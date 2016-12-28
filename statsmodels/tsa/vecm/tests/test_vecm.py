@@ -5,12 +5,43 @@ from numpy.testing import assert_, assert_allclose, assert_raises
 from statsmodels.compat.python import range
 
 import statsmodels.datasets.interest_inflation.data as e6
+from statsmodels.tools.testing import assert_equal
 from statsmodels.tsa.vecm.tests.JMulTi_results.parse_jmulti_output import \
     sublists
+from statsmodels.tsa.vector_ar.util import seasonal_dummies
 from .JMulTi_results.parse_jmulti_output import load_results_jmulti
 from .JMulTi_results.parse_jmulti_output import dt_s_tup_to_string
 from statsmodels.tsa.vecm.vecm import VECM, select_order
 from statsmodels.tsa.vector_ar.var_model import VARProcess
+
+
+class DataSet:
+    """
+    Parameters:
+    -----------
+    data_module : module
+        A module contained in the statsmodels/datasets directory.
+    n_seasons : list
+        A list of integers. Each int represents a number of seasons to test the
+        model with.
+    first_season : list
+        A list of integers. Each int corresponds to the int with the same index
+        in the n_seasons list and declares to which season the first data entry
+        belongs.
+    variable_names : list
+        A list of strings. Each string names a variable.
+    """
+    def __init__(self, data_module, n_seasons, first_season, variable_names):
+        self.data_module = data_module
+        self.seasons = n_seasons
+        self.first_season = first_season
+        self.dt_s_list = [(det, s, self.first_season[i])
+                          for det in deterministic_terms_list
+                          for i, s in enumerate(self.seasons)]
+        self.variable_names = variable_names
+
+    def __str__(self):
+        return self.data_module.__str__()
 
 atol = 0.001  # absolute tolerance
 rtol = 0.01  # relative tolerance
@@ -18,14 +49,13 @@ datasets = []
 data = {}
 results_ref = {}
 results_sm = {}
+results_sm_exog = {}
 coint_rank = 1
 
 debug_mode = True
 dont_test_se_t_p = False
 deterministic_terms_list = ["nc", "co", "colo", "ci", "cili"]
-seasonal_list = [0, 4]
-dt_s_list = [(det, s) for det in deterministic_terms_list
-             for s in seasonal_list]
+
 all_tests = ["Gamma", "alpha", "beta", "C", "det_coint", "Sigma_u",
              "VAR repr. A", "VAR to VEC representation", "log_like", "fc",
              "granger", "inst. causality", "impulse-response", "lag order",
@@ -34,20 +64,51 @@ to_test = all_tests  # ["beta"]
 
 
 def load_data(dataset, data_dict):
-    dtset = dataset.load()
+    dtset = dataset.data_module.load()
     variables = dataset.variable_names
     loaded = dtset.data[variables].view(float, type=np.ndarray)
     data_dict[dataset] = loaded.reshape((-1, len(variables)))
 
 
 def load_results_statsmodels(dataset):
-    results_per_deterministic_terms = dict.fromkeys(dt_s_list)
-    for dt_s_tup in dt_s_list:
+    results_per_deterministic_terms = dict.fromkeys(dataset.dt_s_list)
+    for dt_s_tup in dataset.dt_s_list:
         model = VECM(data[dataset], diff_lags=3, coint_rank=coint_rank,
                      deterministic=dt_s_tup[0], seasons=dt_s_tup[1],
-                     first_season=dataset.first_season)
-        results_per_deterministic_terms[dt_s_tup] = model.fit(
-                method="ml")
+                     first_season=dt_s_tup[2])
+        results_per_deterministic_terms[dt_s_tup] = model.fit(method="ml")
+    return results_per_deterministic_terms
+
+
+def load_results_statsmodels_exog(dataset):
+    """
+    Same as load_results_statsmodels() except that the seasonal term is
+    provided to VECM() via the eoxg parameter. This is to check whether the
+    same results are produced no matter whether exog or season is being used.
+
+    Parameters:
+    -----------
+    dataset : DataSet
+    """
+    results_per_deterministic_terms = dict.fromkeys(dataset.dt_s_list)
+    endog = data[dataset]
+    for dt_s_tup in dataset.dt_s_list:
+        det_string = dt_s_tup[0]
+        seasons = dt_s_tup[1]
+        first_season = dt_s_tup[2]
+        if seasons == 0:
+            exog = None
+        else:
+            exog = seasonal_dummies(seasons, len(data[dataset]), first_season,
+                                    centered=True)
+            if "lo" in dt_s_tup[0]:
+                exog = np.hstack((exog,
+                                  1 + np.arange(len(endog)).reshape(-1, 1)))
+                # remove "lo" since it's now already in exog.
+                det_string = det_string[:-2]
+        model = VECM(endog, exog, diff_lags=3, coint_rank=coint_rank,
+                     deterministic=det_string)
+        results_per_deterministic_terms[dt_s_tup] = model.fit(method="ml")
     return results_per_deterministic_terms
 
 
@@ -69,33 +130,48 @@ def test_ml_gamma():
             return
         print("\n\nGAMMA", end="")
     for ds in datasets:
-        for dt_s in dt_s_list:
+        for dt in ds.dt_s_list:
             if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt_s) + ": ", end="")
+                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
+            exog = (results_sm_exog[ds][dt].exog is not None)
             # estimated parameter vector
-            err_msg = build_err_msg(ds, dt_s, "Gamma")
-            obtained = results_sm[ds][dt_s].gamma
-            desired = results_ref[ds][dt_s]["est"]["Gamma"]
+            err_msg = build_err_msg(ds, dt, "Gamma")
+            obtained = results_sm[ds][dt].gamma
+            obtained_exog = results_sm_exog[ds][dt].gamma
+            desired = results_ref[ds][dt]["est"]["Gamma"]
             yield assert_allclose, obtained, desired, rtol, atol, False, \
                 err_msg
+            if exog:
+                yield assert_equal, obtained_exog, obtained, \
+                    "WITH EXOG: "+err_msg
+
             if debug_mode and dont_test_se_t_p:
                 continue
             # standard errors
-            obt = results_sm[ds][dt_s].stderr_gamma
-            des = results_ref[ds][dt_s]["se"]["Gamma"]
+            obt = results_sm[ds][dt].stderr_gamma
+            obt_exog = results_sm_exog[ds][dt].stderr_gamma
+            des = results_ref[ds][dt]["se"]["Gamma"]
             yield assert_allclose, obt, des, rtol, atol, False, \
                 "STANDARD ERRORS\n"+err_msg
+            if exog:
+                yield assert_equal, obt_exog, obt, "WITH EXOG: "+err_msg
             # t-values
-            obt = results_sm[ds][dt_s].tvalues_gamma
-            des = results_ref[ds][dt_s]["t"]["Gamma"]
+            obt = results_sm[ds][dt].tvalues_gamma
+            obt_exog = results_sm_exog[ds][dt].tvalues_gamma
+            des = results_ref[ds][dt]["t"]["Gamma"]
             yield assert_allclose, obt, des, rtol, atol, False, \
                 "t-VALUES\n"+err_msg
+            if exog:
+                yield assert_equal, obt_exog, obt, "WITH EXOG: "+err_msg
             # p-values
-            obt = results_sm[ds][dt_s].pvalues_gamma
-            des = results_ref[ds][dt_s]["p"]["Gamma"]
+            obt = results_sm[ds][dt].pvalues_gamma
+            obt_exog = results_sm_exog[ds][dt].pvalues_gamma
+            des = results_ref[ds][dt]["p"]["Gamma"]
             yield assert_allclose, obt, des, rtol, atol, False, \
                 "p-VALUES\n"+err_msg
+            if exog:
+                yield assert_equal, obt_exog, obt, "WITH EXOG: "+err_msg
 
 
 def test_ml_alpha():
@@ -104,33 +180,48 @@ def test_ml_alpha():
             return
         print("\n\nALPHA", end="")
     for ds in datasets:
-        for dt in dt_s_list:
+        for dt in ds.dt_s_list:
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
+            exog = (results_sm_exog[ds][dt].exog is not None)
 
             err_msg = build_err_msg(ds, dt, "alpha")
             obtained = results_sm[ds][dt].alpha
+            obtained_exog = results_sm_exog[ds][dt].alpha
             desired = results_ref[ds][dt]["est"]["alpha"]
             yield assert_allclose, obtained, desired, rtol, atol, False, \
                 err_msg
+            if exog:
+                yield assert_equal, obtained_exog, obtained, \
+                    "WITH EXOG: "+err_msg
+
 
             if debug_mode and dont_test_se_t_p:
                 continue
             # standard errors
             obt = results_sm[ds][dt].stderr_alpha
+            obt_exog = results_sm_exog[ds][dt].stderr_alpha
             des = results_ref[ds][dt]["se"]["alpha"]
             yield assert_allclose, obt, des, rtol, atol, False, \
                 "STANDARD ERRORS\n"+err_msg
+            if exog:
+                yield assert_equal, obt_exog, obt, "WITH EXOG: "+err_msg
             # t-values
             obt = results_sm[ds][dt].tvalues_alpha
+            obt_exog = results_sm_exog[ds][dt].tvalues_alpha
             des = results_ref[ds][dt]["t"]["alpha"]
             yield assert_allclose, obt, des, rtol, atol, False, \
                 "t-VALUES\n"+err_msg
+            if exog:
+                yield assert_equal, obt_exog, obt, "WITH EXOG: "+err_msg
             # p-values
             obt = results_sm[ds][dt].pvalues_alpha
+            obt_exog = results_sm_exog[ds][dt].pvalues_alpha
             des = results_ref[ds][dt]["p"]["alpha"]
             yield assert_allclose, obt, des, rtol, atol, False, \
                 "p-VALUES\n"+err_msg
+            if exog:
+                yield assert_equal, obt_exog, obt, "WITH EXOG: "+err_msg
 
 
 def test_ml_beta():
@@ -139,10 +230,11 @@ def test_ml_beta():
             return
         print("\n\nBETA", end="")
     for ds in datasets:
-        for dt in dt_s_list:
+        for dt in ds.dt_s_list:
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
+            exog = (results_sm_exog[ds][dt].exog is not None)
             err_msg = build_err_msg(ds, dt, "beta")
             desired = results_ref[ds][dt]["est"]["beta"]
             rows = desired.shape[0]
@@ -150,30 +242,40 @@ def test_ml_beta():
             # - beta includes deterministic terms in cointegration relation in
             #   sm, so we compare only the elements belonging to beta.
             obtained = results_sm[ds][dt].beta[coint_rank:rows]
+            obtained_exog = results_sm_exog[ds][dt].beta[coint_rank:rows]
             desired = desired[coint_rank:]
-            # print("\ndeterministic terms: " + dt)
-            # print("tested elements of beta: ")
-            # print(str(slice(coint_rank,rows)))
             yield assert_allclose, obtained, desired, rtol, atol, False, \
                 err_msg
+            if exog:
+                yield assert_equal, obtained_exog, obtained, \
+                    "WITH EXOG: "+err_msg
 
             if debug_mode and dont_test_se_t_p:
                 continue
             # standard errors
             obt = results_sm[ds][dt].stderr_beta[coint_rank:rows]
+            obt_exog = results_sm_exog[ds][dt].stderr_beta[coint_rank:rows]
             des = results_ref[ds][dt]["se"]["beta"][coint_rank:]
             yield assert_allclose, obt, des, rtol, atol, False, \
                 "STANDARD ERRORS\n"+err_msg
+            if exog:
+                yield assert_equal, obt_exog, obt, "WITH EXOG: "+err_msg
             # t-values
             obt = results_sm[ds][dt].tvalues_beta[coint_rank:rows]
+            obt_exog = results_sm_exog[ds][dt].tvalues_beta[coint_rank:rows]
             des = results_ref[ds][dt]["t"]["beta"][coint_rank:]
             yield assert_allclose, obt, des, rtol, atol, False, \
                 "t-VALUES\n"+err_msg
+            if exog:
+                yield assert_equal, obt_exog, obt, "WITH EXOG: "+err_msg
             # p-values
             obt = results_sm[ds][dt].pvalues_beta[coint_rank:rows]
+            obt_exog = results_sm_exog[ds][dt].pvalues_beta[coint_rank:rows]
             des = results_ref[ds][dt]["p"]["beta"][coint_rank:]
             yield assert_allclose, obt, des, rtol, atol, False, \
                 "p-VALUES\n"+err_msg
+            if exog:
+                yield assert_equal, obt_exog, obt, "WITH EXOG: "+err_msg
 
 
 def test_ml_c():  # test deterministic terms outside coint relation
@@ -182,14 +284,19 @@ def test_ml_c():  # test deterministic terms outside coint relation
             return
         print("\n\nDET_COEF", end="")
     for ds in datasets:
-        for dt in dt_s_list:
+        for dt in ds.dt_s_list:
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
+            exog = (results_sm_exog[ds][dt].exog is not None)
             C_obt = results_sm[ds][dt].det_coef
+            C_obt_exog = results_sm_exog[ds][dt].det_coef
             se_C_obt = results_sm[ds][dt].stderr_det_coef
+            se_C_obt_exog = results_sm_exog[ds][dt].stderr_det_coef
             t_C_obt = results_sm[ds][dt].tvalues_det_coef
+            t_C_obt_exog = results_sm_exog[ds][dt].tvalues_det_coef
             p_C_obt = results_sm[ds][dt].pvalues_det_coef
+            p_C_obt_exog = results_sm_exog[ds][dt].pvalues_det_coef
 
             if "C" not in results_ref[ds][dt]["est"].keys():
                 # case: there are no deterministic terms
@@ -201,100 +308,161 @@ def test_ml_c():  # test deterministic terms outside coint relation
             desired = results_ref[ds][dt]["est"]["C"]
             dt_string = dt_s_tup_to_string(dt)
             if "co" in dt_string:
+                err_msg = build_err_msg(ds, dt, "CONST")
                 const_obt = C_obt[:, :1]
+                const_obt_exog = C_obt_exog[:, :1]
                 const_des = desired[:, :1]
                 C_obt = C_obt[:, 1:]
+                C_obt_exog = C_obt_exog[:, 1:]
                 desired = desired[:, 1:]
                 yield assert_allclose, const_obt, const_des,  \
-                    rtol, atol, False, build_err_msg(ds, dt, "CONST")
+                    rtol, atol, False, err_msg
+                if exog:
+                    yield assert_equal, const_obt_exog, const_obt, \
+                        "WITH EXOG: "+err_msg
             if "s" in dt_string:
+                err_msg = build_err_msg(ds, dt, "SEASONAL")
                 if "lo" in dt_string:
                     seas_obt = C_obt[:, :-1]
+                    seas_obt_exog = C_obt_exog[:, :-1]
                     seas_des = desired[:, :-1]
                 else:
                     seas_obt = C_obt
+                    seas_obt_exog = C_obt_exog
                     seas_des = desired
                 yield assert_allclose, seas_obt, seas_des,  \
-                    rtol, atol, False, build_err_msg(ds, dt, "SEASONAL")
+                    rtol, atol, False, err_msg
+                if exog:
+                    yield assert_equal, seas_obt_exog, seas_obt, \
+                        "WITH EXOG: "+err_msg
             if "lo" in dt_string:
+                err_msg = build_err_msg(ds, dt, "LINEAR TREND")
                 lt_obt = C_obt[:, -1:]
+                lt_obt_exog = C_obt_exog[:, -1:]
                 lt_des = desired[:, -1:]
                 yield assert_allclose, lt_obt, lt_des,  \
-                    rtol, atol, False, build_err_msg(ds, dt, "LINEAR TREND")
+                    rtol, atol, False, err_msg
+                if exog:
+                    yield assert_equal, lt_obt_exog, lt_obt, \
+                        "WITH EXOG: "+err_msg
             if debug_mode and dont_test_se_t_p:
                 continue
             # standard errors
             se_desired = results_ref[ds][dt]["se"]["C"]
             if "co" in dt_string:
+                err_msg = build_err_msg(ds, dt, "SE CONST")
                 se_const_obt = se_C_obt[:, 0][:, None]
                 se_C_obt = se_C_obt[:, 1:]
+                se_const_obt_exog = se_C_obt_exog[:, 0][:, None]
+                se_C_obt_exog = se_C_obt_exog[:, 1:]
                 se_const_des = se_desired[:, 0][:, None]
                 se_desired = se_desired[:, 1:]
                 yield assert_allclose, se_const_obt, se_const_des,  \
-                    rtol, atol, False, build_err_msg(ds, dt, "SE CONST")
+                    rtol, atol, False, err_msg
+                if exog:
+                    yield assert_equal, se_const_obt_exog, se_const_obt, \
+                        "WITH EXOG: "+err_msg
             if "s" in dt_string:
+                err_msg = build_err_msg(ds, dt, "SE SEASONAL")
                 if "lo" in dt_string:
                     se_seas_obt = se_C_obt[:, :-1]
+                    se_seas_obt_exog = se_C_obt_exog[:, :-1]
                     se_seas_des = se_desired[:, :-1]
                 else:
                     se_seas_obt = se_C_obt
+                    se_seas_obt_exog = se_C_obt_exog
                     se_seas_des = se_desired
                 yield assert_allclose, se_seas_obt, se_seas_des,  \
-                    rtol, atol, False, build_err_msg(ds, dt, "SE SEASONAL")
+                    rtol, atol, False, err_msg
+                if exog:
+                    yield assert_equal, se_seas_obt_exog, se_seas_obt, \
+                        "WITH EXOG: "+err_msg
                 if "lo" in dt_string:
+                    err_msg = build_err_msg(ds, dt, "SE LIN. TREND")
                     se_lt_obt = se_C_obt[:, -1:]
+                    se_lt_obt_exog = se_C_obt_exog[:, -1:]
                     se_lt_des = se_desired[:, -1:]
                     yield assert_allclose, se_lt_obt, se_lt_des,  \
-                        rtol, atol, False,  \
-                        build_err_msg(ds, dt, "SE LIN. TREND")
+                        rtol, atol, False, err_msg
+                    if exog:
+                        yield assert_equal, se_lt_obt_exog, se_lt_obt, \
+                            "WITH EXOG: "+err_msg
             # t-values
             t_desired = results_ref[ds][dt]["t"]["C"]
             if "co" in dt_string:
                 t_const_obt = t_C_obt[:, 0][:, None]
                 t_C_obt = t_C_obt[:, 1:]
+                t_const_obt_exog = t_C_obt_exog[:, 0][:, None]
+                t_C_obt_exog = t_C_obt_exog[:, 1:]
                 t_const_des = t_desired[:, 0][:, None]
                 t_desired = t_desired[:, 1:]
                 yield assert_allclose, t_const_obt, t_const_des,  \
                     rtol, atol, False, build_err_msg(ds, dt, "T CONST")
+                if exog:
+                    yield assert_equal, t_const_obt_exog, t_const_obt, \
+                        "WITH EXOG: "+err_msg
             if "s" in dt_string:
                 if "lo" in dt_string:
                     t_seas_obt = t_C_obt[:, :-1]
+                    t_seas_obt_exog = t_C_obt_exog[:, :-1]
                     t_seas_des = t_desired[:, :-1]
                 else:
                     t_seas_obt = t_C_obt
+                    t_seas_obt_exog = t_C_obt_exog
                     t_seas_des = t_desired
                 yield assert_allclose, t_seas_obt, t_seas_des,  \
                     rtol, atol, False, build_err_msg(ds, dt, "T SEASONAL")
+                if exog:
+                    yield assert_equal, t_seas_obt_exog, t_seas_obt, \
+                        "WITH EXOG"+err_msg
             if "lo" in dt_string:
                 t_lt_obt = t_C_obt[:, -1:]
+                t_lt_obt_exog = t_C_obt_exog[:, -1:]
                 t_lt_des = t_desired[:, -1:]
                 yield assert_allclose, t_lt_obt, t_lt_des,  \
                     rtol, atol, False,  \
                     build_err_msg(ds, dt, "T LIN. TREND")
+                if exog:
+                    yield assert_equal, t_lt_obt_exog, t_lt_obt, \
+                        "WITH EXOG"+err_msg
             # p-values
             p_desired = results_ref[ds][dt]["p"]["C"]
             if "co" in dt_string:
                 p_const_obt = p_C_obt[:, 0][:, None]
                 p_C_obt = p_C_obt[:, 1:]
+                p_const_obt_exog = p_C_obt_exog[:, 0][:, None]
+                p_C_obt_exog = p_C_obt_exog[:, 1:]
                 p_const_des = p_desired[:, 0][:, None]
                 p_desired = p_desired[:, 1:]
                 yield assert_allclose, p_const_obt, p_const_des,  \
                     rtol, atol, False, build_err_msg(ds, dt, "P CONST")
+                if exog:
+                    yield assert_equal, p_const_obt, p_const_obt_exog, \
+                        "WITH EXOG"+err_msg
             if "s" in dt_string:
                 if "lo" in dt_string:
                     p_seas_obt = p_C_obt[:, :-1]
+                    p_seas_obt_exog = p_C_obt_exog[:, :-1]
                     p_seas_des = p_desired[:, :-1]
                 else:
                     p_seas_obt = p_C_obt
+                    p_seas_obt_exog = p_C_obt_exog
                     p_seas_des = p_desired
                 yield assert_allclose, p_seas_obt, p_seas_des,  \
                     rtol, atol, False, build_err_msg(ds, dt, "P SEASONAL")
+                if exog:
+                    yield assert_equal, p_seas_obt_exog, p_seas_obt, \
+                        "WITH EXOG"+err_msg
             if "lo" in dt_string:
                 p_lt_obt = p_C_obt[:, -1:]
+                p_lt_obt_exog = p_C_obt_exog[:, -1:]
                 p_lt_des = p_desired[:, -1:]
                 yield assert_allclose, p_lt_obt, p_lt_des,  \
                     rtol, atol, False,  \
                     build_err_msg(ds, dt, "P LIN. TREND")
+                if exog:
+                    yield assert_equal, p_lt_obt_exog, p_lt_obt, \
+                        "WITH EXOG"+err_msg
 
 
 def test_ml_det_terms_in_coint_relation():
@@ -303,13 +471,15 @@ def test_ml_det_terms_in_coint_relation():
             return
         print("\n\nDET_COEF_COINT", end="")
     for ds in datasets:
-        for dt in dt_s_list:
+        for dt in ds.dt_s_list:
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
+            exog = (results_sm_exog[ds][dt].exog is not None)
             err_msg = build_err_msg(ds, dt, "det terms in coint relation")
             dt_string = dt_s_tup_to_string(dt)
             obtained = results_sm[ds][dt].det_coef_coint
+            obtained_exog = results_sm_exog[ds][dt].det_coef_coint
             if "ci" not in dt_string and "li" not in dt_string:
                 if obtained.size > 0:
                     yield assert_, False, build_err_msg(
@@ -322,21 +492,36 @@ def test_ml_det_terms_in_coint_relation():
             desired = results_ref[ds][dt]["est"]["det_coint"]
             yield assert_allclose, obtained, desired, rtol, atol, False, \
                 err_msg
+            if exog:
+                yield assert_equal, obtained_exog, obtained, \
+                    "WITH EXOG"+err_msg
             # standard errors
             se_obtained = results_sm[ds][dt].stderr_det_coef_coint
+            se_obtained_exog = results_sm_exog[ds][dt].stderr_det_coef_coint
             se_desired = results_ref[ds][dt]["se"]["det_coint"]
             yield assert_allclose, se_obtained, se_desired, rtol, atol, \
                 False, "STANDARD ERRORS\n"+err_msg
+            if exog:
+                yield assert_equal, se_obtained_exog, se_obtained, \
+                    "WITH EXOG"+err_msg
             # t-values
             t_obtained = results_sm[ds][dt].tvalues_det_coef_coint
+            t_obtained_exog = results_sm_exog[ds][dt].tvalues_det_coef_coint
             t_desired = results_ref[ds][dt]["t"]["det_coint"]
             yield assert_allclose, t_obtained, t_desired, rtol, atol, \
                 False, "t-VALUES\n"+err_msg
+            if exog:
+                yield assert_equal, t_obtained_exog, t_obtained, \
+                    "WITH EXOG"+err_msg
             # p-values
             p_obtained = results_sm[ds][dt].pvalues_det_coef_coint
+            p_obtained_exog = results_sm_exog[ds][dt].pvalues_det_coef_coint
             p_desired = results_ref[ds][dt]["p"]["det_coint"]
             yield assert_allclose, p_obtained, p_desired, rtol, atol, \
                 False, "p-VALUES\n"+err_msg
+            if exog:
+                yield assert_equal, p_obtained_exog, p_obtained, \
+                    "WITH EXOG"+err_msg
 
 
 def test_ml_sigma():
@@ -345,15 +530,20 @@ def test_ml_sigma():
             return
         print("\n\nSIGMA_U", end="")
     for ds in datasets:
-        for dt in dt_s_list:
+        for dt in ds.dt_s_list:
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
+            exog = (results_sm_exog[ds][dt].exog is not None)
             err_msg = build_err_msg(ds, dt, "Sigma_u")
             obtained = results_sm[ds][dt].sigma_u
+            obtained_exog = results_sm_exog[ds][dt].sigma_u
             desired = results_ref[ds][dt]["est"]["Sigma_u"]
             yield assert_allclose, obtained, desired, rtol, atol, False, \
                 err_msg
+            if exog:
+                yield assert_equal, obtained_exog, obtained, \
+                    "WITH EXOG"+err_msg
 
 
 def test_var_rep():
@@ -362,16 +552,21 @@ def test_var_rep():
             return
         print("\n\nVAR REPRESENTATION", end="")
     for ds in datasets:
-        for dt in dt_s_list:
+        for dt in ds.dt_s_list:
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
+            exog = (results_sm_exog[ds][dt].exog is not None)
             err_msg = build_err_msg(ds, dt, "VAR repr. A")
             obtained = results_sm[ds][dt].var_repr
+            obtained_exog = results_sm_exog[ds][dt].var_repr
             p = obtained.shape[0]
             desired = np.hsplit(results_ref[ds][dt]["est"]["VAR A"], p)
             yield assert_allclose, obtained, desired, rtol, atol, False, \
                 err_msg
+            if exog:
+                yield assert_equal, obtained_exog, obtained, \
+                    "WITH EXOG"+err_msg
 
 
 def test_var_to_vecm():
@@ -380,7 +575,7 @@ def test_var_to_vecm():
             return
         print("\n\nVAR TO VEC", end="")
     for ds in datasets:
-        for dt in dt_s_list:
+        for dt in ds.dt_s_list:
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
@@ -420,15 +615,21 @@ def test_log_like():
         else:
             print("\n\nLOG LIKELIHOOD", end="")
     for ds in datasets:
-        for dt in dt_s_list:
+        for dt in ds.dt_s_list:
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
+            exog = (results_sm_exog[ds][dt].exog is not None)
             err_msg = build_err_msg(ds, dt, "Log Likelihood")
             obtained = results_sm[ds][dt].llf
+            obtained_exog = results_sm_exog[ds][dt].llf
+
             desired = results_ref[ds][dt]["log_like"]
             yield assert_allclose, obtained, desired, rtol, atol, False, \
                 err_msg
+            if exog:
+                yield assert_equal, obtained_exog, obtained, \
+                    "WITH EXOG"+err_msg
 
 
 def test_fc():
@@ -438,23 +639,49 @@ def test_fc():
         else:
             print("\n\nFORECAST", end="")
     for ds in datasets:
-        for dt in dt_s_list:
+        for dt in ds.dt_s_list:
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
+            STEPS = 5
+            ALPHA = 0.05
             err_msg = build_err_msg(ds, dt, "FORECAST")
             # test point forecast functionality of predict method
-            obtained = results_sm[ds][dt].predict()
+            obtained = results_sm[ds][dt].predict(steps=STEPS)
             desired = results_ref[ds][dt]["fc"]["fc"]
             yield assert_allclose, obtained, desired, rtol, atol, False, \
                 err_msg
+
+            exog = (results_sm_exog[ds][dt].exog is not None)
+            exog_fc = None
+            if exog:  # build future values of exog and test:
+                seasons = dt[1]
+                exog_model = results_sm_exog[ds][dt].exog
+                exog_seasons_fc = exog_model[-seasons:, :seasons-1]
+                exog_seasons_fc = np.pad(exog_seasons_fc,
+                    ((0, STEPS-exog_seasons_fc.shape[0]), (0, 0)), "wrap")
+                # if linear trend in exog
+                if exog_seasons_fc.shape[1] + 1 == exog_model.shape[1]:
+                    exog_lt_fc = exog_model[-1, -1] + 1 + np.arange(STEPS)
+                    exog_fc = np.column_stack((exog_seasons_fc, exog_lt_fc))
+                else:
+                    exog_fc = exog_seasons_fc
+                obtained_exog = results_sm_exog[ds][dt].predict(steps=STEPS,
+                    exog_fc=exog_fc)
+                yield assert_allclose, obtained_exog, obtained, 1e-07, 0, \
+                    False, "WITH EXOG"+err_msg
             # test predict method with confidence interval calculation
             err_msg = build_err_msg(ds, dt, "FORECAST WITH INTERVALS")
-            obtained = results_sm[ds][dt].predict(
-                    alpha=0.05)
+            obtained = results_sm[ds][dt].predict(steps=STEPS, alpha=ALPHA)
+            obtained_exog = results_sm_exog[ds][dt].predict(steps=STEPS,
+                                                            alpha=ALPHA,
+                                                            exog_fc=exog_fc)
             obt = obtained[0]  # forecast
             obt_l = obtained[1]  # lower bound
             obt_u = obtained[2]  # upper bound
+            obt_exog = obtained_exog[0]
+            obt_exog_l = obtained_exog[1]
+            obt_exog_u = obtained_exog[2]
             des = results_ref[ds][dt]["fc"]["fc"]
             des_l = results_ref[ds][dt]["fc"]["lower"]
             des_u = results_ref[ds][dt]["fc"]["upper"]
@@ -464,6 +691,13 @@ def test_fc():
                 err_msg
             yield assert_allclose, obt_u, des_u, rtol, atol, False, \
                 err_msg
+            if exog:
+                yield assert_allclose, obt_exog, obt, 1e-07, 0, False, \
+                    "WITH EXOG"+err_msg
+                yield assert_allclose, obt_exog_l, obt_l, 1e-07, 0, False, \
+                    "WITH EXOG"+err_msg
+                yield assert_allclose, obt_exog_u, obt_u, 1e-07, 0, False, \
+                    "WITH EXOG"+err_msg
 
 
 def test_granger_causality():
@@ -473,10 +707,11 @@ def test_granger_causality():
         else:
             print("\n\nGRANGER", end="")
     for ds in datasets:
-        for dt in dt_s_list:
+        for dt in ds.dt_s_list:
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
+            exog = (results_sm_exog[ds][dt].exog is not None)
             err_msg_g_p = build_err_msg(ds, dt, "GRANGER CAUS. - p-VALUE")
             err_msg_g_t = build_err_msg(ds, dt, "GRANGER CAUS. - TEST STAT.")
 
@@ -496,16 +731,23 @@ def test_granger_causality():
                 granger_sm_ind = results_sm[ds][
                     dt].test_granger_causality(caused_ind, causing_ind,
                                                verbose=verbose)
+                granger_sm_ind_exog = results_sm_exog[ds][
+                    dt].test_granger_causality(caused_ind, causing_ind,
+                                               verbose=False)
                 granger_sm_str = results_sm[ds][
                     dt].test_granger_causality(caused_names,
                                                causing_names, verbose=False)
 
                 # test test-statistic for Granger non-causality:
                 g_t_obt = granger_sm_ind["statistic"]
+                g_t_obt_exog = granger_sm_ind_exog["statistic"]
                 g_t_des = results_ref[ds][dt]["granger_caus"][
                     "test_stat"][(causing_key, caused_key)]
                 yield assert_allclose, g_t_obt, g_t_des, rtol, atol, \
                     False, err_msg_g_t
+                if exog:
+                    yield assert_allclose, g_t_obt_exog, g_t_obt, 1e-07, 0, \
+                        False, "WITH EXOG"+err_msg_g_t
                 # check whether string sequences as args work in the same way:
                 g_t_obt_str = granger_sm_str["statistic"]
                 yield assert_allclose, g_t_obt_str, g_t_obt, 1e-07, 0, False, \
@@ -552,10 +794,11 @@ def test_inst_causality():  # test instantaneous causality
         else:
             print("\n\nINST. CAUSALITY", end="")
     for ds in datasets:
-        for dt in dt_s_list:
+        for dt in ds.dt_s_list:
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
+            exog = (results_sm_exog[ds][dt].exog is not None)
             err_msg_i_p = build_err_msg(ds, dt, "INSTANT. CAUS. - p-VALUE")
             err_msg_i_t = build_err_msg(ds, dt, "INSTANT. CAUS. - TEST STAT.")
 
@@ -572,14 +815,20 @@ def test_inst_causality():  # test instantaneous causality
                 caused_key = tuple(ds.variable_names[i] for i in caused_ind)
                 inst_sm_ind = results_sm[ds][dt].test_inst_causality(
                     causing_ind, verbose=verbose)
+                inst_sm_ind_exog = results_sm_exog[ds][
+                    dt].test_inst_causality(causing_ind, verbose=False)
                 inst_sm_str = results_sm[ds][dt].test_inst_causality(
                     causing_names, verbose=False)
                 # test test-statistic for instantaneous non-causality
                 t_obt = inst_sm_ind["statistic"]
+                t_obt_exog = inst_sm_ind_exog["statistic"]
                 t_des = results_ref[ds][dt]["inst_caus"][
                     "test_stat"][(causing_key, caused_key)]
                 yield assert_allclose, t_obt, t_des, rtol, atol, False, \
                     err_msg_i_t
+                if exog:
+                    yield assert_allclose, t_obt_exog, t_obt, 1e-07, 0, \
+                        False, "WITH EXOG"+err_msg_i_t
                 # check whether string sequences as args work in the same way:
                 t_obt_str = inst_sm_str["statistic"]
                 yield assert_allclose, t_obt_str, t_obt, 1e-07, 0, False, \
@@ -627,17 +876,25 @@ def test_impulse_response():
         else:
             print("\n\nIMPULSE-RESPONSE", end="")
     for ds in datasets:
-        for dt in dt_s_list:
+        for dt in ds.dt_s_list:
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
+
+            exog = (results_sm_exog[ds][dt].exog is not None)
             err_msg = build_err_msg(ds, dt, "IMULSE-RESPONSE")
             periods = 20
             obtained_all = results_sm[ds][dt].irf(periods=periods).irfs
+            obtained_all_exog = results_sm_exog[ds][dt].irf(
+                periods=periods).irfs
             # flatten inner arrays to make them comparable to parsed results:
             obtained_all = obtained_all.reshape(periods+1, -1)
+            obtained_all_exog = obtained_all_exog.reshape(periods+1, -1)
             desired_all = results_ref[ds][dt]["ir"]
             yield assert_allclose, obtained_all, desired_all, rtol, atol,  \
                 False, err_msg
+            if exog:
+                yield assert_equal, obtained_all_exog, obtained_all, \
+                    "WITH EXOG"+err_msg
 
 
 def test_lag_order_selection():
@@ -647,15 +904,32 @@ def test_lag_order_selection():
         else:
             print("\n\nLAG ORDER SELECTION", end="")
     for ds in datasets:
-        for dt in dt_s_list:
+        for dt in ds.dt_s_list:
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
+
+            deterministic = dt[0]
+            exog = (results_sm_exog[ds][dt].exog is not None)
             endog_tot = data[ds]
             # produce output to increase test coverage (but only in a few
             # cases to avoid cluttered test output)
             verbose = (dt[0] == "nc" and dt[1] == 0)
             obtained_all = select_order(endog_tot, 10, dt[0], dt[1],
                                         verbose=verbose)
+            deterministic_outside_exog = ""
+            if "co" in deterministic:
+                deterministic_outside_exog += "co"
+            if "lo" in deterministic:
+                deterministic_outside_exog += "lo"
+            if "ci" in deterministic:
+                deterministic_outside_exog += "ci"
+            if "li" in deterministic:
+                deterministic_outside_exog += "li"
+            exog_model = results_sm_exog[ds][dt].exog
+            obtained_all_exog = select_order(endog_tot, 10,
+                                             deterministic_outside_exog,
+                                             seasons=0, exog=exog_model,
+                                             verbose=False)
             for ic in ["aic", "fpe", "hqic", "bic"]:
                 err_msg = build_err_msg(ds, dt,
                                         "LAG ORDER SELECTION - " + ic.upper())
@@ -663,6 +937,9 @@ def test_lag_order_selection():
                 desired = results_ref[ds][dt]["lagorder"][ic]
                 yield assert_allclose, obtained, desired, rtol, atol, False, \
                     err_msg
+                if exog:
+                    yield assert_equal, obtained_all_exog[ic], \
+                        obtained_all[ic], "WITH EXOG"+err_msg
 
 
 def test_normality():
@@ -672,24 +949,32 @@ def test_normality():
         else:
             print("\n\nTEST NON-NORMALITY", end="")
     for ds in datasets:
-        for dt in dt_s_list:
+        for dt in ds.dt_s_list:
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
             # produce output to increase test coverage (but only in a few
             # cases to avoid cluttered test output)
             verbose = (dt[0] == "nc" and dt[1] == 0)
+
+            exog = (results_sm_exog[ds][dt].exog is not None)
             obtained = results_sm[ds][dt].test_normality(signif=0.05,
                                                          verbose=verbose)
+            obtained_exog = results_sm_exog[ds][dt].test_normality(
+                    signif=0.05, verbose=False)
             err_msg = build_err_msg(ds, dt, "TEST NON-NORMALITY - STATISTIC")
             obt_statistic = obtained["statistic"]
+            obt_statistic_exog = obtained_exog["statistic"]
             des_statistic = results_ref[ds][dt]["test_norm"][
                 "joint_test_statistic"]
             yield assert_allclose, obt_statistic, des_statistic, rtol, atol, \
                 False, err_msg
+            if exog:
+                yield assert_equal, obt_statistic_exog, obt_statistic, \
+                    "WITH EXOG"+err_msg
             err_msg = build_err_msg(ds, dt, "TEST NON-NORMALITY - P-VALUE")
             obt_pvalue = obtained["pvalue"]
-            des_pvalue =results_ref[ds][dt]["test_norm"]["joint_pvalue"]
+            des_pvalue = results_ref[ds][dt]["test_norm"]["joint_pvalue"]
             yield assert_allclose, obt_pvalue, des_pvalue, rtol, atol, \
                 False, err_msg
 
@@ -701,18 +986,25 @@ def test_whiteness():
         else:
             print("\n\nTEST WHITENESS OF RESIDUALS", end="")
     for ds in datasets:
-        for dt in dt_s_list:
+        for dt in ds.dt_s_list:
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
+
+            exog = (results_sm_exog[ds][dt].exog is not None)
+
             lags = results_ref[ds][dt]["whiteness"]["tested order"]
 
             obtained = results_sm[ds][dt].test_whiteness(nlags=lags)
+            obtained_exog = results_sm_exog[ds][dt].test_whiteness(nlags=lags)
             # test statistic
             err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - "
                                             "TEST STATISTIC")
             desired = results_ref[ds][dt]["whiteness"]["test statistic"]
             yield assert_allclose, obtained["statistic"], desired, \
                 rtol, atol, False, err_msg
+            if exog:
+                yield assert_equal, obtained_exog["statistic"],\
+                    obtained["statistic"], "WITH EXOG"+err_msg
             # p-value
             err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - "
                                             "P-VALUE")
@@ -722,12 +1014,17 @@ def test_whiteness():
 
             obtained = results_sm[ds][dt].test_whiteness(nlags=lags,
                                                          adjusted=True)
+            obtained_exog = results_sm_exog[ds][dt].test_whiteness(
+                    nlags=lags, adjusted=True)
             # test statistic (adjusted Portmanteau test)
             err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - "
                                             "TEST STATISTIC (ADJUSTED TEST)")
             desired = results_ref[ds][dt]["whiteness"]["test statistic adj."]
             yield assert_allclose, obtained["statistic"], desired, \
                 rtol, atol, False, err_msg
+            if exog:
+                yield assert_equal, obtained_exog["statistic"],\
+                    obtained["statistic"], "WITH EXOG"+err_msg
             # p-value (adjusted Portmanteau test)
             err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - "
                                             "P-VALUE (ADJUSTED TEST)")
@@ -743,11 +1040,16 @@ def test_summary():
         else:
             print("\n\nSUMMARY", end="")
     for ds in datasets:
-        for dt in dt_s_list:
+        for dt in ds.dt_s_list:
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
+            # see if summary gets printed
             results_sm[ds][dt].summary(alpha=0.05)
+
+            exog = (results_sm_exog[ds][dt].exog is not None)
+            if exog is not None:
+                results_sm_exog[ds][dt].summary(alpha=0.05)
 
 
 def test_exceptions():
@@ -757,7 +1059,7 @@ def test_exceptions():
         else:
             print("\n\nEXCEPTIONS\n", end="")
     ds = datasets[0]
-    dt = dt_s_list[0]
+    dt = ds.dt_s_list[0]
 
     # Granger_causality:
     ### 0<signif<1
@@ -784,10 +1086,14 @@ def test_exceptions():
 
 
 def setup():
-    datasets.append(e6)  # TODO: append more data sets for more test cases.
+    datasets.append(
+            DataSet(e6, [0, 4], [0, 1], ["Dp", "R"]),
+            # DataSet(...) TODO: append more data sets for more test cases.
+    )
     
     for ds in datasets:
         load_data(ds, data)
-        results_ref[ds] = load_results_jmulti(ds, dt_s_list)
+        results_ref[ds] = load_results_jmulti(ds)
         results_sm[ds] = load_results_statsmodels(ds)
+        results_sm_exog[ds] = load_results_statsmodels_exog(ds)
         return results_sm[ds], results_ref[ds]

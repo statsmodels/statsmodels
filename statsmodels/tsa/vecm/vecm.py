@@ -25,7 +25,8 @@ from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval, \
     VAR, ma_rep, orth_ma_rep, test_normality
 
 
-def select_order(data, maxlags, deterministic="nc", seasons=0, verbose=True):
+def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
+                 verbose=True):
     """
     Compute lag order selections based on each of the available information
     criteria.
@@ -61,15 +62,18 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, verbose=True):
         # exclude some periods to same amount of data used for each lag
         # order
         # TODO: pass deterministic and seasons as parameter to VAR()
-        exog = []
+        exogs = []
         if "co" in deterministic or "ci" in deterministic:
-            exog.append(np.ones(len(data)).reshape(-1, 1))
+            exogs.append(np.ones(len(data)).reshape(-1, 1))
         if "lo" in deterministic or "li" in deterministic:
-            exog.append(np.arange(len(data)).reshape(-1, 1))
+            exogs.append(np.arange(len(data)).reshape(-1, 1))
         if seasons > 0:
-            exog.append(seasonal_dummies(seasons, len(data)).reshape(-1, seasons-1))
-        exog = hstack(exog) if exog else None
-        var_model = VAR(data, exog)
+            exogs.append(seasonal_dummies(seasons, len(data)
+                                          ).reshape(-1, seasons-1))
+        if exog is not None:
+            exogs.append(exog)
+        exogs = hstack(exogs) if exogs else None
+        var_model = VAR(data, exogs)
         var_result = var_model._estimate_var(lags=p, offset=maxlags+1-p)
 
         for k, v in iteritems(var_result.info_criteria):
@@ -86,7 +90,14 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, verbose=True):
     return selected_orders
 
 
-def num_det_vars(det_string, seasons=0):
+def linear_trend(nobs, k_ar, coint=False):
+    ret = np.arange(nobs) + k_ar
+    if not coint:
+        ret += 1
+    return ret
+
+
+def num_det_vars(det_string, seasons=0):  # todo: consider exog
     """Gives the number of deterministic variables.
 
     Parameters
@@ -120,17 +131,19 @@ def num_det_vars(det_string, seasons=0):
 
 
 def deterministic_to_exog(deterministic, seasons, len_data,
-                          first_season=0, seasons_centered=False):
-            exog = []
+                          first_season=0, seasons_centered=False, exog=None):
+            exogs = []
             if "co" in deterministic or "ci" in deterministic:
-                exog.append(np.ones(len_data))
+                exogs.append(np.ones(len_data))
             if "lo" in deterministic or "li" in deterministic:
-                exog.append(np.arange(len_data))
+                exogs.append(np.arange(len_data))
             if seasons > 0:
-                exog.append(seasonal_dummies(seasons, len_data,
+                exogs.append(seasonal_dummies(seasons, len_data,
                                              first_period=first_season,
                                              centered=seasons_centered))
-            return np.column_stack(exog) if exog else None
+            if exog is not None:
+                exogs.append(exog)
+            return np.column_stack(exogs) if exogs else None
 
 
 def mat_sqrt(_2darray):
@@ -151,7 +164,7 @@ def mat_sqrt(_2darray):
     return chain_dot(u_, np.diag(s_), v_)
 
 
-def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0,
+def _endog_matrices(endog_tot, exog, diff_lags, deterministic, seasons=0,
                     first_season=0):
     """Returns different matrices needed for parameter estimation (compare p.
     186 in [1]_). These matrices consist of elements of the data as well as
@@ -218,7 +231,7 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0,
         # y_min1 = H.T.dot(y_min1)
 
     if "li" in deterministic:  # p. 299
-        y_min1_stack.append(np.arange(T) + p)
+        y_min1_stack.append(linear_trend(T, p, coint=True))
     y_min1 = np.row_stack(y_min1_stack)
 
     # p. 286:
@@ -236,7 +249,9 @@ def _endog_matrices(endog_tot, diff_lags, deterministic, seasons=0,
                                               first_period=first_season,
                                               centered=True).T)
     if "lo" in deterministic:
-        delta_x_stack.append(np.arange(T) + p + 1)
+        delta_x_stack.append(linear_trend(T, p))
+    if exog is not None:
+        delta_x_stack.append(exog[-T:].T)
     delta_x = np.row_stack(delta_x_stack)
     return y_1_T, delta_y_1_T, y_min1, delta_x
 
@@ -365,10 +380,10 @@ class VECM(tsbase.TimeSeriesModel):
     .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
 
-    def __init__(self, endog_tot, dates=None, freq=None, missing="none",
+    def __init__(self, endog_tot, exog=None, dates=None, freq=None, missing="none",
                  diff_lags=1, coint_rank=1, deterministic="nc", seasons=0,
                  first_season=0):
-        super(VECM, self).__init__(endog_tot, None, dates, freq,
+        super(VECM, self).__init__(endog_tot, exog, dates, freq,
                                    missing=missing)
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VECM")
@@ -488,7 +503,8 @@ class VECM(tsbase.TimeSeriesModel):
     def _estimate_vecm_ml(self, diff_lags, deterministic="nc", seasons=0, r=1,
                           first_season=0):
         y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
-                self.y, diff_lags, deterministic, seasons, first_season)
+                self.y, self.exog, diff_lags, deterministic, seasons,
+                first_season)
         T = y_1_T.shape[1]
 
         s00, s01, s10, s11, s11_, _, v = _sij(delta_x, delta_y_1_T, y_min1)
@@ -504,7 +520,7 @@ class VECM(tsbase.TimeSeriesModel):
                 gamma_tilde.dot(delta_x))
         sigma_u_tilde = temp.dot(temp.T) / T
 
-        return VECMResults(self.y, self.p, r, alpha_tilde, beta_tilde,
+        return VECMResults(self.y, self.exog, self.p, r, alpha_tilde, beta_tilde,
                            gamma_tilde, sigma_u_tilde,
                            deterministic=deterministic, seasons=seasons,
                            delta_y_1_T=delta_y_1_T, y_min1=y_min1,
@@ -537,11 +553,16 @@ class VECM(tsbase.TimeSeriesModel):
 
         if self.seasons > 0:
             param_names += ["season%d.%s" % (s, n)
-                            for n in self.endog_names
-                            for s in range(1, self.seasons)]
+                            for s in range(1, self.seasons)
+                            for n in self.endog_names]
 
         if "lo" in self.deterministic:
             param_names += ["lin_trend.%s" % n for n in self.endog_names]
+
+        if self.exog is not None:
+            param_names += ["exog%d.%s" % (exog_no, n)
+                            for exog_no in range(1, self.exog.shape[1] + 1)
+                            for n in self.endog_names]
 
         # 2. lagged endogenous terms
         param_names += [
@@ -744,12 +765,13 @@ class VECMResults(object):
         A[i], i=0, ..., k_ar-1.
     """
 
-    def __init__(self, endog_tot, level_var_lag_order, coint_rank, alpha, beta,
-                 gamma, sigma_u, deterministic='nc', seasons=0, first_season=0,
-                 delta_y_1_T=None, y_min1=None, delta_x=None, model=None,
-                 names=None, dates=None):
+    def __init__(self, endog_tot, exog, level_var_lag_order, coint_rank, alpha,
+                 beta, gamma, sigma_u, deterministic='nc', seasons=0,
+                 first_season=0, delta_y_1_T=None, y_min1=None, delta_x=None,
+                 model=None, names=None, dates=None):
         self.model = model
         self.y_all = endog_tot
+        self.exog = exog
         self.names = names
         self.dates = dates
         self.neqs = endog_tot.shape[0]
@@ -774,8 +796,13 @@ class VECMResults(object):
 
         split_const_season = 1 if "co" in deterministic else 0
         split_season_lin = split_const_season + ((seasons-1) if seasons else 0)
-        self.const, self.seasonal, self.lin_trend = \
-            np.hsplit(self.det_coef, [split_const_season, split_season_lin])
+        if "lo" in deterministic:
+            split_lin_exog = split_season_lin + 1
+        else:
+            split_lin_exog = split_season_lin
+        self.const, self.seasonal, self.lin_trend, self.exog_coefs = \
+            np.hsplit(self.det_coef,
+                      [split_const_season, split_season_lin, split_lin_exog])
 
         self.sigma_u = sigma_u
 
@@ -785,8 +812,8 @@ class VECMResults(object):
             self.delta_x = delta_x
         else:
             _y_1_T, self.delta_y_1_T, self.y_min1, self.delta_x = \
-                _endog_matrices(endog_tot, level_var_lag_order, deterministic,
-                                seasons)
+                _endog_matrices(endog_tot, self.exog, level_var_lag_order,
+                                deterministic, seasons)
         self.nobs = self.y_min1.shape[1]
 
     @cache_readonly
@@ -825,6 +852,8 @@ class VECMResults(object):
         dt = self.deterministic
         num_det = ("co" in dt) + ("lo" in dt)
         num_det += (self.seasons-1) if self.seasons else 0
+        if self.exog is not None:
+            num_det += self.exog.shape[1]
         b_id = scipy.linalg.block_diag(beta,
                                        np.identity(self.neqs * (self.k_ar-1) +
                                                    num_det))
@@ -1084,7 +1113,7 @@ class VECMResults(object):
         """
         return orth_ma_rep(self, maxn, P)
 
-    def predict(self, steps=5, alpha=None):
+    def predict(self, steps=5, alpha=None, exog_fc=None):
         """
 
         Parameters
@@ -1095,6 +1124,11 @@ class VECMResults(object):
             If None, compute point forecast only.
             If float, compute confidence intervals too. In this case the
             argument stands for the confidence level.
+        exog : ndarray (steps x self.exog.shape[1])
+            If self.exog is not None, then information about the future values
+            of exog have to be passed via this parameter. The ndarray may be
+            larger in it's first dimension. In this case only the first steps
+            rows will be considered.
 
         Returns
         -------
@@ -1105,6 +1139,18 @@ class VECMResults(object):
             period, the last row (index [steps-1]) is the steps-periods-ahead-
             forecast.
         """
+        if self.exog is not None and exog_fc is None:
+            raise ValueError("Please pass the future values of the VECM's exog"
+                             " terms!")
+        if self.exog is None and exog_fc is not None:
+            raise ValueError("This VECMResult-instance's exog attribute is "
+                             "None. Please don't pass a non-None value as the "
+                             "method's exog_fc-argument.")
+        if exog_fc is not None and exog_fc.shape[0] < steps:
+            raise ValueError("The argument exog_fc has to have at least steps "
+                             "elements in its first dimension")
+
+
         last_observations = self.y_all.T[-self.k_ar:]
         exog = []
         trend_coefs = []
@@ -1114,9 +1160,11 @@ class VECMResults(object):
         if self.const.size > 0:
             exog.append(exog_const)
             trend_coefs.append(self.const.T)
+
         if "ci" in self.deterministic:
             exog.append(exog_const)
             trend_coefs.append(self.alpha.dot(self.const_coint).T)
+
         if self.seasons > 0:
             first_future_season = (self.first_season + nobs_tot) % self.seasons
             exog_seasonal = seasonal_dummies(self.seasons, steps,
@@ -1124,13 +1172,21 @@ class VECMResults(object):
             exog.append(exog_seasonal)
             trend_coefs.append(self.seasonal.T)
 
-        exog_lin_trend = list(range(nobs_tot + 1, nobs_tot + steps + 1))
+        exog_lin_trend = linear_trend(self.nobs, self.k_ar)
+        exog_lin_trend = exog_lin_trend[-1] + 1 + np.arange(steps)
         if self.lin_trend.size > 0:
             exog.append(exog_lin_trend)
             trend_coefs.append(self.lin_trend.T)
+
+        exog_lin_trend_coint = linear_trend(self.nobs, self.k_ar, coint=True)
+        exog_lin_trend_coint = exog_lin_trend_coint[-1] + 1 + np.arange(steps)
         if "li" in self.deterministic:
-            exog.append(exog_lin_trend)
+            exog.append(exog_lin_trend_coint)
             trend_coefs.append(self.alpha.dot(self.lin_trend_coint).T)
+
+        if exog_fc is not None:
+            exog.append(exog_fc[:steps])
+            trend_coefs.append(self.exog_coefs.T)
 
         exog = np.column_stack(exog) if exog != [] else None
         if trend_coefs != []:
@@ -1252,12 +1308,15 @@ class VECMResults(object):
         exog = deterministic_to_exog(self.deterministic, self.seasons,
                                      len_data=self.nobs + self.k_ar,
                                      first_season=self.first_season,
-                                     seasons_centered=True)
+                                     seasons_centered=True,
+                                     exog=self.exog)
         var_results = VAR(y.T, exog).fit(maxlags=p, trend="nc")
 
         # num_restr is called N in Lutkepohl
         num_restr = len(causing) * len(caused) * (p - 1)
         num_det_terms = num_det_vars(self.deterministic, self.seasons)
+        if self.exog is not None:
+            num_det_terms += self.exog.shape[1]
 
         # Make restriction matrix
         C = np.zeros((num_restr, k*num_det_terms + k**2 * (p-1)), dtype=float)
@@ -1385,7 +1444,8 @@ class VECMResults(object):
         exog = deterministic_to_exog(self.deterministic, self.seasons,
                                      len_data=self.nobs + self.k_ar,
                                      first_season=self.first_season,
-                                     seasons_centered=True)
+                                     seasons_centered=True,
+                                     exog=self.exog)
 
         # Note: JMulTi seems to be using k_ar+1 instead of k_ar
         k, t, p = self.neqs, self.nobs, self.k_ar
@@ -1604,13 +1664,16 @@ class VECMResults(object):
                     masks.append(offset + np.array(i, ndmin=1))
                     offset += self.neqs
                 if self.seasons > 0:
-                    start = (self.seasons-1) * i
-                    masks.append(offset + np.arange(start,
-                                                    start + self.seasons-1))
-                    offset += (self.seasons-1) * self.neqs
+                    for _ in range(self.seasons-1):
+                        masks.append(offset + np.array(i, ndmin=1))
+                        offset += self.neqs
                 if "lo" in self.deterministic:
                     masks.append(offset + np.array(i, ndmin=1))
                     offset += self.neqs
+                if self.exog is not None:
+                    for _ in range(self.exog.shape[1]):
+                        masks.append(offset + np.array(i, ndmin=1))
+                        offset += self.neqs
                 # 2. Lagged endogenous terms
                 if self.k_ar - 1 > 0:
                     start = i * self.neqs * (self.k_ar-1)

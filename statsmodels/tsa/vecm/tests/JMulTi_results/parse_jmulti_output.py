@@ -102,7 +102,7 @@ def stringify_var_names(var_list, delimiter=""):
     return result.lower()
 
 
-def load_results_jmulti(dataset, dt_s_list):
+def load_results_jmulti(dataset):
     """
 
     Parameters
@@ -126,9 +126,9 @@ def load_results_jmulti(dataset, dt_s_list):
     """
     source = "jmulti"
 
-    results_dict_per_det_terms = dict.fromkeys(dt_s_list)
+    results_dict_per_det_terms = dict.fromkeys(dataset.dt_s_list)
         
-    for dt_s in dt_s_list:
+    for dt_s in dataset.dt_s_list:
         dt_string = dt_s_tup_to_string(dt_s)
         params_file = dataset.__str__()+"_"+source+"_"+dt_string+".txt"
         params_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
