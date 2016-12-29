@@ -28,17 +28,21 @@ identically distributed.
 from __future__ import division
 
 from functools import partial
-
 import itertools
-from numpy import linalg
-from scipy.stats import chi2_contingency, chi2
+import sys
+
+from six import reraise
 
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
-import numpy as np
-from scipy import stats
-import pandas as pd
 from statsmodels import iolib
 from statsmodels.tools.sm_exceptions import SingularMatrixWarning
+
+import numpy as np
+import pandas as pd
+
+from numpy import linalg
+from scipy.stats import chi2_contingency, chi2
+from scipy import stats
 
 
 def _make_df_square(table):
@@ -1411,10 +1415,6 @@ def cochrans_q(x, return_object=True):
     return q_stat, pvalue, df
 
 
-import pandas as pd
-import numpy as np
-
-
 class MRCVTable(object):
     """
     Analyses that can be performed on a two-way contingency table that contains
@@ -1454,14 +1454,12 @@ class MRCVTable(object):
     Bilder and Loughlin (2004)
     """
 
-    def __init__(self, table, rows_factor, columns_factor, shift_zeros=True):
+    def __init__(self, row_factors, column_factors, shift_zeros=True):
 
-        self.rows_factor = rows_factor
-        self.columns_factor = columns_factor
-        self.table = table
-
-        if shift_zeros and (self.table.min() == 0):
-            self.table = self.table + 0.5
+        self.row_factors = row_factors
+        self.column_factors = column_factors
+        self.table = self.table_from_factors(row_factors, column_factors)
+        # TODO george@survata.com shift zeros
 
     def __unicode__(self):
         template = "Contingency Table With Multi-Response Categorical Variables (MRCV's).\nData:\n{table}"
@@ -1506,13 +1504,14 @@ class MRCVTable(object):
 
         rows_factor = Factor(rows_data, labels=rows_labels, name=rows_factor_name, orientation="wide")
         columns_factor = Factor(columns_data, labels=columns_labels, name=columns_factor_name, orientation="wide")
-        table = cls.table_from_factors(columns_factor, rows_factor)
+        table = cls.table_from_factors([rows_factor], [columns_factor])
         return cls(table, rows_factor, columns_factor, shift_zeros)
 
     @classmethod
-    def table_from_factors(cls, columns_factor, rows_factor):
-        row_reshaped = rows_factor.reshape_for_contingency_table()
-        col_reshaped = columns_factor.reshape_for_contingency_table()
+    def table_from_factors(cls, row_factors, column_factors):
+        column_factor, row_factor = cls._extract_and_validate_factors(column_factors, row_factors)
+        row_reshaped = row_factor.reshape_for_contingency_table()
+        col_reshaped = column_factor.reshape_for_contingency_table()
         joint_dataframe = pd.merge(row_reshaped, col_reshaped, how="inner",
                                    on='observation_number', suffixes=("_row", "_col"))
         # without bool cast, '&' sometimes doesn't know how to compare types
@@ -1526,11 +1525,78 @@ class MRCVTable(object):
                                aggfunc=np.sum,)
         return table
 
-    def _spmi_stat(self):
-        rows_data = self.rows_factor.data
-        columns_data = self.columns_factor.data
-        rows_levels = self.rows_factor.labels
-        columns_levels = self.columns_factor.labels
+    @classmethod
+    def _extract_and_validate_factors(cls, column_factors, row_factors):
+        try:
+            try:
+                if len(row_factors) > 1:
+                    msg = "we don't currently support tables with more than one factor on the rows"
+                    raise NotImplementedError(msg)
+                row_factor = row_factors[0]
+            except TypeError:
+                if isinstance(row_factors, Factor):
+                    row_factor = row_factors
+                else:
+                    msg = "row_factors must be either a list of Factors or a Factor instance"
+                    traceback = sys.exc_info()[2]
+                    reraise(NotImplementedError, NotImplementedError(msg), traceback)
+            try:
+                if len(column_factors) > 2:
+                    msg = "we don't currently support tables with more than one factor on the columns"
+                    raise NotImplementedError(msg)
+                column_factor = column_factors[0]
+            except TypeError as e:
+                if isinstance(column_factors, Factor):
+                    column_factor = column_factors
+                else:
+                    msg = "column_factors must be either a list of Factors or a Factor instance"
+                    traceback = sys.exc_info()[2]
+                    reraise(NotImplementedError, NotImplementedError(msg), traceback)
+            return column_factor, row_factor
+        except IndexError:
+            # TODO george@survata.com check reraising error
+            error_type, error_value, traceback = sys.exc_info()
+            explanation = ("{original_message} (Please be sure to pass at "
+                           "least 1 factor on both the rows and columns)").format(original_message=error_value)
+            reraise(error_type, explanation, traceback)
+
+    def _calculate_pairwise_chi2s_for_MMI_item_response_table(self,
+                                                              single_response_factor,
+                                                              multiple_response_factor):
+        """
+
+        :param single_response_factor: 
+        :param multiple_response_factor: 
+        """
+        single_response_dataframe = single_response_factor.as_dataframe()
+        multiple_response_dataframe = multiple_response_factor.as_dataframe()
+
+        single_response_melted = pd.melt(single_response_dataframe.reset_index(), id_vars="index") \
+            .rename(columns={"index": "response_id",
+                             "value": "selected",
+                             "variable": "single_response_level"})
+        single_response_melted = single_response_melted[single_response_melted.selected == 1]
+
+        multiple_response_dataframe.index.name = "response_id"
+        multiple_response_dataframe = multiple_response_dataframe.reset_index()
+        joint_dataframe = pd.merge(single_response_melted.iloc[:, :2], multiple_response_dataframe, how="inner",
+                                   on="response_id")
+
+        mmi_chi_squared_by_cell = pd.Series(index=multiple_response_factor.labels)
+        single_response_column = joint_dataframe.single_response_level
+        for c in multiple_response_factor.labels:
+            multiple_response_column = joint_dataframe.loc[:, c]
+            crosstab = pd.crosstab(single_response_column, multiple_response_column)
+            chi2_results = chi2_contingency(crosstab, correction=False)
+            chi_squared_statistic, _, _, _ = chi2_results
+            mmi_chi_squared_by_cell.loc[c] = chi_squared_statistic
+        return mmi_chi_squared_by_cell
+
+    def _calculate_pairwise_chi2s_for_SPMI_item_response_table(self, rows_factor, columns_factor):
+        rows_data = rows_factor.data
+        columns_data = columns_factor.data
+        rows_levels = rows_factor.labels
+        columns_levels = columns_factor.labels
         chis_spmi = pd.DataFrame(index=rows_levels, columns=columns_levels)
         for i in range(0, len(rows_levels)):
             for j in range(0, len(columns_levels)):
@@ -1548,17 +1614,17 @@ class MRCVTable(object):
         chi2_survival_with_1_dof = partial(chi2.sf, df=1)
         p_value_ij = observed.applymap(chi2_survival_with_1_dof)
         p_value_min = p_value_ij.min().min()
-        bonferroni_correction_factor = self.rows_factor.level_count * self.columns_factor.level_count
+        bonferroni_correction_factor = self.row_factors.level_count * self.column_factors.level_count
         table_p_value_bonferroni_corrected = bonferroni_correction_factor * p_value_min
         cap = lambda x: min(x, 1)
         pairwise_bonferroni_corrected_p_values = (p_value_ij * bonferroni_correction_factor).applymap(cap)
         return table_p_value_bonferroni_corrected, pairwise_bonferroni_corrected_p_values
 
     def _test_for_single_pairwise_mutual_independence_using_bootstrap(self, observed):
-        W = self.rows_factor.as_dataframe()
-        Y = self.columns_factor.as_dataframe()
-        I = self.rows_factor.level_count
-        J = self.columns_factor.level_count
+        W = self.row_factors.as_dataframe()
+        Y = self.column_factors.as_dataframe()
+        I = self.row_factors.level_count
+        J = self.column_factors.level_count
         spmi_df = pd.concat([W, Y], axis=1)  # type: pd.DataFrame
         chi2_survival_with_1_dof = partial(chi2.sf, df=1)
 
@@ -1570,12 +1636,19 @@ class MRCVTable(object):
         X_sq_S_ij_star = pd.DataFrame(index=range(0, I * J), columns=range(0, b_max))
         p_value_b_min = []
         p_value_b_prod = []
+        rows_factor_name = self.row_factors.name
+        rows_factor_labels = self.row_factors.labels
+        columns_factor_name = self.column_factors.name
+        columns_factor_labels = self.column_factors.labels
         for i in range(0, b_max):
             # pd.concat requires unique indexes...sampling with replacement produces duplicates
             q1_sample = q1.sample(n, replace=True).reset_index(drop=True)
             q2_sample = q2.sample(n, replace=True).reset_index(drop=True)
-            sampled = pd.concat([q1_sample, q2_sample], axis=1)
-            stat_star = self._spmi_stat(sampled, I, J)
+
+            sample_rows_factor = Factor(q1_sample, rows_factor_labels, rows_factor_name)
+            sample_columns_factor = Factor(q2_sample, columns_factor_labels, columns_factor_name)
+            stat_star = self._calculate_pairwise_chi2s_for_SPMI_item_response_table(sample_rows_factor,
+                                                                                    sample_columns_factor)
             X_sq_S = stat_star.sum().sum()
             X_sq_S_star.append(X_sq_S)
             X_sq_S_ij_star.append(stat_star)
@@ -1585,7 +1658,8 @@ class MRCVTable(object):
             p_value_b_min.append(p_value_min)
             p_value_b_prod.append(p_value_prod)
 
-        observed = self.spmi_stat(spmi_df, I, J)
+        observed = self._calculate_pairwise_chi2s_for_SPMI_item_response_table(self.row_factors,
+                                                                               self.column_factors)
         observed_X_sq_S = observed.sum().sum()
         p_value_ij = observed.applymap(chi2_survival_with_1_dof)
         p_value_min = p_value_ij.min().min()
@@ -1597,10 +1671,10 @@ class MRCVTable(object):
         print(p_value_boot_min_overall)
 
     def _test_for_single_pairwise_mutual_independence_using_rao_scott_2(self, observed):
-        W = self.rows_factor.as_dataframe()
-        Y = self.columns_factor.as_dataframe()
-        I = self.rows_factor.level_count
-        J = self.columns_factor.level_count
+        W = self.row_factors.as_dataframe()
+        Y = self.column_factors.as_dataframe()
+        I = self.row_factors.level_count
+        J = self.column_factors.level_count
         spmi_df = pd.concat([W, Y], axis=1)  # type: pd.DataFrame
 
         def count_level_combinations(data, number_of_variables):
@@ -1640,8 +1714,9 @@ class MRCVTable(object):
         G_ij = G.dot(np.kron(i_2r, j_2c.T))
         H_ji = H.dot(np.kron(j_2r.T, i_2c))
 
-        H_kron = np.kron(pi_row, H_ji.T).T  # extra .T's b/c Python handles vector/matrix kronecker differently than R
-        G_kron = np.kron(G_ij.T, pi_col).T  # extra .T's b/c Python handles vector/matrix kronecker differently than R
+        # extra .T's b/c Python handles vector/matrix kronecker differently than R
+        H_kron = np.kron(pi_row, H_ji.T).T
+        G_kron = np.kron(G_ij.T, pi_col).T
         F = GH - H_kron - G_kron
 
         mult_cov = np.diag(tau) - np.outer(tau, tau.T)
@@ -1658,6 +1733,118 @@ class MRCVTable(object):
         df_rs2 = (I ** 2) * (J ** 2) / sum_Di_sigma_eigen_sq
         X_sq_S_p_value_rs2 = chi2.sf(X_sq_S_rs2, df=df_rs2)
         return X_sq_S_p_value_rs2
+
+    def _test_for_marginal_mutual_independence_using_bonferroni_correction(self,
+                                                                           single_response_factor,
+                                                                           multiple_response_factor):
+        mmi_pairwise_chis = self._calculate_pairwise_chi2s_for_MMI_item_response_table(single_response_factor,
+                                                                                       multiple_response_factor)
+        # TODO check
+        c = len(multiple_response_factor.labels)
+        r = len(multiple_response_factor.labels)
+
+        chi2_survival_with_1_dof = partial(chi2.sf, df=(r - 1))
+
+        p_value_ij = mmi_pairwise_chis.apply(chi2_survival_with_1_dof)
+        p_value_min = p_value_ij.min()
+
+        bonferroni_correction_factor = c
+        table_p_value_bonferroni_corrected = min(bonferroni_correction_factor * p_value_min, 1)
+        pairwise_bonferroni_corrected_p_values = (p_value_ij * bonferroni_correction_factor).apply(lambda x: min(x, 1))
+        return table_p_value_bonferroni_corrected, pairwise_bonferroni_corrected_p_values
+
+    def _test_for_marginal_mutual_independence_using_rao_scott_2(self,
+                                                                 single_response_factor,
+                                                                 multiple_response_factor):
+        W = single_response_factor.as_dataframe()
+        Y = multiple_response_factor.as_dataframe()
+        n, I = W.shape
+        J = len(Y.columns)
+        c = J
+        r = len(W.unique())
+
+        def conjoint_combinations(srcv, mrcv):
+            number_of_variables = 1 + len(mrcv.columns)
+            srcv = srcv.copy()  # don't modify original dataframe
+            mrcv = mrcv.copy()  # don't modify original dataframe
+            srcv.name = "srcv"
+            srcv_level_arguments = srcv.unique()
+            mrcv_level_arguments = [[0, 1] for i in range(0, number_of_variables - 1)]
+            level_arguments = [list(srcv_level_arguments), ] + mrcv_level_arguments
+            variables = ['srcv', ] + list(mrcv.columns)
+            level_combinations = list(itertools.product(*level_arguments))
+            full_combinations = pd.DataFrame(level_combinations, columns=variables)
+            full_combinations["_dummy"] = 0
+            data = pd.concat([srcv, mrcv], axis=1)
+            data.srcv.value_counts()
+            data['_dummy'] = 1
+            data = pd.concat([data, full_combinations]).reset_index(drop=True)
+            grouped = data.groupby(list(variables))
+            result = grouped.sum().reset_index()
+            return result
+
+        def count_level_combinations(data, number_of_variables):
+            data = data.copy()  # don't modify original dataframe
+            level_arguments = [[0, 1] for i in range(0, number_of_variables)]
+            variables = data.columns
+            level_combinations = list(itertools.product(*level_arguments))
+            full_combinations = pd.DataFrame(level_combinations, columns=variables)
+            full_combinations["_dummy"] = 0
+            data['_dummy'] = 1
+            data = pd.concat([data, full_combinations]).reset_index(drop=True)
+            grouped = data.groupby(list(variables))
+            return grouped.sum().reset_index()
+
+        Y_count_ordered = count_level_combinations(Y, J)
+        n_count_ordered = conjoint_combinations(W, Y)
+        Y_count_ordered.sort_values("_dummy")
+
+        # need make n_iplus be in same order as SRCV options in the n_counts_ordered_table
+        srcv_table_order = n_count_ordered.groupby('srcv').first().index.values
+        n_iplus = W.value_counts().reindex(srcv_table_order)
+        tau = n_count_ordered.iloc[:, -1].astype(int) / np.repeat(n_iplus, repeats=(2 ** c)).reset_index(drop=True)
+        G_tilde = Y_count_ordered.iloc[:, :-1].T
+        I_r = np.eye(r)
+        G = np.kron(I_r, G_tilde)
+        pi = G.dot(tau)
+        m = pi * np.repeat(n_iplus, c)
+        a_i = n_iplus / n
+        pi_not_j = (1 / n) * np.kron(np.ones(r), np.eye(c)).dot(m)
+        j_r = np.ones(r)
+        pi_not = np.kron(j_r, pi_not_j)
+        I_rc = np.eye(r * c)
+        I_c = np.eye(c)
+        J_rr = np.ones((r, r))
+        A = np.diag(a_i)
+        H = I_rc - np.kron(J_rr.dot(A), I_c)
+        D = np.kron(np.diag(n / n_iplus), np.diag(pi_not_j) * (1 - pi_not_j))
+        v_dim = r * (2 ** c)
+        V = np.zeros((v_dim, v_dim))
+
+        for i in range(0, r):
+            a = ((i - 1) * (2 ** c) + 1) - 1
+            b = ((i - 1) * (2 ** c) + (2 ** c)) - 1
+            tau_range = tau[a:b]
+            a_v = (1 / a_i[i - 1])
+            tau_diag = np.diag(tau_range)
+            tau_tcrossproduct = np.outer(tau_range, tau_range.T)
+            v = a_v * (tau_diag - tau_tcrossproduct)
+            V[a:b, a:b] = v
+
+        D_diag = np.diag(1 / np.diag(D))
+        D_diag.dot(H).dot(G)
+        Di_HGVGH = D_diag.dot(H).dot(G).dot(V.dot(G.T).dot(H.T))
+        eigenvalues, eigenvectors = np.linalg.eig(Di_HGVGH)
+        Di_HGVGH_eigen = np.real(eigenvalues)
+        sum_Di_HGVGH_eigen_sq = (Di_HGVGH_eigen ** 2).sum()
+        observed = self._calculate_pairwise_chi2s_for_MMI_item_response_table(single_response_factor,
+                                                                              multiple_response_factor)
+        observed_X_sq = observed.sum()
+        X_sq_S_rs2 = ((r - 1) * c) * observed_X_sq / sum_Di_HGVGH_eigen_sq
+        df_rs2 = ((r - 1) ** 2) * (c ** 2) / sum_Di_HGVGH_eigen_sq
+        X_sq_S_p_value_rs2 = chi2.sf(X_sq_S_rs2, df=df_rs2)
+        return X_sq_S_p_value_rs2
+
 
 
 class Factor(object):
