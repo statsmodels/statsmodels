@@ -1578,11 +1578,9 @@ class MRCVTable(object):
                            "least 1 factor on both the rows and columns")
             raise IndexError(explanation)
 
-    def _calculate_pairwise_chi2s_for_MMI_item_response_table(self,
-                                                              single_response_factor,
-                                                              multiple_response_factor):
+    @staticmethod
+    def _build_item_response_table_for_MMI(single_response_factor, multiple_response_factor):
         """
-
         :param single_response_factor:
         :param multiple_response_factor:
         """
@@ -1600,32 +1598,70 @@ class MRCVTable(object):
         joint_dataframe = pd.merge(single_response_melted.iloc[:, :2], multiple_response_dataframe, how="inner",
                                    on="response_id")
 
-        mmi_chi_squared_by_cell = pd.Series(index=multiple_response_factor.labels)
         single_response_column = joint_dataframe.single_response_level
+        item_response_pieces = {}
         for c in multiple_response_factor.labels:
             multiple_response_column = joint_dataframe.loc[:, c]
             crosstab = pd.crosstab(single_response_column, multiple_response_column)
+            item_response_pieces[c] = crosstab
+
+        item_response_table = pd.concat(item_response_pieces, axis=1,
+                                        names=["multiple_response_level", "selected?"])
+        return item_response_table
+
+    @classmethod
+    def _calculate_pairwise_chi2s_for_MMI_item_response_table(cls,
+                                                              single_response_factor,
+                                                              multiple_response_factor):
+        item_response_table = cls._build_item_response_table_for_MMI(single_response_factor,
+                                                                     multiple_response_factor)
+        mmi_chi_squared_by_cell = pd.Series(index=multiple_response_factor.labels)
+        for factor_level in item_response_table.columns.levels[0]:
+            crosstab = item_response_table.loc[:, factor_level]
             chi2_results = chi2_contingency(crosstab, correction=False)
             chi_squared_statistic, _, _, _ = chi2_results
-            mmi_chi_squared_by_cell.loc[c] = chi_squared_statistic
+            mmi_chi_squared_by_cell.loc[factor_level] = chi_squared_statistic
         return mmi_chi_squared_by_cell
 
-    def _calculate_pairwise_chi2s_for_SPMI_item_response_table(self, rows_factor, columns_factor):
+
+    @staticmethod
+    def _build_item_response_table_for_SPMI(rows_factor, columns_factor):
         rows_data = rows_factor.data
         columns_data = columns_factor.data
         rows_levels = rows_factor.labels
         columns_levels = columns_factor.labels
-        chis_spmi = pd.DataFrame(index=rows_levels, columns=columns_levels)
-        for i in range(0, len(rows_levels)):
-            for j in range(0, len(columns_levels)):
+        row_crosstabs = {}
+        for i, row_name in enumerate(rows_levels):
+            column_crosstabs = {}
+            for j, col_name in enumerate(columns_levels):
                 rows = np.array(rows_data[:, i])
                 columns = np.array(columns_data[:, j])
-                row_name = rows_levels[i]
-                col_name = columns_levels[j]
                 crosstab = pd.crosstab(index=rows, columns=columns, rownames=[row_name], colnames=[col_name])
+                column_crosstabs[col_name] = crosstab
+            row_crosstab = pd.concat(column_crosstabs, axis=1, names=["column_levels", "selected?"])
+            row_crosstabs[row_name] = row_crosstab
+        item_response_table = pd.concat(row_crosstabs, axis=0, names=["row_levels", "selected?"])
+        return item_response_table
+
+    @classmethod
+    def _calculate_pairwise_chi2s_for_SPMI_item_response_table(cls, rows_factor, columns_factor):
+        rows_levels = rows_factor.labels
+        columns_levels = columns_factor.labels
+        chis_spmi = pd.DataFrame(index=rows_levels, columns=columns_levels)
+        item_response_table = cls._build_item_response_table_for_SPMI(rows_factor, columns_factor)
+        for i in range(0, len(rows_levels) * 2, 2):
+            for j in range(0, len(columns_levels) * 2, 2):
+                # use integer indexers because level labels are not necessarily unique
+                # the "stride by 2" is because pandas does not support integer based indexing with multi-indexes
+                # the capture a whole level of the time (i.e. we can't say "give me the first column-group")
+                # so we need to manually select both the 0 and 1 column of each column group
+                # by providing an explicit couple of index positions
+                crosstab = item_response_table.iloc[(i, i+1), (j, j+1)]
                 chi2_results = chi2_contingency(crosstab, correction=False)
                 chi_squared_statistic, _, _, _ = chi2_results
-                chis_spmi.loc[row_name, col_name] = chi_squared_statistic
+                row_level = rows_levels[int(i / 2)]
+                column_level = columns_levels[int(j / 2)]
+                chis_spmi.loc[row_level, column_level] = chi_squared_statistic
         return chis_spmi
 
     def _test_for_single_pairwise_mutual_independence_using_bonferroni(self, row_factor, column_factor):
