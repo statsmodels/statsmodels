@@ -2,6 +2,7 @@
 Miscellaneous utility code for VAR estimation
 """
 from statsmodels.compat.python import range, string_types, asbytes, long
+from statsmodels.compat.pandas import frequencies
 import numpy as np
 import scipy.stats as stats
 import scipy.linalg.decomp as decomp
@@ -109,10 +110,11 @@ def parse_lutkepohl_data(path): # pragma: no cover
     Source for data files: www.jmulti.de
     """
 
+    from statsmodels.compat.pandas import datetools as dt
+
     from collections import deque
     from datetime import datetime
     import pandas
-    import pandas.core.datetools as dt
     import re
 
     regex = re.compile(asbytes('<(.*) (\w)([\d]+)>.*'))
@@ -141,9 +143,9 @@ def parse_lutkepohl_data(path): # pragma: no cover
     year = int(year)
 
     offsets = {
-        asbytes('Q') : dt.BQuarterEnd(),
-        asbytes('M') : dt.BMonthEnd(),
-        asbytes('A') : dt.BYearEnd()
+        asbytes('Q') : frequencies.BQuarterEnd(),
+        asbytes('M') : frequencies.BMonthEnd(),
+        asbytes('A') : frequencies.BYearEnd()
     }
 
     # create an instance

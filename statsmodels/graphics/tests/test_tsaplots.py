@@ -1,4 +1,5 @@
 from statsmodels.compat.python import lmap, map
+from statsmodels.compat.pandas import datetools
 import numpy as np
 import pandas as pd
 from numpy.testing import dec, assert_equal
@@ -91,7 +92,7 @@ def test_plot_month():
     dta = sm.datasets.elnino.load_pandas().data
     dta['YEAR'] = dta.YEAR.astype(int).apply(str)
     dta = dta.set_index('YEAR').T.unstack()
-    dates = lmap(lambda x: pd.tseries.tools.parse_time_string('1 '+' '.join(x))[0],
+    dates = lmap(lambda x: datetools.parse_time_string('1 '+' '.join(x))[0],
                  dta.index.values)
 
     # test dates argument
@@ -123,7 +124,7 @@ def test_plot_quarter():
     plt.close('all')
 
     # test with a DatetimeIndex with no freq
-    parser = pd.tseries.tools.parse_time_string
+    parser = datetools.parse_time_string
     dta.set_index(pd.DatetimeIndex((x[0] for x in map(parser, dates))),
                   inplace=True)
     quarter_plot(dta.unemp)
