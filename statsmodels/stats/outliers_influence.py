@@ -699,7 +699,9 @@ def summary_table(res, alpha=0.05):
 
 
     #standard error for predicted observation
-    predict_se, predict_ci_low, predict_ci_upp = wls_prediction_std(res)
+    tmp = wls_prediction_std(res, alpha=alpha)
+    predict_se, predict_ci_low, predict_ci_upp = tmp
+
     predict_ci = np.column_stack((predict_ci_low, predict_ci_upp))
 
     #standard deviation of residual
