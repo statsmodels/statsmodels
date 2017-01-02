@@ -292,7 +292,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 key = nobs + key
             # Out-of-sample (note that we include key itself in the new index)
             elif key > base_index[-1]:
-                index = Int64Index(np.arange(base_index[0], key + 1))
+                index = Int64Index(np.arange(base_index[0], int(key + 1)))
 
         # Special handling for date indexes
         if date_index:
@@ -304,7 +304,8 @@ class TimeSeriesModel(base.LikelihoodModel):
                 # Out-of-sample (note that we include key itself in the new
                 # index)
                 elif key > len(base_index) - 1:
-                    index = index_class(start=base_index[0], periods=key + 1,
+                    index = index_class(start=base_index[0],
+                                        periods=int(key + 1),
                                         freq=base_index.freq)
                     key = index[-1]
                 else:
