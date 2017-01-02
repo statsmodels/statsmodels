@@ -265,7 +265,6 @@ class TestCategorical(object):
 
         structdes['str_instr'] = self.string_var[:, None]
         self.structdes = structdes
-        self.recdes = structdes.view(np.recarray)
 
 
 class TestCategoricalNumerical(TestCategorical):
@@ -292,39 +291,6 @@ class TestCategoricalNumerical(TestCategorical):
         des = to_categorical(self.instr, drop=True)
         assert_array_equal(des, self.dummy)
         assert_equal(des.shape[1], 5)
-
-    def test_recarray2d(self):
-        des = to_categorical(self.recdes, col='instrument')
-        # better way to do this?
-        test_des = np.column_stack(([des[_] for _ in des.dtype.names[-5:]]))
-        assert_array_equal(test_des, self.dummy)
-        assert_equal(len(des.dtype.names), 9)
-
-    def test_recarray2dint(self):
-        des = to_categorical(self.recdes, col=2)
-        test_des = np.column_stack(([des[_] for _ in des.dtype.names[-5:]]))
-        assert_array_equal(test_des, self.dummy)
-        assert_equal(len(des.dtype.names), 9)
-
-    def test_recarray1d(self):
-        instr = self.structdes['instrument'].view(np.recarray)
-        dum = to_categorical(instr)
-        test_dum = np.column_stack(([dum[_] for _ in dum.dtype.names[-5:]]))
-        assert_array_equal(test_dum, self.dummy)
-        assert_equal(len(dum.dtype.names), 6)
-
-    def test_recarray1d_drop(self):
-        instr = self.structdes['instrument'].view(np.recarray)
-        dum = to_categorical(instr, drop=True)
-        test_dum = np.column_stack(([dum[_] for _ in dum.dtype.names]))
-        assert_array_equal(test_dum, self.dummy)
-        assert_equal(len(dum.dtype.names), 5)
-
-    def test_recarray2d_drop(self):
-        des = to_categorical(self.recdes, col='instrument', drop=True)
-        test_des = np.column_stack(([des[_] for _ in des.dtype.names[-5:]]))
-        assert_array_equal(test_des, self.dummy)
-        assert_equal(len(des.dtype.names), 8)
 
     def test_structarray2d(self):
         des = to_categorical(self.structdes, col='instrument')
@@ -411,39 +377,6 @@ class TestCategoricalString(TestCategorical):
         des = to_categorical(self.string_var, drop=True)
         assert_array_equal(des, self.dummy)
         assert_equal(des.shape[1], 5)
-
-    def test_recarray2d(self):
-        des = to_categorical(self.recdes, col='str_instr')
-        # better way to do this?
-        test_des = np.column_stack(([des[_] for _ in des.dtype.names[-5:]]))
-        assert_array_equal(test_des, self.dummy)
-        assert_equal(len(des.dtype.names), 9)
-
-    def test_recarray2dint(self):
-        des = to_categorical(self.recdes, col=3)
-        test_des = np.column_stack(([des[_] for _ in des.dtype.names[-5:]]))
-        assert_array_equal(test_des, self.dummy)
-        assert_equal(len(des.dtype.names), 9)
-
-    def test_recarray1d(self):
-        instr = self.structdes['str_instr'].view(np.recarray)
-        dum = to_categorical(instr)
-        test_dum = np.column_stack(([dum[_] for _ in dum.dtype.names[-5:]]))
-        assert_array_equal(test_dum, self.dummy)
-        assert_equal(len(dum.dtype.names), 6)
-
-    def test_recarray1d_drop(self):
-        instr = self.structdes['str_instr'].view(np.recarray)
-        dum = to_categorical(instr, drop=True)
-        test_dum = np.column_stack(([dum[_] for _ in dum.dtype.names]))
-        assert_array_equal(test_dum, self.dummy)
-        assert_equal(len(dum.dtype.names), 5)
-
-    def test_recarray2d_drop(self):
-        des = to_categorical(self.recdes, col='str_instr', drop=True)
-        test_des = np.column_stack(([des[_] for _ in des.dtype.names[-5:]]))
-        assert_array_equal(test_des, self.dummy)
-        assert_equal(len(des.dtype.names), 8)
 
     def test_structarray2d(self):
         des = to_categorical(self.structdes, col='str_instr')
