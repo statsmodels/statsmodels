@@ -292,38 +292,6 @@ class TestCategoricalNumerical(TestCategorical):
         assert_array_equal(des, self.dummy)
         assert_equal(des.shape[1], 5)
 
-    def test_structarray2d(self):
-        des = to_categorical(self.structdes, col='instrument')
-        test_des = np.column_stack(([des[_] for _ in des.dtype.names[-5:]]))
-        assert_array_equal(test_des, self.dummy)
-        assert_equal(len(des.dtype.names), 9)
-
-    def test_structarray2dint(self):
-        des = to_categorical(self.structdes, col=2)
-        test_des = np.column_stack(([des[_] for _ in des.dtype.names[-5:]]))
-        assert_array_equal(test_des, self.dummy)
-        assert_equal(len(des.dtype.names), 9)
-
-    def test_structarray1d(self):
-        instr = self.structdes['instrument'].view(dtype=[('var1', 'f4')])
-        dum = to_categorical(instr)
-        test_dum = np.column_stack(([dum[_] for _ in dum.dtype.names[-5:]]))
-        assert_array_equal(test_dum, self.dummy)
-        assert_equal(len(dum.dtype.names), 6)
-
-    def test_structarray2d_drop(self):
-        des = to_categorical(self.structdes, col='instrument', drop=True)
-        test_des = np.column_stack(([des[_] for _ in des.dtype.names[-5:]]))
-        assert_array_equal(test_des, self.dummy)
-        assert_equal(len(des.dtype.names), 8)
-
-    def test_structarray1d_drop(self):
-        instr = self.structdes['instrument'].view(dtype=[('var1', 'f4')])
-        dum = to_categorical(instr, drop=True)
-        test_dum = np.column_stack(([dum[_] for _ in dum.dtype.names]))
-        assert_array_equal(test_dum, self.dummy)
-        assert_equal(len(dum.dtype.names), 5)
-
     def test_arraylike2d(self):
         des = to_categorical(self.structdes.tolist(), col=2)
         des = np.array(des)
@@ -377,38 +345,6 @@ class TestCategoricalString(TestCategorical):
         des = to_categorical(self.string_var, drop=True)
         assert_array_equal(des, self.dummy)
         assert_equal(des.shape[1], 5)
-
-    def test_structarray2d(self):
-        des = to_categorical(self.structdes, col='str_instr')
-        test_des = np.column_stack(([des[_] for _ in des.dtype.names[-5:]]))
-        assert_array_equal(test_des, self.dummy)
-        assert_equal(len(des.dtype.names), 9)
-
-    def test_structarray2dint(self):
-        des = to_categorical(self.structdes, col=3)
-        test_des = np.column_stack(([des[_] for _ in des.dtype.names[-5:]]))
-        assert_array_equal(test_des, self.dummy)
-        assert_equal(len(des.dtype.names), 9)
-
-    def test_structarray1d(self):
-        instr = self.structdes['str_instr'].view(dtype=[('var1', 'a10')])
-        dum = to_categorical(instr)
-        test_dum = np.column_stack(([dum[_] for _ in dum.dtype.names[-5:]]))
-        assert_array_equal(test_dum, self.dummy)
-        assert_equal(len(dum.dtype.names), 6)
-
-    def test_structarray2d_drop(self):
-        des = to_categorical(self.structdes, col='str_instr', drop=True)
-        test_des = np.column_stack(([des[_] for _ in des.dtype.names[-5:]]))
-        assert_array_equal(test_des, self.dummy)
-        assert_equal(len(des.dtype.names), 8)
-
-    def test_structarray1d_drop(self):
-        instr = self.structdes['str_instr'].view(dtype=[('var1', 'a10')])
-        dum = to_categorical(instr, drop=True)
-        test_dum = np.column_stack(([dum[_] for _ in dum.dtype.names]))
-        assert_array_equal(test_dum, self.dummy)
-        assert_equal(len(dum.dtype.names), 5)
 
     def test_arraylike2d(self):
         des = np.column_stack((self.des, self.instr, self.des)).tolist()
