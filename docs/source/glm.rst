@@ -6,7 +6,7 @@ Generalized Linear Models
 =========================
 
 Generalized linear models currently supports estimation using the one-parameter
-exponential families
+exponential families.
 
 See `Module Reference`_ for commands and arguments.
 
@@ -36,6 +36,50 @@ Technical Documentation
 
 ..   ..glm_techn1
 ..   ..glm_techn2
+
+The statistical model is assumed to be
+
+ :math:`Y \sim F_{edf}(\cdot|\theta,\phi,w)` and
+ :math:`\mu = E[Y] = g^{-1}(x^\prime\beta)`.
+
+where :math:`g` is the link function and :math:`F_{edf}(\cdot|\theta,\phi,w)`
+is a distribution of the exponential dispersion family with natural parameter
+:math:`\theta`, scale parameter :math:`\phi` and weight :math:`w`.
+Its density is given by
+
+ :math:`f_{edf}(y|\theta,\phi,w) = c(y,\phi,w)
+ \exp\left(\frac{y\theta-b(\theta)}{\phi}w\right)\,.`
+
+It follows that :math:`\mu = b'(\theta)` and
+:math:`Var[Y]=\frac{\phi}{w}b''(\theta)`. The inverse of the first equation
+gives the natural parameter as a function of the mean :math:`\theta(\mu)`
+such that
+
+ :math:`Var[Y] = \frac{\phi}{w} v(\mu)`
+
+with :math:`v(\mu) = b''(\theta(\mu))`. Therefore it is said that a GLM is
+determined by link function :math:`g` and variance function :math:`v(\mu)`
+alone (and :math:`x` of course).
+
+Note that while :math:`\phi` is the same for every observation :math:`y_i`
+and therefore does not influence the estimation of :math:`\beta`,
+the weights :math:`w_i` might be different for every :math:`y_i` such that the
+estimation of :math:`\beta` depends on them.
+
+==================================== ========================= ================ =========================== =========================================== ================================================ =====================
+Distribution                         Domain                    :math:`\mu=E[Y]` :math:`v(\mu)`              :math:`\theta(\mu)`                         :math:`b(\theta)`                                :math:`\phi`
+==================================== ========================= ================ =========================== =========================================== ================================================ =====================
+Binomial :math:`B(n,p)`              :math:`0,1,\ldots,n`      :math:`np`       :math:`\mu-\frac{\mu^2}{n}` :math:`\log\frac{p}{1-p}`                   :math:`n\log(1+e^\theta)`                        1
+Poisson :math:`P(\mu)`               :math:`0,1,\ldots,\infty` :math:`\mu`      :math:`\mu`                 :math:`\log(\mu)`                           :math:`e^\theta`                                 1
+Neg. Binom. :math:`NB(\mu,\alpha)`   :math:`0,1,\ldots,\infty` :math:`\mu`      :math:`\mu+\alpha\mu^2`     :math:`\log(\frac{\alpha\mu}{1+\alpha\mu})` :math:`-\frac{1}{\alpha}\log(1-\alpha e^\theta)` 1
+Normal :math:`N(\mu,\sigma^2)`       :math:`(-\infty,\infty)`  :math:`\mu`      :math:`1`                   :math:`\mu`                                 :math:`\frac{1}{2}\theta^2`                      :math:`\sigma^2`
+Gamma :math:`N(\mu,\nu)`             :math:`(0,\infty)`        :math:`\mu`      :math:`\mu^2`               :math:`-\frac{1}{\mu}`                      :math:`-\log(-\theta)`                           :math:`\frac{1}{\nu}`
+Inv. Gauss. :math:`IG(\mu,\sigma^2)` :math:`(0,\infty)`        :math:`\mu`      :math:`\mu^3`               :math:`-\frac{1}{2\mu^2}`                   :math:`-\sqrt{-2\theta}`                         :math:`\sigma^2`
+Tweedie :math:`p\geq 1`              depends on :math:`p`      :math:`\mu`      :math:`\mu^p`               :math:`\frac{\mu^{1-p}}{1-p}`               :math:`\frac{\mu^{2-p}}{2-p}`                    :math:`\phi`
+==================================== ========================= ================ =========================== =========================================== ================================================ =====================
+
+The Tweedie distribution has special cases for :math:`p=0,1,2` not listed in the
+table.
 
 References
 ^^^^^^^^^^
@@ -84,6 +128,7 @@ The distribution families currently implemented are
    InverseGaussian
    NegativeBinomial
    Poisson
+   Tweedie
 
 
 .. _links:
@@ -121,5 +166,3 @@ available link functions can be obtained by
    logit
    nbinom
    probit
-
-
