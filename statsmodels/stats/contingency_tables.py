@@ -1676,27 +1676,32 @@ class MRCVTable(object):
         pairwise_bonferroni_corrected_p_values = (p_value_ij * bonferroni_correction_factor).applymap(cap)
         return table_p_value_bonferroni_corrected, pairwise_bonferroni_corrected_p_values
 
-    def _test_for_single_pairwise_mutual_independence_using_bootstrap(self, observed):
-        W = self.row_factors.as_dataframe()
-        Y = self.column_factors.as_dataframe()
-        I = self.row_factors.level_count
-        J = self.column_factors.level_count
+    def _test_for_single_pairwise_mutual_independence_using_bootstrap(self,
+                                                                      row_factor,
+                                                                      column_factor,
+                                                                      verbose=False):
+        W = row_factor.as_dataframe()
+        Y = column_factor.as_dataframe()
+        I = row_factor.level_count
+        J = column_factor.level_count
         spmi_df = pd.concat([W, Y], axis=1)  # type: pd.DataFrame
         chi2_survival_with_1_dof = partial(chi2.sf, df=1)
 
         b_max = 1000
         n = len(spmi_df)
-        q1 = spmi_df.iloc[:, :I + 1]
-        q2 = spmi_df.iloc[:, I + 1:I + J]
+        q1 = spmi_df.iloc[:, :I]
+        q2 = spmi_df.iloc[:, I:I + J]
         X_sq_S_star = []
         X_sq_S_ij_star = pd.DataFrame(index=range(0, I * J), columns=range(0, b_max))
         p_value_b_min = []
         p_value_b_prod = []
-        rows_factor_name = self.row_factors.name
-        rows_factor_labels = self.row_factors.labels
-        columns_factor_name = self.column_factors.name
-        columns_factor_labels = self.column_factors.labels
+        rows_factor_name = row_factor.name
+        rows_factor_labels = row_factor.labels
+        columns_factor_name = column_factor.name
+        columns_factor_labels = column_factor.labels
         for i in range(0, b_max):
+            if verbose and i % 50 == 0:
+                print("sample {}".format(i))
             # pd.concat requires unique indexes...sampling with replacement produces duplicates
             q1_sample = q1.sample(n, replace=True).reset_index(drop=True)
             q2_sample = q2.sample(n, replace=True).reset_index(drop=True)
@@ -1714,8 +1719,7 @@ class MRCVTable(object):
             p_value_b_min.append(p_value_min)
             p_value_b_prod.append(p_value_prod)
 
-        observed = self._calculate_pairwise_chi2s_for_SPMI_item_response_table(self.row_factors,
-                                                                               self.column_factors)
+        observed = self._calculate_pairwise_chi2s_for_SPMI_item_response_table()
         observed_X_sq_S = observed.sum().sum()
         p_value_ij = observed.applymap(chi2_survival_with_1_dof)
         p_value_min = p_value_ij.min().min()
@@ -1914,8 +1918,11 @@ class Factor(object):
     def __init__(self, data, labels, name, orientation="wide"):
         self.name = name
         self.labels = labels
-        self.data = np.asarray(data, dtype=np.float64)
         self.orientation = orientation
+        if orientation == "wide":
+            self.data = np.asarray(data, dtype=np.float64)
+        else:
+            self.data = np.asarray(data, dtype=np.object)
 
     def __unicode__(self):
         return "Factor: {name}\nColumns:{columns}\nData:\n{data}".format(name=self.name, columns=self.labels,
@@ -1935,4 +1942,14 @@ class Factor(object):
 
     def as_dataframe(self):
         return pd.DataFrame(self.data, columns=self.labels)
+
+    def cast_wide_to_narrow(self):
+        solid = self.data
+        solid_df = pd.DataFrame(solid, columns=self.labels)
+        solid_df.head()
+        melted = pd.melt(solid_df.reset_index(), id_vars="index")
+        melted = melted.rename(columns={"index": "observation_id"})
+        narrow_data = melted[melted.value == 1].set_index("observation_id").sort_index()
+        narrow_factor = Factor(narrow_data.values, narrow_data.columns, self.name, orientation="narrow")
+        return narrow_factor
 
