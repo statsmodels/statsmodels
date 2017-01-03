@@ -111,3 +111,7 @@ class PrecisionWarning(UserWarning):
 
 class SpecificationWarning(UserWarning):
     pass
+
+
+class HessianInversionWarning(UserWarning):
+    pass

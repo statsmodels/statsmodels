@@ -418,3 +418,4 @@ def test_all():
 
     if pdf_output:
         pdf.close()
+    plt.close('all')

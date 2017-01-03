@@ -17,7 +17,7 @@ Testing
 -------
 
 Most results have been verified with at least one other statistical package:
-R, Stata or SAS. The guiding principal for the initial rewrite and for 
+R, Stata or SAS. The guiding principle for the initial rewrite and for 
 continued development is that all numbers have to be verified. Some 
 statistical methods are tested with Monte Carlo studies. While we strive to
 follow this test driven approach, there is no guarantee that the code is 

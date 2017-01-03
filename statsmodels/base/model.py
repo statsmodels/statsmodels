@@ -9,7 +9,8 @@ from statsmodels.stats.contrast import ContrastResults, WaldTestResults
 from statsmodels.tools.decorators import resettable_cache, cache_readonly
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import approx_fprime
-from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.sm_exceptions import ValueWarning, \
+    HessianInversionWarning
 from statsmodels.formula import handle_formula_data
 from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.base.optimizer import Optimizer
@@ -456,14 +457,20 @@ class LikelihoodModel(Model):
         elif method == 'newton' and full_output:
             Hinv = np.linalg.inv(-retvals['Hessian']) / nobs
         elif not skip_hessian:
-            try:
-                Hinv = np.linalg.inv(-1 * self.hessian(xopt))
-            except:
-                #might want custom warning ResultsWarning? NumericalWarning?
+            H = -1 * self.hessian(xopt)
+            invertible = False
+            if np.all(np.isfinite(H)):
+                eigvals, eigvecs = np.linalg.eigh(H)
+                if np.min(eigvals) > 0:
+                    invertible = True
+
+            if invertible:
+                Hinv = eigvecs.dot(np.diag(1.0 / eigvals)).dot(eigvecs.T)
+                Hinv = np.asfortranarray((Hinv + Hinv.T) / 2.0)
+            else:
                 from warnings import warn
-                warndoc = ('Inverting hessian failed, no bse or '
-                           'cov_params available')
-                warn(warndoc, RuntimeWarning)
+                warn('Inverting hessian failed, no bse or cov_params '
+                     'available', HessianInversionWarning)
                 Hinv = None
 
         if 'cov_type' in kwargs:
@@ -591,7 +598,6 @@ class GenericLikelihoodModel(LikelihoodModel):
         #Initialize is called by
         #statsmodels.model.LikelihoodModel.__init__
         #and should contain any preprocessing that needs to be done for a model
-        from statsmodels.tools import tools
         if self.exog is not None:
             # assume constant
             er = np_matrix_rank(self.exog)
@@ -764,7 +770,14 @@ class Results(object):
         if transform and hasattr(self.model, 'formula') and exog is not None:
             from patsy import dmatrix
             exog = dmatrix(self.model.data.design_info.builder,
-                           exog)
+                           exog, return_type="dataframe")
+            if len(exog) < len(exog_index):
+                # missing values, rows have been dropped
+                if exog_index is not None:
+                    exog = exog.reindex(exog_index)
+                else:
+                    import warnings
+                    warnings.warn("nan rows have been dropped", ValueWarning)
 
         if exog is not None:
             exog = np.asarray(exog)

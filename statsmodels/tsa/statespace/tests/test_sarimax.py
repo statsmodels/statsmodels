@@ -157,6 +157,12 @@ class SARIMAXStataTests(object):
             hqic, 3
         )
 
+    def test_standardized_forecasts_error(self):
+        cython_sfe = self.result.standardized_forecasts_error
+        self.result._standardized_forecasts_error = None
+        python_sfe = self.result.standardized_forecasts_error
+        assert_allclose(cython_sfe, python_sfe)
+
 
 class ARIMA(SARIMAXStataTests):
     """
@@ -1989,3 +1995,22 @@ def test_misc_exog():
     # Test invalid model specifications
     assert_raises(ValueError, sarimax.SARIMAX, endog, exog=np.zeros((10, 4)),
                   order=(1, 1, 0))
+
+
+def test_datasets():
+    # Test that some unusual types of datasets work
+
+    np.random.seed(232849)
+    endog = np.random.binomial(1, 0.5, size=100)
+    exog = np.random.binomial(1, 0.5, size=100)
+    mod = sarimax.SARIMAX(endog, exog=exog, order=(1, 0, 0))
+    res = mod.fit()
+
+
+def test_predict_custom_index():
+    np.random.seed(328423)
+    endog = pd.DataFrame(np.random.normal(size=50))
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0))
+    res = mod.smooth(mod.start_params)
+    out = res.predict(start=1, end=1, index=['a'])
+    assert_equal(out.index.equals(pd.Index(['a'])), True)

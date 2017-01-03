@@ -197,6 +197,10 @@ class VARMAX(MLEModel):
             endog, exog=exog, k_states=k_states, k_posdef=k_posdef, **kwargs
         )
 
+        # Set as time-varying model if we have time-trend or exog
+        if self.k_exog > 0 or self.k_trend > 1:
+            self.ssm._time_invariant = False
+
         # Initialize the parameters
         self.parameters = OrderedDict()
         self.parameters['trend'] = self.k_endog * self.k_trend
@@ -297,7 +301,13 @@ class VARMAX(MLEModel):
         params = np.zeros(self.k_params, dtype=np.float64)
 
         # A. Run a multivariate regression to get beta estimates
-        endog = self.endog.copy()
+        endog = pd.DataFrame(self.endog.copy())
+        # Pandas < 0.13 didn't support the same type of DataFrame interpolation
+        try:
+            endog = endog.interpolate()
+        except TypeError:
+            pass
+        endog = endog.fillna(method='backfill').values
         exog = self.exog.copy() if self.k_exog > 0 else None
 
         # Although the Kalman filter can deal with missing values in endog,
@@ -724,8 +734,8 @@ class VARMAXResults(MLEResults):
                 ma_params.reshape(k_endog * k_ma, k_endog).T
             ).reshape(k_endog, k_endog, k_ma).T
 
-    def get_prediction(self, start=None, end=None, dynamic=False, exog=None,
-                       **kwargs):
+    def get_prediction(self, start=None, end=None, dynamic=False, index=None,
+                       exog=None, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -764,11 +774,11 @@ class VARMAXResults(MLEResults):
             Array of out of sample forecasts.
         """
         if start is None:
-                start = 0
+            start = self.model._index[0]
 
         # Handle end (e.g. date)
-        _start = self.model._get_predict_start(start)
-        _end, _out_of_sample = self.model._get_predict_end(end)
+        _start, _end, _out_of_sample, prediction_index = (
+            self.model._get_prediction_index(start, end, index, silent=True))
 
         # Handle exogenous parameters
         if _out_of_sample and (self.model.k_exog + self.model.k_trend > 0):
@@ -820,8 +830,8 @@ class VARMAXResults(MLEResults):
                  ' required. `exog` argument ignored.', ValueWarning)
 
         return super(VARMAXResults, self).get_prediction(
-            start=start, end=end, dynamic=dynamic, exog=exog, **kwargs
-        )
+            start=start, end=end, dynamic=dynamic, index=index, exog=exog,
+            **kwargs)
 
     def summary(self, alpha=.05, start=None, separate_params=True):
         from statsmodels.iolib.summary import summary_params

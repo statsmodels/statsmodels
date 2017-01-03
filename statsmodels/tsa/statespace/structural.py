@@ -58,14 +58,14 @@ class UnobservedComponents(MLEModel):
     trend : bool, optional
         Whether or not to include a trend component. Default is False. If True,
         `level` must also be True.
-    seasonal_period : int or None, optional
-        The period of the seasonal component. Default is None.
+    seasonal : int or None, optional
+        The period of the seasonal component, if any. Default is None.
     cycle : bool, optional
         Whether or not to include a cycle component. Default is False.
     ar : int or None, optional
         The order of the autoregressive component. Default is None.
     exog : array_like or None, optional
-        Exoenous variables.
+        Exogenous variables.
     irregular : bool, optional
         Whether or not to include an irregular component. Default is False.
     stochastic_level : bool, optional
@@ -92,7 +92,7 @@ class UnobservedComponents(MLEModel):
     Notes
     -----
 
-    Thse models take the general form (see [1]_ Chapter 3.2 for all details)
+    These models take the general form (see [1]_ Chapter 3.2 for all details)
 
     .. math::
 
@@ -489,6 +489,10 @@ class UnobservedComponents(MLEModel):
             endog, k_states, k_posdef=k_posdef, exog=exog, **kwargs
         )
         self.setup()
+
+        # Set as time-varying model if we have exog
+        if self.k_exog > 0:
+            self.ssm._time_invariant = False
 
         # Initialize the model
         self.ssm.loglikelihood_burn = loglikelihood_burn
@@ -1431,8 +1435,8 @@ class UnobservedComponentsResults(MLEResults):
 
         return fig
 
-    def get_prediction(self, start=None, end=None, dynamic=False, exog=None,
-                       **kwargs):
+    def get_prediction(self, start=None, end=None, dynamic=False, index=None,
+                       exog=None, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -1475,11 +1479,11 @@ class UnobservedComponentsResults(MLEResults):
             Array of out of sample forecasts.
         """
         if start is None:
-            start = 0
+            start = self.model._index[0]
 
         # Handle end (e.g. date)
-        _start = self.model._get_predict_start(start)
-        _end, _out_of_sample = self.model._get_predict_end(end)
+        _start, _end, _out_of_sample, prediction_index = (
+            self.model._get_prediction_index(start, end, index, silent=True))
 
         # Handle exogenous parameters
         if _out_of_sample and self.model.k_exog > 0:
@@ -1524,8 +1528,8 @@ class UnobservedComponentsResults(MLEResults):
                  ' required. `exog` argument ignored.', ValueWarning)
 
         return super(UnobservedComponentsResults, self).get_prediction(
-            start=start, end=end, dynamic=dynamic, exog=exog, **kwargs
-        )
+            start=start, end=end, dynamic=dynamic, index=index, exog=exog,
+            **kwargs)
 
     def summary(self, alpha=.05, start=None):
         # Create the model name
