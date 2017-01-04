@@ -574,10 +574,27 @@ def test_multiple_mutual_independence_true_using_bonferroni():
     multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
     table_p_value, cellwise_p_values = multiple_response_table._test_for_marginal_mutual_independence_using_bonferroni_correction(
         rows_factor, columns_factor)
-    assert table_p_value - 1.1356954469547448e-06 <= 0.00001
-    expected = np.array([7.89787134e-05, 1.13569545e-06, 5.79140286e-06,
-                         3.42276565e-03, 1.35746237e-02])
-    assert_allclose(cellwise_p_values, expected)
+    fpath = os.path.join(results_dirpath, "srcv_r_bonferroni.csv")
+    r_result = pd.DataFrame.from_csv(fpath)
+    table_p_value_r = r_result["p.value.bon"]
+    cell_p_values_r = r_result.iloc[:, 1:]
+    reshaped_python_values = cellwise_p_values.values.reshape(5, 1)
+    assert_allclose(reshaped_python_values, cell_p_values_r.T)
+    assert_allclose(table_p_value_r, table_p_value)
+
+
+
+def test_multiple_mutual_independence_true_using_rao_scott_2():
+    rows_factor = ctab.Factor(presidential_data.iloc[:, :6], presidential_data.columns[:6], "expected_choice", orientation="wide")
+    columns_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11], "believe_true", orientation="wide")
+    multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
+    table_p_value = multiple_response_table._test_for_marginal_mutual_independence_using_rao_scott_2(rows_factor,
+                                                                                                     columns_factor)
+    fpath = os.path.join(results_dirpath, "srcv_r_rao_scott.csv")
+    r_result = pd.DataFrame.from_csv(fpath)
+    table_p_value_r = r_result["p.value.rs2"]
+    assert_allclose(table_p_value_r, table_p_value)
+    assert table_p_value - 0.0 <= 0.00001
 
 
 def test_calculate_pairwise_chi2s_for_SPMI_item_response_table():
@@ -607,13 +624,7 @@ def test_multiple_mutual_independence_true():
 
 
 
-def test_multiple_mutual_independence_true_using_rao_scott_2():
-    rows_factor = ctab.Factor(presidential_data.iloc[:, :6], presidential_data.columns[:6], "expected_choice", orientation="wide")
-    columns_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11], "believe_true", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
-    table_p_value = multiple_response_table._test_for_marginal_mutual_independence_using_rao_scott_2(rows_factor,
-                                                                                                     columns_factor)
-    assert table_p_value - 0.0 <= 0.00001
+
 
 
 def test_test_multiple_mutual_independence_false():

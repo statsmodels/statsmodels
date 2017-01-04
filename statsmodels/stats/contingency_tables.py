@@ -1804,7 +1804,7 @@ class MRCVTable(object):
                                                                                        multiple_response_factor)
         # TODO check
         c = len(multiple_response_factor.labels)
-        r = len(multiple_response_factor.labels)
+        r = len(single_response_factor.labels)
 
         chi2_survival_with_1_dof = partial(chi2.sf, df=(r - 1))
 
@@ -1819,7 +1819,10 @@ class MRCVTable(object):
     def _test_for_marginal_mutual_independence_using_rao_scott_2(self,
                                                                  single_response_factor,
                                                                  multiple_response_factor):
-        W = single_response_factor.as_dataframe()
+        if single_response_factor.orientation == "wide":
+            W = single_response_factor.cast_wide_to_narrow().as_dataframe()
+        else:
+            W = single_response_factor.as_dataframe()
         if not isinstance(W, pd.Series):
             W = W.iloc[:, 0]
         Y = multiple_response_factor.as_dataframe()
@@ -1863,12 +1866,14 @@ class MRCVTable(object):
 
         Y_count_ordered = count_level_combinations(Y, J)
         n_count_ordered = conjoint_combinations(W, Y)
-        Y_count_ordered.sort_values("_dummy")
+        # n_count_ordered.sort_values("_dummy", inplace=True)
 
         # need make n_iplus be in same order as SRCV options in the n_counts_ordered_table
         srcv_table_order = n_count_ordered.groupby('srcv').first().index.values
         n_iplus = W.value_counts().reindex(srcv_table_order)
         tau = n_count_ordered.iloc[:, -1].astype(int) / np.repeat(n_iplus, repeats=(2 ** c)).reset_index(drop=True)
+        # the R version subtracts 1 from G_tilde because data.matrix converts 0->1 and 1->2
+        # (probably because it thinks they're factors and it's internally coding them)
         G_tilde = Y_count_ordered.iloc[:, :-1].T
         I_r = np.eye(r)
         G = np.kron(I_r, G_tilde)
@@ -1887,8 +1892,7 @@ class MRCVTable(object):
         v_dim = r * (2 ** c)
         V = np.zeros((v_dim, v_dim))
 
-        # TODO george@survata.com check starting 1 vs 0
-        for i in range(1, r):
+        for i in range(1, r + 1):
             a = ((i - 1) * (2 ** c) + 1) - 1
             b = ((i - 1) * (2 ** c) + (2 ** c)) - 1
             tau_range = tau[a:b]
@@ -1899,15 +1903,18 @@ class MRCVTable(object):
             V[a:b, a:b] = v
 
         D_diag = np.diag(1 / np.diag(D))
-        D_diag.dot(H).dot(G)
-        Di_HGVGH = D_diag.dot(H).dot(G).dot(V.dot(G.T).dot(H.T))
+        tcrossprod_VG = V.dot(G.T)
+        tcrossprod_VGH = tcrossprod_VG.dot(H.T)
+        Di_HG = D_diag.dot(H).dot(G)
+        Di_HGVGH = np.matmul(Di_HG, tcrossprod_VGH)
         eigenvalues, eigenvectors = np.linalg.eig(Di_HGVGH)
         Di_HGVGH_eigen = np.real(eigenvalues)
         sum_Di_HGVGH_eigen_sq = (Di_HGVGH_eigen ** 2).sum()
         observed = self._calculate_pairwise_chi2s_for_MMI_item_response_table(single_response_factor,
                                                                               multiple_response_factor)
         observed_X_sq = observed.sum()
-        X_sq_S_rs2 = ((r - 1) * c) * observed_X_sq / sum_Di_HGVGH_eigen_sq
+        rows_by_columns = ((r - 1) * c)
+        X_sq_S_rs2 = rows_by_columns * observed_X_sq / sum_Di_HGVGH_eigen_sq
         df_rs2 = ((r - 1) ** 2) * (c ** 2) / sum_Di_HGVGH_eigen_sq
         X_sq_S_p_value_rs2 = chi2.sf(X_sq_S_rs2, df=df_rs2)
         return X_sq_S_p_value_rs2
