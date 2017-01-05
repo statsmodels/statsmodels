@@ -285,7 +285,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
     if lags is None:
         lags = lrange(1, min((nobs // 2 - 2), 40) + 1)
     elif isinstance(lags, (int, long)):
-        lags = lrange(1, min((lags, nobs // 2 - 2)) + 1)
+        lags = lrange(1, lags + 1)
     maxlag = lags[-1]
     lags = np.asarray(lags)
     acfx = acf(x, nlags=maxlag) # normalize by nobs not (nobs-nlags)
