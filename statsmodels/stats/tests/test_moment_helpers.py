@@ -87,6 +87,17 @@ def test_moment_conversion():
         #assert_equal(mvsk2mnc(mc2mvsk(mom[0])), mc2mnc(mom[0]))
 
 
+    multidimention_test = [np.array([[   5.,   10.,    1.],
+       [   5.,   10.,    1.],
+       [   5.,   10.,    1.],
+       [  80.,  310.,    4.]]), np.random.randint(0, 100, 12).reshape(4,3).astype(np.float32)]
+
+    for test_vals in multidimention_test:
+        assert_equal(cum2mc(mnc2cum(mc2mnc(test_vals).T).T).T.astype(np.float32), test_vals)
+        assert_equal(cum2mc(mc2cum(test_vals).T).T.astype(np.float32), test_vals)
+        assert_equal(mvsk2mc(mc2mvsk(test_vals).T).T.astype(np.float32), test_vals)
+
+
 def test_moment_conversion_types():
     # written in 2009
     #why did I use list as return type
@@ -94,13 +105,16 @@ def test_moment_conversion_types():
            'mc2mvsk', 'mnc2cum', 'mnc2mc', 'mnc2mc',
            'mvsk2mc', 'mvsk2mnc']
     assert np.all([isinstance(getattr(moment_helpers,f)([1.0, 1, 0, 3]),list) or
-            isinstance(getattr(moment_helpers,f)(np.array([1.0, 1, 0, 3])),tuple)
+            isinstance(getattr(moment_helpers,f)(np.array([1.0, 1, 0, 3])),tuple) or
+            isinstance(getattr(moment_helpers,f)(np.array([1.0, 1, 0, 3])),np.ndarray)
             for f in all_f])
     assert np.all([isinstance(getattr(moment_helpers,f)(np.array([1.0, 1, 0, 3])),list) or
-            isinstance(getattr(moment_helpers,f)(np.array([1.0, 1, 0, 3])),tuple)
+            isinstance(getattr(moment_helpers,f)(np.array([1.0, 1, 0, 3])),tuple) or
+            isinstance(getattr(moment_helpers,f)(np.array([1.0, 1, 0, 3])),np.ndarray)
             for f in all_f])
     assert np.all([isinstance(getattr(moment_helpers,f)(tuple([1.0, 1, 0, 3])),list) or
-            isinstance(getattr(moment_helpers,f)(np.array([1.0, 1, 0, 3])),tuple)
+            isinstance(getattr(moment_helpers,f)(np.array([1.0, 1, 0, 3])),tuple) or
+            isinstance(getattr(moment_helpers,f)(np.array([1.0, 1, 0, 3])),np.ndarray)
             for f in all_f])
 
 if __name__ == '__main__':
