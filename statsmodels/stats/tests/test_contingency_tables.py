@@ -554,6 +554,19 @@ def test_MMI_item_response_table():
         assert_allclose(py_group.values, r_group)
 
 
+def test_SPMI_item_response_table():
+    rows_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+                              "believe_true", orientation="wide")
+    columns_factor = ctab.Factor(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
+                                 "why_uncertain", orientation="wide")
+    multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
+    spmi_item_response_table_python = multiple_response_table._build_item_response_table_for_SPMI(rows_factor,
+                                                                                           columns_factor)
+    fpath = os.path.join(results_dirpath, "spmi_r_item_response_table_result.csv")
+    spmi_item_response_table_r = pd.DataFrame.from_csv(fpath)
+    assert_allclose(spmi_item_response_table_r.values, spmi_item_response_table_python.values)
+
+
 def test_calculate_pairwise_chi2s_for_MMI_item_response_table():
     rows_factor = ctab.Factor(presidential_data.iloc[:, :6], presidential_data.columns[:6],
                               "expected_choice", orientation="wide")
@@ -568,12 +581,14 @@ def test_calculate_pairwise_chi2s_for_MMI_item_response_table():
     assert_allclose(pairwise_chis, results_from_r)
 
 
-def test_multiple_mutual_independence_true_using_bonferroni():
-    rows_factor = ctab.Factor(presidential_data.iloc[:, :6], presidential_data.columns[:6], "expected_choice", orientation="wide")
-    columns_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11], "believe_true", orientation="wide")
+def test_multiple_mutual_independence_false_using_bonferroni():
+    rows_factor = ctab.Factor(presidential_data.iloc[:, :6], presidential_data.columns[:6],
+                              "expected_choice", orientation="wide")
+    columns_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+                                 "believe_true", orientation="wide")
     multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
-    table_p_value, cellwise_p_values = multiple_response_table._test_for_marginal_mutual_independence_using_bonferroni_correction(
-        rows_factor, columns_factor)
+    bonferroni_test = multiple_response_table._test_for_marginal_mutual_independence_using_bonferroni_correction
+    table_p_value, cellwise_p_values = bonferroni_test(rows_factor, columns_factor)
     fpath = os.path.join(results_dirpath, "srcv_r_bonferroni.csv")
     r_result = pd.DataFrame.from_csv(fpath)
     table_p_value_r = r_result["p.value.bon"]
@@ -583,38 +598,66 @@ def test_multiple_mutual_independence_true_using_bonferroni():
     assert_allclose(table_p_value_r, table_p_value)
 
 
-
-def test_multiple_mutual_independence_true_using_rao_scott_2():
-    rows_factor = ctab.Factor(presidential_data.iloc[:, :6], presidential_data.columns[:6], "expected_choice", orientation="wide")
-    columns_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11], "believe_true", orientation="wide")
+def test_multiple_mutual_independence_false_using_rao_scott_2():
+    rows_factor = ctab.Factor(presidential_data.iloc[:, :6], presidential_data.columns[:6],
+                              "expected_choice", orientation="wide")
+    columns_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+                                 "believe_true", orientation="wide")
     multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
-    table_p_value = multiple_response_table._test_for_marginal_mutual_independence_using_rao_scott_2(rows_factor,
-                                                                                                     columns_factor)
+    rao_scott_2_test = multiple_response_table._test_for_marginal_mutual_independence_using_rao_scott_2
+    table_p_value = rao_scott_2_test(rows_factor,
+                            columns_factor)
     fpath = os.path.join(results_dirpath, "srcv_r_rao_scott.csv")
     r_result = pd.DataFrame.from_csv(fpath)
     table_p_value_r = r_result["p.value.rs2"]
     assert_allclose(table_p_value_r, table_p_value)
-    assert table_p_value - 0.0 <= 0.00001
 
 
 def test_calculate_pairwise_chi2s_for_SPMI_item_response_table():
-    rows_factor = ctab.Factor(presidential_data.iloc[:, 11:], presidential_data.columns[11:], "reasons_undecided", orientation="wide")
-    columns_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11], "believe_true", orientation="wide")
+    rows_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+                             "believe_true", orientation="wide")
+    columns_factor = ctab.Factor(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
+                                 "why_uncertain", orientation="wide")
     multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
-    pairwise_chis = multiple_response_table._calculate_pairwise_chi2s_for_SPMI_item_response_table(rows_factor,
-                                                                                                   columns_factor)
-    expected = np.array([[11.057399043055453, 7.0433141769624967, 11.76419998565429,
-                          6.6835142302920527, 16.129398885445724],
-                         [12.510475178886146, 0.0031863099132473853, 0.5586384786490618,
-                          2.0740299456382045, 0.96428862745228061],
-                         [17.27417447368591, 2.7434061504889233, 9.7400222125093734,
-                          10.013109401042946, 22.869451447577219],
-                         [0.022869776364994012, 1.3818184772649058, 0.4021032851909711,
-                          0.019325630680345859, 8.5606054391027779],
-                         [5.2158331412745191, 4.0136842422000854, 16.088255726022293,
-                          4.4883332473823732, 0.23695713171009866]], dtype=np.float64)
-    observed = pairwise_chis.values.astype(np.float64)
-    assert_allclose(observed, expected)
+    calculate = multiple_response_table._calculate_pairwise_chi2s_for_SPMI_item_response_table
+    spmi_pairwise_chis_python = calculate(rows_factor, columns_factor)
+    r_results_fname = "spmi_r_pairwise_chis_result.csv"
+    r_results_fpath = os.path.join(results_dirpath, r_results_fname)
+    spmi_pairwise_chis_r = pd.DataFrame.from_csv(r_results_fpath)
+    assert_allclose(spmi_pairwise_chis_r.values.astype(float), spmi_pairwise_chis_python.values.astype(float))
+
+
+def test_SPMI_false_using_bonferroni():
+    rows_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+                              "believe_true", orientation="wide")
+    columns_factor = ctab.Factor(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
+                                 "why_uncertain", orientation="wide")
+    multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
+    bonferroni_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_bonferroni
+    table_p_value_bonferroni_corrected, cellwise_p_bonferroni_python = bonferroni_test(rows_factor,
+                                                                                       columns_factor)
+    fpath = os.path.join(results_dirpath, "spmi_r_bonferroni.csv")
+    spmi_bonferroni_r = pd.DataFrame.from_csv(fpath)
+
+    table_p_value_r = spmi_bonferroni_r["p.value.bon"]
+    cell_p_values_r = spmi_bonferroni_r.iloc[:, 1:]
+
+    assert_allclose(cellwise_p_bonferroni_python, cell_p_values_r)
+    assert_allclose(table_p_value_r, table_p_value_bonferroni_corrected)
+
+
+def test_SPMI_false_using_rao_scott_2():
+    rows_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+                              "believe_true", orientation="wide")
+    columns_factor = ctab.Factor(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
+                                 "why_uncertain", orientation="wide")
+    multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
+    rao_scott_2_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_rao_scott_2
+    table_p_value = rao_scott_2_test(rows_factor, columns_factor)
+    fpath = os.path.join(results_dirpath, "spmi_r_rao_scott.csv")
+    r_result = pd.DataFrame.from_csv(fpath)
+    table_p_value_r = r_result["p.value.rs2"]
+    assert_allclose(table_p_value_r, table_p_value)
 
 
 def test_multiple_mutual_independence_true():
@@ -630,34 +673,6 @@ def test_multiple_mutual_independence_true():
 def test_test_multiple_mutual_independence_false():
     assert False
 
-
-def test_spmi_true_using_bonferroni():
-    rows_factor = ctab.Factor(presidential_data.iloc[:, 11:], presidential_data.columns[11:], "reasons_undecided", orientation="wide")
-    columns_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11], "believe_true", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
-    table_p_value, cellwise_p_values = multiple_response_table._test_for_single_pairwise_mutual_independence_using_bonferroni(
-        rows_factor, columns_factor)
-    assert table_p_value - 4.3346430242129665e-05 <= 0.000001
-    expected = np.array([[2.20834933e-02, 1.98904185e-01, 1.50952071e-02,
-                          2.43271486e-01, 1.47896365e-03],
-                         [1.01169167e-02, 1.00000000e+00, 1.00000000e+00,
-                          1.00000000e+00, 1.00000000e+00],
-                         [8.08886522e-04, 1.00000000e+00, 4.50746797e-02,
-                          3.88574715e-02, 4.33464302e-05],
-                         [1.00000000e+00, 1.00000000e+00, 1.00000000e+00,
-                          1.00000000e+00, 8.58787906e-02],
-                         [5.59553004e-01, 1.00000000e+00, 1.51144522e-03,
-                          8.53173376e-01, 1.00000000e+00]])
-    assert_allclose(cellwise_p_values.values, expected)
-
-
-def test_spmi_true_using_rao_scott_2():
-    rows_factor = ctab.Factor(presidential_data.iloc[:, 11:], presidential_data.columns[11:], "reasons_undecided", orientation="wide")
-    columns_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11], "believe_true", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
-    table_p_value = multiple_response_table._test_for_single_pairwise_mutual_independence_using_rao_scott_2(rows_factor,
-                                                                                                            columns_factor)
-    assert table_p_value - 6.2565046672587634e-18 <= 0.000001
 
 
 def test_single_pairwise_mutual_independence_true():

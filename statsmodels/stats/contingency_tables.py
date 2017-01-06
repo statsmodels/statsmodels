@@ -27,6 +27,7 @@ identically distributed.
 
 from __future__ import division
 
+from collections import OrderedDict
 from functools import partial
 import itertools
 import sys
@@ -1630,17 +1631,20 @@ class MRCVTable(object):
         columns_data = columns_factor.data
         rows_levels = rows_factor.labels
         columns_levels = columns_factor.labels
-        row_crosstabs = {}
+        row_crosstabs = OrderedDict()
         for i, row_name in enumerate(rows_levels):
-            column_crosstabs = {}
+            column_crosstabs = OrderedDict()
             for j, col_name in enumerate(columns_levels):
                 rows = np.array(rows_data[:, i])
                 columns = np.array(columns_data[:, j])
                 crosstab = pd.crosstab(index=rows, columns=columns, rownames=[row_name], colnames=[col_name])
                 column_crosstabs[col_name] = crosstab
             row_crosstab = pd.concat(column_crosstabs, axis=1, names=["column_levels", "selected?"])
+            ordered_column_keys = tuple(column_crosstabs.keys())
+            row_crosstab = row_crosstab.reindex(columns=ordered_column_keys, level=0)  # preserve column ordering
             row_crosstabs[row_name] = row_crosstab
         item_response_table = pd.concat(row_crosstabs, axis=0, names=["row_levels", "selected?"])
+        item_response_table = item_response_table.reindex(index=row_crosstabs.keys(), level=0)
         return item_response_table
 
     @classmethod
@@ -1653,7 +1657,7 @@ class MRCVTable(object):
             for j in range(0, len(columns_levels) * 2, 2):
                 # use integer indexers because level labels are not necessarily unique
                 # the "stride by 2" is because pandas does not support integer based indexing with multi-indexes
-                # the capture a whole level of the time (i.e. we can't say "give me the first column-group")
+                # to capture a whole level of the time (i.e. we can't say "give me the first column-group")
                 # so we need to manually select both the 0 and 1 column of each column group
                 # by providing an explicit couple of index positions
                 crosstab = item_response_table.iloc[(i, i+1), (j, j+1)]
@@ -1794,7 +1798,7 @@ class MRCVTable(object):
         observed_X_sq_S = observed.sum().sum()
         X_sq_S_rs2 = I * J * observed_X_sq_S / sum_Di_sigma_eigen_sq
         df_rs2 = (I ** 2) * (J ** 2) / sum_Di_sigma_eigen_sq
-        X_sq_S_p_value_rs2 = chi2.sf(X_sq_S_rs2, df=df_rs2)
+        X_sq_S_p_value_rs2 = 1 - chi2.cdf(X_sq_S_rs2, df=df_rs2)
         return X_sq_S_p_value_rs2
 
     def _test_for_marginal_mutual_independence_using_bonferroni_correction(self,
@@ -1802,7 +1806,6 @@ class MRCVTable(object):
                                                                            multiple_response_factor):
         mmi_pairwise_chis = self._calculate_pairwise_chi2s_for_MMI_item_response_table(single_response_factor,
                                                                                        multiple_response_factor)
-        # TODO check
         c = len(multiple_response_factor.labels)
         r = len(single_response_factor.labels)
 
@@ -1916,7 +1919,7 @@ class MRCVTable(object):
         rows_by_columns = ((r - 1) * c)
         X_sq_S_rs2 = rows_by_columns * observed_X_sq / sum_Di_HGVGH_eigen_sq
         df_rs2 = ((r - 1) ** 2) * (c ** 2) / sum_Di_HGVGH_eigen_sq
-        X_sq_S_p_value_rs2 = chi2.sf(X_sq_S_rs2, df=df_rs2)
+        X_sq_S_p_value_rs2 = 1 - chi2.cdf(X_sq_S_rs2, df=df_rs2)
         return X_sq_S_p_value_rs2
 
 
