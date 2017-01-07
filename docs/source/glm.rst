@@ -39,15 +39,16 @@ Technical Documentation
 
 The statistical model is assumed to be
 
- :math:`Y \sim F_{edf}(\cdot|\theta,\phi,w)` and
+ :math:`Y \sim F_{EDM}(\cdot|\theta,\phi,w)` and
  :math:`\mu = E[Y] = g^{-1}(x^\prime\beta)`.
 
-where :math:`g` is the link function and :math:`F_{edf}(\cdot|\theta,\phi,w)`
-is a distribution of the exponential dispersion family with natural parameter
-:math:`\theta`, scale parameter :math:`\phi` and weight :math:`w`.
+where :math:`g` is the link function and :math:`F_{EDM}(\cdot|\theta,\phi,w)`
+is a distribution of the family of exponential dispersion models (EDM) with
+natural parameter :math:`\theta`, scale parameter :math:`\phi` and weight
+:math:`w`.
 Its density is given by
 
- :math:`f_{edf}(y|\theta,\phi,w) = c(y,\phi,w)
+ :math:`f_{EDM}(y|\theta,\phi,w) = c(y,\phi,w)
  \exp\left(\frac{y\theta-b(\theta)}{\phi}w\right)\,.`
 
 It follows that :math:`\mu = b'(\theta)` and
@@ -80,6 +81,22 @@ Tweedie :math:`p\geq 1`              depends on :math:`p`      :math:`\mu`      
 
 The Tweedie distribution has special cases for :math:`p=0,1,2` not listed in the
 table.
+
+Correspondence of mathematical variables to code:
+
+* :math:`Y` and :math:`y_i` are coded as ``endog``, the variable one wants to
+  model
+* :math:`x` is coded as ``exog``, the covariates alias explanatory variables
+* :math:`\mu` is coded as ``mu``, the mean of :math:`Y`
+* :math:`g` is coded as ``link`` argument to the ``class Family``
+* :math:`\phi` is coded as ``scale``, the dispersion parameter of the EDM
+* :math:`w` is not yet supported (i.e. :math:`w=1`), in the future it might be
+  ``var_weights``
+* :math:`\alpha` is the ancillary parameter ``alpha`` of the Negative Binomial,
+  see table
+* :math:`p` is coded as ``var_power`` for the power of the variance function
+  :math:`v(\mu)` of the Tweedie distribution, see table
+
 
 References
 ^^^^^^^^^^
