@@ -1453,12 +1453,7 @@ class MRCVTable(object):
 
     Attributes
     ----------
-    table_orig : array-like
-        The original table is cached as `table_orig`.
-    marginal_probabilities : tuple of two ndarrays
-        The estimated row and column marginal distributions.
-    independence_probabilities : ndarray
-        Estimated cell probabilities under row/column independence.
+
 
     See also
     --------
@@ -1471,18 +1466,17 @@ class MRCVTable(object):
 
     References
     ----------
-    Definitions of residuals:
-        https://onlinecourses.science.psu.edu/stat504/node/86
-
     Bilder and Loughlin (2004)
     """
 
     def __init__(self, row_factors, column_factors, shift_zeros=True):
-
         self.row_factors = row_factors
         self.column_factors = column_factors
         self.table = self.table_from_factors(row_factors, column_factors)
         # TODO george@survata.com shift zeros
+
+    def __str__(self):
+        return self.__unicode__()
 
     def __unicode__(self):
         template = "Contingency Table With Multi-Response Categorical Variables (MRCV's).\nData:\n{table}"
@@ -1492,8 +1486,7 @@ class MRCVTable(object):
         return self.table.__repr__()
 
     @classmethod
-    def from_data(cls, data, I, J,
-                  rows_factor_name="factor_0", columns_factor_name="factor_1",
+    def from_data(cls, data, I, J, rows_factor_name="factor_0", columns_factor_name="factor_1",
                   shift_zeros=True):
         """
         Construct a Table object from data.
@@ -1525,10 +1518,11 @@ class MRCVTable(object):
             rows_labels = ["level_{}".format(i) for i in range(0, I)]
             columns_labels = ["level_{}".format(i) for i in range(I, I + J)]
 
-        rows_factor = Factor(rows_data, labels=rows_labels, name=rows_factor_name, orientation="wide")
-        columns_factor = Factor(columns_data, labels=columns_labels, name=columns_factor_name, orientation="wide")
-        table = cls.table_from_factors([rows_factor], [columns_factor])
-        return cls(table, rows_factor, columns_factor, shift_zeros)
+        rows_factor = Factor(rows_data, labels=rows_labels,
+                             name=rows_factor_name, orientation="wide")
+        columns_factor = Factor(columns_data, labels=columns_labels,
+                                name=columns_factor_name, orientation="wide")
+        return cls(rows_factor, columns_factor, shift_zeros)
 
     @classmethod
     def table_from_factors(cls, row_factors, column_factors):
@@ -1947,17 +1941,28 @@ class MRCVTable(object):
         return X_sq_S_p_value_rs2
 
 
-
 class Factor(object):
-    def __init__(self, data, labels, name, orientation="wide", multiple_response=False):
+    def __init__(self, data, labels, name, orientation="wide", multiple_response=None):
         self.name = name
+        if len(labels) != data.shape[1]:
+            raise ValueError("all columns must have labels")
         self.labels = labels
         self.orientation = orientation
-        self.multiple_response = multiple_response
         if orientation == "wide":
             self.data = np.asarray(data, dtype=np.float64)
         else:
             self.data = np.asarray(data, dtype=np.object)
+        if multiple_response is None:
+            if orientation == "wide":
+                column_totals = self.data.sum(axis=1)
+                if np.max(column_totals) > 1:
+                    self.multiple_response = True
+                else:
+                    self.multiple_response = False
+            else:
+                self.multiple_response = False
+        else:
+            self.multiple_response = multiple_response
 
     def __unicode__(self):
         template = "{multiple_response_slug}Factor: {name}\nColumns:{columns}\nData:\n{data}"
@@ -1965,7 +1970,8 @@ class Factor(object):
             multiple_response_slug = "Multiple Response "
         else:
             multiple_response_slug = ""
-        return template.format(name=self.name, columns=self.labels, data=self.data)
+        return template.format(multiple_response_slug=multiple_response_slug, name=self.name,
+                               columns=self.labels, data=self.data)
 
     def __repr__(self):
         return self.__unicode__()

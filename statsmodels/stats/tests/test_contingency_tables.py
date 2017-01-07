@@ -729,19 +729,38 @@ def test_overlapping_names_allowed():
 
 
 def test_MRCV_table_from_data():
-    assert False
+    multiple_response_questions = presidential_data.iloc[6:]
+    table = ctab.MRCVTable.from_data(multiple_response_questions, 5, 5)
+    assert np.all(table.table.values[0, :] == np.array([44, 15, 22, 12]))
 
 
 def test_MRCV_table_from_factors():
-    assert False
+    rows_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+                              "believe_true", orientation="wide")
+    columns_factor = ctab.Factor(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
+                                 "why_uncertain", orientation="wide")
+    multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
+    assert np.all(multiple_response_table.table.iloc[0].values == np.array([44, 49, 15, 22, 12]))
 
 
 def test_Factor_from_wide_data():
-    assert False
+    single_response_data = presidential_data.iloc[:, :6]
+    single_response_factor = ctab.Factor(single_response_data, range(0, 6), "")
+    narrow_dataframe = single_response_factor.cast_wide_to_narrow().as_dataframe()
+    assert np.all(narrow_dataframe.iloc[0] == [4, 1])
 
 
 def test_Factor_from_narrow_data():
     assert False
+
+
+def test_Factor_autodetect_multiple_response():
+    single_response_data = presidential_data.iloc[:, :6]
+    single_response_factor = ctab.Factor(single_response_data, [], "")
+    assert not single_response_factor.multiple_response
+    multiple_response_data = presidential_data.iloc[:, 6:11]
+    multiple_response_factor = ctab.Factor(multiple_response_data, [], "")
+    assert multiple_response_factor.multiple_response
 
 
 if __name__ == "__main__":
