@@ -660,27 +660,72 @@ def test_SPMI_false_using_rao_scott_2():
     assert_allclose(table_p_value_r, table_p_value)
 
 
+def build_random_single_select():
+    car_type = np.random.randint(3, size=(10000)) + 1
+    base_pop = pd.DataFrame(car_type).reset_index()
+    base_pop.columns = ['person', 'choice']
+    base_pop['_response'] = 1
+    dataframe = pd.pivot_table(base_pop,
+                               values='_response',
+                               fill_value=0,
+                               index='person',
+                               columns='choice',
+                               aggfunc=np.sum,
+                               margins=False)
+    car_choice = dataframe.copy()
+    car_choice.columns = ["sedan", "truck", "motorcycle"]
+    return car_choice
+
+
 def test_multiple_mutual_independence_true():
-    assert False
-
-
-
-
-
-
-
-
-def test_test_multiple_mutual_independence_false():
-    assert False
-
+    np.random.seed(100)
+    food_choices = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
+                                columns=["eggs", "cheese", "candy", "sushi", "none"])
+    car_choice = build_random_single_select()
+    srcv = ctab.Factor(car_choice, car_choice.columns, "car_choice", orientation="wide")
+    mrcv = ctab.Factor(food_choices, food_choices.columns, "food_choices", orientation="wide")
+    multiple_response_table = ctab.MRCVTable([srcv, ], [mrcv,])
+    rao_scott_2_test = multiple_response_table._test_for_marginal_mutual_independence_using_rao_scott_2
+    rao_p_value = rao_scott_2_test(srcv, mrcv)
+    assert rao_p_value >= 0.05
+    bonferroni_test = multiple_response_table._test_for_marginal_mutual_independence_using_bonferroni_correction
+    bonferroni_table_p_value, bonferroni_cell_p_values = bonferroni_test(srcv, mrcv)
+    assert bonferroni_table_p_value >= 0.05
+    assert np.all(bonferroni_cell_p_values >= 0.05)
 
 
 def test_single_pairwise_mutual_independence_true():
-    assert False
+    np.random.seed(100)
+    food_choices = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
+                                columns=["eggs", "cheese", "candy", "sushi", "none"])
+    language = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
+                                           columns=["English", "French", "Mandarin", "Hungarian", "none"])
+    mrcv_1 = ctab.Factor(language, language.columns, "car_choice", orientation="wide")
+    mrcv_2 = ctab.Factor(food_choices, food_choices.columns, "food_choices", orientation="wide")
+    multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    rao_scott_2_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_rao_scott_2
+    rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
+    assert rao_p_value >= 0.05
+    bonferroni_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_bonferroni
+    bonferroni_table_p_value, bonferroni_cell_p_values = bonferroni_test(mrcv_1, mrcv_2)
+    assert bonferroni_table_p_value >= 0.05
+    assert np.all(bonferroni_cell_p_values >= 0.05)
 
 
-def test_single_pairwise_mutual_independence_false():
-    assert False
+def test_overlapping_names_allowed():
+    """
+    Hit a bug in development if two factors shared levels with the same name
+    """
+    best_food = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
+                             columns=["eggs", "cheese", "candy", "sushi", "none"])
+    worst_food = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
+                              columns=["eggs", "cheese", "candy", "sushi", "none"])
+    mrcv_1 = ctab.Factor(worst_food, worst_food.columns, "car_choice", orientation="wide")
+    mrcv_2 = ctab.Factor(best_food, best_food.columns, "best_food", orientation="wide")
+    multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    rao_scott_2_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_rao_scott_2
+    rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
+    assert rao_p_value >= 0.05
 
 
 def test_MRCV_table_from_data():

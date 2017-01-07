@@ -1548,6 +1548,22 @@ class MRCVTable(object):
                                aggfunc=np.sum,)
         return table
 
+    def test_for_independence(self):
+        single_response_row_factor = any([f.multiple_response for f in self.row_factors])
+        single_response_column_factor = any([f.multiple_response for f in self.column_factors])
+        if single_response_row_factor and single_response_column_factor:
+            single_response_table = Table(self.table)
+            return single_response_table.test_nominal_association()
+        elif single_response_row_factor:
+            return self._test_for_marginal_mutual_independence_using_bonferroni_correction(self.row_factors[0],
+                                                                                           self.column_factors)
+        elif single_response_column_factor:
+            return self._test_for_marginal_mutual_independence_using_bonferroni_correction(self.column_factors,
+                                                                                           self.row_factors[0])
+        else:
+            return self._test_for_single_pairwise_mutual_independence_using_bonferroni(self.row_factors[0],
+                                                                                       self.column_factors[0])
+
     @classmethod
     def _extract_and_validate_factors(cls, column_factors, row_factors):
         try:
@@ -1630,6 +1646,7 @@ class MRCVTable(object):
         rows_data = rows_factor.data
         columns_data = columns_factor.data
         rows_levels = rows_factor.labels
+        row_level_set = set(rows_levels)
         columns_levels = columns_factor.labels
         row_crosstabs = OrderedDict()
         for i, row_name in enumerate(rows_levels):
@@ -1637,6 +1654,8 @@ class MRCVTable(object):
             for j, col_name in enumerate(columns_levels):
                 rows = np.array(rows_data[:, i])
                 columns = np.array(columns_data[:, j])
+                if col_name in row_level_set:
+                    col_name = col_name + " (columns)"
                 crosstab = pd.crosstab(index=rows, columns=columns, rownames=[row_name], colnames=[col_name])
                 column_crosstabs[col_name] = crosstab
             row_crosstab = pd.concat(column_crosstabs, axis=1, names=["column_levels", "selected?"])
@@ -1644,15 +1663,16 @@ class MRCVTable(object):
             row_crosstab = row_crosstab.reindex(columns=ordered_column_keys, level=0)  # preserve column ordering
             row_crosstabs[row_name] = row_crosstab
         item_response_table = pd.concat(row_crosstabs, axis=0, names=["row_levels", "selected?"])
+        item_response_table.columns.set_levels(columns_levels, level=0, inplace=True) # undo any name mangling
         item_response_table = item_response_table.reindex(index=row_crosstabs.keys(), level=0)
         return item_response_table
 
     @classmethod
     def _calculate_pairwise_chi2s_for_SPMI_item_response_table(cls, rows_factor, columns_factor):
-        rows_levels = rows_factor.labels
-        columns_levels = columns_factor.labels
-        chis_spmi = pd.DataFrame(index=rows_levels, columns=columns_levels)
         item_response_table = cls._build_item_response_table_for_SPMI(rows_factor, columns_factor)
+        rows_levels = item_response_table.index.levels[0]
+        columns_levels = item_response_table.columns.levels[0]
+        chis_spmi = pd.DataFrame(index=rows_levels, columns=columns_levels)
         for i in range(0, len(rows_levels) * 2, 2):
             for j in range(0, len(columns_levels) * 2, 2):
                 # use integer indexers because level labels are not necessarily unique
@@ -1746,8 +1766,12 @@ class MRCVTable(object):
 
         def count_level_combinations(data, number_of_variables):
             data = data.copy()  # don't modify original dataframe
-            level_arguments = [[0, 1] for i in range(0, number_of_variables)]
-            variables = data.columns
+            level_arguments = [[0, 1]] * number_of_variables
+            # the groupby statment requires the variables to be uniquely named
+            # but the names aren't used after this
+            # so mangling them is fine
+            variables = list(range(0, len(data.columns)))
+            data.columns = variables
             level_combinations = list(itertools.product(*level_arguments))
             full_combinations = pd.DataFrame(level_combinations, columns=variables)
             full_combinations["_dummy"] = 0
@@ -1925,18 +1949,23 @@ class MRCVTable(object):
 
 
 class Factor(object):
-    def __init__(self, data, labels, name, orientation="wide"):
+    def __init__(self, data, labels, name, orientation="wide", multiple_response=False):
         self.name = name
         self.labels = labels
         self.orientation = orientation
+        self.multiple_response = multiple_response
         if orientation == "wide":
             self.data = np.asarray(data, dtype=np.float64)
         else:
             self.data = np.asarray(data, dtype=np.object)
 
     def __unicode__(self):
-        return "Factor: {name}\nColumns:{columns}\nData:\n{data}".format(name=self.name, columns=self.labels,
-                                                                         data=self.data)
+        template = "{multiple_response_slug}Factor: {name}\nColumns:{columns}\nData:\n{data}"
+        if self.multiple_response:
+            multiple_response_slug = "Multiple Response "
+        else:
+            multiple_response_slug = ""
+        return template.format(name=self.name, columns=self.labels, data=self.data)
 
     def __repr__(self):
         return self.__unicode__()
