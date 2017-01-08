@@ -4,6 +4,8 @@ from functools import partial
 from patsy import dmatrix
 from patsy.design_info import DesignMatrix
 
+from statsmodels.tools.sm_exceptions import ValueWarning
+
 NUMPY_TYPES = [np.ndarray, np.float64, np.recarray]
 PANDAS_TYPES = [pd.Series, pd.DataFrame]
 DEFAULT_EXTERNAL_TYPE = np.ndarray
@@ -37,6 +39,7 @@ class DataInterface(object):
         self.ndim = get_ndim(data)
         self.is_nested_row_vector = is_nested_row_vector(data)
         self.is_col_vector = is_col_vector(data)
+        self.index = getattr(data, 'index', None)
 
         if self.external_type == DEFAULT_EXTERNAL_TYPE and data is not None:
             if not np.isscalar(data):
@@ -64,7 +67,18 @@ class DataInterface(object):
             self.init_data_interface(data)
 
         if self.use_formula and self.model is not None and hasattr(self.model, 'formula'):
-            return dmatrix(self.model.data.design_info.builder, data)
+
+            to_return = dmatrix(self.model.data.design_info.builder, data, return_type='dataframe')
+
+            if len(to_return) < len(self.index):
+                # missing values, rows have been dropped
+                if self.index is not None:
+                    to_return = to_return.reindex(self.index)
+                else:
+                    import warnings
+                    warnings.warn("nan rows have been dropped", ValueWarning)
+
+            return to_return
 
         if type(data) in self.permitted_types:
             to_return = data
@@ -98,8 +112,6 @@ class DataInterface(object):
 
         if from_type == DesignMatrix:
             return data
-
-        self.index = getattr(data, 'index', None)
 
         if from_type in NUMPY_TYPES:
             data_to_return = from_numpy_array(data, self.external_type, index=self.index, name=self.name,
