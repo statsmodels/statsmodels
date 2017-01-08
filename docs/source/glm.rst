@@ -67,20 +67,20 @@ and therefore does not influence the estimation of :math:`\beta`,
 the weights :math:`w_i` might be different for every :math:`y_i` such that the
 estimation of :math:`\beta` depends on them.
 
-==================================== ========================= ================ =========================== =========================================== ================================================ =====================
-Distribution                         Domain                    :math:`\mu=E[Y]` :math:`v(\mu)`              :math:`\theta(\mu)`                         :math:`b(\theta)`                                :math:`\phi`
-==================================== ========================= ================ =========================== =========================================== ================================================ =====================
-Binomial :math:`B(n,p)`              :math:`0,1,\ldots,n`      :math:`np`       :math:`\mu-\frac{\mu^2}{n}` :math:`\log\frac{p}{1-p}`                   :math:`n\log(1+e^\theta)`                        1
-Poisson :math:`P(\mu)`               :math:`0,1,\ldots,\infty` :math:`\mu`      :math:`\mu`                 :math:`\log(\mu)`                           :math:`e^\theta`                                 1
-Neg. Binom. :math:`NB(\mu,\alpha)`   :math:`0,1,\ldots,\infty` :math:`\mu`      :math:`\mu+\alpha\mu^2`     :math:`\log(\frac{\alpha\mu}{1+\alpha\mu})` :math:`-\frac{1}{\alpha}\log(1-\alpha e^\theta)` 1
-Normal :math:`N(\mu,\sigma^2)`       :math:`(-\infty,\infty)`  :math:`\mu`      :math:`1`                   :math:`\mu`                                 :math:`\frac{1}{2}\theta^2`                      :math:`\sigma^2`
-Gamma :math:`N(\mu,\nu)`             :math:`(0,\infty)`        :math:`\mu`      :math:`\mu^2`               :math:`-\frac{1}{\mu}`                      :math:`-\log(-\theta)`                           :math:`\frac{1}{\nu}`
-Inv. Gauss. :math:`IG(\mu,\sigma^2)` :math:`(0,\infty)`        :math:`\mu`      :math:`\mu^3`               :math:`-\frac{1}{2\mu^2}`                   :math:`-\sqrt{-2\theta}`                         :math:`\sigma^2`
-Tweedie :math:`p\geq 1`              depends on :math:`p`      :math:`\mu`      :math:`\mu^p`               :math:`\frac{\mu^{1-p}}{1-p}`               :math:`\frac{\mu^{2-p}}{2-p}`                    :math:`\phi`
-==================================== ========================= ================ =========================== =========================================== ================================================ =====================
+================================================= ============================== ============================== ======================================== =========================================== ============================================================================ =====================
+Distribution                                      Domain                         :math:`\mu=E[Y]`               :math:`v(\mu)`                           :math:`\theta(\mu)`                         :math:`b(\theta)`                                                            :math:`\phi`
+================================================= ============================== ============================== ======================================== =========================================== ============================================================================ =====================
+Binomial :math:`B(n,p)`                           :math:`0,1,\ldots,n`           :math:`np`                     :math:`\mu-\frac{\mu^2}{n}`              :math:`\log\frac{p}{1-p}`                   :math:`n\log(1+e^\theta)`                                                    1
+Poisson :math:`P(\mu)`                            :math:`0,1,\ldots,\infty`      :math:`\mu`                    :math:`\mu`                              :math:`\log(\mu)`                           :math:`e^\theta`                                                             1
+Neg. Binom. :math:`NB(\mu,\alpha)`                :math:`0,1,\ldots,\infty`      :math:`\mu`                    :math:`\mu+\alpha\mu^2`                  :math:`\log(\frac{\alpha\mu}{1+\alpha\mu})` :math:`-\frac{1}{\alpha}\log(1-\alpha e^\theta)`                             1
+Gaussian/Normal :math:`N(\mu,\sigma^2)`           :math:`(-\infty,\infty)`       :math:`\mu`                    :math:`1`                                :math:`\mu`                                 :math:`\frac{1}{2}\theta^2`                                                  :math:`\sigma^2`
+Gamma :math:`N(\mu,\nu)`                          :math:`(0,\infty)`             :math:`\mu`                    :math:`\mu^2`                            :math:`-\frac{1}{\mu}`                      :math:`-\log(-\theta)`                                                       :math:`\frac{1}{\nu}`
+Inv. Gauss. :math:`IG(\mu,\sigma^2)`              :math:`(0,\infty)`             :math:`\mu`                    :math:`\mu^3`                            :math:`-\frac{1}{2\mu^2}`                   :math:`-\sqrt{-2\theta}`                                                     :math:`\sigma^2`
+Tweedie :math:`p\geq 1`                           depends on :math:`p`           :math:`\mu`                    :math:`\mu^p`                            :math:`\frac{\mu^{1-p}}{1-p}`               :math:`\frac{\alpha-1}{\alpha}\left(\frac{\theta}{\alpha-1}\right)^{\alpha}` :math:`\phi`
+================================================= ============================== ============================== ======================================== =========================================== ============================================================================ =====================
 
 The Tweedie distribution has special cases for :math:`p=0,1,2` not listed in the
-table.
+table and uses :math:`\alpha=\frac{p-2}{p-1}`.
 
 Correspondence of mathematical variables to code:
 
@@ -92,10 +92,13 @@ Correspondence of mathematical variables to code:
 * :math:`\phi` is coded as ``scale``, the dispersion parameter of the EDM
 * :math:`w` is not yet supported (i.e. :math:`w=1`), in the future it might be
   ``var_weights``
-* :math:`\alpha` is the ancillary parameter ``alpha`` of the Negative Binomial,
-  see table
 * :math:`p` is coded as ``var_power`` for the power of the variance function
   :math:`v(\mu)` of the Tweedie distribution, see table
+* :math:`\alpha` is either
+
+  * Negative Binomial: the ancillary parameter ``alpha``, see table
+  * Tweedie: an abbreviation for :math:`\frac{p-2}{p-1}` of the power :math:`p`
+    of the variance function, see table
 
 
 References
