@@ -1,0 +1,237 @@
+#cython: boundscheck=False
+#cython: wraparound=False
+#cython: cdivision=False
+"""
+State Space Models
+
+Author: Chad Fulton  
+License: Simplified-BSD
+
+Notes
+-----
+
+The dimensions used in all the BLAS / LAPACK calls below use the following
+convention:
+
+- The dimensions of the arrays *as they are to be manipulated* are all defined
+  as model._k_*
+- If the array in question is defined in the Statespace object
+  (obs, obs_intercept, design, obs_cov, state_intercept, transition, selection,
+  state_cov, selected_state_cov), then the dimension in-memory is defined as
+  model._k_*
+  This is because the in-memory shape of matrices changes according to whether
+  or not data is missing and whether or not the generalized collapse transform
+  is applied.
+- If the array in question is defined in the Kalman filter object
+  (forecast_*, filtered_*, predicted_*, etc.), then the dimension in-memory is
+  defined as kfilter.k_*
+  This is because the in-memory shape of matrices only changes according to
+  filter_method.
+- If the array in question is defined in the Kalman smoother object
+  (smoothed_*, etc.), then the dimension in-memory is defined as kfilter.k_*
+  This is because the in-memory shape of matrices only changes according to
+  filter_method.
+
+Thus, for example, a ?gemm call has the following signature:
+
+dgemm(transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
+
+- m, n, and k are the dimensions *as they are to be manipulated*, and are
+  always defined as model._k_*
+- lda, ldb, and ldc are the *in-memory* dimension, and they are set as
+  model._k_* if the array is defined in the Statespace object, otherwise
+  (in either the filter or smoother cases) they are set as kfilter.k_*
+
+Note that for ?copy calls, the number of elements to be copied is defined to be
+the dimension in memory of the array that is being copied *from*.
+"""
+
+{{py:
+
+TYPES = {
+    "s": ("np.float32_t", "np.float32", "np.NPY_FLOAT32"),
+    "d": ("np.float64_t", "float", "np.NPY_FLOAT64"),
+    "c": ("np.complex64_t", "np.complex64", "np.NPY_COMPLEX64"),
+    "z": ("np.complex128_t", "complex", "np.NPY_COMPLEX128"),
+}
+
+}}
+
+# Typical imports
+import numpy as np
+cimport numpy as np
+from statsmodels.src.math cimport *
+cimport scipy.linalg.cython_blas as blas
+cimport scipy.linalg.cython_lapack as lapack
+
+from statsmodels.tsa.statespace._kalman_smoother cimport (
+    SMOOTHER_STATE, SMOOTHER_STATE_COV, SMOOTHER_DISTURBANCE,
+    SMOOTHER_DISTURBANCE_COV
+)
+
+{{for prefix, types in TYPES.items()}}
+{{py:cython_type, dtype, typenum = types}}
+{{py:
+combined_prefix = prefix
+combined_cython_type = cython_type
+if prefix == 'c':
+    combined_prefix = 'z'
+    combined_cython_type = 'np.complex128_t'
+if prefix == 's':
+    combined_prefix = 'd'
+    combined_cython_type = 'np.float64_t'
+}}
+
+# ### Classical Kalman smoother
+#
+# The following are the above routines as defined in the conventional Kalman
+# smoother.
+#
+# See Durbin and Koopman (2012) Chapter 4.6.1
+
+cdef int {{prefix}}smoothed_estimators_measurement_classical({{prefix}}KalmanSmoother smoother, {{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model) except *:
+    cdef:
+        int i, j, info
+        int inc = 1
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+        {{cython_type}} gamma = -1.0
+        {{cython_type}} tmp
+
+    # Factorize the predicted state covariance matrix
+    blas.{{prefix}}copy(&kfilter.k_states2, &kfilter.predicted_state_cov[0,0,smoother.t+1], &inc,
+                                            smoother._tmpL, &inc)
+    lapack.{{prefix}}potrf("L", &kfilter.k_states, smoother._tmpL, &kfilter.k_states, &info)
+
+    if info < 0:
+        raise np.linalg.LinAlgError('Illegal value in predicted state'
+                                    ' covariance matrix encountered at'
+                                    ' period %d' % smoother.t)
+    if info > 0:
+        raise np.linalg.LinAlgError('Singular predicted state covariance'
+                                    ' matrix encountered at period %d' %
+                                    smoother.t)
+
+    # Scaled smoothed estimator  
+    # $r_t = P_{t+1}^{-1} (\hat \alpha_{t+1} - a_{t+1})$   
+    # $(m \times 1) = (m \times m) [(m \times 1) - (m \times 1)]$
+    # Note: save $r_t$ as _input_scaled_smoothed_estimator not as
+    # _scaled_smoothed_estimator
+    if smoother.t < model.nobs-1 and smoother.smoother_output & (SMOOTHER_STATE | SMOOTHER_DISTURBANCE):
+        blas.{{prefix}}copy(&kfilter.k_states, &smoother.smoothed_state[0, smoother.t+1], &inc,
+                                               smoother._input_scaled_smoothed_estimator, &inc)
+        blas.{{prefix}}axpy(&kfilter.k_states, &gamma, &kfilter.predicted_state[0,smoother.t+1], &inc,
+                                                       smoother._input_scaled_smoothed_estimator, &inc)
+
+        lapack.{{prefix}}potrs("L", &kfilter.k_states, &inc, smoother._tmpL, &kfilter.k_states,
+                                                             smoother._input_scaled_smoothed_estimator, &kfilter.k_states, &info)
+
+        if info < 0:
+            raise np.linalg.LinAlgError('Illegal value in predicted state'
+                                        ' covariance matrix encountered at'
+                                        ' period %d' % smoother.t)
+
+    # Scaled smoothed estimator covariance matrix  
+    # $N_t = P_{t+1}^{-1} (P_{t+1} - V_{t+1}) P_{t+1}^{-1}
+    # $(m \times m) = (m \times p) (p \times m) + (m \times m) (m \times m) (m \times m)$  
+    # Note: save $N_t$ as _input_scaled_smoothed_estimator_cov not as
+    # _scaled_smoothed_estimator_cov
+    if smoother.t < model.nobs-1 and smoother.smoother_output & (SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE_COV):
+        blas.{{prefix}}copy(&kfilter.k_states2, &kfilter.predicted_state_cov[0, 0, smoother.t+1], &inc,
+                                                smoother._input_scaled_smoothed_estimator_cov, &inc)
+        blas.{{prefix}}axpy(&kfilter.k_states2, &gamma, &smoother.smoothed_state_cov[0, 0, smoother.t+1], &inc,
+                                                        smoother._input_scaled_smoothed_estimator_cov, &inc)
+
+        lapack.{{prefix}}potrs("L", &kfilter.k_states, &kfilter.k_states, smoother._tmpL, &kfilter.k_states,
+                                                             smoother._input_scaled_smoothed_estimator_cov, &kfilter.k_states, &info)
+
+        if info < 0:
+            raise np.linalg.LinAlgError('Illegal value in predicted state'
+                                        ' covariance matrix encountered at'
+                                        ' period %d' % smoother.t)
+
+        # transpose
+        for i in range(kfilter.k_states):
+            for j in range(i, kfilter.k_states):
+                if i == j:
+                    continue
+                tmp = smoother.scaled_smoothed_estimator_cov[i,j,smoother.t+1]
+                smoother.scaled_smoothed_estimator_cov[i,j,smoother.t+1] = smoother.scaled_smoothed_estimator_cov[j,i,smoother.t+1]
+                smoother.scaled_smoothed_estimator_cov[j,i,smoother.t+1] = tmp
+
+        lapack.{{prefix}}potrs("L", &kfilter.k_states, &kfilter.k_states, smoother._tmpL, &kfilter.k_states,
+                                                             smoother._input_scaled_smoothed_estimator_cov, &kfilter.k_states, &info)
+
+        if info < 0:
+            raise np.linalg.LinAlgError('Illegal value in predicted state'
+                                        ' covariance matrix encountered at'
+                                        ' period %d' % smoother.t)
+
+    # Smoothing error  
+    # $u_t = \\#_2 - K_t' r_t$  
+    # $(p \times 1) = (p \times 1) - (p \times m) (m \times 1)$ 
+    if smoother.smoother_output & (SMOOTHER_DISTURBANCE):
+        if not model._nmissing == model.k_endog:
+            blas.{{prefix}}copy(&kfilter.k_endog, kfilter._tmp2, &inc, smoother._smoothing_error, &inc)
+        blas.{{prefix}}gemv("T", &model._k_states, &model._k_endog,
+                  &gamma, kfilter._kalman_gain, &kfilter.k_states,
+                          smoother._input_scaled_smoothed_estimator, &inc,
+                  &alpha, smoother._smoothing_error, &inc)
+
+    # $L_t = (T_t - K_t Z_t)$  
+    # $(m \times m) = (m \times m) + (m \times p) (p \times m)$
+    # (this is required for any type of smoothing)
+    blas.{{prefix}}copy(&model._k_states2, model._transition, &inc, smoother._tmpL, &inc)
+    blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_endog,
+              &gamma, kfilter._kalman_gain, &kfilter.k_states,
+                      model._design, &model._k_endog,
+              &alpha, smoother._tmpL, &kfilter.k_states)
+
+cdef int {{prefix}}smoothed_estimators_time_classical({{prefix}}KalmanSmoother smoother, {{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
+  pass
+
+cdef int {{prefix}}smoothed_state_classical({{prefix}}KalmanSmoother smoother, {{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
+    cdef int i, j
+    cdef:
+        int inc = 1
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+        {{cython_type}} gamma = -1.0
+
+    if (smoother.smoother_output & SMOOTHER_STATE) or (smoother.smoother_output & SMOOTHER_STATE_COV):
+        blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
+                  &alpha, &kfilter.filtered_state_cov[0, 0, smoother.t], &kfilter.k_states,
+                          model._transition, &kfilter.k_states,
+                  &beta, smoother._tmp0, &kfilter.k_states)
+
+    # Smoothed state
+    if smoother.smoother_output & SMOOTHER_STATE:
+        # $\hat \alpha_t = a_t|t + P_t|t T_t' r_t$  
+        # $(m \times 1) = (m \times 1) + (m \times m) (m \times 1)$  
+        blas.{{prefix}}copy(&kfilter.k_states, &kfilter.filtered_state[0,smoother.t], &inc, smoother._smoothed_state, &inc)
+
+        blas.{{prefix}}gemv("N", &model._k_states, &model._k_states,
+                  &alpha, smoother._tmp0, &kfilter.k_states,
+                          smoother._input_scaled_smoothed_estimator, &inc,
+                  &alpha, smoother._smoothed_state, &inc)
+
+    # Smoothed state covariance
+    if smoother.smoother_output & SMOOTHER_STATE_COV:
+        # $V_t = P_t|t [I - T_t' N_t T_t P_t|t]$  
+        # $(m \times m) = (m \times m) [(m \times m) - (m \times m) (m \times m)]$  
+        blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
+              &alpha, smoother._input_scaled_smoothed_estimator_cov, &kfilter.k_states,
+                      smoother._tmp0, &kfilter.k_states,
+              &beta, smoother._tmpL2, &kfilter.k_states)
+        blas.{{prefix}}gemm("T", "N", &model._k_states, &model._k_states, &model._k_states,
+              &gamma, model._transition, &kfilter.k_states,
+                      smoother._tmpL2, &kfilter.k_states,
+              &beta, smoother._tmp0, &kfilter.k_states)
+        for i in range(kfilter.k_states):
+            smoother.tmp0[i,i] = 1 + smoother.tmp0[i,i]
+        blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
+              &alpha, &kfilter.filtered_state_cov[0,0,smoother.t], &kfilter.k_states,
+                      smoother._tmp0, &kfilter.k_states,
+              &beta, smoother._smoothed_state_cov, &kfilter.k_states)
+
+{{endfor}}

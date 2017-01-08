@@ -71,13 +71,15 @@ kidney_table = StringIO("""Days      Duration Weight ID
     1.0      2      3     10
 """)
 
+kidney_table.seek(0)
+kidney_table = read_table(kidney_table, sep="\s+")
+
 class TestAnovaLM(object):
     @classmethod
     def setupClass(cls):
         # kidney data taken from JT's course
         # don't know the license
-        kidney_table.seek(0)
-        cls.data = read_table(kidney_table, sep="\s+")
+        cls.data = kidney_table
         cls.kidney_lm = ols('np.log(Days+1) ~ C(Duration) * C(Weight)',
                         data=cls.data).fit()
 
@@ -100,8 +102,7 @@ class TestAnovaLMNoconstant(object):
     def setupClass(cls):
         # kidney data taken from JT's course
         # don't know the license
-        kidney_table.seek(0)
-        cls.data = read_table(kidney_table, sep="\s+")
+        cls.data = kidney_table
         cls.kidney_lm = ols('np.log(Days+1) ~ C(Duration) * C(Weight) - 1',
                         data=cls.data).fit()
 

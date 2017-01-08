@@ -8,14 +8,208 @@ from __future__ import division, absolute_import, print_function
 
 import numpy as np
 from scipy.linalg import solve_sylvester
+import pandas as pd
 from statsmodels.tools.data import _is_using_pandas
-from . import _statespace
 
-has_find_best_blas_type = True
+import warnings
+
+
+compatibility_mode = False
+has_trmm = True
+prefix_dtype_map = {
+    's': np.float32, 'd': np.float64, 'c': np.complex64, 'z': np.complex128
+}
+prefix_statespace_map = {}
+prefix_kalman_filter_map = {}
+prefix_kalman_smoother_map = {}
+prefix_simulation_smoother_map = {}
+prefix_pacf_map = {}
+prefix_sv_map = {}
+prefix_reorder_missing_matrix_map = {}
+prefix_reorder_missing_vector_map = {}
+prefix_copy_missing_matrix_map = {}
+prefix_copy_missing_vector_map = {}
+prefix_copy_index_matrix_map = {}
+prefix_copy_index_vector_map = {}
+
+
+def set_mode(compatibility=None):
+    global compatibility_mode, has_trmm, prefix_statespace_map,        \
+        prefix_kalman_filter_map, prefix_kalman_smoother_map,          \
+        prefix_simulation_smoother_map, prefix_pacf_map, prefix_sv_map
+
+    # Determine mode automatically if none given
+    if compatibility is None:
+        try:
+            from scipy.linalg import cython_blas
+            compatibility = False
+        except ImportError:
+            compatibility = True
+
+    # If compatibility was False, make sure that is possible
+    if not compatibility:
+        try:
+            from scipy.linalg import cython_blas
+        except ImportError:
+            warnings.warn('Minimum dependencies not met. Compatibility mode'
+                          ' enabled.')
+            compatibility = True
+
+    # Initialize the appropriate mode
+    if not compatibility:
+        from scipy.linalg import cython_blas
+        from . import (_representation, _kalman_filter, _kalman_smoother,
+                       _simulation_smoother, _tools)
+        compatibility_mode = False
+
+        prefix_statespace_map.update({
+            's': _representation.sStatespace, 'd': _representation.dStatespace,
+            'c': _representation.cStatespace, 'z': _representation.zStatespace
+        })
+        prefix_kalman_filter_map.update({
+            's': _kalman_filter.sKalmanFilter, 'd': _kalman_filter.dKalmanFilter,
+            'c': _kalman_filter.cKalmanFilter, 'z': _kalman_filter.zKalmanFilter
+        })
+        prefix_kalman_smoother_map.update({
+            's': _kalman_smoother.sKalmanSmoother,
+            'd': _kalman_smoother.dKalmanSmoother,
+            'c': _kalman_smoother.cKalmanSmoother,
+            'z': _kalman_smoother.zKalmanSmoother
+        })
+        prefix_simulation_smoother_map.update({
+            's': _simulation_smoother.sSimulationSmoother,
+            'd': _simulation_smoother.dSimulationSmoother,
+            'c': _simulation_smoother.cSimulationSmoother,
+            'z': _simulation_smoother.zSimulationSmoother
+        })
+        prefix_pacf_map.update({
+            's': _tools._scompute_coefficients_from_multivariate_pacf,
+            'd': _tools._dcompute_coefficients_from_multivariate_pacf,
+            'c': _tools._ccompute_coefficients_from_multivariate_pacf,
+            'z': _tools._zcompute_coefficients_from_multivariate_pacf
+        })
+        prefix_sv_map.update({
+            's': _tools._sconstrain_sv_less_than_one,
+            'd': _tools._dconstrain_sv_less_than_one,
+            'c': _tools._cconstrain_sv_less_than_one,
+            'z': _tools._zconstrain_sv_less_than_one
+        })
+        prefix_reorder_missing_matrix_map.update({
+            's': _tools.sreorder_missing_matrix,
+            'd': _tools.dreorder_missing_matrix,
+            'c': _tools.creorder_missing_matrix,
+            'z': _tools.zreorder_missing_matrix
+        })
+        prefix_reorder_missing_vector_map.update({
+            's': _tools.sreorder_missing_vector,
+            'd': _tools.dreorder_missing_vector,
+            'c': _tools.creorder_missing_vector,
+            'z': _tools.zreorder_missing_vector
+        })
+        prefix_copy_missing_matrix_map.update({
+            's': _tools.scopy_missing_matrix,
+            'd': _tools.dcopy_missing_matrix,
+            'c': _tools.ccopy_missing_matrix,
+            'z': _tools.zcopy_missing_matrix
+        })
+        prefix_copy_missing_vector_map.update({
+            's': _tools.scopy_missing_vector,
+            'd': _tools.dcopy_missing_vector,
+            'c': _tools.ccopy_missing_vector,
+            'z': _tools.zcopy_missing_vector
+        })
+        prefix_copy_index_matrix_map.update({
+            's': _tools.scopy_index_matrix,
+            'd': _tools.dcopy_index_matrix,
+            'c': _tools.ccopy_index_matrix,
+            'z': _tools.zcopy_index_matrix
+        })
+        prefix_copy_index_vector_map.update({
+            's': _tools.scopy_index_vector,
+            'd': _tools.dcopy_index_vector,
+            'c': _tools.ccopy_index_vector,
+            'z': _tools.zcopy_index_vector
+        })
+    else:
+        from . import _statespace
+        from ._pykalman_smoother import _KalmanSmoother
+        compatibility_mode = True
+
+        try:
+            from scipy.linalg.blas import dtrmm
+        except ImportError:
+            has_trmm = False
+
+        prefix_statespace_map.update({
+            's': _statespace.sStatespace, 'd': _statespace.dStatespace,
+            'c': _statespace.cStatespace, 'z': _statespace.zStatespace
+        })
+        prefix_kalman_filter_map.update({
+            's': _statespace.sKalmanFilter, 'd': _statespace.dKalmanFilter,
+            'c': _statespace.cKalmanFilter, 'z': _statespace.zKalmanFilter
+        })
+        prefix_kalman_smoother_map.update({
+            's': _KalmanSmoother, 'd': _KalmanSmoother,
+            'c': _KalmanSmoother, 'z': _KalmanSmoother
+        })
+        prefix_simulation_smoother_map.update({
+            's': None, 'd': None, 'c': None, 'z': None
+        })
+        if has_trmm:
+            prefix_pacf_map.update({
+                's': _statespace._scompute_coefficients_from_multivariate_pacf,
+                'd': _statespace._dcompute_coefficients_from_multivariate_pacf,
+                'c': _statespace._ccompute_coefficients_from_multivariate_pacf,
+                'z': _statespace._zcompute_coefficients_from_multivariate_pacf
+            })
+            prefix_sv_map.update({
+                's': _statespace._sconstrain_sv_less_than_one,
+                'd': _statespace._dconstrain_sv_less_than_one,
+                'c': _statespace._cconstrain_sv_less_than_one,
+                'z': _statespace._zconstrain_sv_less_than_one
+            })
+        prefix_reorder_missing_matrix_map.update({
+            's': _statespace.sreorder_missing_matrix,
+            'd': _statespace.dreorder_missing_matrix,
+            'c': _statespace.creorder_missing_matrix,
+            'z': _statespace.zreorder_missing_matrix
+        })
+        prefix_reorder_missing_vector_map.update({
+            's': _statespace.sreorder_missing_vector,
+            'd': _statespace.dreorder_missing_vector,
+            'c': _statespace.creorder_missing_vector,
+            'z': _statespace.zreorder_missing_vector
+        })
+        prefix_copy_missing_matrix_map.update({
+            's': _statespace.scopy_missing_matrix,
+            'd': _statespace.dcopy_missing_matrix,
+            'c': _statespace.ccopy_missing_matrix,
+            'z': _statespace.zcopy_missing_matrix
+        })
+        prefix_copy_missing_vector_map.update({
+            's': _statespace.scopy_missing_vector,
+            'd': _statespace.dcopy_missing_vector,
+            'c': _statespace.ccopy_missing_vector,
+            'z': _statespace.zcopy_missing_vector
+        })
+        prefix_copy_index_matrix_map.update({
+            's': _statespace.scopy_index_matrix,
+            'd': _statespace.dcopy_index_matrix,
+            'c': _statespace.ccopy_index_matrix,
+            'z': _statespace.zcopy_index_matrix
+        })
+        prefix_copy_index_vector_map.update({
+            's': _statespace.scopy_index_vector,
+            'd': _statespace.dcopy_index_vector,
+            'c': _statespace.ccopy_index_vector,
+            'z': _statespace.zcopy_index_vector
+        })
+set_mode(compatibility=None)
+
+
 try:
     from scipy.linalg.blas import find_best_blas_type
 except ImportError:  # pragma: no cover
-    has_find_best_blas_type = False
     # Shim for SciPy 0.11, derived from tag=0.11 scipy.linalg.blas
     _type_conv = {'f': 's', 'd': 'd', 'F': 'c', 'D': 'z', 'G': 'z'}
 
@@ -24,38 +218,6 @@ except ImportError:  # pragma: no cover
             [(ar.dtype, i) for i, ar in enumerate(arrays)])
         prefix = _type_conv.get(dtype.char, 'd')
         return prefix, dtype, None
-
-has_trmm = True
-try:
-    from scipy.linalg.blas import dtrmm
-except ImportError:
-    has_trmm = False
-
-
-prefix_dtype_map = {
-    's': np.float32, 'd': np.float64, 'c': np.complex64, 'z': np.complex128
-}
-prefix_statespace_map = {
-    's': _statespace.sStatespace, 'd': _statespace.dStatespace,
-    'c': _statespace.cStatespace, 'z': _statespace.zStatespace
-}
-prefix_kalman_filter_map = {
-    's': _statespace.sKalmanFilter, 'd': _statespace.dKalmanFilter,
-    'c': _statespace.cKalmanFilter, 'z': _statespace.zKalmanFilter
-}
-if has_trmm:
-    prefix_pacf_map = {
-        's': _statespace._scompute_coefficients_from_multivariate_pacf,
-        'd': _statespace._dcompute_coefficients_from_multivariate_pacf,
-        'c': _statespace._ccompute_coefficients_from_multivariate_pacf,
-        'z': _statespace._zcompute_coefficients_from_multivariate_pacf
-    }
-    prefix_sv_map = {
-        's': _statespace._sconstrain_sv_less_than_one,
-        'd': _statespace._dconstrain_sv_less_than_one,
-        'c': _statespace._cconstrain_sv_less_than_one,
-        'z': _statespace._zconstrain_sv_less_than_one
-    }
 
 
 def companion_matrix(polynomial):
@@ -232,6 +394,40 @@ def diff(series, k_diff=1, k_seasonal_diff=None, k_seasons=1):
             differenced = differenced.diff()[1:]
             k_diff -= 1
     return differenced
+
+
+def concat(series, axis=0, allow_mix=False):
+    """
+    Concatenate a set of series.
+
+    Parameters
+    ----------
+    series : iterable
+        An iterable of series to be concatenated
+    axis : int, optional
+        The axis along which to concatenate. Default is 1 (columns).
+    allow_mix : bool
+        Whether or not to allow a mix of pandas and non-pandas objects. Default
+        is False. If true, the returned object is an ndarray, and additional
+        pandas metadata (e.g. column names, indices, etc) is lost.
+
+    Returns
+    -------
+    concatenated : array or pd.DataFrame
+        The concatenated array. Will be a DataFrame if series are pandas
+        objects.
+    """
+    is_pandas = np.r_[[_is_using_pandas(s, None) for s in series]]
+
+    if np.all(is_pandas):
+        concatenated = pd.concat(series, axis=axis)
+    elif np.all(~is_pandas) or allow_mix:
+        concatenated = np.concatenate(series, axis=axis)
+    else:
+        raise ValueError('Attempted to concatenate Pandas objects with'
+                         ' non-Pandas objects with `allow_mix=False`.')
+
+    return concatenated
 
 
 def is_invertible(polynomial, threshold=1.):
@@ -1411,3 +1607,292 @@ def validate_vector_shape(name, shape, nrows, nobs):
         raise ValueError('Invalid dimensions for time-varying %s'
                          ' vector. Requires shape (*,%d), got %s' %
                          (name, nobs, str(shape)))
+
+
+def reorder_missing_matrix(matrix, missing, reorder_rows=False,
+                           reorder_cols=False, is_diagonal=False,
+                           inplace=False, prefix=None):
+    """
+    Reorder the rows or columns of a time-varying matrix where all non-missing
+    values are in the upper left corner of the matrix.
+
+    Parameters
+    ----------
+    matrix : array_like
+        The matrix to be reordered. Must have shape (n, m, nobs).
+    missing : array_like of bool
+        The vector of missing indices. Must have shape (k, nobs) where `k = n`
+        if `reorder_rows is True` and `k = m` if `reorder_cols is True`.
+    reorder_rows : bool, optional
+        Whether or not the rows of the matrix should be re-ordered. Default
+        is False.
+    reorder_cols : bool, optional
+        Whether or not the columns of the matrix should be re-ordered. Default
+        is False.
+    is_diagonal : bool, optional
+        Whether or not the matrix is diagonal. If this is True, must also have
+        `n = m`. Default is False.
+    inplace : bool, optional
+        Whether or not to reorder the matrix in-place.
+    prefix : {'s', 'd', 'c', 'z'}, optional
+        The Fortran prefix of the vector. Default is to automatically detect
+        the dtype. This parameter should only be used with caution.
+
+    Returns
+    -------
+    reordered_matrix : array_like
+        The reordered matrix.
+
+    """
+    if prefix is None:
+        prefix = find_best_blas_type((matrix,))[0]
+    reorder = prefix_reorder_missing_matrix_map[prefix]
+
+    if not inplace:
+        matrix = np.copy(matrix, order='F')
+
+    reorder(matrix, np.asfortranarray(missing), reorder_rows, reorder_cols,
+            is_diagonal)
+
+    return matrix
+
+
+def reorder_missing_vector(vector, missing, inplace=False, prefix=None):
+    """
+    Reorder the elements of a time-varying vector where all non-missing
+    values are in the first elements of the vector.
+
+    Parameters
+    ----------
+    vector : array_like
+        The vector to be reordered. Must have shape (n, nobs).
+    missing : array_like of bool
+        The vector of missing indices. Must have shape (n, nobs).
+    inplace : bool, optional
+        Whether or not to reorder the matrix in-place. Default is False.
+    prefix : {'s', 'd', 'c', 'z'}, optional
+        The Fortran prefix of the vector. Default is to automatically detect
+        the dtype. This parameter should only be used with caution.
+
+    Returns
+    -------
+    reordered_vector : array_like
+        The reordered vector.
+
+    """
+    if prefix is None:
+        prefix = find_best_blas_type((vector,))[0]
+    reorder = prefix_reorder_missing_vector_map[prefix]
+
+    if not inplace:
+        vector = np.copy(vector, order='F')
+
+    reorder(vector, np.asfortranarray(missing))
+
+    return vector
+
+
+def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
+                        is_diagonal=False, inplace=False, prefix=None):
+    """
+    Copy the rows or columns of a time-varying matrix where all non-missing
+    values are in the upper left corner of the matrix.
+
+    Parameters
+    ----------
+    A : array_like
+        The matrix from which to copy. Must have shape (n, m, nobs) or
+        (n, m, 1).
+    B : array_like
+        The matrix to copy to. Must have shape (n, m, nobs).
+    missing : array_like of bool
+        The vector of missing indices. Must have shape (k, nobs) where `k = n`
+        if `reorder_rows is True` and `k = m` if `reorder_cols is True`.
+    missing_rows : bool, optional
+        Whether or not the rows of the matrix are a missing dimension. Default
+        is False.
+    missing_cols : bool, optional
+        Whether or not the columns of the matrix are a missing dimension.
+        Default is False.
+    is_diagonal : bool, optional
+        Whether or not the matrix is diagonal. If this is True, must also have
+        `n = m`. Default is False.
+    inplace : bool, optional
+        Whether or not to copy to B in-place. Default is False.
+    prefix : {'s', 'd', 'c', 'z'}, optional
+        The Fortran prefix of the vector. Default is to automatically detect
+        the dtype. This parameter should only be used with caution.
+
+    Returns
+    -------
+    copied_matrix : array_like
+        The matrix B with the non-missing submatrix of A copied onto it.
+
+    """
+    if prefix is None:
+        prefix = find_best_blas_type((A, B))[0]
+    copy = prefix_copy_missing_matrix_map[prefix]
+
+    if not inplace:
+        B = np.copy(B, order='F')
+
+    # We may have been given an F-contiguous memoryview; in that case, we don't
+    # want to alter it or convert it to a numpy array
+    try:
+        if not A.is_f_contig():
+            raise ValueError()
+    except:
+        A = np.asfortranarray(A)
+
+    copy(A, B, np.asfortranarray(missing), missing_rows, missing_cols,
+         is_diagonal)
+
+    return B
+
+
+def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
+    """
+    Reorder the elements of a time-varying vector where all non-missing
+    values are in the first elements of the vector.
+
+    Parameters
+    ----------
+    a : array_like
+        The vector from which to copy. Must have shape (n, nobs) or (n, 1).
+    b : array_like
+        The vector to copy to. Must have shape (n, nobs).
+    missing : array_like of bool
+        The vector of missing indices. Must have shape (n, nobs).
+    inplace : bool, optional
+        Whether or not to copy to b in-place. Default is False.
+    prefix : {'s', 'd', 'c', 'z'}, optional
+        The Fortran prefix of the vector. Default is to automatically detect
+        the dtype. This parameter should only be used with caution.
+
+    Returns
+    -------
+    copied_vector : array_like
+        The vector b with the non-missing subvector of b copied onto it.
+
+    """
+    if prefix is None:
+        prefix = find_best_blas_type((a, b))[0]
+    copy = prefix_copy_missing_vector_map[prefix]
+
+    if not inplace:
+        b = np.copy(b, order='F')
+
+    # We may have been given an F-contiguous memoryview; in that case, we don't
+    # want to alter it or convert it to a numpy array
+    try:
+        if not a.is_f_contig():
+            raise ValueError()
+    except:
+        a = np.asfortranarray(a)
+
+    copy(a, b, np.asfortranarray(missing))
+
+    return b
+
+
+def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
+                      is_diagonal=False, inplace=False, prefix=None):
+    """
+    Copy the rows or columns of a time-varying matrix where all non-index
+    values are in the upper left corner of the matrix.
+
+    Parameters
+    ----------
+    A : array_like
+        The matrix from which to copy. Must have shape (n, m, nobs) or
+        (n, m, 1).
+    B : array_like
+        The matrix to copy to. Must have shape (n, m, nobs).
+    index : array_like of bool
+        The vector of index indices. Must have shape (k, nobs) where `k = n`
+        if `reorder_rows is True` and `k = m` if `reorder_cols is True`.
+    index_rows : bool, optional
+        Whether or not the rows of the matrix are a index dimension. Default
+        is False.
+    index_cols : bool, optional
+        Whether or not the columns of the matrix are a index dimension.
+        Default is False.
+    is_diagonal : bool, optional
+        Whether or not the matrix is diagonal. If this is True, must also have
+        `n = m`. Default is False.
+    inplace : bool, optional
+        Whether or not to copy to B in-place. Default is False.
+    prefix : {'s', 'd', 'c', 'z'}, optional
+        The Fortran prefix of the vector. Default is to automatically detect
+        the dtype. This parameter should only be used with caution.
+
+    Returns
+    -------
+    copied_matrix : array_like
+        The matrix B with the non-index submatrix of A copied onto it.
+
+    """
+    if prefix is None:
+        prefix = find_best_blas_type((A, B))[0]
+    copy = prefix_copy_index_matrix_map[prefix]
+
+    if not inplace:
+        B = np.copy(B, order='F')
+
+    # We may have been given an F-contiguous memoryview; in that case, we don't
+    # want to alter it or convert it to a numpy array
+    try:
+        if not A.is_f_contig():
+            raise ValueError()
+    except:
+        A = np.asfortranarray(A)
+
+    copy(A, B, np.asfortranarray(index), index_rows, index_cols,
+         is_diagonal)
+
+    return B
+
+
+def copy_index_vector(a, b, index, inplace=False, prefix=None):
+    """
+    Reorder the elements of a time-varying vector where all non-index
+    values are in the first elements of the vector.
+
+    Parameters
+    ----------
+    a : array_like
+        The vector from which to copy. Must have shape (n, nobs) or (n, 1).
+    b : array_like
+        The vector to copy to. Must have shape (n, nobs).
+    index : array_like of bool
+        The vector of index indices. Must have shape (n, nobs).
+    inplace : bool, optional
+        Whether or not to copy to b in-place. Default is False.
+    prefix : {'s', 'd', 'c', 'z'}, optional
+        The Fortran prefix of the vector. Default is to automatically detect
+        the dtype. This parameter should only be used with caution.
+
+    Returns
+    -------
+    copied_vector : array_like
+        The vector b with the non-index subvector of b copied onto it.
+
+    """
+    if prefix is None:
+        prefix = find_best_blas_type((a, b))[0]
+    copy = prefix_copy_index_vector_map[prefix]
+
+    if not inplace:
+        b = np.copy(b, order='F')
+
+    # We may have been given an F-contiguous memoryview; in that case, we don't
+    # want to alter it or convert it to a numpy array
+    try:
+        if not a.is_f_contig():
+            raise ValueError()
+    except:
+        a = np.asfortranarray(a)
+
+    copy(a, b, np.asfortranarray(index))
+
+    return b

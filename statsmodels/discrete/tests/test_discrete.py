@@ -145,6 +145,12 @@ class CheckMargEff(object):
         assert_almost_equal(me.margeff_se,
                 self.res2.margeff_nodummy_dydx_se, DECIMAL_4)
 
+        me_frame = me.summary_frame()
+        eff = me_frame["dy/dx"].values
+        assert_allclose(eff, me.margeff, rtol=1e-13)
+        assert_equal(me_frame.shape, (me.margeff.size, 6))
+
+
     def test_nodummy_dydxmean(self):
         me = self.res1.get_margeff(at='mean')
         assert_almost_equal(me.margeff,
@@ -1136,6 +1142,10 @@ class CheckMNLogitBaseZero(CheckModelResults):
         me = self.res1.get_margeff()
         assert_almost_equal(me.margeff, self.res2.margeff_dydx_overall, 6)
         assert_almost_equal(me.margeff_se, self.res2.margeff_dydx_overall_se, 6)
+        me_frame = me.summary_frame()
+        eff = me_frame["dy/dx"].values.reshape(me.margeff.shape, order="F")
+        assert_allclose(eff, me.margeff, rtol=1e-13)
+        assert_equal(me_frame.shape, (np.size(me.margeff), 6))
 
     def test_margeff_mean(self):
         me = self.res1.get_margeff(at='mean')

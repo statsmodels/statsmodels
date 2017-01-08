@@ -223,6 +223,10 @@ class DynamicFactor(MLEModel):
             endog, exog=exog, k_states=k_states, k_posdef=k_posdef, **kwargs
         )
 
+        # Set as time-varying model if we have exog
+        if self.k_exog > 0:
+            self.ssm._time_invariant = False
+
         # Initialize the components
         self.parameters = OrderedDict()
         self._initialize_loadings()
@@ -1131,8 +1135,8 @@ class DynamicFactorResults(MLEResults):
 
         return fig
 
-    def get_prediction(self, start=None, end=None, dynamic=False, exog=None,
-                       **kwargs):
+    def get_prediction(self, start=None, end=None, dynamic=False, index=None,
+                       exog=None, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -1171,11 +1175,11 @@ class DynamicFactorResults(MLEResults):
             Array of out of sample forecasts.
         """
         if start is None:
-                start = 0
+            start = self.model._index[0]
 
         # Handle end (e.g. date)
-        _start = self.model._get_predict_start(start)
-        _end, _out_of_sample = self.model._get_predict_end(end)
+        _start, _end, _out_of_sample, prediction_index = (
+            self.model._get_prediction_index(start, end, index, silent=True))
 
         # Handle exogenous parameters
         if _out_of_sample and self.model.k_exog > 0:
@@ -1227,8 +1231,8 @@ class DynamicFactorResults(MLEResults):
                  ' required. `exog` argument ignored.', ValueWarning)
 
         return super(DynamicFactorResults, self).get_prediction(
-            start=start, end=end, dynamic=dynamic, exog=exog, **kwargs
-        )
+            start=start, end=end, dynamic=dynamic, index=index, exog=exog,
+            **kwargs)
 
     def summary(self, alpha=.05, start=None, separate_params=True):
         from statsmodels.iolib.summary import summary_params
