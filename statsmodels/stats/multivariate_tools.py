@@ -1,7 +1,7 @@
 '''Tools for multivariate analysis
 
 
-Author : Josef Perktold, Young Ju Kim
+Author : Josef Perktold. Young Ju Kim
 License : BSD-3
 
 
@@ -16,7 +16,7 @@ TODO:
 
 import numpy as np
 import pandas as pd
-from statsmodels.stats.outliers_influence import variance_inflation_factor
+from statsmodels.stats.outliers_influence import variance_inflation_factor as vif
 
 
 # temporarily here, used in return
@@ -310,28 +310,25 @@ def feature_selection_vif(data, thresh=5.0):
     while dropCondition:
 
         # 1. Calculate a VIF
-        vifList = [variance_inflation_factor(data.loc[:, col],
-                                             data.loc[:, data.columns != col])
-                   for col in data.columns]
+        vifDict = {col: vif(data.loc[:, col], data.loc[:, data.columns != col])
+                   for col in data.columns}
 
         # Get the MAXIMUM VIF
-        max_val = max(vifList)
-        max_idx = vifList.index(max(vifList))
-        max_var = data.columns[max_idx]
+        maxVar = max(vifDict, key=vifDict.get)
+        maxVal = vifDict[maxVar]
 
         # 2. IF VIF values are over the threshold, THEN drop it
-        if max_val >= thresh:
+        if maxVal >= thresh:
 
             # Keep it
-            dropped = dropped.append({'var': max_var, 'vif': max_val},
+            dropped = dropped.append({'var': maxVar, 'vif': maxVal},
                                      ignore_index=True)
 
             # Drop it
-            data = data.drop(data.columns[max_idx], axis=1)
+            data = data.drop(maxVar, axis=1)
 
             # Print it
-            print("Dropping '" + str(data.columns[max_idx]) + "' " +
-                  "VIF: " + str(max_val))
+            print("Dropping '" + str(maxVar) + "' " + " VIF: " + str(maxVal))
 
             # Since a variable has been dropped, the assumption remains
             dropCondition = True
@@ -341,7 +338,18 @@ def feature_selection_vif(data, thresh=5.0):
             # No variable dropped, the assumption has been rejected
             dropCondition = False
 
-    print('Remaining Variables')
-    print(data.columns)
+    # Print Massages
+    remainsMsg = '# Remaining Variables '
+    msgWrapper = '-' * (len(remainsMsg)+1)
+
+    print('\n' + msgWrapper + '\n' + remainsMsg + '\n' + msgWrapper)
+    print(list(data.columns))
+    print('\n')
+
+    droppedMsg = '# Dropped Variables '
+    msgWrapper = '-' * (len(remainsMsg)+1)
+    print('\n' + msgWrapper + '\n' + droppedMsg + '\n' + msgWrapper)
+    print(list(dropped.loc[:, 'var']))
+    print('\n')
 
     return data, dropped
