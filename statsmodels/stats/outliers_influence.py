@@ -3,13 +3,14 @@
 
 Created on Sun Jan 29 11:16:09 2012
 
-Author: Josef Perktold
+Author: Josef Perktold, Young Ju Kim
 License: BSD-3
 """
 from statsmodels.compat.python import lzip
 from collections import defaultdict
 import numpy as np
 
+import statsmodels.api as sm
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.stats.multitest import multipletests
@@ -163,6 +164,7 @@ def variance_inflation_factor(exog, exog_idx):
     x_i = exog[:, exog_idx]
     mask = np.arange(k_vars) != exog_idx
     x_noti = exog[:, mask]
+    x_noti = sm.add_constant(exog[:, mask])
     r_squared_i = OLS(x_i, x_noti).fit().rsquared
     vif = 1. / (1. - r_squared_i)
     return vif
