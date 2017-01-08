@@ -134,37 +134,6 @@ PandasInterface = partial(DataInterface, PANDAS_TYPES, pd.DataFrame)
 ListInterface = partial(DataInterface, [list], list)
 
 
-def to_categorical(data, col=None, drop=False):
-    # drops support for recarrays
-
-    if type(data) == list:
-        data = flatten_list(data)
-
-    to_type = type(data)
-    to_dummies = to_pandas(data)
-
-    if get_ndim(data) > 1:
-        to_drop = to_dummies.drop(col, 1)
-
-        if isinstance(col, int):
-            to_dummies = to_dummies.iloc[:, col]
-        elif isinstance(col, str):
-            to_dummies = to_dummies.loc[:, col]
-
-    else:
-        to_drop = None
-
-    source_data = to_pandas(data)
-    dummies = pd.get_dummies(to_dummies)
-
-    if not drop:
-        result = pd.concat([source_data, dummies], axis=1)
-    else:
-        result = pd.concat([to_drop, dummies], axis=1)
-
-    return from_pandas(result, to_type)
-
-
 def to_numpy_array(data):
     from_type = type(data)
 
