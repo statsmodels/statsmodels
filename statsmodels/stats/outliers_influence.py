@@ -163,6 +163,7 @@ def variance_inflation_factor(exog, exog_idx):
     k_vars = exog.shape[1]
     x_i = exog[:, exog_idx]
     mask = np.arange(k_vars) != exog_idx
+    x_noti = exog[:, mask]
     x_noti = sm.add_constant(exog[:, mask])
     r_squared_i = OLS(x_i, x_noti).fit().rsquared
     vif = 1. / (1. - r_squared_i)
