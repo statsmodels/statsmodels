@@ -37,10 +37,10 @@ Technical Documentation
 ..   ..glm_techn1
 ..   ..glm_techn2
 
-The statistical model is assumed to be
+The statistical model for each observation :math:`i` is assumed to be
 
- :math:`Y \sim F_{EDM}(\cdot|\theta,\phi,w)` and
- :math:`\mu = E[Y] = g^{-1}(x^\prime\beta)`.
+ :math:`Y_i \sim F_{EDM}(\cdot|\theta,\phi,w_i)` and
+ :math:`\mu_i = E[Y_i|x_i] = g^{-1}(x_i^\prime\beta)`.
 
 where :math:`g` is the link function and :math:`F_{EDM}(\cdot|\theta,\phi,w)`
 is a distribution of the family of exponential dispersion models (EDM) with
@@ -52,11 +52,11 @@ Its density is given by
  \exp\left(\frac{y\theta-b(\theta)}{\phi}w\right)\,.`
 
 It follows that :math:`\mu = b'(\theta)` and
-:math:`Var[Y]=\frac{\phi}{w}b''(\theta)`. The inverse of the first equation
-gives the natural parameter as a function of the mean :math:`\theta(\mu)`
-such that
+:math:`Var[Y|x]=\frac{\phi}{w}b''(\theta)`. The inverse of the first equation
+gives the natural parameter as a function of the expected value
+:math:`\theta(\mu)` such that
 
- :math:`Var[Y] = \frac{\phi}{w} v(\mu)`
+ :math:`Var[Y_i|x_i] = \frac{\phi}{w_i} v(\mu_i)`
 
 with :math:`v(\mu) = b''(\theta(\mu))`. Therefore it is said that a GLM is
 determined by link function :math:`g` and variance function :math:`v(\mu)`
@@ -68,7 +68,7 @@ the weights :math:`w_i` might be different for every :math:`y_i` such that the
 estimation of :math:`\beta` depends on them.
 
 ================================================= ============================== ============================== ======================================== =========================================== ============================================================================ =====================
-Distribution                                      Domain                         :math:`\mu=E[Y]`               :math:`v(\mu)`                           :math:`\theta(\mu)`                         :math:`b(\theta)`                                                            :math:`\phi`
+Distribution                                      Domain                         :math:`\mu=E[Y|x]`             :math:`v(\mu)`                           :math:`\theta(\mu)`                         :math:`b(\theta)`                                                            :math:`\phi`
 ================================================= ============================== ============================== ======================================== =========================================== ============================================================================ =====================
 Binomial :math:`B(n,p)`                           :math:`0,1,\ldots,n`           :math:`np`                     :math:`\mu-\frac{\mu^2}{n}`              :math:`\log\frac{p}{1-p}`                   :math:`n\log(1+e^\theta)`                                                    1
 Poisson :math:`P(\mu)`                            :math:`0,1,\ldots,\infty`      :math:`\mu`                    :math:`\mu`                              :math:`\log(\mu)`                           :math:`e^\theta`                                                             1
@@ -84,10 +84,12 @@ table and uses :math:`\alpha=\frac{p-2}{p-1}`.
 
 Correspondence of mathematical variables to code:
 
-* :math:`Y` and :math:`y_i` are coded as ``endog``, the variable one wants to
+* :math:`Y` and :math:`y` are coded as ``endog``, the variable one wants to
   model
 * :math:`x` is coded as ``exog``, the covariates alias explanatory variables
-* :math:`\mu` is coded as ``mu``, the mean of :math:`Y`
+* :math:`\beta` is coded as ``params``, the parameters one wants to estimate
+* :math:`\mu` is coded as ``mu``, the expectation (conditional on :math:`x`)
+  of :math:`Y`
 * :math:`g` is coded as ``link`` argument to the ``class Family``
 * :math:`\phi` is coded as ``scale``, the dispersion parameter of the EDM
 * :math:`w` is not yet supported (i.e. :math:`w=1`), in the future it might be
