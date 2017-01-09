@@ -2014,3 +2014,19 @@ def test_predict_custom_index():
     res = mod.smooth(mod.start_params)
     out = res.predict(start=1, end=1, index=['a'])
     assert_equal(out.index.equals(pd.Index(['a'])), True)
+
+
+def test_arima000():
+    # Test an ARIMA(0,0,0) with measurement error model (i.e. just estimating
+    # a variance term)
+    np.random.seed(328423)
+    endog = pd.DataFrame(np.random.normal(size=50))
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), measurement_error=True)
+    res = mod.smooth(mod.start_params)
+
+    # Test an invalid model: ARIMA(0, 0, 0) without measurement error
+    assert_raises(ValueError, sarimax.SARIMAX, endog, order=(0, 0, 0))
+
+    # ARIMA(0, 1, 0)
+    mod = sarimax.SARIMAX(endog, order=(0, 1, 0), measurement_error=True)
+    res = mod.smooth(mod.start_params)
