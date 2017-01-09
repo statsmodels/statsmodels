@@ -183,9 +183,6 @@ def to_pandas(data, name=None, columns=None):
     if type(data) in PANDAS_TYPES:
         return data
 
-    elif is_recarray(data):
-        return recarray_to_pandas(data)
-
     else:
         np_data = to_numpy_array(data)
 
@@ -445,87 +442,3 @@ def is_recarray(data):
             return False
     else:
         return False
-
-
-def recarray_to_pandas(data):
-
-    data_list = []
-
-    if data.dtype.names is None:
-
-        if is_col_vector(data):
-            data = transpose(data)
-
-        return pd.Series(data)
-
-    else:
-
-        for name in data.dtype.names:
-            col = data[name]
-
-            if is_col_vector(col):
-                col = transpose(col)
-
-            data_list.append(pd.Series(col, name=name))
-
-        return pd.concat(data_list, axis=1)
-
-
-def drop_recarray_column(rec, name):
-
-    names = list(rec.dtype.names)
-
-    if name in names:
-        names.remove(name)
-
-    result = rec[names]
-
-    return result
-
-
-def slice_2d(shape):
-
-    s = []
-
-    for index in shape:
-        if index > 1:
-            s.append(slice(None))
-        else:
-            s.append(0)
-
-    return tuple(s)
-
-
-def flatten_list(data):
-
-    assert type(data) == list
-
-    np_data = np.asarray(data)
-    shape = np_data.shape
-
-    dims = sum(1 for elem in shape if elem > 1)
-
-    if dims > 2:
-        raise ValueError('Data must have no more than two dimensions')
-    else:
-        slicer = slice_2d(shape)
-        data = np_data[slicer].tolist()
-
-    return data
-
-
-def flatten_array(data):
-
-    assert type(data) in [np.ndarray, np.recarray]
-
-    shape = data.shape
-
-    dims = sum(1 for elem in shape if elem > 1)
-
-    if dims > 2:
-        raise ValueError('Data must have no more than two dimensions')
-    else:
-        slicer = slice_2d(shape)
-        data = data[slicer]
-
-    return data
