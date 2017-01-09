@@ -409,7 +409,9 @@ class SARIMAX(MLEModel):
         self._k_order = max(self.k_ar + self.k_seasonal_ar,
                             self.k_ma + self.k_seasonal_ma + 1)
         if self._k_order == 1 and self.k_ar + self.k_seasonal_ar == 0:
-            self._k_order = 0
+            # Handle time-varying regression
+            if self.time_varying_regression:
+                self._k_order = 0
 
         # Exogenous data
         self.k_exog = 0
@@ -751,6 +753,9 @@ class SARIMAX(MLEModel):
             [1] * self.state_error, [0] * (self._k_order - 1)
         ]
 
+        if len(design) == 0:
+            design = np.r_[0]
+
         # If we have exogenous regressors included as part of the state vector
         # then the exogenous data is incorporated as a time-varying component
         # of the design matrix
@@ -798,11 +803,12 @@ class SARIMAX(MLEModel):
             end = None
 
         # T_c
-        transition[start:end, start:end] = companion_matrix(self._k_order)
-        if self.hamilton_representation:
-            transition[start:end, start:end] = np.transpose(
-                companion_matrix(self._k_order)
-            )
+        if self._k_order > 0:
+            transition[start:end, start:end] = companion_matrix(self._k_order)
+            if self.hamilton_representation:
+                transition[start:end, start:end] = np.transpose(
+                    companion_matrix(self._k_order)
+                )
 
         # Seasonal differencing component
         # T^*
@@ -851,6 +857,9 @@ class SARIMAX(MLEModel):
                     [1] * (self._k_order > 0), [0] * (self._k_order - 1),
                     [0] * ((1 - self.mle_regression) * self.k_exog)
                 ][:, None]
+
+                if len(selection) == 0:
+                    selection = np.zeros((self.k_states, self.k_posdef))
             else:
                 selection = np.zeros((self.k_states, 0))
         else:
@@ -1049,9 +1058,9 @@ class SARIMAX(MLEModel):
             if not params_seasonal_variance == []:
                 params_variance = params_seasonal_variance
             elif self.k_exog > 0:
-                params_variance = np.dot(endog, endog)
+                params_variance = np.inner(endog, endog)
             else:
-                params_variance = 1
+                params_variance = np.inner(endog, endog) / self.nobs
         params_measurement_variance = 1 if self.measurement_error else []
 
         # Combine all parameters
