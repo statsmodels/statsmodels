@@ -1438,6 +1438,19 @@ def cochrans_q(x, return_object=True):
     return q_stat, pvalue, df
 
 
+def shift_zeros(dataframe):
+    """
+    chi-squared tests can't handle having expected counts of zero. so if the table contains
+    a cell with zero observations, jitter it up by 0.5
+    :param dataframe:
+    :return:
+    """
+    if dataframe.min().min() == 0:
+        return dataframe + 0.5
+    else:
+        return dataframe
+
+
 class MRCVTable(object):
     """
     Analyses that can be performed on a two-way contingency table that contains
@@ -1533,20 +1546,20 @@ class MRCVTable(object):
         return table
 
     def test_for_independence(self):
-        single_response_row_factor = any([f.multiple_response for f in self.row_factors])
-        single_response_column_factor = any([f.multiple_response for f in self.column_factors])
-        if single_response_row_factor and single_response_column_factor:
-            single_response_table = Table(self.table)
-            return single_response_table.test_nominal_association()
-        elif single_response_row_factor:
-            return self._test_for_marginal_mutual_independence_using_bonferroni_correction(self.row_factors[0],
-                                                                                           self.column_factors)
-        elif single_response_column_factor:
-            return self._test_for_marginal_mutual_independence_using_bonferroni_correction(self.column_factors,
-                                                                                           self.row_factors[0])
-        else:
+        multiple_response_row_factor = any([f.multiple_response for f in self.row_factors])
+        multiple_response_column_factor = any([f.multiple_response for f in self.column_factors])
+        if multiple_response_row_factor and multiple_response_column_factor:
             return self._test_for_single_pairwise_mutual_independence_using_bonferroni(self.row_factors[0],
                                                                                        self.column_factors[0])
+        elif multiple_response_column_factor:
+            return self._test_for_marginal_mutual_independence_using_bonferroni_correction(self.row_factors[0],
+                                                                                           self.column_factors[0])
+        elif multiple_response_row_factor:
+            return self._test_for_marginal_mutual_independence_using_bonferroni_correction(self.column_factors[0],
+                                                                                           self.row_factors[0])
+        else:
+            single_response_table = Table(self.table)
+            return single_response_table.test_nominal_association()
 
     @classmethod
     def _extract_and_validate_factors(cls, column_factors, row_factors):
@@ -1625,7 +1638,6 @@ class MRCVTable(object):
             mmi_chi_squared_by_cell.loc[factor_level] = chi_squared_statistic
         return mmi_chi_squared_by_cell
 
-
     @staticmethod
     def _build_item_response_table_for_SPMI(rows_factor, columns_factor):
         rows_data = rows_factor.data
@@ -1657,15 +1669,27 @@ class MRCVTable(object):
         item_response_table = cls._build_item_response_table_for_SPMI(rows_factor, columns_factor)
         rows_levels = item_response_table.index.levels[0]
         columns_levels = item_response_table.columns.levels[0]
+        num_col_levels = len(columns_levels)
+        num_row_levels = len(rows_levels)
+        if item_response_table.shape != (num_row_levels * 2, num_col_levels * 2):
+            # crosstab will have degenerate shape (i.e. dimension != r*c)
+            # if one level had no observations, i.e. was all 0 or all 1
+            # we could pad those out with 0.5 on the unobserved levels, but that can produce
+            # extreme chi-square values, e.g. [[1000.5, 0.5], [0.5, 0.5]]
+            # has a chi-square of around 250, which sort of makes sense if the top left pairing
+            # always co-occurs. But instead of making that extreme assumption, we'll just decline
+            # to calculate.
+            return pd.DataFrame(np.nan, index=rows_levels, columns=columns_levels)
         chis_spmi = pd.DataFrame(index=rows_levels, columns=columns_levels)
-        for i in range(0, len(rows_levels) * 2, 2):
-            for j in range(0, len(columns_levels) * 2, 2):
+        for i in range(0, num_row_levels * 2, 2):
+            for j in range(0, num_col_levels * 2, 2):
                 # use integer indexers because level labels are not necessarily unique
                 # the "stride by 2" is because pandas does not support integer based indexing with multi-indexes
                 # to capture a whole level of the time (i.e. we can't say "give me the first column-group")
                 # so we need to manually select both the 0 and 1 column of each column group
                 # by providing an explicit couple of index positions
                 crosstab = item_response_table.iloc[(i, i+1), (j, j+1)]
+                crosstab = shift_zeros(crosstab)
                 chi2_results = chi2_contingency(crosstab, correction=False)
                 chi_squared_statistic, _, _, _ = chi2_results
                 row_level = rows_levels[int(i / 2)]
@@ -1680,8 +1704,8 @@ class MRCVTable(object):
         p_value_ij = observed.applymap(chi2_survival_with_1_dof)
         p_value_min = p_value_ij.min().min()
         bonferroni_correction_factor = row_factor.factor_level_count * column_factor.factor_level_count
-        table_p_value_bonferroni_corrected = bonferroni_correction_factor * p_value_min
         cap = lambda x: min(x, 1)
+        table_p_value_bonferroni_corrected = cap(bonferroni_correction_factor * p_value_min)
         pairwise_bonferroni_corrected_p_values = (p_value_ij * bonferroni_correction_factor).applymap(cap)
         return table_p_value_bonferroni_corrected, pairwise_bonferroni_corrected_p_values
 
@@ -1835,6 +1859,7 @@ class MRCVTable(object):
                                                                  multiple_response_factor):
         if single_response_factor.orientation == "wide":
             W = single_response_factor.cast_wide_to_narrow().data
+            W = W[W['value'] == 1]  # only consider actually selected option
             W.set_index("observation_id", inplace=True)
         else:
             W = single_response_factor.data
@@ -2002,9 +2027,10 @@ class Factor(object):
         if self.orientation != "wide":
             raise NotImplementedError("Factor is already narrow")
         solid_df = self.data
-        melted = pd.melt(solid_df.reset_index(), id_vars=solid_df.index.name)
-        melted = melted.rename(columns={"index": "observation_id"})
-        narrow_data = melted[melted.value == 1].sort_values("observation_id")
+        index_name = solid_df.index.name
+        melted = pd.melt(solid_df.reset_index(), id_vars=index_name)
+        melted = melted.rename(columns={index_name: "observation_id"})
+        narrow_data = melted.sort_values("observation_id").reset_index(drop=True)
         narrow_factor = Factor(narrow_data, self.name, orientation="narrow",
                                multiple_response=self.multiple_response)
         return narrow_factor

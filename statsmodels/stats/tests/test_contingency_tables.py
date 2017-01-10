@@ -605,8 +605,7 @@ def test_multiple_mutual_independence_false_using_rao_scott_2():
                                  "believe_true", orientation="wide")
     multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
     rao_scott_2_test = multiple_response_table._test_for_marginal_mutual_independence_using_rao_scott_2
-    table_p_value = rao_scott_2_test(rows_factor,
-                            columns_factor)
+    table_p_value = rao_scott_2_test(rows_factor, columns_factor)
     fpath = os.path.join(results_dirpath, "srcv_r_rao_scott.csv")
     r_result = pd.DataFrame.from_csv(fpath)
     table_p_value_r = r_result["p.value.rs2"]
@@ -660,8 +659,8 @@ def test_SPMI_false_using_rao_scott_2():
     assert_allclose(table_p_value_r, table_p_value)
 
 
-def build_random_single_select():
-    car_type = np.random.randint(3, size=(10000)) + 1
+def build_random_single_select(n=10000):
+    car_type = np.random.randint(3, size=(n)) + 1
     base_pop = pd.DataFrame(car_type).reset_index()
     base_pop.columns = ['person', 'choice']
     base_pop['_response'] = 1
@@ -747,9 +746,19 @@ def test_Factor_from_wide_data():
     single_response_data = presidential_data.iloc[:, :6]
     single_response_factor = ctab.Factor.from_array(single_response_data, range(0, 6), "")
     narrow_dataframe = single_response_factor.cast_wide_to_narrow().data
+    narrow_dataframe = narrow_dataframe[narrow_dataframe.value == 1]  # actually selected options
     top_row = narrow_dataframe[['observation_id', 'factor_level', 'value']].iloc[0]
     expected = [0, 4, 1]  # from a manual run
     assert np.all(top_row == expected)
+
+
+def test_Factor_wide_to_narrow():
+    # had a bug with index names
+    n = 100
+    car_choice = build_random_single_select(n)
+    srcv = ctab.Factor(car_choice, "car_choice", orientation="wide")
+    wide = srcv.cast_wide_to_narrow()
+    assert wide.data.shape == (300, 3)
 
 
 def test_Factor_from_narrow_data():
@@ -757,13 +766,11 @@ def test_Factor_from_narrow_data():
                               "believe_true", orientation="wide")
     narrow_factor = rows_factor.cast_wide_to_narrow()
     wide_factor = narrow_factor.cast_narrow_to_wide()
-    rows_dataframe = rows_factor.data
-    selected_some = rows_dataframe.sum(axis=1) > 0
     # pivoting the dataframe sorts the columns lexographically (because the original column order
     # is not preserved when the dataframe is cast to narrow)
     # so to compare, we need to sort the columns of the original dataframe
-    selected_some_df = rows_dataframe[selected_some].sort_index(axis=1)
-    matches = selected_some_df == wide_factor.data
+    rows_dataframe = rows_factor.data.sort_index(axis=1)
+    matches = rows_dataframe == wide_factor.data
     assert matches.all().all()
 
 
@@ -784,7 +791,47 @@ def test_Factor_columns_must_have_labels():
         single_response_factor = ctab.Factor.from_array(single_response_data, [], "")
 
 
+def test_MRCV_table_with_ones():
+    a = np.ones((1000, 2))
+    b = np.ones((1000, 2))
+    labels = ["Yes", "No"]
+    mrcv_1 = ctab.Factor.from_array(a, labels, "alive", orientation="wide", multiple_response=True)
+    mrcv_2 = ctab.Factor.from_array(b, labels, "cool", orientation="wide", multiple_response=True)
+    multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    results = multiple_response_table.test_for_independence()
+    assert np.all(np.isnan(results[1]))
+
+
 def test_MRCV_table_with_zeros():
+    a = np.zeros((1000, 2))
+    b = np.zeros((1000, 2))
+    labels = ["Yes", "No"]
+    mrcv_1 = ctab.Factor.from_array(a, labels, "alive", orientation="wide", multiple_response=True)
+    mrcv_2 = ctab.Factor.from_array(b, labels, "cool", orientation="wide", multiple_response=True)
+    multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    results = multiple_response_table.test_for_independence()
+    assert np.all(np.isnan(results[1]))
+
+
+def test_MRCV_2x2_table():
+    # hit a bug with 2x2 tables not working
+    np.seed(100)
+    a = pd.DataFrame(np.random.randint(2, size=(1000, 2)),
+                             columns=["good", "bad"])
+    b = pd.DataFrame(np.random.randint(2, size=(1000, 2)),
+                             columns=["eggs", "cheese"])
+    mrcv_1 = ctab.Factor(a, "alive", orientation="wide", multiple_response=True)
+    mrcv_2 = ctab.Factor(b, "cool", orientation="wide", multiple_response=True)
+    multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    results = multiple_response_table.test_for_independence()
+    assert results[0] > 0.05
+
+
+def test_for_MRCV_independence():
+    mrcv_1 = ctab.Factor.from_array(language, language.columns, "car_choice", orientation="wide")
+    mrcv_2 = ctab.Factor.from_array(food_choices, food_choices.columns, "food_choices", orientation="wide")
+    multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    multiple_response_table.test_for_independence()
     assert False
 
 
