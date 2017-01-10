@@ -818,7 +818,7 @@ class cloglog(CLogLog):
     pass
 
 
-class NegativeBinomial(object):
+class NegativeBinomial(Link):
     '''
     The negative binomial link function
 
