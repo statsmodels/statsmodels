@@ -531,9 +531,9 @@ class Test2x2_1(Check2x2Mixin):
 
 
 def test_MMI_item_response_table():
-    rows_factor = ctab.Factor(presidential_data.iloc[:, :6], presidential_data.columns[:6],
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, :6], presidential_data.columns[:6],
                               "expected_choice", orientation="wide")
-    columns_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
                                  "believe_true", orientation="wide")
     multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
     srcv_item_response_table_python = multiple_response_table._build_item_response_table_for_MMI(rows_factor,
@@ -555,9 +555,9 @@ def test_MMI_item_response_table():
 
 
 def test_SPMI_item_response_table():
-    rows_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
                               "believe_true", orientation="wide")
-    columns_factor = ctab.Factor(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
                                  "why_uncertain", orientation="wide")
     multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
     spmi_item_response_table_python = multiple_response_table._build_item_response_table_for_SPMI(rows_factor,
@@ -568,9 +568,9 @@ def test_SPMI_item_response_table():
 
 
 def test_calculate_pairwise_chi2s_for_MMI_item_response_table():
-    rows_factor = ctab.Factor(presidential_data.iloc[:, :6], presidential_data.columns[:6],
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, :6], presidential_data.columns[:6],
                               "expected_choice", orientation="wide")
-    columns_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
                                  "believe_true", orientation="wide")
     multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
     calculate = multiple_response_table._calculate_pairwise_chi2s_for_MMI_item_response_table
@@ -582,9 +582,9 @@ def test_calculate_pairwise_chi2s_for_MMI_item_response_table():
 
 
 def test_multiple_mutual_independence_false_using_bonferroni():
-    rows_factor = ctab.Factor(presidential_data.iloc[:, :6], presidential_data.columns[:6],
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, :6], presidential_data.columns[:6],
                               "expected_choice", orientation="wide")
-    columns_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
                                  "believe_true", orientation="wide")
     multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
     bonferroni_test = multiple_response_table._test_for_marginal_mutual_independence_using_bonferroni_correction
@@ -599,9 +599,9 @@ def test_multiple_mutual_independence_false_using_bonferroni():
 
 
 def test_multiple_mutual_independence_false_using_rao_scott_2():
-    rows_factor = ctab.Factor(presidential_data.iloc[:, :6], presidential_data.columns[:6],
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, :6], presidential_data.columns[:6],
                               "expected_choice", orientation="wide")
-    columns_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
                                  "believe_true", orientation="wide")
     multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
     rao_scott_2_test = multiple_response_table._test_for_marginal_mutual_independence_using_rao_scott_2
@@ -614,9 +614,9 @@ def test_multiple_mutual_independence_false_using_rao_scott_2():
 
 
 def test_calculate_pairwise_chi2s_for_SPMI_item_response_table():
-    rows_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
                              "believe_true", orientation="wide")
-    columns_factor = ctab.Factor(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
                                  "why_uncertain", orientation="wide")
     multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
     calculate = multiple_response_table._calculate_pairwise_chi2s_for_SPMI_item_response_table
@@ -628,9 +628,9 @@ def test_calculate_pairwise_chi2s_for_SPMI_item_response_table():
 
 
 def test_SPMI_false_using_bonferroni():
-    rows_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
                               "believe_true", orientation="wide")
-    columns_factor = ctab.Factor(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
                                  "why_uncertain", orientation="wide")
     multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
     bonferroni_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_bonferroni
@@ -647,9 +647,9 @@ def test_SPMI_false_using_bonferroni():
 
 
 def test_SPMI_false_using_rao_scott_2():
-    rows_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
                               "believe_true", orientation="wide")
-    columns_factor = ctab.Factor(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
                                  "why_uncertain", orientation="wide")
     multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
     rao_scott_2_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_rao_scott_2
@@ -682,8 +682,8 @@ def test_multiple_mutual_independence_true():
     food_choices = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
                                 columns=["eggs", "cheese", "candy", "sushi", "none"])
     car_choice = build_random_single_select()
-    srcv = ctab.Factor(car_choice, car_choice.columns, "car_choice", orientation="wide")
-    mrcv = ctab.Factor(food_choices, food_choices.columns, "food_choices", orientation="wide")
+    srcv = ctab.Factor.from_array(car_choice, car_choice.columns, "car_choice", orientation="wide")
+    mrcv = ctab.Factor.from_array(food_choices, food_choices.columns, "food_choices", orientation="wide")
     multiple_response_table = ctab.MRCVTable([srcv, ], [mrcv,])
     rao_scott_2_test = multiple_response_table._test_for_marginal_mutual_independence_using_rao_scott_2
     rao_p_value = rao_scott_2_test(srcv, mrcv)
@@ -700,8 +700,8 @@ def test_single_pairwise_mutual_independence_true():
                                 columns=["eggs", "cheese", "candy", "sushi", "none"])
     language = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
                                            columns=["English", "French", "Mandarin", "Hungarian", "none"])
-    mrcv_1 = ctab.Factor(language, language.columns, "car_choice", orientation="wide")
-    mrcv_2 = ctab.Factor(food_choices, food_choices.columns, "food_choices", orientation="wide")
+    mrcv_1 = ctab.Factor.from_array(language, language.columns, "car_choice", orientation="wide")
+    mrcv_2 = ctab.Factor.from_array(food_choices, food_choices.columns, "food_choices", orientation="wide")
     multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
     rao_scott_2_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_rao_scott_2
     rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
@@ -718,8 +718,8 @@ def test_overlapping_names_allowed():
                              columns=["eggs", "cheese", "candy", "sushi", "none"])
     worst_food = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
                               columns=["eggs", "cheese", "candy", "sushi", "none"])
-    mrcv_1 = ctab.Factor(worst_food, worst_food.columns, "car_choice", orientation="wide")
-    mrcv_2 = ctab.Factor(best_food, best_food.columns, "best_food", orientation="wide")
+    mrcv_1 = ctab.Factor.from_array(worst_food, worst_food.columns, "car_choice", orientation="wide")
+    mrcv_2 = ctab.Factor.from_array(best_food, best_food.columns, "best_food", orientation="wide")
     multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
     rao_scott_2_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_rao_scott_2
     rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
@@ -734,9 +734,9 @@ def test_MRCV_table_from_data():
 
 
 def test_MRCV_table_from_factors():
-    rows_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
                               "believe_true", orientation="wide")
-    columns_factor = ctab.Factor(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
                                  "why_uncertain", orientation="wide")
     multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
     expected = np.array([44, 49, 15, 22, 12])  # from a manual run
@@ -745,40 +745,47 @@ def test_MRCV_table_from_factors():
 
 def test_Factor_from_wide_data():
     single_response_data = presidential_data.iloc[:, :6]
-    single_response_factor = ctab.Factor(single_response_data, range(0, 6), "")
-    narrow_dataframe = single_response_factor.cast_wide_to_narrow().as_dataframe()
-    top_row = narrow_dataframe[['observation_id', 'variable', 'value']].iloc[0]
+    single_response_factor = ctab.Factor.from_array(single_response_data, range(0, 6), "")
+    narrow_dataframe = single_response_factor.cast_wide_to_narrow().data
+    top_row = narrow_dataframe[['observation_id', 'factor_level', 'value']].iloc[0]
     expected = [0, 4, 1]  # from a manual run
     assert np.all(top_row == expected)
 
 
 def test_Factor_from_narrow_data():
-    rows_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
                               "believe_true", orientation="wide")
     narrow_factor = rows_factor.cast_wide_to_narrow()
     wide_factor = narrow_factor.cast_narrow_to_wide()
-    rows_dataframe = rows_factor.as_dataframe()
+    rows_dataframe = rows_factor.data
     selected_some = rows_dataframe.sum(axis=1) > 0
-    selected_some_df = rows_dataframe[selected_some]
-    # I think ordering is not getting preserved
-    assert selected_some_df == wide_factor.as_dataframe()
+    # pivoting the dataframe sorts the columns lexographically (because the original column order
+    # is not preserved when the dataframe is cast to narrow)
+    # so to compare, we need to sort the columns of the original dataframe
+    selected_some_df = rows_dataframe[selected_some].sort_index(axis=1)
+    matches = selected_some_df == wide_factor.data
+    assert matches.all().all()
 
 
 def test_Factor_autodetect_multiple_response():
     single_response_data = presidential_data.iloc[:, :6]
     fake_labels_srcv = list(range(0, 6))
     fake_labels_mrcv = list(range(0, 5))
-    single_response_factor = ctab.Factor(single_response_data, fake_labels_srcv, "")
+    single_response_factor = ctab.Factor.from_array(single_response_data, fake_labels_srcv, "")
     assert not single_response_factor.multiple_response
     multiple_response_data = presidential_data.iloc[:, 6:11]
-    multiple_response_factor = ctab.Factor(multiple_response_data, fake_labels_mrcv, "")
+    multiple_response_factor = ctab.Factor.from_array(multiple_response_data, fake_labels_mrcv, "")
     assert multiple_response_factor.multiple_response
 
 
 def test_Factor_columns_must_have_labels():
     single_response_data = presidential_data.iloc[:, :6]
     with assert_raises(ValueError):
-        single_response_factor = ctab.Factor(single_response_data, [], "")
+        single_response_factor = ctab.Factor.from_array(single_response_data, [], "")
+
+
+def test_MRCV_table_with_zeros():
+    assert False
 
 
 if __name__ == "__main__":

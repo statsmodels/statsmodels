@@ -1445,11 +1445,6 @@ class MRCVTable(object):
 
     Parameters
     ----------
-    table : array-like
-        A contingency table.
-    shift_zeros : boolean
-        If True and any cell count is zero, add 0.5 to all values
-        in the table.
 
     Attributes
     ----------
@@ -1457,7 +1452,6 @@ class MRCVTable(object):
 
     See also
     --------
-    statsmodels.graphics.mosaicplot.mosaic
     scipy.stats.chi2_contingency
 
     Notes
@@ -1467,13 +1461,13 @@ class MRCVTable(object):
     References
     ----------
     Bilder and Loughlin (2004)
+    MRCV R Package, Bilder and Koziol
     """
 
-    def __init__(self, row_factors, column_factors, shift_zeros=True):
+    def __init__(self, row_factors, column_factors):
         self.row_factors = row_factors
         self.column_factors = column_factors
         self.table = self.table_from_factors(row_factors, column_factors)
-        # TODO george@survata.com shift zeros
 
     def __str__(self):
         return self.__unicode__()
@@ -1486,8 +1480,7 @@ class MRCVTable(object):
         return self.table.__repr__()
 
     @classmethod
-    def from_data(cls, data, I, J, rows_factor_name="factor_0", columns_factor_name="factor_1",
-                  shift_zeros=True):
+    def from_data(cls, data, I, J, rows_factor_name="factor_0", columns_factor_name="factor_1"):
         """
         Construct a Table object from data.
 
@@ -1496,9 +1489,6 @@ class MRCVTable(object):
         data : array-like
             The raw data, from which a contingency table is constructed
             using the first two columns.
-        shift_zeros : boolean
-            If True and any cell count is zero, add 0.5 to all values
-            in the table.
         I: The number of columns in the dataframe corresponding to the first factor
         J: The number of columns in the dataframe corresponding to the second factor
 
@@ -1510,19 +1500,19 @@ class MRCVTable(object):
         if isinstance(data, pd.DataFrame):
             rows_data = data.iloc[:, 0:I]
             columns_data = data.iloc[:, I:I + J]
-            rows_labels = rows_data.columns
-            columns_labels = columns_data.columns
+            rows_factor = Factor(rows_data, name=rows_factor_name, orientation="wide")
+            columns_factor = Factor(columns_data, name=columns_factor_name, orientation="wide")
         else:
             rows_data = data[:, 0:I]
             columns_data = data[:, I:I + J]
             rows_labels = ["level_{}".format(i) for i in range(0, I)]
             columns_labels = ["level_{}".format(i) for i in range(I, I + J)]
+            rows_factor = Factor.from_array(rows_data, labels=rows_labels,
+                                            name=rows_factor_name, orientation="wide")
+            columns_factor = Factor.from_array(columns_data, labels=columns_labels,
+                                               name=columns_factor_name, orientation="wide")
 
-        rows_factor = Factor(rows_data, labels=rows_labels,
-                             name=rows_factor_name, orientation="wide")
-        columns_factor = Factor(columns_data, labels=columns_labels,
-                                name=columns_factor_name, orientation="wide")
-        return cls(rows_factor, columns_factor, shift_zeros)
+        return cls(rows_factor, columns_factor)
 
     @classmethod
     def table_from_factors(cls, row_factors, column_factors):
@@ -1530,15 +1520,15 @@ class MRCVTable(object):
         row_reshaped = row_factor.reshape_for_contingency_table()
         col_reshaped = column_factor.reshape_for_contingency_table()
         joint_dataframe = pd.merge(row_reshaped, col_reshaped, how="inner",
-                                   on='observation_number', suffixes=("_row", "_col"))
+                                   on='observation_id', suffixes=("_row", "_col"))
         # without bool cast, '&' sometimes doesn't know how to compare types
         joint_response = joint_dataframe['value_row'].astype(bool) & joint_dataframe['value_col'].astype(bool)
         joint_dataframe['_joint_response'] = joint_response
         table = pd.pivot_table(joint_dataframe,
                                values='_joint_response',
                                fill_value=0,
-                               index=['variable_row'],
-                               columns=['variable_col'],
+                               index=['factor_level_row'],
+                               columns=['factor_level_col'],
                                aggfunc=np.sum,)
         return table
 
@@ -1577,7 +1567,7 @@ class MRCVTable(object):
                     msg = "we don't currently support tables with more than one factor on the columns"
                     raise NotImplementedError(msg)
                 column_factor = column_factors[0]
-            except TypeError as e:
+            except TypeError:
                 if isinstance(column_factors, Factor):
                     column_factor = column_factors
                 else:
@@ -1595,19 +1585,20 @@ class MRCVTable(object):
         :param single_response_factor:
         :param multiple_response_factor:
         """
-        single_response_dataframe = single_response_factor.as_dataframe()
-        multiple_response_dataframe = multiple_response_factor.as_dataframe()
+        single_response_dataframe = single_response_factor.data
+        multiple_response_dataframe = multiple_response_factor.data
 
-        single_response_melted = pd.melt(single_response_dataframe.reset_index(), id_vars="index") \
-            .rename(columns={"index": "response_id",
+        id_var = single_response_dataframe.index.name
+        single_response_melted = pd.melt(single_response_dataframe.reset_index(), id_vars=id_var) \
+            .rename(columns={id_var: "observation_id",
                              "value": "selected",
-                             "variable": "single_response_level"})
+                             "factor_level": "single_response_level"})
         single_response_melted = single_response_melted[single_response_melted.selected == 1]
 
-        multiple_response_dataframe.index.name = "response_id"
+        multiple_response_dataframe.index.name = "observation_id"
         multiple_response_dataframe = multiple_response_dataframe.reset_index()
         joint_dataframe = pd.merge(single_response_melted.iloc[:, :2], multiple_response_dataframe, how="inner",
-                                   on="response_id")
+                                   on="observation_id")
 
         single_response_column = joint_dataframe.single_response_level
         item_response_pieces = {}
@@ -1646,8 +1637,8 @@ class MRCVTable(object):
         for i, row_name in enumerate(rows_levels):
             column_crosstabs = OrderedDict()
             for j, col_name in enumerate(columns_levels):
-                rows = np.array(rows_data[:, i])
-                columns = np.array(columns_data[:, j])
+                rows = rows_data.iloc[:, i]
+                columns = columns_data.iloc[:, j]
                 if col_name in row_level_set:
                     col_name = col_name + " (columns)"
                 crosstab = pd.crosstab(index=rows, columns=columns, rownames=[row_name], colnames=[col_name])
@@ -1688,7 +1679,7 @@ class MRCVTable(object):
         chi2_survival_with_1_dof = partial(chi2.sf, df=1)
         p_value_ij = observed.applymap(chi2_survival_with_1_dof)
         p_value_min = p_value_ij.min().min()
-        bonferroni_correction_factor = row_factor.level_count * column_factor.level_count
+        bonferroni_correction_factor = row_factor.factor_level_count * column_factor.factor_level_count
         table_p_value_bonferroni_corrected = bonferroni_correction_factor * p_value_min
         cap = lambda x: min(x, 1)
         pairwise_bonferroni_corrected_p_values = (p_value_ij * bonferroni_correction_factor).applymap(cap)
@@ -1698,10 +1689,10 @@ class MRCVTable(object):
                                                                       row_factor,
                                                                       column_factor,
                                                                       verbose=False):
-        W = row_factor.as_dataframe()
-        Y = column_factor.as_dataframe()
-        I = row_factor.level_count
-        J = column_factor.level_count
+        W = row_factor.data
+        Y = column_factor.data
+        I = row_factor.factor_level_count
+        J = column_factor.factor_level_count
         spmi_df = pd.concat([W, Y], axis=1)  # type: pd.DataFrame
         chi2_survival_with_1_dof = partial(chi2.sf, df=1)
 
@@ -1724,8 +1715,10 @@ class MRCVTable(object):
             q1_sample = q1.sample(n, replace=True).reset_index(drop=True)
             q2_sample = q2.sample(n, replace=True).reset_index(drop=True)
 
-            sample_rows_factor = Factor(q1_sample, rows_factor_labels, rows_factor_name)
-            sample_columns_factor = Factor(q2_sample, columns_factor_labels, columns_factor_name)
+            sample_rows_factor = Factor(q1_sample, rows_factor_name,
+                                        orientation="wide", multiple_response=True)
+            sample_columns_factor = Factor(q2_sample, columns_factor_name,
+                                           orientation="wide", multiple_response=True)
             stat_star = self._calculate_pairwise_chi2s_for_SPMI_item_response_table(sample_rows_factor,
                                                                                     sample_columns_factor)
             X_sq_S = stat_star.sum().sum()
@@ -1752,10 +1745,10 @@ class MRCVTable(object):
                                                                         column_factor):
         observed = self._calculate_pairwise_chi2s_for_SPMI_item_response_table(row_factor,
                                                                                column_factor)
-        W = row_factor.as_dataframe()
-        Y = column_factor.as_dataframe()
-        I = row_factor.level_count
-        J = column_factor.level_count
+        W = row_factor.data
+        Y = column_factor.data
+        I = row_factor.factor_level_count
+        J = column_factor.factor_level_count
         spmi_df = pd.concat([W, Y], axis=1)  # type: pd.DataFrame
 
         def count_level_combinations(data, number_of_variables):
@@ -1841,13 +1834,13 @@ class MRCVTable(object):
                                                                  single_response_factor,
                                                                  multiple_response_factor):
         if single_response_factor.orientation == "wide":
-            W = single_response_factor.cast_wide_to_narrow().as_dataframe()
+            W = single_response_factor.cast_wide_to_narrow().data
             W.set_index("observation_id", inplace=True)
         else:
-            W = single_response_factor.as_dataframe()
+            W = single_response_factor.data
         if not isinstance(W, pd.Series):
             W = W.iloc[:, 0]
-        Y = multiple_response_factor.as_dataframe()
+        Y = multiple_response_factor.data
         n = len(W)
         I = 1  # single response variable must have exactly one column
         J = len(Y.columns)
@@ -1943,20 +1936,18 @@ class MRCVTable(object):
 
 
 class Factor(object):
-    def __init__(self, data, labels, name, orientation="wide", multiple_response=None):
-        self.name = name
-        if len(labels) != data.shape[1]:
-            raise ValueError("all columns must have labels")
-        self.labels = labels
+    def __init__(self, dataframe, name, orientation="wide", multiple_response=None):
         self.orientation = orientation
-        if orientation == "wide":
-            self.data = np.asarray(data, dtype=np.float64)
-        else:
-            self.data = np.asarray(data, dtype=np.object)
+        self.name = name
+        if dataframe.index.name is None:
+            dataframe.index.name = "observation_id"
+        if dataframe.columns.name is None:
+            dataframe.columns.name = "factor_level"
+        self.data = dataframe
         if multiple_response is None:
             if orientation == "wide":
-                column_totals = self.data.sum(axis=1)
-                if np.max(column_totals) > 1:
+                responses_per_observation = dataframe.sum(axis=1)
+                if np.max(responses_per_observation) > 1:
                     self.multiple_response = True
                 else:
                     self.multiple_response = False
@@ -1975,68 +1966,57 @@ class Factor(object):
                                columns=self.labels, data=self.data)
 
     def __repr__(self):
+        return "Factor at {id} :: {output}".format(id=id(self), output=self.__unicode__())
+
+    def __str__(self):
         return self.__unicode__()
 
     @classmethod
     def from_array(cls, data, labels, name, orientation="wide", multiple_response=None):
-        self.name = name
         if len(labels) != data.shape[1]:
             raise ValueError("all columns must have labels")
-        self.labels = labels
-        self.orientation = orientation
-        if orientation == "wide":
-            self.data = np.asarray(data, dtype=np.float64)
-        else:
-            self.data = np.asarray(data, dtype=np.object)
-        if multiple_response is None:
-            if orientation == "wide":
-                column_totals = self.data.sum(axis=1)
-                if np.max(column_totals) > 1:
-                    self.multiple_response = True
-                else:
-                    self.multiple_response = False
-            else:
-                self.multiple_response = False
-        else:
-            self.multiple_response = multiple_response
+        data = np.asarray(data, dtype=np.float64)
+        dataframe = pd.DataFrame(data, columns=labels)
+        factor = cls(dataframe, orientation=orientation,
+                     multiple_response=multiple_response, name=name)
+        return factor
 
     def reshape_for_contingency_table(self):
-        frame = self.as_dataframe()
-        frame['observation_number'] = frame.index
-        return pd.melt(frame, id_vars="observation_number")
+        if self.orientation == "wide":
+            return self.cast_wide_to_narrow().data
+        else:
+            return self.data
 
     @property
-    def level_count(self):
-        return len(self.labels)
+    def labels(self):
+        if self.orientation == "wide":
+            return self.data.columns
+        else:
+            return self.data['factor_level'].unique()
 
-    def as_dataframe(self):
-        return pd.DataFrame(self.data, columns=self.labels)
+    @property
+    def factor_level_count(self):
+        return len(self.labels)
 
     def cast_wide_to_narrow(self):
         if self.orientation != "wide":
             raise NotImplementedError("Factor is already narrow")
-        solid = self.data
-        solid_df = pd.DataFrame(solid, columns=self.labels)
-        solid_df.head()
-        melted = pd.melt(solid_df.reset_index(), id_vars="index")
+        solid_df = self.data
+        melted = pd.melt(solid_df.reset_index(), id_vars=solid_df.index.name)
         melted = melted.rename(columns={"index": "observation_id"})
         narrow_data = melted[melted.value == 1].sort_values("observation_id")
-        narrow_factor = Factor(narrow_data.values, narrow_data.columns, self.name, orientation="narrow")
+        narrow_factor = Factor(narrow_data, self.name, orientation="narrow",
+                               multiple_response=self.multiple_response)
         return narrow_factor
 
     def cast_narrow_to_wide(self):
         if self.orientation != "narrow":
             raise NotImplementedError("Factor is already wide")
-        narrow_df = self.as_dataframe()
-        import pdb;
-        pdb.set_trace()
-        wide_df = pd.pivot_table(narrow_df,
-                               values='value',
-                               fill_value=0,
-                               index=['observation_id'],
-                               columns=['variable'],
-                               aggfunc=np.sum, ).sort_index()
-
-        wide_factor = Factor(wide_df.values, wide_df.columns, self.name, orientation="wide")
+        narrow_df = self.data
+        wide_df = pd.pivot_table(narrow_df, values='value', fill_value=0,
+                                 index=['observation_id'], columns=['factor_level'],
+                                 aggfunc=np.sum).sort_index()
+        wide_factor = Factor(wide_df, self.name, orientation="wide",
+                             multiple_response=self.multiple_response)
         return wide_factor
 
