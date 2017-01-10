@@ -1842,6 +1842,7 @@ class MRCVTable(object):
                                                                  multiple_response_factor):
         if single_response_factor.orientation == "wide":
             W = single_response_factor.cast_wide_to_narrow().as_dataframe()
+            W.set_index("observation_id", inplace=True)
         else:
             W = single_response_factor.as_dataframe()
         if not isinstance(W, pd.Series):
@@ -1976,6 +1977,29 @@ class Factor(object):
     def __repr__(self):
         return self.__unicode__()
 
+    @classmethod
+    def from_array(cls, data, labels, name, orientation="wide", multiple_response=None):
+        self.name = name
+        if len(labels) != data.shape[1]:
+            raise ValueError("all columns must have labels")
+        self.labels = labels
+        self.orientation = orientation
+        if orientation == "wide":
+            self.data = np.asarray(data, dtype=np.float64)
+        else:
+            self.data = np.asarray(data, dtype=np.object)
+        if multiple_response is None:
+            if orientation == "wide":
+                column_totals = self.data.sum(axis=1)
+                if np.max(column_totals) > 1:
+                    self.multiple_response = True
+                else:
+                    self.multiple_response = False
+            else:
+                self.multiple_response = False
+        else:
+            self.multiple_response = multiple_response
+
     def reshape_for_contingency_table(self):
         frame = self.as_dataframe()
         frame['observation_number'] = frame.index
@@ -1989,12 +2013,30 @@ class Factor(object):
         return pd.DataFrame(self.data, columns=self.labels)
 
     def cast_wide_to_narrow(self):
+        if self.orientation != "wide":
+            raise NotImplementedError("Factor is already narrow")
         solid = self.data
         solid_df = pd.DataFrame(solid, columns=self.labels)
         solid_df.head()
         melted = pd.melt(solid_df.reset_index(), id_vars="index")
         melted = melted.rename(columns={"index": "observation_id"})
-        narrow_data = melted[melted.value == 1].set_index("observation_id").sort_index()
+        narrow_data = melted[melted.value == 1].sort_values("observation_id")
         narrow_factor = Factor(narrow_data.values, narrow_data.columns, self.name, orientation="narrow")
         return narrow_factor
+
+    def cast_narrow_to_wide(self):
+        if self.orientation != "narrow":
+            raise NotImplementedError("Factor is already wide")
+        narrow_df = self.as_dataframe()
+        import pdb;
+        pdb.set_trace()
+        wide_df = pd.pivot_table(narrow_df,
+                               values='value',
+                               fill_value=0,
+                               index=['observation_id'],
+                               columns=['variable'],
+                               aggfunc=np.sum, ).sort_index()
+
+        wide_factor = Factor(wide_df.values, wide_df.columns, self.name, orientation="wide")
+        return wide_factor
 

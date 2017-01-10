@@ -5,7 +5,7 @@ Tests for contingency table analyses.
 import numpy as np
 import statsmodels.stats.contingency_tables as ctab
 import pandas as pd
-from numpy.testing import assert_allclose, assert_equal
+from numpy.testing import assert_allclose, assert_equal, assert_raises
 import os
 import statsmodels.api as sm
 
@@ -713,9 +713,7 @@ def test_single_pairwise_mutual_independence_true():
 
 
 def test_overlapping_names_allowed():
-    """
-    Hit a bug in development if two factors shared levels with the same name
-    """
+    # Hit a bug in development if two factors shared levels with the same name
     best_food = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
                              columns=["eggs", "cheese", "candy", "sushi", "none"])
     worst_food = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
@@ -729,9 +727,10 @@ def test_overlapping_names_allowed():
 
 
 def test_MRCV_table_from_data():
-    multiple_response_questions = presidential_data.iloc[6:]
+    multiple_response_questions = presidential_data.iloc[:, 6:]
     table = ctab.MRCVTable.from_data(multiple_response_questions, 5, 5)
-    assert np.all(table.table.values[0, :] == np.array([44, 15, 22, 12]))
+    expected = np.array([44, 49, 15, 22, 12])  # from a manual run
+    assert np.all(table.table.values[0, :] == expected)
 
 
 def test_MRCV_table_from_factors():
@@ -740,27 +739,46 @@ def test_MRCV_table_from_factors():
     columns_factor = ctab.Factor(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
                                  "why_uncertain", orientation="wide")
     multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
-    assert np.all(multiple_response_table.table.iloc[0].values == np.array([44, 49, 15, 22, 12]))
+    expected = np.array([44, 49, 15, 22, 12])  # from a manual run
+    assert np.all(multiple_response_table.table.iloc[0].values == expected)
 
 
 def test_Factor_from_wide_data():
     single_response_data = presidential_data.iloc[:, :6]
     single_response_factor = ctab.Factor(single_response_data, range(0, 6), "")
     narrow_dataframe = single_response_factor.cast_wide_to_narrow().as_dataframe()
-    assert np.all(narrow_dataframe.iloc[0] == [4, 1])
+    top_row = narrow_dataframe[['observation_id', 'variable', 'value']].iloc[0]
+    expected = [0, 4, 1]  # from a manual run
+    assert np.all(top_row == expected)
 
 
 def test_Factor_from_narrow_data():
-    assert False
+    rows_factor = ctab.Factor(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
+                              "believe_true", orientation="wide")
+    narrow_factor = rows_factor.cast_wide_to_narrow()
+    wide_factor = narrow_factor.cast_narrow_to_wide()
+    rows_dataframe = rows_factor.as_dataframe()
+    selected_some = rows_dataframe.sum(axis=1) > 0
+    selected_some_df = rows_dataframe[selected_some]
+    # I think ordering is not getting preserved
+    assert selected_some_df == wide_factor.as_dataframe()
 
 
 def test_Factor_autodetect_multiple_response():
     single_response_data = presidential_data.iloc[:, :6]
-    single_response_factor = ctab.Factor(single_response_data, [], "")
+    fake_labels_srcv = list(range(0, 6))
+    fake_labels_mrcv = list(range(0, 5))
+    single_response_factor = ctab.Factor(single_response_data, fake_labels_srcv, "")
     assert not single_response_factor.multiple_response
     multiple_response_data = presidential_data.iloc[:, 6:11]
-    multiple_response_factor = ctab.Factor(multiple_response_data, [], "")
+    multiple_response_factor = ctab.Factor(multiple_response_data, fake_labels_mrcv, "")
     assert multiple_response_factor.multiple_response
+
+
+def test_Factor_columns_must_have_labels():
+    single_response_data = presidential_data.iloc[:, :6]
+    with assert_raises(ValueError):
+        single_response_factor = ctab.Factor(single_response_data, [], "")
 
 
 if __name__ == "__main__":
