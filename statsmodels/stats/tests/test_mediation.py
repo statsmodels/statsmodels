@@ -60,7 +60,7 @@ def test_framing_example():
     outcome_exog = patsy.dmatrix("emo + treat + age + educ + gender + income", data,
                                   return_type='dataframe')
     probit = sm.families.links.probit
-    outcome_model = sm.GLM(outcome, outcome_exog, family=sm.families.Binomial(link=probit))
+    outcome_model = sm.GLM(outcome, outcome_exog, family=sm.families.Binomial(link=probit()))
 
     mediator = np.asarray(data["emo"])
     mediator_exog = patsy.dmatrix("treat + age + educ + gender + income", data,
@@ -96,7 +96,7 @@ def test_framing_example_moderator():
     outcome_exog = patsy.dmatrix("emo + treat + age + educ + gender + income", data,
                                   return_type='dataframe')
     probit = sm.families.links.probit
-    outcome_model = sm.GLM(outcome, outcome_exog, family=sm.families.Binomial(link=probit))
+    outcome_model = sm.GLM(outcome, outcome_exog, family=sm.families.Binomial(link=probit()))
 
     mediator = np.asarray(data["emo"])
     mediator_exog = patsy.dmatrix("treat + age + educ + gender + income", data,
@@ -125,7 +125,7 @@ def test_framing_example_formula():
 
     probit = sm.families.links.probit
     outcome_model = sm.GLM.from_formula("cong_mesg ~ emo + treat + age + educ + gender + income",
-                                        data, family=sm.families.Binomial(link=probit))
+                                        data, family=sm.families.Binomial(link=probit()))
 
     mediator_model = sm.OLS.from_formula("emo ~ treat + age + educ + gender + income", data)
 
@@ -150,7 +150,7 @@ def test_framing_example_moderator_formula():
 
     probit = sm.families.links.probit
     outcome_model = sm.GLM.from_formula("cong_mesg ~ emo + treat*age + emo*age + educ + gender + income",
-                                        data, family=sm.families.Binomial(link=probit))
+                                        data, family=sm.families.Binomial(link=probit()))
 
     mediator_model = sm.OLS.from_formula("emo ~ treat*age + educ + gender + income", data)
 
