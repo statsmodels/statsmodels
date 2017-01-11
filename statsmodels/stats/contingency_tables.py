@@ -27,23 +27,19 @@ identically distributed.
 
 from __future__ import division
 
+import itertools
 from collections import OrderedDict
 from functools import partial
-import itertools
-import sys
-
-from six import reraise
-
-from statsmodels.tools.decorators import cache_readonly, resettable_cache
-from statsmodels import iolib
-from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 
 import numpy as np
 import pandas as pd
-
 from numpy import linalg
-from scipy.stats import chi2_contingency, chi2
 from scipy import stats
+from scipy.stats import chi2_contingency, chi2
+
+from statsmodels import iolib
+from statsmodels.tools.decorators import cache_readonly, resettable_cache
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 
 
 def _make_df_square(table):

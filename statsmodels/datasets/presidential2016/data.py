@@ -17,6 +17,22 @@ unlock premium content, like articles and ebooks.
 Respondents received no cash compensation for their participation.
 
 More information on Survata's methodology can be found at survata.com/methodology.
+
+This class will load a subset of the full survey data. The subset includes three questions:
+
+1) "Which candidate do you think you are most likely to ultimately vote for in the 2016 presidential election?"
+    The answers are in columns 1 through 6, with a '1' representing 'selected' and '0'
+    representing 'not selected'. Each respondent was only allowed to select 1 candidate,
+    making this a traditional single select categorical variable.
+2) "Please check all of the statements you believe are true". Respondents were presented with a list of
+    assertions (shown in columns 7 through 11). Respondents could check as many options as they liked,
+    making this a multiple response question.
+3) "Please select any factors that contribute to your not being sure who you'll vote for". The reasons shown
+    in columns 12 through 16 were shown and respondents could pick as many as they liked,
+    making this also a multiple response question.
+
+The full survey data, including the answers to 11 additional questions, is available in
+the /src subdirectory.
 """
 
 DESCRSHORT = """Pre-Election Survey Data For U.S.A Undecided Swing State Voters (2016)"""
