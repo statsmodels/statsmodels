@@ -799,7 +799,7 @@ def test_MRCV_table_with_ones():
     mrcv_2 = ctab.Factor.from_array(b, labels, "cool", orientation="wide", multiple_response=True)
     multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
     results = multiple_response_table.test_for_independence()
-    assert np.all(np.isnan(results[1]))
+    assert np.all(np.isnan(results.cellwise_p_values))
 
 
 def test_MRCV_table_with_zeros():
@@ -810,12 +810,27 @@ def test_MRCV_table_with_zeros():
     mrcv_2 = ctab.Factor.from_array(b, labels, "cool", orientation="wide", multiple_response=True)
     multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
     results = multiple_response_table.test_for_independence()
-    assert np.all(np.isnan(results[1]))
+    assert np.all(np.isnan(results.cellwise_p_values))
+
+
+def test_MMI_table_with_no_variance():
+    # if the single response factor has ever observation on the same level, decline to calculate
+    a = np.zeros((1000, 1))
+    b = np.ones((1000, 1))
+    food_choices = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
+                                columns=["eggs", "cheese", "candy", "sushi", "none"])
+    labels = ["Yes", "No"]
+    ab = np.concatenate((a, b), axis=1)
+    srcv = ctab.Factor.from_array(ab, labels, "alive", orientation="wide", multiple_response=True)
+    mrcv_2 = ctab.Factor(food_choices, "cool", orientation="wide", multiple_response=True)
+    multiple_response_table = ctab.MRCVTable([srcv, ], [mrcv_2, ])
+    results = multiple_response_table.test_for_independence()
+    assert np.all(np.isnan(results.cellwise_p_values))
 
 
 def test_MRCV_2x2_table():
     # hit a bug with 2x2 tables not working
-    np.seed(100)
+    np.random.seed(100)
     a = pd.DataFrame(np.random.randint(2, size=(1000, 2)),
                              columns=["good", "bad"])
     b = pd.DataFrame(np.random.randint(2, size=(1000, 2)),
@@ -824,18 +839,68 @@ def test_MRCV_2x2_table():
     mrcv_2 = ctab.Factor(b, "cool", orientation="wide", multiple_response=True)
     multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
     results = multiple_response_table.test_for_independence()
-    assert results[0] > 0.05
+    assert results.table_p_value > 0.05
 
 
 def test_for_MRCV_independence():
-    mrcv_1 = ctab.Factor.from_array(language, language.columns, "car_choice", orientation="wide")
-    mrcv_2 = ctab.Factor.from_array(food_choices, food_choices.columns, "food_choices", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
-    multiple_response_table.test_for_independence()
-    assert False
+    # test all the different combinations the top-level test_for_independence should be
+    # able to dispatch automatically
+    food_choices = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
+                                columns=["eggs", "cheese", "candy", "sushi", "none"])
+    language = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
+                            columns=["English", "French", "Mandarin", "Hungarian", "none"])
+    car_choice = build_random_single_select()
+    second_car_choice = build_random_single_select()
+    srcv_1 = ctab.Factor(car_choice, "", orientation="wide")
+    srcv_2 = ctab.Factor(second_car_choice, "", orientation="wide")
+    mrcv_1 = ctab.Factor(food_choices, "", orientation="wide", multiple_response=True)
+    mrcv_2 = ctab.Factor(language, "", orientation="wide", multiple_response=True)
+
+    table = ctab.MRCVTable([srcv_1, ], [mrcv_1, ])
+    results = table.test_for_independence()
+    assert results.independence_type == 'Marginal Mutual Independence'
+    assert results.method == 'Bonferroni'
+
+    table = ctab.MRCVTable([srcv_1, ], [mrcv_1, ])
+    results = table.test_for_independence(method="bon")
+    assert results.independence_type == 'Marginal Mutual Independence'
+    assert results.method == 'Bonferroni'
+
+    table = ctab.MRCVTable([mrcv_1, ], [srcv_1, ])
+    results = table.test_for_independence(method="bon")
+    assert results.independence_type == 'Marginal Mutual Independence'
+    assert results.method == 'Bonferroni'
+
+    table = ctab.MRCVTable([srcv_1, ], [mrcv_1, ])
+    results = table.test_for_independence(method="rao")
+    assert results.independence_type == 'Marginal Mutual Independence'
+    assert results.method == 'Rao-Scott'
+
+    table = ctab.MRCVTable([mrcv_1, ], [srcv_1, ])
+    results = table.test_for_independence(method="rao")
+    assert results.independence_type == 'Marginal Mutual Independence'
+    assert results.method == 'Rao-Scott'
+
+    table = ctab.MRCVTable([srcv_1, ], [srcv_2, ])
+    results = table.test_for_independence()
+    assert type(results) == ctab.ContingencyTableNominalIndependenceResult
+
+    table = ctab.MRCVTable([mrcv_2, ], [mrcv_1, ])
+    results = table.test_for_independence()
+    assert results.independence_type == 'Single Pairwise Mutual Independence'
+    assert results.method == 'Bonferroni'
+
+    table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    results = table.test_for_independence(method="bon")
+    assert results.independence_type == 'Single Pairwise Mutual Independence'
+    assert results.method == 'Bonferroni'
+
+    table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    results = table.test_for_independence(method="rao")
+    assert results.independence_type == 'Single Pairwise Mutual Independence'
+    assert results.method == 'Rao-Scott'
 
 
 if __name__ == "__main__":
     import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'],
-            exit=False)
+    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)

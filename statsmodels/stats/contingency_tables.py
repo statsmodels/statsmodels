@@ -71,13 +71,13 @@ def _make_df_square(table):
 class _Bunch(object):
 
     def __repr__(self):
-        return "<bunch object containing statsmodels results as {}>".format(id(self))
+        return "<bunch object containing statsmodels results at {}>".format(id(self))
 
 
 class ContingencyTableNominalIndependenceResult(_Bunch):
 
     def __repr__(self):
-        return "<bunch object containing contingency table independence results as {}>".format(id(self))
+        return "<bunch object containing contingency table independence results at {}>".format(id(self))
 
     def __str__(self):
         template = ("Contingency Table Independence Result:\n"
@@ -87,6 +87,20 @@ class ContingencyTableNominalIndependenceResult(_Bunch):
         output = template.format(statistic=self.statistic,
                                 df=self.df,
                                 pvalue=self.pvalue)
+        return output
+
+
+class MRCVTableNominalIndependenceResult(_Bunch):
+
+    def __repr__(self):
+        return "<bunch object containing contingency table independence results at {}>".format(id(self))
+
+    def __str__(self):
+        template = ("Multiple Response Contingency Table Independence Result:\n"
+                    "table p value: {table_p_value}\n"
+                    "cellwise p values: {cellwise_p_values}")
+        output = template.format(table_p_value=self.table_p_value,
+                                 cellwise_p_values=self.cellwise_p_values)
         return output
 
 
@@ -1545,18 +1559,68 @@ class MRCVTable(object):
                                aggfunc=np.sum,)
         return table
 
-    def test_for_independence(self):
+    def test_for_independence(self, method="bonferroni"):
         multiple_response_row_factor = any([f.multiple_response for f in self.row_factors])
         multiple_response_column_factor = any([f.multiple_response for f in self.column_factors])
+        if method in ("bonferroni", "bon", "b"):
+            return self._test_for_independence_using_bonferroni(multiple_response_column_factor,
+                                                                multiple_response_row_factor)
+        elif method in ("rao-scott-2", "rao", "rs2", "rs"):
+            return self._test_for_independence_using_rao_scott(multiple_response_column_factor,
+                                                               multiple_response_row_factor)
+
+    def _test_for_independence_using_bonferroni(self,
+                                                multiple_response_column_factor,
+                                                multiple_response_row_factor):
+        mmi_test = self._test_for_marginal_mutual_independence_using_bonferroni_correction
         if multiple_response_row_factor and multiple_response_column_factor:
-            return self._test_for_single_pairwise_mutual_independence_using_bonferroni(self.row_factors[0],
-                                                                                       self.column_factors[0])
+            spmi_test = self._test_for_single_pairwise_mutual_independence_using_bonferroni
+            table_p_value, cellwise_p_values = spmi_test(self.row_factors[0], self.column_factors[0])
+            result = self._build_MRCV_result(table_p_value, cellwise_p_values, "Bonferroni", "SPMI")
+            return result
         elif multiple_response_column_factor:
-            return self._test_for_marginal_mutual_independence_using_bonferroni_correction(self.row_factors[0],
-                                                                                           self.column_factors[0])
+            table_p_value, cellwise_p_values = mmi_test(self.row_factors[0], self.column_factors[0])
+            result = self._build_MRCV_result(table_p_value, cellwise_p_values, "Bonferroni", "MMI")
+            return result
         elif multiple_response_row_factor:
-            return self._test_for_marginal_mutual_independence_using_bonferroni_correction(self.column_factors[0],
-                                                                                           self.row_factors[0])
+            table_p_value, cellwise_p_values = mmi_test(self.column_factors[0], self.row_factors[0])
+            result = self._build_MRCV_result(table_p_value, cellwise_p_values, "Bonferroni", "MMI")
+            return result
+        else:
+            single_response_table = Table(self.table)
+            return single_response_table.test_nominal_association()
+
+    def _build_MRCV_result(self, table_p_value, cellwise_p_values, method, independence_type):
+        result = MRCVTableNominalIndependenceResult()
+        result.table_p_value = table_p_value
+        result.cellwise_p_values = cellwise_p_values
+        result.method = method
+        if independence_type == "MMI":
+            result.independence_type = "Marginal Mutual Independence"
+        elif independence_type == "SPMI":
+            result.independence_type = "Single Pairwise Mutual Independence"
+        else:
+            raise NotImplementedError("Independence Type Required")
+        return result
+
+    def _test_for_independence_using_rao_scott(self,
+                                               multiple_response_column_factor,
+                                               multiple_response_row_factor):
+        mmi_test = self._test_for_marginal_mutual_independence_using_rao_scott_2
+        NOT_AVAILABLE = "Not Available From Rao-Scott Method"
+        if multiple_response_row_factor and multiple_response_column_factor:
+            spmi_test = self._test_for_single_pairwise_mutual_independence_using_rao_scott_2
+            table_p_value = spmi_test(self.row_factors[0], self.column_factors[0])
+            result = self._build_MRCV_result(table_p_value, NOT_AVAILABLE, "Rao-Scott", "SPMI")
+            return result
+        elif multiple_response_column_factor:
+            table_p_value = mmi_test(self.row_factors[0], self.column_factors[0])
+            result = self._build_MRCV_result(table_p_value, NOT_AVAILABLE, "Rao-Scott", "MMI")
+            return result
+        elif multiple_response_row_factor:
+            table_p_value = mmi_test(self.column_factors[0], self.row_factors[0])
+            result = self._build_MRCV_result(table_p_value, NOT_AVAILABLE, "Rao-Scott", "MMI")
+            return result
         else:
             single_response_table = Table(self.table)
             return single_response_table.test_nominal_association()
@@ -1850,8 +1914,9 @@ class MRCVTable(object):
         p_value_min = p_value_ij.min()
 
         bonferroni_correction_factor = c
-        table_p_value_bonferroni_corrected = min(bonferroni_correction_factor * p_value_min, 1)
-        pairwise_bonferroni_corrected_p_values = (p_value_ij * bonferroni_correction_factor).apply(lambda x: min(x, 1))
+        cap = lambda x: min(x, 1)
+        table_p_value_bonferroni_corrected = cap(bonferroni_correction_factor * p_value_min)
+        pairwise_bonferroni_corrected_p_values = (p_value_ij * bonferroni_correction_factor).apply(cap)
         return table_p_value_bonferroni_corrected, pairwise_bonferroni_corrected_p_values
 
     def _test_for_marginal_mutual_independence_using_rao_scott_2(self,
