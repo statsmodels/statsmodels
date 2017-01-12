@@ -1664,29 +1664,18 @@ class MRCVTable(object):
     @classmethod
     def deduplicate_level_names(cls, column_factor, row_factor):
         # TODO handle narrow factors
-        # TODO abstract
         taken_names = set()  # pandas does poorly with duplicate values on indexes
-        deduplicated_row_levels = []
-        for level in row_factor.labels:
-            while level in taken_names:
-                level += "'"
-            taken_names.add(level)
-            deduplicated_row_levels.append(level)
-        if np.any(deduplicated_row_levels != row_factor.data.columns.values):
-            old_name = row_factor.data.columns.name
-            row_factor.data.columns = deduplicated_row_levels
-            row_factor.data.columns.name = old_name
-
-        deduplicated_col_levels = []
-        for level in column_factor.labels:
-            while level in taken_names:
-                level += "'"
-            taken_names.add(level)
-            deduplicated_col_levels.append(level)
-        if np.any(deduplicated_col_levels != column_factor.data.columns.values):
-            old_name = row_factor.data.columns.name
-            column_factor.data.columns = deduplicated_col_levels
-            column_factor.data.columns.name = old_name
+        for factor in (row_factor, column_factor):
+            deduplicated_levels = []
+            for level in factor.labels:
+                while level in taken_names:
+                    level += "'"
+                taken_names.add(level)
+                deduplicated_levels.append(level)
+            if np.any(deduplicated_levels != factor.data.columns.values):
+                old_name = factor.data.columns.name
+                factor.data.columns = deduplicated_levels
+                factor.data.columns.name = old_name
 
 
     @staticmethod
