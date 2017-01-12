@@ -206,8 +206,6 @@ class Table(object):
             table = pd.crosstab(data.iloc[:, 0], data.iloc[:, 1])
         else:
             table = pd.crosstab(data[:, 0], data[:, 1])
-            pd.melt
-
         return cls(table, shift_zeros)
 
 
@@ -1497,11 +1495,15 @@ class MRCVTable(object):
         return self.__unicode__()
 
     def __unicode__(self):
+        try:
+            str_function = unicode
+        except NameError:  # Python 3 no longer has the unicode() function
+            str_function = str
         template = "Contingency Table With Multi-Response Categorical Variables (MRCV's).\nData:\n{table}"
-        return template.format(table=self.table)
+        return template.format(table=str_function(self.table))
 
     def __repr__(self):
-        return self.table.__repr__()
+        return "At {id} :: {_str}".format(id=id(self), _str=self.__str__())
 
     @classmethod
     def from_data(cls, data, I, J, rows_factor_name="factor_0", columns_factor_name="factor_1"):
@@ -1557,29 +1559,33 @@ class MRCVTable(object):
         return table
 
     def test_for_independence(self, method="bonferroni"):
-        multiple_response_row_factor = any([f.multiple_response for f in self.row_factors])
-        multiple_response_column_factor = any([f.multiple_response for f in self.column_factors])
-        if method in ("bonferroni", "bon", "b"):
-            return self._test_for_independence_using_bonferroni(multiple_response_column_factor,
-                                                                multiple_response_row_factor)
-        elif method in ("rao-scott-2", "rao", "rs2", "rs"):
-            return self._test_for_independence_using_rao_scott(multiple_response_column_factor,
-                                                               multiple_response_row_factor)
+        are_rows_multiple_response = any([f.multiple_response for f in self.row_factors])
+        are_columns_multiple_response = any([f.multiple_response for f in self.column_factors])
+        method_lower = method.lower()
+        if method_lower in ("bonferroni", "bon", "b"):
+            return self._test_for_independence_using_bonferroni(are_columns_multiple_response,
+                                                                are_rows_multiple_response)
+        elif method_lower in ("rao-scott-2", "rao", "rs2", "rs"):
+            return self._test_for_independence_using_rao_scott(are_columns_multiple_response,
+                                                               are_rows_multiple_response)
+        else:
+            raise NotImplementedError("The {method} method is not currently supported. Please "
+                                      "choose \"bonferroni\" or \"rao-scott-2\"".format(method=method))
 
     def _test_for_independence_using_bonferroni(self,
-                                                multiple_response_column_factor,
-                                                multiple_response_row_factor):
+                                                are_columns_multiple_response,
+                                                are_rows_multiple_response):
         mmi_test = self._test_for_marginal_mutual_independence_using_bonferroni_correction
-        if multiple_response_row_factor and multiple_response_column_factor:
+        if are_rows_multiple_response and are_columns_multiple_response:
             spmi_test = self._test_for_single_pairwise_mutual_independence_using_bonferroni
             table_p_value, cellwise_p_values = spmi_test(self.row_factors[0], self.column_factors[0])
             result = self._build_MRCV_result(table_p_value, cellwise_p_values, "Bonferroni", "SPMI")
             return result
-        elif multiple_response_column_factor:
+        elif are_columns_multiple_response:
             table_p_value, cellwise_p_values = mmi_test(self.row_factors[0], self.column_factors[0])
             result = self._build_MRCV_result(table_p_value, cellwise_p_values, "Bonferroni", "MMI")
             return result
-        elif multiple_response_row_factor:
+        elif are_rows_multiple_response:
             table_p_value, cellwise_p_values = mmi_test(self.column_factors[0], self.row_factors[0])
             result = self._build_MRCV_result(table_p_value, cellwise_p_values, "Bonferroni", "MMI")
             return result
