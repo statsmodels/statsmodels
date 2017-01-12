@@ -2,7 +2,6 @@ from __future__ import absolute_import, print_function
 
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_raises
-from numpy.testing.utils import assert_raises_regex
 
 from statsmodels.compat.python import range
 
@@ -1388,45 +1387,49 @@ def test_exceptions():
 
     # pass a shorter array than endog as exog_coint argument
     yield assert_raises, ValueError, VECM, endog, None, np.ones(len(endog)-1)
-    # forecasting: argument checks
-    STEPS = 5
-    # ### with exog
-    exog = seasonal_dummies(4, len(endog), 2, centered=True)  # seasonal...
-    exog = np.hstack((exog, 1 + np.arange(len(endog)).reshape(-1, 1)))  # & lin
-    vecm_res = VECM(endog, exog, diff_lags=3, coint_rank=coint_rank,
-                    deterministic="co").fit()
-    # ##### exog_fc not passed as argument:
-    yield assert_raises_regex, ValueError, "exog_fc is None.*", \
-        vecm_res.predict
-    # ##### exog_fc is too short:
-    exog_fc = np.ones(STEPS)
-    yield assert_raises_regex, ValueError,\
-        ".*exog_fc must have at least steps elements.*",\
-        vecm_res.predict, 5, None, exog_fc[:2]  # [:2] shortens exog_fc
-    # ##### exog_coint_fc (NOT exog_fc) is passed when there is no exog_coint
-    yield assert_raises_regex, ValueError,\
-        ".*exog_coint attribute is None.*",\
-        vecm_res.predict, 5, None, exog_fc,\
-        exog_fc  # passed as exog_coint_fc-argument!
-    # ### with exog_coint
-    exog_coint = []
-    exog_coint.append(np.ones(len(endog)).reshape(-1, 1))
-    exog_coint.append(1 + np.arange(len(endog)).reshape(-1, 1))
-    exog_coint = np.hstack(exog_coint)
-    vecm_res = VECM(endog, diff_lags=1, deterministic="nc",
-                    exog_coint=exog_coint).fit()
-    # ##### exog_coint_fc not passed as argument:
-    yield assert_raises_regex, ValueError, "exog_coint_fc is None.*", \
-        vecm_res.predict
-    # ##### exog_coint_fc is too short:
-    exog_coint_fc = np.ones(STEPS)
-    yield assert_raises_regex, ValueError,\
-        ".*exog_coint_fc must have at least steps elements.*",\
-        vecm_res.predict, 5, None, None, exog_coint_fc[:2]  # [:2] shortens
-    # ##### exog_fc (NOT exog_coint_fc) is passed when there is no exog
-    yield assert_raises_regex, ValueError,\
-        ".*exog attribute is None.*",\
-        vecm_res.predict, 5, None, exog_coint_fc  # passed as exog_fc-argument!
+    try:
+        from numpy.testing.utils import assert_raises_regex
+        # forecasting: argument checks
+        STEPS = 5
+        # ### with exog
+        exog = seasonal_dummies(4, len(endog), 2, centered=True)  # seasonal...
+        exog = np.hstack((exog, 1 + np.arange(len(endog)).reshape(-1, 1)))  # & lin
+        vecm_res = VECM(endog, exog, diff_lags=3, coint_rank=coint_rank,
+                        deterministic="co").fit()
+        # ##### exog_fc not passed as argument:
+        yield assert_raises_regex, ValueError, "exog_fc is None.*", \
+            vecm_res.predict
+        # ##### exog_fc is too short:
+        exog_fc = np.ones(STEPS)
+        yield assert_raises_regex, ValueError,\
+            ".*exog_fc must have at least steps elements.*",\
+            vecm_res.predict, 5, None, exog_fc[:2]  # [:2] shortens exog_fc
+        # ##### exog_coint_fc (NOT exog_fc) is passed when there is no exog_coint
+        yield assert_raises_regex, ValueError,\
+            ".*exog_coint attribute is None.*",\
+            vecm_res.predict, 5, None, exog_fc,\
+            exog_fc  # passed as exog_coint_fc-argument!
+        # ### with exog_coint
+        exog_coint = []
+        exog_coint.append(np.ones(len(endog)).reshape(-1, 1))
+        exog_coint.append(1 + np.arange(len(endog)).reshape(-1, 1))
+        exog_coint = np.hstack(exog_coint)
+        vecm_res = VECM(endog, diff_lags=1, deterministic="nc",
+                        exog_coint=exog_coint).fit()
+        # ##### exog_coint_fc not passed as argument:
+        yield assert_raises_regex, ValueError, "exog_coint_fc is None.*", \
+            vecm_res.predict
+        # ##### exog_coint_fc is too short:
+        exog_coint_fc = np.ones(STEPS)
+        yield assert_raises_regex, ValueError,\
+            ".*exog_coint_fc must have at least steps elements.*",\
+            vecm_res.predict, 5, None, None, exog_coint_fc[:2]  # [:2] shortens
+        # ##### exog_fc (NOT exog_coint_fc) is passed when there is no exog
+        yield assert_raises_regex, ValueError,\
+            ".*exog attribute is None.*",\
+            vecm_res.predict, 5, None, exog_coint_fc  # passed as exog_fc-argument!
+    except ImportError:  # we skip the test in the try-block if we
+        pass             # can't import assert_raises_regex.
 
 
 def setup():
