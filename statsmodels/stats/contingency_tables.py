@@ -1572,6 +1572,19 @@ class MRCVTable(object):
             raise NotImplementedError("The {method} method is not currently supported. Please "
                                       "choose \"bonferroni\" or \"rao-scott-2\"".format(method=method))
 
+    def _build_MRCV_result(self, table_p_value, cellwise_p_values, method, independence_type):
+        result = MRCVTableNominalIndependenceResult()
+        result.table_p_value = table_p_value
+        result.cellwise_p_values = cellwise_p_values
+        result.method = method
+        if independence_type == "MMI":
+            result.independence_type = "Marginal Mutual Independence"
+        elif independence_type == "SPMI":
+            result.independence_type = "Single Pairwise Mutual Independence"
+        else:
+            raise NotImplementedError("Independence Type Required")
+        return result
+
     def _test_for_independence_using_bonferroni(self,
                                                 are_columns_multiple_response,
                                                 are_rows_multiple_response):
@@ -1593,34 +1606,22 @@ class MRCVTable(object):
             single_response_table = Table(self.table)
             return single_response_table.test_nominal_association()
 
-    def _build_MRCV_result(self, table_p_value, cellwise_p_values, method, independence_type):
-        result = MRCVTableNominalIndependenceResult()
-        result.table_p_value = table_p_value
-        result.cellwise_p_values = cellwise_p_values
-        result.method = method
-        if independence_type == "MMI":
-            result.independence_type = "Marginal Mutual Independence"
-        elif independence_type == "SPMI":
-            result.independence_type = "Single Pairwise Mutual Independence"
-        else:
-            raise NotImplementedError("Independence Type Required")
-        return result
 
     def _test_for_independence_using_rao_scott(self,
-                                               multiple_response_column_factor,
-                                               multiple_response_row_factor):
+                                               are_columns_multiple_response,
+                                               are_rows_multiple_response):
         mmi_test = self._test_for_marginal_mutual_independence_using_rao_scott_2
         NOT_AVAILABLE = "Not Available From Rao-Scott Method"
-        if multiple_response_row_factor and multiple_response_column_factor:
+        if are_rows_multiple_response and are_columns_multiple_response:
             spmi_test = self._test_for_single_pairwise_mutual_independence_using_rao_scott_2
             table_p_value = spmi_test(self.row_factors[0], self.column_factors[0])
             result = self._build_MRCV_result(table_p_value, NOT_AVAILABLE, "Rao-Scott", "SPMI")
             return result
-        elif multiple_response_column_factor:
+        elif are_columns_multiple_response:
             table_p_value = mmi_test(self.row_factors[0], self.column_factors[0])
             result = self._build_MRCV_result(table_p_value, NOT_AVAILABLE, "Rao-Scott", "MMI")
             return result
-        elif multiple_response_row_factor:
+        elif are_rows_multiple_response:
             table_p_value = mmi_test(self.column_factors[0], self.row_factors[0])
             result = self._build_MRCV_result(table_p_value, NOT_AVAILABLE, "Rao-Scott", "MMI")
             return result
