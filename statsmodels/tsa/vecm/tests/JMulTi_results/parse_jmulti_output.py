@@ -309,7 +309,7 @@ def load_results_jmulti(dataset):
         fc, lower, upper, plu_min = [], [], [], []
         fc_file = open(fc_file, encoding='latin_1')
         for line in fc_file:
-            str_number = "(\s+-?\d+\.\d{3}\s*)"
+            str_number = "(\s+-?\d+\.\d{4}\s*?)"
             regex_number = re.compile(str_number)
             numbers = re.findall(regex_number, line)
             if numbers == []:
