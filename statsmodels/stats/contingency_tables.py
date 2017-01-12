@@ -2076,7 +2076,7 @@ class Factor(object):
             dataframe.index.name = "observation_id"
         if dataframe.columns.name is None:
             dataframe.columns.name = "factor_level"
-        self.data = dataframe
+        self.data = dataframe.copy()  # don't modify original in subsequent operations
         if multiple_response is None:
             if orientation == "wide":
                 responses_per_observation = dataframe.sum(axis=1)
