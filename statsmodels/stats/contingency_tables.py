@@ -1655,6 +1655,10 @@ class MRCVTable(object):
                     msg = "column_factors must be either a list of Factors or a Factor instance"
                     raise NotImplementedError(msg)
             cls.deduplicate_level_names(column_factor, row_factor)
+            if column_factor.orientation == "narrow" and column_factor.multiple_response:
+                column_factor = column_factor.cast_narrow_to_wide()
+            if row_factor.orientation == "narrow" and column_factor.multiple_response:
+                row_factor = row_factor.cast_narrow_to_wide()
             return column_factor, row_factor
         except IndexError:
             explanation = ("Please be sure to pass at "
@@ -1663,20 +1667,40 @@ class MRCVTable(object):
 
     @classmethod
     def deduplicate_level_names(cls, column_factor, row_factor):
-        # TODO handle narrow factors
         taken_names = set()  # pandas does poorly with duplicate values on indexes
         for factor in (row_factor, column_factor):
-            deduplicated_levels = []
-            for level in factor.labels:
-                while level in taken_names:
-                    level += "'"
-                taken_names.add(level)
-                deduplicated_levels.append(level)
-            if np.any(deduplicated_levels != factor.data.columns.values):
-                old_name = factor.data.columns.name
-                factor.data.columns = deduplicated_levels
-                factor.data.columns.name = old_name
-
+            if factor.orientation == "wide":
+                deduplicated_levels = []
+                for level in factor.labels:
+                    while level in taken_names:
+                        level += "'"
+                    taken_names.add(level)
+                    deduplicated_levels.append(level)
+                if np.any(deduplicated_levels != factor.data.columns.values):
+                    old_name = factor.data.columns.name
+                    factor.data.columns = deduplicated_levels
+                    factor.data.columns.name = old_name
+            else:
+                renames = {}
+                for name in taken_names:
+                    old_name = name
+                    while name in taken_names:
+                        name += "'"
+                    renames[old_name] = name
+                if renames:
+                    factor.data.replace({'factor_level': renames}, inplace=True)
+                # this may be too magical. but with narrow data, we don't have any good way to know
+                # that two identical names correspond to two different variables, except the assumption that
+                # the data wouldn't record two observations of the same level for the same observation id
+                # so we assume any duplicates are actually different variables with the same name
+                # and tag on a ' marker
+                duplicated = factor.data.duplicated(subset=["observation_id", "factor_level"])
+                while duplicated.any():
+                    duplicates = factor.data[duplicated].copy()
+                    duplicates.loc[:, 'factor_level'] = duplicates.factor_level.astype(str) + "'"
+                    factor.data.update(duplicates)
+                    duplicated = factor.data.duplicated(subset=["observation_id", "factor_level"])
+                taken_names |= set(factor.data.factor_level.unique())
 
     @staticmethod
     def _build_item_response_table_for_MMI(single_response_factor, multiple_response_factor):
@@ -1684,18 +1708,22 @@ class MRCVTable(object):
         :param single_response_factor:
         :param multiple_response_factor:
         """
-        single_response_dataframe = single_response_factor.data
+        if single_response_factor.orientation == "narrow":
+            single_response_melted = single_response_factor.data.rename(
+                columns={"value": "selected", "factor_level": "single_response_level"})
+        else:
+            single_response_dataframe = single_response_factor.data
+            id_var = single_response_dataframe.index.name
+            single_response_melted = pd.melt(single_response_dataframe.reset_index(), id_vars=id_var) \
+                .rename(columns={id_var: "observation_id",
+                                 "value": "selected",
+                                 "factor_level": "single_response_level"})
+            single_response_melted = single_response_melted[single_response_melted.selected == 1]
+
         multiple_response_dataframe = multiple_response_factor.data.copy()  # don't modify original
-
-        id_var = single_response_dataframe.index.name
-        single_response_melted = pd.melt(single_response_dataframe.reset_index(), id_vars=id_var) \
-            .rename(columns={id_var: "observation_id",
-                             "value": "selected",
-                             "factor_level": "single_response_level"})
-        single_response_melted = single_response_melted[single_response_melted.selected == 1]
-
         multiple_response_dataframe.index.name = "observation_id"
         multiple_response_dataframe = multiple_response_dataframe.reset_index()
+
         joint_dataframe = pd.merge(single_response_melted.iloc[:, :2],
                                    multiple_response_dataframe,
                                    how="inner", on="observation_id")
@@ -1813,9 +1841,7 @@ class MRCVTable(object):
         p_value_b_min = []
         p_value_b_prod = []
         rows_factor_name = row_factor.name
-        rows_factor_labels = row_factor.labels
         columns_factor_name = column_factor.name
-        columns_factor_labels = column_factor.labels
         for i in range(0, b_max):
             if verbose and i % 50 == 0:
                 print("sample {}".format(i))
@@ -1889,7 +1915,6 @@ class MRCVTable(object):
         GH = np.kron(G, H)
         m = GH.dot(combined_counts)
 
-        pi = m / n
         pi_row = m_row / n
         pi_col = m_col / n
         j_2r = np.ones((2 ** I, 1))
@@ -1947,7 +1972,7 @@ class MRCVTable(object):
             W = W[W['value'] == 1]  # only consider actually selected option
             W.set_index("observation_id", inplace=True)
         else:
-            W = single_response_factor.data
+            W = single_response_factor.data.iloc[:, 1:]
         if not isinstance(W, pd.Series):
             W = W.iloc[:, 0]
         Y = multiple_response_factor.data
@@ -1992,7 +2017,6 @@ class MRCVTable(object):
         Y_count_ordered = count_level_combinations(Y, J)
         n_count_ordered = conjoint_combinations(W, Y)
         # n_count_ordered.sort_values("_dummy", inplace=True)
-
         # need make n_iplus be in same order as SRCV options in the n_counts_ordered_table
         srcv_table_order = n_count_ordered.groupby('srcv').first().index.values
         n_iplus = W.value_counts().reindex(srcv_table_order)
@@ -2007,7 +2031,6 @@ class MRCVTable(object):
         a_i = n_iplus / n
         pi_not_j = (1 / n) * np.kron(np.ones(r), np.eye(c)).dot(m)
         j_r = np.ones(r)
-        pi_not = np.kron(j_r, pi_not_j)
         I_rc = np.eye(r * c)
         I_c = np.eye(c)
         J_rr = np.ones((r, r))

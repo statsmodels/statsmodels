@@ -750,16 +750,26 @@ def test_duplicate_names_allowed():
     mrcv_1 = ctab.Factor.from_array(worst_food, worst_food.columns, "car_choice", orientation="wide")
     mrcv_2 = ctab.Factor.from_array(best_food, best_food.columns, "best_food", orientation="wide")
     multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
-    rao_scott_2_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_rao_scott_2
-    rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
-    assert rao_p_value >= 0.05
+    result = multiple_response_table.test_for_independence(method="rao")
+    assert result.table_p_value >= 0.05
 
     car_choice = build_random_single_select(n=1000, choices=food_choices)
     srcv = ctab.Factor.from_array(car_choice, food_choices, "srcv", orientation="wide")
     multiple_response_table = ctab.MRCVTable([srcv, ], [mrcv_2, ])
-    rao_scott_2_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_rao_scott_2
-    rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
-    assert rao_p_value >= 0.05
+    result = multiple_response_table.test_for_independence(method="rao")
+    assert result.table_p_value >= 0.05
+
+    # deduplicator modifies in-place so need to recreate data
+    car_choice = build_random_single_select(n=1000, choices=food_choices)
+    srcv = ctab.Factor.from_array(car_choice, food_choices, "srcv", orientation="wide")
+    best_food = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                              columns=food_choices)
+    mrcv_2 = ctab.Factor.from_array(best_food, best_food.columns, "best_food", orientation="wide")
+    narrow_srcv = srcv.cast_wide_to_narrow()
+    narrow_mrcv = mrcv_2.cast_wide_to_narrow()
+    multiple_response_table = ctab.MRCVTable([narrow_srcv, ], [narrow_mrcv, ])
+    result = multiple_response_table.test_for_independence(method="rao")
+    assert result.table_p_value >= 0.05
 
 
 def test_MRCV_table_from_data():
@@ -936,6 +946,22 @@ def test_for_MRCV_independence():
     results = table.test_for_independence(method="rao")
     assert results.independence_type == 'Single Pairwise Mutual Independence'
     assert results.method == 'Rao-Scott'
+
+    # test accepting narrows
+    food_choices = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                                columns=["eggs", "cheese", "candy", "sushi", "none"])
+    language = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                                           columns=["English", "French", "Mandarin", "Hungarian", "none"])
+    mrcv_1 = ctab.Factor(food_choices, "car_choice", orientation="wide")
+    mrcv_2 = ctab.Factor(language, "language", orientation="wide")
+    narrow_mrcv_1 = mrcv_1.cast_wide_to_narrow()
+    narrow_mrcv_2 = mrcv_2.cast_wide_to_narrow()
+    multiple_response_table = ctab.MRCVTable([narrow_mrcv_1, ], [narrow_mrcv_2, ])
+    result = multiple_response_table.test_for_independence(method="rao")
+    assert result.table_p_value >= 0.05
+    result = multiple_response_table.test_for_independence(method="bon")
+    assert result.table_p_value >= 0.05
+
 
 
 if __name__ == "__main__":
