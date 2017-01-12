@@ -89,7 +89,8 @@ class ContingencyTableNominalIndependenceResult(_Bunch):
 class MRCVTableNominalIndependenceResult(_Bunch):
 
     def __repr__(self):
-        return "<bunch object containing contingency table independence results at {}>".format(id(self))
+        return ("<bunch object containing multiple-response contingency"
+                " table independence results at {}>".format(id(self)))
 
     def __str__(self):
         template = ("Multiple Response Contingency Table Independence Result:\n"
