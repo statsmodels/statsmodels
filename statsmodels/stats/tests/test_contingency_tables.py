@@ -659,8 +659,13 @@ def test_SPMI_false_using_rao_scott_2():
     assert_allclose(table_p_value_r, table_p_value)
 
 
-def build_random_single_select(n=10000):
-    car_type = np.random.randint(3, size=(n)) + 1
+def build_random_single_select(n=10000, choices=None):
+    if choices:
+        k = len(choices)
+    else:
+        k = 3
+        choices = ["sedan", "truck", "motorcycle"]
+    car_type = np.random.randint(k, size=(n)) + 1
     base_pop = pd.DataFrame(car_type).reset_index()
     base_pop.columns = ['person', 'choice']
     base_pop['_response'] = 1
@@ -672,7 +677,7 @@ def build_random_single_select(n=10000):
                                aggfunc=np.sum,
                                margins=False)
     car_choice = dataframe.copy()
-    car_choice.columns = ["sedan", "truck", "motorcycle"]
+    car_choice.columns = choices
     return car_choice
 
 
@@ -713,13 +718,45 @@ def test_single_pairwise_mutual_independence_true():
 
 def test_overlapping_names_allowed():
     # Hit a bug in development if two factors shared levels with the same name
-    best_food = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
-                             columns=["eggs", "cheese", "candy", "sushi", "none"])
-    worst_food = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
-                              columns=["eggs", "cheese", "candy", "sushi", "none"])
+    np.random.seed(100)
+    food_choices = ["eggs", "cheese", "candy", "sushi", "none"]
+    best_food = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                             columns=food_choices)
+    worst_food = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                              columns=food_choices)
     mrcv_1 = ctab.Factor.from_array(worst_food, worst_food.columns, "car_choice", orientation="wide")
     mrcv_2 = ctab.Factor.from_array(best_food, best_food.columns, "best_food", orientation="wide")
     multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    rao_scott_2_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_rao_scott_2
+    rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
+    assert rao_p_value >= 0.05
+
+    car_choice = build_random_single_select(n=1000, choices=food_choices)
+    srcv = ctab.Factor.from_array(car_choice, food_choices, "srcv", orientation="wide")
+    multiple_response_table = ctab.MRCVTable([srcv, ], [mrcv_2, ])
+    rao_scott_2_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_rao_scott_2
+    rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
+    assert rao_p_value >= 0.05
+
+
+def test_duplicate_names_allowed():
+    np.random.seed(100)
+    # Hit a bug in development if two levels had the same name
+    food_choices = ["eggs", "eggs", "candy", "eggs", "none"]
+    best_food = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                             columns=food_choices)
+    worst_food = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                              columns=food_choices)
+    mrcv_1 = ctab.Factor.from_array(worst_food, worst_food.columns, "car_choice", orientation="wide")
+    mrcv_2 = ctab.Factor.from_array(best_food, best_food.columns, "best_food", orientation="wide")
+    multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    rao_scott_2_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_rao_scott_2
+    rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
+    assert rao_p_value >= 0.05
+
+    car_choice = build_random_single_select(n=1000, choices=food_choices)
+    srcv = ctab.Factor.from_array(car_choice, food_choices, "srcv", orientation="wide")
+    multiple_response_table = ctab.MRCVTable([srcv, ], [mrcv_2, ])
     rao_scott_2_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_rao_scott_2
     rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
     assert rao_p_value >= 0.05

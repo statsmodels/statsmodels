@@ -1487,8 +1487,9 @@ class MRCVTable(object):
     """
 
     def __init__(self, row_factors, column_factors):
-        self.row_factors = row_factors
-        self.column_factors = column_factors
+        column_factor, row_factor = self._extract_and_validate_factors(column_factors, row_factors)
+        self.row_factors = [row_factor,]
+        self.column_factors = [column_factor,]
         self.table = self.table_from_factors(row_factors, column_factors)
 
     def __str__(self):
@@ -1538,13 +1539,12 @@ class MRCVTable(object):
             columns_factor = Factor.from_array(columns_data, labels=columns_labels,
                                                name=columns_factor_name, orientation="wide")
 
-        return cls(rows_factor, columns_factor)
+        return cls([rows_factor], [columns_factor])
 
     @classmethod
     def table_from_factors(cls, row_factors, column_factors):
-        column_factor, row_factor = cls._extract_and_validate_factors(column_factors, row_factors)
-        row_reshaped = row_factor.reshape_for_contingency_table()
-        col_reshaped = column_factor.reshape_for_contingency_table()
+        row_reshaped = row_factors[0].reshape_for_contingency_table()
+        col_reshaped = column_factors[0].reshape_for_contingency_table()
         joint_dataframe = pd.merge(row_reshaped, col_reshaped, how="inner",
                                    on='observation_id', suffixes=("_row", "_col"))
         # without bool cast, '&' sometimes doesn't know how to compare types
@@ -1559,15 +1559,15 @@ class MRCVTable(object):
         return table
 
     def test_for_independence(self, method="bonferroni"):
-        are_rows_multiple_response = any([f.multiple_response for f in self.row_factors])
-        are_columns_multiple_response = any([f.multiple_response for f in self.column_factors])
+        rows_are_multiple_response = any([f.multiple_response for f in self.row_factors])
+        columns_are_multiple_response = any([f.multiple_response for f in self.column_factors])
         method_lower = method.lower()
         if method_lower in ("bonferroni", "bon", "b"):
-            return self._test_for_independence_using_bonferroni(are_columns_multiple_response,
-                                                                are_rows_multiple_response)
+            return self._test_for_independence_using_bonferroni(columns_are_multiple_response,
+                                                                rows_are_multiple_response)
         elif method_lower in ("rao-scott-2", "rao", "rs2", "rs"):
-            return self._test_for_independence_using_rao_scott(are_columns_multiple_response,
-                                                               are_rows_multiple_response)
+            return self._test_for_independence_using_rao_scott(columns_are_multiple_response,
+                                                               rows_are_multiple_response)
         else:
             raise NotImplementedError("The {method} method is not currently supported. Please "
                                       "choose \"bonferroni\" or \"rao-scott-2\"".format(method=method))
@@ -1586,19 +1586,19 @@ class MRCVTable(object):
         return result
 
     def _test_for_independence_using_bonferroni(self,
-                                                are_columns_multiple_response,
-                                                are_rows_multiple_response):
+                                                columns_are_multiple_response,
+                                                rows_are_multiple_response):
         mmi_test = self._test_for_marginal_mutual_independence_using_bonferroni_correction
-        if are_rows_multiple_response and are_columns_multiple_response:
+        if rows_are_multiple_response and columns_are_multiple_response:
             spmi_test = self._test_for_single_pairwise_mutual_independence_using_bonferroni
             table_p_value, cellwise_p_values = spmi_test(self.row_factors[0], self.column_factors[0])
             result = self._build_MRCV_result(table_p_value, cellwise_p_values, "Bonferroni", "SPMI")
             return result
-        elif are_columns_multiple_response:
+        elif columns_are_multiple_response:
             table_p_value, cellwise_p_values = mmi_test(self.row_factors[0], self.column_factors[0])
             result = self._build_MRCV_result(table_p_value, cellwise_p_values, "Bonferroni", "MMI")
             return result
-        elif are_rows_multiple_response:
+        elif rows_are_multiple_response:
             table_p_value, cellwise_p_values = mmi_test(self.column_factors[0], self.row_factors[0])
             result = self._build_MRCV_result(table_p_value, cellwise_p_values, "Bonferroni", "MMI")
             return result
@@ -1608,20 +1608,20 @@ class MRCVTable(object):
 
 
     def _test_for_independence_using_rao_scott(self,
-                                               are_columns_multiple_response,
-                                               are_rows_multiple_response):
+                                               columns_are_multiple_response,
+                                               rows_are_multiple_response):
         mmi_test = self._test_for_marginal_mutual_independence_using_rao_scott_2
         NOT_AVAILABLE = "Not Available From Rao-Scott Method"
-        if are_rows_multiple_response and are_columns_multiple_response:
+        if rows_are_multiple_response and columns_are_multiple_response:
             spmi_test = self._test_for_single_pairwise_mutual_independence_using_rao_scott_2
             table_p_value = spmi_test(self.row_factors[0], self.column_factors[0])
             result = self._build_MRCV_result(table_p_value, NOT_AVAILABLE, "Rao-Scott", "SPMI")
             return result
-        elif are_columns_multiple_response:
+        elif columns_are_multiple_response:
             table_p_value = mmi_test(self.row_factors[0], self.column_factors[0])
             result = self._build_MRCV_result(table_p_value, NOT_AVAILABLE, "Rao-Scott", "MMI")
             return result
-        elif are_rows_multiple_response:
+        elif rows_are_multiple_response:
             table_p_value = mmi_test(self.column_factors[0], self.row_factors[0])
             result = self._build_MRCV_result(table_p_value, NOT_AVAILABLE, "Rao-Scott", "MMI")
             return result
@@ -1654,11 +1654,40 @@ class MRCVTable(object):
                 else:
                     msg = "column_factors must be either a list of Factors or a Factor instance"
                     raise NotImplementedError(msg)
+            cls.deduplicate_level_names(column_factor, row_factor)
             return column_factor, row_factor
         except IndexError:
             explanation = ("Please be sure to pass at "
                            "least 1 factor on both the rows and columns")
             raise IndexError(explanation)
+
+    @classmethod
+    def deduplicate_level_names(cls, column_factor, row_factor):
+        # TODO handle narrow factors
+        # TODO abstract
+        taken_names = set()  # pandas does poorly with duplicate values on indexes
+        deduplicated_row_levels = []
+        for level in row_factor.labels:
+            while level in taken_names:
+                level += "'"
+            taken_names.add(level)
+            deduplicated_row_levels.append(level)
+        if np.any(deduplicated_row_levels != row_factor.data.columns.values):
+            old_name = row_factor.data.columns.name
+            row_factor.data.columns = deduplicated_row_levels
+            row_factor.data.columns.name = old_name
+
+        deduplicated_col_levels = []
+        for level in column_factor.labels:
+            while level in taken_names:
+                level += "'"
+            taken_names.add(level)
+            deduplicated_col_levels.append(level)
+        if np.any(deduplicated_col_levels != column_factor.data.columns.values):
+            old_name = row_factor.data.columns.name
+            column_factor.data.columns = deduplicated_col_levels
+            column_factor.data.columns.name = old_name
+
 
     @staticmethod
     def _build_item_response_table_for_MMI(single_response_factor, multiple_response_factor):
@@ -1667,7 +1696,7 @@ class MRCVTable(object):
         :param multiple_response_factor:
         """
         single_response_dataframe = single_response_factor.data
-        multiple_response_dataframe = multiple_response_factor.data
+        multiple_response_dataframe = multiple_response_factor.data.copy()  # don't modify original
 
         id_var = single_response_dataframe.index.name
         single_response_melted = pd.melt(single_response_dataframe.reset_index(), id_vars=id_var) \
@@ -1678,8 +1707,9 @@ class MRCVTable(object):
 
         multiple_response_dataframe.index.name = "observation_id"
         multiple_response_dataframe = multiple_response_dataframe.reset_index()
-        joint_dataframe = pd.merge(single_response_melted.iloc[:, :2], multiple_response_dataframe, how="inner",
-                                   on="observation_id")
+        joint_dataframe = pd.merge(single_response_melted.iloc[:, :2],
+                                   multiple_response_dataframe,
+                                   how="inner", on="observation_id")
 
         single_response_column = joint_dataframe.single_response_level
         item_response_pieces = {}
@@ -1711,7 +1741,6 @@ class MRCVTable(object):
         rows_data = rows_factor.data
         columns_data = columns_factor.data
         rows_levels = rows_factor.labels
-        row_level_set = set(rows_levels)
         columns_levels = columns_factor.labels
         row_crosstabs = OrderedDict()
         for i, row_name in enumerate(rows_levels):
@@ -1719,8 +1748,6 @@ class MRCVTable(object):
             for j, col_name in enumerate(columns_levels):
                 rows = rows_data.iloc[:, i]
                 columns = columns_data.iloc[:, j]
-                if col_name in row_level_set:
-                    col_name = col_name + " (columns)"
                 crosstab = pd.crosstab(index=rows, columns=columns, rownames=[row_name], colnames=[col_name])
                 column_crosstabs[col_name] = crosstab
             row_crosstab = pd.concat(column_crosstabs, axis=1, names=["column_levels", "selected?"])
