@@ -1654,10 +1654,10 @@ class MRCVTable(object):
                 else:
                     msg = "column_factors must be either a list of Factors or a Factor instance"
                     raise NotImplementedError(msg)
-            cls.deduplicate_level_names(column_factor, row_factor)
+            cls._deduplicate_level_names(column_factor, row_factor)
             if column_factor.orientation == "narrow" and column_factor.multiple_response:
                 column_factor = column_factor.cast_narrow_to_wide()
-            if row_factor.orientation == "narrow" and column_factor.multiple_response:
+            if row_factor.orientation == "narrow" and row_factor.multiple_response:
                 row_factor = row_factor.cast_narrow_to_wide()
             return column_factor, row_factor
         except IndexError:
@@ -1666,7 +1666,7 @@ class MRCVTable(object):
             raise IndexError(explanation)
 
     @classmethod
-    def deduplicate_level_names(cls, column_factor, row_factor):
+    def _deduplicate_level_names(cls, column_factor, row_factor):
         taken_names = set()  # pandas does poorly with duplicate values on indexes
         for factor in (row_factor, column_factor):
             if factor.orientation == "wide":
@@ -1722,8 +1722,9 @@ class MRCVTable(object):
 
         multiple_response_dataframe = multiple_response_factor.data.copy()  # don't modify original
         multiple_response_dataframe.index.name = "observation_id"
-        multiple_response_dataframe = multiple_response_dataframe.reset_index()
+        multiple_response_dataframe.reset_index(inplace=True)
 
+        # TODO why the iloc
         joint_dataframe = pd.merge(single_response_melted.iloc[:, :2],
                                    multiple_response_dataframe,
                                    how="inner", on="observation_id")
@@ -1768,7 +1769,7 @@ class MRCVTable(object):
                 crosstab = pd.crosstab(index=rows, columns=columns, rownames=[row_name], colnames=[col_name])
                 column_crosstabs[col_name] = crosstab
             row_crosstab = pd.concat(column_crosstabs, axis=1, names=["column_levels", "selected?"])
-            ordered_column_keys = tuple(column_crosstabs.keys())
+            ordered_column_keys = column_crosstabs.keys()
             row_crosstab = row_crosstab.reindex(columns=ordered_column_keys, level=0)  # preserve column ordering
             row_crosstabs[row_name] = row_crosstab
         item_response_table = pd.concat(row_crosstabs, axis=0, names=["row_levels", "selected?"])
@@ -1793,6 +1794,7 @@ class MRCVTable(object):
             # to calculate.
             return pd.DataFrame(np.nan, index=rows_levels, columns=columns_levels)
         chis_spmi = pd.DataFrame(index=rows_levels, columns=columns_levels)
+        # TODO indexes are now unique so remove striding
         for i in range(0, num_row_levels * 2, 2):
             for j in range(0, num_col_levels * 2, 2):
                 # use integer indexers because level labels are not necessarily unique
@@ -1888,6 +1890,7 @@ class MRCVTable(object):
         def count_level_combinations(data, number_of_variables):
             data = data.copy()  # don't modify original dataframe
             level_arguments = [[0, 1]] * number_of_variables
+            # TODO maybe not necessary with deduplication
             # the groupby statment requires the variables to be uniquely named
             # but the names aren't used after this
             # so mangling them is fine
@@ -1897,6 +1900,7 @@ class MRCVTable(object):
             full_combinations = pd.DataFrame(level_combinations, columns=variables)
             full_combinations["_dummy"] = 0
             data['_dummy'] = 1
+            # TODO why concat
             data = pd.concat([data, full_combinations]).reset_index(drop=True)
             grouped = data.groupby(list(variables))
             return grouped.sum().reset_index()
@@ -1953,9 +1957,9 @@ class MRCVTable(object):
         c = len(multiple_response_factor.labels)
         r = len(single_response_factor.labels)
 
-        chi2_survival_with_1_dof = partial(chi2.sf, df=(r - 1))
+        chi2_survival = partial(chi2.sf, df=(r - 1))
 
-        p_value_ij = mmi_pairwise_chis.apply(chi2_survival_with_1_dof)
+        p_value_ij = mmi_pairwise_chis.apply(chi2_survival)
         p_value_min = p_value_ij.min()
 
         bonferroni_correction_factor = c
@@ -1988,39 +1992,38 @@ class MRCVTable(object):
             mrcv = mrcv.copy()  # don't modify original dataframe
             srcv.name = "srcv"
             srcv_level_arguments = srcv.unique()
-            mrcv_level_arguments = [[0, 1] for i in range(0, number_of_variables - 1)]
+            mrcv_level_arguments = [[0, 1]] * (number_of_variables - 1)
             level_arguments = [list(srcv_level_arguments), ] + mrcv_level_arguments
             variables = ['srcv', ] + list(mrcv.columns)
             level_combinations = list(itertools.product(*level_arguments))
             full_combinations = pd.DataFrame(level_combinations, columns=variables)
             full_combinations["_dummy"] = 0
-            data = pd.concat([srcv, mrcv], axis=1)
-            data.srcv.value_counts()
+            data = pd.concat([srcv, mrcv], axis=1)  # type: pd.DataFrame
             data['_dummy'] = 1
-            data = pd.concat([data, full_combinations]).reset_index(drop=True)
+            data = pd.concat([data, full_combinations])  # type: pd.DataFrame
+            data.reset_index(drop=True, inplace=True)
             grouped = data.groupby(list(variables))
             result = grouped.sum().reset_index()
             return result
 
         def count_level_combinations(data, number_of_variables):
             data = data.copy()  # don't modify original dataframe
-            level_arguments = [[0, 1] for i in range(0, number_of_variables)]
+            level_arguments = [[0, 1]] * number_of_variables
             variables = data.columns
             level_combinations = list(itertools.product(*level_arguments))
             full_combinations = pd.DataFrame(level_combinations, columns=variables)
             full_combinations["_dummy"] = 0
             data['_dummy'] = 1
-            data = pd.concat([data, full_combinations]).reset_index(drop=True)
+            data = pd.concat([data, full_combinations])  # type: pd.DataFrame
+            data.reset_index(drop=True, inplace=True)
             grouped = data.groupby(list(variables))
-            return grouped.sum().reset_index()
+            return grouped.sum().reset_index().astype(int)
 
         Y_count_ordered = count_level_combinations(Y, J)
         n_count_ordered = conjoint_combinations(W, Y)
-        # n_count_ordered.sort_values("_dummy", inplace=True)
-        # need make n_iplus be in same order as SRCV options in the n_counts_ordered_table
         srcv_table_order = n_count_ordered.groupby('srcv').first().index.values
         n_iplus = W.value_counts().reindex(srcv_table_order)
-        tau = n_count_ordered.iloc[:, -1].astype(int) / np.repeat(n_iplus, repeats=(2 ** c)).reset_index(drop=True)
+        tau = n_count_ordered.iloc[:, -1] / np.repeat(n_iplus, repeats=(2 ** c)).reset_index(drop=True)
         # the R version subtracts 1 from G_tilde because data.matrix converts 0->1 and 1->2
         # (probably because it thinks they're factors and it's internally coding them)
         G_tilde = Y_count_ordered.iloc[:, :-1].T
