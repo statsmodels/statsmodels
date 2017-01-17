@@ -351,7 +351,7 @@ def _sij(delta_x, delta_y_1_T, y_min1):
     # reorder eig_vals to make them decreasing (and order eig_vecs accordingly)
     lambd_order = np.argsort(lambd)[::-1]
     lambd = lambd[lambd_order]
-    v = v[lambd_order]
+    v = v[:, lambd_order]
     return s00, s01, s10, s11, s11_, lambd, v
 
 
