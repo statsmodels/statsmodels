@@ -1963,8 +1963,7 @@ class MRCVTable(object):
         multiple_response_dataframe.index.name = "observation_id"
         multiple_response_dataframe.reset_index(inplace=True)
 
-        # TODO why the iloc
-        joint_dataframe = pd.merge(single_response_melted.iloc[:, :2],
+        joint_dataframe = pd.merge(single_response_melted,
                                    multiple_response_dataframe,
                                    how="inner", on="observation_id")
 
@@ -2136,20 +2135,12 @@ class MRCVTable(object):
             # to calculate.
             return pd.DataFrame(np.nan, index=rows_levels, columns=columns_levels)
         chis_spmi = pd.DataFrame(index=rows_levels, columns=columns_levels)
-        # TODO indexes are now unique so remove striding
-        for i in range(0, num_row_levels * 2, 2):
-            for j in range(0, num_col_levels * 2, 2):
-                # use integer indexers because level labels are not necessarily unique
-                # the "stride by 2" is because pandas does not support integer based indexing with multi-indexes
-                # to capture a whole level of the time (i.e. we can't say "give me the first column-group")
-                # so we need to manually select both the 0 and 1 column of each column group
-                # by providing an explicit couple of index positions
-                crosstab = item_response_table.iloc[(i, i+1), (j, j+1)]
+        for row_level in rows_levels:
+            for column_level in columns_levels:
+                crosstab = item_response_table.loc[row_level, column_level]
                 crosstab = shift_zeros(crosstab)
                 chi2_results = chi2_contingency(crosstab, correction=False)
                 chi_squared_statistic, _, _, _ = chi2_results
-                row_level = rows_levels[int(i / 2)]
-                column_level = columns_levels[int(j / 2)]
                 chis_spmi.loc[row_level, column_level] = chi_squared_statistic
         return chis_spmi
 
@@ -2313,17 +2304,11 @@ class MRCVTable(object):
         def count_level_combinations(data, number_of_variables):
             data = data.copy()  # don't modify original dataframe
             level_arguments = [[0, 1]] * number_of_variables
-            # TODO maybe not necessary with deduplication
-            # the groupby statment requires the variables to be uniquely named
-            # but the names aren't used after this
-            # so mangling them is fine
-            variables = list(range(0, len(data.columns)))
-            data.columns = variables
+            variables = data.columns
             level_combinations = list(itertools.product(*level_arguments))
             full_combinations = pd.DataFrame(level_combinations, columns=variables)
             full_combinations["_dummy"] = 0
             data['_dummy'] = 1
-            # TODO why concat
             data = pd.concat([data, full_combinations]).reset_index(drop=True)
             grouped = data.groupby(list(variables))
             return grouped.sum().reset_index()
