@@ -23,6 +23,7 @@ import statsmodels.tsa.vector_ar.plotting as plot
 from statsmodels.tsa.vector_ar.util import vech, get_index, seasonal_dummies
 from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval, \
     VAR, ma_rep, orth_ma_rep, test_normality
+from statsmodels.tsa.coint_tables import c_sja, c_sjt
 
 
 def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
@@ -347,10 +348,78 @@ def _sij(delta_x, delta_y_1_T, y_min1):
     eig = np.linalg.eig(chain_dot(s01_s11_.T, inv(s00), s01_s11_))
     lambd = eig[0]
     v = eig[1]
+    # reorder eig_vals to make them decreasing (and order eig_vecs accordingly)
+    lambd_order = np.argsort(lambd)[::-1]
+    lambd = lambd[lambd_order]
+    v = v[lambd_order]
     return s00, s01, s10, s11, s11_, lambd, v
 
 
-# VECM class: for known or unknown VECM
+def coint_johansen(endog_tot, det, k_ar, seasons=0, first_season=0):
+    """
+    Function performing Johansen cointegration tests.
+    Parameters
+    ----------
+    endog_tot : ndarray (neqs x nobs_tot)
+    det : str
+        Same as the deterministic argument in the VECM class.
+    k_ar : int
+        Number of lags in the VEC representation, i.e. number of lagged
+        differences.
+    Returns
+    -------
+    result : dict
+        A dictionary containing the two likelihood ratio test statistics
+        (trace statistic ("lrt") and maximum eigenvalue statistic ("lrm")) as
+        well as the corresponding critical values ("cvt" and "cvm").
+    """
+    y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
+            endog_tot, None, None, diff_lags=k_ar, deterministic=det,
+            seasons=seasons, first_season=first_season
+    )
+    _, _, _, _, _, eigval, _ = _sij(delta_x, delta_y_1_T, y_min1)
+
+    neqs = y_1_T.shape[0]
+    t = y_1_T.shape[1]
+
+    if det == "nc":
+        p = -1
+    elif "co" in det or "ci" in det:
+        p = 0
+    elif "lo" in det or "li" in det:
+        p = 1
+    else:
+        p = 123  # >1 is an indicator for: no critical values available
+                 # todo: should we raise an exception already here or wait
+                 #       for c_sja() and c_sjt() to do that?
+    # todo: seasons, exog, and exog_coint? According to p. 334 (Remark 5) in
+    # Lutkepohl (2005) seasonal terms don't change the test statistic's
+    # distribution if there is an unrestricted constant term ("co" in det). So
+    # we should probably allow seasons for this case.
+    trace_statistic = np.zeros(neqs)
+    max_eigval_statistic = np.zeros(neqs)
+    # in the following line: 3 because we have 3 different significance levels
+    #                        (90%, 95%, 99%)
+    crit_val_max_eigval = np.zeros((neqs, 3))
+    crit_val_trace = np.zeros((neqs, 3))
+    for r_0 in range(neqs):  # r_0 is the rank in the null hypothesis
+        trace_statistic[r_0] = -t * sum(np.log(1-eigval[r_0:]))  # r_1 = neqs
+        max_eigval_statistic[r_0] = -t * np.log(1-eigval[r_0])  # r_1 = r_0 + 1
+        crit_val_max_eigval[r_0, :] = c_sja(neqs-r_0, p)
+        crit_val_trace[r_0, :] = c_sjt(neqs-r_0, p)
+    print("trace stat", trace_statistic)
+    print("max eigval stat", max_eigval_statistic)
+
+    return {
+        "method": "johansen",
+        "lrt": trace_statistic,
+        "cvt": crit_val_trace,
+        "lrm": max_eigval_statistic,
+        "cvm": crit_val_max_eigval,
+        "eigval": eigval
+        # todo? eigenvectors (Mine differ from Josef's)
+    }
+
 
 class VECM(tsbase.TimeSeriesModel):
     """
