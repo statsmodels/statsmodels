@@ -747,8 +747,8 @@ def test_duplicate_names_allowed():
                              columns=food_choices)
     worst_food = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
                               columns=food_choices)
-    mrcv_1 = ctab.Factor.from_array(worst_food, worst_food.columns, "car_choice", orientation="wide")
-    mrcv_2 = ctab.Factor.from_array(best_food, best_food.columns, "best_food", orientation="wide")
+    mrcv_1 = ctab.Factor.from_array(worst_food, worst_food.columns, "", orientation="wide")
+    mrcv_2 = ctab.Factor.from_array(best_food, best_food.columns, "", orientation="wide")
     multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
     result = multiple_response_table.test_for_independence(method="rao")
     assert result.table_p_value >= 0.05
