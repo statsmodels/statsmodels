@@ -535,7 +535,7 @@ def test_MMI_item_response_table():
                               "expected_choice", orientation="wide")
     columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
                                  "believe_true", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([rows_factor, ], [columns_factor])
     srcv_item_response_table_python = multiple_response_table._build_item_response_table_for_MMI(rows_factor,
                                                                                                  columns_factor)
     fpath = os.path.join(results_dirpath, "srcv_r_item_response_table_result.csv")
@@ -559,7 +559,7 @@ def test_SPMI_item_response_table():
                               "believe_true", orientation="wide")
     columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
                                  "why_uncertain", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([rows_factor, ], [columns_factor])
     spmi_item_response_table_python = multiple_response_table._build_item_response_table_for_SPMI(rows_factor,
                                                                                            columns_factor)
     fpath = os.path.join(results_dirpath, "spmi_r_item_response_table_result.csv")
@@ -572,7 +572,7 @@ def test_calculate_pairwise_chi2s_for_MMI_item_response_table():
                               "expected_choice", orientation="wide")
     columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
                                  "believe_true", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([rows_factor, ], [columns_factor])
     calculate = multiple_response_table._calculate_pairwise_chi2s_for_MMI_item_response_table
     pairwise_chis = calculate(rows_factor, columns_factor)
     r_results_fname = "srcv_r_all_chis_result.csv"
@@ -586,7 +586,7 @@ def test_multiple_mutual_independence_false_using_bonferroni():
                               "expected_choice", orientation="wide")
     columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
                                  "believe_true", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([rows_factor, ], [columns_factor])
     bonferroni_test = multiple_response_table._test_for_marginal_mutual_independence_using_bonferroni_correction
     table_p_value, cellwise_p_values = bonferroni_test(rows_factor, columns_factor)
     fpath = os.path.join(results_dirpath, "srcv_r_bonferroni.csv")
@@ -603,7 +603,7 @@ def test_multiple_mutual_independence_false_using_rao_scott_2():
                               "expected_choice", orientation="wide")
     columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11], presidential_data.columns[6:11],
                                  "believe_true", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([rows_factor, ], [columns_factor])
     rao_scott_2_test = multiple_response_table._test_for_marginal_mutual_independence_using_rao_scott_2
     table_p_value = rao_scott_2_test(rows_factor, columns_factor)
     fpath = os.path.join(results_dirpath, "srcv_r_rao_scott.csv")
@@ -617,7 +617,7 @@ def test_calculate_pairwise_chi2s_for_SPMI_item_response_table():
                              "believe_true", orientation="wide")
     columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
                                  "why_uncertain", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([rows_factor, ], [columns_factor])
     calculate = multiple_response_table._calculate_pairwise_chi2s_for_SPMI_item_response_table
     spmi_pairwise_chis_python = calculate(rows_factor, columns_factor)
     r_results_fname = "spmi_r_pairwise_chis_result.csv"
@@ -631,7 +631,7 @@ def test_SPMI_false_using_bonferroni():
                               "believe_true", orientation="wide")
     columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
                                  "why_uncertain", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([rows_factor, ], [columns_factor])
     bonferroni_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_bonferroni
     table_p_value_bonferroni_corrected, cellwise_p_bonferroni_python = bonferroni_test(rows_factor,
                                                                                        columns_factor)
@@ -650,7 +650,7 @@ def test_SPMI_false_using_rao_scott_2():
                               "believe_true", orientation="wide")
     columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
                                  "why_uncertain", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([rows_factor, ], [columns_factor])
     rao_scott_2_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_rao_scott_2
     table_p_value = rao_scott_2_test(rows_factor, columns_factor)
     fpath = os.path.join(results_dirpath, "spmi_r_rao_scott.csv")
@@ -688,7 +688,7 @@ def test_multiple_mutual_independence_true():
     car_choice = build_random_single_select()
     srcv = ctab.Factor.from_array(car_choice, car_choice.columns, "car_choice", orientation="wide")
     mrcv = ctab.Factor.from_array(food_choices, food_choices.columns, "food_choices", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([srcv, ], [mrcv,])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([srcv, ], [mrcv, ])
     rao_scott_2_test = multiple_response_table._test_for_marginal_mutual_independence_using_rao_scott_2
     rao_p_value = rao_scott_2_test(srcv, mrcv)
     assert rao_p_value >= 0.05
@@ -706,7 +706,7 @@ def test_single_pairwise_mutual_independence_true():
                                            columns=["English", "French", "Mandarin", "Hungarian", "none"])
     mrcv_1 = ctab.Factor.from_array(language, language.columns, "car_choice", orientation="wide")
     mrcv_2 = ctab.Factor.from_array(food_choices, food_choices.columns, "food_choices", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([mrcv_1, ], [mrcv_2, ])
     rao_scott_2_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_rao_scott_2
     rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
     assert rao_p_value >= 0.05
@@ -726,14 +726,14 @@ def test_overlapping_names_allowed():
                               columns=food_choices)
     mrcv_1 = ctab.Factor.from_array(worst_food, worst_food.columns, "car_choice", orientation="wide")
     mrcv_2 = ctab.Factor.from_array(best_food, best_food.columns, "best_food", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([mrcv_1, ], [mrcv_2, ])
     rao_scott_2_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_rao_scott_2
     rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
     assert rao_p_value >= 0.05
 
     car_choice = build_random_single_select(n=1000, choices=food_choices)
     srcv = ctab.Factor.from_array(car_choice, food_choices, "srcv", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([srcv, ], [mrcv_2, ])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([srcv, ], [mrcv_2, ])
     rao_scott_2_test = multiple_response_table._test_for_single_pairwise_mutual_independence_using_rao_scott_2
     rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
     assert rao_p_value >= 0.05
@@ -749,13 +749,13 @@ def test_duplicate_names_allowed():
                               columns=food_choices)
     mrcv_1 = ctab.Factor.from_array(worst_food, worst_food.columns, "", orientation="wide")
     mrcv_2 = ctab.Factor.from_array(best_food, best_food.columns, "", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([mrcv_1, ], [mrcv_2, ])
     result = multiple_response_table.test_for_independence(method="rao")
     assert result.table_p_value >= 0.05
 
     car_choice = build_random_single_select(n=1000, choices=food_choices)
     srcv = ctab.Factor.from_array(car_choice, food_choices, "srcv", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([srcv, ], [mrcv_2, ])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([srcv, ], [mrcv_2, ])
     result = multiple_response_table.test_for_independence(method="rao")
     assert result.table_p_value >= 0.05
 
@@ -767,14 +767,14 @@ def test_duplicate_names_allowed():
     mrcv_2 = ctab.Factor.from_array(best_food, best_food.columns, "best_food", orientation="wide")
     narrow_srcv = srcv.cast_wide_to_narrow()
     narrow_mrcv = mrcv_2.cast_wide_to_narrow()
-    multiple_response_table = ctab.MRCVTable([narrow_srcv, ], [narrow_mrcv, ])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([narrow_srcv, ], [narrow_mrcv, ])
     result = multiple_response_table.test_for_independence(method="rao")
     assert result.table_p_value >= 0.05
 
 
 def test_MRCV_table_from_data():
     multiple_response_questions = presidential_data.iloc[:, 6:]
-    table = ctab.MRCVTable.from_data(multiple_response_questions, 5, 5)
+    table = ctab.MultipleResponseContingencyTable.from_data(multiple_response_questions, 5, 5)
     expected = np.array([44, 49, 15, 22, 12])  # from a manual run
     assert np.all(table.table.values[0, :] == expected)
 
@@ -784,7 +784,7 @@ def test_MRCV_table_from_factors():
                               "believe_true", orientation="wide")
     columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 11:], presidential_data.columns[11:],
                                  "why_uncertain", orientation="wide")
-    multiple_response_table = ctab.MRCVTable([rows_factor, ], [columns_factor])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([rows_factor, ], [columns_factor])
     expected = np.array([44, 49, 15, 22, 12])  # from a manual run
     assert np.all(multiple_response_table.table.iloc[0].values == expected)
 
@@ -844,7 +844,7 @@ def test_MRCV_table_with_ones():
     labels = ["Yes", "No"]
     mrcv_1 = ctab.Factor.from_array(a, labels, "alive", orientation="wide", multiple_response=True)
     mrcv_2 = ctab.Factor.from_array(b, labels, "cool", orientation="wide", multiple_response=True)
-    multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([mrcv_1, ], [mrcv_2, ])
     results = multiple_response_table.test_for_independence()
     assert np.all(np.isnan(results.cellwise_p_values))
 
@@ -855,7 +855,7 @@ def test_MRCV_table_with_zeros():
     labels = ["Yes", "No"]
     mrcv_1 = ctab.Factor.from_array(a, labels, "alive", orientation="wide", multiple_response=True)
     mrcv_2 = ctab.Factor.from_array(b, labels, "cool", orientation="wide", multiple_response=True)
-    multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([mrcv_1, ], [mrcv_2, ])
     results = multiple_response_table.test_for_independence()
     assert np.all(np.isnan(results.cellwise_p_values))
 
@@ -870,7 +870,7 @@ def test_MMI_table_with_no_variance():
     ab = np.concatenate((a, b), axis=1)
     srcv = ctab.Factor.from_array(ab, labels, "alive", orientation="wide", multiple_response=True)
     mrcv_2 = ctab.Factor(food_choices, "cool", orientation="wide", multiple_response=True)
-    multiple_response_table = ctab.MRCVTable([srcv, ], [mrcv_2, ])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([srcv, ], [mrcv_2, ])
     results = multiple_response_table.test_for_independence()
     assert np.all(np.isnan(results.cellwise_p_values))
 
@@ -884,7 +884,7 @@ def test_MRCV_2x2_table():
                              columns=["eggs", "cheese"])
     mrcv_1 = ctab.Factor(a, "alive", orientation="wide", multiple_response=True)
     mrcv_2 = ctab.Factor(b, "cool", orientation="wide", multiple_response=True)
-    multiple_response_table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([mrcv_1, ], [mrcv_2, ])
     results = multiple_response_table.test_for_independence()
     assert results.table_p_value > 0.05
 
@@ -903,46 +903,46 @@ def test_for_MRCV_independence():
     mrcv_1 = ctab.Factor(food_choices, "", orientation="wide", multiple_response=True)
     mrcv_2 = ctab.Factor(language, "", orientation="wide", multiple_response=True)
 
-    table = ctab.MRCVTable([srcv_1, ], [mrcv_1, ])
+    table = ctab.MultipleResponseContingencyTable([srcv_1, ], [mrcv_1, ])
     results = table.test_for_independence()
     assert results.independence_type == 'Marginal Mutual Independence'
     assert results.method == 'Bonferroni'
 
-    table = ctab.MRCVTable([srcv_1, ], [mrcv_1, ])
+    table = ctab.MultipleResponseContingencyTable([srcv_1, ], [mrcv_1, ])
     results = table.test_for_independence(method="bon")
     assert results.independence_type == 'Marginal Mutual Independence'
     assert results.method == 'Bonferroni'
 
-    table = ctab.MRCVTable([mrcv_1, ], [srcv_1, ])
+    table = ctab.MultipleResponseContingencyTable([mrcv_1, ], [srcv_1, ])
     results = table.test_for_independence(method="bon")
     assert results.independence_type == 'Marginal Mutual Independence'
     assert results.method == 'Bonferroni'
 
-    table = ctab.MRCVTable([srcv_1, ], [mrcv_1, ])
+    table = ctab.MultipleResponseContingencyTable([srcv_1, ], [mrcv_1, ])
     results = table.test_for_independence(method="rao")
     assert results.independence_type == 'Marginal Mutual Independence'
     assert results.method == 'Rao-Scott'
 
-    table = ctab.MRCVTable([mrcv_1, ], [srcv_1, ])
+    table = ctab.MultipleResponseContingencyTable([mrcv_1, ], [srcv_1, ])
     results = table.test_for_independence(method="rao")
     assert results.independence_type == 'Marginal Mutual Independence'
     assert results.method == 'Rao-Scott'
 
-    table = ctab.MRCVTable([srcv_1, ], [srcv_2, ])
+    table = ctab.MultipleResponseContingencyTable([srcv_1, ], [srcv_2, ])
     results = table.test_for_independence()
     assert type(results) == ctab.ContingencyTableNominalIndependenceResult
 
-    table = ctab.MRCVTable([mrcv_2, ], [mrcv_1, ])
+    table = ctab.MultipleResponseContingencyTable([mrcv_2, ], [mrcv_1, ])
     results = table.test_for_independence()
     assert results.independence_type == 'Single Pairwise Mutual Independence'
     assert results.method == 'Bonferroni'
 
-    table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    table = ctab.MultipleResponseContingencyTable([mrcv_1, ], [mrcv_2, ])
     results = table.test_for_independence(method="bon")
     assert results.independence_type == 'Single Pairwise Mutual Independence'
     assert results.method == 'Bonferroni'
 
-    table = ctab.MRCVTable([mrcv_1, ], [mrcv_2, ])
+    table = ctab.MultipleResponseContingencyTable([mrcv_1, ], [mrcv_2, ])
     results = table.test_for_independence(method="rao")
     assert results.independence_type == 'Single Pairwise Mutual Independence'
     assert results.method == 'Rao-Scott'
@@ -956,7 +956,7 @@ def test_for_MRCV_independence():
     mrcv_2 = ctab.Factor(language, "language", orientation="wide")
     narrow_mrcv_1 = mrcv_1.cast_wide_to_narrow()
     narrow_mrcv_2 = mrcv_2.cast_wide_to_narrow()
-    multiple_response_table = ctab.MRCVTable([narrow_mrcv_1, ], [narrow_mrcv_2, ])
+    multiple_response_table = ctab.MultipleResponseContingencyTable([narrow_mrcv_1, ], [narrow_mrcv_2, ])
     result = multiple_response_table.test_for_independence(method="rao")
     assert result.table_p_value >= 0.05
     result = multiple_response_table.test_for_independence(method="bon")

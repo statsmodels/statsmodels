@@ -1499,7 +1499,7 @@ def shift_zeros(dataframe):
         return dataframe
 
 
-class MRCVTable(object):
+class MultipleResponseContingencyTable(object):
     """
     Implements analyses that can be performed on a two-way contingency
     table that includes 'multiple response' categorical variables
@@ -1580,7 +1580,7 @@ class MRCVTable(object):
     @classmethod
     def from_data(cls, data, I, J, rows_factor_name="factor_0", columns_factor_name="factor_1"):
         """
-        Construct an MRCVTable object directly from data (rather than Factor instances).
+        Construct an MultipleResponseContingencyTable object directly from data (rather than Factor instances).
 
         Parameters
         ----------
@@ -1600,7 +1600,7 @@ class MRCVTable(object):
 
         Returns
         -------
-        An MRCVTable instance.
+        An MultipleResponseContingencyTable instance.
         """
 
         if isinstance(data, pd.DataFrame):
@@ -1810,7 +1810,7 @@ class MRCVTable(object):
     @classmethod
     def _extract_and_validate_factors(cls, column_factors, row_factors):
         """
-        Make sure that the factors that the user passed into the initial MRCVTable
+        Make sure that the factors that the user passed into the initial MultipleResponseContingencyTable
         initializer are valid and that the combination of single and multiple
         response variables is currently supported. Also, since we don't currently
         support multiple factors on a single axis we enforce that only one
@@ -2544,7 +2544,7 @@ class Factor(object):
     A data container class for holding information about a single variable
     in a contingency table analysis.
 
-    Primarily used as an input to the MRCVTable class.
+    Primarily used as an input to the MultipleResponseContingencyTable class.
 
     Parameters
     ----------
