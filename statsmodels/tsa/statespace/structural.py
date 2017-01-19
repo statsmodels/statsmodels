@@ -530,7 +530,12 @@ class UnobservedComponents(MLEModel):
         # TODO: I think the kwargs or not attached, need to recover from ???
 
     def _get_init_kwds(self):
+        # Get keywords based on model attributes
         kwds = super(UnobservedComponents, self)._get_init_kwds()
+
+        # Modifications
+        kwds['seasonal'] = self.seasonal_period
+        kwds['autoregressive'] = self.ar_order
 
         for key, value in kwds.items():
             if value is None and hasattr(self.ssm, key):
