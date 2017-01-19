@@ -530,6 +530,9 @@ class Test2x2_1(Check2x2Mixin):
                                       1.3859038243496782]
 
 
+
+# MRCV R values calculated by hand in this notebook:
+# https://github.com/rogueleaderr/statsmodels_supplementary_docs/blob/master/MRCV%20R%20Reference%20Version.ipynb
 def test_MMI_item_response_table():
     rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, :6],
                                          presidential_data.columns[:6],
@@ -606,15 +609,15 @@ def test_multiple_mutual_independence_false_using_bonferroni():
     multiple_response_table = ctab.MultipleResponseTable([rows_factor, ],
                                                          [columns_factor])
     bonferroni_test = multiple_response_table._test_MMI_using_bonferroni
-    table_p_value, cellwise_p_values = bonferroni_test(rows_factor,
+    p_value_overall, p_values_cellwise = bonferroni_test(rows_factor,
                                                        columns_factor)
     fpath = os.path.join(results_dirpath, "srcv_r_bonferroni.csv")
     r_result = pd.DataFrame.from_csv(fpath)
-    table_p_value_r = r_result["p.value.bon"]
+    p_value_overall_r = r_result["p.value.bon"]
     cell_p_values_r = r_result.iloc[:, 1:]
-    reshaped_python_values = cellwise_p_values.values.reshape(5, 1)
+    reshaped_python_values = p_values_cellwise.values.reshape(5, 1)
     assert_allclose(reshaped_python_values, cell_p_values_r.T)
-    assert_allclose(table_p_value_r, table_p_value)
+    assert_allclose(p_value_overall_r, p_value_overall)
 
 
 def test_multiple_mutual_independence_false_using_rao_scott_2():
@@ -627,11 +630,11 @@ def test_multiple_mutual_independence_false_using_rao_scott_2():
     multiple_response_table = ctab.MultipleResponseTable([rows_factor, ],
                                                          [columns_factor])
     rao_scott_2_test = multiple_response_table._test_MMI_using_rao_scott_2
-    table_p_value = rao_scott_2_test(rows_factor, columns_factor)
+    p_value_overall = rao_scott_2_test(rows_factor, columns_factor)
     fpath = os.path.join(results_dirpath, "srcv_r_rao_scott.csv")
     r_result = pd.DataFrame.from_csv(fpath)
-    table_p_value_r = r_result["p.value.rs2"]
-    assert_allclose(table_p_value_r, table_p_value)
+    p_value_overall_r = r_result["p.value.rs2"]
+    assert_allclose(p_value_overall_r, p_value_overall)
 
 
 def test_calculate_pairwise_chi2s_for_SPMI_item_response_table():
@@ -663,15 +666,15 @@ def test_SPMI_false_using_bonferroni():
                                                          [columns_factor])
     test = multiple_response_table._test_SPMI_using_bonferroni
     result = test(rows_factor, columns_factor)
-    table_p_value_bonferroni, cellwise_p_bonferroni_python = result
+    p_value_overall_bonferroni, cellwise_p_bonferroni_python = result
     fpath = os.path.join(results_dirpath, "spmi_r_bonferroni.csv")
     spmi_bonferroni_r = pd.DataFrame.from_csv(fpath)
 
-    table_p_value_r = spmi_bonferroni_r["p.value.bon"]
+    p_value_overall_r = spmi_bonferroni_r["p.value.bon"]
     cell_p_values_r = spmi_bonferroni_r.iloc[:, 1:]
 
     assert_allclose(cellwise_p_bonferroni_python, cell_p_values_r)
-    assert_allclose(table_p_value_r, table_p_value_bonferroni)
+    assert_allclose(p_value_overall_r, p_value_overall_bonferroni)
 
 
 def test_SPMI_false_using_rao_scott_2():
@@ -684,11 +687,11 @@ def test_SPMI_false_using_rao_scott_2():
     multiple_response_table = ctab.MultipleResponseTable([rows_factor, ],
                                                          [columns_factor])
     rao_scott_2_test = multiple_response_table._test_SPMI_using_rao_scott_2
-    table_p_value = rao_scott_2_test(rows_factor, columns_factor)
+    p_value_overall = rao_scott_2_test(rows_factor, columns_factor)
     fpath = os.path.join(results_dirpath, "spmi_r_rao_scott.csv")
     r_result = pd.DataFrame.from_csv(fpath)
-    table_p_value_r = r_result["p.value.rs2"]
-    assert_allclose(table_p_value_r, table_p_value)
+    p_value_overall_r = r_result["p.value.rs2"]
+    assert_allclose(p_value_overall_r, p_value_overall)
 
 
 def build_random_single_select(n=10000, choices=None):
@@ -728,8 +731,8 @@ def test_multiple_mutual_independence_true():
     rao_p_value = rao_scott_2_test(srcv, mrcv)
     assert rao_p_value >= 0.05
     bonferroni_test = multiple_response_table._test_MMI_using_bonferroni
-    bonferroni_table_p_value, bonferroni_cell_p_values = bonferroni_test(srcv, mrcv)
-    assert bonferroni_table_p_value >= 0.05
+    bonferroni_p_value_overall, bonferroni_cell_p_values = bonferroni_test(srcv, mrcv)
+    assert bonferroni_p_value_overall >= 0.05
     assert np.all(bonferroni_cell_p_values >= 0.05)
 
 
@@ -753,8 +756,8 @@ def test_single_pairwise_mutual_independence_true():
     assert rao_p_value >= 0.05
     bonferroni_test = multiple_response_table._test_SPMI_using_bonferroni
     result = bonferroni_test(mrcv_1, mrcv_2)
-    bonferroni_table_p_value, bonferroni_cell_p_values = result
-    assert bonferroni_table_p_value >= 0.05
+    bonferroni_p_value_overall, bonferroni_cell_p_values = result
+    assert bonferroni_p_value_overall >= 0.05
     assert np.all(bonferroni_cell_p_values >= 0.05)
 
 
@@ -802,7 +805,7 @@ def test_duplicate_names_allowed():
     multiple_response_table = ctab.MultipleResponseTable([mrcv_1, ],
                                                          [mrcv_2, ])
     result = multiple_response_table.test_for_independence(method="rao")
-    assert result.table_p_value >= 0.05
+    assert result.p_value_overall >= 0.05
 
     car_choice = build_random_single_select(n=1000, choices=food_choices)
     srcv = ctab.Factor.from_array(car_choice, food_choices, "srcv",
@@ -810,7 +813,7 @@ def test_duplicate_names_allowed():
     multiple_response_table = ctab.MultipleResponseTable([srcv, ],
                                                          [mrcv_2, ])
     result = multiple_response_table.test_for_independence(method="rao")
-    assert result.table_p_value >= 0.05
+    assert result.p_value_overall >= 0.05
 
     # deduplicator modifies in-place so need to recreate data
     car_choice = build_random_single_select(n=1000, choices=food_choices)
@@ -825,7 +828,7 @@ def test_duplicate_names_allowed():
     multiple_response_table = ctab.MultipleResponseTable([narrow_srcv, ],
                                                          [narrow_mrcv, ])
     result = multiple_response_table.test_for_independence(method="rao")
-    assert result.table_p_value >= 0.05
+    assert result.p_value_overall >= 0.05
 
 
 def test_MRCV_table_from_data():
@@ -920,7 +923,7 @@ def test_MRCV_table_with_ones():
     multiple_response_table = ctab.MultipleResponseTable([mrcv_1, ],
                                                          [mrcv_2, ])
     results = multiple_response_table.test_for_independence()
-    assert np.all(np.isnan(results.cellwise_p_values))
+    assert np.all(np.isnan(results.p_values_cellwise))
 
 
 def test_MRCV_table_with_zeros():
@@ -936,7 +939,7 @@ def test_MRCV_table_with_zeros():
     multiple_response_table = ctab.MultipleResponseTable([mrcv_1, ],
                                                          [mrcv_2, ])
     results = multiple_response_table.test_for_independence()
-    assert np.all(np.isnan(results.cellwise_p_values))
+    assert np.all(np.isnan(results.p_values_cellwise))
 
 
 def test_MMI_table_with_no_variance():
@@ -957,7 +960,7 @@ def test_MMI_table_with_no_variance():
     multiple_response_table = ctab.MultipleResponseTable([srcv, ],
                                                          [mrcv_2, ])
     results = multiple_response_table.test_for_independence()
-    assert np.all(np.isnan(results.cellwise_p_values))
+    assert np.all(np.isnan(results.p_values_cellwise))
 
 
 def test_MRCV_2x2_table():
@@ -974,7 +977,7 @@ def test_MRCV_2x2_table():
     multiple_response_table = ctab.MultipleResponseTable([mrcv_1, ],
                                                          [mrcv_2, ])
     results = multiple_response_table.test_for_independence()
-    assert results.table_p_value > 0.05
+    assert results.p_value_overall > 0.05
 
 
 def test_for_MRCV_independence():
@@ -1056,9 +1059,9 @@ def test_for_MRCV_independence():
     multiple_response_table = ctab.MultipleResponseTable([narrow_mrcv_1, ],
                                                          [narrow_mrcv_2, ])
     result = multiple_response_table.test_for_independence(method="rao")
-    assert result.table_p_value >= 0.05
+    assert result.p_value_overall >= 0.05
     result = multiple_response_table.test_for_independence(method="bon")
-    assert result.table_p_value >= 0.05
+    assert result.p_value_overall >= 0.05
 
 
 if __name__ == "__main__":

@@ -117,20 +117,21 @@ class MRCVTableNominalIndependenceResult(_Bunch):
 
     Attributes
     ----------
-    table_p_value : float
-        If repeated samples were drawn from the underlying population
-        and the row and column variables were in fact independent,
-        `table_p_value` would represent the fraction of those samples
-        in which the observed relationship between the row and column
-        variables would be at least as extreme as it is
-        in the provided data.
-    cellwise_p_values : pd.DataFrame of floats
-        If repeated samples were drawn from the underlying population
-        and the row and column variables were in fact independent,
-        the p_value in each cell would represent the fraction of those samples
-        in which the observed relationship between that specific level of
-        the row variable and that specific level of the column variables
-        would be at least as extreme as it is in the provided data.
+    p_value_overall : float
+        Probability that row factor is independent of column factor.
+    p_values_cellwise : pd.DataFrame of floats
+        Probabilities that each specific combination of levels in the
+        the row variable is independent of each specific level in
+        the column variables
+
+    Notes
+    -----
+    If repeated samples were drawn from the underlying population
+    and the row and column variables were in fact independent,
+    these p-values would represent the fraction of those samples
+    in which the observed relationship between the row and column
+    variables would be at least as extreme as it is
+    in the provided data.
     """
     def __repr__(self):
         return ("<bunch object containing multiple-response contingency"
@@ -139,10 +140,10 @@ class MRCVTableNominalIndependenceResult(_Bunch):
     def __str__(self):
         template = ("Multiple Response Contingency Table "
                     "Independence Result:\n"
-                    "table p value: {table_p_value}\n"
-                    "cellwise p values: {cellwise_p_values}")
-        output = template.format(table_p_value=self.table_p_value,
-                                 cellwise_p_values=self.cellwise_p_values)
+                    "table p value: {p_value_overall}\n"
+                    "cellwise p values: {p_values_cellwise}")
+        output = template.format(p_value_overall=self.p_value_overall,
+                                 p_values_cellwise=self.p_values_cellwise)
         return output
 
 
@@ -1492,11 +1493,11 @@ def cochrans_q(x, return_object=True):
     return q_stat, pvalue, df
 
 
-def shift_zeros(dataframe):
+def _shift_zeros(dataframe):
     """
+    If table contains a cell with zero observations, jitter it up by 0.5
+
     Chi-squared tests can't handle having expected counts of zero.
-    So if the table contains a cell with zero observations,
-    jitter it up by 0.5
 
     Parameters
     ----------
@@ -1514,17 +1515,49 @@ def shift_zeros(dataframe):
         return dataframe
 
 
+def _count_level_combinations(data):
+    """
+    Count every combination of co-occurence of variables in `data`
+
+    Parameters
+    ---------
+    data : pd.DataFrame
+        The data to count up. Should be "wide" oriented, i.e. one column
+        per variable
+
+    Return
+    ------
+    pd.DataFrame
+        A dataframe with each combination and its count on a row
+    """
+    variables = data.columns
+    number_of_variables = len(variables)
+    data = data.copy()  # don't modify original dataframe
+    level_arguments = [[0, 1]] * number_of_variables
+    level_combinations = list(itertools.product(*level_arguments))
+    full_combinations = pd.DataFrame(level_combinations,
+                                     columns=variables)
+    full_combinations["_dummy"] = 0
+    data['_dummy'] = 1
+    to_concat = [data, full_combinations]
+    data = pd.concat(to_concat).reset_index(drop=True)
+    grouped = data.groupby(list(variables))
+    return grouped.sum().reset_index()
+
+
 class MultipleResponseTable(object):
     """
-    Implements analyses that can be performed on a two-way contingency
-    table that includes 'multiple response' categorical variables
-    (e.g. 'choose all that apply' questions on surveys).
+    Contingency tables for multiple response categorical variables.
+
+    This class implements analyses that can be performed on a two-way
+    contingency table that includes 'multiple response' categorical
+    variables (e.g. 'choose all that apply' questions on surveys).
 
     Parameters
     ----------
     row_factors : a Factor instance or list of Factors
         The factor or factors containing data that you intend to have on the
-        rows, (i.e. the x axis) the contingency table.
+        rows, (i.e. the x axis) of the contingency table.
     column_factors : a Factor instance or list of Factors
         The factor or factors containing data that you intend to have on the
         columns, (i.e. the y axis) of the contingency table.
@@ -1559,6 +1592,9 @@ class MultipleResponseTable(object):
     in [2]_, [3]_, [4]_, and [5]_.
 
     At the moment, this class mostly restricts itself to ideas from [2]_.
+
+    For more details about use, please see a supplemental Jupyter notebook
+    [available here](https://github.com/rogueleaderr/statsmodels_supplementary_docs/blob/master/MRCV%20Table%20Documentation.ipynb)
 
     References
     ----------
@@ -1611,12 +1647,13 @@ class MultipleResponseTable(object):
         return "At {id} :: {_str}".format(id=id(self), _str=self.__str__())
 
     @classmethod
-    def from_data(cls, data, I, J,
+    def from_data(cls, data, num_cols_1st_var, num_cols_2nd_var,
                   rows_factor_name="factor_0",
                   columns_factor_name="factor_1"):
         """
-        Construct an MultipleResponseTable object directly
-        from data (rather than Factor instances).
+        Construct a MultipleResponseTable object directly from data
+
+        (As opposed to constructing from Factor instances).
 
         Parameters
         ----------
@@ -1624,14 +1661,15 @@ class MultipleResponseTable(object):
             The raw data from which a contingency table is
             to be constructed. Include only data that you intend to include
             in the contingency table.
-        I : int
+        num_cols_1st_var : int
             The number of columns in the dataframe corresponding
-            to the row factor. The first I columns in `data` will be
+            to the row factor. This # of columns in `data` will be
             used as the row factor
-        J : int
+        num_cols_2nd_var : int
             The number of columns in the dataframe corresponding
-            to the column factor. Columns #I through J from `data`
-            will be used as the column factor
+            to the column factor. Columns #`num_cols_1st_var`
+            through `num_cols_2nd_var` from `data` will be used as
+            the column factor
         rows_factor_name : str, optional
             If you would like to provide a name for the row variable
         columns_factor_name : str, optional
@@ -1641,7 +1679,8 @@ class MultipleResponseTable(object):
         -------
         An MultipleResponseTable instance.
         """
-
+        I = num_cols_1st_var
+        J = num_cols_2nd_var
         if isinstance(data, pd.DataFrame):
             rows_data = data.iloc[:, 0:I]
             columns_data = data.iloc[:, I:I + J]
@@ -1668,13 +1707,14 @@ class MultipleResponseTable(object):
     @classmethod
     def table_from_factors(cls, row_factors, column_factors):
         """
-        Build a contingency table by tabulating all combinations of
-        levels of the row and column factors.
+        Tabulate all combinations of levels of the row and column factors.
 
         Parameters
         ----------
-        row_factors : list of Factor instances to use on the rows
-        column_factors : list of Factor instances to use in the columns
+        row_factors : list of Factor instances
+            Factors to use on the rows
+        column_factors : list of Factor
+            Factors to use in the columns
 
         Returns
         -------
@@ -1707,30 +1747,24 @@ class MultipleResponseTable(object):
 
     def test_for_independence(self, method="bonferroni"):
         """
+        Test for independence between row and column factors.
+
         Test whether the variables on the rows and columns of this
-        contingency table are statistically independent.
+        contingency table are statistically independent. Tries to
+        automatically deterime the right test to use given the data you
+        provide.
 
         Parameters
         ----------
         method : {'bonferroni', 'rao-scott-2'}
             The method to use in testing for independence.
 
-            The "Bonferroni" method is simpler and more transparent and can
-            provide p-values on a cell by cell basis. But it can be overly
-            conservative, i.e. require an inefficient amount of evidence
-            to reject the null hypothesis of independence.
-
-            The "Rao-Scott Second Order Correction" method is
-            less conservative but cannot provide cell by cell
-            p-values and may be more difficult
-            to understand or explain conceptually.
-
         Returns
         -------
         MRCVTableNominalIndependenceResult
             Summary class containing results of the independence test,
-            including "table_p_value" and
-            (where available) "cellwise_p_values"
+            including "p_value_overall" and
+            (where available) "p_values_cellwise"
 
         Notes
         -----
@@ -1744,6 +1778,18 @@ class MultipleResponseTable(object):
         3) Zero multiple response variables
            (i.e. only single response variables):
            we use traditional chi-square tests (from the `Table` class)
+
+        Re: the `method` parameter:
+
+        The "Bonferroni" method is simpler and more transparent and can
+            provide p-values on a cell by cell basis. But it can be overly
+            conservative, i.e. require an inefficient amount of evidence
+            to reject the null hypothesis of independence.
+
+            The "Rao-Scott Second Order Correction" method is
+            less conservative but cannot provide cell by cell
+            p-values and may be more difficult
+            to understand or explain conceptually.
         """
         rows_are_multiple_response = any([f.multiple_response
                                           for f in self.row_factors])
@@ -1764,15 +1810,15 @@ class MultipleResponseTable(object):
                    .format(method=method))
             raise NotImplementedError(msg)
 
-    def _build_MRCV_result(self, table_p_value, cellwise_p_values,
+    def _build_MRCV_result(self, p_value_overall, p_values_cellwise,
                            method, independence_type):
         """
         Build and initialize a MRCVTableNominalIndependenceResult instance.
 
         Parameters
         ----------
-        table_p_value : float
-        cellwise_p_values : pd.DataFrame of floats
+        p_value_overall : float
+        p_values_cellwise : pd.DataFrame of floats
         method : str
         independence_type : {'MMI', 'SPMI'}
 
@@ -1781,8 +1827,8 @@ class MultipleResponseTable(object):
         MRCVTableNominalIndependenceResult
         """
         result = MRCVTableNominalIndependenceResult()
-        result.table_p_value = table_p_value
-        result.cellwise_p_values = cellwise_p_values
+        result.p_value_overall = p_value_overall
+        result.p_values_cellwise = p_values_cellwise
         result.method = method
         if independence_type == "MMI":
             result.independence_type = "Marginal Mutual Independence"
@@ -1796,8 +1842,10 @@ class MultipleResponseTable(object):
                                       columns_are_multiple_response,
                                       rows_are_multiple_response):
         """
-        Select and execute the correct Bonferroni-based independence test
-        for this combination of multiple and/or single response variables.
+        Select and execute the correct Bonferroni-based independence test.
+
+        We need to use different tests depending on how many single vs.
+        multiple response variables we're analyzing.
 
         Parameters
         ----------
@@ -1815,24 +1863,24 @@ class MultipleResponseTable(object):
         column_factor = self.column_factors[0]
         if rows_are_multiple_response and columns_are_multiple_response:
             spmi_test = self._test_SPMI_using_bonferroni
-            table_p_value, cellwise_p_values = spmi_test(row_factor,
+            p_value_overall, p_values_cellwise = spmi_test(row_factor,
                                                          column_factor)
-            result = self._build_MRCV_result(table_p_value,
-                                             cellwise_p_values,
+            result = self._build_MRCV_result(p_value_overall,
+                                             p_values_cellwise,
                                              "Bonferroni", "SPMI")
             return result
         elif columns_are_multiple_response:
-            table_p_value, cellwise_p_values = mmi_test(row_factor,
+            p_value_overall, p_values_cellwise = mmi_test(row_factor,
                                                         column_factor)
-            result = self._build_MRCV_result(table_p_value,
-                                             cellwise_p_values,
+            result = self._build_MRCV_result(p_value_overall,
+                                             p_values_cellwise,
                                              "Bonferroni", "MMI")
             return result
         elif rows_are_multiple_response:
-            table_p_value, cellwise_p_values = mmi_test(column_factor,
+            p_value_overall, p_values_cellwise = mmi_test(column_factor,
                                                         row_factor)
-            result = self._build_MRCV_result(table_p_value,
-                                             cellwise_p_values,
+            result = self._build_MRCV_result(p_value_overall,
+                                             p_values_cellwise,
                                              "Bonferroni", "MMI")
             return result
         else:
@@ -1844,7 +1892,9 @@ class MultipleResponseTable(object):
                                      rows_are_multiple_response):
         """
         Select and execute the correct Rao-Scott-2-based independence test
-        for this combination of multiple and/or single response variables.
+
+        We need to use different tests depending on how many single vs.
+        multiple response variables we're analyzing.
 
         Parameters
         ----------
@@ -1863,20 +1913,20 @@ class MultipleResponseTable(object):
         column_factor = self.column_factors[0]
         if rows_are_multiple_response and columns_are_multiple_response:
             spmi_test = self._test_SPMI_using_rao_scott_2
-            table_p_value = spmi_test(row_factor, column_factor)
-            result = self._build_MRCV_result(table_p_value,
+            p_value_overall = spmi_test(row_factor, column_factor)
+            result = self._build_MRCV_result(p_value_overall,
                                              NOT_AVAILABLE,
                                              "Rao-Scott", "SPMI")
             return result
         elif columns_are_multiple_response:
-            table_p_value = mmi_test(row_factor, column_factor)
-            result = self._build_MRCV_result(table_p_value,
+            p_value_overall = mmi_test(row_factor, column_factor)
+            result = self._build_MRCV_result(p_value_overall,
                                              NOT_AVAILABLE,
                                              "Rao-Scott", "MMI")
             return result
         elif rows_are_multiple_response:
-            table_p_value = mmi_test(column_factor, row_factor)
-            result = self._build_MRCV_result(table_p_value,
+            p_value_overall = mmi_test(column_factor, row_factor)
+            result = self._build_MRCV_result(p_value_overall,
                                              NOT_AVAILABLE,
                                              "Rao-Scott", "MMI")
             return result
@@ -1887,6 +1937,8 @@ class MultipleResponseTable(object):
     @classmethod
     def _extract_and_validate_factors(cls, column_factors, row_factors):
         """
+        Validate provided Factors and plunk instances out of lists.
+
         Make sure that the factors that the user passed into
         the initial MultipleResponseTable initializer are valid and
         that the combination of single and multiple response variables is
@@ -1952,10 +2004,11 @@ class MultipleResponseTable(object):
     @classmethod
     def _deduplicate_level_names(cls, column_factor, row_factor):
         """
-        Make sure that all of the factor level names are unique in the
-        whole table because pandas does not deal well with
-        duplicates in indexes. If duplicates are found,
-        append '-characters as needed to make them unique.
+        Make sure that all of the factor level names are unique.
+
+        pandas does not deal well with duplicates in indexes. So if
+        duplicates are found, append '-characters as needed to
+        make them unique.
 
         Parameters
         ----------
@@ -2011,8 +2064,7 @@ class MultipleResponseTable(object):
     def _item_response_table_for_MMI(single_response_factor,
                                      multiple_response_factor):
         """
-        Build the full item response table that compares a single response
-        variable to a multiple response variable.
+        Build item-response table between single and multiple response vars
 
         Parameters
         ----------
@@ -2082,15 +2134,14 @@ class MultipleResponseTable(object):
     @classmethod
     def _chi2s_for_MMI_item_response_table(cls, srcv, mrcv):
         """
-        Calculate chi-squared statistics for each subtable
-        in the MMI item response table.
+        Calc chi-squared stat for pairings in the MMI item-response table.
 
         Parameters
         ----------
         srcv : Factor instance
-            Single response categorical Factor
+            A single response categorical Factor
         mrcv : Factor instance
-            Multiple response categorical Factor
+            A multiple response categorical Factor
 
         Return
         ------
@@ -2131,8 +2182,7 @@ class MultipleResponseTable(object):
     @staticmethod
     def _build_item_response_table_for_SPMI(rows_factor, columns_factor):
         """
-        Build the full item response table that compares a single
-        response variable to another single response variable.
+        Build full item-response table between two multiple response vars
 
         Parameters
         ----------
@@ -2198,15 +2248,14 @@ class MultipleResponseTable(object):
                                             rows_factor,
                                             columns_factor):
         """
-        Calculate chi-squared statistics for each subtable in the SPMI
-        item response table.
+        Calc chi-squared stat for each pairing in SPMI item response table.
 
         Parameters
         ----------
         rows_factor : Factor instance
-            Multiple response factor to use on the rows
+            A multiple response factor to use on the rows
         columns_factor : Factor instance
-            Multiple response factor to use in the columns
+            A multiple response factor to use in the columns
 
         Return
         ------
@@ -2262,7 +2311,7 @@ class MultipleResponseTable(object):
             for column_level in columns_levels:
                 location = row_level, column_level
                 crosstab = item_response_table.loc[location]
-                crosstab = shift_zeros(crosstab)
+                crosstab = _shift_zeros(crosstab)
                 chi2_results = chi2_contingency(crosstab, correction=False)
                 chi_squared_statistic, _, _, _ = chi2_results
                 chis_spmi.loc[location] = chi_squared_statistic
@@ -2270,21 +2319,22 @@ class MultipleResponseTable(object):
 
     def _test_SPMI_using_bonferroni(self, row_factor, column_factor):
         """
-        Test for single pairwise mutual independence between two multiple
-        response variables using a Bonferroni correction.
+        Test for SPMI between two multiple response vars using Bonferroni
 
-        First calculate a full item response table comparing each pairing
-        of levels from both variables, then calculate a chi-square statistic
-        for each pairing, then adjust that table of pairwise statistics
-        using Bonferroni correction to account for multiple comparisons
-        within the single overall test.
+        SPMI stands for "single pairwise mutual independence".
+
+        To test, first calculate a full item response table comparing each
+        pairing of levels from both variables, then calculate a
+        chi-square statistic for each pairing, then adjust that table
+        of pairwise statistics using Bonferroni correction to account
+        for multiple comparisons within the single overall test.
 
         Parameters
         ----------
         row_factor : Factor instance
-            Multiple response factor to use on the rows
+            A multiple response factor to use on the rows
         column_factor : Factor instance
-            Multiple response factor to use in the columns
+            A multiple response factor to use in the columns
 
         Return
         ------
@@ -2302,17 +2352,18 @@ class MultipleResponseTable(object):
                                         column_factor.factor_level_count)
         cap = lambda x: min(x, 1)
         capped_p_value = cap(bonferroni_correction_factor * p_value_min)
-        table_p_value_bonferroni = capped_p_value
+        p_value_overall_bonferroni = capped_p_value
         pairwise_bonferroni_p_values = ((p_value_ij *
                                         bonferroni_correction_factor)
                                         .applymap(cap))
-        return table_p_value_bonferroni, pairwise_bonferroni_p_values
+        return p_value_overall_bonferroni, pairwise_bonferroni_p_values
 
     def _test_for_SPMI_using_bootstrap(self, row_factor, column_factor,
                                        verbose=False):
         """
-        Test for single pairwise mutual independence between two multiple
-        response variables using bootstrapping.
+        Test for SPMI between two multiple response vars using Bootstrapping
+
+        SPMI stands for "single pairwise mutual independence".
 
         First calculate a full item response table comparing each pairing
         of levels from both variables, then calculate a chi-square statistic
@@ -2324,9 +2375,10 @@ class MultipleResponseTable(object):
         Parameters
         ----------
         row_factor : Factor instance
-            Multiple response factor to use on the rows
+            A multiple response factor to use on the rows
         column_factor : Factor instance
-            Multiple response factor to use in the columns
+            A multiple response factor to use in the columns
+
         Return
         ------
         float, pd.DataFrame
@@ -2392,8 +2444,11 @@ class MultipleResponseTable(object):
     def _test_SPMI_using_rao_scott_2(self, row_factor,
                                      column_factor):
         """
-        Test for single pairwise mutual independence between two multiple
-        response variables using a Rao Scott second-order correction [1]_.
+        Test for SPMI between two multiple response vars using Rao Scott
+
+        SPMI stands for "single pairwise mutual independence".
+
+        See [1]_ for more about the second-order Rao Scott Correction.
 
         First calculate a full item response table comparing each pairing
         of levels from both variables, then calculate a chi-square statistic
@@ -2406,9 +2461,9 @@ class MultipleResponseTable(object):
         Parameters
         ----------
         row_factor : Factor instance
-            Multiple response factor to use on the rows
+            A multiple response factor to use on the rows
         column_factor : Factor instance
-            Multiple response factor to use in the columns
+            A multiple response factor to use in the columns
 
         Return
         ------
@@ -2432,23 +2487,9 @@ class MultipleResponseTable(object):
         J = column_factor.factor_level_count
         spmi_df = pd.concat([W, Y], axis=1)  # type: pd.DataFrame
 
-        def count_level_combinations(data, number_of_variables):
-            data = data.copy()  # don't modify original dataframe
-            level_arguments = [[0, 1]] * number_of_variables
-            variables = data.columns
-            level_combinations = list(itertools.product(*level_arguments))
-            full_combinations = pd.DataFrame(level_combinations,
-                                             columns=variables)
-            full_combinations["_dummy"] = 0
-            data['_dummy'] = 1
-            to_concat = [data, full_combinations]
-            data = pd.concat(to_concat).reset_index(drop=True)
-            grouped = data.groupby(list(variables))
-            return grouped.sum().reset_index()
-
-        W_count_ordered = count_level_combinations(W, I)
-        Y_count_ordered = count_level_combinations(Y, J)
-        n_count_ordered = count_level_combinations(spmi_df, I+J)
+        W_count_ordered = _count_level_combinations(W)
+        Y_count_ordered = _count_level_combinations(Y)
+        n_count_ordered = _count_level_combinations(spmi_df)
 
         n = len(spmi_df)
         G = (W_count_ordered.iloc[:, :-1]).T
@@ -2496,9 +2537,9 @@ class MultipleResponseTable(object):
                                    single_response_factor,
                                    multiple_response_factor):
         """
-        Test for marginal mutual independence between two a single response
-        variable and a multiple response variables using a
-        Bonferroni correction.
+        Test for MMI between single and multiple response vars w/ Bonferroni
+
+        MMI stands for "marginal mutual independence".
 
         First calculate a full item response table comparing the single
         response variable versus each level of the multiple response
@@ -2509,10 +2550,9 @@ class MultipleResponseTable(object):
 
         Parameters
         ----------
-
-        rows_factor : Factor instance
-            Multiple response factor to use on the rows
-        columns_factor : Factor instance
+        single_response_factor : Factor instance
+            Single response factor to use on the rows
+        multiple_response_factor : Factor instance
             Multiple response factor to use in the columns
 
         Return
@@ -2535,20 +2575,23 @@ class MultipleResponseTable(object):
 
         bonferroni_correction_factor = c
         cap = lambda x: min(x, 1)
-        table_p_value_bonferroni = cap(bonferroni_correction_factor *
+        p_value_overall_bonferroni = cap(bonferroni_correction_factor *
                                        p_value_min)
         pairwise_bonferroni_p_values = ((p_value_ij *
                                          bonferroni_correction_factor)
                                         .apply( cap))
-        return table_p_value_bonferroni, pairwise_bonferroni_p_values
+        return p_value_overall_bonferroni, pairwise_bonferroni_p_values
 
     def _test_MMI_using_rao_scott_2(self,
                                     single_response_factor,
                                     multiple_response_factor):
         """
-        Test for marginal mutual independence between two a single response
-        variable and a multiple response variables using a
-        second order Rao Scott correction [1]_.
+        Test for MMI between single and multiple response vars w/ Rao Scott
+
+        MMI stands for "marginal mutual independence".
+
+        See [1]_ for information about the second order
+        Rao Scott correction.
 
         First calculate a full item response table comparing the single
         response variable versus each level of the multiple response
@@ -2560,7 +2603,6 @@ class MultipleResponseTable(object):
 
         Parameters
         ----------
-
         single_response_factor : Factor instance
             Single response factor to use on the rows
         multiple_response_factor : Factor instance
@@ -2617,21 +2659,7 @@ class MultipleResponseTable(object):
             result = grouped.sum().reset_index()
             return result
 
-        def count_level_combinations(data, number_of_variables):
-            data = data.copy()  # don't modify original dataframe
-            level_arguments = [[0, 1]] * number_of_variables
-            variables = data.columns
-            level_combinations = list(itertools.product(*level_arguments))
-            full_combinations = pd.DataFrame(level_combinations,
-                                             columns=variables)
-            full_combinations["_dummy"] = 0
-            data['_dummy'] = 1
-            data = pd.concat([data, full_combinations]) # type: pd.DataFrame
-            data.reset_index(drop=True, inplace=True)
-            grouped = data.groupby(list(variables))
-            return grouped.sum().reset_index().astype(int)
-
-        Y_count_ordered = count_level_combinations(Y, J)
+        Y_count_ordered = _count_level_combinations(Y)
         n_count_ordered = conjoint_combinations(W, Y)
         n_counts_grouped = n_count_ordered.groupby('srcv')
         srcv_table_order = n_counts_grouped.first().index.values
@@ -2691,8 +2719,7 @@ class MultipleResponseTable(object):
 
 class Factor(object):
     """
-    A data container class for holding information about a single variable
-    in a contingency table analysis.
+    Container class for a single variable in a contingency table analysis.
 
     Primarily used as an input to the MultipleResponseTable class.
 
@@ -2706,7 +2733,6 @@ class Factor(object):
         To specify whether the data is laid out in a
         wide (i.e. with one column per level)
         versus narrow (i.e. with one row per observation/level pairing).
-        See notes for examples.
     multiple_response : boolean
         Can the variable contain more than 1 level per observation, e.g.
         "subject #1 selected both eggs and pizza".
@@ -2721,7 +2747,6 @@ class Factor(object):
         Whether the data is laid out in a
         wide (i.e. with one column per level)
         versus narrow (i.e. with one row per observation/level pairing,
-        See notes for examples.
     multiple_response : boolean
         Can the variable contain more than 1 level per observation, e.g.
         "subject #1 selected both eggs and pizza".
@@ -2811,7 +2836,6 @@ class Factor(object):
             To specify whether the data is laid out in a
             wide (i.e. with one column per level)
             versus narrow (i.e. with one row per observation/level pairing,
-            See class notes for examples.
         multiple_response : boolean
             Can the variable contain more than 1 level per observation, e.g.
             "subject #1 selected both eggs and pizza".
@@ -2827,8 +2851,10 @@ class Factor(object):
 
     def reshape_for_contingency_table(self):
         """
-        Orient factor data in such a way that it can be compiled
-        into a contingency table using the pandas pivot_table function
+        Orient factor data for tabulating into a contingency table
+
+        We want to be able to use the pandas pivot_table function but
+        it requires a specific format
         """
         if self.orientation == "wide":
             return self.cast_wide_to_narrow().data
@@ -2848,8 +2874,7 @@ class Factor(object):
 
     def cast_wide_to_narrow(self):
         """
-        Take a factor that has a wide orientation and create a new factor
-        with the same data in a narrow orientation
+        Pivot a wide factor into a new factor in a narrow orientation
         """
         if self.orientation != "wide":
             raise NotImplementedError("Factor is already narrow")
@@ -2865,8 +2890,7 @@ class Factor(object):
 
     def cast_narrow_to_wide(self):
         """
-        Take a factor that has a narrow orientation and create a new factor
-        with the same data in a wide orientation
+        Pivot a narrow factor into a new factor with a wide orientation
         """
         if self.orientation != "narrow":
             raise NotImplementedError("Factor is already wide")
