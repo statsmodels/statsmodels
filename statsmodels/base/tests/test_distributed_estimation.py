@@ -23,8 +23,9 @@ def _data_gen(endog, exog, partitions):
 
 
 def test_calc_grad():
-    """seperately tests that _calc_grad returns
-    sensible results"""
+
+    # seperately tests that _calc_grad returns
+    # sensible results
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -36,8 +37,9 @@ def test_calc_grad():
 
 
 def test_calc_wdesign_mat():
-    """seperately tests that _calc_wdesign_mat
-    returns sensible results"""
+
+    # seperately tests that _calc_wdesign_mat
+    # returns sensible results
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -53,9 +55,10 @@ def test_calc_wdesign_mat():
 
 
 def test_est_regularized_debiased():
-    """tests that the shape of all the intermediate steps
-    remains correct for regularized debiased estimation,
-    does this for OLS and GLM"""
+
+    # tests that the shape of all the intermediate steps
+    # remains correct for regularized debiased estimation,
+    # does this for OLS and GLM
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -95,9 +98,10 @@ def test_est_regularized_debiased():
 
 
 def test_est_regularized_naive():
-    """tests that the shape of all the intermediate steps
-    remains correct for regularized naive estimation,
-    does this for OLS and GLM"""
+
+    # tests that the shape of all the intermediate steps
+    # remains correct for regularized naive estimation,
+    # does this for OLS and GLM
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -115,9 +119,10 @@ def test_est_regularized_naive():
 
 
 def test_est_unregularized_naive():
-    """tests that the shape of all the intermediate steps
-    remains correct for unregularized naive estimation,
-    does this for OLS and GLM"""
+
+    # tests that the shape of all the intermediate steps
+    # remains correct for unregularized naive estimation,
+    # does this for OLS and GLM
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -135,8 +140,9 @@ def test_est_unregularized_naive():
 
 
 def test_join_debiased():
-    """tests that the shape of all the intermediate steps
-    remains correct for debiased join, does this for OLS and GLM"""
+
+    # tests that the shape of all the intermediate steps
+    # remains correct for debiased join, does this for OLS and GLM
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -160,8 +166,9 @@ def test_join_debiased():
 
 
 def test_join_naive():
-    """tests that the shape of all the intermediate steps
-    remains correct for naive join, does this for OLS and GLM"""
+
+    # tests that the shape of all the intermediate steps
+    # remains correct for naive join, does this for OLS and GLM
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -185,9 +192,10 @@ def test_join_naive():
 
 
 def test_fit_sequential():
-    """tests that the shape of all the intermediate steps
-    remains correct for sequential fit, does this for OLS and GLM
-    and a variety of model sizes"""
+
+    # tests that the shape of all the intermediate steps
+    # remains correct for sequential fit, does this for OLS and GLM
+    # and a variety of model sizes
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -234,9 +242,10 @@ def test_fit_sequential():
 
 
 def test_fit_joblib():
-    """tests that the shape of all the intermediate steps
-    remains correct for joblib fit, does this for OLS and GLM
-    and a variety of model sizes"""
+
+    # tests that the shape of all the intermediate steps
+    # remains correct for joblib fit, does this for OLS and GLM
+    # and a variety of model sizes
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -283,7 +292,8 @@ def test_fit_joblib():
 
 
 def test_single_partition():
-    """tests that the results make sense if we have a single partition"""
+
+    # tests that the results make sense if we have a single partition
 
     np.random.seed(435265)
     N = 200
@@ -321,7 +331,8 @@ def test_single_partition():
 
 
 def test_larger_p():
-    """tests when p > N / m for the debiased and naive case"""
+
+    # tests when p > N / m for the debiased and naive case
 
     np.random.seed(435265)
     N = 40
@@ -344,7 +355,8 @@ def test_larger_p():
 
 
 def test_non_zero_params():
-    """tests that the thresholding does not cause any issues"""
+
+    # tests that the thresholding does not cause any issues
 
     np.random.seed(435265)
     N = 200
@@ -368,8 +380,9 @@ def test_non_zero_params():
 
 
 def test_repeat_partition():
-    """tests that if we use identical partitions the average is the same
-    as the estimate for the full data"""
+
+    # tests that if we use identical partitions the average is the same
+    # as the estimate for the full data
 
     np.random.seed(435265)
     N = 200
@@ -403,8 +416,9 @@ def test_repeat_partition():
 
 
 def test_debiased_v_average():
-    """tests that the debiased method performs better than the standard
-    average.  Does this for both OLS and GLM."""
+
+    # tests that the debiased method performs better than the standard
+    # average.  Does this for both OLS and GLM.
 
 
     np.random.seed(435265)
