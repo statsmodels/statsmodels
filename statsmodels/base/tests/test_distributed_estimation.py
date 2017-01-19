@@ -420,7 +420,6 @@ def test_debiased_v_average():
     # tests that the debiased method performs better than the standard
     # average.  Does this for both OLS and GLM.
 
-
     np.random.seed(435265)
     N = 200
     p = 10
