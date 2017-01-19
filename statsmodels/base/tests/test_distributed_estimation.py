@@ -23,6 +23,8 @@ def _data_gen(endog, exog, partitions):
 
 
 def test_calc_grad():
+    """seperately tests that _calc_grad returns
+    sensible results"""
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -34,6 +36,8 @@ def test_calc_grad():
 
 
 def test_calc_wdesign_mat():
+    """seperately tests that _calc_wdesign_mat
+    returns sensible results"""
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -49,6 +53,9 @@ def test_calc_wdesign_mat():
 
 
 def test_est_regularized_debiased():
+    """tests that the shape of all the intermediate steps
+    remains correct for regularized debiased estimation,
+    does this for OLS and GLM"""
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -88,6 +95,9 @@ def test_est_regularized_debiased():
 
 
 def test_est_regularized_naive():
+    """tests that the shape of all the intermediate steps
+    remains correct for regularized naive estimation,
+    does this for OLS and GLM"""
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -105,6 +115,9 @@ def test_est_regularized_naive():
 
 
 def test_est_unregularized_naive():
+    """tests that the shape of all the intermediate steps
+    remains correct for unregularized naive estimation,
+    does this for OLS and GLM"""
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -122,6 +135,8 @@ def test_est_unregularized_naive():
 
 
 def test_join_debiased():
+    """tests that the shape of all the intermediate steps
+    remains correct for debiased join, does this for OLS and GLM"""
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -145,6 +160,8 @@ def test_join_debiased():
 
 
 def test_join_naive():
+    """tests that the shape of all the intermediate steps
+    remains correct for naive join, does this for OLS and GLM"""
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -168,6 +185,9 @@ def test_join_naive():
 
 
 def test_fit_sequential():
+    """tests that the shape of all the intermediate steps
+    remains correct for sequential fit, does this for OLS and GLM
+    and a variety of model sizes"""
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -214,6 +234,9 @@ def test_fit_sequential():
 
 
 def test_fit_joblib():
+    """tests that the shape of all the intermediate steps
+    remains correct for joblib fit, does this for OLS and GLM
+    and a variety of model sizes"""
 
     np.random.seed(435265)
     X = np.random.normal(size=(50, 3))
@@ -260,6 +283,7 @@ def test_fit_joblib():
 
 
 def test_single_partition():
+    """tests that the results make sense if we have a single partition"""
 
     np.random.seed(435265)
     N = 200
@@ -297,6 +321,7 @@ def test_single_partition():
 
 
 def test_larger_p():
+    """tests when p > N / m for the debiased and naive case"""
 
     np.random.seed(435265)
     N = 40
@@ -308,7 +333,6 @@ def test_larger_p():
     X = np.random.normal(size=(N, p))
     y = X.dot(beta) + np.random.normal(size=N)
 
-    # test if anything breaks with p > N / m
     db_mod = DistributedModel(m)
     fitOLSdb = db_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0.1})
     assert_equal(np.sum(np.isnan(fitOLSdb.params)), 0)
@@ -320,6 +344,7 @@ def test_larger_p():
 
 
 def test_non_zero_params():
+    """tests that the thresholding does not cause any issues"""
 
     np.random.seed(435265)
     N = 200
@@ -331,7 +356,6 @@ def test_non_zero_params():
     X = np.random.normal(size=(N, p))
     y = X.dot(beta) + np.random.normal(size=N)
 
-    # test if anything breaks with the thresholding
     db_mod = DistributedModel(m, join_kwds={"threshold": 0.13})
     fitOLSdb = db_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0.1})
     ols_mod = OLS(y, X)
@@ -344,6 +368,8 @@ def test_non_zero_params():
 
 
 def test_repeat_partition():
+    """tests that if we use identical partitions the average is the same
+    as the estimate for the full data"""
 
     np.random.seed(435265)
     N = 200
@@ -377,6 +403,9 @@ def test_repeat_partition():
 
 
 def test_debiased_v_average():
+    """tests that the debiased method performs better than the standard
+    average.  Does this for both OLS and GLM."""
+
 
     np.random.seed(435265)
     N = 200
@@ -388,7 +417,6 @@ def test_debiased_v_average():
     X = np.random.normal(size=(N, p))
     y = X.dot(beta) + np.random.normal(size=N)
 
-    # test OLS
     db_mod = DistributedModel(m)
     fitOLSdb = db_mod.fit(_data_gen(y, X, m), fit_kwds={"alpha": 0.2})
     olsdb = np.linalg.norm(fitOLSdb.params - beta)
@@ -399,7 +427,6 @@ def test_debiased_v_average():
 
     assert_(olsdb < olsn)
 
-    # test GLM (logistic)
     prob = 1 / (1 + np.exp(-X.dot(beta) + np.random.normal(size=N)))
     y = 1. * (prob > 0.5)
 
