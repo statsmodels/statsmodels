@@ -1544,6 +1544,17 @@ class MultipleResponseTable(object):
     This class is a close re-implementation of certain functions
     from the MRCV R Library [1]_.
 
+    The MRCV R library is provided under a GPLv3 license but the
+    original authors granted express permission to port the library
+    into statsmodels into statsmodels and provide the port under a
+    BSD-license.
+
+    From Natalie Koziol, one of the original authors:
+    "I, Natalie Koziol, the original author of the MRCV R package,
+    give my permission to include a translation of MRCV in the statsmodels
+    library under a BSD or compatible license as long as the
+    original software and authors are cited."
+
     The MRCV library is itself an implementation of ideas presented
     in [2]_, [3]_, [4]_, and [5]_.
 
