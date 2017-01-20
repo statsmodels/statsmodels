@@ -1959,47 +1959,42 @@ class MultipleResponseTable(object):
             single factor instance to use on the rows.
         """
         try:
-            try:
-                if len(row_factors) > 1:
-                    msg = ("we don't currently support tables with "
-                           "more than one factor on the rows")
-                    raise NotImplementedError(msg)
-                row_factor = row_factors[0]
-            except TypeError:
-                if isinstance(row_factors, Factor):
-                    row_factor = row_factors
+            extracted = []
+            for axis, factors in (("row", row_factors),
+                                  ("column", column_factors)):
+                if isinstance(factors, list):
+                    if len(factors) > 1:
+                        msg = ("we don't currently support "
+                               "tables with more than one"
+                               " factor on the {}".format(axis))
+                        raise NotImplementedError(msg)
+                    factor = factors[0]
+                elif isinstance(factors, Factor):
+                    factor = factors
                 else:
-                    msg = ("row_factors must be either a list of Factors "
-                           "or a Factor instance")
+                    msg = ("{} factors must be either a list of Factors "
+                           "or a Factor instance".format(axis))
                     raise NotImplementedError(msg)
-            try:
-                if len(column_factors) > 2:
-                    msg = ("we don't currently support tables with "
-                           "more than one factor on the columns")
-                    raise NotImplementedError(msg)
-                column_factor = column_factors[0]
-            except TypeError:
-                if isinstance(column_factors, Factor):
-                    column_factor = column_factors
-                else:
-                    msg = ("column_factors must be either a list of "
-                           "Factors or a Factor instance")
-                    raise NotImplementedError(msg)
-            cls._deduplicate_level_names(column_factor, row_factor)
-            if (column_factor.orientation == "narrow" and
-                    column_factor.multiple_response):
-                column_factor = column_factor.cast_narrow_to_wide()
-            if (row_factor.orientation == "narrow" and
-                    row_factor.multiple_response):
-                row_factor = row_factor.cast_narrow_to_wide()
+                extracted.append(factor)
+
+            # deduplication needs to happen before pivoting
+            # for a corner case where a narrow factor with duplicate
+            # names won't get pivoted correctly to wide
+            cls._deduplicate_level_names(extracted)
+            for i, factor in enumerate(extracted):
+                if (factor.orientation == "narrow" and
+                        factor.multiple_response):
+                    extracted[i] = factor.cast_narrow_to_wide()
+            row_factor, column_factor = extracted
             return column_factor, row_factor
         except IndexError:
             explanation = ("Please be sure to pass at "
                            "least 1 factor on both the rows and columns")
             raise IndexError(explanation)
 
+
     @classmethod
-    def _deduplicate_level_names(cls, column_factor, row_factor):
+    def _deduplicate_level_names(cls, factors):
         """
         Make sure that all of the factor level names are unique.
 
@@ -2009,15 +2004,11 @@ class MultipleResponseTable(object):
 
         Parameters
         ----------
-        row_factor : Factor instance
-            Factor to use on the rows
-        column_factor : Factor instance
-            Factor to use in the columns
-
+        factors : list of Factor instance
+            row and column factors to deduplicate together
         """
-        # pandas does poorly with duplicate values on indexes
         taken_names = set()
-        for factor in (row_factor, column_factor):
+        for factor in factors:
             if factor.orientation == "wide":
                 deduplicated_levels = []
                 for level in factor.labels:
