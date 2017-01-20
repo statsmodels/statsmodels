@@ -1726,14 +1726,9 @@ class MultipleResponseTable(object):
         """
         row_reshaped = row_factors[0].reshape_for_contingency_table()
         col_reshaped = column_factors[0].reshape_for_contingency_table()
-        joint_dataframe = pd.merge(row_reshaped, col_reshaped,
-                                   how="inner",
-                                   on='observation_id',
-                                   suffixes=("_row", "_col"))
-        # without bool cast, '&' sometimes doesn't know how to compare types
-        joint_response = (joint_dataframe['value_row'].astype(bool) &
-                          joint_dataframe['value_col'].astype(bool))
-        joint_dataframe['_joint_response'] = joint_response
+        joint_dataframe = _build_joint_dataframe(row_reshaped,
+                                                 col_reshaped,
+                                                 "_row", "_col")
         table = pd.pivot_table(joint_dataframe,
                                values='_joint_response',
                                fill_value=0,
@@ -2611,7 +2606,7 @@ class MultipleResponseTable(object):
                   76, 221-230, 1981.
          """
         if single_response_factor.orientation == "wide":
-            W = single_response_factor.cast_wide_to_narrow().data
+            W = single_response_factor.cast_wide_to_narrow().data.copy()
             W = W[W['value'] == 1]  # only consider actually selected option
             W.set_index("observation_id", inplace=True)
         else:
@@ -2705,6 +2700,21 @@ class MultipleResponseTable(object):
         return X_sq_S_p_value_rs2
 
 
+def _build_joint_dataframe(left_data, right_data, l_suffix, r_suffix):
+    joint_dataframe = pd.merge(right_data, left_data,
+                               how="inner",
+                               on='observation_id',
+                               suffixes=(l_suffix, r_suffix))
+    # without bool cast, '&' sometimes doesn't know how to compare types
+    l_value_col = 'value{}'.format(l_suffix)
+    r_value_col = 'value{}'.format(r_suffix)
+    joint_response = (joint_dataframe[l_value_col].astype(bool) &
+                      joint_dataframe[r_value_col].astype(
+                          bool)).astype(int)
+    joint_dataframe['_joint_response'] = joint_response
+    return joint_dataframe
+
+
 class Factor(object):
     """
     Container class for a single variable in a contingency table analysis.
@@ -2768,9 +2778,11 @@ class Factor(object):
                  orientation="wide", multiple_response=None):
         self.orientation = orientation
         self.name = name
-        if dataframe.index.name is None:
+        if (dataframe.index.name is None and
+                    "observation_id" not in dataframe.columns):
             dataframe.index.name = "observation_id"
-        if dataframe.columns.name is None:
+        if (dataframe.columns.name is None and
+                    "factor_level" not in dataframe.columns):
             dataframe.columns.name = "factor_level"
         # don't modify original in subsequent operations
         self.data = dataframe.copy()
@@ -2793,7 +2805,7 @@ class Factor(object):
             mr_slug = "Multiple Response "
         else:
             mr_slug = ""
-        return template.format(multiple_response_slug=mr_slug,
+        return template.format(mr_slug=mr_slug,
                                name=self.name, columns=self.labels,
                                data=self.data)
 
@@ -2892,4 +2904,82 @@ class Factor(object):
         wide_factor = Factor(wide_df, self.name, orientation="wide",
                              multiple_response=self.multiple_response)
         return wide_factor
+
+    def combine_with(self, subordinate):
+        """
+        Allow combining factors to put multiple vars on an table axis
+
+        Parameters
+        ----------
+        subordinate : Factor
+            Factor instance to merge in as the "lower rung" of the combined
+            factor levels
+
+        Returns
+        -------
+        Factor
+            The two factors merged into a new Factor having a column for
+            each combination of levels from the original factors
+
+        Notes
+        -----
+        This method provides a backdoor way to create contingency tables
+        involving three or more variables. Although the basic methodology
+        in MultipleResponseTable can be extended to accommodate more than
+        two variables, doing so substantially complicates the algorithms.
+
+        Instead, you can combine two variables and then investigate whether
+        the *combination* of two factors is independent of another factor.
+
+        This method will take two factors and build a 'wide' oriented
+        factor that has a column for each combination of levels in the
+        original factors. Column names are constructed with this convention:
+        "(superior_factor_level, subordinate_factor_level)."
+
+        Please think carefully about the implication of merging factors
+        for the particular statistical analysis you're trying to perform.
+        The statements "variables X, Y, and Z are independent" is not
+        equivalent to "variable X is independent of variables Y and Z
+        together".
+
+        """
+        if self.orientation == "wide":
+            superior = self.cast_wide_to_narrow()
+        else:
+            superior = self
+        if subordinate.orientation == "wide":
+            subordinate = self.cast_wide_to_narrow()
+        subordinate_data = subordinate.data
+        superior_data = superior.data
+        l_suffix = "_superior"
+        r_suffix = "_subordinate"
+        joint_dataframe = _build_joint_dataframe(subordinate_data,
+                                                 superior_data,
+                                                 l_suffix, r_suffix)
+        l_factor_level_col = 'factor_level{}'.format(l_suffix)
+        r_factor_level_col = 'factor_level{}'.format(r_suffix)
+        combined_data = pd.pivot_table(joint_dataframe,
+                                       values='_joint_response',
+                                       fill_value=0,
+                                       index=['observation_id'],
+                                       columns=[l_factor_level_col,
+                                                r_factor_level_col],
+                                       aggfunc=np.sum)
+        flat_columns = []
+        top_levels, bottom_levels = combined_data.columns.levels
+        top_labels, bottom_labels = combined_data.columns.labels
+        for top_label, bottom_label in zip(top_labels, bottom_labels):
+            top_level = top_levels[top_label]
+            bottom_level = bottom_levels[bottom_label]
+            flat_columns.append((top_level, bottom_level))
+        combined_data.columns = flat_columns
+        template = "Combination of ({superior}) and ({subordinate})"
+        merged_factor_name = template.format(superior=superior.name,
+                                             subordinate=subordinate.name)
+        is_multiple_response = (superior.multiple_response or
+                                subordinate.multiple_response)
+        combined_factor = Factor(combined_data, merged_factor_name,
+                                 orientation="wide",
+                                 multiple_response=is_multiple_response)
+        return combined_factor
 
