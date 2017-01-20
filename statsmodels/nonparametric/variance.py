@@ -127,8 +127,8 @@ class VarianceDiffProjector(object):
     def __init__(self, endog, exog, order=2):
         # TODO: endog is not needed in __init__
         self.endog = np.asarray(endog)
-        if self.endog.ndim != 1:
-            raise ValueError("endog has to be 1-D")
+        #if self.endog.ndim != 1:
+        #    raise ValueError("endog has to be 1-D")
 
         self.exog = np.asarray(exog)
         if self.exog.ndim != 1:
@@ -229,4 +229,4 @@ class VarianceDiffProjector(object):
         #  TODO: should be add ddof, not in articles
         resid = self.get_resid(endog=endog, order=order)
 
-        return resid.dot(resid) / resid.shape[0]
+        return resid.T.dot(resid) / resid.shape[0]

@@ -112,3 +112,13 @@ def test_var_nonparametric():
     assert_allclose(v21, v2_, rtol=1e-13)
     assert_allclose(vv1, v2_, rtol=1e-13)
     assert_allclose(p.var(order=1), v2_, rtol=1e-13)
+
+    # vectorized in endog
+    xx2 = np.column_stack((x, x**2))
+    cov_xx = p.var(xx2)
+    vxx = np.diag(cov_xx)
+    vxx1 = np.array([p.var(x), p.var(x**2)])
+    assert_allclose(vxx, vxx1, rtol=1e-13)
+
+    p = VarianceDiffProjector(xx2, t)
+    assert_allclose(p.var(), cov_xx, rtol=1e-13)
