@@ -45,6 +45,7 @@ import pandas as pd
 from numpy import linalg
 from scipy import stats
 from scipy.stats import chi2_contingency, chi2
+from statsmodels.compat import asunicode
 
 from statsmodels import iolib
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
@@ -1635,13 +1636,9 @@ class MultipleResponseTable(object):
         return self.__unicode__()
 
     def __unicode__(self):
-        try:
-            str_function = unicode
-        except NameError:  # Python 3 no longer has the unicode() function
-            str_function = str
         template = ("Contingency Table With Multi-Response Categorical "
                     "Variables (MRCV's).\nData:\n{table}")
-        return template.format(table=str_function(self.table))
+        return template.format(table=asunicode(self.table))
 
     def __repr__(self):
         return "At {id} :: {_str}".format(id=id(self), _str=self.__str__())
