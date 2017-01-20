@@ -239,7 +239,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
         If lags is a list or array, then all lags are included up to the largest
         lag in the list, however only the tests for the lags in the list are
         reported.
-        If lags is None, then the default maxlag is 12*(nobs/100)^{1/4}
+        If lags is None, then the default maxlag is 'min((nobs // 2 - 2), 40)'
     boxpierce : {False, True}
         If true, then additional to the results of the Ljung-Box test also the
         Box-Pierce test results are returned
@@ -283,17 +283,14 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
     x = np.asarray(x)
     nobs = x.shape[0]
     if lags is None:
-        lags = lrange(1,41)  #TODO: check default; SS: changed to 40
+        lags = lrange(1, min((nobs // 2 - 2), 40) + 1)
     elif isinstance(lags, (int, long)):
-        lags = lrange(1,lags+1)
-    maxlag = max(lags)
+        lags = lrange(1, lags + 1)
+    maxlag = lags[-1]
     lags = np.asarray(lags)
-
     acfx = acf(x, nlags=maxlag) # normalize by nobs not (nobs-nlags)
                              # SS: unbiased=False is default now
-#    acf2norm = acfx[1:maxlag+1]**2 / (nobs - np.arange(1,maxlag+1))
     acf2norm = acfx[1:maxlag+1]**2 / (nobs - np.arange(1,maxlag+1))
-
     qljungbox = nobs * (nobs+2) * np.cumsum(acf2norm)[lags-1]
     pval = stats.chi2.sf(qljungbox, lags)
     if not boxpierce:
@@ -302,6 +299,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
         qboxpierce = nobs * np.cumsum(acfx[1:maxlag+1]**2)[lags-1]
         pvalbp = stats.chi2.sf(qboxpierce, lags)
         return qljungbox, pval, qboxpierce, pvalbp
+
 
 def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     '''Lagrange Multiplier tests for autocorrelation
