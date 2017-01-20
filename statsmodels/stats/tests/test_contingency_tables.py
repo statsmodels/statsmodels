@@ -729,11 +729,12 @@ def test_multiple_mutual_independence_true():
     multiple_response_table = ctab.MultipleResponseTable([srcv, ], [mrcv, ])
     rao_scott_2_test = multiple_response_table._test_MMI_using_rao_scott_2
     rao_p_value = rao_scott_2_test(srcv, mrcv)
-    assert rao_p_value >= 0.05
+    np.testing.assert_(rao_p_value >= 0.05)
     bonferroni_test = multiple_response_table._test_MMI_using_bonferroni
-    bonferroni_p_value_overall, bonferroni_cell_p_values = bonferroni_test(srcv, mrcv)
-    assert bonferroni_p_value_overall >= 0.05
-    assert np.all(bonferroni_cell_p_values >= 0.05)
+    bonferroni_p_value_overall, \
+    bonferroni_cell_p_values = bonferroni_test(srcv, mrcv)
+    np.testing.assert_(bonferroni_p_value_overall >= 0.05)
+    np.testing.assert_(np.all(bonferroni_cell_p_values >= 0.05))
 
 
 def test_single_pairwise_mutual_independence_true():
@@ -753,12 +754,12 @@ def test_single_pairwise_mutual_independence_true():
                                                          [mrcv_2, ])
     rao_scott_2_test = multiple_response_table._test_SPMI_using_rao_scott_2
     rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
-    assert rao_p_value >= 0.05
+    np.testing.assert_(rao_p_value >= 0.05)
     bonferroni_test = multiple_response_table._test_SPMI_using_bonferroni
     result = bonferroni_test(mrcv_1, mrcv_2)
     bonferroni_p_value_overall, bonferroni_cell_p_values = result
-    assert bonferroni_p_value_overall >= 0.05
-    assert np.all(bonferroni_cell_p_values >= 0.05)
+    np.testing.assert_(bonferroni_p_value_overall >= 0.05)
+    np.testing.assert_(np.all(bonferroni_cell_p_values >= 0.05))
 
 
 def test_overlapping_names_allowed():
@@ -778,7 +779,7 @@ def test_overlapping_names_allowed():
                                                          [mrcv_2, ])
     rao_scott_2_test = multiple_response_table._test_SPMI_using_rao_scott_2
     rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
-    assert rao_p_value >= 0.05
+    np.testing.assert_(rao_p_value >= 0.05)
 
     car_choice = build_random_single_select(n=1000, choices=food_choices)
     srcv = ctab.Factor.from_array(car_choice, food_choices,
@@ -787,7 +788,7 @@ def test_overlapping_names_allowed():
                                                          [mrcv_2, ])
     rao_scott_2_test = multiple_response_table._test_SPMI_using_rao_scott_2
     rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
-    assert rao_p_value >= 0.05
+    np.testing.assert_(rao_p_value >= 0.05)
 
 
 def test_duplicate_names_allowed():
@@ -805,7 +806,7 @@ def test_duplicate_names_allowed():
     multiple_response_table = ctab.MultipleResponseTable([mrcv_1, ],
                                                          [mrcv_2, ])
     result = multiple_response_table.test_for_independence(method="rao")
-    assert result.p_value_overall >= 0.05
+    np.testing.assert_(result.p_value_overall >= 0.05)
 
     car_choice = build_random_single_select(n=1000, choices=food_choices)
     srcv = ctab.Factor.from_array(car_choice, food_choices, "srcv",
@@ -813,7 +814,7 @@ def test_duplicate_names_allowed():
     multiple_response_table = ctab.MultipleResponseTable([srcv, ],
                                                          [mrcv_2, ])
     result = multiple_response_table.test_for_independence(method="rao")
-    assert result.p_value_overall >= 0.05
+    np.testing.assert_(result.p_value_overall >= 0.05)
 
     # deduplicator modifies in-place so need to recreate data
     car_choice = build_random_single_select(n=1000, choices=food_choices)
@@ -828,7 +829,7 @@ def test_duplicate_names_allowed():
     multiple_response_table = ctab.MultipleResponseTable([narrow_srcv, ],
                                                          [narrow_mrcv, ])
     result = multiple_response_table.test_for_independence(method="rao")
-    assert result.p_value_overall >= 0.05
+    np.testing.assert_(result.p_value_overall >= 0.05)
 
 
 def test_MRCV_table_from_data():
@@ -836,7 +837,7 @@ def test_MRCV_table_from_data():
     construct = ctab.MultipleResponseTable.from_data
     table = construct(multiple_response_questions, 5, 5)
     expected = np.array([44, 49, 15, 22, 12])  # from a manual run
-    assert np.all(table.table.values[0, :] == expected)
+    np.testing.assert_equal(table.table.values[0, :], expected)
 
 
 def test_MRCV_table_from_factors():
@@ -849,7 +850,8 @@ def test_MRCV_table_from_factors():
     multiple_response_table = ctab.MultipleResponseTable([rows_factor, ],
                                                          [columns_factor])
     expected = np.array([44, 49, 15, 22, 12])  # from a manual run
-    assert np.all(multiple_response_table.table.iloc[0].values == expected)
+    np.testing.assert_equal(multiple_response_table.table.iloc[0].values, 
+                            expected)
 
 
 def test_Factor_from_wide_data():
@@ -862,7 +864,7 @@ def test_Factor_from_wide_data():
     columns = ['observation_id', 'factor_level', 'value']
     top_row = narrow_dataframe[columns].iloc[0]
     expected = [0, 4, 1]  # from a manual run
-    assert np.all(top_row == expected)
+    np.testing.assert_array_equal(top_row, expected)
 
 
 def test_Factor_wide_to_narrow():
@@ -871,7 +873,7 @@ def test_Factor_wide_to_narrow():
     car_choice = build_random_single_select(n)
     srcv = ctab.Factor(car_choice, "car_choice", orientation="wide")
     wide = srcv.cast_wide_to_narrow()
-    assert wide.data.shape == (300, 3)
+    np.testing.assert_equal(wide.data.shape, (300, 3))
 
 
 def test_Factor_from_narrow_data():
@@ -886,7 +888,7 @@ def test_Factor_from_narrow_data():
     # the columns of the original dataframe
     rows_dataframe = rows_factor.data.sort_index(axis=1)
     matches = rows_dataframe == wide_factor.data
-    assert matches.all().all()
+    np.testing.assert_(matches.all().all())
 
 
 def test_Factor_autodetect_multiple_response():
@@ -896,11 +898,11 @@ def test_Factor_autodetect_multiple_response():
     build = ctab.Factor.from_array
     single_response_factor = build(single_response_data,
                                    fake_labels_srcv, "")
-    assert not single_response_factor.multiple_response
+    np.testing.assert_(not single_response_factor.multiple_response)
     multiple_response_data = presidential_data.iloc[:, 6:11]
     multiple_response_factor = build(multiple_response_data,
                                      fake_labels_mrcv, "")
-    assert multiple_response_factor.multiple_response
+    np.testing.assert_(multiple_response_factor.multiple_response)
 
 
 def test_Factor_columns_must_have_labels():
@@ -923,7 +925,7 @@ def test_MRCV_table_with_ones():
     multiple_response_table = ctab.MultipleResponseTable([mrcv_1, ],
                                                          [mrcv_2, ])
     results = multiple_response_table.test_for_independence()
-    assert np.all(np.isnan(results.p_values_cellwise))
+    np.testing.assert_(np.all(np.isnan(results.p_values_cellwise)))
 
 
 def test_MRCV_table_with_zeros():
@@ -939,7 +941,7 @@ def test_MRCV_table_with_zeros():
     multiple_response_table = ctab.MultipleResponseTable([mrcv_1, ],
                                                          [mrcv_2, ])
     results = multiple_response_table.test_for_independence()
-    assert np.all(np.isnan(results.p_values_cellwise))
+    np.testing.assert_(np.all(np.isnan(results.p_values_cellwise)))
 
 
 def test_MMI_table_with_no_variance():
@@ -960,7 +962,7 @@ def test_MMI_table_with_no_variance():
     multiple_response_table = ctab.MultipleResponseTable([srcv, ],
                                                          [mrcv_2, ])
     results = multiple_response_table.test_for_independence()
-    assert np.all(np.isnan(results.p_values_cellwise))
+    np.testing.assert_(np.all(np.isnan(results.p_values_cellwise)))
 
 
 def test_MRCV_2x2_table():
@@ -977,7 +979,7 @@ def test_MRCV_2x2_table():
     multiple_response_table = ctab.MultipleResponseTable([mrcv_1, ],
                                                          [mrcv_2, ])
     results = multiple_response_table.test_for_independence()
-    assert results.p_value_overall > 0.05
+    np.testing.assert_(results.p_value_overall > 0.05)
 
 
 def test_for_MRCV_independence():
@@ -1001,48 +1003,54 @@ def test_for_MRCV_independence():
 
     table = ctab.MultipleResponseTable([srcv_1, ], [mrcv_1, ])
     results = table.test_for_independence()
-    assert results.independence_type == 'Marginal Mutual Independence'
-    assert results.method == 'Bonferroni'
+    np.testing.assert_equal(results.independence_type,
+                            'Marginal Mutual Independence')
+    np.testing.assert_equal(results.method, 'Bonferroni')
 
     table = ctab.MultipleResponseTable([srcv_1, ], [mrcv_1, ])
     results = table.test_for_independence(method="bon")
-    assert results.independence_type == 'Marginal Mutual Independence'
-    assert results.method == 'Bonferroni'
+    np.testing.assert_equal(results.independence_type,
+                            'Marginal Mutual Independence')
+    np.testing.assert_equal(results.method, 'Bonferroni')
 
     table = ctab.MultipleResponseTable([mrcv_1, ], [srcv_1, ])
     results = table.test_for_independence(method="bon")
-    assert results.independence_type == 'Marginal Mutual Independence'
-    assert results.method == 'Bonferroni'
+    np.testing.assert_equal(results.independence_type,
+                            'Marginal Mutual Independence')
+    np.testing.assert_equal(results.method, 'Bonferroni')
 
     table = ctab.MultipleResponseTable([srcv_1, ], [mrcv_1, ])
     results = table.test_for_independence(method="rao")
-    assert results.independence_type == 'Marginal Mutual Independence'
-    assert results.method == 'Rao-Scott'
+    np.testing.assert_equal(results.independence_type,
+                            'Marginal Mutual Independence')
+    np.testing.assert_equal(results.method, 'Rao-Scott')
 
     table = ctab.MultipleResponseTable([mrcv_1, ], [srcv_1, ])
     results = table.test_for_independence(method="rao")
-    assert results.independence_type == 'Marginal Mutual Independence'
-    assert results.method == 'Rao-Scott'
+    np.testing.assert_equal(results.independence_type,
+                            'Marginal Mutual Independence')
+    np.testing.assert_equal(results.method, 'Rao-Scott')
 
     table = ctab.MultipleResponseTable([srcv_1, ], [srcv_2, ])
     results = table.test_for_independence()
-    assert type(results) == ctab.ContingencyTableNominalIndependenceResult
+    np.testing.assert_equal(type(results),
+                            ctab.ContingencyTableNominalIndependenceResult)
 
     table = ctab.MultipleResponseTable([mrcv_2, ], [mrcv_1, ])
     results = table.test_for_independence()
     expected = 'Single Pairwise Mutual Independence'
-    assert results.independence_type == expected
-    assert results.method == 'Bonferroni'
+    np.testing.assert_equal(results.independence_type, expected)
+    np.testing.assert_equal(results.method, 'Bonferroni')
 
     table = ctab.MultipleResponseTable([mrcv_1, ], [mrcv_2, ])
     results = table.test_for_independence(method="bon")
-    assert results.independence_type == expected
-    assert results.method == 'Bonferroni'
+    np.testing.assert_equal(results.independence_type, expected)
+    np.testing.assert_equal(results.method, 'Bonferroni')
 
     table = ctab.MultipleResponseTable([mrcv_1, ], [mrcv_2, ])
     results = table.test_for_independence(method="rao")
-    assert results.independence_type == expected
-    assert results.method == 'Rao-Scott'
+    np.testing.assert_equal(results.independence_type, expected)
+    np.testing.assert_equal(results.method, 'Rao-Scott')
 
     # test accepting narrows
     food_choices = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
@@ -1059,9 +1067,9 @@ def test_for_MRCV_independence():
     multiple_response_table = ctab.MultipleResponseTable([narrow_mrcv_1, ],
                                                          [narrow_mrcv_2, ])
     result = multiple_response_table.test_for_independence(method="rao")
-    assert result.p_value_overall >= 0.05
+    np.testing.assert_(result.p_value_overall >= 0.05)
     result = multiple_response_table.test_for_independence(method="bon")
-    assert result.p_value_overall >= 0.05
+    np.testing.assert_(result.p_value_overall >= 0.05)
 
 
 if __name__ == "__main__":
