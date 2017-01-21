@@ -16,8 +16,8 @@ dates = sm.tsa.datetools.dates_from_range('1700', length=len(data.endog))
 # Using Pandas
 # ------------
 
-# Make a pandas TimeSeries or DataFrame
-endog = pd.TimeSeries(data.endog, index=dates)
+# Make a pandas Series or DataFrame with DatetimeIndex
+endog = pd.Series(data.endog, index=dates)
 
 # and instantiate the model
 ar_model = sm.tsa.AR(endog, freq='A')
