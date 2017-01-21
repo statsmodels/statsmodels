@@ -367,13 +367,49 @@ def anova_lm(*args, **kwargs):
     return table
 
 
+def _not_slice(slices, slices_to_exclude, n):
+    ind = np.array([True]*n)
+    for term in slices_to_exclude:
+        s = slices[term]
+        ind[s] = False
+    return ind
+
+
+def _ssr_reduced_model(y, x, term_slices, params, keys):
+    """
+    Residual sum of squares of OLS model excluding factors in `keys`
+    Assumes x matrix is orthogonal
+
+    Parameters
+    ----------
+    y : array_like, dependent variables
+    x : array_like, independent variables
+    term_slices : a dict of slices
+        term_slices[key] is a boolean array specifies the parameters
+        associated with the factor `key`
+    params : OLS solution of y = x * params
+    keys : factors to be excluded
+
+    Returns
+    -------
+    residual sum of squares and degrees of freedom
+
+    """
+    ind = _not_slice(term_slices, keys, x.shape[1])
+    params1 = params[ind]
+    ssr = np.subtract(y, x[:, ind].dot(params1))
+    ssr = ssr.T.dot(ssr)
+    df_resid = len(y) - len(params1)
+    return ssr, df_resid
+
+
 class AnovaRM(object):
     """
-    Repeated measures ANOVA using least square regression
+    Repeated measures Anova using least squares regression
 
-    The full model regression residual sum of squared is
+    The full model regression residual sum of squares is
     used to compared with reduced model for calculating the
-    within subject effect sum of squared [1]
+    within subject effect sum of squares [1]
 
     Between subject effect and Greenhouse-Geisser correction is not yet
     supported.
@@ -389,12 +425,10 @@ class AnovaRM(object):
         The within-subject factors
     between : a list of string(s)
         The between-subject factors
-    subject : string
-        Specify the subject id
 
     Returns
     -------
-    ANOVAResults
+    results: ANOVAResults instance
 
     References
     ----------
@@ -442,43 +476,8 @@ class AnovaRM(object):
             raise ValueError('There are more than 1 element in a cell! Missing'
                              ' factors?')
 
-
     def fit(self):
         y = self.data[self.dv].values
-
-        def _not_slice(slices, slices_to_exclude, n):
-            ind = np.array([True]*n)
-            for term in slices_to_exclude:
-                s = slices[term]
-                ind[s] = False
-            return ind
-
-        def _ssr_reduced_model(y, x, term_slices, params, keys):
-            """
-            Residual sum of squared of OLS model excluding factors in `keys`
-            Assumes x matrix is orthogonal
-
-            Parameters
-            ----------
-            y : dependent variables
-            x : independent variables
-            term_slices : a dict of slices
-                term_slices[key] is a boolean array specifies the parameters
-                associated with the factor `key`
-            params : OLS solution of y = x * params
-            keys : factors to be excluded
-
-            Returns
-            -------
-            residual sum of squared and degree of freedom
-
-            """
-            ind = _not_slice(term_slices, keys, x.shape[1])
-            params1 = params[ind]
-            ssr = np.subtract(y, x[:, ind].dot(params1))
-            ssr = ssr.T.dot(ssr)
-            df_resid = len(y) - len(params1)
-            return ssr, df_resid
 
         # Construct OLS endog and exog from string using patsy
         within = ['C(%s, Sum)' % i for i in self.within]
@@ -508,7 +507,7 @@ class AnovaRM(object):
         ssr = results.ssr
 
         anova_table = pd.DataFrame(
-            {'F Value':[], 'Num DF':[], 'Den DF':[], 'Pr > F':[]})
+            {'F Value': [], 'Num DF': [], 'Den DF': [], 'Pr > F': []})
 
         for key in term_slices:
             if self.subject not in key and key != 'Intercept':
@@ -517,14 +516,14 @@ class AnovaRM(object):
                     y, x, term_slices, params, [key])
                 df1 = df_resid1 - df_resid
                 msm = (ssr1 - ssr) / df1
-                if key == ':'.join(factors[:-1]) or (key + ':' +
-                                                     subject not in term_slices):
+                if (key == ':'.join(factors[:-1]) or
+                        (key + ':' + subject not in term_slices)):
                     mse = ssr / df_resid
                     df2 = df_resid
                 else:
                     ssr1, df_resid1 = _ssr_reduced_model(
                         y, x, term_slices, params,
-                        [key+ ':' + subject])
+                        [key + ':' + subject])
                     df2 = df_resid1 - df_resid
                     mse = (ssr1 - ssr) / df2
                 F = msm / mse
@@ -534,8 +533,8 @@ class AnovaRM(object):
                 anova_table.loc[term, 'Num DF'] = df1
                 anova_table.loc[term, 'Den DF'] = df2
                 anova_table.loc[term, 'Pr > F'] = p
-        self.anova_table = anova_table.iloc[:, [1, 2, 0, 3]]
-        return ANOVAResults(self)
+
+        return ANOVAResults(anova_table.iloc[:, [1, 2, 0, 3]])
 
 
 class ANOVAResults(object):
@@ -546,8 +545,8 @@ class ANOVAResults(object):
     ----------
     anova_table : DataFrame
     """
-    def __init__(self, anova):
-        self.anova_table = anova.anova_table
+    def __init__(self, anova_table):
+        self.anova_table = anova_table
 
     def __str__(self):
         return self.summary().__str__()
