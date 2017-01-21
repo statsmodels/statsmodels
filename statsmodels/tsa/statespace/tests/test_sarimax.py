@@ -2037,23 +2037,29 @@ def test_arima000():
     res = mod.smooth(mod.start_params)
 
     # Exogenous variables
-    endog = np.ones(nobs) * 10
+    error = np.random.normal(size=nobs)
+    endog = np.ones(nobs) * 10 + error
     exog = np.ones(nobs)
 
     # OLS
     mod = sarimax.SARIMAX(endog, order=(0, 0, 0), exog=exog)
-    res = mod.smooth(mod.start_params)
-    assert_allclose(res.smoothed_state, 0, atol=1e-10)
+    mod.ssm.filter_univariate = True
+    res = mod.smooth([10., 1.])
+    assert_allclose(res.smoothed_state[0], error, atol=1e-10)
 
     # RLS
     mod = sarimax.SARIMAX(endog, order=(0, 0, 0), exog=exog,
                           mle_regression=False)
-    res = mod.smooth(mod.start_params)
-    assert_allclose(res.smoothed_state[0], 0, atol=1e-10)
+    mod.ssm.filter_univariate = True
+    mod.initialize_known([0., 10.], np.diag([1., 0.]))
+    res = mod.smooth([1.])
+    assert_allclose(res.smoothed_state[0], error, atol=1e-10)
     assert_allclose(res.smoothed_state[1], 10, atol=1e-10)
 
     # RLS + TVP
     mod = sarimax.SARIMAX(endog, order=(0, 0, 0), exog=exog,
                           mle_regression=False, time_varying_regression=True)
-    assert_allclose(res.smoothed_state[0], 0, atol=1e-10)
-    assert_allclose(res.smoothed_state[1], 10, atol=1e-10)
+    mod.ssm.filter_univariate = True
+    mod.initialize_known([10.], np.diag([0.]))
+    res = mod.smooth([0., 1.])
+    assert_allclose(res.smoothed_state[0], 10, atol=1e-10)
