@@ -2020,13 +2020,40 @@ def test_arima000():
     # Test an ARIMA(0,0,0) with measurement error model (i.e. just estimating
     # a variance term)
     np.random.seed(328423)
-    endog = pd.DataFrame(np.random.normal(size=50))
-    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), measurement_error=True)
+    nobs = 50
+    endog = pd.DataFrame(np.random.normal(size=nobs))
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), measurement_error=False)
     res = mod.smooth(mod.start_params)
-
-    # Test an invalid model: ARIMA(0, 0, 0) without measurement error
-    assert_raises(ValueError, sarimax.SARIMAX, endog, order=(0, 0, 0))
+    assert_allclose(res.smoothed_state, endog.T)
 
     # ARIMA(0, 1, 0)
-    mod = sarimax.SARIMAX(endog, order=(0, 1, 0), measurement_error=True)
+    mod = sarimax.SARIMAX(endog, order=(0, 1, 0), measurement_error=False)
     res = mod.smooth(mod.start_params)
+    assert_allclose(res.smoothed_state[1:, 1:], endog.diff()[1:].T)
+
+    # SARIMA(0, 1, 0)x(0, 1, 0, 1)
+    mod = sarimax.SARIMAX(endog, order=(0, 1, 0), measurement_error=True,
+                          seasonal_order=(0, 1, 0, 1))
+    res = mod.smooth(mod.start_params)
+
+    # Exogenous variables
+    endog = np.ones(nobs) * 10
+    exog = np.ones(nobs)
+
+    # OLS
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), exog=exog)
+    res = mod.smooth(mod.start_params)
+    assert_allclose(res.smoothed_state, 0, atol=1e-10)
+
+    # RLS
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), exog=exog,
+                          mle_regression=False)
+    res = mod.smooth(mod.start_params)
+    assert_allclose(res.smoothed_state[0], 0, atol=1e-10)
+    assert_allclose(res.smoothed_state[1], 10, atol=1e-10)
+
+    # RLS + TVP
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), exog=exog,
+                          mle_regression=False, time_varying_regression=True)
+    assert_allclose(res.smoothed_state[0], 0, atol=1e-10)
+    assert_allclose(res.smoothed_state[1], 10, atol=1e-10)
