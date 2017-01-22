@@ -14,11 +14,12 @@ from scipy import sparse
 
 from numpy.testing import assert_allclose
 
+import statsmodels.nonparametric.variance as smv
 from statsmodels.nonparametric.variance import (var_differencing,
                                                VarianceDiffProjector)
 
 def test_var_nonparametric():
-
+    np.random.seed(123654)
     nobs = 30
     t = np.linspace(0, 1, nobs)
     x = np.sin(2 * 5 * t) + 0.2 * np.random.randn(nobs) #* (1 + 1. * t) #heteroscedasticity
@@ -122,3 +123,21 @@ def test_var_nonparametric():
 
     p = VarianceDiffProjector(xx2, t)
     assert_allclose(p.var(), cov_xx, rtol=1e-13)
+
+    s2h, resid = var_differencing(x, kind='hall')
+    # large difference in this case
+    # hall is not good in small sample with large fluctuation in mean
+    assert_allclose(s2h, vv2, atol=0.1)
+
+    # regression test, result depends on random seed
+    assert_allclose(s2h, 0.09615371010859211, rtol=1e-13)
+
+
+def test_windows():
+    for order in range(1, 5+1):
+        d0 = smv._poly_window(order=order, length=None, residual=True, normed=True)
+        d1 = smv._diff_kernel(order)
+        dsign = np.sign(d0 / d1)
+        # diff_kernel seems to have "indeterminate" sign
+        assert_allclose(d0, d1 * dsign, rtol=1e-13)
+

@@ -12,7 +12,29 @@ from scipy import sparse
 from scipy.misc import comb
 
 
-def _diff_kernel(order):
+_window_hall = {
+    1 : np.array([0.7071, -0.7071]),
+    2 : np.array([ 0.8090, -0.5, -0.3090]),
+    3 : np.array([ 0.1942, 0.2809, 0.3832, -0.8582]),
+    4 : np.array([ 0.2798, -0.0142, 0.6909, -0.4858, -0.4617]),
+    5 : np.array([ 0.9064, -0.2600, -0.2167, -0.1774, -0.1420, -0.1103])
+    }
+
+_window_hkt = {
+    1 : np.array([0.7071, -0.7071]),
+    2 : np.array([0.8090, -0.5, -0.3090]),
+    3 : np.array([0.1942, 0.2809, 0.3832, -0.8582]),
+    4 : np.array([0.2708, -0.0142, 0.6909, -0.4858, -0.4617]),
+    5 : np.array([0.9064, -0.2600, -0.2167, -0.1774, -0.1420, -0.1103]),
+    6 : np.array([0.2400, 0.0300, -0.0342, 0.07738, -0.3587, -0.3038, -0.3472]),
+    7 : np.array([0.9302, -0.1965, -0.1728, -0.1506, -0.1299, -0.1107, -0.0930, -0.0768]),
+    8 : np.array([0.2171, 0.0467, -0.0046, -0.0348, 0.8207, -0.2860, -0.2453, -0.2260, -0.2879]),
+    9 : np.array([0.9443, -0.1578, -0.1429, -0.1287, -0.1152, -0.1025, -0.0905, -0.0792, -0.0687, -0.0588]),
+    10 : np.array([0.1995, 0.0539, 0.0104, -0.0140, -0.0325, 0.8510, -0.2384, -0.2079, -0.1882, -0.1830, -0.2507])
+    }
+
+
+def _diff_kernel(order, kind='poly'):
     """
     compute a differencing kernel of given order
 
@@ -29,13 +51,56 @@ def _diff_kernel(order):
     d : ndarray
         differencing kernel or window of length equal to order + 1
     """
-    r = order
-    ii = np.arange(r + 1)
-    d = (-1)**ii * comb(r, ii) / np.sqrt(comb(2 * r, r))
+    if kind == 'poly':
+        r = order
+        ii = np.arange(r + 1)
+        d = (-1)**ii * comb(r, ii) / np.sqrt(comb(2 * r, r))
+    elif kind in ['optim', 'hall']:
+        try:
+            d = _window_hkt[order]
+        except KeyError:
+            message = "order %d not available for optimal window"
+            raise(message)
+    else:
+        raise ValueError('kind of window not available')
+
     return d
 
 
-def var_differencing(y, x=None, order=2, method=None):
+def _poly_window(order=2, length=None, residual=True, normed=True):
+    """compute polynomial residual filter
+
+    length has to be odd and larger than order (equal? check)
+    (Even windows will not be centered and index is length // 2, i.e. the
+    lower of the two centers.)
+
+    The highest power is `order - 1`.
+
+    Note: if length is None, then this produces the diff kernel of Dette, Munk
+    and Wagner.
+    """
+    if length is None:
+        length = order + 1
+
+    tv = np.vander(np.linspace(-1, 1, length), order)
+    center = (length + 1) // 2
+    smooth = tv[center].dot(np.linalg.pinv(tv))
+    if residual:
+        # which sign for residual? _diff_kernel seems to have inconsistent sign
+        # sign is not relevant for variance computation, but is for residuals itself
+        smooth *= -1
+        smooth[center] += 1
+        # or
+        #smooth[center] -= 1
+    if normed:
+        smooth = smooth / np.sqrt(smooth.dot(smooth))
+
+    return smooth
+
+
+
+
+def var_differencing(y, x=None, order=2, kind='poly', method=None):
     """
     nonparametric estimate of variance for data with smooth mean function
 
@@ -67,7 +132,7 @@ def var_differencing(y, x=None, order=2, method=None):
         raise ValueError("order must be one or larger")
 
     y = np.asarray(y)
-    d = _diff_kernel(order)
+    d = _diff_kernel(order, kind=kind)
     if method is None:
         resid = np.convolve(y, d, mode='valid')
         var = resid.dot(resid) / resid.shape[0]
