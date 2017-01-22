@@ -2014,3 +2014,59 @@ def test_predict_custom_index():
     res = mod.smooth(mod.start_params)
     out = res.predict(start=1, end=1, index=['a'])
     assert_equal(out.index.equals(pd.Index(['a'])), True)
+
+
+def test_arima000():
+    from statsmodels.tsa.statespace.tools import compatibility_mode
+
+    # Test an ARIMA(0,0,0) with measurement error model (i.e. just estimating
+    # a variance term)
+    np.random.seed(328423)
+    nobs = 50
+    endog = pd.DataFrame(np.random.normal(size=nobs))
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), measurement_error=False)
+    res = mod.smooth(mod.start_params)
+    assert_allclose(res.smoothed_state, endog.T)
+
+    # ARIMA(0, 1, 0)
+    mod = sarimax.SARIMAX(endog, order=(0, 1, 0), measurement_error=False)
+    res = mod.smooth(mod.start_params)
+    assert_allclose(res.smoothed_state[1:, 1:], endog.diff()[1:].T)
+
+    # SARIMA(0, 1, 0)x(0, 1, 0, 1)
+    mod = sarimax.SARIMAX(endog, order=(0, 1, 0), measurement_error=True,
+                          seasonal_order=(0, 1, 0, 1))
+    res = mod.smooth(mod.start_params)
+
+    # Exogenous variables
+    error = np.random.normal(size=nobs)
+    endog = np.ones(nobs) * 10 + error
+    exog = np.ones(nobs)
+
+    # We need univariate filtering here, to guarantee we won't hit singular
+    # forecast error covariance matrices.
+    if compatibility_mode:
+        return
+
+    # OLS
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), exog=exog)
+    mod.ssm.filter_univariate = True
+    res = mod.smooth([10., 1.])
+    assert_allclose(res.smoothed_state[0], error, atol=1e-10)
+
+    # RLS
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), exog=exog,
+                          mle_regression=False)
+    mod.ssm.filter_univariate = True
+    mod.initialize_known([0., 10.], np.diag([1., 0.]))
+    res = mod.smooth([1.])
+    assert_allclose(res.smoothed_state[0], error, atol=1e-10)
+    assert_allclose(res.smoothed_state[1], 10, atol=1e-10)
+
+    # RLS + TVP
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), exog=exog,
+                          mle_regression=False, time_varying_regression=True)
+    mod.ssm.filter_univariate = True
+    mod.initialize_known([10.], np.diag([0.]))
+    res = mod.smooth([0., 1.])
+    assert_allclose(res.smoothed_state[0], 10, atol=1e-10)
