@@ -333,6 +333,8 @@ class SurvfuncRight(object):
             entry = self.entry = np.asarray(entry)
 
         if exog is not None:
+            if entry is not None:
+                raise ValueError("exog and entry cannot both be present")
             from ._kernel_estimates import _kernel_survfunc
             exog = self.exog = np.asarray(exog)
             nobs = exog.shape[0]
