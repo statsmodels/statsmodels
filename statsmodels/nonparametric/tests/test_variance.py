@@ -132,6 +132,10 @@ def test_var_nonparametric():
     # regression test, result depends on random seed
     assert_allclose(s2h, 0.09615371010859211, rtol=1e-13)
 
+    d2p = smv._poly_window(order=2, length=None, residual=True, normed=True)
+    s2p, residp = var_differencing(x, kind=d2p)
+    assert_allclose(s2p, vv2, rtol=1e-13)
+
 
 def test_windows():
     for order in range(1, 5+1):

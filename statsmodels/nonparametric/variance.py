@@ -132,7 +132,10 @@ def var_differencing(y, x=None, order=2, kind='poly', method=None):
         raise ValueError("order must be one or larger")
 
     y = np.asarray(y)
-    d = _diff_kernel(order, kind=kind)
+    if isinstance(kind, str):
+        d = _diff_kernel(order, kind=kind)
+    else:
+        d = kind
     if method is None:
         resid = np.convolve(y, d, mode='valid')
         var = resid.dot(resid) / resid.shape[0]
