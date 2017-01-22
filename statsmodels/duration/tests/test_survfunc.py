@@ -1,6 +1,3 @@
-import sys
-sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/statsmodels_fork/statsmodels")
-
 import numpy as np
 from statsmodels.duration.survfunc import (
     SurvfuncRight, survdiff, plot_survfunc,
