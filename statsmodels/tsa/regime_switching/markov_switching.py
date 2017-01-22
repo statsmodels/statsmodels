@@ -1832,7 +1832,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         # Make into Pandas arrays if using Pandas data
         if isinstance(self.data, PandasData):
             index = self.data.row_labels[self.order:]
-            if self.expected_durations.ndim > 1:                
+            if self.expected_durations.ndim > 1:
                 self.expected_durations = pd.DataFrame(
                     self.expected_durations, index=index)
             self.predicted_marginal_probabilities = pd.DataFrame(
