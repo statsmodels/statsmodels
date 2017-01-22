@@ -454,8 +454,7 @@ def test_survdiff_entry_3():
     assert_allclose(z, 6.75082959)
     assert_allclose(p, 0.00937041)
 
-def test_kernel():
-=======
+
 def test_incidence2():
     # Check that the cumulative incidence functions for all competing
     # risks sum to the complementary survival function.
@@ -477,8 +476,6 @@ def test_incidence2():
 
 def test_kernel_survfunc1():
     # Regression test
->>>>>>> added kernelized cumulative incidence methods
-
     n = 100
     np.random.seed(3434)
     x = np.random.normal(size=(n, 3))
