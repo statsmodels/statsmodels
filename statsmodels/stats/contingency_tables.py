@@ -2948,7 +2948,7 @@ class Factor(object):
         else:
             superior = self
         if subordinate.orientation == "wide":
-            subordinate = self.cast_wide_to_narrow()
+            subordinate = subordinate.cast_wide_to_narrow()
         subordinate_data = subordinate.data
         superior_data = superior.data
         l_suffix = "_superior"
