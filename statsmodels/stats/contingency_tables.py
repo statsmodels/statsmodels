@@ -2953,8 +2953,8 @@ class Factor(object):
         superior_data = superior.data
         l_suffix = "_superior"
         r_suffix = "_subordinate"
-        joint_dataframe = _build_joint_dataframe(subordinate_data,
-                                                 superior_data,
+        joint_dataframe = _build_joint_dataframe(superior_data,
+                                                 subordinate_data,
                                                  l_suffix, r_suffix)
         l_factor_level_col = 'factor_level{}'.format(l_suffix)
         r_factor_level_col = 'factor_level{}'.format(r_suffix)
