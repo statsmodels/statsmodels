@@ -837,7 +837,7 @@ def test_MRCV_table_from_data():
     construct = ctab.MultipleResponseTable.from_data
     table = construct(multiple_response_questions, 5, 5)
     expected = np.array([44, 49, 15, 22, 12])  # from a manual run
-    np.testing.assert_equal(table.table.values[0, :], expected)
+    np.testing.assert_equal(table.table.iloc[:, 0], expected)
 
 
 def test_MRCV_table_from_factors():
@@ -850,7 +850,7 @@ def test_MRCV_table_from_factors():
     multiple_response_table = ctab.MultipleResponseTable([rows_factor, ],
                                                          [columns_factor])
     expected = np.array([44, 49, 15, 22, 12])  # from a manual run
-    np.testing.assert_equal(multiple_response_table.table.iloc[0].values, 
+    np.testing.assert_equal(multiple_response_table.table.iloc[:, 0].values,
                             expected)
 
 
@@ -1070,6 +1070,55 @@ def test_for_MRCV_independence():
     np.testing.assert_(result.p_value_overall >= 0.05)
     result = multiple_response_table.test_for_independence(method="bon")
     np.testing.assert_(result.p_value_overall >= 0.05)
+
+def test_combining_factors():
+    food_choices = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                                columns=["eggs", "cheese",
+                                         "candy", "sushi", "none"])
+    language = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                            columns=["English", "French",
+                                     "Mandarin", "Hungarian", "none"])
+    car_choice = build_random_single_select(n=1000)
+    second_car_choice = build_random_single_select(n=1000)
+    srcv_1 = ctab.Factor(car_choice, "", orientation="wide")
+    srcv_2 = ctab.Factor(second_car_choice, "", orientation="wide")
+    mrcv_1 = ctab.Factor(food_choices, "", orientation="wide",
+                         multiple_response=True)
+    mrcv_2 = ctab.Factor(language, "", orientation="wide",
+                         multiple_response=True)
+
+    srcv_srcv = srcv_1.combine_with(srcv_2)
+    np.testing.assert_(srcv_srcv.labels[0] == ("motorcycle", "motorcycle"))
+    np.testing.assert_(srcv_srcv.labels[-1] == ("truck", "truck"))
+    np.testing.assert_(srcv_srcv.data.shape == (1000, 9))
+
+    srcv_mrcv = srcv_1.combine_with(mrcv_1)
+    np.testing.assert_(srcv_mrcv.labels[0] == ("motorcycle", "candy"))
+    np.testing.assert_(srcv_mrcv.labels[-1] == ("truck", "sushi"))
+    np.testing.assert_(srcv_mrcv.data.shape == (1000, 15))
+
+    mrcv_mrcv = mrcv_1.combine_with(mrcv_2)
+    np.testing.assert_(mrcv_mrcv.labels[0] == ("candy", "English"))
+    np.testing.assert_(mrcv_mrcv.labels[-1] == ("sushi", "none"))
+    np.testing.assert_(mrcv_mrcv.data.shape == (1000, 25))
+
+    narrow = mrcv_2.cast_wide_to_narrow()
+    wide_narrow = mrcv_1.combine_with(narrow)
+    np.testing.assert_(wide_narrow.labels[0] == ("candy", "English"))
+    np.testing.assert_(wide_narrow.labels[-1] == ("sushi", "none"))
+    np.testing.assert_(wide_narrow.data.shape == (1000, 25))
+
+    narrow_wide = narrow.combine_with(mrcv_1)
+    np.testing.assert_(narrow_wide.labels[0] == ("English", "candy",))
+    np.testing.assert_(narrow_wide.labels[-1] == ("none", "sushi",))
+    np.testing.assert_(narrow_wide.data.shape == (1000, 25))
+
+    narrow_2 = mrcv_2.cast_wide_to_narrow()
+    narrow_narrow = narrow.combine_with(narrow_2)
+    np.testing.assert_(narrow_narrow.labels[0] ==
+                       ("English", "English"))
+    np.testing.assert_(narrow_narrow.labels[-1] == ("none", "none"))
+    np.testing.assert_(narrow_narrow.data.shape == (1000, 25))
 
 
 if __name__ == "__main__":
