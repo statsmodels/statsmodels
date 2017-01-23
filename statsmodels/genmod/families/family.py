@@ -1212,7 +1212,7 @@ class InverseGaussian(Family):
 
 
 class NegativeBinomial(Family):
-    """
+    r"""
     Negative Binomial exponential family.
 
     Parameters
@@ -1242,6 +1242,15 @@ class NegativeBinomial(Family):
     Notes
     -----
     Power link functions are not yet supported.
+
+    Parameterization for :math:`y=0,1,2,\ldots` is
+
+     :math:`f(y) = \frac{\Gamma(y+\frac{1}{\alpha})}{y!\Gamma(\frac{1}{\alpha})}
+     \left(\frac{1}{1+\alpha\mu}\right)^{\frac{1}{\alpha}}
+     \left(\frac{\alpha\mu}{1+\alpha\mu}\right)^y`
+
+    with :math:`E[Y]=\mu\,` and :math:`Var[Y]=\mu+\alpha\mu^2`.
+
 
     """
     links = [L.log, L.cloglog, L.identity, L.nbinom, L.Power]
