@@ -1638,7 +1638,7 @@ class MultipleResponseTable(object):
     def __unicode__(self):
         template = ("Contingency Table With Multi-Response Categorical "
                     "Variables (MRCV's).\nData:\n{table}")
-        return template.format(table=asunicode(self.table))
+        return template.format(table=asunicode(self.table, "utf8"))
 
     def __repr__(self):
         return "At {id} :: {_str}".format(id=id(self), _str=self.__str__())
