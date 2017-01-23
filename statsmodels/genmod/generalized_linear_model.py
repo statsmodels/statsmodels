@@ -1085,8 +1085,20 @@ class GLM(base.LikelihoodModel):
 
         defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
                     "zero_tol" : 1e-10}
-        defaults.update(kwargs)
+        kwargs = dict(kwargs)
 
+        # Usually we want to run the elastic net with scale parameter fixed at 1.
+        for x in "loglike_kwds", "score_kwds", "hess_kwds":
+            if x not in kwargs:
+                defaults[x] = {"scale": 1}
+            else:
+                h = kwargs[x]
+                if "scale" not in h:
+                    h["scale"] = 1
+                defaults[x] = h
+                del kwargs[x]
+
+        defaults.update(kwargs)
         result = fit_elasticnet(self, method=method,
                                 alpha=alpha,
                                 start_params=start_params,
