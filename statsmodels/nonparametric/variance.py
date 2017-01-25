@@ -81,9 +81,12 @@ def _poly_window(order=2, length=None, residual=True, normed=True):
     """
     if length is None:
         length = order + 1
+    else:
+        if length < order + 1:
+            raise ValueError('window_length needs to be strictly larger than order')
 
     tv = np.vander(np.linspace(-1, 1, length), order)
-    center = (length + 1) // 2
+    center = (length - 1) // 2
     smooth = tv[center].dot(np.linalg.pinv(tv))
     if residual:
         # which sign for residual? _diff_kernel seems to have inconsistent sign
