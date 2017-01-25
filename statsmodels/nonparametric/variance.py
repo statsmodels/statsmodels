@@ -98,6 +98,58 @@ def _poly_window(order=2, length=None, residual=True, normed=True):
     return smooth
 
 
+def _spike_window(window_length=3, method=1):
+    """Spike window of Hall, Kay and Titterington
+
+    This window for differencing variance estimation behaves asymptotically similar
+    to the optimal HKT window. This assumes locally constant mean function.
+
+    Note: The window length is order + 1
+
+    Parameters
+    ----------
+    window_length : int, 2 or larger
+        window length
+    method : int
+        this is just for comparing two methods of computing the same window
+
+    Returns
+    -------
+    d : ndarray
+        spike window for nonparametric variance estimation
+
+    """
+    if window_length < 2:
+        raise ValueError('window_length need to be two or larger')
+
+    if method == 1:
+        n_half = window_length // 2
+        if n_half == window_length / 2.:
+            even = True
+            n = n_half
+        else:
+            even = False
+            n = n_half
+
+        n2 = 2. * n
+        d = np.zeros(window_length, np.float64)
+        if not even:
+            d[:] = - 1 / np.sqrt(n2 * (n2 + 1))
+            d[n] = np.sqrt(n2 / (n2 + 1))
+        else:
+            d[:] = - 1 / np.sqrt(n2 * (n2 - 1))
+            d[n - 1] = np.sqrt((n2 - 1) / n2)
+    else:
+        # This is a version I wrote for cross-checking the computation in HKT
+        # constracted as local unweighted average with additional weight on the center
+        # observation
+        k = window_length
+        d = - np.ones(k) / (k + 1)
+        mid = (k - 1) // 2
+        d[mid] = - d[:-1].sum()  # same as d[mid] = 1 + 2 * d[mid]
+        d = d / np.sqrt(d.dot(d))
+
+    return d
 
 
 def var_differencing(y, x=None, order=2, kind='poly', method=None):

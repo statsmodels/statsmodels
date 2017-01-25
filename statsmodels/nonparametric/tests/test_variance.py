@@ -145,3 +145,9 @@ def test_windows():
         # diff_kernel seems to have "indeterminate" sign
         assert_allclose(d0, d1 * dsign, rtol=1e-13)
 
+
+    for k in range(2,8):
+        # compare two methods, no reference numbers
+        d0 = smv._spike_window(k, method=1)
+        d1 = smv._spike_window(k, method=2)
+        assert_allclose(d0, d1, rtol=1e-13)
