@@ -353,3 +353,168 @@ class VarianceDiffProjector(object):
         resid = self.get_resid(endog=endog, order=order)
 
         return resid.T.dot(resid) / resid.shape[0]
+
+
+
+class RollingRegressionProjector(object):
+    """class for prediction based on local regression
+
+    This class is expensive in the initialization, but can perform
+    repeated projections fast.
+    The projection coefficients are computed in a loop over all windows,
+    but uses either sparse array dot product or a loop over the window
+    for the projection.
+
+    window_length currently has to be odd. Even window lengths are not yet
+    supported.
+
+    Parameters
+    ----------
+    exog : array_like, 2-D
+        regressors, or explanatory variables with observation in rows
+    window_length : int
+        length of rolling window, currently has to be odd (not checked in code)
+    normed : bool
+        If False, then the window coefficients are normed to for residuals.
+
+    Notes
+    -----
+
+    If the exog is a Vandermonde matrix, then the local regression is a local
+    polynomial regression, e.g. a quadratic polynomial can be constructed
+    with ::
+
+        exog = np.vander(x, 3)[:, ::-1]
+
+    Status: experimental code,
+        projection works correctly, API and features are unclear
+
+
+    Possible Options: TODO
+    - position in window, mid, first, last, int
+    - distance, difference to exog in position
+      (polynomials might be numerically unstable over large range, but
+      then we would need to evaluate kernel or polynomial inside
+      initialization loop, callback)
+
+
+    """
+
+    def __init__(self, exog, window_length, normed=False,
+                 project_residuals=False, **kwds):
+
+        self.exog = np.asarray(exog)
+        self.window_length = window_length
+        self.nobs = self.exog.shape[0]
+        self.store_all = True
+        self.normed = normed
+        self.project_residuals = project_residuals
+        if self.normed and not self.project_residuals:
+            import warnings
+            warnings.warn('normed is True but project_residual is False. '
+                          'No idea what will be the result')
+        self.proj_mat = None
+        self._df_var = None
+        self.__dict__.update(kwds)
+
+
+    def _initialize(self):
+        m = self.window_length
+        nobs = self.nobs
+        exog = self.exog
+
+        proj = []
+        self.params_all = []
+        for ii in range(nobs - m + 1):
+            #print('ii: ii + m', ii, ii + m)
+            params = np.linalg.pinv(exog[ii: ii + m])
+            coef = exog[ii + m //2].dot(params)
+            proj.append(coef)
+            if self.store_all:
+                self.params_all.append(params)
+
+        proj = np.asarray(proj)
+        if self.project_residuals:
+            proj *= -1
+            proj[:, m // 2] += 1
+        if self.normed:
+            proj /= np.sqrt((proj**2).sum(1))[:, None]
+        self.proj = proj
+
+
+    def _initialize_sparse(self):
+        m = self.window_length
+        nobs = self.nobs
+
+        offsets = np.arange(m)
+        data = self.proj
+        #I don't manage to get dia_matrix construction to work
+        #k_mat = sparse.dia_matrix((data.T, offsets), shape=(nobs-m + 1, nobs))
+        idx0_ = np.arange(nobs-m + 1)
+        idx1 = (idx0_[:,None] + offsets).ravel()
+        idx0 = np.repeat(idx0_, m)
+        self.proj_mat = sparse.csr_matrix((data.ravel(), (idx0, idx1)),
+                                          shape=(nobs-m + 1, nobs))
+
+
+    @property
+    def df_var(self):
+        """degrees of freedom (denominator) for variance of residuals
+
+        var = resid.dot(resid) / df_var
+
+        This caches the attribute.
+        """
+        if self._df_var is None:
+            if self.project_residuals:
+                if self.normed:
+                    self._df_var = self.proj.shape[0]
+                else:
+                    self._df_var = (self.proj**2).sum()
+            else:
+                # I'm not sure this is always correct
+                self._df_var = (self.nobs - (self.proj**2).sum() -
+                                self.window_length + 1)
+
+        return self._df_var
+
+
+    def _project_loop(self, endog):
+        """predict observations for `endog`
+
+        Warning: This uses a nobs loop and is mainly for verification
+
+        """
+
+        y = np.asarray(endog)
+        m = self.window_length
+        nobs = self.nobs
+        proj = self.proj
+        y_hat = np.array([proj[ii].dot(y[ii: ii + m]) for ii in range(nobs - m + 1)])
+
+        return y_hat
+
+
+    def _project_loop_windows(self, endog):
+
+        y = np.asarray(endog)
+        proj = self.proj
+        m = self.window_length
+        nobs = y.shape[0]
+        w_idx = 0
+        y_hat = proj.T[w_idx] * y[w_idx: nobs - m + w_idx + 1]
+        for w_idx in range(1, m):
+            y_hat += proj[:, w_idx] * y[w_idx: nobs - m + w_idx + 1]
+
+        return y_hat
+
+
+    def _project_sparse(self, endog):
+        #y = np.asarray(endog)  # we might allow sparse y
+        y = endog
+
+        if self.proj_mat is None:
+            self._initialize_sparse()
+
+        y_hat = np.asarray(self.proj_mat.dot(y))
+        return y_hat

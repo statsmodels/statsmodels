@@ -151,3 +151,74 @@ def test_windows():
         d0 = smv._spike_window(k, method=1)
         d1 = smv._spike_window(k, method=2)
         assert_allclose(d0, d1, rtol=1e-13)
+
+
+def test_rolling_regression():
+    #  generate simulated data
+    #  Note: seed is chosen for nice case
+    np.random.seed(923654)
+    nobs = 200
+    std_e = 0.05
+    var_e = std_e**2
+    x = np.random.rand(nobs) * 2 - 1   # uniform on [0, 1]
+    x.sort()
+    y_true = x + 1 * x**2
+    y = y_true + std_e * np.random.randn(nobs)
+    var_oracle = (y - y_true).var()
+    assert_allclose(var_oracle, var_e, rtol=0.15)
+
+    exog = np.vander(x, 3)[:, ::-1]
+
+    m = 15  #  window_length
+
+    #  with projectors
+    p = smv.RollingRegressionProjector(exog, m)
+    p._initialize()
+    p._initialize_sparse()
+    y_hat3 = p._project_loop(y)
+    tab3 = np.column_stack((y[m // 2:-(m // 2)],
+                            y_hat3,
+                            y[m // 2:-(m // 2)] - y_hat3))
+
+    var3 = (tab3[:,-1]**2).mean()
+
+    y_hat4 = p._project_sparse(y)
+    resid4 = y[m // 2:-(m // 2)] - y_hat4
+    var4 = resid4.dot(resid4) / resid4.shape[0]
+
+    y_hat5 = p._project_loop_windows(y)
+    resid5 = y[m // 2:-(m // 2)] - y_hat5
+    var5 = resid5.dot(resid5) / resid5.shape[0]
+
+    assert_allclose(var4, var3, rtol=1e-13, atol=1e-20)
+    assert_allclose(var5, var3, rtol=1e-13, atol=1e-20)
+
+    # check projection for residuals
+    pr = smv.RollingRegressionProjector(exog, m, project_residuals=True)
+    pr._initialize()
+    #pr._initialize_sparse()
+    resid6 = pr._project_sparse(y)
+    var6 = resid6.dot(resid6) / resid6.shape[0]
+    assert_allclose(var6, var3, rtol=1e-13, atol=1e-20)
+
+
+    # check variance estimation
+    pr2 = smv.RollingRegressionProjector(exog, m,
+                                         project_residuals=True,
+                                         normed=True)
+    pr2._initialize()
+    resid_ = pr2._project_sparse(y)
+    var7 = resid_.dot(resid_) / resid_.shape[0]
+    assert_allclose(var7, var_oracle, rtol=0.05)
+
+    dp = smv.VarianceDiffProjector(y, x)
+    var8 = dp.var()
+
+    assert_allclose(var4, var_oracle, rtol=0.15)
+    assert_allclose(var4 * p.proj.shape[0] / p.df_var, var_oracle, rtol=0.05)
+    assert_allclose(var5 * p.proj.shape[0] / p.df_var, var_oracle, rtol=0.05)
+    assert_allclose(var6 * pr.proj.shape[0] / pr.df_var, var_oracle, rtol=0.05)
+    assert_allclose(var8, var_oracle, rtol=0.05)
+
+    var9 = smv.var_differencing(y, order=3)[0]
+    assert_allclose(var9, var_oracle, rtol=0.05)
