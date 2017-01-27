@@ -2342,7 +2342,7 @@ class MultipleResponseTable(object):
         return p_value_overall_bonferroni, pairwise_bonferroni_p_values
 
     def _test_for_SPMI_using_bootstrap(self, row_factor, column_factor,
-                                       verbose=False):
+                                       verbose=False, b_max=1000):
         """
         Test for SPMI between two multiple response vars using Bootstrapping
 
@@ -2377,7 +2377,6 @@ class MultipleResponseTable(object):
         spmi_df = pd.concat([W, Y], axis=1)  # type: pd.DataFrame
         chi2_survival_with_1_dof = partial(chi2.sf, df=1)
 
-        b_max = 1000
         n = len(spmi_df)
         q1 = spmi_df.iloc[:, :I]
         q2 = spmi_df.iloc[:, I:I + J]
@@ -2708,9 +2707,9 @@ def _build_joint_dataframe(left_data, right_data, l_suffix, r_suffix):
     # without bool cast, '&' sometimes doesn't know how to compare types
     l_value_col = 'value{}'.format(l_suffix)
     r_value_col = 'value{}'.format(r_suffix)
-    joint_response = (joint_dataframe[l_value_col].astype(bool) &
-                      joint_dataframe[r_value_col].astype(
-                          bool)).astype(int)
+    joint_response = ((joint_dataframe[l_value_col].astype(bool) &
+                      joint_dataframe[r_value_col].astype(bool))
+                      .astype(int))
     joint_dataframe['_joint_response'] = joint_response
     return joint_dataframe
 
@@ -2781,8 +2780,13 @@ class Factor(object):
         if (dataframe.index.name is None and
                     "observation_id" not in dataframe.columns):
             dataframe.index.name = "observation_id"
+        elif dataframe.index.name == "observation_id":
+            if dataframe.index.nunique() < len(dataframe.index):
+                import warnings
+                warnings.warn("You have duplicate observations id's in your"
+                              "index. That may cause strange behavior.")
         if (dataframe.columns.name is None and
-                    "factor_level" not in dataframe.columns):
+            "factor_level" not in dataframe.columns):
             dataframe.columns.name = "factor_level"
         # don't modify original in subsequent operations
         self.data = dataframe.copy()
