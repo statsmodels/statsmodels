@@ -34,7 +34,7 @@ Xi = mixture_rvs([.25,.75], size=200, dist=[stats.norm, stats.norm],
 class TestKDEExceptions(object):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.kde = KDE(Xi)
         cls.weights_200 = np.linspace(1, 100, 200)
         cls.weights_100 = np.linspace(1, 100, 100)
@@ -83,7 +83,7 @@ class CheckKDE(object):
 
 class TestKDEGauss(CheckKDE):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         res1 = KDE(Xi)
         res1.fit(kernel="gau", fft=False, bw="silverman")
         cls.res1 = res1
@@ -124,7 +124,7 @@ class TestKDEGauss(CheckKDE):
 
 class TestKDEEpanechnikov(CheckKDE):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         res1 = KDE(Xi)
         res1.fit(kernel="epa", fft=False, bw="silverman")
         cls.res1 = res1
@@ -132,7 +132,7 @@ class TestKDEEpanechnikov(CheckKDE):
 
 class TestKDETriangular(CheckKDE):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         res1 = KDE(Xi)
         res1.fit(kernel="tri", fft=False, bw="silverman")
         cls.res1 = res1
@@ -140,7 +140,7 @@ class TestKDETriangular(CheckKDE):
 
 class TestKDEBiweight(CheckKDE):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         res1 = KDE(Xi)
         res1.fit(kernel="biw", fft=False, bw="silverman")
         cls.res1 = res1
@@ -149,7 +149,7 @@ class TestKDEBiweight(CheckKDE):
 #NOTE: This is a knownfailure due to a definitional difference of Cosine kernel
 #class TestKDECosine(CheckKDE):
 #    @classmethod
-#    def setupClass(cls):
+#    def setup_class(cls):
 #        res1 = KDE(Xi)
 #        res1.fit(kernel="cos", fft=False, bw="silverman")
 #        cls.res1 = res1
@@ -159,7 +159,7 @@ class TestKDEBiweight(CheckKDE):
 class TestKdeWeights(CheckKDE):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         res1 = KDE(Xi)
         weights = np.linspace(1,100,200)
         res1.fit(kernel="gau", gridsize=50, weights=weights, fft=False,
@@ -181,7 +181,7 @@ class TestKdeWeights(CheckKDE):
 
 class TestKDEGaussFFT(CheckKDE):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.decimal_density = 2 # low accuracy because binning is different
         res1 = KDE(Xi)
         res1.fit(kernel="gau", fft=True, bw="silverman")
@@ -192,7 +192,7 @@ class TestKDEGaussFFT(CheckKDE):
 class CheckKDEWeights(object):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.x = x = KDEWResults['x']
         weights = KDEWResults['weights']
         res1 = KDE(x)

@@ -9,7 +9,7 @@ if __name__ == '__main__':
 
     #def mytest():
     aregression = TestOLS()
-    TestOLS.setupClass()
+    TestOLS.setup_class()
     results = aregression.res1
     r_summary = str(results.summary_old())
     print(r_summary)
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     from statsmodels.discrete.tests.test_discrete  import TestProbitNewton
 
     aregression = TestProbitNewton()
-    TestProbitNewton.setupClass()
+    TestProbitNewton.setup_class()
     results = aregression.res1
     r_summary = str(results.summary())
     print(r_summary)
@@ -36,7 +36,7 @@ if __name__ == '__main__':
     from statsmodels.robust.tests.test_rlm  import TestHampel
 
     aregression = TestHampel()
-    #TestHampel.setupClass()
+    #TestHampel.setup_class()
     results = aregression.res1
     r_summary = str(results.summary())
     print(r_summary)
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     from statsmodels.genmod.tests.test_glm  import TestGlmBinomial
 
     aregression = TestGlmBinomial()
-    #TestGlmBinomial.setupClass()
+    #TestGlmBinomial.setup_class()
     results = aregression.res1
     r_summary = str(results.summary())
     print(r_summary)

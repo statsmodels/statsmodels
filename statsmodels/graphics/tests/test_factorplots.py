@@ -16,7 +16,7 @@ except ImportError:
 class TestInteractionPlot(object):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         if not have_matplotlib:
             raise SkipTest('matplotlib not available')
         np.random.seed(12345)

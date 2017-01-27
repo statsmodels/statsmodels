@@ -12,7 +12,7 @@ else:
 
 class TestX13(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         if not _have_x13:
             raise SkipTest('X13/X12 not available')
 

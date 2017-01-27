@@ -192,7 +192,7 @@ class CheckArimaResultsMixin(CheckArmaResultsMixin):
 
 class Test_Y_ARMA11_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,0]
         cls.res1 = ARMA(endog, order=(1,1)).fit(trend='nc', disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -210,7 +210,7 @@ class Test_Y_ARMA11_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA14_NoConst(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,1]
         cls.res1 = ARMA(endog, order=(1,4)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma14()
@@ -219,7 +219,7 @@ class Test_Y_ARMA14_NoConst(CheckArmaResultsMixin):
 @dec.slow
 class Test_Y_ARMA41_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,2]
         cls.res1 = ARMA(endog, order=(4,1)).fit(trend='nc', disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -230,7 +230,7 @@ class Test_Y_ARMA41_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA22_NoConst(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,3]
         cls.res1 = ARMA(endog, order=(2,2)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma22()
@@ -238,7 +238,7 @@ class Test_Y_ARMA22_NoConst(CheckArmaResultsMixin):
 
 class Test_Y_ARMA50_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,4]
         cls.res1 = ARMA(endog, order=(5,0)).fit(trend='nc', disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -248,7 +248,7 @@ class Test_Y_ARMA50_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA02_NoConst(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,5]
         cls.res1 = ARMA(endog, order=(0,2)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma02()
@@ -256,7 +256,7 @@ class Test_Y_ARMA02_NoConst(CheckArmaResultsMixin):
 
 class Test_Y_ARMA11_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,6]
         cls.res1 = ARMA(endog, order=(1,1)).fit(trend="c", disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -266,7 +266,7 @@ class Test_Y_ARMA11_Const(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA14_Const(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,7]
         cls.res1 = ARMA(endog, order=(1,4)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma14c()
@@ -274,7 +274,7 @@ class Test_Y_ARMA14_Const(CheckArmaResultsMixin):
 
 class Test_Y_ARMA41_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,8]
         cls.res2 = results_arma.Y_arma41c()
         cls.res1 = ARMA(endog, order=(4,1)).fit(trend="c", disp=-1,
@@ -289,7 +289,7 @@ class Test_Y_ARMA41_Const(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA22_Const(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,9]
         cls.res1 = ARMA(endog, order=(2,2)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma22c()
@@ -297,7 +297,7 @@ class Test_Y_ARMA22_Const(CheckArmaResultsMixin):
 
 class Test_Y_ARMA50_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,10]
         cls.res1 = ARMA(endog, order=(5,0)).fit(trend="c", disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -307,7 +307,7 @@ class Test_Y_ARMA50_Const(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA02_Const(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,11]
         cls.res1 = ARMA(endog, order=(0,2)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma02c()
@@ -316,7 +316,7 @@ class Test_Y_ARMA02_Const(CheckArmaResultsMixin):
 # cov_params and tvalues are off still but not as much vs. R
 class Test_Y_ARMA11_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,0]
         cls.res1 = ARMA(endog, order=(1,1)).fit(method="css", trend='nc',
                             disp=-1)
@@ -327,7 +327,7 @@ class Test_Y_ARMA11_NoConst_CSS(CheckArmaResultsMixin):
 # better vs. R
 class Test_Y_ARMA14_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,1]
         cls.res1 = ARMA(endog, order=(1,4)).fit(method="css", trend='nc',
                             disp=-1)
@@ -341,7 +341,7 @@ class Test_Y_ARMA14_NoConst_CSS(CheckArmaResultsMixin):
 # maroot is off because maparams is off a bit (adjust tolerance?)
 class Test_Y_ARMA41_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,2]
         cls.res1 = ARMA(endog, order=(4,1)).fit(method="css", trend='nc',
                         disp=-1)
@@ -355,7 +355,7 @@ class Test_Y_ARMA41_NoConst_CSS(CheckArmaResultsMixin):
 #same notes as above
 class Test_Y_ARMA22_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,3]
         cls.res1 = ARMA(endog, order=(2,2)).fit(method="css", trend='nc',
                             disp=-1)
@@ -374,7 +374,7 @@ class Test_Y_ARMA22_NoConst_CSS(CheckArmaResultsMixin):
 # consistent with the rest of the models
 class Test_Y_ARMA50_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,4]
         cls.res1 = ARMA(endog, order=(5,0)).fit(method="css", trend='nc',
                             disp=-1)
@@ -385,7 +385,7 @@ class Test_Y_ARMA50_NoConst_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA02_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,5]
         cls.res1 = ARMA(endog, order=(0,2)).fit(method="css", trend='nc',
                             disp=-1)
@@ -395,7 +395,7 @@ class Test_Y_ARMA02_NoConst_CSS(CheckArmaResultsMixin):
 #NOTE: our results are close to --x-12-arima option and R
 class Test_Y_ARMA11_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,6]
         cls.res1 = ARMA(endog, order=(1,1)).fit(trend="c", method="css",
                         disp=-1)
@@ -407,7 +407,7 @@ class Test_Y_ARMA11_Const_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA14_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,7]
         cls.res1 = ARMA(endog, order=(1,4)).fit(trend="c", method="css",
                         disp=-1)
@@ -418,7 +418,7 @@ class Test_Y_ARMA14_Const_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA41_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,8]
         cls.res1 = ARMA(endog, order=(4,1)).fit(trend="c", method="css",
                         disp=-1)
@@ -431,7 +431,7 @@ class Test_Y_ARMA41_Const_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA22_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,9]
         cls.res1 = ARMA(endog, order=(2,2)).fit(trend="c", method="css",
                         disp=-1)
@@ -442,7 +442,7 @@ class Test_Y_ARMA22_Const_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA50_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,10]
         cls.res1 = ARMA(endog, order=(5,0)).fit(trend="c", method="css",
                         disp=-1)
@@ -454,7 +454,7 @@ class Test_Y_ARMA50_Const_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA02_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,11]
         cls.res1 = ARMA(endog, order=(0,2)).fit(trend="c", method="css",
                         disp=-1)
@@ -539,7 +539,7 @@ def test_start_params_bug():
 class Test_ARIMA101(CheckArmaResultsMixin):
     # just make sure this works
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,6]
         cls.res1 = ARIMA(endog, (1,0,1)).fit(trend="c", disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -553,7 +553,7 @@ class Test_ARIMA101(CheckArmaResultsMixin):
 class Test_ARIMA111(CheckArimaResultsMixin, CheckForecastMixin,
                     CheckDynamicForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cpi = load_macrodata().data['cpi']
         cls.res1 = ARIMA(cpi, (1,1,1)).fit(disp=-1)
         cls.res2 = results_arima.ARIMA111()
@@ -584,7 +584,7 @@ class Test_ARIMA111(CheckArimaResultsMixin, CheckForecastMixin,
 class Test_ARIMA111CSS(CheckArimaResultsMixin, CheckForecastMixin,
                        CheckDynamicForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cpi = load_macrodata().data['cpi']
         cls.res1 = ARIMA(cpi, (1,1,1)).fit(disp=-1, method='css')
         cls.res2 = results_arima.ARIMA111(method='css')
@@ -615,7 +615,7 @@ class Test_ARIMA111CSS(CheckArimaResultsMixin, CheckForecastMixin,
 
 class Test_ARIMA112CSS(CheckArimaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cpi = load_macrodata().data['cpi']
         cls.res1 = ARIMA(cpi, (1,1,2)).fit(disp=-1, method='css',
                                 start_params = [.905322, -.692425, 1.07366,
@@ -652,7 +652,7 @@ class Test_ARIMA112CSS(CheckArimaResultsMixin):
 
 #class Test_ARIMADates(CheckArmaResults, CheckForecast, CheckDynamicForecast):
 #    @classmethod
-#    def setupClass(cls):
+#    def setup_class(cls):
 #        cpi = load_macrodata().data['cpi']
 #        dates = pd.date_range('1959', periods=203, freq='Q')
 #        cls.res1 = ARIMA(cpi, dates=dates, freq='Q').fit(order=(1,1,1), disp=-1)

@@ -251,7 +251,7 @@ class CheckFEVD(object):
 class TestVARResults(CheckIRF, CheckFEVD):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.p = 2
 
         cls.data = get_macrodata()

@@ -46,7 +46,7 @@ def _est_regression_summary():
              XXtimeXXX = str(time.strftime("%H:%M:%S",t)))
     desired = str(desired)
     aregression = TestOLS()
-    TestOLS.setupClass()
+    TestOLS.setup_class()
     results = aregression.res1
     # be quiet!
     original_filters = warnings.filters[:] # copy original
