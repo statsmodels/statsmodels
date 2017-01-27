@@ -749,7 +749,7 @@ def freq_to_period(freq):
         return 24
     else:  # pragma : no cover
         raise ValueError("freq {} not understood. Please report if you "
-                         "think this in error.".format(freq))
+                         "think this is in error.".format(freq))
 
 
 __all__ = ['lagmat', 'lagmat2ds','add_trend', 'duplication_matrix',

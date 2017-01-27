@@ -83,7 +83,7 @@ class CheckTLinearModelMixin(object):
         assert_allclose(res1.pvalues[:-2], res2.loc_fit.table[:, 3], rtol=0.009, atol=1e-5)
 
         # df
-        assert_allclose(res1.params[-2], res2.dof, rtol=1e-5)
+        assert_allclose(res1.params[-2], res2.dof, rtol=5e-5)
         assert_allclose(res1.bse[-2], res2.dofse, rtol=0.16, atol=1e-5)
         # scale
         scale_est = np.sqrt(res2.scale_fit.fitted_values.mean())

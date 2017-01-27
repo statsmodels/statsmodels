@@ -170,7 +170,7 @@ class RecursiveLS(MLEModel):
 
     @property
     def start_params(self):
-        # Only parameter is the measurment disturbance standard deviation
+        # Only parameter is the measurement disturbance standard deviation
         return np.zeros(0)
 
     def update(self, params, **kwargs):

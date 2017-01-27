@@ -30,6 +30,7 @@ except ImportError:
 dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start='1959-01-01', end='2009-07-01', freq='QS')
 
+
 def run_ucm(name):
     true = getattr(results_structural, name)
 
@@ -53,7 +54,7 @@ def run_ucm(name):
             # Also allow a check with a 1-dim numpy array
             if kwargs['exog'] == 'numpy':
                 exog = exog.values.squeeze()
-            
+
             kwargs['exog'] = exog
 
         # Create the model
@@ -115,7 +116,9 @@ def test_irregular():
 
 
 def test_fixed_intercept():
-    warnings.simplefilter("always")
+    # Clear warnings
+    structural.__warningregistry__ = {}
+
     with warnings.catch_warnings(record=True) as w:
         run_ucm('fixed_intercept')
         message = ("Specified model does not contain a stochastic element;"
@@ -140,7 +143,9 @@ def test_fixed_slope():
 
 
 def test_fixed_slope():
-    warnings.simplefilter("always")
+    # Clear warnings
+    structural.__warningregistry__ = {}
+
     with warnings.catch_warnings(record=True) as w:
         run_ucm('fixed_slope')
         message = ("Specified model does not contain a stochastic element;"
@@ -211,11 +216,13 @@ def test_mle_reg():
 
 
 def test_specifications():
+    # Clear warnings
+    structural.__warningregistry__ = {}
+
     endog = [1, 2]
 
     # Test that when nothing specified, a warning is issued and the model that
     # is fit is one with irregular=True and nothing else.
-    warnings.simplefilter("always")
     with warnings.catch_warnings(record=True) as w:
         mod = UnobservedComponents(endog)
 
@@ -282,9 +289,70 @@ def test_forecast():
     endog = np.arange(50) + 10
     exog = np.arange(50)
 
-    mod = UnobservedComponents(endog, exog=exog, level='dconstant')
-    res = mod.smooth([1e-15, 1])
+    mod = UnobservedComponents(endog, exog=exog, level='dconstant', seasonal=4)
+    res = mod.smooth([1e-15, 0, 1])
 
     actual = res.forecast(10, exog=np.arange(50,60)[:,np.newaxis])
-    desired = np.arange(50,60) + 10
+    desired = np.arange(50, 60) + 10
     assert_allclose(actual, desired)
+
+
+def test_misc_exog():
+    # Tests for missing data
+    nobs = 20
+    k_endog = 1
+    np.random.seed(1208)
+    endog = np.random.normal(size=(nobs, k_endog))
+    endog[:4, 0] = np.nan
+    exog1 = np.random.normal(size=(nobs, 1))
+    exog2 = np.random.normal(size=(nobs, 2))
+
+    index = pd.date_range('1970-01-01', freq='QS', periods=nobs)
+    endog_pd = pd.DataFrame(endog, index=index)
+    exog1_pd = pd.Series(exog1.squeeze(), index=index)
+    exog2_pd = pd.DataFrame(exog2, index=index)
+
+    models = [
+        UnobservedComponents(endog, 'llevel', exog=exog1),
+        UnobservedComponents(endog, 'llevel', exog=exog2),
+        UnobservedComponents(endog, 'llevel', exog=exog2),
+        UnobservedComponents(endog_pd, 'llevel', exog=exog1_pd),
+        UnobservedComponents(endog_pd, 'llevel', exog=exog2_pd),
+        UnobservedComponents(endog_pd, 'llevel', exog=exog2_pd),
+    ]
+
+    for mod in models:
+        # Smoke tests
+        mod.start_params
+        res = mod.fit(disp=False)
+        res.summary()
+        res.predict()
+        res.predict(dynamic=True)
+        res.get_prediction()
+
+        oos_exog = np.random.normal(size=(1, mod.k_exog))
+        res.forecast(steps=1, exog=oos_exog)
+        res.get_forecast(steps=1, exog=oos_exog)
+
+        # Smoke tests for invalid exog
+        oos_exog = np.random.normal(size=(1))
+        assert_raises(ValueError, res.forecast, steps=1, exog=oos_exog)
+
+        oos_exog = np.random.normal(size=(2, mod.k_exog))
+        assert_raises(ValueError, res.forecast, steps=1, exog=oos_exog)
+
+        oos_exog = np.random.normal(size=(1, mod.k_exog + 1))
+        assert_raises(ValueError, res.forecast, steps=1, exog=oos_exog)
+
+    # Test invalid model specifications
+    assert_raises(ValueError, UnobservedComponents, endog, 'llevel',
+                  exog=np.zeros((10, 4)))
+
+
+def test_predict_custom_index():
+    np.random.seed(328423)
+    endog = pd.DataFrame(np.random.normal(size=50))
+    mod = structural.UnobservedComponents(endog, 'llevel')
+    res = mod.smooth(mod.start_params)
+    out = res.predict(start=1, end=1, index=['a'])
+    assert_equal(out.index.equals(pd.Index(['a'])), True)

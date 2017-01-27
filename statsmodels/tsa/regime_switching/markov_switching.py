@@ -29,10 +29,17 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.tsa.statespace.tools import find_best_blas_type
 from statsmodels.tsa.regime_switching._hamilton_filter import (
     shamilton_filter, dhamilton_filter, chamilton_filter, zhamilton_filter)
+from statsmodels.tsa.regime_switching._kim_smoother import (
+    skim_smoother, dkim_smoother, ckim_smoother, zkim_smoother)
 
 prefix_hamilton_filter_map = {
     's': shamilton_filter, 'd': dhamilton_filter,
     'c': chamilton_filter, 'z': zhamilton_filter
+}
+
+prefix_kim_smoother_map = {
+    's': skim_smoother, 'd': dkim_smoother,
+    'c': ckim_smoother, 'z': zkim_smoother
 }
 
 
@@ -313,8 +320,7 @@ def cy_hamilton_filter(initial_probabilities, regime_transition,
             joint_likelihoods, filtered_joint_probabilities[..., 1:])
 
 
-def py_kim_smoother(regime_transition, filtered_marginal_probabilities,
-                    predicted_joint_probabilities,
+def py_kim_smoother(regime_transition, predicted_joint_probabilities,
                     filtered_joint_probabilities):
     """
     Kim smoother using pure Python
@@ -325,9 +331,6 @@ def py_kim_smoother(regime_transition, filtered_marginal_probabilities,
         Matrix of regime transition probabilities, shaped either
         (k_regimes, k_regimes, 1) or if there are time-varying transition
         probabilities (k_regimes, k_regimes, nobs).
-    filtered_marginal_probabilities : array
-        Array containing Pr[S_t=s_t | Y_t] - the probability of being in each
-        regime conditional on time t information. Shaped (k_regimes, nobs).
     predicted_joint_probabilities : array
         Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_{t-1}] -
         the joint probability of the current and previous `order` periods
@@ -373,14 +376,14 @@ def py_kim_smoother(regime_transition, filtered_marginal_probabilities,
     regime_transition = np.reshape(regime_transition, shape)
 
     # Get appropriate subset of transition matrix
-    if regime_transition.shape[-1] > 1:
+    if regime_transition.shape[-1] == nobs + order:
         regime_transition = regime_transition[..., order:]
 
     # Kim smoother iterations
     transition_t = 0
     for t in range(nobs - 2, -1, -1):
         if regime_transition.shape[-1] > 1:
-            transition_t = t+1
+            transition_t = t + 1
 
         # S_{t+1}, S_t, ..., S_{t-r+1} | t
         # x = predicted_joint_probabilities[..., t]
@@ -389,8 +392,76 @@ def py_kim_smoother(regime_transition, filtered_marginal_probabilities,
         # S_{t+1}, S_t, ..., S_{t-r+2} | T / S_{t+1}, S_t, ..., S_{t-r+2} | t
         y = (smoothed_joint_probabilities[..., t+1] /
              predicted_joint_probabilities[..., t+1])
-        # S_{t+1}, S_t, ..., S_{t-r+1} | T
+        # S_t, S_{t-1}, ..., S_{t-r+1} | T
         smoothed_joint_probabilities[..., t] = (x * y[..., None]).sum(axis=0)
+
+    # Get smoothed marginal probabilities S_t | T by integrating out
+    # S_{t-k+1}, S_{t-k+2}, ..., S_{t-1}
+    smoothed_marginal_probabilities = smoothed_joint_probabilities
+    for i in range(1, smoothed_marginal_probabilities.ndim - 1):
+        smoothed_marginal_probabilities = np.sum(
+            smoothed_marginal_probabilities, axis=-2)
+
+    return smoothed_joint_probabilities, smoothed_marginal_probabilities
+
+
+def cy_kim_smoother(regime_transition, predicted_joint_probabilities,
+                    filtered_joint_probabilities):
+    """
+    Kim smoother using Cython inner loop
+
+    Parameters
+    ----------
+    regime_transition : array
+        Matrix of regime transition probabilities, shaped either
+        (k_regimes, k_regimes, 1) or if there are time-varying transition
+        probabilities (k_regimes, k_regimes, nobs).
+    predicted_joint_probabilities : array
+        Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_{t-1}] -
+        the joint probability of the current and previous `order` periods
+        being in each combination of regimes conditional on time t-1
+        information. Shaped (k_regimes,) * (order + 1) + (nobs,).
+    filtered_joint_probabilities : array
+        Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_{t}] -
+        the joint probability of the current and previous `order` periods
+        being in each combination of regimes conditional on time t
+        information. Shaped (k_regimes,) * (order + 1) + (nobs,).
+
+    Returns
+    -------
+    smoothed_joint_probabilities : array
+        Array containing Pr[S_t=s_t, ..., S_{t-order}=s_{t-order} | Y_T] -
+        the joint probability of the current and previous `order` periods
+        being in each combination of regimes conditional on all information.
+        Shaped (k_regimes,) * (order + 1) + (nobs,).
+    smoothed_marginal_probabilities : array
+        Array containing Pr[S_t=s_t | Y_T] - the probability of being in each
+        regime conditional on all information. Shaped (k_regimes, nobs).
+    """
+
+    # Dimensions
+    k_regimes = filtered_joint_probabilities.shape[0]
+    nobs = filtered_joint_probabilities.shape[-1]
+    order = filtered_joint_probabilities.ndim - 2
+    dtype = filtered_joint_probabilities.dtype
+
+    # Storage
+    smoothed_joint_probabilities = np.zeros(
+        (k_regimes,) * (order + 1) + (nobs,), dtype=dtype)
+
+    # Get appropriate subset of transition matrix
+    if regime_transition.shape[-1] == nobs + order:
+        regime_transition = regime_transition[..., order:]
+
+    # Run Cython smoother iterations
+    prefix, dtype, _ = find_best_blas_type((
+        regime_transition, predicted_joint_probabilities,
+        filtered_joint_probabilities))
+    func = prefix_kim_smoother_map[prefix]
+    func(nobs, k_regimes, order, regime_transition,
+         predicted_joint_probabilities.reshape(k_regimes**(order+1), nobs),
+         filtered_joint_probabilities.reshape(k_regimes**(order+1), nobs),
+         smoothed_joint_probabilities.reshape(k_regimes**(order+1), nobs))
 
     # Get smoothed marginal probabilities S_t | T by integrating out
     # S_{t-k+1}, S_{t-k+2}, ..., S_{t-1}
@@ -554,7 +625,7 @@ class MarkovSwitchingParams(object):
                     self.index_regime_purpose[j][k] = v
                     indices.append(v)
                     offset += self.k_parameters[k]
-                self.index_regime[j] = np.concatenate(indices)
+                self.index_regime[j] = np.concatenate(indices).astype(int)
         else:
             raise IndexError('Invalid index')
 
@@ -797,11 +868,14 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             forecasts.
         """
         if start is None:
-            start = 0
+            start = self._index[0]
 
-        # Handle start and end (e.g. dates)
-        start = self._get_predict_start(start)
-        end, out_of_sample = self._get_predict_end(end)
+        # Handle start, end
+        start, end, out_of_sample, prediction_index = (
+            self._get_prediction_index(start, end))
+
+        if out_of_sample > 0:
+            raise NotImplementedError
 
         # Perform in-sample prediction
         predict = self.predict_conditional(params)
@@ -827,7 +901,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         else:
             predict = squeezed
 
-        return predict[start:end + 1]
+        return predict[start:end + out_of_sample + 1]
 
     def predict_conditional(self, params):
         """
@@ -950,8 +1024,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             regime_transition = self.regime_transition_matrix(params)
 
         # Apply the smoother
-        return py_kim_smoother(regime_transition,
-                               filtered_marginal_probabilities,
+        return cy_kim_smoother(regime_transition,
                                predicted_joint_probabilities,
                                filtered_joint_probabilities)
 
@@ -1831,8 +1904,8 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         # Make into Pandas arrays if using Pandas data
         if isinstance(self.data, PandasData):
-            index = self.data.row_labels[self.order:]
-            if self.expected_durations.ndim > 1:                
+            index = self.data.row_labels
+            if self.expected_durations.ndim > 1:
                 self.expected_durations = pd.DataFrame(
                     self.expected_durations, index=index)
             self.predicted_marginal_probabilities = pd.DataFrame(
@@ -2173,9 +2246,9 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         mask = []
         for key, _mask in other_masks.items():
-            mask = np.r_[mask, _mask]
+            mask.extend(_mask)
         if len(mask) > 0:
-            table = make_table(self, mask.tolist(), 'Non-switching parameters')
+            table = make_table(self, mask, 'Non-switching parameters')
             summary.tables.append(table)
 
         # Transition parameters

@@ -171,38 +171,55 @@ class CheckIRF(object):
         self._check_irfs(self.irf.irfs, self.ref.irf)
         self._check_irfs(self.irf.orth_irfs, self.ref.orth_irf)
 
+
     def _check_irfs(self, py_irfs, r_irfs):
         for i, name in enumerate(self.res.names):
             ref_irfs = r_irfs[name].view((float, self.k), type=np.ndarray)
             res_irfs = py_irfs[:, :, i]
             assert_almost_equal(ref_irfs, res_irfs)
 
+
     def test_plot_irf(self):
         if not have_matplotlib():
             raise nose.SkipTest
 
+        import matplotlib.pyplot as plt
         self.irf.plot()
+        plt.close('all')
         self.irf.plot(plot_stderr=False)
+        plt.close('all')
 
         self.irf.plot(impulse=0, response=1)
+        plt.close('all')
         self.irf.plot(impulse=0)
+        plt.close('all')
         self.irf.plot(response=0)
+        plt.close('all')
 
         self.irf.plot(orth=True)
+        plt.close('all')
         self.irf.plot(impulse=0, response=1, orth=True)
         close_plots()
+
 
     def test_plot_cum_effects(self):
         if not have_matplotlib():
             raise nose.SkipTest
-
+        # I need close after every plot to avoid segfault, see #3158
+        import matplotlib.pyplot as plt
+        plt.close('all')
         self.irf.plot_cum_effects()
+        plt.close('all')
         self.irf.plot_cum_effects(plot_stderr=False)
+        plt.close('all')
         self.irf.plot_cum_effects(impulse=0, response=1)
+        plt.close('all')
 
         self.irf.plot_cum_effects(orth=True)
+        plt.close('all')
         self.irf.plot_cum_effects(impulse=0, response=1, orth=True)
         close_plots()
+
 
 class CheckFEVD(object):
 
@@ -514,7 +531,7 @@ class TestVARResultsLutkepohl(object):
         adj_data = np.diff(np.log(data), axis=0)
         # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
 
-        self.model = VAR(adj_data[:-16], dates=dates[1:-16], freq='Q')
+        self.model = VAR(adj_data[:-16], dates=dates[1:-16], freq='BQ-MAR')
         self.res = self.model.fit(maxlags=self.p)
         self.irf = self.res.irf(10)
         self.lut = E1_Results()

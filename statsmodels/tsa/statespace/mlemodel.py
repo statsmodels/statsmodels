@@ -11,19 +11,18 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
+from .simulation_smoother import SimulationSmoother
 from .kalman_smoother import KalmanSmoother, SmootherResults
-from .kalman_filter import (
-    KalmanFilter, FilterResults, PredictionResults, INVERT_UNIVARIATE, SOLVE_LU
-)
+from .kalman_filter import (KalmanFilter, FilterResults, INVERT_UNIVARIATE,
+                            SOLVE_LU)
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.wrapper as wrap
-from statsmodels.tools.numdiff import (
-    _get_epsilon, approx_hess_cs, approx_fprime_cs, approx_fprime
-)
+from statsmodels.tools.numdiff import (_get_epsilon, approx_hess_cs,
+                                       approx_fprime_cs, approx_fprime)
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 from statsmodels.tools.eval_measures import aic, bic, hqic
 from statsmodels.tools.tools import pinv_extended, Bunch
-from statsmodels.tools.sm_exceptions import PrecisionWarning
+from statsmodels.tools.sm_exceptions import PrecisionWarning, ValueWarning
 import statsmodels.genmod._prediction as pred
 from statsmodels.genmod.families.links import identity
 import warnings
@@ -129,7 +128,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         endog = self.endog.T
 
         # Instantiate the state space object
-        self.ssm = KalmanSmoother(endog.shape[0], self.k_states, **kwargs)
+        self.ssm = SimulationSmoother(endog.shape[0], self.k_states, **kwargs)
         # Bind the data to the model
         self.ssm.bind(endog)
 
@@ -299,7 +298,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             cov_type='opg', cov_kwds=None, method='lbfgs', maxiter=50,
             full_output=1, disp=5, callback=None, return_params=False,
             optim_score=None, optim_complex_step=None, optim_hessian=None,
-            **kwargs):
+            flags=None, **kwargs):
         """
         Fits the model by maximum likelihood via Kalman filter.
 
@@ -411,14 +410,6 @@ class MLEModel(tsbase.TimeSeriesModel):
             kwargs.setdefault('epsilon', 1e-5)
         elif optim_score is None:
             optim_score = 'approx'
-        elif optim_score not in ['harvey', 'approx']:
-            raise NotImplementedError('Invalid method for calculating the'
-                                      ' score.')
-
-        # Update the hessian method
-        if optim_hessian not in [None, 'opg', 'oim', 'approx']:
-            raise NotImplementedError('Invalid method for calculating the'
-                                      ' Hessian.')
 
         # Check for complex step differentiation
         if optim_complex_step is None:
@@ -432,11 +423,13 @@ class MLEModel(tsbase.TimeSeriesModel):
             start_params = self.untransform_params(np.array(start_params))
 
         # Maximum likelihood estimation
-        flags = {
+        if flags is None:
+            flags = {}
+        flags.update({
             'transformed': False,
             'score_method': optim_score,
             'approx_complex_step': optim_complex_step
-        }
+        })
         if optim_hessian is not None:
             flags['hessian_method'] = optim_hessian
         fargs = (flags,)
@@ -690,6 +683,26 @@ class MLEModel(tsbase.TimeSeriesModel):
         self.update(params, transformed=True, complex_step=complex_step)
 
         return self.ssm.loglikeobs(complex_step=complex_step, **kwargs)
+
+    def simulation_smoother(self, simulation_output=None, **kwargs):
+        r"""
+        Retrieve a simulation smoother for the state space model.
+
+        Parameters
+        ----------
+        simulation_output : int, optional
+            Determines which simulation smoother output is calculated.
+            Default is all (including state and disturbances).
+        **kwargs
+            Additional keyword arguments, used to set the simulation output.
+            See `set_simulation_output` for more details.
+
+        Returns
+        -------
+        SimulationSmoothResults
+        """
+        return self.ssm.simulation_smoother(
+            simulation_output=simulation_output, **kwargs)
 
     def _forecasts_error_partial_derivatives(self, params, transformed=True,
                                              approx_complex_step=None,
@@ -1433,12 +1446,10 @@ class MLEModel(tsbase.TimeSeriesModel):
         simulated_obs, simulated_states = self.ssm.simulate(
             nsimulations, measurement_shocks, state_shocks, initial_state)
 
-        # Simulated obs is (k_endog x nobs); don't want to squeeze in
-        # case of npredictions = 1
-        if simulated_obs.shape[0] == 1:
-            simulated_obs = simulated_obs[0, :]
-        else:
-            simulated_obs = simulated_obs.T
+        # Simulated obs is (nobs x k_endog); don't want to squeeze in
+        # case of nsimulations = 1
+        if simulated_obs.shape[1] == 1:
+            simulated_obs = simulated_obs[:, 0]
         return simulated_obs
 
     def impulse_responses(self, params, steps=1, impulse=0,
@@ -1487,8 +1498,14 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         """
         self.update(params)
-        return self.ssm.impulse_responses(
+        irfs = self.ssm.impulse_responses(
             steps, impulse, orthogonalized, cumulative, **kwargs)
+
+        # IRF is (nobs x k_endog); don't want to squeeze in case of steps = 1
+        if irfs.shape[1] == 1:
+            irfs = irfs[:, 0]
+
+        return irfs
 
     @classmethod
     def from_formula(cls, formula, data, subset=None):
@@ -1573,16 +1590,31 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             self.cov_kwds['cov_type'] = (
                 'Covariance matrix could not be calculated: singular.'
                 ' information matrix.')
+        self.model.update(self.params)
 
         # References of filter and smoother output
-        for name in ['filtered_state', 'filtered_state_cov', 'predicted_state',
-                     'predicted_state_cov', 'forecasts', 'forecasts_error',
-                     'forecasts_error_cov', 'smoothed_state',
-                     'smoothed_state_cov', 'smoothed_measurement_disturbance',
-                     'smoothed_state_disturbance',
-                     'smoothed_measurement_disturbance_cov',
-                     'smoothed_state_disturbance_cov']:
+        extra_arrays = [
+            'filtered_state', 'filtered_state_cov', 'predicted_state',
+            'predicted_state_cov', 'forecasts', 'forecasts_error',
+            'forecasts_error_cov', 'standardized_forecasts_error',
+            'scaled_smoothed_estimator',
+            'scaled_smoothed_estimator_cov', 'smoothing_error',
+            'smoothed_state',
+            'smoothed_state_cov', 'smoothed_state_autocov',
+            'smoothed_measurement_disturbance',
+            'smoothed_state_disturbance',
+            'smoothed_measurement_disturbance_cov',
+            'smoothed_state_disturbance_cov']
+        for name in extra_arrays:
             setattr(self, name, getattr(self.filter_results, name, None))
+
+        # Handle removing data
+        self._data_attr_model = getattr(self, '_data_attr_model', [])
+        self._data_attr_model.extend(['ssm'])
+        self._data_attr.extend(extra_arrays)
+        self._data_attr.extend(['filter_results', 'smoother_results'])
+        self.data_in_cache = getattr(self, 'data_in_cache', [])
+        self.data_in_cache.extend([])
 
     def _get_robustcov_results(self, cov_type='opg', **kwargs):
         """
@@ -1999,7 +2031,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Tests whether the sum-of-squares in the first third of the sample is
         significantly different than the sum-of-squares in the last third
-        of the sample. Analogous to a Goldfeld-Quandt test.
+        of the sample. Analogous to a Goldfeld-Quandt test. The null hypothesis
+        is of no heteroskedasticity.
 
         Parameters
         ----------
@@ -2096,13 +2129,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 denom_dof = len(denom_resid)
 
                 if numer_dof < 2:
-                    raise RuntimeError('Early subset of data has too few'
-                                       ' non-missing observations to'
-                                       ' calculate test statistic.')
+                    warnings.warn('Early subset of data for variable %d'
+                                  '  has too few non-missing observations to'
+                                  ' calculate test statistic.' % i)
+                    numer_resid = np.nan
                 if denom_dof < 2:
-                    raise RuntimeError('Later subset of data has too few'
-                                       ' non-missing observations to'
-                                       ' calculate test statistic.')
+                    warnings.warn('Later subset of data for variable %d'
+                                  '  has too few non-missing observations to'
+                                  ' calculate test statistic.' % i)
+                    denom_resid = np.nan
 
                 test_statistic = np.sum(numer_resid) / np.sum(denom_resid)
 
@@ -2217,7 +2252,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                       ' method.')
         return output
 
-    def get_prediction(self, start=None, end=None, dynamic=False, **kwargs):
+    def get_prediction(self, start=None, end=None, dynamic=False,
+                       index=None, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -2253,40 +2289,25 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             forecasts. An (npredict x k_endog) array.
         """
         if start is None:
-            start = 0
+            start = self.model._index[0]
 
-        # Handle start and end (e.g. dates)
-        start = self.model._get_predict_start(start)
-        end, out_of_sample = self.model._get_predict_end(end)
+        # Handle start, end, dynamic
+        start, end, out_of_sample, prediction_index = (
+            self.model._get_prediction_index(start, end, index))
 
-        # Handle string dynamic
-        dates = self.data.dates
+        # Handle `dynamic`
         if isinstance(dynamic, str):
-            if dates is None:
-                raise ValueError("Got a string for dynamic and dates is None")
-            dtdynamic = self.model._str_to_date(dynamic)
-            try:
-                dynamic_start = self.model._get_dates_loc(dates, dtdynamic)
-
-                dynamic = dynamic_start - start
-            except KeyError:
-                raise ValueError("Dynamic must be in dates. Got %s | %s" %
-                                 (str(dynamic), str(dtdynamic)))
+            dynamic, _, _ = self.model._get_index_loc(dynamic)
 
         # Perform the prediction
         # This is a (k_endog x npredictions) array; don't want to squeeze in
         # case of npredictions = 1
         prediction_results = self.filter_results.predict(
-            start, end+out_of_sample+1, dynamic, **kwargs
-        )
+            start, end + out_of_sample + 1, dynamic, **kwargs)
 
         # Return a new mlemodel.PredictionResults object
-        if self.data.dates is None:
-            row_labels = self.data.row_labels
-        else:
-            row_labels = self.data.predict_dates
-        return PredictionResultsWrapper(
-            PredictionResults(self, prediction_results, row_labels=row_labels))
+        return PredictionResultsWrapper(PredictionResults(
+            self, prediction_results, row_labels=prediction_index))
 
     def get_forecast(self, steps=1, **kwargs):
         """
@@ -2309,7 +2330,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Array of out of sample forecasts. A (steps x k_endog) array.
         """
         if isinstance(steps, (int, long)):
-            end = self.nobs+steps-1
+            end = self.nobs + steps - 1
         else:
             end = steps
         return self.get_prediction(start=self.nobs, end=end, **kwargs)
@@ -2540,7 +2561,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Bottom-left: QQ plot
         ax = fig.add_subplot(223)
         from statsmodels.graphics.gofplots import qqplot
-        qqplot(resid, line='s', ax=ax)
+        qqplot(resid_nonmissing, line='s', ax=ax)
         ax.set_title('Normal Q-Q')
 
         # Bottom-right: Correlogram
@@ -2586,11 +2607,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         if start is None:
             start = 0
-        if self.data.dates is not None:
-            dates = self.data.dates
-            d = dates[start]
+        if self.model._index_dates:
+            ix = self.model._index
+            d = ix[start]
             sample = ['%02d-%02d-%02d' % (d.month, d.day, d.year)]
-            d = dates[-1]
+            d = ix[-1]
             sample += ['- ' + '%02d-%02d-%02d' % (d.month, d.day, d.year)]
         else:
             sample = [str(start), ' - ' + str(self.model.nobs)]
@@ -2600,9 +2621,18 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             model_name = model.__class__.__name__
 
         # Diagnostic tests results
-        het = self.test_heteroskedasticity(method='breakvar')
-        lb = self.test_serial_correlation(method='ljungbox')
-        jb = self.test_normality(method='jarquebera')
+        try:
+            het = self.test_heteroskedasticity(method='breakvar')
+        except:
+            het = np.array([[np.nan]*2])
+        try:
+            lb = self.test_serial_correlation(method='ljungbox')
+        except:
+            lb = np.array([[np.nan]*2]).reshape(1, 2, 1)
+        try:
+            jb = self.test_normality(method='jarquebera')
+        except:
+            jb = np.array([[np.nan]*4])
 
         # Create the tables
         if not isinstance(model_name, list):
@@ -2718,9 +2748,7 @@ class PredictionResults(pred.PredictionResults):
             endog = pd.DataFrame(prediction_results.endog.T,
                                  columns=model.model.endog_names)
         self.model = Bunch(data=model.data.__class__(
-            endog=endog,
-            predict_dates=getattr(model.data, 'predict_dates', None)),
-        )
+            endog=endog, predict_dates=row_labels))
         self.prediction_results = prediction_results
 
         # Get required values
@@ -2758,19 +2786,16 @@ class PredictionResults(pred.PredictionResults):
             method, alpha, **kwds)
 
         # Create a dataframe
-        if self.model.data.predict_dates is not None:
-            conf_int = pd.DataFrame(conf_int,
-                                    index=self.model.data.predict_dates)
-        else:
-            conf_int = pd.DataFrame(conf_int)
+        if self.row_labels is not None:
+            conf_int = pd.DataFrame(conf_int, index=self.row_labels)
 
-        # Attach the endog names
-        ynames = self.model.data.ynames
-        if not type(ynames) == list:
-            ynames = [ynames]
-        names = (['lower %s' % name for name in ynames] +
-                 ['upper %s' % name for name in ynames])
-        conf_int.columns = names
+            # Attach the endog names
+            ynames = self.model.data.ynames
+            if not type(ynames) == list:
+                ynames = [ynames]
+            names = (['lower %s' % name for name in ynames] +
+                     ['upper %s' % name for name in ynames])
+            conf_int.columns = names
 
         return conf_int
 
@@ -2779,7 +2804,7 @@ class PredictionResults(pred.PredictionResults):
         # import pandas as pd
         from statsmodels.compat.collections import OrderedDict
         # ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
-        ci_mean = self.conf_int(alpha=alpha).values
+        ci_mean = np.asarray(self.conf_int(alpha=alpha))
         to_include = OrderedDict()
         if self.predicted_mean.ndim == 1:
             yname = self.model.data.ynames

@@ -11,8 +11,10 @@ def _check_period_index(x, freq="M"):
     if not isinstance(x.index, (DatetimeIndex, PeriodIndex)):
         raise ValueError("The index must be a DatetimeIndex or PeriodIndex")
 
-    from statsmodels.tsa.base.datetools import _infer_freq
-    inferred_freq = _infer_freq(x.index)
+    if x.index.freq is not None:
+        inferred_freq = x.index.freqstr
+    else:
+        inferred_freq = pd.infer_freq(x.index)
     if not inferred_freq.startswith(freq):
         raise ValueError("Expected frequency {}. Got {}".format(inferred_freq,
                                                                 freq))

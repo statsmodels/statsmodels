@@ -623,3 +623,12 @@ def test_miscellaneous():
     exog = pd.Series(np.arange(75), index=pd.date_range(start='1960-04-01', end='1978-10-01', freq='QS'))
     mod = CheckDynamicFactor()
     mod.setup_class(true=None, k_factors=1, factor_order=1, exog=exog, filter=False)
+
+
+def test_predict_custom_index():
+    np.random.seed(328423)
+    endog = pd.DataFrame(np.random.normal(size=(50, 2)))
+    mod = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=1)
+    res = mod.smooth(mod.start_params)
+    out = res.predict(start=1, end=1, index=['a'])
+    assert_equal(out.index.equals(pd.Index(['a'])), True)

@@ -58,14 +58,14 @@ class UnobservedComponents(MLEModel):
     trend : bool, optional
         Whether or not to include a trend component. Default is False. If True,
         `level` must also be True.
-    seasonal_period : int or None, optional
-        The period of the seasonal component. Default is None.
+    seasonal : int or None, optional
+        The period of the seasonal component, if any. Default is None.
     cycle : bool, optional
         Whether or not to include a cycle component. Default is False.
     ar : int or None, optional
         The order of the autoregressive component. Default is None.
     exog : array_like or None, optional
-        Exoenous variables.
+        Exogenous variables.
     irregular : bool, optional
         Whether or not to include an irregular component. Default is False.
     stochastic_level : bool, optional
@@ -92,7 +92,7 @@ class UnobservedComponents(MLEModel):
     Notes
     -----
 
-    Thse models take the general form (see [1]_ Chapter 3.2 for all details)
+    These models take the general form (see [1]_ Chapter 3.2 for all details)
 
     .. math::
 
@@ -448,9 +448,9 @@ class UnobservedComponents(MLEModel):
                 exog = np.asarray(exog)
 
             # Make sure we have 2-dimensional array
-            if exog.ndim == 1:
+            if exog.ndim < 2:
                 if not exog_is_using_pandas:
-                    exog = exog[:, None]
+                    exog = np.atleast_2d(exog).T
                 else:
                     exog = pd.DataFrame(exog)
 
@@ -490,6 +490,10 @@ class UnobservedComponents(MLEModel):
         )
         self.setup()
 
+        # Set as time-varying model if we have exog
+        if self.k_exog > 0:
+            self.ssm._time_invariant = False
+
         # Initialize the model
         self.ssm.loglikelihood_burn = loglikelihood_burn
 
@@ -526,7 +530,12 @@ class UnobservedComponents(MLEModel):
         # TODO: I think the kwargs or not attached, need to recover from ???
 
     def _get_init_kwds(self):
+        # Get keywords based on model attributes
         kwds = super(UnobservedComponents, self)._get_init_kwds()
+
+        # Modifications
+        kwds['seasonal'] = self.seasonal_period
+        kwds['autoregressive'] = self.ar_order
 
         for key, value in kwds.items():
             if value is None and hasattr(self.ssm, key):
@@ -693,9 +702,10 @@ class UnobservedComponents(MLEModel):
         endog = self.endog
         exog = self.exog
         if np.any(np.isnan(endog)):
-            endog = endog[~np.isnan(endog)]
+            mask = ~np.isnan(endog).squeeze()
+            endog = endog[mask]
             if exog is not None:
-                exog = exog[~np.isnan(endog)]
+                exog = exog[mask]
 
         # Level / trend variances
         # (Use the HP filter to get initial estimates of variances)
@@ -716,10 +726,10 @@ class UnobservedComponents(MLEModel):
         # Regression
         if self.regression and self.mle_regression:
             _start_params['reg_coeff'] = (
-                np.linalg.pinv(self.exog).dot(resid).tolist()
+                np.linalg.pinv(exog).dot(resid).tolist()
             )
             resid = np.squeeze(
-                resid - np.dot(self.exog, _start_params['reg_coeff'])
+                resid - np.dot(exog, _start_params['reg_coeff'])
             )
 
         # Autoregressive
@@ -1359,7 +1369,7 @@ class UnobservedComponentsResults(MLEResults):
 
             # Get the predicted values and confidence intervals
             predict = self.filter_results.forecasts[0]
-            std_errors = np.sqrt(self.filter_results.forecasts_error_cov[0,0])
+            std_errors = np.sqrt(self.filter_results.forecasts_error_cov[0, 0])
             ci_lower = predict - critical_value * std_errors
             ci_upper = predict + critical_value * std_errors
 
@@ -1369,7 +1379,7 @@ class UnobservedComponentsResults(MLEResults):
             ci_poly = ax.fill_between(
                 dates[llb:], ci_lower[llb:], ci_upper[llb:], alpha=0.2
             )
-            ci_label = '$%.3g \\%%$ confidence interval' % ((1 - alpha)*100)
+            ci_label = '$%.3g \\%%$ confidence interval' % ((1 - alpha) * 100)
 
             # Proxy artist for fill_between legend entry
             # See e.g. http://matplotlib.org/1.3.1/users/legend_guide.html
@@ -1426,12 +1436,12 @@ class UnobservedComponentsResults(MLEResults):
         if llb > 0:
             text = ('Note: The first %d observations are not shown, due to'
                     ' approximate diffuse initialization.')
-            fig.text(0.1, 0.01, text % llb, fontsize='large');
+            fig.text(0.1, 0.01, text % llb, fontsize='large')
 
         return fig
 
-    def predict(self, start=None, end=None, exog=None, dynamic=False,
-                **kwargs):
+    def get_prediction(self, start=None, end=None, dynamic=False, index=None,
+                       exog=None, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -1474,11 +1484,11 @@ class UnobservedComponentsResults(MLEResults):
             Array of out of sample forecasts.
         """
         if start is None:
-            start = 0
+            start = self.model._index[0]
 
         # Handle end (e.g. date)
-        _start = self.model._get_predict_start(start)
-        _end, _out_of_sample = self.model._get_predict_end(end)
+        _start, _end, _out_of_sample, prediction_index = (
+            self.model._get_prediction_index(start, end, index, silent=True))
 
         # Handle exogenous parameters
         if _out_of_sample and self.model.k_exog > 0:
@@ -1522,34 +1532,9 @@ class UnobservedComponentsResults(MLEResults):
             warn('Exogenous array provided to predict, but additional data not'
                  ' required. `exog` argument ignored.', ValueWarning)
 
-        return super(UnobservedComponentsResults, self).predict(
-            start=start, end=end, exog=exog, dynamic=dynamic, **kwargs
-        )
-
-    def forecast(self, steps=1, exog=None, **kwargs):
-        """
-        Out-of-sample forecasts
-
-        Parameters
-        ----------
-        steps : int, optional
-            The number of out of sample forecasts from the end of the
-            sample. Default is 1.
-        exog : array_like, optional
-            If the model includes exogenous regressors, you must provide
-            exactly enough out-of-sample values for the exogenous variables for
-            each step forecasted.
-        **kwargs
-            Additional arguments may required for forecasting beyond the end
-            of the sample. See `FilterResults.predict` for more details.
-
-        Returns
-        -------
-        forecast : array
-            Array of out of sample forecasts.
-        """
-        return super(UnobservedComponentsResults, self).forecast(
-            steps, exog=exog, **kwargs)
+        return super(UnobservedComponentsResults, self).get_prediction(
+            start=start, end=end, dynamic=dynamic, index=index, exog=exog,
+            **kwargs)
 
     def summary(self, alpha=.05, start=None):
         # Create the model name
