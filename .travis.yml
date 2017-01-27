@@ -1,10 +1,10 @@
 # Travis script that uses miniconda in place of the system installed python
-# versions.  Allows substantial flexability for choosing versions of
+# versions.  Allows substantial flexibility for choosing versions of
 # required packages and is simpler to use to test up-to-date scientific Python
 # stack
-language: python
+dist: trusty
 sudo: required
-
+language: python
 
 env:
   # Default values for common packages, override as needed
@@ -13,6 +13,7 @@ env:
     - COVERAGE=false
     - USEMPL=true
     - MATPLOTLIB=
+    - NOSE=false
     - DOCBUILD=false
 
 matrix:
@@ -22,7 +23,6 @@ matrix:
     env:
     - PYTHON=2.7
     - NUMPY=1.11
-    - PANDAS=0.19
     - MATPLOTLIB=1.5
     - COVERAGE=true
   - python: 2.7
@@ -55,14 +55,15 @@ matrix:
     - SCIPY=0.17
     - PANDAS=0.18
     - MATPLOTLIB=1.5
+    - NOSE=true
+  - python: 2.7
+    env:
+    - PYTHON=3.6
+    - NOSE=true
   - python: 2.7
     env:
     - PYTHON=3.6
     - COVERAGE=true
-  - python: 2.7
-    env:
-    - PYTHON=3.6
-    - DOCBUILD=true
 
 notifications:
   email:
@@ -91,25 +92,37 @@ before_install:
   - PKGS="${PKGS} pandas"; if [ ${PANDAS} ]; then PKGS="${PKGS}=${PANDAS}"; fi
   - PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}=${CYTHON}"; fi
   - if [ ${USEMPL} = true ]; then PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi; fi
-  - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} nose pip pyyaml setuptools
+  - if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --cov-config=.travis_coveragerc --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
+  # Ensure tests are correctly gathered by xdist
+  - export PYTHONHASHSEED=0
+  - echo conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} nose pyyaml
+  - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} nose pyyaml
   - source activate statsmodels-test
-  - if [ ${COVERAGE} = true ]; then pip install coverage coveralls; fi
+  - pip install pytest pytest-xdist
+  - if [ ${COVERAGE} = true ]; then pip install codecov coverage coveralls pytest-cov; fi
   - if [ ${DOCBUILD} = true ]; then bash tools/ci_docbuild_install.sh; fi;
+  - export SRCDIR=$PWD
+
 
 # Install packages
 install:
+  - python setup.py build_ext --inplace
   - python setup.py develop
 
 script:
-  - export SRCDIR=$PWD
-  - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; bash ${SRCDIR}/tools/ci_docbuild.sh; exit 0; fi;
-  - mkdir -p "${SRCDIR}/travis-test"; cd "${SRCDIR}/travis-test"
   # Show versions
   - python -c 'import statsmodels.api as sm; sm.show_versions();'
   # Compose a script to run testing with coverage
-  - echo 'import statsmodels as sm; a=sm.test(label="full", verbose=3); import sys; sys.exit((len(a.failures)+len(a.errors))>0)' > test.py
-  - if [ ${COVERAGE} = true ]; then coverage run --rcfile=${SRCDIR}/.travis_coveragerc test.py; else python test.py; fi
+  - |
+    if [ ${NOSE} = true ]
+      then echo nosetests statsmodels
+      nosetests -v statsmodels
+    else
+      echo pytest -s -v ${COVERAGE_OPTS} statsmodels
+      pytest -s -v ${COVERAGE_OPTS} statsmodels
+    fi
 
 after_success:
   # Coverage only for 2.7
   - if [ ${COVERAGE} = true ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi
+  - if [ ${COVERAGE} = true ]; then codecov; fi
