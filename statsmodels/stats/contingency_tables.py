@@ -2522,7 +2522,7 @@ class MultipleResponseTable(object):
         """
         Test for MMI between single and multiple response vars w/ Bonferroni
 
-        MMI stands for "marginal mutual independence".
+        MMI stands for "multiple marginal independence".
 
         First calculate a full item response table comparing the single
         response variable versus each level of the multiple response
@@ -2571,7 +2571,7 @@ class MultipleResponseTable(object):
         """
         Test for MMI between single and multiple response vars w/ Rao Scott
 
-        MMI stands for "marginal mutual independence".
+        MMI stands for "multiple marginal independence".
 
         See [1]_ for information about the second order
         Rao Scott correction.
