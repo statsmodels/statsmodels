@@ -28,14 +28,14 @@ class CheckGenericMixin(object):
         self.predict_kwds = {}
 
     @classmethod
-    def setup_class(self):
-
+    def setup_class(cls):
         nobs = 500
         np.random.seed(987689)
         x = np.random.randn(nobs, 3)
         x = sm.add_constant(x)
-        self.exog = x
-        self.xf = 0.25 * np.ones((2, 4))
+        cls.exog = x
+        cls.xf = 0.25 * np.ones((2, 4))
+        cls.predict_kwds = {}
 
     def test_ttest_tvalues(self):
         # test that t_test has same results a params, bse, tvalues, ...
@@ -352,7 +352,7 @@ class CheckAnovaMixin(object):
         import statsmodels.stats.tests.test_anova as ttmod
 
         test = ttmod.TestAnova3()
-        test.setupClass()
+        test.setup_class()
 
         cls.data = test.data.drop([0,1,2])
         cls.initialize()

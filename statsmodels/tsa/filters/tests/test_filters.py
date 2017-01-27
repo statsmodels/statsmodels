@@ -593,7 +593,7 @@ def test_hpfilter_pandas():
 
 class TestFilters(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         # even
         data = [-50, 175, 149, 214, 247, 237, 225, 329, 729, 809,
                 530, 489, 540, 457, 195, 176, 337, 239, 128, 102,

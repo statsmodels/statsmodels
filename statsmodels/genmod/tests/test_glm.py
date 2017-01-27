@@ -644,7 +644,7 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
 
 class TestGlmPoissonOffset(CheckModelResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         from .results.results_glm import Cpunish_offset
         from statsmodels.datasets.cpunish import load
         cls.decimal_params = DECIMAL_4
@@ -1596,65 +1596,61 @@ class CheckTweedie(object):
 
 class TestTweediePower15(CheckTweedie):
     @classmethod
-    def setupClass(self):
+    def setup_class(cls):
         from .results.results_glm import CpunishTweediePower15
         from statsmodels.datasets.cpunish import load_pandas
-        self.data = load_pandas()
-        self.exog = self.data.exog[['INCOME', 'SOUTH']]
-        self.endog = self.data.endog
-        family_link = sm.families.Tweedie(link=sm.families.links.Power(1),
-                                          var_power=1.5)
-        self.res1 = sm.GLM(endog=self.data.endog,
-                           exog=self.data.exog[['INCOME', 'SOUTH']],
+        cls.data = load_pandas()
+        cls.exog = cls.data.exog[['INCOME', 'SOUTH']]
+        cls.endog = cls.data.endog
+        family_link = sm.families.Tweedie(var_power=1.5, link_power=1.)
+        cls.res1 = sm.GLM(endog=cls.data.endog,
+                           exog=cls.data.exog[['INCOME', 'SOUTH']],
                            family=family_link).fit()
-        self.res2 = CpunishTweediePower15()
+        cls.res2 = CpunishTweediePower15()
 
 
 class TestTweediePower2(CheckTweedie):
     @classmethod
-    def setupClass(self):
+    def setup_class(cls):
         from .results.results_glm import CpunishTweediePower2
         from statsmodels.datasets.cpunish import load_pandas
-        self.data = load_pandas()
-        self.exog = self.data.exog[['INCOME', 'SOUTH']]
-        self.endog = self.data.endog
-        family_link = sm.families.Tweedie(link=sm.families.links.Power(1),
-                                          var_power=2.)
-        self.res1 = sm.GLM(endog=self.data.endog,
-                           exog=self.data.exog[['INCOME', 'SOUTH']],
+        cls.data = load_pandas()
+        cls.exog = cls.data.exog[['INCOME', 'SOUTH']]
+        cls.endog = cls.data.endog
+        family_link = sm.families.Tweedie(var_power=2., link_power=1.)
+        cls.res1 = sm.GLM(endog=cls.data.endog,
+                           exog=cls.data.exog[['INCOME', 'SOUTH']],
                            family=family_link).fit()
-        self.res2 = CpunishTweediePower2()
+        cls.res2 = CpunishTweediePower2()
 
 
 class TestTweedieLog1(CheckTweedie):
     @classmethod
-    def setupClass(self):
+    def setup_class(cls):
         from .results.results_glm import CpunishTweedieLog1
         from statsmodels.datasets.cpunish import load_pandas
-        self.data = load_pandas()
-        self.exog = self.data.exog[['INCOME', 'SOUTH']]
-        self.endog = self.data.endog
-        family_link = sm.families.Tweedie(link=sm.families.links.log(),
-                                          var_power=1.)
-        self.res1 = sm.GLM(endog=self.data.endog,
-                           exog=self.data.exog[['INCOME', 'SOUTH']],
+        cls.data = load_pandas()
+        cls.exog = cls.data.exog[['INCOME', 'SOUTH']]
+        cls.endog = cls.data.endog
+        family_link = sm.families.Tweedie(var_power=1., link_power=0.)
+        cls.res1 = sm.GLM(endog=cls.data.endog,
+                           exog=cls.data.exog[['INCOME', 'SOUTH']],
                            family=family_link).fit()
-        self.res2 = CpunishTweedieLog1()
+        cls.res2 = CpunishTweedieLog1()
 
 
 class TestTweedieLog15Fair(CheckTweedie):
     @classmethod
-    def setupClass(self):
+    def setup_class(cls):
         from .results.results_glm import FairTweedieLog15
         from statsmodels.datasets.fair import load_pandas
         data = load_pandas()
-        family_link = sm.families.Tweedie(link=sm.families.links.log(),
-                                          var_power=1.5)
-        self.res1 = sm.GLM(endog=data.endog,
+        family_link = sm.families.Tweedie(var_power=1.5, link_power=0.)
+        cls.res1 = sm.GLM(endog=data.endog,
                            exog=data.exog[['rate_marriage', 'age',
                                            'yrs_married']],
                            family=family_link).fit()
-        self.res2 = FairTweedieLog15()
+        cls.res2 = FairTweedieLog15()
 
 
 class CheckTweedieSpecial(object):
@@ -1676,73 +1672,69 @@ class CheckTweedieSpecial(object):
 
 class TestTweedieSpecialLog0(CheckTweedieSpecial):
     @classmethod
-    def setupClass(self):
+    def setup_class(cls):
         from statsmodels.datasets.cpunish import load_pandas
-        self.data = load_pandas()
-        self.exog = self.data.exog[['INCOME', 'SOUTH']]
-        self.endog = self.data.endog
-        family1 = sm.families.Gaussian(link=sm.families.links.log())
-        self.res1 = sm.GLM(endog=self.data.endog,
-                           exog=self.data.exog[['INCOME', 'SOUTH']],
+        cls.data = load_pandas()
+        cls.exog = cls.data.exog[['INCOME', 'SOUTH']]
+        cls.endog = cls.data.endog
+        family1 = sm.families.Gaussian(link=sm.families.links.log)
+        cls.res1 = sm.GLM(endog=cls.data.endog,
+                           exog=cls.data.exog[['INCOME', 'SOUTH']],
                            family=family1).fit()
-        family2 = sm.families.Tweedie(link=sm.families.links.log(),
-                                      var_power=0)
-        self.res2 = sm.GLM(endog=self.data.endog,
-                           exog=self.data.exog[['INCOME', 'SOUTH']],
+        family2 = sm.families.Tweedie(var_power=0, link_power=0)
+        cls.res2 = sm.GLM(endog=cls.data.endog,
+                           exog=cls.data.exog[['INCOME', 'SOUTH']],
                            family=family2).fit()
 
 
 class TestTweedieSpecialLog1(CheckTweedieSpecial):
     @classmethod
-    def setupClass(self):
+    def setup_class(cls):
         from statsmodels.datasets.cpunish import load_pandas
-        self.data = load_pandas()
-        self.exog = self.data.exog[['INCOME', 'SOUTH']]
-        self.endog = self.data.endog
-        family1 = sm.families.Poisson(link=sm.families.links.log())
-        self.res1 = sm.GLM(endog=self.data.endog,
-                           exog=self.data.exog[['INCOME', 'SOUTH']],
+        cls.data = load_pandas()
+        cls.exog = cls.data.exog[['INCOME', 'SOUTH']]
+        cls.endog = cls.data.endog
+        family1 = sm.families.Poisson(link=sm.families.links.log)
+        cls.res1 = sm.GLM(endog=cls.data.endog,
+                           exog=cls.data.exog[['INCOME', 'SOUTH']],
                            family=family1).fit()
-        family2 = sm.families.Tweedie(link=sm.families.links.log(),
-                                      var_power=1)
-        self.res2 = sm.GLM(endog=self.data.endog,
-                           exog=self.data.exog[['INCOME', 'SOUTH']],
+        family2 = sm.families.Tweedie(var_power=1, link_power=0)
+        cls.res2 = sm.GLM(endog=cls.data.endog,
+                           exog=cls.data.exog[['INCOME', 'SOUTH']],
                            family=family2).fit()
 
 
 class TestTweedieSpecialLog2(CheckTweedieSpecial):
     @classmethod
-    def setupClass(self):
+    def setup_class(cls):
         from statsmodels.datasets.cpunish import load_pandas
-        self.data = load_pandas()
-        self.exog = self.data.exog[['INCOME', 'SOUTH']]
-        self.endog = self.data.endog
-        family1 = sm.families.Gamma(link=sm.families.links.log())
-        self.res1 = sm.GLM(endog=self.data.endog,
-                           exog=self.data.exog[['INCOME', 'SOUTH']],
+        cls.data = load_pandas()
+        cls.exog = cls.data.exog[['INCOME', 'SOUTH']]
+        cls.endog = cls.data.endog
+        family1 = sm.families.Gamma(link=sm.families.links.log)
+        cls.res1 = sm.GLM(endog=cls.data.endog,
+                           exog=cls.data.exog[['INCOME', 'SOUTH']],
                            family=family1).fit()
-        family2 = sm.families.Tweedie(link=sm.families.links.log(),
-                                      var_power=2)
-        self.res2 = sm.GLM(endog=self.data.endog,
-                           exog=self.data.exog[['INCOME', 'SOUTH']],
+        family2 = sm.families.Tweedie(var_power=2, link_power=0)
+        cls.res2 = sm.GLM(endog=cls.data.endog,
+                           exog=cls.data.exog[['INCOME', 'SOUTH']],
                            family=family2).fit()
 
 
 class TestTweedieSpecialLog3(CheckTweedieSpecial):
     @classmethod
-    def setupClass(self):
+    def setup_class(cls):
         from statsmodels.datasets.cpunish import load_pandas
-        self.data = load_pandas()
-        self.exog = self.data.exog[['INCOME', 'SOUTH']]
-        self.endog = self.data.endog
-        family1 = sm.families.InverseGaussian(link=sm.families.links.log())
-        self.res1 = sm.GLM(endog=self.data.endog,
-                           exog=self.data.exog[['INCOME', 'SOUTH']],
+        cls.data = load_pandas()
+        cls.exog = cls.data.exog[['INCOME', 'SOUTH']]
+        cls.endog = cls.data.endog
+        family1 = sm.families.InverseGaussian(link=sm.families.links.log)
+        cls.res1 = sm.GLM(endog=cls.data.endog,
+                           exog=cls.data.exog[['INCOME', 'SOUTH']],
                            family=family1).fit()
-        family2 = sm.families.Tweedie(link=sm.families.links.log(),
-                                      var_power=3)
-        self.res2 = sm.GLM(endog=self.data.endog,
-                           exog=self.data.exog[['INCOME', 'SOUTH']],
+        family2 = sm.families.Tweedie(var_power=3, link_power=0)
+        cls.res2 = sm.GLM(endog=cls.data.endog,
+                           exog=cls.data.exog[['INCOME', 'SOUTH']],
                            family=family2).fit()
 
 

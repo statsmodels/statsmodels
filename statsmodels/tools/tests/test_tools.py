@@ -466,7 +466,7 @@ def test_chain_dot():
 
 class TestNanDot(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         nan = np.nan
         cls.mx_1 = np.array([[nan, 1.], [2., 3.]])
         cls.mx_2 = np.array([[nan, nan], [2., 3.]])
@@ -536,7 +536,7 @@ class TestNanDot(object):
 
 class TestEnsure2d(TestCase):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         x = np.arange(400.0).reshape((100,4))
         cls.df = pd.DataFrame(x, columns = ['a','b','c','d'])
         cls.series = cls.df.iloc[:,0]

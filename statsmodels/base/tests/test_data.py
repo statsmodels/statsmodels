@@ -8,7 +8,7 @@ from statsmodels.formula import handle_formula_data
 
 #class TestDates(object):
 #    @classmethod
-#    def setupClass(cls):
+#    def setup_class(cls):
 #        nrows = 10
 #        cls.dates_result = cls.dates_results = np.random.random(nrows)
 #
@@ -18,7 +18,7 @@ from statsmodels.formula import handle_formula_data
 
 class TestArrays(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = np.random.random(10)
         cls.exog = np.c_[np.ones(10), np.random.random((10,2))]
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
@@ -63,8 +63,8 @@ class TestArrays(object):
 
 class TestArrays2dEndog(TestArrays):
     @classmethod
-    def setupClass(cls):
-        super(TestArrays2dEndog, cls).setupClass()
+    def setup_class(cls):
+        super(TestArrays2dEndog, cls).setup_class()
         cls.endog = np.random.random((10,1))
         cls.exog = np.c_[np.ones(10), np.random.random((10,2))]
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
@@ -77,8 +77,8 @@ class TestArrays2dEndog(TestArrays):
 
 class TestArrays1dExog(TestArrays):
     @classmethod
-    def setupClass(cls):
-        super(TestArrays1dExog, cls).setupClass()
+    def setup_class(cls):
+        super(TestArrays1dExog, cls).setup_class()
         cls.endog = np.random.random(10)
         exog =  np.random.random(10)
         cls.data = sm_data.handle_data(cls.endog, exog)
@@ -93,7 +93,7 @@ class TestArrays1dExog(TestArrays):
 
 class TestDataFrames(TestArrays):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = pandas.DataFrame(np.random.random(10), columns=['y_1'])
         exog =  pandas.DataFrame(np.random.random((10,2)),
                                  columns=['x_1','x_2'])
@@ -139,8 +139,8 @@ class TestDataFrames(TestArrays):
 
 class TestLists(TestArrays):
     @classmethod
-    def setupClass(cls):
-        super(TestLists, cls).setupClass()
+    def setup_class(cls):
+        super(TestLists, cls).setup_class()
         cls.endog = np.random.random(10).tolist()
         cls.exog = np.c_[np.ones(10), np.random.random((10,2))].tolist()
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
@@ -148,8 +148,8 @@ class TestLists(TestArrays):
 
 class TestRecarrays(TestArrays):
     @classmethod
-    def setupClass(cls):
-        super(TestRecarrays, cls).setupClass()
+    def setup_class(cls):
+        super(TestRecarrays, cls).setup_class()
         cls.endog = np.random.random(9).view([('y_1',
                                          'f8')]).view(np.recarray)
         exog = np.random.random(9*3).view([('const', 'f8'),('x_1', 'f8'),
@@ -167,8 +167,8 @@ class TestRecarrays(TestArrays):
 
 class TestStructarrays(TestArrays):
     @classmethod
-    def setupClass(cls):
-        super(TestStructarrays, cls).setupClass()
+    def setup_class(cls):
+        super(TestStructarrays, cls).setup_class()
         cls.endog = np.random.random(9).view([('y_1',
                                          'f8')]).view(np.recarray)
         exog = np.random.random(9*3).view([('const', 'f8'),('x_1', 'f8'),
@@ -186,7 +186,7 @@ class TestStructarrays(TestArrays):
 
 class TestListDataFrame(TestDataFrames):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = np.random.random(10).tolist()
 
         exog =  pandas.DataFrame(np.random.random((10,2)),
@@ -221,7 +221,7 @@ class TestListDataFrame(TestDataFrames):
 
 class TestDataFrameList(TestDataFrames):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = pandas.DataFrame(np.random.random(10), columns=['y_1'])
 
         exog =  pandas.DataFrame(np.random.random((10,2)),
@@ -256,7 +256,7 @@ class TestDataFrameList(TestDataFrames):
 
 class TestArrayDataFrame(TestDataFrames):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = np.random.random(10)
 
         exog =  pandas.DataFrame(np.random.random((10,2)),
@@ -291,7 +291,7 @@ class TestArrayDataFrame(TestDataFrames):
 
 class TestDataFrameArray(TestDataFrames):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = pandas.DataFrame(np.random.random(10), columns=['y_1'])
 
         exog =  pandas.DataFrame(np.random.random((10,2)),
@@ -326,7 +326,7 @@ class TestDataFrameArray(TestDataFrames):
 
 class TestSeriesDataFrame(TestDataFrames):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = pandas.Series(np.random.random(10), name='y_1')
 
         exog =  pandas.DataFrame(np.random.random((10,2)),
@@ -357,7 +357,7 @@ class TestSeriesDataFrame(TestDataFrames):
 
 class TestSeriesSeries(TestDataFrames):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = pandas.Series(np.random.random(10), name='y_1')
 
         exog =  pandas.Series(np.random.random(10), name='x_1')
@@ -410,7 +410,7 @@ def test_alignment():
 
 class TestMultipleEqsArrays(TestArrays):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = np.random.random((10,4))
         cls.exog = np.c_[np.ones(10), np.random.random((10,2))]
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
@@ -445,7 +445,7 @@ class TestMultipleEqsArrays(TestArrays):
 
 class TestMultipleEqsDataFrames(TestDataFrames):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.endog = endog = pandas.DataFrame(np.random.random((10,4)),
                                      columns=['y_1', 'y_2', 'y_3', 'y_4'])
         exog =  pandas.DataFrame(np.random.random((10,2)),
@@ -496,7 +496,7 @@ class TestMultipleEqsDataFrames(TestDataFrames):
 
 class TestMissingArray(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         X = np.random.random((25,4))
         y = np.random.random(25)
         y[10] = np.nan
@@ -562,7 +562,7 @@ class TestMissingArray(object):
 
 class TestMissingPandas(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         X = np.random.random((25,4))
         y = np.random.random(25)
         y[10] = np.nan
@@ -624,7 +624,7 @@ class TestMissingPandas(object):
 
 class TestConstant(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         from statsmodels.datasets.longley import load_pandas
         cls.data = load_pandas()
 

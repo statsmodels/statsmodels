@@ -26,7 +26,7 @@ WIN32 = os.name == 'nt' and sys.maxsize < 2**33
 
 class TestPCA(TestCase):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         rs = np.random.RandomState()
         rs.seed(1234)
         k = 3

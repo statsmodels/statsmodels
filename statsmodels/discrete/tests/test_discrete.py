@@ -323,7 +323,7 @@ class CheckMargEff(object):
 class TestProbitNewton(CheckBinaryResults):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Probit(data.endog, data.exog).fit(method="newton", disp=0)
@@ -338,7 +338,7 @@ class TestProbitNewton(CheckBinaryResults):
 class TestProbitBFGS(CheckBinaryResults):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Probit(data.endog, data.exog).fit(method="bfgs",
@@ -350,7 +350,7 @@ class TestProbitBFGS(CheckBinaryResults):
 
 class TestProbitNM(CheckBinaryResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -361,7 +361,7 @@ class TestProbitNM(CheckBinaryResults):
 
 class TestProbitPowell(CheckBinaryResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -372,7 +372,7 @@ class TestProbitPowell(CheckBinaryResults):
 
 class TestProbitCG(CheckBinaryResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -399,7 +399,7 @@ class TestProbitCG(CheckBinaryResults):
 
 class TestProbitNCG(CheckBinaryResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -412,7 +412,7 @@ class TestProbitNCG(CheckBinaryResults):
 
 class TestProbitBasinhopping(CheckBinaryResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         if not has_basinhopping:
             raise SkipTest("Skipped TestProbitBasinhopping since"
                            " basinhopping solver is not available")
@@ -493,7 +493,7 @@ class CheckLikelihoodModelL1(object):
 
 class TestProbitL1(CheckLikelihoodModelL1):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
         alpha = np.array([0.1, 0.2, 0.3, 10]) #/ data.exog.shape[0]
@@ -511,7 +511,7 @@ class TestProbitL1(CheckLikelihoodModelL1):
 
 class TestMNLogitL1(CheckLikelihoodModelL1):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         anes_data = sm.datasets.anes96.load()
         anes_exog = anes_data.exog
         anes_exog = sm.add_constant(anes_exog, prepend=False)
@@ -528,7 +528,7 @@ class TestMNLogitL1(CheckLikelihoodModelL1):
 
 class TestLogitL1(CheckLikelihoodModelL1):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
         cls.alpha = 3 * np.array([0., 1., 1., 1.]) #/ data.exog.shape[0]
@@ -546,9 +546,9 @@ class TestLogitL1(CheckLikelihoodModelL1):
 
 class TestCVXOPT(object):
     @classmethod
-    def setupClass(self):
-        self.data = sm.datasets.spector.load()
-        self.data.exog = sm.add_constant(self.data.exog, prepend=True)
+    def setup_class(cls):
+        cls.data = sm.datasets.spector.load()
+        cls.data.exog = sm.add_constant(cls.data.exog, prepend=True)
 
     def test_cvxopt_versus_slsqp(self):
         #Compares resutls from cvxopt to the standard slsqp
@@ -567,7 +567,7 @@ class TestCVXOPT(object):
 
 class TestSweepAlphaL1(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
         cls.model = Logit(data.endog, data.exog)
@@ -644,7 +644,7 @@ class CheckL1Compatability(object):
 
 class TestPoissonL1Compatability(CheckL1Compatability):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.kvars = 10 # Number of variables
         cls.m = 7 # Number of unregularized parameters
         rand_data = sm.datasets.randhie.load()
@@ -664,7 +664,7 @@ class TestPoissonL1Compatability(CheckL1Compatability):
 
 class TestNegativeBinomialL1Compatability(CheckL1Compatability):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.kvars = 10 # Number of variables
         cls.m = 7 # Number of unregularized parameters
         rand_data = sm.datasets.randhie.load()
@@ -689,7 +689,7 @@ class TestNegativeBinomialL1Compatability(CheckL1Compatability):
 
 class TestNegativeBinomialGeoL1Compatability(CheckL1Compatability):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.kvars = 10 # Number of variables
         cls.m = 7 # Number of unregularized parameters
         rand_data = sm.datasets.randhie.load()
@@ -714,7 +714,7 @@ class TestNegativeBinomialGeoL1Compatability(CheckL1Compatability):
 
 class TestLogitL1Compatability(CheckL1Compatability):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.kvars = 4 # Number of variables
         cls.m = 3 # Number of unregularized parameters
         data = sm.datasets.spector.load()
@@ -731,7 +731,7 @@ class TestLogitL1Compatability(CheckL1Compatability):
 
 class TestMNLogitL1Compatability(CheckL1Compatability):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.kvars = 4 # Number of variables
         cls.m = 3 # Number of unregularized parameters
         data = sm.datasets.spector.load()
@@ -761,7 +761,7 @@ class TestMNLogitL1Compatability(CheckL1Compatability):
 
 class TestProbitL1Compatability(CheckL1Compatability):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.kvars = 4 # Number of variables
         cls.m = 3 # Number of unregularized parameters
         data = sm.datasets.spector.load()
@@ -810,7 +810,7 @@ class TestL1AlphaZeroLogit(CompareL11D):
     Compares l1 model with alpha = 0 to the unregularized model.
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
         cls.res1 = Logit(data.endog, data.exog).fit_regularized(
@@ -824,7 +824,7 @@ class TestL1AlphaZeroProbit(CompareL11D):
     Compares l1 model with alpha = 0 to the unregularized model.
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
         cls.res1 = Probit(data.endog, data.exog).fit_regularized(
@@ -835,7 +835,7 @@ class TestL1AlphaZeroProbit(CompareL11D):
 
 class TestL1AlphaZeroMNLogit(CompareL1):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.anes96.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = MNLogit(data.endog, data.exog).fit_regularized(
@@ -848,7 +848,7 @@ class TestL1AlphaZeroMNLogit(CompareL1):
 
 class TestLogitNewton(CheckBinaryResults, CheckMargEff):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Logit(data.endog, data.exog).fit(method="newton", disp=0)
@@ -940,7 +940,7 @@ class TestLogitNewtonPrepend(CheckMargEff):
 
 class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -950,7 +950,7 @@ class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
 
 class TestPoissonNewton(CheckModelResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Poisson(data.endog, exog).fit(method='newton', disp=0)
@@ -986,7 +986,7 @@ class TestPoissonNewton(CheckModelResults):
 
 class TestNegativeBinomialNB2Newton(CheckModelResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial(data.endog, exog, 'nb2').fit(method='newton', disp=0)
@@ -1038,7 +1038,7 @@ class TestNegativeBinomialNB2Newton(CheckModelResults):
 
 class TestNegativeBinomialNB1Newton(CheckModelResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(
@@ -1078,7 +1078,7 @@ class TestNegativeBinomialNB1Newton(CheckModelResults):
 
 class TestNegativeBinomialNB2BFGS(CheckModelResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial(data.endog, exog, 'nb2').fit(
@@ -1133,7 +1133,7 @@ class TestNegativeBinomialNB2BFGS(CheckModelResults):
 
 class TestNegativeBinomialNB1BFGS(CheckModelResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(method="bfgs",
@@ -1179,7 +1179,7 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
     """
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial(data.endog, exog, 'geometric').fit(method='bfgs', disp=0)
@@ -1343,7 +1343,7 @@ class CheckMNLogitBaseZero(CheckModelResults):
 
 class TestMNLogitNewtonBaseZero(CheckMNLogitBaseZero):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
 
         data = sm.datasets.anes96.load()
         cls.data = data
@@ -1356,7 +1356,7 @@ class TestMNLogitNewtonBaseZero(CheckMNLogitBaseZero):
 
 class TestMNLogitLBFGSBaseZero(CheckMNLogitBaseZero):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.anes96.load()
         cls.data = data
         exog = data.exog

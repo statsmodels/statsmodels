@@ -33,15 +33,15 @@ class RemoveDataPickle(object):
         self.predict_kwds = {}
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
 
         nobs = 10000
         np.random.seed(987689)
         x = np.random.randn(nobs, 3)
         x = sm.add_constant(x)
-        self.exog = x
-        self.xf = 0.25 * np.ones((2, 4))
-        self.l_max = 20000
+        cls.exog = x
+        cls.xf = 0.25 * np.ones((2, 4))
+        cls.l_max = 20000
 
     def test_remove_data_pickle(self):
         import pandas as pd
