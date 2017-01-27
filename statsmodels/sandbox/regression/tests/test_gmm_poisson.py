@@ -126,7 +126,7 @@ class CheckGMM(object):
 class TestGMMAddOnestep(CheckGMM):
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         XLISTEXOG2 = 'aget aget2 educyr actlim totchr'.split()
 
         endog_name = 'docvis'
@@ -141,7 +141,7 @@ class TestGMMAddOnestep(CheckGMM):
         endog, exog, instrument = lmap(asarray, [endog, exog, instrument])
 
 
-        self.bse_tol = [5e-6, 5e-7]
+        cls.bse_tol = [5e-6, 5e-7]
         q_tol = [0.04, 0]
         # compare to Stata default options, iterative GMM
         # with const at end
@@ -153,16 +153,16 @@ class TestGMMAddOnestep(CheckGMM):
         res0 = mod.fit(start, maxiter=0, inv_weights=w0inv,
                         optim_method='bfgs', optim_args={'gtol':1e-8, 'disp': 0},
                         wargs={'centered':False})
-        self.res1 = res0
+        cls.res1 = res0
 
         from .results_gmm_poisson import results_addonestep as results
-        self.res2 = results
+        cls.res2 = results
 
 
 class TestGMMAddTwostep(CheckGMM):
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         XLISTEXOG2 = 'aget aget2 educyr actlim totchr'.split()
 
         endog_name = 'docvis'
@@ -177,7 +177,7 @@ class TestGMMAddTwostep(CheckGMM):
         endog, exog, instrument = lmap(asarray, [endog, exog, instrument])
 
 
-        self.bse_tol = [5e-6, 5e-7]
+        cls.bse_tol = [5e-6, 5e-7]
         # compare to Stata default options, iterative GMM
         # with const at end
         start = OLS(np.log(endog+1), exog).fit().params
@@ -188,17 +188,17 @@ class TestGMMAddTwostep(CheckGMM):
         res0 = mod.fit(start, maxiter=2, inv_weights=w0inv,
                         optim_method='bfgs', optim_args={'gtol':1e-8, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
-        self.res1 = res0
+        cls.res1 = res0
 
         from .results_gmm_poisson import results_addtwostep as results
-        self.res2 = results
+        cls.res2 = results
 
 
 class TestGMMMultOnestep(CheckGMM):
     #compares has_optimal_weights=True with Stata's has_optimal_weights=False
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         # compare to Stata default options, twostep GMM
         XLISTEXOG2 = 'aget aget2 educyr actlim totchr'.split()
 
@@ -218,9 +218,9 @@ class TestGMMMultOnestep(CheckGMM):
         exog_ = np.column_stack((endog, exog))
 
 
-        self.bse_tol = [5e-6, 5e-7]
-        self.q_tol = [0.04, 0]
-        self.j_tol = [0.04, 0]
+        cls.bse_tol = [5e-6, 5e-7]
+        cls.q_tol = [0.04, 0]
+        cls.j_tol = [0.04, 0]
         # compare to Stata default options, iterative GMM
         # with const at end
         start = OLS(endog, exog).fit().params
@@ -231,16 +231,16 @@ class TestGMMMultOnestep(CheckGMM):
         res0 = mod.fit(start, maxiter=0, inv_weights=w0inv,
                         optim_method='bfgs', optim_args={'gtol':1e-8, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
-        self.res1 = res0
+        cls.res1 = res0
 
         from .results_gmm_poisson import results_multonestep as results
-        self.res2 = results
+        cls.res2 = results
 
 class TestGMMMultTwostep(CheckGMM):
     #compares has_optimal_weights=True with Stata's has_optimal_weights=False
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         # compare to Stata default options, twostep GMM
         XLISTEXOG2 = 'aget aget2 educyr actlim totchr'.split()
 
@@ -260,7 +260,7 @@ class TestGMMMultTwostep(CheckGMM):
         exog_ = np.column_stack((endog, exog))
 
 
-        self.bse_tol = [5e-6, 5e-7]
+        cls.bse_tol = [5e-6, 5e-7]
         # compare to Stata default options, iterative GMM
         # with const at end
         start = OLS(endog, exog).fit().params
@@ -271,10 +271,10 @@ class TestGMMMultTwostep(CheckGMM):
         res0 = mod.fit(start, maxiter=2, inv_weights=w0inv,
                         optim_method='bfgs', optim_args={'gtol':1e-8, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
-        self.res1 = res0
+        cls.res1 = res0
 
         from .results_gmm_poisson import results_multtwostep as results
-        self.res2 = results
+        cls.res2 = results
 
 
 class TestGMMMultTwostepDefault(CheckGMM):
@@ -282,7 +282,7 @@ class TestGMMMultTwostepDefault(CheckGMM):
     # agreement is not very high, maybe vce(unadjusted) is different after all
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         # compare to Stata default options, twostep GMM
         XLISTEXOG2 = 'aget aget2 educyr actlim totchr'.split()
 
@@ -302,8 +302,8 @@ class TestGMMMultTwostepDefault(CheckGMM):
         exog_ = np.column_stack((endog, exog))
 
 
-        self.bse_tol = [0.004, 5e-4]
-        self.params_tol = [5e-5, 5e-5]
+        cls.bse_tol = [0.004, 5e-4]
+        cls.params_tol = [5e-5, 5e-5]
         # compare to Stata default options, iterative GMM
         # with const at end
         start = OLS(endog, exog).fit().params
@@ -315,17 +315,17 @@ class TestGMMMultTwostepDefault(CheckGMM):
                         optim_method='bfgs', optim_args={'gtol':1e-8, 'disp': 0},
                         #wargs={'centered':True}, has_optimal_weights=True
                        )
-        self.res1 = res0
+        cls.res1 = res0
 
         from .results_gmm_poisson import results_multtwostepdefault as results
-        self.res2 = results
+        cls.res2 = results
 
 
 class TestGMMMultTwostepCenter(CheckGMM):
     #compares my defaults with the same options in Stata
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         # compare to Stata default options, twostep GMM
         XLISTEXOG2 = 'aget aget2 educyr actlim totchr'.split()
 
@@ -345,8 +345,8 @@ class TestGMMMultTwostepCenter(CheckGMM):
         exog_ = np.column_stack((endog, exog))
 
 
-        self.bse_tol = [5e-4, 5e-5]
-        self.params_tol = [5e-5, 5e-5]
+        cls.bse_tol = [5e-4, 5e-5]
+        cls.params_tol = [5e-5, 5e-5]
         q_tol = [5e-5, 1e-8]
         # compare to Stata default options, iterative GMM
         # with const at end
@@ -359,10 +359,10 @@ class TestGMMMultTwostepCenter(CheckGMM):
                         optim_method='bfgs', optim_args={'gtol':1e-8, 'disp': 0},
                         wargs={'centered':True}, has_optimal_weights=False
                        )
-        self.res1 = res0
+        cls.res1 = res0
 
         from .results_gmm_poisson import results_multtwostepcenter as results
-        self.res2 = results
+        cls.res2 = results
 
     def test_more(self):
 

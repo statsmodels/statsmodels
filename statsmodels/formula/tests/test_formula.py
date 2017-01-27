@@ -16,7 +16,7 @@ longley_formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
 class CheckFormulaOLS(object):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.data = load()
 
     def test_endog_names(self):
@@ -46,26 +46,26 @@ class CheckFormulaOLS(object):
 
 class TestFormulaPandas(CheckFormulaOLS):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = load_pandas().data
         cls.model = ols(longley_formula, data)
-        super(TestFormulaPandas, cls).setupClass()
+        super(TestFormulaPandas, cls).setup_class()
 
 
 class TestFormulaDict(CheckFormulaOLS):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = dict((k, v.tolist()) for k, v in iteritems(load_pandas().data))
         cls.model = ols(longley_formula, data)
-        super(TestFormulaDict, cls).setupClass()
+        super(TestFormulaDict, cls).setup_class()
 
 
 class TestFormulaRecArray(CheckFormulaOLS):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = load().data
         cls.model = ols(longley_formula, data)
-        super(TestFormulaRecArray, cls).setupClass()
+        super(TestFormulaRecArray, cls).setup_class()
 
 
 def test_tests():

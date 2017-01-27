@@ -102,7 +102,7 @@ class CheckWeight(object):
 
 class TestGlmPoissonPlain(CheckWeight):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         self = cls # alias
 
         self.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
@@ -114,7 +114,7 @@ class TestGlmPoissonPlain(CheckWeight):
 
 class TestGlmPoissonFwNr(CheckWeight):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         self = cls # alias
 
         fweights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
@@ -129,7 +129,7 @@ class TestGlmPoissonFwNr(CheckWeight):
 
 class TestGlmPoissonAwNr(CheckWeight):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         self = cls # alias
 
         fweights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
@@ -156,7 +156,7 @@ class TestGlmPoissonAwNr(CheckWeight):
 # prob_weights fail with HC, not properly implemented yet
 class T_estGlmPoissonPwNr(CheckWeight):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         self = cls # alias
 
         fweights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
@@ -175,7 +175,7 @@ class T_estGlmPoissonPwNr(CheckWeight):
 
 class TestGlmPoissonFwHC(CheckWeight):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         self = cls # alias
 
         fweights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
@@ -195,7 +195,7 @@ class TestGlmPoissonFwHC(CheckWeight):
 # var_weights (aweights fail with HC, not properly implemented yet
 class TestGlmPoissonAwHC(CheckWeight):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         self = cls # alias
 
         fweights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
@@ -220,7 +220,7 @@ class TestGlmPoissonAwHC(CheckWeight):
 
 class TestGlmPoissonFwClu(CheckWeight):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         self = cls # alias
 
         fweights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
