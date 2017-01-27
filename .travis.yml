@@ -101,24 +101,27 @@ before_install:
   - PKGS="${PKGS} pandas"; if [ ${PANDAS} ]; then PKGS="${PKGS}=${PANDAS}"; fi
   - PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}=${CYTHON}"; fi
   - if [ ${USEMPL} = true ]; then PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi; fi
+  - if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --cov-config=.travis_coveragerc --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
 
 # Install packages
 install:
-  - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} nose pip pyyaml setuptools
+  - echo conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} nose pyyaml
+  - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} nose pyyaml
   - source activate statsmodels-test
-  - if [ ${COVERAGE} = true ]; then pip install coverage coveralls; fi
-  - python setup.py install
+  - pip install pytest pytest-xdist
+  - if [ ${COVERAGE} = true ]; then pip install codecov coverage coveralls pytest-cov; fi
+  - python setup.py build_ext --inplace
+  - python setup.py develop
 
 script:
   - SRCDIR=$PWD
-  - python setup.py install
-  - mkdir -p "${SRCDIR}/travis-test"; cd "${SRCDIR}/travis-test"
   # Show versions
   - python -c 'import statsmodels.api as sm; sm.show_versions();'
   # Compose a script to run testing with coverage
-  - echo 'import statsmodels as sm; a=sm.test(label="full", verbose=3); import sys; sys.exit((len(a.failures)+len(a.errors))>0)' > test.py
-  - if [ ${COVERAGE} = true ]; then coverage run --rcfile=${SRCDIR}/.travis_coveragerc test.py; else python test.py; fi
+  - echo pytest --skip-slow -n auto ${COVERAGE_OPTS} statsmodels
+  - pytest --skip-slow -n auto ${COVERAGE_OPTS} statsmodels
 
 after_success:
   # Coverage only for 2.7
   - if [ ${COVERAGE} = true ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi
+  - if [ ${COVERAGE} = true ]; then codecov; fi
