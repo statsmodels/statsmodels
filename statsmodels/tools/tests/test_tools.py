@@ -172,31 +172,32 @@ def test_estimable():
 
 class TestCategoricalNumerical(object):
     #TODO: use assert_raises to check that bad inputs are taken care of
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         #import string
         stringabc = 'abcdefghijklmnopqrstuvwxy'
-        self.des = np.random.randn(25,2)
-        self.instr = np.floor(np.arange(10,60, step=2)/10)
+        cls.des = np.random.randn(25,2)
+        cls.instr = np.floor(np.arange(10,60, step=2)/10)
         x=np.zeros((25,5))
         x[:5,0]=1
         x[5:10,1]=1
         x[10:15,2]=1
         x[15:20,3]=1
         x[20:25,4]=1
-        self.dummy = x
+        cls.dummy = x
         structdes = np.zeros((25,1),dtype=[('var1', 'f4'),('var2', 'f4'),
                     ('instrument','f4'),('str_instr','a10')])
-        structdes['var1'] = self.des[:,0][:,None]
-        structdes['var2'] = self.des[:,1][:,None]
-        structdes['instrument'] = self.instr[:,None]
+        structdes['var1'] = cls.des[:,0][:,None]
+        structdes['var2'] = cls.des[:,1][:,None]
+        structdes['instrument'] = cls.instr[:,None]
         string_var = [stringabc[0:5], stringabc[5:10],
                 stringabc[10:15], stringabc[15:20],
                 stringabc[20:25]]
         string_var *= 5
-        self.string_var = np.array(sorted(string_var))
-        structdes['str_instr'] = self.string_var[:,None]
-        self.structdes = structdes
-        self.recdes = structdes.view(np.recarray)
+        cls.string_var = np.array(sorted(string_var))
+        structdes['str_instr'] = cls.string_var[:,None]
+        cls.structdes = structdes
+        cls.recdes = structdes.view(np.recarray)
 
     def test_array2d(self):
         des = np.column_stack((self.des, self.instr, self.des))

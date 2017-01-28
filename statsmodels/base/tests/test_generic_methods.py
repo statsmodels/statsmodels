@@ -24,9 +24,6 @@ import platform
 
 class CheckGenericMixin(object):
 
-    def __init__(self):
-        self.predict_kwds = {}
-
     @classmethod
     def setup_class(cls):
         nobs = 500
