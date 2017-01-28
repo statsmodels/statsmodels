@@ -309,11 +309,12 @@ def test_cochranq():
 
 class CheckStratifiedMixin(object):
 
-    def initialize(self, tables):
-        self.rslt = ctab.StratifiedTable(tables)
-        self.rslt_0 = ctab.StratifiedTable(tables, shift_zeros=True)
+    @classmethod
+    def initialize(cls, tables):
+        cls.rslt = ctab.StratifiedTable(tables)
+        cls.rslt_0 = ctab.StratifiedTable(tables, shift_zeros=True)
         tables_pandas = [pd.DataFrame(x) for x in tables]
-        self.rslt_pandas = ctab.StratifiedTable(tables_pandas)
+        cls.rslt_pandas = ctab.StratifiedTable(tables_pandas)
 
 
     def test_oddsratio_pooled(self):
@@ -392,8 +393,8 @@ class TestStratified1(CheckStratifiedMixin):
     rslt = mantelhaen.test(data)
     """
 
-    def __init__(self):
-
+    @classmethod
+    def setup_class(cls):
         tables = [None] * 5
         tables[0] = np.array([[0, 0], [6, 5]])
         tables[1] = np.array([[3, 0], [3, 6]])
@@ -401,14 +402,14 @@ class TestStratified1(CheckStratifiedMixin):
         tables[3] = np.array([[5, 6], [1, 0]])
         tables[4] = np.array([[2, 5], [0, 0]])
 
-        self.initialize(tables)
+        cls.initialize(tables)
 
-        self.oddsratio_pooled = 7
-        self.logodds_pooled = np.log(7)
-        self.mh_stat = 3.9286
-        self.mh_pvalue = 0.04747
-        self.or_lcb = 1.026713
-        self.or_ucb = 47.725133
+        cls.oddsratio_pooled = 7
+        cls.logodds_pooled = np.log(7)
+        cls.mh_stat = 3.9286
+        cls.mh_pvalue = 0.04747
+        cls.or_lcb = 1.026713
+        cls.or_ucb = 47.725133
 
 
 class TestStratified2(CheckStratifiedMixin):
@@ -422,7 +423,8 @@ class TestStratified2(CheckStratifiedMixin):
     rslt = mantelhaen.test(data)
     """
 
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         tables = [None] * 5
         tables[0] = np.array([[20, 14], [10, 24]])
         tables[1] = np.array([[15, 12], [3, 15]])
@@ -430,16 +432,16 @@ class TestStratified2(CheckStratifiedMixin):
         tables[3] = np.array([[12, 3], [7, 5]])
         tables[4] = np.array([[1, 0], [3, 2]])
 
-        self.initialize(tables)
+        cls.initialize(tables)
 
-        self.oddsratio_pooled = 3.5912
-        self.logodds_pooled = np.log(3.5912)
+        cls.oddsratio_pooled = 3.5912
+        cls.logodds_pooled = np.log(3.5912)
 
-        self.mh_stat = 11.8852
-        self.mh_pvalue = 0.0005658
+        cls.mh_stat = 11.8852
+        cls.mh_pvalue = 0.0005658
 
-        self.or_lcb = 1.781135
-        self.or_ucb = 7.240633
+        cls.or_lcb = 1.781135
+        cls.or_ucb = 7.240633
 
 
 class TestStratified3(CheckStratifiedMixin):
@@ -454,8 +456,8 @@ class TestStratified3(CheckStratifiedMixin):
     rslt = mantelhaen.test(data)
     """
 
-    def __init__(self):
-
+    @classmethod
+    def setup_class(cls):
         tables = [None] * 6
         tables[0] = np.array([[313, 512], [19, 89]])
         tables[1] = np.array([[207, 353], [8, 17]])
@@ -464,26 +466,26 @@ class TestStratified3(CheckStratifiedMixin):
         tables[4] = np.array([[138, 53], [299, 94]])
         tables[5] = np.array([[351, 22], [317, 24]])
 
-        self.initialize(tables)
+        cls.initialize(tables)
 
-        self.oddsratio_pooled = 1.101879
-        self.logodds_pooled = np.log(1.101879)
+        cls.oddsratio_pooled = 1.101879
+        cls.logodds_pooled = np.log(1.101879)
 
-        self.mh_stat = 1.3368
-        self.mh_pvalue = 0.2476
+        cls.mh_stat = 1.3368
+        cls.mh_pvalue = 0.2476
 
-        self.or_lcb = 0.9402012
-        self.or_ucb = 1.2913602
+        cls.or_lcb = 0.9402012
+        cls.or_ucb = 1.2913602
 
-        self.or_homog = 18.83297
-        self.or_homog_p = 0.002064786
+        cls.or_homog = 18.83297
+        cls.or_homog_p = 0.002064786
 
 
 class Check2x2Mixin(object):
-
-    def initialize(self):
-        self.tbl_obj = ctab.Table2x2(self.table)
-        self.tbl_data_obj = ctab.Table2x2.from_data(self.data)
+    @classmethod
+    def initialize(cls):
+        cls.tbl_obj = ctab.Table2x2(cls.table)
+        cls.tbl_data_obj = ctab.Table2x2.from_data(cls.data)
 
     def test_oddsratio(self):
         assert_allclose(self.tbl_obj.oddsratio, self.oddsratio)
@@ -550,28 +552,26 @@ class Check2x2Mixin(object):
 
 class Test2x2_1(Check2x2Mixin):
 
-    def __init__(self):
-
+    @classmethod
+    def setup_class(cls):
         data = np.zeros((8, 2))
         data[:, 0] = [0, 0, 1, 1, 0, 0, 1, 1]
         data[:, 1] = [0, 1, 0, 1, 0, 1, 0, 1]
-        self.data = np.asarray(data)
-        self.table = np.asarray([[2, 2], [2, 2]])
+        cls.data = np.asarray(data)
+        cls.table = np.asarray([[2, 2], [2, 2]])
 
-        self.initialize()
-
-        self.oddsratio = 1.
-        self.log_oddsratio = 0.
-        self.log_oddsratio_se = np.sqrt(2)
-        self.oddsratio_confint = [0.062548836166112329, 15.987507702689751]
-        self.oddsratio_pvalue = 1.
-        self.riskratio = 1.
-        self.log_riskratio = 0.
-        self.log_riskratio_se = 1 / np.sqrt(2)
-        self.riskratio_pvalue = 1.
-        self.riskratio_confint = [0.25009765325990629,
+        cls.oddsratio = 1.
+        cls.log_oddsratio = 0.
+        cls.log_oddsratio_se = np.sqrt(2)
+        cls.oddsratio_confint = [0.062548836166112329, 15.987507702689751]
+        cls.oddsratio_pvalue = 1.
+        cls.riskratio = 1.
+        cls.log_riskratio = 0.
+        cls.log_riskratio_se = 1 / np.sqrt(2)
+        cls.riskratio_pvalue = 1.
+        cls.riskratio_confint = [0.25009765325990629,
                                   3.9984381579173824]
-        self.log_riskratio_confint = [-1.3859038243496782,
+        cls.log_riskratio_confint = [-1.3859038243496782,
                                       1.3859038243496782]
         ss = [  '               Estimate   SE   LCB    UCB   p-value',
                 '---------------------------------------------------',
@@ -580,4 +580,5 @@ class Test2x2_1(Check2x2Mixin):
                 'Risk ratio        1.000        0.250  3.998   1.000',
                 'Log risk ratio    0.000 0.707 -1.386  1.386   1.000',
                 '---------------------------------------------------']
-        self.summary_string = '\n'.join(ss)
+        cls.summary_string = '\n'.join(ss)
+        cls.initialize()

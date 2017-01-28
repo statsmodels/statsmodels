@@ -12,18 +12,20 @@ class GenRes(object):
     Reads in the data and creates class instance to be tested
 
     """
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         data = star98.load()
         desc_stat_data = data.exog[:50, 5]
         mv_desc_stat_data = data.exog[:50, 5:7]  # mv = multivariate
-        self.res1 = DescStat(desc_stat_data)
-        self.res2 = DescStatRes()
-        self.mvres1 = DescStat(mv_desc_stat_data)
+        cls.res1 = DescStat(desc_stat_data)
+        cls.res2 = DescStatRes()
+        cls.mvres1 = DescStat(mv_desc_stat_data)
 
 
 class TestDescriptiveStatistics(GenRes):
-    def __init__(self):
-        super(TestDescriptiveStatistics, self).__init__()
+    @classmethod
+    def setup_class(cls):
+        super(TestDescriptiveStatistics, cls).setup_class()
 
     def test_test_mean(self):
         assert_almost_equal(self.res1.test_mean(14),
