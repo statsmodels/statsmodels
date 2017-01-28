@@ -7,7 +7,7 @@ import string
 import numpy as np
 import numpy.random as R
 import numpy.linalg as L
-from numpy.testing import *
+from numpy.testing import TestCase, assert_almost_equal, assert_equal
 
 from statsmodels.sandbox import formula #, contrast #, utils
 from statsmodels.sandbox import contrast_old as contrast

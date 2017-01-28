@@ -4,7 +4,7 @@ Test functions for models.robust.scale
 
 import numpy as np
 from numpy.random import standard_normal
-from numpy.testing import *
+from numpy.testing import assert_almost_equal, assert_equal, run_module_suite
 
 # Example from Section 5.5, Venables & Ripley (2002)
 
