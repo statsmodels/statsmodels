@@ -137,7 +137,7 @@ class CheckBinaryResults(CheckModelResults):
         assert_almost_equal(self.res1.resid_generalized,
                             self.res2.resid_generalized, DECIMAL_4)
 
-    def smoke_test_resid_response(self):
+    def test_resid_response_smoke(self):
         self.res1.resid_response
 
 
