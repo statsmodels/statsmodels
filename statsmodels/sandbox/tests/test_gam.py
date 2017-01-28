@@ -133,8 +133,8 @@ class CheckGAM(CheckAM):
 
 class BaseAM(object):
 
-    def __init__(self):
-
+    @classmethod
+    def setup_class(cls):
         #DGP: simple polynomial
         order = 3
         nobs = 200
@@ -150,18 +150,19 @@ class BaseAM(object):
         #z = y_true #alias check
         #d = x
 
-        self.nobs = nobs
-        self.y_true, self.x, self.exog = y_true, x, exog_reduced
+        cls.nobs = nobs
+        cls.y_true, cls.x, cls.exog = y_true, x, exog_reduced
 
 
 
 class TestAdditiveModel(BaseAM, CheckAM):
 
-    def __init__(self):
-        super(self.__class__, self).__init__() #initialize DGP
+    @classmethod
+    def setup_class(cls):
+        super(TestAdditiveModel, cls).setup_class() #initialize DGP
 
-        nobs = self.nobs
-        y_true, x, exog = self.y_true, self.x, self.exog
+        nobs = cls.nobs
+        y_true, x, exog = cls.y_true, cls.x, cls.exog
 
         np.random.seed(8765993)
         sigma_noise = 0.1
@@ -174,9 +175,9 @@ class TestAdditiveModel(BaseAM, CheckAM):
         res_ols = OLS(y, exog).fit()
 
         #Note: there still are some naming inconsistencies
-        self.res1 = res1 = Dummy() #for gam model
+        cls.res1 = res1 = Dummy() #for gam model
         #res2 = Dummy() #for benchmark
-        self.res2 = res2 = res_ols  #reuse existing ols results, will add additional
+        cls.res2 = res2 = res_ols  #reuse existing ols results, will add additional
 
         res1.y_pred = res_gam.predict(x)
         res2.y_pred = res_ols.model.predict(res_ols.params, exog)
@@ -191,37 +192,38 @@ class TestAdditiveModel(BaseAM, CheckAM):
 
 class BaseGAM(BaseAM, CheckGAM):
 
-    def init(self):
-        nobs = self.nobs
-        y_true, x, exog = self.y_true, self.x, self.exog
-        if not hasattr(self, 'scale'):
+    @classmethod
+    def init(cls):
+        nobs = cls.nobs
+        y_true, x, exog = cls.y_true, cls.x, cls.exog
+        if not hasattr(cls, 'scale'):
             scale = 1
         else:
-            scale = self.scale
+            scale = cls.scale
 
-        f = self.family
+        f = cls.family
 
-        self.mu_true = mu_true = f.link.inverse(y_true)
+        cls.mu_true = mu_true = f.link.inverse(y_true)
 
         np.random.seed(8765993)
         #y_obs = np.asarray([stats.poisson.rvs(p) for p in mu], float)
-        if issubclass(get_class(self.rvs), stats.rv_discrete):
+        if issubclass(get_class(cls.rvs), stats.rv_discrete):
             # Discrete distributions don't take `scale`.
-            y_obs = self.rvs(mu_true, size=nobs)
+            y_obs = cls.rvs(mu_true, size=nobs)
         else:
-            y_obs = self.rvs(mu_true, scale=scale, size=nobs)
+            y_obs = cls.rvs(mu_true, scale=scale, size=nobs)
         m = GAM(y_obs, x, family=f)  #TODO: y_obs is twice __init__ and fit
         m.fit(y_obs, maxiter=100)
         res_gam = m.results
-        self.res_gam = res_gam   #attached for debugging
-        self.mod_gam = m   #attached for debugging
+        cls.res_gam = res_gam   #attached for debugging
+        cls.mod_gam = m   #attached for debugging
 
         res_glm = GLM(y_obs, exog, family=f).fit()
 
         #Note: there still are some naming inconsistencies
-        self.res1 = res1 = Dummy() #for gam model
+        cls.res1 = res1 = Dummy() #for gam model
         #res2 = Dummy() #for benchmark
-        self.res2 = res2 = res_glm  #reuse existing glm results, will add additional
+        cls.res2 = res2 = res_glm  #reuse existing glm results, will add additional
 
         #eta in GLM terminology
         res2.y_pred = res_glm.model.predict(res_glm.params, exog, linear=True)
@@ -240,23 +242,25 @@ class BaseGAM(BaseAM, CheckGAM):
 
 class TestGAMPoisson(BaseGAM):
 
-    def __init__(self):
-        super(self.__class__, self).__init__() #initialize DGP
+    @classmethod
+    def setup_class(cls):
+        super(TestGAMPoisson, cls).setup_class() #initialize DGP
 
-        self.family =  family.Poisson()
-        self.rvs = stats.poisson.rvs
+        cls.family =  family.Poisson()
+        cls.rvs = stats.poisson.rvs
 
-        self.init()
+        cls.init()
 
 class TestGAMBinomial(BaseGAM):
 
-    def __init__(self):
-        super(self.__class__, self).__init__() #initialize DGP
+    @classmethod
+    def setup_class(cls):
+        super(TestGAMBinomial, cls).setup_class() #initialize DGP
 
-        self.family =  family.Binomial()
-        self.rvs = stats.bernoulli.rvs
+        cls.family =  family.Binomial()
+        cls.rvs = stats.bernoulli.rvs
 
-        self.init()
+        cls.init()
 
 class _estGAMGaussianLogLink(BaseGAM):
     #test failure, but maybe precision issue, not far off
@@ -267,36 +271,39 @@ class _estGAMGaussianLogLink(BaseGAM):
     #>>> np.mean((tt.res2.mu_pred - tt.mu_true)**2)/tt.mu_true.mean()
     #0.022989403735692578
 
-    def __init__(self):
-        super(self.__class__, self).__init__() #initialize DGP
+    @classmethod
+    def setup_class(cls):
+        super(_estGAMGaussianLogLink, cls).setup_class() #initialize DGP
 
-        self.family =  family.Gaussian(links.log)
-        self.rvs = stats.norm.rvs
-        self.scale = 5
+        cls.family =  family.Gaussian(links.log)
+        cls.rvs = stats.norm.rvs
+        cls.scale = 5
 
-        self.init()
+        cls.init()
 
 
 class TestGAMGamma(BaseGAM):
 
-    def __init__(self):
-        super(self.__class__, self).__init__() #initialize DGP
+    @classmethod
+    def setup_class(cls):
+        super(TestGAMGamma, cls).setup_class() #initialize DGP
 
-        self.family =  family.Gamma(links.log)
-        self.rvs = stats.gamma.rvs
+        cls.family =  family.Gamma(links.log)
+        cls.rvs = stats.gamma.rvs
 
-        self.init()
+        cls.init()
 
 class _estGAMNegativeBinomial(BaseGAM):
     #rvs generation doesn't work, nbinom needs 2 parameters
 
-    def __init__(self):
-        super(self.__class__, self).__init__() #initialize DGP
+    @classmethod
+    def setup_class(cls):
+        super(_estGAMNegativeBinomial, cls).setup_class() #initialize DGP
 
-        self.family =  family.NegativeBinomial()
-        self.rvs = stats.nbinom.rvs
+        cls.family =  family.NegativeBinomial()
+        cls.rvs = stats.nbinom.rvs
 
-        self.init()
+        cls.init()
 
 if __name__ == '__main__':
     t1 = TestAdditiveModel()

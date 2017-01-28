@@ -16,7 +16,7 @@ from statsmodels.discrete.discrete_model import Poisson
 import statsmodels.stats.tests.test_anova as ttmod
 
 test = ttmod.TestAnova3()
-test.setupClass()
+test.setup_class()
 
 data = test.data.drop([0,1,2])
 res_ols = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", data).fit(use_t=False)

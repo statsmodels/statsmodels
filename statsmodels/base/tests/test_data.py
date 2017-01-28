@@ -5,6 +5,10 @@ import pandas.util.testing as ptesting
 
 from statsmodels.base import data as sm_data
 from statsmodels.formula import handle_formula_data
+from statsmodels.regression.linear_model import OLS
+from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.genmod import families
+from statsmodels.discrete.discrete_model import Logit
 
 #class TestDates(object):
 #    @classmethod
@@ -770,34 +774,35 @@ class CheckHasConstant(object):
         cls.exogs = (x1, x2, x3, x4, x5, x5b, x5c, x6, x7)
         cls.results = (result1, result2, result3, result4, result5, result5b,
                        result5c, result6, result7)
+        cls._initialize()
 
 
 class TestHasConstantOLS(CheckHasConstant):
 
-    def __init__(self):
-        self.setup_class()  # why does nose do it properly
-        from statsmodels.regression.linear_model import OLS
-        self.mod = OLS
-        self.y = self.y_c
+    @classmethod
+    def _initialize(cls):
+
+        cls.mod = OLS
+        cls.y = cls.y_c
 
 
 class TestHasConstantGLM(CheckHasConstant):
 
-    def __init__(self):
-        self.setup_class()  # why does nose do it properly
-        from statsmodels.genmod.generalized_linear_model import GLM
-        from statsmodels.genmod import families
-        self.mod = lambda y, x : GLM(y, x, family=families.Binomial())
-        self.y = self.y_bin
+    @staticmethod
+    def mod(y, x):
+        return GLM(y, x, family=families.Binomial())
+
+    @classmethod
+    def _initialize(cls):
+        cls.y = cls.y_bin
 
 class TestHasConstantLogit(CheckHasConstant):
 
-    def __init__(self):
-        self.setup_class()  # why does nose do it properly
-        from statsmodels.discrete.discrete_model import Logit
-        self.mod = Logit
-        self.y = self.y_bin
-        self.fit_kwds = {'disp': False}
+    @classmethod
+    def _initialize(cls):
+        cls.mod = Logit
+        cls.y = cls.y_bin
+        cls.fit_kwds = {'disp': False}
 
 
 def test_dtype_object():

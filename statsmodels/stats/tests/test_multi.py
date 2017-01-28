@@ -201,34 +201,38 @@ class CheckMultiTestsMixin(object):
         assert_almost_equal(pvalscorr, res_multtest[:,6], 15)
 
 class TestMultiTests1(CheckMultiTestsMixin):
-    def __init__(self):
-        self.methods =  ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n']
-        self.alpha = 0.1
-        self.res2 = res_multtest1
+    @classmethod
+    def setup_class(cls):
+        cls.methods =  ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n']
+        cls.alpha = 0.1
+        cls.res2 = res_multtest1
 
 class TestMultiTests2(CheckMultiTestsMixin):
     # case: all hypothesis rejected (except 'b' and 's'
-    def __init__(self):
-        self.methods =  ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n']
-        self.alpha = 0.05
-        self.res2 = res_multtest2
+    @classmethod
+    def setup_class(cls):
+        cls.methods =  ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n']
+        cls.alpha = 0.05
+        cls.res2 = res_multtest2
 
 class TestMultiTests3(CheckMultiTestsMixin):
-    def __init__(self):
-        self.methods =  ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n',
+    @classmethod
+    def setup_class(cls):
+        cls.methods =  ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n',
                          'fdr_tsbh']
-        self.alpha = 0.05
-        self.res2 = res0_large
+        cls.alpha = 0.05
+        cls.res2 = res0_large
 
 class TestMultiTests4(CheckMultiTestsMixin):
     # in simulations, all two stage fdr, fdr_tsbky, fdr_tsbh, fdr_gbs, have in
     # some cases (cases with large Alternative) an FDR that looks too large
     # this is the first case #rejected = 12, DGP : has 10 false
-    def __init__(self):
-        self.methods =  ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n',
+    @classmethod
+    def setup_class(cls):
+        cls.methods =  ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n',
                          'fdr_tsbh']
-        self.alpha = 0.05
-        self.res2 = res_multtest3
+        cls.alpha = 0.05
+        cls.res2 = res_multtest3
 
 def test_pvalcorrection_reject():
     # consistency test for reject boolean and pvalscorr

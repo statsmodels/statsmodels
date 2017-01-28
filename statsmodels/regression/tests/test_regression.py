@@ -703,7 +703,8 @@ class TestWLS_CornerCases(object):
 class TestWLSExogWeights(CheckRegressionResults):
     # Test WLS with Greene's credit card data
     # reg avgexp age income incomesq ownrent [aw=1/incomesq]
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         from .results.results_regression import CCardWLS
         from statsmodels.datasets.ccard import load
         dta = load()
@@ -715,15 +716,15 @@ class TestWLSExogWeights(CheckRegressionResults):
         # for comparison with stata analytic weights
         scaled_weights = ((weights * nobs) / weights.sum())
 
-        self.res1 = WLS(dta.endog, dta.exog, weights=scaled_weights).fit()
-        self.res2 = CCardWLS()
-        self.res2.wresid = scaled_weights ** .5 * self.res2.resid
+        cls.res1 = WLS(dta.endog, dta.exog, weights=scaled_weights).fit()
+        cls.res2 = CCardWLS()
+        cls.res2.wresid = scaled_weights ** .5 * cls.res2.resid
 
         # correction because we use different definition for loglike/llf
-        corr_ic = 2 * (self.res1.llf - self.res2.llf)
-        self.res2.aic -= corr_ic
-        self.res2.bic -= corr_ic
-        self.res2.llf += 0.5 * np.sum(np.log(self.res1.model.weights))
+        corr_ic = 2 * (cls.res1.llf - cls.res2.llf)
+        cls.res2.aic -= corr_ic
+        cls.res2.bic -= corr_ic
+        cls.res2.llf += 0.5 * np.sum(np.log(cls.res1.model.weights))
 
 
 def test_wls_example():

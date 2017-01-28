@@ -81,8 +81,9 @@ DECIMAL = 5
 
 class Test_Transf2(object):
 
-    def __init__(self):
-        self.dist_equivalents = [
+    @classmethod
+    def setup_class(cls):
+        cls.dist_equivalents = [
             #transf, stats.lognorm(1))
             #The below fails on the SPARC box with scipy 10.1
             #(lognormalg, stats.lognorm(1)),
@@ -95,9 +96,9 @@ class Test_Transf2(object):
             ]      #try both frozen
 
         l,s = 0.0, 1.0
-        self.ppfq = [0.1,0.5,0.9]
-        self.xx = [0.95,1.0,1.1]
-        self.nxx = [-0.95,-1.0,-1.1]
+        cls.ppfq = [0.1,0.5,0.9]
+        cls.xx = [0.95,1.0,1.1]
+        cls.nxx = [-0.95,-1.0,-1.1]
 
     def test_equivalent(self):
         xx, ppfq = self.xx, self.ppfq

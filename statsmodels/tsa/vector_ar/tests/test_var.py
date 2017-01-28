@@ -523,18 +523,19 @@ class TestVARResultsLutkepohl(object):
     Verify calculations using results from Lutkepohl's book
     """
 
-    def __init__(self):
-        self.p = 2
+    @classmethod
+    def setup_class(cls):
+        cls.p = 2
         sdata, dates = get_lutkepohl_data('e1')
 
         data = data_util.struct_to_ndarray(sdata)
         adj_data = np.diff(np.log(data), axis=0)
         # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
 
-        self.model = VAR(adj_data[:-16], dates=dates[1:-16], freq='BQ-MAR')
-        self.res = self.model.fit(maxlags=self.p)
-        self.irf = self.res.irf(10)
-        self.lut = E1_Results()
+        cls.model = VAR(adj_data[:-16], dates=dates[1:-16], freq='BQ-MAR')
+        cls.res = cls.model.fit(maxlags=cls.p)
+        cls.irf = cls.res.irf(10)
+        cls.lut = E1_Results()
 
     def test_approx_mse(self):
         # 3.5.18, p. 99

@@ -52,39 +52,42 @@ class TestBDSSequence(CheckBDS):
     """
     BDS Test on np.arange(1,26)
     """
-    def __init__(self):
-        self.results = results[results[0] == 1]
-        self.bds_stats = np.array(self.results[2][1:])
-        self.pvalues = np.array(self.results[3][1:])
+    @classmethod
+    def setup_class(cls):
+        cls.results = results[results[0] == 1]
+        cls.bds_stats = np.array(cls.results[2][1:])
+        cls.pvalues = np.array(cls.results[3][1:])
 
-        self.data = data[0][data[0].notnull()]
-        self.res = bds(self.data, 5)
+        cls.data = data[0][data[0].notnull()]
+        cls.res = bds(cls.data, 5)
 
 
 class TestBDSNormal(CheckBDS):
     """
     BDS Test on np.random.normal(size=25)
     """
-    def __init__(self):
-        self.results = results[results[0] == 2]
-        self.bds_stats = np.array(self.results[2][1:])
-        self.pvalues = np.array(self.results[3][1:])
+    @classmethod
+    def setup_class(cls):
+        cls.results = results[results[0] == 2]
+        cls.bds_stats = np.array(cls.results[2][1:])
+        cls.pvalues = np.array(cls.results[3][1:])
 
-        self.data = data[1][data[1].notnull()]
-        self.res = bds(self.data, 5)
+        cls.data = data[1][data[1].notnull()]
+        cls.res = bds(cls.data, 5)
 
 
 class TestBDSCombined(CheckBDS):
     """
     BDS Test on np.r_[np.random.normal(size=25), np.random.uniform(size=25)]
     """
-    def __init__(self):
-        self.results = results[results[0] == 3]
-        self.bds_stats = np.array(self.results[2][1:])
-        self.pvalues = np.array(self.results[3][1:])
+    @classmethod
+    def setup_class(cls):
+        cls.results = results[results[0] == 3]
+        cls.bds_stats = np.array(cls.results[2][1:])
+        cls.pvalues = np.array(cls.results[3][1:])
 
-        self.data = data[2][data[2].notnull()]
-        self.res = bds(self.data, 5)
+        cls.data = data[2][data[2].notnull()]
+        cls.res = bds(cls.data, 5)
 
 
 class TestBDSGDPC1(CheckBDS):
@@ -95,10 +98,11 @@ class TestBDSGDPC1(CheckBDS):
     ----------
     http://research.stlouisfed.org/fred2/series/GDPC1
     """
-    def __init__(self):
-        self.results = results[results[0] == 4]
-        self.bds_stats = np.array(self.results[2][1:])
-        self.pvalues = np.array(self.results[3][1:])
+    @classmethod
+    def setup_class(cls):
+        cls.results = results[results[0] == 4]
+        cls.bds_stats = np.array(cls.results[2][1:])
+        cls.pvalues = np.array(cls.results[3][1:])
 
-        self.data = data[3][data[3].notnull()]
-        self.res = bds(self.data, 5)
+        cls.data = data[3][data[3].notnull()]
+        cls.res = bds(cls.data, 5)
