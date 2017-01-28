@@ -1160,7 +1160,7 @@ class Test_ar_no_enforce(SARIMAXCoverageTest):
         kwargs['enforce_stationarity'] = False
         kwargs['enforce_invertibility'] = False
         kwargs['initial_variance'] = 1e9
-        # kwargs['loglikelihood_burn'] = 0
+        kwargs['loglikelihood_burn'] = 0
         super(Test_ar_no_enforce, cls).setup_class(6, *args, **kwargs)
         # Reset loglikelihood burn, which gets automatically set to the number
         # of states if enforce_stationarity = False
