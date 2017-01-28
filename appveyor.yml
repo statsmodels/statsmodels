@@ -31,4 +31,4 @@ build_script:
   - python setup.py develop
 
 test_script:
-  - pytest --skip-slow -n auto statsmodels
+  - pytest -n auto statsmodels
