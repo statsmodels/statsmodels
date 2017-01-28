@@ -119,8 +119,8 @@ script:
   # Show versions
   - python -c 'import statsmodels.api as sm; sm.show_versions();'
   # Compose a script to run testing with coverage
-  - echo pytest --skip-slow -n auto ${COVERAGE_OPTS} statsmodels
-  - pytest --skip-slow -n auto ${COVERAGE_OPTS} statsmodels
+  - echo pytest -n auto ${COVERAGE_OPTS} statsmodels
+  - pytest -n auto ${COVERAGE_OPTS} statsmodels
 
 after_success:
   # Coverage only for 2.7
