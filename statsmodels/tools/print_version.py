@@ -124,6 +124,12 @@ def _show_versions_only():
         print("nose: Not installed")
 
     try:
+        import pytest
+        print("pytest: %s (%s)" % (safe_version(pytest), dirname(pytest.__file__)))
+    except ImportError:
+        print("pytest: Not installed")
+
+    try:
         import virtualenv
         print("virtualenv: %s" % safe_version(virtualenv))
     except ImportError:
@@ -212,6 +218,7 @@ def show_versions(show_dirs=True):
         import matplotlib as mpl
         print("matplotlib: %s (%s)" % (safe_version(mpl),
                                        dirname(mpl.__file__)))
+        print("   matplotlib backend: " +  mpl.rcParams['backend'])
     except ImportError:
         print("matplotlib: Not installed")
 
@@ -256,6 +263,12 @@ def show_versions(show_dirs=True):
         print("nose: %s (%s)" % (safe_version(nose), dirname(nose.__file__)))
     except ImportError:
         print("nose: Not installed")
+
+    try:
+        import pytest
+        print("pytest: %s (%s)" % (safe_version(pytest), dirname(pytest.__file__)))
+    except ImportError:
+        print("pytest: Not installed")
 
     try:
         import virtualenv
