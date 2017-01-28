@@ -69,6 +69,7 @@ matrix:
     - SCIPY=
     - PANDAS=
     - MATPLOTLIB=1.4
+    - COVERAGE=true
 
 notifications:
   email:
