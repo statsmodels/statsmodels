@@ -164,7 +164,7 @@ def get_thsd(mci, alpha=0.05):
 class CheckTuckeyHSDMixin(object):
 
     @classmethod
-    def setup_class(cls):
+    def setup_class_(cls):
         cls.mc = MultiComparison(cls.endog, cls.groups)
         cls.res = cls.mc.tukeyhsd(alpha=cls.alpha)
 
