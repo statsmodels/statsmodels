@@ -132,96 +132,82 @@ class RemoveDataPickle(object):
 
 class TestRemoveDataPickleOLS(RemoveDataPickle):
 
-    @classmethod
-    def setup_class(cls):
-        super(TestRemoveDataPickleOLS, cls).setup_class()
+    def setup(self):
         #fit for each test, because results will be changed by test
-        x = cls.exog
+        x = self.exog
         np.random.seed(987689)
         y = x.sum(1) + np.random.randn(x.shape[0])
-        cls.results = sm.OLS(y, cls.exog).fit()
+        self.results = sm.OLS(y, self.exog).fit()
 
 
 class TestRemoveDataPickleWLS(RemoveDataPickle):
 
-    @classmethod
-    def setup_class(cls):
-        super(TestRemoveDataPickleWLS, cls).setup_class()
+    def setup(self):
         #fit for each test, because results will be changed by test
-        x = cls.exog
+        x = self.exog
         np.random.seed(987689)
         y = x.sum(1) + np.random.randn(x.shape[0])
-        cls.results = sm.WLS(y, cls.exog, weights=np.ones(len(y))).fit()
+        self.results = sm.WLS(y, self.exog, weights=np.ones(len(y))).fit()
 
 
 class TestRemoveDataPicklePoisson(RemoveDataPickle):
 
-    @classmethod
-    def setup_class(cls):
-        super(TestRemoveDataPicklePoisson, cls).setup_class()
+    def setup(self):
         #fit for each test, because results will be changed by test
-        x = cls.exog
+        x = self.exog
         np.random.seed(987689)
         y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
         model = sm.Poisson(y_count, x)  #, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
         # use start_params to converge faster
         start_params = np.array([0.75334818, 0.99425553, 1.00494724, 1.00247112])
-        cls.results = model.fit(start_params=start_params, method='bfgs',
+        self.results = model.fit(start_params=start_params, method='bfgs',
                                  disp=0)
 
         #TODO: temporary, fixed in master
-        cls.predict_kwds = dict(exposure=1, offset=0)
+        self.predict_kwds = dict(exposure=1, offset=0)
 
 class TestRemoveDataPickleNegativeBinomial(RemoveDataPickle):
 
-    @classmethod
-    def setup_class(cls):
-        super(TestRemoveDataPickleNegativeBinomial, cls).setup_class()
+    def setup(self):
         #fit for each test, because results will be changed by test
         np.random.seed(987689)
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         mod = sm.NegativeBinomial(data.endog, data.exog)
-        cls.results = mod.fit(disp=0)
+        self.results = mod.fit(disp=0)
 
 class TestRemoveDataPickleLogit(RemoveDataPickle):
 
-    @classmethod
-    def setup_class(cls):
-        super(TestRemoveDataPickleLogit, cls).setup_class()
+    def setup(self):
         #fit for each test, because results will be changed by test
-        x = cls.exog
+        x = self.exog
         nobs = x.shape[0]
         np.random.seed(987689)
         y_bin = (np.random.rand(nobs) < 1.0 / (1 + np.exp(x.sum(1) - x.mean()))).astype(int)
         model = sm.Logit(y_bin, x)  #, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
         # use start_params to converge faster
         start_params = np.array([-0.73403806, -1.00901514, -0.97754543, -0.95648212])
-        cls.results = model.fit(start_params=start_params, method='bfgs', disp=0)
+        self.results = model.fit(start_params=start_params, method='bfgs', disp=0)
 
 
 class TestRemoveDataPickleRLM(RemoveDataPickle):
 
-    @classmethod
-    def setup_class(cls):
-        super(TestRemoveDataPickleRLM, cls).setup_class()
+    def setup(self):
         #fit for each test, because results will be changed by test
-        x = cls.exog
+        x = self.exog
         np.random.seed(987689)
         y = x.sum(1) + np.random.randn(x.shape[0])
-        cls.results = sm.RLM(y, cls.exog).fit()
+        self.results = sm.RLM(y, self.exog).fit()
 
 
 class TestRemoveDataPickleGLM(RemoveDataPickle):
 
-    @classmethod
-    def setup_class(cls):
-        super(TestRemoveDataPickleGLM, cls).setup_class()
+    def setup(self):
         #fit for each test, because results will be changed by test
-        x = cls.exog
+        x = self.exog
         np.random.seed(987689)
         y = x.sum(1) + np.random.randn(x.shape[0])
-        cls.results = sm.GLM(y, cls.exog).fit()
+        self.results = sm.GLM(y, self.exog).fit()
 
 
 class TestPickleFormula(RemoveDataPickle):
@@ -236,13 +222,14 @@ class TestPickleFormula(RemoveDataPickle):
                               columns=cls.exog.columns)
         cls.l_max = 900000  # have to pickle endo/exog to unpickle form.
 
-        x = cls.exog
+    def setup(self):
+        x = self.exog
         np.random.seed(123)
         y = x.sum(1) + np.random.randn(x.shape[0])
         y = pd.Series(y, name="Y")
-        X = cls.exog.copy()
+        X = self.exog.copy()
         X["Y"] = y
-        cls.results = sm.OLS.from_formula("Y ~ A + B + C", data=X).fit()
+        self.results = sm.OLS.from_formula("Y ~ A + B + C", data=X).fit()
 
 
 class TestPickleFormula2(RemoveDataPickle):
@@ -257,34 +244,30 @@ class TestPickleFormula2(RemoveDataPickle):
         cls.xf = pd.DataFrame(0.25 * np.ones((2, 3)),
                               columns=cls.data.columns[1:])
         cls.l_max = 900000  # have to pickle endo/exog to unpickle form.
-        cls.results = sm.OLS.from_formula("Y ~ A + B + C", data=cls.data).fit()
+
+    def setup(self):
+        self.results = sm.OLS.from_formula("Y ~ A + B + C", data=self.data).fit()
 
 
 class TestPickleFormula3(TestPickleFormula2):
 
-    @classmethod
-    def setup_class(cls):
-        super(TestPickleFormula3, cls).setup_class()
-        cls.results = sm.OLS.from_formula("Y ~ A + B * C", data=cls.data).fit()
+    def setup(self):
+        self.results = sm.OLS.from_formula("Y ~ A + B * C", data=self.data).fit()
 
 
 class TestPickleFormula4(TestPickleFormula2):
 
-    @classmethod
-    def setup_class(cls):
-        super(TestPickleFormula4, cls).setup_class()
-        cls.results = sm.OLS.from_formula("Y ~ np.log(A) + B * C", data=cls.data).fit()
+    def setup(self):
+        self.results = sm.OLS.from_formula("Y ~ np.log(A) + B * C", data=self.data).fit()
 
 # we need log in module namespace for the following test
 from numpy import log
 class TestPickleFormula5(TestPickleFormula2):
 
-    @classmethod
-    def setup_class(cls):
-        super(TestPickleFormula5, cls).setup_class()
+    def setup(self):
         # if we import here, then unpickling fails -> exception in test
         #from numpy import log
-        cls.results = sm.OLS.from_formula("Y ~ log(A) + B * C", data=cls.data).fit()
+        self.results = sm.OLS.from_formula("Y ~ log(A) + B * C", data=self.data).fit()
 
 
 if __name__ == '__main__':

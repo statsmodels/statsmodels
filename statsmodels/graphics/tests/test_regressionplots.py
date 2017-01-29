@@ -37,8 +37,7 @@ def teardown_module():
 
 class TestPlot(object):
 
-    @classmethod
-    def setup_class(cls):
+    def setup(self):
         nsample = 100
         sig = 0.5
         x1 = np.linspace(0, 20, nsample)
@@ -50,7 +49,7 @@ class TestPlot(object):
         exog0 = sm.add_constant(np.c_[x1, x2], prepend=False)
         res = sm.OLS(y, exog0).fit()
 
-        cls.res = res
+        self.res = res
 
     @dec.skipif(not have_matplotlib)
     def test_plot_fit(self):
@@ -131,8 +130,7 @@ class TestPlot(object):
 
 
 class TestPlotPandas(TestPlot):
-    @classmethod
-    def setup_class(cls):
+    def setup(self):
         nsample = 100
         sig = 0.5
         x1 = np.linspace(0, 20, nsample)
@@ -145,10 +143,10 @@ class TestPlotPandas(TestPlot):
         exog0 = DataFrame(exog0, columns=["const", "var1", "var2"])
         y = Series(y, name="outcome")
         res = sm.OLS(y, exog0).fit()
-        cls.res = res
+        self.res = res
         data = DataFrame(exog0, columns=["const", "var1", "var2"])
         data['y'] = y
-        cls.data = data
+        self.data = data
 
 class TestPlotFormula(TestPlotPandas):
     @dec.skipif(not have_matplotlib)
