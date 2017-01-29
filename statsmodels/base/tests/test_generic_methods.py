@@ -12,6 +12,7 @@ Author: Josef Perktold
 """
 from statsmodels.compat.python import range
 import numpy as np
+import pandas as pd
 import statsmodels.api as sm
 from statsmodels.compat.scipy import NumpyVersion
 
@@ -428,7 +429,7 @@ class TestWaldAnovaOLS(CheckAnovaMixin):
     def test_noformula(self):
         endog = self.res.model.endog
         exog = self.res.model.data.orig_exog
-        del exog.design_info
+        exog = pd.DataFrame(exog)
 
         res = sm.OLS(endog, exog).fit()
         wa = res.wald_test_terms(skip_single=True,

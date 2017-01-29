@@ -10,6 +10,8 @@ tests.
 # pylint: disable-msg=E1101
 from statsmodels.compat.python import range
 import os
+import warnings
+
 import numpy as np
 from numpy.testing import (assert_, assert_raises, assert_almost_equal,
                            assert_equal, assert_array_equal, assert_allclose,
@@ -1297,6 +1299,7 @@ def test_perfect_prediction():
     from pandas.util.testing import assert_produces_warning
     # this is not thread-safe
     with assert_produces_warning():
+        warnings.simplefilter('always')
         mod.fit(disp=False, maxiter=50)  # should not raise but does warn
 
 def test_poisson_predict():
@@ -1326,6 +1329,7 @@ def test_poisson_newton():
     from pandas.util.testing import assert_produces_warning
     # this is not thread-safe
     with assert_produces_warning():
+        warnings.simplefilter('always')
         res = mod.fit(start_params=-np.ones(4), method='newton', disp=0)
     assert_(not res.mle_retvals['converged'])
 

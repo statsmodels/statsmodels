@@ -105,6 +105,7 @@ class CheckDynamicFactor(object):
 
     def test_mle(self):
         with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
             results = self.model.fit(method='powell', maxiter=100, disp=False)
             results = self.model.fit(results.params, maxiter=1000, disp=False)
             results = self.model.fit(results.params, method='nm', maxiter=1000,

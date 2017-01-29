@@ -432,7 +432,7 @@ def test_varmax():
     # TODO: This is just a smoke test
     mod = varmax.VARMAX(
         np.random.normal(size=(nobs, 2)), order=(0, 1), trend='nc')
-    print(mod.start_params)
+    # print(mod.start_params)
     mod.simulate(mod.start_params, nobs)
 
     # VARMA(2, 2) + trend + exog
