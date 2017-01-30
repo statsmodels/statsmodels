@@ -5,6 +5,9 @@ The one parameter exponential family distributions used by GLM.
 # see http://www.biostat.jhsph.edu/~qli/biostatistics_r_doc/library/stats/html/family.html
 # for comparison to R, and McCullagh and Nelder
 
+
+import warnings
+import inspect
 import numpy as np
 from scipy import special
 from . import links as L
@@ -39,7 +42,7 @@ class Family(object):
         """
         Helper method to set the link for a family.
 
-        Raises a ValueError exception if the link is not available.  Note that
+        Raises a ValueError exception if the link is not available. Note that
         the error message might not be that informative because it tells you
         that the link should be in the base class for the link function.
 
@@ -72,7 +75,14 @@ class Family(object):
     link = property(_getlink, _setlink, doc="Link function for family")
 
     def __init__(self, link, variance):
-        self.link = link()
+        if inspect.isclass(link):
+            warnmssg = "Calling Family(..) with a link class as argument "
+            warnmssg += "is deprecated.\n"
+            warnmssg += "Use an instance of a link class instead."
+            warnings.warn(warnmssg, category=DeprecationWarning)
+            self.link = link()
+        else:
+            self.link = link
         self.variance = variance
 
     def starting_mu(self, y):
@@ -294,9 +304,10 @@ class Poisson(Family):
     valid = [0, np.inf]
     safe_links = [L.Log, ]
 
-    def __init__(self, link=L.log):
-        self.variance = Poisson.variance
-        self.link = link()
+    def __init__(self, link=None):
+        if link is None:
+            link = L.log()
+        super(Poisson, self).__init__(link=link, variance=Poisson.variance)
 
     def _clean(self, x):
         """
@@ -457,9 +468,10 @@ class Gaussian(Family):
     variance = V.constant
     safe_links = links
 
-    def __init__(self, link=L.identity):
-        self.variance = Gaussian.variance
-        self.link = link()
+    def __init__(self, link=None):
+        if link is None:
+            link = L.identity()
+        super(Gaussian, self).__init__(link=link, variance=Gaussian.variance)
 
     def resid_dev(self, endog, mu, scale=1.):
         r"""
@@ -626,9 +638,10 @@ class Gamma(Family):
     variance = V.mu_squared
     safe_links = [L.Log, ]
 
-    def __init__(self, link=L.inverse_power):
-        self.variance = Gamma.variance
-        self.link = link()
+    def __init__(self, link=None):
+        if link is None:
+            link = L.inverse_power()
+        super(Gamma, self).__init__(link=link, variance=Gamma.variance)
 
     def _clean(self, x):
         """
@@ -800,14 +813,15 @@ class Binomial(Family):
     # Other safe links, e.g. cloglog and probit are subclasses
     safe_links = [L.Logit, L.CDFLink]
 
-    def __init__(self, link=L.logit):  # , n=1.):
+    def __init__(self, link=None):  # , n=1.):
+        if link is None:
+            link = L.logit()
         # TODO: it *should* work for a constant n>1 actually, if freq_weights
         # is equal to n
         self.n = 1
         # overwritten by initialize if needed but always used to initialize
         # variance since endog is assumed/forced to be (0,1)
-        self.variance = V.Binomial(n=self.n)
-        self.link = link()
+        super(Binomial, self).__init__(link=link, variance=V.Binomial(n=self.n))
 
     def starting_mu(self, y):
         """
@@ -1090,9 +1104,11 @@ class InverseGaussian(Family):
     variance = V.mu_cubed
     safe_links = [L.inverse_squared, L.Log, ]
 
-    def __init__(self, link=L.inverse_squared):
-        self.variance = InverseGaussian.variance
-        self.link = link()
+    def __init__(self, link=None):
+        if link is None:
+            link = L.inverse_squared()
+        super(InverseGaussian, self).__init__(
+            link=link, variance=InverseGaussian.variance)
 
     def resid_dev(self, endog, mu, scale=1.):
         r"""
@@ -1259,13 +1275,12 @@ class NegativeBinomial(Family):
     variance = V.nbinom
     safe_links = [L.Log, ]
 
-    def __init__(self, link=L.log, alpha=1.):
+    def __init__(self, link=None, alpha=1.):
         self.alpha = 1. * alpha  # make it at least float
-        self.variance = V.NegativeBinomial(alpha=self.alpha)
-        if isinstance(link, L.NegativeBinomial):
-            self.link = link(alpha=self.alpha)
-        else:
-            self.link = link()
+        if link is None:
+            link = L.log()
+        super(NegativeBinomial, self).__init__(
+            link=link, variance=V.NegativeBinomial(alpha=self.alpha))
 
     def _clean(self, x):
         """
@@ -1454,13 +1469,11 @@ class Tweedie(Family):
     Parameters
     ----------
     link : a link instance, optional
-        The default link for the Tweedie family is the log link when the
-        link_power is 0. Otherwise, the power link is default.
+        The default link for the Tweedie family is the log link.
         Available links are log and Power.
+        See statsmodels.family.links for more information.
     var_power : float, optional
-        The variance power.
-    link_power : float, optional
-        The link power.
+        The variance power. The default is 1.
 
     Attributes
     ----------
@@ -1468,8 +1481,6 @@ class Tweedie(Family):
         The link function of the Tweedie instance
     Tweedie.variance : varfunc instance
         `variance` is an instance of statsmodels.family.varfuncs.Power
-    Tweedie.link_power : float
-        The power of the link function, or 0 if its a log link.
     Tweedie.var_power : float
         The power of the variance function.
 
@@ -1489,20 +1500,12 @@ class Tweedie(Family):
     variance = V.Power
     safe_links = [L.log, L.Power]
 
-    def __init__(self, link=None, var_power=1., link_power=0):
+    def __init__(self, link=None, var_power=1.):
         self.var_power = var_power
-        self.link_power = link_power
-        self.variance = V.Power(power=var_power * 1.)
-        if link_power != 0 and not ((link is L.Power) or (link is None)):
-            msg = 'link_power of {} not supported specified link'
-            msg = msg.format(link_power)
-            raise ValueError(msg)
-        if (link_power == 0) and ((link is None) or (link is L.Log)):
-            self.link = L.log()
-        elif link_power != 0:
-            self.link = L.Power(power=link_power * 1.)
-        else:
-            self.link = link()
+        if link is None:
+            link = L.log()
+        super(Tweedie, self).__init__(
+            link=link, variance=V.Power(power=var_power * 1.))
 
     def _clean(self, x):
         """

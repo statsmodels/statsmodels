@@ -511,7 +511,7 @@ class T_estGLMProbit(CheckDiscreteGLM):
         endog_bin = (endog > endog.mean()).astype(int)
         cls.cov_type = 'cluster'
 
-        mod1 = GLM(endog_bin, exog, family=families.Gaussian(link=links.CDFLink))
+        mod1 = GLM(endog_bin, exog, family=families.Gaussian(link=links.CDFLink()))
         cls.res1 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
 
         mod1 = smd.Probit(endog_bin, exog)
