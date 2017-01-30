@@ -197,7 +197,7 @@ class TestPCA(TestCase):
     def test_pandas(self):
         pc = PCA(pd.DataFrame(self.x))
         pc1 = PCA(self.x)
-        assert_equal(pc.factors.values, pc1.factors)
+        assert_allclose(pc.factors.values, pc1.factors)
         fig = pc.plot_scree()
         fig = pc.plot_scree(ncomp=10)
         fig = pc.plot_scree(log_scale=False)
@@ -286,13 +286,13 @@ class TestPCA(TestCase):
         pc = PCA(x, missing='drop-row')
         x_dropped_row = x[np.logical_not(np.any(np.isnan(x), 1))]
         pc_dropped = PCA(x_dropped_row)
-        assert_equal(pc.projection, pc_dropped.projection)
+        assert_allclose(pc.projection, pc_dropped.projection)
         assert_equal(x, pc.data)
 
         pc = PCA(x, missing='drop-col')
         x_dropped_col = x[:, np.logical_not(np.any(np.isnan(x), 0))]
         pc_dropped = PCA(x_dropped_col)
-        assert_equal(pc.projection, pc_dropped.projection)
+        assert_allclose(pc.projection, pc_dropped.projection)
         assert_equal(x, pc.data)
 
         pc = PCA(x, missing='drop-min')
@@ -301,7 +301,7 @@ class TestPCA(TestCase):
         else:
             x_dropped_min = x_dropped_col
         pc_dropped = PCA(x_dropped_min)
-        assert_equal(pc.projection, pc_dropped.projection)
+        assert_allclose(pc.projection, pc_dropped.projection)
         assert_equal(x, pc.data)
 
         pc = PCA(x, ncomp=3, missing='fill-em')
