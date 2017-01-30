@@ -133,9 +133,9 @@ class Family(object):
         """
         return 1. / (self.link.deriv(mu)**2 * self.variance(mu))
 
-    def deviance(self, endog, mu, freq_weights=1., scale=1.):
+    def deviance(self, endog, mu, iweights=1., scale=1.):
         r"""
-        The deviance function evaluated at (endog,mu,freq_weights,mu).
+        The deviance function evaluated at (endog,mu,iweights,mu).
 
         Deviance is usually defined as twice the loglikelihood ratio.
 
@@ -145,8 +145,8 @@ class Family(object):
             The endogenous response variable
         mu : array-like
             The inverse of the link function at the linear predicted values.
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
+        iweights : array-like
+            1d array of weights. The default is 1.
         scale : float, optional
             An optional scale argument. The default is 1.
 
@@ -161,7 +161,7 @@ class Family(object):
 
         .. math::
 
-           D = 2\sum_i (freq\_weights_i * (llf(Y_i, Y_i) -
+           D = 2\sum_i (iweights_i * (llf(Y_i, Y_i) -
                llf(Y_i, \mu_i)))
 
         where y is the endogenous variable. The deviance functions are
@@ -169,7 +169,7 @@ class Family(object):
         """
         raise NotImplementedError
 
-    def resid_dev(self, endog, mu, freq_weights=1., scale=1.):
+    def resid_dev(self, endog, mu, iweights=1., scale=1.):
         r"""
         The deviance residuals
 
@@ -179,8 +179,8 @@ class Family(object):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
+        iweights : array-like
+            1d array of weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -236,7 +236,7 @@ class Family(object):
         """
         return self.link(mu)
 
-    def loglike(self, endog, mu, freq_weights=1., scale=1.):
+    def loglike(self, endog, mu, iweights=1., scale=1.):
         """
         The log-likelihood function in terms of the fitted mean response.
 
@@ -246,7 +246,7 @@ class Family(object):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        freq_weights : array-like
+        iweights : array-like
             1d array of frequency weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -255,7 +255,7 @@ class Family(object):
         -------
         llf : float
             The value of the loglikelihood evaluated at
-            (endog,mu,freq_weights,scale) as defined below.
+            (endog,mu,iweights,scale) as defined below.
 
         Notes
         -----
@@ -266,7 +266,7 @@ class Family(object):
         """
         raise NotImplementedError
 
-    def resid_anscombe(self, endog, mu, freq_weights=1., scale=1.):
+    def resid_anscombe(self, endog, mu, iweights=1., scale=1.):
         r"""
         The Anscombe residuals
 
@@ -276,7 +276,7 @@ class Family(object):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        freq_weights : array-like
+        iweights : array-like
             1d array of frequency weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
@@ -380,7 +380,7 @@ class Poisson(Family):
         return (np.sign(endog - mu) *
             np.sqrt(2 * (endog * np.log(endog_mu) - (endog - mu)) / scale))
 
-    def deviance(self, endog, mu, freq_weights=1., scale=1.):
+    def deviance(self, endog, mu, iweights=1., scale=1.):
         r'''
         Poisson deviance function
 
@@ -390,15 +390,15 @@ class Poisson(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
+        iweights : array-like
+            1d array of weights. The default is 1.
         scale : float, optional
             An optional scale argument. The default is 1.
 
         Returns
         -------
         deviance : float
-            The deviance function at (endog,mu,freq_weights,scale) as defined
+            The deviance function at (endog,mu,iweights,scale) as defined
             below.
 
         Notes
@@ -407,14 +407,14 @@ class Poisson(Family):
 
         .. math::
 
-           D = 2 * \sum_i (freq\_weights_i *
+           D = 2 * \sum_i (iweights_i *
            (Y_i * \log(Y_i / \mu_i) - (Y_i - \mu_i)))/ scale
         '''
         endog_mu = self._clean(endog / mu)
-        return 2 * np.sum(freq_weights * (endog * np.log(endog_mu) -
-                                            (endog - mu))) / scale
+        return 2 * np.sum(iweights * (endog * np.log(endog_mu) -
+                                      (endog - mu))) / scale
 
-    def loglike(self, endog, mu, freq_weights=1., scale=1.):
+    def loglike(self, endog, mu, iweights=1., scale=1.):
         r"""
         The log-likelihood function in terms of the fitted mean response.
 
@@ -424,7 +424,7 @@ class Poisson(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        freq_weights : array-like
+        iweights : array-like
             1d array of frequency weights. The default is 1.
         scale : float, optional
             Not used for in the Poisson loglike.
@@ -433,17 +433,17 @@ class Poisson(Family):
         -------
         llf : float
             The value of the loglikelihood function evaluated at
-            (endog,mu,freq_weights,scale) as defined below.
+            (endog,mu,iweights,scale) as defined below.
 
         Notes
         -----
         .. math::
 
-           llf = scale * \sum_i freq\_weights_i * (Y_i * \log(\mu_i) - \mu_i -
+           llf = scale * \sum_i iweights_i * (Y_i * \log(\mu_i) - \mu_i -
                  \ln \Gamma(Y_i + 1))
         """
-        return np.sum(freq_weights * (endog * np.log(mu) - mu -
-                        special.gammaln(endog + 1)))
+        return np.sum(iweights * (endog * np.log(mu) - mu -
+                      special.gammaln(endog + 1)))
 
     def resid_anscombe(self, endog, mu, scale=1.):
         r"""
@@ -536,7 +536,7 @@ class Gaussian(Family):
 
         return (endog - mu) / scale**(0.5)
 
-    def deviance(self, endog, mu, freq_weights=1., scale=1.):
+    def deviance(self, endog, mu, iweights=1., scale=1.):
         r"""
         Gaussian deviance function
 
@@ -546,26 +546,26 @@ class Gaussian(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
+        iweights : array-like
+            1d array of weights. The default is 1.
         scale : float, optional
             An optional scale argument. The default is 1.
 
         Returns
         -------
         deviance : float
-            The deviance function at (endog,mu,freq_weights,scale)
+            The deviance function at (endog,mu,iweights,scale)
             as defined below.
 
         Notes
         --------
         .. math::
 
-           D = \sum_i freq\_weights_i * (Y_i - \mu_i)^2 / scale
+           D = \sum_i iweights_i * (Y_i - \mu_i)^2 / scale
         """
-        return np.sum((freq_weights * (endog - mu)**2)) / scale
+        return np.sum((iweights * (endog - mu) ** 2)) / scale
 
-    def loglike(self, endog, mu, freq_weights=1., scale=1.):
+    def loglike(self, endog, mu, iweights=1., scale=1.):
         r"""
         The log-likelihood in terms of the fitted mean response.
 
@@ -575,8 +575,8 @@ class Gaussian(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
+        iweights : array-like
+            1d array of weights. The default is 1.
         scale : float, optional
             Scales the loglikelihood function. The default is 1.
 
@@ -584,7 +584,7 @@ class Gaussian(Family):
         -------
         llf : float
             The value of the loglikelihood function evaluated at
-            (endog,mu,freq_weights,scale) as defined below.
+            (endog,mu,iweights,scale) as defined below.
 
         Notes
         -----
@@ -606,18 +606,18 @@ class Gaussian(Family):
 
         .. math::
 
-           llf = \sum_i freq\_weights_i * ((Y_i * \mu_i - \mu_i^2 / 2) / scale-
+           llf = \sum_i iweights_i * ((Y_i * \mu_i - \mu_i^2 / 2) / scale-
                  Y^2 / (2 * scale) - (1/2) * \log(2 * \pi * scale))
         """
         if isinstance(self.link, L.Power) and self.link.power == 1:
             # This is just the loglikelihood for classical OLS
-            nobs2 = np.sum(freq_weights, axis=0) / 2.
+            nobs2 = np.sum(iweights, axis=0) / 2.
             SSR = np.sum((endog-self.fitted(mu))**2, axis=0)
             llf = -np.log(SSR) * nobs2
             llf -= (1+np.log(np.pi/nobs2))*nobs2
             return llf
         else:
-            return np.sum(freq_weights * ((endog * mu - mu**2/2)/scale -
+            return np.sum(iweights * ((endog * mu - mu**2/2)/scale -
                           endog**2/(2 * scale) - .5*np.log(2 * np.pi * scale)))
 
     def resid_anscombe(self, endog, mu, scale=1.):
@@ -685,7 +685,7 @@ class Gamma(Family):
             link = L.inverse_power()
         super(Gamma, self).__init__(link=link, variance=Gamma.variance)
 
-    def deviance(self, endog, mu, freq_weights=1., scale=1.):
+    def deviance(self, endog, mu, iweights=1., scale=1.):
         r"""
         Gamma deviance function
 
@@ -695,8 +695,8 @@ class Gamma(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
+        iweights : array-like
+            1d array of weights. The default is 1.
         scale : float, optional
             An optional scale argument. The default is 1.
 
@@ -709,11 +709,11 @@ class Gamma(Family):
         -----
         .. math::
 
-           D = 2 * \sum_i freq\_weights_i *
+           D = 2 * \sum_i iweights_i *
            ((Y_i - \mu_i)/\mu_i - \log(Y_i / \mu_i)) / scale
         """
         endog_mu = self._clean(endog / mu)
-        return 2*np.sum(freq_weights*((endog-mu)/mu-np.log(endog_mu)))/scale
+        return 2*np.sum(iweights*((endog-mu)/mu-np.log(endog_mu)))/scale
 
     def resid_dev(self, endog, mu, scale=1.):
         r"""
@@ -745,7 +745,7 @@ class Gamma(Family):
         return np.sign(endog - mu) * np.sqrt(2 *
                 ((endog - mu)/mu - np.log(endog_mu))/scale)
 
-    def loglike(self, endog, mu, freq_weights=1., scale=1.):
+    def loglike(self, endog, mu, iweights=1., scale=1.):
         r"""
         The log-likelihood function in terms of the fitted mean response.
 
@@ -755,7 +755,7 @@ class Gamma(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        freq_weights : array-like
+        iweights : array-like
             1d array of frequency weights. The default is 1.
         scale : float, optional
             The default is 1.
@@ -764,7 +764,7 @@ class Gamma(Family):
         -------
         llf : float
             The value of the loglikelihood function evaluated at
-            (endog,mu,freq_weights,scale) as defined below.
+            (endog,mu,iweights,scale) as defined below.
 
         Notes
         --------
@@ -777,7 +777,7 @@ class Gamma(Family):
         endog_mu = self._clean(endog / mu)
         return - np.sum((endog_mu - np.log(endog_mu) + scale *
                          np.log(endog) + np.log(scale) + scale *
-                         special.gammaln(1./scale)) * freq_weights) / scale
+                         special.gammaln(1./scale)) * iweights) / scale
 
         # in Stata scale is set to equal 1 for reporting llf
         # in R it's the dispersion, though there is a loss of precision vs.
@@ -872,6 +872,8 @@ class Binomial(Family):
         ----------
         endog : array
             Endogenous response variable
+        freq_weights : array
+            1d array of frequency weights
 
         Returns
         --------
@@ -892,7 +894,7 @@ class Binomial(Family):
         else:
             return endog, np.ones(endog.shape[0])
 
-    def deviance(self, endog, mu, freq_weights=1, scale=1.):
+    def deviance(self, endog, mu, iweights=1, scale=1.):
         r'''
         Deviance function for either Bernoulli or Binomial data.
 
@@ -903,8 +905,8 @@ class Binomial(Family):
             if appropriate).
         mu : array
             Fitted mean response variable
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
+        iweights : array-like
+            1d array of weights. The default is 1.
         scale : float, optional
             An optional scale argument. The default is 1.
 
@@ -919,7 +921,7 @@ class Binomial(Family):
 
         .. math::
 
-           D = 2 * \sum_i freq\_weights * (Y_i * \log(Y_i / \mu_i)
+           D = 2 * \sum_i iweights * (Y_i * \log(Y_i / \mu_i)
            + (n_i - Y_i) * \log((n_i - Y_i) / (n_i - \mu_i))) / scale
 
         Since :math:`Y_i` and :math:`\mu_i` are transformed to :math:`[0,1]`
@@ -927,12 +929,12 @@ class Binomial(Family):
 
         .. math::
 
-           D = 2 * \sum_i freq\_weights n_i * (Y_i * \log(Y_i / \mu_i)
+           D = 2 * \sum_i iweights n_i * (Y_i * \log(Y_i / \mu_i)
            + (1 - Y_i) * \log((1 - Y_i) / (1 - \mu_i))) / scale
         '''
         endog_mu = self._clean(endog / mu)
         n_endog_mu = self._clean((1. - endog) / (1. - mu))
-        return 2 * np.sum(freq_weights * self.n *
+        return 2 * np.sum(iweights * self.n *
                            (endog * np.log(endog_mu) +
                            (1. - endog) * np.log(n_endog_mu))) / scale
 
@@ -979,7 +981,7 @@ class Binomial(Family):
                 np.sqrt(2 * self.n * (endog * np.log(endog_mu) +
                         (1. - endog) * np.log(n_endog_mu))/scale))
 
-    def loglike(self, endog, mu, freq_weights=1, scale=1.):
+    def loglike(self, endog, mu, iweights=1, scale=1.):
         r"""
         The log-likelihood function in terms of the fitted mean response.
 
@@ -989,8 +991,8 @@ class Binomial(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
+        iweights : array-like
+            1d array of weights. The default is 1.
         scale : float, optional
             Not used in the Binomial loglike.
 
@@ -998,7 +1000,7 @@ class Binomial(Family):
         -------
         llf : float
             The value of the loglikelihood function evaluated at
-            (endog,mu,freq_weights,scale) as defined below.
+            (endog,mu,iweights,scale) as defined below.
 
         Notes
         --------
@@ -1007,13 +1009,13 @@ class Binomial(Family):
         .. math::
 
          llf = \sum_i (y_i * \log(\mu_i/(1-\mu_i)) + \log(1-\mu_i)) *
-               freq\_weights_i
+               iweights_i
 
         If the endogenous variable is binomial:
 
         .. math::
 
-           llf = \sum_i freq\_weights_i * (\ln \Gamma(n+1) -
+           llf = \sum_i iweights_i * (\ln \Gamma(n+1) -
                  \ln \Gamma(y_i + 1) - \ln \Gamma(n_i - y_i +1) + y_i *
                  \log(\mu_i / (n_i - \mu_i)) + n * \log(1 - \mu_i/n_i))
 
@@ -1024,7 +1026,7 @@ class Binomial(Family):
 
         if np.shape(self.n) == () and self.n == 1:
             return np.sum((endog * np.log(mu/(1 - mu)) +
-                            np.log(1 - mu)) * freq_weights)
+                           np.log(1 - mu)) * iweights)
         else:
             y = endog * self.n  # convert back to successes
             # note that mu is still in (0,1), i.e. not convertet back
@@ -1032,7 +1034,7 @@ class Binomial(Family):
                             special.gammaln(y + 1) -
                             special.gammaln(self.n - y + 1) + y *
                             np.log(mu/(1 - mu)) + self.n *
-                            np.log(1 - mu)) * freq_weights)
+                            np.log(1 - mu)) * iweights)
 
     def resid_anscombe(self, endog, mu, scale=1.):
         r'''
@@ -1144,7 +1146,7 @@ class InverseGaussian(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        freq_weights : array-like
+        iweights : array-like
             1d array of frequency weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
@@ -1164,7 +1166,7 @@ class InverseGaussian(Family):
         """
         return np.sign(endog-mu) * np.sqrt((endog-mu)**2/(endog*mu**2)/scale)
 
-    def deviance(self, endog, mu, freq_weights=1., scale=1.):
+    def deviance(self, endog, mu, iweighs=1., scale=1.):
         r"""
         Inverse Gaussian deviance function
 
@@ -1174,8 +1176,8 @@ class InverseGaussian(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
+        iweights : array-like
+            1d array of weights. The default is 1.
         scale : float, optional
             An optional scale argument. The default is 1.
 
@@ -1188,12 +1190,12 @@ class InverseGaussian(Family):
         -----
         .. math::
 
-           D = \sum_i freq\_weights_i * ((Y_i - \mu_i)^2 / (Y_i *\mu_i^2)) /
+           D = \sum_i iweights_i * ((Y_i - \mu_i)^2 / (Y_i *\mu_i^2)) /
                scale
         """
-        return np.sum(freq_weights*(endog-mu)**2/(endog*mu**2))/scale
+        return np.sum(iweighs*(endog-mu)**2/(endog*mu**2))/scale
 
-    def loglike(self, endog, mu, freq_weights=1., scale=1.):
+    def loglike(self, endog, mu, iweights=1., scale=1.):
         r"""
         The log-likelihood function in terms of the fitted mean response.
 
@@ -1203,8 +1205,8 @@ class InverseGaussian(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
+        iweights : array-like
+            1d array of weights. The default is 1.
         scale : float, optional
             The default is 1.
 
@@ -1212,18 +1214,18 @@ class InverseGaussian(Family):
         -------
         llf : float
             The value of the loglikelihood function evaluated at
-            (endog,mu,freq_weights,scale) as defined below.
+            (endog,mu,iweights,scale) as defined below.
 
         Notes
         -----
         .. math::
 
-           llf = -1/2 * \sum_i freq\_weights_i * ((Y_i - \mu_i)^2 / (Y_i *
+           llf = -1/2 * \sum_i iweights_i * ((Y_i - \mu_i)^2 / (Y_i *
                  \mu_i^2 * scale) + \log(scale * Y_i^3) + \log(2 * \pi))
         """
         return -.5 * np.sum(((endog - mu)**2/(endog * mu**2 * scale) +
                              np.log(scale * endog**3) + np.log(2 * np.pi)) *
-                            freq_weights)
+                            iweights)
 
     def resid_anscombe(self, endog, mu, scale=1.):
         r"""
@@ -1309,7 +1311,7 @@ class NegativeBinomial(Family):
         super(NegativeBinomial, self).__init__(
             link=link, variance=V.NegativeBinomial(alpha=self.alpha))
 
-    def deviance(self, endog, mu, freq_weights=1., scale=1.):
+    def deviance(self, endog, mu, iweights=1., scale=1.):
         r"""
         Returns the value of the deviance function.
 
@@ -1319,8 +1321,8 @@ class NegativeBinomial(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
+        iweights : array-like
+            1d array of weights. The default is 1.
         scale : float, optional
             An optional scale argument. The default is 1.
 
@@ -1339,7 +1341,7 @@ class NegativeBinomial(Family):
         """
         endog_mu = self._clean(endog / mu)
         tmp = self._clean((1 + self.alpha * endog) / (1 + self.alpha * mu))
-        return np.sum(freq_weights * (2 * endog * np.log(endog_mu) -
+        return np.sum(iweights * (2 * endog * np.log(endog_mu) -
                         2 / self.alpha * (1 + self.alpha * endog) *
                         np.log(tmp))) / scale
 
@@ -1378,7 +1380,7 @@ class NegativeBinomial(Family):
                         2 / self.alpha * (1 + self.alpha * endog) *
                         np.log(tmp)) / scale))
 
-    def loglike(self, endog, mu, freq_weights=1., scale=1.):
+    def loglike(self, endog, mu, iweights=1., scale=1.):
         r"""
         The log-likelihood function in terms of the fitted mean response.
 
@@ -1388,7 +1390,7 @@ class NegativeBinomial(Family):
             Endogenous response variable
         mu : array-like
             The fitted mean response values
-        freq_weights : array-like
+        iweights : array-like
             1d array of frequency weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -1397,7 +1399,7 @@ class NegativeBinomial(Family):
         -------
         llf : float
             The value of the loglikelihood function evaluated at
-            (endog,mu,freq_weights,scale) as defined below.
+            (endog,mu,iweights,scale) as defined below.
 
         Notes
         -----
@@ -1405,7 +1407,7 @@ class NegativeBinomial(Family):
 
         .. math::
 
-           llf = \sum_i freq\_weights_i * (Y_i * \log{(\alpha * \mu_i /
+           llf = \sum_i iweights_i * (Y_i * \log{(\alpha * \mu_i /
                  (1 + \alpha * \mu_i))} - \log{(1 + \alpha * \mu_i)}/
                  \alpha + Constant)
 
@@ -1421,7 +1423,7 @@ class NegativeBinomial(Family):
         return np.sum((endog * np.log(self.alpha * mu /
                                       (1 + self.alpha * mu)) -
                       np.log(1 + self.alpha * mu) / self.alpha +
-                      constant) * freq_weights)
+                      constant) * iweights)
 
     def resid_anscombe(self, endog, mu, scale=1.):
         r"""
@@ -1510,7 +1512,7 @@ class Tweedie(Family):
         super(Tweedie, self).__init__(
             link=link, variance=V.Power(power=var_power * 1.))
 
-    def deviance(self, endog, mu, freq_weights=1., scale=1.):
+    def deviance(self, endog, mu, iweights=1., scale=1.):
         r"""
         Returns the value of the deviance function.
 
@@ -1520,8 +1522,8 @@ class Tweedie(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        freq_weights : array-like
-            1d array of frequency weights. The default is 1.
+        iweights : array-like
+            1d array of weights. The default is 1.
         scale : float, optional
             An optional scale argument. The default is 1.
 
@@ -1564,7 +1566,7 @@ class Tweedie(Family):
 
         .. math::
 
-            D = \sum{2 * freq\_weights * dev_i / scale}
+            D = \sum{2 * iweights * dev_i / scale}
         """
         p = self.var_power
         if p == 1:
@@ -1577,7 +1579,7 @@ class Tweedie(Family):
         else:
             dev = (endog ** (2 - p) / ((1 - p) * (2 - p)) -
                    endog * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
-        return np.sum(2 * freq_weights * dev / scale)
+        return np.sum(2 * iweights * dev / scale)
 
     def resid_dev(self, endog, mu, scale=1.):
         r"""
@@ -1640,14 +1642,14 @@ class Tweedie(Family):
                            mu,
                            endog * np.log(endog / mu) + (mu - endog))
         elif p == 2:
-            endog1 = np.clip(endog, FLOAT_EPS, np.inf)
+            endog1 = self._clean(endog)
             dev = ((endog - mu) / mu) - np.log(endog1 / mu)
         else:
             dev = (endog ** (2 - p) / ((1 - p) * (2 - p)) -
                    endog * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
         return np.sign(endog - mu) * np.sqrt(2 * dev / scale)
 
-    def loglike(self, endog, mu, freq_weights=1., scale=1.):
+    def loglike(self, endog, mu, iweights=1., scale=1.):
         r"""
         The log-likelihood function in terms of the fitted mean response.
 
@@ -1657,7 +1659,7 @@ class Tweedie(Family):
             Endogenous response variable
         mu : array-like
             The fitted mean response values
-        freq_weights : array-like
+        iweights : array-like
             1d array of frequency weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
@@ -1666,7 +1668,7 @@ class Tweedie(Family):
         -------
         llf : float
             The value of the loglikelihood function evaluated at
-            (endog,mu,freq_weights,scale) as defined below.
+            (endog,mu,iweights,scale) as defined below.
 
         Notes
         -----

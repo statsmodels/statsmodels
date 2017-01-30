@@ -19,6 +19,7 @@ from nose import SkipTest
 import warnings
 
 from .results import results_glm_poisson_weights as res_stata
+from .results import res_R_var_weight as res_r
 
 # load data into module namespace
 from statsmodels.datasets.cpunish import load
@@ -138,7 +139,7 @@ class TestGlmPoissonFwHC(CheckWeight):
         self.res2 = res_stata.results_poisson_fweight_hc1
 
 # var_weights (aweights fail with HC, not properly implemented yet
-class T_estGlmPoissonAwHC(CheckWeight):
+class TestGlmPoissonAwHC(CheckWeight):
     @classmethod
     def setupClass(cls):
         self = cls # alias
@@ -151,7 +152,7 @@ class T_estGlmPoissonAwHC(CheckWeight):
         aweights = fweights / wsum * nobs
         self.corr_fact = np.sqrt((wsum - 1.) / wsum)
         self.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
-                        family=sm.families.Poisson(), freq_weights=aweights
+                        family=sm.families.Poisson(), var_weights=aweights
                         ).fit(cov_type='HC0') #, cov_kwds={'use_correction':False})
         # compare with discrete, start close to save time
         #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
@@ -182,3 +183,29 @@ class TestGlmPoissonFwClu(CheckWeight):
         # compare with discrete, start close to save time
         #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         self.res2 = res_stata.results_poisson_fweight_clu1
+
+
+class TestGlmTweedieAwNr(CheckWeight):
+    @classmethod
+    def setupClass(cls):
+        self = cls
+        import statsmodels.formula.api as smf
+
+        data = sm.datasets.fair.load_pandas()
+        endog = data.endog
+        data = data.exog
+        data['fair'] = endog
+        aweights = np.repeat(1, len(data.index))
+        aweights[::5] = 5
+        aweights[::13] = 3
+        model = smf.glm(
+                'fair ~ age + yrs_married',
+                data=data,
+                family=sm.families.Tweedie(
+                    var_power=1.55,
+                    link=sm.families.links.log()
+                    ),
+                var_weights=aweights
+        )
+        self.res1 = model.fit()
+        self.res2 = res_r.res
