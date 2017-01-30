@@ -2814,7 +2814,6 @@ class Factor(object):
                  orientation="wide", multiple_response=None):
         self.orientation = orientation
         self.name = name
-
         if (dataframe.index.name is None and
                     "observation_id" not in dataframe.columns):
             dataframe.index.name = "observation_id"
