@@ -35,6 +35,8 @@ except ImportError:
         return (prefix, dtype, None)
 
 
+from scipy.linalg import solve_discrete_lyapunov
+from statsmodels.tsa.statespace.mlemodel import MLEModel
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.statespace import _statespace as ss
 from .results import results_kalman_filter
@@ -704,3 +706,78 @@ class TestClark1989ConserveAll(Clark1989):
             self.result['state'][5][-1],
             self.true_states.iloc[end-1, 3], 4
         )
+
+
+def check_stationary_initialization_1dim(dtype=float):
+    endog = np.zeros(10, dtype=dtype)
+
+    # 1-dimensional example
+    mod = MLEModel(endog, k_states=1, k_posdef=1)
+    mod.ssm.initialize_stationary()
+    intercept = [2.3]
+    phi = np.diag([0.9])
+    sigma2 = np.diag([1.3])
+
+    mod['state_intercept'] = intercept
+    mod['transition'] = phi
+    mod['selection'] = np.eye(1)
+    mod['state_cov'] = sigma2
+
+    mod.ssm._initialize_filter()
+    mod.ssm._initialize_state()
+
+    _statespace = mod.ssm._statespace
+    initial_state = np.array(_statespace.initial_state)
+    initial_state_cov = np.array(_statespace.initial_state_cov)
+
+    # mean = intercept + phi * mean
+    # intercept = (1 - phi) * mean
+    # mean = intercept / (1 - phi)
+    assert_allclose(initial_state, intercept / (1 - phi[0, 0]))
+    desired = np.linalg.inv(np.eye(1) - phi).dot(intercept)
+    assert_allclose(initial_state, desired)
+    # var = phi**2 var + sigma2
+    # var = sigma2 / (1 - phi**2)
+    assert_allclose(initial_state_cov, sigma2 / (1 - phi**2))
+    assert_allclose(initial_state_cov, solve_discrete_lyapunov(phi, sigma2))
+
+
+def check_stationary_initialization_2dim(dtype=float):
+    endog = np.zeros(10, dtype=dtype)
+    # 2-dimensional example
+    mod = MLEModel(endog, k_states=2, k_posdef=2)
+    mod.ssm.initialize_stationary()
+    intercept = np.array([2.3, -10.2])
+    phi = np.array([[0.9, 0.1],
+                    [-0.2, 0.7]])
+    sigma2 = np.array([[1.4, -0.2],
+                       [-0.2, 4.5]])
+
+    mod['state_intercept'] = intercept
+    mod['transition'] = phi
+    mod['selection'] = np.eye(2)
+    mod['state_cov'] = sigma2
+
+    mod.ssm._initialize_filter()
+    mod.ssm._initialize_state()
+
+    _statespace = mod.ssm._statespace
+    initial_state = np.array(_statespace.initial_state)
+    initial_state_cov = np.array(_statespace.initial_state_cov)
+
+    desired = np.linalg.inv(np.eye(2) - phi).dot(intercept)
+    assert_allclose(initial_state, desired)
+    desired = solve_discrete_lyapunov(phi, sigma2)
+    assert_allclose(initial_state_cov, desired)
+
+
+def test_stationary_initialization():
+    check_stationary_initialization_1dim(np.float32)
+    check_stationary_initialization_1dim(np.float64)
+    check_stationary_initialization_1dim(np.complex64)
+    check_stationary_initialization_1dim(np.complex128)
+
+    check_stationary_initialization_2dim(np.float32)
+    check_stationary_initialization_2dim(np.float64)
+    check_stationary_initialization_2dim(np.complex64)
+    check_stationary_initialization_2dim(np.complex128)
