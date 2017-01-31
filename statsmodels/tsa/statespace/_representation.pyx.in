@@ -294,6 +294,12 @@ cdef class {{prefix}}Statespace(object):
         # Initialize dimensions
         self.set_dimensions(self.k_endog, self.k_states, self.k_posdef)
 
+    def __getnewargs__(self):
+        return (np.asarray(self.obs), np.asarray(self.design), np.asarray(self.obs_intercept), np.asarray(self.obs_cov),
+                np.asarray(self.transition), np.asarray(self.state_intercept), np.asarray(self.selection),
+                np.asarray(self.state_cov), self.diagonal_obs_cov)
+
+
     # ## Initialize: known values
     #
     # Initialize the filter with specific values, assumed to be known with

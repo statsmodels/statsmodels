@@ -390,6 +390,12 @@ cdef class {{prefix}}KalmanFilter(object):
         self.converged = 0
         self.period_converged = 0
 
+    def __getnewargs__(self):
+        return (self.model, self.filter_method, self.inversion_method,
+                self.stability_method,  self.conserve_memory, self.filter_timing,
+                self.tolerance, self.loglikelihood_burn)
+
+
     cdef allocate_arrays(self):
         # Local variables
         cdef:

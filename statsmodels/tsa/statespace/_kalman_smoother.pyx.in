@@ -329,6 +329,9 @@ cdef class {{prefix}}KalmanSmoother(object):
         # dim1[0] = self.kfilter.k_endog2;
         # self.selected_obs_cov = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
 
+    def __getnewargs__(self):
+        return (self.model, self.kfilter, self.smoother_output, self.smooth_method)
+
     cdef int check_filter_method_changed(self):
         return not self.kfilter.filter_method == self.filter_method
 
