@@ -395,7 +395,15 @@ cdef class {{prefix}}Statespace(object):
         from tools import solve_discrete_lyapunov
 
         dim[0] = self.k_states
-        self.initial_state = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
+        if np.sum(self.state_intercept) == 0:
+            self.initial_state = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
+        else:
+            eye = np.eye(self.k_states)
+            T = np.array(self.transition[:,:,0], dtype={{dtype}})
+            # (I - T)^{-1} c = x => (I - T) x = c
+            self.initial_state = np.linalg.solve(
+                eye - T, np.array(self.state_intercept[:, 0], dtype={{dtype}}))
+
         self.initial_state_cov = np.asfortranarray(solve_discrete_lyapunov(
             np.array(self.transition[:,:,0], dtype={{dtype}}),
             np.array(self.selected_state_cov[:,:,0], dtype={{dtype}}),
