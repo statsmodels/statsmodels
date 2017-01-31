@@ -44,8 +44,8 @@ class DataSet:
     def __str__(self):
         return self.data_module.__str__()
 
-atol = 0.001  # absolute tolerance
-rtol = 0.01  # relative tolerance
+atol = 0.0005  # absolute tolerance
+rtol = 0  # relative tolerance
 datasets = []
 data = {}
 results_ref = {}
@@ -738,9 +738,9 @@ def test_var_rep():
             exog_coint = (results_sm_exog_coint[ds][dt].exog_coint is not None)
 
             err_msg = build_err_msg(ds, dt, "VAR repr. A")
-            obtained = results_sm[ds][dt].var_repr
-            obtained_exog = results_sm_exog[ds][dt].var_repr
-            obtained_exog_coint = results_sm_exog_coint[ds][dt].var_repr
+            obtained = results_sm[ds][dt].var_rep
+            obtained_exog = results_sm_exog[ds][dt].var_rep
+            obtained_exog_coint = results_sm_exog_coint[ds][dt].var_rep
             p = obtained.shape[0]
             desired = np.hsplit(results_ref[ds][dt]["est"]["VAR A"], p)
             yield assert_allclose, obtained, desired, rtol, atol, False, \
@@ -765,7 +765,7 @@ def test_var_to_vecm():
 
             err_msg = build_err_msg(ds, dt, "VAR to VEC representation")
             sigma_u = results_sm[ds][dt].sigma_u
-            coefs = results_sm[ds][dt].var_repr
+            coefs = results_sm[ds][dt].var_rep
             intercept = np.zeros(len(sigma_u))
             var = VARProcess(coefs, intercept, sigma_u)
             vecm_results = var.to_vecm()
@@ -810,8 +810,10 @@ def test_log_like():
             obtained = results_sm[ds][dt].llf
             obtained_exog = results_sm_exog[ds][dt].llf
             obtained_exog_coint = results_sm_exog_coint[ds][dt].llf
-
-            desired = results_ref[ds][dt]["log_like"]
+            # JMulTi's llf seems to have a bug (Stata and tsdyn suggest that
+            # our code is correct). We use nobs to correct this inconsistency.
+            nobs = results_sm[ds][dt].nobs
+            desired = results_ref[ds][dt]["log_like"] * nobs / (nobs-1)
             yield assert_allclose, obtained, desired, rtol, atol, False, \
                 err_msg
             if exog:

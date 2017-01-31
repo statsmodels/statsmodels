@@ -1,6 +1,5 @@
 from __future__ import division, print_function
 
-import collections
 import math
 from collections import defaultdict
 from math import log
@@ -20,7 +19,7 @@ import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.vector_ar import output as var_output, output
 import statsmodels.tsa.vector_ar.irf as irf
 import statsmodels.tsa.vector_ar.plotting as plot
-from statsmodels.tsa.vector_ar.util import vech, get_index, seasonal_dummies
+from statsmodels.tsa.vector_ar.util import get_index, seasonal_dummies
 from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval, \
     VAR, ma_rep, orth_ma_rep, test_normality
 from statsmodels.tsa.coint_tables import c_sja, c_sjt
@@ -34,10 +33,12 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
 
     Parameters
     ----------
-    data : array (nobs_tot x neqs)
+    data : array-like (nobs_tot x neqs)
         The observed data.
     maxlags : int
-    deterministic : str {"nc", "co", "ci", "lo", "li"}
+        All orders until maxlag will be compared according to the information
+        criteria listed in the Results-section of this docstring.
+    deterministic : str {"nc", "co", "ci", "lo", "li"}, default: "nc"
         * "nc" - no deterministic terms
         * "co" - constant outside the cointegration relation
         * "ci" - constant within the cointegration relation
@@ -46,9 +47,13 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
 
         Combinations of these are possible (e.g. "cili" or "colo" for linear
         trend with intercept)
-    seasons : int
+    seasons : int, default: 0
         Number of seasons.
-    verbose : bool, default True
+    exog : ndarray (nobs_tot x neqs) or None, default: None
+        Deterministic terms outside the cointegration relation.
+    exog_coint: ndarray (nobs_tot x neqs) or None, default: None
+        Deterministic terms inside the cointegration relation.
+    verbose : bool, default: True
         If True, print table of info criteria and selected orders
 
     Returns
@@ -60,8 +65,6 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
     """
     ic = defaultdict(list)
     for p in range(1, maxlags + 2):  # +2 because k_ar_VECM == k_ar_VAR - 1
-        # exclude some periods to same amount of data used for each lag
-        # order
         exogs = []
         if "co" in deterministic or "ci" in deterministic:
             exogs.append(np.ones(len(data)).reshape(-1, 1))
@@ -76,6 +79,7 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
             exogs.append(exog)
         exogs = hstack(exogs) if exogs else None
         var_model = VAR(data, exogs)
+        # exclude some periods ==> same amount of data used for each lag order
         var_result = var_model._estimate_var(lags=p, offset=maxlags+1-p)
 
         for k, v in iteritems(var_result.info_criteria):
@@ -92,7 +96,27 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
     return selected_orders
 
 
-def linear_trend(nobs, k_ar, coint=False):
+def _linear_trend(nobs, k_ar, coint=False):
+    """
+    Construct an ndarray representing a linear trend in a VECM. Note that the
+    returned array's size is nobs and not nobs_tot so it cannot be used to
+    construct the exog-argument of VECM's __init__ method.
+
+    Parameters
+    ----------
+    nobs : int
+        Number of observations excluding the presample.
+    k_ar : int
+        Number of lagged differences.
+    coint : boolean, default: False
+        If True (False), the returned array represents a linear trend inside
+        (outside) the cointegration relation.
+
+    Returns
+    -------
+    ret : ndarray (nobs)
+        An ndarray representing a linear trend in a VECM
+    """
     ret = np.arange(nobs) + k_ar
     if not coint:
         ret += 1
@@ -100,7 +124,8 @@ def linear_trend(nobs, k_ar, coint=False):
 
 
 def num_det_vars(det_string, seasons=0):
-    """Gives the number of deterministic variables.
+    """Gives the number of deterministic variables specified by det_string and
+    seasons.
 
     Parameters
     ----------
@@ -132,25 +157,56 @@ def num_det_vars(det_string, seasons=0):
     return num
 
 
-def deterministic_to_exog(deterministic, seasons, len_data, first_season=0,
+def deterministic_to_exog(deterministic, seasons, nobs_tot, first_season=0,
                           seasons_centered=False, exog=None, exog_coint=None):
-            exogs = []
-            if "co" in deterministic or "ci" in deterministic:
-                exogs.append(np.ones(len_data))
-            if exog_coint is not None:
-                exogs.append(exog_coint)
-            if "lo" in deterministic or "li" in deterministic:
-                exogs.append(np.arange(len_data))
-            if seasons > 0:
-                exogs.append(seasonal_dummies(seasons, len_data,
-                                             first_period=first_season,
-                                             centered=seasons_centered))
-            if exog is not None:
-                exogs.append(exog)
-            return np.column_stack(exogs) if exogs else None
+    """
+    Use the VECM's deterministic terms to construct an array that is suitable
+    to convey this information to VAR in form of the exog-argument for VAR's
+    __init__ method.
+
+    Parameters
+    ----------
+    deterministic : str
+        See VECM's docstring for more information.
+    seasons : int
+        Number of seasons.
+    nobs_tot : int
+        Number of observations including the presample.
+    first_season : int, default: 0
+        Season of the first observation.
+    seasons_centered : boolean, default: False
+        If True, the seasonal dummy variables are demeaned such that they are
+        orthogonal to an intercept term.
+    exog : ndarray (nobs_tot x #det_terms) or None, default: None
+        An ndarray representing deterministic terms outside the cointegration
+        relation.
+    exog_coint : ndarray (nobs_tot x #det_terms_coint) or None, default: None
+        An ndarray representing deterministic terms inside the cointegration
+        relation.
+
+    Returns
+    -------
+    exog : ndarray or None
+        None, if the function's arguments don't contain deterministic terms.
+        Otherwise, an ndarray representing these deterministic terms.
+    """
+    exogs = []
+    if "co" in deterministic or "ci" in deterministic:
+        exogs.append(np.ones(nobs_tot))
+    if exog_coint is not None:
+        exogs.append(exog_coint)
+    if "lo" in deterministic or "li" in deterministic:
+        exogs.append(np.arange(nobs_tot))
+    if seasons > 0:
+        exogs.append(seasonal_dummies(seasons, nobs_tot,
+                                      first_period=first_season,
+                                      centered=seasons_centered))
+    if exog is not None:
+        exogs.append(exog)
+    return np.column_stack(exogs) if exogs else None
 
 
-def mat_sqrt(_2darray):
+def _mat_sqrt(_2darray):
     """Calculates the square root of a matrix.
 
     Parameters
@@ -177,8 +233,12 @@ def _endog_matrices(endog_tot, exog, exog_coint, diff_lags, deterministic,
 
     Parameters
     ----------
-    endog_tot : ndarray (neqs x total_nobs)
+    endog_tot : ndarray (neqs x nobs_tot)
         The whole sample including the presample.
+    exog: ndarray (nobs_tot x neqs) or None
+        Deterministic terms outside the cointegration relation.
+    exog_coint: ndarray (nobs_tot x neqs) or None
+        Deterministic terms inside the cointegration relation.
     diff_lags : int
         Number of lags in the VEC representation.
     deterministic : str {"nc", "co", "ci", "lo", "li"}
@@ -228,13 +288,9 @@ def _endog_matrices(endog_tot, exog, exog_coint, diff_lags, deterministic,
                          "Please choose one of the two.")
     y_min1_stack = [y_min1]
     if "ci" in deterministic:  # pp. 257, 299, 306, 307
-        # y_min1_mean = y_min1.mean(1)
         y_min1_stack.append(np.ones(T))
-        # H = vstack((np.identity(neqs),
-        #             - y_min1_mean))
-        # y_min1 = H.T.dot(y_min1)
     if "li" in deterministic:  # p. 299
-        y_min1_stack.append(linear_trend(T, p, coint=True))
+        y_min1_stack.append(_linear_trend(T, p, coint=True))
     if exog_coint is not None:
         y_min1_stack.append(exog_coint[-T-1:-1].T)
     y_min1 = np.row_stack(y_min1_stack)
@@ -254,36 +310,12 @@ def _endog_matrices(endog_tot, exog, exog_coint, diff_lags, deterministic,
                                               first_period=first_season,
                                               centered=True).T)
     if "lo" in deterministic:
-        delta_x_stack.append(linear_trend(T, p))
+        delta_x_stack.append(_linear_trend(T, p))
     if exog is not None:
         delta_x_stack.append(exog[-T:].T)
     delta_x = np.row_stack(delta_x_stack)
 
     return y_1_T, delta_y_1_T, y_min1, delta_x
-
-
-# def _block_matrix_ymin1_deltax(y_min1, delta_x):  # e.g. p.287 (7.2.4)
-#     """Returns an ndarray needed for parameter estimation as well as the
-#     calculation of standard errors.
-#
-#     Parameters
-#     ----------
-#     y_min1 : ndarray (neqs x nobs)
-#         (dimensions assuming no deterministic terms are given)
-#         .. math:: (y_0, \ldots, y_{T-1}
-#     delta_x : ndarray (diff_lags*neqs x nobs)
-#         (dimensions assuming no deterministic terms are given)
-#
-#     Returns
-#     -------
-#     result : ndarray (neqs*k_ar x neqs*k_ar)
-#         (dimensions assuming no deterministic terms are given)
-#         Inverse of a matrix consisting of four blocks. Each block is consists
-#         of matrix products of the function's arguments.
-#     """
-#     b = y_min1.dot(delta_x.T)
-#     return inv(vstack((hstack((y_min1.dot(y_min1.T), b)),
-#                        hstack((b.T, delta_x.dot(delta_x.T))))))
 
 
 def _r_matrices(T, delta_x, delta_y_1_T, y_min1):
@@ -297,15 +329,20 @@ def _r_matrices(T, delta_x, delta_y_1_T, y_min1):
     delta_x : ndarray (diff_lags*neqs x nobs)
         (dimensions assuming no deterministic terms are given)
     delta_y_1_T : ndarray (neqs x nobs)
-        .. math:: (y_1, \ldots, y_T) - (y_0, \ldots, y_{T-1})
+        :math:`(y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})`
     y_min1 : ndarray (neqs x nobs)
         (dimensions assuming no deterministic terms are given)
-        .. math:: (y_0, \ldots, y_{T-1}
+        :math:`(y_0, \\ldots, y_{T-1}`
 
     Returns
     -------
     result : tuple
-        A tuple of two ndarrays
+        A tuple of two ndarrays. (See p. 292 in [1]_ for the definition of
+        R_0 and R_1.)
+
+    References
+    ----------
+    .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
 
     # todo: rewrite m such that a big (TxT) matrix is avoided
@@ -325,16 +362,23 @@ def _sij(delta_x, delta_y_1_T, y_min1):
     delta_x : ndarray (diff_lags*neqs x nobs)
         (dimensions assuming no deterministic terms are given)
     delta_y_1_T : ndarray (neqs x nobs)
-        .. math:: (y_1, \ldots, y_T) - (y_0, \ldots, y_{T-1})
+        :math:`(y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})`
     y_min1 : ndarray (neqs x nobs)
         (dimensions assuming no deterministic terms are given)
-        .. math:: (y_0, \ldots, y_{T-1}
+        :math:`(y_0, \\ldots, y_{T-1}`
 
     Returns
     -------
     result : tuple
         A tuple of five ndarrays as well as eigenvalues and -vectors of a
         certain (matrix) product of some of the returned ndarrays.
+        (See pp. 294-295 in [1]_ for more information on
+        :math:`S_0, S_1, \\lambda_i, \\v_i` for
+        :math:`i \\in \\{1, \\dots, K\\}`.)
+
+    References
+    ----------
+    .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
     T = y_min1.shape[1]
     r0, r1 = _r_matrices(T, delta_x, delta_y_1_T, y_min1)
@@ -342,7 +386,7 @@ def _sij(delta_x, delta_y_1_T, y_min1):
     s01 = np.dot(r0, r1.T) / T
     s10 = s01.T
     s11 = np.dot(r1, r1.T) / T
-    s11_ = inv(mat_sqrt(s11))
+    s11_ = inv(_mat_sqrt(s11))
     # p. 295:
     s01_s11_ = np.dot(s01, s11_)
     eig = np.linalg.eig(chain_dot(s01_s11_.T, inv(s00), s01_s11_))
@@ -366,6 +410,10 @@ def coint_johansen(endog_tot, det, k_ar, seasons=0, first_season=0):
     k_ar : int
         Number of lags in the VEC representation, i.e. number of lagged
         differences.
+    seasons : int, default: 0
+        Number of seasons.
+    first_season : int, default: 0
+        Season of the first observation.
     Returns
     -------
     result : dict
@@ -424,20 +472,33 @@ def coint_johansen(endog_tot, det, k_ar, seasons=0, first_season=0):
 class VECM(tsbase.TimeSeriesModel):
     """
     Fit a VECM process
-    .. math:: \Delta y_t = \Pi y_{t-1} + \Gamma_1 \Delta y_{t-1} + \ldots + \Gamma_{k_ar-1} \Delta y_{t-k_ar+1} + u_t
+    .. math:: \\Delta y_t = \\Pi y_{t-1} + \\Gamma_1 \\Delta y_{t-1} + \\ldots + \\Gamma_{k_ar-1} \\Delta y_{t-k_ar+1} + u_t
     where
-    .. math:: \Pi = \alpha \beta'
+    .. math:: \\Pi = \\alpha \\beta'
     as described in chapter 7 of [1]_.
 
     Parameters
     ----------
-    endog_tot : array-like
+    endog_tot : array-like (nobs_tot x neqs)
         2-d endogenous response variable.
-    dates : array-like
-        must match number of rows of endog
+    exog: ndarray (nobs_tot x neqs) or None
+        Deterministic terms outside the cointegration relation.
+    exog_coint: ndarray (nobs_tot x neqs) or None
+        Deterministic terms inside the cointegration relation.
+    dates : array-like of datetime, optional
+        See :class:`statsmodels.tsa.base.tsa_model.TimeSeriesModel` for more
+        information.
+    freq : str, optional
+        See :class:`statsmodels.tsa.base.tsa_model.TimeSeriesModel` for more
+        information.
+    missing : str, optional
+        See :class:`statsmodels.base.model.Model` for more information.
     diff_lags : int
         Number of lags in the VEC representation
-    deterministic : str {"nc", "co", "ci", "lo", "li"}
+    coint_rank : int
+        Cointegration rank, equals the rank of the matrix :math:`\\Pi` and the
+        number of columns of :math:`\\alpha` and :math:`\\beta`.
+    deterministic : str {"nc", "co", "ci", "lo", "li"}, default: "nc"
         * "nc" - no deterministic terms
         * "co" - constant outside the cointegration relation
         * "ci" - constant within the cointegration relation
@@ -446,8 +507,10 @@ class VECM(tsbase.TimeSeriesModel):
 
         Combinations of these are possible (e.g. "cili" or "colo" for linear
         trend with intercept)
-    seasons : int
-        Number of seasons. 0 (default) means no seasons.
+    seasons : int, default: 0
+        Number of seasons. 0 means no seasons.
+    first_season : int, default: 0
+        Season of the first observation.
 
     References
     ----------
@@ -464,7 +527,7 @@ class VECM(tsbase.TimeSeriesModel):
             raise ValueError("exog_coint must have as many rows as enodg_tot!")
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VECM")
-        self.y = self.endog.T  # TODO delete this line if y not necessary
+        self.y = self.endog.T
         self.exog_coint = exog_coint
         self.neqs = self.endog.shape[1]
         self.p = diff_lags + 1
@@ -482,11 +545,9 @@ class VECM(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        method : {"ml"}
+        method : str {"ml"}, default: "ml"
             Estimation method to use.
-        coint_rank : int
-            Cointegration rank, equals the rank of the matrix \Pi and the
-            number of columns of \alpha and \beta
+            * "ml" - Maximum likelihood
 
         Returns
         -------
@@ -494,102 +555,25 @@ class VECM(tsbase.TimeSeriesModel):
 
         References
         -----
-        [1]_ pp. 269-304
+        .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
         """
-        # if method == "ls":
-        #     return self._estimate_vecm_ls(self.diff_lags, self.deterministic,
-        #                                   self.seasons, self.first_season)
-        # elif method == "egls":
-        #     return self._estimate_vecm_egls(self.diff_lags, self.deterministic,
-        #                                     self.seasons, self.coint_rank,
-        #                                     self.first_season)
         if method == "ml":
-            return self._estimate_vecm_ml(self.diff_lags, self.deterministic,
-                                          self.seasons, self.coint_rank,
-                                          self.first_season)
+            return self._estimate_vecm_ml()
         else:
             raise ValueError("%s not recognized, must be among %s"
                              % (method, "ml"))
 
-    # def _ls_pi_gamma(self, delta_y_1_T, y_min1, delta_x, diff_lags,
-    #                  deterministic):
-    #     K = delta_y_1_T.shape[0]
-    #     T = delta_y_1_T.shape[1]
-    #
-    #     mat1 = hstack((delta_y_1_T.dot(y_min1.T), delta_y_1_T.dot(delta_x.T)))
-    #     mat2 = _block_matrix_ymin1_deltax(y_min1, delta_x)
-    #     est_pi_gamma = mat1.dot(mat2)  # p. 287 (equation (7.2.4))
-    #
-    #     pi_cols = K
-    #     if "ci" in deterministic:
-    #         pi_cols += 1
-    #     if "li" in deterministic:
-    #         pi_cols += 1
-    #     pi_hat, gamma_hat = np.hsplit(est_pi_gamma, [pi_cols])
-    #
-    #     _A = delta_y_1_T - pi_hat.dot(y_min1) - gamma_hat.dot(delta_x)
-    #     p = diff_lags+1
-    #     sigma_u_hat = 1/(T-K*p) * np.dot(_A, _A.T)  # p. 287 (equation (7.2.5))
-    #
-    #     return pi_hat, gamma_hat, sigma_u_hat
-
-    # def _estimate_vecm_ls(self, diff_lags, deterministic="nc", seasons=0,
-    #                       first_season=0):
-    #     # deterministic \in \{"c", "lo", \}, where
-    #     # c=constant, lt=linear trend, s=seasonal terms
-    #     y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
-    #             self.y, diff_lags, deterministic, seasons, first_season)
-    #
-    #     pi_hat, gamma_hat, sigma_u_hat = self._ls_pi_gamma(delta_y_1_T, y_min1,
-    #                                                        delta_x, diff_lags,
-    #                                                        deterministic)
-    #     return {"Pi_hat": pi_hat, "Gamma_hat": gamma_hat,
-    #             "Sigma_u_hat": sigma_u_hat}
-    
-    # def _estimate_vecm_egls(self, diff_lags, deterministic="nc", seasons=0,
-    #                         r=1, first_season=0):
-    #     y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
-    #             self.y, diff_lags, deterministic, seasons, first_season)
-    #     T = y_1_T.shape[1]
-    #
-    #     pi_hat, _gamma_hat, sigma_u_hat = self._ls_pi_gamma(delta_y_1_T,
-    #                                                         y_min1, delta_x,
-    #                                                         diff_lags,
-    #                                                         deterministic)
-    #     alpha_hat = pi_hat[:, :r]
-    #
-    #     r0, r1 = _r_matrices(T, delta_x, delta_y_1_T, y_min1)
-    #     r11 = r1[:r]
-    #     r12 = r1[r:]
-    #     _alpha_Sigma = alpha_hat.T.dot(inv(sigma_u_hat))
-    #     # p. 292:
-    #     beta_hhat = inv(_alpha_Sigma.dot(alpha_hat)).dot(_alpha_Sigma).dot(
-    #             r0-alpha_hat.dot(r11)).dot(r12.T).dot(inv(r12.dot(r12.T))).T
-    #     beta_hhat = vstack((np.identity(r),
-    #                         beta_hhat))
-    #
-    #     # ? Gamma_hhat necessary / computed via
-    #     # (delta_y_1_T - alpha_hat.dot(beta_hhat.T).dot(y_min1)).dot(
-    #     #     delta_x.dot(inv(np.dot(delta_x,delta_x.T))))
-    #
-    #     # Gamma_hhat =
-    #     # TODO: Gamma?
-    #
-    #     return {"alpha": alpha_hat, "beta": beta_hhat,
-    #             "Gamma": _gamma_hat, "Sigma_u": sigma_u_hat}
-    
-    def _estimate_vecm_ml(self, diff_lags, deterministic="nc", seasons=0, r=1,
-                          first_season=0):
+    def _estimate_vecm_ml(self):
         y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
-                self.y, self.exog, self.exog_coint, diff_lags, deterministic,
-                seasons, first_season)
+                self.y, self.exog, self.exog_coint, self.diff_lags,
+                self.deterministic, self.seasons, self.first_season)
         T = y_1_T.shape[1]
 
         s00, s01, s10, s11, s11_, _, v = _sij(delta_x, delta_y_1_T, y_min1)
 
-        beta_tilde = (v[:, :r].T.dot(s11_)).T
+        beta_tilde = (v[:, :self.coint_rank].T.dot(s11_)).T
         # normalize beta tilde such that eye(r) forms the first r rows of it:
-        beta_tilde = np.dot(beta_tilde, inv(beta_tilde[:r]))
+        beta_tilde = np.dot(beta_tilde, inv(beta_tilde[:self.coint_rank]))
         alpha_tilde = s01.dot(beta_tilde).dot(
                 inv(beta_tilde.T.dot(s11).dot(beta_tilde)))
         gamma_tilde = (delta_y_1_T - alpha_tilde.dot(beta_tilde.T).dot(y_min1)
@@ -598,23 +582,24 @@ class VECM(tsbase.TimeSeriesModel):
                 gamma_tilde.dot(delta_x))
         sigma_u_tilde = temp.dot(temp.T) / T
 
-        return VECMResults(self.y, self.exog, self.exog_coint, self.p, r,
-                           alpha_tilde, beta_tilde, gamma_tilde, sigma_u_tilde,
-                           deterministic=deterministic, seasons=seasons,
-                           delta_y_1_T=delta_y_1_T, y_min1=y_min1,
-                           delta_x=delta_x, model=self, names=self.endog_names,
-                           dates=self.data.dates,
+        return VECMResults(self.y, self.exog, self.exog_coint, self.p,
+                           self.coint_rank, alpha_tilde, beta_tilde,
+                           gamma_tilde, sigma_u_tilde,
+                           deterministic=self.deterministic,
+                           seasons=self.seasons, delta_y_1_T=delta_y_1_T,
+                           y_min1=y_min1, delta_x=delta_x, model=self,
+                           names=self.endog_names, dates=self.data.dates,
                            first_season=self.first_season)
 
     @property
     def lagged_param_names(self):
         """
-
         Returns
         -------
         param_names : list of str
             Returns a list of parameter names for the lagged endogenous
-            parameters which are called Gamma in [1]_ (see chapter 6).
+            parameters which are called :math:`\\Gamma` in [1]_
+            (see chapter 6).
             If present in the model, also names for deterministic terms outside
             the cointegration relation are returned. They name the elements of
             the matrix C in [1]_ (p. 299).
@@ -654,12 +639,11 @@ class VECM(tsbase.TimeSeriesModel):
     @property
     def load_coef_param_names(self):
         """
-
         Returns
         -------
         param_names : list of str
             Returns a list of parameter names for the loading coefficients
-            which are called alpha in [1]_ (see chapter 6).
+            which are called :math:`\\alpha` in [1]_ (see chapter 6).
 
         References
         ----------
@@ -670,8 +654,8 @@ class VECM(tsbase.TimeSeriesModel):
         if self.coint_rank == 0:
             return None
 
-        # loading coefficients (alpha) # called "ec" in JMulTi, "ECT" in tsDyn
-        param_names += [               # called "_ce" in Stata
+        # loading coefficients (alpha) # called "ec" in JMulTi, "ECT" in tsDyn,
+        param_names += [               # and "_ce" in Stata
             self.load_coef_repr + "%d.%s" % (i+1, self.endog_names[j])
             for j in range(self.neqs)
             for i in range(self.coint_rank)
@@ -713,41 +697,7 @@ class VECM(tsbase.TimeSeriesModel):
                             for n in range(self.neqs)]
 
         return param_names
-    #
-    # @property
-    # def sigma2_param_names(self, error_cov_type="unstructured"):
-    #     """
-    #
-    #     Parameters
-    #     ----------
-    #     error_cov_type : str {"diagonal", "unstructured"}
-    #         If "diagonal", the variance of each variable is returned.
-    #         If "unstructured", the covariance of each combination of variables
-    #         is returned.
-    #
-    #     Returns
-    #     -------
-    #     param_names : list of str
-    #         Returns a list of parameter names.
-    #     """
-    #     param_names = []
-    #
-    #     if self.error_cov_type == 'diagonal':
-    #         param_names += [
-    #             'sigma2.%s' % self.endog_names[i]
-    #             for i in range(self.neqs)
-    #         ]
-    #     elif self.error_cov_type == 'unstructured':
-    #         param_names += [
-    #             ('sqrt.var.%s' % self.endog_names[i] if i == j else
-    #              'sqrt.cov.%s.%s' % (self.endog_names[j], self.endog_names[i]))
-    #             for i in range(self.neqs)
-    #             for j in range(i+1)
-    #         ]
-    #     else:
-    #         raise ValueError("error_cov_type has to be either \"diagonal\" " +
-    #                          "or \"unstructured\".")
-    #     return param_names
+
 
 # -----------------------------------------------------------------------------
 # VECMResults class
@@ -758,17 +708,29 @@ class VECMResults(object):
 
     Parameters
     ----------
-    endog_tot : array
-
-    level_var_lag_order : int
-
+    endog_tot : ndarray (neqs x nobs_tot)
+        Array of observations.
+    exog: ndarray (nobs_tot x neqs) or None
+        Deterministic terms outside the cointegration relation.
+    exog_coint: ndarray (nobs_tot x neqs) or None
+        Deterministic terms inside the cointegration relation.
+    k_ar : int
+        Lags in the VAR representation. This implies: Lags in the VEC
+        representation = k_ar - 1
     coint_rank : int
-
-    alpha : array (neqs x coint_rank)
-    beta : array (neqs x coint_rank)
-    gamma : array (neqs x neqs*(level_var_lag_order-1))
-    sigma_u : array (neqs x neqs)
-    deterministic : str {"nc", "co", "ci", "lo", "li"}
+        Cointegration rank, equals the rank of the matrix :math:`\\Pi` and the
+        number of columns of :math:`\\alpha` and :math:`\\beta`.
+    alpha : ndarray (neqs x coint_rank)
+        Estimate for the parameter :math:`\\alpha` of a VECM.
+    beta : ndarray (neqs x coint_rank)
+        Estimate for the parameter :math:`\\beta` of a VECM.
+    gamma : ndarray (neqs x neqs*(k_ar-1))
+        Array containing the estimates of the p-1 parameter matrices
+        :math:`\\Gamma_1, \\dots, \\Gamma_{p-1}` of a VECM(p-1). The
+        submatrices are stacked horizontally from left to right.
+    sigma_u : ndarray (neqs x neqs)
+        Estimate of white noise process covariance matrix :math:`\\Sigma_u`.
+    deterministic : str {"nc", "co", "ci", "lo", "li"}, default: "nc"
         * "nc" - no deterministic terms
         * "co" - constant outside the cointegration relation
         * "ci" - constant within the cointegration relation
@@ -777,78 +739,161 @@ class VECMResults(object):
 
         Combinations of these are possible (e.g. "cili" or "colo" for linear
         trend with intercept)
-    seasons : int
-        Number of seasons. 0 (default) means no seasons.
+    seasons : int, default: 0
+        Number of seasons. 0 means no seasons.
+    first_season : int, default: 0
+        Season of the first observation.
+    delta_y_1_T : ndarray or None, default: None
+        Auxilliary array for internal computations. It will be calculated if
+        not given as parameter.
+    y_min1 : ndarray or None, default: None
+        Auxilliary array for internal computations. It will be calculated if
+        not given as parameter.
+    delta_x : ndarray or None, default: None
+        Auxilliary array for internal computations. It will be calculated if
+        not given as parameter.
     model : VECM
         An instance of the VECM class.
+    names : list of str
+        Each str in the list represents the name of a variable of the time
+        series.
+    dates : array-like
+        For example a DatetimeIndex of length nobs_tot.
 
     Returns
     -------
     **Attributes**
-
-    y_all
-    alpha
-    beta
-    gamma
-    sigma_u
-        Estimate of white noise process variance Var[u_t]
-
-    deterministic
+    nobs : int
+        Number of observations (excluding the presample).
+    model : see Parameters
+    y_all : see endog_tot in Parameters
+    exog : see Parameters
+    exog_coint : see Parameters
+    names : see Parameters
+    dates : see Parameters
     neqs : int
-        Number of variables per observation. Number of equations.
-    k_ar : int
-        Lags in the VAR representation. This implies: Lags in the VEC
-        representation = k_ar - 1
+        Number of variables in the time series.
+    k_ar : see Parameters
+    deterministic : see Parameters
+    seasons : see Parameters
+    first_season : see Parameters
+    alpha : see Parameters
+    beta : see Parameters
+    gamma : see Parameters
+    sigma_u : see Parameters
+    det_coef_coint : ndarray (#(determinist. terms inside the coint. rel.) x r)
+        Estimated coefficients for the all deterministic terms inside the
+        cointegration relation.
+    const_coint : ndarray (1 x r)
+        If there is a constant deterministic term inside the cointegration
+        relation, then const_coint is the first row of det_coef_coint.
+        Otherwise it's an ndarray of zeros.
+    lin_trend_coint : ndarray (1 x r)
+        If there is a linear deterministic term inside the cointegration
+        relation, then lin_trend_coint contains the corresponding estimated
+         coefficients. As such it represents the corresponding row of
+         det_coef_coint. If there is no linear deterministic term inside the
+         cointegration relation, then lin_trend_coint is an ndarray of zeros.
+    exog_coint_coefs : ndarray (exog_coint.shape[1] x r) or None
+        If deterministic terms inside the cointegration relation are passed via
+        the exog_coint parameter, then exog_coint_coefs contains the
+        corresponding estimated coefficients. As such exog_coint_coefs
+        represents the last rows of det_coef_coint.
+        If no deterministic terms were passed via the exog_coint parameter,
+        this attribute is None.
+    det_coef : ndarray (neqs x #(deterministic terms outside the coint. rel.))
+        Estimated coefficients for the all deterministic terms outside the
+        cointegration relation.
+    const : ndarray (neqs x 1) or (neqs x 0)
+        If a constant deterministic term outside the cointegration is specified
+        within the deterministic parameter, then const is the first column of
+        det_coef_coint. Otherwise it's an ndarray of size zero.
+    seasonal : ndarray (neqs x seasons)
+        If the seasons parameter is > 0, then seasonal contains the estimated
+        coefficients corresponding to the seasonal terms. Otherwise it's an
+        ndarray of size zero.
+    lin_trend : ndarray (neqs x 1) or (neqs x 0)
+        If a linear deterministic term outside the cointegration is specified
+        within the deterministic parameter, then lin_trend contains the
+        corresponding estimated coefficients. As such it represents the
+        corresponding column of det_coef_coint. If there is no linear
+        deterministic term outside the cointegration relation, then
+        lin_trend is an ndarray of size zero.
+    exog_coefs : ndarray (neqs x exog_coefs.shape[1])
+        If deterministic terms outside the cointegration relation are passed
+        via the exog parameter, then exog_coefs contains the corresponding
+        estimated coefficients. As such exog_coefs represents the last columns
+        of det_coef.
+        If no deterministic terms were passed via the exog parameter, this
+        attribute is an ndarray of size zero.
+    delta_y_1_T : see Parameters
+    y_min1 : see Parameters
+    delta_x : see Parameters
     r : int
-        Cointegration rank.
-    T : int
-        Number of observations after the presample
-
-    y_min1 : ndarray (neqs x T)
-        Observations at t=0 until t=T-1
-    delta_y_1_T : ndarray (neqs x T)
-        Observations at t=1 until t=T minus y_min1
-    delta_x : ndarray ((neqs * (k_ar-1) + number of deterministic dummy variables
-        outside the cointegration relation) x T)
-
-    llf
-
-    _cov_sigma
-    num_det_coef_coint : int
-        Number of estimated coefficients for deterministic terms within the
-        cointegration relation
-
+        Cointegration rank, equals the rank of the matrix :math:`\\Pi` and the
+        number of columns of :math:`\\alpha` and :math:`\\beta`.
+    llf : float
+        The model's log-likelihood.
     cov_params : ndarray (d x d)
-        ... where d equals neqs * (neqs+num_det_coef_coint + neqs*(k_ar-1)+number of
-        deterministic dummy variables outside the cointegration relation)
+        Covariance matrix of the parameters. The number of rows and columns, d,
+        is equal to neqs * (neqs+num_det_coef_coint + neqs*(k_ar-1)+number of
+        deterministic dummy variables outside the cointegration relation). For
+        the case with no deterministic terms this matrix is defined on p. 287
+        in [1]_ as :math:`\\Sigma_{co}` and its relationship to the
+        ML-estimators can be seen in eq. (7.2.21) on p. 296 in [1]_.
+    cov_params_wo_det : ndarray
+        Covariance matrix of the parameters
+        :math:`\\tilde{\\Pi}, \\tilde{\\Gamma}` where
+        :math:`\\tilde{\\Pi} = \\tilde{\\alpha} \\tilde{\\beta'}`.
+        Equals cov_params without the rows and columns related to deterministic
+        terms. This matrix is defined as :math:`\\Sigma_{co}` on p. 287 in [1]_.
     stderr_params : ndarray (d)
-        ... where d is defined as for cov_params
+        Array containing the standard errors of :math:`\\Pi`, :math:`\\Gamma`,
+        and estimated parameters related to deterministic terms.
     stderr_coint : ndarray (neqs+num_det_coef_coint x r)
-    stderr_alpha ndarray (neqs x r)
+        Array containing the standard errors of :math:`\\beta` and estimated
+        parameters related to deterministic terms inside the cointegration
+        relation.
+    stderr_alpha :  ndarray (neqs x r)
+        The standard errors of :math:`\\alpha`.
     stderr_beta : ndarray (neqs x r)
-    stderr_det_coef_coint ndarray (num_det_coef_coint x r)
+        The standard errors of :math:`\\beta`.
+    stderr_det_coef_coint : ndarray (num_det_coef_coint x r)
+        The standard errors of estimated the parameters related to
+        deterministic terms inside the cointegration relation.
     stderr_gamma : ndarray (neqs x neqs*(k_ar-1))
-    stderr_det_coef : ndarray (neqs x number of deterministic dummy variables
-        outside the cointegration relation)
+        The standard errors of :math:`\\Gamma`.
+    stderr_det_coef : ndarray (neqs x det. terms outside the coint. relation)
+        The standard errors of estimated the parameters related to
+        deterministic terms outside the cointegration relation.
     tvalues_alpha : ndarray (neqs x r)
     tvalues_beta : ndarray (neqs x r)
-    tvalues_det_coef_coint
+    tvalues_det_coef_coint : ndarray (num_det_coef_coint x r)
     tvalues_gamma : ndarray (neqs x neqs*(k_ar-1))
-    tvalues_det_coef : ndarray (neqs x number of deterministic dummy variables
-        outside the cointegration relation)
+    tvalues_det_coef : ndarray (neqs x det. terms outside the coint. relation)
     pvalues_alpha : ndarray (neqs x r)
     pvalues_beta : ndarray (neqs x r)
-    pvalues_det_coef_coint
+    pvalues_det_coef_coint : ndarray (num_det_coef_coint x r)
     pvalues_gamma : ndarray (neqs x neqs*(k_ar-1))
-    pvalues_det_coef : ndarray (neqs x number of deterministic dummy variables
-        outside the cointegration relation)
-    var_repr : (k_ar x neqs x neqs)
-        KxK matrices A_i of the corresponding VAR representation. If the return
-        value is assigned to a variable A, these matrices can be accessed via
-        A[i], i=0, ..., k_ar-1.
+    pvalues_det_coef : ndarray (neqs x det. terms outside the coint. relation)
+    var_rep : (k_ar x neqs x neqs)
+        KxK parameter matrices A_i of the corresponding VAR representation. If
+        the return value is assigned to a variable A, these matrices can be
+        accessed via A[i] for i=0, ..., k_ar-1.
+    cov_var_repr : ndarray (neqs**2 * k_ar x neqs**2 * k_ar)
+        This matrix is called :math:`\\Sigma^{co}_{\\alpha}` on p. 289 in [1]_.
+        It is needed e.g. for impulse-response-analysis.
+    fittedvalues : ndarray (nobs x neqs)
+        The predicted in-sample values of the models' endogenous variables.
+    resid : ndarray (nobs x neqs)
+        The residuals.
+
+    References
+    ----------
+    .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
 
-    def __init__(self, endog_tot, exog, exog_coint, level_var_lag_order,
+    def __init__(self, endog_tot, exog, exog_coint, k_ar,
                  coint_rank, alpha, beta, gamma, sigma_u, deterministic='nc',
                  seasons=0, first_season=0, delta_y_1_T=None, y_min1=None,
                  delta_x=None, model=None, names=None, dates=None):
@@ -859,7 +904,7 @@ class VECMResults(object):
         self.names = names
         self.dates = dates
         self.neqs = endog_tot.shape[0]
-        self.k_ar = level_var_lag_order
+        self.k_ar = k_ar
         self.deterministic = deterministic
         self.seasons = seasons
         self.first_season = first_season
@@ -880,15 +925,17 @@ class VECMResults(object):
         if "ci" in deterministic:
             self.const_coint = self.det_coef_coint[:1, :]
         else:
-            self.const_coint = np.zeros(self.r)[:, None]
+            self.const_coint = np.zeros(self.r).reshape((1, -1))
         if "li" in deterministic:
             start = 1 if "ci" in deterministic else 0
             self.lin_trend_coint = self.det_coef_coint[start:start+1, :]
         else:
-            self.lin_trend_coint = np.zeros(self.r)[:, None]
+            self.lin_trend_coint = np.zeros(self.r).reshape(1, -1)
         if self.exog_coint is not None:
             start = ("ci" in deterministic) + ("li" in deterministic)
             self.exog_coint_coefs = self.det_coef_coint[start:, :]
+        else:
+            self.exog_coint_coefs = None
 
         split_const_season = 1 if "co" in deterministic else 0
         split_season_lin = split_const_season + ((seasons-1) if seasons else 0)
@@ -902,25 +949,27 @@ class VECMResults(object):
 
         self.sigma_u = sigma_u
 
-        if y_min1 is not None or delta_x is not None or delta_y_1_T:
-            self.delta_y_1_T = delta_y_1_T
-            self.y_min1 = y_min1
-            self.delta_x = delta_x
+        if y_min1 is not None and delta_x is not None \
+                and delta_y_1_T is not None:
+            self._delta_y_1_T = delta_y_1_T
+            self._y_min1 = y_min1
+            self._delta_x = delta_x
         else:
-            _y_1_T, self.delta_y_1_T, self.y_min1, self.delta_x = \
-                _endog_matrices(endog_tot, self.exog, level_var_lag_order,
+            _y_1_T, self._delta_y_1_T, self._y_min1, self._delta_x = \
+                _endog_matrices(endog_tot, self.exog, k_ar,
                                 deterministic, seasons)
-        self.nobs = self.y_min1.shape[1]
+        self.nobs = self._y_min1.shape[1]
 
     @cache_readonly
     def llf(self):  # Lutkepohl p. 295 (7.2.20)
-        """Compute VECM(k_ar) loglikelihood
+        """Compute VECM(k_ar-1) loglikelihood, where k_ar-1 denotes the number
+        of lagged differences.
         """
         K = self.neqs
         T = self.nobs
         r = self.r
-        s00, _, _, _, _, lambd, _ = _sij(self.delta_x, self.delta_y_1_T,
-                                         self.y_min1)
+        s00, _, _, _, _, lambd, _ = _sij(self._delta_x, self._delta_y_1_T,
+                                         self._y_min1)
         return - K * T * log(2*math.pi) / 2  \
             - T * (log(np.linalg.det(s00)) + sum(np.log(1-lambd)[:r])) / 2  \
             - K * T / 2
@@ -933,11 +982,6 @@ class VECMResults(object):
         # compare p. 93, 297 Lutkepohl (2005)
         return 2 * chain_dot(d_K_plus, np.kron(sigma_u, sigma_u), d_K_plus.T)
 
-    @cache_readonly
-    def num_det_coef_coint(self):  # todo: check if used at all?
-        number_of_params = 0 + ("ci" in self.deterministic) \
-                           + ("li" in self.deterministic) + self.exog.shape[1]
-        return number_of_params
 
     @cache_readonly
     def cov_params(self):  # p.296 (7.2.21)
@@ -954,12 +998,12 @@ class VECMResults(object):
                                        np.identity(self.neqs * (self.k_ar-1) +
                                                    num_det))
 
-        y_min1 = self.y_min1
+        y_min1 = self._y_min1
         b_y = beta.T.dot(y_min1)
         omega11 = b_y.dot(b_y.T)
-        omega12 = b_y.dot(self.delta_x.T)
+        omega12 = b_y.dot(self._delta_x.T)
         omega21 = omega12.T
-        omega22 = self.delta_x.dot(self.delta_x.T)
+        omega22 = self._delta_x.dot(self._delta_x.T)
         omega = np.bmat([[omega11, omega12],
                          [omega21, omega22]]).A
 
@@ -995,10 +1039,24 @@ class VECMResults(object):
 
     @cache_readonly
     def stderr_coint(self):
-        _, r1 = _r_matrices(self.nobs, self.delta_x, self.delta_y_1_T,
-                            self.y_min1)
+        """
+        Notes
+        -----
+        See p. 297 in [1]_. Using the rule
+        :math:`vec(B R) = (B' \kron I) vec(R)` for two matrices B and R which
+        are compatible for multiplication. This is rule (3) on p. 662 in [1]_.
+
+        References
+        ----------
+        .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+        """
+        _, r1 = _r_matrices(self.nobs, self._delta_x, self._delta_y_1_T,
+                            self._y_min1)
         r12 = r1[self.r:]
+        if r12.size == 0:
+            return np.zeros((self.r, self.r))
         mat1 = inv(r12.dot(r12.T))
+        mat1 = np.kron(mat1.T, np.identity(self.r))
         det = self.det_coef_coint.shape[0]
         mat2 = np.kron(np.identity(self.neqs-self.r+det),
                        inv(chain_dot(
@@ -1017,14 +1075,14 @@ class VECMResults(object):
 
     @cache_readonly
     def stderr_beta(self):
-        ret_1dim = self.stderr_coint[:self.beta.size]
+        ret_1dim = self.stderr_coint[:self.beta.shape[0]]
         return ret_1dim.reshape(self.beta.shape, order="F")
 
     @cache_readonly
     def stderr_det_coef_coint(self):
         if self.det_coef_coint.size == 0:
             return self.det_coef_coint  # 0-size array
-        ret_1dim = self.stderr_coint[self.beta.size:]
+        ret_1dim = self.stderr_coint[self.beta.shape[0]:]
         return ret_1dim.reshape(self.det_coef_coint.shape, order="F")
 
     @cache_readonly
@@ -1123,7 +1181,7 @@ class VECMResults(object):
         return self._make_conf_int(self.det_coef, self.stderr_det_coef, alpha)
 
     @cache_readonly
-    def var_repr(self):
+    def var_rep(self):
         pi = self.alpha.dot(self.beta.T)
         gamma = self.gamma
         K = self.neqs
@@ -1140,7 +1198,7 @@ class VECMResults(object):
     def cov_var_repr(self):
         """
         Gives the covariance matrix of the vector consisting of the columns of
-        the corresponding VAR coefficient matrices (i.e. vec(self.var_repr)).
+        the corresponding VAR coefficient matrices (i.e. vec(self.var_rep)).
 
         Returns
         -------
@@ -1185,7 +1243,7 @@ class VECMResults(object):
                          vecm_var_transformation.T)
 
     def ma_rep(self, maxn=10):
-        return ma_rep(self.var_repr, maxn)
+        return ma_rep(self.var_rep, maxn)
 
     @cache_readonly
     def _chol_sigma_u(self):
@@ -1193,8 +1251,8 @@ class VECMResults(object):
 
     def orth_ma_rep(self, maxn=10, P=None):
         r"""Compute orthogonalized MA coefficient matrices using P matrix such
-        that :math:`\Sigma_u = PP^\prime`. P defaults to the Cholesky
-        decomposition of :math:`\Sigma_u`
+        that :math:`\\Sigma_u = PP^\\prime`. P defaults to the Cholesky
+        decomposition of :math:`\\Sigma_u`
 
         Parameters
         ----------
@@ -1277,7 +1335,7 @@ class VECMResults(object):
             exog.append(exog_seasonal)
             trend_coefs.append(self.seasonal.T)
 
-        exog_lin_trend = linear_trend(self.nobs, self.k_ar)
+        exog_lin_trend = _linear_trend(self.nobs, self.k_ar)
         exog_lin_trend = exog_lin_trend[-1] + 1 + np.arange(steps)
         if self.lin_trend.size > 0:
             exog.append(exog_lin_trend)
@@ -1290,12 +1348,12 @@ class VECMResults(object):
         # adding deterministic terms inside cointegration relation
         if "ci" in self.deterministic:
             exog.append(exog_const)
-            trend_coefs.append(self.alpha.dot(self.const_coint).T)
-        exog_lin_trend_coint = linear_trend(self.nobs, self.k_ar, coint=True)
+            trend_coefs.append(self.alpha.dot(self.const_coint.T).T)
+        exog_lin_trend_coint = _linear_trend(self.nobs, self.k_ar, coint=True)
         exog_lin_trend_coint = exog_lin_trend_coint[-1] + 1 + np.arange(steps)
         if "li" in self.deterministic:
             exog.append(exog_lin_trend_coint)
-            trend_coefs.append(self.alpha.dot(self.lin_trend_coint).T)
+            trend_coefs.append(self.alpha.dot(self.lin_trend_coint.T).T)
 
         if exog_coint_fc is not None:
             if exog_coint_fc.ndim == 1:
@@ -1314,12 +1372,12 @@ class VECMResults(object):
 
         # call the forecasting function of the VAR-module
         if alpha is not None:
-            return forecast_interval(last_observations, self.var_repr,
+            return forecast_interval(last_observations, self.var_rep,
                                      trend_coefs, self.sigma_u, steps,
                                      alpha=alpha,
                                      exog=exog)
         else:
-            return forecast(last_observations, self.var_repr, trend_coefs,
+            return forecast(last_observations, self.var_rep, trend_coefs,
                             steps, exog)
 
     def plot_forecast(self, steps, alpha=0.05, plot_conf_int=True,
@@ -1335,7 +1393,9 @@ class VECMResults(object):
             The confidence level.
         plot_conf_int : bool, default: True
             If True, plot bounds of confidence intervals.
-
+        n_last_obs : int or None, default: None
+            If int, restrict plotted history to n_last_obs observations.
+            If None, include the whole history in the plot.
         """
         mid, lower, upper = self.predict(steps, alpha=alpha)
 
@@ -1420,11 +1480,11 @@ class VECMResults(object):
 
         if causing is None:
             causing_ind = [i for i in range(self.neqs) if i not in caused_ind]
-            causing = [self.names[c] for c in caused_ind]
+            causing = [self.names[c] for c in causing_ind]
 
         y, k, t, p = self.y_all, self.neqs, self.nobs - 1, self.k_ar + 1
         exog = deterministic_to_exog(self.deterministic, self.seasons,
-                                     len_data=self.nobs + self.k_ar,
+                                     nobs_tot=self.nobs + self.k_ar,
                                      first_season=self.first_season,
                                      seasons_centered=True, exog=self.exog,
                                      exog_coint=self.exog_coint)
@@ -1562,7 +1622,7 @@ class VECMResults(object):
         .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
         """
         exog = deterministic_to_exog(self.deterministic, self.seasons,
-                                     len_data=self.nobs + self.k_ar,
+                                     nobs_tot=self.nobs + self.k_ar,
                                      first_season=self.first_season,
                                      seasons_centered=True, exog=self.exog,
                                      exog_coint=self.exog_coint)
@@ -1594,8 +1654,8 @@ class VECMResults(object):
         gamma = self.gamma
         if self.det_coef.size > 0:
             gamma = hstack((gamma, self.det_coef))
-        delta_y = np.dot(pi, self.y_min1) + np.dot(gamma, self.delta_x)
-        return (delta_y + self.y_min1[:self.neqs]).T
+        delta_y = np.dot(pi, self._y_min1) + np.dot(gamma, self._delta_x)
+        return (delta_y + self._y_min1[:self.neqs]).T
 
     @cache_readonly
     def resid(self):
@@ -1619,6 +1679,13 @@ class VECMResults(object):
         verbose : bool
             If True, print summary with the test's results.
 
+        Returns
+        -------
+        result : dict
+            A dictionary with the test's results as key-value-pairs. The keys
+            are 'statistic', 'crit_value', 'pvalue', 'df', 'conclusion', and
+            'signif'.
+
         Notes
         -----
         H0 (null) : data are generated by a Gaussian-distributed process
@@ -1638,7 +1705,10 @@ class VECMResults(object):
 
         Returns
         -------
-        results : dict
+        result : dict
+            A dictionary with the test's results as key-value-pairs. The keys
+            are 'statistic', 'crit_value', 'pvalue', 'df', 'conclusion', and
+            'signif'.
 
         References
         ----------
@@ -1718,6 +1788,17 @@ class VECMResults(object):
         plot.plot_mts(y.T, names=names, index=dates)
 
     def summary(self, alpha=.05):
+        """
+        Parameters
+        ----------
+        alpha : float between 0 and 1, default 0.05
+            Significance level of the shown confidence intervals.
+
+        Returns
+        -------
+        summary : statsmodels.iolib.summary.Summary
+            A summary containing information about estimated parameters.
+        """
         from statsmodels.iolib.summary import summary_params
 
         summary = Summary()
@@ -1806,7 +1887,7 @@ class VECMResults(object):
                 # Create the table
                 mask = np.concatenate(masks)
                 eq_name = self.model.endog_names[i]
-                title = "Det. terms outside coint. relation " + \
+                title = "Det. terms outside the coint. relation " + \
                         "& lagged endog. parameters for equation %s" % eq_name
                 table = make_table(self, lagged_params, stderr_lagged_params,
                                    tvalues_lagged_params,

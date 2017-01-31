@@ -74,7 +74,7 @@ class BaseIRAnalysis(object):
 
         # auxiliary stuff
         if vecm:
-            self._A = util.comp_matrix(model.var_repr)
+            self._A = util.comp_matrix(model.var_rep)
         else:
             self._A = util.comp_matrix(model.coefs)
 
