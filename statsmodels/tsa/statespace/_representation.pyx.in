@@ -232,6 +232,8 @@ cdef class {{prefix}}Statespace(object):
 
         # Set the flag for initialization to be false
         self.initialized = False
+        self.initial_state = None
+        self.initial_state_cov = None
 
         # Unless it is specified, check for a diagonal covariance matrix
         if diagonal_obs_cov == -1:
@@ -294,11 +296,65 @@ cdef class {{prefix}}Statespace(object):
         # Initialize dimensions
         self.set_dimensions(self.k_endog, self.k_states, self.k_posdef)
 
-    def __getnewargs__(self):
-        return (np.asarray(self.obs), np.asarray(self.design), np.asarray(self.obs_intercept), np.asarray(self.obs_cov),
+    def __reduce__(self):
+        init = (np.asarray(self.obs), np.asarray(self.design), np.asarray(self.obs_intercept), np.asarray(self.obs_cov),
                 np.asarray(self.transition), np.asarray(self.state_intercept), np.asarray(self.selection),
                 np.asarray(self.state_cov), self.diagonal_obs_cov)
+        state = {'initialized': self.initialized,
+                 'initial_state': None,
+                 'initial_state_cov': None,
+                 'missing': np.asarray(self.missing),
+                 'nmissing': np.asarray(self.nmissing),
+                 'has_missing': self.has_missing,
+                 'tmp': np.asarray(self.tmp),
+                 'selected_state_cov': np.asarray(self.selected_state_cov),
+                 'selected_obs': np.asarray(self.selected_obs),
+                 'selected_obs_intercept': np.asarray(self.selected_obs_intercept),
+                 'selected_design': np.asarray(self.selected_design),
+                 'selected_obs_cov': np.asarray(self.selected_obs_cov),
+                 'transform_cholesky': np.asarray(self.transform_cholesky),
+                 'transform_obs_cov': np.asarray(self.transform_obs_cov),
+                 'transform_design': np.asarray(self.transform_design),
+                 'collapse_obs': np.asarray(self.collapse_obs),
+                 'collapse_obs_tmp': np.asarray(self.collapse_obs_tmp),
+                 'collapse_design': np.asarray(self.collapse_design),
+                 'collapse_obs_cov': np.asarray(self.collapse_obs_cov),
+                 'collapse_cholesky': np.asarray(self.collapse_cholesky),
+                 't': self.t,
+                 'collapse_loglikelihood': self.collapse_loglikelihood,
+                 'companion_transition': self.companion_transition,
+                 'transform_determinant': self.transform_determinant,
+                 }
+        if self.initialized:
+            state['initial_state'] = np.asarray(self.initial_state)
+            state['initial_state_cov'] = np.asarray(self.initial_state_cov)
+        return (self.__class__, init, state)
 
+    def __setstate__(self, state):
+        self.initial_state = state['initial_state']
+        self.initial_state_cov = state['initial_state_cov']
+        self.initialized = state['initialized']
+        self.selected_state_cov = state['selected_state_cov']
+        self.missing = state['missing']
+        self.nmissing =state['nmissing']
+        self.has_missing = state['has_missing']
+        self.tmp = state['tmp']
+        self.selected_obs  = state['selected_obs']
+        self.selected_obs_intercept  = state['selected_obs_intercept']
+        self.selected_design  = state['selected_design']
+        self.selected_obs_cov  =state['selected_obs_cov']
+        self.transform_cholesky  = state['transform_cholesky']
+        self.transform_obs_cov  = state['transform_obs_cov']
+        self.transform_design = state['transform_design']
+        self.collapse_obs = state['collapse_obs']
+        self.collapse_obs_tmp = state['collapse_obs_tmp']
+        self.collapse_design = state['collapse_design']
+        self.collapse_obs_cov = state['collapse_obs_cov']
+        self.collapse_cholesky = state['collapse_cholesky']
+        self.t = state['t']
+        self.collapse_loglikelihood = state['collapse_loglikelihood']
+        self.companion_transition = state['companion_transition']
+        self.transform_determinant = state['transform_determinant']
 
     # ## Initialize: known values
     #
