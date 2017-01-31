@@ -166,19 +166,22 @@ def multivariate_stats(eigenvals,
     m = (np.abs(p - q) - 1) / 2
     n = (v - p - 1) / 2
 
-    results = pd.DataFrame({'Value': [], 'F Value': [], 'Num DF': [],
-                            'Den DF': [], 'Pr > F': []})
+    cols = ['Value', 'Num DF', 'Den DF', 'F Value', 'Pr > F']
+    index = ["Wilks' lambda", "Pillai's trace",
+             "Hotelling-Lawley trace", "Roy's greatest root"]
+    results = pd.DataFrame(columns=cols,
+                           index=index)
 
     def fn(x):
         return np.real([x])[0]
 
-    results.loc["Wilks’ lambda", 'Value'] = fn(np.prod(1 - eigv2))
+    results.loc["Wilks' lambda", 'Value'] = fn(np.prod(1 - eigv2))
 
-    results.loc["Pillai’s trace", 'Value'] = fn(eigv2.sum())
+    results.loc["Pillai's trace", 'Value'] = fn(eigv2.sum())
 
     results.loc["Hotelling-Lawley trace", 'Value'] = fn(eigv1.sum())
 
-    results.loc["Roy’s greatest root", 'Value'] = fn(eigv1.max())
+    results.loc["Roy's greatest root", 'Value'] = fn(eigv1.max())
 
     r = v - (p - q + 1)/2
     u = (p*q - 2) / 4
@@ -188,24 +191,24 @@ def multivariate_stats(eigenvals,
     else:
         t = 1
     df2 = r*t - 2*u
-    lmd = results.loc["Wilks’ lambda", 'Value']
+    lmd = results.loc["Wilks' lambda", 'Value']
     lmd = np.power(lmd, 1 / t)
     F = (1 - lmd) / lmd * df2 / df1
-    results.loc["Wilks’ lambda", 'Num DF'] = df1
-    results.loc["Wilks’ lambda", 'Den DF'] = df2
-    results.loc["Wilks’ lambda", 'F Value'] = F
+    results.loc["Wilks' lambda", 'Num DF'] = df1
+    results.loc["Wilks' lambda", 'Den DF'] = df2
+    results.loc["Wilks' lambda", 'F Value'] = F
     pval = stats.f.sf(F, df1, df2)
-    results.loc["Wilks’ lambda", 'Pr > F'] = pval
+    results.loc["Wilks' lambda", 'Pr > F'] = pval
 
-    V = results.loc["Pillai’s trace", 'Value']
+    V = results.loc["Pillai's trace", 'Value']
     df1 = s * (2*m + s + 1)
     df2 = s * (2*n + s + 1)
     F = df2 / df1 * V / (s - V)
-    results.loc["Pillai’s trace", 'Num DF'] = df1
-    results.loc["Pillai’s trace", 'Den DF'] = df2
-    results.loc["Pillai’s trace", 'F Value'] = F
+    results.loc["Pillai's trace", 'Num DF'] = df1
+    results.loc["Pillai's trace", 'Den DF'] = df2
+    results.loc["Pillai's trace", 'F Value'] = F
     pval = stats.f.sf(F, df1, df2)
-    results.loc["Pillai’s trace", 'Pr > F'] = pval
+    results.loc["Pillai's trace", 'Pr > F'] = pval
 
     U = results.loc["Hotelling-Lawley trace", 'Value']
     if n > 0:
@@ -224,17 +227,17 @@ def multivariate_stats(eigenvals,
     pval = stats.f.sf(F, df1, df2)
     results.loc["Hotelling-Lawley trace", 'Pr > F'] = pval
 
-    sigma = results.loc["Roy’s greatest root", 'Value']
+    sigma = results.loc["Roy's greatest root", 'Value']
     r = np.max([p, q])
     df1 = r
     df2 = v - r + q
     F = df2 / df1 * sigma
-    results.loc["Roy’s greatest root", 'Num DF'] = df1
-    results.loc["Roy’s greatest root", 'Den DF'] = df2
-    results.loc["Roy’s greatest root", 'F Value'] = F
+    results.loc["Roy's greatest root", 'Num DF'] = df1
+    results.loc["Roy's greatest root", 'Den DF'] = df2
+    results.loc["Roy's greatest root", 'F Value'] = F
     pval = stats.f.sf(F, df1, df2)
-    results.loc["Roy’s greatest root", 'Pr > F'] = pval
-    return results.iloc[:, [4, 2, 0, 1, 3]]
+    results.loc["Roy's greatest root", 'Pr > F'] = pval
+    return results
 
 
 def _multivariate_ols_test(hypotheses, fit_results, exog_names,
