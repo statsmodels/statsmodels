@@ -390,10 +390,71 @@ cdef class {{prefix}}KalmanFilter(object):
         self.converged = 0
         self.period_converged = 0
 
-    def __getnewargs__(self):
-        return (self.model, self.filter_method, self.inversion_method,
+    def __reduce__(self):
+        args = (self.model, self.filter_method, self.inversion_method,
                 self.stability_method,  self.conserve_memory, self.filter_timing,
                 self.tolerance, self.loglikelihood_burn)
+        state = {'t': self.t,
+                 'converged' : self.converged ,
+                 'converged_determinant' : self.converged_determinant,
+                 'determinant' : self.determinant,
+                 'period_converged' : self.period_converged,
+                 'converged_filtered_state_cov': np.asarray(self.converged_filtered_state_cov),
+                 'converged_forecast_error_cov': np.asarray(self.converged_forecast_error_cov),
+                 'converged_kalman_gain': np.asarray(self.converged_kalman_gain),
+                 'converged_predicted_state_cov': np.asarray(self.converged_predicted_state_cov),
+                 'filtered_state': np.asarray(self.filtered_state),
+                 'filtered_state_cov': np.asarray(self.filtered_state_cov),
+                 'forecast': np.asarray(self.forecast),
+                 'forecast_error': np.asarray(self.forecast_error),
+                 'forecast_error_cov': np.asarray(self.forecast_error_cov),
+                 'forecast_error_fac': np.asarray(self.forecast_error_fac),
+                 'forecast_error_ipiv': np.asarray(self.forecast_error_ipiv),
+                 'forecast_error_work': np.asarray(self.forecast_error_work),
+                 'kalman_gain': np.asarray(self.kalman_gain),
+                 'loglikelihood': np.asarray(self.loglikelihood),
+                 'predicted_state': np.asarray(self.predicted_state),
+                 'predicted_state_cov': np.asarray(self.predicted_state_cov),
+                 'standardized_forecast_error': np.asarray(self.standardized_forecast_error),
+                 'tmp0': np.asarray(self.tmp0),
+                 'tmp00': np.asarray(self.tmp00),
+                 'tmp1': np.asarray(self.tmp1),
+                 'tmp2': np.asarray(self.tmp2),
+                 'tmp3': np.asarray(self.tmp3),
+                 'tmp4': np.asarray(self.tmp4)
+                 }
+
+        return (self.__class__, args, state)
+
+    def __setstate__(self, state):
+        self.t = state['t']
+        self.converged  = state['converged']
+        self.converged_determinant = state['converged_determinant']
+        self.determinant = state['determinant']
+        self.period_converged = state['period_converged']
+        self.converged_filtered_state_cov = state['converged_filtered_state_cov']
+        self.converged_forecast_error_cov = state['converged_forecast_error_cov']
+        self.converged_kalman_gain = state['converged_kalman_gain']
+        self.converged_predicted_state_cov = state['converged_predicted_state_cov']
+        self.filtered_state = state['filtered_state']
+        self.filtered_state_cov = state['filtered_state_cov']
+        self.forecast = state['forecast']
+        self.forecast_error = state['forecast_error']
+        self.forecast_error_cov = state['forecast_error_cov']
+        self.forecast_error_fac = state['forecast_error_fac']
+        self.forecast_error_ipiv = state['forecast_error_ipiv']
+        self.forecast_error_work = state['forecast_error_work']
+        self.kalman_gain = state['kalman_gain']
+        self.loglikelihood = state['loglikelihood']
+        self.predicted_state = state['predicted_state']
+        self.predicted_state_cov = state['predicted_state_cov']
+        self.standardized_forecast_error = state['standardized_forecast_error']
+        self.tmp0 = state['tmp0']
+        self.tmp00 = state['tmp00']
+        self.tmp1 = state['tmp1']
+        self.tmp2 = state['tmp2']
+        self.tmp3 = state['tmp3']
+        self.tmp4 = state['tmp4']
 
 
     cdef allocate_arrays(self):

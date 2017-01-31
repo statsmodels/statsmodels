@@ -89,9 +89,6 @@ cdef class sKalmanFilter(object):
     cdef readonly np.float32_t converged_determinant
 
     # ### Temporary arrays
-    cdef readonly np.float32_t [:] selected_obs
-    cdef readonly np.float32_t [:] selected_design
-    cdef readonly np.float32_t [:] selected_obs_cov
     cdef readonly np.float32_t [::1,:] forecast_error_fac
     cdef readonly int [:] forecast_error_ipiv
     cdef readonly np.float32_t [::1,:] forecast_error_work
@@ -217,9 +214,6 @@ cdef class dKalmanFilter(object):
     cdef readonly np.float64_t converged_determinant
 
     # ### Temporary arrays
-    cdef readonly np.float64_t [:] selected_obs
-    cdef readonly np.float64_t [:] selected_design
-    cdef readonly np.float64_t [:] selected_obs_cov
     cdef readonly np.float64_t [::1,:] forecast_error_fac
     cdef readonly int [:] forecast_error_ipiv
     cdef readonly np.float64_t [::1,:] forecast_error_work
@@ -345,9 +339,6 @@ cdef class cKalmanFilter(object):
     cdef readonly np.complex64_t converged_determinant
 
     # ### Temporary arrays
-    cdef readonly np.complex64_t [:] selected_obs
-    cdef readonly np.complex64_t [:] selected_design
-    cdef readonly np.complex64_t [:] selected_obs_cov
     cdef readonly np.complex64_t [::1,:] forecast_error_fac
     cdef readonly int [:] forecast_error_ipiv
     cdef readonly np.complex64_t [::1,:] forecast_error_work
@@ -473,9 +464,6 @@ cdef class zKalmanFilter(object):
     cdef readonly np.complex128_t converged_determinant
 
     # ### Temporary arrays
-    cdef readonly np.complex128_t [:] selected_obs
-    cdef readonly np.complex128_t [:] selected_design
-    cdef readonly np.complex128_t [:] selected_obs_cov
     cdef readonly np.complex128_t [::1,:] forecast_error_fac
     cdef readonly int [:] forecast_error_ipiv
     cdef readonly np.complex128_t [::1,:] forecast_error_work
