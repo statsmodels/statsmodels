@@ -1,5 +1,5 @@
 import pandas as pd
-from ..anova import AnovaRM
+from statsmodels.stats.anova import AnovaRM
 from numpy.testing import assert_array_almost_equal, assert_raises
 
 

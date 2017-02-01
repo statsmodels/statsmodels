@@ -32,7 +32,7 @@ def _get_covariance(model, robust):
 
 def anova_single(model, **kwargs):
     """
-    ANOVA table for one fitted linear model.
+    Anova table for one fitted linear model.
 
     Parameters
     ----------
@@ -92,7 +92,7 @@ def anova_single(model, **kwargs):
 def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
                      pr_test, robust):
     """
-    ANOVA table for one fitted linear model.
+    Anova table for one fitted linear model.
 
     Parameters
     ----------
@@ -148,7 +148,7 @@ def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
 #NOTE: the below is not agnostic about formula...
 def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
     """
-    ANOVA type II table for one fitted linear model.
+    Anova type II table for one fitted linear model.
 
     Parameters
     ----------
@@ -275,7 +275,7 @@ def anova3_lm_single(model, design_info, n_rows, test, pr_test, robust):
 
 def anova_lm(*args, **kwargs):
     """
-    ANOVA table for one or more fitted linear models.
+    Anova table for one or more fitted linear models.
 
     Parameters
     ----------
@@ -287,7 +287,7 @@ def anova_lm(*args, **kwargs):
     test : str {"F", "Chisq", "Cp"} or None
         Test statistics to provide. Default is "F".
     typ : str or int {"I","II","III"} or {1,2,3}
-        The type of ANOVA test to perform. See notes.
+        The type of Anova test to perform. See notes.
     robust : {None, "hc0", "hc1", "hc2", "hc3"}
         Use heteroscedasticity-corrected coefficient covariance matrix.
         If robust covariance is desired, it is recommended to use `hc3`.
@@ -316,12 +316,12 @@ def anova_lm(*args, **kwargs):
     ...                             "partner_status"}) # make name pythonic
     >>> moore_lm = ols('conformity ~ C(fcategory, Sum)*C(partner_status, Sum)',
     ...                 data=data).fit()
-    >>> table = sm.stats.anova_lm(moore_lm, typ=2) # Type 2 ANOVA DataFrame
+    >>> table = sm.stats.anova_lm(moore_lm, typ=2) # Type 2 Anova DataFrame
     >>> print(table)
     """
     typ = kwargs.get('typ', 1)
 
-    ### Farm Out Single model ANOVA Type I, II, III, and IV ###
+    ### Farm Out Single model Anova Type I, II, III, and IV ###
 
     if len(args) == 1:
         model = args[0]
@@ -333,7 +333,7 @@ def anova_lm(*args, **kwargs):
         raise ValueError("Multiple models only supported for type I. "
                          "Got type %s" % str(typ))
 
-    ### COMPUTE ANOVA TYPE I ###
+    ### COMPUTE Anova TYPE I ###
 
     # if given a single model
     if len(args) == 1:
@@ -428,11 +428,11 @@ class AnovaRM(object):
 
     Returns
     -------
-    results: ANOVAResults instance
+    results: AnovaResults instance
 
     References
     ----------
-    .. [1] Rutherford, Andrew. ANOVA and ANCOVA: a GLM approach. John Wiley & Sons, 2011.
+    .. [1] Rutherford, Andrew. Anova and ANCOVA: a GLM approach. John Wiley & Sons, 2011.
 
     """
 
@@ -534,12 +534,12 @@ class AnovaRM(object):
                 anova_table.loc[term, 'Den DF'] = df2
                 anova_table.loc[term, 'Pr > F'] = p
 
-        return ANOVAResults(anova_table.iloc[:, [1, 2, 0, 3]])
+        return AnovaResults(anova_table.iloc[:, [1, 2, 0, 3]])
 
 
-class ANOVAResults(object):
+class AnovaResults(object):
     """
-    ANOVA results class
+    Anova results class
 
     Attributes
     ----------
@@ -553,7 +553,7 @@ class ANOVAResults(object):
 
     def summary(self, contrast_L=False, transform_M=False):
         summ = summary2.Summary()
-        summ.add_title('ANOVA')
+        summ.add_title('Anova')
         summ.add_df(self.anova_table)
 
         return summ
