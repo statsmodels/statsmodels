@@ -17,6 +17,9 @@ Time Series Analysis.
 Princeton, N.J.: Princeton University Press.
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat import cPickle
+
+import copy
 
 import numpy as np
 import pandas as pd
@@ -190,6 +193,27 @@ class Clark1987(object):
             self.result['state'][3][self.true['start']:],
             self.true_states.iloc[:, 2], 4
         )
+
+    def test_copied_filter(self):
+        copied = copy.deepcopy(self.filter)
+        pickled = cPickle.loads(cPickle.dumps(self.filter))
+        #  Run the filters
+        self.filter()
+        copied()
+        pickled()
+
+        assert id(filter) != id(copied)
+        assert id(filter) != id(pickled)
+
+        assert_allclose(np.array(self.filter.filtered_state),
+                        np.array(copied.filtered_state))
+        assert_allclose(np.array(self.filter.filtered_state),
+                        np.array(pickled.filtered_state))
+
+        assert_allclose(np.array(self.filter.loglikelihood),
+                        np.array(copied.loglikelihood))
+        assert_allclose(np.array(self.filter.loglikelihood),
+                        np.array(pickled.loglikelihood))
 
 
 class TestClark1987Single(Clark1987):

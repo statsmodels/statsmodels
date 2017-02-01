@@ -748,6 +748,8 @@ class KalmanFilter(Representation):
 
         # Run the filter
         kfilter()
+        tmp = np.array(kfilter.loglikelihood)
+        tmp2 = np.array(kfilter.predicted_state)
 
         return kfilter
 
@@ -793,7 +795,7 @@ class KalmanFilter(Representation):
         kfilter = self._filter(
             filter_method, inversion_method, stability_method, conserve_memory,
             filter_timing, tolerance, loglikelihood_burn, complex_step)
-
+        tmp = np.array(kfilter.loglikelihood)
         # Create the results object
         results = self.results_class(self)
         results.update_representation(self)

@@ -175,6 +175,7 @@ cdef class sKalmanFilter(object):
     cdef void numerical_stability(self)
     cdef void check_convergence(self)
     cdef void migrate_storage(self)
+    cdef void _reinitialize_pointers(self) except *
 
     cdef void _forecasting(self)
     cdef np.float32_t _inversion(self)
@@ -300,6 +301,7 @@ cdef class dKalmanFilter(object):
     cdef void numerical_stability(self)
     cdef void check_convergence(self)
     cdef void migrate_storage(self)
+    cdef void _reinitialize_pointers(self) except *
 
     cdef void _forecasting(self)
     cdef np.float64_t _inversion(self)
@@ -425,6 +427,7 @@ cdef class cKalmanFilter(object):
     cdef void numerical_stability(self)
     cdef void check_convergence(self)
     cdef void migrate_storage(self)
+    cdef void _reinitialize_pointers(self) except *
 
     cdef void _forecasting(self)
     cdef np.complex64_t _inversion(self)
@@ -550,6 +553,7 @@ cdef class zKalmanFilter(object):
     cdef void numerical_stability(self)
     cdef void check_convergence(self)
     cdef void migrate_storage(self)
+    cdef void _reinitialize_pointers(self) except *
 
     cdef void _forecasting(self)
     cdef np.complex128_t _inversion(self)
