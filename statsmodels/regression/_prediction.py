@@ -155,6 +155,8 @@ def get_prediction(self, exog=None, transform=True, weights=None,
         if (weights.size > 1 and
            (weights.ndim != 1 or weights.shape[0] == exog.shape[1])):
             raise ValueError('weights has wrong shape')
+    elif weights is None:
+        weights = np.ones(len(exog))
 
     ### end
 
