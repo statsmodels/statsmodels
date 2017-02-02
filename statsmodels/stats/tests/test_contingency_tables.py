@@ -956,10 +956,31 @@ def test_MMI_table_with_no_variance():
     ab = np.concatenate((a, b), axis=1)
     srcv = ctab.Factor.from_array(ab, labels, "alive",
                                   orientation="wide",
-                                  multiple_response=True)
+                                  multiple_response=False)
     mrcv_2 = ctab.Factor(food_choices, "cool", orientation="wide",
                          multiple_response=True)
     multiple_response_table = ctab.MultipleResponseTable([srcv, ],
+                                                         [mrcv_2, ])
+    results = multiple_response_table.test_for_independence()
+    np.testing.assert_(np.all(np.isnan(results.p_values_cellwise)))
+
+
+def test_SPMI_table_with_no_variance():
+    # if the single response factor has ever observation on the
+    # same level, decline to calculate
+    a = np.zeros((1000, 1))
+    b = np.ones((1000, 1))
+    food_choices = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
+                                columns=["eggs", "cheese",
+                                         "candy", "sushi", "none"])
+    labels = ["Yes", "No"]
+    ab = np.concatenate((a, b), axis=1)
+    mrcv_1 = ctab.Factor.from_array(ab, labels, "alive",
+                                  orientation="wide",
+                                  multiple_response=True)
+    mrcv_2 = ctab.Factor(food_choices, "cool", orientation="wide",
+                         multiple_response=True)
+    multiple_response_table = ctab.MultipleResponseTable([mrcv_1, ],
                                                          [mrcv_2, ])
     results = multiple_response_table.test_for_independence()
     np.testing.assert_(np.all(np.isnan(results.p_values_cellwise)))
@@ -1120,6 +1141,8 @@ def test_combining_factors():
     np.testing.assert_(narrow_narrow.labels[-1] == ("none", "none"))
     np.testing.assert_(narrow_narrow.data.shape == (1000, 25))
 
+def test_creating_narrow_factor_from_data():
+    assert False
 
 if __name__ == "__main__":
     import nose
