@@ -1,6 +1,7 @@
 from statsmodels.compat.numpy import recarray_select
 
 from statsmodels.compat.python import lrange
+from statsmodels.tools.sm_exceptions import ColinearityWarning
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
                                                pacf, grangercausalitytests,
                                                coint, acovf, kpss, ResultsStore,
@@ -337,6 +338,34 @@ def test_coint():
             r2 = res[i][1:]
             r1 = res1[i][2]
             assert_allclose(r1, r2, rtol=0, atol=6e-7)
+
+
+def test_coint_identical_series():
+    nobs = 200
+    scale_e = 1
+    np.random.seed(123)
+    y = scale_e * np.random.randn(nobs)
+    warnings.simplefilter('always', ColinearityWarning)
+    with warnings.catch_warnings(record=True) as w:
+        c = coint(y, y, trend="c", maxlag=0, autolag=None)
+    assert_equal(len(w), 1)
+    assert_equal(c[0], 0.0)
+    # Limit of table
+    assert_(c[1] > .98)
+
+
+def test_coint_perfect_collinearity():
+    nobs = 200
+    scale_e = 1
+    np.random.seed(123)
+    x = scale_e * np.random.randn(nobs, 2)
+    y = 1 + x.sum(axis=1)
+    warnings.simplefilter('always', ColinearityWarning)
+    with warnings.catch_warnings(record=True) as w:
+        c = coint(y, x, trend="c", maxlag=0, autolag=None)
+    assert_equal(c[0], 0.0)
+    # Limit of table
+    assert_(c[1] > .98)
 
 
 class TestGrangerCausality(object):
