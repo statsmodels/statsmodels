@@ -1348,7 +1348,8 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def resid_pearson(self):
-        return (np.sqrt(self._n_trials) * (self._endog-self.mu) /
+        return (np.sqrt(self._n_trials) * (self._endog-self.mu) *
+                np.sqrt(self._var_weights) /
                 np.sqrt(self.family.variance(self.mu)))
 
     @cache_readonly
@@ -1364,7 +1365,9 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def resid_deviance(self):
-        return self.family.resid_dev(self._endog, self.fittedvalues)
+        dev = self.family.resid_dev(self._endog, self.fittedvalues)
+        return dev * np.sqrt(self._var_weights)
+    
 
     @cache_readonly
     def pearson_chi2(self):
