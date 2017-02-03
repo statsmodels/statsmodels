@@ -769,6 +769,7 @@ class Results(object):
 
         if transform and hasattr(self.model, 'formula') and exog is not None:
             from patsy import dmatrix
+            exog = pd.DataFrame(exog)  # user may pass series, if one predictor
             exog = dmatrix(self.model.data.design_info.builder,
                            exog, return_type="dataframe")
             if len(exog) < len(exog_index):
