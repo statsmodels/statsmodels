@@ -460,7 +460,7 @@ class KDEMultivariateConditional(GenericKDE):
 
         Notes
         -----
-        Similar to ``KDE.loo_likelihood`, but substitute ``f(y|x)=f(x,y)/f(y)``
+        Similar to ``KDE.loo_likelihood`, but substitute ``f(y|x)=f(x,y)/f(x)``
         for ``f(x)``.
         """
         yLOO = LeaveOneOut(self.data)
@@ -499,12 +499,12 @@ class KDEMultivariateConditional(GenericKDE):
         -----
         The formula for the conditional probability density is:
 
-        .. math:: f(X|Y)=\frac{f(X,Y)}{f(Y)}
+        .. math:: f(y|x)=\frac{f(x,y)}{f(x)}
 
         with
 
-        .. math:: f(X)=\prod_{s=1}^{q}h_{s}^{-1}k
-                            \left(\frac{X_{is}-X_{js}}{h_{s}}\right)
+        .. math:: f(x)=\prod_{s=1}^{q}h_{s}^{-1}k
+                            \left(\frac{x_{is}-x_{js}}{h_{s}}\right)
 
         where :math:`k` is the appropriate kernel for each variable.
         """
