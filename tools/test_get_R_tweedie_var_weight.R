@@ -66,12 +66,13 @@ cat("res['ll'] = np.nan \n")
 
 cat("res['resids_colnames'] = ['resid_response', 'resid_pearson', 'resid_deviance', 'resid_working'] \n" )
 
-r <- rbind(residuals.glm(model, 'response'),
+r <- cbind(residuals.glm(model, 'response'),
            residuals.glm(model, 'pearson'),
            residuals.glm(model, 'deviance'),
            residuals.glm(model, 'working'))
 
-pyprint(r, "res['resid'] = ")
+
+pyprint(r, "res['resids'] = ")
 
 cat("
 class Bunch(dict):
