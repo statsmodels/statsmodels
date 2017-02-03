@@ -119,3 +119,7 @@ def test_formula_predict_series():
     result = results.predict(pd.Series([1, 2, 3], index=[1, 2, 3], name='x'))
     expected = pd.Series([1., 2., 3.], index=[1, 2, 3])
     tm.assert_series_equal(result, expected)
+
+    result = results.predict({"x": [1, 2, 3]})
+    expected = pd.Series([1., 2., 3.], index=[0, 1, 2])
+    tm.assert_series_equal(result, expected)
