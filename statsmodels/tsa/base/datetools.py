@@ -83,7 +83,7 @@ def _date_from_idx(d1, idx, freq):
     This does not do any rounding to make sure that d1 is actually on the
     offset. For now, this needs to be taken care of before you get here.
     """
-    return _maybe_convert_period(d1) + idx * _freq_to_pandas[freq]
+    return _maybe_convert_period(d1) + int(idx) * _freq_to_pandas[freq]
 
 
 def _idx_from_dates(d1, d2, freq):
