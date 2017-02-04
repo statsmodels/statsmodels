@@ -450,3 +450,19 @@ else:
                 idx = np.concatenate(np.nonzero(flag) + ([ar.size],))
                 ret += (np.diff(idx),)
         return ret
+
+
+def recarray_select(recarray, fields):
+    """"
+    Work-around for changes in NumPy 1.13 that return views for recarray
+    multiple column selection
+    """
+    fields = [fields] if not isinstance(fields, (tuple, list)) else fields
+    if len(fields) == len(recarray.dtype):
+        return recarray
+    import numpy.lib.recfunctions as nprf
+    subset = recarray[[fields[0]]].copy()
+    for field in fields[1:]:
+        subset = nprf.append_fields(subset, field, recarray[field])
+    subset.dtype.names = [field for field in fields]
+    return subset
