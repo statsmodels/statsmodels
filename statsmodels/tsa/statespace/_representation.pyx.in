@@ -337,8 +337,11 @@ cdef class {{prefix}}Statespace(object):
         """
         cdef np.npy_intp dim1[1]
         cdef np.npy_intp dim2[2]
-        cdef int inc = 1
+        cdef int i, info, inc = 1
         cdef int k_states2 = self.k_states**2
+        cdef np.float64_t asum, tol = 1e-9
+        cdef {{cython_type}} scalar
+        cdef int [::1,:] ipiv
 
         # Create selected state covariance matrix
         {{prefix}}select_cov(self.k_states, self.k_posdef,
@@ -347,9 +350,40 @@ cdef class {{prefix}}Statespace(object):
                                    &self.state_cov[0,0,0],
                                    &self.selected_state_cov[0,0,0])
 
-        # Initial state means are all zero
+        # Initial state mean
+        {{if combined_prefix == 'd'}}
+        asum = blas.{{prefix}}asum(&self.k_states, &self.state_intercept[0, 0], &inc)
+        {{elif prefix == 'c'}}
+        asum = blas.scasum(&self.k_states, &self.state_intercept[0, 0], &inc)
+        {{else}}
+        asum = blas.dzasum(&self.k_states, &self.state_intercept[0, 0], &inc)
+        {{endif}}
+
         dim1[0] = self.k_states
         self.initial_state = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+        if asum > tol:
+            dim2[0] = self.k_states
+            dim2[1] = self.k_states
+            ipiv = np.PyArray_ZEROS(2, dim2, np.NPY_INT32, FORTRAN)
+
+            # I - T
+            blas.{{prefix}}copy(&k_states2, &self.transition[0,0,0], &inc,
+                                            &self.tmp[0,0], &inc)
+            scalar = -1.0
+            blas.{{prefix}}scal(&k_states2, &scalar, &self.tmp[0, 0], &inc)
+            for i in range(self.k_states):
+                self.tmp[i, i] = self.tmp[i, i] + 1
+
+            # c
+            blas.{{prefix}}copy(&self.k_states, &self.state_intercept[0,0], &inc,
+                                                &self.initial_state[0], &inc)
+
+            # Solve (I - T) x = c
+            lapack.{{prefix}}getrf(&self.k_states, &self.k_states, &self.tmp[0, 0], &self.k_states,
+                                   &ipiv[0, 0], &info)
+            lapack.{{prefix}}getrs('N', &self.k_states, &inc, &self.tmp[0, 0], &self.k_states,
+                                   &ipiv[0, 0], &self.initial_state[0], &self.k_states, &info)
+
         dim2[0] = self.k_states; dim2[1] = self.k_states;
         self.initial_state_cov = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 

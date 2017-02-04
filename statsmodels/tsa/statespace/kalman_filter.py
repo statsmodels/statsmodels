@@ -948,8 +948,22 @@ class KalmanFilter(Representation):
                 raise ValueError('Invalid shape of provided initial state'
                                  ' vector. Required (%d, 1)' % self.k_states)
         elif self.initialization == 'known':
-            initial_state = self._initial_state
-        elif self.initialization in ['approximate_diffuse', 'stationary']:
+            initial_state = np.random.multivariate_normal(
+                self._initial_state, self._initial_state_cov)
+        elif self.initialization == 'stationary':
+            from scipy.linalg import solve_discrete_lyapunov
+            # (I - T)^{-1} c = x => (I - T) x = c
+            initial_state_mean = np.linalg.solve(
+                np.eye(self.k_states) - self['transition', :, :, 0],
+                self['state_intercept', :, 0])
+            R = self['selection', :, :, 0]
+            Q = self['state_cov', :, :, 0]
+            selected_state_cov = R.dot(Q).dot(R.T)
+            initial_state_cov = solve_discrete_lyapunov(
+                self['transition', :, :, 0], selected_state_cov)
+            initial_state = np.random.multivariate_normal(
+                initial_state_mean, initial_state_cov)
+        elif self.initialization == 'approximate_diffuse':
             initial_state = np.zeros(self.k_states)
         else:
             initial_state = np.zeros(self.k_states)
