@@ -446,18 +446,43 @@ class DiscreteMargins(object):
         -------
         frame : DataFrames
             A DataFrame summarizing the marginal effects.
+
+        Notes
+        -----
+        The dataframe is created on each call and not cached, as are the
+        tables build in `summary()`
         """
         _check_at_is_all(self.margeff_options)
-        from pandas import DataFrame
+        results = self.results
+        model = self.results.model
+        from pandas import DataFrame, MultiIndex
         names = [_transform_names[self.margeff_options['method']],
                                   'Std. Err.', 'z', 'Pr(>|z|)',
                                   'Conf. Int. Low', 'Cont. Int. Hi.']
         ind = self.results.model.exog.var(0) != 0 # True if not a constant
         exog_names = self.results.model.exog_names
         var_names = [name for i,name in enumerate(exog_names) if ind[i]]
-        table = np.column_stack((self.margeff, self.margeff_se, self.tvalues,
-                                 self.pvalues, self.conf_int(alpha)))
-        return DataFrame(table, columns=names, index=var_names)
+
+        if self.margeff.ndim == 2:
+            # MNLogit case
+            ci = self.conf_int(alpha)
+            table = np.column_stack([i.ravel("F") for i in
+                        [self.margeff, self.margeff_se, self.tvalues,
+                         self.pvalues, ci[:, 0, :], ci[:, 1, :]]])
+
+            _, yname_list = results._get_endog_name(model.endog_names,
+                                                        None, all=True)
+            ynames = np.repeat(yname_list, len(var_names))
+            xnames = np.tile(var_names, len(yname_list))
+            index = MultiIndex.from_tuples(list(zip(ynames, xnames)),
+                                           names=['endog', 'exog'])
+        else:
+            table = np.column_stack((self.margeff, self.margeff_se, self.tvalues,
+                                     self.pvalues, self.conf_int(alpha)))
+            index=var_names
+
+        return DataFrame(table, columns=names, index=index)
+
 
     @cache_readonly
     def pvalues(self):
@@ -551,7 +576,7 @@ class DiscreteMargins(object):
                 tble.title = yname_list[eq]
                 # overwrite coef with method name
                 header = ['', _transform_names[method], 'std err', 'z',
-                        'P>|z|', '[%3.1f%% Conf. Int.]' % (100-alpha*100)]
+                        'P>|z|', '[' + str(alpha/2), str(1-alpha/2) + ']']
                 tble.insert_header_row(0, header)
                 #from IPython.core.debugger import Pdb; Pdb().set_trace()
                 table.append(tble)
@@ -562,7 +587,7 @@ class DiscreteMargins(object):
             table = summary_params(restup, yname=yname, xname=exog_names,
                     alpha=alpha, use_t=False, skip_header=True)
             header = ['', _transform_names[method], 'std err', 'z',
-                        'P>|z|', '[%3.1f%% Conf. Int.]' % (100-alpha*100)]
+                        'P>|z|', '[' + str(alpha/2), str(1-alpha/2) + ']']
             table.insert_header_row(0, header)
 
         smry.tables.append(table)

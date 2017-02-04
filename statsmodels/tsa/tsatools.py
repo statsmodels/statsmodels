@@ -1,4 +1,5 @@
 from statsmodels.compat.python import range, lrange, lzip, long
+from statsmodels.compat.numpy import recarray_select
 
 import numpy as np
 import numpy.lib.recfunctions as nprf
@@ -199,8 +200,10 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
                 last_names.pop(last_names.index(col))
 
         if first_names: # only do this if x isn't "empty"
-            first_arr = nprf.append_fields(x[first_names][lags:],tmp_names,
-                        ndlags.T, usemask=False)
+            # Workaround to avoid NumPy FutureWarning
+            _x = recarray_select(x, first_names)
+            first_arr = nprf.append_fields(_x[lags:],tmp_names, ndlags.T,
+                                           usemask=False)
         else:
             first_arr = np.zeros(len(x)-lags, dtype=lzip(tmp_names,
                 (x[col].dtype,)*lags))
@@ -749,7 +752,7 @@ def freq_to_period(freq):
         return 24
     else:  # pragma : no cover
         raise ValueError("freq {} not understood. Please report if you "
-                         "think this in error.".format(freq))
+                         "think this is in error.".format(freq))
 
 
 __all__ = ['lagmat', 'lagmat2ds','add_trend', 'duplication_matrix',

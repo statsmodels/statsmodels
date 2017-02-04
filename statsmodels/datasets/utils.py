@@ -1,3 +1,4 @@
+from statsmodels.compat.numpy import recarray_select
 from statsmodels.compat.python import (range, StringIO, urlopen,
                                        HTTPError, URLError, lrange,
                                        cPickle, urljoin, BytesIO, long, PY3)
@@ -98,7 +99,7 @@ def process_recarray(data, endog_idx=0, exog_idx=None, stack=True, dtype=None):
     if stack:
         exog = np.column_stack(data[field] for field in exog_name)
     else:
-        exog = data[exog_name]
+        exog = recarray_select(data, exog_name)
 
     if dtype:
         endog = endog.astype(dtype)

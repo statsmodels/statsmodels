@@ -1989,3 +1989,13 @@ def test_misc_exog():
     # Test invalid model specifications
     assert_raises(ValueError, sarimax.SARIMAX, endog, exog=np.zeros((10, 4)),
                   order=(1, 1, 0))
+
+
+def test_datasets():
+    # Test that some unusual types of datasets work
+
+    np.random.seed(232849)
+    endog = np.random.binomial(1, 0.5, size=100)
+    exog = np.random.binomial(1, 0.5, size=100)
+    mod = sarimax.SARIMAX(endog, exog=exog, order=(1, 0, 0))
+    res = mod.fit()

@@ -58,14 +58,14 @@ class UnobservedComponents(MLEModel):
     trend : bool, optional
         Whether or not to include a trend component. Default is False. If True,
         `level` must also be True.
-    seasonal_period : int or None, optional
-        The period of the seasonal component. Default is None.
+    seasonal : int or None, optional
+        The period of the seasonal component, if any. Default is None.
     cycle : bool, optional
         Whether or not to include a cycle component. Default is False.
     ar : int or None, optional
         The order of the autoregressive component. Default is None.
     exog : array_like or None, optional
-        Exoenous variables.
+        Exogenous variables.
     irregular : bool, optional
         Whether or not to include an irregular component. Default is False.
     stochastic_level : bool, optional
@@ -92,7 +92,7 @@ class UnobservedComponents(MLEModel):
     Notes
     -----
 
-    Thse models take the general form (see [1]_ Chapter 3.2 for all details)
+    These models take the general form (see [1]_ Chapter 3.2 for all details)
 
     .. math::
 
@@ -530,7 +530,12 @@ class UnobservedComponents(MLEModel):
         # TODO: I think the kwargs or not attached, need to recover from ???
 
     def _get_init_kwds(self):
+        # Get keywords based on model attributes
         kwds = super(UnobservedComponents, self)._get_init_kwds()
+
+        # Modifications
+        kwds['seasonal'] = self.seasonal_period
+        kwds['autoregressive'] = self.ar_order
 
         for key, value in kwds.items():
             if value is None and hasattr(self.ssm, key):

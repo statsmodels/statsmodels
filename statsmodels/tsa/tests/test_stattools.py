@@ -1,4 +1,7 @@
+from statsmodels.compat.numpy import recarray_select
+
 from statsmodels.compat.python import lrange
+from statsmodels.tools.sm_exceptions import ColinearityWarning
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
                                                pacf, grangercausalitytests,
                                                coint, acovf, kpss, ResultsStore,
@@ -9,7 +12,7 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_warns,
                            assert_raises, dec, assert_, assert_allclose)
 from numpy import genfromtxt
 from statsmodels.datasets import macrodata, sunspots
-from pandas import Series, Index, DataFrame
+from pandas import Series, Index, DatetimeIndex, DataFrame
 import os
 import warnings
 from statsmodels.tools.sm_exceptions import MissingDataError
@@ -137,8 +140,9 @@ class TestACF(CheckCorrGram):
         #self.acf = np.concatenate(([1.], self.acf))
         self.qstat = self.results['Q1']
         self.res1 = acf(self.x, nlags=40, qstat=True, alpha=.05)
-        self.confint_res = self.results[['acvar_lb','acvar_ub']].view((float,
-                                                                            2))
+        res = DataFrame.from_records(self.results)
+        self.confint_res = recarray_select(self.results, ['acvar_lb','acvar_ub'])
+        self.confint_res = self.confint_res.view((float, 2))
 
     def test_acf(self):
         assert_almost_equal(self.res1[0][1:41], self.acf, DECIMAL_8)
@@ -337,12 +341,40 @@ def test_coint():
             assert_allclose(r1, r2, rtol=0, atol=6e-7)
 
 
+def test_coint_identical_series():
+    nobs = 200
+    scale_e = 1
+    np.random.seed(123)
+    y = scale_e * np.random.randn(nobs)
+    warnings.simplefilter('always', ColinearityWarning)
+    with warnings.catch_warnings(record=True) as w:
+        c = coint(y, y, trend="c", maxlag=0, autolag=None)
+    assert_equal(len(w), 1)
+    assert_equal(c[0], 0.0)
+    # Limit of table
+    assert_(c[1] > .98)
+
+
+def test_coint_perfect_collinearity():
+    nobs = 200
+    scale_e = 1
+    np.random.seed(123)
+    x = scale_e * np.random.randn(nobs, 2)
+    y = 1 + x.sum(axis=1)
+    warnings.simplefilter('always', ColinearityWarning)
+    with warnings.catch_warnings(record=True) as w:
+        c = coint(y, x, trend="c", maxlag=0, autolag=None)
+    assert_equal(c[0], 0.0)
+    # Limit of table
+    assert_(c[1] > .98)
+
+
 class TestGrangerCausality(object):
 
     def test_grangercausality(self):
         # some example data
         mdata = macrodata.load().data
-        mdata = mdata[['realgdp', 'realcons']]
+        mdata = recarray_select(mdata, ['realgdp', 'realcons'])
         data = mdata.view((float, 2))
         data = np.diff(np.log(data), axis=0)
 

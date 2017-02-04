@@ -731,9 +731,10 @@ class Gamma(Family):
                  (scale -1) * \log(Y) + \log(scale) + scale *
                  \ln \Gamma(1 / scale))
         """
-        return - 1./scale * np.sum((endog/mu + np.log(mu) + (scale - 1) *
-                                    np.log(endog) + np.log(scale) + scale *
-                                   special.gammaln(1./scale)) * freq_weights)
+        endog_mu = self._clean(endog / mu)
+        return - np.sum((endog_mu - np.log(endog_mu) + scale *
+                         np.log(endog) + np.log(scale) + scale *
+                         special.gammaln(1./scale)) * freq_weights) / scale
 
         # in Stata scale is set to equal 1 for reporting llf
         # in R it's the dispersion, though there is a loss of precision vs.
@@ -1211,7 +1212,7 @@ class InverseGaussian(Family):
 
 
 class NegativeBinomial(Family):
-    """
+    r"""
     Negative Binomial exponential family.
 
     Parameters
@@ -1241,6 +1242,15 @@ class NegativeBinomial(Family):
     Notes
     -----
     Power link functions are not yet supported.
+
+    Parameterization for :math:`y=0,1,2,\ldots` is
+
+     :math:`f(y) = \frac{\Gamma(y+\frac{1}{\alpha})}{y!\Gamma(\frac{1}{\alpha})}
+     \left(\frac{1}{1+\alpha\mu}\right)^{\frac{1}{\alpha}}
+     \left(\frac{\alpha\mu}{1+\alpha\mu}\right)^y`
+
+    with :math:`E[Y]=\mu\,` and :math:`Var[Y]=\mu+\alpha\mu^2`.
+
 
     """
     links = [L.log, L.cloglog, L.identity, L.nbinom, L.Power]
@@ -1431,9 +1441,9 @@ class NegativeBinomial(Family):
         hyp2f1(x) = hyp2f1(2/3.,1/3.,5/3.,x)
         """
 
-        hyp2f1 = lambda x : special.hyp2f1(2 / 3., 1 / 3., 5 / 3., x)
+        hyp2f1 = lambda x: special.hyp2f1(2 / 3., 1 / 3., 5 / 3., x)
         return ((hyp2f1(-self.alpha * endog) - hyp2f1(-self.alpha * mu) +
-                 1.5 * ( endog**(2 / 3.) - mu**(2 / 3.))) /
+                 1.5 * (endog**(2 / 3.) - mu**(2 / 3.))) /
                 (mu + self.alpha * mu**2)**(1 / 6.))
 
 

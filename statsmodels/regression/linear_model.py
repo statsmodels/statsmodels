@@ -471,7 +471,7 @@ class WLS(RegressionModel):
     weights : array-like, optional
         1d array of weights.  If you supply 1/W then the variables are pre-
         multiplied by 1/sqrt(W).  If no weights are supplied the default value
-        is 1 and WLS reults are the same as OLS.
+        is 1 and WLS results are the same as OLS.
     %(extra_params)s
 
     Attributes
@@ -753,7 +753,7 @@ class OLS(WLS):
 
 
     def fit_regularized(self, method="elastic_net", alpha=0.,
-                        start_params=None, profile_scale=False,
+                        L1_wt=1., start_params=None, profile_scale=False,
                         refit=False, **kwargs):
         """
         Return a regularized fit to a linear regression model.
@@ -767,6 +767,10 @@ class OLS(WLS):
             applies to all variables in the model.  If a vector, it
             must have the same length as `params`, and contains a
             penalty weight for each coefficient.
+        L1_wt: scalar
+            The fraction of the penalty given to the L1 penalty term.
+            Must be between 0 and 1 (inclusive).  If 0, the fit is a
+            ridge fit, if 1 it is a lasso fit.
         start_params : array-like
             Starting values for ``params``.
         profile_scale : bool
@@ -805,9 +809,6 @@ class OLS(WLS):
 
         maxiter : int
             Maximum number of iterations
-        L1_wt  : float
-            Must be in [0, 1].  The L1 penalty has weight L1_wt and the
-            L2 penalty has weight 1 - L1_wt.
         cnvrg_tol : float
             Convergence threshold for line searches
         zero_tol : float
@@ -822,12 +823,15 @@ class OLS(WLS):
 
         from statsmodels.base.elastic_net import fit_elasticnet
 
+        if L1_wt == 0:
+            return self._fit_ridge(alpha)
+
         # In the future we could add support for other penalties, e.g. SCAD.
         if method != "elastic_net":
-            raise ValueError("method for fit_regularied must be elastic_net")
+            raise ValueError("method for fit_regularized must be elastic_net")
 
         # Set default parameters.
-        defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
+        defaults = {"maxiter" : 50, "cnvrg_tol" : 1e-10,
                     "zero_tol" : 1e-10}
         defaults.update(kwargs)
 
@@ -845,12 +849,41 @@ class OLS(WLS):
 
         return fit_elasticnet(self, method=method,
                               alpha=alpha,
+                              L1_wt=L1_wt,
                               start_params=start_params,
                               loglike_kwds=loglike_kwds,
                               score_kwds=score_kwds,
                               hess_kwds=hess_kwds,
                               refit=refit,
+                              check_step=False,
                               **defaults)
+
+    def _fit_ridge(self, alpha):
+        """
+        Fit a linear model using ridge regression.
+
+        Parameters
+        ----------
+        alpha : scalar or array-like
+            The penalty weight.  If a scalar, the same penalty weight
+            applies to all variables in the model.  If a vector, it
+            must have the same length as `params`, and contains a
+            penalty weight for each coefficient.
+
+        Notes
+        -----
+        Equivalent to fit_regularized with L1_wt = 0 (but implemented
+        more efficiently).
+        """
+
+        u, s, vt = np.linalg.svd(self.exog, 0)
+        v = vt.T
+        s2 = s*s + alpha * self.nobs
+        params = np.dot(u.T, self.endog) * s / s2
+        params = np.dot(v, params)
+
+        from statsmodels.base.elastic_net import RegularizedResults
+        return RegularizedResults(self, params)
 
 
 class GLSAR(GLS):
@@ -1105,11 +1138,11 @@ class RegressionResults(base.LikelihoodModelResults):
     **Attributes**
 
     aic
-        Aikake's information criteria. For a model with a constant
+        Akaike's information criteria. For a model with a constant
         :math:`-2llf + 2(df_model + 1)`. For a model without a constant
         :math:`-2llf + 2(df_model)`.
     bic
-        Bayes' information criteria For a model with a constant
+        Bayes' information criteria. For a model with a constant
         :math:`-2llf + \log(n)(df_model+1)`. For a model without a constant
         :math:`-2llf + \log(n)(df_model)`
     bse
@@ -1380,7 +1413,7 @@ class RegressionResults(base.LikelihoodModelResults):
             k_params = self.normalized_cov_params.shape[0]
             mat = np.eye(k_params)
             const_idx = self.model.data.const_idx
-            # TODO: What if model includes implcit constant, e.g. all dummies but no constant regressor?
+            # TODO: What if model includes implicit constant, e.g. all dummies but no constant regressor?
             # TODO: Restats as LM test by projecting orthogonalizing to constant?
             if self.model.data.k_constant == 1:
                 # if constant is implicit, return nan see #2444
@@ -1866,9 +1899,9 @@ class RegressionResults(base.LikelihoodModelResults):
             - `groups` array_like, integer (required) :
                   index of clusters or groups
             - `use_correction` bool (optional) :
-                  If True the sandwich covariance is calulated with a small
+                  If True the sandwich covariance is calculated with a small
                   sample correction.
-                  If False the the sandwich covariance is calulated without
+                  If False the sandwich covariance is calculated without
                   small sample correction.
             - `df_correction` bool (optional)
                   If True (default), then the degrees of freedom for the
@@ -1901,9 +1934,9 @@ class RegressionResults(base.LikelihoodModelResults):
             errors in panel data.
             The data needs to be sorted in this case, the time series for
             each panel unit or cluster need to be stacked. The membership to
-            a timeseries of an individual or group can be either specified by 
+            a timeseries of an individual or group can be either specified by
             group indicators or by increasing time periods.
-            
+
             keywords
 
             - either `groups` or `time` : array_like (required)
@@ -1912,7 +1945,7 @@ class RegressionResults(base.LikelihoodModelResults):
             - `maxlag` integer (required) : number of lags to use
             - `kernel` string (optional) : kernel, default is Bartlett
             - `use_correction` False or string in ['hac', 'cluster'] (optional) :
-                  If False the the sandwich covariance is calulated without
+                  If False the sandwich covariance is calculated without
                   small sample correction.
             - `df_correction` bool (optional)
                   adjustment to df_resid, see cov_type 'cluster' above
@@ -2643,4 +2676,3 @@ if __name__ == "__main__":
 | BIC criterion:              238.643    Kurtosis:                2.43373 |
 ---------------------------------------------------------------------------
 """
-
