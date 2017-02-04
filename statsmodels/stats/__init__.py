@@ -1,3 +1,4 @@
 
-from statsmodels import NoseWrapper as Tester
-test = Tester().test
+from statsmodels import PytestTester
+test = PytestTester()
+
