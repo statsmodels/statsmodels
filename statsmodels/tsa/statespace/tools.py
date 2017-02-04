@@ -317,7 +317,7 @@ def solve_discrete_lyapunov(a, q, complex_step=False):
     (usually the transition matrix) in order to allow complex step
     differentiation.
     """
-    eye = np.eye(a.shape[0])
+    eye = np.eye(a.shape[0], dtype=a.dtype)
     if not complex_step:
         aH = a.conj().transpose()
         aHI_inv = np.linalg.inv(aH + eye)
