@@ -319,3 +319,12 @@ github_project_url = "https://github.com/statsmodels/statsmodels"
 import json
 example_context = json.load(open('examples/landing.json'))
 html_context = {'examples': example_context }
+
+
+# --------------- DOCTEST -------------------
+doctest_global_setup = """
+import numpy as np
+import scipy.stats as stats
+import matplotlib.pyplot as plt
+import pandas as pd
+"""
