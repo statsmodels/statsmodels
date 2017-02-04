@@ -750,7 +750,7 @@ class DynamicFactor(MLEModel):
             Array of unconstrained parameters used by the optimizer.
         """
         constrained = np.array(constrained, ndmin=1)
-        dtype=constrained.dtype
+        dtype = constrained.dtype
         unconstrained = np.zeros(constrained.shape, dtype=dtype)
 
         # 1. Factor loadings
@@ -945,7 +945,7 @@ class DynamicFactorResults(MLEResults):
 
         self.specification = Bunch(**{
             # Model properties
-            'k_endog' : self.model.k_endog,
+            'k_endog': self.model.k_endog,
             'enforce_stationarity': self.model.enforce_stationarity,
 
             # Factor-related properties
@@ -996,7 +996,7 @@ class DynamicFactorResults(MLEResults):
         -------
         out: Bunch
             Has the following attributes:
-            
+
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
@@ -1019,7 +1019,7 @@ class DynamicFactorResults(MLEResults):
                 filtered=res.filtered_state[offset:end],
                 filtered_cov=res.filtered_state_cov[offset:end, offset:end],
                 smoothed=None, smoothed_cov=None,
-                        offset=offset)
+                offset=offset)
             if self.smoothed_state is not None:
                 out.smoothed = self.smoothed_state[offset:end]
             if self.smoothed_state_cov is not None:
@@ -1119,7 +1119,7 @@ class DynamicFactorResults(MLEResults):
         for coeffs in coefficients_of_determination.T:
             # Create the new axis
             ax = fig.add_subplot(spec.k_factors, 1, plot_idx)
-            ax.set_ylim((0,1))
+            ax.set_ylim((0, 1))
             ax.set(title='Factor %i' % plot_idx, ylabel=r'$R^2$')
             bars = ax.bar(locations, coeffs)
 
@@ -1297,7 +1297,7 @@ class DynamicFactorResults(MLEResults):
                 # 1. Factor loadings
                 # Recall these are in the form:
                 # 'loading.f1.y1', 'loading.f2.y1', 'loading.f1.y2', ...
-                
+
                 loading_mask = (
                     loading_indices[i * k_factors:(i + 1) * k_factors])
                 loading_masks.append(loading_mask)

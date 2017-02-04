@@ -1258,7 +1258,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         else:
             epsilon = _get_epsilon(params, 4, None, len(params)) / 2
         hessian = approx_fprime(params, self._score_finite_difference,
-            epsilon=epsilon, kwargs=kwargs, centered=approx_centered)
+                                epsilon=epsilon, kwargs=kwargs,
+                                centered=approx_centered)
 
         return hessian / (self.nobs - self.ssm.loglikelihood_burn)
 
@@ -1842,7 +1843,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         `cov_params_robust_oim`
         """
         return self.cov_params_robust_oim
-
 
     def _cov_params_robust_oim(self, approx_complex_step=True,
                                approx_centered=False):

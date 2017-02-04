@@ -156,9 +156,8 @@ class KalmanSmoother(KalmanFilter):
             if not create_smoother:
                 kalman_smoother = self._kalman_smoothers[prefix]
 
-                create_smoother = (
-                    not kalman_smoother.kfilter is self._kalman_filters[prefix]
-                )
+                create_smoother = (kalman_smoother.kfilter is not
+                                   self._kalman_filters[prefix])
 
             # If the dtype-specific _kalman_smoother does not exist (or if we
             # need to re-create it), create it
@@ -337,7 +336,7 @@ class KalmanSmoother(KalmanFilter):
             if name in kwargs:
                 setattr(self, name, kwargs[name])
 
-        if self._compatibility_mode and not self.smooth_method in [0,1]:
+        if self._compatibility_mode and self.smooth_method not in [0, 1]:
             raise NotImplementedError('Only conventional Kalman filtering'
                                       ' is available. Consider updating'
                                       ' dependencies for more options.')

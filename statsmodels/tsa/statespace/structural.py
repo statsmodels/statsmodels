@@ -17,7 +17,8 @@ from statsmodels.tsa.tsatools import lagmat
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from scipy.linalg import solve_discrete_lyapunov
 from statsmodels.tools.tools import Bunch
-from statsmodels.tools.sm_exceptions import ValueWarning, OutputWarning, SpecificationWarning
+from statsmodels.tools.sm_exceptions import (ValueWarning, OutputWarning,
+                                             SpecificationWarning)
 from .tools import (
     companion_matrix, constrain_stationary_univariate,
     unconstrain_stationary_univariate
@@ -127,7 +128,7 @@ class UnobservedComponents(MLEModel):
       also be a level included).
     - The element is deterministic vs stochastic (i.e. whether or not the
       variance on the error term is confined to be zero or not)
-    
+
     The only additional parameters to be estimated via MLE are the variances of
     any included stochastic components.
 
@@ -1030,7 +1031,7 @@ class UnobservedComponentsResults(MLEResults):
         -------
         out: Bunch
             Has the following attributes:
-            
+
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
@@ -1066,7 +1067,7 @@ class UnobservedComponentsResults(MLEResults):
         -------
         out: Bunch
             Has the following attributes:
-            
+
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
@@ -1103,7 +1104,7 @@ class UnobservedComponentsResults(MLEResults):
         -------
         out: Bunch
             Has the following attributes:
-            
+
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
@@ -1142,7 +1143,7 @@ class UnobservedComponentsResults(MLEResults):
         -------
         out: Bunch
             Has the following attributes:
-            
+
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
@@ -1183,7 +1184,7 @@ class UnobservedComponentsResults(MLEResults):
         -------
         out: Bunch
             Has the following attributes:
-            
+
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
@@ -1223,7 +1224,7 @@ class UnobservedComponentsResults(MLEResults):
         -------
         out: Bunch
             Has the following attributes:
-            
+
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of

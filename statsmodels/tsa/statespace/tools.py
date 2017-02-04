@@ -67,8 +67,10 @@ def set_mode(compatibility=None):
             'c': _representation.cStatespace, 'z': _representation.zStatespace
         })
         prefix_kalman_filter_map.update({
-            's': _kalman_filter.sKalmanFilter, 'd': _kalman_filter.dKalmanFilter,
-            'c': _kalman_filter.cKalmanFilter, 'z': _kalman_filter.zKalmanFilter
+            's': _kalman_filter.sKalmanFilter,
+            'd': _kalman_filter.dKalmanFilter,
+            'c': _kalman_filter.cKalmanFilter,
+            'z': _kalman_filter.zKalmanFilter
         })
         prefix_kalman_smoother_map.update({
             's': _kalman_smoother.sKalmanSmoother,

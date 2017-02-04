@@ -104,14 +104,15 @@ def _partials_logistic(x):
         partials = [np.diag(tmp[:, t] - tmp[:, t]**2)
                     for t in range(tmp.shape[1])]
         shape = tmp.shape[1], tmp.shape[0], tmp.shape[0]
-        partials = np.concatenate(partials).reshape(shape).transpose((1,2,0))
+        partials = np.concatenate(partials).reshape(shape).transpose((1, 2, 0))
     # k x k x j x t
     else:
         partials = [[np.diag(tmp[:, j, t] - tmp[:, j, t]**2)
                      for t in range(tmp.shape[2])]
                     for j in range(tmp.shape[1])]
         shape = tmp.shape[1], tmp.shape[2], tmp.shape[0], tmp.shape[0]
-        partials = np.concatenate(partials).reshape(shape).transpose((2,3,0,1))
+        partials = np.concatenate(partials).reshape(shape).transpose(
+            (2, 3, 0, 1))
 
     for i in range(tmp.shape[0]):
         for j in range(i):
@@ -2209,6 +2210,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         # Make parameters tables for each regime
         from statsmodels.iolib.summary import summary_params
         import re
+
         def make_table(self, mask, title, strip_end=True):
             res = (self, self.params[mask], self.bse[mask],
                    self.tvalues[mask], self.pvalues[mask],
