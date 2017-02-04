@@ -398,7 +398,7 @@ cdef class {{prefix}}Statespace(object):
         if np.sum(self.state_intercept) == 0:
             self.initial_state = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
         else:
-            eye = np.eye(self.k_states)
+            eye = np.eye(self.k_states).astype({{dtype}})
             T = np.array(self.transition[:,:,0], dtype={{dtype}})
             # (I - T)^{-1} c = x => (I - T) x = c
             self.initial_state = np.linalg.solve(
