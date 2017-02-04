@@ -79,12 +79,15 @@ cdef class sSimulationSmoother(object):
 
     # ### Parameters
     cdef readonly int nobs
-    cdef readonly int pretransformed_variates
+    cdef readonly int pretransformed_disturbance_variates
+    cdef readonly int pretransformed_initial_state_variates
+    cdef readonly int fixed_initial_state
 
     cpdef draw_disturbance_variates(self)
     cpdef draw_initial_state_variates(self)
-    cpdef set_disturbance_variates(self, np.float32_t [:] variates)
-    cpdef set_initial_state_variates(self, np.float32_t [:] variates)
+    cpdef set_disturbance_variates(self, np.float32_t [:] variates, int pretransformed=*)
+    cpdef set_initial_state_variates(self, np.float32_t [:] variates, int pretransformed=*)
+    cpdef set_initial_state(self, np.float32_t [:] initial_state)
     cpdef simulate(self, int simulation_output=*)
 
     cdef np.float32_t generate_obs(self, int t, np.float32_t * obs, np.float32_t * state, np.float32_t * variates)
@@ -144,12 +147,15 @@ cdef class dSimulationSmoother(object):
 
     # ### Parameters
     cdef readonly int nobs
-    cdef readonly int pretransformed_variates
+    cdef readonly int pretransformed_disturbance_variates
+    cdef readonly int pretransformed_initial_state_variates
+    cdef readonly int fixed_initial_state
 
     cpdef draw_disturbance_variates(self)
     cpdef draw_initial_state_variates(self)
-    cpdef set_disturbance_variates(self, np.float64_t [:] variates)
-    cpdef set_initial_state_variates(self, np.float64_t [:] variates)
+    cpdef set_disturbance_variates(self, np.float64_t [:] variates, int pretransformed=*)
+    cpdef set_initial_state_variates(self, np.float64_t [:] variates, int pretransformed=*)
+    cpdef set_initial_state(self, np.float64_t [:] initial_state)
     cpdef simulate(self, int simulation_output=*)
 
     cdef np.float64_t generate_obs(self, int t, np.float64_t * obs, np.float64_t * state, np.float64_t * variates)
@@ -209,12 +215,15 @@ cdef class cSimulationSmoother(object):
 
     # ### Parameters
     cdef readonly int nobs
-    cdef readonly int pretransformed_variates
+    cdef readonly int pretransformed_disturbance_variates
+    cdef readonly int pretransformed_initial_state_variates
+    cdef readonly int fixed_initial_state
 
     cpdef draw_disturbance_variates(self)
     cpdef draw_initial_state_variates(self)
-    cpdef set_disturbance_variates(self, np.complex64_t [:] variates)
-    cpdef set_initial_state_variates(self, np.complex64_t [:] variates)
+    cpdef set_disturbance_variates(self, np.complex64_t [:] variates, int pretransformed=*)
+    cpdef set_initial_state_variates(self, np.complex64_t [:] variates, int pretransformed=*)
+    cpdef set_initial_state(self, np.complex64_t [:] initial_state)
     cpdef simulate(self, int simulation_output=*)
 
     cdef np.complex64_t generate_obs(self, int t, np.complex64_t * obs, np.complex64_t * state, np.complex64_t * variates)
@@ -274,12 +283,15 @@ cdef class zSimulationSmoother(object):
 
     # ### Parameters
     cdef readonly int nobs
-    cdef readonly int pretransformed_variates
+    cdef readonly int pretransformed_disturbance_variates
+    cdef readonly int pretransformed_initial_state_variates
+    cdef readonly int fixed_initial_state
 
     cpdef draw_disturbance_variates(self)
     cpdef draw_initial_state_variates(self)
-    cpdef set_disturbance_variates(self, np.complex128_t [:] variates)
-    cpdef set_initial_state_variates(self, np.complex128_t [:] variates)
+    cpdef set_disturbance_variates(self, np.complex128_t [:] variates, int pretransformed=*)
+    cpdef set_initial_state_variates(self, np.complex128_t [:] variates, int pretransformed=*)
+    cpdef set_initial_state(self, np.complex128_t [:] initial_state)
     cpdef simulate(self, int simulation_output=*)
 
     cdef np.complex128_t generate_obs(self, int t, np.complex128_t * obs, np.complex128_t * state, np.complex128_t * variates)

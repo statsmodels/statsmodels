@@ -127,8 +127,7 @@ cdef class {{prefix}}SimulationSmoother(object):
                  int loglikelihood_burn=0,
                  int smoother_output=SMOOTHER_ALL,
                  int simulation_output=SIMULATE_ALL,
-                 int nobs=-1,
-                 int pretransformed_variates=0):
+                 int nobs=-1):
         cdef int inc = 1
         cdef:
             np.npy_intp dim1[1]
@@ -151,7 +150,9 @@ cdef class {{prefix}}SimulationSmoother(object):
         self.nobs = nobs
         nobs_endog = self.nobs * model.k_endog
 
-        self.pretransformed_variates = pretransformed_variates
+        self.pretransformed_disturbance_variates = False
+        self.pretransformed_initial_state_variates = False
+        self.fixed_initial_state = False
 
         # Model objects
         self.model = model
@@ -262,22 +263,43 @@ cdef class {{prefix}}SimulationSmoother(object):
 
     cpdef draw_disturbance_variates(self):
         self.disturbance_variates = np.random.normal(size=self.n_disturbance_variates)
+        self.pretransformed_disturbance_variates = False
 
     cpdef draw_initial_state_variates(self):
         self.initial_state_variates = np.random.normal(size=self.n_initial_state_variates)
+        self.pretransformed_initial_state_variates = False
+        self.fixed_initial_state = False
 
-    cpdef set_disturbance_variates(self, {{cython_type}} [:] variates):
+    cpdef set_disturbance_variates(self, {{cython_type}} [:] variates, int pretransformed=0):
         # TODO allow variates to be an iterator or callback
         tools.validate_vector_shape('disturbance variates', &variates.shape[0],
                                     self.n_disturbance_variates)
         self.disturbance_variates = variates
+        self.pretransformed_disturbance_variates = pretransformed
 
-    cpdef set_initial_state_variates(self, {{cython_type}} [:] variates):
+    cpdef set_initial_state_variates(self, {{cython_type}} [:] variates, int pretransformed=0):
+        # Note that the initial state is set to be:
+        # initial_state = mod.initial_state + initial_state_variate * cholesky(mod.initial_state_cov)
+        # so is can be difficult to set the initial state itself via this method;
+        # see instead set_initial_state
         # TODO allow variates to be an iterator or callback
         tools.validate_vector_shape('initial state variates',
                                     &variates.shape[0],
                                     self.n_initial_state_variates)
         self.initial_state_variates = variates
+        self.pretransformed_initial_state_variates = pretransformed
+        self.fixed_initial_state = False
+
+    cpdef set_initial_state(self, {{cython_type}} [:] initial_state):
+        # Using this method sets a flag that indicates the self.initial_state_variates
+        # variable should be interpreted as the actual initial_state.
+        # TODO allow variates to be an iterator or callback
+        tools.validate_vector_shape('initial state',
+                                    &initial_state.shape[0],
+                                    self.n_initial_state_variates)
+        self.initial_state_variates = initial_state
+        self.pretransformed_initial_state_variates = True
+        self.fixed_initial_state = True
 
     cpdef simulate(self, int simulation_output=-1):
         """
@@ -322,11 +344,14 @@ cdef class {{prefix}}SimulationSmoother(object):
         # If pretransformed_variates is True, then the variates should already
         # be N(0, initial_state_cov), and then we just need:
         # alpha_1^+ = initial_state + variate
-        self.cholesky(&self.model.initial_state_cov[0,0], self._tmp0, k_states)
+        # However, if fixed_initial_state is True, then we just set:
+        # alpha_1^+ = variate
         blas.{{prefix}}copy(&k_states, &self.initial_state_variates[0], &inc, &self.generated_state[0,0], &inc)
-        if not self.pretransformed_variates:
-            self.transform_variates(&self.generated_state[0,0], self._tmp0, k_states)
-        blas.{{prefix}}axpy(&k_states, &alpha, &self.model.initial_state[0], &inc, &self.generated_state[0,0], &inc)
+        if not self.fixed_initial_state:
+            self.cholesky(&self.model.initial_state_cov[0,0], self._tmp0, k_states)
+            if not self.pretransformed_initial_state_variates:
+                self.transform_variates(&self.generated_state[0,0], self._tmp0, k_states)
+            blas.{{prefix}}axpy(&k_states, &alpha, &self.model.initial_state[0], &inc, &self.generated_state[0,0], &inc)
 
 
         self.simulated_kfilter.seek(0) # reset the filter
@@ -353,7 +378,7 @@ cdef class {{prefix}}SimulationSmoother(object):
                 self.cholesky(&self.model.obs_cov[0,0,t], self._tmp1, k_endog)
 
             # eps_t^+ = ind_eps * chol(H_t)
-            if not self.pretransformed_variates:
+            if not self.pretransformed_disturbance_variates:
                 self.transform_variates(&self.disturbance_variates[measurement_idx], self._tmp1, k_endog)
             # y_t^+
             self.generate_obs(t, &self.generated_obs[0,t], &self.generated_state[0,t], &self.disturbance_variates[measurement_idx])
@@ -366,7 +391,7 @@ cdef class {{prefix}}SimulationSmoother(object):
                 self.cholesky(&self.model.state_cov[0,0,t], self._tmp2, k_posdef)
 
             # eta_t^+ = ind_eta * chol(Q_t)
-            if not self.pretransformed_variates:
+            if not self.pretransformed_disturbance_variates:
                 self.transform_variates(&self.disturbance_variates[state_idx], self._tmp2, k_posdef)
             # alpha_t+1^+
             self.generate_state(t, &self.generated_state[0,t+1], &self.generated_state[0,t], &self.disturbance_variates[state_idx])
