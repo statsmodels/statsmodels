@@ -1856,8 +1856,6 @@ class FilterResults(FrozenRepresentation):
         # with predicted data during dynamic forecasting
         endog = model._representations[model.prefix]['obs']
 
-        # print(nstatic, ndynamic, nforecast, model.nobs)
-
         for t in range(kfilter.model.nobs):
             # Run the Kalman filter for the first `nstatic` periods (for
             # which dynamic computation will not be performed)
