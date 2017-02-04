@@ -273,7 +273,7 @@ def month_plot(x, dates=None, ylabel=None, ax=None):
     >>> dates = pd.to_datetime(list(map(lambda x : '-'.join(x) + '-1',
     ...                                        dta.index.values)))
 
-    >>> dta.index = pd.DatetimeIndex(dates, freq='M')
+    >>> dta.index = pd.DatetimeIndex(dates, freq='MS')
     >>> fig = sm.graphics.tsa.month_plot(dta)
 
     .. plot:: plots/graphics_month_plot.py

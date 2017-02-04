@@ -128,15 +128,15 @@ _mice_data_example_1 = """
     >>> imp = mice.MICEData(data)
     >>> imp.set_imputer('x1', formula='x2 + np.square(x2) + x3')
     >>> for j in range(20):
-            imp.update_all()
-            imp.data.to_csv('data%02d.csv' % j)"""
+    ...     imp.update_all()
+    ...     imp.data.to_csv('data%02d.csv' % j)"""
 
 _mice_data_example_2 = """
     >>> imp = mice.MICEData(data)
     >>> j = 0
     >>> for data in imp:
-            imp.data.to_csv('data%02d.csv' % j)
-            j += 1"""
+    ...     imp.data.to_csv('data%02d.csv' % j)
+    ...     j += 1"""
 
 
 class PatsyFormula(object):

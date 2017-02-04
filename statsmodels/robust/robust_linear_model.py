@@ -87,7 +87,7 @@ class RLM(base.LikelihoodModel):
     >>> import statsmodels.api as sm
     >>> data = sm.datasets.stackloss.load()
     >>> data.exog = sm.add_constant(data.exog)
-    >>> rlm_model = sm.RLM(data.endog, data.exog,
+    >>> rlm_model = sm.RLM(data.endog, data.exog, \
                            M=sm.robust.norms.HuberT())
 
     >>> rlm_results = rlm_model.fit()
@@ -100,11 +100,8 @@ class RLM(base.LikelihoodModel):
     array([  0.82938433,   0.92606597,  -0.12784672, -41.02649835])
     >>> rlm_results_HC2.bse
     array([ 0.11945975,  0.32235497,  0.11796313,  9.08950419])
-    >>>
-    >>> rlm_hamp_hub = sm.RLM(data.endog, data.exog,
-                          M=sm.robust.norms.Hampel()).fit(
-                          sm.robust.scale.HuberScale())
-
+    >>> mod = sm.RLM(data.endog, data.exog, M=sm.robust.norms.Hampel())
+    >>> rlm_hamp_hub = mod.fit(scale_est=sm.robust.scale.HuberScale())
     >>> rlm_hamp_hub.params
     array([  0.73175452,   1.25082038,  -0.14794399, -40.27122257])
     """ % {'params' : base._model_params_doc,

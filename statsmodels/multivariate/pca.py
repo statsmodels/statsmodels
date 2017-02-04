@@ -125,9 +125,9 @@ class PCA(object):
     Basic PCA using the correlation matrix of the data
 
     >>> import numpy as np
-    >>> from statsmodels.tools.pca import PCA
+    >>> from statsmodels.multivariate.pca import PCA
     >>> x = np.random.randn(100)[:, None]
-    >>> x = x + np.random.randn((100, 100))
+    >>> x = x + np.random.randn(100, 100)
     >>> pc = PCA(x)
 
     Note that the principal components are computed using a SVD and so the
