@@ -521,10 +521,10 @@ class SARIMAX(MLEModel):
             self._manual_initialization = True
 
         # Initialize the fixed components of the statespace model
-        self.ssm.design = self.initial_design
-        self.ssm.state_intercept = self.initial_state_intercept
-        self.ssm.transition = self.initial_transition
-        self.ssm.selection = self.initial_selection
+        self['design'] = self.initial_design
+        self['state_intercept'] = self.initial_state_intercept
+        self['transition'] = self.initial_transition
+        self['selection'] = self.initial_selection
 
         # If we are estimating a simple ARMA model, then we can use a faster
         # initialization method (unless initialization was already specified).
@@ -726,13 +726,13 @@ class SARIMAX(MLEModel):
 
         # Add in the initialized stationary components
         if self._k_order > 0:
-            selection_stationary = self.ssm.selection[start:end, :, 0]
+            selection_stationary = self['selection', start:end, :, 0]
             selected_state_cov_stationary = np.dot(
-                np.dot(selection_stationary, self.ssm.state_cov[:, :, 0]),
+                np.dot(selection_stationary, self['state_cov', :, :, 0]),
                 selection_stationary.T
             )
             initial_state_cov_stationary = solve_discrete_lyapunov(
-                self.ssm.transition[start:end, start:end, 0],
+                self['transition', start:end, start:end, 0],
                 selected_state_cov_stationary,
                 complex_step=complex_step
             )
@@ -1619,7 +1619,7 @@ class SARIMAX(MLEModel):
         # time-varying observation intercept (is equivalent to simply
         # subtracting it out of the endogenous variable first)
         if self.mle_regression:
-            self.ssm['obs_intercept'] = np.dot(self.exog, params_exog)[None, :]
+            self['obs_intercept'] = np.dot(self.exog, params_exog)[None, :]
 
         # State intercept (Harvey) or additional observation intercept
         # (Hamilton)
@@ -1630,7 +1630,7 @@ class SARIMAX(MLEModel):
         if self.k_trend > 0:
             data = np.dot(self._trend_data, params_trend).astype(params.dtype)
             if not self.hamilton_representation:
-                self.ssm['state_intercept', self._k_states_diff, :] = data
+                self['state_intercept', self._k_states_diff, :] = data
             else:
                 # The way the trend enters in the Hamilton representation means
                 # that the parameter is not an ``intercept'' but instead the
@@ -1646,35 +1646,35 @@ class SARIMAX(MLEModel):
                     self.ssm.obs_intercept += data[None, :]
                 # Otherwise set it directly
                 else:
-                    self.ssm.obs_intercept = data[None, :]
+                    self['obs_intercept'] = data[None, :]
 
         # Observation covariance matrix
         if self.measurement_error:
-            self.ssm['obs_cov', 0, 0] = params_measurement_variance
+            self['obs_cov', 0, 0] = params_measurement_variance
 
         # Transition matrix
         if self.k_ar > 0 or self.k_seasonal_ar > 0:
-            self.ssm[self.transition_ar_params_idx] = reduced_polynomial_ar[1:]
+            self[self.transition_ar_params_idx] = reduced_polynomial_ar[1:]
         elif not self.ssm.transition.dtype == params.dtype:
             # This is required if the transition matrix is not really in use
             # (e.g. for an MA(q) process) so that it's dtype never changes as
             # the parameters' dtype changes. This changes the dtype manually.
-            self.ssm.transition = self.ssm.transition.real.astype(params.dtype)
+            self['transition'] = self['transition'].real.astype(params.dtype)
 
         # Selection matrix (Harvey) or Design matrix (Hamilton)
         if self.k_ma > 0 or self.k_seasonal_ma > 0:
             if not self.hamilton_representation:
-                self.ssm[self.selection_ma_params_idx] = (
+                self[self.selection_ma_params_idx] = (
                     reduced_polynomial_ma[1:]
                 )
             else:
-                self.ssm[self.design_ma_params_idx] = reduced_polynomial_ma[1:]
+                self[self.design_ma_params_idx] = reduced_polynomial_ma[1:]
 
         # State covariance matrix
         if self.k_posdef > 0:
-            self.ssm['state_cov', 0, 0] = params_variance
+            self['state_cov', 0, 0] = params_variance
             if self.state_regression and self.time_varying_regression:
-                self.ssm[self._exog_variance_idx] = params_exog_variance
+                self[self._exog_variance_idx] = params_exog_variance
 
         # Initialize
         if not self._manual_initialization:

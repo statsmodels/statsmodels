@@ -223,11 +223,11 @@ class VARMAX(MLEModel):
         # If we have exog effects, then the state intercept needs to be
         # time-varying
         if self.k_exog > 0:
-            self.ssm['state_intercept'] = np.zeros((self.k_states, self.nobs))
+            self['state_intercept'] = np.zeros((self.k_states, self.nobs))
 
         # The design matrix is just an identity for the first k_endog states
         idx = np.diag_indices(self.k_endog)
-        self.ssm[('design',) + idx] = 1
+        self[('design',) + idx] = 1
 
         # The transition matrix is described in four blocks, where the upper
         # left block is in companion form with the autoregressive coefficient
@@ -235,13 +235,13 @@ class VARMAX(MLEModel):
         if self.k_ar > 0:
             idx = np.diag_indices((self.k_ar - 1) * self.k_endog)
             idx = idx[0] + self.k_endog, idx[1]
-            self.ssm[('transition',) + idx] = 1
+            self[('transition',) + idx] = 1
         # ... and the  lower right block is in companion form with zeros as the
         # coefficient matrices (it is shaped k_endog * k_ma x k_endog * k_ma).
         idx = np.diag_indices((self.k_ma - 1) * self.k_endog)
         idx = (idx[0] + (_min_k_ar + 1) * self.k_endog,
                idx[1] + _min_k_ar * self.k_endog)
-        self.ssm[('transition',) + idx] = 1
+        self[('transition',) + idx] = 1
 
         # The selection matrix is described in two blocks, where the upper
         # block selects the all k_posdef errors in the first k_endog rows
@@ -249,10 +249,10 @@ class VARMAX(MLEModel):
         # also selects all k_posdef errors in the first k_endog rows (the lower
         # block is shaped k_endog * k_ma x k).
         idx = np.diag_indices(self.k_endog)
-        self.ssm[('selection',) + idx] = 1
+        self[('selection',) + idx] = 1
         idx = idx[0] + _min_k_ar * self.k_endog, idx[1]
         if self.k_ma > 0:
-            self.ssm[('selection',) + idx] = 1
+            self[('selection',) + idx] = 1
 
         # Cache some indices
         if self.trend == 'c' and self.k_exog == 0:
@@ -501,7 +501,7 @@ class VARMAX(MLEModel):
             if self.error_cov_type == 'diagonal':
                 state_cov = np.diag(unconstrained[self._params_state_cov]**2)
             elif self.error_cov_type == 'unstructured':
-                state_cov_lower = np.zeros(self.ssm['state_cov'].shape,
+                state_cov_lower = np.zeros(self['state_cov'].shape,
                                            dtype=unconstrained.dtype)
                 state_cov_lower[self._idx_lower_state_cov] = (
                     unconstrained[self._params_state_cov])
@@ -578,7 +578,7 @@ class VARMAX(MLEModel):
             if self.error_cov_type == 'diagonal':
                 state_cov = np.diag(constrained[self._params_state_cov])
             elif self.error_cov_type == 'unstructured':
-                state_cov_lower = np.zeros(self.ssm['state_cov'].shape,
+                state_cov_lower = np.zeros(self['state_cov'].shape,
                                            dtype=constrained.dtype)
                 state_cov_lower[self._idx_lower_state_cov] = (
                     constrained[self._params_state_cov])
@@ -637,32 +637,32 @@ class VARMAX(MLEModel):
             intercept = np.dot(self.exog, exog_params)
             if self.trend == 'c':
                 intercept += params[self._params_trend]
-            self.ssm[self._idx_state_intercept] = intercept.T
+            self[self._idx_state_intercept] = intercept.T
         elif self.trend == 'c':
-            self.ssm[self._idx_state_intercept] = params[self._params_trend]
+            self[self._idx_state_intercept] = params[self._params_trend]
 
         # 2. Transition
         ar = params[self._params_ar].reshape(
             self.k_endog, self.k_endog * self.k_ar)
         ma = params[self._params_ma].reshape(
             self.k_endog, self.k_endog * self.k_ma)
-        self.ssm[self._idx_transition] = np.c_[ar, ma]
+        self[self._idx_transition] = np.c_[ar, ma]
 
         # 3. State covariance
         if self.error_cov_type == 'diagonal':
-            self.ssm[self._idx_state_cov] = (
+            self[self._idx_state_cov] = (
                 params[self._params_state_cov]
             )
         elif self.error_cov_type == 'unstructured':
-            state_cov_lower = np.zeros(self.ssm['state_cov'].shape,
+            state_cov_lower = np.zeros(self['state_cov'].shape,
                                        dtype=params.dtype)
             state_cov_lower[self._idx_lower_state_cov] = (
                 params[self._params_state_cov])
-            self.ssm['state_cov'] = np.dot(state_cov_lower, state_cov_lower.T)
+            self['state_cov'] = np.dot(state_cov_lower, state_cov_lower.T)
 
         # 4. Observation covariance
         if self.measurement_error:
-            self.ssm[self._idx_obs_cov] = params[self._params_obs_cov]
+            self[self._idx_obs_cov] = params[self._params_obs_cov]
 
 
 class VARMAXResults(MLEResults):
