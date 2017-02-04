@@ -1479,9 +1479,6 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
        Journal of Statistical Computation and Simulation 24 (2): 99-106.
 
     """
-
-    from scipy import linalg
-
     use_list = type(constrained) == list
     if not use_list:
         k_endog, order = constrained.shape

@@ -13,7 +13,6 @@ import pandas as pd
 from statsmodels.compat.collections import OrderedDict
 
 from scipy.misc import logsumexp
-from scipy.stats import norm
 from statsmodels.base.data import PandasData
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tools.data import _is_using_pandas
@@ -1609,7 +1608,6 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         # Otherwise do logistic transformation
         else:
             # Transition probabilities
-            offset = 0
             for i in range(self.k_regimes):
                 tmp1 = unconstrained[self.parameters[i, 'regime_transition']]
                 tmp2 = np.r_[0, tmp1]
@@ -1918,8 +1916,6 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                     self.smoothed_marginal_probabilities, index=index)
 
     def _get_robustcov_results(self, cov_type='opg', **kwargs):
-        import statsmodels.stats.sandwich_covariance as sw
-
         use_self = kwargs.pop('use_self', False)
         if use_self:
             res = self

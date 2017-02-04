@@ -6,17 +6,13 @@ License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
 
-import warnings
-
 import numpy as np
 
 from statsmodels.tsa.statespace.representation import OptionWrapper
 from statsmodels.tsa.statespace.kalman_filter import (KalmanFilter,
                                                       FilterResults)
-from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tsa.statespace.tools import (
-    reorder_missing_matrix, reorder_missing_vector,
-    copy_index_matrix, copy_index_vector)
+    reorder_missing_matrix, reorder_missing_vector, copy_index_matrix)
 from statsmodels.tsa.statespace import tools
 
 SMOOTHER_STATE = 0x01              # Durbin and Koopman (2012), Chapter 4.4.2

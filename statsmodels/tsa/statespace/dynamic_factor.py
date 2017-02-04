@@ -11,14 +11,12 @@ from statsmodels.compat.collections import OrderedDict
 
 import numpy as np
 import pandas as pd
-from .kalman_filter import KalmanFilter, FilterResults
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
-    companion_matrix, diff, is_invertible,
+    is_invertible,
     constrain_stationary_univariate, unconstrain_stationary_univariate,
     constrain_stationary_multivariate, unconstrain_stationary_multivariate
 )
-from scipy.linalg import solve_discrete_lyapunov
 from statsmodels.multivariate.pca import PCA
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.vector_ar.var_model import VAR
@@ -401,7 +399,6 @@ class DynamicFactor(MLEModel):
 
     def _initialize_error_transition_individual(self):
         k_endog = self.k_endog
-        _factor_order = self._factor_order
         _error_order = self._error_order
 
         # Initialize the parameters
@@ -516,7 +513,6 @@ class DynamicFactor(MLEModel):
 
         # 4. Errors
         if self.error_order == 0:
-            error_params = []
             if self.error_cov_type == 'scalar':
                 params[self._params_error_cov] = endog.var(axis=0).mean()
             elif self.error_cov_type == 'diagonal':
@@ -1292,8 +1288,6 @@ class DynamicFactorResults(MLEResults):
             exog_indices = indices[self.model._params_exog]
             exog_masks = []
             for i in range(k_endog):
-                offset = 0
-
                 # 1. Factor loadings
                 # Recall these are in the form:
                 # 'loading.f1.y1', 'loading.f2.y1', 'loading.f1.y2', ...

@@ -12,9 +12,8 @@ import pandas as pd
 from scipy.stats import norm
 
 from .simulation_smoother import SimulationSmoother
-from .kalman_smoother import KalmanSmoother, SmootherResults
-from .kalman_filter import (KalmanFilter, FilterResults, INVERT_UNIVARIATE,
-                            SOLVE_LU)
+from .kalman_smoother import SmootherResults
+from .kalman_filter import (INVERT_UNIVARIATE, SOLVE_LU)
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import (_get_epsilon, approx_hess_cs,
@@ -22,7 +21,7 @@ from statsmodels.tools.numdiff import (_get_epsilon, approx_hess_cs,
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 from statsmodels.tools.eval_measures import aic, bic, hqic
 from statsmodels.tools.tools import pinv_extended, Bunch
-from statsmodels.tools.sm_exceptions import PrecisionWarning, ValueWarning
+from statsmodels.tools.sm_exceptions import PrecisionWarning
 import statsmodels.genmod._prediction as pred
 from statsmodels.genmod.families.links import identity
 import warnings
@@ -978,7 +977,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         if approx_complex_step:
             kwargs['inversion_method'] = INVERT_UNIVARIATE | SOLVE_LU
         res = self.ssm.filter(complex_step=approx_complex_step, **kwargs)
-        dtype = self.ssm.dtype
 
         # Get forecasts error partials
         partials_forecasts_error, partials_forecasts_error_cov = (
@@ -1665,9 +1663,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
           intermediate calculations use the 'approx' method.
         - 'none' for no covariance matrix calculation.
         """
-
-        import statsmodels.stats.sandwich_covariance as sw
-
         use_self = kwargs.pop('use_self', False)
         if use_self:
             res = self

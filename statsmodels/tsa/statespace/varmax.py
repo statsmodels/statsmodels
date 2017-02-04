@@ -11,12 +11,10 @@ from statsmodels.compat.collections import OrderedDict
 
 import pandas as pd
 import numpy as np
-from .kalman_filter import (
-    KalmanFilter, FilterResults, INVERT_UNIVARIATE, SOLVE_LU
-)
+from .kalman_filter import (INVERT_UNIVARIATE, SOLVE_LU)
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
-    companion_matrix, diff, is_invertible,
+    is_invertible,
     constrain_stationary_multivariate, unconstrain_stationary_multivariate
 )
 from statsmodels.tools.tools import Bunch
