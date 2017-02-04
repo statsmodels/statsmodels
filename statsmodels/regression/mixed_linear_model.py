@@ -573,7 +573,7 @@ class MixedLM(base.LikelihoodModel):
     A mixed model with fixed effects for the columns of ``exog`` and
     independent random coefficients for the columns of ``exog_re``:
 
-    >>> free = MixedLMParams.from_components(fe_params=np.ones(exog.shape[1]),
+    >>> free = MixedLMParams.from_components(fe_params=np.ones(exog.shape[1]), \
                      cov_re=np.eye(exog_re.shape[1]))
     >>> model = sm.MixedLM(endog, exog, groups, exog_re=exog_re)
     >>> result = model.fit(free=free)
@@ -829,7 +829,7 @@ class MixedLM(base.LikelihoodModel):
         the schools.
 
         >>> vc = {'classroom': '0 + C(classroom)'}
-        >>> MixedLM.from_formula('test_score ~ age', vc_formula=vc,
+        >>> MixedLM.from_formula('test_score ~ age', vc_formula=vc, \
                                   re_formula='1', groups='school', data=data)
 
         Now suppose we also have a previous test score called
@@ -838,7 +838,7 @@ class MixedLM(base.LikelihoodModel):
         specify a random slope for the pretest score
 
         >>> vc = {'classroom': '0 + C(classroom)', 'pretest': '0 + pretest'}
-        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc,
+        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc, \
                                   re_formula='1', groups='school', data=data)
 
         The following model is almost equivalent to the previous one,
@@ -846,8 +846,8 @@ class MixedLM(base.LikelihoodModel):
         be correlated.
 
         >>> vc = {'classroom': '0 + C(classroom)'}
-        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc,
-                                  re_formula='1 + pretest', groups='school',
+        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc, \
+                                  re_formula='1 + pretest', groups='school', \
                                   data=data)
         """
 
