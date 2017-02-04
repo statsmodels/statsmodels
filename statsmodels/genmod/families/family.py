@@ -380,7 +380,9 @@ class Poisson(Family):
            D = 2 * \sum_i (freq\_weights_i * Y_i * \log(Y_i / \mu_i))/ scale
         '''
         endog_mu = self._clean(endog / mu)
-        return 2 * np.sum(endog * freq_weights * np.log(endog_mu)) / scale
+        return 2 * np.sum(freq_weights * (endog * np.log(endog_mu) -
+                                          (endog - mu))) / scale
+
 
     def loglike(self, endog, mu, freq_weights=1., scale=1.):
         r"""
