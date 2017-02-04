@@ -714,13 +714,13 @@ def check_stationary_initialization_1dim(dtype=float):
     # 1-dimensional example
     mod = MLEModel(endog, k_states=1, k_posdef=1)
     mod.ssm.initialize_stationary()
-    intercept = [2.3]
-    phi = np.diag([0.9])
-    sigma2 = np.diag([1.3])
+    intercept = np.array([2.3], dtype=dtype)
+    phi = np.diag([0.9]).astype(dtype)
+    sigma2 = np.diag([1.3]).astype(dtype)
 
     mod['state_intercept'] = intercept
     mod['transition'] = phi
-    mod['selection'] = np.eye(1)
+    mod['selection'] = np.eye(1).astype(dtype)
     mod['state_cov'] = sigma2
 
     mod.ssm._initialize_filter()
@@ -729,6 +729,7 @@ def check_stationary_initialization_1dim(dtype=float):
     _statespace = mod.ssm._statespace
     initial_state = np.array(_statespace.initial_state)
     initial_state_cov = np.array(_statespace.initial_state_cov)
+    # precision reductions only required for float complex case
 
     # mean = intercept + phi * mean
     # intercept = (1 - phi) * mean
@@ -747,15 +748,15 @@ def check_stationary_initialization_2dim(dtype=float):
     # 2-dimensional example
     mod = MLEModel(endog, k_states=2, k_posdef=2)
     mod.ssm.initialize_stationary()
-    intercept = np.array([2.3, -10.2])
-    phi = np.array([[0.9, 0.1],
-                    [-0.2, 0.7]])
+    intercept = np.array([2.3, -10.2], dtype=dtype)
+    phi = np.array([[0.8, 0.1],
+                    [-0.2, 0.7]], dtype=dtype)
     sigma2 = np.array([[1.4, -0.2],
-                       [-0.2, 4.5]])
+                       [-0.2, 4.5]], dtype=dtype)
 
     mod['state_intercept'] = intercept
     mod['transition'] = phi
-    mod['selection'] = np.eye(2)
+    mod['selection'] = np.eye(2).astype(dtype)
     mod['state_cov'] = sigma2
 
     mod.ssm._initialize_filter()
@@ -765,10 +766,11 @@ def check_stationary_initialization_2dim(dtype=float):
     initial_state = np.array(_statespace.initial_state)
     initial_state_cov = np.array(_statespace.initial_state_cov)
 
-    desired = np.linalg.inv(np.eye(2) - phi).dot(intercept)
+    desired = np.linalg.solve(np.eye(2).astype(dtype) - phi, intercept)
     assert_allclose(initial_state, desired)
     desired = solve_discrete_lyapunov(phi, sigma2)
-    assert_allclose(initial_state_cov, desired)
+    # precision reductions only required for single precision float / complex
+    assert_allclose(initial_state_cov, desired, atol=1e-5)
 
 
 def test_stationary_initialization():
