@@ -155,6 +155,9 @@ class TimeSeriesModel(base.LikelihoodModel):
         dates = self.data.dates
         freq = self.data.freq
 
+        if isinstance(end, datetime.datetime):
+            end = self._str_to_date(str(end))
+
         if isinstance(end, str) or (dates is not None
                                     and isinstance(end, type(dates[0]))):
             if dates is None:
