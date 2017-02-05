@@ -400,7 +400,8 @@ class KalmanSmoother(KalmanFilter):
 
         Examples
         --------
-        >>> mod = sm.tsa.statespace.KalmanSmoother(1,1)
+        >>> import statsmodels.tsa.statespace.kalman_smoother as ks
+        >>> mod = ks.KalmanSmoother(1,1)
         >>> mod.smoother_output
         15
         >>> mod.set_smoother_output(smoother_output=0)

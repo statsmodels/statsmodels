@@ -336,19 +336,27 @@ class KalmanFilter(Representation):
         Examples
         --------
         >>> mod = sm.tsa.statespace.SARIMAX(range(10))
-        >>> mod.filter_method
+        >>> mod.ssm.filter_method
         1
-        >>> mod.filter_conventional
+        >>> mod.ssm.filter_conventional
         True
-        >>> mod.set_filter_method(filter_method=1)
-        >>> mod.filter_method
-        1
-        >>> mod.set_filter_method(filter_conventional=True)
-        >>> mod.filter_method
-        1
-        >>> mod.filter_conventional = True
-        >>> mod.filter_method
-        1
+        >>> mod.ssm.filter_univariate = True
+        >>> mod.ssm.filter_method
+        17
+        >>> mod.ssm.set_filter_method(filter_univariate=False,
+        ...                           filter_collapsed=True)
+        >>> mod.ssm.filter_method
+        33
+        >>> mod.ssm.set_filter_method(filter_method=1)
+        >>> mod.ssm.filter_conventional
+        True
+        >>> mod.ssm.filter_univariate
+        False
+        >>> mod.ssm.filter_collapsed
+        False
+        >>> mod.ssm.filter_univariate = True
+        >>> mod.ssm.filter_method
+        17
         """
         if filter_method is not None:
             self.filter_method = filter_method
@@ -417,20 +425,20 @@ class KalmanFilter(Representation):
         Examples
         --------
         >>> mod = sm.tsa.statespace.SARIMAX(range(10))
-        >>> mod.inversion_method
+        >>> mod.ssm.inversion_method
         1
-        >>> mod.solve_cholesky
+        >>> mod.ssm.solve_cholesky
         True
-        >>> mod.invert_univariate
+        >>> mod.ssm.invert_univariate
         True
-        >>> mod.invert_lu
+        >>> mod.ssm.invert_lu
         False
-        >>> mod.invert_univariate = False
-        >>> mod.inversion_method
+        >>> mod.ssm.invert_univariate = False
+        >>> mod.ssm.inversion_method
         8
-        >>> mod.set_inversion_method(solve_cholesky=False,
-                                     invert_cholesky=True)
-        >>> mod.inversion_method
+        >>> mod.ssm.set_inversion_method(solve_cholesky=False,
+        ...                              invert_cholesky=True)
+        >>> mod.ssm.inversion_method
         16
         """
         if inversion_method is not None:
@@ -483,12 +491,12 @@ class KalmanFilter(Representation):
         Examples
         --------
         >>> mod = sm.tsa.statespace.SARIMAX(range(10))
-        >>> mod.stability_method
+        >>> mod.ssm.stability_method
         1
-        >>> mod.stability_force_symmetry
+        >>> mod.ssm.stability_force_symmetry
         True
-        >>> mod.stability_force_symmetry = False
-        >>> mod.stability_method
+        >>> mod.ssm.stability_force_symmetry = False
+        >>> mod.ssm.stability_method
         0
         """
         if stability_method is not None:
@@ -555,16 +563,16 @@ class KalmanFilter(Representation):
         Examples
         --------
         >>> mod = sm.tsa.statespace.SARIMAX(range(10))
-        >>> mod.conserve_memory
+        >>> mod.ssm..conserve_memory
         0
-        >>> mod.memory_no_predicted
+        >>> mod.ssm.memory_no_predicted
         False
-        >>> mod.memory_no_predicted = True
-        >>> mod.conserve_memory
+        >>> mod.ssm.memory_no_predicted = True
+        >>> mod.ssm.conserve_memory
         2
-        >>> mod.set_conserve_memory(memory_no_filtered=True,
-                                    memory_no_forecast=True)
-        >>> mod.conserve_memory
+        >>> mod.ssm.set_conserve_memory(memory_no_filtered=True,
+        ...                             memory_no_forecast=True)
+        >>> mod.ssm.conserve_memory
         7
         """
         if conserve_memory is not None:
