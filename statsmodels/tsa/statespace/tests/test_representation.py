@@ -24,8 +24,7 @@ from statsmodels.tsa.statespace.kalman_filter import KalmanFilter, FilterResults
 from statsmodels.tsa.statespace import tools, sarimax
 from .results import results_kalman_filter
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
-from nose.exc import SkipTest
-from statsmodels.compat.numpy import NumpyVersion
+import pytest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -120,7 +119,7 @@ class TestClark1987Single(Clark1987):
     """
     @classmethod
     def setup_class(cls):
-        raise SkipTest('Not implemented')
+        pytest.skip('Not implemented')
         super(TestClark1987Single, cls).setup_class(
             dtype=np.float32, conserve_memory=0
         )
@@ -146,7 +145,7 @@ class TestClark1987SingleComplex(Clark1987):
     """
     @classmethod
     def setup_class(cls):
-        raise SkipTest('Not implemented')
+        pytest.skip('Not implemented')
         super(TestClark1987SingleComplex, cls).setup_class(
             dtype=np.complex64, conserve_memory=0
         )

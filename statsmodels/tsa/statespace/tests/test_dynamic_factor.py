@@ -15,7 +15,7 @@ import warnings
 from statsmodels.tsa.statespace import dynamic_factor
 from .results import results_varmax, results_dynamic_factor
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
-from nose.exc import SkipTest
+import pytest
 from statsmodels.iolib.summary import forg
 
 try:
@@ -377,7 +377,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         assert_allclose(bse[-10:], self.true['var_oim'][-10:], atol=2e-4)
 
     def test_mle(self):
-        raise SkipTest("Known failure, no sequence of optimizers has been"
+        pytest.skip("Known failure, no sequence of optimizers has been"
                        " found which can achieve the maximum.")
         # The following gets us to llf=546.53, which is still not good enough
         # llf = 300.842477412

@@ -16,6 +16,7 @@ from __future__ import division, absolute_import, print_function
 
 import numpy as np
 import pandas as pd
+import pytest
 import os
 
 from statsmodels import datasets
@@ -27,7 +28,6 @@ from statsmodels.tsa.statespace.kalman_smoother import (
     SMOOTH_CONVENTIONAL, SMOOTH_CLASSICAL, SMOOTH_ALTERNATIVE,
     SMOOTH_UNIVARIATE)
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal, assert_raises
-from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -161,7 +161,7 @@ class TestStatesAR3AlternateTiming(TestStatesAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
-            raise SkipTest
+            pytest.skip()
         super(TestStatesAR3AlternateTiming, cls).setup_class(
             alternate_timing=True, *args, **kwargs)
 
@@ -170,7 +170,7 @@ class TestStatesAR3AlternativeSmoothing(TestStatesAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
-            raise SkipTest
+            pytest.skip()
         super(TestStatesAR3AlternativeSmoothing, cls).setup_class(
             smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
 
@@ -203,7 +203,7 @@ class TestStatesAR3UnivariateSmoothing(TestStatesAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
-            raise SkipTest
+            pytest.skip()
         super(TestStatesAR3UnivariateSmoothing, cls).setup_class(
             filter_method=FILTER_UNIVARIATE, *args, **kwargs)
 
@@ -334,7 +334,7 @@ class TestStatesMissingAR3AlternateTiming(TestStatesMissingAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
-            raise SkipTest
+            pytest.skip()
         super(TestStatesMissingAR3AlternateTiming, cls).setup_class(alternate_timing=True, *args, **kwargs)
 
 
@@ -342,7 +342,7 @@ class TestStatesMissingAR3AlternativeSmoothing(TestStatesMissingAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
-            raise SkipTest
+            pytest.skip()
         super(TestStatesMissingAR3AlternativeSmoothing, cls).setup_class(
             smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
 
@@ -358,7 +358,7 @@ class TestStatesMissingAR3UnivariateSmoothing(TestStatesMissingAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
-            raise SkipTest
+            pytest.skip()
         super(TestStatesMissingAR3UnivariateSmoothing, cls).setup_class(
             filter_method=FILTER_UNIVARIATE, *args, **kwargs)
 
@@ -521,7 +521,7 @@ class TestMultivariateMissingClassicalSmoothing(TestMultivariateMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
-            raise SkipTest
+            pytest.skip()
         super(TestMultivariateMissingClassicalSmoothing, cls).setup_class(
             smooth_method=SMOOTH_CLASSICAL, *args, **kwargs)
 
@@ -537,7 +537,7 @@ class TestMultivariateMissingAlternativeSmoothing(TestMultivariateMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
-            raise SkipTest
+            pytest.skip()
         super(TestMultivariateMissingAlternativeSmoothing, cls).setup_class(
             smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
 
@@ -553,7 +553,7 @@ class TestMultivariateMissingUnivariateSmoothing(TestMultivariateMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
-            raise SkipTest
+            pytest.skip()
         super(TestMultivariateMissingUnivariateSmoothing, cls).setup_class(
             filter_method=FILTER_UNIVARIATE, *args, **kwargs)
 
@@ -717,7 +717,7 @@ class TestMultivariateVARAlternativeSmoothing(TestMultivariateVAR):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
-            raise SkipTest
+            pytest.skip()
         super(TestMultivariateVARAlternativeSmoothing, cls).setup_class(
             smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
 
@@ -733,7 +733,7 @@ class TestMultivariateVARClassicalSmoothing(TestMultivariateVAR):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
-            raise SkipTest
+            pytest.skip()
         super(TestMultivariateVARClassicalSmoothing, cls).setup_class(
             smooth_method=SMOOTH_CLASSICAL, *args, **kwargs)
 
@@ -760,7 +760,7 @@ class TestMultivariateVARUnivariate(object):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
-            raise SkipTest
+            pytest.skip()
         # Results
         path = current_path + os.sep + 'results/results_smoothing2_R.csv'
         cls.desired = pd.read_csv(path)
@@ -901,7 +901,7 @@ class TestMultivariateVARUnivariateSmoothing(TestMultivariateVARUnivariate):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
-            raise SkipTest
+            pytest.skip()
         super(TestMultivariateVARUnivariateSmoothing, cls).setup_class(
             filter_method=FILTER_UNIVARIATE, *args, **kwargs)
 
@@ -921,7 +921,7 @@ class TestVARAutocovariances(object):
     @classmethod
     def setup_class(cls, which='mixed', *args, **kwargs):
         if compatibility_mode:
-            raise SkipTest
+            pytest.skip()
 
         # Data
         dta = datasets.macrodata.load_pandas().data
@@ -994,7 +994,7 @@ class TestVARAutocovariancesAlternativeSmoothing(TestVARAutocovariances):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
-            raise SkipTest
+            pytest.skip()
         super(TestVARAutocovariancesAlternativeSmoothing, cls).setup_class(
             smooth_method=SMOOTH_ALTERNATIVE, *args, **kwargs)
 
@@ -1010,7 +1010,7 @@ class TestVARAutocovariancesClassicalSmoothing(TestVARAutocovariances):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
-            raise SkipTest
+            pytest.skip()
         super(TestVARAutocovariancesClassicalSmoothing, cls).setup_class(
             smooth_method=SMOOTH_CLASSICAL, *args, **kwargs)
 
@@ -1026,7 +1026,7 @@ class TestVARAutocovariancesUnivariateSmoothing(TestVARAutocovariances):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         if compatibility_mode:
-            raise SkipTest
+            pytest.skip()
         super(TestVARAutocovariancesUnivariateSmoothing, cls).setup_class(
             filter_method=FILTER_UNIVARIATE, *args, **kwargs)
 

@@ -19,7 +19,7 @@ from statsmodels.compat.scipy import NumpyVersion
 from numpy.testing import (assert_, assert_allclose, assert_equal,
                            assert_array_equal)
 
-from nose import SkipTest
+import pytest
 import platform
 
 
@@ -124,7 +124,7 @@ class CheckGenericMixin(object):
             results = self.results
         if (isinstance(results, GLMResults) or
             isinstance(results, DiscreteResults)):
-            raise SkipTest
+            pytest.skip()
 
         res = self.results
         fitted = res.fittedvalues

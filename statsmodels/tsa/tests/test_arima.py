@@ -3,12 +3,12 @@ from statsmodels.compat.python import lrange, BytesIO, cPickle
 import os
 import warnings
 
-from nose.tools import nottest
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_allclose,
                            assert_raises, dec, TestCase)
 import pandas as pd
 from pandas import PeriodIndex, DatetimeIndex
+import pytest
 
 from statsmodels.datasets.macrodata import load as load_macrodata
 from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
@@ -1933,7 +1933,7 @@ class TestARMA00(TestCase):
         predictions = self.arma_00_res.predict()
         assert_almost_equal(self.y.mean() * np.ones_like(predictions), predictions)
 
-    @nottest
+    @pytest.mark.skip
     def test_information_criteria(self):
         # This test is invalid since the ICs differ due to df_model differences
         # between OLS and ARIMA
@@ -2286,5 +2286,5 @@ def test_arima_pickle():
 
 
 if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

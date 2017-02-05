@@ -21,6 +21,7 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 import pandas as pd
 import os
+import pytest
 
 try:
     from scipy.linalg.blas import find_best_blas_type
@@ -41,7 +42,6 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.statespace import _statespace as ss
 from .results import results_kalman_filter
 from numpy.testing import assert_almost_equal, assert_allclose
-from nose.exc import SkipTest
 
 prefix_statespace_map = {
     's': ss.sStatespace, 'd': ss.dStatespace,
@@ -192,13 +192,13 @@ class Clark1987(object):
         )
 
 
+@pytest.mark.skip('Not implemented')
 class TestClark1987Single(Clark1987):
     """
     Basic single precision test for the loglikelihood and filtered states.
     """
     @classmethod
     def setup_class(cls):
-        raise SkipTest('Not implemented')
         super(TestClark1987Single, cls).setup_class(
             dtype=np.float32, conserve_memory=0
         )
@@ -242,6 +242,7 @@ class TestClark1987Double(Clark1987):
         cls.result = cls.run_filter()
 
 
+@pytest.mark.skip('Not implemented')
 class TestClark1987SingleComplex(Clark1987):
     """
     Basic single precision complex test for the loglikelihood and filtered
@@ -249,7 +250,6 @@ class TestClark1987SingleComplex(Clark1987):
     """
     @classmethod
     def setup_class(cls):
-        raise SkipTest('Not implemented')
         super(TestClark1987SingleComplex, cls).setup_class(
             dtype=np.complex64, conserve_memory=0
         )

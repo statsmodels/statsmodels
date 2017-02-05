@@ -12,12 +12,13 @@ Author: Josef Perktold
 
 import copy
 import warnings
-import nose
 from distutils.version import LooseVersion
+
 
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_allclose, assert_raises,
                            assert_equal, assert_warns, dec)
+import pytest
 import scipy
 
 import statsmodels.stats.power as smp
@@ -93,7 +94,7 @@ class CheckPowerMixin(object):
     @dec.skipif(not have_matplotlib)
     def test_power_plot(self):
         if self.cls == smp.FTestPower:
-            raise nose.SkipTest('skip FTestPower plot_power')
+            pytest.skip('skip FTestPower plot_power')
         plt.close()
         fig = plt.figure()
         ax = fig.add_subplot(2,1,1)
@@ -778,3 +779,4 @@ if __name__ == '__main__':
     nt = TestNormalIndPower_onesamp1()
     nt.test_power()
     nt.test_roots()
+

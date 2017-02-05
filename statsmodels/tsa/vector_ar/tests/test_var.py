@@ -5,12 +5,11 @@ from __future__ import print_function
 # pylint: disable=W0612,W0231
 from statsmodels.compat.python import (iteritems, StringIO, lrange, BytesIO,
                                        range)
-from nose.tools import assert_raises
-import nose
 import os
 import sys
 
 import numpy as np
+import pytest
 
 import statsmodels.api as sm
 import statsmodels.tsa.vector_ar.util as util
@@ -181,7 +180,7 @@ class CheckIRF(object):
 
     def test_plot_irf(self):
         if not have_matplotlib():
-            raise nose.SkipTest
+            pytest.skip('matplotlib not available')
 
         import matplotlib.pyplot as plt
         self.irf.plot()
@@ -204,7 +203,7 @@ class CheckIRF(object):
 
     def test_plot_cum_effects(self):
         if not have_matplotlib():
-            raise nose.SkipTest
+            pytest.skip('matplotlib not available')
         # I need close after every plot to avoid segfault, see #3158
         import matplotlib.pyplot as plt
         plt.close('all')
@@ -230,7 +229,7 @@ class CheckFEVD(object):
 
     def test_fevd_plot(self):
         if not have_matplotlib():
-            raise nose.SkipTest
+            pytest.skip('matplotlib not available')
 
         self.fevd.plot()
         close_plots()
@@ -289,7 +288,8 @@ class TestVARResults(CheckIRF, CheckFEVD):
             assert_equal(idx, i)
             assert_equal(idx, idx2)
 
-        assert_raises(Exception, self.res.get_eq_index, 'foo')
+        with pytest.raises(Exception):
+            self.res.get_eq_index('foo')
 
     def test_repr(self):
         # just want this to work
@@ -337,7 +337,8 @@ class TestVARResults(CheckIRF, CheckFEVD):
         for ic in ics:
             res = self.model.fit(maxlags=10, ic=ic, verbose=True)
 
-        assert_raises(Exception, self.model.fit, ic='foo')
+        with pytest.raises(Exception):
+            self.model.fit(ic='foo')
 
     def test_nobs(self):
         assert_equal(self.res.nobs, self.ref.nobs)
@@ -375,7 +376,8 @@ class TestVARResults(CheckIRF, CheckFEVD):
         _ = self.res.test_causality(self.names[0], self.names[1])
         _ = self.res.test_causality(0, 1)
 
-        assert_raises(Exception,self.res.test_causality, 0, 1, kind='foo')
+        with pytest.raises(Exception):
+            self.res.test_causality(0, 1, kind='foo')
 
     def test_select_order(self):
         result = self.model.fit(10, ic='aic', verbose=True)
@@ -409,28 +411,28 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     def test_plot_sim(self):
         if not have_matplotlib():
-            raise nose.SkipTest
+            pytest.skip('matplotlib not available')
 
         self.res.plotsim(steps=100)
         close_plots()
 
     def test_plot(self):
         if not have_matplotlib():
-            raise nose.SkipTest
+            pytest.skip('matplotlib not available')
 
         self.res.plot()
         close_plots()
 
     def test_plot_acorr(self):
         if not have_matplotlib():
-            raise nose.SkipTest
+            pytest.skip('matplotlib not available')
 
         self.res.plot_acorr()
         close_plots()
 
     def test_plot_forecast(self):
         if not have_matplotlib():
-            raise nose.SkipTest
+            pytest.skip('matplotlib not available')
 
         self.res.plot_forecast(5)
         close_plots()
@@ -593,7 +595,8 @@ def test_var_constant():
     data.index = DatetimeIndex(index)
 
     model = VAR(data)
-    assert_raises(ValueError, model.fit, 1)
+    with pytest.raises(ValueError):
+        model.fit(1)
 
 def test_var_trend():
     # see 2271
@@ -607,7 +610,8 @@ def test_var_trend():
     data_nc = data - data.mean(0)
     model_nc = sm.tsa.VAR(data_nc)
     results_nc = model_nc.fit(4, trend = 'nc')
-    assert_raises(ValueError, model.fit, 4, trend='t')
+    with pytest.raises(ValueError):
+        model.fit(4, trend='t')
 
 
 def test_irf_trend():
@@ -641,6 +645,5 @@ def test_irf_trend():
 
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb', '--pdb-failure'],
-                   exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

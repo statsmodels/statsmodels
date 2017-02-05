@@ -892,7 +892,5 @@ def test_formula_missing_extra_arrays():
 
 
 if __name__ == "__main__":
-    import nose
-    #nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb', '--pdb-failure'],
-    #        exit=False)
-    nose.runmodule(argv=[__file__, '-vvs', '-x'], exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

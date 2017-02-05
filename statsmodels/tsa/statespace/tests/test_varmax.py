@@ -15,7 +15,7 @@ import warnings
 from statsmodels.tsa.statespace import mlemodel, varmax
 from .results import results_varmax
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
-from nose.exc import SkipTest
+import pytest
 from statsmodels.iolib.summary import forg
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -629,11 +629,11 @@ class TestVARMA(CheckFREDManufacturing):
 
     def test_bse_approx(self):
         # Standard errors do not match Stata's
-        raise SkipTest('Known failure: standard errors do not match.')
+        pytest.skip('Known failure: standard errors do not match.')
 
     def test_bse_oim(self):
         # Standard errors do not match Stata's
-        raise SkipTest('Known failure: standard errors do not match.')
+        pytest.skip('Known failure: standard errors do not match.')
 
     def test_aic(self):
         # Since the VARMA model here is generic (we're just putting in zeros
@@ -712,11 +712,11 @@ class TestVMA1(CheckFREDManufacturing):
 
     def test_bse_approx(self):
         # Standard errors do not match Stata's
-        raise SkipTest('Known failure: standard errors do not match.')
+        pytest.skip('Known failure: standard errors do not match.')
 
     def test_bse_oim(self):
         # Standard errors do not match Stata's
-        raise SkipTest('Known failure: standard errors do not match.')
+        pytest.skip('Known failure: standard errors do not match.')
 
     def test_aic(self):
         # Since the VARMA model here is generic (we're just putting in zeros

@@ -661,6 +661,5 @@ class TestLagmat2DS(unittest.TestCase):
         assert_raises(TypeError, sm.tsa.lagmat2ds, data, 5)
 
 if __name__ == '__main__':
-    import nose
-
-    nose.runmodule()
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

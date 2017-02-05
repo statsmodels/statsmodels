@@ -1,8 +1,7 @@
 import os
 import numpy.testing as npt
-from nose import SkipTest
-from nose.tools import raises
 import numpy as np
+import pytest
 from statsmodels.distributions.mixture_rvs import mixture_rvs
 from statsmodels.nonparametric.kde import KDEUnivariate as KDE
 import statsmodels.sandbox.nonparametric.kernels as kernels
@@ -39,24 +38,23 @@ class TestKDEExceptions(object):
         cls.weights_200 = np.linspace(1, 100, 200)
         cls.weights_100 = np.linspace(1, 100, 100)
 
-    @raises(ValueError)
     def test_check_is_fit_exception(self):
-        self.kde.evaluate(0)
+        with pytest.raises(ValueError):
+            self.kde.evaluate(0)
 
-    @raises(NotImplementedError)
     def test_non_weighted_fft_exception(self):
-        self.kde.fit(kernel="gau", gridsize=50, weights=self.weights_200, fft=True,
-                    bw="silverman")
+        with pytest.raises(NotImplementedError):
+            self.kde.fit(kernel="gau", gridsize=50, weights=self.weights_200,
+                         fft=True, bw="silverman")
 
-    @raises(ValueError)
     def test_wrong_weight_length_exception(self):
-        self.kde.fit(kernel="gau", gridsize=50, weights=self.weights_100, fft=False,
-                    bw="silverman")
+        with pytest.raises(ValueError):
+            self.kde.fit(kernel="gau", gridsize=50, weights=self.weights_100,
+                         fft=False, bw="silverman")
 
-    @raises(NotImplementedError)
     def test_non_gaussian_fft_exception(self):
-        self.kde.fit(kernel="epa", gridsize=50, fft=True,
-                    bw="silverman")
+        with pytest.raises(NotImplementedError):
+            self.kde.fit(kernel="epa", gridsize=50, fft=True, bw="silverman")
 
 class CheckKDE(object):
 
@@ -209,7 +207,7 @@ class CheckKDEWeights(object):
 
     def test_evaluate(self):
         if self.kernel_name == 'cos':
-            raise SkipTest("Cosine kernel fails against Stata")
+            pytest.skip("Cosine kernel fails against Stata")
         kde_vals = [self.res1.evaluate(xi) for xi in self.x]
         kde_vals = np.squeeze(kde_vals)  #kde_vals is a "column_list"
         npt.assert_almost_equal(kde_vals, self.res_density,
@@ -333,6 +331,5 @@ class TestNormConstant():
 
 
 if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb'],
-                       exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

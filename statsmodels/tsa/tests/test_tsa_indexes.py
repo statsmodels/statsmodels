@@ -14,11 +14,10 @@ from __future__ import division, absolute_import, print_function
 import warnings
 import numpy as np
 import pandas as pd
-import os
+import pytest
 
 from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal,
                            assert_raises)
-from nose.exc import SkipTest
 
 from statsmodels.tsa.base import tsa_model
 
@@ -658,7 +657,7 @@ def test_prediction_increment_pandas_dates_nanosecond():
                                        freq='N')
         mod = tsa_model.TimeSeriesModel(endog)
     except:
-        raise SkipTest
+        pytest.skip()
 
     # Basic prediction: [0, end]; the index is the date index
     start_key = 0

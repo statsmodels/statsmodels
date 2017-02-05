@@ -126,8 +126,5 @@ def test_invlogit_stability():
     assert_equal(zinv, np.ones_like(z))
 
 if __name__=="__main__":
-    #run_module_suite()
-    #taken from Fernando Perez:
-    import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb'],
-                       exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

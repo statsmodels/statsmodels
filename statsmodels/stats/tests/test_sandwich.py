@@ -90,6 +90,5 @@ def test_hac_simple():
     assert_almost_equal(cov3, cov4, decimal=14)
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x'], exit=False)
-    #test_hac_simple()
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

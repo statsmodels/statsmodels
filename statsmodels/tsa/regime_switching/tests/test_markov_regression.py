@@ -13,7 +13,6 @@ import pandas as pd
 from statsmodels.tsa.regime_switching import (markov_switching,
                                               markov_regression)
 from numpy.testing import assert_equal, assert_allclose, assert_raises
-from nose.exc import SkipTest
 
 
 current_path = os.path.dirname(os.path.abspath(__file__))

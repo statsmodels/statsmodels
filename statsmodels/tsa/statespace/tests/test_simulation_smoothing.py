@@ -21,12 +21,12 @@ from statsmodels.tsa.statespace.kalman_smoother import (
 from statsmodels.tsa.statespace.simulation_smoother import (
     SIMULATION_STATE, SIMULATION_DISTURBANCE, SIMULATION_ALL)
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal, assert_raises
-from nose.exc import SkipTest
+import pytest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
-if compatibility_mode:
-    raise SkipTest
+pytestmark = pytest.mark.skipif(compatibility_mode,
+                                reason='In compatibility mode')
 
 
 class MultivariateVARKnown(object):
@@ -429,14 +429,12 @@ class TestMultivariateVARKnownMissingMixed(MultivariateVARKnown):
         cls.true_llf = 1117.265303
 
 
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestDFM(TestMultivariateVARKnown):
     test_against_KFAS = False
 
     @classmethod
     def setup_class(cls, which='none', *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
-
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')

@@ -11,10 +11,10 @@ from statsmodels.compat.python import StringIO
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal, assert_
-from nose import SkipTest
 
 import pandas as pd
 import patsy
+import pytest
 
 from statsmodels.discrete.discrete_model import Poisson
 from statsmodels.discrete.discrete_model import Logit
@@ -100,7 +100,7 @@ class CheckPoissonConstrainedMixin(object):
             df_r = res2.N - res2.df_m - 1
             assert_equal(res1.df_resid, df_r)
         else:
-            raise SkipTest("not available yet")
+            pytest.skip("not available yet")
 
     def test_other(self):
         # some results may not be valid or available for all models
@@ -118,7 +118,7 @@ class CheckPoissonConstrainedMixin(object):
                     warnings.warn(message)
 
         else:
-            raise SkipTest("not available yet")
+            pytest.skip("not available yet")
 
 
 class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):

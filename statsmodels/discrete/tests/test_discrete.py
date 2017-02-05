@@ -16,13 +16,13 @@ import numpy as np
 from numpy.testing import (assert_, assert_raises, assert_almost_equal,
                            assert_equal, assert_array_equal, assert_allclose,
                            assert_array_less)
+import pytest
 
 from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
                                                  Poisson, NegativeBinomial)
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
-from nose import SkipTest
 from .results.results_discrete import Spector, DiscreteL1, RandHIE, Anes
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
@@ -404,13 +404,12 @@ class TestProbitNCG(CheckBinaryResults):
                                                      warn_convergence=False)
         # converges close enough but warnflag is 2 for precision loss
 
+@pytest.mark.skipif(not has_basinhopping,
+                    reason='Skipped TestProbitBasinhopping since basinhopping '
+                           'solver is not available')
 class TestProbitBasinhopping(CheckBinaryResults):
     @classmethod
     def setup_class(cls):
-        if not has_basinhopping:
-            raise SkipTest("Skipped TestProbitBasinhopping since"
-                           " basinhopping solver is not available")
-
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -499,7 +498,8 @@ class TestLogitL1(CheckLikelihoodModelL1):
         assert_almost_equal(
                 self.res1.cov_params(), self.res2.cov_params, DECIMAL_4)
 
-
+@pytest.mark.skipif(not has_cvxopt,
+                   reason="Skipped test_cvxopt since cvxopt is not available")
 class TestCVXOPT(object):
     @classmethod
     def setup_class(cls):
@@ -508,17 +508,16 @@ class TestCVXOPT(object):
 
     def test_cvxopt_versus_slsqp(self):
         #Compares resutls from cvxopt to the standard slsqp
-        if has_cvxopt:
-            self.alpha = 3. * np.array([0, 1, 1, 1.]) #/ self.data.endog.shape[0]
-            res_slsqp = Logit(self.data.endog, self.data.exog).fit_regularized(
-                method="l1", alpha=self.alpha, disp=0, acc=1e-10, maxiter=1000,
-                trim_mode='auto')
-            res_cvxopt = Logit(self.data.endog, self.data.exog).fit_regularized(
-                method="l1_cvxopt_cp", alpha=self.alpha, disp=0, abstol=1e-10,
-                trim_mode='auto', auto_trim_tol=0.01, maxiter=1000)
-            assert_almost_equal(res_slsqp.params, res_cvxopt.params, DECIMAL_4)
-        else:
-            raise SkipTest("Skipped test_cvxopt since cvxopt is not available")
+        self.alpha = 3. * np.array([0, 1, 1, 1.]) #/ self.data.endog.shape[0]
+        res_slsqp = Logit(self.data.endog, self.data.exog).fit_regularized(
+            method="l1", alpha=self.alpha, disp=0, acc=1e-10, maxiter=1000,
+            trim_mode='auto')
+        res_cvxopt = Logit(self.data.endog, self.data.exog).fit_regularized(
+            method="l1_cvxopt_cp", alpha=self.alpha, disp=0, abstol=1e-10,
+            trim_mode='auto', auto_trim_tol=0.01, maxiter=1000)
+        assert_almost_equal(res_slsqp.params, res_cvxopt.params, DECIMAL_4)
+
+
 
 
 class TestSweepAlphaL1(object):
@@ -712,7 +711,7 @@ class TestMNLogitL1Compatability(CheckL1Compatability):
         assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:m, :m], DECIMAL_3)
 
     def test_f_test(self):
-        raise SkipTest("Skipped test_f_test for MNLogit")
+        pytest.skip("Skipped test_f_test for MNLogit")
 
 
 class TestProbitL1Compatability(CheckL1Compatability):
@@ -1438,6 +1437,5 @@ def test_binary_pred_table_zeros():
 
 
 if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'],
-            exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

@@ -14,7 +14,7 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.tools.tools import add_constant
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.discrete import discrete_model as discrete
-from nose import SkipTest
+import pytest
 import warnings
 
 # Test Precisions
@@ -1897,8 +1897,5 @@ def test_poisson_deviance():
 
 
 if __name__ == "__main__":
-    # run_module_suite()
-    # taken from Fernando Perez:
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'],
-                   exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])
