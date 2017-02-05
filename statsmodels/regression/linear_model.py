@@ -368,7 +368,7 @@ class GLS(RegressionModel):
 
     >>> gls_model = sm.GLS(data.endog, data.exog, sigma=sigma)
     >>> gls_results = gls_model.fit()
-    >>> print(gls_results.summary()))
+    >>> print(gls_results.summary())
 
     """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc + base._extra_param_doc}
@@ -614,7 +614,7 @@ class OLS(WLS):
     array([ 2.14285714,  0.25      ])
     >>> results.tvalues
     array([ 1.87867287,  0.98019606])
-    >>> print(results.t_test([1, 0])))
+    >>> print(results.t_test([1, 0]))
     <T test: effect=array([ 2.14285714]), sd=array([[ 1.14062282]]), t=array([[ 1.87867287]]), p=array([[ 0.05953974]]), df_denom=5>
     >>> print(results.f_test(np.identity(2)))
     <F test: F=array([[ 19.46078431]]), p=[[ 0.00437251]], df_denom=5, df_num=2>
@@ -1088,7 +1088,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     >>> from statsmodels.datasets.sunspots import load
     >>> data = load()
     >>> rho, sigma = sm.regression.yule_walker(data.endog,
-                                       order=4, method="mle")
+    ...                                        order=4, method="mle")
 
     >>> rho
     array([ 1.28310031, -0.45240924, -0.20770299,  0.04794365])
@@ -2483,8 +2483,8 @@ class OLSResults(RegressionResults):
         >>> fitted.rsquared
         >>> 0.91357690446068196
         >>> # Test that the slope on the first variable is 0
-        >>> fitted.test_beta([0], [1])
-        >>> (1.7894660442330235e-07, 27.248146353709153)
+        >>> fitted.el_test([0], [1])
+        >>> (27.248146353888796, 1.7894660442330235e-07)
         """
         params = np.copy(self.params)
         opt_fun_inst = _ELRegOpts() # to store weights

@@ -550,7 +550,7 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
     >>> y = np.random.normal(loc=8.0, scale=3.0, size=37)
     >>> pp_x = sm.ProbPlot(x)
     >>> pp_y = sm.ProbPlot(y)
-    >>> qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
+    >>> qqplot_2samples(pp_x, pp_y)
 
     Notes
     -----

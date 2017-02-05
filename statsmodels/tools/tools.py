@@ -109,9 +109,11 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
     Univariate examples
 
     >>> import string
-    >>> string_var = [string.lowercase[0:5], string.lowercase[5:10],   \
-                string.lowercase[10:15], string.lowercase[15:20],   \
-                string.lowercase[20:25]]
+    >>> string_var = [string.ascii_lowercase[0:5], \
+                      string.ascii_lowercase[5:10], \
+                      string.ascii_lowercase[10:15], \
+                      string.ascii_lowercase[15:20],   \
+                      string.ascii_lowercase[20:25]]
     >>> string_var *= 5
     >>> string_var = np.asarray(sorted(string_var))
     >>> design = sm.tools.categorical(string_var, drop=True)

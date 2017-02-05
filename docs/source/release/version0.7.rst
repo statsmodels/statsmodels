@@ -35,7 +35,7 @@ sandbox.  This change bring a number of new features, including:
 .. code-block:: python
 
    import statsmodels.api as sm
-   from statsmodels.tools.pca import PCA
+   from statsmodels.multivariate.pca import PCA
 
    data = sm.datasets.fertility.load_pandas().data
 
