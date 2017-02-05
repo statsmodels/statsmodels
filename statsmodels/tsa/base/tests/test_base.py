@@ -4,6 +4,7 @@ import pandas as pd
 from statsmodels.tsa.base.datetools import _freq_to_pandas
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
 from statsmodels.tools.testing import assert_equal, assert_raises
+from datetime import datetime
 
 
 def test_pandas_nodates_index():
@@ -106,3 +107,17 @@ def test_pandas_dates():
     model = TimeSeriesModel(df['price'])
 
     assert_equal(model.data.dates, result.index)
+
+def test_get_predict_start_end():
+    index = pd.DatetimeIndex(start='1970-01-01', end='1990-01-01', freq='AS')
+    endog = pd.Series(np.zeros(10), index[:10])
+    model = TimeSeriesModel(endog)
+
+    predict_starts = [1, '1971-01-01', datetime(1971, 1, 1), index[1]]
+    predict_ends = [20, '1990-01-01', datetime(1990, 1, 1), index[-1]]
+
+    for start in predict_starts:
+        assert_equal(model._get_predict_start(start), 1)
+
+    for end in predict_ends:
+        assert_equal(model._get_predict_end(end), (9, 11))
