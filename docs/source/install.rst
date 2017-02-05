@@ -8,15 +8,16 @@ Installation
 Using setuptools
 ~~~~~~~~~~~~~~~~
 
-To obtain the latest released version of statsmodels using `setuptools <https://pypi.python.org/pypi/setuptools>`__::
+To obtain the latest released version of statsmodels using `setuptools <https://pypi.python.org/pypi/setuptools>`__,
+ensure that your version of `pip` is at least 9.0.0 and use::
 
-    pip install -U statsmodels
+    pip install --upgrade statsmodels --upgrade-strategy="only-if-needed"
 
 Or follow `this link to our PyPI page <https://pypi.python.org/pypi/statsmodels>`__.
 
-Statsmodels is also available in `Anaconda <https://www.continuum.io/downloads>`__::
+Statsmodels is also available in `Anaconda <https://www.continuum.io/downloads>`__ and on conda-forge::
 
-    conda install statsmodels
+    conda install -c conda-forge statsmodels
 
 Obtaining the Source
 ~~~~~~~~~~~~~~~~~~~~
