@@ -264,7 +264,7 @@ class TestMixedLM(object):
 
         # The random effects
         exog_re = np.random.normal(size=(n, 2))
-        slopes = np.random.normal(size=(n / 16, 2))
+        slopes = np.random.normal(size=(n // 16, 2))
         slopes = np.kron(slopes, np.ones((16, 1))) * exog_re
         errors += slopes.sum(1)
 
