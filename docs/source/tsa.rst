@@ -75,6 +75,7 @@ Descriptive Statistics and Tests
    stattools.periodogram
    stattools.adfuller
    stattools.kpss
+   stattools.coint
    stattools.bds
    stattools.q_stat
    stattools.grangercausalitytests
