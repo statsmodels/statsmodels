@@ -310,8 +310,8 @@ class UnobservedComponents(MLEModel):
         # Model options
         self.level = level
         self.trend = trend
-        self.seasonal_period = seasonal if seasonal is not None else 0
-        self.seasonal = self.seasonal_period > 0
+        self.seasonal_periods = seasonal if seasonal is not None else 0
+        self.seasonal = self.seasonal_periods > 0
         self.cycle = cycle
         self.ar_order = autoregressive if autoregressive is not None else 0
         self.autoregressive = self.ar_order > 0
@@ -421,7 +421,7 @@ class UnobservedComponents(MLEModel):
                  " irregular component added.", SpecificationWarning)
             self.irregular = True
 
-        if self.seasonal and self.seasonal_period < 2:
+        if self.seasonal and self.seasonal_periods < 2:
             raise ValueError('Seasonal component must have a seasonal period'
                              ' of at least 2.')
 
@@ -460,7 +460,7 @@ class UnobservedComponents(MLEModel):
         # Model parameters
         k_states = (
             self.level + self.trend +
-            (self.seasonal_period - 1) * self.seasonal +
+            (self.seasonal_periods - 1) * self.seasonal +
             self.cycle * 2 +
             self.ar_order +
             (not self.mle_regression) * self.k_exog
@@ -534,7 +534,7 @@ class UnobservedComponents(MLEModel):
         kwds = super(UnobservedComponents, self)._get_init_kwds()
 
         # Modifications
-        kwds['seasonal'] = self.seasonal_period
+        kwds['seasonal'] = self.seasonal_periods
         kwds['autoregressive'] = self.ar_order
 
         for key, value in kwds.items():
@@ -578,7 +578,7 @@ class UnobservedComponents(MLEModel):
                 j += 1
             i += 1
         if self.seasonal:
-            n = self.seasonal_period - 1
+            n = self.seasonal_periods - 1
             self.ssm['design', 0, i] = 1.
             self.ssm['transition', i:i + n, i:i + n] = (
                 companion_matrix(np.r_[1, [1] * n]).transpose()
@@ -654,7 +654,7 @@ class UnobservedComponents(MLEModel):
 
             start = (
                 self.level + self.trend +
-                (self.seasonal_period - 1) * self.seasonal +
+                (self.seasonal_periods - 1) * self.seasonal +
                 self.cycle * 2
             )
             end = start + self.ar_order
@@ -1001,7 +1001,7 @@ class UnobservedComponentsResults(MLEResults):
             # Model options
             'level': self.model.level,
             'trend': self.model.trend,
-            'seasonal_period': self.model.seasonal_period,
+            'seasonal_periods': self.model.seasonal_periods,
             'seasonal': self.model.seasonal,
             'cycle': self.model.cycle,
             'ar_order': self.model.ar_order,
@@ -1117,7 +1117,7 @@ class UnobservedComponentsResults(MLEResults):
         """
         # If present, seasonal always follows level/trend (if they are present)
         # Note that we return only the first seasonal state, but there are
-        # in fact seasonal_period-1 seasonal states, however latter states
+        # in fact seasonal_periods-1 seasonal states, however latter states
         # are just lagged versions of the first seasonal state.
         out = None
         spec = self.specification
@@ -1163,7 +1163,7 @@ class UnobservedComponentsResults(MLEResults):
         spec = self.specification
         if spec.cycle:
             offset = int(spec.trend + spec.level +
-                         spec.seasonal * (spec.seasonal_period - 1))
+                         spec.seasonal * (spec.seasonal_periods - 1))
             out = Bunch(filtered=self.filtered_state[offset],
                         filtered_cov=self.filtered_state_cov[offset, offset],
                         smoothed=None, smoothed_cov=None,
@@ -1202,7 +1202,7 @@ class UnobservedComponentsResults(MLEResults):
         spec = self.specification
         if spec.autoregressive:
             offset = int(spec.trend + spec.level +
-                         spec.seasonal * (spec.seasonal_period - 1) +
+                         spec.seasonal * (spec.seasonal_periods - 1) +
                          2 * spec.cycle)
             out = Bunch(filtered=self.filtered_state[offset],
                         filtered_cov=self.filtered_state_cov[offset, offset],
@@ -1250,7 +1250,7 @@ class UnobservedComponentsResults(MLEResults):
                               ' of the state vector.', OutputWarning)
             else:
                 offset = int(spec.trend + spec.level +
-                             spec.seasonal * (spec.seasonal_period - 1) +
+                             spec.seasonal * (spec.seasonal_periods - 1) +
                              spec.cycle * (1 + spec.stochastic_cycle) +
                              spec.ar_order)
                 start = offset
@@ -1542,7 +1542,7 @@ class UnobservedComponentsResults(MLEResults):
         model_name = [self.specification.trend_specification]
 
         if self.specification.seasonal:
-            seasonal_name = 'seasonal(%d)' % self.specification.seasonal_period
+            seasonal_name = 'seasonal(%d)' % self.specification.seasonal_periods
             if self.specification.stochastic_seasonal:
                 seasonal_name = 'stochastic ' + seasonal_name
             model_name.append(seasonal_name)
