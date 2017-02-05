@@ -340,7 +340,7 @@ def companion_matrix(polynomial):
     return matrix
 
 
-def diff(series, k_diff=1, k_seasonal_diff=None, k_seasons=1):
+def diff(series, k_diff=1, k_seasonal_diff=None, seasonal_periods=1):
     r"""
     Difference a series simply and/or seasonally along the zero-th axis.
 
@@ -350,7 +350,7 @@ def diff(series, k_diff=1, k_seasonal_diff=None, k_seasons=1):
 
         \Delta^d \Delta_s^D y_t
 
-    where :math:`d =` `diff`, :math:`s =` `k_seasons`,
+    where :math:`d =` `diff`, :math:`s =` `seasonal_periods`,
     :math:`D =` `seasonal\_diff`, and :math:`\Delta` is the difference
     operator.
 
@@ -363,7 +363,7 @@ def diff(series, k_diff=1, k_seasonal_diff=None, k_seasons=1):
     seasonal_diff : int or None, optional
         The number of seasonal differences to perform. Default is no seasonal
         differencing.
-    k_seasons : int, optional
+    seasonal_periods : int, optional
         The seasonal lag. Default is 1. Unused if there is no seasonal
         differencing.
 
@@ -380,10 +380,10 @@ def diff(series, k_diff=1, k_seasonal_diff=None, k_seasons=1):
         while k_seasonal_diff > 0:
             if not pandas:
                 differenced = (
-                    differenced[k_seasons:] - differenced[:-k_seasons]
+                    differenced[seasonal_periods:] - differenced[:-seasonal_periods]
                 )
             else:
-                differenced = differenced.diff(k_seasons)[k_seasons:]
+                differenced = differenced.diff(seasonal_periods)[seasonal_periods:]
             k_seasonal_diff -= 1
 
     # Simple differencing
