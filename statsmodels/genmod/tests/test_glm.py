@@ -1810,6 +1810,39 @@ class TestConvergence(object):
                      actual_iterations)
 
 
+def test_poisson_deviance():
+    # see #3355 missing term in deviance if resid_response.sum() != 0
+    np.random.seed(123987)
+    nobs, k_vars = 50, 3-1
+    x = sm.add_constant(np.random.randn(nobs, k_vars))
+
+    mu_true = np.exp(x.sum(1))
+    y = np.random.poisson(mu_true, size=nobs)
+
+    mod = sm.GLM(y, x[:, :], family=sm.genmod.families.Poisson())
+    res = mod.fit()
+
+    d_i = res.resid_deviance
+    d = res.deviance
+    lr = (mod.family.loglike(y, y+1e-20) -
+          mod.family.loglike(y, res.fittedvalues)) * 2
+
+    assert_allclose(d, (d_i**2).sum(), rtol=1e-12)
+    assert_allclose(d, lr, rtol=1e-12)
+
+    # case without constant, resid_response.sum() != 0
+    mod_nc = sm.GLM(y, x[:, 1:], family=sm.genmod.families.Poisson())
+    res_nc = mod_nc.fit()
+
+    d_i = res_nc.resid_deviance
+    d = res_nc.deviance
+    lr = (mod.family.loglike(y, y+1e-20) -
+          mod.family.loglike(y, res_nc.fittedvalues)) * 2
+
+    assert_allclose(d, (d_i**2).sum(), rtol=1e-12)
+    assert_allclose(d, lr, rtol=1e-12)
+
+
 if __name__ == "__main__":
     # run_module_suite()
     # taken from Fernando Perez:
