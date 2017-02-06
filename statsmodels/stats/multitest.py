@@ -591,7 +591,7 @@ class NullDistribution(object):
         # Extract the null z-scores
         ii = np.flatnonzero((zscores >= null_lb) & (zscores <= null_ub))
         if len(ii) == 0:
-            raise RunTimeError("No Z-scores fall between null_lb and null_ub")
+            raise RuntimeError("No Z-scores fall between null_lb and null_ub")
         zscores0 = zscores[ii]
 
         # Number of Z-scores, and null Z-scores

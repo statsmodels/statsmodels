@@ -210,6 +210,15 @@ to one way ANOVA, but still in developement
 
    pairwise_tukeyhsd
 
+.. currentmuodule:: statsmodels.stats.multitest
+
+.. autosummary::
+   :toctree: generated/
+
+   local_fdr
+   fdrcorrection_twostage
+   NullDistribution
+
 The following functions are not (yet) public
 
 .. currentmodule:: statsmodels.sandbox.stats.multicomp
@@ -386,3 +395,24 @@ kurtosis and cummulants.
    corr2cov
    se_cov
 
+
+Mediation Analysis
+------------------
+
+Mediation analysis focuses on the relationships among three key variables:
+an 'outcome', a 'treatment', and a 'mediator'. Since mediation analysis is a
+form of causal inference, there are several assumptions involved that are
+difficult or impossible to verify. Ideally, mediation analysis is conducted in
+the context of an experiment such as this one in which the treatment is
+randomly assigned. It is also common for people to conduct mediation analyses
+using observational data in which the treatment may be thought of as an
+'exposure'. The assumptions behind mediation analysis are even more difficult
+to verify in an observational setting.
+
+.. currentmodule:: statsmodels.stats.mediation
+
+.. autosummary::
+   :toctree: generated/
+
+   Mediation
+   MediationResults
