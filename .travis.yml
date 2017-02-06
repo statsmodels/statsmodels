@@ -107,6 +107,8 @@ install:
   - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} nose pip pyyaml setuptools
   - source activate statsmodels-test
   - if [ ${COVERAGE} = true ]; then pip install coverage coveralls; fi
+  - pip install pip --upgrade
+  - if [[ ${PYTHON} = "2.6" || ${PYTHON} = "3.3" ]]; then pip install "patsy==0.3.0" --upgrade --upgrade-strategy only-if-needed; fi
   - python setup.py install
 
 script:
