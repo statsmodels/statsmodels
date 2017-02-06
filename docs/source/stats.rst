@@ -216,6 +216,8 @@ to one way ANOVA, but still in developement
    :toctree: generated/
 
    local_fdr
+   fdrcorrection_twostage
+   NullDistribution
 
 The following functions are not (yet) public
 
