@@ -14,7 +14,8 @@ from .diagnostic import (
             )
 
 from . import multicomp
-from .multitest import (multipletests, fdrcorrection, fdrcorrection_twostage)
+from .multitest import (multipletests, fdrcorrection, fdrcorrection_twostage,
+                        local_fdr, NullDistribution)
 from .multicomp import tukeyhsd
 from . import gof
 from .gof import (powerdiscrepancy, gof_chisquare_discrete,
@@ -61,3 +62,4 @@ from statsmodels.stats.contingency_tables import (mcnemar, cochrans_q,
                                                   Table2x2,
                                                   Table,
                                                   StratifiedTable)
+from .mediation import Mediation
