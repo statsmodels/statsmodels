@@ -5,6 +5,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat.testing import skip
 
 import numpy as np
 import pandas as pd
@@ -15,7 +16,6 @@ import warnings
 from statsmodels.tsa.statespace import dynamic_factor
 from .results import results_varmax, results_dynamic_factor
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
-import pytest
 from statsmodels.iolib.summary import forg
 
 try:
@@ -376,9 +376,8 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         assert_allclose(bse[:3], self.true['var_oim'][:3], atol=1e-5)
         assert_allclose(bse[-10:], self.true['var_oim'][-10:], atol=2e-4)
 
+    @skip("Known failure, no sequence of optimizers has been found which can achieve the maximum.")
     def test_mle(self):
-        pytest.skip("Known failure, no sequence of optimizers has been"
-                       " found which can achieve the maximum.")
         # The following gets us to llf=546.53, which is still not good enough
         # llf = 300.842477412
         # res = mod.fit(method='lbfgs', maxiter=10000)
@@ -396,6 +395,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         # res = mod.fit(res.params, method='nm', maxiter=10000, maxfev=10000)
         # llf = 559.049076604
         # ...
+        pass
 
     def test_summary(self):
         summary = self.results.summary()

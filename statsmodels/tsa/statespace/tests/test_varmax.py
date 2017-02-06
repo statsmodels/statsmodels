@@ -5,6 +5,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat.testing import skip
 
 import numpy as np
 import pandas as pd
@@ -627,13 +628,15 @@ class TestVARMA(CheckFREDManufacturing):
         # meaninful
         pass
 
+    @skip('Known failure: standard errors do not match.')
     def test_bse_approx(self):
         # Standard errors do not match Stata's
-        pytest.skip('Known failure: standard errors do not match.')
+        pass
 
+    @skip('Known failure: standard errors do not match.')
     def test_bse_oim(self):
         # Standard errors do not match Stata's
-        pytest.skip('Known failure: standard errors do not match.')
+        pass
 
     def test_aic(self):
         # Since the VARMA model here is generic (we're just putting in zeros
@@ -710,13 +713,15 @@ class TestVMA1(CheckFREDManufacturing):
         # meaninful
         pass
 
+    @skip('Known failure: standard errors do not match.')
     def test_bse_approx(self):
         # Standard errors do not match Stata's
-        pytest.skip('Known failure: standard errors do not match.')
+        pass
 
+    @skip('Known failure: standard errors do not match.')
     def test_bse_oim(self):
         # Standard errors do not match Stata's
-        pytest.skip('Known failure: standard errors do not match.')
+        pass
 
     def test_aic(self):
         # Since the VARMA model here is generic (we're just putting in zeros

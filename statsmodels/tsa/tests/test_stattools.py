@@ -140,6 +140,7 @@ class TestACF(CheckCorrGram):
     """
     Test Autocorrelation Function
     """
+    @classmethod
     def setup_class(cls):
         cls.acf = cls.results['acvar']
         #cls.acf = np.concatenate(([1.], cls.acf))

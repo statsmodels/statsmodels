@@ -17,6 +17,7 @@ env:
     - OPTIONAL=
     - COVERAGE=false
     - USEMPL=true
+    - NOSE=false
 
 matrix:
   fast_finish: true
@@ -69,7 +70,115 @@ matrix:
     - SCIPY=
     - PANDAS=
     - MATPLOTLIB=1.4
+  - python: 2.7
+    env:
+    - PYTHON=2.6
+    - dateutil=
+    - NUMPY="1.6.2=py26_4"
+    - SCIPY="0.11.0=np16py26_3"
+    - MATPLOTLIB=1.2
+    - NOSE=true
+  - python: 2.7
+    env:
+    - PYTHON=2.7
+    - dateutil=
+    - NUMPY=1.7
+    - SCIPY=0.12
+    - OPTIONAL="mkl mkl-rt libgfortran=1.0"
     - COVERAGE=true
+    - NOSE=true
+  - python: 2.7
+    env:
+    - PYTHON=3.3
+    - dateutil=
+    - NUMPY=1.8
+    - SCIPY=0.13
+    - MATPLOTLIB=1.3
+    - PANDAS=0.13
+    - NOSE=true
+  - python: 2.7
+    env:
+    - PYTHON=3.4
+    - dateutil=
+    - NUMPY=1.9
+    - SCIPY=0.14
+    - PANDAS=0.14
+    - MATPLOTLIB=1.4
+    - OPTIONAL=libgfortran=1.0
+    - NOSE=true
+  - python: 2.7
+    env:
+    - PYTHON=2.7
+    - dateutil=
+    - NUMPY=
+    - SCIPY=
+    - USEMPL=false
+    - PANDAS=
+    - NOSE=true
+  - python: 2.7
+    env:
+    - PYTHON=3.5
+    - python-dateutil=
+    - NUMPY=
+    - SCIPY=
+    - PANDAS=
+    - MATPLOTLIB=1.4
+    - NOSE=true
+  allow_failures:
+  - python: 2.7
+    env:
+    - PYTHON=2.6
+    - dateutil=
+    - NUMPY="1.6.2=py26_4"
+    - SCIPY="0.11.0=np16py26_3"
+    - MATPLOTLIB=1.2
+    - NOSE=true
+  - python: 2.7
+    env:
+    - PYTHON=2.7
+    - dateutil=
+    - NUMPY=1.7
+    - SCIPY=0.12
+    - OPTIONAL="mkl mkl-rt libgfortran=1.0"
+    - COVERAGE=true
+    - NOSE=true
+  - python: 2.7
+    env:
+    - PYTHON=3.3
+    - dateutil=
+    - NUMPY=1.8
+    - SCIPY=0.13
+    - MATPLOTLIB=1.3
+    - PANDAS=0.13
+    - NOSE=true
+  - python: 2.7
+    env:
+    - PYTHON=3.4
+    - dateutil=
+    - NUMPY=1.9
+    - SCIPY=0.14
+    - PANDAS=0.14
+    - MATPLOTLIB=1.4
+    - OPTIONAL=libgfortran=1.0
+    - NOSE=true
+  - python: 2.7
+    env:
+    - PYTHON=2.7
+    - dateutil=
+    - NUMPY=
+    - SCIPY=
+    - USEMPL=false
+    - PANDAS=
+    - NOSE=true
+  - python: 2.7
+    env:
+    - PYTHON=3.5
+    - python-dateutil=
+    - NUMPY=
+    - SCIPY=
+    - PANDAS=
+    - MATPLOTLIB=1.4
+    - NOSE=true
 
 notifications:
   email:
@@ -109,7 +218,7 @@ install:
   - echo conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} nose pyyaml
   - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} nose pyyaml
   - source activate statsmodels-test
-  - pip install pytest pytest-xdist
+  - pip install pytest # pytest-xdist
   - if [ ${COVERAGE} = true ]; then pip install codecov coverage coveralls pytest-cov; fi
   - python setup.py build_ext --inplace
   - python setup.py develop
@@ -119,8 +228,8 @@ script:
   # Show versions
   - python -c 'import statsmodels.api as sm; sm.show_versions();'
   # Compose a script to run testing with coverage
-  - echo pytest -n auto ${COVERAGE_OPTS} statsmodels
-  - pytest -n auto ${COVERAGE_OPTS} statsmodels
+  - if [ ${NOSE} = false ]; then echo pytest ${COVERAGE_OPTS} statsmodels statsmodels; else echo nosetests statsmodels; fi
+  - if [ ${NOSE} = false ]; then pytest ${COVERAGE_OPTS} statsmodels; else nosetests statsmodels; fi
 
 after_success:
   # Coverage only for 2.7

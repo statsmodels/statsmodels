@@ -9,7 +9,7 @@ Created on Sat Mar 09 08:44:49 2013
 
 Author: Josef Perktold
 """
-
+from statsmodels.compat.testing import SkipTest, skipif
 import copy
 import warnings
 from distutils.version import LooseVersion
@@ -18,7 +18,6 @@ from distutils.version import LooseVersion
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_allclose, assert_raises,
                            assert_equal, assert_warns, dec)
-import pytest
 import scipy
 
 import statsmodels.stats.power as smp
@@ -91,10 +90,10 @@ class CheckPowerMixin(object):
             #yield assert_allclose, result, value, 0.001, 0, key+' failed'
             kwds[key] = value  # reset dict
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib is not installed')
     def test_power_plot(self):
         if self.cls == smp.FTestPower:
-            pytest.skip('skip FTestPower plot_power')
+            raise SkipTest('skip FTestPower plot_power')
         plt.close()
         fig = plt.figure()
         ax = fig.add_subplot(2,1,1)
@@ -735,7 +734,8 @@ def test_power_solver():
     assert_raises(ValueError, nip.solve_power, None, nobs1=1600, alpha=0.01,
                   power=0.005, ratio=1, alternative='larger')
 
-@dec.skipif(SM_GT_10, 'Known failure on modern SciPy')
+
+@skipif(SM_GT_10, 'Known failure on modern SciPy')
 def test_power_solver_warn():
     # messing up the solver to trigger warning
     # I wrote this with scipy 0.9,

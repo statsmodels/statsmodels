@@ -8,7 +8,7 @@ during refactoring arises.
 The first group of functions provide consistency checks
 
 """
-
+from statsmodels.compat.testing import SkipTest
 import numpy as np
 from numpy.testing import assert_allclose, assert_
 import pytest
@@ -87,7 +87,7 @@ def check_fitted(results):
         results = results
     if (isinstance(results, GLMResults) or
         isinstance(results, DiscreteResults)):
-        pytest.skip()
+        raise SkipTest()
 
     res = results
     fitted = res.fittedvalues

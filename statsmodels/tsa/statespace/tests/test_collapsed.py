@@ -8,6 +8,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat.testing import SkipTest, skip, skipif
 
 import numpy as np
 import pandas as pd
@@ -27,8 +28,10 @@ import pytest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
-pytestmark = pytest.mark.skipif(compatibility_mode,
-                                reason='In compatibility mode')
+if compatibility_mode:
+    pytestmark = pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
+    raise SkipTest('In compatibility mode')
+
 
 
 class Trivariate(object):
@@ -151,20 +154,18 @@ class Trivariate(object):
             self.results_b.smoothed_state_autocov
         )
 
-
     # Skipped because "measurement" refers to different things; even different
     # dimensions
-    @pytest.mark.skip
+    @skip
     def test_smoothed_measurement_disturbance(self):
         assert_allclose(
             self.results_a.smoothed_measurement_disturbance,
             self.results_b.smoothed_measurement_disturbance
         )
 
-
     # Skipped because "measurement" refers to different things; even different
     # dimensions
-    @pytest.mark.skip
+    @skip
     def test_smoothed_measurement_disturbance_cov(self):
         assert_allclose(
             self.results_a.smoothed_measurement_disturbance_cov,
@@ -421,8 +422,7 @@ class TestTrivariateUnivariateAllMissingAlternate(TestTrivariateUnivariateAllMis
     def test_using_alterate(self):
         assert(self.model._kalman_filter.filter_timing == 1)
 
-@pytest.mark.skipif(compatibility_mode,
-                    reason='Compatibility mode')
+@skipif(compatibility_mode, reason='Compatibility mode')
 class TestDFM(object):
     @classmethod
     def setup_class(cls, which='mixed', *args, **kwargs):
@@ -593,7 +593,7 @@ class TestDFM(object):
 
     # Skipped because "measurement" refers to different things; even different
     # dimensions
-    @pytest.mark.skip
+    @skip
     def test_smoothed_measurement_disturbance(self):
         assert_allclose(
             self.results_a.smoothed_measurement_disturbance,
@@ -602,7 +602,7 @@ class TestDFM(object):
 
     # Skipped because "measurement" refers to different things; even different
     # dimensions
-    @pytest.mark.skip
+    @skip
     def test_smoothed_measurement_disturbance_cov(self):
         assert_allclose(
             self.results_a.smoothed_measurement_disturbance_cov,

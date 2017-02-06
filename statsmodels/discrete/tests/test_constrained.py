@@ -8,6 +8,7 @@ License: BSD-3
 """
 
 from statsmodels.compat.python import StringIO
+from statsmodels.compat.testing import SkipTest
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal, assert_
@@ -100,7 +101,7 @@ class CheckPoissonConstrainedMixin(object):
             df_r = res2.N - res2.df_m - 1
             assert_equal(res1.df_resid, df_r)
         else:
-            pytest.skip("not available yet")
+            raise SkipTest("not available yet")
 
     def test_other(self):
         # some results may not be valid or available for all models
@@ -118,7 +119,7 @@ class CheckPoissonConstrainedMixin(object):
                     warnings.warn(message)
 
         else:
-            pytest.skip("not available yet")
+            raise SkipTest("not available yet")
 
 
 class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):

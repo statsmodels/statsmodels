@@ -10,6 +10,7 @@ Author: Chad Fulton
 License: BSD-3
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat.testing import SkipTest
 
 import warnings
 import numpy as np
@@ -657,7 +658,7 @@ def test_prediction_increment_pandas_dates_nanosecond():
                                        freq='N')
         mod = tsa_model.TimeSeriesModel(endog)
     except:
-        pytest.skip()
+        raise SkipTest
 
     # Basic prediction: [0, end]; the index is the date index
     start_key = 0

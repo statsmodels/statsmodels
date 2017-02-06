@@ -1,4 +1,5 @@
 from statsmodels.compat.python import lrange, BytesIO, cPickle
+from statsmodels.compat.testing import skip
 
 import os
 import warnings
@@ -1933,7 +1934,7 @@ class TestARMA00(TestCase):
         predictions = self.arma_00_res.predict()
         assert_almost_equal(self.y.mean() * np.ones_like(predictions), predictions)
 
-    @pytest.mark.skip
+    @skip
     def test_information_criteria(self):
         # This test is invalid since the ICs differ due to df_model differences
         # between OLS and ARIMA

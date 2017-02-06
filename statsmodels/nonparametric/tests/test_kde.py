@@ -1,3 +1,4 @@
+from statsmodels.compat.testing import SkipTest
 import os
 import numpy.testing as npt
 import numpy as np
@@ -207,7 +208,7 @@ class CheckKDEWeights(object):
 
     def test_evaluate(self):
         if self.kernel_name == 'cos':
-            pytest.skip("Cosine kernel fails against Stata")
+            raise SkipTest("Cosine kernel fails against Stata")
         kde_vals = [self.res1.evaluate(xi) for xi in self.x]
         kde_vals = np.squeeze(kde_vals)  #kde_vals is a "column_list"
         npt.assert_almost_equal(kde_vals, self.res_density,
@@ -331,5 +332,4 @@ class TestNormConstant():
 
 
 if __name__ == "__main__":
-    import pytest
     pytest.main([__file__, '-vvs', '-x', '--pdb'])

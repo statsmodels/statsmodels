@@ -5,6 +5,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import#, print_function
+from statsmodels.compat.testing import SkipTest
 
 import numpy as np
 import pandas as pd
@@ -25,8 +26,10 @@ import pytest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
-pytestmark = pytest.mark.skipif(compatibility_mode,
-                                reason='In compatibility mode')
+if compatibility_mode:
+    raise SkipTest('Not testable in compatibility mode')
+    pytestmark = pytest.mark.skipif(compatibility_mode,
+                                    reason='Not testable in compatibility mode')
 
 
 class MultivariateVARKnown(object):
@@ -429,12 +432,14 @@ class TestMultivariateVARKnownMissingMixed(MultivariateVARKnown):
         cls.true_llf = 1117.265303
 
 
-@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
+@pytest.mark.skipif(compatibility_mode, reason='Not testable in compatibility mode')
 class TestDFM(TestMultivariateVARKnown):
     test_against_KFAS = False
 
     @classmethod
     def setup_class(cls, which='none', *args, **kwargs):
+        if compatibility_mode:
+            raise SkipTest
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')

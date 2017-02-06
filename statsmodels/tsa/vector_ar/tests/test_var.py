@@ -5,6 +5,8 @@ from __future__ import print_function
 # pylint: disable=W0612,W0231
 from statsmodels.compat.python import (iteritems, StringIO, lrange, BytesIO,
                                        range)
+from statsmodels.compat.testing import SkipTest
+
 import os
 import sys
 
@@ -180,7 +182,7 @@ class CheckIRF(object):
 
     def test_plot_irf(self):
         if not have_matplotlib():
-            pytest.skip('matplotlib not available')
+            raise SkipTest('matplotlib not available')
 
         import matplotlib.pyplot as plt
         self.irf.plot()
@@ -203,7 +205,7 @@ class CheckIRF(object):
 
     def test_plot_cum_effects(self):
         if not have_matplotlib():
-            pytest.skip('matplotlib not available')
+            raise SkipTest('matplotlib not available')
         # I need close after every plot to avoid segfault, see #3158
         import matplotlib.pyplot as plt
         plt.close('all')
@@ -229,7 +231,7 @@ class CheckFEVD(object):
 
     def test_fevd_plot(self):
         if not have_matplotlib():
-            pytest.skip('matplotlib not available')
+            raise SkipTest('matplotlib not available')
 
         self.fevd.plot()
         close_plots()
@@ -411,28 +413,28 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     def test_plot_sim(self):
         if not have_matplotlib():
-            pytest.skip('matplotlib not available')
+            raise SkipTest('matplotlib not available')
 
         self.res.plotsim(steps=100)
         close_plots()
 
     def test_plot(self):
         if not have_matplotlib():
-            pytest.skip('matplotlib not available')
+            raise SkipTest('matplotlib not available')
 
         self.res.plot()
         close_plots()
 
     def test_plot_acorr(self):
         if not have_matplotlib():
-            pytest.skip('matplotlib not available')
+            raise SkipTest('matplotlib not available')
 
         self.res.plot_acorr()
         close_plots()
 
     def test_plot_forecast(self):
         if not have_matplotlib():
-            pytest.skip('matplotlib not available')
+            raise SkipTest('matplotlib not available')
 
         self.res.plot_forecast(5)
         close_plots()

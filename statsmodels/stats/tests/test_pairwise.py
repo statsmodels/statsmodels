@@ -9,8 +9,6 @@ import warnings
 from statsmodels.compat.python import BytesIO, asbytes, range
 from statsmodels.compat.numpy import recarray_select
 
-from nose.tools import assert_true
-
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_,
                            assert_raises, assert_allclose)

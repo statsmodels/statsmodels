@@ -15,11 +15,11 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 from statsmodels.compat.scipy import NumpyVersion
+from statsmodels.compat.testing import SkipTest
 
 from numpy.testing import (assert_, assert_allclose, assert_equal,
                            assert_array_equal)
 
-import pytest
 import platform
 
 
@@ -124,7 +124,7 @@ class CheckGenericMixin(object):
             results = self.results
         if (isinstance(results, GLMResults) or
             isinstance(results, DiscreteResults)):
-            pytest.skip()
+            raise SkipTest('Infeasible for {0}'.format(type(results)))
 
         res = self.results
         fitted = res.fittedvalues

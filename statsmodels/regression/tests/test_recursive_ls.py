@@ -5,7 +5,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
-
+from statsmodels.compat.testing import SkipTest
 import numpy as np
 import pandas as pd
 import os
@@ -98,7 +98,7 @@ def test_estimates():
 
 def test_plots():
     if not have_matplotlib:
-        pytest.skip('matplotlib not available')
+        raise SkipTest('matplotlib not available')
 
     exog = add_constant(dta[['m1', 'pop']])
     mod = RecursiveLS(endog, exog)

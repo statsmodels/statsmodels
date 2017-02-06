@@ -1,7 +1,7 @@
 """
 Test functions for sm.rlm
 """
-
+from statsmodels.compat.testing import SkipTest
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_allclose
 import pytest
@@ -34,7 +34,7 @@ class CheckRlmResultsMixin(object):
 #TODO: get other results from SAS, though if it works for one...
     def test_confidenceintervals(self):
         if not hasattr(self.res2, 'conf_int'):
-            pytest.skip("Results from R")
+            raise SkipTest("Results from R")
         else:
             assert_almost_equal(self.res1.conf_int(), self.res2.conf_int(),
             DECIMAL_4)
@@ -58,7 +58,7 @@ class CheckRlmResultsMixin(object):
 
     def test_bcov_unscaled(self):
         if not hasattr(self.res2, 'bcov_unscaled'):
-            pytest.skip("No unscaled cov matrix from SAS")
+            raise SkipTest("No unscaled cov matrix from SAS")
         else:
             assert_almost_equal(self.res1.bcov_unscaled,
                     self.res2.bcov_unscaled, DECIMAL_4)
@@ -75,7 +75,7 @@ class CheckRlmResultsMixin(object):
 
     def test_tvalues(self):
         if not hasattr(self.res2, 'tvalues'):
-            pytest.skip("No tvalues in benchmark")
+            raise SkipTest("No tvalues in benchmark")
         else:
             assert_allclose(self.res1.tvalues, self.res2.tvalues, rtol=0.003)
 
