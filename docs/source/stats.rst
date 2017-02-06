@@ -210,6 +210,13 @@ to one way ANOVA, but still in developement
 
    pairwise_tukeyhsd
 
+.. currentmuodule:: statsmodels.stats.multitest
+
+.. autosummary::
+   :toctree: generated/
+
+   local_fdr
+
 The following functions are not (yet) public
 
 .. currentmodule:: statsmodels.sandbox.stats.multicomp
@@ -407,7 +414,7 @@ to verify in an observational setting.
 .. currentmodule:: statsmodels.stats.mediation
 
 .. autosummary::
-   :toctree: generated
+   :toctree: generated/
 
    Mediation
    MediationResults
