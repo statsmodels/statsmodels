@@ -2,13 +2,14 @@ from __future__ import print_function, division
 
 import os
 import sys
-from unittest import TestCase
 import warnings
+from unittest import TestCase
 
 import numpy as np
+import pandas as pd
+from nose.tools import assert_true
 from numpy.testing import assert_allclose, assert_equal, assert_raises
 from numpy.testing.decorators import skipif
-import pandas as pd
 
 try:
     import matplotlib.pyplot as plt
@@ -381,3 +382,40 @@ class TestPCA(TestCase):
             errors = x - pc.project(i, transform=False, unweight=False)
             rsquare[i] = 1.0 - np.sum(errors ** 2) / tss
         assert_allclose(rsquare, pc.rsquare)
+
+    def test_missing_dataframe(self):
+        x = self.x.copy()
+        x[::5, ::7] = np.nan
+        pc = PCA(x, ncomp=3, missing='fill-em')
+
+        x = pd.DataFrame(x)
+        pc_df = PCA(x, ncomp=3, missing='fill-em')
+        assert_allclose(pc.coeff, pc_df.coeff)
+        assert_allclose(pc.factors, pc_df.factors)
+
+        pc_df_nomissing = PCA(pd.DataFrame(self.x.copy()), ncomp=3)
+        assert_true(isinstance(pc_df.coeff, type(pc_df_nomissing.coeff)))
+        assert_true(isinstance(pc_df.data, type(pc_df_nomissing.data)))
+        assert_true(isinstance(pc_df.eigenvals,
+                               type(pc_df_nomissing.eigenvals)))
+        assert_true(isinstance(pc_df.eigenvecs,
+                               type(pc_df_nomissing.eigenvecs)))
+
+
+        x = self.x.copy()
+        x[::5, ::7] = np.nan
+        x_df = pd.DataFrame(x)
+        pc = PCA(x, missing='drop-row')
+        pc_df = PCA(x_df, missing='drop-row')
+        assert_allclose(pc.coeff, pc_df.coeff)
+        assert_allclose(pc.factors, pc_df.factors)
+
+        pc = PCA(x, missing='drop-col')
+        pc_df = PCA(x_df, missing='drop-col')
+        assert_allclose(pc.coeff, pc_df.coeff)
+        assert_allclose(pc.factors, pc_df.factors)
+
+        pc = PCA(x, missing='drop-min')
+        pc_df = PCA(x_df, missing='drop-min')
+        assert_allclose(pc.coeff, pc_df.coeff)
+        assert_allclose(pc.factors, pc_df.factors)

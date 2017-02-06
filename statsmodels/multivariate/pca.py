@@ -335,6 +335,10 @@ class PCA(object):
         else:
             raise ValueError('missing method is not known.')
 
+        if self._index is not None:
+            self._columns = self._columns[self.cols]
+            self._index = self._index[self.rows]
+
         # Check adjusted data size
         if self._adjusted_data.size == 0:
             raise ValueError('Removal of missing values has eliminated all data.')
@@ -471,7 +475,7 @@ class PCA(object):
             return self.data
 
         # 1. Standardized data as needed
-        data = self.transformed_data = self._prepare_data()
+        data = self.transformed_data = np.asarray(self._prepare_data())
 
         ncomp = self._ncomp
 
@@ -503,7 +507,7 @@ class PCA(object):
             self._compute_eig()
             # Call function to compute factors and projection
             self._compute_pca_from_eig()
-            projection = self.project(transform=False, unweight=False)
+            projection = np.asarray(self.project(transform=False, unweight=False))
             projection_masked = projection[mask]
             data[mask] = projection_masked
             delta = last_projection_masked - projection_masked
@@ -511,7 +515,7 @@ class PCA(object):
             _iter += 1
         # Must copy to avoid overwriting original data since replacing values
         data = self._adjusted_data + 0.0
-        projection = self.project()
+        projection = np.asarray(self.project())
         data[mask] = projection[mask]
 
         return data
@@ -656,10 +660,12 @@ class PCA(object):
                           index=index)
         self.projection = df
         # Weights
-        df = pd.DataFrame(self.coeff, index=cols, columns=self._columns)
+        df = pd.DataFrame(self.coeff, index=cols,
+                          columns=self._columns)
         self.coeff = df
         # Loadings
-        df = pd.DataFrame(self.loadings, index=self._columns, columns=cols)
+        df = pd.DataFrame(self.loadings,
+                          index=self._columns, columns=cols)
         self.loadings = df
         # eigenvals
         self.eigenvals = pd.Series(self.eigenvals)
