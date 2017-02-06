@@ -6,8 +6,11 @@ Created on Wed Mar 28 15:34:18 2012
 Author: Josef Perktold
 """
 import warnings
-from nose.tools import assert_true
 from statsmodels.compat.python import BytesIO, asbytes, range
+from statsmodels.compat.numpy import recarray_select
+
+from nose.tools import assert_true
+
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_,
                            assert_raises, assert_allclose)
@@ -318,7 +321,8 @@ class TestTuckeyHSD3(CheckTuckeyHSDMixin):
         #CheckTuckeyHSD.setup_class_()
 
         self.meandiff2 = sas_['mean']
-        self.confint2 = sas_[['lower','upper']].view(float).reshape((3,2))
+        self.confint2 = recarray_select(sas_, ['lower','upper']).view(float).reshape((3,2))
+
         self.reject2 = sas_['sig'] == asbytes('***')
 
 

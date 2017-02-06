@@ -17,7 +17,7 @@ def test_co2_python3():
 class TestDatasets(object):
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         exclude = ['check_internet', 'clear_data_home', 'get_data_home',
                    'get_rdataset', 'tests', 'utils', 'webuse']
         cls.sets = []

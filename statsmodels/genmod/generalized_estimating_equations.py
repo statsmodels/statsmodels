@@ -382,7 +382,7 @@ _gee_example = """
     >>> import statsmodels.api as sm
     >>> fam = sm.families.Poisson()
     >>> ind = sm.cov_struct.Independence()
-    >>> model = sm.GEE.from_formula("y ~ age + trt + base", "subject",
+    >>> model = sm.GEE.from_formula("y ~ age + trt + base", "subject", \
                                  data, cov_struct=ind, family=fam)
     >>> result = model.fit()
     >>> print(result.summary())
@@ -393,7 +393,7 @@ _gee_example = """
     >>> import statsmodels.formula.api as smf
     >>> fam = sm.families.Poisson()
     >>> ind = sm.cov_struct.Independence()
-    >>> model = smf.gee("y ~ age + trt + base", "subject",
+    >>> model = smf.gee("y ~ age + trt + base", "subject", \
                     data, cov_struct=ind, family=fam)
     >>> result = model.fit()
     >>> print(result.summary())
