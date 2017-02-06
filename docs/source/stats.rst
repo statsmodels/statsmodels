@@ -362,9 +362,13 @@ positive definite and close to the original matrix.
 .. autosummary::
    :toctree: generated/
 
-	corr_nearest
-	corr_clipped
-	cov_nearest
+   corr_clipped
+   corr_nearest
+   corr_nearest_factor
+   corr_thresholded
+   cov_nearest
+   cov_nearest_factor_homog
+   FactoredPSDMatrix
 
 These are utility functions to convert between central and non-central moments, skew,
 kurtosis and cummulants.
