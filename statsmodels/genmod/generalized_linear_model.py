@@ -421,7 +421,7 @@ class GLM(base.LikelihoodModel):
         Parameters
         ----------
         params : ndarray
-            parameter at which Hessian is evaluated
+            parameter at which score is evaluated
         scale : None or float
             If scale is None, then the default scale will be calculated.
             Default scale is defined by `self.scaletype` and set in fit.
@@ -531,6 +531,7 @@ class GLM(base.LikelihoodModel):
         factor = self.hessian_factor(params, scale=scale, observed=observed)
         hess = -np.dot(self.exog.T * factor, self.exog)
         return hess
+
 
     def information(self, params, scale=None):
         """
