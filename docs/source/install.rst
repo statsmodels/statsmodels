@@ -153,11 +153,14 @@ Replace `/x64` with `/x86` and `v7.0` with `v7.1` as needed.
 Dependencies
 ~~~~~~~~~~~~
 
+statsmodels 0.8 was tested with the following minimal version requirements.
+However, some features require more recent versions.
+
 * `Python <https://www.python.org>`__ >= 2.6, including Python 3.x
 * `NumPy <http://www.scipy.org/>`__ >= 1.6
 * `SciPy <http://www.scipy.org/>`__ >= 0.11
-* `Pandas <http://pandas.pydata.org/>`__ >= 0.14
-* `Patsy <https://patsy.readthedocs.org>`__ >= 0.3.0
+* `Pandas <http://pandas.pydata.org/>`__ >= 0.12
+* `Patsy <https://patsy.readthedocs.org>`__ >= 0.2.1
 * `Cython <http://cython.org/>`__ >= 0.24 is required to build the code from
   github but not from a source distribution. Earlier versions may work, although
   you must use Cython >= 0.20.1 if you're on Python 3.4.

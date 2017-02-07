@@ -1,11 +1,14 @@
 Dependencies
 ------------
 
+statsmodels 0.8 was tested with the following minimal version requirements.
+However, some features require more recent versions.
+
 python >= 2.6
 
     www.python.org
 
-numpy >= 1.6
+numpy >= 1.6.2
 
     www.numpy.org
 
@@ -13,11 +16,11 @@ scipy >= 0.11
     
     www.scipy.org
 
-pandas >= 0.14
+pandas >= 0.12
 
     pandas.pydata.org
 
-patsy >= 0.3.0
+patsy >= 0.2.1
 
     patsy.readthedocs.org
 

@@ -139,8 +139,8 @@ def check_dependency_versions(min_versions):
         install_requires.append('pandas')
     else:
         if not (LooseVersion(pversion) >= min_versions['pandas']):
-            ImportError("Pandas version is %s. Requires >= %s" %
-                        (pversion, min_versions['pandas']))
+            raise ImportError("Pandas version is %s. Requires >= %s" %
+                              (pversion, min_versions['pandas']))
 
     try:
         from patsy import __version__ as patsy_version
@@ -160,7 +160,7 @@ MAJ = 0
 MIN = 8
 REV = 0
 ISRELEASED = True
-VERSION = '%d.%d.%drc1' % (MAJ,MIN,REV)
+VERSION = '%d.%d.%d' % (MAJ,MIN,REV)
 
 classifiers = ['Development Status :: 4 - Beta',
                'Environment :: Console',
@@ -400,7 +400,7 @@ if __name__ == "__main__":
     min_versions = {
         'numpy' : '1.6.2',
         'scipy' : '0.11',
-        'pandas' : '0.13',
+        'pandas' : '0.12',
         'patsy' : '0.2.1',
                    }
     if sys.version_info[0] == 3 and sys.version_info[1] >= 3:
