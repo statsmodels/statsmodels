@@ -7,7 +7,7 @@ if "%SPHINXBUILD%" == "" (
 )
 set BUILDDIR=build
 set TOOLSPATH=../tools
-set DATASETBUILD  = dataset_rst.py
+set DATASETBUILD=dataset_rst.py
 set NOTEBOOKBUILD=nbgenerate.py
 set FOLDTOC=fold_toc.py
 set ALLSPHINXOPTS=-d %BUILDDIR%/doctrees %SPHINXOPTS% source

@@ -210,7 +210,7 @@ to one way ANOVA, but still in developement
 
    pairwise_tukeyhsd
 
-.. currentmuodule:: statsmodels.stats.multitest
+.. currentmodule:: statsmodels.stats.multitest
 
 .. autosummary::
    :toctree: generated/
