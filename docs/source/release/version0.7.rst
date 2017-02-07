@@ -220,7 +220,7 @@ Development summary and credits
 
 .. note::
 
-Thanks to all of the contributors for the 0.7 release:
+  Thanks to all of the contributors for the 0.7 release:
 
 .. note::
 
