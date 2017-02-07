@@ -308,10 +308,10 @@ epub_copyright = u'2009-2017, Josef Perktold, Skipper Seabold, Jonathan Taylor, 
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-        'numpy' : ('http://docs.scipy.org/doc/numpy/', None),
-        'python' : ('http://docs.python.org/3.2', None),
+        'numpy' : ('https://docs.scipy.org/doc/numpy/', None),
+        'python' : ('https://docs.python.org/3.2', None),
         'pydagogue' : ('http://matthew-brett.github.io/pydagogue/', None),
-        'patsy' : ('http://patsy.readthedocs.org/en/latest/', None),
+        'patsy' : ('http://patsy.readthedocs.io/en/latest/', None),
         'pandas' : ('http://pandas.pydata.org/pandas-docs/stable/', None),
         }
 
