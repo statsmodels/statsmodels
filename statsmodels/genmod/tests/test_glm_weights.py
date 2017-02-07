@@ -48,10 +48,10 @@ class CheckWeight(object):
         resid_all = dict(zip(res2.resids_colnames, res2.resids.T))
 
         assert_allclose(res1.resid_response, resid_all['resid_response'], atol= 1e-6, rtol=2e-6)
-        assert_allclose(res1.resid_pearson, resid_all['resid_pearson'], atol= 1e-6, rtol=2e-4)
-        assert_allclose(res1.resid_deviance, resid_all['resid_deviance'], atol= 1e-6, rtol=2e-4)
-        assert_allclose(res1.resid_working, resid_all['resid_working'], atol= 1e-6, rtol=2e-4)
-        if isinstance(self, TestGlmTweedieAwNr):
+        assert_allclose(res1.resid_pearson, resid_all['resid_pearson'], atol= 1e-6, rtol=2e-6)
+        assert_allclose(res1.resid_deviance, resid_all['resid_deviance'], atol= 1e-6, rtol=2e-6)
+        assert_allclose(res1.resid_working, resid_all['resid_working'], atol= 1e-6, rtol=2e-6)
+        if resid_all.get('resid_anscombe') is None:
             return None
         assert_allclose(res1.resid_anscombe, resid_all['resid_anscombe'], atol= 1e-6, rtol=2e-6)
 
@@ -96,10 +96,14 @@ class TestGlmPoissonAwNr(CheckWeight):
         aweights = fweights / wsum * nobs
 
         self.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
-                    family=sm.families.Poisson(), freq_weights=aweights).fit()
+                    family=sm.families.Poisson(), var_weights=aweights).fit()
         # compare with discrete, start close to save time
         modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         self.res2 = res_stata.results_poisson_aweight_nonrobust
+
+        # Need to adjust resids to add weights
+        self.res2.resids[:, 3:5] *= np.sqrt(aweights[:, np.newaxis])
+
 
 # prob_weights fail with HC, not properly implemented yet
 class T_estGlmPoissonPwNr(CheckWeight):
@@ -213,5 +217,51 @@ class TestGlmTweedieAwNr(CheckWeight):
                     ),
                 var_weights=aweights
         )
-        self.res1 = model.fit()
-        self.res2 = res_r.res
+        self.res1 = model.fit(rtol=1e-25, atol=0)
+        self.res2 = res_r.results_tweedie_aweights_nonrobust
+
+
+class TestGlmGammaAwNr(CheckWeight):
+    @classmethod
+    def setupClass(cls):
+        self = cls
+        import statsmodels.formula.api as smf
+
+        data = sm.datasets.cpunish.load_pandas()
+        endog = data.endog
+        data = data.exog
+        data['EXECUTIONS'] = endog
+        data['INCOME'] /= 1000
+        aweights = np.array([1, 2, 3, 4, 5, 4, 3, 2, 1, 2, 3, 4, 5, 4, 3, 2,
+                             1])
+        model = smf.glm(
+                'EXECUTIONS ~ INCOME + SOUTH - 1',
+                data=data,
+                family=sm.families.Gamma(link=sm.families.links.log()),
+                var_weights=aweights
+        )
+        self.res1 = model.fit(rtol=1e-25, atol=0)
+        self.res2 = res_r.results_gamma_aweights_nonrobust
+
+
+class TestGlmGaussianAwNr(CheckWeight):
+    @classmethod
+    def setupClass(cls):
+        self = cls
+        import statsmodels.formula.api as smf
+
+        data = sm.datasets.cpunish.load_pandas()
+        endog = data.endog
+        data = data.exog
+        data['EXECUTIONS'] = endog
+        data['INCOME'] /= 1000
+        aweights = np.array([1, 2, 3, 4, 5, 4, 3, 2, 1, 2, 3, 4, 5, 4, 3, 2,
+                             1])
+        model = smf.glm(
+                'EXECUTIONS ~ INCOME + SOUTH - 1',
+                data=data,
+                family=sm.families.Gaussian(link=sm.families.links.log()),
+                var_weights=aweights
+        )
+        self.res1 = model.fit(rtol=1e-25, atol=0)
+        self.res2 = res_r.results_gaussian_aweights_nonrobust

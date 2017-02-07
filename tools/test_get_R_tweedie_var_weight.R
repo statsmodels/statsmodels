@@ -26,9 +26,16 @@ pyprint <- function(arr, prefix=NULL, suffix=NULL) {
     cat("None\n")
   } else {
     cat("np.array([")
+    i <- 1
     for (val in arr) {
       cat(val)
-      cat(", ")
+      if (i %% 3 == 0) {
+        cat(",\n ")
+      }
+      else {
+        cat(", ")
+      }
+      i <- 1 + i
     }
     cat("])")
     if (!is.null(dim(arr))) {
@@ -47,6 +54,44 @@ pyprint <- function(arr, prefix=NULL, suffix=NULL) {
   }
 }
 
+cat("
+
+class Bunch(dict):
+    def __init__(self, **kw):
+        dict.__init__(self, kw)
+        self.__dict__  = self
+
+")
+
+out2py <- function(model, name){
+  cat("res = dict() \n")
+  pyprint(model$coefficients, prefix = "res['params'] = ")
+  pyprint(diag(vcov(model))^0.5, prefix = "res['bse'] = ")
+  cat(sprintf("res['deviance'] = %f \n", model$deviance))
+  
+  ll = logLik(model)
+  
+  if (is.na(ll)) {
+    cat("res['ll'] = np.nan \n")
+  } else {
+    cat(sprintf("res['ll'] = %f \n", ll))
+  }
+  
+  cat("res['resids_colnames'] = ['resid_response', 'resid_pearson', 'resid_deviance', 'resid_working'] \n" )
+  
+  r <- cbind(residuals.glm(model, 'response'),
+             residuals.glm(model, 'pearson'),
+             residuals.glm(model, 'deviance'),
+             residuals.glm(model, 'working'))
+  
+  
+  pyprint(r, "res['resids'] = ")
+  
+  cat(sprintf("%s = Bunch(**res) \n \n", name))
+}
+
+control <- glm.control(epsilon = 1e-25, maxit = 100)
+
 data = read.csv('../statsmodels/datasets/fair/fair.csv')
 data$weights <- rep(1, length(data$rate_marriage))
 data$weights[seq(1, length(data$rate_marriage), 5)] <- 5
@@ -55,32 +100,27 @@ data$weights[seq(1, length(data$rate_marriage), 13)] <- 3
 model <- glm(affairs ~ 1 + age + yrs_married,
              data = data,
              family = tweedie(var.power = 1.55, link.power = 0),
-             weights = weights)
+             weights = weights,
+             control = control)
 
-cat("res = dict() \n")
-pyprint(model$coefficients, prefix = "res['params'] = ")
-pyprint(diag(vcov(model))^0.5, prefix = "res['bse'] = ")
-cat(sprintf("res['deviance'] = %f \n", model$deviance))
+out2py(model, "results_tweedie_aweights_nonrobust")
 
-cat("res['ll'] = np.nan \n")
+data <- read.csv('../statsmodels/datasets/cpunish/cpunish.csv')
+data$INCOME <- data$INCOME / 1000
+data$weight <- c(1, 2, 3, 4, 5, 4, 3, 2, 1, 2, 3, 4, 5, 4, 3, 2, 1)
 
-cat("res['resids_colnames'] = ['resid_response', 'resid_pearson', 'resid_deviance', 'resid_working'] \n" )
+model <- glm(EXECUTIONS ~ INCOME + SOUTH - 1,
+             data = data,
+             family = Gamma(link = "log"),
+             weights = weight,
+             control = control)
 
-r <- cbind(residuals.glm(model, 'response'),
-           residuals.glm(model, 'pearson'),
-           residuals.glm(model, 'deviance'),
-           residuals.glm(model, 'working'))
+out2py(model, "results_gamma_aweights_nonrobust")
 
+model <- glm(EXECUTIONS ~ INCOME + SOUTH - 1,
+             data = data,
+             family = gaussian(link = "log"),
+             weights = weight,
+             control = control)
 
-pyprint(r, "res['resids'] = ")
-
-cat("
-class Bunch(dict):
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__  = self
-
-res = Bunch(
-    **res
-)
-")
+out2py(model, "results_gaussian_aweights_nonrobust")
