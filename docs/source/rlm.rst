@@ -103,7 +103,6 @@ Scale
     Huber
     HuberScale
     mad
-    huber
     hubers_scale
     stand_mad
 

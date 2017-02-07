@@ -213,10 +213,11 @@ Time Series Filters
 TSA Tools
 """""""""
 
+.. currentmodule:: statsmodels.tsa
+
 .. autosummary::
    :toctree: generated/
 
-   tsatools.add_constant
    tsatools.add_trend
    tsatools.detrend
    tsatools.lagmat

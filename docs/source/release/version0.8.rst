@@ -150,7 +150,7 @@ Local FDR, multiple testing #2297 (Kerby Shedden)
 
 Mediation Analysis #2352 (Kerby Shedden)
 
-Confidence intervals for multinomial proportions #3162 (Sébastien Lerique, Josef Perktold)
+Confidence intervals for multinomial proportions #3162 (Sebastien Lerique, Josef Perktold)
 
 other:
 
