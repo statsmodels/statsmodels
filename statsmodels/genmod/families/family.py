@@ -169,7 +169,7 @@ class Family(object):
         """
         raise NotImplementedError
 
-    def resid_dev(self, endog, mu, iweights=1., scale=1.):
+    def resid_dev(self, endog, mu, scale=1.):
         r"""
         The deviance residuals
 
@@ -179,8 +179,6 @@ class Family(object):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        iweights : array-like
-            1d array of weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -247,7 +245,7 @@ class Family(object):
         mu : array
             Usually but not always the fitted mean response variable.
         iweights : array-like
-            1d array of frequency weights. The default is 1.
+            1d array of weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
 
@@ -425,7 +423,7 @@ class Poisson(Family):
         mu : array-like
             Fitted mean response variable
         iweights : array-like
-            1d array of frequency weights. The default is 1.
+            1d array of weights. The default is 1.
         scale : float, optional
             Not used for in the Poisson loglike.
 
@@ -756,7 +754,7 @@ class Gamma(Family):
         mu : array-like
             Fitted mean response variable
         iweights : array-like
-            1d array of frequency weights. The default is 1.
+            1d array of weights. The default is 1.
         scale : float, optional
             The default is 1.
 
@@ -1146,8 +1144,6 @@ class InverseGaussian(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        iweights : array-like
-            1d array of frequency weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -1391,7 +1387,7 @@ class NegativeBinomial(Family):
         mu : array-like
             The fitted mean response values
         iweights : array-like
-            1d array of frequency weights. The default is 1.
+            1d array of weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
 
@@ -1660,7 +1656,7 @@ class Tweedie(Family):
         mu : array-like
             The fitted mean response values
         iweights : array-like
-            1d array of frequency weights. The default is 1.
+            1d array of weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
 
