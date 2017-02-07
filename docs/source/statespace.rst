@@ -165,7 +165,7 @@ The `UnobservedComponents` class is another example of a statespace model.
    structural.UnobservedComponents
    structural.UnobservedComponentsResults
 
-For examples of the use of this model, see the `example notebook <examples/notebooks/generated/statespace_structural_harvey_jaeger_notebook.html>`__ or a notebook on using the unobserved components model to `decompose a time series into a trend and cycle <examples/notebooks/generated/statespace_cycles_notebook.html>`__ or the very brief code snippet below:
+For examples of the use of this model, see the `example notebook <examples/notebooks/generated/statespace_structural_harvey_jaeger_notebook.html>`__ or a notebook on using the unobserved components model to `decompose a time series into a trend and cycle <examples/notebooks/generated/statespace_cycles.html>`__ or the very brief code snippet below:
 
 .. code-block:: python
 
