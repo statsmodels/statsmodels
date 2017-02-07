@@ -83,8 +83,8 @@ class CheckVAR(object):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
 
 def get_macrodata():
-    data = sm.datasets.macrodata.load().data[['realgdp','realcons','realinv']]
-    names = data.dtype.names
+    data = sm.datasets.macrodata.load_pandas().data[['realgdp','realcons','realinv']]
+    data = data.to_records(index=False)
     nd = data.view((float,3), type=np.ndarray)
     nd = np.diff(np.log(nd), axis=0)
     return nd.ravel().view(data.dtype, type=np.ndarray)
