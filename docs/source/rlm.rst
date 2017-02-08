@@ -1,4 +1,3 @@
-.. module:: statsmodels.robust
 .. currentmodule:: statsmodels.robust
 
 
@@ -48,6 +47,8 @@ References
 
 Module Reference
 ----------------
+
+.. module:: statsmodels.robust
 
 Model Classes
 ^^^^^^^^^^^^^

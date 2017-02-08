@@ -232,7 +232,6 @@ to one way ANOVA, but still in developement
 
 The following functions are not (yet) public
 
-.. module:: statsmodels.sandbox.stats.multicomp
 .. currentmodule:: statsmodels.sandbox.stats.multicomp
 
 .. autosummary::

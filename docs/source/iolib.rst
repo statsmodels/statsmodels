@@ -1,4 +1,3 @@
-.. module:: statsmodels.iolib
 .. currentmodule:: statsmodels.iolib
 
 .. _iolib:
@@ -19,6 +18,8 @@ Examples
 
 Module Reference
 ----------------
+
+.. module:: statsmodels.iolib
 
 
 .. autosummary::
