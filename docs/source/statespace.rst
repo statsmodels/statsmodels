@@ -1,3 +1,4 @@
+.. module:: statsmodels.tsa.statespace
 .. currentmodule:: statsmodels.tsa.statespace
 
 

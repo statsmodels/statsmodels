@@ -45,6 +45,7 @@ Most moving window statistics, like rolling mean, moments (up to 4th order), min
 max, mean, and variance, are covered by the functions for `Moving (rolling)
 statistics/moments <http://pandas.pydata.org/pandas-docs/stable/computation.html#moving-rolling-statistics-moments>`_ in Pandas.
 
+.. module:: statsmodels.sandbox.tsa
 .. currentmodule:: statsmodels.sandbox.tsa
 
 .. autosummary::
@@ -59,6 +60,7 @@ statistics/moments <http://pandas.pydata.org/pandas-docs/stable/computation.html
 Regression and ANOVA
 ^^^^^^^^^^^^^^^^^^^^
 
+.. module:: statsmodels.sandbox.regression.anova_nistcertified
 .. currentmodule:: statsmodels.sandbox.regression.anova_nistcertified
 
 The following two ANOVA functions are fully tested against the NIST test data
@@ -82,6 +84,7 @@ generating ANOVA results with OLS. They are best considered as recipes since
 they were written with a specific use in mind. These function will eventually
 be rewritten or reorganized.
 
+.. module:: statsmodels.sandbox.regression
 .. currentmodule:: statsmodels.sandbox.regression
 
 .. autosummary::
@@ -124,6 +127,7 @@ parameters have been verified as accurate, this code is still very
 experimental, and the usage of the models will very likely change significantly
 before they are added to the main codebase.
 
+.. module:: statsmodels.sandbox.sysreg
 .. currentmodule:: statsmodels.sandbox.sysreg
 
 .. autosummary::
@@ -134,12 +138,14 @@ before they are added to the main codebase.
 
 Miscellaneous
 ^^^^^^^^^^^^^
- .. currentmodule:: statsmodels.sandbox.tools.tools_tsa
+.. module:: statsmodels.sandbox.tools.tools_tsa
+.. currentmodule:: statsmodels.sandbox.tools.tools_tsa
 
 
 Descriptive Statistics Printing
 """""""""""""""""""""""""""""""
 
+.. module:: statsmodels.sandbox
 .. currentmodule:: statsmodels.sandbox
 
 .. autosummary::

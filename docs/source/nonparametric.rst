@@ -1,3 +1,4 @@
+.. module:: statsmodels.nonparametric
 .. currentmodule:: statsmodels.nonparametric
 
 .. _nonparametric:
