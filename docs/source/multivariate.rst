@@ -14,6 +14,7 @@ Principal Component Analysis
 ----------------------------
 
 .. module:: statsmodels.multivariate.pca
+.. currentmodule:: statsmodels.multivariate.pca
 
 .. autosummary::
    :toctree: generated/
