@@ -34,27 +34,26 @@ from statsmodels.tsa.base.datetools import _index_date
 from statsmodels.tsa.kalmanf import KalmanFilter
 
 _armax_notes = """
+    Notes
+    -----
+    If exogenous variables are given, then the model that is fit is
 
-        Notes
-        -----
-        If exogenous variables are given, then the model that is fit is
+    .. math::
 
-        .. math::
+       \\phi(L)(y_t - X_t\\beta) = \\theta(L)\epsilon_t
 
-           \\phi(L)(y_t - X_t\\beta) = \\theta(L)\epsilon_t
-
-        where :math:`\\phi` and :math:`\\theta` are polynomials in the lag
-        operator, :math:`L`. This is the regression model with ARMA errors,
-        or ARMAX model. This specification is used, whether or not the model
-        is fit using conditional sum of square or maximum-likelihood, using
-        the `method` argument in
-        :meth:`statsmodels.tsa.arima_model.%(Model)s.fit`. Therefore, for
-        now, `css` and `mle` refer to estimation methods only. This may
-        change for the case of the `css` model in future versions.
+    where :math:`\\phi` and :math:`\\theta` are polynomials in the lag
+    operator, :math:`L`. This is the regression model with ARMA errors,
+    or ARMAX model. This specification is used, whether or not the model
+    is fit using conditional sum of square or maximum-likelihood, using
+    the `method` argument in
+    :meth:`statsmodels.tsa.arima_model.%(Model)s.fit`. Therefore, for
+    now, `css` and `mle` refer to estimation methods only. This may
+    change for the case of the `css` model in future versions.
 """
 
-_arma_params = """\
-    endog : array-like
+_arma_params = \
+"""endog : array-like
         The endogenous variable.
     order : iterable
         The (p,q) order of the model for the number of AR parameters,
@@ -67,8 +66,8 @@ _arma_model = "Autoregressive Moving Average ARMA(p,q) Model"
 
 _arima_model = "Autoregressive Integrated Moving Average ARIMA(p,d,q) Model"
 
-_arima_params = """\
-    endog : array-like
+_arima_params = \
+"""endog : array-like
         The endogenous variable.
     order : iterable
         The (p,d,q) order of the model for the number of AR parameters,

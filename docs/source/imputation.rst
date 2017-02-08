@@ -1,3 +1,4 @@
+.. module:: statsmodels.imputation.mice
 .. currentmodule:: statsmodels.imputation.mice
 
 .. _imputation:

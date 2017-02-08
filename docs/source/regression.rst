@@ -127,6 +127,8 @@ wendog : array
 Module Reference
 ----------------
 
+.. module:: statsmodels.regression.linear_model
+
 Model Classes
 ^^^^^^^^^^^^^
 
@@ -139,6 +141,7 @@ Model Classes
    GLSAR
    yule_walker
 
+.. module:: statsmodels.regression.quantile_regression
 .. currentmodule:: statsmodels.regression.quantile_regression
 
 .. autosummary::
@@ -146,6 +149,7 @@ Model Classes
 
    QuantReg
 
+.. module:: statsmodels.regression.recursive_ls
 .. currentmodule:: statsmodels.regression.recursive_ls
 
 .. autosummary::

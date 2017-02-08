@@ -274,6 +274,7 @@ methods and attributes.
 Module Reference
 ----------------
 
+.. module:: statsmodels.stats.contingency_tables
 .. currentmodule:: statsmodels.stats.contingency_tables
 
 .. autosummary::

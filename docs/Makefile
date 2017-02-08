@@ -58,6 +58,9 @@ notebooks:
 	$(TOOLSPATH)$(NOTEBOOKBUILD) --execute=True --allow_errors=True
 
 html:
+    # make directories for images
+	@echo "Make static directory for images"
+	mkdir -p $(BUILDDIR)/html/_static
 	# generate the examples rst files
 	@echo "Generating reST from examples folder"
 	#$(TOOLSPATH)$(EXAMPLEBUILD)

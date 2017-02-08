@@ -19,6 +19,8 @@ Examples
 Module Reference
 ----------------
 
+.. module:: statsmodels.iolib
+
 
 .. autosummary::
    :toctree: generated/

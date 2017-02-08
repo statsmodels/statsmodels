@@ -590,7 +590,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             function.
         transformed : boolean, optional
             Whether or not `params` is already transformed. Default is True.
-        **kwargs
+        kwargs
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
 
@@ -1002,8 +1002,10 @@ class MLEModel(tsbase.TimeSeriesModel):
         ----------
         params : array_like
             Array of parameters at which to evaluate the score.
-        *args, **kwargs
-            Additional arguments to the `loglike` method.
+        args
+            Additional positional arguments to the `loglike` method.
+        kwargs
+            Additional keyword arguments to the `loglike` method.
 
         Returns
         ----------
@@ -1138,8 +1140,10 @@ class MLEModel(tsbase.TimeSeriesModel):
         ----------
         params : array_like
             Array of parameters at which to evaluate the hessian.
-        *args, **kwargs
-            Additional arguments to the `loglike` method.
+        args
+            Additional positional arguments to the `loglike` method.
+        kwargs
+            Additional keyword arguments to the `loglike` method.
 
         Returns
         -------
