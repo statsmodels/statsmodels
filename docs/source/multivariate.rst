@@ -1,3 +1,4 @@
+.. module:: statsmodels.multivariate
 .. currentmodule:: statsmodels.multivariate
 
 .. _multivariate:

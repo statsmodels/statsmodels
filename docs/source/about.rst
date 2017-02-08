@@ -1,3 +1,4 @@
+.. module:: statsmodels
 .. currentmodule:: statsmodels
 
 *****************

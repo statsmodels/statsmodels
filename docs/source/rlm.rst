@@ -1,3 +1,4 @@
+.. module:: statsmodels.robust
 .. currentmodule:: statsmodels.robust
 
 
@@ -51,6 +52,7 @@ Module Reference
 Model Classes
 ^^^^^^^^^^^^^
 
+.. module:: statsmodels.robust.robust_linear_model
 .. currentmodule:: statsmodels.robust.robust_linear_model
 
 .. autosummary::
@@ -71,6 +73,7 @@ Model Results
 Norms
 ^^^^^
 
+.. module:: statsmodels.robust.norms
 .. currentmodule:: statsmodels.robust.norms
 
 .. autosummary::
@@ -90,6 +93,7 @@ Norms
 Scale
 ^^^^^
 
+.. module:: statsmodels.robust.scale
 .. currentmodule:: statsmodels.robust.scale
 
 .. autosummary::
