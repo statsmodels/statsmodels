@@ -493,6 +493,11 @@ class ARMA(tsbase.TimeSeriesModel):
         exog = self.exog
         if k != 0:
             ols_params = GLS(endog, exog).fit().params
+            if k != len(ols_params):
+                raise ValueError("Number of exogenous variables "
+                                 "(including constants) is not equal "
+                                 "to the paramaters of generalised "
+                                 "least square fit")
             start_params[:k] = ols_params
             endog -= np.dot(exog, ols_params).squeeze()
         if q != 0:
