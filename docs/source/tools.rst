@@ -1,3 +1,4 @@
+.. module:: statsmodels.tools
 .. currentmodule:: statsmodels.tools
 
 

@@ -1,3 +1,4 @@
+.. module:: statsmodels.discrete.discrete_model
 .. currentmodule:: statsmodels.discrete.discrete_model
 
 

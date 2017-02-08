@@ -1,3 +1,4 @@
+.. module:: statsmodels.emplike
 .. currentmodule:: statsmodels.emplike
 
 

@@ -1,3 +1,4 @@
+.. module:: statsmodels.duration
 .. currentmodule:: statsmodels.duration
 
 
@@ -199,6 +200,7 @@ References for Cox proportional hazards regression model::
 Module Reference
 ----------------
 
+.. module:: statsmodels.duration.survfunc
 .. currentmodule:: statsmodels.duration.survfunc
 
 The class for working with survival distributions is:
@@ -208,6 +210,7 @@ The class for working with survival distributions is:
 
    SurvfuncRight
 
+.. module:: statsmodels.duration.hazard_regression
 .. currentmodule:: statsmodels.duration.hazard_regression
 
 The proportional hazards regression model class is:

@@ -1,3 +1,4 @@
+.. module:: statsmodels.regression.mixed_linear_model
 .. currentmodule:: statsmodels.regression.mixed_linear_model
 
 

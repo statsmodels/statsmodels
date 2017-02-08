@@ -1,3 +1,4 @@
+.. module:: statsmodels.iolib
 .. currentmodule:: statsmodels.iolib
 
 .. _iolib:

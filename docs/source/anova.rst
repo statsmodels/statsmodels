@@ -1,3 +1,4 @@
+.. module:: statsmodels.stats.anova
 .. currentmodule:: statsmodels.stats.anova
 
 .. _anova:

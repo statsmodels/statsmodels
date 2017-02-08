@@ -25,17 +25,23 @@ sys.path.insert(0, os.path.abspath('../sphinxext'))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
-              'sphinx.ext.intersphinx', 'sphinx.ext.todo',
-              # 'sphinx.ext.imgmath',
-              'sphinx.ext.pngmath', 'sphinx.ext.viewcode', 'sphinx.ext.autosummary',
+extensions = ['sphinx.ext.autodoc',
+              'sphinx.ext.doctest',
+              'sphinx.ext.intersphinx',
+              'sphinx.ext.todo',
+              'sphinx.ext.mathjax',
+              # 'sphinx.ext.imgmath', mathjax instead
+              # 'sphinx.ext.pngmath', mathjax instead
+              'sphinx.ext.viewcode',
+              'sphinx.ext.autosummary',
               'sphinx.ext.inheritance_diagram',
               'matplotlib.sphinxext.plot_directive',
               'matplotlib.sphinxext.only_directives',
               'IPython.sphinxext.ipython_console_highlighting',
               'IPython.sphinxext.ipython_directive',
               'github',  # for GitHub links,
-              'numpydoc',
+              #'numpydoc',  # try napoleon
+              'sphinx.ext.napoleon'
               ]
 
 # Add any paths that contain templates here, relative to this directory.
