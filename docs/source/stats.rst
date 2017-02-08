@@ -1,3 +1,4 @@
+.. module:: statsmodels.stats
 .. currentmodule:: statsmodels.stats
 
 .. _stats:
@@ -22,6 +23,7 @@ instead of only the raw numbers.
 Residual Diagnostics and Specification Tests
 --------------------------------------------
 
+.. module:: statsmodels.stats.stattools
 .. currentmodule:: statsmodels.stats.stattools
 
 .. autosummary::
@@ -35,6 +37,7 @@ Residual Diagnostics and Specification Tests
    robust_kurtosis
    expected_robust_kurtosis
 
+.. module:: statsmodels.stats.diagnostic
 .. currentmodule:: statsmodels.stats.diagnostic
 
 .. autosummary::
@@ -71,6 +74,7 @@ Residual Diagnostics and Specification Tests
 Outliers and influence measures
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. module:: statsmodels.stats.outliers_influence
 .. currentmodule:: statsmodels.stats.outliers_influence
 
 .. autosummary::
@@ -120,6 +124,7 @@ Goodness of Fit Tests and Measures
 
 some tests for goodness of fit for univariate distributions
 
+.. module:: statsmodels.stats.gof
 .. currentmodule:: statsmodels.stats.gof
 
 .. autosummary::
@@ -142,6 +147,7 @@ some tests for goodness of fit for univariate distributions
 Non-Parametric Tests
 --------------------
 
+.. module:: statsmodels.sandbox.stats.runs
 .. currentmodule:: statsmodels.sandbox.stats.runs
 
 .. autosummary::
@@ -155,6 +161,7 @@ Non-Parametric Tests
    cochrans_q
    Runs
 
+.. module:: statsmodels.stats.descriptivestats
 .. currentmodule:: statsmodels.stats.descriptivestats
 
 .. autosummary::
@@ -171,6 +178,7 @@ The main function that statsmodels has currently available for interrater
 agreement measures and tests is Cohen's Kappa. Fleiss' Kappa is currently
 only implemented as a measures but without associated results statistics.
 
+.. module:: statsmodels.stats.inter_rater
 .. currentmodule:: statsmodels.stats.inter_rater
 
 .. autosummary::
@@ -191,6 +199,7 @@ These three functions are verified.
 GroupsStats and MultiComparison are convenience classes to multiple comparisons similar
 to one way ANOVA, but still in developement
 
+.. module:: statsmodels.sandbox.stats.multicomp
 .. currentmodule:: statsmodels.sandbox.stats.multicomp
 
 .. autosummary::
@@ -203,6 +212,7 @@ to one way ANOVA, but still in developement
    MultiComparison
    TukeyHSDResults
 
+.. module:: statsmodels.stats.multicomp
 .. currentmodule:: statsmodels.stats.multicomp
 
 .. autosummary::
@@ -210,7 +220,8 @@ to one way ANOVA, but still in developement
 
    pairwise_tukeyhsd
 
-.. currentmuodule:: statsmodels.stats.multitest
+.. module:: statsmodels.stats.multitest
+.. currentmodule:: statsmodels.stats.multitest
 
 .. autosummary::
    :toctree: generated/
@@ -266,6 +277,7 @@ for two, either paired or independent, samples. These tests are based on TOST,
 two one-sided tests, which have as null hypothesis that the means are not
 "close" to each other.
 
+.. module:: statsmodels.stats.weightstats
 .. currentmodule:: statsmodels.stats.weightstats
 
 .. autosummary::
@@ -306,6 +318,7 @@ three shortcut functions, ``tt_solve_power``, ``tt_ind_solve_power`` and
 equations.
 
 
+.. module:: statsmodels.stats.power
 .. currentmodule:: statsmodels.stats.power
 
 .. autosummary::
@@ -331,6 +344,7 @@ Proportion
 Also available are hypothesis test, confidence intervals and effect size for
 proportions that can be used with NormalIndPower.
 
+.. module:: statsmodels.stats.proportion
 .. currentmodule:: statsmodels.stats.proportion
 
 .. autosummary::
@@ -366,6 +380,7 @@ covariance matrix is not positive semi-definite. The following three
 functions can be used to find a correlation or covariance matrix that is
 positive definite and close to the original matrix.
 
+.. module:: statsmodels.stats.correlation_tools
 .. currentmodule:: statsmodels.stats.correlation_tools
 
 .. autosummary::
@@ -382,6 +397,7 @@ positive definite and close to the original matrix.
 These are utility functions to convert between central and non-central moments, skew,
 kurtosis and cummulants.
 
+.. module:: statsmodels.stats.moment_helpers
 .. currentmodule:: statsmodels.stats.moment_helpers
 
 .. autosummary::
@@ -413,6 +429,7 @@ using observational data in which the treatment may be thought of as an
 'exposure'. The assumptions behind mediation analysis are even more difficult
 to verify in an observational setting.
 
+.. module:: statsmodels.stats.mediation
 .. currentmodule:: statsmodels.stats.mediation
 
 .. autosummary::

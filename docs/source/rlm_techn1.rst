@@ -1,3 +1,4 @@
+.. module:: statsmodels.rlm
 .. currentmodule:: statsmodels.rlm
 
 

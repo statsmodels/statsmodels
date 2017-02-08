@@ -14,10 +14,12 @@ Users can also leverage the powerful input/output functions provided by :ref:`pa
 Examples
 --------
 
-    `SimpleTable: Basic example <examples/notebooks/generated/example_wls.html#ols-vs-wls>`__
+    `SimpleTable: Basic example <examples/notebooks/generated/wls.html#ols-vs-wls>`__
 
 Module Reference
 ----------------
+
+.. module:: statsmodels.iolib
 
 
 .. autosummary::

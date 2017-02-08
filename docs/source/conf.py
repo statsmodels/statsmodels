@@ -25,17 +25,23 @@ sys.path.insert(0, os.path.abspath('../sphinxext'))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
-              'sphinx.ext.intersphinx', 'sphinx.ext.todo',
-              # 'sphinx.ext.imgmath',
-              'sphinx.ext.pngmath', 'sphinx.ext.viewcode', 'sphinx.ext.autosummary',
+extensions = ['sphinx.ext.autodoc',
+              'sphinx.ext.doctest',
+              'sphinx.ext.intersphinx',
+              'sphinx.ext.todo',
+              # 'sphinx.ext.mathjax', # One of mathjax, pngmath or imgmath
+              # 'sphinx.ext.imgmath'
+              'sphinx.ext.pngmath',
+              'sphinx.ext.viewcode',
+              'sphinx.ext.autosummary',
               'sphinx.ext.inheritance_diagram',
               'matplotlib.sphinxext.plot_directive',
               'matplotlib.sphinxext.only_directives',
               'IPython.sphinxext.ipython_console_highlighting',
               'IPython.sphinxext.ipython_directive',
               'github',  # for GitHub links,
-              'numpydoc',
+              'numpydoc',  # numpydoc or napoleon, but not both
+              # 'sphinx.ext.napoleon'
               ]
 
 ipython_savefig_dir = '../build/html/_static'
@@ -54,7 +60,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'statsmodels'
-copyright = u'2009-2016, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
+copyright = u'2009-2017, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
 
 
 autosummary_generate = True
@@ -266,7 +272,7 @@ man_pages = [
 epub_title = u'statsmodels'
 epub_author = u'Josef Perktold, Skipper Seabold'
 epub_publisher = u'Josef Perktold, Skipper Seabold'
-epub_copyright = u'2009-2016, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
+epub_copyright = u'2009-2017, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.
@@ -302,10 +308,10 @@ epub_copyright = u'2009-2016, Josef Perktold, Skipper Seabold, Jonathan Taylor, 
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-        'numpy' : ('http://docs.scipy.org/doc/numpy/', None),
-        'python' : ('http://docs.python.org/3.2', None),
+        'numpy' : ('https://docs.scipy.org/doc/numpy/', None),
+        'python' : ('https://docs.python.org/3.2', None),
         'pydagogue' : ('http://matthew-brett.github.io/pydagogue/', None),
-        'patsy' : ('http://patsy.readthedocs.org/en/latest/', None),
+        'patsy' : ('http://patsy.readthedocs.io/en/latest/', None),
         'pandas' : ('http://pandas.pydata.org/pandas-docs/stable/', None),
         }
 

@@ -1,3 +1,4 @@
+.. module:: statsmodels.imputation.mice
 .. currentmodule:: statsmodels.imputation.mice
 
 .. _imputation:
@@ -45,5 +46,5 @@ Implementation Details
 ----------------------
 
 Internally, this function uses
-`pandas.isnull <pandas:http://pandas.pydata.org/pandas-docs/stable/missing_data.html#working-with-missing-data>`_.
+`pandas.isnull <http://pandas.pydata.org/pandas-docs/stable/missing_data.html#working-with-missing-data>`_.
 Anything that returns True from this function will be treated as missing data.

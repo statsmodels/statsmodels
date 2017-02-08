@@ -1,5 +1,6 @@
 :orphan:
 
+.. module:: statsmodels.tsa.vector_ar.var_model
 .. currentmodule:: statsmodels.tsa.vector_ar.var_model
 
 .. _var:
@@ -319,6 +320,7 @@ The forecasts can be visualized using `plot_forecast`:
 Class Reference
 ---------------
 
+.. module:: statsmodels.tsa.vector_ar
 .. currentmodule:: statsmodels.tsa.vector_ar
 
 .. autosummary::

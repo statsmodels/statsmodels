@@ -1,3 +1,4 @@
+.. module:: statsmodels.multivariate
 .. currentmodule:: statsmodels.multivariate
 
 .. _multivariate:
@@ -12,8 +13,11 @@ This section includes methods and algorithms from multivariate statistics.
 Principal Component Analysis
 ----------------------------
 
+.. module:: statsmodels.multivariate.pca
+.. currentmodule:: statsmodels.multivariate.pca
+
 .. autosummary::
    :toctree: generated/
 
-   pca.PCA
-   pca.pca
+   PCA
+   pca

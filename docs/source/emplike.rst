@@ -60,6 +60,8 @@ Examples
 Module Reference
 ----------------
 
+.. module:: statsmodels.emplike
+
 .. autosummary::
    :toctree: generated/
 

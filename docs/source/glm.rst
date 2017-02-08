@@ -114,6 +114,8 @@ References
 Module Reference
 ----------------
 
+.. module:: statsmodels.genmod.generalized_linear_model
+
 Model Class
 ^^^^^^^^^^^
 
@@ -137,6 +139,7 @@ Families
 
 The distribution families currently implemented are
 
+.. module:: statsmodels.genmod.families.family
 .. currentmodule:: statsmodels.genmod.families.family
 
 .. autosummary::
@@ -166,6 +169,7 @@ available link functions can be obtained by
 
     >>> sm.families.family.<familyname>.links
 
+.. module:: statsmodels.genmod.families.links
 .. currentmodule:: statsmodels.genmod.families.links
 
 .. autosummary::

@@ -351,13 +351,13 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
     alpha : float
         error rate
     method : {'bky', 'bh')
-         see Notes for details
+        see Notes for details
 
-        'bky' : implements the procedure in Definition 6 of Benjamini, Krieger
+        * 'bky' - implements the procedure in Definition 6 of Benjamini, Krieger
            and Yekuteli 2006
-        'bh' : implements the two stage method of Benjamini and Hochberg
+        * 'bh' - the two stage method of Benjamini and Hochberg
 
-    iter ; bool
+    iter : bool
 
     Returns
     -------

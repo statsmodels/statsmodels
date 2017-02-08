@@ -244,12 +244,12 @@ def add_constant(data, prepend=True, has_constant='skip'):
     Parameters
     ----------
     data : array-like
-        `data` is the column-ordered design matrix
+        ``data`` is the column-ordered design matrix
     prepend : bool
         If true, the constant is in the first column.  Else the constant is
         appended (last column).
     has_constant : str {'raise', 'add', 'skip'}
-        Behavior if ``data'' already has a constant. The default will return
+        Behavior if ``data`` already has a constant. The default will return
         data without adding another constant. If 'raise', will raise an
         error if a constant is present. Using 'add' will duplicate the
         constant, if one is present.

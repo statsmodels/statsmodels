@@ -59,6 +59,8 @@ References
 Module Reference
 ----------------
 
+.. module:: statsmodels.genmod.generalized_estimating_equations
+
 Model Class
 ^^^^^^^^^^^
 
@@ -81,6 +83,7 @@ Dependence Structures
 
 The dependence structures currently implemented are
 
+.. module:: statsmodels.genmod.cov_struct
 .. currentmodule:: statsmodels.genmod.cov_struct
 
 .. autosummary::
@@ -99,6 +102,7 @@ Families
 
 The distribution families are the same as for GLM, currently implemented are
 
+.. module:: statsmodels.genmod.families.family
 .. currentmodule:: statsmodels.genmod.families.family
 
 .. autosummary::

@@ -161,6 +161,8 @@ users:
 Module Reference
 ----------------
 
+.. module:: statsmodels.regression.mixed_linear_model
+
 The model class is:
 
 .. autosummary::

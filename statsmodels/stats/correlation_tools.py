@@ -792,17 +792,17 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
 
     Notes
     -----
-    This is an alternative to C = np.corrcoef(data); C *= (np.abs(C)
+    This is an alternative to C = np.corrcoef(data); C \*= (np.abs(C)
     >= absmin), suitable for very tall data matrices.
 
     If the data are jointly Gaussian, the marginal sampling
     distributions of the elements of the sample correlation matrix are
     approximately Gaussian with standard deviation 1 / sqrt(n).  The
-    default value of `minabs` is thus equal to 1 standard error, which
+    default value of ``minabs`` is thus equal to 1 standard error, which
     will set to zero approximately 68% of the estimated correlation
     coefficients for which the population value is zero.
 
-    No intermediate matrix with more than `max_elt` values will be
+    No intermediate matrix with more than ``max_elt`` values will be
     constructed.  However memory use could still be high if a large
     number of correlation values exceed `minabs` in magnitude.
 
