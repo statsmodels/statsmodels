@@ -410,3 +410,18 @@ class WaldTestResults(object):
 
     def __repr__(self):
         return str(self.__class__) + '\n' + self.__str__()
+
+
+class CovTestResults(object):
+    """a minimal class to hold the results from the cov test
+    for elastic net"""
+
+    def __init__(self, statistic, table=None, pvalues=None):
+
+        self.table = table
+        self.statistic = statistic
+        self.pvalues = pvalues
+
+        if table is not None:
+            self.statistic = table["statistic"].values
+            self.pvalues = table["pvalue"].values
