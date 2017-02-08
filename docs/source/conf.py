@@ -29,9 +29,9 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.doctest',
               'sphinx.ext.intersphinx',
               'sphinx.ext.todo',
-              'sphinx.ext.mathjax',
-              # 'sphinx.ext.imgmath', mathjax instead
-              # 'sphinx.ext.pngmath', mathjax instead
+              # 'sphinx.ext.mathjax',
+              # 'sphinx.ext.imgmath'
+              'sphinx.ext.pngmath',
               'sphinx.ext.viewcode',
               'sphinx.ext.autosummary',
               'sphinx.ext.inheritance_diagram',
@@ -40,8 +40,8 @@ extensions = ['sphinx.ext.autodoc',
               'IPython.sphinxext.ipython_console_highlighting',
               'IPython.sphinxext.ipython_directive',
               'github',  # for GitHub links,
-              #'numpydoc',  # try napoleon
-              'sphinx.ext.napoleon'
+              'numpydoc',
+              # 'sphinx.ext.napoleon'
               ]
 
 ipython_savefig_dir = '../build/html/_static'
