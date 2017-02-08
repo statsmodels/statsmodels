@@ -38,8 +38,6 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
               'numpydoc',
               ]
 
-ipython_savefig_dir = '../build/html/_static'
-
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
