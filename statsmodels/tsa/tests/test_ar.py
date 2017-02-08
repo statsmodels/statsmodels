@@ -264,7 +264,7 @@ def test_ar_dates():
     endog = Series(data.endog, index=dates)
     ar_model = sm.tsa.AR(endog, freq='A').fit(maxlag=9, method='mle', disp=-1)
     pred = ar_model.predict(start='2005', end='2015')
-    predict_dates = DatetimeIndex(start='2005', end='2016', freq='A')
+    predict_dates = DatetimeIndex(start='2005', end='2016', freq='A')[:11]
 
     assert_equal(ar_model.data.predict_dates, predict_dates)
     assert_equal(pred.index, predict_dates)
