@@ -163,7 +163,6 @@ Fitting a linear regression model returns a results class. OLS has a
 specific results class with some additional methods compared to the
 results class of the other linear models.
 
-.. module:: statsmodels.regression.linear_model
 .. currentmodule:: statsmodels.regression.linear_model
 
 .. autosummary::
@@ -172,7 +171,6 @@ results class of the other linear models.
    RegressionResults
    OLSResults
 
-.. module:: statsmodels.regression.quantile_regression
 .. currentmodule:: statsmodels.regression.quantile_regression
 
 .. autosummary::
@@ -180,7 +178,6 @@ results class of the other linear models.
 
    QuantRegResults
 
-.. module:: statsmodels.regression.recursive_ls
 .. currentmodule:: statsmodels.regression.recursive_ls
 
 .. autosummary::

@@ -93,7 +93,6 @@ the parameter estimates that are robust to heteroscedasticity and
 autocorrelation in the errors. Similar to the methods that are available
 for the LinearModelResults, these methods are designed for use with OLS.
 
-.. module:: statsmodels.stats
 .. currentmodule:: statsmodels.stats
 
 .. autosummary::
@@ -136,7 +135,6 @@ some tests for goodness of fit for univariate distributions
    gof_binning_discrete
    chisquare_effectsize
 
-.. module:: statsmodels.stats.diagnostic
 .. currentmodule:: statsmodels.stats.diagnostic
 
 .. autosummary::
@@ -298,7 +296,6 @@ two one-sided tests, which have as null hypothesis that the means are not
 weightstats also contains tests and confidence intervals based on summary
 data
 
-.. module:: statsmodels.stats.weightstats
 .. currentmodule:: statsmodels.stats.weightstats
 
 .. autosummary::

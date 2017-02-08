@@ -1,4 +1,3 @@
-.. module:: statsmodels.graphics
 .. currentmodule:: statsmodels.graphics
 
 .. _graphics:
