@@ -96,7 +96,7 @@ class CheckGenericMixin(object):
 class TestMyPareto1(CheckGenericMixin):
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         params = [2, 0, 2]
         nobs = 100
         np.random.seed(1234)
@@ -109,12 +109,12 @@ class TestMyPareto1(CheckGenericMixin):
         mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model
         mod_par.data.xnames = ['shape', 'loc', 'scale']
 
-        self.mod = mod_par
-        self.res1 = mod_par.fit(disp=None)
+        cls.mod = mod_par
+        cls.res1 = mod_par.fit(disp=None)
 
         # Note: possible problem with parameters close to min data boundary
         # see issue #968
-        self.skip_bsejac = True
+        cls.skip_bsejac = True
 
     def test_minsupport(self):
         # rough sanity checks for convergence
@@ -128,7 +128,7 @@ class TestMyParetoRestriction(CheckGenericMixin):
 
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         params = [2, 0, 2]
         nobs = 50
         np.random.seed(1234)
@@ -144,8 +144,8 @@ class TestMyParetoRestriction(CheckGenericMixin):
         mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model
         mod_par.data.xnames = ['shape', 'scale']
 
-        self.mod = mod_par
-        self.res1 = mod_par.fit(disp=None)
+        cls.mod = mod_par
+        cls.res1 = mod_par.fit(disp=None)
 
         # Note: loc is fixed, no problems with parameters close to min data
-        self.skip_bsejac = False
+        cls.skip_bsejac = False

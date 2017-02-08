@@ -106,7 +106,7 @@ def test_vech():
 
 class TestLagmat(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         data = sm.datasets.macrodata.load()
         cls.macro_df = pd.DataFrame.from_records(data.data)
         cls.macro_df = cls.macro_df[['year', 'quarter', 'realgdp', 'cpi']]
@@ -554,7 +554,7 @@ class TestAddTrend(unittest.TestCase):
 
 class TestLagmat2DS(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         data = sm.datasets.macrodata.load()
         cls.macro_df = pd.DataFrame.from_records(data.data)
         cls.macro_df = cls.macro_df[['year', 'quarter', 'realgdp', 'cpi']]
@@ -661,6 +661,5 @@ class TestLagmat2DS(unittest.TestCase):
         assert_raises(TypeError, sm.tsa.lagmat2ds, data, 5)
 
 if __name__ == '__main__':
-    import nose
-
-    nose.runmodule()
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

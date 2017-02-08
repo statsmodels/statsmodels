@@ -5,6 +5,7 @@ Author: Chad Fulton
 License: BSD-3
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat.testing import SkipTest
 
 import warnings
 import os
@@ -13,7 +14,6 @@ import pandas as pd
 from statsmodels.tools import add_constant
 from statsmodels.tsa.regime_switching import markov_autoregression
 from numpy.testing import assert_equal, assert_allclose, assert_raises
-from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 

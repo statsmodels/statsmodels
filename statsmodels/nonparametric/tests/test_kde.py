@@ -1,8 +1,8 @@
+from statsmodels.compat.testing import SkipTest
 import os
 import numpy.testing as npt
-from nose import SkipTest
-from nose.tools import raises
 import numpy as np
+import pytest
 from statsmodels.distributions.mixture_rvs import mixture_rvs
 from statsmodels.nonparametric.kde import KDEUnivariate as KDE
 import statsmodels.sandbox.nonparametric.kernels as kernels
@@ -34,29 +34,28 @@ Xi = mixture_rvs([.25,.75], size=200, dist=[stats.norm, stats.norm],
 class TestKDEExceptions(object):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.kde = KDE(Xi)
         cls.weights_200 = np.linspace(1, 100, 200)
         cls.weights_100 = np.linspace(1, 100, 100)
 
-    @raises(ValueError)
     def test_check_is_fit_exception(self):
-        self.kde.evaluate(0)
+        with pytest.raises(ValueError):
+            self.kde.evaluate(0)
 
-    @raises(NotImplementedError)
     def test_non_weighted_fft_exception(self):
-        self.kde.fit(kernel="gau", gridsize=50, weights=self.weights_200, fft=True,
-                    bw="silverman")
+        with pytest.raises(NotImplementedError):
+            self.kde.fit(kernel="gau", gridsize=50, weights=self.weights_200,
+                         fft=True, bw="silverman")
 
-    @raises(ValueError)
     def test_wrong_weight_length_exception(self):
-        self.kde.fit(kernel="gau", gridsize=50, weights=self.weights_100, fft=False,
-                    bw="silverman")
+        with pytest.raises(ValueError):
+            self.kde.fit(kernel="gau", gridsize=50, weights=self.weights_100,
+                         fft=False, bw="silverman")
 
-    @raises(NotImplementedError)
     def test_non_gaussian_fft_exception(self):
-        self.kde.fit(kernel="epa", gridsize=50, fft=True,
-                    bw="silverman")
+        with pytest.raises(NotImplementedError):
+            self.kde.fit(kernel="epa", gridsize=50, fft=True, bw="silverman")
 
 class CheckKDE(object):
 
@@ -83,7 +82,7 @@ class CheckKDE(object):
 
 class TestKDEGauss(CheckKDE):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         res1 = KDE(Xi)
         res1.fit(kernel="gau", fft=False, bw="silverman")
         cls.res1 = res1
@@ -124,7 +123,7 @@ class TestKDEGauss(CheckKDE):
 
 class TestKDEEpanechnikov(CheckKDE):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         res1 = KDE(Xi)
         res1.fit(kernel="epa", fft=False, bw="silverman")
         cls.res1 = res1
@@ -132,7 +131,7 @@ class TestKDEEpanechnikov(CheckKDE):
 
 class TestKDETriangular(CheckKDE):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         res1 = KDE(Xi)
         res1.fit(kernel="tri", fft=False, bw="silverman")
         cls.res1 = res1
@@ -140,7 +139,7 @@ class TestKDETriangular(CheckKDE):
 
 class TestKDEBiweight(CheckKDE):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         res1 = KDE(Xi)
         res1.fit(kernel="biw", fft=False, bw="silverman")
         cls.res1 = res1
@@ -149,7 +148,7 @@ class TestKDEBiweight(CheckKDE):
 #NOTE: This is a knownfailure due to a definitional difference of Cosine kernel
 #class TestKDECosine(CheckKDE):
 #    @classmethod
-#    def setupClass(cls):
+#    def setup_class(cls):
 #        res1 = KDE(Xi)
 #        res1.fit(kernel="cos", fft=False, bw="silverman")
 #        cls.res1 = res1
@@ -159,7 +158,7 @@ class TestKDEBiweight(CheckKDE):
 class TestKdeWeights(CheckKDE):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         res1 = KDE(Xi)
         weights = np.linspace(1,100,200)
         res1.fit(kernel="gau", gridsize=50, weights=weights, fft=False,
@@ -181,7 +180,7 @@ class TestKdeWeights(CheckKDE):
 
 class TestKDEGaussFFT(CheckKDE):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.decimal_density = 2 # low accuracy because binning is different
         res1 = KDE(Xi)
         res1.fit(kernel="gau", fft=True, bw="silverman")
@@ -192,7 +191,7 @@ class TestKDEGaussFFT(CheckKDE):
 class CheckKDEWeights(object):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.x = x = KDEWResults['x']
         weights = KDEWResults['weights']
         res1 = KDE(x)
@@ -333,6 +332,4 @@ class TestNormConstant():
 
 
 if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb'],
-                       exit=False)
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

@@ -37,9 +37,6 @@ def teardown_module():
 
 class TestPlot(object):
 
-    def __init__(self):
-        self.setup() #temp: for testing without nose
-
     def setup(self):
         nsample = 100
         sig = 0.5
@@ -166,7 +163,7 @@ class TestPlotFormula(TestPlotPandas):
 class TestABLine(object):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         np.random.seed(12345)
         X = sm.add_constant(np.random.normal(0, 20, size=30))
         y = np.dot(X, [25, 3.5]) + np.random.normal(0, 30, size=30)
@@ -209,7 +206,7 @@ class TestABLine(object):
 
 class TestABLinePandas(TestABLine):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         np.random.seed(12345)
         X = sm.add_constant(np.random.normal(0, 20, size=30))
         y = np.dot(X, [25, 3.5]) + np.random.normal(0, 30, size=30)
@@ -342,5 +339,5 @@ class TestCERESPlot(object):
                 close_or_save(pdf, fig)
 
 if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

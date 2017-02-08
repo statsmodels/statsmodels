@@ -65,6 +65,5 @@ def check_cont_fit(distname,arg):
 
 
 if __name__ == "__main__":
-    import nose
-    #nose.run(argv=['', __file__])
-    nose.runmodule(argv=[__file__,'-s'], exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

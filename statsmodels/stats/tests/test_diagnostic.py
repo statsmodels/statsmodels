@@ -19,7 +19,7 @@ import numpy as np
 
 from numpy.testing import (assert_, assert_almost_equal, assert_equal,
                            assert_approx_equal, assert_allclose)
-from nose import SkipTest
+import pytest
 
 from statsmodels.regression.linear_model import OLS, GLSAR
 from statsmodels.tools.tools import add_constant
@@ -106,7 +106,8 @@ def notyet_atst():
 
 class TestDiagnosticG(object):
 
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         d = macrodata.load().data
         #growth rates
         gs_l_realinv = 400 * np.diff(np.log(d['realinv']))
@@ -124,11 +125,11 @@ class TestDiagnosticG(object):
 
         res_ols3 = OLS(endogg, exogg3).fit()
 
-        self.res = res_ols
-        self.res2 = res_ols2
-        self.res3 = res_ols3
-        self.endog = self.res.model.endog
-        self.exog = self.res.model.exog
+        cls.res = res_ols
+        cls.res2 = res_ols2
+        cls.res3 = res_ols3
+        cls.endog = cls.res.model.endog
+        cls.exog = cls.res.model.exog
 
     def test_basic(self):
         #mainly to check I got the right regression
@@ -650,7 +651,8 @@ class TestDiagnosticG(object):
 
 class TestDiagnosticGPandas(TestDiagnosticG):
 
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         d = macrodata.load_pandas().data
         #growth rates
         d['gs_l_realinv'] = 400 * np.log(d['realinv']).diff()
@@ -659,7 +661,7 @@ class TestDiagnosticGPandas(TestDiagnosticG):
         d['tbilrate'] = d['tbilrate'].shift(1)
 
         d = d.dropna()
-        self.d = d
+        cls.d = d
         endogg = d['gs_l_realinv']
         exogg = add_constant(d[['gs_l_realgdp', 'lint']])
         exogg2 = add_constant(d[['gs_l_realgdp', 'tbilrate']])
@@ -670,11 +672,11 @@ class TestDiagnosticGPandas(TestDiagnosticG):
 
         res_ols3 = OLS(endogg, exogg3).fit()
 
-        self.res = res_ols
-        self.res2 = res_ols2
-        self.res3 = res_ols3
-        self.endog = self.res.model.endog
-        self.exog = self.res.model.exog
+        cls.res = res_ols
+        cls.res2 = res_ols2
+        cls.res3 = res_ols3
+        cls.endog = cls.res.model.endog
+        cls.exog = cls.res.model.exog
 
 
 def grangertest():
@@ -876,8 +878,8 @@ def test_outlier_test():
 
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x'], exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])
 
     #t = TestDiagnosticG()
     #t.test_basic()

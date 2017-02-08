@@ -16,7 +16,6 @@ from statsmodels.tsa import arima_model as arima
 from .results import results_sarimax
 from statsmodels.tools import add_constant
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
-from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -72,7 +71,7 @@ class TestSARIMAXStatsmodels(object):
     def test_mle(self):
         # ARIMA estimates the mean of the process, whereas SARIMAX estimates
         # the intercept. Convert the mean to intercept to compare
-        params_a = self.result_a.params
+        params_a = self.result_a.params.copy()
         params_a[0] = (1 - params_a[1]) * params_a[0]
         assert_allclose(self.result_b.params[:-1], params_a, atol=5e-5)
 
@@ -960,14 +959,14 @@ class SARIMAXCoverageTest(object):
     def test_start_params(self):
         # just a quick test that start_params isn't throwing an exception
         # (other than related to invertibility)
-
+        stat, inv = self.model.enforce_stationarity, self.model.enforce_invertibility
         self.model.enforce_stationarity = False
         self.model.enforce_invertibility = False
         self.model.start_params
-        self.model.enforce_stationarity = True
-        self.model.enforce_invertibility = True
+        self.model.enforce_stationarity, self.model.enforce_invertibility = stat, inv
 
     def test_transform_untransform(self):
+        stat, inv = self.model.enforce_stationarity, self.model.enforce_invertibility
         true_constrained = self.true_params
 
         # Sometimes the parameters given by Stata are not stationary and / or
@@ -989,9 +988,7 @@ class SARIMAXCoverageTest(object):
         constrained = self.model.transform_params(unconstrained)
 
         assert_almost_equal(constrained, true_constrained, 4)
-
-        self.model.enforce_stationarity = True
-        self.model.enforce_invertibility = True
+        self.model.enforce_stationarity, self.model.enforce_invertibility = stat, inv
 
     def test_results(self):
         self.result = self.model.filter(self.true_params)
@@ -1164,22 +1161,29 @@ class Test_ar_no_enforce(SARIMAXCoverageTest):
         kwargs['enforce_stationarity'] = False
         kwargs['enforce_invertibility'] = False
         kwargs['initial_variance'] = 1e9
-        # kwargs['loglikelihood_burn'] = 0
+        kwargs['loglikelihood_burn'] = 0
         super(Test_ar_no_enforce, cls).setup_class(6, *args, **kwargs)
         # Reset loglikelihood burn, which gets automatically set to the number
         # of states if enforce_stationarity = False
         cls.model.ssm.loglikelihood_burn = 0
 
-    def test_loglike(self):
-        # Regression in the state vector gives a different loglikelihood, so
-        # just check that it's approximately the same
-        self.result = self.model.filter(self.true_params)
+    def test_init_keys_replicate(self):
+        mod1 = self.model
 
-        assert_allclose(
-            self.result.llf,
-            self.true_loglike,
-            atol=2
-        )
+        kwargs = self.model._get_init_kwds()
+        endog = mod1.data.orig_endog
+        exog = mod1.data.orig_exog
+
+        model2 = sarimax.SARIMAX(endog, exog, **kwargs)
+        # Fixes needed for edge case model
+        model2.ssm._initial_variance = mod1.ssm._initial_variance
+        model2.ssm.initialization = mod1.ssm.initialization
+
+        res1 = self.model.filter(self.true_params)
+        res2 = model2.filter(self.true_params)
+        rtol = 1e-6 if IS_WINDOWS else 1e-13
+        assert_allclose(res2.llf, res1.llf, rtol=rtol)
+
 
 class Test_ar_exogenous(SARIMAXCoverageTest):
     # // ARX

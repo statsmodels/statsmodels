@@ -18,7 +18,6 @@ from statsmodels.tsa.statespace import (sarimax, structural, varmax,
 from statsmodels.tsa.statespace.tools import compatibility_mode
 from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal,
                            assert_raises)
-from nose.exc import SkipTest
 
 
 def test_arma_lfilter():
@@ -432,7 +431,7 @@ def test_varmax():
     # TODO: This is just a smoke test
     mod = varmax.VARMAX(
         np.random.normal(size=(nobs, 2)), order=(0, 1), trend='nc')
-    print(mod.start_params)
+    # print(mod.start_params)
     mod.simulate(mod.start_params, nobs)
 
     # VARMA(2, 2) + trend + exog

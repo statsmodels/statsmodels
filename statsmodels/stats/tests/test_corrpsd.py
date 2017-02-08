@@ -333,7 +333,7 @@ class Test_Factor(object):
             np.fill_diagonal(mat, 1)
 
             # Threshold it
-            mat *= (np.abs(mat) >= 0.4)
+            mat *= (np.abs(mat) >= 0.35)
             smat = sparse.csr_matrix(mat)
 
             rslt = corr_nearest_factor(smat, dm)

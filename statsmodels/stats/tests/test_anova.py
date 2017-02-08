@@ -76,7 +76,7 @@ kidney_table = read_table(kidney_table, sep="\s+")
 
 class TestAnovaLM(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         # kidney data taken from JT's course
         # don't know the license
         cls.data = kidney_table
@@ -99,7 +99,7 @@ class TestAnovaLM(object):
 
 class TestAnovaLMNoconstant(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         # kidney data taken from JT's course
         # don't know the license
         cls.data = kidney_table
@@ -517,5 +517,5 @@ class TestAnova3HC3(TestAnovaLM):
         np.testing.assert_almost_equal(results['PR(>F)'].values, PrF)
 
 if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb-failure'], exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

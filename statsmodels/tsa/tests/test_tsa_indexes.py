@@ -10,15 +10,15 @@ Author: Chad Fulton
 License: BSD-3
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat.testing import SkipTest
 
 import warnings
 import numpy as np
 import pandas as pd
-import os
+import pytest
 
 from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal,
                            assert_raises)
-from nose.exc import SkipTest
 
 from statsmodels.tsa.base import tsa_model
 

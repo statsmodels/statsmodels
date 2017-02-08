@@ -1,7 +1,8 @@
-from nose import SkipTest
-from nose.tools import assert_raises, assert_equal
+from statsmodels.compat.testing import SkipTest
 import numpy as np
+from numpy.testing import assert_raises, assert_equal
 from pandas import Series
+import pytest
 
 from statsmodels.graphics.factorplots import interaction_plot
 
@@ -16,7 +17,7 @@ except ImportError:
 class TestInteractionPlot(object):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         if not have_matplotlib:
             raise SkipTest('matplotlib not available')
         np.random.seed(12345)

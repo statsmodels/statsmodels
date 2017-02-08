@@ -37,17 +37,17 @@ class CheckStataResultsPMixin(CheckStataResultsMixin):
 class TestGLSARCorc(CheckStataResultsPMixin):
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         d2 = macrodata.load().data
         g_gdp = 400*np.diff(np.log(d2['realgdp']))
         g_inv = 400*np.diff(np.log(d2['realinv']))
         exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1]], prepend=False)
 
         mod1 = GLSAR(g_inv, exogg, 1)
-        self.res = mod1.iterative_fit(5)
+        cls.res = mod1.iterative_fit(5)
 
         from .results.macro_gr_corc_stata import results
-        self.results = results
+        cls.results = results
 
     def test_rho(self):
         assert_almost_equal(self.res.model.rho, self.results.rho, 3)  # pylint: disable-msg=E1101
@@ -94,7 +94,5 @@ class TestGLSARCorc(CheckStataResultsPMixin):
 
 
 if __name__=="__main__":
-    import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x',#'--pdb', '--pdb-failure'
-                         ],
-                   exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

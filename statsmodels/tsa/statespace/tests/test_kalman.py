@@ -17,10 +17,12 @@ Time Series Analysis.
 Princeton, N.J.: Princeton University Press.
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat.testing import SkipTest, skip
 
 import numpy as np
 import pandas as pd
 import os
+import pytest
 
 try:
     from scipy.linalg.blas import find_best_blas_type
@@ -41,7 +43,6 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.statespace import _statespace as ss
 from .results import results_kalman_filter
 from numpy.testing import assert_almost_equal, assert_allclose
-from nose.exc import SkipTest
 
 prefix_statespace_map = {
     's': ss.sStatespace, 'd': ss.dStatespace,

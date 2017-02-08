@@ -5,7 +5,7 @@ from statsmodels.stats.contrast import Contrast
 
 class TestContrast(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         R.seed(54321)
         cls.X = R.standard_normal((40,10))
 

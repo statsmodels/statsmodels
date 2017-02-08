@@ -146,5 +146,5 @@ def test_returns_inputs():
     assert_almost_equal(result, np.column_stack((x, y)))
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])
