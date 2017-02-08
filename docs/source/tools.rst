@@ -1,4 +1,3 @@
-.. module:: statsmodels.tools
 .. currentmodule:: statsmodels.tools
 
 
@@ -16,6 +15,8 @@ tools modules, for example :mod:`statsmodels.tsa.tsatools`
 
 Module Reference
 ----------------
+
+.. module:: statsmodels.tools
 
 Basic tools :mod:`tools`
 ^^^^^^^^^^^^^^^^^^^^^^^^

@@ -1,4 +1,3 @@
-.. module:: statsmodels.nonparametric
 .. currentmodule:: statsmodels.nonparametric
 
 .. _nonparametric:
@@ -84,6 +83,8 @@ References
 
 Module Reference
 ----------------
+
+.. module:: statsmodels.nonparametric
 
 The public functions and classes are
 

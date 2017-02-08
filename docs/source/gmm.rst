@@ -1,4 +1,3 @@
-.. module:: statsmodels.sandbox.regression.gmm
 .. currentmodule:: statsmodels.sandbox.regression.gmm
 
 
@@ -27,6 +26,8 @@ only the moment conditions, `momcond` have to be defined.
 
 Module Reference
 """"""""""""""""
+
+.. module:: statsmodels.sandbox.regression.gmm
 
 .. autosummary::
    :toctree: generated/

@@ -1,4 +1,3 @@
-.. module:: statsmodels.genmod.generalized_estimating_equations
 .. currentmodule:: statsmodels.genmod.generalized_estimating_equations
 
 .. _gee:
@@ -59,6 +58,8 @@ References
 
 Module Reference
 ----------------
+
+.. module:: statsmodels.genmod.generalized_estimating_equations
 
 Model Class
 ^^^^^^^^^^^

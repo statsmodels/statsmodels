@@ -1,4 +1,3 @@
-.. module:: statsmodels.genmod.generalized_linear_model
 .. currentmodule:: statsmodels.genmod.generalized_linear_model
 
 .. _glm:
@@ -115,6 +114,8 @@ References
 Module Reference
 ----------------
 
+.. module:: statsmodels.genmod.generalized_linear_model
+
 Model Class
 ^^^^^^^^^^^
 
@@ -183,11 +184,8 @@ available link functions can be obtained by
    NegativeBinomial
    Power
    cauchy
-   cloglog
    identity
    inverse_power
    inverse_squared
-   log
-   logit
    nbinom
    probit

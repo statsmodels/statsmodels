@@ -1,4 +1,3 @@
-.. module:: statsmodels.emplike
 .. currentmodule:: statsmodels.emplike
 
 
@@ -60,6 +59,8 @@ Examples
 
 Module Reference
 ----------------
+
+.. module:: statsmodels.emplike
 
 .. autosummary::
    :toctree: generated/

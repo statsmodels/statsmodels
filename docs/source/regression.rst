@@ -1,4 +1,3 @@
-.. module:: statsmodels.regression.linear_model
 .. currentmodule:: statsmodels.regression.linear_model
 
 
@@ -127,6 +126,8 @@ wendog : array
 
 Module Reference
 ----------------
+
+.. module:: statsmodels.regression.linear_model
 
 Model Classes
 ^^^^^^^^^^^^^
