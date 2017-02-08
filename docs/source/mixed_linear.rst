@@ -1,4 +1,3 @@
-.. module:: statsmodels.regression.mixed_linear_model
 .. currentmodule:: statsmodels.regression.mixed_linear_model
 
 
@@ -161,6 +160,8 @@ users:
 
 Module Reference
 ----------------
+
+.. module:: statsmodels.regression.mixed_linear_model
 
 The model class is:
 

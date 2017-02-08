@@ -46,6 +46,9 @@ if "%1" == "clean" (
 
 if "%1" == "html" (
     REM python %TOOLSPATH%/%EXAMPLEBUILD%
+    echo mkdir %BUILDDIR%
+    echo mkdir %BUILDDIR%\html
+    echo mkdir %BUILDDIR%\html\_static
 	echo python %TOOLSPATH%/%NOTEBOOKBUILD% --execute=True --allow_errors=True
     python %TOOLSPATH%/%NOTEBOOKBUILD% --execute=True --allow_errors=True
     echo python %TOOLSPATH%/%DATASETBUILD%

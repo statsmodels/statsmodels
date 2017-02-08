@@ -1,4 +1,3 @@
-.. module:: statsmodels.discrete.discrete_model
 .. currentmodule:: statsmodels.discrete.discrete_model
 
 
@@ -60,6 +59,8 @@ General references for this class of models are::
 
 Module Reference
 ----------------
+
+.. module:: statsmodels.discrete.discrete_model
 
 The specific model classes are:
 
