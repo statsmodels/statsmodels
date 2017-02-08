@@ -46,10 +46,10 @@ if "%1" == "clean" (
 
 if "%1" == "html" (
     REM python %TOOLSPATH%/%EXAMPLEBUILD%
-	REM echo python %TOOLSPATH%/%NOTEBOOKBUILD% --execute=True --allow_errors=True
-    REM python %TOOLSPATH%/%NOTEBOOKBUILD% --execute=True --allow_errors=True
-    REM echo python %TOOLSPATH%/%DATASETBUILD%
-    REM python %TOOLSPATH%/%DATASETBUILD%
+	echo python %TOOLSPATH%/%NOTEBOOKBUILD% --execute=True --allow_errors=True
+    python %TOOLSPATH%/%NOTEBOOKBUILD% --execute=True --allow_errors=True
+    echo python %TOOLSPATH%/%DATASETBUILD%
+    python %TOOLSPATH%/%DATASETBUILD%
 	echo %SPHINXBUILD% -b html %ALLSPHINXOPTS% %BUILDDIR%/html
 	%SPHINXBUILD% -b html %ALLSPHINXOPTS% %BUILDDIR%/html
 	if errorlevel 1 exit /b 1

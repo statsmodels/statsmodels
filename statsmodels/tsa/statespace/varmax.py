@@ -57,7 +57,7 @@ class VARMAX(MLEModel):
     enforce_invertibility : boolean, optional
         Whether or not to transform the MA parameters to enforce invertibility
         in the moving average component of the model. Default is True.
-    **kwargs
+    kwargs
         Keyword arguments may be used to provide default values for state space
         matrices or for Kalman filtering options. See `Representation`, and
         `KalmanFilter` for more details.
@@ -758,7 +758,7 @@ class VARMAXResults(MLEResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
-        **kwargs
+        kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
 

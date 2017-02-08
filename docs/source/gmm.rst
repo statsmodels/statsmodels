@@ -22,7 +22,6 @@ the optimal weighting matrix and estimating the parameters. Implementing models 
 different moment conditions is done by subclassing GMM. In the minimal implementation
 only the moment conditions, `momcond` have to be defined.
 
-.. module:: statsmodels.sandbox.regression.gmm
 .. currentmodule:: statsmodels.sandbox.regression.gmm
 
 
