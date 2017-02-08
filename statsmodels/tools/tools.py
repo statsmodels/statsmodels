@@ -383,23 +383,6 @@ def clean0(matrix):
     return np.array(np.transpose(val))
 
 
-def rank(X, cond=1.0e-12):
-    """
-    Return the rank of a matrix X based on its generalized inverse,
-    not the SVD.
-    """
-    from warnings import warn
-    warn("rank is deprecated and will be removed in 0.7."
-         " Use np.linalg.matrix_rank instead.", FutureWarning)
-    X = np.asarray(X)
-    if len(X.shape) == 2:
-        D = svdvals(X)
-        return int(np.add.reduce(np.greater(D / D.max(),
-                                            cond).astype(np.int32)))
-    else:
-        return int(not np.alltrue(np.equal(X, 0.)))
-
-
 def fullrank(X, r=None):
     """
     Return a matrix whose column span is the same as X.
@@ -508,14 +491,6 @@ class Bunch(dict):
     def __init__(self, **kw):
         dict.__init__(self, kw)
         self.__dict__ = self
-
-webuse = np.deprecate(webuse,
-                      old_name='statsmodels.tools.tools.webuse',
-                      new_name='statsmodels.datasets.webuse',
-                      message='webuse will be removed from the tools '
-                              'namespace in the 0.7.0 release. Please use the'
-                              ' new import.')
-
 
 def _ensure_2d(x, ndarray=False):
     """

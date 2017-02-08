@@ -253,11 +253,6 @@ class RLM(base.LikelihoodModel):
             raise ValueError("Convergence argument %s not understood" \
                 % conv)
         self.scale_est = scale_est
-        if (isinstance(scale_est,
-                       string_types) and scale_est.lower() == "stand_mad"):
-            from warnings import warn
-            warn("stand_mad is deprecated and will be removed in 0.7.0",
-                 FutureWarning)
 
         wls_results = lm.WLS(self.endog, self.exog).fit()
         if not init:
