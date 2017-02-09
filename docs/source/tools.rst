@@ -39,7 +39,6 @@ insufficiently tested.
    tools.clean0
    tools.fullrank
    tools.isestimable
-   tools.rank
    tools.recipr
    tools.recipr0
    tools.unsqueeze

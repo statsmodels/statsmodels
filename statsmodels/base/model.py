@@ -668,9 +668,6 @@ class GenericLikelihoodModel(LikelihoodModel):
         kwds.setdefault('centered', True)
         return approx_fprime(params, self.loglikeobs, **kwds)
 
-    jac = np.deprecate(score_obs, 'jac', 'score_obs', "Use score_obs method."
-                       " jac will be removed in 0.7.")
-
     def hessian(self, params):
         '''
         Hessian of log-likelihood evaluated at params
@@ -1871,10 +1868,6 @@ class ResultMixin(object):
         '''cached Jacobian of log-likelihood
         '''
         return self.model.score_obs(self.params)
-
-    jacv = np.deprecate(score_obsv, 'jacv', 'score_obsv',
-                        "Use score_obsv attribute."
-                       " jacv will be removed in 0.7.")
 
     @cache_readonly
     def hessv(self):

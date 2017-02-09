@@ -43,11 +43,6 @@ def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
         center = np.apply_over_axes(center, a, axis)
     return np.median((np.fabs(a-center))/c, axis=axis)
 
-def stand_mad(a, c=Gaussian.ppf(3/4.), axis=0):
-    from warnings import warn
-    warn("stand_mad is deprecated and will be removed in 0.7.0. Use mad "
-         "instead.", FutureWarning)
-    return mad(a, c=c, axis=axis)
 
 class Huber(object):
     """

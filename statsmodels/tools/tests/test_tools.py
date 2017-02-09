@@ -13,7 +13,6 @@ from pandas.util.testing import assert_frame_equal, assert_series_equal
 from statsmodels.datasets import longley
 from statsmodels.tools import tools
 from statsmodels.tools.tools import pinv_extended
-from statsmodels.compat.numpy import np_matrix_rank
 
 
 class TestTools(TestCase):
@@ -108,16 +107,6 @@ class TestTools(TestCase):
         Y = tools.recipr0(X)
         assert_almost_equal(Y, np.array([[0.5,1],[-0.25,0]]))
 
-    def test_rank(self):
-        import warnings
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            X = standard_normal((40,10))
-            self.assertEquals(tools.rank(X), np_matrix_rank(X))
-
-            X[:,0] = X[:,1] + X[:,2]
-            self.assertEquals(tools.rank(X), np_matrix_rank(X))
-
     def test_extendedpinv(self):
         X = standard_normal((40, 10))
         np_inv = np.linalg.pinv(X)
@@ -144,13 +133,11 @@ class TestTools(TestCase):
 
             Y = tools.fullrank(X)
             self.assertEquals(Y.shape, (40,9))
-            self.assertEquals(tools.rank(Y), 9)
 
             X[:,5] = X[:,3] + X[:,4]
             Y = tools.fullrank(X)
             self.assertEquals(Y.shape, (40,8))
             warnings.simplefilter("ignore")
-            self.assertEquals(tools.rank(Y), 8)
 
 
 def test_estimable():
