@@ -353,11 +353,6 @@ class GLM(base.LikelihoodModel):
         """
         Initialize a generalized linear model.
         """
-        # TODO: intended for public use?
-        self.history = {'fittedvalues': [],
-                        'params': [np.inf],
-                        'deviance': [np.inf]}
-
         self.df_model = np_matrix_rank(self.exog) - 1
 
         if (self.freq_weights is not None) and \
@@ -1351,8 +1346,6 @@ class GLM(base.LikelihoodModel):
         res._results.constraints = lc
         res._results.k_constr = k_constr
         res._results.results_constrained = res_constr
-        # TODO: the next is not the best. history should bin in results
-        res._results.model.history = res_constr.model.history
         return res
 
 
