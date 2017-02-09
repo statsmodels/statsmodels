@@ -37,7 +37,8 @@ class CheckWeight(object):
         assert_allclose(res1.params, res2.params, atol= 1e-6, rtol=2e-6)
         corr_fact = getattr(self, 'corr_fact', 1)
         assert_allclose(res1.bse, corr_fact * res2.bse, atol= 1e-6, rtol=2e-6)
-        assert_allclose(res1.llf, res2.ll, atol= 1e-6, rtol=1e-7)
+        if not isinstance(self, TestGlmGaussianAwNr):
+            assert_allclose(res1.llf, res2.ll, atol= 1e-6, rtol=1e-7)
         assert_allclose(res1.deviance, res2.deviance, atol= 1e-6, rtol=1e-7)
 
     def test_residuals(self):
@@ -99,9 +100,13 @@ class TestGlmPoissonAwNr(CheckWeight):
                     family=sm.families.Poisson(), var_weights=aweights).fit()
         # compare with discrete, start close to save time
         modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
-        self.res2 = res_stata.results_poisson_aweight_nonrobust
+        
+        # Need to copy to avoid inplace adjustment
+        from copy import copy
+        self.res2 = copy(res_stata.results_poisson_aweight_nonrobust)
+        self.res2.resids = self.res2.resids.copy()
 
-        # Need to adjust resids to add weights
+        # Need to adjust resids for pearson and deviance to add weights
         self.res2.resids[:, 3:5] *= np.sqrt(aweights[:, np.newaxis])
 
 
@@ -159,7 +164,8 @@ class TestGlmPoissonAwHC(CheckWeight):
 
         # This is really close when corr_fact = (wsum - 1.) / wsum, but to
         # avoid having loosen precision of the assert_allclose, I'm doing this
-        # manually
+        # manually. Its *possible* lowering the IRLS convergence criterion
+        # in stata and here will make this less sketchy. 
         self.corr_fact = np.sqrt((wsum - 1.) / wsum) * 0.98518473599905609
         self.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                         family=sm.families.Poisson(), var_weights=aweights
@@ -265,3 +271,22 @@ class TestGlmGaussianAwNr(CheckWeight):
         )
         self.res1 = model.fit(rtol=1e-25, atol=0)
         self.res2 = res_r.results_gaussian_aweights_nonrobust
+
+    def test_r_llf(self):
+        res1 = self.res1
+        res2 = self.res2
+        model = self.res1.model
+
+        # Need to make a few adjustments...
+        # First, calculate scale using nobs as denominator
+        scale = res1.scale * model.df_resid / model.wnobs
+        # Calculate llf using adj scale and wts = freq_weights
+        wts = model.freq_weights
+        llf = model.family.loglike(model.endog, res1.mu, wts, scale)
+        # SM uses (essentially) stat's loglike formula... first term is
+        # (endog - mu) ** 2 / scale
+        adj_sm = -1 / 2 * ((model.endog - res1.mu) ** 2).sum() / scale
+        # R has these 2 terms that stata/sm don't
+        adj_r = -model.wnobs / 2 + np.sum(np.log(model.var_weights)) / 2
+        llf_adj = llf - adj_sm + adj_r
+        assert_allclose(llf_adj, res2.ll, atol=1e-6, rtol=1e-7)

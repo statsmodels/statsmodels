@@ -1419,9 +1419,14 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def llf(self):
+        from statsmodels.genmod.families import Gamma, InverseGaussian
         _modelfamily = self.family
+        if isinstance(_modelfamily, (Gamma, InverseGaussian)):
+            scale = self.deviance / np.sum(self._iweights)
+        else:
+            scale = self.scale
         val = _modelfamily.loglike(self._endog, self.mu, self._iweights,
-                                   scale=self.scale)
+                                   scale=scale)
         return val
 
     @cache_readonly

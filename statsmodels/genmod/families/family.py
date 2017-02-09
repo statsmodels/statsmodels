@@ -604,8 +604,8 @@ class Gaussian(Family):
 
         .. math::
 
-           llf = \sum_i iweights_i * ((Y_i * \mu_i - \mu_i^2 / 2) / scale-
-                 Y^2 / (2 * scale) - (1/2) * \log(2 * \pi * scale))
+           llf = -1 / 2 \sum_i  * iweights_i * ((Y_i - mu_i)^2 / scale +
+                                                \log(2 * \pi * scale))
         """
         if isinstance(self.link, L.Power) and self.link.power == 1:
             # This is just the loglikelihood for classical OLS
@@ -615,8 +615,8 @@ class Gaussian(Family):
             llf -= (1+np.log(np.pi/nobs2))*nobs2
             return llf
         else:
-            return np.sum(iweights * ((endog * mu - mu**2/2)/scale -
-                          endog**2/(2 * scale) - .5*np.log(2 * np.pi * scale)))
+            return np.sum(-0.5 * iweights * ((endog - mu) ** 2 / scale +
+                                             np.log(2 * np.pi * scale)))
 
     def resid_anscombe(self, endog, mu, scale=1.):
         r"""
