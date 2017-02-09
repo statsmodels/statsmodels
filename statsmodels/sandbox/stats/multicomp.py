@@ -1,4 +1,4 @@
-'''
+r'''
 
 from pystatsmodels mailinglist 20100524
 
