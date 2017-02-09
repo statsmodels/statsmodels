@@ -105,17 +105,23 @@ model <- glm(affairs ~ 1 + age + yrs_married,
 
 out2py(model, "results_tweedie_aweights_nonrobust")
 
-data <- read.csv('../statsmodels/datasets/cpunish/cpunish.csv')
-data$INCOME <- data$INCOME / 1000
-data$weight <- c(1, 2, 3, 4, 5, 4, 3, 2, 1, 2, 3, 4, 5, 4, 3, 2, 1)
+data <- read.csv('../statsmodels/genmod/tests/results/stata_cancer_glm.csv')
+data$weights <- rep(1, length(data$studytime))
+data$weights[seq(1, length(data$studytime), 5)] <- 5
+data$weights[seq(1, length(data$studytime), 13)] <- 3
+data$drug <- as.factor(data$drug)
 
-model <- glm(EXECUTIONS ~ INCOME + SOUTH - 1,
+model <- glm(studytime ~ 1 + age + drug,
              data = data,
              family = Gamma(link = "log"),
-             weights = weight,
+             weights = weights,
              control = control)
 
 out2py(model, "results_gamma_aweights_nonrobust")
+
+data <- read.csv('../statsmodels/datasets/cpunish/cpunish.csv')
+data$INCOME <- data$INCOME / 1000
+data$weight <- c(1, 2, 3, 4, 5, 4, 3, 2, 1, 2, 3, 4, 5, 4, 3, 2, 1)
 
 model <- glm(EXECUTIONS ~ INCOME + SOUTH - 1,
              data = data,

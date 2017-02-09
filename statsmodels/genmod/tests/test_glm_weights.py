@@ -37,7 +37,8 @@ class CheckWeight(object):
         assert_allclose(res1.params, res2.params, atol= 1e-6, rtol=2e-6)
         corr_fact = getattr(self, 'corr_fact', 1)
         assert_allclose(res1.bse, corr_fact * res2.bse, atol= 1e-6, rtol=2e-6)
-        if not isinstance(self, TestGlmGaussianAwNr):
+        if not isinstance(self, (TestGlmGaussianAwNr, TestGlmGammaAwNr)):
+            # Matching R is hard
             assert_allclose(res1.llf, res2.ll, atol= 1e-6, rtol=1e-7)
         assert_allclose(res1.deviance, res2.deviance, atol= 1e-6, rtol=1e-7)
 
@@ -55,6 +56,15 @@ class CheckWeight(object):
         if resid_all.get('resid_anscombe') is None:
             return None
         assert_allclose(res1.resid_anscombe, resid_all['resid_anscombe'], atol= 1e-6, rtol=2e-6)
+
+    def test_compare_bfgs(self):
+        res1 = self.res1
+        if isinstance(res1.model.family, sm.families.Tweedie):
+            # Can't do this on Tweedie as loglikelihood is too complex
+            return None
+        res2 = self.res1.model.fit(method='bfgs')
+        assert_allclose(res1.params, res2.params, atol=1e-3, rtol=2e-3)
+        assert_allclose(res1.bse, res2.bse, atol=1e-3, rtol=1e-3)
 
 
 class TestGlmPoissonPlain(CheckWeight):
@@ -231,23 +241,28 @@ class TestGlmGammaAwNr(CheckWeight):
     @classmethod
     def setupClass(cls):
         self = cls
-        import statsmodels.formula.api as smf
+        from .results.results_glm import CancerLog
+        res2 = CancerLog()
+        endog = res2.endog
+        exog = res2.exog[:, :-1]
+        exog = sm.add_constant(exog)
 
-        data = sm.datasets.cpunish.load_pandas()
-        endog = data.endog
-        data = data.exog
-        data['EXECUTIONS'] = endog
-        data['INCOME'] /= 1000
-        aweights = np.array([1, 2, 3, 4, 5, 4, 3, 2, 1, 2, 3, 4, 5, 4, 3, 2,
-                             1])
-        model = smf.glm(
-                'EXECUTIONS ~ INCOME + SOUTH - 1',
-                data=data,
-                family=sm.families.Gamma(link=sm.families.links.log()),
-                var_weights=aweights
-        )
+        aweights = np.repeat(1, len(endog))
+        aweights[::5] = 5
+        aweights[::13] = 3
+        model = sm.GLM(endog, exog, 
+                       family=sm.families.Gamma(link=sm.families.links.log()),
+                       var_weights=aweights)
         self.res1 = model.fit(rtol=1e-25, atol=0)
         self.res2 = res_r.results_gamma_aweights_nonrobust
+
+    def test_r_llf(self):
+        scale = self.res1.deviance / self.res1._iweights.sum()
+        ll = self.res1.model.family.loglike(self.res1.model.endog,
+                                            self.res1.mu,
+                                            self.res1._iweights,
+                                            scale)
+        assert_allclose(ll, self.res2.ll, atol=1e-6, rtol=1e-7)
 
 
 class TestGlmGaussianAwNr(CheckWeight):
