@@ -459,6 +459,36 @@ class GLS(RegressionModel):
             # with error covariance matrix
         return llf
 
+
+    def hessian_factor(self, params, scale=None, observed=True):
+        """Weights for calculating Hessian
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+        observed : bool
+            If True, then the observed Hessian is returned. If false then the
+            expected information matrix is returned.
+
+        Returns
+        -------
+        hessian_factor : ndarray, 1d
+            A 1d weight vector used in the calculation of the Hessian.
+            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
+        """
+
+        if self.sigma is None or self.sigma.shape == ():
+            return np.ones(self.exog.shape[0])
+        elif self.sigma.ndim == 1:
+            return self.cholsigmainv
+        else:
+            return np.diag(self.cholsigmainv)
+
 class WLS(RegressionModel):
     __doc__ = """
     A regression model with diagonal but non-identity covariance structure.
@@ -580,6 +610,30 @@ class WLS(RegressionModel):
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
         llf += 0.5 * np.sum(np.log(self.weights))
         return llf
+
+    def hessian_factor(self, params, scale=None, observed=True):
+        """Weights for calculating Hessian
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+        observed : bool
+            If True, then the observed Hessian is returned. If false then the
+            expected information matrix is returned.
+
+        Returns
+        -------
+        hessian_factor : ndarray, 1d
+            A 1d weight vector used in the calculation of the Hessian.
+            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
+        """
+
+        return self.weights
 
 
 class OLS(WLS):
@@ -752,6 +806,31 @@ class OLS(WLS):
         return hess
 
 
+    def hessian_factor(self, params, scale=None, observed=True):
+        """Weights for calculating Hessian
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+        observed : bool
+            If True, then the observed Hessian is returned. If false then the
+            expected information matrix is returned.
+
+        Returns
+        -------
+        hessian_factor : ndarray, 1d
+            A 1d weight vector used in the calculation of the Hessian.
+            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
+        """
+
+        return np.ones(self.exog.shape[0])
+
+
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         L1_wt=1., start_params=None, profile_scale=False,
                         refit=False, **kwargs):
@@ -781,6 +860,18 @@ class OLS(WLS):
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
+        distributed : bool
+            If True, the model uses distributed methods for fitting,
+            will raise an error if True and partitions is None.
+        generator : function
+            generator used to partition the model, allows for handling
+            of out of memory/parallel computing.
+        partitions : scalar
+            The number of partitions desired for the distributed
+            estimation.
+        threshold : scalar or array-like
+            The threshold below which coefficients are zeroed out,
+            only used for distributed estimation
 
         Returns
         -------
@@ -857,6 +948,7 @@ class OLS(WLS):
                               refit=refit,
                               check_step=False,
                               **defaults)
+
 
     def _fit_ridge(self, alpha):
         """
