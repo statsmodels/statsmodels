@@ -1,4 +1,6 @@
 .. module:: statsmodels.sandbox.distributions
+   :synopsis: Probability distributions
+
 .. currentmodule:: statsmodels.sandbox.distributions
 
 .. _distributions:
@@ -14,6 +16,8 @@ Empirical Distributions
 -----------------------
 
 .. module:: statsmodels.distributions.empirical_distribution
+   :synopsis: Tools for working with empirical distributions
+
 .. currentmodule:: statsmodels.distributions.empirical_distribution
 
 .. autosummary::
@@ -28,6 +32,8 @@ Distribution Extras
 
 
 .. module:: statsmodels.sandbox.distributions.extras
+   :synopsis: Probability distributions and random number generators
+
 .. currentmodule:: statsmodels.sandbox.distributions.extras
 
 *Skew Distributions*
@@ -69,6 +75,8 @@ or u-shaped transformation, such as abs or square. The remaining objects are
 special cases.
 
 .. module:: statsmodels.sandbox.distributions.transformed
+   :synopsis: Experimental probability distributions and random number generators
+
 .. currentmodule:: statsmodels.sandbox.distributions.transformed
 
 .. autosummary::

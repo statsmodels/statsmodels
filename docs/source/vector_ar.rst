@@ -1,6 +1,8 @@
 :orphan:
 
 .. module:: statsmodels.tsa.vector_ar.var_model
+   :synopsis: Vector autoregressions
+
 .. currentmodule:: statsmodels.tsa.vector_ar.var_model
 
 .. _var:
@@ -321,6 +323,8 @@ Class Reference
 ---------------
 
 .. module:: statsmodels.tsa.vector_ar
+   :synopsis: Vector autoregressions and related tools
+
 .. currentmodule:: statsmodels.tsa.vector_ar
 
 .. autosummary::

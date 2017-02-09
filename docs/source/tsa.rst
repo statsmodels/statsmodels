@@ -1,4 +1,6 @@
-.. module:: statsmodels.tools
+.. module:: statsmodels.tsa
+   :synopsis: Time-series analysis
+
 .. currentmodule:: statsmodels.tsa
 
 

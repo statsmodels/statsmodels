@@ -20,7 +20,7 @@ Module Reference
 ----------------
 
 .. module:: statsmodels.iolib
-
+   :synopsis: Tools for reading datasets
 
 .. autosummary::
    :toctree: generated/
