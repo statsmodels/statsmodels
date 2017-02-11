@@ -49,7 +49,7 @@ if "%1" == "html" (
     echo mkdir %BUILDDIR%\html\_static
     mkdir %BUILDDIR%\html\_static
 	echo python %TOOLSPATH%/%NOTEBOOKBUILD% --execute=True --allow_errors=True
-    python %TOOLSPATH%/%NOTEBOOKBUILD% --execute=True --allow_errors=True
+    python %TOOLSPATH%/%NOTEBOOKBUILD% --parallel --report-errors
     echo python %TOOLSPATH%/%DATASETBUILD%
     python %TOOLSPATH%/%DATASETBUILD%
 	echo %SPHINXBUILD% -b html %ALLSPHINXOPTS% %BUILDDIR%/html
