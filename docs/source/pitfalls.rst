@@ -44,7 +44,7 @@ is recommended to create two separate model instances. ::
   mod1 = RLM(endog, exog)
   res1 = mod1.fit(scale_est='mad')
   mod2 = RLM(endog, exog)
-  res2 = mod2.fit(scale_est='stand_mad')
+  res2 = mod2.fit(scale_est=sm.robust.scale.HuberScale())
 
 
 Unidentified Parameters
