@@ -683,6 +683,18 @@ class SmootherResults(FilterResults):
         self._smoothed_forecasts_error = None
         self._smoothed_forecasts_error_cov = None
 
+        # Note: if we concentrated out the scale, need to adjust the
+        # loglikelihood values and all of the covariance matrices and the
+        # values that depend on the covariance matrices
+        if self.filter_concentrated:
+            self.smoothed_state_cov *= self.scale
+            self.smoothed_state_autocov *= self.scale
+            self.smoothed_state_disturbance_cov *= self.scale
+            self.smoothed_measurement_disturbance_cov *= self.scale
+            self.scaled_smoothed_estimator /= self.scale
+            self.scaled_smoothed_estimator_cov /= self.scale
+            self.smoothing_error /= self.scale
+
     def _get_smoothed_forecasts(self):
         if self._smoothed_forecasts is None:
             # Initialize empty arrays

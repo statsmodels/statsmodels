@@ -24,6 +24,7 @@ FILTER_UNIVARIATE = 0x10       # ibid., Chapter 6.4
 FILTER_COLLAPSED = 0x20        # ibid., Chapter 6.5
 FILTER_EXTENDED = 0x40         # ibid., Chapter 10.2
 FILTER_UNSCENTED = 0x80        # ibid., Chapter 10.3
+FILTER_CONCENTRATED = 0x100    # Harvey (1989), Chapter 3.4
 
 INVERT_UNIVARIATE = 0x01
 SOLVE_LU = 0x02
@@ -134,7 +135,7 @@ class KalmanFilter(Representation):
     filter_methods = [
         'filter_conventional', 'filter_exact_initial', 'filter_augmented',
         'filter_square_root', 'filter_univariate', 'filter_collapsed',
-        'filter_extended', 'filter_unscented'
+        'filter_extended', 'filter_unscented', 'filter_concentrated'
     ]
 
     filter_conventional = OptionWrapper('filter_method', FILTER_CONVENTIONAL)
@@ -168,6 +169,10 @@ class KalmanFilter(Representation):
     filter_unscented = OptionWrapper('filter_method', FILTER_UNSCENTED)
     """
     (bool) Flag for unscented Kalman filtering. Not implemented.
+    """
+    filter_concentrated = OptionWrapper('filter_method', FILTER_CONCENTRATED)
+    """
+    (bool) Flag for Kalman filtering with concentrated log-likelihood.
     """
 
     inversion_methods = [
@@ -414,6 +419,9 @@ class KalmanFilter(Representation):
         FILTER_COLLAPSED = 0x20
             Collapsed approach to Kalman filtering. Will be used *in addition*
             to conventional or univariate filtering.
+        FILTER_CONCENTRATED = 0x20
+            Use the concentrated log-likelihood function. Will be used
+            *in addition* to the other options.
 
         Note that only the first method is available if using a Scipy version
         older than 0.16.
@@ -810,7 +818,18 @@ class KalmanFilter(Representation):
         kfilter = self._filter(**kwargs)
         loglikelihood_burn = kwargs.get('loglikelihood_burn',
                                         self.loglikelihood_burn)
-        return np.sum(kfilter.loglikelihood[loglikelihood_burn:])
+        loglike = np.sum(kfilter.loglikelihood[loglikelihood_burn:])
+        # If loglikelihood_burn > 0, we want to burn the component of the
+        # likelihoods that depends on the forecast error. In the
+        # non-concentrated case, this is all of the loglikelihood values, but
+        # in the concentrated case there is a fixed component that we shouldn't
+        # eliminate)
+        if self.filter_method & FILTER_CONCENTRATED:
+            scale = np.sum(kfilter.scale) / self.nobs
+            nobs_unburned = self.nobs - loglikelihood_burn
+            loglike += (-0.5 * nobs_unburned * self.k_endog * np.log(scale)
+                        - 0.5 * self.nobs)
+        return loglike
 
     def loglikeobs(self, **kwargs):
         r"""
@@ -839,11 +858,23 @@ class KalmanFilter(Representation):
         kwargs['conserve_memory'] = MEMORY_CONSERVE ^ MEMORY_NO_LIKELIHOOD
         kfilter = self._filter(**kwargs)
         llf_obs = np.array(kfilter.loglikelihood, copy=True)
+        if self.filter_method & FILTER_CONCENTRATED:
+            scale = np.sum(kfilter.scale) / self.nobs
+            llf_obs += -0.5 * self.k_endog * (np.log(scale) + 1)
 
         # Set any burned observations to have zero likelihood
         loglikelihood_burn = kwargs.get('loglikelihood_burn',
                                         self.loglikelihood_burn)
-        llf_obs[:loglikelihood_burn] = 0
+        if not self.filter_method & FILTER_CONCENTRATED:
+            llf_obs[:loglikelihood_burn] = 0
+        # Except when the scale is concentrated, the loglikelihood
+        # decomposition requires that these observations be -0.5 (i.e. we want
+        # to burn the component of the likelihoods that depends on the
+        # forecast error. In the non-concentrated case, this is all of it, but
+        # in the concentrated case there is a fixed component that we shouldn't
+        # eliminate)
+        else:
+            llf_obs[:loglikelihood_burn] = -0.5
 
         return llf_obs
 
@@ -1296,7 +1327,7 @@ class FilterResults(FrozenRepresentation):
         'tmp1', 'tmp2', 'tmp3', 'tmp4', 'forecasts',
         'forecasts_error', 'forecasts_error_cov', 'llf_obs',
         'collapsed_forecasts', 'collapsed_forecasts_error',
-        'collapsed_forecasts_error_cov',
+        'collapsed_forecasts_error_cov', 'scale'
     ]
 
     _filter_options = (
@@ -1559,6 +1590,37 @@ class FilterResults(FrozenRepresentation):
                                self.predicted_state_cov[:, :, t]),
                         self.design[:, :, design_t].T
                     ) + self.obs_cov[:, :, obs_cov_t]
+
+        # Note: if we concentrated out the scale, need to adjust the
+        # loglikelihood values and all of the covariance matrices and the
+        # values that depend on the covariance matrices
+        # Note: concentrated computation is not permitted with collapsed
+        # version, so we do not need to modify collapsed arrays.
+        self.scale = 1.
+        if self.filter_concentrated:
+            self.scale = np.sum(kalman_filter.scale) / self.nobs
+            self.llf_obs += -0.5 * self.k_endog * (np.log(self.scale) + 1)
+
+            self.obs_cov *= self.scale
+            self.state_cov *= self.scale
+
+            self.initial_state_cov *= self.scale
+            self.predicted_state_cov *= self.scale
+            self.filtered_state_cov *= self.scale
+            self.forecasts_error_cov *= self.scale
+            if self.missing_forecasts_error_cov is not None:
+                self.missing_forecasts_error_cov *= self.scale
+
+            if not self._compatibility_mode and not (
+                    self.memory_no_std_forecast or
+                    self.invert_lu or
+                    self.solve_lu or
+                    self.filter_collapsed):
+                # Note: do not have to adjust the Kalman gain or tmp4
+                self.tmp1 *= self.scale
+                self.tmp2 /= self.scale
+                self.tmp3 /= self.scale
+                self._standardized_forecasts_error /= self.scale**0.5
 
     @property
     def kalman_gain(self):

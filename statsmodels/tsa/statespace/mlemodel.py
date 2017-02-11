@@ -1538,12 +1538,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     statsmodels.tsa.statespace.representation.FrozenRepresentation
     """
     def __init__(self, model, params, results, cov_type='opg',
-                 cov_kwds=None, **kwargs):
+                 cov_kwds=None, scale=1, **kwargs):
         self.data = model.data
 
         tsbase.TimeSeriesModelResults.__init__(self, model, params,
                                                normalized_cov_params=None,
-                                               scale=1.)
+                                               scale=scale)
 
         # Save the state space representation output
         self.filter_results = results
@@ -2005,7 +2005,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (float) The value of the log-likelihood function evaluated at `params`.
         """
-        return self.llf_obs[self.filter_results.loglikelihood_burn:].sum()
+        return self.llf_obs.sum()
 
     @cache_readonly
     def loglikelihood_burn(self):
@@ -2730,6 +2730,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             ('BIC', ["%#5.3f" % self.bic]),
             ('HQIC', ["%#5.3f" % self.hqic])
         ]
+        if self.filter_results.filter_concentrated:
+            top_right.append(('Scale', ["%#5.3f" % self.scale]))
 
         if hasattr(self, 'cov_type'):
             top_left.append(('Covariance Type:', [self.cov_type]))

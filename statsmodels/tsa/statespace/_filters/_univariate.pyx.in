@@ -28,7 +28,7 @@ cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 
 from statsmodels.tsa.statespace._kalman_filter cimport (
-    MEMORY_NO_LIKELIHOOD, MEMORY_NO_STD_FORECAST)
+    MEMORY_NO_LIKELIHOOD, MEMORY_NO_STD_FORECAST, FILTER_CONCENTRATED)
 
 {{for prefix, types in TYPES.items()}}
 {{py:cython_type, dtype, typenum = types}}
@@ -288,10 +288,13 @@ cdef void {{prefix}}filtered_state_cov({{prefix}}KalmanFilter kfilter, {{prefix}
 cdef void {{prefix}}loglikelihood({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, int i, {{cython_type}} forecast_error_cov, {{cython_type}} forecast_error_cov_inv):
     kfilter._loglikelihood[0] = (
         kfilter._loglikelihood[0] - 0.5*(
-            {{combined_prefix}}log(2 * NPY_PI * forecast_error_cov) + 
-            kfilter._forecast_error[i]**2 * forecast_error_cov_inv
+            {{combined_prefix}}log(2 * NPY_PI * forecast_error_cov)
         )
     )
+    if kfilter.filter_method & FILTER_CONCENTRATED:
+        kfilter._scale[0] = kfilter._scale[0] + kfilter._forecast_error[i]**2 * forecast_error_cov_inv
+    else:
+        kfilter._loglikelihood[0] = kfilter._loglikelihood[0] - 0.5 * (kfilter._forecast_error[i]**2 * forecast_error_cov_inv)
 
 cdef int {{prefix}}updating_univariate({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
     # the updating step was performed in the forecast_univariate step
@@ -435,6 +438,9 @@ cdef {{cython_type}} {{prefix}}inverse_noop_univariate({{prefix}}KalmanFilter kf
     return 0
 
 cdef {{cython_type}} {{prefix}}loglikelihood_univariate({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, {{cython_type}} determinant):
+    return 0
+
+cdef {{cython_type}} {{prefix}}scale_univariate({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
     return 0
 
 {{endfor}}

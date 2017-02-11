@@ -28,8 +28,7 @@ cdef int FILTER_UNIVARIATE = 0x10       # ibid., Chapter 6.4
 cdef int FILTER_COLLAPSED = 0x20        # ibid., Chapter 6.5
 cdef int FILTER_EXTENDED = 0x40         # ibid., Chapter 10.2
 cdef int FILTER_UNSCENTED = 0x80        # ibid., Chapter 10.3
-cdef int SMOOTHER_CLASSICAL = 0x100     # ibid., Chapter 4.6.1
-cdef int SMOOTHER_ALTERNATIVE = 0x200   # ibid., Chapter 4.6.1
+cdef int FILTER_CONCENTRATED = 0x100    # Harvey (1989), Chapter 3.4
 
 # ### Inversion methods
 # Methods by which the terms using the inverse of the forecast error
@@ -88,17 +87,20 @@ from statsmodels.tsa.statespace._filters._conventional cimport (
     {{prefix}}updating_missing_conventional,
     {{prefix}}inverse_missing_conventional,
     {{prefix}}loglikelihood_missing_conventional,
+    {{prefix}}scale_missing_conventional,
     {{prefix}}forecast_conventional,
     {{prefix}}updating_conventional,
     {{prefix}}prediction_conventional,
-    {{prefix}}loglikelihood_conventional
+    {{prefix}}loglikelihood_conventional,
+    {{prefix}}scale_conventional
 )
 from statsmodels.tsa.statespace._filters._univariate cimport (
     {{prefix}}forecast_univariate,
     {{prefix}}updating_univariate,
     {{prefix}}inverse_noop_univariate,
     {{prefix}}prediction_univariate,
-    {{prefix}}loglikelihood_univariate
+    {{prefix}}loglikelihood_univariate,
+    {{prefix}}scale_univariate
 )
 from statsmodels.tsa.statespace._filters._univariate_diffuse cimport (
     {{prefix}}forecast_univariate_diffuse,
@@ -591,6 +593,7 @@ cdef class {{prefix}}KalmanFilter(object):
             storage = self.model.nobs
         dim1[0] = storage
         self.loglikelihood = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+        self.scale = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
 
         # Converged matrices
         dim2[0] = self.k_endog; dim2[1] = self.k_endog;
@@ -712,6 +715,10 @@ cdef class {{prefix}}KalmanFilter(object):
                                    ' state dimension is equal to or larger than the'
                                    ' dimension of the observation vector.')
 
+            if filter_method & FILTER_COLLAPSED and filter_method & FILTER_CONCENTRATED:
+                raise RuntimeError('Cannot apply a concentrated likelihood function'
+                                   ' with a collapsed observation vector.')
+
             # Change the smoother output flag
             self.filter_method = filter_method
 
@@ -780,6 +787,7 @@ cdef class {{prefix}}KalmanFilter(object):
         # Clear values
         if self.t == 0 or not (self.conserve_memory & MEMORY_NO_LIKELIHOOD):
             self.loglikelihood[self.t] = 0
+            self.scale[self.t] = 0
 
         # Initialize pointers to current-iteration objects
         self.initialize_statespace_object_pointers()
@@ -847,6 +855,8 @@ cdef class {{prefix}}KalmanFilter(object):
                 # self._calculate_loglikelihood() +
                 self.model.collapse_loglikelihood
             )
+        if self.filter_method & FILTER_CONCENTRATED:
+            self._scale[0] = self._scale[0] + self.calculate_scale(self, self.model)
 
         # Prediction step (default timing)
         if self.filter_timing == TIMING_INIT_PREDICTED:
@@ -983,6 +993,7 @@ cdef class {{prefix}}KalmanFilter(object):
         self._kalman_gain = &self.kalman_gain[0, 0, gain_t]
 
         self._loglikelihood = &self.loglikelihood[loglikelihood_t]
+        self._scale = &self.scale[loglikelihood_t]
 
         # Initialize object-level pointers to named temporary arrays
         self._tmp1 = &self.tmp1[0, 0, smoothing_t]
@@ -1008,13 +1019,14 @@ cdef class {{prefix}}KalmanFilter(object):
             self.updating = {{prefix}}updating_univariate
             self.inversion = {{prefix}}inverse_noop_univariate
             self.calculate_loglikelihood = {{prefix}}loglikelihood_univariate
-            self.prediction = {{prefix}}prediction_univariate                
-
+            self.calculate_scale = {{prefix}}scale_univariate
+            self.prediction = {{prefix}}prediction_univariate
         # Conventional method
         elif self.filter_method & FILTER_CONVENTIONAL:
             self.forecasting = {{prefix}}forecast_conventional
             self.updating = {{prefix}}updating_conventional
             self.calculate_loglikelihood = {{prefix}}loglikelihood_conventional
+            self.calculate_scale = {{prefix}}scale_conventional
             self.prediction = {{prefix}}prediction_conventional
 
             # Inversion method
@@ -1049,6 +1061,7 @@ cdef class {{prefix}}KalmanFilter(object):
 
             # Change the loglikelihood calculation to give zero.
             self.calculate_loglikelihood = {{prefix}}loglikelihood_missing_conventional
+            self.calculate_scale = {{prefix}}scale_missing_conventional
 
             # The prediction step is the same as the conventional Kalman
             # filter

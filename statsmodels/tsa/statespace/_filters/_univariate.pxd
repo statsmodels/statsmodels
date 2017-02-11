@@ -22,6 +22,7 @@ cdef int supdating_univariate(sKalmanFilter kfilter, sStatespace model)
 cdef int sprediction_univariate(sKalmanFilter kfilter, sStatespace model)
 cdef np.float32_t sinverse_noop_univariate(sKalmanFilter kfilter, sStatespace model, np.float32_t determinant) except *
 cdef np.float32_t sloglikelihood_univariate(sKalmanFilter kfilter, sStatespace model, np.float32_t determinant)
+cdef np.float32_t sscale_univariate(sKalmanFilter kfilter, sStatespace model)
 
 cdef void sforecast_error(sKalmanFilter kfilter, sStatespace model, int i)
 cdef np.float32_t sforecast_error_cov(sKalmanFilter kfilter, sStatespace model, int i)
@@ -38,6 +39,7 @@ cdef int dupdating_univariate(dKalmanFilter kfilter, dStatespace model)
 cdef int dprediction_univariate(dKalmanFilter kfilter, dStatespace model)
 cdef np.float64_t dinverse_noop_univariate(dKalmanFilter kfilter, dStatespace model, np.float64_t determinant) except *
 cdef np.float64_t dloglikelihood_univariate(dKalmanFilter kfilter, dStatespace model, np.float64_t determinant)
+cdef np.float64_t dscale_univariate(dKalmanFilter kfilter, dStatespace model)
 
 cdef void dforecast_error(dKalmanFilter kfilter, dStatespace model, int i)
 cdef np.float64_t dforecast_error_cov(dKalmanFilter kfilter, dStatespace model, int i)
@@ -54,6 +56,7 @@ cdef int cupdating_univariate(cKalmanFilter kfilter, cStatespace model)
 cdef int cprediction_univariate(cKalmanFilter kfilter, cStatespace model)
 cdef np.complex64_t cinverse_noop_univariate(cKalmanFilter kfilter, cStatespace model, np.complex64_t determinant) except *
 cdef np.complex64_t cloglikelihood_univariate(cKalmanFilter kfilter, cStatespace model, np.complex64_t determinant)
+cdef np.complex64_t cscale_univariate(cKalmanFilter kfilter, cStatespace model)
 
 cdef void cforecast_error(cKalmanFilter kfilter, cStatespace model, int i)
 cdef np.complex64_t cforecast_error_cov(cKalmanFilter kfilter, cStatespace model, int i)
@@ -70,6 +73,7 @@ cdef int zupdating_univariate(zKalmanFilter kfilter, zStatespace model)
 cdef int zprediction_univariate(zKalmanFilter kfilter, zStatespace model)
 cdef np.complex128_t zinverse_noop_univariate(zKalmanFilter kfilter, zStatespace model, np.complex128_t determinant) except *
 cdef np.complex128_t zloglikelihood_univariate(zKalmanFilter kfilter, zStatespace model, np.complex128_t determinant)
+cdef np.complex128_t zscale_univariate(zKalmanFilter kfilter, zStatespace model)
 
 cdef void zforecast_error(zKalmanFilter kfilter, zStatespace model, int i)
 cdef np.complex128_t zforecast_error_cov(zKalmanFilter kfilter, zStatespace model, int i)
