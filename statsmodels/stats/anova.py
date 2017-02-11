@@ -417,14 +417,14 @@ class AnovaRM(object):
     Parameters
     ----------
     data : DataFrame
-    dv : string
+    depvar : string
         The dependent variable in `data`
     subject : string
         Specify the subject id
     within : a list of string(s)
         The within-subject factors
     between : a list of string(s)
-        The between-subject factors
+        The between-subject factors, this is not yet implemented
 
     Returns
     -------
@@ -436,9 +436,9 @@ class AnovaRM(object):
 
     """
 
-    def __init__(self, data, dv, subject, within=None, between=None):
+    def __init__(self, data, depvar, subject, within=None, between=None):
         self.data = data
-        self.dv = dv
+        self.depvar = depvar
         self.within = within
         if 'C' in within:
             raise ValueError("Factor name cannot be 'C'! This is in conflict "
@@ -477,7 +477,7 @@ class AnovaRM(object):
                              ' factors?')
 
     def fit(self):
-        y = self.data[self.dv].values
+        y = self.data[self.depvar].values
 
         # Construct OLS endog and exog from string using patsy
         within = ['C(%s, Sum)' % i for i in self.within]
