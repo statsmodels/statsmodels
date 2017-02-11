@@ -449,6 +449,7 @@ statespace_ext_data = dict(
               "filename": "_tools",
               "sources": []},
 )
+
 try:
     from scipy.linalg import cython_blas
     ext_data.update(statespace_ext_data)
@@ -456,10 +457,6 @@ except ImportError:
     for name, data in statespace_ext_data.items():
         path = '.'.join([data["name"].split('.')[0], 'pyx.in'])
         append_cython_exclusion(path, CYTHON_EXCLUSION_FILE)
-
-# Statespace also requires the npymath configuration. We add this at build time
-# in the custom build_ext command below
-EXTS_NEEDING_NPYMATH = [ext_data['_statespace']['name']]
 
 extensions = []
 for name, data in ext_data.items():
@@ -473,6 +470,10 @@ for name, data in ext_data.items():
     obj = Extension('%s.%s' % (destdir, filename), **data)
 
     extensions.append(obj)
+
+# Statespace also requires the npymath configuration. We add this at build time
+# in the custom build_ext command below
+EXTS_NEEDING_NPYMATH = ['statsmodels.tsa.statespace._statespace']
 
 
 def get_data_files():
