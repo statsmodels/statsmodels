@@ -573,6 +573,33 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         return result
 
+    def _handle_args(self, names, defaults, *args, **kwargs):
+        output_args = []
+        # We need to handle positional arguments in two ways, in case this was
+        # called by a Scipy optimization routine
+        if len(args) > 0:
+            # the fit() method will pass a dictionary
+            if isinstance(args[0], dict):
+                flags = args[0]
+            # otherwise, a user may have just used positional arguments...
+            else:
+                flags = dict(zip(names, args))
+            for i in range(len(names)):
+                output_args.append(flags.get(names[i], defaults[i]))
+
+            for name, value in flags.items():
+                if name in kwargs:
+                    raise TypeError("loglike() got multiple values for keyword"
+                                    " argument '%s'" % name)
+        else:
+            for i in range(len(names)):
+                output_args.append(kwargs.pop(names[i], defaults[i]))
+
+        return tuple(output_args) + (kwargs,)
+
+    _loglike_param_names = ['transformed', 'complex_step']
+    _loglike_param_defaults = [True, True]
+
     def loglike(self, params, *args, **kwargs):
         """
         Loglikelihood evaluation
@@ -604,26 +631,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         update : modifies the internal state of the state space model to
                  reflect new params
         """
-        # We need to handle positional arguments in two ways, in case this was
-        # called by a Scipy optimization routine
-        if len(args) > 0:
-            argnames = ['transformed', 'complex_step']
-            # the fit() method will pass a dictionary
-            if isinstance(args[0], dict):
-                flags = args[0]
-            # otherwise, a user may have just used positional arguments...
-            else:
-                flags = dict(zip(argnames, args))
-            transformed = flags.get('transformed', True)
-            complex_step = flags.get('complex_step', True)
-
-            for name, value in flags.items():
-                if name in kwargs:
-                    raise TypeError("loglike() got multiple values for keyword"
-                                    " argument '%s'" % name)
-        else:
-            transformed = kwargs.pop('transformed', True)
-            complex_step = kwargs.pop('complex_step', True)
+        transformed, complex_step, kwargs = self._handle_args(
+            MLEModel._loglike_param_names, MLEModel._loglike_param_defaults,
+            *args, **kwargs)
 
         if not transformed:
             params = self.transform_params(params)
@@ -1007,6 +1017,10 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         return -partials / 2.
 
+    _score_param_names = ['transformed', 'score_method',
+                          'approx_complex_step', 'approx_centered']
+    _score_param_defaults = [True, 'approx', None, True]
+
     def score(self, params, *args, **kwargs):
         """
         Compute the score function at params.
@@ -1036,32 +1050,14 @@ class MLEModel(tsbase.TimeSeriesModel):
         """
         params = np.array(params, ndmin=1)
 
-        # We were given one positional argument if this was called by a Scipy
-        # optimization routine
-        if len(args) > 0:
-            argnames = ['transformed', 'method', 'approx_complex_step',
-                        'approx_centered']
-            # the fit() method will pass a dictionary
-            if isinstance(args[0], dict):
-                flags = args[0]
-                flags['method'] = flags.get('score_method', 'approx')
-            # otherwise, a user may have just used positional arguments...
-            else:
-                flags = dict(zip(argnames, args))
-            transformed = flags.get('transformed', True)
-            method = flags.get('method', 'approx')
-            approx_complex_step = flags.get('approx_complex_step', None)
-            approx_centered = flags.get('approx_centered', True)
-
-            for name, value in flags.items():
-                if name in kwargs:
-                    raise TypeError("score() got multiple values for keyword"
-                                    " argument '%s'" % name)
-        else:
-            transformed = kwargs.pop('transformed', True)
-            method = kwargs.pop('method', 'approx')
-            approx_complex_step = kwargs.pop('approx_complex_step', None)
-            approx_centered = kwargs.pop('approx_centered', False)
+        transformed, method, approx_complex_step, approx_centered, kwargs = (
+            self._handle_args(MLEModel._score_param_names,
+                              MLEModel._score_param_defaults, *args, **kwargs))
+        # For fit() calls, the method is called 'score_method' (to distinguish
+        # it from the method used for fit) but generally in kwargs the method
+        # will just be called 'method'
+        if 'method' in kwargs:
+            method = kwargs.pop('method')
 
         if approx_complex_step is None:
             approx_complex_step = not self.ssm._complex_endog
@@ -1144,6 +1140,10 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         return score
 
+    _hessian_param_names = ['transformed', 'hessian_method',
+                            'approx_complex_step', 'approx_centered']
+    _hessian_param_defaults = [True, 'approx', None, True]
+
     def hessian(self, params, *args, **kwargs):
         """
         Hessian matrix of the likelihood function, evaluated at the given
@@ -1171,32 +1171,15 @@ class MLEModel(tsbase.TimeSeriesModel):
         `fit` must call this function and only supports passing arguments via
         \*args (for example `scipy.optimize.fmin_l_bfgs`).
         """
-        # We were given one positional argument if this was called by a Scipy
-        # optimization routine
-        if len(args) > 0:
-            argnames = ['transformed', 'method', 'approx_complex_step',
-                        'approx_centered']
-            # the fit() method will pass a dictionary
-            if isinstance(args[0], dict):
-                flags = args[0]
-                flags['method'] = flags.get('hessian_method', 'approx')
-            # otherwise, a user may have just used positional arguments...
-            else:
-                flags = dict(zip(argnames, args))
-            transformed = flags.get('transformed', True)
-            method = flags.get('method', 'approx')
-            approx_complex_step = flags.get('approx_complex_step', None)
-            approx_centered = flags.get('approx_centered', True)
-
-            for name, value in flags.items():
-                if name in kwargs:
-                    raise TypeError("hessian() got multiple values for keyword"
-                                    " argument '%s'" % name)
-        else:
-            transformed = kwargs.pop('transformed', False)
-            method = kwargs.pop('method', 'approx')
-            approx_complex_step = kwargs.pop('approx_complex_step', None)
-            approx_centered = kwargs.pop('approx_centered', False)
+        transformed, method, approx_complex_step, approx_centered, kwargs = (
+            self._handle_args(MLEModel._hessian_param_names,
+                              MLEModel._hessian_param_defaults,
+                              *args, **kwargs))
+        # For fit() calls, the method is called 'hessian_method' (to
+        # distinguish it from the method used for fit) but generally in kwargs
+        # the method will just be called 'method'
+        if 'method' in kwargs:
+            method = kwargs.pop('method')
 
         if not transformed and approx_complex_step:
             raise ValueError("Cannot use complex-step approximations to"
