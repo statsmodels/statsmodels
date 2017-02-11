@@ -398,7 +398,7 @@ class VAR(tsbase.TimeSeriesModel):
             bic : Bayesian a.k.a. Schwarz
         verbose : bool, default False
             Print order selection output to the screen
-        trend, str {"c", "ct", "ctt", "nc"}
+        trend : str {"c", "ct", "ctt", "nc"}
             "c" - add constant
             "ct" - constant and trend
             "ctt" - constant, linear and quadratic trend

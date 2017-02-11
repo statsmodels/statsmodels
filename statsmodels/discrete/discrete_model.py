@@ -967,7 +967,7 @@ class Poisson(CountModel):
 
         Returns
         -------
-        loglike : ndarray (nobs,)
+        loglike : array-like
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -1124,8 +1124,8 @@ class Poisson(CountModel):
 
         Returns
         -------
-        score : ndarray (nobs, k_vars)
-            The score vector of the model evaluated at `params`
+        score : array-like
+            The score vector (nobs, k_vars) of the model evaluated at `params`
 
         Notes
         -----
@@ -1272,7 +1272,7 @@ class Logit(BinaryModel):
 
         Returns
         -------
-        loglike : ndarray (nobs,)
+        loglike : ndarray
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -1325,7 +1325,7 @@ class Logit(BinaryModel):
 
         Returns
         -------
-        jac : ndarray, (nobs, k_vars)
+        jac : array-like
             The derivative of the loglikelihood for each observation evaluated
             at `params`.
 
@@ -1473,7 +1473,7 @@ class Probit(BinaryModel):
 
         Returns
         -------
-        loglike : ndarray (nobs,)
+        loglike : array-like
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -1533,7 +1533,7 @@ class Probit(BinaryModel):
 
         Returns
         -------
-        jac : ndarray, (nobs, k_vars)
+        jac : array-like
             The derivative of the loglikelihood for each observation evaluated
             at `params`.
 
@@ -1703,7 +1703,7 @@ class MNLogit(MultinomialModel):
 
         Returns
         -------
-        loglike : ndarray (nobs,)
+        loglike : array-like
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -1778,7 +1778,7 @@ class MNLogit(MultinomialModel):
 
         Returns
         --------
-        jac : ndarray, (nobs, k_vars*(J-1))
+        jac : array-like
             The derivative of the loglikelihood for each observation evaluated
             at `params` .
 

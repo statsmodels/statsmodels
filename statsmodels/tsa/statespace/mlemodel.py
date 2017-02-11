@@ -1095,12 +1095,12 @@ class MLEModel(tsbase.TimeSeriesModel):
         ----------
         params : array_like
             Array of parameters at which to evaluate the score.
-        **kwargs
+        kwargs
             Additional arguments to the `loglike` method.
 
         Returns
         ----------
-        score : array (nobs, k_vars)
+        score : array
             Score per observation, evaluated at `params`.
 
         Notes
