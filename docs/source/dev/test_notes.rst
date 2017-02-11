@@ -62,7 +62,7 @@ tested. The tests look something like
         """
 
         @classmethod
-        def setupClass(cls):
+        def setup_class(cls):
             # set up model
             data = sm.datasets.spector.load()
             data.exog = sm.add_constant(data.exog)

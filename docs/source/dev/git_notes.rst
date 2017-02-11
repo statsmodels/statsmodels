@@ -45,22 +45,27 @@ This should take you to your fork's page.
 
 Then, you want to clone the fork to your machine::
 
-    git clone git@github.com:your-user-name/statsmodels.git statsmodels-yourname
-    cd statsmodels-yourname
-    git remote add upstream git://github.com/statsmodels/statsmodels.git
+    git clone https://github.com/your-user-name/statsmodels
+    cd statsmodels
+    git remote add upstream https://github.com/statsmodels/statsmodels
+    git fetch --all
 
-The first line creates a directory named `statsmodels-yourname`. The third line
-sets-up a read-only connection to the upstream statsmodels repository. This
-will allow you to periodically update your local code with changes in the
-upstream.  
+The third line sets-up a read-only connection to the upstream statsmodels
+repository. This will allow you to periodically update your local code with
+changes in the upstream.  The final command fetches both your repository and
+the upstream statsmodels repository.
 
 Create a Branch
 ~~~~~~~~~~~~~~~
 
 All changes to the code should be made in a feature branch. To create a branch, type::
 
-    git branch shiny-new-feature
-    git checkout shiny-new-feature
+    git checkout master
+    git rebase upstream/master
+    git checkout -b shiny-new-feature
+
+The first two lines ensure you are starting from an up-to-date version of the upstream
+statsmodels repository.  The third creates and checkout a new branch.
 
 Doing::
 
@@ -122,20 +127,26 @@ Pushing your changes
 At any time you can push your feature branch (and any changes) to your github
 (fork) repository by::
 
-    git push origin shiny-new-feature
+    git push
 
-Here `origin` is the default name given to your remote repository. You can see
-the remote repositories by::
+although the first time you will need to run
+
+    git push --set-upstream origin shiny-new-feature
+
+to instruct git to set the current branch to track its corresponding branch in
+your github repository.
+
+You can see the remote repositories by::
 
     git remote -v
 
 If you added the upstream repository as described above you will see something
 like::
 
-    origin  git@github.com:yourname/statsmodels.git (fetch)
-    origin  git@github.com:yourname/statsmodels.git (push)
-    upstream        git://github.com/statsmodels/statsmodels.git (fetch)
-    upstream        git://github.com/statsmodels/statsmodels.git (push)
+    origin  https://github.com/yourname/statsmodels.git (fetch)
+    origin  https://github.com/yourname/statsmodels.git (push)
+    upstream        https://github.com/statsmodels/statsmodels.git (fetch)
+    upstream        https://github.com/statsmodels/statsmodels.git (push)
 
 Before you push any commits, however, it is *highly* recommended that you make
 sure what you are pushing makes sense and looks clean. You can review your
