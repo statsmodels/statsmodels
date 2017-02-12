@@ -5,16 +5,22 @@ Created on Fri Mar 01 14:56:56 2013
 
 Author: Josef Perktold
 """
+import warnings
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal, assert_array_less
+from numpy.testing import (assert_almost_equal, assert_equal, assert_array_less,
+                           assert_raises, assert_allclose)
 
-from statsmodels.stats.proportion import proportion_confint
+from statsmodels.stats.proportion import (proportion_confint,
+                                          multinomial_proportions_confint)
 import statsmodels.stats.proportion as smprop
-import warnings
+from statsmodels.tools.sm_exceptions import HypothesisTestWarning
+
 
 class Holder(object):
     pass
+
+
 
 def test_confint_proportion():
     from .results.results_proportion import res_binom, res_binom_methods
@@ -49,6 +55,67 @@ def test_proportion_effect_size():
     # example from blog
     es = smprop.proportion_effectsize(0.5, 0.4)
     assert_almost_equal(es, 0.2013579207903309, decimal=13)
+
+def test_confint_multinomial_proportions():
+    from .results.results_multinomial_proportions import res_multinomial
+
+    for ((method, description), values) in res_multinomial.items():
+        cis = multinomial_proportions_confint(values.proportions, 0.05,
+                                              method=method)
+        assert_almost_equal(
+            values.cis, cis, decimal=values.precision,
+            err_msg='"%s" method, %s' % (method, description))
+
+def test_multinomial_proportions_errors():
+    # Out-of-bounds values for alpha raise a ValueError
+    for alpha in [-.1, 0, 1, 1.1]:
+        assert_raises(ValueError, multinomial_proportions_confint,
+                      [5] * 50, alpha=alpha)
+
+    assert_raises(ValueError, multinomial_proportions_confint,
+                  np.arange(50) - 1)
+    # Any unknown method is reported.
+    for method in ['unknown_method', 'sisok_method', 'unknown-glaz']:
+        assert_raises(NotImplementedError, multinomial_proportions_confint,
+                      [5] * 50, method=method)
+
+def  test_confint_multinomial_proportions_zeros():
+    # test when a count is zero or close to zero
+    # values from R MultinomialCI
+    ci01 = np.array([
+     0.09364718, 0.1898413,
+     0.00000000, 0.0483581,
+     0.13667426, 0.2328684,
+     0.10124019, 0.1974343,
+     0.10883321, 0.2050273,
+     0.17210833, 0.2683024,
+     0.09870919, 0.1949033]).reshape(-1,2)
+
+    ci0 = np.array([
+    0.09620253, 0.19238867,
+    0.00000000, 0.05061652,
+    0.13924051, 0.23542664,
+    0.10379747, 0.19998360,
+    0.11139241, 0.20757854,
+    0.17468354, 0.27086968,
+    0.10126582, 0.19745196]).reshape(-1,2)
+
+    # the shifts are the differences between "LOWER(SG)"  "UPPER(SG)" and
+    # "LOWER(C+1)" "UPPER(C+1)" in verbose printout
+    # ci01_shift = np.array([0.002531008, -0.002515122])  # not needed
+    ci0_shift = np.array([0.002531642, 0.002515247])
+
+    p = [56, 0.1, 73, 59, 62, 87, 58]
+    ci_01 = smprop.multinomial_proportions_confint(p, 0.05,
+                                                   method='sison_glaz')
+    p = [56, 0, 73, 59, 62, 87, 58]
+    ci_0 = smprop.multinomial_proportions_confint(p, 0.05,
+                                                  method='sison_glaz')
+
+    assert_allclose(ci_01, ci01, atol=1e-5)
+    assert_allclose(ci_0, np.maximum(ci0 - ci0_shift, 0), atol=1e-5)
+    assert_allclose(ci_01, ci_0, atol=5e-4)
+
 
 class CheckProportionMixin(object):
     def test_proptest(self):
@@ -160,6 +227,25 @@ class TestProportion(CheckProportionMixin):
         res_prop_test_1.method = '1-sample proportions test without continuity correction'
         res_prop_test_1.data_name = 'smokers2[1] out of patients[1], null probability 0.9'
         self.res_prop_test_1 = res_prop_test_1
+
+    # GH 2969
+    def test_default_values(self):
+        count = np.array([5, 12])
+        nobs = np.array([83, 99])
+        stat, pval = smprop.proportions_ztest(count, nobs, value=None)
+        assert_almost_equal(stat, -1.4078304151258787)
+        assert_almost_equal(pval, 0.15918129181156992)
+
+    # GH 2779
+    def test_scalar(self):
+        count = 5
+        nobs = 83
+        value = 0.05
+        stat, pval = smprop.proportions_ztest(count, nobs, value=value)
+        assert_almost_equal(stat, 0.392126026314)
+        assert_almost_equal(pval, 0.694965098115)
+
+        assert_raises(ValueError, smprop.proportions_ztest, count, nobs, value=None)
 
 
 def test_binom_test():
@@ -315,7 +401,7 @@ def test_power_ztost_prop():
     assert_almost_equal(power, 0.8204, decimal=4) # PASS example
 
     with warnings.catch_warnings():  # python >= 2.6
-        warnings.simplefilter("ignore")
+        warnings.simplefilter("ignore", HypothesisTestWarning)
         power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
                                         p_alt=0.5, alpha=0.05, discrete=False,
                                         dist='binom')[0]

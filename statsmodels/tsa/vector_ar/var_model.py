@@ -335,17 +335,16 @@ class VAR(tsbase.TimeSeriesModel):
         self.y = self.endog #keep alias for now
         self.neqs = self.endog.shape[1]
 
-    def _get_predict_start(self, start, k_ar):
-        if start is None:
-            start = k_ar
-        return super(VAR, self)._get_predict_start(start)
-
     def predict(self, params, start=None, end=None, lags=1, trend='c'):
         """
         Returns in-sample predictions or forecasts
         """
-        start = self._get_predict_start(start, lags)
-        end, out_of_sample = self._get_predict_end(end)
+        if start is None:
+            start = k_ar
+
+        # Handle start, end
+        start, end, out_of_sample, prediction_index = (
+            self._get_prediction_index(start, end))
 
         if end < start:
             raise ValueError("end is before start")
@@ -863,7 +862,7 @@ class VARResults(VARProcess):
 
     @property
     def df_resid(self):
-        "Number of observations minus number of estimated parameters"
+        """Number of observations minus number of estimated parameters"""
         return self.nobs - self.df_model
 
     @cache_readonly
@@ -1105,7 +1104,8 @@ class VARResults(VARProcess):
 
         for i in range(repl):
             #discard first hundred to eliminate correct for starting bias
-            sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+            sim = util.varsim(coefs, intercept, sigma_u,
+                              seed=seed, steps=nobs+burn)
             sim = sim[burn:]
             ma_coll[i,:,:,:] = fill_coll(sim)
 
@@ -1156,8 +1156,6 @@ class VARResults(VARProcess):
         intercept = self.intercept
         df_model = self.df_model
         nobs = self.nobs
-        if seed is not None:
-            np.random.seed(seed=seed)
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
 
@@ -1176,7 +1174,8 @@ class VARResults(VARProcess):
 
         for i in range(repl):
             #discard first hundred to eliminate correct for starting bias
-            sim = util.varsim(coefs, intercept, sigma_u, steps=nobs+burn)
+            sim = util.varsim(coefs, intercept, sigma_u,
+                              seed=seed, steps=nobs+burn)
             sim = sim[burn:]
             ma_coll[i,:,:,:] = fill_coll(sim)
 
@@ -1486,7 +1485,7 @@ class VARResults(VARProcess):
 
     @property
     def aic(self):
-        "Akaike information criterion"
+        """Akaike information criterion"""
         return self.info_criteria['aic']
 
     @property
@@ -1499,12 +1498,12 @@ class VARResults(VARProcess):
 
     @property
     def hqic(self):
-        "Hannan-Quinn criterion"
+        """Hannan-Quinn criterion"""
         return self.info_criteria['hqic']
 
     @property
     def bic(self):
-        "Bayesian a.k.a. Schwarz info criterion"
+        """Bayesian a.k.a. Schwarz info criterion"""
         return self.info_criteria['bic']
 
     @cache_readonly

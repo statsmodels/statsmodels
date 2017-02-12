@@ -9,22 +9,9 @@ import numpy.random as R
 import numpy.linalg as L
 from numpy.testing import *
 
-import sys, nose
+from statsmodels.sandbox import formula #, contrast #, utils
+from statsmodels.sandbox import contrast_old as contrast
 
-#automatic conversion with 2to3 makes mistakes in formula, changes
-#"if type(self.name) is types.StringType"  to  "if type(self.name) is bytes"
-try:
-    from statsmodels.sandbox import formula #, contrast #, utils
-    from statsmodels.sandbox import contrast_old as contrast
-except:
-    if sys.version_info[0] >= 3:
-        raise nose.SkipTest('No tests here')
-    else:
-        raise
-
-def setup():
-    if sys.version_info[0] >= 3:
-        raise nose.SkipTest('No tests here')
 
 class TestTerm(TestCase):
 
@@ -69,7 +56,7 @@ class TestFormula(TestCase):
         self.namespace = {}
         self.terms = []
         for i in range(10):
-            name = '%s' % string.uppercase[i]
+            name = '%s' % string.ascii_uppercase[i]
             self.namespace[name] = self.X[:,i]
             self.terms.append(formula.Term(name))
 
@@ -142,7 +129,11 @@ class TestFormula(TestCase):
         q = formula.Quantitative(['other%d' % i for i in range(1,4)], termname='other', func=t1, transform=other)
         f += q
         q.namespace = f.namespace = self.formula.namespace
-        assert_almost_equal(q(), f()[f.termcolumns(q)])
+        a = q()
+        b = f()
+        c = f.termcolumns(q)
+        b = b[c]
+        assert_almost_equal(a,b)
 
 
     def test_str(self):

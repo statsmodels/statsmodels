@@ -346,15 +346,12 @@ def arma2ar(ar, ma, nobs=100):
     -------
     ar : array, 1d
         coefficients of AR lag polynomial with nobs elements
-    `
 
     Notes
     -----
     This is just an alias for
-
-    ``ar_representation = arma_impulse_response(ma, ar, nobs=100)``
-
-    fully tested against matlab
+    ``ar_representation = arma_impulse_response(ma, ar, nobs=100)`` which has
+    been fully tested against MATLAB.
 
     Examples
     --------

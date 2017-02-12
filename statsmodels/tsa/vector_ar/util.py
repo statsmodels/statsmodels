@@ -1,14 +1,13 @@
 """
 Miscellaneous utility code for VAR estimation
 """
-from statsmodels.compat.python import range, string_types, asbytes
+from statsmodels.compat.python import range, string_types, asbytes, long
+from statsmodels.compat.pandas import frequencies
 import numpy as np
 import scipy.stats as stats
-import scipy.linalg as L
 import scipy.linalg.decomp as decomp
 
 import statsmodels.tsa.tsatools as tsa
-from scipy.linalg import cholesky
 
 #-------------------------------------------------------------------------------
 # Auxiliary functions for estimation
@@ -111,10 +110,11 @@ def parse_lutkepohl_data(path): # pragma: no cover
     Source for data files: www.jmulti.de
     """
 
+    from statsmodels.compat.pandas import datetools as dt
+
     from collections import deque
     from datetime import datetime
     import pandas
-    import pandas.core.datetools as dt
     import re
 
     regex = re.compile(asbytes('<(.*) (\w)([\d]+)>.*'))
@@ -143,9 +143,9 @@ def parse_lutkepohl_data(path): # pragma: no cover
     year = int(year)
 
     offsets = {
-        asbytes('Q') : dt.BQuarterEnd(),
-        asbytes('M') : dt.BMonthEnd(),
-        asbytes('A') : dt.BYearEnd()
+        asbytes('Q') : frequencies.BQuarterEnd(),
+        asbytes('M') : frequencies.BMonthEnd(),
+        asbytes('A') : frequencies.BYearEnd()
     }
 
     # create an instance
@@ -188,9 +188,8 @@ def varsim(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
     Simulate simple VAR(p) process with known coefficients, intercept, white
     noise covariance, etc.
     """
-    if seed is not None:
-        np.random.seed(seed=seed)
-    from numpy.random import multivariate_normal as rmvnorm
+    rs = np.random.RandomState(seed=seed)
+    rmvnorm = rs.multivariate_normal
     p, k, k = coefs.shape
     ugen = rmvnorm(np.zeros(len(sig_u)), sig_u, steps)
     result = np.zeros((steps, k))
@@ -208,7 +207,7 @@ def get_index(lst, name):
     try:
         result = lst.index(name)
     except Exception:
-        if not isinstance(name, int):
+        if not isinstance(name, (int, long)):
             raise
         result = name
     return result

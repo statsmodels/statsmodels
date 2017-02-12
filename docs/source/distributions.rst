@@ -1,3 +1,4 @@
+.. module:: statsmodels.sandbox.distributions
 .. currentmodule:: statsmodels.sandbox.distributions
 
 .. _distributions:
@@ -12,6 +13,7 @@ distributions.
 Empirical Distributions
 -----------------------
 
+.. module:: statsmodels.distributions.empirical_distribution
 .. currentmodule:: statsmodels.distributions.empirical_distribution
 
 .. autosummary::
@@ -19,11 +21,13 @@ Empirical Distributions
 
    ECDF
    StepFunction
+   monotone_fn_inverter
 
 Distribution Extras
 -------------------
 
 
+.. module:: statsmodels.sandbox.distributions.extras
 .. currentmodule:: statsmodels.sandbox.distributions.extras
 
 *Skew Distributions*
@@ -64,6 +68,7 @@ distribution from a monotonic transformation, `TransfTwo_gen` can use hump-shape
 or u-shaped transformation, such as abs or square. The remaining objects are
 special cases.
 
+.. module:: statsmodels.sandbox.distributions.transformed
 .. currentmodule:: statsmodels.sandbox.distributions.transformed
 
 .. autosummary::

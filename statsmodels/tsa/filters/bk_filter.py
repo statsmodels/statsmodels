@@ -52,8 +52,7 @@ def bkfilter(X, low=6, high=32, K=12):
     >>> import statsmodels.api as sm
     >>> import pandas as pd
     >>> dta = sm.datasets.macrodata.load_pandas().data
-    >>> dates = sm.tsa.datetools.dates_from_range('1959Q1', '2009Q3')
-    >>> index = pd.DatetimeIndex(dates)
+    >>> index = pd.DatetimeIndex(start='1959Q1', end='2009Q4', freq='Q')
     >>> dta.set_index(index, inplace=True)
 
     >>> cycles = sm.tsa.filters.bkfilter(dta[['realinv']], 6, 24, 12)
@@ -64,6 +63,12 @@ def bkfilter(X, low=6, high=32, K=12):
     >>> plt.show()
 
     .. plot:: plots/bkf_plot.py
+
+    See Also
+    --------
+    statsmodels.tsa.filters.cf_filter.cffilter
+    statsmodels.tsa.filters.hp_filter.hpfilter
+    statsmodels.tsa.seasonal.seasonal_decompose
     """
     #TODO: change the docstring to ..math::?
     #TODO: allow windowing functions to correct for Gibb's Phenomenon?

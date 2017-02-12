@@ -9,7 +9,8 @@ from statsmodels.tools.testing import assert_equal
 from .results import results_ar
 import numpy as np
 import numpy.testing as npt
-from pandas import Series, Index, DatetimeIndex
+from pandas import Series, Index, DatetimeIndex, PeriodIndex
+
 
 DECIMAL_6 = 6
 DECIMAL_5 = 5
@@ -259,19 +260,17 @@ class TestAutolagAR(object):
 def test_ar_dates():
     # just make sure they work
     data = sm.datasets.sunspots.load()
-    dates = sm.tsa.datetools.dates_from_range('1700', length=len(data.endog))
+    dates = DatetimeIndex(start='1700', periods=len(data.endog), freq='A')
     endog = Series(data.endog, index=dates)
     ar_model = sm.tsa.AR(endog, freq='A').fit(maxlag=9, method='mle', disp=-1)
     pred = ar_model.predict(start='2005', end='2015')
-    predict_dates = sm.tsa.datetools.dates_from_range('2005', '2015')
-    from pandas import DatetimeIndex  # pylint: disable-msg=E0611
-    predict_dates = DatetimeIndex(predict_dates, freq='infer')
+    predict_dates = DatetimeIndex(start='2005', end='2016', freq='A')[:11]
 
     assert_equal(ar_model.data.predict_dates, predict_dates)
     assert_equal(pred.index, predict_dates)
 
 def test_ar_named_series():
-    dates = sm.tsa.datetools.dates_from_range("2011m1", length=72)
+    dates = PeriodIndex(start="2011-1", periods=72, freq='M')
     y = Series(np.random.randn(72), name="foobar", index=dates)
     results = sm.tsa.AR(y).fit(2)
     assert_(results.params.index.equals(Index(["const", "L1.foobar",
@@ -287,7 +286,7 @@ def test_ar_start_params():
 def test_ar_series():
     # smoke test for 773
     dta = sm.datasets.macrodata.load_pandas().data["cpi"].diff().dropna()
-    dates = sm.tsa.datetools.dates_from_range("1959Q1", length=len(dta))
+    dates = PeriodIndex(start='1959Q1', periods=len(dta), freq='Q')
     dta.index = dates
     ar = AR(dta).fit(maxlags=15)
     ar.bse
@@ -302,6 +301,20 @@ def test_ar_select_order():
     ar = AR(ts)
     res = ar.select_order(maxlag=12, ic='aic')
     assert_(res == 2)
+
+# GH 2658
+def test_ar_select_order_tstat():
+    rs = np.random.RandomState(123)
+    tau = 25
+    y = rs.randn(tau)
+    ts = Series(y, index=DatetimeIndex(start='1/1/1990', periods=tau,
+                                   freq='M'))
+
+    ar = AR(ts)
+    res = ar.select_order(maxlag=5, ic='t-stat')
+    assert_equal(res, 0)
+
+
 
 #TODO: likelihood for ARX model?
 #class TestAutolagARX(object):

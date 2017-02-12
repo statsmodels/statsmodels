@@ -596,9 +596,9 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
 
     >>> data = {'a': 10, 'b': 15, 'c': 16}
     >>> props = lambda key: {'color': 'r' if 'a' in key else 'gray'}
-    >>> labelizer = lambda k: {('a',): 'first', ('b',): 'second',
+    >>> labelizer = lambda k: {('a',): 'first', ('b',): 'second', \
                                ('c',): 'third'}[k]
-    >>> mosaic(data, title='colored dictionary',
+    >>> mosaic(data, title='colored dictionary', \
                 properties=props, labelizer=labelizer)
     >>> pylab.show()
 
@@ -613,7 +613,8 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         raise ValueError("You must pass an index if data is a DataFrame."
                          " See examples.")
 
-    from pylab import Rectangle
+    from matplotlib.patches import Rectangle
+    #from pylab import Rectangle
     fig, ax = utils.create_mpl_ax(ax)
     # normalize the data to a dict with tuple of strings as keys
     data = _normalize_data(data, index)

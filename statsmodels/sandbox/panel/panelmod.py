@@ -14,7 +14,7 @@ import numpy as np
 
 __all__ = ["PanelModel"]
 
-from pandas import LongPanel, __version__
+from pandas import Panel
 
 
 def group(X):
@@ -80,7 +80,7 @@ def repanel_cov(groups, sigmas):
 
 
 
-class PanelData(LongPanel):
+class PanelData(Panel):
     pass
 
 class PanelModel(object):
@@ -95,7 +95,7 @@ class PanelModel(object):
 #    exog
 #    panel_arr
 #    time_arr
-    panel_data : pandas.LongPanel object
+    panel_data : pandas.Panel object
 
     Notes
     -----
@@ -114,8 +114,8 @@ class PanelModel(object):
 #            if not isinstance(endog, str):
 #                raise ValueError("If a pandas object is supplied then endog \
 #must be a string containing the name of the endogenous variable")
-#            if not isinstance(aspandas, LongPanel):
-#                raise ValueError("Only pandas.LongPanel objects are supported")
+#            if not isinstance(aspandas, Panel):
+#                raise ValueError("Only pandas.Panel objects are supported")
 #            self.initialize_pandas(endog, aspandas, panel_name)
 
 
@@ -211,7 +211,8 @@ class PanelModel(object):
             uniq = self.timeuniq
         else:
             raise ValueError("index %s not understood" % index)
-
+        print(Y, uniq, uniq[:,None], len(Y), len(uniq), len(uniq[:,None]),
+              index)
         #TODO: use sparse matrices
         dummy = (Y == uniq[:,None]).astype(float)
         if X.ndim > 1:
@@ -331,7 +332,7 @@ class DynamicPanel(PanelModel):
 
 if __name__ == "__main__":
     import pandas
-    from pandas import LongPanel
+    from pandas import Panel
     import statsmodels.api as sm
     import numpy.lib.recfunctions as nprf
 
@@ -342,8 +343,10 @@ if __name__ == "__main__":
 #    fullexog.sort(order=['firm','year'])
     panel_arr = nprf.append_fields(fullexog, 'investment', endog, float,
             usemask=False)
-    panel_panda = LongPanel.fromRecords(panel_arr, major_field='year',
-            minor_field='firm')
+
+    panel_df = pandas.DataFrame(panel_arr)
+    panel_panda = panel_df.set_index(['year', 'firm']).to_panel()
+
 
     # the most cumbersome way of doing it as far as preprocessing by hand
     exog = fullexog[['value','capital']].view(float).reshape(-1,2)

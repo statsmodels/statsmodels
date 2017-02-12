@@ -232,123 +232,6 @@ class RegressionModel(base.LikelihoodModel):
                        **kwargs)
         return RegressionResultsWrapper(lfit)
 
-    def fit_regularized(self, method="coord_descent", maxiter=1000,
-                        alpha=0., L1_wt=1., start_params=None,
-                        cnvrg_tol=1e-8, zero_tol=1e-8, **kwargs):
-        """
-        Return a regularized fit to a linear regression model.
-
-        Parameters
-        ----------
-        method : string
-            Only the coordinate descent algorithm is implemented.
-        maxiter : integer
-            The maximum number of iteration cycles (an iteration cycle
-            involves running coordinate descent on all variables).
-        alpha : scalar or array-like
-            The penalty weight.  If a scalar, the same penalty weight
-            applies to all variables in the model.  If a vector, it
-            must have the same length as `params`, and contains a
-            penalty weight for each coefficient.
-        L1_wt : scalar
-            The fraction of the penalty given to the L1 penalty term.
-            Must be between 0 and 1 (inclusive).  If 0, the fit is
-            ridge regression.  If 1, the fit is the lasso.
-        start_params : array-like
-            Starting values for ``params``.
-        cnvrg_tol : scalar
-            If ``params`` changes by less than this amount (in sup-norm)
-            in once iteration cycle, the algorithm terminates with
-            convergence.
-        zero_tol : scalar
-            Any estimated coefficient smaller than this value is
-            replaced with zero.
-
-        Returns
-        -------
-        A RegressionResults object, of the same type returned by
-        ``fit``.
-
-        Notes
-        -----
-        The approach closely follows that implemented in the glmnet
-        package in R.  The penalty is the "elastic net" penalty, which
-        is a convex combination of L1 and L2 penalties.
-
-        The function that is minimized is: ..math::
-
-            0.5*RSS/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
-
-        where RSS is the usual regression sum of squares, n is the
-        sample size, and :math:`|*|_1` and :math:`|*|_2` are the L1 and L2
-        norms.
-
-        Post-estimation results are based on the same data used to
-        select variables, hence may be subject to overfitting biases.
-
-        References
-        ----------
-        Friedman, Hastie, Tibshirani (2008).  Regularization paths for
-        generalized linear models via coordinate descent.  Journal of
-        Statistical Software 33(1), 1-22 Feb 2010.
-        """
-
-        k_exog = self.wexog.shape[1]
-
-        if np.isscalar(alpha):
-            alpha = alpha * np.ones(k_exog, dtype=np.float64)
-
-        # Below we work with RSS + penalty, so we need to rescale.
-        alpha *= 2 * self.wexog.shape[0]
-
-        if start_params is None:
-            params = np.zeros(k_exog, dtype=np.float64)
-        else:
-            params = start_params.copy()
-
-        converged = False
-        xxprod = 2*(self.wexog**2).sum(0)
-
-        # Coordinate descent
-        for itr in range(maxiter):
-
-            params_save = params.copy()
-            for k in range(self.wexog.shape[1]):
-
-                params[k] = 0.
-                wendog_adj = self.wendog - np.dot(self.wexog, params)
-                xyprod = 2*np.dot(self.wexog[:,k], wendog_adj)
-                den = xxprod[k] + alpha[k] * (1 - L1_wt)
-                a = alpha[k] * L1_wt
-                if a >= np.abs(xyprod):
-                    params[k] = 0.
-                elif xyprod > 0:
-                    params[k] = (xyprod - a) / den
-                else:
-                    params[k] = (xyprod + a) / den
-
-            # Check for convergence
-            pchange = np.max(np.abs(params - params_save))
-            if pchange < cnvrg_tol:
-                converged = True
-                break
-
-        # Set approximate zero coefficients to be exactly zero
-        params *= np.abs(params) >= zero_tol
-
-        # Fit the reduced model to get standard errors and other
-        # post-estimation results.
-        ii = np.flatnonzero(params)
-        cov = np.zeros((k_exog, k_exog), dtype=np.float64)
-        if len(ii) > 0:
-            model = self.__class__(self.wendog, self.wexog[:,ii])
-            rslt = model.fit()
-            cov[np.ix_(ii, ii)] = rslt.normalized_cov_params
-
-        lfit = RegressionResults(self, params,
-                                 normalized_cov_params=cov)
-        lfit.converged = converged
-        return RegressionResultsWrapper(lfit)
 
     def predict(self, params, exog=None):
         """
@@ -485,7 +368,7 @@ class GLS(RegressionModel):
 
     >>> gls_model = sm.GLS(data.endog, data.exog, sigma=sigma)
     >>> gls_results = gls_model.fit()
-    >>> print(gls_results.summary()))
+    >>> print(gls_results.summary())
 
     """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc + base._extra_param_doc}
@@ -576,6 +459,36 @@ class GLS(RegressionModel):
             # with error covariance matrix
         return llf
 
+
+    def hessian_factor(self, params, scale=None, observed=True):
+        """Weights for calculating Hessian
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+        observed : bool
+            If True, then the observed Hessian is returned. If false then the
+            expected information matrix is returned.
+
+        Returns
+        -------
+        hessian_factor : ndarray, 1d
+            A 1d weight vector used in the calculation of the Hessian.
+            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
+        """
+
+        if self.sigma is None or self.sigma.shape == ():
+            return np.ones(self.exog.shape[0])
+        elif self.sigma.ndim == 1:
+            return self.cholsigmainv
+        else:
+            return np.diag(self.cholsigmainv)
+
 class WLS(RegressionModel):
     __doc__ = """
     A regression model with diagonal but non-identity covariance structure.
@@ -588,7 +501,7 @@ class WLS(RegressionModel):
     weights : array-like, optional
         1d array of weights.  If you supply 1/W then the variables are pre-
         multiplied by 1/sqrt(W).  If no weights are supplied the default value
-        is 1 and WLS reults are the same as OLS.
+        is 1 and WLS results are the same as OLS.
     %(extra_params)s
 
     Attributes
@@ -698,6 +611,30 @@ class WLS(RegressionModel):
         llf += 0.5 * np.sum(np.log(self.weights))
         return llf
 
+    def hessian_factor(self, params, scale=None, observed=True):
+        """Weights for calculating Hessian
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+        observed : bool
+            If True, then the observed Hessian is returned. If false then the
+            expected information matrix is returned.
+
+        Returns
+        -------
+        hessian_factor : ndarray, 1d
+            A 1d weight vector used in the calculation of the Hessian.
+            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
+        """
+
+        return self.weights
+
 
 class OLS(WLS):
     __doc__ = """
@@ -731,7 +668,7 @@ class OLS(WLS):
     array([ 2.14285714,  0.25      ])
     >>> results.tvalues
     array([ 1.87867287,  0.98019606])
-    >>> print(results.t_test([1, 0])))
+    >>> print(results.t_test([1, 0]))
     <T test: effect=array([ 2.14285714]), sd=array([[ 1.14062282]]), t=array([[ 1.87867287]]), p=array([[ 0.05953974]]), df_denom=5>
     >>> print(results.f_test(np.identity(2)))
     <F test: F=array([[ 19.46078431]]), p=[[ 0.00437251]], df_denom=5, df_num=2>
@@ -749,31 +686,297 @@ class OLS(WLS):
         if "weights" in self._init_keys:
             self._init_keys.remove("weights")
 
-    def loglike(self, params):
+    def loglike(self, params, scale=None):
         """
-        The likelihood function for the clasical OLS model.
+        The likelihood function for the OLS model.
 
         Parameters
         ----------
         params : array-like
             The coefficients with which to estimate the log-likelihood.
+        scale : float or None
+            If None, return the profile (concentrated) log likelihood
+            (profiled over the scale parameter), else return the
+            log-likelihood using the given scale value.
 
         Returns
         -------
-        The concentrated likelihood function evaluated at params.
+        The likelihood function evaluated at params.
         """
         nobs2 = self.nobs / 2.0
-        return -nobs2*np.log(2*np.pi)-nobs2*np.log(1/(2*nobs2) *\
-                np.dot(np.transpose(self.endog -
-                    np.dot(self.exog, params)),
-                    (self.endog - np.dot(self.exog,params)))) -\
-                    nobs2
+        nobs = float(self.nobs)
+        resid = self.endog - np.dot(self.exog, params)
+        if hasattr(self, 'offset'):
+            resid -= self.offset
+        ssr = np.sum(resid**2)
+        if scale is None:
+            # profile log likelihood
+            llf = -nobs2*np.log(2*np.pi) - nobs2*np.log(ssr / nobs) - nobs2
+        else:
+            # log-likelihood
+            llf = -nobs2 * np.log(2 * np.pi * scale) - ssr / (2*scale)
+        return llf
+
 
     def whiten(self, Y):
         """
         OLS model whitener does nothing: returns Y.
         """
         return Y
+
+
+    def score(self, params, scale=None):
+        """
+        Evaluate the score function at a given point.
+
+        The score corresponds to the profile (concentrated)
+        log-likelihood in which the scale parameter has been profiled
+        out.
+
+        Parameters
+        ----------
+        params : array-like
+            The parameter vector at which the score function is
+            computed.
+        scale : float or None
+            If None, return the profile (concentrated) log likelihood
+            (profiled over the scale parameter), else return the
+            log-likelihood using the given scale value.
+
+        Returns
+        -------
+        The score vector.
+        """
+
+        if not hasattr(self, "_wexog_xprod"):
+            self._setup_score_hess()
+
+        xtxb = np.dot(self._wexog_xprod, params)
+        sdr = -self._wexog_x_wendog + xtxb
+
+        if scale is None:
+            ssr = self._wendog_xprod - 2 * np.dot(self._wexog_x_wendog.T, params)
+            ssr += np.dot(params, xtxb)
+            return -self.nobs * sdr / ssr
+        else:
+            return -sdr / scale
+
+
+    def _setup_score_hess(self):
+        y = self.wendog
+        if hasattr(self, 'offset'):
+            y = y - self.offset
+        self._wendog_xprod = np.sum(y * y)
+        self._wexog_xprod = np.dot(self.wexog.T, self.wexog)
+        self._wexog_x_wendog = np.dot(self.wexog.T, y)
+
+
+    def hessian(self, params, scale=None):
+        """
+        Evaluate the Hessian function at a given point.
+
+        Parameters
+        ----------
+        params : array-like
+            The parameter vector at which the Hessian is computed.
+        scale : float or None
+            If None, return the profile (concentrated) log likelihood
+            (profiled over the scale parameter), else return the
+            log-likelihood using the given scale value.
+
+        Returns
+        -------
+        The Hessian matrix.
+        """
+
+        if not hasattr(self, "_wexog_xprod"):
+            self._setup_score_hess()
+
+        xtxb = np.dot(self._wexog_xprod, params)
+
+        if scale is None:
+            ssr = self._wendog_xprod - 2 * np.dot(self._wexog_x_wendog.T, params)
+            ssr += np.dot(params, xtxb)
+            ssrp = -2*self._wexog_x_wendog + 2*xtxb
+            hm = self._wexog_xprod / ssr - np.outer(ssrp, ssrp) / ssr**2
+            return -self.nobs * hm / 2
+        else:
+            return -self._wexog_xprod / scale
+
+        return hess
+
+
+    def hessian_factor(self, params, scale=None, observed=True):
+        """Weights for calculating Hessian
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+        observed : bool
+            If True, then the observed Hessian is returned. If false then the
+            expected information matrix is returned.
+
+        Returns
+        -------
+        hessian_factor : ndarray, 1d
+            A 1d weight vector used in the calculation of the Hessian.
+            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
+        """
+
+        return np.ones(self.exog.shape[0])
+
+
+    def fit_regularized(self, method="elastic_net", alpha=0.,
+                        L1_wt=1., start_params=None, profile_scale=False,
+                        refit=False, **kwargs):
+        """
+        Return a regularized fit to a linear regression model.
+
+        Parameters
+        ----------
+        method : string
+            Only the 'elastic_net' approach is currently implemented.
+        alpha : scalar or array-like
+            The penalty weight.  If a scalar, the same penalty weight
+            applies to all variables in the model.  If a vector, it
+            must have the same length as `params`, and contains a
+            penalty weight for each coefficient.
+        L1_wt: scalar
+            The fraction of the penalty given to the L1 penalty term.
+            Must be between 0 and 1 (inclusive).  If 0, the fit is a
+            ridge fit, if 1 it is a lasso fit.
+        start_params : array-like
+            Starting values for ``params``.
+        profile_scale : bool
+            If True the penalized fit is computed using the profile
+            (concentrated) log-likelihood for the Gaussian model.
+            Otherwise the fit uses the residual sum of squares.
+        refit : bool
+            If True, the model is refit using only the variables that
+            have non-zero coefficients in the regularized fit.  The
+            refitted model is not regularized.
+        distributed : bool
+            If True, the model uses distributed methods for fitting,
+            will raise an error if True and partitions is None.
+        generator : function
+            generator used to partition the model, allows for handling
+            of out of memory/parallel computing.
+        partitions : scalar
+            The number of partitions desired for the distributed
+            estimation.
+        threshold : scalar or array-like
+            The threshold below which coefficients are zeroed out,
+            only used for distributed estimation
+
+        Returns
+        -------
+        An array of coefficients, or a RegressionResults object of the
+        same type returned by ``fit``.
+
+        Notes
+        -----
+
+        The elastic net approach closely follows that implemented in
+        the glmnet package in R.  The penalty is a combination of L1
+        and L2 penalties.
+
+        The function that is minimized is: ..math::
+
+            0.5*RSS/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
+
+        where RSS is the usual regression sum of squares, n is the
+        sample size, and :math:`|*|_1` and :math:`|*|_2` are the L1 and L2
+        norms.
+
+        Post-estimation results are based on the same data used to
+        select variables, hence may be subject to overfitting biases.
+
+        The elastic_net method uses the following keyword arguments:
+
+        maxiter : int
+            Maximum number of iterations
+        cnvrg_tol : float
+            Convergence threshold for line searches
+        zero_tol : float
+            Coefficients below this threshold are treated as zero.
+
+        References
+        ----------
+        Friedman, Hastie, Tibshirani (2008).  Regularization paths for
+        generalized linear models via coordinate descent.  Journal of
+        Statistical Software 33(1), 1-22 Feb 2010.
+        """
+
+        from statsmodels.base.elastic_net import fit_elasticnet
+
+        if L1_wt == 0:
+            return self._fit_ridge(alpha)
+
+        # In the future we could add support for other penalties, e.g. SCAD.
+        if method != "elastic_net":
+            raise ValueError("method for fit_regularized must be elastic_net")
+
+        # Set default parameters.
+        defaults = {"maxiter" : 50, "cnvrg_tol" : 1e-10,
+                    "zero_tol" : 1e-10}
+        defaults.update(kwargs)
+
+        # If a scale parameter is passed in, the non-profile
+        # likelihood (residual sum of squares divided by -2) is used,
+        # otherwise the profile likelihood is used.
+        if profile_scale:
+            loglike_kwds = {}
+            score_kwds = {}
+            hess_kwds = {}
+        else:
+            loglike_kwds = {"scale": 1}
+            score_kwds = {"scale": 1}
+            hess_kwds = {"scale": 1}
+
+        return fit_elasticnet(self, method=method,
+                              alpha=alpha,
+                              L1_wt=L1_wt,
+                              start_params=start_params,
+                              loglike_kwds=loglike_kwds,
+                              score_kwds=score_kwds,
+                              hess_kwds=hess_kwds,
+                              refit=refit,
+                              check_step=False,
+                              **defaults)
+
+
+    def _fit_ridge(self, alpha):
+        """
+        Fit a linear model using ridge regression.
+
+        Parameters
+        ----------
+        alpha : scalar or array-like
+            The penalty weight.  If a scalar, the same penalty weight
+            applies to all variables in the model.  If a vector, it
+            must have the same length as `params`, and contains a
+            penalty weight for each coefficient.
+
+        Notes
+        -----
+        Equivalent to fit_regularized with L1_wt = 0 (but implemented
+        more efficiently).
+        """
+
+        u, s, vt = np.linalg.svd(self.exog, 0)
+        v = vt.T
+        s2 = s*s + alpha * self.nobs
+        params = np.dot(u.T, self.endog) * s / s2
+        params = np.dot(v, params)
+
+        from statsmodels.base.elastic_net import RegularizedResults
+        return RegularizedResults(self, params)
+
 
 class GLSAR(GLS):
     __doc__ = """
@@ -977,7 +1180,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     >>> from statsmodels.datasets.sunspots import load
     >>> data = load()
     >>> rho, sigma = sm.regression.yule_walker(data.endog,
-                                       order=4, method="mle")
+    ...                                        order=4, method="mle")
 
     >>> rho
     array([ 1.28310031, -0.45240924, -0.20770299,  0.04794365])
@@ -1027,11 +1230,11 @@ class RegressionResults(base.LikelihoodModelResults):
     **Attributes**
 
     aic
-        Aikake's information criteria. For a model with a constant
+        Akaike's information criteria. For a model with a constant
         :math:`-2llf + 2(df_model + 1)`. For a model without a constant
         :math:`-2llf + 2(df_model)`.
     bic
-        Bayes' information criteria For a model with a constant
+        Bayes' information criteria. For a model with a constant
         :math:`-2llf + \log(n)(df_model+1)`. For a model without a constant
         :math:`-2llf + \log(n)(df_model)`
     bse
@@ -1302,7 +1505,7 @@ class RegressionResults(base.LikelihoodModelResults):
             k_params = self.normalized_cov_params.shape[0]
             mat = np.eye(k_params)
             const_idx = self.model.data.const_idx
-            # TODO: What if model includes implcit constant, e.g. all dummies but no constant regressor?
+            # TODO: What if model includes implicit constant, e.g. all dummies but no constant regressor?
             # TODO: Restats as LM test by projecting orthogonalizing to constant?
             if self.model.data.k_constant == 1:
                 # if constant is implicit, return nan see #2444
@@ -1788,9 +1991,9 @@ class RegressionResults(base.LikelihoodModelResults):
             - `groups` array_like, integer (required) :
                   index of clusters or groups
             - `use_correction` bool (optional) :
-                  If True the sandwich covariance is calulated with a small
+                  If True the sandwich covariance is calculated with a small
                   sample correction.
-                  If False the the sandwich covariance is calulated without
+                  If False the sandwich covariance is calculated without
                   small sample correction.
             - `df_correction` bool (optional)
                   If True (default), then the degrees of freedom for the
@@ -1822,22 +2025,26 @@ class RegressionResults(base.LikelihoodModelResults):
         - 'hac-panel' heteroscedasticity and autocorrelation robust standard
             errors in panel data.
             The data needs to be sorted in this case, the time series for
-            each panel unit or cluster need to be stacked.
+            each panel unit or cluster need to be stacked. The membership to
+            a timeseries of an individual or group can be either specified by
+            group indicators or by increasing time periods.
+
             keywords
 
-            - `time` array_like (required) : index of time periods
-
+            - either `groups` or `time` : array_like (required)
+              `groups` : indicator for groups
+              `time` : index of time periods
             - `maxlag` integer (required) : number of lags to use
             - `kernel` string (optional) : kernel, default is Bartlett
             - `use_correction` False or string in ['hac', 'cluster'] (optional) :
-                  If False the the sandwich covariance is calulated without
+                  If False the sandwich covariance is calculated without
                   small sample correction.
             - `df_correction` bool (optional)
                   adjustment to df_resid, see cov_type 'cluster' above
                   #TODO: we need more options here
 
         Reminder:
-        `use_correction` in "nw-groupsum" and "nw-panel" is not bool,
+        `use_correction` in "hac-groupsum" and "hac-panel" is not bool,
         needs to be in [False, 'hac', 'cluster']
 
         TODO: Currently there is no check for extra or misspelled keywords,
@@ -1846,6 +2053,14 @@ class RegressionResults(base.LikelihoodModelResults):
         """
 
         import statsmodels.stats.sandwich_covariance as sw
+
+        #normalize names
+        if cov_type == 'nw-panel':
+            cov_type = 'hac-panel'
+        if cov_type == 'nw-groupsum':
+            cov_type = 'hac-groupsum'
+        if 'kernel' in kwds:
+            kwds['weights_func'] = kwds.pop('kernel')
 
         # TODO: make separate function that returns a robust cov plus info
         use_self = kwds.pop('use_self', False)
@@ -1864,7 +2079,7 @@ class RegressionResults(base.LikelihoodModelResults):
         res.use_t = use_t
 
         adjust_df = False
-        if cov_type in ['cluster', 'nw-panel', 'nw-groupsum']:
+        if cov_type in ['cluster', 'hac-panel', 'hac-groupsum']:
             df_correction = kwds.get('df_correction', None)
             # TODO: check also use_correction, do I need all combinations?
             if df_correction is not False: # i.e. in [None, True]:
@@ -1883,7 +2098,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
             res.cov_kwds['scale'] = scale = kwds.get('scale', 1.)
             res.cov_params_default = scale * res.normalized_cov_params
-        elif cov_type in ('HC0', 'HC1', 'HC2', 'HC3'):
+        elif cov_type.upper() in ('HC0', 'HC1', 'HC2', 'HC3'):
             if kwds:
                 raise ValueError('heteroscedasticity robust covarians ' +
                                  'does not use keywords')
@@ -1892,9 +2107,11 @@ class RegressionResults(base.LikelihoodModelResults):
             # TODO cannot access cov without calling se first
             getattr(self, cov_type.upper() + '_se')
             res.cov_params_default = getattr(self, 'cov_' + cov_type.upper())
-        elif cov_type == 'HAC':
+        elif cov_type.lower() == 'hac':
             maxlags = kwds['maxlags']   # required?, default in cov_hac_simple
             res.cov_kwds['maxlags'] = maxlags
+            weights_func = kwds.get('weights_func', sw.weights_bartlett)
+            res.cov_kwds['weights_func'] = weights_func
             use_correction = kwds.get('use_correction', False)
             res.cov_kwds['use_correction'] = use_correction
             res.cov_kwds['description'] = ('Standard Errors are heteroscedasticity ' +
@@ -1902,8 +2119,9 @@ class RegressionResults(base.LikelihoodModelResults):
                  'sample correction') % (maxlags, ['without', 'with'][use_correction])
 
             res.cov_params_default = sw.cov_hac_simple(self, nlags=maxlags,
+                                                 weights_func=weights_func,
                                                  use_correction=use_correction)
-        elif cov_type == 'cluster':
+        elif cov_type.lower() == 'cluster':
             #cluster robust standard errors, one- or two-way
             groups = kwds['groups']
             if not hasattr(groups, 'shape'):
@@ -1943,9 +2161,10 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_kwds['description'] = ('Standard Errors are robust to' +
                                 'cluster correlation ' + '(' + cov_type + ')')
 
-        elif cov_type == 'nw-panel':
+        elif cov_type.lower() == 'hac-panel':
             #cluster robust standard errors
-            res.cov_kwds['time'] = time = kwds['time']
+            res.cov_kwds['time'] = time = kwds.get('time', None)
+            res.cov_kwds['groups'] = groups = kwds.get('groups', None)
             #TODO: nlags is currently required
             #nlags = kwds.get('nlags', True)
             #res.cov_kwds['nlags'] = nlags
@@ -1955,16 +2174,23 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_kwds['use_correction'] = use_correction
             weights_func = kwds.get('weights_func', sw.weights_bartlett)
             res.cov_kwds['weights_func'] = weights_func
-            # TODO: clumsy time index in cov_nw_panel
-            tt = (np.nonzero(np.diff(time) < 0)[0] + 1).tolist()
-            groupidx = lzip([0] + tt, tt + [len(time)])
+            if groups is not None:
+                tt = (np.nonzero(groups[:-1] != groups[1:])[0] + 1).tolist()
+                nobs_ = len(groups)
+            elif time is not None:
+                # TODO: clumsy time index in cov_nw_panel
+                tt = (np.nonzero(time[1:] < time[:-1])[0] + 1).tolist()
+                nobs_ = len(time)
+            else:
+                raise ValueError('either time or groups needs to be given')
+            groupidx = lzip([0] + tt, tt + [nobs_])
             self.n_groups = n_groups = len(groupidx)
             res.cov_params_default = sw.cov_nw_panel(self, maxlags, groupidx,
                                                 weights_func=weights_func,
                                                 use_correction=use_correction)
             res.cov_kwds['description'] = ('Standard Errors are robust to' +
                                 'cluster correlation ' + '(' + cov_type + ')')
-        elif cov_type == 'nw-groupsum':
+        elif cov_type.lower() == 'hac-groupsum':
             # Driscoll-Kraay standard errors
             res.cov_kwds['time'] = time = kwds['time']
             #TODO: nlags is currently required
@@ -1978,7 +2204,7 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_kwds['weights_func'] = weights_func
             if adjust_df:
                 # need to find number of groups
-                tt = (np.nonzero(np.diff(time) < 0)[0] + 1)
+                tt = (np.nonzero(time[1:] < time[:-1])[0] + 1)
                 self.n_groups = n_groups = len(tt) + 1
             res.cov_params_default = sw.cov_nw_groupsum(self, maxlags, time,
                                             weights_func=weights_func,
@@ -2251,7 +2477,7 @@ class OLSResults(RegressionResults):
 
         See also
         --------
-        :class:`statsmodels.stats.outliers_influence.OLSInfluence`
+        statsmodels.stats.outliers_influence.OLSInfluence
         """
         from statsmodels.stats.outliers_influence import OLSInfluence
         return OLSInfluence(self)
@@ -2349,8 +2575,8 @@ class OLSResults(RegressionResults):
         >>> fitted.rsquared
         >>> 0.91357690446068196
         >>> # Test that the slope on the first variable is 0
-        >>> fitted.test_beta([0], [1])
-        >>> (1.7894660442330235e-07, 27.248146353709153)
+        >>> fitted.el_test([0], [1])
+        >>> (27.248146353888796, 1.7894660442330235e-07)
         """
         params = np.copy(self.params)
         opt_fun_inst = _ELRegOpts() # to store weights
@@ -2542,4 +2768,3 @@ if __name__ == "__main__":
 | BIC criterion:              238.643    Kurtosis:                2.43373 |
 ---------------------------------------------------------------------------
 """
-

@@ -21,3 +21,5 @@ from .statespace.sarimax import SARIMAX
 from .statespace.structural import UnobservedComponents
 from .statespace.varmax import VARMAX
 from .statespace.dynamic_factor import DynamicFactor
+from .regime_switching.markov_regression import MarkovRegression
+from .regime_switching.markov_autoregression import MarkovAutoregression

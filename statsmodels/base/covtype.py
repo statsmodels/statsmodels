@@ -99,11 +99,15 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     - 'hac-panel' heteroscedasticity and autocorrelation robust standard
         errors in panel data.
         The data needs to be sorted in this case, the time series for
-        each panel unit or cluster need to be stacked.
+        each panel unit or cluster need to be stacked. The membership to
+        a timeseries of an individual or group can be either specified by
+        group indicators or by increasing time periods.
+
         keywords
 
-        - `time` array_like (required) : index of time periods
-
+        - either `groups` or `time` : array_like (required)
+          `groups` : indicator for groups
+          `time` : index of time periods
         - `maxlag` integer (required) : number of lags to use
         - `kernel` string (optional) : kernel, default is Bartlett
         - `use_correction` False or string in ['hac', 'cluster'] (optional) :
@@ -114,7 +118,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
               #TODO: we need more options here
 
     Reminder:
-    `use_correction` in "nw-groupsum" and "nw-panel" is not bool,
+    `use_correction` in "hac-groupsum" and "hac-panel" is not bool,
     needs to be in [False, 'hac', 'cluster']
 
     TODO: Currently there is no check for extra or misspelled keywords,
@@ -123,6 +127,14 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     """
 
     import statsmodels.stats.sandwich_covariance as sw
+
+    #normalize names
+    if cov_type == 'nw-panel':
+        cov_type = 'hac-panel'
+    if cov_type == 'nw-groupsum':
+        cov_type = 'hac-groupsum'
+    if 'kernel' in kwds:
+            kwds['weights_func'] = kwds.pop('kernel')
 
     # TODO: make separate function that returns a robust cov plus info
     use_self = kwds.pop('use_self', False)
@@ -142,7 +154,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     res.use_t = use_t
 
     adjust_df = False
-    if cov_type in ['cluster', 'nw-panel', 'nw-groupsum']:
+    if cov_type in ['cluster', 'hac-panel', 'hac-groupsum']:
         df_correction = kwds.get('df_correction', None)
         # TODO: check also use_correction, do I need all combinations?
         if df_correction is not False: # i.e. in [None, True]:
@@ -155,7 +167,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     # TODO: this should be outsourced in a function so we can reuse it in
     #       other models
     # TODO: make it DRYer   repeated code for checking kwds
-    if cov_type in ('HC0', 'HC1', 'HC2', 'HC3'):
+    if cov_type.upper() in ('HC0', 'HC1', 'HC2', 'HC3'):
         if kwds:
             raise ValueError('heteroscedasticity robust covarians ' +
                              'does not use keywords')
@@ -167,9 +179,11 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
             # results classes that don't have cov_HCx attribute
             res.cov_params_default = sw.cov_white_simple(self,
                                                          use_correction=False)
-    elif cov_type == 'HAC':
+    elif cov_type.lower() == 'hac':
         maxlags = kwds['maxlags']   # required?, default in cov_hac_simple
         res.cov_kwds['maxlags'] = maxlags
+        weights_func = kwds.get('weights_func', sw.weights_bartlett)
+        res.cov_kwds['weights_func'] = weights_func
         use_correction = kwds.get('use_correction', False)
         res.cov_kwds['use_correction'] = use_correction
         res.cov_kwds['description'] = ('Standard Errors are heteroscedasticity ' +
@@ -177,8 +191,9 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
              'sample correction') % (maxlags, ['without', 'with'][use_correction])
 
         res.cov_params_default = sw.cov_hac_simple(self, nlags=maxlags,
+                                             weights_func=weights_func,
                                              use_correction=use_correction)
-    elif cov_type == 'cluster':
+    elif cov_type.lower() == 'cluster':
         #cluster robust standard errors, one- or two-way
         groups = kwds['groups']
         if not hasattr(groups, 'shape'):
@@ -218,9 +233,10 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         res.cov_kwds['description'] = ('Standard Errors are robust to' +
                             'cluster correlation ' + '(' + cov_type + ')')
 
-    elif cov_type == 'nw-panel':
+    elif cov_type.lower() == 'hac-panel':
         #cluster robust standard errors
-        res.cov_kwds['time'] = time = kwds['time']
+        res.cov_kwds['time'] = time = kwds.get('time', None)
+        res.cov_kwds['groups'] = groups = kwds.get('groups', None)
         #TODO: nlags is currently required
         #nlags = kwds.get('nlags', True)
         #res.cov_kwds['nlags'] = nlags
@@ -231,15 +247,23 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         weights_func = kwds.get('weights_func', sw.weights_bartlett)
         res.cov_kwds['weights_func'] = weights_func
         # TODO: clumsy time index in cov_nw_panel
-        tt = (np.nonzero(np.diff(time) < 0)[0] + 1).tolist()
-        groupidx = lzip([0] + tt, tt + [len(time)])
+        if groups is not None:
+            tt = (np.nonzero(groups[:-1] != groups[1:])[0] + 1).tolist()
+            nobs_ = len(groups)
+        elif time is not None:
+            # TODO: clumsy time index in cov_nw_panel
+            tt = (np.nonzero(time[1:] < time[:-1])[0] + 1).tolist()
+            nobs_ = len(time)
+        else:
+            raise ValueError('either time or groups needs to be given')
+        groupidx = lzip([0] + tt, tt + [nobs_])
         self.n_groups = n_groups = len(groupidx)
         res.cov_params_default = sw.cov_nw_panel(self, maxlags, groupidx,
                                             weights_func=weights_func,
                                             use_correction=use_correction)
         res.cov_kwds['description'] = ('Standard Errors are robust to' +
                             'cluster correlation ' + '(' + cov_type + ')')
-    elif cov_type == 'nw-groupsum':
+    elif cov_type.lower() == 'hac-groupsum':
         # Driscoll-Kraay standard errors
         res.cov_kwds['time'] = time = kwds['time']
         #TODO: nlags is currently required
@@ -253,7 +277,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         res.cov_kwds['weights_func'] = weights_func
         if adjust_df:
             # need to find number of groups
-            tt = (np.nonzero(np.diff(time) < 0)[0] + 1)
+            tt = (np.nonzero(time[1:] < time[:-1])[0] + 1)
             self.n_groups = n_groups = len(tt) + 1
         res.cov_params_default = sw.cov_nw_groupsum(self, maxlags, time,
                                         weights_func=weights_func,

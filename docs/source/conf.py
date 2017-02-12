@@ -22,33 +22,29 @@ sys.path.insert(0, os.path.abspath('../sphinxext'))
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-#needs_sphinx = '1.0'
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
-              'sphinx.ext.intersphinx', 'sphinx.ext.todo',
-              'sphinx.ext.pngmath', 'sphinx.ext.viewcode', 'sphinx.ext.autosummary',
+extensions = ['sphinx.ext.autodoc',
+              'sphinx.ext.doctest',
+              'sphinx.ext.intersphinx',
+              'sphinx.ext.todo',
+              # 'sphinx.ext.mathjax', # One of mathjax, pngmath or imgmath
+              # 'sphinx.ext.imgmath'
+              'sphinx.ext.pngmath',
+              'sphinx.ext.viewcode',
+              'sphinx.ext.autosummary',
               'sphinx.ext.inheritance_diagram',
               'matplotlib.sphinxext.plot_directive',
               'matplotlib.sphinxext.only_directives',
               'IPython.sphinxext.ipython_console_highlighting',
               'IPython.sphinxext.ipython_directive',
-              'github' # for GitHub links
+              'github',  # for GitHub links,
+              'numpydoc',  # numpydoc or napoleon, but not both
+              # 'sphinx.ext.napoleon'
               ]
 
-import sphinx
-if sphinx.__version__ == '1.1.3':
-    print ("WARNING: Not building inheritance diagrams on sphinx 1.1.3. "
-           "See https://github.com/statsmodels/statsmodels/issues/1002")
-    extensions.remove('sphinx.ext.inheritance_diagram')
-
-# plot_directive is broken on old matplotlib
-from matplotlib import __version__ as mpl_version
-from distutils.version import LooseVersion
-if LooseVersion(mpl_version) < LooseVersion('1.0.1'):
-    extensions.remove('matplotlib.sphinxext.plot_directive')
-    extensions.append('numpy_ext.plot_directive')
+ipython_savefig_dir = '../build/html/_static'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -64,7 +60,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'statsmodels'
-copyright = u'2009-2013, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
+copyright = u'2009-2017, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
 
 
 autosummary_generate = True
@@ -135,7 +131,7 @@ pygments_style = 'sphinx'
 if 'htmlhelp' in sys.argv:
     #html_theme = 'statsmodels_htmlhelp'  #doesn't look nice yet
     html_theme = 'default'
-    print '################# using statsmodels_htmlhelp ############'
+    print('################# using statsmodels_htmlhelp ############')
 else:
     html_theme = 'statsmodels'
 
@@ -251,6 +247,10 @@ latex_documents = [
 # If false, no module index is generated.
 #latex_domain_indices = True
 
+# imgmath options
+imgmath_image_format = 'png'
+imgmath_latex_preamble = r'\usepackage[active]{preview}'
+imgmath_use_preview = True
 # pngmath options
 # http://sphinx-doc.org/ext/math.html#module-sphinx.ext.pngmath
 pngmath_latex_preamble=r'\usepackage[active]{preview}' # + other custom stuff for inline math, such as non-default math fonts etc.
@@ -272,7 +272,7 @@ man_pages = [
 epub_title = u'statsmodels'
 epub_author = u'Josef Perktold, Skipper Seabold'
 epub_publisher = u'Josef Perktold, Skipper Seabold'
-epub_copyright = u'2009-2013, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
+epub_copyright = u'2009-2017, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.
@@ -308,11 +308,11 @@ epub_copyright = u'2009-2013, Josef Perktold, Skipper Seabold, Jonathan Taylor, 
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-        'numpy' : ('http://docs.scipy.org/doc/numpy/', None),
-        'python' : ('http://docs.python.org/3.2', None),
+        'numpy' : ('https://docs.scipy.org/doc/numpy/', None),
+        'python' : ('https://docs.python.org/3.2', None),
         'pydagogue' : ('http://matthew-brett.github.io/pydagogue/', None),
-        'patsy' : ('http://patsy.readthedocs.org/en/latest/', None),
-        'pandas' : ('http://pandas.pydata.org/pandas-docs/dev/', None),
+        'patsy' : ('http://patsy.readthedocs.io/en/latest/', None),
+        'pandas' : ('http://pandas.pydata.org/pandas-docs/stable/', None),
         }
 
 from os.path import dirname, abspath, join
@@ -325,3 +325,13 @@ github_project_url = "https://github.com/statsmodels/statsmodels"
 import json
 example_context = json.load(open('examples/landing.json'))
 html_context = {'examples': example_context }
+
+# --------------- DOCTEST -------------------
+doctest_global_setup = """
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+import numpy as np
+import scipy.stats as stats
+import matplotlib.pyplot as plt
+import pandas as pd
+"""

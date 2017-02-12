@@ -36,6 +36,7 @@ Detailed examples can be found here:
 * `OLS <examples/notebooks/generated/ols.html>`__
 * `WLS <examples/notebooks/generated/wls.html>`__
 * `GLS <examples/notebooks/generated/gls.html>`__
+* `Recursive LS <examples/notebooks/generated/recursive_ls.html>`__
 
 Technical Documentation
 -----------------------
@@ -56,7 +57,7 @@ All regression models define the same methods and follow the same structure,
 and can be used in a similar fashion. Some of them contain additional model
 specific methods and attributes.
 
-GLS is the superclass of the other regression classes.
+GLS is the superclass of the other regression classes except for RecursiveLS.
 
 .. Class hierachy: TODO
 
@@ -126,6 +127,8 @@ wendog : array
 Module Reference
 ----------------
 
+.. module:: statsmodels.regression.linear_model
+
 Model Classes
 ^^^^^^^^^^^^^
 
@@ -138,12 +141,21 @@ Model Classes
    GLSAR
    yule_walker
 
+.. module:: statsmodels.regression.quantile_regression
 .. currentmodule:: statsmodels.regression.quantile_regression
 
 .. autosummary::
    :toctree: generated/
 
    QuantReg
+
+.. module:: statsmodels.regression.recursive_ls
+.. currentmodule:: statsmodels.regression.recursive_ls
+
+.. autosummary::
+   :toctree: generated/
+
+   RecursiveLS
 
 Results Classes
 ^^^^^^^^^^^^^^^
@@ -166,3 +178,10 @@ results class of the other linear models.
    :toctree: generated/
 
    QuantRegResults
+
+.. currentmodule:: statsmodels.regression.recursive_ls
+
+.. autosummary::
+   :toctree: generated/
+
+   RecursiveLSResults

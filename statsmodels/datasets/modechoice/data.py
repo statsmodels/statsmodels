@@ -87,4 +87,4 @@ def _get_data():
     filepath = dirname(abspath(__file__))
     with open(filepath + '/modechoice.csv', 'rb') as f:
         data = np.recfromtxt(f, delimiter=";", names=True, dtype=float)
-        return data
+    return data

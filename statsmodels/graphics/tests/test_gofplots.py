@@ -31,6 +31,7 @@ class BaseProbplotMixin(object):
 
     @dec.skipif(not have_matplotlib)
     def test_ppplot(self):
+        plt.close('all')
         self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line)
 
     @dec.skipif(not have_matplotlib)
@@ -169,9 +170,12 @@ class TestTopLevel(object):
             # test with `ProbPlot` instances
             fig = sm.qqplot_2samples(self.prbplt, self.other_prbplot,
                                      line=line)
+            plt.close('all')
+
     @dec.skipif(not have_matplotlib)
     def test_qqplot_2samples_arrays(self):
         # also tests all values for line
         for line in ['r', 'q', '45', 's']:
             # test with arrays
             fig = sm.qqplot_2samples(self.res, self.other_array, line=line)
+            plt.close('all')

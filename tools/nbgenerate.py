@@ -1,7 +1,8 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import io
 import os
+import sys
 import argparse
 from functools import partial
 try:
@@ -85,6 +86,9 @@ def find_notebooks(directory=None):
     return nbs
 
 def do_one(nb, to=None, execute=None, allow_errors=None, timeout=None, kernel_name=None):
+    from traitlets.traitlets import TraitError
+    import jupyter_client
+
     name = os.path.basename(nb)
     if execute:
         dst = os.path.join(EXECUTED_DIR, name)
@@ -93,15 +97,25 @@ def do_one(nb, to=None, execute=None, allow_errors=None, timeout=None, kernel_na
                         kernel_name=kernel_name)
     dst = os.path.splitext(os.path.join(DST_DIR, name))[0] + '.' + to
     print("Converting %s to %s" % (nb, dst))
-    convert(nb, dst, to=to)
+    try:
+        convert(nb, dst, to=to)
+    except TraitError:
+        kernels = jupyter_client.kernelspec.find_kernel_specs()
+        msg = ('Could not find kernel named `%s`, Available kernels:\n %s'
+               % kernel_name, kernels)
+        raise ValueError(msg)
     return dst
 
 def do(fp=None, directory=None, to='html', execute=True,
-       allow_errors=True, timeout=1000, kernel_name=None):
+       allow_errors=True, timeout=1000, kernel_name=''):
     if fp is None:
         nbs = find_notebooks(directory)
     else:
         nbs = [fp]
+
+    if kernel_name is None:
+        kernel_name = find_kernel_name()
+
     func = partial(do_one, to=to, execute=execute, allow_errors=allow_errors,
                    timeout=timeout, kernel_name=kernel_name)
     if par:
@@ -112,6 +126,17 @@ def do(fp=None, directory=None, to='html', execute=True,
         for nb in nbs:
             func(nb)
             print("Finished %s" % nb)
+
+
+def find_kernel_name():
+    import jupyter_client
+
+    kernels = jupyter_client.kernelspec.find_kernel_specs()
+    kernel_name = 'python%s' % sys.version_info.major
+    if kernel_name not in kernels:
+        return ''
+    return kernel_name
+
 
 parser = argparse.ArgumentParser(description="Process example notebooks")
 parser.add_argument("--fp", type=str, default=None,

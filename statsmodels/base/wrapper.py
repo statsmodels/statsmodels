@@ -2,7 +2,7 @@ import inspect
 import functools
 
 import numpy as np
-from statsmodels.compat.python import get_function_name, iteritems
+from statsmodels.compat.python import get_function_name, iteritems, getargspec
 
 class ResultsWrapper(object):
     """
@@ -95,7 +95,7 @@ def make_wrapper(func, how):
             obj = data.wrap_output(func(results, *args, **kwargs), how)
         return obj
 
-    argspec = inspect.getargspec(func)
+    argspec = getargspec(func)
     formatted = inspect.formatargspec(argspec[0], varargs=argspec[1],
                                       defaults=argspec[3])
 

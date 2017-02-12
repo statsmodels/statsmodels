@@ -33,6 +33,8 @@ A more detailed example can be found here:
 Module Reference
 ----------------
 
+.. module:: statsmodels.stats.anova
+
 .. autosummary::
    :toctree: generated/
 

@@ -8,10 +8,10 @@ namespace : dictionary
 
 
 """
+from statsmodels.compat.collections import OrderedDict
 from statsmodels.compat.python import (iterkeys, lrange, callable, string_types,
                                 itervalues, range)
 import copy
-import types
 import numpy as np
 
 __docformat__ = 'restructuredtext'
@@ -300,11 +300,14 @@ class Factor(Term):
         """
         Retrieve the column corresponding to key in a Formula.
 
-        :Parameters:
-            key : one of the Factor's keys
+        Parameters
+        ----------
+        key : Factor key
+            one of the Factor's keys
 
-        :Returns: ndarray corresponding to key, when evaluated in
-                  current namespace
+        Returns
+        -------
+        ndarray corresponding to key, when evaluated in current namespace
         """
         if not self.ordinal:
             i = self.names().index('(%s==%s)' % (self.termname, str(key)))
@@ -494,7 +497,7 @@ class Formula(object):
 
         if self.hasterm(query_term):
             names = query_term.names()
-            value = {}
+            value = OrderedDict()
             for name in names:
                 value[name] = self._names.index(name)
         else:
@@ -614,9 +617,15 @@ class Formula(object):
         terms in the formula are sorted alphabetically.
         """
 
+        def _delist(x):
+            if isinstance(x, list):
+                return x[0]
+            else:
+                return x
+
         other = Formula(other)
         terms = self.terms + other.terms
-        pieces = sorted([(term.name, term) for term in terms])
+        pieces = sorted([(_delist(term.name), term) for term in terms], key=lambda x: x[0])
         terms = [piece[1] for piece in pieces]
         f = Formula(terms)
         if _namespace_equal(self.namespace, other.namespace):

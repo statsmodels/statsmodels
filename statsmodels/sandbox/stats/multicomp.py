@@ -93,7 +93,7 @@ from numpy.testing import assert_almost_equal, assert_equal
 #temporary circular import
 from statsmodels.stats.multitest import multipletests, _ecdf as ecdf, fdrcorrection as fdrcorrection0, fdrcorrection_twostage
 from statsmodels.graphics import utils
-
+from statsmodels.tools.sm_exceptions import ValueWarning
 
 qcrit = '''
   2     3     4     5     6     7     8     9     10
@@ -813,7 +813,7 @@ class MultiComparison(object):
                 # warn and keep only observations with label in group_order
                 import warnings
                 warnings.warn('group_order does not contain all groups:' +
-                              ' dropping observations')
+                              ' dropping observations', ValueWarning)
 
                 mask_keep = self.groupintlab != -999
                 self.groupintlab = self.groupintlab[mask_keep]
@@ -823,7 +823,7 @@ class MultiComparison(object):
         if len(self.groupsunique) < 2:
             raise ValueError('2 or more groups required for multiple comparisons')
 
-        self.datali = [data[self.groups == k] for k in self.groupsunique]
+        self.datali = [self.data[self.groups == k] for k in self.groupsunique]
         self.pairindices = np.triu_indices(len(self.groupsunique), 1)  #tuple
         self.nobs = self.data.shape[0]
         self.ngroups = len(self.groupsunique)
@@ -1346,7 +1346,7 @@ def simultaneous_ci(q_crit, var, groupnobs, pairindices=None):
     if (ng > 2):
         w = ((ng-1.) * sum2 - sum1) / ((ng - 1.) * (ng - 2.))
     else:
-        w = sum1 * np.ones(2, 1) / 2.
+        w = sum1 * np.ones((2, 1)) / 2.
 
     return (q_crit / np.sqrt(2))*w
 

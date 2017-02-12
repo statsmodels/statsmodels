@@ -6,12 +6,16 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            dec, assert_)
 from . import lme_r_results
 from statsmodels.base import _penalties as penalties
+from numpy.testing import dec
 import statsmodels.tools.numdiff as nd
 import os
 import csv
+import scipy
 
 # TODO: add tests with unequal group sizes
 
+v = scipy.__version__.split(".")[1]
+old_scipy = int(v) < 16
 
 class R_Results(object):
     """
@@ -209,15 +213,10 @@ class TestMixedLM(object):
                         dist_high=0.5, num_high=3)
 
     # Fails on old versions of scipy/numpy
+    @dec.skipif(old_scipy)
     def test_vcomp_1(self):
         # Fit the same model using constrained random effects and
         # variance components.
-
-        import scipy
-        v = scipy.__version__.split(".")[1]
-        v = int(v)
-        if v < 16:
-            return
 
         np.random.seed(4279)
         exog = np.random.normal(size=(400, 1))
@@ -265,17 +264,17 @@ class TestMixedLM(object):
 
         # The random effects
         exog_re = np.random.normal(size=(n, 2))
-        slopes = np.random.normal(size=(n / 16, 2))
+        slopes = np.random.normal(size=(n // 16, 2))
         slopes = np.kron(slopes, np.ones((16, 1))) * exog_re
         errors += slopes.sum(1)
 
         # First variance component
         subgroups1 = np.kron(np.arange(n / 4), np.ones(4))
-        errors += np.kron(2 * np.random.normal(size=n / 4), np.ones(4))
+        errors += np.kron(2 * np.random.normal(size=n // 4), np.ones(4))
 
         # Second variance component
         subgroups2 = np.kron(np.arange(n / 2), np.ones(2))
-        errors += np.kron(2 * np.random.normal(size=n / 2), np.ones(2))
+        errors += np.kron(2 * np.random.normal(size=n // 2), np.ones(2))
 
         # iid errors
         errors += np.random.normal(size=n)
@@ -312,14 +311,9 @@ class TestMixedLM(object):
         assert_allclose(result1.bse.iloc[0:3], [
                         0.12610, 0.03938, 0.03848], rtol=1e-3)
 
+    @dec.skipif(old_scipy)
     def test_vcomp_3(self):
         # Test a model with vcomp but no other random effects, using formulas.
-
-        import scipy
-        v = scipy.__version__.split(".")[1]
-        v = int(v)
-        if v < 16:
-            return
 
         np.random.seed(4279)
         x1 = np.random.normal(size=400)
@@ -343,13 +337,8 @@ class TestMixedLM(object):
                         np.r_[-0.101549, 0.028613, -0.224621, -0.126295],
                         rtol=1e-3)
 
+    @dec.skipif(old_scipy)
     def test_sparse(self):
-
-        import scipy
-        v = scipy.__version__.split(".")[1]
-        v = int(v)
-        if v < 16:
-            return
 
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         rdir = os.path.join(cur_dir, 'results')
@@ -431,11 +420,11 @@ class TestMixedLM(object):
         groups = np.kron(np.arange(n / 4), np.ones(4))
         errors = 0
         exog_re = np.random.normal(size=(n, 2))
-        slopes = np.random.normal(size=(n / 4, 2))
+        slopes = np.random.normal(size=(n // 4, 2))
         slopes = np.kron(slopes, np.ones((4, 1))) * exog_re
         errors += slopes.sum(1)
         ex_vc = np.random.normal(size=(n, 4))
-        slopes = np.random.normal(size=(n / 4, 4))
+        slopes = np.random.normal(size=(n // 4, 4))
         slopes[:, 2:] *= 2
         slopes = np.kron(slopes, np.ones((4, 1))) * ex_vc
         errors += slopes.sum(1)
@@ -482,9 +471,8 @@ class TestMixedLM(object):
         mod1 = MixedLM(endog, exog, groups, exog_re)
         # test the names
         assert_(mod1.data.xnames == ["x1", "x2", "x3", "x4"])
-        assert_(mod1.data.exog_re_names == ["Z1"])
-        assert_(mod1.data.exog_re_names_full == ["Z1 RE"])
-
+        assert_(mod1.data.exog_re_names == ["x_re1"])
+        assert_(mod1.data.exog_re_names_full == ["x_re1 RE"])
         rslt1 = mod1.fit()
 
         # Fit with a formula, passing groups as the actual values.
@@ -532,6 +520,7 @@ class TestMixedLM(object):
             rslt5 = mod5.fit()
         assert_almost_equal(rslt4.params, rslt5.params)
 
+    @dec.skipif(old_scipy)
     def test_regularized(self):
 
         np.random.seed(3453)
@@ -693,6 +682,49 @@ def test_mixed_lm_wrapper():
     bse_re = result.bse_re
     assert_(bse_re.index.tolist() == re_names_full)
 
+def test_random_effects():
+
+    np.random.seed(23429)
+
+    # Default model (random effects only)
+    ngrp = 100
+    gsize = 10
+    rsd = 2
+    gsd = 3
+    mn = gsd*np.random.normal(size=ngrp)
+    gmn = np.kron(mn, np.ones(gsize))
+    y = gmn + rsd*np.random.normal(size=ngrp*gsize)
+    gr = np.kron(np.arange(ngrp), np.ones(gsize))
+    x = np.ones(ngrp * gsize)
+    model = MixedLM(y, x, groups=gr)
+    result = model.fit()
+    re = result.random_effects
+    assert_(isinstance(re, dict))
+    assert_(len(re) == ngrp)
+    assert_(isinstance(re[0], pd.Series))
+    assert_(len(re[0]) == 1)
+
+    # Random intercept only, set explicitly
+    model = MixedLM(y, x, exog_re=x, groups=gr)
+    result = model.fit()
+    re = result.random_effects
+    assert_(isinstance(re, dict))
+    assert_(len(re) == ngrp)
+    assert_(isinstance(re[0], pd.Series))
+    assert_(len(re[0]) == 1)
+
+    # Random intercept and slope
+    xr = np.random.normal(size=(ngrp*gsize, 2))
+    xr[:, 0] = 1
+    qp = np.linspace(-1, 1, gsize)
+    xr[:, 1] = np.kron(np.ones(ngrp), qp)
+    model = MixedLM(y, x, exog_re=xr, groups=gr)
+    result = model.fit()
+    re = result.random_effects
+    assert_(isinstance(re, dict))
+    assert_(len(re) == ngrp)
+    assert_(isinstance(re[0], pd.Series))
+    assert_(len(re[0]) == 2)
 
 if __name__ == "__main__":
 

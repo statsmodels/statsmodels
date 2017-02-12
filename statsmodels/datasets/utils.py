@@ -1,6 +1,7 @@
+from statsmodels.compat.numpy import recarray_select
 from statsmodels.compat.python import (range, StringIO, urlopen,
                                        HTTPError, URLError, lrange,
-                                       cPickle, urljoin, BytesIO)
+                                       cPickle, urljoin, BytesIO, long, PY3)
 import sys
 import shutil
 from os import environ
@@ -77,7 +78,7 @@ class Dataset(dict):
 def process_recarray(data, endog_idx=0, exog_idx=None, stack=True, dtype=None):
     names = list(data.dtype.names)
 
-    if isinstance(endog_idx, int):
+    if isinstance(endog_idx, (int, long)):
         endog = array(data[names[endog_idx]], dtype=dtype)
         endog_name = names[endog_idx]
         endog_idx = [endog_idx]
@@ -98,7 +99,7 @@ def process_recarray(data, endog_idx=0, exog_idx=None, stack=True, dtype=None):
     if stack:
         exog = np.column_stack(data[field] for field in exog_name)
     else:
-        exog = data[exog_name]
+        exog = recarray_select(data, exog_name)
 
     if dtype:
         endog = endog.astype(dtype)
@@ -116,7 +117,7 @@ def process_recarray_pandas(data, endog_idx=0, exog_idx=None, dtype=None,
     data = DataFrame(data, dtype=dtype)
     names = data.columns
 
-    if isinstance(endog_idx, int):
+    if isinstance(endog_idx, (int, long)):
         endog_name = names[endog_idx]
         endog = data[endog_name]
         if exog_idx is None:
@@ -128,7 +129,7 @@ def process_recarray_pandas(data, endog_idx=0, exog_idx=None, dtype=None,
         endog_name = list(endog.columns)
         if exog_idx is None:
             exog = data.drop(endog_name, axis=1)
-        elif isinstance(exog_idx, int):
+        elif isinstance(exog_idx, (int, long)):
             exog = data.filter([names[exog_idx]])
         else:
             exog = data.filter(names[exog_idx])
@@ -166,7 +167,7 @@ def _get_cache(cache):
 
 
 def _cache_it(data, cache_path):
-    if sys.version_info[0] >= 3:
+    if PY3:
         # for some reason encode("zip") won't work for me in Python 3?
         import zlib
         # use protocol 2 so can open with python 2.x if cached in 3.x
@@ -177,7 +178,7 @@ def _cache_it(data, cache_path):
 
 
 def _open_cache(cache_path):
-    if sys.version_info[0] >= 3:
+    if PY3:
         # NOTE: don't know why but decode('zip') doesn't work on my
         # Python 3 build
         import zlib
@@ -235,7 +236,7 @@ def _get_dataset_meta(dataname, package, cache):
                  "datasets.csv")
     data, _ = _urlopen_cached(index_url, cache)
     # Python 3
-    if sys.version[0] == '3':  # pragma: no cover
+    if PY3:  # pragma: no cover
         data = data.decode('utf-8', 'strict')
     index = read_csv(StringIO(data))
     idx = np.logical_and(index.Item == dataname, index.Package == package)

@@ -1,15 +1,16 @@
 '''
 Utility functions models code
 '''
-from statsmodels.compat.python import reduce, lzip, lmap, asstr2, range
+from statsmodels.compat.python import reduce, lzip, lmap, asstr2, range, long
 import numpy as np
 import numpy.lib.recfunctions as nprf
 import numpy.linalg as L
 from scipy.linalg import svdvals
+import pandas as pd
+
 from statsmodels.datasets import webuse
-from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.data import _is_using_pandas, _is_recarray
 from statsmodels.compat.numpy import np_matrix_rank
-from pandas import DataFrame
 
 
 def _make_dictnames(tmp_arr, offset=0):
@@ -108,9 +109,11 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
     Univariate examples
 
     >>> import string
-    >>> string_var = [string.lowercase[0:5], string.lowercase[5:10],   \
-                string.lowercase[10:15], string.lowercase[15:20],   \
-                string.lowercase[20:25]]
+    >>> string_var = [string.ascii_lowercase[0:5], \
+                      string.ascii_lowercase[5:10], \
+                      string.ascii_lowercase[10:15], \
+                      string.ascii_lowercase[15:20],   \
+                      string.ascii_lowercase[20:25]]
     >>> string_var *= 5
     >>> string_var = np.asarray(sorted(string_var))
     >>> design = sm.tools.categorical(string_var, drop=True)
@@ -147,7 +150,7 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
     if data.dtype.names or data.__class__ is np.recarray:
         if not col and np.squeeze(data).ndim > 1:
             raise IndexError("col is None and the input array is not 1d")
-        if isinstance(col, int):
+        if isinstance(col, (int, long)):
             col = data.dtype.names[col]
         if col is None and data.dtype.names and len(data.dtype.names) == 1:
             col = data.dtype.names[0]
@@ -201,7 +204,7 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
         if not isinstance(data, np.ndarray):
             raise NotImplementedError("Array-like objects are not supported")
 
-        if isinstance(col, int):
+        if isinstance(col, (int, long)):
             offset = data.shape[1]          # need error catching here?
             tmp_arr = np.unique(data[:, col])
             tmp_dummy = (tmp_arr[:, np.newaxis] == data[:, col]).astype(float)
@@ -233,108 +236,57 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
             raise IndexError("The index %s is not understood" % col)
 
 
-def _series_add_constant(data, prepend, has_constant):
-    const = np.ones_like(data)
-    if data.var() == 0:
-        if has_constant == 'raise':
-            raise ValueError("data already contains a constant.")
-        elif has_constant == 'skip':
-            return data
-        elif has_constant == 'add':
-            pass
-        else:
-            raise ValueError("Option {0} not understood for "
-                             "has_constant.".format(has_constant))
-    if not prepend:
-        columns = [data.name, 'const']
-    else:
-        columns = ['const', data.name]
-    results = DataFrame({data.name : data, 'const' : const}, columns=columns)
-    return results
-
-
-def _dataframe_add_constant(data, prepend, has_constant):
-    # check for const.
-    if np.any(data.var(0) == 0):
-        if has_constant == 'raise':
-            raise ValueError("data already contains a constant.")
-        elif has_constant == 'skip':
-            return data
-        elif has_constant == 'add':
-            pass
-        else:
-            raise ValueError("Option {0} not understood for "
-                             "has_constant.".format(has_constant))
-    if prepend:
-        data.insert(0, 'const', 1)
-    else:
-        data['const'] = 1
-    return data
-
-
-def _pandas_add_constant(data, prepend, has_constant):
-    from pandas import Series
-    if isinstance(data, Series):
-        return _series_add_constant(data, prepend, has_constant)
-    else:
-        return _dataframe_add_constant(data, prepend, has_constant)
-
-
 # TODO: add an axis argument to this for sysreg
 def add_constant(data, prepend=True, has_constant='skip'):
     """
-    This appends a column of ones to an array if prepend==False.
+    Adds a column of ones to an array
 
     Parameters
     ----------
     data : array-like
-        `data` is the column-ordered design matrix
+        ``data`` is the column-ordered design matrix
     prepend : bool
-        True and the constant is prepended rather than appended.
+        If true, the constant is in the first column.  Else the constant is
+        appended (last column).
     has_constant : str {'raise', 'add', 'skip'}
-        Behavior if `data` already has a constant. The default will return
+        Behavior if ``data`` already has a constant. The default will return
         data without adding another constant. If 'raise', will raise an
         error if a constant is present. Using 'add' will duplicate the
-        constant, if one is present. Has no effect for structured or
-        recarrays. There is no checking for a constant in this case.
+        constant, if one is present.
 
     Returns
     -------
-    data : array
-        The original array with a constant (column of ones) as the first or
-        last column.
+    data : array, recarray or DataFrame
+        The original values with a constant (column of ones) as the first or
+        last column. Returned value depends on input type.
+
+    Notes
+    -----
+    When the input is recarray or a pandas Series or DataFrame, the added
+    column's name is 'const'.
     """
-    if _is_using_pandas(data, None):
-        # work on a copy
-        return _pandas_add_constant(data.copy(), prepend, has_constant)
-    else:
-        data = np.asarray(data)
-    if not data.dtype.names:
-        var0 = data.var(0) == 0
-        if np.any(var0):
-            if has_constant == 'raise':
-                raise ValueError("data already contains a constant.")
-            elif has_constant == 'skip':
-                return data
-            elif has_constant == 'add':
-                pass
-            else:
-                raise ValueError("Option {0} not understood for "
-                                 "has_constant.".format(has_constant))
-        data = np.column_stack((data, np.ones((data.shape[0], 1))))
-        if prepend:
-            return np.roll(data, 1, 1)
-    else:
-        return_rec = data.__class__ is np.recarray
-        if prepend:
-            ones = np.ones((data.shape[0], 1), dtype=[('const', float)])
-            data = nprf.append_fields(ones, data.dtype.names,
-                                      [data[i] for i in data.dtype.names],
-                                      usemask=False, asrecarray=return_rec)
-        else:
-            data = nprf.append_fields(data, 'const', np.ones(data.shape[0]),
-                                      usemask=False, asrecarray=return_rec)
-    return data
+    if _is_using_pandas(data, None) or _is_recarray(data):
+        from statsmodels.tsa.tsatools import add_trend
+        return add_trend(data, trend='c', prepend=prepend, has_constant=has_constant)
+
+    # Special case for NumPy
+    x = np.asanyarray(data)
+    if x.ndim == 1:
+        x = x[:,None]
+    elif x.ndim > 2:
+        raise ValueError('Only implementd 2-dimensional arrays')
+
+    is_nonzero_const = np.ptp(x, axis=0) == 0
+    is_nonzero_const &= np.all(x != 0.0, axis=0)
+    if is_nonzero_const.any():
+        if has_constant == 'skip':
+            return x
+        elif has_constant == 'raise':
+            raise ValueError("data already contains a constant")
+
+    x = [np.ones(x.shape[0]), x]
+    x = x if prepend else x[::-1]
+    return np.column_stack(x)
 
 
 def isestimable(C, D):
@@ -429,23 +381,6 @@ def clean0(matrix):
     colsum = np.add.reduce(matrix**2, 0)
     val = [matrix[:, i] for i in np.flatnonzero(colsum)]
     return np.array(np.transpose(val))
-
-
-def rank(X, cond=1.0e-12):
-    """
-    Return the rank of a matrix X based on its generalized inverse,
-    not the SVD.
-    """
-    from warnings import warn
-    warn("rank is deprecated and will be removed in 0.7."
-         " Use np.linalg.matrix_rank instead.", FutureWarning)
-    X = np.asarray(X)
-    if len(X.shape) == 2:
-        D = svdvals(X)
-        return int(np.add.reduce(np.greater(D / D.max(),
-                                            cond).astype(np.int32)))
-    else:
-        return int(not np.alltrue(np.equal(X, 0.)))
 
 
 def fullrank(X, r=None):
@@ -557,9 +492,44 @@ class Bunch(dict):
         dict.__init__(self, kw)
         self.__dict__ = self
 
-webuse = np.deprecate(webuse,
-                      old_name='statsmodels.tools.tools.webuse',
-                      new_name='statsmodels.datasets.webuse',
-                      message='webuse will be removed from the tools '
-                              'namespace in the 0.7.0 release. Please use the'
-                              ' new import.')
+def _ensure_2d(x, ndarray=False):
+    """
+
+    Parameters
+    ----------
+    x : array, Series, DataFrame or None
+        Input to verify dimensions, and to transform as necesary
+    ndarray : bool
+        Flag indicating whether to always return a NumPy array. Setting False
+        will return an pandas DataFrame when the input is a Series or a
+        DataFrame.
+
+    Returns
+    -------
+    out : array, DataFrame or None
+        array or DataFrame with 2 dimensiona.  One dimensional arrays are
+        returned as nobs by 1. None is returned if x is None.
+    names : list of str or None
+        list containing variables names when the input is a pandas datatype.
+        Returns None if the input is an ndarray.
+
+    Notes
+    -----
+    Accepts None for simplicity
+    """
+    if x is None:
+        return x
+    is_pandas = _is_using_pandas(x, None)
+    if x.ndim == 2:
+        if is_pandas:
+            return x, x.columns
+        else:
+            return x, None
+    elif x.ndim > 2:
+        raise ValueError('x mst be 1 or 2-dimensional.')
+
+    name = x.name if is_pandas else None
+    if ndarray:
+        return np.asarray(x)[:, None], name
+    else:
+        return pd.DataFrame(x), name

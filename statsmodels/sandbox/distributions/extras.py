@@ -1015,17 +1015,17 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     Examples
     --------
 
-    >>> print mvstdnormcdf([-np.inf,-np.inf], [0.0,np.inf], 0.5)
+    >>> print(mvstdnormcdf([-np.inf,-np.inf], [0.0,np.inf], 0.5))
     0.5
     >>> corr = [[1.0, 0, 0.5],[0,1,0],[0.5,0,1]]
-    >>> print mvstdnormcdf([-np.inf,-np.inf,-100.0], [0.0,0.0,0.0], corr, abseps=1e-6)
+    >>> print(mvstdnormcdf([-np.inf,-np.inf,-100.0], [0.0,0.0,0.0], corr, abseps=1e-6))
     0.166666399198
-    >>> print mvstdnormcdf([-np.inf,-np.inf,-100.0],[0.0,0.0,0.0],corr, abseps=1e-8)
+    >>> print(mvstdnormcdf([-np.inf,-np.inf,-100.0],[0.0,0.0,0.0],corr, abseps=1e-8))
     something wrong completion with ERROR > EPS and MAXPTS function values used;
                         increase MAXPTS to decrease ERROR; 1.048330348e-006
     0.166666546218
-    >>> print mvstdnormcdf([-np.inf,-np.inf,-100.0],[0.0,0.0,0.0], corr,
-                            maxpts=100000, abseps=1e-8)
+    >>> print(mvstdnormcdf([-np.inf,-np.inf,-100.0],[0.0,0.0,0.0], corr, \
+                            maxpts=100000, abseps=1e-8))
     0.166666588293
 
     '''

@@ -1,4 +1,5 @@
-.. currentmodule:: statsmodels.duration.hazard_regression
+.. module:: statsmodels.duration
+.. currentmodule:: statsmodels.duration
 
 
 .. _duration:
@@ -21,7 +22,7 @@ not know the exact event time.
 Survival function estimation and inference
 ------------------------------------------
 
-The :class:`statsmodels.duration.SurvfuncRight` class can be used to
+The :class:`statsmodels.api.SurvfuncRight` class can be used to
 estimate a survival function using data that may be right censored.
 ``SurvfuncRight`` implements several inference procedures including
 confidence intervals for survival distribution quantiles, pointwise
@@ -43,7 +44,7 @@ We fit the survival distribution only for the female subjects.
 
    data = sm.datasets.get_rdataset("flchain", "survival").data
    df = data.loc[data.sex == "F", :]
-   sf = sm.duration.SurvfuncRight(df["futime"], df["death"])
+   sf = sm.SurvfuncRight(df["futime"], df["death"])
 
 The main features of the fitted survival distribution can be seen by
 calling the ``summary`` method:
@@ -103,7 +104,7 @@ the same axes:
     sexes = []
     for g in gb:
         sexes.append(g[0])
-        sf = sm.duration.SurvfuncRight(g[1]["futime"], g[1]["death"])
+        sf = sm.SurvfuncRight(g[1]["futime"], g[1]["death"])
         sf.plot(ax)
     li = ax.get_lines()
     li[1].set_visible(False)
@@ -169,12 +170,7 @@ Examples
    print(rslt.summary())
 
 
-Detailed examples can be found here:
-
-.. toctree::
-    :maxdepth: 2
-
-    examples/notebooks/generated/
+See :ref:`statsmodels-examples` for more detailed examples.
 
 
 There are some notebook examples on the Wiki:
@@ -204,12 +200,18 @@ References for Cox proportional hazards regression model::
 Module Reference
 ----------------
 
+.. module:: statsmodels.duration.survfunc
+.. currentmodule:: statsmodels.duration.survfunc
+
 The class for working with survival distributions is:
 
 .. autosummary::
    :toctree: generated/
 
    SurvfuncRight
+
+.. module:: statsmodels.duration.hazard_regression
+.. currentmodule:: statsmodels.duration.hazard_regression
 
 The proportional hazards regression model class is:
 

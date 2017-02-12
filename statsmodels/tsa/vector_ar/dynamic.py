@@ -14,7 +14,6 @@ ROLLING = 1
 EXPANDING = 2
 
 
-
 def _get_window_type(window_type):
     if window_type in (FULL_SAMPLE, ROLLING, EXPANDING):
         return window_type
@@ -29,6 +28,7 @@ def _get_window_type(window_type):
             return EXPANDING
 
     raise Exception('Unrecognized window type: %s' % window_type)
+
 
 class DynamicVAR(object):
     """
@@ -51,7 +51,7 @@ class DynamicVAR(object):
     -------
     **Attributes**:
 
-    coefs : WidePanel
+    coefs : Panel
         items : coefficient names
         major_axis : dates
         minor_axis : VAR equation names
@@ -112,6 +112,7 @@ class DynamicVAR(object):
     def equations(self):
         eqs = {}
         for col, ts in iteritems(self.y):
+            # TODO: Remove in favor of statsmodels implemetation
             model = pd.ols(y=ts, x=self.x, window=self._window,
                            window_type=self._window_type,
                            min_periods=self._min_periods)
@@ -123,13 +124,13 @@ class DynamicVAR(object):
     @cache_readonly
     def coefs(self):
         """
-        Return dynamic regression coefficients as WidePanel
+        Return dynamic regression coefficients as Panel
         """
         data = {}
         for eq, result in iteritems(self.equations):
             data[eq] = result.beta
 
-        panel = pd.WidePanel.fromDict(data)
+        panel = pd.Panel.fromDict(data)
 
         # Coefficient names become items
         return panel.swapaxes('items', 'minor')
@@ -243,7 +244,9 @@ class DynamicVAR(object):
             y_handle = ax.plot(dates, y_ts.values, 'k.', ms=2)
             forc_handle = ax.plot(dates, forc_ts.values, 'k-')
 
-        fig.legend((y_handle, forc_handle), ('Y', 'Forecast'))
+        lines = (y_handle[0], forc_handle[0])
+        labels =  ('Y', 'Forecast')
+        fig.legend(lines,labels)
         fig.autofmt_xdate()
 
         fig.suptitle('Dynamic %d-step forecast' % steps)

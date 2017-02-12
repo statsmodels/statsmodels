@@ -44,8 +44,7 @@ def cffilter(X, low=6, high=32, drift=True):
     >>> import statsmodels.api as sm
     >>> import pandas as pd
     >>> dta = sm.datasets.macrodata.load_pandas().data
-    >>> dates = sm.tsa.datetools.dates_from_range('1959Q1', '2009Q3')
-    >>> index = pd.DatetimeIndex(dates)
+    >>> index = pd.DatetimeIndex(start='1959Q1', end='2009Q4', freq='Q')
     >>> dta.set_index(index, inplace=True)
 
     >>> cf_cycles, cf_trend = sm.tsa.filters.cffilter(dta[["infl", "unemp"]])
@@ -56,6 +55,13 @@ def cffilter(X, low=6, high=32, drift=True):
     >>> plt.show()
 
     .. plot:: plots/cff_plot.py
+
+    See Also
+    --------
+    statsmodels.tsa.filters.bk_filter.bkfilter
+    statsmodels.tsa.filters.hp_filter.hpfilter
+    statsmodels.tsa.seasonal.seasonal_decompose
+
     """
     #TODO: cythonize/vectorize loop?, add ability for symmetric filter,
     #      and estimates of theta other than random walk.

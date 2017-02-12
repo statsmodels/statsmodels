@@ -71,3 +71,51 @@ Maximum iteration reached.
 
 class InvalidTestWarning(UserWarning):
     pass
+
+
+class NotImplementedWarning(UserWarning):
+    pass
+
+
+class OutputWarning(UserWarning):
+    pass
+
+
+class DomainWarning(UserWarning):
+    pass
+
+
+class ValueWarning(UserWarning):
+    pass
+
+
+class EstimationWarning(UserWarning):
+    pass
+
+
+class SingularMatrixWarning(UserWarning):
+    pass
+
+
+class HypothesisTestWarning(UserWarning):
+    pass
+
+
+class InterpolationWarning(UserWarning):
+    pass
+
+
+class PrecisionWarning(UserWarning):
+    pass
+
+
+class SpecificationWarning(UserWarning):
+    pass
+
+
+class HessianInversionWarning(UserWarning):
+    pass
+
+
+class ColinearityWarning(UserWarning):
+    pass

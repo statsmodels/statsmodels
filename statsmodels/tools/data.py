@@ -11,8 +11,10 @@ def _check_period_index(x, freq="M"):
     if not isinstance(x.index, (DatetimeIndex, PeriodIndex)):
         raise ValueError("The index must be a DatetimeIndex or PeriodIndex")
 
-    from statsmodels.tsa.base.datetools import _infer_freq
-    inferred_freq = _infer_freq(x.index)
+    if x.index.freq is not None:
+        inferred_freq = x.index.freqstr
+    else:
+        inferred_freq = pd.infer_freq(x.index)
     if not inferred_freq.startswith(freq):
         raise ValueError("Expected frequency {}. Got {}".format(inferred_freq,
                                                                 freq))
@@ -95,7 +97,8 @@ def _is_using_ndarray(endog, exog):
 
 
 def _is_using_pandas(endog, exog):
-    klasses = (pd.Series, pd.DataFrame, pd.WidePanel)
+    # TODO: Remove WidePanel when finished with it
+    klasses = (pd.Series, pd.DataFrame, pd.WidePanel, pd.Panel)
     return (isinstance(endog, klasses) or isinstance(exog, klasses))
 
 
@@ -112,3 +115,10 @@ def _is_using_patsy(endog, exog):
     # we get this when a structured array is passed through a formula
     return (is_design_matrix(endog) and
             (is_design_matrix(exog) or exog is None))
+
+
+def _is_recarray(data):
+    """
+    Returns true if data is a recarray
+    """
+    return isinstance(data, np.core.recarray)

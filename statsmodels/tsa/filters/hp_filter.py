@@ -1,10 +1,10 @@
 from __future__ import absolute_import
 
 from scipy import sparse
-from scipy.sparse import dia_matrix, eye as speye
 from scipy.sparse.linalg import spsolve
 import numpy as np
 from ._utils import _maybe_get_pandas_wrapper
+
 
 def hpfilter(X, lamb=1600):
     """
@@ -32,8 +32,7 @@ def hpfilter(X, lamb=1600):
     >>> import statsmodels.api as sm
     >>> import pandas as pd
     >>> dta = sm.datasets.macrodata.load_pandas().data
-    >>> dates = sm.tsa.datetools.dates_from_range('1959Q1', '2009Q3')
-    >>> index = pd.DatetimeIndex(dates)
+    >>> index = pd.DatetimeIndex(start='1959Q1', end='2009Q4', freq='Q')
     >>> dta.set_index(index, inplace=True)
 
     >>> cycle, trend = sm.tsa.filters.hpfilter(dta.realgdp, 1600)
@@ -68,6 +67,12 @@ def hpfilter(X, lamb=1600):
     K[i,j] = -2 if i == j + 1
     K[i,j] = 0 otherwise
 
+    See Also
+    --------
+    statsmodels.tsa.filters.bk_filter.bkfilter
+    statsmodels.tsa.filters.cf_filter.cffilter
+    statsmodels.tsa.seasonal.seasonal_decompose
+
     References
     ----------
     Hodrick, R.J, and E. C. Prescott. 1980. "Postwar U.S. Business Cycles: An
@@ -82,25 +87,14 @@ def hpfilter(X, lamb=1600):
     if X.ndim > 1:
         X = X.squeeze()
     nobs = len(X)
-    I = speye(nobs,nobs)
+    I = sparse.eye(nobs,nobs)
     offsets = np.array([0,1,2])
     data = np.repeat([[1.],[-2.],[1.]], nobs, axis=1)
-    K = dia_matrix((data, offsets), shape=(nobs-2,nobs))
+    K = sparse.dia_matrix((data, offsets), shape=(nobs-2,nobs))
 
-    import scipy
-    if (X.dtype != np.dtype('<f8') and
-            int(scipy.__version__[:3].split('.')[1]) < 11):
-        #scipy umfpack bug on Big Endian machines, will be fixed in 0.11
-        use_umfpack = False
-    else:
-        use_umfpack = True
+    use_umfpack = True
+    trend = spsolve(I+lamb*K.T.dot(K), X, use_umfpack=use_umfpack)
 
-    if scipy.__version__[:3] == '0.7':
-        #doesn't have use_umfpack option
-        #will be broken on big-endian machines with scipy 0.7 and umfpack
-        trend = spsolve(I+lamb*K.T.dot(K), X)
-    else:
-        trend = spsolve(I+lamb*K.T.dot(K), X, use_umfpack=use_umfpack)
     cycle = X-trend
     if _pandas_wrapper is not None:
         return _pandas_wrapper(cycle), _pandas_wrapper(trend)

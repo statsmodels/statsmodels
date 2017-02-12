@@ -1,7 +1,7 @@
 """
 Test functions for models.GLM
 """
-
+from __future__ import division
 from statsmodels.compat import range
 
 import os
@@ -66,10 +66,19 @@ class CheckModelResultsMixin(object):
 
     decimal_resids = DECIMAL_4
     def test_residuals(self):
+        # fix incorrect numbers in resid_working results
+        # residuals for Poisson are also tested in test_glm_weights.py
+        import copy
+        # new numpy would have copy method
+        resid2 = copy.copy(self.res2.resids)
+        resid2[:, 2] *= self.res1.family.link.deriv(self.res1.mu)**2
+
+        atol = 10**(-self.decimal_resids)
         resids = np.column_stack((self.res1.resid_pearson,
                 self.res1.resid_deviance, self.res1.resid_working,
                 self.res1.resid_anscombe, self.res1.resid_response))
-        assert_almost_equal(resids, self.res2.resids, self.decimal_resids)
+        assert_allclose(resids, resid2, rtol=1e-6, atol=atol)
+
 
     decimal_aic_R = DECIMAL_4
     def test_aic_R(self):
@@ -88,7 +97,7 @@ class CheckModelResultsMixin(object):
         if isinstance(self.res1.model.family, (sm.families.Gamma,
             sm.families.InverseGaussian)):
             llf = self.res1.model.family.loglike(self.res1.model.endog,
-                    self.res1.mu, self.res1.model.freq_weights, scale=1)
+                                                 self.res1.mu, self.res1.model.freq_weights, scale=1)
             aic = (-2*llf+2*(self.res1.df_model+1))/self.res1.nobs
         else:
             aic = self.res1.aic/self.res1.nobs
@@ -111,7 +120,7 @@ class CheckModelResultsMixin(object):
         if isinstance(self.res1.model.family, (sm.families.Gamma,
             sm.families.InverseGaussian)):
             llf = self.res1.model.family.loglike(self.res1.model.endog,
-                    self.res1.mu, self.res1.model.freq_weights, scale=1)
+                                                 self.res1.mu, self.res1.model.freq_weights, scale=1)
         else:
             llf = self.res1.llf
         assert_almost_equal(llf, self.res2.llf, self.decimal_loglike)
@@ -265,7 +274,7 @@ class TestGaussianLog(CheckModelResultsMixin):
                         0.001 * np.random.randn(nobs)
 
         GaussLog_Model = GLM(self.lny, self.X, \
-                family=sm.families.Gaussian(sm.families.links.log))
+                family=sm.families.Gaussian(sm.families.links.log()))
         self.res1 = GaussLog_Model.fit()
         from .results.results_glm import GaussianLog
         self.res2 = GaussianLog()
@@ -293,7 +302,7 @@ class TestGaussianInverse(CheckModelResultsMixin):
         self.X = np.c_[np.ones((nobs,1)),x,x**2]
         self.y_inv = (1. + .02*x + .001*x**2)**-1 + .001 * np.random.randn(nobs)
         InverseLink_Model = GLM(self.y_inv, self.X,
-                family=sm.families.Gaussian(sm.families.links.inverse_power))
+                family=sm.families.Gaussian(sm.families.links.inverse_power()))
         InverseLink_Res = InverseLink_Model.fit()
         self.res1 = InverseLink_Res
         from .results.results_glm import GaussianInverse
@@ -457,7 +466,7 @@ class TestGlmGammaLog(CheckModelResultsMixin):
         from .results.results_glm import CancerLog
         res2 = CancerLog()
         self.res1 = GLM(res2.endog, res2.exog,
-            family=sm.families.Gamma(link=sm.families.links.log)).fit()
+            family=sm.families.Gamma(link=sm.families.links.log())).fit()
         self.res2 = res2
 
 #    def setup(self):
@@ -481,7 +490,9 @@ class TestGlmGammaIdentity(CheckModelResultsMixin):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             self.res1 = GLM(res2.endog, res2.exog,
-                            family=sm.families.Gamma(link=sm.families.links.identity)).fit()
+                            family=sm.families.Gamma(
+                                link=sm.families.links.identity())
+                            ).fit()
         self.res2 = res2
 
 #    def setup(self):
@@ -547,8 +558,8 @@ class TestGlmInvgaussLog(CheckModelResultsMixin):
         from .results.results_glm import InvGaussLog
         res2 = InvGaussLog()
         self.res1 = GLM(res2.endog, res2.exog,
-            family=sm.families.InverseGaussian(link=\
-            sm.families.links.log)).fit()
+            family=sm.families.InverseGaussian(
+                link=sm.families.links.log())).fit()
         self.res2 = res2
 
 #    def setup(self):
@@ -572,7 +583,7 @@ class TestGlmInvgaussIdentity(CheckModelResultsMixin):
             warnings.simplefilter("ignore")
             self.res1 = GLM(data.endog, data.exog,
                             family=sm.families.InverseGaussian(
-                                link=sm.families.links.identity)).fit()
+                                link=sm.families.links.identity())).fit()
         from .results.results_glm import InvGaussIdentity
         self.res2 = InvGaussIdentity()
 
@@ -587,7 +598,7 @@ class TestGlmInvgaussIdentity(CheckModelResultsMixin):
 class TestGlmNegbinomial(CheckModelResultsMixin):
     def __init__(self):
         '''
-        Test Negative Binomial family with canonical log link
+        Test Negative Binomial family with log link
         '''
         # Test Precision
         self.decimal_resid = DECIMAL_1
@@ -625,23 +636,24 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
 #class TestGlmNegbinomial_nbinom(CheckModelResultsMixin):
 #    pass
 
-#NOTE: hacked together version to test poisson offset
+
 class TestGlmPoissonOffset(CheckModelResultsMixin):
     @classmethod
     def setupClass(cls):
-        from .results.results_glm import Cpunish
+        from .results.results_glm import Cpunish_offset
         from statsmodels.datasets.cpunish import load
+        cls.decimal_params = DECIMAL_4
+        cls.decimal_bse = DECIMAL_4
+        cls.decimal_aic_R = 3
         data = load()
         data.exog[:,3] = np.log(data.exog[:,3])
-        data.exog = add_constant(data.exog, prepend=False)
+        data.exog = add_constant(data.exog, prepend=True)
         exposure = [100] * len(data.endog)
         cls.data = data
         cls.exposure = exposure
         cls.res1 = GLM(data.endog, data.exog, family=sm.families.Poisson(),
                     exposure=exposure).fit()
-        cls.res1.params[-1] += np.log(100) # add exposure back in to param
-                                            # to make the results the same
-        cls.res2 = Cpunish()
+        cls.res2 = Cpunish_offset()
 
     def test_missing(self):
         # make sure offset is dropped correctly
@@ -820,7 +832,7 @@ def test_formula_missing_exposure():
          'x': [1, 3, 2, 1.5]}
     df = pd.DataFrame(d)
 
-    family = sm.families.Gaussian(link=sm.families.links.log)
+    family = sm.families.Gaussian(link=sm.families.links.log())
 
     mod = smf.glm("Foo ~ Bar", data=df, exposure=df.exposure,
                   family=family)
@@ -995,7 +1007,7 @@ def test_gradient_irls():
 
                with warnings.catch_warnings():
                    warnings.simplefilter("ignore")
-                   mod_irls = sm.GLM(endog, exog, family=family_class(link=link))
+                   mod_irls = sm.GLM(endog, exog, family=family_class(link=link()))
                rslt_irls = mod_irls.fit(method="IRLS")
 
                # Try with and without starting values.
@@ -1005,13 +1017,13 @@ def test_gradient_irls():
                        continue
                    with warnings.catch_warnings():
                        warnings.simplefilter("ignore")
-                       mod_gradient = sm.GLM(endog, exog, family=family_class(link=link))
+                       mod_gradient = sm.GLM(endog, exog, family=family_class(link=link()))
                    rslt_gradient = mod_gradient.fit(max_start_irls=max_start_irls,
                                                     start_params=start_params,
                                                     method="newton")
 
                    assert_allclose(rslt_gradient.params,
-                                   rslt_irls.params, rtol=1e-6, atol=5e-6)
+                                   rslt_irls.params, rtol=1e-6, atol=5e-5)
 
                    assert_allclose(rslt_gradient.llf, rslt_irls.llf,
                                    rtol=1e-6, atol=1e-6)
@@ -1024,7 +1036,7 @@ def test_gradient_irls():
                    ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
                    gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
 
-                   assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=1e-6)
+                   assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=5e-5)
 
 
 class CheckWtdDuplicationMixin(object):
@@ -1169,6 +1181,33 @@ class TestWtdGlmPoissonHC0(CheckWtdDuplicationMixin):
                         family=sm.families.Poisson()).fit(**fit_kwds)
 
 
+class TestWtdGlmPoissonClu(CheckWtdDuplicationMixin):
+    def __init__(self):
+        '''
+        Tests Poisson family with canonical log link.
+        '''
+        super(TestWtdGlmPoissonClu, self).__init__()
+
+        start_params = np.array([1.82794424e-04, -4.76785037e-02,
+                                 -9.48249717e-02, -2.92293226e-04,
+                                 2.63728909e+00, -2.05934384e+01])
+
+        gid = np.arange(1, len(self.endog) + 1) // 2
+        fit_kwds = dict(cov_type='cluster', cov_kwds={'groups': gid, 'use_correction':False})
+
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.res1 = GLM(self.endog, self.exog,
+                            freq_weights=self.weight,
+                            family=sm.families.Poisson()).fit(**fit_kwds)
+            gidr = np.repeat(gid, self.weight)
+            fit_kwds = dict(cov_type='cluster', cov_kwds={'groups': gidr, 'use_correction':False})
+            self.res2 = GLM(self.endog_big, self.exog_big,
+                            family=sm.families.Poisson()).fit(start_params=start_params,
+                                                              **fit_kwds)
+
+
 class TestWtdGlmBinomial(CheckWtdDuplicationMixin):
     def __init__(self):
         '''
@@ -1188,10 +1227,13 @@ class TestWtdGlmNegativeBinomial(CheckWtdDuplicationMixin):
     def __init__(self):
         '''
         Tests Negative Binomial family with canonical link
-        g(u) = log(u/k * (1 - u/k))
+        g(p) = log(p/(p + 1/alpha))
         '''
         super(TestWtdGlmNegativeBinomial, self).__init__()
-        family_link = sm.families.NegativeBinomial()
+        alpha=1.
+        family_link = sm.families.NegativeBinomial(
+            link=sm.families.links.nbinom(alpha=alpha),
+            alpha=alpha)
         self.res1 = GLM(self.endog, self.exog,
                         freq_weights=self.weight,
                         family=family_link).fit()
@@ -1205,7 +1247,7 @@ class TestWtdGlmGamma(CheckWtdDuplicationMixin):
         Tests Gamma family with log link.
         '''
         super(TestWtdGlmGamma, self).__init__()
-        family_link = sm.families.Gamma(sm.families.links.log)
+        family_link = sm.families.Gamma(sm.families.links.log())
         self.res1 = GLM(self.endog, self.exog,
                         freq_weights=self.weight,
                         family=family_link).fit()
@@ -1216,10 +1258,10 @@ class TestWtdGlmGamma(CheckWtdDuplicationMixin):
 class TestWtdGlmGaussian(CheckWtdDuplicationMixin):
     def __init__(self):
         '''
-        Tests Gaussian family with canonical identity link.
+        Tests Gaussian family with log link.
         '''
         super(TestWtdGlmGaussian, self).__init__()
-        family_link = sm.families.Gaussian(sm.families.links.log)
+        family_link = sm.families.Gaussian(sm.families.links.log())
         self.res1 = GLM(self.endog, self.exog,
                         freq_weights=self.weight,
                         family=family_link).fit()
@@ -1233,7 +1275,7 @@ class TestWtdGlmInverseGaussian(CheckWtdDuplicationMixin):
         Tests InverseGuassian family with log link.
         '''
         super(TestWtdGlmInverseGaussian, self).__init__()
-        family_link = sm.families.InverseGaussian(sm.families.links.log)
+        family_link = sm.families.InverseGaussian(sm.families.links.log())
         self.res1 = GLM(self.endog, self.exog,
                         freq_weights=self.weight,
                         family=family_link).fit()
@@ -1247,7 +1289,7 @@ class TestWtdGlmGammaNewton(CheckWtdDuplicationMixin):
         Tests Gamma family with log link.
         '''
         super(TestWtdGlmGammaNewton, self).__init__()
-        family_link = sm.families.Gamma(sm.families.links.log)
+        family_link = sm.families.Gamma(sm.families.links.log())
         self.res1 = GLM(self.endog, self.exog,
                         freq_weights=self.weight,
                         family=family_link,
@@ -1263,7 +1305,7 @@ class TestWtdGlmGammaScale_X2(CheckWtdDuplicationMixin):
         Tests Gamma family with log link.
         '''
         super(TestWtdGlmGammaScale_X2, self).__init__()
-        family_link = sm.families.Gamma(sm.families.links.log)
+        family_link = sm.families.Gamma(sm.families.links.log())
         self.res1 = GLM(self.endog, self.exog,
                         freq_weights=self.weight,
                         family=family_link,
@@ -1279,7 +1321,7 @@ class TestWtdGlmGammaScale_dev(CheckWtdDuplicationMixin):
         Tests Gamma family with log link.
         '''
         super(TestWtdGlmGammaScale_dev, self).__init__()
-        family_link = sm.families.Gamma(sm.families.links.log)
+        family_link = sm.families.Gamma(sm.families.links.log())
         self.res1 = GLM(self.endog, self.exog,
                         freq_weights=self.weight,
                         family=family_link,
@@ -1307,10 +1349,11 @@ class TestWtdGlmGammaScale_dev(CheckWtdDuplicationMixin):
 class TestWtdTweedieLog(CheckWtdDuplicationMixin):
     def __init__(self):
         '''
-        Tests Gamma family with log link.
+        Tests Tweedie family with log link and var_power=1.
         '''
         super(TestWtdTweedieLog, self).__init__()
-        family_link = sm.families.Tweedie(var_power=1, link_power=0)
+        family_link = sm.families.Tweedie(link=sm.families.links.log(),
+                                          var_power=1)
         self.res1 = GLM(self.endog, self.exog,
                         freq_weights=self.weight,
                         family=family_link).fit()
@@ -1321,7 +1364,7 @@ class TestWtdTweedieLog(CheckWtdDuplicationMixin):
 class TestWtdTweediePower2(CheckWtdDuplicationMixin):
     def __init__(self):
         '''
-        Tests Gamma family with log link.
+        Tests Tweedie family with Power(1) link and var_power=2.
         '''
         from statsmodels.datasets.cpunish import load_pandas
         self.data = load_pandas()
@@ -1331,8 +1374,8 @@ class TestWtdTweediePower2(CheckWtdDuplicationMixin):
         self.weight = np.random.randint(5, 100, len(self.endog))
         self.endog_big = np.repeat(self.endog.values, self.weight)
         self.exog_big = np.repeat(self.exog.values, self.weight, axis=0)
-        link = sm.families.links.Power
-        family_link = sm.families.Tweedie(var_power=2, link_power=1, link=link)
+        link = sm.families.links.Power(1)
+        family_link = sm.families.Tweedie(link=link, var_power=2)
         self.res1 = GLM(self.endog, self.exog,
                         freq_weights=self.weight,
                         family=family_link).fit()
@@ -1343,10 +1386,11 @@ class TestWtdTweediePower2(CheckWtdDuplicationMixin):
 class TestWtdTweediePower15(CheckWtdDuplicationMixin):
     def __init__(self):
         '''
-        Tests Gamma family with log link.
+        Tests Tweedie family with Power(0.5) link and var_power=1.5.
         '''
         super(TestWtdTweediePower15, self).__init__()
-        family_link = sm.families.Tweedie(var_power=1.5, link_power=0.5)
+        family_link = sm.families.Tweedie(link=sm.families.links.Power(0.5),
+                                          var_power=1.5)
         self.res1 = GLM(self.endog, self.exog,
                         freq_weights=self.weight,
                         family=family_link).fit()
@@ -1395,13 +1439,13 @@ class CheckTweedie(object):
                         np.concatenate((self.res2.resid_deviance[:17],
                                         [self.res2.resid_deviance[l2]])),
                         rtol=1e-5, atol=1e-5)
-        # Not working either...
-        if not isinstance(self, (TestTweedieLog1, TestTweedieLog15Fair)):
-            assert_allclose(np.concatenate((self.res1.resid_working[:17],
-                                            [self.res1.resid_working[l]])),
-                            np.concatenate((self.res2.resid_working[:17],
-                                            [self.res2.resid_working[l2]])),
-                            rtol=1e-5, atol=1e-5)
+
+        assert_allclose(np.concatenate((self.res1.resid_working[:17],
+                                        [self.res1.resid_working[l]])),
+                        np.concatenate((self.res2.resid_working[:17],
+                                        [self.res2.resid_working[l2]])),
+                        rtol=1e-5, atol=1e-5)
+
 
     def test_bse(self):
         assert_allclose(self.res1.bse, self.res2.bse, atol=1e-6, rtol=1e6)
@@ -1440,7 +1484,8 @@ class TestTweediePower15(CheckTweedie):
         self.data = load_pandas()
         self.exog = self.data.exog[['INCOME', 'SOUTH']]
         self.endog = self.data.endog
-        family_link = sm.families.Tweedie(var_power=1.5, link_power=1.)
+        family_link = sm.families.Tweedie(link=sm.families.links.Power(1),
+                                          var_power=1.5)
         self.res1 = sm.GLM(endog=self.data.endog,
                            exog=self.data.exog[['INCOME', 'SOUTH']],
                            family=family_link).fit()
@@ -1455,7 +1500,8 @@ class TestTweediePower2(CheckTweedie):
         self.data = load_pandas()
         self.exog = self.data.exog[['INCOME', 'SOUTH']]
         self.endog = self.data.endog
-        family_link = sm.families.Tweedie(var_power=2., link_power=1.)
+        family_link = sm.families.Tweedie(link=sm.families.links.Power(1),
+                                          var_power=2.)
         self.res1 = sm.GLM(endog=self.data.endog,
                            exog=self.data.exog[['INCOME', 'SOUTH']],
                            family=family_link).fit()
@@ -1470,7 +1516,8 @@ class TestTweedieLog1(CheckTweedie):
         self.data = load_pandas()
         self.exog = self.data.exog[['INCOME', 'SOUTH']]
         self.endog = self.data.endog
-        family_link = sm.families.Tweedie(var_power=1., link_power=0.)
+        family_link = sm.families.Tweedie(link=sm.families.links.log(),
+                                          var_power=1.)
         self.res1 = sm.GLM(endog=self.data.endog,
                            exog=self.data.exog[['INCOME', 'SOUTH']],
                            family=family_link).fit()
@@ -1483,7 +1530,8 @@ class TestTweedieLog15Fair(CheckTweedie):
         from .results.results_glm import FairTweedieLog15
         from statsmodels.datasets.fair import load_pandas
         data = load_pandas()
-        family_link = sm.families.Tweedie(var_power=1.5, link_power=0.)
+        family_link = sm.families.Tweedie(link=sm.families.links.log(),
+                                          var_power=1.5)
         self.res1 = sm.GLM(endog=data.endog,
                            exog=data.exog[['rate_marriage', 'age',
                                            'yrs_married']],
@@ -1515,11 +1563,12 @@ class TestTweedieSpecialLog0(CheckTweedieSpecial):
         self.data = load_pandas()
         self.exog = self.data.exog[['INCOME', 'SOUTH']]
         self.endog = self.data.endog
-        family1 = sm.families.Gaussian(link=sm.families.links.log)
+        family1 = sm.families.Gaussian(link=sm.families.links.log())
         self.res1 = sm.GLM(endog=self.data.endog,
                            exog=self.data.exog[['INCOME', 'SOUTH']],
                            family=family1).fit()
-        family2 = sm.families.Tweedie(var_power=0, link_power=0)
+        family2 = sm.families.Tweedie(link=sm.families.links.log(),
+                                      var_power=0)
         self.res2 = sm.GLM(endog=self.data.endog,
                            exog=self.data.exog[['INCOME', 'SOUTH']],
                            family=family2).fit()
@@ -1532,11 +1581,12 @@ class TestTweedieSpecialLog1(CheckTweedieSpecial):
         self.data = load_pandas()
         self.exog = self.data.exog[['INCOME', 'SOUTH']]
         self.endog = self.data.endog
-        family1 = sm.families.Poisson(link=sm.families.links.log)
+        family1 = sm.families.Poisson(link=sm.families.links.log())
         self.res1 = sm.GLM(endog=self.data.endog,
                            exog=self.data.exog[['INCOME', 'SOUTH']],
                            family=family1).fit()
-        family2 = sm.families.Tweedie(var_power=1, link_power=0)
+        family2 = sm.families.Tweedie(link=sm.families.links.log(),
+                                      var_power=1)
         self.res2 = sm.GLM(endog=self.data.endog,
                            exog=self.data.exog[['INCOME', 'SOUTH']],
                            family=family2).fit()
@@ -1549,11 +1599,12 @@ class TestTweedieSpecialLog2(CheckTweedieSpecial):
         self.data = load_pandas()
         self.exog = self.data.exog[['INCOME', 'SOUTH']]
         self.endog = self.data.endog
-        family1 = sm.families.Gamma(link=sm.families.links.log)
+        family1 = sm.families.Gamma(link=sm.families.links.log())
         self.res1 = sm.GLM(endog=self.data.endog,
                            exog=self.data.exog[['INCOME', 'SOUTH']],
                            family=family1).fit()
-        family2 = sm.families.Tweedie(var_power=2, link_power=0)
+        family2 = sm.families.Tweedie(link=sm.families.links.log(),
+                                      var_power=2)
         self.res2 = sm.GLM(endog=self.data.endog,
                            exog=self.data.exog[['INCOME', 'SOUTH']],
                            family=family2).fit()
@@ -1566,11 +1617,12 @@ class TestTweedieSpecialLog3(CheckTweedieSpecial):
         self.data = load_pandas()
         self.exog = self.data.exog[['INCOME', 'SOUTH']]
         self.endog = self.data.endog
-        family1 = sm.families.InverseGaussian(link=sm.families.links.log)
+        family1 = sm.families.InverseGaussian(link=sm.families.links.log())
         self.res1 = sm.GLM(endog=self.data.endog,
                            exog=self.data.exog[['INCOME', 'SOUTH']],
                            family=family1).fit()
-        family2 = sm.families.Tweedie(var_power=3, link_power=0)
+        family2 = sm.families.Tweedie(link=sm.families.links.log(),
+                                      var_power=3)
         self.res2 = sm.GLM(endog=self.data.endog,
                            exog=self.data.exog[['INCOME', 'SOUTH']],
                            family=family2).fit()
@@ -1609,21 +1661,207 @@ def testTweediePowerEstimate():
          1.56354040e-09,   0.00000000e+00,   0.00000000e+00,
          0.00000000e+00,   0.00000000e+00]
     model1 = sm.GLM(y, data.exog[['INCOME', 'SOUTH']],
-                    family=sm.families.Tweedie(var_power=1.5, link_power=0))
+                    family=sm.families.Tweedie(link=sm.families.links.log(),
+                                               var_power=1.5))
     res1 = model1.fit()
     model2 = sm.GLM((y - res1.mu) ** 2,
                     np.column_stack((np.ones(len(res1.mu)), np.log(res1.mu))),
-                    family=sm.families.Gamma(sm.families.links.log))
+                    family=sm.families.Gamma(sm.families.links.log()))
     res2 = model2.fit()
     # Sample may be too small for this...
     # assert_allclose(res1.scale, np.exp(res2.params[0]), rtol=0.25)
     p = model1.estimate_tweedie_power(res1.mu)
     assert_allclose(p, res2.params[1], rtol=0.25)
 
+class TestRegularized(object):
 
-if __name__=="__main__":
-    #run_module_suite()
-    #taken from Fernando Perez:
+    def test_regularized(self):
+
+        import os
+        from . import glmnet_r_results
+
+        for dtype in "binomial", "poisson":
+
+            cur_dir = os.path.dirname(os.path.abspath(__file__))
+            data = np.loadtxt(os.path.join(cur_dir, "results", "enet_%s.csv" % dtype),
+                              delimiter=",")
+
+            endog = data[:, 0]
+            exog = data[:, 1:]
+
+            fam = {"binomial" : sm.families.Binomial,
+                   "poisson" : sm.families.Poisson}[dtype]
+
+            for j in range(9):
+
+                vn = "rslt_%s_%d" % (dtype, j)
+                r_result = getattr(glmnet_r_results, vn)
+                L1_wt = r_result[0]
+                alpha = r_result[1]
+                params = r_result[2:]
+
+                model = GLM(endog, exog, family=fam())
+                sm_result = model.fit_regularized(L1_wt=L1_wt, alpha=alpha)
+
+                # Agreement is OK, see below for further check
+                assert_allclose(params, sm_result.params, atol=1e-2, rtol=0.3)
+
+                # The penalized log-likelihood that we are maximizing.
+                def plf(params):
+                    llf = model.loglike(params) / len(endog)
+                    llf = llf - alpha * ((1 - L1_wt)*np.sum(params**2) / 2 + L1_wt*np.sum(np.abs(params)))
+                    return llf
+
+                # Confirm that we are doing better than glmnet.
+                from numpy.testing import assert_equal
+                llf_r = plf(params)
+                llf_sm = plf(sm_result.params)
+                assert_equal(np.sign(llf_sm - llf_r), 1)
+
+
+class TestConvergence(object):
+    def __init__(self):
+        '''
+        Test Binomial family with canonical logit link using star98 dataset.
+        '''
+        from statsmodels.datasets.star98 import load
+        data = load()
+        data.exog = add_constant(data.exog, prepend=False)
+        self.model = GLM(data.endog, data.exog,
+                         family=sm.families.Binomial())
+
+    def _when_converged(self, atol=1e-8, rtol=0, tol_criterion='deviance'):
+        for i, dev in enumerate(self.res.fit_history[tol_criterion]):
+            orig = self.res.fit_history[tol_criterion][i]
+            new = self.res.fit_history[tol_criterion][i + 1]
+            if np.allclose(orig, new, atol=atol, rtol=rtol):
+                return i
+        raise ValueError('CONVERGENCE CHECK: It seems this doens\'t converge!')
+
+    def test_convergence_atol_only(self):
+        atol = 1e-8
+        rtol = 0
+        self.res = self.model.fit(atol=atol, rtol=rtol)
+        expected_iterations = self._when_converged(atol=atol, rtol=rtol)
+        actual_iterations = self.res.fit_history['iteration']
+        # Note the first value is the list is np.inf. The second value
+        # is the initial guess based off of start_params or the
+        # estimate thereof. The third value (index = 2) is the actual "first
+        # iteration"
+        assert_equal(expected_iterations, actual_iterations)
+        assert_equal(len(self.res.fit_history['deviance']) - 2,
+                     actual_iterations)
+
+    def test_convergence_rtol_only(self):
+        atol = 0
+        rtol = 1e-8
+        self.res = self.model.fit(atol=atol, rtol=rtol)
+        expected_iterations = self._when_converged(atol=atol, rtol=rtol)
+        actual_iterations = self.res.fit_history['iteration']
+        # Note the first value is the list is np.inf. The second value
+        # is the initial guess based off of start_params or the
+        # estimate thereof. The third value (index = 2) is the actual "first
+        # iteration"
+        assert_equal(expected_iterations, actual_iterations)
+        assert_equal(len(self.res.fit_history['deviance']) - 2,
+                     actual_iterations)
+
+    def test_convergence_atol_rtol(self):
+        atol = 1e-8
+        rtol = 1e-8
+        self.res = self.model.fit(atol=atol, rtol=rtol)
+        expected_iterations = self._when_converged(atol=atol, rtol=rtol)
+        actual_iterations = self.res.fit_history['iteration']
+        # Note the first value is the list is np.inf. The second value
+        # is the initial guess based off of start_params or the
+        # estimate thereof. The third value (index = 2) is the actual "first
+        # iteration"
+        assert_equal(expected_iterations, actual_iterations)
+        assert_equal(len(self.res.fit_history['deviance']) - 2,
+                     actual_iterations)
+
+    def test_convergence_atol_only_params(self):
+        atol = 1e-8
+        rtol = 0
+        self.res = self.model.fit(atol=atol, rtol=rtol, tol_criterion='params')
+        expected_iterations = self._when_converged(atol=atol, rtol=rtol,
+                                                   tol_criterion='params')
+        actual_iterations = self.res.fit_history['iteration']
+        # Note the first value is the list is np.inf. The second value
+        # is the initial guess based off of start_params or the
+        # estimate thereof. The third value (index = 2) is the actual "first
+        # iteration"
+        assert_equal(expected_iterations, actual_iterations)
+        assert_equal(len(self.res.fit_history['deviance']) - 2,
+                     actual_iterations)
+
+    def test_convergence_rtol_only_params(self):
+        atol = 0
+        rtol = 1e-8
+        self.res = self.model.fit(atol=atol, rtol=rtol, tol_criterion='params')
+        expected_iterations = self._when_converged(atol=atol, rtol=rtol,
+                                                   tol_criterion='params')
+        actual_iterations = self.res.fit_history['iteration']
+        # Note the first value is the list is np.inf. The second value
+        # is the initial guess based off of start_params or the
+        # estimate thereof. The third value (index = 2) is the actual "first
+        # iteration"
+        assert_equal(expected_iterations, actual_iterations)
+        assert_equal(len(self.res.fit_history['deviance']) - 2,
+                     actual_iterations)
+
+    def test_convergence_atol_rtol_params(self):
+        atol = 1e-8
+        rtol = 1e-8
+        self.res = self.model.fit(atol=atol, rtol=rtol, tol_criterion='params')
+        expected_iterations = self._when_converged(atol=atol, rtol=rtol,
+                                                   tol_criterion='params')
+        actual_iterations = self.res.fit_history['iteration']
+        # Note the first value is the list is np.inf. The second value
+        # is the initial guess based off of start_params or the
+        # estimate thereof. The third value (index = 2) is the actual "first
+        # iteration"
+        assert_equal(expected_iterations, actual_iterations)
+        assert_equal(len(self.res.fit_history['deviance']) - 2,
+                     actual_iterations)
+
+
+def test_poisson_deviance():
+    # see #3355 missing term in deviance if resid_response.sum() != 0
+    np.random.seed(123987)
+    nobs, k_vars = 50, 3-1
+    x = sm.add_constant(np.random.randn(nobs, k_vars))
+
+    mu_true = np.exp(x.sum(1))
+    y = np.random.poisson(mu_true, size=nobs)
+
+    mod = sm.GLM(y, x[:, :], family=sm.genmod.families.Poisson())
+    res = mod.fit()
+
+    d_i = res.resid_deviance
+    d = res.deviance
+    lr = (mod.family.loglike(y, y+1e-20) -
+          mod.family.loglike(y, res.fittedvalues)) * 2
+
+    assert_allclose(d, (d_i**2).sum(), rtol=1e-12)
+    assert_allclose(d, lr, rtol=1e-12)
+
+    # case without constant, resid_response.sum() != 0
+    mod_nc = sm.GLM(y, x[:, 1:], family=sm.genmod.families.Poisson())
+    res_nc = mod_nc.fit()
+
+    d_i = res_nc.resid_deviance
+    d = res_nc.deviance
+    lr = (mod.family.loglike(y, y+1e-20) -
+          mod.family.loglike(y, res_nc.fittedvalues)) * 2
+
+    assert_allclose(d, (d_i**2).sum(), rtol=1e-12)
+    assert_allclose(d, lr, rtol=1e-12)
+
+
+if __name__ == "__main__":
+    # run_module_suite()
+    # taken from Fernando Perez:
     import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb'],
-                       exit=False)
+    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'],
+                   exit=False)

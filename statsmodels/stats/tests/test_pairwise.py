@@ -7,6 +7,10 @@ Author: Josef Perktold
 """
 import warnings
 from statsmodels.compat.python import BytesIO, asbytes, range
+from statsmodels.compat.numpy import recarray_select
+
+from nose.tools import assert_true
+
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_,
                            assert_raises, assert_allclose)
@@ -248,8 +252,8 @@ class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
         assert_raises(ValueError, MultiComparison, np.array([1] * 10), [1] * 10)
 
         # group_order doesn't select all observations, only one group left
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", UserWarning)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
             assert_raises(ValueError, MultiComparison, np.array([1] * 10),
                          [1, 2] * 5, group_order=[1])
 
@@ -257,7 +261,12 @@ class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
         # we do tukey_hsd with reduced set of observations
         data = np.arange(15)
         groups = np.repeat([1, 2, 3], 5)
-        mod1 = MultiComparison(np.array(data), groups, group_order=[1, 2])
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            mod1 = MultiComparison(np.array(data), groups, group_order=[1, 2])
+            assert_equal(len(w), 1)
+            assert_true(issubclass(w[0].category, UserWarning))
+
         res1 = mod1.tukeyhsd(alpha=0.01)
         mod2 = MultiComparison(np.array(data[:10]), groups[:10])
         res2 = mod2.tukeyhsd(alpha=0.01)
@@ -312,7 +321,8 @@ class TestTuckeyHSD3(CheckTuckeyHSDMixin):
         #CheckTuckeyHSD.setup_class_()
 
         self.meandiff2 = sas_['mean']
-        self.confint2 = sas_[['lower','upper']].view(float).reshape((3,2))
+        self.confint2 = recarray_select(sas_, ['lower','upper']).view(float).reshape((3,2))
+
         self.reject2 = sas_['sig'] == asbytes('***')
 
 

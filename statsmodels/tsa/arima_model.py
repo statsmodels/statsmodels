@@ -5,7 +5,7 @@
 #       packages such as gretl and X12-ARIMA
 
 from __future__ import absolute_import
-from statsmodels.compat.python import string_types, range
+from statsmodels.compat.python import string_types, range, long
 # for 2to3 with extensions
 
 from datetime import datetime
@@ -30,31 +30,29 @@ from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.ar_model import AR
 from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
-from statsmodels.tsa.base.datetools import _index_date
 from statsmodels.tsa.kalmanf import KalmanFilter
 
 _armax_notes = """
+    Notes
+    -----
+    If exogenous variables are given, then the model that is fit is
 
-        Notes
-        -----
-        If exogenous variables are given, then the model that is fit is
+    .. math::
 
-        .. math::
+       \\phi(L)(y_t - X_t\\beta) = \\theta(L)\epsilon_t
 
-           \\phi(L)(y_t - X_t\\beta) = \\theta(L)\epsilon_t
-
-        where :math:`\\phi` and :math:`\\theta` are polynomials in the lag
-        operator, :math:`L`. This is the regression model with ARMA errors,
-        or ARMAX model. This specification is used, whether or not the model
-        is fit using conditional sum of square or maximum-likelihood, using
-        the `method` argument in
-        :meth:`statsmodels.tsa.arima_model.%(Model)s.fit`. Therefore, for
-        now, `css` and `mle` refer to estimation methods only. This may
-        change for the case of the `css` model in future versions.
+    where :math:`\\phi` and :math:`\\theta` are polynomials in the lag
+    operator, :math:`L`. This is the regression model with ARMA errors,
+    or ARMAX model. This specification is used, whether or not the model
+    is fit using conditional sum of square or maximum-likelihood, using
+    the `method` argument in
+    :meth:`statsmodels.tsa.arima_model.%(Model)s.fit`. Therefore, for
+    now, `css` and `mle` refer to estimation methods only. This may
+    change for the case of the `css` model in future versions.
 """
 
-_arma_params = """\
-    endog : array-like
+_arma_params = \
+"""endog : array-like
         The endogenous variable.
     order : iterable
         The (p,q) order of the model for the number of AR parameters,
@@ -67,8 +65,8 @@ _arma_model = "Autoregressive Moving Average ARMA(p,q) Model"
 
 _arima_model = "Autoregressive Integrated Moving Average ARIMA(p,d,q) Model"
 
-_arima_params = """\
-    endog : array-like
+_arima_params = \
+"""endog : array-like
         The endogenous variable.
     order : iterable
         The (p,d,q) order of the model for the number of AR parameters,
@@ -371,17 +369,6 @@ def _arma_predict_in_sample(start, end, endog, resid, k_ar, method):
     return fittedvalues[fv_start:fv_end]
 
 
-def _validate(start, k_ar, k_diff, dates, method):
-    if isinstance(start, (string_types, datetime)):
-        start = _index_date(start, dates)
-        start -= k_diff
-    if 'mle' not in method and start < k_ar - k_diff:
-        raise ValueError("Start must be >= k_ar for conditional "
-                         "MLE or dynamic forecast. Got %s" % start)
-
-    return start
-
-
 def _unpack_params(params, order, k_trend, k_exog, reverse=False):
     p, q = order
     k = k_trend + k_exog
@@ -464,7 +451,7 @@ class ARMA(tsbase.TimeSeriesModel):
             k_exog = 0
         self.k_exog = k_exog
 
-    def _fit_start_params_hr(self, order):
+    def _fit_start_params_hr(self, order, start_ar_lags=None):
         """
         Get starting parameters for fit.
 
@@ -473,6 +460,10 @@ class ARMA(tsbase.TimeSeriesModel):
         order : iterable
             (p,q,k) - AR lags, MA lags, and number of exogenous variables
             including the constant.
+        start_ar_lags : int, optional
+            If start_ar_lags is not None, rather than fitting an AR process
+            according to best BIC, fits an AR process with a lag length equal
+            to start_ar_lags.
 
         Returns
         -------
@@ -481,15 +472,19 @@ class ARMA(tsbase.TimeSeriesModel):
 
         Notes
         -----
-        If necessary, fits an AR process with the laglength selected according
-        to best BIC.  Obtain the residuals.  Then fit an ARMA(p,q) model via
-        OLS using these residuals for a first approximation.  Uses a separate
-        OLS regression to find the coefficients of exogenous variables.
+        If necessary, fits an AR process with the laglength start_ar_lags, or
+        selected according to best BIC if start_ar_lags is None.  Obtain the
+        residuals.  Then fit an ARMA(p,q) model via OLS using these residuals
+        for a first approximation.  Uses a separate OLS regression to find the
+        coefficients of exogenous variables.
 
         References
         ----------
         Hannan, E.J. and Rissanen, J.  1982.  "Recursive estimation of mixed
             autoregressive-moving average order."  `Biometrika`.  69.1.
+
+        Durbin, J. 1960. "The Fitting of Time-Series Models."
+        `Review of the International Statistical Institute`. Vol. 28, No. 3
         """
         p, q, k = order
         start_params = zeros((p+q+k))
@@ -503,10 +498,15 @@ class ARMA(tsbase.TimeSeriesModel):
             if p != 0:
                 # make sure we don't run into small data problems in AR fit
                 nobs = len(endog)
-                maxlag = int(round(12*(nobs/100.)**(1/4.)))
-                if maxlag >= nobs:
-                    maxlag = nobs - 1
-                armod = AR(endog).fit(ic='bic', trend='nc', maxlag=maxlag)
+                if start_ar_lags is None:
+                    maxlag = int(round(12*(nobs/100.)**(1/4.)))
+                    if maxlag >= nobs:
+                        maxlag = nobs - 1
+                    armod = AR(endog).fit(ic='bic', trend='nc', maxlag=maxlag)
+                else:
+                    if start_ar_lags >= nobs:
+                        start_ar_lags = nobs - 1
+                    armod = AR(endog).fit(trend='nc', maxlag=start_ar_lags)
                 arcoefs_tmp = armod.params
                 p_tmp = armod.k_ar
                 # it's possible in small samples that optimal lag-order
@@ -515,7 +515,9 @@ class ARMA(tsbase.TimeSeriesModel):
                     raise ValueError("Proper starting parameters cannot"
                                      " be found for this order with this "
                                      "number of observations. Use the "
-                                     "start_params argument.")
+                                     "start_params argument, or set "
+                                     "start_ar_lags to an integer less than "
+                                     "len(endog) - q.")
                 resid = endog[p_tmp:] - np.dot(lagmat(endog, p_tmp,
                                                       trim='both'),
                                                arcoefs_tmp)
@@ -555,13 +557,13 @@ class ARMA(tsbase.TimeSeriesModel):
         # check MA coefficients
         return start_params
 
-    def _fit_start_params(self, order, method):
+    def _fit_start_params(self, order, method, start_ar_lags=None):
         if method != 'css-mle':  # use Hannan-Rissanen to get start params
-            start_params = self._fit_start_params_hr(order)
+            start_params = self._fit_start_params_hr(order, start_ar_lags)
         else:  # use CSS to get start params
             func = lambda params: -self.loglike_css(params)
             #start_params = [.1]*(k_ar+k_ma+k_exog) # different one for k?
-            start_params = self._fit_start_params_hr(order)
+            start_params = self._fit_start_params_hr(order, start_ar_lags)
             if self.transparams:
                 start_params = self._invtransparams(start_params)
             bounds = [(None,)*2]*sum(order)
@@ -635,30 +637,29 @@ class ARMA(tsbase.TimeSeriesModel):
             newparams[k+k_ar:k+k_ar+k_ma] = _ma_invtransparams(macoefs)
         return newparams
 
-    def _get_predict_start(self, start, dynamic):
-        # do some defaults
+    def _get_prediction_index(self, start, end, dynamic, index=None):
         method = getattr(self, 'method', 'mle')
         k_ar = getattr(self, 'k_ar', 0)
         k_diff = getattr(self, 'k_diff', 0)
+
         if start is None:
             if 'mle' in method and not dynamic:
                 start = 0
             else:
                 start = k_ar
-            self._set_predict_start_date(start)  # else it's done in super
-        elif isinstance(start, int):
-            start = super(ARMA, self)._get_predict_start(start)
-        else:  # should be on a date
-            #elif 'mle' not in method or dynamic: # should be on a date
-            start = _validate(start, k_ar, k_diff, self.data.dates,
-                              method)
-            start = super(ARMA, self)._get_predict_start(start)
-        _check_arima_start(start, k_ar, k_diff, method, dynamic)
-        return start
+            start = self._index[start]
 
-    def _get_predict_end(self, end, dynamic=False):
-        # pass through so predict works for ARIMA and ARMA
-        return super(ARMA, self)._get_predict_end(end)
+        start, end, out_of_sample, prediction_index = (
+            super(ARMA, self)._get_prediction_index(start, end, index))
+
+        # This replaces the _validate() call
+        if 'mle' not in method and start < k_ar - k_diff:
+            raise ValueError("Start must be >= k_ar for conditional "
+                             "MLE or dynamic forecast. Got %s" % start)
+        # Other validation
+        _check_arima_start(start, k_ar, k_diff, method, dynamic)
+
+        return start, end, out_of_sample, prediction_index
 
     def geterrors(self, params):
         """
@@ -673,8 +674,8 @@ class ARMA(tsbase.TimeSeriesModel):
             parameters, including the trend
         """
 
-        #start = self._get_predict_start(start) # will be an index of a date
-        #end, out_of_sample = self._get_predict_end(end)
+        # start, end, out_of_sample, prediction_index = (
+        #     self._get_prediction_index(start, end, index))
         params = np.asarray(params)
         k_ar, k_ma = self.k_ar, self.k_ma
         k = self.k_exog + self.k_trend
@@ -716,8 +717,9 @@ class ARMA(tsbase.TimeSeriesModel):
         #params = np.asarray(params)
 
         # will return an index of a date
-        start = self._get_predict_start(start, dynamic)
-        end, out_of_sample = self._get_predict_end(end, dynamic)
+        start, end, out_of_sample, _ = (
+            self._get_prediction_index(start, end, dynamic))
+
         if out_of_sample and (exog is None and self.k_exog > 0):
             raise ValueError("You must provide exog for ARMAX")
 
@@ -817,7 +819,7 @@ class ARMA(tsbase.TimeSeriesModel):
 
     def fit(self, start_params=None, trend='c', method="css-mle",
             transparams=True, solver='lbfgs', maxiter=50, full_output=1,
-            disp=5, callback=None, **kwargs):
+            disp=5, callback=None, start_ar_lags=None, **kwargs):
         """
         Fits ARMA(p,q) model using exact maximum likelihood via Kalman filter.
 
@@ -858,13 +860,20 @@ class ARMA(tsbase.TimeSeriesModel):
             If True, all output from solver will be available in
             the Results object's mle_retvals attribute.  Output is dependent
             on the solver.  See Notes for more information.
-        disp : bool, optional
+        disp : int, optional
             If True, convergence information is printed.  For the default
             l_bfgs_b solver, disp controls the frequency of the output during
             the iterations. disp < 0 means no output in this case.
         callback : function, optional
             Called after each iteration as callback(xk) where xk is the current
             parameter vector.
+        start_ar_lags : int, optional
+            Parameter for fitting start_params. When fitting start_params,
+            residuals are obtained from an AR fit, then an ARMA(p,q) model is
+            fit via OLS using these residuals. If start_ar_lags is None, fit
+            an AR process according to best BIC. If start_ar_lags is not None,
+            fits an AR process with a lag length equal to start_ar_lags.
+            See ARMA._fit_start_params_hr for more information.
         kwargs
             See Notes for keyword arguments that can be passed to fit.
 
@@ -931,7 +940,8 @@ class ARMA(tsbase.TimeSeriesModel):
             start_params = np.asarray(start_params)
 
         else:  # estimate starting parameters
-            start_params = self._fit_start_params((k_ar, k_ma, k), method)
+            start_params = self._fit_start_params((k_ar, k_ma, k), method,
+                                                  start_ar_lags)
 
         if transparams:  # transform initial parameters to ensure invertibility
             start_params = self._invtransparams(start_params)
@@ -963,7 +973,6 @@ class ARMA(tsbase.TimeSeriesModel):
 #so model methods are not the same on unfit models as fit ones
 #starting to think that order of model should be put in instantiation...
 class ARIMA(ARMA):
-
     __doc__ = tsbase._tsa_doc % {"model" : _arima_model,
                                  "params" : _arima_params, "extra_params" : "",
                                  "extra_sections" : _armax_notes %
@@ -978,6 +987,11 @@ class ARIMA(ARMA):
             mod = super(ARIMA, cls).__new__(cls)
             mod.__init__(endog, order, exog, dates, freq, missing)
             return mod
+
+    def __getnewargs__(self):
+        return ((self.endog),
+                (self.k_lags, self.k_diff, self.k_ma),
+                self.exog, self.dates, self.freq, self.missing)
 
     def __init__(self, endog, order, exog=None, dates=None, freq=None,
                  missing='none'):
@@ -1001,49 +1015,55 @@ class ARIMA(ARMA):
         # what about exog, should we difference it automatically before
         # super call?
 
-    def _get_predict_start(self, start, dynamic):
-        """
-        """
-        #TODO: remove all these getattr and move order specification to
-        # class constructor
-        k_diff = getattr(self, 'k_diff', 0)
+        # Reset index
+        orig_length = len(self._index)
+        new_length = self.endog.shape[0]
+        if self.data.row_labels is not None:
+            self.data._cache['row_labels'] = (
+                self.data.row_labels[orig_length - new_length:])
+        if self._index is not None:
+            if self._index_generated:
+                self._index = self._index[:-(orig_length - new_length)]
+            else:
+                self._index = self._index[orig_length - new_length:]
+
+    def _get_prediction_index(self, start, end, dynamic, index=None):
         method = getattr(self, 'method', 'mle')
         k_ar = getattr(self, 'k_ar', 0)
+        k_diff = getattr(self, 'k_diff', 0)
         if start is None:
             if 'mle' in method and not dynamic:
                 start = 0
             else:
                 start = k_ar
-        elif isinstance(start, int):
-                start -= k_diff
-                try:  # catch when given an integer outside of dates index
-                    start = super(ARIMA, self)._get_predict_start(start,
-                                                                  dynamic)
-                except IndexError:
-                    raise ValueError("start must be in series. "
-                                     "got %d" % (start + k_diff))
-        else:  # received a date
-            start = _validate(start, k_ar, k_diff, self.data.dates,
-                              method)
-            start = super(ARIMA, self)._get_predict_start(start, dynamic)
-        # reset date for k_diff adjustment
-        self._set_predict_start_date(start + k_diff)
-        return start
+            start = self._index[start]
+        elif isinstance(start, (int, long, np.integer)):
+            start -= k_diff
+            if start < 0:
+                raise ValueError('The start index %d of the original series '
+                                 ' has been differenced away' % start)
+        if isinstance(end, (int, long, np.integer)):
+            end -= k_diff
 
-    def _get_predict_end(self, end, dynamic=False):
-        """
-        Returns last index to be forecast of the differenced array.
-        Handling of inclusiveness should be done in the predict function.
-        """
-        end, out_of_sample = super(ARIMA, self)._get_predict_end(end, dynamic)
+        start, end, out_of_sample, prediction_index = (
+            super(ARIMA, self)._get_prediction_index(start, end, index))
+
+        # From _get_predict_end
         if 'mle' not in self.method and not dynamic:
-            end -= self.k_ar
+            end -= k_ar
 
-        return end - self.k_diff, out_of_sample
+        # This replaces the _validate() call
+        if 'mle' not in method and start < k_ar - k_diff:
+            raise ValueError("Start must be >= k_ar for conditional "
+                             "MLE or dynamic forecast. Got %s" % start)
+        # Other validation
+        _check_arima_start(start, k_ar, k_diff, method, dynamic)
+
+        return start, end, out_of_sample, prediction_index
 
     def fit(self, start_params=None, trend='c', method="css-mle",
             transparams=True, solver='lbfgs', maxiter=50, full_output=1,
-            disp=5, callback=None, **kwargs):
+            disp=5, callback=None, start_ar_lags=None, **kwargs):
         """
         Fits ARIMA(p,d,q) model by exact maximum likelihood via Kalman filter.
 
@@ -1084,13 +1104,20 @@ class ARIMA(ARMA):
             If True, all output from solver will be available in
             the Results object's mle_retvals attribute.  Output is dependent
             on the solver.  See Notes for more information.
-        disp : bool, optional
+        disp : int, optional
             If True, convergence information is printed.  For the default
             l_bfgs_b solver, disp controls the frequency of the output during
             the iterations. disp < 0 means no output in this case.
         callback : function, optional
             Called after each iteration as callback(xk) where xk is the current
             parameter vector.
+        start_ar_lags : int, optional
+            Parameter for fitting start_params. When fitting start_params,
+            residuals are obtained from an AR fit, then an ARMA(p,q) model is
+            fit via OLS using these residuals. If start_ar_lags is None, fit
+            an AR process according to best BIC. If start_ar_lags is not None,
+            fits an AR process with a lag length equal to start_ar_lags.
+            See ARMA._fit_start_params_hr for more information.
         kwargs
             See Notes for keyword arguments that can be passed to fit.
 
@@ -1115,7 +1142,7 @@ class ARIMA(ARMA):
         mlefit = super(ARIMA, self).fit(start_params, trend,
                                            method, transparams, solver,
                                            maxiter, full_output, disp,
-                                           callback, **kwargs)
+                                           callback, start_ar_lags, **kwargs)
         normalized_cov_params = None  # TODO: fix this?
         arima_fit = ARIMAResults(self, mlefit._results.params,
                                  normalized_cov_params)
@@ -1130,7 +1157,13 @@ class ARIMA(ARMA):
                 dynamic=False):
         # go ahead and convert to an index for easier checking
         if isinstance(start, (string_types, datetime)):
-            start = _index_date(start, self.data.dates)
+            # start = _index_date(start, self.data.dates)
+            start, _, _ = self._get_index_label_loc(start)
+            if isinstance(start, slice):
+                start = start.start
+            # Adjustment since _index was already changed to fit the
+            # differenced endog.
+            start += self.k_diff
         if typ == 'linear':
             if not dynamic or (start != self.k_ar + self.k_diff and
                                start is not None):
@@ -1152,8 +1185,9 @@ class ARIMA(ARMA):
                 predict = super(ARIMA, self).predict(params, start, end, exog,
                                                      dynamic)
 
-                start = self._get_predict_start(start, dynamic)
-                end, out_of_sample = self._get_predict_end(end)
+                start, end, out_of_sample, _ = (
+                    self._get_prediction_index(start, end, dynamic))
+
                 d = self.k_diff
                 if 'mle' in self.method:
                     start += d - 1  # for case where d == 2
@@ -1207,7 +1241,8 @@ class ARIMA(ARMA):
                     predict = super(ARIMA, self).predict(params, start, end,
                                                          exog, dynamic)
                     if not start:
-                        start = self._get_predict_start(start, dynamic)
+                        start, _, _, _ = self._get_prediction_index(
+                            start, end, dynamic)
                         start += k_diff
                     self.k_ma = q
                     return endog[start-1] + np.cumsum(predict)
@@ -1728,8 +1763,8 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         # use predict so you set dates
         forecast = self.predict(start, end, exog, dynamic)
         # doing this twice. just add a plot keyword to predict?
-        start = self.model._get_predict_start(start, dynamic=False)
-        end, out_of_sample = self.model._get_predict_end(end, dynamic=False)
+        start, end, out_of_sample, _ = (
+            self.model._get_prediction_index(start, end, dynamic=False))
 
         if out_of_sample:
             steps = out_of_sample
@@ -1853,8 +1888,8 @@ class ARIMAResults(ARMAResults):
         # use predict so you set dates
         forecast = self.predict(start, end, exog, 'levels', dynamic)
         # doing this twice. just add a plot keyword to predict?
-        start = self.model._get_predict_start(start, dynamic=dynamic)
-        end, out_of_sample = self.model._get_predict_end(end, dynamic=dynamic)
+        start, end, out_of_sample, _ = (
+            self.model._get_prediction_index(start, end, dynamic))
 
         if out_of_sample:
             steps = out_of_sample

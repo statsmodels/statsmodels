@@ -4,7 +4,7 @@ They can be used to estimate regression relationships involving both
 means and variances.
 
 These models are also known as multilevel linear models, and
-hierachical linear models.
+hierarchical linear models.
 
 The MixedLM class fits linear mixed effects models to data, and
 provides support for some common post-estimation tasks.  This is a
@@ -53,7 +53,7 @@ structure is of interest, GEE is an alternative to using linear mixed
 models.
 
 Two types of random effects are supported.  Standard random effects
-are correlated with each other in arbitary ways.  Every group has the
+are correlated with each other in arbitrary ways.  Every group has the
 same number (`k_re`) of standard random effects, with the same joint
 distribution (but with independent realizations across the groups).
 
@@ -140,7 +140,7 @@ effects parameters (if any).  As a result of this profiling, it is
 difficult and unnecessary to calculate the Hessian of the profiled log
 likelihood function, so that calculation is not implemented here.
 Therefore, optimization methods requiring the Hessian matrix such as
-the Newton-Raphson algorihm cannot be used for model fitting.
+the Newton-Raphson algorithm cannot be used for model fitting.
 """
 
 import numpy as np
@@ -221,8 +221,10 @@ def _get_exog_re_names(self, exog_re):
         return [exog_re.name]
     elif isinstance(exog_re, list):
         return exog_re
-    return ["Z{0}".format(k + 1) for k in range(exog_re.shape[1])]
 
+    # Default names
+    defnames = ["x_re{0:1d}".format(k + 1) for k in range(exog_re.shape[1])]
+    return defnames
 
 class MixedLMParams(object):
     """
@@ -524,7 +526,7 @@ class MixedLM(base.LikelihoodModel):
         covariance structure (the "random effects" covariates).  If
         None, defaults to a random intercept for each group.
     exog_vc : dict-like
-        A dicationary containing specifications of the variance
+        A dictionary containing specifications of the variance
         component terms.  See below for details.
     use_sqrt : bool
         If True, optimization is carried out using the lower
@@ -571,7 +573,7 @@ class MixedLM(base.LikelihoodModel):
     A mixed model with fixed effects for the columns of ``exog`` and
     independent random coefficients for the columns of ``exog_re``:
 
-    >>> free = MixedLMParams.from_components(fe_params=np.ones(exog.shape[1]),
+    >>> free = MixedLMParams.from_components(fe_params=np.ones(exog.shape[1]), \
                      cov_re=np.eye(exog_re.shape[1]))
     >>> model = sm.MixedLM(endog, exog, groups, exog_re=exog_re)
     >>> result = model.fit(free=free)
@@ -637,7 +639,10 @@ class MixedLM(base.LikelihoodModel):
             self.k_re2 = 1
             self.exog_re = np.ones((len(endog), 1), dtype=np.float64)
             self.data.exog_re = self.exog_re
-            self.data.param_names = self.exog_names + ['Group RE']
+            names = ['Group RE']
+            self.data.param_names = self.exog_names + names
+            self.data.exog_re_names = names
+            self.data.exog_re_names_full = names
 
         elif exog_re is not None:
             # Process exog_re the same way that exog is handled
@@ -824,7 +829,7 @@ class MixedLM(base.LikelihoodModel):
         the schools.
 
         >>> vc = {'classroom': '0 + C(classroom)'}
-        >>> MixedLM.from_formula('test_score ~ age', vc_formula=vc,
+        >>> MixedLM.from_formula('test_score ~ age', vc_formula=vc, \
                                   re_formula='1', groups='school', data=data)
 
         Now suppose we also have a previous test score called
@@ -833,7 +838,7 @@ class MixedLM(base.LikelihoodModel):
         specify a random slope for the pretest score
 
         >>> vc = {'classroom': '0 + C(classroom)', 'pretest': '0 + pretest'}
-        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc,
+        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc, \
                                   re_formula='1', groups='school', data=data)
 
         The following model is almost equivalent to the previous one,
@@ -841,8 +846,8 @@ class MixedLM(base.LikelihoodModel):
         be correlated.
 
         >>> vc = {'classroom': '0 + C(classroom)'}
-        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc,
-                                  re_formula='1 + pretest', groups='school',
+        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc, \
+                                  re_formula='1 + pretest', groups='school', \
                                   data=data)
         """
 
@@ -1191,7 +1196,7 @@ class MixedLM(base.LikelihoodModel):
         -----
         If P are the standard form parameters and R are the
         transformed parameters (i.e. with the Cholesky square root
-        covariance and square root transformed variane components),
+        covariance and square root transformed variance components),
         then P[i] = lin[i] * R + R' * quad[i] * R
         """
 
@@ -1247,7 +1252,7 @@ class MixedLM(base.LikelihoodModel):
         group : string
             The group label
 
-        Returns an expaded version of vcomp, in which each variance
+        Returns an expanded version of vcomp, in which each variance
         parameter is copied as many times as there are independent
         realizations of the variance component in the given group.
         """
@@ -1260,7 +1265,6 @@ class MixedLM(base.LikelihoodModel):
         if len(vc_var) > 0:
             return np.concatenate(vc_var)
         else:
-            1/0
             return np.empty(0)
 
 
@@ -1895,7 +1899,7 @@ class MixedLM(base.LikelihoodModel):
         Parameters
         ----------
         start_params: array-like or MixedLMParams
-            Starting values for the profile log-likeihood.  If not a
+            Starting values for the profile log-likelihood.  If not a
             `MixedLMParams` instance, this should be an array
             containing the packed parameters for the profile
             log-likelihood, including the fixed effects
@@ -1914,7 +1918,7 @@ class MixedLM(base.LikelihoodModel):
             it is fixed at its starting value.  Setting the `cov_re`
             component to the identity matrix fits a model with
             independent random effects.  Note that some optimization
-            methods do not respect this contraint (bfgs and lbfgs both
+            methods do not respect this constraint (bfgs and lbfgs both
             work).
         full_output : bool
             If true, attach iteration history to results

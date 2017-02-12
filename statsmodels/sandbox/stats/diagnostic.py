@@ -30,7 +30,7 @@ missing:
 
 """
 from __future__ import print_function
-from statsmodels.compat.python import iteritems, lrange, map
+from statsmodels.compat.python import iteritems, lrange, map, long
 import numpy as np
 from scipy import stats
 from statsmodels.regression.linear_model import OLS
@@ -284,7 +284,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
     nobs = x.shape[0]
     if lags is None:
         lags = lrange(1,41)  #TODO: check default; SS: changed to 40
-    elif isinstance(lags, int):
+    elif isinstance(lags, (int, long)):
         lags = lrange(1,lags+1)
     maxlag = max(lags)
     lags = np.asarray(lags)
@@ -531,10 +531,13 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
     else:
         return lm, lmpval, fval, fpval
 
+
+msg = "Use acorr_breusch_godfrey, acorr_breush_godfrey will be removed " \
+      "in 0.9 \n (Note: misspelling missing 'c'),"
+
 acorr_breush_godfrey = np.deprecate(acorr_breusch_godfrey, 'acorr_breush_godfrey',
                                'acorr_breusch_godfrey',
-                               "Use acorr_breusch_godfrey, acorr_breush_godfrey will be "
-                               "removed in 0.9 \n(Note: misspelling missing 'c')")
+                               msg)
 
 
 def het_breuschpagan(resid, exog_het):

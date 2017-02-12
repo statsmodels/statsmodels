@@ -17,7 +17,7 @@ changes
 2013-02-25 : add chisquare_power, effectsize and "value"
 
 '''
-from statsmodels.compat.python import range, lrange
+from statsmodels.compat.python import range, lrange, string_types
 import numpy as np
 from scipy import stats
 
@@ -117,7 +117,7 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
     o = np.array(observed)
     e = np.array(expected)
 
-    if np.isfinite(lambd) == True:  # check whether lambd is a number
+    if not isinstance(lambd, string_types):
         a = lambd
     else:
         if   lambd == 'loglikeratio': a = 0
@@ -232,10 +232,7 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
 
     # find sample frequencies and perform chisquare test
     #TODO: move to compatibility.py
-    if np.__version__ < '1.5':
-        freq,hsupp = np.histogram(rvs, histsupp, new=True)
-    else:
-        freq,hsupp = np.histogram(rvs,histsupp)
+    freq, hsupp = np.histogram(rvs,histsupp)
     cdfs = distfn.cdf(distsupp,*arg)
     (chis,pval) = stats.chisquare(np.array(freq),n*distmass)
 
@@ -320,10 +317,7 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
     histsupp[0] = distfn.a
 
     # find sample frequencies and perform chisquare test
-    if np.__version__ < '1.5':
-        freq,hsupp = np.histogram(rvs, histsupp, new=True)
-    else:
-        freq,hsupp = np.histogram(rvs,histsupp)
+    freq,hsupp = np.histogram(rvs,histsupp)
     #freq,hsupp = np.histogram(rvs,histsupp,new=True)
     cdfs = distfn.cdf(distsupp,*arg)
     return np.array(freq), n*distmass, histsupp

@@ -85,7 +85,7 @@ Potential problems for Python 3
 
 from __future__ import division
 from statsmodels.compat.python import (lmap, lrange, zip, next, iteritems,
-                                       zip_longest, range)
+                                       zip_longest, range, long)
 
 from itertools import cycle
 import csv
@@ -316,7 +316,7 @@ class SimpleTable(list):
             return [0] * ncols
         elif request is None:  # assume no extra space desired (e.g, CSV)
             request = [0] * ncols
-        elif isinstance(request, int):
+        elif isinstance(request, (int, long)):
             request = [request] * ncols
         elif len(request) < ncols:
             request = [request[i % len(request)] for i in range(ncols)]
@@ -677,7 +677,7 @@ class Cell(object):
         fmt = self._get_fmt(output_format, **fmt_dict)
         datatype = self.datatype
         data_aligns = fmt.get('data_aligns', 'c')
-        if isinstance(datatype, int):
+        if isinstance(datatype, (int, long)):
             align = data_aligns[datatype % len(data_aligns)]
         elif datatype == 'stub':
             # still support deprecated `stubs_align`
@@ -710,13 +710,13 @@ class Cell(object):
             if data_fmt is None:
                 data_fmt = '%s'
             data_fmts = [data_fmt]
-        if isinstance(datatype, int):
+        if isinstance(datatype, (int, long)):
             datatype = datatype % len(data_fmts)  # constrain to indexes
             content = data_fmts[datatype] % (data,)
         elif datatype in fmt:
             if "replacements" in fmt:
                 if isinstance(data, str):
-                    for repl in fmt["replacements"]:
+                    for repl in sorted(fmt["replacements"]):
                         data = data.replace(repl, fmt["replacements"][repl])
 
             dfmt = fmt.get(datatype)
@@ -878,7 +878,8 @@ default_latex_fmt = dict(
     stub=r'\textbf{%s}',
     empty='',
     missing='--',
-    replacements={"%" : "\%", ">" : "$>$", "|" : "$|$"}
+    #replacements will be processed in lexicographical order
+    replacements={"#" : "\#", "$" : "\$", "%" : "\%", "&" : "\&", ">" : "$>$", "_" : "\_", "|" : "$|$"} 
 )
 
 default_fmts = dict(

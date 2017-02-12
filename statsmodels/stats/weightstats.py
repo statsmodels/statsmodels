@@ -67,11 +67,10 @@ class DescrStatsW(object):
     Examples
     --------
 
-    Note: I don't know the seed for the following, so the numbers will
-    differ
-
+    >>> import numpy as np
+    >>> np.random.seed(0)
     >>> x1_2d = 1.0 + np.random.randn(20, 3)
-    >>> w1 = np.random.randint(1,4, 20)
+    >>> w1 = np.random.randint(1, 4, 20)
     >>> d1 = DescrStatsW(x1_2d, weights=w1)
     >>> d1.mean
     array([ 1.42739844,  1.23174284,  1.083753  ])
@@ -99,7 +98,6 @@ class DescrStatsW(object):
     ...
     >>> stats.ttest_1samp(x1r, [0, 1, 1])
     ...
-
 
     '''
     def __init__(self, data, weights=None, ddof=0):
@@ -242,14 +240,15 @@ class DescrStatsW(object):
         Returns
         -------
         quantiles : Series, DataFrame, or ndarray
-            If `return_pandas`=True, returns one of the following:
-            * data are 1d, `return_pandas`=True: a Series indexed by
-              the probability points.
-            * data are 2d, `return_pandas`=True: a DataFrame with
-              the probability points as row index and the variables
-              as column index.
-        If `return_pandas`=False, returns an ndarray containing the
-        same values as the Series/DataFrame.
+            If `return_pandas` = True, returns one of the following:
+              * data are 1d, `return_pandas` = True: a Series indexed by
+                the probability points.
+              * data are 2d, `return_pandas` = True: a DataFrame with
+                the probability points as row index and the variables
+                as column index.
+
+            If `return_pandas` = False, returns an ndarray containing the
+            same values as the Series/DataFrame.
 
         Notes
         -----
@@ -510,24 +509,23 @@ class DescrStatsW(object):
 
         z-test on a proportion, with 20 observations, 15 of those are our event
 
+        >>> import statsmodels.api as sm
         >>> x1 = [0, 1]
         >>> w1 = [5, 15]
-        >>> d1 = smws.DescrStatsW(x1, w1)
+        >>> d1 = sm.stats.DescrStatsW(x1, w1)
         >>> d1.ztest_mean(0.5)
         (2.5166114784235836, 0.011848940928347452)
 
         This differs from the proportions_ztest because of the degrees of
         freedom correction:
-
-        >>> smprop.proportions_ztest(15, 20., value=0.5)
+        >>> sm.stats.proportions_ztest(15, 20.0, value=0.5)
         (2.5819888974716112, 0.009823274507519247).
 
         We can replicate the results from ``proportions_ztest`` if we increase
         the weights to have artificially one more observation:
 
-        >>> smws.DescrStatsW(x1, np.array(w1)*21./20).ztest_mean(0.5)
+        >>> sm.stats.DescrStatsW(x1, np.array(w1)*21./20).ztest_mean(0.5)
         (2.5819888974716116, 0.0098232745075192366)
-
         '''
         tstat = (self.mean - value) / self.std_mean
         #TODO: use outsourced

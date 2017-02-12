@@ -18,8 +18,10 @@ def seasonal_mean(x, freq):
     return np.array([pd_nanmean(x[i::freq]) for i in range(freq)])
 
 
-def seasonal_decompose(x, model="additive", filt=None, freq=None):
+def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True):
     """
+    Seasonal decomposition using moving averages
+
     Parameters
     ----------
     x : array-like
@@ -28,10 +30,15 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None):
         Type of seasonal component. Abbreviations are accepted.
     filt : array-like
         The filter coefficients for filtering out the seasonal component.
-        The default is a symmetric moving average.
+        The concrete moving average method used in filtering is determined by two_sided.
     freq : int, optional
-        Frequency of the series. Must be used if x is not a pandas
+        Frequency of the series. Must be used if x is not  a pandas object.
+        Overrides default periodicity of x if x is a pandas
         object with a timeseries index.
+    two_sided : bool
+        The moving average method used in filtering.
+        If True (default), a centered moving average is computed using the filt.
+        If False, the filter coefficients are for past values only.
 
     Returns
     -------
@@ -53,6 +60,9 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None):
 
     See Also
     --------
+    statsmodels.tsa.filters.bk_filter.bkfilter
+    statsmodels.tsa.filters.cf_filter.xffilter
+    statsmodels.tsa.filters.hp_filter.hpfilter
     statsmodels.tsa.filters.convolution_filter
     """
     _pandas_wrapper, pfreq = _maybe_get_pandas_wrapper_freq(x)
@@ -66,18 +76,14 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None):
             raise ValueError("Multiplicative seasonality is not appropriate "
                              "for zero and negative values")
 
-    if pfreq is not None:
-        pfreq = freq_to_period(pfreq)
-        if freq and pfreq != freq:
-            raise ValueError("Inferred frequency of index and frequency "
-                             "don't match. This function does not re-sample")
-        else:
+    if freq is None:
+        if pfreq is not None:
+            pfreq = freq_to_period(pfreq)
             freq = pfreq
-
-    elif freq is None:
-        raise ValueError("You must specify a freq or x must be a "
-                         "pandas object with a timeseries index")
-
+        else:
+            raise ValueError("You must specify a freq or x must be a "
+                             "pandas object with a timeseries index with"
+                             "a freq not set to None")
 
     if filt is None:
         if freq % 2 == 0:  # split weights at ends
@@ -85,7 +91,8 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None):
         else:
             filt = np.repeat(1./freq, freq)
 
-    trend = convolution_filter(x, filt)
+    nsides = int(two_sided) + 1
+    trend = convolution_filter(x, filt, nsides)
 
     # nan pad for conformability - convolve doesn't do it
     if model.startswith('m'):

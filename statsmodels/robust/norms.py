@@ -368,7 +368,6 @@ class AndrewWave(RobustNorm):
     See also
     --------
     statsmodels.robust.norms.RobustNorm
-
     """
     def __init__(self, a = 1.339):
         self.a = a

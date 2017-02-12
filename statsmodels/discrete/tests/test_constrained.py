@@ -338,9 +338,10 @@ class TestGLMPoissonConstrained1a(CheckPoissonConstrainedMixin):
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
-        cls.res1 = fit_constrained(mod, lc.coefs, lc.constants)
+        cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
+                                   fit_kwds={'atol': 1e-10})
         cls.constraints = lc
-        cls.res1m = mod.fit_constrained(constr)
+        cls.res1m = mod.fit_constrained(constr, atol=1e-10)
 
 
 class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
@@ -357,14 +358,16 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
         # example with offset
         formula = 'deaths ~ smokes + C(agecat)'
         mod = GLM.from_formula(formula, data=data,
-                                    family=families.Poisson(),
-                                    offset=np.log(data['pyears'].values))
+                               family=families.Poisson(),
+                               offset=np.log(data['pyears'].values))
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
-        cls.res1 = fit_constrained(mod, lc.coefs, lc.constants)
+
+        cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
+                                   fit_kwds={'atol': 1e-10})
         cls.constraints = lc
-        cls.res1m = mod.fit_constrained(constr)._results
+        cls.res1m = mod.fit_constrained(constr, atol=1e-10)._results
 
     def test_compare_glm_poisson(self):
         res1 = self.res1m
@@ -384,7 +387,7 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
 
         # basic, just as check that we have the same model
         assert_allclose(res1.params, res2.params, rtol=1e-12)
-        assert_allclose(res1.bse, res2.bse, rtol=1e-12)
+        assert_allclose(res1.bse, res2.bse, rtol=1e-11)
 
         # check predict, fitted, ...
 
@@ -450,10 +453,10 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
                    family=families.Binomial())
 
         constr = 'x1 - x3 = 0'
-        cls.res1m = mod1.fit_constrained(constr)
+        cls.res1m = mod1.fit_constrained(constr, atol=1e-10)
 
         R, q = cls.res1m.constraints.coefs, cls.res1m.constraints.constants
-        cls.res1 = fit_constrained(mod1, R, q)
+        cls.res1 = fit_constrained(mod1, R, q, fit_kwds={'atol': 1e-10})
         cls.constraints_rq = (R, q)
 
 

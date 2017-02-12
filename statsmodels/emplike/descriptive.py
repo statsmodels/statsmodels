@@ -623,6 +623,8 @@ class DescStatUV(_OptFuncts):
 
         Examples
         --------
+        >>> import numpy as np
+        >>> import statsmodels.api as sm
         >>> random_numbers = np.random.standard_normal(1000)*100
         >>> el_analysis = sm.emplike.DescStat(random_numbers)
         >>> hyp_test = el_analysis.test_var(9500)
@@ -666,11 +668,14 @@ class DescStatUV(_OptFuncts):
 
         Examples
         --------
+        >>> import numpy as np
+        >>> import statsmodels.api as sm
         >>> random_numbers = np.random.standard_normal(100)
         >>> el_analysis = sm.emplike.DescStat(random_numbers)
         >>> el_analysis.ci_var()
-        >>> 'f(a) and f(b) must have different signs'
+        (0.7539322567470305, 1.229998852496268)
         >>> el_analysis.ci_var(.5, 2)
+        (0.7539322567469926, 1.2299988524962664)
 
         Notes
         -----
@@ -998,7 +1003,7 @@ class DescStatMV(_OptFuncts):
             return llr, p_val
 
     def mv_mean_contour(self, mu1_low, mu1_upp, mu2_low, mu2_upp, step1, step2,
-                        levs=[.2, .1, .05, .01, .001], var1_name=None,
+                        levs=(.001, .01, .05, .1, .2), var1_name=None,
                         var2_name=None, plot_dta=False):
         """
         Creates a confidence region plot for the mean of bivariate data
@@ -1007,33 +1012,24 @@ class DescStatMV(_OptFuncts):
         ----------
         m1_low : float
             Minimum value of the mean for variable 1
-
         m1_upp : float
             Maximum value of the mean for variable 1
-
         mu2_low : float
             Minimum value of the mean for variable 2
-
         mu2_upp : float
             Maximum value of the mean for variable 2
-
         step1 : float
             Increment of evaluations for variable 1
-
         step2 : float
             Increment of evaluations for variable 2
-
         levs : list
             Levels to be drawn on the contour plot.
-            Default =  [.2, .1 .05, .01, .001]
-
+            Default =  (.001, .01, .05, .1, .2)
         plot_dta : bool
             If True, makes a scatter plot of the data on
             top of the contour plot. Defaultis False.
-
         var1_name : str
             Name of variable 1 to be plotted on the x-axis
-
         var2_name : str
             Name of variable 2 to be plotted on the y-axis
 
@@ -1047,8 +1043,9 @@ class DescStatMV(_OptFuncts):
 
         Examples
         --------
+        >>> import statsmodels.api as sm
         >>> two_rvs = np.random.standard_normal((20,2))
-        >>> el_analysis = sm.empllike.DescStat(two_rvs)
+        >>> el_analysis = sm.emplike.DescStat(two_rvs)
         >>> contourp = el_analysis.mv_mean_contour(-2, 2, -2, 2, .1, .1)
         >>> contourp.show()
         """
@@ -1063,8 +1060,8 @@ class DescStatMV(_OptFuncts):
             ax.set_xlabel('Variable 1')
         else:
             ax.set_xlabel(var1_name)
-        x = (np.arange(mu1_low, mu1_upp, step1))
-        y = (np.arange(mu2_low, mu2_upp, step2))
+        x = np.arange(mu1_low, mu1_upp, step1)
+        y = np.arange(mu2_low, mu2_upp, step2)
         pairs = itertools.product(x, y)
         z = []
         for i in pairs:

@@ -16,9 +16,11 @@ from statsmodels.genmod.families import links
 from statsmodels.regression.linear_model import OLS
 import statsmodels.stats.sandwich_covariance as sc
 from statsmodels.base.covtype import get_robustcov_results
+import statsmodels.stats.sandwich_covariance as sw
 from statsmodels.tools.tools import add_constant
 
-from numpy.testing import assert_allclose, assert_equal
+
+from numpy.testing import assert_allclose, assert_equal, assert_
 import statsmodels.tools._testing as smt
 
 
@@ -509,7 +511,7 @@ class T_estGLMProbit(CheckDiscreteGLM):
         endog_bin = (endog > endog.mean()).astype(int)
         cls.cov_type = 'cluster'
 
-        mod1 = GLM(endog_bin, exog, family=families.Gaussian(link=links.CDFLink))
+        mod1 = GLM(endog_bin, exog, family=families.Gaussian(link=links.CDFLink()))
         cls.res1 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
 
         mod1 = smd.Probit(endog_bin, exog)
@@ -553,6 +555,131 @@ class TestGLMGaussHC(CheckDiscreteGLM):
 
         mod2 = OLS(endog, exog)
         cls.res2 = mod2.fit(cov_type='HC0')
+
+
+class TestGLMGaussHAC(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+
+        cls.cov_type = 'HAC'
+
+        kwds={'maxlags':2}
+        mod1 = GLM(endog, exog, family=families.Gaussian())
+        cls.res1 = mod1.fit(cov_type='HAC', cov_kwds=kwds)
+
+        mod2 = OLS(endog, exog)
+        cls.res2 = mod2.fit(cov_type='HAC', cov_kwds=kwds)
+
+
+class TestGLMGaussHACUniform(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+
+        cls.cov_type = 'HAC'
+
+        kwds={'kernel':sw.weights_uniform, 'maxlags':2}
+        mod1 = GLM(endog, exog, family=families.Gaussian())
+        cls.res1 = mod1.fit(cov_type='HAC', cov_kwds=kwds)
+
+        mod2 = OLS(endog, exog)
+        cls.res2 = mod2.fit(cov_type='HAC', cov_kwds=kwds)
+
+        #for debugging
+        cls.res3 = mod2.fit(cov_type='HAC', cov_kwds={'maxlags':2})
+
+
+    def test_cov_options(self):
+
+        # check keyword `weights_func
+        kwdsa = {'weights_func':sw.weights_uniform, 'maxlags':2}
+        res1a = self.res1.model.fit(cov_type='HAC', cov_kwds=kwdsa)
+        res2a = self.res2.model.fit(cov_type='HAC', cov_kwds=kwdsa)
+        assert_allclose(res1a.bse, self.res1.bse, rtol=1e-12)
+        assert_allclose(res2a.bse, self.res2.bse, rtol=1e-12)
+
+        # regression test for bse values
+        bse = np.array([  2.82203924,   4.60199596,  11.01275064])
+        assert_allclose(res1a.bse, bse, rtol=1e-6)
+
+        assert_(res1a.cov_kwds['weights_func'] is sw.weights_uniform)
+
+        kwdsb = {'kernel':sw.weights_bartlett, 'maxlags':2}
+        res1a = self.res1.model.fit(cov_type='HAC', cov_kwds=kwdsb)
+        res2a = self.res2.model.fit(cov_type='HAC', cov_kwds=kwdsb)
+        assert_allclose(res1a.bse, res2a.bse, rtol=1e-12)
+
+        # regression test for bse values
+        bse = np.array([  2.502264,  3.697807,  9.193303])
+        assert_allclose(res1a.bse, bse, rtol=1e-6)
+
+
+class TestGLMGaussHACPanel(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+        cls.cov_type = 'hac-panel'
+        # time index is just made up to have a test case
+        time = np.tile(np.arange(7), 5)[:-1]
+        mod1 = GLM(endog.copy(), exog.copy(), family=families.Gaussian())
+        kwds = dict(time=time,
+                    maxlags=2,
+                    kernel=sw.weights_uniform,
+                    use_correction='hac',
+                    df_correction=False)
+        cls.res1 = mod1.fit(cov_type='hac-panel', cov_kwds=kwds)
+        cls.res1b = mod1.fit(cov_type='nw-panel', cov_kwds=kwds)
+
+        mod2 = OLS(endog, exog)
+        cls.res2 = mod2.fit(cov_type='hac-panel', cov_kwds=kwds)
+
+    def test_kwd(self):
+        # test corrected keyword name
+        assert_allclose(self.res1b.bse, self.res1.bse, rtol=1e-12)
+
+
+class TestGLMGaussHACPanelGroups(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+        cls.cov_type = 'hac-panel'
+        # time index is just made up to have a test case
+        groups = np.repeat(np.arange(5), 7)[:-1]
+        mod1 = GLM(endog.copy(), exog.copy(), family=families.Gaussian())
+        kwds = dict(groups=groups,
+                    maxlags=2,
+                    kernel=sw.weights_uniform,
+                    use_correction='hac',
+                    df_correction=False)
+        cls.res1 = mod1.fit(cov_type='hac-panel', cov_kwds=kwds)
+
+        mod2 = OLS(endog, exog)
+        cls.res2 = mod2.fit(cov_type='hac-panel', cov_kwds=kwds)
+
+
+class TestGLMGaussHACGroupsum(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+        cls.cov_type = 'hac-groupsum'
+        # time index is just made up to have a test case
+        time = np.tile(np.arange(7), 5)[:-1]
+        mod1 = GLM(endog, exog, family=families.Gaussian())
+        kwds = dict(time=time,
+                    maxlags=2,
+                    use_correction='hac',
+                    df_correction=False)
+        cls.res1 = mod1.fit(cov_type='hac-groupsum', cov_kwds=kwds)
+        cls.res1b = mod1.fit(cov_type='nw-groupsum', cov_kwds=kwds)
+
+        mod2 = OLS(endog, exog)
+        cls.res2 = mod2.fit(cov_type='hac-groupsum', cov_kwds=kwds)
+
+    def test_kwd(self):
+        # test corrected keyword name
+        assert_allclose(self.res1b.bse, self.res1.bse, rtol=1e-12)
+
 
 
 if __name__ == '__main__':

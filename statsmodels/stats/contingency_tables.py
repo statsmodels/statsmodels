@@ -31,6 +31,7 @@ import numpy as np
 from scipy import stats
 import pandas as pd
 from statsmodels import iolib
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 
 
 
@@ -124,7 +125,7 @@ class Table(object):
     categorical variables.
 
     References
-    ---------
+    ----------
     Definitions of residuals:
         https://onlinecourses.science.psu.edu/stat504/node/86
     """
@@ -559,7 +560,9 @@ class SquareTable(Table):
         try:
             statistic = n_obs * np.dot(d, np.linalg.solve(vmat, d))
         except np.linalg.LinAlgError:
-            warnings.warn("Unable to invert covariance matrix")
+            import warnings
+            warnings.warn("Unable to invert covariance matrix",
+                          SingularMatrixWarning)
             b = _Bunch()
             b.statistic = np.nan
             b.pvalue = np.nan
@@ -705,8 +708,8 @@ class Table2x2(SquareTable):
         """
         P-value for a hypothesis test about the odds ratio.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         null : float
             The null value of the odds ratio.
         """
@@ -718,8 +721,8 @@ class Table2x2(SquareTable):
         """
         P-value for a hypothesis test about the log odds ratio.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         null : float
             The null value of the log odds ratio.
         """
@@ -797,8 +800,8 @@ class Table2x2(SquareTable):
         """
         p-value for a hypothesis test about the risk ratio.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         null : float
             The null value of the risk ratio.
         """
@@ -810,8 +813,8 @@ class Table2x2(SquareTable):
         """
         p-value for a hypothesis test about the log risk ratio.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         null : float
             The null value of the log risk ratio.
         """

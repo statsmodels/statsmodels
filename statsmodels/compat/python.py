@@ -11,7 +11,9 @@ PY3_2 = sys.version_info[:2] == (3, 2)
 
 if PY3:
     import builtins
+    from collections import namedtuple
     from io import StringIO, BytesIO
+    import inspect
 
     cStringIO = StringIO
     import pickle as cPickle
@@ -80,12 +82,39 @@ if PY3:
     string_types = str
     input = input
 
+    ArgSpec= namedtuple('ArgSpec', ['args', 'varargs', 'keywords', 'defaults'])
+    def getargspec(func):
+        """
+        Simple workaroung for getargspec deprecation that returns
+        an ArgSpec-like object
+        """
+        sig = inspect.signature(func)
+        parameters = sig.parameters
+        args, defaults  = [], []
+        varargs, keywords = None, None
+
+        for key in parameters:
+            parameter = parameters[key]
+
+            if parameter.kind == inspect.Parameter.VAR_POSITIONAL:
+                varargs = key
+            elif parameter.kind == inspect.Parameter.VAR_KEYWORD:
+                keywords = key
+            else:
+                args.append(key)
+            if parameter.default is not parameter.empty:
+                defaults.append(parameter.default)
+        defaults = None if len(defaults) == 0 else defaults
+
+        return ArgSpec(args, varargs, keywords, defaults)
+
 else:
     import __builtin__ as builtins
     # not writeable when instantiated with string, doesn't handle unicode well
     from cStringIO import StringIO as cStringIO
     # always writeable
     from StringIO import StringIO
+    from inspect import getargspec
 
     BytesIO = StringIO
     import cPickle
@@ -232,3 +261,5 @@ except:
             for j in range(i+1, r):
                 indices[j] = indices[j-1] + 1
             yield tuple(pool[i] for i in indices)
+
+

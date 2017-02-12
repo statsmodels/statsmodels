@@ -50,8 +50,11 @@ License: BSD (3-clause)
 
 from __future__ import print_function
 from statsmodels.compat.python import lrange
+from statsmodels.compat.numpy import np_matrix_rank
+
 import numpy as np
 from scipy import optimize, stats
+
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.base.model import (Model,
                                     LikelihoodModel, LikelihoodModelResults)
@@ -59,7 +62,7 @@ from statsmodels.regression.linear_model import (OLS, RegressionResults,
                                                  RegressionResultsWrapper)
 import statsmodels.stats.sandwich_covariance as smcov
 from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
-from statsmodels.compat.numpy import np_matrix_rank
+from statsmodels.tools.tools import _ensure_2d
 
 DEBUG = 0
 
@@ -70,38 +73,36 @@ def maxabs(x):
 
 
 class IV2SLS(LikelihoodModel):
-    '''
-    Class for instrumental variables estimation using Two-Stage Least-Squares
+    """
+    Instrumental variables estimation using Two-Stage Least-Squares (2SLS)
 
 
     Parameters
     ----------
-    endog: array 1d
-       endogenous variable
+    endog: array
+       Endogenous variable, 1-dimensional or 2-dimensional array nobs by 1
     exog : array
-       explanatory variables
+       Explanatory variables, 1-dimensional or 2-dimensional array nobs by k
     instruments : array
-       instruments for explanatory variables, needs to contain those exog
-       variables that are not instrumented out
+       Instruments for explanatory variables. Must contain both exog
+       variables that are not being instrumented and instruments
 
     Notes
     -----
     All variables in exog are instrumented in the calculations. If variables
-    in exog are not supposed to be instrumented out, then these variables
-    need also to be included in the instrument array.
+    in exog are not supposed to be instrumented, then these variables
+    must also to be included in the instrument array.
 
     Degrees of freedom in the calculation of the standard errors uses
     `df_resid = (nobs - k_vars)`.
     (This corresponds to the `small` option in Stata's ivreg2.)
-
-
-    '''
+    """
 
     def __init__(self, endog, exog, instrument=None):
-        self.instrument = instrument
+        self.instrument, self.instrument_names = _ensure_2d(instrument, True)
         super(IV2SLS, self).__init__(endog, exog)
         # where is this supposed to be handled
-        #Note: Greene p.77/78 dof correction is not necessary (because only
+        # Note: Greene p.77/78 dof correction is not necessary (because only
         #       asy results), but most packages do it anyway
         self.df_resid = self.exog.shape[0] - self.exog.shape[1]
         #self.df_model = float(self.rank - self.k_constant)

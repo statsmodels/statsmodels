@@ -11,26 +11,26 @@ Author: Josef Perktold
 """
 
 import copy
+import warnings
+import nose
+from distutils.version import LooseVersion
 
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_allclose, assert_raises,
-                           assert_equal, assert_warns)
-
+                           assert_equal, assert_warns, dec)
+import scipy
 
 import statsmodels.stats.power as smp
-import warnings
-#from .test_weightstats import CheckPowerMixin
 from statsmodels.stats.tests.test_weightstats import Holder
 
-# for testing plots
-import nose
-from numpy.testing import dec
 try:
-    import matplotlib.pyplot as plt  #makes plt available for test functions
+    import matplotlib.pyplot as plt  # makes plt available for test functions
     have_matplotlib = True
 except ImportError:
     have_matplotlib = False
 
+
+SM_GT_10 = LooseVersion(scipy.__version__) >= '0.10'
 
 class CheckPowerMixin(object):
 
@@ -94,6 +94,7 @@ class CheckPowerMixin(object):
     def test_power_plot(self):
         if self.cls == smp.FTestPower:
             raise nose.SkipTest('skip FTestPower plot_power')
+        plt.close()
         fig = plt.figure()
         ax = fig.add_subplot(2,1,1)
         fig = self.cls().plot_power(dep_var='nobs',
@@ -109,7 +110,7 @@ class CheckPowerMixin(object):
                                   #alternative='larger',
                                   ax=ax, title='',
                                   **self.kwds_extra)
-        plt.close('all')
+        plt.close(fig)
 
 #''' test cases
 #one sample
@@ -715,6 +716,7 @@ def test_power_solver():
     assert_raises(ValueError, nip.solve_power, None, nobs1=1600, alpha=0.01,
                   power=0.005, ratio=1, alternative='larger')
 
+@dec.skipif(SM_GT_10, 'Known failure on modern SciPy')
 def test_power_solver_warn():
     # messing up the solver to trigger warning
     # I wrote this with scipy 0.9,
@@ -727,27 +729,26 @@ def test_power_solver_warn():
     nip.start_bqexp['nobs1'] = {'upp': 50, 'low': -20}
     val = nip.solve_power(0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1,
                           alternative='larger')
-    import scipy
-    if scipy.__version__ < '0.10':
-        assert_almost_equal(val, 1600, decimal=4)
-        assert_equal(nip.cache_fit_res[0], 1)
+
+    assert_almost_equal(val, 1600, decimal=4)
+    assert_equal(nip.cache_fit_res[0], 1)
+    assert_equal(len(nip.cache_fit_res), 3)
+
+    # case that has convergence failure, and should warn
+    nip.start_ttp['nobs1'] = np.nan
+
+    from statsmodels.tools.sm_exceptions import ConvergenceWarning
+    assert_warns(ConvergenceWarning, nip.solve_power, 0.1, nobs1=None,
+                  alpha=0.01, power=pow_, ratio=1, alternative='larger')
+    # this converges with scipy 0.11  ???
+    # nip.solve_power(0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative='larger')
+
+    with warnings.catch_warnings():  # python >= 2.6
+        warnings.simplefilter("ignore")
+        val = nip.solve_power(0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1,
+                              alternative='larger')
+        assert_equal(nip.cache_fit_res[0], 0)
         assert_equal(len(nip.cache_fit_res), 3)
-
-        # case that has convergence failure, and should warn
-        nip.start_ttp['nobs1'] = np.nan
-
-        from statsmodels.tools.sm_exceptions import ConvergenceWarning
-        assert_warns(ConvergenceWarning, nip.solve_power, 0.1, nobs1=None,
-                      alpha=0.01, power=pow_, ratio=1, alternative='larger')
-        # this converges with scipy 0.11  ???
-        # nip.solve_power(0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative='larger')
-
-        with warnings.catch_warnings():  # python >= 2.6
-            warnings.simplefilter("ignore")
-            val = nip.solve_power(0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1,
-                                  alternative='larger')
-            assert_equal(nip.cache_fit_res[0], 0)
-            assert_equal(len(nip.cache_fit_res), 3)
 
 
 

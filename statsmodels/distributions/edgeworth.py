@@ -41,7 +41,7 @@ def _faa_di_bruno_partitions(n):
     ---------
     >>> _faa_di_bruno_partitions(2)
     [[(1, 2)], [(2, 1)]]
-    >>> for p in faa_di_bruno_partitions(4):
+    >>> for p in _faa_di_bruno_partitions(4):
     ...     assert 4 == sum(m * k for (m, k) in p)
 
     """
@@ -122,6 +122,8 @@ class ExpandedNormal(rv_continuous):
     Construct the 4th order expansion for the chi-square distribution using
     the known values of the cumulants:
 
+    >>> import matplotlib.pyplot as plt
+    >>> from scipy import stats
     >>> from scipy.misc import factorial
     >>> df = 12
     >>> chi2_c = [2**(j-1) * factorial(j-1) * df for j in range(1, 5)]
@@ -135,9 +137,9 @@ class ExpandedNormal(rv_continuous):
     Plot the density function:
     >>> mu, sigma = df, np.sqrt(2*df)
     >>> x = np.linspace(mu - 3*sigma, mu + 3*sigma)
-    >>> plt.plot(x, stats.chi2.pdf(x, df=df), 'g-', lw=4, alpha=0.5)
-    >>> plt.plot(x, stats.norm.pdf(x, mu, sigma), 'b--', lw=4, alpha=0.5)
-    >>> plt.plot(x, edgw_chi2.pdf(x), 'r-', lw=2)
+    >>> fig1 = plt.plot(x, stats.chi2.pdf(x, df=df), 'g-', lw=4, alpha=0.5)
+    >>> fig2 = plt.plot(x, stats.norm.pdf(x, mu, sigma), 'b--', lw=4, alpha=0.5)
+    >>> fig3 = plt.plot(x, edgw_chi2.pdf(x), 'r-', lw=2)
     >>> plt.show()
 
     References
@@ -166,7 +168,7 @@ class ExpandedNormal(rv_continuous):
         r = (r - self._mu) / self._sigma
         if r[(np.imag(r) == 0) & (np.abs(r) < 4)].any():
             mesg = 'PDF has zeros at %s ' % r
-            warnings.warn(mesg, UserWarning)
+            warnings.warn(mesg, RuntimeWarning)
 
         kwds.update({'name': name,
                      'momtype': 0})   # use pdf, not ppf in self.moment()
