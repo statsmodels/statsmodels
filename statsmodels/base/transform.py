@@ -145,7 +145,7 @@ class BoxCox(object):
 
         return lmbda
 
-    def _guerrero_cv(self, x, bounds, R=4, scale='sd'):
+    def _guerrero_cv(self, x, bounds, R=4, scale='sd', options={'maxiter': 25}):
         """
         Computes lambda using guerrero's coefficient of variation. If no
         seasonality is present in the data, R is set to 4 (as per Guerrero
@@ -167,6 +167,8 @@ class BoxCox(object):
         scale : {'sd', 'mad'}
             The dispersion measure to be used. 'sd' indicates the sample
             standard deviation, but the more robust 'mad' is also available.
+        options : dict
+            The options (as a dict) to be passed to the optimizer.
         """
         nobs = len(x)
         groups = int(nobs / R)
@@ -190,10 +192,10 @@ class BoxCox(object):
         res = minimize_scalar(optim,
                               bounds=bounds,
                               method='bounded',
-                              options={'maxiter': 50})
+                              options=options)
         return res.x
 
-    def _loglik_boxcox(self, x, bounds):
+    def _loglik_boxcox(self, x, bounds, options={'maxiter': 25}):
         """
         Taken from the Stata manual on Box-Cox regressions, where this is the
         special case of 'lhs only'. As an estimator for the variance, the
@@ -202,6 +204,8 @@ class BoxCox(object):
         Parameters
         ----------
         x : array_like
+        options : dict
+            The options (as a dict) to be passed to the optimizer.
         """
         sum_x = np.sum(np.log(x))
         nobs = len(x)
@@ -213,5 +217,5 @@ class BoxCox(object):
         res = minimize_scalar(optim,
                               bounds=bounds,
                               method='bounded',
-                              options={'maxiter': 50})
+                              options=options)
         return res.x
