@@ -1035,7 +1035,6 @@ def test_gradient_irls():
                    gradient_bse = rslt_gradient.bse
                    ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
                    gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
-
                    assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=5e-5)
 
 
