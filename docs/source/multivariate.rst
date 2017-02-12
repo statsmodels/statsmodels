@@ -1,5 +1,5 @@
 .. module:: statsmodels.multivariate
-   :synopsis: Models for multiple series
+   :synopsis: Models for multivariate data
 
 .. currentmodule:: statsmodels.multivariate
 

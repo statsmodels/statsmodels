@@ -180,7 +180,7 @@ html_sidebars = {'index' : ['indexsidebar.html','searchbox.html','sidelinks.html
 #html_additional_pages = {}
 
 # If false, no module index is generated.
-html_domain_indices = False
+html_domain_indices = True
 
 # If false, no index is generated.
 #html_use_index = True

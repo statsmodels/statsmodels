@@ -42,7 +42,7 @@ Residual Diagnostics and Specification Tests
    expected_robust_kurtosis
 
 .. module:: statsmodels.stats.diagnostic
-   :synopsis: Statistical methods and tests to diagnose model fit probelms
+   :synopsis: Statistical methods and tests to diagnose model fit problems
 
 .. currentmodule:: statsmodels.stats.diagnostic
 
@@ -81,7 +81,7 @@ Outliers and influence measures
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. module:: statsmodels.stats.outliers_influence
-   :synopsis: Statistical methods and tests measure outlier influence
+   :synopsis: Statistical methods and measures for outliers and influence
 
 .. currentmodule:: statsmodels.stats.outliers_influence
 
@@ -133,7 +133,7 @@ Goodness of Fit Tests and Measures
 some tests for goodness of fit for univariate distributions
 
 .. module:: statsmodels.stats.gof
-   :synopsis: Statistical methods and tests measure goodness of fit
+   :synopsis: Goodness of fit measures and tests
 
 .. currentmodule:: statsmodels.stats.gof
 
@@ -239,7 +239,7 @@ to one way ANOVA, but still in developement
    pairwise_tukeyhsd
 
 .. module:: statsmodels.stats.multitest
-   :synopsis: False discovery rate adjustments
+   :synopsis: Multiple testing p-value adjustments
 
 .. currentmodule:: statsmodels.stats.multitest
 
@@ -426,7 +426,7 @@ These are utility functions to convert between central and non-central moments, 
 kurtosis and cummulants.
 
 .. module:: statsmodels.stats.moment_helpers
-   :synopsis: Tools to compute moments from data
+   :synopsis: Tools for converting moments
 
 .. currentmodule:: statsmodels.stats.moment_helpers
 

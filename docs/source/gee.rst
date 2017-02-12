@@ -85,7 +85,7 @@ Dependence Structures
 The dependence structures currently implemented are
 
 .. module:: statsmodels.genmod.cov_struct
-   :synopsis: Covariance structures for GEE and GLM
+   :synopsis: Covariance structures for Generalized Estimating Equations (GEE)
 
 .. currentmodule:: statsmodels.genmod.cov_struct
 
@@ -106,7 +106,7 @@ Families
 The distribution families are the same as for GLM, currently implemented are
 
 .. module:: statsmodels.genmod.families.family
-   :synopsis: Generalized Linear Model (GLM) link families
+   :synopsis: Generalized Linear Model (GLM) families
 
 .. currentmodule:: statsmodels.genmod.families.family
 
