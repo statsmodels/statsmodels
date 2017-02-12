@@ -381,7 +381,6 @@ class Poisson(Family):
         return 2 * np.sum(iweights * (endog * np.log(endog_mu) -
                                       (endog - mu))) / scale
 
-
     def loglike(self, endog, mu, iweights=1., scale=1.):
         r"""
         The log-likelihood function in terms of the fitted mean response.
@@ -1584,7 +1583,7 @@ class Tweedie(Family):
             dev = ((endog - mu) / mu) - np.log(endog1 / mu)
         else:
             dev = (endog ** (2 - p) / ((1 - p) * (2 - p)) -
-                   endog * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
+                   endog * mu ** (1 - p) / (1 - p) + mu ** (2 - p) / (2 - p))
         return np.sum(2 * iweights * dev)
 
     def resid_dev(self, endog, mu, scale=1.):

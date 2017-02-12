@@ -34,15 +34,21 @@ class CheckWeight(object):
         res1 = self.res1
         res2 = self.res2
 
-        assert_allclose(res1.params, res2.params, atol= 1e-6, rtol=2e-6)
+        assert_allclose(res1.params, res2.params, atol=1e-6, rtol=2e-6)
         corr_fact = getattr(self, 'corr_fact', 1)
-        assert_allclose(res1.bse, corr_fact * res2.bse, atol= 1e-6, rtol=2e-6)
+        assert_allclose(res1.bse, corr_fact * res2.bse, atol=1e-6, rtol=2e-6)
+        if isinstance(self, (TestRepeatedvsAggregated, TestRepeatedvsAverage)):
+            # Loglikelihood is different between repeated vs. exposure/average
+            return None
         if not isinstance(self, (TestGlmGaussianAwNr, TestGlmGammaAwNr)):
             # Matching R is hard
-            assert_allclose(res1.llf, res2.ll, atol= 1e-6, rtol=1e-7)
-        assert_allclose(res1.deviance, res2.deviance, atol= 1e-6, rtol=1e-7)
+            assert_allclose(res1.llf, res2.ll, atol=1e-6, rtol=1e-7)
+        assert_allclose(res1.deviance, res2.deviance, atol=1e-6, rtol=1e-7)
 
     def test_residuals(self):
+        if isinstance(self, (TestRepeatedvsAggregated, TestRepeatedvsAverage)):
+            # This won't match as different number of records
+            return None
         res1 = self.res1
         res2 = self.res2
         if not hasattr(res2, 'resids'):
@@ -503,3 +509,79 @@ def test_wtd_gradient_irls():
                     gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
                     assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6,
                                     atol=5e-5)
+
+
+def get_dummies(x):
+    values = np.sort(np.unique(x))
+    out = np.zeros(shape=(x.shape[0], len(values) - 1))
+    for i, v in enumerate(values):
+        if i == 0:
+            continue
+        out[:, i - 1] = np.where(v == x, 1, 0)
+    return out
+
+
+class TestRepeatedvsAggregated(CheckWeight):
+    @classmethod
+    def setupClass(cls):
+        import pandas as pd
+        self = cls
+        np.random.seed(4321)
+        n = 100
+        p = 5
+        exog = np.empty((n, p))
+        exog[:, 0] = 1
+        exog[:, 1] = np.random.randint(low=-5, high=5, size=n)
+        x = np.repeat(np.array([1, 2, 3, 4]), n / 4)
+        exog[:, 2:] = get_dummies(x)
+        beta = np.array([-1, 0.1, -0.05, .2, 0.35])
+        lin_pred = (exog * beta).sum(axis=1)
+        family = sm.families.Poisson
+        link = sm.families.links.log
+        endog = gen_endog(lin_pred, family, link)
+        mod1 = sm.GLM(endog, exog, family=family(link=link))
+        self.res1 = mod1.fit()
+
+        agg = pd.DataFrame(exog)
+        agg['endog'] = endog
+        agg_endog = agg.groupby([0, 1, 2, 3, 4]).sum()[['endog']]
+        agg_wt = agg.groupby([0, 1, 2, 3, 4]).count()[['endog']]
+        agg_exog = np.array(agg_endog.index.tolist())
+        agg_wt = agg_wt['endog']
+        agg_endog = agg_endog['endog']
+        mod2 = sm.GLM(agg_endog, agg_exog, family=family(link=link),
+                      exposure=agg_wt)
+        self.res2 = mod2.fit()
+
+
+class TestRepeatedvsAverage(CheckWeight):
+    @classmethod
+    def setupClass(cls):
+        import pandas as pd
+        self = cls
+        np.random.seed(4321)
+        n = 100
+        p = 5
+        exog = np.empty((n, p))
+        exog[:, 0] = 1
+        exog[:, 1] = np.random.randint(low=-5, high=5, size=n)
+        x = np.repeat(np.array([1, 2, 3, 4]), n / 4)
+        exog[:, 2:] = get_dummies(x)
+        beta = np.array([-1, 0.1, -0.05, .2, 0.35])
+        lin_pred = (exog * beta).sum(axis=1)
+        family = sm.families.Poisson
+        link = sm.families.links.log
+        endog = gen_endog(lin_pred, family, link)
+        mod1 = sm.GLM(endog, exog, family=family(link=link))
+        self.res1 = mod1.fit()
+
+        agg = pd.DataFrame(exog)
+        agg['endog'] = endog
+        agg_endog = agg.groupby([0, 1, 2, 3, 4]).sum()[['endog']]
+        agg_wt = agg.groupby([0, 1, 2, 3, 4]).count()[['endog']]
+        agg_exog = np.array(agg_endog.index.tolist())
+        agg_wt = agg_wt['endog']
+        avg_endog = agg_endog['endog'] / agg_wt
+        mod2 = sm.GLM(avg_endog, agg_exog, family=family(link=link),
+                      var_weights=agg_wt)
+        self.res2 = mod2.fit()
