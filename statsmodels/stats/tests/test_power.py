@@ -13,12 +13,10 @@ Author: Josef Perktold
 import copy
 import warnings
 import nose
-from distutils.version import LooseVersion
 
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_allclose, assert_raises,
                            assert_equal, assert_warns, dec)
-import scipy
 
 import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
@@ -29,8 +27,6 @@ try:
 except ImportError:
     have_matplotlib = False
 
-
-SM_GT_10 = LooseVersion(scipy.__version__) >= '0.10'
 
 class CheckPowerMixin(object):
 
@@ -716,7 +712,7 @@ def test_power_solver():
     assert_raises(ValueError, nip.solve_power, None, nobs1=1600, alpha=0.01,
                   power=0.005, ratio=1, alternative='larger')
 
-@dec.skipif(SM_GT_10, 'Known failure on modern SciPy')
+@dec.skipif(True, 'Known failure on modern SciPy')
 def test_power_solver_warn():
     # messing up the solver to trigger warning
     # I wrote this with scipy 0.9,
