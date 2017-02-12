@@ -17,7 +17,7 @@ Time Series Analysis.
 Princeton, N.J.: Princeton University Press.
 """
 from __future__ import division, absolute_import, print_function
-from statsmodels.compat.testing import SkipTest, skip
+from statsmodels.compat.testing import SkipTest, skipif
 from statsmodels.compat import cPickle
 
 from distutils.version import LooseVersion
@@ -199,7 +199,7 @@ class Clark1987(object):
             self.true_states.iloc[:, 2], 4
         )
 
-    @skipif(NP_LT_18)
+    @skipif(NP_LT_18, 'Array order is not preserved on Numpy <= 1.8')
     def test_pickled_filter(self):
         pickled = cPickle.loads(cPickle.dumps(self.filter))
         #  Run the filters
@@ -212,7 +212,7 @@ class Clark1987(object):
         assert_allclose(np.array(self.filter.loglikelihood),
                         np.array(pickled.loglikelihood))
 
-    @skipif(NP_LT_18)
+    @skipif(NP_LT_18, 'Array order is not preserved on Numpy <= 1.8')
     def test_copied_filter(self):
         copied = copy.deepcopy(self.filter)
         #  Run the filters
