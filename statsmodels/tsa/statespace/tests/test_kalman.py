@@ -17,6 +17,7 @@ Time Series Analysis.
 Princeton, N.J.: Princeton University Press.
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat.testing import SkipTest, skip
 from statsmodels.compat import cPickle
 
 from distutils.version import LooseVersion
@@ -25,6 +26,7 @@ import copy
 import numpy as np
 import pandas as pd
 import os
+import pytest
 
 try:
     from scipy.linalg.blas import find_best_blas_type
@@ -45,8 +47,6 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.statespace import _statespace as ss
 from .results import results_kalman_filter
 from numpy.testing import assert_almost_equal, assert_allclose
-from numpy.testing.decorators import skipif
-from nose.exc import SkipTest
 
 # Skip copy test on older NumPy since deepcopy does not copy order
 NP_LT_18 = LooseVersion(np.__version__).version[:2] < [1, 8]
@@ -226,6 +226,7 @@ class Clark1987(object):
         assert_allclose(np.array(self.filter.loglikelihood),
                         np.array(copied.loglikelihood))
 
+@pytest.mark.skip(reason='Not implemented')
 class TestClark1987Single(Clark1987):
     """
     Basic single precision test for the loglikelihood and filtered states.
@@ -276,6 +277,7 @@ class TestClark1987Double(Clark1987):
         cls.result = cls.run_filter()
 
 
+@pytest.mark.skip(reason='Not implemented')
 class TestClark1987SingleComplex(Clark1987):
     """
     Basic single precision complex test for the loglikelihood and filtered

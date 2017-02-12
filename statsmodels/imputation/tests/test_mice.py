@@ -1,3 +1,5 @@
+from statsmodels.compat.testing import skipif
+
 import numpy as np
 import pandas as pd
 from statsmodels.imputation import mice
@@ -218,7 +220,7 @@ class TestMICEData(object):
         assert_equal(imp_data._cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
 
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_missing_pattern(self):
 
         df = gendat()
@@ -234,7 +236,7 @@ class TestMICEData(object):
                     close_or_save(pdf, fig)
 
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_bivariate(self):
 
         df = gendat()
@@ -248,7 +250,7 @@ class TestMICEData(object):
             close_or_save(pdf, fig)
 
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_fit_obs(self):
 
         df = gendat()
@@ -262,7 +264,7 @@ class TestMICEData(object):
             close_or_save(pdf, fig)
 
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_imputed_hist(self):
 
         df = gendat()
@@ -344,8 +346,5 @@ class TestMICE(object):
 
 
 if  __name__=="__main__":
-
-    import nose
-
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb', '--pdb-failure'],
-                   exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

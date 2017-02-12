@@ -1,14 +1,15 @@
 from statsmodels.compat.python import lrange, BytesIO, cPickle
+from statsmodels.compat.testing import skip, skipif
 
 import os
 import warnings
 
-from nose.tools import nottest
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_allclose,
                            assert_raises, dec, TestCase)
 import pandas as pd
 from pandas import PeriodIndex, DatetimeIndex
+import pytest
 
 from statsmodels.datasets.macrodata import load as load_macrodata
 from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
@@ -1933,7 +1934,7 @@ class TestARMA00(TestCase):
         predictions = self.arma_00_res.predict()
         assert_almost_equal(self.y.mean() * np.ones_like(predictions), predictions)
 
-    @nottest
+    @skip
     def test_information_criteria(self):
         # This test is invalid since the ICs differ due to df_model differences
         # between OLS and ARIMA
@@ -2002,7 +2003,7 @@ def test_arma_missing():
     assert_raises(MissingDataError, ARMA, y, (1, 0), missing='raise')
 
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plot_predict():
     from statsmodels.datasets.sunspots import load_pandas
 
@@ -2286,5 +2287,5 @@ def test_arima_pickle():
 
 
 if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

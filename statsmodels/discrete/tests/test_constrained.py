@@ -8,13 +8,14 @@ License: BSD-3
 """
 
 from statsmodels.compat.python import StringIO
+from statsmodels.compat.testing import SkipTest
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal, assert_
-from nose import SkipTest
 
 import pandas as pd
 import patsy
+import pytest
 
 from statsmodels.discrete.discrete_model import Poisson
 from statsmodels.discrete.discrete_model import Logit

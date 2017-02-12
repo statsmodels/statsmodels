@@ -8,6 +8,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat.testing import SkipTest, skip, skipif
 
 import numpy as np
 import pandas as pd
@@ -23,12 +24,13 @@ from statsmodels.tsa.statespace.kalman_smoother import (
 from statsmodels.tsa.statespace.tools import compatibility_mode
 from statsmodels.tsa.statespace.tests.results import results_kalman_filter
 from numpy.testing import assert_equal, assert_allclose
-from nose.exc import SkipTest
+import pytest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 if compatibility_mode:
-    raise SkipTest('Collapsed methods not available.')
+    pytestmark = pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
+    raise SkipTest('In compatibility mode')
 
 
 class Trivariate(object):
@@ -151,18 +153,18 @@ class Trivariate(object):
             self.results_b.smoothed_state_autocov
         )
 
-    @SkipTest
     # Skipped because "measurement" refers to different things; even different
     # dimensions
+    @skip
     def test_smoothed_measurement_disturbance(self):
         assert_allclose(
             self.results_a.smoothed_measurement_disturbance,
             self.results_b.smoothed_measurement_disturbance
         )
 
-    @SkipTest
     # Skipped because "measurement" refers to different things; even different
     # dimensions
+    @skip
     def test_smoothed_measurement_disturbance_cov(self):
         assert_allclose(
             self.results_a.smoothed_measurement_disturbance_cov,
@@ -419,13 +421,10 @@ class TestTrivariateUnivariateAllMissingAlternate(TestTrivariateUnivariateAllMis
     def test_using_alterate(self):
         assert(self.model._kalman_filter.filter_timing == 1)
 
-
+@skipif(compatibility_mode, reason='Compatibility mode')
 class TestDFM(object):
     @classmethod
     def setup_class(cls, which='mixed', *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
-
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
@@ -591,18 +590,18 @@ class TestDFM(object):
                         self.augmented_results.smoothed_state_cov[:2, 2:, 6:],
                         atol=1e-7)
 
-    @SkipTest
     # Skipped because "measurement" refers to different things; even different
     # dimensions
+    @skip
     def test_smoothed_measurement_disturbance(self):
         assert_allclose(
             self.results_a.smoothed_measurement_disturbance,
             self.results_b.smoothed_measurement_disturbance
         )
 
-    @SkipTest
     # Skipped because "measurement" refers to different things; even different
     # dimensions
+    @skip
     def test_smoothed_measurement_disturbance_cov(self):
         assert_allclose(
             self.results_a.smoothed_measurement_disturbance_cov,

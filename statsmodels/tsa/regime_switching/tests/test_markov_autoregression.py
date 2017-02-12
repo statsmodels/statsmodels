@@ -5,6 +5,7 @@ Author: Chad Fulton
 License: BSD-3
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat.testing import skip
 
 import warnings
 import os
@@ -13,7 +14,6 @@ import pandas as pd
 from statsmodels.tools import add_constant
 from statsmodels.tsa.regime_switching import markov_autoregression
 from numpy.testing import assert_equal, assert_allclose, assert_raises
-from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -790,8 +790,9 @@ class TestHamiltonAR1SwitchTVTP(MarkovAutoregression):
         super(TestHamiltonAR1SwitchTVTP, cls).setup_class(
             true, rgnp, k_regimes=2, order=1, exog_tvtp=exog_tvtp)
 
+    @skip
     def test_fit_em(self):
-        raise SkipTest
+        pass
 
     def test_filtered_regimes(self):
         assert_allclose(self.result.filtered_marginal_probabilities[:, 0],
@@ -827,11 +828,13 @@ class TestFilardo(MarkovAutoregression):
             true, endog, k_regimes=2, order=4, switching_ar=False,
             exog_tvtp=exog_tvtp)
 
+    @skip
     def test_fit(self, **kwargs):
-        raise SkipTest
+        pass
 
+    @skip
     def test_fit_em(self):
-        raise SkipTest
+        pass
 
     def test_filtered_regimes(self):
         assert_allclose(self.result.filtered_marginal_probabilities[:, 0],
@@ -870,11 +873,13 @@ class TestFilardoPandas(MarkovAutoregression):
             true, endog, k_regimes=2, order=4, switching_ar=False,
             exog_tvtp=exog_tvtp)
 
+    @skip
     def test_fit(self, **kwargs):
-        raise SkipTest
+        pass
 
+    @skip
     def test_fit_em(self):
-        raise SkipTest
+        pass
 
     def test_filtered_regimes(self):
         assert_allclose(self.result.filtered_marginal_probabilities[0],

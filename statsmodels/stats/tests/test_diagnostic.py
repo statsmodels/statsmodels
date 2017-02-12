@@ -19,7 +19,7 @@ import numpy as np
 
 from numpy.testing import (assert_, assert_almost_equal, assert_equal,
                            assert_approx_equal, assert_allclose)
-from nose import SkipTest
+import pytest
 
 from statsmodels.regression.linear_model import OLS, GLSAR
 from statsmodels.tools.tools import add_constant
@@ -878,8 +878,8 @@ def test_outlier_test():
 
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x'], exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])
 
     #t = TestDiagnosticG()
     #t.test_basic()

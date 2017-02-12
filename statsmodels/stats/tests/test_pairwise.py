@@ -9,8 +9,6 @@ import warnings
 from statsmodels.compat.python import BytesIO, asbytes, range
 from statsmodels.compat.numpy import recarray_select
 
-from nose.tools import assert_true
-
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_,
                            assert_raises, assert_allclose)
@@ -265,7 +263,7 @@ class TestTuckeyHSD2Pandas(TestTuckeyHSD2):
             warnings.simplefilter('always')
             mod1 = MultiComparison(np.array(data), groups, group_order=[1, 2])
             assert_equal(len(w), 1)
-            assert_true(issubclass(w[0].category, UserWarning))
+            assert issubclass(w[0].category, UserWarning)
 
         res1 = mod1.tukeyhsd(alpha=0.01)
         mod2 = MultiComparison(np.array(data[:10]), groups[:10])
