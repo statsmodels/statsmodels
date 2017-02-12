@@ -16,12 +16,7 @@ TODO:
 
 import numpy as np
 
-# temporarily here, used in return
-class Bunch(dict):
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
-        self.__dict__  = self
-
+from statsmodels.tools.tools import Bunch
 
 def partial_project(endog, exog):
     '''helper function to get linear projection or partialling out of variables

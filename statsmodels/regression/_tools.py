@@ -1,9 +1,7 @@
 from collections import namedtuple
 import numpy as np
+from statsmodels.tools.tools import Bunch
 
-_MinimalWLSResults = namedtuple('_MinimalWLSResults',
-                                ['params', 'resid',
-                                 'model', 'fittedvalues', 'scale'])
 _MinimalWLSModel = namedtuple('_MinimalWLSModel', ['weights'])
 
 
@@ -93,13 +91,11 @@ class _MinimalWLS(object):
         else:
             params, _, _, _ = np.linalg.lstsq(self.wexog, self.wendog)
 
-        model = _MinimalWLSModel(weights=self.weights)
         fitted_values = self.exog.dot(params)
         resid = self.endog - fitted_values
         wresid = self.wendog - self.wexog.dot(params)
         df_resid = self.wexog.shape[0] - self.wexog.shape[1]
         scale = np.dot(wresid, wresid) / df_resid
 
-        return _MinimalWLSResults(params=params, fittedvalues=fitted_values,
-                                  resid=resid,
-                                  model=model, scale=scale)
+        return Bunch(params=params, fittedvalues=fitted_values, resid=resid,
+                     model=self, scale=scale)
