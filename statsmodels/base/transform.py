@@ -120,8 +120,9 @@ class BoxCox(object):
         **kwargs : dict
             Options dict for the specified method.
             * For 'guerrero': R (int), the seasonality/grouping parameter. Scale
-              ({'mad', 'sd'}), the dispersion measure.
-            * For 'loglik': this is not used.
+              ({'mad', 'sd'}), the dispersion measure. Options (dict), to be
+              passed to the optimizer.
+            * For 'loglik': Options (dict), to be passed to the optimizer.
 
         Returns
         -------
