@@ -10,6 +10,10 @@ omit =
     */compat/*
     # Unused file
     */results/gee_generate_tests.py
+    # Results for tests
+    */tests/results/*
+    # Simulation checks
+    */tests/*_simulation_check.py
 
 [report]
 # Regexes for lines to exclude from consideration
