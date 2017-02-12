@@ -140,6 +140,7 @@ class TestACF(CheckCorrGram):
     """
     Test Autocorrelation Function
     """
+    @classmethod
     def setup_class(cls):
         cls.acf = cls.results['acvar']
         #cls.acf = np.concatenate(([1.], cls.acf))
@@ -560,7 +561,5 @@ def test_acf_fft_dataframe():
     assert_equal(result.ndim, 1)
 
 if __name__=="__main__":
-    import nose
-#    nose.runmodule(argv=[__file__, '-vvs','-x','-pdb'], exit=False)
-    import numpy as np
-    np.testing.run_module_suite()
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

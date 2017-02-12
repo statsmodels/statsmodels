@@ -1,4 +1,5 @@
 from __future__ import print_function, division
+from statsmodels.compat.testing import skipif
 
 import os
 import sys
@@ -9,7 +10,6 @@ import numpy as np
 import pandas as pd
 from nose.tools import assert_true
 from numpy.testing import assert_allclose, assert_equal, assert_raises
-from numpy.testing.decorators import skipif
 
 try:
     import matplotlib.pyplot as plt
@@ -53,7 +53,7 @@ class TestPCA(TestCase):
         b = rs.standard_gamma(lam, size=(k, n)) / lam
         cls.x_wide = f.dot(b) + e
 
-    @skipif(missing_matplotlib)
+    @skipif(missing_matplotlib, 'matplotlib not available')
     def test_smoke_plot_and_repr(self):
         pc = PCA(self.x)
         fig = pc.plot_scree()
@@ -193,11 +193,11 @@ class TestPCA(TestCase):
         assert_raises(ValueError, PCA, self.x, tol=2.0)
         assert_raises(ValueError, PCA, np.nan * np.ones((200,100)), tol=2.0)
 
-    @skipif(missing_matplotlib)
+    @skipif(missing_matplotlib, 'matplotlib not available')
     def test_pandas(self):
         pc = PCA(pd.DataFrame(self.x))
         pc1 = PCA(self.x)
-        assert_equal(pc.factors.values, pc1.factors)
+        assert_allclose(pc.factors.values, pc1.factors)
         fig = pc.plot_scree()
         fig = pc.plot_scree(ncomp=10)
         fig = pc.plot_scree(log_scale=False)
@@ -278,7 +278,7 @@ class TestPCA(TestCase):
         project = pc.project
         assert_raises(ValueError, project, 6)
 
-    @skipif(WIN32)
+    @skipif(WIN32, 'Windows 32-bit')
     def test_replace_missing(self):
         x = self.x.copy()
         x[::5, ::7] = np.nan
@@ -286,13 +286,13 @@ class TestPCA(TestCase):
         pc = PCA(x, missing='drop-row')
         x_dropped_row = x[np.logical_not(np.any(np.isnan(x), 1))]
         pc_dropped = PCA(x_dropped_row)
-        assert_equal(pc.projection, pc_dropped.projection)
+        assert_allclose(pc.projection, pc_dropped.projection)
         assert_equal(x, pc.data)
 
         pc = PCA(x, missing='drop-col')
         x_dropped_col = x[:, np.logical_not(np.any(np.isnan(x), 0))]
         pc_dropped = PCA(x_dropped_col)
-        assert_equal(pc.projection, pc_dropped.projection)
+        assert_allclose(pc.projection, pc_dropped.projection)
         assert_equal(x, pc.data)
 
         pc = PCA(x, missing='drop-min')
@@ -301,7 +301,7 @@ class TestPCA(TestCase):
         else:
             x_dropped_min = x_dropped_col
         pc_dropped = PCA(x_dropped_min)
-        assert_equal(pc.projection, pc_dropped.projection)
+        assert_allclose(pc.projection, pc_dropped.projection)
         assert_equal(x, pc.data)
 
         pc = PCA(x, ncomp=3, missing='fill-em')

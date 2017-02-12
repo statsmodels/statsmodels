@@ -3,6 +3,7 @@ Test functions for models.GLM
 """
 from __future__ import division
 from statsmodels.compat import range
+from statsmodels.compat.testing import skipif
 
 import os
 import numpy as np
@@ -14,7 +15,7 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.tools.tools import add_constant
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.discrete import discrete_model as discrete
-from nose import SkipTest
+import pytest
 import warnings
 
 # Test Precisions
@@ -864,7 +865,7 @@ def test_formula_missing_exposure():
                   exposure=exposure, family=family)
 
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plots():
 
     np.random.seed(378)
@@ -2027,8 +2028,5 @@ def test_non_invertible_hessian_fails_summary():
 
 
 if __name__ == "__main__":
-    # run_module_suite()
-    # taken from Fernando Perez:
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'],
-                   exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

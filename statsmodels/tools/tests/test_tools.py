@@ -6,9 +6,9 @@ import numpy as np
 from numpy.random import standard_normal
 from numpy.testing import (assert_equal, assert_array_equal,
                            assert_almost_equal, assert_string_equal, TestCase)
-from nose.tools import (assert_true, assert_false, assert_raises)
 import pandas as pd
 from pandas.util.testing import assert_frame_equal, assert_series_equal
+import pytest
 
 from statsmodels.datasets import longley
 from statsmodels.tools import tools
@@ -34,7 +34,8 @@ class TestTools(TestCase):
         x = tools.add_constant(x, has_constant='skip')
         assert_equal(x, np.ones((5,1)))
 
-        assert_raises(ValueError, tools.add_constant, x, has_constant='raise')
+        with pytest.raises(ValueError):
+            tools.add_constant(x, has_constant='raise')
 
         assert_equal(tools.add_constant(x, has_constant='add'),
                      np.ones((5, 2)))
@@ -44,7 +45,8 @@ class TestTools(TestCase):
         y = tools.add_constant(x, has_constant='skip')
         assert_equal(x, y)
 
-        assert_raises(ValueError, tools.add_constant, x, has_constant='raise')
+        with pytest.raises(ValueError):
+            tools.add_constant(x, has_constant='raise')
 
         assert_equal(tools.add_constant(x, has_constant='add'),
                      np.column_stack((np.ones(4), x)))
@@ -58,7 +60,7 @@ class TestTools(TestCase):
         y = tools.add_constant(x)
         assert_equal(y['const'],np.array([1.0,1.0,1.0]))
         for f in x.dtype.fields:
-            assert_true(y[f].dtype == x[f].dtype)
+            assert y[f].dtype == x[f].dtype
 
     def test_add_constant_series(self):
         s = pd.Series([1.0,2.0,3.0])
@@ -146,28 +148,30 @@ def test_estimable():
     X = rng.normal(size=(N, P))
     C = rng.normal(size=(1, P))
     isestimable = tools.isestimable
-    assert_true(isestimable(C, X))
-    assert_true(isestimable(np.eye(P), X))
+    assert isestimable(C, X)
+    assert isestimable(np.eye(P), X)
     for row in np.eye(P):
-        assert_true(isestimable(row, X))
+        assert isestimable(row, X)
     X = np.ones((40, 2))
-    assert_true(isestimable([1, 1], X))
-    assert_false(isestimable([1, 0], X))
-    assert_false(isestimable([0, 1], X))
-    assert_false(isestimable(np.eye(2), X))
+    assert isestimable([1, 1], X)
+    assert not isestimable([1, 0], X)
+    assert not isestimable([0, 1], X)
+    assert not isestimable(np.eye(2), X)
     halfX = rng.normal(size=(N, 5))
     X = np.hstack([halfX, halfX])
-    assert_false(isestimable(np.hstack([np.eye(5), np.zeros((5, 5))]), X))
-    assert_false(isestimable(np.hstack([np.zeros((5, 5)), np.eye(5)]), X))
-    assert_true(isestimable(np.hstack([np.eye(5), np.eye(5)]), X))
+    assert not isestimable(np.hstack([np.eye(5), np.zeros((5, 5))]), X)
+    assert not isestimable(np.hstack([np.zeros((5, 5)), np.eye(5)]), X)
+    assert isestimable(np.hstack([np.eye(5), np.eye(5)]), X)
     # Test array-like for design
     XL = X.tolist()
-    assert_true(isestimable(np.hstack([np.eye(5), np.eye(5)]), XL))
+    assert isestimable(np.hstack([np.eye(5), np.eye(5)]), XL)
     # Test ValueError for incorrect number of columns
     X = rng.normal(size=(N, 5))
     for n in range(1, 4):
-        assert_raises(ValueError, isestimable, np.ones((n,)), X)
-    assert_raises(ValueError, isestimable, np.eye(4), X)
+        with pytest.raises(ValueError):
+            isestimable(np.ones((n,)), X)
+    with pytest.raises(ValueError):
+        isestimable(np.eye(4), X)
 
 
 class TestCategoricalNumerical(object):

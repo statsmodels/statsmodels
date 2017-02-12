@@ -16,7 +16,6 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.tools.tools import add_constant
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.discrete import discrete_model as discrete
-from nose import SkipTest
 import warnings
 
 from .results import results_glm_poisson_weights as res_stata

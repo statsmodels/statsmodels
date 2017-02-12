@@ -1,7 +1,8 @@
+from statsmodels.compat.testing import skipif
 import numpy as np
 
 import statsmodels.api as sm
-from numpy.testing import dec, assert_equal, assert_raises
+from numpy.testing import assert_equal, assert_raises
 from statsmodels.graphics.regressionplots import (plot_fit, plot_ccpr,
                   plot_partregress, plot_regress_exog, abline_plot,
                   plot_partregress_grid, plot_ccpr_grid, add_lowess,
@@ -29,7 +30,7 @@ def close_or_save(pdf, fig):
         pdf.savefig(fig)
     plt.close(fig)
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def teardown_module():
     plt.close('all')
     if pdf_output:
@@ -37,8 +38,7 @@ def teardown_module():
 
 class TestPlot(object):
 
-    @classmethod
-    def setup_class(cls):
+    def setup(self):
         nsample = 100
         sig = 0.5
         x1 = np.linspace(0, 20, nsample)
@@ -50,9 +50,9 @@ class TestPlot(object):
         exog0 = sm.add_constant(np.c_[x1, x2], prepend=False)
         res = sm.OLS(y, exog0).fit()
 
-        cls.res = res
+        self.res = res
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_fit(self):
         res = self.res
 
@@ -72,7 +72,7 @@ class TestPlot(object):
 
         close_or_save(pdf, fig)
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_oth(self):
         #just test that they run
         res = self.res
@@ -94,7 +94,7 @@ class TestPlot(object):
         close_or_save(pdf, fig)
         plt.close('all')
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_influence(self):
         infl = self.res.get_influence()
         fig = influence_plot(self.res)
@@ -123,7 +123,7 @@ class TestPlot(object):
 
         assert_raises(ValueError, influence_plot, self.res, criterion='unknown')
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_leverage_resid2(self):
         fig = plot_leverage_resid2(self.res)
         assert_equal(isinstance(fig, plt.Figure), True)
@@ -131,8 +131,7 @@ class TestPlot(object):
 
 
 class TestPlotPandas(TestPlot):
-    @classmethod
-    def setup_class(cls):
+    def setup(self):
         nsample = 100
         sig = 0.5
         x1 = np.linspace(0, 20, nsample)
@@ -145,13 +144,13 @@ class TestPlotPandas(TestPlot):
         exog0 = DataFrame(exog0, columns=["const", "var1", "var2"])
         y = Series(y, name="outcome")
         res = sm.OLS(y, exog0).fit()
-        cls.res = res
+        self.res = res
         data = DataFrame(exog0, columns=["const", "var1", "var2"])
         data['y'] = y
-        cls.data = data
+        self.data = data
 
 class TestPlotFormula(TestPlotPandas):
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_one_column_exog(self):
         from statsmodels.formula.api import ols
         res = ols("y~var1-1", data=self.data).fit()
@@ -174,14 +173,14 @@ class TestABLine(object):
         cls.y = y
         cls.mod = mod
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_abline_model(self):
         fig = abline_plot(model_results=self.mod)
         ax = fig.axes[0]
         ax.scatter(self.X[:,1], self.y)
         close_or_save(pdf, fig)
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_abline_model_ax(self):
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -189,14 +188,14 @@ class TestABLine(object):
         fig = abline_plot(model_results=self.mod, ax=ax)
         close_or_save(pdf, fig)
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_abline_ab(self):
         mod = self.mod
         intercept, slope = mod.params
         fig = abline_plot(intercept=intercept, slope=slope)
         close_or_save(pdf, fig)
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_abline_ab_ax(self):
         mod = self.mod
         intercept, slope = mod.params
@@ -235,7 +234,7 @@ class TestABLinePandas(TestABLine):
 
 class TestAddedVariablePlot(object):
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_added_variable_poisson(self):
 
         np.random.seed(3446)
@@ -284,7 +283,7 @@ class TestAddedVariablePlot(object):
 
 class TestPartialResidualPlot(object):
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_partial_residual_poisson(self):
 
         np.random.seed(3446)
@@ -320,7 +319,7 @@ class TestPartialResidualPlot(object):
 
 class TestCERESPlot(object):
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_ceres_poisson(self):
 
         np.random.seed(3446)
@@ -355,5 +354,5 @@ class TestCERESPlot(object):
                 close_or_save(pdf, fig)
 
 if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

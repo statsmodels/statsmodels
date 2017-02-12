@@ -1,5 +1,5 @@
+from statsmodels.compat.testing import skipif
 import numpy as np
-from numpy.testing import dec
 
 import statsmodels.api as sm
 from statsmodels.graphics.gofplots import qqplot, qqline, ProbPlot
@@ -25,64 +25,64 @@ class BaseProbplotMixin(object):
         if have_matplotlib:
             plt.close('all')
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_qqplot(self):
         self.fig = self.prbplt.qqplot(ax=self.ax, line=self.line)
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_ppplot(self):
         plt.close('all')
         self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line)
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_probplot(self):
         self.fig = self.prbplt.probplot(ax=self.ax, line=self.line)
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_qqplot_other_array(self):
         self.fig = self.prbplt.qqplot(ax=self.ax, line=self.line,
                                         other=self.other_array)
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_ppplot_other_array(self):
         self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line,
                                         other=self.other_array)
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def t_est_probplot_other_array(self):
         self.fig = self.prbplt.probplot(ax=self.ax, line=self.line,
                                         other=self.other_array)
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_qqplot_other_prbplt(self):
         self.fig = self.prbplt.qqplot(ax=self.ax, line=self.line,
                                         other=self.other_prbplot)
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_ppplot_other_prbplt(self):
         self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line,
                                         other=self.other_prbplot)
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def t_est_probplot_other_prbplt(self):
         self.fig = self.prbplt.probplot(ax=self.ax, line=self.line,
                                         other=self.other_prbplot)
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_qqplot_custom_labels(self):
         self.fig = self.prbplt.qqplot(ax=self.ax, line=self.line,
                                       xlabel='Custom X-Label',
                                       ylabel='Custom Y-Label')
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_ppplot_custom_labels(self):
         self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line,
                                       xlabel='Custom X-Label',
                                       ylabel='Custom Y-Label')
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_probplot_custom_labels(self):
         self.fig = self.prbplt.probplot(ax=self.ax, line=self.line,
                                         xlabel='Custom X-Label',
                                         ylabel='Custom Y-Label')
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_qqplot_pltkwargs(self):
         self.fig = self.prbplt.qqplot(ax=self.ax, line=self.line,
                                       marker='d',
@@ -90,7 +90,7 @@ class BaseProbplotMixin(object):
                                       markeredgecolor='white',
                                       alpha=0.5)
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_ppplot_pltkwargs(self):
         self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line,
                                       marker='d',
@@ -98,7 +98,7 @@ class BaseProbplotMixin(object):
                                       markeredgecolor='white',
                                       alpha=0.5)
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_probplot_pltkwargs(self):
         self.fig = self.prbplt.probplot(ax=self.ax, line=self.line,
                                         marker='d',
@@ -159,11 +159,11 @@ class TestTopLevel(object):
         if have_matplotlib:
             plt.close('all')
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_qqplot(self):
         fig = sm.qqplot(self.res, line='r')
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_qqplot_2samples_ProbPlotObjects(self):
         # also tests all values for line
         for line in ['r', 'q', '45', 's']:
@@ -172,7 +172,7 @@ class TestTopLevel(object):
                                      line=line)
             plt.close('all')
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_qqplot_2samples_arrays(self):
         # also tests all values for line
         for line in ['r', 'q', '45', 's']:

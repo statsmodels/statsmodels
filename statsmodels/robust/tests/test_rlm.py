@@ -1,13 +1,14 @@
 """
 Test functions for sm.rlm
 """
-
+from statsmodels.compat.testing import SkipTest
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_allclose
+import pytest
 from scipy import stats
 import statsmodels.api as sm
 from statsmodels.robust.robust_linear_model import RLM
-from nose import SkipTest
+
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3

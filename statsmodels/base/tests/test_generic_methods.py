@@ -12,13 +12,14 @@ Author: Josef Perktold
 """
 from statsmodels.compat.python import range
 import numpy as np
+import pandas as pd
 import statsmodels.api as sm
 from statsmodels.compat.scipy import NumpyVersion
+from statsmodels.compat.testing import SkipTest
 
 from numpy.testing import (assert_, assert_allclose, assert_equal,
                            assert_array_equal)
 
-from nose import SkipTest
 import platform
 
 
@@ -117,7 +118,7 @@ class CheckGenericMixin(object):
             results = self.results
         if (isinstance(results, GLMResults) or
             isinstance(results, DiscreteResults)):
-            raise SkipTest
+            raise SkipTest('Infeasible for {0}'.format(type(results)))
 
         res = self.results
         fitted = res.fittedvalues
@@ -422,7 +423,7 @@ class TestWaldAnovaOLS(CheckAnovaMixin):
     def test_noformula(self):
         endog = self.res.model.endog
         exog = self.res.model.data.orig_exog
-        del exog.design_info
+        exog = pd.DataFrame(exog)
 
         res = sm.OLS(endog, exog).fit()
         wa = res.wald_test_terms(skip_single=True,
