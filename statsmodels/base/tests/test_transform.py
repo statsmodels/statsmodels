@@ -1,17 +1,16 @@
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal, assert_warns,
-                           assert_raises, dec, assert_)
+from numpy.testing import (assert_almost_equal, assert_equal, assert_raises)
 from statsmodels.base.transform import (BoxCox)
 from statsmodels.datasets import macrodata
 
 
-class SetupBoxCox(object):
-    data = macrodata.load()
-    x = data.data['realgdp']
-    bc = BoxCox()
+class TestTransform:
 
-
-class TestTransform(SetupBoxCox):
+    @classmethod
+    def setup_class(cls):
+        data = macrodata.load()
+        cls.x = data.data['realgdp']
+        cls.bc = BoxCox()
 
     def test_nonpositive(self):
         # Testing negative values
