@@ -53,12 +53,12 @@ class TestTransform:
         # `l <- BoxCox.lambda(x, method="guerrero")` on a ts object
         # with frequency 4 (BoxCox.lambda defaults to 2, but we use
         # Guerrero and Perera (2004) as a guideline)
-        lmbda = self.bc._est_lambda(self.x, method='guerrero', R=4)
+        lmbda = self.bc._est_lambda(self.x, method='guerrero', window_length=4)
         assert_almost_equal(lmbda, 0.507624, 4)
 
         # `l <- BoxCox.lambda(x, method="guerrero")` with the default grouping
-        # parameter (namely, R=2).
-        lmbda = self.bc._est_lambda(self.x, method='guerrero', R=2)
+        # parameter (namely, window_length=2).
+        lmbda = self.bc._est_lambda(self.x, method='guerrero', window_length=2)
         assert_almost_equal(lmbda, 0.513893, 4)
 
     def test_guerrero_robust_scale(self):
@@ -70,7 +70,6 @@ class TestTransform:
 
     def test_loglik_lambda_estimation(self):
         # 0.2 is the value returned by `BoxCox.lambda(x, method="loglik")`
-        # TODO: check _loglik for more series, as I'm not sure it is correct
         lmbda = self.bc._est_lambda(self.x, method='loglik')
         assert_almost_equal(lmbda, 0.2, 1)
 

@@ -15,6 +15,7 @@ class BoxCox(object):
 
         Parameters
         ----------
+        x : array_like
         lmbda : float
             The lambda parameter for the Box-Cox transform. If None, a value
             will be estimated by means of the specified method.
@@ -22,11 +23,12 @@ class BoxCox(object):
             The method to estimate the lambda parameter. Will only be used if
             lmbda is None, and defaults to 'guerrero', detailed in Guerrero
             (1993). 'loglik' maximizes the profile likelihood.
-        **kwargs: dict
+        **kwargs
             Options for the specified method.
-            * For 'guerrero', this entails _R_, the grouping parameter,
-              and _scale_, the dispersion measure.
-            * For 'loglik', this dict is not used.
+            * For 'guerrero', this entails window_length, the grouping
+              parameter, scale, the dispersion measure, and options, to be
+              passed to the optimizer.
+            * For 'loglik': options, to be passed to the optimizer.
 
         Returns
         -------
@@ -117,11 +119,11 @@ class BoxCox(object):
         method : {'guerrero', 'loglik'}
             The method by which to estimate lambda. Defaults to 'guerrero', but
             the profile likelihood ('loglik') is also available.
-        **kwargs : dict
-            Options dict for the specified method.
-            * For 'guerrero': R (int), the seasonality/grouping parameter. Scale
-              ({'mad', 'sd'}), the dispersion measure. Options (dict), to be
-              passed to the optimizer.
+        **kwargs
+            Options for the specified method.
+            * For 'guerrero': window_length (int), the seasonality/grouping
+              parameter. Scale ({'mad', 'sd'}), the dispersion measure. Options
+              (dict), to be passed to the optimizer.
             * For 'loglik': Options (dict), to be passed to the optimizer.
 
         Returns
@@ -140,17 +142,18 @@ class BoxCox(object):
         if method == 'guerrero':
             lmbda = self._guerrero_cv(x, bounds=bounds, **kwargs)
         elif method == 'loglik':
-            lmbda = self._loglik_boxcox(x, bounds=bounds)
+            lmbda = self._loglik_boxcox(x, bounds=bounds, **kwargs)
         else:
             raise ValueError("Method '{0}' not understood.".format(method))
 
         return lmbda
 
-    def _guerrero_cv(self, x, bounds, R=4, scale='sd', options={'maxiter': 25}):
+    def _guerrero_cv(self, x, bounds, window_length=4, scale='sd',
+                     options={'maxiter': 25}):
         """
         Computes lambda using guerrero's coefficient of variation. If no
-        seasonality is present in the data, R is set to 4 (as per Guerrero
-        and Perera, (2004)).
+        seasonality is present in the data, window_length is set to 4 (as
+        per Guerrero and Perera, (2004)).
 
         NOTE: Seasonality-specific auxiliaries *should* provide their own
         seasonality parameter.
@@ -161,7 +164,7 @@ class BoxCox(object):
         bounds : tuple
             Numeric 2-tuple, that indicate the solution space for the lambda
             parameter.
-        R : int
+        window_length : int
             Seasonality/grouping parameter. Default 4, as per Guerrero and
             Perera (2004). NOTE: this indicates the length of the individual
             groups, not the total number of groups!
@@ -172,10 +175,11 @@ class BoxCox(object):
             The options (as a dict) to be passed to the optimizer.
         """
         nobs = len(x)
-        groups = int(nobs / R)
+        groups = int(nobs / window_length)
 
-        # remove the first n < R observations from consideration.
-        grouped_data = np.reshape(x[nobs - (groups * R): nobs], (groups, R))
+        # remove the first n < window_length observations from consideration.
+        grouped_data = np.reshape(x[nobs - (groups * window_length): nobs],
+                                  (groups, window_length))
         mean = np.mean(grouped_data, 1)
 
         scale = scale.lower()
@@ -186,7 +190,7 @@ class BoxCox(object):
         else:
             raise ValueError("Scale '{0}' not understood.".format(scale))
 
-        def optim(lmbda, *args, **kwargs):
+        def optim(lmbda):
             rat = np.divide(dispersion, np.power(mean, 1 - lmbda))  # eq 6, p 40
             return np.std(rat, ddof=1) / np.mean(rat)
 
@@ -211,7 +215,7 @@ class BoxCox(object):
         sum_x = np.sum(np.log(x))
         nobs = len(x)
 
-        def optim(lmbda, *args, **kwargs):
+        def optim(lmbda):
             y, lmbda = self.transform_boxcox(x, lmbda)
             return (1 - lmbda) * sum_x + (nobs / 2.) * np.log(np.var(y))
 
