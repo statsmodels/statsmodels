@@ -388,7 +388,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     loc = self.data.row_labels.get_loc(key)
                 else:
                     raise
-                loc = loc if np.isscalar(loc) else loc[0]
+                loc = loc[0]  # Require scalar
                 index = self.data.row_labels[:loc + 1]
                 index_was_expanded = False
             except:
