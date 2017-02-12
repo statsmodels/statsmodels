@@ -1340,7 +1340,7 @@ class GLMResults(base.LikelihoodModelResults):
             if cov_kwds is None:
                 cov_kwds = {}
             get_robustcov_results(self, cov_type=cov_type, use_self=True,
-                                       use_t=use_t, **cov_kwds)
+                                  use_t=use_t, **cov_kwds)
 
     @cache_readonly
     def resid_response(self):
@@ -1367,7 +1367,6 @@ class GLMResults(base.LikelihoodModelResults):
     def resid_deviance(self):
         dev = self.family.resid_dev(self._endog, self.fittedvalues)
         return dev * np.sqrt(self._var_weights)
-    
 
     @cache_readonly
     def pearson_chi2(self):
@@ -1376,16 +1375,13 @@ class GLMResults(base.LikelihoodModelResults):
         chisqsum = np.sum(chisq)
         return chisqsum
 
-
     @cache_readonly
     def fittedvalues(self):
         return self.mu
 
-
     @cache_readonly
     def mu(self):
         return self.model.predict(self.params)
-
 
     @cache_readonly
     def null(self):

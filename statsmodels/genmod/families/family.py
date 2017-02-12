@@ -1574,7 +1574,7 @@ class Tweedie(Family):
             dev = ((endog - mu) / mu) - np.log(endog1 / mu)
         else:
             dev = (endog ** (2 - p) / ((1 - p) * (2 - p)) -
-                   endog * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
+                   endog * mu ** (1 - p) / (1 - p) + mu ** (2 - p) / (2 - p))
         return np.sum(2 * iweights * dev / scale)
 
     def resid_dev(self, endog, mu, scale=1.):
