@@ -61,6 +61,7 @@ Module Reference
 ----------------
 
 .. module:: statsmodels.discrete.discrete_model
+   :synopsis: Models for discrete data
 
 The specific model classes are:
 

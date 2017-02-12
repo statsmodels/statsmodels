@@ -1,4 +1,6 @@
 .. module:: statsmodels.duration
+   :synopsis: Models for durations
+
 .. currentmodule:: statsmodels.duration
 
 
@@ -201,6 +203,8 @@ Module Reference
 ----------------
 
 .. module:: statsmodels.duration.survfunc
+   :synopsis: Models for Survival Analysis
+
 .. currentmodule:: statsmodels.duration.survfunc
 
 The class for working with survival distributions is:
@@ -211,6 +215,8 @@ The class for working with survival distributions is:
    SurvfuncRight
 
 .. module:: statsmodels.duration.hazard_regression
+   :synopsis: Proportional hazards model for Survival Analysis
+
 .. currentmodule:: statsmodels.duration.hazard_regression
 
 The proportional hazards regression model class is:

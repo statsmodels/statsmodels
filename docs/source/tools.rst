@@ -17,6 +17,7 @@ Module Reference
 ----------------
 
 .. module:: statsmodels.tools
+   :synopsis: Tools for variable transformation and common numerical operations
 
 Basic tools :mod:`tools`
 ^^^^^^^^^^^^^^^^^^^^^^^^

@@ -61,6 +61,7 @@ Module Reference
 ----------------
 
 .. module:: statsmodels.emplike
+   :synopsis: Empirical likelihood tools
 
 .. autosummary::
    :toctree: generated/

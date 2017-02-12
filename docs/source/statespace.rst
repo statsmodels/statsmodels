@@ -1,4 +1,6 @@
 .. module:: statsmodels.tsa.statespace
+   :synopsis: Statespace models for time-series analysis
+
 .. currentmodule:: statsmodels.tsa.statespace
 
 

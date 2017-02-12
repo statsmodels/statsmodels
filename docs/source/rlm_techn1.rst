@@ -1,4 +1,6 @@
 .. module:: statsmodels.rlm
+   :synopsis: Outlier robust linear models
+
 .. currentmodule:: statsmodels.rlm
 
 

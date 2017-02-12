@@ -1,4 +1,6 @@
 .. module:: statsmodels.stats
+   :synopsis: Statistical methods and tests
+
 .. currentmodule:: statsmodels.stats
 
 .. _stats:
@@ -24,6 +26,8 @@ Residual Diagnostics and Specification Tests
 --------------------------------------------
 
 .. module:: statsmodels.stats.stattools
+   :synopsis: Statistical methods and tests that do not fit into other categories
+
 .. currentmodule:: statsmodels.stats.stattools
 
 .. autosummary::
@@ -38,6 +42,8 @@ Residual Diagnostics and Specification Tests
    expected_robust_kurtosis
 
 .. module:: statsmodels.stats.diagnostic
+   :synopsis: Statistical methods and tests to diagnose model fit problems
+
 .. currentmodule:: statsmodels.stats.diagnostic
 
 .. autosummary::
@@ -75,6 +81,8 @@ Outliers and influence measures
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. module:: statsmodels.stats.outliers_influence
+   :synopsis: Statistical methods and measures for outliers and influence
+
 .. currentmodule:: statsmodels.stats.outliers_influence
 
 .. autosummary::
@@ -125,6 +133,8 @@ Goodness of Fit Tests and Measures
 some tests for goodness of fit for univariate distributions
 
 .. module:: statsmodels.stats.gof
+   :synopsis: Goodness of fit measures and tests
+
 .. currentmodule:: statsmodels.stats.gof
 
 .. autosummary::
@@ -148,6 +158,8 @@ Non-Parametric Tests
 --------------------
 
 .. module:: statsmodels.sandbox.stats.runs
+   :synopsis: Experimental statistical methods and tests to analyze runs
+
 .. currentmodule:: statsmodels.sandbox.stats.runs
 
 .. autosummary::
@@ -162,6 +174,8 @@ Non-Parametric Tests
    Runs
 
 .. module:: statsmodels.stats.descriptivestats
+   :synopsis: Descriptive statistics
+
 .. currentmodule:: statsmodels.stats.descriptivestats
 
 .. autosummary::
@@ -200,6 +214,8 @@ GroupsStats and MultiComparison are convenience classes to multiple comparisons 
 to one way ANOVA, but still in developement
 
 .. module:: statsmodels.sandbox.stats.multicomp
+   :synopsis: Experimental methods for controlling size while performing multiple comparisons
+
 .. currentmodule:: statsmodels.sandbox.stats.multicomp
 
 .. autosummary::
@@ -213,6 +229,8 @@ to one way ANOVA, but still in developement
    TukeyHSDResults
 
 .. module:: statsmodels.stats.multicomp
+   :synopsis: Methods for controlling size while performing multiple comparisons
+
 .. currentmodule:: statsmodels.stats.multicomp
 
 .. autosummary::
@@ -221,6 +239,8 @@ to one way ANOVA, but still in developement
    pairwise_tukeyhsd
 
 .. module:: statsmodels.stats.multitest
+   :synopsis: Multiple testing p-value adjustments
+
 .. currentmodule:: statsmodels.stats.multitest
 
 .. autosummary::
@@ -278,6 +298,8 @@ two one-sided tests, which have as null hypothesis that the means are not
 "close" to each other.
 
 .. module:: statsmodels.stats.weightstats
+   :synopsis: Weighted statistics
+
 .. currentmodule:: statsmodels.stats.weightstats
 
 .. autosummary::
@@ -319,6 +341,8 @@ equations.
 
 
 .. module:: statsmodels.stats.power
+   :synopsis: Power and size calculations for common tests
+
 .. currentmodule:: statsmodels.stats.power
 
 .. autosummary::
@@ -345,6 +369,8 @@ Also available are hypothesis test, confidence intervals and effect size for
 proportions that can be used with NormalIndPower.
 
 .. module:: statsmodels.stats.proportion
+   :synopsis: Tests for proportions
+
 .. currentmodule:: statsmodels.stats.proportion
 
 .. autosummary::
@@ -381,6 +407,8 @@ functions can be used to find a correlation or covariance matrix that is
 positive definite and close to the original matrix.
 
 .. module:: statsmodels.stats.correlation_tools
+   :synopsis: Procedures for ensuring correlations are positive semi-definite
+
 .. currentmodule:: statsmodels.stats.correlation_tools
 
 .. autosummary::
@@ -398,6 +426,8 @@ These are utility functions to convert between central and non-central moments, 
 kurtosis and cummulants.
 
 .. module:: statsmodels.stats.moment_helpers
+   :synopsis: Tools for converting moments
+
 .. currentmodule:: statsmodels.stats.moment_helpers
 
 .. autosummary::
@@ -430,6 +460,8 @@ using observational data in which the treatment may be thought of as an
 to verify in an observational setting.
 
 .. module:: statsmodels.stats.mediation
+   :synopsis: Mediation analysis
+
 .. currentmodule:: statsmodels.stats.mediation
 
 .. autosummary::

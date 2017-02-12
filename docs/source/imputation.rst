@@ -1,4 +1,6 @@
 .. module:: statsmodels.imputation.mice
+   :synopsis: Multiple imputation for missing data
+
 .. currentmodule:: statsmodels.imputation.mice
 
 .. _imputation:

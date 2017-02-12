@@ -46,6 +46,8 @@ max, mean, and variance, are covered by the functions for `Moving (rolling)
 statistics/moments <http://pandas.pydata.org/pandas-docs/stable/computation.html#moving-rolling-statistics-moments>`_ in Pandas.
 
 .. module:: statsmodels.sandbox.tsa
+   :synopsis: Experimental time-series analysis models
+
 .. currentmodule:: statsmodels.sandbox.tsa
 
 .. autosummary::
@@ -61,6 +63,8 @@ Regression and ANOVA
 ^^^^^^^^^^^^^^^^^^^^
 
 .. module:: statsmodels.sandbox.regression.anova_nistcertified
+   :synopsis: Experimental ANOVA estimator
+
 .. currentmodule:: statsmodels.sandbox.regression.anova_nistcertified
 
 The following two ANOVA functions are fully tested against the NIST test data
@@ -85,6 +89,8 @@ they were written with a specific use in mind. These function will eventually
 be rewritten or reorganized.
 
 .. module:: statsmodels.sandbox.regression
+   :synopsis: Experimental regression tools
+
 .. currentmodule:: statsmodels.sandbox.regression
 
 .. autosummary::
@@ -128,6 +134,8 @@ experimental, and the usage of the models will very likely change significantly
 before they are added to the main codebase.
 
 .. module:: statsmodels.sandbox.sysreg
+   :synopsis: Experimental system regression models
+
 .. currentmodule:: statsmodels.sandbox.sysreg
 
 .. autosummary::
@@ -139,6 +147,8 @@ before they are added to the main codebase.
 Miscellaneous
 ^^^^^^^^^^^^^
 .. module:: statsmodels.sandbox.tools.tools_tsa
+   :synopsis: Experimental tools for working with time-series
+
 .. currentmodule:: statsmodels.sandbox.tools.tools_tsa
 
 
@@ -146,6 +156,8 @@ Descriptive Statistics Printing
 """""""""""""""""""""""""""""""
 
 .. module:: statsmodels.sandbox
+   :synopsis: Experimental tools that have not been fully vetted
+
 .. currentmodule:: statsmodels.sandbox
 
 .. autosummary::

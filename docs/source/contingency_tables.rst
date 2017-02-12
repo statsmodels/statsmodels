@@ -275,6 +275,8 @@ Module Reference
 ----------------
 
 .. module:: statsmodels.stats.contingency_tables
+   :synopsis: Contingency table analysis
+
 .. currentmodule:: statsmodels.stats.contingency_tables
 
 .. autosummary::

@@ -34,6 +34,7 @@ Module Reference
 ----------------
 
 .. module:: statsmodels.stats.anova
+   :synopsis: Analysis of Variance
 
 .. autosummary::
    :toctree: generated/

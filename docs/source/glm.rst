@@ -115,6 +115,7 @@ Module Reference
 ----------------
 
 .. module:: statsmodels.genmod.generalized_linear_model
+   :synopsis: Generalized Linear Models (GLM)
 
 Model Class
 ^^^^^^^^^^^
