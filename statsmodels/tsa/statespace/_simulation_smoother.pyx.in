@@ -260,6 +260,42 @@ cdef class {{prefix}}SimulationSmoother(object):
         self._tmp1 = &self.tmp1[0,0]
         self._tmp2 = &self.tmp2[0,0]
 
+    def __reduce__(self):
+        args = (self.model, self.filter_method, self.inversion_method,
+                self.stability_method, self.conserve_memory, self.filter_timing,
+                self.tolerance, self.loglikelihood_burn, self.smoother_output,
+                self.simulation_output, self.nobs, self.pretransformed_variates)
+        state = {
+            'disturbance_variates': np.array(self.disturbance_variates, copy=True, order='F'),
+            'initial_state_variates': np.array(self.initial_state_variates, copy=True, order='F'),
+            'simulated_measurement_disturbance': np.array(self.simulated_measurement_disturbance, copy=True, order='F'),
+            'simulated_state_disturbance': np.array(self.simulated_state_disturbance, copy=True, order='F'),
+            'simulated_state': np.array(self.simulated_state, copy=True, order='F'),
+            'generated_obs': np.array(self.generated_obs, copy=True, order='F'),
+            'generated_state': np.array(self.generated_state, copy=True, order='F'),
+            'tmp0': np.array(self.tmp0, copy=True, order='F'),
+            'tmp2': np.array(self.tmp2, copy=True, order='F'),
+            'tmp1': np.array(self.tmp1, copy=True, order='F')
+        }
+        return (self.__class__, args, state)
+
+    def __setstate__(self, state):
+        self.disturbance_variates = state['disturbance_variates']
+        self.initial_state_variates = state['initial_state_variates']
+        self.simulated_measurement_disturbance  = state['simulated_measurement_disturbance']
+        self.simulated_state_disturbance = state['simulated_state_disturbance']
+        self.simulated_state = state['simulated_state']
+        self.generated_obs = state['generated_obs']
+        self.generated_state = state['generated_state']
+        self.tmp0 = state['tmp0']
+        self.tmp2 = state['tmp2']
+        self.tmp1 = state['tmp1']
+
+    cdef void _reinitialize_temp_pointers(self) except *:
+        self._tmp0 = &self.tmp0[0,0]
+        self._tmp1 = &self.tmp1[0,0]
+        self._tmp2 = &self.tmp2[0,0]
+
 
     cpdef draw_disturbance_variates(self):
         self.disturbance_variates = np.random.normal(size=self.n_disturbance_variates)

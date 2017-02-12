@@ -17,6 +17,10 @@ Time Series Analysis.
 Princeton, N.J.: Princeton University Press.
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat import cPickle
+
+from distutils.version import LooseVersion
+import copy
 
 import numpy as np
 import pandas as pd
@@ -41,7 +45,11 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.statespace import _statespace as ss
 from .results import results_kalman_filter
 from numpy.testing import assert_almost_equal, assert_allclose
+from numpy.testing.decorators import skipif
 from nose.exc import SkipTest
+
+# Skip copy test on older NumPy since deepcopy does not copy order
+NP_LT_18 = LooseVersion(np.__version__).version[:2] < [1, 8]
 
 prefix_statespace_map = {
     's': ss.sStatespace, 'd': ss.dStatespace,
@@ -191,6 +199,32 @@ class Clark1987(object):
             self.true_states.iloc[:, 2], 4
         )
 
+    @skipif(NP_LT_18)
+    def test_pickled_filter(self):
+        pickled = cPickle.loads(cPickle.dumps(self.filter))
+        #  Run the filters
+        self.filter()
+        pickled()
+
+        assert id(filter) != id(pickled)
+        assert_allclose(np.array(self.filter.filtered_state),
+                        np.array(pickled.filtered_state))
+        assert_allclose(np.array(self.filter.loglikelihood),
+                        np.array(pickled.loglikelihood))
+
+    @skipif(NP_LT_18)
+    def test_copied_filter(self):
+        copied = copy.deepcopy(self.filter)
+        #  Run the filters
+        self.filter()
+        copied()
+
+        assert id(filter) != id(copied)
+        assert_allclose(np.array(self.filter.filtered_state),
+                        np.array(copied.filtered_state))
+
+        assert_allclose(np.array(self.filter.loglikelihood),
+                        np.array(copied.loglikelihood))
 
 class TestClark1987Single(Clark1987):
     """

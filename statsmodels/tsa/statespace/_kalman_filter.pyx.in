@@ -390,6 +390,84 @@ cdef class {{prefix}}KalmanFilter(object):
         self.converged = 0
         self.period_converged = 0
 
+    def __reduce__(self):
+        args = (self.model, self.filter_method, self.inversion_method,
+                self.stability_method,  self.conserve_memory, self.filter_timing,
+                self.tolerance, self.loglikelihood_burn)
+        state = {'t': self.t,
+                 'converged' : self.converged ,
+                 'converged_determinant' : self.converged_determinant,
+                 'determinant' : self.determinant,
+                 'period_converged' : self.period_converged,
+                 'converged_filtered_state_cov': np.array(self.converged_filtered_state_cov, copy=True, order='F'),
+                 'converged_forecast_error_cov': np.array(self.converged_forecast_error_cov, copy=True, order='F'),
+                 'converged_kalman_gain': np.array(self.converged_kalman_gain, copy=True, order='F'),
+                 'converged_predicted_state_cov': np.array(self.converged_predicted_state_cov, copy=True, order='F'),
+                 'filtered_state': np.array(self.filtered_state, copy=True, order='F'),
+                 'filtered_state_cov': np.array(self.filtered_state_cov, copy=True, order='F'),
+                 'forecast': np.array(self.forecast, copy=True, order='F'),
+                 'forecast_error': np.array(self.forecast_error, copy=True, order='F'),
+                 'forecast_error_cov': np.array(self.forecast_error_cov, copy=True, order='F'),
+                 'forecast_error_fac': np.array(self.forecast_error_fac, copy=True, order='F'),
+                 'forecast_error_ipiv': np.array(self.forecast_error_ipiv, copy=True, order='F'),
+                 'forecast_error_work': np.array(self.forecast_error_work, copy=True, order='F'),
+                 'kalman_gain': np.array(self.kalman_gain, copy=True, order='F'),
+                 'loglikelihood': np.array(self.loglikelihood, copy=True, order='F'),
+                 'predicted_state': np.array(self.predicted_state, copy=True, order='F'),
+                 'predicted_state_cov': np.array(self.predicted_state_cov, copy=True, order='F'),
+                 'standardized_forecast_error': np.array(self.standardized_forecast_error, copy=True, order='F'),
+                 'tmp0': np.array(self.tmp0, copy=True, order='F'),
+                 'tmp00': np.array(self.tmp00, copy=True, order='F'),
+                 'tmp1': np.array(self.tmp1, copy=True, order='F'),
+                 'tmp2': np.array(self.tmp2, copy=True, order='F'),
+                 'tmp3': np.array(self.tmp3, copy=True, order='F'),
+                 'tmp4': np.array(self.tmp4, copy=True, order='F')
+                 }
+
+        return (self.__class__, args, state)
+
+    def __setstate__(self, state):
+        self.t = state['t']
+        self.converged  = state['converged']
+        self.converged_determinant = state['converged_determinant']
+        self.determinant = state['determinant']
+        self.period_converged = state['period_converged']
+        self.converged_filtered_state_cov = state['converged_filtered_state_cov']
+        self.converged_forecast_error_cov = state['converged_forecast_error_cov']
+        self.converged_kalman_gain = state['converged_kalman_gain']
+        self.converged_predicted_state_cov = state['converged_predicted_state_cov']
+        self.filtered_state = state['filtered_state']
+        self.filtered_state_cov = state['filtered_state_cov']
+        self.forecast = state['forecast']
+        self.forecast_error = state['forecast_error']
+        self.forecast_error_cov = state['forecast_error_cov']
+        self.forecast_error_fac = state['forecast_error_fac']
+        self.forecast_error_ipiv = state['forecast_error_ipiv']
+        self.forecast_error_work = state['forecast_error_work']
+        self.kalman_gain = state['kalman_gain']
+        self.loglikelihood = state['loglikelihood']
+        self.predicted_state = state['predicted_state']
+        self.predicted_state_cov = state['predicted_state_cov']
+        self.standardized_forecast_error = state['standardized_forecast_error']
+        self.tmp0 = state['tmp0']
+        self.tmp00 = state['tmp00']
+        self.tmp1 = state['tmp1']
+        self.tmp2 = state['tmp2']
+        self.tmp3 = state['tmp3']
+        self.tmp4 = state['tmp4']
+        self._reinitialize_pointers()
+
+    cdef void _reinitialize_pointers(self) except *:
+        self._converged_forecast_error_cov = &self.converged_forecast_error_cov[0,0]
+        self._converged_filtered_state_cov = &self.converged_filtered_state_cov[0,0]
+        self._converged_predicted_state_cov = &self.converged_predicted_state_cov[0,0]
+        self._converged_kalman_gain = &self.converged_kalman_gain[0,0]
+        self._forecast_error_fac = &self.forecast_error_fac[0,0]
+        self._forecast_error_work = &self.forecast_error_work[0,0]
+        self._forecast_error_ipiv = &self.forecast_error_ipiv[0]
+        self._tmp0 = &self.tmp0[0, 0]
+        self._tmp00 = &self.tmp00[0, 0]
+
     cdef allocate_arrays(self):
         # Local variables
         cdef:
