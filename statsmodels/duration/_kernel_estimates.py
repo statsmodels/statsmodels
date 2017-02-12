@@ -85,7 +85,9 @@ def _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
                 tr = 1e-15
                 ii = np.flatnonzero((denom < tr) & (num < tr))
                 rat[ii] = 0
-                lrat = np.log(1 - rat)
+                ratc = 1 - rat
+                ratc = np.clip(ratc, 1e-10, np.inf)
+                lrat = np.log(ratc)
                 prat = np.cumsum(lrat)[ie]
                 sf = np.exp(prat)
                 sp[i] = np.r_[1, sf[:-1]]
@@ -185,7 +187,9 @@ def _kernel_survfunc(time, status, exog, kfunc, freq_weights):
         tr = 1e-15
         ii = np.flatnonzero((denom < tr) & (num < tr))
         rat[ii] = 0
-        lrat = np.log(1 - rat)
+        ratc = 1 - rat
+        ratc = np.clip(ratc, 1e-12, np.inf)
+        lrat = np.log(ratc)
         prat = np.cumsum(lrat)[ie]
         prat = np.exp(prat)
 

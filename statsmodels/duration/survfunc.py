@@ -52,9 +52,12 @@ def _calc_survfunc_right(time, status, weights=None, entry=None, compress=True,
 
     # The survival function probabilities.
     sp = 1 - d / n.astype(np.float64)
+    ii = sp < 1e-16
+    sp[ii] = 1e-16
     sp = np.log(sp)
     sp = np.cumsum(sp)
     sp = np.exp(sp)
+    sp[ii] = 0
 
     if not retall:
         return sp, utime, rtime, n, d
@@ -62,7 +65,10 @@ def _calc_survfunc_right(time, status, weights=None, entry=None, compress=True,
     # Standard errors
     if weights is None:
         # Greenwood's formula
-        se = d / (n * (n - d)).astype(np.float64)
+        denom = n * (n - d)
+        denom = np.clip(denom, 1e-12, np.inf)
+        se = d / denom.astype(np.float64)
+        se[(n == d) | (n == 0)] = np.nan
         se = np.cumsum(se)
         se = np.sqrt(se)
         se *= sp
@@ -175,7 +181,7 @@ class CumIncidenceRight(object):
     exog : array-like
         Optional, if present used to account for violation of
         independent censoring.
-    bwm : float
+    bw_factor : float
         Band-width multiplier for kernel-based estimation.  Only
         used if exog is provided.
     dimred : boolean
@@ -225,7 +231,7 @@ class CumIncidenceRight(object):
     """
 
     def __init__(self, time, status, title=None, freq_weights=None,
-                 exog=None, bwm=1., dimred=True):
+                 exog=None, bw_factor=1., dimred=True):
 
         _checkargs(time, status, None, freq_weights, None)
         time = self.time = np.asarray(time)
@@ -237,7 +243,7 @@ class CumIncidenceRight(object):
             from ._kernel_estimates import _kernel_cumincidence
             exog = self.exog = np.asarray(exog)
             nobs = exog.shape[0]
-            kw = nobs**(-1/3.0) * bwm
+            kw = nobs**(-1/3.0) * bw_factor
             kfunc = lambda x: np.exp(-x**2 / kw**2).sum(1)
             x = _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
                                      dimred)
@@ -281,7 +287,7 @@ class SurvfuncRight(object):
     exog : array-like
         Optional, if present used to account for violation of
         independent censoring.
-    bwm : float
+    bw_factor : float
         Band-width multiplier for kernel-based estimation.  Only used
         if exog is provided.
 
@@ -321,7 +327,7 @@ class SurvfuncRight(object):
     """
 
     def __init__(self, time, status, entry=None, title=None,
-                 freq_weights=None, exog=None, bwm=1.):
+                 freq_weights=None, exog=None, bw_factor=1.):
 
         _checkargs(time, status, entry, freq_weights, exog)
         time = self.time = np.asarray(time)
@@ -338,7 +344,7 @@ class SurvfuncRight(object):
             from ._kernel_estimates import _kernel_survfunc
             exog = self.exog = np.asarray(exog)
             nobs = exog.shape[0]
-            kw = nobs**(-1/3.0) * bwm
+            kw = nobs**(-1/3.0) * bw_factor
             kfunc = lambda x: np.exp(-x**2 / kw**2).sum(1)
             x = _kernel_survfunc(time, status, exog, kfunc, freq_weights)
             self.surv_prob = x[0]
@@ -675,8 +681,10 @@ def _survdiff(time, status, group, weight_type, gr, entry=None,
     nrisk_tot = sum(nrisk)
 
     # The variance of event counts in the first group.
-    r = nrisk[0] / nrisk_tot
-    var = obs * r * (1 - r) * (nrisk_tot - obs) / (nrisk_tot - 1)
+    r = nrisk[0] / np.clip(nrisk_tot, 1e-10, np.inf)
+    denom = nrisk_tot - 1
+    denom = np.clip(denom, 1e-10, np.inf)
+    var = obs * r * (1 - r) * (nrisk_tot - obs) / denom
 
     # The expected number of events in the first group.
     exp1 = obs * r

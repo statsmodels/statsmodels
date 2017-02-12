@@ -500,10 +500,10 @@ def test_kernel_survfunc2():
     status = np.random.randint(0, 2, size=n)
 
     resultkm = SurvfuncRight(time, status)
-    result = SurvfuncRight(time, status, exog=x, bwm=10000)
+    result = SurvfuncRight(time, status, exog=x, bw_factor=10000)
 
     assert_allclose(resultkm.surv_times, result.surv_times)
-    assert_allclose(resultkm.surv_prob, result.surv_prob)
+    assert_allclose(resultkm.surv_prob, result.surv_prob, rtol=1e-6, atol=1e-6)
 
 
 def test_kernel_survfunc3():
@@ -514,8 +514,8 @@ def test_kernel_survfunc3():
     x = np.random.normal(size=(n, 3))
     time = np.random.randint(0, 10, size=n)
     status = np.random.randint(0, 2, size=n)
-    SurvfuncRight(time, status, exog=x, bwm=10000)
-    SurvfuncRight(time, status, exog=x, bwm=np.r_[10000, 10000])
+    SurvfuncRight(time, status, exog=x, bw_factor=10000)
+    SurvfuncRight(time, status, exog=x, bw_factor=np.r_[10000, 10000])
 
 
 def test_kernel_cumincidence1():
@@ -533,7 +533,7 @@ def test_kernel_cumincidence1():
     result1 = CumIncidenceRight(time, status)
 
     for dimred in False, True:
-        result2 = CumIncidenceRight(time, status, exog=x, bwm=10000,
+        result2 = CumIncidenceRight(time, status, exog=x, bw_factor=10000,
                                     dimred=dimred)
 
         assert_allclose(result1.times, result2.times)
@@ -549,4 +549,4 @@ def test_kernel_cumincidence2():
     x = np.random.normal(size=(n, 3))
     time = np.random.randint(0, 10, size=n)
     status = np.random.randint(0, 3, size=n)
-    CumIncidenceRight(time, status, exog=x, bwm=10000)
+    CumIncidenceRight(time, status, exog=x, bw_factor=10000)
