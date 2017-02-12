@@ -37,6 +37,7 @@ marks.bzr
 .#*
 *.bak
 *.tmp
+/.idea
 *.tgz
 *.rej
 *.org
