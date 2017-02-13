@@ -105,7 +105,7 @@ Then in the statsmodels directory do::
 OR
 
 You can build 32-bit Microsoft SDK. Detailed instructions can be found on the
-Cython wiki `here <http://wiki.cython.org/64BitCythonExtensionsOnWindows>`__.
+Cython wiki `here <https://github.com/cython/cython/wiki/CythonExtensionsOnWindows>`__.
 The gist of these instructions follow. You will need to download the free
 Windows SDK C/C++ compiler from Microsoft. You must use
 the **Microsoft Windows SDK for Windows 7 and .NET Framework 3.5 SP1** to be

@@ -4,6 +4,9 @@
 # Change to doc directory
 cd ${SRCDIR}/docs
 
+# Run notebooks as tests
+nosetests -v ../statsmodels/examples/tests
+
 # Clean up
 echo '================================= Clean ================================='
 make clean

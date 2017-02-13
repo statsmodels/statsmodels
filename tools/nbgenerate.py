@@ -65,7 +65,7 @@ def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
     ep = ExecutePreprocessor(allow_errors=False,
                              timeout=timeout,
                              kernel_name=kernel_name)
-    ep.preprocess(nb, {'metadta': {'path': 'notebooks/'}})
+    ep.preprocess(nb, {'metadata': {'path': SOURCE_DIR}})
 
     with io.open(dst, 'wt', encoding='utf-8') as f:
         nbformat.write(nb, f)
