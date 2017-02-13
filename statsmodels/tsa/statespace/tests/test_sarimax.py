@@ -2203,4 +2203,7 @@ def test_concentrated_scale_conventional():
 
 
 def test_concentrated_scale_univariate():
+    from statsmodels.tsa.statespace.tools import compatibility_mode
+    if compatibility_mode:
+        return
     check_concentrated_scale(filter_univariate=True)

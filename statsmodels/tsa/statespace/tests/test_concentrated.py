@@ -13,6 +13,7 @@ import pandas as pd
 from .results import results_varmax
 from statsmodels.tsa.statespace import varmax
 from numpy.testing import assert_equal, assert_raises, assert_allclose
+from statsmodels.tsa.statespace.tools import compatibility_mode
 
 
 def check_concentrated_scale(filter_univariate=False, **kwargs):
@@ -125,6 +126,8 @@ def test_concentrated_scale_conventional():
 
 
 def test_concentrated_scale_univariate():
+    if compatibility_mode:
+        return
     check_concentrated_scale(filter_univariate=True)
     check_concentrated_scale(filter_univariate=True, measurement_error=False)
     check_concentrated_scale(filter_univariate=True, error_cov_type='diagonal')
