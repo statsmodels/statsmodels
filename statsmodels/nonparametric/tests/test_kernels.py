@@ -19,9 +19,9 @@ fname = 'results/results_kernel_regression.csv'
 results = np.recfromcsv(os.path.join(curdir, fname))
 
 y = results['accident']
-x = np.log(results['service'])
-use_mask = ~np.isnan(x)
-x = x[use_mask]
+x = results['service']
+use_mask = x >= 0
+x = np.log(x[use_mask].copy())
 y = y[use_mask]
 xg = np.linspace(x.min(), x.max(), 40) # grid points default in Stata
 

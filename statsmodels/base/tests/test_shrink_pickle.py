@@ -258,7 +258,7 @@ class TestPickleFormula3(TestPickleFormula2):
 class TestPickleFormula4(TestPickleFormula2):
 
     def setup(self):
-        self.results = sm.OLS.from_formula("Y ~ np.log(A) + B * C", data=self.data).fit()
+        self.results = sm.OLS.from_formula("Y ~ np.log(abs(A)+1) + B * C", data=self.data).fit()
 
 # we need log in module namespace for the following test
 from numpy import log
@@ -267,7 +267,7 @@ class TestPickleFormula5(TestPickleFormula2):
     def setup(self):
         # if we import here, then unpickling fails -> exception in test
         #from numpy import log
-        self.results = sm.OLS.from_formula("Y ~ log(A) + B * C", data=self.data).fit()
+        self.results = sm.OLS.from_formula("Y ~ log(abs(A)+1) + B * C", data=self.data).fit()
 
 
 class TestRemoveDataPicklePoissonRegularized(RemoveDataPickle):

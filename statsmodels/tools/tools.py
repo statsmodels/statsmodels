@@ -354,24 +354,37 @@ def pinv_extended(X, rcond=1e-15):
     return res, s_orig
 
 
-def recipr(X):
+def recipr(x):
     """
     Return the reciprocal of an array, setting all entries less than or
     equal to 0 to 0. Therefore, it presumes that X should be positive in
     general.
     """
-    x = np.maximum(np.asarray(X).astype(np.float64), 0)
-    return np.greater(x, 0.) / (x + np.less_equal(x, 0.))
+
+    x = np.asarray(x)
+    out = np.zeros_like(x, dtype=np.float64)
+    nans = np.isnan(x.flat)
+    pos = np.logical_not(nans)
+    pos[pos] = pos[pos] & (x.flat[pos] > 0)
+    out.flat[pos] = 1.0 / x.flat[pos]
+    out.flat[nans] = np.nan
+    return out
 
 
-def recipr0(X):
+def recipr0(x):
     """
     Return the reciprocal of an array, setting all entries equal to 0
     as 0. It does not assume that X should be positive in
     general.
     """
-    test = np.equal(np.asarray(X), 0)
-    return np.where(test, 0, 1. / X)
+    x = np.asarray(x)
+    out = np.zeros_like(x, dtype=np.float64)
+    nans = np.isnan(x.flat)
+    not_zero = np.logical_not(nans)
+    not_zero[not_zero] = not_zero[not_zero] & (x.flat[not_zero] != 0)
+    out.flat[not_zero] = 1.0 / x.flat[not_zero]
+    out.flat[nans] = np.nan
+    return out
 
 
 def clean0(matrix):
