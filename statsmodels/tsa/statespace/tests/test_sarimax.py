@@ -2195,7 +2195,7 @@ def check_concentrated_scale(filter_univariate=False):
         for name in smoothed_attr:
             actual = getattr(res_conc.filter_results, name)
             desired = getattr(res_orig.filter_results, name)
-            assert_allclose(actual, desired, atol=1e-4)
+            assert_allclose(actual, desired, atol=1e-3)
 
 
 def test_concentrated_scale_conventional():
