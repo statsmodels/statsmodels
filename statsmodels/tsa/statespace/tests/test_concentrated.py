@@ -14,9 +14,13 @@ from .results import results_varmax
 from statsmodels.tsa.statespace import varmax
 from numpy.testing import assert_equal, assert_raises, assert_allclose
 from statsmodels.tsa.statespace.tools import compatibility_mode
+from nose.exc import SkipTest
+
+if compatibility_mode:
+    raise SkipTest
 
 
-def check_concentrated_scale(filter_univariate=False, **kwargs):
+def check_concentrated_scale(filter_univariate=False, missing=False, **kwargs):
     # Test that concentrating the scale out of the likelihood function works
     index = pd.date_range('1960-01-01', '1982-10-01', freq='QS')
     dta = pd.DataFrame(results_varmax.lutkepohl_data,
@@ -26,6 +30,12 @@ def check_concentrated_scale(filter_univariate=False, **kwargs):
     dta['dln_consump'] = np.log(dta['consump']).diff()
 
     endog = dta.ix['1960-04-01':'1978-10-01', ['dln_inv', 'dln_inc']]
+
+    # Optionally add some missing observations
+    if missing:
+        endog.iloc[0, 0] = np.nan
+        endog.iloc[3:5, :] = np.nan
+        endog.iloc[8, 1] = np.nan
 
     # Sometimes we can have slight differences if the Kalman filters
     # converge at different observations, so disable convergence.
@@ -123,11 +133,11 @@ def test_concentrated_scale_conventional():
     check_concentrated_scale(filter_univariate=False, measurement_error=True)
     check_concentrated_scale(filter_univariate=False,
                              error_cov_type='diagonal')
+    check_concentrated_scale(filter_univariate=False, missing=True)
 
 
 def test_concentrated_scale_univariate():
-    if compatibility_mode:
-        return
     check_concentrated_scale(filter_univariate=True)
-    check_concentrated_scale(filter_univariate=True, measurement_error=False)
+    check_concentrated_scale(filter_univariate=True, measurement_error=True)
     check_concentrated_scale(filter_univariate=True, error_cov_type='diagonal')
+    check_concentrated_scale(filter_univariate=True, missing=True)
