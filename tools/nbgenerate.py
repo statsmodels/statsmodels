@@ -106,6 +106,7 @@ def do_one(nb, to=None, execute=None, timeout=None, kernel_name=None,
     from traitlets.traitlets import TraitError
     import jupyter_client
 
+    os.chdir(SOURCE_DIR)
     name = os.path.basename(nb)
     dst = os.path.join(EXECUTED_DIR, name)
     update_needed = True

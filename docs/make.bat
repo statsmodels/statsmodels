@@ -48,7 +48,7 @@ if "%1" == "html" (
     REM python %TOOLSPATH%/%EXAMPLEBUILD%
     echo mkdir %BUILDDIR%\html\_static
     mkdir %BUILDDIR%\html\_static
-	echo python %TOOLSPATH%/%NOTEBOOKBUILD% --execute=True --allow_errors=True
+	echo python %TOOLSPATH%/%NOTEBOOKBUILD% --parallel --report-errors
     python %TOOLSPATH%/%NOTEBOOKBUILD% --parallel --report-errors
     echo python %TOOLSPATH%/%DATASETBUILD%
     python %TOOLSPATH%/%DATASETBUILD%
