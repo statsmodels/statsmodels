@@ -55,12 +55,9 @@ class ContrastResults(object):
                 self.pvalue = self.dist.sf(self.statistic, df_denom)
             else:
                 "normal"
-                # TODO: Need a simpler method to handle NaNs
-                pvalue = np.empty_like(value)
-                pvalue.fill(np.nan)
-                not_nan = np.logical_not(np.isnan(value))
-                pvalue[not_nan] = self.dist.sf(np.abs(value[not_nan])) * 2
-                self.pvalue = pvalue
+                self.pvalue = np.full_like(value, np.nan)
+                not_nan = ~np.isnan(value)
+                self.pvalue[not_nan] = self.dist.sf(np.abs(value[not_nan])) * 2
 
         # cleanup
         # should we return python scalar?

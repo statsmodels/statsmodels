@@ -364,7 +364,7 @@ def recipr(x):
     x = np.asarray(x)
     out = np.zeros_like(x, dtype=np.float64)
     nans = np.isnan(x.flat)
-    pos = np.logical_not(nans)
+    pos = ~nans
     pos[pos] = pos[pos] & (x.flat[pos] > 0)
     out.flat[pos] = 1.0 / x.flat[pos]
     out.flat[nans] = np.nan
@@ -380,9 +380,9 @@ def recipr0(x):
     x = np.asarray(x)
     out = np.zeros_like(x, dtype=np.float64)
     nans = np.isnan(x.flat)
-    not_zero = np.logical_not(nans)
-    not_zero[not_zero] = not_zero[not_zero] & (x.flat[not_zero] != 0)
-    out.flat[not_zero] = 1.0 / x.flat[not_zero]
+    non_zero = ~nans
+    non_zero[non_zero] = non_zero[non_zero] & (x.flat[non_zero] != 0)
+    out.flat[non_zero] = 1.0 / x.flat[non_zero]
     out.flat[nans] = np.nan
     return out
 

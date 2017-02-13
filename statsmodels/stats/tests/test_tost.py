@@ -478,7 +478,7 @@ def test_tost_asym():
 
     #SMOKE tests: foe multi-endpoint vectorized, k on k
     resall = smws.ttost_ind(clinic[15:, 2:7], clinic[:15, 2:7],
-                           [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6,
+                           np.exp([-1.0, -1.0, -1.5, -1.5, -1.5]), 0.6,
                            usevar='unequal', transform=np.log)
     resall = smws.ttost_ind(clinic[15:, 2:7], clinic[:15, 2:7],
                            [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6,
