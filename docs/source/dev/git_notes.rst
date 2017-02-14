@@ -5,7 +5,7 @@ Github
 ------
 
 The `statsmodels` code base is hosted on `Github <https://github.com/statsmodels/statsmodels>`_. To
-contribute you will need to `sign up for a free Github account <https://github.com/join>`_.
+contribute you will need to `sign up for a free Github account <https://github.com/>`_.
 
 Version Control and Git
 -----------------------
@@ -18,13 +18,13 @@ codebase. It also keeps a complete history of all changes to the code, so you
 can easily undo changes or see when a change was made, by whom, and why.
 
 To install and configure Git, and to setup SSH keys, see
-`setting up git <https://help.github.com/articles/set-up-git>`_.
+`setting up git <https://help.github.com/articles/set-up-git/>`_.
 
 To learn more about Git, you may want to visit: 
 
-+ `Git documentation (book and videos) <http://git-scm.com/documentation>`_
-+ `Github help pages <https://help.github.com/>`_ 
-+ `NumPy documentation <http://docs.scipy.org/doc/numpy/dev/index.html>`_
++ `Git documentation (book and videos) <https://git-scm.com/documentation>`_
++ `Github help pages <https://help.github.com/>`_
++ `NumPy documentation <https://docs.scipy.org/doc/numpy/dev/index.html>`_
 + `Matthew Brett's Pydagogue <http://matthew-brett.github.io/pydagogue/>`_
 
 Below, we describe the bare minimum git commands you need to contribute to
@@ -40,7 +40,7 @@ After setting up git, you need to fork the main `statsmodels` repository. To do
 this, visit the `statsmodels project page
 <https://github.com/statsmodels/statsmodels>`_ and hit the fork button (see
 instructions for
-`forking a repo <https://help.github.com/articles/fork-a-repo>`_ for details).
+`forking a repo <https://help.github.com/articles/fork-a-repo/>`_ for details).
 This should take you to your fork's page.
 
 Then, you want to clone the fork to your machine::
@@ -175,7 +175,7 @@ this by using `compare view
    `shiny-new-feature`, respectively.
 #. From here you will see a nice overview of your changes. If anything is amiss, you can fix it.
 
-If everything looks good you are read to make a `pull request <https://help.github.com/articles/using-pull-requests>`__.
+If everything looks good you are read to make a `pull request <https://help.github.com/articles/about-pull-requests/>`__.
 
 #. Navigate to your repository on github.
 #. Click on the `Pull Request` button.
@@ -256,26 +256,3 @@ however. To delete the branch on github, do::
 .. commits. Do not edit the history of changes that have been pushed.**
 
 .. see this reference http://gitready.com/advanced/2009/02/10/squashing-commits-with-rebase.html
-
-
-Git for Bzr Users
-~~~~~~~~~~~~~~~~~
-
-::
-
-    git pull != bzr pull
-
-::
-
-    git pull = git fetch + git merge
-
-Of course, you could::
-
-    git pull --rebase = git fetch + git rebase
-
-::
-
-    git merge != bzr merge
-    git merge == bzr merge + bzr commit
-    git merge --no-commit == bzr merge
-

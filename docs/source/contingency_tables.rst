@@ -295,4 +295,4 @@ See also
 Scipy_ has several functions for analyzing contingency tables,
 including Fisher's exact test which is not currently in Statsmodels.
 
-.. _Scipy: http://docs.scipy.org/doc/scipy-0.14.0/reference/stats.html#contingency-table-functions
+.. _Scipy: https://docs.scipy.org/doc/scipy-0.18.0/reference/stats.html#contingency-table-functions

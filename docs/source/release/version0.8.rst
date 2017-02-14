@@ -20,7 +20,7 @@ recent numpy and pandas releases.
 Statsmodels is using now github to store the updated documentation which
 is available under
 http://www.statsmodels.org/stable for the last release, and
-http://www.statsmodels.org/dev/ for the development version.
+http://www.statsmodels.org/devel/ for the development version.
 
 This is the last release that supports Python 2.6.
 
@@ -246,7 +246,6 @@ https://github.com/statsmodels/statsmodels/issues?q=label%3Atype-bug-wrong+is%3A
 Backwards incompatible changes and deprecations
 -----------------------------------------------
 
-* ???
 * predict now returns a pandas Series if the exog argument is a DataFrame,
   including missing/NaN values
 * PCA moved to multivariate compared to 0.7
