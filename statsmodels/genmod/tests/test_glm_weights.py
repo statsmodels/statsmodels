@@ -36,17 +36,26 @@ class CheckWeight(object):
 
         assert_allclose(res1.params, res2.params, atol=1e-6, rtol=2e-6)
         corr_fact = getattr(self, 'corr_fact', 1)
-        assert_allclose(res1.bse, corr_fact * res2.bse, atol=1e-6, rtol=2e-6)
-        if isinstance(self, (TestRepeatedvsAggregated, TestRepeatedvsAverage)):
-            # Loglikelihood is different between repeated vs. exposure/average
+        if hasattr(res2, 'normalized_cov_params'):
+            assert_allclose(res1.normalized_cov_params,
+                            res2.normalized_cov_params,
+                            atol=1e-8, rtol=2e-6)
+        if isinstance(self, (TestRepeatedvsAggregated, TestRepeatedvsAverage,
+                             TestTweedieRepeatedvsAggregated,
+                             TestTweedieRepeatedvsAverage)):
+            # Loglikelihood, scale, deviance is different between repeated vs.
+            # exposure/average
             return None
+        assert_allclose(res1.bse, corr_fact * res2.bse, atol=1e-6, rtol=2e-6)
         if not isinstance(self, (TestGlmGaussianAwNr, TestGlmGammaAwNr)):
             # Matching R is hard
             assert_allclose(res1.llf, res2.ll, atol=1e-6, rtol=1e-7)
         assert_allclose(res1.deviance, res2.deviance, atol=1e-6, rtol=1e-7)
 
     def test_residuals(self):
-        if isinstance(self, (TestRepeatedvsAggregated, TestRepeatedvsAverage)):
+        if isinstance(self, (TestRepeatedvsAggregated, TestRepeatedvsAverage,
+                             TestTweedieRepeatedvsAggregated,
+                             TestTweedieRepeatedvsAverage)):
             # This won't match as different number of records
             return None
         res1 = self.res1
@@ -225,7 +234,7 @@ class TestGlmPoissonFwClu(CheckWeight):
 
 class TestGlmTweedieAwNr(CheckWeight):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         self = cls
         import statsmodels.formula.api as smf
 
@@ -251,7 +260,7 @@ class TestGlmTweedieAwNr(CheckWeight):
 
 class TestGlmGammaAwNr(CheckWeight):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         self = cls
         from .results.results_glm import CancerLog
         res2 = CancerLog()
@@ -279,7 +288,7 @@ class TestGlmGammaAwNr(CheckWeight):
 
 class TestGlmGaussianAwNr(CheckWeight):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         self = cls
         import statsmodels.formula.api as smf
 
@@ -347,6 +356,12 @@ def gen_endog(lin_pred, family_class, link, binom_version=0):
     elif family_class == fam.InverseGaussian:
         from scipy.stats.distributions import invgauss
         endog = invgauss.rvs(mu)
+    elif family_class == fam.Tweedie:
+        rate = 1
+        shape = 1.0
+        scale = mu / (rate * shape)
+        endog = (np.random.poisson(rate, size=scale.shape[0]) *
+                 np.random.gamma(shape * scale))
     else:
         raise ValueError
 
@@ -488,11 +503,6 @@ def test_wtd_gradient_irls():
                             start_params=start_params,
                             method=method
                     )
-                    if not np.allclose(rslt_gradient.params,
-                                       rslt_irls.params, rtol=1e-6, atol=5e-5):
-                        import pdb
-                        pdb.set_trace()
-
                     assert_allclose(rslt_gradient.params,
                                     rslt_irls.params, rtol=1e-6, atol=5e-5)
 
@@ -523,7 +533,7 @@ def get_dummies(x):
 
 class TestRepeatedvsAggregated(CheckWeight):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         import pandas as pd
         self = cls
         np.random.seed(4321)
@@ -556,11 +566,11 @@ class TestRepeatedvsAggregated(CheckWeight):
 
 class TestRepeatedvsAverage(CheckWeight):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         import pandas as pd
         self = cls
         np.random.seed(4321)
-        n = 100
+        n = 10000
         p = 5
         exog = np.empty((n, p))
         exog[:, 0] = 1
@@ -585,3 +595,73 @@ class TestRepeatedvsAverage(CheckWeight):
         mod2 = sm.GLM(avg_endog, agg_exog, family=family(link=link),
                       var_weights=agg_wt)
         self.res2 = mod2.fit()
+
+
+class TestTweedieRepeatedvsAggregated(CheckWeight):
+    @classmethod
+    def setup_class(cls):
+        import pandas as pd
+        self = cls
+        np.random.seed(4321)
+        n = 1000000
+        p = 5
+        exog = np.empty((n, p))
+        exog[:, 0] = 1
+        exog[:, 1] = np.random.randint(low=-5, high=5, size=n)
+        x = np.repeat(np.array([1, 2, 3, 4]), n / 4)
+        exog[:, 2:] = get_dummies(x)
+        beta = np.array([7, 0.1, -0.05, .2, 0.35])
+        lin_pred = (exog * beta).sum(axis=1)
+        family = sm.families.Tweedie
+        link = sm.families.links.log
+        endog = gen_endog(lin_pred, family, link)
+        mod1 = sm.GLM(endog, exog, family=family(link=link(), var_power=1.5))
+        self.res1 = mod1.fit(rtol=1e-20, atol=0, tol_criterion='params')
+
+        agg = pd.DataFrame(exog)
+        agg['endog'] = endog
+        agg_endog = agg.groupby([0, 1, 2, 3, 4]).sum()[['endog']]
+        agg_wt = agg.groupby([0, 1, 2, 3, 4]).count()[['endog']]
+        agg_exog = np.array(agg_endog.index.tolist())
+        agg_wt = agg_wt['endog']
+        agg_endog = agg_endog['endog']
+        mod2 = sm.GLM(agg_endog, agg_exog,
+                      family=family(link=link(), var_power=1.5),
+                      exposure=agg_wt, var_weights=agg_wt ** 0.5)
+        self.res2 = mod2.fit(rtol=1e-20, atol=0, tol_criterion='params')
+
+
+class TestTweedieRepeatedvsAverage(CheckWeight):
+    @classmethod
+    def setup_class(cls):
+        import pandas as pd
+        self = cls
+        np.random.seed(4321)
+        n = 1000
+        p = 5
+        exog = np.empty((n, p))
+        exog[:, 0] = 1
+        exog[:, 1] = np.random.randint(low=-5, high=5, size=n)
+        x = np.repeat(np.array([1, 2, 3, 4]), n / 4)
+        exog[:, 2:] = get_dummies(x)
+        beta = np.array([7, 0.1, -0.05, .2, 0.35])
+        lin_pred = (exog * beta).sum(axis=1)
+        family = sm.families.Tweedie
+        link = sm.families.links.log
+        endog = gen_endog(lin_pred, family, link)
+        mod1 = sm.GLM(endog, exog, family=family(link=link(), var_power=1.5))
+        self.res1 = mod1.fit(rtol=1e-10, atol=0, tol_criterion='params',
+                             scaletype='x2')
+
+        agg = pd.DataFrame(exog)
+        agg['endog'] = endog
+        agg_endog = agg.groupby([0, 1, 2, 3, 4]).sum()[['endog']]
+        agg_wt = agg.groupby([0, 1, 2, 3, 4]).count()[['endog']]
+        agg_exog = np.array(agg_endog.index.tolist())
+        agg_wt = agg_wt['endog']
+        avg_endog = agg_endog['endog'] / agg_wt
+        mod2 = sm.GLM(avg_endog, agg_exog,
+                      family=family(link=link(), var_power=1.5),
+                      var_weights=agg_wt)
+        self.res2 = mod2.fit(rtol=1e-10, atol=0, tol_criterion='params')
+
