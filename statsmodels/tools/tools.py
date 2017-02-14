@@ -533,3 +533,36 @@ def _ensure_2d(x, ndarray=False):
         return np.asarray(x)[:, None], name
     else:
         return pd.DataFrame(x), name
+
+def matrix_rank_safe(mat, tol=None):
+    """
+    Shallow wrapper for NumPy's matrix_rank that protects against inf and non
+    
+    Parameters
+    ----------
+    mat : {(m,), (m,n}}, array
+        array of <=2 dimensions
+    tol : {None, float}, options
+        threshold below which SVD values are considered zero. If `tol` is
+        None, and ``S`` is an array with singular values for `M`, and
+        ``eps`` is the epsilon value for datatype of ``S``, then `tol` is
+        set to ``S.max() * max(M.shape) * eps``.
+    
+    Returns
+    -------
+    rank : int
+        Rank of mat
+    
+    Notes
+    -----
+    Columns containins infinite or NaN values are dropped before computing 
+    the rank, so that the rank returned is the rank of remaining columns
+    """
+    if np.ndim(mat) == 1:
+        mat = mat[:,None]
+
+    loc = np.all(np.isfinite(mat), axis=0)
+    if loc.sum() > 0:
+        return np_matrix_rank(mat[:, loc], tol)
+    else:
+        return 0

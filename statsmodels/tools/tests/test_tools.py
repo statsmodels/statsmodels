@@ -567,3 +567,31 @@ class TestEnsure2d(TestCase):
         results = tools._ensure_2d(self.ndarray[:,0])
         assert_array_equal(results[0], self.ndarray[:,[0]])
         assert_equal(results[1], None)
+
+
+class TestMatrixRankSafe(object):
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(12345)
+        cls.mat = np.random.random_sample((20, 10))
+
+    def test_nonans(self):
+        assert_equal(np.linalg.matrix_rank(self.mat),
+                     tools.matrix_rank_safe(self.mat))
+        assert_equal(10, tools.matrix_rank_safe(self.mat))
+
+    def test_allnans(self):
+        mat = self.mat.copy()
+        mat[0, :] = np.nan
+        assert_equal(0, tools.matrix_rank_safe(mat))
+
+    def test_all_inf(self):
+        mat = self.mat.copy()
+        mat[0, :] = np.inf
+        assert_equal(0, tools.matrix_rank_safe(mat))
+
+    def test_mixed_nan_inf(self):
+        mat = self.mat.copy()
+        mat[5, ::3] = np.inf
+        mat[2, ::4] = np.nan
+        assert_equal(4, tools.matrix_rank_safe(mat))
