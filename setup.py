@@ -353,127 +353,53 @@ cmdclass["build_ext"] = build_ext
 # Reset the cython exclusions file
 init_cython_exclusion(CYTHON_EXCLUSION_FILE)
 
-ext_data = dict(
-    kalman_loglike = {"name" : "statsmodels/tsa/kalmanf/kalman_loglike.c",
-              "depends" : ["statsmodels/src/capsule.h"],
-              "include_dirs": ["statsmodels/src"],
-              "sources" : []},
-    _hamilton_filter = {"name" : "statsmodels/tsa/regime_switching/_hamilton_filter.c",
-              "depends" : [],
-              "include_dirs": [],
-              "sources" : []},
-    _kim_smoother = {"name" : "statsmodels/tsa/regime_switching/_kim_smoother.c",
-              "depends" : [],
-              "include_dirs": [],
-              "sources" : []},
+ext_data = {
+    "statsmodels/tsa/kalmanf/kalman_loglike.c" : {
+        "depends" : ["statsmodels/src/capsule.h"],
+        "include_dirs": ["statsmodels/src"]},
+    "statsmodels/tsa/regime_switching/_hamilton_filter.c" : {},
+    "statsmodels/tsa/regime_switching/_kim_smoother.c" : {},
     # statespace also needs npymath include / libs - see below
-    _statespace = {"name" : "statsmodels/tsa/statespace/_statespace.c",
-              "depends" : ["statsmodels/src/capsule.h"],
-              "include_dirs": ["statsmodels/src"],
-              "libraries": [],
-              "library_dirs": [],
-              "sources" : []},
-    linbin = {"name" : "statsmodels/nonparametric/linbin.c",
-             "depends" : [],
-             "sources" : []},
-    _smoothers_lowess = {"name" : "statsmodels/nonparametric/_smoothers_lowess.c",
-             "depends" : [],
-             "sources" : []}
-    )
+    "statsmodels/tsa/statespace/_statespace.c" : {
+        "depends" : ["statsmodels/src/capsule.h"],
+        "include_dirs": ["statsmodels/src"],
+        "npymath": True},
+    "statsmodels/nonparametric/linbin.c" : {},
+    "statsmodels/nonparametric/_smoothers_lowess.c" : {},
+}
 
-statespace_ext_data = dict(
-    _representation = {"name" : "statsmodels/tsa/statespace/_representation.c",
-              "include_dirs": ['statsmodels/src'],
-              "libraries": [],
-              "library_dirs": [],
-              "sources": []},
-    _kalman_filter = {"name" : "statsmodels/tsa/statespace/_kalman_filter.c",
-              "include_dirs": ['statsmodels/src'],
-              "libraries": [],
-              "library_dirs": [],
-              "sources": []},
-    _kalman_filter_conventional = {"name" : "statsmodels/tsa/statespace/_filters/_conventional.c",
-              "filename": "_conventional",
-              "include_dirs": ['statsmodels/src'],
-              "libraries": [],
-              "library_dirs": [],
-              "sources": []},
-    _kalman_filter_inversions = {"name" : "statsmodels/tsa/statespace/_filters/_inversions.c",
-              "filename": "_inversions",
-              "include_dirs": ['statsmodels/src'],
-              "libraries": [],
-              "library_dirs": [],
-              "sources": []},
-    _kalman_filter_univariate = {"name" : "statsmodels/tsa/statespace/_filters/_univariate.c",
-              "filename": "_univariate",
-              "include_dirs": ['statsmodels/src'],
-              "libraries": [],
-              "library_dirs": [],
-              "sources": []},
-    _kalman_smoother = {"name" : "statsmodels/tsa/statespace/_kalman_smoother.c",
-              "include_dirs": ['statsmodels/src'],
-              "libraries": [],
-              "library_dirs": [],
-              "sources": []},
-    _kalman_smoother_alternative = {"name" : "statsmodels/tsa/statespace/_smoothers/_alternative.c",
-              "filename": "_alternative",
-              "include_dirs": ['statsmodels/src'],
-              "libraries": [],
-              "library_dirs": [],
-              "sources": []},
-    _kalman_smoother_classical = {"name" : "statsmodels/tsa/statespace/_smoothers/_classical.c",
-              "filename": "_classical",
-              "include_dirs": ['statsmodels/src'],
-              "libraries": [],
-              "library_dirs": [],
-              "sources": []},
-    _kalman_smoother_conventional = {"name" : "statsmodels/tsa/statespace/_smoothers/_conventional.c",
-              "filename": "_conventional",
-              "include_dirs": ['statsmodels/src'],
-              "libraries": [],
-              "library_dirs": [],
-              "sources": []},
-    _kalman_smoother_univariate = {"name" : "statsmodels/tsa/statespace/_smoothers/_univariate.c",
-              "filename": "_univariate",
-              "include_dirs": ['statsmodels/src'],
-              "libraries": [],
-              "library_dirs": [],
-              "sources": []},
-    _kalman_simulation_smoother = {"name" : "statsmodels/tsa/statespace/_simulation_smoother.c",
-              "filename": "_simulation_smoother",
-              "include_dirs": ['statsmodels/src'],
-              "libraries": [],
-              "library_dirs": [],
-              "sources": []},
-    _kalman_tools = {"name" : "statsmodels/tsa/statespace/_tools.c",
-              "filename": "_tools",
-              "sources": []},
-)
+statespace_ext_data = {
+    key : {"include_dirs": ['statsmodels/src'], "npymath": True}
+    for key in ("statsmodels/tsa/statespace/_representation.c",
+                "statsmodels/tsa/statespace/_kalman_filter.c",
+                "statsmodels/tsa/statespace/_filters/_conventional.c",
+                "statsmodels/tsa/statespace/_filters/_inversions.c",
+                "statsmodels/tsa/statespace/_filters/_univariate.c",
+                "statsmodels/tsa/statespace/_kalman_smoother.c",
+                "statsmodels/tsa/statespace/_smoothers/_alternative.c",
+                "statsmodels/tsa/statespace/_smoothers/_classical.c",
+                "statsmodels/tsa/statespace/_smoothers/_conventional.c",
+                "statsmodels/tsa/statespace/_smoothers/_univariate.c",
+                "statsmodels/tsa/statespace/_simulation_smoother.c")
+}
+statespace_ext_data["statsmodels/tsa/statespace/_tools.c"] = {}
 
 try:
     from scipy.linalg import cython_blas
     ext_data.update(statespace_ext_data)
 except ImportError:
-    for name, data in statespace_ext_data.items():
-        path = '.'.join([data["name"].split('.')[0], 'pyx.in'])
+    for name, params in statespace_ext_data.items():
+        path = splitext(name)[0] + '.pyx.in'
         append_cython_exclusion(path, CYTHON_EXCLUSION_FILE)
 
 extensions = []
+EXTS_NEEDING_NPYMATH = []
 for name, data in ext_data.items():
-    data['sources'] = data.get('sources', []) + [data['name']]
-
-    destdir = ".".join(dirname(data["name"]).split("/"))
-    data.pop('name')
-
-    filename = data.pop('filename', name)
-
-    obj = Extension('%s.%s' % (destdir, filename), **data)
-
-    extensions.append(obj)
-
-# Statespace also requires the npymath configuration. We add this at build time
-# in the custom build_ext command below
-EXTS_NEEDING_NPYMATH = ['statsmodels.tsa.statespace._statespace']
+    data['sources'] = data.get('sources', []) + [name]
+    mod_name = ".".join(splitext(name)[0].split("/"))
+    if data.pop('npymath', False):
+        EXTS_NEEDING_NPYMATH.append(mod_name)
+    extensions.append(Extension(mod_name, **data))
 
 
 def get_data_files():
