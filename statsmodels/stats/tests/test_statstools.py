@@ -280,7 +280,7 @@ class TestStattools(TestCase):
         assert_almost_equal(expected, kurtosis)
 
     def test_robust_kurtosis_ab(self):
-        """Test custom alpha, beta in kr3"""
+        # Test custom alpha, beta in kr3
         x = self.kurtosis_x
         alpha, beta = (10.0, 45.0)
         kurtosis = robust_kurtosis(self.kurtosis_x, ab=(alpha,beta), excess=False)
@@ -289,7 +289,7 @@ class TestStattools(TestCase):
         assert_almost_equal(kurtosis[2], num/denom)
 
     def test_robust_kurtosis_dg(self):
-        """Test custom delta, gamma in kr4"""
+        # Test custom delta, gamma in kr4
         x = self.kurtosis_x
         delta, gamma = (10.0, 45.0)
         kurtosis = robust_kurtosis(self.kurtosis_x, dg=(delta,gamma), excess=False)

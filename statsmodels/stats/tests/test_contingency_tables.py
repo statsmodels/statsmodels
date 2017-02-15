@@ -91,10 +91,8 @@ def test_local_odds():
 
 
 def test_stratified_table_cube():
-    """
-    Test that we can pass a rank 3 ndarray or a list of rank 2
-    ndarrays to StratifiedTable and get the same results.
-    """
+    # Test that we can pass a rank 3 ndarray or a list of rank 2
+    # ndarrays to StratifiedTable and get the same results.
 
     tab1 = [[[8, 9], [6, 7]], [[4, 9], [5, 5]], [[8, 8], [9, 11]]]
     tab2 = np.asarray(tab1).T
@@ -199,29 +197,27 @@ def test_mcnemar():
 
 
 def test_cochranq():
-    """
-    library(CVST)
-    table1 = matrix(c(1, 0, 1, 1,
-                      0, 1, 1, 1,
-                      1, 1, 1, 0,
-                      0, 1, 0, 0,
-                      0, 1, 0, 0,
-                      1, 0, 1, 0,
-                      0, 1, 0, 0,
-                      1, 1, 1, 1,
-                      0, 1, 0, 0), ncol=4, byrow=TRUE)
-    rslt1 = cochranq.test(table1)
-    table2 = matrix(c(0, 0, 1, 1, 0,
-                      0, 1, 0, 1, 0,
-                      0, 1, 1, 0, 1,
-                      1, 0, 0, 0, 1,
-                      1, 1, 0, 0, 0,
-                      1, 0, 1, 0, 0,
-                      0, 1, 0, 0, 0,
-                      0, 0, 1, 1, 0,
-                      0, 0, 0, 0, 0), ncol=5, byrow=TRUE)
-    rslt2 = cochranq.test(table2)
-    """
+    # library(CVST)
+    # table1 = matrix(c(1, 0, 1, 1,
+    #                   0, 1, 1, 1,
+    #                   1, 1, 1, 0,
+    #                   0, 1, 0, 0,
+    #                   0, 1, 0, 0,
+    #                   1, 0, 1, 0,
+    #                   0, 1, 0, 0,
+    #                   1, 1, 1, 1,
+    #                   0, 1, 0, 0), ncol=4, byrow=TRUE)
+    # rslt1 = cochranq.test(table1)
+    # table2 = matrix(c(0, 0, 1, 1, 0,
+    #                   0, 1, 0, 1, 0,
+    #                   0, 1, 1, 0, 1,
+    #                   1, 0, 0, 0, 1,
+    #                   1, 1, 0, 0, 0,
+    #                   1, 0, 1, 0, 0,
+    #                   0, 1, 0, 0, 0,
+    #                   0, 0, 1, 1, 0,
+    #                   0, 0, 0, 0, 0), ncol=5, byrow=TRUE)
+    # rslt2 = cochranq.test(table2)
 
     table = [[1, 0, 1, 1],
              [0, 1, 1, 1],

@@ -80,7 +80,7 @@ class test_SimpleTable(object):
         #print(desired)
         self.assertEqual(actual, desired)
     def test_ltx_fmt1(self):
-        """Limited test of custom ltx_fmt"""
+        # Limited test of custom ltx_fmt
         desired = r"""
 \begin{center}
 \begin{tabular}{lcc}
