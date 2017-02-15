@@ -92,6 +92,12 @@ def _show_versions_only():
     except ImportError:
         print("cvxopt: Not installed")
 
+    try:
+        import joblib
+        print("joblib: %s " % (safe_version(joblib)))
+    except ImportError:
+        print("joblib: Not installed")
+
     print("\nDeveloper Tools\n================\n")
 
     try:
@@ -228,6 +234,13 @@ def show_versions(show_dirs=True):
                                    dirname(info.__file__)))
     except ImportError:
         print("cvxopt: Not installed")
+
+    try:
+        import joblib
+        print("joblib: %s (%s)" % (safe_version(joblib),
+                                   dirname(info.__file__)))
+    except ImportError:
+        print("joblib: Not installed")
 
     print("\nDeveloper Tools\n================\n")
 
