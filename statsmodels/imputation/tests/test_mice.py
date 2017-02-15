@@ -73,9 +73,7 @@ def gendat():
 class TestMICEData(object):
 
     def test_default(self):
-        """
-        Test with all defaults.
-        """
+        # Test with all defaults.
 
         df = gendat()
         orig = df.copy()
@@ -130,9 +128,7 @@ class TestMICEData(object):
 
 
     def test_pertmeth(self):
-        """
-        Test with specified perturbation method.
-        """
+        # Test with specified perturbation method.
 
         df = gendat()
         orig = df.copy()
@@ -180,9 +176,7 @@ class TestMICEData(object):
 
 
     def test_set_imputer(self):
-        """
-        Test with specified perturbation method.
-        """
+        # Test with specified perturbation method.
 
         from statsmodels.regression.linear_model import RegressionResultsWrapper
         from statsmodels.genmod.generalized_linear_model import GLMResultsWrapper

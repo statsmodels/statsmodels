@@ -6,7 +6,7 @@ import warnings
 
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_allclose,
-                           assert_raises, dec, TestCase)
+                           assert_raises, dec)
 import pandas as pd
 from pandas import PeriodIndex, DatetimeIndex
 import pytest
@@ -1915,7 +1915,7 @@ def test_small_data():
         res = mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
 
 
-class TestARMA00(TestCase):
+class TestARMA00(object):
 
     @classmethod
     def setup_class(cls):
