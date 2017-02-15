@@ -1,10 +1,9 @@
 from statsmodels.tools.web import _generate_url, webdoc
 from statsmodels.regression.linear_model import OLS
-from unittest import TestCase
 from numpy import array
 import pytest
 
-class TestWeb(TestCase):
+class TestWeb(object):
     def test_string(self):
         url = _generate_url('arch',True)
         assert url == 'http://www.statsmodels.org/stable/search.html?q=arch&check_keywords=yes&area=default'

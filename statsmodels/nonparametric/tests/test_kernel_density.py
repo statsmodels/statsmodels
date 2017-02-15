@@ -2,14 +2,12 @@ import numpy as np
 import numpy.testing as npt
 import numpy.testing.decorators as dec
 
-from unittest import TestCase
-
 import statsmodels.api as sm
 nparam = sm.nonparametric
 
 
-class KDETestBase(TestCase):
-    def setUp(self):
+class KDETestBase(object):
+    def setup(self):
         nobs = 60
         np.random.seed(123456)
         self.o = np.random.binomial(2, 0.7, size=(nobs, 1))
