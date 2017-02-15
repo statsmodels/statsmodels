@@ -264,7 +264,7 @@ def get_rdataset(dataname, package="datasets", cache=False):
     -------
     dataset : Dataset instance
         A `statsmodels.data.utils.Dataset` instance. This objects has
-        attributes::
+        attributes:
 
         * data - A pandas DataFrame containing the data
         * title - The dataset title

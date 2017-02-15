@@ -193,7 +193,7 @@ def _effects_at(effects, at):
 
 def _margeff_cov_params_dummy(model, cov_margins, params, exog, dummy_ind,
         method, J):
-    """
+    r"""
     Returns the Jacobian for discrete regressors for use in margeff_cov_params.
 
     For discrete regressors the marginal effect is
@@ -225,7 +225,7 @@ def _margeff_cov_params_dummy(model, cov_margins, params, exog, dummy_ind,
 
 def _margeff_cov_params_count(model, cov_margins, params, exog, count_ind,
                              method, J):
-    """
+    r"""
     Returns the Jacobian for discrete regressors for use in margeff_cov_params.
 
     For discrete regressors the marginal effect is

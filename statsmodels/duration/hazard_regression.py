@@ -487,9 +487,11 @@ class PHReg(model.LikelihoodModel):
         The penalty is the ``elastic net`` penalty, which is a
         combination of L1 and L2 penalties.
 
-        The function that is minimized is: ..math::
+        The function that is minimized is: 
+        
+        .. math::
 
-            -loglike/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
+            -loglike/n + alpha*((1-L1\_wt)*|params|_2^2/2 + L1\_wt*|params|_1)
 
         where :math:`|*|_1` and :math:`|*|_2` are the L1 and L2 norms.
 

@@ -246,6 +246,7 @@ def companion_matrix(polynomial):
     Given coefficients of a lag polynomial of the form:
 
     .. math::
+    
         c(L) = c_0 + c_1 L + \dots + c_p L^p
 
     returns a matrix of the form
@@ -1086,7 +1087,7 @@ def _compute_multivariate_sample_acovf(endog, maxlag):
 def _compute_multivariate_acovf_from_coefficients(
         coefficients, error_variance, maxlag=None,
         forward_autocovariances=False):
-    """
+    r"""
     Compute multivariate autocovariances from vector autoregression coefficient
     matrices
 
@@ -1118,14 +1119,14 @@ def _compute_multivariate_acovf_from_coefficients(
     -----
     Computes
 
-    ..math::
+    .. math::
 
         \Gamma(j) = E(y_t y_{t-j}')
 
     for j = 1, ..., `maxlag`, unless `forward_autocovariances` is specified,
     in which case it computes:
 
-    ..math::
+    .. math::
 
         E(y_t y_{t+j}') = \Gamma(j)'
 

@@ -401,7 +401,7 @@ class inverse_squared(Power):
 
     Notes
     -----
-    g(`p`) = 1/(`p`\ \*\*2)
+    g(`p`) = 1/(`p`\*\*2)
 
     Alias of statsmodels.family.links.Power(power=2.)
     """

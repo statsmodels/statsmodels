@@ -52,7 +52,7 @@ class Results(object):
 
 
 class NonlinearLS(Model):  #or subclass a model
-    '''Base class for estimation of a non-linear model with least squares
+    r'''Base class for estimation of a non-linear model with least squares
 
     This class is supposed to be subclassed, and the subclass has to provide a method
     `_predict` that defines the non-linear function `f(params) that is predicting the endogenous

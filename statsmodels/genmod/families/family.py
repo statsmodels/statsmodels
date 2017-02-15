@@ -826,7 +826,7 @@ class Binomial(Family):
         super(Binomial, self).__init__(link=link, variance=V.Binomial(n=self.n))
 
     def starting_mu(self, y):
-        """
+        r"""
         The starting values for the IRLS algorithm for the Binomial family.
         A good choice for the binomial family is :math:`\mu_0 = (Y_i + 0.5)/2`
         """
@@ -1681,7 +1681,7 @@ class Tweedie(Family):
         return np.nan
 
     def resid_anscombe(self, endog, mu):
-        """
+        r"""
         The Anscombe residuals for the Tweedie family
 
         Parameters
