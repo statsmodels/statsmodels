@@ -4,10 +4,7 @@
 # stack
 dist: trusty
 sudo: required
-<<<<<<< HEAD
 language: python
-=======
->>>>>>> TST: Update travis config
 
 env:
   # Default values for common packages, override as needed
