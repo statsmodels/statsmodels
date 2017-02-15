@@ -6,7 +6,6 @@ from __future__ import division, absolute_import, print_function
 from statsmodels.compat import cPickle
 from statsmodels.compat.testing import SkipTest
 
-from unittest import SkipTest
 import numpy as np
 from distutils.version import LooseVersion
 import os

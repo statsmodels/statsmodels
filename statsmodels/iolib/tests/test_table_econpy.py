@@ -7,7 +7,6 @@ Unit tests table.py.
 '''
 from __future__ import absolute_import
 from statsmodels.compat.python import zip
-import unittest
 
 import numpy as np
 
@@ -56,14 +55,14 @@ def custom_labeller(cell):
 
 
 
-class test_Cell(unittest.TestCase):
+class test_Cell(object):
     def test_celldata(self):
         celldata = cell0data, cell1data, row1data[0], row1data[1]
         cells = [Cell(datum, datatype=i%2) for i, datum in enumerate(celldata)]
         for cell, datum in zip(cells, celldata):
             self.assertEqual(cell.data, datum)
 
-class test_SimpleTable(unittest.TestCase):
+class test_SimpleTable(object):
     def test_txt_fmt1(self):
         # Limited test of custom txt_fmt
         desired = """
@@ -138,6 +137,4 @@ class test_SimpleTable(unittest.TestCase):
         actual = '\n%s\n' % tbl.as_text(missing='--')
         self.assertEqual(actual, desired)
 
-if __name__=="__main__":
-    unittest.main()
 

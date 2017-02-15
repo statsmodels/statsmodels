@@ -1,5 +1,4 @@
 from statsmodels.compat.testing import skip
-from unittest import TestCase
 
 import numpy as np
 import numpy.testing as npt
@@ -9,7 +8,7 @@ import statsmodels.api as sm
 nparam = sm.nonparametric
 
 
-class KernelRegressionTestBase(TestCase):
+class KernelRegressionTestBase(object):
     @classmethod
     def setup_class(cls):
         nobs = 60

@@ -4,7 +4,6 @@ from statsmodels.compat.testing import skipif
 import os
 import sys
 import warnings
-from unittest import TestCase
 
 import numpy as np
 import pandas as pd
@@ -24,7 +23,7 @@ DECIMAL_5 = .00001
 WIN32 = os.name == 'nt' and sys.maxsize < 2**33
 
 
-class TestPCA(TestCase):
+class TestPCA(object):
     @classmethod
     def setup_class(cls):
         rs = np.random.RandomState()
