@@ -5,7 +5,7 @@ from statsmodels.compat.python import lrange, range
 import numpy as np
 from numpy.random import standard_normal
 from numpy.testing import (assert_equal, assert_array_equal,
-                           assert_almost_equal, assert_string_equal, TestCase)
+                           assert_almost_equal, assert_string_equal)
 import pandas as pd
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 import pytest
@@ -15,7 +15,7 @@ from statsmodels.tools import tools
 from statsmodels.tools.tools import pinv_extended
 
 
-class TestTools(TestCase):
+class TestTools(object):
 
     def test_add_constant_list(self):
         x = lrange(1,5)
@@ -134,11 +134,11 @@ class TestTools(TestCase):
             X[:,0] = X[:,1] + X[:,2]
 
             Y = tools.fullrank(X)
-            self.assertEquals(Y.shape, (40,9))
+            assert_equal(Y.shape, (40,9))
 
             X[:,5] = X[:,3] + X[:,4]
             Y = tools.fullrank(X)
-            self.assertEquals(Y.shape, (40,8))
+            assert_equal(Y.shape, (40,8))
             warnings.simplefilter("ignore")
 
 
@@ -539,7 +539,7 @@ class TestNanDot(object):
         expected_res = np.array([[  7.,  10.], [ 15.,  22.]])
         assert_array_equal(test_res, expected_res)
 
-class TestEnsure2d(TestCase):
+class TestEnsure2d(object):
     @classmethod
     def setup_class(cls):
         x = np.arange(400.0).reshape((100,4))

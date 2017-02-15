@@ -2,7 +2,7 @@
 # TODO: Test robust kurtosis
 import numpy as np
 import pandas as pd
-from numpy.testing import (assert_almost_equal, assert_raises, TestCase)
+from numpy.testing import (assert_almost_equal, assert_raises)
 from statsmodels.stats.stattools import (omni_normtest, jarque_bera,
                                          durbin_watson, _medcouple_1d, medcouple,
                                          robust_kurtosis, robust_skewness)
@@ -163,7 +163,7 @@ def test_durbin_watson_pandas():
     assert_almost_equal(durbin_watson(x), durbin_watson(x_series), decimal=13)
 
 
-class TestStattools(TestCase):
+class TestStattools(object):
     @classmethod
     def setup_class(cls):
         x = np.random.standard_normal(1000)
