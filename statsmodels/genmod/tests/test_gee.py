@@ -102,10 +102,8 @@ def check_wrapper(results):
 class TestGEE(object):
 
     def test_margins_gaussian(self):
-        """
-        Check marginal effects for a Gaussian GEE fit.  Marginal
-        effects and ordinary effects should be equal.
-        """
+        # Check marginal effects for a Gaussian GEE fit.  Marginal
+        # effects and ordinary effects should be equal.
 
         n = 40
         np.random.seed(34234)
@@ -128,10 +126,8 @@ class TestGEE(object):
         marg.summary()
 
     def test_margins_logistic(self):
-        """
-        Check marginal effects for a binomial GEE fit.  Comparison
-        comes from Stata.
-        """
+        # Check marginal effects for a binomial GEE fit.  Comparison
+        # comes from Stata.
 
         np.random.seed(34234)
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
@@ -150,11 +146,9 @@ class TestGEE(object):
         assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
 
     def test_margins_multinomial(self):
-        """
-        Check marginal effects for a 2-class multinomial GEE fit,
-        which should be equivalent to logistic regression.  Comparison
-        comes from Stata.
-        """
+        # Check marginal effects for a 2-class multinomial GEE fit,
+        # which should be equivalent to logistic regression.  Comparison
+        # comes from Stata.
 
         np.random.seed(34234)
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
@@ -191,9 +185,7 @@ class TestGEE(object):
         plt.close(fig)
 
     def test_margins_poisson(self):
-        """
-        Check marginal effects for a Poisson GEE fit.
-        """
+        # Check marginal effects for a Poisson GEE fit.
 
         np.random.seed(34234)
         endog = np.r_[10, 15, 12, 13, 20, 18, 26, 29]

@@ -71,9 +71,7 @@ class TestPCA(object):
         assert_equal(self.x, pc.data)
 
     def test_eig_svd_equiv(self):
-        """
-        Test leading components since the tail end can differ
-        """
+        # Test leading components since the tail end can differ
         pc_eig = PCA(self.x)
         pc_svd = PCA(self.x, method='svd')
 
@@ -154,9 +152,7 @@ class TestPCA(object):
         assert_allclose(np.abs(pc.factors), np.abs(x.dot(vec)))
 
     def test_against_reference(self):
-        """
-        Test against MATLAB, which by default demeans but does not standardize        
-        """
+        # Test against MATLAB, which by default demeans but does not standardize
         x = data.xo / 1000.0
         pc = PCA(x, normalize=False, standardize=False)
 

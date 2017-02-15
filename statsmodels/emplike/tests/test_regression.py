@@ -124,17 +124,15 @@ class TestRegressionNM(GenRes):
 
     @slow
     def test_ci_beta0(self):
-        """
-        All confidence intervals are tested by conducting a hypothesis
-        tests at the confidence interval values since el_test
-        is already tested against Matlab
+        # All confidence intervals are tested by conducting a hypothesis
+        # tests at the confidence interval values since el_test
+        # is already tested against Matlab
+        #
+        # See Also
+        # --------
+        #
+        # test_descriptive.py, test_ci_skew
 
-        See Also
-        --------
-
-        test_descriptive.py, test_ci_skew
-
-        """
         beta0ci = self.res1.conf_int_el(0, method='nm')
         assert_almost_equal(beta0ci, self.res2.test_ci_beta0, 6)
 

@@ -177,12 +177,11 @@ def test_endog_1D_array():
         'Histamine0 ~ 0 + Depleted', data)
 
 def test_affine_hypothesis():
-    """ Testing affine hypothesis, compared with R car linearHypothesis
-    Note: The test statistis Phillai, Wilks, Hotelling-Lawley
-    and Roy are the same as R output but the approximate F and degree
-    of freedoms can be different. This is due to the fact that this
-    implementation is based on SAS formula [1]
-    """
+    # Testing affine hypothesis, compared with R car linearHypothesis
+    # Note: The test statistis Phillai, Wilks, Hotelling-Lawley
+    # and Roy are the same as R output but the approximate F and degree
+    # of freedoms can be different. This is due to the fact that this
+    # implementation is based on SAS formula [1]
     mod = _MultivariateOLS.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
         data)
