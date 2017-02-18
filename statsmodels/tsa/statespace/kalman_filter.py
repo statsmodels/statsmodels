@@ -749,7 +749,8 @@ class KalmanFilter(Representation):
 
     def filter(self, filter_method=None, inversion_method=None,
                stability_method=None, conserve_memory=None, filter_timing=None,
-               tolerance=None, loglikelihood_burn=None, complex_step=False):
+               tolerance=None, loglikelihood_burn=None, complex_step=False,
+               scale=None):
         r"""
         Apply the Kalman filter to the statespace model.
 
@@ -776,6 +777,10 @@ class KalmanFilter(Representation):
         loglikelihood_burn : int, optional
             The number of initial periods during which the loglikelihood is not
             recorded. Default is 0.
+        scale : numeric, optional
+            If the `scale` argument is provided when `FILTER_CONCENTRATED` is
+            active, `FILTER_CONCENTRATED` is disabled and the given scale is
+            applied to the observation and state covariance matrices.
 
         Notes
         -----
@@ -785,6 +790,18 @@ class KalmanFilter(Representation):
         if conserve_memory is None:
             conserve_memory = self.conserve_memory | MEMORY_NO_SMOOTHING
 
+        # If a scale was provided, use it and do not concentrate it out of the
+        # loglikelihood
+        if scale is not None:
+            if not self.filter_concentrated:
+                raise ValueError('Cannot provide scale if filter method does'
+                                 ' not include FILTER_CONCENTRATED.')
+            self.filter_concentrated = False
+            obs_cov = self['obs_cov']
+            state_cov = self['state_cov']
+            self['obs_cov'] = scale * self['obs_cov']
+            self['state_cov'] = scale * self['state_cov']
+
         # Run the filter
         kfilter = self._filter(
             filter_method, inversion_method, stability_method, conserve_memory,
@@ -793,6 +810,16 @@ class KalmanFilter(Representation):
         results = self.results_class(self)
         results.update_representation(self)
         results.update_filter(kfilter)
+
+        # If a scale was provided, reset the model and update the results
+        # object
+        if scale is not None:
+            self['state_cov'] = state_cov
+            self['obs_cov'] = obs_cov
+            self.filter_concentrated = True
+
+            results.filter_concentrated = True
+            results.scale = scale
 
         return results
 
@@ -1894,9 +1921,16 @@ class FilterResults(FrozenRepresentation):
             endog.fill(np.nan)
             endog = np.asfortranarray(np.c_[self.endog[:, :nstatic], endog])
 
+            # Do not propagate through FILTER_CONCENTRATED, because we want
+            # to perform prediction based on the estimated values, and one of
+            # the estimated values is the scale (and in any case, the
+            # obs_cov and state_cov have been updated to reflect the scale
+            # estimate already)
+            filter_method = self.filter_method & ~FILTER_CONCENTRATED
+
             # Setup the new statespace representation
             model_kwargs = {
-                'filter_method': self.filter_method,
+                'filter_method': filter_method,
                 'inversion_method': self.inversion_method,
                 'stability_method': self.stability_method,
                 'conserve_memory': self.conserve_memory,

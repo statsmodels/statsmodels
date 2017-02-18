@@ -596,9 +596,53 @@ class MLEModel(tsbase.TimeSeriesModel):
         result = self.ssm.smooth(complex_step=complex_step, **kwargs)
 
         # Wrap in a results object
+<<<<<<< e422acda25f30d507cdfd697d715f265d8b0b027
         return self._wrap_results(params, result, return_ssm, cov_type,
                                   cov_kwds, results_class,
                                   results_wrapper_class)
+=======
+        if not return_ssm:
+            result_kwargs = {}
+            if cov_type is not None:
+                result_kwargs['cov_type'] = cov_type
+            if cov_kwds is not None:
+                result_kwargs['cov_kwds'] = cov_kwds
+
+            if results_class is None:
+                results_class = MLEResults
+            if results_wrapper_class is None:
+                results_wrapper_class = MLEResultsWrapper
+
+            result = results_wrapper_class(
+                results_class(self, params, result, **result_kwargs)
+            )
+
+        return result
+
+    def _handle_args(self, names, defaults, *args, **kwargs):
+        output_args = []
+        # We need to handle positional arguments in two ways, in case this was
+        # called by a Scipy optimization routine
+        if len(args) > 0:
+            # the fit() method will pass a dictionary
+            if isinstance(args[0], dict):
+                flags = args[0]
+            # otherwise, a user may have just used positional arguments...
+            else:
+                flags = dict(zip(names, args))
+            for i in range(len(names)):
+                output_args.append(flags.get(names[i], defaults[i]))
+
+            for name, value in flags.items():
+                if name in kwargs:
+                    raise TypeError("loglike() got multiple values for keyword"
+                                    " argument '%s'" % name)
+        else:
+            for i in range(len(names)):
+                output_args.append(kwargs.pop(names[i], defaults[i]))
+
+        return tuple(output_args) + (kwargs,)
+>>>>>>> REF: Allow passing scale to filter, smooth
 
     _loglike_param_names = ['transformed', 'complex_step']
     _loglike_param_defaults = [True, False]
@@ -1538,8 +1582,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     statsmodels.tsa.statespace.representation.FrozenRepresentation
     """
     def __init__(self, model, params, results, cov_type='opg',
-                 cov_kwds=None, scale=1, **kwargs):
+                 cov_kwds=None, **kwargs):
         self.data = model.data
+        scale = results.scale
 
         tsbase.TimeSeriesModelResults.__init__(self, model, params,
                                                normalized_cov_params=None,

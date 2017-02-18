@@ -352,7 +352,8 @@ class KalmanSmoother(KalmanFilter):
         return smoother
 
     def smooth(self, smoother_output=None, smooth_method=None, results=None,
-               run_filter=True, prefix=None, complex_step=False, **kwargs):
+               run_filter=True, prefix=None, complex_step=False, scale=None,
+               **kwargs):
         """
         Apply the Kalman smoother to the statespace model.
 
@@ -377,6 +378,18 @@ class KalmanSmoother(KalmanFilter):
         -------
         SmootherResults object
         """
+        # If a scale was provided, use it and do not concentrate it out of the
+        # loglikelihood
+        if scale is not None:
+            if not self.filter_concentrated:
+                raise ValueError('Cannot provide scale if filter method does'
+                                 ' not include FILTER_CONCENTRATED.')
+            self.filter_concentrated = False
+            obs_cov = self['obs_cov']
+            state_cov = self['state_cov']
+            self['obs_cov'] = scale * self['obs_cov']
+            self['state_cov'] = scale * self['state_cov']
+
         # Run the filter
         kfilter = self._filter(**kwargs)
 
@@ -392,6 +405,16 @@ class KalmanSmoother(KalmanFilter):
 
         # Update the results
         results.update_smoother(smoother)
+
+        # If a scale was provided, reset the model and update the results
+        # object
+        if scale is not None:
+            self['state_cov'] = state_cov
+            self['obs_cov'] = obs_cov
+            self.filter_concentrated = True
+
+            results.filter_concentrated = True
+            results.scale = scale
 
         return results
 
