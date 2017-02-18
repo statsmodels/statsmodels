@@ -22,7 +22,7 @@ _faa_di_bruno_cache = {
 
 
 def _faa_di_bruno_partitions(n):
-    """ Return all non-negative integer solutions of the diophantine equation::
+    """ Return all non-negative integer solutions of the diophantine equation
 
             n*k_n + ... + 2*k_2 + 1*k_1 = n   (1)
 

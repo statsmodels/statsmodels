@@ -299,7 +299,7 @@ class RegressionModel(base.LikelihoodModel):
 
 
 class GLS(RegressionModel):
-    __doc__ = """
+    __doc__ = r"""
     Generalized least squares model with a general covariance structure.
 
     %(params)s
@@ -834,7 +834,7 @@ class OLS(WLS):
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         L1_wt=1., start_params=None, profile_scale=False,
                         refit=False, **kwargs):
-        """
+        r"""
         Return a regularized fit to a linear regression model.
 
         Parameters
@@ -885,9 +885,11 @@ class OLS(WLS):
         the glmnet package in R.  The penalty is a combination of L1
         and L2 penalties.
 
-        The function that is minimized is: ..math::
+        The function that is minimized is: 
+        
+        .. math::
 
-            0.5*RSS/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
+            0.5*RSS/n + alpha*((1-L1\_wt)*|params|_2^2/2 + L1\_wt*|params|_1)
 
         where RSS is the usual regression sum of squares, n is the
         sample size, and :math:`|*|_1` and :math:`|*|_2` are the L1 and L2
@@ -1220,7 +1222,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
 
 
 class RegressionResults(base.LikelihoodModelResults):
-    """
+    r"""
     This class summarizes the fit of a linear regression model.
 
     It handles the output of contrasts, estimates of covariance, etc.
@@ -1231,12 +1233,12 @@ class RegressionResults(base.LikelihoodModelResults):
 
     aic
         Akaike's information criteria. For a model with a constant
-        :math:`-2llf + 2(df_model + 1)`. For a model without a constant
-        :math:`-2llf + 2(df_model)`.
+        :math:`-2llf + 2(df\_model + 1)`. For a model without a constant
+        :math:`-2llf + 2(df\_model)`.
     bic
         Bayes' information criteria. For a model with a constant
-        :math:`-2llf + \log(n)(df_model+1)`. For a model without a constant
-        :math:`-2llf + \log(n)(df_model)`
+        :math:`-2llf + \log(n)(df\_model+1)`. For a model without a constant
+        :math:`-2llf + \log(n)(df\_model)`
     bse
         The standard errors of the parameter estimates.
     pinv_wexog
@@ -1883,7 +1885,7 @@ class RegressionResults(base.LikelihoodModelResults):
         .. math:: D=-2\\log\\left(\\frac{\\mathcal{L}_{null}}
            {\\mathcal{L}_{alternative}}\\right)
 
-        where :math:`\mathcal{L}` is the likelihood of the model. With :math:`D`
+        where :math:`\\mathcal{L}` is the likelihood of the model. With :math:`D`
         distributed as chisquare with df equal to difference in number of
         parameters or equivalently difference in residual degrees of freedom.
 

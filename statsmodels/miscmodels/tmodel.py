@@ -129,7 +129,7 @@ class TLinearModel(GenericLikelihoodModel):
 
         Notes
         -----
-        .. math :: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
 
         The t distribution is the standard t distribution and not a standardized
         t distribution, which means that the scale parameter is not equal to the

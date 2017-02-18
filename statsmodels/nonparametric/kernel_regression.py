@@ -278,7 +278,7 @@ class KernelReg(GenericKDE):
         return aic
 
     def cv_loo(self, bw, func):
-        """
+        r"""
         The cross-validation function with leave-one-out estimator.
 
         Parameters
@@ -301,7 +301,7 @@ class KernelReg(GenericKDE):
 
         For details see p.35 in [2]
 
-        ..math:: CV(h)=n^{-1}\sum_{i=1}^{n}(Y_{i}-g_{-i}(X_{i}))^{2}
+        .. math:: CV(h)=n^{-1}\sum_{i=1}^{n}(Y_{i}-g_{-i}(X_{i}))^{2}
 
         where :math:`g_{-i}(X_{i})` is the leave-one-out estimator of g(X)
         and :math:`h` is the vector of bandwidths
@@ -601,7 +601,7 @@ class KernelCensoredReg(KernelReg):
 
 
     def cv_loo(self, bw, func):
-        """
+        r"""
         The cross-validation function with leave-one-out
         estimator
 
@@ -627,7 +627,7 @@ class KernelCensoredReg(KernelReg):
 
         For details see p.35 in [2]
 
-        ..math:: CV(h)=n^{-1}\sum_{i=1}^{n}(Y_{i}-g_{-i}(X_{i}))^{2}
+        .. math:: CV(h)=n^{-1}\sum_{i=1}^{n}(Y_{i}-g_{-i}(X_{i}))^{2}
 
         where :math:`g_{-i}(X_{i})` is the leave-one-out estimator of g(X)
         and :math:`h` is the vector of bandwidths
@@ -717,7 +717,7 @@ class TestRegCoefC(object):
     References
     ----------
     Racine, J.: "Consistent Significance Testing for Nonparametric Regression"
-    Journal of Business \& Economics Statistics.
+    Journal of Business & Economics Statistics.
 
     Chapter 12 in [1].
     """
