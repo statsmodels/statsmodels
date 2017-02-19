@@ -1,3 +1,4 @@
+from statsmodels.compat.numpy import recarray_select
 from statsmodels.compat.python import (range, StringIO, urlopen,
                                        HTTPError, URLError, lrange,
                                        cPickle, urljoin, BytesIO, long, PY3)
@@ -98,7 +99,7 @@ def process_recarray(data, endog_idx=0, exog_idx=None, stack=True, dtype=None):
     if stack:
         exog = np.column_stack(data[field] for field in exog_name)
     else:
-        exog = data[exog_name]
+        exog = recarray_select(data, exog_name)
 
     if dtype:
         endog = endog.astype(dtype)
@@ -263,7 +264,7 @@ def get_rdataset(dataname, package="datasets", cache=False):
     -------
     dataset : Dataset instance
         A `statsmodels.data.utils.Dataset` instance. This objects has
-        attributes::
+        attributes:
 
         * data - A pandas DataFrame containing the data
         * title - The dataset title
@@ -328,10 +329,11 @@ def clear_data_home(data_home=None):
     data_home = get_data_home(data_home)
     shutil.rmtree(data_home)
 
-def check_internet():
+def check_internet(url=None):
     """Check if internet is available"""
+    url = "https://github.com" if url is None else url
     try:
-        urlopen("https://github.com")
+        urlopen(url)
     except URLError as err:
         return False
     return True

@@ -668,9 +668,6 @@ class GenericLikelihoodModel(LikelihoodModel):
         kwds.setdefault('centered', True)
         return approx_fprime(params, self.loglikeobs, **kwds)
 
-    jac = np.deprecate(score_obs, 'jac', 'score_obs', "Use score_obs method."
-                       " jac will be removed in 0.7.")
-
     def hessian(self, params):
         '''
         Hessian of log-likelihood evaluated at params
@@ -678,6 +675,30 @@ class GenericLikelihoodModel(LikelihoodModel):
         from statsmodels.tools.numdiff import approx_hess
         # need options for hess (epsilon)
         return approx_hess(params, self.loglike)
+
+    def hessian_factor(self, params, scale=None, observed=True):
+        """Weights for calculating Hessian
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+        observed : bool
+            If True, then the observed Hessian is returned. If false then the
+            expected information matrix is returned.
+
+        Returns
+        -------
+        hessian_factor : ndarray, 1d
+            A 1d weight vector used in the calculation of the Hessian.
+            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
+        """
+
+        raise NotImplementedError
 
     def fit(self, start_params=None, method='nm', maxiter=500, full_output=1,
             disp=1, callback=None, retall=0, **kwargs):
@@ -785,7 +806,6 @@ class Results(object):
             return predict_results
         else:
             return exog_interface.from_statsmodels(predict_results)
-
 
     def summary(self):
         pass
@@ -1503,9 +1523,9 @@ class LikelihoodModelResults(Results):
         C(Weight, Sum)                    12.432445  3.99943118767e-05              2        51
         C(Duration, Sum):C(Weight, Sum)    0.176002      0.83912310946              2        51
 
-        >>> res_poi = Poisson.from_formula("Days ~ C(Weight) * C(Duration)",
+        >>> res_poi = Poisson.from_formula("Days ~ C(Weight) * C(Duration)", \
                                            data).fit(cov_type='HC0')
-        >>> wt = res_poi.wald_test_terms(skip_single=False,
+        >>> wt = res_poi.wald_test_terms(skip_single=False, \
                                          combine_terms=['Duration', 'Weight'])
         >>> print(wt)
                                     chi2             P>chi2  df constraint
@@ -1831,10 +1851,6 @@ class ResultMixin(object):
         '''cached Jacobian of log-likelihood
         '''
         return self.model.score_obs(self.params)
-
-    jacv = np.deprecate(score_obsv, 'jacv', 'score_obsv',
-                        "Use score_obsv attribute."
-                       " jacv will be removed in 0.7.")
 
     @cache_readonly
     def hessv(self):

@@ -60,6 +60,9 @@ General references for this class of models are::
 Module Reference
 ----------------
 
+.. module:: statsmodels.discrete.discrete_model
+   :synopsis: Models for discrete data
+
 The specific model classes are:
 
 .. autosummary::

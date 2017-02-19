@@ -6,7 +6,7 @@ from patsy.design_info import DesignMatrix
 
 from statsmodels.tools.sm_exceptions import ValueWarning
 
-NUMPY_TYPES = [np.ndarray, np.float64, np.recarray]
+NUMPY_TYPES = [np.ndarray, np.float64]
 PANDAS_TYPES = [pd.Series, pd.DataFrame]
 DEFAULT_EXTERNAL_TYPE = np.ndarray
 
@@ -67,7 +67,6 @@ class DataInterface(object):
             self.init_data_interface(data)
 
         if self.use_formula and self.model is not None and hasattr(self.model, 'formula'):
-
             to_return = dmatrix(self.model.data.design_info.builder, data, return_type='dataframe')
 
             if len(to_return) < len(self.index):
@@ -112,6 +111,8 @@ class DataInterface(object):
 
         if from_type == DesignMatrix:
             return data
+
+        self.index = getattr(data, 'index', None)
 
         if from_type in NUMPY_TYPES:
             data_to_return = from_numpy_array(data, self.external_type, index=self.index, name=self.name,
@@ -158,7 +159,11 @@ def to_numpy_array(data):
     elif from_type == np.recarray:
         return data.view(np.ndarray)
 
-    elif from_type in [pd.Series, pd.DataFrame]:
+    elif from_type == pd.Series:
+
+        return data.values
+
+    elif from_type == pd.DataFrame:
         return data.values
 
     else:
@@ -170,8 +175,9 @@ def to_numpy_array(data):
 
 
 def to_list(data):
+    from_type = type(data)
 
-    if type(data) == list:
+    if from_type == list:
         return data
 
     else:
@@ -179,8 +185,9 @@ def to_list(data):
 
 
 def to_pandas(data, name=None, columns=None):
+    from_type = type(data)
 
-    if type(data) in PANDAS_TYPES:
+    if from_type in PANDAS_TYPES:
         return data
 
     else:
@@ -194,10 +201,9 @@ def to_pandas(data, name=None, columns=None):
 
 
 def from_numpy_array(data, to_type, index=None, name=None, columns=None, from_ndim=None):
+    from_type = type(data)
 
-    assert type(data) in [np.ndarray, np.recarray]
-
-    if type(data) == to_type:
+    if from_type == to_type:
         return data
 
     elif to_type == list:
@@ -227,9 +233,6 @@ def from_numpy_array(data, to_type, index=None, name=None, columns=None, from_nd
 
 
 def from_pandas(data, to_type):
-
-    assert type(data) in [pd.DataFrame, pd.Series]
-
     from_type = type(data)
 
     if from_type == to_type:
@@ -258,10 +261,9 @@ def from_pandas(data, to_type):
 
 
 def from_list(data, to_type, index=None, name=None, columns=None):
+    from_type = type(data)
 
-    assert type(data) == list
-
-    if to_type == list:
+    if from_type == to_type:
         return data
 
     elif to_type == np.ndarray:
@@ -299,15 +301,7 @@ def get_ndim(data):
         except TypeError:
             raise TypeError('Cannot find dimension of {}'.format(data_type))
 
-    if len(data.shape) > 2:
-        dims = sum(1 for elem in data.shape if elem > 1)
-
-        if dims > 2:
-            raise ValueError('Data must have no more than two dimensions')
-        else:
-            return dims
-
-    elif get_shape_dim(data.shape, 0) > 1 and get_shape_dim(data.shape, 1) == 1:
+    if get_shape_dim(data.shape, 0) > 1 and get_shape_dim(data.shape, 1) == 1:
         return 1
 
     elif get_shape_dim(data.shape, 0) == 1 and get_shape_dim(data.shape, 1) > 1:

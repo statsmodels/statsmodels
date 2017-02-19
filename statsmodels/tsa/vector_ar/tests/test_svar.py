@@ -16,10 +16,9 @@ DECIMAL_4 = 4
 class TestSVAR(object):
     @classmethod
     def setupClass(cls):
-        mdata = sm.datasets.macrodata.load().data
+        mdata = sm.datasets.macrodata.load_pandas().data
         mdata = mdata[['realgdp','realcons','realinv']]
-        names = mdata.dtype.names
-        data = mdata.view((float,3))
+        data = mdata.values
         data = np.diff(np.log(data), axis=0)
         A = np.asarray([[1, 0, 0],['E', 1, 0],['E', 'E', 1]])
         B = np.asarray([['E', 0, 0], [0, 'E', 0], [0, 0, 'E']])

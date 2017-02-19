@@ -299,7 +299,7 @@ class RegressionModel(base.LikelihoodModel):
 
 
 class GLS(RegressionModel):
-    __doc__ = """
+    __doc__ = r"""
     Generalized least squares model with a general covariance structure.
 
     %(params)s
@@ -368,7 +368,7 @@ class GLS(RegressionModel):
 
     >>> gls_model = sm.GLS(data.endog, data.exog, sigma=sigma)
     >>> gls_results = gls_model.fit()
-    >>> print(gls_results.summary()))
+    >>> print(gls_results.summary())
 
     """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc + base._extra_param_doc}
@@ -458,6 +458,36 @@ class GLS(RegressionModel):
                 llf -= 0.5*np.sum(np.log(self.sigma))
             # with error covariance matrix
         return llf
+
+
+    def hessian_factor(self, params, scale=None, observed=True):
+        """Weights for calculating Hessian
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+        observed : bool
+            If True, then the observed Hessian is returned. If false then the
+            expected information matrix is returned.
+
+        Returns
+        -------
+        hessian_factor : ndarray, 1d
+            A 1d weight vector used in the calculation of the Hessian.
+            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
+        """
+
+        if self.sigma is None or self.sigma.shape == ():
+            return np.ones(self.exog.shape[0])
+        elif self.sigma.ndim == 1:
+            return self.cholsigmainv
+        else:
+            return np.diag(self.cholsigmainv)
 
 class WLS(RegressionModel):
     __doc__ = """
@@ -581,6 +611,30 @@ class WLS(RegressionModel):
         llf += 0.5 * np.sum(np.log(self.weights))
         return llf
 
+    def hessian_factor(self, params, scale=None, observed=True):
+        """Weights for calculating Hessian
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+        observed : bool
+            If True, then the observed Hessian is returned. If false then the
+            expected information matrix is returned.
+
+        Returns
+        -------
+        hessian_factor : ndarray, 1d
+            A 1d weight vector used in the calculation of the Hessian.
+            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
+        """
+
+        return self.weights
+
 
 class OLS(WLS):
     __doc__ = """
@@ -614,7 +668,7 @@ class OLS(WLS):
     array([ 2.14285714,  0.25      ])
     >>> results.tvalues
     array([ 1.87867287,  0.98019606])
-    >>> print(results.t_test([1, 0])))
+    >>> print(results.t_test([1, 0]))
     <T test: effect=array([ 2.14285714]), sd=array([[ 1.14062282]]), t=array([[ 1.87867287]]), p=array([[ 0.05953974]]), df_denom=5>
     >>> print(results.f_test(np.identity(2)))
     <F test: F=array([[ 19.46078431]]), p=[[ 0.00437251]], df_denom=5, df_num=2>
@@ -752,10 +806,35 @@ class OLS(WLS):
         return hess
 
 
-    def fit_regularized(self, method="elastic_net", alpha=0.,
-                        start_params=None, profile_scale=False,
-                        refit=False, **kwargs):
+    def hessian_factor(self, params, scale=None, observed=True):
+        """Weights for calculating Hessian
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+        observed : bool
+            If True, then the observed Hessian is returned. If false then the
+            expected information matrix is returned.
+
+        Returns
+        -------
+        hessian_factor : ndarray, 1d
+            A 1d weight vector used in the calculation of the Hessian.
+            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
         """
+
+        return np.ones(self.exog.shape[0])
+
+
+    def fit_regularized(self, method="elastic_net", alpha=0.,
+                        L1_wt=1., start_params=None, profile_scale=False,
+                        refit=False, **kwargs):
+        r"""
         Return a regularized fit to a linear regression model.
 
         Parameters
@@ -767,6 +846,10 @@ class OLS(WLS):
             applies to all variables in the model.  If a vector, it
             must have the same length as `params`, and contains a
             penalty weight for each coefficient.
+        L1_wt: scalar
+            The fraction of the penalty given to the L1 penalty term.
+            Must be between 0 and 1 (inclusive).  If 0, the fit is a
+            ridge fit, if 1 it is a lasso fit.
         start_params : array-like
             Starting values for ``params``.
         profile_scale : bool
@@ -777,6 +860,18 @@ class OLS(WLS):
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
+        distributed : bool
+            If True, the model uses distributed methods for fitting,
+            will raise an error if True and partitions is None.
+        generator : function
+            generator used to partition the model, allows for handling
+            of out of memory/parallel computing.
+        partitions : scalar
+            The number of partitions desired for the distributed
+            estimation.
+        threshold : scalar or array-like
+            The threshold below which coefficients are zeroed out,
+            only used for distributed estimation
 
         Returns
         -------
@@ -790,9 +885,11 @@ class OLS(WLS):
         the glmnet package in R.  The penalty is a combination of L1
         and L2 penalties.
 
-        The function that is minimized is: ..math::
+        The function that is minimized is: 
+        
+        .. math::
 
-            0.5*RSS/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
+            0.5*RSS/n + alpha*((1-L1\_wt)*|params|_2^2/2 + L1\_wt*|params|_1)
 
         where RSS is the usual regression sum of squares, n is the
         sample size, and :math:`|*|_1` and :math:`|*|_2` are the L1 and L2
@@ -805,9 +902,6 @@ class OLS(WLS):
 
         maxiter : int
             Maximum number of iterations
-        L1_wt  : float
-            Must be in [0, 1].  The L1 penalty has weight L1_wt and the
-            L2 penalty has weight 1 - L1_wt.
         cnvrg_tol : float
             Convergence threshold for line searches
         zero_tol : float
@@ -822,12 +916,15 @@ class OLS(WLS):
 
         from statsmodels.base.elastic_net import fit_elasticnet
 
+        if L1_wt == 0:
+            return self._fit_ridge(alpha)
+
         # In the future we could add support for other penalties, e.g. SCAD.
         if method != "elastic_net":
-            raise ValueError("method for fit_regularied must be elastic_net")
+            raise ValueError("method for fit_regularized must be elastic_net")
 
         # Set default parameters.
-        defaults = {"maxiter" : 50, "L1_wt" : 1, "cnvrg_tol" : 1e-10,
+        defaults = {"maxiter" : 50, "cnvrg_tol" : 1e-10,
                     "zero_tol" : 1e-10}
         defaults.update(kwargs)
 
@@ -845,12 +942,42 @@ class OLS(WLS):
 
         return fit_elasticnet(self, method=method,
                               alpha=alpha,
+                              L1_wt=L1_wt,
                               start_params=start_params,
                               loglike_kwds=loglike_kwds,
                               score_kwds=score_kwds,
                               hess_kwds=hess_kwds,
                               refit=refit,
+                              check_step=False,
                               **defaults)
+
+
+    def _fit_ridge(self, alpha):
+        """
+        Fit a linear model using ridge regression.
+
+        Parameters
+        ----------
+        alpha : scalar or array-like
+            The penalty weight.  If a scalar, the same penalty weight
+            applies to all variables in the model.  If a vector, it
+            must have the same length as `params`, and contains a
+            penalty weight for each coefficient.
+
+        Notes
+        -----
+        Equivalent to fit_regularized with L1_wt = 0 (but implemented
+        more efficiently).
+        """
+
+        u, s, vt = np.linalg.svd(self.exog, 0)
+        v = vt.T
+        s2 = s*s + alpha * self.nobs
+        params = np.dot(u.T, self.endog) * s / s2
+        params = np.dot(v, params)
+
+        from statsmodels.base.elastic_net import RegularizedResults
+        return RegularizedResults(self, params)
 
 
 class GLSAR(GLS):
@@ -1055,7 +1182,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     >>> from statsmodels.datasets.sunspots import load
     >>> data = load()
     >>> rho, sigma = sm.regression.yule_walker(data.endog,
-                                       order=4, method="mle")
+    ...                                        order=4, method="mle")
 
     >>> rho
     array([ 1.28310031, -0.45240924, -0.20770299,  0.04794365])
@@ -1095,7 +1222,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
 
 
 class RegressionResults(base.LikelihoodModelResults):
-    """
+    r"""
     This class summarizes the fit of a linear regression model.
 
     It handles the output of contrasts, estimates of covariance, etc.
@@ -1106,12 +1233,12 @@ class RegressionResults(base.LikelihoodModelResults):
 
     aic
         Akaike's information criteria. For a model with a constant
-        :math:`-2llf + 2(df_model + 1)`. For a model without a constant
-        :math:`-2llf + 2(df_model)`.
+        :math:`-2llf + 2(df\_model + 1)`. For a model without a constant
+        :math:`-2llf + 2(df\_model)`.
     bic
         Bayes' information criteria. For a model with a constant
-        :math:`-2llf + \log(n)(df_model+1)`. For a model without a constant
-        :math:`-2llf + \log(n)(df_model)`
+        :math:`-2llf + \log(n)(df\_model+1)`. For a model without a constant
+        :math:`-2llf + \log(n)(df\_model)`
     bse
         The standard errors of the parameter estimates.
     pinv_wexog
@@ -1758,7 +1885,7 @@ class RegressionResults(base.LikelihoodModelResults):
         .. math:: D=-2\\log\\left(\\frac{\\mathcal{L}_{null}}
            {\\mathcal{L}_{alternative}}\\right)
 
-        where :math:`\mathcal{L}` is the likelihood of the model. With :math:`D`
+        where :math:`\\mathcal{L}` is the likelihood of the model. With :math:`D`
         distributed as chisquare with df equal to difference in number of
         parameters or equivalently difference in residual degrees of freedom.
 
@@ -2450,8 +2577,8 @@ class OLSResults(RegressionResults):
         >>> fitted.rsquared
         >>> 0.91357690446068196
         >>> # Test that the slope on the first variable is 0
-        >>> fitted.test_beta([0], [1])
-        >>> (1.7894660442330235e-07, 27.248146353709153)
+        >>> fitted.el_test([0], [1])
+        >>> (27.248146353888796, 1.7894660442330235e-07)
         """
         params = np.copy(self.params)
         opt_fun_inst = _ELRegOpts() # to store weights
@@ -2643,4 +2770,3 @@ if __name__ == "__main__":
 | BIC criterion:              238.643    Kurtosis:                2.43373 |
 ---------------------------------------------------------------------------
 """
-

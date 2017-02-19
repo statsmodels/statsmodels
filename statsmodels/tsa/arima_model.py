@@ -33,27 +33,26 @@ from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
 from statsmodels.tsa.kalmanf import KalmanFilter
 
 _armax_notes = """
+    Notes
+    -----
+    If exogenous variables are given, then the model that is fit is
 
-        Notes
-        -----
-        If exogenous variables are given, then the model that is fit is
+    .. math::
 
-        .. math::
+       \\phi(L)(y_t - X_t\\beta) = \\theta(L)\epsilon_t
 
-           \\phi(L)(y_t - X_t\\beta) = \\theta(L)\epsilon_t
-
-        where :math:`\\phi` and :math:`\\theta` are polynomials in the lag
-        operator, :math:`L`. This is the regression model with ARMA errors,
-        or ARMAX model. This specification is used, whether or not the model
-        is fit using conditional sum of square or maximum-likelihood, using
-        the `method` argument in
-        :meth:`statsmodels.tsa.arima_model.%(Model)s.fit`. Therefore, for
-        now, `css` and `mle` refer to estimation methods only. This may
-        change for the case of the `css` model in future versions.
+    where :math:`\\phi` and :math:`\\theta` are polynomials in the lag
+    operator, :math:`L`. This is the regression model with ARMA errors,
+    or ARMAX model. This specification is used, whether or not the model
+    is fit using conditional sum of square or maximum-likelihood, using
+    the `method` argument in
+    :meth:`statsmodels.tsa.arima_model.%(Model)s.fit`. Therefore, for
+    now, `css` and `mle` refer to estimation methods only. This may
+    change for the case of the `css` model in future versions.
 """
 
-_arma_params = """\
-    endog : array-like
+_arma_params = \
+"""endog : array-like
         The endogenous variable.
     order : iterable
         The (p,q) order of the model for the number of AR parameters,
@@ -66,8 +65,8 @@ _arma_model = "Autoregressive Moving Average ARMA(p,q) Model"
 
 _arima_model = "Autoregressive Integrated Moving Average ARIMA(p,d,q) Model"
 
-_arima_params = """\
-    endog : array-like
+_arima_params = \
+"""endog : array-like
         The endogenous variable.
     order : iterable
         The (p,d,q) order of the model for the number of AR parameters,
@@ -974,7 +973,6 @@ class ARMA(tsbase.TimeSeriesModel):
 #so model methods are not the same on unfit models as fit ones
 #starting to think that order of model should be put in instantiation...
 class ARIMA(ARMA):
-
     __doc__ = tsbase._tsa_doc % {"model" : _arima_model,
                                  "params" : _arima_params, "extra_params" : "",
                                  "extra_sections" : _armax_notes %
@@ -989,6 +987,11 @@ class ARIMA(ARMA):
             mod = super(ARIMA, cls).__new__(cls)
             mod.__init__(endog, order, exog, dates, freq, missing)
             return mod
+
+    def __getnewargs__(self):
+        return ((self.endog),
+                (self.k_lags, self.k_diff, self.k_ma),
+                self.exog, self.dates, self.freq, self.missing)
 
     def __init__(self, endog, order, exog=None, dates=None, freq=None,
                  missing='none'):

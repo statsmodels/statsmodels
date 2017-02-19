@@ -1,3 +1,6 @@
+.. module:: statsmodels.tsa
+   :synopsis: Time-series analysis
+
 .. currentmodule:: statsmodels.tsa
 
 
@@ -75,6 +78,7 @@ Descriptive Statistics and Tests
    stattools.periodogram
    stattools.adfuller
    stattools.kpss
+   stattools.coint
    stattools.bds
    stattools.q_stat
    stattools.grangercausalitytests
@@ -211,10 +215,11 @@ Time Series Filters
 TSA Tools
 """""""""
 
+.. currentmodule:: statsmodels.tsa
+
 .. autosummary::
    :toctree: generated/
 
-   tsatools.add_constant
    tsatools.add_trend
    tsatools.detrend
    tsatools.lagmat

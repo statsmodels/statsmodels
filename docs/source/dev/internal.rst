@@ -20,6 +20,9 @@ These are the base classes for both the estimation models and the results.
 They are not directly useful, but layout the structure of the subclasses and
 define some common methods.
 
+.. module:: statsmodels.base.model
+   :synopsis: Base classes that are inherited by models
+
 .. currentmodule:: statsmodels.base.model
 
 .. autosummary::
@@ -32,6 +35,9 @@ define some common methods.
    LikelihoodModelResults
    ResultMixin
    GenericLikelihoodModelResults
+
+.. module:: statsmodels.stats.contrast
+   :synopsis: Classes for statistical test
 
 .. currentmodule:: statsmodels.stats.contrast
 

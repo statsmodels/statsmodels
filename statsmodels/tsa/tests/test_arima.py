@@ -1,4 +1,4 @@
-from statsmodels.compat.python import lrange, BytesIO
+from statsmodels.compat.python import lrange, BytesIO, cPickle
 
 import os
 import warnings
@@ -151,6 +151,7 @@ class CheckArmaResultsMixin(object):
     def test_summary(self):
         # smoke tests
         table = self.res1.summary()
+
 
 
 class CheckForecastMixin(object):
@@ -1587,7 +1588,7 @@ def test_arima_predict_bug():
     #predict_start_date wasn't getting set on start = None
     from statsmodels.datasets import sunspots
     dta = sunspots.load_pandas().data.SUNACTIVITY
-    dta.index = pd.DatetimeIndex(start='1700', end='2009', freq='A')
+    dta.index = pd.DatetimeIndex(start='1700', end='2009', freq='A')[:309]
     print(dta.index)
     arma_mod20 = ARMA(dta, (2,0)).fit(disp=-1)
     arma_mod20.predict(None, None)
@@ -2006,7 +2007,7 @@ def test_plot_predict():
     from statsmodels.datasets.sunspots import load_pandas
 
     dta = load_pandas().data[['SUNACTIVITY']]
-    dta.index = DatetimeIndex(start='1700', end='2009', freq='A')
+    dta.index = DatetimeIndex(start='1700', end='2009', freq='A')[:309]
     res = ARMA(dta, (3, 0)).fit(disp=-1)
     fig = res.plot_predict('1990', '2012', dynamic=True, plot_insample=False)
     plt.close(fig)
@@ -2250,6 +2251,39 @@ def test_long_ar_start_params():
     res = model.fit(method='css-mle',start_ar_lags=10, disp=0)
     res = model.fit(method='mle',start_ar_lags=10, disp=0)
     assert_raises(ValueError, model.fit, start_ar_lags=nobs+5, disp=0)
+
+
+def test_arma_pickle():
+    np.random.seed(9876565)
+    x = fa.ArmaFft([1, -0.5], [1., 0.4], 40).generate_sample(nsample=200,
+                                                             burnin=1000)
+    mod = ARMA(x, (1, 1))
+    pkl_mod = cPickle.loads(cPickle.dumps(mod))
+
+    res = mod.fit(trend="c", disp=-1)
+    pkl_res = pkl_mod.fit(trend="c", disp=-1)
+
+    assert_allclose(res.params, pkl_res.params)
+    assert_allclose(res.llf, pkl_res.llf)
+    assert_almost_equal(res.resid, pkl_res.resid)
+    assert_almost_equal(res.fittedvalues, pkl_res.fittedvalues)
+    assert_almost_equal(res.pvalues, pkl_res.pvalues)
+
+
+def test_arima_pickle():
+    endog = y_arma[:, 6]
+    mod = ARIMA(endog, (1, 0, 1))
+    pkl_mod = cPickle.loads(cPickle.dumps(mod))
+
+    res = mod.fit(trend="c", disp=-1)
+    pkl_res = pkl_mod.fit(trend="c", disp=-1)
+
+    assert_allclose(res.params, pkl_res.params)
+    assert_allclose(res.llf, pkl_res.llf)
+    assert_almost_equal(res.resid, pkl_res.resid)
+    assert_almost_equal(res.fittedvalues, pkl_res.fittedvalues)
+    assert_almost_equal(res.pvalues, pkl_res.pvalues)
+
 
 if __name__ == "__main__":
     import nose
