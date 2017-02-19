@@ -1,3 +1,7 @@
+'''
+Author: Brendan Condon
+'''
+
 import pandas as pd
 import numpy as np
 from functools import partial
