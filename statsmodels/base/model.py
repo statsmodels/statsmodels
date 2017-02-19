@@ -789,23 +789,6 @@ class Results(object):
         at_least_2d = False
         require_col_vector = False
 
-        exog_index = exog.index if _is_using_pandas(exog, None) else None
-
-        if transform and hasattr(self.model, 'formula') and exog is not None:
-            from patsy import dmatrix
-            exog = pd.DataFrame(exog)  # user may pass series, if one predictor
-            if exog_index is None:  # user passed in a dictionary
-                exog_index = exog.index
-            exog = dmatrix(self.model.data.design_info.builder,
-                           exog, return_type="dataframe")
-            if len(exog) < len(exog_index):
-                # missing values, rows have been dropped
-                if exog_index is not None:
-                    exog = exog.reindex(exog_index)
-                else:
-                    import warnings
-                    warnings.warn("nan rows have been dropped", ValueWarning)
-
         if exog is not None:
             at_least_2d = True # needed in count model shape[1]
 
@@ -823,7 +806,6 @@ class Results(object):
             return predict_results
         else:
             return exog_interface.from_statsmodels(predict_results)
-
 
     def summary(self):
         pass

@@ -4,6 +4,8 @@ from functools import partial
 from patsy import dmatrix
 from patsy.design_info import DesignMatrix
 
+from statsmodels.tools.sm_exceptions import ValueWarning
+
 NUMPY_TYPES = [np.ndarray, np.float64]
 PANDAS_TYPES = [pd.Series, pd.DataFrame]
 DEFAULT_EXTERNAL_TYPE = np.ndarray
@@ -37,6 +39,7 @@ class DataInterface(object):
         self.ndim = get_ndim(data)
         self.is_nested_row_vector = is_nested_row_vector(data)
         self.is_col_vector = is_col_vector(data)
+        self.index = getattr(data, 'index', None)
 
         if self.external_type == DEFAULT_EXTERNAL_TYPE and data is not None:
             if not np.isscalar(data):
@@ -64,7 +67,17 @@ class DataInterface(object):
             self.init_data_interface(data)
 
         if self.use_formula and self.model is not None and hasattr(self.model, 'formula'):
-            return dmatrix(self.model.data.design_info.builder, data)
+            to_return = dmatrix(self.model.data.design_info.builder, data, return_type='dataframe')
+
+            if len(to_return) < len(self.index):
+                # missing values, rows have been dropped
+                if self.index is not None:
+                    to_return = to_return.reindex(self.index)
+                else:
+                    import warnings
+                    warnings.warn("nan rows have been dropped", ValueWarning)
+
+            return to_return
 
         if type(data) in self.permitted_types:
             to_return = data
@@ -134,68 +147,6 @@ PandasInterface = partial(DataInterface, PANDAS_TYPES, pd.DataFrame)
 ListInterface = partial(DataInterface, [list], list)
 
 
-def to_categorical(data, col=None, dictnames=False, drop=False):
-
-    ndim = get_ndim(data)
-    to_type = np.recarray
-
-    if is_recarray(data):
-
-        if ndim > 1:
-            if col is None:
-                raise ValueError('Col must not be None for multi dimensional recarray')
-            else:
-                if type(col) == int:
-                    col = data.dtype.names[col]
-
-                rec_column = data[col]
-                to_dummies = transpose(rec_column)
-
-                to_drop = drop_recarray_column(data, col)
-                to_drop = recarray_to_pandas(to_drop)
-
-        else:
-            to_drop = None
-
-            if data.dtype.names is not None:
-                name = data.dtype.names[0]
-                to_dummies = data[name]
-            else:
-                to_dummies = data
-
-            if is_col_vector(to_dummies):
-                to_dummies = transpose(to_dummies)
-
-        to_dummies = pd.Series(to_dummies)
-
-    else:
-        to_type = type(data)
-        to_dummies = to_pandas(data)
-
-        if ndim > 1:
-            to_drop = to_dummies.drop(col, 1)
-
-            if isinstance(col, int):
-                to_dummies = to_dummies.iloc[:, col]
-            elif isinstance(col, str):
-                to_dummies = to_dummies.loc[:, col]
-
-        else:
-            to_drop = None
-
-    source_data = to_pandas(data)
-    dummies = pd.get_dummies(to_dummies)
-
-    interface = NumPyInterface(external_type=to_type)
-
-    if not drop:
-        result = pd.concat([source_data, dummies], axis=1)
-        return interface.from_statsmodels(result)
-    else:
-        result = pd.concat([to_drop, dummies], axis=1)
-        return interface.from_statsmodels(result)
-
-
 def to_numpy_array(data):
     from_type = type(data)
 
@@ -238,9 +189,6 @@ def to_pandas(data, name=None, columns=None):
 
     if from_type in PANDAS_TYPES:
         return data
-
-    elif is_recarray(data):
-        return recarray_to_pandas(data)
 
     else:
         np_data = to_numpy_array(data)
@@ -488,39 +436,3 @@ def is_recarray(data):
             return False
     else:
         return False
-
-
-def recarray_to_pandas(data):
-
-    data_list = []
-
-    if data.dtype.names is None:
-
-        if is_col_vector(data):
-            data = transpose(data)
-
-        return pd.Series(data)
-
-    else:
-
-        for name in data.dtype.names:
-            col = data[name]
-
-            if is_col_vector(col):
-                col = transpose(col)
-
-            data_list.append(pd.Series(col, name=name))
-
-        return pd.concat(data_list, axis=1)
-
-
-def drop_recarray_column(rec, name):
-
-    names = list(rec.dtype.names)
-
-    if name in names:
-        names.remove(name)
-
-    result = rec[names]
-
-    return result
