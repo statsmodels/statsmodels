@@ -889,7 +889,7 @@ class Poisson(CountModel):
         -----
         The CDF is defined as
 
-        .. math:: \\exp\left(-\\lambda\\right)\\sum_{i=0}^{y}\\frac{\\lambda^{i}}{i!}
+        .. math:: \\exp\\left(-\\lambda\\right)\\sum_{i=0}^{y}\\frac{\\lambda^{i}}{i!}
 
         where :math:`\\lambda` assumes the loglinear model. I.e.,
 
@@ -947,7 +947,7 @@ class Poisson(CountModel):
 
         Notes
         --------
-        .. math :: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
         """
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
@@ -972,7 +972,7 @@ class Poisson(CountModel):
 
         Notes
         --------
-        .. math :: \\ln L_{i}=\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        .. math:: \\ln L_{i}=\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
 
         for observations :math:`i=1,...,n`
 
@@ -1141,9 +1141,6 @@ class Poisson(CountModel):
         X = self.exog
         L = np.exp(np.dot(X,params) + offset + exposure)
         return (self.endog - L)[:,None] * X
-
-    jac = np.deprecate(score_obs, 'jac', 'score_obs', "Use score_obs method."
-                       " jac will be removed in 0.7")
 
     def hessian(self, params):
         """
@@ -1343,9 +1340,6 @@ class Logit(BinaryModel):
         X = self.exog
         L = self.cdf(np.dot(X, params))
         return (y - L)[:,None] * X
-
-    jac = np.deprecate(score_obs, 'jac', 'score_obs', "Use score_obs method."
-                       " jac will be removed in 0.7")
 
     def hessian(self, params):
         """
@@ -1559,9 +1553,6 @@ class Probit(BinaryModel):
         L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
         return L[:,None] * X
 
-    jac = np.deprecate(score_obs, 'jac', 'score_obs', "Use score_obs method."
-                       " jac will be removed in 0.7")
-
     def hessian(self, params):
         """
         Probit model Hessian matrix of the log-likelihood
@@ -1579,7 +1570,7 @@ class Probit(BinaryModel):
 
         Notes
         -----
-        .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\lambda_{i}\\left(\\lambda_{i}+x_{i}^{\\prime}\\beta\\right)x_{i}x_{i}^{\\prime}
+        .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\\lambda_{i}\\left(\\lambda_{i}+x_{i}^{\\prime}\\beta\\right)x_{i}x_{i}^{\\prime}
 
         where
 
@@ -1805,9 +1796,6 @@ class MNLogit(MultinomialModel):
                                                   params))[:,1:]
         #NOTE: might need to switch terms if params is reshaped
         return (firstterm[:,:,None] * self.exog[:,None,:]).reshape(self.exog.shape[0], -1)
-
-    jac = np.deprecate(score_obs, 'jac', 'score_obs', "Use score_obs method."
-                       " jac will be removed in 0.7")
 
     def hessian(self, params):
         """
@@ -2251,9 +2239,6 @@ class NegativeBinomial(CountModel):
     def score_obs(self, params):
         sc = approx_fprime_cs(params, self.loglikeobs)
         return sc
-
-    jac = np.deprecate(score_obs, 'jac', 'score_obs', "Use score_obs method."
-                       " jac will be removed in 0.7")
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None,
@@ -2891,7 +2876,7 @@ class ProbitResults(BinaryResults):
         -----
         The generalized residuals for the Probit model are defined
 
-        .. math:: y\\frac{\phi(X\\beta)}{\\Phi(X\\beta)}-(1-y)\\frac{\\phi(X\\beta)}{1-\\Phi(X\\beta)}
+        .. math:: y\\frac{\\phi(X\\beta)}{\\Phi(X\\beta)}-(1-y)\\frac{\\phi(X\\beta)}{1-\\Phi(X\\beta)}
         """
         # generalized residuals
         model = self.model

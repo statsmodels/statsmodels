@@ -1,5 +1,4 @@
 import numpy as np
-import statsmodels.base.wrapper as wrap
 from statsmodels.base.model import Results
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.decorators import cache_readonly
@@ -60,10 +59,10 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
 
 
 
-def fit_elasticnet(model, method="coord_descent", maxiter=100, alpha=0.,
-         L1_wt=1., start_params=None, cnvrg_tol=1e-7, zero_tol=1e-8,
-         refit=False, loglike_kwds=None, score_kwds=None,
-         hess_kwds=None):
+def fit_elasticnet(model, method="coord_descent", maxiter=100,
+         alpha=0., L1_wt=1., start_params=None, cnvrg_tol=1e-7,
+         zero_tol=1e-8, refit=False, check_step=True,
+         loglike_kwds=None, score_kwds=None, hess_kwds=None):
     """
     Return an elastic net regularized fit to a regression model.
 
@@ -99,6 +98,9 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100, alpha=0.,
         If True, the model is refit using only the variables that have
         non-zero coefficients in the regularized fit.  The refitted
         model is not regularized.
+    check_step : bool
+        If True, confirm that the first step is an improvement and search
+        further if it is not.
     loglike_kwds : dict-like or None
         Keyword arguments for the log-likelihood function.
     score_kwds : dict-like or None
@@ -184,7 +186,8 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100, alpha=0.,
 
             # Do the one-dimensional optimization.
             func, grad, hess = fgh_list[k]
-            params[k] = _opt_1d(func, grad, hess, model_1var, params[k], alpha[k]*L1_wt, tol=btol)
+            params[k] = _opt_1d(func, grad, hess, model_1var, params[k], alpha[k]*L1_wt,
+                                tol=btol, check_step=check_step)
 
             # Update the active set
             if itr > 0 and np.abs(params[k]) < zero_tol:
@@ -242,7 +245,8 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100, alpha=0.,
     return refit
 
 
-def _opt_1d(func, grad, hess, model, start, L1_wt, tol):
+def _opt_1d(func, grad, hess, model, start, L1_wt, tol,
+            check_step=True):
     """
     One-dimensional helper for elastic net.
 
@@ -263,6 +267,10 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol):
         The weight for the L1 penalty function.
     tol : non-negative real
         A convergence threshold.
+    check_step : bool
+        If True, check that the first step is an improvement and
+        use bisection if it is not.  If False, return after the
+        first step regardless.
 
     Notes
     -----
@@ -311,6 +319,8 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol):
     # If the new point is not uphill for the target function, take it
     # and return.  This check is a bit expensive and un-necessary for
     # OLS
+    if not check_step:
+        return x + h
     f1 = func(x + h, model) + L1_wt*np.abs(x + h)
     if f1 <= f + L1_wt*np.abs(x) + 1e-10:
         return x + h

@@ -190,7 +190,7 @@ class HuberT(RobustNorm):
         return np.less_equal(np.fabs(z), self.t)
 
     def rho(self, z):
-        """
+        r"""
         The robust criterion function for Huber's t.
 
         Parameters
@@ -286,7 +286,7 @@ class RamsayE(RobustNorm):
         self.a = a
 
     def rho(self, z):
-        """
+        r"""
         The robust criterion function for Ramsay's Ea.
 
         Parameters
@@ -380,7 +380,7 @@ class AndrewWave(RobustNorm):
         return np.less_equal(np.fabs(z), self.a * np.pi)
 
     def rho(self, z):
-        """
+        r"""
         The robust criterion function for Andrew's wave.
 
         Parameters
@@ -489,7 +489,7 @@ class TrimmedMean(RobustNorm):
         return np.less_equal(np.fabs(z), self.c)
 
     def rho(self, z):
-        """
+        r"""
         The robust criterion function for least trimmed mean.
 
         Parameters
@@ -600,7 +600,7 @@ class Hampel(RobustNorm):
         return t1, t2, t3
 
     def rho(self, z):
-        """
+        r"""
         The robust criterion function for Hampel's estimator
 
         Parameters
@@ -724,7 +724,7 @@ class TukeyBiweight(RobustNorm):
         return np.less_equal(z, self.c)
 
     def rho(self, z):
-        """
+        r"""
         The robust criterion function for Tukey's biweight estimator
 
         Parameters

@@ -33,6 +33,9 @@ A more detailed example can be found here:
 Module Reference
 ----------------
 
+.. module:: statsmodels.stats.anova
+   :synopsis: Analysis of Variance
+
 .. autosummary::
    :toctree: generated/
 

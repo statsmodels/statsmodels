@@ -450,3 +450,16 @@ else:
                 idx = np.concatenate(np.nonzero(flag) + ([ar.size],))
                 ret += (np.diff(idx),)
         return ret
+
+
+def recarray_select(recarray, fields):
+    """"
+    Work-around for changes in NumPy 1.13 that return views for recarray
+    multiple column selection
+    """
+    from pandas import DataFrame
+    fields = [fields] if not isinstance(fields, (tuple, list)) else fields
+    if len(fields) == len(recarray.dtype):
+        return recarray
+    recarray = DataFrame.from_records(recarray)
+    return recarray[fields].to_records(index=False)

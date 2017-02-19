@@ -619,7 +619,7 @@ class VARProcess(object):
         return mat([np.dot(coefs, P) for coefs in ma_mats])
 
     def long_run_effects(self):
-        """Compute long-run effect of unit impulse
+        r"""Compute long-run effect of unit impulse
 
         .. math::
 
@@ -678,7 +678,7 @@ class VARProcess(object):
         return forecast(y, self.coefs, self.intercept, steps)
 
     def mse(self, steps):
-        """
+        r"""
         Compute theoretical forecast error variance matrices
 
         Parameters
@@ -1372,9 +1372,9 @@ class VARResults(VARProcess):
         return results
 
     def test_whiteness(self, nlags=10, plot=True, linewidth=8):
-        """
+        r"""
         Test white noise assumption. Sample (Y) autocorrelations are compared
-        with the standard :math:`2 / \sqrt(T)` bounds.
+        with the standard :math:`2 / \sqrt{T}` bounds.
 
         Parameters
         ----------

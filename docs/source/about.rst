@@ -1,3 +1,7 @@
+.. module:: statsmodels
+   :synopsis: Statistical analysis in Python
+
+
 .. currentmodule:: statsmodels
 
 *****************

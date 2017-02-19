@@ -101,3 +101,25 @@ def test_formula_predict():
     results = ols(formula, dta).fit()
     npt.assert_almost_equal(results.fittedvalues.values,
                             results.predict(data.exog), 8)
+
+
+def test_formula_predict_series():
+    import pandas as pd
+    import pandas.util.testing as tm
+    data = pd.DataFrame({"y": [1, 2, 3], "x": [1, 2, 3]}, index=[5, 3, 1])
+    results = ols('y ~ x', data).fit()
+
+    result = results.predict(data)
+    expected = pd.Series([1., 2., 3.], index=[5, 3, 1])
+    tm.assert_series_equal(result, expected)
+
+    result = results.predict(data.x)
+    tm.assert_series_equal(result, expected)
+
+    result = results.predict(pd.Series([1, 2, 3], index=[1, 2, 3], name='x'))
+    expected = pd.Series([1., 2., 3.], index=[1, 2, 3])
+    tm.assert_series_equal(result, expected)
+
+    result = results.predict({"x": [1, 2, 3]})
+    expected = pd.Series([1., 2., 3.], index=[0, 1, 2])
+    tm.assert_series_equal(result, expected)

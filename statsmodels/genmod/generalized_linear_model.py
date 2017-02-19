@@ -421,7 +421,7 @@ class GLM(base.LikelihoodModel):
         Parameters
         ----------
         params : ndarray
-            parameter at which Hessian is evaluated
+            parameter at which score is evaluated
         scale : None or float
             If scale is None, then the default scale will be calculated.
             Default scale is defined by `self.scaletype` and set in fit.
@@ -531,6 +531,7 @@ class GLM(base.LikelihoodModel):
         factor = self.hessian_factor(params, scale=scale, observed=observed)
         hess = -np.dot(self.exog.T * factor, self.exog)
         return hess
+
 
     def information(self, params, scale=None):
         """
@@ -1054,9 +1055,11 @@ class GLM(base.LikelihoodModel):
         The penalty is the ``elastic net`` penalty, which is a
         combination of L1 and L2 penalties.
 
-        The function that is minimized is: ..math::
+        The function that is minimized is: 
+        
+        .. math::
 
-            -loglike/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
+            -loglike/n + alpha*((1-L1\_wt)*|params|_2^2/2 + L1\_wt*|params|_1)
 
         where :math:`|*|_1` and :math:`|*|_2` are the L1 and L2 norms.
 
