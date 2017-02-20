@@ -383,12 +383,17 @@ def _cross_validation(window_lengths, k, endog, exog, projector_kwds):
     undersmooths in small samples.
     """
     res = []
+    if len(endog) < 202:
+        incr = 1
+    else:
+        incr = max(1, k // 3)
     for k_win in window_lengths:
         kwds = projector_kwds.copy()
         kwds['window_length'] = k_win
         # todo: add start option, or do we want full k
         mse = 0
-        start_all = np.arange(0, k, max(1, k // 3))   #[0, k // 2]
+
+        start_all = np.arange(0, k, incr)   #[0, k // 2]
         for start in start_all:
             mse += _leave_kth_out(k, endog, exog, kwds.copy(), start=start)
             #print('cv loop', k_win, start, mse)  #for checking or debugging
@@ -397,7 +402,8 @@ def _cross_validation(window_lengths, k, endog, exog, projector_kwds):
     return np.asarray(res)
 
 
-def fit_loclin_cvbw(endog, exog, weights=1., n_bins=None, **projector_kwds):
+def fit_loclin_cvbw(endog, exog, weights=1., n_bins=None, shift_loss=0.1,
+                    max_window_length=50, **projector_kwds):
     """convenience function to get local linear regression results
 
     This function combines binning, cross-validate bandwidth search and returns a
@@ -419,6 +425,10 @@ def fit_loclin_cvbw(endog, exog, weights=1., n_bins=None, **projector_kwds):
     n_bins : None or int
         If None, then no binning is performed, and the data is assumed without
         verification to be on an equal spaced grid.
+    shift_loss : float
+        This increases the window length if the relative loss is smaller than shift_loss.
+        In small samples setting for example shift_loss = 0.2 helps to avoid undersmoothing
+        in some cases.
     projector_kwds : dict
         keywords transmitted to the projector class
 
@@ -434,12 +444,13 @@ def fit_loclin_cvbw(endog, exog, weights=1., n_bins=None, **projector_kwds):
     method will can give good results without binning and unequal spaced
     observations.
 
+    TODO: add options to control cross-validation
+
     """
     if n_bins is not None:
         binn = Binner(exog, n_bins=n_bins) #, xmin=0, xmax=1)
         exog_ = binn.bin_center
         endog_ = binn.bin_data(endog)
-        print(len(exog_), len(endog_))
         #assert len(exog_) == len(endog_)
         weights = binn.bin_data()
 
@@ -447,12 +458,21 @@ def fit_loclin_cvbw(endog, exog, weights=1., n_bins=None, **projector_kwds):
         exog_ = exog
         endog_ = endog
 
-    res = _cross_validation(np.arange(1,20,2), 10, endog_, exog_,
+    win_lens = np.arange(5, max_window_length + 1, 2)
+    res_cv = _cross_validation(win_lens, 10, endog_, exog_,
                             dict(weights=weights))
-    idx_best = np.nanargmin(res[:,1])
-    bwi_best, mse = res[idx_best]
+    idx_best = np.nanargmin(res_cv[:,1])
+    bwi_best, mse = res_cv[idx_best]
     projector_kwds['window_length'] = bwi_best
+    if shift_loss > 0 and idx_best != len(res_cv) - 1:
+        for idx, r in enumerate(res_cv[idx_best+1:]):
+            if r[1] > mse * (1 + shift_loss):
+                break
+
+        projector_kwds['window_length'] = res_cv[idx_best + idx, 0]
+
     locpoly = BinnedLocalPolynomialProjector(exog_, weights=weights,
                                             **projector_kwds)
     res = locpoly.project(endog_)
+    res.results_crossval = res_cv
     return res

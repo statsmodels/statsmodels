@@ -35,7 +35,7 @@ def test_binned_regression_ex1():
     # local constant kernel regression
     ssr0 = ((yb - res.fitted_locpoly0 * w)**2).sum()
     scale0 = ssr0 / nobs
-    assert_allclose(scale0, sig_e**2, rtol=0.25)
+    assert_allclose(scale0, sig_e**2, rtol=0.2)
 
     # test properties of binner and local poly
     assert_equal(local_poly.bwi, 9)
@@ -46,7 +46,7 @@ def test_binned_regression_ex1():
     assert_allclose(yb.sum(), y.sum(), rtol=1e-13)
 
     res2 = smbr.fit_loclin_cvbw(y, x, weights=1., n_bins=300)
-    assert_equal(res2.projector.bwi, 19)
+    assert_equal(res2.projector.bwi, 45)
     ssr = ((yb - res2.fittedvalues * w)**2).sum()
     scale = ssr / nobs
-    assert_allclose(scale, sig_e**2, rtol=0.15)
+    assert_allclose(scale, sig_e**2, rtol=0.1)
