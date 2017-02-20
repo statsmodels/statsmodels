@@ -855,8 +855,8 @@ cdef class {{prefix}}KalmanFilter(object):
                 # self._calculate_loglikelihood() +
                 self.model.collapse_loglikelihood
             )
-        if self.filter_method & FILTER_CONCENTRATED:
-            self._scale[0] = self._scale[0] + self.calculate_scale(self, self.model)
+            if self.filter_method & FILTER_CONCENTRATED:
+                self._scale[0] = self._scale[0] + self.calculate_scale(self, self.model)
 
         # Prediction step (default timing)
         if self.filter_timing == TIMING_INIT_PREDICTED:
