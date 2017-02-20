@@ -726,6 +726,37 @@ class KalmanFilter(Representation):
         if 'timing_init_filtered' in kwargs:
             self.filter_timing = int(kwargs['timing_init_filtered'])
 
+    from contextlib import contextmanager
+
+    @contextmanager
+    def _handle_fixed_scale(self, scale):
+        """
+        Context manager for fixing the scale when FILTER_CONCENTRATED is set
+
+        Is a no-op if scale is None
+        """
+        # If a scale was provided, use it and do not concentrate it out of the
+        # loglikelihood
+        if scale is not None:
+            if not self.filter_concentrated:
+                raise ValueError('Cannot provide scale if filter method does'
+                                 ' not include FILTER_CONCENTRATED.')
+            self.filter_concentrated = False
+            obs_cov = self['obs_cov']
+            state_cov = self['state_cov']
+            self['obs_cov'] = scale * self['obs_cov']
+            self['state_cov'] = scale * self['state_cov']
+        yield
+        # If a scale was provided, reset the model and update the results
+        # object
+        if scale is not None:
+            self['state_cov'] = state_cov
+            self['obs_cov'] = obs_cov
+            self.filter_concentrated = True
+
+            results.filter_concentrated = True
+            results.scale = scale
+
     def _filter(self, filter_method=None, inversion_method=None,
                 stability_method=None, conserve_memory=None,
                 filter_timing=None, tolerance=None, loglikelihood_burn=None,
@@ -790,36 +821,16 @@ class KalmanFilter(Representation):
         if conserve_memory is None:
             conserve_memory = self.conserve_memory | MEMORY_NO_SMOOTHING
 
-        # If a scale was provided, use it and do not concentrate it out of the
-        # loglikelihood
-        if scale is not None:
-            if not self.filter_concentrated:
-                raise ValueError('Cannot provide scale if filter method does'
-                                 ' not include FILTER_CONCENTRATED.')
-            self.filter_concentrated = False
-            obs_cov = self['obs_cov']
-            state_cov = self['state_cov']
-            self['obs_cov'] = scale * self['obs_cov']
-            self['state_cov'] = scale * self['state_cov']
+        with self._handle_fixed_scale(scale):
+            # Run the filter
+            kfilter = self._filter(
+                filter_method, inversion_method, stability_method, conserve_memory,
+                filter_timing, tolerance, loglikelihood_burn, complex_step)
 
-        # Run the filter
-        kfilter = self._filter(
-            filter_method, inversion_method, stability_method, conserve_memory,
-            filter_timing, tolerance, loglikelihood_burn, complex_step)
-        # Create the results object
-        results = self.results_class(self)
-        results.update_representation(self)
-        results.update_filter(kfilter)
-
-        # If a scale was provided, reset the model and update the results
-        # object
-        if scale is not None:
-            self['state_cov'] = state_cov
-            self['obs_cov'] = obs_cov
-            self.filter_concentrated = True
-
-            results.filter_concentrated = True
-            results.scale = scale
+            # Create the results object
+            results = self.results_class(self)
+            results.update_representation(self)
+            results.update_filter(kfilter)
 
         return results
 
