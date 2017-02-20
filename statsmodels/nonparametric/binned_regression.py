@@ -79,7 +79,8 @@ class LocalPolynomialFitResults(object):
         idx1 = len(y) - (miss - idx0)
         ax.plot(x[idx0: idx1], fitted, 'r-', lw=2, label='linear')
         ax.legend()
-        ax.set_title('Local Polynomial Regression (nobs=%d, bwi=%d)' % (nobs, bwi))
+        ax.set_title('Local Polynomial Regression (nobs=%d, bwi=%d)' %
+                     (nobs, bwi))
         return ax.figure
 
 
@@ -200,6 +201,47 @@ class BinnedLocalPolynomialProjector(object):
 
 
 class Binner(object):
+    """class for linear binning
+
+    Linear binning assigns a fraction of the observation to each
+    neighboring bin center
+
+    Similar to numpy histogram, the bins are open on the upper end, except for
+    a correction at the last bin which includes the upper bin boundary.
+
+
+    Parameters
+    ----------
+    x : array_like
+        binning variable, linear binning fraction is base on the distance of
+        this variable to the bins
+    n_bins : int
+        the number of grid points is currently n_bins + 1
+    xmin : None or float
+        smallest bin value. If None, then the smallest value of x is used.
+    xmax : None or float
+        largest bin value. If None, then the largest value of x is used.
+        To avoid extra bins for observations that are at xmax, xmax is corrected
+        by 1e-15 so the upper boundary is included in the last bin.
+
+    Attributes
+    ----------
+    d : float
+        distance between grid points
+    idx : integer array
+        index array for the assignment of observations to bin
+    rem : array
+        fraction of each observation for the linear binning
+    bin_center : array
+        center of the bins, the length corresponds to the number of grid points
+        n_bins + 1.
+
+    Notes
+    -----
+    Status: It works, but there might be some redefinition in the number and
+    values of the grid.
+
+    """
 
     # TODO: needs better attribute names
 
@@ -227,6 +269,25 @@ class Binner(object):
         self.bin_center = xcenter
 
     def bin_data(self, x=1.):
+        """discretize or bin a new series base on bins and bin fractions
+
+        This uses the same fraction to allocate to neighboring bins as the
+        original variable.
+
+        Parameters
+        ----------
+        x : array_like, 1-D
+            new data series to be binned. It needs to correspond to the data
+            series used in creating the instance. Currently restricted to one
+            dimensional arrays because of the use of numpy bincount.
+
+        Returns
+        -------
+        binned : ndarray
+            data binned to the grid. The magnitudes correspond to the sum of
+            all fractional values that are assigned to a bin.
+
+        """
         n_bins = self.n_bins
         rem = self.rem
         idx = self.idx
@@ -239,9 +300,29 @@ class Binner(object):
 def _leave_kth_out(k, endog, exog, projector_kwds, start=0):
     """experimental version to leave kth bin or observation out
 
-    this works by setting the weight of every k-th bin to zero
+    Computes the mean squared error of the out-of-sample prediction for the
+    left out variables. Every k-th observation or bin starting at `start` is
+    left out for the estimation.
+    This works by setting the weight left out bins to essentially zero and does
+    not change the number and sequence of bins.
 
+    Parameters
+    ----------
+    k : int
+        every k-th bin is left out by setting the weights of it to 1e-15
+    endog : array
+        dependent or endogenous variable
+    exog : array
+        independent or exogenous variable
+    projector_kwds : dict
+        keywords transmitted to the projector class
+    start : int
+        The index of the first observation to be left out
 
+    Returns
+    -------
+    mse : float
+        mean squared error of the prediction of the left out observations
 
     """
     exog = np.asarray(exog)
@@ -271,6 +352,35 @@ def _leave_kth_out(k, endog, exog, projector_kwds, start=0):
 
 def _cross_validation(window_lengths, k, endog, exog, projector_kwds):
     """experimental leave k-th out cross validation for bandwidth choice
+
+    This computes the mean squared error mse for out-of-sample prediction.
+
+    Parameters
+    ----------
+    window_lengths : iterable
+        Iterable of all window_lengths (bandwidth parameter) for which the
+        leave k-th out cross-validation error is computed.
+    k : int
+        every k-th bin is left out by setting the weights of it to 1e-15
+    endog : array
+        dependent or endogenous variable
+    exog : array
+        independent or exogenous variable
+    projector_kwds : dict
+        keywords transmitted to the projector class
+
+    Returns
+    -------
+    res : ndarray, 2-D
+        This array contains the window length in the first column and the
+        cross-validation mse in the second column for each window specified in
+        `window_lengths`.
+
+
+    Notes
+    -----
+    This needs more options to control the cross-validation. Currently it
+    undersmooths in small samples.
     """
     res = []
     for k_win in window_lengths:
@@ -289,6 +399,40 @@ def _cross_validation(window_lengths, k, endog, exog, projector_kwds):
 
 def fit_loclin_cvbw(endog, exog, weights=1., n_bins=None, **projector_kwds):
     """convenience function to get local linear regression results
+
+    This function combines binning, cross-validate bandwidth search and returns a
+    LocalPolynomialFitResults with the local linear kernel regression base on the
+    minimum MSE window_length.
+
+    Warning: This oversmooths in small samples.
+
+    Parameters
+    ----------
+
+    endog : array
+        dependent or endogenous variable
+    exog : array
+        independent or exogenous variable
+    weights : array or float
+        frequency weights if data is already binned. This is currently ignored
+        if binning is performed by this function, i.e. if n_bins > 0.
+    n_bins : None or int
+        If None, then no binning is performed, and the data is assumed without
+        verification to be on an equal spaced grid.
+    projector_kwds : dict
+        keywords transmitted to the projector class
+
+    Returns
+    -------
+    res : LocalPolynomialFitResults instance
+        results of the local linear kernel regression based on the minimum
+        MSE window length.
+
+    Notes
+    -----
+    Note: If observation are densely distributed on a compact support, then the
+    method will can give good results without binning and unequal spaced
+    observations.
 
     """
     if n_bins is not None:
