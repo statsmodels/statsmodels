@@ -1649,15 +1649,16 @@ class FilterResults(FrozenRepresentation):
             if self.missing_forecasts_error_cov is not None:
                 self.missing_forecasts_error_cov *= self.scale
 
+            if not self._compatibility_mode:
+                # Note: do not have to adjust the Kalman gain or tmp4
+                self.tmp1 *= self.scale
+                self.tmp2 /= self.scale
+                self.tmp3 /= self.scale
             if not self._compatibility_mode and not (
                     self.memory_no_std_forecast or
                     self.invert_lu or
                     self.solve_lu or
                     self.filter_collapsed):
-                # Note: do not have to adjust the Kalman gain or tmp4
-                self.tmp1 *= self.scale
-                self.tmp2 /= self.scale
-                self.tmp3 /= self.scale
                 self._standardized_forecasts_error /= self.scale**0.5
 
     @property
