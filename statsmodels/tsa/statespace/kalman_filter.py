@@ -857,17 +857,51 @@ class KalmanFilter(Representation):
         loglikelihood_burn = kwargs.get('loglikelihood_burn',
                                         self.loglikelihood_burn)
         loglike = np.sum(kfilter.loglikelihood[loglikelihood_burn:])
-        # If loglikelihood_burn > 0, we want to burn the component of the
-        # likelihoods that depends on the forecast error. In the
-        # non-concentrated case, this is all of the loglikelihood values, but
-        # in the concentrated case there is a fixed component that we shouldn't
-        # eliminate)
+
+        # Need to modify the computed log-likelihood to incorporate the
+        # MLE scale.
+        # Also note that if loglikelihood_burn > 0, we want to burn the
+        # component of the likelihoods that depends on the forecast error. In
+        # the non-concentrated case, this is all of the loglikelihood values,
+        # but in the concentrated case there is a fixed component that we
+        # shouldn't eliminate)
+        # TODO am I sure this works with missing data?
         if self.filter_method & FILTER_CONCENTRATED:
-            scale = np.sum(kfilter.scale) / self.nobs
-            nobs_unburned = self.nobs - loglikelihood_burn
-            loglike += (-0.5 * nobs_unburned * self.k_endog * np.log(scale)
-                        - 0.5 * self.nobs)
+            nobs_effective = self.nobs - loglikelihood_burn
+            scale = (np.sum(kfilter.scale[loglikelihood_burn:]) /
+                     (self.k_endog * nobs_effective))
+            loglike += (-0.5 * nobs_effective * self.k_endog * (np.log(scale) + 1))
         return loglike
+
+    def _loglikeobs(self, kfilter=None, loglikelihood_burn=0):
+        if kfilter is None:
+            kfilter = self._kalman_filter
+
+        scale = (np.sum(kfilter.scale[loglikelihood_burn:]) /
+                 (self.k_endog * (self.nobs - loglikelihood_burn)))
+        forecasts_error = np.array(kfilter.forecast_error)
+        forecasts_error_cov = np.array(kfilter.forecast_error_cov)
+
+        if self.k_endog == 1:
+            llf_obs = -0.5 * (np.log(2 * np.pi) +
+                              np.log(scale * forecasts_error_cov[0, 0]) +
+                              forecasts_error[0]**2 /
+                              (scale * forecasts_error_cov[0, 0]))
+        else:
+            # This is tough in the case of missing data...
+            const = self.k_endog * np.log(2 * np.pi)
+            logdet = np.linalg.slogdet(scale * forecasts_error_cov.T)[1]
+            chol = np.linalg.cholesky(scale * forecasts_error_cov.T)
+
+            llf_obs = np.zeros(self.nobs, dtype=scale.dtype)
+            for i in range(self.nobs):
+                # v' (LL')^{-1} v = v' L^{-1}' L^{-1} v = x' x
+                # where x = L^{-1} v
+                # or L x = v
+                x = np.linalg.solve(chol[i], forecasts_error[:, i])
+                llf_obs[i] = -0.5 * (const + logdet[i] + np.sum(x**2))
+
+        return llf_obs, scale
 
     def loglikeobs(self, **kwargs):
         r"""
@@ -893,26 +927,25 @@ class KalmanFilter(Representation):
         if self.memory_no_likelihood:
             raise RuntimeError('Cannot compute loglikelihood if'
                                ' MEMORY_NO_LIKELIHOOD option is selected.')
-        kwargs['conserve_memory'] = MEMORY_CONSERVE ^ MEMORY_NO_LIKELIHOOD
+        if not self.filter_method & FILTER_CONCENTRATED:
+            kwargs['conserve_memory'] = MEMORY_CONSERVE ^ MEMORY_NO_LIKELIHOOD
         kfilter = self._filter(**kwargs)
-        llf_obs = np.array(kfilter.loglikelihood, copy=True)
-        if self.filter_method & FILTER_CONCENTRATED:
-            scale = np.sum(kfilter.scale) / self.nobs
-            llf_obs += -0.5 * self.k_endog * (np.log(scale) + 1)
 
-        # Set any burned observations to have zero likelihood
         loglikelihood_burn = kwargs.get('loglikelihood_burn',
                                         self.loglikelihood_burn)
+
+        # If the scale was concentrated out of the log-likelihood function,
+        # then we need to manually compute the log-likelihood of each
+        # observation here (this is not as computationally efficient as
+        # directly computing it in the Cython Kalman filter, but this function
+        # shouldn't be in any inner loops, so it should be okay)
         if not self.filter_method & FILTER_CONCENTRATED:
-            llf_obs[:loglikelihood_burn] = 0
-        # Except when the scale is concentrated, the loglikelihood
-        # decomposition requires that these observations be -0.5 (i.e. we want
-        # to burn the component of the likelihoods that depends on the
-        # forecast error. In the non-concentrated case, this is all of it, but
-        # in the concentrated case there is a fixed component that we shouldn't
-        # eliminate)
+            llf_obs = np.array(kfilter.loglikelihood, copy=True)
         else:
-            llf_obs[:loglikelihood_burn] = -0.5
+            llf_obs, scale = self._loglikeobs(kfilter, loglikelihood_burn)
+
+        # Set any burned observations to have zero likelihood
+        llf_obs[:loglikelihood_burn] = 0
 
         return llf_obs
 
@@ -1636,8 +1669,8 @@ class FilterResults(FrozenRepresentation):
         # version, so we do not need to modify collapsed arrays.
         self.scale = 1.
         if self.filter_concentrated:
-            self.scale = np.sum(kalman_filter.scale) / self.nobs
-            self.llf_obs += -0.5 * self.k_endog * (np.log(self.scale) + 1)
+            self.llf_obs, self.scale = self.model._loglikeobs(
+                kalman_filter, self.loglikelihood_burn)
 
             self.obs_cov *= self.scale
             self.state_cov *= self.scale
