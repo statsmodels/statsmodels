@@ -313,15 +313,6 @@ class SARIMAX(MLEModel):
                              ' state vector, so that `mle_regression` must'
                              ' be set to False.')
 
-        # So far, can't guarantee that the concentrated scale with time-varying
-        # regression model is correctly specified (the log-likelihood is
-        # very slightly different than in the non-concentrated model) so don't
-        # allow it right now.
-        if self.time_varying_regression and self.concentrate_scale:
-            raise ValueError('Time-varying regression is not supported when'
-                             ' concentrating the scale out of the likelihood'
-                             ' function.')
-
         # Lag polynomials
         # Assume that they are given from lowest degree to highest, that all
         # degrees except for the constant are included, and that they are
