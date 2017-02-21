@@ -7,6 +7,7 @@ License: Simplified-BSD
 from __future__ import division, absolute_import, print_function
 
 from warnings import warn
+from contextlib import contextmanager
 
 import numpy as np
 from .representation import OptionWrapper, Representation, FrozenRepresentation
@@ -729,11 +730,23 @@ class KalmanFilter(Representation):
     from contextlib import contextmanager
 
     @contextmanager
-    def _handle_fixed_scale(self, scale):
+    def fixed_scale(self, scale):
         """
         Context manager for fixing the scale when FILTER_CONCENTRATED is set
 
-        Is a no-op if scale is None
+        Parameters
+        ----------
+        scale : numeric
+            Scale of the model.
+
+        Notes
+        -----
+        This a no-op if scale is None.
+
+        This context manager is most useful in models which are explicitly
+        concentrating out the scale, so that the set of parameters they are
+        estimating does not include the scale.
+
         """
         # If a scale was provided, use it and do not concentrate it out of the
         # loglikelihood
@@ -744,18 +757,15 @@ class KalmanFilter(Representation):
             self.filter_concentrated = False
             obs_cov = self['obs_cov']
             state_cov = self['state_cov']
-            self['obs_cov'] = scale * self['obs_cov']
-            self['state_cov'] = scale * self['state_cov']
+            self['obs_cov'] = scale * obs_cov
+            self['state_cov'] = scale * state_cov
+            print(self['state_cov'])
         yield
-        # If a scale was provided, reset the model and update the results
-        # object
+        # If a scale was provided, reset the model
         if scale is not None:
             self['state_cov'] = state_cov
             self['obs_cov'] = obs_cov
             self.filter_concentrated = True
-
-            results.filter_concentrated = True
-            results.scale = scale
 
     def _filter(self, filter_method=None, inversion_method=None,
                 stability_method=None, conserve_memory=None,
@@ -780,8 +790,7 @@ class KalmanFilter(Representation):
 
     def filter(self, filter_method=None, inversion_method=None,
                stability_method=None, conserve_memory=None, filter_timing=None,
-               tolerance=None, loglikelihood_burn=None, complex_step=False,
-               scale=None):
+               tolerance=None, loglikelihood_burn=None, complex_step=False):
         r"""
         Apply the Kalman filter to the statespace model.
 
@@ -808,10 +817,6 @@ class KalmanFilter(Representation):
         loglikelihood_burn : int, optional
             The number of initial periods during which the loglikelihood is not
             recorded. Default is 0.
-        scale : numeric, optional
-            If the `scale` argument is provided when `FILTER_CONCENTRATED` is
-            active, `FILTER_CONCENTRATED` is disabled and the given scale is
-            applied to the observation and state covariance matrices.
 
         Notes
         -----
@@ -821,16 +826,15 @@ class KalmanFilter(Representation):
         if conserve_memory is None:
             conserve_memory = self.conserve_memory | MEMORY_NO_SMOOTHING
 
-        with self._handle_fixed_scale(scale):
-            # Run the filter
-            kfilter = self._filter(
-                filter_method, inversion_method, stability_method, conserve_memory,
-                filter_timing, tolerance, loglikelihood_burn, complex_step)
+        # Run the filter
+        kfilter = self._filter(
+            filter_method, inversion_method, stability_method, conserve_memory,
+            filter_timing, tolerance, loglikelihood_burn, complex_step)
 
-            # Create the results object
-            results = self.results_class(self)
-            results.update_representation(self)
-            results.update_filter(kfilter)
+        # Create the results object
+        results = self.results_class(self)
+        results.update_representation(self)
+        results.update_filter(kfilter)
 
         return results
 
@@ -860,48 +864,15 @@ class KalmanFilter(Representation):
 
         # Need to modify the computed log-likelihood to incorporate the
         # MLE scale.
-        # Also note that if loglikelihood_burn > 0, we want to burn the
-        # component of the likelihoods that depends on the forecast error. In
-        # the non-concentrated case, this is all of the loglikelihood values,
-        # but in the concentrated case there is a fixed component that we
-        # shouldn't eliminate)
-        # TODO am I sure this works with missing data?
         if self.filter_method & FILTER_CONCENTRATED:
-            nobs_effective = self.nobs - loglikelihood_burn
-            scale = (np.sum(kfilter.scale[loglikelihood_burn:]) /
-                     (self.k_endog * nobs_effective))
-            loglike += (-0.5 * nobs_effective * self.k_endog * (np.log(scale) + 1))
+            nobs_k_endog = np.sum(
+                self.k_endog -
+                np.array(self._statespace.nmissing)[loglikelihood_burn:])
+
+            scale = np.sum(kfilter.scale[loglikelihood_burn:]) / nobs_k_endog
+
+            loglike += -0.5 * nobs_k_endog * (np.log(scale) + 1)
         return loglike
-
-    def _loglikeobs(self, kfilter=None, loglikelihood_burn=0):
-        if kfilter is None:
-            kfilter = self._kalman_filter
-
-        scale = (np.sum(kfilter.scale[loglikelihood_burn:]) /
-                 (self.k_endog * (self.nobs - loglikelihood_burn)))
-        forecasts_error = np.array(kfilter.forecast_error)
-        forecasts_error_cov = np.array(kfilter.forecast_error_cov)
-
-        if self.k_endog == 1:
-            llf_obs = -0.5 * (np.log(2 * np.pi) +
-                              np.log(scale * forecasts_error_cov[0, 0]) +
-                              forecasts_error[0]**2 /
-                              (scale * forecasts_error_cov[0, 0]))
-        else:
-            # This is tough in the case of missing data...
-            const = self.k_endog * np.log(2 * np.pi)
-            logdet = np.linalg.slogdet(scale * forecasts_error_cov.T)[1]
-            chol = np.linalg.cholesky(scale * forecasts_error_cov.T)
-
-            llf_obs = np.zeros(self.nobs, dtype=scale.dtype)
-            for i in range(self.nobs):
-                # v' (LL')^{-1} v = v' L^{-1}' L^{-1} v = x' x
-                # where x = L^{-1} v
-                # or L x = v
-                x = np.linalg.solve(chol[i], forecasts_error[:, i])
-                llf_obs[i] = -0.5 * (const + logdet[i] + np.sum(x**2))
-
-        return llf_obs, scale
 
     def loglikeobs(self, **kwargs):
         r"""
@@ -930,19 +901,28 @@ class KalmanFilter(Representation):
         if not self.filter_method & FILTER_CONCENTRATED:
             kwargs['conserve_memory'] = MEMORY_CONSERVE ^ MEMORY_NO_LIKELIHOOD
         kfilter = self._filter(**kwargs)
-
+        llf_obs = np.array(kfilter.loglikelihood, copy=True)
         loglikelihood_burn = kwargs.get('loglikelihood_burn',
                                         self.loglikelihood_burn)
 
         # If the scale was concentrated out of the log-likelihood function,
-        # then we need to manually compute the log-likelihood of each
-        # observation here (this is not as computationally efficient as
-        # directly computing it in the Cython Kalman filter, but this function
-        # shouldn't be in any inner loops, so it should be okay)
-        if not self.filter_method & FILTER_CONCENTRATED:
-            llf_obs = np.array(kfilter.loglikelihood, copy=True)
-        else:
-            llf_obs, scale = self._loglikeobs(kfilter, loglikelihood_burn)
+        # then the llf_obs above is:
+        # -0.5 * k_endog * log 2 * pi - 0.5 * log |F_t|
+        # and we need to add in the effect of the scale:
+        # -0.5 * k_endog * log scale - 0.5 v' F_t^{-1} v / scale
+        # and note that v' F_t^{-1} is in the _kalman_filter.scale array
+        # Also note that we need to adjust the nobs and k_endog in both the
+        # denominator of the scale computation and in the llf_obs adjustment
+        # to take into account missing values.
+        if self.filter_method & FILTER_CONCENTRATED:
+            nmissing = np.array(self._statespace.nmissing)
+            nobs_k_endog = np.sum(self.k_endog - nmissing[loglikelihood_burn:])
+
+            scale = np.sum(kfilter.scale[loglikelihood_burn:]) / nobs_k_endog
+
+            scale_obs = np.array(kfilter.scale, copy=True)
+            llf_obs += -0.5 * (
+                (self.k_endog - nmissing) * np.log(scale) + scale_obs / scale)
 
         # Set any burned observations to have zero likelihood
         llf_obs[:loglikelihood_burn] = 0
@@ -1669,9 +1649,21 @@ class FilterResults(FrozenRepresentation):
         # version, so we do not need to modify collapsed arrays.
         self.scale = 1.
         if self.filter_concentrated:
-            self.llf_obs, self.scale = self.model._loglikeobs(
-                kalman_filter, self.loglikelihood_burn)
+            d = self.loglikelihood_burn
+            # Compute the scale
+            nmissing = np.array(kalman_filter.model.nmissing)
+            nobs_k_endog = np.sum(self.k_endog - nmissing[d:])
 
+            scale_obs = np.array(kalman_filter.scale, copy=True)
+            self.scale = np.sum(scale_obs[d:]) / nobs_k_endog
+
+            # Adjust the loglikelihood obs (see `KalmanFilter.loglikeobs` for
+            # defaults on the adjustment)
+            self.llf_obs += -0.5 * (
+                (self.k_endog - nmissing) * np.log(self.scale) +
+                scale_obs / self.scale)
+
+            # Scale the filter output
             self.obs_cov *= self.scale
             self.state_cov *= self.scale
 

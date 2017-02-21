@@ -352,7 +352,7 @@ class KalmanSmoother(KalmanFilter):
         return smoother
 
     def smooth(self, smoother_output=None, smooth_method=None, results=None,
-               run_filter=True, prefix=None, complex_step=False, scale=None,
+               run_filter=True, prefix=None, complex_step=False,
                **kwargs):
         """
         Apply the Kalman smoother to the statespace model.
@@ -378,25 +378,22 @@ class KalmanSmoother(KalmanFilter):
         -------
         SmootherResults object
         """
-        # If a scale was provided, use it and do not concentrate it out of the
-        # loglikelihood
-        with self._handle_fixed_scale(scale):
 
-            # Run the filter
-            kfilter = self._filter(**kwargs)
+        # Run the filter
+        kfilter = self._filter(**kwargs)
 
-            # Create the results object
-            results = self.results_class(self)
-            results.update_representation(self)
-            results.update_filter(kfilter)
+        # Create the results object
+        results = self.results_class(self)
+        results.update_representation(self)
+        results.update_filter(kfilter)
 
-            # Run the smoother
-            if smoother_output is None:
-                smoother_output = self.smoother_output
-            smoother = self._smooth(smoother_output, results=results, **kwargs)
+        # Run the smoother
+        if smoother_output is None:
+            smoother_output = self.smoother_output
+        smoother = self._smooth(smoother_output, results=results, **kwargs)
 
-            # Update the results
-            results.update_smoother(smoother)
+        # Update the results
+        results.update_smoother(smoother)
 
         return results
 
