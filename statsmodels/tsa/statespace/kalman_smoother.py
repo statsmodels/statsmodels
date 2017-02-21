@@ -688,7 +688,7 @@ class SmootherResults(FilterResults):
         # Note: if we concentrated out the scale, need to adjust the
         # loglikelihood values and all of the covariance matrices and the
         # values that depend on the covariance matrices
-        if self.filter_concentrated:
+        if self.filter_concentrated and self.model._scale is None:
             self.smoothed_state_cov *= self.scale
             self.smoothed_state_autocov *= self.scale
             self.smoothed_state_disturbance_cov *= self.scale

@@ -1573,7 +1573,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     params : array
         The parameters of the model.
     scale : float
-        This is currently set to 1.0 and not used by the model or its results.
+        This is currently set to 1.0 unless the model uses concentrated
+        filtering.
 
     See Also
     --------
@@ -2554,9 +2555,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         simulated_obs : array
             An (nsimulations x k_endog) array of simulated observations.
         """
-        return self.model.simulate(self.params, nsimulations,
-                                   measurement_shocks, state_shocks,
-                                   initial_state)
+        scale = self.scale if self.filter_results.filter_concentrated else None
+        with self.model.ssm.fixed_scale(scale):
+            sim = self.model.simulate(self.params, nsimulations,
+                                      measurement_shocks, state_shocks,
+                                      initial_state)
+        return sim
 
     def impulse_responses(self, steps=1, impulse=0, orthogonalized=False,
                           cumulative=False, **kwargs):
@@ -2601,9 +2605,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         calculating impulse responses.
 
         """
-        return self.model.impulse_responses(self.params, steps, impulse,
-                                            orthogonalized, cumulative,
-                                            **kwargs)
+        scale = self.scale if self.filter_results.filter_concentrated else None
+        with self.model.ssm.fixed_scale(scale):
+            irfs = self.model.impulse_responses(self.params, steps, impulse,
+                                                orthogonalized, cumulative,
+                                                **kwargs)
+        return irfs
 
     def plot_diagnostics(self, variable=0, lags=10, fig=None, figsize=None):
         """

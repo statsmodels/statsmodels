@@ -321,6 +321,18 @@ class KalmanFilter(Representation):
 
         self.tolerance = tolerance
 
+        # Internal flags
+        # The _scale internal flag is used because we may want to
+        # use a fixed scale, in which case we want the flag to the Cython
+        # Kalman filter to indicate that the scale should not be concentrated
+        # out, so that self.filter_concentrated = False, but we still want to
+        # alert the results object that we are viewing the model as one in
+        # which the scale had been concentrated out for e.g. degree of freedom
+        # computations.
+        # This value should always be None, except within the fixed_scale
+        # context, and should not be modified by users or anywhere else.
+        self._scale = None
+
     @property
     def _kalman_filter(self):
         prefix = self.prefix
@@ -755,6 +767,7 @@ class KalmanFilter(Representation):
                 raise ValueError('Cannot provide scale if filter method does'
                                  ' not include FILTER_CONCENTRATED.')
             self.filter_concentrated = False
+            self._scale = scale
             obs_cov = self['obs_cov']
             state_cov = self['state_cov']
             self['obs_cov'] = scale * obs_cov
@@ -765,6 +778,7 @@ class KalmanFilter(Representation):
             self['state_cov'] = state_cov
             self['obs_cov'] = obs_cov
             self.filter_concentrated = True
+            self._scale = None
 
     def _filter(self, filter_method=None, inversion_method=None,
                 stability_method=None, conserve_memory=None,
@@ -1647,7 +1661,7 @@ class FilterResults(FrozenRepresentation):
         # Note: concentrated computation is not permitted with collapsed
         # version, so we do not need to modify collapsed arrays.
         self.scale = 1.
-        if self.filter_concentrated:
+        if self.filter_concentrated and self.model._scale is None:
             d = self.loglikelihood_burn
             # Compute the scale
             nmissing = np.array(kalman_filter.model.nmissing)
@@ -1684,6 +1698,15 @@ class FilterResults(FrozenRepresentation):
                     self.solve_lu or
                     self.filter_collapsed):
                 self._standardized_forecasts_error /= self.scale**0.5
+        # The self.model._scale value is only not None within a fixed_scale
+        # context, in which case it is set and indicates that we should
+        # generally view this results object as using a concentrated scale
+        # (e.g. for d.o.f. computations), but because the fixed scale was
+        # actually applied to the model prior to filtering, we do not need to
+        # make any adjustments to the filter output, etc.
+        elif self.model._scale is not None:
+            self.filter_concentrated = True
+            self.scale = self.model._scale
 
     @property
     def kalman_gain(self):
