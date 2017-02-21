@@ -2093,7 +2093,6 @@ def check_concentrated_scale(filter_univariate=False):
                                      measurement_errors,
                                      time_varying_regressions,
                                      simple_differencings):
-
         kwargs = dict(zip(names, element))
         if kwargs.get('time_varying_regression', False):
             kwargs['mle_regression'] = False
@@ -2142,8 +2141,8 @@ def check_concentrated_scale(filter_univariate=False):
             k_snr += 1
 
         atol = 1e-5
-        if kwargs['seasonal_order'] == seasonal_orders[1] or kwargs['measurement_error']:
-            atol = 1e-3
+        if kwargs['measurement_error']:
+            atol = 1e-4
 
         orig_params = np.r_[orig_params[:-k_snr],
                             res_conc.scale * orig_params[-k_snr:]]
@@ -2196,8 +2195,8 @@ def check_concentrated_scale(filter_univariate=False):
                          'smoothed_forecasts_error_cov']
 
         for name in smoothed_attr:
-            actual = getattr(res_conc.filter_results, name)
-            desired = getattr(res_orig.filter_results, name)
+            actual = getattr(res_conc.filter_results, name)[..., d:]
+            desired = getattr(res_orig.filter_results, name)[..., d:]
             assert_allclose(actual, desired, atol=atol)
 
 
