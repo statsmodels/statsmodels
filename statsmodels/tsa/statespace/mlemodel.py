@@ -596,53 +596,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         result = self.ssm.smooth(complex_step=complex_step, **kwargs)
 
         # Wrap in a results object
-<<<<<<< e422acda25f30d507cdfd697d715f265d8b0b027
         return self._wrap_results(params, result, return_ssm, cov_type,
                                   cov_kwds, results_class,
                                   results_wrapper_class)
-=======
-        if not return_ssm:
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs['cov_type'] = cov_type
-            if cov_kwds is not None:
-                result_kwargs['cov_kwds'] = cov_kwds
-
-            if results_class is None:
-                results_class = MLEResults
-            if results_wrapper_class is None:
-                results_wrapper_class = MLEResultsWrapper
-
-            result = results_wrapper_class(
-                results_class(self, params, result, **result_kwargs)
-            )
-
-        return result
-
-    def _handle_args(self, names, defaults, *args, **kwargs):
-        output_args = []
-        # We need to handle positional arguments in two ways, in case this was
-        # called by a Scipy optimization routine
-        if len(args) > 0:
-            # the fit() method will pass a dictionary
-            if isinstance(args[0], dict):
-                flags = args[0]
-            # otherwise, a user may have just used positional arguments...
-            else:
-                flags = dict(zip(names, args))
-            for i in range(len(names)):
-                output_args.append(flags.get(names[i], defaults[i]))
-
-            for name, value in flags.items():
-                if name in kwargs:
-                    raise TypeError("loglike() got multiple values for keyword"
-                                    " argument '%s'" % name)
-        else:
-            for i in range(len(names)):
-                output_args.append(kwargs.pop(names[i], defaults[i]))
-
-        return tuple(output_args) + (kwargs,)
->>>>>>> REF: Allow passing scale to filter, smooth
 
     _loglike_param_names = ['transformed', 'complex_step']
     _loglike_param_defaults = [True, False]
@@ -1616,7 +1572,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         self.k_diffuse_states = 0 if P is None else np.sum(np.diagonal(P) == 1)
 
         # Degrees of freedom (see DK 2012, section 7.4)
-        self.df_model = self.params.size + self.k_diffuse_states
+        self.df_model = (self.params.size + self.k_diffuse_states +
+                         self.filter_results.filter_concentrated)
         self.df_resid = self.nobs_effective - self.df_model
 
         # Setup covariance matrix notes dictionary
@@ -1790,7 +1747,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (float) Akaike Information Criterion
         """
+<<<<<<< c911d882025194c55204af185adebe63dfa92787
         # return -2 * self.llf + 2 * self.df_model
+=======
+        # return -2 * self.llf + 2 * self.df_mdoel
+>>>>>>> REF: Add effective nobs (nobs - burned periods)
         return aic(self.llf, self.nobs_effective, self.df_model)
 
     @cache_readonly
