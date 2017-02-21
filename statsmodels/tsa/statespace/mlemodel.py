@@ -2043,14 +2043,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (float) The value of the log-likelihood function evaluated at `params`.
         """
-        return self.model.loglikeobs(self.params)
+        return self.filter_results.llf_obs
 
     @cache_readonly
     def llf(self):
         """
         (float) The value of the log-likelihood function evaluated at `params`.
         """
-        return self.llf_obs.sum()
+        return self.llf_obs[self.filter_results.loglikelihood_burn:].sum()
 
     @cache_readonly
     def loglikelihood_burn(self):
