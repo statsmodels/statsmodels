@@ -2143,7 +2143,7 @@ def check_concentrated_scale(filter_univariate=False):
 
         atol = 1e-5
         if kwargs['measurement_error'] or kwargs['time_varying_regression']:
-            atol = 1e-4
+            atol = 1e-3
 
         orig_params = np.r_[orig_params[:-k_snr],
                             res_conc.scale * orig_params[-k_snr:]]
