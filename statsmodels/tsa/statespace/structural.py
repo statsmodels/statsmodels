@@ -562,50 +562,50 @@ class UnobservedComponents(MLEModel):
         if self.irregular:
             self.parameters_obs_cov['irregular_var'] = 1
         if self.level:
-            self['design', 0, i] = 1.
-            self['transition', i, i] = 1.
+            self.ssm['design', 0, i] = 1.
+            self.ssm['transition', i, i] = 1.
             if self.trend:
-                self['transition', i, i+1] = 1.
+                self.ssm['transition', i, i+1] = 1.
             if self.stochastic_level:
-                self['selection', i, j] = 1.
+                self.ssm['selection', i, j] = 1.
                 self.parameters_state_cov['level_var'] = 1
                 j += 1
             i += 1
         if self.trend:
-            self['transition', i, i] = 1.
+            self.ssm['transition', i, i] = 1.
             if self.stochastic_trend:
-                self['selection', i, j] = 1.
+                self.ssm['selection', i, j] = 1.
                 self.parameters_state_cov['trend_var'] = 1
                 j += 1
             i += 1
         if self.seasonal:
             n = self.seasonal_periods - 1
-            self['design', 0, i] = 1.
-            self['transition', i:i + n, i:i + n] = (
+            self.ssm['design', 0, i] = 1.
+            self.ssm['transition', i:i + n, i:i + n] = (
                 companion_matrix(np.r_[1, [1] * n]).transpose()
             )
             if self.stochastic_seasonal:
-                self['selection', i, j] = 1.
+                self.ssm['selection', i, j] = 1.
                 self.parameters_state_cov['seasonal_var'] = 1
                 j += 1
             i += n
         if self.cycle:
-            self['design', 0, i] = 1.
+            self.ssm['design', 0, i] = 1.
             self.parameters_transition['cycle_freq'] = 1
             if self.damped_cycle:
                 self.parameters_transition['cycle_damp'] = 1
             if self.stochastic_cycle:
-                self['selection', i:i+2, j:j+2] = np.eye(2)
+                self.ssm['selection', i:i+2, j:j+2] = np.eye(2)
                 self.parameters_state_cov['cycle_var'] = 1
                 j += 2
             self._idx_cycle_transition = np.s_['transition', i:i+2, i:i+2]
             i += 2
         if self.autoregressive:
-            self['design', 0, i] = 1.
+            self.ssm['design', 0, i] = 1.
             self.parameters_transition['ar_coeff'] = self.ar_order
             self.parameters_state_cov['ar_var'] = 1
-            self['selection', i, j] = 1
-            self['transition', i:i+self.ar_order, i:i+self.ar_order] = (
+            self.ssm['selection', i, j] = 1
+            self.ssm['transition', i:i+self.ar_order, i:i+self.ar_order] = (
                 companion_matrix(self.ar_order).T
             )
             self._idx_ar_transition = (
@@ -617,10 +617,12 @@ class UnobservedComponents(MLEModel):
             if self.mle_regression:
                 self.parameters_obs_intercept['reg_coeff'] = self.k_exog
             else:
-                design = np.repeat(self['design', :, :, 0], self.nobs, axis=0)
-                self['design'] = design.transpose()[np.newaxis, :, :]
-                self['design', 0, i:i+self.k_exog, :] = self.exog.transpose()
-                self['transition', i:i+self.k_exog, i:i+self.k_exog] = (
+                design = np.repeat(self.ssm['design', :, :, 0], self.nobs,
+                                   axis=0)
+                self.ssm['design'] = design.transpose()[np.newaxis, :, :]
+                self.ssm['design', 0, i:i+self.k_exog, :] = (
+                    self.exog.transpose())
+                self.ssm['transition', i:i+self.k_exog, i:i+self.k_exog] = (
                     np.eye(self.k_exog)
                 )
 
@@ -659,19 +661,19 @@ class UnobservedComponents(MLEModel):
                 self.cycle * 2
             )
             end = start + self.ar_order
-            selection_stationary = self['selection', start:end, :, 0]
+            selection_stationary = self.ssm['selection', start:end, :, 0]
             selected_state_cov_stationary = np.dot(
-                np.dot(selection_stationary, self['state_cov', :, :, 0]),
+                np.dot(selection_stationary, self.ssm['state_cov', :, :, 0]),
                 selection_stationary.T
             )
             try:
                 initial_state_cov_stationary = solve_discrete_lyapunov(
-                    self['transition', start:end, start:end, 0],
+                    self.ssm['transition', start:end, start:end, 0],
                     selected_state_cov_stationary
                 )
             except:
                 initial_state_cov_stationary = solve_discrete_lyapunov(
-                    self['transition', start:end, start:end, 0],
+                    self.ssm['transition', start:end, start:end, 0],
                     selected_state_cov_stationary,
                     method='direct'
                 )
@@ -918,7 +920,7 @@ class UnobservedComponents(MLEModel):
 
         # Observation covariance
         if self.irregular:
-            self['obs_cov', 0, 0] = params[offset]
+            self.ssm['obs_cov', 0, 0] = params[offset]
             offset += 1
 
         # State covariance
@@ -929,7 +931,7 @@ class UnobservedComponents(MLEModel):
                     variances = np.r_[variances[:-1], variances[-2:]]
                 else:
                     variances = np.r_[variances, variances[-1]]
-            self[self._idx_state_cov] = variances
+            self.ssm[self._idx_state_cov] = variances
             offset += self.k_state_cov
 
         # Cycle transition
@@ -943,12 +945,12 @@ class UnobservedComponents(MLEModel):
             if self.damped_cycle:
                 offset += 1
                 cycle_transition *= params[offset]
-            self[self._idx_cycle_transition] = cycle_transition
+            self.ssm[self._idx_cycle_transition] = cycle_transition
             offset += 1
 
         # AR transition
         if self.autoregressive:
-            self[self._idx_ar_transition] = (
+            self.ssm[self._idx_ar_transition] = (
                 params[offset:offset+self.ar_order]
             )
             offset += self.ar_order
@@ -956,7 +958,7 @@ class UnobservedComponents(MLEModel):
         # Beta observation intercept
         if self.regression:
             if self.mle_regression:
-                self['obs_intercept'] = np.dot(
+                self.ssm['obs_intercept'] = np.dot(
                     self.exog,
                     params[offset:offset+self.k_exog]
                 )[None, :]
@@ -1543,7 +1545,8 @@ class UnobservedComponentsResults(MLEResults):
         model_name = [self.specification.trend_specification]
 
         if self.specification.seasonal:
-            seasonal_name = 'seasonal(%d)' % self.specification.seasonal_periods
+            seasonal_name = ('seasonal(%d)'
+                             % self.specification.seasonal_periods)
             if self.specification.stochastic_seasonal:
                 seasonal_name = 'stochastic ' + seasonal_name
             model_name.append(seasonal_name)

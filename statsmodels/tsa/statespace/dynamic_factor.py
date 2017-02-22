@@ -258,7 +258,7 @@ class DynamicFactor(MLEModel):
         if self.error_order > 0:
             start = self._factor_order
             end = self._factor_order + self.k_endog
-            self['design', :, start:end] = np.eye(self.k_endog)
+            self.ssm['design', :, start:end] = np.eye(self.k_endog)
 
         # Setup indices of state space matrices
         self._idx_loadings = np.s_['design', :, :self.k_factors]
@@ -270,7 +270,7 @@ class DynamicFactor(MLEModel):
         # If we have exog effects, then the obs intercept needs to be
         # time-varying
         if self.k_exog > 0:
-            self['obs_intercept'] = np.zeros((self.k_endog, self.nobs))
+            self.ssm['obs_intercept'] = np.zeros((self.k_endog, self.nobs))
 
         # Setup indices of state space matrices
         self._idx_exog = np.s_['obs_intercept', :self.k_endog, :]
@@ -329,13 +329,13 @@ class DynamicFactor(MLEModel):
         # VAR(p) for factor transition
         if self.k_factors > 0:
             if self.factor_order > 0:
-                self['transition', k_factors:order, :order - k_factors] = (
+                self.ssm['transition', k_factors:order, :order - k_factors] = (
                     np.eye(order - k_factors))
 
-            self['selection', :k_factors, :k_factors] = np.eye(k_factors)
+            self.ssm['selection', :k_factors, :k_factors] = np.eye(k_factors)
             # Identification requires constraining the state covariance to an
             # identity matrix
-            self['state_cov', :k_factors, :k_factors] = np.eye(k_factors)
+            self.ssm['state_cov', :k_factors, :k_factors] = np.eye(k_factors)
 
         # Setup indices of state space matrices
         self._idx_factor_transition = np.s_['transition', :k_factors, :order]
@@ -357,12 +357,12 @@ class DynamicFactor(MLEModel):
             _slice = np.s_['selection',
                            _factor_order:_factor_order + k_endog,
                            k_factors:k_factors + k_endog]
-            self[_slice] = np.eye(k_endog)
+            self.ssm[_slice] = np.eye(k_endog)
             _slice = np.s_[
                 'transition',
                 _factor_order + k_endog:_factor_order + _error_order,
                 _factor_order:_factor_order + _error_order - k_endog]
-            self[_slice] = np.eye(_error_order - k_endog)
+            self.ssm[_slice] = np.eye(_error_order - k_endog)
 
             # Now specialized setups
             if self.error_var:
@@ -685,8 +685,7 @@ class DynamicFactor(MLEModel):
             # This is always an identity matrix, but because the transform
             # done prior to update (where the ssm representation matrices
             # change), it may be complex
-            cov = self[
-                'state_cov', :self.k_factors, :self.k_factors].real
+            cov = self.ssm['state_cov', :self.k_factors, :self.k_factors].real
             coefficient_matrices, variance = (
                 constrain_stationary_multivariate(unconstrained_matrices, cov))
             constrained[self._params_factor_transition] = (
@@ -706,7 +705,7 @@ class DynamicFactor(MLEModel):
                         self.k_endog, self._error_order))
                 start = self.k_factors
                 end = self.k_factors + self.k_endog
-                cov = self['state_cov', start:end, start:end].real
+                cov = self.ssm['state_cov', start:end, start:end].real
                 coefficient_matrices, variance = (
                     constrain_stationary_multivariate(
                         unconstrained_matrices, cov))
@@ -776,8 +775,7 @@ class DynamicFactor(MLEModel):
             constrained_matrices = (
                 constrained[self._params_factor_transition].reshape(
                     self.k_factors, self._factor_order))
-            cov = self[
-                'state_cov', :self.k_factors, :self.k_factors].real
+            cov = self.ssm['state_cov', :self.k_factors, :self.k_factors].real
             coefficient_matrices, variance = (
                 unconstrain_stationary_multivariate(
                     constrained_matrices, cov))
@@ -798,7 +796,7 @@ class DynamicFactor(MLEModel):
                         self.k_endog, self._error_order))
                 start = self.k_factors
                 end = self.k_factors + self.k_endog
-                cov = self['state_cov', start:end, start:end].real
+                cov = self.ssm['state_cov', start:end, start:end].real
                 coefficient_matrices, variance = (
                     unconstrain_stationary_multivariate(
                         constrained_matrices, cov))
@@ -871,7 +869,7 @@ class DynamicFactor(MLEModel):
 
         # 1. Factor loadings
         # Update the design / factor loading matrix
-        self[self._idx_loadings] = (
+        self.ssm[self._idx_loadings] = (
             params[self._params_loadings].reshape(self.k_endog, self.k_factors)
         )
 
@@ -879,32 +877,32 @@ class DynamicFactor(MLEModel):
         if self.k_exog > 0:
             exog_params = params[self._params_exog].reshape(
                 self.k_endog, self.k_exog).T
-            self[self._idx_exog] = np.dot(self.exog, exog_params).T
+            self.ssm[self._idx_exog] = np.dot(self.exog, exog_params).T
 
         # 3. Error covariances
         if self.error_cov_type in ['scalar', 'diagonal']:
-            self[self._idx_error_cov] = (
+            self.ssm[self._idx_error_cov] = (
                 params[self._params_error_cov])
         elif self.error_cov_type == 'unstructured':
             error_cov_lower = np.zeros((self.k_endog, self.k_endog),
                                        dtype=params.dtype)
             error_cov_lower[self._idx_lower_error_cov] = (
                 params[self._params_error_cov])
-            self[self._idx_error_cov] = (
+            self.ssm[self._idx_error_cov] = (
                 np.dot(error_cov_lower, error_cov_lower.T))
 
         # 4. Factor transition VAR
-        self[self._idx_factor_transition] = (
+        self.ssm[self._idx_factor_transition] = (
             params[self._params_factor_transition].reshape(
                 self.k_factors, self.factor_order * self.k_factors))
 
         # 5. Error transition VAR
         if self.error_var:
-            self[self._idx_error_transition] = (
+            self.ssm[self._idx_error_transition] = (
                 params[self._params_error_transition].reshape(
                     self.k_endog, self._error_order))
         else:
-            self[self._idx_error_transition] = (
+            self.ssm[self._idx_error_transition] = (
                 params[self._params_error_transition])
 
 
