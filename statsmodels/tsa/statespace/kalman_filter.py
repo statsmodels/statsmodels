@@ -1150,8 +1150,8 @@ class KalmanFilter(Representation):
                 else:
                     mat = np.asarray(kwargs[name])
                     validate_matrix_shape(name, mat.shape, shape[0],
-                                          shape[1], nforecast)
-                    if mat.ndim < 3 or not mat.shape[2] == nforecast:
+                                          shape[1], steps)
+                    if mat.ndim < 3 or not mat.shape[2] == steps:
                         raise ValueError(exception % name)
                     representation[name] = np.c_[representation[name], mat]
 
@@ -1575,7 +1575,6 @@ class FilterResults(FrozenRepresentation):
                     )
                 else:
                     mask = ~self.missing[:, t].astype(bool)
-                    n = self.k_endog - self.nmissing[t]
                     F = self.forecasts_error_cov[np.ix_(mask, mask, [t])]
                     self._kalman_gain[:, mask, t] = np.dot(
                         np.dot(
@@ -1856,8 +1855,6 @@ class FilterResults(FrozenRepresentation):
         # with predicted data during dynamic forecasting
         endog = model._representations[model.prefix]['obs']
 
-        # print(nstatic, ndynamic, nforecast, model.nobs)
-
         for t in range(kfilter.model.nobs):
             # Run the Kalman filter for the first `nstatic` periods (for
             # which dynamic computation will not be performed)
@@ -1989,8 +1986,6 @@ class PredictionResults(FilterResults):
     ]
 
     def __init__(self, results, start, end, nstatic, ndynamic, nforecast):
-        from scipy import stats
-
         # Save the filter results object
         self.results = results
 

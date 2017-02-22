@@ -11,12 +11,10 @@ from statsmodels.compat.collections import OrderedDict
 
 import pandas as pd
 import numpy as np
-from .kalman_filter import (
-    KalmanFilter, FilterResults, INVERT_UNIVARIATE, SOLVE_LU
-)
+from .kalman_filter import (INVERT_UNIVARIATE, SOLVE_LU)
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
-    companion_matrix, diff, is_invertible,
+    is_invertible,
     constrain_stationary_multivariate, unconstrain_stationary_multivariate
 )
 from statsmodels.tools.tools import Bunch
@@ -354,8 +352,8 @@ class VARMAX(MLEModel):
 
             if not stationary:
                 raise ValueError('Non-stationary starting autoregressive'
-                         ' parameters found with `enforce_stationarity`'
-                         ' set to True.')
+                                 ' parameters found with'
+                                 ' `enforce_stationarity` set to True.')
 
         # C. Run a VAR model on the residuals to get MA parameters
         ma_params = []
@@ -376,8 +374,8 @@ class VARMAX(MLEModel):
 
                 if not invertible:
                     raise ValueError('Non-invertible starting moving-average'
-                             ' parameters found with `enforce_stationarity`'
-                             ' set to True.')
+                                     ' parameters found with'
+                                     ' `enforce_stationarity` set to True.')
 
         # 1. Intercept terms
         if self.trend == 'c':
@@ -918,7 +916,8 @@ class VARMAXResults(MLEResults):
 
                 # 5. Measurement error variance terms
                 if self.model.measurement_error:
-                    masks.append(np.array(self.model.k_params - i - 1, ndmin=1))
+                    masks.append(
+                        np.array(self.model.k_params - i - 1, ndmin=1))
 
                 # Create the table
                 mask = np.concatenate(masks)

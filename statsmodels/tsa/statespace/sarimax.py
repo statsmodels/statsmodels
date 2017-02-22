@@ -11,7 +11,7 @@ from warnings import warn
 
 import numpy as np
 import pandas as pd
-from .kalman_filter import KalmanFilter, FilterResults
+from .kalman_filter import KalmanFilter
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
     companion_matrix, diff, is_invertible, constrain_stationary_univariate,
@@ -331,9 +331,8 @@ class SARIMAX(MLEModel):
                 1., [0] * self.seasonal_periods * len(seasonal_order[0])
             ]
             for i in range(len(seasonal_order[0])):
-                self.polynomial_seasonal_ar[(i + 1) * self.seasonal_periods] = (
-                    seasonal_order[0][i]
-                )
+                tmp = (i + 1) * self.seasonal_periods
+                self.polynomial_seasonal_ar[tmp] = seasonal_order[0][i]
         if isinstance(seasonal_order[2], (int, long, np.integer)):
             self.polynomial_seasonal_ma = np.r_[
                 1.,  # constant
@@ -344,9 +343,8 @@ class SARIMAX(MLEModel):
                 1., [0] * self.seasonal_periods * len(seasonal_order[2])
             ]
             for i in range(len(seasonal_order[2])):
-                self.polynomial_seasonal_ma[(i + 1) * self.seasonal_periods] = (
-                    seasonal_order[2][i]
-                )
+                tmp = (i + 1) * self.seasonal_periods
+                self.polynomial_seasonal_ma[tmp] = seasonal_order[2][i]
 
         # Deterministic trend polynomial
         self.trend = trend
@@ -446,7 +444,8 @@ class SARIMAX(MLEModel):
         # Number of states
         k_states = self._k_order
         if not self.simple_differencing:
-            k_states += self.seasonal_periods * self._k_seasonal_diff + self._k_diff
+            k_states += (self.seasonal_periods * self._k_seasonal_diff +
+                         self._k_diff)
         if self.state_regression:
             k_states += self.k_exog
 
@@ -521,10 +520,10 @@ class SARIMAX(MLEModel):
             self._manual_initialization = True
 
         # Initialize the fixed components of the statespace model
-        self.ssm.design = self.initial_design
-        self.ssm.state_intercept = self.initial_state_intercept
-        self.ssm.transition = self.initial_transition
-        self.ssm.selection = self.initial_selection
+        self.ssm['design'] = self.initial_design
+        self.ssm['state_intercept'] = self.initial_state_intercept
+        self.ssm['transition'] = self.initial_transition
+        self.ssm['selection'] = self.initial_selection
 
         # If we are estimating a simple ARMA model, then we can use a faster
         # initialization method (unless initialization was already specified).
@@ -726,13 +725,13 @@ class SARIMAX(MLEModel):
 
         # Add in the initialized stationary components
         if self._k_order > 0:
-            selection_stationary = self.ssm.selection[start:end, :, 0]
+            selection_stationary = self.ssm['selection', start:end, :, 0]
             selected_state_cov_stationary = np.dot(
-                np.dot(selection_stationary, self.ssm.state_cov[:, :, 0]),
+                np.dot(selection_stationary, self.ssm['state_cov', :, :, 0]),
                 selection_stationary.T
             )
             initial_state_cov_stationary = solve_discrete_lyapunov(
-                self.ssm.transition[start:end, start:end, 0],
+                self.ssm['transition', start:end, start:end, 0],
                 selected_state_cov_stationary,
                 complex_step=complex_step
             )
@@ -839,8 +838,8 @@ class SARIMAX(MLEModel):
                 start = self._k_diff
                 end = self._k_states_diff
                 transition[:self._k_diff, start:end] = (
-                    ([0] * (self.seasonal_periods - 1) + [1]) * self._k_seasonal_diff
-                )
+                    ([0] * (self.seasonal_periods - 1) + [1]) *
+                    self._k_seasonal_diff)
             # [1 0]
             column = self._k_states_diff
             transition[:self._k_diff, column] = 1
@@ -1646,7 +1645,7 @@ class SARIMAX(MLEModel):
                     self.ssm.obs_intercept += data[None, :]
                 # Otherwise set it directly
                 else:
-                    self.ssm.obs_intercept = data[None, :]
+                    self.ssm['obs_intercept'] = data[None, :]
 
         # Observation covariance matrix
         if self.measurement_error:
@@ -1659,7 +1658,8 @@ class SARIMAX(MLEModel):
             # This is required if the transition matrix is not really in use
             # (e.g. for an MA(q) process) so that it's dtype never changes as
             # the parameters' dtype changes. This changes the dtype manually.
-            self.ssm.transition = self.ssm.transition.real.astype(params.dtype)
+            self.ssm['transition'] = self.ssm['transition'].real.astype(
+                params.dtype)
 
         # Selection matrix (Harvey) or Design matrix (Hamilton)
         if self.k_ma > 0 or self.k_seasonal_ma > 0:
@@ -1726,7 +1726,8 @@ class SARIMAXResults(MLEResults):
     statsmodels.tsa.statespace.kalman_filter.FilterResults
     statsmodels.tsa.statespace.mlemodel.MLEResults
     """
-    def __init__(self, model, params, filter_results, cov_type='opg', **kwargs):
+    def __init__(self, model, params, filter_results, cov_type='opg',
+                 **kwargs):
         super(SARIMAXResults, self).__init__(model, params, filter_results,
                                              cov_type, **kwargs)
 
@@ -1991,7 +1992,8 @@ class SARIMAXResults(MLEResults):
                 k_seasonal_diff = 0
             seasonal_order = ('(%s, %d, %s, %d)' %
                               (str(order_seasonal_ar), k_seasonal_diff,
-                               str(order_seasonal_ma), self.model.seasonal_periods))
+                               str(order_seasonal_ma),
+                               self.model.seasonal_periods))
             if not order == '':
                 order += 'x'
         model_name = (

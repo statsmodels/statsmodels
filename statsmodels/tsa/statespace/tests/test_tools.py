@@ -944,9 +944,6 @@ def test_copy_index_vector():
                 A[i, t] = 1.
     B = np.zeros((k_endog, nobs), order='F')
 
-    print(A[:, 3])
-
     index = np.asfortranarray(index.astype(np.int32))
     tools.copy_index_vector(A, B, index, inplace=True)
-    print(B[:, 3])
     assert_equal(B, A)

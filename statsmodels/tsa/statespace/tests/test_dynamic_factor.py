@@ -74,7 +74,9 @@ class CheckDynamicFactor(object):
 
     def test_results(self):
         # Smoke test for creating the summary
-        self.results.summary()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.results.summary()
 
         # Test cofficient matrix creation (via a different, more direct, method)
         if self.model.factor_order > 0:
@@ -186,7 +188,9 @@ class TestDynamicFactor2(CheckDynamicFactor):
         pass
 
     def test_summary(self):
-        summary = self.results.summary()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            summary = self.results.summary()
         tables = [str(table) for table in summary.tables]
         params = self.true['params']
 
@@ -296,7 +300,9 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
         super(TestDynamicFactor_exog2, self).test_dynamic_predict(exog=exog)
 
     def test_summary(self):
-        summary = self.results.summary()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            summary = self.results.summary()
         tables = [str(table) for table in summary.tables]
         params = self.true['params']
 
@@ -397,7 +403,9 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         # ...
 
     def test_summary(self):
-        summary = self.results.summary()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            summary = self.results.summary()
         tables = [str(table) for table in summary.tables]
         params = self.true['params']
 

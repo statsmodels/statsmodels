@@ -635,9 +635,10 @@ class TestMultivariateVAR(object):
         )
 
     def test_scaled_smoothed_estimator_cov(self):
+        # Last obs is zero, so exclude it
         assert_allclose(
-            np.log(self.results.det_scaled_smoothed_estimator_cov.T),
-            np.log(self.desired[['detN']]), atol=1e-6
+            np.log(self.results.det_scaled_smoothed_estimator_cov.T[:-1]),
+            np.log(self.desired[['detN']][:-1]), atol=1e-6
         )
 
     def test_forecasts(self):
@@ -819,9 +820,10 @@ class TestMultivariateVARUnivariate(object):
         )
 
     def test_scaled_smoothed_estimator_cov(self):
+        # Last obs is zero, so exclude it
         assert_allclose(
-            np.log(self.results.det_scaled_smoothed_estimator_cov.T),
-            np.log(self.desired[['detN']])
+            np.log(self.results.det_scaled_smoothed_estimator_cov.T[:-1]),
+            np.log(self.desired[['detN']][:-1])
         )
 
     def test_forecasts(self):

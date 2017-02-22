@@ -493,12 +493,14 @@ def test_summary():
     assert_equal(re.search('Model:\s+MLEModel', txt) is not None, True)
 
     # Smoke test that summary still works when diagnostic tests fail
-    res.filter_results._standardized_forecasts_error[:] = np.nan
-    res.summary()
-    res.filter_results._standardized_forecasts_error = 1
-    res.summary()
-    res.filter_results._standardized_forecasts_error = 'a'
-    res.summary()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        res.filter_results._standardized_forecasts_error[:] = np.nan
+        res.summary()
+        res.filter_results._standardized_forecasts_error = 1
+        res.summary()
+        res.filter_results._standardized_forecasts_error = 'a'
+        res.summary()
 
 
 def check_endog(endog, nobs=2, k_endog=1, **kwargs):
@@ -713,6 +715,12 @@ def test_pandas_endog():
 
 def test_diagnostics():
     mod, res = get_dummy_mod()
+
+    # Override the standardized forecasts errors to get more reasonable values
+    # for the tests to run (not necessary, but prevents some annoying warnings)
+    shape = res.filter_results._standardized_forecasts_error.shape
+    res.filter_results._standardized_forecasts_error = (
+        np.random.normal(size=shape))
 
     # Make sure method=None selects the appropriate test
     actual = res.test_normality(method=None)

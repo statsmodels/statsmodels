@@ -59,8 +59,8 @@ class MatrixWrapper(object):
 
     def _set_matrix(self, obj, value, shape):
         # Expand 1-dimensional array if possible
-        if (value.ndim == 1 and shape[0] == 1
-                and value.shape[0] == shape[1]):
+        if (value.ndim == 1 and shape[0] == 1 and
+                value.shape[0] == shape[1]):
             value = value[None, :]
 
         # Enforce that the matrix is appropriate size
@@ -262,7 +262,8 @@ class Representation(object):
             endog = k_endog
             # If so, assume that it is either column-ordered and in wide format
             # or row-ordered and in long format
-            if endog.flags['C_CONTIGUOUS'] and (endog.shape[0] > 1 or nobs == 1):
+            if (endog.flags['C_CONTIGUOUS'] and
+                    (endog.shape[0] > 1 or nobs == 1)):
                 endog = endog.T
             k_endog = endog.shape[0]
 
@@ -332,10 +333,10 @@ class Representation(object):
         elif self.initialization == 'stationary':
             self.initialize_stationary()
         elif self.initialization == 'known':
-            if not 'initial_state' in kwargs:
+            if 'initial_state' not in kwargs:
                 raise ValueError('Initial state must be provided when "known"'
                                  ' is the specified initialization method.')
-            if not 'initial_state_cov' in kwargs:
+            if 'initial_state_cov' not in kwargs:
                 raise ValueError('Initial state covariance matrix must be'
                                  ' provided when "known" is the specified'
                                  ' initialization method.')
@@ -657,7 +658,6 @@ class Representation(object):
                         existing[:] = new[:]
                     else:
                         existing = new
-
 
         # Determine if we need to (re-)create the _statespace models
         # (if time-varying matrices changed)

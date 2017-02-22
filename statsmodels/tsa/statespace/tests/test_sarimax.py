@@ -2008,7 +2008,7 @@ def test_datasets():
     endog = np.random.binomial(1, 0.5, size=100)
     exog = np.random.binomial(1, 0.5, size=100)
     mod = sarimax.SARIMAX(endog, exog=exog, order=(1, 0, 0))
-    res = mod.fit()
+    res = mod.fit(disp=-1)
 
 
 def test_predict_custom_index():

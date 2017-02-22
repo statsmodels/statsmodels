@@ -17,7 +17,8 @@ from statsmodels.tsa.tsatools import lagmat
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from scipy.linalg import solve_discrete_lyapunov
 from statsmodels.tools.tools import Bunch
-from statsmodels.tools.sm_exceptions import ValueWarning, OutputWarning, SpecificationWarning
+from statsmodels.tools.sm_exceptions import (ValueWarning, OutputWarning,
+                                             SpecificationWarning)
 from .tools import (
     companion_matrix, constrain_stationary_univariate,
     unconstrain_stationary_univariate
@@ -127,7 +128,7 @@ class UnobservedComponents(MLEModel):
       also be a level included).
     - The element is deterministic vs stochastic (i.e. whether or not the
       variance on the error term is confined to be zero or not)
-    
+
     The only additional parameters to be estimated via MLE are the variances of
     any included stochastic components.
 
@@ -616,9 +617,11 @@ class UnobservedComponents(MLEModel):
             if self.mle_regression:
                 self.parameters_obs_intercept['reg_coeff'] = self.k_exog
             else:
-                design = np.repeat(self.ssm['design', :, :, 0], self.nobs, axis=0)
+                design = np.repeat(self.ssm['design', :, :, 0], self.nobs,
+                                   axis=0)
                 self.ssm['design'] = design.transpose()[np.newaxis, :, :]
-                self.ssm['design', 0, i:i+self.k_exog, :] = self.exog.transpose()
+                self.ssm['design', 0, i:i+self.k_exog, :] = (
+                    self.exog.transpose())
                 self.ssm['transition', i:i+self.k_exog, i:i+self.k_exog] = (
                     np.eye(self.k_exog)
                 )
@@ -658,19 +661,19 @@ class UnobservedComponents(MLEModel):
                 self.cycle * 2
             )
             end = start + self.ar_order
-            selection_stationary = self.ssm.selection[start:end, :, 0]
+            selection_stationary = self.ssm['selection', start:end, :, 0]
             selected_state_cov_stationary = np.dot(
-                np.dot(selection_stationary, self.ssm.state_cov[:, :, 0]),
+                np.dot(selection_stationary, self.ssm['state_cov', :, :, 0]),
                 selection_stationary.T
             )
             try:
                 initial_state_cov_stationary = solve_discrete_lyapunov(
-                    self.ssm.transition[start:end, start:end, 0],
+                    self.ssm['transition', start:end, start:end, 0],
                     selected_state_cov_stationary
                 )
             except:
                 initial_state_cov_stationary = solve_discrete_lyapunov(
-                    self.ssm.transition[start:end, start:end, 0],
+                    self.ssm['transition', start:end, start:end, 0],
                     selected_state_cov_stationary,
                     method='direct'
                 )
@@ -1030,7 +1033,7 @@ class UnobservedComponentsResults(MLEResults):
         -------
         out: Bunch
             Has the following attributes:
-            
+
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
@@ -1066,7 +1069,7 @@ class UnobservedComponentsResults(MLEResults):
         -------
         out: Bunch
             Has the following attributes:
-            
+
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
@@ -1103,7 +1106,7 @@ class UnobservedComponentsResults(MLEResults):
         -------
         out: Bunch
             Has the following attributes:
-            
+
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
@@ -1142,7 +1145,7 @@ class UnobservedComponentsResults(MLEResults):
         -------
         out: Bunch
             Has the following attributes:
-            
+
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
@@ -1183,7 +1186,7 @@ class UnobservedComponentsResults(MLEResults):
         -------
         out: Bunch
             Has the following attributes:
-            
+
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
@@ -1223,7 +1226,7 @@ class UnobservedComponentsResults(MLEResults):
         -------
         out: Bunch
             Has the following attributes:
-            
+
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
@@ -1542,7 +1545,8 @@ class UnobservedComponentsResults(MLEResults):
         model_name = [self.specification.trend_specification]
 
         if self.specification.seasonal:
-            seasonal_name = 'seasonal(%d)' % self.specification.seasonal_periods
+            seasonal_name = ('seasonal(%d)'
+                             % self.specification.seasonal_periods)
             if self.specification.stochastic_seasonal:
                 seasonal_name = 'stochastic ' + seasonal_name
             model_name.append(seasonal_name)

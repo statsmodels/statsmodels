@@ -11,14 +11,12 @@ from statsmodels.compat.collections import OrderedDict
 
 import numpy as np
 import pandas as pd
-from .kalman_filter import KalmanFilter, FilterResults
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
-    companion_matrix, diff, is_invertible,
+    is_invertible,
     constrain_stationary_univariate, unconstrain_stationary_univariate,
     constrain_stationary_multivariate, unconstrain_stationary_multivariate
 )
-from scipy.linalg import solve_discrete_lyapunov
 from statsmodels.multivariate.pca import PCA
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.vector_ar.var_model import VAR
@@ -401,7 +399,6 @@ class DynamicFactor(MLEModel):
 
     def _initialize_error_transition_individual(self):
         k_endog = self.k_endog
-        _factor_order = self._factor_order
         _error_order = self._error_order
 
         # Initialize the parameters
@@ -516,7 +513,6 @@ class DynamicFactor(MLEModel):
 
         # 4. Errors
         if self.error_order == 0:
-            error_params = []
             if self.error_cov_type == 'scalar':
                 params[self._params_error_cov] = endog.var(axis=0).mean()
             elif self.error_cov_type == 'diagonal':
@@ -689,8 +685,7 @@ class DynamicFactor(MLEModel):
             # This is always an identity matrix, but because the transform
             # done prior to update (where the ssm representation matrices
             # change), it may be complex
-            cov = self.ssm[
-                'state_cov', :self.k_factors, :self.k_factors].real
+            cov = self.ssm['state_cov', :self.k_factors, :self.k_factors].real
             coefficient_matrices, variance = (
                 constrain_stationary_multivariate(unconstrained_matrices, cov))
             constrained[self._params_factor_transition] = (
@@ -750,7 +745,7 @@ class DynamicFactor(MLEModel):
             Array of unconstrained parameters used by the optimizer.
         """
         constrained = np.array(constrained, ndmin=1)
-        dtype=constrained.dtype
+        dtype = constrained.dtype
         unconstrained = np.zeros(constrained.shape, dtype=dtype)
 
         # 1. Factor loadings
@@ -780,8 +775,7 @@ class DynamicFactor(MLEModel):
             constrained_matrices = (
                 constrained[self._params_factor_transition].reshape(
                     self.k_factors, self._factor_order))
-            cov = self.ssm[
-                'state_cov', :self.k_factors, :self.k_factors].real
+            cov = self.ssm['state_cov', :self.k_factors, :self.k_factors].real
             coefficient_matrices, variance = (
                 unconstrain_stationary_multivariate(
                     constrained_matrices, cov))
@@ -945,7 +939,7 @@ class DynamicFactorResults(MLEResults):
 
         self.specification = Bunch(**{
             # Model properties
-            'k_endog' : self.model.k_endog,
+            'k_endog': self.model.k_endog,
             'enforce_stationarity': self.model.enforce_stationarity,
 
             # Factor-related properties
@@ -996,7 +990,7 @@ class DynamicFactorResults(MLEResults):
         -------
         out: Bunch
             Has the following attributes:
-            
+
             - `filtered`: a time series array with the filtered estimate of
                           the component
             - `filtered_cov`: a time series array with the filtered estimate of
@@ -1019,7 +1013,7 @@ class DynamicFactorResults(MLEResults):
                 filtered=res.filtered_state[offset:end],
                 filtered_cov=res.filtered_state_cov[offset:end, offset:end],
                 smoothed=None, smoothed_cov=None,
-                        offset=offset)
+                offset=offset)
             if self.smoothed_state is not None:
                 out.smoothed = self.smoothed_state[offset:end]
             if self.smoothed_state_cov is not None:
@@ -1119,7 +1113,7 @@ class DynamicFactorResults(MLEResults):
         for coeffs in coefficients_of_determination.T:
             # Create the new axis
             ax = fig.add_subplot(spec.k_factors, 1, plot_idx)
-            ax.set_ylim((0,1))
+            ax.set_ylim((0, 1))
             ax.set(title='Factor %i' % plot_idx, ylabel=r'$R^2$')
             bars = ax.bar(locations, coeffs)
 
@@ -1292,12 +1286,10 @@ class DynamicFactorResults(MLEResults):
             exog_indices = indices[self.model._params_exog]
             exog_masks = []
             for i in range(k_endog):
-                offset = 0
-
                 # 1. Factor loadings
                 # Recall these are in the form:
                 # 'loading.f1.y1', 'loading.f2.y1', 'loading.f1.y2', ...
-                
+
                 loading_mask = (
                     loading_indices[i * k_factors:(i + 1) * k_factors])
                 loading_masks.append(loading_mask)

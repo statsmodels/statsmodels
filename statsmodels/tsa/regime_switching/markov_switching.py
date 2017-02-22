@@ -13,7 +13,6 @@ import pandas as pd
 from statsmodels.compat.collections import OrderedDict
 
 from scipy.misc import logsumexp
-from scipy.stats import norm
 from statsmodels.base.data import PandasData
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tools.data import _is_using_pandas
@@ -104,14 +103,15 @@ def _partials_logistic(x):
         partials = [np.diag(tmp[:, t] - tmp[:, t]**2)
                     for t in range(tmp.shape[1])]
         shape = tmp.shape[1], tmp.shape[0], tmp.shape[0]
-        partials = np.concatenate(partials).reshape(shape).transpose((1,2,0))
+        partials = np.concatenate(partials).reshape(shape).transpose((1, 2, 0))
     # k x k x j x t
     else:
         partials = [[np.diag(tmp[:, j, t] - tmp[:, j, t]**2)
                      for t in range(tmp.shape[2])]
                     for j in range(tmp.shape[1])]
         shape = tmp.shape[1], tmp.shape[2], tmp.shape[0], tmp.shape[0]
-        partials = np.concatenate(partials).reshape(shape).transpose((2,3,0,1))
+        partials = np.concatenate(partials).reshape(shape).transpose(
+            (2, 3, 0, 1))
 
     for i in range(tmp.shape[0]):
         for j in range(i):
@@ -1608,7 +1608,6 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         # Otherwise do logistic transformation
         else:
             # Transition probabilities
-            offset = 0
             for i in range(self.k_regimes):
                 tmp1 = unconstrained[self.parameters[i, 'regime_transition']]
                 tmp2 = np.r_[0, tmp1]
@@ -1917,8 +1916,6 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                     self.smoothed_marginal_probabilities, index=index)
 
     def _get_robustcov_results(self, cov_type='opg', **kwargs):
-        import statsmodels.stats.sandwich_covariance as sw
-
         use_self = kwargs.pop('use_self', False)
         if use_self:
             res = self
@@ -2209,6 +2206,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         # Make parameters tables for each regime
         from statsmodels.iolib.summary import summary_params
         import re
+
         def make_table(self, mask, title, strip_end=True):
             res = (self, self.params[mask], self.bse[mask],
                    self.tvalues[mask], self.pvalues[mask],

@@ -67,8 +67,10 @@ def set_mode(compatibility=None):
             'c': _representation.cStatespace, 'z': _representation.zStatespace
         })
         prefix_kalman_filter_map.update({
-            's': _kalman_filter.sKalmanFilter, 'd': _kalman_filter.dKalmanFilter,
-            'c': _kalman_filter.cKalmanFilter, 'z': _kalman_filter.zKalmanFilter
+            's': _kalman_filter.sKalmanFilter,
+            'd': _kalman_filter.dKalmanFilter,
+            'c': _kalman_filter.cKalmanFilter,
+            'z': _kalman_filter.zKalmanFilter
         })
         prefix_kalman_smoother_map.update({
             's': _kalman_smoother.sKalmanSmoother,
@@ -1477,9 +1479,6 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
        Journal of Statistical Computation and Simulation 24 (2): 99-106.
 
     """
-
-    from scipy import linalg
-
     use_list = type(constrained) == list
     if not use_list:
         k_endog, order = constrained.shape
