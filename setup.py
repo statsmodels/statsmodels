@@ -8,7 +8,7 @@ developers [1], which was in turn based on work done in pyzmq [2] and lxml [3].
 """
 
 import os
-from os.path import relpath, join as pjoin
+from os.path import relpath, join as pjoin, exists, dirname, abspath, splitext
 import sys
 import subprocess
 import re
@@ -49,7 +49,7 @@ else:
         sys.exit("Need setuptools to install statsmodels for Python 3.x")
 
 
-curdir = os.path.abspath(os.path.dirname(__file__))
+curdir = abspath(dirname(__file__))
 README = open(pjoin(curdir, "README.rst")).read()
 CYTHON_EXCLUSION_FILE = 'cythonize_exclusions.dat'
 
@@ -70,24 +70,48 @@ from distutils.command.build_ext import build_ext as _build_ext
 
 class build_ext(_build_ext):
     def build_extensions(self):
-        numpy_incl = pkg_resources.resource_filename('numpy', 'core/include')
+        # Rebuild from pyx sources if necessary.  This build delayed until
+        # build step to allow pip to install Cython beforehand.
+        if len(self.find_missing_sources()):
+            self.generate_cython()
+        # Delay numpy imports to allow pip to install numpy during build.
+        from numpy.distutils.misc_util import get_info
+        from numpy import get_include
+        numpy_incl = get_include()
+        npymath_info = get_info("npymath")
 
         for ext in self.extensions:
-            if (hasattr(ext, 'include_dirs') and
-                    not numpy_incl in ext.include_dirs):
+            if not hasattr(ext, 'include_dirs'):
+                continue
+            if not numpy_incl in ext.include_dirs:
                 ext.include_dirs.append(numpy_incl)
+            if not ext.name in EXTS_NEEDING_NPYMATH:
+                continue
+            ext.include_dirs += npymath_info['include_dirs']
+            ext.libraries += npymath_info['libraries']
+            ext.library_dirs += npymath_info['library_dirs']
+
         _build_ext.build_extensions(self)
 
+    def generate_cython(self):
+        cwd = abspath(dirname(__file__))
+        print("Cythonizing sources")
+        p = subprocess.call([sys.executable,
+                             pjoin(cwd, 'tools', 'cythonize.py'),
+                             'statsmodels'],
+                            cwd=cwd)
+        if p != 0:
+            raise RuntimeError("Running cythonize failed!")
 
-def generate_cython():
-    cwd = os.path.abspath(os.path.dirname(__file__))
-    print("Cythonizing sources")
-    p = subprocess.call([sys.executable,
-                          os.path.join(cwd, 'tools', 'cythonize.py'),
-                          'statsmodels'],
-                         cwd=cwd)
-    if p != 0:
-        raise RuntimeError("Running cythonize failed!")
+    def find_missing_sources(self):
+        """ Return list of not-existing source files from extensions
+        """
+        missing = []
+        for ext in self.extensions:
+            for src in ext.sources:
+                if not exists(src):
+                    missing.append(src)
+        return missing
 
 
 def init_cython_exclusion(filename):
@@ -228,9 +252,9 @@ def write_version_py(filename=pjoin(curdir, 'statsmodels/version.py')):
     # otherwise the import of numpy.version messes up the build under Python 3.
     FULLVERSION = VERSION
     dowrite = True
-    if os.path.exists('.git'):
+    if exists('.git'):
         GIT_REVISION = git_version()
-    elif os.path.exists(filename):
+    elif exists(filename):
         # must be a source distribution, use existing version file
         try:
             from statsmodels.version import git_revision as GIT_REVISION
@@ -271,16 +295,16 @@ class CleanCommand(Command):
             for f in files:
                 if f in self._clean_exclude:
                     continue
-                if os.path.splitext(f)[-1] in ('.pyc', '.so', '.o',
-                                               '.pyo',
-                                               '.pyd', '.c', '.orig'):
+                if splitext(f)[-1] in ('.pyc', '.so', '.o',
+                                       '.pyo',
+                                       '.pyd', '.c', '.orig'):
                     self._clean_me.append(pjoin(root, f))
             for d in dirs:
                 if d == '__pycache__':
                     self._clean_trees.append(pjoin(root, d))
 
         for d in ('build',):
-            if os.path.exists(d):
+            if exists(d):
                 self._clean_trees.append(d)
 
     def finalize_options(self):
@@ -298,23 +322,6 @@ class CleanCommand(Command):
                 shutil.rmtree(clean_tree)
             except Exception:
                 pass
-
-
-class CheckingBuildExt(build_ext):
-    """Subclass build_ext to get clearer report if Cython is necessary."""
-
-    def check_cython_extensions(self, extensions):
-        for ext in extensions:
-            for src in ext.sources:
-                if not os.path.exists(src):
-                    raise Exception("""Cython-generated file '%s' not found.
-        Cython is required to compile statsmodels from a development branch.
-        Please install Cython or download a source release of statsmodels.
-                """ % src)
-
-    def build_extensions(self):
-        self.check_cython_extensions(self.extensions)
-        build_ext.build_extensions(self)
 
 
 class DummyBuildSrc(Command):
@@ -336,134 +343,63 @@ cmdclass = {'clean': CleanCommand,
             'build': build}
 
 cmdclass["build_src"] = DummyBuildSrc
-cmdclass["build_ext"] = CheckingBuildExt
+cmdclass["build_ext"] = build_ext
 
 
 # some linux distros require it
 #NOTE: we are not currently using this but add it to Extension, if needed.
 # libraries = ['m'] if 'win32' not in sys.platform else []
 
-from numpy.distutils.misc_util import get_info
-
 # Reset the cython exclusions file
 init_cython_exclusion(CYTHON_EXCLUSION_FILE)
 
-npymath_info = get_info("npymath")
-ext_data = dict(
-    kalman_loglike = {"name" : "statsmodels/tsa/kalmanf/kalman_loglike.c",
-              "depends" : ["statsmodels/src/capsule.h"],
-              "include_dirs": ["statsmodels/src"],
-              "sources" : []},
-    _hamilton_filter = {"name" : "statsmodels/tsa/regime_switching/_hamilton_filter.c",
-              "depends" : [],
-              "include_dirs": [],
-              "sources" : []},
-    _kim_smoother = {"name" : "statsmodels/tsa/regime_switching/_kim_smoother.c",
-              "depends" : [],
-              "include_dirs": [],
-              "sources" : []},
-    _statespace = {"name" : "statsmodels/tsa/statespace/_statespace.c",
-              "depends" : ["statsmodels/src/capsule.h"],
-              "include_dirs": ["statsmodels/src"] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources" : []},
-    linbin = {"name" : "statsmodels/nonparametric/linbin.c",
-             "depends" : [],
-             "sources" : []},
-    _smoothers_lowess = {"name" : "statsmodels/nonparametric/_smoothers_lowess.c",
-             "depends" : [],
-             "sources" : []}
-    )
+ext_data = {
+    "statsmodels/tsa/kalmanf/kalman_loglike.c" : {
+        "depends" : ["statsmodels/src/capsule.h"],
+        "include_dirs": ["statsmodels/src"]},
+    "statsmodels/tsa/regime_switching/_hamilton_filter.c" : {},
+    "statsmodels/tsa/regime_switching/_kim_smoother.c" : {},
+    # statespace also needs npymath include / libs - see below
+    "statsmodels/tsa/statespace/_statespace.c" : {
+        "depends" : ["statsmodels/src/capsule.h"],
+        "include_dirs": ["statsmodels/src"],
+        "npymath": True},
+    "statsmodels/nonparametric/linbin.c" : {},
+    "statsmodels/nonparametric/_smoothers_lowess.c" : {},
+}
 
-statespace_ext_data = dict(
-    _representation = {"name" : "statsmodels/tsa/statespace/_representation.c",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_filter = {"name" : "statsmodels/tsa/statespace/_kalman_filter.c",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_filter_conventional = {"name" : "statsmodels/tsa/statespace/_filters/_conventional.c",
-              "filename": "_conventional",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_filter_inversions = {"name" : "statsmodels/tsa/statespace/_filters/_inversions.c",
-              "filename": "_inversions",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_filter_univariate = {"name" : "statsmodels/tsa/statespace/_filters/_univariate.c",
-              "filename": "_univariate",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_smoother = {"name" : "statsmodels/tsa/statespace/_kalman_smoother.c",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_smoother_alternative = {"name" : "statsmodels/tsa/statespace/_smoothers/_alternative.c",
-              "filename": "_alternative",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_smoother_classical = {"name" : "statsmodels/tsa/statespace/_smoothers/_classical.c",
-              "filename": "_classical",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_smoother_conventional = {"name" : "statsmodels/tsa/statespace/_smoothers/_conventional.c",
-              "filename": "_conventional",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_smoother_univariate = {"name" : "statsmodels/tsa/statespace/_smoothers/_univariate.c",
-              "filename": "_univariate",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_simulation_smoother = {"name" : "statsmodels/tsa/statespace/_simulation_smoother.c",
-              "filename": "_simulation_smoother",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_tools = {"name" : "statsmodels/tsa/statespace/_tools.c",
-              "filename": "_tools",
-              "sources": []},
-)
+statespace_ext_data = {
+    key : {"include_dirs": ['statsmodels/src'], "npymath": True}
+    for key in ("statsmodels/tsa/statespace/_representation.c",
+                "statsmodels/tsa/statespace/_kalman_filter.c",
+                "statsmodels/tsa/statespace/_filters/_conventional.c",
+                "statsmodels/tsa/statespace/_filters/_inversions.c",
+                "statsmodels/tsa/statespace/_filters/_univariate.c",
+                "statsmodels/tsa/statespace/_kalman_smoother.c",
+                "statsmodels/tsa/statespace/_smoothers/_alternative.c",
+                "statsmodels/tsa/statespace/_smoothers/_classical.c",
+                "statsmodels/tsa/statespace/_smoothers/_conventional.c",
+                "statsmodels/tsa/statespace/_smoothers/_univariate.c",
+                "statsmodels/tsa/statespace/_simulation_smoother.c")
+}
+statespace_ext_data["statsmodels/tsa/statespace/_tools.c"] = {}
+
 try:
     from scipy.linalg import cython_blas
     ext_data.update(statespace_ext_data)
 except ImportError:
-    for name, data in statespace_ext_data.items():
-        path = '.'.join([data["name"].split('.')[0], 'pyx.in'])
+    for name, params in statespace_ext_data.items():
+        path = splitext(name)[0] + '.pyx.in'
         append_cython_exclusion(path, CYTHON_EXCLUSION_FILE)
 
 extensions = []
+EXTS_NEEDING_NPYMATH = []
 for name, data in ext_data.items():
-    data['sources'] = data.get('sources', []) + [data['name']]
-
-    destdir = ".".join(os.path.dirname(data["name"]).split("/"))
-    data.pop('name')
-
-    filename = data.pop('filename', name)
-
-    obj = Extension('%s.%s' % (destdir, filename), **data)
-
-    extensions.append(obj)
+    data['sources'] = data.get('sources', []) + [name]
+    mod_name = ".".join(splitext(name)[0].split("/"))
+    if data.pop('npymath', False):
+        EXTS_NEEDING_NPYMATH.append(mod_name)
+    extensions.append(Extension(mod_name, **data))
 
 
 def get_data_files():
@@ -490,7 +426,7 @@ def get_data_files():
 
 
 if __name__ == "__main__":
-    if os.path.exists('MANIFEST'):
+    if exists('MANIFEST'):
         os.unlink('MANIFEST')
 
     min_versions = {
@@ -503,8 +439,11 @@ if __name__ == "__main__":
         # 3.3 needs numpy 1.7+
         min_versions.update({"numpy" : "1.7.0"})
 
-    (setup_requires,
-     install_requires) = check_dependency_versions(min_versions)
+    setup_requires, install_requires = check_dependency_versions(min_versions)
+    # Generate Cython sources during ext build, unless building from source
+    # release
+    if not exists(pjoin(curdir, 'PKG-INFO')) and not no_frills:
+        setup_requires.append('Cython')
 
     if _have_setuptools:
         setuptools_kwargs['setup_requires'] = setup_requires
@@ -539,10 +478,7 @@ if __name__ == "__main__":
     #('docs/build/htmlhelp/statsmodelsdoc.chm',
     # 'statsmodels/statsmodelsdoc.chm')
 
-    cwd = os.path.abspath(os.path.dirname(__file__))
-    if not os.path.exists(os.path.join(cwd, 'PKG-INFO')) and not no_frills:
-        # Generate Cython sources, unless building from source release
-        generate_cython()
+    cwd = abspath(dirname(__file__))
     extras = {'docs': ['sphinx>=1.3.5',
                        'nbconvert>=4.2.0',
                        'jupyter_client',
