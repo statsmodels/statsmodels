@@ -11,27 +11,20 @@ import numpy as np
 def isoutlier(ts, find="IQR", N=2, detrend=True, dates=None, level=0):
     '''
     Find outliers in a time series.
-    
     Parameters
     ----------
     ts : 1D array-like 
          A panda Series with a DateTime index or a 1D array
-       
     find : {'MAD', 'IQR, 'ZScore'}
          Method for finding outliers
-              
     N : float
         if |MAD or ZScore| > N observation is an outlier
-       
     detrend : boolean
         remove the trend before finding ourliers?
-    
     dates : array-like DateTime, optional
         The datetime values for the time series    
-       
     level : int
             index level if the Series is multi-index
-    
     Returns
     -------
     array-like boolean
@@ -104,22 +97,16 @@ def plot(ts, trend=True, interval=False, outliers=False,  ax=None,  **kwargs):
     ----------
     ts : pd.Series 
         A time series with a DateTime index
-   
     trend : boolean 
         overlay trend linear as green dotted line?
-    
     interval : boolean 
         overlay a 2 standard deviation interval? Not supported
-    
     outliers : boolean
         Overlay outliers as red stars?
-    
     kwargs : 
         Aguments passed to isoutler
-    
     ax :  matplotlib.axes, optional 
         axes to draw on otherwise use current axes 
-    
     Returns
     -------
     axes object
@@ -158,23 +145,18 @@ def replace(ts, find="IQR", detrend=True, N = 2, how='NaN', **kwargs):
         ----------
         ts : pd.Series or Dataframe
             a time series with a DateTime index.
-
         find : {'MAD', 'IQR, 'ZScore'}
             Method of finding outliers
-
         N : int 
             if |MAD or ZScore| > N observation is an outlier
-
         detrend : boolean
             remove the timeseries trend before finding ourliers
-            
         how : {'NaN', 'interpolate'}
             replace outliers with NaN or interpolated values
-
         Returns
         -------
-        Time series with outliers replaced by NaN or values interpolated from neightbours
-        
+        Time series with outliers replaced by NaN or values interpolated 
+        from neightbours 
         '''
         if not isinstance(ts, pd.Series):
             return ts.apply(replace,  find=find, detrend=detrend, N = N, how=how, **kwargs)
