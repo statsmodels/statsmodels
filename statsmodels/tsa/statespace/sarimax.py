@@ -516,10 +516,10 @@ class SARIMAX(MLEModel):
             self.ssm._time_invariant = False
 
         # Initialize the fixed components of the statespace model
-        self.ssm.design = self.initial_design
-        self.ssm.state_intercept = self.initial_state_intercept
-        self.ssm.transition = self.initial_transition
-        self.ssm.selection = self.initial_selection
+        self.ssm['design'] = self.initial_design
+        self.ssm['state_intercept'] = self.initial_state_intercept
+        self.ssm['transition'] = self.initial_transition
+        self.ssm['selection'] = self.initial_selection
         if self.concentrate_scale:
             self.ssm['state_cov', 0, 0] = 1.
 
