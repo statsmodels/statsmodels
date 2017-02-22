@@ -16,6 +16,7 @@ from statsmodels.tsa import arima_model as arima
 from .results import results_sarimax
 from statsmodels.tools import add_constant
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
+from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
