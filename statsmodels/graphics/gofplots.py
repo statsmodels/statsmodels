@@ -143,7 +143,7 @@ class ProbPlot(object):
                                  **dict(loc = 0, scale = 1))
             else:
                 self.dist = dist(loc=0, scale=1)
-        elif distargs or loc == 0 or scale == 1:
+        elif distargs or loc != 0 or scale != 1:
             self.dist = dist(*distargs, **dict(loc=loc, scale=scale))
             self.loc = loc
             self.scale = scale
