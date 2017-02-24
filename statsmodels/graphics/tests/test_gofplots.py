@@ -137,6 +137,12 @@ class TestProbPlotRandomNormalLocScale(BaseProbplotMixin):
         self.line = '45'
         super(TestProbPlotRandomNormalLocScale, self).setup()
 
+    def test_loc_set(self):
+        assert self.prbplt.loc == 8.25
+
+    def test_scale_set(self):
+        assert self.prbplt.scale == 3.25
+
 
 class TestCompareSamplesDifferentSize(object):
     def setup(self):
@@ -156,6 +162,28 @@ class TestCompareSamplesDifferentSize(object):
     def test_ppplot(self, close_figures):
         self.data1.ppplot(other=self.data2)
         self.data2.ppplot(other=self.data1)
+
+
+class TestProbPlotRandomNormalLocScaleDist(BaseProbplotMixin):
+
+    def setup(self):
+        np.random.seed(5)
+        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        self.prbplt = sm.ProbPlot(self.data, loc=8, scale=3)
+        self.line = '45'
+        super(TestProbPlotRandomNormalLocScaleDist, self).setup()
+
+    def test_loc_set(self):
+        assert self.prbplt.loc == 8
+
+    def test_scale_set(self):
+        assert self.prbplt.scale == 3
+
+    def test_loc_set_in_dist(self):
+        assert self.prbplt.dist.mean() == 8.
+
+    def test_scale_set_in_dist(self):
+        assert self.prbplt.dist.var() == 9.
 
 
 class TestTopLevel(object):
