@@ -1,5 +1,6 @@
 import numpy as np
 from numpy.testing import dec
+from nose.tools import assert_equal
 
 import statsmodels.api as sm
 from statsmodels.graphics.gofplots import qqplot, qqline, ProbPlot
@@ -143,6 +144,33 @@ class TestProbPlotRandomNormalLocScale(BaseProbplotMixin):
         self.prbplt = sm.ProbPlot(self.data, loc=8.25, scale=3.25)
         self.line = '45'
         self.base_setup()
+
+    def test_loc_set(self):
+        assert_equal(self.prbplt.loc, 8.25)
+
+    def test_scale_set(self):
+        assert_equal(self.prbplt.scale, 3.25)
+
+
+class TestProbPlotRandomNormalLocScaleDist(BaseProbplotMixin):
+    def setup(self):
+        np.random.seed(5)
+        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        self.prbplt = sm.ProbPlot(self.data, loc=8, scale=3)
+        self.line = '45'
+        self.base_setup()
+
+    def test_loc_set(self):
+        assert_equal(self.prbplt.loc, 8)
+
+    def test_scale_set(self):
+        assert_equal(self.prbplt.scale, 3)
+
+    def test_loc_set_in_dist(self):
+        assert_equal(self.prbplt.dist.mean(), 8.)
+
+    def test_scale_set_in_dist(self):
+        assert_equal(self.prbplt.dist.var(), 9.)
 
 
 class TestTopLevel(object):
