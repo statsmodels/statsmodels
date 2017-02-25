@@ -725,20 +725,33 @@ class SARIMAX(MLEModel):
 
         # Add in the initialized stationary components
         if self._k_order > 0:
+            transition = self.ssm['transition', start:end, start:end, 0]
+
+            # Initial state
+            # In the Harvey representation, if we have a trend that
+            # is put into the state intercept and means we have a non-zero
+            # unconditional mean
+            if not self.hamilton_representation and self.k_trend > 0:
+                initial_intercept = (
+                    self['state_intercept', self._k_states_diff, 0])
+                initial_mean = (initial_intercept /
+                                (1 - np.sum(transition[:, 0])))
+                initial_state[self._k_states_diff] = initial_mean
+                _start = self._k_states_diff + 1
+                _end = _start + transition.shape[0] - 1
+                initial_state[_start:_end] = transition[1:, 0] * initial_mean
+
+            # Initial state covariance
             selection_stationary = self.ssm['selection', start:end, :, 0]
             selected_state_cov_stationary = np.dot(
                 np.dot(selection_stationary, self.ssm['state_cov', :, :, 0]),
-                selection_stationary.T
-            )
+                selection_stationary.T)
             initial_state_cov_stationary = solve_discrete_lyapunov(
-                self.ssm['transition', start:end, start:end, 0],
-                selected_state_cov_stationary,
-                complex_step=complex_step
-            )
+                transition, selected_state_cov_stationary,
+                complex_step=complex_step)
 
             initial_state_cov[start:end, start:end] = (
-                initial_state_cov_stationary
-            )
+                initial_state_cov_stationary)
 
         self.ssm.initialize_known(initial_state, initial_state_cov)
 
