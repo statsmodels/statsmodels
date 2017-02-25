@@ -300,6 +300,18 @@ class Family(object):
         """
         raise NotImplementedError
 
+    def _clean(self, x):
+        """
+        Helper function to trim the data so that it is in (0,inf)
+
+        Notes
+        -----
+        The need for this function was discovered through usage and its
+        possible that other families might need a check for validity of the
+        domain.
+        """
+        return np.clip(x, FLOAT_EPS, np.inf)
+
 
 class Poisson(Family):
     """
@@ -336,18 +348,6 @@ class Poisson(Family):
         if link is None:
             link = L.log()
         super(Poisson, self).__init__(link=link, variance=Poisson.variance)
-
-    def _clean(self, x):
-        """
-        Helper function to trim the data so that is in (0,inf)
-
-        Notes
-        -----
-        The need for this function was discovered through usage and its
-        possible that other families might need a check for validity of the
-        domain.
-        """
-        return np.clip(x, FLOAT_EPS, np.inf)
 
     def resid_dev(self, endog, mu, scale=1.):
         r"""Poisson deviance residual
@@ -411,7 +411,6 @@ class Poisson(Family):
         endog_mu = self._clean(endog / mu)
         return 2 * np.sum(freq_weights * (endog * np.log(endog_mu) -
                                           (endog - mu))) / scale
-
 
     def loglike(self, endog, mu, freq_weights=1., scale=1.):
         r"""
@@ -682,18 +681,6 @@ class Gamma(Family):
             link = L.inverse_power()
         super(Gamma, self).__init__(link=link, variance=Gamma.variance)
 
-    def _clean(self, x):
-        """
-        Helper function to trim the data so that is in (0,inf)
-
-        Notes
-        -----
-        The need for this function was discovered through usage and its
-        possible that other families might need a check for validity of the
-        domain.
-        """
-        return np.clip(x, FLOAT_EPS, np.inf)
-
     def deviance(self, endog, mu, freq_weights=1., scale=1.):
         r"""
         Gamma deviance function
@@ -721,7 +708,7 @@ class Gamma(Family):
            D = 2 * \sum_i freq\_weights_i *
            ((Y_i - \mu_i)/\mu_i - \log(Y_i / \mu_i)) / scale
         """
-        endog_mu = self._clean(endog/mu)
+        endog_mu = self._clean(endog / mu)
         return 2*np.sum(freq_weights*((endog-mu)/mu-np.log(endog_mu)))/scale
 
     def resid_dev(self, endog, mu, scale=1.):
@@ -935,7 +922,7 @@ class Binomial(Family):
         :math:`Y_i = 1`. and :math:`I_{0,i}` is an indicator function that
         evaluates to 1 if :math:`Y_i = 0`.
 
-        If the model is ninomial:
+        If the model is binomial:
 
         .. math::
 
@@ -946,14 +933,15 @@ class Binomial(Family):
         '''
         if np.shape(self.n) == () and self.n == 1:
             one = np.equal(endog, 1)
-            return -2 * np.sum((one * np.log(mu + 1e-200) + (1-one) *
-                               np.log(1 - mu + 1e-200)) * freq_weights) / scale
+            return -2 * np.sum((one * np.log(mu) + (1-one) *
+                               np.log(1-mu)) * freq_weights) / scale
 
         else:
+            endog_mu = self._clean(endog / mu)
+            n_endog_mu = self._clean((1-endog) / (1-mu))
             return 2 * np.sum(self.n * freq_weights *
-                              (endog * np.log(endog/mu + 1e-200) +
-                               (1 - endog) * np.log((1 - endog) /
-                               (1 - mu) + 1e-200))) / scale
+                              (endog * np.log(endog_mu) +
+                               (1 - endog) * np.log(n_endog_mu))) / scale
 
     def resid_dev(self, endog, mu, scale=1.):
         r"""
@@ -1004,10 +992,12 @@ class Binomial(Family):
             return np.sign(endog-mu) *
                 np.sqrt(-2 * np.log(one * mu + (1 - one) * (1 - mu))/scale)
         else:
+            endog_mu = self._clean(endog/mu)
+            n_endog_mu = self._clean((1-endog)/(1-mu))
             return np.sign(endog - mu) *
                 np.sqrt(2 * self.n *
-                    (endog * np.log(endog/mu + 1e-200) +
-                    (1 - endog) * np.log((1 - endog)/(1 - mu) + 1e-200))/scale)
+                    (endog * np.log(endog_mu) +
+                    (1 - endog) * np.log(n_endog_mu))/scale)
 
     def loglike(self, endog, mu, freq_weights=1, scale=1.):
         r"""
@@ -1053,7 +1043,7 @@ class Binomial(Family):
         """
 
         if np.shape(self.n) == () and self.n == 1:
-            return np.sum((endog * np.log(mu/(1 - mu) + 1e-200) +
+            return np.sum((endog * np.log(self._clean(mu/(1 - mu))) +
                             np.log(1 - mu)) * freq_weights)
         else:
             y = endog * self.n  # convert back to successes
@@ -1330,18 +1320,6 @@ class NegativeBinomial(Family):
         super(NegativeBinomial, self).__init__(
             link=link, variance=V.NegativeBinomial(alpha=self.alpha))
 
-    def _clean(self, x):
-        """
-        Helper function to trim the data so that is in (0,inf)
-
-        Notes
-        -----
-        The need for this function was discovered through usage and its
-        possible that other families might need a check for validity of the
-        domain.
-        """
-        return np.clip(x, FLOAT_EPS, np.inf)
-
     def deviance(self, endog, mu, freq_weights=1., scale=1.):
         r"""
         Returns the value of the deviance function.
@@ -1380,7 +1358,7 @@ class NegativeBinomial(Family):
         """
         iszero = np.equal(endog, 0)
         notzero = 1 - iszero
-        endog_mu = self._clean(endog/mu)
+        endog_mu = self._clean(endog / mu)
         tmp = iszero * 2 * np.log(1 + self.alpha * mu) / self.alpha
         tmp += notzero * (2 * endog * np.log(endog_mu) - 2 / self.alpha *
                           (1 + self.alpha * endog) *
@@ -1560,18 +1538,6 @@ class Tweedie(Family):
             link = L.log()
         super(Tweedie, self).__init__(
             link=link, variance=V.Power(power=var_power * 1.))
-
-    def _clean(self, x):
-        """
-        Helper function to trim the data so that is in (0,inf)
-
-        Notes
-        -----
-        The need for this function was discovered through usage and its
-        possible that other families might need a check for validity of the
-        domain.
-        """
-        return np.clip(x, 0, np.inf)
 
     def deviance(self, endog, mu, freq_weights=1., scale=1.):
         r"""
