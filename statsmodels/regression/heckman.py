@@ -22,7 +22,7 @@ class Heckman(base.LikelihoodModel):
     """
     Class for Heckman correction for sample selection bias model.
 
-    Attributes
+    Parameters
     ----------
     endog : 1darray
         Data for the dependent variable. Should be set to np.nan for
