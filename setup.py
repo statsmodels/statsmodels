@@ -450,7 +450,8 @@ try:
 except ImportError:
     for name, data in statespace_ext_data.items():
         path = '.'.join([data["name"].split('.')[0], 'pyx.in'])
-        append_cython_exclusion(path, CYTHON_EXCLUSION_FILE)
+        append_cython_exclusion(path.replace('/', os.path.sep),
+                                CYTHON_EXCLUSION_FILE)
 
 extensions = []
 for name, data in ext_data.items():
