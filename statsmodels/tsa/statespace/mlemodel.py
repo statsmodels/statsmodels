@@ -598,7 +598,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         return tuple(output_args) + (kwargs,)
 
     _loglike_param_names = ['transformed', 'complex_step']
-    _loglike_param_defaults = [True, True]
+    _loglike_param_defaults = [True, False]
 
     def loglike(self, params, *args, **kwargs):
         """
@@ -1019,7 +1019,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     _score_param_names = ['transformed', 'score_method',
                           'approx_complex_step', 'approx_centered']
-    _score_param_defaults = [True, 'approx', None, True]
+    _score_param_defaults = [True, 'approx', None, False]
 
     def score(self, params, *args, **kwargs):
         """
@@ -1142,7 +1142,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
     _hessian_param_names = ['transformed', 'hessian_method',
                             'approx_complex_step', 'approx_centered']
-    _hessian_param_defaults = [True, 'approx', None, True]
+    _hessian_param_defaults = [True, 'approx', None, False]
 
     def hessian(self, params, *args, **kwargs):
         """
