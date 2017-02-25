@@ -182,8 +182,8 @@ class Family(object):
         freq_weights : array-like
             1d array of frequency weights. The default is 1.
         scale : float, optional
-            An optional argument to divide the residuals by scale. The default
-            is 1.
+            An optional argument to divide the residuals by sqrt(scale).
+            The default is 1.
 
         Returns
         -------
@@ -196,7 +196,7 @@ class Family(object):
 
         .. math::
 
-           \sign(y_i-\mu_i) \sqrt(D_i)
+           sign(y_i-\mu_i) \sqrt{D_i}
         """
         raise NotImplementedError
 
@@ -266,9 +266,21 @@ class Family(object):
         """
         raise NotImplementedError
 
-    def resid_anscombe(self, endog, mu):
+    def resid_anscombe(self, endog, mu, freq_weights=1., scale=1.):
         r"""
         The Anscombe residuals
+
+        Parameters
+        ----------
+        endog : array
+            The endogenous response variable
+        mu : array
+            The inverse of the link function at the linear predicted values.
+        freq_weights : array-like
+            1d array of frequency weights. The default is 1.
+        scale : float, optional
+            An optional argument to divide the residuals by sqrt(scale).
+            The default is 1.
 
         See Also
         --------
@@ -283,7 +295,8 @@ class Family(object):
            \frac{A(y)-A(\mu)}{A'(\mu)\sqrt{Var[\mu]}}
 
         where :math:`A'(y)=v(y)^{-\frac{1}{3}}` and :math:`v(\mu)` is the
-        variance function Var[y]=\frac{\phi}{w}v(mu).
+        variance function Var[y]=\frac{\phi}{w}v(mu). The transformation
+        :math:`A(y)` makes the residuals more normal distributed.
         """
         raise NotImplementedError
 
@@ -346,8 +359,8 @@ class Poisson(Family):
         mu : array-like
             Fitted mean response variable
         scale : float, optional
-            An optional argument to divide the residuals by scale. The default
-            is 1.
+            An optional argument to divide the residuals by sqrt(scale).
+            The default is 1.
 
         Returns
         -------
@@ -359,11 +372,11 @@ class Poisson(Family):
         .. math::
 
            resid\_dev_i = sign(Y_i - \mu_i) * \sqrt{2 *
-                          (Y_i * \log(Y_i / \mu_i) - (Y_i - \mu_i))} / scale
+                          (Y_i * \log(Y_i / \mu_i) - (Y_i - \mu_i))/ scale}
         """
         endog_mu = self._clean(endog / mu)
-        return (np.sign(endog - mu) *
-                np.sqrt(2 * (endog * np.log(endog_mu) - (endog - mu))) / scale)
+        return np.sign(endog - mu) *
+                np.sqrt(2 * (endog * np.log(endog_mu) - (endog - mu)) / scale)
 
     def deviance(self, endog, mu, freq_weights=1., scale=1.):
         r'''
@@ -392,7 +405,8 @@ class Poisson(Family):
 
         .. math::
 
-           D = 2 * \sum_i (freq\_weights_i * Y_i * \log(Y_i / \mu_i))/ scale
+           D = 2 * \sum_i (freq\_weights_i *
+           (Y_i * \log(Y_i / \mu_i) - (Y_i - \mu_i)))/ scale
         '''
         endog_mu = self._clean(endog / mu)
         return 2 * np.sum(freq_weights * (endog * np.log(endog_mu) -
@@ -412,7 +426,7 @@ class Poisson(Family):
         freq_weights : array-like
             1d array of frequency weights. The default is 1.
         scale : float, optional
-            The scale parameter, defaults to 1.
+            Not used for in the Poisson loglike.
 
         Returns
         -------
@@ -427,13 +441,12 @@ class Poisson(Family):
            llf = scale * \sum_i freq\_weights_i * (Y_i * \log(\mu_i) - \mu_i -
                  \ln \Gamma(Y_i + 1))
         """
-        loglike = np.sum(freq_weights * (endog * np.log(mu) - mu -
+        return np.sum(freq_weights * (endog * np.log(mu) - mu -
                          special.gammaln(endog + 1)))
-        return scale * loglike
 
-    def resid_anscombe(self, endog, mu):
+    def resid_anscombe(self, endog, mu, scale=1.):
         r"""
-        Anscombe residuals for the Poisson exponential family distribution
+        Anscombe residuals for the Poisson distribution
 
         Parameters
         ----------
@@ -441,6 +454,9 @@ class Poisson(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
+        scale : float, optional
+            An optional argument to divide the residuals by sqrt(scale).
+            The default is 1.
 
         Returns
         -------
@@ -453,7 +469,8 @@ class Poisson(Family):
 
            resid\_anscombe_i = (3/2) * (Y_i^{2/3} - \mu_i^{2/3}) / \mu_i^{1/6}
         """
-        return (3 / 2.) * (endog**(2/3.) - mu**(2 / 3.)) / mu**(1 / 6.)
+        return (3 / 2.) * (endog**(2/3.) - mu**(2 / 3.)) / mu**(1 / 6.) /
+                np.sqrt(scale)
 
 
 class Gaussian(Family):
@@ -513,10 +530,10 @@ class Gaussian(Family):
         --------
         .. math::
 
-           resid\_dev_i = (Y_i - \mu_i) / \sqrt{Var(\mu_i)} / scale
+           resid\_dev_i = (Y_i - \mu_i) / \sqrt{scale}
         """
 
-        return (endog - mu) / np.sqrt(self.variance(mu)) / scale
+        return (endog - mu) / np.sqrt(scale)
 
     def deviance(self, endog, mu, freq_weights=1., scale=1.):
         r"""
@@ -601,9 +618,9 @@ class Gaussian(Family):
             return np.sum(freq_weights * ((endog * mu - mu**2/2)/scale -
                           endog**2/(2 * scale) - .5*np.log(2 * np.pi * scale)))
 
-    def resid_anscombe(self, endog, mu):
+    def resid_anscombe(self, endog, mu, scale=1.):
         r"""
-        The Anscombe residuals for the Gaussian exponential family distribution
+        The Anscombe residuals for the Gaussian distribution
 
         Parameters
         ----------
@@ -611,6 +628,9 @@ class Gaussian(Family):
             Endogenous response variable
         mu : array
             Fitted mean response variable
+        scale : float, optional
+            An optional argument to divide the residuals by sqrt(scale).
+            The default is 1.
 
         Returns
         -------
@@ -619,11 +639,13 @@ class Gaussian(Family):
 
         Notes
         --------
+        For the Gaussian distribution, Anscombe residuals are the same as
+        deviance residuals.
         .. math::
 
            resid\_anscombe_i = Y_i - \mu_i
         """
-        return endog - mu
+        return (endog - mu) / np.sqrt(scale)
 
 
 class Gamma(Family):
@@ -696,11 +718,11 @@ class Gamma(Family):
         -----
         .. math::
 
-           D = 2 * \sum_i freq\_weights_i * ((Y_i - \mu_i)/\mu_i - \log(Y_i /
-               \mu_i))
+           D = 2 * \sum_i freq\_weights_i *
+           ((Y_i - \mu_i)/\mu_i - \log(Y_i / \mu_i)) / scale
         """
         endog_mu = self._clean(endog/mu)
-        return 2*np.sum(freq_weights*((endog-mu)/mu-np.log(endog_mu)))
+        return 2*np.sum(freq_weights*((endog-mu)/mu-np.log(endog_mu)))/scale
 
     def resid_dev(self, endog, mu, scale=1.):
         r"""
@@ -713,8 +735,8 @@ class Gamma(Family):
         mu : array-like
             Fitted mean response variable
         scale : float, optional
-            An optional argument to divide the residuals by scale. The default
-            is 1.
+            An optional argument to divide the residuals by sqrt(scale).
+            The default is 1.
 
         Returns
         -------
@@ -725,12 +747,12 @@ class Gamma(Family):
         -----
         .. math::
 
-           resid\_dev_i = sign(Y_i - \mu_i) \sqrt{-2 *
-                          (-(Y_i - \mu_i) / \mu_i + \log(Y_i / \mu_i))}
+           resid\_dev_i = sign(Y_i - \mu_i) \sqrt{2 *
+                          ((Y_i - \mu_i) / \mu_i - \log(Y_i / \mu_i))/scale}
         """
         endog_mu = self._clean(endog / mu)
-        return np.sign(endog - mu) * np.sqrt(-2 * (-(endog - mu)/mu +
-                                                   np.log(endog_mu)))
+        return np.sign(endog - mu) * np.sqrt(2 *
+                ((endog - mu)/mu - np.log(endog_mu))/scale)
 
     def loglike(self, endog, mu, freq_weights=1., scale=1.):
         r"""
@@ -770,9 +792,9 @@ class Gamma(Family):
         # in R it's the dispersion, though there is a loss of precision vs.
         # our results due to an assumed difference in implementation
 
-    def resid_anscombe(self, endog, mu):
+    def resid_anscombe(self, endog, mu, scale=1.):
         r"""
-        The Anscombe residuals for Gamma exponential family distribution
+        The Anscombe residuals for Gamma distribution
 
         Parameters
         ----------
@@ -780,6 +802,9 @@ class Gamma(Family):
             Endogenous response variable
         mu : array
             Fitted mean response variable
+        scale : float, optional
+            An optional argument to divide the residuals by sqrt(scale).
+            The default is 1.
 
         Returns
         -------
@@ -791,8 +816,9 @@ class Gamma(Family):
         .. math::
 
            resid\_anscombe_i = 3 * (Y_i^{1/3} - \mu_i^{1/3}) / \mu_i^{1/3}
+           / \sqrt{scale}
         """
-        return 3 * (endog**(1/3.) - mu**(1/3.)) / mu**(1/3.)
+        return 3 * (endog**(1/3.) - mu**(1/3.)) / mu**(1/3.) / np.sqrt(scale)
 
 
 class Binomial(Family):
@@ -903,7 +929,7 @@ class Binomial(Family):
         .. math::
 
            D = -2 * \sum_i freq\_weights * (I_{1,i} * \log(\mu_i) + I_{0,i} *
-               \log(1 - \mu_i))
+               \log(1 - \mu_i)) / scale
 
         where :math:`I_{1,i}` is an indicator function that evalueates to 1 if
         :math:`Y_i = 1`. and :math:`I_{0,i}` is an indicator function that
@@ -914,20 +940,20 @@ class Binomial(Family):
         .. math::
 
            D = 2 * \sum_i freq\_weights * (\log(Y_i / \mu_i) + (n_i - Y_i) *
-               \log((n_i - Y_i) / n_i - \mu_i))
+               \log((n_i - Y_i) / n_i - \mu_i)) / scale
 
         where :math:`Y_i` and :math:`n` are as defined in Binomial.initialize.
         '''
         if np.shape(self.n) == () and self.n == 1:
             one = np.equal(endog, 1)
             return -2 * np.sum((one * np.log(mu + 1e-200) + (1-one) *
-                               np.log(1 - mu + 1e-200)) * freq_weights)
+                               np.log(1 - mu + 1e-200)) * freq_weights) / scale
 
         else:
             return 2 * np.sum(self.n * freq_weights *
                               (endog * np.log(endog/mu + 1e-200) +
                                (1 - endog) * np.log((1 - endog) /
-                               (1 - mu) + 1e-200)))
+                               (1 - mu) + 1e-200))) / scale
 
     def resid_dev(self, endog, mu, scale=1.):
         r"""
@@ -940,8 +966,8 @@ class Binomial(Family):
         mu : array-like
             Fitted mean response variable
         scale : float, optional
-            An optional argument to divide the residuals by scale. The default
-            is 1.
+            An optional argument to divide the residuals by sqrt(scale).
+            The default is 1.
 
         Returns
         -------
@@ -955,7 +981,7 @@ class Binomial(Family):
         .. math::
 
            resid\_dev_i = sign(Y_i - \mu_i) * \sqrt{-2 *
-                          \log(I_{1,i} * \mu_i + I_{0,i} * (1 - \mu_i))}
+                          \log(I_{1,i} * \mu_i + I_{0,i} * (1 - \mu_i))/scale}
 
         where :math:`I_{1,i}` is an indicator function that evalueates to 1 if
         :math:`Y_i = 1`. and :math:`I_{0,i}` is an indicator function that
@@ -967,7 +993,7 @@ class Binomial(Family):
 
            resid\_dev_i = sign(Y_i - \mu_i) \sqrt{2 * n_i *
                           (Y_i * \log(Y_i / \mu_i) + (1 - Y_i) *
-                          \log(1 - Y_i)/(1 - \mu_i))}
+                          \log(1 - Y_i)/(1 - \mu_i))/scale}
 
         where :math:`Y_i` and :math:`n` are as defined in Binomial.initialize.
         """
@@ -975,15 +1001,13 @@ class Binomial(Family):
         mu = self.link._clean(mu)
         if np.shape(self.n) == () and self.n == 1:
             one = np.equal(endog, 1)
-            return np.sign(endog-mu)*np.sqrt(-2 *
-                                             np.log(one * mu + (1 - one) *
-                                                    (1 - mu)))/scale
+            return np.sign(endog-mu) *
+                np.sqrt(-2 * np.log(one * mu + (1 - one) * (1 - mu))/scale)
         else:
-            return (np.sign(endog - mu) *
-                    np.sqrt(2 * self.n *
-                            (endog * np.log(endog/mu + 1e-200) +
-                             (1 - endog) * np.log((1 - endog)/(1 - mu) +
-                                                  1e-200)))/scale)
+            return np.sign(endog - mu) *
+                np.sqrt(2 * self.n *
+                    (endog * np.log(endog/mu + 1e-200) +
+                    (1 - endog) * np.log((1 - endog)/(1 - mu) + 1e-200))/scale)
 
     def loglike(self, endog, mu, freq_weights=1, scale=1.):
         r"""
@@ -998,7 +1022,7 @@ class Binomial(Family):
         freq_weights : array-like
             1d array of frequency weights. The default is 1.
         scale : float, optional
-            Not used for the Binomial GLM.
+            Not used in the Binomial loglike.
 
         Returns
         -------
@@ -1012,14 +1036,14 @@ class Binomial(Family):
 
         .. math::
 
-         llf = scale * \sum_i (y_i * \log(\mu_i/(1-\mu_i)) + \log(1-\mu_i)) *
+         llf = \sum_i (y_i * \log(\mu_i/(1-\mu_i)) + \log(1-\mu_i)) *
                freq\_weights_i
 
         If the endogenous variable is binomial:
 
         .. math::
 
-           llf = scale * \sum_i freq\_weights_i * (\ln \Gamma(n+1) -
+           llf = \sum_i freq\_weights_i * (\ln \Gamma(n+1) -
                  \ln \Gamma(y_i + 1) - \ln \Gamma(n_i - y_i +1) + y_i *
                  \log(\mu_i / (1 - \mu_i)) + n * \log(1 - \mu_i))
 
@@ -1029,17 +1053,17 @@ class Binomial(Family):
         """
 
         if np.shape(self.n) == () and self.n == 1:
-            return scale * np.sum((endog * np.log(mu/(1 - mu) + 1e-200) +
-                                   np.log(1 - mu)) * freq_weights)
+            return np.sum((endog * np.log(mu/(1 - mu) + 1e-200) +
+                            np.log(1 - mu)) * freq_weights)
         else:
             y = endog * self.n  # convert back to successes
-            return scale * np.sum((special.gammaln(self.n + 1) -
-                                   special.gammaln(y + 1) -
-                                   special.gammaln(self.n - y + 1) + y *
-                                   np.log(mu/(1 - mu)) + self.n *
-                                   np.log(1 - mu)) * freq_weights)
+            return np.sum((special.gammaln(self.n + 1) -
+                            special.gammaln(y + 1) -
+                            special.gammaln(self.n - y + 1) + y *
+                            np.log(mu/(1 - mu)) + self.n *
+                            np.log(1 - mu)) * freq_weights)
 
-    def resid_anscombe(self, endog, mu):
+    def resid_anscombe(self, endog, mu, scale=1.):
         '''
         The Anscombe residuals
 
@@ -1049,6 +1073,9 @@ class Binomial(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
+        scale : float, optional
+            An optional argument to divide the residuals by sqrt(scale).
+            The default is 1.
 
         Returns
         -------
@@ -1083,7 +1110,8 @@ class Binomial(Family):
         cox_snell = lambda x: (special.betainc(2/3., 2/3., x)
                                * special.beta(2/3., 2/3.))
         return np.sqrt(self.n) * ((cox_snell(endog) - cox_snell(mu)) /
-                                  (mu**(1/6.) * (1 - mu)**(1/6.)))
+                                  (mu**(1/6.) * (1 - mu)**(1/6.))) /
+                                  np.sqrt(scale)
 
 
 class InverseGaussian(Family):
@@ -1140,8 +1168,8 @@ class InverseGaussian(Family):
         freq_weights : array-like
             1d array of frequency weights. The default is 1.
         scale : float, optional
-            An optional argument to divide the residuals by scale. The default
-            is 1.
+            An optional argument to divide the residuals by sqrt(scale).
+            The default is 1.
 
         Returns
         -------
@@ -1153,9 +1181,9 @@ class InverseGaussian(Family):
         .. math::
 
            resid\_dev_i = sign(Y_i - \mu_i) *
-                          \sqrt {(Y_i - \mu_i)^2 / (Y_i * \mu_i^2)} / scale
+                          \sqrt{(Y_i - \mu_i)^2 / (Y_i * \mu_i^2) / scale}
         """
-        return np.sign(endog-mu) * np.sqrt((endog-mu)**2/(endog*mu**2))/scale
+        return np.sign(endog-mu) * np.sqrt((endog-mu)**2/(endog*mu**2)/scale)
 
     def deviance(self, endog, mu, freq_weights=1., scale=1.):
         r"""
@@ -1218,7 +1246,7 @@ class InverseGaussian(Family):
                              np.log(scale * endog**3) + np.log(2 * np.pi)) *
                             freq_weights)
 
-    def resid_anscombe(self, endog, mu):
+    def resid_anscombe(self, endog, mu, scale=1.):
         r"""
         The Anscombe residuals for the inverse Gaussian distribution
 
@@ -1228,6 +1256,9 @@ class InverseGaussian(Family):
             Endogenous response variable
         mu : array
             Fitted mean response variable
+        scale : float, optional
+            An optional argument to divide the residuals by sqrt(scale).
+            The default is 1.
 
         Returns
         -------
@@ -1239,9 +1270,9 @@ class InverseGaussian(Family):
         -----
         .. math::
 
-           resid\_anscombe_i = \log(Y_i / \mu_i) / \sqrt{\mu_i}
+           resid\_anscombe_i = \log(Y_i / \mu_i) / \sqrt{\mu_i * scale}
         """
-        return np.log(endog / mu) / np.sqrt(mu)
+        return np.log(endog / mu) / np.sqrt(mu * scale)
 
 
 class NegativeBinomial(Family):
@@ -1368,8 +1399,8 @@ class NegativeBinomial(Family):
         mu : array-like
             `mu` is the fitted value of the model
         scale : float, optional
-            An optional argument to divide the residuals by scale. The default
-            is 1.
+            An optional argument to divide the residuals by sqrt(scale).
+            The default is 1.
 
         Returns
         --------
@@ -1384,12 +1415,14 @@ class NegativeBinomial(Family):
 
         If :math:`Y_i = 0`:
 
-        :math:`piecewise_i = 2 * \log(1 + \alpha * \mu_i)/ \alpha`
+        :math:`piecewise_i = 2 * \log(1 + \alpha * \mu_i)/ \alpha
+        / \sqrt{scale}`
 
         If :math:`Y_i > 0`:
 
-        :math:`piecewise_i = 2 * Y_i * \log(Y_i / \mu_i) - (2 / \alpha) *
-        (1 + \alpha * Y_i) * \log((1 + \alpha * Y_i) / (1 + \alpha * \mu_i))`
+        :math:`piecewise_i = (2 * Y_i * \log(Y_i / \mu_i) - (2 / \alpha) *
+        (1 + \alpha * Y_i) * \log((1 + \alpha * Y_i) / (1 + \alpha * \mu_i)))
+        / \sqrt{scale}`
         """
         iszero = np.equal(endog, 0)
         notzero = 1 - iszero
@@ -1399,7 +1432,7 @@ class NegativeBinomial(Family):
                           (1 + self.alpha * endog) *
                           np.log((1 + self.alpha * endog) /
                                  (1 + self.alpha * mu)))
-        return np.sign(endog - mu) * np.sqrt(tmp) / scale
+        return np.sign(endog - mu) * np.sqrt(tmp / scale)
 
     def loglike(self, endog, mu, freq_weights=1., scale=1.):
         r"""
@@ -1448,7 +1481,7 @@ class NegativeBinomial(Family):
                       np.log(1 + self.alpha * exp_lin_pred) /
                       self.alpha + constant) * freq_weights)
 
-    def resid_anscombe(self, endog, mu):
+    def resid_anscombe(self, endog, mu, scale=1.):
         """
         The Anscombe residuals for the negative binomial family
 
@@ -1458,6 +1491,9 @@ class NegativeBinomial(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
+        scale : float, optional
+            An optional argument to divide the residuals by sqrt(scale).
+            The default is 1.
 
         Returns
         -------
@@ -1468,6 +1504,7 @@ class NegativeBinomial(Family):
         -----
         `resid_anscombe` = (hyp2f1(-alpha*endog)-hyp2f1(-alpha*mu)+\
                 1.5*(endog**(2/3.)-mu**(2/3.)))/(mu+alpha*mu**2)**(1/6.)
+                /sqrt(scale)
 
         where hyp2f1 is the hypergeometric 2f1 function parameterized as
         hyp2f1(x) = hyp2f1(2/3.,1/3.,5/3.,x)
@@ -1476,7 +1513,7 @@ class NegativeBinomial(Family):
         hyp2f1 = lambda x: special.hyp2f1(2 / 3., 1 / 3., 5 / 3., x)
         return ((hyp2f1(-self.alpha * endog) - hyp2f1(-self.alpha * mu) +
                  1.5 * (endog**(2 / 3.) - mu**(2 / 3.))) /
-                (mu + self.alpha * mu**2)**(1 / 6.))
+                (mu + self.alpha * mu**2)**(1 / 6.)) / np.sqrt(scale)
 
 
 class Tweedie(Family):
@@ -1562,13 +1599,13 @@ class Tweedie(Family):
 
         .. math::
 
-            resid\_dev_i = \mu
+            dev_i = \mu
 
         when :math:`endog = 0` and
 
         .. math::
 
-            resid\_dev_i = endog * \log(endog / \mu) + (\mu - endog)
+            dev_i = endog * \log(endog / \mu) + (\mu - endog)
 
         otherwise.
 
@@ -1576,21 +1613,21 @@ class Tweedie(Family):
 
         .. math::
 
-            resid\_dev_i =  (endog - \mu) / \mu - \log(endog / \mu)
+            dev_i =  (endog - \mu) / \mu - \log(endog / \mu)
 
         For all other p,
 
         .. math::
 
-            resid\_dev_i = endog ^{2 - p} / ((1 - p) * (2 - p)) -
-                           endog * \mu ^{1 - p} / (1 - p) + \mu ^{2 - p} /
-                           (2 - p)
+            dev_i = endog ^{2 - p} / ((1 - p) * (2 - p)) -
+                    endog * \mu ^{1 - p} / (1 - p) + \mu ^{2 - p} /
+                    (2 - p)
 
-        Once :math:`resid\_dev_i` is calculated, then calculate deviance as
+        Once :math:`dev_i` is calculated, then deviance is calculated as
 
         .. math::
 
-            D = \sum{2 * freq\_weights * resid\_dev_i}
+            D = \sum{2 * freq\_weights * dev_i / scale}
         """
         p = self.var_power
         if p == 1:
@@ -1603,7 +1640,7 @@ class Tweedie(Family):
         else:
             dev = (endog ** (2 - p) / ((1 - p) * (2 - p)) -
                    endog * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
-        return np.sum(2 * freq_weights * dev)
+        return np.sum(2 * freq_weights * dev / scale)
 
     def resid_dev(self, endog, mu, scale=1.):
         r"""
@@ -1616,8 +1653,8 @@ class Tweedie(Family):
         mu : array-like
             `mu` is the fitted value of the model
         scale : float, optional
-            An optional argument to divide the residuals by scale. The default
-            is 1.
+            An optional argument to divide the residuals by sqrt(scale).
+            The default is 1.
 
         Returns
         --------
@@ -1630,13 +1667,13 @@ class Tweedie(Family):
 
         .. math::
 
-            resid\_dev_i = \mu
+            dev_i = \mu
 
         when :math:`endog = 0` and
 
         .. math::
 
-            resid\_dev_i = endog * \log(endog / \mu) + (\mu - endog)
+            dev_i = endog * \log(endog / \mu) + (\mu - endog)
 
         otherwise.
 
@@ -1644,15 +1681,21 @@ class Tweedie(Family):
 
         .. math::
 
-            resid\_dev_i =  (endog - \mu) / \mu - \log(endog / \mu)
+            dev_i =  (endog - \mu) / \mu - \log(endog / \mu)
 
         For all other p,
 
         .. math::
 
-            resid\_dev_i = endog ^{2 - p} / ((1 - p) * (2 - p)) -
-                           endog * \mu ^{1 - p} / (1 - p) + \mu ^{2 - p} /
-                           (2 - p)
+            dev_i = endog ^{2 - p} / ((1 - p) * (2 - p)) -
+                    endog * \mu ^{1 - p} / (1 - p) + \mu ^{2 - p} /
+                    (2 - p)
+
+        The deviance residual is then
+
+        .. math::
+
+            resid\_dev_i = sign(endog-mu) * \sqrt{2 * dev_i / scale}
         """
         p = self.var_power
         if p == 1:
@@ -1665,7 +1708,7 @@ class Tweedie(Family):
         else:
             dev = (endog ** (2 - p) / ((1 - p) * (2 - p)) -
                    endog * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
-        return np.sign(endog - mu) * np.sqrt(2 * dev)
+        return np.sign(endog - mu) * np.sqrt(2 * dev / scale)
 
     def loglike(self, endog, mu, freq_weights=1., scale=1.):
         r"""
@@ -1695,7 +1738,7 @@ class Tweedie(Family):
         """
         return np.nan
 
-    def resid_anscombe(self, endog, mu):
+    def resid_anscombe(self, endog, mu, scale=1.):
         r"""
         The Anscombe residuals for the Tweedie family
 
@@ -1705,6 +1748,9 @@ class Tweedie(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
+        scale : float, optional
+            An optional argument to divide the residuals by sqrt(scale).
+            The default is 1.
 
         Returns
         -------
@@ -1717,7 +1763,7 @@ class Tweedie(Family):
 
         .. math::
 
-            resid\_anscombe_i = (\log(endog) - \log(\mu)) / \sqrt{mu}
+            resid\_anscombe_i = \log(endog / \mu) / \sqrt{\mu * scale}
 
         Otherwise,
 
@@ -1728,10 +1774,11 @@ class Tweedie(Family):
         .. math::
 
             resid\_anscombe_i = (1 / c) * (endog ^ c - \mu ^ c) / \mu ^{p / 6}
+            / \sqrt{scale}
         """
         if self.var_power == 3:
-            return (np.log(endog) - np.log(mu)) / np.sqrt(mu)
+            return np.log(endog / mu) / np.sqrt(mu * scale)
         else:
             c = (3. - self.var_power) / 3.
             return ((1. / c) * (endog ** c - mu ** c) /
-                    mu ** (self.var_power / 6.))
+                    mu ** (self.var_power / 6.)) / np.sqrt{scale}
