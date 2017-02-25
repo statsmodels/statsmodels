@@ -161,8 +161,8 @@ class Family(object):
 
         .. math::
 
-           D = \sum_i (2 * freq\_weights_i * llf(Y_i, Y_i) - 2 *
-               llf(Y_i, \mu_i)) / scale
+           D = 2\sum_i (freq\_weights_i * (llf(Y_i, Y_i) -
+               llf(Y_i, \mu_i)))
 
         where y is the endogenous variable. The deviance functions are
         analytically defined for each family.
@@ -170,7 +170,7 @@ class Family(object):
         raise NotImplementedError
 
     def resid_dev(self, endog, mu, freq_weights=1., scale=1.):
-        """
+        r"""
         The deviance residuals
 
         Parameters
@@ -191,7 +191,12 @@ class Family(object):
 
         Notes
         -----
-        The deviance residuals are defined for each family.
+        The deviance residuals are defined by the contribution D_i of
+        observation i to the deviance as
+
+        .. math::
+
+           \sign(y_i-\mu_i) \sqrt(D_i)
         """
         raise NotImplementedError
 
@@ -262,13 +267,23 @@ class Family(object):
         raise NotImplementedError
 
     def resid_anscombe(self, endog, mu):
-        """
+        r"""
         The Anscombe residuals
 
         See Also
         --------
         statsmodels.genmod.families.family.Family : `resid_anscombe` for the
           individual families for more information
+
+        Notes
+        -----
+        Anscombe residuals are defined by
+        .. math:
+
+           \frac{A(y)-A(\mu)}{A'(\mu)\sqrt{Var[\mu]}}
+
+        where :math:`A'(y)=v(y)^{-\frac{1}{3}}` and :math:`v(\mu)` is the
+        variance function Var[y]=\frac{\phi}{w}v(mu).
         """
         raise NotImplementedError
 
