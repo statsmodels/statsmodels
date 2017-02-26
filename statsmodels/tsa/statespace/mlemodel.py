@@ -296,8 +296,8 @@ class MLEModel(tsbase.TimeSeriesModel):
     def fit(self, start_params=None, transformed=True,
             cov_type='opg', cov_kwds=None, method='lbfgs', maxiter=50,
             full_output=1, disp=5, callback=None, return_params=False,
-            optim_score=None, optim_complex_step=None, optim_hessian=None,
-            flags=None, **kwargs):
+            results=None, optim_score=None, optim_complex_step=None,
+            optim_hessian=None, flags=None, **kwargs):
         """
         Fits the model by maximum likelihood via Kalman filter.
 
@@ -369,6 +369,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         return_params : boolean, optional
             Whether or not to return only the array of maximizing parameters.
             Default is False.
+        results : {'params', 'mlefit', 'filter', 'smooth'}
+            The type of results to return. Default is 'smooth'.
         optim_score : {'harvey', 'approx'} or None, optional
             The method by which the score vector is calculated. 'harvey' uses
             the method from Harvey (1989), 'approx' uses either finite
@@ -439,19 +441,39 @@ class MLEModel(tsbase.TimeSeriesModel):
                                            disp=disp, callback=callback,
                                            skip_hessian=True, **kwargs)
 
-        # Just return the fitted parameters if requested
-        if return_params:
-            return self.transform_params(mlefit.params)
-        # Otherwise construct the results class if desired
-        else:
-            res = self.smooth(mlefit.params, transformed=False,
-                              cov_type=cov_type, cov_kwds=cov_kwds)
+        # Backwards compatibility for return_params
+        if results is not None and not results == 'params' and return_params:
+            raise ValueError('Cannot use the `results` and `return_params`'
+                             ' arguments together. Please use `results`.')
+        if return_params is True:
+            warnings.warn('The `return_params=True` argument is deprecated,'
+                          ' use `results="params" instead.',
+                          DeprecationWarning)
+        if results is None and return_params:
+            results = 'params'
+        elif results is None:
+            results = 'smooth'
 
+        # Just return the fitted parameters if requested
+        if results == 'params':
+            res = self.transform_params(mlefit.params)
+        elif results == 'mlefit':
+            res = mlefit
+        # Otherwise construct the results class if desired
+        elif results in ['filter', 'smooth']:
+            if results == 'smooth':
+                res = self.smooth(mlefit.params, transformed=False,
+                                  cov_type=cov_type, cov_kwds=cov_kwds)
+            else:
+                res = self.filter(mlefit.params, transformed=False,
+                                  cov_type=cov_type, cov_kwds=cov_kwds)
             res.mlefit = mlefit
             res.mle_retvals = mlefit.mle_retvals
             res.mle_settings = mlefit.mle_settings
+        else:
+            raise ValueError('Invalid value for `results`.')
 
-            return res
+        return res
 
     def filter(self, params, transformed=True, complex_step=False,
                cov_type=None, cov_kwds=None, return_ssm=False,
