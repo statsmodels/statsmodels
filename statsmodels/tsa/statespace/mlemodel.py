@@ -368,7 +368,8 @@ class MLEModel(tsbase.TimeSeriesModel):
             current parameter vector.
         return_params : boolean, optional
             Whether or not to return only the array of maximizing parameters.
-            Default is False.
+            Default is False. This argument is deprecated; you should use
+            `results='params'` instead.
         results : {'params', 'mlefit', 'filter', 'smooth'}
             The type of results to return. Default is 'smooth'.
         optim_score : {'harvey', 'approx'} or None, optional
