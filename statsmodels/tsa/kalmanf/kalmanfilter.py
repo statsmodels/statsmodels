@@ -29,6 +29,7 @@ from statsmodels.compat.python import lzip, lmap, callable, range
 import numpy as np
 from numpy import dot, identity, kron, log, zeros, pi, exp, eye, issubdtype, ones
 from numpy.linalg import inv, pinv
+from scipy import optimize
 from statsmodels.tools.tools import chain_dot
 from . import kalman_loglike
 
@@ -331,7 +332,7 @@ class StateSpaceModel(object):
         """
         # determine if
         if self.p == 1:
-            return _univariatefilter(init_state, init_var)
+            return self._univariatefilter(params, init_state, init_var)
         else:
             raise ValueError("No multivariate filter written yet")
 
