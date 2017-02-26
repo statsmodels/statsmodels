@@ -1354,7 +1354,7 @@ class SARIMAX(MLEModel):
             end += self.k_ma_params
             if self.enforce_invertibility:
                 constrained[start:end] = (
-                    constrain_stationary_univariate(unconstrained[start:end])
+                    -constrain_stationary_univariate(unconstrained[start:end])
                 )
             else:
                 constrained[start:end] = unconstrained[start:end]
@@ -1376,7 +1376,7 @@ class SARIMAX(MLEModel):
             end += self.k_seasonal_ma_params
             if self.enforce_invertibility:
                 constrained[start:end] = (
-                    constrain_stationary_univariate(unconstrained[start:end])
+                    -constrain_stationary_univariate(unconstrained[start:end])
                 )
             else:
                 constrained[start:end] = unconstrained[start:end]
@@ -1458,7 +1458,7 @@ class SARIMAX(MLEModel):
             end += self.k_ma_params
             if self.enforce_invertibility:
                 unconstrained[start:end] = (
-                    unconstrain_stationary_univariate(constrained[start:end])
+                    unconstrain_stationary_univariate(-constrained[start:end])
                 )
             else:
                 unconstrained[start:end] = constrained[start:end]
@@ -1480,7 +1480,7 @@ class SARIMAX(MLEModel):
             end += self.k_seasonal_ma_params
             if self.enforce_invertibility:
                 unconstrained[start:end] = (
-                    unconstrain_stationary_univariate(constrained[start:end])
+                    unconstrain_stationary_univariate(-constrained[start:end])
                 )
             else:
                 unconstrained[start:end] = constrained[start:end]

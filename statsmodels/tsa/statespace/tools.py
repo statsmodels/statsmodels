@@ -433,7 +433,7 @@ def concat(series, axis=0, allow_mix=False):
     return concatenated
 
 
-def is_invertible(polynomial, threshold=1.):
+def is_invertible(polynomial, threshold=1 - 1e-10):
     r"""
     Determine if a polynomial is invertible.
 

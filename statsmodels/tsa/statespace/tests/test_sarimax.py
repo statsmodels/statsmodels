@@ -571,11 +571,10 @@ class TestAirlineStateDifferencing(Airline):
         )
 
     def test_mle(self):
-        result = self.model.fit(disp=-1)
+        result = self.model.fit(method='nm', maxiter=1000, disp=0)
         assert_allclose(
             result.params, self.result.params,
-            atol=1e-3
-        )
+            atol=1e-3)
 
     def test_bse(self):
         # test defaults
@@ -980,8 +979,8 @@ class SARIMAXCoverageTest(object):
         )
         contracted_polynomial_seasonal_ma = self.model.polynomial_seasonal_ma[self.model.polynomial_seasonal_ma.nonzero()]
         self.model.enforce_invertibility = (
-            (self.model.k_ma == 0 or tools.is_invertible(np.r_[1, -self.model.polynomial_ma[1:]])) and
-            (len(contracted_polynomial_seasonal_ma) <= 1 or tools.is_invertible(np.r_[1, -contracted_polynomial_seasonal_ma[1:]]))
+            (self.model.k_ma == 0 or tools.is_invertible(np.r_[1, self.model.polynomial_ma[1:]])) and
+            (len(contracted_polynomial_seasonal_ma) <= 1 or tools.is_invertible(np.r_[1, contracted_polynomial_seasonal_ma[1:]]))
         )
 
         unconstrained = self.model.untransform_params(true_constrained)
