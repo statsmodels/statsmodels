@@ -89,7 +89,7 @@ from statsmodels.sandbox import tsa
 
 def sumofsq(x, axis=0):
     """Helper function to calculate sum of squares along first axis"""
-    return np.sum(x**2, axis=0)
+    return np.sum(x**2, axis=axis)
 
 
 def normloglike(x, mu=0, sigma2=1, returnlls=False, axis=0):

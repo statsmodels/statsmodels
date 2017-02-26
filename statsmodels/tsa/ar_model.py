@@ -23,7 +23,7 @@ __all__ = ['AR']
 
 def sumofsq(x, axis=0):
     """Helper function to calculate sum of squares along first axis"""
-    return np.sum(x**2, axis=0)
+    return np.sum(x**2, axis=axis)
 
 
 def _check_ar_start(start, k_ar, method, dynamic):
