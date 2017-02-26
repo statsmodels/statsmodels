@@ -1549,7 +1549,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             self.smoother_results = None
 
         # Dimensions
-        self.nobs = model.nobs
+        self.nobs = self.filter_results.nobs
+        self.nobs_effective = self.nobs - self.loglikelihood_burn
+
+        # Degrees of freedom
+        self.df_model = self.params.size
+        self.df_resid = self.nobs_effective - self.df_model
 
         # Setup covariance matrix notes dictionary
         if not hasattr(self, 'cov_kwds'):
@@ -1723,16 +1728,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (float) Akaike Information Criterion
         """
-        # return -2*self.llf + 2*self.params.shape[0]
-        return aic(self.llf, self.nobs, self.params.shape[0])
+        # return -2 * self.llf + 2 * self.df_model
+        return aic(self.llf, self.nobs_effective, self.df_model)
 
     @cache_readonly
     def bic(self):
         """
         (float) Bayes Information Criterion
         """
-        # return -2*self.llf + self.params.shape[0]*np.log(self.nobs)
-        return bic(self.llf, self.nobs, self.params.shape[0])
+        # return (-2 * self.llf +
+        #         self.df_model * np.log(self.nobs_effective))
+        return bic(self.llf, self.nobs_effective, self.df_model)
 
     def _cov_params_approx(self, approx_complex_step=True,
                            approx_centered=False):
@@ -1885,6 +1891,87 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return self._cov_params_robust_approx(self._cov_approx_complex_step,
                                               self._cov_approx_centered)
 
+    def info_criteria(self, criteria, method='standard'):
+        """
+        Information criteria
+
+        Parameters
+        ----------
+        criteria : {'aic', 'bic', 'hqic'}
+            The information criteria to compute.
+        method : {'standard', 'lutkepohl'}
+            The method for information criteria computation. Default is
+            'standard' method; 'lutkepohl' computes the information criteria
+            as in Lutkepohl (2010). See Notes for formulas.
+
+        Notes
+        -----
+        The `'standard'` formulas are:
+
+        .. math::
+
+            AIC & = -2 \log L(Y_n | \hat \psi) + 2 k \\
+            BIC & = -2 \log L(Y_n | \hat \psi) + k \log n \\
+            HQIC & = -2 \log L(Y_n | \hat \psi) + 2 k \log \log n \\
+
+        where :math:`\hat \psi` are the maximum likelihood estimates of the
+        parameters, :math:`n` is the number of observations, and `k` is the
+        number of estimated parameters.
+
+        Note that the `'standard'` formulas are returned from the `aic`, `bic`,
+        and `hqic` results attributes.
+
+        The `'lutkepohl'` formuals are (Lutkepohl, 2010):
+
+        .. math::
+
+            AIC_L & = \log | Q | + \frac{2 k}{n} \\
+            BIC_L & = \log | Q | + \frac{k \log n}{n} \\
+            HQIC_L & = \log | Q | + \frac{2 k \log \log n}{n} \\
+
+        Note that the Lutkepohl definitions do not apply to all state space
+        models, and should be used with care outside of SARIMAX and VARMAX
+        models.
+
+        References
+        ----------
+        .. [1] Lutkepohl, Helmut. 2007.
+           New Introduction to Multiple Time Series Analysis.
+           Berlin: Springer.
+
+        """
+        criteria = criteria.lower()
+        method = method.lower()
+
+        if method == 'standard':
+            out = getattr(self, criteria)
+        elif method == 'lutkepohl':
+            if self.filter_results.state_cov.shape[-1] > 1:
+                raise ValueError('Cannot compute Lutkepohl statistics for'
+                                 ' models with time-varying state covariance'
+                                 ' matrix.')
+
+            cov = self.filter_results.state_cov[:, :, 0]
+            if criteria == 'aic':
+                out = np.squeeze(np.linalg.slogdet(cov)[1] +
+                                 2 * self.df_model / self.nobs_effective)
+            elif criteria == 'bic':
+                out = np.squeeze(np.linalg.slogdet(cov)[1] +
+                                 self.df_model * np.log(self.nobs_effective) /
+                                 self.nobs_effective)
+            elif criteria == 'hqic':
+                out = np.squeeze(np.linalg.slogdet(cov)[1] +
+                                 2 * self.df_model *
+                                 np.log(np.log(self.nobs_effective)) /
+                                 self.nobs_effective)
+            else:
+                raise ValueError('Invalid information criteria')
+
+        else:
+            raise ValueError('Invalid information criteria computation method')
+
+        return out
+
     @cache_readonly
     def fittedvalues(self):
         """
@@ -1905,8 +1992,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (float) Hannan-Quinn Information Criterion
         """
-        # return -2*self.llf + 2*np.log(np.log(self.nobs))*self.params.shape[0]
-        return hqic(self.llf, self.nobs, self.params.shape[0])
+        # return (-2 * self.llf +
+        #         2 * np.log(np.log(self.nobs_effective)) * self.df_model)
+        return hqic(self.llf, self.nobs_effective, self.df_model)
 
     @cache_readonly
     def llf_obs(self):
@@ -2101,7 +2189,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             test_statistics = []
             p_values = []
             for i in range(self.model.k_endog):
-                h = int(np.round((self.nobs - d) / 3))
+                h = int(np.round(self.nobs_effective / 3))
                 numer_resid = squared_resid[i, -h:]
                 numer_resid = numer_resid[~np.isnan(numer_resid)]
                 numer_dof = len(numer_resid)
@@ -2217,7 +2305,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             # Default lags for acorr_ljungbox is 40, but may not always have
             # that many observations
             if lags is None:
-                lags = min(40, self.nobs - d - 1)
+                lags = min(40, self.nobs_effective - 1)
 
             for i in range(self.model.k_endog):
                 results = acorr_ljungbox(
@@ -2377,7 +2465,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Array of out of sample forecasts. A (steps x k_endog) array.
         """
         if isinstance(steps, (int, long)):
-            end = self.nobs+steps-1
+            end = self.nobs + steps - 1
         else:
             end = steps
         return self.predict(start=self.nobs, end=end, **kwargs)
@@ -2596,7 +2684,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             d = ix[-1]
             sample += ['- ' + '%02d-%02d-%02d' % (d.month, d.day, d.year)]
         else:
-            sample = [str(start), ' - ' + str(self.model.nobs)]
+            sample = [str(start), ' - ' + str(self.nobs)]
 
         # Standardize the model name as a list of str
         if model_name is None:
@@ -2632,7 +2720,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         ]
 
         top_right = [
-            ('No. Observations:', [self.model.nobs]),
+            ('No. Observations:', [self.nobs]),
             ('Log Likelihood', ["%#5.3f" % self.llf]),
             ('AIC', ["%#5.3f" % self.aic]),
             ('BIC', ["%#5.3f" % self.bic]),
