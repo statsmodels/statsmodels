@@ -888,7 +888,7 @@ __all__ = ['arma_acf', 'arma_acovf', 'arma_generate_sample',
 
 if __name__ == '__main__':
 
-
+    from statsmodels.tsa.arima_model import ARIMA
     # Simulate AR(1)
     #--------------
     # ar * y = ma * eta
