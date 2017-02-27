@@ -57,7 +57,6 @@ def _prep_censored_wage_heckman_exampledata():
     ## and independent variables for selection equation
     Y = data['wage']
 
-
     X = data[['AX','AX2','WE','CIT']]
     X = sm.add_constant(X, prepend=True)
     X = X.astype(float)
@@ -65,6 +64,11 @@ def _prep_censored_wage_heckman_exampledata():
     Z = data[['WA','WA2','FAMINC','WE','K']]
     Z = sm.add_constant(Z, prepend=True)
     Z = Z.astype(float)
+
+    ## express these as copies and not views of the original data
+    Y = Y.copy()
+    X = X.copy()
+    Z = Z.copy()
 
     ## Return as three vars
     return Y, X, Z
@@ -532,6 +536,7 @@ def test_heckman_2step_missingdata(verbose=True):
     ### Fit data with Heckman model using 2 step ###
     ## With pandas input with named variables ##
     Y, X, Z = _prep_censored_wage_heckman_exampledata()
+
 
     ## delete some data ##
     '''
