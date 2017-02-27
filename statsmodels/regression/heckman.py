@@ -539,13 +539,11 @@ class HeckmanResults(base.LikelihoodModelResults):
             self.select_res.use_t = False
 
 
-    def summary(self, disp=True, yname=None, xname=None, zname=None, title=None, alpha=.05):
+    def summary(self, yname=None, xname=None, zname=None, title=None, alpha=.05):
         """Summarize the Heckman model Results
 
         Parameters
         -----------
-        disp  : bool, optional
-            Default is True. If True, then results will be printed.
         yname : string, optional
             Default is `y`
         xname : list of strings, optional
@@ -658,9 +656,6 @@ class HeckmanResults(base.LikelihoodModelResults):
             'Second table are the estimates for the selection equation.',
             'Third table is the estimate for the coef of the inverse Mills ratio (Heckman\'s Lambda).'])
 
-        ## Print summary if option set to do so
-        if(disp):
-            print(smry)
-
+        ## return
         return smry
 

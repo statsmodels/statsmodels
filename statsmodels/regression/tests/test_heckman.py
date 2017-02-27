@@ -373,12 +373,16 @@ def test_heckman_2step(verbose=True):
 
     heckman_model = heckman.Heckman(Y,X,Z)
     heckman_res = heckman_model.fit(method='twostep')
-    heckman_smry = heckman_res.summary(disp=verbose)
+
+    if verbose:
+        print(heckman_res.summary())
 
     ## With list input (no names) ##
     heckman_basic_model = heckman.Heckman(Y.tolist(), X.as_matrix().tolist(), Z.as_matrix().tolist())
     heckman_basic_res = heckman_basic_model.fit(method='twostep')
-    heckman_basic_smry = heckman_basic_res.summary(disp=verbose)
+
+    if verbose:
+        print(heckman_basic_res.summary())
 
     ### Check against Stata's estimates ###
     ## Load Stata's estimates
@@ -450,8 +454,9 @@ def test_heckman_mle(verbose=True):
     # fit the model
     heckman_res = heckman_model.fit(method='mle', method_mle='ncg', disp=False)
 
-    # produce the fitted model summary object
-    heckman_smry = heckman_res.summary(disp=verbose)
+    # print the fitted model summary object
+    if verbose:
+        print(heckman_res.summary())
 
 
     ### Stata's two-step estimates ###
@@ -573,13 +578,17 @@ def test_heckman_2step_missingdata(verbose=True):
     heckman_model = heckman.Heckman(Y,X,Z,
         missing='drop')
     heckman_res = heckman_model.fit(method='twostep')
-    heckman_smry = heckman_res.summary(disp=verbose)
+
+    if verbose:
+        print(heckman_res.summary())
 
     ## With list input (no names) ##
     heckman_basic_model = heckman.Heckman(Y.tolist(), X.as_matrix().tolist(), Z.as_matrix().tolist(),
         missing='drop')
     heckman_basic_res = heckman_basic_model.fit(method='twostep')
-    heckman_basic_smry = heckman_basic_res.summary(disp=verbose)
+
+    if verbose:
+        print(heckman_basic_res.summary())
 
     ### Check against Stata's estimates ###
     ## Load Stata's estimates
