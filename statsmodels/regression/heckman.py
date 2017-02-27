@@ -410,9 +410,12 @@ class Heckman(base.LikelihoodModel):
         Y_aligned[D] = Y
 
         # create an array where each row is the log likelihood for the corresponding observation
+        norm_cdf_input = (Z_zbeta_aligned+(Y_aligned-X_xbeta_aligned)*rho/sigma) / np.sqrt(1-rho**2)
+        norm_cdf_input[~D] = 0  # dummy value
+
         ll_obs_observed = \
             np.multiply(D,
-                np.log(norm.cdf( (Z_zbeta_aligned+(Y_aligned-X_xbeta_aligned)*rho/sigma) / np.sqrt(1-rho**2) )) - \
+                np.log(norm.cdf(norm_cdf_input)) - \
                 (1./2.)*((Y_aligned-X_xbeta_aligned)/sigma)**2 - \
                 np.log(np.sqrt(2*np.pi)*sigma))
         ll_obs_observed[~D] = 0
