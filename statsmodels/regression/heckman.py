@@ -1,8 +1,8 @@
 """
 Heckman correction for sample selection bias (the Heckit procedure).
 
-Created August 19, 2014 by B.I.
-Last modified September 02, 2014 by B.I.
+Original Code Created August 19, 2014 by B.I.
+Last modified February 26, 2017 by B.I.
 
 NO warranty is provided for this software.
 """
@@ -13,10 +13,9 @@ import statsmodels.base.model as base
 from statsmodels.iolib import summary
 from statsmodels.tools.numdiff import approx_fprime
 from scipy.stats import norm
-from scipy.stats import t
 import warnings
 import pandas as pd
-import pdb
+
 
 class Heckman(base.LikelihoodModel):
     """
@@ -319,7 +318,7 @@ class Heckman(base.LikelihoodModel):
         rho_hat = np.tanh(atanh_rho_hat)
 
         scale = results_mle.scale
-        #TODO: I think these should be the sandwich estimates, but should confirm
+
         xbeta_ncov_hat = results_mle.normalized_cov_params[:num_xvars,:num_xvars]
         zbeta_ncov_hat = results_mle.normalized_cov_params[
             num_xvars:(num_xvars+num_zvars),num_xvars:(num_xvars+num_zvars)
@@ -635,12 +634,12 @@ class HeckmanResults(base.LikelihoodModelResults):
         smry.add_table_params(self.select_res, yname=yname, xname=zname, alpha=alpha,
                              use_t=self.select_res.use_t)
 
-        # add the estimate to the inverse Mills estimate
+        # add the estimate to the inverse Mills estimate (z-score)
         smry.add_table_params(
             base.LikelihoodModelResults(None, np.atleast_1d(self.params_inverse_mills),
             normalized_cov_params=np.atleast_1d(self.stderr_inverse_mills**2), scale=1.),
             yname=None, xname=['IMR (Lambda)'], alpha=alpha,
-            use_t=False)  #TODO: return t-score instead of z-score for IMR
+            use_t=False)
 
         # add point estimates for rho and sigma
         diagn_left = [('rho:', ["%#6.3f" % self.corr_eqnerrors]),

@@ -9,10 +9,7 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 import imp
-import csv
-import urllib
 from numpy.testing import assert_
-import pdb
 
 from statsmodels.regression import heckman
 
