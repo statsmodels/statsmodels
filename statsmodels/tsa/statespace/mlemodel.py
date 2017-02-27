@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 State Space Model
 
@@ -1902,7 +1903,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         method : {'standard', 'lutkepohl'}
             The method for information criteria computation. Default is
             'standard' method; 'lutkepohl' computes the information criteria
-            as in Lutkepohl (2010). See Notes for formulas.
+            as in Lütkepohl (2007). See Notes for formulas.
 
         Notes
         -----
@@ -1921,7 +1922,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         Note that the `'standard'` formulas are returned from the `aic`, `bic`,
         and `hqic` results attributes.
 
-        The `'lutkepohl'` formuals are (Lutkepohl, 2010):
+        The `'lutkepohl'` formuals are (Lütkepohl, 2010):
 
         .. math::
 
@@ -1929,13 +1930,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             BIC_L & = \log | Q | + \frac{k \log n}{n} \\
             HQIC_L & = \log | Q | + \frac{2 k \log \log n}{n} \\
 
-        Note that the Lutkepohl definitions do not apply to all state space
-        models, and should be used with care outside of SARIMAX and VARMAX
-        models.
+        where :math:`Q` is the state covariance matrix. Note that the Lütkepohl
+        definitions do not apply to all state space models, and should be used
+        with care outside of SARIMAX and VARMAX models.
 
         References
         ----------
-        .. [1] Lutkepohl, Helmut. 2007.
+        .. [1] Lütkepohl, Helmut. 2007.
            New Introduction to Multiple Time Series Analysis.
            Berlin: Springer.
 
