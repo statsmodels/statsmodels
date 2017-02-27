@@ -1089,18 +1089,7 @@ class VARResults(VARProcess):
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
 
-        if (orth == True and cum == True):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
-                              orth_ma_rep(maxn=T).cumsum(axis=0)
-        elif (orth == True and cum == False):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
-                              orth_ma_rep(maxn=T)
-        elif (orth == False and cum == True):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
-                              ma_rep(maxn=T).cumsum(axis=0)
-        elif (orth == False and cum == False):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
-                              ma_rep(maxn=T)
+        fill_coll = _get_fill_coll(orth, cum, sim, k_ar, T)
 
         for i in range(repl):
             #discard first hundred to eliminate correct for starting bias
@@ -1159,18 +1148,7 @@ class VARResults(VARProcess):
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
 
-        if (orth == True and cum == True):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
-                              orth_ma_rep(maxn=T).cumsum(axis=0)
-        elif (orth == True and cum == False):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
-                              orth_ma_rep(maxn=T)
-        elif (orth == False and cum == True):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
-                              ma_rep(maxn=T).cumsum(axis=0)
-        elif (orth == False and cum == False):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
-                              ma_rep(maxn=T)
+        fill_coll = _get_fill_coll(orth, cum, sim, k_ar, T)
 
         for i in range(repl):
             #discard first hundred to eliminate correct for starting bias
@@ -1646,6 +1624,25 @@ def _compute_acov(x, nlags=1):
 def _acovs_to_acorrs(acovs):
     sd = np.sqrt(np.diag(acovs[0]))
     return acovs / np.outer(sd, sd)
+
+
+def _get_fill_coll(orth, cum, sim, k_ar, T):
+    if (orth is True and cum is True):
+        fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                        orth_ma_rep(maxn=T).cumsum(axis=0)
+    elif (orth is True and cum is False):
+        fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                        orth_ma_rep(maxn=T)
+    elif (orth is False and cum is True):
+        fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                        ma_rep(maxn=T).cumsum(axis=0)
+    elif (orth is False and cum is False):
+        fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+                        ma_rep(maxn=T)
+    return fill_coll
+
+
+
 
 if __name__ == '__main__':
     import statsmodels.api as sm
