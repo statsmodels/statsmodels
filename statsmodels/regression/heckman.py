@@ -274,7 +274,7 @@ class Heckman(base.LikelihoodModel):
         ## store results
         results = HeckmanResults(self, params, normalized_varcov, sigma2Hat,
             select_res=step1res,
-            param_inverse_mills=betaHat_inverse_mills, stderr_inverse_mills=stderr_betaHat_inverse_mills,
+            params_inverse_mills=betaHat_inverse_mills, stderr_inverse_mills=stderr_betaHat_inverse_mills,
             var_reg_error=sigma2Hat, corr_eqnerrors=rhoHat,
             method='twostep')
 
@@ -352,7 +352,7 @@ class Heckman(base.LikelihoodModel):
         results = HeckmanResults(self, xbeta_hat,
             xbeta_ncov_hat, scale,
             select_res=base.LikelihoodModelResults(None, zbeta_hat, zbeta_ncov_hat, scale),
-            param_inverse_mills=imr_hat, stderr_inverse_mills=imr_stderr_hat,
+            params_inverse_mills=imr_hat, stderr_inverse_mills=imr_stderr_hat,
             var_reg_error=sigma_hat**2, corr_eqnerrors=rho_hat,
             method='mle')
 
@@ -500,7 +500,7 @@ class HeckmanResults(base.LikelihoodModelResults):
     ----------
     select_res : ProbitResult object
         The ProbitResult object created when estimating the selection equation.
-    param_inverse_mills : scalar
+    params_inverse_mills : scalar
         Parameter estimate of the coef on the inverse Mills term in the second step.
     stderr_inverse_mills : scalar
         Standard error of the parameter estimate of the coef on the inverse Mills
@@ -517,7 +517,7 @@ class HeckmanResults(base.LikelihoodModelResults):
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.,
         select_res=None,
-        param_inverse_mills=None, stderr_inverse_mills=None,
+        params_inverse_mills=None, stderr_inverse_mills=None,
         var_reg_error=None, corr_eqnerrors=None,
         method=None):
 
@@ -526,7 +526,7 @@ class HeckmanResults(base.LikelihoodModelResults):
                                                 scale)
 
         self.select_res = select_res
-        self.param_inverse_mills = param_inverse_mills
+        self.params_inverse_mills = params_inverse_mills
         self.stderr_inverse_mills = stderr_inverse_mills
         self.var_reg_error = var_reg_error
         self.corr_eqnerrors = corr_eqnerrors
@@ -636,7 +636,7 @@ class HeckmanResults(base.LikelihoodModelResults):
 
         # add the estimate to the inverse Mills estimate
         smry.add_table_params(
-            base.LikelihoodModelResults(None, np.atleast_1d(self.param_inverse_mills),
+            base.LikelihoodModelResults(None, np.atleast_1d(self.params_inverse_mills),
             normalized_cov_params=np.atleast_1d(self.stderr_inverse_mills**2), scale=1.),
             yname=None, xname=['IMR (Lambda)'], alpha=alpha,
             use_t=False)  #TODO: return t-score instead of z-score for IMR

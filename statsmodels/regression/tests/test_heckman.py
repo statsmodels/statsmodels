@@ -342,7 +342,7 @@ def _check_heckman_to_stata(
         {'trueval' : stata_select_coef_arr, 'estval': heckman_res.select_res.params},
         {'trueval' : stata_select_stderr_arr,
             'estval': np.sqrt(np.diag(heckman_res.select_res.scale*heckman_res.select_res.normalized_cov_params))},
-        {'trueval' : stata_lambda_coef, 'estval': heckman_res.param_inverse_mills},
+        {'trueval' : stata_lambda_coef, 'estval': heckman_res.params_inverse_mills},
         {'trueval' : stata_lambda_stderr, 'estval': heckman_res.stderr_inverse_mills},
         {'trueval' : stata_rho, 'estval': heckman_res.corr_eqnerrors},
         {'trueval' : stata_sigma, 'estval': heckman_res.var_reg_error}
