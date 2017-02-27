@@ -148,7 +148,7 @@ class SARIMAXStataTests(object):
     def test_hqic(self):
         hqic = (
             -2*self.result.llf +
-            2*np.log(np.log(self.result.nobs)) *
+            2*np.log(np.log(self.result.nobs_effective)) *
             self.result.params.shape[0]
         )
         assert_almost_equal(
