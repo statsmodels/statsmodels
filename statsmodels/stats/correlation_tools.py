@@ -7,12 +7,14 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-from statsmodels.tools.sm_exceptions import (IterationLimitWarning,
-    iteration_limit_doc)
 import numpy as np
 import scipy.sparse as sparse
 from scipy.sparse.linalg import svds
 from scipy.optimize import fminbound
+
+from statsmodels.tools.tools import Bunch
+from statsmodels.tools.sm_exceptions import (IterationLimitWarning,
+    iteration_limit_doc)
 
 def clip_evals(x, value=0): #threshold=0, value=0):
     evals, evecs = np.linalg.eigh(x)
@@ -412,14 +414,6 @@ def _project_correlation_factors(X):
     ii = np.flatnonzero(nm > 1)
     if len(ii) > 0:
         X[ii,:] /= nm[ii][:, None]
-
-
-#TODO does this belong in a tools module somewhere?
-class Bunch(object):
-
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-
 
 
 class FactoredPSDMatrix:

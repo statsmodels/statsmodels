@@ -483,14 +483,14 @@ def maybe_unwrap_results(results):
     """
     return getattr(results, '_results', results)
 
-
 class Bunch(dict):
     """
     Returns a dict-like object with keys accessible via attribute lookup.
     """
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
+    def __init__(self, *args, **kwargs):
+        super(Bunch, self).__init__(*args, **kwargs)
         self.__dict__ = self
+
 
 def _ensure_2d(x, ndarray=False):
     """

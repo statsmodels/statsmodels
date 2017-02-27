@@ -33,19 +33,20 @@ W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 
 from __future__ import print_function
 
+from collections import namedtuple
+
 from statsmodels.compat.python import lrange, lzip, range
+
 __docformat__ = 'restructuredtext en'
 
 __all__ = ['GLS', 'WLS', 'OLS', 'GLSAR']
 
 import numpy as np
-import pandas as pd
 from scipy.linalg import toeplitz
 from scipy import stats
 from scipy import optimize
 
 from statsmodels.compat.numpy import np_matrix_rank
-from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.tools import add_constant, chain_dot, pinv_extended
 from statsmodels.tools.decorators import (resettable_cache,
                                           cache_readonly,
