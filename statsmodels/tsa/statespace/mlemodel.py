@@ -879,12 +879,11 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         information_matrix = np.zeros((n, n), dtype=dtype)
         for t in range(self.ssm.loglikelihood_burn, self.nobs):
-            inv_forecasts_error_cov[:, :, t] = (
-                np.linalg.inv(res.forecasts_error_cov[:, :, t])
-            )
+            ifec = ifecs[:, :, t]
+            # Equiv: ifec = np.linalg.inv(res.forecasts_error_cov[:, :, t])
             for i in range(n):
                 tmp[:, :, t, i] = np.dot(
-                    inv_forecasts_error_cov[:, :, t],
+                    ifec,
                     partials_forecasts_error_cov[:, :, t, i]
                 )
             for i in range(n):
@@ -895,7 +894,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                     )
                     information_matrix[i, j] += np.inner(
                         partials_forecasts_error[:, t, i],
-                        np.dot(inv_forecasts_error_cov[:, :, t],
+                        np.dot(ifec,
                                partials_forecasts_error[:, t, j])
                     )
         return information_matrix / (self.nobs - self.ssm.loglikelihood_burn)
@@ -1000,26 +999,26 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         ifecs = np.linalg.inv(res.forecasts_error_cov.T).T
         # Broadcast np.linalg.inv along 3rd dim
-        
+
         # Compute partial derivatives w.r.t. likelihood function
         partials = np.zeros((self.nobs, n))
         k_endog = self.k_endog
         for t in range(self.nobs):
             for i in range(n):
-                inv_forecasts_error_cov = np.linalg.inv(
-                    res.forecasts_error_cov[:, :, t])
+                ifec = ifecs[:, :, t]
+                # Equiv: ifec = np.linalg.inv(res.forecasts_error_cov[:, :, t])
                 partials[t, i] += np.trace(np.dot(
-                    np.dot(inv_forecasts_error_cov,
+                    np.dot(ifec,
                            partials_forecasts_error_cov[:, :, t, i]),
                     (np.eye(k_endog) -
-                     np.dot(inv_forecasts_error_cov,
+                     np.dot(ifec,
                             np.outer(res.forecasts_error[:, t],
                                      res.forecasts_error[:, t])))))
                 # 2 * dv / di * F^{-1} v_t
                 # where x = F^{-1} v_t or F x = v
                 partials[t, i] += 2 * np.dot(
                     partials_forecasts_error[:, t, i],
-                    np.dot(inv_forecasts_error_cov, res.forecasts_error[:, t]))
+                    np.dot(ifec, res.forecasts_error[:, t]))
 
         return -partials / 2.
 
