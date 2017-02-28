@@ -880,7 +880,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         for t in range(self.ssm.loglikelihood_burn, self.nobs):
             ifec = ifecs[:, :, t]
             # Equiv: ifec = np.linalg.inv(res.forecasts_error_cov[:, :, t])
-            
+            pfet = partials_forecasts_error[:, t, :]
+
             tmp  = np.tensordot(ifec,
                 partials_forecasts_error_cov[:, :, t, :],
                 axes=[[1], [0]]
@@ -888,12 +889,11 @@ class MLEModel(tsbase.TimeSeriesModel):
             ijdot = np.tensordot(tmp, tmp, axes=[[1], [0]])
             traced = np.trace(ijdot, axis1=0, axis2=2)
 
-            pfet = partials_forecasts_error[:, t, :]
-            for i in range(n):
-                for j in range(n):
-                    dotted = np.inner(pfe[:, i], np.dot(ifec, pfet[:, j])
-
-                    information_matrix[i, j] += 0.5*traced[i, j] + dotted
+            pfidot = np.tensordot(ifec, pfet, axes=[[1], [0]])
+            inner = np.tensordot(pfet, pfidot, axes=[[0], [0]])
+            # inner[i, j] --> np.inner(pfet[:, i], np.dot(ifec, pfet[:, j]))
+            
+            information_matrix[:, :] += 0.5*traced + inner
         
         return information_matrix / (self.nobs - self.ssm.loglikelihood_burn)
 
@@ -1004,14 +1004,14 @@ class MLEModel(tsbase.TimeSeriesModel):
         keye = np.eye(k_endog)
         for t in range(self.nobs):
             ifec = ifecs[:, :, t]
+            pfet = partials_forecasts_error[:, t, :]
+            rfet = res.forecasts_error[:, t]
 
             tmp = np.tensordot(ifec,
                 partials_forecasts_error_cov[:, :, t, :],
                 axes=[[1], [0]]
                 )
 
-            pfet = partials_forecasts_error[:, t, :]
-            rfet = res.forecasts_error[:, t]
             rfet_outer = np.outer(rfet, rfet)
             iro_dot = np.dot(ifec, rfet_outer)
             irdot = np.dot(ifec, rfet)
