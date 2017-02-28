@@ -147,7 +147,7 @@ def _kernel_survfunc(time, status, exog, kfunc, freq_weights):
     Zeng, Donglin 2004. Estimating Marginal Survival Function by
     Adjusting for Dependent Censoring Using Many Covariates. The
     Annals of Statistics 32 (4):
-    1533–55. doi:10.1214/009053604000000508.
+    1533-55. doi:10.1214/009053604000000508.
     http://arxiv.org/pdf/math/0409180.pdf
     """
 
