@@ -873,7 +873,6 @@ class MLEModel(tsbase.TimeSeriesModel):
                 approx_centered=approx_centered, res=res, **kwargs))
 
         # Compute the information matrix
-        tmp = np.zeros((self.k_endog, self.k_endog, self.nobs, n), dtype=dtype)
         ifecs = np.linalg.inv(res.forecasts_error_cov.T).T
         # Broadcast np.linalg.inv along 3rd dim
 
@@ -882,7 +881,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             ifec = ifecs[:, :, t]
             # Equiv: ifec = np.linalg.inv(res.forecasts_error_cov[:, :, t])
             
-            itmp  = np.tensordot(ifec,
+            tmp  = np.tensordot(ifec,
                 partials_forecasts_error_cov[:, :, t, :],
                 axes=[[1], [0]]
                 )
@@ -890,7 +889,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             pfet = partials_forecasts_error[:, t, :]
             for i in range(n):
                 for j in range(n):
-                    traced = np.trace(np.dot(itmp[:, :, i], itmp[:, :, j]))
+                    traced = np.trace(np.dot(tmp[:, :, i], tmp[:, :, j]))
                     dotted = np.inner(pfe[:, i], np.dot(ifec, pfet[:, j])
 
                     information_matrix[i, j] += 0.5*traced + dotted
