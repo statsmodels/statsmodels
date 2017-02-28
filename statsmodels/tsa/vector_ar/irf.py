@@ -566,7 +566,8 @@ class IRAnalysis(BaseIRAnalysis):
         H = self.H
 
         G = self.G
-        Gc = np.r_[0, G]
+        Z = numpy.zeros((1,)+G.shape[1:])
+        Gc = np.r_[Z, G]
 
         effects = self.irfs
         if cum:
@@ -607,7 +608,8 @@ class IRAnalysis(BaseIRAnalysis):
             return self._orth_cov(cum=True)
 
         G = self.G
-        Gc = np.r_[0, G].cumsum()
+        Z = numpy.zeros((1,)+G.shape[1:])
+        Gc = np.r_[Z, G].cumsum()
 
         covs = self._empty_covm(self.periods + 1)
         covs[0] = np.zeros((self.neqs**2, self.neqs**2))
