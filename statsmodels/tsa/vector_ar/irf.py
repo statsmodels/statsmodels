@@ -555,7 +555,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         return [_make_g(i) for i in range(1, self.periods + 1)]
 
-    def _orth_cov(self):
+    def _orth_cov(self, cum=False):
         # Lutkepohl 3.7.8
 
         Ik = np.eye(self.neqs)
@@ -566,6 +566,9 @@ class IRAnalysis(BaseIRAnalysis):
         Gc = np.r_[0, G]
 
         effects = self.irfs
+        if cum:
+            effects = self.cum_effects
+            Gc = Gc.cumsum()
 
         covs = self._empty_covm(self.periods + 1)
         for i in range(self.periods + 1):
@@ -597,6 +600,9 @@ class IRAnalysis(BaseIRAnalysis):
         -------
 
         """
+        #if orth:
+        #    return self._orth_cov(cum=True)
+
         Ik = np.eye(self.neqs)
         PIk = np.kron(self.P.T, Ik)
         H = self.H
