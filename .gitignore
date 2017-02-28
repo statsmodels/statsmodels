@@ -14,6 +14,9 @@ docs/source/datasets
 docs/gettingstarted_0.png
 examples/executed
 
+.coverage
+coverage_html_report/
+
 # generated c source and built extensions
 *.c
 *.so
