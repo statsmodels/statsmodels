@@ -1005,10 +1005,14 @@ class MLEModel(tsbase.TimeSeriesModel):
             rfet = res.forecasts_error[:, t]
             rfet_outer = np.outer(rfet, rfet)
 
+            tmp = np.tensordot(ifec,
+                partials_forecasts_error_cov[:, :, t, :],
+                axes=[[1], [0]]
+                )
+
             for i in range(n):
                 ifec = ifecs[:, :, t]
-                # Equiv: ifec = np.linalg.inv(res.forecasts_error_cov[:, :, t])
-                itmp = np.dot(ifec, partials_forecasts_error_cov[:, :, t, i])
+                itmp = tmp[:, :, i]
                 traced = np.trace(np.dot(
                     itmp,
                     keye - np.dot(ifec, rfet_outer))
