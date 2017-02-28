@@ -613,12 +613,8 @@ class IRAnalysis(BaseIRAnalysis):
         effects = self.cum_effects
 
         covs = self._empty_covm(self.periods + 1)
-        for i in range(self.periods + 1):
-
-            if i == 0:
-                covs[i] = np.zeros((self.neqs**2, self.neqs**2))
-                continue
-
+        covs[0] = np.zeros((self.neqs**2, self.neqs**2))
+        for i in range(1, self.periods + 1):
             covs[i] = chain_dot(Gc[i], self.cov_a, Gc[i].T)
 
         return covs
