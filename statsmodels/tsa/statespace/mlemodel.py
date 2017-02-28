@@ -1004,17 +1004,20 @@ class MLEModel(tsbase.TimeSeriesModel):
         k_endog = self.k_endog
         keye = np.eye(k_endog)
         for t in range(self.nobs):
+            rfet = res.forecasts_error[:, t]
+            rfet_outer = np.outer(rfet, rfet)
+            
             for i in range(n):
                 ifec = ifecs[:, :, t]
                 # Equiv: ifec = np.linalg.inv(res.forecasts_error_cov[:, :, t])
                 itmp = np.dot(ifec, partials_forecasts_error_cov[:, :, t, i])
 
-                rfet = res.forecasts_error[:, t]
+                
                 traced = np.trace(np.dot(
                     itmp,
-                    keye - np.dot(ifec, np.outer(rfet, rfet)))
+                    keye - np.dot(ifec, rfet_outer))
                     )
-                
+
                 # 2 * dv / di * F^{-1} v_t
                 # where x = F^{-1} v_t or F x = v
                 dotted = np.dot(
