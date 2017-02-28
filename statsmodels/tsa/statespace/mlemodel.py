@@ -885,11 +885,11 @@ class MLEModel(tsbase.TimeSeriesModel):
                 partials_forecasts_error_cov[:, :, t, :],
                 axes=[[1], [0]]
                 )
+            ijdot = np.tensordot(tmp, tmp, axes=[[1], [0]])
 
             pfet = partials_forecasts_error[:, t, :]
             for i in range(n):
                 for j in range(n):
-                    ijdot = np.dot(tmp[:, :, i], tmp[:, :, j])
                     traced = np.trace(ijdot)
                     dotted = np.inner(pfe[:, i], np.dot(ifec, pfet[:, j])
 
