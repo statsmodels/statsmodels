@@ -562,12 +562,15 @@ class IRAnalysis(BaseIRAnalysis):
         PIk = np.kron(self.P.T, Ik)
         H = self.H
 
+        G = self.G
+        Gc = np.r_[0, G]
+
         covs = self._empty_covm(self.periods + 1)
         for i in range(self.periods + 1):
             if i == 0:
                 apiece = 0
             else:
-                Ci = np.dot(PIk, self.G[i-1])
+                Ci = np.dot(PIk, Gc[i])
                 apiece = chain_dot(Ci, self.cov_a, Ci.T)
 
             Cibar = np.dot(np.kron(Ik, self.irfs[i]), H)
@@ -598,17 +601,17 @@ class IRAnalysis(BaseIRAnalysis):
         Ik = np.eye(self.neqs)
         PIk = np.kron(self.P.T, Ik)
 
-        F = 0.
+        G = self.G
+        Gc = np.r_[0, G].cumsum()
+
         covs = self._empty_covm(self.periods + 1)
         for i in range(self.periods + 1):
-            if i > 0:
-                F = F + self.G[i - 1]
 
             if orth:
                 if i == 0:
                     apiece = 0
                 else:
-                    Bn = np.dot(PIk, F)
+                    Bn = np.dot(PIk, Gc[i])
                     apiece = chain_dot(Bn, self.cov_a, Bn.T)
 
                 Bnbar = np.dot(np.kron(Ik, self.cum_effects[i]), self.H)
@@ -620,7 +623,7 @@ class IRAnalysis(BaseIRAnalysis):
                     covs[i] = np.zeros((self.neqs**2, self.neqs**2))
                     continue
 
-                covs[i] = chain_dot(F, self.cov_a, F.T)
+                covs[i] = chain_dot(Gc[i], self.cov_a, Gc[i].T)
 
         return covs
 
