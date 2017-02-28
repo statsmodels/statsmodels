@@ -78,6 +78,31 @@ class BaseIRAnalysis(object):
     def cum_effect_cov(self, *args, **kwargs):
         raise NotImplementedError
 
+    def _choose_irfs(self, orth, svar, either_ok=False):
+        """
+        Helper function to find the appropriate set of IRFs to use in
+        the calling function.
+        """
+        if orth and svar and not either_ok:
+            raise ValueError("For SVAR system, set orth=False")
+            # Note: This function was created because near-identical code
+            # existed in four different methods.  One key difference is
+            # that only one of them raised this ValueError.  I suspect
+            # that they all should, but am implementing an "either_ok"
+            # so as to maintain the previous behavior precisely.
+
+        if orth:
+            title = 'Impulse responses (orthogonalized)'
+            irfs = self.orth_irfs
+        elif svar:
+            title = 'Impulse responses (structural)'
+            irfs = self.svar_irfs
+        else:
+            title = 'Impulse responses'
+            irfs = self.irfs
+        
+        return (irfs, title)
+
     def plot(self, orth=False, impulse=None, response=None,
              signif=0.05, plot_params=None, subplot_params=None,
              plot_stderr=True, stderr_type='asym', repl=1000,
@@ -115,18 +140,7 @@ class BaseIRAnalysis(object):
         model = self.model
         svar = self.svar
 
-        if orth and svar:
-            raise ValueError("For SVAR system, set orth=False")
-
-        if orth:
-            title = 'Impulse responses (orthogonalized)'
-            irfs = self.orth_irfs
-        elif svar:
-            title = 'Impulse responses (structural)'
-            irfs = self.svar_irfs
-        else:
-            title = 'Impulse responses'
-            irfs = self.irfs
+        (irfs, title) = self._choose_irfs(orth, svar, either_ok=False)
 
         if plot_stderr == False:
             stderr = None
@@ -280,6 +294,7 @@ class IRAnalysis(BaseIRAnalysis):
             return model.irf_errband_mc(orth=orth, repl=repl, T=periods,
                                         signif=signif, seed=seed,
                                         burn=burn, cum=False)
+    
     def err_band_sz1(self, orth=False, svar=False, repl=1000,
                      signif=0.05, seed=None, burn=100, component=None):
         """
@@ -311,12 +326,8 @@ class IRAnalysis(BaseIRAnalysis):
 
         model = self.model
         periods = self.periods
-        if orth:
-            irfs = self.orth_irfs
-        elif svar:
-            irfs = self.svar_irfs
-        else:
-            irfs = self.irfs
+        (irfs, _) = self._choose_irfs(orth, svar, either_ok=True)
+
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
@@ -374,12 +385,8 @@ class IRAnalysis(BaseIRAnalysis):
         """
         model = self.model
         periods = self.periods
-        if orth:
-            irfs = self.orth_irfs
-        elif svar:
-            irfs = self.svar_irfs
-        else:
-            irfs = self.irfs
+        (irfs, _) = self._choose_irfs(orth, svar, either_ok=True)
+
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
@@ -442,12 +449,8 @@ class IRAnalysis(BaseIRAnalysis):
 
         model = self.model
         periods = self.periods
-        if orth:
-            irfs = self.orth_irfs
-        elif svar:
-            irfs = self.svar_irfs
-        else:
-            irfs = self.irfs
+        (irfs, _) = self._choose_irfs(orth, svar, either_ok=True)
+
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
