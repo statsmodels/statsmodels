@@ -68,8 +68,11 @@ def _find_x12(x12path=None, prefer_x13=True):
     for binary in _binary_names:
         x12 = os.path.join(x12path, binary)
         try:
-            subprocess.check_call(x12, stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE)
+            subprocess.check_call(x12,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                close_fds=True
+                                )
             return x12
         except OSError:
             pass
@@ -117,8 +120,11 @@ def run_spec(x12path, specpath, outname=None, meta=False, datameta=False):
     if outname:
         args += [outname]
 
-    return subprocess.Popen(args, stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT)
+    return subprocess.Popen(args,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT
+                            close_fds=True
+                            )
 
 
 def _make_automdl_options(maxorder, maxdiff, diff):
