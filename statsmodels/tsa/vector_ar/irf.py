@@ -600,8 +600,8 @@ class IRAnalysis(BaseIRAnalysis):
         -------
 
         """
-        #if orth:
-        #    return self._orth_cov(cum=True)
+        if orth:
+            return self._orth_cov(cum=True)
 
         Ik = np.eye(self.neqs)
         PIk = np.kron(self.P.T, Ik)
@@ -615,20 +615,11 @@ class IRAnalysis(BaseIRAnalysis):
         covs = self._empty_covm(self.periods + 1)
         for i in range(self.periods + 1):
 
-            if orth:
-                Bn = np.dot(PIk, Gc[i])
-                apiece = chain_dot(Bn, self.cov_a, Bn.T)
+            if i == 0:
+                covs[i] = np.zeros((self.neqs**2, self.neqs**2))
+                continue
 
-                Bnbar = np.dot(np.kron(Ik, effects[i]), H)
-                bpiece = chain_dot(Bnbar, self.cov_sig, Bnbar.T) / self.T
-
-                covs[i] = apiece + bpiece
-            else:
-                if i == 0:
-                    covs[i] = np.zeros((self.neqs**2, self.neqs**2))
-                    continue
-
-                covs[i] = chain_dot(Gc[i], self.cov_a, Gc[i].T)
+            covs[i] = chain_dot(Gc[i], self.cov_a, Gc[i].T)
 
         return covs
 
