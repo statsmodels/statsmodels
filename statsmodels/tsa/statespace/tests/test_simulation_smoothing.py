@@ -42,18 +42,18 @@ class MultivariateVARKnown(object):
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01',
                                   freq='QS')
-        obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().ix[1:]
+        obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().iloc[1:]
 
         if missing == 'all':
-            obs.ix[0:50, :] = np.nan
+            obs.iloc[0:50, :] = np.nan
         elif missing == 'partial':
-            obs.ix[0:50, 0] = np.nan
+            obs.iloc[0:50, 0] = np.nan
         elif missing == 'mixed':
-            obs.ix[0:50, 0] = np.nan
-            obs.ix[19:70, 1] = np.nan
-            obs.ix[39:90, 2] = np.nan
-            obs.ix[119:130, 0] = np.nan
-            obs.ix[119:130, 2] = np.nan
+            obs.iloc[0:50, 0] = np.nan
+            obs.iloc[19:70, 1] = np.nan
+            obs.iloc[39:90, 2] = np.nan
+            obs.iloc[119:130, 0] = np.nan
+            obs.iloc[119:130, 2] = np.nan
             obs.iloc[-10:, :] = np.nan
 
         if test_against_KFAS:
@@ -440,20 +440,20 @@ class TestDFM(TestMultivariateVARKnown):
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().ix[1:] * 400
+        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().iloc[1:] * 400
 
         if which == 'all':
-            obs.ix[:50, :] = np.nan
-            obs.ix[119:130, :] = np.nan
+            obs.iloc[:50, :] = np.nan
+            obs.iloc[119:130, :] = np.nan
         elif which == 'partial':
-            obs.ix[0:50, 0] = np.nan
-            obs.ix[119:130, 0] = np.nan
+            obs.iloc[0:50, 0] = np.nan
+            obs.iloc[119:130, 0] = np.nan
         elif which == 'mixed':
-            obs.ix[0:50, 0] = np.nan
-            obs.ix[19:70, 1] = np.nan
-            obs.ix[39:90, 2] = np.nan
-            obs.ix[119:130, 0] = np.nan
-            obs.ix[119:130, 2] = np.nan
+            obs.iloc[0:50, 0] = np.nan
+            obs.iloc[19:70, 1] = np.nan
+            obs.iloc[39:90, 2] = np.nan
+            obs.iloc[119:130, 0] = np.nan
+            obs.iloc[119:130, 2] = np.nan
 
         # Create the model with typical state space
         mod = mlemodel.MLEModel(obs, k_states=2, k_posdef=2, **kwargs)
@@ -489,18 +489,18 @@ class MultivariateVAR(object):
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01',
                                   freq='QS')
-        obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().ix[1:]
+        obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().iloc[1:]
 
         if missing == 'all':
-            obs.ix[0:50, :] = np.nan
+            obs.iloc[0:50, :] = np.nan
         elif missing == 'partial':
-            obs.ix[0:50, 0] = np.nan
+            obs.iloc[0:50, 0] = np.nan
         elif missing == 'mixed':
-            obs.ix[0:50, 0] = np.nan
-            obs.ix[19:70, 1] = np.nan
-            obs.ix[39:90, 2] = np.nan
-            obs.ix[119:130, 0] = np.nan
-            obs.ix[119:130, 2] = np.nan
+            obs.iloc[0:50, 0] = np.nan
+            obs.iloc[19:70, 1] = np.nan
+            obs.iloc[39:90, 2] = np.nan
+            obs.iloc[119:130, 0] = np.nan
+            obs.iloc[119:130, 2] = np.nan
             obs.iloc[-10:, :] = np.nan
 
         # Create the model
@@ -573,7 +573,7 @@ def test_misc():
     dta = datasets.macrodata.load_pandas().data
     dta.index = pd.date_range(start='1959-01-01', end='2009-7-01',
                               freq='QS')
-    obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().ix[1:]
+    obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().iloc[1:]
 
     mod = sarimax.SARIMAX(obs['realgdp'], order=(1, 0, 0))
     mod['design', 0, 0] = 0.

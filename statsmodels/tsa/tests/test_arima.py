@@ -1751,7 +1751,7 @@ def test_arimax():
     y = dta.pop("realdpi")
 
     # 1 exog
-    #X = dta.ix[1:]["m1"]
+    #X = dta.iloc[1:]["m1"]
     #res = ARIMA(y, (2, 1, 1), X).fit(disp=-1)
     #params = [23.902305009084373, 0.024650911502790, -0.162140641341602,
     #          0.165262136028113, -0.066667022903974]
@@ -2127,7 +2127,7 @@ def test_ARIMA_exog_predict():
 
     forecast_period = PeriodIndex(start='2008Q2', end='2009Q4', freq='Q')
     end = forecast_period[0]
-    data_sample = data.ix[dta.index < end]
+    data_sample = data.loc[dta.index < end]
 
     exog_full = data[['loggdp', 'logcons']]
 

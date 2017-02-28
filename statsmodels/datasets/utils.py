@@ -125,7 +125,7 @@ def process_recarray_pandas(data, endog_idx=0, exog_idx=None, dtype=None,
         else:
             exog = data.filter(names[exog_idx])
     else:
-        endog = data.ix[:, endog_idx]
+        endog = data.loc[:, endog_idx]
         endog_name = list(endog.columns)
         if exog_idx is None:
             exog = data.drop(endog_name, axis=1)
@@ -135,8 +135,8 @@ def process_recarray_pandas(data, endog_idx=0, exog_idx=None, dtype=None,
             exog = data.filter(names[exog_idx])
 
     if index_idx is not None:  # NOTE: will have to be improved for dates
-        endog.index = Index(data.ix[:, index_idx])
-        exog.index = Index(data.ix[:, index_idx])
+        endog.index = Index(data.iloc[:, index_idx])
+        exog.index = Index(data.iloc[:, index_idx])
         data = data.set_index(names[index_idx])
 
     exog_name = list(exog.columns)
@@ -240,7 +240,7 @@ def _get_dataset_meta(dataname, package, cache):
         data = data.decode('utf-8', 'strict')
     index = read_csv(StringIO(data))
     idx = np.logical_and(index.Item == dataname, index.Package == package)
-    dataset_meta = index.ix[idx]
+    dataset_meta = index.loc[idx]
     return dataset_meta["Title"].item()
 
 

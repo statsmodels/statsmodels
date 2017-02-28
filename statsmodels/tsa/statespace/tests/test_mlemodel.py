@@ -829,7 +829,7 @@ def test_lutkepohl_information_criteria():
     dta['dln_inc'] = np.log(dta['inc']).diff()
     dta['dln_consump'] = np.log(dta['consump']).diff()
 
-    endog = dta.ix['1960-04-01':'1978-10-01',
+    endog = dta.loc['1960-04-01':'1978-10-01',
                    ['dln_inv', 'dln_inc', 'dln_consump']]
 
     # AR model - SARIMAX

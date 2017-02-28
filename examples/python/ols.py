@@ -209,7 +209,7 @@ print(condition_number)
 # 
 # Greene also points out that dropping a single observation can have a dramatic effect on the coefficient estimates: 
 
-ols_results2 = sm.OLS(y.ix[:14], X.ix[:14]).fit()
+ols_results2 = sm.OLS(y.iloc[:14], X.iloc[:14]).fit()
 print("Percentage change %4.2f%%\n"*7 % tuple([i for i in (ols_results2.params - ols_results.params)/ols_results.params*100]))
 
 

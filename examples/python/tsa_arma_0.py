@@ -93,7 +93,7 @@ predict_sunspots = arma_mod30.predict('1990', '2012', dynamic=True)
 print(predict_sunspots)
 
 
-ax = dta.ix['1950':].plot(figsize=(12,8))
+ax = dta.loc['1950':].plot(figsize=(12,8))
 ax = predict_sunspots.plot(ax=ax, style='r--', label='Dynamic Prediction')
 ax.legend()
 ax.axis((-20.0, 38.0, -4.0, 200.0))

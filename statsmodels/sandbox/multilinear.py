@@ -152,7 +152,7 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
     if isinstance(column_list, string_types):
         column_list = [column_list]
     if subset is not None:
-        dataframe = dataframe.ix[subset]
+        dataframe = dataframe.loc[subset]
     # perform each model and retrieve the statistics
     col_results = {}
     # as the model will use always the same endogenous variables

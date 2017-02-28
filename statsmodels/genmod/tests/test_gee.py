@@ -1637,7 +1637,7 @@ def test_missing():
             ['35C', 'C', 0, 1, 15]]
 
     df = pd.DataFrame(data[1:], columns=data[0])
-    df.ix[df.fake == 1, 'fake'] = np.nan
+    df.loc[df.fake == 1, 'fake'] = np.nan
     mod = smf.gee('status ~ fake', data=df, groups='grps',
                   cov_struct=sm.cov_struct.Independence(),
                   family=sm.families.Binomial())

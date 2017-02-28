@@ -365,17 +365,17 @@ def _col_params(result, float_format='%.4f', stars=True):
     for col in res.columns[:2]:
         res[col] = res[col].apply(lambda x: float_format % x)
     # Std.Errors in parentheses
-    res.ix[:, 1] = '(' + res.ix[:, 1] + ')'
+    res.iloc[:, 1] = '(' + res.iloc[:, 1] + ')'
     # Significance stars
     if stars:
-        idx = res.ix[:, 3] < .1
-        res.ix[idx, 0] = res.ix[idx, 0] + '*'
-        idx = res.ix[:, 3] < .05
-        res.ix[idx, 0] = res.ix[idx, 0] + '*'
-        idx = res.ix[:, 3] < .01
-        res.ix[idx, 0] = res.ix[idx, 0] + '*'
+        idx = res.iloc[:, 3] < .1
+        res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + '*'
+        idx = res.iloc[:, 3] < .05
+        res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + '*'
+        idx = res.iloc[:, 3] < .01
+        res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + '*'
     # Stack Coefs and Std.Errors
-    res = res.ix[:, :2]
+    res = res.iloc[:, :2]
     res = res.stack()
     res = pd.DataFrame(res)
     res.columns = [str(result.model.endog_names)]
@@ -526,7 +526,7 @@ def _df_to_simpletable(df, align='r', float_format="%.4f", header=True,
     if index:
         stubs = [str(x) + int(pad_index) * ' ' for x in dat.index.tolist()]
     else:
-        dat.ix[:, 0] = [str(x) + int(pad_index) * ' ' for x in dat.ix[:, 0]]
+        dat.iloc[:, 0] = [str(x) + int(pad_index) * ' ' for x in dat.iloc[:, 0]]
         stubs = None
     st = SimpleTable(np.array(dat), headers=headers, stubs=stubs,
                      ltx_fmt=fmt_latex, txt_fmt=fmt_txt)

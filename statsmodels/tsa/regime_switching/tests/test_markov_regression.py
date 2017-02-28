@@ -1022,9 +1022,9 @@ class TestFedFundsConstL1Exog(MarkovRegression):
             'bse_oim': np.r_[.0929915, .0641179, .1373889, .1279231, .0333236,
                              .0270852, .0294113, .0240138, .0408057, .0297351,
                              np.nan],
-            'predict0': results.ix[4:, 'constL1exog_syhat1'],
-            'predict1': results.ix[4:, 'constL1exog_syhat2'],
-            'predict_smoothed': results.ix[4:, 'constL1exog_syhat'],
+            'predict0': results.iloc[4:]['constL1exog_syhat1'],
+            'predict1': results.iloc[4:]['constL1exog_syhat2'],
+            'predict_smoothed': results.iloc[4:]['constL1exog_syhat'],
         }
         super(TestFedFundsConstL1Exog, cls).setup_class(
             true, fedfunds[4:], k_regimes=2,

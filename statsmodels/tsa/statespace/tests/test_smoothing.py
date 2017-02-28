@@ -84,19 +84,19 @@ class TestStatesAR3(object):
     def test_predict_obs(self):
         assert_almost_equal(
             self.results.filter_results.predict().forecasts[0],
-            self.stata.ix[1:, 'dep1'], 4
+            self.stata.iloc[1:]['dep1'], 4
         )
 
     def test_standardized_residuals(self):
         assert_almost_equal(
             self.results.filter_results.standardized_forecasts_error[0],
-            self.stata.ix[1:, 'sr1'], 4
+            self.stata.iloc[1:]['sr1'], 4
         )
 
     def test_predicted_states(self):
         assert_almost_equal(
             self.results.filter_results.predicted_state[:, :-1].T,
-            self.stata.ix[1:, ['sp1', 'sp2', 'sp3']], 4
+            self.stata.iloc[1:][['sp1', 'sp2', 'sp3']], 4
         )
         assert_almost_equal(
             self.results.filter_results.predicted_state[:, :-1].T,
@@ -112,13 +112,13 @@ class TestStatesAR3(object):
     def test_filtered_states(self):
         assert_almost_equal(
             self.results.filter_results.filtered_state.T,
-            self.stata.ix[1:, ['sf1', 'sf2', 'sf3']], 4
+            self.stata.iloc[1:][['sf1', 'sf2', 'sf3']], 4
         )
 
     def test_smoothed_states(self):
         assert_almost_equal(
             self.results.smoother_results.smoothed_state.T,
-            self.stata.ix[1:, ['sm1', 'sm2', 'sm3']], 4
+            self.stata.iloc[1:][['sm1', 'sm2', 'sm3']], 4
         )
         assert_almost_equal(
             self.results.smoother_results.smoothed_state.T,
@@ -178,17 +178,17 @@ class TestStatesAR3AlternativeSmoothing(TestStatesAR3):
         # Initialization issues can change the first few smoothed states
         assert_almost_equal(
             self.results.smoother_results.smoothed_state.T[2:],
-            self.stata.ix[3:, ['sm1', 'sm2', 'sm3']], 4
+            self.stata.iloc[3:][['sm1', 'sm2', 'sm3']], 4
         )
         assert_almost_equal(
             self.results.smoother_results.smoothed_state.T[2:],
-            self.matlab_ssm.ix[2:, ['alphahat1', 'alphahat2', 'alphahat3']], 4
+            self.matlab_ssm.iloc[2:][['alphahat1', 'alphahat2', 'alphahat3']], 4
         )
 
     def test_smoothed_states_cov(self):
         assert_almost_equal(
             self.results.det_smoothed_state_cov.T[1:],
-            self.matlab_ssm.ix[1:, ['detV']], 4
+            self.matlab_ssm.iloc[1:][['detV']], 4
         )
 
     def test_smooth_method(self):
@@ -235,10 +235,10 @@ class TestStatesMissingAR3(object):
 
         # Create missing observations
         cls.stata['dwpi'] = cls.stata['wpi'].diff()
-        cls.stata.ix[10:21, 'dwpi'] = np.nan
+        cls.stata.loc[cls.stata.index[10:21], 'dwpi'] = np.nan
 
         cls.model = sarimax.SARIMAX(
-            cls.stata.ix[1:,'dwpi'], order=(3, 0, 0),
+            cls.stata.loc[cls.stata.index[1:],'dwpi'], order=(3, 0, 0),
             hamilton_representation=True, *args, **kwargs
         )
         if alternate_timing:
@@ -390,12 +390,12 @@ class TestMultivariateMissing(object):
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = dta[['realgdp','realcons','realinv']].diff().ix[1:]
-        obs.ix[0:50, 0] = np.nan
-        obs.ix[19:70, 1] = np.nan
-        obs.ix[39:90, 2] = np.nan
-        obs.ix[119:130, 0] = np.nan
-        obs.ix[119:130, 2] = np.nan
+        obs = dta[['realgdp','realcons','realinv']].diff().iloc[1:]
+        obs.iloc[0:50, 0] = np.nan
+        obs.iloc[19:70, 1] = np.nan
+        obs.iloc[39:90, 2] = np.nan
+        obs.iloc[119:130, 0] = np.nan
+        obs.iloc[119:130, 2] = np.nan
 
         # Create the model
         mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
@@ -585,7 +585,7 @@ class TestMultivariateVAR(object):
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().ix[1:]
+        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().iloc[1:]
 
         # Create the model
         mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
@@ -769,7 +769,7 @@ class TestMultivariateVARUnivariate(object):
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().ix[1:]
+        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().iloc[1:]
 
         # Create the model
         mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
@@ -928,20 +928,20 @@ class TestVARAutocovariances(object):
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().ix[1:]
+        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().iloc[1:]
 
         if which == 'all':
-            obs.ix[:50, :] = np.nan
-            obs.ix[119:130, :] = np.nan
+            obs.iloc[:50, :] = np.nan
+            obs.iloc[119:130, :] = np.nan
         elif which == 'partial':
-            obs.ix[0:50, 0] = np.nan
-            obs.ix[119:130, 0] = np.nan
+            obs.iloc[0:50, 0] = np.nan
+            obs.iloc[119:130, 0] = np.nan
         elif which == 'mixed':
-            obs.ix[0:50, 0] = np.nan
-            obs.ix[19:70, 1] = np.nan
-            obs.ix[39:90, 2] = np.nan
-            obs.ix[119:130, 0] = np.nan
-            obs.ix[119:130, 2] = np.nan
+            obs.iloc[0:50, 0] = np.nan
+            obs.iloc[19:70, 1] = np.nan
+            obs.iloc[39:90, 2] = np.nan
+            obs.iloc[119:130, 0] = np.nan
+            obs.iloc[119:130, 2] = np.nan
 
         # Create the model with typical state space
         mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3, **kwargs)

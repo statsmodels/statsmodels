@@ -21,21 +21,21 @@ idx = ['income', 'Intercept']
 
 class CheckModelResultsMixin(object):
     def test_params(self):
-        assert_allclose(np.ravel(self.res1.params.ix[idx]),
+        assert_allclose(np.ravel(self.res1.params.loc[idx]),
                         self.res2.table[:, 0], rtol=1e-3)
 
     def test_bse(self):
         assert_equal(self.res1.scale, 1)
-        assert_allclose(np.ravel(self.res1.bse.ix[idx]),
+        assert_allclose(np.ravel(self.res1.bse.loc[idx]),
                         self.res2.table[:, 1], rtol=1e-3)
 
     def test_tvalues(self):
-        assert_allclose(np.ravel(self.res1.tvalues.ix[idx]),
+        assert_allclose(np.ravel(self.res1.tvalues.loc[idx]),
                         self.res2.table[:, 2], rtol=1e-2)
 
     def test_pvalues(self):
         pvals_stata = scipy.stats.t.sf(self.res2.table[:, 2], self.res2.df_r)
-        assert_allclose(np.ravel(self.res1.pvalues.ix[idx]),
+        assert_allclose(np.ravel(self.res1.pvalues.loc[idx]),
                         pvals_stata, rtol=1.1)
 
         # test that we use the t distribution for the p-values
@@ -44,7 +44,7 @@ class CheckModelResultsMixin(object):
                         pvals_t, rtol=1e-9, atol=1e-10)
 
     def test_conf_int(self):
-        assert_allclose(self.res1.conf_int().ix[idx],
+        assert_allclose(self.res1.conf_int().loc[idx],
                         self.res2.table[:, -2:], rtol=1e-3)
 
     def test_nobs(self):

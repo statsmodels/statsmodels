@@ -1059,7 +1059,7 @@ def test_formula_missing_cat():
     from patsy import PatsyError
 
     dta = sm.datasets.grunfeld.load_pandas().data
-    dta.ix[0, 'firm'] = np.nan
+    dta.loc[dta.index[0], 'firm'] = np.nan
 
     mod = ols(formula='value ~ invest + capital + firm + year',
               data=dta.dropna())

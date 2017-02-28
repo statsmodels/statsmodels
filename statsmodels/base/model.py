@@ -138,7 +138,7 @@ class Model(object):
         #TODO: provide a docs template for args/kwargs from child models
         #TODO: subset could use syntax. issue #469.
         if subset is not None:
-            data = data.ix[subset]
+            data = data.loc[subset]
         eval_env = kwargs.pop('eval_env', None)
         if eval_env is None:
             eval_env = 2
