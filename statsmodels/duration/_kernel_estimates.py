@@ -128,7 +128,7 @@ def _kernel_survfunc(time, status, exog, kfunc, freq_weights):
         The status for each subject (1 indicates event, 0 indicates
         censoring)
     exog : array-like
-        Covariates such that censoring is independnet conditioned on
+        Covariates such that censoring is independent conditional on
         exog
     kfunc : function
         Kernel function
@@ -144,8 +144,10 @@ def _kernel_survfunc(time, status, exog, kfunc, freq_weights):
 
     References
     ----------
-    Estimating marginal survival function by adjusting for dependent
-    censoring using many covariates
+    Zeng, Donglin 2004. Estimating Marginal Survival Function by
+    Adjusting for Dependent Censoring Using Many Covariates. The
+    Annals of Statistics 32 (4):
+    1533–55. doi:10.1214/009053604000000508.
     http://arxiv.org/pdf/math/0409180.pdf
     """
 
