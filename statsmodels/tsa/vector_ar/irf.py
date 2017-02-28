@@ -274,7 +274,7 @@ class IRAnalysis(BaseIRAnalysis):
         covs = self._empty_covm(self.periods + 1)
         covs[0] = np.zeros((self.neqs ** 2, self.neqs ** 2))
         for i in range(1, self.periods + 1):
-            Gi = self.G[i - 1]
+            Gi = self.G[i-1]
             covs[i] = chain_dot(Gi, self.cov_a, Gi.T)
 
         return covs
@@ -565,8 +565,8 @@ class IRAnalysis(BaseIRAnalysis):
         PIk = np.kron(self.P.T, Ik)
         H = self.H
 
-        G = self.G
-        Z = np.zeros((1,)+G.shape[1:])
+        G = self.G # G comes back as a list of arrays
+        Z = np.zeros((1,)+G[0].shape)
         Gc = np.r_[Z, G]
 
         effects = self.irfs
@@ -607,8 +607,8 @@ class IRAnalysis(BaseIRAnalysis):
         if orth:
             return self._orth_cov(cum=True)
 
-        G = self.G
-        Z = np.zeros((1,)+G.shape[1:])
+        G = self.G # G comes back as a list of arrays
+        Z = np.zeros((1,)+G[0].shape)
         Gc = np.r_[Z, G].cumsum()
 
         covs = self._empty_covm(self.periods + 1)
