@@ -886,14 +886,14 @@ class MLEModel(tsbase.TimeSeriesModel):
                 axes=[[1], [0]]
                 )
             ijdot = np.tensordot(tmp, tmp, axes=[[1], [0]])
+            traced = np.trace(ijdot, axis1=0, axis2=2)
 
             pfet = partials_forecasts_error[:, t, :]
             for i in range(n):
                 for j in range(n):
-                    traced = np.trace(ijdot)
                     dotted = np.inner(pfe[:, i], np.dot(ifec, pfet[:, j])
 
-                    information_matrix[i, j] += 0.5*traced + dotted
+                    information_matrix[i, j] += 0.5*traced[i, j] + dotted
         
         return information_matrix / (self.nobs - self.ssm.loglikelihood_burn)
 
