@@ -603,14 +603,8 @@ class IRAnalysis(BaseIRAnalysis):
         if orth:
             return self._orth_cov(cum=True)
 
-        Ik = np.eye(self.neqs)
-        PIk = np.kron(self.P.T, Ik)
-        H = self.H
-
         G = self.G
         Gc = np.r_[0, G].cumsum()
-
-        effects = self.cum_effects
 
         covs = self._empty_covm(self.periods + 1)
         covs[0] = np.zeros((self.neqs**2, self.neqs**2))
