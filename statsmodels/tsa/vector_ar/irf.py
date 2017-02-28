@@ -565,15 +565,14 @@ class IRAnalysis(BaseIRAnalysis):
         G = self.G
         Gc = np.r_[0, G]
 
+        effects = self.irfs
+
         covs = self._empty_covm(self.periods + 1)
         for i in range(self.periods + 1):
-            if i == 0:
-                apiece = 0
-            else:
-                Ci = np.dot(PIk, Gc[i])
-                apiece = chain_dot(Ci, self.cov_a, Ci.T)
+            Ci = np.dot(PIk, Gc[i])
+            apiece = chain_dot(Ci, self.cov_a, Ci.T)
 
-            Cibar = np.dot(np.kron(Ik, self.irfs[i]), H)
+            Cibar = np.dot(np.kron(Ik, effects[i]), H)
             bpiece = chain_dot(Cibar, self.cov_sig, Cibar.T) / self.T
 
             # Lutkepohl typo, cov_sig correct
@@ -600,21 +599,21 @@ class IRAnalysis(BaseIRAnalysis):
         """
         Ik = np.eye(self.neqs)
         PIk = np.kron(self.P.T, Ik)
+        H = self.H
 
         G = self.G
         Gc = np.r_[0, G].cumsum()
+
+        effects = self.cum_effects
 
         covs = self._empty_covm(self.periods + 1)
         for i in range(self.periods + 1):
 
             if orth:
-                if i == 0:
-                    apiece = 0
-                else:
-                    Bn = np.dot(PIk, Gc[i])
-                    apiece = chain_dot(Bn, self.cov_a, Bn.T)
+                Bn = np.dot(PIk, Gc[i])
+                apiece = chain_dot(Bn, self.cov_a, Bn.T)
 
-                Bnbar = np.dot(np.kron(Ik, self.cum_effects[i]), self.H)
+                Bnbar = np.dot(np.kron(Ik, effects[i]), H)
                 bpiece = chain_dot(Bnbar, self.cov_sig, Bnbar.T) / self.T
 
                 covs[i] = apiece + bpiece
