@@ -874,6 +874,8 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         # Compute the information matrix
         tmp = np.zeros((self.k_endog, self.k_endog, self.nobs, n), dtype=dtype)
+        ifecs = np.linalg.inv(res.forecasts_error_cov.T).T
+        # Broadcast np.linalg.inv along 3rd dim
 
         information_matrix = np.zeros((n, n), dtype=dtype)
         for t in range(self.ssm.loglikelihood_burn, self.nobs):
@@ -996,6 +998,9 @@ class MLEModel(tsbase.TimeSeriesModel):
                 approx_complex_step=approx_complex_step,
                 approx_centered=approx_centered, res=res, **kwargs))
 
+        ifecs = np.linalg.inv(res.forecasts_error_cov.T).T
+        # Broadcast np.linalg.inv along 3rd dim
+        
         # Compute partial derivatives w.r.t. likelihood function
         partials = np.zeros((self.nobs, n))
         k_endog = self.k_endog
