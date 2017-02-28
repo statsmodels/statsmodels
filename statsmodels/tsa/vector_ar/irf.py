@@ -608,7 +608,7 @@ class IRAnalysis(BaseIRAnalysis):
             return self._orth_cov(cum=True)
 
         G = self.G
-        Z = numpy.zeros((1,)+G.shape[1:])
+        Z = np.zeros((1,)+G.shape[1:])
         Gc = np.r_[Z, G].cumsum()
 
         covs = self._empty_covm(self.periods + 1)

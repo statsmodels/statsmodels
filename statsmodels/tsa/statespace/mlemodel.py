@@ -864,7 +864,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         dtype = self.ssm.dtype
 
         # Save this for inversion later
-        inv_forecasts_error_cov = res.forecasts_error_cov.copy()
+        inv_forecasts_error_cov = res.forecasts_error_cov.copy() ## is this needed?
 
         partials_forecasts_error, partials_forecasts_error_cov = (
             self._forecasts_error_partial_derivatives(
