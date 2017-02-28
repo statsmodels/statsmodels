@@ -881,11 +881,10 @@ class MLEModel(tsbase.TimeSeriesModel):
         for t in range(self.ssm.loglikelihood_burn, self.nobs):
             ifec = ifecs[:, :, t]
             # Equiv: ifec = np.linalg.inv(res.forecasts_error_cov[:, :, t])
-            itmp = tmp[:, :, t, :]
-            for i in range(n):
-                itmp[:, :, i] = np.dot(
-                    ifec,
-                    partials_forecasts_error_cov[:, :, t, i]
+            
+            itmp  = np.tensordot(ifec,
+                partials_forecasts_error_cov[:, :, t, :],
+                axes=[[1], [0]]
                 )
 
             pfet = partials_forecasts_error[:, t, :]
@@ -1006,13 +1005,11 @@ class MLEModel(tsbase.TimeSeriesModel):
         for t in range(self.nobs):
             rfet = res.forecasts_error[:, t]
             rfet_outer = np.outer(rfet, rfet)
-            
+
             for i in range(n):
                 ifec = ifecs[:, :, t]
                 # Equiv: ifec = np.linalg.inv(res.forecasts_error_cov[:, :, t])
                 itmp = np.dot(ifec, partials_forecasts_error_cov[:, :, t, i])
-
-                
                 traced = np.trace(np.dot(
                     itmp,
                     keye - np.dot(ifec, rfet_outer))
