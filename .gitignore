@@ -14,9 +14,6 @@ docs/source/datasets
 docs/gettingstarted_0.png
 examples/executed
 
-.coverage
-coverage_html_report/
-
 # generated c source and built extensions
 *.c
 *.so
@@ -56,6 +53,10 @@ marks.bzr
 # Mac droppings
 .DS_Store
 help
+
+# coverage report info
+.coverage
+coverage_html_report/
 
 # Project specific
 statsmodels/version.py
