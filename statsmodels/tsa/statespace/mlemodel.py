@@ -891,15 +891,11 @@ class MLEModel(tsbase.TimeSeriesModel):
             pfet = partials_forecasts_error[:, t, :]
             for i in range(n):
                 for j in range(n):
-                    information_matrix[i, j] += (
-                        0.5 * np.trace(np.dot(itmp[:, :, i],
-                                              itmp[:, :, j]))
-                    )
-                    information_matrix[i, j] += np.inner(
-                        pfe[:, i],
-                        np.dot(ifec,
-                               pfet[:, j])
-                    )
+                    traced = np.trace(np.dot(itmp[:, :, i], itmp[:, :, j]))
+                    dotted = np.inner(pfe[:, i], np.dot(ifec, pfet[:, j])
+
+                    information_matrix[i, j] += 0.5*traced + dotted
+        
         return information_matrix / (self.nobs - self.ssm.loglikelihood_burn)
 
     def opg_information_matrix(self, params, transformed=True,
@@ -1013,7 +1009,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                 itmp = np.dot(ifec, partials_forecasts_error_cov[:, :, t, i])
 
                 rfet = res.forecasts_error[:, t]
-                partials[t, i] += np.trace(np.dot(
+                traced = np.trace(np.dot(
                     itmp,
                     (np.eye(k_endog) -
                      np.dot(ifec,
@@ -1021,10 +1017,12 @@ class MLEModel(tsbase.TimeSeriesModel):
                     )
                 # 2 * dv / di * F^{-1} v_t
                 # where x = F^{-1} v_t or F x = v
-                partials[t, i] += 2 * np.dot(
+                dotted = np.dot(
                     partials_forecasts_error[:, t, i],
                     np.dot(ifec, rfet)
                     )
+
+                partials[t, i] += traced + 2*dotted
 
         return -partials / 2.
 
