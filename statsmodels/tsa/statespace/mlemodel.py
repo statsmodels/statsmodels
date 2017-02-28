@@ -1010,6 +1010,7 @@ class MLEModel(tsbase.TimeSeriesModel):
                 axes=[[1], [0]]
                 )
 
+            pfet = partials_forecasts_error[:, t, :]
             rfet = res.forecasts_error[:, t]
             rfet_outer = np.outer(rfet, rfet)
             iro_dot = np.dot(ifec, rfet_outer)
@@ -1018,21 +1019,11 @@ class MLEModel(tsbase.TimeSeriesModel):
             ikdots = np.tensordot(tmp, keye-iro_dot, axes=[[1], [0]])
             traces = np.trace(ikdots, axis1=0, axis2=2)
 
-            for i in range(n):
-                traced = traces[i]
-                # Equiv:
-                # itmp = tmp[:, :, i]
-                # ikdot = np.dot(itmp, keye-iro_dot)
-                # traced = np.trace(ikdot)
-
-                # 2 * dv / di * F^{-1} v_t
-                # where x = F^{-1} v_t or F x = v
-                dotted = np.dot(
-                    partials_forecasts_error[:, t, i],
-                    irdot
-                    )
-
-                partials[t, i] += traced + 2*dotted
+            dotteds = np.tensordot(pfet, irdot, axes[[0], [0]])
+            
+            # 2 * dv / di * F^{-1} v_t
+            # where x = F^{-1} v_t or F x = v
+            partials[t, :] += traces + 2*dotteds
 
         return -partials / 2.
 
