@@ -8,7 +8,7 @@ License: BSD-3
 
 from statsmodels.compat.python import range
 from statsmodels.compat.collections import OrderedDict
-from _knockoff import RegressionFDR
+from ._knockoff import RegressionFDR
 import numpy as np
 
 
