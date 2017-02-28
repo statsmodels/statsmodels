@@ -67,10 +67,10 @@ def test_testers():
     y = np.random.normal(size=n)
     x = np.random.normal(size=(n, p))
 
-    testers = [kr.Correlation(),
-               kr.Forward(pursuit=False),
-               kr.Forward(pursuit=True),
-               kr.OLS()]
+    testers = [kr.CorrelationEffects(),
+               kr.ForwardEffects(pursuit=False),
+               kr.ForwardEffects(pursuit=True),
+               kr.OLSEffects()]
 
     for method in "equi", "sdp":
 
@@ -91,10 +91,10 @@ def test_sim():
     target_fdr = 0.2
     nrep = 10
 
-    testers = [[kr.Correlation(), 300, 100, 6],
-               [kr.Forward(pursuit=False), 300, 100, 3.5],
-               [kr.Forward(pursuit=True), 300, 100, 3.5],
-               [kr.OLS(), 3000, 200, 3.5]]
+    testers = [[kr.CorrelationEffects(), 300, 100, 6],
+               [kr.ForwardEffects(pursuit=False), 300, 100, 3.5],
+               [kr.ForwardEffects(pursuit=True), 300, 100, 3.5],
+               [kr.OLSEffects(), 3000, 200, 3.5]]
 
     for method in "equi", "sdp":
 

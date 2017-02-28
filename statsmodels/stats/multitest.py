@@ -8,7 +8,7 @@ License: BSD-3
 
 from statsmodels.compat.python import range
 from statsmodels.compat.collections import OrderedDict
-
+from _knockoff import RegressionFDR
 import numpy as np
 
 
@@ -684,4 +684,3 @@ class NullDistribution(object):
 
         zval = (zscores - self.mean) / self.sd
         return np.exp(-0.5*zval**2 - np.log(self.sd) - 0.5*np.log(2*np.pi))
-

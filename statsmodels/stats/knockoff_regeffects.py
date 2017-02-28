@@ -4,7 +4,7 @@ import statsmodels.api as sm
 
 class RegressionEffects(object):
     """
-    Stub for RegressionEffects class.
+    Prorotype RegressionEffects class.
 
     Any implementation of the class must provide a method called
     'stats' that takes a RegressionFDR object and returns effect sizes
@@ -25,7 +25,7 @@ class RegressionEffects(object):
         raise NotImplementedError
 
 
-class Correlation(RegressionEffects):
+class CorrelationEffects(RegressionEffects):
     """
     Marginal correlation effect sizes for FDR control.
 
@@ -49,7 +49,7 @@ class Correlation(RegressionEffects):
         return np.abs(s1) - np.abs(s2)
 
 
-class Forward(RegressionEffects):
+class ForwardEffects(RegressionEffects):
     """
     Forward selection effect sizes for FDR control.
 
@@ -100,7 +100,7 @@ class Forward(RegressionEffects):
         return st
 
 
-class OLS(RegressionEffects):
+class OLSEffects(RegressionEffects):
     """
     OLS regression for knockoff analysis.
 
