@@ -34,7 +34,7 @@ proc.nobs = nobs
 # TODO: bug nobs is None, not needed ?, used in ArmaProcess.__repr__
 print(proc.ar, proc.ma)
 
-print(proc.ar_roots(), proc.ma_roots())
+print(proc.ar_roots(), proc.maroots())
 
 from statsmodels.tsa.arma_mle import Arma
 modn = Arma(x)
