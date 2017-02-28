@@ -566,7 +566,7 @@ class IRAnalysis(BaseIRAnalysis):
         H = self.H
 
         G = self.G
-        Z = numpy.zeros((1,)+G.shape[1:])
+        Z = np.zeros((1,)+G.shape[1:])
         Gc = np.r_[Z, G]
 
         effects = self.irfs
