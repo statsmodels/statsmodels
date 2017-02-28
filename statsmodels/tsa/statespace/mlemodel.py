@@ -1002,6 +1002,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Compute partial derivatives w.r.t. likelihood function
         partials = np.zeros((self.nobs, n))
         k_endog = self.k_endog
+        keye = np.eye(k_endog)
         for t in range(self.nobs):
             for i in range(n):
                 ifec = ifecs[:, :, t]
@@ -1011,10 +1012,9 @@ class MLEModel(tsbase.TimeSeriesModel):
                 rfet = res.forecasts_error[:, t]
                 traced = np.trace(np.dot(
                     itmp,
-                    (np.eye(k_endog) -
-                     np.dot(ifec,
-                            np.outer(rfet, rfet))))
+                    keye - np.dot(ifec, np.outer(rfet, rfet)))
                     )
+                
                 # 2 * dv / di * F^{-1} v_t
                 # where x = F^{-1} v_t or F x = v
                 dotted = np.dot(
