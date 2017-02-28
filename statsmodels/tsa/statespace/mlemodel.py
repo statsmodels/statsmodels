@@ -1019,7 +1019,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             ikdots = np.tensordot(tmp, keye-iro_dot, axes=[[1], [0]])
             traces = np.trace(ikdots, axis1=0, axis2=2)
 
-            dotteds = np.tensordot(pfet, irdot, axes[[0], [0]])
+            dotteds = np.tensordot(pfet, irdot, axes=[[0], [0]])
             
             # 2 * dv / di * F^{-1} v_t
             # where x = F^{-1} v_t or F x = v
