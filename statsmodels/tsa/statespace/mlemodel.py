@@ -1017,10 +1017,8 @@ class MLEModel(tsbase.TimeSeriesModel):
 
             for i in range(n):
                 itmp = tmp[:, :, i]
-                traced = np.trace(np.dot(
-                    itmp,
-                    keye - iro_dot)
-                    )
+                ikdot = np.dot(itmp, keye-iro_dot)
+                traced = np.trace(ikdot)
 
                 # 2 * dv / di * F^{-1} v_t
                 # where x = F^{-1} v_t or F x = v
