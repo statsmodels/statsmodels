@@ -4,7 +4,7 @@ import statsmodels.api as sm
 
 class RegressionEffects(object):
     """
-    Prorotype RegressionEffects class.
+    Base class for regression effects used in RegressionFDR.
 
     Any implementation of the class must provide a method called
     'stats' that takes a RegressionFDR object and returns effect sizes

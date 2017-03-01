@@ -183,7 +183,7 @@ Non-Parametric Tests
 
    sign_test
 
-.. _interrater:   
+.. _interrater:
 
 Interrater Reliability and Agreement
 ------------------------------------
@@ -208,7 +208,7 @@ Multiple Tests and Multiple Comparison Procedures
 
 `multipletests` is a function for p-value correction, which also includes p-value
 correction based on fdr in `fdrcorrection`.
-`tukeyhsd` performs simulatenous testing for the comparison of (independent) means.
+`tukeyhsd` performs simultaneous testing for the comparison of (independent) means.
 These three functions are verified.
 GroupsStats and MultiComparison are convenience classes to multiple comparisons similar
 to one way ANOVA, but still in developement
@@ -239,7 +239,7 @@ to one way ANOVA, but still in developement
    pairwise_tukeyhsd
 
 .. module:: statsmodels.stats.multitest
-   :synopsis: Multiple testing p-value adjustments
+   :synopsis: Multiple testing p-value and FDR adjustments
 
 .. currentmodule:: statsmodels.stats.multitest
 
@@ -249,6 +249,7 @@ to one way ANOVA, but still in developement
    local_fdr
    fdrcorrection_twostage
    NullDistribution
+   RegressionFDR
 
 The following functions are not (yet) public
 
