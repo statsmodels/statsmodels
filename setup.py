@@ -550,7 +550,8 @@ if __name__ == "__main__":
                        'ipykernel',
                        'matplotlib',
                        'nbformat>=4.0.1',
-                       'numpydoc>=0.6.0']}
+                       'numpydoc>=0.6.0',
+                       'pandas-datareader']}
 
     setup(name = DISTNAME,
           version = VERSION,
