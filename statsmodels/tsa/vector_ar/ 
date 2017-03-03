@@ -1,0 +1,24 @@
+
+
+_B = {}
+def bpow(i):
+	if i not in _B:
+		_B[i] = np.linalg.matrix_power(B, i)
+	return _B[i]
+
+
+
+
+_B2 = {50: np.linalg.matrix_power(B, 50)}
+def v1():
+	i = 51
+	return np.linalg.matrix_power(B, i)
+
+
+def v2():
+	i = 51
+	b2 = B2.get(i-1, None)
+	if b2 is not None:
+		return b2 * B
+	else:
+		return np.linalg.matrix_power(B, i)
