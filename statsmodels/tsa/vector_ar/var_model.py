@@ -155,7 +155,7 @@ def _var_acf(coefs, sig_u):
     A = util.comp_matrix(coefs)
     # construct VAR(1) noise covariance
     SigU = np.zeros((k*p, k*p))
-    SigU[:k,:k] = sig_u
+    SigU[:k, :k] = sig_u
 
     # vec(ACF) = (I_(kp)^2 - kron(A, A))^-1 vec(Sigma_U)
     vecACF = L.solve(np.eye((k*p)**2) - np.kron(A, A), vec(SigU))
@@ -213,7 +213,6 @@ def forecast(y, coefs, intercept, steps):
 
     return forcs
 
-
 def _get_forecast_index(row_labels, nsteps):
     newidx = None
     
@@ -245,7 +244,7 @@ def _get_forecast_index(row_labels, nsteps):
             start = idx[-1] + 1
             newidx = idxcls(start=start, periods=nsteps, freq=freq)
 
-    pass newidx
+    return newidx
 
 def forecast_cov(ma_coefs, sig_u, steps):
     """
@@ -280,7 +279,7 @@ def var_loglike(resid, omega, nobs):
     omega : ndarray
         Sigma hat matrix.  Each element i,j is the average product of the
         OLS residual for variable i and the OLS residual for variable j or
-        np.dot(resid.T,resid)/nobs.  There should be no correction for the
+        np.dot(resid.T, resid)/nobs.  There should be no correction for the
         degrees of freedom.
     nobs : int
 
@@ -312,11 +311,11 @@ def _reordered(self, order):
     sigma_u = self.sigma_u
     names = self.names
     k_ar = self.k_ar
-    endog_new = np.zeros([np.size(endog,0),np.size(endog,1)])
-    endog_lagged_new = np.zeros([np.size(endog_lagged,0), np.size(endog_lagged,1)])
-    params_new_inc, params_new = [np.zeros([np.size(params,0), np.size(params,1)])
+    endog_new = np.zeros([np.size(endog, 0), np.size(endog, 1)])
+    endog_lagged_new = np.zeros([np.size(endog_lagged, 0), np.size(endog_lagged, 1)])
+    params_new_inc, params_new = [np.zeros([np.size(params, 0), np.size(params, 1)])
                                   for i in range(2)]
-    sigma_u_new_inc, sigma_u_new = [np.zeros([np.size(sigma_u,0), np.size(sigma_u,1)])
+    sigma_u_new_inc, sigma_u_new = [np.zeros([np.size(sigma_u, 0), np.size(sigma_u, 1)])
                                     for i in range(2)]
     num_end = len(self.params[0])
     names_new = []
@@ -324,18 +323,18 @@ def _reordered(self, order):
     #Rearrange elements and fill in new arrays
     k = self.k_trend
     for i, c in enumerate(order):
-        endog_new[:,i] = self.endog[:,c]
+        endog_new[:, i] = self.endog[:, c]
         if k > 0:
-            params_new_inc[0,i] = params[0,i]
-            endog_lagged_new[:,0] = endog_lagged[:,0]
+            params_new_inc[0, i] = params[0, i]
+            endog_lagged_new[:, 0] = endog_lagged[:, 0]
         for j in range(k_ar):
-            params_new_inc[i+j*num_end+k,:] = self.params[c+j*num_end+k,:]
-            endog_lagged_new[:,i+j*num_end+k] = endog_lagged[:,c+j*num_end+k]
-        sigma_u_new_inc[i,:] = sigma_u[c,:]
+            params_new_inc[i+j*num_end+k, :] = self.params[c+j*num_end+k, :]
+            endog_lagged_new[:, i+j*num_end+k] = endog_lagged[:, c+j*num_end+k]
+        sigma_u_new_inc[i, :] = sigma_u[c, :]
         names_new.append(names[c])
     for i, c in enumerate(order):
-        params_new[:,i] = params_new_inc[:,c]
-        sigma_u_new[:,i] = sigma_u_new_inc[:,c]
+        params_new[:, i] = params_new_inc[:, c]
+        sigma_u_new[:, i] = sigma_u_new_inc[:, c]
 
     return VARResults(endog=endog_new, endog_lagged=endog_lagged_new,
                       params=params_new, sigma_u=sigma_u_new,
@@ -408,7 +407,7 @@ class VAR(tsbase.TimeSeriesModel):
 
         # fit out of sample
         y = y[-k_ar:]
-        coefs = params[k_trend:].reshape((k_ar, k, k)).swapaxes(1,2)
+        coefs = params[k_trend:].reshape((k_ar, k, k)).swapaxes(1, 2)
         predictedvalues[pv_end:] = forecast(y, coefs, intercept, out_of_sample)
         return predictedvalues
 
@@ -459,7 +458,7 @@ class VAR(tsbase.TimeSeriesModel):
                                 % (ic, sorted(selections)))
             lags = selections[ic]
             if verbose:
-                print('Using %d based on %s criterion' %  (lags, ic))
+                print('Using %d based on %s criterion' % (lags, ic))
         else:
             if lags is None:
                 lags = 1
@@ -1127,17 +1126,17 @@ class VARResults(VARProcess):
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
 
-        if (orth == True and cum == True):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+        if (orth is True and cum is True):
+            fill_coll = lambda sim: VAR(sim).fit(maxlags=k_ar).\
                               orth_ma_rep(maxn=T).cumsum(axis=0)
-        elif (orth == True and cum == False):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+        elif (orth is True and cum is False):
+            fill_coll = lambda sim: VAR(sim).fit(maxlags=k_ar).\
                               orth_ma_rep(maxn=T)
-        elif (orth == False and cum == True):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+        elif (orth is False and cum is True):
+            fill_coll = lambda sim: VAR(sim).fit(maxlags=k_ar).\
                               ma_rep(maxn=T).cumsum(axis=0)
-        elif (orth == False and cum == False):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+        elif (orth is False and cum is False):
+            fill_coll = lambda sim: VAR(sim).fit(maxlags=k_ar).\
                               ma_rep(maxn=T)
 
         for i in range(repl):
@@ -1145,12 +1144,12 @@ class VARResults(VARProcess):
             sim = util.varsim(coefs, intercept, sigma_u,
                               seed=seed, steps=nobs+burn)
             sim = sim[burn:]
-            ma_coll[i,:,:,:] = fill_coll(sim)
+            ma_coll[i, :, :, :] = fill_coll(sim)
 
         ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
-        index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
-        lower = ma_sort[index[0],:, :, :]
-        upper = ma_sort[index[1],:, :, :]
+        index = round(signif/2*repl)-1, round((1-signif/2)*repl)-1
+        lower = ma_sort[index[0], :, :, :]
+        upper = ma_sort[index[1], :, :, :]
         return lower, upper
 
     def irf_resim(self, orth=False, repl=1000, T=10,
@@ -1197,17 +1196,17 @@ class VARResults(VARProcess):
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
 
-        if (orth == True and cum == True):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+        if (orth is True and cum is True):
+            fill_coll = lambda sim: VAR(sim).fit(maxlags=k_ar).\
                               orth_ma_rep(maxn=T).cumsum(axis=0)
-        elif (orth == True and cum == False):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+        elif (orth is True and cum is False):
+            fill_coll = lambda sim: VAR(sim).fit(maxlags=k_ar).\
                               orth_ma_rep(maxn=T)
-        elif (orth == False and cum == True):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+        elif (orth is False and cum is True):
+            fill_coll = lambda sim: VAR(sim).fit(maxlags=k_ar).\
                               ma_rep(maxn=T).cumsum(axis=0)
-        elif (orth == False and cum == False):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+        elif (orth is False and cum is False):
+            fill_coll = lambda sim: VAR(sim).fit(maxlags=k_ar).\
                               ma_rep(maxn=T)
 
         for i in range(repl):
@@ -1215,7 +1214,7 @@ class VARResults(VARProcess):
             sim = util.varsim(coefs, intercept, sigma_u,
                               seed=seed, steps=nobs+burn)
             sim = sim[burn:]
-            ma_coll[i,:,:,:] = fill_coll(sim)
+            ma_coll[i, :, :, :] = fill_coll(sim)
 
         return ma_coll
 
@@ -1258,7 +1257,7 @@ class VARResults(VARProcess):
     def _bmat_forc_cov(self):
         # B as defined on p. 96 of Lut
         upper = np.zeros((1, self.df_model))
-        upper[0,0] = 1
+        upper[0, 0] = 1
 
         lower_dim = self.neqs * (self.k_ar - 1)
         I = np.eye(lower_dim)
@@ -1311,7 +1310,7 @@ class VARResults(VARProcess):
     def reorder(self, order):
         """Reorder variables for structural specification
         """
-        if len(order) != len(self.params[0,:]):
+        if len(order) != len(self.params[0, :]):
             raise ValueError("Reorder specification length should match number of endogenous variables")
        #This convert order to list of integers if given as strings
         if isinstance(order[0], string_types):
@@ -1394,12 +1393,12 @@ class VARResults(VARProcess):
 
         conclusion = 'fail to reject' if statistic < crit_value else 'reject'
         results = {
-            'statistic' : statistic,
-            'crit_value' : crit_value,
-            'pvalue' : pvalue,
-            'df' : df,
-            'conclusion' : conclusion,
-            'signif' :  signif
+            'statistic': statistic,
+            'crit_value': crit_value,
+            'pvalue': pvalue,
+            'df': df,
+            'conclusion': conclusion,
+            'signif': signif
         }
 
         if verbose:
@@ -1471,12 +1470,12 @@ class VARResults(VARProcess):
         conclusion = 'fail to reject' if lam_omni < crit_omni else 'reject'
 
         results = {
-            'statistic' : lam_omni,
-            'crit_value' : crit_omni,
-            'pvalue' : omni_pvalue,
-            'df' : self.neqs * 2,
-            'conclusion' : conclusion,
-            'signif' :  signif
+            'statistic': lam_omni,
+            'crit_value': crit_omni,
+            'pvalue': omni_pvalue,
+            'df': self.neqs * 2,
+            'conclusion': conclusion,
+            'signif': signif
         }
 
         if verbose:
@@ -1515,10 +1514,10 @@ class VARResults(VARProcess):
         fpe = ((nobs + self.df_model) / self.df_resid) ** neqs * np.exp(ld)
 
         return {
-            'aic' : aic,
-            'bic' : bic,
-            'hqic' : hqic,
-            'fpe' : fpe
+            'aic': aic,
+            'bic': bic,
+            'hqic': hqic,
+            'fpe': fpe
             }
 
     @property
@@ -1549,19 +1548,19 @@ class VARResults(VARProcess):
         neqs = self.neqs
         k_ar = self.k_ar
         p = neqs * k_ar
-        arr = np.zeros((p,p))
-        arr[:neqs,:] = np.column_stack(self.coefs)
-        arr[neqs:,:-neqs] = np.eye(p-neqs)
+        arr = np.zeros((p, p))
+        arr[:neqs, :] = np.column_stack(self.coefs)
+        arr[neqs:, :-neqs] = np.eye(p-neqs)
         roots = np.linalg.eig(arr)[0]**-1
         idx = np.argsort(np.abs(roots))[::-1] # sort by reverse modulus
         return roots[idx]
 
 class VARResultsWrapper(wrap.ResultsWrapper):
-    _attrs = {'bse' : 'columns_eq', 'cov_params' : 'cov',
-              'params' : 'columns_eq', 'pvalues' : 'columns_eq',
-              'tvalues' : 'columns_eq', 'sigma_u' : 'cov_eq',
-              'sigma_u_mle' : 'cov_eq',
-              'stderr' : 'columns_eq'}
+    _attrs = {'bse': 'columns_eq', 'cov_params': 'cov',
+              'params': 'columns_eq', 'pvalues': 'columns_eq',
+              'tvalues': 'columns_eq', 'sigma_u': 'cov_eq',
+              'sigma_u_mle': 'cov_eq',
+              'stderr': 'columns_eq'}
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
                                     _attrs)
     _methods = {}
@@ -1620,7 +1619,7 @@ class FEVD(object):
         """
         raise NotImplementedError
 
-    def plot(self, periods=None, figsize=(10,10), **plot_kwds):
+    def plot(self, periods=None, figsize=(10, 10), **plot_kwds):
         """Plot graphical display of FEVD
 
         Parameters
@@ -1718,9 +1717,9 @@ if __name__ == '__main__':
 
     '''
     mdata = sm.datasets.macrodata.load().data
-    mdata2 = mdata[['realgdp','realcons','realinv']]
+    mdata2 = mdata[['realgdp', 'realcons', 'realinv']]
     names = mdata2.dtype.names
-    data = mdata2.view((float,3))
+    data = mdata2.view((float, 3))
     data = np.diff(np.log(data), axis=0)
 
     import pandas as pn
