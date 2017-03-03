@@ -414,13 +414,13 @@ class Heckman(base.LikelihoodModel):
 
         ll_obs_observed = \
             np.multiply(D,
-                np.log(norm.cdf(norm_cdf_input)) - \
+                norm.logcdf(norm_cdf_input) - \
                 (1./2.)*((Y_aligned-X_xbeta_aligned)/sigma)**2 - \
                 np.log(np.sqrt(2*np.pi)*sigma))
         ll_obs_observed[~D] = 0
         ll_obs_notobserved = \
             np.multiply(1-D,
-                np.log(norm.cdf(-Z_zbeta_aligned)))
+                norm.logcdf(-Z_zbeta_aligned))
 
         ll_obs = ll_obs_observed + ll_obs_notobserved
 
