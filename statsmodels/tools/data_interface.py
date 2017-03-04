@@ -4,8 +4,6 @@ from functools import partial
 from patsy import dmatrix
 from patsy.design_info import DesignMatrix
 
-from statsmodels.tools.sm_exceptions import ValueWarning
-
 NUMPY_TYPES = [np.ndarray, np.float64]
 PANDAS_TYPES = [pd.Series, pd.DataFrame]
 DEFAULT_EXTERNAL_TYPE = np.ndarray
@@ -63,19 +61,21 @@ class DataInterface(object):
         if data is None:
             return None
 
+        if type(data) is dict:
+            self.external_type = pd.DataFrame
+            data = to_pandas(data)
+
         else:
             self.init_data_interface(data)
 
         if self.use_formula and self.model is not None and hasattr(self.model, 'formula'):
+            if type(data) == pd.Series:
+                data = pd.DataFrame(data, columns=[data.name])
+
             to_return = dmatrix(self.model.data.design_info.builder, data, return_type='dataframe')
 
-            if len(to_return) < len(self.index):
-                # missing values, rows have been dropped
-                if self.index is not None:
-                    to_return = to_return.reindex(self.index)
-                else:
-                    import warnings
-                    warnings.warn("nan rows have been dropped", ValueWarning)
+            if self.index is not None:
+                to_return = to_return.reindex(self.index)
 
             return to_return
 
@@ -158,7 +158,6 @@ def to_numpy_array(data):
         return data.view(np.ndarray)
 
     elif from_type == pd.Series:
-
         return data.values
 
     elif from_type == pd.DataFrame:
@@ -188,6 +187,20 @@ def to_pandas(data, name=None, columns=None):
     if from_type in PANDAS_TYPES:
         return data
 
+    elif from_type is dict:
+        keys = data.keys()
+
+        if type(keys) is not list:
+            keys = list(data.keys())
+
+        data = pd.DataFrame(data)
+
+        if len(keys) == 1:
+            key = keys[0]
+            return data[key]
+        else:
+            return data
+
     else:
         np_data = to_numpy_array(data)
 
@@ -211,7 +224,9 @@ def from_numpy_array(data, to_type, index=None, name=None, columns=None, from_nd
         return data.view(np.recarray)
 
     elif to_type == pd.Series:
-        index = getattr(data, 'index', None)
+        if index is None:
+            index = getattr(data, 'index', None)
+
         return pd.Series(data=data, index=index, name=name)
 
     elif to_type == pd.DataFrame:
