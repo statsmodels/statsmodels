@@ -112,8 +112,6 @@ class DataInterface(object):
         if from_type == DesignMatrix:
             return data
 
-        self.index = getattr(data, 'index', None)
-
         if from_type in NUMPY_TYPES:
             data_to_return = from_numpy_array(data, self.external_type, index=self.index, name=self.name,
                                               columns=self.columns, from_ndim=self.ndim)
