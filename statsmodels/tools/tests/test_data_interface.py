@@ -1,5 +1,6 @@
 from statsmodels.tools.data_interface import (NumPyInterface, ListInterface, SeriesInterface, DataFrameInterface,
-                                              get_ndim, is_col_vector, transpose, from_list, from_pandas)
+                                              get_ndim, is_col_vector, transpose, from_list, from_pandas,
+                                              to_numpy_array, to_list, to_pandas)
 
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 from numpy.testing import assert_raises
@@ -251,12 +252,16 @@ def test_list():
     assert_raises(TypeError, from_list, list2, pd.Series)
     assert_raises(TypeError, from_list, list2, 'foobar')
 
+    assert list1 == to_list(list1)
+
+
 def test_pandas():
 
     list1 = [1, 2, 3, 4]
     list2 = [[1, 2, 3, 4], [5, 6, 7, 8]]
 
     series1 = pd.Series(list1)
+    series2 = pd.Series(list1, name=0)
 
     df1 = pd.DataFrame(list1)
     df2 = pd.DataFrame(list2)
@@ -264,7 +269,7 @@ def test_pandas():
     assert_series_equal(series1, from_pandas(series1, pd.Series))
 
     s = from_pandas(df1, pd.Series)
-    assert_series_equal(s, series1, check_names=False)
+    assert_series_equal(s, series2)
 
     assert_raises(TypeError, from_pandas, df2, pd.Series)
 
@@ -277,3 +282,12 @@ def test_pandas():
     assert l3 == list2
 
     assert_raises(TypeError, from_pandas, list2, 'foobar')
+
+    assert_series_equal(series1, to_pandas(series1, pd.Series))
+    assert_frame_equal(df1, to_pandas(df1, pd.DataFrame))
+
+
+def test_numpy():
+    list1 = [1, 2, 3, 4]
+
+    assert_raises(TypeError, to_numpy_array, list1, 'foobar')
