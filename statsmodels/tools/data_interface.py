@@ -154,9 +154,6 @@ def to_numpy_array(data):
     elif from_type == list:
         return np.array(data)
 
-    elif from_type == np.recarray:
-        return data.view(np.ndarray)
-
     elif from_type == pd.Series:
         return data.values
 
@@ -220,9 +217,6 @@ def from_numpy_array(data, to_type, index=None, name=None, columns=None, from_nd
     elif to_type == list:
         return data.tolist()
 
-    elif to_type == np.recarray:
-        return data.view(np.recarray)
-
     elif to_type == pd.Series:
         if index is None:
             index = getattr(data, 'index', None)
@@ -258,16 +252,21 @@ def from_pandas(data, to_type):
         return data
 
     elif from_type == pd.DataFrame and to_type == pd.Series:
-        if data.ndim == 1:
-            return pd.Series(data.values, index=data.index, name=data.columns[0])
+        if get_ndim(data) == 1:
+
+            values = transpose(data.values)
+            return pd.Series(values, index=data.index, name=data.columns[0])
+
         else:
             raise TypeError('Cannot convert multi dimensional DataFrame to a Series')
 
     elif to_type == list:
-        return data.values.tolist()
+        values = data.values.tolist()
 
-    elif to_type == np.recarray:
-        return data.to_records(index=False)
+        if get_ndim(values) == 1 and is_col_vector(values):
+            values = transpose(values)
+
+        return values
 
     else:
         raise TypeError('Cannot convert from {} to {}'.format(from_type, to_type))
@@ -286,7 +285,7 @@ def from_list(data, to_type, index=None, name=None, columns=None):
         return pd.DataFrame(data, index=index, columns=columns)
 
     elif to_type == pd.Series:
-        if data.ndim == 1:
+        if get_ndim(data) == 1:
             return pd.Series(data, index=index, name=name)
         else:
             raise TypeError('Cannot convert multi dimensional DataFrame to a Series')
