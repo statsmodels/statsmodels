@@ -68,17 +68,17 @@ class TestIntercepts(object):
         obs = obs / obs.std()
 
         if which == 'all':
-            obs.ix[:50, :] = np.nan
-            obs.ix[119:130, :] = np.nan
+            obs.iloc[:50, :] = np.nan
+            obs.iloc[119:130, :] = np.nan
         elif which == 'partial':
-            obs.ix[0:50, 0] = np.nan
-            obs.ix[119:130, 0] = np.nan
+            obs.iloc[0:50, 0] = np.nan
+            obs.iloc[119:130, 0] = np.nan
         elif which == 'mixed':
-            obs.ix[0:50, 0] = np.nan
-            obs.ix[19:70, 1] = np.nan
-            obs.ix[39:90, 2] = np.nan
-            obs.ix[119:130, 0] = np.nan
-            obs.ix[119:130, 2] = np.nan
+            obs.iloc[0:50, 0] = np.nan
+            obs.iloc[19:70, 1] = np.nan
+            obs.iloc[39:90, 2] = np.nan
+            obs.iloc[119:130, 0] = np.nan
+            obs.iloc[119:130, 2] = np.nan
 
         mod = Intercepts(obs, **kwargs)
 

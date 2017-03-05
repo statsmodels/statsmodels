@@ -113,14 +113,14 @@ class TestRealGDPARStata(object):
     def test_filtered_state(self):
         for i in range(12):
             assert_allclose(
-                realgdp_results.ix[1:, 'u%d' % (i+1)],
+                realgdp_results.iloc[1:]['u%d' % (i+1)],
                 self.results.filter_results.filtered_state[i],
                 atol=1e-6
             )
 
     def test_standardized_forecasts_error(self):
         assert_allclose(
-            realgdp_results.ix[1:, 'rstd'],
+            realgdp_results.iloc[1:]['rstd'],
             self.results.filter_results.standardized_forecasts_error[0],
             atol=1e-3
         )

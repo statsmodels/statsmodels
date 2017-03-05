@@ -538,13 +538,13 @@ class TestHamiltonAR2Switch(MarkovAutoregression):
             'llf_fit_em': -184.99606,
             'bse_oim': np.r_[.1424841, .0994742, .2057086, .1225987, np.nan,
                              .1754383, .1652473, .187409, .1295937],
-            'smoothed0': results.ix[3:, 'switchar2_sm1'],
-            'smoothed1': results.ix[3:, 'switchar2_sm2'],
-            'predict0': results.ix[3:, 'switchar2_yhat1'],
-            'predict1': results.ix[3:, 'switchar2_yhat2'],
-            'predict_predicted': results.ix[3:, 'switchar2_pyhat'],
-            'predict_filtered': results.ix[3:, 'switchar2_fyhat'],
-            'predict_smoothed': results.ix[3:, 'switchar2_syhat'],
+            'smoothed0': results.iloc[3:]['switchar2_sm1'],
+            'smoothed1': results.iloc[3:]['switchar2_sm2'],
+            'predict0': results.iloc[3:]['switchar2_yhat1'],
+            'predict1': results.iloc[3:]['switchar2_yhat2'],
+            'predict_predicted': results.iloc[3:]['switchar2_pyhat'],
+            'predict_filtered': results.iloc[3:]['switchar2_fyhat'],
+            'predict_smoothed': results.iloc[3:]['switchar2_syhat'],
         }
         super(TestHamiltonAR2Switch, cls).setup_class(
             true, rgnp, k_regimes=2, order=2)

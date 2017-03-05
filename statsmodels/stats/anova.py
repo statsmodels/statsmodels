@@ -126,17 +126,17 @@ def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
 
     index = term_names.tolist()
     table.index = Index(index + ['Residual'])
-    table.ix[index, ['df', 'sum_sq']] = np.c_[arr[~idx].sum(1), sum_sq]
+    table.loc[index, ['df', 'sum_sq']] = np.c_[arr[~idx].sum(1), sum_sq]
     if test == 'F':
-        table.ix[:n_rows, test] = ((table['sum_sq']/table['df'])/
-                                (model.ssr/model.df_resid))
-        table.ix[:n_rows, pr_test] = stats.f.sf(table["F"], table["df"],
-                                model.df_resid)
+        table.loc[table.index[:n_rows],  test] = ((table['sum_sq']/table['df']) /
+                                                             (model.ssr/model.df_resid))
+        table.loc[table.index[:n_rows], pr_test] = stats.f.sf(table["F"], table["df"],
+                                                                         model.df_resid)
 
     # fill in residual
-    table.ix['Residual', ['sum_sq','df', test, pr_test]] = (model.ssr,
-                                                            model.df_resid,
-                                                            np.nan, np.nan)
+    table.loc['Residual', ['sum_sq','df', test, pr_test]] = (model.ssr,
+                                                             model.df_resid,
+                                                             np.nan, np.nan)
     table['mean_sq'] = table['sum_sq'] / table['df']
     return table
 
@@ -209,21 +209,21 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
         #from IPython.core.debugger import Pdb; Pdb().set_trace()
         if test == 'F':
             f = model.f_test(L12, cov_p=robust_cov)
-            table.ix[i, test] = test_value = f.fvalue
-            table.ix[i, pr_test] = f.pvalue
+            table.loc[table.index[i], test] = test_value = f.fvalue
+            table.loc[table.index[i], pr_test] = f.pvalue
 
         # need to back out SSR from f_test
-        table.ix[i, 'df'] = r
+        table.loc[table.index[i], 'df'] = r
         col_order.append(cols.start)
         index.append(term.name())
 
     table.index = Index(index + ['Residual'])
-    table = table.ix[np.argsort(col_order + [model.model.exog.shape[1]+1])]
+    table = table.iloc [np.argsort(col_order + [model.model.exog.shape[1]+1])]
     # back out sum of squares from f_test
     ssr = table[test] * table['df'] * model.ssr/model.df_resid
     table['sum_sq'] = ssr
     # fill in residual
-    table.ix['Residual', ['sum_sq','df', test, pr_test]] = (model.ssr,
+    table.loc['Residual', ['sum_sq','df', test, pr_test]] = (model.ssr,
                                                             model.df_resid,
                                                             np.nan, np.nan)
 
@@ -248,22 +248,22 @@ def anova3_lm_single(model, design_info, n_rows, test, pr_test, robust):
 
         if test == 'F':
             f = model.f_test(L12, cov_p=cov)
-            table.ix[i, test] = test_value = f.fvalue
-            table.ix[i, pr_test] = f.pvalue
+            table.loc[table.index[i], test] = test_value = f.fvalue
+            table.loc[table.index[i], pr_test] = f.pvalue
 
         # need to back out SSR from f_test
-        table.ix[i, 'df'] = r
+        table.loc[table.index[i], 'df'] = r
         #col_order.append(cols.start)
         index.append(term.name())
 
     table.index = Index(index + ['Residual'])
     #NOTE: Don't need to sort because terms are an ordered dict now
-    #table = table.ix[np.argsort(col_order + [model.model.exog.shape[1]+1])]
+    #table = table.iloc[np.argsort(col_order + [model.model.exog.shape[1]+1])]
     # back out sum of squares from f_test
     ssr = table[test] * table['df'] * model.ssr/model.df_resid
     table['sum_sq'] = ssr
     # fill in residual
-    table.ix['Residual', ['sum_sq','df', test, pr_test]] = (model.ssr,
+    table.loc['Residual', ['sum_sq','df', test, pr_test]] = (model.ssr,
                                                             model.df_resid,
                                                             np.nan, np.nan)
     return table
@@ -350,7 +350,7 @@ def anova_lm(*args, **kwargs):
 
     table["ssr"] = lmap(getattr, args, ["ssr"]*n_models)
     table["df_resid"] = lmap(getattr, args, ["df_resid"]*n_models)
-    table.ix[1:, "df_diff"] = -np.diff(table["df_resid"].values)
+    table.loc[table.index[1:], "df_diff"] = -np.diff(table["df_resid"].values)
     table["ss_diff"] = -table["ssr"].diff()
     if test == "F":
         table["F"] = table["ss_diff"] / table["df_diff"] / scale

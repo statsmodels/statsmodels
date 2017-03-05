@@ -45,13 +45,13 @@ print(res.summary())
 quantiles = np.arange(.05, .96, .1)
 def fit_model(q):
     res = mod.fit(q=q)
-    return [q, res.params['Intercept'], res.params['income']] +             res.conf_int().ix['income'].tolist()
+    return [q, res.params['Intercept'], res.params['income']] + res.conf_int().loc['income'].tolist()
     
 models = [fit_model(x) for x in quantiles]
 models = pd.DataFrame(models, columns=['q', 'a', 'b','lb','ub'])
 
 ols = smf.ols('foodexp ~ income', data).fit()
-ols_ci = ols.conf_int().ix['income'].tolist()
+ols_ci = ols.conf_int().loc['income'].tolist()
 ols = dict(a = ols.params['Intercept'],
            b = ols.params['income'],
            lb = ols_ci[0],

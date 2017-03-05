@@ -259,20 +259,20 @@ class MultivariateMissingGeneralObsCov(object):
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = dta[['realgdp','realcons','realinv']].diff().ix[1:]
+        obs = dta[['realgdp','realcons','realinv']].diff().iloc[1:]
 
         if which == 'all':
-            obs.ix[:50, :] = np.nan
-            obs.ix[119:130, :] = np.nan
+            obs.iloc[:50, :] = np.nan
+            obs.iloc[119:130, :] = np.nan
         elif which == 'partial':
-            obs.ix[0:50, 0] = np.nan
-            obs.ix[119:130, 0] = np.nan
+            obs.iloc[0:50, 0] = np.nan
+            obs.iloc[119:130, 0] = np.nan
         elif which == 'mixed':
-            obs.ix[0:50, 0] = np.nan
-            obs.ix[19:70, 1] = np.nan
-            obs.ix[39:90, 2] = np.nan
-            obs.ix[119:130, 0] = np.nan
-            obs.ix[119:130, 2] = np.nan
+            obs.iloc[0:50, 0] = np.nan
+            obs.iloc[19:70, 1] = np.nan
+            obs.iloc[39:90, 2] = np.nan
+            obs.iloc[119:130, 0] = np.nan
+            obs.iloc[119:130, 2] = np.nan
 
         # Create the model
         mod = MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
@@ -511,20 +511,20 @@ class TestMultivariateVAR(object):
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = dta[['realgdp','realcons','realinv']].diff().ix[1:]
+        obs = dta[['realgdp','realcons','realinv']].diff().iloc[1:]
 
         if which == 'all':
-            obs.ix[:50, :] = np.nan
-            obs.ix[119:130, :] = np.nan
+            obs.iloc[:50, :] = np.nan
+            obs.iloc[119:130, :] = np.nan
         elif which == 'partial':
-            obs.ix[0:50, 0] = np.nan
-            obs.ix[119:130, 0] = np.nan
+            obs.iloc[0:50, 0] = np.nan
+            obs.iloc[119:130, 0] = np.nan
         elif which == 'mixed':
-            obs.ix[0:50, 0] = np.nan
-            obs.ix[19:70, 1] = np.nan
-            obs.ix[39:90, 2] = np.nan
-            obs.ix[119:130, 0] = np.nan
-            obs.ix[119:130, 2] = np.nan
+            obs.iloc[0:50, 0] = np.nan
+            obs.iloc[19:70, 1] = np.nan
+            obs.iloc[39:90, 2] = np.nan
+            obs.iloc[119:130, 0] = np.nan
+            obs.iloc[119:130, 2] = np.nan
 
         # Create the model
         mod = MLEModel(obs, k_states=3, k_posdef=3, **kwargs)

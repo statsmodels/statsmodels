@@ -3029,7 +3029,7 @@ class MultinomialResults(DiscreteResults):
             # Header must show value of endog
             level_str =  self.model.endog_names + ' = ' + str(i)
             coefs[level_str] = coefs.index
-            coefs = coefs.ix[:,[-1,0,1,2,3,4,5]]
+            coefs = coefs.iloc[:,[-1,0,1,2,3,4,5]]
             smry.add_df(coefs, index=False, header=True, float_format=float_format)
             smry.add_title(results=self)
         return smry
