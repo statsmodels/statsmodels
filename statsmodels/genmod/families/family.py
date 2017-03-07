@@ -915,19 +915,26 @@ class Binomial(Family):
 
         Notes
         -----
+        Binomial in general:
+
         .. math::
 
            D = 2 * \sum_i freq\_weights * (Y_i * \log(Y_i / \mu_i)
            + (n_i - Y_i) * \log((n_i - Y_i) / (n_i - \mu_i))) / scale
 
-        where :math:`Y_i` and :math:`n_i` are as defined in
-        Binomial.initialize.
+        Since :math:`Y_i` and :math:`\mu_i` are transformed to :math:`[0,1]`
+        in Binomial.initialize, the following version is implemented:
+
+        .. math::
+
+           D = 2 * \sum_i freq\_weights n_i * (Y_i * \log(Y_i / \mu_i)
+           + (1 - Y_i) * \log((1 - Y_i) / (1 - \mu_i))) / scale
         '''
         endog_mu = self._clean(endog / mu)
-        n_endog_mu = self._clean((self.n - endog) / (self.n - mu))
-        return 2 * np.sum(freq_weights *
+        n_endog_mu = self._clean((1. - endog) / (1. - mu))
+        return 2 * np.sum(freq_weights * self.n *
                            (endog * np.log(endog_mu) +
-                           (self.n - endog) * np.log(n_endog_mu))) / scale
+                           (1. - endog) * np.log(n_endog_mu))) / scale
 
     def resid_dev(self, endog, mu, scale=1.):
         r"""
@@ -950,20 +957,27 @@ class Binomial(Family):
 
         Notes
         -----
+        Binomial in general:
         .. math::
 
            resid\_dev_i = sign(Y_i - \mu_i) \sqrt{2 *
                           (Y_i * \log(Y_i / \mu_i) + (n_i - Y_i) *
                           \log(n_i - Y_i)/(n_i - \mu_i))/scale}
 
-        where :math:`Y_i` and :math:`n_i` are as defined in
-        Binomial.initialize.
+        Since :math:`Y_i` and :math:`\mu_i` are transformed to :math:`[0,1]`
+        in Binomial.initialize, the following version is implemented:
+
+        .. math::
+
+           resid\_dev_i = sign(Y_i - \mu_i) \sqrt{ 2 *
+                            n_i * (Y_i * \log(Y_i / \mu_i) + (1 - Y_i) *
+                            \log((1 - Y_i) / (1 - \mu_i)))/scale}
         """
         endog_mu = self._clean(endog / mu)
-        n_endog_mu = self._clean((self.n - endog) / (self.n - mu))
+        n_endog_mu = self._clean((1. - endog) / (1. - mu))
         return (np.sign(endog - mu) *
-                np.sqrt(2 * (endog * np.log(endog_mu) +
-                        (self.n - endog) * np.log(n_endog_mu))/scale))
+                np.sqrt(2 * self.n * (endog * np.log(endog_mu) +
+                        (1. - endog) * np.log(n_endog_mu))/scale))
 
     def loglike(self, endog, mu, freq_weights=1, scale=1.):
         r"""
@@ -1001,7 +1015,7 @@ class Binomial(Family):
 
            llf = \sum_i freq\_weights_i * (\ln \Gamma(n+1) -
                  \ln \Gamma(y_i + 1) - \ln \Gamma(n_i - y_i +1) + y_i *
-                 \log(\mu_i / (1 - \mu_i)) + n * \log(1 - \mu_i))
+                 \log(\mu_i / (n_i - \mu_i)) + n * \log(1 - \mu_i/n_i))
 
         where :math:`y_i = Y_i * n_i` with :math:`Y_i` and :math:`n_i` as
         defined in Binomial initialize.  This simply makes :math:`y_i` the
@@ -1013,6 +1027,7 @@ class Binomial(Family):
                             np.log(1 - mu)) * freq_weights)
         else:
             y = endog * self.n  # convert back to successes
+            # note that mu is still in (0,1), i.e. not convertet back
             return np.sum((special.gammaln(self.n + 1) -
                             special.gammaln(y + 1) -
                             special.gammaln(self.n - y + 1) + y *
@@ -1068,6 +1083,9 @@ class Binomial(Family):
         Cox, DR and Snell, EJ. (1968) "A General Definition of Residuals."
             Journal of the Royal Statistical Society B. 30, 248-75.
         '''
+        endog = endog * self.n  # convert back to successes
+        mu = mu * self.n  # convert back to successes
+
         cox_snell = lambda x: (special.betainc(2/3., 2/3., x)
                                * special.beta(2/3., 2/3.))
         return self.n**(2/3.) * (cox_snell(endog*1./self.n) \
