@@ -1893,7 +1893,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                               self._cov_approx_centered)
 
     def info_criteria(self, criteria, method='standard'):
-        """
+        r"""
         Information criteria
 
         Parameters
