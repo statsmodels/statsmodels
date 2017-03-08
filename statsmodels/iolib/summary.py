@@ -874,7 +874,7 @@ class Summary(object):
 
         Parameters
         ----------
-        etext : string
+        etext : list[str]
             string with lines that are added to the text output.
 
         '''
@@ -909,7 +909,10 @@ class Summary(object):
         tables.
 
         '''
-        return summary_return(self.tables, return_fmt='latex')
+        latex = summary_return(self.tables, return_fmt='latex')
+        if not self.extra_txt is None:
+            latex = latex + '\n\n' + self.extra_txt.replace('\n', ' \\newline\n ')
+        return latex
 
     def as_csv(self):
         '''return tables as string
@@ -920,7 +923,10 @@ class Summary(object):
             concatenated summary tables in comma delimited format
 
         '''
-        return summary_return(self.tables, return_fmt='csv')
+        csv = summary_return(self.tables, return_fmt='csv')
+        if not self.extra_txt is None:
+            csv = csv + '\n\n' + self.extra_txt
+        return csv
 
     def as_html(self):
         '''return tables as string
@@ -931,7 +937,10 @@ class Summary(object):
             concatenated summary tables in HTML format
 
         '''
-        return summary_return(self.tables, return_fmt='html')
+        html = summary_return(self.tables, return_fmt='html')
+        if not self.extra_txt is None:
+            html = html + '<br/><br/>' + self.extra_txt.replace('\n', '<br/>')
+        return html
 
 
 if __name__ == "__main__":
