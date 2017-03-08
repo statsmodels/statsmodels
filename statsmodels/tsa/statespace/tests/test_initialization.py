@@ -446,6 +446,3 @@ def test_invalid():
     assert_raises(ValueError, init)
     init = Initialization(2, 'stationary')
     assert_raises(ValueError, init)
-    assert_raises(ValueError, init, transition=np.diag([0.5, 0.5]))
-    assert_raises(ValueError, init, state_intercept=[0, 0],
-                  transition=np.diag([1, 1]), selected_state_cov=np.eye(2))

@@ -409,8 +409,7 @@ class Initialization(object):
         self.stationary_cov = None
         self.approximate_diffuse_variance = None
 
-    def __call__(self, model=None, state_intercept=None, transition=None,
-                 selected_state_cov=None, complex_step=False):
+    def __call__(self, model=None, model_index=None, complex_step=False):
         """
         Construct initialization representation
 
@@ -420,18 +419,8 @@ class Initialization(object):
             A state space model representation object, optional if 'stationary'
             initialization is used and ignored otherwise. See notes for
             details in the stationary initialization case.
-        state_intercept : array, optional
-            The state intercept of the model, optional if 'stationary'
-            initialization is used and ignored otherwise. See notes for
-            details in the stationary initialization case.
-        transition : array, optional
-            The transition matrix of the model, optional if 'stationary'
-            initialization is used and ignored otherwise. See notes for
-            details in the stationary initialization case.
-        selected_state_cov : array, optional
-            The selected state covariance matrix of the model, optional if
-            'stationary' initialization is used and ignored otherwise. See
-            notes for details in the stationary initialization case.
+        model_index : array, optional
+            The base index of the block in the model.
 
         Returns
         -------
@@ -458,23 +447,19 @@ class Initialization(object):
 
         # Retrieve state_intercept, etc. if `model` was given
         if model is not None:
-            state_intercept = model['state_intercept', :, 0]
-            transition = model['transition', :, :, 0]
-            selection = model['selection', :, :, 0]
-            state_cov = model['state_cov', :, :, 0]
-            selected_state_cov = np.dot(selection, state_cov).dot(selection.T)
+            if model_index is None:
+                model_index = self._states
+                ix1 = np.s_[:]
+                ix2 = np.s_[:, :]
+            else:
+                ix1 = model_index
+                ix2 = np.ix_(model_index, model_index)
 
-        # If we have any of the model elements, make sure we have them all
-        have_model = (state_intercept is not None or transition is not None or
-                      selected_state_cov is not None)
-        missing_model = (state_intercept is None or transition is None or
-                         selected_state_cov is None)
-        if have_model and missing_model:
-            raise ValueError('If any of the arguments `state_intercept`,'
-                             ' `transition`, or `selected_state_cov` are'
-                             ' provided, then all of them must be provided'
-                             ' (alternatively, the `model` argument may be'
-                             ' used).')
+            state_intercept = model['state_intercept', ix1, 0]
+            transition = model[('transition',) + ix2 + (0,)]
+            selection = model['selection', ix1, :, 0]
+            state_cov = model['state_cov']
+            selected_state_cov = np.dot(selection, state_cov).dot(selection.T)
 
         # If using global initialization, compute the actual elements and
         # return them
@@ -483,7 +468,7 @@ class Initialization(object):
             zeros = np.zeros((self.k_states, self.k_states))
 
             # General validation
-            if self.initialization_type == 'stationary' and not have_model:
+            if self.initialization_type == 'stationary' and model is None:
                 raise ValueError('Stationary initialization requires passing'
                                  ' either the `model` argument or all of the'
                                  ' individual transition equation arguments.')
@@ -533,10 +518,9 @@ class Initialization(object):
             for index, init in self.blocks.items():
                 ix = np.ix_(index, index)
                 kwargs = {}
-                if have_model:
-                    kwargs['state_intercept'] = state_intercept[index, ]
-                    kwargs['transition'] = transition[ix]
-                    kwargs['selected_state_cov'] = selected_state_cov[ix]
+                if model is not None:
+                    kwargs['model'] = model
+                    kwargs['model_index'] = tuple(np.array(model_index)[index, ])
                 out = init(**kwargs)
 
                 initial_state_mean[index, ] = out[0]
