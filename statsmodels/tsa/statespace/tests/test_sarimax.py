@@ -1861,7 +1861,6 @@ def test_manual_stationary_initialization():
     mod2 = sarimax.SARIMAX(endog, order=(3,0,0))
     mod2.ssm.initialize_known(res1.filter_results.initial_state,
                               res1.filter_results.initial_state_cov)
-    mod2.initialize_state()  # a noop in this case (include for coverage)
     res2 = mod2.filter([0.5,0.2,0.1,1])
 
     # Create a third model with "known" initialization, but specified in kwargs
@@ -1900,7 +1899,6 @@ def test_manual_approximate_diffuse_initialization():
     mod2 = sarimax.SARIMAX(endog, order=(3,0,0))
     mod2.ssm.initialize_known(res1.filter_results.initial_state,
                               res1.filter_results.initial_state_cov)
-    mod2.initialize_state()  # a noop in this case (include for coverage)
     res2 = mod2.filter([0.5,0.2,0.1,1])
 
     # Create a third model with "known" initialization, but specified in kwargs
