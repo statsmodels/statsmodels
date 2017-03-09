@@ -335,6 +335,48 @@ def test_mixed_stationary():
                          desired_cov)
 
 
+def test_nested():
+    endog = np.zeros(10)
+    mod = sarimax.SARIMAX(endog, order=(6, 0, 0))
+    phi = [0.5, -0.2, 0.1, 0.0, 0.1, 0.0]
+    sigma2 = 2.
+    mod.update(np.r_[phi, sigma2])
+
+    # Create the initialization object as a series of nested objects
+    init1_1 = Initialization(3)
+    init1_1_1 = Initialization(2, 'stationary')
+    init1_1_2 = Initialization(1, 'approximate_diffuse',
+                               approximate_diffuse_variance=1e9)
+    init1_1.set((0, 2), init1_1_1)
+    init1_1.set(2, init1_1_2)
+
+    init1_2 = Initialization(3)
+    init1_2_1 = Initialization(1, 'known', constant=[1], stationary_cov=[[2.]])
+    init1_2.set(0, init1_2_1)
+    init1_2_2 = Initialization(1, 'diffuse')
+    init1_2.set(1, init1_2_2)
+    init1_2_3 = Initialization(1, 'approximate_diffuse')
+    init1_2.set(2, init1_2_3)
+
+    init = Initialization(6)
+    init.set((0, 3), init1_1)
+    init.set((3, 6), init1_2)
+
+    # Check the output
+    desired_cov = np.zeros((6, 6))
+    T = np.array([[0.5, 1],
+                  [-0.2, 0]])
+    Q = np.array([[sigma2, 0],
+                  [0, 0]])
+    desired_cov[:2, :2] = solve_discrete_lyapunov(T, Q)
+    desired_cov[2, 2] = 1e9
+    desired_cov[3, 3] = 2.
+    desired_cov[5, 5] = 1e6
+    check_initialization(mod, init, [0, 0, 0, 1, 0, 0],
+                         np.diag([0, 0, 0, 0, 1, 0]),
+                         desired_cov)
+
+
 def test_invalid():
     # Invalid initializations (also tests for some invalid calls to set)
     assert_raises(ValueError, Initialization, 5, '')
