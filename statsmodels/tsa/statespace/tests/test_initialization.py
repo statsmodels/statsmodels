@@ -350,7 +350,6 @@ def test_invalid():
     assert_raises(ValueError, init.set, -1, 'diffuse')
     assert_raises(ValueError, init.unset, -1)
     assert_raises(ValueError, init.set, 5, 'diffuse')
-    assert_raises(ValueError, init.unset, 5)
     assert_raises(ValueError, init.set, 'x', 'diffuse')
     assert_raises(ValueError, init.unset, 'x')
     assert_raises(ValueError, init.set, (1, 2, 3), 'diffuse')

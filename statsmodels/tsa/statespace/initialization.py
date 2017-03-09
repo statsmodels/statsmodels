@@ -286,6 +286,11 @@ class Initialization(object):
             raise ValueError('Cannot include a slice step in `index`.')
         index = self._states[slice(*index)]
 
+        # Compatibility with zero-length slices (can make it easier to set up
+        # initialization without lots of if statements)
+        if len(index) == 0:
+            return
+
         # Make sure that we are not setting a block when global initialization
         # was previously set
         if self.initialization_type is not None and not index == self._states:
@@ -419,6 +424,11 @@ class Initialization(object):
         if len(index) > 2:
             raise ValueError('Cannot include a slice step in `index`.')
         index = self._states[slice(*index)]
+
+        # Compatibility with zero-length slices (can make it easier to set up
+        # initialization without lots of if statements)
+        if len(index) == 0:
+            return
 
         # Unset the values
         k_states = len(index)
