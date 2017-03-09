@@ -171,7 +171,7 @@ def test_global_stationary():
     sigma2 = 2.
     mod.update(np.r_[intercept, phi, sigma2])
     init = Initialization(mod.k_states, 'stationary')
-    a, Pinf, Pstar = init(mod)
+    a, Pinf, Pstar = init(model=mod)
     assert_equal(a, [0])
     assert_equal(Pinf, np.diag([0]))
     assert_equal(Pstar, np.eye(1) * sigma2 / (1 - phi**2))
@@ -182,7 +182,7 @@ def test_global_stationary():
     sigma2 = 2.
     mod.update(np.r_[intercept, phi, sigma2])
     init = Initialization(mod.k_states, 'stationary')
-    a, Pinf, Pstar = init(mod)
+    a, Pinf, Pstar = init(model=mod)
     assert_equal(a, [intercept / (1 - phi)])
     assert_equal(Pinf, np.diag([0]))
     assert_equal(Pstar, np.eye(1) * sigma2 / (1 - phi**2))
@@ -197,7 +197,7 @@ def test_global_stationary():
     sigma2 = 2.
     mod.update(np.r_[intercept, phi, sigma2])
     init = Initialization(mod.k_states, 'stationary')
-    a, Pinf, Pstar = init(mod)
+    a, Pinf, Pstar = init(model=mod)
     assert_equal(a, [0, 0])
     assert_equal(Pinf, np.diag([0, 0]))
     T = np.array([[0.5, 1],
@@ -212,7 +212,7 @@ def test_global_stationary():
     sigma2 = 2.
     mod.update(np.r_[intercept, phi, sigma2])
     init = Initialization(mod.k_states, 'stationary')
-    a, Pinf, Pstar = init(mod)
+    a, Pinf, Pstar = init(model=mod)
     desired_intercept = np.linalg.inv(np.eye(2) - T).dot([intercept, 0])
     assert_allclose(a, desired_intercept)
     assert_equal(Pinf, np.diag([0, 0]))
@@ -262,7 +262,7 @@ def test_mixed_basic():
     # > stationary
     init.unset(1)
     init.set(1, 'stationary')
-    a, Pinf, Pstar = init(mod)
+    a, Pinf, Pstar = init(model=mod)
 
     assert_allclose(a, [1.2, 0])
     assert_equal(Pinf, np.diag([0, 0]))
@@ -335,7 +335,7 @@ def test_mixed_stationary():
     init = Initialization(mod.k_states)
     init.set(0, 'diffuse')
     init.set((1, 3), 'stationary')
-    a, Pinf, Pstar = init(mod)
+    a, Pinf, Pstar = init(model=mod)
 
     assert_allclose(a, [0, 0, 0])
     assert_equal(Pinf, np.diag([1, 0, 0]))
@@ -350,7 +350,7 @@ def test_mixed_stationary():
     init.set(0, 'diffuse')
     init.set(1, 'stationary')
     init.set(2, 'approximate_diffuse')
-    a, Pinf, Pstar = init(mod)
+    a, Pinf, Pstar = init(model=mod)
 
     assert_allclose(a, [0, 0, 0])
     assert_equal(Pinf, np.diag([1, 0, 0]))
@@ -363,7 +363,7 @@ def test_mixed_stationary():
     init.set(0, 'diffuse')
     init.set(1, 'stationary')
     init.set(2, 'stationary')
-    a, Pinf, Pstar = init(mod)
+    a, Pinf, Pstar = init(model=mod)
 
     desired_cov[2, 2] = 0
     assert_allclose(Pstar, desired_cov)
@@ -383,7 +383,7 @@ def test_mixed_stationary():
 
     # > stationary, global
     init = Initialization(mod.k_states, 'stationary')
-    a, Pinf, Pstar = init(mod)
+    a, Pinf, Pstar = init(model=mod)
 
     desired_intercept = np.linalg.solve(np.eye(2) - transition, intercept)
     desired_cov = solve_discrete_lyapunov(transition, cov)
@@ -402,7 +402,7 @@ def test_mixed_stationary():
     init.unset(None)
     init.set(0, 'stationary')
     init.set(1, 'stationary')
-    a, Pinf, Pstar = init(mod)
+    a, Pinf, Pstar = init(model=mod)
     assert_allclose(a, [intercept[0] / (1 - transition[0, 0]),
                         intercept[1] / (1 - transition[1, 1])])
     assert_equal(Pinf, np.diag([0, 0]))
