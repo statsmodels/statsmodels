@@ -409,7 +409,9 @@ class Initialization(object):
         self.stationary_cov = None
         self.approximate_diffuse_variance = None
 
-    def __call__(self, model=None, model_index=None, complex_step=False):
+    def __call__(self, index=None, model=None, initial_state_mean=None,
+                 initial_diffuse_state_cov=None,
+                 initial_stationary_state_cov=None, complex_step=False):
         """
         Construct initialization representation
 
@@ -421,6 +423,16 @@ class Initialization(object):
             details in the stationary initialization case.
         model_index : array, optional
             The base index of the block in the model.
+        initial_state_mean : array, optional
+            An array (or more usually view) in which to place the initial state
+            mean.
+        initial_diffuse_state_cov : array, optional
+            An array (or more usually view) in which to place the diffuse
+            component of initial state covariance matrix.
+        initial_stationary_state_cov : array, optional
+            An array (or more usually view) in which to place the stationary
+            component of initial state covariance matrix.
+
 
         Returns
         -------
@@ -445,21 +457,31 @@ class Initialization(object):
             raise ValueError('Cannot construct initialization representation'
                              ' because not all states have been initialized.')
 
+        # Setup indexes
+        if index is None:
+            index = self._states
+            ix1 = np.s_[:]
+            ix2 = np.s_[:, :]
+        else:
+            ix1 = np.s_[index[0]:index[-1] + 1]
+            ix2 = np.ix_(index, index)
+
         # Retrieve state_intercept, etc. if `model` was given
         if model is not None:
-            if model_index is None:
-                model_index = self._states
-                ix1 = np.s_[:]
-                ix2 = np.s_[:, :]
-            else:
-                ix1 = model_index
-                ix2 = np.ix_(model_index, model_index)
-
             state_intercept = model['state_intercept', ix1, 0]
             transition = model[('transition',) + ix2 + (0,)]
             selection = model['selection', ix1, :, 0]
             state_cov = model['state_cov']
             selected_state_cov = np.dot(selection, state_cov).dot(selection.T)
+
+        # Create output arrays if not given
+        if initial_state_mean is None:
+            initial_state_mean = np.zeros(self.k_states)
+        cov_shape = (self.k_states, self.k_states)
+        if initial_diffuse_state_cov is None:
+            initial_diffuse_state_cov = np.zeros(cov_shape)
+        if initial_stationary_state_cov is None:
+            initial_stationary_state_cov = np.zeros(cov_shape)
 
         # If using global initialization, compute the actual elements and
         # return them
@@ -484,48 +506,38 @@ class Initialization(object):
             # Set the initial state mean
             if self.initialization_type == 'stationary':
                 # TODO performance
-                initial_state_mean = np.linalg.solve(eye - transition,
-                                                     state_intercept)
+                initial_state_mean[ix1] = np.linalg.solve(eye - transition,
+                                                          state_intercept)
             else:
-                initial_state_mean = self.constant
+                initial_state_mean[ix1] = self.constant
 
             # Set the diffuse component
             if self.initialization_type == 'diffuse':
-                initial_diffuse_state_cov = np.eye(self.k_states)
+                initial_diffuse_state_cov[ix2] = np.eye(self.k_states)
             else:
-                initial_diffuse_state_cov = zeros
+                initial_diffuse_state_cov[ix2] = zeros
 
             # Set the stationary component
             if self.initialization_type == 'known':
-                initial_stationary_state_cov = self.stationary_cov
+                initial_stationary_state_cov[ix2] = self.stationary_cov
             elif self.initialization_type == 'diffuse':
-                initial_stationary_state_cov = zeros
+                initial_stationary_state_cov[ix2] = zeros
             elif self.initialization_type == 'approximate_diffuse':
-                initial_stationary_state_cov = (
+                initial_stationary_state_cov[ix2] = (
                     eye * self.approximate_diffuse_variance)
             elif self.initialization_type == 'stationary':
                 # TODO performance
-                initial_stationary_state_cov = solve_discrete_lyapunov(
+                initial_stationary_state_cov[ix2] = solve_discrete_lyapunov(
                     transition, selected_state_cov, complex_step=complex_step)
         # Otherwise, if using blocks, combine the elements returned by each of
         # the blocks and return those
         else:
-            initial_state_mean = np.zeros(self.k_states)
-            cov_shape = (self.k_states, self.k_states)
-            initial_diffuse_state_cov = np.zeros(cov_shape)
-            initial_stationary_state_cov = np.zeros(cov_shape)
-
-            for index, init in self.blocks.items():
-                ix = np.ix_(index, index)
-                kwargs = {}
-                if model is not None:
-                    kwargs['model'] = model
-                    kwargs['model_index'] = tuple(np.array(model_index)[index, ])
-                out = init(**kwargs)
-
-                initial_state_mean[index, ] = out[0]
-                initial_diffuse_state_cov[ix] = out[1]
-                initial_stationary_state_cov[ix] = out[2]
+            for block_index, init in self.blocks.items():
+                out = init(
+                    index=tuple(np.array(index)[block_index, ]),
+                    model=model, initial_state_mean=initial_state_mean,
+                    initial_diffuse_state_cov=initial_diffuse_state_cov,
+                    initial_stationary_state_cov=initial_stationary_state_cov)
 
         return (initial_state_mean, initial_diffuse_state_cov,
                 initial_stationary_state_cov)
