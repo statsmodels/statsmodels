@@ -10,6 +10,7 @@ import numpy as np
 from .tools import (
     find_best_blas_type, validate_matrix_shape, validate_vector_shape
 )
+from .initialization import Initialization
 from . import tools
 
 
@@ -698,6 +699,9 @@ class Representation(object):
         return prefix, dtype, create
 
     def _initialize_state(self, prefix=None, complex_step=False):
+        # TODO once the transition to using the Initialization objects is
+        # complete, this should be moved entirely to the _{{prefix}}Statespace
+        # object.
         if prefix is None:
             prefix = self.prefix
         dtype = tools.prefix_dtype_map[prefix]
@@ -714,6 +718,10 @@ class Representation(object):
             )
         elif self.initialization == 'stationary':
             self._statespaces[prefix].initialize_stationary(complex_step)
+        elif isinstance(self.initialization, Initialization):
+            if not self.initialization.initialized:
+                raise RuntimeError('Initialization is incomplete.')
+            self._statespaces[prefix].initialize(self.initialization)
         else:
             raise RuntimeError('Statespace model not initialized.')
 

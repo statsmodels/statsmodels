@@ -32,6 +32,10 @@ cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 cimport statsmodels.tsa.statespace._tools as tools
 
+{{for prefix, types in TYPES.items()}}
+from statsmodels.tsa.statespace._initialization cimport {{prefix}}Initialization
+{{endfor}}
+
 cdef int FORTRAN = 1
 
 {{for prefix, types in TYPES.items()}}
@@ -265,6 +269,14 @@ cdef class {{prefix}}Statespace(object):
         dim2[0] = self.k_states; dim2[1] = self.k_states;
         self.tmp = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
+        # Arrays for initialization
+        dim1[0] = self.k_states;
+        self.initial_state = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+        dim2[0] = self.k_states; dim2[1] = self.k_states;
+        self.initial_state_cov = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        dim2[0] = self.k_states; dim2[1] = self.k_states;
+        self.initial_diffuse_state_cov = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+
         # Arrays for missing data
         dim1[0] = self.k_endog;
         self.selected_obs = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
@@ -357,6 +369,29 @@ cdef class {{prefix}}Statespace(object):
         self.collapse_loglikelihood = state['collapse_loglikelihood']
         self.companion_transition = state['companion_transition']
         self.transform_determinant = state['transform_determinant']
+
+    def initialize(self, init, offset=0, complex_step=False, clear=True):
+        cdef {{prefix}}Initialization _init
+        # Clear initial arrays
+        if clear:
+            self.initial_state[:] = 0
+            self.initial_diffuse_state_cov[:] = 0
+            self.initial_state_cov[:] = 0
+
+        # If using global initialization, compute the actual elements and
+        # return them
+        if init.initialization_type is not None:
+            init._initialize_initialization(prefix='{{prefix}}')
+            _init = init._initializations['{{prefix}}']
+            _init.initialize(init.initialization_type, offset, self,
+                             self.initial_state,
+                             self.initial_diffuse_state_cov,
+                             self.initial_state_cov, complex_step)
+        # Otherwise, if using blocks, initialize each of the blocks
+        else:
+            for block_index, block_init in init.blocks.items():
+                self.initialize(block_init, offset=offset + block_index[0],
+                                complex_step=complex_step, clear=False)
 
     # ## Initialize: known values
     #

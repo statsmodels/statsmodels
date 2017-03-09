@@ -8,7 +8,7 @@ import warnings
 
 import numpy as np
 
-from .tools import solve_discrete_lyapunov
+from . import tools
 
 
 class Initialization(object):
@@ -179,7 +179,9 @@ class Initialization(object):
 
     """
 
-    def __init__(self, k_states, initialization_type=None, **kwargs):
+    def __init__(self, k_states, initialization_type=None,
+                 initialization_classes=None, approximate_diffuse_variance=1e6,
+                 **kwargs):
         # Parameters
         self.k_states = k_states
 
@@ -192,13 +194,54 @@ class Initialization(object):
         # `constant` is a vector of constant values (i.e. it is the vector
         # a from DK)
         self.initialization_type = None
-        self.constant = None
-        self.stationary_cov = None
-        self.approximate_diffuse_variance = None
+        self.constant = np.zeros(self.k_states)
+        self.stationary_cov = np.zeros((self.k_states, self.k_states))
+        self.approximate_diffuse_variance = approximate_diffuse_variance
+
+        # Cython interface attributes
+        self.prefix_initialization_map = (
+            initialization_classes if initialization_classes is not None
+            else tools.prefix_initialization_map.copy())
+        self._representations = {}
+        self._initializations = {}
 
         # If given a global initialization, use it now
         if initialization_type is not None:
             self.set(None, initialization_type, **kwargs)
+
+    def _initialize_initialization(self, prefix):
+        dtype = tools.prefix_dtype_map[prefix]
+
+        # If the dtype-specific representation matrices do not exist, create
+        # them
+        if prefix not in self._representations:
+            # Copy the statespace representation matrices
+            self._representations[prefix] = {
+                'constant': self.constant.astype(dtype),
+                'stationary_cov': np.asfortranarray(
+                    self.stationary_cov.astype(dtype)),
+            }
+        # If they do exist, update them
+        else:
+            self._representations[prefix]['constant'][:] = (
+                self.constant.astype(dtype)[:])
+            self._representations[prefix]['stationary_cov'][:] = (
+                self.stationary_cov.astype(dtype)[:])
+
+        # Create if necessary
+        if prefix not in self._initializations:
+            # Setup the base statespace object
+            cls = self.prefix_initialization_map[prefix]
+            self._initializations[prefix] = cls(
+                self.k_states, self._representations[prefix]['constant'],
+                self._representations[prefix]['stationary_cov'],
+                self.approximate_diffuse_variance)
+        # Otherwise update
+        else:
+            self._initializations[prefix].approximate_diffuse_variance = (
+                self.approximate_diffuse_variance)
+
+        return prefix, dtype
 
     def set(self, index, initialization_type, constant=None,
             stationary_cov=None, approximate_diffuse_variance=None):
@@ -310,10 +353,9 @@ class Initialization(object):
                     warnings.warn('Constant values provided, but they are'
                                   ' ignored in exact diffuse initialization.')
             elif initialization_type == 'approximate_diffuse':
-                if approximate_diffuse_variance is None:
-                    approximate_diffuse_variance = 1e6
-                self.approximate_diffuse_variance = (
-                    approximate_diffuse_variance)
+                if approximate_diffuse_variance is not None:
+                    self.approximate_diffuse_variance = (
+                        approximate_diffuse_variance)
             elif initialization_type == 'stationary':
                 if constant is not None:
                     raise ValueError('Constant values cannot be provided for'
@@ -334,6 +376,9 @@ class Initialization(object):
         # Otherwise, if setting a sub-block, construct the new initialization
         # object
         else:
+            if approximate_diffuse_variance is None:
+                approximate_diffuse_variance = (
+                    self.approximate_diffuse_variance)
             init = Initialization(
                 k_states, initialization_type, constant=constant,
                 stationary_cov=stationary_cov,
@@ -379,9 +424,8 @@ class Initialization(object):
         k_states = len(index)
         if k_states == self.k_states and self.initialization_type is not None:
             self.initialization_type = None
-            self.constant = None
-            self.stationary_cov = None
-            self.approximate_diffuse_variance = None
+            self.constant[:] = 0
+            self.stationary_cov[:] = 0
         elif index in self.blocks:
             for i in index:
                 self._initialization[i] = None
@@ -405,9 +449,13 @@ class Initialization(object):
 
         # Clear global attributes
         self.initialization_type = None
-        self.constant = None
-        self.stationary_cov = None
-        self.approximate_diffuse_variance = None
+        self.constant[:] = 0
+        self.stationary_cov[:] = 0
+
+    @property
+    def initialized(self):
+        return not (self.initialization_type is None and
+                    np.any(np.equal(self._initialization, None)))
 
     def __call__(self, index=None, model=None, initial_state_mean=None,
                  initial_diffuse_state_cov=None,
@@ -527,8 +575,10 @@ class Initialization(object):
                     eye * self.approximate_diffuse_variance)
             elif self.initialization_type == 'stationary':
                 # TODO performance
-                initial_stationary_state_cov[ix2] = solve_discrete_lyapunov(
-                    transition, selected_state_cov, complex_step=complex_step)
+                initial_stationary_state_cov[ix2] = (
+                    tools.solve_discrete_lyapunov(transition,
+                                                  selected_state_cov,
+                                                  complex_step=complex_step))
         # Otherwise, if using blocks, combine the elements returned by each of
         # the blocks and return those
         else:
