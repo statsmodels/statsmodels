@@ -26,6 +26,23 @@ if compatibility_mode:
     raise SkipTest
 
 
+def check_initialization(mod, init, a_true, Pinf_true, Pstar_true):
+    # Check the Python version
+    a, Pinf, Pstar = init(model=mod)
+    assert_allclose(a, a_true)
+    assert_allclose(Pinf, Pinf_true)
+    assert_allclose(Pstar, Pstar_true)
+
+    # Check the Cython version
+    mod.ssm._initialize_representation()
+    init._initialize_initialization(prefix=mod.ssm.prefix)
+    _statespace = mod.ssm._statespace
+    _statespace.initialize(init)
+    assert_allclose(np.array(_statespace.initial_state), a_true)
+    assert_allclose(np.array(_statespace.initial_diffuse_state_cov), Pinf_true)
+    assert_allclose(np.array(_statespace.initial_state_cov), Pstar_true)
+
+
 def test_global_known():
     # Test for global known initialization
 
@@ -35,25 +52,16 @@ def test_global_known():
 
     # Known, mean
     init = Initialization(mod.k_states, 'known', constant=[1.5])
-    a, Pinf, Pstar = init()
-    assert_equal(a, [1.5])
-    assert_equal(Pinf, np.diag([0]))
-    assert_equal(Pstar, np.diag([0]))
+    check_initialization(mod, init, [1.5], np.diag([0]), np.diag([0]))
 
     # Known, covariance
     init = Initialization(mod.k_states, 'known', stationary_cov=np.diag([1]))
-    a, Pinf, Pstar = init()
-    assert_equal(a, [0])
-    assert_equal(Pinf, np.diag([0]))
-    assert_equal(Pstar, np.diag([1]))
+    check_initialization(mod, init, [0], np.diag([0]), np.diag([1]))
 
     # Known, both
     init = Initialization(mod.k_states, 'known', constant=[1.5],
                           stationary_cov=np.diag([1]))
-    a, Pinf, Pstar = init()
-    assert_equal(a, [1.5])
-    assert_equal(Pinf, np.diag([0]))
-    assert_equal(Pstar, np.diag([1]))
+    check_initialization(mod, init, [1.5], np.diag([0]), np.diag([1]))
 
     # - n-dimensional -
     endog = np.zeros(10)
@@ -61,26 +69,20 @@ def test_global_known():
 
     # Known, mean
     init = Initialization(mod.k_states, 'known', constant=[1.5, -0.2])
-    a, Pinf, Pstar = init()
-    assert_equal(a, [1.5, -0.2])
-    assert_equal(Pinf, np.diag([0, 0]))
-    assert_equal(Pstar, np.diag([0, 0]))
+    check_initialization(mod, init, [1.5, -0.2], np.diag([0, 0]),
+                         np.diag([0, 0]))
 
     # Known, covariance
     init = Initialization(mod.k_states, 'known',
                           stationary_cov=np.diag([1, 4.2]))
-    a, Pinf, Pstar = init()
-    assert_equal(a, [0, 0])
-    assert_equal(Pinf, np.diag([0, 0]))
-    assert_equal(Pstar, np.diag([1, 4.2]))
+    check_initialization(mod, init, [0, 0], np.diag([0, 0]),
+                         np.diag([1, 4.2]))
 
     # Known, both
     init = Initialization(mod.k_states, 'known', constant=[1.5, -0.2],
                           stationary_cov=np.diag([1, 4.2]))
-    a, Pinf, Pstar = init()
-    assert_equal(a, [1.5, -0.2])
-    assert_equal(Pinf, np.diag([0, 0]))
-    assert_equal(Pstar, np.diag([1, 4.2]))
+    check_initialization(mod, init, [1.5, -0.2], np.diag([0, 0]),
+                         np.diag([1, 4.2]))
 
 
 def test_global_diffuse():
@@ -91,20 +93,14 @@ def test_global_diffuse():
     mod = sarimax.SARIMAX(endog, order=(1, 0, 0))
 
     init = Initialization(mod.k_states, 'diffuse')
-    a, Pinf, Pstar = init()
-    assert_equal(a, [0])
-    assert_equal(Pinf, np.eye(1))
-    assert_equal(Pstar, np.diag([0]))
+    check_initialization(mod, init, [0], np.eye(1), np.diag([0]))
 
     # - n-dimensional -
     endog = np.zeros(10)
     mod = sarimax.SARIMAX(endog, order=(2, 0, 0))
 
     init = Initialization(mod.k_states, 'diffuse')
-    a, Pinf, Pstar = init()
-    assert_equal(a, [0, 0])
-    assert_equal(Pinf, np.eye(2))
-    assert_equal(Pstar, np.diag([0, 0]))
+    check_initialization(mod, init, [0, 0], np.eye(2), np.diag([0, 0]))
 
 
 def test_global_approximate_diffuse():
@@ -115,47 +111,30 @@ def test_global_approximate_diffuse():
     mod = sarimax.SARIMAX(endog, order=(1, 0, 0))
 
     init = Initialization(mod.k_states, 'approximate_diffuse')
-    a, Pinf, Pstar = init()
-    assert_equal(a, [0])
-    assert_equal(Pinf, np.diag([0]))
-    assert_equal(Pstar, np.eye(1) * 1e6)
+    check_initialization(mod, init, [0], np.diag([0]), np.eye(1) * 1e6)
 
     init = Initialization(mod.k_states, 'approximate_diffuse', constant=[1.2])
-    a, Pinf, Pstar = init()
-    assert_equal(a, [1.2])
-    assert_equal(Pinf, np.diag([0]))
-    assert_equal(Pstar, np.eye(1) * 1e6)
+    check_initialization(mod, init, [1.2], np.diag([0]), np.eye(1) * 1e6)
 
     init = Initialization(mod.k_states, 'approximate_diffuse',
                           approximate_diffuse_variance=1e10)
-    a, Pinf, Pstar = init()
-    assert_equal(a, [0])
-    assert_equal(Pinf, np.diag([0]))
-    assert_equal(Pstar, np.eye(1) * 1e10)
+    check_initialization(mod, init, [0], np.diag([0]), np.eye(1) * 1e10)
 
     # - n-dimensional -
     endog = np.zeros(10)
     mod = sarimax.SARIMAX(endog, order=(2, 0, 0))
 
     init = Initialization(mod.k_states, 'approximate_diffuse')
-    a, Pinf, Pstar = init()
-    assert_equal(a, [0, 0])
-    assert_equal(Pinf, np.diag([0, 0]))
-    assert_equal(Pstar, np.eye(2) * 1e6)
+    check_initialization(mod, init, [0, 0], np.diag([0, 0]), np.eye(2) * 1e6)
 
     init = Initialization(mod.k_states, 'approximate_diffuse',
                           constant=[1.2, -0.2])
-    a, Pinf, Pstar = init()
-    assert_equal(a, [1.2, -0.2])
-    assert_equal(Pinf, np.diag([0, 0]))
-    assert_equal(Pstar, np.eye(2) * 1e6)
+    check_initialization(mod, init, [1.2, -0.2], np.diag([0, 0]),
+                         np.eye(2) * 1e6)
 
     init = Initialization(mod.k_states, 'approximate_diffuse',
                           approximate_diffuse_variance=1e10)
-    a, Pinf, Pstar = init()
-    assert_equal(a, [0, 0])
-    assert_equal(Pinf, np.diag([0, 0]))
-    assert_equal(Pstar, np.eye(2) * 1e10)
+    check_initialization(mod, init, [0, 0], np.diag([0, 0]), np.eye(2) * 1e10)
 
 
 def test_global_stationary():
@@ -171,10 +150,8 @@ def test_global_stationary():
     sigma2 = 2.
     mod.update(np.r_[intercept, phi, sigma2])
     init = Initialization(mod.k_states, 'stationary')
-    a, Pinf, Pstar = init(model=mod)
-    assert_equal(a, [0])
-    assert_equal(Pinf, np.diag([0]))
-    assert_equal(Pstar, np.eye(1) * sigma2 / (1 - phi**2))
+    check_initialization(mod, init, [0], np.diag([0]),
+                         np.eye(1) * sigma2 / (1 - phi**2))
 
     # intercept
     intercept = 1.2
@@ -182,10 +159,8 @@ def test_global_stationary():
     sigma2 = 2.
     mod.update(np.r_[intercept, phi, sigma2])
     init = Initialization(mod.k_states, 'stationary')
-    a, Pinf, Pstar = init(model=mod)
-    assert_equal(a, [intercept / (1 - phi)])
-    assert_equal(Pinf, np.diag([0]))
-    assert_equal(Pstar, np.eye(1) * sigma2 / (1 - phi**2))
+    check_initialization(mod, init, [intercept / (1 - phi)], np.diag([0]),
+                         np.eye(1) * sigma2 / (1 - phi**2))
 
     # - n-dimensional -
     endog = np.zeros(10)
@@ -197,14 +172,11 @@ def test_global_stationary():
     sigma2 = 2.
     mod.update(np.r_[intercept, phi, sigma2])
     init = Initialization(mod.k_states, 'stationary')
-    a, Pinf, Pstar = init(model=mod)
-    assert_equal(a, [0, 0])
-    assert_equal(Pinf, np.diag([0, 0]))
     T = np.array([[0.5, 1],
                   [-0.2, 0]])
     Q = np.diag([sigma2, 0])
     desired_cov = solve_discrete_lyapunov(T, Q)
-    assert_allclose(Pstar, desired_cov)
+    check_initialization(mod, init, [0, 0], np.diag([0, 0]), desired_cov)
 
     # intercept
     intercept = 1.2
@@ -212,11 +184,9 @@ def test_global_stationary():
     sigma2 = 2.
     mod.update(np.r_[intercept, phi, sigma2])
     init = Initialization(mod.k_states, 'stationary')
-    a, Pinf, Pstar = init(model=mod)
     desired_intercept = np.linalg.inv(np.eye(2) - T).dot([intercept, 0])
-    assert_allclose(a, desired_intercept)
-    assert_equal(Pinf, np.diag([0, 0]))
-    assert_allclose(Pstar, desired_cov)
+    check_initialization(mod, init, desired_intercept, np.diag([0, 0]),
+                         desired_cov)
 
 
 def test_mixed_basic():
@@ -236,57 +206,36 @@ def test_mixed_basic():
 
     # > known has constant
     init.set(1, 'known', constant=[-0.2])
-    a, Pinf, Pstar = init()
-    assert_allclose(a, [1.2, -0.2])
-    assert_equal(Pinf, np.diag([0, 0]))
-    assert_allclose(Pstar, np.diag([0, 0]))
+    check_initialization(mod, init, [1.2, -0.2], np.diag([0, 0]),
+                         np.diag([0, 0]))
 
     # > diffuse
     init.unset(1)
     init.set(1, 'diffuse')
-    a, Pinf, Pstar = init()
-
-    assert_allclose(a, [1.2, 0])
-    assert_equal(Pinf, np.diag([0, 1]))
-    assert_allclose(Pstar, np.diag([0, 0]))
+    check_initialization(mod, init, [1.2, 0], np.diag([0, 1]), np.diag([0, 0]))
 
     # > approximate diffuse
     init.unset(1)
     init.set(1, 'approximate_diffuse')
-    a, Pinf, Pstar = init()
-
-    assert_allclose(a, [1.2, 0])
-    assert_equal(Pinf, np.diag([0, 0]))
-    assert_allclose(Pstar, np.diag([0, 1e6]))
+    check_initialization(mod, init, [1.2, 0], np.diag([0, 0]),
+                         np.diag([0, 1e6]))
 
     # > stationary
     init.unset(1)
     init.set(1, 'stationary')
-    a, Pinf, Pstar = init(model=mod)
-
-    assert_allclose(a, [1.2, 0])
-    assert_equal(Pinf, np.diag([0, 0]))
-    assert_allclose(Pstar, np.diag([0, 0]))
+    check_initialization(mod, init, [1.2, 0], np.diag([0, 0]), np.diag([0, 0]))
 
     # known has cov
     init = Initialization(mod.k_states)
     init.set(0, 'known', stationary_cov=np.diag([1]))
     init.set(1, 'diffuse')
-    a, Pinf, Pstar = init()
-
-    assert_allclose(a, [0, 0])
-    assert_equal(Pinf, np.diag([0, 1]))
-    assert_allclose(Pstar, np.diag([1, 0]))
+    check_initialization(mod, init, [0, 0], np.diag([0, 1]), np.diag([1, 0]))
 
     # known has both
     init = Initialization(mod.k_states)
     init.set(0, 'known', constant=[1.2], stationary_cov=np.diag([1]))
     init.set(1, 'diffuse')
-    a, Pinf, Pstar = init()
-
-    assert_allclose(a, [1.2, 0])
-    assert_equal(Pinf, np.diag([0, 1]))
-    assert_allclose(Pstar, np.diag([1, 0]))
+    check_initialization(mod, init, [1.2, 0], np.diag([0, 1]), np.diag([1, 0]))
 
     # - 3-dimensional -
     endog = np.zeros(10)
@@ -296,32 +245,23 @@ def test_mixed_basic():
     init = Initialization(mod.k_states)
     init.set((0, 2), 'known', constant=[1.2, -0.2])
     init.set(2, 'diffuse')
-    a, Pinf, Pstar = init()
-
-    assert_allclose(a, [1.2, -0.2, 0])
-    assert_equal(Pinf, np.diag([0, 0, 1]))
-    assert_allclose(Pstar, np.diag([0, 0, 0]))
+    check_initialization(mod, init, [1.2, -0.2, 0], np.diag([0, 0, 1]),
+                         np.diag([0, 0, 0]))
 
     # known has cov
     init = Initialization(mod.k_states)
     init.set((0, 2), 'known', stationary_cov=np.diag([1, 4.2]))
     init.set(2, 'diffuse')
-    a, Pinf, Pstar = init()
-
-    assert_allclose(a, [0, 0, 0])
-    assert_equal(Pinf, np.diag([0, 0, 1]))
-    assert_allclose(Pstar, np.diag([1, 4.2, 0]))
+    check_initialization(mod, init, [0, 0, 0], np.diag([0, 0, 1]),
+                         np.diag([1, 4.2, 0]))
 
     # known has both
     init = Initialization(mod.k_states)
     init.set((0, 2), 'known', constant=[1.2, -0.2],
              stationary_cov=np.diag([1, 4.2]))
     init.set(2, 'diffuse')
-    a, Pinf, Pstar = init()
-
-    assert_allclose(a, [1.2, -0.2, 0])
-    assert_equal(Pinf, np.diag([0, 0, 1]))
-    assert_allclose(Pstar, np.diag([1, 4.2, 0]))
+    check_initialization(mod, init, [1.2, -0.2, 0], np.diag([0, 0, 1]),
+                         np.diag([1, 4.2, 0]))
 
 
 def test_mixed_stationary():
@@ -335,38 +275,28 @@ def test_mixed_stationary():
     init = Initialization(mod.k_states)
     init.set(0, 'diffuse')
     init.set((1, 3), 'stationary')
-    a, Pinf, Pstar = init(model=mod)
-
-    assert_allclose(a, [0, 0, 0])
-    assert_equal(Pinf, np.diag([1, 0, 0]))
     desired_cov = np.zeros((3, 3))
     T = np.array([[0.5, 1],
                   [-0.2, 0]])
     Q = np.diag([sigma2, 0])
     desired_cov[1:, 1:] = solve_discrete_lyapunov(T, Q)
-    assert_allclose(Pstar, desired_cov)
+    check_initialization(mod, init, [0, 0, 0], np.diag([1, 0, 0]), desired_cov)
 
     init.clear()
     init.set(0, 'diffuse')
     init.set(1, 'stationary')
     init.set(2, 'approximate_diffuse')
-    a, Pinf, Pstar = init(model=mod)
-
-    assert_allclose(a, [0, 0, 0])
-    assert_equal(Pinf, np.diag([1, 0, 0]))
     T = np.array([[0.5]])
     Q = np.diag([sigma2])
     desired_cov = np.diag([0, solve_discrete_lyapunov(T, Q), 1e6])
-    assert_allclose(Pstar, desired_cov)
+    check_initialization(mod, init, [0, 0, 0], np.diag([1, 0, 0]), desired_cov)
 
     init.clear()
     init.set(0, 'diffuse')
     init.set(1, 'stationary')
     init.set(2, 'stationary')
-    a, Pinf, Pstar = init(model=mod)
-
     desired_cov[2, 2] = 0
-    assert_allclose(Pstar, desired_cov)
+    check_initialization(mod, init, [0, 0, 0], np.diag([1, 0, 0]), desired_cov)
 
     # Test with a VAR model
     endog = np.zeros((10, 2))
@@ -383,31 +313,26 @@ def test_mixed_stationary():
 
     # > stationary, global
     init = Initialization(mod.k_states, 'stationary')
-    a, Pinf, Pstar = init(model=mod)
-
     desired_intercept = np.linalg.solve(np.eye(2) - transition, intercept)
     desired_cov = solve_discrete_lyapunov(transition, cov)
-    assert_allclose(a, desired_intercept)
-    assert_equal(Pinf, np.diag([0, 0]))
-    assert_allclose(Pstar, desired_cov)
+    check_initialization(mod, init, desired_intercept, np.diag([0, 0]),
+                         desired_cov)
 
     # > diffuse, global
     init.set(None, 'diffuse')
-    a, Pinf, Pstar = init()
-    assert_allclose(a, [0, 0])
-    assert_equal(Pinf, np.eye(2))
-    assert_allclose(Pstar, np.diag([0, 0]))
+    check_initialization(mod, init, [0, 0], np.eye(2), np.diag([0, 0]))
 
     # > stationary, individually
     init.unset(None)
     init.set(0, 'stationary')
     init.set(1, 'stationary')
     a, Pinf, Pstar = init(model=mod)
-    assert_allclose(a, [intercept[0] / (1 - transition[0, 0]),
-                        intercept[1] / (1 - transition[1, 1])])
-    assert_equal(Pinf, np.diag([0, 0]))
-    assert_allclose(Pstar, np.diag([cov[0, 0] / (1 - transition[0, 0]**2),
-                                    cov[1, 1] / (1 - transition[1, 1]**2)]))
+    desired_intercept = [intercept[0] / (1 - transition[0, 0]),
+                         intercept[1] / (1 - transition[1, 1])]
+    desired_cov = np.diag([cov[0, 0] / (1 - transition[0, 0]**2),
+                           cov[1, 1] / (1 - transition[1, 1]**2)])
+    check_initialization(mod, init, desired_intercept, np.diag([0, 0]),
+                         desired_cov)
 
 
 def test_invalid():
@@ -416,8 +341,6 @@ def test_invalid():
     assert_raises(ValueError, Initialization, 5, 'stationary', constant=[1, 2])
     assert_raises(ValueError, Initialization, 5, 'stationary',
                   stationary_cov=[1, 2])
-    assert_raises(ValueError, Initialization, 5, 'stationary',
-                  approximate_diffuse_variance=1e10)
     assert_raises(ValueError, Initialization, 5, 'known')
     assert_raises(ValueError, Initialization, 5, 'known', constant=[1])
     assert_raises(ValueError, Initialization, 5, 'known', stationary_cov=[0])
