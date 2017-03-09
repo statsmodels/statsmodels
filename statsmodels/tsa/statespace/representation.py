@@ -728,7 +728,8 @@ class Representation(object):
         elif isinstance(self.initialization, Initialization):
             if not self.initialization.initialized:
                 raise RuntimeError('Initialization is incomplete.')
-            self._statespaces[prefix].initialize(self.initialization)
+            self._statespaces[prefix].initialize(self.initialization,
+                                                 complex_step=complex_step)
         else:
             raise RuntimeError('Statespace model not initialized.')
 
