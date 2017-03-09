@@ -393,6 +393,9 @@ cdef class {{prefix}}Statespace(object):
                 self.initialize(block_init, offset=offset + block_index[0],
                                 complex_step=complex_step, clear=False)
 
+        if not self.initialized:
+            self.initialized = True
+
     # ## Initialize: known values
     #
     # Initialize the filter with specific values, assumed to be known with
