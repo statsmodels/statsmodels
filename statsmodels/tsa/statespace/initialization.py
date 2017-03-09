@@ -381,13 +381,16 @@ class Initialization(object):
         # Otherwise, if setting a sub-block, construct the new initialization
         # object
         else:
-            if approximate_diffuse_variance is None:
-                approximate_diffuse_variance = (
-                    self.approximate_diffuse_variance)
-            init = Initialization(
-                k_states, initialization_type, constant=constant,
-                stationary_cov=stationary_cov,
-                approximate_diffuse_variance=approximate_diffuse_variance)
+            if isinstance(initialization_type, Initialization):
+                init = initialization_type
+            else:
+                if approximate_diffuse_variance is None:
+                    approximate_diffuse_variance = (
+                        self.approximate_diffuse_variance)
+                init = Initialization(
+                    k_states, initialization_type, constant=constant,
+                    stationary_cov=stationary_cov,
+                    approximate_diffuse_variance=approximate_diffuse_variance)
 
             self.blocks[index] = init
             for i in index:
