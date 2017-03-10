@@ -910,3 +910,165 @@ def test_lutkepohl_information_criteria():
     bic = res.info_criteria('bic') - 6 * np.log(res.nobs_effective)
     assert_allclose(aic, true['estat_aic'])
     assert_allclose(bic, true['estat_bic'])
+
+
+
+
+
+def test_tensor_equivalence():
+    # Implementing vectorized versions of mlemodel.observed_information_matrix
+    # and mlemodel._score_obs_harvey, this test checks the vectorized versions
+    # are equivalent to the original for-loop based versions.
+
+    # Arbitrary parameters
+    k_endog = 4
+    nobs = 100
+    n = 6
+    loglikelihood_burn = 9
+    dtype = np.float64 ## numpy.complex128 ?
+
+    self = type('dummy', (object,), {})
+    ssm = type('ssm', (object,), {})
+    self.ssm = ssm
+
+    self.k_endog = k_endog
+    self.nobs = nobs
+    self.ssm.loglikelihood_burn = loglikelihood_burn
+
+    # partials_forecasts_error
+    pfe = np.random.random(k_endog*nobs*n).reshape(k_endog, nobs, n) ## complex case?
+    # partials_forecasts_error_cov
+    pfecov = np.random.random(k_endog*k_endog*nobs*n).reshape(k_endog, k_endog,nobs, n) ## complex case?
+
+    partials_forecasts_error = pfe
+    partials_forecasts_error_cov = pfecov
+
+    res = type('dummy', (object,), {})
+    res.forecasts_error = np.random.random(k_endog*nobs).reshape(k_endog, nobs) ## complex case?
+    res.forecasts_error_cov = np.random.random(k_endog*k_endog*nobs).reshape(k_endog, k_endog, nobs) ## complex case?
+
+
+    # The implementation being replaced
+    def information_matrix_loop():
+        inv_forecasts_error_cov = res.forecasts_error_cov.copy()
+        tmp = np.zeros((self.k_endog, self.k_endog, self.nobs, n), dtype=dtype)
+
+        information_matrix = np.zeros((n, n), dtype=dtype)
+        for t in range(self.ssm.loglikelihood_burn, self.nobs):
+            inv_forecasts_error_cov[:, :, t] = (
+                np.linalg.inv(res.forecasts_error_cov[:, :, t])
+            )
+            for i in range(n):
+                tmp[:, :, t, i] = np.dot(
+                    inv_forecasts_error_cov[:, :, t],
+                    partials_forecasts_error_cov[:, :, t, i]
+                )
+            for i in range(n):
+                for j in range(n):
+                    information_matrix[i, j] += (
+                        0.5 * np.trace(np.dot(tmp[:, :, t, i],
+                                              tmp[:, :, t, j]))
+                    )
+                    information_matrix[i, j] += np.inner(
+                        partials_forecasts_error[:, t, i],
+                        np.dot(inv_forecasts_error_cov[:, :, t],
+                               partials_forecasts_error[:, t, j])
+                    )
+        return information_matrix
+
+    
+    # The new implementation
+    def information_matrix_tensor():
+        ifecs = np.linalg.inv(res.forecasts_error_cov.T).T
+        information_matrix = np.zeros((n, n), dtype=dtype)
+        for t in range(self.ssm.loglikelihood_burn, self.nobs):
+            ifec = ifecs[:, :, t]
+            # Equiv: ifec = np.linalg.inv(res.forecasts_error_cov[:, :, t])
+            pfet = partials_forecasts_error[:, t, :]
+
+            tmp  = np.tensordot(ifec,
+                partials_forecasts_error_cov[:, :, t, :],
+                axes=[[1], [0]]
+                )
+            ijdot = np.tensordot(tmp, tmp, axes=[[1], [0]])
+            traced = np.trace(ijdot, axis1=0, axis2=2)
+                
+            pfidot = np.tensordot(ifec, pfet, axes=[[1], [0]])
+            inner = np.tensordot(pfet, pfidot, axes=[[0], [0]])
+            # inner[i, j] --> np.inner(pfet[:, i], np.dot(ifec, pfet[:, j]))
+                
+            information_matrix[:, :] += 0.5*traced + inner
+
+        return information_matrix
+
+    info_mat_loop = information_matrix_loop()
+    info_mat_tensor = information_matrix_tensor()
+    assert_allclose(info_mat_tensor, info_mat_loop)
+    
+    # import timeit
+    # tloop = timeit.timeit(information_matrix_loop, number=10)
+    # tvec = timeit.timeit(information_matrix_tensor, number=10)
+    # assert tloop < tvec, (tloop, tvec,)
+    # --> Intended to fail to demonstrate vectorized version is faster
+
+    def _score_obs_harvey_loop():
+        partials = np.zeros((self.nobs, n), dtype=dtype)
+        for t in range(self.nobs):
+            for i in range(n):
+                inv_forecasts_error_cov = np.linalg.inv(
+                    res.forecasts_error_cov[:, :, t])
+                partials[t, i] += np.trace(np.dot(
+                    np.dot(inv_forecasts_error_cov,
+                           partials_forecasts_error_cov[:, :, t, i]),
+                    (np.eye(k_endog) -
+                     np.dot(inv_forecasts_error_cov,
+                            np.outer(res.forecasts_error[:, t],
+                                     res.forecasts_error[:, t])))))
+                # 2 * dv / di * F^{-1} v_t
+                # where x = F^{-1} v_t or F x = v
+                partials[t, i] += 2 * np.dot(
+                    partials_forecasts_error[:, t, i],
+                    np.dot(inv_forecasts_error_cov, res.forecasts_error[:, t]))
+        return -partials/2
+
+    def _score_obs_harvey_tensor():
+        ifecs = np.linalg.inv(res.forecasts_error_cov.T).T
+        # Broadcast np.linalg.inv along 3rd dim
+        keye = np.eye(k_endog)
+
+        partials = np.zeros((nobs, n), dtype=dtype)
+        for t in range(nobs):
+            ifec = ifecs[:, :, t]
+            # Equiv: ifec = np.linalg.inv(res.forecasts_error_cov[:, :, t])
+            pfet = partials_forecasts_error[:, t, :]
+            rfet = res.forecasts_error[:, t]
+            irdot = np.dot(ifec, rfet)
+
+            rfet_outer = np.outer(rfet, rfet)
+            iro_outer = np.dot(ifec, rfet_outer)
+
+            tmp = np.tensordot(ifec,
+                partials_forecasts_error_cov[:, :, t, :],
+                axes=[[1], [0]]
+                )
+            ikdots = np.tensordot(tmp, keye - iro_outer, axes=[[1], [0]])
+            traced = np.trace(ikdots, axis1=0, axis2=2)
+
+            dotteds = np.tensordot(pfet, irdot, axes=[[0], [0]])
+
+            partials[t, :] += 0.5 * traced + dotteds
+
+        return -partials
+
+    partials_loop = _score_obs_harvey_loop()
+    partials_tensor = _score_obs_harvey_tensor()
+    assert_allclose(partials_loop, partials_tensor)
+
+
+    # import timeit
+    # tloop = timeit.timeit(_score_obs_harvey_loop, number=10)
+    # tvec = timeit.timeit(_score_obs_harvey_tensor, number=10)
+    # assert tloop < tvec, (tloop, tvec,)
+    # --> Intended to fail to demonstrate vectorized version is faster
+
+
