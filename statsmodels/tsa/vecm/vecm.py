@@ -399,74 +399,160 @@ def _sij(delta_x, delta_y_1_T, y_min1):
     return s00, s01, s10, s11, s11_, lambd, v
 
 
-def coint_johansen(endog_tot, det, k_ar, seasons=0, first_season=0):
-    """
-    Function performing Johansen cointegration tests.
-    Parameters
-    ----------
-    endog_tot : ndarray (neqs x nobs_tot)
-    det : str
-        Same as the deterministic argument in the VECM class.
-    k_ar : int
-        Number of lags in the VEC representation, i.e. number of lagged
-        differences.
-    seasons : int, default: 0
-        Number of seasons.
-    first_season : int, default: 0
-        Season of the first observation.
-    Returns
-    -------
-    result : dict
-        A dictionary containing the two likelihood ratio test statistics
-        (trace statistic ("lrt") and maximum eigenvalue statistic ("lrm")) as
-        well as the corresponding critical values ("cvt" and "cvm").
-    """
-    y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
-            endog_tot, None, None, diff_lags=k_ar, deterministic=det,
-            seasons=seasons, first_season=first_season
-    )
-    _, _, _, _, _, eigval, _ = _sij(delta_x, delta_y_1_T, y_min1)
+def coint_johansen(x, p, k, coint_trend=None):
+    from statsmodels.regression.linear_model import OLS
+    tdiff = np.diff
 
-    neqs = y_1_T.shape[0]
-    t = y_1_T.shape[1]
+    class Holder(object):
+        pass
 
-    if det == "nc":
-        p = -1
-    elif "co" in det or "ci" in det:
-        p = 0
-    elif "lo" in det or "li" in det:
-        p = 1
+    def trimr(x, front, end):
+        if end > 0:
+            return x[front:-end]
+        else:
+            return x[front:]
+
+    import statsmodels.tsa.tsatools as tsat
+    mlag = tsat.lagmat
+
+    def lag(x, lag):
+        return x[:-lag]
+
+    def detrend(y, order):
+        if order == -1:
+            return y
+        return OLS(y, np.vander(np.linspace(-1,1,len(y)), order+1)).fit().resid
+
+    def resid(y, x):
+        if x.size == 0:
+            return y
+        r = y - np.dot(x, np.dot(np.linalg.pinv(x), y))
+        return r
+
+
+    #    % error checking on inputs
+    #    if (nargin ~= 3)
+    #     error('Wrong # of inputs to johansen')
+    #    end
+    nobs, m = x.shape
+
+    #why this?  f is detrend transformed series, p is detrend data
+    if (p > -1):
+        f = 0
     else:
-        p = 123  # >1 is an indicator for: no critical values available
-                 # todo: should we raise an exception already here or wait
-                 #       for c_sja() and c_sjt() to do that?
-    # todo: seasons, exog, and exog_coint? According to p. 334 (Remark 5) in
-    # Lutkepohl (2005) seasonal terms don't change the test statistic's
-    # distribution if there is an unrestricted constant term ("co" in det). So
-    # we should probably allow seasons for this case.
-    trace_statistic = np.zeros(neqs)
-    max_eigval_statistic = np.zeros(neqs)
-    # in the following line: 3 because we have 3 different significance levels
-    #                        (90%, 95%, 99%)
-    crit_val_max_eigval = np.zeros((neqs, 3))
-    crit_val_trace = np.zeros((neqs, 3))
-    for r_0 in range(neqs):  # r_0 is the rank in the null hypothesis
-        trace_statistic[r_0] = -t * sum(np.log(1-eigval[r_0:]))  # r_1 = neqs
-        max_eigval_statistic[r_0] = -t * np.log(1-eigval[r_0])  # r_1 = r_0 + 1
-        crit_val_max_eigval[r_0, :] = c_sja(neqs-r_0, p)
-        crit_val_trace[r_0, :] = c_sjt(neqs-r_0, p)
-    print("trace stat", trace_statistic)
-    print("max eigval stat", max_eigval_statistic)
+        f = p
 
-    return {
-        "method": "johansen",
-        "lrt": trace_statistic,
-        "cvt": crit_val_trace,
-        "lrm": max_eigval_statistic,
-        "cvm": crit_val_max_eigval,
-        "eigval": eigval
-        # todo? eigenvectors (Mine differ from Josef's)
-    }
+    if coint_trend is not None:
+        f = coint_trend  #matlab has separate options
+
+    x     = detrend(x,p)
+    dx    = tdiff(x,1, axis=0)
+    #dx    = trimr(dx,1,0)
+    z     = mlag(dx,k)#[k-1:]
+    z = trimr(z,k,0)
+    z     = detrend(z,f)
+
+    dx = trimr(dx,k,0)
+
+    dx    = detrend(dx,f)
+    #r0t   = dx - z*(z\dx)
+    r0t   = resid(dx, z)  #diff on lagged diffs
+    #lx = trimr(lag(x,k),k,0)
+    lx = lag(x,k)
+    lx = trimr(lx, 1, 0)
+    dx    = detrend(lx,f)
+    #rkt   = dx - z*(z\dx)
+    rkt   = resid(dx, z)  #level on lagged diffs
+    skk   = np.dot(rkt.T, rkt) / rkt.shape[0]
+    sk0   = np.dot(rkt.T, r0t) / rkt.shape[0]
+    s00   = np.dot(r0t.T, r0t) / r0t.shape[0]
+    sig   = np.dot(sk0, np.dot(inv(s00), (sk0.T)))
+    tmp   = inv(skk)
+    #du, au = np.linalg.eig(np.dot(tmp, sig))
+    au, du = np.linalg.eig(np.dot(tmp, sig))  #au is eval, du is evec
+    #orig = np.dot(tmp, sig)
+
+    #% Normalize the eigen vectors such that (du'skk*du) = I
+    temp   = inv(np.linalg.cholesky(np.dot(du.T, np.dot(skk, du))))
+    dt     = np.dot(du, temp)
+
+
+    #JP: the next part can be done much  easier
+
+    #%      NOTE: At this point, the eigenvectors are aligned by column. To
+    #%            physically move the column elements using the MATLAB sort,
+    #%            take the transpose to put the eigenvectors across the row
+
+    #dt = transpose(dt)
+
+    #% sort eigenvalues and vectors
+
+    #au, auind = np.sort(diag(au))
+    auind = np.argsort(au)
+    #a = np.flipud(au)
+    aind = np.flipud(auind)
+    a = au[aind]
+    #d = dt[aind,:]
+    d = dt[:,aind]
+
+    #%NOTE: The eigenvectors have been sorted by row based on auind and moved to array "d".
+    #%      Put the eigenvectors back in column format after the sort by taking the
+    #%      transpose of "d". Since the eigenvectors have been physically moved, there is
+    #%      no need for aind at all. To preserve existing programming, aind is reset back to
+    #%      1, 2, 3, ....
+
+    #d  =  transpose(d)
+    #test = np.dot(transpose(d), np.dot(skk, d))
+
+    #%EXPLANATION:  The MATLAB sort function sorts from low to high. The flip realigns
+    #%auind to go from the largest to the smallest eigenvalue (now aind). The original procedure
+    #%physically moved the rows of dt (to d) based on the alignment in aind and then used
+    #%aind as a column index to address the eigenvectors from high to low. This is a double
+    #%sort. If you wanted to extract the eigenvector corresponding to the largest eigenvalue by,
+    #%using aind as a reference, you would get the correct eigenvector, but with sorted
+    #%coefficients and, therefore, any follow-on calculation would seem to be in error.
+    #%If alternative programming methods are used to evaluate the eigenvalues, e.g. Frame method
+    #%followed by a root extraction on the characteristic equation, then the roots can be
+    #%quickly sorted. One by one, the corresponding eigenvectors can be generated. The resultant
+    #%array can be operated on using the Cholesky transformation, which enables a unit
+    #%diagonalization of skk. But nowhere along the way are the coefficients within the
+    #%eigenvector array ever changed. The final value of the "beta" array using either method
+    #%should be the same.
+
+
+    #% Compute the trace and max eigenvalue statistics */
+    lr1 = np.zeros(m)
+    lr2 = np.zeros(m)
+    cvm = np.zeros((m,3))
+    cvt = np.zeros((m,3))
+    iota = np.ones(m)
+    t, junk = rkt.shape
+    for i in range(0, m):
+        tmp = trimr(np.log(iota-a), i ,0)
+        lr1[i] = -t * np.sum(tmp, 0)  #columnsum ?
+        #tmp = np.log(1-a)
+        #lr1[i] = -t * np.sum(tmp[i:])
+        lr2[i] = -t * np.log(1-a[i])
+        cvm[i,:] = c_sja(m-i,p)
+        cvt[i,:] = c_sjt(m-i,p)
+        aind[i] = i
+    #end
+
+    result = Holder()
+    #% set up results structure
+    #estimation results, residuals
+    result.rkt = rkt
+    result.r0t = r0t
+    result.eig = a
+    result.evec = d  #transposed compared to matlab ?
+    result.lr1 = lr1
+    result.lr2 = lr2
+    result.cvt = cvt
+    result.cvm = cvm
+    result.ind = aind
+    result.meth = 'johansen'
+
+    return result
 
 
 class VECM(tsbase.TimeSeriesModel):
@@ -1402,7 +1488,8 @@ class VECMResults(object):
         y = self.y_all.T
         y = y[self.k_ar:] if n_last_obs is None else y[-n_last_obs:]
         plot.plot_var_forc(y, mid, lower, upper, names=self.names,
-                           plot_stderr=plot_conf_int)
+                           plot_stderr=plot_conf_int,
+                           legend_options={"loc": "lower left"})
 
     def test_granger_causality(self, caused, causing=None, signif=0.05,
                                verbose=True):
