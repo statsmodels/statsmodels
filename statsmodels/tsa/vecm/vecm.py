@@ -399,7 +399,32 @@ def _sij(delta_x, delta_y_1_T, y_min1):
     return s00, s01, s10, s11, s11_, lambd, v
 
 
-def coint_johansen(x, p, k, coint_trend=None):
+def coint_johansen(endog_tot, det_order, k_ar, coint_trend=None):
+    """
+    Perform the Johansen cointegration test for determining the cointegration
+    rank of a VECM.
+
+    Parameters
+    ----------
+    endog_tot : array-like (nobs_tot x neqs)
+
+    det_order : int
+        * -1 - no deterministic terms
+        * 0 - constant term
+        * 1 - linear trend
+        * >1 - higher polynomial order
+    k_ar : int, nonnegative
+        Number of lagged differences in the model.
+    coint_trend
+
+    Returns
+    -------
+    result : Holder
+        An object containing the results which can be accessed using
+        dot-notation.
+    """
+    # TODO: describe coint_trend argument.
+
     from statsmodels.regression.linear_model import OLS
     tdiff = np.diff
 
@@ -415,13 +440,14 @@ def coint_johansen(x, p, k, coint_trend=None):
     import statsmodels.tsa.tsatools as tsat
     mlag = tsat.lagmat
 
-    def lag(x, lag):
-        return x[:-lag]
+    def lag(x, lags):
+        return x[:-lags]
 
     def detrend(y, order):
         if order == -1:
             return y
-        return OLS(y, np.vander(np.linspace(-1,1,len(y)), order+1)).fit().resid
+        return OLS(y, np.vander(np.linspace(-1, 1, len(y)),
+                                order+1)).fit().resid
 
     def resid(y, x):
         if x.size == 0:
@@ -429,55 +455,49 @@ def coint_johansen(x, p, k, coint_trend=None):
         r = y - np.dot(x, np.dot(np.linalg.pinv(x), y))
         return r
 
+    nobs, neqs = endog_tot.shape
 
-    #    % error checking on inputs
-    #    if (nargin ~= 3)
-    #     error('Wrong # of inputs to johansen')
-    #    end
-    nobs, m = x.shape
-
-    #why this?  f is detrend transformed series, p is detrend data
-    if (p > -1):
+    # why this?  f is detrend transformed series, det_order is detrend data
+    if det_order > -1:
         f = 0
     else:
-        f = p
+        f = det_order
 
     if coint_trend is not None:
-        f = coint_trend  #matlab has separate options
+        f = coint_trend  # matlab has separate options
 
-    x     = detrend(x,p)
-    dx    = tdiff(x,1, axis=0)
-    #dx    = trimr(dx,1,0)
-    z     = mlag(dx,k)#[k-1:]
-    z = trimr(z,k,0)
-    z     = detrend(z,f)
+    endog_tot = detrend(endog_tot, det_order)
+    dx = tdiff(endog_tot, 1, axis=0)
+    # dx = trimr(dx, 1, 0)
+    z = mlag(dx, k_ar)  # [k_ar-1:]
+    z = trimr(z, k_ar, 0)
+    z = detrend(z, f)
 
-    dx = trimr(dx,k,0)
+    dx = trimr(dx, k_ar, 0)
 
-    dx    = detrend(dx,f)
-    #r0t   = dx - z*(z\dx)
-    r0t   = resid(dx, z)  #diff on lagged diffs
-    #lx = trimr(lag(x,k),k,0)
-    lx = lag(x,k)
+    dx = detrend(dx, f)
+    # r0t = dx - z*(z\dx)
+    r0t = resid(dx, z)  # diff on lagged diffs
+    # lx = trimr(lag(endog_tot,k_ar), k_ar, 0)
+    lx = lag(endog_tot, k_ar)
     lx = trimr(lx, 1, 0)
-    dx    = detrend(lx,f)
-    #rkt   = dx - z*(z\dx)
-    rkt   = resid(dx, z)  #level on lagged diffs
-    skk   = np.dot(rkt.T, rkt) / rkt.shape[0]
-    sk0   = np.dot(rkt.T, r0t) / rkt.shape[0]
-    s00   = np.dot(r0t.T, r0t) / r0t.shape[0]
-    sig   = np.dot(sk0, np.dot(inv(s00), (sk0.T)))
-    tmp   = inv(skk)
-    #du, au = np.linalg.eig(np.dot(tmp, sig))
-    au, du = np.linalg.eig(np.dot(tmp, sig))  #au is eval, du is evec
-    #orig = np.dot(tmp, sig)
+    dx = detrend(lx, f)
+    # rkt = dx - z*(z\dx)
+    rkt = resid(dx, z)  # level on lagged diffs
+    skk = np.dot(rkt.T, rkt) / rkt.shape[0]
+    sk0 = np.dot(rkt.T, r0t) / rkt.shape[0]
+    s00 = np.dot(r0t.T, r0t) / r0t.shape[0]
+    sig = np.dot(sk0, np.dot(inv(s00), sk0.T))
+    tmp = inv(skk)
+    # du, au = np.linalg.eig(np.dot(tmp, sig))
+    au, du = np.linalg.eig(np.dot(tmp, sig))  # au is eval, du is evec
+    # orig = np.dot(tmp, sig)
 
-    #% Normalize the eigen vectors such that (du'skk*du) = I
-    temp   = inv(np.linalg.cholesky(np.dot(du.T, np.dot(skk, du))))
-    dt     = np.dot(du, temp)
+    # % Normalize the eigen vectors such that (du'skk*du) = I
+    temp = inv(np.linalg.cholesky(np.dot(du.T, np.dot(skk, du))))
+    dt = np.dot(du, temp)
 
-
-    #JP: the next part can be done much  easier
+    # JP: the next part can be done much  easier
 
     #%      NOTE: At this point, the eigenvectors are aligned by column. To
     #%            physically move the column elements using the MATLAB sort,
@@ -487,13 +507,13 @@ def coint_johansen(x, p, k, coint_trend=None):
 
     #% sort eigenvalues and vectors
 
-    #au, auind = np.sort(diag(au))
+    # au, auind = np.sort(diag(au))
     auind = np.argsort(au)
-    #a = np.flipud(au)
+    # a = np.flipud(au)
     aind = np.flipud(auind)
     a = au[aind]
-    #d = dt[aind,:]
-    d = dt[:,aind]
+    # d = dt[aind, :]
+    d = dt[:, aind]
 
     #%NOTE: The eigenvectors have been sorted by row based on auind and moved to array "d".
     #%      Put the eigenvectors back in column format after the sort by taking the
@@ -501,8 +521,8 @@ def coint_johansen(x, p, k, coint_trend=None):
     #%      no need for aind at all. To preserve existing programming, aind is reset back to
     #%      1, 2, 3, ....
 
-    #d  =  transpose(d)
-    #test = np.dot(transpose(d), np.dot(skk, d))
+    # d  =  transpose(d)
+    # test = np.dot(transpose(d), np.dot(skk, d))
 
     #%EXPLANATION:  The MATLAB sort function sorts from low to high. The flip realigns
     #%auind to go from the largest to the smallest eigenvalue (now aind). The original procedure
@@ -519,32 +539,29 @@ def coint_johansen(x, p, k, coint_trend=None):
     #%eigenvector array ever changed. The final value of the "beta" array using either method
     #%should be the same.
 
-
     #% Compute the trace and max eigenvalue statistics */
-    lr1 = np.zeros(m)
-    lr2 = np.zeros(m)
-    cvm = np.zeros((m,3))
-    cvt = np.zeros((m,3))
-    iota = np.ones(m)
+    lr1 = np.zeros(neqs)
+    lr2 = np.zeros(neqs)
+    cvm = np.zeros((neqs, 3))
+    cvt = np.zeros((neqs, 3))
+    iota = np.ones(neqs)
     t, junk = rkt.shape
-    for i in range(0, m):
-        tmp = trimr(np.log(iota-a), i ,0)
-        lr1[i] = -t * np.sum(tmp, 0)  #columnsum ?
-        #tmp = np.log(1-a)
-        #lr1[i] = -t * np.sum(tmp[i:])
+    for i in range(0, neqs):
+        tmp = trimr(np.log(iota-a), i, 0)
+        lr1[i] = -t * np.sum(tmp, 0)  # columnsum ?
+        # tmp = np.log(1-a)
+        # lr1[i] = -t * np.sum(tmp[i:])
         lr2[i] = -t * np.log(1-a[i])
-        cvm[i,:] = c_sja(m-i,p)
-        cvt[i,:] = c_sjt(m-i,p)
+        cvm[i, :] = c_sja(neqs - i, det_order)
+        cvt[i, :] = c_sjt(neqs - i, det_order)
         aind[i] = i
-    #end
 
     result = Holder()
-    #% set up results structure
-    #estimation results, residuals
+    # estimation results, residuals
     result.rkt = rkt
     result.r0t = r0t
     result.eig = a
-    result.evec = d  #transposed compared to matlab ?
+    result.evec = d  # transposed compared to matlab ?
     result.lr1 = lr1
     result.lr2 = lr2
     result.cvt = cvt
