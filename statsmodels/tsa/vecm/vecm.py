@@ -11,6 +11,7 @@ import scipy.stats
 
 from statsmodels.compat.python import range, string_types, iteritems
 from statsmodels.iolib.summary import Summary
+from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import chain_dot
 from statsmodels.tsa.tsatools import duplication_matrix, vec
@@ -107,7 +108,7 @@ def _linear_trend(nobs, k_ar, coint=False):
     nobs : int
         Number of observations excluding the presample.
     k_ar : int
-        Number of lagged differences.
+        Number of lags in levels.
     coint : boolean, default: False
         If True (False), the returned array represents a linear trend inside
         (outside) the cointegration relation.
@@ -399,6 +400,77 @@ def _sij(delta_x, delta_y_1_T, y_min1):
     return s00, s01, s10, s11, s11_, lambd, v
 
 
+def select_coint_rank(endog_tot, det_order, k_ar, coint_trend=None,
+                      method="trace", signif=0.95, verbose=True):
+    """
+    Calculate the cointegration rank of a VECM.
+
+    Parameters
+    ----------
+    endog_tot : array-like (nobs_tot x neqs)
+        The data with presample.
+    det_order : int
+        * -1 - no deterministic terms
+        * 0 - constant term
+        * 1 - linear trend
+        * >1 - higher polynomial order
+    k_ar : int, nonnegative
+        Number of lagged differences in the model.
+    coint_trend
+    method : str, {"trace", "maxeig"}, default: "trace"
+        If "trace", the trace test statistic is used. If "maxeig", the
+        maximum eigenvalue test statistic is used.
+    signif : float, {0.9, 0.95, 0.99}, default: 0.95
+        The test's significance level.
+
+    Returns
+    -------
+    rank : int
+        The cointegration rank suggested by the test.
+    """
+
+    if method not in ["trace", "maxeig"]:
+        raise ValueError("The method argument has to be either 'trace' or"
+                         "'maximum eigenvalue'.")
+
+    possible_signif_values = [0.9, 0.95, 0.99]
+    if signif not in possible_signif_values:
+        raise ValueError("Please choose a significance level from {0.9, 0.95,"
+                         "0.99}")
+
+    coint_result = coint_johansen(endog_tot, det_order, k_ar, coint_trend)
+    neqs = endog_tot.shape[1]
+    r_0 = 0  # rank in null hypothesis
+    test_stat = coint_result.lr1 if method == "trace" else coint_result.lr2
+    crit_vals = coint_result.cvt if method == "trace" else coint_result.cvm
+    signif_index = possible_signif_values.index(signif)
+
+    verbose_data = []
+    while r_0 < neqs:
+        r_1 = neqs if method == "trace" else (r_0 + 1)
+        test_statistic = test_stat[r_0]
+        critical_value = crit_vals[r_0, signif_index]
+
+        if verbose:
+            verbose_data.append([r_0, r_1, round(test_statistic, 4),
+                                 critical_value])
+
+        if test_statistic < critical_value:
+            break  # we accept current rank
+        else:
+            r_0 += 1  # we reject current rank and test next possible rank
+
+    if verbose:
+        headers = ["r_0", "r_1", "test statistic", "critical value"]
+        title = "Johansen cointegration test using " + \
+                ("trace" if method == "trace" else "maximum eigenvalue") + \
+                " test statistic with " + str(round(signif*100)) + \
+                "% significance level"
+        print(SimpleTable(data=verbose_data, headers=headers, title=title))
+
+    return r_0
+
+
 def coint_johansen(endog_tot, det_order, k_ar, coint_trend=None):
     """
     Perform the Johansen cointegration test for determining the cointegration
@@ -407,7 +479,7 @@ def coint_johansen(endog_tot, det_order, k_ar, coint_trend=None):
     Parameters
     ----------
     endog_tot : array-like (nobs_tot x neqs)
-
+        The data with presample.
     det_order : int
         * -1 - no deterministic terms
         * 0 - constant term
@@ -421,7 +493,34 @@ def coint_johansen(endog_tot, det_order, k_ar, coint_trend=None):
     -------
     result : Holder
         An object containing the results which can be accessed using
-        dot-notation.
+        dot-notation. The object's attributes are
+            * eig: (neqs)
+                Eigenvalues.
+            * evec: (neqs x neqs)
+                Eigenvectors.
+            * lr1: (neqs)
+                Trace statistic.
+            * lr2: (neqs)
+                Maximum eigenvalue statistic.
+            * cvt: (neqs x 3)
+                Critical values (90%, 95%, 99%) for trace statistic.
+            * cvm: (neqs x 3)
+                Critical values (90%, 95%, 99%) for maximum eigenvalue
+                statistic.
+            * method: str
+                "johansen"
+            * r0t: (nobs x neqs)
+                Residuals for :math:`\\Delta Y`. See eq. (7.2.13) on p.292 in
+                [1]_.
+            * rkt: (nobs x neqs)
+                Residuals for :math:`Y_{-1}`. See eq. (7.2.13) on p. 292 in
+                [1]_.
+            * ind: (neqs)
+                Order of eigenvalues.
+
+    References
+    ----------
+    .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
     # TODO: describe coint_trend argument.
 

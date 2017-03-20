@@ -12,7 +12,7 @@ from statsmodels.tsa.vecm.tests.JMulTi_results.parse_jmulti_output import \
 from statsmodels.tsa.vector_ar.util import seasonal_dummies
 from .JMulTi_results.parse_jmulti_output import load_results_jmulti
 from .JMulTi_results.parse_jmulti_output import dt_s_tup_to_string
-from statsmodels.tsa.vecm.vecm import VECM, select_order
+from statsmodels.tsa.vecm.vecm import VECM, select_order, select_coint_rank
 from statsmodels.tsa.vector_ar.var_model import VARProcess
 
 
@@ -61,7 +61,8 @@ deterministic_terms_list = ["nc", "co", "colo", "ci", "cili"]
 all_tests = ["Gamma", "alpha", "beta", "C", "det_coint", "Sigma_u",
              "VAR repr. A", "VAR to VEC representation", "log_like", "fc",
              "granger", "inst. causality", "impulse-response", "lag order",
-             "test_norm", "whiteness", "summary", "exceptions"]
+             "test_norm", "whiteness", "summary", "exceptions",
+             "select_coint_rank"]
 to_test = all_tests  # ["beta"]
 
 
@@ -1364,6 +1365,13 @@ def test_exceptions():
     ds = datasets[0]
     dt = ds.dt_s_list[0]
     endog = data[datasets[0]]
+
+    # select_coint_rank:
+    yield assert_raises, ValueError, select_coint_rank, endog, 0, 3, "trace", \
+        0.975  # 0.975 is not possible (must be 0.9, 0.95 or 0.99)
+    yield assert_raises, ValueError, select_coint_rank, endog, 0, 3, \
+        "my_method", 0.95  # method argument cannot be "my_method"
+
     # Granger_causality:
     # ### 0<signif<1
     yield assert_raises, ValueError,\
@@ -1432,6 +1440,16 @@ def test_exceptions():
             vecm_res.predict, 5, None, exog_coint_fc  # passed as exog_fc-argument!
     except ImportError:  # we skip the test in the try-block if we
         pass             # can't import assert_raises_regex.
+
+
+def test_select_coint_rank():  # This is only a smoke test.
+    if debug_mode:
+        if "select_coint_rank" not in to_test:
+            return
+        else:
+            print("\n\nSELECT_COINT_RANK\n", end="")
+    endog = data[datasets[0]]
+    select_coint_rank(endog, 0, 3)
 
 
 def setup():
