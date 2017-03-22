@@ -11,7 +11,8 @@ from numpy.testing import assert_almost_equal, assert_equal
 from statsmodels.tsa.vecm.vecm import coint_johansen
 
 current_path = os.path.dirname(os.path.abspath(__file__))
-dta = np.genfromtxt(open(current_path + "/test_coint.csv", "rb"))
+dta = np.genfromtxt(open(os.path.join(current_path, "Matlab_results",
+                                      "test_coint.csv"), "rb"))
 
 
 class CheckCointJoh(object):
