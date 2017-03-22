@@ -16,7 +16,9 @@ from numpy.testing import (assert_, assert_raises, assert_almost_equal,
                            assert_array_less)
 
 from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
-                                                 Poisson, NegativeBinomial)
+                                                Poisson, NegativeBinomial,
+                                                CountModel
+                                                )
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
@@ -1460,6 +1462,34 @@ def test_formula_missing_exposure():
     exposure = pd.Series(np.random.randn(5))
     assert_raises(ValueError, sm.Poisson, df.Foo, df[['constant', 'Bar']],
                   exposure=exposure)
+
+def test_predict_with_exposure():
+    # Case where CountModel.predict is called with exog = None and exposure
+    # or offset not-None
+    # See 3565
+
+    # Setup copied from test_formula_missing_exposure
+    import pandas as pd
+    d = {'Foo': [1, 2, 10, 149], 'Bar': [1, 2, 3, 4],
+         'constant': [1] * 4, 'exposure' : [np.exp(1)]*4,
+         'x': [1, 3, 2, 1.5]}
+    df = pd.DataFrame(d)
+    
+    mod1 = CountModel.from_formula('Foo ~ Bar', data=df, exposure=df['exposure'])
+    
+    params = np.array([1, .4])
+    pred = mod1.predict(params, linear=True)
+    # No exposure is passed, so default to using mod1.exposure, which
+    # should have been logged
+    X = df[['constant', 'Bar']].values # mod1.exog
+    expected = np.dot(X, params) + 1
+    assert_allclose(pred, expected)
+    # The above should have passed without the current patch.  The next
+    # test would fail under the old code
+
+    pred2 = mod1.predict(params, exposure=[np.exp(2)]*4, linear=True)
+    expected2 = expected + 1
+    assert_allclose(pred2, expected2)
 
 
 def test_binary_pred_table_zeros():
