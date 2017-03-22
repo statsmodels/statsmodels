@@ -4,10 +4,11 @@ library(tsDyn)
 dta = read.table("E6_jmulti.csv", header = FALSE, sep = " ")
 
 det.terms <- c("co", "cc", "colt", "cclt", "colc", "cclc")
-det.outside.coint <- "none"
-det.inside.coint <- "none"
 
 for(dt in det.terms){
+  det.outside.coint <- "none"
+  det.inside.coint <- "none"
+
   if(grepl("co", dt))  # python: if "co" in dt:
   {
     det.outside.coint <- "const"
