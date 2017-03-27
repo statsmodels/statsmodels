@@ -7,8 +7,30 @@ Author: Josef Perktold
 """
 from __future__ import division
 
+import numbers
 import numpy as np
 from scipy.special import gammaln
+
+
+# copy-pasted from scipy which copy-pasted from scikit-learn utils/validation.py
+# temporary location, will need to be more central in utils.
+def check_random_state(seed):
+    """Turn seed into a np.random.RandomState instance
+
+    If seed is None (or np.random), return the RandomState singleton used
+    by np.random.
+    If seed is an int, return a new RandomState instance seeded with seed.
+    If seed is already a RandomState instance, return it.
+    Otherwise raise ValueError.
+    """
+    if seed is None or seed is np.random:
+        return np.random.mtrand._rand
+    if isinstance(seed, (numbers.Integral, np.integer)):
+        return np.random.RandomState(seed)
+    if isinstance(seed, np.random.RandomState):
+        return seed
+    raise ValueError('%r cannot be used to seed a numpy.random.RandomState'
+                     ' instance' % seed)
 
 
 def _logfactsum(x, axis=None):
@@ -20,7 +42,7 @@ def _logfactsum(x, axis=None):
     return gammaln(x + 1).sum(axis)
 
 
-def simulate_table_permutation_gen(n_row, n_col):
+def simulate_table_permutation_gen(n_row, n_col, seed=None):
     """generator for random contingency table by permutation
 
     This is a generator, that yields the next random table.
@@ -47,6 +69,7 @@ def simulate_table_permutation_gen(n_row, n_col):
     This could be extended to more than two dimensional contingency tables.
 
     """
+    rng = check_random_state(seed)
     n_row = np.asarray(n_row, np.int64)
     n_col = np.asarray(n_col, np.int64)
     k_rows = len(n_row)
@@ -55,13 +78,13 @@ def simulate_table_permutation_gen(n_row, n_col):
     g1 = np.repeat(np.arange(k_rows), n_row)
     g2 = np.repeat(np.arange(k_cols), n_col)
     while True:
-        np.random.shuffle(g2)
+        rng.shuffle(g2)
         table = np.bincount(g1 * k_cols + g2, minlength=k_rows * k_cols
                             ).reshape(k_rows, k_cols)
         yield table
 
 
-def simulate_table_conditional(n_row, n_col):
+def simulate_table_conditional(n_row, n_col, seed=None):
     """simulate a contingency table with given margins
 
     This implementation cannot be vectorized and is not a very
@@ -86,6 +109,7 @@ def simulate_table_conditional(n_row, n_col):
 
     Boyett 1979
     """
+    rng = check_random_state(seed)
     n_row = np.asarray(n_row, np.int64)
     n_col = np.asarray(n_col, np.int64)
     transpose = False
@@ -102,7 +126,7 @@ def simulate_table_conditional(n_row, n_col):
     rowcumsum = np.cumsum(np.concatenate(([0], n_row)))
 
     x = np.arange(1, nobs + 1, dtype=np.int64)
-    np.random.shuffle(x)
+    rng.shuffle(x)
     rvs_table = np.zeros((k_rows, k_cols), dtype=np.int64)
     for i_row in range(k_rows):
         row_int = x[rowcumsum[i_row]:rowcumsum[i_row+1]]
