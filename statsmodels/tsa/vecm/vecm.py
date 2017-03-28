@@ -13,21 +13,23 @@ from statsmodels.compat.python import range, string_types, iteritems
 from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tools.tools import chain_dot
 from statsmodels.tsa.tsatools import duplication_matrix, vec
 
 import statsmodels.tsa.base.tsa_model as tsbase
-from statsmodels.tsa.vector_ar import output as var_output, output
 import statsmodels.tsa.vector_ar.irf as irf
 import statsmodels.tsa.vector_ar.plotting as plot
+from statsmodels.tsa.vector_ar.hypothesis_test_results import \
+    CausalityTestResults, NormalityTestResults, WhitenessTestResults
 from statsmodels.tsa.vector_ar.util import get_index, seasonal_dummies
 from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval, \
-    VAR, ma_rep, orth_ma_rep, test_normality
+    VAR, ma_rep, orth_ma_rep, test_normality, LagOrderResults
 from statsmodels.tsa.coint_tables import c_sja, c_sjt
 
 
 def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
-                 exog_coint=None, verbose=True):
+                 exog_coint=None):
     """
     Compute lag order selections based on each of the available information
     criteria.
@@ -39,7 +41,7 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
     maxlags : int
         All orders until maxlag will be compared according to the information
         criteria listed in the Results-section of this docstring.
-    deterministic : str {"nc", "co", "ci", "lo", "li"}, default: "nc"
+    deterministic : str {"nc", "co", "ci", "lo", "li"}
         * "nc" - no deterministic terms
         * "co" - constant outside the cointegration relation
         * "ci" - constant within the cointegration relation
@@ -47,22 +49,20 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
         * "li" - linear trend within the cointegration relation
 
         Combinations of these are possible (e.g. "cili" or "colo" for linear
-        trend with intercept)
+        trend with intercept). When using a constant term you have to choose
+        whether you want to restrict it to the cointegration relation (i.e.
+        "ci") or leave it unrestricted (i.e. "co"). Don't use both "ci" and
+        "co". The same applies for "li" and "lo" in when using a linear term.
     seasons : int, default: 0
-        Number of seasons.
+        Number of periods in a seasonal cycle.
     exog : ndarray (nobs_tot x neqs) or None, default: None
         Deterministic terms outside the cointegration relation.
     exog_coint: ndarray (nobs_tot x neqs) or None, default: None
         Deterministic terms inside the cointegration relation.
-    verbose : bool, default: True
-        If True, print table of info criteria and selected orders
 
     Returns
     -------
-    selected_orders : dict
-        Keys: Information criterion as string. {"aic", "bic", "hqic", "fpe"}
-        Values: Number of lagged differences chosen by the corresponding
-        information criterion.
+    selected_orders : LagOrderResults
     """
     ic = defaultdict(list)
     for p in range(1, maxlags + 2):  # +2 because k_ar_VECM == k_ar_VAR - 1
@@ -91,17 +91,12 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
     selected_orders = dict((ic_name, np.array(ic_value).argmin() - 1 + 1)
                            for ic_name, ic_value in iteritems(ic))
 
-    if verbose:
-        output.print_ic_table(ic, selected_orders, vecm=True)
-
-    return selected_orders
+    return LagOrderResults(ic, selected_orders, True)
 
 
 def _linear_trend(nobs, k_ar, coint=False):
     """
-    Construct an ndarray representing a linear trend in a VECM. Note that the
-    returned array's size is nobs and not nobs_tot so it cannot be used to
-    construct the exog-argument of VECM's __init__ method.
+    Construct an ndarray representing a linear trend in a VECM.
 
     Parameters
     ----------
@@ -117,6 +112,11 @@ def _linear_trend(nobs, k_ar, coint=False):
     -------
     ret : ndarray (nobs)
         An ndarray representing a linear trend in a VECM
+
+    Notes
+    -----
+    The returned array's size is nobs and not nobs_tot so it cannot be used to
+    construct the exog-argument of VECM's __init__ method.
     """
     ret = np.arange(nobs) + k_ar
     if not coint:
@@ -140,7 +140,7 @@ def num_det_vars(det_string, seasons=0):
         Combinations of these are possible (e.g. "cili" or "colo" for linear
         trend with intercept)
     seasons : int
-        Number of seasons.
+        Number of periods in a seasonal cycle.
 
     Returns
     -------
@@ -161,16 +161,19 @@ def num_det_vars(det_string, seasons=0):
 def deterministic_to_exog(deterministic, seasons, nobs_tot, first_season=0,
                           seasons_centered=False, exog=None, exog_coint=None):
     """
-    Use the VECM's deterministic terms to construct an array that is suitable
-    to convey this information to VAR in form of the exog-argument for VAR's
-    __init__ method.
+    Translate all information about deterministic terms into a single array.
+
+    These information is taken from `deterministic` and `seasons` as well as
+    from the `exog` and `exog_coint` arrays. The resulting array form can then
+    be used e.g. in VAR's __init__ method.
 
     Parameters
     ----------
     deterministic : str
-        See VECM's docstring for more information.
+        A string specifying the deterministic terms in the model. See VECM's
+        docstring for more information.
     seasons : int
-        Number of seasons.
+        Number of periods in a seasonal cycle.
     nobs_tot : int
         Number of observations including the presample.
     first_season : int, default: 0
@@ -222,15 +225,17 @@ def _mat_sqrt(_2darray):
     """
     u_, s_, v_ = svd(_2darray, full_matrices=False)
     s_ = np.sqrt(s_)
-    return chain_dot(u_, np.diag(s_), v_)
+    return u_.dot(s_[:, None] * v_)
 
 
 def _endog_matrices(endog_tot, exog, exog_coint, diff_lags, deterministic,
                     seasons=0, first_season=0):
-    """Returns different matrices needed for parameter estimation (compare p.
-    186 in [1]_). These matrices consist of elements of the data as well as
-    elements representing deterministic terms. A tuple of consisting of these
-    matrices is returned.
+    """
+    Returns different matrices needed for parameter estimation.
+
+    Compare p. 186 in [1]_. The returned matrices consist of elements of the
+    data as well as elements representing deterministic terms. A tuple of
+    consisting of these matrices is returned.
 
     Parameters
     ----------
@@ -250,9 +255,12 @@ def _endog_matrices(endog_tot, exog, exog_coint, diff_lags, deterministic,
         * "li" - linear trend within the cointegration relation
 
         Combinations of these are possible (e.g. "cili" or "colo" for linear
-        trend with intercept)
+        trend with intercept). When using a constant term you have to choose
+        whether you want to restrict it to the cointegration relation (i.e.
+        "ci") or leave it unrestricted (i.e. "co"). Don't use both "ci" and
+        "co". The same applies for "li" and "lo" in when using a linear term.
     seasons : int, default: 0
-        Number of seasons. 0 (default) means no seasons.
+        Number of periods in a seasonal cycle. 0 (default) means no seasons.
     first_season : int, default: 0
         The season of the first observation. `0` means first season, `1` means
         second season, ..., `seasons-1` means the last season.
@@ -261,14 +269,18 @@ def _endog_matrices(endog_tot, exog, exog_coint, diff_lags, deterministic,
     -------
     y_1_T : ndarray (neqs x nobs)
         The (transposed) data without the presample.
-        .. math:: (y_1, \ldots, y_T)
+        .. math:: (y_1, \\ldots, y_T)
     delta_y_1_T : ndarray (neqs x nobs)
-        .. math:: (y_1, \ldots, y_T) - (y_0, \ldots, y_{T-1})
-    y_min1 : ndarray (neqs x nobs)
+        The first differences of endog.
+        .. math:: (y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})
+    y_lag1 : ndarray (neqs x nobs)
         (dimensions assuming no deterministic terms are given)
-        .. math:: (y_0, \ldots, y_{T-1}
+        Endog of the previous period (lag 1).
+        .. math:: (y_0, \\ldots, y_{T-1})
     delta_x : ndarray (diff_lags*neqs x nobs)
         (dimensions assuming no deterministic terms are given)
+        Lagged differenced endog, used as regressor for the short term
+        equation.
 
     References
     ----------
@@ -283,18 +295,18 @@ def _endog_matrices(endog_tot, exog, exog_coint, diff_lags, deterministic,
     delta_y = np.diff(y)
     delta_y_1_T = delta_y[:, p-1:]
 
-    y_min1 = y[:, p-1:-1]
+    y_lag1 = y[:, p-1:-1]
     if "co" in deterministic and "ci" in deterministic:
         raise ValueError("Both 'co' and 'ci' as deterministic terms given. " +
                          "Please choose one of the two.")
-    y_min1_stack = [y_min1]
+    y_lag1_stack = [y_lag1]
     if "ci" in deterministic:  # pp. 257, 299, 306, 307
-        y_min1_stack.append(np.ones(T))
+        y_lag1_stack.append(np.ones(T))
     if "li" in deterministic:  # p. 299
-        y_min1_stack.append(_linear_trend(T, p, coint=True))
+        y_lag1_stack.append(_linear_trend(T, p, coint=True))
     if exog_coint is not None:
-        y_min1_stack.append(exog_coint[-T-1:-1].T)
-    y_min1 = np.row_stack(y_min1_stack)
+        y_lag1_stack.append(exog_coint[-T-1:-1].T)
+    y_lag1 = np.row_stack(y_lag1_stack)
 
     # p. 286:
     delta_x = np.zeros((diff_lags*K, T))
@@ -316,24 +328,26 @@ def _endog_matrices(endog_tot, exog, exog_coint, diff_lags, deterministic,
         delta_x_stack.append(exog[-T:].T)
     delta_x = np.row_stack(delta_x_stack)
 
-    return y_1_T, delta_y_1_T, y_min1, delta_x
+    return y_1_T, delta_y_1_T, y_lag1, delta_x
 
 
-def _r_matrices(T, delta_x, delta_y_1_T, y_min1):
+def _r_matrices(delta_y_1_T, y_lag1, delta_x):
     """Returns two ndarrays needed for parameter estimation as well as the
     calculation of standard errors.
 
     Parameters
     ----------
-    T : int
-        nobs
+    delta_y_1_T : ndarray (neqs x nobs)
+        The first differences of endog.
+        .. math:: (y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})
+    y_lag1 : ndarray (neqs x nobs)
+        (dimensions assuming no deterministic terms are given)
+        Endog of the previous period (lag 1).
+        .. math:: (y_0, \\ldots, y_{T-1})
     delta_x : ndarray (diff_lags*neqs x nobs)
         (dimensions assuming no deterministic terms are given)
-    delta_y_1_T : ndarray (neqs x nobs)
-        :math:`(y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})`
-    y_min1 : ndarray (neqs x nobs)
-        (dimensions assuming no deterministic terms are given)
-        :math:`(y_0, \\ldots, y_{T-1}`
+        Lagged differenced endog, used as regressor for the short term
+        equation.
 
     Returns
     -------
@@ -347,14 +361,15 @@ def _r_matrices(T, delta_x, delta_y_1_T, y_min1):
     """
 
     # todo: rewrite m such that a big (TxT) matrix is avoided
-    m = np.identity(T) - (
+    nobs = y_lag1.shape[1]
+    m = np.identity(nobs) - (
         delta_x.T.dot(inv(delta_x.dot(delta_x.T))).dot(delta_x))  # p. 291
     r0 = delta_y_1_T.dot(m)  # p. 292
-    r1 = y_min1.dot(m)
+    r1 = y_lag1.dot(m)
     return r0, r1
 
 
-def _sij(delta_x, delta_y_1_T, y_min1):
+def _sij(delta_x, delta_y_1_T, y_lag1):
     """Returns matrices and eigenvalues and -vectors used for parameter
     estimation and the calculation of a models loglikelihood.
 
@@ -364,9 +379,9 @@ def _sij(delta_x, delta_y_1_T, y_min1):
         (dimensions assuming no deterministic terms are given)
     delta_y_1_T : ndarray (neqs x nobs)
         :math:`(y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})`
-    y_min1 : ndarray (neqs x nobs)
+    y_lag1 : ndarray (neqs x nobs)
         (dimensions assuming no deterministic terms are given)
-        :math:`(y_0, \\ldots, y_{T-1}`
+        :math:`(y_0, \\ldots, y_{T-1})`
 
     Returns
     -------
@@ -381,12 +396,12 @@ def _sij(delta_x, delta_y_1_T, y_min1):
     ----------
     .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
-    T = y_min1.shape[1]
-    r0, r1 = _r_matrices(T, delta_x, delta_y_1_T, y_min1)
-    s00 = np.dot(r0, r0.T) / T
-    s01 = np.dot(r0, r1.T) / T
+    nobs = y_lag1.shape[1]
+    r0, r1 = _r_matrices(delta_y_1_T, y_lag1, delta_x)
+    s00 = np.dot(r0, r0.T) / nobs
+    s01 = np.dot(r0, r1.T) / nobs
     s10 = s01.T
-    s11 = np.dot(r1, r1.T) / T
+    s11 = np.dot(r1, r1.T) / nobs
     s11_ = inv(_mat_sqrt(s11))
     # p. 295:
     s01_s11_ = np.dot(s01, s11_)
@@ -400,20 +415,72 @@ def _sij(delta_x, delta_y_1_T, y_min1):
     return s00, s01, s10, s11, s11_, lambd, v
 
 
-def select_coint_rank(endog_tot, det_order, k_ar, method="trace", signif=0.95,
-                      verbose=True):
+class CointRankResults:
+    """
+    A class for holding the results from testing the cointegration rank.
+
+    Parameters
+    ----------
+    rank : int (0 <= rank <= neqs)
+        The rank to choose according to the Johansen cointegration rank
+        test.
+    neqs : int
+        Number of variables in the time series.
+    test_stats : array-like (rank+1)
+        A one-dimensional array-like object containing the test statistics of
+        the conducted tests.
+    crit_vals : array-like (rank+1)
+        A one-dimensional array-like object containing the critical values
+        corresponding to the entries in the test_stats argument.
+    method : str, {"trace", "maxeig"}, default: "trace"
+        If "trace", the trace test statistic is used. If "maxeig", the
+        maximum eigenvalue test statistic is used.
+    signif : float, {0.9, 0.95, 0.99}, default: 0.95
+        The test's significance level.
+    """
+    def __init__(self, rank, neqs, test_stats, crit_vals, method="trace",
+                 signif=0.95):
+        self.rank = rank
+        self.r_1 = [neqs if method == "trace" else i+1
+                    for i in range(min(rank+1, neqs))]
+        self.test_stats = test_stats
+        self.crit_vals = crit_vals
+        self.method = method
+        self.signif = signif
+
+    def summary(self):
+        headers = ["r_0", "r_1", "test statistic", "critical value"]
+        title = "Johansen cointegration test using " + \
+            ("trace" if self.method == "trace" else "maximum eigenvalue") + \
+            " test statistic with " + str(round(self.signif*100)) + \
+            "% significance level"
+        data = [[i, self.r_1[i], self.test_stats[i], self.crit_vals[i]]
+                for i in range(self.rank+1)]
+        data_fmt = {"data_fmts": ["%s", "%s", "%#0.4g", "%#0.4g"],
+                    "data_aligns": "r"}
+        html_data_fmt = dict(data_fmt)
+        html_data_fmt["data_fmts"] = ["<td>" + i + "</td>"
+                                      for i in html_data_fmt["data_fmts"]]
+        return SimpleTable(data=data, headers=headers, title=title,
+                           txt_fmt=data_fmt, html_fmt=html_data_fmt,
+                           ltx_fmt=data_fmt)
+
+    def __str__(self):
+        return self.summary().as_text()
+
+
+def select_coint_rank(endog, det_order, k_ar, method="trace", signif=0.95):
     """
     Calculate the cointegration rank of a VECM.
 
     Parameters
     ----------
-    endog_tot : array-like (nobs_tot x neqs)
+    endog : array-like (nobs_tot x neqs)
         The data with presample.
     det_order : int
         * -1 - no deterministic terms
         * 0 - constant term
         * 1 - linear trend
-        * >1 - higher polynomial order
     k_ar : int, nonnegative
         Number of lagged differences in the model.
     method : str, {"trace", "maxeig"}, default: "trace"
@@ -424,66 +491,56 @@ def select_coint_rank(endog_tot, det_order, k_ar, method="trace", signif=0.95,
 
     Returns
     -------
-    rank : int
-        The cointegration rank suggested by the test.
+    rank : CointRankResults
+        A CointRankResults object containing the cointegration rank suggested
+        by the test and allowing a summary to be printed.
     """
-
     if method not in ["trace", "maxeig"]:
         raise ValueError("The method argument has to be either 'trace' or"
                          "'maximum eigenvalue'.")
+
+    if det_order not in [-1, 0, 1]:
+        if type(det_order) == int and det_order > 1:
+            raise ValueError("A det_order greather than 1 is not supported."
+                             "Use a value of -1, 0, or 1.")
+        else:
+            raise ValueError("det_order must be -1, 0, or 1.")
 
     possible_signif_values = [0.9, 0.95, 0.99]
     if signif not in possible_signif_values:
         raise ValueError("Please choose a significance level from {0.9, 0.95,"
                          "0.99}")
 
-    coint_result = coint_johansen(endog_tot, det_order, k_ar)
-    neqs = endog_tot.shape[1]
-    r_0 = 0  # rank in null hypothesis
+    coint_result = coint_johansen(endog, det_order, k_ar)
     test_stat = coint_result.lr1 if method == "trace" else coint_result.lr2
     crit_vals = coint_result.cvt if method == "trace" else coint_result.cvm
     signif_index = possible_signif_values.index(signif)
 
-    verbose_data = []
+    neqs = endog.shape[1]
+    r_0 = 0  # rank in null hypothesis
     while r_0 < neqs:
-        r_1 = neqs if method == "trace" else (r_0 + 1)
-        test_statistic = test_stat[r_0]
-        critical_value = crit_vals[r_0, signif_index]
-
-        if verbose:
-            verbose_data.append([r_0, r_1, round(test_statistic, 4),
-                                 critical_value])
-
-        if test_statistic < critical_value:
+        if test_stat[r_0] < crit_vals[r_0, signif_index]:
             break  # we accept current rank
         else:
             r_0 += 1  # we reject current rank and test next possible rank
 
-    if verbose:
-        headers = ["r_0", "r_1", "test statistic", "critical value"]
-        title = "Johansen cointegration test using " + \
-                ("trace" if method == "trace" else "maximum eigenvalue") + \
-                " test statistic with " + str(round(signif*100)) + \
-                "% significance level"
-        print(SimpleTable(data=verbose_data, headers=headers, title=title))
-
-    return r_0
+    return CointRankResults(r_0, neqs, test_stat[:r_0 + 1],
+                            crit_vals[:r_0 + 1, signif_index], method, signif)
 
 
-def coint_johansen(endog_tot, det_order, k_ar):
+def coint_johansen(endog, det_order, k_ar):
     """
     Perform the Johansen cointegration test for determining the cointegration
     rank of a VECM.
 
     Parameters
     ----------
-    endog_tot : array-like (nobs_tot x neqs)
+    endog : array-like (nobs_tot x neqs)
         The data with presample.
     det_order : int
         * -1 - no deterministic terms
         * 0 - constant term
         * 1 - linear trend
-        * >1 - higher polynomial order
     k_ar : int, nonnegative
         Number of lagged differences in the model.
 
@@ -516,10 +573,23 @@ def coint_johansen(endog_tot, det_order, k_ar):
             * ind: (neqs)
                 Order of eigenvalues.
 
+    Notes
+    -----
+    The implementation might change to make more use of the existing VECM
+    framework.
+
     References
     ----------
     .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
+    import warnings
+    if det_order not in [-1, 0, 1]:
+        warnings.warn("Critical values are only available for a det_order of "
+                      "-1, 0, or 1.", category=HypothesisTestWarning)
+    if endog.shape[1] > 12:  # todo: test with a time series of 13 variables
+        warnings.warn("Critical values are only available for time series "
+                      "with 12 variables at most.",
+                      category=HypothesisTestWarning)
 
     from statsmodels.regression.linear_model import OLS
     tdiff = np.diff
@@ -551,7 +621,7 @@ def coint_johansen(endog_tot, det_order, k_ar):
         r = y - np.dot(x, np.dot(np.linalg.pinv(x), y))
         return r
 
-    nobs, neqs = endog_tot.shape
+    nobs, neqs = endog.shape
 
     # why this?  f is detrend transformed series, det_order is detrend data
     if det_order > -1:
@@ -559,8 +629,8 @@ def coint_johansen(endog_tot, det_order, k_ar):
     else:
         f = det_order
 
-    endog_tot = detrend(endog_tot, det_order)
-    dx = tdiff(endog_tot, 1, axis=0)
+    endog = detrend(endog, det_order)
+    dx = tdiff(endog, 1, axis=0)
     z = mlag(dx, k_ar)
     z = trimr(z, k_ar, 0)
     z = detrend(z, f)
@@ -569,7 +639,7 @@ def coint_johansen(endog_tot, det_order, k_ar):
 
     dx = detrend(dx, f)
     r0t = resid(dx, z)
-    lx = lag(endog_tot, k_ar)
+    lx = lag(endog, k_ar)
     lx = trimr(lx, 1, 0)
     dx = detrend(lx, f)
     rkt = resid(dx, z)  # level on lagged diffs
@@ -622,7 +692,9 @@ def coint_johansen(endog_tot, det_order, k_ar):
 
 class VECM(tsbase.TimeSeriesModel):
     """
-    Fit a VECM process
+    Class representing a Vector Error Correction Model (VECM).
+
+    A VECM process has the following form
     .. math:: \\Delta y_t = \\Pi y_{t-1} + \\Gamma_1 \\Delta y_{t-1} + \\ldots + \\Gamma_{k_ar-1} \\Delta y_{t-k_ar+1} + u_t
     where
     .. math:: \\Pi = \\alpha \\beta'
@@ -649,7 +721,7 @@ class VECM(tsbase.TimeSeriesModel):
     coint_rank : int
         Cointegration rank, equals the rank of the matrix :math:`\\Pi` and the
         number of columns of :math:`\\alpha` and :math:`\\beta`.
-    deterministic : str {"nc", "co", "ci", "lo", "li"}, default: "nc"
+    deterministic : str {"nc", "co", "ci", "lo", "li"}
         * "nc" - no deterministic terms
         * "co" - constant outside the cointegration relation
         * "ci" - constant within the cointegration relation
@@ -657,9 +729,12 @@ class VECM(tsbase.TimeSeriesModel):
         * "li" - linear trend within the cointegration relation
 
         Combinations of these are possible (e.g. "cili" or "colo" for linear
-        trend with intercept)
+        trend with intercept). When using a constant term you have to choose
+        whether you want to restrict it to the cointegration relation (i.e.
+        "ci") or leave it unrestricted (i.e. "co"). Don't use both "ci" and
+        "co". The same applies for "li" and "lo" in when using a linear term.
     seasons : int, default: 0
-        Number of seasons. 0 means no seasons.
+        Number of periods in a seasonal cycle. 0 means no seasons.
     first_season : int, default: 0
         Season of the first observation.
 
@@ -691,8 +766,9 @@ class VECM(tsbase.TimeSeriesModel):
 
     def fit(self, method="ml"):
         """
-        Estimates the parameters of a VECM as described on pp. 269-304 in [1]_
-        and returns a VECMResults object.
+        Estimates the parameters of a VECM.
+
+        The estimation procedure is described on pp. 269-304 in [1]_.
 
         Parameters
         ----------
@@ -715,21 +791,21 @@ class VECM(tsbase.TimeSeriesModel):
                              % (method, "ml"))
 
     def _estimate_vecm_ml(self):
-        y_1_T, delta_y_1_T, y_min1, delta_x = _endog_matrices(
+        y_1_T, delta_y_1_T, y_lag1, delta_x = _endog_matrices(
                 self.y, self.exog, self.exog_coint, self.diff_lags,
                 self.deterministic, self.seasons, self.first_season)
         T = y_1_T.shape[1]
 
-        s00, s01, s10, s11, s11_, _, v = _sij(delta_x, delta_y_1_T, y_min1)
+        s00, s01, s10, s11, s11_, _, v = _sij(delta_x, delta_y_1_T, y_lag1)
 
         beta_tilde = (v[:, :self.coint_rank].T.dot(s11_)).T
         # normalize beta tilde such that eye(r) forms the first r rows of it:
         beta_tilde = np.dot(beta_tilde, inv(beta_tilde[:self.coint_rank]))
         alpha_tilde = s01.dot(beta_tilde).dot(
                 inv(beta_tilde.T.dot(s11).dot(beta_tilde)))
-        gamma_tilde = (delta_y_1_T - alpha_tilde.dot(beta_tilde.T).dot(y_min1)
+        gamma_tilde = (delta_y_1_T - alpha_tilde.dot(beta_tilde.T).dot(y_lag1)
                        ).dot(delta_x.T).dot(inv(np.dot(delta_x, delta_x.T)))
-        temp = (delta_y_1_T - alpha_tilde.dot(beta_tilde.T).dot(y_min1) -
+        temp = (delta_y_1_T - alpha_tilde.dot(beta_tilde.T).dot(y_lag1) -
                 gamma_tilde.dot(delta_x))
         sigma_u_tilde = temp.dot(temp.T) / T
 
@@ -738,13 +814,15 @@ class VECM(tsbase.TimeSeriesModel):
                            gamma_tilde, sigma_u_tilde,
                            deterministic=self.deterministic,
                            seasons=self.seasons, delta_y_1_T=delta_y_1_T,
-                           y_min1=y_min1, delta_x=delta_x, model=self,
+                           y_lag1=y_lag1, delta_x=delta_x, model=self,
                            names=self.endog_names, dates=self.data.dates,
                            first_season=self.first_season)
 
     @property
-    def lagged_param_names(self):
+    def _lagged_param_names(self):
         """
+        Returns parameter names (for Gamma and deterministics) for the summary.
+
         Returns
         -------
         param_names : list of str
@@ -788,8 +866,10 @@ class VECM(tsbase.TimeSeriesModel):
         return param_names
 
     @property
-    def load_coef_param_names(self):
+    def _load_coef_param_names(self):
         """
+        Returns parameter names (for alpha) for the summary.
+
         Returns
         -------
         param_names : list of str
@@ -815,8 +895,9 @@ class VECM(tsbase.TimeSeriesModel):
         return param_names
 
     @property
-    def coint_param_names(self):
+    def _coint_param_names(self):
         """
+        Returns parameter names (for beta and deterministics) for the summary.
 
         Returns
         -------
@@ -850,9 +931,6 @@ class VECM(tsbase.TimeSeriesModel):
         return param_names
 
 
-# -----------------------------------------------------------------------------
-# VECMResults class
-
 class VECMResults(object):
     """Class holding estimation related results of a vector error correction
     model (VECM).
@@ -881,7 +959,7 @@ class VECMResults(object):
         submatrices are stacked horizontally from left to right.
     sigma_u : ndarray (neqs x neqs)
         Estimate of white noise process covariance matrix :math:`\\Sigma_u`.
-    deterministic : str {"nc", "co", "ci", "lo", "li"}, default: "nc"
+    deterministic : str {"nc", "co", "ci", "lo", "li"}
         * "nc" - no deterministic terms
         * "co" - constant outside the cointegration relation
         * "ci" - constant within the cointegration relation
@@ -889,15 +967,18 @@ class VECMResults(object):
         * "li" - linear trend within the cointegration relation
 
         Combinations of these are possible (e.g. "cili" or "colo" for linear
-        trend with intercept)
+        trend with intercept). When using a constant term you have to choose
+        whether you want to restrict it to the cointegration relation (i.e.
+        "ci") or leave it unrestricted (i.e. "co"). Don't use both "ci" and
+        "co". The same applies for "li" and "lo" in when using a linear term.
     seasons : int, default: 0
-        Number of seasons. 0 means no seasons.
+        Number of periods in a seasonal cycle. 0 means no seasons.
     first_season : int, default: 0
         Season of the first observation.
     delta_y_1_T : ndarray or None, default: None
         Auxilliary array for internal computations. It will be calculated if
         not given as parameter.
-    y_min1 : ndarray or None, default: None
+    y_lag1 : ndarray or None, default: None
         Auxilliary array for internal computations. It will be calculated if
         not given as parameter.
     delta_x : ndarray or None, default: None
@@ -977,10 +1058,10 @@ class VECMResults(object):
         of det_coef.
         If no deterministic terms were passed via the exog parameter, this
         attribute is an ndarray of size zero.
-    delta_y_1_T : see Parameters
-    y_min1 : see Parameters
-    delta_x : see Parameters
-    r : int
+    _delta_y_1_T : see delta_y_1_T in Parameters
+    _y_lag1 : see y_lag1 in Parameters
+    _delta_x : see delta_x in Parameters
+    coint_rank : int
         Cointegration rank, equals the rank of the matrix :math:`\\Pi` and the
         number of columns of :math:`\\alpha` and :math:`\\beta`.
     llf : float
@@ -1046,7 +1127,7 @@ class VECMResults(object):
 
     def __init__(self, endog_tot, exog, exog_coint, k_ar,
                  coint_rank, alpha, beta, gamma, sigma_u, deterministic='nc',
-                 seasons=0, first_season=0, delta_y_1_T=None, y_min1=None,
+                 seasons=0, first_season=0, delta_y_1_T=None, y_lag1=None,
                  delta_x=None, model=None, names=None, dates=None):
         self.model = model
         self.y_all = endog_tot
@@ -1060,13 +1141,13 @@ class VECMResults(object):
         self.seasons = seasons
         self.first_season = first_season
 
-        self.r = coint_rank
+        self.coint_rank = coint_rank
         if alpha.dtype == np.complex128 and np.all(np.imag(alpha) == 0):
-            alpha = np.real(alpha)
+            alpha = np.real_if_close(alpha)
         if beta.dtype == np.complex128 and np.all(np.imag(beta) == 0):
-            beta = np.real(beta)
+            beta = np.real_if_close(beta)
         if gamma.dtype == np.complex128 and np.all(np.imag(gamma) == 0):
-            gamma = np.real(gamma)
+            gamma = np.real_if_close(gamma)
 
         self.alpha = alpha
         self.beta, self.det_coef_coint = np.vsplit(beta, [self.neqs])
@@ -1076,12 +1157,12 @@ class VECMResults(object):
         if "ci" in deterministic:
             self.const_coint = self.det_coef_coint[:1, :]
         else:
-            self.const_coint = np.zeros(self.r).reshape((1, -1))
+            self.const_coint = np.zeros(coint_rank).reshape((1, -1))
         if "li" in deterministic:
             start = 1 if "ci" in deterministic else 0
             self.lin_trend_coint = self.det_coef_coint[start:start+1, :]
         else:
-            self.lin_trend_coint = np.zeros(self.r).reshape(1, -1)
+            self.lin_trend_coint = np.zeros(coint_rank).reshape(1, -1)
         if self.exog_coint is not None:
             start = ("ci" in deterministic) + ("li" in deterministic)
             self.exog_coint_coefs = self.det_coef_coint[start:, :]
@@ -1100,27 +1181,27 @@ class VECMResults(object):
 
         self.sigma_u = sigma_u
 
-        if y_min1 is not None and delta_x is not None \
+        if y_lag1 is not None and delta_x is not None \
                 and delta_y_1_T is not None:
             self._delta_y_1_T = delta_y_1_T
-            self._y_min1 = y_min1
+            self._y_lag1 = y_lag1
             self._delta_x = delta_x
         else:
-            _y_1_T, self._delta_y_1_T, self._y_min1, self._delta_x = \
+            _y_1_T, self._delta_y_1_T, self._y_lag1, self._delta_x = \
                 _endog_matrices(endog_tot, self.exog, k_ar,
                                 deterministic, seasons)
-        self.nobs = self._y_min1.shape[1]
+        self.nobs = self._y_lag1.shape[1]
 
     @cache_readonly
     def llf(self):  # Lutkepohl p. 295 (7.2.20)
-        """Compute VECM(k_ar-1) loglikelihood, where k_ar-1 denotes the number
-        of lagged differences.
+        """
+        Compute the VECM's loglikelihood.
         """
         K = self.neqs
         T = self.nobs
-        r = self.r
+        r = self.coint_rank
         s00, _, _, _, _, lambd, _ = _sij(self._delta_x, self._delta_y_1_T,
-                                         self._y_min1)
+                                         self._y_lag1)
         return - K * T * log(2*math.pi) / 2  \
             - T * (log(np.linalg.det(s00)) + sum(np.log(1-lambd)[:r])) / 2  \
             - K * T / 2
@@ -1135,7 +1216,7 @@ class VECMResults(object):
 
 
     @cache_readonly
-    def cov_params(self):  # p.296 (7.2.21)
+    def cov_params_default(self):  # p.296 (7.2.21)
         # Sigma_co described on p. 287
         beta = self.beta
         if self.det_coef_coint.size > 0:
@@ -1149,8 +1230,8 @@ class VECMResults(object):
                                        np.identity(self.neqs * (self.k_ar-1) +
                                                    num_det))
 
-        y_min1 = self._y_min1
-        b_y = beta.T.dot(y_min1)
+        y_lag1 = self._y_lag1
+        b_y = beta.T.dot(y_lag1)
         omega11 = b_y.dot(b_y.T)
         omega12 = b_y.dot(self._delta_x.T)
         omega21 = omega12.T
@@ -1171,7 +1252,7 @@ class VECMResults(object):
 
         # rows & cols to be dropped (related to deterministic terms outside of
         # the cointegration relation)
-        cov = self.cov_params
+        cov = self.cov_params_default
         cov_size = len(cov)
         to_drop_o = np.arange(cov_size-self.det_coef.size, cov_size)
 
@@ -1186,11 +1267,13 @@ class VECMResults(object):
     # standard errors:
     @cache_readonly
     def stderr_params(self):
-        return np.sqrt(np.diag(self.cov_params))
+        return np.sqrt(np.diag(self.cov_params_default))
 
     @cache_readonly
     def stderr_coint(self):
         """
+        Standard errors of beta and deterministic terms inside the coit. rel.
+
         Notes
         -----
         See p. 297 in [1]_. Using the rule
@@ -1201,20 +1284,20 @@ class VECMResults(object):
         ----------
         .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
         """
-        _, r1 = _r_matrices(self.nobs, self._delta_x, self._delta_y_1_T,
-                            self._y_min1)
-        r12 = r1[self.r:]
+        r = self.coint_rank
+        _, r1 = _r_matrices(self._delta_y_1_T, self._y_lag1, self._delta_x)
+        r12 = r1[r:]
         if r12.size == 0:
-            return np.zeros((self.r, self.r))
+            return np.zeros((r, r))
         mat1 = inv(r12.dot(r12.T))
-        mat1 = np.kron(mat1.T, np.identity(self.r))
+        mat1 = np.kron(mat1.T, np.identity(r))
         det = self.det_coef_coint.shape[0]
-        mat2 = np.kron(np.identity(self.neqs-self.r+det),
+        mat2 = np.kron(np.identity(self.neqs-r+det),
                        inv(chain_dot(
                                self.alpha.T, inv(self.sigma_u), self.alpha)))
-        first_rows = np.zeros((self.r, self.r))
+        first_rows = np.zeros((r, r))
         last_rows_1d = np.sqrt(np.diag(mat1.dot(mat2)))
-        last_rows = last_rows_1d.reshape((self.neqs-self.r+det, self.r),
+        last_rows = last_rows_1d.reshape((self.neqs-r+det, r),
                                          order="F")
         return vstack((first_rows,
                        last_rows))
@@ -1257,8 +1340,9 @@ class VECMResults(object):
 
     @cache_readonly
     def tvalues_beta(self):
-        first_rows = np.zeros((self.r, self.r))
-        last_rows = self.beta[self.r:] / self.stderr_beta[self.r:]
+        r = self.coint_rank
+        first_rows = np.zeros((r, r))
+        last_rows = self.beta[r:] / self.stderr_beta[r:]
         return vstack((first_rows,
                        last_rows))
 
@@ -1285,8 +1369,8 @@ class VECMResults(object):
 
     @cache_readonly
     def pvalues_beta(self):
-        first_rows = np.zeros((self.r, self.r))
-        tval_last = self.tvalues_beta[self.r:]
+        first_rows = np.zeros((self.coint_rank, self.coint_rank))
+        tval_last = self.tvalues_beta[self.coint_rank:]
         last_rows = (1-scipy.stats.norm.cdf(abs(tval_last))) * 2  # student-t
         return vstack((first_rows,
                        last_rows))
@@ -1348,8 +1432,11 @@ class VECMResults(object):
     @cache_readonly
     def cov_var_repr(self):
         """
-        Gives the covariance matrix of the vector consisting of the columns of
-        the corresponding VAR coefficient matrices (i.e. vec(self.var_rep)).
+        Gives the covariance matrix of the corresponding VAR-representation.
+
+        More precisely, the covariance matrix of the vector consisting of the
+        columns of the corresponding VAR coefficient matrices (i.e.
+        vec(self.var_rep)).
 
         Returns
         -------
@@ -1371,7 +1458,7 @@ class VECMResults(object):
         #
         # w_eye = np.kron(w, np.identity(K))
         #
-        # return chain_dot(w_eye.T, self.cov_params, w_eye)
+        # return chain_dot(w_eye.T, self.cov_params_default, w_eye)
 
         if self.k_ar - 1 == 0:
             return self.cov_params_wo_det
@@ -1401,8 +1488,10 @@ class VECMResults(object):
         return np.linalg.cholesky(self.sigma_u)
 
     def orth_ma_rep(self, maxn=10, P=None):
-        r"""Compute orthogonalized MA coefficient matrices using P matrix such
-        that :math:`\\Sigma_u = PP^\\prime`. P defaults to the Cholesky
+        """Compute orthogonalized MA coefficient matrices.
+
+        For this purpose a matrix  P is used which fulfills
+        :math:`\\Sigma_u = PP^\\prime`. P defaults to the Cholesky
         decomposition of :math:`\\Sigma_u`
 
         Parameters
@@ -1420,6 +1509,7 @@ class VECMResults(object):
 
     def predict(self, steps=5, alpha=None, exog_fc=None, exog_coint_fc=None):
         """
+        Calculate future values of the time series.
 
         Parameters
         ----------
@@ -1556,13 +1646,13 @@ class VECMResults(object):
                            plot_stderr=plot_conf_int,
                            legend_options={"loc": "lower left"})
 
-    def test_granger_causality(self, caused, causing=None, signif=0.05,
-                               verbose=True):
+    def test_granger_causality(self, caused, causing=None, signif=0.05):
         """
-        Test for Granger-causality as described in chapter 7.6.3 of [1]_.
-        Test H0: "`causing` does not Granger-cause the remaining variables of
-        the system" against  H1: "`causing` is Granger-causal for the
-        remaining variables".
+        Test for Granger-causality.
+
+        The concept of Granger-causality is described in chapter 7.6.3 of [1]_.
+        Test H0: "The variables in `causing` do not Granger-cause those in
+        `caused`" against  H1: "`causing` is Granger-causal for `caused`".
 
         Parameters
         ----------
@@ -1580,28 +1670,15 @@ class VECMResults(object):
             If a sequence of int or str, test whether the corresponding
             variables are Granger-causing the variable(s) specified by
             `caused`.
-            If None, `causing` is assumed to be the complement of `caused`.
+            If None, `causing` is assumed to be the complement of `caused` (the
+            remaining variables of the system).
         signif : float between 0 and 1, default 5 %
             Significance level for computing critical values for test,
             defaulting to standard 0.95 level.
-        verbose : bool
-            If True, print a table with the results.
 
         Returns
         -------
-        results : dict
-            A dict holding the test's results. The dict's keys are:
-            * "statistic" : float
-                The claculated test statistic.
-            * "crit_value" : float
-                The critical value of the F-distribution.
-            * "pvalue" : float
-                The p-value corresponding to the test statistic.
-            * "df" : float
-                The degrees of freedom of the F-distribution.
-            * "conclusion" : str {"reject", "fail to reject"}
-                 Whether H0 can be rejected or not.
-            * "signif" : float
+        results : CausalityTestResults
 
         References
         ----------
@@ -1618,6 +1695,7 @@ class VECMResults(object):
         if not all(isinstance(c, allowed_types) for c in caused):
             raise TypeError("caused has to be of type string or int (or a "
                             "sequence of these types).")
+        caused = [self.names[c] if type(c) == int else c for c in caused]
         caused_ind = [get_index(self.names, c) for c in caused]
 
         if causing is not None:
@@ -1659,31 +1737,22 @@ class VECMResults(object):
                 for ed_ind in caused_ind:
                     C[row, cols_det + ed_ind + k * ing_ind + k**2 * j] = 1
                     row += 1
-        # print(C.shape)
-        # print(var_results.params[:-k].shape)
-        # a = np.vstack(vec(var_results.coefs[i])[:, None] for i in range(p-1))
-        # Ca = np.dot(C, a)
         Ca = np.dot(C, vec(var_results.params[:-k].T))
 
         x_min_p_components = []
         if exog is not None:
             x_min_p_components.append(exog[-t:].T)
-        # if "co" in self.deterministic or "ci" in self.deterministic:
-        #     x_min_p_components.append(np.ones(t))
-        # if "lo" in self.deterministic or "li" in self.deterministic:
-        #     x_min_p_components.append(np.arange(t))
-        # if self.seasons > 0:
-        #     x_min_p_components.append(seasonal_dummies(self.seasons, t,
-        #                                                first_period=1,
-        #                                                centered=False).T)
+
         x_min_p = np.zeros((k * p, t))
         for i in range(p-1):  # fll first k * k_ar rows of x_min_p
             x_min_p[i*k:(i+1)*k, :] = y[:, p-1-i:-1-i] - y[:, :-p]
         x_min_p[-k:, :] = y[:, :-p]  # fill last rows of x_min_p
         x_min_p_components.append(x_min_p)
+
         x_min_p = np.row_stack(x_min_p_components)
         x_x = np.dot(x_min_p, x_min_p.T)  # k*k_ar x k*k_ar
-        x_x_11 = inv(x_x)[:k * (p-1) + num_det_terms, :k * (p-1) + num_det_terms]  # k*(k_ar-1) x k*(k_ar-1)
+        x_x_11 = inv(x_x)[:k*(p-1) + num_det_terms,
+                          :k*(p-1) + num_det_terms]  # k*(k_ar-1) x k*(k_ar-1)
         # For VAR-models with parameter restrictions the denominator in the
         # calculation of sigma_u is nobs and not (nobs-k*k_ar-num_det_terms).
         # Testing for Granger-causality means testing for restricted
@@ -1703,35 +1772,23 @@ class VECMResults(object):
 
         pvalue = f_distribution.sf(f_statistic)
         crit_value = f_distribution.ppf(1 - signif)
-        conclusion = 'fail to reject' if f_statistic < crit_value else 'reject'
+        return CausalityTestResults(causing, caused, f_statistic, crit_value,
+                                    pvalue, df, signif, test="granger",
+                                    method="f")
 
-        results = {
-            "statistic": f_statistic,
-            "crit_value": crit_value,
-            "pvalue": pvalue,
-            "df": df,
-            "conclusion": conclusion,
-            "signif":  signif
-        }
-
-        if verbose:
-            summ = var_output.causality_summary(results, causing, caused, "f")
-            print(summ)
-
-        return results
-
-    def test_inst_causality(self, causing, signif=0.05, verbose=True):
+    def test_inst_causality(self, causing, signif=0.05):
         """
-        Test for instantaneous causality as described in chapters 3.6.3 and
-        7.6.4 of [1]_.
-        Test H0: "No instantaneous causality between caused and causing"
-        against H1: "Instantaneous causality between caused and causing
-        exists".
+        Test for instantaneous causality.
+
+        The concept of instantaneous causality is described in chapters 3.6.3
+        and 7.6.4 of [1]_. Test H0: "No instantaneous causality between the
+        variables in `caused` and those in `causing`" against H1:
+        "Instantaneous causality between `caused` and `causing` exists".
         Note that instantaneous causality is a symmetric relation
-        (i.e. if causing is "instantaneously causing" caused, then also caused
-        is "instantaneously causing" causing), thus the naming of the
-        parameters (which is chosen to be in accordance with
-        test_granger_causality()) may be misleading.
+        (i.e. if `causing` is "instantaneously causing" `caused`, then also
+        `caused` is "instantaneously causing" `causing`), thus the naming of
+        the parameters (which is chosen to be in accordance with
+        `test_granger_causality()`) may be misleading.
 
         Parameters
         ----------
@@ -1743,31 +1800,18 @@ class VECMResults(object):
         signif : float between 0 and 1, default 5 %
             Significance level for computing critical values for test,
             defaulting to standard 0.95 level
-        verbose : bool
-            If True, print a table with the results.
 
         Returns
         -------
-        results : dict
-            A dict holding the test's results. The dict's keys are:
-            * "statistic" : float
-                The claculated test statistic.
-            * "crit_value" : float
-                The critical value of the \Chi^2-distribution.
-            * "pvalue" : float
-                The p-value corresponding to the test statistic.
-            * "df" : float
-                The degrees of freedom of the \Chi^2-distribution.
-            * "conclusion" : str {"reject", "fail to reject"}
-                 Whether H0 can be rejected or not.
-            * "signif" : float
+        results : CausalityTestResults
 
         Notes
         -----
         This method is not returning the same result as JMulTi. This is because
         the test is based on a VAR(k_ar) model in statsmodels (in accordance to
         pp. 104, 320-321 in [1]_) whereas JMulTi seems to be using a
-        VAR(k_ar+1) model.
+        VAR(k_ar+1) model. Reducing the lag order by one in JMulTi leads to
+        equal results in statsmodels and JMulTi.
 
         References
         ----------
@@ -1783,9 +1827,8 @@ class VECMResults(object):
         k, t, p = self.neqs, self.nobs, self.k_ar
         # fit with trend "nc" because all trend information is already in exog
         var_results = VAR(self.y_all.T, exog).fit(maxlags=p, trend="nc")
-        return var_results.test_inst_causality(causing=causing, signif=signif,
-                                               verbose=verbose,
-                                               names=self.names)
+        var_results._results.names = self.names
+        return var_results.test_inst_causality(causing=causing, signif=signif)
 
     def irf(self, periods=10):
         return irf.IRAnalysis(self, periods=periods, vecm=True)
@@ -1793,6 +1836,8 @@ class VECMResults(object):
     @cache_readonly
     def fittedvalues(self):
         """
+        Return the in-sample values of endog calculated by the model.
+
         Returns
         -------
         fitted : array (nobs x neqs)
@@ -1806,12 +1851,14 @@ class VECMResults(object):
         gamma = self.gamma
         if self.det_coef.size > 0:
             gamma = hstack((gamma, self.det_coef))
-        delta_y = np.dot(pi, self._y_min1) + np.dot(gamma, self._delta_x)
-        return (delta_y + self._y_min1[:self.neqs]).T
+        delta_y = np.dot(pi, self._y_lag1) + np.dot(gamma, self._delta_x)
+        return (delta_y + self._y_lag1[:self.neqs]).T
 
     @cache_readonly
     def resid(self):
         """
+        Return the difference between observed and fitted values.
+
         Returns
         -------
         resid : array (nobs x neqs)
@@ -1819,35 +1866,31 @@ class VECMResults(object):
         """
         return self.y_all.T[self.k_ar:] - self.fittedvalues
 
-    def test_normality(self, signif=0.05, verbose=True):
+    def test_normality(self, signif=0.05):
         """
         Test assumption of normal-distributed errors using Jarque-Bera-style
-        omnibus Chi^2 test
+        omnibus Chi^2 test.
 
         Parameters
         ----------
         signif : float
-            Test significance threshold
-        verbose : bool
-            If True, print summary with the test's results.
+            The test's significance level.
 
         Returns
         -------
-        result : dict
-            A dictionary with the test's results as key-value-pairs. The keys
-            are 'statistic', 'crit_value', 'pvalue', 'df', 'conclusion', and
-            'signif'.
+        result : NormalityTestResults
 
         Notes
         -----
         H0 (null) : data are generated by a Gaussian-distributed process
         """
-        return test_normality(self, signif=signif, verbose=verbose)
+        return test_normality(self, signif=signif)
 
     def test_whiteness(self, nlags=10, signif=0.05, adjusted=False):
         """
-        Test the whiteness of the residuals using the Portmanteau test as
-        described in [1]_, chapter 8.4.1.
+        Test the whiteness of the residuals using the Portmanteau test.
+
+        This test is described in [1]_, chapter 8.4.1.
 
         Parameters
         ----------
@@ -1857,10 +1900,7 @@ class VECMResults(object):
 
         Returns
         -------
-        result : dict
-            A dictionary with the test's results as key-value-pairs. The keys
-            are 'statistic', 'crit_value', 'pvalue', 'df', 'conclusion', and
-            'signif'.
+        result : WhitenessTestResults
 
         References
         ----------
@@ -1868,6 +1908,8 @@ class VECMResults(object):
         """
         def cov(lag):
             """
+            Calculate the autocovariance matrix of :math:`u_t` for a given lag.
+
             Parameters
             ----------
             lag : int >= 0
@@ -1905,28 +1947,18 @@ class VECMResults(object):
             statistic += to_add
         statistic *= self.nobs**2 if adjusted else self.nobs
 
-        df = self.neqs**2 * (nlags - self.k_ar + 1) - self.neqs * self.r
+        df = self.neqs**2 * (nlags - self.k_ar + 1) - self.neqs*self.coint_rank
         dist = scipy.stats.chi2(df)
         pvalue = dist.sf(statistic)
         crit_value = dist.ppf(1 - signif)
 
-        if statistic < crit_value:
-            conclusion = 'fail to reject'
-        else:
-            conclusion = 'reject'
-        results = {
-            'statistic': statistic,
-            'crit_value': crit_value,
-            'pvalue': pvalue,
-            'df': df,
-            'conclusion': conclusion,
-            'signif': signif
-        }
-        return results
+        return WhitenessTestResults(statistic, crit_value, pvalue, df, signif,
+                                    nlags, adjusted)
+
 
     def plot_data(self, with_presample=False):
         """
-        Plots the input time series.
+        Plot the input time series.
 
         Parameters
         ----------
@@ -1941,6 +1973,8 @@ class VECMResults(object):
 
     def summary(self, alpha=.05):
         """
+        Return a summary of the estimation results.
+
         Parameters
         ----------
         alpha : float between 0 and 1, default 0.05
@@ -2045,7 +2079,7 @@ class VECMResults(object):
                                    tvalues_lagged_params,
                                    pvalues_lagged_params,
                                    conf_int_lagged_params, mask,
-                                   self.model.lagged_param_names, title)
+                                   self.model._lagged_param_names, title)
                 summary.tables.append(table)
 
         # ---------------------------------------------------------------------
@@ -2058,12 +2092,12 @@ class VECMResults(object):
         lower = ci_a["lower"].flatten()
         upper = ci_a["upper"].flatten()
         ci_a = np.column_stack((lower, upper))
-        a_names = self.model.load_coef_param_names
+        a_names = self.model._load_coef_param_names
         alpha_masks = []
         for i in range(self.neqs):
-            if self.r > 0:
-                start = i * self.r
-                end = start + self.r
+            if self.coint_rank > 0:
+                start = i * self.coint_rank
+                end = start + self.coint_rank
                 mask = np.arange(start, end)
 
             # Create the table
@@ -2082,7 +2116,7 @@ class VECMResults(object):
         tvalues_coint_components = []
         pvalues_coint_components = []
         conf_int_coint_components = []
-        if self.r > 0:
+        if self.coint_rank > 0:
             coint_components.append(self.beta.T.flatten())
             stderr_coint_components.append(self.stderr_beta.T.flatten())
             tvalues_coint_components.append(self.tvalues_beta.T.flatten())
@@ -2109,30 +2143,30 @@ class VECMResults(object):
         tvalues_coint = hstack(tvalues_coint_components)
         pvalues_coint = hstack(pvalues_coint_components)
         conf_int_coint = vstack(conf_int_coint_components)
-        coint_names = self.model.coint_param_names
+        coint_names = self.model._coint_param_names
 
-        for i in range(self.r):
+        for i in range(self.coint_rank):
             masks = []
             offset = 0
 
             # 1. Cointegration matrix (beta)
-            if self.r > 0:
+            if self.coint_rank > 0:
                 start = i * self.neqs
                 end = start + self.neqs
                 masks.append(offset + np.arange(start, end))
-                offset += self.neqs * self.r
+                offset += self.neqs * self.coint_rank
 
             # 2. Deterministic terms inside cointegration relation
             if "ci" in self.deterministic:
                 masks.append(offset + np.array(i, ndmin=1))
-                offset += self.r
+                offset += self.coint_rank
             if "li" in self.deterministic:
                 masks.append(offset + np.array(i, ndmin=1))
-                offset += self.r
+                offset += self.coint_rank
             if self.exog_coint is not None:
                 for _ in range(self.exog_coint.shape[1]):
                     masks.append(offset + np.array(i, ndmin=1))
-                    offset += self.r
+                    offset += self.coint_rank
 
             # Create the table
             mask = np.concatenate(masks)

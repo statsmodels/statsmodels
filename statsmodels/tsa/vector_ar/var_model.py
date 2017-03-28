@@ -18,10 +18,13 @@ from numpy.linalg import cholesky as chol, solve
 import scipy.stats as stats
 import scipy.linalg as L
 
+from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import chain_dot
 from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tsa.tsatools import vec, unvec, duplication_matrix
+from statsmodels.tsa.vector_ar.hypothesis_test_results import \
+    CausalityTestResults, NormalityTestResults, WhitenessTestResults
 
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
 from statsmodels.tsa.vector_ar.output import VARSummary
@@ -408,18 +411,16 @@ def orth_ma_rep(results, maxn=10, P=None):
     return mat([np.dot(coefs, P) for coefs in ma_mats])
 
 
-def test_normality(results, signif=0.05, verbose=True):
+def test_normality(results, signif=0.05):
     """
     Test assumption of normal-distributed errors using Jarque-Bera-style
     omnibus Chi^2 test
 
     Parameters
     ----------
-    results : VARResults or VECMResults
+    results : VARResults or statsmodels.tsa.vecm.vecm.VECMResults
     signif : float
-        Test significance threshold
-    verbose : bool
-        If True, print summary with the test's results.
+        The test's significance level.
 
     Notes
     -----
@@ -427,10 +428,8 @@ def test_normality(results, signif=0.05, verbose=True):
 
     Returns
     -------
-    result : dict
-        A dictionary with the test's results as key-value-pairs. The keys are
-        'statistic', 'crit_value', 'pvalue', 'df', 'conclusion', and 'signif'.
-
+    result : NormalityTestResults
+        
     References
     ----------
     .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
@@ -447,28 +446,65 @@ def test_normality(results, signif=0.05, verbose=True):
     lam_skew = results.nobs * np.dot(b1.T, b1) / 6
     lam_kurt = results.nobs * np.dot(b2.T, b2) / 24
 
-    lam_omni = lam_skew + lam_kurt
+    lam_omni = float(lam_skew + lam_kurt)
     omni_dist = stats.chi2(results.neqs * 2)
-    omni_pvalue = omni_dist.sf(lam_omni)
-    crit_omni = omni_dist.ppf(1 - signif)
+    omni_pvalue = float(omni_dist.sf(lam_omni))
+    crit_omni = float(omni_dist.ppf(1 - signif))
 
-    conclusion = 'fail to reject' if lam_omni < crit_omni else 'reject'
+    return NormalityTestResults(lam_omni, crit_omni, omni_pvalue,
+                                results.neqs*2, signif)
 
-    results = {
-        'statistic': lam_omni,
-        'crit_value': crit_omni,
-        'pvalue': omni_pvalue,
-        'df': results.neqs * 2,
-        'conclusion': conclusion,
-        'signif': signif
-    }
 
-    if verbose:
-        summ = output.normality_summary(results)
-        print(summ)
+class LagOrderResults:
+    """
+    Results class for hypothesis tests.
 
-    return results
+    Parameters
+    ----------
+    ics : dict
+        The keys are the strings "aic", "bic", "hqic", and "fpe". A
+        corresponding value is a list of information criteria for various
+        numbers of lags.
+    selected_orders: dict
+        The keys are the strings "aic", "bic", "hqic", and "fpe". The
+        corresponding value is an integer specifying the number of lags chosen
+        according to a given criterion (key).
+    vecm : bool, default: False
+        True indicates that the model is a VECM. In case of a VAR model this
+        argument must be false.
 
+    Notes
+    -----
+    In case of a VECM the shown lags are lagged differences.
+    """
+    def __init__(self, ics, selected_orders, vecm=False):
+        self.title = ("VECM" if vecm else "VAR") + " Order Selection"
+        self.title += " (* highlights the minimums)"
+        self.ics = ics
+        self.selected_orders = selected_orders
+        self.vecm = vecm
+        self.aic = selected_orders["aic"]
+        self.bic = selected_orders["bic"]
+        self.hqic = selected_orders["hqic"]
+        self.fpe = selected_orders["fpe"]
+
+    def summary(self):  # basically copied from (now deleted) print_ic_table()
+        cols = sorted(self.ics)  # ["aic", "bic", "hqic", "fpe"]
+        str_data = mat([["%#10.4g" % v for v in self.ics[c]] for c in cols],
+                       dtype=object).T
+        # mark minimum with an asterisk
+        for i, col in enumerate(cols):
+            idx = int(self.selected_orders[col]), i
+            str_data[idx] += '*'
+        return SimpleTable(str_data, [col.upper() for col in cols],
+                           lrange(len(str_data)), title=self.title)
+
+    def __str__(self):
+        return "<" + self.__module__ + "." + self.__class__.__name__ \
+                   + " object. Selected orders are: AIC -> " + str(self.aic) \
+                   + ", BIC -> " + str(self.bic)  \
+                   + ", FPE -> " + str(self.fpe) \
+                   + ", HQIC -> " + str(self.hqic) + ">"
 
 #-------------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
@@ -501,16 +537,17 @@ class VAR(tsbase.TimeSeriesModel):
         self.neqs = self.endog.shape[1]
         self.n_totobs = len(endog)
 
+    def _get_predict_start(self, start, k_ar):
+        if start is None:
+            start = k_ar
+        return super(VAR, self)._get_predict_start(start)
+
     def predict(self, params, start=None, end=None, lags=1, trend='c'):
         """
         Returns in-sample predictions or forecasts
         """
-        if start is None:
-            start = k_ar
-
-        # Handle start, end
-        start, end, out_of_sample, prediction_index = (
-            self._get_prediction_index(start, end))
+        start = self._get_predict_start(start, lags)
+        end, out_of_sample = self._get_predict_end(end)
 
         if end < start:
             raise ValueError("end is before start")
@@ -583,7 +620,7 @@ class VAR(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        est : VARResults
+        est : VARResultsWrapper
         """
         lags = maxlags
 
@@ -591,12 +628,13 @@ class VAR(tsbase.TimeSeriesModel):
             raise ValueError("trend '{}' not supported for VAR".format(trend))
 
         if ic is not None:
-            selections = self.select_order(maxlags=maxlags, verbose=verbose)
-            if ic not in selections:
+            selections = self.select_order(maxlags=maxlags)
+            if not hasattr(selections, ic):
                 raise Exception("%s not recognized, must be among %s"
                                 % (ic, sorted(selections)))
-            lags = selections[ic]
+            lags = getattr(selections, ic)
             if verbose:
+                print(selections)
                 print('Using %d based on %s criterion' %  (lags, ic))
         else:
             if lags is None:
@@ -687,7 +725,7 @@ class VAR(tsbase.TimeSeriesModel):
                             dates=self.data.dates, model=self, exog=self.exog)
         return VARResultsWrapper(varfit)
 
-    def select_order(self, maxlags=None, verbose=True, trend="c"):
+    def select_order(self, maxlags=None, trend="c"):
         """
         Compute lag order selections based on each of the available information
         criteria
@@ -696,8 +734,6 @@ class VAR(tsbase.TimeSeriesModel):
         ----------
         maxlags : int
             if None, defaults to 12 * (nobs/100.)**(1./4)
-        verbose : bool, default True
-            If True, print table of info criteria and selected orders
         trend : str {"nc", "c", "ct", "ctt"}
             * "nc" - no deterministic terms
             * "c" - constant term
@@ -706,7 +742,7 @@ class VAR(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        selections : dict {info_crit -> selected_order}
+        selections : LagOrderResults
         """
         if maxlags is None:
             maxlags = int(round(12*(len(self.endog)/100.)**(1/4.)))
@@ -724,10 +760,7 @@ class VAR(tsbase.TimeSeriesModel):
         selected_orders = dict((k, mat(v).argmin() + p_min)
                                for k, v in iteritems(ics))
 
-        if verbose:
-            output.print_ic_table(ics, selected_orders)
-
-        return selected_orders
+        return LagOrderResults(ics, selected_orders, vecm=False)
 
 class VARProcess(object):
     """
@@ -829,7 +862,7 @@ class VARProcess(object):
         return orth_ma_rep(self, maxn, P)
 
     def long_run_effects(self):
-        r"""Compute long-run effect of unit impulse
+        """Compute long-run effect of unit impulse
 
         .. math::
 
@@ -912,7 +945,7 @@ class VARProcess(object):
         return forecast(y, self.coefs, trend_coefs, steps, exog_future)
 
     def mse(self, steps):
-        r"""
+        """
         Compute theoretical forecast error variance matrices
 
         Parameters
@@ -1564,8 +1597,7 @@ class VARResults(VARProcess):
 #-------------------------------------------------------------------------------
 # VAR Diagnostics: Granger-causality, whiteness of residuals, normality, etc.
 
-    def test_causality(self, caused, causing=None, kind='f', signif=0.05,
-                       verbose=True):
+    def test_causality(self, caused, causing=None, kind='f', signif=0.05):
         """
         Test for Granger-causality as described in chapter 7.6.3 of [1]_.
         Test H0: "`causing` does not Granger-cause the remaining variables of
@@ -1605,7 +1637,7 @@ class VARResults(VARProcess):
 
         Returns
         -------
-        results : dict
+        results : CausalityTestResults
 
         References
         ----------
@@ -1621,6 +1653,7 @@ class VARResults(VARProcess):
         if not all(isinstance(c, allowed_types) for c in caused):
             raise TypeError("caused has to be of type string or int (or a "
                             "sequence of these types).")
+        caused = [self.names[c] if type(c) == int else c for c in caused]
         caused_ind = [util.get_index(self.names, c) for c in caused]
 
         if causing is not None:
@@ -1673,24 +1706,11 @@ class VARResults(VARProcess):
         pvalue = dist.sf(statistic)
         crit_value = dist.ppf(1 - signif)
 
-        conclusion = 'fail to reject' if statistic < crit_value else 'reject'
-        results = {
-            'statistic' : statistic,
-            'crit_value' : crit_value,
-            'pvalue' : pvalue,
-            'df' : df,
-            'conclusion' : conclusion,
-            'signif' :  signif
-        }
+        return CausalityTestResults(causing, caused, statistic,
+                                    crit_value, pvalue, df, signif,
+                                    test="granger", method=kind)
 
-        if verbose:
-            summ = output.causality_summary(results, causing, caused, kind)
-            print(summ)
-
-        return results
-
-    def test_inst_causality(self, causing, signif=0.05, verbose=True,
-                            names=None):
+    def test_inst_causality(self, causing, signif=0.05):
         """
         Test for instantaneous causality as described in chapters 3.6.3 and
         7.6.4 of [1]_.
@@ -1743,7 +1763,6 @@ class VARResults(VARProcess):
         ----------
         .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
         """
-
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
 
@@ -1753,12 +1772,11 @@ class VARResults(VARProcess):
         if not all(isinstance(c, allowed_types) for c in causing):
             raise TypeError("causing has to be of type string or int (or a " +
                             "a sequence of these types).")
-        names = names if names is not None else self.names
-        causing = [names[c] if type(c) == int else c for c in causing]
-        causing_ind = [util.get_index(names, c) for c in causing]
+        causing = [self.names[c] if type(c) == int else c for c in causing]
+        causing_ind = [util.get_index(self.names, c) for c in causing]
 
         caused_ind = [i for i in range(self.neqs) if i not in causing_ind]
-        caused = [names[c] for c in caused_ind]
+        caused = [self.names[c] for c in caused_ind]
 
         # Note: JMulTi seems to be using k_ar+1 instead of k_ar
         k, t, p = self.neqs, self.nobs, self.k_ar
@@ -1791,23 +1809,9 @@ class VARResults(VARProcess):
         pvalue = dist.sf(wald_statistic)
         crit_value = dist.ppf(1 - signif)
 
-        if wald_statistic < crit_value:
-            conclusion = 'fail to reject'
-        else:
-            conclusion = 'reject'
-        results = {
-            'statistic': wald_statistic,
-            'crit_value': crit_value,
-            'pvalue': pvalue,
-            'df': df,
-            'conclusion': conclusion,
-            'signif': signif
-        }
-
-        if verbose:
-            print(output.causality_summary(results, causing, caused,
-                                           "wald", inst_caus=True))
-        return results
+        return CausalityTestResults(causing, caused, wald_statistic,
+                                    crit_value, pvalue, df, signif,
+                                    test="inst", method="wald")
 
     def test_whiteness_new(self, nlags=10, signif=0.05, adjusted=False):
         """
@@ -1822,7 +1826,7 @@ class VARResults(VARProcess):
 
         Returns
         -------
-        results : dict
+        results : WhitenessTestResults
 
         References
         ----------
@@ -1865,25 +1869,13 @@ class VARResults(VARProcess):
         pvalue = dist.sf(statistic)
         crit_value = dist.ppf(1 - signif)
 
-        if statistic < crit_value:
-            conclusion = 'fail to reject'
-        else:
-            conclusion = 'reject'
-        results = {
-            'statistic': statistic,
-            'crit_value': crit_value,
-            'pvalue': pvalue,
-            'df': df,
-            'conclusion': conclusion,
-            'signif': signif
-        }
-
-        return results
+        return WhitenessTestResults(statistic, crit_value, pvalue, df, signif,
+                                    nlags, adjusted)
 
     def test_whiteness(self, nlags=10, plot=True, linewidth=8):
-        r"""
+        """
         Test white noise assumption. Sample (Y) autocorrelations are compared
-        with the standard :math:`2 / \sqrt{T}` bounds.
+        with the standard :math:`2 / \sqrt(T)` bounds.
 
         Parameters
         ----------
@@ -1909,23 +1901,25 @@ class VARResults(VARProcess):
             fig.suptitle(r"ACF plots with $2 / \sqrt{T}$ bounds "
                          "for testing whiteness assumption")
 
-    def test_normality(self, signif=0.05, verbose=True):
+    def test_normality(self, signif=0.05):
         """
         Test assumption of normal-distributed errors using Jarque-Bera-style
-        omnibus Chi^2 test
+        omnibus Chi^2 test.
 
         Parameters
         ----------
         signif : float
-            Test significance threshold
-        verbose : bool
-            If True, print summary with the test's results.
+            Test significance level.
+
+        Returns
+        -------
+        result : NormalityTestResults
 
         Notes
         -----
         H0 (null) : data are generated by a Gaussian-distributed process
         """
-        return test_normality(self, signif=signif, verbose=verbose)
+        return test_normality(self, signif=signif)
 
     @cache_readonly
     def detomega(self):

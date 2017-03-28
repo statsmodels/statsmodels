@@ -334,19 +334,18 @@ def test_causality():  # test Granger- and instantaneous causality
 
                 # test Granger-causality ######################################
                 granger_sm_ind = results_sm[ds][
-                    dt].test_causality(caused_ind, causing_ind, verbose=False)
+                    dt].test_causality(caused_ind, causing_ind)
                 granger_sm_str = results_sm[ds][
-                    dt].test_causality(caused_names, causing_names,
-                                       verbose=False)
+                    dt].test_causality(caused_names, causing_names)
 
                 # test test-statistic for Granger non-causality:
-                g_t_obt = granger_sm_ind["statistic"]
+                g_t_obt = granger_sm_ind.test_statistic
                 g_t_des = results_ref[ds][dt]["granger_caus"][
                     "test_stat"][(causing_key, caused_key)]
                 yield assert_allclose, g_t_obt, g_t_des, rtol, atol, \
                     False, err_msg_g_t
                 # check whether string sequences as args work in the same way:
-                g_t_obt_str = granger_sm_str["statistic"]
+                g_t_obt_str = granger_sm_str.test_statistic
                 yield assert_allclose, g_t_obt_str, g_t_obt, 1e-07, 0, False, \
                     err_msg_g_t + " - sequences of integers and ".upper() + \
                     "strings as arguments don't yield the same result!".upper()
@@ -356,28 +355,28 @@ def test_causality():  # test Granger- and instantaneous causality
                     ci = causing_ind[0] if len(causing_ind)==1 else causing_ind
                     ce = caused_ind[0] if len(caused_ind) == 1 else caused_ind
                     granger_sm_single_ind = results_sm[ds][
-                        dt].test_causality(ce, ci, verbose=False)
-                    g_t_obt_single = granger_sm_single_ind["statistic"]
+                        dt].test_causality(ce, ci)
+                    g_t_obt_single = granger_sm_single_ind.test_statistic
                     yield assert_allclose, g_t_obt_single, g_t_obt, 1e-07, 0, \
                         False, \
                         err_msg_g_t + " - list of int and int as ".upper() + \
                         "argument don't yield the same result!".upper()
 
                 # test p-value for Granger non-causality:
-                g_p_obt = granger_sm_ind["pvalue"]
+                g_p_obt = granger_sm_ind.pvalue
                 g_p_des = results_ref[ds][dt]["granger_caus"]["p"][(
                     causing_key, caused_key)]
                 yield assert_allclose, g_p_obt, g_p_des, rtol, atol, \
                     False, err_msg_g_p
                 # check whether string sequences as args work in the same way:
-                g_p_obt_str = granger_sm_str["pvalue"]
+                g_p_obt_str = granger_sm_str.pvalue
                 yield assert_allclose, g_p_obt_str, g_p_obt, 1e-07, 0, False, \
                     err_msg_g_t + " - sequences of integers and ".upper() + \
                     "strings as arguments don't yield the same result!".upper()
                 # check if int (e.g. 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
-                    g_p_obt_single = granger_sm_single_ind["pvalue"]
+                    g_p_obt_single = granger_sm_single_ind.pvalue
                     yield assert_allclose, g_p_obt_single, g_p_obt, 1e-07, 0, \
                         False, \
                         err_msg_g_t + " - list of int and int as ".upper() + \
@@ -385,17 +384,17 @@ def test_causality():  # test Granger- and instantaneous causality
 
                 # test instantaneous causality ################################
                 inst_sm_ind = results_sm[ds][dt].test_inst_causality(
-                    causing_ind, verbose=False)
+                    causing_ind)
                 inst_sm_str = results_sm[ds][dt].test_inst_causality(
-                    causing_names, verbose=False)
+                    causing_names)
                 # test test-statistic for instantaneous non-causality
-                t_obt = inst_sm_ind["statistic"]
+                t_obt = inst_sm_ind.test_statistic
                 t_des = results_ref[ds][dt]["inst_caus"][
                     "test_stat"][(causing_key, caused_key)]
                 yield assert_allclose, t_obt, t_des, rtol, atol, False, \
                     err_msg_i_t
                 # check whether string sequences as args work in the same way:
-                t_obt_str = inst_sm_str["statistic"]
+                t_obt_str = inst_sm_str.test_statistic
                 yield assert_allclose, t_obt_str, t_obt, 1e-07, 0, False, \
                     err_msg_i_t + " - sequences of integers and ".upper() + \
                     "strings as arguments don't yield the same result!".upper()
@@ -403,8 +402,8 @@ def test_causality():  # test Granger- and instantaneous causality
                 # the same result:
                 if len(causing_ind) == 1:
                     inst_sm_single_ind = results_sm[ds][
-                        dt].test_inst_causality(causing_ind[0], verbose=False)
-                    t_obt_single = inst_sm_single_ind["statistic"]
+                        dt].test_inst_causality(causing_ind[0])
+                    t_obt_single = inst_sm_single_ind.test_statistic
                     yield assert_allclose, t_obt_single, t_obt, 1e-07, 0, \
                         False, \
                         err_msg_i_t + " - list of int and int as ".upper() + \
@@ -412,13 +411,13 @@ def test_causality():  # test Granger- and instantaneous causality
 
                 # test p-value for instantaneous non-causality
                 p_obt = results_sm[ds][dt].test_inst_causality(
-                    causing_ind, verbose=False)["pvalue"]
+                    causing_ind).pvalue
                 p_des = results_ref[ds][dt]["inst_caus"]["p"][(
                     causing_key, caused_key)]
                 yield assert_allclose, p_obt, p_des, rtol, atol, False, \
                     err_msg_i_p
                 # check whether string sequences as args work in the same way:
-                p_obt_str = inst_sm_str["pvalue"]
+                p_obt_str = inst_sm_str.pvalue
                 yield assert_allclose, p_obt_str, p_obt, 1e-07, 0, False, \
                     err_msg_i_p + " - sequences of integers and ".upper() + \
                     "strings as arguments don't yield the same result!".upper()
@@ -426,8 +425,8 @@ def test_causality():  # test Granger- and instantaneous causality
                 # the same result:
                 if len(causing_ind) == 1:
                     inst_sm_single_ind = results_sm[ds][
-                        dt].test_inst_causality(causing_ind[0], verbose=False)
-                    p_obt_single = inst_sm_single_ind["pvalue"]
+                        dt].test_inst_causality(causing_ind[0])
+                    p_obt_single = inst_sm_single_ind.pvalue
                     yield assert_allclose, p_obt_single, p_obt, 1e-07, 0, \
                         False, \
                         err_msg_i_p + " - list of int and int as ".upper() + \
@@ -467,11 +466,11 @@ def test_lag_order_selection():
             endog_tot = data[ds]
             exog = generate_exog_from_season(dt[1], len(endog_tot))
             model = VAR(endog_tot, exog)
-            obtained_all = model.select_order(10, trend=dt[0], verbose=False)
+            obtained_all = model.select_order(10, trend=dt[0])
             for ic in ["aic", "fpe", "hqic", "bic"]:
                 err_msg = build_err_msg(ds, dt,
                                         "LAG ORDER SELECTION - " + ic.upper())
-                obtained = obtained_all[ic]
+                obtained = getattr(obtained_all, ic)
                 desired = results_ref[ds][dt]["lagorder"][ic]
                 yield assert_allclose, obtained, desired, rtol, atol, False, \
                     err_msg
@@ -488,19 +487,21 @@ def test_normality():
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
-            obtained = results_sm[ds][dt].test_normality(signif=0.05,
-                                                         verbose=False)
+            obtained = results_sm[ds][dt].test_normality(signif=0.05)
             err_msg = build_err_msg(ds, dt, "TEST NON-NORMALITY - STATISTIC")
-            obt_statistic = obtained["statistic"]
+            obt_statistic = obtained.test_statistic
             des_statistic = results_ref[ds][dt]["test_norm"][
                 "joint_test_statistic"]
             yield assert_allclose, obt_statistic, des_statistic, rtol, atol, \
                 False, err_msg
             err_msg = build_err_msg(ds, dt, "TEST NON-NORMALITY - P-VALUE")
-            obt_pvalue = obtained["pvalue"]
+            obt_pvalue = obtained.pvalue
             des_pvalue = results_ref[ds][dt]["test_norm"]["joint_pvalue"]
             yield assert_allclose, obt_pvalue, des_pvalue, rtol, atol, \
                 False, err_msg
+            # call methods to assure they don't raise exceptions
+            obtained.summary()
+            str(obtained)  # __str__()
 
 
 def test_whiteness():
@@ -520,13 +521,13 @@ def test_whiteness():
             err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - "
                                             "TEST STATISTIC")
             desired = results_ref[ds][dt]["whiteness"]["test statistic"]
-            yield assert_allclose, obtained["statistic"], desired, \
+            yield assert_allclose, obtained.test_statistic, desired, \
                 rtol, atol, False, err_msg
             # p-value
             err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - "
                                             "P-VALUE")
             desired = results_ref[ds][dt]["whiteness"]["p-value"]
-            yield assert_allclose, obtained["pvalue"], desired, \
+            yield assert_allclose, obtained.pvalue, desired, \
                 rtol, atol, False, err_msg
 
             obtained = results_sm[ds][dt].test_whiteness_new(nlags=lags,
@@ -535,13 +536,13 @@ def test_whiteness():
             err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - "
                                             "TEST STATISTIC (ADJUSTED TEST)")
             desired = results_ref[ds][dt]["whiteness"]["test statistic adj."]
-            yield assert_allclose, obtained["statistic"], desired, \
+            yield assert_allclose, obtained.test_statistic, desired, \
                 rtol, atol, False, err_msg
             # p-value (adjusted Portmanteau test)
             err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - "
                                             "P-VALUE (ADJUSTED TEST)")
             desired = results_ref[ds][dt]["whiteness"]["p-value adjusted"]
-            yield assert_allclose, obtained["pvalue"], desired, \
+            yield assert_allclose, obtained.pvalue, desired, \
                 rtol, atol, False, err_msg
 
 

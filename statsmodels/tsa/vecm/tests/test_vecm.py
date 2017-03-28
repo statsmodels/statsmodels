@@ -18,6 +18,8 @@ from statsmodels.tsa.vector_ar.var_model import VARProcess
 
 class DataSet:
     """
+    A class for representing the data in a data module.
+
     Parameters:
     -----------
     data_module : module
@@ -85,9 +87,12 @@ def load_results_statsmodels(dataset):
 
 def load_results_statsmodels_exog(dataset):
     """
+    Load data with seasonal terms in `exog`.
+
     Same as load_results_statsmodels() except that the seasonal term is
-    provided to VECM() via the eoxg parameter. This is to check whether the
-    same results are produced no matter whether exog or season is being used.
+    provided to `VECM`'s `__init__()` method via the `eoxg` parameter. This is
+    to check whether the same results are produced no matter whether `exog` or
+    `seasons` is being used.
 
     Parameters:
     -----------
@@ -117,10 +122,13 @@ def load_results_statsmodels_exog(dataset):
 
 def load_results_statsmodels_exog_coint(dataset):
     """
+    Load data with deterministic terms in `exog_coint`.
+
     Same as load_results_statsmodels() except that deterministic terms inside
-    the cointegration relation are provided to VECM() via the eoxg_coint
-    parameter. This is to check whether the same results are produced no matter
-    whether exog_coint or deterministic argument is being used.
+    the cointegration relation are provided to `VECM`'s `__init__()` method via
+    the `eoxg_coint` parameter. This is to check whether the same results are
+    produced no matter whether `exog_coint` or the `deterministic` argument is
+    being used.
 
     Parameters:
     -----------
@@ -962,10 +970,6 @@ def test_granger_causality():
             err_msg_g_p = build_err_msg(ds, dt, "GRANGER CAUS. - p-VALUE")
             err_msg_g_t = build_err_msg(ds, dt, "GRANGER CAUS. - TEST STAT.")
 
-            # produce output to increase test coverage (but only in a few
-            # cases to avoid cluttered test output)
-            verbose = (dt[0] == "nc" and dt[1] == 0)
-
             v_ind = range(len(ds.variable_names))
             for causing_ind in sublists(v_ind, 1, len(v_ind)-1):
                 causing_names = ["y" + str(i+1) for i in causing_ind]
@@ -976,22 +980,23 @@ def test_granger_causality():
                 caused_key = tuple(ds.variable_names[i] for i in caused_ind)
 
                 granger_sm_ind = results_sm[ds][
-                    dt].test_granger_causality(caused_ind, causing_ind,
-                                               verbose=verbose)
+                    dt].test_granger_causality(caused_ind, causing_ind)
                 granger_sm_ind_exog = results_sm_exog[ds][
-                    dt].test_granger_causality(caused_ind, causing_ind,
-                                               verbose=False)
+                    dt].test_granger_causality(caused_ind, causing_ind)
                 granger_sm_ind_exog_coint = results_sm_exog_coint[ds][
-                    dt].test_granger_causality(caused_ind, causing_ind,
-                                               verbose=False)
+                    dt].test_granger_causality(caused_ind, causing_ind)
                 granger_sm_str = results_sm[ds][
-                    dt].test_granger_causality(caused_names,
-                                               causing_names, verbose=False)
+                    dt].test_granger_causality(caused_names, causing_names)
+
+                # call methods to assure they don't raise exceptions
+                granger_sm_ind.summary()
+                str(granger_sm_ind)  # __str__()
+                yield assert_, (granger_sm_ind == granger_sm_str)  # __eq__()
 
                 # test test-statistic for Granger non-causality:
-                g_t_obt = granger_sm_ind["statistic"]
-                g_t_obt_exog = granger_sm_ind_exog["statistic"]
-                g_t_obt_exog_coint = granger_sm_ind_exog_coint["statistic"]
+                g_t_obt = granger_sm_ind.test_statistic
+                g_t_obt_exog = granger_sm_ind_exog.test_statistic
+                g_t_obt_exog_coint = granger_sm_ind_exog_coint.test_statistic
                 g_t_des = results_ref[ds][dt]["granger_caus"][
                     "test_stat"][(causing_key, caused_key)]
                 yield assert_allclose, g_t_obt, g_t_des, rtol, atol, \
@@ -1003,7 +1008,7 @@ def test_granger_causality():
                     yield assert_allclose, g_t_obt_exog_coint, g_t_obt, 1e-07,\
                         0, False, "WITH EXOG_COINT"+err_msg_g_t
                 # check whether string sequences as args work in the same way:
-                g_t_obt_str = granger_sm_str["statistic"]
+                g_t_obt_str = granger_sm_str.test_statistic
                 yield assert_allclose, g_t_obt_str, g_t_obt, 1e-07, 0, False, \
                     err_msg_g_t + " - sequences of integers and ".upper() + \
                     "strings as arguments don't yield the same result!".upper()
@@ -1013,28 +1018,28 @@ def test_granger_causality():
                     ci = causing_ind[0] if len(causing_ind)==1 else causing_ind
                     ce = caused_ind[0] if len(caused_ind) == 1 else caused_ind
                     granger_sm_single_ind = results_sm[ds][
-                        dt].test_granger_causality(ce, ci, verbose=False)
-                    g_t_obt_single = granger_sm_single_ind["statistic"]
+                        dt].test_granger_causality(ce, ci)
+                    g_t_obt_single = granger_sm_single_ind.test_statistic
                     yield assert_allclose, g_t_obt_single, g_t_obt, 1e-07, 0, \
                         False, \
                         err_msg_g_t + " - list of int and int as ".upper() + \
                         "argument don't yield the same result!".upper()
 
                 # test p-value for Granger non-causality:
-                g_p_obt = granger_sm_ind["pvalue"]
+                g_p_obt = granger_sm_ind.pvalue
                 g_p_des = results_ref[ds][dt]["granger_caus"]["p"][(
                     causing_key, caused_key)]
                 yield assert_allclose, g_p_obt, g_p_des, rtol, atol, \
                     False, err_msg_g_p
                 # check whether string sequences as args work in the same way:
-                g_p_obt_str = granger_sm_str["pvalue"]
+                g_p_obt_str = granger_sm_str.pvalue
                 yield assert_allclose, g_p_obt_str, g_p_obt, 1e-07, 0, False, \
                     err_msg_g_t + " - sequences of integers and ".upper() + \
                     "strings as arguments don't yield the same result!".upper()
                 # check if int (e.g. 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
-                    g_p_obt_single = granger_sm_single_ind["pvalue"]
+                    g_p_obt_single = granger_sm_single_ind.pvalue
                     yield assert_allclose, g_p_obt_single, g_p_obt, 1e-07, 0, \
                         False, \
                         err_msg_g_t + " - list of int and int as ".upper() + \
@@ -1058,10 +1063,6 @@ def test_inst_causality():  # test instantaneous causality
             err_msg_i_p = build_err_msg(ds, dt, "INSTANT. CAUS. - p-VALUE")
             err_msg_i_t = build_err_msg(ds, dt, "INSTANT. CAUS. - TEST STAT.")
 
-            # produce output to increase test coverage (but only in a few
-            # cases to avoid cluttered test output)
-            verbose = (dt[0] == "nc" and dt[1] == 0)
-
             v_ind = range(len(ds.variable_names))
             for causing_ind in sublists(v_ind, 1, len(v_ind)-1):
                 causing_names = ["y" + str(i+1) for i in causing_ind]
@@ -1070,17 +1071,21 @@ def test_inst_causality():  # test instantaneous causality
                 caused_ind = [i for i in v_ind if i not in causing_ind]
                 caused_key = tuple(ds.variable_names[i] for i in caused_ind)
                 inst_sm_ind = results_sm[ds][dt].test_inst_causality(
-                    causing_ind, verbose=verbose)
+                    causing_ind)
                 inst_sm_ind_exog = results_sm_exog[ds][
-                    dt].test_inst_causality(causing_ind, verbose=False)
+                    dt].test_inst_causality(causing_ind)
                 inst_sm_ind_exog_coint = results_sm_exog_coint[ds][
-                    dt].test_inst_causality(causing_ind, verbose=False)
+                    dt].test_inst_causality(causing_ind)
                 inst_sm_str = results_sm[ds][dt].test_inst_causality(
-                    causing_names, verbose=False)
+                    causing_names)
+                # call methods to assure they don't raise exceptions
+                inst_sm_ind.summary()
+                str(inst_sm_ind)  # __str__()
+                yield assert_, (inst_sm_ind == inst_sm_str)  # __eq__()
                 # test test-statistic for instantaneous non-causality
-                t_obt = inst_sm_ind["statistic"]
-                t_obt_exog = inst_sm_ind_exog["statistic"]
-                t_obt_exog_coint = inst_sm_ind_exog_coint["statistic"]
+                t_obt = inst_sm_ind.test_statistic
+                t_obt_exog = inst_sm_ind_exog.test_statistic
+                t_obt_exog_coint = inst_sm_ind_exog_coint.test_statistic
                 t_des = results_ref[ds][dt]["inst_caus"][
                     "test_stat"][(causing_key, caused_key)]
                 yield assert_allclose, t_obt, t_des, rtol, atol, False, \
@@ -1092,7 +1097,7 @@ def test_inst_causality():  # test instantaneous causality
                     yield assert_allclose, t_obt_exog_coint, t_obt, 1e-07, 0, \
                         False, "WITH EXOG_COINT"+err_msg_i_t
                 # check whether string sequences as args work in the same way:
-                t_obt_str = inst_sm_str["statistic"]
+                t_obt_str = inst_sm_str.test_statistic
                 yield assert_allclose, t_obt_str, t_obt, 1e-07, 0, False, \
                     err_msg_i_t + " - sequences of integers and ".upper() + \
                     "strings as arguments don't yield the same result!".upper()
@@ -1100,8 +1105,8 @@ def test_inst_causality():  # test instantaneous causality
                 # the same result:
                 if len(causing_ind) == 1:
                     inst_sm_single_ind = results_sm[ds][
-                        dt].test_inst_causality(causing_ind[0], verbose=False)
-                    t_obt_single = inst_sm_single_ind["statistic"]
+                        dt].test_inst_causality(causing_ind[0])
+                    t_obt_single = inst_sm_single_ind.test_statistic
                     yield assert_allclose, t_obt_single, t_obt, 1e-07, 0, \
                         False, \
                         err_msg_i_t + " - list of int and int as ".upper() + \
@@ -1109,13 +1114,13 @@ def test_inst_causality():  # test instantaneous causality
 
                 # test p-value for instantaneous non-causality
                 p_obt = results_sm[ds][dt].test_inst_causality(
-                    causing_ind, verbose=False)["pvalue"]
+                    causing_ind).pvalue
                 p_des = results_ref[ds][dt]["inst_caus"]["p"][(
                     causing_key, caused_key)]
                 yield assert_allclose, p_obt, p_des, rtol, atol, False, \
                     err_msg_i_p
                 # check whether string sequences as args work in the same way:
-                p_obt_str = inst_sm_str["pvalue"]
+                p_obt_str = inst_sm_str.pvalue
                 yield assert_allclose, p_obt_str, p_obt, 1e-07, 0, False, \
                     err_msg_i_p + " - sequences of integers and ".upper() + \
                     "strings as arguments don't yield the same result!".upper()
@@ -1123,8 +1128,8 @@ def test_inst_causality():  # test instantaneous causality
                 # the same result:
                 if len(causing_ind) == 1:
                     inst_sm_single_ind = results_sm[ds][
-                        dt].test_inst_causality(causing_ind[0], verbose=False)
-                    p_obt_single = inst_sm_single_ind["pvalue"]
+                        dt].test_inst_causality(causing_ind[0])
+                    p_obt_single = inst_sm_single_ind.pvalue
                     yield assert_allclose, p_obt_single, p_obt, 1e-07, 0, \
                         False, \
                         err_msg_i_p + " - list of int and int as ".upper() + \
@@ -1181,11 +1186,8 @@ def test_lag_order_selection():
 
             deterministic = dt[0]
             endog_tot = data[ds]
-            # produce output to increase test coverage (but only in a few
-            # cases to avoid cluttered test output)
-            verbose = (dt[0] == "nc" and dt[1] == 0)
-            obtained_all = select_order(endog_tot, 10, dt[0], dt[1],
-                                        verbose=verbose)
+
+            obtained_all = select_order(endog_tot, 10, dt[0], dt[1])
             deterministic_outside_exog = ""
             # "co" is not in exog in any test case
             if "co" in deterministic:
@@ -1201,26 +1203,27 @@ def test_lag_order_selection():
 
             obtained_all_exog = select_order(endog_tot, 10,
                                              deterministic_outside_exog,
-                                             seasons=0, exog=exog_model,
-                                             verbose=False)
+                                             seasons=0, exog=exog_model)
             # "ci" and "li" are always in exog_coint, so pass "nc" as det. term
             obtained_all_exog_coint = select_order(endog_tot, 10, "nc",
                                                    seasons=dt[1],
-                                                   verbose=False,
                                                    exog_coint=exog_coint_model)
             for ic in ["aic", "fpe", "hqic", "bic"]:
                 err_msg = build_err_msg(ds, dt,
                                         "LAG ORDER SELECTION - " + ic.upper())
-                obtained = obtained_all[ic]
+                obtained = getattr(obtained_all, ic)
                 desired = results_ref[ds][dt]["lagorder"][ic]
                 yield assert_allclose, obtained, desired, rtol, atol, False, \
                     err_msg
                 if exog:
-                    yield assert_equal, obtained_all_exog[ic], \
-                        obtained_all[ic], "WITH EXOG"+err_msg
+                    yield assert_equal, getattr(obtained_all_exog, ic), \
+                        getattr(obtained_all, ic), "WITH EXOG"+err_msg
                 if exog_coint:
-                    yield assert_equal, obtained_all_exog_coint[ic], \
-                        obtained_all[ic], "WITH EXOG_COINT"+err_msg
+                    yield assert_equal, getattr(obtained_all_exog_coint, ic), \
+                        getattr(obtained_all, ic), "WITH EXOG_COINT"+err_msg
+            # call methods to assure they don't raise exceptions
+            obtained_all.summary()
+            str(obtained_all)  # __str__()
 
 
 def test_normality():
@@ -1234,23 +1237,17 @@ def test_normality():
             if debug_mode:
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
-            # produce output to increase test coverage (but only in a few
-            # cases to avoid cluttered test output)
-            verbose = (dt[0] == "nc" and dt[1] == 0)
-
             exog = (results_sm_exog[ds][dt].exog is not None)
             exog_coint = (results_sm_exog_coint[ds][dt].exog_coint is not None)
 
-            obtained = results_sm[ds][dt].test_normality(signif=0.05,
-                                                         verbose=verbose)
-            obtained_exog = results_sm_exog[ds][dt].test_normality(
-                    signif=0.05, verbose=False)
+            obtained = results_sm[ds][dt].test_normality(signif=0.05)
+            obtained_exog = results_sm_exog[ds][dt].test_normality(signif=0.05)
             obtained_exog_coint = results_sm_exog_coint[ds][dt].test_normality(
-                    signif=0.05, verbose=False)
+                    signif=0.05)
             err_msg = build_err_msg(ds, dt, "TEST NON-NORMALITY - STATISTIC")
-            obt_statistic = obtained["statistic"]
-            obt_statistic_exog = obtained_exog["statistic"]
-            obt_statistic_exog_coint = obtained_exog_coint["statistic"]
+            obt_statistic = obtained.test_statistic
+            obt_statistic_exog = obtained_exog.test_statistic
+            obt_statistic_exog_coint = obtained_exog_coint.test_statistic
             des_statistic = results_ref[ds][dt]["test_norm"][
                 "joint_test_statistic"]
             yield assert_allclose, obt_statistic, des_statistic, rtol, atol, \
@@ -1262,10 +1259,14 @@ def test_normality():
                 yield assert_equal, obt_statistic_exog_coint, obt_statistic, \
                     "WITH EXOG_COINT"+err_msg
             err_msg = build_err_msg(ds, dt, "TEST NON-NORMALITY - P-VALUE")
-            obt_pvalue = obtained["pvalue"]
+            obt_pvalue = obtained.pvalue
             des_pvalue = results_ref[ds][dt]["test_norm"]["joint_pvalue"]
             yield assert_allclose, obt_pvalue, des_pvalue, rtol, atol, \
                 False, err_msg
+            # call methods to assure they don't raise exceptions
+            obtained.summary()
+            str(obtained)  # __str__()
+            yield assert_, (obtained == obtained_exog)  # __eq__()
 
 
 def test_whiteness():
@@ -1292,19 +1293,19 @@ def test_whiteness():
             err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - "
                                             "TEST STATISTIC")
             desired = results_ref[ds][dt]["whiteness"]["test statistic"]
-            yield assert_allclose, obtained["statistic"], desired, \
+            yield assert_allclose, obtained.test_statistic, desired, \
                 rtol, atol, False, err_msg
             if exog:
-                yield assert_equal, obtained_exog["statistic"],\
-                    obtained["statistic"], "WITH EXOG"+err_msg
+                yield assert_equal, obtained_exog.test_statistic, \
+                    obtained.test_statistic, "WITH EXOG"+err_msg
             if exog_coint:
-                yield assert_equal, obtained_exog_coint["statistic"],\
-                    obtained["statistic"], "WITH EXOG_COINT"+err_msg
+                yield assert_equal, obtained_exog_coint.test_statistic, \
+                    obtained.test_statistic, "WITH EXOG_COINT"+err_msg
             # p-value
             err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - "
                                             "P-VALUE")
             desired = results_ref[ds][dt]["whiteness"]["p-value"]
-            yield assert_allclose, obtained["pvalue"], desired, \
+            yield assert_allclose, obtained.pvalue, desired, \
                 rtol, atol, False, err_msg
 
             obtained = results_sm[ds][dt].test_whiteness(nlags=lags,
@@ -1317,20 +1318,24 @@ def test_whiteness():
             err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - "
                                             "TEST STATISTIC (ADJUSTED TEST)")
             desired = results_ref[ds][dt]["whiteness"]["test statistic adj."]
-            yield assert_allclose, obtained["statistic"], desired, \
+            yield assert_allclose, obtained.test_statistic, desired, \
                 rtol, atol, False, err_msg
             if exog:
-                yield assert_equal, obtained_exog["statistic"],\
-                    obtained["statistic"], "WITH EXOG"+err_msg
+                yield assert_equal, obtained_exog.test_statistic, \
+                    obtained.test_statistic, "WITH EXOG"+err_msg
             if exog_coint:
-                yield assert_equal, obtained_exog_coint["statistic"],\
-                    obtained["statistic"], "WITH EXOG_COINT"+err_msg
+                yield assert_equal, obtained_exog_coint.test_statistic, \
+                    obtained.test_statistic, "WITH EXOG_COINT"+err_msg
             # p-value (adjusted Portmanteau test)
             err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - "
                                             "P-VALUE (ADJUSTED TEST)")
             desired = results_ref[ds][dt]["whiteness"]["p-value adjusted"]
-            yield assert_allclose, obtained["pvalue"], desired, \
+            yield assert_allclose, obtained.pvalue, desired, \
                 rtol, atol, False, err_msg
+            # call methods to assure they don't raise exceptions
+            obtained.summary()
+            str(obtained)  # __str__()
+            yield assert_, (obtained == obtained_exog)  # __eq__()
 
 
 def test_summary():
@@ -1367,10 +1372,13 @@ def test_exceptions():
     endog = data[datasets[0]]
 
     # select_coint_rank:
-    yield assert_raises, ValueError, select_coint_rank, endog, 0, 3, "trace", \
-        0.975  # 0.975 is not possible (must be 0.9, 0.95 or 0.99)
     yield assert_raises, ValueError, select_coint_rank, endog, 0, 3, \
         "my_method", 0.95  # method argument cannot be "my_method"
+    # det_order has to be 0.9, 0.95, or 0.99:
+    yield assert_raises, ValueError, select_coint_rank, endog, 2, 3
+    yield assert_raises, ValueError, select_coint_rank, endog, 0.5, 3
+    yield assert_raises, ValueError, select_coint_rank, endog, 0, 3, "trace", \
+        0.975  # 0.975 is not possible (must be 0.9, 0.95 or 0.99)
 
     # Granger_causality:
     # ### 0<signif<1
@@ -1449,8 +1457,31 @@ def test_select_coint_rank():  # This is only a smoke test.
         else:
             print("\n\nSELECT_COINT_RANK\n", end="")
     endog = data[datasets[0]]
-    select_coint_rank(endog, 0, 3)
+    neqs = endog.shape[1]
 
+    trace_result = select_coint_rank(endog, 0, 3, method="trace")
+    rank = trace_result.rank
+    r_1 = trace_result.r_1
+    test_stats = trace_result.test_stats
+    crit_vals = trace_result.crit_vals
+    if rank > 0:
+        yield assert_equal, r_1[0], r_1[1]
+        for i in range(rank):
+            yield assert_, test_stats[i] > crit_vals[i]
+    if rank < neqs:
+        yield assert_, test_stats[rank] < crit_vals[rank]
+
+    maxeig_result = select_coint_rank(endog, 0, 3, method="maxeig", signif=0.9)
+    rank = maxeig_result.rank
+    r_1 = maxeig_result.r_1
+    test_stats = maxeig_result.test_stats
+    crit_vals = maxeig_result.crit_vals
+    if maxeig_result.rank > 0:
+        yield assert_equal, r_1[0], r_1[1] - 1
+        for i in range(rank):
+            yield assert_, test_stats[i] > crit_vals[i]
+    if rank < neqs:
+        yield assert_, test_stats[rank] < crit_vals[rank]
 
 def setup():
     datasets.append(
