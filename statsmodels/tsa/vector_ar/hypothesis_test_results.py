@@ -1,7 +1,7 @@
 from statsmodels.iolib.table import SimpleTable
 
 
-class HypothesisTestResults:
+class HypothesisTestResults(object):
     """
     Results class for hypothesis tests.
 
