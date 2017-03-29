@@ -49,10 +49,8 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
         * "li" - linear trend within the cointegration relation
 
         Combinations of these are possible (e.g. "cili" or "colo" for linear
-        trend with intercept). When using a constant term you have to choose
-        whether you want to restrict it to the cointegration relation (i.e.
-        "ci") or leave it unrestricted (i.e. "co"). Don't use both "ci" and
-        "co". The same applies for "li" and "lo" in when using a linear term.
+        trend with intercept). See the docstring of the `VECM`-class for more
+        information.
     seasons : int, default: 0
         Number of periods in a seasonal cycle.
     exog : ndarray (nobs_tot x neqs) or None, default: None
@@ -138,7 +136,8 @@ def num_det_vars(det_string, seasons=0):
         * "li" - linear trend within the cointegration relation
 
         Combinations of these are possible (e.g. "cili" or "colo" for linear
-        trend with intercept)
+        trend with intercept). See the docstring of the `VECM`-class for more
+        information.
     seasons : int
         Number of periods in a seasonal cycle.
 
@@ -228,7 +227,7 @@ def _mat_sqrt(_2darray):
     return u_.dot(s_[:, None] * v_)
 
 
-def _endog_matrices(endog_tot, exog, exog_coint, diff_lags, deterministic,
+def _endog_matrices(endog, exog, exog_coint, diff_lags, deterministic,
                     seasons=0, first_season=0):
     """
     Returns different matrices needed for parameter estimation.
@@ -239,7 +238,7 @@ def _endog_matrices(endog_tot, exog, exog_coint, diff_lags, deterministic,
 
     Parameters
     ----------
-    endog_tot : ndarray (neqs x nobs_tot)
+    endog : ndarray (neqs x nobs_tot)
         The whole sample including the presample.
     exog: ndarray (nobs_tot x neqs) or None
         Deterministic terms outside the cointegration relation.
@@ -255,10 +254,8 @@ def _endog_matrices(endog_tot, exog, exog_coint, diff_lags, deterministic,
         * "li" - linear trend within the cointegration relation
 
         Combinations of these are possible (e.g. "cili" or "colo" for linear
-        trend with intercept). When using a constant term you have to choose
-        whether you want to restrict it to the cointegration relation (i.e.
-        "ci") or leave it unrestricted (i.e. "co"). Don't use both "ci" and
-        "co". The same applies for "li" and "lo" in when using a linear term.
+        trend with intercept). See the docstring of the `VECM`-class for more
+        information.
     seasons : int, default: 0
         Number of periods in a seasonal cycle. 0 (default) means no seasons.
     first_season : int, default: 0
@@ -269,14 +266,14 @@ def _endog_matrices(endog_tot, exog, exog_coint, diff_lags, deterministic,
     -------
     y_1_T : ndarray (neqs x nobs)
         The (transposed) data without the presample.
-        .. math:: (y_1, \\ldots, y_T)
+        `.. math:: (y_1, \\ldots, y_T)
     delta_y_1_T : ndarray (neqs x nobs)
         The first differences of endog.
-        .. math:: (y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})
+        `.. math:: (y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})
     y_lag1 : ndarray (neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Endog of the previous period (lag 1).
-        .. math:: (y_0, \\ldots, y_{T-1})
+        `.. math:: (y_0, \\ldots, y_{T-1})
     delta_x : ndarray (diff_lags*neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Lagged differenced endog, used as regressor for the short term
@@ -285,10 +282,11 @@ def _endog_matrices(endog_tot, exog, exog_coint, diff_lags, deterministic,
     References
     ----------
     .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+
     """
     # p. 286:
     p = diff_lags+1
-    y = endog_tot
+    y = endog
     K = y.shape[0]
     y_1_T = y[:, p:]
     T = y_1_T.shape[1]
@@ -339,11 +337,11 @@ def _r_matrices(delta_y_1_T, y_lag1, delta_x):
     ----------
     delta_y_1_T : ndarray (neqs x nobs)
         The first differences of endog.
-        .. math:: (y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})
+        `.. math:: (y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})
     y_lag1 : ndarray (neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Endog of the previous period (lag 1).
-        .. math:: (y_0, \\ldots, y_{T-1})
+        `.. math:: (y_0, \\ldots, y_{T-1})
     delta_x : ndarray (diff_lags*neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Lagged differenced endog, used as regressor for the short term
@@ -695,14 +693,14 @@ class VECM(tsbase.TimeSeriesModel):
     Class representing a Vector Error Correction Model (VECM).
 
     A VECM process has the following form
-    .. math:: \\Delta y_t = \\Pi y_{t-1} + \\Gamma_1 \\Delta y_{t-1} + \\ldots + \\Gamma_{k_ar-1} \\Delta y_{t-k_ar+1} + u_t
+    `.. math:: \\Delta y_t = \\Pi y_{t-1} + \\Gamma_1 \\Delta y_{t-1} + \\ldots + \\Gamma_{k_ar-1} \\Delta y_{t-k_ar+1} + u_t
     where
-    .. math:: \\Pi = \\alpha \\beta'
+    `.. math:: \\Pi = \\alpha \\beta'
     as described in chapter 7 of [1]_.
 
     Parameters
     ----------
-    endog_tot : array-like (nobs_tot x neqs)
+    endog : array-like (nobs_tot x neqs)
         2-d endogenous response variable.
     exog: ndarray (nobs_tot x neqs) or None
         Deterministic terms outside the cointegration relation.
@@ -733,23 +731,65 @@ class VECM(tsbase.TimeSeriesModel):
         whether you want to restrict it to the cointegration relation (i.e.
         "ci") or leave it unrestricted (i.e. "co"). Don't use both "ci" and
         "co". The same applies for "li" and "lo" in when using a linear term.
+        See the Notes-section for more information.
     seasons : int, default: 0
         Number of periods in a seasonal cycle. 0 means no seasons.
     first_season : int, default: 0
         Season of the first observation.
 
+    Notes
+    -----
+    A VECM with deterministic term has the form
+    .. math::
+
+       \\Delta y_t = \\alpha \\begin{pmatrix}\\beta' & \\eta'\\end{pmatrix} \\begin{pmatrix}y_{t-1}\\\\D^{co}_{t-1}\\end{pmatrix} + \\Gamma_1 \\Delta y_{t-1} + \\dots + \\Gamma_{p-1} \\Delta y_{t-p+1} + C D_t + u_t.
+
+    In :math:`D^{co}_{t-1}` we have the deterministic terms which are inside
+    the cointegration relation (or restricted to the cointegration relation).
+    :math:`\\eta` is the corresponding estimator. To pass a deterministic term
+    inside the cointegration relation, we can use the `exog_coint` argument.
+    For the two special cases of an intercept and a linear trend there exists
+    a simpler way to declare these terms: we can pass `"ci"` and `"li"`
+    respectively to the `deterministic` argument. So for an intercept inside
+    the cointegration relation we can either pass `"ci"` as `deterministic` or
+    `np.ones(len(data))` if `data` is passed to the `endog` argument. This
+    ensures that :math:`D^{co} = 1` for :math:`t`.
+    We can also use deterministic terms outside the cointegration relation.
+    These are defined in :math:`D_t` in the formula above with the
+    corresponding estimators in the matrix :math:`C`. We specify such terms by
+    passing them to the `exog` argument. For an intercept and/or linear trend
+    we again have the possibility to use `deterministic` alternatively. For an
+    intercept we pass `"co"` and for a linear trend we pass `"lo"` where the
+    `o` stands for `outside`.
+
+    The following table shows the five cases considered in [2]_. The last
+    column indicates which string to pass to the `deterministic` argument for
+    each of these cases.
+
+    ====  ===============================  ==================================  ===============
+    Case  Intercept                        Slope of the linear trend           `deterministic`
+    ====  ===============================  ==================================  ===============
+    I     :math:`0`                        :math:`0`                           `"nc"`
+    II    :math:`- \\alpha \\beta^T \\mu`  :math:`0`                           `"ci"`
+    III   :math:`\\neq 0`                  :math:`0`                           `"co"`
+    IV    :math:`\\neq 0`                  :math:`- \\alpha \\beta^T \\gamma`  `"coli"`
+    V     :math:`\\neq 0`                  :math:`\neq 0`                      `"colo"`
+    ====  ===============================  ==================================  ===============
+
     References
     ----------
     .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+    .. [2] Johansen, S. 1995. *Likelihood-Based Inference in Cointegrated Vector Autoregressive Models*. Oxford University Press.
+
     """
 
-    def __init__(self, endog_tot, exog=None, exog_coint=None, dates=None,
+    def __init__(self, endog, exog=None, exog_coint=None, dates=None,
                  freq=None, missing="none", diff_lags=1, coint_rank=1,
                  deterministic="nc", seasons=0, first_season=0):
-        super(VECM, self).__init__(endog_tot, exog, dates, freq,
+        super(VECM, self).__init__(endog, exog, dates, freq,
                                    missing=missing)
         if exog_coint is not None and \
-                not exog_coint.shape[0] == endog_tot.shape[0]:
+                not exog_coint.shape[0] == endog.shape[0]:
             raise ValueError("exog_coint must have as many rows as enodg_tot!")
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VECM")
@@ -937,7 +977,7 @@ class VECMResults(object):
 
     Parameters
     ----------
-    endog_tot : ndarray (neqs x nobs_tot)
+    endog : ndarray (neqs x nobs_tot)
         Array of observations.
     exog: ndarray (nobs_tot x neqs) or None
         Deterministic terms outside the cointegration relation.
@@ -967,10 +1007,8 @@ class VECMResults(object):
         * "li" - linear trend within the cointegration relation
 
         Combinations of these are possible (e.g. "cili" or "colo" for linear
-        trend with intercept). When using a constant term you have to choose
-        whether you want to restrict it to the cointegration relation (i.e.
-        "ci") or leave it unrestricted (i.e. "co"). Don't use both "ci" and
-        "co". The same applies for "li" and "lo" in when using a linear term.
+        trend with intercept). See the docstring of the `VECM`-class for more
+        information.
     seasons : int, default: 0
         Number of periods in a seasonal cycle. 0 means no seasons.
     first_season : int, default: 0
@@ -998,7 +1036,7 @@ class VECMResults(object):
     nobs : int
         Number of observations (excluding the presample).
     model : see Parameters
-    y_all : see endog_tot in Parameters
+    y_all : see endog in Parameters
     exog : see Parameters
     exog_coint : see Parameters
     names : see Parameters
@@ -1125,17 +1163,17 @@ class VECMResults(object):
     .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
 
-    def __init__(self, endog_tot, exog, exog_coint, k_ar,
+    def __init__(self, endog, exog, exog_coint, k_ar,
                  coint_rank, alpha, beta, gamma, sigma_u, deterministic='nc',
                  seasons=0, first_season=0, delta_y_1_T=None, y_lag1=None,
                  delta_x=None, model=None, names=None, dates=None):
         self.model = model
-        self.y_all = endog_tot
+        self.y_all = endog
         self.exog = exog
         self.exog_coint = exog_coint
         self.names = names
         self.dates = dates
-        self.neqs = endog_tot.shape[0]
+        self.neqs = endog.shape[0]
         self.k_ar = k_ar
         self.deterministic = deterministic
         self.seasons = seasons
@@ -1188,7 +1226,7 @@ class VECMResults(object):
             self._delta_x = delta_x
         else:
             _y_1_T, self._delta_y_1_T, self._y_lag1, self._delta_x = \
-                _endog_matrices(endog_tot, self.exog, k_ar,
+                _endog_matrices(endog, self.exog, k_ar,
                                 deterministic, seasons)
         self.nobs = self._y_lag1.shape[1]
 
