@@ -287,7 +287,7 @@ class IRAnalysis(BaseIRAnalysis):
                                         signif=signif, seed=seed,
                                         burn=burn, cum=False)
         else:
-            return model.irf_errband_mc(orth=orth, repl=repl, T=periods,  # TODO: irf_errband relies on self.intercept --> solve with exog-refactor
+            return model.irf_errband_mc(orth=orth, repl=repl, T=periods,
                                         signif=signif, seed=seed,
                                         burn=burn, cum=False)
     def err_band_sz1(self, orth=False, svar=False, repl=1000,
@@ -328,7 +328,7 @@ class IRAnalysis(BaseIRAnalysis):
         else:
             irfs = self.irfs
         neqs = self.neqs
-        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,  # TODO: irf_resim relies on self.intercept --> solve with exog-refactor
+        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
         q = util.norm_signif_level(signif)
 
@@ -391,7 +391,7 @@ class IRAnalysis(BaseIRAnalysis):
         else:
             irfs = self.irfs
         neqs = self.neqs
-        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,  # TODO: irf_resim relies on self.intercept --> solve with exog-refactor
+        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
 
         W, eigva, k = self._eigval_decomp_SZ(irf_resim)
@@ -459,7 +459,7 @@ class IRAnalysis(BaseIRAnalysis):
         else:
             irfs = self.irfs
         neqs = self.neqs
-        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,  # TODO: irf_resim relies on self.intercept --> solve with exog-refactor
+        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
         stack = np.zeros((neqs, repl, periods*neqs))
 
@@ -641,7 +641,7 @@ class IRAnalysis(BaseIRAnalysis):
         """
         model = self.model
         periods = self.periods
-        return model.irf_errband_mc(orth=orth, repl=repl,  # TODO: irf_errband_mc relies on self.intercept --> solve with exog-refactor
+        return model.irf_errband_mc(orth=orth, repl=repl,
                                     T=periods, signif=signif, seed=seed, burn=burn, cum=True)
 
     def lr_effect_cov(self, orth=False):

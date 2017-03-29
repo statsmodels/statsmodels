@@ -1400,18 +1400,10 @@ class VARResults(VARProcess):
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
 
-        if (orth == True and cum == True):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
-                              orth_ma_rep(maxn=T).cumsum(axis=0)
-        elif (orth == True and cum == False):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
-                              orth_ma_rep(maxn=T)
-        elif (orth == False and cum == True):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
-                              ma_rep(maxn=T).cumsum(axis=0)
-        elif (orth == False and cum == False):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
-                              ma_rep(maxn=T)
+        def fill_coll(sim):
+            ret = VAR(sim, exog=self.exog).fit(maxlags=k_ar, trend=self.trend)
+            ret = ret.orth_ma_rep(maxn=T) if orth else ret.ma_rep(maxn=T)
+            return ret.cumsum(axis=0) if cum else ret
 
         for i in range(repl):
             #discard first hundred to eliminate correct for starting bias
@@ -1470,18 +1462,10 @@ class VARResults(VARProcess):
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
 
-        if (orth == True and cum == True):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
-                              orth_ma_rep(maxn=T).cumsum(axis=0)
-        elif (orth == True and cum == False):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
-                              orth_ma_rep(maxn=T)
-        elif (orth == False and cum == True):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
-                              ma_rep(maxn=T).cumsum(axis=0)
-        elif (orth == False and cum == False):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
-                              ma_rep(maxn=T)
+        def fill_coll(sim):
+            ret = VAR(sim, exog=self.exog).fit(maxlags=k_ar, trend=self.trend)
+            ret = ret.orth_ma_rep(maxn=T) if orth else ret.ma_rep(maxn=T)
+            return ret.cumsum(axis=0) if cum else ret
 
         for i in range(repl):
             #discard first hundred to eliminate correct for starting bias
