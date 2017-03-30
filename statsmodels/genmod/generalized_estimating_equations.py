@@ -259,7 +259,7 @@ _gee_family_doc = """\
         The default is Gaussian.  To specify the binomial
         distribution use `family=sm.families.Binomial()`. Each family
         can take a link instance as an argument.  See
-        statsmodels.family.family for more information."""
+        statsmodels.genmod.families.family for more information."""
 
 _gee_ordinal_family_doc = """\
         The only family supported is `Binomial`.  The default `Logit`
