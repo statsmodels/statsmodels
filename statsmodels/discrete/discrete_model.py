@@ -2073,7 +2073,7 @@ class NegativeBinomial(CountModel):
             alpha = params[-1]
         params = params[:-1]
         exog = self.exog
-        y = self.endog[:,None]
+        y = self.endog[:, None]
         mu = self.predict(params)[:, None]
         a1 = 1/alpha * mu**Q
         # Note: Q is either 0 or 1, so a1 is either 1/alpha or mu/alpha.
