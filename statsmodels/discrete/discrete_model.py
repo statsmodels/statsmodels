@@ -19,20 +19,16 @@ from __future__ import division
 
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial"]
 
-from statsmodels.compat.python import lmap, lzip, range
+from statsmodels.compat.python import lmap, range
 import numpy as np
 from scipy.special import gammaln
-from scipy import stats, special, optimize  # opt just for nbin
+from scipy import stats, special
 import statsmodels.tools.tools as tools
 from statsmodels.tools import data as data_tools
-from statsmodels.tools.decorators import (resettable_cache,
-        cache_readonly)
-from statsmodels.regression.linear_model import OLS
-from scipy import stats, special, optimize  # opt just for nbin
-from scipy.stats import nbinom
+from statsmodels.tools.decorators import resettable_cache, cache_readonly
+
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
-from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
-                                       approx_hess_cs, approx_fprime_cs)
+from statsmodels.tools.numdiff import approx_fprime_cs
 import statsmodels.base.model as base
 from statsmodels.base.data import handle_data  # for mnlogit
 import statsmodels.regression.linear_model as lm
@@ -3173,7 +3169,7 @@ if __name__=="__main__":
 #    res1 = optimize.fmin_l_bfgs_b(func, np.r_[poiss_res.params,.1],
 #                        approx_grad=True)
     res1 = optimize.fmin_bfgs(func, np.r_[poiss_res.params,.1], fprime=grad)
-    from statsmodels.tools.numdiff import approx_hess_cs
+    # from statsmodels.tools.numdiff import approx_hess_cs
 #    np.sqrt(np.diag(-np.linalg.inv(approx_hess_cs(np.r_[params,lnalpha], mod.loglike))))
 #NOTE: this is the hessian in terms of alpha _not_ lnalpha
     hess_arr = mod.hessian(res1)
