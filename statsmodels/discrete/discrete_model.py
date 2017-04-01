@@ -162,9 +162,9 @@ class DiscreteModel(base.LikelihoodModel):
         and should contain any preprocessing that needs to be done for a model.
         """
         # assumes constant
-        self.df_model = float(np_matrix_rank(self.exog) - 1)
-        self.df_resid = (float(self.exog.shape[0] -
-                         np_matrix_rank(self.exog)))
+        exog_rank = np_matrix_rank(self.exog)
+        self.df_model = float(exog_rank - 1)
+        self.df_resid = float(self.exog.shape[0] - exog_rank)
 
     def cdf(self, X):
         """
