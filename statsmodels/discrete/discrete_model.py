@@ -2082,13 +2082,13 @@ class NegativeBinomial(CountModel):
                         special.digamma(y+mu/alpha)
                         - special.digamma(mu/alpha)
                         )
+            da1 = alpha**2 * (alpha + 1)
             
             dparams = exog*mu/alpha*(np.log(1/(alpha + 1)) + digamma_part)
             dalpha = ((alpha*(y - mu*np.log(1/(alpha + 1)) -
                               mu*(digamma_part + 1)) -
-                       mu*(np.log(1/(alpha + 1)) + digamma_part))/
-                       (alpha**2*(alpha + 1))).sum()
-
+                       mu*(np.log(1/(alpha + 1)) + digamma_part))
+                       ).sum() / da1
         else: # nb2
             digamma_part = special.digamma(a1+y) - special.digamma(a1)
             
@@ -2097,7 +2097,8 @@ class NegativeBinomial(CountModel):
             dalpha = (digamma_part + np.log(a1)
                         - np.log(a1+mu) - (a1+y)/(a1+mu) + 1).sum()*da1
 
-        # multiply above by constant outside sum to reduce rounding error
+        # Multiply/divide by da1 above outside the sum() to reduce
+        # floating point error.
         if self._transparams:
             return np.r_[dparams.sum(0), dalpha*alpha]
         else:
