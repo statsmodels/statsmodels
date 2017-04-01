@@ -2139,14 +2139,16 @@ class NegativeBinomial(CountModel):
 
         a1 = mu/alpha
 
+        # for dl/dalpha dalpha
+        digamma_part = (special.digamma(y + mu/alpha) -
+                        special.digamma(mu/alpha))
+
         # for dl/dparams dparams
         dim = exog.shape[1]
         hess_arr = np.empty((dim+1,dim+1))
         #const_arr = a1*mu*(a1+y)/(mu+a1)**2
         # not all of dparams
-        dparams = exog/alpha*(np.log(1/(alpha + 1)) +
-                              special.digamma(y + mu/alpha) -
-                              special.digamma(mu/alpha))
+        dparams = exog/alpha*(np.log(1/(alpha + 1)) + digamma_part)
 
         dmudb = exog*mu
         xmu_alpha = exog*mu/alpha
@@ -2170,9 +2172,6 @@ class NegativeBinomial(CountModel):
         hess_arr[-1,:-1] = dldpda
         hess_arr[:-1,-1] = dldpda
 
-        # for dl/dalpha dalpha
-        digamma_part = (special.digamma(y + mu/alpha) -
-                        special.digamma(mu/alpha))
 
         log_alpha = np.log(1/(alpha+1))
         alpha3 = alpha**3
@@ -2928,7 +2927,7 @@ class MultinomialResults(DiscreteResults):
             # use range below to ensure sortedness
             ynames = [ynames[key] for key in range(int(model.J))]
             ynames = ['='.join([yname, name]) for name in ynames]
-            if not all:
+            if not all: # TODO: Avoid built-in names
                 yname_list = ynames[1:] # assumes first variable is dropped
             else:
                 yname_list = ynames
