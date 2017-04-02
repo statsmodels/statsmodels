@@ -751,9 +751,11 @@ class MixedLM(base.LikelihoodModel):
 
         return exog_names + param_names + vc_names, exog_re_names, param_names
 
+
     @classmethod
     def from_formula(cls, formula, data, re_formula=None, vc_formula=None,
-                     subset=None, use_sparse=False, *args, **kwargs):
+                     subset=None, use_sparse=False, missing='none', *args,
+                     **kwargs):
         """
         Create a Model from a formula and dataframe.
 
@@ -777,6 +779,8 @@ class MixedLM(base.LikelihoodModel):
             An array-like object of booleans, integers, or index
             values that indicate the subset of df to use in the
             model. Assumes df is a `pandas.DataFrame`
+        missing : string
+            Either 'none' or 'drop'
         args : extra arguments
             These are passed to the model
         kwargs : extra keyword arguments
@@ -853,13 +857,20 @@ class MixedLM(base.LikelihoodModel):
 
         if "groups" not in kwargs.keys():
             raise AttributeError("'groups' is a required keyword argument in MixedLM.from_formula")
+        groups = kwargs["groups"]
 
         # If `groups` is a variable name, retrieve the data for the
         # groups variable.
         group_name = "Group"
-        if type(kwargs["groups"]) == str:
-            group_name = kwargs["groups"]
-            kwargs["groups"] = np.asarray(data[kwargs["groups"]])
+        if type(groups) == str:
+            group_name = groups
+            groups = np.asarray(data[groups])
+        del kwargs["groups"]
+
+        # Bypass all upstream missing data handling to properly handle variance components
+        if missing == 'drop':
+            data, groups = _handle_missing(data, groups, formula, re_formula, vc_formula)
+            missing = 'none'
 
         if re_formula is not None:
             if re_formula.strip() == "1":
@@ -894,8 +905,7 @@ class MixedLM(base.LikelihoodModel):
                 eval_env = EvalEnvironment({})
 
             exog_vc = {}
-            data["_group"] = kwargs["groups"]
-            gb = data.groupby("_group")
+            gb = data.groupby(groups)
             kylist = list(gb.groups.keys())
             kylist.sort()
             for vc_name in vc_formula.keys():
@@ -917,6 +927,7 @@ class MixedLM(base.LikelihoodModel):
                                                subset=None,
                                                exog_re=exog_re,
                                                exog_vc=exog_vc,
+                                               groups=groups,
                                                *args, **kwargs)
 
         # expand re names to account for pairs of RE
@@ -2580,3 +2591,33 @@ class MixedLMResultsWrapper(base.LikelihoodResultsWrapper):
     _methods = {}
     _upstream_methods = base.LikelihoodResultsWrapper._wrap_methods
     _wrap_methods = base.wrap.union_dicts(_methods, _upstream_methods)
+
+
+def _handle_missing(data, groups, formula, re_formula, vc_formula):
+
+    tokens = set([])
+
+    forms = [formula]
+    if re_formula is not None:
+        forms.append(re_formula)
+    if vc_formula is not None:
+        forms.extend(vc_formula.values())
+
+    import tokenize
+    import io
+    skiptoks = {"(", ")", "*", ":", "+", "-", "**", "/"}
+
+    for fml in forms:
+        g = tokenize.generate_tokens(io.StringIO(fml).readline)
+        for tok in g:
+            if tok not in skiptoks:
+                tokens.add(tok.string)
+    tokens = list(tokens & set(data.columns))
+    tokens.sort()
+
+    data = data[tokens]
+    ii = pd.notnull(data).all(1)
+    if type(groups) != "str":
+        ii &= pd.notnull(groups)
+
+    return data.loc[ii, :], groups[np.asarray(ii)]

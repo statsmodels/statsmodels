@@ -726,6 +726,62 @@ def test_random_effects():
     assert_(isinstance(re[0], pd.Series))
     assert_(len(re[0]) == 2)
 
+
+def test_handle_missing():
+
+    np.random.seed(23423)
+    df = np.random.normal(size=(100, 6))
+    df = pd.DataFrame(df)
+    df.columns = ["y", "g", "x1", "z1", "c1", "c2"]
+    df["g"] = np.kron(np.arange(50), np.ones(2))
+    re = np.random.normal(size=(50, 4))
+    re = np.kron(re, np.ones((2, 1)))
+    df["y"] = re[:, 0] + re[:, 1] * df.z1 + re[:, 2] * df.c1
+    df["y"] += re[:, 3] * df.c2 + np.random.normal(size=100)
+    df.loc[1, "y"] = np.NaN
+    df.loc[2, "g"] = np.NaN
+    df.loc[3, "x1"] = np.NaN
+    df.loc[4, "z1"] = np.NaN
+    df.loc[5, "c1"] = np.NaN
+    df.loc[6, "c2"] = np.NaN
+
+    fml = "y ~ x1"
+    re_formula = "1 + z1"
+    vc_formula = {"a": "0 + c1", "b": "0 + c2"}
+    for include_re in False, True:
+        for include_vc in False, True:
+            kwargs = {}
+            dx = df.copy()
+            va = ["y", "g", "x1"]
+            if include_re:
+                kwargs["re_formula"] = re_formula
+                va.append("z1")
+            if include_vc:
+                kwargs["vc_formula"] = vc_formula
+                va.extend(["c1", "c2"])
+
+            dx = dx[va].dropna()
+
+            # Some of these models are severely misspecified with
+            # small n, so produce convergence warnings.  Not relevant
+            # to what we are checking here.
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+
+                # Drop missing externally
+                model1 = MixedLM.from_formula(
+                    fml, groups="g", data=dx, **kwargs)
+                result1 = model1.fit()
+
+                # MixeLM handles missing
+                model2 = MixedLM.from_formula(
+                    fml, groups="g", data=df, missing='drop', **kwargs)
+                result2 = model2.fit()
+
+                assert_allclose(result1.params, result2.params)
+                assert_allclose(result1.bse, result2.bse)
+
+
 if __name__ == "__main__":
 
     import nose
