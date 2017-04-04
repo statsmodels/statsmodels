@@ -639,7 +639,7 @@ class MixedLM(base.LikelihoodModel):
             self.k_re2 = 1
             self.exog_re = np.ones((len(endog), 1), dtype=np.float64)
             self.data.exog_re = self.exog_re
-            names = ['Group RE']
+            names = ['Group Var']
             self.data.param_names = self.exog_names + names
             self.data.exog_re_names = names
             self.data.exog_re_names_full = names
@@ -741,13 +741,13 @@ class MixedLM(base.LikelihoodModel):
         for i in range(len(exog_re_names)):
             for j in range(i + 1):
                 if i == j:
-                    param_names.append(exog_re_names[i] + " RE")
+                    param_names.append(exog_re_names[i] + " Var")
                 else:
-                    param_names.append(exog_re_names[j] + " RE x " +
-                                       exog_re_names[i] + " RE")
+                    param_names.append(exog_re_names[j] + " x " +
+                                       exog_re_names[i] + " Cov")
                 jj += 1
 
-        vc_names = [x + " RE" for x in self._vc_names]
+        vc_names = [x + " Var" for x in self._vc_names]
 
         return exog_names + param_names + vc_names, exog_re_names, param_names
 
@@ -876,7 +876,7 @@ class MixedLM(base.LikelihoodModel):
             if re_formula.strip() == "1":
                 # Work around Patsy bug, fixed by 0.3.
                 exog_re = np.ones((data.shape[0], 1))
-                exog_re_names = ["Group"]
+                exog_re_names = [group_name]
             else:
                 eval_env = kwargs.get('eval_env', None)
                 if eval_env is None:
@@ -886,13 +886,14 @@ class MixedLM(base.LikelihoodModel):
                     eval_env = EvalEnvironment({})
                 exog_re = patsy.dmatrix(re_formula, data, eval_env=eval_env)
                 exog_re_names = exog_re.design_info.column_names
+                exog_re_names = [x.replace("Intercept", group_name) for x in exog_re_names]
                 exog_re = np.asarray(exog_re)
             if exog_re.ndim == 1:
                 exog_re = exog_re[:, None]
         else:
             exog_re = None
             if vc_formula is None:
-                exog_re_names = ["groups"]
+                exog_re_names = [group_name]
             else:
                 exog_re_names = []
 

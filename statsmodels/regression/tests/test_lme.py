@@ -472,7 +472,7 @@ class TestMixedLM(object):
         # test the names
         assert_(mod1.data.xnames == ["x1", "x2", "x3", "x4"])
         assert_(mod1.data.exog_re_names == ["x_re1"])
-        assert_(mod1.data.exog_re_names_full == ["x_re1 RE"])
+        assert_(mod1.data.exog_re_names_full == ["x_re1 Var"])
         rslt1 = mod1.fit()
 
         # Fit with a formula, passing groups as the actual values.
@@ -487,7 +487,7 @@ class TestMixedLM(object):
 
         assert_(mod2.data.xnames == ["exog0", "exog1", "exog2", "exog3"])
         assert_(mod2.data.exog_re_names == ["exog_re"])
-        assert_(mod2.data.exog_re_names_full == ["exog_re RE"])
+        assert_(mod2.data.exog_re_names_full == ["exog_re Var"])
 
         rslt2 = mod2.fit()
         assert_almost_equal(rslt1.params, rslt2.params)
@@ -498,7 +498,7 @@ class TestMixedLM(object):
                                     groups="groups")
         assert_(mod3.data.xnames == ["exog0", "exog1", "exog2", "exog3"])
         assert_(mod3.data.exog_re_names == ["exog_re"])
-        assert_(mod3.data.exog_re_names_full == ["exog_re RE"])
+        assert_(mod3.data.exog_re_names_full == ["exog_re Var"])
 
         rslt3 = mod3.fit(start_params=rslt2.params)
         assert_allclose(rslt1.params, rslt3.params, rtol=1e-4)
@@ -514,7 +514,7 @@ class TestMixedLM(object):
         from statsmodels.formula.api import mixedlm
         mod5 = mixedlm(fml, df, groups="groups")
         assert_(mod5.data.exog_re_names == ["groups"])
-        assert_(mod5.data.exog_re_names_full == ["groups RE"])
+        assert_(mod5.data.exog_re_names_full == ["groups Var"])
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             rslt5 = mod5.fit()
@@ -652,9 +652,9 @@ def test_mixed_lm_wrapper():
     result.summary()
 
     xnames = ["exog0", "exog1", "exog2", "exog3"]
-    re_names = ["Intercept", "exog_re"]
-    re_names_full = ["Intercept RE", "Intercept RE x exog_re RE",
-                     "exog_re RE"]
+    re_names = ["Group", "exog_re"]
+    re_names_full = ["Group Var", "Group x exog_re Cov",
+                     "exog_re Var"]
 
     assert_(mod2.data.xnames == xnames)
     assert_(mod2.data.exog_re_names == re_names)
