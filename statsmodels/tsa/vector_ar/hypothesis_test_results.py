@@ -9,13 +9,18 @@ class HypothesisTestResults(object):
     ----------
     test_statistic : float
     crit_value : float
-    pvalue : float
+    pvalue : float, 0 <= `pvalue` <= 1
     df : int
         Degrees of freedom.
-    signif : float
+    signif : float, 0 < `signif` < 1
         Significance level.
     method : str
-        The kind of test (e.g. "f" for F-test, "wald" for Wald-test).
+        The kind of test (e.g. ``"f"`` for F-test, ``"wald"`` for Wald-test).
+    title : str
+        A title describing the test. It will be part of the summary.
+    h0 : str
+        A string describing the null hypothesis. It will be used in the
+        summary.
     """
     def __init__(self, test_statistic, crit_value, pvalue, df,
                  signif, method, title, h0, ):
@@ -84,11 +89,11 @@ class CausalityTestResults(HypothesisTestResults):
         Degrees of freedom.
     signif : float
         Significance level.
-    test : str {"granger", "inst"}, default: "granger"
-        If "granger", Granger-causality has been tested. If "inst",
+    test : str {``"granger"``, ``"inst"``}, default: ``"granger"``
+        If ``"granger"``, Granger-causality has been tested. If ``"inst"``,
         instantaneous causality has been tested.
-    method : str {"f", "wald"}
-        The kind of test. "f" indicates an F-test, "wald" indicates a
+    method : str {``"f"``, ``"wald"``}
+        The kind of test. ``"f"`` indicates an F-test, ``"wald"`` indicates a
         Wald-test.
     """
     def __init__(self, causing, caused, test_statistic, crit_value, pvalue, df,
@@ -136,7 +141,7 @@ class CausalityTestResults(HypothesisTestResults):
 
 class NormalityTestResults(HypothesisTestResults):
     """
-    Results class for normality tests.
+    Results class for the Jarque-Bera-test for nonnormality.
 
     Parameters
     ----------
@@ -162,7 +167,7 @@ class NormalityTestResults(HypothesisTestResults):
 
 class WhitenessTestResults(HypothesisTestResults):
     """
-    Results class for normality tests.
+    Results class for the Portmanteau-test for residual autocorrelation.
 
     Parameters
     ----------

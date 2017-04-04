@@ -457,21 +457,21 @@ def test_normality(results, signif=0.05):
 
 class LagOrderResults:
     """
-    Results class for hypothesis tests.
+    Results class for choosing a model's lag order.
 
     Parameters
     ----------
     ics : dict
-        The keys are the strings "aic", "bic", "hqic", and "fpe". A
-        corresponding value is a list of information criteria for various
-        numbers of lags.
+        The keys are the strings ``"aic"``, ``"bic"``, ``"hqic"``, and
+        ``"fpe"``. A corresponding value is a list of information criteria for
+        various numbers of lags.
     selected_orders: dict
-        The keys are the strings "aic", "bic", "hqic", and "fpe". The
-        corresponding value is an integer specifying the number of lags chosen
-        according to a given criterion (key).
-    vecm : bool, default: False
-        True indicates that the model is a VECM. In case of a VAR model this
-        argument must be false.
+        The keys are the strings ``"aic"``, ``"bic"``, ``"hqic"``, and
+        ``"fpe"``. The corresponding value is an integer specifying the number
+        of lags chosen according to a given criterion (key).
+    vecm : bool, default: `False`
+        `True` indicates that the model is a VECM. In case of a VAR model
+        this argument must be `False`.
 
     Notes
     -----

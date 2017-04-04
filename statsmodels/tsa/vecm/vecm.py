@@ -41,26 +41,26 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
     maxlags : int
         All orders until maxlag will be compared according to the information
         criteria listed in the Results-section of this docstring.
-    deterministic : str {"nc", "co", "ci", "lo", "li"}
-        * "nc" - no deterministic terms
-        * "co" - constant outside the cointegration relation
-        * "ci" - constant within the cointegration relation
-        * "lo" - linear trend outside the cointegration relation
-        * "li" - linear trend within the cointegration relation
+    deterministic : str {``"nc"``, ``"co"``, ``"ci"``, ``"lo"``, ``"li"``}
+        * ``"nc"`` - no deterministic terms
+        * ``"co"`` - constant outside the cointegration relation
+        * ``"ci"`` - constant within the cointegration relation
+        * ``"lo"`` - linear trend outside the cointegration relation
+        * ``"li"`` - linear trend within the cointegration relation
 
-        Combinations of these are possible (e.g. "cili" or "colo" for linear
-        trend with intercept). See the docstring of the `VECM`-class for more
-        information.
+        Combinations of these are possible (e.g. ``"cili"`` or ``"colo"`` for
+        linear trend with intercept). See the docstring of the
+        :class:`VECM`-class for more information.
     seasons : int, default: 0
         Number of periods in a seasonal cycle.
-    exog : ndarray (nobs_tot x neqs) or None, default: None
+    exog : ndarray (nobs_tot x neqs) or `None`, default: `None`
         Deterministic terms outside the cointegration relation.
-    exog_coint: ndarray (nobs_tot x neqs) or None, default: None
+    exog_coint : ndarray (nobs_tot x neqs) or `None`, default: `None`
         Deterministic terms inside the cointegration relation.
 
     Returns
     -------
-    selected_orders : LagOrderResults
+    selected_orders : :class:`statsmodels.tsa.vector_ar.var_model.LagOrderResults`
     """
     ic = defaultdict(list)
     for p in range(1, maxlags + 2):  # +2 because k_ar_VECM == k_ar_VAR - 1
@@ -122,7 +122,7 @@ def _linear_trend(nobs, k_ar, coint=False):
     return ret
 
 
-def num_det_vars(det_string, seasons=0):
+def _num_det_vars(det_string, seasons=0):
     """Gives the number of deterministic variables specified by det_string and
     seasons.
 
@@ -136,8 +136,8 @@ def num_det_vars(det_string, seasons=0):
         * "li" - linear trend within the cointegration relation
 
         Combinations of these are possible (e.g. "cili" or "colo" for linear
-        trend with intercept). See the docstring of the `VECM`-class for more
-        information.
+        trend with intercept). See the docstring of the :class:`VECM`-class for
+        more information.
     seasons : int
         Number of periods in a seasonal cycle.
 
@@ -157,8 +157,8 @@ def num_det_vars(det_string, seasons=0):
     return num
 
 
-def deterministic_to_exog(deterministic, seasons, nobs_tot, first_season=0,
-                          seasons_centered=False, exog=None, exog_coint=None):
+def _deterministic_to_exog(deterministic, seasons, nobs_tot, first_season=0,
+                           seasons_centered=False, exog=None, exog_coint=None):
     """
     Translate all information about deterministic terms into a single array.
 
@@ -246,16 +246,16 @@ def _endog_matrices(endog, exog, exog_coint, diff_lags, deterministic,
         Deterministic terms inside the cointegration relation.
     diff_lags : int
         Number of lags in the VEC representation.
-    deterministic : str {"nc", "co", "ci", "lo", "li"}
-        * "nc" - no deterministic terms
-        * "co" - constant outside the cointegration relation
-        * "ci" - constant within the cointegration relation
-        * "lo" - linear trend outside the cointegration relation
-        * "li" - linear trend within the cointegration relation
+    deterministic : str {``"nc"``, ``"co"``, ``"ci"``, ``"lo"``, ``"li"``}
+        * ``"nc"`` - no deterministic terms
+        * ``"co"`` - constant outside the cointegration relation
+        * ``"ci"`` - constant within the cointegration relation
+        * ``"lo"`` - linear trend outside the cointegration relation
+        * ``"li"`` - linear trend within the cointegration relation
 
-        Combinations of these are possible (e.g. "cili" or "colo" for linear
-        trend with intercept). See the docstring of the `VECM`-class for more
-        information.
+        Combinations of these are possible (e.g. ``"cili"`` or ``"colo"`` for
+        linear trend with intercept). See the docstring of the
+        :class:`VECM`-class for more information.
     seasons : int, default: 0
         Number of periods in a seasonal cycle. 0 (default) means no seasons.
     first_season : int, default: 0
@@ -274,7 +274,7 @@ def _endog_matrices(endog, exog, exog_coint, diff_lags, deterministic,
         (dimensions assuming no deterministic terms are given)
         Endog of the previous period (lag 1).
         `.. math:: (y_0, \\ldots, y_{T-1})
-    delta_x : ndarray (diff_lags*neqs x nobs)
+    delta_x : ndarray (k_ar_diff*neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Lagged differenced endog, used as regressor for the short term
         equation.
@@ -342,7 +342,7 @@ def _r_matrices(delta_y_1_T, y_lag1, delta_x):
         (dimensions assuming no deterministic terms are given)
         Endog of the previous period (lag 1).
         `.. math:: (y_0, \\ldots, y_{T-1})
-    delta_x : ndarray (diff_lags*neqs x nobs)
+    delta_x : ndarray (k_ar_diff*neqs x nobs)
         (dimensions assuming no deterministic terms are given)
         Lagged differenced endog, used as regressor for the short term
         equation.
@@ -373,7 +373,7 @@ def _sij(delta_x, delta_y_1_T, y_lag1):
 
     Parameters
     ----------
-    delta_x : ndarray (diff_lags*neqs x nobs)
+    delta_x : ndarray (k_ar_diff*neqs x nobs)
         (dimensions assuming no deterministic terms are given)
     delta_y_1_T : ndarray (neqs x nobs)
         :math:`(y_1, \\ldots, y_T) - (y_0, \\ldots, y_{T-1})`
@@ -414,24 +414,23 @@ def _sij(delta_x, delta_y_1_T, y_lag1):
 
 
 class CointRankResults:
-    """
-    A class for holding the results from testing the cointegration rank.
+    """A class for holding the results from testing the cointegration rank.
 
     Parameters
     ----------
-    rank : int (0 <= rank <= neqs)
+    rank : int (0 <= `rank` <= `neqs`)
         The rank to choose according to the Johansen cointegration rank
         test.
     neqs : int
         Number of variables in the time series.
-    test_stats : array-like (rank+1)
+    test_stats : array-like (`rank` + 1 if `rank` < `neqs` else `rank`)
         A one-dimensional array-like object containing the test statistics of
         the conducted tests.
-    crit_vals : array-like (rank+1)
+    crit_vals : array-like (`rank` +1 if `rank` < `neqs` else `rank`)
         A one-dimensional array-like object containing the critical values
-        corresponding to the entries in the test_stats argument.
-    method : str, {"trace", "maxeig"}, default: "trace"
-        If "trace", the trace test statistic is used. If "maxeig", the
+        corresponding to the entries in the `test_stats` argument.
+    method : str, {``"trace"``, ``"maxeig"``}, default: ``"trace"``
+        If ``"trace"``, the trace test statistic is used. If ``"maxeig"``, the
         maximum eigenvalue test statistic is used.
     signif : float, {0.9, 0.95, 0.99}, default: 0.95
         The test's significance level.
@@ -467,9 +466,9 @@ class CointRankResults:
         return self.summary().as_text()
 
 
-def select_coint_rank(endog, det_order, k_ar, method="trace", signif=0.95):
-    """
-    Calculate the cointegration rank of a VECM.
+def select_coint_rank(endog, det_order, k_ar_diff, method="trace",
+                      signif=0.95):
+    """Calculate the cointegration rank of a VECM.
 
     Parameters
     ----------
@@ -479,18 +478,18 @@ def select_coint_rank(endog, det_order, k_ar, method="trace", signif=0.95):
         * -1 - no deterministic terms
         * 0 - constant term
         * 1 - linear trend
-    k_ar : int, nonnegative
+    k_ar_diff : int, nonnegative
         Number of lagged differences in the model.
-    method : str, {"trace", "maxeig"}, default: "trace"
-        If "trace", the trace test statistic is used. If "maxeig", the
+    method : str, {``"trace"``, ``"maxeig"``}, default: ``"trace"``
+        If ``"trace"``, the trace test statistic is used. If ``"maxeig"``, the
         maximum eigenvalue test statistic is used.
     signif : float, {0.9, 0.95, 0.99}, default: 0.95
         The test's significance level.
 
     Returns
     -------
-    rank : CointRankResults
-        A CointRankResults object containing the cointegration rank suggested
+    rank : :class:`CointRankResults`
+        A :class:`CointRankResults` object containing the cointegration rank suggested
         by the test and allowing a summary to be printed.
     """
     if method not in ["trace", "maxeig"]:
@@ -509,7 +508,7 @@ def select_coint_rank(endog, det_order, k_ar, method="trace", signif=0.95):
         raise ValueError("Please choose a significance level from {0.9, 0.95,"
                          "0.99}")
 
-    coint_result = coint_johansen(endog, det_order, k_ar)
+    coint_result = coint_johansen(endog, det_order, k_ar_diff)
     test_stat = coint_result.lr1 if method == "trace" else coint_result.lr2
     crit_vals = coint_result.cvt if method == "trace" else coint_result.cvm
     signif_index = possible_signif_values.index(signif)
@@ -526,7 +525,7 @@ def select_coint_rank(endog, det_order, k_ar, method="trace", signif=0.95):
                             crit_vals[:r_0 + 1, signif_index], method, signif)
 
 
-def coint_johansen(endog, det_order, k_ar):
+def coint_johansen(endog, det_order, k_ar_diff):
     """
     Perform the Johansen cointegration test for determining the cointegration
     rank of a VECM.
@@ -539,7 +538,7 @@ def coint_johansen(endog, det_order, k_ar):
         * -1 - no deterministic terms
         * 0 - constant term
         * 1 - linear trend
-    k_ar : int, nonnegative
+    k_ar_diff : int, nonnegative
         Number of lagged differences in the model.
 
     Returns
@@ -547,29 +546,46 @@ def coint_johansen(endog, det_order, k_ar):
     result : Holder
         An object containing the results which can be accessed using
         dot-notation. The object's attributes are
-            * eig: (neqs)
-                Eigenvalues.
-            * evec: (neqs x neqs)
-                Eigenvectors.
-            * lr1: (neqs)
-                Trace statistic.
-            * lr2: (neqs)
-                Maximum eigenvalue statistic.
-            * cvt: (neqs x 3)
-                Critical values (90%, 95%, 99%) for trace statistic.
-            * cvm: (neqs x 3)
-                Critical values (90%, 95%, 99%) for maximum eigenvalue
-                statistic.
-            * method: str
-                "johansen"
-            * r0t: (nobs x neqs)
-                Residuals for :math:`\\Delta Y`. See eq. (7.2.13) on p.292 in
-                [1]_.
-            * rkt: (nobs x neqs)
-                Residuals for :math:`Y_{-1}`. See eq. (7.2.13) on p. 292 in
-                [1]_.
-            * ind: (neqs)
-                Order of eigenvalues.
+
+        * eig: (neqs)
+
+          Eigenvalues.
+
+        * evec: (neqs x neqs)
+
+          Eigenvectors.
+
+        * lr1: (neqs)
+
+          Trace statistic.
+
+        * lr2: (neqs)
+
+          Maximum eigenvalue statistic.
+
+        * cvt: (neqs x 3)
+
+          Critical values (90%, 95%, 99%) for trace statistic.
+
+        * cvm: (neqs x 3)
+
+          Critical values (90%, 95%, 99%) for maximum eigenvalue
+          statistic.
+
+        * method: str
+          "johansen"
+
+        * r0t: (nobs x neqs)
+
+          Residuals for :math:`\\Delta Y`. See p. 292 in [1]_.
+
+        * rkt: (nobs x neqs)
+
+          Residuals for :math:`Y_{-1}`. See p. 292 in [1]_.
+
+        * ind: (neqs)
+
+          Order of eigenvalues.
 
     Notes
     -----
@@ -629,15 +645,15 @@ def coint_johansen(endog, det_order, k_ar):
 
     endog = detrend(endog, det_order)
     dx = tdiff(endog, 1, axis=0)
-    z = mlag(dx, k_ar)
-    z = trimr(z, k_ar, 0)
+    z = mlag(dx, k_ar_diff)
+    z = trimr(z, k_ar_diff, 0)
     z = detrend(z, f)
 
-    dx = trimr(dx, k_ar, 0)
+    dx = trimr(dx, k_ar_diff, 0)
 
     dx = detrend(dx, f)
     r0t = resid(dx, z)
-    lx = lag(endog, k_ar)
+    lx = lag(endog, k_ar_diff)
     lx = trimr(lx, 1, 0)
     dx = detrend(lx, f)
     rkt = resid(dx, z)  # level on lagged diffs
@@ -692,10 +708,14 @@ class VECM(tsbase.TimeSeriesModel):
     """
     Class representing a Vector Error Correction Model (VECM).
 
-    A VECM process has the following form
-    `.. math:: \\Delta y_t = \\Pi y_{t-1} + \\Gamma_1 \\Delta y_{t-1} + \\ldots + \\Gamma_{k_ar-1} \\Delta y_{t-k_ar+1} + u_t
+    A VECM(:math:`k_{ar}-1`) has the following form
+
+    .. math:: \\Delta y_t = \\Pi y_{t-1} + \\Gamma_1 \\Delta y_{t-1} + \\ldots + \\Gamma_{k_{ar}-1} \\Delta y_{t-k_{ar}+1} + u_t
+
     where
-    `.. math:: \\Pi = \\alpha \\beta'
+
+    .. math:: \\Pi = \\alpha \\beta'
+
     as described in chapter 7 of [1]_.
 
     Parameters
@@ -714,24 +734,25 @@ class VECM(tsbase.TimeSeriesModel):
         information.
     missing : str, optional
         See :class:`statsmodels.base.model.Model` for more information.
-    diff_lags : int
-        Number of lags in the VEC representation
+    k_ar_diff : int
+        Number of lagged differences in the model. Equals :math:`k_{ar} - 1` in
+        the formula above.
     coint_rank : int
         Cointegration rank, equals the rank of the matrix :math:`\\Pi` and the
         number of columns of :math:`\\alpha` and :math:`\\beta`.
-    deterministic : str {"nc", "co", "ci", "lo", "li"}
-        * "nc" - no deterministic terms
-        * "co" - constant outside the cointegration relation
-        * "ci" - constant within the cointegration relation
-        * "lo" - linear trend outside the cointegration relation
-        * "li" - linear trend within the cointegration relation
+    deterministic : str {``"nc"``, ``"co"``, ``"ci"``, ``"lo"``, ``"li"``}
+        * ``"nc"`` - no deterministic terms
+        * ``"co"`` - constant outside the cointegration relation
+        * ``"ci"`` - constant within the cointegration relation
+        * ``"lo"`` - linear trend outside the cointegration relation
+        * ``"li"`` - linear trend within the cointegration relation
 
-        Combinations of these are possible (e.g. "cili" or "colo" for linear
-        trend with intercept). When using a constant term you have to choose
-        whether you want to restrict it to the cointegration relation (i.e.
-        "ci") or leave it unrestricted (i.e. "co"). Don't use both "ci" and
-        "co". The same applies for "li" and "lo" in when using a linear term.
-        See the Notes-section for more information.
+        Combinations of these are possible (e.g. ``"cili"`` or ``"colo"`` for
+        linear trend with intercept). When using a constant term you have to
+        choose whether you want to restrict it to the cointegration relation
+        (i.e. ``"ci"``) or leave it unrestricted (i.e. ``"co"``). Don't use
+        both ``"ci"`` and ``"co"``. The same applies for ``"li"`` and ``"lo"``
+        when using a linear term. See the Notes-section for more information.
     seasons : int, default: 0
         Number of periods in a seasonal cycle. 0 means no seasons.
     first_season : int, default: 0
@@ -739,42 +760,45 @@ class VECM(tsbase.TimeSeriesModel):
 
     Notes
     -----
-    A VECM with deterministic term has the form
+    A VECM(:math:`k_{ar} - 1`) with deterministic terms has the form
+
     .. math::
 
-       \\Delta y_t = \\alpha \\begin{pmatrix}\\beta' & \\eta'\\end{pmatrix} \\begin{pmatrix}y_{t-1}\\\\D^{co}_{t-1}\\end{pmatrix} + \\Gamma_1 \\Delta y_{t-1} + \\dots + \\Gamma_{p-1} \\Delta y_{t-p+1} + C D_t + u_t.
+       \\Delta y_t = \\alpha \\begin{pmatrix}\\beta' & \\eta'\\end{pmatrix} \\begin{pmatrix}y_{t-1}\\\\D^{co}_{t-1}\\end{pmatrix} + \\Gamma_1 \\Delta y_{t-1} + \\dots + \\Gamma_{k_{ar}-1} \\Delta y_{t-k_{ar}+1} + C D_t + u_t.
 
     In :math:`D^{co}_{t-1}` we have the deterministic terms which are inside
     the cointegration relation (or restricted to the cointegration relation).
     :math:`\\eta` is the corresponding estimator. To pass a deterministic term
     inside the cointegration relation, we can use the `exog_coint` argument.
     For the two special cases of an intercept and a linear trend there exists
-    a simpler way to declare these terms: we can pass `"ci"` and `"li"`
+    a simpler way to declare these terms: we can pass ``"ci"`` and ``"li"``
     respectively to the `deterministic` argument. So for an intercept inside
-    the cointegration relation we can either pass `"ci"` as `deterministic` or
-    `np.ones(len(data))` if `data` is passed to the `endog` argument. This
-    ensures that :math:`D^{co} = 1` for :math:`t`.
+    the cointegration relation we can either pass ``"ci"`` as `deterministic`
+    or `np.ones(len(data))` as `exog_coint` if `data` is passed as the
+    `endog` argument. This ensures that :math:`D_{t-1}^{co} = 1` for all
+    :math:`t`.
+
     We can also use deterministic terms outside the cointegration relation.
     These are defined in :math:`D_t` in the formula above with the
     corresponding estimators in the matrix :math:`C`. We specify such terms by
     passing them to the `exog` argument. For an intercept and/or linear trend
-    we again have the possibility to use `deterministic` alternatively. For an
-    intercept we pass `"co"` and for a linear trend we pass `"lo"` where the
-    `o` stands for `outside`.
+    we again have the possibility to use `deterministic` alternatively. For
+    an intercept we pass ``"co"`` and for a linear trend we pass ``"lo"`` where
+    the `o` stands for `outside`.
 
     The following table shows the five cases considered in [2]_. The last
     column indicates which string to pass to the `deterministic` argument for
     each of these cases.
 
-    ====  ===============================  ==================================  ===============
-    Case  Intercept                        Slope of the linear trend           `deterministic`
-    ====  ===============================  ==================================  ===============
-    I     :math:`0`                        :math:`0`                           `"nc"`
-    II    :math:`- \\alpha \\beta^T \\mu`  :math:`0`                           `"ci"`
-    III   :math:`\\neq 0`                  :math:`0`                           `"co"`
-    IV    :math:`\\neq 0`                  :math:`- \\alpha \\beta^T \\gamma`  `"coli"`
-    V     :math:`\\neq 0`                  :math:`\neq 0`                      `"colo"`
-    ====  ===============================  ==================================  ===============
+    ====  ===============================  ===================================  =============
+    Case  Intercept                        Slope of the linear trend            `deterministic`
+    ====  ===============================  ===================================  =============
+    I     0                                0                                    ``"nc"``
+    II    :math:`- \\alpha \\beta^T \\mu`     0                                    ``"ci"``
+    III   :math:`\\neq 0`                   0                                    ``"co"``
+    IV    :math:`\\neq 0`                   :math:`- \\alpha \\beta^T \\gamma`      ``"coli"``
+    V     :math:`\\neq 0`                   :math:`\\neq 0`                       ``"colo"``
+    ====  ===============================  ===================================  =============
 
     References
     ----------
@@ -784,7 +808,7 @@ class VECM(tsbase.TimeSeriesModel):
     """
 
     def __init__(self, endog, exog=None, exog_coint=None, dates=None,
-                 freq=None, missing="none", diff_lags=1, coint_rank=1,
+                 freq=None, missing="none", k_ar_diff=1, coint_rank=1,
                  deterministic="nc", seasons=0, first_season=0):
         super(VECM, self).__init__(endog, exog, dates, freq,
                                    missing=missing)
@@ -796,8 +820,8 @@ class VECM(tsbase.TimeSeriesModel):
         self.y = self.endog.T
         self.exog_coint = exog_coint
         self.neqs = self.endog.shape[1]
-        self.p = diff_lags + 1
-        self.diff_lags = diff_lags
+        self.k_ar = k_ar_diff + 1
+        self.k_ar_diff = k_ar_diff
         self.coint_rank = coint_rank
         self.deterministic = deterministic
         self.seasons = seasons
@@ -813,15 +837,14 @@ class VECM(tsbase.TimeSeriesModel):
         Parameters
         ----------
         method : str {"ml"}, default: "ml"
-            Estimation method to use.
-            * "ml" - Maximum likelihood
+            Estimation method to use. "ml" stands for Maximum Likelihood.
 
         Returns
         -------
-        est : VECMResults
+        est : :class:`VECMResults`
 
         References
-        -----
+        ----------
         .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
         """
         if method == "ml":
@@ -832,7 +855,7 @@ class VECM(tsbase.TimeSeriesModel):
 
     def _estimate_vecm_ml(self):
         y_1_T, delta_y_1_T, y_lag1, delta_x = _endog_matrices(
-                self.y, self.exog, self.exog_coint, self.diff_lags,
+                self.y, self.exog, self.exog_coint, self.k_ar_diff,
                 self.deterministic, self.seasons, self.first_season)
         T = y_1_T.shape[1]
 
@@ -849,7 +872,7 @@ class VECM(tsbase.TimeSeriesModel):
                 gamma_tilde.dot(delta_x))
         sigma_u_tilde = temp.dot(temp.T) / T
 
-        return VECMResults(self.y, self.exog, self.exog_coint, self.p,
+        return VECMResults(self.y, self.exog, self.exog_coint, self.k_ar,
                            self.coint_rank, alpha_tilde, beta_tilde,
                            gamma_tilde, sigma_u_tilde,
                            deterministic=self.deterministic,
@@ -900,7 +923,7 @@ class VECM(tsbase.TimeSeriesModel):
         param_names += [
             "L%d.%s.%s" % (i+1, n1, n2)
             for n2 in self.endog_names
-            for i in range(self.p-1)
+            for i in range(self.k_ar_diff)
             for n1 in self.endog_names]
 
         return param_names
@@ -972,58 +995,59 @@ class VECM(tsbase.TimeSeriesModel):
 
 
 class VECMResults(object):
-    """Class holding estimation related results of a vector error correction
-    model (VECM).
+    """Class for holding estimation related results of a vector error
+    correction model (VECM).
 
     Parameters
     ----------
     endog : ndarray (neqs x nobs_tot)
         Array of observations.
-    exog: ndarray (nobs_tot x neqs) or None
+    exog : ndarray (nobs_tot x neqs) or `None`
         Deterministic terms outside the cointegration relation.
-    exog_coint: ndarray (nobs_tot x neqs) or None
+    exog_coint : ndarray (nobs_tot x neqs) or `None`
         Deterministic terms inside the cointegration relation.
-    k_ar : int
-        Lags in the VAR representation. This implies: Lags in the VEC
-        representation = k_ar - 1
-    coint_rank : int
+    k_ar : int, >= 1
+        Lags in the VAR representation. This implies that the number of lags in
+        the VEC representation (=lagged differences) equals :math:`k_{ar} - 1`.
+    coint_rank : int, 0 <= `coint_rank` <= neqs
         Cointegration rank, equals the rank of the matrix :math:`\\Pi` and the
         number of columns of :math:`\\alpha` and :math:`\\beta`.
-    alpha : ndarray (neqs x coint_rank)
+    alpha : ndarray (neqs x `coint_rank`)
         Estimate for the parameter :math:`\\alpha` of a VECM.
-    beta : ndarray (neqs x coint_rank)
+    beta : ndarray (neqs x `coint_rank`)
         Estimate for the parameter :math:`\\beta` of a VECM.
     gamma : ndarray (neqs x neqs*(k_ar-1))
-        Array containing the estimates of the p-1 parameter matrices
-        :math:`\\Gamma_1, \\dots, \\Gamma_{p-1}` of a VECM(p-1). The
-        submatrices are stacked horizontally from left to right.
+        Array containing the estimates of the :math:`k_{ar}-1` parameter
+        matrices :math:`\\Gamma_1, \\dots, \\Gamma_{k_{ar}-1}` of a
+        VECM(:math:`k_{ar}-1`). The submatrices are stacked horizontally from
+        left to right.
     sigma_u : ndarray (neqs x neqs)
         Estimate of white noise process covariance matrix :math:`\\Sigma_u`.
-    deterministic : str {"nc", "co", "ci", "lo", "li"}
-        * "nc" - no deterministic terms
-        * "co" - constant outside the cointegration relation
-        * "ci" - constant within the cointegration relation
-        * "lo" - linear trend outside the cointegration relation
-        * "li" - linear trend within the cointegration relation
+    deterministic : str {``"nc"``, ``"co"``, ``"ci"``, ``"lo"``, ``"li"``}
+        * ``"nc"`` - no deterministic terms
+        * ``"co"`` - constant outside the cointegration relation
+        * ``"ci"`` - constant within the cointegration relation
+        * ``"lo"`` - linear trend outside the cointegration relation
+        * ``"li"`` - linear trend within the cointegration relation
 
-        Combinations of these are possible (e.g. "cili" or "colo" for linear
-        trend with intercept). See the docstring of the `VECM`-class for more
-        information.
+        Combinations of these are possible (e.g. ``"cili"`` or ``"colo"`` for
+        linear trend with intercept). See the docstring of the
+        :class:`VECM`-class for more information.
     seasons : int, default: 0
         Number of periods in a seasonal cycle. 0 means no seasons.
     first_season : int, default: 0
         Season of the first observation.
-    delta_y_1_T : ndarray or None, default: None
+    delta_y_1_T : ndarray or `None`, default: `None`
         Auxilliary array for internal computations. It will be calculated if
         not given as parameter.
-    y_lag1 : ndarray or None, default: None
+    y_lag1 : ndarray or `None`, default: `None`
         Auxilliary array for internal computations. It will be calculated if
         not given as parameter.
-    delta_x : ndarray or None, default: None
+    delta_x : ndarray or `None`, default: `None`
         Auxilliary array for internal computations. It will be calculated if
         not given as parameter.
-    model : VECM
-        An instance of the VECM class.
+    model : :class:`VECM`
+        An instance of the :class:`VECM`-class.
     names : list of str
         Each str in the list represents the name of a variable of the time
         series.
@@ -1036,7 +1060,7 @@ class VECMResults(object):
     nobs : int
         Number of observations (excluding the presample).
     model : see Parameters
-    y_all : see endog in Parameters
+    y_all : see `endog` in Parameters
     exog : see Parameters
     exog_coint : see Parameters
     names : see Parameters
@@ -1051,50 +1075,51 @@ class VECMResults(object):
     beta : see Parameters
     gamma : see Parameters
     sigma_u : see Parameters
-    det_coef_coint : ndarray (#(determinist. terms inside the coint. rel.) x r)
+    det_coef_coint : ndarray (#(determinist. terms inside the coint. rel.) x `coint_rank`)
         Estimated coefficients for the all deterministic terms inside the
         cointegration relation.
-    const_coint : ndarray (1 x r)
+    const_coint : ndarray (1 x `coint_rank`)
         If there is a constant deterministic term inside the cointegration
-        relation, then const_coint is the first row of det_coef_coint.
+        relation, then `const_coint` is the first row of `det_coef_coint`.
         Otherwise it's an ndarray of zeros.
-    lin_trend_coint : ndarray (1 x r)
+    lin_trend_coint : ndarray (1 x `coint_rank`)
         If there is a linear deterministic term inside the cointegration
-        relation, then lin_trend_coint contains the corresponding estimated
-         coefficients. As such it represents the corresponding row of
-         det_coef_coint. If there is no linear deterministic term inside the
-         cointegration relation, then lin_trend_coint is an ndarray of zeros.
-    exog_coint_coefs : ndarray (exog_coint.shape[1] x r) or None
+        relation, then `lin_trend_coint` contains the corresponding estimated
+        coefficients. As such it represents the corresponding row of
+        `det_coef_coint`. If there is no linear deterministic term inside
+        the cointegration relation, then `lin_trend_coint` is an ndarray of
+        zeros.
+    exog_coint_coefs : ndarray (exog_coint.shape[1] x `coint_rank`) or `None`
         If deterministic terms inside the cointegration relation are passed via
-        the exog_coint parameter, then exog_coint_coefs contains the
-        corresponding estimated coefficients. As such exog_coint_coefs
-        represents the last rows of det_coef_coint.
-        If no deterministic terms were passed via the exog_coint parameter,
-        this attribute is None.
+        the `exog_coint` parameter, then `exog_coint_coefs` contains the
+        corresponding estimated coefficients. As such `exog_coint_coefs`
+        represents the last rows of `det_coef_coint`.
+        If no deterministic terms were passed via the `exog_coint` parameter,
+        this attribute is `None`.
     det_coef : ndarray (neqs x #(deterministic terms outside the coint. rel.))
         Estimated coefficients for the all deterministic terms outside the
         cointegration relation.
     const : ndarray (neqs x 1) or (neqs x 0)
         If a constant deterministic term outside the cointegration is specified
-        within the deterministic parameter, then const is the first column of
-        det_coef_coint. Otherwise it's an ndarray of size zero.
+        within the deterministic parameter, then `const` is the first column
+        of `det_coef_coint`. Otherwise it's an ndarray of size zero.
     seasonal : ndarray (neqs x seasons)
-        If the seasons parameter is > 0, then seasonal contains the estimated
-        coefficients corresponding to the seasonal terms. Otherwise it's an
-        ndarray of size zero.
+        If the `seasons` parameter is > 0, then seasonal contains the
+        estimated coefficients corresponding to the seasonal terms. Otherwise
+        it's an ndarray of size zero.
     lin_trend : ndarray (neqs x 1) or (neqs x 0)
         If a linear deterministic term outside the cointegration is specified
-        within the deterministic parameter, then lin_trend contains the
+        within the deterministic parameter, then `lin_trend` contains the
         corresponding estimated coefficients. As such it represents the
-        corresponding column of det_coef_coint. If there is no linear
+        corresponding column of `det_coef_coint`. If there is no linear
         deterministic term outside the cointegration relation, then
-        lin_trend is an ndarray of size zero.
+        `lin_trend` is an ndarray of size zero.
     exog_coefs : ndarray (neqs x exog_coefs.shape[1])
         If deterministic terms outside the cointegration relation are passed
-        via the exog parameter, then exog_coefs contains the corresponding
-        estimated coefficients. As such exog_coefs represents the last columns
-        of det_coef.
-        If no deterministic terms were passed via the exog parameter, this
+        via the `exog` parameter, then `exog_coefs` contains the
+        corresponding estimated coefficients. As such `exog_coefs` represents
+        the last columns of `det_coef`.
+        If no deterministic terms were passed via the `exog` parameter, this
         attribute is an ndarray of size zero.
     _delta_y_1_T : see delta_y_1_T in Parameters
     _y_lag1 : see y_lag1 in Parameters
@@ -1105,7 +1130,8 @@ class VECMResults(object):
     llf : float
         The model's log-likelihood.
     cov_params : ndarray (d x d)
-        Covariance matrix of the parameters. The number of rows and columns, d,
+        Covariance matrix of the parameters. The number of rows and columns, d
+        (used in the dimension specification of this argument),
         is equal to neqs * (neqs+num_det_coef_coint + neqs*(k_ar-1)+number of
         deterministic dummy variables outside the cointegration relation). For
         the case with no deterministic terms this matrix is defined on p. 287
@@ -1115,41 +1141,43 @@ class VECMResults(object):
         Covariance matrix of the parameters
         :math:`\\tilde{\\Pi}, \\tilde{\\Gamma}` where
         :math:`\\tilde{\\Pi} = \\tilde{\\alpha} \\tilde{\\beta'}`.
-        Equals cov_params without the rows and columns related to deterministic
-        terms. This matrix is defined as :math:`\\Sigma_{co}` on p. 287 in [1]_.
+        Equals `cov_params` without the rows and columns related to
+        deterministic terms. This matrix is defined as :math:`\\Sigma_{co}` on
+        p. 287 in [1]_.
     stderr_params : ndarray (d)
         Array containing the standard errors of :math:`\\Pi`, :math:`\\Gamma`,
         and estimated parameters related to deterministic terms.
-    stderr_coint : ndarray (neqs+num_det_coef_coint x r)
+    stderr_coint : ndarray (neqs+num_det_coef_coint x `coint_rank`)
         Array containing the standard errors of :math:`\\beta` and estimated
         parameters related to deterministic terms inside the cointegration
         relation.
-    stderr_alpha :  ndarray (neqs x r)
+    stderr_alpha :  ndarray (neqs x `coint_rank`)
         The standard errors of :math:`\\alpha`.
-    stderr_beta : ndarray (neqs x r)
+    stderr_beta : ndarray (neqs x `coint_rank`)
         The standard errors of :math:`\\beta`.
-    stderr_det_coef_coint : ndarray (num_det_coef_coint x r)
+    stderr_det_coef_coint : ndarray (num_det_coef_coint x `coint_rank`)
         The standard errors of estimated the parameters related to
         deterministic terms inside the cointegration relation.
     stderr_gamma : ndarray (neqs x neqs*(k_ar-1))
-        The standard errors of :math:`\\Gamma`.
+        The standard errors of :math:`\\Gamma_1, \\ldots, \\Gamma_{k_{ar}-1}`.
     stderr_det_coef : ndarray (neqs x det. terms outside the coint. relation)
         The standard errors of estimated the parameters related to
         deterministic terms outside the cointegration relation.
-    tvalues_alpha : ndarray (neqs x r)
-    tvalues_beta : ndarray (neqs x r)
-    tvalues_det_coef_coint : ndarray (num_det_coef_coint x r)
+    tvalues_alpha : ndarray (neqs x `coint_rank`)
+    tvalues_beta : ndarray (neqs x `coint_rank`)
+    tvalues_det_coef_coint : ndarray (num_det_coef_coint x `coint_rank`)
     tvalues_gamma : ndarray (neqs x neqs*(k_ar-1))
     tvalues_det_coef : ndarray (neqs x det. terms outside the coint. relation)
-    pvalues_alpha : ndarray (neqs x r)
-    pvalues_beta : ndarray (neqs x r)
-    pvalues_det_coef_coint : ndarray (num_det_coef_coint x r)
+    pvalues_alpha : ndarray (neqs x `coint_rank`)
+    pvalues_beta : ndarray (neqs x `coint_rank`)
+    pvalues_det_coef_coint : ndarray (num_det_coef_coint x `coint_rank`)
     pvalues_gamma : ndarray (neqs x neqs*(k_ar-1))
     pvalues_det_coef : ndarray (neqs x det. terms outside the coint. relation)
     var_rep : (k_ar x neqs x neqs)
-        KxK parameter matrices A_i of the corresponding VAR representation. If
-        the return value is assigned to a variable A, these matrices can be
-        accessed via A[i] for i=0, ..., k_ar-1.
+        KxK parameter matrices :math:`A_i` of the corresponding VAR
+        representation. If the return value is assigned to a variable ``A``,
+        these matrices can be accessed via ``A[i]`` for
+        :math:`i=0, \ldots, k_{ar}-1`.
     cov_var_repr : ndarray (neqs**2 * k_ar x neqs**2 * k_ar)
         This matrix is called :math:`\\Sigma^{co}_{\\alpha}` on p. 289 in [1]_.
         It is needed e.g. for impulse-response-analysis.
@@ -1310,13 +1338,19 @@ class VECMResults(object):
     @cache_readonly
     def stderr_coint(self):
         """
-        Standard errors of beta and deterministic terms inside the coit. rel.
+        Standard errors of beta and deterministic terms inside the
+        cointegration relation.
 
         Notes
         -----
         See p. 297 in [1]_. Using the rule
-        :math:`vec(B R) = (B' \kron I) vec(R)` for two matrices B and R which
-        are compatible for multiplication. This is rule (3) on p. 662 in [1]_.
+
+        .. math::
+
+           vec(B R) = (B' \\otimes I) vec(R)
+
+        for two matrices B and R which are compatible for multiplication.
+        This is rule (3) on p. 662 in [1]_.
 
         References
         ----------
@@ -1479,6 +1513,7 @@ class VECMResults(object):
         Returns
         -------
         cov : array (neqs**2 * k_ar x neqs**2 * k_ar)
+
         """
         # This implementation is using the fact that for a random variable x
         # with covariance matrix Sigma_x the following holds:
@@ -1537,7 +1572,8 @@ class VECMResults(object):
         maxn : int
             Number of coefficient matrices to compute
         P : ndarray (neqs x neqs), optional
-            Matrix such that Sigma_u = PP', defaults to Cholesky descomp
+            Matrix such that :math:`\\Sigma_u = PP'`. Defaults to Cholesky
+            decomposition.
 
         Returns
         -------
@@ -1553,7 +1589,7 @@ class VECMResults(object):
         ----------
         steps : int
             Prediction horizon.
-        alpha : float between 0 and 1 or None
+        alpha : float, 0 < `alpha` < 1 or None
             If None, compute point forecast only.
             If float, compute confidence intervals too. In this case the
             argument stands for the confidence level.
@@ -1668,7 +1704,7 @@ class VECMResults(object):
         ----------
         steps : int
             Prediction horizon.
-        alpha : float between 0 and 1
+        alpha : float, 0 < `alpha` < 1
             The confidence level.
         plot_conf_int : bool, default: True
             If True, plot bounds of confidence intervals.
@@ -1689,8 +1725,9 @@ class VECMResults(object):
         Test for Granger-causality.
 
         The concept of Granger-causality is described in chapter 7.6.3 of [1]_.
-        Test H0: "The variables in `causing` do not Granger-cause those in
-        `caused`" against  H1: "`causing` is Granger-causal for `caused`".
+        Test |H0|: "The variables in `causing` do not Granger-cause those in
+        `caused`" against  |H1|: "`causing` is Granger-causal for
+        `caused`".
 
         Parameters
         ----------
@@ -1701,27 +1738,30 @@ class VECMResults(object):
             If a sequence of int or str, test whether the corresponding
             variables are Granger-caused by the variable(s) specified
             by `causing`.
-        causing : int or str or sequence of int or str or None, default: None
+        causing : int or str or sequence of int or str or `None`, default: `None`
             If int or str, test whether the variable specified via this index
             (int) or name (str) is Granger-causing the variable(s) specified by
             `caused`.
             If a sequence of int or str, test whether the corresponding
             variables are Granger-causing the variable(s) specified by
             `caused`.
-            If None, `causing` is assumed to be the complement of `caused` (the
-            remaining variables of the system).
-        signif : float between 0 and 1, default 5 %
+            If `None`, `causing` is assumed to be the complement of
+            `caused` (the remaining variables of the system).
+        signif : float, 0 < `signif` < 1, default 5 %
             Significance level for computing critical values for test,
             defaulting to standard 0.95 level.
 
         Returns
         -------
-        results : CausalityTestResults
+        results : :class:`statsmodels.tsa.vector_ar.hypothesis_test_results.CausalityTestResults`
 
         References
         ----------
         .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
 
+        .. |H0| replace:: H\ :sub:`0`
+
+        .. |H1| replace:: H\ :sub:`1`
         """
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
@@ -1751,16 +1791,16 @@ class VECMResults(object):
             causing = [self.names[c] for c in causing_ind]
 
         y, k, t, p = self.y_all, self.neqs, self.nobs - 1, self.k_ar + 1
-        exog = deterministic_to_exog(self.deterministic, self.seasons,
-                                     nobs_tot=self.nobs + self.k_ar,
-                                     first_season=self.first_season,
-                                     seasons_centered=True, exog=self.exog,
-                                     exog_coint=self.exog_coint)
+        exog = _deterministic_to_exog(self.deterministic, self.seasons,
+                                      nobs_tot=self.nobs + self.k_ar,
+                                      first_season=self.first_season,
+                                      seasons_centered=True, exog=self.exog,
+                                      exog_coint=self.exog_coint)
         var_results = VAR(y.T, exog).fit(maxlags=p, trend="nc")
 
         # num_restr is called N in Lutkepohl
         num_restr = len(causing) * len(caused) * (p - 1)
-        num_det_terms = num_det_vars(self.deterministic, self.seasons)
+        num_det_terms = _num_det_vars(self.deterministic, self.seasons)
         if self.exog is not None:
             num_det_terms += self.exog.shape[1]
         if self.exog_coint is not None:
@@ -1819,47 +1859,51 @@ class VECMResults(object):
         Test for instantaneous causality.
 
         The concept of instantaneous causality is described in chapters 3.6.3
-        and 7.6.4 of [1]_. Test H0: "No instantaneous causality between the
-        variables in `caused` and those in `causing`" against H1:
+        and 7.6.4 of [1]_. Test |H0|: "No instantaneous causality between the
+        variables in `caused` and those in `causing`" against |H1|:
         "Instantaneous causality between `caused` and `causing` exists".
         Note that instantaneous causality is a symmetric relation
         (i.e. if `causing` is "instantaneously causing" `caused`, then also
         `caused` is "instantaneously causing" `causing`), thus the naming of
         the parameters (which is chosen to be in accordance with
-        `test_granger_causality()`) may be misleading.
+        :meth:`test_granger_causality()`) may be misleading.
 
         Parameters
         ----------
-        causing :
+        causing : int or str or sequence of int or str
             If int or str, test whether the corresponding variable is causing
             the variable(s) specified in caused.
             If sequence of int or str, test whether the corresponding variables
             are causing the variable(s) specified in caused.
-        signif : float between 0 and 1, default 5 %
+        signif : float, 0 < `signif` < 1, default 5 %
             Significance level for computing critical values for test,
-            defaulting to standard 0.95 level
+            defaulting to standard 0.95 level.
 
         Returns
         -------
-        results : CausalityTestResults
+        results : :class:`statsmodels.tsa.vector_ar.hypothesis_test_results.CausalityTestResults`
 
         Notes
         -----
-        This method is not returning the same result as JMulTi. This is because
-        the test is based on a VAR(k_ar) model in statsmodels (in accordance to
-        pp. 104, 320-321 in [1]_) whereas JMulTi seems to be using a
-        VAR(k_ar+1) model. Reducing the lag order by one in JMulTi leads to
-        equal results in statsmodels and JMulTi.
+        This method is not returning the same result as `JMulTi`. This is
+        because the test is based on a VAR(k_ar) model in `statsmodels` (in
+        accordance to pp. 104, 320-321 in [1]_) whereas `JMulTi` seems to be
+        using a VAR(k_ar+1) model. Reducing the lag order by one in `JMulTi`
+        leads to equal results in `statsmodels` and `JMulTi`.
 
         References
         ----------
         .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+
+        .. |H0| replace:: H\ :sub:`0`
+
+        .. |H1| replace:: H\ :sub:`1`
         """
-        exog = deterministic_to_exog(self.deterministic, self.seasons,
-                                     nobs_tot=self.nobs + self.k_ar,
-                                     first_season=self.first_season,
-                                     seasons_centered=True, exog=self.exog,
-                                     exog_coint=self.exog_coint)
+        exog = _deterministic_to_exog(self.deterministic, self.seasons,
+                                      nobs_tot=self.nobs + self.k_ar,
+                                      first_season=self.first_season,
+                                      seasons_centered=True, exog=self.exog,
+                                      exog_coint=self.exog_coint)
 
         # Note: JMulTi seems to be using k_ar+1 instead of k_ar
         k, t, p = self.neqs, self.nobs, self.k_ar
@@ -1907,7 +1951,7 @@ class VECMResults(object):
     def test_normality(self, signif=0.05):
         """
         Test assumption of normal-distributed errors using Jarque-Bera-style
-        omnibus Chi^2 test.
+        omnibus :math:`\\chi^2` test.
 
         Parameters
         ----------
@@ -1916,11 +1960,13 @@ class VECMResults(object):
 
         Returns
         -------
-        result : NormalityTestResults
+        result : :class:`statsmodels.tsa.vector_ar.hypothesis_test_results.NormalityTestResults`
 
         Notes
         -----
-        H0 (null) : data are generated by a Gaussian-distributed process
+        |H0| : data are generated by a Gaussian-distributed process
+
+        .. |H0| replace:: H\ :sub:`0`
         """
         return test_normality(self, signif=signif)
 
@@ -1933,12 +1979,12 @@ class VECMResults(object):
         Parameters
         ----------
         nlags : int > 0
-        signif : float, between 0 and 1
+        signif : float, 0 < `signif` < 1
         adjusted : bool, default False
 
         Returns
         -------
-        result : WhitenessTestResults
+        result : :class:`statsmodels.tsa.vector_ar.hypothesis_test_results.WhitenessTestResults`
 
         References
         ----------
@@ -2000,9 +2046,9 @@ class VECMResults(object):
 
         Parameters
         ----------
-        with_presample : bool, default: False
-            If False, the pre-sample data (the first k_ar values) will not be
-            plotted.
+        with_presample : bool, default: `False`
+            If `False`, the pre-sample data (the first `k_ar` values) will
+            not be plotted.
         """
         y = self.y_all if with_presample else self.y_all[:, self.k_ar:]
         names = self.names
@@ -2015,12 +2061,12 @@ class VECMResults(object):
 
         Parameters
         ----------
-        alpha : float between 0 and 1, default 0.05
+        alpha : float 0 < `alpha` < 1, default 0.05
             Significance level of the shown confidence intervals.
 
         Returns
         -------
-        summary : statsmodels.iolib.summary.Summary
+        summary : :class:`statsmodels.iolib.summary.Summary`
             A summary containing information about estimated parameters.
         """
         from statsmodels.iolib.summary import summary_params

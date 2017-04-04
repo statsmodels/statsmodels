@@ -78,7 +78,7 @@ def load_data(dataset, data_dict):
 def load_results_statsmodels(dataset):
     results_per_deterministic_terms = dict.fromkeys(dataset.dt_s_list)
     for dt_s_tup in dataset.dt_s_list:
-        model = VECM(data[dataset], diff_lags=3, coint_rank=coint_rank,
+        model = VECM(data[dataset], k_ar_diff=3, coint_rank=coint_rank,
                      deterministic=dt_s_tup[0], seasons=dt_s_tup[1],
                      first_season=dt_s_tup[2])
         results_per_deterministic_terms[dt_s_tup] = model.fit(method="ml")
@@ -90,9 +90,9 @@ def load_results_statsmodels_exog(dataset):
     Load data with seasonal terms in `exog`.
 
     Same as load_results_statsmodels() except that the seasonal term is
-    provided to `VECM`'s `__init__()` method via the `eoxg` parameter. This is
-    to check whether the same results are produced no matter whether `exog` or
-    `seasons` is being used.
+    provided to :class:`VECM`'s `__init__()` method via the `eoxg` parameter.
+    This is to check whether the same results are produced no matter whether
+    `exog` or `seasons` is being used.
 
     Parameters:
     -----------
@@ -114,7 +114,7 @@ def load_results_statsmodels_exog(dataset):
                                   1 + np.arange(len(endog)).reshape(-1, 1)))
                 # remove "lo" since it's now already in exog.
                 det_string = det_string[:-2]
-        model = VECM(endog, exog, diff_lags=3, coint_rank=coint_rank,
+        model = VECM(endog, exog, k_ar_diff=3, coint_rank=coint_rank,
                      deterministic=det_string)
         results_per_deterministic_terms[dt_s_tup] = model.fit(method="ml")
     return results_per_deterministic_terms
@@ -125,10 +125,10 @@ def load_results_statsmodels_exog_coint(dataset):
     Load data with deterministic terms in `exog_coint`.
 
     Same as load_results_statsmodels() except that deterministic terms inside
-    the cointegration relation are provided to `VECM`'s `__init__()` method via
-    the `eoxg_coint` parameter. This is to check whether the same results are
-    produced no matter whether `exog_coint` or the `deterministic` argument is
-    being used.
+    the cointegration relation are provided to :class:`VECM`'s `__init__()`
+    method via the `eoxg_coint` parameter. This is to check whether the same
+    results are produced no matter whether `exog_coint` or the `deterministic`
+    argument is being used.
 
     Parameters:
     -----------
@@ -152,7 +152,7 @@ def load_results_statsmodels_exog_coint(dataset):
             # reversing (such that constant is first and linear is second)
             exog_coint = exog_coint[::-1]
             exog_coint = np.hstack(exog_coint)
-        model = VECM(endog, exog=None, exog_coint=exog_coint, diff_lags=3,
+        model = VECM(endog, exog=None, exog_coint=exog_coint, k_ar_diff=3,
                      coint_rank=coint_rank, deterministic=det_string,
                      seasons=dt_s_tup[1], first_season=dt_s_tup[2])
         results_per_deterministic_terms[dt_s_tup] = model.fit(method="ml")
@@ -173,7 +173,7 @@ def build_err_msg(ds, dt_s, parameter_str):
 
 def test_ml_gamma():
     if debug_mode:
-        if "Gamma" not in to_test:
+        if "Gamma" not in to_test:  # pragma: no cover
             return
         print("\n\nGAMMA", end="")
     for ds in datasets:
@@ -199,7 +199,7 @@ def test_ml_gamma():
                 yield assert_equal, obtained_exog_coint, obtained, \
                     "WITH EXOG_COINT: "+err_msg
 
-            if debug_mode and dont_test_se_t_p:
+            if debug_mode and dont_test_se_t_p:  # pragma: no cover
                 continue
             # standard errors
             obt = results_sm[ds][dt].stderr_gamma
@@ -241,7 +241,7 @@ def test_ml_gamma():
 
 def test_ml_alpha():
     if debug_mode:
-        if "alpha" not in to_test:
+        if "alpha" not in to_test:  # pragma: no cover
             return
         print("\n\nALPHA", end="")
     for ds in datasets:
@@ -265,8 +265,7 @@ def test_ml_alpha():
                 yield assert_equal, obtained_exog_coint, obtained, \
                     "WITH EXOG_COINT: "+err_msg
 
-
-            if debug_mode and dont_test_se_t_p:
+            if debug_mode and dont_test_se_t_p:  # pragma: no cover
                 continue
             # standard errors
             obt = results_sm[ds][dt].stderr_alpha
@@ -305,7 +304,7 @@ def test_ml_alpha():
 
 def test_ml_beta():
     if debug_mode:
-        if "beta" not in to_test:
+        if "beta" not in to_test:  # pragma: no cover
             return
         print("\n\nBETA", end="")
     for ds in datasets:
@@ -336,7 +335,7 @@ def test_ml_beta():
                 yield assert_equal, obtained_exog_coint, obtained, \
                     "WITH EXOG_COINT: "+err_msg
 
-            if debug_mode and dont_test_se_t_p:
+            if debug_mode and dont_test_se_t_p:  # pragma: no cover
                 continue
             # standard errors
             obt = results_sm[ds][dt].stderr_beta[coint_rank:rows]
@@ -378,7 +377,7 @@ def test_ml_beta():
 
 def test_ml_c():  # test deterministic terms outside coint relation
     if debug_mode:
-        if "C" not in to_test:
+        if "C" not in to_test:  # pragma: no cover
             return
         print("\n\nDET_COEF", end="")
     for ds in datasets:
@@ -463,7 +462,7 @@ def test_ml_c():  # test deterministic terms outside coint relation
                 if exog_coint:
                     yield assert_equal, lt_obt_exog_coint, lt_obt, \
                         "WITH EXOG_COINT: "+err_msg
-            if debug_mode and dont_test_se_t_p:
+            if debug_mode and dont_test_se_t_p:  # pragma: no cover
                 continue
             # standard errors
             se_desired = results_ref[ds][dt]["se"]["C"]
@@ -627,7 +626,7 @@ def test_ml_c():  # test deterministic terms outside coint relation
 
 def test_ml_det_terms_in_coint_relation():
     if debug_mode:
-        if "det_coint" not in to_test:
+        if "det_coint" not in to_test:  # pragma: no cover
             return
         print("\n\nDET_COEF_COINT", end="")
     for ds in datasets:
@@ -707,7 +706,7 @@ def test_ml_det_terms_in_coint_relation():
 
 def test_ml_sigma():
     if debug_mode:
-        if "Sigma_u" not in to_test:
+        if "Sigma_u" not in to_test:  # pragma: no cover
             return
         print("\n\nSIGMA_U", end="")
     for ds in datasets:
@@ -735,7 +734,7 @@ def test_ml_sigma():
 
 def test_var_rep():
     if debug_mode:
-        if "VAR repr. A" not in to_test:
+        if "VAR repr. A" not in to_test:  # pragma: no cover
             return
         print("\n\nVAR REPRESENTATION", end="")
     for ds in datasets:
@@ -764,7 +763,7 @@ def test_var_rep():
 
 def test_var_to_vecm():
     if debug_mode:
-        if "VAR to VEC representation" not in to_test:
+        if "VAR to VEC representation" not in to_test:  # pragma: no cover
             return
         print("\n\nVAR TO VEC", end="")
     for ds in datasets:
@@ -803,7 +802,7 @@ def test_var_to_vecm():
 
 def test_log_like():
     if debug_mode:
-        if "log_like" not in to_test:
+        if "log_like" not in to_test:  # pragma: no cover
             return
         else:
             print("\n\nLOG LIKELIHOOD", end="")
@@ -836,7 +835,7 @@ def test_log_like():
 
 def test_fc():
     if debug_mode:
-        if "fc" not in to_test:
+        if "fc" not in to_test:  # pragma: no cover
             return
         else:
             print("\n\nFORECAST", end="")
@@ -955,7 +954,7 @@ def test_fc():
 
 def test_granger_causality():
     if debug_mode:
-        if "granger" not in to_test:
+        if "granger" not in to_test:  # pragma: no cover
             return
         else:
             print("\n\nGRANGER", end="")
@@ -1048,7 +1047,7 @@ def test_granger_causality():
 
 def test_inst_causality():  # test instantaneous causality
     if debug_mode:
-        if "inst. causality" not in to_test:
+        if "inst. causality" not in to_test:  # pragma: no cover
             return
         else:
             print("\n\nINST. CAUSALITY", end="")
@@ -1138,7 +1137,7 @@ def test_inst_causality():  # test instantaneous causality
 
 def test_impulse_response():
     if debug_mode:
-        if "impulse-response" not in to_test:
+        if "impulse-response" not in to_test:  # pragma: no cover
             return
         else:
             print("\n\nIMPULSE-RESPONSE", end="")
@@ -1175,7 +1174,7 @@ def test_impulse_response():
 
 def test_lag_order_selection():
     if debug_mode:
-        if "lag order" not in to_test:
+        if "lag order" not in to_test:  # pragma: no cover
             return
         else:
             print("\n\nLAG ORDER SELECTION", end="")
@@ -1228,7 +1227,7 @@ def test_lag_order_selection():
 
 def test_normality():
     if debug_mode:
-        if "test_norm" not in to_test:
+        if "test_norm" not in to_test:  # pragma: no cover
             return
         else:
             print("\n\nTEST NON-NORMALITY", end="")
@@ -1271,7 +1270,7 @@ def test_normality():
 
 def test_whiteness():
     if debug_mode:
-        if "whiteness" not in to_test:
+        if "whiteness" not in to_test:  # pragma: no cover
             return
         else:
             print("\n\nTEST WHITENESS OF RESIDUALS", end="")
@@ -1340,7 +1339,7 @@ def test_whiteness():
 
 def test_summary():
     if debug_mode:
-        if "summary" not in to_test:
+        if "summary" not in to_test:  # pragma: no cover
             return
         else:
             print("\n\nSUMMARY", end="")
@@ -1363,7 +1362,7 @@ def test_summary():
 
 def test_exceptions():
     if debug_mode:
-        if "exceptions" not in to_test:
+        if "exceptions" not in to_test:  # pragma: no cover
             return
         else:
             print("\n\nEXCEPTIONS\n", end="")
@@ -1394,13 +1393,13 @@ def test_exceptions():
 
     # exceptions in VECM class
     # ### choose only one of the two: "co" and "ci"
-    model = VECM(endog, diff_lags=1, deterministic="cico")
+    model = VECM(endog, k_ar_diff=1, deterministic="cico")
     yield assert_raises, ValueError, model.fit
     # ### we analyze multiple time series
     univariate_data = endog[0]
     yield assert_raises, ValueError, VECM, univariate_data
     # ### fit only allowed with known method
-    model = VECM(endog, diff_lags=1, deterministic="nc")
+    model = VECM(endog, k_ar_diff=1, deterministic="nc")
     yield assert_raises, ValueError, model.fit, "abc"  # no "abc" estim.-method
 
     # pass a shorter array than endog as exog_coint argument
@@ -1412,7 +1411,7 @@ def test_exceptions():
         # ### with exog
         exog = seasonal_dummies(4, len(endog), 2, centered=True)  # seasonal...
         exog = np.hstack((exog, 1 + np.arange(len(endog)).reshape(-1, 1)))  # & lin
-        vecm_res = VECM(endog, exog, diff_lags=3, coint_rank=coint_rank,
+        vecm_res = VECM(endog, exog, k_ar_diff=3, coint_rank=coint_rank,
                         deterministic="co").fit()
         # ##### exog_fc not passed as argument:
         yield assert_raises_regex, ValueError, "exog_fc is None.*", \
@@ -1432,7 +1431,7 @@ def test_exceptions():
         exog_coint.append(np.ones(len(endog)).reshape(-1, 1))
         exog_coint.append(1 + np.arange(len(endog)).reshape(-1, 1))
         exog_coint = np.hstack(exog_coint)
-        vecm_res = VECM(endog, diff_lags=1, deterministic="nc",
+        vecm_res = VECM(endog, k_ar_diff=1, deterministic="nc",
                         exog_coint=exog_coint).fit()
         # ##### exog_coint_fc not passed as argument:
         yield assert_raises_regex, ValueError, "exog_coint_fc is None.*", \
@@ -1452,7 +1451,7 @@ def test_exceptions():
 
 def test_select_coint_rank():  # This is only a smoke test.
     if debug_mode:
-        if "select_coint_rank" not in to_test:
+        if "select_coint_rank" not in to_test:  # pragma: no cover
             return
         else:
             print("\n\nSELECT_COINT_RANK\n", end="")
