@@ -216,39 +216,6 @@ def forecast(y, coefs, intercept, steps):
 
     return forcs
 
-def _get_forecast_index(row_labels, nsteps):
-    newidx = None
-    
-    if isinstance(row_labels, (pd.DatetimeIndex, pd.PeriodIndex)):
-        # Original data can from a pd.Series or DataFrame, is labelled as
-        # dates
-        idx = row_labels
-        freq = idx.freq
-        idxcls = idx.__class__
-        # idx.__class__ is either pd.DatetimeIndex or pd.PeriodIndex.
-        # Below we will need to create new instances of the same type.
-        # Calling it this way avoids having to do a if/else block
-        # for each option.
-
-        if freq is None:
-            # Sometimes a DatetimeIndex gets created without the frequency
-            # attribute getting set.
-            freq = idx.inferred_freq
-            if freq is not None:
-                # We create a new DatetimeIndex, do not alter the old one.
-                # If you try to alter the old one, you're gonna have a
-                # bad time.
-                idx = idxcls(idx, freq)
-        
-        if freq is not None and len(idx) != 0:
-            # idx[-1]+1 adds one time unit to the last observation in
-            # the data, so corresponds to the first period for which
-            # we make a forecast
-            start = idx[-1] + 1
-            newidx = idxcls(start=start, periods=nsteps, freq=freq)
-
-    return newidx
-
 def forecast_cov(ma_coefs, sig_u, steps):
     """
     Compute theoretical forecast error variance matrices
