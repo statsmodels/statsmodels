@@ -191,6 +191,9 @@ def forecast(y, coefs, intercept, steps):
     # initial value
     forcs = np.zeros((steps, k)) + intercept
 
+    if isinstance(y, (pd.Series, pd.DataFrame)):
+        y = y.values # TODO: is there a better way to handle this?
+
     # h=0 forecast should be latest observation
     # forcs[0] = y[-1]
 
@@ -548,7 +551,7 @@ class VAR(tsbase.TimeSeriesModel):
 
         return selected_orders
 
-class VARProcess(object):
+class VARProcess(tsbase.TimeSeriesProcess):
     """
     Class represents a known VAR(p) process
 
@@ -709,9 +712,17 @@ class VARProcess(object):
         Lutkepohl pp 37-38
         """
         fdata = forecast(y, self.coefs, self.intercept, steps)
-        idx = _get_forecast_index(self.data.row_labels, steps)
+        idx = self._get_forecast_index(y, steps)
         if idx is not None:
-            fdata = pd.DataFrame(fdata, columns=self.endog_names, index=idx)
+            cols = getattr(y, 'columns', None)
+            if cols is None and hasattr(self, 'model'):
+                # If y is a a DataFrame, we check its columns first.  If
+                # for some reason we don't find columns there, we look at
+                # self.model.endog_names.  But note that VARProcess does
+                # not have a `model` attribute, so this check is specific
+                # to instances of the VARResults subclass.
+                cols = self.model.endog_names
+            fdata = pd.DataFrame(fdata, columns=cols, index=idx)
         return fdata
 
     def mse(self, steps):

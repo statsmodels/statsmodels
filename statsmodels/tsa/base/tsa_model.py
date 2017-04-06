@@ -15,6 +15,8 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.tsa.base import datetools
 from statsmodels.tools.sm_exceptions import ValueWarning
 
+from statsmodels.tsa.base.datetools import get_forecast_index
+
 _tsa_doc = """
     %(model)s
 
@@ -35,6 +37,25 @@ _model_doc = "Timeseries model base class"
 
 _generic_params = base._model_params_doc
 _missing_param_doc = base._missing_param_doc
+
+
+class TimeSeriesProcess(object):
+
+    def _get_forecast_index(self, data, steps):
+        idx = None
+        if hasattr(data, 'index'):
+            # We are looking directly at a pandas Series or DataFrame
+            idx = get_forecast_index(data.index, steps)
+        elif not hasattr(data, 'row_labels'):
+            if hasattr(self, 'data'):
+                data = self.data
+            elif hasattr(self, 'endog'):
+                data = self.endog
+        
+        if idx is None and hasattr(data, 'row_labels'):
+            idx = get_forecast_index(data.row_labels, steps)
+        return idx
+
 
 
 class TimeSeriesModel(base.LikelihoodModel):
