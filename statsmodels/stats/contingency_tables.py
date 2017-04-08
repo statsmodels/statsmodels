@@ -136,7 +136,7 @@ class Table(object):
         self.table = np.asarray(table, dtype=np.float64)
 
         if shift_zeros and (self.table.min() == 0):
-            self.table = self.table + 0.5
+            self.table[self.table == 0] = 0.5
 
 
     @classmethod
