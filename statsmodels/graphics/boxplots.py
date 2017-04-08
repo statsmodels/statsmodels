@@ -139,7 +139,10 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
                                        plot_opts)
 
     if show_boxplot:
-        ax.boxplot(data, notch=1, positions=positions, vert=1)
+        if np.ndim(data) == 2 : 
+            ax.boxplot(data.T, notch=1, positions=positions, vert=1)
+        else : 
+            ax.boxplot(data, notch=1, positions=positions, vert=1)
 
     # Set ticks and tick labels of horizontal axis.
     _set_ticks_labels(ax, data, labels, positions, plot_opts)
