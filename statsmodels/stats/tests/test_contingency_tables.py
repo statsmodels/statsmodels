@@ -119,6 +119,7 @@ def test_shifting():
     r = np.asarray([[0.5, 1, 2],
                     [3, 0.5, 4],
                     [5, 6, 0.5]], dtype=np.float64)
+    assert_equal(ctab.Table(t).table, r)
     assert_equal(ctab.Table(t, shift_zeros=True).table, r)
 
 
