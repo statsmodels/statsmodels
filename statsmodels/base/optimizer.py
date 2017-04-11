@@ -271,7 +271,7 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
         history = [oldparams, newparams]
     while (iterations < maxiter and np.any(np.abs(newparams -
             oldparams) > tol)):
-        H = np.asarray(hess(newparams))
+        H = np.asarray(hess(newparams), dtype=np.float64)
         # regularize Hessian, not clear what ridge factor should be
         # keyword option with absolute default 1e-10, see #1847
         if not np.all(ridge_factor == 0):
