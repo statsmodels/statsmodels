@@ -698,8 +698,7 @@ class TestZTest(object):
             assert_allclose(zstat, tc.statistic, rtol=1e-10)
             assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
 
-            zstat,
-            pval = cm.ztest_ind(value=tc.null_value,
+            zstat, pval = cm.ztest_ind(value=tc.null_value,
                                 alternative=alternatives[tc.alternative])
             assert_allclose(zstat, tc.statistic, rtol=1e-10)
             assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
@@ -731,8 +730,7 @@ class TestZTest(object):
             assert_allclose(zstat, tc.statistic, rtol=1e-10)
             assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
 
-            zstat,
-            pval = d1.ztest_mean(value=tc.null_value,
+            zstat, pval = d1.ztest_mean(value=tc.null_value,
                                  alternative=alternatives[tc.alternative])
             assert_allclose(zstat, tc.statistic, rtol=1e-10)
             assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
