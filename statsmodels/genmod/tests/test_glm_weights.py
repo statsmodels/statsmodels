@@ -603,7 +603,7 @@ class TestTweedieRepeatedvsAggregated(CheckWeight):
         import pandas as pd
         self = cls
         np.random.seed(4321)
-        n = 1000000
+        n = 10000
         p = 5
         exog = np.empty((n, p))
         exog[:, 0] = 1
