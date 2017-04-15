@@ -42,7 +42,9 @@ class CheckWeight(object):
                             atol=1e-8, rtol=2e-6)
         if isinstance(self, (TestRepeatedvsAggregated, TestRepeatedvsAverage,
                              TestTweedieRepeatedvsAggregated,
-                             TestTweedieRepeatedvsAverage)):
+                             TestTweedieRepeatedvsAverage,
+                             TestBinomial0RepeatedvsAverage,
+                             TestBinomial0RepeatedvsDuplicated)):
             # Loglikelihood, scale, deviance is different between repeated vs.
             # exposure/average
             return None
@@ -55,7 +57,9 @@ class CheckWeight(object):
     def test_residuals(self):
         if isinstance(self, (TestRepeatedvsAggregated, TestRepeatedvsAverage,
                              TestTweedieRepeatedvsAggregated,
-                             TestTweedieRepeatedvsAverage)):
+                             TestTweedieRepeatedvsAverage,
+                             TestBinomial0RepeatedvsAverage,
+                             TestBinomial0RepeatedvsDuplicated)):
             # This won't match as different number of records
             return None
         res1 = self.res1
@@ -73,9 +77,6 @@ class CheckWeight(object):
         assert_allclose(res1.resid_anscombe, resid_all['resid_anscombe'], atol= 1e-6, rtol=2e-6)
 
     def t_est_compare_bfgs(self):
-        if isinstance(self, TestGlmGammaAwNr):
-            import pdb
-            pdb.set_trace()
         res1 = self.res1
         if isinstance(res1.model.family, sm.families.Tweedie):
             # Can't do this on Tweedie as loglikelihood is too complex
@@ -665,3 +666,65 @@ class TestTweedieRepeatedvsAverage(CheckWeight):
                       var_weights=agg_wt)
         self.res2 = mod2.fit(rtol=1e-10, atol=0, tol_criterion='params')
 
+
+class TestBinomial0RepeatedvsAverage(CheckWeight):
+    @classmethod
+    def setup_class(cls):
+        import pandas as pd
+        self = cls
+        np.random.seed(4321)
+        n = 20
+        p = 5
+        exog = np.empty((n, p))
+        exog[:, 0] = 1
+        exog[:, 1] = np.random.randint(low=-5, high=5, size=n)
+        x = np.repeat(np.array([1, 2, 3, 4]), n / 4)
+        exog[:, 2:] = get_dummies(x)
+        beta = np.array([-1, 0.1, -0.05, .2, 0.35])
+        lin_pred = (exog * beta).sum(axis=1)
+        family = sm.families.Binomial
+        link = sm.families.links.log
+        endog = gen_endog(lin_pred, family, link, binom_version=0)
+        mod1 = sm.GLM(endog, exog, family=family(link=link()))
+        self.res1 = mod1.fit(rtol=1e-10, atol=0, tol_criterion='params',
+                             scaletype='x2')
+
+        agg = pd.DataFrame(exog)
+        agg['endog'] = endog
+        agg_endog = agg.groupby([0, 1, 2, 3, 4]).sum()[['endog']]
+        agg_wt = agg.groupby([0, 1, 2, 3, 4]).count()[['endog']]
+        agg_exog = np.array(agg_endog.index.tolist())
+        agg_wt = agg_wt['endog']
+        avg_endog = agg_endog['endog'] / agg_wt
+        mod2 = sm.GLM(avg_endog, agg_exog,
+                      family=family(link=link()),
+                      var_weights=agg_wt)
+        self.res2 = mod2.fit(rtol=1e-10, atol=0, tol_criterion='params')
+
+
+class TestBinomial0RepeatedvsDuplicated(CheckWeight):
+    @classmethod
+    def setup_class(cls):
+        import pandas as pd
+        self = cls
+        np.random.seed(4321)
+        n = 10000
+        p = 5
+        exog = np.empty((n, p))
+        exog[:, 0] = 1
+        exog[:, 1] = np.random.randint(low=-5, high=5, size=n)
+        x = np.repeat(np.array([1, 2, 3, 4]), n / 4)
+        exog[:, 2:] = get_dummies(x)
+        beta = np.array([-1, 0.1, -0.05, .2, 0.35])
+        lin_pred = (exog * beta).sum(axis=1)
+        family = sm.families.Binomial
+        link = sm.families.links.log
+        endog = gen_endog(lin_pred, family, link, binom_version=0)
+        wt = np.random.randint(1, 5, n)
+        mod1 = sm.GLM(endog, exog, family=family(link=link), freq_weights=wt)
+        self.res1 = mod1.fit()
+
+        exog_dup = np.repeat(exog, wt, axis=0)
+        endog_dup = np.repeat(endog, wt)
+        mod2 = sm.GLM(endog_dup, exog_dup, family=family(link=link))
+        self.res2 = mod2.fit()
