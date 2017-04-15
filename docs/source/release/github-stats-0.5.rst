@@ -1,7 +1,98 @@
-.. _issues_list_05:
+Issues closed in the 0.5 development cycle
+==========================================
 
-Issues closed in the 0.5.0 development cycle
-============================================
+.. _issues_list_051:
+
+Issues closed in 0.5.1
+----------------------
+
+GitHub stats for bugfix release 0.5.1 (2013/08/14 - 2013/11/23), backporting pull requests from 0.6.
+
+We closed a total of 73 issues, 30 pull requests and 43 regular issues;
+this is the full list (generated with the script :file:`tools/github_stats.py`):
+
+These lists are automatically generated, and may be incomplete or contain duplicates.
+
+Pull Requests (30):
+
+* :ghpull:`1200`: BLD: do not install ``*.pyx`` ``*.c``  MANIFEST.in
+* :ghpull:`1202`: MAINT: Sort backports to make applying easier.
+* :ghpull:`1157`: Tst precision master
+* :ghpull:`1161`: add a fitting interface for simultaneous log likelihood and score, for lbfgs, tested with MNLogit
+* :ghpull:`1160`: DOC: update scipy version from 0.7 to 0.9.0
+* :ghpull:`1147`: ENH: add lbfgs for fitting
+* :ghpull:`1156`: ENH: Raise on 0,0 order models in AR(I)MA. Closes #1123
+* :ghpull:`1149`: BUG: Fix small data issues for ARIMA.
+* :ghpull:`1092`: Fixed duplicate svd in RegressionModel
+* :ghpull:`1139`: TST: Silence tests
+* :ghpull:`1135`: Misc style
+* :ghpull:`1088`: ENH: add predict_prob to poisson
+* :ghpull:`1125`: REF/BUG: Some GLM cleanup. Used trimmed results in NegativeBinomial variance.
+* :ghpull:`1124`: BUG: Fix ARIMA prediction when fit without a trend.
+* :ghpull:`1118`: DOC: Update gettingstarted.rst
+* :ghpull:`1117`: Update ex_arma2.py
+* :ghpull:`1107`: REF: Deprecate stand_mad. Add center keyword to mad. Closes #658.
+* :ghpull:`1089`: ENH: exp(poisson.logpmf()) for poisson better behaved.
+* :ghpull:`1077`: BUG: Allow 1d exog in ARMAX forecasting.
+* :ghpull:`1075`: BLD: Fix build issue on some versions of easy_install.
+* :ghpull:`1071`: Update setup.py to fix broken install on OSX
+* :ghpull:`1052`: DOC: Updating contributing docs
+* :ghpull:`1136`: RLS: Add IPython tools for easier backporting of issues.
+* :ghpull:`1091`: DOC: minor git typo
+* :ghpull:`1082`: coveralls support
+* :ghpull:`1072`: notebook examples title cell
+* :ghpull:`1056`: Example: reg diagnostics
+* :ghpull:`1057`: COMPAT: Fix py3 caching for get_rdatasets.
+* :ghpull:`1045`: DOC/BLD: Update from nbconvert to IPython 1.0.
+* :ghpull:`1026`: DOC/BLD: Add LD_LIBRARY_PATH to env for docs build.
+
+Issues (43):
+
+* :ghissue:`1152`: statsmodels failing tests with pandas master
+* :ghissue:`1195`: pyximport.install() before import api crash
+* :ghissue:`1066`: gmm.IV2SLS has wrong predict signature
+* :ghissue:`1186`: OLS when exog is 1d
+* :ghissue:`1113`: TST: precision too high in test_normality
+* :ghissue:`1159`: scipy version is still >= 0.7?
+* :ghissue:`1108`: SyntaxError: unqualified exec is not allowed in function 'test_EvalEnvironment_capture_flag
+* :ghissue:`1116`: Typo in Example Doc?
+* :ghissue:`1123`: BUG : arima_model._get_predict_out_of_sample, ignores exogenous of there is no trend ?
+* :ghissue:`1155`: ARIMA - The computed initial AR coefficients are not stationary
+* :ghissue:`979`: Win64 binary can't find Python installation
+* :ghissue:`1046`: TST: test_arima_small_data_bug on current master 
+* :ghissue:`1146`: ARIMA fit failing for small set of data due to invalid maxlag
+* :ghissue:`1081`: streamline linear algebra for linear model
+* :ghissue:`1138`: BUG: pacf_yw doesn't demean
+* :ghissue:`1127`: Allow linear link model with Binomial families
+* :ghissue:`1122`: no data cleaning for statsmodels.genmod.families.varfuncs.NegativeBinomial()
+* :ghissue:`658`: robust.mad is not being computed correctly or is non-standard definition; it returns the median
+* :ghissue:`1076`: Some issues with ARMAX forecasting
+* :ghissue:`1073`: easy_install sandbox violation
+* :ghissue:`1115`: EasyInstall Problem
+* :ghissue:`1106`: bug in robust.scale.mad?
+* :ghissue:`1102`: Installation Problem
+* :ghissue:`1084`: DataFrame.sort_index does not use ascending when then value is a list with a single element
+* :ghissue:`393`: marginal effects in discrete choice do not have standard errors defined
+* :ghissue:`1078`: Use pandas.version.short_version
+* :ghissue:`96`: deepcopy breaks on ResettableCache
+* :ghissue:`1055`: datasets.get_rdataset   string decode error on python 3
+* :ghissue:`46`: tsa.stattools.acf confint needs checking and tests
+* :ghissue:`957`: ARMA start estimate with numpy master
+* :ghissue:`62`: GLSAR incorrect initial condition in whiten
+* :ghissue:`1021`: from_formula() throws error - problem installing
+* :ghissue:`911`: noise in stats.power tests
+* :ghissue:`472`: Update roadmap for 0.5
+* :ghissue:`238`: release 0.5
+* :ghissue:`1006`: update nbconvert to IPython 1.0
+* :ghissue:`1038`: DataFrame with integer names not handled in ARIMA
+* :ghissue:`1036`: Series no longer inherits from ndarray
+* :ghissue:`1028`: Test fail with windows and Anaconda - Low priority
+* :ghissue:`676`: acorr_breush_godfrey  undefined nlags
+* :ghissue:`922`: lowess returns inconsistent with option
+* :ghissue:`425`: no bse in robust with norm=TrimmedMean
+
+
+.. _issues_list_05:
 
 Issued closed in 0.5.0
 -----------------------
