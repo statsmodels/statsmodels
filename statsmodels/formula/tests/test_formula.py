@@ -5,9 +5,11 @@ from statsmodels.formula.api import ols
 from statsmodels.formula.formulatools import make_hypotheses_matrices
 from statsmodels.tools import add_constant
 from statsmodels.datasets.longley import load, load_pandas
+from statsmodels.datasets import cpunish
 
 import numpy.testing as npt
 from statsmodels.tools.testing import assert_equal
+import numpy as np
 
 
 longley_formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
@@ -118,3 +120,51 @@ def test_formula_predict_series():
     result = results.predict({"x": [1, 2, 3]})
     expected = pd.Series([1., 2., 3.], index=[0, 1, 2])
     tm.assert_series_equal(result, expected)
+
+
+def test_patsy_lazy_dict():
+    class LazyDict(dict):
+        def __init__(self, data):
+            self.data = data
+
+        def __missing__(self, key):
+            return np.array(self.data[key])
+
+    data = cpunish.load_pandas().data
+    data = LazyDict(data)
+    res = ols('EXECUTIONS ~ SOUTH + INCOME', data=data).fit()
+
+    res2 = res.predict(data)
+    npt.assert_allclose(res.fittedvalues, res2)
+
+    data = cpunish.load_pandas().data
+    data['INCOME'].loc[0] = None
+
+    data = LazyDict(data)
+    data.index = cpunish.load_pandas().data.index
+    res = ols('EXECUTIONS ~ SOUTH + INCOME', data=data).fit()
+
+    res2 = res.predict(data)
+    assert_equal(res.fittedvalues, res2)  # Should lose a record
+    assert_equal(len(res2) + 1, len(cpunish.load_pandas().data))
+
+
+def test_patsy_missing_data():
+    # Test pandas-style first
+    data = cpunish.load_pandas().data
+    data['INCOME'].loc[0] = None
+    res = ols('EXECUTIONS ~ SOUTH + INCOME', data=data).fit()
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        res2 = res.predict(data)
+        assert len(w) > 0
+    assert_equal(res.fittedvalues, res2[1:])  # First record will be dropped
+
+    # Non-pandas version
+    data = cpunish.load_pandas().data
+    data['INCOME'].loc[0] = None
+    data = data.to_records(index=False)
+
+    res = ols('EXECUTIONS ~ SOUTH + INCOME', data=data).fit()
+    res2 = res.predict(data)
+    assert_equal(res.fittedvalues, res2)  # No records wiill be dropped
