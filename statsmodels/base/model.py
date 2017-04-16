@@ -799,20 +799,18 @@ class Results(object):
 
         exog_index = exog.index if _is_using_pandas(exog, None) else None
 
-        if transform and hasattr(self.model, 'formula') and exog is not None:
+        if transform and hasattr(self.model, 'formula') and (exog is not None):
             from patsy import dmatrix
-            exog = pd.DataFrame(exog)  # user may pass series, if one predictor
-            if exog_index is None:  # user passed in a dictionary
-                exog_index = exog.index
+            if hasattr(exog, 'ndim') and exog.ndim == 1:
+                # user may pass series, if one predictor
+                exog = pd.DataFrame(exog)
+            exog_index = getattr(exog, 'index', None)
             exog = dmatrix(self.model.data.design_info.builder,
                            exog, return_type="dataframe")
-            if len(exog) < len(exog_index):
+            if (exog_index is not None) and (len(exog) < len(exog_index)):
                 # missing values, rows have been dropped
-                if exog_index is not None:
-                    exog = exog.reindex(exog_index)
-                else:
-                    import warnings
-                    warnings.warn("nan rows have been dropped", ValueWarning)
+                exog = exog.reindex(exog_index)
+            exog_index = exog.index
 
         if exog is not None:
             exog = np.asarray(exog)
@@ -824,14 +822,11 @@ class Results(object):
         predict_results = self.model.predict(self.params, exog, *args, **kwargs)
 
         if exog_index is not None and not hasattr(predict_results, 'predicted_values'):
-
             if predict_results.ndim == 1:
                 return pd.Series(predict_results, index=exog_index)
             else:
                 return pd.DataFrame(predict_results, index=exog_index)
-
         else:
-
             return predict_results
 
     def summary(self):

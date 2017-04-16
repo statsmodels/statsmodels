@@ -8,6 +8,7 @@ from statsmodels.datasets.longley import load, load_pandas
 
 import numpy.testing as npt
 from statsmodels.tools.testing import assert_equal
+import numpy as np
 
 
 longley_formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
@@ -118,3 +119,41 @@ def test_formula_predict_series():
     result = results.predict({"x": [1, 2, 3]})
     expected = pd.Series([1., 2., 3.], index=[0, 1, 2])
     tm.assert_series_equal(result, expected)
+
+
+def test_patsy_lazy_dict():
+    import statsmodels.api as sm
+    import statsmodels.formula.api as smf
+
+    class LazyDict(dict):
+        def __init__(self, data):
+            self.data = data
+
+        def __missing__(self, key):
+            return np.array(self.data[key])
+
+    data = sm.datasets.cpunish.load_pandas().data
+    data = LazyDict(data)
+    res = smf.ols('EXECUTIONS ~ SOUTH + INCOME', data=data).fit()
+
+    res2 = res.predict(data)
+    npt.assert_allclose(res.fittedvalues, res2)
+
+    data = sm.datasets.cpunish.load_pandas().data
+    data['INCOME'].loc[0] = None
+
+    data = LazyDict(data)
+    data.index = sm.datasets.cpunish.load_pandas().data.index
+    res = smf.ols('EXECUTIONS ~ SOUTH + INCOME', data=data).fit()
+
+    res2 = res.predict(data)
+    assert_equal(len(res.fittedvalues) + 1, len(res2))  # Should lose a record
+
+    data = sm.datasets.cpunish.load_pandas().data
+    data['INCOME'].loc[0] = None
+
+    data = LazyDict(data)
+    res = smf.ols('EXECUTIONS ~ SOUTH + INCOME', data=data).fit()
+
+    res2 = res.predict(data)
+    npt.assert_allclose(res.fittedvalues, res2)
