@@ -1,7 +1,40 @@
 .. _issues_list_06:
 
-Issues closed in the 0.6.0 development cycle
-============================================
+Issues closed in the 0.6 development cycle
+==========================================
+
+Issues closed in 0.6.1
+----------------------
+
+GitHub stats for bugfix release 0.6.1 (2014/11/05 - 2014/12/02), backporting pull requests from 0.7.
+
+We closed a total of 15 issues, 8 pull requests and 7 regular issues;
+this is the full list (generated with the script 
+:file:`tools/github_stats.py`):
+
+These lists are automatically generated, and may be incomplete or contain duplicates.
+
+Pull Requests (8):
+
+* :ghpull:`2111`: Mixed profile
+* :ghpull:`2053`: Add NominalGEE and OrdinalGEE to api
+* :ghpull:`2105`: BUG: Avoid returning nans in lowess.
+* :ghpull:`2066`: fixes #2065 (missing np)
+* :ghpull:`2089`: BUG: Fix pos. def check in logdet
+* :ghpull:`2097`: BUG: Make sure RE names are properly handled in MixedLM.
+* :ghpull:`2093`: Add user control over what happens if a constant is already present.
+* :ghpull:`2084`: BUG: Correct issue if patsy handles missing. Closes #2083.
+
+Issues (7):
+
+* :ghissue:`2102`: MixedLM profile likelihood issue
+* :ghissue:`1798`: lowess silently returns nans
+* :ghissue:`2065`: In tukey_hsd.plot_simultaneous - "ones" not defined.
+* :ghissue:`2087`: slogdet positive-definite check is wrong
+* :ghissue:`2099`: Error in accessing mixedlm results with random slopes
+* :ghissue:`2043`: ValueError on tsa with constant column
+* :ghissue:`2083`: BUG: rlm errors on missing values
+
 
 Issues closed in 0.6.0
 ----------------------
