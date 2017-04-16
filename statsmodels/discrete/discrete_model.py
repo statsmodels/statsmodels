@@ -374,7 +374,11 @@ class DiscreteModel(base.LikelihoodModel):
         if nnz_params > 0:
             H_restricted = H[nz_idx[:, None], nz_idx]
             # Covariance estimate for the nonzero params
-            H_restricted_inv = np.linalg.inv(-H_restricted)
+            try:
+                H_restricted_inv = np.linalg.inv(-H_restricted)
+            except np.linalg.LinAlgError:
+                print 'Hessian inversion failed: Hessian is singular ' \
+                      'try increasing penalty'
         else:
             H_restricted_inv = np.zeros(0)
 
@@ -3144,7 +3148,7 @@ if __name__=="__main__":
 # newton, note that Lawless (1987) has the derivations
 # appear to be something wrong with the score?
 # according to Lawless, traditionally the likelihood is maximized wrt to B
-# and a gridsearch on a to determin ahat?
+# and a gridsearch on a to determine ahat?
 # or the Breslow approach, which is 2 step iterative.
     nb2_params = [-2.190,.217,-.216,.609,-.142,.118,-.497,.145,.214,.144,
             .038,.099,.190,1.077] # alpha is last
