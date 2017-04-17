@@ -101,7 +101,7 @@ def append_cython_exclusion(path, filename):
 
 
 def strip_rc(version):
-    return re.sub(r"rc\d+$", "", version)
+    return re.sub(r"\.?\w+\d+$", "", version)
 
 
 def check_dependency_versions(min_versions):
