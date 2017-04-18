@@ -6,6 +6,7 @@ from __future__ import division
 from statsmodels.compat import range
 
 import os
+import pandas as pd
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
                            assert_allclose, assert_, assert_array_less, dec)
@@ -733,3 +734,75 @@ class TestBinomial0RepeatedvsDuplicated(CheckWeight):
         endog_dup = np.repeat(endog, wt)
         mod2 = sm.GLM(endog_dup, exog_dup, family=family(link=link))
         self.res2 = mod2.fit()
+
+
+def test_warnings_raised():
+    import sys
+    if sys.version_info < (3, 4):
+        raise SkipTest
+    weights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
+    # faking aweights by using normalized freq_weights
+    weights = np.array(weights)
+
+    gid = np.arange(1, 17 + 1) // 2
+
+    cov_kwds = {'groups': gid, 'use_correction': False}
+    with warnings.catch_warnings(record=True) as w:
+        res1 = GLM(cpunish_data.endog, cpunish_data.exog,
+                   family=sm.families.Poisson(), freq_weights=weights
+                   ).fit(cov_type='cluster', cov_kwds=cov_kwds)
+        res1.summary()
+        assert len(w) >= 1
+
+    with warnings.catch_warnings(record=True) as w:
+        res1 = GLM(cpunish_data.endog, cpunish_data.exog,
+                   family=sm.families.Poisson(), var_weights=weights
+                   ).fit(cov_type='cluster', cov_kwds=cov_kwds)
+        res1.summary()
+        assert len(w) >= 1
+
+
+def test_weights_different_formats():
+    weights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
+    yield check_weights_as_formats, weights
+    yield check_weights_as_formats, np.asarray(weights)
+    yield check_weights_as_formats, pd.Series(weights)
+
+
+def check_weights_as_formats(weights):
+    res = GLM(cpunish_data.endog, cpunish_data.exog,
+              family=sm.families.Poisson(), freq_weights=weights
+              ).fit()
+    assert isinstance(res._freq_weights, np.ndarray)
+    assert isinstance(res._var_weights, np.ndarray)
+    assert isinstance(res._iweights, np.ndarray)
+
+    res = GLM(cpunish_data.endog, cpunish_data.exog,
+              family=sm.families.Poisson(), var_weights=weights
+              ).fit()
+    assert isinstance(res._freq_weights, np.ndarray)
+    assert isinstance(res._var_weights, np.ndarray)
+    assert isinstance(res._iweights, np.ndarray)
+
+
+def test_incompatible_input():
+    weights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
+    exog = cpunish_data.exog
+    endog = cpunish_data.endog
+    family = sm.families.Poisson()
+    # Too short
+    assert_raises(ValueError, GLM, endog, exog, family=family,
+                  freq_weights=weights[:-1])
+    assert_raises(ValueError, GLM, endog, exog, family=family,
+                  var_weights=weights[:-1])
+    # Too long
+    assert_raises(ValueError, GLM, endog, exog, family=family,
+                  freq_weights=weights + [3])
+    assert_raises(ValueError, GLM, endog, exog, family=family,
+                  var_weights=weights + [3])
+
+    # Too many dimensions
+    assert_raises(ValueError, GLM, endog, exog, family=family,
+                  freq_weights=[weights, weights])
+    assert_raises(ValueError, GLM, endog, exog, family=family,
+                  var_weights=[weights, weights])
