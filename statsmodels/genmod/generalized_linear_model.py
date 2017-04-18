@@ -170,16 +170,58 @@ class GLM(base.LikelihoodModel):
     Endog and exog are references so that if the data they refer to are already
     arrays and these arrays are changed, endog and exog will change.
 
-    Using frequency weights: Frequency weights produce the same results as repeating
-    observations by the frequencies (if those are integers). This is verified for all
-    basic results with nonrobust or heteroscedasticity robust ``cov_type``. Other
-    robust covariance types have not yet been verified, and at least the small sample
+    Statsmodels supports two separte definitions of weights: frequency weights
+    and variance weights.
+
+    Frequency weights produce the same results as repeating observations by the
+    frequencies (if those are integers). Frequency weights will keep the number
+    of observations consistent, but the degrees of freedom will change to
+    reflect the new weights.
+
+    Variance weights (referred to in other packages as analytic weights) are
+    used when ``endog`` represents an an average or mean. This relies on the
+    assumption that that the inverse variance scales proportionally to the
+    weight--an observation that is deemed more credible should have less
+    variance and therefore have more weight. For the ``Poisson`` family--which
+    assumes that occurences scale proportionally with time--a natural practice
+    would be to use the amount of time as the variance weight and set ``endog``
+    to be a rate (occurrances per period of time). Similarly, using a
+    compound Poisson family, namely ``Tweedie``, makes a similar assumption
+    about the rate (or frequency) of occurences having variance proportional to
+    time.
+
+    Both frequency and variance weights are verified for all basic results with
+    nonrobust or heteroscedasticity robust ``cov_type``. Other robust
+    covariance types have not yet been verified, and at least the small sample
     correction is currently not based on the correct total frequency count.
-    It has not yet been decided whether all the different types of residuals will be
-    based on weighted residuals. Currently, residuals are not weighted.
 
+    Currently, all residuals are not weighted by frequency, although they may
+    incorporate ``n_trials`` for ``Binomial`` and ``var_weights``
 
-    **Attributes**
+    +---------------+----------------------------------+
+    | Residual Type | Applicable weights               |
+    +===============+==================================+
+    | Anscombe      | Unweighted                       |
+    +---------------+----------------------------------+
+    | Deviance      | ``var_weights``                  |
+    +---------------+----------------------------------+
+    | Pearson       | ``var_weights`` and ``n_trials`` |
+    +---------------+----------------------------------+
+    | Reponse       | ``n_trials``                     |
+    +---------------+----------------------------------+
+    | Working       | ``n_trials``                     |
+    +---------------+----------------------------------+
+
+    WARNING: Loglikelihood, llf, deviance, etc. is not valid in models where
+    scale is equal to 1 (i.e., ``Binomial``, ``NegativeBinomial``, and
+    ``Poisson``). If variance weights are specified, then results such as
+    ``loglike`` and ``deviance`` are based on a quasi-likelihood
+    interpretation. The loglikelihood is not correctly specified in this case,
+    and statistics based on it, such AIC or likelihood ratio tests, are not\
+    appropriate.
+
+    Attributes
+    ----------
 
     df_model : float
         Model degrees of freedom is equal to p - 1, where p is the number
@@ -262,6 +304,11 @@ class GLM(base.LikelihoodModel):
             exposure = np.log(exposure)
         if offset is not None:  # this should probably be done upstream
             offset = np.asarray(offset)
+
+        if freq_weights is not None:
+            freq_weights = np.asarray(freq_weights)
+        if var_weights is not None:
+            var_weights = np.asarray(var_weights)
 
         self.freq_weights = freq_weights
         self.var_weights = var_weights
@@ -370,7 +417,7 @@ class GLM(base.LikelihoodModel):
         if var_weights is None:
             self.var_weights = np.ones((endog.shape[0]))
             # TODO: check do we want to keep None as sentinel for var_weights
-        self.iweights = np.array(self.freq_weights * self.var_weights)
+        self.iweights = np.asarray(self.freq_weights * self.var_weights)
 
     def _get_init_kwds(self):
         # this is a temporary fixup because exposure has been transformed
@@ -1328,6 +1375,12 @@ class GLMResults(base.LikelihoodModelResults):
             import warnings
             from statsmodels.tools.sm_exceptions import SpecificationWarning
             warnings.warn('cov_type not fully supported with freq_weights',
+                          SpecificationWarning)
+
+        if self.model._has_var_weights and not ct:
+            import warnings
+            from statsmodels.tools.sm_exceptions import SpecificationWarning
+            warnings.warn('cov_type not fully supported with var_weights',
                           SpecificationWarning)
 
         if cov_type == 'nonrobust':
