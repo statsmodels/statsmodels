@@ -156,6 +156,11 @@ class CheckModelResultsMixin(object):
         assert_almost_equal(self.res1.pvalues, pvalues)
         assert_almost_equal(self.res1.conf_int(), conf_int)
 
+    def test_pearson_chi2(self):
+        if hasattr(self.res2, 'pearson_chi2'):
+            assert_allclose(self.res1.pearson_chi2, self.res2.pearson_chi2,
+                            atol=1e-6, rtol=1e-6)
+
     def test_summary(self):
         #SMOKE test
         self.res1.summary()

@@ -370,7 +370,7 @@ class GLM(base.LikelihoodModel):
         if var_weights is None:
             self.var_weights = np.ones((endog.shape[0]))
             # TODO: check do we want to keep None as sentinel for var_weights
-        self.iweights = self.freq_weights * self.var_weights
+        self.iweights = np.array(self.freq_weights * self.var_weights)
 
     def _get_init_kwds(self):
         # this is a temporary fixup because exposure has been transformed
@@ -1371,7 +1371,7 @@ class GLMResults(base.LikelihoodModelResults):
     @cache_readonly
     def pearson_chi2(self):
         chisq = (self._endog - self.mu)**2 / self.family.variance(self.mu)
-        chisq *= self._iweights
+        chisq *= self._iweights * self._n_trials
         chisqsum = np.sum(chisq)
         return chisqsum
 
