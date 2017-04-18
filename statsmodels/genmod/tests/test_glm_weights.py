@@ -88,6 +88,11 @@ class CheckWeight(object):
         res2_bse = np.sqrt(-np.diag(np.linalg.inv(H)))
         assert_allclose(res1.bse, res2_bse, atol=1e-3, rtol=1e-3)
 
+    def test_pearson_chi2(self):
+        if hasattr(self.res2, 'chi2'):
+            assert_allclose(self.res1.pearson_chi2, self.res2.deviance_p,
+                            atol=1e-6, rtol=1e-6)
+
 
 class TestGlmPoissonPlain(CheckWeight):
     @classmethod
