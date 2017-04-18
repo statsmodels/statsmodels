@@ -79,7 +79,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
               If False, then `df_resid` of the results instance is not
               adjusted.
 
-    - 'hac-groupsum' Driscoll and Kraay, heteroscedasticity and
+    - 'nw-groupsum' Driscoll and Kraay, heteroscedasticity and
         autocorrelation robust standard errors in panel data
         keywords
 
