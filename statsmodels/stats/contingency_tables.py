@@ -2307,7 +2307,7 @@ class MultipleResponseTable(object):
                  "probably because certain factor levels lacked variance, "
                  "i.e. were 1 for all observations or 0 for "
                  "all observations. Statsmodels declines "
-                 "to calculate test for independence in this case "
+                 "to calculate a test for independence in this case "
                  "because doing so would require substantial assumptions "
                  "about the unobserved cases.")
             chis = pd.DataFrame(np.nan, index=rows_levels,
