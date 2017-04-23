@@ -110,8 +110,6 @@ def parse_lutkepohl_data(path): # pragma: no cover
     Source for data files: www.jmulti.de
     """
 
-    from statsmodels.compat.pandas import datetools as dt
-
     from collections import deque
     from datetime import datetime
     import pandas

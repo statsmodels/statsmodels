@@ -38,7 +38,7 @@ from statsmodels.base.data import handle_data  # for mnlogit
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 from statsmodels.compat.numpy import np_matrix_rank
-from pandas.core.api import get_dummies
+from pandas import get_dummies
 
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 try:

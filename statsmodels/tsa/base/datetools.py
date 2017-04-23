@@ -3,11 +3,11 @@ Tools for working with dates
 """
 from statsmodels.compat.python import (lrange, lzip, lmap, string_types, long,
                                        callable, asstr, reduce, zip, map)
-from statsmodels.compat.pandas import datetools
 import re
 import datetime
 
-from pandas import Int64Index, Period, PeriodIndex, Timestamp, DatetimeIndex
+from pandas import (Int64Index, Period, PeriodIndex, Timestamp, DatetimeIndex,
+                    to_datetime)
 import numpy as np
 
 _quarter_to_day = {
@@ -82,7 +82,7 @@ def date_parser(timestr, parserinfo=None, **kwargs):
         month, day = 12, 31
         year = int(timestr)
     else:
-        return datetools.to_datetime(timestr, **kwargs)
+        return to_datetime(timestr, **kwargs)
 
     return datetime.datetime(year, month, day)
 
@@ -176,7 +176,8 @@ def dates_from_range(start, end=None, length=None):
     Examples
     --------
     >>> import statsmodels.api as sm
-    >>> dates = sm.tsa.datetools.date_range('1960m1', length=nobs)
+    >>> import pandas as pd
+    >>> dates = pd.date_range('1960m1', length=nobs)
 
 
     Returns

@@ -55,10 +55,10 @@ except ImportError:
             return (issubclass(tipo, (np.number, np.bool_)) and
                     not issubclass(tipo, (np.datetime64, np.timedelta64)))
 
-try:
-    import pandas.tseries.tools as datetools
-    import pandas.tseries.frequencies as frequencies
-except ImportError:
-    from pandas.core import datetools
-    frequencies = datetools
-
+if version >= '0.20':
+    from pandas.tseries import frequencies
+else:
+    try:
+        import pandas.tseries.frequencies as frequencies
+    except ImportError:
+        from pandas.core import datetools as frequencies

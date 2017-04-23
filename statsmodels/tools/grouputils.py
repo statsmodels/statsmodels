@@ -34,7 +34,7 @@ import pandas as pd
 from statsmodels.compat.numpy import npc_unique
 from statsmodels.compat.pandas import sort_values
 import statsmodels.tools.data as data_util
-from pandas.core.index import Index, MultiIndex
+from pandas import Index, MultiIndex
 
 
 def combine_indices(groups, prefix='', sep='.', return_labels=False):
