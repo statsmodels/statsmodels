@@ -2104,7 +2104,11 @@ class MultipleResponseTable(object):
         single_response_column = joint_dataframe.single_response_level
         item_response_pieces = {}
         for c in multiple_response_factor.labels:
-            multiple_response_column = joint_dataframe.loc[:, c]
+            column_position = joint_dataframe.columns.get_loc(c)
+            # if factors have been combined, c can be a tuple.
+            # pandas assumes tuples passed into .loc
+            # are looking for a multi-index pair.
+            multiple_response_column = joint_dataframe.iloc[:, column_position]
             crosstab = pd.crosstab(single_response_column,
                                    multiple_response_column)
             item_response_pieces[c] = crosstab
@@ -2286,8 +2290,15 @@ class MultipleResponseTable(object):
             # around 250, which sort of makes sense if the top left pairing
             # always co-occurs. But instead of making that extreme
             # assumption, we'll just decline to calculate.
-            return pd.DataFrame(np.nan,
-                                index=rows_levels,
+            import warnings
+            warnings.warn("The SPMI item-response table had degenerate shape, "
+                 "probably because certain factor levels lacked variance, "
+                 "i.e. were 1 for all observations or 0 for "
+                 "all observations. Statsmodels declines "
+                 "to calculate test for independence in this case "
+                 "because doing so would require substantial assumptions "
+                 "about the unobserved cases.")
+            chis = pd.DataFrame(np.nan, index=rows_levels,
                                 columns=columns_levels)
         chis_spmi = pd.DataFrame(index=rows_levels, columns=columns_levels)
         for row_level in rows_levels:
@@ -2412,7 +2423,14 @@ class MultipleResponseTable(object):
             p_value_b_min.append(p_value_min)
             p_value_b_prod.append(p_value_prod)
 
-        observed, _ = calc_chis(q1, q2)
+        observed_rows_factor = Factor(q1, rows_factor_name,
+                                    orientation="wide",
+                                    multiple_response=True)
+        observed_columns_factor = Factor(q2, columns_factor_name,
+                                       orientation="wide",
+                                       multiple_response=True)
+        observed, _ = calc_chis(observed_rows_factor,
+                                observed_columns_factor)
         observed_X_sq_S = observed.sum().sum()
         p_value_ij = observed.applymap(chi2_survival_with_1_dof)
         p_value_min = p_value_ij.min().min()
@@ -2422,6 +2440,13 @@ class MultipleResponseTable(object):
 
         p_value_boot_min_overall = np.mean(p_value_b_min <= p_value_min)
         print(p_value_boot_min_overall)
+        start = pd.DataFrame(0,
+                             index=p_value_ij.index,
+                             columns=p_value_ij.columns)
+        for frame in X_sq_S_ij_star:
+            start += frame
+        average_p_ij = start / len(X_sq_S_ij_star)
+        print(average_p_ij)
 
     def _test_SPMI_using_rao_scott_2(self, row_factor,
                                      column_factor):
@@ -2700,7 +2725,7 @@ class MultipleResponseTable(object):
 
 
 def _build_joint_dataframe(left_data, right_data, l_suffix, r_suffix):
-    joint_dataframe = pd.merge(right_data, left_data,
+    joint_dataframe = pd.merge(left_data, right_data,
                                how="inner",
                                on='observation_id',
                                suffixes=(l_suffix, r_suffix))
@@ -2777,6 +2802,7 @@ class Factor(object):
                  orientation="wide", multiple_response=None):
         self.orientation = orientation
         self.name = name
+
         if (dataframe.index.name is None and
                     "observation_id" not in dataframe.columns):
             dataframe.index.name = "observation_id"
@@ -2976,7 +3002,9 @@ class Factor(object):
             top_level = top_levels[top_label]
             bottom_level = bottom_levels[bottom_label]
             flat_columns.append((top_level, bottom_level))
-        combined_data.columns = flat_columns
+        # columns come out as tuples...that causes problems for some of
+        # pandas indexing methods like .loc
+        combined_data.columns = [asunicode(c, 'utf8') for c in flat_columns]
         template = "Combination of ({superior}) and ({subordinate})"
         merged_factor_name = template.format(superior=superior.name,
                                              subordinate=subordinate.name)
@@ -2986,4 +3014,3 @@ class Factor(object):
                                  orientation="wide",
                                  multiple_response=is_multiple_response)
         return combined_factor
-
