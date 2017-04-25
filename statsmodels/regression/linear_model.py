@@ -1018,9 +1018,18 @@ class OLS(WLS):
 
         u, s, vt = np.linalg.svd(self.exog, 0)
         v = vt.T
-        s2 = s*s + alpha * self.nobs
-        params = np.dot(u.T, self.endog) * s / s2
-        params = np.dot(v, params)
+        q = np.dot(u.T, self.endog) * s
+        s2 = s * s
+        if np.isscalar(alpha):
+            sd = s2 + alpha * self.nobs
+            params = q / sd
+            params = np.dot(v, params)
+        else:
+            vtav = self.nobs * np.dot(vt, alpha[:, None] * v)
+            d = np.diag(vtav) + s2
+            np.fill_diagonal(vtav, d)
+            r = np.linalg.solve(vtav, q)
+            params = np.dot(v, r)
 
         from statsmodels.base.elastic_net import RegularizedResults
         return RegularizedResults(self, params)
