@@ -837,7 +837,7 @@ def test_MRCV_table_from_data():
     construct = ctab.MultipleResponseTable.from_data
     table = construct(multiple_response_questions, 5, 5)
     expected = np.array([44, 49, 15, 22, 12])  # from a manual run
-    np.testing.assert_equal(table.table.iloc[:, 0], expected)
+    np.testing.assert_equal(table.table.iloc[0, :], expected)
 
 
 def test_MRCV_table_from_factors():
@@ -850,7 +850,7 @@ def test_MRCV_table_from_factors():
     multiple_response_table = ctab.MultipleResponseTable([rows_factor, ],
                                                          [columns_factor])
     expected = np.array([44, 49, 15, 22, 12])  # from a manual run
-    np.testing.assert_equal(multiple_response_table.table.iloc[:, 0].values,
+    np.testing.assert_equal(multiple_response_table.table.iloc[0, :].values,
                             expected)
 
 
@@ -1109,40 +1109,56 @@ def test_combining_factors():
                          multiple_response=True)
 
     srcv_srcv = srcv_1.combine_with(srcv_2)
-    np.testing.assert_(srcv_srcv.labels[0] == ("motorcycle", "motorcycle"))
-    np.testing.assert_(srcv_srcv.labels[-1] == ("truck", "truck"))
+
+    np.testing.assert_(srcv_srcv.labels[0] ==
+                       "('motorcycle', 'motorcycle')")
+    np.testing.assert_(srcv_srcv.labels[-1] == "('truck', 'truck')")
     np.testing.assert_(srcv_srcv.data.shape == (1000, 9))
 
     srcv_mrcv = srcv_1.combine_with(mrcv_1)
-    np.testing.assert_(srcv_mrcv.labels[0] == ("motorcycle", "candy"))
-    np.testing.assert_(srcv_mrcv.labels[-1] == ("truck", "sushi"))
+    np.testing.assert_(srcv_mrcv.labels[0] == "('motorcycle', 'candy')")
+    np.testing.assert_(srcv_mrcv.labels[-1] == "('truck', 'sushi')")
     np.testing.assert_(srcv_mrcv.data.shape == (1000, 15))
 
     mrcv_mrcv = mrcv_1.combine_with(mrcv_2)
-    np.testing.assert_(mrcv_mrcv.labels[0] == ("candy", "English"))
-    np.testing.assert_(mrcv_mrcv.labels[-1] == ("sushi", "none"))
+    np.testing.assert_(mrcv_mrcv.labels[0] == "('candy', 'English')")
+    np.testing.assert_(mrcv_mrcv.labels[-1] == "('sushi', 'none')")
     np.testing.assert_(mrcv_mrcv.data.shape == (1000, 25))
 
     narrow = mrcv_2.cast_wide_to_narrow()
     wide_narrow = mrcv_1.combine_with(narrow)
-    np.testing.assert_(wide_narrow.labels[0] == ("candy", "English"))
-    np.testing.assert_(wide_narrow.labels[-1] == ("sushi", "none"))
+    np.testing.assert_(wide_narrow.labels[0] == "('candy', 'English')")
+    np.testing.assert_(wide_narrow.labels[-1] == "('sushi', 'none')")
     np.testing.assert_(wide_narrow.data.shape == (1000, 25))
 
     narrow_wide = narrow.combine_with(mrcv_1)
-    np.testing.assert_(narrow_wide.labels[0] == ("English", "candy",))
-    np.testing.assert_(narrow_wide.labels[-1] == ("none", "sushi",))
+    np.testing.assert_(narrow_wide.labels[0] == "('English', 'candy')")
+    np.testing.assert_(narrow_wide.labels[-1] == "('none', 'sushi')")
     np.testing.assert_(narrow_wide.data.shape == (1000, 25))
 
     narrow_2 = mrcv_2.cast_wide_to_narrow()
     narrow_narrow = narrow.combine_with(narrow_2)
     np.testing.assert_(narrow_narrow.labels[0] ==
-                       ("English", "English"))
-    np.testing.assert_(narrow_narrow.labels[-1] == ("none", "none"))
+                       "('English', 'English')")
+    np.testing.assert_(narrow_narrow.labels[-1] == "('none', 'none')")
     np.testing.assert_(narrow_narrow.data.shape == (1000, 25))
 
+
 def test_creating_narrow_factor_from_data():
-    assert False
+    car_choice = build_random_single_select(n=1000)
+    index_name = car_choice.index.name
+    melted = pd.melt(car_choice.reset_index(), id_vars=index_name)
+    melted = melted.rename(columns={index_name: "observation_id"})
+    narrowed = melted.sort_values("observation_id")
+    narrow_data = narrowed.reset_index(drop=True)
+    with assert_raises(NotImplementedError):
+        ctab.Factor(narrow_data, "", orientation="narrow")
+    narrow_data.columns = ['observation_id', 'factor_level', 'value']
+    srcv = ctab.Factor(narrow_data, "", orientation="narrow")
+    np.testing.assert_equal(srcv.data.shape, (3000, 3))
+    levels = srcv.data['factor_level'].unique()
+    expected = np.array(['sedan', 'truck', 'motorcycle'], dtype=object)
+    np.testing.assert_equal(levels, expected)
 
 if __name__ == "__main__":
     import nose

@@ -2171,7 +2171,24 @@ class MultipleResponseTable(object):
         """
         item_response_table = cls._item_response_table_for_MMI(srcv, mrcv)
         mmi_chi_squared_by_cell = pd.Series(index=mrcv.labels)
-        for factor_level in item_response_table.columns.levels[0]:
+        rows_levels = item_response_table.index
+        columns_levels = item_response_table.columns.levels[0]
+        valid_shape = cls._item_response_tbl_shape_valid(
+            item_response_table, columns_levels, srcv.labels, "MMI"
+        )
+        if not valid_shape:
+            import warnings
+            warnings.warn("The MMI item-response table had degenerate shape, "
+                          "probably because certain factor levels lacked "
+                          "variance, i.e. were 1 for all observations or 0 for "
+                          "all observations. Statsmodels declines "
+                          "to calculate a test for independence in this case "
+                          "because doing so would require "
+                          "substantial assumptions about the unobserved cases.")
+            chis = pd.DataFrame(np.nan, index=rows_levels,
+                                columns=columns_levels)
+            return chis
+        for factor_level in columns_levels:
             crosstab = item_response_table.loc[:, factor_level]
             chi2_results = chi2_contingency(crosstab, correction=False)
             chi_squared_stat, _, _, _ = chi2_results
@@ -2290,28 +2307,21 @@ class MultipleResponseTable(object):
         item_response_table = build_table(rows_factor, columns_factor)
         rows_levels = item_response_table.index.levels[0]
         columns_levels = item_response_table.columns.levels[0]
-        num_col_levels = len(columns_levels)
-        num_row_levels = len(rows_levels)
-        if item_response_table.shape != (num_row_levels * 2,
-                                         num_col_levels * 2):
-            # crosstab will have degenerate shape (i.e. dimension != r*c)
-            # if one level had no observations, i.e. was all 0 or all 1
-            # we could pad those out with 0.5 on the unobserved levels,
-            # but that can produce extreme chi-square values,
-            # e.g. [[1000.5, 0.5], [0.5, 0.5]] has a chi-square of
-            # around 250, which sort of makes sense if the top left pairing
-            # always co-occurs. But instead of making that extreme
-            # assumption, we'll just decline to calculate.
+        valid_shape = cls._item_response_tbl_shape_valid(
+            item_response_table, columns_levels, rows_levels, "SPMI"
+        )
+        if not valid_shape:
             import warnings
             warnings.warn("The SPMI item-response table had degenerate shape, "
-                 "probably because certain factor levels lacked variance, "
-                 "i.e. were 1 for all observations or 0 for "
-                 "all observations. Statsmodels declines "
-                 "to calculate a test for independence in this case "
-                 "because doing so would require substantial assumptions "
-                 "about the unobserved cases.")
+                          "probably because certain factor levels lacked "
+                          "variance, i.e. were 1 for all observations or 0 for "
+                          "all observations. Statsmodels declines "
+                          "to calculate a test for independence in this case "
+                          "because doing so would require "
+                          "substantial assumptions about the unobserved cases.")
             chis = pd.DataFrame(np.nan, index=rows_levels,
                                 columns=columns_levels)
+            return chis
         chis_spmi = pd.DataFrame(index=rows_levels, columns=columns_levels)
         for row_level in rows_levels:
             for column_level in columns_levels:
@@ -2322,6 +2332,52 @@ class MultipleResponseTable(object):
                 chi_squared_statistic, _, _, _ = chi2_results
                 chis_spmi.loc[location] = chi_squared_statistic
         return chis_spmi
+
+    @classmethod
+    def _item_response_tbl_shape_valid(cls,
+                                       item_response_table,
+                                       columns_levels,
+                                       rows_levels,
+                                       type_):
+        """
+        Ensure item response table shape makes sense to analyze.
+         
+        Crosstab will have degenerate shape (i.e. dimension != r*c)
+        if one level had no observations, i.e. was all 0 or all 1.
+        We could pad those out with 0.5 on the unobserved levels,
+        but that can produce extreme chi-square values,
+        e.g. [[1000.5, 0.5], [0.5, 0.5]] has a chi-square of
+        around 250, which sort of makes sense if the top left pairing
+        always co-occurs. But instead of making that extreme
+        assumption, we'll just decline to calculate.
+            
+        Parameters
+        ----------
+        item_response_table : pd.DataFrame 
+            Table to validate
+        columns_levels : pd.Index 
+            levels of column factor
+        rows_levels: pd.Index
+            levels of row factor
+
+        Return
+        ------
+        bool
+            Whether shape is valid         
+        """
+
+        num_col_levels = len(columns_levels)
+        num_row_levels = len(rows_levels)
+        if type_ == 'SPMI':
+            valid = item_response_table.shape == (num_row_levels * 2,
+                                                  num_col_levels * 2)
+            return valid
+        elif type_ == "MMI":
+            valid = item_response_table.shape == (num_row_levels,
+                                                  num_col_levels * 2)
+            return valid
+        else:
+            raise NotImplementedError('Invalid MRCV table type.')
 
     def _test_SPMI_using_bonferroni(self, row_factor, column_factor):
         """
@@ -2498,7 +2554,7 @@ class MultipleResponseTable(object):
                   Journal of the American Statistical Association
                   76, 221-230, 1981.
         """
-        observed, _ = self._chi2s_for_SPMI_item_response_table(row_factor,
+        observed = self._chi2s_for_SPMI_item_response_table(row_factor,
                                                             column_factor)
         W = row_factor.data
         Y = column_factor.data
@@ -2594,11 +2650,20 @@ class MultipleResponseTable(object):
 
         bonferroni_correction_factor = c
         cap = lambda x: min(x, 1)
-        p_value_overall_bonferroni = cap(bonferroni_correction_factor *
-                                       p_value_min)
-        pairwise_bonferroni_p_values = ((p_value_ij *
-                                         bonferroni_correction_factor)
-                                        .apply( cap))
+        try:
+            p_value_overall_bonferroni = cap(bonferroni_correction_factor *
+                                           p_value_min)
+            pairwise_bonferroni_p_values = ((p_value_ij *
+                                             bonferroni_correction_factor)
+                                            .apply(cap))
+        except ValueError:
+            # if p_value_ij are all nan, p_value min will come back as a
+            # series and the min() function will fail. But the min
+            # of a series of nans should be nan
+            p_value_overall_bonferroni = np.nan
+            pairwise_bonferroni_p_values = pd.Series(np.nan,
+                                                     index=p_value_ij.index)
+
         return p_value_overall_bonferroni, pairwise_bonferroni_p_values
 
     def _test_MMI_using_rao_scott_2(self,
@@ -2726,7 +2791,7 @@ class MultipleResponseTable(object):
         Di_HGVGH_eigen = np.real(eigenvalues)
         sum_Di_HGVGH_eigen_sq = (Di_HGVGH_eigen ** 2).sum()
         calculate_chis = self._chi2s_for_MMI_item_response_table
-        observed, _ = calculate_chis(single_response_factor,
+        observed = calculate_chis(single_response_factor,
                                   multiple_response_factor)
         observed_X_sq = observed.sum()
         rows_by_columns = ((r - 1) * c)
@@ -2814,6 +2879,15 @@ class Factor(object):
                  orientation="wide", multiple_response=None):
         self.orientation = orientation
         self.name = name
+        if orientation == "narrow":
+            if list(dataframe.columns.values) != ['observation_id',
+                                                  'factor_level',
+                                                  'value']:
+                msg = ("If you provide data directly to a narrow-oriented "
+                       "factor, the provided labels must be "
+                       "['observation_id', 'factor_level', 'value'].")
+                raise NotImplementedError(msg)
+
         if (dataframe.index.name is None and
                     "observation_id" not in dataframe.columns):
             dataframe.index.name = "observation_id"
@@ -2827,6 +2901,7 @@ class Factor(object):
             dataframe.columns.name = "factor_level"
         # don't modify original in subsequent operations
         self.data = dataframe.copy()
+
         if multiple_response is None:
             if orientation == "wide":
                 responses_per_observation = dataframe.sum(axis=1)
@@ -2936,7 +3011,12 @@ class Factor(object):
         if self.orientation != "narrow":
             raise NotImplementedError("Factor is already wide")
         narrow_df = self.data
-        wide_df = pd.get_dummies(narrow_df).sort_index()
+        wide_df = pd.pivot_table(narrow_df,
+                                 values='value',
+                                 fill_value=0,
+                                 index=['observation_id'],
+                                 columns=['factor_level'],
+                                 aggfunc=np.sum).sort_index()
         wide_factor = Factor(wide_df, self.name, orientation="wide",
                              multiple_response=self.multiple_response)
         return wide_factor
