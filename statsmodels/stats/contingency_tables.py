@@ -17,14 +17,14 @@ The main classes are:
   * StratifiedTable : implements methods that can be applied to a
   collection of contingency tables.
 
-  * MRCVTable : implements methods that can be applied to contingency
+  * MultipleResponseTable : implements methods that can be applied to contingency
   tables that contain "multiple response" variables,
   i.e. factors where a single observation may have more than one level.
   For example, a "select all that apply" question on a survey.
 
   * Factor : A data container class that implements methods for
   processing and reshaping data into a format that is amenable
-  for use in the MRCVTable class.
+  for use in the MultipleResponseTable class.
 
 This module also contains functions for conducting Mcnemar's test
 and Cochran's q test.
@@ -1566,7 +1566,7 @@ class MultipleResponseTable(object):
     deduplication_padding : str
         Our tables don't deal well with duplicated index / column labels so we automatically
         add a padding character / string to duplicated names to make them unique. Defaults to
-        the ' ('prime') character but you can pass any character to use instead.
+        the ' (i.e. "prime") character but you can pass any character to use instead.
 
     Attributes
     ----------
@@ -1934,7 +1934,7 @@ class MultipleResponseTable(object):
                                       column_factors, row_factors,
                                       deduplication_padding):
         """
-        Validate provided Factors and plunk instances out of lists.
+        Validate provided Factors and pluck instances out of lists.
 
         Make sure that the factors that the user passed into
         the initial MultipleResponseTable initializer are valid and
@@ -1999,7 +1999,7 @@ class MultipleResponseTable(object):
         Make sure that all of the factor level names are unique.
 
         pandas does not deal well with duplicates in indexes. So if
-        duplicates are found, append '-characters as needed to
+        duplicates are found, append characters as needed to
         make them unique.
 
         Parameters
@@ -2160,7 +2160,7 @@ class MultipleResponseTable(object):
         the deviance is from expectation in that particular sub-table.
         Then by appropriately combining those individual chi-squared
         statistics we can investigate mutual marginal independence
-        for the overall table
+        for the overall table.
         """
         item_response_table = cls._item_response_table_for_MMI(srcv, mrcv)
         mmi_chi_squared_by_cell = pd.Series(index=mrcv.labels)
@@ -2337,12 +2337,9 @@ class MultipleResponseTable(object):
          
         Crosstab will have degenerate shape (i.e. dimension != r*c)
         if one level had no observations, i.e. was all 0 or all 1.
-        We could pad those out with 0.5 on the unobserved levels,
-        but that can produce extreme chi-square values,
-        e.g. [[1000.5, 0.5], [0.5, 0.5]] has a chi-square of
-        around 250, which sort of makes sense if the top left pairing
-        always co-occurs. But instead of making that extreme
-        assumption, we'll just decline to calculate.
+        We could pad those out with 0.5 on the unobserved levels. 
+        But instead of making the assumption that that's desired, 
+        we'll just decline to calculate.
             
         Parameters
         ----------
@@ -2376,7 +2373,7 @@ class MultipleResponseTable(object):
         """
         Test for SPMI between two multiple response vars using Bonferroni
 
-        SPMI stands for "single pairwise mutual independence".
+        SPMI stands for "simultaneous pairwise mutual independence".
 
         To test, first calculate a full item response table comparing each
         pairing of levels from both variables, then calculate a
@@ -2868,31 +2865,49 @@ class Factor(object):
         The number of distinct levels that an observation can take.
 
     Notes
-    -----
+    ----- 
+    Factors can have one of two *orientations* (narrow or wide) depending on the shape of the data they contain:
+
     Here's an example of a wide oriented factor:
-
-     +---------------+------+--------------+
-     |observation_id | eggs | pizza | candy|
-     +---------------+------+-------|------+
-     |        1      |  1   |   0   |   0  |
-     |        2      |  0   |   1   |   1  |
-     |        3      |  0   |   0   |   0  |
-     |        4      |  1   |   1   |   1  |
-     |        5      |  1   |   0   |   0  |
-     |        6      |  1   |   0   |   1  |
-     +---------------+------+--------------+
+    
+    +----------------+------+-------+-------+
+    | observation_id | eggs | pizza | candy |
+    +================+======+=======+=======+
+    |        1       |  1   |   0   |   0   |
+    +----------------+------+-------+-------+
+    |        2       |  0   |   1   |   1   |
+    +----------------+------+-------+-------+
+    |        3       |  0   |   0   |   0   |
+    +----------------+------+-------+-------+
+    |        4       |  1   |   1   |   1   |
+    +----------------+------+-------+-------+
+    |        5       |  1   |   0   |   0   |
+    +----------------+------+-------+-------+
+    |        6       |  1   |   0   |   1   |
+    +----------------+------+-------+-------+
+    
     Here's an example of a narrow oriented factor:
-
-    +---------------+----------+----------+
-    |observation_id | variable | selected |
-    +---------------+----------+----------+
-    |        1      |  eggs    |   1      |
-    |        1      |  pizza   |   1      |
-    |        1      |  candy   |   0      |
-    |        2      |  eggs    |   1      |
-    |        3      |  eggs    |   1      |
-    |        4      |  eggs    |   0      |
-    +---------------+----------+----------+
+    
+    +----------------+----------+----------+
+    | observation_id | variable | selected |
+    +================+==========+==========+
+    |         1      |  eggs    |    1     |
+    +----------------+----------+----------+
+    |         1      |  pizza   |    1     |
+    +----------------+----------+----------+
+    |         1      |  candy   |    0     |
+    +----------------+----------+----------+
+    |         2      |  eggs    |    1     |
+    +----------------+----------+----------+
+    |         3      |  eggs    |    1     |
+    +----------------+----------+----------+
+    |         4      |  eggs    |    0     |
+    +----------------+----------+----------+
+    
+    When you create a factor you should tell it the orientation of your data.
+    
+    If your data does not already conform to one of these two shapes, please reshape it
+    so that it does before using the :class:`Factor` class.
     """
 
     def __init__(self, dataframe, name,

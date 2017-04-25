@@ -573,7 +573,7 @@ def test_SPMI_item_response_table():
                                  "why_uncertain", orientation="wide")
     multiple_response_table = ctab.MultipleResponseTable([rows_factor, ],
                                                          [columns_factor])
-    build = multiple_response_table._build_item_response_table_for_SPMI
+    build = multiple_response_table._item_response_table_for_SPMI
     spmi_item_response_table_python = build(rows_factor, columns_factor)
     result_path = "spmi_r_item_response_table_result.csv"
     fpath = os.path.join(results_dirpath, result_path)
@@ -945,7 +945,7 @@ def test_MRCV_table_with_zeros():
 
 
 def test_MMI_table_with_no_variance():
-    # if the single response factor has ever observation on the
+    # if the single response factor has every observation on the
     # same level, decline to calculate
     a = np.zeros((1000, 1))
     b = np.ones((1000, 1))
@@ -966,7 +966,7 @@ def test_MMI_table_with_no_variance():
 
 
 def test_SPMI_table_with_no_variance():
-    # if the single response factor has ever observation on the
+    # if a factor has every observation on the
     # same level, decline to calculate
     a = np.zeros((1000, 1))
     b = np.ones((1000, 1))
