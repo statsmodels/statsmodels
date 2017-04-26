@@ -61,5 +61,7 @@ from statsmodels.stats.contingency_tables import (mcnemar, cochrans_q,
                                                   SquareTable,
                                                   Table2x2,
                                                   Table,
-                                                  StratifiedTable)
+                                                  StratifiedTable,
+                                                  MultipleResponseTable,
+                                                  Factor)
 from .mediation import Mediation
