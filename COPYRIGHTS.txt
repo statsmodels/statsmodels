@@ -17,6 +17,7 @@ pandas
 matplotlib
 scikit-learn
 qsturng-py http://code.google.com/p/qsturng-py/
+MRCV
 
 
 numpy (statsmodels.compatnp contains copy of entire model)
@@ -247,3 +248,17 @@ LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 ----------------------------------------------------------
+
+MRCV
+----
+
+The MRCV R library is provided under a GPLv3 license but the
+original authors granted express permission to port the library
+into statsmodels and provide the port under a
+BSD-license.
+
+From Natalie Koziol, one of the original authors:
+"I, Natalie Koziol, the original author of the MRCV R package,
+give my permission to include a translation of MRCV in the statsmodels
+library under a BSD or compatible license as long as the
+original software and authors are cited."

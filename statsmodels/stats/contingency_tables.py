@@ -1559,14 +1559,14 @@ class MultipleResponseTable(object):
     ----------
     row_factors : a Factor instance or list of Factors
         The factor or factors containing data that you intend to have on the
-        rows, (i.e. the x axis) of the contingency table.
+        rows (i.e. the x axis) of the contingency table.
     column_factors : a Factor instance or list of Factors
         The factor or factors containing data that you intend to have on the
-        columns, (i.e. the y axis) of the contingency table.
+        columns (i.e. the y axis) of the contingency table.
     deduplication_padding : str
         Our tables don't deal well with duplicated index / column labels so we automatically
         add a padding character / string to duplicated names to make them unique. Defaults to
-        ' ('prime') character but you can pass any character to use instead.
+        the ' ('prime') character but you can pass any character to use instead.
 
     Attributes
     ----------
@@ -1576,23 +1576,16 @@ class MultipleResponseTable(object):
 
     See also
     --------
+    statsmodels.stats.contingency_tables.Table
     scipy.stats.chi2_contingency
 
     Notes
     -----
+    At the moment, this class only supports one Factor on the rows and 
+    one Factor in the columns (i.e. making a 2x2x2 table is not allowed).
+    
     This class is a close re-implementation of certain functions
-    from the MRCV R Library [1]_.
-
-    The MRCV R library is provided under a GPLv3 license but the
-    original authors granted express permission to port the library
-    into statsmodels into statsmodels and provide the port under a
-    BSD-license.
-
-    From Natalie Koziol, one of the original authors:
-    "I, Natalie Koziol, the original author of the MRCV R package,
-    give my permission to include a translation of MRCV in the statsmodels
-    library under a BSD or compatible license as long as the
-    original software and authors are cited."
+    from the MRCV R Library [1]_. The code is used by permission of the authors.
 
     The MRCV library is itself an implementation of ideas presented
     in [2]_, [3]_, [4]_, and [5]_.
@@ -1684,7 +1677,7 @@ class MultipleResponseTable(object):
 
         Returns
         -------
-        An MultipleResponseTable instance.
+        table : MultipleResponseTable
         """
         I = num_cols_1st_var
         J = num_cols_2nd_var
@@ -2196,7 +2189,7 @@ class MultipleResponseTable(object):
         return mmi_chi_squared_by_cell
 
     @staticmethod
-    def _build_item_response_table_for_SPMI(rows_factor, columns_factor):
+    def _item_response_table_for_SPMI(rows_factor, columns_factor):
         """
         Build full item-response table between two multiple response vars
 
@@ -2303,7 +2296,7 @@ class MultipleResponseTable(object):
         chi-squared statistics we can investigate single pairwise
         marginal independence for the overall table
         """
-        build_table = cls._build_item_response_table_for_SPMI
+        build_table = cls._item_response_table_for_SPMI
         item_response_table = build_table(rows_factor, columns_factor)
         rows_levels = item_response_table.index.levels[0]
         columns_levels = item_response_table.columns.levels[0]
@@ -2802,6 +2795,24 @@ class MultipleResponseTable(object):
 
 
 def _build_joint_dataframe(left_data, right_data, l_suffix, r_suffix):
+    """
+    Take two dataframes and combine them into a dataframe that 
+    can be pivoted using pandas .pivot_table() functionality
+    
+    Parameters
+    ----------
+    left_data : pd.DataFrame
+        dataframe to concatenate on the left 
+    right_data : pd.DataFrame
+        dataframe to concatenate on the right 
+    l_suffix : str
+        if the data frames have overlapping column names apply
+        this suffix to columns from the left dataframe
+    r_suffix : str
+        if the data frames have overlapping column names apply
+         this suffix to columns from the right dataframe
+     
+    """
     joint_dataframe = pd.merge(left_data, right_data,
                                how="inner",
                                on='observation_id',
@@ -2844,35 +2855,44 @@ class Factor(object):
         The name of the variable
     orientation : { "wide", "narrow" }
         Whether the data is laid out in a
-        wide (i.e. with one column per level)
-        versus narrow (i.e. with one row per observation/level pairing,
+        wide orientation (i.e. with one column per level)
+        versus narrow orientation (i.e. with one row per 
+        observation/level pairing)
     multiple_response : boolean
         Can the variable contain more than 1 level per observation, e.g.
         "subject #1 selected both eggs and pizza".
+    labels : [str]
+        Strings that designate each level that an observation can take, e.g.
+        ["bicycle", "motorcycle", "car"]
+    factor_level_counts : int
+        The number of distinct levels that an observation can take.
 
     Notes
     -----
     Here's an example of a wide oriented factor:
 
-     observation_id | eggs | pizza | candy
-     ---------------|------|-------|-------
-             1      |  1   |   0   |   0
-             2      |  0   |   1   |   1
-             3      |  0   |   0   |   0
-             4      |  1   |   1   |   1
-             5      |  1   |   0   |   0
-             6      |  1   |   0   |   1
-
+     +---------------+------+--------------+
+     |observation_id | eggs | pizza | candy|
+     +---------------+------+-------|------+
+     |        1      |  1   |   0   |   0  |
+     |        2      |  0   |   1   |   1  |
+     |        3      |  0   |   0   |   0  |
+     |        4      |  1   |   1   |   1  |
+     |        5      |  1   |   0   |   0  |
+     |        6      |  1   |   0   |   1  |
+     +---------------+------+--------------+
     Here's an example of a narrow oriented factor:
 
-    observation_id | variable | selected
-    ---------------|----------|---------
-            1      |  eggs    |   1
-            1      |  pizza   |   1
-            1      |  candy   |   0
-            2      |  eggs    |   1
-            3      |  eggs    |   1
-            4      |  eggs    |   0
+    +---------------+----------+----------+
+    |observation_id | variable | selected |
+    +---------------+----------+----------+
+    |        1      |  eggs    |   1      |
+    |        1      |  pizza   |   1      |
+    |        1      |  candy   |   0      |
+    |        2      |  eggs    |   1      |
+    |        3      |  eggs    |   1      |
+    |        4      |  eggs    |   0      |
+    +---------------+----------+----------+
     """
 
     def __init__(self, dataframe, name,
@@ -2970,7 +2990,7 @@ class Factor(object):
         Orient factor data for tabulating into a contingency table
 
         We want to be able to use the pandas pivot_table function but
-        it requires a specific format
+        it requires a specific format.
         """
         if self.orientation == "wide":
             return self.cast_wide_to_narrow().data
@@ -2979,6 +2999,10 @@ class Factor(object):
 
     @property
     def labels(self):
+        """
+        Strings that designate each level that an observation can take, e.g.
+         ["bicycle", "motorcycle", "car"]
+        """
         if self.orientation == "wide":
             return self.data.columns
         else:
@@ -2986,6 +3010,9 @@ class Factor(object):
 
     @property
     def factor_level_count(self):
+        """
+        The number of distinct levels that an observation can take. 
+        """
         return len(self.labels)
 
     def cast_wide_to_narrow(self):
