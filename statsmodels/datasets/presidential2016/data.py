@@ -29,10 +29,19 @@ This class will load a subset of the full survey data. The subset includes three
     making this a multiple response question.
 3) "Please select any factors that contribute to your not being sure who you'll vote for". The reasons shown
     in columns 12 through 16 were shown and respondents could pick as many as they liked,
-    making this also a multiple response question.
+    making this also a multiple response question. 
 
 The full survey data, including the answers to 11 additional questions, is available in
 the /src subdirectory.
+
+IMPORTANT NOTE: in the original survey from which these responses were
+ collected, questions #2 and #3 included additional answer choices. Because 
+ there were many answer choices, only a randomly selected subset of answer
+ choices was displayed to each respondent. In this data set, answer choices that
+ were not selected are marked with a '0' regardless of whether they were 
+ not selected because 1) they were not displayed or 2) because they were 
+ displayed but not selected. So please be extremely careful about drawing 
+ any conclusions about the world from this data.
 """
 
 DESCRSHORT = """Pre-Election Survey Data For U.S.A Undecided Swing State Voters (2016)"""
