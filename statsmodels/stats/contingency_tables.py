@@ -225,11 +225,8 @@ class Table(object):
             self.table = self.table + 0.5
 
     def __str__(self):
-        try:
-            str_function = unicode
-        except NameError:  # Python 3 no longer has the unicode() function
-            str_function = str
-        return "Contingency Table: \n{table}".format(table=str_function(self.table_orig))
+        encoded = asunicode(self.table_orig, encoding="utf8")
+        return "Contingency Table: \n{table}".format(table=encoded)
 
     @classmethod
     def from_data(cls, data, shift_zeros=True):
