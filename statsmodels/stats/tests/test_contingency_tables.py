@@ -737,7 +737,7 @@ def test_multiple_mutual_independence_true():
     np.testing.assert_(np.all(bonferroni_cell_p_values >= 0.05))
 
 
-def test_single_pairwise_mutual_independence_true():
+def test_simultaneous_pairwise_mutual_independence_true():
     np.random.seed(100)
     food_choices = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
                                 columns=["eggs", "cheese", "candy",
@@ -1059,7 +1059,7 @@ def test_for_MRCV_independence():
 
     table = ctab.MultipleResponseTable([mrcv_2, ], [mrcv_1, ])
     results = table.test_for_independence()
-    expected = 'Single Pairwise Mutual Independence'
+    expected = 'Simultaneous Pairwise Mutual Independence'
     np.testing.assert_equal(results.independence_type, expected)
     np.testing.assert_equal(results.method, 'Bonferroni')
 

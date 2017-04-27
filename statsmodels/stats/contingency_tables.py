@@ -1825,7 +1825,7 @@ class MultipleResponseTable(object):
         if independence_type == "MMI":
             result.independence_type = "Marginal Mutual Independence"
         elif independence_type == "SPMI":
-            result.independence_type = "Single Pairwise Mutual Independence"
+            result.independence_type = "Simultaneous Pairwise Mutual Independence"
         else:
             raise NotImplementedError("Independence Type Required")
         return result
@@ -2290,7 +2290,7 @@ class MultipleResponseTable(object):
         We can then calculate a chi-squared statistic showing
         how strong the deviance is from expectation in that particular
         sub-table. Then by appropriately combining those individual
-        chi-squared statistics we can investigate single pairwise
+        chi-squared statistics we can investigate simultaneous pairwise
         marginal independence for the overall table
         """
         build_table = cls._item_response_table_for_SPMI
@@ -2412,7 +2412,7 @@ class MultipleResponseTable(object):
         """
         Test for SPMI between two multiple response vars using Bootstrapping
 
-        SPMI stands for "single pairwise mutual independence".
+        SPMI stands for "simultaneous pairwise mutual independence".
 
         First calculate a full item response table comparing each pairing
         of levels from both variables, then calculate a chi-square statistic
@@ -2508,7 +2508,7 @@ class MultipleResponseTable(object):
         """
         Test for SPMI between two multiple response vars using Rao Scott
 
-        SPMI stands for "single pairwise mutual independence".
+        SPMI stands for "simultaneous pairwise mutual independence".
 
         See [1]_ for more about the second-order Rao Scott Correction.
 
