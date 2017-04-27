@@ -2487,7 +2487,7 @@ class MultipleResponseTable(object):
         observed_columns_factor = Factor(q2, columns_factor_name,
                                        orientation="wide",
                                        multiple_response=True)
-        observed, _ = calc_chis(observed_rows_factor,
+        observed = calc_chis(observed_rows_factor,
                                 observed_columns_factor)
         observed_X_sq_S = observed.sum().sum()
         p_value_ij = observed.applymap(chi2_survival_with_1_dof)
