@@ -3032,7 +3032,7 @@ class Factor(object):
         Pivot a wide factor into a new factor in a narrow orientation
         """
         if self.orientation != "wide":
-            raise NotImplementedError("Factor is already narrow")
+            raise TypeError("Factor is already narrow")
         solid_df = self.data
         index_name = solid_df.index.name
         melted = pd.melt(solid_df.reset_index(), id_vars=index_name)
@@ -3048,7 +3048,7 @@ class Factor(object):
         Pivot a narrow factor into a new factor with a wide orientation
         """
         if self.orientation != "narrow":
-            raise NotImplementedError("Factor is already wide")
+            raise TypeError("Factor is already wide")
         narrow_df = self.data
         wide_df = pd.pivot_table(narrow_df,
                                  values='value',
