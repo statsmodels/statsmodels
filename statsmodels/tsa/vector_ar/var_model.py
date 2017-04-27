@@ -744,7 +744,7 @@ class VARProcess(tsbase.TimeSeriesProcess):
 
         Returns
         -------
-        (lower, mid, upper) : (ndarray, ndarray, ndarray)
+        (mid, lower, upper) : (ndarray, ndarray, ndarray)
         """
         assert(0 < alpha < 1)
         q = util.norm_signif_level(alpha)
@@ -755,7 +755,7 @@ class VARProcess(tsbase.TimeSeriesProcess):
         forc_lower = point_forecast - q * sigma
         forc_upper = point_forecast + q * sigma
 
-        return point_forecast, forc_lower, forc_upper
+        return (point_forecast, forc_lower, forc_upper)
 
 
 #-------------------------------------------------------------------------------
