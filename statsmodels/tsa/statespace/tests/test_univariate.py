@@ -253,7 +253,7 @@ class MultivariateMissingGeneralObsCov(object):
     @classmethod
     def setup_class(cls, which, dtype=float, alternate_timing=False, **kwargs):
         # Results
-        path = current_path + os.sep + 'results/results_smoothing_generalobscov_R.csv'
+        path = os.path.join(current_path, 'results', 'results_smoothing_generalobscov_R.csv')
         cls.desired = pd.read_csv(path)
 
         # Data
@@ -505,7 +505,7 @@ class TestMultivariateVAR(object):
     @classmethod
     def setup_class(cls, which='none', **kwargs):
         # Results
-        path = current_path + os.sep + 'results/results_smoothing_generalobscov_R.csv'
+        path = os.path.join(current_path, 'results', 'results_smoothing_generalobscov_R.csv')
         cls.desired = pd.read_csv(path)
 
         # Data

@@ -36,12 +36,12 @@ class TestStatesAR3(object):
     @classmethod
     def setup_class(cls, alternate_timing=False, *args, **kwargs):
         # Dataset / Stata comparison
-        path = current_path + os.sep + 'results/results_wpi1_ar3_stata.csv'
+        path = os.path.join(current_path, 'results', 'results_wpi1_ar3_stata.csv')
         cls.stata = pd.read_csv(path)
         cls.stata.index = pd.date_range(start='1960-01-01', periods=124,
                                         freq='QS')
         # Matlab comparison
-        path = current_path + os.sep+'results/results_wpi1_ar3_matlab_ssm.csv'
+        path = os.path.join(current_path, 'results', 'results_wpi1_ar3_matlab_ssm.csv')
         matlab_names = [
             'a1', 'a2', 'a3', 'detP', 'alphahat1', 'alphahat2', 'alphahat3',
             'detV', 'eps', 'epsvar', 'eta', 'etavar'
@@ -218,19 +218,19 @@ class TestStatesMissingAR3(object):
     @classmethod
     def setup_class(cls, alternate_timing=False, *args, **kwargs):
         # Dataset
-        path = current_path + os.sep + 'results/results_wpi1_ar3_stata.csv'
+        path = os.path.join(current_path, 'results', 'results_wpi1_ar3_stata.csv')
         cls.stata = pd.read_csv(path)
         cls.stata.index = pd.date_range(start='1960-01-01', periods=124,
                                          freq='QS')
         # Matlab comparison
-        path = current_path + os.sep+'results/results_wpi1_missing_ar3_matlab_ssm.csv'
+        path = os.path.join(current_path, 'results', 'results_wpi1_missing_ar3_matlab_ssm.csv')
         matlab_names = [
             'a1','a2','a3','detP','alphahat1','alphahat2','alphahat3',
             'detV','eps','epsvar','eta','etavar'
         ]
         cls.matlab_ssm = pd.read_csv(path, header=None, names=matlab_names)
         # KFAS comparison
-        path = current_path + os.sep+'results/results_smoothing3_R.csv'
+        path = os.path.join(current_path, 'results', 'results_smoothing3_R.csv')
         cls.R_ssm = pd.read_csv(path)
 
         # Create missing observations
@@ -384,7 +384,7 @@ class TestMultivariateMissing(object):
     @classmethod
     def setup_class(cls, **kwargs):
         # Results
-        path = current_path + os.sep + 'results/results_smoothing_R.csv'
+        path = os.path.join(current_path, 'results', 'results_smoothing_R.csv')
         cls.desired = pd.read_csv(path)
 
         # Data
@@ -579,7 +579,7 @@ class TestMultivariateVAR(object):
     @classmethod
     def setup_class(cls, *args, **kwargs):
         # Results
-        path = current_path + os.sep + 'results/results_smoothing2_R.csv'
+        path = os.path.join(current_path, 'results', 'results_smoothing2_R.csv')
         cls.desired = pd.read_csv(path)
 
         # Data
@@ -763,7 +763,7 @@ class TestMultivariateVARUnivariate(object):
         if compatibility_mode:
             raise SkipTest
         # Results
-        path = current_path + os.sep + 'results/results_smoothing2_R.csv'
+        path = os.path.join(current_path, 'results', 'results_smoothing2_R.csv')
         cls.desired = pd.read_csv(path)
 
         # Data

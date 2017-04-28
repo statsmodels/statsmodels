@@ -29,8 +29,8 @@ from statsmodels.compat.numpy import NumpyVersion
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
-clark1989_path = 'results' + os.sep + 'results_clark1989_R.csv'
-clark1989_results = pd.read_csv(current_path + os.sep + clark1989_path)
+clark1989_path = os.path.join(current_path, 'results', 'results_clark1989_R.csv')
+clark1989_results = pd.read_csv(clark1989_path)
 
 
 class Clark1987(object):

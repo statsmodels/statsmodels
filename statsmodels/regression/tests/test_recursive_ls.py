@@ -28,11 +28,11 @@ except ImportError:
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
-results_R_path = 'results' + os.sep + 'results_rls_R.csv'
-results_R = pd.read_csv(current_path + os.sep + results_R_path)
+results_R_path = os.path.join(current_path, 'results', 'results_rls_R.csv')
+results_R = pd.read_csv(results_R_path)
 
-results_stata_path = 'results' + os.sep + 'results_rls_stata.csv'
-results_stata = pd.read_csv(current_path + os.sep + results_stata_path)
+results_stata_path = os.path.join(current_path, 'results', 'results_rls_stata.csv')
+results_stata = pd.read_csv(results_stata_path)
 
 dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start='1959-01-01', end='2009-07-01', freq='QS')

@@ -19,11 +19,11 @@ from numpy.testing import assert_equal, assert_almost_equal, assert_raises, asse
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
-realgdp_path = 'results' + os.sep + 'results_realgdpar_stata.csv'
-realgdp_results = pd.read_csv(current_path + os.sep + realgdp_path)
+realgdp_path = os.path.join(current_path, 'results', 'results_realgdpar_stata.csv')
+realgdp_results = pd.read_csv(realgdp_path)
 
-coverage_path = 'results' + os.sep + 'results_sarimax_coverage.csv'
-coverage_results = pd.read_csv(current_path + os.sep + coverage_path)
+coverage_path = os.path.join(current_path, 'results', 'results_sarimax_coverage.csv')
+coverage_results = pd.read_csv(coverage_path)
 
 try:
     import matplotlib.pyplot as plt
