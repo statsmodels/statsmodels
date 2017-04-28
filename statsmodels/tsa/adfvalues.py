@@ -340,6 +340,13 @@ tau_ctt_2010 = [[ [-4.37113,-11.5882,-35.819,-334.047], # N = 1
                   [-6.22941,-36.9673,-10.868,418.414]]]
 tau_ctt_2010 = asarray(tau_ctt_2010)
 
+tau_2010s = {
+  'nc': tau_nc_2010,
+  'c': tau_c_2010,
+  'ct': tau_ct_2010,
+  'ctt': tau_ctt_2010,
+  }
+
 def mackinnoncrit(N=1, regression ="c", nobs=inf):
     """
     Returns the critical values for cointegrating and the ADF test.
@@ -379,9 +386,10 @@ def mackinnoncrit(N=1, regression ="c", nobs=inf):
     if reg not in ['c', 'ct', 'nc', 'ctt']:
         raise ValueError("regression keyword %s not understood" % reg)
     if nobs is inf:
-        return eval("tau_"+reg+"_2010["+str(N-1)+",:,0]")
+        tau2010 = tau_2010s[reg][N-1, :, 0]
+        return tau2010
     else:
-        return polyval(eval("tau_"+reg+"_2010["+str(N-1)+",:,::-1].T"),1./nobs)
+        tau2010 = tau_2010s[reg][N-1, :, ::-1].T
+        return np.polyval(tau2010, 1./nobs)
 
-if __name__=="__main__":
-    pass
+
