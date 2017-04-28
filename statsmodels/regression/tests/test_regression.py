@@ -1175,6 +1175,27 @@ def test_regularized_refit():
     assert_allclose(result1.bse, result2.bse)
 
 
+def test_regularized_predict():
+    n = 100
+    p = 5
+    np.random.seed(3132)
+    xmat = np.random.normal(size=(n, p))
+    yvec = xmat.sum(1) + np.random.normal(size=n)
+    wgt = np.random.uniform(1, 2, n)
+
+    for klass in WLS, GLS:
+        model1 = WLS(yvec, xmat,  weights=wgt)
+        result1 = model1.fit_regularized(alpha=2., L1_wt=0.5, refit=True)
+
+        params = result1.params
+        fittedvalues = np.dot(xmat, params)
+        pr = model1.predict(result1.params)
+        assert_allclose(fittedvalues, pr)
+        assert_allclose(result1.fittedvalues, pr)
+
+        pr = result1.predict()
+        assert_allclose(fittedvalues, pr)
+
 def test_regularized_options():
     n = 100
     p = 5

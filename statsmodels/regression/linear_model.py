@@ -495,12 +495,17 @@ class GLS(RegressionModel):
         if self.sigma is not None:
             alpha = alpha * np.sum(1 / np.diag(self.sigma)) / len(self.endog)
 
-        return OLS(self.wendog, self.wexog).fit_regularized(
+        rslt = OLS(self.wendog, self.wexog).fit_regularized(
             method=method, alpha=alpha,
             L1_wt=L1_wt,
             start_params=start_params,
             profile_scale=profile_scale,
             refit=refit, **kwargs)
+
+        from statsmodels.base.elastic_net import (
+            RegularizedResults, RegularizedResultsWrapper)
+        rrslt = RegularizedResults(self, rslt.params)
+        return RegularizedResultsWrapper(rrslt)
 
 
 class WLS(RegressionModel):
@@ -658,12 +663,17 @@ class WLS(RegressionModel):
         # denominator
         alpha = alpha * np.sum(self.weights) / len(self.weights)
 
-        return OLS(self.wendog, self.wexog).fit_regularized(
+        rslt = OLS(self.wendog, self.wexog).fit_regularized(
             method=method, alpha=alpha,
             L1_wt=L1_wt,
             start_params=start_params,
             profile_scale=profile_scale,
             refit=refit, **kwargs)
+
+        from statsmodels.base.elastic_net import (
+            RegularizedResults, RegularizedResultsWrapper)
+        rrslt = RegularizedResults(self, rslt.params)
+        return RegularizedResultsWrapper(rrslt)
 
 
 class OLS(WLS):
