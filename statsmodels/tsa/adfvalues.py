@@ -1,5 +1,6 @@
 from scipy.stats import norm
 from numpy import array, polyval, inf, asarray
+import numpy as np
 
 __all__ = ['mackinnonp','mackinnoncrit']
 
