@@ -20,8 +20,8 @@ from statsmodels.iolib.summary import forg
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
-var_path = 'results' + os.sep + 'results_var_stata.csv'
-var_results = pd.read_csv(current_path + os.sep + var_path)
+var_path = os.path.join('results', 'results_var_stata.csv')
+var_results = pd.read_csv(var_path)
 
 varmax_path = 'results' + os.sep + 'results_varmax_stata.csv'
 varmax_results = pd.read_csv(current_path + os.sep + varmax_path)
