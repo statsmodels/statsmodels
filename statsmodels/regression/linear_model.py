@@ -59,6 +59,91 @@ __docformat__ = 'restructuredtext en'
 __all__ = ['GLS', 'WLS', 'OLS', 'GLSAR']
 
 
+_fit_regularized_doc =\
+        r"""
+        Return a regularized fit to a linear regression model.
+
+        Parameters
+        ----------
+        method : string
+            Only the 'elastic_net' approach is currently implemented.
+        alpha : scalar or array-like
+            The penalty weight.  If a scalar, the same penalty weight
+            applies to all variables in the model.  If a vector, it
+            must have the same length as `params`, and contains a
+            penalty weight for each coefficient.
+        L1_wt: scalar
+            The fraction of the penalty given to the L1 penalty term.
+            Must be between 0 and 1 (inclusive).  If 0, the fit is a
+            ridge fit, if 1 it is a lasso fit.
+        start_params : array-like
+            Starting values for ``params``.
+        profile_scale : bool
+            If True the penalized fit is computed using the profile
+            (concentrated) log-likelihood for the Gaussian model.
+            Otherwise the fit uses the residual sum of squares.
+        refit : bool
+            If True, the model is refit using only the variables that
+            have non-zero coefficients in the regularized fit.  The
+            refitted model is not regularized.
+        distributed : bool
+            If True, the model uses distributed methods for fitting,
+            will raise an error if True and partitions is None.
+        generator : function
+            generator used to partition the model, allows for handling
+            of out of memory/parallel computing.
+        partitions : scalar
+            The number of partitions desired for the distributed
+            estimation.
+        threshold : scalar or array-like
+            The threshold below which coefficients are zeroed out,
+            only used for distributed estimation
+
+        Returns
+        -------
+        An array of coefficients, or a RegressionResults object of the
+        same type returned by ``fit``.
+
+        Notes
+        -----
+
+        The elastic net approach closely follows that implemented in
+        the glmnet package in R.  The penalty is a combination of L1
+        and L2 penalties.
+
+        The function that is minimized is:
+
+        .. math::
+
+            0.5*RSS/n + alpha*((1-L1\_wt)*|params|_2^2/2 + L1\_wt*|params|_1)
+
+        where RSS is the usual regression sum of squares, n is the
+        sample size, and :math:`|*|_1` and :math:`|*|_2` are the L1 and L2
+        norms.
+
+        For WLS and GLS, the RSS is calculated using the whitened endog and
+        exog data.
+
+        Post-estimation results are based on the same data used to
+        select variables, hence may be subject to overfitting biases.
+
+        The elastic_net method uses the following keyword arguments:
+
+        maxiter : int
+            Maximum number of iterations
+        cnvrg_tol : float
+            Convergence threshold for line searches
+        zero_tol : float
+            Coefficients below this threshold are treated as zero.
+
+        References
+        ----------
+        Friedman, Hastie, Tibshirani (2008).  Regularization paths for
+        generalized linear models via coordinate descent.  Journal of
+        Statistical Software 33(1), 1-22 Feb 2010.
+        """
+
+
 def _get_sigma(sigma, nobs):
     """
     Returns sigma (matrix, nobs by nobs) for GLS and the inverse of its
@@ -507,6 +592,8 @@ class GLS(RegressionModel):
         rrslt = RegularizedResults(self, rslt.params)
         return RegularizedResultsWrapper(rrslt)
 
+    fit_regularized.__doc__ = _fit_regularized_doc
+
 
 class WLS(RegressionModel):
     __doc__ = """
@@ -674,6 +761,8 @@ class WLS(RegressionModel):
             RegularizedResults, RegularizedResultsWrapper)
         rrslt = RegularizedResults(self, rslt.params)
         return RegularizedResultsWrapper(rrslt)
+
+    fit_regularized.__doc__ = _fit_regularized_doc
 
 
 class OLS(WLS):
@@ -907,6 +996,8 @@ class OLS(WLS):
                               refit=refit,
                               check_step=False,
                               **defaults)
+
+    fit_regularized.__doc__ = _fit_regularized_doc
 
     def _fit_ridge(self, alpha):
         """
@@ -1179,95 +1270,6 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False,
         return rho, np.sqrt(sigmasq), np.linalg.inv(R)
     else:
         return rho, np.sqrt(sigmasq)
-
-
-_fit_regularized_doc =\
-        r"""
-        Return a regularized fit to a linear regression model.
-
-        Parameters
-        ----------
-        method : string
-            Only the 'elastic_net' approach is currently implemented.
-        alpha : scalar or array-like
-            The penalty weight.  If a scalar, the same penalty weight
-            applies to all variables in the model.  If a vector, it
-            must have the same length as `params`, and contains a
-            penalty weight for each coefficient.
-        L1_wt: scalar
-            The fraction of the penalty given to the L1 penalty term.
-            Must be between 0 and 1 (inclusive).  If 0, the fit is a
-            ridge fit, if 1 it is a lasso fit.
-        start_params : array-like
-            Starting values for ``params``.
-        profile_scale : bool
-            If True the penalized fit is computed using the profile
-            (concentrated) log-likelihood for the Gaussian model.
-            Otherwise the fit uses the residual sum of squares.
-        refit : bool
-            If True, the model is refit using only the variables that
-            have non-zero coefficients in the regularized fit.  The
-            refitted model is not regularized.
-        distributed : bool
-            If True, the model uses distributed methods for fitting,
-            will raise an error if True and partitions is None.
-        generator : function
-            generator used to partition the model, allows for handling
-            of out of memory/parallel computing.
-        partitions : scalar
-            The number of partitions desired for the distributed
-            estimation.
-        threshold : scalar or array-like
-            The threshold below which coefficients are zeroed out,
-            only used for distributed estimation
-
-        Returns
-        -------
-        An array of coefficients, or a RegressionResults object of the
-        same type returned by ``fit``.
-
-        Notes
-        -----
-
-        The elastic net approach closely follows that implemented in
-        the glmnet package in R.  The penalty is a combination of L1
-        and L2 penalties.
-
-        The function that is minimized is:
-
-        .. math::
-
-            0.5*RSS/n + alpha*((1-L1\_wt)*|params|_2^2/2 + L1\_wt*|params|_1)
-
-        where RSS is the usual regression sum of squares, n is the
-        sample size, and :math:`|*|_1` and :math:`|*|_2` are the L1 and L2
-        norms.
-
-        For WLS and GLS, the RSS is calculated using the whitened endog and
-        exog data.
-
-        Post-estimation results are based on the same data used to
-        select variables, hence may be subject to overfitting biases.
-
-        The elastic_net method uses the following keyword arguments:
-
-        maxiter : int
-            Maximum number of iterations
-        cnvrg_tol : float
-            Convergence threshold for line searches
-        zero_tol : float
-            Coefficients below this threshold are treated as zero.
-
-        References
-        ----------
-        Friedman, Hastie, Tibshirani (2008).  Regularization paths for
-        generalized linear models via coordinate descent.  Journal of
-        Statistical Software 33(1), 1-22 Feb 2010.
-        """
-
-GLS.fit_regularized.__doc__ = _fit_regularized_doc
-OLS.fit_regularized.__doc__ = _fit_regularized_doc
-WLS.fit_regularized.__doc__ = _fit_regularized_doc
 
 
 class RegressionResults(base.LikelihoodModelResults):
