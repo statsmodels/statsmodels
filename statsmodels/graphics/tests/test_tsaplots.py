@@ -2,6 +2,7 @@ from statsmodels.compat.python import lmap
 import numpy as np
 import pandas as pd
 from numpy.testing import dec, assert_equal
+from distutils.version import LooseVersion
 
 import statsmodels.api as sm
 from statsmodels.graphics.tsaplots import (plot_acf, plot_pacf, month_plot,
@@ -14,6 +15,8 @@ try:
     have_matplotlib = True
 except:
     have_matplotlib = False
+
+pandas_lt_0_19_2 = LooseVersion(pd.__version__) < '0.19.1'
 
 
 @dec.skipif(not have_matplotlib)
@@ -87,6 +90,7 @@ def test_plot_pacf_irregular():
     plt.close(fig)
 
 @dec.skipif(not have_matplotlib)
+@dec.skipif(pandas_lt_0_19_2)
 def test_plot_month():
     dta = sm.datasets.elnino.load_pandas().data
     dta['YEAR'] = dta.YEAR.astype(int).apply(str)
@@ -113,6 +117,7 @@ def test_plot_month():
     plt.close(fig)
 
 @dec.skipif(not have_matplotlib)
+@dec.skipif(pandas_lt_0_19_2)
 def test_plot_quarter():
     dta = sm.datasets.macrodata.load_pandas().data
     dates = lmap('Q'.join, zip(dta.year.astype(int).apply(str),
