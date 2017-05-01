@@ -1184,7 +1184,7 @@ def test_regularized_predict():
     wgt = np.random.uniform(1, 2, n)
 
     for klass in WLS, GLS:
-        model1 = WLS(yvec, xmat,  weights=wgt)
+        model1 = klass(yvec, xmat,  weights=wgt)
         result1 = model1.fit_regularized(alpha=2., L1_wt=0.5, refit=True)
 
         params = result1.params

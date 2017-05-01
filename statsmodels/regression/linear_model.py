@@ -101,8 +101,7 @@ _fit_regularized_doc =\
 
         Returns
         -------
-        An array of coefficients, or a RegressionResults object of the
-        same type returned by ``fit``.
+        A RegularizedResults instance.
 
         Notes
         -----
