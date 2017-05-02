@@ -1827,8 +1827,8 @@ class MNLogit(MultinomialModel):
         the Hessian and could probably be refactored for speed.
         """
         params = params.reshape(self.K, -1, order='F')
-        X = self.exog
-        pr = self.cdf(np.dot(X, params))
+        exog = self.exog
+        pr = self.cdf(np.dot(exog, params))
         J = self.wendog.shape[1] - 1
         K = self.exog.shape[1]
         
