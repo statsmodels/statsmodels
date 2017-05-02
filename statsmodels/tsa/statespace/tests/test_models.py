@@ -57,7 +57,7 @@ class TestIntercepts(object):
     @classmethod
     def setup_class(cls, which='mixed', **kwargs):
         # Results
-        path = ps.path.join(current_path, 'results', 'results_intercepts_R.csv')
+        path = os.path.join(current_path, 'results', 'results_intercepts_R.csv')
         cls.desired = pd.read_csv(path)
 
         # Data
