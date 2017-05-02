@@ -1828,21 +1828,24 @@ class MNLogit(MultinomialModel):
         """
         params = params.reshape(self.K, -1, order='F')
         X = self.exog
-        pr = self.cdf(np.dot(X,params))
-        partials = []
+        pr = self.cdf(np.dot(X, params))
         J = self.wendog.shape[1] - 1
         K = self.exog.shape[1]
-        for i in range(J):
-            for j in range(J): # this loop assumes we drop the first col.
-                if i == j:
-                    partials.append(\
-                        -np.dot(((pr[:,i+1]*(1-pr[:,j+1]))[:,None]*X).T,X))
-                else:
-                    partials.append(-np.dot(((pr[:,i+1]*-pr[:,j+1])[:,None]*X).T,X))
-        H = np.array(partials)
-        # the developer's notes on multinomial should clear this math up
-        H = np.transpose(H.reshape(J,J,K,K), (0,2,1,3)).reshape(J*K,J*K)
-        return H
+        
+        prj = pr[:, 1:J+1] # we drop the first col.
+        cross_prob = -prj[:, :, None] * prj[:, None, :]
+        # cross_prob is (nobs x J x J), the product of each pair if columns
+        # of prj.
+        pr_diag = prj[:, :, None] * np.eye(J)[None, :, :]
+        # pr_diag corresponds to the the linear term in the i==j case
+        # of the loop-based version of this function.
+        prmat = cross_prob + pr_diag
+        xprh = prmat.T[:, :, :, None]*exog
+        partials = -np.tensordot(xprh, exog, axes=[[-2], [0]])
+        # The developer's notes on multinomial should clear this math up
+        hess = partials.transpose(0, 2, 1, 3).reshape(J*K, J*K)
+        return hess
+
 
 
 #TODO: Weibull can replaced by a survival analsysis function
