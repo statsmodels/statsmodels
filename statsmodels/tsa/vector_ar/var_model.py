@@ -1107,12 +1107,12 @@ class VARResults(VARProcess):
             sim = util.varsim(coefs, intercept, sigma_u,
                               seed=seed, steps=nobs+burn)
             sim = sim[burn:]
-            ma_coll[i,:,:,:] = fill_coll(sim)
+            ma_coll[i, :, :, :] = fill_coll(sim)
 
-        ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
-        index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
-        lower = ma_sort[index[0],:, :, :]
-        upper = ma_sort[index[1],:, :, :]
+        ma_sort = np.sort(ma_coll, axis=0) # sort to get quantiles
+        index = (int(round(signif/2*repl))-1, int(round((1-signif/2)*repl))-1)
+        lower = ma_sort[index[0], :, :, :]
+        upper = ma_sort[index[1], :, :, :]
         return lower, upper
 
     def irf_resim(self, orth=False, repl=1000, T=10,
