@@ -355,6 +355,26 @@ class TestVARResults(CheckIRF, CheckFEVD):
     #--------------------------------------------------
     # Lots of tests to make sure stuff works...need to check correctness
 
+    def test_errband_mc(self): # TODO: Check Correctness, these are just smoke tests
+        res = self.res
+        irf = self.irf
+        errband_mc = irf.errband_mc()
+
+    def test_sz1(self): # TODO: Check Correctness, these are just smoke tests
+        res = self.res
+        irf = self.irf
+        err_band_sz1 = irf.err_band_sz1()
+    
+    def test_sz2(self): # TODO: Check Correctness, these are just smoke tests
+        res = self.res
+        irf = self.irf
+        err_band_sz2 = irf.err_band_sz2()
+
+    def test_sz3(self): # TODO: Check Correctness, these are just smoke tests
+        res = self.res
+        irf = self.irf
+        err_band_sz3 = irf.err_band_sz3()
+
     def test_causality(self):
         causedby = self.ref.causality['causedby']
 
