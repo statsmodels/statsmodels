@@ -61,6 +61,7 @@ matrix:
   - python: 2.7
     env:
     - PYTHON=3.6
+    - PANDAS=0.20.0rc2
     - COVERAGE=true
 
 
@@ -91,6 +92,7 @@ before_install:
   - PKGS="${PKGS} pandas"; if [ ${PANDAS} ]; then PKGS="${PKGS}=${PANDAS}"; fi
   - PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}=${CYTHON}"; fi
   - if [ ${USEMPL} = true ]; then PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi; fi
+  - conda config --add channels pandas
 
 # Install packages
 install:
