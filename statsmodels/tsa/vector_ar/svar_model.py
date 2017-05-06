@@ -734,8 +734,8 @@ class SVARResults(SVARProcess, VARResults):
                                  svar_ma_rep(maxn=T)
 
         ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
-        index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
-        lower = ma_sort[index[0],:, :, :]
-        upper = ma_sort[index[1],:, :, :]
+        index = (int(round(signif/2*repl))-1, int(round((1-signif/2)*repl))-1)
+        lower = ma_sort[index[0], :, :, :]
+        upper = ma_sort[index[1], :, :, :]
         return lower, upper
 
