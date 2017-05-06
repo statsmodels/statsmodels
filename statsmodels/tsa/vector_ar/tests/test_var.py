@@ -375,6 +375,31 @@ class TestVARResults(CheckIRF, CheckFEVD):
         irf = self.irf
         err_band_sz3 = irf.err_band_sz3()
 
+    def test_cum_errband_mc(self): # TODO: Check Correctness, these are just smoke tests
+        irf = self.irf
+        cemc = irf.cum_errband_mc()
+
+    def test_irf_plots(self): # TODO: Check Correctness, these are just smoke tests
+        irf = self.irf
+
+        for stderr_type in ['asym', 'mc', 'sz1', 'sz2', 'sz3']:
+            _ = irf.plot(stderr_type=stderr_type)
+
+    # In this branch, VARResults has no predict method
+    #def test_predict(self):  # TODO: Check Correctness, these are just smoke tests
+    #    res = self.res
+    #    pred = res.predict(res.params) # TODO: Check that these match fittedvalues?
+
+    def test_plot_sample_acorr(self):  # TODO: Check Correctness, these are just smoke tests
+        res = self.res
+        _ = res.plot_sample_acorr()
+
+    def test_normality(self): # TODO: Check Correctness, these are just smoke tests
+        # smoke test
+        res = self.res
+        norm = res.test_normality()
+
+
     def test_causality(self):
         causedby = self.ref.causality['causedby']
 
