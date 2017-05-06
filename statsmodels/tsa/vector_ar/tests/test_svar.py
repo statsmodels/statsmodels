@@ -61,3 +61,13 @@ class TestSVAR(object):
         assert_allclose(res1.aic - corr_const, res2.aic_var, atol=1e-12)
         assert_allclose(res1.bic - corr_const, res2.sbic_var, atol=1e-12)
         assert_allclose(res1.hqic - corr_const, res2.hqic_var, atol=1e-12)
+
+
+    def test_irf(self):
+        # Note: this is a smoketest
+        _ = self.res1.irf()
+
+    def test_sirf_errband_mc(self):
+        # Note: this is a smoketest
+        _ = self.res1.sirf_errband_mc()
+
