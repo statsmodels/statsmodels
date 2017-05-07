@@ -34,6 +34,8 @@ class OLSNonNegative(Model):
 
 
     def predict(self, params, exog):
+        if exog is None:
+            exog = self.exog
         predicted = exog.dot(params)
         return predicted
 
@@ -92,6 +94,8 @@ class OLSSimplexConstrained(Model):
 
 
     def predict(self, params, exog):
+        if exog is None:
+            exog = self.exog
         predicted = exog.dot(params)
         return predicted
 
