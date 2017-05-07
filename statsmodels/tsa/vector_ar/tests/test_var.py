@@ -380,8 +380,10 @@ class TestVARResults(CheckIRF, CheckFEVD):
         cemc = irf.cum_errband_mc()
 
     def test_irf_plots(self): # TODO: Check Correctness, these are just smoke tests
-        irf = self.irf
+        if not have_matplotlib():
+            raise nose.SkipTest
 
+        irf = self.irf
         for stderr_type in ['asym', 'mc', 'sz1', 'sz2', 'sz3']:
             _ = irf.plot(stderr_type=stderr_type)
 
@@ -391,6 +393,9 @@ class TestVARResults(CheckIRF, CheckFEVD):
     #    pred = res.predict(res.params) # TODO: Check that these match fittedvalues?
 
     def test_plot_sample_acorr(self):  # TODO: Check Correctness, these are just smoke tests
+        if not have_matplotlib():
+            raise nose.SkipTest
+        
         res = self.res
         _ = res.plot_sample_acorr()
 
