@@ -66,7 +66,7 @@ class SVAR(tsbase.TimeSeriesModel):
         self.neqs = self.endog.shape[1]
 
         types = ['A', 'B', 'AB']
-        if svar_type not in types:
+        if str(svar_type) not in types:
             raise ValueError('SVAR type not recognized, must be in '
                              + str(types))
         self.svar_type = svar_type
@@ -79,13 +79,13 @@ class SVAR(tsbase.TimeSeriesModel):
             A = np.identity(self.neqs)
             self.A_mask = A_mask = np.zeros(A.shape, dtype=bool)
         else:
-            A_mask = np.logical_or(A == 'E', A == 'e')
+            A_mask = np.logical_or(A == b'E', A == b'e')
             self.A_mask = A_mask
         if B is None:
             B = np.identity(self.neqs)
             self.B_mask = B_mask = np.zeros(B.shape, dtype=bool)
         else:
-            B_mask = np.logical_or(B == 'E', B == 'e')
+            B_mask = np.logical_or(B == b'E', B == b'e')
             self.B_mask = B_mask
 
         # convert A and B to numeric
@@ -678,8 +678,8 @@ class SVARResults(SVARProcess, VARResults):
         B_pass = np.zeros(B.shape, dtype='|S1')
         A_pass[~A_mask] = A[~A_mask]
         B_pass[~B_mask] = B[~B_mask]
-        A_pass[A_mask] = 'E'
-        B_pass[B_mask] = 'E'
+        A_pass[A_mask] = b'E'
+        B_pass[B_mask] = b'E' # TODO: Careful about other places with bytes/unicode comparison
         if A_mask.sum() == 0:
             s_type = 'B'
         elif B_mask.sum() == 0:
