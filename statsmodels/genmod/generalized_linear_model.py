@@ -973,6 +973,14 @@ class GLM(base.LikelihoodModel):
             :math:`rtol * prior + atol > abs(current - prior)`
         tol_criterion : str, optional
             Defaults to ``'deviance'``. Can optionally be ``'params'``.
+
+        If a scipy optimizer is used, the following additional parameter is
+        available:
+
+        observed_hessian : bool, optional
+            When True, the default, the observed Hessian is used in fitting.
+            This may provide more stable fits, but adds assumption that the
+            Hessian is correctly specified.
         """
         self.scaletype = scale
 

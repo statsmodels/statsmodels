@@ -253,7 +253,7 @@ class LikelihoodModel(Model):
 
     def fit(self, start_params=None, method='newton', maxiter=100,
             full_output=True, disp=True, fargs=(), callback=None, retall=False,
-            skip_hessian=False, **kwargs):
+            skip_hessian=False, observed_hessian=True, **kwargs):
         """
         Fit method for likelihood based models
 
@@ -436,14 +436,17 @@ class LikelihoodModel(Model):
         nobs = self.endog.shape[0]
         f = lambda params, *args: -self.loglike(params, *args) / nobs
         score = lambda params, *args: -self.score(params, *args) / nobs
-        try:
+        if observed_hessian:
             hess = lambda params, *args: -self.hessian(params, *args) / nobs
-        except:
-            hess = None
+        else:
+            hess = lambda params, *args: -self.hessian(params, *args, observed=False) / nobs
 
         if method == 'newton':
             score = lambda params, *args: self.score(params, *args) / nobs
-            hess = lambda params, *args: self.hessian(params, *args) / nobs
+            if observed_hessian:
+                hess = lambda params, *args: self.hessian(params, *args) / nobs
+            else:
+                hess = lambda params, *args: self.hessian(params, *args, observed=False) / nobs
             #TODO: why are score and hess positive?
 
         warn_convergence = kwargs.pop('warn_convergence', True)
