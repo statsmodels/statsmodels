@@ -66,7 +66,8 @@ class SVAR(tsbase.TimeSeriesModel):
         self.neqs = self.endog.shape[1]
 
         types = ['A', 'B', 'AB']
-        if str(svar_type) not in types:
+        svar_type = str(svar_type)
+        if svar_type not in types:
             raise ValueError('SVAR type not recognized, must be in '
                              + str(types))
         self.svar_type = svar_type
