@@ -80,12 +80,14 @@ class SVAR(tsbase.TimeSeriesModel):
             A = np.identity(self.neqs)
             self.A_mask = A_mask = np.zeros(A.shape, dtype=bool)
         else:
+            A = A.astype(bytes)
             A_mask = np.logical_or(A == b'E', A == b'e')
             self.A_mask = A_mask
         if B is None:
             B = np.identity(self.neqs)
             self.B_mask = B_mask = np.zeros(B.shape, dtype=bool)
         else:
+            B = B.astype(bytes)
             B_mask = np.logical_or(B == b'E', B == b'e')
             self.B_mask = B_mask
 
