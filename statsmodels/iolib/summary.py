@@ -933,11 +933,3 @@ class Summary(object):
         '''
         return summary_return(self.tables, return_fmt='html')
 
-
-if __name__ == "__main__":
-    import statsmodels.api as sm
-    data = sm.datasets.longley.load()
-    data.exog = sm.add_constant(data.exog)
-    res = sm.OLS(data.endog, data.exog).fit()
-    #summary(
-
