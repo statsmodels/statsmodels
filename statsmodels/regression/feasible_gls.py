@@ -208,6 +208,3 @@ class GLSHet(WLS):
         return results
 
 
-
-if __name__ == '__main__':
-    pass
