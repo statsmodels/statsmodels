@@ -405,6 +405,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         point = self.res.forecast(self.res.y[-5:], 5)
 
     def test_forecast_index(self):
+        # See GH #3599 for discussion on this topic
         data = self.res.endog[-5:]
         idx = pd.date_range('2017-04-01', periods=5, freq='MS')
         data = pd.DataFrame(data, index=idx)
