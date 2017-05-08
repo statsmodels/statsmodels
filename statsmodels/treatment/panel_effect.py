@@ -29,7 +29,7 @@ class OLSNonNegative(Model):
 
 
     def fit(self):
-        params, rnorm = optimize.nnls(self.exog, self.endog)
+        params, _ = optimize.nnls(self.exog, self.endog)
         return Results(self, params, method='OLSNonNegative')
 
 
@@ -71,17 +71,16 @@ class OLSSimplexConstrained(Model):
             endog_ = self.endog
             exog_ = self.exog
 
-        params0, rnorm = optimize.nnls(exog_, endog_)
+        params0, _ = optimize.nnls(exog_, endog_)
 
-        #Define minimisation function
+        # minimisation function
         def fn(params, en, ex):
             return np.linalg.norm(ex.dot(params) - en)
 
-        #Define constraints and bounds
+        # constraints and bounds
         cons = {'type': 'eq', 'fun': lambda x:  np.sum(x)-1}
         bounds = [[0., 1]] * exog_.shape[1]
 
-        #Call minimisation subject to these values
         params_start = params0.copy() + 0.01
         params_start /= params0.sum()
 
@@ -100,13 +99,28 @@ class OLSSimplexConstrained(Model):
         return predicted
 
 
-
 class PanelATTBasic(object):
     """Basic class for treatment effect estimation in panel data
 
     This is a simple version to get started.
-    Assumes only one treated unit
+    Assumes only one treated unit and several controls or predictors.
 
+    Parameters
+    ----------
+    endog : array_like
+        outcome series of the treated unit
+    exog : array_like
+        outcome variable of the control or untreated units,
+        observation in rows, and control units in columns
+    treatment_index : int
+        index of the first treatment period.
+        The average treatment effect is computed using all periods from
+        treatment_index to the end.
+        Estimation of the prediction model uses observations up to the
+        treatment_index (excluding the treatment_index period)
+
+    Notes
+    -----
     Currently assumes treatment lasts from treatment_index to the end of the
     series. TODO: add optional end point
 
@@ -119,9 +133,7 @@ class PanelATTBasic(object):
     model, e.g. add supporting function for OLS and fit-regularized to do
     the variable or penalization search.
 
-    Also we need basic prediction models that use nnls and slsqp with
-    constraints, so we can delegate and get required method like predict.
-
+    Status: experimental, options and API are still changing
     """
 
     def __init__(self, endog, exog, treatment_index):
@@ -143,6 +155,31 @@ class PanelATTBasic(object):
         it can be used with OLS and with regularized.
         (just implmentation leak?)
 
+        Parameters
+        ----------
+        constraints : string or None
+            If constraints is None, then no constraints on the parameters are
+            imposed. The implemented constraints are
+            - "nonneg" or "nn": all parameters are nonnegative
+            - "simplex" : all parameters are nonnegative and sum to one
+        regularization : None or tuple (alpha, L1_wt)
+            This uses the elastic net `fit_regularized` method of OLS. If it is
+            not None, then the tuple needs to specify the elastic net
+            penalization parameters `alpha` and `L1_wt`.
+            Note, regularization cannot be specified at the same time
+            as constraints
+        add_const : bool
+            Wether to add a constant to the prediction regression.
+            Warning: the constant is currently subject to the same constraints
+            or penalization as slope parameters.
+            This will change, so that a constant will not be penalized or
+            subject to constraints.
+
+        Returns
+        -------
+        res : Results instance
+
+
         """
         self.add_const = add_const
         y0_pre = self.endog[self.slice_pre]
@@ -156,19 +193,14 @@ class PanelATTBasic(object):
         else:
             exog = y1_pre
 
-
-
         if constraints is not None:
-            #print('******** using constraints:', constraints)
             if ('nonneg' in constraints) or ('nn' in constraints) :
                 res_fit = OLSNonNegative(y0_pre, exog).fit()
 
             elif 'simplex' in constraints:
-                #print('******** using simplex')
                 res_fit = OLSSimplexConstrained(y0_pre, exog).fit()
             else:
                 raise ValueError('constraints not recognized, use nonneg or simplex')
-            #raise NotImplementedError('not yet, WIP')
 
         elif regularization is not None:
             model = OLS(y0_pre, exog)
@@ -180,13 +212,22 @@ class PanelATTBasic(object):
 
 
 
-        res_att =  PanelATTResults(model=self, res_fit=res_fit)
-                                   #predicted=predicted)
+        res_att = PanelATTResults(model=self, res_fit=res_fit)
         return res_att
 
+
     def predict(self, result, exog):
+        """predict for given exog using the results instance
+
+        Note, this differs from the usual predict method in that it
+        requires the results instance instead of `params`.
+
+        This might change. Currently this class does not hold on to the
+        prediction model.
+
+        """
         # TODO: this doesn't work properly, we need already the fit instance
-        # or we just use linear prediction directly
+        # or we could just use linear prediction directly
         if self.add_const:
             exog = np.column_stack((np.ones(exog.shape[0]), exog))
         return result.res_fit.predict(exog)
@@ -195,8 +236,21 @@ class PanelATTBasic(object):
 class PanelATTResults(object):
     """Results class for PanelATT
 
+    This class computes the prediction and treatment effect.
+
     API, signature unclear, What will be required?
-    currently attach anything as optional
+    Currently only model is required and anything else is attached
+    as optional.
+
+    Attributes
+    ----------
+    model : PanelATT model instance
+    res_fit : the results instance of the prediction model. This is currently
+        optional but the currently used PanelATTBasic class provides this.
+    att : average treatment effect, mean over treatment periods
+    treatment_effect : prediction error for treatment periods
+    predicted : predicted values for all periods
+    prediction_error : prediction error for all periods
 
     """
     def __init__(self, model, **kwds):
@@ -210,21 +264,47 @@ class PanelATTResults(object):
     def att(self):
         return self.treatment_effect.mean(0)
 
+
     def get_smoothed(self, connected=False, frac=0.25):
+        """get a lowess fit for the outcome variable of the treated
+
+        Not used yet
+
+        Parameters
+        ----------
+        connected : bool
+            If true, then lowess is fit to the entire all observations.
+            If false, then lowess is fit separately to the pre-treatment
+            and treatment periods.
+            This method returns one array if false, and two arrays if true.
+        frac : float
+            lowess smoothing parameter, The same value is used for eacg
+            part if connected is false.
+
+        Returns
+        -------
+        smoothed: array or tuple of two arrays
+            The smoothed series. See connected parameter.
+
+        """
         y0 = self.endog
-        y0_pre = self.endog[self.slice_pre]
-        y0_treat = self.endog[self.slice_treat]
+
         trend = np.arange(y0.shape[0])
         if connected:
             smoothed = lowess(y0, trend, frac=0.25, return_sorted=False)
             return smoothed
         else:
+            y0_pre = self.endog[self.slice_pre]
+            y0_treat = self.endog[self.slice_treat]
             smoothed0 = lowess(y0_pre, trend[self.model.slice_pre], frac=0.25, return_sorted=False)
             smoothed1 = lowess(y0_treat, trend[self.model.slice_treat], frac=0.25, return_sorted=False)
             return smoothed0, smoothed1
 
+
     def plot(self, loc_legend=None, fig=None):
-        """plot time series graph,
+        """plot time series graph of data, prediction and prediction error
+
+        This returns a figure with 3 axis.
 
         This does not yet conform to statsmodels API standard
         This needs an option to plot scatter plus lowess instead of lines.
@@ -250,10 +330,8 @@ class PanelATTResults(object):
 
         ax2 = fig.add_subplot(3,1,3)
         ax2.plot(self.model.endog - self.predicted, lw=2)
-        ax2.plot(np.zeros(len(self.model.endog)), lw=2)
+        ax2.plot(np.zeros(len(self.model.endog)), color='k', lw=1)
         ax2.vlines(nobs_pre - 0.5, *ax2.get_ylim())
         #ax2.legend(loc="lower left")
         ax2.set_title("Prediction Error and Treatment Effect")
         return fig
-
-
