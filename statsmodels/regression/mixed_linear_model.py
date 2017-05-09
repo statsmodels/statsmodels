@@ -816,10 +816,6 @@ class MixedLM(base.LikelihoodModel):
         be affected by whether the group labels are distinct or
         re-used over the top-level groups.
 
-        This method currently does not correctly handle missing
-        values, so missing values should be explicitly dropped from
-        the DataFrame before calling this method.
-
         Examples
         --------
         Suppose we have an educational data set with students nested
