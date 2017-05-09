@@ -1478,8 +1478,3 @@ def test_binary_pred_table_zeros():
     expected = np.array([[ 8.,  0.], [ 2.,  0.]])
     assert_equal(res.pred_table(), expected)
 
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'],
-            exit=False)
