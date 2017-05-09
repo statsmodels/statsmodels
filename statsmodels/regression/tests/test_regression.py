@@ -1149,12 +1149,19 @@ def test_ridge():
     xmat = np.random.normal(size=(n, p))
     yvec = xmat.sum(1) + np.random.normal(size=n)
 
-    for alpha in [1., np.ones(p), 10, 10*np.ones(p)]:
-        model1 = OLS(yvec, xmat)
-        result1 = model1._fit_ridge(alpha=1.)
-        model2 = OLS(yvec, xmat)
-        result2 = model2.fit_regularized(alpha=1., L1_wt=0)
-        assert_allclose(result1.params, result2.params)
+    v = np.ones(p)
+    v[0] = 0
+
+    for a in (0, 1, 10):
+        for alpha in (a, a*np.ones(p), a*v):
+            model1 = OLS(yvec, xmat)
+            result1 = model1._fit_ridge(alpha=alpha)
+            model2 = OLS(yvec, xmat)
+            result2 = model2.fit_regularized(alpha=alpha, L1_wt=0)
+            assert_allclose(result1.params, result2.params)
+            model3 = OLS(yvec, xmat)
+            result3 = model3.fit_regularized(alpha=alpha, L1_wt=1e-10)
+            assert_allclose(result1.params, result3.params)
 
     fv1 = result1.fittedvalues
     fv2 = np.dot(xmat, result1.params)
