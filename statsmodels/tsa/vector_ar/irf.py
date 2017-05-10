@@ -78,6 +78,31 @@ class BaseIRAnalysis(object):
     def cum_effect_cov(self, *args, **kwargs):
         raise NotImplementedError
 
+    def _choose_irfs(self, orth, svar, either_ok=False):
+        """
+        Helper function to find the appropriate set of IRFs to use in
+        the calling function.
+        """
+        if orth and svar and not either_ok:
+            raise ValueError("For SVAR system, set orth=False")
+            # Note: This function was created because near-identical code
+            # existed in four different methods.  One key difference is
+            # that only one of them raised this ValueError.  I suspect
+            # that they all should, but am implementing an "either_ok"
+            # so as to maintain the previous behavior precisely.
+
+        if orth:
+            title = 'Impulse responses (orthogonalized)'
+            irfs = self.orth_irfs
+        elif svar:
+            title = 'Impulse responses (structural)'
+            irfs = self.svar_irfs
+        else:
+            title = 'Impulse responses'
+            irfs = self.irfs
+        
+        return (irfs, title)
+
     def plot(self, orth=False, impulse=None, response=None,
              signif=0.05, plot_params=None, subplot_params=None,
              plot_stderr=True, stderr_type='asym', repl=1000,
@@ -115,18 +140,7 @@ class BaseIRAnalysis(object):
         model = self.model
         svar = self.svar
 
-        if orth and svar:
-            raise ValueError("For SVAR system, set orth=False")
-
-        if orth:
-            title = 'Impulse responses (orthogonalized)'
-            irfs = self.orth_irfs
-        elif svar:
-            title = 'Impulse responses (structural)'
-            irfs = self.svar_irfs
-        else:
-            title = 'Impulse responses'
-            irfs = self.irfs
+        (irfs, title) = self._choose_irfs(orth, svar, either_ok=False)
 
         if plot_stderr == False:
             stderr = None
@@ -260,7 +274,7 @@ class IRAnalysis(BaseIRAnalysis):
         covs = self._empty_covm(self.periods + 1)
         covs[0] = np.zeros((self.neqs ** 2, self.neqs ** 2))
         for i in range(1, self.periods + 1):
-            Gi = self.G[i - 1]
+            Gi = self.G[i-1]
             covs[i] = chain_dot(Gi, self.cov_a, Gi.T)
 
         return covs
@@ -280,6 +294,7 @@ class IRAnalysis(BaseIRAnalysis):
             return model.irf_errband_mc(orth=orth, repl=repl, T=periods,
                                         signif=signif, seed=seed,
                                         burn=burn, cum=False)
+    
     def err_band_sz1(self, orth=False, svar=False, repl=1000,
                      signif=0.05, seed=None, burn=100, component=None):
         """
@@ -311,12 +326,8 @@ class IRAnalysis(BaseIRAnalysis):
 
         model = self.model
         periods = self.periods
-        if orth:
-            irfs = self.orth_irfs
-        elif svar:
-            irfs = self.svar_irfs
-        else:
-            irfs = self.irfs
+        (irfs, _) = self._choose_irfs(orth, svar, either_ok=True)
+
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
@@ -374,12 +385,8 @@ class IRAnalysis(BaseIRAnalysis):
         """
         model = self.model
         periods = self.periods
-        if orth:
-            irfs = self.orth_irfs
-        elif svar:
-            irfs = self.svar_irfs
-        else:
-            irfs = self.irfs
+        (irfs, _) = self._choose_irfs(orth, svar, either_ok=True)
+
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
@@ -442,12 +449,8 @@ class IRAnalysis(BaseIRAnalysis):
 
         model = self.model
         periods = self.periods
-        if orth:
-            irfs = self.orth_irfs
-        elif svar:
-            irfs = self.svar_irfs
-        else:
-            irfs = self.irfs
+        (irfs, _) = self._choose_irfs(orth, svar, either_ok=True)
+
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
@@ -555,22 +558,28 @@ class IRAnalysis(BaseIRAnalysis):
 
         return [_make_g(i) for i in range(1, self.periods + 1)]
 
-    def _orth_cov(self):
+    def _orth_cov(self, cum=False):
         # Lutkepohl 3.7.8
 
         Ik = np.eye(self.neqs)
         PIk = np.kron(self.P.T, Ik)
         H = self.H
 
+        G = self.G # G comes back as a list of arrays
+        Z = np.zeros((1,)+G[0].shape)
+        Gc = np.r_[Z, G]
+
+        effects = self.irfs
+        if cum:
+            effects = self.cum_effects
+            Gc = Gc.cumsum()
+
         covs = self._empty_covm(self.periods + 1)
         for i in range(self.periods + 1):
-            if i == 0:
-                apiece = 0
-            else:
-                Ci = np.dot(PIk, self.G[i-1])
-                apiece = chain_dot(Ci, self.cov_a, Ci.T)
+            Ci = np.dot(PIk, Gc[i])
+            apiece = chain_dot(Ci, self.cov_a, Ci.T)
 
-            Cibar = np.dot(np.kron(Ik, self.irfs[i]), H)
+            Cibar = np.dot(np.kron(Ik, effects[i]), H)
             bpiece = chain_dot(Cibar, self.cov_sig, Cibar.T) / self.T
 
             # Lutkepohl typo, cov_sig correct
@@ -595,32 +604,17 @@ class IRAnalysis(BaseIRAnalysis):
         -------
 
         """
-        Ik = np.eye(self.neqs)
-        PIk = np.kron(self.P.T, Ik)
+        if orth:
+            return self._orth_cov(cum=True)
 
-        F = 0.
+        G = self.G # G comes back as a list of arrays
+        Z = np.zeros((1,)+G[0].shape)
+        Gc = np.r_[Z, G].cumsum()
+
         covs = self._empty_covm(self.periods + 1)
-        for i in range(self.periods + 1):
-            if i > 0:
-                F = F + self.G[i - 1]
-
-            if orth:
-                if i == 0:
-                    apiece = 0
-                else:
-                    Bn = np.dot(PIk, F)
-                    apiece = chain_dot(Bn, self.cov_a, Bn.T)
-
-                Bnbar = np.dot(np.kron(Ik, self.cum_effects[i]), self.H)
-                bpiece = chain_dot(Bnbar, self.cov_sig, Bnbar.T) / self.T
-
-                covs[i] = apiece + bpiece
-            else:
-                if i == 0:
-                    covs[i] = np.zeros((self.neqs**2, self.neqs**2))
-                    continue
-
-                covs[i] = chain_dot(F, self.cov_a, F.T)
+        covs[0] = np.zeros((self.neqs**2, self.neqs**2))
+        for i in range(1, self.periods + 1):
+            covs[i] = chain_dot(Gc[i], self.cov_a, Gc[i].T)
 
         return covs
 

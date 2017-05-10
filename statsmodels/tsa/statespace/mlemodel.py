@@ -864,7 +864,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         dtype = self.ssm.dtype
 
         # Save this for inversion later
-        inv_forecasts_error_cov = res.forecasts_error_cov.copy()
+        inv_forecasts_error_cov = res.forecasts_error_cov.copy() ## is this needed?
 
         partials_forecasts_error, partials_forecasts_error_cov = (
             self._forecasts_error_partial_derivatives(
@@ -873,29 +873,28 @@ class MLEModel(tsbase.TimeSeriesModel):
                 approx_centered=approx_centered, res=res, **kwargs))
 
         # Compute the information matrix
-        tmp = np.zeros((self.k_endog, self.k_endog, self.nobs, n), dtype=dtype)
+        ifecs = np.linalg.inv(res.forecasts_error_cov.T).T
+        # Broadcast np.linalg.inv along 3rd dim
 
         information_matrix = np.zeros((n, n), dtype=dtype)
         for t in range(self.ssm.loglikelihood_burn, self.nobs):
-            inv_forecasts_error_cov[:, :, t] = (
-                np.linalg.inv(res.forecasts_error_cov[:, :, t])
-            )
-            for i in range(n):
-                tmp[:, :, t, i] = np.dot(
-                    inv_forecasts_error_cov[:, :, t],
-                    partials_forecasts_error_cov[:, :, t, i]
+            ifec = ifecs[:, :, t]
+            # Equiv: ifec = np.linalg.inv(res.forecasts_error_cov[:, :, t])
+            pfet = partials_forecasts_error[:, t, :]
+
+            tmp  = np.tensordot(ifec,
+                partials_forecasts_error_cov[:, :, t, :],
+                axes=[[1], [0]]
                 )
-            for i in range(n):
-                for j in range(n):
-                    information_matrix[i, j] += (
-                        0.5 * np.trace(np.dot(tmp[:, :, t, i],
-                                              tmp[:, :, t, j]))
-                    )
-                    information_matrix[i, j] += np.inner(
-                        partials_forecasts_error[:, t, i],
-                        np.dot(inv_forecasts_error_cov[:, :, t],
-                               partials_forecasts_error[:, t, j])
-                    )
+            ijdot = np.tensordot(tmp, tmp, axes=[[1], [0]])
+            traced = np.trace(ijdot, axis1=0, axis2=2)
+
+            pfidot = np.tensordot(ifec, pfet, axes=[[1], [0]])
+            inner = np.tensordot(pfet, pfidot, axes=[[0], [0]])
+            # inner[i, j] --> np.inner(pfet[:, i], np.dot(ifec, pfet[:, j]))
+            
+            information_matrix[:, :] += 0.5*traced + inner
+        
         return information_matrix / (self.nobs - self.ssm.loglikelihood_burn)
 
     def opg_information_matrix(self, params, transformed=True,
@@ -996,25 +995,35 @@ class MLEModel(tsbase.TimeSeriesModel):
                 approx_complex_step=approx_complex_step,
                 approx_centered=approx_centered, res=res, **kwargs))
 
+        ifecs = np.linalg.inv(res.forecasts_error_cov.T).T
+        # Broadcast np.linalg.inv along 3rd dim
+
         # Compute partial derivatives w.r.t. likelihood function
         partials = np.zeros((self.nobs, n))
         k_endog = self.k_endog
+        keye = np.eye(k_endog)
         for t in range(self.nobs):
-            for i in range(n):
-                inv_forecasts_error_cov = np.linalg.inv(
-                    res.forecasts_error_cov[:, :, t])
-                partials[t, i] += np.trace(np.dot(
-                    np.dot(inv_forecasts_error_cov,
-                           partials_forecasts_error_cov[:, :, t, i]),
-                    (np.eye(k_endog) -
-                     np.dot(inv_forecasts_error_cov,
-                            np.outer(res.forecasts_error[:, t],
-                                     res.forecasts_error[:, t])))))
-                # 2 * dv / di * F^{-1} v_t
-                # where x = F^{-1} v_t or F x = v
-                partials[t, i] += 2 * np.dot(
-                    partials_forecasts_error[:, t, i],
-                    np.dot(inv_forecasts_error_cov, res.forecasts_error[:, t]))
+            ifec = ifecs[:, :, t]
+            pfet = partials_forecasts_error[:, t, :]
+            rfet = res.forecasts_error[:, t]
+
+            tmp = np.tensordot(ifec,
+                partials_forecasts_error_cov[:, :, t, :],
+                axes=[[1], [0]]
+                )
+
+            rfet_outer = np.outer(rfet, rfet)
+            iro_dot = np.dot(ifec, rfet_outer)
+            irdot = np.dot(ifec, rfet)
+
+            ikdots = np.tensordot(tmp, keye-iro_dot, axes=[[1], [0]])
+            traces = np.trace(ikdots, axis1=0, axis2=2)
+
+            dotteds = np.tensordot(pfet, irdot, axes=[[0], [0]])
+            
+            # 2 * dv / di * F^{-1} v_t
+            # where x = F^{-1} v_t or F x = v
+            partials[t, :] += traces + 2*dotteds
 
         return -partials / 2.
 
