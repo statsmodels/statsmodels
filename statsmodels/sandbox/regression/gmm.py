@@ -83,7 +83,7 @@ class IV2SLS(LikelihoodModel):
        Endogenous variable, 1-dimensional or 2-dimensional array nobs by 1
     exog : array
        Explanatory variables, 1-dimensional or 2-dimensional array nobs by k
-    instruments : array
+    instrument : array
        Instruments for explanatory variables. Must contain both exog
        variables that are not being instrumented and instruments
 
@@ -1407,7 +1407,7 @@ class LinearIVGMM(IVGMM):
     exog : array_like
         explanatory, right hand side variables, including explanatory variables
         that are endogenous
-    instruments : array_like
+    instrument : array_like
         Instrumental variables, variables that are exogenous to the error
         in the linear model containing both included and excluded exogenous
         variables
