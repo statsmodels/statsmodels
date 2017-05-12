@@ -2138,8 +2138,7 @@ class NegativeBinomial(CountModel):
         a1 = mu/alpha
 
         # for dl/dalpha dalpha
-        digamma_part = (special.digamma(y + mu/alpha) -
-                        special.digamma(mu/alpha))
+        digamma_part = special.digamma(y + a1) - special.digamma(a1)
 
         # for dl/dparams dparams
         dim = exog.shape[1]
@@ -2149,9 +2148,9 @@ class NegativeBinomial(CountModel):
         dparams = exog/alpha*(np.log(1/(alpha + 1)) + digamma_part)
 
         dmudb = exog*mu
-        xmu_alpha = exog*mu/alpha
-        trigamma = (special.polygamma(1, mu/alpha + y) -
-                    special.polygamma(1, mu/alpha))
+        xmu_alpha = exog*a1
+        trigamma = (special.polygamma(1, a1 + y) -
+                    special.polygamma(1, a1))
         for i in range(dim):
             for j in range(dim):
                 if j > i:
@@ -2164,8 +2163,8 @@ class NegativeBinomial(CountModel):
 
         # for dl/dparams dalpha
         da1 = -alpha**-2
-        dldpda = np.sum(-mu/alpha * dparams + exog*mu/alpha *
-                        (-trigamma*mu/alpha**2 - 1/(alpha+1)), axis=0)
+        dldpda = np.sum(-a1 * dparams + exog*a1 *
+                        (-trigamma*a1**2 - 1/(alpha+1)), axis=0)
 
         hess_arr[-1,:-1] = dldpda
         hess_arr[:-1,-1] = dldpda
