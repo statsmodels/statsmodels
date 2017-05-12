@@ -2074,10 +2074,8 @@ class NegativeBinomial(CountModel):
         a1 = 1/alpha * mu**Q
         # Note: Q is either 0 or 1, so a1 is either 1/alpha or mu/alpha.
         if Q: # nb1
-            digamma_part = (
-                        special.digamma(y+mu/alpha)
-                        - special.digamma(mu/alpha)
-                        )
+            digamma_part = (special.digamma(y + mu / alpha)
+                        - special.digamma(mu / alpha))
             da1 = alpha**2 * (alpha + 1)
             
             dparams = exog*mu/alpha*(np.log(1/(alpha + 1)) + digamma_part)
