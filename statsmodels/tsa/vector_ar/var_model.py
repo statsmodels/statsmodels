@@ -339,6 +339,7 @@ class VAR(tsbase.TimeSeriesModel):
         """
         Returns in-sample predictions or forecasts
         """
+        k_ar = lags
         if start is None:
             start = k_ar
 
@@ -353,7 +354,6 @@ class VAR(tsbase.TimeSeriesModel):
 
         k_trend = util.get_trendorder(trend)
         k = self.neqs
-        k_ar = lags
 
         predictedvalues = np.zeros((end + 1 - start + out_of_sample, k))
         if k_trend != 0:
