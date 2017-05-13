@@ -812,7 +812,7 @@ class ArmaProcess(object):
            MA-polynomial
         '''
         #TODO: variable returns like this?
-        pr = self.ma_roots()
+        pr = self.maroots()
         insideroots = np.abs(pr) < 1
         if insideroots.any():
             pr[np.abs(pr) < 1] = 1./pr[np.abs(pr) < 1]
