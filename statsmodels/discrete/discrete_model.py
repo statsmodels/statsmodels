@@ -747,21 +747,22 @@ class CountModel(DiscreteModel):
         #TODO: add offset tp
         if exog is None:
             exog = self.exog
-            offset = getattr(self, 'offset', 0)
+        
+        if exposure is None:
+            # If self.exposure exists, it will already be in logs.
             exposure = getattr(self, 'exposure', 0)
-
         else:
-            if exposure is None:
-                exposure = 0
-            else:
-                exposure = np.log(exposure)
-            if offset is None:
-                offset = 0
+            exposure = np.log(exposure)
 
+        if offset is None:
+            offset = getattr(self, 'offset', 0)
+
+        fitted = np.dot(exog, params[:exog.shape[1]])
+        linpred = fitted + exposure + offset
         if not linear:
-            return np.exp(np.dot(exog, params[:exog.shape[1]]) + exposure + offset) # not cdf
+            return np.exp(linpred) # not cdf
         else:
-            return np.dot(exog, params[:exog.shape[1]]) + exposure + offset
+            return linpred
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
