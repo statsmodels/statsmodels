@@ -7,8 +7,8 @@ Notes
 
 * theoretical autocorrelation function of general ARMA
   Done, relatively easy to guess solution, time consuming to get
-  theoretical test cases,
-  example file contains explicit formulas for acovf of MA(1), MA(2) and ARMA(1,1)
+  theoretical test cases, example file contains explicit formulas for
+  acovf of MA(1), MA(2) and ARMA(1,1)
 
 Properties:
 Judge, ... (1985): The Theory and Practise of Econometrics
@@ -16,11 +16,14 @@ Judge, ... (1985): The Theory and Practise of Econometrics
 Author: josefpktd
 License: BSD
 """
-from __future__ import print_function
 from statsmodels.compat.python import range
 
 import numpy as np
 from scipy import signal, optimize, linalg
+
+__all__ = ['arma_acf', 'arma_acovf', 'arma_generate_sample',
+           'arma_impulse_response', 'arma2ar', 'arma2ma', 'deconvolve',
+           'lpol2index', 'index2lpol']
 
 
 def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn,
@@ -44,7 +47,7 @@ def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn,
         default: np.random.randn
         TODO: change to size argument
     burnin : integer
-        Burnin observations at the geneated and  dropped from the beginning of
+        Burn in observations at the generated and dropped from the beginning of
         the sample
 
     Returns
@@ -57,7 +60,7 @@ def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn,
     As mentioned above, both the AR and MA components should include the
     coefficient on the zero-lag. This is typically 1. Further, due to the
     conventions used in signal processing used in signal.lfilter vs.
-    conventions in statistics for ARMA processes, the AR paramters should
+    conventions in statistics for ARMA processes, the AR parameters should
     have the opposite sign of what you might expect. See the examples below.
 
     Examples
@@ -105,7 +108,7 @@ def arma_acovf(ar, ma, nobs=10):
     Notes
     -----
     Tries to do some crude numerical speed improvements for cases
-    with high persistance. However, this algorithm is slow if the process is
+    with high persistence. However, this algorithm is slow if the process is
     highly persistent and only a few autocovariances are desired.
     """
     # increase length of impulse response for AR closer to 1
@@ -117,7 +120,7 @@ def arma_acovf(ar, ma, nobs=10):
     else:
         nobs_ir = max(100, 2 * nobs)  # no idea right now
     ir = arma_impulse_response(ar, ma, leads=nobs_ir)
-    # better save than sorry (?), I have no idea about the required precision
+    # better safe than sorry (?), I have no idea about the required precision
     # only checked for AR(1)
     while ir[-1] > 5 * 1e-5:
         nobs_ir *= 10
@@ -159,7 +162,8 @@ def arma_acf(ar, ma, lags=10, **kwargs):
     if 'nobs' in kwargs:
         lags = kwargs['nobs']
         import warnings
-        warnings.warn('nobs is deprecated in favor of lags', DeprecationWarning)
+        warnings.warn('nobs is deprecated in favor of lags',
+                      DeprecationWarning)
 
     acovf = arma_acovf(ar, ma, lags)
     return acovf / acovf[0]
@@ -192,7 +196,8 @@ def arma_pacf(ar, ma, lags=10, **kwargs):
     if 'nobs' in kwargs:
         lags = kwargs['nobs']
         import warnings
-        warnings.warn('nobs is deprecated in favor of lags', DeprecationWarning)
+        warnings.warn('nobs is deprecated in favor of lags',
+                      DeprecationWarning)
     # TODO: Should use rank 1 inverse update
     apacf = np.zeros(lags)
     acov = arma_acf(ar, ma, lags=lags + 1)
@@ -215,7 +220,7 @@ def arma_periodogram(ar, ma, worN=None, whole=0):
     ma : array_like
         moving average lag-polynomial with leading 1
     worN : {None, int}, optional
-        option for scipy.signal.freqz   (read "w or N")
+        option for scipy.signal.freqz (read "w or N")
         If None, then compute at 512 frequencies around the unit circle.
         If a single integer, the compute at that many frequencies.
         Otherwise, compute the response at frequencies given in worN
@@ -242,7 +247,9 @@ def arma_periodogram(ar, ma, worN=None, whole=0):
     sd = np.abs(h) ** 2 / np.sqrt(2 * np.pi)
     if np.any(np.isnan(h)):
         # this happens with unit root or seasonal unit root'
-        print('Warning: nan in frequency response h, maybe a unit root')
+        import warnings
+        warnings.warn('Warning: nan in frequency response h, maybe a unit '
+                      'root', RuntimeWarning)
     return w, sd
 
 
@@ -273,7 +280,7 @@ def arma_impulse_response(ar, ma, leads=100, **kwargs):
     ma_representation = arma_impulse_response(ar, ma, leads=100)
     ar_representation = arma_impulse_response(ma, ar, leads=100)
 
-    fully tested against matlab
+    Fully tested against matlab
 
     Examples
     --------
@@ -303,7 +310,8 @@ def arma_impulse_response(ar, ma, leads=100, **kwargs):
     if 'nobs' in kwargs:
         leads = kwargs['nobs']
         import warnings
-        warnings.warn(DeprecationWarning, 'nobs is deprecated in favor of leads')
+        warnings.warn('nobs is deprecated in favor of leads',
+                      DeprecationWarning)
     impulse = np.zeros(leads)
     impulse[0] = 1.
     return signal.lfilter(ma, ar, impulse)
@@ -338,7 +346,8 @@ def arma2ma(ar, ma, lags=100, **kwargs):
     if 'nobs' in kwargs:
         lags = kwargs['nobs']
         import warnings
-        warnings.warn('nobs is deprecated in favor of lags', DeprecationWarning)
+        warnings.warn('nobs is deprecated in favor of lags',
+                      DeprecationWarning)
 
     return arma_impulse_response(ar, ma, leads=lags)
 
@@ -372,7 +381,8 @@ def arma2ar(ar, ma, lags=100, **kwargs):
     if 'nobs' in kwargs:
         lags = kwargs['nobs']
         import warnings
-        warnings.warn('nobs is deprecated in favor of lags', DeprecationWarning)
+        warnings.warn('nobs is deprecated in favor of lags',
+                      DeprecationWarning)
     return arma_impulse_response(ma, ar, leads=lags)
 
 
@@ -415,7 +425,7 @@ def ar2arma(ar_des, p, q, n=20, mse='ar', start=None):
     """
 
     # TODO: convert MA lag polynomial, ma_app, to be invertible, by mirroring
-    # TODO: roots outside the unit intervall to ones that are inside. How do we do
+    # TODO: roots outside the unit interval to ones that are inside. How to do
     # TODO: this?
 
     # p,q = pq
@@ -437,7 +447,7 @@ def ar2arma(ar_des, p, q, n=20, mse='ar', start=None):
 
 def lpol2index(ar):
     """
-    Remove zeros from lagpolynomial
+    Remove zeros from lag polynomial
 
     Parameters
     ----------
@@ -449,7 +459,7 @@ def lpol2index(ar):
     coeffs : array
         non-zero coefficients of lag polynomial
     index : array
-        index (lags) of lagpolynomial with non-zero elements
+        index (lags) of lag polynomial with non-zero elements
     """
     ar = np.asarray(ar)
     index = np.nonzero(ar)[0]
@@ -466,7 +476,7 @@ def index2lpol(coeffs, index):
     coeffs : array
         non-zero coefficients of lag polynomial
     index : array
-        index (lags) of lagpolynomial with non-zero elements
+        index (lags) of lag polynomial with non-zero elements
 
     Returns
     -------
@@ -623,7 +633,7 @@ class ArmaProcess(object):
     Both the AR and MA components must include the coefficient on the
     zero-lag. In almost all cases these values should be 1. Further, due to
     using the lag-polynomial representation, the AR parameters should
-    have the opposite sign of what one would write in the ARMA representaion.
+    have the opposite sign of what one would write in the ARMA representation.
     See the examples below.
 
     The ARMA(p,q) process is described by
@@ -742,10 +752,9 @@ class ArmaProcess(object):
         return self.__class__(ar, ma, nobs=self.nobs)
 
     def __repr__(self):
-        return 'ArmaProcess({0}, {1}, nobs={2}) at {3}'.format(self.ar.tolist(),
-                                                               self.ma.tolist(),
-                                                               self.nobs,
-                                                               hex(id(self)))
+        msg = 'ArmaProcess({0}, {1}, nobs={2}) at {3}'
+        return msg.format(self.ar.tolist(), self.ma.tolist(),
+                          self.nobs, hex(id(self)))
 
     def __str__(self):
         return 'ArmaProcess\nAR: {0}\nMA: {1}'.format(self.ar.tolist(),
@@ -922,8 +931,3 @@ class ArmaProcess(object):
             fslice = tuple([slice(None)] * np.ndim(newsize))
         eta = scale * distrvs(size=newsize)
         return signal.lfilter(self.ma, self.ar, eta, axis=axis)[fslice]
-
-
-__all__ = ['arma_acf', 'arma_acovf', 'arma_generate_sample',
-           'arma_impulse_response', 'arma2ar', 'arma2ma', 'deconvolve',
-           'lpol2index', 'index2lpol']
