@@ -40,7 +40,7 @@ def test_arma_acovf_persistent():
     ar = np.array([1, -.9995])
     ma = np.array([1])
     process = ArmaProcess(ar, ma)
-    res = process.acovf(lags=10)
+    res = process.acovf(10)
 
     # Theoretical variance sig2 given by:
     # sig2 = .9995**2 * sig2 + 1
