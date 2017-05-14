@@ -22,13 +22,18 @@ class TestSVAR(object):
         data = np.diff(np.log(data), axis=0)
         A = np.asarray([[1, 0, 0],['E', 1, 0],['E', 'E', 1]])
         B = np.asarray([['E', 0, 0], [0, 'E', 0], [0, 0, 'E']])
-        results = SVAR(data, svar_type='AB', A=A, B=B).fit(maxlags=3)
+        model = SVAR(data, svar_type='AB', A=A, B=B)
+        results = model.fit(maxlags=3)
+        cls.model = model
         cls.res1 = results
         #cls.res2 = results_svar.SVARdataResults()
         from .results import results_svar_st
         cls.res2 = results_svar_st.results_svar1_small
 
-
+    def test_fit_with_ic(self): # Smoke-test to check on #3664
+        model = self.model
+        aic_res = model.fit(maxlags=3, ic='aic')
+        
     def _reformat(self, x):
         return x[[1, 4, 7, 2, 5, 8, 3, 6, 9, 0], :].ravel("F")
 
