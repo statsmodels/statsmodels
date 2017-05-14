@@ -35,7 +35,7 @@ import numpy as np
 from scipy import stats
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
-from statsmodels.tsa.stattools import acf, adfuller
+from statsmodels.tsa.stattools import acf, adfuller, default_lags
 from statsmodels.tsa.tsatools import lagmat
 from statsmodels.compat.numpy import np_matrix_rank
 
@@ -352,8 +352,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     nobs = x.shape[0]
     if maxlag is None:
         #for adf from Greene referencing Schwert 1989
-        maxlag = int(np.ceil(12. * np.power(nobs/100., 1/4.)))#nobs//4  #TODO: check default, or do AIC/BIC
-
+        maxlag = default_lags(nobs) #TODO: check default, or do AIC/BIC
 
     xdiff = np.diff(x)
     #
@@ -499,6 +498,9 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
         #for adf from Greene referencing Schwert 1989
         nlags = np.trunc(12. * np.power(nobs/100., 1/4.))#nobs//4  #TODO: check default, or do AIC/BIC
         nlags = int(nlags)
+        # TODO: check if there is a special reason why this uses np.trunc
+        # instead of np.ceil like elsewhere.  If the distinction is
+        # unimportant, this can use tsa.stattools.default_lags(nobs)
 
     x = np.concatenate((np.zeros(nlags), x))
 

@@ -164,6 +164,8 @@ class SVAR(tsbase.TimeSeriesModel):
 
         if ic is not None:
             selections = self.select_order(maxlags=maxlags, verbose=verbose)
+            # TODO: does this method exist?  It looks like it is intended
+            # to be inherited from VAR, but this is not a subclass.
             if ic not in selections:
                 raise Exception("%s not recognized, must be among %s"
                                 % (ic, sorted(selections)))

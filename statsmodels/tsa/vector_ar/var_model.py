@@ -496,7 +496,7 @@ class VAR(tsbase.TimeSeriesModel):
         selections : dict {info_crit -> selected_order}
         """
         if maxlags is None:
-            maxlags = int(round(12*(len(self.endog)/100.)**(1/4.)))
+            maxlags = tsa.default_lags(len(self.endog))
 
         ics = defaultdict(list)
         for p in range(maxlags + 1):
