@@ -117,8 +117,8 @@ def jarque_bera(resids, axis=0):
     """
     resids = np.asarray(resids)
     # Calculate residual skewness and kurtosis
-    skew = stats.skew(resids, axis=axis)
-    kurtosis = 3 + stats.kurtosis(resids, axis=axis)
+    skew = np.array(stats.skew(resids, axis=axis), ndmin=axis)
+    kurtosis = np.array(3 + stats.kurtosis(resids, axis=axis), ndmin=axis)
 
     # Calculate the Jarque-Bera test for normality
     n = resids.shape[axis]
