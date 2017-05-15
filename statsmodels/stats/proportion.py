@@ -90,8 +90,14 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
             ci_upp = optimize.brentq(func, q_, 1. - float_info.epsilon)
 
     elif method == 'beta':
-        ci_low = stats.beta.ppf(alpha_2, count, nobs - count + 1)
-        ci_upp = stats.beta.isf(alpha_2, count + 1, nobs - count)
+        if count == 0:
+            ci_low = 0
+        else:
+            ci_low = stats.beta.ppf(alpha_2, count, nobs - count + 1)
+        if count == nobs:
+            ci_upp = 1
+        else:
+            ci_upp = stats.beta.isf(alpha_2, count + 1, nobs - count)
 
     elif method == 'agresti_coull':
         crit = stats.norm.isf(alpha / 2.)
