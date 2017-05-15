@@ -15,7 +15,7 @@ from numpy.linalg import slogdet
 from statsmodels.tools.numdiff import (approx_hess, approx_fprime)
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
-from statsmodels.tsa.vector_ar.var_model import VARProcess, \
+from statsmodels.tsa.vector_ar.var_model import VAR, VARProcess, \
                                                         VARResults
 
 import statsmodels.tsa.vector_ar.util as util
@@ -31,7 +31,7 @@ def svar_ckerr(svar_type, A, B):
 
         raise ValueError('SVAR of type B or AB but B array not given.')
 
-class SVAR(tsbase.TimeSeriesModel):
+class SVAR(VAR):
     r"""
     Fit VAR and then estimate structural components of A and B, defined:
 
@@ -259,7 +259,11 @@ class SVAR(tsbase.TimeSeriesModel):
                             names=self.endog_names, trend=trend,
                             dates=self.data.dates, model=self,
                            A=A, B=B, A_mask=A_mask, B_mask=B_mask)
-
+    
+    _estimate = _estimate_svar
+    # We need this alias so that the appropriate method gets called when we
+    # call select_order, which is inherited from VAR
+    
     def loglike(self, params):
         """
         Loglikelihood for SVAR model
@@ -365,7 +369,7 @@ class SVAR(tsbase.TimeSeriesModel):
         else: #TODO: change to a warning?
             print("Order/rank conditions have not been checked")
 
-        retvals = super(SVAR, self).fit(start_params=start_params,
+        retvals = tsbase.TimeSeriesModel.fit(self, start_params=start_params,
                     method=solver, maxiter=maxiter,
                     maxfun=maxfun, ftol=1e-20, disp=0).params
 
