@@ -1859,6 +1859,18 @@ def test_poisson_deviance():
     assert_allclose(d, lr, rtol=1e-12)
 
 
+def test_non_invertible_hessian_fails_summary():
+    # Test when the hessian fails the summary is still available.
+    import statsmodels.api as sm
+
+    data = sm.datasets.cpunish.load_pandas()
+
+    data.endog[:] = 1
+    mod = sm.GLM(data.endog, data.exog, family=sm.families.Gamma())
+    res = mod.fit(maxiter=1, method='bfgs', max_start_irls=0)
+    res.summary()
+
+
 if __name__ == "__main__":
     # run_module_suite()
     # taken from Fernando Perez:
