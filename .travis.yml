@@ -26,6 +26,7 @@ matrix:
     env:
     - PYTHON=2.7
     - NUMPY=1.11
+    - PANDAS=0.19
     - MATPLOTLIB=1.5
     - COVERAGE=true
   - python: 2.7

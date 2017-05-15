@@ -1055,7 +1055,14 @@ class LikelihoodModelResults(Results):
 
     @cache_readonly
     def bse(self):
-        return np.sqrt(np.diag(self.cov_params()))
+        # Issue 3299
+        if ((not hasattr(self, 'cov_params_default')) and
+                (self.normalized_cov_params is None)):
+            bse_ = np.empty(len(self.params))
+            bse_[:] = np.nan
+        else:
+            bse_ = np.sqrt(np.diag(self.cov_params()))
+        return bse_
 
     @cache_readonly
     def tvalues(self):

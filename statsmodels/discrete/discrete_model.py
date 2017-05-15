@@ -747,21 +747,22 @@ class CountModel(DiscreteModel):
         #TODO: add offset tp
         if exog is None:
             exog = self.exog
-            offset = getattr(self, 'offset', 0)
+        
+        if exposure is None:
+            # If self.exposure exists, it will already be in logs.
             exposure = getattr(self, 'exposure', 0)
-
         else:
-            if exposure is None:
-                exposure = 0
-            else:
-                exposure = np.log(exposure)
-            if offset is None:
-                offset = 0
+            exposure = np.log(exposure)
 
+        if offset is None:
+            offset = getattr(self, 'offset', 0)
+
+        fitted = np.dot(exog, params[:exog.shape[1]])
+        linpred = fitted + exposure + offset
         if not linear:
-            return np.exp(np.dot(exog, params[:exog.shape[1]]) + exposure + offset) # not cdf
+            return np.exp(linpred) # not cdf
         else:
-            return np.dot(exog, params[:exog.shape[1]]) + exposure + offset
+            return linpred
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
@@ -3023,9 +3024,9 @@ class MultinomialResults(DiscreteResults):
         eqn = self.params.shape[1]
         confint = self.conf_int(alpha)
         for i in range(eqn):
-            coefs = summary2.summary_params(self, alpha, self.params[:,i],
+            coefs = summary2.summary_params((self, self.params[:,i],
                     self.bse[:,i], self.tvalues[:,i], self.pvalues[:,i],
-                    confint[i])
+                    confint[i]), alpha=alpha)
             # Header must show value of endog
             level_str =  self.model.endog_names + ' = ' + str(i)
             coefs[level_str] = coefs.index
