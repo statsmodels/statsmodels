@@ -382,17 +382,24 @@ def _ssr_reduced_model(y, x, term_slices, params, keys):
 
     Parameters
     ----------
-    y : array_like, dependent variables
-    x : array_like, independent variables
+    y : array_like
+        dependent variable
+    x : array_like
+        independent variables
     term_slices : a dict of slices
         term_slices[key] is a boolean array specifies the parameters
         associated with the factor `key`
-    params : OLS solution of y = x * params
-    keys : factors to be excluded
+    params : ndarray
+        OLS solution of y = x * params
+    keys : keys for term_slices
+        factors to be excluded
 
     Returns
     -------
-    residual sum of squares and degrees of freedom
+    rss : float
+        residual sum of squares
+    df : int
+        degrees of freedom
 
     """
     ind = _not_slice(term_slices, keys, x.shape[1])
@@ -408,7 +415,7 @@ class AnovaRM(object):
     Repeated measures Anova using least squares regression
 
     The full model regression residual sum of squares is
-    used to compared with reduced model for calculating the
+    used to compare with the reduced model for calculating the
     within subject effect sum of squares [1]
 
     Between subject effect and Greenhouse-Geisser correction is not yet
@@ -451,6 +458,14 @@ class AnovaRM(object):
         self._check_data_balanced()
 
     def _check_data_balanced(self):
+        """raise if data is not balanced
+
+        This raises a ValueError if the data is not balanced, and
+        returns None if it is balance
+
+        Return might change
+
+        """
         factor_levels = 1
         for wi in self.within:
             factor_levels *= len(self.data[wi].unique())
@@ -477,6 +492,13 @@ class AnovaRM(object):
                              ' factors?')
 
     def fit(self):
+        """estimate the model and compute the Anova table
+
+        Returns
+        -------
+        AnovaResults instance
+
+        """
         y = self.data[self.depvar].values
 
         # Construct OLS endog and exog from string using patsy
@@ -551,7 +573,14 @@ class AnovaResults(object):
     def __str__(self):
         return self.summary().__str__()
 
-    def summary(self, contrast_L=False, transform_M=False):
+    def summary(self):
+        """create summary results
+
+        Returns
+        -------
+        summary : Summary instance
+
+        """
         summ = summary2.Summary()
         summ.add_title('Anova')
         summ.add_df(self.anova_table)
