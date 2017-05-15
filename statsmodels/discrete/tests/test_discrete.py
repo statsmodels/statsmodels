@@ -1389,6 +1389,9 @@ def test_issue_339():
     test_case_file = os.path.join(cur_dir, 'results', 'mn_logit_summary.txt')
     test_case = open(test_case_file, 'r').read()
     np.testing.assert_equal(smry, test_case[:-1])
+    # smoke test for summary2
+    res1.summary2()  # see #3651
+
 
 def test_issue_341():
     data = sm.datasets.anes96.load()
@@ -1474,9 +1477,9 @@ def test_predict_with_exposure():
          'constant': [1] * 4, 'exposure' : [np.exp(1)]*4,
          'x': [1, 3, 2, 1.5]}
     df = pd.DataFrame(d)
-    
+
     mod1 = CountModel.from_formula('Foo ~ Bar', data=df, exposure=df['exposure'])
-    
+
     params = np.array([1, .4])
     pred = mod1.predict(params, linear=True)
     # No exposure is passed, so default to using mod1.exposure, which
