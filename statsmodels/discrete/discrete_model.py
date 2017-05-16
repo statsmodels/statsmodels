@@ -2082,20 +2082,15 @@ class NegativeBinomial(CountModel):
         if Q: # nb1
             # Recall that Q is either 0 or 1, so in this case it is 1.
             # Then a1 is mu/alpha.
-            # `prob` then simplifies to 1/(alpha+1)
-            
-            da1 = alpha**2 * (alpha + 1)
-            
+            # `prob` then simplifies to 1/(alpha+1)            
             dparams = exog*a1*npdg
-            dalpha = ((alpha*(y - mu) - (1+alpha)*mu*npdg)).sum() / da1
+            dalpha = ((alpha*(y - mu) - (1+alpha)*mu*npdg)).sum() / (alpha**2 * (alpha + 1))
         else: # nb2
             # In this case a1 is 1/alpha            
             dparams = exog*a1 * (y-mu)/(mu+a1)
-            da1 = -alpha**-2
-            dalpha = (npdg
-                        - (y-mu)/(a1+mu)).sum()*da1
+            dalpha = -(npdg - (y-mu)/(a1+mu)).sum() / alpha**2
 
-        # Multiply/divide by da1 above outside the sum() to reduce
+        # Multiply/divide by constants above outside the sum() to reduce
         # floating point error.
         if self._transparams:
             return np.r_[dparams.sum(0), dalpha*alpha]
