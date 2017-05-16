@@ -2084,11 +2084,11 @@ class NegativeBinomial(CountModel):
             # Then a1 is mu/alpha.
             # `prob` then simplifies to 1/(alpha+1)            
             dparams = exog*a1*npdg
-            dalpha = (((y - mu)/(alpha+1) - 1/alpha*mu*npdg)).sum() / alpha
+            dalpha = (((y - mu)*prob - a1*npdg)).sum() / alpha
         else: # nb2
             # In this case a1 is 1/alpha            
             dparams = exog*a1 * (y-mu)/(mu+a1)
-            dalpha = -(npdg - (y-mu)/(a1+mu)).sum() / alpha**2
+            dalpha = -(npdg*a1 - (y-mu)*a1/(a1+mu)).sum() / alpha
 
         # Multiply/divide by constants above outside the sum() to reduce
         # floating point error.
