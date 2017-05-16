@@ -2074,17 +2074,19 @@ class NegativeBinomial(CountModel):
         mu = self.predict(params)[:, None]
         a1 = 1/alpha * mu**Q
         # Note: Q is either 0 or 1, so a1 is either 1/alpha or mu/alpha.
+        prob = a1 / (a1 + mu)
         if Q: # nb1
             # Recall that Q is either 0 or 1, so in this case it is 1.
             # Then a1 is mu/alpha.
+            # `prob` then simplifies to 1/(alpha+1)
             digamma_part = (special.digamma(y + a1)
                         - special.digamma(a1))
             da1 = alpha**2 * (alpha + 1)
             
-            dparams = exog*mu/alpha*(np.log(1/(alpha + 1)) + digamma_part)
-            dalpha = ((alpha*(y - mu*np.log(1/(alpha + 1)) -
+            dparams = exog*a1*(np.log(prob) + digamma_part)
+            dalpha = ((alpha*(y - mu*np.log(prob) -
                               mu*(digamma_part + 1)) -
-                       mu*(np.log(1/(alpha + 1)) + digamma_part))
+                       mu*(np.log(prob) + digamma_part))
                        ).sum() / da1
         else: # nb2
             # In this case a1 is 1/alpha
