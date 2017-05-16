@@ -2087,7 +2087,7 @@ class NegativeBinomial(CountModel):
             da1 = alpha**2 * (alpha + 1)
             
             dparams = exog*a1*npdg
-            dalpha = ((alpha*(y - mu*(np.log(prob) + digamma_part + 1)) -
+            dalpha = ((alpha*(y - mu*(npdg + 1)) -
                        mu*npdg)
                        ).sum() / da1
         else: # nb2
@@ -2095,7 +2095,7 @@ class NegativeBinomial(CountModel):
             dparams = exog*a1 * (y-mu)/(mu+a1)
             da1 = -alpha**-2
             dalpha = (digamma_part + np.log(prob)
-                        - (a1+y)/(a1+mu) + 1).sum()*da1
+                        - (a1+y)/(a1+mu) + (a1+mu)/(a1+mu)).sum()*da1
 
         # Multiply/divide by da1 above outside the sum() to reduce
         # floating point error.
