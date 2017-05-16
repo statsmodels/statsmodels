@@ -2087,12 +2087,12 @@ class NegativeBinomial(CountModel):
             da1 = alpha**2 * (alpha + 1)
             
             dparams = exog*a1*npdg
-            dalpha = ((alpha*(y - mu*(npdg + 1)) - mu*npdg)).sum() / da1
+            dalpha = ((alpha*(y - mu) - (1+alpha)*mu*npdg)).sum() / da1
         else: # nb2
             # In this case a1 is 1/alpha            
             dparams = exog*a1 * (y-mu)/(mu+a1)
             da1 = -alpha**-2
-            dalpha = (digamma_part + np.log(prob)
+            dalpha = (npdg
                         - (y-mu)/(a1+mu)).sum()*da1
 
         # Multiply/divide by da1 above outside the sum() to reduce
