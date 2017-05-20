@@ -296,6 +296,30 @@ def test_dtypes():
     assert_allclose(approx_fprime(np.array([1.+0j, 2.+0j]), f), desired)
 
 
+def test_tuple_error():
+	  # This is a regression test for a bug that occurred due to a typo
+	  # in approx_hess3.  See GH #3253
+	  # With the typo, this test will raise:
+	  #
+	  #   File "<stdin>", line 1, in <module>
+    #	File "/usr/local/lib/python2.7/site-packages/statsmodels/tools/numdiff.py", line 352, in approx_hess3
+    #       - f(*((x - ee[i, :] - ee[j, :],) + args), **kwargs),)
+	  #   TypeError: unsupported operand type(s) for -: 'float' and 'tuple'
+
+    # The below is copied near-verbatim form #3253
+	  def f(x):
+    	  return np.dot(x, x) / 2.0
+
+	  def f_float(x):
+    	  return float(np.dot(x, x) / 2.0)
+
+	  # Test array for differentiating
+	  x = np.array([1.0])
+
+	  numdiff.approx_hess3(x, f_float)
+
+
+
 if __name__ == '__main__':
 
     epsilon = 1e-6
