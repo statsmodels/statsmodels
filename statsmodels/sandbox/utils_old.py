@@ -3,16 +3,11 @@ import numpy.linalg as L
 import scipy.interpolate
 import scipy.linalg
 
+from statsmodels.tools.tools import recipr, recipr0, clean0, fullrank
+
 __docformat__ = 'restructuredtext'
 
-def recipr(X):
-    """
-    Return the reciprocal of an array, setting all entries less than or
-    equal to 0 to 0. Therefore, it presumes that X should be positive in
-    general.
-    """
-    x = np.maximum(np.asarray(X).astype(np.float64), 0)
-    return np.greater(x, 0.) / (x + np.less_equal(x, 0.))
+
 
 def mad(a, c=0.6745, axis=0):
     """
@@ -28,23 +23,6 @@ def mad(a, c=0.6745, axis=0):
     a.shape = _shape
     return m
 
-def recipr0(X):
-    """
-    Return the reciprocal of an array, setting all entries equal to 0
-    as 0. It does not assume that X should be positive in
-    general.
-    """
-    test = np.equal(np.asarray(X), 0)
-    return np.where(test, 0, 1. / X)
-
-def clean0(matrix):
-    """
-    Erase columns of zeros: can save some time in pseudoinverse.
-    """
-    colsum = np.add.reduce(matrix**2, 0)
-    val = [matrix[:,i] for i in np.flatnonzero(colsum)]
-    return np.array(np.transpose(val))
-
 def rank(X, cond=1.0e-12):
     """
     Return the rank of a matrix X based on its generalized inverse,
@@ -57,25 +35,6 @@ def rank(X, cond=1.0e-12):
     else:
         return int(not np.alltrue(np.equal(X, 0.)))
 
-def fullrank(X, r=None):
-    """
-    Return a matrix whose column span is the same as X.
-
-    If the rank of X is known it can be specified as r -- no check
-    is made to ensure that this really is the rank of X.
-
-    """
-
-    if r is None:
-        r = rank(X)
-
-    V, D, U = L.svd(X, full_matrices=0)
-    order = np.argsort(D)
-    order = order[::-1]
-    value = []
-    for i in range(r):
-        value.append(V[:,order[i]])
-    return np.asarray(np.transpose(value)).astype(np.float64)
 
 class StepFunction(object):
     """
