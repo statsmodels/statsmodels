@@ -7,8 +7,8 @@ from unittest import TestCase
 
 import numpy as np
 from numpy.testing import (assert_array_almost_equal, assert_almost_equal,
-                        assert_allclose,
-                        assert_equal, assert_raises, assert_, dec)
+                           assert_allclose,
+                           assert_equal, assert_raises, assert_, dec)
 
 from statsmodels.tsa.arima_process import (arma_generate_sample, arma_acovf,
                                            arma_acf, arma_impulse_response, lpol_fiar, lpol_fima,
@@ -55,11 +55,11 @@ def test_arma_acovf_persistent():
     # sig2 = .9995**2 * sig2 + 1
     sig2 = 1/(1-.9995**2)
 
-    corrs = np.array([.9995**n for n in range(10)])
+    corrs = .9995**np.arange(10)
     expected = sig2*corrs
-    assert_(np.ndim(res) == 1)
-    assert_allclose(res, expected, 6)
-    # 7 decimals breaks at .999, worked at .995
+    assert_equal(res.ndim, 1)
+    assert_allclose(res, expected, atol=1e-10)
+    # atol=7 breaks at .999, worked at .995
 
 def test_arma_acf():
     # Check for specific AR(1)
