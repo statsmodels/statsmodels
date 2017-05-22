@@ -127,7 +127,9 @@ def arma_acovf(ar, ma, nobs=10):
         ir = arma_impulse_response(ar, ma, leads=nobs_ir)
     # again no idea where the speed break points are:
     if nobs_ir > 50000 and nobs < 1001:
-        acovf = np.array([np.dot(ir[:nobs - t], ir[t:nobs])
+        end = len(ir)
+        # Explitly slice from the end to avoid foo[:-0] returning an empty slice
+        acovf = np.array([np.dot(ir[:end-nobs-t], ir[t:end-nobs])
                           for t in range(nobs)])
     else:
         acovf = np.correlate(ir, ir, 'full')[len(ir) - 1:]
