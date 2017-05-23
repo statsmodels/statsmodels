@@ -30,7 +30,6 @@ cpunish_data.exog = add_constant(cpunish_data.exog, prepend=False)
 
 
 class CheckWeight(object):
-
     def test_basic(self):
         res1 = self.res1
         res2 = self.res2
@@ -50,6 +49,9 @@ class CheckWeight(object):
             # exposure/average
             return None
         assert_allclose(res1.bse, corr_fact * res2.bse, atol=1e-6, rtol=2e-6)
+        if isinstance(self, TestBinomialVsVarWeights):
+            # Binomial ll and deviance are different for 1d vs. counts...
+            return None
         if not isinstance(self, (TestGlmGaussianAwNr, TestGlmGammaAwNr)):
             # Matching R is hard
             assert_allclose(res1.llf, res2.ll, atol=1e-6, rtol=1e-7)
@@ -783,6 +785,21 @@ def check_weights_as_formats(weights):
     assert isinstance(res._freq_weights, np.ndarray)
     assert isinstance(res._var_weights, np.ndarray)
     assert isinstance(res._iweights, np.ndarray)
+
+
+class TestBinomialVsVarWeights(CheckWeight):
+    @classmethod
+    def setup_class(self):
+        from statsmodels.datasets.star98 import load
+        data = load()
+        data.exog = add_constant(data.exog, prepend=False)
+        self.res1 = GLM(data.endog, data.exog,
+                        family=sm.families.Binomial()).fit()
+        weights = data.endog.sum(axis=1)
+        endog2 = data.endog[:, 0] / weights
+        self.res2 = GLM(endog2, data.exog,
+                        family=sm.families.Binomial(),
+                        var_weights=weights).fit()
 
 
 def test_incompatible_input():

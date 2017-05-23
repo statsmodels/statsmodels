@@ -1021,7 +1021,6 @@ class Binomial(Family):
         defined in Binomial initialize.  This simply makes :math:`y_i` the
         original number of successes.
         """
-
         if np.shape(self.n) == () and self.n == 1:
             return np.sum((endog * np.log(mu/(1 - mu)) +
                            np.log(1 - mu)) * iweights)
