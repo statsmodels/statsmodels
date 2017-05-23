@@ -58,7 +58,7 @@ def test_arma_acovf_persistent():
     corrs = .9995**np.arange(10)
     expected = sig2*corrs
     assert_equal(res.ndim, 1)
-    assert_allclose(res, expected, atol=1e-10)
+    assert_allclose(res, expected, atol=1e-6)
     # atol=7 breaks at .999, worked at .995
 
 def test_arma_acf():
