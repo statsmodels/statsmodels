@@ -70,9 +70,7 @@ def _isdummy(X):
 def _get_dummy_index(X, const_idx):
     dummy_ind = _isdummy(X)
     dummy = True
-    # adjust back for a constant because effects doesn't have one
-    if const_idx is not None:
-        dummy_ind[dummy_ind > const_idx] -= 1
+
     if dummy_ind.size == 0: # don't waste your time
         dummy = False
         dummy_ind = None # this gets passed to stand err func
