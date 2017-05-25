@@ -204,7 +204,7 @@ class Summary(object):
         settings = self.settings
         title = self.title
         if title is not None:
-            title = '\\caption{' + title + '} \\\\'
+            title = '\\caption{' + title + '}'
         else:
             title = '\\caption{}'
 
