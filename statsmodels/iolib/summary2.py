@@ -427,7 +427,7 @@ def _make_unique(list_of_names):
 
 
 def summary_col(results, float_format='%.4f', model_names=[], stars=False,
-                info_dict=None, regressor_order=[]):
+                info_dict=None, regressor_order=[], drop_omitted=False):
     """
     Summarize multiple results instances side-by-side (coefs and SEs)
 
@@ -453,6 +453,10 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
     regressor_order : list of strings
         list of names of the regressors in the desired order. All regressors
         not specified will be appended to the end of the list.
+    drop_omitted : bool
+        Includes regressors that are not specified in regressor_order. If False,
+        regressors not specified will be appended to end of the list. If True,
+        only regressors in regressors_list will be included.
     """
 
     if not isinstance(results, list):
@@ -483,6 +487,8 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
         summ.index = f(np.unique(varnames))
         summ = summ.reindex(f(order))
         summ.index = [x[:-4] for x in summ.index]
+        if drop_omitted:
+            summ = summ.loc[regressor_order]
 
     idx = pd.Series(lrange(summ.shape[0])) % 2 == 1
     summ.index = np.where(idx, '', summ.index.get_level_values(0))
