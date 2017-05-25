@@ -890,7 +890,7 @@ class TestLogitNewton(CheckBinaryResults, CheckMargEff):
                 self.res2.margeff_dummy_atexog2_se, DECIMAL_4)
 
 
-class TestLogitNewtonPrepend(object):
+class TestLogitNewtonPrepend(CheckMargEff):
     # same as previous version but adjusted vor add_constant prepend=True
     # bug #3695
     @classmethod

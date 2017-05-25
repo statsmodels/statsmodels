@@ -105,9 +105,7 @@ def _iscount(X):
 def _get_count_index(X, const_idx):
     count_ind = _iscount(X)
     count = True
-    # adjust back for a constant because effects doesn't have one
-    if const_idx is not None:
-        count_ind[count_ind > const_idx] -= 1
+
     if count_ind.size == 0: # don't waste your time
         count = False
         count_ind = None # for stand err func
