@@ -52,6 +52,9 @@ class CheckWeight(object):
         if isinstance(self, TestBinomialVsVarWeights):
             # Binomial ll and deviance are different for 1d vs. counts...
             return None
+        if isinstance(self, TestGlmGaussianWLS):
+            # This won't work right now either
+            return None
         if not isinstance(self, (TestGlmGaussianAwNr, TestGlmGammaAwNr)):
             # Matching R is hard
             assert_allclose(res1.llf, res2.ll, atol=1e-6, rtol=1e-7)
@@ -800,6 +803,33 @@ class TestBinomialVsVarWeights(CheckWeight):
         self.res2 = GLM(endog2, data.exog,
                         family=sm.families.Binomial(),
                         var_weights=weights).fit()
+
+
+class TestGlmGaussianWLS(CheckWeight):
+    @classmethod
+    def setup_class(cls):
+        self = cls
+        import statsmodels.formula.api as smf
+
+        data = sm.datasets.cpunish.load_pandas()
+        endog = data.endog
+        data = data.exog
+        data['EXECUTIONS'] = endog
+        data['INCOME'] /= 1000
+        aweights = np.array([1, 2, 3, 4, 5, 4, 3, 2, 1, 2, 3, 4, 5, 4, 3, 2,
+                             1])
+        model = smf.glm(
+                'EXECUTIONS ~ INCOME + SOUTH - 1',
+                data=data,
+                family=sm.families.Gaussian(link=sm.families.links.identity()),
+                var_weights=aweights
+        )
+        wlsmodel = smf.wls(
+                'EXECUTIONS ~ INCOME + SOUTH - 1',
+                data=data,
+                weights=aweights)
+        self.res1 = model.fit(rtol=1e-25, atol=1e-25)
+        self.res2 = wlsmodel.fit()
 
 
 def test_incompatible_input():
