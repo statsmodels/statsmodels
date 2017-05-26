@@ -1128,6 +1128,7 @@ def test_missing_formula_predict():
 
 
 def test_fvalue_implicit_constant():
+    # if constant is implicit, return nan see #2444
     nobs = 100
     np.random.seed(2)
     x = np.random.randn(nobs, 1)
@@ -1137,6 +1138,26 @@ def test_fvalue_implicit_constant():
     from statsmodels.regression.linear_model import OLS, WLS
 
     res = OLS(y, x).fit(cov_type='HC1')
+    assert_(np.isnan(res.fvalue))
+    assert_(np.isnan(res.f_pvalue))
+    res.summary()
+
+    res = WLS(y, x).fit(cov_type='HC1')
+    assert_(np.isnan(res.fvalue))
+    assert_(np.isnan(res.f_pvalue))
+    res.summary()
+
+
+def test_fvalue_only_constant():
+    # if only constant in model, return nan see #3642
+    nobs = 20
+    np.random.seed(2)
+    x = np.ones(nobs)
+    y = np.random.randn(nobs)
+
+    from statsmodels.regression.linear_model import OLS, WLS
+
+    res = OLS(y, x).fit(cov_type='hac', cov_kwds={'maxlags': 3})
     assert_(np.isnan(res.fvalue))
     assert_(np.isnan(res.f_pvalue))
     res.summary()
