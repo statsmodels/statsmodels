@@ -212,7 +212,7 @@ class Summary(object):
         simple_tables = _simple_tables(tables, settings)
         tab = [x.as_latex_tabular() for x in simple_tables]
         tab = '\n\\hline\n'.join(tab)
-        tab = re.sub('\\\\hline\\n\\\\hline\\n\\\\end{tabular}\\n\\\\begin{tabular}{l*}\\n','\hline\n\hline\n', tab) # create single tabular object for summary_col
+        tab = re.sub('\\\\hline\\n\\\\hline\\n\\\\end{tabular}\\n\\\\begin{tabular}{l*}\\n','\midrule\n\midrule\n', tab) # create single tabular object for summary_col
         out = '\\begin{table}', title, tab, '\\end{table}'
         out = '\n'.join(out)
         return out
