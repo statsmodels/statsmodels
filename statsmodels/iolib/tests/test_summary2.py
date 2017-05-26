@@ -43,9 +43,10 @@ x1    & -0.7500  & -1.5769   \\
         y1 = [6,4,2,7,4]
         reg1 = OLS(y1,x).fit()
         actual = reg1.summary().as_latex()
-        return actual.find('\\\\hline\\n\\\\hline\\n\\\\'
-        'end{tabular}\\n\\\\begin{tabular}{.*}\\n')
-        self.assertTrue(True)
+        string_to_find = r'''\end{tabular}
+\begin{tabular}'''
+        result = string_to_find in actual
+        self.assertIs(result, True)
 
 if __name__ == '__main__':
     unittest.main()
