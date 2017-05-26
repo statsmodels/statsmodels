@@ -1,6 +1,6 @@
 import unittest
 from statsmodels.regression.linear_model import OLS, add_constant
-from summary2 import summary_col
+from statsmodels.regression.summary2 import summary_col
 
 class TestSummaryLatex(unittest.TestCase):
 
