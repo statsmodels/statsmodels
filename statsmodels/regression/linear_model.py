@@ -2240,9 +2240,11 @@ class RegressionResults(base.LikelihoodModelResults):
             weights_func = kwds.get('weights_func', sw.weights_bartlett)
             res.cov_kwds['weights_func'] = weights_func
             if groups is not None:
+                groups = np.asarray(groups)
                 tt = (np.nonzero(groups[:-1] != groups[1:])[0] + 1).tolist()
                 nobs_ = len(groups)
             elif time is not None:
+                time = np.asarray(time)
                 # TODO: clumsy time index in cov_nw_panel
                 tt = (np.nonzero(time[1:] < time[:-1])[0] + 1).tolist()
                 nobs_ = len(time)
