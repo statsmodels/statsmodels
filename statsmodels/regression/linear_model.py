@@ -1580,6 +1580,8 @@ class RegressionResults(base.LikelihoodModelResults):
                 idx = lrange(k_params)
                 idx.pop(const_idx)
                 mat = mat[idx]  # remove constant
+                if mat.size == 0:  # see  #3642
+                    return np.nan
             ft = self.f_test(mat)
             # using backdoor to set another attribute that we already have
             self._cache['f_pvalue'] = ft.pvalue
