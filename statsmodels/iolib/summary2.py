@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 import datetime
 import textwrap
-from statsmodels.iolib.table import SimpleTable
-from statsmodels.iolib.tableformatting import fmt_latex, fmt_txt
+from .table import SimpleTable
+from .tableformatting import fmt_latex, fmt_txt
 import re
 
 
