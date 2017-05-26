@@ -453,7 +453,6 @@ class TestWaldAnovaOLSF(CheckAnovaMixin):
         mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
         cls.res = mod.fit()  # default use_t=True
 
-
     def test_predict_missing(self):
         ex = self.data[:5].copy()
         ex.iloc[0, 1] = np.nan
