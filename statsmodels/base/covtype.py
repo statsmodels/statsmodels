@@ -248,10 +248,12 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         res.cov_kwds['weights_func'] = weights_func
         # TODO: clumsy time index in cov_nw_panel
         if groups is not None:
+            groups = np.asarray(groups)
             tt = (np.nonzero(groups[:-1] != groups[1:])[0] + 1).tolist()
             nobs_ = len(groups)
         elif time is not None:
             # TODO: clumsy time index in cov_nw_panel
+            time = np.asarray(time)
             tt = (np.nonzero(time[1:] < time[:-1])[0] + 1).tolist()
             nobs_ = len(time)
         else:
