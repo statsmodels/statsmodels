@@ -1577,7 +1577,7 @@ class LikelihoodModelResults(Results):
             extra_constraints = []
         if combine_terms is None:
             combine_terms = []
-        design_info = getattr(result.model.data.orig_exog, 'design_info', None)
+        design_info = getattr(result.model.data, 'design_info', None)
 
         if design_info is None and extra_constraints is None:
             raise ValueError('no constraints, nothing to do')
