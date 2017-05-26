@@ -8,6 +8,7 @@ import datetime
 import textwrap
 from .table import SimpleTable
 from .tableformatting import fmt_latex, fmt_txt
+import re
 
 
 class Summary(object):
@@ -16,6 +17,7 @@ class Summary(object):
         self.settings = []
         self.extra_txt = []
         self.title = None
+        self._merge_latex = False
 
     def __str__(self):
         return self.as_text()
@@ -203,14 +205,22 @@ class Summary(object):
         tables = self.tables
         settings = self.settings
         title = self.title
+
         if title is not None:
-            title = '\\caption{' + title + '} \\\\'
+            title = '\\caption{' + title + '}'
         else:
             title = '\\caption{}'
 
         simple_tables = _simple_tables(tables, settings)
         tab = [x.as_latex_tabular() for x in simple_tables]
         tab = '\n\\hline\n'.join(tab)
+
+        to_replace = ('\\\\hline\\n\\\\hline\\n\\\\'
+        'end{tabular}\\n\\\\begin{tabular}{.*}\\n')
+
+        if self._merge_latex:
+             # create single tabular object for summary_col
+            tab = re.sub(to_replace,'\midrule\n\midrule\n', tab)
 
         out = '\\begin{table}', title, tab, '\\end{table}'
         out = '\n'.join(out)
@@ -498,6 +508,7 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
     summ = summ.fillna('')
 
     smry = Summary()
+    smry._merge_latex = True
     smry.add_df(summ, header=True, align='l')
     smry.add_text('Standard errors in parentheses.')
     if stars:
