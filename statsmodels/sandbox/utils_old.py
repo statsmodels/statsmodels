@@ -4,7 +4,7 @@ import scipy.interpolate
 import scipy.linalg
 
 from statsmodels.tools.tools import recipr, recipr0, clean0, fullrank
-from statsmodels.distributions.empirical_distribution import StepFunction
+from statsmodels.distributions.empirical_distribution import StepFunction, monotone_fn_inverter
 
 __docformat__ = 'restructuredtext'
 
@@ -50,21 +50,3 @@ def ECDF(values):
     y = (np.arange(n) + 1.) / n
     return StepFunction(x, y)
 
-def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
-    """
-    Given a monotone function fn (no checking is done to verify monotonicity)
-    and a set of x values, return an linearly interpolated approximation
-    to its inverse from its values on x.
-    """
-
-    if vectorized:
-        y = fn(x, **keywords)
-    else:
-        y = []
-        for _x in x:
-            y.append(fn(_x, **keywords))
-        y = np.array(y)
-
-    a = np.argsort(y)
-
-    return scipy.interpolate.interp1d(y[a], x[a])

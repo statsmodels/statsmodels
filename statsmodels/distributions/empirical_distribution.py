@@ -140,7 +140,7 @@ class ECDF(StepFunction):
             y = np.linspace(1./nobs,1,nobs)
             super(ECDF, self).__init__(x, y, side=side, sorted=True)
         else:
-            return interp1d(x,y,drop_errors=False,fill_values=ival)
+            return interp1d(x,y,drop_errors=False,fill_values=ival) # FIXME: what is the intended outcome here?  `return` inside an `__init__` probably won't achieve it.
 
 def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
     """
