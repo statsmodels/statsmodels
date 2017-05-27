@@ -27,46 +27,7 @@ from statsmodels.compat.python import get_function_name
 import numpy as np
 from scipy import linalg
 
-
-#this has been copied from nitime a long time ago
-#TODO: ceck whether class has changed in nitime
-class OneTimeProperty(object):
-
-
-    """A descriptor to make special properties that become normal attributes.
-
-    This is meant to be used mostly by the auto_attr decorator in this module.
-    Author: Fernando Perez, copied from nitime
-    """
-    def __init__(self,func):
-
-        """Create a OneTimeProperty instance.
-
-         Parameters
-         ----------
-           func : method
-
-             The method that will be called the first time to compute a value.
-             Afterwards, the method's name will be a standard attribute holding
-             the value of this computation.
-             """
-        self.getter = func
-        self.name = get_function_name(func)
-
-    def __get__(self,obj,type=None):
-        """This will be called on attribute access on the class or instance. """
-
-        if obj is None:
-            # Being called on the class, return the original function. This way,
-            # introspection works on the class.
-            #return func
-            print('class access')
-            return self.getter
-
-        val = self.getter(obj)
-        #print("** auto_attr - loading '%s'" % self.name  # dbg)
-        setattr(obj, self.name, val)
-        return val
+from statsmodels.tools.decorators import OneTimeProperty
 
 
 class PlainMatrixArray(object):
