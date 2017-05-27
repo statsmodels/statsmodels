@@ -14,7 +14,6 @@ from statsmodels.tools.tools import add_constant, Bunch
 from statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
 from statsmodels.tsa.adfvalues import mackinnonp, mackinnoncrit
 from statsmodels.tsa._bds import bds
-from statsmodels.tsa.arima_model import ARMA
 from statsmodels.tools.sm_exceptions import InterpolationWarning, MissingDataError
 
 
@@ -1033,6 +1032,9 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
 
 
 def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
+    from statsmodels.tsa.arima_model import ARMA
+    # We need to import this here instead of at the module-level to
+    # avoid a circular import.
     try:
         return ARMA(y, order=order, **model_kw).fit(disp=0, trend=trend,
                                                     start_params=start_params,
