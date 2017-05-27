@@ -94,7 +94,7 @@ class StepFunction(object):
         self.x = np.r_[-np.inf, _x]
         self.y = np.r_[ival, _y]
 
-        if not sorted:
+        if not sorted: # TODO: avoid built-in names
             asort = np.argsort(self.x)
             self.x = np.take(self.x, asort, 0)
             self.y = np.take(self.y, asort, 0)

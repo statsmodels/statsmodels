@@ -4,6 +4,7 @@ import scipy.interpolate
 import scipy.linalg
 
 from statsmodels.tools.tools import recipr, recipr0, clean0, fullrank
+from statsmodels.distributions.empirical_distribution import StepFunction
 
 __docformat__ = 'restructuredtext'
 
@@ -36,52 +37,7 @@ def rank(X, cond=1.0e-12):
         return int(not np.alltrue(np.equal(X, 0.)))
 
 
-class StepFunction(object):
-    """
-    A basic step function: values at the ends are handled in the simplest
-    way possible: everything to the left of x[0] is set to ival; everything
-    to the right of x[-1] is set to y[-1].
 
-    Examples
-    --------
-    >>> from numpy import arange
-    >>> from statsmodels.sandbox.utils_old import StepFunction
-    >>>
-    >>> x = arange(20)
-    >>> y = arange(20)
-    >>> f = StepFunction(x, y)
-    >>>
-    >>> print f(3.2)
-    3.0
-    >>> print f([[3.2,4.5],[24,-3.1]])
-    [[  3.   4.]
-     [ 19.   0.]]
-    """
-
-    def __init__(self, x, y, ival=0., sorted=False):
-
-        _x = np.asarray(x)
-        _y = np.asarray(y)
-
-        if _x.shape != _y.shape:
-            raise ValueError('in StepFunction: x and y do not have the same shape')
-        if len(_x.shape) != 1:
-            raise ValueError('in StepFunction: x and y must be 1-dimensional')
-
-        self.x = np.hstack([[-np.inf], _x])
-        self.y = np.hstack([[ival], _y])
-
-        if not sorted:
-            asort = np.argsort(self.x)
-            self.x = np.take(self.x, asort, 0)
-            self.y = np.take(self.y, asort, 0)
-        self.n = self.x.shape[0]
-
-    def __call__(self, time):
-
-        tind = np.searchsorted(self.x, time) - 1
-        _shape = tind.shape
-        return self.y[tind]
 
 def ECDF(values):
     """
