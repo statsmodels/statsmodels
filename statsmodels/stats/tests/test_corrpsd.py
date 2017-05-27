@@ -187,7 +187,8 @@ class TestCorrPSD1(CheckCorrPSDMixin):
         cls.res = cov1_r
 
 def test_corrpsd_threshold():
-    x = np.array([[1, -0.9, -0.9], [-0.9, 1, -0.9], [-0.9, -0.9, 1]])
+    #x = np.array([[1, -0.9, -0.9], [-0.9, 1, -0.9], [-0.9, -0.9, 1]])
+    x = np.array([[1, -0.5, -0.51], [-0.5, 1, -0.5], [-0.51, -0.5, 1]])
 
     #print np.linalg.eigvalsh(x)
     for threshold in [0, 1e-15, 1e-10, 1e-6]:
@@ -200,7 +201,7 @@ def test_corrpsd_threshold():
         y = corr_clipped(x, threshold=threshold)
         evals = np.linalg.eigvalsh(y)
         #print 'evals', evals, threshold
-        assert_allclose(evals[0], threshold, rtol=0.25, atol=1e-15)
+        assert_allclose(evals[0], threshold, rtol=0.0025, atol=1e-15)
 
         y = cov_nearest(x, method='nearest', n_fact=100, threshold=threshold)
         evals = np.linalg.eigvalsh(y)
@@ -212,7 +213,7 @@ def test_corrpsd_threshold():
         evals = np.linalg.eigvalsh(y)
         #print 'evals', evals, threshold
         #print evals[0] / threshold - 1
-        assert_allclose(evals[0], threshold, rtol=0.25, atol=1e-15)
+        assert_allclose(evals[0], threshold, rtol=0.0025, atol=1e-15)
 
 class Test_Factor(object):
 

@@ -16,10 +16,31 @@ from statsmodels.tools.tools import Bunch
 from statsmodels.tools.sm_exceptions import (IterationLimitWarning,
     iteration_limit_doc)
 
-def clip_evals(x, value=0): #threshold=0, value=0):
+def clip_evals(x, value=0, fudge=0):
+    """clip eigenvalues below threshold
+
+    Parameters
+    ----------
+    x : array_like
+        hermitian, symmetric matrix
+    value : float
+        threshold, all eigen values below are set to this value
+
+    Returns
+    -------
+    x_clipped : ndarray
+        returns array with all eigenvalues at least equal to value.
+        If no clipping is necessary, then the original array is returned.
+    clipped : bool
+        Indicator that is true if any clipping was performed.
+
+    """
     evals, evecs = np.linalg.eigh(x)
-    clipped = np.any(evals < 0)
-    x_new = np.dot(evecs * np.maximum(evals, value), evecs.T)
+    clipped = np.any(evals < value)
+    if clipped:
+        x_new = np.dot(evecs * np.maximum(evals, value + fudge), evecs.T)
+    else:
+        x_new = x
     return x_new, clipped
 
 
@@ -77,16 +98,18 @@ def corr_nearest(corr, threshold=1e-15, n_fact=100):
 
     for ii in range(int(len(corr) * n_fact)):
         x_adj = x_new - diff
-        x_psd, clipped = clip_evals(x_adj, value=threshold)
-        if not clipped:
+        x_psd, clipped = clip_evals(x_adj, value=threshold, fudge=1e-16)
+        if not clipped or np.linalg.eigvalsh(x_psd).min() >= threshold:
             x_new = x_psd
             break
         diff = x_psd - x_adj
         x_new = x_psd.copy()
         x_new[diag_idx, diag_idx] = 1
     else:
+        raise
         import warnings
-        warnings.warn(iteration_limit_doc, IterationLimitWarning)
+        warnings.warn(iteration_limit_doc + '%d iterations' % (ii + 1),
+                      IterationLimitWarning)
 
     return x_new
 
