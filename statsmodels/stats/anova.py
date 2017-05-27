@@ -361,26 +361,3 @@ def anova_lm(*args, **kwargs):
 
     return table
 
-
-if __name__ == "__main__":
-    import pandas
-    from statsmodels.formula.api import ols
-    # in R
-    #library(car)
-    #write.csv(Moore, "moore.csv", row.names=FALSE)
-    moore = pandas.read_table('moore.csv', delimiter=",", skiprows=1,
-                                names=['partner_status','conformity',
-                                    'fcategory','fscore'])
-    moore_lm = ols('conformity ~ C(fcategory, Sum)*C(partner_status, Sum)',
-                    data=moore).fit()
-
-    mooreB = ols('conformity ~ C(partner_status, Sum)', data=moore).fit()
-
-    # for each term you just want to test vs the model without its
-    # higher-order terms
-
-    # using Monette-Fox slides and Marden class notes for linear algebra /
-    # orthogonal complement
-    # https://netfiles.uiuc.edu/jimarden/www/Classes/STAT324/
-
-    table = anova_lm(moore_lm, typ=2)

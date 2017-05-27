@@ -856,6 +856,3 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
     return cmat
 
 
-
-if __name__ == '__main__':
-    pass

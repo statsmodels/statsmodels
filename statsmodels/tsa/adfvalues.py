@@ -383,5 +383,4 @@ def mackinnoncrit(N=1, regression ="c", nobs=inf):
     else:
         return polyval(eval("tau_"+reg+"_2010["+str(N-1)+",:,::-1].T"),1./nobs)
 
-if __name__=="__main__":
-    pass
+
