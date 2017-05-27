@@ -38,7 +38,17 @@ def rank(X, cond=1.0e-12):
 
 
 
-
+# Note 2017-05-26: This behaves slightly differently than
+# statsmodels.distributions.empirical_distribution.ECDF
+# For reference, the example in the docstring from that class is roughly:
+# >>> ecdf = empirical_distribution.ECDF([3, 3, 1, 4])
+# >>> ecdf([3, 55, 0.5, 1.5])
+# array([ 0.75,  1.  ,  0.  ,  0.25])
+#
+# The same values here produce:
+# >>> ecdf = utils_old.ECDF([3, 3, 1, 4])
+# >>> ecdf([3, 55, 0.5, 1.5])
+# array([ 0.25,  1.  ,  0.  ,  0.25])
 def ECDF(values):
     """
     Return the ECDF of an array as a step function.
