@@ -4,7 +4,7 @@
 from statsmodels.compat.python import lmap, asbytes
 import numpy as np
 import statsmodels.api as sm
-from statsmodels.sandbox.sysreg import *
+from statsmodels.sandbox.sysreg import SUR, Sem2SLS
 
 #for Python 3 compatibility
 

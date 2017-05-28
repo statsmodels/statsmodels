@@ -3,7 +3,7 @@
 TODO: remove in 0.5.0
 '''
 
-from statsmodels.stats.sandwich_covariance import *
+from statsmodels.stats.sandwich_covariance import se_cov, cov_hac, weights_bartlett
 #from statsmodels.stats.moment_helpers import se_cov
 
 #not in __all__
