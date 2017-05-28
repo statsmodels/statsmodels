@@ -22,6 +22,7 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import chain_dot
 from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tsa.tsatools import vec, unvec
+from statsmodels.tsa import stattools
 
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
 from statsmodels.tsa.vector_ar.output import VARSummary
@@ -496,7 +497,7 @@ class VAR(tsbase.TimeSeriesModel):
         selections : dict {info_crit -> selected_order}
         """
         if maxlags is None:
-            maxlags = tsa.default_lags(len(self.endog))
+            maxlags = stattools.default_lags(len(self.endog))
 
         ics = defaultdict(list)
         for p in range(maxlags + 1):
