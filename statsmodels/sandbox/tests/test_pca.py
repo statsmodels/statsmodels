@@ -13,7 +13,7 @@ from statsmodels.sandbox import tools
 from statsmodels.sandbox.tools import pca, pcasvd
 from statsmodels.tsa.arima_process import arma_impulse_response
 
-from .datamlw import *
+from .datamlw import princomp1, princomp2, princomp3
 
 
 def check_pca_princomp(pcares, princomp):
