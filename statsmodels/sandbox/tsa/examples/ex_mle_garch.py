@@ -70,9 +70,10 @@ import numdifftools as ndt
 
 import statsmodels.api as sm
 from statsmodels.sandbox import tsa
-from statsmodels.sandbox.tsa.garch import generate_kindofgarch, \
-  generate_garch, generate_gjrgarch, garchplot, Garch, Garch0, \
-  loglike_GARCH11, Arma, miso_lfilter
+from statsmodels.sandbox.tsa.garch import (generate_kindofgarch,
+                                          generate_garch, generate_gjrgarch,
+                                          garchplot, Garch, Garch0,
+                                          loglike_GARCH11, Arma, miso_lfilter)
 
 
 nobs = 1000
