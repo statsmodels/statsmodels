@@ -186,8 +186,8 @@ class MultivariateVARKnown(object):
 
         # Test against R package KFAS values
         if self.test_against_KFAS:
-            path = (current_path + os.sep +
-                    'results/results_simulation_smoothing0.csv')
+            path = os.path.join(current_path,
+                    'results', 'results_simulation_smoothing0.csv')
             true = pd.read_csv(path)
 
             assert_allclose(sim.simulated_state,
@@ -265,8 +265,8 @@ class MultivariateVARKnown(object):
 
         # Test against R package KFAS values
         if self.test_against_KFAS:
-            path = (current_path + os.sep +
-                    'results/results_simulation_smoothing1.csv')
+            path = os.path.join(current_path,
+                    'results', 'results_simulation_smoothing1.csv')
             true = pd.read_csv(path)
             assert_allclose(sim.simulated_state,
                             true[['state1', 'state2', 'state3']].T,
@@ -369,8 +369,8 @@ class MultivariateVARKnown(object):
 
         # Test against R package KFAS values
         if self.test_against_KFAS:
-            path = (current_path + os.sep +
-                    'results/results_simulation_smoothing2.csv')
+            path = os.path.join(current_path,
+                    'results', 'results_simulation_smoothing2.csv')
             true = pd.read_csv(path)
             assert_allclose(sim.simulated_state.T,
                             true[['state1', 'state2', 'state3']],
@@ -558,11 +558,11 @@ class TestMultivariateVAR(MultivariateVAR):
     @classmethod
     def setup_class(cls):
         super(TestMultivariateVAR, cls).setup_class()
-        path = (current_path + os.sep +
-                'results/results_simulation_smoothing3_variates.csv')
+        path = os.path.join(current_path,
+                'results', 'results_simulation_smoothing3_variates.csv')
         cls.variates = pd.read_csv(path).values.squeeze()
-        path = (current_path + os.sep +
-                'results/results_simulation_smoothing3.csv')
+        path = os.path.join(current_path,
+                'results', 'results_simulation_smoothing3.csv')
         cls.true = pd.read_csv(path)
         cls.true_llf = 1695.34872
 

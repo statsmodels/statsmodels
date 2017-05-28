@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #cython: boundscheck=False
 #cython: wraparound=False
 #cython: cdivision=False

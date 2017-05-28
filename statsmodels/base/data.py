@@ -351,6 +351,13 @@ class ModelData(object):
     def param_names(self, values):
         self._param_names = values
 
+    def __len__(self):
+        dlen = None
+        labels = self.row_labels
+        if labels is not None:
+            dlen = len(labels)
+        return dlen
+
     @cache_readonly
     def row_labels(self):
         exog = self.orig_exog

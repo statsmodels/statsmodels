@@ -26,8 +26,8 @@ except ImportError:
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
-output_path = 'results' + os.sep + 'results_dynamic_factor_stata.csv'
-output_results = pd.read_csv(current_path + os.sep + output_path)
+output_path = os.path.join(current_path, 'results', 'results_dynamic_factor_stata.csv')
+output_results = pd.read_csv(output_path)
 
 
 class CheckDynamicFactor(object):

@@ -7,8 +7,7 @@ Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
 
 from __future__ import division, print_function
-from statsmodels.compat.python import (range, lrange, string_types, StringIO, iteritems,
-                                cStringIO)
+from statsmodels.compat.python import (range, lrange, string_types, StringIO, iteritems)
 
 from collections import defaultdict
 
@@ -17,6 +16,7 @@ import numpy.linalg as npl
 from numpy.linalg import cholesky as chol, solve
 import scipy.stats as stats
 import scipy.linalg as L
+import pandas as pd
 
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import chain_dot
@@ -155,7 +155,7 @@ def _var_acf(coefs, sig_u):
     A = util.comp_matrix(coefs)
     # construct VAR(1) noise covariance
     SigU = np.zeros((k*p, k*p))
-    SigU[:k,:k] = sig_u
+    SigU[:k, :k] = sig_u
 
     # vec(ACF) = (I_(kp)^2 - kron(A, A))^-1 vec(Sigma_U)
     vecACF = L.solve(np.eye((k*p)**2) - np.kron(A, A), vec(SigU))
@@ -190,6 +190,9 @@ def forecast(y, coefs, intercept, steps):
     k = len(coefs[0])
     # initial value
     forcs = np.zeros((steps, k)) + intercept
+
+    if isinstance(y, (pd.Series, pd.DataFrame)):
+        y = y.values # TODO: is there a better way to handle this?
 
     # h=0 forecast should be latest observation
     # forcs[0] = y[-1]
@@ -246,7 +249,7 @@ def var_loglike(resid, omega, nobs):
     omega : ndarray
         Sigma hat matrix.  Each element i,j is the average product of the
         OLS residual for variable i and the OLS residual for variable j or
-        np.dot(resid.T,resid)/nobs.  There should be no correction for the
+        np.dot(resid.T, resid)/nobs.  There should be no correction for the
         degrees of freedom.
     nobs : int
 
@@ -278,11 +281,11 @@ def _reordered(self, order):
     sigma_u = self.sigma_u
     names = self.names
     k_ar = self.k_ar
-    endog_new = np.zeros([np.size(endog,0),np.size(endog,1)])
-    endog_lagged_new = np.zeros([np.size(endog_lagged,0), np.size(endog_lagged,1)])
-    params_new_inc, params_new = [np.zeros([np.size(params,0), np.size(params,1)])
+    endog_new = np.zeros([np.size(endog, 0), np.size(endog, 1)])
+    endog_lagged_new = np.zeros([np.size(endog_lagged, 0), np.size(endog_lagged, 1)])
+    params_new_inc, params_new = [np.zeros([np.size(params, 0), np.size(params, 1)])
                                   for i in range(2)]
-    sigma_u_new_inc, sigma_u_new = [np.zeros([np.size(sigma_u,0), np.size(sigma_u,1)])
+    sigma_u_new_inc, sigma_u_new = [np.zeros([np.size(sigma_u, 0), np.size(sigma_u, 1)])
                                     for i in range(2)]
     num_end = len(self.params[0])
     names_new = []
@@ -290,18 +293,18 @@ def _reordered(self, order):
     #Rearrange elements and fill in new arrays
     k = self.k_trend
     for i, c in enumerate(order):
-        endog_new[:,i] = self.endog[:,c]
+        endog_new[:, i] = self.endog[:, c]
         if k > 0:
-            params_new_inc[0,i] = params[0,i]
-            endog_lagged_new[:,0] = endog_lagged[:,0]
+            params_new_inc[0, i] = params[0, i]
+            endog_lagged_new[:, 0] = endog_lagged[:, 0]
         for j in range(k_ar):
-            params_new_inc[i+j*num_end+k,:] = self.params[c+j*num_end+k,:]
-            endog_lagged_new[:,i+j*num_end+k] = endog_lagged[:,c+j*num_end+k]
-        sigma_u_new_inc[i,:] = sigma_u[c,:]
+            params_new_inc[i+j*num_end+k, :] = self.params[c+j*num_end+k, :]
+            endog_lagged_new[:, i+j*num_end+k] = endog_lagged[:, c+j*num_end+k]
+        sigma_u_new_inc[i, :] = sigma_u[c, :]
         names_new.append(names[c])
     for i, c in enumerate(order):
-        params_new[:,i] = params_new_inc[:,c]
-        sigma_u_new[:,i] = sigma_u_new_inc[:,c]
+        params_new[:, i] = params_new_inc[:, c]
+        sigma_u_new[:, i] = sigma_u_new_inc[:, c]
 
     return VARResults(endog=endog_new, endog_lagged=endog_lagged_new,
                       params=params_new, sigma_u=sigma_u_new,
@@ -374,7 +377,7 @@ class VAR(tsbase.TimeSeriesModel):
 
         # fit out of sample
         y = y[-k_ar:]
-        coefs = params[k_trend:].reshape((k_ar, k, k)).swapaxes(1,2)
+        coefs = params[k_trend:].reshape((k_ar, k, k)).swapaxes(1, 2)
         predictedvalues[pv_end:] = forecast(y, coefs, intercept, out_of_sample)
         return predictedvalues
 
@@ -425,7 +428,7 @@ class VAR(tsbase.TimeSeriesModel):
                                 % (ic, sorted(selections)))
             lags = selections[ic]
             if verbose:
-                print('Using %d based on %s criterion' %  (lags, ic))
+                print('Using %d based on %s criterion' % (lags, ic))
         else:
             if lags is None:
                 lags = 1
@@ -515,7 +518,7 @@ class VAR(tsbase.TimeSeriesModel):
 
         return selected_orders
 
-class VARProcess(object):
+class VARProcess(tsbase.TimeSeriesProcess):
     """
     Class represents a known VAR(p) process
 
@@ -675,7 +678,19 @@ class VARProcess(object):
         -----
         Lutkepohl pp 37-38
         """
-        return forecast(y, self.coefs, self.intercept, steps)
+        fdata = forecast(y, self.coefs, self.intercept, steps)
+        idx = self._get_forecast_index(y, steps)
+        if idx is not None:
+            cols = getattr(y, 'columns', None)
+            if cols is None and hasattr(self, 'model'):
+                # If y is a a DataFrame, we check its columns first.  If
+                # for some reason we don't find columns there, we look at
+                # self.model.endog_names.  But note that VARProcess does
+                # not have a `model` attribute, so this check is specific
+                # to instances of the VARResults subclass.
+                cols = self.model.endog_names
+            fdata = pd.DataFrame(fdata, columns=cols, index=idx)
+        return fdata
 
     def mse(self, steps):
         r"""
@@ -729,7 +744,7 @@ class VARProcess(object):
 
         Returns
         -------
-        (lower, mid, upper) : (ndarray, ndarray, ndarray)
+        (mid, lower, upper) : (ndarray, ndarray, ndarray)
         """
         assert(0 < alpha < 1)
         q = util.norm_signif_level(alpha)
@@ -740,7 +755,7 @@ class VARProcess(object):
         forc_lower = point_forecast - q * sigma
         forc_upper = point_forecast + q * sigma
 
-        return point_forecast, forc_lower, forc_upper
+        return (point_forecast, forc_lower, forc_upper)
 
 
 #-------------------------------------------------------------------------------
@@ -818,7 +833,7 @@ class VARResults(VARProcess):
     _model_type = 'VAR'
 
     def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
-                 model=None, trend='c', names=None, dates=None):
+                 model=None, trend='c', names=None, dates=None): ## How does lag_order relate to k_ar?  Are they the same?
 
         self.model = model
         self.y = self.endog = endog  #keep alias for now
@@ -1089,17 +1104,17 @@ class VARResults(VARProcess):
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
 
-        if (orth == True and cum == True):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+        if (orth is True and cum is True):
+            fill_coll = lambda sim: VAR(sim).fit(maxlags=k_ar).\
                               orth_ma_rep(maxn=T).cumsum(axis=0)
-        elif (orth == True and cum == False):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+        elif (orth is True and cum is False):
+            fill_coll = lambda sim: VAR(sim).fit(maxlags=k_ar).\
                               orth_ma_rep(maxn=T)
-        elif (orth == False and cum == True):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+        elif (orth is False and cum is True):
+            fill_coll = lambda sim: VAR(sim).fit(maxlags=k_ar).\
                               ma_rep(maxn=T).cumsum(axis=0)
-        elif (orth == False and cum == False):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+        elif (orth is False and cum is False):
+            fill_coll = lambda sim: VAR(sim).fit(maxlags=k_ar).\
                               ma_rep(maxn=T)
 
         for i in range(repl):
@@ -1107,12 +1122,12 @@ class VARResults(VARProcess):
             sim = util.varsim(coefs, intercept, sigma_u,
                               seed=seed, steps=nobs+burn)
             sim = sim[burn:]
-            ma_coll[i,:,:,:] = fill_coll(sim)
+            ma_coll[i, :, :, :] = fill_coll(sim)
 
         ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
-        index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
-        lower = ma_sort[index[0],:, :, :]
-        upper = ma_sort[index[1],:, :, :]
+        index = round(signif/2*repl)-1, round((1-signif/2)*repl)-1
+        lower = ma_sort[index[0], :, :, :]
+        upper = ma_sort[index[1], :, :, :]
         return lower, upper
 
     def irf_resim(self, orth=False, repl=1000, T=10,
@@ -1159,17 +1174,17 @@ class VARResults(VARProcess):
 
         ma_coll = np.zeros((repl, T+1, neqs, neqs))
 
-        if (orth == True and cum == True):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+        if (orth is True and cum is True):
+            fill_coll = lambda sim: VAR(sim).fit(maxlags=k_ar).\
                               orth_ma_rep(maxn=T).cumsum(axis=0)
-        elif (orth == True and cum == False):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+        elif (orth is True and cum is False):
+            fill_coll = lambda sim: VAR(sim).fit(maxlags=k_ar).\
                               orth_ma_rep(maxn=T)
-        elif (orth == False and cum == True):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+        elif (orth is False and cum is True):
+            fill_coll = lambda sim: VAR(sim).fit(maxlags=k_ar).\
                               ma_rep(maxn=T).cumsum(axis=0)
-        elif (orth == False and cum == False):
-            fill_coll = lambda sim : VAR(sim).fit(maxlags=k_ar).\
+        elif (orth is False and cum is False):
+            fill_coll = lambda sim: VAR(sim).fit(maxlags=k_ar).\
                               ma_rep(maxn=T)
 
         for i in range(repl):
@@ -1177,7 +1192,7 @@ class VARResults(VARProcess):
             sim = util.varsim(coefs, intercept, sigma_u,
                               seed=seed, steps=nobs+burn)
             sim = sim[burn:]
-            ma_coll[i,:,:,:] = fill_coll(sim)
+            ma_coll[i, :, :, :] = fill_coll(sim)
 
         return ma_coll
 
@@ -1220,7 +1235,7 @@ class VARResults(VARProcess):
     def _bmat_forc_cov(self):
         # B as defined on p. 96 of Lut
         upper = np.zeros((1, self.df_model))
-        upper[0,0] = 1
+        upper[0, 0] = 1
 
         lower_dim = self.neqs * (self.k_ar - 1)
         I = np.eye(lower_dim)
@@ -1273,7 +1288,7 @@ class VARResults(VARProcess):
     def reorder(self, order):
         """Reorder variables for structural specification
         """
-        if len(order) != len(self.params[0,:]):
+        if len(order) != len(self.params[0, :]):
             raise ValueError("Reorder specification length should match number of endogenous variables")
        #This convert order to list of integers if given as strings
         if isinstance(order[0], string_types):
@@ -1356,12 +1371,12 @@ class VARResults(VARProcess):
 
         conclusion = 'fail to reject' if statistic < crit_value else 'reject'
         results = {
-            'statistic' : statistic,
-            'crit_value' : crit_value,
-            'pvalue' : pvalue,
-            'df' : df,
-            'conclusion' : conclusion,
-            'signif' :  signif
+            'statistic': statistic,
+            'crit_value': crit_value,
+            'pvalue': pvalue,
+            'df': df,
+            'conclusion': conclusion,
+            'signif': signif
         }
 
         if verbose:
@@ -1433,12 +1448,12 @@ class VARResults(VARProcess):
         conclusion = 'fail to reject' if lam_omni < crit_omni else 'reject'
 
         results = {
-            'statistic' : lam_omni,
-            'crit_value' : crit_omni,
-            'pvalue' : omni_pvalue,
-            'df' : self.neqs * 2,
-            'conclusion' : conclusion,
-            'signif' :  signif
+            'statistic': lam_omni,
+            'crit_value': crit_omni,
+            'pvalue': omni_pvalue,
+            'df': self.neqs * 2,
+            'conclusion': conclusion,
+            'signif': signif
         }
 
         if verbose:
@@ -1477,10 +1492,10 @@ class VARResults(VARProcess):
         fpe = ((nobs + self.df_model) / self.df_resid) ** neqs * np.exp(ld)
 
         return {
-            'aic' : aic,
-            'bic' : bic,
-            'hqic' : hqic,
-            'fpe' : fpe
+            'aic': aic,
+            'bic': bic,
+            'hqic': hqic,
+            'fpe': fpe
             }
 
     @property
@@ -1511,19 +1526,19 @@ class VARResults(VARProcess):
         neqs = self.neqs
         k_ar = self.k_ar
         p = neqs * k_ar
-        arr = np.zeros((p,p))
-        arr[:neqs,:] = np.column_stack(self.coefs)
-        arr[neqs:,:-neqs] = np.eye(p-neqs)
+        arr = np.zeros((p, p))
+        arr[:neqs, :] = np.column_stack(self.coefs)
+        arr[neqs:, :-neqs] = np.eye(p-neqs)
         roots = np.linalg.eig(arr)[0]**-1
         idx = np.argsort(np.abs(roots))[::-1] # sort by reverse modulus
         return roots[idx]
 
 class VARResultsWrapper(wrap.ResultsWrapper):
-    _attrs = {'bse' : 'columns_eq', 'cov_params' : 'cov',
-              'params' : 'columns_eq', 'pvalues' : 'columns_eq',
-              'tvalues' : 'columns_eq', 'sigma_u' : 'cov_eq',
-              'sigma_u_mle' : 'cov_eq',
-              'stderr' : 'columns_eq'}
+    _attrs = {'bse': 'columns_eq', 'cov_params': 'cov',
+              'params': 'columns_eq', 'pvalues': 'columns_eq',
+              'tvalues': 'columns_eq', 'sigma_u': 'cov_eq',
+              'sigma_u_mle': 'cov_eq',
+              'stderr': 'columns_eq'}
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
                                     _attrs)
     _methods = {}
@@ -1582,7 +1597,7 @@ class FEVD(object):
         """
         raise NotImplementedError
 
-    def plot(self, periods=None, figsize=(10,10), **plot_kwds):
+    def plot(self, periods=None, figsize=(10, 10), **plot_kwds):
         """Plot graphical display of FEVD
 
         Parameters
@@ -1646,52 +1661,4 @@ def _compute_acov(x, nlags=1):
 def _acovs_to_acorrs(acovs):
     sd = np.sqrt(np.diag(acovs[0]))
     return acovs / np.outer(sd, sd)
-
-if __name__ == '__main__':
-    import statsmodels.api as sm
-    from statsmodels.tsa.vector_ar.util import parse_lutkepohl_data
-    import statsmodels.tools.data as data_util
-
-    np.set_printoptions(linewidth=140, precision=5)
-
-    sdata, dates = parse_lutkepohl_data('data/%s.dat' % 'e1')
-
-    names = sdata.dtype.names
-    data = data_util.struct_to_ndarray(sdata)
-    adj_data = np.diff(np.log(data), axis=0)
-    # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
-    model = VAR(adj_data[:-16], dates=dates[1:-16], names=names)
-    # model = VAR(adj_data[:-16], dates=dates[1:-16], names=names)
-
-    est = model.fit(maxlags=2)
-    irf = est.irf()
-
-    y = est.y[-2:]
-    """
-    # irf.plot_irf()
-
-    # i = 2; j = 1
-    # cv = irf.cum_effect_cov(orth=True)
-    # print np.sqrt(cv[:, j * 3 + i, j * 3 + i]) / 1e-2
-
-    # data = np.genfromtxt('Canada.csv', delimiter=',', names=True)
-    # data = data.view((float, 4))
-    """
-
-    '''
-    mdata = sm.datasets.macrodata.load().data
-    mdata2 = mdata[['realgdp','realcons','realinv']]
-    names = mdata2.dtype.names
-    data = mdata2.view((float,3))
-    data = np.diff(np.log(data), axis=0)
-
-    import pandas as pn
-    df = pn.DataFrame.fromRecords(mdata)
-    df = np.log(df.reindex(columns=names))
-    df = (df - df.shift(1)).dropna()
-
-    model = VAR(df)
-    est = model.fit(maxlags=2)
-    irf = est.irf()
-    '''
 

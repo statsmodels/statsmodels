@@ -11,6 +11,7 @@ import os
 import sys
 
 import numpy as np
+import pandas as pd
 
 import statsmodels.api as sm
 import statsmodels.tsa.vector_ar.util as util
@@ -402,6 +403,18 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     def test_forecast(self):
         point = self.res.forecast(self.res.y[-5:], 5)
+
+    def test_forecast_index(self):
+        # See GH #3599 for discussion on this topic
+        data = self.res.endog[-5:]
+        idx = pd.date_range('2017-04-01', periods=5, freq='MS')
+        data = pd.DataFrame(data, index=idx)
+        fcast = self.res.forecast(data, 5)
+        assert isinstance(fcast, pd.DataFrame), fcast
+        fidx = fcast.index
+        assert isinstance(fidx, pd.DatetimeIndex), fidx
+        assert fidx.freq == 'MS', fidx.freq
+        assert fidx[0] == idx[-1]+1, (fidx[0], idx[-1], idx[-1]+1,)
 
     def test_forecast_interval(self):
         y = self.res.y[:-self.p:]
