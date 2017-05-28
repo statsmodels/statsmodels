@@ -500,7 +500,7 @@ class ARMA(tsbase.TimeSeriesModel):
                 # make sure we don't run into small data problems in AR fit
                 nobs = len(endog)
                 if start_ar_lags is None:
-                    maxlag = stattools.default_lag(nobs)
+                    maxlag = stattools.default_lags(nobs)
                     if maxlag >= nobs:
                         maxlag = nobs - 1
                     armod = AR(endog).fit(ic='bic', trend='nc', maxlag=maxlag)

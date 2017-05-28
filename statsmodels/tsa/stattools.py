@@ -19,7 +19,7 @@ from statsmodels.tools.sm_exceptions import InterpolationWarning, MissingDataErr
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
-           'adfuller', 'kpss', 'bds']
+           'adfuller', 'kpss', 'bds', 'default_lags']
 
 
 #NOTE: now in two places to avoid circular import

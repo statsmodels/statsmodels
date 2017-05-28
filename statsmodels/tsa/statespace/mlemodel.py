@@ -2309,7 +2309,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 lags = min(40, self.nobs_effective - 1)
                 # TODO: the docstring has a different default setting for lags
                 # Which of these should be changed?  If the docstring is
-                # correct, we can use stattools.default_lag
+                # correct, we can use stattools.default_lags
 
             for i in range(self.model.k_endog):
                 results = acorr_ljungbox(

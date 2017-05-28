@@ -527,7 +527,7 @@ class AR(tsbase.TimeSeriesModel):
         endog = self.endog
 
         if maxlag is None:
-            maxlag = stattools.default_lag(nobs)
+            maxlag = stattools.default_lags(nobs)
         k_ar = maxlag  # stays this if ic is None
 
         # select lag length
