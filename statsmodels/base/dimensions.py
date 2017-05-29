@@ -140,6 +140,23 @@ class CssKarNobsMixin(object):
 		return float(nobs)
 
 
+class WNobsMixin(object):
+	"""
+
+	This mixin is specific to GLM Model, defines a `wnobs` property in
+	terms of the model's `freq_weights` attribute.
+
+	"""
+
+	@property
+	def wnobs(self):
+		if (self.freq_weights is not None) and (self.freq_weights.shape[0] == self.endog.shape[0]):
+			wnobs = bn.nansum(self.freq_weights) # self.freq_weights.sum()
+		else:
+			wnobs = self.exog.shape[0] ## wexog??  # TODO: not hit in tests
+		return wnobs
+
+
 class KTrendMixin(object):
 	# Note: making k_exog a cache_readonly or cached_property breaks
 	# a couple of ARIMA tests; not sure why.

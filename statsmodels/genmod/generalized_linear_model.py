@@ -28,6 +28,7 @@ import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 import statsmodels.regression._tools as reg_tools
 
+from statsmodels.base import dimensions
 
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
@@ -48,7 +49,7 @@ def _check_convergence(criterion, iteration, atol, rtol):
                        atol=atol, rtol=rtol)
 
 
-class GLM(base.LikelihoodModel):
+class GLM(dimensions.WNobsMixin, base.LikelihoodModel):
     __doc__ = """
     Generalized Linear Models class
 
@@ -298,15 +299,7 @@ class GLM(base.LikelihoodModel):
                                             np.transpose(self.pinv_wexog))
 
         self.df_model = np_matrix_rank(self.exog) - 1
-
-
-        if (self.freq_weights is not None) and \
-           (self.freq_weights.shape[0] == self.endog.shape[0]):
-            self.wnobs = self.freq_weights.sum()
-            self.df_resid = self.wnobs - self.df_model - 1
-        else:
-            self.wnobs = self.exog.shape[0]
-            self.df_resid = self.exog.shape[0] - self.df_model - 1
+        self.df_resid = self.wnobs - self.df_model - 1
 
     def _check_inputs(self, family, offset, exposure, endog, freq_weights):
 
