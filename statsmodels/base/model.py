@@ -15,6 +15,7 @@ from statsmodels.formula import handle_formula_data
 from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.base.optimizer import Optimizer
 
+from statsmodels.base import dimensions
 
 _model_params_doc = """
     Parameters
@@ -41,7 +42,7 @@ _extra_param_doc = """
 """
 
 
-class Model(object):
+class Model(dimensions.NEQsMixin, dimensions.NobsMixin):
     __doc__ = """
     A (predictive) statistical model. Intended to be subclassed not used.
 
@@ -745,7 +746,7 @@ class GenericLikelihoodModel(LikelihoodModel):
     #fit.__doc__ += LikelihoodModel.fit.__doc__
 
 
-class Results(object):
+class Results(dimensions.NEQsMixin, dimensions.NobsMixin):
     """
     Class to contain model results
 
