@@ -15,6 +15,7 @@ Examples:
 
 """
 import numpy as np
+import bottleneck as bn
 
 from statsmodels.tools.decorators import cache_readonly
 
