@@ -40,6 +40,8 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.compat.numpy import np_matrix_rank
 from pandas.core.api import get_dummies
 
+from statsmodels.base import dimensions
+
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 try:
     import cvxopt
@@ -2650,7 +2652,7 @@ class NegativeBinomialResults(CountResults):
         return -2*self.llf + np.log(self.nobs)*(self.df_model +
                                                 self.k_constant + k_extra)
 
-class L1CountResults(DiscreteResults):
+class L1CountResults(dimensions.L1Estimator, DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
             "A results class for count data fit by l1 regularization",
             "extra_attr" : _l1_results_attr}
@@ -2658,10 +2660,6 @@ class L1CountResults(DiscreteResults):
 
     def __init__(self, model, cntfit):
         super(L1CountResults, self).__init__(model, cntfit)
-        # self.trimmed is a boolean array with T/F telling whether or not that
-        # entry in params has been set zero'd out.
-        self.trimmed = cntfit.mle_retvals['trimmed']
-        self.nnz_params = (self.trimmed == False).sum()
         # update degrees of freedom
         self.model.df_model = self.nnz_params - 1
         self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
@@ -2887,16 +2885,12 @@ class ProbitResults(BinaryResults):
         cdf = model.cdf(XB)
         return endog * pdf/cdf - (1-endog)*pdf/(1-cdf)
 
-class L1BinaryResults(BinaryResults):
+class L1BinaryResults(dimensions.L1Estimator, BinaryResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
     "Results instance for binary data fit by l1 regularization",
     "extra_attr" : _l1_results_attr}
     def __init__(self, model, bnryfit):
         super(L1BinaryResults, self).__init__(model, bnryfit)
-        # self.trimmed is a boolean array with T/F telling whether or not that
-        # entry in params has been set zero'd out.
-        self.trimmed = bnryfit.mle_retvals['trimmed']
-        self.nnz_params = (self.trimmed == False).sum()
         self.model.df_model = self.nnz_params - 1
         self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
         self.df_model = self.model.df_model
@@ -3036,17 +3030,12 @@ class MultinomialResults(DiscreteResults):
         return smry
 
 
-class L1MultinomialResults(MultinomialResults):
+class L1MultinomialResults(dimensions.L1Estimator, MultinomialResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
         "A results class for multinomial data fit by l1 regularization",
         "extra_attr" : _l1_results_attr}
     def __init__(self, model, mlefit):
         super(L1MultinomialResults, self).__init__(model, mlefit)
-        # self.trimmed is a boolean array with T/F telling whether or not that
-        # entry in params has been set zero'd out.
-        self.trimmed = mlefit.mle_retvals['trimmed']
-        self.nnz_params = (self.trimmed == False).sum()
-
         #Note: J-1 constants
         self.model.df_model = self.nnz_params - (self.model.J - 1)
         self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)

@@ -1175,8 +1175,7 @@ class LikelihoodModelResults(Results):
             return cov_p
 
     #TODO: make sure this works as needed for GLMs
-    def t_test(self, r_matrix, cov_p=None, scale=None,
-               use_t=None):
+    def t_test(self, r_matrix, cov_p=None, scale=None, use_t=None):
         """
         Compute a t-test for a each linear hypothesis of the form Rb = q
 
