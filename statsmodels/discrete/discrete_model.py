@@ -17,7 +17,8 @@ W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 """
 from __future__ import division
 
-__all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial"]
+__all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
+           "GeneralizedPoisson"]
 
 from statsmodels.compat.python import lmap, lzip, range
 import numpy as np
@@ -1172,6 +1173,157 @@ class Poisson(CountModel):
         X = self.exog
         L = np.exp(np.dot(X,params) + exposure + offset)
         return -np.dot(L*X.T, X)
+
+class GeneralizedPoisson(CountModel):
+    __doc__ = """
+    Generalized Poisson model for count data
+
+    %(params)s
+    %(extra_params)s
+
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    """ % {'params' : base._model_params_doc,
+           'extra_params' :
+           """offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+
+    """ + base._missing_param_doc}
+
+    def __init__(self, endog, exog, p = 1, offset=None,
+                       exposure=None, missing='none', **kwargs):
+        super(GeneralizedPoisson, self).__init__(endog, exog, offset=offset,
+                                               exposure=exposure,
+                                               missing=missing, **kwargs)
+        self.p = p - 1
+
+    def loglike(self, params):
+        """
+        Loglikelihood of Generalized Poisson model
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model.
+
+        Returns
+        -------
+        loglike : float
+            The log-likelihood function of the model evaluated at `params`.
+            See notes.
+
+        Notes
+        --------
+        """
+        return np.sum(self.loglikeobs(params))
+
+    def loglikeobs(self, params):
+        """
+        Loglikelihood for observations of Generalized Poisson model
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model.
+
+        Returns
+        -------
+        loglike : ndarray (nobs,)
+            The log likelihood for each observation of the model evaluated
+            at `params`. See Notes
+
+        Notes
+        --------
+        """
+        alpha = params[-1]
+        p = self.p
+        endog = self.endog
+        mu = self.predict(params[:-1])
+        mu_p = np.power(mu, p)
+        alphamu = 1 + alpha * mu_p
+        alphamuy = mu + alpha * mu_p * endog
+        return (np.log(mu) + (endog - 1) * np.log(alphamuy) - endog *
+                np.log(alphamu) - gammaln(endog + 1) - alphamuy / alphamu)
+
+    def fit(self, start_params=None, method='newton', maxiter=35,
+            full_output=1, disp=1, callback=None, **kwargs):
+        pass
+
+    fit.__doc__ = DiscreteModel.fit.__doc__
+
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+        pass
+
+    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
+
+    def score(self, params):
+        """
+        Generalized Poisson model score (gradient) vector of the log-likelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        score : ndarray, 1-D
+            The score vector of the model, i.e. the first derivative of the
+            loglikelihood function, evaluated at `params`
+
+        Notes
+        -----
+        """
+        pass
+
+    def score_obs(self, params):
+        """
+        Generalized Poisson model Jacobian of the log-likelihood for each observation
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        score : ndarray (nobs, k_vars)
+            The score vector of the model evaluated at `params`
+
+        Notes
+        -----
+        """
+        pass
+
+    def hessian(self, params):
+        """
+        Generalized Poisson model Hessian matrix of the loglikelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        hess : ndarray, (k_vars, k_vars)
+            The Hessian, second derivative of loglikelihood function,
+            evaluated at `params`
+
+        Notes
+        -----
+        """
+        pass
 
 class Logit(BinaryModel):
     __doc__ = """

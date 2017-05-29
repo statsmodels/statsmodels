@@ -17,7 +17,7 @@ from numpy.testing import (assert_, assert_raises, assert_almost_equal,
 
 from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
                                                 Poisson, NegativeBinomial,
-                                                CountModel
+                                                CountModel, GeneralizedPoisson
                                                 )
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
@@ -1557,6 +1557,28 @@ def test_binary_pred_table_zeros():
     res = MNLogit(y, np.ones(nobs)).fit(disp=0)
     expected = np.array([[ 8.,  0.], [ 2.,  0.]])
     assert_equal(res.pred_table(), expected)
+
+
+class TestGeneralizedPoisson(object):
+    """
+    Test Generalized Poisson model
+    """
+
+    def test_llf(self):
+        data = sm.datasets.spector.load()
+        model_poisson = sm.Poisson(data.endog, data.exog).fit()
+        poisson_llf = model_poisson.llf
+
+        gpoisson_llf1 = sm.GeneralizedPoisson(
+                        data.endog, data.exog, p=1).loglike(
+                        list(model_poisson.params) + [0])
+
+        gpoisson_llf2 = sm.GeneralizedPoisson(
+                        data.endog, data.exog, p=2).loglike(
+                        list(model_poisson.params) + [0])
+
+        assert_almost_equal(poisson_llf, gpoisson_llf1)
+        assert_almost_equal(poisson_llf, gpoisson_llf2)
 
 
 if __name__ == "__main__":
