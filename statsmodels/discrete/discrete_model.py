@@ -1246,9 +1246,11 @@ class GeneralizedPoisson(CountModel):
         p = self.p
         endog = self.endog
         mu = self.predict(params[:-1])
-        return (np.log(mu) + (endog - 1) * np.log(mu + alpha * np.power(mu, p) * endog) - 
-                np.log(1 + alpha * np.power(mu, p)) - gammaln(endog + 1) - 
-                (mu + alpha * np.power(mu, p) * endog) / (1 + alpha * np.power(mu, p)))
+        mu_p = np.power(mu, p)
+        alphamu = 1 + alpha * mu_p
+        alphamuy = mu + alpha * mu_p * endog
+        return (np.log(mu) + (endog - 1) * np.log(alphamuy) - endog *
+                np.log(alphamu) - gammaln(endog + 1) - alphamuy / alphamu)
 
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):

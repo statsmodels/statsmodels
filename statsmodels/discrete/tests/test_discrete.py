@@ -1569,11 +1569,16 @@ class TestGeneralizedPoisson(object):
         model_poisson = sm.Poisson(data.endog, data.exog).fit()
         poisson_llf = model_poisson.llf
 
-        gpoisson_llf = sm.GeneralizedPoisson(
+        gpoisson_llf1 = sm.GeneralizedPoisson(
                         data.endog, data.exog, p=1).loglike(
                         list(model_poisson.params) + [0])
 
-        assert_almost_equal(poisson_llf, gpoisson_llf)
+        gpoisson_llf2 = sm.GeneralizedPoisson(
+                        data.endog, data.exog, p=2).loglike(
+                        list(model_poisson.params) + [0])
+
+        assert_almost_equal(poisson_llf, gpoisson_llf1)
+        assert_almost_equal(poisson_llf, gpoisson_llf2)
 
 
 if __name__ == "__main__":
