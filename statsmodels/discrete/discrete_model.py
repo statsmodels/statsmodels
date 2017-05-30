@@ -1247,10 +1247,11 @@ class GeneralizedPoisson(CountModel):
         endog = self.endog
         mu = self.predict(params[:-1])
         mu_p = np.power(mu, p)
-        alphamu = 1 + alpha * mu_p
-        alphamuy = mu + alpha * mu_p * endog
+        alphamu = alpha * mu_p
+        alphamuy = mu + alphamu * endog
         return (np.log(mu) + (endog - 1) * np.log(alphamuy) - endog *
-                np.log(alphamu) - gammaln(endog + 1) - alphamuy / alphamu)
+                np.log(alphamu + 1) - gammaln(endog + 1) - alphamuy / 
+                (alphamu + 1))
 
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
@@ -1284,26 +1285,26 @@ class GeneralizedPoisson(CountModel):
         Notes
         -----
         """
-        pass
+        alpha = params[-1]
+        params = params[:-1]
+        p = self.p
+        exog = self.exog
+        endog = self.endog[:,None]
+        mu = self.predict(params)[:,None]
+        mu_p = np.power(mu, p)
+        alphamu = alpha * mu_p
+        alphamuy = mu + alphamu * endog
+        dalpha = (mu_p * endog * ((endog - 1) / alphamuy - 1 / (alphamu + 1)) - 
+                 (1 + mu_p * endog) / (alphamu + 1) - alphamuy * mu_p /
+                 ((alphamu + 1) * (alphamu + 1)))
+        alphamup = alpha * p * mu ** (p - 1)
+        alphamupy = alphamup * endog
+        dparams = exog * (1 / mu + (endog - 1) * (1 + alphamupy) / alphamuy -
+                   (alphamupy / (alphamu + 1)) -
+                   (((1 + alphamupy) * (1 + alphamu) - alphamuy *
+                   alphamup) / ((alphamu + 1) * (alphamu + 1))))
+        return np.r_[dparams.sum(0), dalpha.sum()]
 
-    def score_obs(self, params):
-        """
-        Generalized Poisson model Jacobian of the log-likelihood for each observation
-
-        Parameters
-        ----------
-        params : array-like
-            The parameters of the model
-
-        Returns
-        -------
-        score : ndarray (nobs, k_vars)
-            The score vector of the model evaluated at `params`
-
-        Notes
-        -----
-        """
-        pass
 
     def hessian(self, params):
         """
