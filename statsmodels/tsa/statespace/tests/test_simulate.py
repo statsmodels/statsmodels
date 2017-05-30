@@ -201,6 +201,8 @@ def test_structural():
                           initial_state=[10])
     assert_allclose(actual, 10 + eps)
 
+    raise RuntimeError('The error appears to be after this point.')
+    
     # Deterministic constant
     mod = structural.UnobservedComponents([0], 'deterministic constant')
     actual = mod.simulate([1.], nobs, measurement_shocks=eps,
