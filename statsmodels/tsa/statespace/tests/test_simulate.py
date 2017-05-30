@@ -201,7 +201,7 @@ def test_structural():
                           initial_state=[10])
     assert_allclose(actual, 10 + eps)
 
-    #raise RuntimeError('The error appears to be after this point.')
+    #raise RuntimeError('The error appears to be *before* this point.', 1)
     
     # Deterministic constant
     mod = structural.UnobservedComponents([0], 'deterministic constant')
@@ -222,7 +222,9 @@ def test_structural():
                           state_shocks=eps2,
                           initial_state=np.zeros(mod.k_states))
     assert_allclose(actual, eps + eps3)
-
+    
+    raise RuntimeError('The error appears to be *before* this point.', 2)
+    
     # Fixed slope
     # (in practice this is a deterministic trend, because an irregular
     #  component must be added)
@@ -239,7 +241,7 @@ def test_structural():
                           state_shocks=eps2, initial_state=[0, 1])
     assert_allclose(actual, eps + np.arange(100))
 
-    raise RuntimeError('The error appears to be after this point.', 2)
+    raise RuntimeError('The error appears to be *before* this point.', 3)
     
     # Local linear deterministic trend
     mod = structural.UnobservedComponents(
