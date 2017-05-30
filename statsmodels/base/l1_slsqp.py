@@ -99,7 +99,10 @@ def fit_l1_slsqp(
     if full_output:
         x_full, fx, its, imode, smode = results
         fopt = func(np.asarray(x_full))
-        converged = 'True' if imode == 0 else smode
+        if imode == 0:
+            converged = True
+        else:
+            converged = smode
         iterations = its
         gopt = float('nan')     # Objective is non-differentiable
         hopt = float('nan')
