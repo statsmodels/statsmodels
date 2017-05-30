@@ -201,7 +201,7 @@ def test_structural():
                           initial_state=[10])
     assert_allclose(actual, 10 + eps)
 
-    raise RuntimeError('The error appears to be after this point.')
+    #raise RuntimeError('The error appears to be after this point.')
     
     # Deterministic constant
     mod = structural.UnobservedComponents([0], 'deterministic constant')
@@ -239,6 +239,8 @@ def test_structural():
                           state_shocks=eps2, initial_state=[0, 1])
     assert_allclose(actual, eps + np.arange(100))
 
+    raise RuntimeError('The error appears to be after this point.', 2)
+    
     # Local linear deterministic trend
     mod = structural.UnobservedComponents(
         [0], 'local linear deterministic trend')
