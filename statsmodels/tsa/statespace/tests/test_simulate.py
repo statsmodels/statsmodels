@@ -7,6 +7,9 @@ License: Simplified-BSD
 
 from __future__ import division, absolute_import, print_function
 
+import faulthandler
+faulthandler.enable()
+
 import warnings
 import numpy as np
 import pandas as pd
