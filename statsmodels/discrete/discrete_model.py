@@ -1202,7 +1202,7 @@ class GeneralizedPoisson(CountModel):
         super(GeneralizedPoisson, self).__init__(endog, exog, offset=offset,
                                                exposure=exposure,
                                                missing=missing, **kwargs)
-        self.p = p - 1
+        self.parameterization = p - 1
 
     def loglike(self, params):
         """
@@ -1243,7 +1243,7 @@ class GeneralizedPoisson(CountModel):
         --------
         """
         alpha = params[-1]
-        p = self.p
+        p = self.parameterization
         endog = self.endog
         mu = self.predict(params[:-1])
         mu_p = np.power(mu, p)
@@ -1253,9 +1253,33 @@ class GeneralizedPoisson(CountModel):
                 np.log(alphamu) - gammaln(endog + 1) - alphamu_y / 
                 alphamu)
 
-    def fit(self, start_params=None, method='newton', maxiter=35,
-            full_output=1, disp=1, callback=None, **kwargs):
-        pass
+    def fit(self, start_params=None, method='bfgs', maxiter=35,
+            full_output=1, disp=1, callback=None,
+            cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
+        if start_params is None:
+            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+            if np.size(offset) == 1 and offset == 0:
+                offset = None
+            mod_poi = Poisson(self.endog, self.exog, offset=offset)
+            start_params = mod_poi.fit(disp=0).params
+            start_params = np.append(start_params, 0.1)
+        mlefit = super(GeneralizedPoisson, self).fit(start_params=start_params,
+                        maxiter=maxiter, method=method, disp=disp,
+                        full_output=full_output, callback=lambda x:x,
+                        **kwargs)
+
+        if method not in ["newton", "ncg"]:
+            mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
+
+        result = mlefit
+
+        if cov_kwds is None:
+            cov_kwds = {}
+
+        result._get_robustcov_results(cov_type=cov_type,
+                                      use_self=True, use_t=use_t, **cov_kwds)
+        return result
+
 
     fit.__doc__ = DiscreteModel.fit.__doc__
 
@@ -1287,7 +1311,7 @@ class GeneralizedPoisson(CountModel):
         """
         alpha = params[-1]
         params = params[:-1]
-        p = self.p
+        p = self.parameterization
         exog = self.exog
         endog = self.endog[:,None]
         mu = self.predict(params)[:,None]
@@ -1323,7 +1347,7 @@ class GeneralizedPoisson(CountModel):
         Notes
         -----
         """
-        pass
+        return approx_hess(params, self.loglike)
 
 class Logit(BinaryModel):
     __doc__ = """
