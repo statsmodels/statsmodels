@@ -1247,11 +1247,11 @@ class GeneralizedPoisson(CountModel):
         endog = self.endog
         mu = self.predict(params[:-1])
         mu_p = np.power(mu, p)
-        alphamu = alpha * mu_p
-        alphamuy = mu + alphamu * endog
-        return (np.log(mu) + (endog - 1) * np.log(alphamuy) - endog *
-                np.log(alphamu + 1) - gammaln(endog + 1) - alphamuy / 
-                (alphamu + 1))
+        alphamu = 1 + alpha * mu_p
+        alphamu_y = mu + (alphamu - 1) * endog
+        return (np.log(mu) + (endog - 1) * np.log(alphamu_y) - endog *
+                np.log(alphamu) - gammaln(endog + 1) - alphamu_y / 
+                alphamu)
 
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
@@ -1292,19 +1292,18 @@ class GeneralizedPoisson(CountModel):
         endog = self.endog[:,None]
         mu = self.predict(params)[:,None]
         mu_p = np.power(mu, p)
-        alphamu = alpha * mu_p
-        alphamuy = mu + alphamu * endog
-        dalpha = (mu_p * endog * ((endog - 1) / alphamuy - 1 / (alphamu + 1)) - 
-                 (1 + mu_p * endog) / (alphamu + 1) - alphamuy * mu_p /
-                 ((alphamu + 1) * (alphamu + 1)))
-        alphamup = alpha * p * mu ** (p - 1)
-        alphamupy = alphamup * endog
-        dparams = exog * (1 / mu + (endog - 1) * (1 + alphamupy) / alphamuy -
-                   (alphamupy / (alphamu + 1)) -
-                   (((1 + alphamupy) * (1 + alphamu) - alphamuy *
-                   alphamup) / ((alphamu + 1) * (alphamu + 1))))
+        mu_y = mu_p * endog
+        alphamu = 1 + alpha * mu_p
+        alphamu_y = mu + (alphamu - 1) * endog
+        dalpha = (mu_y * ((endog - 1) / alphamu_y - 1 / alphamu) - 
+                  mu_y / alphamu - alphamu_y * mu_p / (alphamu **2 ))
+        palphamu = alpha * p * mu ** (p - 1)
+        palphamu_y = palphamu * endog
+        dparams = exog * (1 / mu + (endog - 1) * (1 + palphamu_y) / alphamu_y -
+                   (endog * palphamu / alphamu) -
+                   (1 + palphamu_y) / alphamu + alphamu_y * palphamu / 
+                   (alphamu * alphamu))
         return np.r_[dparams.sum(0), dalpha.sum()]
-
 
     def hessian(self, params):
         """
