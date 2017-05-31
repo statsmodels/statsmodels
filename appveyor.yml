@@ -26,7 +26,7 @@ build_script:
   - conda update conda --quiet
   - ps: If ($env:SCIPY) { conda install numpy scipy=$env:SCIPY cython pandas pip nose patsy --quiet } Else {
         If ($env:PANDAS) { conda install numpy scipy cython pandas=$env:PANDAS pip nose patsy --quiet } Else {
-        conda install numpy scipy cython pandas pip nose patsy --quiet }}
+        conda install numpy scipy cython pandas pip nose patsy faulthandler --quiet }}
   - python setup.py develop
 
 test_script:
