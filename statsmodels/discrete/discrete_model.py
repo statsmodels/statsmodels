@@ -1203,6 +1203,8 @@ class GeneralizedPoisson(CountModel):
                                                exposure=exposure,
                                                missing=missing, **kwargs)
         self.parameterization = p - 1
+        self.exog_names.append('alpha')
+        self.k_extra = 1
 
     def loglike(self, params):
         """
@@ -1242,10 +1244,14 @@ class GeneralizedPoisson(CountModel):
         Notes
         --------
         """
-        alpha = params[-1]
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+        params = params[:-1]
         p = self.parameterization
         endog = self.endog
-        mu = self.predict(params[:-1])
+        mu = self.predict(params)
         mu_p = np.power(mu, p)
         alphamu = 1 + alpha * mu_p
         alphamu_y = mu + (alphamu - 1) * endog
@@ -1256,12 +1262,18 @@ class GeneralizedPoisson(CountModel):
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
+
+        if method not in ['newton', 'ncg']:
+            self._transparams = True
+        else:
+            self._transparams = False 
+
         if start_params is None:
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            start_params = mod_poi.fit(disp=0).params
+            start_params = mod_poi.fit(disp=0, method=method).params
             start_params = np.append(start_params, 0.1)
         mlefit = super(GeneralizedPoisson, self).fit(start_params=start_params,
                         maxiter=maxiter, method=method, disp=disp,
@@ -1271,7 +1283,8 @@ class GeneralizedPoisson(CountModel):
         if method not in ["newton", "ncg"]:
             mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
 
-        result = mlefit
+        gpfit = NegativeBinomialResults(self, mlefit._results)
+        result = NegativeBinomialResultsWrapper(gpfit)
 
         if cov_kwds is None:
             cov_kwds = {}
@@ -1287,7 +1300,39 @@ class GeneralizedPoisson(CountModel):
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
-        pass
+        
+        if np.size(alpha) == 1 and alpha != 0:
+            k_params = self.exog.shape[1] + self.k_extra
+            alpha = alpha * np.ones(k_params)
+            alpha[-1] = 0
+
+        alpha_p = alpha[:-1] if (self.k_extra and np.size(alpha) > 1) else alpha
+        self._transparams = False
+        if start_params is None:
+            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+            if np.size(offset) == 1 and offset == 0:
+                offset = None
+            mod_poi = Poisson(self.endog, self.exog, offset=offset)
+            start_params = mod_poi.fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=0, callback=callback,
+                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
+            start_params = np.append(start_params, 1.2)
+
+        cntfit = super(CountModel, self).fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+
+        if method in ['l1', 'l1_cvxopt_cp']:
+            discretefit = L1GeneralizedPoissonResults(self, cntfit)
+        else:
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
+
+        return L1GeneralizedPoissonResultsWrapper(discretefit)
 
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
@@ -1309,7 +1354,12 @@ class GeneralizedPoisson(CountModel):
         Notes
         -----
         """
-        alpha = params[-1]
+        return approx_fprime(params, self.loglikeobs).sum(0)
+        
+        if self._transparams: # got lnalpha during fit
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
         params = params[:-1]
         p = self.parameterization
         exog = self.exog
@@ -1348,6 +1398,55 @@ class GeneralizedPoisson(CountModel):
         -----
         """
         return approx_hess(params, self.loglike)
+
+        if self._transparams: # got lnalpha during fit
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+
+        params = params[:-1]
+        p = self.parameterization
+        exog = self.exog
+        endog = self.endog[:,None]
+        mu = self.predict(params)[:,None]
+        mu_p = np.power(mu, p)
+        mu_pm1 = mu_p / mu
+        mumu_p = mu_p * mu_p
+        mu_y = mu_p * endog
+        alphamu = 1 + alpha * mu_p
+        alphamu_y = mu + (alphamu - 1) * endog
+        palphamu = alpha * p * mu ** (p - 1)
+        palphamu_y = palphamu * endog
+
+        # for dl/dparams dparams
+        dim = exog.shape[1]
+        hess_arr = np.empty((dim+1,dim+1))
+
+        for i in range(dim):
+            for j in range(dim):
+                if j > i:
+                    continue
+                hess_arr[i,j] = np.sum(0, axis=0) # need to implement
+        tri_idx = np.triu_indices(dim, k=1)
+        hess_arr[tri_idx] = hess_arr.T[tri_idx]
+
+        # for dl/dparams dalpha
+        dldpda = np.sum(exog * ((endog - 1) * (alphamu_y * palphamu / alpha -
+                        (1 + palphamu_y) * endog * mu_p) / (alphamu_y ** 2) -
+                        ((2 * palphamu_y * (alphamu / alpha - mu_p) / alpha -
+                        mu_p) / (alphamu ** 2)) + 0.), axis=0)
+
+        hess_arr[-1,:-1] = dldpda
+        hess_arr[:-1,-1] = dldpda
+
+        # for dl/dalpha dalpha
+        dldada = (endog * endog * mumu_p * (1 - endog) / (alphamu_y *
+                  alphamu_y) + (mumu_p * (endog + 1) - 2 * mu_p *
+                  (mu_p * mu + endog * mumu_p) / alphamu) /
+                  (alphamu * alphamu))
+        hess_arr[-1,-1] = dldada.sum()
+
+        return hess_arr
 
 class Logit(BinaryModel):
     __doc__ = """
@@ -2826,6 +2925,11 @@ class NegativeBinomialResults(CountResults):
         return -2*self.llf + np.log(self.nobs)*(self.df_model +
                                                 self.k_constant + k_extra)
 
+class GeneralizedPoissonResults(NegativeBinomialResults):
+    __doc__ = _discrete_results_docs % {
+        "one_line_description" : "A results class for Generalized Poisson",
+                    "extra_attr" : ""}
+
 class L1CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
             "A results class for count data fit by l1 regularization",
@@ -2883,6 +2987,9 @@ class L1PoissonResults(L1CountResults, PoissonResults):
     pass
 
 class L1NegativeBinomialResults(L1CountResults, NegativeBinomialResults):
+    pass
+
+class L1GeneralizedPoissonResults(L1CountResults, GeneralizedPoissonResults):
     pass
 
 class OrderedResults(DiscreteResults):
@@ -3245,6 +3352,11 @@ class NegativeBinomialResultsWrapper(lm.RegressionResultsWrapper):
 wrap.populate_wrapper(NegativeBinomialResultsWrapper,
                       NegativeBinomialResults)
 
+class GeneralizedPoissonResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(GeneralizedPoissonResultsWrapper,
+                      GeneralizedPoissonResults)
+
 class PoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
     #_methods = {
@@ -3272,6 +3384,11 @@ class L1NegativeBinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1NegativeBinomialResultsWrapper,
                       L1NegativeBinomialResults)
+
+class L1GeneralizedPoissonResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(L1GeneralizedPoissonResultsWrapper,
+                      L1GeneralizedPoissonResults)
 
 class BinaryResultsWrapper(lm.RegressionResultsWrapper):
     _attrs = {"resid_dev" : "rows",
