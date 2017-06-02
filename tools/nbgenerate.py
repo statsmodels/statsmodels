@@ -107,7 +107,7 @@ def do_one(nb, to=None, execute=None, allow_errors=None, timeout=None, kernel_na
     return dst
 
 def do(fp=None, directory=None, to='html', execute=True,
-       allow_errors=True, timeout=1000, kernel_name=''):
+       allow_errors=True, timeout=1000, kernel_name=None):
     if fp is None:
         nbs = find_notebooks(directory)
     else:
