@@ -1559,6 +1559,28 @@ def test_binary_pred_table_zeros():
     assert_equal(res.pred_table(), expected)
 
 
+def test_unchanging_degrees_of_freedom():
+    # see GH3734
+    data = sm.datasets.randhie.load()
+    model = sm.NegativeBinomial(data.endog, data.exog, loglike_method='nb2')
+    
+    res1 = model.fit()
+    assert_equal(res1.df_model, 8)
+
+    res2 = model.fit_regularized(alpha=100)
+    assert_(res2.df_model != 8)
+    # The case of interest is that when res2.df_model != res1.df_model.
+    # Make sure this is the case before making the assertion we actually
+    # care about.
+
+    res3 = model.fit()
+    # res3 should be identical to res1.  This test is being added in a PR
+    # that fixes a bug in which the call to `fit_regularized` modifies
+    # model.df_model, leading to res3.df_model != res1.df_model
+    assert_equal(res3.df_model, res1.df_model)
+    assert_equal(res3.df_resid, res1.df_resid)
+
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'],
