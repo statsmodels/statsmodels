@@ -1115,8 +1115,6 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     will be provided in the future. In the meantime, consider passing
     {method : 'css'} to fit_kw.
     """
-    from pandas import DataFrame
-
     ar_range = lrange(0, max_ar + 1)
     ma_range = lrange(0, max_ma + 1)
     if isinstance(ic, string_types):
@@ -1140,14 +1138,12 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
             for i, criteria in enumerate(ic):
                 results[i, ar, ma] = getattr(mod, criteria)
 
-    dfs = [DataFrame(res, columns=ma_range, index=ar_range) for res in results]
-
-    res = dict(zip(ic, dfs))
+    res = dict(zip(ic, results))
 
     # add the minimums to the results dict
     min_res = {}
     for i, result in iteritems(res):
-        mins = np.where(result.min().min() == result)
+        mins = np.where(np.nanmin(result) == result)
         min_res.update({i + '_min_order' : (mins[0][0], mins[1][0])})
     res.update(min_res)
 

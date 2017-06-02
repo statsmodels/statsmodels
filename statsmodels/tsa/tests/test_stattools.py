@@ -509,19 +509,13 @@ def test_arma_order_select_ic():
                       [ 499.49225249,  504.96650341,  510.48779255]])
     aic = DataFrame(aic_x , index=lrange(5), columns=lrange(3))
     bic = DataFrame(bic_x , index=lrange(5), columns=lrange(3))
-    assert_almost_equal(res.aic.values, aic.values, 5)
-    assert_almost_equal(res.bic.values, bic.values, 5)
+    assert_almost_equal(res.aic, aic.values, 5)
+    assert_almost_equal(res.bic, bic.values, 5)
     assert_equal(res.aic_min_order, (1, 2))
     assert_equal(res.bic_min_order, (1, 2))
-    assert_(res.aic.index.equals(aic.index))
-    assert_(res.aic.columns.equals(aic.columns))
-    assert_(res.bic.index.equals(bic.index))
-    assert_(res.bic.columns.equals(bic.columns))
 
     res = arma_order_select_ic(y, ic='aic', trend='nc')
-    assert_almost_equal(res.aic.values, aic.values, 5)
-    assert_(res.aic.index.equals(aic.index))
-    assert_(res.aic.columns.equals(aic.columns))
+    assert_almost_equal(res.aic, aic.values, 5)
     assert_equal(res.aic_min_order, (1, 2))
 
 def test_arma_order_select_ic_failure():
