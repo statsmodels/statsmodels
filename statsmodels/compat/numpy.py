@@ -88,7 +88,7 @@ from .scipy import NumpyVersion
 import numpy as np
 
 import sys
-_is_py2 = sys.version_info.major == 2
+PY3 = sys.version_info.major == 3
 
 if NumpyVersion(np.__version__) < '1.6.2':
     npc_unique = np.unique
@@ -474,7 +474,7 @@ def recarray_select(recarray, fields):
 
 def _bytelike_dtype_names(arr):
     # See # 3658
-    if _is_py2:
+    if not PY3:
         dtype = arr.dtype
         names = dtype.names
         names = [bytes(name) if isinstance(name, unicode) else name for name in names]

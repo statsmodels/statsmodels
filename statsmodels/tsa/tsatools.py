@@ -1,6 +1,6 @@
 import sys
 from statsmodels.compat.python import range, lrange, lzip, long
-from statsmodels.compat.numpy import recarray_select
+from statsmodels.compat.numpy import recarray_select, PY3
 
 import numpy as np
 import numpy.lib.recfunctions as nprf
@@ -12,7 +12,6 @@ from pandas.tseries.frequencies import to_offset
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.data import _is_using_pandas, _is_recarray
 
-_is_py2 = sys.version_info.major == 2
 
 
 
@@ -127,7 +126,7 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
         else:
             descr = descr + new_descr[-extra_col:]
 
-        if _is_py2:
+        if not PY3:
             # See 3658
             names = [entry[0] for entry in descr]
             dtypes = [entry[1] for entry in descr]
@@ -189,7 +188,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
             col = names[0]
         if isinstance(col, (int, long)):
             col = x.dtype.names[col]
-        if _is_py2:
+        if not PY3:
             # TODO: Get rid of this kludge.  See GH # 3658
             names = [bytes(name) if isinstance(name, unicode) else name for name in names]
             # Fail loudly if there is a non-ascii name.
