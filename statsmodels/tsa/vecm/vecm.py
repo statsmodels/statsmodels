@@ -24,7 +24,7 @@ from statsmodels.tsa.vector_ar.hypothesis_test_results import \
     CausalityTestResults, NormalityTestResults, WhitenessTestResults
 from statsmodels.tsa.vector_ar.util import get_index, seasonal_dummies
 from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval, \
-    VAR, ma_rep, orth_ma_rep, test_normality, LagOrderResults
+    VAR, ma_rep, orth_ma_rep, test_normality, LagOrderResults, _compute_acov
 from statsmodels.tsa.coint_tables import c_sja, c_sjt
 
 
@@ -1990,29 +1990,10 @@ class VECMResults(object):
         ----------
         .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
         """
-        def cov(lag):
-            """
-            Calculate the autocovariance matrix of :math:`u_t` for a given lag.
-
-            Parameters
-            ----------
-            lag : int >= 0
-
-            Returns
-            -------
-            result : ndarray (neqs, neqs)
-                The estimated autocovariance matrix of :math:`u_t` for lag
-                `lag`.
-            """
-            u = np.asarray(self.resid).T
-            u -= np.mean(u, axis=1).reshape((u.shape[0], 1))
-            result = np.zeros((self.neqs, self.neqs))
-            for t in range(lag, self.nobs):
-                result += u[:, t:t+1].dot(u[:, t-lag:t-lag+1].T)
-            result /= self.nobs
-            return result
 
         statistic = 0
+        u = np.asarray(self.resid)
+        acov_list = _compute_acov(u, nlags)
         # self.sigma_u instead of cov(0) is necessary to get the same
         # result as JMulTi. The difference between the two is that sigma_u is
         # calculated with the usual residuals while in cov(0) the
@@ -2024,7 +2005,7 @@ class VECMResults(object):
         if c0_inv.dtype == np.complex128 and np.all(np.imag(c0_inv) == 0):
             c0_inv = np.real(c0_inv)
         for t in range(1, nlags+1):
-            ct = cov(t)
+            ct = acov_list[t]
             to_add = np.trace(chain_dot(ct.T, c0_inv, ct, c0_inv))
             if adjusted:
                 to_add /= (self.nobs - t)

@@ -195,7 +195,10 @@ def varsim(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
     p, k, k = coefs.shape
     ugen = rmvnorm(np.zeros(len(sig_u)), sig_u, steps)
     result = np.zeros((steps, k))
-    result[p:] = intercept + ugen[p:] if intercept is not None else ugen[p:]
+    if intercept is not None:
+        result[p:] = intercept + ugen[p:]
+    else:
+        result[p:] = ugen[p:]
 
     # add in AR terms
     for t in range(p, steps):

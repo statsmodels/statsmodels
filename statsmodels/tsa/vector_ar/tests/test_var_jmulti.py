@@ -574,4 +574,3 @@ def setup():
         load_data(ds, data)
         results_ref[ds] = load_results_jmulti(ds, dt_s_list)
         results_sm[ds] = load_results_statsmodels(ds)
-        return results_sm[ds], results_ref[ds]

@@ -996,7 +996,7 @@ class VARProcess(object):
 
         Returns
         -------
-        (lower, mid, upper) : (ndarray, ndarray, ndarray)
+        (mid, lower, upper) : (ndarray, ndarray, ndarray)
         """
         assert(0 < alpha < 1)
         q = util.norm_signif_level(alpha)
@@ -1039,6 +1039,7 @@ class VARResults(VARProcess):
     names : array-like
         List of names of the endogenous variables in order of appearance in `endog`.
     dates
+    exog : array
 
 
     Returns
@@ -1816,34 +1817,13 @@ class VARResults(VARProcess):
         ----------
         .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
         """
-        def cov(lag):
-            """
-            Parameters
-            ----------
-            lag : int >= 0
-
-            Returns
-            -------
-            result : ndarray (neqs, neqs)
-                The estimated autocovariance matrix of :math:`u_t` for lag
-                `lag`.
-            """
-            u = np.asarray(self.resid).T
-            # the following line is unnecessary in case of OLS-estimation
-            # (mean of residuals =0) but in case other estimation methods are
-            # added we leave here.
-            u -= np.mean(u, axis=1).reshape((u.shape[0], 1))
-            result = np.zeros((self.neqs, self.neqs))
-            for t in range(lag, self.nobs):
-                result += u[:, t:t+1].dot(u[:, t-lag:t-lag+1].T)
-            result /= self.nobs
-            return result
-
         statistic = 0
-        c0_inv = L.inv(cov(0))
+        u = np.asarray(self.resid)
+        acov_list = _compute_acov(u, nlags)
+        cov0_inv = L.inv(acov_list[0])
         for t in range(1, nlags+1):
-            ct = cov(t)
-            to_add = np.trace(chain_dot(ct.T, c0_inv, ct, c0_inv))
+            ct = acov_list[t]
+            to_add = np.trace(chain_dot(ct.T, cov0_inv, ct, cov0_inv))
             if adjusted:
                 to_add /= (self.nobs - t)
             statistic += to_add
@@ -1859,7 +1839,7 @@ class VARResults(VARProcess):
     def test_whiteness(self, nlags=10, plot=True, linewidth=8):
         """
         Test white noise assumption. Sample (Y) autocorrelations are compared
-        with the standard :math:`2 / \sqrt(T)` bounds.
+        with the standard :math:`2 / \sqrt{T}` bounds.
 
         Parameters
         ----------

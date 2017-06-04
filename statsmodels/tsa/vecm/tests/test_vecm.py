@@ -1494,4 +1494,3 @@ def setup():
         results_sm[ds] = load_results_statsmodels(ds)
         results_sm_exog[ds] = load_results_statsmodels_exog(ds)
         results_sm_exog_coint[ds] = load_results_statsmodels_exog_coint(ds)
-        return results_sm[ds], results_ref[ds]
