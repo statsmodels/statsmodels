@@ -1205,6 +1205,7 @@ class GeneralizedPoisson(CountModel):
         self.parameterization = p - 1
         self.exog_names.append('alpha')
         self.k_extra = 1
+        self._transparams = True
 
     def loglike(self, params):
         """
@@ -1293,7 +1294,6 @@ class GeneralizedPoisson(CountModel):
                                       use_self=True, use_t=use_t, **cov_kwds)
         return result
 
-
     fit.__doc__ = DiscreteModel.fit.__doc__
 
     def fit_regularized(self, start_params=None, method='l1',
@@ -1353,9 +1353,7 @@ class GeneralizedPoisson(CountModel):
 
         Notes
         -----
-        """
-        return approx_fprime(params, self.loglikeobs).sum(0)
-        
+        """        
         if self._transparams: # got lnalpha during fit
             alpha = np.exp(params[-1])
         else:
@@ -1363,21 +1361,23 @@ class GeneralizedPoisson(CountModel):
         params = params[:-1]
         p = self.parameterization
         exog = self.exog
-        endog = self.endog[:,None]
+        y = self.endog[:,None]
         mu = self.predict(params)[:,None]
         mu_p = np.power(mu, p)
-        mu_y = mu_p * endog
-        alphamu = 1 + alpha * mu_p
-        alphamu_y = mu + (alphamu - 1) * endog
-        dalpha = (mu_y * ((endog - 1) / alphamu_y - 1 / alphamu) - 
-                  mu_y / alphamu - alphamu_y * mu_p / (alphamu **2 ))
-        palphamu = alpha * p * mu ** (p - 1)
-        palphamu_y = palphamu * endog
-        dparams = exog * (1 / mu + (endog - 1) * (1 + palphamu_y) / alphamu_y -
-                   (endog * palphamu / alphamu) -
-                   (1 + palphamu_y) / alphamu + alphamu_y * palphamu / 
-                   (alphamu * alphamu))
-        return np.r_[dparams.sum(0), dalpha.sum()]
+        a1 = 1 + alpha * mu_p
+        a2 = mu + alpha * mu_p * y
+        a3 = alpha * p * mu ** (p - 1)
+        a4 = a3 * y
+        dmudb = mu * exog
+
+        dalpha = (mu_p * (y * ((y - 1) / a2 - 2 / a1)) + a2 / a1**2).sum()
+        dparams = dmudb * (-a4 / a1 + a3 * a2 / (a1 ** 2) + (y - 1) *
+                  (1 + a4) / a2 - (1 + a3) / a1 + 1 / mu)
+
+        if self._transparams:
+            return np.r_[dparams.sum(0), dalpha*alpha]
+        else:
+            return np.r_[dparams.sum(0), dalpha]
 
     def hessian(self, params):
         """
@@ -1397,9 +1397,8 @@ class GeneralizedPoisson(CountModel):
         Notes
         -----
         """
-        return approx_hess(params, self.loglike)
-
-        if self._transparams: # got lnalpha during fit
+        #return approx_hess(params, self.loglike)
+        if self._transparams:
             alpha = np.exp(params[-1])
         else:
             alpha = params[-1]
@@ -1407,43 +1406,46 @@ class GeneralizedPoisson(CountModel):
         params = params[:-1]
         p = self.parameterization
         exog = self.exog
-        endog = self.endog[:,None]
+        y = self.endog[:,None]
         mu = self.predict(params)[:,None]
         mu_p = np.power(mu, p)
-        mu_pm1 = mu_p / mu
-        mumu_p = mu_p * mu_p
-        mu_y = mu_p * endog
-        alphamu = 1 + alpha * mu_p
-        alphamu_y = mu + (alphamu - 1) * endog
-        palphamu = alpha * p * mu ** (p - 1)
-        palphamu_y = palphamu * endog
+        a1 = 1 + alpha * mu_p
+        a2 = mu + alpha * mu_p * y
+        a3 = alpha * p * mu ** (p - 1)
+        a4 = a3 * y
+        dmudb = mu * exog
 
         # for dl/dparams dparams
         dim = exog.shape[1]
         hess_arr = np.empty((dim+1,dim+1))
 
         for i in range(dim):
-            for j in range(dim):
-                if j > i:
-                    continue
-                hess_arr[i,j] = np.sum(0, axis=0) # need to implement
+            for j in range(i + 1):
+                hess_arr[i,j] = np.sum(mu * exog[:,i,None] * exog[:,j,None] *
+                    (mu * (a3 * a4 / a1**2 - 2 * a3**2 * a2 / a1**3 + 2 * a3 *
+                    (a4 + 1) / a1**2 - a4 * p / (mu * a1) + a3 * p * a2 /
+                    (mu * a1**2) + a4 / (mu * a1) - a3 * a2 / (mu * a1**2) +
+                    (y - 1) * a4 * (p - 1) / (a2 * mu) - (y - 1) *
+                    (1 + a4)**2 / a2**2 - a4 * (p - 1) / (a1 * mu) - 1 /
+                    mu**2) + (-a4 / a1 + a3 * a2 / a1**2 + (y - 1) *
+                    (1 + a4) / a2 - (1 + a4) / a1 + 1 / mu)), axis=0)
         tri_idx = np.triu_indices(dim, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
         # for dl/dparams dalpha
-        dldpda = np.sum(exog * ((endog - 1) * (alphamu_y * palphamu / alpha -
-                        (1 + palphamu_y) * endog * mu_p) / (alphamu_y ** 2) -
-                        ((2 * palphamu_y * (alphamu / alpha - mu_p) / alpha -
-                        mu_p) / (alphamu ** 2)) + 0.), axis=0)
+        dldpda = np.sum((2 * a4 * mu_p / a1**2 - 2 * a3 * mu_p * a2 / a1**3 -
+                        mu_p * y * (y - 1) * (1 + a4) / a2**2 + mu_p *
+                        (1 + a4) / a1**2 + a4 * (y - 1) / (alpha * a2) - 2 *
+                        a4 / (alpha * a1) + a3 * a2 / (alpha * a1**2)) * dmudb,
+                        axis=0)
 
         hess_arr[-1,:-1] = dldpda
         hess_arr[:-1,-1] = dldpda
 
         # for dl/dalpha dalpha
-        dldada = (endog * endog * mumu_p * (1 - endog) / (alphamu_y *
-                  alphamu_y) + (mumu_p * (endog + 1) - 2 * mu_p *
-                  (mu_p * mu + endog * mumu_p) / alphamu) /
-                  (alphamu * alphamu))
+        dldada = mu_p**2 * (3 * y / a1**2 - y**2 * (y - 1) / a2**2 - 2 * a2 /
+                            a1**3)
+
         hess_arr[-1,-1] = dldada.sum()
 
         return hess_arr
