@@ -1205,7 +1205,40 @@ class GeneralizedPoisson(CountModel):
         self.parameterization = p - 1
         self.exog_names.append('alpha')
         self.k_extra = 1
-        self._transparams = True
+        self._transparams = False
+
+    def pdf(self, Y):
+        """
+        Generalized Poisson model probability mass function
+
+        Parameters
+        -----------
+        Y : array-like
+            `Y` is the linear predictor of the model.  See notes.
+
+        Returns
+        -------
+        pdf : ndarray
+            The value of the Poisson probability mass function, PMF, for each
+            point of Y.
+
+        Notes
+        --------
+        The PMF is defined as
+
+        .. math:: \\frac{e^{-\\lambda_{i}}\\lambda_{i}^{y_{i}}}{y_{i}!}
+
+        where :math:`\\lambda` assumes the loglinear model. I.e.,
+
+        .. math:: \\ln\\lambda_{i}=x_{i}\\beta
+
+        The parameter `X` is :math:`x_{i}\\beta` in the above formula.
+        """
+        endog_old = self.endog
+        self.endog = Y
+        val = self.loglike(self.fit().params)
+        self.endog = endog_old
+        return val
 
     def loglike(self, params):
         """
@@ -1254,17 +1287,16 @@ class GeneralizedPoisson(CountModel):
         endog = self.endog
         mu = self.predict(params)
         mu_p = np.power(mu, p)
-        alphamu = 1 + alpha * mu_p
-        alphamu_y = mu + (alphamu - 1) * endog
-        return (np.log(mu) + (endog - 1) * np.log(alphamu_y) - endog *
-                np.log(alphamu) - gammaln(endog + 1) - alphamu_y / 
-                alphamu)
+        a1 = 1 + alpha * mu_p
+        a2 = mu + (a1 - 1) * endog
+        return (np.log(mu) + (endog - 1) * np.log(a2) - endog *
+                np.log(a1) - gammaln(endog + 1) - a2 / 
+                a1)
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
-            full_output=1, disp=1, callback=None,
+            full_output=1, disp=1, callback=None, use_transparams = False,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
-
-        if method not in ['newton', 'ncg']:
+        if use_transparams and method not in ['newton', 'ncg']:
             self._transparams = True
         else:
             self._transparams = False 
@@ -1281,7 +1313,9 @@ class GeneralizedPoisson(CountModel):
                         full_output=full_output, callback=lambda x:x,
                         **kwargs)
 
-        if method not in ["newton", "ncg"]:
+
+        if use_transparams and method not in ["newton", "ncg"]:
+            self._transparams = False
             mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
 
         gpfit = NegativeBinomialResults(self, mlefit._results)
@@ -1318,7 +1352,7 @@ class GeneralizedPoisson(CountModel):
                 full_output=full_output, disp=0, callback=callback,
                 alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
-            start_params = np.append(start_params, 1.2)
+            start_params = np.append(start_params, 0.1)
 
         cntfit = super(CountModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
@@ -1353,8 +1387,8 @@ class GeneralizedPoisson(CountModel):
 
         Notes
         -----
-        """        
-        if self._transparams: # got lnalpha during fit
+        """
+        if self._transparams:
             alpha = np.exp(params[-1])
         else:
             alpha = params[-1]
@@ -1370,14 +1404,47 @@ class GeneralizedPoisson(CountModel):
         a4 = a3 * y
         dmudb = mu * exog
 
-        dalpha = (mu_p * (y * ((y - 1) / a2 - 2 / a1)) + a2 / a1**2).sum()
-        dparams = dmudb * (-a4 / a1 + a3 * a2 / (a1 ** 2) + (y - 1) *
-                  (1 + a4) / a2 - (1 + a3) / a1 + 1 / mu)
+        dalpha = (mu_p * (y * ((y - 1) / a2 - 2 / a1) + a2 / a1**2)).sum()
+        dparams = dmudb * (-a4 / a1 + a3 * a2 / (a1 ** 2) + (1 + a4) *
+                  ((y - 1) / a2 - 1 / a1) + 1 / mu)
 
         if self._transparams:
             return np.r_[dparams.sum(0), dalpha*alpha]
         else:
             return np.r_[dparams.sum(0), dalpha]
+
+    def p_score(self, params):
+        """
+        Generalized Poisson model derivative of the log-likelihood by p-parameter
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        dldp : float
+
+        Notes
+        -----
+        """
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+        params = params[:-1]
+        p = self.parameterization
+        exog = self.exog
+        y = self.endog[:,None]
+        mu = self.predict(params)[:,None]
+        mu_p = np.power(mu, p)
+        a1 = 1 + alpha * mu_p
+        a2 = mu + alpha * mu_p * y
+
+        dp = np.sum((np.log(mu) * ((a2 - mu) * ((y - 1) / a2 - 2 / a1) + (a1 - 1) *
+              a2 / a1 ** 2)))
+        return dp
 
     def hessian(self, params):
         """
@@ -1397,7 +1464,6 @@ class GeneralizedPoisson(CountModel):
         Notes
         -----
         """
-        #return approx_hess(params, self.loglike)
         if self._transparams:
             alpha = np.exp(params[-1])
         else:
