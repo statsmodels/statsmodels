@@ -1563,9 +1563,36 @@ class TestGeneralizedPoisson(object):
     """
     Test Generalized Poisson model
     """
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.randhie.load()
+        data.exog = sm.add_constant(data.exog)
+        cls.res1 = GeneralizedPoisson(data.endog, data.exog, p=2).fit(method='newton')
+        res2 = RandHIE()
+        res2.generalizedpoisson_gp2()
+        cls.res2 = res2
 
-    def test_llf(self):
-        pass
+    def test_bse(self):
+        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_3)
+
+    def test_params(self):
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
+
+    def test_alpha(self):
+        assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha,
+                            DECIMAL_4)
+        assert_almost_equal(self.res1.lnalpha_std_err,
+                            self.res2.lnalpha_std_err, DECIMAL_4)
+
+    def test_conf_int(self):
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
+                            DECIMAL_4)
+
+    def test_aic(self):
+        assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL_3)
+
+    def test_bic(self):
+        assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_3)
 
 
 if __name__ == "__main__":
