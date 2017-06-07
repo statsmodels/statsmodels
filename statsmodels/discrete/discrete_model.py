@@ -1404,9 +1404,9 @@ class GeneralizedPoisson(CountModel):
         a4 = a3 * y
         dmudb = mu * exog
 
-        dalpha = (mu_p * (y * ((y - 1) / a2 - 2 / a1)) + a2 / a1**2).sum()
-        dparams = dmudb * (-a4 / a1 + a3 * a2 / (a1 ** 2) + (y - 1) *
-                  (1 + a4) / a2 - (1 + a3) / a1 + 1 / mu)
+        dalpha = (mu_p * (y * ((y - 1) / a2 - 2 / a1) + a2 / a1**2)).sum()
+        dparams = dmudb * (-a4 / a1 + a3 * a2 / (a1 ** 2) + (1 + a4) *
+                  ((y - 1) / a2 - 1 / a1) + 1 / mu)
 
         if self._transparams:
             return np.r_[dparams.sum(0), dalpha*alpha]
