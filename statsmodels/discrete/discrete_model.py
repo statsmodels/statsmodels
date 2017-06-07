@@ -1207,39 +1207,6 @@ class GeneralizedPoisson(CountModel):
         self.k_extra = 1
         self._transparams = False
 
-    def pdf(self, Y):
-        """
-        Generalized Poisson model probability mass function
-
-        Parameters
-        -----------
-        Y : array-like
-            `Y` is the linear predictor of the model.  See notes.
-
-        Returns
-        -------
-        pdf : ndarray
-            The value of the Poisson probability mass function, PMF, for each
-            point of Y.
-
-        Notes
-        --------
-        The PMF is defined as
-
-        .. math:: \\frac{e^{-\\lambda_{i}}\\lambda_{i}^{y_{i}}}{y_{i}!}
-
-        where :math:`\\lambda` assumes the loglinear model. I.e.,
-
-        .. math:: \\ln\\lambda_{i}=x_{i}\\beta
-
-        The parameter `X` is :math:`x_{i}\\beta` in the above formula.
-        """
-        endog_old = self.endog
-        self.endog = Y
-        val = self.loglike(self.fit().params)
-        self.endog = endog_old
-        return val
-
     def loglike(self, params):
         """
         Loglikelihood of Generalized Poisson model
@@ -1413,7 +1380,7 @@ class GeneralizedPoisson(CountModel):
         else:
             return np.r_[dparams.sum(0), dalpha]
 
-    def p_score(self, params):
+    def _score_p(self, params):
         """
         Generalized Poisson model derivative of the log-likelihood by p-parameter
 
