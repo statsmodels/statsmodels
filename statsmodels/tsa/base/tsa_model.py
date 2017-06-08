@@ -15,6 +15,8 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.tsa.base import datetools
 from statsmodels.tools.sm_exceptions import ValueWarning
 
+from statsmodels.base import dimensions
+
 _tsa_doc = """
     %(model)s
 
@@ -37,7 +39,7 @@ _generic_params = base._model_params_doc
 _missing_param_doc = base._missing_param_doc
 
 
-class TimeSeriesModel(base.LikelihoodModel):
+class TimeSeriesModel(dimensions.KExogMixin, base.LikelihoodModel):
 
     __doc__ = _tsa_doc % {"model": _model_doc, "params": _generic_params,
                           "extra_params": _missing_param_doc,

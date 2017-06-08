@@ -63,7 +63,6 @@ class SVAR(tsbase.TimeSeriesModel):
         # self.dates) = data_util.interpret_data(endog, names, dates)
 
         self.y = self.endog #keep alias for now
-        self.neqs = self.endog.shape[1]
 
         types = ['A', 'B', 'AB']
         if svar_type not in types:
@@ -174,14 +173,13 @@ class SVAR(tsbase.TimeSeriesModel):
             if lags is None:
                 lags = 1
 
-        self.nobs = len(self.endog) - lags
-
         # initialize starting parameters
         start_params = self._get_init_params(A_guess, B_guess)
 
         return self._estimate_svar(start_params, lags, trend=trend,
                                    solver=solver, override=override,
-                                   maxiter=maxiter, maxfun=maxfun)
+                                   maxiter=maxiter, maxfun=maxfun,
+                                   method=method)
 
 
     def _get_init_params(self, A_guess, B_guess):
@@ -216,12 +214,13 @@ class SVAR(tsbase.TimeSeriesModel):
         return np.r_[A_guess, B_guess]
 
     def _estimate_svar(self, start_params, lags, maxiter, maxfun,
-                       trend='c', solver="nm", override=False):
+                       trend='c', solver="nm", override=False, method=None):
         """
         lags : int
         trend : string or None
             As per above
         """
+        self.method = method # TODO: Not ideal setting this here
         k_trend = util.get_trendorder(trend)
         y = self.endog
         z = util.get_var_endog(y, lags, trend=trend, has_constant='raise')
@@ -258,7 +257,8 @@ class SVAR(tsbase.TimeSeriesModel):
         return SVARResults(y, z, var_params, omega, lags,
                             names=self.endog_names, trend=trend,
                             dates=self.data.dates, model=self,
-                           A=A, B=B, A_mask=A_mask, B_mask=B_mask)
+                            A=A, B=B, A_mask=A_mask, B_mask=B_mask,
+                            method=method)
 
     def loglike(self, params):
         """
@@ -466,10 +466,8 @@ class SVARProcess(VARProcess):
     -------
     **Attributes**:
     """
-    def __init__(self, coefs, intercept, sigma_u, A_solve, B_solve,
-                 names=None):
+    def __init__(self, coefs, intercept, sigma_u, A_solve, B_solve, names=None):
         self.k_ar = len(coefs)
-        self.neqs = coefs.shape[1]
         self.coefs = coefs
         self.intercept = intercept
         self.sigma_u = sigma_u
@@ -570,15 +568,14 @@ class SVARResults(SVARProcess, VARResults):
 
     def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
                  A=None, B=None, A_mask=None, B_mask=None, model=None,
-                 trend='c', names=None, dates=None):
+                 trend='c', names=None, dates=None, method=None):
 
+        self.method = method
         self.model = model
         self.y = self.endog = endog  #keep alias for now
         self.ys_lagged = self.endog_lagged = endog_lagged #keep alias for now
         self.dates = dates
 
-        self.n_totobs, self.neqs = self.y.shape
-        self.nobs = self.n_totobs - lag_order
         k_trend = util.get_trendorder(trend)
         if k_trend > 0: # make this the polynomial trend order
             trendorder = k_trend - 1

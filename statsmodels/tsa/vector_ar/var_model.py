@@ -33,6 +33,8 @@ import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.wrapper as wrap
 
+from statsmodels.base import dimensions
+
 mat = np.array
 
 #-------------------------------------------------------------------------------
@@ -306,7 +308,7 @@ def _reordered(self, order):
     return VARResults(endog=endog_new, endog_lagged=endog_lagged_new,
                       params=params_new, sigma_u=sigma_u_new,
                       lag_order=self.k_ar, model=self.model,
-                      trend='c', names=names_new, dates=self.dates)
+                      trend='c', names=names_new, dates=self.dates, method=self.method)
 
 #-------------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
@@ -333,7 +335,6 @@ class VAR(tsbase.TimeSeriesModel):
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VAR")
         self.y = self.endog #keep alias for now
-        self.neqs = self.endog.shape[1]
 
     def predict(self, params, start=None, end=None, lags=1, trend='c'):
         """
@@ -432,11 +433,10 @@ class VAR(tsbase.TimeSeriesModel):
 
         k_trend = util.get_trendorder(trend)
         self.exog_names = util.make_lag_names(self.endog_names, lags, k_trend)
-        self.nobs = len(self.endog) - lags
 
-        return self._estimate_var(lags, trend=trend)
+        return self._estimate_var(lags, trend=trend, method=method)
 
-    def _estimate_var(self, lags, offset=0, trend='c'):
+    def _estimate_var(self, lags, offset=0, trend='c', method=None):
         """
         lags : int
         offset : int
@@ -445,6 +445,7 @@ class VAR(tsbase.TimeSeriesModel):
         trend : string or None
             As per above
         """
+        self.method = method # TODO: Not wild about setting this here
         # have to do this again because select_order doesn't call fit
         self.k_trend = k_trend = util.get_trendorder(trend)
 
@@ -470,13 +471,13 @@ class VAR(tsbase.TimeSeriesModel):
 
         avobs = len(y_sample)
 
-        df_resid = avobs - (self.neqs * lags + k_trend)
+        df_resid = float(avobs) - (self.neqs * lags + k_trend)
 
         sse = np.dot(resid.T, resid)
         omega = sse / df_resid
 
         varfit = VARResults(y, z, params, omega, lags, names=self.endog_names,
-                          trend=trend, dates=self.data.dates, model=self)
+                trend=trend, dates=self.data.dates, model=self, method=method)
         return VARResultsWrapper(varfit)
 
     def select_order(self, maxlags=None, verbose=True):
@@ -532,7 +533,6 @@ class VARProcess(object):
     """
     def __init__(self, coefs, intercept, sigma_u, names=None):
         self.k_ar = len(coefs)
-        self.neqs = coefs.shape[1]
         self.coefs = coefs
         self.intercept = intercept
         self.sigma_u = sigma_u
@@ -747,7 +747,7 @@ class VARProcess(object):
 # VARResults class
 
 
-class VARResults(VARProcess):
+class VARResults(dimensions.CssKarNobsMixin, dimensions.NobsMixin, dimensions.NEQsMixin, VARProcess):
     """Estimate VAR(p) process with fixed number of lags
 
     Parameters
@@ -818,15 +818,15 @@ class VARResults(VARProcess):
     _model_type = 'VAR'
 
     def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
-                 model=None, trend='c', names=None, dates=None):
+                 model=None, trend='c', names=None, dates=None, method=None):
 
+        self.method = method
         self.model = model
         self.y = self.endog = endog  #keep alias for now
         self.ys_lagged = self.endog_lagged = endog_lagged #keep alias for now
         self.dates = dates
 
-        self.n_totobs, neqs = self.y.shape
-        self.nobs = self.n_totobs - lag_order
+        n_totobs, neqs = self.y.shape
         k_trend = util.get_trendorder(trend)
         if k_trend > 0: # make this the polynomial trend order
             trendorder = k_trend - 1
@@ -925,7 +925,7 @@ class VARResults(VARProcess):
     def sigma_u_mle(self):
         """(Biased) maximum likelihood estimate of noise process covariance
         """
-        return self.sigma_u * self.df_resid / self.nobs
+        return self.sigma_u * self.df_resid / float(self.nobs)
 
     @cache_readonly
     def cov_params(self):
@@ -1462,7 +1462,7 @@ class VARResults(VARProcess):
     @cache_readonly
     def info_criteria(self):
         "information criteria for lagorder selection"
-        nobs = self.nobs
+        nobs = float(self.nobs)
         neqs = self.neqs
         lag_order = self.k_ar
         free_params = lag_order * neqs ** 2 + neqs * self.k_trend

@@ -12,7 +12,7 @@ from warnings import warn
 import numpy as np
 import pandas as pd
 from .kalman_filter import KalmanFilter
-from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
+from .mlemodel import prepare_exog, MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
     companion_matrix, diff, is_invertible, constrain_stationary_univariate,
     unconstrain_stationary_univariate, solve_discrete_lyapunov
@@ -412,29 +412,19 @@ class SARIMAX(MLEModel):
                 self._k_order = 0
 
         # Exogenous data
-        self.k_exog = 0
-        if exog is not None:
-            exog_is_using_pandas = _is_using_pandas(exog, None)
-            if not exog_is_using_pandas:
-                exog = np.asarray(exog)
+        (k_exog, exog) = prepare_exog(exog)
+        # Until exog gets attached as self.exog, we can't check self.k_exog
 
-            # Make sure we have 2-dimensional array
-            if exog.ndim < 2:
-                if not exog_is_using_pandas:
-                    exog = np.atleast_2d(exog).T
-                else:
-                    exog = pd.DataFrame(exog)
-
-            self.k_exog = exog.shape[1]
+            
         # Redefine mle_regression to be true only if it was previously set to
         # true and there are exogenous regressors
         self.mle_regression = (
-            self.mle_regression and exog is not None and self.k_exog > 0
+            self.mle_regression and exog is not None and k_exog > 0
         )
         # State regression is regression with coefficients estiamted within
         # the state vector
         self.state_regression = (
-            not self.mle_regression and exog is not None and self.k_exog > 0
+            not self.mle_regression and exog is not None and k_exog > 0
         )
         # If all we have is a regression (so k_ar = k_ma = 0), then put the
         # error term as measurement error
@@ -447,7 +437,7 @@ class SARIMAX(MLEModel):
             k_states += (self.seasonal_periods * self._k_seasonal_diff +
                          self._k_diff)
         if self.state_regression:
-            k_states += self.k_exog
+            k_states += k_exog
 
         # Number of diffuse states
         k_diffuse_states = k_states
@@ -459,7 +449,7 @@ class SARIMAX(MLEModel):
         # Only have an error component to the states if k_posdef > 0
         self.state_error = k_posdef > 0
         if self.state_regression and self.time_varying_regression:
-            k_posdef += self.k_exog
+            k_posdef += k_exog
 
         # Diffuse initialization can be more sensistive to the variance value
         # in the case of state regression, so set a higher than usual default
@@ -498,7 +488,6 @@ class SARIMAX(MLEModel):
 
         # Set some model variables now so they will be available for the
         # initialize() method, below
-        self.nobs = len(endog)
         self.k_states = k_states
         self.k_posdef = k_posdef
 
@@ -578,7 +567,8 @@ class SARIMAX(MLEModel):
                     self._index = self._index[orig_length - new_length:]
 
         # Reset the nobs
-        self.nobs = endog.shape[0]
+        self.endog = endog # TODO is this OK?
+        # TODO: Do we need to do self._cache.clear() to be on the safe side?
 
         # Cache the arrays for calculating the intercept from the trend
         # components
@@ -1072,7 +1062,7 @@ class SARIMAX(MLEModel):
             elif self.k_exog > 0:
                 params_variance = np.inner(endog, endog)
             else:
-                params_variance = np.inner(endog, endog) / self.nobs
+                params_variance = np.inner(endog, endog) / float(self.nobs)
         params_measurement_variance = 1 if self.measurement_error else []
 
         # Combine all parameters

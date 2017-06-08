@@ -2350,7 +2350,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         self.df_model = model.df_model
         self.df_resid = model.df_resid
         self._cache = resettable_cache()
-        self.nobs = model.exog.shape[0]
         self.__dict__.update(mlefit.__dict__)
 
         if not hasattr(self, 'cov_type'):
@@ -2900,6 +2899,11 @@ class L1BinaryResults(dimensions.L1Estimator, BinaryResults):
 class MultinomialResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
             "A results class for multinomial data", "extra_attr" : ""}
+    
+    def __init__(self, *args, **kwargs):
+        super(MultinomialResults, self).__init__(*args, **kwargs)
+        self.J = self.model.J
+
     def _maybe_convert_ynames_int(self, ynames):
         # see if they're integers
         try:
@@ -2938,7 +2942,7 @@ class MultinomialResults(DiscreteResults):
         pred_table[i,j] refers to the number of times "i" was observed and
         the model predicted "j". Correct predictions are along the diagonal.
         """
-        ju = self.model.J - 1  # highest index
+        ju = self.J - 1  # highest index
         # these are the actual, predicted indices
         #idx = lzip(self.model.endog, self.predict().argmax(1))
         bins = np.concatenate(([0], np.linspace(0.5, ju - 0.5, ju), [ju]))
@@ -2952,11 +2956,11 @@ class MultinomialResults(DiscreteResults):
 
     @cache_readonly
     def aic(self):
-        return -2*(self.llf - (self.df_model+self.model.J-1))
+        return -2*(self.llf - (self.df_model+self.J-1))
 
     @cache_readonly
     def bic(self):
-        return -2*self.llf + np.log(self.nobs)*(self.df_model+self.model.J-1)
+        return -2*self.llf + np.log(self.nobs)*(self.df_model+self.J-1)
 
     def conf_int(self, alpha=.05, cols=None):
         confint = super(DiscreteResults, self).conf_int(alpha=alpha,
@@ -3034,10 +3038,11 @@ class L1MultinomialResults(dimensions.L1Estimator, MultinomialResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
         "A results class for multinomial data fit by l1 regularization",
         "extra_attr" : _l1_results_attr}
+    
     def __init__(self, model, mlefit):
         super(L1MultinomialResults, self).__init__(model, mlefit)
         #Note: J-1 constants
-        self.model.df_model = self.nnz_params - (self.model.J - 1)
+        self.model.df_model = self.nnz_params - (self.J - 1)
         self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
         self.df_model = self.model.df_model
         self.df_resid = self.model.df_resid

@@ -17,6 +17,7 @@ from statsmodels.tsa.kalmanf.kalmanfilter import KalmanFilter
 import statsmodels.base.wrapper as wrap
 from statsmodels.tsa.vector_ar import util
 
+from statsmodels.base import dimensions
 
 __all__ = ['AR']
 
@@ -52,7 +53,7 @@ def _ar_predict_out_of_sample(y, params, p, k_trend, steps, start=0):
     return forecast
 
 
-class AR(tsbase.TimeSeriesModel):
+class AR(dimensions.CssKarNobsMixin, tsbase.TimeSeriesModel):
     __doc__ = tsbase._tsa_doc % {"model" : "Autoregressive AR(p) model",
                                  "params" : """endog : array-like
         1-d endogenous response variable. The independent variable.""",
@@ -65,7 +66,7 @@ class AR(tsbase.TimeSeriesModel):
         if endog.ndim == 1:
             endog = endog[:, None]
             self.endog = endog  # to get shapes right
-        elif endog.ndim > 1 and endog.shape[1] != 1:
+        elif endog.ndim > 1 and self.k_endog != 1:
             raise ValueError("Only the univariate case is implemented")
 
     def initialize(self):
@@ -343,7 +344,6 @@ class AR(tsbase.TimeSeriesModel):
         #TODO: Math is on Hamilton ~pp 124-5
         if self.method == "cmle":
             return self._loglike_css(params)
-
         else:
             return self._loglike_mle(params)
 
@@ -522,7 +522,8 @@ class AR(tsbase.TimeSeriesModel):
         self.method = method
         self.trend = trend
         self.transparams = transparams
-        nobs = len(self.endog)  # overwritten if method is 'cmle'
+        nobs = len(self.endog) # overwritten if method is 'cmle'
+        # Note: We can't access this as self.nobs until after k_ar is set below.
         endog = self.endog
 
         if maxlag is None:
@@ -548,15 +549,14 @@ class AR(tsbase.TimeSeriesModel):
         self.Y = Y
         self.X = X
 
+        self.method = method # TODO: Is this right right place to set this?
         if method == "cmle":     # do OLS
             arfit = OLS(Y, X).fit()
             params = arfit.params
-            self.nobs = nobs - k_ar
             self.sigma2 = arfit.ssr/arfit.nobs  # needed for predict fcasterr
 
         elif method == "mle":
             solver = solver.lower()
-            self.nobs = nobs
             if start_params is None:
                 start_params = OLS(Y, X).fit().params
             else:
@@ -597,7 +597,7 @@ class AR(tsbase.TimeSeriesModel):
         return ARResultsWrapper(arfit)
 
 
-class ARResults(tsbase.TimeSeriesModelResults):
+class ARResults(dimensions.CssKarNobsMixin, tsbase.TimeSeriesModelResults):
     """
     Class to hold results from fitting an AR model.
 
@@ -677,12 +677,11 @@ class ARResults(tsbase.TimeSeriesModelResults):
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(ARResults, self).__init__(model, params, normalized_cov_params,
                                         scale)
+        
+        self.method = model.method # Needed for nobs to evaluate correctly
         self._cache = resettable_cache()
-        self.nobs = model.nobs
-        n_totobs = len(model.endog)
-        self.n_totobs = n_totobs
         self.X = model.X  # copy?
-        self.Y = model.Y
+        self.Y = model.Y # TODO: use standard names endog and exog
         k_ar = model.k_ar
         self.k_ar = k_ar
         k_trend = model.k_trend
@@ -693,7 +692,10 @@ class ARResults(tsbase.TimeSeriesModelResults):
         self.trendorder = trendorder
         #TODO: cmle vs mle?
         self.df_model = k_ar + k_trend
-        self.df_resid = self.model.df_resid = n_totobs - self.df_model
+        self.df_resid = self.model.df_resid = self._nobs_total - self.df_model
+        # TODO: should we use self.nobs instead of self._nobs_total?  Using
+        # `nobs` would match essentially *everywhere* else in statsmodels
+        # TODO: don't set self.model.df_resid
 
     @cache_writable()
     def sigma2(self):
@@ -712,7 +714,7 @@ class ARResults(tsbase.TimeSeriesModelResults):
         if self.model.method == "cmle":  # uses different scale/sigma def.
             resid = self.resid
             ssr = np.dot(resid, resid)
-            ols_scale = ssr / (self.nobs - self.k_ar - self.k_trend)
+            ols_scale = ssr / (self.nobs - self.df_model)
             return np.sqrt(np.diag(self.cov_params(scale=ols_scale)))
         else:
             hess = approx_hess(self.params, self.model.loglike)

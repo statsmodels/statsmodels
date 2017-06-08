@@ -7,6 +7,7 @@ License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
 from statsmodels.compat.python import long
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -25,7 +26,15 @@ from statsmodels.tools.tools import pinv_extended, Bunch
 from statsmodels.tools.sm_exceptions import PrecisionWarning
 import statsmodels.genmod._prediction as pred
 from statsmodels.genmod.families.links import identity
-import warnings
+
+from statsmodels.base.initialization import prepare_exog
+
+from statsmodels.base import dimensions
+
+
+
+
+
 
 
 class MLEModel(tsbase.TimeSeriesModel):
@@ -91,7 +100,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         self.endog, self.exog = self.prepare_data()
 
         # Dimensions
-        self.nobs = self.endog.shape[0]
         self.k_states = k_states
 
         # Initialize the state-space representation
@@ -132,8 +140,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Bind the data to the model
         self.ssm.bind(endog)
 
-        # Other dimensions, now that `ssm` is available
-        self.k_endog = self.ssm.k_endog
 
     def __setitem__(self, key, value):
         return self.ssm.__setitem__(key, value)
@@ -1550,8 +1556,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             self.smoother_results = None
 
         # Dimensions
-        self.nobs = self.filter_results.nobs
         self.nobs_effective = self.nobs - self.loglikelihood_burn
+        # TODO: This attribute only exists if **kwargs has the expected keys
 
         # Degrees of freedom
         self.df_model = self.params.size

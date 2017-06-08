@@ -1160,6 +1160,8 @@ to obtain summary:
     def __init__(self, model_formula, model_class, data, n_skip=3,
                  init_kwds=None, fit_kwds=None):
 
+        self.endog = None
+        self.exog = None
         self.model_formula = model_formula
         self.model_class = model_class
         self.n_skip = n_skip

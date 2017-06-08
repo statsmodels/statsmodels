@@ -49,7 +49,7 @@ def _check_convergence(criterion, iteration, atol, rtol):
                        atol=atol, rtol=rtol)
 
 
-class GLM(dimensions.WNobsMixin, base.LikelihoodModel):
+class GLM(dimensions.WNobsMixin, dimensions.KExogMixin, base.LikelihoodModel):
     __doc__ = """
     Generalized Linear Models class
 
@@ -263,7 +263,6 @@ class GLM(dimensions.WNobsMixin, base.LikelihoodModel):
         if exposure is None:
             delattr(self, 'exposure')
 
-        self.nobs = self.endog.shape[0]
 
         #things to remove_data
         self._data_attr.extend(['weights', 'pinv_wexog', 'mu', 'freq_weights',
@@ -283,7 +282,6 @@ class GLM(dimensions.WNobsMixin, base.LikelihoodModel):
         self._offset_exposure = offset_exposure
 
         self.scaletype = None
-
 
     def initialize(self):
         """
@@ -593,6 +591,7 @@ class GLM(dimensions.WNobsMixin, base.LikelihoodModel):
 
             ex = np.column_stack((self.exog, exog_extra))
             k_constraints += ex.shape[1] - self.exog.shape[1]
+            # FIXME: self.exog.shape[1] !+ self.k_exog 2017-06-06
 
             score_factor = self.score_factor(params_constrained)
             score = (score_factor[:, None] * ex).sum(0)
@@ -823,7 +822,7 @@ class GLM(dimensions.WNobsMixin, base.LikelihoodModel):
         # this checks what kind of data is given for Binomial.
         # family will need a reference to endog if this is to be removed from
         # preprocessing
-        self.n_trials = np.ones((self.endog.shape[0]))  # For binomial
+        self.n_trials = np.ones((self.nobs))  # For binomial
         if isinstance(self.family, families.Binomial):
             tmp = self.family.initialize(self.endog, self.freq_weights)
             self.endog = tmp[0]
@@ -969,7 +968,7 @@ class GLM(dimensions.WNobsMixin, base.LikelihoodModel):
         endog = self.endog
         wlsexog = self.exog
         if start_params is None:
-            start_params = np.zeros(self.exog.shape[1], np.float)
+            start_params = np.zeros(wlsexog.shape[1], np.float)
             mu = self.family.starting_mu(self.endog)
             lin_pred = self.family.predict(mu)
         else:
@@ -1255,8 +1254,7 @@ class GLMResults(base.LikelihoodModelResults):
                                          normalized_cov_params=
                                          normalized_cov_params, scale=scale)
         self.family = model.family
-        self._endog = model.endog
-        self.nobs = model.endog.shape[0]
+        self._endog = model.endog # TODO: Why calling this _endog instead of endog?
         self._freq_weights = model.freq_weights
         if isinstance(self.family, families.Binomial):
             self._n_trials = self.model.n_trials

@@ -14,7 +14,7 @@ import pandas as pd
 from statsmodels.tsa.filters.hp_filter import hpfilter
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.tsatools import lagmat
-from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
+from .mlemodel import prepare_exog, MLEModel, MLEResults, MLEResultsWrapper
 from scipy.linalg import solve_discrete_lyapunov
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.sm_exceptions import (ValueWarning, OutputWarning,
@@ -442,21 +442,12 @@ class UnobservedComponents(MLEModel):
             self.trend_specification = _mask_map.get(self.trend_mask, None)
 
         # Exogenous component
-        self.k_exog = 0
-        if exog is not None:
-            exog_is_using_pandas = _is_using_pandas(exog, None)
-            if not exog_is_using_pandas:
-                exog = np.asarray(exog)
+        (k_exog, exog) = prepare_exog(exog)
+        # Until exog gets attached to self, we need to use `k_exog`
+        # and *not* self.k_exog
 
-            # Make sure we have 2-dimensional array
-            if exog.ndim < 2:
-                if not exog_is_using_pandas:
-                    exog = np.atleast_2d(exog).T
-                else:
-                    exog = pd.DataFrame(exog)
 
-            self.k_exog = exog.shape[1]
-        self.regression = self.k_exog > 0
+        self.regression = k_exog > 0
 
         # Model parameters
         k_states = (
@@ -464,7 +455,7 @@ class UnobservedComponents(MLEModel):
             (self.seasonal_periods - 1) * self.seasonal +
             self.cycle * 2 +
             self.ar_order +
-            (not self.mle_regression) * self.k_exog
+            (not self.mle_regression) * k_exog
         )
         k_posdef = (
             self.stochastic_level * self.level +

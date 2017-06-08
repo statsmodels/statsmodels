@@ -181,6 +181,7 @@ class KTrendMixin(object):
 		return kt
 
 
+# FIXME: What if self.exog exists but self.data has not been set yet?
 class KExogMixin(object):
 
 	# Note: making k_exog a cache_readonly breaks
@@ -189,6 +190,7 @@ class KExogMixin(object):
 	def k_exog(self):
 		try:
 			# FIXME: Could this be wrong depending on whether the user already passed a trend or constant?
+			# TODO: What about C_CONTIGUOUS/F_CONTIGUOUS?
 			return self.data.orig_exog.shape[1]
 			# For most models:
 			# 	equiv: self.exog.shape[1]
@@ -212,6 +214,19 @@ class KExogMixin(object):
 			# np.ndim(...) gives the desired measurement.
 			return np.ndim(self.data.orig_exog)
 			# FIXME: is this going to incorrectly return 0 when we have a scalar instead of an array?
+
+
+class MNDimensions(object):
+	@cache_readonly
+	def J(self):
+		# number of alternative choices
+		return self.wendog.shape[1]
+
+	# TODO: Is this equivalent to k_exog?
+	@cache_readonly
+	def K(self):
+		# number of variables
+		return self.exog.shape[1]
 
 
 class L1Estimator(object):

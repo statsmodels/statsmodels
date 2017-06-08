@@ -13,6 +13,8 @@ PJ Huber.  1973,  'The 1972 Wald Memorial Lectures: Robust Regression:
 R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
     2002.
 """
+from __future__ import division
+
 from statsmodels.compat.python import string_types
 import numpy as np
 import scipy.stats as stats
@@ -110,6 +112,8 @@ class RLM(base.LikelihoodModel):
 
     def __init__(self, endog, exog, M=norms.HuberT(), missing='none',
                  **kwargs):
+        self.endog = endog
+        self.exog = exog
         self.M = M
         super(base.LikelihoodModel, self).__init__(endog, exog,
                 missing=missing, **kwargs)
@@ -129,7 +133,6 @@ class RLM(base.LikelihoodModel):
         self.df_resid = (np.float(self.exog.shape[0] -
                          np_matrix_rank(self.exog)))
         self.df_model = np.float(np_matrix_rank(self.exog)-1)
-        self.nobs = float(self.endog.shape[0])
 
     def score(self, params):
         raise NotImplementedError
@@ -390,9 +393,10 @@ class RLMResults(base.LikelihoodModelResults):
         super(RLMResults, self).__init__(model, params,
                 normalized_cov_params, scale)
         self.model = model
+        self.endog = model.endog
+        self.exog = model.exog
         self.df_model = model.df_model
         self.df_resid = model.df_resid
-        self.nobs = model.nobs
         self._cache = resettable_cache()
         #for remove_data
         self.data_in_cache = ['sresid']

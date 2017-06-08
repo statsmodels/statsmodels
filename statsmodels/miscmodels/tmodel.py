@@ -58,7 +58,6 @@ class TLinearModel(GenericLikelihoodModel):
 
     def initialize(self):
         # TODO: here or in __init__
-        self.k_vars = self.exog.shape[1]
         if not hasattr(self, 'fix_df'):
             self.fix_df = False
 
@@ -66,12 +65,12 @@ class TLinearModel(GenericLikelihoodModel):
             # df will be estimated, no parameter restrictions
             self.fixed_params = None
             self.fixed_paramsmask = None
-            self.k_params = self.exog.shape[1] + 2
+            self.k_params = self.k_exog + 2
             extra_params_names = ['df', 'scale']
         else:
             # df fixed
-            self.k_params = self.exog.shape[1] + 1
-            fixdf = np.nan * np.zeros(self.exog.shape[1] + 2)
+            self.k_params = self.k_exog + 1
+            fixdf = np.nan * np.zeros(self.k_exog + 2)
             fixdf[-2] = self.fix_df
             self.fixed_params = fixdf
             self.fixed_paramsmask = np.isnan(fixdf)
@@ -89,7 +88,7 @@ class TLinearModel(GenericLikelihoodModel):
             from statsmodels.regression.linear_model import OLS
             res_ols = OLS(self.endog, self.exog).fit()
             start_params = 0.1*np.ones(self.k_params)
-            start_params[:self.k_vars] = res_ols.params
+            start_params[:self.k_exog] = res_ols.params
 
             if self.fix_df is False:
 
@@ -160,7 +159,7 @@ class TLinearModel(GenericLikelihoodModel):
     def predict(self, params, exog=None):
         if exog is None:
             exog = self.exog
-        return np.dot(exog, params[:self.exog.shape[1]])
+        return np.dot(exog, params[:self.k_exog])
 
 
 from scipy import stats

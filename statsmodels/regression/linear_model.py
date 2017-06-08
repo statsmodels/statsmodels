@@ -50,6 +50,7 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.emplike.elregress import _ELRegOpts
 import warnings
 from statsmodels.tools.sm_exceptions import InvalidTestWarning
+from statsmodels.base import dimensions
 
 # need import in module instead of lazily to copy `__doc__`
 from . import _prediction as pred
@@ -169,7 +170,7 @@ def _get_sigma(sigma, nobs):
     return sigma, cholsigmainv
 
 
-class RegressionModel(base.LikelihoodModel):
+class RegressionModel(dimensions.KarNobsMixin, base.LikelihoodModel):
     """
     Base class for linear regression models. Should not be directly called.
 
@@ -183,7 +184,6 @@ class RegressionModel(base.LikelihoodModel):
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
         # overwrite nobs from class Model:
-        self.nobs = float(self.wexog.shape[0])
 
         self._df_model = None
         self._df_resid = None
@@ -215,7 +215,7 @@ class RegressionModel(base.LikelihoodModel):
         if self._df_resid is None:
             if self.rank is None:
                 self.rank = np_matrix_rank(self.exog)
-            self._df_resid = self.nobs - self.rank
+            self._df_resid = float(self.nobs) - self.rank
         return self._df_resid
 
     @df_resid.setter
@@ -302,7 +302,7 @@ class RegressionModel(base.LikelihoodModel):
         if self._df_model is None:
             self._df_model = float(self.rank - self.k_constant)
         if self._df_resid is None:
-            self.df_resid = self.nobs - self.rank
+            self.df_resid = float(self.nobs) - self.rank
 
         if isinstance(self, OLS):
             lfit = OLSResults(
@@ -659,11 +659,10 @@ class WLS(RegressionModel):
             weights = weights.squeeze()
         super(WLS, self).__init__(endog, exog, missing=missing,
                                   weights=weights, hasconst=hasconst, **kwargs)
-        nobs = self.exog.shape[0]
         weights = self.weights
         # Experimental normalization of weights
-        weights = weights / np.sum(weights) * nobs
-        if weights.size != nobs and weights.shape[0] != nobs:
+        weights = weights / np.sum(weights) * self.nobs
+        if weights.size != self.nobs and weights.shape[0] != self.nobs:
             raise ValueError('Weights must be scalar or same length as design')
 
     def whiten(self, X):
@@ -926,7 +925,7 @@ class OLS(WLS):
             ssr += np.dot(params, xtxb)
             ssrp = -2*self._wexog_x_wendog + 2*xtxb
             hm = self._wexog_xprod / ssr - np.outer(ssrp, ssrp) / ssr**2
-            return -self.nobs * hm / 2
+            return -self.nobs * hm / 2.0
         else:
             return -self._wexog_xprod / scale
 
@@ -1015,17 +1014,17 @@ class OLS(WLS):
         Equivalent to fit_regularized with L1_wt = 0 (but implemented
         more efficiently).
         """
-
+        nobs = float(self.nobs)
         u, s, vt = np.linalg.svd(self.exog, 0)
         v = vt.T
         q = np.dot(u.T, self.endog) * s
         s2 = s * s
         if np.isscalar(alpha):
-            sd = s2 + alpha * self.nobs
+            sd = s2 + alpha * nobs
             params = q / sd
             params = np.dot(v, params)
         else:
-            vtav = self.nobs * np.dot(vt, alpha[:, None] * v)
+            vtav = nobs * np.dot(vt, alpha[:, None] * v)
             d = np.diag(vtav) + s2
             np.fill_diagonal(vtav, d)
             r = np.linalg.solve(vtav, q)
@@ -1100,6 +1099,9 @@ class GLSAR(GLS):
             if self.rho.shape == ():
                 self.rho.shape = (1,)
             self.order = self.rho.shape[0]
+
+        self.k_ar = self.order
+
         if exog is None:
             # JP this looks wrong, should be a regression on constant
             # results for rho estimate now identical to yule-walker on y
@@ -1280,8 +1282,8 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False,
         return rho, np.sqrt(sigmasq)
 
 
-class RegressionResults(base.LikelihoodModelResults):
-    r"""
+class RegressionResults(dimensions.KarNobsMixin, base.LikelihoodModelResults):
+    """
     This class summarizes the fit of a linear regression model.
 
     It handles the output of contrasts, estimates of covariance, etc.
@@ -1428,6 +1430,15 @@ class RegressionResults(base.LikelihoodModelResults):
         super(RegressionResults, self).__init__(
             model, params, normalized_cov_params, scale)
 
+        self.endog = model.endog
+        self.exog = model.exog
+
+        self.wexog = getattr(model, 'wexog', None) # TODO: can we be sure of having this? # No.  This is subclassed by GLMResults, and the GLM Model does not have wexog
+        if hasattr(model, 'k_ar'):
+            # kludge for GLSAR
+            self.k_ar = model.k_ar
+
+
         self._cache = resettable_cache()
         if hasattr(model, 'wexog_singular_values'):
             self._wexog_singular_values = model.wexog_singular_values
@@ -1481,10 +1492,6 @@ class RegressionResults(base.LikelihoodModelResults):
         # keep method for docstring for now
         ci = super(RegressionResults, self).conf_int(alpha=alpha, cols=cols)
         return ci
-
-    @cache_readonly
-    def nobs(self):
-        return float(self.model.wexog.shape[0])
 
     @cache_readonly
     def fittedvalues(self):
@@ -1543,7 +1550,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def rsquared_adj(self):
-        return 1 - (np.divide(self.nobs - self.k_constant, self.df_resid)
+        return 1 - (np.divide(float(self.nobs) - self.k_constant, self.df_resid)
                     * (1 - self.rsquared))
 
     @cache_readonly
@@ -1565,14 +1572,14 @@ class RegressionResults(base.LikelihoodModelResults):
     def fvalue(self):
         if hasattr(self, 'cov_type') and self.cov_type != 'nonrobust':
             # with heteroscedasticity or correlation robustness
-            k_params = self.normalized_cov_params.shape[0]
+            k_params = self.normalized_cov_params.shape[0] # TODO: this vs nparams in GenericLikelihoodMOdel?
             mat = np.eye(k_params)
             const_idx = self.model.data.const_idx
             # TODO: What if model includes implicit constant, e.g. all
             #       dummies but no constant regressor?
             # TODO: Restats as LM test by projecting orthogonalizing
             #       to constant?
-            if self.model.data.k_constant == 1:
+            if self.model.data.k_constant == 1: # TODO: attach as self.k_constant?
                 # if constant is implicit, return nan see #2444
                 if const_idx is None:
                     return np.nan
@@ -1810,7 +1817,7 @@ class RegressionResults(base.LikelihoodModelResults):
         wexog = self.model.wexog
         scores = wexog * wresid[:, None]
 
-        n = self.nobs
+        nobs = float(self.nobs)
         df_full = self.df_resid
         df_restr = restricted.df_resid
         df_diff = (df_restr - df_full)
@@ -1830,13 +1837,13 @@ class RegressionResults(base.LikelihoodModelResults):
         cov_type = getattr(self, 'cov_type', 'nonrobust')
         if cov_type == 'nonrobust':
             sigma2 = np.mean(wresid**2)
-            XpX = np.dot(wexog.T, wexog) / n
+            XpX = np.dot(wexog.T, wexog) / nobs
             Sinv = inv(sigma2 * XpX)
         elif cov_type in ('HC0', 'HC1', 'HC2', 'HC3'):
-            Sinv = inv(np.dot(scores.T, scores) / n)
+            Sinv = inv(np.dot(scores.T, scores) / nobs)
         elif cov_type == 'HAC':
             maxlags = self.cov_kwds['maxlags']
-            Sinv = inv(sw.S_hac_simple(scores, maxlags) / n)
+            Sinv = inv(sw.S_hac_simple(scores, maxlags) / nobs)
         elif cov_type == 'cluster':
             # cluster robust standard errors
             groups = self.cov_kwds['groups']
@@ -1846,7 +1853,7 @@ class RegressionResults(base.LikelihoodModelResults):
             raise ValueError('Only nonrobust, HC, HAC and cluster are ' +
                              'currently connected')
 
-        lm_value = n * chain_dot(s, Sinv, s.T)
+        lm_value = nobs * chain_dot(s, Sinv, s.T)
         p_value = stats.chi2.sf(lm_value, df_diff)
         return lm_value, p_value, df_diff
 
@@ -2405,7 +2412,7 @@ class RegressionResults(base.LikelihoodModelResults):
         etext = []
         if hasattr(self, 'cov_type'):
             etext.append(self.cov_kwds['description'])
-        if self.model.exog.shape[0] < self.model.exog.shape[1]:
+        if self.nobs < self.k_exog:
             wstr = "The input rank is higher than the number of observations."
             etext.append(wstr)
         if eigvals[-1] < 1e-10:
@@ -2651,13 +2658,14 @@ class OLSResults(RegressionResults):
         """
         params = np.copy(self.params)
         opt_fun_inst = _ELRegOpts()  # to store weights
+        # FIXME: self.k_exog does not match  self.model.exog.shape[1]
         if len(param_nums) == len(params):
             llr = opt_fun_inst._opt_nuis_regress(
                 [],
                 param_nums=param_nums,
                 endog=self.model.endog,
                 exog=self.model.exog,
-                nobs=self.model.nobs,
+                nobs=float(self.nobs),
                 nvar=self.model.exog.shape[1],
                 params=params,
                 b0_vals=b0_vals,
@@ -2669,7 +2677,7 @@ class OLSResults(RegressionResults):
                 return llr, pval
         x0 = np.delete(params, param_nums)
         args = (param_nums, self.model.endog, self.model.exog,
-                self.model.nobs, self.model.exog.shape[1], params,
+                self.nobs, self.model.exog.shape[1], params,
                 b0_vals, stochastic_exog)
         if method == 'nm':
             llr = optimize.fmin(opt_fun_inst._opt_nuis_regress, x0,
