@@ -1573,7 +1573,7 @@ class TestGeneralizedPoisson(object):
         cls.res2 = res2
 
     def test_bse(self):
-        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_3)
+        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
 
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
@@ -1589,10 +1589,20 @@ class TestGeneralizedPoisson(object):
                             DECIMAL_4)
 
     def test_aic(self):
-        assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL_2)
+        assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL_4)
 
     def test_bic(self):
-        assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_2)
+        assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_4)
+
+    def test_df(self):
+        assert_equal(self.res1.df_model, self.res2.df_model)
+
+    def test_llf(self):
+        assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL_4)
+
+    def test_llr_pvalue(self):
+        assert_almost_equal(self.res1.llr_pvalue, self.res2.llr_pvalue,
+                DECIMAL_4)
 
 
 if __name__ == "__main__":
