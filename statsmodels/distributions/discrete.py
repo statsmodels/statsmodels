@@ -2,9 +2,14 @@ import numpy as np
 from scipy.stats import rv_discrete
 from scipy.special import gammaln
 
+
 class genpoisson_p_gen(rv_discrete):
     '''A generalized Poisson discrete random variable
     '''
+    def _argcheck(self, mu, alpha, p):
+        return True
+
+
     def _logpmf(self, x, mu, alpha, p):
         mu_p = mu ** (p - 1)
         a1 = 1 + alpha * mu_p
