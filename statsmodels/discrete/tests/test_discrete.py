@@ -1559,7 +1559,7 @@ def test_binary_pred_table_zeros():
     assert_equal(res.pred_table(), expected)
 
 
-class TestGeneralizedPoisson(object):
+class TestGeneralizedPoisson_p2(object):
     """
     Test Generalized Poisson model
     """
@@ -1603,6 +1603,45 @@ class TestGeneralizedPoisson(object):
         result = self.res1.wald_test(np.eye(len(self.res1.params))[:-2])
         assert_allclose(result.statistic, self.res2.wald_statistic)
         assert_allclose(result.pvalue, self.res2.wald_pvalue, atol=1e-15)
+
+
+class TestGeneralizedPoisson_p1(object):
+    """
+    Test Generalized Poisson model
+    """
+    @classmethod
+    def setupClass(cls):
+        cls.data = sm.datasets.randhie.load()
+        cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
+        cls.res1 = GeneralizedPoisson(
+            cls.data.endog, cls.data.exog, p=1).fit(method='newton')
+
+    def test_llf(self):
+        poisson_llf = sm.Poisson(
+            self.data.endog, self.data.exog).loglike(
+            self.res1.params[:-1])
+        genpoisson_llf = sm.GeneralizedPoisson(
+            self.data.endog, self.data.exog, p=1).loglike(
+            list(self.res1.params[:-1]) + [0])
+        assert_allclose(genpoisson_llf, poisson_llf)
+
+    def test_score(self):
+        poisson_score = sm.Poisson(
+            self.data.endog, self.data.exog).score(
+            self.res1.params[:-1])
+        genpoisson_score = sm.GeneralizedPoisson(
+            self.data.endog, self.data.exog, p=1).score(
+            list(self.res1.params[:-1]) + [0])
+        assert_allclose(genpoisson_score[:-1], poisson_score, atol=1e-10)
+
+    def test_hessian(self):
+        poisson_score = sm.Poisson(
+            self.data.endog, self.data.exog).hessian(
+            self.res1.params[:-1])
+        genpoisson_score = sm.GeneralizedPoisson(
+            self.data.endog, self.data.exog, p=1).hessian(
+            list(self.res1.params[:-1]) + [0])
+        assert_allclose(genpoisson_score[:-1,:-1], poisson_score, atol=1e-10)
 
 
 if __name__ == "__main__":

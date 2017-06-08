@@ -1446,6 +1446,7 @@ class GeneralizedPoisson(CountModel):
         a2 = mu + alpha * mu_p * y
         a3 = alpha * p * mu ** (p - 1)
         a4 = a3 * y
+        a5 = p * mu ** (p - 1)
         dmudb = mu * exog
 
         # for dl/dparams dparams
@@ -1468,8 +1469,8 @@ class GeneralizedPoisson(CountModel):
         # for dl/dparams dalpha
         dldpda = np.sum((2 * a4 * mu_p / a1**2 - 2 * a3 * mu_p * a2 / a1**3 -
                         mu_p * y * (y - 1) * (1 + a4) / a2**2 + mu_p *
-                        (1 + a4) / a1**2 + a4 * (y - 1) / (alpha * a2) - 2 *
-                        a4 / (alpha * a1) + a3 * a2 / (alpha * a1**2)) * dmudb,
+                        (1 + a4) / a1**2 + a5 * y * (y - 1) / a2 - 2 *
+                        a5 * y / a1 + a5 * a2 / a1**2) * dmudb,
                         axis=0)
 
         hess_arr[-1,:-1] = dldpda
