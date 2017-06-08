@@ -42,6 +42,7 @@ from statsmodels.compat.numpy import np_matrix_rank
 from pandas.core.api import get_dummies
 
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
+from statsmodels.distributions import genpoisson_p
 try:
     import cvxopt
     have_cvxopt = True
@@ -1483,6 +1484,45 @@ class GeneralizedPoisson(CountModel):
         hess_arr[-1,-1] = dldada.sum()
 
         return hess_arr
+
+    def predict(self, params, exog=None, exposure=None, offset=None,
+                which='mean'):
+        """
+        Predict response variable of a count model given exogenous variables.
+
+        Notes
+        -----
+        If exposure is specified, then it will be logged by the method.
+        The user does not need to log it first.
+        """
+        #TODO: add offset tp
+        if exog is None:
+            exog = self.exog
+        
+        if exposure is None:
+            exposure = getattr(self, 'exposure', 0)
+        elif exposure != 0:
+            exposure = np.log(exposure)
+
+        if offset is None:
+            offset = getattr(self, 'offset', 0)
+
+        fitted = np.dot(exog, params[:exog.shape[1]])
+        linpred = fitted + exposure + offset
+
+        if which == 'mean':
+            return np.exp(linpred)
+        elif which == 'linear':
+            return linpred
+        elif which =='prob':
+            counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+            mu = self.predict(params, exog=exog, exposure=exposure,
+                              offset=offset)[:,None]
+            return genpoisson_p.pmf(counts, mu, params[-2],
+                                    self.parameterization)
+        else:
+            raise ValueError('keyword \'which\' not recognized')
+
 
 class Logit(BinaryModel):
     __doc__ = """
