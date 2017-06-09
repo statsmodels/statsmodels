@@ -1286,8 +1286,8 @@ class GeneralizedPoisson(CountModel):
             self._transparams = False
             mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
 
-        gpfit = NegativeBinomialResults(self, mlefit._results)
-        result = NegativeBinomialResultsWrapper(gpfit)
+        gpfit = GeneralizedPoissonResults(self, mlefit._results)
+        result = GeneralizedPoissonResultsWrapper(gpfit)
 
         if cov_kwds is None:
             cov_kwds = {}
@@ -3005,6 +3005,12 @@ class GeneralizedPoissonResults(NegativeBinomialResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description" : "A results class for Generalized Poisson",
                     "extra_attr" : ""}
+
+    @cache_readonly
+    def _dispersion_factor(self):
+        p = getattr(self.model, 'parameterization', 0)
+        mu = self.predict()
+        return (1 + self.params[-1] * mu**p)**2
 
 class L1CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :

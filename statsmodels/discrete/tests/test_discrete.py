@@ -1604,6 +1604,11 @@ class TestGeneralizedPoisson_p2(object):
         assert_allclose(result.statistic, self.res2.wald_statistic)
         assert_allclose(result.pvalue, self.res2.wald_pvalue, atol=1e-15)
 
+    def test_t(self):
+        unit_matrix = np.identity(self.res1.params.size)
+        t_test = self.res1.t_test(unit_matrix)
+        assert_allclose(self.res1.tvalues, t_test.tvalue)
+
 
 class TestGeneralizedPoisson_p1(object):
     """
@@ -1643,6 +1648,31 @@ class TestGeneralizedPoisson_p1(object):
             list(self.res1.params[:-1]) + [0])
         assert_allclose(genpoisson_score[:-1,:-1], poisson_score, atol=1e-10)
 
+    def test_t(self):
+        unit_matrix = np.identity(self.res1.params.size)
+        t_test = self.res1.t_test(unit_matrix)
+        assert_allclose(self.res1.tvalues, t_test.tvalue)
+
+
+class TestGeneralizedPoisson_underdispersion(object):
+    @classmethod
+    def setupClass(cls):
+        exog = np.identity(100)
+        cls.endog1 = [sm.distributions.genpoisson_p.rvs(1, 1, 1) for i in range(100)]
+        cls.endog2 = [sm.distributions.genpoisson_p.rvs(1, 1, 2) for i in range(100)]
+        cls.res1 = sm.GeneralizedPoisson(
+            cls.endog1, exog, p=1).fit(method='bfgs', maxiter=1000)
+        cls.res2 = sm.GeneralizedPoisson(
+            cls.endog2, exog, p=2).fit(method='bfgs', maxiter=1000)
+
+    def test_p1(self):
+        assert_allclose(np.exp(self.res1.params[:-1]), self.endog1,
+                        atol=1e-2, rtol=1e-2)
+
+    def test_p2(self):
+        assert_allclose(np.exp(self.res2.params[:-1]), self.endog2,
+                        atol=1e-2, rtol=1e-2)
+        
 
 if __name__ == "__main__":
     import nose
