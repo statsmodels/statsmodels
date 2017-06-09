@@ -1657,22 +1657,21 @@ class TestGeneralizedPoisson_p1(object):
 class TestGeneralizedPoisson_underdispersion(object):
     @classmethod
     def setupClass(cls):
-        exog = np.identity(100)
-        cls.endog1 = [sm.distributions.genpoisson_p.rvs(1, 1, 1) for i in range(100)]
-        cls.endog2 = [sm.distributions.genpoisson_p.rvs(1, 1, 2) for i in range(100)]
-        cls.res1 = sm.GeneralizedPoisson(
-            cls.endog1, exog, p=1).fit(method='bfgs', maxiter=1000)
-        cls.res2 = sm.GeneralizedPoisson(
-            cls.endog2, exog, p=2).fit(method='bfgs', maxiter=1000)
+        cls.expected_params = [1, 1, -0.1]
+        np.random.seed(1234)
+        nobs = 200
+        exog = np.ones((nobs, 2))
+        exog[:nobs//2, 1] = 0
+        mu_true = np.exp(exog.dot(cls.expected_params[:-1]))
+        endog = sm.distributions.genpoisson_p.rvs(mu_true,
+            cls.expected_params[-1], 1)
+        model_gp = sm.GeneralizedPoisson(endog, exog, p=1)
+        cls.res = model_gp.fit()
 
-    def test_p1(self):
-        assert_allclose(np.exp(self.res1.params[:-1]), self.endog1,
-                        atol=1e-2, rtol=1e-2)
+    def test_params(self):
+        assert_allclose(self.res.params, self.expected_params,
+                        atol=5e-2, rtol=5e-2)
 
-    def test_p2(self):
-        assert_allclose(np.exp(self.res2.params[:-1]), self.endog2,
-                        atol=1e-2, rtol=1e-2)
-        
 
 if __name__ == "__main__":
     import nose

@@ -21,6 +21,13 @@ class TestGenpoisson_p(object):
         genpoisson_pmf = sm.distributions.genpoisson_p.pmf(2, 2, 0, 2)
         assert_allclose(poisson_pmf, genpoisson_pmf, rtol=1e-15)
 
+    def test_pmf_p5(self):
+        poisson_pmf = poisson.pmf(10, 2)
+        genpoisson_pmf_5 = sm.distributions.genpoisson_p.pmf(10, 2, 1e-25, 5)
+        genpoisson_pmf_neg5 = sm.distributions.genpoisson_p.pmf(10, 2, 1e-25, -5)
+        assert_allclose(poisson_pmf, genpoisson_pmf_5, rtol=1e-12)
+        assert_allclose(poisson_pmf, genpoisson_pmf_neg5, rtol=1e-12)
+
     def test_logpmf_p1(self):
         poisson_pmf = poisson.logpmf(5, 2)
         genpoisson_pmf = sm.distributions.genpoisson_p.logpmf(5, 2, 0, 1)

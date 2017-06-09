@@ -49,6 +49,8 @@ try:
 except ImportError:
     have_cvxopt = False
 
+import warnings
+
 #TODO: When we eventually get user-settable precision, we need to change
 #      this
 FLOAT_EPS = np.finfo(float).eps
@@ -1190,7 +1192,11 @@ class GeneralizedPoisson(CountModel):
         A reference to the exogenous design.
     """ % {'params' : base._model_params_doc,
            'extra_params' :
-           """offset : array_like
+    """
+    p: scalar
+        P denotes parametrizations for GP regression. p=1 for GP-1 and
+    p=2 for GP-2. Default is p=1.
+    offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
@@ -1225,6 +1231,11 @@ class GeneralizedPoisson(CountModel):
 
         Notes
         --------
+        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[\\mu_{i}+(y_{i}-1)*ln(\\mu_{i}+
+            \\alpha*\\mu_{i}^{p-1}*y_{i})-y_{i}*ln(1+\\alpha*\\mu_{i}^{p-1})-
+            ln(y_{i}!)-\\frac{\\mu_{i}+\\alpha*\\mu_{i}^{p-1}*y_{i}}{1+\\alpha*
+            \\mu_{i}^{p-1}}\\right]
+
         """
         return np.sum(self.loglikeobs(params))
 
@@ -1245,6 +1256,12 @@ class GeneralizedPoisson(CountModel):
 
         Notes
         --------
+        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[\\mu_{i}+(y_{i}-1)*ln(\\mu_{i}+
+            \\alpha*\\mu_{i}^{p-1}*y_{i})-y_{i}*ln(1+\\alpha*\\mu_{i}^{p-1})-
+            ln(y_{i}!)-\\frac{\\mu_{i}+\\alpha*\\mu_{i}^{p-1}*y_{i}}{1+\\alpha*
+            \\mu_{i}^{p-1}}\\right]
+
+        for observations :math:`i=1,...,n`
         """
         if self._transparams:
             alpha = np.exp(params[-1])
@@ -1258,15 +1275,27 @@ class GeneralizedPoisson(CountModel):
         a1 = 1 + alpha * mu_p
         a2 = mu + (a1 - 1) * endog
         return (np.log(mu) + (endog - 1) * np.log(a2) - endog *
-                np.log(a1) - gammaln(endog + 1) - a2 / 
-                a1)
+                np.log(a1) - gammaln(endog + 1) - a2 / a1)
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, use_transparams = False,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
+        """
+        Parameters
+        ----------
+        use_transparams : bool
+            This parameter enable internal transformation to impose non-negativity.
+            True to enable. Default is False.
+            use_transparams=True imposes the no underdispersion (alpha > 0) constaint.
+            In case use_transparams=True and method="newton" or "ncg" transformation
+            is ignored.
+        """
         if use_transparams and method not in ['newton', 'ncg']:
             self._transparams = True
         else:
+            if use_transparams:
+                warnings.warn("Paramter \"use_transparams\" is ignored",
+                              RuntimeWarning)
             self._transparams = False 
 
         if start_params is None:
@@ -1296,7 +1325,7 @@ class GeneralizedPoisson(CountModel):
                                       use_self=True, use_t=use_t, **cov_kwds)
         return result
 
-    fit.__doc__ = DiscreteModel.fit.__doc__
+    fit.__doc__ = DiscreteModel.fit.__doc__ + fit.__doc__
 
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
@@ -1352,9 +1381,6 @@ class GeneralizedPoisson(CountModel):
         score : ndarray, 1-D
             The score vector of the model, i.e. the first derivative of the
             loglikelihood function, evaluated at `params`
-
-        Notes
-        -----
         """
         if self._transparams:
             alpha = np.exp(params[-1])
@@ -1393,9 +1419,8 @@ class GeneralizedPoisson(CountModel):
         Returns
         -------
         dldp : float
-
-        Notes
-        -----
+            dldp is first derivative of the loglikelihood function, 
+        evaluated at `p-parameter`.
         """
         if self._transparams:
             alpha = np.exp(params[-1])
@@ -1428,9 +1453,6 @@ class GeneralizedPoisson(CountModel):
         hess : ndarray, (k_vars, k_vars)
             The Hessian, second derivative of loglikelihood function,
             evaluated at `params`
-
-        Notes
-        -----
         """
         if self._transparams:
             alpha = np.exp(params[-1])
@@ -1495,7 +1517,6 @@ class GeneralizedPoisson(CountModel):
         If exposure is specified, then it will be logged by the method.
         The user does not need to log it first.
         """
-        #TODO: add offset tp
         if exog is None:
             exog = self.exog
         
