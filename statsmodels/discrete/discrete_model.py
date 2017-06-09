@@ -49,6 +49,8 @@ try:
 except ImportError:
     have_cvxopt = False
 
+import warnings
+
 #TODO: When we eventually get user-settable precision, we need to change
 #      this
 FLOAT_EPS = np.finfo(float).eps
@@ -1273,15 +1275,27 @@ class GeneralizedPoisson(CountModel):
         a1 = 1 + alpha * mu_p
         a2 = mu + (a1 - 1) * endog
         return (np.log(mu) + (endog - 1) * np.log(a2) - endog *
-                np.log(a1) - gammaln(endog + 1) - a2 / 
-                a1)
+                np.log(a1) - gammaln(endog + 1) - a2 / a1)
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, use_transparams = False,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
+        """
+        Parameters
+        ----------
+        use_transparams : bool
+            This parameter enable internal transformation to impose non-negativity.
+            True to enable. Default is False.
+            use_transparams=True imposes the no underdispersion (alpha > 0) constaint.
+            In case use_transparams=True and method="newton" or "ncg" transformation
+            is ignored.
+        """
         if use_transparams and method not in ['newton', 'ncg']:
             self._transparams = True
         else:
+            if use_transparams:
+                warnings.warn("Paramter \"use_transparams\" is ignored",
+                              RuntimeWarning)
             self._transparams = False 
 
         if start_params is None:
@@ -1311,7 +1325,7 @@ class GeneralizedPoisson(CountModel):
                                       use_self=True, use_t=use_t, **cov_kwds)
         return result
 
-    fit.__doc__ = DiscreteModel.fit.__doc__
+    fit.__doc__ = DiscreteModel.fit.__doc__ + fit.__doc__
 
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
