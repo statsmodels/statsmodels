@@ -1190,7 +1190,11 @@ class GeneralizedPoisson(CountModel):
         A reference to the exogenous design.
     """ % {'params' : base._model_params_doc,
            'extra_params' :
-           """offset : array_like
+    """
+    p: scalar
+        P denotes parametrizations for GP regression. p=1 for GP-1 and
+    p=2 for GP-2. Default is p=1.
+    offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
@@ -1225,6 +1229,11 @@ class GeneralizedPoisson(CountModel):
 
         Notes
         --------
+        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[\\mu_{i}+(y_{i}-1)*ln(\\mu_{i}+
+            \\alpha*\\mu_{i}^{p-1}*y_{i})-y_{i}*ln(1+\\alpha*\\mu_{i}^{p-1})-
+            ln(y_{i}!)-\\frac{\\mu_{i}+\\alpha*\\mu_{i}^{p-1}*y_{i}}{1+\\alpha*
+            \\mu_{i}^{p-1}}\\right]
+
         """
         return np.sum(self.loglikeobs(params))
 
@@ -1245,6 +1254,12 @@ class GeneralizedPoisson(CountModel):
 
         Notes
         --------
+        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[\\mu_{i}+(y_{i}-1)*ln(\\mu_{i}+
+            \\alpha*\\mu_{i}^{p-1}*y_{i})-y_{i}*ln(1+\\alpha*\\mu_{i}^{p-1})-
+            ln(y_{i}!)-\\frac{\\mu_{i}+\\alpha*\\mu_{i}^{p-1}*y_{i}}{1+\\alpha*
+            \\mu_{i}^{p-1}}\\right]
+
+        for observations :math:`i=1,...,n`
         """
         if self._transparams:
             alpha = np.exp(params[-1])
@@ -1352,9 +1367,6 @@ class GeneralizedPoisson(CountModel):
         score : ndarray, 1-D
             The score vector of the model, i.e. the first derivative of the
             loglikelihood function, evaluated at `params`
-
-        Notes
-        -----
         """
         if self._transparams:
             alpha = np.exp(params[-1])
@@ -1393,9 +1405,8 @@ class GeneralizedPoisson(CountModel):
         Returns
         -------
         dldp : float
-
-        Notes
-        -----
+            dldp is first derivative of the loglikelihood function, 
+        evaluated at `p-parameter`.
         """
         if self._transparams:
             alpha = np.exp(params[-1])
@@ -1428,9 +1439,6 @@ class GeneralizedPoisson(CountModel):
         hess : ndarray, (k_vars, k_vars)
             The Hessian, second derivative of loglikelihood function,
             evaluated at `params`
-
-        Notes
-        -----
         """
         if self._transparams:
             alpha = np.exp(params[-1])
@@ -1495,7 +1503,6 @@ class GeneralizedPoisson(CountModel):
         If exposure is specified, then it will be logged by the method.
         The user does not need to log it first.
         """
-        #TODO: add offset tp
         if exog is None:
             exog = self.exog
         
