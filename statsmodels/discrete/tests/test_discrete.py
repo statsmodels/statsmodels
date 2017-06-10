@@ -1666,7 +1666,7 @@ class TestGeneralizedPoisson_underdispersion(object):
         endog = sm.distributions.genpoisson_p.rvs(mu_true,
             cls.expected_params[-1], 1)
         model_gp = sm.GeneralizedPoisson(endog, exog, p=1)
-        cls.res = model_gp.fit()
+        cls.res = model_gp.fit(method='nm', maxiter=1000)
 
     def test_params(self):
         assert_allclose(self.res.params, self.expected_params,
