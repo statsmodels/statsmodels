@@ -11,7 +11,7 @@ class genpoisson_p_gen(rv_discrete):
 
     def _logpmf(self, x, mu, alpha, p):
         mu_p = mu ** (p - 1.)
-        a1 = 1 + alpha * mu_p
+        a1 = np.maximum(0, 1 + alpha * mu_p)
         a2 = np.maximum(0, mu + (a1 - 1.) * x)
         logpmf_ = np.log(mu) + (x - 1.) * np.log(a2)
         logpmf_ -=  x * np.log(a1) + gammaln(x + 1.) + a2 / a1
