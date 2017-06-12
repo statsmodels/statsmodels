@@ -2,7 +2,12 @@ from __future__ import division
 
 __all__ = ["PoissonZeroInflated"]
 
-from statsmodels.discrete.discrete_model import CountModel
+import numpy as np
+import statsmodels.base.model as base
+from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
+                                                 Poisson, Logit)
+from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
+                                       approx_hess_cs, approx_fprime_cs)
 
 class GenericZeroInflated(CountModel):
     __doc__ = """
@@ -85,24 +90,27 @@ class GenericZeroInflated(CountModel):
 
         y = self.endog
         w = self.model_infl.predict(params_infl)
-        llf_main = self.main_model.loglikeobs(params_main)
+        llf_main = self.model_main.loglikeobs(params_main)
+        zero_idx = np.nonzero(y == 0)[0]
+        nonzero_idx = np.nonzero(y)[0]
 
         llf = np.zeros_like(y)
-        llf[y == 0] = (np.log(w[y == 0] +
-            (1 - w[y == 0]) * np.exp(llf_main[y == 0])))
-        llf[y != 0] = np.log(1 - w[y != 0]) + llf_main[y != 0]
+        llf[zero_idx] = (np.log(w[zero_idx] +
+            (1 - w[zero_idx]) * np.exp(llf_main[zero_idx])))
+        llf[nonzero_idx] = np.log(1 - w[nonzero_idx]) + llf_main[nonzero_idx]
 
         return llf
 
-    def fit(self, start_params=None, method='newton', maxiter=35,
-            full_output=1, disp=1, callback=None, **kwargs):
+    def fit(self, start_params=None, method='bfgs', maxiter=35,
+            full_output=1, disp=1, callback=None,
+            cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
         if start_params is None:
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             start_params = mod_poi.fit(disp=0).params
-            start_params = np.append(start_params, np.ones(self.k_inflate))
+            start_params = np.append(start_params, np.zeros(self.k_inflate))
         mlefit = super(GenericZeroInflated, self).fit(start_params=start_params,
                         maxiter=maxiter, disp=disp,
                         full_output=full_output, callback=lambda x:x,
@@ -200,7 +208,7 @@ class PoissonZeroInflated(GenericZeroInflated):
                                                   exog_infl=exog_infl,
                                                   exposure=exposure,
                                                   missing=missing, **kwargs)
-        self.main_model = Poisson(endog, exog)
+        self.model_main = Poisson(endog, exog)
         self.model_infl = Logit(np.zeros(exog_infl.shape[0]), exog_infl)
 
 
