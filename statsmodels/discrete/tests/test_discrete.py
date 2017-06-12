@@ -1637,7 +1637,7 @@ class TestGeneralizedPoisson_p1(object):
         genpoisson_score = sm.GeneralizedPoisson(
             self.data.endog, self.data.exog, p=1).score(
             list(self.res1.params[:-1]) + [0])
-        assert_allclose(genpoisson_score[:-1], poisson_score, atol=1e-10)
+        assert_allclose(genpoisson_score[:-1], poisson_score, atol=1e-9)
 
     def test_hessian(self):
         poisson_score = sm.Poisson(
@@ -1663,14 +1663,19 @@ class TestGeneralizedPoisson_underdispersion(object):
         exog = np.ones((nobs, 2))
         exog[:nobs//2, 1] = 2
         mu_true = np.exp(exog.dot(cls.expected_params[:-1]))
-        endog = sm.distributions.genpoisson_p.rvs(mu_true,
+        cls.endog = sm.distributions.genpoisson_p.rvs(mu_true,
             cls.expected_params[-1], 1)
-        model_gp = sm.GeneralizedPoisson(endog, exog, p=1)
+        model_gp = sm.GeneralizedPoisson(cls.endog, exog, p=1)
         cls.res = model_gp.fit(method='nm', maxiter=5000, maxfun=5000)
 
-    def test_params(self):
-        assert_allclose(self.res.params, self.expected_params,
+    def test_mean(self):
+        assert_allclose(self.res.predict().mean(), self.endog.mean(),
                         atol=1e-1, rtol=1e-1)
+
+    def test_var(self):
+        assert_allclose(
+            self.res.predict().mean() * self.res._dispersion_factor.mean(),
+            self.endog.var(), atol=2e-1, rtol=2e-1)
 
 
 if __name__ == "__main__":
