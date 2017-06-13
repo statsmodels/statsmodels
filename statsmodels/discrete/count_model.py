@@ -38,7 +38,9 @@ class GenericZeroInflated(CountModel):
                                                   missing=missing, **kwargs)
 
         if exog_infl is None:
-            exog_infl = np.ones((endog.size, 1))
+            self.exog_infl = np.ones((endog.size, 1))
+        else:
+            self.exog_infl = exog_infl
         self.k_exog = exog.shape[1]
         self.k_inflate = exog_infl.shape[1]
 
@@ -90,6 +92,7 @@ class GenericZeroInflated(CountModel):
 
         y = self.endog
         w = self.model_infl.predict(params_infl)
+        w[w >= 1.] = np.nextafter(1, 0)
         llf_main = self.model_main.loglikeobs(params_main)
         zero_idx = np.nonzero(y == 0)[0]
         nonzero_idx = np.nonzero(y)[0]
@@ -210,6 +213,31 @@ class PoissonZeroInflated(GenericZeroInflated):
                                                   missing=missing, **kwargs)
         self.model_main = Poisson(endog, exog)
         self.model_infl = Logit(np.zeros(exog_infl.shape[0]), exog_infl)
+
+    def score(self, params):
+        params_infl = params[self.k_exog:]
+        params_main = params[:self.k_exog]
+
+        y = self.endog
+        w = self.model_infl.predict(params_infl)
+        w[w == 1.] = np.nextafter(1, 0)
+        score_main = self.model_main.score_obs(params_main)
+        zero_idx = np.nonzero(y == 0)[0]
+        nonzero_idx = np.nonzero(y)[0]
+
+        mu = self.model_main.predict(params_main)
+
+        dmudb = (self.exog[zero_idx].T * mu[zero_idx]).T
+        coeff = (1 + w[zero_idx] * (np.exp(mu[zero_idx]) - 1))
+        dldp_zero = (dmudb.T * ((w[zero_idx] - 1) / coeff)).T.sum(0)
+        dldp_nonzero = score_main[nonzero_idx].sum(0)
+        dldp = dldp_zero + dldp_nonzero
+
+        dldw_zero =  -self.exog_infl[zero_idx].T.dot(w[zero_idx]*(1-w[zero_idx])*(1 - np.exp(mu[zero_idx])) / coeff)
+        dldw_nonzero = -self.exog_infl[nonzero_idx].T.dot(w[nonzero_idx])
+        dldw = dldw_zero + dldw_nonzero
+
+        return np.concatenate((dldp, dldw))
 
 
 if __name__=="__main__":
