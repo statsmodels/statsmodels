@@ -26,16 +26,22 @@ class survey_stat(object):
 
             # check if str, num, or list
             if isinstance(sample_method, str):
-                sample_method = data[sample_method].values
+                sample = data[sample_method].values
                 del data[sample_method]
             elif isinstance(sample_method, int):
-                sample_method = data.iloc[:, sample_method].values
-                del data.iloc[:, sample_method]
+                print("int")
+                try:
+                    sample = data.iloc[:, sample_method].values
+                    data.drop(data.columns[sample_method], inplace=True, axis=1)
+                except: # data is a ndarray
+                    sample = data[:,sample_method]
+                    data = np.delete(data, sample_method, 1)
             elif isinstance(sample_method, list):
                 sample_method = np.array(sample_method)
+            else:
+                n = len(sample_method)
+                sample_method = sample_method.reshape(n,1)
 
-            n = len(sample_method)
-            sample_method = sample_method.reshape(n,1)
             return data, sample_method
 
         data, self.cluster = check_type(data, cluster)
@@ -45,13 +51,14 @@ class survey_stat(object):
         self.data = np.asarray(data)
 
 
-    #def jackknife(self):
-        # for each strata, delete a cluster, 
-        # define p_weights
-            # p_weights_i (for obs i) is w_i if obs is not in strata
-            # 0 if in strata and deleted cluster
-            # size_of_cluster / (1-size_of_cluster) if is in strata but not in psu
-    
+    # def jackknife(self, col_index):
+    #     unique_strata = np.unique(strata)
+    #     for i in unique_strata:
+    #         idx = np.where(strata == i)
+    #         unique_cluster = np.unique()
+
+
+
     def get_subgroup_indices(self):
         combos = {}
         iter = 0
@@ -66,23 +73,15 @@ class survey_stat(object):
                 iter += 1
             else:
                 mesh[i, 2] = combos[tuple(mesh[i,[0,1]])]
-        return mesh[:,2]
+        return mesh
 
-    def show(self):
-        print(self.data)
-        print(self.cluster)
-        print(self.strata)
-        print(self.prob_weights)
+    # def show(self):
+    #     print(self.data)
+    #     print(self.cluster)
+    #     print(self.strata)
+    #     print(self.prob_weights)
 
     def survey_total(self):
-        # carries 7 diff combos
-        # 1. strata then cluster then prob_weight 
-        # 2. strata then cluster
-        # 3. strata 
-        # 4. strata then prob_weight 
-        # 5. cluster
-        # 6. prob_weight
-        # 7. none (just sample mean)
 
         n = self.data.shape[0]
         if not isinstance(self.prob_weights, np.ndarray):
@@ -93,8 +92,10 @@ class survey_stat(object):
             self.strata = np.ones([n,1])
 
         # get unique strata, cluster combination. Calculate total for each subgroup
-        mesh = self.get_subgroup_indices()
+        self.mesh = self.get_subgroup_indices()
 
+        # Only need last column here
+        mesh = self.mesh[:,2]
         # for each column, mult obs by prob_weight
         def col_total(self, mesh, index):
             total = [np.dot(self.data[np.where(mesh == i), index], 
@@ -108,8 +109,6 @@ class survey_stat(object):
 
 
     def survey_mean(self):
-        # if self.strata_cluster_totals is None:
-        #     self.strata_cluster_totals = self.survey_total()
         try:
             self.mean = np.round(self.total / np.sum(self.prob_weights), 2)
         except:
