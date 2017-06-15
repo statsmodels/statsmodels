@@ -198,3 +198,19 @@ class SurveyStat(object):
             self.mean = np.round(self.total / np.sum(self.prob_weights), 2)
         return self.mean
 
+
+    def survey_percentile(self, percentile):
+        cumsum_weights = np.cumsum(self.prob_weights)
+        perc = (cumsum_weights[-1] * percentile) / 100
+        p = self.data.shape[1]
+        if perc in cumsum_weights:
+            index = np.where(cumsum_weights == perc)[0].item()
+            self.percentile = np.array([(self.data[index, var] + self.data[index + 1,var]) / 2 for var in range(p)])
+        else:
+            index = np.argmax(cumsum_weights > perc)
+            self.percentile = np.array([self.data[index, var] for var in range(p)])
+        return self.percentile
+
+    def survey_median(self):
+        self.median = self.survey_percentiles(50)
+        return self.median
