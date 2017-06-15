@@ -156,22 +156,24 @@ class SurveyStat(object):
             self.strata = np.ones([n,1])
 
         # get unique strata, cluster label. Calculate total for each subgroup
-        self.mesh = self.__create_subgroup_labels()
+        # self.mesh = self.__create_subgroup_labels()
 
-        # Only need last column here
-        mesh = self.mesh[:,2]
+        # # Only need last column here
+        # mesh = self.mesh[:,2]
 
-        # for each column and in each subgroup, mult observation by prob_weight
-        def col_total(self, mesh, index):
-            total = [np.dot(self.data[np.where(mesh == i), index], 
-                     self.prob_weights[np.where(mesh==i)]) for i in np.unique(
-                     mesh)]
-            return sum(total)
+        # # for each column and in each subgroup, mult observation by prob_weight
+        # def col_total(self, mesh, index):
+        #     total = [np.dot(self.data[np.where(mesh == i), index], 
+        #              self.prob_weights[np.where(mesh==i)]) for i in np.unique(
+        #              mesh)]
+        #     return sum(total)
 
 
-        self.total = np.array([col_total(self, mesh, j).item() for j in range(
-            self.data.shape[1])])
-
+        # self.total = np.array([col_total(self, mesh, j).item() for j in range(
+        #     self.data.shape[1])])
+        self.total = [np.dot(self.data[:, index], self.prob_weights).item(
+            ) for index in range(self.data.shape[1])]
+        self.total = np.array(self.total)
         return self.total
 
 
