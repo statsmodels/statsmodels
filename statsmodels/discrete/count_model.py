@@ -338,16 +338,3 @@ def predict(self, params, exog=None, exog_infl=None, exposure=None,
 if __name__=="__main__":
     import numpy as np
     import statsmodels.api as sm
-
-    data = sm.datasets.randhie.load()
-    endog = data.endog
-    exog = sm.add_constant(data.exog[:,1:4], prepend=False)
-    exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
-    res1 = PoissonZeroInflated(data.endog, exog, exog_infl=exog_infl).fit(method='newton')
-
-    print res1.params
-    print res1.llf
-
-    print PoissonZeroInflated(data.endog, exog, exog_infl=exog_infl).score(res1.params)
-
-    print PoissonZeroInflated(data.endog, exog, exog_infl=exog_infl).hessian(res1.params)
