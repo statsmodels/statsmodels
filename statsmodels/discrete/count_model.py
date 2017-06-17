@@ -233,13 +233,121 @@ class PoissonZeroInflated(GenericZeroInflated):
         dldp_nonzero = score_main[nonzero_idx].sum(0)
         dldp = dldp_zero + dldp_nonzero
 
-        dldw_zero =  -self.exog_infl[zero_idx].T.dot(w[zero_idx]*(1-w[zero_idx])*(1 - np.exp(mu[zero_idx])) / coeff)
+        dldw_zero =  self.exog_infl[zero_idx].T.dot(w[zero_idx] *
+            (w[zero_idx] - 1) * (1 - np.exp(mu[zero_idx])) / coeff)
         dldw_nonzero = -self.exog_infl[nonzero_idx].T.dot(w[nonzero_idx])
         dldw = dldw_zero + dldw_nonzero
 
         return np.concatenate((dldp, dldw))
 
+    def hessian(self, params):
+        params_infl = params[self.k_exog:]
+        params_main = params[:self.k_exog]
+
+        y = self.endog
+        w = self.model_infl.predict(params_infl)
+        w[w == 1.] = np.nextafter(1, 0)
+        score = self.score(params)
+        zero_idx = np.nonzero(y == 0)[0]
+        nonzero_idx = np.nonzero(y)[0]
+
+        mu = self.model_main.predict(params_main)
+
+        dim = self.k_exog + self.k_inflate
+
+        hess_arr = np.zeros((dim,dim))
+
+        coeff = (1 + w[zero_idx] * (np.exp(mu[zero_idx]) - 1))
+
+        #d2l/dp2
+        for i in range(self.k_exog):
+            for j in range(i, -1, -1):
+                hess_arr[i, j] = ((
+                    self.exog[zero_idx, i] * self.exog[zero_idx, j] *
+                    mu[zero_idx] * (w[zero_idx] - 1) * (1 / coeff -
+                    w[zero_idx] * mu[zero_idx] * np.exp(mu[zero_idx]) /
+                    coeff**2)).sum() - (mu[nonzero_idx] * self.exog[nonzero_idx, i] *
+                    self.exog[nonzero_idx, j]).sum())
+
+        #d2l/dw2
+        for i in range(self.k_inflate):
+            for j in range(i, -1, -1):
+                hess_arr[i + self.k_exog, j + self.k_exog] = ((
+                    self.exog_infl[zero_idx, i] * self.exog_infl[zero_idx, j] *
+                    w[zero_idx] * (w[zero_idx] - 1) * (np.exp(mu[zero_idx]) - 1) *
+                    (w[zero_idx] * ((np.exp(mu[zero_idx]) - 1) * w[zero_idx] + 2) -
+                    1) / coeff**2).sum() +
+                    (self.exog_infl[nonzero_idx, i] *
+                     self.exog_infl[nonzero_idx, j] * w[nonzero_idx] *
+                     (w[nonzero_idx] - 1)).sum())
+
+        #d2l/dpdw
+        for i in range(self.k_inflate):
+            for j in range(self.k_exog):
+                hess_arr[i + self.k_exog, j] = -((
+                    self.exog[zero_idx, j] * self.exog_infl[zero_idx, i] *
+                    mu[zero_idx] * np.exp(mu[zero_idx]) * w[zero_idx] *
+                    (w[zero_idx] - 1) / coeff**2).sum())
+
+        tri_idx = np.triu_indices(dim, k=1)
+        hess_arr[tri_idx] = hess_arr.T[tri_idx]
+
+        return hess_arr
+
+def predict(self, params, exog=None, exog_infl=None, exposure=None,
+            offset=None, which='mean'):
+    """
+    Predict response variable of a count model given exogenous variables.
+
+    Notes
+    -----
+    If exposure is specified, then it will be logged by the method.
+    The user does not need to log it first.
+    """
+    if exog is None:
+        exog = self.exog
+        offset = getattr(self, 'offset', 0)
+        exposure = getattr(self, 'exposure', 0)
+
+    if exposure is None:
+        exposure = 0
+    elif exposure != 0:
+        exposure = np.log(exposure)
+
+    if offset is None:
+        offset = 0
+
+    fitted = np.dot(exog, params[:exog.shape[1]]) + exposure + offset
+    prob_poisson = 1 / (1 + np.exp(-params[-1]))
+    prob_zero = (1 - prob_poisson)  + prob_poisson * np.exp(-np.exp(lin_pred))
+
+    if which == 'mean':
+        return prob_poisson * np.exp(lin_pred)
+    elif which == 'poisson-mean':
+        return np.exp(lin_pred)
+    elif which == 'linear':
+        return lin_pred
+    elif which == 'mean-nonzero':
+        return prob_poisson * np.exp(lin_pred) / (1 - prob_zero)
+    elif which == 'prob-zero':
+        return  prob_zero
+    else:
+        raise ValueError('keyword `which` not recognized')
+
 
 if __name__=="__main__":
     import numpy as np
     import statsmodels.api as sm
+
+    data = sm.datasets.randhie.load()
+    endog = data.endog
+    exog = sm.add_constant(data.exog[:,1:4], prepend=False)
+    exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
+    res1 = PoissonZeroInflated(data.endog, exog, exog_infl=exog_infl).fit(method='newton')
+
+    print res1.params
+    print res1.llf
+
+    print PoissonZeroInflated(data.endog, exog, exog_infl=exog_infl).score(res1.params)
+
+    print PoissonZeroInflated(data.endog, exog, exog_infl=exog_infl).hessian(res1.params)
