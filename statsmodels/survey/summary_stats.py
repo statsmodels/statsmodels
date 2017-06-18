@@ -7,14 +7,16 @@ class SurveyStat(object):
 
     def __init__(self, data, cluster=None, strata=None, prob_weights=None):
 
-        data, self.cluster = self.__check_type(data, cluster)
-        data, self.strata = self.__check_type(data, strata)
-        data, self.prob_weights = self.__check_type(data, prob_weights)
-    
-        self.data = np.asarray(data)
+        data, self.cluster = self._check_type(data, cluster)
+        data, self.strata = self._check_type(data, strata)
+        data, self.prob_weights = self._check_type(data, prob_weights)
+        
+        n = data.shape[0]
+        p = data.shape[1]
+        self.data = np.asarray(data).reshape(n,p)
 
     # preprocessing to be used by init
-    def __check_type(self, data, sampling_method):
+    def _check_type(self, data, sampling_method):
         """
         converts cluster, strata, etc to an numpy array
         gets rid of column from data if possible
@@ -44,7 +46,7 @@ class SurveyStat(object):
                 sampling_method = temp
                 n = len(sampling_method)
                 sampling_method = sampling_method.reshape(n,1)
-            except AttributeError: # data is a ndarray
+            except: # data is a ndarray
                 temp = data[:,sampling_method]
                 data = np.delete(data, sampling_method, 1)
                 sampling_method = temp
@@ -61,15 +63,8 @@ class SurveyStat(object):
 
         return data, sampling_method
 
-    # def jackknife(self, col_index):
-    #     unique_strata = np.unique(strata)
-    #     for i in unique_strata:
-    #         idx = np.where(strata == i)
-    #         unique_cluster = np.unique()
 
-
-
-    def __create_subgroup_labels(self):
+    def _create_subgroup_labels(self):
         """
         creates labels for each SSU within a PSU so that one is sure that 
         operations are being done withing each sampling subgroup
@@ -84,46 +79,57 @@ class SurveyStat(object):
         is self.cluster, the third column is the unique label for each subgroup
         """
 
-        combos = {}
-        iter = 0
-        # add new column that will hold the labels for each subgroup 
-        mesh = np.hstack([self.strata, self.cluster, np.zeros([len(self.cluster),1])])
-        for i in range(mesh.shape[0]):
-            # if we've not seen a particular SSU
-            if tuple(mesh[i,[0,1]]) not in combos:
-                combos[tuple(mesh[i,[0,1]])] = iter
-                mesh[i, 2] = iter
-                # the label for that ssu
-                iter += 1
-            else:
-                mesh[i, 2] = combos[tuple(mesh[i,[0,1]])]
-        return mesh
+        _, i1 = np.unique(strata, return_inverse=True)
+        _, i2 = np.unique(clusters, return_inverse=True)
+        labels = i1 * len(i2) + i2
+        return labels
 
-    def add_prob_weights(self, prob_weights):
-        """
-        Allows user to pass in a the probability weights either as a an array-like object
-        or as an integer to represent a column in their data. 
-        *issue: what if their original data was a DataFrame and they input an column from the 
-        df? This is an issue bc check_type won't delete the column from self.data.strata
+    def _jackknife(self, method, column_index):
+        stratum_stats = np.empty(len(np.unique(self.strata)))
+        for id, stratum in enumerate(np.unique(self.strata)):
+            # get indices for a particular stratum and the # of clusters in it
+            id_stratum = np.where(self.strata == stratum)[0]        
+            unique_clusters = np.unique(self.cluster[id_stratum])
+            num_clusters = len(unique_clusters)
 
-        Parameters
-        ----------
-        prob_weights: An array-like obj with len() = n or or column index
+            # get the statistic without a particular cluster
+            cluster_stats = np.empty(num_clusters)
 
-        Returns
-        -------
-        A nx3 array, the first column being self.strata, the second column
-        is self.cluster, the third column is the unique label for each subgroup
-        """
+            for ind,cluster in enumerate(unique_clusters):
+                new_weights = self._reweight(cluster, id_stratum, method)
+                if method == "total":
+                    cluster_stats[ind] = np.array(np.dot(self.data[:, column_index], new_weights).item())
+                    cluster_stats[ind] = cluster_stats[ind] - self._total[column_index]
+                elif method == "mean":
+                    cluster_stats[ind] = np.array(np.dot(self.data[:, column_index], new_weights).item())
+                    cluster_stats[ind] = np.round(cluster_stats[ind] / np.sum(new_weights), 2)
+                    cluster_stats[ind] = cluster_stats[ind] - self._mean[column_index]
 
-        self.data, prob_weights = self.__check_type(data, strata)
+            stratum_stats[id] = np.sum((cluster_stats) ** 2)
+            stratum_stats[id] *= (num_clusters - 1) / num_clusters
 
+        return np.sqrt(np.sum(stratum_stats))
 
-    def add_strata(self, strata):
-        self.data, self.strata = self.__check_type(data, strata)
+            # diff = (cluster_stats - method) * (num_clusters) / (num_clusters - 1)
+            # stratum_stats[id] = sum(diff)
+        
 
-    def add_cluster(self, cluster):
-        self.data, self.cluster = self.__check_type(data, cluster)
+    def _reweight(self, cluster, id_stratum, method):
+        num_clusters = len(np.unique(self.cluster[id_stratum]))
+        # in stratum h but not in cluster j
+        # print("cluster #:", cluster)
+        # print("cluster indices:", np.where(self.cluster == cluster)[0])
+        # print("stratum indices:", id_stratum)
+        id_noncluster = np.intersect1d(id_stratum, np.where(self.cluster != cluster)[0])
+
+        # in stratum h and in cluster j
+        id_cluster = np.intersect1d(id_stratum, np.where(self.cluster == cluster)[0])
+
+        new_weights = np.array(self.prob_weights, copy=True)
+        new_weights[id_noncluster] = (num_clusters / (num_clusters - 1)) * self.prob_weights[id_noncluster]
+        new_weights[id_cluster] = 0
+
+        return new_weights        
 
 
     def show(self):
@@ -132,7 +138,7 @@ class SurveyStat(object):
         print(self.strata)
         print(self.prob_weights)
 
-    def survey_total(self):
+    def total(self, method):
         """
         Calculates the total for each variable. 
 
@@ -155,29 +161,16 @@ class SurveyStat(object):
         if not isinstance(self.strata, np.ndarray):
             self.strata = np.ones([n,1])
 
-        # get unique strata, cluster label. Calculate total for each subgroup
-        # self.mesh = self.__create_subgroup_labels()
+        self._total = [np.dot(self.data[:, index], self.prob_weights).item() for index in range(self.data.shape[1])]
+        self._total = np.array(self._total)
 
-        # # Only need last column here
-        # mesh = self.mesh[:,2]
-
-        # # for each column and in each subgroup, mult observation by prob_weight
-        # def col_total(self, mesh, index):
-        #     total = [np.dot(self.data[np.where(mesh == i), index], 
-        #              self.prob_weights[np.where(mesh==i)]) for i in np.unique(
-        #              mesh)]
-        #     return sum(total)
+        if method == "jack":
+          total_se = np.array([self._jackknife("total", index) for index in range(self.data.shape[1])])
+        
+        return self._total, total_se
 
 
-        # self.total = np.array([col_total(self, mesh, j).item() for j in range(
-        #     self.data.shape[1])])
-        self.total = [np.dot(self.data[:, index], self.prob_weights).item(
-            ) for index in range(self.data.shape[1])]
-        self.total = np.array(self.total)
-        return self.total
-
-
-    def survey_mean(self):
+    def mean(self, method):
         """
         Calculates survey mean
 
@@ -189,28 +182,54 @@ class SurveyStat(object):
         -------
         A 1xp array, containg the mean for each of the p vars in self.data
         """
-
         try:
-            self.mean = np.round(self.total / np.sum(self.prob_weights), 2)
+            self._mean = np.round(self._total / np.sum(self.prob_weights), 2)
         # if self.total doesn't exist yet
         except AttributeError:
-            self.total = self.survey_total()
-            self.mean = np.round(self.total / np.sum(self.prob_weights), 2)
-        return self.mean
+            self._total = self.total()
+            self._mean = np.round(self._total / np.sum(self.prob_weights), 2)
 
+        if method == "jack":
+            mean_se = np.array([self._jackknife("mean", index) for index in range(self.data.shape[1])])
+        
+        return self._mean, mean_se
 
-    def survey_percentile(self, percentile):
-        cumsum_weights = np.cumsum(self.prob_weights)
-        perc = (cumsum_weights[-1] * percentile) / 100
+    # need to make this work when input is an array-like object
+    def percentile(self, percentile): 
         p = self.data.shape[1]
-        if perc in cumsum_weights:
-            index = np.where(cumsum_weights == perc)[0].item()
-            self.percentile = np.array([(self.data[index, var] + self.data[index + 1,var]) / 2 for var in range(p)])
-        else:
-            index = np.argmax(cumsum_weights > perc)
-            self.percentile = np.array([self.data[index, var] for var in range(p)])
-        return self.percentile
+        self._percentile = np.empty(p)
+        
+        for index in range(p):
+            sorted_weights = [x for (y,x) in sorted(zip(self.data[:, index],self.prob_weights))]
+            sorted_weights = np.array(sorted_weights)
+            cumsum_weights = np.cumsum(sorted_weights)
 
-    def survey_median(self):
-        self.median = self.survey_percentiles(50)
-        return self.median
+            perc = (cumsum_weights[-1] * percentile) / 100
+            sorted_data = np.sort(self.data[:, index])
+            
+            if perc in cumsum_weights:
+                ind = np.where(cumsum_weights == perc)[0].item()
+                self._percentile[index] = (sorted_data[ind] + sorted_data[ind + 1]) / 2
+            else:
+                ind = np.argmax(cumsum_weights > perc)
+                self._percentile[index] = sorted_data[ind]
+        return self._percentile
+
+    def median(self):
+        self._median = self.percentile(50)
+        return self._median
+
+
+
+
+df = pd.read_csv("~/Documents/survey_data")
+df.drop("Unnamed: 0", inplace=True, axis=1)
+print(df.head())
+
+test = SurveyStat(data=df, cluster="dnum", prob_weights="pw")
+# test.show()
+print("\n \n \n")
+print(test.total('jack')) # matches perfectly with R result
+print(test.mean('jack')) # SE is around 2.8 bigger than R's result..
+print(test.percentile(25)) # R seems to take the difference between the the (i-1)th and ith value when I dont.
+print(test.median()) # matches R
