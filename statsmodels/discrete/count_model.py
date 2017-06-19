@@ -4,8 +4,13 @@ __all__ = ["PoissonZeroInflated"]
 
 import numpy as np
 import statsmodels.base.model as base
+import statsmodels.base.wrapper as wrap
+import statsmodels.regression.linear_model as lm
 from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
-                                                 Poisson, Logit)
+                                                 Poisson, Logit, CountResults,
+                                                 L1CountResults,
+                                                 _discrete_results_docs)
+from statsmodels.distributions import zipoisson
 from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
                                        approx_hess_cs, approx_fprime_cs)
 
@@ -38,11 +43,16 @@ class GenericZeroInflated(CountModel):
                                                   missing=missing, **kwargs)
 
         if exog_infl is None:
-            self.exog_infl = np.ones((endog.size, 1))
+            self.k_inflate = 1
+            self.exog_infl = np.ones((endog.size, self.k_inflate))
         else:
             self.exog_infl = exog_infl
-        self.k_exog = exog.shape[1]
-        self.k_inflate = exog_infl.shape[1]
+            self.k_inflate = exog_infl.shape[1]
+
+        if len(exog.shape) == 1:
+            self.k_exog = 1
+        else:
+            self.k_exog = exog.shape[1]
 
     def loglike(self, params):
         """
@@ -119,9 +129,8 @@ class GenericZeroInflated(CountModel):
                         full_output=full_output, callback=lambda x:x,
                         **kwargs)
 
-        #gpfit = GeneralizedPoissonResults(self, mlefit._results)
-        #result = GeneralizedPoissonResultsWrapper(gpfit)
-        result = mlefit
+        zipfit = self.result(self, mlefit._results)
+        result = self.result_wrapper(zipfit)
 
         if cov_kwds is None:
             cov_kwds = {}
@@ -131,6 +140,38 @@ class GenericZeroInflated(CountModel):
         return result
 
     fit.__doc__ = DiscreteModel.fit.__doc__
+
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+        if start_params is None:
+            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+            if np.size(offset) == 1 and offset == 0:
+                offset = None
+            mod_poi = Poisson(self.endog, self.exog, offset=offset)
+            start_params = mod_poi.fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=0, callback=callback,
+                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
+            start_params = np.append(start_params, 0.1)
+
+        cntfit = super(CountModel, self).fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+
+        if method in ['l1', 'l1_cvxopt_cp']:
+            discretefit = self.result_reg(self, cntfit)
+        else:
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
+
+        return self.result_reg_wrapper(discretefit)
+
+    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
     def score(self, params):
         """
@@ -211,8 +252,13 @@ class PoissonZeroInflated(GenericZeroInflated):
                                                   exog_infl=exog_infl,
                                                   exposure=exposure,
                                                   missing=missing, **kwargs)
-        self.model_main = Poisson(endog, exog)
-        self.model_infl = Logit(np.zeros(exog_infl.shape[0]), exog_infl)
+        self.model_main = Poisson(self.endog, self.exog)
+        self.model_infl = Logit(np.zeros(self.exog_infl.shape[0]),
+                                         self.exog_infl)
+        self.result = ZeroInflatedPoissonResults
+        self.result_wrapper = ZeroInflatedPoissonResultsWrapper
+        self.result_reg = L1ZeroInflatedPoissonResults
+        self.result_reg_wrapper = L1ZeroInflatedPoissonResultsWrapper
 
     def score(self, params):
         params_infl = params[self.k_exog:]
@@ -294,45 +340,93 @@ class PoissonZeroInflated(GenericZeroInflated):
 
         return hess_arr
 
-def predict(self, params, exog=None, exog_infl=None, exposure=None,
-            offset=None, which='mean'):
-    """
-    Predict response variable of a count model given exogenous variables.
+    def predict(self, params, exog=None, exog_infl=None, exposure=None,
+                offset=None, which='mean'):
+        """
+        Predict response variable of a count model given exogenous variables.
 
-    Notes
-    -----
-    If exposure is specified, then it will be logged by the method.
-    The user does not need to log it first.
-    """
-    if exog is None:
-        exog = self.exog
-        offset = getattr(self, 'offset', 0)
-        exposure = getattr(self, 'exposure', 0)
+        Notes
+        -----
+        If exposure is specified, then it will be logged by the method.
+        The user does not need to log it first.
+        """
+        if exog is None:
+            exog = self.exog
+            offset = getattr(self, 'offset', 0)
+            exposure = getattr(self, 'exposure', 0)
 
-    if exposure is None:
-        exposure = 0
-    elif exposure != 0:
-        exposure = np.log(exposure)
+        if exog_infl is None:
+            exog_infl = self.exog_infl
 
-    if offset is None:
-        offset = 0
+        if exposure is None:
+            exposure = 0
+        elif exposure != 0:
+            exposure = np.log(exposure)
 
-    fitted = np.dot(exog, params[:exog.shape[1]]) + exposure + offset
-    prob_poisson = 1 / (1 + np.exp(-params[-1]))
-    prob_zero = (1 - prob_poisson)  + prob_poisson * np.exp(-np.exp(lin_pred))
+        if offset is None:
+            offset = 0
 
-    if which == 'mean':
-        return prob_poisson * np.exp(lin_pred)
-    elif which == 'poisson-mean':
-        return np.exp(lin_pred)
-    elif which == 'linear':
-        return lin_pred
-    elif which == 'mean-nonzero':
-        return prob_poisson * np.exp(lin_pred) / (1 - prob_zero)
-    elif which == 'prob-zero':
-        return  prob_zero
-    else:
-        raise ValueError('keyword `which` not recognized')
+        params_infl = params[self.k_exog:]
+        params_main = params[:self.k_exog]
+
+        lin_pred = np.dot(exog, params_main) + exposure + offset
+        prob_poisson = 1 / (1 + np.exp(np.dot(exog_infl, params_infl)))
+        prob_zero = (1 - prob_poisson) + prob_poisson * np.exp(-np.exp(lin_pred))
+
+        if which == 'mean':
+            return prob_poisson * np.exp(lin_pred)
+        elif which == 'poisson-mean':
+            return np.exp(lin_pred)
+        elif which == 'linear':
+            return lin_pred
+        elif which == 'mean-nonzero':
+            return prob_poisson * np.exp(lin_pred) / (1 - prob_zero)
+        elif which == 'prob-zero':
+            return  prob_zero
+        elif which == 'prob':
+            counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+            w = self.model_infl.predict(params_infl)[:,None]
+            w[w == 1.] = np.nextafter(1, 0)
+            mu = self.model_main.predict(params_main)[:,None]
+            return zipoisson.pmf(counts, mu, w)
+        else:
+            raise ValueError('keyword `which` not recognized')
+
+class GenericZeroInflatedResults(CountResults):
+    __doc__ = _discrete_results_docs % {
+        "one_line_description" : "A results class for Generic Zero Inflated",
+                    "extra_attr" : ""}
+
+class ZeroInflatedPoissonResults(GenericZeroInflatedResults):
+    __doc__ = _discrete_results_docs % {
+        "one_line_description" : "A results class for Zero Inflated Poisson",
+                    "extra_attr" : ""}
+
+class L1GenericZeroInflatedResults(L1CountResults, GenericZeroInflatedResults):
+    pass
+
+class L1ZeroInflatedPoissonResults(L1CountResults, ZeroInflatedPoissonResults):
+    pass
+
+class GenericZeroInflatedResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(GenericZeroInflatedResultsWrapper,
+                      GenericZeroInflatedResults)
+
+class ZeroInflatedPoissonResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(ZeroInflatedPoissonResultsWrapper,
+                      ZeroInflatedPoissonResults)
+
+class L1GenericZeroInflatedResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(L1GenericZeroInflatedResultsWrapper,
+                      L1GenericZeroInflatedResults)
+
+class L1ZeroInflatedPoissonResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(L1ZeroInflatedPoissonResultsWrapper,
+                      L1ZeroInflatedPoissonResults)
 
 
 if __name__=="__main__":

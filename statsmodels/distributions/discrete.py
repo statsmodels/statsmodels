@@ -22,3 +22,28 @@ class genpoisson_p_gen(rv_discrete):
 
 genpoisson_p = genpoisson_p_gen(name='genpoisson_p',
                                 longname='Generalized Poisson')
+
+class zipoisson_gen(rv_discrete):
+    '''A Zero Inflated Poisson distribution
+    '''
+    def _argcheck(self, mu, w):
+        return True
+
+    def _logpmf(self, x, mu, w):
+        if np.isscalar(x):
+            self._logpmf_each(x, mu, w)
+        else:
+            return [self._logpmf_each(x[i], mu[i], w[i]) for i in range(len(x))]
+
+    def _logpmf_each(self, x, mu, w):
+        if x == 0:
+            return np.log(w + (1. - w) * np.exp(-mu))
+        else:
+            return (np.log(1. - w) + x * np.log(mu) -
+                    gammaln(x + 1.) - mu)
+
+    def _pmf(self, x, mu, w):
+        return np.exp(self._logpmf(x, mu, w))
+
+zipoisson = zipoisson_gen(name='zipoisson',
+                          longname='Zero Inflated Poisson')
