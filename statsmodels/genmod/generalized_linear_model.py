@@ -938,8 +938,13 @@ class GLM(base.LikelihoodModel):
         mu = self.predict(rslt.params)
         scale = self.estimate_scale(mu)
 
+        if rslt.normalized_cov_params is None:
+            cov_p = None
+        else:
+            cov_p = rslt.normalized_cov_params / scale
+
         glm_results = GLMResults(self, rslt.params,
-                                 rslt.normalized_cov_params / scale,
+                                 cov_p,
                                  scale,
                                  cov_type=cov_type, cov_kwds=cov_kwds,
                                  use_t=use_t)

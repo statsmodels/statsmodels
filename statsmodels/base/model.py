@@ -1055,7 +1055,14 @@ class LikelihoodModelResults(Results):
 
     @cache_readonly
     def bse(self):
-        return np.sqrt(np.diag(self.cov_params()))
+        # Issue 3299
+        if ((not hasattr(self, 'cov_params_default')) and
+                (self.normalized_cov_params is None)):
+            bse_ = np.empty(len(self.params))
+            bse_[:] = np.nan
+        else:
+            bse_ = np.sqrt(np.diag(self.cov_params()))
+        return bse_
 
     @cache_readonly
     def tvalues(self):
@@ -1570,7 +1577,7 @@ class LikelihoodModelResults(Results):
             extra_constraints = []
         if combine_terms is None:
             combine_terms = []
-        design_info = getattr(result.model.data.orig_exog, 'design_info', None)
+        design_info = getattr(result.model.data, 'design_info', None)
 
         if design_info is None and extra_constraints is None:
             raise ValueError('no constraints, nothing to do')

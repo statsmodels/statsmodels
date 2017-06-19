@@ -327,7 +327,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     '''
 
     if isinstance(results, tuple):
-        results, params, std_err, tvalues, pvalues, conf_int = results
+        results, params, bse, tvalues, pvalues, conf_int = results
     else:
         params = results.params
         bse = results.bse

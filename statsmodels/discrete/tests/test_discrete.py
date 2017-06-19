@@ -16,7 +16,9 @@ from numpy.testing import (assert_, assert_raises, assert_almost_equal,
                            assert_array_less)
 
 from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
-                                                 Poisson, NegativeBinomial)
+                                                Poisson, NegativeBinomial,
+                                                CountModel
+                                                )
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
@@ -887,6 +889,55 @@ class TestLogitNewton(CheckBinaryResults, CheckMargEff):
         assert_almost_equal(me.margeff_se,
                 self.res2.margeff_dummy_atexog2_se, DECIMAL_4)
 
+
+class TestLogitNewtonPrepend(CheckMargEff):
+    # same as previous version but adjusted vor add_constant prepend=True
+    # bug #3695
+    @classmethod
+    def setup_class(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
+        cls.res1 = Logit(data.endog, data.exog).fit(method="newton", disp=0)
+        res2 = Spector()
+        res2.logit()
+        cls.res2 = res2
+        cls.slice = np.roll(np.arange(len(cls.res1.params)), 1) #.astype(int)
+
+    def test_resid_pearson(self):
+        assert_almost_equal(self.res1.resid_pearson,
+                            self.res2.resid_pearson, 5)
+
+    def test_nodummy_exog1(self):
+        me = self.res1.get_margeff(atexog={1 : 2.0, 3 : 1.})
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_nodummy_atexog1, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_atexog1_se, DECIMAL_4)
+
+    def test_nodummy_exog2(self):
+        me = self.res1.get_margeff(atexog={2 : 21., 3 : 0}, at='mean')
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_nodummy_atexog2, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_atexog2_se, DECIMAL_4)
+
+    def test_dummy_exog1(self):
+        me = self.res1.get_margeff(atexog={1 : 2.0, 3 : 1.}, dummy=True)
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_dummy_atexog1, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_dummy_atexog1_se, DECIMAL_4)
+
+    def test_dummy_exog2(self):
+        me = self.res1.get_margeff(atexog={2 : 21., 3 : 0}, at='mean',
+                dummy=True)
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_dummy_atexog2, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_dummy_atexog2_se, DECIMAL_4)
+
+
+
 class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
     @classmethod
     def setupClass(cls):
@@ -1387,6 +1438,9 @@ def test_issue_339():
     test_case_file = os.path.join(cur_dir, 'results', 'mn_logit_summary.txt')
     test_case = open(test_case_file, 'r').read()
     np.testing.assert_equal(smry, test_case[:-1])
+    # smoke test for summary2
+    res1.summary2()  # see #3651
+
 
 def test_issue_341():
     data = sm.datasets.anes96.load()
@@ -1460,6 +1514,34 @@ def test_formula_missing_exposure():
     exposure = pd.Series(np.random.randn(5))
     assert_raises(ValueError, sm.Poisson, df.Foo, df[['constant', 'Bar']],
                   exposure=exposure)
+
+def test_predict_with_exposure():
+    # Case where CountModel.predict is called with exog = None and exposure
+    # or offset not-None
+    # See 3565
+
+    # Setup copied from test_formula_missing_exposure
+    import pandas as pd
+    d = {'Foo': [1, 2, 10, 149], 'Bar': [1, 2, 3, 4],
+         'constant': [1] * 4, 'exposure' : [np.exp(1)]*4,
+         'x': [1, 3, 2, 1.5]}
+    df = pd.DataFrame(d)
+
+    mod1 = CountModel.from_formula('Foo ~ Bar', data=df, exposure=df['exposure'])
+
+    params = np.array([1, .4])
+    pred = mod1.predict(params, linear=True)
+    # No exposure is passed, so default to using mod1.exposure, which
+    # should have been logged
+    X = df[['constant', 'Bar']].values # mod1.exog
+    expected = np.dot(X, params) + 1
+    assert_allclose(pred, expected)
+    # The above should have passed without the current patch.  The next
+    # test would fail under the old code
+
+    pred2 = mod1.predict(params, exposure=[np.exp(2)]*4, linear=True)
+    expected2 = expected + 1
+    assert_allclose(pred2, expected2)
 
 
 def test_binary_pred_table_zeros():

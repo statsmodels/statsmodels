@@ -990,14 +990,18 @@ def test_summary():
 \\bottomrule
 \\end{tabular}
 %\\caption{OLS Regression Results}
-\\end{center}"""
+\\end{center}
+
+Warnings: \\newline
+ [1] Standard Errors assume that the covariance matrix of the errors is correctly specified. \\newline
+ [2] The condition number is large, 4.86e+09. This might indicate that there are \\newline
+ strong multicollinearity or other numerical problems."""
     assert_equal(table, expected)
 
 
 class TestRegularizedFit(object):
 
-    # Make sure there are no issues when there are no selected
-    # variables.
+    # Make sure there are no problems when no variables are selected.
     def test_empty_model(self):
 
         np.random.seed(742)
@@ -1005,10 +1009,10 @@ class TestRegularizedFit(object):
         endog = np.random.normal(size=n)
         exog = np.random.normal(size=(n, 3))
 
-        model = OLS(endog, exog)
-        result = model.fit_regularized(alpha=1000)
-
-        assert_equal(result.params, 0.)
+        for cls in OLS, WLS, GLS:
+            model = cls(endog, exog)
+            result = model.fit_regularized(alpha=1000)
+            assert_equal(result.params, 0.)
 
     def test_regularized(self):
 
@@ -1039,16 +1043,49 @@ class TestRegularizedFit(object):
             exog = exog - exog.mean(0)
             exog /= exog.std(0, ddof=1)
 
-            mod = OLS(endog, exog)
-            rslt = mod.fit_regularized(L1_wt=L1_wt, alpha=lam)
-            assert_almost_equal(rslt.params, params, decimal=3)
+            for cls in OLS, WLS, GLS:
+                mod = cls(endog, exog)
+                rslt = mod.fit_regularized(L1_wt=L1_wt, alpha=lam)
+                assert_almost_equal(rslt.params, params, decimal=3)
 
-            # Smoke test for summary
-            rslt.summary()
+                # Smoke test for summary
+                rslt.summary()
 
-            # Smoke test for profile likeihood
-            mod.fit_regularized(L1_wt=L1_wt, alpha=lam,
-                                profile_scale=True)
+                # Smoke test for profile likeihood
+                mod.fit_regularized(L1_wt=L1_wt, alpha=lam,
+                                    profile_scale=True)
+
+    def test_regularized_weights(self):
+
+        np.random.seed(1432)
+        exog1 = np.random.normal(size=(100, 3))
+        endog1 = exog1[:, 0] + exog1[:, 1] + np.random.normal(size=100)
+        exog2 = np.random.normal(size=(100, 3))
+        endog2 = exog2[:, 0] + exog2[:, 1] + np.random.normal(size=100)
+
+        exog_a = np.vstack((exog1, exog1, exog2))
+        endog_a = np.concatenate((endog1, endog1, endog2))
+
+        # Should be equivalent to exog_a, endog_a.
+        exog_b = np.vstack((exog1, exog2))
+        endog_b = np.concatenate((endog1, endog2))
+        wgts = np.ones(200)
+        wgts[0:100] = 2
+        sigma = np.diag(1/wgts)
+
+        for L1_wt in 0, 0.5, 1:
+            for alpha in 0, 1:
+                mod1 = OLS(endog_a, exog_a)
+                rslt1 = mod1.fit_regularized(L1_wt=L1_wt, alpha=alpha)
+
+                mod2 = WLS(endog_b, exog_b, weights=wgts)
+                rslt2 = mod2.fit_regularized(L1_wt=L1_wt, alpha=alpha)
+
+                mod3 = GLS(endog_b, exog_b, sigma=sigma)
+                rslt3 = mod3.fit_regularized(L1_wt=L1_wt, alpha=alpha)
+
+                assert_almost_equal(rslt1.params, rslt2.params, decimal=3)
+                assert_almost_equal(rslt1.params, rslt3.params, decimal=3)
 
 
 def test_formula_missing_cat():
@@ -1091,6 +1128,7 @@ def test_missing_formula_predict():
 
 
 def test_fvalue_implicit_constant():
+    # if constant is implicit, return nan see #2444
     nobs = 100
     np.random.seed(2)
     x = np.random.randn(nobs, 1)
@@ -1110,6 +1148,26 @@ def test_fvalue_implicit_constant():
     res.summary()
 
 
+def test_fvalue_only_constant():
+    # if only constant in model, return nan see #3642
+    nobs = 20
+    np.random.seed(2)
+    x = np.ones(nobs)
+    y = np.random.randn(nobs)
+
+    from statsmodels.regression.linear_model import OLS, WLS
+
+    res = OLS(y, x).fit(cov_type='hac', cov_kwds={'maxlags': 3})
+    assert_(np.isnan(res.fvalue))
+    assert_(np.isnan(res.f_pvalue))
+    res.summary()
+
+    res = WLS(y, x).fit(cov_type='HC1')
+    assert_(np.isnan(res.fvalue))
+    assert_(np.isnan(res.f_pvalue))
+    res.summary()
+
+
 def test_ridge():
     n = 100
     p = 5
@@ -1117,12 +1175,19 @@ def test_ridge():
     xmat = np.random.normal(size=(n, p))
     yvec = xmat.sum(1) + np.random.normal(size=n)
 
-    for alpha in [1., np.ones(p), 10, 10*np.ones(p)]:
-        model1 = OLS(yvec, xmat)
-        result1 = model1._fit_ridge(alpha=1.)
-        model2 = OLS(yvec, xmat)
-        result2 = model2.fit_regularized(alpha=1., L1_wt=0)
-        assert_allclose(result1.params, result2.params)
+    v = np.ones(p)
+    v[0] = 0
+
+    for a in (0, 1, 10):
+        for alpha in (a, a*np.ones(p), a*v):
+            model1 = OLS(yvec, xmat)
+            result1 = model1._fit_ridge(alpha=alpha)
+            model2 = OLS(yvec, xmat)
+            result2 = model2.fit_regularized(alpha=alpha, L1_wt=0)
+            assert_allclose(result1.params, result2.params)
+            model3 = OLS(yvec, xmat)
+            result3 = model3.fit_regularized(alpha=alpha, L1_wt=1e-10)
+            assert_allclose(result1.params, result3.params)
 
     fv1 = result1.fittedvalues
     fv2 = np.dot(xmat, result1.params)
@@ -1142,6 +1207,27 @@ def test_regularized_refit():
     assert_allclose(result1.params, result2.params)
     assert_allclose(result1.bse, result2.bse)
 
+
+def test_regularized_predict():
+    n = 100
+    p = 5
+    np.random.seed(3132)
+    xmat = np.random.normal(size=(n, p))
+    yvec = xmat.sum(1) + np.random.normal(size=n)
+    wgt = np.random.uniform(1, 2, n)
+
+    for klass in WLS, GLS:
+        model1 = klass(yvec, xmat,  weights=wgt)
+        result1 = model1.fit_regularized(alpha=2., L1_wt=0.5, refit=True)
+
+        params = result1.params
+        fittedvalues = np.dot(xmat, params)
+        pr = model1.predict(result1.params)
+        assert_allclose(fittedvalues, pr)
+        assert_allclose(result1.fittedvalues, pr)
+
+        pr = result1.predict()
+        assert_allclose(fittedvalues, pr)
 
 def test_regularized_options():
     n = 100

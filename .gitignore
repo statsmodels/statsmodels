@@ -54,6 +54,10 @@ marks.bzr
 .DS_Store
 help
 
+# Coverage report output
+.coverage
+coverage_html_report/
+
 # Project specific
 statsmodels/version.py
 cythonize.dat
