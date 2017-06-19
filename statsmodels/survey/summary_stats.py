@@ -46,7 +46,7 @@ class SurveyStat(object):
                 sampling_method = temp
                 n = len(sampling_method)
                 sampling_method = sampling_method.reshape(n,1)
-            except: # data is a ndarray
+            except AttributeError: # data is a ndarray
                 temp = data[:,sampling_method]
                 data = np.delete(data, sampling_method, 1)
                 sampling_method = temp
@@ -85,8 +85,9 @@ class SurveyStat(object):
         return labels
 
     def _jackknife(self, method, column_index):
-        stratum_stats = np.empty(len(np.unique(self.strata)))
-        for id, stratum in enumerate(np.unique(self.strata)):
+        unique_strata = np.unique(self.strata)
+        stratum_stats = np.empty(len(unique_strata))
+        for id, stratum in enumerate(unique_strata):
             # get indices for a particular stratum and the # of clusters in it
             id_stratum = np.where(self.strata == stratum)[0]        
             unique_clusters = np.unique(self.cluster[id_stratum])
@@ -95,19 +96,18 @@ class SurveyStat(object):
             # get the statistic without a particular cluster
             cluster_stats = np.empty(num_clusters)
 
-            for ind,cluster in enumerate(unique_clusters):
+            for ind, cluster in enumerate(unique_clusters):
                 new_weights = self._reweight(cluster, id_stratum, method)
                 if method == "total":
                     cluster_stats[ind] = np.array(np.dot(self.data[:, column_index], new_weights).item())
-                    cluster_stats[ind] = cluster_stats[ind] - self._total[column_index]
+                    cluster_stats[ind] -= self._total[column_index]
                 elif method == "mean":
                     cluster_stats[ind] = np.array(np.dot(self.data[:, column_index], new_weights).item())
-                    cluster_stats[ind] = np.round(cluster_stats[ind] / np.sum(new_weights), 2)
-                    cluster_stats[ind] = cluster_stats[ind] - self._mean[column_index]
+                    cluster_stats[ind] /= np.sum(new_weights)
+                    cluster_stats[ind] -= self._mean[column_index]
 
             stratum_stats[id] = np.sum((cluster_stats) ** 2)
             stratum_stats[id] *= (num_clusters - 1) / num_clusters
-
         return np.sqrt(np.sum(stratum_stats))
 
             # diff = (cluster_stats - method) * (num_clusters) / (num_clusters - 1)
@@ -115,6 +115,8 @@ class SurveyStat(object):
         
 
     def _reweight(self, cluster, id_stratum, method):
+        # make sure to throw and error if len(num_clusters == 1) 
+        # ie you can't calc a statistic minus a cluster bc there's only one
         num_clusters = len(np.unique(self.cluster[id_stratum]))
         # in stratum h but not in cluster j
         # print("cluster #:", cluster)
@@ -148,7 +150,9 @@ class SurveyStat(object):
 
         Returns
         -------
-        A 1xp array, holding the values for each of the p vars in self.data
+        A tuple of length 2, each index is a 1xp array. The first array holds 
+        the total for each of the p vars in self.data. The second array is the
+        SE for each total
         """
 
         # creates "dummy" arrays for prob_weights, cluster, and strata
@@ -180,14 +184,16 @@ class SurveyStat(object):
 
         Returns
         -------
-        A 1xp array, containg the mean for each of the p vars in self.data
+        A tuple of length 2, each index is a 1xp array. The first array holds 
+        the mean for each of the p vars in self.data. The second array is the
+        SE for each total 
         """
         try:
             self._mean = np.round(self._total / np.sum(self.prob_weights), 2)
         # if self.total doesn't exist yet
         except AttributeError:
             self._total = self.total()
-            self._mean = np.round(self._total / np.sum(self.prob_weights), 2)
+            self._mean = self._total / np.sum(self.prob_weights)
 
         if method == "jack":
             mean_se = np.array([self._jackknife("mean", index) for index in range(self.data.shape[1])])
@@ -222,14 +228,18 @@ class SurveyStat(object):
 
 
 
-df = pd.read_csv("~/Documents/survey_data")
-df.drop("Unnamed: 0", inplace=True, axis=1)
-print(df.head())
+# df = pd.read_csv("~/Documents/survey_data")
+# df.drop("Unnamed: 0", inplace=True, axis=1)
+# df = df.loc[df['dnum'].isin([637,437])]
+# print(df.head())
 
-test = SurveyStat(data=df, cluster="dnum", prob_weights="pw")
-# test.show()
-print("\n \n \n")
-print(test.total('jack')) # matches perfectly with R result
-print(test.mean('jack')) # SE is around 2.8 bigger than R's result..
-print(test.percentile(25)) # R seems to take the difference between the the (i-1)th and ith value when I dont.
-print(test.median()) # matches R
+# test = SurveyStat(data=df, cluster="dnum", prob_weights="pw")
+# # test.show()
+# print("\n \n \n")
+# survey_tot = test.total('jack') # matches perfectly with R result
+# print(survey_tot)
+# survey_mean = test.mean('jack') # SE is bigger than R's result
+# # i did my method in R and got what I got here... thus, R must be doing something differently for their mean
+# print(survey_mean)
+# print(test.percentile(25)) # R seems to take the difference between the the (i-1)th and ith value when I dont.
+# print(test.median()) # matches R
