@@ -85,7 +85,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     model_types = {'OLS' : 'Ordinary least squares',
                    'GLS' : 'Generalized least squares',
                    'GLSAR' : 'Generalized least squares with AR(p)',
-                   'WLS' : 'Weigthed least squares',
+                   'WLS' : 'Weighted least squares',
                    'RLM' : 'Robust linear model',
                    'GLM' : 'Generalized linear model'
                    }
