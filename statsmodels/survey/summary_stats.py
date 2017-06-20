@@ -11,12 +11,11 @@ class SurveyStat(object):
         data, self.strata = self._check_type(data, strata)
         data, self.prob_weights = self._check_type(data, prob_weights)
         
-        n = data.shape[0]
-        p = data.shape[1]
-        self.data = np.asarray(data).reshape(n,p)
+        self.p = data.shape[1]
+        self.data = np.asarray(data)
 
     # preprocessing to be used by init
-    def _check_type(self, data, sampling_method):
+    def _check_type(self, data, vname):
         """
         converts cluster, strata, etc to an numpy array
         gets rid of column from data if possible
@@ -25,66 +24,60 @@ class SurveyStat(object):
         ----------
         data : array-like
           The raw data
-        sampling_method : one of cluster, strata, or prob_weight
+        vname : one of cluster, strata, or prob_weight
 
         Returns
         -------
         A nx1 numpy array
         """
-
         # check if str, num, or list
-        if isinstance(sampling_method, str):
-            temp = data[sampling_method].values
-            del data[sampling_method]
-            sampling_method = temp
-            n = len(sampling_method)
-            sampling_method = sampling_method.reshape(n,1)
-        elif isinstance(sampling_method, int):
-            try:
-                temp = data.iloc[:, sampling_method].values
-                data.drop(data.columns[sampling_method], inplace=True, axis=1)
-                sampling_method = temp
-                n = len(sampling_method)
-                sampling_method = sampling_method.reshape(n,1)
-            except AttributeError: # data is a ndarray
-                temp = data[:,sampling_method]
-                data = np.delete(data, sampling_method, 1)
-                sampling_method = temp
-                n = len(sampling_method)
-                sampling_method = sampling_method.reshape(n,1)
-        elif isinstance(sampling_method, list):
-            sampling_method = np.array(sampling_method)
-        elif sampling_method is None:
-            n = data.shape[0]
-            self.sampling_method = np.ones([n,1])
+
+        self.n = data.shape[0]
+        if isinstance(vname, str):
+            temp = data[vname].values
+            del data[vname]
+            vname = temp
+            n = len(vname)
+            vname = vname.reshape(self.n,1)  
+        elif isinstance(vname, list):
+            vname = np.array(vname).reshape(self.n,1)
+        elif vname is None:
+            vname = np.ones([self.n,1])
         else:
-            n = len(sampling_method)
-            sampling_method = sampling_method.reshape(n,1)
+            vname = vname.reshape(self.n,1)
 
-        return data, sampling_method
+        return data, vname
 
 
-    def _create_subgroup_labels(self):
-        """
-        creates labels for each SSU within a PSU so that one is sure that 
-        operations are being done withing each sampling subgroup
+    # def create_subgroup_labels(self):
+    #     """
+    #     Create unique integer id for each stratum x cluster combination
+        
+    #     The ids are 0, 1, ... and are kept as an attribute
+    #     """
 
-        Parameters
-        ----------
-        self
+    #     _, i1 = np.unique(self.strata, return_inverse=True)
+    #     _, i2 = np.unique(self.cluster, return_inverse=True)
+    #     labels = i1 * len(i2) + i2
+    #     self.grp_ix = dict.fromkeys(np.unique(labels),[])
+    #     # doesnt append correctly
+    #     for i, k in enumerate(labels):
+    #         self.grp_ix[k].append(i)
+    #     return self.group_ix
 
-        Returns
-        -------
-        A nx3 array, the first column being self.strata, the second column
-        is self.cluster, the third column is the unique label for each subgroup
-        """
+    # def get_psu_indices(self):
+    #     self.indices_dict = {}
+    #     unique_strata = np.unique(self.strata)
+    #     stratum_stats = np.empty(len(unique_strata))
+    #     for id, stratum in enumerate(unique_strata):
+    #         # get indices for a particular stratum and the # of clusters in it
+    #         id_stratum = np.where(self.strata == stratum)[0]        
+    #         unique_clusters = np.unique(self.cluster[id_stratum])
+    #         num_clusters = len(unique_clusters)
+    #         self.indices_dict[stratum] = unique_clusters
+    #     # print(self.indices_dict)
 
-        _, i1 = np.unique(strata, return_inverse=True)
-        _, i2 = np.unique(clusters, return_inverse=True)
-        labels = i1 * len(i2) + i2
-        return labels
-
-    def _jackknife(self, method, column_index):
+    def _jackknife(self, method, column_index, object):
         unique_strata = np.unique(self.strata)
         stratum_stats = np.empty(len(unique_strata))
         for id, stratum in enumerate(unique_strata):
@@ -97,14 +90,16 @@ class SurveyStat(object):
             cluster_stats = np.empty(num_clusters)
 
             for ind, cluster in enumerate(unique_clusters):
+        # self.get_psu_indices()
+        # stratum_stats = np.empty(len(self.indices_dict.keys()))
+        # for id, stratum in enumerate(self.indices_dict.keys()):
+        #     id_stratum = np.where(self.strata == stratum)[0]
+        #     num_clusters = len(self.indices_dict[stratum])
+        #     cluster_stats = np.empty(num_clusters)
+        #     for ind, cluster in enumerate(self.indices_dict[key]):
                 new_weights = self._reweight(cluster, id_stratum, method)
-                if method == "total":
-                    cluster_stats[ind] = np.array(np.dot(self.data[:, column_index], new_weights).item())
-                    cluster_stats[ind] -= self._total[column_index]
-                elif method == "mean":
-                    cluster_stats[ind] = np.array(np.dot(self.data[:, column_index], new_weights).item())
-                    cluster_stats[ind] /= np.sum(new_weights)
-                    cluster_stats[ind] -= self._mean[column_index]
+
+                cluster_stats[ind] = object._stat(new_weights)
 
             stratum_stats[id] = np.sum((cluster_stats) ** 2)
             stratum_stats[id] *= (num_clusters - 1) / num_clusters
@@ -117,11 +112,9 @@ class SurveyStat(object):
     def _reweight(self, cluster, id_stratum, method):
         # make sure to throw and error if len(num_clusters == 1) 
         # ie you can't calc a statistic minus a cluster bc there's only one
+        
         num_clusters = len(np.unique(self.cluster[id_stratum]))
-        # in stratum h but not in cluster j
-        # print("cluster #:", cluster)
-        # print("cluster indices:", np.where(self.cluster == cluster)[0])
-        # print("stratum indices:", id_stratum)
+
         id_noncluster = np.intersect1d(id_stratum, np.where(self.cluster != cluster)[0])
 
         # in stratum h and in cluster j
@@ -133,6 +126,8 @@ class SurveyStat(object):
 
         return new_weights        
 
+    def _stat(self):
+        raise NotImplementedError
 
     def show(self):
         print(self.data)
@@ -155,21 +150,12 @@ class SurveyStat(object):
         SE for each total
         """
 
-        # creates "dummy" arrays for prob_weights, cluster, and strata
-        # if any or all were not supplied
-        n = self.data.shape[0]
-        if not isinstance(self.prob_weights, np.ndarray):
-            self.prob_weights = np.ones([n,1])
-        if not isinstance(self.cluster, np.ndarray):
-            self.cluster = np.ones([n,1])
-        if not isinstance(self.strata, np.ndarray):
-            self.strata = np.ones([n,1])
 
         self._total = [np.dot(self.data[:, index], self.prob_weights).item() for index in range(self.data.shape[1])]
         self._total = np.array(self._total)
 
         if method == "jack":
-          total_se = np.array([self._jackknife("total", index) for index in range(self.data.shape[1])])
+            total_se = np.array([self._jackknife("total", index, SurveyTotal(self.data, self.cluster, self.strata, self.prob_weights,index,self._total)) for index in range(self.data.shape[1])])
         
         return self._total, total_se
 
@@ -196,7 +182,7 @@ class SurveyStat(object):
             self._mean = self._total / np.sum(self.prob_weights)
 
         if method == "jack":
-            mean_se = np.array([self._jackknife("mean", index) for index in range(self.data.shape[1])])
+            mean_se = np.array([self._jackknife("mean", index, SurveyMean(self.data, self.cluster, self.strata, self.prob_weights,index, self._mean)) for index in range(self.data.shape[1])])
         
         return self._mean, mean_se
 
@@ -226,20 +212,46 @@ class SurveyStat(object):
         return self._median
 
 
+class SurveyMean(SurveyStat):
+
+    def __init__(self, data, cluster, strata, prob_weights, column_index,parent_stat):
+        SurveyStat.__init__(self, data, cluster, strata, prob_weights)
+        self.column_index = column_index
+        self.parent_stat = parent_stat
+
+    def _stat(self, new_weights):
+        stat = np.array(np.dot(self.data[:, self.column_index], new_weights).item())
+        stat /= np.sum(new_weights)
+        stat -= self.parent_stat[self.column_index]
+        return stat
+
+class SurveyTotal(SurveyStat):
+
+    def __init__(self, data, cluster, strata, prob_weights, column_index, parent_stat):
+        SurveyStat.__init__(self, data, cluster, strata, prob_weights)
+        self.column_index = column_index
+        self.parent_stat = parent_stat
+
+    def _stat(self, new_weights):
+        stat = np.array(np.dot(self.data[:, self.column_index], new_weights).item())
+        stat -= self.parent_stat[self.column_index]
+        return stat
 
 
-# df = pd.read_csv("~/Documents/survey_data")
-# df.drop("Unnamed: 0", inplace=True, axis=1)
+
+
+df = pd.read_csv("~/Documents/survey_data")
+df.drop("Unnamed: 0", inplace=True, axis=1)
 # df = df.loc[df['dnum'].isin([637,437])]
-# print(df.head())
+print(df.head())
 
-# test = SurveyStat(data=df, cluster="dnum", prob_weights="pw")
+test = SurveyStat(data=df, cluster="dnum", prob_weights="pw")
 # # test.show()
 # print("\n \n \n")
-# survey_tot = test.total('jack') # matches perfectly with R result
-# print(survey_tot)
-# survey_mean = test.mean('jack') # SE is bigger than R's result
-# # i did my method in R and got what I got here... thus, R must be doing something differently for their mean
-# print(survey_mean)
+survey_tot = test.total('jack') # matches perfectly with R result
+print(survey_tot)
+survey_mean = test.mean('jack') # SE is bigger than R's result
+# i did my method in R and got what I got here... thus, R must be doing something differently for their mean
+print(survey_mean)
 # print(test.percentile(25)) # R seems to take the difference between the the (i-1)th and ith value when I dont.
 # print(test.median()) # matches R
