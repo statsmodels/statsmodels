@@ -1076,7 +1076,7 @@ class MICEData(object):
         ix = dxi[[jj, ir]]
         iz = ixm[[jj, ix]]
 
-        imputed_miss = np.array(endog_obs[iz])
+        imputed_miss = np.array(endog_obs[iz]).squeeze()
         self._store_changes(vname, imputed_miss)
 
 
