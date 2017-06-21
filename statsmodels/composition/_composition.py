@@ -47,7 +47,6 @@ Functions
    ilr
    ilr_inv
    centralize
-   ancom
 
 References
 ----------
