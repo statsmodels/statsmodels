@@ -1372,12 +1372,12 @@ def test_exceptions():
 
     # select_coint_rank:
     yield assert_raises, ValueError, select_coint_rank, endog, 0, 3, \
-        "my_method", 0.95  # method argument cannot be "my_method"
-    # det_order has to be 0.9, 0.95, or 0.99:
+        "my_method", 0.05  # method argument cannot be "my_method"
+    # det_order has to be -1, 0, or 1:
     yield assert_raises, ValueError, select_coint_rank, endog, 2, 3
     yield assert_raises, ValueError, select_coint_rank, endog, 0.5, 3
     yield assert_raises, ValueError, select_coint_rank, endog, 0, 3, "trace", \
-        0.975  # 0.975 is not possible (must be 0.9, 0.95 or 0.99)
+        0.025  # 0.025 is not possible (must be 0.1, 0.05, or 0.01)
 
     # Granger_causality:
     # ### 0<signif<1
@@ -1470,7 +1470,7 @@ def test_select_coint_rank():  # This is only a smoke test.
     if rank < neqs:
         yield assert_, test_stats[rank] < crit_vals[rank]
 
-    maxeig_result = select_coint_rank(endog, 0, 3, method="maxeig", signif=0.9)
+    maxeig_result = select_coint_rank(endog, 0, 3, method="maxeig", signif=0.1)
     rank = maxeig_result.rank
     r_1 = maxeig_result.r_1
     test_stats = maxeig_result.test_stats

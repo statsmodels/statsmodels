@@ -1610,7 +1610,7 @@ class VARResults(VARProcess):
             Perform F-test or Wald (chi-sq) test
         signif : float, default 5%
             Significance level for computing critical values for test,
-            defaulting to standard 0.95 level
+            defaulting to standard 0.05 level
 
         Notes
         -----
@@ -1717,7 +1717,7 @@ class VARResults(VARProcess):
             are causing the variable(s) specified in caused.
         signif : float between 0 and 1, default 5 %
             Significance level for computing critical values for test,
-            defaulting to standard 0.95 level
+            defaulting to standard 0.05 level
         verbose : bool
             If True, print a table with the results.
 

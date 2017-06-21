@@ -432,12 +432,13 @@ class CointRankResults:
     method : str, {``"trace"``, ``"maxeig"``}, default: ``"trace"``
         If ``"trace"``, the trace test statistic is used. If ``"maxeig"``, the
         maximum eigenvalue test statistic is used.
-    signif : float, {0.9, 0.95, 0.99}, default: 0.95
+    signif : float, {0.1, 0.05, 0.01}, default: 0.05
         The test's significance level.
     """
     def __init__(self, rank, neqs, test_stats, crit_vals, method="trace",
-                 signif=0.95):
+                 signif=0.05):
         self.rank = rank
+        self.neqs = neqs
         self.r_1 = [neqs if method == "trace" else i+1
                     for i in range(min(rank+1, neqs))]
         self.test_stats = test_stats
@@ -449,10 +450,11 @@ class CointRankResults:
         headers = ["r_0", "r_1", "test statistic", "critical value"]
         title = "Johansen cointegration test using " + \
             ("trace" if self.method == "trace" else "maximum eigenvalue") + \
-            " test statistic with " + str(round(self.signif*100)) + \
-            "% significance level"
+            " test statistic with {:.0%}".format(self.signif) + \
+            " significance level"
+        num_tests = min(self.rank, self.neqs-1)
         data = [[i, self.r_1[i], self.test_stats[i], self.crit_vals[i]]
-                for i in range(self.rank+1)]
+                for i in range(num_tests + 1)]
         data_fmt = {"data_fmts": ["%s", "%s", "%#0.4g", "%#0.4g"],
                     "data_aligns": "r"}
         html_data_fmt = dict(data_fmt)
@@ -467,7 +469,7 @@ class CointRankResults:
 
 
 def select_coint_rank(endog, det_order, k_ar_diff, method="trace",
-                      signif=0.95):
+                      signif=0.05):
     """Calculate the cointegration rank of a VECM.
 
     Parameters
@@ -483,7 +485,7 @@ def select_coint_rank(endog, det_order, k_ar_diff, method="trace",
     method : str, {``"trace"``, ``"maxeig"``}, default: ``"trace"``
         If ``"trace"``, the trace test statistic is used. If ``"maxeig"``, the
         maximum eigenvalue test statistic is used.
-    signif : float, {0.9, 0.95, 0.99}, default: 0.95
+    signif : float, {0.1, 0.05, 0.01}, default: 0.05
         The test's significance level.
 
     Returns
@@ -503,10 +505,10 @@ def select_coint_rank(endog, det_order, k_ar_diff, method="trace",
         else:
             raise ValueError("det_order must be -1, 0, or 1.")
 
-    possible_signif_values = [0.9, 0.95, 0.99]
+    possible_signif_values = [0.1, 0.05, 0.01]
     if signif not in possible_signif_values:
-        raise ValueError("Please choose a significance level from {0.9, 0.95,"
-                         "0.99}")
+        raise ValueError("Please choose a significance level from {0.1, 0.05,"
+                         "0.01}")
 
     coint_result = coint_johansen(endog, det_order, k_ar_diff)
     test_stat = coint_result.lr1 if method == "trace" else coint_result.lr2
@@ -1749,7 +1751,7 @@ class VECMResults(object):
             `caused` (the remaining variables of the system).
         signif : float, 0 < `signif` < 1, default 5 %
             Significance level for computing critical values for test,
-            defaulting to standard 0.95 level.
+            defaulting to standard 0.05 level.
 
         Returns
         -------
@@ -1877,7 +1879,7 @@ class VECMResults(object):
             are causing the variable(s) specified in caused.
         signif : float, 0 < `signif` < 1, default 5 %
             Significance level for computing critical values for test,
-            defaulting to standard 0.95 level.
+            defaulting to standard 0.05 level.
 
         Returns
         -------
