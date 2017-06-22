@@ -221,7 +221,7 @@ class GenericZeroInflated(CountModel):
 
         return np.concatenate((dldw, dldp))
 
-    def hessian(self, params):
+    def _hessian_part(self, params):
         """
         Generic Zero Inflated model Hessian matrix of the loglikelihood
 
@@ -239,7 +239,45 @@ class GenericZeroInflated(CountModel):
         Notes
         -----
         """
-        return approx_hess(params, self.loglike)
+        params_infl = params[:self.k_inflate]
+        params_main = params[self.k_inflate:]
+
+        y = self.endog
+        w = self.model_infl.predict(params_infl)
+        w[w == 1.] = np.nextafter(1, 0)
+        score_main = self.model_main.score_obs(params_main)
+        llf_main = self.model_main.loglikeobs(params_main)
+        llf = self.loglikeobs(params)
+        zero_idx = np.nonzero(y == 0)[0]
+        nonzero_idx = np.nonzero(y)[0]
+
+        dim = self.k_exog + self.k_inflate
+
+        hess_arr = np.zeros((dim, dim))
+
+        pmf = np.exp(llf)
+
+        #d2l/dw2
+        for i in range(self.k_inflate):
+            for j in range(i, -1, -1):
+                hess_arr[i, j] = ((
+                    self.exog_infl[zero_idx, i] * self.exog_infl[zero_idx, j] *
+                    (w[zero_idx] * (1 - w[zero_idx]) * ((1 -
+                    np.exp(llf_main[zero_idx])) * (1 - 2 * w[zero_idx]) *
+                    np.exp(llf[zero_idx]) - (w[zero_idx] - w[zero_idx]**2) *
+                    (1 - np.exp(llf_main[zero_idx]))**2) /
+                    pmf[zero_idx]**2)).sum() -
+                    (self.exog_infl[nonzero_idx, i] * self.exog_infl[nonzero_idx, j] *
+                    w[nonzero_idx] * (1 - w[nonzero_idx])).sum())
+
+        #d2l/dpdw
+        for i in range(self.k_inflate):
+            for j in range(self.k_exog):
+                hess_arr[i, j + self.k_inflate] = -(score_main[zero_idx, j] *
+                    w[zero_idx] * (1 - w[zero_idx]) *
+                    self.exog_infl[zero_idx, i] / pmf[zero_idx]).sum()
+
+        return hess_arr
 
 class PoissonZeroInflated(GenericZeroInflated):
     """
@@ -292,9 +330,7 @@ class PoissonZeroInflated(GenericZeroInflated):
 
         mu = self.model_main.predict(params_main)
 
-        dim = self.k_exog + self.k_inflate
-
-        hess_arr = np.zeros((dim,dim))
+        hess_arr = self._hessian_part(params)
 
         coeff = (1 + w[zero_idx] * (np.exp(mu[zero_idx]) - 1))
 
@@ -308,27 +344,7 @@ class PoissonZeroInflated(GenericZeroInflated):
                     coeff**2)).sum() - (mu[nonzero_idx] * self.exog[nonzero_idx, i] *
                     self.exog[nonzero_idx, j]).sum())
 
-        #d2l/dw2
-        for i in range(self.k_inflate):
-            for j in range(i, -1, -1):
-                hess_arr[i, j] = ((
-                    self.exog_infl[zero_idx, i] * self.exog_infl[zero_idx, j] *
-                    w[zero_idx] * (w[zero_idx] - 1) * (np.exp(mu[zero_idx]) - 1) *
-                    (w[zero_idx] * ((np.exp(mu[zero_idx]) - 1) * w[zero_idx] + 2) -
-                    1) / coeff**2).sum() +
-                    (self.exog_infl[nonzero_idx, i] *
-                     self.exog_infl[nonzero_idx, j] * w[nonzero_idx] *
-                     (w[nonzero_idx] - 1)).sum())
-
-        #d2l/dpdw
-        for i in range(self.k_inflate):
-            for j in range(self.k_exog):
-                hess_arr[i, j + self.k_inflate] = -((
-                    self.exog[zero_idx, j] * self.exog_infl[zero_idx, i] *
-                    mu[zero_idx] * np.exp(mu[zero_idx]) * w[zero_idx] *
-                    (w[zero_idx] - 1) / coeff**2).sum())
-
-        tri_idx = np.triu_indices(dim, k=1)
+        tri_idx = np.triu_indices(self.k_exog + self.k_inflate, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
         return hess_arr
@@ -425,11 +441,3 @@ wrap.populate_wrapper(L1ZeroInflatedPoissonResultsWrapper,
 if __name__=="__main__":
     import numpy as np
     import statsmodels.api as sm
-
-    data = sm.datasets.randhie.load()
-    endog = data.endog
-    exog = sm.add_constant(data.exog[:,1:4], prepend=False)
-    exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
-    res1 = PoissonZeroInflated(data.endog, exog, exog_infl=exog_infl).fit(maxiter=500)
-
-    print(res1.llf)
