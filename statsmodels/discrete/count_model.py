@@ -194,7 +194,32 @@ class GenericZeroInflated(CountModel):
             The score vector of the model, i.e. the first derivative of the
             loglikelihood function, evaluated at `params`
         """
-        return approx_fprime(params, self.loglike)
+        params_infl = params[:self.k_inflate]
+        params_main = params[self.k_inflate:]
+
+        y = self.endog
+        w = self.model_infl.predict(params_infl)
+        w[w == 1.] = np.nextafter(1, 0)
+        score_main = self.model_main.score_obs(params_main)
+        llf_main = self.model_main.loglikeobs(params_main)
+        llf = self.loglikeobs(params)
+        zero_idx = np.nonzero(y == 0)[0]
+        nonzero_idx = np.nonzero(y)[0]
+
+        mu = self.model_main.predict(params_main)
+
+        coeff = (1 + w[zero_idx] * (np.exp(mu[zero_idx]) - 1))
+        dldp_zero = (score_main[zero_idx].T *
+                     (1 - (w[zero_idx]) / np.exp(llf[zero_idx]))).T.sum(0)
+        dldp_nonzero = score_main[nonzero_idx].sum(0)
+        dldp = dldp_zero + dldp_nonzero
+
+        dldw_zero =  self.exog_infl[zero_idx].T.dot(w[zero_idx] *
+            (1 - w[zero_idx]) * (1 - np.exp(llf_main[zero_idx])) / np.exp(llf[zero_idx]))
+        dldw_nonzero = -self.exog_infl[nonzero_idx].T.dot(w[nonzero_idx])
+        dldw = dldw_zero + dldw_nonzero
+
+        return np.concatenate((dldw, dldp))
 
     def hessian(self, params):
         """
@@ -253,32 +278,6 @@ class PoissonZeroInflated(GenericZeroInflated):
         self.result_wrapper = ZeroInflatedPoissonResultsWrapper
         self.result_reg = L1ZeroInflatedPoissonResults
         self.result_reg_wrapper = L1ZeroInflatedPoissonResultsWrapper
-
-    def score(self, params):
-        params_infl = params[:self.k_inflate]
-        params_main = params[self.k_inflate:]
-
-        y = self.endog
-        w = self.model_infl.predict(params_infl)
-        w[w == 1.] = np.nextafter(1, 0)
-        score_main = self.model_main.score_obs(params_main)
-        zero_idx = np.nonzero(y == 0)[0]
-        nonzero_idx = np.nonzero(y)[0]
-
-        mu = self.model_main.predict(params_main)
-
-        dmudb = (self.exog[zero_idx].T * mu[zero_idx]).T
-        coeff = (1 + w[zero_idx] * (np.exp(mu[zero_idx]) - 1))
-        dldp_zero = (dmudb.T * ((w[zero_idx] - 1) / coeff)).T.sum(0)
-        dldp_nonzero = score_main[nonzero_idx].sum(0)
-        dldp = dldp_zero + dldp_nonzero
-
-        dldw_zero =  self.exog_infl[zero_idx].T.dot(w[zero_idx] *
-            (w[zero_idx] - 1) * (1 - np.exp(mu[zero_idx])) / coeff)
-        dldw_nonzero = -self.exog_infl[nonzero_idx].T.dot(w[nonzero_idx])
-        dldw = dldw_zero + dldw_nonzero
-
-        return np.concatenate((dldw, dldp))
 
     def hessian(self, params):
         params_infl = params[:self.k_inflate]
@@ -426,3 +425,11 @@ wrap.populate_wrapper(L1ZeroInflatedPoissonResultsWrapper,
 if __name__=="__main__":
     import numpy as np
     import statsmodels.api as sm
+
+    data = sm.datasets.randhie.load()
+    endog = data.endog
+    exog = sm.add_constant(data.exog[:,1:4], prepend=False)
+    exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
+    res1 = PoissonZeroInflated(data.endog, exog, exog_infl=exog_infl).fit(maxiter=500)
+
+    print(res1.llf)
