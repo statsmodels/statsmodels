@@ -27,6 +27,8 @@ class GenericZeroInflated(CountModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
+    exog_infl: array
+        A reference to the zero-inflated exogenous design.
     """ % {'params' : base._model_params_doc,
            'extra_params' :
            """offset : array_like
@@ -71,7 +73,10 @@ class GenericZeroInflated(CountModel):
 
         Notes
         --------
-        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        .. math:: \\ln L=\\sum_{y_{i}=0}\\ln(w_{i}+(1-w_{i})*P_{main\\_model})+
+            \\sum_{y_{i}>0}(\\ln(1-w_{i})+L_{main\\_model})
+            where P - pdf of main model, L - loglike function of main model.
+
         """
         return np.sum(self.loglikeobs(params))
 
@@ -92,13 +97,15 @@ class GenericZeroInflated(CountModel):
 
         Notes
         --------
-        .. math:: \\ln L_{i}=\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        .. math:: \\ln L=\\ln(w_{i}+(1-w_{i})*P_{main\\_model})+
+            \\ln(1-w_{i})+L_{main\\_model}
+            where P - pdf of main model, L - loglike function of main model.
 
         for observations :math:`i=1,...,n`
 
         """
-        params_infl = params[self.k_exog:]
-        params_main = params[:self.k_exog]
+        params_infl = params[:self.k_inflate]
+        params_main = params[self.k_inflate:]
 
         y = self.endog
         w = self.model_infl.predict(params_infl)
@@ -123,7 +130,7 @@ class GenericZeroInflated(CountModel):
                 offset = None
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             start_params = mod_poi.fit(disp=0).params
-            start_params = np.append(start_params, np.zeros(self.k_inflate))
+            start_params = np.append(np.zeros(self.k_inflate), start_params)
         mlefit = super(GenericZeroInflated, self).fit(start_params=start_params,
                         maxiter=maxiter, disp=disp,
                         full_output=full_output, callback=lambda x:x,
@@ -156,7 +163,6 @@ class GenericZeroInflated(CountModel):
                 alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
             start_params = np.append(start_params, 0.1)
-
         cntfit = super(CountModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=disp, callback=callback,
@@ -187,14 +193,6 @@ class GenericZeroInflated(CountModel):
         score : ndarray, 1-D
             The score vector of the model, i.e. the first derivative of the
             loglikelihood function, evaluated at `params`
-
-        Notes
-        -----
-        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta}=\\sum_{i=1}^{n}\\left(y_{i}-\\lambda_{i}\\right)x_{i}
-
-        where the loglinear model is assumed
-
-        .. math:: \\ln\\lambda_{i}=x_{i}\\beta
         """
         return approx_fprime(params, self.loglike)
 
@@ -215,12 +213,6 @@ class GenericZeroInflated(CountModel):
 
         Notes
         -----
-        .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\\sum_{i=1}^{n}\\lambda_{i}x_{i}x_{i}^{\\prime}
-
-        where the loglinear model is assumed
-
-        .. math:: \\ln\\lambda_{i}=x_{i}\\beta
-
         """
         return approx_hess(params, self.loglike)
 
@@ -237,6 +229,8 @@ class PoissonZeroInflated(GenericZeroInflated):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
+    exog_infl: array
+        A reference to the zero-inflated exogenous design.
     """ % {'params' : base._model_params_doc,
            'extra_params' :
            """offset : array_like
@@ -254,15 +248,15 @@ class PoissonZeroInflated(GenericZeroInflated):
                                                   missing=missing, **kwargs)
         self.model_main = Poisson(self.endog, self.exog)
         self.model_infl = Logit(np.zeros(self.exog_infl.shape[0]),
-                                         self.exog_infl)
+                                self.exog_infl)
         self.result = ZeroInflatedPoissonResults
         self.result_wrapper = ZeroInflatedPoissonResultsWrapper
         self.result_reg = L1ZeroInflatedPoissonResults
         self.result_reg_wrapper = L1ZeroInflatedPoissonResultsWrapper
 
     def score(self, params):
-        params_infl = params[self.k_exog:]
-        params_main = params[:self.k_exog]
+        params_infl = params[:self.k_inflate]
+        params_main = params[self.k_inflate:]
 
         y = self.endog
         w = self.model_infl.predict(params_infl)
@@ -284,11 +278,11 @@ class PoissonZeroInflated(GenericZeroInflated):
         dldw_nonzero = -self.exog_infl[nonzero_idx].T.dot(w[nonzero_idx])
         dldw = dldw_zero + dldw_nonzero
 
-        return np.concatenate((dldp, dldw))
+        return np.concatenate((dldw, dldp))
 
     def hessian(self, params):
-        params_infl = params[self.k_exog:]
-        params_main = params[:self.k_exog]
+        params_infl = params[:self.k_inflate]
+        params_main = params[self.k_inflate:]
 
         y = self.endog
         w = self.model_infl.predict(params_infl)
@@ -308,7 +302,7 @@ class PoissonZeroInflated(GenericZeroInflated):
         #d2l/dp2
         for i in range(self.k_exog):
             for j in range(i, -1, -1):
-                hess_arr[i, j] = ((
+                hess_arr[i + self.k_inflate, j + self.k_inflate] = ((
                     self.exog[zero_idx, i] * self.exog[zero_idx, j] *
                     mu[zero_idx] * (w[zero_idx] - 1) * (1 / coeff -
                     w[zero_idx] * mu[zero_idx] * np.exp(mu[zero_idx]) /
@@ -318,7 +312,7 @@ class PoissonZeroInflated(GenericZeroInflated):
         #d2l/dw2
         for i in range(self.k_inflate):
             for j in range(i, -1, -1):
-                hess_arr[i + self.k_exog, j + self.k_exog] = ((
+                hess_arr[i, j] = ((
                     self.exog_infl[zero_idx, i] * self.exog_infl[zero_idx, j] *
                     w[zero_idx] * (w[zero_idx] - 1) * (np.exp(mu[zero_idx]) - 1) *
                     (w[zero_idx] * ((np.exp(mu[zero_idx]) - 1) * w[zero_idx] + 2) -
@@ -330,7 +324,7 @@ class PoissonZeroInflated(GenericZeroInflated):
         #d2l/dpdw
         for i in range(self.k_inflate):
             for j in range(self.k_exog):
-                hess_arr[i + self.k_exog, j] = -((
+                hess_arr[i, j + self.k_inflate] = -((
                     self.exog[zero_idx, j] * self.exog_infl[zero_idx, i] *
                     mu[zero_idx] * np.exp(mu[zero_idx]) * w[zero_idx] *
                     (w[zero_idx] - 1) / coeff**2).sum())
@@ -366,8 +360,8 @@ class PoissonZeroInflated(GenericZeroInflated):
         if offset is None:
             offset = 0
 
-        params_infl = params[self.k_exog:]
-        params_main = params[:self.k_exog]
+        params_infl = params[:self.self.k_inflate]
+        params_main = params[self.self.k_inflate:]
 
         lin_pred = np.dot(exog, params_main) + exposure + offset
         prob_poisson = 1 / (1 + np.exp(np.dot(exog_infl, params_infl)))
@@ -385,9 +379,9 @@ class PoissonZeroInflated(GenericZeroInflated):
             return  prob_zero
         elif which == 'prob':
             counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-            w = self.model_infl.predict(params_infl)[:,None]
+            w = self.model_infl.predict(params_infl)[:, None]
             w[w == 1.] = np.nextafter(1, 0)
-            mu = self.model_main.predict(params_main)[:,None]
+            mu = self.model_main.predict(params_main)[:, None]
             return zipoisson.pmf(counts, mu, w)
         else:
             raise ValueError('keyword `which` not recognized')

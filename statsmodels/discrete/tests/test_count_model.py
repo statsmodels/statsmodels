@@ -26,10 +26,10 @@ class TestZeroInflatedModel(object):
         assert_allclose(self.res1.llf, self.res2.llf, atol=1e-5, rtol=1e-5)
 
     def test_conf_int(self):
-        assert_allclose(self.res1.conf_int(), self.res2.conf_int, atol=1e-5)
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int, atol=1e-3, rtol=1e-5)
 
     def test_bse(self):
-        assert_allclose(self.res1.bse, self.res2.bse, atol=1e-5)
+        assert_allclose(self.res1.bse, self.res2.bse, atol=1e-3)
 
     def test_aic(self):
         assert_allclose(self.res1.aic, self.res2.aic, atol=1e-2, rtol=1e-2)
