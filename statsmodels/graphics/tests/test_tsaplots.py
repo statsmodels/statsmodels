@@ -1,8 +1,8 @@
-from statsmodels.compat.python import lmap, map
-from statsmodels.compat.pandas import datetools
+from statsmodels.compat.python import lmap
 import numpy as np
 import pandas as pd
 from numpy.testing import dec, assert_equal
+from distutils.version import LooseVersion
 
 import statsmodels.api as sm
 from statsmodels.graphics.tsaplots import (plot_acf, plot_pacf, month_plot,
@@ -15,6 +15,8 @@ try:
     have_matplotlib = True
 except:
     have_matplotlib = False
+
+pandas_lt_0_19_2 = LooseVersion(pd.__version__) < '0.19.1'
 
 
 @dec.skipif(not have_matplotlib)
@@ -88,12 +90,12 @@ def test_plot_pacf_irregular():
     plt.close(fig)
 
 @dec.skipif(not have_matplotlib)
+@dec.skipif(pandas_lt_0_19_2)
 def test_plot_month():
     dta = sm.datasets.elnino.load_pandas().data
     dta['YEAR'] = dta.YEAR.astype(int).apply(str)
     dta = dta.set_index('YEAR').T.unstack()
-    dates = lmap(lambda x: datetools.parse_time_string('1 '+' '.join(x))[0],
-                 dta.index.values)
+    dates = pd.to_datetime(['-'.join([x[1], x[0]]) for x in dta.index.values])
 
     # test dates argument
     fig = month_plot(dta.values, dates=dates, ylabel='el nino')
@@ -115,31 +117,28 @@ def test_plot_month():
     plt.close(fig)
 
 @dec.skipif(not have_matplotlib)
+@dec.skipif(pandas_lt_0_19_2)
 def test_plot_quarter():
     dta = sm.datasets.macrodata.load_pandas().data
     dates = lmap('Q'.join, zip(dta.year.astype(int).apply(str),
-                              dta.quarter.astype(int).apply(str)))
+                               dta.quarter.astype(int).apply(str)))
     # test dates argument
     quarter_plot(dta.unemp.values, dates)
     plt.close('all')
 
     # test with a DatetimeIndex with no freq
-    parser = datetools.parse_time_string
-    dta.set_index(pd.DatetimeIndex((x[0] for x in map(parser, dates))),
-                  inplace=True)
+    dta.set_index(pd.to_datetime(dates), inplace=True)
     quarter_plot(dta.unemp)
     plt.close('all')
 
     # w freq
     # see pandas #6631
-    dta.index = pd.DatetimeIndex((x[0] for x in map(parser, dates)),
-                                   freq='QS-Oct')
+    dta.index = pd.DatetimeIndex(pd.to_datetime(dates), freq='QS-Oct')
     quarter_plot(dta.unemp)
     plt.close('all')
 
     # w PeriodIndex
-    dta.index = pd.PeriodIndex((x[0] for x in map(parser, dates)),
-                                   freq='Q')
+    dta.index = pd.PeriodIndex(pd.to_datetime(dates), freq='Q')
     quarter_plot(dta.unemp)
     plt.close('all')
 
