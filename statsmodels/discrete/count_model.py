@@ -8,7 +8,7 @@ import statsmodels.base.wrapper as wrap
 import statsmodels.regression.linear_model as lm
 from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
                                                  Poisson, Logit, CountResults,
-                                                 L1CountResults,
+                                                 L1CountResults, Probit,
                                                  _discrete_results_docs)
 from statsmodels.distributions import zipoisson
 from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
@@ -319,15 +319,22 @@ class PoissonZeroInflated(GenericZeroInflated):
         equal to 1.
 
     """ + base._missing_param_doc}
-    def __init__(self, endog, exog, exog_infl=None, offset=None,
-                       exposure=None, missing='none', **kwargs):
+    def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
+                 inflation='logit', missing='none', **kwargs):
         super(PoissonZeroInflated, self).__init__(endog, exog, offset=offset,
                                                   exog_infl=exog_infl,
                                                   exposure=exposure,
                                                   missing=missing, **kwargs)
+        if inflation == 'logit':
+            self.model_infl = Logit(np.zeros(self.exog_infl.shape[0]),
+                                    self.exog_infl)
+        elif inflation == 'probit':
+            self.model_infl = Probit(np.zeros(self.exog_infl.shape[0]),
+                                    self.exog_infl)
+        else:
+            raise Exception("inflation == %s, which is not handled"
+                % inflation)
         self.model_main = Poisson(self.endog, self.exog)
-        self.model_infl = Logit(np.zeros(self.exog_infl.shape[0]),
-                                self.exog_infl)
         self.result = ZeroInflatedPoissonResults
         self.result_wrapper = ZeroInflatedPoissonResultsWrapper
         self.result_reg = L1ZeroInflatedPoissonResults
