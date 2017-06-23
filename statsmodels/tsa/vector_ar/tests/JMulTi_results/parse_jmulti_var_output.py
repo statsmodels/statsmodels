@@ -1,11 +1,10 @@
-import re
 import os
+import re
 from io import open
 
-import itertools
 import numpy as np
 
-from statsmodels.tsa.vecm.tests.JMulTi_results.parse_jmulti_output \
+from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output \
     import sublists, stringify_var_names, dt_s_tup_to_string
 
 debug_mode = False

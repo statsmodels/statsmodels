@@ -3,13 +3,13 @@ from __future__ import absolute_import, print_function
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_raises
 
-from statsmodels.compat.python import range
 import statsmodels.datasets.macrodata.data as macro
-from statsmodels.tsa.vecm.tests.JMulTi_results.parse_jmulti_output import \
-    sublists
-from .JMulTi_results.parse_jmulti_var_output import load_results_jmulti
-from .JMulTi_results.parse_jmulti_var_output import dt_s_tup_to_string
+from statsmodels.compat.python import range
+from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output \
+    import sublists
 from statsmodels.tsa.vector_ar.var_model import VAR
+from .JMulTi_results.parse_jmulti_var_output import dt_s_tup_to_string
+from .JMulTi_results.parse_jmulti_var_output import load_results_jmulti
 
 atol = 0.001  # absolute tolerance
 rtol = 0.01  # relative tolerance

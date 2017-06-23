@@ -3,17 +3,16 @@ from __future__ import absolute_import, print_function
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_raises
 
-from statsmodels.compat.python import range
-
 import statsmodels.datasets.interest_inflation.data as e6
+from statsmodels.compat.python import range
 from statsmodels.tools.testing import assert_equal
-from statsmodels.tsa.vecm.tests.JMulTi_results.parse_jmulti_output import \
+from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output import dt_s_tup_to_string
+from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output import load_results_jmulti
+from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output import\
     sublists
 from statsmodels.tsa.vector_ar.util import seasonal_dummies
-from .JMulTi_results.parse_jmulti_output import load_results_jmulti
-from .JMulTi_results.parse_jmulti_output import dt_s_tup_to_string
-from statsmodels.tsa.vecm.vecm import VECM, select_order, select_coint_rank
 from statsmodels.tsa.vector_ar.var_model import VARProcess
+from statsmodels.tsa.vector_ar.vecm import VECM, select_order, select_coint_rank
 
 
 class DataSet:

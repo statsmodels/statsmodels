@@ -6,9 +6,11 @@ Author: Josef Perktold
 
 """
 import os
+
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
-from statsmodels.tsa.vecm.vecm import coint_johansen
+
+from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 dta = np.genfromtxt(open(os.path.join(current_path, "Matlab_results",

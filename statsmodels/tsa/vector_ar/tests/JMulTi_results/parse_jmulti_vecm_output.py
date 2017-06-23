@@ -130,7 +130,7 @@ def load_results_jmulti(dataset):
         
     for dt_s in dataset.dt_s_list:
         dt_string = dt_s_tup_to_string(dt_s)
-        params_file = dataset.__str__()+"_"+source+"_"+dt_string+".txt"
+        params_file = "vecm_"+dataset.__str__()+"_"+source+"_"+dt_string+".txt"
         params_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                    params_file)
         # sections in jmulti output:
@@ -272,8 +272,8 @@ def load_results_jmulti(dataset):
 
         # ---------------------------------------------------------------------
         # parse information regarding \Sigma_u
-        sigmau_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_Sigmau" + ".txt"
+        sigmau_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
+                      dt_string + "_Sigmau" + ".txt"
         sigmau_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                    sigmau_file)
         rows_to_parse = 0
@@ -302,8 +302,8 @@ def load_results_jmulti(dataset):
 
         # ---------------------------------------------------------------------
         # parse forecast related output:
-        fc_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_fc5" + ".txt"
+        fc_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
+                  dt_string + "_fc5" + ".txt"
         fc_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                fc_file)
         fc, lower, upper, plu_min = [], [], [], []
@@ -340,7 +340,7 @@ def load_results_jmulti(dataset):
         var_combs = sublists(vn, 1, len(vn)-1)
         for causing in var_combs:
             caused = tuple(el for el in vn if el not in causing)
-            granger_file = dataset.__str__() + "_" + source + "_" \
+            granger_file = "vecm_" + dataset.__str__() + "_" + source + "_" \
                 + dt_string + "_granger_causality_" \
                 + stringify_var_names(causing) + "_" \
                 + stringify_var_names(caused) + ".txt"
@@ -380,7 +380,7 @@ def load_results_jmulti(dataset):
             # based on VAR(p+1) *but* tests for instantaneous causality are
             # based on VAR(p)! Thus we have this separate file with JMulTi
             # results for a VECM with the lag order reduced by one.
-            inst_file = dataset.__str__() + "_" + source + "_" \
+            inst_file = "vecm_" + dataset.__str__() + "_" + source + "_" \
                 + dt_string + "_inst_causality_" \
                 + stringify_var_names(causing) + "_" \
                 + stringify_var_names(caused) + ".txt"
@@ -405,8 +405,8 @@ def load_results_jmulti(dataset):
 
         # ---------------------------------------------------------------------
         # parse output related to impulse-response analysis:
-        ir_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_ir" + ".txt"
+        ir_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
+                  dt_string + "_ir" + ".txt"
         ir_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                ir_file)
         ir_file = open(ir_file, encoding='latin_1')
@@ -442,8 +442,8 @@ def load_results_jmulti(dataset):
 
         # ---------------------------------------------------------------------
         # parse output related to lag order selection:
-        lagorder_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_lagorder" + ".txt"
+        lagorder_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
+                        dt_string + "_lagorder" + ".txt"
         lagorder_file = os.path.join(os.path.dirname(
             os.path.realpath(__file__)), lagorder_file)
         lagorder_file = open(lagorder_file, encoding='latin_1')
@@ -465,8 +465,8 @@ def load_results_jmulti(dataset):
         
         # ---------------------------------------------------------------------
         # parse output related to non-normality-test:
-        test_norm_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_diag" + ".txt"
+        test_norm_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
+                         dt_string + "_diag" + ".txt"
         test_norm_file = os.path.join(os.path.dirname(
             os.path.realpath(__file__)), test_norm_file)
         test_norm_file = open(test_norm_file, encoding='latin_1')
@@ -491,8 +491,8 @@ def load_results_jmulti(dataset):
 
         # ---------------------------------------------------------------------
         # parse output related to testing the whiteness of the residuals:
-        whiteness_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_diag" + ".txt"
+        whiteness_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
+                         dt_string + "_diag" + ".txt"
         whiteness_file = os.path.join(os.path.dirname(
             os.path.realpath(__file__)), whiteness_file)
         whiteness_file = open(whiteness_file, encoding='latin_1')
