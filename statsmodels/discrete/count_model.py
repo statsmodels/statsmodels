@@ -132,9 +132,9 @@ class GenericZeroInflated(CountModel):
             start_params = mod_poi.fit(disp=0).params
             start_params = np.append(np.zeros(self.k_inflate), start_params)
         mlefit = super(GenericZeroInflated, self).fit(start_params=start_params,
-                        maxiter=maxiter, disp=disp,
-                        full_output=full_output, callback=lambda x:x,
-                        **kwargs)
+                       maxiter=maxiter, disp=disp,
+                       full_output=full_output, callback=lambda x:x,
+                       **kwargs)
 
         zipfit = self.result(self, mlefit._results)
         result = self.result_wrapper(zipfit)
@@ -221,7 +221,10 @@ class GenericZeroInflated(CountModel):
 
         return np.concatenate((dldw, dldp))
 
-    def _hessian_part(self, params):
+    def _hessian_partly(self, params):
+        pass
+
+    def hessian(self, params):
         """
         Generic Zero Inflated model Hessian matrix of the loglikelihood
 
@@ -239,6 +242,11 @@ class GenericZeroInflated(CountModel):
         Notes
         -----
         """
+        hess_arr_part = self._hessian_partly(params)
+
+        if hess_arr_part is None:
+            return approx_hess(params, self.loglike)
+
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
@@ -276,6 +284,14 @@ class GenericZeroInflated(CountModel):
                 hess_arr[i, j + self.k_inflate] = -(score_main[zero_idx, j] *
                     w[zero_idx] * (1 - w[zero_idx]) *
                     self.exog_infl[zero_idx, i] / pmf[zero_idx]).sum()
+
+        for i in range(self.k_exog):
+            for j in range(i, -1, -1):
+                hess_arr[i + self.k_inflate, j + self.k_inflate] = hess_arr_part[i, j]
+        
+
+        tri_idx = np.triu_indices(self.k_exog + self.k_inflate, k=1)
+        hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
         return hess_arr
 
@@ -317,7 +333,7 @@ class PoissonZeroInflated(GenericZeroInflated):
         self.result_reg = L1ZeroInflatedPoissonResults
         self.result_reg_wrapper = L1ZeroInflatedPoissonResultsWrapper
 
-    def hessian(self, params):
+    def _hessian_partly(self, params):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
@@ -330,22 +346,19 @@ class PoissonZeroInflated(GenericZeroInflated):
 
         mu = self.model_main.predict(params_main)
 
-        hess_arr = self._hessian_part(params)
+        hess_arr = np.zeros((self.k_exog, self.k_exog))
 
         coeff = (1 + w[zero_idx] * (np.exp(mu[zero_idx]) - 1))
 
         #d2l/dp2
         for i in range(self.k_exog):
             for j in range(i, -1, -1):
-                hess_arr[i + self.k_inflate, j + self.k_inflate] = ((
+                hess_arr[i, j] = ((
                     self.exog[zero_idx, i] * self.exog[zero_idx, j] *
                     mu[zero_idx] * (w[zero_idx] - 1) * (1 / coeff -
                     w[zero_idx] * mu[zero_idx] * np.exp(mu[zero_idx]) /
                     coeff**2)).sum() - (mu[nonzero_idx] * self.exog[nonzero_idx, i] *
                     self.exog[nonzero_idx, j]).sum())
-
-        tri_idx = np.triu_indices(self.k_exog + self.k_inflate, k=1)
-        hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
         return hess_arr
 
@@ -441,3 +454,11 @@ wrap.populate_wrapper(L1ZeroInflatedPoissonResultsWrapper,
 if __name__=="__main__":
     import numpy as np
     import statsmodels.api as sm
+
+    data = sm.datasets.randhie.load()
+    endog = data.endog
+    exog = sm.add_constant(data.exog[:,1:4], prepend=False)
+    exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
+    res1 = PoissonZeroInflated(data.endog, exog, exog_infl=exog_infl).fit(maxiter=500)
+
+    print(res1.llf)
