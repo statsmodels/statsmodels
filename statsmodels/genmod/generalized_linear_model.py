@@ -554,7 +554,7 @@ class GLM(base.LikelihoodModel):
             scale = self.estimate_scale(mu)
 
         eim_factor = 1 / (self.family.link.deriv(mu)**2 *
-                            self.family.variance(mu))
+                          self.family.variance(mu))
         eim_factor *= self.iweights * self.n_trials
 
         if not observed:
@@ -584,7 +584,6 @@ class GLM(base.LikelihoodModel):
 
         return oim_factor
 
-
     def hessian(self, params, scale=None, observed=True):
         """Hessian, second derivative of loglikelihood function
 
@@ -605,6 +604,8 @@ class GLM(base.LikelihoodModel):
         hessian : ndarray
             Hessian, i.e. observed information, or expected information matrix.
         """
+        if hasattr(self, '_optim_hessian') and self._optim_hessian == 'eim':
+            observed = False
 
         factor = self.hessian_factor(params, scale=scale, observed=observed)
         hess = -np.dot(self.exog.T * factor, self.exog)
@@ -977,10 +978,10 @@ class GLM(base.LikelihoodModel):
         If a scipy optimizer is used, the following additional parameter is
         available:
 
-        observed_hessian : bool, optional
-            When True, the default, the observed Hessian is used in fitting.
-            This may provide more stable fits, but adds assumption that the
-            Hessian is correctly specified.
+        optim_hessian : {'eim', 'oim'}, optional
+            When 'oim', the default, the observed Hessian is used in fitting.
+            'eim' is the expected Hessian. This may provide more stable fits,
+            but adds assumption that the Hessian is correctly specified.
         """
         self.scaletype = scale
 
@@ -989,7 +990,8 @@ class GLM(base.LikelihoodModel):
                                   tol=tol, scale=scale, cov_type=cov_type,
                                   cov_kwds=cov_kwds, use_t=use_t, **kwargs)
         else:
-            return self._fit_gradient(start_params=start_params,
+            self._optim_hessian = kwargs.get('optim_hessian')
+            fit_ = self._fit_gradient(start_params=start_params,
                                       method=method,
                                       maxiter=maxiter,
                                       tol=tol, scale=scale,
@@ -998,6 +1000,8 @@ class GLM(base.LikelihoodModel):
                                       cov_kwds=cov_kwds, use_t=use_t,
                                       max_start_irls=max_start_irls,
                                       **kwargs)
+            self._optim_hessian = None
+            return fit_
 
     def _fit_gradient(self, start_params=None, method="newton",
                       maxiter=100, tol=1e-8, full_output=True,

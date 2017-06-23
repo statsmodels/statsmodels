@@ -1043,8 +1043,8 @@ def test_gradient_irls():
                    assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=5e-5)
 
 
-def test_gradient_irls_expected_hessian():
-    # Compare the results when using gradient optimization and IRLS.
+def test_gradient_irls_eim():
+    # Compare the results when using eime gradient optimization and IRLS.
 
     # TODO: Find working examples for inverse_squared link
 
@@ -1122,7 +1122,7 @@ def test_gradient_irls_expected_hessian():
                    rslt_gradient = mod_gradient.fit(max_start_irls=max_start_irls,
                                                     start_params=start_params,
                                                     method="newton",
-                                                    observed_hessian=False)
+                                                    optim_hessian='eim')
 
                    assert_allclose(rslt_gradient.params,
                                    rslt_irls.params, rtol=1e-6, atol=5e-5)
