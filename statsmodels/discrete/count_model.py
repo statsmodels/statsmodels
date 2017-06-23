@@ -114,7 +114,7 @@ class GenericZeroInflated(CountModel):
         zero_idx = np.nonzero(y == 0)[0]
         nonzero_idx = np.nonzero(y)[0]
 
-        llf = np.zeros_like(y)
+        llf = np.zeros_like(y, dtype=np.float64)
         llf[zero_idx] = (np.log(w[zero_idx] +
             (1 - w[zero_idx]) * np.exp(llf_main[zero_idx])))
         llf[nonzero_idx] = np.log(1 - w[nonzero_idx]) + llf_main[nonzero_idx]
