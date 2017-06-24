@@ -122,8 +122,10 @@ def fit_l1_cvxopt_cp(
         gopt = float('nan')  # Objective is non-differentiable
         hopt = float('nan')
         iterations = float('nan')
-        converged = 'True' if results['status'] == 'optimal'\
-            else results['status']
+        if results['status'] == 'optimal':
+            converged = True
+        else:
+            converged = results['status']
         retvals = {
             'fopt': fopt, 'converged': converged, 'iterations': iterations,
             'gopt': gopt, 'hopt': hopt, 'trimmed': trimmed}
