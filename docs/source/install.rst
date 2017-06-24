@@ -105,18 +105,18 @@ Then in the statsmodels directory do::
 OR
 
 You can build 32-bit Microsoft SDK. Detailed instructions can be found on the
-Cython wiki `here <http://wiki.cython.org/64BitCythonExtensionsOnWindows>`__.
+Cython wiki `here <https://github.com/cython/cython/wiki/CythonExtensionsOnWindows>`__.
 The gist of these instructions follow. You will need to download the free
 Windows SDK C/C++ compiler from Microsoft. You must use
 the **Microsoft Windows SDK for Windows 7 and .NET Framework 3.5 SP1** to be
 comptible with Python 2.7, 3.1, and 3.2. The link for the 3.5 SP1 version is
 
-`http://www.microsoft.com/downloads/en/details.aspx?familyid=71DEB800-C591-4F97-A900-BEA146E4FAE1&displaylang=en <http://www.microsoft.com/downloads/en/details.aspx?familyid=71DEB800-C591-4F97-A900-BEA146E4FAE1&displaylang=en>`__
+`https://www.microsoft.com/en-us/download/details.aspx?id=18950 <https://www.microsoft.com/en-us/download/details.aspx?id=18950>`__
 
-For Python 3.3, you need to use the **Microsoft Windows SDK for Windows 7 and .NET Framework 4**,
+For Python 3.3 and 3.4, you need to use the **Microsoft Windows SDK for Windows 7 and .NET Framework 4**,
 available from
 
-`http://www.microsoft.com/en-us/download/details.aspx?id=8279 <http://www.microsoft.com/en-us/download/details.aspx?id=8279>`__
+`https://www.microsoft.com/en-us/download/details.aspx?id=8279 <https://www.microsoft.com/en-us/download/details.aspx?id=8279>`__
 
 For 7.0, get the ISO file GRMSDKX_EN_DVD.iso for AMD64. After you install this,
 open the SDK Command Shell (Start -> All Programs ->
@@ -157,15 +157,14 @@ Dependencies
 * `NumPy <http://www.scipy.org/>`__ >= 1.8
 * `SciPy <http://www.scipy.org/>`__ >= 0.14
 * `Pandas <http://pandas.pydata.org/>`__ >= 0.14
-* `Patsy <https://patsy.readthedocs.org>`__ >= 0.3.0
+* `Patsy <https://patsy.readthedocs.io/en/latest/>`__ >= 0.3.0
 * `Cython <http://cython.org/>`__ >= 0.24 is required to build the code from
-  github but not from a source distribution. Earlier versions may work, although
-  you must use Cython >= 0.20.1 if you're on Python 3.4.
+  github but not from a source distribution.
 
 Optional Dependencies
 ~~~~~~~~~~~~~~~~~~~~~
 
-* `Matplotlib <http://matplotlib.org/>`__ >= 1.3 is needed for plotting
+* `Matplotlib <http://matplotlib.org/>`__ >= 1.4 is needed for plotting
   functions and running many of the examples.
 * If installed, `X-12-ARIMA <http://www.census.gov/srd/www/x13as/>`__ or
   `X-13ARIMA-SEATS <http://www.census.gov/srd/www/x13as/>`__ can be used
@@ -174,3 +173,6 @@ Optional Dependencies
   the test suite.
 * `IPython <http://ipython.org>`__ >= 3.0 is required to build the
   docs locally or to use the notebooks.
+* `joblib <http://pythonhosted.org/joblib/>`__ >= 0.9 can be used to accelerate distributed
+  estimation for certain models.
+* `jupyter <http://jupyter.org/>`__ is needed to run the notebooks.

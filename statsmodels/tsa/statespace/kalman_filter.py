@@ -1348,7 +1348,7 @@ class FilterResults(FrozenRepresentation):
 
         Parameters
         ----------
-        kalman_filter : KalmanFilter
+        kalman_filter : statespace.kalman_filter.KalmanFilter
             The model object from which to take the updated values.
 
         Notes

@@ -18,7 +18,7 @@ New Dependencies
 * `psutil`_
 * `affinity`_ (As a fallback to psutil)
 
-.. _vbench: https://github.com/pydata/vbench
+.. _vbench: https://github.com/wesm/vbench
 .. _sqlalchemy: https://pypi.python.org/pypi/SQLAlchemy
 .. _gitpython: https://pypi.python.org/pypi/GitPython/
 .. _psutil: https://pypi.python.org/pypi/psutil
@@ -132,10 +132,10 @@ Once you've run `run_suite.py` and generated a benchmark database, you can use `
 References:
 ~~~~~~~~~~~
 
-`http://wesmckinney.com/blog/?p=373 <http://wesmckinney.com/blog/?p=373>`_
+`http://wesmckinney.com/blog/introducing-vbench-new-code-performance-analysis-and-monitoring-tool/ <http://wesmckinney.com/blog/introducing-vbench-new-code-performance-analysis-and-monitoring-tool/>`_
 
-`https://github.com/pydata/vbench <https://github.com/pydata/vbench>`_
+`https://github.com/wesm/vbench <https://github.com/wesm/vbench>`_
 
-`https://github.com/pydata/pandas/tree/master/vb_suite <https://github.com/pydata/pandas/tree/master/vb_suite>`_
+`https://github.com/pandas-dev/pandas/tree/master/vb_suite <https://github.com/pandas-dev/pandas/tree/master/vb_suite>`_
 
 `https://github.com/yarikoptic/numpy-vbench <https://github.com/yarikoptic/numpy-vbench>`_

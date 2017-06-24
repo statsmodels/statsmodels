@@ -874,16 +874,19 @@ class GLM(base.LikelihoodModel):
         exog : array-like
             The predictor variable matrix.
 
-        Returns a frozen random number generator object.  Use the
-        ``rvs`` method to generate random values.
+        Returns
+        -------
+        gen
+            Frozen random number generator object.  Use the ``rvs`` method to
+            generate random values.
 
         Notes
         -----
-        Due to the behavior of ``scipy.stats.distributions objects``,
-        the returned random number generator must be called with
-        ``gen.rvs(n)`` where ``n`` is the number of observations in
-        the data set used to fit the model.  If any other value is
-        used for ``n``, misleading results will be produced.
+        Due to the behavior of ``scipy.stats.distributions objects``, the
+        returned random number generator must be called with ``gen.rvs(n)``
+        where ``n`` is the number of observations in the data set used
+        to fit the model.  If any other value is used for ``n``, misleading
+        results will be produced.
         """
 
         fit = self.predict(params, exog, exposure, offset, linear=False)

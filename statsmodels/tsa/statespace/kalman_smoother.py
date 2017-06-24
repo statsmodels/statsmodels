@@ -415,7 +415,7 @@ class KalmanSmoother(KalmanFilter):
 
 
 class SmootherResults(FilterResults):
-    """
+    r"""
     Results from applying the Kalman smoother and/or filter to a state space
     model.
 

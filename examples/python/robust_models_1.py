@@ -152,7 +152,7 @@ stats.norm.ppf(.75)
 print(x)
 
 
-sm.robust.scale.stand_mad(x)
+sm.robust.scale.mad(x)
 
 
 np.array([1,2,3,4,5.]).std()
@@ -186,10 +186,10 @@ loc, scale = huber(fat_tails)
 print(loc, scale)
 
 
-sm.robust.stand_mad(fat_tails)
+sm.robust.mad(fat_tails)
 
 
-sm.robust.stand_mad(fat_tails, c=stats.t(6).ppf(.75))
+sm.robust.mad(fat_tails, c=stats.t(6).ppf(.75))
 
 
 sm.robust.scale.mad(fat_tails)

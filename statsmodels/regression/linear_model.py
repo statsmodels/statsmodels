@@ -357,14 +357,16 @@ class RegressionModel(base.LikelihoodModel):
         exog : array-like
             The predictor variable matrix.
         dist_class : class
-            A random number generator class.  Must take 'loc' and
-            'scale' as arguments and return a random number generator
-            implementing an `rvs` method for simulating random values.
-            Defaults to Gaussian.
+            A random number generator class.  Must take 'loc' and 'scale'
+            as arguments and return a random number generator implementing
+            an ``rvs`` method for simulating random values. Defaults to Gaussian.
 
-        Returns a frozen random number generator object with mean and
-        variance determined by the fitted linear model.  Use the
-        ``rvs`` method to generate random values.
+        Returns
+        -------
+        gen
+            Frozen random number generator object with mean and variance
+            determined by the fitted linear model.  Use the ``rvs`` method
+            to generate random values.
 
         Notes
         -----
@@ -677,7 +679,8 @@ class WLS(RegressionModel):
 
         Returns
         -------
-        sqrt(weights)*X
+        whitened : array-like
+            sqrt(weights)*X
         """
 
         X = np.asarray(X)
@@ -1715,7 +1718,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         Returns
         -------
-        An array wresid/sqrt(scale)
+        An array wresid standardized by the sqrt if scale
         """
 
         if not hasattr(self, 'resid'):

@@ -5,13 +5,13 @@ Testing
 
 Test Driven Development
 ~~~~~~~~~~~~~~~~~~~~~~~
-We strive to follow a `Test Driven Development (TDD) <http://en.wikipedia.org/wiki/Test-driven_development>`_ pattern.
+We strive to follow a `Test Driven Development (TDD) <https://en.wikipedia.org/wiki/Test-driven_development>`_ pattern.
 All models or statistical functions that are added to the main code base are to have
 tests versus an existing statistical package, if possible.
 
 Introduction to Nose
 ~~~~~~~~~~~~~~~~~~~~
-Like many packages, statsmodels uses the `Nose testing system <https://nose.readthedocs.org/en/latest>`__ and the convenient extensions in `numpy.testing <http://docs.scipy.org/doc/numpy/reference/routines.testing.html>`__. Nose itself is an extension of :mod:`Python's unittest <python:unittest>`. Nose will find any file, directory, function, or class name that matches the regular expression ``(?:^|[b_./-])[Tt]est``. This is mainly functions that begin with test* and classes that begin with Test*.
+Like many packages, statsmodels uses the `Nose testing system <http://nose.readthedocs.io/en/latest/>`__ and the convenient extensions in `numpy.testing <http://docs.scipy.org/doc/numpy/reference/routines.testing.html>`__. Nose itself is an extension of :mod:`Python's unittest <python:unittest>`. Nose will find any file, directory, function, or class name that matches the regular expression ``(?:^|[b_./-])[Tt]est``. This is mainly functions that begin with test* and classes that begin with Test*.
 
 .. _run-tests:
 
@@ -62,7 +62,7 @@ tested. The tests look something like
         """
 
         @classmethod
-        def setupClass(cls):
+        def setup_class(cls):
             # set up model
             data = sm.datasets.spector.load()
             data.exog = sm.add_constant(data.exog)

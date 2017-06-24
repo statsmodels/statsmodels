@@ -5,13 +5,13 @@ Fitting models using R-style formulas
 
 Since version 0.5.0, ``statsmodels`` allows users to fit statistical
 models using R-style formulas. Internally, ``statsmodels`` uses the
-`patsy <http://patsy.readthedocs.org/>`_ package to convert formulas and
+`patsy <http://patsy.readthedocs.io/en/latest/>`_ package to convert formulas and
 data to the matrices that are used in model fitting. The formula
 framework is quite powerful; this tutorial only scratches the surface. A
 full description of the formula language can be found in the ``patsy``
 docs:
 
--  `Patsy formula language description <http://patsy.readthedocs.org/>`_
+-  `Patsy formula language description <http://patsy.readthedocs.io/en/latest/>`_
 
 Loading modules and functions
 -----------------------------
@@ -114,7 +114,7 @@ multiplied together:
 
 
 Many other things are possible with operators. Please consult the `patsy
-docs <https://patsy.readthedocs.org/en/latest/formulas.html>`_ to learn
+docs <https://patsy.readthedocs.io/en/latest/formulas.html>`_ to learn
 more.
 
 Functions
@@ -142,7 +142,7 @@ Define a custom function:
 Namespaces
 ----------
 
-Notice that all of the above examples use the calling namespace to look for the functions to apply. The namespace used can be controlled via the ``eval_env`` keyword. For example, you may want to give a custom namespace using the :class:`patsy:patsy.EvalEnvironment` or you may want to use a "clean" namespace, which we provide by passing ``eval_func=-1``. The default is to use the caller's namespace. This can have (un)expected consequences, if, for example, someone has a variable names ``C`` in the user namespace or in their data structure passed to ``patsy``, and ``C`` is used in the formula to handle a categorical variable. See the `Patsy API Reference <http://patsy.readthedocs.org/en/latest/API-reference.html>`_ for more information.
+Notice that all of the above examples use the calling namespace to look for the functions to apply. The namespace used can be controlled via the ``eval_env`` keyword. For example, you may want to give a custom namespace using the :class:`patsy:patsy.EvalEnvironment` or you may want to use a "clean" namespace, which we provide by passing ``eval_func=-1``. The default is to use the caller's namespace. This can have (un)expected consequences, if, for example, someone has a variable names ``C`` in the user namespace or in their data structure passed to ``patsy``, and ``C`` is used in the formula to handle a categorical variable. See the `Patsy API Reference <http://patsy.readthedocs.io/en/latest/API-reference.html>`_ for more information.
 
 Using formulas with models that do not (yet) support them
 ---------------------------------------------------------
