@@ -1831,10 +1831,10 @@ class MNLogit(MultinomialModel):
         X = self.exog
         pr = self.cdf(np.dot(X,params))
         partials = []
-        J = self.wendog.shape[1] - 1
-        K = self.exog.shape[1]
-        for i in range(J):
-            for j in range(J): # this loop assumes we drop the first col.
+        J = self.J
+        K = self.K
+        for i in range(J-1):
+            for j in range(J-1): # this loop assumes we drop the first col.
                 if i == j:
                     partials.append(\
                         -np.dot(((pr[:,i+1]*(1-pr[:,j+1]))[:,None]*X).T,X))
@@ -1842,7 +1842,7 @@ class MNLogit(MultinomialModel):
                     partials.append(-np.dot(((pr[:,i+1]*-pr[:,j+1])[:,None]*X).T,X))
         H = np.array(partials)
         # the developer's notes on multinomial should clear this math up
-        H = np.transpose(H.reshape(J,J,K,K), (0,2,1,3)).reshape(J*K,J*K)
+        H = np.transpose(H.reshape(J-1, J-1, K, K), (0, 2, 1, 3)).reshape((J-1)*K, (J-1)*K)
         return H
 
 
