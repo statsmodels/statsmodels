@@ -801,10 +801,8 @@ class Results(object):
 
         if transform and hasattr(self.model, 'formula') and (exog is not None):
             from patsy import dmatrix
-            if hasattr(exog, 'ndim') and exog.ndim == 1:
-                # user may pass series, if one predictor
+            if isinstance(exog, pd.Series):
                 exog = pd.DataFrame(exog)
-            exog_index = getattr(exog, 'index', None)
             exog = dmatrix(self.model.data.design_info.builder,
                            exog, return_type="dataframe")
             if (exog_index is not None) and (len(exog) < len(exog_index)):
@@ -819,9 +817,11 @@ class Results(object):
                 exog = exog[:, None]
             exog = np.atleast_2d(exog)  # needed in count model shape[1]
 
-        predict_results = self.model.predict(self.params, exog, *args, **kwargs)
+        predict_results = self.model.predict(self.params, exog, *args,
+                                             **kwargs)
 
-        if exog_index is not None and not hasattr(predict_results, 'predicted_values'):
+        if exog_index is not None and not hasattr(predict_results,
+                                                  'predicted_values'):
             if predict_results.ndim == 1:
                 return pd.Series(predict_results, index=exog_index)
             else:

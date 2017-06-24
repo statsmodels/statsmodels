@@ -147,13 +147,4 @@ def test_patsy_lazy_dict():
     res = smf.ols('EXECUTIONS ~ SOUTH + INCOME', data=data).fit()
 
     res2 = res.predict(data)
-    assert_equal(len(res.fittedvalues) + 1, len(res2))  # Should lose a record
-
-    data = sm.datasets.cpunish.load_pandas().data
-    data['INCOME'].loc[0] = None
-
-    data = LazyDict(data)
-    res = smf.ols('EXECUTIONS ~ SOUTH + INCOME', data=data).fit()
-
-    res2 = res.predict(data)
-    npt.assert_allclose(res.fittedvalues, res2)
+    assert_equal(len(res.fittedvalues), len(res2))  # Should lose a record
