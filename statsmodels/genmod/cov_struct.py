@@ -1,3 +1,5 @@
+from __future__ import division
+
 from statsmodels.compat.python import iterkeys, itervalues, zip, range
 from statsmodels.stats.correlation_tools import cov_nearest
 import numpy as np

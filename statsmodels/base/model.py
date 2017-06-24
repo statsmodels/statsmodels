@@ -15,6 +15,7 @@ from statsmodels.formula import handle_formula_data
 from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.base.optimizer import Optimizer
 
+from statsmodels.base import dimensions
 
 _model_params_doc = """
     Parameters
@@ -41,7 +42,7 @@ _extra_param_doc = """
 """
 
 
-class Model(object):
+class Model(dimensions.NEQsMixin, dimensions.NobsMixin):
     __doc__ = """
     A (predictive) statistical model. Intended to be subclassed not used.
 
@@ -425,6 +426,7 @@ class LikelihoodModel(Model):
             elif self.exog is not None:
                 # fails for shape (K,)?
                 start_params = [0] * self.exog.shape[1]
+                # Note: self.k_exog is not guaranteed to exist at this point
             else:
                 raise ValueError("If exog is None, then start_params should "
                                  "be specified")
@@ -434,6 +436,7 @@ class LikelihoodModel(Model):
         # args in most (any?) of the optimize function
 
         nobs = self.endog.shape[0]
+        # Note: In most cases this is equivalent to `self.nobs`.
         f = lambda params, *args: -self.loglike(params, *args) / nobs
         score = lambda params, *args: -self.score(params, *args) / nobs
         try:
@@ -508,7 +511,7 @@ class LikelihoodModel(Model):
 
 
 #TODO: the below is unfinished
-class GenericLikelihoodModel(LikelihoodModel):
+class GenericLikelihoodModel(LikelihoodModel, dimensions.KExogMixin):
     """
     Allows the fitting of any likelihood function via maximum likelihood.
 
@@ -580,6 +583,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         if exog is not None:
             #try:
             self.nparams = (exog.shape[1] if np.ndim(exog) == 2 else 1)
+            # TODO: Is this ever used?  Is it named k_params elsewhere?
 
         if extra_params_names is not None:
             self._set_extra_params_names(extra_params_names)
@@ -593,6 +597,7 @@ class GenericLikelihoodModel(LikelihoodModel):
                 self.data.xnames = extra_params_names
 
         self.nparams = len(self.exog_names)
+        # TODO: Is this used elsewhere?  Is it named k_params elsewhere?
 
     #this is redundant and not used when subclassing
     def initialize(self):
@@ -608,9 +613,9 @@ class GenericLikelihoodModel(LikelihoodModel):
         #and should contain any preprocessing that needs to be done for a model
         if self.exog is not None:
             # assume constant
-            er = np_matrix_rank(self.exog)
-            self.df_model = float(er - 1)
-            self.df_resid = float(self.exog.shape[0] - er)
+            rank = float(np_matrix_rank(self.exog))
+            self.df_model = rank - 1
+            self.df_resid = self.nobs - rank
         else:
             self.df_model = np.nan
             self.df_resid = np.nan
@@ -745,7 +750,7 @@ class GenericLikelihoodModel(LikelihoodModel):
     #fit.__doc__ += LikelihoodModel.fit.__doc__
 
 
-class Results(object):
+class Results(dimensions.NEQsMixin, dimensions.NobsMixin):
     """
     Class to contain model results
 
@@ -757,6 +762,7 @@ class Results(object):
         parameter estimates from the fit model
     """
     def __init__(self, model, params, **kwd):
+        self.model = model
         self.__dict__.update(kwd)
         self.initialize(model, params, **kwd)
         self._data_attr = []
@@ -813,8 +819,7 @@ class Results(object):
 
         if exog is not None:
             exog = np.asarray(exog)
-            if exog.ndim == 1 and (self.model.exog.ndim == 1 or
-                                   self.model.exog.shape[1] == 1):
+            if exog.ndim == 1 and (self.model.exog.ndim == 1 or self.exog.shape[1] == 1):
                 exog = exog[:, None]
             exog = np.atleast_2d(exog)  # needed in count model shape[1]
 
@@ -837,7 +842,7 @@ class Results(object):
 
 
 #TODO: public method?
-class LikelihoodModelResults(Results):
+class LikelihoodModelResults(Results, dimensions.KExogMixin):
     """
     Class to contain results from likelihood models
 
@@ -999,6 +1004,11 @@ class LikelihoodModelResults(Results):
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.,
                  **kwargs):
+
+        self.model = model
+        self.endog = model.endog
+        self.exog = model.exog
+
         super(LikelihoodModelResults, self).__init__(model, params)
         self.normalized_cov_params = normalized_cov_params
         self.scale = scale
@@ -1174,8 +1184,7 @@ class LikelihoodModelResults(Results):
             return cov_p
 
     #TODO: make sure this works as needed for GLMs
-    def t_test(self, r_matrix, cov_p=None, scale=None,
-               use_t=None):
+    def t_test(self, r_matrix, cov_p=None, scale=None, use_t=None):
         """
         Compute a t-test for a each linear hypothesis of the form Rb = q
 
@@ -1276,7 +1285,7 @@ class LikelihoodModelResults(Results):
             not hasattr(self, 'cov_params_default')):
             raise ValueError('Need covariance of parameters for computing '
                              'T statistics')
-        if num_params != self.params.shape[0]:
+        if num_params != self.params.shape[0]: # TODO: Should this more generally be params.size?
             raise ValueError('r_matrix and params are not aligned')
         if q_matrix is None:
             q_matrix = np.zeros(num_ttests)
@@ -1818,9 +1827,10 @@ class LikelihoodModelResults(Results):
             except AttributeError:
                 pass
 
+        extra_attrs = ['exog', 'endog', 'wexog']
         model_only = ['model.' + i for i in getattr(self, "_data_attr_model", [])]
         model_attr = ['model.' + i for i in self.model._data_attr]
-        for att in self._data_attr + model_attr + model_only:
+        for att in self._data_attr + model_attr + model_only + extra_attrs:
             #print('removing', att)
             wipe(self, att)
 
@@ -1991,7 +2001,7 @@ class ResultMixin(object):
         pass
 
 
-class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
+class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin, dimensions.KExogMixin):
     """
     A results class for the discrete dependent variable models.
 
@@ -2047,7 +2057,6 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         self.model = model
         self.endog = model.endog
         self.exog = model.exog
-        self.nobs = model.endog.shape[0]
 
         # TODO: possibly move to model.fit()
         #       and outsource together with patching names
@@ -2061,7 +2070,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         if hasattr(model, 'df_resid'):
             self.df_resid = model.df_resid
         else:
-            self.df_resid = self.endog.shape[0] - self.df_model
+            self.df_resid = self.nobs - self.df_model
             # retrofitting the model, used in t_test TODO: check design
             self.model.df_resid = self.df_resid
 

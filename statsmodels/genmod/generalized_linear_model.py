@@ -28,6 +28,7 @@ import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 import statsmodels.regression._tools as reg_tools
 
+from statsmodels.base import dimensions
 
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
@@ -48,7 +49,7 @@ def _check_convergence(criterion, iteration, atol, rtol):
                        atol=atol, rtol=rtol)
 
 
-class GLM(base.LikelihoodModel):
+class GLM(dimensions.WNobsMixin, dimensions.KExogMixin, base.LikelihoodModel):
     __doc__ = """
     Generalized Linear Models class
 
@@ -324,7 +325,6 @@ class GLM(base.LikelihoodModel):
         if exposure is None:
             delattr(self, 'exposure')
 
-        self.nobs = self.endog.shape[0]
 
         # things to remove_data
         self._data_attr.extend(['weights', 'pinv_wexog', 'mu', 'freq_weights',
@@ -346,7 +346,6 @@ class GLM(base.LikelihoodModel):
 
         self.scaletype = None
 
-
     def initialize(self):
         """
         Initialize a generalized linear model.
@@ -361,15 +360,7 @@ class GLM(base.LikelihoodModel):
                                             np.transpose(self.pinv_wexog))
 
         self.df_model = np_matrix_rank(self.exog) - 1
-
-
-        if (self.freq_weights is not None) and \
-           (self.freq_weights.shape[0] == self.endog.shape[0]):
-            self.wnobs = self.freq_weights.sum()
-            self.df_resid = self.wnobs - self.df_model - 1
-        else:
-            self.wnobs = self.exog.shape[0]
-            self.df_resid = self.exog.shape[0] - self.df_model - 1
+        self.df_resid = self.wnobs - self.df_model - 1
 
     def _check_inputs(self, family, offset, exposure, endog, freq_weights,
                       var_weights):
@@ -676,6 +667,7 @@ class GLM(base.LikelihoodModel):
 
             ex = np.column_stack((self.exog, exog_extra))
             k_constraints += ex.shape[1] - self.exog.shape[1]
+            # FIXME: self.exog.shape[1] !+ self.k_exog 2017-06-06
 
             score_factor = self.score_factor(params_constrained)
             score = (score_factor[:, None] * ex).sum(0)
@@ -906,7 +898,7 @@ class GLM(base.LikelihoodModel):
         # this checks what kind of data is given for Binomial.
         # family will need a reference to endog if this is to be removed from
         # preprocessing
-        self.n_trials = np.ones((self.endog.shape[0]))  # For binomial
+        self.n_trials = np.ones((self.nobs))  # For binomial
         if isinstance(self.family, families.Binomial):
             tmp = self.family.initialize(self.endog, self.freq_weights)
             self.endog = tmp[0]
@@ -1052,7 +1044,7 @@ class GLM(base.LikelihoodModel):
         endog = self.endog
         wlsexog = self.exog
         if start_params is None:
-            start_params = np.zeros(self.exog.shape[1], np.float)
+            start_params = np.zeros(wlsexog.shape[1], np.float)
             mu = self.family.starting_mu(self.endog)
             lin_pred = self.family.predict(mu)
         else:
@@ -1338,8 +1330,7 @@ class GLMResults(base.LikelihoodModelResults):
                                          normalized_cov_params=
                                          normalized_cov_params, scale=scale)
         self.family = model.family
-        self._endog = model.endog
-        self.nobs = model.endog.shape[0]
+        self._endog = model.endog # TODO: Why calling this _endog instead of endog?
         self._freq_weights = model.freq_weights
         self._var_weights = model.var_weights
         self._iweights = model.iweights

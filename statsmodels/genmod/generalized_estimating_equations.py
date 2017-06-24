@@ -48,6 +48,8 @@ from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
                                              ValueWarning)
 import warnings
 
+from statsmodels.base import dimensions
+
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
     _plot_partial_residuals_doc,
@@ -446,7 +448,7 @@ _gee_nominal_example = """
 """
 
 
-class GEE(base.Model):
+class GEE(base.Model, dimensions.KExogMixin):
 
     __doc__ = (
         "    Estimation of marginal regression models using Generalized\n"
@@ -530,7 +532,7 @@ class GEE(base.Model):
         if constraint is not None:
             if len(constraint) != 2:
                 raise ValueError("GEE: `constraint` must be a 2-tuple.")
-            if constraint[0].shape[1] != self.exog.shape[1]:
+            if constraint[0].shape[1] != self.k_exog:
                 raise ValueError(
                     "GEE: the left hand side of the constraint must have "
                     "the same number of columns as the exog matrix.")
@@ -590,11 +592,9 @@ class GEE(base.Model):
         self.cov_struct.initialize(self)
 
         # Total sample size
-        group_ns = [len(y) for y in self.endog_li]
-        self.nobs = sum(group_ns)
         # The following are column based, not on rank see #1928
-        self.df_model = self.exog.shape[1] - 1  # assumes constant
-        self.df_resid = self.nobs - self.exog.shape[1]
+        self.df_model = self.k_exog - 1  # assumes constant
+        self.df_resid = self.nobs - (self.df_model + 1)
 
         # Skip the covariance updates if all groups have a single
         # observation (reduces to fitting a GLM).
@@ -1056,6 +1056,7 @@ class GEE(base.Model):
 
         # TODO: use GLM to get Poisson starting values
         return np.zeros(self.exog.shape[1])
+        # FIXME: 2017-06-06 self.exog.shape[1] != self.k_exog
 
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
@@ -1065,7 +1066,7 @@ class GEE(base.Model):
         # Subtract this number from the total sample size when
         # normalizing the scale parameter estimate.
         if ddof_scale is None:
-            self.ddof_scale = self.exog.shape[1]
+            self.ddof_scale = self.k_exog
         else:
             if not ddof_scale >= 0:
                 raise ValueError(

@@ -158,8 +158,8 @@ import warnings
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.base._penalties import Penalty
 from statsmodels.compat.numpy import np_matrix_rank
-from pandas import DataFrame
 
+from statsmodels.base import dimensions
 
 def _dot(x, y):
     """
@@ -506,7 +506,7 @@ def _smw_logdet(s, A, AtA, BI, di, B_logdet):
     return B_logdet + ld + ld1
 
 
-class MixedLM(base.LikelihoodModel):
+class MixedLM(dimensions.KExogMixin, base.LikelihoodModel):
     """
     An object specifying a linear mixed effects model.  Use the `fit`
     method to fit the model and obtain a results object.
@@ -697,13 +697,13 @@ class MixedLM(base.LikelihoodModel):
             self.exog_re2_li = [np.dot(x.T, x) for x in self.exog_re_li]
 
         # The total number of observations, summed over all groups
-        self.nobs = len(self.endog)
-        self.n_totobs = self.nobs
+        #self.nobs = len(self.endog)
+        self.n_totobs = self.nobs # TODO: use self._nobs_total
 
         # Set the fixed effects parameter names
         if self.exog_names is None:
             self.exog_names = ["FE%d" % (k + 1) for k in
-                               range(self.exog.shape[1])]
+                               range(self.k_exog)]
 
         # Precompute this
         self._aex_r = []
@@ -1724,7 +1724,7 @@ class MixedLM(base.LikelihoodModel):
 
         fac = self.n_totobs
         if self.reml:
-            fac -= self.exog.shape[1]
+            fac -= self.k_exog
 
         rvir = 0.
         xtvix = 0.
@@ -2099,7 +2099,6 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
         super(MixedLMResults, self).__init__(model, params,
                                              normalized_cov_params=cov_params)
-        self.nobs = self.model.nobs
         self.df_resid = self.nobs - np_matrix_rank(self.model.exog)
 
 
@@ -2146,7 +2145,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         Returns the standard errors of the fixed effect regression
         coefficients.
         """
-        p = self.model.exog.shape[1]
+        p = self.model.exog.shape[1]#self.k_exog # TODO: is k_exog a misnomer in this case?
         return np.sqrt(np.diag(self.cov_params())[0:p])
 
 
@@ -2159,7 +2158,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         standard errors may not give meaningful confidence intervals
         of p-values if used in the usual way.
         """
-        p = self.model.exog.shape[1]
+        p = self.model.exog.shape[1]#self.k_exog # TODO: is k_exog a misnomer in this case?
         return np.sqrt(self.scale * np.diag(self.cov_params())[p:])
 
 

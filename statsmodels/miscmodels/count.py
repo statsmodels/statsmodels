@@ -214,7 +214,7 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         #TODO: it's not standard pattern to use default exog
         if exog is None:
             self.exog = np.ones((self.nobs,1))
-        self.nparams = self.exog.shape[1]
+        self.nparams = self.k_exog # TODO: use k_params?
         #what's the shape in regression for exog if only constant
         self.start_params = np.hstack((np.ones(self.nparams), 0))
         self.cloneattr = ['start_params']

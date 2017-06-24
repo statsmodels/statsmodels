@@ -95,12 +95,13 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         self.switching_variance = switching_variance
 
         # Exogenous data
-        self.k_exog, exog = markov_switching._prepare_exog(exog)
-
+        k_exog, exog = markov_switching._prepare_exog(exog)
+        # Note: At this juncture, k_exog is not the same as self.k_exog
+        
         # Trend
         nobs = len(endog)
         self.k_trend = 0
-        self._k_exog = self.k_exog
+        self._k_exog = k_exog
         trend_exog = None
         if trend == 'c':
             trend_exog = np.ones((nobs, 1))
@@ -127,8 +128,8 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         elif not len(self.switching_trend) == self.k_trend:
             raise ValueError('Invalid iterable passed to `switching_trend`.')
         if self.switching_exog is True or self.switching_exog is False:
-            self.switching_exog = [self.switching_exog] * self.k_exog
-        elif not len(self.switching_exog) == self.k_exog:
+            self.switching_exog = [self.switching_exog] * k_exog
+        elif not len(self.switching_exog) == k_exog:
             raise ValueError('Invalid iterable passed to `switching_exog`.')
 
         self.switching_coeffs = (

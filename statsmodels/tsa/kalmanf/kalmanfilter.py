@@ -593,7 +593,7 @@ class KalmanFilter(object):
         paramsdtype = params.dtype
         y = arma_model.endog.copy().astype(paramsdtype)
         k = arma_model.k_exog + arma_model.k_trend
-        nobs = arma_model.nobs
+        nobs = len(y) # Try to avoid the need to get a reliable `nobs` attribute from the model
         k_ar = arma_model.k_ar
         k_ma = arma_model.k_ma
         k_lags = arma_model.k_lags

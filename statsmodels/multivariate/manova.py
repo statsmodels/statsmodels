@@ -7,14 +7,17 @@ author: Yichuan Liu
 from __future__ import division
 
 import numpy as np
+
 from statsmodels.base.model import Model
+from statsmodels.base import dimensions
+
 from .multivariate_ols import _multivariate_ols_test, _hypotheses_doc
 from .multivariate_ols import _multivariate_ols_fit
 from .multivariate_ols import MultivariateTestResults
 __docformat__ = 'restructuredtext en'
 
 
-class MANOVA(Model):
+class MANOVA(Model, dimensions.KExogMixin):
     """
     Multivariate analysis of variance
     The implementation of MANOVA is based on multivariate regression and does
@@ -60,13 +63,13 @@ class MANOVA(Model):
                 terms = self.data.design_info.term_name_slices
                 hypotheses = []
                 for key in terms:
-                    L_contrast = np.eye(self.exog.shape[1])[terms[key], :]
+                    L_contrast = np.eye(self.k_exog)[terms[key], :]
                     hypotheses.append([key, L_contrast, None])
             else:
                 hypotheses = []
-                for i in range(self.exog.shape[1]):
+                for i in range(self.k_exog):
                     name = 'x%d' % (i)
-                    L = np.zeros([1, self.exog.shape[1]])
+                    L = np.zeros([1, self.k_exog])
                     L[i] = 1
                     hypotheses.append([name, L, None])
 

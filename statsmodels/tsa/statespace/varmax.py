@@ -12,7 +12,7 @@ from statsmodels.compat.collections import OrderedDict
 import pandas as pd
 import numpy as np
 from .kalman_filter import (INVERT_UNIVARIATE, SOLVE_LU)
-from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
+from .mlemodel import prepare_exog, MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
     is_invertible,
     constrain_stationary_multivariate, unconstrain_stationary_multivariate
@@ -22,6 +22,10 @@ from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.vector_ar import var_model
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.sm_exceptions import (EstimationWarning, ValueWarning)
+
+
+
+
 
 
 class VARMAX(MLEModel):
@@ -119,6 +123,8 @@ class VARMAX(MLEModel):
                  enforce_stationarity=True, enforce_invertibility=True,
                  **kwargs):
 
+        self.endog = endog
+
         # Model parameters
         self.error_cov_type = error_cov_type
         self.measurement_error = measurement_error
@@ -151,24 +157,12 @@ class VARMAX(MLEModel):
                  EstimationWarning)
 
         # Exogenous data
-        self.k_exog = 0
-        if exog is not None:
-            exog_is_using_pandas = _is_using_pandas(exog, None)
-            if not exog_is_using_pandas:
-                exog = np.asarray(exog)
+        (k_exog, exog) = prepare_exog(exog)
+        # Until exog gets attached to self, we need to use `k_exog`
+        # and *not* self.k_exog
 
-            # Make sure we have 2-dimensional array
-            if exog.ndim == 1:
-                if not exog_is_using_pandas:
-                    exog = exog[:, None]
-                else:
-                    exog = pd.DataFrame(exog)
 
-            self.k_exog = exog.shape[1]
 
-        # Note: at some point in the future might add state regression, as in
-        # SARIMAX.
-        self.mle_regression = self.k_exog > 0
 
         # We need to have an array or pandas at this point
         if not _is_using_pandas(endog, None):
@@ -194,6 +188,12 @@ class VARMAX(MLEModel):
         super(VARMAX, self).__init__(
             endog, exog=exog, k_states=k_states, k_posdef=k_posdef, **kwargs
         )
+        # Actions that check self.k_exog need to wait until after
+        # self.exog is set in this super call
+
+        # Note: at some point in the future might add state regression, as in
+        # SARIMAX.
+        self.mle_regression = self.k_exog > 0
 
         # Set as time-varying model if we have time-trend or exog
         if self.k_exog > 0 or self.k_trend > 1:

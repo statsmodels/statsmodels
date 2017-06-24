@@ -327,7 +327,6 @@ class PHReg(model.LikelihoodModel):
         self.surv = PHSurvivalTime(self.endog, self.status,
                                     self.exog, self.strata,
                                     self.entry, self.offset)
-        self.nobs = len(self.endog)
         self.groups = None
 
         # TODO: not used?

@@ -493,7 +493,6 @@ class GMM(Model):
 #         self.endog = endog
 #         self.exog = exog
 #         self.instrument = instrument
-        self.nobs = endog.shape[0]
         if k_moms is not None:
             self.nmoms = k_moms
         elif instrument is not None:
@@ -1109,8 +1108,8 @@ class GMMResults(LikelihoodModelResults):
     def __init__(self, *args, **kwds):
         self.__dict__.update(kwds)
 
-        self.nobs = self.model.nobs
         self.df_resid = np.inf
+        self.endog = self.model.endog
 
         self.cov_params_default = self._cov_params()
 

@@ -248,6 +248,7 @@ class TestARIMAStationary(ARIMA):
         assert_allclose(oim_bse[1], self.true['se_ar_oim'], atol=1e-3)
         assert_allclose(oim_bse[2], self.true['se_ma_oim'], atol=1e-2)
 
+
     def test_bse_robust(self):
         robust_oim_bse = self.result.cov_params_robust_oim.diagonal()**0.5
         robust_approx_bse = self.result.cov_params_robust_approx.diagonal()**0.5
@@ -811,9 +812,11 @@ class TestFriedmanStateRegression(Friedman):
 
     def test_bse_oim(self):
         # OIM covariance type
+
         bse = self.result._cov_params_oim().diagonal()**0.5
         assert_allclose(bse[0], self.true['se_ar_oim'], atol=1e-1)
         assert_allclose(bse[1], self.true['se_ma_oim'], atol=1e-1)
+        # TODO: are these tolerances tight enough?
 
 
 class TestFriedmanPredict(Friedman):

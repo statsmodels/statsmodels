@@ -12,11 +12,12 @@ import scipy
 import pandas as pd
 
 from statsmodels.base.model import Model
+from statsmodels.base import dimensions
 from statsmodels.iolib import summary2
 from .multivariate_ols import multivariate_stats
 
 
-class CanCorr(Model):
+class CanCorr(Model, dimensions.KExogMixin):
     """
     Canonical correlation analysis using singluar value decomposition
 
@@ -61,9 +62,10 @@ class CanCorr(Model):
         tolerance : float
             eigenvalue tolerance, values smaller than which is considered 0
         """
-        nobs, k_yvar = self.endog.shape
-        nobs, k_xvar = self.exog.shape
-        k = np.min([k_yvar, k_xvar])
+        nobs = self.nobs
+        k_exog = self.k_exog
+        k_endog = self.k_endog
+        k = np.min([k_endog, k_exog])
 
         x = np.array(self.exog)
         x = x - x.mean(0)
@@ -104,8 +106,9 @@ class CanCorr(Model):
         CanCorrTestResults instance
 
         """
-        nobs, k_yvar = self.endog.shape
-        nobs, k_xvar = self.exog.shape
+        nobs = self.nobs
+        k_endog = self.k_endog
+        k_exog = self.k_exog
         eigenvals = np.power(self.cancorr, 2)
         stats = pd.DataFrame(columns=['Canonical Correlation', "Wilks' lambda",
                                       'Num DF','Den DF', 'F Value','Pr > F'],
@@ -113,9 +116,9 @@ class CanCorr(Model):
         prod = 1
         for i in range(len(eigenvals) - 1, -1, -1):
             prod *= 1 - eigenvals[i]
-            p = k_yvar - i
-            q = k_xvar - i
-            r = (nobs - k_yvar - 1) - (p - q + 1) / 2
+            p = k_endog - i
+            q = k_exog - i
+            r = (nobs - k_endog - 1) - (p - q + 1) / 2
             u = (p * q - 2) / 4
             df1 = p * q
             if p ** 2 + q ** 2 - 5 > 0:
@@ -147,7 +150,7 @@ class CanCorr(Model):
 
         # Multivariate tests (remember x has mean removed)
         stats_mv = multivariate_stats(eigenvals,
-                                      k_yvar, k_xvar, nobs - k_xvar - 1)
+                                      k_endog, k_exog, nobs - k_exog - 1)
         return CanCorrTestResults(stats, stats_mv)
 
 

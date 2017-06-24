@@ -32,6 +32,8 @@ from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
 from statsmodels.tsa.kalmanf import KalmanFilter
 
+from statsmodels.base import dimensions
+
 _armax_notes = """
     Notes
     -----
@@ -427,8 +429,7 @@ def _check_estimable(nobs, n_params):
     if nobs <= n_params:
         raise ValueError("Insufficient degrees of freedom to estimate")
 
-
-class ARMA(tsbase.TimeSeriesModel):
+class ARMA(dimensions.CssKarNobsMixin, tsbase.TimeSeriesModel):
 
     __doc__ = tsbase._tsa_doc % {"model" : _arma_model,
                                  "params" : _arma_params, "extra_params" : "",
@@ -443,13 +444,7 @@ class ARMA(tsbase.TimeSeriesModel):
         self.k_ar = k_ar = order[0]
         self.k_ma = k_ma = order[1]
         self.k_lags = max(k_ar, k_ma+1)
-        if exog is not None:
-            if exog.ndim == 1:
-                exog = exog[:, None]
-            k_exog = exog.shape[1]  # number of exog. variables excl. const
-        else:
-            k_exog = 0
-        self.k_exog = k_exog
+        # self.k_lags is used in kalmanfilter._init_kalman_state
 
     def _fit_start_params_hr(self, order, start_ar_lags=None):
         """
@@ -661,6 +656,42 @@ class ARMA(tsbase.TimeSeriesModel):
 
         return start, end, out_of_sample, prediction_index
 
+
+
+    def geterrors_css(self, params):
+        # This is separated so we can get to it from _loglike_css
+        # even if self.method is not "css", i.e. when called via
+        # lambda in _fit_start_params
+
+        # use scipy.signal.lfilter
+        k_ar = self.k_ar
+        k_ma = self.k_ma
+        k = self.k_exog + self.k_trend
+
+        y = self.endog.copy().astype(params.dtype) # TODO: can we avoid the copy by just not doing an in-place modifcation of y below?
+
+        newparams = params
+        if self.transparams:
+            newparams = self._transparams(params)
+
+        if k > 0:
+            y -= np.dot(self.exog, params[:k])
+
+        # (trendparams, exparams, arparams, maparams) = _unpack_params(params, (k_ar, k_ma), self.k_trend, self.k_exog, reverse=False)
+        # the order of p determines how many zeros errors to set for scipy.signal.lfilter
+        arparams = np.r_[1, -newparams[k:k+k_ar]] ## easier if there was a arparams and maparams property? --> yep, and _unpack_params is for exactly that!
+        maparams = np.r_[1, newparams[k+k_ar:]]
+        ## in the garch.py version, the params[:p] in arparams had the opposite sign
+
+        zi = np.zeros((max(k_ar, k_ma)), dtype=params.dtype)
+        for i in range(k_ar):
+            zi[i] = sum(-arparams[:i+1][::-1] * y[:i+1])
+
+        e = lfilter(arparams, maparams, y, zi=zi)
+        errors = e[0][k_ar:]
+        return errors.squeeze()
+
+
     def geterrors(self, params):
         """
         Get the errors of the ARMA process.
@@ -691,25 +722,9 @@ class ARMA(tsbase.TimeSeriesModel):
                                             paramsdtype)
             if isinstance(errors, tuple):
                 errors = errors[0]  # non-cython version returns a tuple
-        else:  # use scipy.signal.lfilter
-            y = self.endog.copy()
-            k = self.k_exog + self.k_trend
-            if k > 0:
-                y -= dot(self.exog, params[:k])
-
-            k_ar = self.k_ar
-            k_ma = self.k_ma
-
-            (trendparams, exparams,
-             arparams, maparams) = _unpack_params(params, (k_ar, k_ma),
-                                                  self.k_trend, self.k_exog,
-                                                  reverse=False)
-            b, a = np.r_[1, -arparams], np.r_[1, maparams]
-            zi = zeros((max(k_ar, k_ma)))
-            for i in range(k_ar):
-                zi[i] = sum(-b[:i+1][::-1]*y[:i+1])
-            e = lfilter(b, a, y, zi=zi)
-            errors = e[0][k_ar:]
+        else:
+            # use scipy.signal.lfilter
+            errors = self.geterrors_css(params)
         return errors.squeeze()
 
     def predict(self, params, start=None, end=None, exog=None, dynamic=False):
@@ -738,14 +753,20 @@ class ARMA(tsbase.TimeSeriesModel):
             if self.k_exog > 0 and k_ar > 0 and not dynamic:
                 # need the last k_ar exog for the lag-polynomial
                 exog = np.vstack((self.exog[-k_ar:, self.k_trend:], exog))
+                # Note the argument to vstack is self.exog and not exog, not
+                # necessarily the same at this point
 
         if dynamic:
             if self.k_exog > 0:
                 # need the last k_ar exog for the lag-polynomial
                 exog = np.vstack((self.exog[start - k_ar:, self.k_trend:], exog))
+                # Note the argument to vstack is self.exog and not exog, not
+                # necessarily the same at this point
+
             #TODO: now that predict does dynamic in-sample it should
             # also return error estimates and confidence intervals
             # but how? len(endog) is not tot_obs
+
             out_of_sample += end - start + 1
             return _arma_predict_out_of_sample(params, out_of_sample, resid,
                                                k_ar, self.k_ma, self.k_trend,
@@ -762,6 +783,7 @@ class ARMA(tsbase.TimeSeriesModel):
                                                          self.k_exog, endog,
                                                          exog, method=method)
             predictedvalues = np.r_[predictedvalues, forecastvalues]
+
         return predictedvalues
     predict.__doc__ = _arma_predict
 
@@ -791,27 +813,11 @@ class ARMA(tsbase.TimeSeriesModel):
         """
         Conditional Sum of Squares likelihood function.
         """
-        k_ar = self.k_ar
-        k_ma = self.k_ma
-        k = self.k_exog + self.k_trend
-        y = self.endog.copy().astype(params.dtype)
-        nobs = self.nobs
-        # how to handle if empty?
-        if self.transparams:
-            newparams = self._transparams(params)
-        else:
-            newparams = params
-        if k > 0:
-            y -= dot(self.exog, newparams[:k])
-        # the order of p determines how many zeros errors to set for lfilter
-        b, a = np.r_[1, -newparams[k:k + k_ar]], np.r_[1, newparams[k + k_ar:]]
-        zi = np.zeros((max(k_ar, k_ma)), dtype=params.dtype)
-        for i in range(k_ar):
-            zi[i] = sum(-b[:i + 1][::-1] * y[:i + 1])
-        errors = lfilter(b, a, y, zi=zi)[0][k_ar:]
-
-        ssr = np.dot(errors, errors)
+        resid = self.geterrors_css(params)
+        nobs = len(resid)
+        ssr = np.dot(resid, resid) # TODO: how does this compare to bn.nansum(resid**2)?
         sigma2 = ssr/nobs
+
         if set_sigma2:
             self.sigma2 = sigma2
         llf = -nobs/2.*(log(2*pi) + log(sigma2)) - ssr/(2*sigma2)
@@ -902,12 +908,15 @@ class ARMA(tsbase.TimeSeriesModel):
         self.transparams = transparams
 
         endog, exog = self.endog, self.exog
-        k_exog = self.k_exog
-        self.nobs = len(endog)  # this is overwritten if method is 'css'
+        self.method = method.lower() # TODO: double-check this is the right place to set this
 
         # (re)set trend and handle exogenous variables
         # always pass original exog
         k_trend, exog = _make_arma_exog(endog, self.exog, trend)
+        self.trend = trend
+
+        self.exog = exog    # overwrites original exog from __init__
+        k_exog = self.k_exog
 
         # Check has something to estimate
         if k_ar == 0 and k_ma == 0 and k_trend == 0 and k_exog == 0:
@@ -932,9 +941,6 @@ class ARMA(tsbase.TimeSeriesModel):
 
         self.method = method = method.lower()
 
-        # adjust nobs for css
-        if method == 'css':
-            self.nobs = len(self.endog) - k_ar
 
         if start_params is not None:
             start_params = np.asarray(start_params)
@@ -963,7 +969,7 @@ class ARMA(tsbase.TimeSeriesModel):
         self.transparams = False  # so methods don't expect transf.
 
         normalized_cov_params = None  # TODO: fix this
-        armafit = ARMAResults(self, params, normalized_cov_params)
+        armafit = ARMAResults(self, params, normalized_cov_params, method=method)
         armafit.mle_retvals = mlefit.mle_retvals
         armafit.mle_settings = mlefit.mle_settings
         return ARMAResultsWrapper(armafit)
@@ -1139,13 +1145,14 @@ class ARIMA(ARMA):
         r, order = 'F')
 
         """
+        self.method = method # TODO: Is this the right place to set this?
         mlefit = super(ARIMA, self).fit(start_params, trend,
                                            method, transparams, solver,
                                            maxiter, full_output, disp,
                                            callback, start_ar_lags, **kwargs)
         normalized_cov_params = None  # TODO: fix this?
         arima_fit = ARIMAResults(self, mlefit._results.params,
-                                 normalized_cov_params)
+                                 normalized_cov_params, method=method)
         arima_fit.k_diff = self.k_diff
 
         arima_fit.mle_retvals = mlefit.mle_retvals
@@ -1258,7 +1265,7 @@ class ARIMA(ARMA):
     predict.__doc__ = _arima_predict
 
 
-class ARMAResults(tsbase.TimeSeriesModelResults):
+class ARMAResults(dimensions.CssKarNobsMixin, tsbase.TimeSeriesModelResults):
     """
     Class to hold results from fitting an ARMA model.
 
@@ -1332,9 +1339,9 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
     nobs : float
         The number of observations used to fit the model. If the model is fit
         using exact maximum likelihood this is equal to the total number of
-        observations, `n_totobs`. If the model is fit using conditional
-        maximum likelihood this is equal to `n_totobs` - `k_ar`.
-    n_totobs : float
+        observations, `_nobs_total`. If the model is fit using conditional
+        maximum likelihood this is equal to `_nobs_total` - `k_ar`.
+    _nobs_total : float
         The total number of observations for `endog`. This includes all
         observations, even pre-sample values if the model is fit using `css`.
     params : array
@@ -1364,19 +1371,31 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
     #TODO: use this for docstring when we fix nobs issue
 
-    def __init__(self, model, params, normalized_cov_params=None, scale=1.):
+    def __init__(self, model, params, normalized_cov_params=None, scale=1., method=None):
+
+        self.method = method # TODO: use arg or inherit, not both
+        method = model.method
+
+        self.trend = model.trend
+        # TODO: Since model.trend may be mutable, it might be better to
+        # pass this as an argument like method above.
+        self.k_ma = model.k_ma
+        self.k_ar = model.k_ar
+
         super(ARMAResults, self).__init__(model, params, normalized_cov_params,
                                           scale)
+
+        self.endog = model.endog
+        self.exog = model.exog
+
+        
         self.sigma2 = model.sigma2
-        nobs = model.nobs
-        self.nobs = nobs
+        self.method = method
         k_exog = model.k_exog
-        self.k_exog = k_exog
         k_trend = model.k_trend
         self.k_trend = k_trend
         k_ar = model.k_ar
         self.k_ar = k_ar
-        self.n_totobs = len(model.endog)
         k_ma = model.k_ma
         self.k_ma = k_ma
         df_model = k_exog + k_trend + k_ar + k_ma
@@ -1384,6 +1403,8 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         self.df_model = df_model
         self.df_resid = self.nobs - df_model
         self._cache = resettable_cache()
+
+
 
     @cache_readonly
     def arroots(self):
@@ -1468,9 +1489,9 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         k_ar = self.k_ar
         exog = model.exog  # this is a copy
         if exog is not None:
-            if model.method == "css" and k_ar > 0:
+            if self.method == "css" and k_ar > 0:
                 exog = exog[k_ar:]
-        if model.method == "css" and k_ar > 0:
+        if self.method == "css" and k_ar > 0:
             endog = endog[k_ar:]
         fv = endog - self.resid
         # add deterministic part back in

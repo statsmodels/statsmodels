@@ -118,7 +118,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
             missing=missing)
 
         # Sanity checks
-        if self.nobs <= self.order:
+        if self._nobs_total <= self.order:
             raise ValueError('Must have more observations than the order of'
                              ' the autoregression.')
 
@@ -126,7 +126,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         self.exog_ar = lagmat(endog, self.order)[self.order:]
 
         # Reshape other datasets
-        self.nobs -= self.order
+        #self.nobs -= self.order
         self.orig_endog = self.endog
         self.endog = self.endog[self.order:]
         if self._k_exog > 0:

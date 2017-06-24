@@ -41,23 +41,7 @@ prefix_kim_smoother_map = {
     'c': ckim_smoother, 'z': zkim_smoother
 }
 
-
-def _prepare_exog(exog):
-    k_exog = 0
-    if exog is not None:
-        exog_is_using_pandas = _is_using_pandas(exog, None)
-        if not exog_is_using_pandas:
-            exog = np.asarray(exog)
-
-        # Make sure we have 2-dimensional array
-        if exog.ndim == 1:
-            if not exog_is_using_pandas:
-                exog = exog[:, None]
-            else:
-                exog = pd.DataFrame(exog)
-
-        k_exog = exog.shape[1]
-    return k_exog, exog
+from statsmodels.base.initialization import prepare_exog as _prepare_exog
 
 
 def _logistic(x):
@@ -672,6 +656,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         self.tvtp = exog_tvtp is not None
         # The order of the model may be overridden in subclasses
         self.order = order
+        self.k_ar = order
 
         # Exogenous data
         # TODO add checks for exog_tvtp consistent shape and indices
@@ -681,8 +666,6 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         super(MarkovSwitching, self).__init__(endog, exog, dates=dates,
                                               freq=freq, missing=missing)
 
-        # Dimensions
-        self.nobs = self.endog.shape[0]
 
         # Sanity checks
         if self.endog.ndim > 1 and self.endog.shape[1] > 1:
@@ -690,7 +673,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         if self.k_regimes < 2:
             raise ValueError('Markov switching models must have at least two'
                              ' regimes.')
-        if not(self.exog_tvtp is None or self.exog_tvtp.shape[0] == self.nobs):
+        if not(self.exog_tvtp is None or self.exog_tvtp.shape[0] == len(self.endog)):
+            # Note: In subclasses (e.g. MarkovAutoregression), we may
+            # not have len(self.endog) == self.nobs
             raise ValueError('Time-varying transition probabilities exogenous'
                              ' array must have the same number of observations'
                              ' as the endogenous array.')
@@ -1722,7 +1707,7 @@ class HamiltonFilterResults(object):
 
         self.model = model
 
-        self.nobs = model.nobs
+        self.k_ar = model.k_ar
         self.order = model.order
         self.k_regimes = model.k_regimes
 
@@ -1843,7 +1828,8 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             self.smoother_results = None
 
         # Dimensions
-        self.nobs = model.nobs
+        #self.nobs = model.nobs
+        self.k_ar = model.k_ar
         self.order = model.order
         self.k_regimes = model.k_regimes
 

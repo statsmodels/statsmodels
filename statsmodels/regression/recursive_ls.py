@@ -19,6 +19,8 @@ from statsmodels.tools.tools import Bunch
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 import statsmodels.base.wrapper as wrap
 
+from statsmodels.base.initialization import prepare_exog
+
 # Columns are alpha = 0.1, 0.05, 0.025, 0.01, 0.005
 _cusum_squares_scalars = np.array([
     [1.0729830,   1.2238734,  1.3581015,  1.5174271,  1.6276236],
@@ -58,30 +60,21 @@ class RecursiveLS(MLEModel):
         if not _is_using_pandas(endog, None):
             endog = np.asanyarray(endog)
 
-        exog_is_using_pandas = _is_using_pandas(exog, None)
-        if not exog_is_using_pandas:
-            exog = np.asarray(exog)
-
-        # Make sure we have 2-dimensional array
-        if exog.ndim == 1:
-            if not exog_is_using_pandas:
-                exog = exog[:, None]
-            else:
-                exog = pd.DataFrame(exog)
-
-        self.k_exog = exog.shape[1]
+        (k_exog, exog) = prepare_exog(exog)
 
         # Handle coefficient initialization
         # By default, do not calculate likelihood while it is controlled by
         # diffuse initial conditions.
-        kwargs.setdefault('loglikelihood_burn', self.k_exog)
+        kwargs.setdefault('loglikelihood_burn', k_exog) # Note: we can't use self.k_exog since we havent called super(...).__init__ yet
         kwargs.setdefault('initialization', 'approximate_diffuse')
         kwargs.setdefault('initial_variance', 1e9)
 
         # Initialize the state space representation
         super(RecursiveLS, self).__init__(
-            endog, k_states=self.k_exog, exog=exog, **kwargs
+            endog, k_states=k_exog, exog=exog, **kwargs
         )
+        # Note: because self.data has not been set, self.k_exog will be 0,
+        # so we need to explicitly use k_exog here.
 
         # Setup the state space representation
         self['design'] = self.exog[:, :, None].T
@@ -111,7 +104,7 @@ class RecursiveLS(MLEModel):
         # Compute the MLE of sigma2 (see Harvey, 1989 equation 4.2.5)
         resid = smoother_results.standardized_forecasts_error[0]
         sigma2 = (np.inner(resid, resid) /
-                  (self.nobs - self.loglikelihood_burn))
+                  (float(self.nobs) - self.loglikelihood_burn))
 
         # Now construct a results class, where the params are the final
         # estimates of the regression coefficients
@@ -614,7 +607,7 @@ class RecursiveLSResults(MLEResults):
         # Get the points for the significance bound lines
         if points is None:
             points = np.array([llb, self.nobs])
-        line = (points - llb) / (self.nobs - llb)
+        line = (points - llb) / (float(self.nobs) - llb)
 
         return line - crit, line + crit
 
@@ -673,7 +666,7 @@ class RecursiveLSResults(MLEResults):
 
         # Plot cusum series and reference line
         ax.plot(dates[llb:], self.cusum_squares, label='CUSUM of squares')
-        ref_line = (np.arange(llb, self.nobs) - llb) / (self.nobs - llb)
+        ref_line = (np.arange(llb, self.nobs) - llb) / (float(self.nobs) - llb)
         ax.plot(dates[llb:], ref_line, 'k', alpha=0.3)
 
         # Plot significance bounds
