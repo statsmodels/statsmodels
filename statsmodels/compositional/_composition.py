@@ -1,10 +1,6 @@
 r"""
 This module provides functions for compositional data analysis.
 
-Many 'omics datasets are inherently compositional - meaning that they
-are best interpreted as proportions or percentages rather than
-absolute counts.
-
 Formally, :math:`x` is a composition if :math:`\sum_{i=0}^D x_{i} = c`
 and :math:`x_{i} > 0`, :math:`1 \leq i \leq D` and :math:`c` is a real
 valued constant and there are :math:`D` components for each

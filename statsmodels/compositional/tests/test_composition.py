@@ -6,10 +6,10 @@ from numpy.random import normal
 import pandas as pd
 import scipy
 import copy
-from statsmodels.composition import (closure, multiplicative_replacement,
-                                     perturb, perturb_inv, power, inner,
-                                     clr, clr_inv, ilr, ilr_inv,
-                                     centralize)
+from statsmodels.compositional import (closure, multiplicative_replacement,
+                                       perturb, perturb_inv, power, inner,
+                                       clr, clr_inv, ilr, ilr_inv,
+                                       centralize)
 
 
 class CompositionTests(TestCase):
