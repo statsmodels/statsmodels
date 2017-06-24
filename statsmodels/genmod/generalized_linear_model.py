@@ -584,7 +584,7 @@ class GLM(base.LikelihoodModel):
 
         return oim_factor
 
-    def hessian(self, params, scale=None, observed=True):
+    def hessian(self, params, scale=None, observed=None):
         """Hessian, second derivative of loglikelihood function
 
         Parameters
@@ -596,16 +596,19 @@ class GLM(base.LikelihoodModel):
             Default scale is defined by `self.scaletype` and set in fit.
             If scale is not None, then it is used as a fixed scale.
         observed : bool
-            If True, then the observed Hessian is returned. If false then the
-            expected information matrix is returned.
+            If True, then the observed Hessian is returned (default).
+            If false then the expected information matrix is returned.
 
         Returns
         -------
         hessian : ndarray
             Hessian, i.e. observed information, or expected information matrix.
         """
-        if hasattr(self, '_optim_hessian') and self._optim_hessian == 'eim':
-            observed = False
+        if observed is None:
+            if hasattr(self, '_optim_hessian') and (self._optim_hessian == 'eim'):
+                observed = False
+            else:
+                observed = True
 
         factor = self.hessian_factor(params, scale=scale, observed=observed)
         hess = -np.dot(self.exog.T * factor, self.exog)

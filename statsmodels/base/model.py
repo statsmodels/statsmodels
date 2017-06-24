@@ -253,7 +253,7 @@ class LikelihoodModel(Model):
 
     def fit(self, start_params=None, method='newton', maxiter=100,
             full_output=True, disp=True, fargs=(), callback=None, retall=False,
-            skip_hessian=False, observed_hessian=True, **kwargs):
+            skip_hessian=False, **kwargs):
         """
         Fit method for likelihood based models
 
