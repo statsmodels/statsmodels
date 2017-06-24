@@ -48,51 +48,49 @@ class TestSimpleTable(unittest.TestCase):
     def test_noperc(self):
         t1 = Describe(data4)
         noperc = ['obs', 'mean', 'std', 'min', 'max', 'ptp', #'mode',  #'var',
-        #                        'median', 'skew', 'uss', 'kurtosis']
+                                'median', 'skew', 'uss', 'kurtosis']
         #TODO: mode var raise exception,
         #TODO: percentile writes list in cell (?), huge wide format
-        print(t1.summary(stats=noperc))
-        print(t1.summary())
-        print(t1.summary( orientation='varcols'))
-        print(t1.summary(stats=['mean', 'median', 'min', 'max'], orientation=('varcols')))
-        print(t1.summary(stats='all'))
+        _ = t1.summary(stats=noperc)
+        _ = t1.summary()
+        _ = t1.summary( orientation='varcols')
+        _ = t1.summary(stats=['mean', 'median', 'min', 'max'], orientation=('varcols'))
+        _ = t1.summary(stats='all')
 
 
     def test_basic_1(self):
         t1 = Describe(data1)
-        print(t1.summary())
+        _ = t1.summary()
 
     def test_basic_2(self):
         t2 = Describe(data2)
-        print(t2.summary())
+        _ = t2.summary()
 
     def test_basic_3(self):
         t1 = Describe(data3)
-        print(t1.summary())
+        _ = t1.summary()
 
     def test_basic_4(self):
         t1 = Describe(data4)
-        print(t1.summary())
+        _ = t1.summary()
 
     def test_basic_1a(self):
         t1 = Describe(data1)
-        print(t1.summary(stats='basic', columns=['alpha']))
+        _ = t1.summary(stats='basic', columns=['alpha'])
 
     def test_basic_1b(self):
-        print('test_basic_1b')
         t1 = Describe(data1)
-        print(t1.summary(stats='basic', columns='all'))
+        _ = t1.summary(stats='basic', columns='all')
 
     def test_basic_2a(self):
-        print('test_basic_2a')
         t2 = Describe(data2)
-        print(t2.summary(stats='all'))
+        _ = t2.summary(stats='all')
 
     def test_basic_3(aself):
         t1 = Describe(data3)
-        print(t1.summary(stats='all'))
+        _ = t1.summary(stats='all')
 
     def test_basic_4a(self):
         t1 = Describe(data4)
-        print(t1.summary(stats='all'))
+        _ = t1.summary(stats='all')
 
