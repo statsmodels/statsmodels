@@ -1,257 +1,185 @@
 import numpy as np 
-import pandas as pd
-#from numbers import Number
+import pandas as pd 
 
+class SurveyDesign(object):
+
+    def __init__(self, strata=None, cluster=None, weights=None, nest=True):
+
+    
+        # if any of them are none, we should make them an array of ones
+        # how to know the len each array should be efficiently?
+        self.weights = weights
+        # Recode strata and clusters as integer values 0, 1, ...                                                                                             
+        _, self.strat = np.unique(strata, return_inverse=True)
+        _, clust = np.unique(cluster, return_inverse=True)
+
+        # the number of distinct strata
+        self.nstrat = max(self.strat) + 1
+
+        # If requested, recode the PSUs to be sure that the same PSU number in                                                                               
+        # different strata are treated as distinct PSUs.  This is the same as                                                                                
+        # the nest option in R.                                                                                                                              
+        if nest:
+            m = max(clust) + 1
+            sclust = clust + m*self.strat
+            _, self.sclust = np.unique(sclust, return_inverse=True)
+        else:
+            self.sclust = clust.copy()
+            
+        # The number of clusters per stratum                                                                                                                 
+        _, ii = np.unique(self.sclust, return_index=True)
+        self.ncs = np.bincount(self.strat[ii])
+
+        # The stratum for each cluster                                                                                                                       
+        _, ii = np.unique(self.sclust, return_index=True)
+        self.sfclust = self.strat[ii]
+
+
+    def show(self):
+        print(self.sfclust)
+        print(self.ncs)
+        print(self.sclust)
+        print(self.nstrat)
+
+    def summary(self):
+        print("Number of observations:", len(self.strat))
+        print("Sum of weights:", self.weights.sum())
+        print("Number of strata:", self.nstrat)
+        print("The number of clusters per stratum:", self.ncs)
 
 class SurveyStat(object):
 
-    def __init__(self, data, cluster=None, strata=None, prob_weights=None):
+    def __init__(self):
+        pass
 
-        data, self.cluster = self._check_type(data, cluster)
-        data, self.strata = self._check_type(data, strata)
-        data, self.prob_weights = self._check_type(data, prob_weights)
-        
-        self.p = data.shape[1]
+    def jack(self,stat, SurveyDesign):
+        """                                                                                                                                              
+        Jackknife variance estimation for survey data.                                                                                                   
+                                                                                                                                                         
+        Returns                                                                                                                                          
+        -------                                                                                                                                          
+        est : ndarray                                                                                                                                    
+            The point estimates of the statistic, calculated on the columns                                                                              
+            of data.                                                                                                                                     
+        vc : square ndarray                                                                                                                              
+            The variance-covariance matrix of the estimates, obtained using                                                                              
+            the (drop 1) jackknife procedure.                                                                                                            
+        pseudo : ndarray                                                                                                                                 
+            The jackknife pseudo-values.                                                                                                                 
+        """
+
+        ngrp = max(SurveyDesign.sclust) + 1
+        jdata = [stat._stat(SurveyDesign,j) for j in range(ngrp)]
+        jdata = np.asarray(jdata)
+
+        nh = SurveyDesign.ncs[SurveyDesign.sfclust].astype(np.float64)
+        pseudo = jdata + nh[:, None] * (np.dot(stat.w, stat.data) - jdata)
+
+        for s in range(SurveyDesign.nstrat):
+            ii = np.flatnonzero(SurveyDesign.sfclust == s)
+            jdata[ii, :] -= jdata[ii, :].mean(0)
+
+        u = np.sqrt((nh - 1) / nh)
+        jdata = u[:, None] * jdata
+        vc = np.dot(jdata.T, jdata)
+        est = stat._stat(SurveyDesign)
+
+        return est, vc, pseudo
+
+
+
+class SurveyMean(SurveyDesign):
+    
+    def __init__(self, SurveyDesign, data):
         self.data = np.asarray(data)
+        ss = SurveyStat()
+        self.est, self.vc, self.pseudo = ss.jack(self, SurveyDesign)
+        self.vc = np.sqrt(np.diag(self.vc))
 
-    # preprocessing to be used by init
-    def _check_type(self, data, vname):
+    def _stat(self, SurveyDesign,c=None):
+        """                                                                                                                                              
+        Calculate a statistic with possible cluster deletion.                                                                                            
+                                                                                                                                                         
+        Parameters                                                                                                                                       
+        ----------                                                                                                                                       
+        c : int or None                                                                                                                                  
+            If an integer, return the statistic calculated with                                                                                          
+            cluster c deleted.  If c is None, return the statistic                                                                                       
+            calculated for the whole data set.                                                                                                           
+                                                                                                                                                         
+        Returns                                                                                                                                          
+        -------                                                                                                                                          
+        An array containing the statistic calculated on the columns                                                                                      
+        of the dataset.                                                                                                                                  
         """
-        converts cluster, strata, etc to an numpy array
-        gets rid of column from data if possible
 
-        Parameters
-        ----------
-        data : array-like
-          The raw data
-        vname : one of cluster, strata, or prob_weight
+        if c is None:
+            return np.dot(SurveyDesign.weights, self.data) / np.sum(SurveyDesign.weights)
 
-        Returns
-        -------
-        A nx1 numpy array
+        s = SurveyDesign.sfclust[c]
+        nh = SurveyDesign.ncs[s]
+        self.w = SurveyDesign.weights.copy()
+        self.w[SurveyDesign.strat == s] *= nh / float(nh - 1)
+        self.w[SurveyDesign.sclust == c] = 0
+        self.w /= self.w.sum()
+        return np.dot(self.w, self.data)
+
+
+class SurveyTotal(SurveyDesign):
+    def __init__(self, SurveyDesign, data):
+        self.data = np.asarray(data)
+        ss = SurveyStat()
+        self.est, self.vc, self.pseudo = ss.jack(self, SurveyDesign)
+        self.vc = np.sqrt(np.diag(self.vc))
+
+    def _stat(self, SurveyDesign,c=None):
+        """                                                                                                                                              
+        Calculate a statistic with possible cluster deletion.                                                                                            
+                                                                                                                                                         
+        Parameters                                                                                                                                       
+        ----------                                                                                                                                       
+        c : int or None                                                                                                                                  
+            If an integer, return the statistic calculated with                                                                                          
+            cluster c deleted.  If c is None, return the statistic                                                                                       
+            calculated for the whole data set.                                                                                                           
+                                                                                                                                                         
+        Returns                                                                                                                                          
+        -------                                                                                                                                          
+        An array containing the statistic calculated on the columns                                                                                      
+        of the dataset.                                                                                                                                  
         """
-        # check if str, num, or list
 
-        self.n = data.shape[0]
-        if isinstance(vname, str):
-            temp = data[vname].values
-            del data[vname]
-            vname = temp
-            n = len(vname)
-            vname = vname.reshape(self.n,1)  
-        elif isinstance(vname, list):
-            vname = np.array(vname).reshape(self.n,1)
-        elif vname is None:
-            vname = np.ones([self.n,1])
+        if c is None:
+            return np.dot(SurveyDesign.weights, self.data)
+
+        s = SurveyDesign.sfclust[c]
+        nh = SurveyDesign.ncs[s]
+        self.w = SurveyDesign.weights.copy()
+        self.w[SurveyDesign.strat == s] *= nh / float(nh - 1)
+        self.w[SurveyDesign.sclust == c] = 0
+        return np.dot(self.w, self.data)
+
+class SurveyPercentile(SurveyDesign):
+
+    def __init__(self, SurveyDesign, data, percentile):
+        self.data = data
+        self.cumsum_weights = np.cumsum(SurveyDesign.weights)
+        self.est = [[self._stat(perc, index) for index in range(self.data.shape[1])] for perc in percentile]
+
+    def _stat(self, percentile, col_index):
+
+        percentile *= (self.cumsum_weights[-1] / 100)
+        sorted_data = np.sort(self.data[:, col_index])
+        pos = np.searchsorted(self.cumsum_weights, percentile)
+        if (sorted_data[pos] == percentile):
+            percentile = (sorted_data[pos] + sorted_data[pos+1]) / 2
         else:
-            vname = vname.reshape(self.n,1)
+            percentile = sorted_data[pos]
+        return percentile
 
-        return data, vname
+class SurveyMedian(SurveyPercentile):
 
-
-    # def create_subgroup_labels(self):
-    #     """
-    #     Create unique integer id for each stratum x cluster combination
-        
-    #     The ids are 0, 1, ... and are kept as an attribute
-    #     """
-
-    #     _, i1 = np.unique(self.strata, return_inverse=True)
-    #     _, i2 = np.unique(self.cluster, return_inverse=True)
-    #     labels = i1 * len(i2) + i2
-    #     self.grp_ix = dict.fromkeys(np.unique(labels),[])
-    #     # doesnt append correctly
-    #     for i, k in enumerate(labels):
-    #         self.grp_ix[k].append(i)
-    #     return self.group_ix
-
-    # def get_psu_indices(self):
-    #     self.indices_dict = {}
-    #     unique_strata = np.unique(self.strata)
-    #     stratum_stats = np.empty(len(unique_strata))
-    #     for id, stratum in enumerate(unique_strata):
-    #         # get indices for a particular stratum and the # of clusters in it
-    #         id_stratum = np.where(self.strata == stratum)[0]        
-    #         unique_clusters = np.unique(self.cluster[id_stratum])
-    #         num_clusters = len(unique_clusters)
-    #         self.indices_dict[stratum] = unique_clusters
-    #     # print(self.indices_dict)
-
-    def _jackknife(self, method, column_index, object):
-        unique_strata = np.unique(self.strata)
-        stratum_stats = np.empty(len(unique_strata))
-        for id, stratum in enumerate(unique_strata):
-            # get indices for a particular stratum and the # of clusters in it
-            id_stratum = np.where(self.strata == stratum)[0]        
-            unique_clusters = np.unique(self.cluster[id_stratum])
-            num_clusters = len(unique_clusters)
-
-            # get the statistic without a particular cluster
-            cluster_stats = np.empty(num_clusters)
-
-            for ind, cluster in enumerate(unique_clusters):
-        # self.get_psu_indices()
-        # stratum_stats = np.empty(len(self.indices_dict.keys()))
-        # for id, stratum in enumerate(self.indices_dict.keys()):
-        #     id_stratum = np.where(self.strata == stratum)[0]
-        #     num_clusters = len(self.indices_dict[stratum])
-        #     cluster_stats = np.empty(num_clusters)
-        #     for ind, cluster in enumerate(self.indices_dict[key]):
-                new_weights = self._reweight(cluster, id_stratum, method)
-
-                cluster_stats[ind] = object._stat(new_weights)
-
-            stratum_stats[id] = np.sum((cluster_stats) ** 2)
-            stratum_stats[id] *= (num_clusters - 1) / num_clusters
-        return np.sqrt(np.sum(stratum_stats))
-
-            # diff = (cluster_stats - method) * (num_clusters) / (num_clusters - 1)
-            # stratum_stats[id] = sum(diff)
-        
-
-    def _reweight(self, cluster, id_stratum, method):
-        # make sure to throw and error if len(num_clusters == 1) 
-        # ie you can't calc a statistic minus a cluster bc there's only one
-        
-        num_clusters = len(np.unique(self.cluster[id_stratum]))
-
-        id_noncluster = np.intersect1d(id_stratum, np.where(self.cluster != cluster)[0])
-
-        # in stratum h and in cluster j
-        id_cluster = np.intersect1d(id_stratum, np.where(self.cluster == cluster)[0])
-
-        new_weights = np.array(self.prob_weights, copy=True)
-        new_weights[id_noncluster] = (num_clusters / (num_clusters - 1)) * self.prob_weights[id_noncluster]
-        new_weights[id_cluster] = 0
-
-        return new_weights        
-
-    def _stat(self):
-        raise NotImplementedError
-
-    def show(self):
-        print(self.data)
-        print(self.cluster)
-        print(self.strata)
-        print(self.prob_weights)
-
-    def total(self, method):
-        """
-        Calculates the total for each variable. 
-
-        Parameters
-        ----------
-        self
-
-        Returns
-        -------
-        A tuple of length 2, each index is a 1xp array. The first array holds 
-        the total for each of the p vars in self.data. The second array is the
-        SE for each total
-        """
-
-
-        self._total = [np.dot(self.data[:, index], self.prob_weights).item() for index in range(self.data.shape[1])]
-        self._total = np.array(self._total)
-
-        if method == "jack":
-            total_se = np.array([self._jackknife("total", index, SurveyTotal(self.data, self.cluster, self.strata, self.prob_weights,index,self._total)) for index in range(self.data.shape[1])])
-        
-        return self._total, total_se
-
-
-    def mean(self, method):
-        """
-        Calculates survey mean
-
-        Parameters
-        ----------
-        self
-
-        Returns
-        -------
-        A tuple of length 2, each index is a 1xp array. The first array holds 
-        the mean for each of the p vars in self.data. The second array is the
-        SE for each total 
-        """
-        try:
-            self._mean = np.round(self._total / np.sum(self.prob_weights), 2)
-        # if self.total doesn't exist yet
-        except AttributeError:
-            self._total = self.total()
-            self._mean = self._total / np.sum(self.prob_weights)
-
-        if method == "jack":
-            mean_se = np.array([self._jackknife("mean", index, SurveyMean(self.data, self.cluster, self.strata, self.prob_weights,index, self._mean)) for index in range(self.data.shape[1])])
-        
-        return self._mean, mean_se
-
-    # need to make this work when input is an array-like object
-    def percentile(self, percentile): 
-        p = self.data.shape[1]
-        self._percentile = np.empty(p)
-        
-        for index in range(p):
-            sorted_weights = [x for (y,x) in sorted(zip(self.data[:, index],self.prob_weights))]
-            sorted_weights = np.array(sorted_weights)
-            cumsum_weights = np.cumsum(sorted_weights)
-
-            perc = (cumsum_weights[-1] * percentile) / 100
-            sorted_data = np.sort(self.data[:, index])
-            
-            if perc in cumsum_weights:
-                ind = np.where(cumsum_weights == perc)[0].item()
-                self._percentile[index] = (sorted_data[ind] + sorted_data[ind + 1]) / 2
-            else:
-                ind = np.argmax(cumsum_weights > perc)
-                self._percentile[index] = sorted_data[ind]
-        return self._percentile
-
-    def median(self):
-        self._median = self.percentile(50)
-        return self._median
-
-
-class SurveyMean(SurveyStat):
-
-    def __init__(self, data, cluster, strata, prob_weights, column_index,parent_stat):
-        SurveyStat.__init__(self, data, cluster, strata, prob_weights)
-        self.column_index = column_index
-        self.parent_stat = parent_stat
-
-    def _stat(self, new_weights):
-        stat = np.array(np.dot(self.data[:, self.column_index], new_weights).item())
-        stat /= np.sum(new_weights)
-        stat -= self.parent_stat[self.column_index]
-        return stat
-
-class SurveyTotal(SurveyStat):
-
-    def __init__(self, data, cluster, strata, prob_weights, column_index, parent_stat):
-        SurveyStat.__init__(self, data, cluster, strata, prob_weights)
-        self.column_index = column_index
-        self.parent_stat = parent_stat
-
-    def _stat(self, new_weights):
-        stat = np.array(np.dot(self.data[:, self.column_index], new_weights).item())
-        stat -= self.parent_stat[self.column_index]
-        return stat
-
-
-
-
-df = pd.read_csv("~/Documents/survey_data")
-df.drop("Unnamed: 0", inplace=True, axis=1)
-# df = df.loc[df['dnum'].isin([637,437])]
-print(df.head())
-
-test = SurveyStat(data=df, cluster="dnum", prob_weights="pw")
-# # test.show()
-# print("\n \n \n")
-survey_tot = test.total('jack') # matches perfectly with R result
-print(survey_tot)
-survey_mean = test.mean('jack') # SE is bigger than R's result
-# i did my method in R and got what I got here... thus, R must be doing something differently for their mean
-print(survey_mean)
-# print(test.percentile(25)) # R seems to take the difference between the the (i-1)th and ith value when I dont.
-# print(test.median()) # matches R
+    def __init__(self, SurveyDesign, data):
+        # sp = super(SurveyMedian, self).__init__(SurveyDesign, data, [50])
+        sp = SurveyPercentile(SurveyDesign, data, [50])
+        self.est = sp.est
