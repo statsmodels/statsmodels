@@ -803,7 +803,7 @@ class CompareMeans(object):
         lower = np.atleast_1d(lower)
         upper = np.atleast_1d(upper)
         conf_int = np.column_stack((lower, upper))
-        params = d1.mean - d2.mean - value
+        params = np.atleast_1d(d1.mean - d2.mean - value)
         
         title = 'Test for equality of means'
         yname = 'y' # not used in params_frame
