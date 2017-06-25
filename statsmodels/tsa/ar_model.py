@@ -8,6 +8,7 @@ from scipy.stats import norm
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.tsatools import (lagmat, add_trend,
                                       _ar_transparams, _ar_invtransparams)
+from statsmodels.tsa import stattools
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.model as base
 from statsmodels.tools.decorators import (resettable_cache,
@@ -526,7 +527,7 @@ class AR(tsbase.TimeSeriesModel):
         endog = self.endog
 
         if maxlag is None:
-            maxlag = int(round(12*(nobs/100.)**(1/4.)))
+            maxlag = stattools.default_lags(nobs)
         k_ar = maxlag  # stays this if ic is None
 
         # select lag length

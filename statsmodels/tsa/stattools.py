@@ -14,13 +14,12 @@ from statsmodels.tools.tools import add_constant, Bunch
 from statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
 from statsmodels.tsa.adfvalues import mackinnonp, mackinnoncrit
 from statsmodels.tsa._bds import bds
-from statsmodels.tsa.arima_model import ARMA
 from statsmodels.tools.sm_exceptions import InterpolationWarning, MissingDataError
 
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
-           'adfuller', 'kpss', 'bds']
+           'adfuller', 'kpss', 'bds', 'default_lags']
 
 
 #NOTE: now in two places to avoid circular import
@@ -214,7 +213,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
     if maxlag is None:
         #from Greene referencing Schwert 1989
-        maxlag = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
+        maxlag = default_lags(nobs)
 
     xdiff = np.diff(x)
     xdall = lagmat(xdiff[:, None], maxlag, trim='both', original='in')
@@ -1033,6 +1032,9 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
 
 
 def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
+    from statsmodels.tsa.arima_model import ARMA
+    # We need to import this here instead of at the module-level to
+    # avoid a circular import.
     try:
         return ARMA(y, order=order, **model_kw).fit(disp=0, trend=trend,
                                                     start_params=start_params,
@@ -1244,7 +1246,7 @@ def kpss(x, regression='c', lags=None, store=False):
 
     if lags is None:
         # from Kwiatkowski et al. referencing Schwert (1989)
-        lags = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
+        lags = default_lags(nobs)
 
     pvals = [0.10, 0.05, 0.025, 0.01]
 
@@ -1285,3 +1287,14 @@ def _sigma_est_kpss(resids, nobs, lags):
         resids_prod = np.dot(resids[i:], resids[:nobs - i])
         s_hat += 2 * resids_prod * (1. - (i / (lags + 1.)))
     return s_hat / nobs
+
+
+def default_lags(nobs):
+    """
+    Lag choice of  int(12 * (n / 100) ** (1 / 4)), as outlined in
+    Schwert (1989)
+    """
+    # from Kwiatkowski et al. referencing Schwert (1989)
+    lags = 12. * (nobs /100.) ** (1 / 4.)
+    lags = int(np.ceil(lags))
+    return lags

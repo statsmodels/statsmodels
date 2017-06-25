@@ -5,7 +5,8 @@ from statsmodels.tools.sm_exceptions import ColinearityWarning
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
                                                pacf, grangercausalitytests,
                                                coint, acovf, kpss, ResultsStore,
-                                               arma_order_select_ic)
+                                               arma_order_select_ic,
+                                               default_lags)
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_warns,
                            assert_raises, dec, assert_, assert_allclose)
@@ -455,7 +456,7 @@ class TestKPSS(SetupKPSS):
             kpss_stat, pval, lags, crits = kpss(self.x, 'c')
         assert_equal(lags, int(np.ceil(12. * np.power(len(self.x) / 100., 1 / 4.))))
         # assert_warns(UserWarning, kpss, self.x)
-
+        assert_equal(lags, default_lags(len(self.x)))
 
 
 def test_pandasacovf():

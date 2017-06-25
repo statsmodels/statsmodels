@@ -26,6 +26,7 @@ from statsmodels.tsa.tsatools import (lagmat, add_trend,
                                       _ar_transparams, _ar_invtransparams,
                                       _ma_transparams, _ma_invtransparams,
                                       unintegrate, unintegrate_levels)
+from statsmodels.tsa import stattools
 from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.ar_model import AR
 from statsmodels.tsa.arima_process import arma2ma
@@ -499,7 +500,7 @@ class ARMA(tsbase.TimeSeriesModel):
                 # make sure we don't run into small data problems in AR fit
                 nobs = len(endog)
                 if start_ar_lags is None:
-                    maxlag = int(round(12*(nobs/100.)**(1/4.)))
+                    maxlag = stattools.default_lags(nobs)
                     if maxlag >= nobs:
                         maxlag = nobs - 1
                     armod = AR(endog).fit(ic='bic', trend='nc', maxlag=maxlag)

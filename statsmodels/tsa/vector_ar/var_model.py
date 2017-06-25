@@ -21,12 +21,12 @@ import scipy.linalg as L
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import chain_dot
 from statsmodels.tools.linalg import logdet_symm
-from statsmodels.tsa.tsatools import vec, unvec
+from statsmodels.tsa.tsatools import vec, unvec, duplication_matrix
+from statsmodels.tsa import stattools
 
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
 from statsmodels.tsa.vector_ar.output import VARSummary
 
-import statsmodels.tsa.tsatools as tsa
 import statsmodels.tsa.vector_ar.output as output
 import statsmodels.tsa.vector_ar.plotting as plotting
 import statsmodels.tsa.vector_ar.util as util
@@ -496,7 +496,7 @@ class VAR(tsbase.TimeSeriesModel):
         selections : dict {info_crit -> selected_order}
         """
         if maxlags is None:
-            maxlags = int(round(12*(len(self.endog)/100.)**(1/4.)))
+            maxlags = stattools.default_lags(len(self.endog))
 
         ics = defaultdict(list)
         for p in range(maxlags + 1):
@@ -980,7 +980,7 @@ class VARResults(VARProcess):
         """
         Estimated covariance matrix of vech(sigma_u)
         """
-        D_K = tsa.duplication_matrix(self.neqs)
+        D_K = duplication_matrix(self.neqs)
         D_Kinv = npl.pinv(D_K)
 
         sigxsig = np.kron(self.sigma_u, self.sigma_u)
