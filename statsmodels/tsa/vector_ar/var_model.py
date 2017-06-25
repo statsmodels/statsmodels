@@ -478,6 +478,8 @@ class VAR(tsbase.TimeSeriesModel):
         varfit = VARResults(y, z, params, omega, lags, names=self.endog_names,
                           trend=trend, dates=self.data.dates, model=self)
         return VARResultsWrapper(varfit)
+      
+    _estimate = _estimate_var
 
     def select_order(self, maxlags=None, verbose=True):
         """
@@ -502,7 +504,7 @@ class VAR(tsbase.TimeSeriesModel):
         for p in range(maxlags + 1):
             # exclude some periods to same amount of data used for each lag
             # order
-            result = self._estimate_var(p, offset=maxlags-p)
+            result = self._estimate(p, offset=maxlags-p)
 
             for k, v in iteritems(result.info_criteria):
                 ics[k].append(v)
