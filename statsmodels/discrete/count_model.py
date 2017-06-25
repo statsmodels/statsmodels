@@ -56,6 +56,11 @@ class GenericZeroInflated(CountModel):
         else:
             self.k_exog = exog.shape[1]
 
+        self.k_extra = self.k_inflate
+        self.exog_names.insert(0, 'inflate_const')
+        for i in range(self.k_extra - 1, 0, -1):
+            self.exog_names.insert(0, 'inflate_x%d' % i)
+
     def loglike(self, params):
         """
         Loglikelihood of Generic Zero Inflated model
@@ -461,11 +466,3 @@ wrap.populate_wrapper(L1ZeroInflatedPoissonResultsWrapper,
 if __name__=="__main__":
     import numpy as np
     import statsmodels.api as sm
-
-    data = sm.datasets.randhie.load()
-    endog = data.endog
-    exog = sm.add_constant(data.exog[:,1:4], prepend=False)
-    exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
-    res1 = PoissonZeroInflated(data.endog, exog, exog_infl=exog_infl).fit(maxiter=500)
-
-    print(res1.llf)
