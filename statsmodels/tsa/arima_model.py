@@ -989,9 +989,13 @@ class ARIMA(ARMA):
             return mod
 
     def __getnewargs__(self):
+        # using same defaults as in __init__
+        dates = getattr(self, 'dates', None)
+        freq = getattr(self, 'freq', None)
+        missing = getattr(self, 'missing', 'none')
         return ((self.endog),
                 (self.k_lags, self.k_diff, self.k_ma),
-                self.exog, self.dates, self.freq, self.missing)
+                self.exog, dates, freq, missing)
 
     def __init__(self, endog, order, exog=None, dates=None, freq=None,
                  missing='none'):

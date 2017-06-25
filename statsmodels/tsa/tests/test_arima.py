@@ -2272,7 +2272,7 @@ def test_arma_pickle():
 
 def test_arima_pickle():
     endog = y_arma[:, 6]
-    mod = ARIMA(endog, (1, 0, 1))
+    mod = ARIMA(endog, (1, 1, 1))
     pkl_mod = cPickle.loads(cPickle.dumps(mod))
 
     res = mod.fit(trend="c", disp=-1)
