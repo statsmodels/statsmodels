@@ -780,6 +780,7 @@ def test_handle_missing():
 
                 assert_allclose(result1.params, result2.params)
                 assert_allclose(result1.bse, result2.bse)
+                assert_equal(len(result1.fittedvalues), result1.nobs)
 
 
 if __name__ == "__main__":
