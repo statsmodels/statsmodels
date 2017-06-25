@@ -318,6 +318,24 @@ class TestWeightstats(object):
         cm2 = CompareMeans.from_data(x1_2d, x2_2d)
         assert_(str(cm1.summary()) == str(cm2.summary()))
 
+    def test_comparemeans_convenient_interface_1d(self):
+        # same as above for 2d, just use 1d data instead
+        x1_2d, x2_2d = self.x1, self.x2
+        d1 = DescrStatsW(x1_2d)
+        d2 = DescrStatsW(x2_2d)
+        cm1 = CompareMeans(d1, d2)
+
+        # smoke test for summary
+        from statsmodels.iolib.table import SimpleTable
+        for use_t in [True, False]:
+            for usevar in ['pooled', 'unequal']:
+                smry = cm1.summary(use_t=use_t, usevar=usevar)
+                assert_(isinstance(smry, SimpleTable))
+
+        # test for from_data method
+        cm2 = CompareMeans.from_data(x1_2d, x2_2d)
+        assert_(str(cm1.summary()) == str(cm2.summary()))
+
 
 class CheckWeightstats1dMixin(object):
 
