@@ -23,3 +23,4 @@ from .statespace.varmax import VARMAX
 from .statespace.dynamic_factor import DynamicFactor
 from .regime_switching.markov_regression import MarkovRegression
 from .regime_switching.markov_autoregression import MarkovAutoregression
+from .outlier import isoutlier, plot, replace
