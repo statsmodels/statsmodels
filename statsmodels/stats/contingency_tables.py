@@ -664,6 +664,9 @@ class Table2x2(SquareTable):
 
     def __init__(self, table, shift_zeros=True):
 
+        if type(table) is list:
+            table = np.asarray(table)
+
         if (table.ndim != 2) or (table.shape[0] != 2) or (table.shape[1] != 2):
             raise ValueError("Table2x2 takes a 2x2 table as input.")
 
