@@ -60,8 +60,18 @@ def _make_df_square(table):
 class _Bunch(object):
 
     def __repr__(self):
-        return "<bunch object containing statsmodels results>"
+        return "<bunch containing results, print to see contents>"
 
+
+    def __str__(self):
+        ky = [k for k,_ in self.__dict__.items()]
+        ky.sort()
+        m = max([len(k) for k in ky])
+        tab = []
+        f = "{:" + str(m) + "}   {}"
+        for k in ky:
+            tab.append(f.format(k, self.__dict__[k]))
+        return "\n".join(tab)
 
 class Table(object):
     """
