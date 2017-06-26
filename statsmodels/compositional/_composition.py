@@ -80,10 +80,11 @@ And the resulting perturbation would be
 array([ 0.25,  0.25,  0.5 ])
 
 """
-
+from __future__ import division
 import numpy as np
 import pandas as pd
 import scipy.stats
+
 
 
 def closure(mat):

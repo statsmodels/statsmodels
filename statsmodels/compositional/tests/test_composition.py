@@ -1,3 +1,4 @@
+from __future__ import division
 from unittest import TestCase, main
 import numpy as np
 import numpy.testing as npt
@@ -10,6 +11,7 @@ from statsmodels.compositional import (closure, multiplicative_replacement,
                                        perturb, perturb_inv, power, inner,
                                        clr, clr_inv, ilr, ilr_inv,
                                        centralize)
+
 
 
 class CompositionTests(TestCase):
