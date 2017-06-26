@@ -1539,8 +1539,8 @@ class GeneralizedPoisson(CountModel):
             counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
             mu = self.predict(params, exog=exog, exposure=exposure,
                               offset=offset)[:,None]
-            return genpoisson_p.pmf(counts, mu, params[-2],
-                                    self.parameterization)
+            return genpoisson_p.pmf(counts, mu, params[-1],
+                                    self.parameterization + 1)
         else:
             raise ValueError('keyword \'which\' not recognized')
 

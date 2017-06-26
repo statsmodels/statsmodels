@@ -7,7 +7,7 @@ class genpoisson_p_gen(rv_discrete):
     '''A generalized Poisson discrete random variable
     '''
     def _argcheck(self, mu, alpha, p):
-        return True
+        return (mu >= 0) & (alpha==alpha) & (p > 0)
 
     def _logpmf(self, x, mu, alpha, p):
         mu_p = mu ** (p - 1.)
