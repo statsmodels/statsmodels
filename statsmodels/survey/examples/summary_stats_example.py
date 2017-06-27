@@ -3,8 +3,8 @@ import summary_stats
 df = pd.read_csv("examples/survey_df.csv")
 
 survey_df = SurveyDesign(np.ones(df.shape[0]), np.asarray(df["dnum"]), np.asarray(df["pw"]))
-df = np.asarray(df)
-survey_tot = SurveyTotal(survey_df, df) # matches perfectly with R result
+
+survey_tot = SurveyTotal(survey_df, df, 'jack') # matches perfectly with R result
 print(survey_tot.est)
 print(survey_tot.vc)
 # returns tuple of two arrays. First array is the estimates, second is the corresponding SEs
@@ -18,7 +18,7 @@ print(survey_tot.vc)
 # api99 3759622.80883407 856866.80598719
 # api00 3989985.46570205 907398.70559744
 
-survey_mean = SurveyMean(survey_df, df)
+survey_mean = SurveyMean(survey_df, df, 'jack')
 print(survey_mean.est)
 print(survey_mean.vc) # does not match up w/ R but it does match up in the dummy example
 
@@ -29,9 +29,12 @@ data = np.asarray([[1, 3, 2, 5, 4, 1, 2, 3, 4, 6, 9, 5],
                    [5, 3, 2, 1, 4, 7, 8, 9, 5, 4, 3, 5]], dtype=np.float64).T
 
 design = SurveyDesign(strata, cluster, weights)
-avg = SurveyMean(design,data)
+avg = SurveyMean(design,data, 'jack')
 assert(np.allclose(avg.est, np.r_[3.777778, 4.722222]))
 assert(np.allclose(avg.vc, np.r_[0.9029327, 1.061515]))
+import os
+print(os.listdir())
+
 
 # R returns
 #         mean     SE
@@ -44,7 +47,7 @@ assert(np.allclose(avg.vc, np.r_[0.9029327, 1.061515]))
 # api00 644.17 26.59966787
 
 # need to fix this. get some keyerror
-perc = SurveyPercentile(survey_df, df, [25, 50])
+perc = SurveyQuantile(survey_df, df, [.25, .50,1,2])
 print(perc.est)
 # R returns 
 #         0.25 
