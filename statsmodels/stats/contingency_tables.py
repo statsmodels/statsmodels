@@ -15,9 +15,9 @@ The main classes are:
   contingency table.
 
   * StratifiedTable : implements methods that can be applied to a
-  collection of contingency tables.
+  collection of 2x2 contingency tables.
 
-Also contains functions for conducting Mcnemar's test and Cochran's q
+Also contains functions for conducting McNemar's test and Cochran's q
 test.
 
 Note that the inference procedures may depend on how the data were
@@ -74,7 +74,7 @@ class _Bunch(object):
 
 class Table(object):
     """
-    Analyses that can be performed on a two-way contingency table.
+    A two-way contingency table.
 
     Parameters
     ----------
@@ -146,6 +146,11 @@ class Table(object):
 
         if shift_zeros and (self.table.min() == 0):
             self.table = self.table + 0.5
+
+    def __str__(self):
+        s = "A %dx%d contingency table with counts:\n" % tuple(self.table.shape)
+        s += np.array_str(self.table)
+        return s
 
     @classmethod
     def from_data(cls, data, shift_zeros=True):
@@ -991,7 +996,8 @@ class StratifiedTable(object):
         """
 
         if not isinstance(data, pd.DataFrame):
-            data1 = pd.DataFrame(index=np.arange(data.shape[0]), columns=[var1, var2, strata])
+            data1 = pd.DataFrame(index=np.arange(data.shape[0]),
+                                 columns=[var1, var2, strata])
             data1.loc[:, var1] = data[:, var1]
             data1.loc[:, var2] = data[:, var2]
             data1.loc[:, strata] = data[:, strata]
