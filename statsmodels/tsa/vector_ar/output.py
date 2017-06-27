@@ -173,9 +173,35 @@ class VARSummary(object):
 
         return buf.getvalue()
 
-def causality_summary(results, variables, equation, kind):
-    title = "Granger causality %s-test" % kind
-    null_hyp = 'H_0: %s do not Granger-cause %s' % (variables, equation)
+def causality_summary(results, variables, equation, kind, inst_caus=False):
+    """
+
+    Parameters
+    ----------
+    results : dict
+        A dict storing the results of the causality test.
+    variables :
+        The potentially causing variable(s).
+    equation :
+        The potentially caused variable.
+    kind : str {"f", "wald"}
+        If "f" an F-test is performed.
+        If "wald" a Wald-test is performed.
+    inst_caus : bool, default: False
+        If True, the strings for the title and H0 are adapted to the test for
+        instantaneous causality instead of Granger-causality.
+
+    Returns
+    -------
+
+    """
+    if inst_caus:
+        title = "Instantaneous causality test"
+        null_hyp = 'H_0: %s do not instantaneously cause %s' % (variables,
+                                                                equation)
+    else:
+        title = "Granger causality %s-test" % kind
+        null_hyp = 'H_0: %s do not Granger-cause %s' % (variables, equation)
     return hypothesis_test_table(results, title, null_hyp)
 
 def normality_summary(results):
@@ -206,7 +232,7 @@ def hypothesis_test_table(results, title, null_hyp):
     return buf.getvalue()
 
 
-def print_ic_table(ics, selected_orders):
+def print_ic_table(ics, selected_orders, vecm=False):
     """
     For VAR order selection
 
@@ -228,8 +254,12 @@ def print_ic_table(ics, selected_orders):
                data_fmts=("%s",) * len(cols))
 
     buf = StringIO()
+    if vecm:
+        title = "VECM Order Selection"
+    else:
+        title = "VAR Order Selection"
     table = SimpleTable(data, cols, lrange(len(data)),
-                        title='VAR Order Selection', txt_fmt=fmt)
+                        title=title, txt_fmt=fmt)
     buf.write(str(table) + '\n')
     buf.write('* Minimum' + '\n')
 
