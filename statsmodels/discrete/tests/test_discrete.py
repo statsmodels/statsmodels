@@ -1693,6 +1693,26 @@ class TestGeneralizedPoisson_p1(object):
         t_test = self.res1.t_test(unit_matrix)
         assert_allclose(self.res1.tvalues, t_test.tvalue)
 
+    def test_fit_regularized(self):
+        model = self.res1.model
+
+        # don't penalize constant and dispersion parameter
+        alpha = np.ones(len(self.res1.params))
+        alpha[-2:] = 0
+        # the first prints currently a warning, irrelevant here
+        res_reg1 = model.fit_regularized(alpha=alpha*0.01, disp=0)
+        res_reg2 = model.fit_regularized(alpha=alpha*100, disp=0)
+        res_reg3 = model.fit_regularized(alpha=alpha*1000, disp=0)
+
+        assert_allclose(res_reg1.params, self.res1.params, atol=5e-5)
+        assert_allclose(res_reg1.bse, self.res1.bse, atol=1e-5)
+
+        # check shrinkage, regression numbers
+        assert_allclose((self.res1.params[:-2]**2).mean(), 0.016580955543320779)
+        assert_allclose((res_reg1.params[:-2]**2).mean(), 0.016580734975068664)
+        assert_allclose((res_reg2.params[:-2]**2).mean(), 0.010672558641545994)
+        assert_allclose((res_reg3.params[:-2]**2).mean(), 0.00035544919793048415)
+
 class TestGeneralizedPoisson_underdispersion(object):
     @classmethod
     def setupClass(cls):
