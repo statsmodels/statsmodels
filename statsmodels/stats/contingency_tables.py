@@ -45,10 +45,10 @@ def _make_df_square(table):
         return table
 
     # If the table is not square, make it square
-    if table.shape[0] != table.shape[1]:
+    if not table.index.equals(table.columns):
         ix = list(set(table.index) | set(table.columns))
-        table = table.reindex(ix, axis=0)
-        table = table.reindex(ix, axis=1)
+        ix.sort()
+        table = table.reindex(index=ix, columns=ix, fill_value=0)
 
     # Ensures that the rows and columns are in the same order.
     table = table.reindex(table.columns)
@@ -414,9 +414,10 @@ class SquareTable(Table):
     These methods should only be used when the rows and columns of the
     table have the same categories.  If `table` is provided as a
     Pandas DataFrame, the row and column indices will be extended to
-    create a square table.  Otherwise the table should be provided in
-    a square form, with the (implicit) row and column categories
-    appearing in the same order.
+    create a square table, inserting zeros where a row or column is
+    missing.  Otherwise the table should be provided in a square form,
+    with the (implicit) row and column categories appearing in the
+    same order.
     """
 
     def __init__(self, table, shift_zeros=True):
