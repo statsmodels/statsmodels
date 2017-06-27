@@ -209,6 +209,18 @@ def test_mcnemar():
     b4 = ctab.mcnemar(tables[0], exact=True)
     assert_allclose(b4.pvalue, r_results.loc[0, "homog_binom_p"])
 
+def test_from_data_stratified():
+    df = pd.DataFrame([[1, 1, 1, 0, 1, 0, 1, 0], [0, 1, 0, 1, 0, 1, 0, 0],
+                       [0, 0, 0, 0, 1, 1, 1, 1]]).T
+    tab1 = ctab.StratifiedTable.from_data(0, 1, 2, df)
+    e = np.asarray([[[0, 1], [1, 1]], [[2, 2], [1, 0]]])
+    assert_equal(tab1.table, e)
+
+def test_from_data_2x2():
+    df = pd.DataFrame([[1, 1, 1, 0, 1, 0, 1, 0], [0, 1, 0, 1, 0, 1, 0, 0]]).T
+    tab1 = ctab.Table2x2.from_data(df, shift_zeros=False)
+    e = np.asarray([[1, 2], [4, 1]])
+    assert_equal(tab1.table, e)
 
 def test_cochranq():
     """

@@ -971,15 +971,15 @@ class StratifiedTable(object):
         Parameters
         ----------
         var1 : int or string
-            The column index or name of `data` containing the variable
+            The column index or name of `data` specifying the variable
             defining the rows of the contingency table.  The variable
             must have only two distinct values.
         var2 : int or string
-            The column index or name of `data` containing the variable
+            The column index or name of `data` specifying the variable
             defining the columns of the contingency table.  The variable
             must have only two distinct values.
         strata : int or string
-            The column index of name of `data` containing the variable
+            The column index or name of `data` specifying the variable
             defining the strata.
         data : array-like
             The raw data.  A cross-table for analysis is constructed
@@ -1003,7 +1003,11 @@ class StratifiedTable(object):
         for g in gb:
             ii = gb[g]
             tab = pd.crosstab(data1.loc[ii, var1], data1.loc[ii, var2])
-            tables.append(tab)
+            if (tab.shape != np.r_[2, 2]).any():
+                msg = "Invalid table dimensions"
+                raise ValueError(msg)
+            tables.append(np.asarray(tab))
+
         return cls(tables)
 
     def test_null_odds(self, correction=False):
