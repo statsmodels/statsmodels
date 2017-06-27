@@ -1703,7 +1703,7 @@ class TestGeneralizedPoisson_underdispersion(object):
         exog[:nobs//2, 1] = 2
         mu_true = np.exp(exog.dot(cls.expected_params[:-1]))
         cls.endog = sm.distributions.genpoisson_p.rvs(mu_true,
-            cls.expected_params[-1], 1)
+            cls.expected_params[-1], 1, size=len(mu_true))
         model_gp = sm.GeneralizedPoisson(cls.endog, exog, p=1)
         cls.res = model_gp.fit(method='nm', maxiter=5000, maxfun=5000)
 
