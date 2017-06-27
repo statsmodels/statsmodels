@@ -61,6 +61,18 @@ def test_SquareTable_from_data():
                  rslt3.summary().as_text())
 
 
+def test_SquareTable_nonsquare():
+
+    tab = [[1, 0, 3], [2, 1, 4], [3, 0, 5]]
+    df = pd.DataFrame(tab, index=[0, 1, 3], columns=[0, 2, 3])
+
+    df2 = ctab.SquareTable(df, shift_zeros=False)
+
+    e = np.asarray([[1, 0, 0, 3], [2, 0, 1, 4], [0, 0, 0, 0], [3, 0, 0, 5]],
+                   dtype=np.float64)
+
+    assert_equal(e, df2.table)
+
 
 def test_cumulative_odds():
 
@@ -261,6 +273,8 @@ def test_cochranq():
     assert_allclose(b1.statistic, b2.statistic)
     assert_allclose(b1.pvalue, b2.pvalue)
 
+    # Test for printing bunch
+    assert_equal(str(b1), "df          1\npvalue      0.6547208460185768\nstatistic   0.2")
 
 
 class CheckStratifiedMixin(object):
