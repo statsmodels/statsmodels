@@ -1609,6 +1609,46 @@ class TestGeneralizedPoisson_p2(object):
         t_test = self.res1.t_test(unit_matrix)
         assert_allclose(self.res1.tvalues, t_test.tvalue)
 
+class TestGeneralizedPoisson_transparams(object):
+    """
+    Test Generalized Poisson model
+    """
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.randhie.load()
+        data.exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = GeneralizedPoisson(data.endog, data.exog, p=2).fit(
+            method='newton', use_transparams=True)
+        res2 = RandHIE()
+        res2.generalizedpoisson_gp2()
+        cls.res2 = res2
+
+    def test_bse(self):
+        assert_allclose(self.res1.bse, self.res2.bse, atol=1e-5)
+
+    def test_params(self):
+        assert_allclose(self.res1.params, self.res2.params, atol=1e-5)
+
+    def test_alpha(self):
+        assert_allclose(self.res1.lnalpha, self.res2.lnalpha)
+        assert_allclose(self.res1.lnalpha_std_err,
+                        self.res2.lnalpha_std_err, atol=1e-5)
+
+    def test_conf_int(self):
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int,
+                        atol=1e-3)
+
+    def test_aic(self):
+        assert_allclose(self.res1.aic, self.res2.aic)
+
+    def test_bic(self):
+        assert_allclose(self.res1.bic, self.res2.bic)
+
+    def test_df(self):
+        assert_equal(self.res1.df_model, self.res2.df_model)
+
+    def test_llf(self):
+        assert_allclose(self.res1.llf, self.res2.llf)
 
 class TestGeneralizedPoisson_p1(object):
     """
@@ -1652,7 +1692,6 @@ class TestGeneralizedPoisson_p1(object):
         unit_matrix = np.identity(self.res1.params.size)
         t_test = self.res1.t_test(unit_matrix)
         assert_allclose(self.res1.tvalues, t_test.tvalue)
-
 
 class TestGeneralizedPoisson_underdispersion(object):
     @classmethod
