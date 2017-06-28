@@ -1,5 +1,6 @@
+import sys
 from statsmodels.compat.python import range, lrange, lzip, long
-from statsmodels.compat.numpy import recarray_select
+from statsmodels.compat.numpy import recarray_select, PY3
 
 import numpy as np
 import numpy.lib.recfunctions as nprf
@@ -10,6 +11,9 @@ from pandas.tseries.frequencies import to_offset
 
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.data import _is_using_pandas, _is_recarray
+
+
+
 
 
 def add_trend(x, trend="c", prepend=False, has_constant='skip'):
@@ -117,7 +121,19 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
         x = x.to_records(index=False, convert_datetime64=False)
         new_descr = x.dtype.descr
         extra_col = len(new_descr) - len(descr)
-        descr = new_descr[:extra_col] + descr if prepend else descr + new_descr[-extra_col:]
+        if prepend:
+            descr = new_descr[:extra_col] + descr
+        else:
+            descr = descr + new_descr[-extra_col:]
+
+        if not PY3:
+            # See 3658
+            names = [entry[0] for entry in descr]
+            dtypes = [entry[1] for entry in descr]
+            names = [bytes(name) for name in names]
+            # Fail loudly if there is a non-ascii name
+            descr = list(zip(names, dtypes))
+
         x = x.astype(np.dtype(descr))
 
     return x
@@ -172,10 +188,18 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
             col = names[0]
         if isinstance(col, (int, long)):
             col = x.dtype.names[col]
+        if not PY3:
+            # TODO: Get rid of this kludge.  See GH # 3658
+            names = [bytes(name) if isinstance(name, unicode) else name for name in names]
+            # Fail loudly if there is a non-ascii name.
+            x.dtype.names = names
+            if isinstance(col, unicode):
+                col = bytes(col)
+       
         contemp = x[col]
 
         # make names for lags
-        tmp_names = [col + '_'+'L(%i)' % i for i in range(1,lags+1)]
+        tmp_names = [col + '_'+'L(%i)' % i for i in range(1, lags+1)]
         ndlags = lagmat(contemp, maxlag=lags, trim='Both')
 
         # get index for return
@@ -202,8 +226,9 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
         if first_names: # only do this if x isn't "empty"
             # Workaround to avoid NumPy FutureWarning
             _x = recarray_select(x, first_names)
-            first_arr = nprf.append_fields(_x[lags:],tmp_names, ndlags.T,
+            first_arr = nprf.append_fields(_x[lags:], tmp_names, ndlags.T,
                                            usemask=False)
+
         else:
             first_arr = np.zeros(len(x)-lags, dtype=lzip(tmp_names,
                 (x[col].dtype,)*lags))

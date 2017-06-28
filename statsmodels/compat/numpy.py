@@ -87,6 +87,9 @@ from __future__ import absolute_import
 from .scipy import NumpyVersion
 import numpy as np
 
+import sys
+PY3 = sys.version_info.major == 3
+
 if NumpyVersion(np.__version__) < '1.6.2':
     npc_unique = np.unique
 else:
@@ -460,6 +463,19 @@ def recarray_select(recarray, fields):
     from pandas import DataFrame
     fields = [fields] if not isinstance(fields, (tuple, list)) else fields
     if len(fields) == len(recarray.dtype):
-        return recarray
-    recarray = DataFrame.from_records(recarray)
-    return recarray[fields].to_records(index=False)
+        selection = recarray
+    else:
+        recarray = DataFrame.from_records(recarray)
+        selection = recarray[fields].to_records(index=False)
+    
+    _bytelike_dtype_names(selection)
+    return selection
+
+
+def _bytelike_dtype_names(arr):
+    # See # 3658
+    if not PY3:
+        dtype = arr.dtype
+        names = dtype.names
+        names = [bytes(name) if isinstance(name, unicode) else name for name in names]
+        dtype.names = names
