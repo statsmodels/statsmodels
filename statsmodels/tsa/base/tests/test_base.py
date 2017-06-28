@@ -32,18 +32,12 @@ def test_pandas_nodates_index():
         index = pd.to_datetime([100, 101, 102])
         s = pd.Series(data, index=index)
 
-        # Alternate test for Pandas < 0.14
-        from distutils.version import LooseVersion
-        from pandas import __version__ as pd_version
-        if LooseVersion(pd_version) < '0.14':
-            assert_raises(NotImplementedError, TimeSeriesModel, s)
-        else:
-            actual_str = (index[0].strftime('%Y-%m-%d %H:%M:%S.%f') +
-                          str(index[0].value))
-            assert_equal(actual_str, '1970-01-01 00:00:00.000000100')
-            mod = TimeSeriesModel(s)
-            start, end, out_of_sample, _ = mod._get_prediction_index(0, 4)
-            assert_equal(len(mod.data.predict_dates), 5)
+        actual_str = (index[0].strftime('%Y-%m-%d %H:%M:%S.%f') +
+                      str(index[0].value))
+        assert_equal(actual_str, '1970-01-01 00:00:00.000000100')
+        mod = TimeSeriesModel(s)
+        start, end, out_of_sample, _ = mod._get_prediction_index(0, 4)
+        assert_equal(len(mod.data.predict_dates), 5)
 
 def test_predict_freq():
     # test that predicted dates have same frequency

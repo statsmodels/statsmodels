@@ -22,12 +22,6 @@ from nose import SkipTest
 import platform
 
 
-iswin = platform.system() == 'Windows'
-npversionless15 = NumpyVersion(np.__version__) < '1.5.0'
-winoldnp = iswin & npversionless15
-
-
-
 class CheckGenericMixin(object):
 
     def __init__(self):
