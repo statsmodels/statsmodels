@@ -44,7 +44,6 @@ from .scipy import NumpyVersion
 import numpy as np
 
 np_matrix_rank = np.linalg.matrix_rank
-nanmean = np.nanmean
 
 if NumpyVersion(np.__version__) >= '1.9.0':
     np_new_unique = np.unique
