@@ -19,6 +19,9 @@ try:
 except:
     have_matplotlib = False
 
+from statsmodels.compat.pandas import version as pandas_version
+pandas_old = pandas_version < '0.9'
+
 # the main drawing function
 from statsmodels.graphics.mosaicplot import mosaic
 # other functions to be tested for accuracy
