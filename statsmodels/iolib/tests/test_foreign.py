@@ -18,6 +18,9 @@ from statsmodels.iolib.foreign import (StataWriter, genfromdta,
 from statsmodels.datasets import macrodata
 
 
+from statsmodels.compat.pandas import version as pandas_version
+pandas_old = pandas_version < '0.9'
+
 # Test precisions
 DECIMAL_4 = 4
 DECIMAL_3 = 3
