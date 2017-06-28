@@ -2,8 +2,7 @@
 
 """
 from __future__ import division
-
-from statsmodels.compat import range
+from statsmodels.compat.testing import SkipTest
 
 import os
 import pandas as pd

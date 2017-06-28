@@ -92,7 +92,9 @@ def test_plot_pacf_irregular():
 
     plt.close(fig)
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+
+@skipif(not have_matplotlib or pandas_lt_0_19_2,
+        reason='matplotlib not available or pandas too old')
 def test_plot_month():
     dta = sm.datasets.elnino.load_pandas().data
     dta['YEAR'] = dta.YEAR.astype(int).apply(str)
@@ -118,7 +120,9 @@ def test_plot_month():
     fig = month_plot(dta)
     plt.close(fig)
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+
+@skipif(not have_matplotlib or pandas_lt_0_19_2,
+        reason='matplotlib not available or pandas too old')
 def test_plot_quarter():
     dta = sm.datasets.macrodata.load_pandas().data
     dates = lmap('Q'.join, zip(dta.year.astype(int).apply(str),

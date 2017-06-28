@@ -3,7 +3,7 @@ import io
 import os
 import sys
 
-from nose import SkipTest
+from statsmodels.compat.testing import SkipTest
 
 try:
     import jupyter_client
