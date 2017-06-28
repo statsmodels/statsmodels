@@ -23,10 +23,13 @@ def test_mean():
 
 def test_total():
     tot = ss.SurveyTotal(design, data, 'jack')
-
-    # assert(np.allclose(tot.est, np.r_[68., 85.]))
+    assert(np.allclose(tot.est, np.r_[68, 85]))
     # # # throws an error. tot.vc yields array([ 19.79898987,  15.71623365])
     # # # so im rounding until I can get the stata results
-    # assert(np.allclose(np.round(tot.vc, 3), np.r_[19.799, 15.716]))
+    assert(np.allclose(tot.vc, np.r_[19.79899, 15.71623]))
 
-ss.SurveyQuantile(design, data, [.25, .50])
+def quant_test():
+    quant = ss.SurveyQuantile(design, data, [.1, .25, .33, .5, .75, .99])
+    assert(np.allclose(quant.est[0], np.r_[1, 2, 2, 3.5, 5, 9]))
+    ## change 7 to 6 to accommodate w/ stata
+    assert(np.allclose(quant.est[1], np.r_[2, 3, 3, 4.5, 7, 9]))

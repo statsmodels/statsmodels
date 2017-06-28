@@ -30,6 +30,7 @@ data = np.asarray([[1, 3, 2, 5, 4, 1, 2, 3, 4, 6, 9, 5],
 
 design = SurveyDesign(strata, cluster, weights)
 avg = SurveyMean(design,data, 'jack')
+tot = SurveyTotal(design, data, 'jack')
 assert(np.allclose(avg.est, np.r_[3.777778, 4.722222]))
 assert(np.allclose(avg.vc, np.r_[0.9029327, 1.061515]))
 import os
