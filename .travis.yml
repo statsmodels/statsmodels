@@ -23,6 +23,7 @@ matrix:
     env:
     - PYTHON=2.7
     - NUMPY=1.11
+    - PANDAS=0.19
     - MATPLOTLIB=1.5
     - COVERAGE=true
   - python: 2.7
@@ -63,11 +64,11 @@ matrix:
   - python: 2.7
     env:
     - PYTHON=3.6
-    - NOSE=true
+    - COVERAGE=true
   - python: 2.7
     env:
     - PYTHON=3.6
-    - COVERAGE=true
+    - DOCBUILD=true
 
 notifications:
   email:
@@ -97,8 +98,6 @@ before_install:
   - PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}=${CYTHON}"; fi
   - if [ ${USEMPL} = true ]; then PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi; fi
   - if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --cov-config=.travis_coveragerc --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
-  # Ensure tests are correctly gathered by xdist
-  - export PYTHONHASHSEED=0
   - echo conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} nose pyyaml
   - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} nose pyyaml
   - source activate statsmodels-test
@@ -106,7 +105,8 @@ before_install:
   - if [ ${COVERAGE} = true ]; then pip install codecov coverage coveralls pytest-cov; fi
   - if [ ${DOCBUILD} = true ]; then bash tools/ci_docbuild_install.sh; fi;
   - export SRCDIR=$PWD
-
+  # Ensure tests are correctly gathered by xdist
+  - export PYTHONHASHSEED=0
 
 # Install packages
 install:
@@ -116,17 +116,18 @@ install:
 script:
   # Show versions
   - python -c 'import statsmodels.api as sm; sm.show_versions();'
-  # Compose a script to run testing with coverage
+  # docbuild and exit, if required
+  - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; bash ${SRCDIR}/tools/ci_docbuild.sh; exit 0; fi;
+  # Run tests
   - |
     if [ ${NOSE} = true ]
       then echo nosetests statsmodels
-      nosetests -v statsmodels
+      nosetests statsmodels
     else
-      echo pytest -s -v -n 2 ${COVERAGE_OPTS} statsmodels
-      pytest -s -v -n 2 ${COVERAGE_OPTS} statsmodels
+      echo pytest -n 2 ${COVERAGE_OPTS} statsmodels
+      pytest -n 2 ${COVERAGE_OPTS} statsmodels
     fi
 
 after_success:
-  # Coverage only for 2.7
   - if [ ${COVERAGE} = true ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi
   - if [ ${COVERAGE} = true ]; then codecov; fi

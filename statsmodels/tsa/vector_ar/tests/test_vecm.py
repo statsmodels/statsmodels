@@ -15,7 +15,7 @@ from statsmodels.tsa.vector_ar.var_model import VARProcess
 from statsmodels.tsa.vector_ar.vecm import VECM, select_order, select_coint_rank
 
 
-class DataSet:
+class DataSet(object):
     """
     A class for representing the data in a data module.
 
@@ -55,7 +55,7 @@ results_sm_exog = {}
 results_sm_exog_coint = {}
 coint_rank = 1
 
-debug_mode = True
+debug_mode = False
 dont_test_se_t_p = False
 deterministic_terms_list = ["nc", "co", "colo", "ci", "cili"]
 
@@ -169,6 +169,20 @@ def build_err_msg(ds, dt_s, parameter_str):
         err_msg += ", seasons: " + str(seasons)
     return err_msg
 
+def setup():
+    datasets.append(
+        DataSet(e6, [0, 4], [0, 1], ["Dp", "R"]),
+        # DataSet(...) TODO: append more data sets for more test cases.
+    )
+
+    for ds in datasets:
+        load_data(ds, data)
+        results_ref[ds] = load_results_jmulti(ds)
+        results_sm[ds] = load_results_statsmodels(ds)
+        results_sm_exog[ds] = load_results_statsmodels_exog(ds)
+        results_sm_exog_coint[ds] = load_results_statsmodels_exog_coint(ds)
+
+setup()
 
 def test_ml_gamma():
     if debug_mode:
@@ -1480,16 +1494,3 @@ def test_select_coint_rank():  # This is only a smoke test.
             yield assert_, test_stats[i] > crit_vals[i]
     if rank < neqs:
         yield assert_, test_stats[rank] < crit_vals[rank]
-
-def setup():
-    datasets.append(
-            DataSet(e6, [0, 4], [0, 1], ["Dp", "R"]),
-            # DataSet(...) TODO: append more data sets for more test cases.
-    )
-    
-    for ds in datasets:
-        load_data(ds, data)
-        results_ref[ds] = load_results_jmulti(ds)
-        results_sm[ds] = load_results_statsmodels(ds)
-        results_sm_exog[ds] = load_results_statsmodels_exog(ds)
-        results_sm_exog_coint[ds] = load_results_statsmodels_exog_coint(ds)
