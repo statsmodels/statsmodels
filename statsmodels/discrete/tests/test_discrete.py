@@ -1693,6 +1693,26 @@ class TestGeneralizedPoisson_p1(object):
         t_test = self.res1.t_test(unit_matrix)
         assert_allclose(self.res1.tvalues, t_test.tvalue)
 
+    def test_fit_regularized(self):
+        model = self.res1.model
+
+        # don't penalize constant and dispersion parameter
+        alpha = np.ones(len(self.res1.params))
+        alpha[-2:] = 0
+        # the first prints currently a warning, irrelevant here
+        res_reg1 = model.fit_regularized(alpha=alpha*0.01, disp=0)
+        res_reg2 = model.fit_regularized(alpha=alpha*100, disp=0)
+        res_reg3 = model.fit_regularized(alpha=alpha*1000, disp=0)
+
+        assert_allclose(res_reg1.params, self.res1.params, atol=5e-5)
+        assert_allclose(res_reg1.bse, self.res1.bse, atol=1e-5)
+
+        # check shrinkage, regression numbers
+        assert_allclose((self.res1.params[:-2]**2).mean(), 0.016580955543320779)
+        assert_allclose((res_reg1.params[:-2]**2).mean(), 0.016580734975068664)
+        assert_allclose((res_reg2.params[:-2]**2).mean(), 0.010672558641545994)
+        assert_allclose((res_reg3.params[:-2]**2).mean(), 0.00035544919793048415)
+
 class TestGeneralizedPoisson_underdispersion(object):
     @classmethod
     def setupClass(cls):
@@ -1703,18 +1723,55 @@ class TestGeneralizedPoisson_underdispersion(object):
         exog[:nobs//2, 1] = 2
         mu_true = np.exp(exog.dot(cls.expected_params[:-1]))
         cls.endog = sm.distributions.genpoisson_p.rvs(mu_true,
-            cls.expected_params[-1], 1)
+            cls.expected_params[-1], 1, size=len(mu_true))
         model_gp = sm.GeneralizedPoisson(cls.endog, exog, p=1)
         cls.res = model_gp.fit(method='nm', maxiter=5000, maxfun=5000)
 
-    def test_mean(self):
+    def test_basic(self):
+        res = self.res
+        endog = res.model.endog
+        # check random data generation, regression test
+        assert_allclose(endog.mean(), 1.42, rtol=1e-3)
+        assert_allclose(endog.var(), 1.2836, rtol=1e-3)
+
+        # check estimation
+        assert_allclose(res.params, self.expected_params, atol=0.07, rtol=0.1)
+        assert_(res.mle_retvals['converged'] is True)
+        assert_allclose(res.mle_retvals['fopt'], 1.418753161722015, rtol=0.01)
+
+    def test_newton(self):
+        # check newton optimization with start_params
+        res = self.res
+        res2 = res.model.fit(start_params=res.params, method='newton')
+        assert_allclose(res.model.score(res.params),
+                        np.zeros(len(res2.params)), atol=5e-3)
+        assert_allclose(res.model.score(res2.params),
+                        np.zeros(len(res2.params)), atol=1e-10)
+        assert_allclose(res.params, res2.params, atol=1e-4)
+
+    def test_mean_var(self):
         assert_allclose(self.res.predict().mean(), self.endog.mean(),
                         atol=1e-1, rtol=1e-1)
 
-    def test_var(self):
         assert_allclose(
             self.res.predict().mean() * self.res._dispersion_factor.mean(),
             self.endog.var(), atol=2e-1, rtol=2e-1)
+
+    def test_predict_prob(self):
+        res = self.res
+        endog = res.model.endog
+        freq = np.bincount(endog)
+
+        pr = res.predict(which='prob')
+        pr2 = sm.distributions.genpoisson_p.pmf(np.arange(6)[:, None],
+                                        res.predict(), res.params[-1], 1).T
+        assert_allclose(pr, pr2, rtol=1e-10, atol=1e-10)
+
+        from scipy import stats
+        chi2 = stats.chisquare(freq, pr.sum(0))
+        assert_allclose(chi2[:], (0.64628806058715882, 0.98578597726324468),
+                        rtol=0.01)
+
 
 
 if __name__ == "__main__":
