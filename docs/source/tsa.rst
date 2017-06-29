@@ -122,6 +122,8 @@ Autogressive Moving-Average Processes (ARMA) and Kalman Filter
 Vector Autogressive Processes (VAR)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. currentmodule:: statsmodels.tsa
+
 .. autosummary::
    :toctree: generated/
 
@@ -162,12 +164,12 @@ Vector Error Correction Models (VECM)
 .. autosummary::
    :toctree: generated/
 
-   vecm.vecm.select_order
-   vecm.vecm.select_coint_rank
-   vecm.vecm.CointRankResults
-   vecm.vecm.VECM
-   vecm.vecm.VECMResults
-   vecm.vecm.coint_johansen
+   vector_ar.vecm.select_order
+   vector_ar.vecm.select_coint_rank
+   vector_ar.vecm.CointRankResults
+   vector_ar.vecm.VECM
+   vector_ar.vecm.VECMResults
+   vector_ar.vecm.coint_johansen
 
 Regime switching models
 """""""""""""""""""""""
