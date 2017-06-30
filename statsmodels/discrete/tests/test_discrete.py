@@ -42,7 +42,7 @@ except ImportError:
     has_basinhopping = False
 
 try:
-    from scipy.optimize._trustregion_dogleg import  _minimize_dogleg
+    from scipy.optimize._trustregion_dogleg import _minimize_dogleg
     has_dogleg = True
 except ImportError:
     has_dogleg = False
@@ -414,9 +414,9 @@ class TestProbitNCG(CheckBinaryResults):
         # converges close enough but warnflag is 2 for precision loss
 
 
-@pytest.mark.skipif(not has_cvxopt, reason='Skipped TestProbitBasinhopping '
-                                           'since basinhopping solver is '
-                                           'not available')
+@pytest.mark.skipif(not has_basinhopping, reason='Skipped TestProbitBasinhopping '
+                                                 'since basinhopping solver is '
+                                                 'not available')
 class TestProbitBasinhopping(CheckBinaryResults):
     @classmethod
     def setup_class(cls):
@@ -434,7 +434,7 @@ class TestProbitBasinhopping(CheckBinaryResults):
 
 class TestProbitMinimizeDefault(CheckBinaryResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -445,7 +445,7 @@ class TestProbitMinimizeDefault(CheckBinaryResults):
 
 class TestProbitMinimizeDogleg(CheckBinaryResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         if not has_dogleg:
             raise SkipTest("Skipped TestProbitMinimizeDogleg since "
                            "dogleg method is not available")
@@ -460,7 +460,7 @@ class TestProbitMinimizeDogleg(CheckBinaryResults):
 
 class TestProbitMinimizeAdditionalOptions(CheckBinaryResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()

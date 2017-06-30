@@ -137,6 +137,17 @@ def build_err_msg(ds, dt_s, parameter_str):
     return err_msg
 
 
+def setup():
+    datasets.append(macro)  # TODO: append more data sets for more test cases.
+
+    for ds in datasets:
+        load_data(ds, data)
+        results_ref[ds] = load_results_jmulti(ds, dt_s_list)
+        results_sm[ds] = load_results_statsmodels(ds)
+
+setup()
+
+
 def test_ols_coefs():
     if debug_mode:
         if "coefs" not in to_test:
@@ -565,12 +576,3 @@ def test_exceptions():
             ### causing must be int, str or iterable of int or str
             yield assert_raises, TypeError,\
                 results_sm[ds][dt].test_inst_causality, [0.5]  # 0.5 not an int
-
-
-def setup():
-    datasets.append(macro)  # TODO: append more data sets for more test cases.
-
-    for ds in datasets:
-        load_data(ds, data)
-        results_ref[ds] = load_results_jmulti(ds, dt_s_list)
-        results_sm[ds] = load_results_statsmodels(ds)

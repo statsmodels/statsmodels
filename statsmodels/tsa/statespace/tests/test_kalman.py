@@ -226,7 +226,7 @@ class Clark1987(object):
         assert_allclose(np.array(self.filter.loglikelihood),
                         np.array(copied.loglikelihood))
 
-@pytest.mark.skip(reason='Not implemented')
+
 class TestClark1987Single(Clark1987):
     """
     Basic single precision test for the loglikelihood and filtered states.
@@ -277,7 +277,6 @@ class TestClark1987Double(Clark1987):
         cls.result = cls.run_filter()
 
 
-@pytest.mark.skip(reason='Not implemented')
 class TestClark1987SingleComplex(Clark1987):
     """
     Basic single precision complex test for the loglikelihood and filtered
