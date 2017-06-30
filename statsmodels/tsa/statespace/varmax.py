@@ -14,7 +14,7 @@ import numpy as np
 from .kalman_filter import (INVERT_UNIVARIATE, SOLVE_LU)
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
-    is_invertible, prepare_exog
+    is_invertible, prepare_exog,
     constrain_stationary_multivariate, unconstrain_stationary_multivariate
 )
 from statsmodels.tools.tools import Bunch

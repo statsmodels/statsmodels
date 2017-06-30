@@ -34,9 +34,7 @@ prefix_copy_index_vector_map = {}
 
 
 def set_mode(compatibility=None):
-    global compatibility_mode, has_trmm, prefix_statespace_map,        \
-        prefix_kalman_filter_map, prefix_kalman_smoother_map,          \
-        prefix_simulation_smoother_map, prefix_pacf_map, prefix_sv_map
+    global compatibility_mode, has_trmm
 
     # Determine mode automatically if none given
     if compatibility is None:
