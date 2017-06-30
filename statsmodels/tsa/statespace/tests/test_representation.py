@@ -114,7 +114,6 @@ class Clark1987(object):
         )
 
 
-@pytest.mark.skip(reason='Not implemented')
 class TestClark1987Single(Clark1987):
     """
     Basic single precision test for the loglikelihood and filtered states.

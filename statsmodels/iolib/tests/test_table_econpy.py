@@ -55,15 +55,15 @@ def custom_labeller(cell):
         return 'missing'
 
 
-
-class test_Cell(object):
+class TestCell(object):
     def test_celldata(self):
         celldata = cell0data, cell1data, row1data[0], row1data[1]
         cells = [Cell(datum, datatype=i%2) for i, datum in enumerate(celldata)]
         for cell, datum in zip(cells, celldata):
             assert_equal(cell.data, datum)
 
-class test_SimpleTable(object):
+
+class TestSimpleTable(object):
     def test_txt_fmt1(self):
         # Limited test of custom txt_fmt
         desired = """
@@ -98,6 +98,7 @@ class test_SimpleTable(object):
         #print(actual)
         #print(desired)
         assert_equal(actual, desired)
+
     def test_html_fmt1(self):
         # Limited test of custom html_fmt
         desired = """
@@ -121,6 +122,7 @@ class test_SimpleTable(object):
         #print(desired)
         #print len(actual), len(desired)
         assert_equal(actual, desired)
+
     def test_customlabel(self):
         # Limited test of custom custom labeling
         tbl = SimpleTable(table1data, test1header, test1stubs, txt_fmt=txt_fmt1)
@@ -137,5 +139,3 @@ class test_SimpleTable(object):
 """
         actual = '\n%s\n' % tbl.as_text(missing='--')
         assert_equal(actual, desired)
-
-
