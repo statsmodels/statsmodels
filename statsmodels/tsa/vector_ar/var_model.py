@@ -7,16 +7,13 @@ Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
 
 from __future__ import division, print_function
-from statsmodels.compat.python import (range, lrange, string_types, StringIO, iteritems,
-                                cStringIO)
-
+from statsmodels.compat.python import (range, lrange, string_types,
+                                       StringIO, iteritems)
 from collections import defaultdict
 
 import numpy as np
-import numpy.linalg as npl
-from numpy.linalg import cholesky as chol, solve
 import scipy.stats as stats
-import scipy.linalg as L
+import scipy.linalg
 
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly
@@ -30,13 +27,10 @@ from statsmodels.tsa.vector_ar.irf import IRAnalysis
 from statsmodels.tsa.vector_ar.output import VARSummary
 
 import statsmodels.tsa.tsatools as tsa
-import statsmodels.tsa.vector_ar.output as output
-import statsmodels.tsa.vector_ar.plotting as plotting
-import statsmodels.tsa.vector_ar.util as util
+from statsmodels.tsa.vector_ar import output, plotting, util
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.wrapper as wrap
 
-mat = np.array
 
 #-------------------------------------------------------------------------------
 # VAR process routines
@@ -161,7 +155,7 @@ def _var_acf(coefs, sig_u):
     SigU[:k,:k] = sig_u
 
     # vec(ACF) = (I_(kp)^2 - kron(A, A))^-1 vec(Sigma_U)
-    vecACF = L.solve(np.eye((k*p)**2) - np.kron(A, A), vec(SigU))
+    vecACF = scipy.linalg.solve(np.eye((k*p)**2) - np.kron(A, A), vec(SigU))
 
     acf = unvec(vecACF)
     acf = acf[:k].T.reshape((p, k, k))
@@ -408,7 +402,7 @@ def orth_ma_rep(results, maxn=10, P=None):
         P = results._chol_sigma_u
 
     ma_mats = results.ma_rep(maxn=maxn)
-    return mat([np.dot(coefs, P) for coefs in ma_mats])
+    return np.array([np.dot(coefs, P) for coefs in ma_mats])
 
 
 def test_normality(results, signif=0.05):
@@ -437,7 +431,7 @@ def test_normality(results, signif=0.05):
     """
     resid_c = results.resid - results.resid.mean(0)
     sig = np.dot(resid_c.T, resid_c) / results.nobs
-    Pinv = npl.inv(chol(sig))
+    Pinv = np.linalg.inv(np.linalg.cholesky(sig))
 
     w = np.dot(Pinv, resid_c.T)
     b1 = (w**3).sum(1)[:, None] / results.nobs
@@ -490,7 +484,7 @@ class LagOrderResults:
 
     def summary(self):  # basically copied from (now deleted) print_ic_table()
         cols = sorted(self.ics)  # ["aic", "bic", "hqic", "fpe"]
-        str_data = mat([["%#10.4g" % v for v in self.ics[c]] for c in cols],
+        str_data = np.array([["%#10.4g" % v for v in self.ics[c]] for c in cols],
                        dtype=object).T
         # mark minimum with an asterisk
         for i, col in enumerate(cols):
@@ -757,7 +751,7 @@ class VAR(tsbase.TimeSeriesModel):
             for k, v in iteritems(result.info_criteria):
                 ics[k].append(v)
 
-        selected_orders = dict((k, mat(v).argmin() + p_min)
+        selected_orders = dict((k, np.array(v).argmin() + p_min)
                                for k, v in iteritems(ics))
 
         return LagOrderResults(ics, selected_orders, vecm=False)
@@ -827,7 +821,7 @@ class VARProcess(object):
 
         .. math:: \mu = (I - A_1 - \dots - A_p)^{-1} \alpha
         """
-        return solve(self._char_mat, self.exog)
+        return np.linalg.solve(self._char_mat, self.exog)
 
     def ma_rep(self, maxn=10):
         r"""Compute MA(:math:`\infty`) coefficient matrices
@@ -869,11 +863,11 @@ class VARProcess(object):
             \Psi_\infty = \sum_{i=0}^\infty \Phi_i
 
         """
-        return L.inv(self._char_mat)
+        return scipy.linalg.inv(self._char_mat)
 
     @cache_readonly
     def _chol_sigma_u(self):
-        return chol(self.sigma_u)
+        return np.linalg.cholesky(self.sigma_u)
 
     @cache_readonly
     def _char_mat(self):
@@ -1220,7 +1214,7 @@ class VARResults(VARProcess):
         Ref: Lutkepohl p.74-75
         """
         z = self.ys_lagged
-        return np.kron(L.inv(np.dot(z.T, z)), self.sigma_u)
+        return np.kron(scipy.linalg.inv(np.dot(z.T, z)), self.sigma_u)
 
     def cov_ybar(self):
         r"""Asymptotically consistent estimate of covariance of the sample mean
@@ -1237,7 +1231,7 @@ class VARResults(VARProcess):
         Lutkepohl Proposition 3.3
         """
 
-        Ainv = L.inv(np.eye(self.neqs) - self.coefs.sum(0))
+        Ainv = scipy.linalg.inv(np.eye(self.neqs) - self.coefs.sum(0))
         return chain_dot(Ainv, self.sigma_u, Ainv.T)
 
 #------------------------------------------------------------
@@ -1262,7 +1256,7 @@ class VARResults(VARProcess):
         Estimated covariance matrix of vech(sigma_u)
         """
         D_K = tsa.duplication_matrix(self.neqs)
-        D_Kinv = npl.pinv(D_K)
+        D_Kinv = np.linalg.pinv(D_K)
 
         sigxsig = np.kron(self.sigma_u, self.sigma_u)
         return 2 * chain_dot(D_Kinv, sigxsig, D_Kinv.T)
@@ -1481,7 +1475,7 @@ class VARResults(VARProcess):
     def _omega_forc_cov(self, steps):
         # Approximate MSE matrix \Omega(h) as defined in Lut p97
         G = self._zz
-        Ginv = L.inv(G)
+        Ginv = scipy.linalg.inv(G)
 
         # memoize powers of B for speedup
         # TODO: see if can memoize better
@@ -1673,7 +1667,7 @@ class VARResults(VARProcess):
 
         # Lutkepohl 3.6.5
         Cb = np.dot(C, vec(self.params.T))
-        middle = L.inv(chain_dot(C, self.cov_params, C.T))
+        middle = scipy.linalg.inv(chain_dot(C, self.cov_params, C.T))
 
         # wald statistic
         lam_wald = statistic = chain_dot(Cb, middle, Cb)
@@ -1785,7 +1779,7 @@ class VARResults(VARProcess):
         Cs = np.dot(C, vech_sigma_u)
         d = np.linalg.pinv(duplication_matrix(k))
         Cd = np.dot(C, d)
-        middle = L.inv(chain_dot(Cd, np.kron(sigma_u, sigma_u), Cd.T)) / 2
+        middle = scipy.linalg.inv(chain_dot(Cd, np.kron(sigma_u, sigma_u), Cd.T)) / 2
 
         wald_statistic = t * chain_dot(Cs.T, middle, Cs)
         df = num_restr
@@ -1820,7 +1814,7 @@ class VARResults(VARProcess):
         statistic = 0
         u = np.asarray(self.resid)
         acov_list = _compute_acov(u, nlags)
-        cov0_inv = L.inv(acov_list[0])
+        cov0_inv = scipy.linalg.inv(acov_list[0])
         for t in range(1, nlags+1):
             ct = acov_list[t]
             to_add = np.trace(chain_dot(ct.T, cov0_inv, ct, cov0_inv))
@@ -1895,7 +1889,7 @@ class VARResults(VARProcess):
 
             \hat \Omega = \frac{T}{T - Kp - 1} \hat \Omega_{\mathrm{MLE}}
         """
-        return L.det(self.sigma_u)
+        return scipy.linalg.det(self.sigma_u)
 
     @cache_readonly
     def info_criteria(self):
