@@ -18,18 +18,19 @@ def test_design():
 
 def test_mean():
     avg = ss.SurveyMean(design, data, 'jack')
-    assert(np.allclose(avg.est, np.r_[3.777778, 4.722222]))
-    assert(np.allclose(avg.vc, np.r_[0.9029327, 1.061515]))
+    assert_allclose(avg.est, np.r_[3.777778, 4.722222])
+    assert_allclose(avg.vc, np.r_[0.9029327, 1.061515],  rtol=1e-5, atol=0)
 
 def test_total():
     tot = ss.SurveyTotal(design, data, 'jack')
-    assert(np.allclose(tot.est, np.r_[68, 85]))
+    assert_allclose(tot.est, np.r_[68, 85])
     # # # throws an error. tot.vc yields array([ 19.79898987,  15.71623365])
     # # # so im rounding until I can get the stata results
-    assert(np.allclose(tot.vc, np.r_[19.79899, 15.71623]))
+    assert_allclose(tot.vc, np.r_[19.79899, 15.71623],  rtol=1e-5, atol=0)
 
 def quant_test():
     quant = ss.SurveyQuantile(design, data, [.1, .25, .33, .5, .75, .99])
-    assert(np.allclose(quant.est[0], np.r_[1, 2, 2, 3.5, 5, 9]))
+    assert_allclose(quant.est[0], np.r_[1, 2, 2, 3.5, 5, 9])
     ## change 7 to 6 to accommodate w/ stata
-    assert(np.allclose(quant.est[1], np.r_[2, 3, 3, 4.5, 7, 9]))
+    assert_allclose(quant.est[1], np.r_[2, 3, 3, 4.5, 7, 9])
+

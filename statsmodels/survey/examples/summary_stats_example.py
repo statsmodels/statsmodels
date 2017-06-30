@@ -33,8 +33,7 @@ avg = SurveyMean(design,data, 'jack')
 tot = SurveyTotal(design, data, 'jack')
 assert(np.allclose(avg.est, np.r_[3.777778, 4.722222]))
 assert(np.allclose(avg.vc, np.r_[0.9029327, 1.061515]))
-import os
-print(os.listdir())
+
 
 
 # R returns
@@ -50,24 +49,24 @@ print(os.listdir())
 # need to fix this. get some keyerror
 perc = SurveyQuantile(survey_df, df, [.25, .50,1,2])
 print(perc.est)
-# R returns 
-#         0.25 
-# api00 551.75 
-# api99 512.00 
+# R returns
+#         0.25
+# api00 551.75
+# api99 512.00
 
-# this returns 
-#         0.25 
+# this returns
+#         0.25
 # api00 552.
 # api99 512.
 
 med = SurveyMedian(survey_df, df)
 print(med.est)
-# R returns 
-#         0.5 
-# api00 652 
+# R returns
+#         0.5
+# api00 652
 # api99 615
 
 # this returns
-#         0.5 
+#         0.5
 # api00 652.
 # api99 615.
