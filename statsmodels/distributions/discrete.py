@@ -1,4 +1,5 @@
 import numpy as np
+
 from scipy.stats import rv_discrete, nbinom, poisson
 from scipy.special import gammaln
 from scipy._lib._util import _lazywhere
@@ -34,6 +35,7 @@ class genpoisson_p_gen(rv_discrete):
 
 genpoisson_p = genpoisson_p_gen(name='genpoisson_p',
                                 longname='Generalized Poisson')
+
 
 class zipoisson_gen(rv_discrete):
     '''Zero Inflated Poisson distribution
@@ -159,6 +161,26 @@ class zinegativebinomial_gen(rv_discrete):
 
 zinegbin = zinegativebinomial_gen(name='zinegbin',
     longname='Zero Inflated Generalized Negative Binomial')
+
+
+class truncatedpoisson_gen(rv_discrete):
+    '''Truncated Poisson discrete random variable
+    '''
+    def _argcheck(self, mu, truncation):
+        return (mu >= 0) & (truncation >= 0)
+
+    def _logpmf(self, x, mu, truncation):
+        pmf = 0
+        for i in range(int(truncation) + 1):
+            pmf += poisson.pmf(truncation, mu)
+
+        return poisson.logpmf(x, mu) - np.log(1 - pmf)
+
+    def _pmf(self, x, mu, truncation):
+        return np.exp(self._logpmf(x, mu, truncation))
+
+truncatedpoisson = truncatedpoisson_gen(name='truncatedpoisson',
+                                        longname='Truncated Poisson')
 
 
 class DiscretizedCount(rv_discrete):
