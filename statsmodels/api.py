@@ -84,6 +84,11 @@ from .discrete.discrete_model import (
     Poisson,
     Probit,
 )
+from .discrete.truncated_model import (
+    TruncatedPoisson,
+    TruncatedNegativeBinomialP,
+    Hurdle,
+    )
 from .duration import api as duration
 from .duration.hazard_regression import PHReg
 from .duration.survfunc import SurvfuncRight

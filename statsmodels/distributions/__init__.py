@@ -4,7 +4,7 @@ from .edgeworth import ExpandedNormal
 
 from .discrete import (genpoisson_p, zipoisson, zigenpoisson, zinegbin,
                        truncatedpoisson,
-                       genpoisson_p, truncatedpoisson, truncatednegbin.
+                       genpoisson_p, truncatedpoisson, truncatednegbin,
                        )
 
 

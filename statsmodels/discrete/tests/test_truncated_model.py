@@ -7,6 +7,10 @@ from numpy.testing import (assert_, assert_raises, assert_almost_equal,
 import statsmodels.api as sm
 from .results.results_discrete import RandHIE
 
+import warnings
+warnings.simplefilter("ignore")
+
+
 class CheckResults(object):
     def test_params(self):
         assert_allclose(self.res1.params, self.res2.params, atol=1e-5, rtol=1e-5)
@@ -41,8 +45,9 @@ class TestTruncatedPoissonModel(CheckResults):
     @classmethod
     def setup_class(cls):
         data = sm.datasets.randhie.load()
-        exog = sm.add_constant(data.exog[:,:4], prepend=False)
-        cls.res1 = sm.TruncatedPoisson(data.endog, exog, truncation=5).fit(maxiter=500)
+        exog = sm.add_constant(np.asarray(data.exog)[:,:4], prepend=False)
+        mod = sm.TruncatedPoisson(data.endog, exog, truncation=5)
+        cls.res1 = mod.fit(method="newton", maxiter=500)
         res2 = RandHIE()
         res2.truncated_poisson()
         cls.res2 = res2
@@ -51,7 +56,7 @@ class TestZeroTruncatedPoissonModel(CheckResults):
     @classmethod
     def setup_class(cls):
         data = sm.datasets.randhie.load()
-        exog = sm.add_constant(data.exog[:,:4], prepend=False)
+        exog = sm.add_constant(np.asarray(data.exog)[:,:4], prepend=False)
         cls.res1 = sm.TruncatedPoisson(data.endog, exog, truncation=0).fit(maxiter=500)
         res2 = RandHIE()
         res2.zero_truncated_poisson()
@@ -61,7 +66,7 @@ class TestZeroTruncatedNBPModel(CheckResults):
     @classmethod
     def setup_class(cls):
         data = sm.datasets.randhie.load()
-        exog = sm.add_constant(data.exog[:,:3], prepend=False)
+        exog = sm.add_constant(np.asarray(data.exog)[:,:3], prepend=False)
         cls.res1 = sm.TruncatedNegativeBinomialP(data.endog, exog,
             truncation=0).fit(maxiter=500)
         res2 = RandHIE()
@@ -83,7 +88,7 @@ class TestTruncatedPoisson_predict(object):
         mu_true = exog.dot(cls.expected_params)
         cls.endog = sm.distributions.truncatedpoisson.rvs(mu_true, 0, size=mu_true.shape)
         model = sm.TruncatedPoisson(cls.endog, exog, truncation=0)
-        cls.res = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
+        cls.res = model.fit(method='bfgs', maxiter=5000)
 
     def test_mean(self):
         assert_allclose(self.res.predict().mean(), self.endog.mean(),

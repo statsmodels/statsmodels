@@ -16,7 +16,7 @@ from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
                                                  _discrete_results_docs)
 from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
                                        approx_hess_cs, approx_fprime_cs)
-from statsmodels.tools.decorators import resettable_cache, cache_readonly
+from statsmodels.tools.decorators import cache_readonly
 from copy import deepcopy
 
 class GenericTruncated(CountModel):
@@ -163,7 +163,7 @@ class GenericTruncated(CountModel):
             model = self.model_main.__class__(self.endog, self.exog, offset=offset)
             start_params = model.fit(disp=0).params
         mlefit = super(GenericTruncated, self).fit(start_params=start_params,
-                       maxiter=maxiter, disp=disp,
+                       method=method, maxiter=maxiter, disp=disp,
                        full_output=full_output, callback=lambda x:x,
                        **kwargs)
 
@@ -408,7 +408,7 @@ class TruncatedNegativeBinomialP(GenericTruncated):
             mu = self.predict(params, exog=exog, exposure=exposure,
                               offset=offset)[:,None]
             return self.model_dist.pmf(counts, mu, params[-1],
-                self.model_main.parametrization ,self.trunc)
+                self.model_main.parameterization, self.trunc)
         else:
             raise TypeError(
                 "argument wich == %s not handled" % which)
@@ -995,7 +995,7 @@ class TruncatedNegativeBinomialResults(GenericTruncatedResults):
     @cache_readonly
     def _dispersion_factor(self):
         alpha = self.params[-1]
-        p = self.model.model_main.parametrization
+        p = self.model.model_main.parameterization
         mu = np.exp(self.predict(which='linear'))
 
         return (1 - alpha * mu**(p-1) / (np.exp(mu**(p-1)) - 1))
