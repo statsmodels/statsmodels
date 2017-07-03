@@ -205,7 +205,7 @@ class TestABLine(object):
         fig = abline_plot(intercept=intercept, slope=slope, ax=ax)
         close_or_save(pdf, fig)
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_abline_remove(self):
         mod = self.mod
         intercept, slope = mod.params

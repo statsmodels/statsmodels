@@ -1576,7 +1576,7 @@ class TestGeneralizedPoisson_p2(object):
     Test Generalized Poisson model
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = GeneralizedPoisson(data.endog, data.exog, p=2).fit(method='newton')
@@ -1626,7 +1626,7 @@ class TestGeneralizedPoisson_transparams(object):
     Test Generalized Poisson model
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = GeneralizedPoisson(data.endog, data.exog, p=2).fit(
@@ -1667,7 +1667,7 @@ class TestGeneralizedPoisson_p1(object):
     Test Generalized Poisson model
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.data = sm.datasets.randhie.load()
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
         cls.res1 = GeneralizedPoisson(
@@ -1727,7 +1727,7 @@ class TestGeneralizedPoisson_p1(object):
 
 class TestGeneralizedPoisson_underdispersion(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.expected_params = [1, -0.5, -0.05]
         np.random.seed(1234)
         nobs = 200
