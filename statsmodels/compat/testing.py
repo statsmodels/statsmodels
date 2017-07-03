@@ -63,4 +63,35 @@ def skipIf(condition, reason):
 
 skipif = skipIf
 
-__all__ = ['skip', 'skipif', 'SkipTest']
+
+def example(t):
+    """
+    Label a test as an example.
+
+    Parameters
+    ----------
+    t : callable
+        The test to label as slow.
+
+    Returns
+    -------
+    t : callable
+        The decorated test `t`.
+
+    Examples
+    --------
+    The `statsmodels.compat.testing` module includes ``example``.
+    A test can be decorated as slow like this::
+
+      from statsmodels.compat.testing import example
+
+      @example
+      def test_example(self):
+          print('Running an example')
+    """
+
+    t.example = True
+    return t
+
+
+__all__ = ['skip', 'skipif', 'SkipTest', 'example']

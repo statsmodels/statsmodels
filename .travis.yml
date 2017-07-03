@@ -124,8 +124,8 @@ script:
       then echo nosetests statsmodels
       nosetests statsmodels
     else
-      echo pytest -n 2 ${COVERAGE_OPTS} statsmodels
-      pytest -n 2 ${COVERAGE_OPTS} statsmodels
+      echo pytest -n 2 ${COVERAGE_OPTS} statsmodels --skip-examples
+      pytest -n 2 ${COVERAGE_OPTS} statsmodels --skip-examples
     fi
 
 after_success:
