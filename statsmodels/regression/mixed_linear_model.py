@@ -153,6 +153,7 @@ from scipy import sparse
 import pandas as pd
 import patsy
 from statsmodels.compat.collections import OrderedDict
+from statsmodels.compat.python import string_types
 from statsmodels.compat import range
 import warnings
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
@@ -858,7 +859,7 @@ class MixedLM(base.LikelihoodModel):
         # If `groups` is a variable name, retrieve the data for the
         # groups variable.
         group_name = "Group"
-        if type(groups) == str:
+        if isinstance(groups, string_types):
             group_name = groups
             groups = np.asarray(data[groups])
         del kwargs["groups"]
@@ -1044,7 +1045,7 @@ class MixedLM(base.LikelihoodModel):
         http://statweb.stanford.edu/~tibs/stat315a/Supplements/fuse.pdf
         """
 
-        if type(method) == str and (method.lower() != 'l1'):
+        if isinstance(method, string_types) and (method.lower() != 'l1'):
             raise ValueError("Invalid regularization method")
 
         # If method is a smooth penalty just optimize directly.
