@@ -27,15 +27,9 @@ class zipoisson_gen(rv_discrete):
     '''A Zero Inflated Poisson distribution
     '''
     def _argcheck(self, mu, w):
-        return True
+        return (mu > 0) & (w >= 0) & (w<=1)
 
     def _logpmf(self, x, mu, w):
-        if np.isscalar(x):
-            self._logpmf_each(x, mu, w)
-        else:
-            return [self._logpmf_each(x[i], mu[i], w[i]) for i in range(len(x))]
-
-    def _logpmf_each(self, x, mu, w):
         if x == 0:
             return np.log(w + (1. - w) * np.exp(-mu))
         else:
