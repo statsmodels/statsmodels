@@ -226,24 +226,7 @@ class GenericTruncated(CountModel):
         Notes
         -----
         """
-        hessian_main = self.model_main.hessian(params)
-
-        pmf = np.zeros_like(self.endog)
-        score_trunc = np.zeros_like(self.exog)
-        hessian_trunc = np.zeros_like(hessian_main)
-
-        for i in range(self.trunc + 1):
-            model = self.model_main_name(np.ones_like(self.endog) * i,
-                                         self.exog)
-            pmf_i =  np.exp(model.loglikeobs(params))
-            score_trunc += (model.score_obs(params).T * pmf_i).T
-            pmf += pmf_i
-
-        dparams2 = (hessian_main -
-                    (score_trunc.T**2 * (1 - pmf / (1 - pmf)) * pmf / (1 - pmf)).T.sum(0) +
-                    (pmf * (1 - pmf)).sum(0) * hessian_trunc)
-
-        return dparams2
+        return approx_hess(params, self.loglike)
 
 class TruncatedPoisson(GenericTruncated):
     """
