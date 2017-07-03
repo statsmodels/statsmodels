@@ -39,7 +39,7 @@ class GenericZeroInflated(CountModel):
 
     """ + base._missing_param_doc}
     def __init__(self, endog, exog, exog_infl=None, offset=None,
-                       exposure=None, missing='none', **kwargs):
+                 inflation='logit', exposure=None, missing='none', **kwargs):
         super(GenericZeroInflated, self).__init__(endog, exog, offset=offset,
                                                   exposure=exposure,
                                                   missing=missing, **kwargs)
@@ -56,6 +56,17 @@ class GenericZeroInflated(CountModel):
         else:
             self.k_exog = exog.shape[1]
 
+        if inflation == 'logit':
+            self.model_infl = Logit(np.zeros(self.exog_infl.shape[0]),
+                                    self.exog_infl)
+        elif inflation == 'probit':
+            self.model_infl = Probit(np.zeros(self.exog_infl.shape[0]),
+                                    self.exog_infl)
+        else:
+            raise Exception("inflation == %s, which is not handled"
+                % inflation)
+
+        self.inflation = inflation
         self.k_extra = self.k_inflate
         self.exog_names.insert(0, 'inflate_const')
         for i in range(self.k_extra - 1, 0, -1):
@@ -114,7 +125,7 @@ class GenericZeroInflated(CountModel):
 
         y = self.endog
         w = self.model_infl.predict(params_infl)
-        w[w >= 1.] = np.nextafter(1, 0)
+        w[w >= 1] = np.nextafter(1, 0)
         llf_main = self.model_main.loglikeobs(params_main)
         zero_idx = np.nonzero(y == 0)[0]
         nonzero_idx = np.nonzero(y)[0]
@@ -184,7 +195,7 @@ class GenericZeroInflated(CountModel):
 
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
-    def score(self, params):
+    def score_obs(self, params):
         """
         Generic Zero Inflated model score (gradient) vector of the log-likelihood
 
@@ -213,18 +224,32 @@ class GenericZeroInflated(CountModel):
 
         mu = self.model_main.predict(params_main)
 
-        coeff = (1 + w[zero_idx] * (np.exp(mu[zero_idx]) - 1))
-        dldp_zero = (score_main[zero_idx].T *
-                     (1 - (w[zero_idx]) / np.exp(llf[zero_idx]))).T.sum(0)
-        dldp_nonzero = score_main[nonzero_idx].sum(0)
-        dldp = dldp_zero + dldp_nonzero
+        dldp = np.zeros_like(self.exog, dtype=np.float64)
+        dldw = np.zeros_like(self.exog_infl, dtype=np.float64)
 
-        dldw_zero =  self.exog_infl[zero_idx].T.dot(w[zero_idx] *
-            (1 - w[zero_idx]) * (1 - np.exp(llf_main[zero_idx])) / np.exp(llf[zero_idx]))
-        dldw_nonzero = -self.exog_infl[nonzero_idx].T.dot(w[nonzero_idx])
-        dldw = dldw_zero + dldw_nonzero
+        dldp[zero_idx,:] = (score_main[zero_idx].T *
+                     (1 - (w[zero_idx]) / np.exp(llf[zero_idx]))).T
+        dldp[nonzero_idx,:] = score_main[nonzero_idx]
 
-        return np.concatenate((dldw, dldp))
+        if self.inflation == 'logit':
+            dldw[zero_idx,:] =  (self.exog_infl[zero_idx].T * w[zero_idx] *
+                                 (1 - w[zero_idx]) *
+                                 (1 - np.exp(llf_main[zero_idx])) /
+                                  np.exp(llf[zero_idx])).T
+            dldw[nonzero_idx,:] = -(self.exog_infl[nonzero_idx].T *
+                                    w[nonzero_idx]).T
+        elif self.inflation == 'probit':
+            dldw[zero_idx,:] =  (self.exog_infl[zero_idx].T * w[zero_idx] *
+                                 (1 - w[zero_idx]) *
+                                 (1 - np.exp(llf_main[zero_idx])) /
+                                  np.exp(llf[zero_idx])).T
+            dldw[nonzero_idx,:] = -(self.exog_infl[nonzero_idx].T *
+                                    w[nonzero_idx]).T
+
+        return np.hstack((dldw, dldp))
+
+    def score(self, params):
+        return self.score_obs(params).sum(0)
 
     def _hessian_partly(self, params):
         pass
@@ -247,6 +272,7 @@ class GenericZeroInflated(CountModel):
         Notes
         -----
         """
+        return approx_hess(params, self.loglike)
         hess_arr_part = self._hessian_partly(params)
 
         if hess_arr_part is None:
@@ -327,18 +353,10 @@ class PoissonZeroInflated(GenericZeroInflated):
     def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
                  inflation='logit', missing='none', **kwargs):
         super(PoissonZeroInflated, self).__init__(endog, exog, offset=offset,
+                                                  inflation=inflation,
                                                   exog_infl=exog_infl,
                                                   exposure=exposure,
                                                   missing=missing, **kwargs)
-        if inflation == 'logit':
-            self.model_infl = Logit(np.zeros(self.exog_infl.shape[0]),
-                                    self.exog_infl)
-        elif inflation == 'probit':
-            self.model_infl = Probit(np.zeros(self.exog_infl.shape[0]),
-                                    self.exog_infl)
-        else:
-            raise Exception("inflation == %s, which is not handled"
-                % inflation)
         self.model_main = Poisson(self.endog, self.exog)
         self.result = ZeroInflatedPoissonResults
         self.result_wrapper = ZeroInflatedPoissonResultsWrapper
@@ -466,3 +484,15 @@ wrap.populate_wrapper(L1ZeroInflatedPoissonResultsWrapper,
 if __name__=="__main__":
     import numpy as np
     import statsmodels.api as sm
+
+    data = sm.datasets.randhie.load()
+    endog = data.endog
+    exog = sm.add_constant(data.exog[:,1:4], prepend=False)
+    exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
+    res1 = PoissonZeroInflated(data.endog, exog, exog_infl=exog_infl,
+        inflation='probit').fit(maxiter=500)
+    
+    print res1.llf
+    print res1.params
+
+    print res1.model.score(res1.params)
