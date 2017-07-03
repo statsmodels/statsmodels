@@ -1,6 +1,7 @@
+from statsmodels.compat.testing import SkipTest
+
 import os
 
-from nose import SkipTest
 from numpy.testing import assert_, assert_array_equal
 
 from statsmodels.datasets import get_rdataset, webuse, check_internet, utils

@@ -7,7 +7,6 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from nose.tools import assert_true
 from numpy.testing import assert_allclose, assert_equal, assert_raises
 
 try:
@@ -388,13 +387,10 @@ class TestPCA(object):
         assert_allclose(pc.factors, pc_df.factors)
 
         pc_df_nomissing = PCA(pd.DataFrame(self.x.copy()), ncomp=3)
-        assert_true(isinstance(pc_df.coeff, type(pc_df_nomissing.coeff)))
-        assert_true(isinstance(pc_df.data, type(pc_df_nomissing.data)))
-        assert_true(isinstance(pc_df.eigenvals,
-                               type(pc_df_nomissing.eigenvals)))
-        assert_true(isinstance(pc_df.eigenvecs,
-                               type(pc_df_nomissing.eigenvecs)))
-
+        assert isinstance(pc_df.coeff, type(pc_df_nomissing.coeff))
+        assert isinstance(pc_df.data, type(pc_df_nomissing.data))
+        assert isinstance(pc_df.eigenvals, type(pc_df_nomissing.eigenvals))
+        assert isinstance(pc_df.eigenvecs, type(pc_df_nomissing.eigenvecs))
 
         x = self.x.copy()
         x[::5, ::7] = np.nan
