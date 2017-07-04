@@ -1,31 +1,48 @@
 .. currentmodule:: statsmodels.regression.mixed_linear_model
 
-
 .. _mixedlmmod:
 
 Linear Mixed Effects Models
 ===========================
 
-
 Linear Mixed Effects models are used for regression analyses involving
 dependent data.  Such data arise when working with longitudinal and
 other study designs in which multiple observations are made on each
-subject.  Two specific mixed effects models are *random intercepts
-models*, where all responses in a single group are additively shifted
-by a value that is specific to the group, and *random slopes models*,
-where the values follow a mean trajectory that is linear in observed
-covariates, with both the slopes and intercept being specific to the
-group. The Statsmodels MixedLM implementation allows arbitrary random
-effects design matrices to be specified for the groups, so these and
-other types of random effects models can all be fit.
+subject.  Some specific linear mixed effects models are
+
+* *Random intercepts models*, where all responses in a group are
+  additively shifted by a value that is specific to the group.
+
+* *Random slopes models*, where the responses in a group follow a
+  (conditional) mean trajectory that is linear in the observed
+  covariates, with the slopes (and possibly intercepts) varying by
+  group.
+
+* *Variance components models*, where the levels of one or more
+  categorical covariates are associated with draws from distributions.
+  These random terms additively determine the conditional mean of each
+  observation based on its covariate values.
+
+The Statsmodels implementation of LME is primarily group-based,
+meaning that random effects must be independently-realized for
+responses in different groups.  There are two types of random effects
+in our implementation of mixed models: (i) random coefficients that
+have an unknown covariance matrix, and (ii) random coefficients that
+are independent draws from a common univariate distribution.  For
+both (i) and (ii), the random effects influence the conditional mean
+of a group through their matrix/vector product with a group-specific
+design matrix.
+
+Statsmodels MixedLM handles most non-crossed random effects models,
+and some crossed models.  To include crossed random effects in a
+model, it is necessary to treat the entire dataset as a single group.
+The variance components arguments to the model can then be used to
+define models with various combinations of crossed and non-crossed
+random effects.
 
 The Statsmodels LME framework currently supports post-estimation
 inference via Wald tests and confidence intervals on the coefficients,
-profile likelihood analysis, likelihood ratio testing, and AIC.  Some
-limitations of the current implementation are that it does not support
-structure more complex on the residual errors (they are always
-homoscedastic), and it does not support crossed random effects.  We
-hope to implement these features for the next release.
+profile likelihood analysis, likelihood ratio testing, and AIC.
 
 Examples
 --------
@@ -58,7 +75,7 @@ The probability model for group :math:`i` is:
 
 .. math::
 
-    Y = X\beta + Z\gamma + \epsilon
+    Y = X\beta + Z\gamma + Q_1\eta_1 + \cdots + Q_k\eta_k + \epsilon
 
 where
 
@@ -72,25 +89,33 @@ where
 * :math:`\gamma` is a :math:`k_{re}`-dimensional random vector with mean 0
   and covariance matrix :math:`\Psi`; note that each group
   gets its own independent realization of gamma.
+* :math:`Q_j` is a :math: `n_i \time q_j` dimensional design matrix for the
+  :math: `j`th variance component.
+* :math:`\eta_j` is a :math:`q_j`-dimensional random vector containing independent
+  and identically ditsributed values with variance :math:`\tau_j^2`.
 * :math:`\epsilon` is a :math:`n_i` dimensional vector of i.i.d normal
   errors with mean 0 and variance :math:`\sigma^2`; the :math:`\epsilon`
   values are independent both within and between groups
 
-:math:`Y, X` and :math:`Z` must be entirely observed.
-:math:`\beta, \Psi,` and :math:`\sigma^2` are estimated using ML or REML estimation,
-and :math:`\gamma` and :math:`\epsilon` are random so define the probability model.
+:math:`Y, X, \{Q_j\}` and :math:`Z` must be entirely observed.  :math:`\beta`,
+:math:`\Psi`, and :math:`\sigma^2` are estimated using ML or REML estimation,
+and :math:`\gamma`, :math:`\{\eta_j\}` and :math:`\epsilon` are
+random so define the probability model.
 
-The mean structure is :math:`E[Y|X,Z] = X*\beta`.  If only the mean structure
-is of interest, GEE is a good alternative to mixed models.
+The marginal mean structure is :math:`E[Y|X,Z] = X*\beta`.  If only
+the marginal mean structure is of interest, GEE is a good alternative
+to mixed models.
 
 
 Notation:
 
-* :math:`cov_{re}` is the random effects covariance matrix (referred to above
-  as :math:`\Psi`) and :math:`scale` is the (scalar) error variance.  For a single
-  group, the marginal covariance matrix of endog given exog is :math:`scale*I
-  + Z * cov_{re} * Z`, where :math:`Z` is the design matrix for the random
-  effects in one group.
+* :math:`cov_{re}` is the random effects covariance matrix (referred
+  to above as :math:`\Psi`) and :math:`scale` is the (scalar) error
+  variance.  There is also a single estimated variance parameter
+  :math:`\tau_j^2` for each variance component.  For a single group,
+  the marginal covariance matrix of endog given exog is
+  :math:`scale*I + Z * cov_{re} * Z`, where :math:`Z` is the design
+  matrix for the random effects in one group.
 
 Notes
 ^^^^^
@@ -119,12 +144,7 @@ that when unpacking, it is important to either square or reflect the
 dependence structure depending on which parameterization is being
 used.
 
-2. The situation where the random effects covariance matrix is
-singular is numerically challenging.  Small changes in the covariance
-parameters may lead to large changes in the likelihood and
-derivatives.
-
-3. The optimization strategy is to optionally perform a few EM steps,
+2. The optimization strategy is to optionally perform a few EM steps,
 followed by optionally performing a few steepest descent steps,
 followed by conjugate gradient descent using one of the scipy gradient
 optimizers.  The EM and steepest descent steps are used to get
