@@ -36,7 +36,7 @@ class GenericTruncated(CountModel):
 
     """ + base._missing_param_doc}
 
-    def __init__(self, endog, exog, truncation=0,offset=None,
+    def __init__(self, endog, exog, truncation=0, offset=None,
                        exposure=None, missing='none', **kwargs):
         super(GenericTruncated, self).__init__(endog, exog, offset=offset,
                                                   exposure=exposure,
@@ -254,7 +254,7 @@ class TruncatedPoisson(GenericTruncated):
     """ + base._missing_param_doc}
 
     def __init__(self, endog, exog, offset=None, exposure=None,
-                 truncation=0, inflation='logit', missing='none', **kwargs):
+                 truncation=0, missing='none', **kwargs):
         super(TruncatedPoisson, self).__init__(endog, exog, offset=offset,
                                                exposure=exposure,
                                                truncation=truncation,
