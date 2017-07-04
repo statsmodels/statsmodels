@@ -13,6 +13,7 @@ from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
 from statsmodels.distributions import zipoisson
 from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
                                        approx_hess_cs, approx_fprime_cs)
+from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
 
 
 class GenericZeroInflated(CountModel):
@@ -359,17 +360,18 @@ class GenericZeroInflated(CountModel):
         if offset is None:
             offset = 0
 
-        params_infl = params[:self.self.k_inflate]
-        params_main = params[self.self.k_inflate:]
-
-        lin_pred = np.dot(exog, params_main) + exposure + offset
-        prob_zero = (1 - prob_poisson) + prob_poisson * self.distribution(exog, params_main)
+        params_infl = params[:self.k_inflate]
+        params_main = params[self.k_inflate:]
 
         if self.infl == 'logit':
             prob_poisson = 1 / (1 + np.exp(np.dot(exog_infl, params_infl)))
         elif self.infl == 'probit':
             raise NotImplemented('Predict for Probit inflation not implemented')
             
+
+        lin_pred = np.dot(exog, params_main) + exposure + offset
+        prob_zero = ((1 - prob_poisson) +
+            prob_poisson * np.exp(self.model_main.loglikeobs(params_main)))
 
         if which == 'mean':
             return prob_poisson * np.exp(lin_pred)
