@@ -991,7 +991,7 @@ class RandHIE(object):
         self.wald_pvalue = 4.8795019354e-254
         self.wald_statistic = 1206.46339591254
 
-    def zero_inflated_poisson(self):
+    def zero_inflated_poisson_logit(self):
         self.params = [.1033783, -1.045983, -.0821979, .0085692,
                        -.0267957, 1.482363]
         self.llf = -57005.72199826186
@@ -1004,3 +1004,19 @@ class RandHIE(object):
                          [-0.0295635, -0.024028],
                          [ 1.465524,   1.499202]]
         self.aic = 114023.444
+        self.bic = 114070.9
+
+    def zero_inflated_poisson_probit(self):
+        self.params = [.0622534, -.6429324, -.0821788, .0085673,
+                       -.0267952, 1.482369]
+        self.llf = -57006.05
+        self.bse = [.0048228, .0132516, .0107142, .0018697,
+                    .0014121, .0085913]
+        self.conf_int = [[ 0.0528009,  .0717058],
+                         [-0.6689051, -.6169597],
+                         [-0.1031783, -.0611793],
+                         [ 0.0049027,  .0122319],
+                         [-0.0295629, -.0240275],
+                         [ 1.46553,   1.499208]]
+        self.aic = 114024.1
+        self.bic = 114071.6
