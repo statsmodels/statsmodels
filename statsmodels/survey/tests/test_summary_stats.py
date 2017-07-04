@@ -14,7 +14,7 @@ design = ss.SurveyDesign(strata, cluster, weights)
 def test_design():
     assert_equal(design.ncs, np.array([2, 3]))
     assert_equal(design.sfclust, np.array([0, 0, 1, 1, 1]))
-    assert(len(np.unique(design.sclust)), len(np.unique(cluster)))
+    assert(len(np.unique(design.sclust)) == len(np.unique(cluster)))
 
 def test_mean():
     avg = ss.SurveyMean(design, data, 'jack')
@@ -29,8 +29,12 @@ def test_total():
     assert_allclose(tot.vc, np.r_[19.79899, 15.71623],  rtol=1e-5, atol=0)
 
 def quant_test():
-    quant = ss.SurveyQuantile(design, data, [.1, .25, .33, .5, .75, .99])
+    quant = ss.SurveyQuantile(design, data, [.1, .25, .33, .5, .75, .99], 'jack')
     assert_allclose(quant.est[0], np.r_[1, 2, 2, 3.5, 5, 9])
     ## change 7 to 6 to accommodate w/ stata
     assert_allclose(quant.est[1], np.r_[2, 3, 3, 4.5, 7, 9])
 
+    # ensure that median yields same result
+    med = ss.SurveyMedian(design, data, 'jack')
+    assert_equal(quant.est[0][-3], med.est[0][0])
+    assert_equal(quant.est[1][-3], med.est[1][0])
