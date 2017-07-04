@@ -14,6 +14,7 @@ from statsmodels.distributions import zipoisson
 from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
                                        approx_hess_cs, approx_fprime_cs)
 
+
 class GenericZeroInflated(CountModel):
     __doc__ = """
     Generiz Zero Inflated model for count data
@@ -57,12 +58,16 @@ class GenericZeroInflated(CountModel):
         else:
             self.k_exog = exog.shape[1]
 
+        self.infl = inflation
         if inflation == 'logit':
             self.model_infl = Logit(np.zeros(self.exog_infl.shape[0]),
                                     self.exog_infl)
+            self._hessian_inflate = self._hessian_logit
         elif inflation == 'probit':
             self.model_infl = Probit(np.zeros(self.exog_infl.shape[0]),
                                     self.exog_infl)
+            self._hessian_inflate = self._hessian_probit
+
         else:
             raise TypeError("inflation == %s, which is not handled"
                 % inflation)
@@ -126,7 +131,8 @@ class GenericZeroInflated(CountModel):
 
         y = self.endog
         w = self.model_infl.predict(params_infl)
-        w[w >= 1] = np.nextafter(1, 0)
+
+        w[w >= 1.] = np.nextafter(1, 0)
         llf_main = self.model_main.loglikeobs(params_main)
         zero_idx = np.nonzero(y == 0)[0]
         nonzero_idx = np.nonzero(y)[0]
@@ -189,7 +195,8 @@ class GenericZeroInflated(CountModel):
         if method in ['l1', 'l1_cvxopt_cp']:
             discretefit = self.result_reg(self, cntfit)
         else:
-            raise Exception(
+
+            raise TypeError(
                     "argument method == %s, which is not handled" % method)
 
         return self.result_reg_wrapper(discretefit)
@@ -199,12 +206,10 @@ class GenericZeroInflated(CountModel):
     def score_obs(self, params):
         """
         Generic Zero Inflated model score (gradient) vector of the log-likelihood
-
         Parameters
         ----------
         params : array-like
             The parameters of the model
-
         Returns
         -------
         score : ndarray, 1-D
@@ -240,45 +245,17 @@ class GenericZeroInflated(CountModel):
             dldw[nonzero_idx,:] = -(self.exog_infl[nonzero_idx].T *
                                     w[nonzero_idx]).T
         elif self.inflation == 'probit':
-            dldw[zero_idx,:] =  (self.exog_infl[zero_idx].T * w[zero_idx] *
-                                 (1 - w[zero_idx]) *
-                                 (1 - np.exp(llf_main[zero_idx])) /
-                                  np.exp(llf[zero_idx])).T
-            dldw[nonzero_idx,:] = -(self.exog_infl[nonzero_idx].T *
-                                    w[nonzero_idx]).T
+            return approx_fprime(params, self.loglikeobs)
 
         return np.hstack((dldw, dldp))
 
     def score(self, params):
         return self.score_obs(params).sum(0)
 
-    def _hessian_partly(self, params):
+    def _hessian_main(self, params):
         pass
 
-    def hessian(self, params):
-        """
-        Generic Zero Inflated model Hessian matrix of the loglikelihood
-
-        Parameters
-        ----------
-        params : array-like
-            The parameters of the model
-
-        Returns
-        -------
-        hess : ndarray, (k_vars, k_vars)
-            The Hessian, second derivative of loglikelihood function,
-            evaluated at `params`
-
-        Notes
-        -----
-        """
-        return approx_hess(params, self.loglike)
-        hess_arr_part = self._hessian_partly(params)
-
-        if hess_arr_part is None:
-            return approx_hess(params, self.loglike)
-
+    def _hessian_logit(self, params):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
@@ -291,10 +268,8 @@ class GenericZeroInflated(CountModel):
         zero_idx = np.nonzero(y == 0)[0]
         nonzero_idx = np.nonzero(y)[0]
 
-        dim = self.k_exog + self.k_inflate
-
-        hess_arr = np.zeros((dim, dim))
-
+        hess_arr = np.zeros((self.k_inflate, self.k_exog + self.k_inflate))
+    
         pmf = np.exp(llf)
 
         #d2l/dw2
@@ -316,16 +291,104 @@ class GenericZeroInflated(CountModel):
                 hess_arr[i, j + self.k_inflate] = -(score_main[zero_idx, j] *
                     w[zero_idx] * (1 - w[zero_idx]) *
                     self.exog_infl[zero_idx, i] / pmf[zero_idx]).sum()
-
-        for i in range(self.k_exog):
-            for j in range(i, -1, -1):
-                hess_arr[i + self.k_inflate, j + self.k_inflate] = hess_arr_part[i, j]
         
+        return hess_arr
+
+    def _hessian_probit(self, params):
+        pass
+
+    def hessian(self, params):
+        """
+        Generic Zero Inflated model Hessian matrix of the loglikelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        hess : ndarray, (k_vars, k_vars)
+            The Hessian, second derivative of loglikelihood function,
+            evaluated at `params`
+
+        Notes
+        -----
+        """
+        hess_arr_main = self._hessian_main(params)
+        hess_arr_infl = self._hessian_inflate(params)
+
+        if hess_arr_main is None or hess_arr_infl is None:
+            return approx_hess(params, self.loglike)
+
+        dim = self.k_exog + self.k_inflate
+
+        hess_arr = np.zeros((dim, dim))
+
+        hess_arr[:self.k_inflate,:] = hess_arr_infl
+        hess_arr[self.k_inflate:,self.k_inflate:] = hess_arr_main
 
         tri_idx = np.triu_indices(self.k_exog + self.k_inflate, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
         return hess_arr
+
+    def predict(self, params, exog=None, exog_infl=None, exposure=None,
+                offset=None, which='mean'):
+        """
+        Predict response variable of a count model given exogenous variables.
+
+        Notes
+        -----
+        If exposure is specified, then it will be logged by the method.
+        The user does not need to log it first.
+        """
+        if exog is None:
+            exog = self.exog
+            offset = getattr(self, 'offset', 0)
+            exposure = getattr(self, 'exposure', 0)
+
+        if exog_infl is None:
+            exog_infl = self.exog_infl
+
+        if exposure is None:
+            exposure = 0
+        elif exposure != 0:
+            exposure = np.log(exposure)
+
+        if offset is None:
+            offset = 0
+
+        params_infl = params[:self.self.k_inflate]
+        params_main = params[self.self.k_inflate:]
+
+        lin_pred = np.dot(exog, params_main) + exposure + offset
+        prob_zero = (1 - prob_poisson) + prob_poisson * self.distribution(exog, params_main)
+
+        if self.infl == 'logit':
+            prob_poisson = 1 / (1 + np.exp(np.dot(exog_infl, params_infl)))
+        elif self.infl == 'probit':
+            raise NotImplemented('Predict for Probit inflation not implemented')
+            
+
+        if which == 'mean':
+            return prob_poisson * np.exp(lin_pred)
+        elif which == 'poisson-mean':
+            return np.exp(lin_pred)
+        elif which == 'linear':
+            return lin_pred
+        elif which == 'mean-nonzero':
+            return prob_poisson * np.exp(lin_pred) / (1 - prob_zero)
+        elif which == 'prob-zero':
+            return  prob_zero
+        elif which == 'prob':
+            counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+            w = self.model_infl.predict(params_infl)[:, None]
+            w[w == 1.] = np.nextafter(1, 0)
+            mu = self.model_main.predict(params_main)[:, None]
+            return self.distribution.pmf(counts, mu, w)
+        else:
+            raise ValueError('keyword `which` not recognized')
 
 class PoissonZeroInflated(GenericZeroInflated):
     """
@@ -360,12 +423,13 @@ class PoissonZeroInflated(GenericZeroInflated):
                                                   exposure=exposure,
                                                   missing=missing, **kwargs)
         self.model_main = Poisson(self.endog, self.exog)
+        self.distribution = zipoisson
         self.result = ZeroInflatedPoissonResults
         self.result_wrapper = ZeroInflatedPoissonResultsWrapper
         self.result_reg = L1ZeroInflatedPoissonResults
         self.result_reg_wrapper = L1ZeroInflatedPoissonResultsWrapper
 
-    def _hessian_partly(self, params):
+    def _hessian_main(self, params):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
@@ -393,58 +457,6 @@ class PoissonZeroInflated(GenericZeroInflated):
                     self.exog[nonzero_idx, j]).sum())
 
         return hess_arr
-
-    def predict(self, params, exog=None, exog_infl=None, exposure=None,
-                offset=None, which='mean'):
-        """
-        Predict response variable of a count model given exogenous variables.
-
-        Notes
-        -----
-        If exposure is specified, then it will be logged by the method.
-        The user does not need to log it first.
-        """
-        if exog is None:
-            exog = self.exog
-            offset = getattr(self, 'offset', 0)
-            exposure = getattr(self, 'exposure', 0)
-
-        if exog_infl is None:
-            exog_infl = self.exog_infl
-
-        if exposure is None:
-            exposure = 0
-        elif exposure != 0:
-            exposure = np.log(exposure)
-
-        if offset is None:
-            offset = 0
-
-        params_infl = params[:self.self.k_inflate]
-        params_main = params[self.self.k_inflate:]
-
-        lin_pred = np.dot(exog, params_main) + exposure + offset
-        prob_poisson = 1 / (1 + np.exp(np.dot(exog_infl, params_infl)))
-        prob_zero = (1 - prob_poisson) + prob_poisson * np.exp(-np.exp(lin_pred))
-
-        if which == 'mean':
-            return prob_poisson * np.exp(lin_pred)
-        elif which == 'poisson-mean':
-            return np.exp(lin_pred)
-        elif which == 'linear':
-            return lin_pred
-        elif which == 'mean-nonzero':
-            return prob_poisson * np.exp(lin_pred) / (1 - prob_zero)
-        elif which == 'prob-zero':
-            return  prob_zero
-        elif which == 'prob':
-            counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-            w = self.model_infl.predict(params_infl)[:, None]
-            w[w == 1.] = np.nextafter(1, 0)
-            mu = self.model_main.predict(params_main)[:, None]
-            return zipoisson.pmf(counts, mu, w)
-        else:
-            raise ValueError('keyword `which` not recognized')
 
 class GenericZeroInflatedResults(CountResults):
     __doc__ = _discrete_results_docs % {
