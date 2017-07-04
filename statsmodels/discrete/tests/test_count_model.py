@@ -14,7 +14,7 @@ class TestZeroInflatedModel(object):
         endog = data.endog
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
-        cls.res1 = sm.PoissonZeroInflated(data.endog, exog, exog_infl=exog_infl).fit(maxiter=500)
+        cls.res1 = sm.PoissonZeroInflated(data.endog, exog, exog_infl=exog_infl).fit(method='newton', maxiter=500)
         res2 = RandHIE()
         res2.zero_inflated_poisson()
         cls.res2 = res2
