@@ -199,31 +199,25 @@ class SurveyStat(object):
 
         jdata = []
         has_reps = self.design.rep_weights is not None
-        for r in range(replicates):
-            # if rep_weights were supplied
-            while has_reps:
-                if index is None:
-                    jdata.append(self._stat(weights=self.design.rep_weights))
-                else:
-                    jdata.append(self._stat(self.design.rep_weights, index))
-                continue
-            w = self.design.weights.copy()
-            bin = np.zeros(self.design.nclust)
-            for s in range(self.design.nstrat):
-                # how to handle strata w/ only one cluster?
-                w[self.design.strat == s] *= self.design.ncs[s] \
-                                             / float(self.design.ncs[s] - 1)
 
-                # If there is only one or two clusters then weights wont change
-                if (self.design.ncs[s] == 1 or self.design.ncs[s] == 2):
-                    continue
-                # array of clusters to resample from
-                ii = np.flatnonzero(self.design.sfclust == s)
-                # resample them
-                ii_resample = np.random.choice(ii, size=(self.design.ncs[s]-1))
-                # accumulate number of times cluster i was resampled
-                bin += np.bincount(ii_resample,
-                                   minlength=max(self.design.sclust)+1)
+        if has_reps:
+            bin = np.zeros(self.design.nclust)
+            for r in range(replicates):
+                for s in range(self.design.nstrat):
+                    w[self.design.strat == s] *= ((float(self.design.ncs[s] - 1) \
+                                                / self.design.ncs[s])**(1/replicates))
+                    # If there is only one or two clusters then weights wont change
+                    if (self.design.ncs[s] == 1 or self.design.ncs[s] == 2):
+                        continue
+                    # array of clusters to resample from
+                    ii = np.flatnonzero(self.design.sfclust == s)
+                    # resample them
+                    ii_resample = np.random.choice(ii, size=(self.design.ncs[s]-1))
+                    # accumulate number of times cluster i was resampled
+                    bin += np.bincount(ii_resample,
+                                       minlength=max(self.design.sclust)+1)
+            # avg number of times cluster i was resampled
+            bin /= replicates
             # augment weights
             w *= bin[self.design.sclust]
             # call the stat w/ the new weights
@@ -231,12 +225,45 @@ class SurveyStat(object):
                 jdata.append(self._stat(weights=w))
             else:
                 jdata.append(self._stat(w, index))
-        jdata = np.asarray(jdata)
-        # nh = self.design.ncs[self.design.sfclust].astype(np.float64)
-        # pseudo = jdata + nh[:, None] * (np.dot(w, stat.data) - jdata)
+        else:
+            for r in range(replicates):
+                w = self.design.weights.copy()
+                bin = np.zeros(self.design.nclust)
+                for s in range(self.design.nstrat):
+                    # how to handle strata w/ only one cluster?
+                    w[self.design.strat == s] *= float(self.design.ncs[s] - 1) \
+                                                 / self.design.ncs[s]
+                    # If there is only one or two clusters then weights wont change
+                    if (self.design.ncs[s] == 1 or self.design.ncs[s] == 2):
+                        continue
+                    # array of clusters to resample from
+                    ii = np.flatnonzero(self.design.sfclust == s)
+                    # resample them
+                    ii_resample = np.random.choice(ii, size=(self.design.ncs[s]-1))
+                    # accumulate number of times cluster i was resampled
+                    bin += np.bincount(ii_resample,
+                                       minlength=max(self.design.sclust)+1)
+                # augment weights
+                w *= bin[self.design.sclust]
+                # call the stat w/ the new weights
+                if index is None:
+                    jdata.append(self._stat(weights=w))
+                else:
+                    jdata.append(self._stat(w, index))
 
-        boot_mean = jdata.mean(0)
-        var = ((jdata - boot_mean)**2).sum(0) / (replicates - 1)
+                if index is None:
+                    jdata.append(self._stat(weights = w))
+                else:
+                    jdata.append(self._stat(w, index))
+
+        jdata = np.asarray(jdata)
+        if self.mse:
+            print("mse specified")
+            var = np.dot((jdata-est).T, (jdata-est)) / (replicates)
+            var = np.sqrt(np.diag(var))
+        else:
+            boot_mean = jdata.mean(0)
+            var = ((jdata - boot_mean)**2).sum(0) / (replicates)
 
         return est, var
 
@@ -508,3 +535,4 @@ class SurveyMedian(SurveyQuantile):
         sp = SurveyQuantile(SurveyDesign, data, [.50], se_method, mse)
         self.est = sp.est
         self.vc = sp.vc
+
