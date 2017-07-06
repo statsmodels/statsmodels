@@ -574,6 +574,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         return result
 
+    # TODO: _handle_args does not use `self`.  Does it need to be a method?
     def _handle_args(self, names, defaults, *args, **kwargs):
         output_args = []
         # We need to handle positional arguments in two ways, in case this was
@@ -1741,25 +1742,28 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         #         self.df_model * np.log(self.nobs_effective))
         return bic(self.llf, self.nobs_effective, self.df_model)
 
-    def _cov_params_approx(self, approx_complex_step=True,
-                           approx_centered=False):
-        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
-        if approx_complex_step:
-            evaluated_hessian = self.model._hessian_complex_step(
-                self.params, transformed=True
-            )
-        else:
-            evaluated_hessian = self.model._hessian_finite_difference(
-                self.params, transformed=True,
-                approx_centered=approx_centered
-            )
+
+    def _update_rank(self, singular_values):
         self.model.update(self.params)
-
-        neg_cov, singular_values = pinv_extended(nobs * evaluated_hessian)
-
         if self._rank is None:
             self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+        return
 
+    def _cov_params_approx(self, approx_complex_step=True,
+                           approx_centered=False):
+        nobs = self.model.nobs - self.filter_results.loglikelihood_burn
+
+        evaluated_hessian = nobs * self.model.hessian(params=self.params,
+                                    transformed=True,
+                                    method='approx',
+                                    approx_complex_step=approx_complex_step,
+                                    approx_centered=approx_centered)
+        # TODO: Case with "not approx_complex_step" is not hit in
+        # tests as of 2017-05-19
+
+        (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
+
+        self._update_rank(singular_values)
         return -neg_cov
 
     @cache_readonly
@@ -1771,21 +1775,19 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return self._cov_params_approx(self._cov_approx_complex_step,
                                        self._cov_approx_centered)
 
-    def _cov_params_oim(self, approx_complex_step=True,
-                        approx_centered=False):
+    def _cov_params_oim(self, approx_complex_step=True, approx_centered=False):
         nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
-        cov_params, singular_values = pinv_extended(
-            nobs * self.model.observed_information_matrix(
-                self.params, transformed=True,
-                approx_complex_step=approx_complex_step,
-                approx_centered=approx_centered)
-        )
-        self.model.update(self.params)
 
-        if self._rank is None:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+        evaluated_hessian = nobs * self.model.hessian(self.params,
+                                        hessian_method='oim',
+                                        transformed=True,
+                                        approx_complex_step=approx_complex_step,
+                                        approx_centered=approx_centered)
 
-        return cov_params
+        (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
+
+        self._update_rank(singular_values)
+        return -neg_cov
 
     @cache_readonly
     def cov_params_oim(self):
@@ -1796,21 +1798,18 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return self._cov_params_oim(self._cov_approx_complex_step,
                                     self._cov_approx_centered)
 
-    def _cov_params_opg(self, approx_complex_step=True,
-                        approx_centered=False):
+    def _cov_params_opg(self, approx_complex_step=True, approx_centered=False):
         nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
-        cov_params, singular_values = pinv_extended(
-            nobs * self.model.opg_information_matrix(
-                self.params, transformed=True,
-                approx_complex_step=approx_complex_step,
-                approx_centered=approx_centered)
-        )
-        self.model.update(self.params)
 
-        if self._rank is None:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+        evaluated_hessian = nobs * self.model.hessian_opg(self.params,
+                                        transformed=True,
+                                        approx_complex_step=approx_complex_step,
+                                        approx_centered=approx_centered)
 
-        return cov_params
+        (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
+
+        self._update_rank(singular_values)
+        return -neg_cov
 
     @cache_readonly
     def cov_params_opg(self):
@@ -1834,20 +1833,18 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
         cov_opg = self._cov_params_opg(approx_complex_step=approx_complex_step,
                                        approx_centered=approx_centered)
-        evaluated_hessian = (
-            nobs * self.model.observed_information_matrix(
-                self.params, transformed=True,
-                approx_complex_step=approx_complex_step,
-                approx_centered=approx_centered)
-        )
-        self.model.update(self.params)
+
+        evaluated_hessian = nobs * self.model.hessian(self.params,
+                                        hessian_method='oim',
+                                        transformed=True,
+                                        approx_complex_step=approx_complex_step,
+                                        approx_centered=approx_centered)
+
         cov_params, singular_values = pinv_extended(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
 
-        if self._rank is None:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
-
+        self._update_rank(singular_values)
         return cov_params
 
     @cache_readonly
@@ -1864,23 +1861,19 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
         cov_opg = self._cov_params_opg(approx_complex_step=approx_complex_step,
                                        approx_centered=approx_centered)
-        if approx_complex_step:
-            evaluated_hessian = nobs * self.model._hessian_complex_step(
-                self.params, transformed=True
-            )
-        else:
-            evaluated_hessian = nobs * self.model._hessian_finite_difference(
-                self.params, transformed=True,
-                approx_centered=approx_centered
-            )
-        self.model.update(self.params)
-        cov_params, singular_values = pinv_extended(
+
+        evaluated_hessian = nobs * self.model.hessian(self.params,
+                                        transformed=True,
+                                        method='approx',
+                                        approx_complex_step=approx_complex_step)
+        # TODO: Case with "not approx_complex_step" is not
+        # hit in tests as of 2017-05-19
+
+        (cov_params, singular_values) = pinv_extended(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
 
-        if self._rank is None:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
-
+        self._update_rank(singular_values)
         return cov_params
 
     @cache_readonly
@@ -2367,7 +2360,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             self.model._get_prediction_index(start, end, index))
 
         # Handle `dynamic`
-        if isinstance(dynamic, str):
+        if isinstance(dynamic, str): # TODO: bytes/unicode?
             dynamic, _, _ = self.model._get_index_loc(dynamic)
 
         # Perform the prediction
