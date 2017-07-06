@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.stats import rv_discrete
+from scipy.stats import rv_discrete, poisson
 from scipy.special import gammaln
 
 
@@ -22,3 +22,34 @@ class genpoisson_p_gen(rv_discrete):
 
 genpoisson_p = genpoisson_p_gen(name='genpoisson_p',
                                 longname='Generalized Poisson')
+
+class truncatedpoisson_gen(rv_discrete):
+    '''Truncated Poisson discrete random variable
+    '''
+    def _argcheck(self, mu, truncation):
+        return (mu >= 0) & (truncation >= 0)
+
+    def _logpmf(self, x, mu, truncation):
+        pmf = 0
+        for i in range(truncation + 1):
+            pmf += poisson.pmf(truncation, mu)
+
+        return poisson.logpmf(x, mu) - np.log(1 - pmf)
+
+    def _pmf(self, x, mu, truncation):
+        return np.exp(self._logpmf(x, mu, truncation))
+
+truncatedpoisson = truncatedpoisson_gen(name='truncatedpoisson',
+                                        longname='Truncated Poisson')
+
+
+
+if __name__=="__main__":
+    import numpy as np
+    import statsmodels.api as sm
+
+    print(poisson.pmf(1, 1))
+    print(truncatedpoisson.pmf(1, 1, 50))
+
+    print(poisson.logpmf(1, 1))
+    print(truncatedpoisson.logpmf(1, 1, 50))

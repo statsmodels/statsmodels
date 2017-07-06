@@ -201,7 +201,7 @@ class GenericTruncated(CountModel):
         if method in ['l1', 'l1_cvxopt_cp']:
             discretefit = self.result_reg(self, cntfit)
         else:
-            raise Exception(
+            raise TypeError(
                     "argument method == %s, which is not handled" % method)
 
         return self.result_reg_wrapper(discretefit)

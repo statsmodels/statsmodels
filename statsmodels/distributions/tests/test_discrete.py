@@ -36,6 +36,29 @@ class TestGenpoisson_p(object):
         genpoisson_pmf = sm.distributions.genpoisson_p.logpmf(6, 1, 0, 2)
         assert_allclose(poisson_pmf, genpoisson_pmf, rtol=1e-15)
 
+class TestTruncatedPoisson(object):
+    """
+    Test Truncated Poisson distribution
+    """
+    def test_pmf_zero(self):
+        poisson_pmf = poisson.pmf(100, 100)
+        tpoisson_pmf = sm.distributions.truncatedpoisson.pmf(100, 100, 0)
+        assert_allclose(poisson_pmf, tpoisson_pmf, rtol=1e-7)
+
+    def test_logpmf_zero(self):
+        poisson_logpmf = poisson.logpmf(100, 100)
+        tpoisson_logpmf = sm.distributions.truncatedpoisson.logpmf(100, 100, 0)
+        assert_allclose(poisson_logpmf, tpoisson_logpmf, rtol=1e-7)
+
+    def test_pmf(self):
+        poisson_pmf = poisson.pmf(1, 1)
+        tpoisson_pmf = sm.distributions.truncatedpoisson.pmf(1, 1, 50)
+        assert_allclose(poisson_pmf, tpoisson_pmf, rtol=1e-7)
+
+    def test_logpmf(self):
+        poisson_logpmf = poisson.logpmf(1, 1)
+        tpoisson_logpmf = sm.distributions.truncatedpoisson.logpmf(1, 1, 50)
+        assert_allclose(poisson_logpmf, tpoisson_logpmf, rtol=1e-7)
 
 if __name__ == "__main__":
     import pytest
