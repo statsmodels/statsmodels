@@ -59,9 +59,13 @@ class SurveyDesign(object):
         The total number of clusters across strata
     """
 
-    def __init__(self, strata=None, cluster=None, weights=None, rep_weights=None, nest=True):
-        strata, cluster, self.weights = self._check_args(strata, cluster, weights)
-        self.rep_weights = rep_weights
+    def __init__(self, strata=None, cluster=None, weights=None, rep_weights=None, fpc=None, se_method=None, nest=True):
+        strata, cluster, self.weights, self.rep_weights, self.fpc = self._check_args(strata, cluster, weights, rep_weights, fpc)
+
+        if (se_method not in ["boot", 'mean_boot', 'jack']):
+            raise ValueError("Method %s not supported" % se_method)
+        else:
+            self.se_method = se_method
         # Recode strata and clusters as integer values 0, 1, ...
         _, self.strat = np.unique(strata, return_inverse=True)
         _, clust = np.unique(cluster, return_inverse=True)
@@ -84,8 +88,10 @@ class SurveyDesign(object):
         self.ncs = np.bincount(self.strat[ii])
 
         # The stratum for each cluster
-        _, ii = np.unique(self.sclust, return_index=True)
         self.sfclust = self.strat[ii]
+
+        # The fpc for each cluster
+        self.fpc = self.fpc[ii]
 
         # The total number of clusters over all stratum
         self.nclust = np.sum(self.ncs)
@@ -97,15 +103,12 @@ class SurveyDesign(object):
         summary_list = ["Number of observations: ", str(len(self.strat)),
                         "Sum of weights: ", str(self.weights.sum()),
                         "Number of strata: ", str(self.nstrat),
-                        "Number of clusters per stratum:", str(self.ncs)]
+                        "Number of clusters per stratum: ", str(self.ncs),
+                        "Method to compute SE: ", self.se_method]
 
         return "\n".join(summary_list)
-        # print("Number of observations: ", len(self.strat))
-        # print("Sum of weight: ", self.weights.sum())
-        # print("Number of strata: ", self.nstrat)
-        # print("The number of clusters per stratum: ", self.ncs)
 
-    def _check_args(self, strata, cluster, weights):
+    def _check_args(self, strata, cluster, weights, rep_weights, fpc):
         """
         Minor error checking to make sure user supplied any of
         strata, cluster, or weights. For unspecified subgroup labels
@@ -132,25 +135,92 @@ class SurveyDesign(object):
         vals[2] : ndarray
             array of the observation weights
         """
-        if all([x is None for x in (strata, cluster, weights)]):
-            raise ValueError("""At least one of strata, cluster, and weights
+        if all([x is None for x in (strata, cluster, weights, rep_weights)]):
+            raise ValueError("""At least one of strata, cluster, rep_weights, and weights
                              musts not be None""")
-        v = [len(x) for x in (strata, cluster, weights) if x is not None]
+        v = [len(x) for x in (strata, cluster, weights, rep_weights) if x is not None]
         if len(set(v)) != 1:
-            raise ValueError("""lengths of strata, cluster, and weights
+            raise ValueError("""lengths of strata, cluster, rep_weights, and weights
                              are not compatible""")
         n = v[0]
         vals = []
-        for x in (strata, cluster, weights):
+        for x in (strata, cluster, weights, rep_weights):
             if x is None:
                 vals.append(np.ones(n))
             else:
                 vals.append(np.asarray(x))
 
-        return vals[0], vals[1], vals[2]
+        if fpc is None:
+            vals.append(np.zeros(n))
+        else:
+            vals.append(np.asarray(fpc))
+
+        return vals[0], vals[1], vals[2], vals[3], vals[4]
+
+    def get_rep_weights(self, c=None, n_rep=None, bsn=None):
+        if self.se_method=='jack':
+            return self._jackknife_rep_weights(c)
+        elif self.se_method=='boot':
+            return self._bootstrap_weights()
+        else:
+            return self._mean_bootstrap_weight(n_rep, bsn)
+
+    def _jackknife_rep_weights(self, c):
+        # get stratum that the cluster belongs in
+        s = self.sfclust[c]
+        nh = self.ncs[s]
+        w = self.weights.copy()
+        # all weights within the stratum are modified
+        w[self.strat == s] *= nh / float(nh - 1)
+        # but if you're within the cluster to be removed, set as 0
+        w[self.sclust == c] = 0
+        return w
+
+    def _bootstrap_weights(self):
+        w = self.weights.copy()
+        clust_count = np.zeros(self.nclust)
+        for s in range(self.nstrat):
+            # how to handle strata w/ only one cluster?
+            w[self.strat == s] *= float(self.ncs[s] - 1) \
+                                         / self.ncs[s]
+            # If there is only one or two clusters then weights wont change
+            if (self.ncs[s] == 1 or self.ncs[s] == 2):
+                continue
+            # array of clusters to resample from
+            ii = np.flatnonzero(self.sfclust == s)
+            # resample them
+            ii_resample = np.random.choice(ii, size=(self.ncs[s]-1))
+            # accumulate number of times cluster i was resampled
+            clust_count += np.bincount(ii_resample,
+                               minlength=max(self.sclust)+1)
+
+        w *= clust_count[self.sclust]
+        return w
+
+    def _mean_bootstrap_weight(self, replicates, bsn):
+        clust_count = np.zeros(self.design.nclust)
+        for r in range(n_rep):
+            for s in range(self.nstrat):
+                w[self.strat == s] *= ((float(self.ncs[s] - 1) \
+                                            / self.ncs[s])**(1/replicates))
+                # If there is only one or two clusters then weights wont change
+                if (self.ncs[s] == 1 or self.ncs[s] == 2):
+                    continue
+                # array of clusters to resample from
+                ii = np.flatnonzero(self.sfclust == s)
+                # resample them
+                ii_resample = np.random.choice(ii, size=(self.ncs[s]-1))
+                # accumulate number of times cluster i was resampled
+                clust_count += np.bincount(ii_resample,
+                                   minlength=max(self.sclust)+1)
+        # avg number of times cluster i was resampled
+        clust_count *= (bsn / replicates)
+        # augment weights
+        w *= clust_count[self.sclust]
+        return w
 
 
-class SurveyStat(object):
+class SurveyStat(SurveyDesign):
     """
     Estimation and inference for summary statistics in complex surveys.
 
@@ -173,7 +243,7 @@ class SurveyStat(object):
         self.design = design
         self.mse = mse
 
-    def bootstrap(self, replicates, index=None):
+    def bootstrap(self, replicates, index=None, bsn=None):
         """
         Calculates bootstrap standard errors
 
@@ -198,72 +268,28 @@ class SurveyStat(object):
             est = self._stat(self.design.weights)
 
         jdata = []
-        has_reps = self.design.rep_weights is not None
-
-        if has_reps:
-            bin = np.zeros(self.design.nclust)
-            for r in range(replicates):
-                for s in range(self.design.nstrat):
-                    w[self.design.strat == s] *= ((float(self.design.ncs[s] - 1) \
-                                                / self.design.ncs[s])**(1/replicates))
-                    # If there is only one or two clusters then weights wont change
-                    if (self.design.ncs[s] == 1 or self.design.ncs[s] == 2):
-                        continue
-                    # array of clusters to resample from
-                    ii = np.flatnonzero(self.design.sfclust == s)
-                    # resample them
-                    ii_resample = np.random.choice(ii, size=(self.design.ncs[s]-1))
-                    # accumulate number of times cluster i was resampled
-                    bin += np.bincount(ii_resample,
-                                       minlength=max(self.design.sclust)+1)
-            # avg number of times cluster i was resampled
-            bin /= replicates
-            # augment weights
-            w *= bin[self.design.sclust]
-            # call the stat w/ the new weights
-            if index is None:
-                jdata.append(self._stat(weights=w))
-            else:
-                jdata.append(self._stat(w, index))
-        else:
-            for r in range(replicates):
-                w = self.design.weights.copy()
-                bin = np.zeros(self.design.nclust)
-                for s in range(self.design.nstrat):
-                    # how to handle strata w/ only one cluster?
-                    w[self.design.strat == s] *= float(self.design.ncs[s] - 1) \
-                                                 / self.design.ncs[s]
-                    # If there is only one or two clusters then weights wont change
-                    if (self.design.ncs[s] == 1 or self.design.ncs[s] == 2):
-                        continue
-                    # array of clusters to resample from
-                    ii = np.flatnonzero(self.design.sfclust == s)
-                    # resample them
-                    ii_resample = np.random.choice(ii, size=(self.design.ncs[s]-1))
-                    # accumulate number of times cluster i was resampled
-                    bin += np.bincount(ii_resample,
-                                       minlength=max(self.design.sclust)+1)
-                # augment weights
-                w *= bin[self.design.sclust]
-                # call the stat w/ the new weights
+        if (self.design.se_method == "boot"):
+            for i in range(replicates):
+                w = self.design._bootstrap_weights()
                 if index is None:
                     jdata.append(self._stat(weights=w))
                 else:
                     jdata.append(self._stat(w, index))
-
-                if index is None:
-                    jdata.append(self._stat(weights = w))
-                else:
-                    jdata.append(self._stat(w, index))
+        else:
+            w = self.design._mean_bootstrap_weight(replicates, bsn)
+            if index is None:
+                jdata.append(self._stat(weights=w))
+            else:
+                jdata.append(self._stat(w, index))
 
         jdata = np.asarray(jdata)
         if self.mse:
             print("mse specified")
-            var = np.dot((jdata-est).T, (jdata-est)) / (replicates)
+            var = np.dot((jdata-est).T, (jdata-est)) / replicates
             var = np.sqrt(np.diag(var))
         else:
             boot_mean = jdata.mean(0)
-            var = ((jdata - boot_mean)**2).sum(0) / (replicates)
+            var = ((jdata - boot_mean)**2).sum(0) / replicates
 
         return est, var
 
@@ -291,15 +317,8 @@ class SurveyStat(object):
         jdata = []
         # for each cluster
         for c in range(self.design.nclust):
-            # get stratum that the cluster belongs in
-            s = self.design.sfclust[c]
-            nh = self.design.ncs[s]
-            self.w = self.design.weights.copy()
-            # all weights within the stratum are modified
-            self.w[self.design.strat == s] *= nh / float(nh - 1)
-            # but if you're within the cluster to be removed, set as 0
-            self.w[self.design.sclust == c] = 0
-            # if dealing w/ survey quantile...
+            # get jackknife weights
+            self.w = self.design.get_rep_weights(c)
             if index is not None:
                 # 3d array, nclust x col x len(quantiles)
                 jdata.append(self._stat(self.w, index))
@@ -308,7 +327,6 @@ class SurveyStat(object):
         jdata = np.asarray(jdata)
         nh = self.design.ncs[self.design.sfclust].astype(np.float64)
         # pseudo = jdata + nh[:, None] * (np.dot(self.w, stat.data) - jdata)
-
         if index is not None:
             est = self._stat(self.design.weights, index)
         else:
@@ -323,12 +341,10 @@ class SurveyStat(object):
                 ii = np.flatnonzero(self.design.sfclust == s)
                 # center the 'delete 1' statistic
                 jdata[ii, :] -= jdata[ii, :].mean(0)
-        u = np.sqrt((nh - 1) / nh)
-        jdata = u[:, None] * jdata
+        mh = np.sqrt((nh - 1) / nh)
+        fh = np.sqrt(1 - self.design.fpc)
+        jdata = fh[:, None] * mh[:, None] * jdata
         vc = np.dot(jdata.T, jdata)
-
-
-        # if not working w/ percentile and est is []
 
         return est, np.sqrt(np.diag(vc))
 
@@ -359,14 +375,14 @@ class SurveyMean(SurveyStat):
     pseudo : ndarray
         The jackknife pseudo-values.
     """
-    def __init__(self, design, data, se_method, mse=False, replicates=None):
+    def __init__(self, design, data, mse=False, replicates=None, bsn=None):
         super().__init__(design, mse)
         self.data = np.asarray(data)
-        if se_method == "jack":
+        if self.design.se_method == "jack":
             self.est, self.vc = self.jack()
             # self.vc = np.sqrt(np.diag(self.vc))
-        elif se_method == "boot":
-            self.est, self.vc = self.bootstrap(replicates)
+        elif self.design.se_method == "boot":
+            self.est, self.vc = self.bootstrap(replicates, bsn)
             self.vc = np.sqrt(self.vc)
         else:
             raise ValueError("Method %s not supported" % se_method)
@@ -419,15 +435,15 @@ class SurveyTotal(SurveyStat):
     pseudo : ndarray
         The jackknife pseudo-values.
     """
-    def __init__(self, design, data, se_method,replicates=None, mse=False):
+    def __init__(self, design, data, replicates=None, mse=False, bsn=None):
         super().__init__(design, mse)
         self.data = np.asarray(data)
 
-        if se_method == "jack":
+        if self.design.se_method == "jack":
             self.est, self.vc = self.jack()
             # self.vc = np.sqrt(np.diag(self.vc))
-        elif se_method == "boot":
-            self.est, self.vc = self.bootstrap(replicates)
+        elif self.design.se_method == "boot":
+            self.est, self.vc = self.bootstrap(replicates, bsn)
             self.vc = np.sqrt(self.vc)
         else:
             raise ValueError("Method %s not supported" % se_method)
@@ -480,16 +496,14 @@ class SurveyQuantile(SurveyStat):
         The jackknife pseudo-values.
     """
 
-    def __init__(self, design, data, quantile, se_method, mse=False):
+    def __init__(self, design, data, quantile, se_method, mse=False, bsn=None):
         self.data = np.asarray(data)
         super().__init__(design, mse)
         self.quantile = np.asarray(quantile)
 
         # give warning if user entered in quantile bigger than one
-        large_q = np.asarray([x > 1 for x in self.quantile])
-        n = large_q.sum()
-        if n > 0:
-            print("warning:", n, "inputed quantile[s] > 1")
+        if (self.quantile.min() < 0 or self.quantile.max > 1):
+            raise ValueError("quantile[s] should be within [0, 1]")
         self.n_cw = len(self.design.weights)
 
         # get quantile[s] for each column
@@ -504,6 +518,7 @@ class SurveyQuantile(SurveyStat):
                 self.est[index], self.vc[index] = self.bootstrap(index)
         else:
             raise ValueError("method %s not supported" % se_method)
+
     def _stat(self, weights, col_index):
         quant_list = []
         cw = np.cumsum(weights)
@@ -536,3 +551,19 @@ class SurveyMedian(SurveyQuantile):
         self.est = sp.est
         self.vc = sp.vc
 
+
+
+strata = np.r_[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
+cluster = np.r_[0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4]
+weights = np.r_[1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1].astype(np.float64)
+fpc = np.r_[.5, .5, .5, .5, .5, .5, .1, .1, .1, .1, .1]
+data = np.asarray([[1, 3, 2, 5, 4, 1, 2, 3, 4, 6, 9],
+                   [5, 3, 2, 1, 4, 7, 8, 9, 5, 4, 3],
+                   [3, 2, 1, 5, 6, 7, 4, 2, 1, 6, 4]], dtype=np.float64).T
+from numpy.testing import (assert_almost_equal, assert_equal, assert_array_less,
+                           assert_raises, assert_allclose)
+
+
+design = SurveyDesign(strata, cluster, weights, fpc=fpc, se_method='jack')
+tot = SurveyTotal(design, data, mse=True)
+# quant = SurveyQuantile(design, data, [.1, .25, .33, .5, .75, .99], 'jack')
