@@ -541,6 +541,8 @@ class DiscreteMargins(object):
         _, const_idx = _get_const_index(model.exog)
         if const_idx is not None:
             exog_names.pop(const_idx[0])
+        if getattr(model, 'k_extra', 0) > 0:
+            exog_names = exog_names[:-model.k_extra]
 
         J = int(getattr(model, "J", 1))
         if J > 1:
@@ -661,6 +663,8 @@ class DiscreteMargins(object):
         params = results.params
         exog = model.exog.copy() # copy because values are changed
         effects_idx, const_idx =  _get_const_index(exog)
+        if hasattr(model, 'k_extra') and model.k_extra > 0:
+            effects_idx = np.concatenate((effects_idx, np.zeros(model.k_extra, np.bool_)))
 
         if dummy:
             _check_discrete_args(at, method)
