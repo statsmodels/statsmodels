@@ -6,6 +6,7 @@ import numpy as np
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 import statsmodels.regression.linear_model as lm
+from statsmodels.distributions import truncatedpoisson
 from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
                                                  Poisson, Logit, CountResults,
                                                  L1CountResults, Probit,
@@ -228,6 +229,42 @@ class GenericTruncated(CountModel):
         """
         return approx_hess(params, self.loglike)
 
+    def predict(self, params, exog=None, exposure=None, offset=None,
+                which='mean'):
+        """
+        Predict response variable of a count model given exogenous variables.
+        Notes
+        -----
+        If exposure is specified, then it will be logged by the method.
+        The user does not need to log it first.
+        """
+        if exog is None:
+            exog = self.exog
+        
+        if exposure is None:
+            exposure = getattr(self, 'exposure', 0)
+        elif exposure != 0:
+            exposure = np.log(exposure)
+
+        if offset is None:
+            offset = getattr(self, 'offset', 0)
+
+        fitted = np.dot(exog, params[:exog.shape[1]])
+        linpred = fitted + exposure + offset
+
+        if which == 'mean':
+            return np.exp(linpred) / (1 - np.exp(np.exp(-linpred)))
+        elif which == 'linear':
+            return linpred
+        elif which =='prob':
+            counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+            mu = self.predict(params, exog=exog, exposure=exposure,
+                              offset=offset)[:,None]
+            return self.model_dist.pmf(counts, mu, self.trunc)
+        else:
+            raise TypeError(
+                    "argument wich == %s not handled" % which)
+
 class TruncatedPoisson(GenericTruncated):
     """
     Poisson Zero Inflated model for count data
@@ -261,6 +298,7 @@ class TruncatedPoisson(GenericTruncated):
                                                missing=missing, **kwargs)
         self.model_main_name = Poisson
         self.model_main = Poisson(self.endog, self.exog)
+        self.model_dist = truncatedpoisson
         self.result = TruncatedPoissonResults
         self.result_wrapper = TruncatedPoissonResultsWrapper
         self.result_reg = L1TruncatedPoissonResults
@@ -306,3 +344,12 @@ wrap.populate_wrapper(L1TruncatedPoissonResultsWrapper,
 if __name__=="__main__":
     import numpy as np
     import statsmodels.api as sm
+
+    data = sm.datasets.randhie.load()
+    endog = data.endog
+    exog = sm.add_constant(data.exog[:,:4], prepend=False)
+    res1 = TruncatedPoisson(data.endog, exog, truncation=0).fit(maxiter=500)
+
+    print endog[endog > 0].mean()
+    print res1.predict().mean()
+        
