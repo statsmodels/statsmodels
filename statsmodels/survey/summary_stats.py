@@ -70,7 +70,7 @@ class SurveyDesign(object):
         self.rep_weights = rep_weights
 
         if self.rep_weights is None:
-            strata, cluster, self.weights,
+            strata, cluster, self.weights, \
             self.fpc = self._check_args(strata, cluster, weights, fpc)
 
             # Recode strata and clusters as integer values 0, 1, ...
