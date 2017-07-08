@@ -361,12 +361,12 @@ class TestVARResults(CheckIRF, CheckFEVD):
         for i, name in enumerate(self.names):
             variables = self.names[:i] + self.names[i + 1:]
             result = self.res.test_causality(name, variables, kind='f')
-            assert_almost_equal(result['pvalue'], causedby[i], DECIMAL_4)
+            assert_almost_equal(result.pvalue, causedby[i], DECIMAL_4)
 
             rng = lrange(self.k)
             rng.remove(i)
             result2 = self.res.test_causality(i, rng, kind='f')
-            assert_almost_equal(result['pvalue'], result2['pvalue'], DECIMAL_12)
+            assert_almost_equal(result.pvalue, result2.pvalue, DECIMAL_12)
 
             # make sure works
             result = self.res.test_causality(name, variables, kind='wald')

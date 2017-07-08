@@ -95,7 +95,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         self.switching_variance = switching_variance
 
         # Exogenous data
-        self.k_exog, exog = markov_switching._prepare_exog(exog)
+        self.k_exog, exog = markov_switching.prepare_exog(exog)
 
         # Trend
         nobs = len(endog)

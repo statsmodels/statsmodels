@@ -13,10 +13,6 @@ import pandas
 from statsmodels.imputation import ros
 from statsmodels.compat.python import StringIO
 
-if pandas.__version__.split('.')[1] <  '14':
-    __test__ = False
-
-
 @ntools.nottest
 def load_basic_data():
     raw_csv = StringIO(

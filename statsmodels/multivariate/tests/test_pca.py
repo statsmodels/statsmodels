@@ -19,7 +19,6 @@ except ImportError:
 
 from statsmodels.multivariate.pca import PCA
 from statsmodels.multivariate.tests.results.datamlw import data, princomp1, princomp2
-from statsmodels.compat.numpy import nanmean
 
 DECIMAL_5 = .00001
 WIN32 = os.name == 'nt' and sys.maxsize < 2**33
@@ -307,9 +306,9 @@ class TestPCA(TestCase):
 
         pc = PCA(x, ncomp=3, missing='fill-em')
         missing = np.isnan(x)
-        mu = nanmean(x, axis=0)
+        mu = np.nanmean(x, axis=0)
         errors = x - mu
-        sigma = np.sqrt(nanmean(errors ** 2, axis=0))
+        sigma = np.sqrt(np.nanmean(errors ** 2, axis=0))
         x_std = errors / sigma
         x_std[missing] = 0.0
         last = x_std[missing]

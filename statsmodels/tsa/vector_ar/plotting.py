@@ -48,7 +48,8 @@ def plot_mts(Y, names=None, index=None):
             ax.set_title(names[j])
 
 def plot_var_forc(prior, forc, err_upper, err_lower,
-                  index=None, names=None, plot_stderr=True):
+                  index=None, names=None, plot_stderr=True,
+                  legend_options=None):
     import matplotlib.pyplot as plt
 
     n, k = prior.shape
@@ -75,7 +76,10 @@ def plot_var_forc(prior, forc, err_upper, err_lower,
         if names is not None:
             ax.set_title(names[j])
 
-        ax.legend(loc='upper right')
+        if legend_options is None:
+            legend_options = {"loc": "upper right"}
+        ax.legend(**legend_options)
+    return fig
 
 def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
                     error_fmt='k--', alpha=0.05, stderr_type = 'asym'):

@@ -14,7 +14,7 @@ import numpy as np
 from .kalman_filter import (INVERT_UNIVARIATE, SOLVE_LU)
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
-    is_invertible,
+    is_invertible, prepare_exog,
     constrain_stationary_multivariate, unconstrain_stationary_multivariate
 )
 from statsmodels.tools.tools import Bunch
@@ -151,20 +151,7 @@ class VARMAX(MLEModel):
                  EstimationWarning)
 
         # Exogenous data
-        self.k_exog = 0
-        if exog is not None:
-            exog_is_using_pandas = _is_using_pandas(exog, None)
-            if not exog_is_using_pandas:
-                exog = np.asarray(exog)
-
-            # Make sure we have 2-dimensional array
-            if exog.ndim == 1:
-                if not exog_is_using_pandas:
-                    exog = exog[:, None]
-                else:
-                    exog = pd.DataFrame(exog)
-
-            self.k_exog = exog.shape[1]
+        (self.k_exog, exog) = prepare_exog(exog)
 
         # Note: at some point in the future might add state regression, as in
         # SARIMAX.

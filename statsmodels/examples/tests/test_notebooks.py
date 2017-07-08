@@ -12,7 +12,7 @@ try:
 except ImportError:
     raise SkipTest('Required packages not available')
 
-KNOWN_FAILURES = ['discrete_choice_example', 'distributed_estimation', 'robust_models_1']
+KNOWN_FAILURES = ['distributed_estimation']
 if os.name == 'nt':
     KNOWN_FAILURES += ['mixed_lm_example']
 
