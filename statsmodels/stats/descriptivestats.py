@@ -170,8 +170,7 @@ class Describe(object):
         elif number_like()==False and string_like()==True:
             return 'string'
         else:
-            assert (number_like()==True or string_like()==True), '\
-            Not sure of dtype'+str(self.dataset[col][0])
+            raise ValueError('Not sure of dtype'+str(self.dataset[col][0]))
 
     #@property
     def summary(self, stats='basic', columns='all', orientation='auto'):
