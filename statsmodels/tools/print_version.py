@@ -238,7 +238,7 @@ def show_versions(show_dirs=True):
     try:
         import joblib
         print("joblib: %s (%s)" % (safe_version(joblib),
-                                   dirname(info.__file__)))
+                                   dirname(joblib.__file__)))
     except ImportError:
         print("joblib: Not installed")
 
