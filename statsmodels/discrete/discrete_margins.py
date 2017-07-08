@@ -216,7 +216,8 @@ def _margeff_cov_params_dummy(model, cov_margins, params, exog, dummy_ind,
             K = dfdb.shape[1] // (J-1)
             cov_margins[i::K, :] = dfdb
         else:
-            cov_margins[i, :] = dfdb # how each F changes with change in B
+            # dfdb could be too short if there are extra params, k_extra > 0
+            cov_margins[i, :len(dfdb)] = dfdb # how each F changes with change in B
     return cov_margins
 
 def _margeff_cov_params_count(model, cov_margins, params, exog, count_ind,
@@ -247,7 +248,8 @@ def _margeff_cov_params_count(model, cov_margins, params, exog, count_ind,
             K = dfdb.shape[1] / (J-1)
             cov_margins[i::K, :] = dfdb
         else:
-            cov_margins[i, :] = dfdb # how each F changes with change in B
+            # dfdb could be too short if there are extra params, k_extra > 0
+            cov_margins[i, :len(dfdb)] = dfdb # how each F changes with change in B
     return cov_margins
 
 def margeff_cov_params(model, params, exog, cov_params, at, derivative,
@@ -678,6 +680,10 @@ class DiscreteMargins(object):
         else:
             count_idx = None
 
+        # attach dummy_idx and cout_idx
+        self.dummy_idx = dummy_idx
+        self.count_idx = count_idx
+
         # get the exogenous variables
         exog = _get_margeff_exog(exog, at, atexog, effects_idx)
 
@@ -714,6 +720,9 @@ class DiscreteMargins(object):
                 self.margeff_cov = margeff_cov[effects_idx][:, effects_idx]
             else:
                 # don't care about at constant
+                # hack truncate effects_idx again if necessary
+                # if eyex, then effects is truncated to be without extra params
+                effects_idx = effects_idx[:len(effects)]
                 self.margeff_cov = margeff_cov[effects_idx][:, effects_idx]
                 self.margeff_se = margeff_se[effects_idx]
                 self.margeff = effects[effects_idx]
