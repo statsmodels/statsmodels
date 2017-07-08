@@ -459,6 +459,9 @@ class DiscreteMargins(object):
                                   'Conf. Int. Low', 'Cont. Int. Hi.']
         ind = self.results.model.exog.var(0) != 0 # True if not a constant
         exog_names = self.results.model.exog_names
+        k_extra = getattr(model, 'k_extra', 0)
+        if k_extra > 0:
+            exog_names = exog_names[:-k_extra]
         var_names = [name for i,name in enumerate(exog_names) if ind[i]]
 
         if self.margeff.ndim == 2:
