@@ -166,7 +166,7 @@ def _var_acf(coefs, sig_u):
     return acf
 
 
-def mse(ma_coefs, sigma_u, steps):
+def forecast_cov(ma_coefs, sigma_u, steps):
     """
     Compute theoretical forecast error variance matrices
 
@@ -196,7 +196,7 @@ def mse(ma_coefs, sigma_u, steps):
     return forc_covs
 
 
-forecast_cov = mse
+mse = forecast_cov
 
 
 def forecast(y, coefs, trend_coefs, steps, exog=None):
