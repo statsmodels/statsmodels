@@ -9,7 +9,7 @@ from .results.results_discrete import RandHIE
 
 class TestTruncatedPoissonModel(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         endog = data.endog
         exog = sm.add_constant(data.exog[:,:4], prepend=False)
@@ -38,7 +38,7 @@ class TestTruncatedPoissonModel(object):
 
 class TestZeroTruncatedPoissonModel(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         endog = data.endog
         exog = sm.add_constant(data.exog[:,:4], prepend=False)

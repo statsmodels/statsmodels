@@ -47,9 +47,3 @@ truncatedpoisson = truncatedpoisson_gen(name='truncatedpoisson',
 if __name__=="__main__":
     import numpy as np
     import statsmodels.api as sm
-
-    print(poisson.pmf(1, 1))
-    print(truncatedpoisson.pmf(1, 1, 50))
-
-    print(poisson.logpmf(1, 1))
-    print(truncatedpoisson.logpmf(1, 1, 50))

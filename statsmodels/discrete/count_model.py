@@ -345,11 +345,4 @@ if __name__=="__main__":
     import numpy as np
     import statsmodels.api as sm
 
-    data = sm.datasets.randhie.load()
-    endog = data.endog
-    exog = sm.add_constant(data.exog[:,:4], prepend=False)
-    res1 = TruncatedPoisson(data.endog, exog, truncation=0).fit(maxiter=500)
-
-    print endog[endog > 0].mean()
-    print res1.predict().mean()
         
