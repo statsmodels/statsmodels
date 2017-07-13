@@ -38,11 +38,11 @@ class TestHoltWinters(object):
         
     def test_ndarray(self):
         fit1 = holt_winters(self.aust.values, h=4, m=4, trend='add', seasonal='mul')
-        assert_almost_equal(fit1.fcast, [61.3083,37.3730,46.9652,51.5578], 4)
+        assert_almost_equal(fit1.fcast, [61.3083,37.3730,46.9652,51.5578], 3)
         
     def test_pandas(self):
         fit1 = holt_winters(self.aust, h=4, m=4, trend='add', seasonal='add')
-        assert_almost_equal(fit1.fcast.values, [60.9542,36.8505,46.1628,50.1272], 4)
+        assert_almost_equal(fit1.fcast.values, [60.9542,36.8505,46.1628,50.1272], 3)
         
     def test_ses(self):
         fit1 = ses(self.oildata_oil,0.2,optimised=False)
