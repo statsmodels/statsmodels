@@ -11,7 +11,11 @@ import warnings
 
 from collections import namedtuple
 from scipy.stats import boxcox
-from scipy.special import inv_boxcox
+try:
+    from scipy.special import inv_boxcox
+except ImportError:
+    inv_boxcox = lambda x, lam6da: (x**lam6da-1)/lam6da if lam6da != 0 else np.log(x)
+    
 from scipy.spatial.distance import sqeuclidean
 from scipy.optimize import minimize, basinhopping, brute
 
