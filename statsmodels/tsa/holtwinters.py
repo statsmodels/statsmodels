@@ -370,7 +370,7 @@ def holt_winters(data, alpha=None, beta=None, gamma=None, m=None, h=1, trend=Non
         b[i:] = dampen(b[i],phi_h)
         fitted = trended(l,b)
     level = l[:i].copy()
-    if boxcoxed:
+    if boxcoxed or boxcoxed == 'log':
         fitted = inv_boxcox(fitted, lam6da)
         level = inv_boxcox(level, lam6da)
         slope = inv_boxcox(slope, lam6da)
