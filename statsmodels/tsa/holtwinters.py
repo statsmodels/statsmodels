@@ -325,9 +325,9 @@ def holt_winters(data, alpha=None, beta=None, gamma=None, m=None, h=1, trend=Non
     b[0] = b0
     s[:m] = s0
     phi_h = np.cumsum(np.repeat(phi,h)**np.arange(1,h+1)) if damped else np.arange(1,h+1)
-    trended = {'mul':np.multiply, 'add':np.add, False: lambda l,b: l}[trend]
-    detrend = {'mul':np.divide, 'add':np.subtract, False: lambda l,b: 0 }[trend]
-    dampen  = {'mul':np.power, 'add':np.multiply, False: lambda b,phi: 0}[trend]
+    trended = {'mul':np.multiply, 'add':np.add, None: lambda l,b: l}[trend]
+    detrend = {'mul':np.divide, 'add':np.subtract, None: lambda l,b: 0 }[trend]
+    dampen  = {'mul':np.power, 'add':np.multiply, None: lambda b,phi: 0}[trend]
     if seasonal=='mul':
         for i in range( 1, N+1):
             l[i] = y_alpha[i-1]/s[i-1] + (alphac * trended(l[i-1], dampen(b[i-1],phi) ) )
