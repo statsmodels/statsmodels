@@ -79,9 +79,13 @@ class TestHoltWinters(object):
         
     def test_hw_seasonal(self):
         fit1 = holt_winters(self.aust, h=8, m=4, trend='add', seasonal='add', boxcoxed=True)
-        fit2 = holt_winters(self.aust, h=8, m=4, trend='add', seasonal='mul', boxcoxed=True)        
+        fit2 = holt_winters(self.aust, h=8, m=4, trend='add', seasonal='mul', boxcoxed=True)
+        fit3 = holt_winters(self.aust, h=8, m=4, seasonal='add', boxcoxed=True)
+        fit4 = holt_winters(self.aust, h=8, m=4, seasonal='mul', boxcoxed=True)
         assert_almost_equal(fit1.fcast.values, [61.34,37.24,46.84,51.01,64.47,39.78,49.64,53.90], 2)
         assert_almost_equal(fit2.fcast.values, [60.97,36.99,46.71,51.48,64.46,39.02,49.29,54.32], 2)
+        assert_almost_equal(fit3.fcast.values, [59.91,35.71,44.64,47.62,59.91,35.71,44.64,47.62], 2)
+        assert_almost_equal(fit4.fcast.values, [60.71,35.70,44.63,47.55,60.71,35.70,44.63,47.55], 2)
     
     def test_raises(self):
         pass
