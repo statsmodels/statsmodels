@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Created on Wed Jul 12 09:35:35 2017
 
@@ -15,11 +13,10 @@ from scipy.stats import boxcox
 try:
     from scipy.special import inv_boxcox
 except ImportError:
-    inv_boxcox = lambda x, lamda: (x**lamda-1)/lamda if lamda != 0 else np.log(x)
+    inv_boxcox = lambda x, lmbda: np.exp(np.log1p(lmbda * x) / lmbda) if lmbda != 0 else np.exp(x)
     
 from scipy.spatial.distance import sqeuclidean
 from scipy.optimize import minimize, basinhopping, brute
-
 
 class HoltWintersResult(object):
     def __init__(self, **kwargs):
