@@ -15,7 +15,7 @@ from scipy.stats import boxcox
 try:
     from scipy.special import inv_boxcox
 except ImportError:
-    inv_boxcox = lambda x, lam6da: (x**lam6da-1)/lam6da if lam6da != 0 else np.log(x)
+    inv_boxcox = lambda x, lamda: (x**lamda-1)/lamda if lamda != 0 else np.log(x)
     
 from scipy.spatial.distance import sqeuclidean
 from scipy.optimize import minimize, basinhopping, brute
