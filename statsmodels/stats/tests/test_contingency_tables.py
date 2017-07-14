@@ -60,6 +60,21 @@ def test_SquareTable_from_data():
     assert_equal(rslt2.summary().as_text(),
                  rslt3.summary().as_text())
 
+    s = str(rslt1)
+    assert_equal(s.startswith('A 5x5 contingency table with counts:\n[[ 8.'), True)
+
+
+def test_SquareTable_nonsquare():
+
+    tab = [[1, 0, 3], [2, 1, 4], [3, 0, 5]]
+    df = pd.DataFrame(tab, index=[0, 1, 3], columns=[0, 2, 3])
+
+    df2 = ctab.SquareTable(df, shift_zeros=False)
+
+    e = np.asarray([[1, 0, 0, 3], [2, 0, 1, 4], [0, 0, 0, 0], [3, 0, 0, 5]],
+                   dtype=np.float64)
+
+    assert_equal(e, df2.table)
 
 
 def test_cumulative_odds():
@@ -197,6 +212,33 @@ def test_mcnemar():
     b4 = ctab.mcnemar(tables[0], exact=True)
     assert_allclose(b4.pvalue, r_results.loc[0, "homog_binom_p"])
 
+def test_from_data_stratified():
+
+    df = pd.DataFrame([[1, 1, 1, 0, 1, 0, 1, 0], [0, 1, 0, 1, 0, 1, 0, 0],
+                       [0, 0, 0, 0, 1, 1, 1, 1]]).T
+    e = np.asarray([[[0, 1], [1, 1]], [[2, 2], [1, 0]]])
+
+    # Test pandas
+    tab1 = ctab.StratifiedTable.from_data(0, 1, 2, df)
+    assert_equal(tab1.table, e)
+
+    # Test ndarray
+    tab1 = ctab.StratifiedTable.from_data(0, 1, 2, np.asarray(df))
+    assert_equal(tab1.table, e)
+
+def test_from_data_2x2():
+
+    df = pd.DataFrame([[1, 1, 1, 0, 1, 0, 1, 0], [0, 1, 0, 1, 0, 1, 0, 0]]).T
+    e = np.asarray([[1, 2], [4, 1]])
+
+    # Test pandas
+    tab1 = ctab.Table2x2.from_data(df, shift_zeros=False)
+    assert_equal(tab1.table, e)
+
+    # Test ndarray
+    tab1 = ctab.Table2x2.from_data(np.asarray(df), shift_zeros=False)
+    assert_equal(tab1.table, e)
+
 
 def test_cochranq():
     """
@@ -261,6 +303,8 @@ def test_cochranq():
     assert_allclose(b1.statistic, b2.statistic)
     assert_allclose(b1.pvalue, b2.pvalue)
 
+    # Test for printing bunch
+    assert_equal(str(b1).startswith("df          1\npvalue      0.65"), True)
 
 
 class CheckStratifiedMixin(object):
