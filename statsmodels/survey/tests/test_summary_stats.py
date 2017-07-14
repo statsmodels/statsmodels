@@ -20,50 +20,52 @@ def test_design():
     assert_equal(design.ncs, np.array([3, 2]))
     assert_equal(design.sfclust, np.array([0, 0, 0, 1, 1]))
     assert(len(np.unique(design.sclust)) == len(np.unique(cluster)))
+    # make sure get_rep_weights works
+    rep = [design.get_rep_weights(c=c) for c in range(design.nclust)]
 
 def test_mean_jack():
     avg_fpc = ss.SurveyMean(design_fpc, data)
     assert_allclose(avg_fpc.est, np.r_[3.625, 4.6875, 3.9375])
-    assert_allclose(avg_fpc.vc, np.r_[0.7907643, 1.05731, .8268258],  rtol=1e-5, atol=0)
+    assert_allclose(avg_fpc.std, np.r_[0.7907643, 1.05731, .8268258],  rtol=1e-5, atol=0)
 
     # avg_fpc_mse = ss.SurveyMean(design_fpc, data, 'jack', mse=True)
     # assert_allclose(avg_fpc_mse.est, np.r_[3.625, 4.6875, 3.9375])
-    # assert_allclose(avg_fpc_mse.vc, np.r_[0.7907643, 1.05731, .8268258],  rtol=1e-5, atol=0)
+    # assert_allclose(avg_fpc_mse.vcov, np.r_[0.7907643, 1.05731, .8268258],  rtol=1e-5, atol=0)
 
     avg = ss.SurveyMean(design, data)
     assert_allclose(avg.est, np.r_[3.625, 4.6875, 3.9375])
-    assert_allclose(avg.vc, np.r_[0.8652204, 1.223652, .9952406],  rtol=1e-5, atol=0)
+    assert_allclose(avg.std, np.r_[0.8652204, 1.223652, .9952406],  rtol=1e-5, atol=0)
 
     avg_mse = ss.SurveyMean(design, data, mse=True)
     assert_allclose(avg_mse.est, np.r_[3.625, 4.6875, 3.9375])
-    assert_allclose(avg_mse.vc, np.r_[.8666358, 1.225125, .9961644],  rtol=1e-5, atol=0)
+    assert_allclose(avg_mse.std, np.r_[.8666358, 1.225125, .9961644],  rtol=1e-5, atol=0)
 
 # def test_mean_boot():
 #     avg = ss.SurveyMean(design, data, 'boot')
 #     assert_allclose(avg.est, np.r_[0, 0])
-#     assert_allclose(avg.vc, np.r_[0, 0], rtol=1e-5, atol=0)
+#     assert_allclose(avg.vcov, np.r_[0, 0], rtol=1e-5, atol=0)
 
 def test_total_jack():
     tot_fpc = ss.SurveyTotal(design_fpc, data)
     assert_allclose(tot_fpc.est, np.r_[58, 75, 63])
-    assert_allclose(tot_fpc.vc, np.r_[9.402127, 20.82066, 10.51665],  rtol=1e-5, atol=0)
+    assert_allclose(tot_fpc.std, np.r_[9.402127, 20.82066, 10.51665],  rtol=1e-5, atol=0)
 
     # tot_fpc_mse = ss.SurveyMean(design_fpc, data, 'jack', mse=True)
     # assert_allclose(tot_fpc_mse.est, np.r_[3.625, 4.6875, 3.9375])
-    # assert_allclose(tot_fpc_mse.vc, np.r_[0.7907643, 1.05731, .8268258],  rtol=1e-5, atol=0)
+    # assert_allclose(tot_fpc_mse.vcov, np.r_[0.7907643, 1.05731, .8268258],  rtol=1e-5, atol=0)
 
     tot = ss.SurveyTotal(design, data)
     assert_allclose(tot.est, np.r_[58, 75, 63])
-    assert_allclose(tot.vc, np.r_[10.58301, 23.38803, 13.49074],  rtol=1e-5, atol=0)
+    assert_allclose(tot.std, np.r_[10.58301, 23.38803, 13.49074],  rtol=1e-5, atol=0)
 
     tot_mse = ss.SurveyTotal(design, data, mse=True)
     assert_allclose(tot_mse.est, np.r_[58, 75, 63])
-    assert_allclose(tot_mse.vc, np.r_[10.58301, 23.38803, 13.49074],  rtol=1e-5, atol=0)
+    assert_allclose(tot_mse.std, np.r_[10.58301, 23.38803, 13.49074],  rtol=1e-5, atol=0)
 
 # def test_total_boot():
 #     tot = ss.SurveyTotal(design, data, 'boot')
 #     assert_allclose(tot.est, np.r_[68, 85])
-#     assert_allclose(tot.vc, np.r_[19.79899, 15.71623],  rtol=1e-5, atol=0)
+#     assert_allclose(tot.vcov, np.r_[19.79899, 15.71623],  rtol=1e-5, atol=0)
 
 # def test_quantile_jack():
 #     quant = ss.SurveyQuantile(design, data, [.1, .25, .33, .5, .75, .99], 'jack')
