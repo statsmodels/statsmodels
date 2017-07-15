@@ -472,7 +472,7 @@ class TestMixedLM(object):
         # test the names
         assert_(mod1.data.xnames == ["x1", "x2", "x3", "x4"])
         assert_(mod1.data.exog_re_names == ["x_re1"])
-        assert_(mod1.data.exog_re_names_full == ["x_re1 RE"])
+        assert_(mod1.data.exog_re_names_full == ["x_re1 Var"])
         rslt1 = mod1.fit()
 
         # Fit with a formula, passing groups as the actual values.
@@ -487,7 +487,7 @@ class TestMixedLM(object):
 
         assert_(mod2.data.xnames == ["exog0", "exog1", "exog2", "exog3"])
         assert_(mod2.data.exog_re_names == ["exog_re"])
-        assert_(mod2.data.exog_re_names_full == ["exog_re RE"])
+        assert_(mod2.data.exog_re_names_full == ["exog_re Var"])
 
         rslt2 = mod2.fit()
         assert_almost_equal(rslt1.params, rslt2.params)
@@ -498,7 +498,7 @@ class TestMixedLM(object):
                                     groups="groups")
         assert_(mod3.data.xnames == ["exog0", "exog1", "exog2", "exog3"])
         assert_(mod3.data.exog_re_names == ["exog_re"])
-        assert_(mod3.data.exog_re_names_full == ["exog_re RE"])
+        assert_(mod3.data.exog_re_names_full == ["exog_re Var"])
 
         rslt3 = mod3.fit(start_params=rslt2.params)
         assert_allclose(rslt1.params, rslt3.params, rtol=1e-4)
@@ -514,7 +514,7 @@ class TestMixedLM(object):
         from statsmodels.formula.api import mixedlm
         mod5 = mixedlm(fml, df, groups="groups")
         assert_(mod5.data.exog_re_names == ["groups"])
-        assert_(mod5.data.exog_re_names_full == ["groups RE"])
+        assert_(mod5.data.exog_re_names_full == ["groups Var"])
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             rslt5 = mod5.fit()
@@ -652,9 +652,9 @@ def test_mixed_lm_wrapper():
     result.summary()
 
     xnames = ["exog0", "exog1", "exog2", "exog3"]
-    re_names = ["Intercept", "exog_re"]
-    re_names_full = ["Intercept RE", "Intercept RE x exog_re RE",
-                     "exog_re RE"]
+    re_names = ["Group", "exog_re"]
+    re_names_full = ["Group Var", "Group x exog_re Cov",
+                     "exog_re Var"]
 
     assert_(mod2.data.xnames == xnames)
     assert_(mod2.data.exog_re_names == re_names)
@@ -725,6 +725,63 @@ def test_random_effects():
     assert_(len(re) == ngrp)
     assert_(isinstance(re[0], pd.Series))
     assert_(len(re[0]) == 2)
+
+
+def test_handle_missing():
+
+    np.random.seed(23423)
+    df = np.random.normal(size=(100, 6))
+    df = pd.DataFrame(df)
+    df.columns = ["y", "g", "x1", "z1", "c1", "c2"]
+    df["g"] = np.kron(np.arange(50), np.ones(2))
+    re = np.random.normal(size=(50, 4))
+    re = np.kron(re, np.ones((2, 1)))
+    df["y"] = re[:, 0] + re[:, 1] * df.z1 + re[:, 2] * df.c1
+    df["y"] += re[:, 3] * df.c2 + np.random.normal(size=100)
+    df.loc[1, "y"] = np.NaN
+    df.loc[2, "g"] = np.NaN
+    df.loc[3, "x1"] = np.NaN
+    df.loc[4, "z1"] = np.NaN
+    df.loc[5, "c1"] = np.NaN
+    df.loc[6, "c2"] = np.NaN
+
+    fml = "y ~ x1"
+    re_formula = "1 + z1"
+    vc_formula = {"a": "0 + c1", "b": "0 + c2"}
+    for include_re in False, True:
+        for include_vc in False, True:
+            kwargs = {}
+            dx = df.copy()
+            va = ["y", "g", "x1"]
+            if include_re:
+                kwargs["re_formula"] = re_formula
+                va.append("z1")
+            if include_vc:
+                kwargs["vc_formula"] = vc_formula
+                va.extend(["c1", "c2"])
+
+            dx = dx[va].dropna()
+
+            # Some of these models are severely misspecified with
+            # small n, so produce convergence warnings.  Not relevant
+            # to what we are checking here.
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+
+                # Drop missing externally
+                model1 = MixedLM.from_formula(
+                    fml, groups="g", data=dx, **kwargs)
+                result1 = model1.fit()
+
+                # MixeLM handles missing
+                model2 = MixedLM.from_formula(
+                    fml, groups="g", data=df, missing='drop', **kwargs)
+                result2 = model2.fit()
+
+                assert_allclose(result1.params, result2.params)
+                assert_allclose(result1.bse, result2.bse)
+                assert_equal(len(result1.fittedvalues), result1.nobs)
+
 
 if __name__ == "__main__":
 
