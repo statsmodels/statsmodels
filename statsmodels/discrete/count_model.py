@@ -27,6 +27,9 @@ class GenericTruncated(CountModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
+    truncation : int, optional
+        Truncation parameter specify truncation point out of the support
+        of the distribution. pmf(k) = 0 for k <= truncation
     """ % {'params' : base._model_params_doc,
            'extra_params' :
            """offset : array_like
@@ -96,7 +99,7 @@ class GenericTruncated(CountModel):
         """
         llf_main = self.model_main.loglikeobs(params)
 
-        pmf = np.zeros_like(self.endog)
+        pmf = np.zeros_like(self.endog, dtype=np.float64)
         for i in range(self.trunc + 1):
             model = self.model_main_name(np.ones_like(self.endog) * i,
                                          self.exog)
@@ -123,8 +126,8 @@ class GenericTruncated(CountModel):
         """
         score_main = self.model_main.score_obs(params)
 
-        pmf = np.zeros_like(self.endog)
-        score_trunc = np.zeros_like(score_main)
+        pmf = np.zeros_like(self.endog, dtype=np.float64)
+        score_trunc = np.zeros_like(score_main, dtype=np.float64)
         for i in range(self.trunc + 1):
             model = self.model_main_name(np.ones_like(self.endog) * i,
                                          self.exog)
@@ -138,7 +141,7 @@ class GenericTruncated(CountModel):
 
     def score(self, params):
         """
-        Generalized Poisson model score (gradient) vector of the log-likelihood
+        Generic Truncated model score (gradient) vector of the log-likelihood
 
         Parameters
         ----------
@@ -230,8 +233,15 @@ class GenericTruncated(CountModel):
         return approx_hess(params, self.loglike)
 
     def predict(self, params, exog=None, exposure=None, offset=None,
-                which='mean'):
+                which='mean', count_prob=None):
         """
+        Paramaters
+        ----------
+        count_prob : array-like or int
+            The counts for which you want the probabilities. If count_prob is
+            None then the probabilities for each count from 0 to max(y) are
+            given.
+
         Predict response variable of a count model given exogenous variables.
         Notes
         -----
@@ -257,7 +267,10 @@ class GenericTruncated(CountModel):
         elif which == 'linear':
             return linpred
         elif which =='prob':
-            counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+            if count_prob is not None:
+                counts = np.atleast_2d(count_prob)
+            else:
+                counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
             mu = self.predict(params, exog=exog, exposure=exposure,
                               offset=offset)[:,None]
             return self.model_dist.pmf(counts, mu, self.trunc)
@@ -267,7 +280,7 @@ class GenericTruncated(CountModel):
 
 class TruncatedPoisson(GenericTruncated):
     """
-    Poisson Zero Inflated model for count data
+    Poisson Truncated model for count data
 
     %(params)s
     %(extra_params)s
@@ -344,5 +357,3 @@ wrap.populate_wrapper(L1TruncatedPoissonResultsWrapper,
 if __name__=="__main__":
     import numpy as np
     import statsmodels.api as sm
-
-        
