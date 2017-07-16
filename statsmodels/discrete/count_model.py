@@ -63,13 +63,6 @@ class GenericTruncated(CountModel):
         loglike : float
             The log-likelihood function of the model evaluated at `params`.
             See notes.
-
-        Notes
-        --------
-        .. math:: \\ln L=\\sum_{y_{i}=0}\\ln(w_{i}+(1-w_{i})*P_{main\\_model})+
-            \\sum_{y_{i}>0}(\\ln(1-w_{i})+L_{main\\_model})
-            where P - pdf of main model, L - loglike function of main model.
-
         """
         return np.sum(self.loglikeobs(params))
 
@@ -87,14 +80,6 @@ class GenericTruncated(CountModel):
         loglike : ndarray (nobs,)
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
-
-        Notes
-        --------
-        .. math:: \\ln L=\\ln(w_{i}+(1-w_{i})*P_{main\\_model})+
-            \\ln(1-w_{i})+L_{main\\_model}
-            where P - pdf of main model, L - loglike function of main model.
-
-        for observations :math:`i=1,...,n`
 
         """
         llf_main = self.model_main.loglikeobs(params)
@@ -291,8 +276,6 @@ class TruncatedPoisson(GenericTruncated):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    exog_infl: array
-        A reference to the zero-inflated exogenous design.
     """ % {'params' : base._model_params_doc,
            'extra_params' :
            """offset : array_like

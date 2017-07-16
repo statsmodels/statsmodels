@@ -31,7 +31,7 @@ class truncatedpoisson_gen(rv_discrete):
 
     def _logpmf(self, x, mu, truncation):
         pmf = 0
-        for i in range(truncation + 1):
+        for i in range(int(truncation) + 1):
             pmf += poisson.pmf(truncation, mu)
 
         return poisson.logpmf(x, mu) - np.log(1 - pmf)
