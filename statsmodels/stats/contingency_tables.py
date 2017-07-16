@@ -32,6 +32,10 @@ from scipy import stats
 import pandas as pd
 from statsmodels import iolib
 from statsmodels.tools.sm_exceptions import SingularMatrixWarning
+import statsmodels.stats.proportion as smprop
+from statsmodels.stats._random import (simulate_table_permutation_gen,
+                                       simulate_table_conditional,
+                                       check_random_state)
 
 
 def _make_df_square(table):
@@ -1392,3 +1396,108 @@ def cochrans_q(x, return_object=True):
         return b
 
     return q_stat, pvalue, df
+
+
+class Results(object):
+
+    def __init__(self, **kwds):
+        self.__dict__.update(kwds)
+        d = list(kwds.keys())
+        d.sort()
+        d0 = ['title', 'statistic', 'p_value']
+        self._keys = d0 + [i for i in d if not i in d0]
+
+
+    def __repr__(self):
+        return repr(self.__class__) + '\n' + self.__str__()
+
+
+    def __str__(self):
+        text = '\n'.join("%s = %s" % (k, getattr(self, k, np.nan))
+                         for k in self._keys)
+
+        return text
+
+
+def chisquare_contingency(table, n_repl=10000, seed=None, keep_res_mc=False):
+    """permutation independence test for 2-dimensional contingency table
+
+    The test statistic is Pearson's chisquare statistic and pvalue is
+    based on permutation, i.e. Monte Carlo conditional on the table margins.
+
+    Parameters
+    ----------
+    table : array_like, 2-D
+        two dimensional contingency table
+    n_repl : int
+        number of permutations for the computation of the p-value
+    seed : int or `np.random.RandomState`, optional
+        If `seed` is not specified the `np.RandomState` singleton is used.
+        If `seed` is an int, a new `np.random.RandomState` instance is used,
+        seeded with seed.
+        If `seed` is already a `np.random.RandomState instance`, then that
+        `np.random.RandomState` instance is used.
+
+    Returns
+    -------
+    res : results instance
+        - statistic : Pearson's chisquare test statistic
+        - p_value_chi2 : asymptotic p-value based on chi-square distribution
+        - p_value : p-value based on permutations
+        - confint_p_value : confidence interval for the `p_value` for the
+          permutation distribution
+        - table and other information
+
+    Notes
+    -----
+    Status: experimental, options and default might still change. If the implementation
+    is changed or improved, then the random sample generation might not be replicable.
+    """
+    table = np.asarray(table)
+    n_row = table.sum(1)
+    n_col = table.sum(0)
+    nobs = n_col.sum()
+    p_row = n_row / nobs
+    p_col = n_col / nobs
+    prob_ind = np.outer(p_row, p_col)
+    count_ind = prob_ind * nobs
+    chi2_stat = ((table - count_ind)**2 / count_ind).sum()
+    df = np.prod(np.asarray(table.shape) - 1)
+    pvalue_chi2 = stats.chi2.sf(chi2_stat, df)
+
+    if 0:
+        # this is slower than simple permutation generator
+        # (around 30 to 40% in simple example)
+        rng = check_random_state(seed)
+        #  see https://github.com/statsmodels/statsmodels/issues/306#issuecomment-289531822
+        res_mc = [((simulate_table_conditional(n_row, n_col, rng) - count_ind)**2
+                   / count_ind).sum()
+                  for _ in range(n_repl)]
+    else:
+        gen = simulate_table_permutation_gen(n_row, n_col, seed)
+        res_mc = [((next(gen) - count_ind)**2 / count_ind).sum()
+                  for _ in range(n_repl)]
+
+    res_mc = np.asarray(res_mc)
+    larger = (res_mc >= chi2_stat).mean()
+    midp = 0.5 * (res_mc == chi2_stat).mean() + (res_mc > chi2_stat).mean()
+
+    pvalue_confint = smprop.proportion_confint(larger * n_repl, n_repl,
+                                               method='beta')
+
+    extras = {}
+    if keep_res_mc:
+        extras = {'res_mc' : res_mc}
+    res = Results(table=table,
+                  statistic=chi2_stat,
+                  p_value_chi2=pvalue_chi2,
+                  p_value = larger,
+                  confint_p_value = pvalue_confint,
+                  p_value_midp = midp,
+                  nobs=nobs,
+                  n_repl=n_repl,
+                  title='Chisquare test for independence with permutation '
+                       'pvalue',
+                  **extras)
+
+    return res

@@ -569,3 +569,14 @@ class Test2x2_1(Check2x2Mixin):
                                   3.9984381579173824]
         self.log_riskratio_confint = [-1.3859038243496782,
                                       1.3859038243496782]
+
+
+def test_chi2_permutation():
+    t = [[0, 7, 0, 0, 0, 0, 0, 1, 1],[1, 1, 1, 1, 1, 1, 1,0,0],[0,8,0,0,0,0,0,0,0]]
+
+    np.random.seed(987456)
+    rr = ctab.chisquare_contingency(t)
+    # numbers 0.0013, 0.1342 from Agresti 1992
+    # A Survey of Exact Inference for Contingency p.148
+    assert_allclose(rr.p_value, 0.0013, atol=0.0005)
+    assert_allclose(rr.p_value_chi2, 0.1342, atol=0.00005)
