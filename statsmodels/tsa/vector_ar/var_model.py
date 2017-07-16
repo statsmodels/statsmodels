@@ -305,7 +305,7 @@ def forecast_interval(y, coefs, trend_coefs, sig_u, steps=5, alpha=0.05,
     q = util.norm_signif_level(alpha)
 
     point_forecast = forecast(y, coefs, trend_coefs, steps, exog)
-    ma_coefs = ma_rep(coefs, 10)
+    ma_coefs = ma_rep(coefs, steps)
     sigma = np.sqrt(_forecast_vars(steps, ma_coefs, sig_u))
 
     forc_lower = point_forecast - q * sigma
