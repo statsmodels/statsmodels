@@ -571,7 +571,9 @@ class ARMA(tsbase.TimeSeriesModel):
                                             approx_grad=True, m=12,
                                             pgtol=1e-7, factr=1e3,
                                             bounds=bounds, iprint=-1)
-            start_params = self._transparams(mlefit[0])
+            start_params = mlefit[0]
+            if self.transparams:
+                start_params = self._transparams(start_params)
         return start_params
 
     def score(self, params):
