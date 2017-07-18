@@ -424,7 +424,8 @@ class PoissonZeroInflated(GenericZeroInflated):
                                                   exog_infl=exog_infl,
                                                   exposure=exposure,
                                                   missing=missing, **kwargs)
-        self.model_main = Poisson(self.endog, self.exog)
+        self.model_main = Poisson(self.endog, self.exog, offset=offset,
+                                  exposure=exposure)
         self.distribution = zipoisson
         self.result = ZeroInflatedPoissonResults
         self.result_wrapper = ZeroInflatedPoissonResultsWrapper
