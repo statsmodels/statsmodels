@@ -1,24 +1,28 @@
 # -*- coding: utf-8 -*-
 """
 Created on Sat Sep 10 20:21:04 2016
-
 Bartlett Sphericity Test Function:
-
 - This test evaluates sampling adequacy for exploratory Factor Analysis
-
 Bartlett_Sphericity function has two inputs:
-
 - The Dataset (numerical or ordinal variables only)
 - The correlation method (spearman or pearson)
-
 It Outputs the test result, degrees of freedom and p-value
-
-
 @authors: Rui Sarmento
           Vera Costa
 """
 
 #Bartlett Sphericity Test
+#Exploratory factor analysis is only useful if the matrix of population 
+#correlation is statistically different from the identity matrix. 
+#If these are equal, the variables are few interrelated, i.e., the specific 
+#factors explain the greater proportion of the variance and the common factors
+#are unimportant. Therefore, it should be defined when the correlations 
+#between the original variables are sufficiently high. 
+#Thus, the factor analysis is useful in estimation of common factors. 
+#With this in mind, the Bartlett Sphericity test can be used. The hypotheses are:
+
+# H0: the matrix of population correlations is equal to the identity matrix
+# H1: the matrix of population correlations is different from the identity matrix.
 
 def bartlett_sphericity(dataset, corr_method="pearson"):
     
@@ -53,7 +57,7 @@ def bartlett_sphericity(dataset, corr_method="pearson"):
     Analysis, Biometrika, 38, 337-344.
     [2] R. Sarmento and V. Costa, (2016)
     "Comparative Approaches to Using R and Python for Statistical Data Analysis"
-    in press, Cybertech Publishing.
+    2017, IGI-Global.
     
     Examples
     --------
