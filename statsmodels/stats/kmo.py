@@ -22,6 +22,13 @@ import math as math
 import collections
 
 #KMO Test
+#KMO is a measure of the adequacy of sampling “Kaiser-Meyer-Olkin" and checks 
+#if it is possible to factorize the main variables efficiently.
+#The correlation matrix is always the starting point. The variables are more or
+#less correlated, but the others can influence the correlation between the two 
+#variables. Hence, with KMO, the partial correlation is used to measure the 
+#relation between two variables by removing the effect of the remaining variables.
+
 def kmo(dataset_corr):
     
     r"""
@@ -38,25 +45,26 @@ def kmo(dataset_corr):
        
         Ex:
         Out[30]: 
-        KMO_Test_Results(value=0.85649724257367099, per_variable=Q1     1.275049
-        Q2     1.250335
-        Q3     1.252462
-        Q4     1.255828
-        Q5     1.278402
-        Q6     1.263415
-        Q7     1.251248
-        Q8     1.260742
-        Q9     1.267690
-        Q10    1.256992
+        KMO_Test_Results(value=0.798844102413, 
+        per_variable=
+        Q1     0.812160468405
+        Q2     0.774161264483
+        Q3     0.786819432663
+        Q4     0.766251123086
+        Q5     0.800579196084
+        Q6     0.842927745203 
+        Q7     0.792010173432 
+        Q8     0.862037322891
+        Q9     0.714795031915 
+        Q10    0.856497242574
         dtype: float64)
     
     References
     ----------    
     [1] Kaiser, H. F. (1970). A second generation little jiffy. Psychometrika, 35(4), 401-415.
     [2] Kaiser, H. F. (1974). An index of factorial simplicity. Psychometrika, 39(1), 31-36.
-    [3] R. Sarmento and V. Costa, (2016)
-    "Comparative Approaches to Using R and Python for Statistical Data Analysis"
-    in press, Cybertech Publishing.
+    [3] R. Sarmento and V. Costa, (2017)
+    "Comparative Approaches to Using R and Python for Statistical Data Analysis", IGI-Global
     
     Examples
     --------
@@ -64,16 +72,18 @@ def kmo(dataset_corr):
     
     >>> kmo_test(survey_data.corr(method="spearman"))
          
-        KMO_Test_Results(value=0.85649724257367099, per_variable=Q1     1.275049
-        Q2     1.250335
-        Q3     1.252462
-        Q4     1.255828
-        Q5     1.278402
-        Q6     1.263415
-        Q7     1.251248
-        Q8     1.260742
-        Q9     1.267690
-        Q10    1.256992
+        KMO_Test_Results(value=0.798844102413, 
+        per_variable=
+        Q1     0.812160468405
+        Q2     0.774161264483
+        Q3     0.786819432663
+        Q4     0.766251123086
+        Q5     0.800579196084
+        Q6     0.842927745203 
+        Q7     0.792010173432 
+        Q8     0.862037322891
+        Q9     0.714795031915 
+        Q10    0.856497242574
         dtype: float64) 
 """
     
@@ -102,8 +112,8 @@ def kmo(dataset_corr):
     kmo_value = kmo_num / kmo_denom
     
     
-    kmo_j = [None] * dataset_corr.shape[1]
-    #KMO per variable
+    kmo_j = [None]*dataset_corr.shape[1]
+    #KMO per variable (diagonal of the spss anti-image matrix)
     for j in range(0, dataset_corr.shape[1]):
         kmo_j_num = np.sum(dataset_corr[:,[j]] ** 2) - dataset_corr[j,j] ** 2
         kmo_j_denom = kmo_j_num + np.sum(A[:,[j]] ** 2) - A[j,j] ** 2
