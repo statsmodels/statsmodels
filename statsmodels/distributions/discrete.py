@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.stats import rv_discrete
 from scipy.special import gammaln
+from scipy._lib._util import _lazywhere
 
 
 class genpoisson_p_gen(rv_discrete):
@@ -30,11 +31,10 @@ class zipoisson_gen(rv_discrete):
         return (mu > 0) & (w >= 0) & (w<=1)
 
     def _logpmf(self, x, mu, w):
-        if x == 0:
-            return np.log(w + (1. - w) * np.exp(-mu))
-        else:
-            return (np.log(1. - w) + x * np.log(mu) -
-                    gammaln(x + 1.) - mu)
+        return _lazywhere(x != 0, (x, mu, w),
+                          (lambda x, mu, w: np.log(1. - w) + x * np.log(mu) -
+                          gammaln(x + 1.) - mu),
+                          np.log(w + (1. - w) * np.exp(-mu)))
 
     def _pmf(self, x, mu, w):
         return np.exp(self._logpmf(x, mu, w))
