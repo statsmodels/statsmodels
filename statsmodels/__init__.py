@@ -5,7 +5,7 @@ from numpy import errstate
 from numpy.testing import Tester
 
 from warnings import simplefilter
-from .tools.sm_exceptions import (ConvergenceWarning, CacheWriteWarning,
+from statsmodels.tools.sm_exceptions import (ConvergenceWarning, CacheWriteWarning,
                                   IterationLimitWarning, InvalidTestWarning)
 
 
