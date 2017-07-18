@@ -63,6 +63,13 @@ class GenericTruncated(CountModel):
         loglike : float
             The log-likelihood function of the model evaluated at `params`.
             See notes.
+
+        Notes
+        --------
+        .. math:: \\ln L=\\sum_{y_{i}=0}\\ln(w_{i}+(1-w_{i})*P_{main\\_model})+
+            \\sum_{y_{i}>0}(\\ln(1-w_{i})+L_{main\\_model})
+            where P - pdf of main model, L - loglike function of main model.
+
         """
         return np.sum(self.loglikeobs(params))
 
@@ -80,6 +87,14 @@ class GenericTruncated(CountModel):
         loglike : ndarray (nobs,)
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
+
+        Notes
+        --------
+        .. math:: \\ln L=\\ln(w_{i}+(1-w_{i})*P_{main\\_model})+
+            \\ln(1-w_{i})+L_{main\\_model}
+            where P - pdf of main model, L - loglike function of main model.
+
+        for observations :math:`i=1,...,n`
 
         """
         llf_main = self.model_main.loglikeobs(params)
@@ -276,6 +291,8 @@ class TruncatedPoisson(GenericTruncated):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
+    exog_infl: array
+        A reference to the zero-inflated exogenous design.
     """ % {'params' : base._model_params_doc,
            'extra_params' :
            """offset : array_like
@@ -299,6 +316,101 @@ class TruncatedPoisson(GenericTruncated):
         self.result_wrapper = TruncatedPoissonResultsWrapper
         self.result_reg = L1TruncatedPoissonResults
         self.result_reg_wrapper = L1TruncatedPoissonResultsWrapper
+
+class GenericHurdle(CountModel):
+    __doc__ = """
+    Generic Hurdle model for count data
+
+    %(params)s
+    %(extra_params)s
+
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    """ % {'params' : base._model_params_doc,
+           'extra_params' :
+           """offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+
+    """ + base._missing_param_doc}
+
+    def __init__(self, endog, exog, offset=None,
+                 exposure=None, missing='none', **kwargs):
+        super(GenericHurdle, self).__init__(endog, exog, offset=offset,
+                                            exposure=exposure,
+                                            missing=missing, **kwargs)
+        self.model1 = self.model_name1(
+            np.zeros_like(self.endog, dtype=np.float64), self.exog)
+        self.model2 = self.model_name2(self.endog, self.exog)
+        
+    def loglikeobs(self, params):
+        """
+        Loglikelihood for observations of Generic Hurdle model
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model.
+
+        Returns
+        -------
+        loglike : ndarray (nobs,)
+            The log likelihood for each observation of the model evaluated
+            at `params`. See Notes
+
+        Notes
+        --------
+
+        for observations :math:`i=1,...,n`
+        """
+        llf = np.zeros_like(self.endog, dtype=np.float64)
+
+        llf1 = self.model1.loglikeobs(params)
+        llf2 = self.model2.loglikeobs(params)
+
+        y = self.endog
+        zero_idx = np.nonzero(y == 0)[0]
+        nonzero_idx = np.nonzero(y)[0]
+
+        llf[zero_idx] = llf1[zero_idx]
+        llf[nonzero_idx] = np.log(1 - np.exp(llf1[nonzero_idx])) + llf2
+
+        return llf
+
+    def loglike(self, params):
+        """
+        Loglikelihood of Generic Hurdle model
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model.
+
+        Returns
+        -------
+        loglike : float
+            The log-likelihood function of the model evaluated at `params`.
+            See notes.
+
+        Notes
+        --------
+        """
+        return np.sum(self.loglikeobs(params))
+
+    def score_obs(self, params):
+        return approx_fprime(params, self.loglikeobs)
+
+    def score(self, params):
+        return np.sum(self.score_obs(params), axis=0)
+
+    def hessian(self, params):
+        return approx_hess(params, self.loglike)
 
 class GenericTruncatedResults(CountResults):
     __doc__ = _discrete_results_docs % {
