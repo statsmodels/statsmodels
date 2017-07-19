@@ -404,7 +404,20 @@ class GenericHurdle(CountModel):
         return np.sum(self.loglikeobs(params))
 
     def score_obs(self, params):
-        return approx_fprime(params, self.loglikeobs)
+        llf1 = self.model1.loglikeobs(params)
+        score1 = self.model1.score_obs(params)
+        score2 = self.model2.score_obs(params)
+
+        y = self.endog
+        zero_idx = np.nonzero(y == 0)[0]
+        nonzero_idx = np.nonzero(y)[0]
+
+        score = np.zeros_like(self.exog, dtype=np.float64)
+        score[zero_idx,:] = score1[zero_idx,:]
+        score[nonzero_idx,:] = (score1[nonzero_idx,:].T * -np.exp(llf1[nonzero_idx]) /
+                                (1 - np.exp(llf1[nonzero_idx]))).T + score2
+
+        return score
 
     def score(self, params):
         return np.sum(self.score_obs(params), axis=0)
