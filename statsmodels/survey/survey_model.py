@@ -8,30 +8,43 @@ class SurveyModel(object):
         self.init_args = dict(init_args)
         self.fit_args = dict(fit_args)
 
-    def fit(self, y, X, replicates=None):
+    def _centering(self, array=None):
+        if self.center_by == 'est':
+            array -= self.params
+        elif self.center_by == 'global':
+            array -= array.mean(0)
+        elif self.center_by == 'stratum':
+            if self.design.rep_weights is None:
+                for s in range(self.design.nstrat):
+                    # center the 'delete 1' statistic
+                    array[self.design.ii[s], :] -= array[self.design.ii[s],
+                                                         :].mean(0)
+        else:
+            raise ValueError("Centering option not implemented")
+        return array
+
+    def fit(self, y, X, cov_method='jack', center_by='est', replicates=None):
+        self.center_by = center_by
         self.init_args["weights"] = self.design.weights
         self.params = self._get_params(y, X)
         if replicates is None:
-            try:
-                k = self.design.nclust
-            except AttributeError:
-                k = self.design.rep_weights.shape[1]
+            k = self.design.nclust
         else:
             k = replicates
-        self.replicate_params = []
+
+        replicate_params = []
         for c in range(k):
-            w = self.design.get_rep_weights(c=c)
+            w = self.design.get_rep_weights(cov_method=cov_method, c=c)
             self.init_args["weights"] = w
             print('weights', self.init_args['weights'])
-            model = self.model(y, X, **self.init_args)
-            self.replicate_params.append(self._get_params(y, X))
-        self.replicate_params = np.asarray(self.replicate_params)
-        print('new params', self.replicate_params)
+            replicate_params.append(self._get_params(y, X))
 
-        self.replicate_params -= self.params
+        replicate_params = np.asarray(replicate_params)
+        print('new params', replicate_params)
+        self.replicate_params = self._centering(replicate_params)
 
         # for now, just working with jackknife to see if it works
-        if self.design.cov_method == 'jack':
+        if cov_method == 'jack':
             try:
                 nh = self.design.clust_per_strat[self.design.strat_for_clust].astype(np.float64)
                 mh = np.sqrt((nh - 1) / nh)
@@ -48,3 +61,10 @@ class SurveyModel(object):
         result = model.fit(**self.fit_args)
         return result.params
 
+# import pandas as pd
+# df = pd.read_stata("/home/jarvis/Downloads/nhanes2.dta")
+# y = df["weight"]
+# X = df["height"]
+# design = SurveyDesign(strata=df["strata"], cluster=df["psu"], weights=df['weight'])
+# mod = SurveyModel(design, sm.WLS)
+# mod.fit(y, X)

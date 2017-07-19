@@ -45,13 +45,13 @@ class SurveyDesign(object):
     ----------
     weights : (n, ) array
         The weight for each observation
-    nstrat : integer
+    n_strat : integer
         The number of district strata
     sclust : (n, ) array
         The relabeled cluster array from 0, 1, ..
     strat : (n, ) array
         The related strata array from 0, 1, ...
-    clust_per_strat : (self.nstrat, ) array
+    clust_per_strat : (self.n_strat, ) array
         Holds the number of clusters in each stratum
     strat_for_clust : ndarray
         The stratum for each cluster
@@ -60,12 +60,8 @@ class SurveyDesign(object):
     """
 
     def __init__(self, strata=None, cluster=None, weights=None,
-                 rep_weights=None, fpc=None, cov_method='jack', nest=True):
-        # Ensure method for SE is supported
-        if cov_method not in ["boot", 'mean_boot', 'jack']:
-            raise ValueError("Method %s not supported" % cov_method)
-        else:
-            self.cov_method = cov_method
+                 rep_weights=None, fpc=None, nest=True):
+
 
         self.rep_weights = rep_weights
 
@@ -77,6 +73,7 @@ class SurveyDesign(object):
                 self.weights = np.ones(self.rep_weights.shape[0])
             else:
                 self.weights = weights
+            self.nclust = self.rep_weights.shape[1]
             return
 
         strata, cluster, self.weights, \
@@ -87,7 +84,7 @@ class SurveyDesign(object):
         _, clust = np.unique(cluster, return_inverse=True)
 
         # the number of distinct strata
-        self.nstrat = max(self.strat) + 1
+        self.n_strat = max(self.strat) + 1
 
         # If requested, recode the PSUs to be sure that the same PSU # in
         # different strata are treated as distinct PSUs. This is the same
@@ -114,7 +111,7 @@ class SurveyDesign(object):
 
         # get indices of all clusters within a stratum
         self.ii = []
-        for s in range(self.nstrat):
+        for s in range(self.n_strat):
             self.ii.append(np.flatnonzero(self.strat_for_clust == s))
 
     def __str__(self):
@@ -123,9 +120,8 @@ class SurveyDesign(object):
         """
         summary_list = ["Number of observations: ", str(len(self.strat)),
                         "Sum of weights: ", str(self.weights.sum()),
-                        "Number of strata: ", str(self.nstrat),
-                        "Number of clusters per stratum: ", str(self.clust_per_strat),
-                        "Method to compute SE: ", self.cov_method]
+                        "Number of strata: ", str(self.n_strat),
+                        "Number of clusters per stratum: ", str(self.clust_per_strat)]
 
         return "\n".join(summary_list)
 
@@ -178,7 +174,7 @@ class SurveyDesign(object):
 
         return vals[0], vals[1], vals[2], vals[3]
 
-    def get_rep_weights(self, c=None, bsn=None):
+    def get_rep_weights(self, cov_method, c=None, bsn=None):
         """
         Returns replicate weights if provided, else computes rep weights
         and returns them.
@@ -200,12 +196,16 @@ class SurveyDesign(object):
             was created, or calculated rep_weights from jackknife,
             bootstrap, or mean bootstrap
         """
+        # Ensure method for SE is supported
+        if cov_method not in ["boot", 'mean_boot', 'jack']:
+            raise ValueError("Method %s not supported" % cov_method)
+
         if self.rep_weights is not None:
             # should rep_weights be a list of arrays or a ndarray
             return self.rep_weights[:, c]
-        if self.cov_method == 'jack':
+        if cov_method == 'jack':
             return self._jackknife_rep_weights(c)
-        elif self.cov_method == 'boot':
+        elif cov_method == 'boot':
             return self._bootstrap_weights()
         else:
             return self._mean_bootstrap_weight(bsn)
@@ -246,7 +246,7 @@ class SurveyDesign(object):
         """
         w = self.weights.copy()
         clust_count = np.zeros(self.nclust)
-        for s in range(self.nstrat):
+        for s in range(self.n_strat):
             # how to handle strata w/ only one cluster?
             w[self.strat == s] *= float(self.clust_per_strat[s] - 1) \
                                          / self.clust_per_strat[s]
@@ -280,11 +280,11 @@ class SurveyDesign(object):
         w = self.weights.copy()
         # for each replicate, I accumulate bsn number of times?
         for b in range(bsn):
-            for s in range(self.nstrat):
+            for s in range(self.n_strat):
                 w[self.strat == s] *= ((float(self.clust_per_strat[s] - 1) /
                                         self.clust_per_strat[s])**(1/bsn))
                 # If there is only one or two clusters then weights wont change
-                if (self.clust_per_strat[s] == 1 or self.clust_per_strat[s] == 2):
+                if self.clust_per_strat[s] in (1, 2):
                     continue
                 # resample array of clusters in strata s
                 ii_resample = np.random.choice(self.ii[s], size=(self.clust_per_strat[s]-1))
@@ -317,11 +317,11 @@ class SurveyStat(object):
         The jackknife pseudo-values.
     """
 
-    def __init__(self, design, mse=False):
+    def __init__(self, design, center_by="stratum"):
         self.design = design
-        self.mse = mse
+        self.center_by = center_by
 
-    def _bootstrap(self, replicates=None, bsn=None):
+    def _bootstrap(self, n_reps=None, bsn=None):
         """
         Calculates bootstrap standard errors
 
@@ -329,7 +329,7 @@ class SurveyStat(object):
         ----------
         stat : object
             Object of class SurveyMean, SurveyTotal, SurveyPercentile, etc
-        replicates : integer
+        n_reps : integer
             The number of replicates that the user wishes to specify
 
         Returns
@@ -343,16 +343,21 @@ class SurveyStat(object):
         est = self._stat(self.design.weights)
 
         jdata = []
-        for i in range(replicates):
-            w = self.design.get_rep_weights(i, bsn=bsn)
+        for i in range(n_reps):
+            # does not support mean_boot, need to have cov_method as a parameter
+            # to specify between the two. But not sure if ppl even use mean_boot
+            w = self.design.get_rep_weights(i, cov_method='boot', bsn=bsn)
             jdata.append(self._stat(w))
         jdata = np.asarray(jdata)
-        if self.mse:
-            print("mse specified")
+        if self.center_by == 'est':
+            print("centering by est")
             jdata -= est
-        else:
+        elif self.center == "global":
+            print("centering by global mean")
             jdata -= jdata.mean(0)
-        self.vcov = np.dot(jdata.T, jdata) / replicates
+        else:
+            raise ValueError("For bootstrap, center by 'est' or 'global'")
+        self.vcov = np.dot(jdata.T, jdata) / n_reps
         if self.vcov.ndim == 2:
             self.stderr = np.sqrt(np.diag(self.vcov))
         else:
@@ -379,31 +384,33 @@ class SurveyStat(object):
         pseudo : ndarray
             The jackknife pseudo-values.
         """
+        if self.center_by != 'est' and self.design.rep_weights is not None:
+            raise ValueError("If providing replicate weights, center by est")
+
         est = self._stat(self.design.weights)
 
         jdata = []
-        try:
-            k = self.design.nclust
-        except AttributeError:
-            k = self.design.rep_weights.shape[1]
         # for each cluster
-        for c in range(k):
+        for c in range(self.design.nclust):
             # get jackknife weights
-            w = self.design.get_rep_weights(c=c)
+            w = self.design.get_rep_weights(c=c, cov_method='jack')
             jdata.append(self._stat(w))
         jdata = np.asarray(jdata)
-        if self.mse:
-            print('mse specified')
+        if self.center_by == 'est':
+            print('centering by estimate')
             jdata -= est
+        elif self.center_by == 'global':
+            print("centering by global mean")
+            jdata -= jdata.mean(0)
         else:
+            print("centering by stratum")
             if self.design.rep_weights is None:
-                for s in range(self.design.nstrat):
+                for s in range(self.design.n_strat):
                     # center the 'delete 1' statistic
                     jdata[self.design.ii[s], :] -= jdata[self.design.ii[s],
                                                          :].mean(0)
             else:
-                jdata -= jdata.mean(0)
-        print(jdata)
+                raise ValueError("Can not center by stratum when rep_weights given")
 
         if self.design.rep_weights is None:
             nh = self.design.clust_per_strat[self.design.strat_for_clust].astype(np.float64)
@@ -450,16 +457,15 @@ class SurveyMean(SurveyStat):
     pseudo : ndarray
         The jackknife pseudo-values.
     """
-    def __init__(self, design, data, mse=False, replicates=None, bsn=None):
-        super().__init__(design, mse)
-        if len(data.shape) == 2:
-            self.data = np.asarray(data)
-        else:
-            self.data = np.asarray(data.reshape(len(data),1))
-        if self.design.cov_method == "jack":
+    def __init__(self, design, data, cov_method='jack',center_by='global', n_reps=None, bsn=None):
+        super().__init__(design, center_by)
+        self.data = np.asarray(data)
+        if self.data.ndim == 1:
+            self.data = self.data[:, None]
+        if cov_method == "jack":
             self.est, self.vcov, self.stderr = self._jackknife()
         else:
-            self.est, self.vcov, self.stderr = self._bootstrap(replicates, bsn)
+            self.est, self.vcov, self.stderr = self._bootstrap(n_reps, bsn)
 
     def _stat(self, weights):
         """
@@ -507,25 +513,24 @@ class SurveyTotal(SurveyStat):
     pseudo : ndarray
         The jackknife pseudo-values.
     """
-    def __init__(self, design, data, replicates=None, mse=False, bsn=None):
-        super().__init__(design, mse)
-        if len(data.shape) == 2:
-            self.data = np.asarray(data)
-        else:
-            self.data = np.asarray(data.reshape(len(data),1))
-        if self.design.cov_method == "jack":
+    def __init__(self, design, data, cov_method='jack', n_reps=None, center_by='global', bsn=None):
+        super().__init__(design, center_by)
+        self.data = np.asarray(data)
+        if self.data.ndim == 1:
+            self.data = self.data[:, None]
+        if cov_method == "jack":
             self.est, self.vcov, self.stderr = self._jackknife()
         else:
-            self.est, self.vcov, self.stderr = self._bootstrap(replicates, bsn)
+            self.est, self.vcov, self.stderr = self._bootstrap(n_reps, bsn)
 
     def _stat(self, weights):
         """
-        Returns calculation of mean.
+        Returns calculation of total.
 
         Parameters
         ----------
         weights : np.array
-            The weights used to calculate the mean, will either be
+            The weights used to calculate the total, will either be
             original design weights or recalculated weights via jk,
             boot, etc
 
@@ -565,30 +570,29 @@ class SurveyQuantile(SurveyStat):
     pseudo : ndarray
         The jackknife pseudo-values.
     """
-    def __init__(self, design, data, quantile, replicates=None, mse=False,
-                 bsn=None):
-        if len(data.shape) == 2:
-            self.data = np.asarray(data)
-        else:
-            self.data = np.asarray(data.reshape(len(data),1))
+    def __init__(self, design, data, quantile, cov_method='jack', n_reps=None,
+        center_by='global', bsn=None):
+        self.data = np.asarray(data)
+        if self.data.ndim == 1:
+            self.data = self.data[:, None]
         super().__init__(design, mse)
         self.quantile = np.asarray(quantile)
 
         # give warning if user entered in quantile bigger than one
-        if (self.quantile.min() < 0 or self.quantile.max > 1):
+        if self.quantile.min() < 0 or self.quantile.max > 1:
             raise ValueError("quantile[s] should be within [0, 1]")
         self.n_cw = len(self.design.weights)
 
         # get quantile[s] for each column
-        self.est = [0] * self.data.shape[1]
+        self.est = np.empty(self.data.shape[1])
         # need to call this several times
-        self.std = [0] * self.data.shape[1]
-        if self.design.cov_method == "jack":
+        self.stderr = np.empty(self.data.shape[1])
+        if cov_method == "jack":
             for index in range(self.data.shape[1]):
-                self.est[index], self.std[index] = self._jackknife()
+                self.est[index], self.stderr[index] = self._jackknife()
         else:
             for index in range(self.data.shape[1]):
-                self.est[index], self.std[index] = self._bootstrap()
+                self.est[index], self.stderr[index] = self._bootstrap()
 
     def _stat(self, weights, col_index):
         quant_list = []
@@ -604,7 +608,7 @@ class SurveyQuantile(SurveyStat):
             if pos in np.array([self.n_cw - 1, self.n_cw]):
                 quant_list.append(sorted_data[-1])
                 continue
-            if (cw[pos] == q[i]):
+            if cw[pos] == q[i]:
                 quant_list.append((sorted_data[pos] + sorted_data[pos+1]) / 2)
             else:
                 quant_list.append(sorted_data[pos])
