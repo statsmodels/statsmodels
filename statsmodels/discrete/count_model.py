@@ -1,6 +1,6 @@
 from __future__ import division
 
-__all__ = ["TruncatedPoisson"]
+__all__ = ["TruncatedPoisson", "Hurdle"]
 
 import numpy as np
 import statsmodels.base.model as base
@@ -27,9 +27,6 @@ class GenericTruncated(CountModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    truncation : int, optional
-        Truncation parameter specify truncation point out of the support
-        of the distribution. pmf(k) = 0 for k <= truncation
     """ % {'params' : base._model_params_doc,
            'extra_params' :
            """offset : array_like
@@ -141,7 +138,7 @@ class GenericTruncated(CountModel):
 
     def score(self, params):
         """
-        Generic Truncated model score (gradient) vector of the log-likelihood
+        Generalized Poisson model score (gradient) vector of the log-likelihood
 
         Parameters
         ----------
@@ -233,15 +230,8 @@ class GenericTruncated(CountModel):
         return approx_hess(params, self.loglike)
 
     def predict(self, params, exog=None, exposure=None, offset=None,
-                which='mean', count_prob=None):
+                which='mean'):
         """
-        Paramaters
-        ----------
-        count_prob : array-like or int
-            The counts for which you want the probabilities. If count_prob is
-            None then the probabilities for each count from 0 to max(y) are
-            given.
-
         Predict response variable of a count model given exogenous variables.
         Notes
         -----
@@ -267,10 +257,7 @@ class GenericTruncated(CountModel):
         elif which == 'linear':
             return linpred
         elif which =='prob':
-            if count_prob is not None:
-                counts = np.atleast_2d(count_prob)
-            else:
-                counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+            counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
             mu = self.predict(params, exog=exog, exposure=exposure,
                               offset=offset)[:,None]
             return self.model_dist.pmf(counts, mu, self.trunc)
@@ -280,7 +267,7 @@ class GenericTruncated(CountModel):
 
 class TruncatedPoisson(GenericTruncated):
     """
-    Poisson Truncated model for count data
+    Poisson Zero Inflated model for count data
 
     %(params)s
     %(extra_params)s
@@ -351,7 +338,7 @@ class GenericHurdle(CountModel):
         
     def loglikeobs(self, params):
         """
-        Loglikelihood for observations of Generic Hurdle model
+        Loglikelihood for observations of Generic Truncated model
 
         Parameters
         ----------
@@ -385,7 +372,7 @@ class GenericHurdle(CountModel):
 
     def loglike(self, params):
         """
-        Loglikelihood of Generic Hurdle model
+        Loglikelihood of Generic Truncated model
 
         Parameters
         ----------
@@ -425,14 +412,77 @@ class GenericHurdle(CountModel):
     def hessian(self, params):
         return approx_hess(params, self.loglike)
 
+    def fit(self, start_params=None, method='bfgs', maxiter=35,
+            full_output=1, disp=1, callback=None,
+            cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
+        if start_params is None:
+            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+            if np.size(offset) == 1 and offset == 0:
+                offset = None
+            model = self.model_name2(self.endog, self.exog, offset=offset)
+            start_params = model.fit(disp=0).params
+        mlefit = super(GenericHurdle, self).fit(start_params=start_params,
+                       maxiter=maxiter, disp=disp,
+                       full_output=full_output, callback=lambda x:x,
+                       **kwargs)
+
+        zipfit = self.result(self, mlefit._results)
+        result = self.result_wrapper(zipfit)
+
+
+        if cov_kwds is None:
+            cov_kwds = {}
+
+        result._get_robustcov_results(cov_type=cov_type,
+                                      use_self=True, use_t=use_t, **cov_kwds)
+        return result
+
+class HurdlePoisson(GenericHurdle):
+    """
+    Poisson Hurdle model for count data
+
+    %(params)s
+    %(extra_params)s
+
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    exog_infl: array
+        A reference to the zero-inflated exogenous design.
+    """ % {'params' : base._model_params_doc,
+           'extra_params' :
+           """offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+
+    """ + base._missing_param_doc}   
+
+    def __init__(self, endog, exog, offset=None,
+                       exposure=None, missing='none', **kwargs):
+        self.model_name1 = Poisson
+        self.model_name2 = TruncatedPoisson
+        super(HurdlePoisson, self).__init__(endog, exog, offset=offset,
+                                            exposure=exposure,
+                                            missing=missing, **kwargs)
+        self.result = HurdlePoissonResults
+        self.result_wrapper = HurdlePoissonResultsWrapper
+        self.result_reg = L1HurdlePoissonResults
+        self.result_reg_wrapper = L1HurdlePoissonResultsWrapper
+
+
 class GenericTruncatedResults(CountResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Generic Zero Inflated",
+        "one_line_description" : "A results class for Generic Truncated",
                     "extra_attr" : ""}
 
 class TruncatedPoissonResults(GenericTruncatedResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Zero Inflated Poisson",
+        "one_line_description" : "A results class for Truncated Poisson",
                     "extra_attr" : ""}
 
 class L1GenericTruncatedResults(L1CountResults, GenericTruncatedResults):
@@ -460,6 +510,23 @@ class L1TruncatedPoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1TruncatedPoissonResultsWrapper,
                       L1TruncatedPoissonResults)
+
+class HurdlePoissonResults(CountResults):
+    __doc__ = _discrete_results_docs % {
+        "one_line_description" : "A results class for Hurdle",
+                    "extra_attr" : ""}
+
+class L1HurdlePoissonResults(L1CountResults, HurdlePoissonResults):
+    pass
+
+class HurdlePoissonResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(HurdlePoissonResultsWrapper,
+                      HurdlePoissonResults)
+class L1HurdlePoissonResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(L1HurdlePoissonResultsWrapper,
+                      L1HurdlePoissonResults)
 
 
 if __name__=="__main__":
