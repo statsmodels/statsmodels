@@ -9,7 +9,7 @@ from .results.results_discrete import RandHIE
 
 class TestZeroInflatedModel_logit(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         cls.endog = data.endog
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
@@ -38,13 +38,9 @@ class TestZeroInflatedModel_logit(object):
     def test_bic(self):
         assert_allclose(self.res1.aic, self.res2.aic, atol=1e-1, rtol=1e-1)
 
-    def test_mean(self):
-        assert_allclose(self.res1.predict().mean(), self.endog.mean(),
-                        atol=1e-2, rtol=1e-2)
-
 class TestZeroInflatedModel_probit(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         cls.endog = data.endog
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
@@ -75,7 +71,7 @@ class TestZeroInflatedModel_probit(object):
 
 class TestZeroInflatedModel_offset(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         cls.endog = data.endog
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
@@ -103,6 +99,28 @@ class TestZeroInflatedModel_offset(object):
 
     def test_bic(self):
         assert_allclose(self.res1.aic, self.res2.aic, atol=1e-1, rtol=1e-1)
+
+class TestZeroInflatedModel_predict(object):
+    @classmethod
+    def setup_class(cls):
+        expected_params = [1, 0.5]
+        np.random.seed(123)
+        nobs = 200
+        exog = np.ones((nobs, 2))
+        exog[:nobs//2, 1] = 2
+        mu_true = exog.dot(expected_params)
+        cls.endog = sm.distributions.zipoisson.rvs(mu_true, expected_params[-1])
+        model = sm.PoissonZeroInflated(cls.endog, exog, p=1)
+        cls.res = model.fit(method='newton', maxiter=5000, maxfun=5000)
+
+    def test_mean(self):
+        assert_allclose(self.res.predict().mean(), self.endog.mean(),
+                        atol=1e-2, rtol=1e-2)
+
+    def test_var(self):
+        assert_allclose((self.res.predict().mean() *
+                        self.res._dispersion_factor.mean()),
+                        self.endog.var(), atol=5e-2, rtol=5e-2)
 
 
 if __name__ == "__main__":

@@ -367,7 +367,6 @@ class GenericZeroInflated(CountModel):
             prob_poisson = 1 / (1 + np.exp(np.dot(exog_infl, params_infl)))
         elif self.infl == 'probit':
             raise NotImplemented('Predict for Probit inflation not implemented')
-            
 
         lin_pred = np.dot(exog, params_main) + exposure + offset
         prob_zero = ((1 - prob_poisson) +
@@ -470,6 +469,12 @@ class ZeroInflatedPoissonResults(GenericZeroInflatedResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description" : "A results class for Zero Inflated Poisson",
                     "extra_attr" : ""}
+
+    @cache_readonly
+    def _dispersion_factor(self):
+        mu = self.predict(which='linear')
+        w = 1 - self.predict() / np.exp(self.predict(which='linear'))
+        return (1 + w * np.exp(mu))
 
 class L1GenericZeroInflatedResults(L1CountResults, GenericZeroInflatedResults):
     pass
