@@ -27,6 +27,9 @@ class GenericTruncated(CountModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
+    truncation : int, optional
+        Truncation parameter specify truncation point out of the support
+        of the distribution. pmf(k) = 0 for k <= truncation
     """ % {'params' : base._model_params_doc,
            'extra_params' :
            """offset : array_like
@@ -63,9 +66,6 @@ class GenericTruncated(CountModel):
 
         Notes
         --------
-        .. math:: \\ln L=\\sum_{y_{i}=0}\\ln(w_{i}+(1-w_{i})*P_{main\\_model})+
-            \\sum_{y_{i}>0}(\\ln(1-w_{i})+L_{main\\_model})
-            where P - pdf of main model, L - loglike function of main model.
 
         """
         return np.sum(self.loglikeobs(params))
@@ -87,11 +87,6 @@ class GenericTruncated(CountModel):
 
         Notes
         --------
-        .. math:: \\ln L=\\ln(w_{i}+(1-w_{i})*P_{main\\_model})+
-            \\ln(1-w_{i})+L_{main\\_model}
-            where P - pdf of main model, L - loglike function of main model.
-
-        for observations :math:`i=1,...,n`
 
         """
         llf_main = self.model_main.loglikeobs(params)
@@ -138,7 +133,7 @@ class GenericTruncated(CountModel):
 
     def score(self, params):
         """
-        Generalized Poisson model score (gradient) vector of the log-likelihood
+        Generic Truncated model score (gradient) vector of the log-likelihood
 
         Parameters
         ----------
@@ -230,8 +225,15 @@ class GenericTruncated(CountModel):
         return approx_hess(params, self.loglike)
 
     def predict(self, params, exog=None, exposure=None, offset=None,
-                which='mean'):
+                which='mean', count_prob=None):
         """
+        Paramaters
+        ----------
+        count_prob : array-like or int
+            The counts for which you want the probabilities. If count_prob is
+            None then the probabilities for each count from 0 to max(y) are
+            given.
+
         Predict response variable of a count model given exogenous variables.
         Notes
         -----
@@ -257,7 +259,10 @@ class GenericTruncated(CountModel):
         elif which == 'linear':
             return linpred
         elif which =='prob':
-            counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+            if count_prob is not None:
+                counts = np.atleast_2d(count_prob)
+            else:
+                counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
             mu = self.predict(params, exog=exog, exposure=exposure,
                               offset=offset)[:,None]
             return self.model_dist.pmf(counts, mu, self.trunc)
@@ -267,7 +272,7 @@ class GenericTruncated(CountModel):
 
 class TruncatedPoisson(GenericTruncated):
     """
-    Poisson Zero Inflated model for count data
+    Poisson Truncated model for count data
 
     %(params)s
     %(extra_params)s
@@ -278,8 +283,6 @@ class TruncatedPoisson(GenericTruncated):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    exog_infl: array
-        A reference to the zero-inflated exogenous design.
     """ % {'params' : base._model_params_doc,
            'extra_params' :
            """offset : array_like
@@ -338,7 +341,7 @@ class GenericHurdle(CountModel):
         
     def loglikeobs(self, params):
         """
-        Loglikelihood for observations of Generic Truncated model
+        Loglikelihood for observations of Generic Hurdle model
 
         Parameters
         ----------
@@ -372,7 +375,7 @@ class GenericHurdle(CountModel):
 
     def loglike(self, params):
         """
-        Loglikelihood of Generic Truncated model
+        Loglikelihood of Generic Hurdle model
 
         Parameters
         ----------
@@ -450,8 +453,6 @@ class HurdlePoisson(GenericHurdle):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    exog_infl: array
-        A reference to the zero-inflated exogenous design.
     """ % {'params' : base._model_params_doc,
            'extra_params' :
            """offset : array_like
@@ -473,7 +474,6 @@ class HurdlePoisson(GenericHurdle):
         self.result_wrapper = HurdlePoissonResultsWrapper
         self.result_reg = L1HurdlePoissonResults
         self.result_reg_wrapper = L1HurdlePoissonResultsWrapper
-
 
 class GenericTruncatedResults(CountResults):
     __doc__ = _discrete_results_docs % {
@@ -527,7 +527,6 @@ class L1HurdlePoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1HurdlePoissonResultsWrapper,
                       L1HurdlePoissonResults)
-
 
 if __name__=="__main__":
     import numpy as np

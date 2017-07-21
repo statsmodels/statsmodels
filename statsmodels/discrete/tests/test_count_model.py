@@ -33,7 +33,7 @@ class TestTruncatedPoissonModel(object):
     def test_aic(self):
         assert_allclose(self.res1.aic, self.res2.aic, atol=1e-2, rtol=1e-2)
 
-    def test_aic(self):
+    def test_bic(self):
         assert_allclose(self.res1.bic, self.res2.bic, atol=1e-2, rtol=1e-2)
 
 class TestZeroTruncatedPoissonModel(object):
@@ -62,7 +62,34 @@ class TestZeroTruncatedPoissonModel(object):
     def test_aic(self):
         assert_allclose(self.res1.aic, self.res2.aic, atol=1e-2, rtol=1e-2)
 
+    def test_bic(self):
+        assert_allclose(self.res1.bic, self.res2.bic, atol=1e-2, rtol=1e-2)
+
+class TestHurdle(object):
+    @classmethod
+    def setup_class(cls):
+        data = sm.datasets.randhie.load()
+        endog = data.endog
+        exog = sm.add_constant(data.exog[:,:4], prepend=False)
+        cls.res1 = sm.HurdlePoisson(endog, exog).fit(maxiter=500)
+        cls.res2 = sm.Poisson(endog, exog).fit()
+
+    def test_params(self):
+        assert_allclose(self.res1.params, self.res2.params, atol=1e-5, rtol=1e-5)
+
+    def test_llf(self):
+        assert_allclose(self.res1.llf, self.res2.llf, atol=1e-5, rtol=1e-5)
+
+    def test_conf_int(self):
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int(), atol=1e-3, rtol=1e-5)
+
+    def test_bse(self):
+        assert_allclose(self.res1.bse, self.res2.bse, atol=1e-3)
+
     def test_aic(self):
+        assert_allclose(self.res1.aic, self.res2.aic, atol=1e-2, rtol=1e-2)
+
+    def test_bic(self):
         assert_allclose(self.res1.bic, self.res2.bic, atol=1e-2, rtol=1e-2)
 
 
