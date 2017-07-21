@@ -38,6 +38,16 @@ class TestZeroInflatedModel_logit(object):
     def test_bic(self):
         assert_allclose(self.res1.aic, self.res2.aic, atol=1e-1, rtol=1e-1)
 
+    def test_fit_regularized(self):
+        model = self.res1.model
+
+        alpha = np.ones(len(self.res1.params))
+        alpha[-2:] = 0
+        res_reg = model.fit_regularized(alpha=alpha*0.01, disp=0)
+
+        assert_allclose(res_reg.params, self.res1.params, atol=5e-5)
+        assert_allclose(res_reg.bse, self.res1.bse, atol=5e-5)
+
 class TestZeroInflatedModel_probit(object):
     @classmethod
     def setup_class(cls):

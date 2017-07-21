@@ -176,6 +176,12 @@ class GenericZeroInflated(CountModel):
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
+
+        if np.size(alpha) == 1 and alpha != 0:
+            k_params = self.k_exog + self.k_inflate
+            alpha = alpha * np.ones(k_params)
+
+        alpha_p = alpha[:-self.k_extra] if (self.k_extra and np.size(alpha) > 1) else alpha
         if start_params is None:
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
@@ -186,7 +192,7 @@ class GenericZeroInflated(CountModel):
                 full_output=full_output, disp=0, callback=callback,
                 alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
-            start_params = np.append(start_params, 0.1)
+            start_params = np.append(np.zeros(self.k_inflate), start_params)
         cntfit = super(CountModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=disp, callback=callback,
