@@ -338,6 +338,8 @@ class GenericHurdle(CountModel):
         self.model1 = self.model_name1(
             np.zeros_like(self.endog, dtype=np.float64), self.exog)
         self.model2 = self.model_name2(self.endog, self.exog)
+        self.zero_idx = np.nonzero(self.endog == 0)[0]
+        self.nonzero_idx = np.nonzero(self.endog)[0]
         
     def loglikeobs(self, params):
         """
@@ -364,12 +366,9 @@ class GenericHurdle(CountModel):
         llf1 = self.model1.loglikeobs(params)
         llf2 = self.model2.loglikeobs(params)
 
-        y = self.endog
-        zero_idx = np.nonzero(y == 0)[0]
-        nonzero_idx = np.nonzero(y)[0]
-
-        llf[zero_idx] = llf1[zero_idx]
-        llf[nonzero_idx] = np.log(1 - np.exp(llf1[nonzero_idx])) + llf2
+        llf[self.zero_idx] = llf1[self.zero_idx]
+        llf[self.nonzero_idx] = (np.log(1 -
+            np.exp(llf1[self.nonzero_idx])) + llf2)
 
         return llf
 
@@ -398,14 +397,11 @@ class GenericHurdle(CountModel):
         score1 = self.model1.score_obs(params)
         score2 = self.model2.score_obs(params)
 
-        y = self.endog
-        zero_idx = np.nonzero(y == 0)[0]
-        nonzero_idx = np.nonzero(y)[0]
-
         score = np.zeros_like(self.exog, dtype=np.float64)
-        score[zero_idx,:] = score1[zero_idx,:]
-        score[nonzero_idx,:] = (score1[nonzero_idx,:].T * -np.exp(llf1[nonzero_idx]) /
-                                (1 - np.exp(llf1[nonzero_idx]))).T + score2
+        score[self.zero_idx,:] = score1[self.zero_idx,:]
+        score[self.nonzero_idx,:] = ((score1[self.nonzero_idx,:].T *
+            -np.exp(llf1[self.nonzero_idx]) /
+            (1 - np.exp(llf1[self.nonzero_idx]))).T + score2)
 
         return score
 
