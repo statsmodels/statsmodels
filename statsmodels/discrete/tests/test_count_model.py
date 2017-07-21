@@ -109,9 +109,10 @@ class TestZeroInflatedModel_predict(object):
         exog = np.ones((nobs, 2))
         exog[:nobs//2, 1] = 2
         mu_true = exog.dot(expected_params)
-        cls.endog = sm.distributions.zipoisson.rvs(mu_true, expected_params[-1])
+        cls.endog = sm.distributions.zipoisson.rvs(mu_true, expected_params[-1],
+                                                   size=mu_true.shape)
         model = sm.PoissonZeroInflated(cls.endog, exog, p=1)
-        cls.res = model.fit(method='newton', maxiter=5000, maxfun=5000)
+        cls.res = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
 
     def test_mean(self):
         assert_allclose(self.res.predict().mean(), self.endog.mean(),
