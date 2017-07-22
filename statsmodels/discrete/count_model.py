@@ -276,6 +276,44 @@ class GenericTruncated(CountModel):
             raise TypeError(
                     "argument wich == %s not handled" % which)
 
+class Truncated(GenericTruncated):
+    """
+    Truncated model for count data
+
+    %(params)s
+    %(extra_params)s
+
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    """ % {'params' : base._model_params_doc,
+           'extra_params' :
+           """offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+
+    """ + base._missing_param_doc}
+
+    def __init__(self, endog, exog, model=Poisson,
+                 distribution=truncatedpoisson, offset=None,
+                 exposure=None, truncation=0, missing='none', **kwargs):
+        super(Truncated, self).__init__(endog, exog, offset=offset,
+                                               exposure=exposure,
+                                               truncation=truncation,
+                                               missing=missing, **kwargs)
+        self.model_main_name = model
+        self.model_main = model(self.endog, self.exog)
+        self.model_dist = distribution
+        self.result = GenericTruncatedResults
+        self.result_wrapper = GenericTruncatedResultsWrapper
+        self.result_reg = L1GenericTruncatedResults
+        self.result_reg_wrapper = L1GenericTruncatedResultsWrapper   
+
 class TruncatedPoisson(GenericTruncated):
     """
     Poisson Truncated model for count data
@@ -343,7 +381,7 @@ class GenericHurdle(CountModel):
                                             missing=missing, **kwargs)
         self.model1 = self.model_name1(
             np.zeros_like(self.endog, dtype=np.float64), self.exog)
-        self.model2 = self.model_name2(self.endog, self.exog)
+        self.model2 = Truncated(self.endog, self.exog, model=self.model_name2)
         self.zero_idx = np.nonzero(self.endog == 0)[0]
         self.nonzero_idx = np.nonzero(self.endog)[0]
         
@@ -478,7 +516,7 @@ class GenericHurdle(CountModel):
 
 class HurdlePoisson(GenericHurdle):
     """
-    Poisson Hurdle model for count data
+    Poisson Poisson Hurdle model for count data
 
     %(params)s
     %(extra_params)s
@@ -502,7 +540,7 @@ class HurdlePoisson(GenericHurdle):
     def __init__(self, endog, exog, offset=None,
                        exposure=None, missing='none', **kwargs):
         self.model_name1 = Poisson
-        self.model_name2 = TruncatedPoisson
+        self.model_name2 = Poisson
         super(HurdlePoisson, self).__init__(endog, exog, offset=offset,
                                             exposure=exposure,
                                             missing=missing, **kwargs)
