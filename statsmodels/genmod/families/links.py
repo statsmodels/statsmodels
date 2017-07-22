@@ -861,7 +861,7 @@ class ILR(Link):
         -----
         g(p) = ilr(p)
         """
-        from statsmodels.compositional import ilr, ilr_inv
+        from statsmodels.compositional import ilr
         x = self._clean(p)
         return ilr(x, basis)
 
@@ -883,6 +883,7 @@ class ILR(Link):
         -----
         g^{-1}(z) = exp(z)
         """
+        from statsmodels.compositional import ilr_inv
         return ilr_inv(z)
 
     def deriv(self, p):
@@ -903,11 +904,12 @@ class ILR(Link):
         -----
 
         .. math::
-            g'(x) = - \sqrt{\frac{i}{i+1}} \frac{1}{x}
+            g'(x)_i = - \sqrt{\frac{i}{i+1}} \frac{1}{x_i}
 
         """
         p = self._clean(p)
-        return (-1/x) * np.sqrt(i / (i+1))
+        coefs = [np.sqrt(i / (i+1)) for i in range(p)]
+        return np.dot(coefs, (-1/p))
 
 
 class NegativeBinomial(Link):
