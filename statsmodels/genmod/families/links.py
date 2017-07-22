@@ -830,6 +830,86 @@ class cloglog(CLogLog):
     pass
 
 
+class ILR(Link):
+    """
+    The ilr transform
+
+    Notes
+    -----
+    call and derivative call a private method _clean to trim the data by
+    machine epsilon so that p is in (0,1). log is an alias of Log.
+    """
+
+    def _clean(self, x):
+        return np.clip(x, FLOAT_EPS, 1-FLOAT_EPS)
+
+    def __call__(self, p, basis=None):
+        """
+        ILR transform link function
+
+        Parameters
+        ----------
+        x : array-like
+           Mean parameters
+
+        Returns
+        -------
+        z : array
+           ilr(x)
+
+        Notes
+        -----
+        g(p) = ilr(p)
+        """
+        from statsmodels.compositional import ilr, ilr_inv
+        x = self._clean(p)
+        return ilr(x, basis)
+
+    def inverse(self, z):
+        """
+        Inverse of log transform link function
+
+        Parameters
+        ----------
+        z : array
+            The inverse of the link function at `p`
+
+        Returns
+        -------
+        p : array
+            The mean probabilities given the value of the inverse `z`
+
+        Notes
+        -----
+        g^{-1}(z) = exp(z)
+        """
+        return ilr_inv(z)
+
+    def deriv(self, p):
+        """
+        Derivative of log transform link function
+
+        Parameters
+        ----------
+        p : array-like
+            Mean parameters
+
+        Returns
+        -------
+        g'(p) : array
+            derivative of log transform of x
+
+        Notes
+        -----
+
+        .. math::
+            g'(x) = - \sqrt{\frac{i}{i+1}} \frac{1}{x}
+
+        """
+        p = self._clean(p)
+        return (-1/x) * np.sqrt(i / (i+1))
+
+
 class NegativeBinomial(Link):
     '''
     The negative binomial link function
