@@ -178,6 +178,12 @@ class GenericTruncated(CountModel):
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
+
+        if np.size(alpha) == 1 and alpha != 0:
+            k_params = self.exog.shape[1]
+            alpha = alpha * np.ones(k_params)
+
+        alpha_p = alpha
         if start_params is None:
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
@@ -435,6 +441,40 @@ class GenericHurdle(CountModel):
         result._get_robustcov_results(cov_type=cov_type,
                                       use_self=True, use_t=use_t, **cov_kwds)
         return result
+
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+
+        if np.size(alpha) == 1 and alpha != 0:
+            k_params = self.exog.shape[1]
+            alpha = alpha * np.ones(k_params)
+
+        alpha_p = alpha
+        if start_params is None:
+            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+            if np.size(offset) == 1 and offset == 0:
+                offset = None
+            model = self.model_name1(self.endog, self.exog, offset=offset)
+            start_params = model.fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=0, callback=callback,
+                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
+        cntfit = super(CountModel, self).fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+
+        if method in ['l1', 'l1_cvxopt_cp']:
+            discretefit = self.result_reg(self, cntfit)
+        else:
+            raise TypeError(
+                    "argument method == %s, which is not handled" % method)
+
+        return self.result_reg_wrapper(discretefit)
 
 class HurdlePoisson(GenericHurdle):
     """
