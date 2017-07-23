@@ -1,5 +1,5 @@
+from __future__ import division
 import numpy as np
-
 class SurveyModel(object):
 
     def __init__(self, design, model_class, init_args={}, fit_args={}):
@@ -28,7 +28,7 @@ class SurveyModel(object):
         self.init_args["weights"] = self.design.weights
         self.params = self._get_params(y, X)
         if replicates is None:
-            k = self.design.nclust
+            k = self.design.n_clust
         else:
             k = replicates
 
@@ -61,10 +61,3 @@ class SurveyModel(object):
         result = model.fit(**self.fit_args)
         return result.params
 
-# import pandas as pd
-# df = pd.read_stata("/home/jarvis/Downloads/nhanes2.dta")
-# y = df["weight"]
-# X = df["height"]
-# design = SurveyDesign(strata=df["strata"], cluster=df["psu"], weights=df['weight'])
-# mod = SurveyModel(design, sm.WLS)
-# mod.fit(y, X)
