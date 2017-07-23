@@ -1,3 +1,4 @@
+from __future__ import division
 import summary_stats as ss
 import statsmodels.api as sm
 import survey_model as smod
