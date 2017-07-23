@@ -15,11 +15,23 @@ Unknown
 Hubert W. Lilliefors
 Journal of the American Statistical Association, Vol. 62, No. 318. (Jun., 1967), pp. 399-402.
 
+
+---
+
+Updated 2017-07-23
+Jacob C. Kimmel
+
+Ref:
+Lilliefors, H.W.
+On the Kolmogorov-Smirnov test for the exponential distribution with mean unknown.
+Journal of the American Statistical Association, Vol 64, No. 325. (1969), pp. 387–389.
 """
 from statsmodels.compat.python import string_types
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy import stats
+from .tabledist import TableDist
+
 
 def ksstat(x, cdf, alternative='two_sided', args=()):
     """
@@ -87,55 +99,107 @@ def ksstat(x, cdf, alternative='two_sided', args=()):
             return Dmin
 
     D = np.max([Dplus,Dmin])
+
     return D
 
 
 #new version with tabledist
 #--------------------------
 
-def get_lilliefors_table():
+def get_lilliefors_table(dist='norm'):
+    '''
+    Generates tables for significance levels of test statistics for normal or
+    exponential distribution testing, as specified in Lilliefors references above
+
+    Parameters
+    ----------
+    dist : string.
+        distribution being tested in set {'norm', 'exp'}.
+
+    Returns
+    -------
+    lf : TableDist object.
+        table of critical values
+    '''
     #function just to keep things together
-    from .tabledist import TableDist
     #for this test alpha is sf probability, i.e. right tail probability
 
-    alpha = np.array([ 0.2  ,  0.15 ,  0.1  ,  0.05 ,  0.01 ,  0.001])[::-1]
-    size = np.array([ 4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  15,
+    if dist == 'norm':
+        alpha = np.array([ 0.2  ,  0.15 ,  0.1  ,  0.05 ,  0.01 ,  0.001])[::-1]
+        size = np.array([ 4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  15,
                      16,  17,  18,  19,  20,  25,  30,  40, 100, 400, 900], float)
 
-    #critical values, rows are by sample size, columns are by alpha
-    crit_lf = np.array(   [[303, 321, 346, 376, 413, 433],
-                           [289, 303, 319, 343, 397, 439],
-                           [269, 281, 297, 323, 371, 424],
-                           [252, 264, 280, 304, 351, 402],
-                           [239, 250, 265, 288, 333, 384],
-                           [227, 238, 252, 274, 317, 365],
-                           [217, 228, 241, 262, 304, 352],
-                           [208, 218, 231, 251, 291, 338],
-                           [200, 210, 222, 242, 281, 325],
-                           [193, 202, 215, 234, 271, 314],
-                           [187, 196, 208, 226, 262, 305],
-                           [181, 190, 201, 219, 254, 296],
-                           [176, 184, 195, 213, 247, 287],
-                           [171, 179, 190, 207, 240, 279],
-                           [167, 175, 185, 202, 234, 273],
-                           [163, 170, 181, 197, 228, 266],
-                           [159, 166, 176, 192, 223, 260],
-                           [143, 150, 159, 173, 201, 236],
-                           [131, 138, 146, 159, 185, 217],
-                           [115, 120, 128, 139, 162, 189],
-                           [ 74,  77,  82,  89, 104, 122],
-                           [ 37,  39,  41,  45,  52,  61],
-                           [ 25,  26,  28,  30,  35,  42]])[:,::-1] / 1000.
+        #critical values, rows are by sample size, columns are by alpha
+        crit_lf = np.array(   [[303, 321, 346, 376, 413, 433],
+                               [289, 303, 319, 343, 397, 439],
+                               [269, 281, 297, 323, 371, 424],
+                               [252, 264, 280, 304, 351, 402],
+                               [239, 250, 265, 288, 333, 384],
+                               [227, 238, 252, 274, 317, 365],
+                               [217, 228, 241, 262, 304, 352],
+                               [208, 218, 231, 251, 291, 338],
+                               [200, 210, 222, 242, 281, 325],
+                               [193, 202, 215, 234, 271, 314],
+                               [187, 196, 208, 226, 262, 305],
+                               [181, 190, 201, 219, 254, 296],
+                               [176, 184, 195, 213, 247, 287],
+                               [171, 179, 190, 207, 240, 279],
+                               [167, 175, 185, 202, 234, 273],
+                               [163, 170, 181, 197, 228, 266],
+                               [159, 166, 176, 192, 223, 260],
+                               [143, 150, 159, 173, 201, 236],
+                               [131, 138, 146, 159, 185, 217],
+                               [115, 120, 128, 139, 162, 189],
+                               [ 74,  77,  82,  89, 104, 122],
+                               [ 37,  39,  41,  45,  52,  61],
+                               [ 25,  26,  28,  30,  35,  42]])[:,::-1] / 1000.
+    elif dist == 'exp':
+        alpha = np.array([0.2,  0.15,  0.1,  0.05, 0.01])[::-1]
+        size = np.array([3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,25,30], float)
+
+        crit_lf = np.array([   [451, 479, 511, 551, 600],
+                                [396, 422, 499, 487, 548],
+                                [359, 382, 406, 442, 504],
+                                [331, 351, 375, 408, 470],
+                                [309, 327, 350, 382, 442],
+                                [291, 308, 329, 360, 419],
+                                [277, 291, 311, 341, 399],
+                                [263, 277, 295, 325, 380],
+                                [251, 264, 283, 311, 365],
+                                [241, 254, 271, 298, 351],
+                                [232, 245, 261, 287, 338],
+                                [224, 237, 252, 277, 326],
+                                [217, 229, 244, 269, 315],
+                                [211, 222, 236, 261, 306],
+                                [204, 215, 229, 253, 297],
+                                [199, 210, 223, 246, 289],
+                                [193, 204, 218, 239, 283],
+                                [188, 199, 212, 234, 278],
+                                [170, 180, 191, 210, 247],
+                                [155, 164, 174, 192, 226]])[:,::-1] / 1000.
+
+        def f(n):
+            return np.array([.86/np.sqrt(n), .91/np.sqrt(n),
+            .96/np.sqrt(n), 1.06/np.sqrt(n), 1.25/np.sqrt(n)])
+
+        higher_sizes = np.array([35, 40, 45, 50, 60, 70,
+                                80, 100, 200, 500, 1000,
+                                2000, 3000, 5000, 10000, 100000], float)
+        higher_crit_lf = np.zeros([higher_sizes.shape[0], crit_lf.shape[1]])
+        for i in range(len(higher_sizes)):
+            higher_crit_lf[i,:] = f(higher_sizes[i])
+
+        size = np.concatenate([size, higher_sizes])
+        crit_lf = np.vstack([crit_lf, higher_crit_lf])
+
 
 
     lf = TableDist(alpha, size, crit_lf)
 
     return lf
 
-lilliefors_table = get_lilliefors_table()
-
 def pval_lf(Dmax, n):
-    '''approximate pvalues for Lilliefors test of normality
+    '''approximate pvalues for Lilliefors test
 
     This is only valid for pvalues smaller than 0.1 which is not checked in
     this function.
@@ -178,8 +242,8 @@ def pval_lf(Dmax, n):
     return pval
 
 
-def kstest_normal(x, pvalmethod='approx'):
-    '''lilliefors test for normality,
+def kstest_lilliefors(x, dist='norm', pvalmethod='approx'):
+    '''lilliefors test for normality or an exponential distribution.
 
     Kolmogorov Smirnov test with estimated mean and variance
 
@@ -187,15 +251,26 @@ def kstest_normal(x, pvalmethod='approx'):
     ----------
     x : array_like, 1d
         data series, sample
+    dist : string.
+        distribution to test in set {'norm', 'exp'}.
     pvalmethod : 'approx', 'table'
+        'approx' is only valid for normality. if `dist = 'exp'`,
+        `table` is returned.
         'approx' uses the approximation formula of Dalal and Wilkinson,
         valid for pvalues < 0.1. If the pvalue is larger than 0.1, then the
         result of `table` is returned
+
+        For normality:
         'table' uses the table from Dalal and Wilkinson, which is available
         for pvalues between 0.001 and 0.2, and the formula of Lilliefors for
         large n (n>900). Values in the table are linearly interpolated.
         Values outside the range will be returned as bounds, 0.2 for large and
         0.001 for small pvalues.
+        For exponential:
+        'table' uses the table from Lilliefors 1967, available for pvalues
+        between 0.01 and 0.2.
+        Values outside the range will be returned as bounds, 0.2 for large and
+        0.01 for small pvalues.
 
     Returns
     -------
@@ -216,10 +291,23 @@ def kstest_normal(x, pvalmethod='approx'):
     '''
 
     x = np.asarray(x)
-    z = (x-x.mean())/x.std(ddof=1)
-    nobs = len(z)
+    nobs = len(x)
 
-    d_ks = ksstat(z, stats.norm.cdf, alternative='two_sided')
+    if dist == 'norm':
+        z = (x-x.mean())/x.std(ddof=1)
+        test_d = stats.norm.cdf
+        lilliefors_table = get_lilliefors_table(dist='norm')
+    elif dist == 'exp':
+        z = x
+        ex = stats.expon(scale=1./x.mean())
+        test_d = ex.cdf
+        lilliefors_table = get_lilliefors_table(dist='exp')
+        pvalmethod = 'table'
+    else:
+        print('test distribution must be norm or exp.')
+        return
+
+    d_ks = ksstat(z, test_d, alternative='two_sided')
 
     if pvalmethod == 'approx':
         pval = pval_lf(d_ks, nobs)
@@ -230,7 +318,7 @@ def kstest_normal(x, pvalmethod='approx'):
     return d_ks, pval
 
 
-lilliefors = kstest_normal
+lilliefors = kstest_lilliefors
 
 lillifors = np.deprecate(lilliefors, 'lillifors', 'lilliefors',
                                "Use lilliefors, lillifors will be "
