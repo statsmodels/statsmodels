@@ -293,15 +293,15 @@ cdef class {{prefix}}KalmanSmoother(object):
         # *Note*: in math notation below, a $\\#$ will represent a generic
         # temporary array, and a $\\#_i$ will represent a named temporary array.
 
-        # # $L_t$ $(m \times m)$
-        dim2[0] = self.kfilter.k_states; dim2[1] = self.kfilter.k_states;
+        # # $L_t$ $(m \times m)$, also holds $(m \times r)$ sometimes
+        dim2[0] = self.kfilter.k_states; dim2[1] = max(self.kfilter.k_states, self.kfilter.k_posdef);
         self.tmpL = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         self._tmpL = &self.tmpL[0, 0]
         self.tmpL2 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         self._tmpL2 = &self.tmpL2[0, 0]
 
         # # Holds arrays of dimension $(m \times m)$ and $(m \times r)$
-        dim2[0] = self.kfilter.k_states; dim2[1] = self.kfilter.k_states;
+        dim2[0] = self.kfilter.k_states; dim2[1] = max(self.kfilter.k_states, self.kfilter.k_posdef);
         self.tmp0 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         self._tmp0 = &self.tmp0[0, 0]
 
