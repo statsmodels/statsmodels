@@ -13,7 +13,8 @@ from . import robust
 from .robust.robust_linear_model import RLM
 from .discrete.discrete_model import (Poisson, Logit, Probit,
                                       MNLogit, NegativeBinomial,
-                                      GeneralizedPoisson)
+                                      GeneralizedPoisson,
+                                      NegativeBinomial_p)
 from .tsa import api as tsa
 from .duration.survfunc import SurvfuncRight
 from .duration.hazard_regression import PHReg

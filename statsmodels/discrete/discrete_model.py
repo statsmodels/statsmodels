@@ -24,6 +24,7 @@ from statsmodels.compat.python import lmap, lzip, range
 import numpy as np
 from scipy.special import gammaln
 from scipy import stats, special, optimize  # opt just for nbin
+from scipy.stats import nbinom
 import statsmodels.tools.tools as tools
 from statsmodels.tools import data as data_tools
 from statsmodels.tools.decorators import (resettable_cache,
@@ -43,6 +44,7 @@ from pandas import get_dummies
 
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 from statsmodels.distributions import genpoisson_p
+
 try:
     import cvxopt
     have_cvxopt = True
@@ -2704,6 +2706,180 @@ class NegativeBinomial(CountModel):
 
         return L1NegativeBinomialResultsWrapper(discretefit)
 
+class NegativeBinomial_p(CountModel):
+    __doc__ = """
+    Negative Binomial model for count data
+    %(params)s
+    %(extra_params)s
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    """ % {'params' : base._model_params_doc,
+           'extra_params' :
+           """offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+    """ + base._missing_param_doc}
+    def __init__(self, endog, exog, p=1, offset=None,
+                       exposure=None, missing='none', **kwargs):
+        super(NegativeBinomial_p, self).__init__(endog, exog, offset=offset,
+                                                  exposure=exposure,
+                                                  missing=missing, **kwargs)
+        self.parametrization = p
+        self.exog_names.append('alpha')
+        self.k_extra = 1
+        self._transparams = False
+
+    def loglike(self, params):
+        """
+        Loglikelihood of Generic Zero Inflated model
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model.
+        Returns
+        -------
+        loglike : float
+            The log-likelihood function of the model evaluated at `params`.
+            See notes.
+        Notes
+        --------
+        .. math:: \\ln L=\\sum_{y_{i}=0}\\ln(w_{i}+(1-w_{i})*P_{main\\_model})+
+            \\sum_{y_{i}>0}(\\ln(1-w_{i})+L_{main\\_model})
+            where P - pdf of main model, L - loglike function of main model.
+        """
+        return np.sum(self.loglikeobs(params))
+
+    def loglikeobs(self, params):
+        """
+        Loglikelihood for observations of Generic Zero Inflated model
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model.
+        Returns
+        -------
+        loglike : ndarray (nobs,)
+            The log likelihood for each observation of the model evaluated
+            at `params`. See Notes
+        Notes
+        --------
+        ..math::
+           \lambda_i &= exp(X\beta) \\
+           \theta &= 1 / \alpha \\
+           g_i &= \theta \lambda_i^p \\
+           w_i &= g_i/(g_i + \lambda_i) \\
+           r_i &= \theta / (\theta+\lambda_i) \\
+           ln \mathcal{L}_i &= ln \Gamma(y_i+g_i) - ln \Gamma(1+y_i) + g_iln (r_i) + y_i ln(1-r_i)
+        for observations :math:`i=1,...,n`
+        """
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+
+        params = params[:-1]
+        p = self.parametrization
+        y = self.endog
+
+        mu = self.predict(params)
+        mu_p = mu**(2 - p)
+        a1 = mu_p / alpha
+        a2 = mu + a1
+
+        llf = (gammaln(y + a1) - gammaln(y + 1) - gammaln(a1) +
+               a1 * np.log(a1) + y * np.log(mu) -
+               (y + a1) * np.log(a2))
+
+        return llf
+
+    def score(self, params):
+        return approx_fprime(params, self.loglike)
+
+    def hessian(self, params):
+        return approx_hess(params, self.loglike)
+
+    def fit(self, start_params=None, method='bfgs', maxiter=35,
+            full_output=1, disp=1, callback=None, use_transparams = False,
+            cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
+
+        if use_transparams and method not in ['newton', 'ncg']:
+            self._transparams = True
+        else:
+            if use_transparams:
+                warnings.warn("Paramter \"use_transparams\" is ignored",
+                              RuntimeWarning)
+            self._transparams = False
+
+        if start_params is None:
+            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+            if np.size(offset) == 1 and offset == 0:
+                offset = None
+            mod_poi = Poisson(self.endog, self.exog, offset=offset)
+            start_params = mod_poi.fit(disp=0).params
+            start_params = np.append(start_params, 0.1)
+        mlefit = super(NegativeBinomial_p, self).fit(start_params=start_params,
+                        maxiter=maxiter, method=method, disp=disp,
+                        full_output=full_output, callback=lambda x:x,
+                        **kwargs)
+
+        if use_transparams and method not in ["newton", "ncg"]:
+            self._transparams = False
+            mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
+
+        nbinfit = NegativeBinomialResults(self, mlefit._results)
+        result = NegativeBinomialResultsWrapper(nbinfit)
+
+        if cov_kwds is None:
+            cov_kwds = {}
+        result._get_robustcov_results(cov_type=cov_type,
+                                    use_self=True, use_t=use_t, **cov_kwds)
+        return result
+
+
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+
+        if np.size(alpha) == 1 and alpha != 0:
+            k_params = self.exog.shape[1] + self.k_extra
+            alpha = alpha * np.ones(k_params)
+            alpha[-1] = 0
+
+        alpha_p = alpha[:-1] if (self.k_extra and np.size(alpha) > 1) else alpha
+
+        self._transparams = False
+        if start_params is None:
+            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+            if np.size(offset) == 1 and offset == 0:
+                offset = None
+            mod_poi = Poisson(self.endog, self.exog, offset=offset)
+            start_params = mod_poi.fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=0, callback=callback,
+                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
+            if self.loglike_method.startswith('nb'):
+                start_params = np.append(start_params, 0.1)
+
+        cntfit = super(CountModel, self).fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+        if method in ['l1', 'l1_cvxopt_cp']:
+            discretefit = L1NegativeBinomialResults(self, cntfit)
+        else:
+            raise TypeError(
+                    "argument method == %s, which is not handled" % method)
+
+        return L1NegativeBinomialResultsWrapper(discretefit)
 
 ### Results Class ###
 
