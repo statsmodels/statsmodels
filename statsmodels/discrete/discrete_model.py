@@ -2800,11 +2800,102 @@ class NegativeBinomial_p(CountModel):
 
         return llf
 
+        def score_obs(self, params):
+            if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+
+        params = params[:-1]
+        p = 2 - self.parametrization
+        y = self.endog
+
+        mu = self.predict(params)
+        mu_p = mu**p
+        a1 = mu_p / alpha
+        a2 = mu + a1
+        a3 = y + a1
+        a4 = p * a1 / mu
+
+        dparams = ((a4 * (digamma(a3) - digamma(a1)) -
+                   (1 + a4) * a3 / a2) +
+                   y / mu + a4 * (1 + np.log(a1) - np.log(a2)))
+        dparams = (self.exog.T * mu * dparams).T
+        dalpha = (-a1 / alpha * (digamma(a3) -
+                                 digamma(a1) +
+                                 np.log(a1 / a2) +
+                                 1 - a3 / a2))
+ 
+        #multiply above by constant outside sum to reduce rounding error
+        return np.concatenate((dparams, np.atleast_2d(dalpha).T),
+                              axis=1)
+
     def score(self, params):
-        return approx_fprime(params, self.loglike)
+        score = np.sum(self.score_obs(params), axis=0)
+        if self._transparams:
+            score[-1] == score[-1] ** 2
+            return score
+        else:
+            return score
 
     def hessian(self, params):
-        return approx_hess(params, self.loglike)
+        if self._transparams: # lnalpha came in during fit
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+        params = params[:-1]
+
+        p = 2 - self.parametrization
+        y = self.endog
+        exog = self.exog
+        mu = self.predict(params)
+
+        mu_p = mu**p
+        a1 = mu_p / alpha
+        a2 = mu + a1
+        a3 = y + a1
+        a4 = p * a1 / mu
+        a5 = a4 * p / mu
+
+        dim = exog.shape[1]
+        hess_arr = np.zeros((dim + 1, dim + 1))
+
+        coeff = mu**2 * (((1 + a4)**2 * a3 / a2**2 -
+                          a3 * (a5 - a4 / mu) / a2 - y / mu**2 -
+                          2 * a4 * (1 + a4) / a2 +
+                          a5 * (np.log(a1) - np.log(a2) - digamma(a1) +
+                                digamma(a3) + 2) -
+                          a4 * (np.log(a1) - np.log(a2) - digamma(a1) +
+                                digamma(a3) + 1) / mu -
+                          a4**2 * (polygamma(1, a1) - polygamma(1, a3))) +
+                         (-(1 + a4) * a3 / a2 + y / mu +
+                          a4 * (np.log(a1) - np.log(a2) - digamma(a1) +
+                                digamma(a3) + 1)) / mu)
+
+        for i in range(dim):
+            for j in range(i, -1, -1):
+                hess_arr[i, j] = np.sum(self.exog[:, i] * self.exog[:, j] * coeff)
+
+        for i in range(dim):
+            hess_arr[-1, i] = (self.exog[:, i] * mu * a1 *
+                ((1 + a4) * (1 - a3 / a2) / a2 -
+                 p * (np.log(a1 / a2) - digamma(a1) + digamma(a3) + 2) / mu +
+                 p * (a3 / mu + a4) / a2 +
+                 a4 * (polygamma(1, a1) - polygamma(1, a3))) / alpha).sum()
+                
+
+        da2 = (a1 * (2 * np.log(a1) - 2 * np.log(a2) -
+                     2 * digamma(a1) + 2 *digamma(a3) + 3 -
+                     2 * a3 / a2 - a1 * polygamma(1, a1) +
+                     a1 * polygamma(1, a3) - 2 * a1 / a2 +
+                     a1 * a3 / a2**2) / alpha**2)
+                        
+        hess_arr[-1, -1] = da2.sum()
+        
+        tri_idx = np.triu_indices(dim + 1, k=1)
+        hess_arr[tri_idx] = hess_arr.T[tri_idx]
+
+        return hess_arr
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, use_transparams = False,
