@@ -17,3 +17,10 @@ class TestLilliefors(object):
         x_e = stats.expon.rvs(size=5000)
         d_ks, p = lilliefors(x_e, dist='exp')
         assert_(p > 0.05)
+
+    def test_pval_bounds(self):
+        x = np.arange(1,10)
+        d_ks_n, p_n = lilliefors(x, dist='norm')
+        d_ks_e, p_e = lilliefors(x, dist='exp')
+        assert_(p_n < 1)
+        assert_(p_e < 1)
