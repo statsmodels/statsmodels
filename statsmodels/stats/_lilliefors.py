@@ -311,6 +311,9 @@ def kstest_lilliefors(x, dist='norm', pvalmethod='approx'):
 
     if pvalmethod == 'approx':
         pval = pval_lf(d_ks, nobs)
+        # check pval is in desired range
+        if pval > 0.1:
+            pval = lilliefors_table.prob(d_ks, nobs)
     elif pvalmethod == 'table':
         #pval = pval_lftable(d_ks, nobs)
         pval = lilliefors_table.prob(d_ks, nobs)
