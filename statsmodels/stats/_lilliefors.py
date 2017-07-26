@@ -153,6 +153,23 @@ def get_lilliefors_table(dist='norm'):
                                [ 74,  77,  82,  89, 104, 122],
                                [ 37,  39,  41,  45,  52,  61],
                                [ 25,  26,  28,  30,  35,  42]])[:,::-1] / 1000.
+
+        # also build a table for larger sample sizes
+        def f(n):
+            return np.array([.736/np.sqrt(n), .768/np.sqrt(n),
+            .805/np.sqrt(n), .886/np.sqrt(n), 1.031/np.sqrt(n)])
+
+        higher_sizes = np.array([35, 40, 45, 50, 60, 70,
+                                80, 100, 200, 500, 1000,
+                                2000, 3000, 5000, 10000, 100000], float)
+        higher_crit_lf = np.zeros([higher_sizes.shape[0], crit_lf.shape[1]-1])
+        for i in range(len(higher_sizes)):
+            higher_crit_lf[i,:] = f(higher_sizes[i])
+
+        alpha_large = alpha[:-1]
+        size_large = np.concatenate([size, higher_sizes])
+        crit_lf_large = np.vstack([crit_lf[:-4,:-1], higher_crit_lf])
+
     elif dist == 'exp':
         alpha = np.array([0.2,  0.15,  0.1,  0.05, 0.01])[::-1]
         size = np.array([3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,25,30], float)
