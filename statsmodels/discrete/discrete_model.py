@@ -2800,8 +2800,8 @@ class NegativeBinomial_p(CountModel):
 
         return llf
 
-        def score_obs(self, params):
-            if self._transparams:
+    def score_obs(self, params):
+        if self._transparams:
             alpha = np.exp(params[-1])
         else:
             alpha = params[-1]
@@ -2826,7 +2826,6 @@ class NegativeBinomial_p(CountModel):
                                  np.log(a1 / a2) +
                                  1 - a3 / a2))
  
-        #multiply above by constant outside sum to reduce rounding error
         return np.concatenate((dparams, np.atleast_2d(dalpha).T),
                               axis=1)
 
@@ -2973,6 +2972,42 @@ class NegativeBinomial_p(CountModel):
                     "argument method == %s, which is not handled" % method)
 
         return L1NegativeBinomialResultsWrapper(discretefit)
+
+    def predict(self, params, exog=None, exposure=None, offset=None,
+                which='mean'):
+        """
+        Predict response variable of a count model given exogenous variables.
+        Notes
+        -----
+        If exposure is specified, then it will be logged by the method.
+        The user does not need to log it first.
+        """
+        if exog is None:
+            exog = self.exog
+        
+        if exposure is None:
+            exposure = getattr(self, 'exposure', 0)
+        elif exposure != 0:
+            exposure = np.log(exposure)
+
+        if offset is None:
+            offset = getattr(self, 'offset', 0)
+
+        fitted = np.dot(exog, params[:exog.shape[1]])
+        linpred = fitted + exposure + offset
+
+        if which == 'mean':
+            return np.exp(linpred)
+        elif which == 'linear':
+            return linpred
+        elif which =='prob':
+            counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+            mu = self.predict(params, exog=exog, exposure=exposure,
+                              offset=offset)[:,None]
+            return nbinom.pmf(counts, mu, params[-1], self.parametrization)
+        else:
+            raise TypeError('keyword \'which\' = %s not recognized' % which)
+
 
 ### Results Class ###
 
