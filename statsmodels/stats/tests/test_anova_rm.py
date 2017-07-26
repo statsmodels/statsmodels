@@ -1,6 +1,9 @@
 import pandas as pd
+import numpy as np
 from statsmodels.stats.anova import AnovaRM
-from numpy.testing import assert_array_almost_equal, assert_raises
+from numpy.testing import (assert_array_almost_equal, assert_raises,
+                           assert_warns, assert_equal)
+from pandas.util.testing import assert_frame_equal
 
 
 DV = [7, 3, 6, 6, 5, 8, 6, 7,
@@ -71,6 +74,7 @@ D = ['a','a','a','a','a','a','a','a',
      'b','b','b','b','b','b','b','b']
 
 data = pd.DataFrame([id, A, B, D, DV], index=['id', 'A', 'B', 'D', 'DV']).T
+data['DV'] = data['DV'].astype('int')
 
 
 def test_single_factor_repeated_measures_anova():
@@ -131,3 +135,64 @@ def test_repeated_measures_collinearity():
 def test_repeated_measures_unbalanced_data():
     assert_raises(ValueError, AnovaRM, data.iloc[1:48, :], 'DV', 'id',
                   within=['A', 'B'])
+
+
+def test_repeated_measures_aggregation():
+    df1 = AnovaRM(data, 'DV', 'id', within=['A', 'B', 'D']).fit()
+    df2 = AnovaRM(data.append(data), 'DV', 'id', within=['A', 'B', 'D'],
+                  aggregate_func=np.mean).fit()
+
+    assert_frame_equal(df1.anova_table, df2.anova_table)
+
+
+def test_repeated_measures_aggregation_one_subject_duplicated():
+    df1 = AnovaRM(data, 'DV', 'id', within=['A', 'B', 'D']).fit()
+    df2 = AnovaRM(data.append(data.loc[data['id'] == '1', :]).reset_index(),
+                  'DV', 'id', within=['A', 'B', 'D'],
+                  aggregate_func=np.mean).fit()
+
+    assert_frame_equal(df1.anova_table, df2.anova_table)
+
+
+def test_repeated_measures_aggregate_func():
+    assert_raises(ValueError, AnovaRM, data.append(data), 'DV', 'id',
+                  within=['A', 'B', 'D'])
+
+    m1 = AnovaRM(data.append(data), 'DV', 'id', within=['A', 'B', 'D'],
+                 aggregate_func=np.mean)
+    m2 = AnovaRM(data.append(data), 'DV', 'id', within=['A', 'B', 'D'],
+                 aggregate_func=np.median)
+
+    assert_raises(AssertionError, assert_equal,
+                  m1.aggregate_func, m2.aggregate_func)
+    assert_frame_equal(m1.fit().anova_table, m2.fit().anova_table)
+
+
+def test_repeated_measures_aggregate_func_mean():
+    m1 = AnovaRM(data.append(data), 'DV', 'id', within=['A', 'B', 'D'],
+                 aggregate_func=np.mean)
+
+    m2 = AnovaRM(data.append(data), 'DV', 'id', within=['A', 'B', 'D'],
+                 aggregate_func='mean')
+
+    assert_equal(m1.aggregate_func, m2.aggregate_func)
+
+
+def test_repeated_measures_aggregate_compare_with_ezANOVA():
+    # Results should reproduces those from R's `ezANOVA` (library ez).
+    ez = pd.DataFrame(
+        {'F Value': [8.7650709, 8.4985785, 20.5076546, 0.8457797, 21.7593382,
+                     6.2416695, 5.4253359],
+         'Num DF': [1, 2, 1, 2, 1, 2, 2],
+         'Den DF': [7, 14, 7, 14, 7, 14, 14],
+         'Pr > F': [0.021087505, 0.003833921, 0.002704428, 0.450021759,
+                    0.002301792, 0.011536846, 0.018010647]},
+        index=pd.Index(['A', 'B', 'D', 'A:B', 'A:D', 'B:D', 'A:B:D']))
+    ez = ez[['F Value', 'Num DF', 'Den DF', 'Pr > F']]
+
+    df = (AnovaRM(data.append(data), 'DV', 'id', within=['A', 'B', 'D'],
+                  aggregate_func=np.mean)
+          .fit()
+          .anova_table)
+
+    assert_frame_equal(ez, df, check_dtype=False)
