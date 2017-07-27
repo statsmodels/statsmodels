@@ -17,8 +17,8 @@ from numpy.testing import (assert_, assert_raises, assert_almost_equal,
 
 from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
                                                 Poisson, NegativeBinomial,
-                                                CountModel, GeneralizedPoisson
-                                                )
+                                                CountModel, GeneralizedPoisson,
+                                                NegativeBinomial_p)
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
@@ -1772,7 +1772,199 @@ class TestGeneralizedPoisson_underdispersion(object):
         assert_allclose(chi2[:], (0.64628806058715882, 0.98578597726324468),
                         rtol=0.01)
 
+class TestNegativeBinomial_pNB2Newton(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomial_p(data.endog, exog, p=2).fit(method='newton', disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_nb2_bfgs()
+        cls.res2 = res2
 
+    #NOTE: The bse is much closer precitions to stata
+    def test_bse(self):
+        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_3)
+
+    def test_params(self):
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
+
+    def test_alpha(self):
+        self.res1.bse # attaches alpha_std_err
+        assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha,
+                            DECIMAL_4)
+        assert_almost_equal(self.res1.lnalpha_std_err,
+                            self.res2.lnalpha_std_err, DECIMAL_4)
+
+    def test_conf_int(self):
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
+                            DECIMAL_3)
+
+    def test_zstat(self): # Low precision because Z vs. t
+        assert_almost_equal(self.res1.pvalues[:-1], self.res2.pvalues,
+                            DECIMAL_2)
+
+    def test_fittedvalues(self):
+        assert_almost_equal(self.res1.fittedvalues[:10],
+                            self.res2.fittedvalues[:10], DECIMAL_3)
+
+    def test_predict(self):
+        assert_almost_equal(self.res1.predict()[:10],
+                            np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
+
+    def test_predict_xb(self):
+        assert_almost_equal(self.res1.predict(which='linear')[:10],
+                            self.res2.fittedvalues[:10], DECIMAL_3)
+
+class TestNegativeBinomial_pNB1Newton(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomial_p(data.endog, exog, p=1).fit(method="newton",
+                                                                 maxiter=100,
+                                                                 disp=0,
+                                                                 use_transparams=True)
+        res2 = RandHIE()
+        res2.negativebinomial_nb1_bfgs()
+        cls.res2 = res2
+
+    def test_zstat(self):
+        assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_1)
+
+    def test_lnalpha(self):
+        self.res1.bse # attaches alpha_std_err
+        assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha, 3)
+        assert_almost_equal(self.res1.lnalpha_std_err,
+                            self.res2.lnalpha_std_err, DECIMAL_4)
+
+    def test_params(self):
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
+
+    def test_conf_int(self):
+        # the bse for alpha is not high precision from the hessian
+        # approximation
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
+                            DECIMAL_2)
+
+    def test_predict(self):
+        assert_almost_equal(self.res1.predict()[:10],
+                            np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
+
+    def test_predict_xb(self):
+        assert_almost_equal(self.res1.predict(which='linear')[:10],
+                            self.res2.fittedvalues[:10], DECIMAL_3)
+
+
+class TestNegativeBinomial_pNB2BFGS(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomial_p(data.endog, exog, p=2).fit(
+                                                method='bfgs', disp=0,
+                                                maxiter=1000,
+                                                use_transparams=True)
+        res2 = RandHIE()
+        res2.negativebinomial_nb2_bfgs()
+        cls.res2 = res2
+
+    #NOTE: The bse is much closer precitions to stata
+    def test_bse(self):
+        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_3)
+
+    def test_params(self):
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_3)
+
+    def test_alpha(self):
+        self.res1.bse # attaches alpha_std_err
+        assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha,
+                            DECIMAL_4)
+        assert_almost_equal(self.res1.lnalpha_std_err,
+                            self.res2.lnalpha_std_err, DECIMAL_4)
+
+    def test_conf_int(self):
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
+                            DECIMAL_3)
+
+    def test_zstat(self): # Low precision because Z vs. t
+        assert_almost_equal(self.res1.pvalues[:-1], self.res2.pvalues,
+                            DECIMAL_2)
+
+    def test_fittedvalues(self):
+        assert_almost_equal(self.res1.fittedvalues[:10],
+                            self.res2.fittedvalues[:10], DECIMAL_3)
+
+    def test_predict(self):
+        assert_almost_equal(self.res1.predict()[:10],
+                            np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
+
+    def test_predict_xb(self):
+        assert_almost_equal(self.res1.predict(which='linear')[:10],
+                            self.res2.fittedvalues[:10], DECIMAL_3)
+
+
+class TestNegativeBinomial_pNB1BFGS(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomial_p(data.endog, exog, p=1).fit(method="bfgs",
+                                                                 maxiter=100,
+                                                                 disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_nb1_bfgs()
+        cls.res2 = res2
+
+    def test_zstat(self):
+        assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_1)
+
+    def test_lnalpha(self):
+        self.res1.bse # attaches alpha_std_err
+        assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha, 3)
+        assert_almost_equal(self.res1.lnalpha_std_err,
+                            self.res2.lnalpha_std_err, DECIMAL_4)
+
+    def test_params(self):
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
+
+    def test_conf_int(self):
+        # the bse for alpha is not high precision from the hessian
+        # approximation
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
+                            DECIMAL_2)
+
+    def test_predict(self):
+        assert_almost_equal(self.res1.predict()[:10],
+                            np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
+
+    def test_predict_xb(self):
+        assert_almost_equal(self.res1.predict(which='linear')[:10],
+                            self.res2.fittedvalues[:10], DECIMAL_3)
+
+class TestNegativeBinomial_pL1Compatability(CheckL1Compatability):
+    @classmethod
+    def setupClass(cls):
+        cls.kvars = 10 # Number of variables
+        cls.m = 7 # Number of unregularized parameters
+        rand_data = sm.datasets.randhie.load()
+        rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)
+        rand_exog_st = (rand_exog - rand_exog.mean(0)) / rand_exog.std(0)
+        rand_exog = sm.add_constant(rand_exog_st, prepend=True)
+        # Drop some columns and do an unregularized fit
+        exog_no_PSI = rand_exog[:, :cls.m]
+        mod_unreg = sm.NegativeBinomial_p(rand_data.endog, exog_no_PSI)
+        cls.res_unreg = mod_unreg.fit(method="newton", disp=False)
+        # Do a regularized fit with alpha, effectively dropping the last column
+        alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars + 1)
+        alpha[:cls.m] = 0
+        alpha[-1] = 0  # don't penalize alpha
+
+        mod_reg = sm.NegativeBinomial_p(rand_data.endog, rand_exog)
+        cls.res_reg = mod_reg.fit_regularized(
+            method='l1', alpha=alpha, disp=False, acc=1e-10, maxiter=2000,
+            trim_mode='auto')
+        cls.k_extra = 1  # 1 extra parameter in nb2
 
 if __name__ == "__main__":
     import nose
