@@ -15,14 +15,15 @@ data = np.asarray([[1, 3, 2, 5, 4, 1, 2, 3, 4, 6, 9],
                    [5, 3, 2, 1, 4, 7, 8, 9, 5, 4, 3],
                    [3, 2, 1, 5, 6, 7, 4, 2, 1, 6, 4]], dtype=np.float64).T
 # need to get stata results to compare
-y = data[:,0]
+y = np.random.choice([0,1], 11)
 X = data[:, [1,2]]
 
 def test_jack_repw():
     design = ss.SurveyDesign(strata, cluster, weights)
     assert_equal(design.clust, np.r_[0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4])
     model_class = sm.GLM
-    model = smod.SurveyModel(design, model_class=model_class)
+    init_args = {'family': sm.families.Binomial()}
+    model = smod.SurveyModel(design, model_class=model_class, init_args=init_args)
     rslt = model.fit(y, X, cov_method='linearized', center_by='est')
 
     rw = []
