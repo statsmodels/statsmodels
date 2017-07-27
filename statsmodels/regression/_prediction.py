@@ -164,12 +164,15 @@ def get_prediction(self, exog=None, transform=True, weights=None,
 
     covb = self.cov_params()
     var_pred_mean = (exog * np.dot(covb, exog.T).T).sum(1)
+    var_resid = self.scale  # self.mse_resid / weights
 
     # TODO: check that we have correct scale, Refactor scale #???
-    var_resid = self.scale / weights # self.mse_resid / weights
     # special case for now:
     if self.cov_type == 'fixed scale':
-        var_resid = self.cov_kwds['scale'] / weights
+        var_resid = self.cov_kwds['scale']
+
+    if weights is not None:
+        var_resid /= weights
 
     dist = ['norm', 't'][self.use_t]
     return PredictionResults(predicted_mean, var_pred_mean, var_resid,

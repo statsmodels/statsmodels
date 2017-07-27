@@ -794,7 +794,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
     Parameters
     ----------
-    x : array, 2d, (nobs,2)
+    x : array, 2d
         data for test whether the time series in the second column Granger
         causes the time series in the first column
     maxlag : integer
@@ -1010,8 +1010,16 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
 
     res_co = OLS(y0, xx).fit()
 
-    res_adf = adfuller(res_co.resid, maxlag=maxlag, autolag=None,
-                             regression='nc')
+    if res_co.rsquared < 1 - np.sqrt(np.finfo(np.double).eps):
+        res_adf = adfuller(res_co.resid, maxlag=maxlag, autolag=None,
+                           regression='nc')
+    else:
+        import warnings
+        warnings.warn("y0 and y1 are perfectly colinear.  Cointegration test "
+                      "is not reliable in this case.")
+        # Edge case where series are too similar
+        res_adf = (0,)
+
     # no constant or trend, see egranger in Stata and MacKinnon
     if trend == 'nc':
         crit = [np.nan] * 3  # 2010 critical values not available

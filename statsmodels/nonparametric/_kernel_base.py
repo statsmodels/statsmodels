@@ -276,7 +276,7 @@ class GenericKDE (object):
         return bw
 
     def _cv_ml(self):
-        """
+        r"""
         Returns the cross validation maximum likelihood bandwidth parameter.
 
         Notes
@@ -307,7 +307,7 @@ class GenericKDE (object):
         return bw
 
     def _cv_ls(self):
-        """
+        r"""
         Returns the cross-validation least squares bandwidth parameter(s).
 
         Notes
@@ -455,7 +455,7 @@ def _adjust_shape(dat, k_vars):
 
 def gpke(bw, data, data_predict, var_type, ckertype='gaussian',
          okertype='wangryzin', ukertype='aitchisonaitken', tosum=True):
-    """
+    r"""
     Returns the non-normalized Generalized Product Kernel Estimator
 
     Parameters

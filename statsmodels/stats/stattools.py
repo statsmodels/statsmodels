@@ -157,17 +157,17 @@ def robust_skewness(y, axis=0):
     -----
     The robust skewness measures are defined
 
-    .. math ::
+    .. math::
 
         SK_{2}=\\frac{\\left(q_{.75}-q_{.5}\\right)
         -\\left(q_{.5}-q_{.25}\\right)}{q_{.75}-q_{.25}}
 
-    .. math ::
+    .. math::
 
         SK_{3}=\\frac{\\mu-\\hat{q}_{0.5}}
         {\\hat{E}\\left[\\left|y-\\hat{\\mu}\\right|\\right]}
 
-    .. math ::
+    .. math::
 
         SK_{4}=\\frac{\\mu-\\hat{q}_{0.5}}{\\hat{\\sigma}}
 

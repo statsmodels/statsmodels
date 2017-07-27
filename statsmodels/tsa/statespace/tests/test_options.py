@@ -1,9 +1,8 @@
 """
-Miscellaneous Tests
+Tests for setting options in KalmanFilter, KalmanSmoother, SimulationSmoother
 
-- Tests for setting options in KalmanFilter, KalmanSmoother, SimulationSmoother
-  (does not test the filtering, smoothing, or simulation smoothing for each
-  option)
+(does not test the filtering, smoothing, or simulation smoothing for each
+option)
 
 Author: Chad Fulton
 License: Simplified-BSD
@@ -13,6 +12,13 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 from statsmodels.tsa.statespace.kalman_filter import (
     FILTER_CONVENTIONAL,
+    FILTER_EXACT_INITIAL,
+    FILTER_AUGMENTED,
+    FILTER_SQUARE_ROOT,
+    FILTER_UNIVARIATE,
+    FILTER_COLLAPSED,
+    FILTER_EXTENDED,
+    FILTER_UNSCENTED,
 
     INVERT_UNIVARIATE,
     SOLVE_LU,
@@ -27,16 +33,26 @@ from statsmodels.tsa.statespace.kalman_filter import (
     MEMORY_NO_PREDICTED,
     MEMORY_NO_FILTERED,
     MEMORY_NO_LIKELIHOOD,
+    MEMORY_NO_GAIN,
+    MEMORY_NO_SMOOTHING,
+    MEMORY_NO_STD_FORECAST,
     MEMORY_CONSERVE
 )
 from statsmodels.tsa.statespace.kalman_smoother import (
-    KalmanSmoother,
     SMOOTHER_STATE,
     SMOOTHER_STATE_COV,
+    SMOOTHER_STATE_AUTOCOV,
     SMOOTHER_DISTURBANCE,
     SMOOTHER_DISTURBANCE_COV,
     SMOOTHER_ALL
 )
+from statsmodels.tsa.statespace.simulation_smoother import (
+    SimulationSmoother,
+    SIMULATION_STATE,
+    SIMULATION_DISTURBANCE,
+    SIMULATION_ALL
+)
+from statsmodels.tsa.statespace.tools import compatibility_mode
 from numpy.testing import assert_equal
 
 
@@ -48,32 +64,50 @@ class Options(object):
         endog = np.arange(10)
         k_states = 1
 
-        cls.model = KalmanSmoother(k_endog=1, k_states=k_states, *args,
-                                   **kwargs)
+        cls.model = SimulationSmoother(k_endog=1, k_states=k_states, *args,
+                                       **kwargs)
         cls.model.bind(endog)
+
 
 class TestOptions(Options):
     def test_filter_methods(self):
         model = self.model
 
         # TODO test FilterResults for accurante boolean versions of options
-        
         # Clear the filter method
         model.filter_method = 0
 
         # Try setting via boolean
         model.filter_conventional = True
         assert_equal(model.filter_method, FILTER_CONVENTIONAL)
-        model.filter_conventional = False
-        assert_equal(model.filter_method, 0)
 
-        # Try setting directly via method
-        model.set_filter_method(FILTER_CONVENTIONAL)
-        assert_equal(model.filter_method, FILTER_CONVENTIONAL)
+        if not compatibility_mode:
+            model.filter_collapsed = True
+            assert_equal(model.filter_method, FILTER_CONVENTIONAL | FILTER_COLLAPSED)
+            model.filter_conventional = False
+            assert_equal(model.filter_method, FILTER_COLLAPSED)
 
-        # Try setting via boolean via method
-        model.set_filter_method(filter_conventional=True)
-        assert_equal(model.filter_method, FILTER_CONVENTIONAL)
+            # Try setting directly via method
+            model.set_filter_method(FILTER_AUGMENTED)
+            assert_equal(model.filter_method, FILTER_AUGMENTED)
+
+            # Try setting via boolean via method
+            model.set_filter_method(filter_conventional=True, filter_augmented=False)
+            assert_equal(model.filter_method, FILTER_CONVENTIONAL)
+
+            # Try setting and unsetting all
+            model.filter_method = 0
+            for name in model.filter_methods:
+                setattr(model, name, True)
+            assert_equal(
+                model.filter_method,
+                FILTER_CONVENTIONAL | FILTER_EXACT_INITIAL | FILTER_AUGMENTED |
+                FILTER_SQUARE_ROOT | FILTER_UNIVARIATE | FILTER_COLLAPSED |
+                FILTER_EXTENDED | FILTER_UNSCENTED
+            )
+            for name in model.filter_methods:
+                setattr(model, name, False)
+            assert_equal(model.filter_method, 0)
 
     def test_inversion_methods(self):
         model = self.model
@@ -168,7 +202,8 @@ class TestOptions(Options):
         assert_equal(
             model.conserve_memory,
             MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED | MEMORY_NO_FILTERED |
-            MEMORY_NO_LIKELIHOOD
+            MEMORY_NO_LIKELIHOOD | MEMORY_NO_GAIN | MEMORY_NO_SMOOTHING |
+            MEMORY_NO_STD_FORECAST
         )
         assert_equal(model.conserve_memory, MEMORY_CONSERVE)
         for name in model.memory_options:
@@ -209,8 +244,8 @@ class TestOptions(Options):
             setattr(model, name, True)
         assert_equal(
             model.smoother_output,
-            SMOOTHER_STATE | SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE |
-            SMOOTHER_DISTURBANCE_COV
+            SMOOTHER_STATE | SMOOTHER_STATE_COV | SMOOTHER_STATE_AUTOCOV |
+            SMOOTHER_DISTURBANCE | SMOOTHER_DISTURBANCE_COV
         )
         assert_equal(model.smoother_output, SMOOTHER_ALL)
         for name in model.smoother_outputs:
@@ -218,3 +253,10 @@ class TestOptions(Options):
                 continue
             setattr(model, name, False)
         assert_equal(model.smoother_output, 0)
+
+    def test_simulation_outputs(self):
+        # TODO test changing simulation options in SimulationSmoothResults
+        # instance
+
+        assert_equal(self.model.get_simulation_output(SIMULATION_STATE), SIMULATION_STATE)
+        assert_equal(self.model.get_simulation_output(simulate_state=True, simulate_disturbance=True), SIMULATION_ALL)

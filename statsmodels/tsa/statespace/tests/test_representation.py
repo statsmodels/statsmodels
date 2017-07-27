@@ -766,14 +766,6 @@ def test_filter():
     res = mod.filter()
     assert_equal(isinstance(res, FilterResults), True)
 
-    # Test specified invalid results class
-    assert_raises(ValueError, mod.filter, results=object)
-
-    # Test specified valid results class
-    res = mod.filter(results=FilterResults)
-    assert_equal(isinstance(res, FilterResults), True)
-
-
 def test_loglike():
     # Tests of invalid calls to the loglike function
 
@@ -1018,7 +1010,7 @@ def test_simulate():
     actual = mod.simulate(
         nsimulations, measurement_shocks=measurement_shocks,
         state_shocks=state_shocks)[0].squeeze()
-    desired = np.r_[0, np.cumsum(state_shocks)[:-1] + np.arange(1,10)]
+    desired = np.r_[0, np.cumsum(state_shocks)[:-1] + np.arange(1, 10)]
 
     assert_allclose(actual, desired)
 
@@ -1035,24 +1027,25 @@ def test_simulate():
     # ARMA(1,1): phi = [0.1], theta = [0.5], sigma^2 = 2
     phi = np.r_[0.1]
     theta = np.r_[0.5]
-    mod = sarimax.SARIMAX([0], order=(1,0,1))
+    mod = sarimax.SARIMAX([0], order=(1, 0, 1))
     mod.update(np.r_[phi, theta, sigma2])
 
     actual = mod.ssm.simulate(
         nsimulations, measurement_shocks=measurement_shocks,
-        state_shocks=state_shocks)[0].squeeze()
+        state_shocks=state_shocks,
+        initial_state=np.zeros(mod.k_states))[0].squeeze()
     desired = lfilter([1, theta], [1, -phi], np.r_[0, state_shocks[:-1]])
 
     assert_allclose(actual, desired)
 
     # SARIMAX(1,0,1)x(1,0,1,4), this time using the results object call
-    mod = sarimax.SARIMAX([0.1, 0.5, -0.2], order=(1,0,1),
-                          seasonal_order=(1,0,1,4))
+    mod = sarimax.SARIMAX([0.1, 0.5, -0.2], order=(1, 0, 1),
+                          seasonal_order=(1, 0, 1, 4))
     res = mod.filter([0.1, 0.5, 0.2, -0.3, 1])
 
     actual = res.simulate(
         nsimulations, measurement_shocks=measurement_shocks,
-        state_shocks=state_shocks)[0].squeeze()
+        state_shocks=state_shocks, initial_state=np.zeros(mod.k_states))
     desired = lfilter(
         res.polynomial_reduced_ma, res.polynomial_reduced_ar,
         np.r_[0, state_shocks[:-1]])
@@ -1226,11 +1219,11 @@ def test_impulse_responses():
     phi = 0.5
     mod.update([phi, 1])
 
-    desired = np.cumprod(np.r_[1, [phi]*10])[:, np.newaxis]
-    
+    desired = np.cumprod(np.r_[1, [phi]*10])
+
     # Test going through the model directly
     actual = mod.ssm.impulse_responses(steps=10)
-    assert_allclose(actual, desired)
+    assert_allclose(actual[:, 0], desired)
 
     # Test going through the results object
     res = mod.filter([phi, 1.])

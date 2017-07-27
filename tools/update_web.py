@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 """
 This script installs the trunk version, builds the docs, then uploads them
 to ...

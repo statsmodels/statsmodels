@@ -26,7 +26,6 @@ y = arma_generate_sample(arparams, maparams, nobs)
 
 import pandas as pd
 dates = sm.tsa.datetools.dates_from_range('1980m1', length=nobs)
-y = pd.TimeSeries(y, index=dates)
+y = pd.Series(y, index=dates)
 arma_mod = sm.tsa.ARMA(y, order=(2,2))
 arma_res = arma_mod.fit(trend='nc', disp=-1)
-

@@ -585,13 +585,13 @@ class TestMissingPandas(object):
         X = self.X
         combined = np.c_[y, X]
         idx = ~np.isnan(combined).any(axis=1)
-        y = y.ix[idx]
-        X = X.ix[idx]
+        y = y.loc[idx]
+        X = X.loc[idx]
         data = sm_data.handle_data(self.y, self.X, 'drop')
         np.testing.assert_array_equal(data.endog, y.values)
-        ptesting.assert_series_equal(data.orig_endog, self.y.ix[idx])
+        ptesting.assert_series_equal(data.orig_endog, self.y.loc[idx])
         np.testing.assert_array_equal(data.exog, X.values)
-        ptesting.assert_frame_equal(data.orig_exog, self.X.ix[idx])
+        ptesting.assert_frame_equal(data.orig_exog, self.X.loc[idx])
 
     def test_none(self):
         data = sm_data.handle_data(self.y, self.X, 'none', hasconst=False)
@@ -610,7 +610,7 @@ class TestMissingPandas(object):
 
     def test_mv_endog(self):
         y = self.X
-        y = y.ix[~np.isnan(y.values).any(axis=1)]
+        y = y.loc[~np.isnan(y.values).any(axis=1)]
         data = sm_data.handle_data(self.X, None, 'drop')
         np.testing.assert_array_equal(data.endog, y.values)
 
@@ -874,8 +874,8 @@ def test_formula_missing_extra_arrays():
     model_data2 = sm_data.handle_data(endog, exog, **kwargs)
 
     good_idx = [0, 4, 6, 9]
-    assert_equal(data.ix[good_idx, 'y'], model_data2.endog)
-    assert_equal(data.ix[good_idx, ['constant', 'X']], model_data2.exog)
+    assert_equal(data.loc[good_idx, 'y'], model_data2.endog)
+    assert_equal(data.loc[good_idx, ['constant', 'X']], model_data2.exog)
     assert_equal(weights_2d[good_idx][:, good_idx], model_data2.weights)
 
     tmp = handle_formula_data(data, None, formula, depth=2, missing='drop')

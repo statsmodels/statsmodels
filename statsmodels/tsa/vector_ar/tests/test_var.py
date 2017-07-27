@@ -83,8 +83,8 @@ class CheckVAR(object):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
 
 def get_macrodata():
-    data = sm.datasets.macrodata.load().data[['realgdp','realcons','realinv']]
-    names = data.dtype.names
+    data = sm.datasets.macrodata.load_pandas().data[['realgdp','realcons','realinv']]
+    data = data.to_records(index=False)
     nd = data.view((float,3), type=np.ndarray)
     nd = np.diff(np.log(nd), axis=0)
     return nd.ravel().view(data.dtype, type=np.ndarray)
@@ -361,12 +361,12 @@ class TestVARResults(CheckIRF, CheckFEVD):
         for i, name in enumerate(self.names):
             variables = self.names[:i] + self.names[i + 1:]
             result = self.res.test_causality(name, variables, kind='f')
-            assert_almost_equal(result['pvalue'], causedby[i], DECIMAL_4)
+            assert_almost_equal(result.pvalue, causedby[i], DECIMAL_4)
 
             rng = lrange(self.k)
             rng.remove(i)
             result2 = self.res.test_causality(i, rng, kind='f')
-            assert_almost_equal(result['pvalue'], result2['pvalue'], DECIMAL_12)
+            assert_almost_equal(result.pvalue, result2.pvalue, DECIMAL_12)
 
             # make sure works
             result = self.res.test_causality(name, variables, kind='wald')
@@ -531,7 +531,7 @@ class TestVARResultsLutkepohl(object):
         adj_data = np.diff(np.log(data), axis=0)
         # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
 
-        self.model = VAR(adj_data[:-16], dates=dates[1:-16], freq='Q')
+        self.model = VAR(adj_data[:-16], dates=dates[1:-16], freq='BQ-MAR')
         self.res = self.model.fit(maxlags=self.p)
         self.irf = self.res.irf(10)
         self.lut = E1_Results()

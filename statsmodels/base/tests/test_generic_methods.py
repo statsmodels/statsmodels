@@ -22,12 +22,6 @@ from nose import SkipTest
 import platform
 
 
-iswin = platform.system() == 'Windows'
-npversionless15 = NumpyVersion(np.__version__) < '1.5.0'
-winoldnp = iswin & npversionless15
-
-
-
 class CheckGenericMixin(object):
 
     def __init__(self):
@@ -452,7 +446,6 @@ class TestWaldAnovaOLSF(CheckAnovaMixin):
 
         mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
         cls.res = mod.fit()  # default use_t=True
-
 
     def test_predict_missing(self):
         ex = self.data[:5].copy()

@@ -27,6 +27,9 @@ only the moment conditions, `momcond` have to be defined.
 Module Reference
 """"""""""""""""
 
+.. module:: statsmodels.sandbox.regression.gmm
+   :synopsis: A framework for implementing Generalized Method of Moments (GMM)
+
 .. autosummary::
    :toctree: generated/
 

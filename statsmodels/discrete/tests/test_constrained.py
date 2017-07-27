@@ -338,9 +338,10 @@ class TestGLMPoissonConstrained1a(CheckPoissonConstrainedMixin):
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
-        cls.res1 = fit_constrained(mod, lc.coefs, lc.constants)
+        cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
+                                   fit_kwds={'atol': 1e-10})
         cls.constraints = lc
-        cls.res1m = mod.fit_constrained(constr)
+        cls.res1m = mod.fit_constrained(constr, atol=1e-10)
 
 
 class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
@@ -386,7 +387,7 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
 
         # basic, just as check that we have the same model
         assert_allclose(res1.params, res2.params, rtol=1e-12)
-        assert_allclose(res1.bse, res2.bse, rtol=1e-12)
+        assert_allclose(res1.bse, res2.bse, rtol=1e-11)
 
         # check predict, fitted, ...
 

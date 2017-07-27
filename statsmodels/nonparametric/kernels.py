@@ -23,7 +23,7 @@ from scipy.special import erf
 
 
 def aitchison_aitken(h, Xi, x, num_levels=None):
-    """
+    r"""
     The Aitchison-Aitken kernel, used for unordered discrete random variables.
 
     Parameters
@@ -68,7 +68,7 @@ def aitchison_aitken(h, Xi, x, num_levels=None):
 
 
 def wang_ryzin(h, Xi, x):
-    """
+    r"""
     The Wang-Ryzin kernel, used for ordered discrete random variables.
 
     Parameters

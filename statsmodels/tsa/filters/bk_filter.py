@@ -52,8 +52,7 @@ def bkfilter(X, low=6, high=32, K=12):
     >>> import statsmodels.api as sm
     >>> import pandas as pd
     >>> dta = sm.datasets.macrodata.load_pandas().data
-    >>> dates = sm.tsa.datetools.dates_from_range('1959Q1', '2009Q3')
-    >>> index = pd.DatetimeIndex(dates)
+    >>> index = pd.DatetimeIndex(start='1959Q1', end='2009Q4', freq='Q')
     >>> dta.set_index(index, inplace=True)
 
     >>> cycles = sm.tsa.filters.bkfilter(dta[['realinv']], 6, 24, 12)

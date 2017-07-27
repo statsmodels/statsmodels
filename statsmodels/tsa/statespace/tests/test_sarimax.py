@@ -16,7 +16,6 @@ from statsmodels.tsa import arima_model as arima
 from .results import results_sarimax
 from statsmodels.tools import add_constant
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
-from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -72,7 +71,7 @@ class TestSARIMAXStatsmodels(object):
     def test_mle(self):
         # ARIMA estimates the mean of the process, whereas SARIMAX estimates
         # the intercept. Convert the mean to intercept to compare
-        params_a = self.result_a.params
+        params_a = self.result_a.params.copy()
         params_a[0] = (1 - params_a[1]) * params_a[0]
         assert_allclose(self.result_b.params[:-1], params_a, atol=5e-5)
 
@@ -114,14 +113,14 @@ class TestRealGDPARStata(object):
     def test_filtered_state(self):
         for i in range(12):
             assert_allclose(
-                realgdp_results.ix[1:, 'u%d' % (i+1)],
+                realgdp_results.iloc[1:]['u%d' % (i+1)],
                 self.results.filter_results.filtered_state[i],
                 atol=1e-6
             )
 
     def test_standardized_forecasts_error(self):
         assert_allclose(
-            realgdp_results.ix[1:, 'rstd'],
+            realgdp_results.iloc[1:]['rstd'],
             self.results.filter_results.standardized_forecasts_error[0],
             atol=1e-3
         )
@@ -149,13 +148,19 @@ class SARIMAXStataTests(object):
     def test_hqic(self):
         hqic = (
             -2*self.result.llf +
-            2*np.log(np.log(self.result.nobs)) *
+            2*np.log(np.log(self.result.nobs_effective)) *
             self.result.params.shape[0]
         )
         assert_almost_equal(
             self.result.hqic,
             hqic, 3
         )
+
+    def test_standardized_forecasts_error(self):
+        cython_sfe = self.result.standardized_forecasts_error
+        self.result._standardized_forecasts_error = None
+        python_sfe = self.result.standardized_forecasts_error
+        assert_allclose(cython_sfe, python_sfe)
 
 
 class ARIMA(SARIMAXStataTests):
@@ -566,11 +571,10 @@ class TestAirlineStateDifferencing(Airline):
         )
 
     def test_mle(self):
-        result = self.model.fit(disp=-1)
+        result = self.model.fit(method='nm', maxiter=1000, disp=0)
         assert_allclose(
             result.params, self.result.params,
-            atol=1e-3
-        )
+            atol=1e-3)
 
     def test_bse(self):
         # test defaults
@@ -954,14 +958,14 @@ class SARIMAXCoverageTest(object):
     def test_start_params(self):
         # just a quick test that start_params isn't throwing an exception
         # (other than related to invertibility)
-
+        stat, inv = self.model.enforce_stationarity, self.model.enforce_invertibility
         self.model.enforce_stationarity = False
         self.model.enforce_invertibility = False
         self.model.start_params
-        self.model.enforce_stationarity = True
-        self.model.enforce_invertibility = True
+        self.model.enforce_stationarity, self.model.enforce_invertibility = stat, inv
 
     def test_transform_untransform(self):
+        stat, inv = self.model.enforce_stationarity, self.model.enforce_invertibility
         true_constrained = self.true_params
 
         # Sometimes the parameters given by Stata are not stationary and / or
@@ -975,17 +979,15 @@ class SARIMAXCoverageTest(object):
         )
         contracted_polynomial_seasonal_ma = self.model.polynomial_seasonal_ma[self.model.polynomial_seasonal_ma.nonzero()]
         self.model.enforce_invertibility = (
-            (self.model.k_ma == 0 or tools.is_invertible(np.r_[1, -self.model.polynomial_ma[1:]])) and
-            (len(contracted_polynomial_seasonal_ma) <= 1 or tools.is_invertible(np.r_[1, -contracted_polynomial_seasonal_ma[1:]]))
+            (self.model.k_ma == 0 or tools.is_invertible(np.r_[1, self.model.polynomial_ma[1:]])) and
+            (len(contracted_polynomial_seasonal_ma) <= 1 or tools.is_invertible(np.r_[1, contracted_polynomial_seasonal_ma[1:]]))
         )
 
         unconstrained = self.model.untransform_params(true_constrained)
         constrained = self.model.transform_params(unconstrained)
 
         assert_almost_equal(constrained, true_constrained, 4)
-
-        self.model.enforce_stationarity = True
-        self.model.enforce_invertibility = True
+        self.model.enforce_stationarity, self.model.enforce_invertibility = stat, inv
 
     def test_results(self):
         self.result = self.model.filter(self.true_params)
@@ -1164,16 +1166,23 @@ class Test_ar_no_enforce(SARIMAXCoverageTest):
         # of states if enforce_stationarity = False
         cls.model.ssm.loglikelihood_burn = 0
 
-    def test_loglike(self):
-        # Regression in the state vector gives a different loglikelihood, so
-        # just check that it's approximately the same
-        self.result = self.model.filter(self.true_params)
+    def test_init_keys_replicate(self):
+        mod1 = self.model
 
-        assert_allclose(
-            self.result.llf,
-            self.true_loglike,
-            atol=2
-        )
+        kwargs = self.model._get_init_kwds()
+        endog = mod1.data.orig_endog
+        exog = mod1.data.orig_exog
+
+        model2 = sarimax.SARIMAX(endog, exog, **kwargs)
+        # Fixes needed for edge case model
+        model2.ssm._initial_variance = mod1.ssm._initial_variance
+        model2.ssm.initialization = mod1.ssm.initialization
+
+        res1 = self.model.filter(self.true_params)
+        res2 = model2.filter(self.true_params)
+        rtol = 1e-6 if IS_WINDOWS else 1e-13
+        assert_allclose(res2.llf, res1.llf, rtol=rtol)
+
 
 class Test_ar_exogenous(SARIMAXCoverageTest):
     # // ARX
@@ -1989,3 +1998,78 @@ def test_misc_exog():
     # Test invalid model specifications
     assert_raises(ValueError, sarimax.SARIMAX, endog, exog=np.zeros((10, 4)),
                   order=(1, 1, 0))
+
+
+def test_datasets():
+    # Test that some unusual types of datasets work
+
+    np.random.seed(232849)
+    endog = np.random.binomial(1, 0.5, size=100)
+    exog = np.random.binomial(1, 0.5, size=100)
+    mod = sarimax.SARIMAX(endog, exog=exog, order=(1, 0, 0))
+    res = mod.fit(disp=-1)
+
+
+def test_predict_custom_index():
+    np.random.seed(328423)
+    endog = pd.DataFrame(np.random.normal(size=50))
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0))
+    res = mod.smooth(mod.start_params)
+    out = res.predict(start=1, end=1, index=['a'])
+    assert_equal(out.index.equals(pd.Index(['a'])), True)
+
+
+def test_arima000():
+    from statsmodels.tsa.statespace.tools import compatibility_mode
+
+    # Test an ARIMA(0,0,0) with measurement error model (i.e. just estimating
+    # a variance term)
+    np.random.seed(328423)
+    nobs = 50
+    endog = pd.DataFrame(np.random.normal(size=nobs))
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), measurement_error=False)
+    res = mod.smooth(mod.start_params)
+    assert_allclose(res.smoothed_state, endog.T)
+
+    # ARIMA(0, 1, 0)
+    mod = sarimax.SARIMAX(endog, order=(0, 1, 0), measurement_error=False)
+    res = mod.smooth(mod.start_params)
+    assert_allclose(res.smoothed_state[1:, 1:], endog.diff()[1:].T)
+
+    # SARIMA(0, 1, 0)x(0, 1, 0, 1)
+    mod = sarimax.SARIMAX(endog, order=(0, 1, 0), measurement_error=True,
+                          seasonal_order=(0, 1, 0, 1))
+    res = mod.smooth(mod.start_params)
+
+    # Exogenous variables
+    error = np.random.normal(size=nobs)
+    endog = np.ones(nobs) * 10 + error
+    exog = np.ones(nobs)
+
+    # We need univariate filtering here, to guarantee we won't hit singular
+    # forecast error covariance matrices.
+    if compatibility_mode:
+        return
+
+    # OLS
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), exog=exog)
+    mod.ssm.filter_univariate = True
+    res = mod.smooth([10., 1.])
+    assert_allclose(res.smoothed_state[0], error, atol=1e-10)
+
+    # RLS
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), exog=exog,
+                          mle_regression=False)
+    mod.ssm.filter_univariate = True
+    mod.initialize_known([0., 10.], np.diag([1., 0.]))
+    res = mod.smooth([1.])
+    assert_allclose(res.smoothed_state[0], error, atol=1e-10)
+    assert_allclose(res.smoothed_state[1], 10, atol=1e-10)
+
+    # RLS + TVP
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), exog=exog,
+                          mle_regression=False, time_varying_regression=True)
+    mod.ssm.filter_univariate = True
+    mod.initialize_known([10.], np.diag([0.]))
+    res = mod.smooth([0., 1.])
+    assert_allclose(res.smoothed_state[0], 10, atol=1e-10)

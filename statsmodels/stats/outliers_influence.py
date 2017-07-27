@@ -135,7 +135,7 @@ def variance_inflation_factor(exog, exog_idx):
 
     Parameters
     ----------
-    exog : ndarray, (nobs, k_vars)
+    exog : ndarray
         design matrix with all explanatory variables, as for example used in
         regression
     exog_idx : int
@@ -665,7 +665,8 @@ class OLSInfluence(object):
 
 
 def summary_table(res, alpha=0.05):
-    '''generate summary table of outlier and influence similar to SAS
+    """
+    Generate summary table of outlier and influence similar to SAS
 
     Parameters
     ----------
@@ -680,8 +681,7 @@ def summary_table(res, alpha=0.05):
        calculated measures and statistics for the table
     ss2 : list of strings
        column_names for table (Note: rows of table are observations)
-
-    '''
+    """
 
     from scipy import stats
     from statsmodels.sandbox.regression.predstd import wls_prediction_std
@@ -699,7 +699,9 @@ def summary_table(res, alpha=0.05):
 
 
     #standard error for predicted observation
-    predict_se, predict_ci_low, predict_ci_upp = wls_prediction_std(res)
+    tmp = wls_prediction_std(res, alpha=alpha)
+    predict_se, predict_ci_low, predict_ci_upp = tmp
+
     predict_ci = np.column_stack((predict_ci_low, predict_ci_upp))
 
     #standard deviation of residual

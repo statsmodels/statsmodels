@@ -9,4 +9,4 @@ There are currently several places that statsmodels is automatically built and t
 
 The test coverage pages are here.
 
-* `Coveralls <https://coveralls.io/r/statsmodels/statsmodels>`_
+* `Coveralls <https://coveralls.io/github/statsmodels/statsmodels>`_

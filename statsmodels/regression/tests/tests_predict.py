@@ -213,3 +213,7 @@ class TestWLSPrediction(object):
         ptt = pt.t_test()
         assert_allclose(ptt[0], res_glm.tvalues, rtol=1e-13)
         assert_allclose(ptt[1], res_glm.pvalues, rtol=1e-13)
+
+        # prediction with exog and no weights does not error
+        res_glm = mod_glm.fit()
+        pred_glm = res_glm.get_prediction(X)

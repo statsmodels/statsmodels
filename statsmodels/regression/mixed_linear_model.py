@@ -4,7 +4,7 @@ They can be used to estimate regression relationships involving both
 means and variances.
 
 These models are also known as multilevel linear models, and
-hierachical linear models.
+hierarchical linear models.
 
 The MixedLM class fits linear mixed effects models to data, and
 provides support for some common post-estimation tasks.  This is a
@@ -53,7 +53,7 @@ structure is of interest, GEE is an alternative to using linear mixed
 models.
 
 Two types of random effects are supported.  Standard random effects
-are correlated with each other in arbitary ways.  Every group has the
+are correlated with each other in arbitrary ways.  Every group has the
 same number (`k_re`) of standard random effects, with the same joint
 distribution (but with independent realizations across the groups).
 
@@ -140,7 +140,7 @@ effects parameters (if any).  As a result of this profiling, it is
 difficult and unnecessary to calculate the Hessian of the profiled log
 likelihood function, so that calculation is not implemented here.
 Therefore, optimization methods requiring the Hessian matrix such as
-the Newton-Raphson algorihm cannot be used for model fitting.
+the Newton-Raphson algorithm cannot be used for model fitting.
 """
 
 import numpy as np
@@ -153,6 +153,7 @@ from scipy import sparse
 import pandas as pd
 import patsy
 from statsmodels.compat.collections import OrderedDict
+from statsmodels.compat.python import string_types
 from statsmodels.compat import range
 import warnings
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
@@ -526,7 +527,7 @@ class MixedLM(base.LikelihoodModel):
         covariance structure (the "random effects" covariates).  If
         None, defaults to a random intercept for each group.
     exog_vc : dict-like
-        A dicationary containing specifications of the variance
+        A dictionary containing specifications of the variance
         component terms.  See below for details.
     use_sqrt : bool
         If True, optimization is carried out using the lower
@@ -573,7 +574,7 @@ class MixedLM(base.LikelihoodModel):
     A mixed model with fixed effects for the columns of ``exog`` and
     independent random coefficients for the columns of ``exog_re``:
 
-    >>> free = MixedLMParams.from_components(fe_params=np.ones(exog.shape[1]),
+    >>> free = MixedLMParams.from_components(fe_params=np.ones(exog.shape[1]), \
                      cov_re=np.eye(exog_re.shape[1]))
     >>> model = sm.MixedLM(endog, exog, groups, exog_re=exog_re)
     >>> result = model.fit(free=free)
@@ -639,7 +640,7 @@ class MixedLM(base.LikelihoodModel):
             self.k_re2 = 1
             self.exog_re = np.ones((len(endog), 1), dtype=np.float64)
             self.data.exog_re = self.exog_re
-            names = ['Group RE']
+            names = ['Group Var']
             self.data.param_names = self.exog_names + names
             self.data.exog_re_names = names
             self.data.exog_re_names_full = names
@@ -741,19 +742,21 @@ class MixedLM(base.LikelihoodModel):
         for i in range(len(exog_re_names)):
             for j in range(i + 1):
                 if i == j:
-                    param_names.append(exog_re_names[i] + " RE")
+                    param_names.append(exog_re_names[i] + " Var")
                 else:
-                    param_names.append(exog_re_names[j] + " RE x " +
-                                       exog_re_names[i] + " RE")
+                    param_names.append(exog_re_names[j] + " x " +
+                                       exog_re_names[i] + " Cov")
                 jj += 1
 
-        vc_names = [x + " RE" for x in self._vc_names]
+        vc_names = [x + " Var" for x in self._vc_names]
 
         return exog_names + param_names + vc_names, exog_re_names, param_names
 
+
     @classmethod
     def from_formula(cls, formula, data, re_formula=None, vc_formula=None,
-                     subset=None, use_sparse=False, *args, **kwargs):
+                     subset=None, use_sparse=False, missing='none', *args,
+                     **kwargs):
         """
         Create a Model from a formula and dataframe.
 
@@ -777,6 +780,8 @@ class MixedLM(base.LikelihoodModel):
             An array-like object of booleans, integers, or index
             values that indicate the subset of df to use in the
             model. Assumes df is a `pandas.DataFrame`
+        missing : string
+            Either 'none' or 'drop'
         args : extra arguments
             These are passed to the model
         kwargs : extra keyword arguments
@@ -812,10 +817,6 @@ class MixedLM(base.LikelihoodModel):
         be affected by whether the group labels are distinct or
         re-used over the top-level groups.
 
-        This method currently does not correctly handle missing
-        values, so missing values should be explicitly dropped from
-        the DataFrame before calling this method.
-
         Examples
         --------
         Suppose we have an educational data set with students nested
@@ -829,7 +830,7 @@ class MixedLM(base.LikelihoodModel):
         the schools.
 
         >>> vc = {'classroom': '0 + C(classroom)'}
-        >>> MixedLM.from_formula('test_score ~ age', vc_formula=vc,
+        >>> MixedLM.from_formula('test_score ~ age', vc_formula=vc, \
                                   re_formula='1', groups='school', data=data)
 
         Now suppose we also have a previous test score called
@@ -838,7 +839,7 @@ class MixedLM(base.LikelihoodModel):
         specify a random slope for the pretest score
 
         >>> vc = {'classroom': '0 + C(classroom)', 'pretest': '0 + pretest'}
-        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc,
+        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc, \
                                   re_formula='1', groups='school', data=data)
 
         The following model is almost equivalent to the previous one,
@@ -846,26 +847,33 @@ class MixedLM(base.LikelihoodModel):
         be correlated.
 
         >>> vc = {'classroom': '0 + C(classroom)'}
-        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc,
-                                  re_formula='1 + pretest', groups='school',
+        >>> MixedLM.from_formula('test_score ~ age + pretest', vc_formula=vc, \
+                                  re_formula='1 + pretest', groups='school', \
                                   data=data)
         """
 
         if "groups" not in kwargs.keys():
             raise AttributeError("'groups' is a required keyword argument in MixedLM.from_formula")
+        groups = kwargs["groups"]
 
         # If `groups` is a variable name, retrieve the data for the
         # groups variable.
         group_name = "Group"
-        if type(kwargs["groups"]) == str:
-            group_name = kwargs["groups"]
-            kwargs["groups"] = np.asarray(data[kwargs["groups"]])
+        if isinstance(groups, string_types):
+            group_name = groups
+            groups = np.asarray(data[groups])
+        del kwargs["groups"]
+
+        # Bypass all upstream missing data handling to properly handle variance components
+        if missing == 'drop':
+            data, groups = _handle_missing(data, groups, formula, re_formula, vc_formula)
+            missing = 'none'
 
         if re_formula is not None:
             if re_formula.strip() == "1":
                 # Work around Patsy bug, fixed by 0.3.
                 exog_re = np.ones((data.shape[0], 1))
-                exog_re_names = ["Group"]
+                exog_re_names = [group_name]
             else:
                 eval_env = kwargs.get('eval_env', None)
                 if eval_env is None:
@@ -875,13 +883,14 @@ class MixedLM(base.LikelihoodModel):
                     eval_env = EvalEnvironment({})
                 exog_re = patsy.dmatrix(re_formula, data, eval_env=eval_env)
                 exog_re_names = exog_re.design_info.column_names
+                exog_re_names = [x.replace("Intercept", group_name) for x in exog_re_names]
                 exog_re = np.asarray(exog_re)
             if exog_re.ndim == 1:
                 exog_re = exog_re[:, None]
         else:
             exog_re = None
             if vc_formula is None:
-                exog_re_names = ["groups"]
+                exog_re_names = [group_name]
             else:
                 exog_re_names = []
 
@@ -894,8 +903,7 @@ class MixedLM(base.LikelihoodModel):
                 eval_env = EvalEnvironment({})
 
             exog_vc = {}
-            data["_group"] = kwargs["groups"]
-            gb = data.groupby("_group")
+            gb = data.groupby(groups)
             kylist = list(gb.groups.keys())
             kylist.sort()
             for vc_name in vc_formula.keys():
@@ -917,6 +925,7 @@ class MixedLM(base.LikelihoodModel):
                                                subset=None,
                                                exog_re=exog_re,
                                                exog_vc=exog_vc,
+                                               groups=groups,
                                                *args, **kwargs)
 
         # expand re names to account for pairs of RE
@@ -1036,7 +1045,7 @@ class MixedLM(base.LikelihoodModel):
         http://statweb.stanford.edu/~tibs/stat315a/Supplements/fuse.pdf
         """
 
-        if type(method) == str and (method.lower() != 'l1'):
+        if isinstance(method, string_types) and (method.lower() != 'l1'):
             raise ValueError("Invalid regularization method")
 
         # If method is a smooth penalty just optimize directly.
@@ -1196,7 +1205,7 @@ class MixedLM(base.LikelihoodModel):
         -----
         If P are the standard form parameters and R are the
         transformed parameters (i.e. with the Cholesky square root
-        covariance and square root transformed variane components),
+        covariance and square root transformed variance components),
         then P[i] = lin[i] * R + R' * quad[i] * R
         """
 
@@ -1252,7 +1261,7 @@ class MixedLM(base.LikelihoodModel):
         group : string
             The group label
 
-        Returns an expaded version of vcomp, in which each variance
+        Returns an expanded version of vcomp, in which each variance
         parameter is copied as many times as there are independent
         realizations of the variance component in the given group.
         """
@@ -1899,7 +1908,7 @@ class MixedLM(base.LikelihoodModel):
         Parameters
         ----------
         start_params: array-like or MixedLMParams
-            Starting values for the profile log-likeihood.  If not a
+            Starting values for the profile log-likelihood.  If not a
             `MixedLMParams` instance, this should be an array
             containing the packed parameters for the profile
             log-likelihood, including the fixed effects
@@ -1918,7 +1927,7 @@ class MixedLM(base.LikelihoodModel):
             it is fixed at its starting value.  Setting the `cov_re`
             component to the identity matrix fits a model with
             independent random effects.  Note that some optimization
-            methods do not respect this contraint (bfgs and lbfgs both
+            methods do not respect this constraint (bfgs and lbfgs both
             work).
         full_output : bool
             If true, attach iteration history to results
@@ -2580,3 +2589,42 @@ class MixedLMResultsWrapper(base.LikelihoodResultsWrapper):
     _methods = {}
     _upstream_methods = base.LikelihoodResultsWrapper._wrap_methods
     _wrap_methods = base.wrap.union_dicts(_methods, _upstream_methods)
+
+
+def _handle_missing(data, groups, formula, re_formula, vc_formula):
+
+    tokens = set([])
+
+    forms = [formula]
+    if re_formula is not None:
+        forms.append(re_formula)
+    if vc_formula is not None:
+        forms.extend(vc_formula.values())
+
+    import tokenize
+    from statsmodels.compat import PY3
+    from statsmodels.compat.python import StringIO, asunicode
+    skiptoks = {"(", ")", "*", ":", "+", "-", "**", "/"}
+
+    for fml in forms:
+        # Unicode conversion is for Py2 compatability
+        rl = StringIO(fml)
+        def rlu():
+            line = rl.readline()
+            return asunicode(line, 'ascii')
+        g = tokenize.generate_tokens(rlu)
+        for tok in g:
+            if tok not in skiptoks:
+                if PY3:
+                    tokens.add(tok.string)
+                else:
+                    tokens.add(tok[1])
+    tokens = list(tokens & set(data.columns))
+    tokens.sort()
+
+    data = data[tokens]
+    ii = pd.notnull(data).all(1)
+    if type(groups) != "str":
+        ii &= pd.notnull(groups)
+
+    return data.loc[ii, :], groups[np.asarray(ii)]

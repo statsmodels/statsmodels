@@ -11,12 +11,10 @@ from statsmodels.compat.collections import OrderedDict
 
 import pandas as pd
 import numpy as np
-from .kalman_filter import (
-    KalmanFilter, FilterResults, INVERT_UNIVARIATE, SOLVE_LU
-)
+from .kalman_filter import (INVERT_UNIVARIATE, SOLVE_LU)
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
-    companion_matrix, diff, is_invertible,
+    is_invertible, prepare_exog,
     constrain_stationary_multivariate, unconstrain_stationary_multivariate
 )
 from statsmodels.tools.tools import Bunch
@@ -57,7 +55,7 @@ class VARMAX(MLEModel):
     enforce_invertibility : boolean, optional
         Whether or not to transform the MA parameters to enforce invertibility
         in the moving average component of the model. Default is True.
-    **kwargs
+    kwargs
         Keyword arguments may be used to provide default values for state space
         matrices or for Kalman filtering options. See `Representation`, and
         `KalmanFilter` for more details.
@@ -153,20 +151,7 @@ class VARMAX(MLEModel):
                  EstimationWarning)
 
         # Exogenous data
-        self.k_exog = 0
-        if exog is not None:
-            exog_is_using_pandas = _is_using_pandas(exog, None)
-            if not exog_is_using_pandas:
-                exog = np.asarray(exog)
-
-            # Make sure we have 2-dimensional array
-            if exog.ndim == 1:
-                if not exog_is_using_pandas:
-                    exog = exog[:, None]
-                else:
-                    exog = pd.DataFrame(exog)
-
-            self.k_exog = exog.shape[1]
+        (self.k_exog, exog) = prepare_exog(exog)
 
         # Note: at some point in the future might add state regression, as in
         # SARIMAX.
@@ -196,6 +181,10 @@ class VARMAX(MLEModel):
         super(VARMAX, self).__init__(
             endog, exog=exog, k_states=k_states, k_posdef=k_posdef, **kwargs
         )
+
+        # Set as time-varying model if we have time-trend or exog
+        if self.k_exog > 0 or self.k_trend > 1:
+            self.ssm._time_invariant = False
 
         # Initialize the parameters
         self.parameters = OrderedDict()
@@ -297,7 +286,13 @@ class VARMAX(MLEModel):
         params = np.zeros(self.k_params, dtype=np.float64)
 
         # A. Run a multivariate regression to get beta estimates
-        endog = self.endog.copy()
+        endog = pd.DataFrame(self.endog.copy())
+        # Pandas < 0.13 didn't support the same type of DataFrame interpolation
+        try:
+            endog = endog.interpolate()
+        except TypeError:
+            pass
+        endog = endog.fillna(method='backfill').values
         exog = self.exog.copy() if self.k_exog > 0 else None
 
         # Although the Kalman filter can deal with missing values in endog,
@@ -344,8 +339,8 @@ class VARMAX(MLEModel):
 
             if not stationary:
                 raise ValueError('Non-stationary starting autoregressive'
-                         ' parameters found with `enforce_stationarity`'
-                         ' set to True.')
+                                 ' parameters found with'
+                                 ' `enforce_stationarity` set to True.')
 
         # C. Run a VAR model on the residuals to get MA parameters
         ma_params = []
@@ -366,8 +361,8 @@ class VARMAX(MLEModel):
 
                 if not invertible:
                     raise ValueError('Non-invertible starting moving-average'
-                             ' parameters found with `enforce_stationarity`'
-                             ' set to True.')
+                                     ' parameters found with'
+                                     ' `enforce_stationarity` set to True.')
 
         # 1. Intercept terms
         if self.trend == 'c':
@@ -724,8 +719,8 @@ class VARMAXResults(MLEResults):
                 ma_params.reshape(k_endog * k_ma, k_endog).T
             ).reshape(k_endog, k_endog, k_ma).T
 
-    def get_prediction(self, start=None, end=None, dynamic=False, exog=None,
-                       **kwargs):
+    def get_prediction(self, start=None, end=None, dynamic=False, index=None,
+                       exog=None, **kwargs):
         """
         In-sample prediction and out-of-sample forecasting
 
@@ -754,7 +749,7 @@ class VARMAXResults(MLEResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
-        **kwargs
+        kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
 
@@ -764,11 +759,11 @@ class VARMAXResults(MLEResults):
             Array of out of sample forecasts.
         """
         if start is None:
-                start = 0
+            start = self.model._index[0]
 
         # Handle end (e.g. date)
-        _start = self.model._get_predict_start(start)
-        _end, _out_of_sample = self.model._get_predict_end(end)
+        _start, _end, _out_of_sample, prediction_index = (
+            self.model._get_prediction_index(start, end, index, silent=True))
 
         # Handle exogenous parameters
         if _out_of_sample and (self.model.k_exog + self.model.k_trend > 0):
@@ -820,8 +815,8 @@ class VARMAXResults(MLEResults):
                  ' required. `exog` argument ignored.', ValueWarning)
 
         return super(VARMAXResults, self).get_prediction(
-            start=start, end=end, dynamic=dynamic, exog=exog, **kwargs
-        )
+            start=start, end=end, dynamic=dynamic, index=index, exog=exog,
+            **kwargs)
 
     def summary(self, alpha=.05, start=None, separate_params=True):
         from statsmodels.iolib.summary import summary_params
@@ -908,7 +903,8 @@ class VARMAXResults(MLEResults):
 
                 # 5. Measurement error variance terms
                 if self.model.measurement_error:
-                    masks.append(np.array(self.model.k_params - i - 1, ndmin=1))
+                    masks.append(
+                        np.array(self.model.k_params - i - 1, ndmin=1))
 
                 # Create the table
                 mask = np.concatenate(masks)

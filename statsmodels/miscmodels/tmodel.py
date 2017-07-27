@@ -123,13 +123,13 @@ class TLinearModel(GenericLikelihoodModel):
 
         Returns
         -------
-        loglike : array, (nobs,)
+        loglike : array
             The log likelihood of the model evaluated at `params` for each
             observation defined by self.endog and self.exog.
 
         Notes
         -----
-        .. math :: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
 
         The t distribution is the standard t distribution and not a standardized
         t distribution, which means that the scale parameter is not equal to the

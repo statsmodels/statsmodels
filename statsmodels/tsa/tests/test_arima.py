@@ -1,4 +1,4 @@
-from statsmodels.compat.python import lrange, BytesIO
+from statsmodels.compat.python import lrange, BytesIO, cPickle
 
 import os
 import warnings
@@ -17,7 +17,6 @@ from statsmodels.tools.testing import assert_equal
 from statsmodels.tsa.arma_mle import Arma
 from statsmodels.tsa.arima_model import ARMA, ARIMA
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tsa.base.datetools import dates_from_range
 from statsmodels.tsa.tests.results import results_arma, results_arima
 from statsmodels.tsa.arima_process import arma_generate_sample
 
@@ -152,6 +151,7 @@ class CheckArmaResultsMixin(object):
     def test_summary(self):
         # smoke tests
         table = self.res1.summary()
+
 
 
 class CheckForecastMixin(object):
@@ -653,10 +653,8 @@ class Test_ARIMA112CSS(CheckArimaResultsMixin):
 #class Test_ARIMADates(CheckArmaResults, CheckForecast, CheckDynamicForecast):
 #    @classmethod
 #    def setupClass(cls):
-#        from statsmodels.tsa.datetools import dates_from_range
-#
 #        cpi = load_macrodata().data['cpi']
-#        dates = dates_from_range('1959q1', length=203)
+#        dates = pd.date_range('1959', periods=203, freq='Q')
 #        cls.res1 = ARIMA(cpi, dates=dates, freq='Q').fit(order=(1,1,1), disp=-1)
 #        cls.res2 = results_arima.ARIMA111()
 #        # make sure endog names changes to D.cpi
@@ -706,16 +704,14 @@ def test_arma_predict_mle_dates():
     mod = ARMA(sunspots, (9,0), dates=sun_dates, freq='A')
     mod.method = 'mle'
 
-    assert_raises(ValueError, mod._get_predict_start, *('1701', True))
+    assert_raises(ValueError, mod._get_prediction_index, *('1701', '1751', True))
 
     start, end = 2, 51
-    _ = mod._get_predict_start('1702', False)
-    _ = mod._get_predict_end('1751')
+    _, _, _, _ = mod._get_prediction_index('1702', '1751', False)
     assert_equal(mod.data.predict_dates, sun_dates[start:end+1])
 
     start, end = 308, 333
-    _ = mod._get_predict_start('2008', False)
-    _ = mod._get_predict_end('2033')
+    _, _, _, _ = mod._get_prediction_index('2008', '2033', False)
     assert_equal(mod.data.predict_dates, sun_predict_dates)
 
 
@@ -763,7 +759,7 @@ def test_arma_predict_css_dates():
     sunspots = load().data['SUNACTIVITY']
     mod = ARMA(sunspots, (9,0), dates=sun_dates, freq='A')
     mod.method = 'css'
-    assert_raises(ValueError, mod._get_predict_start, *('1701', False))
+    assert_raises(ValueError, mod._get_prediction_index, *('1701', '1751', False))
 
 
 def test_arima_predict_mle():
@@ -913,12 +909,12 @@ def test_arima_predict_mle():
 
 
 def _check_start(model, given, expected, dynamic):
-    start = model._get_predict_start(given, dynamic)
+    start, _, _, _ = model._get_prediction_index(given, None, dynamic)
     assert_equal(start, expected)
 
 
 def _check_end(model, given, end_expect, out_of_sample_expect):
-    end, out_of_sample = model._get_predict_end(given)
+    _, end, out_of_sample, _ = model._get_prediction_index(None, given, False)
     assert_equal((end, out_of_sample), (end_expect, out_of_sample_expect))
 
 
@@ -929,16 +925,17 @@ def test_arma_predict_indices():
     model.method = 'mle'
 
     # raises - pre-sample + dynamic
-    assert_raises(ValueError, model._get_predict_start, *(0, True))
-    assert_raises(ValueError, model._get_predict_start, *(8, True))
-    assert_raises(ValueError, model._get_predict_start, *('1700', True))
-    assert_raises(ValueError, model._get_predict_start, *('1708', True))
+    assert_raises(ValueError, model._get_prediction_index, *(0, None, True))
+    assert_raises(ValueError, model._get_prediction_index, *(8, None, True))
+    assert_raises(ValueError, model._get_prediction_index, *('1700', None, True))
+    assert_raises(ValueError, model._get_prediction_index, *('1708', None, True))
 
     # raises - start out of sample
-    assert_raises(ValueError, model._get_predict_start, *(311, True))
-    assert_raises(ValueError, model._get_predict_start, *(311, False))
-    assert_raises(ValueError, model._get_predict_start, *('2010', True))
-    assert_raises(ValueError, model._get_predict_start, *('2010', False))
+    # TODO: remove these, start out of sample now allowed
+    # assert_raises(ValueError, model._get_prediction_index, *(311, None, True))
+    # assert_raises(ValueError, model._get_prediction_index, *(311, None, False))
+    # assert_raises(ValueError, model._get_prediction_index, *('2010', None, True))
+    # assert_raises(ValueError, model._get_prediction_index, *('2010', None, False))
 
     # works - in-sample
     # None
@@ -1000,20 +997,21 @@ def test_arima_predict_indices():
     # starting indices
 
     # raises - pre-sample + dynamic
-    assert_raises(ValueError, model._get_predict_start, *(0, True))
-    assert_raises(ValueError, model._get_predict_start, *(4, True))
-    assert_raises(ValueError, model._get_predict_start, *('1959Q1', True))
-    assert_raises(ValueError, model._get_predict_start, *('1960Q1', True))
+    assert_raises(ValueError, model._get_prediction_index, *(0, None, True))
+    assert_raises(ValueError, model._get_prediction_index, *(4, None, True))
+    assert_raises(KeyError, model._get_prediction_index, *('1959Q1', None, True))
+    assert_raises(ValueError, model._get_prediction_index, *('1960Q1', None, True))
 
     # raises - index differenced away
-    assert_raises(ValueError, model._get_predict_start, *(0, False))
-    assert_raises(ValueError, model._get_predict_start, *('1959Q1', False))
+    assert_raises(ValueError, model._get_prediction_index, *(0, None, False))
+    assert_raises(KeyError, model._get_prediction_index, *('1959Q1', None, False))
 
     # raises - start out of sample
-    assert_raises(ValueError, model._get_predict_start, *(204, True))
-    assert_raises(ValueError, model._get_predict_start, *(204, False))
-    assert_raises(ValueError, model._get_predict_start, *('2010Q1', True))
-    assert_raises(ValueError, model._get_predict_start, *('2010Q1', False))
+    # TODO: start out of sample is now allowed; remove this code
+    # assert_raises(ValueError, model._get_prediction_index, *(204, None, True))
+    # assert_raises(ValueError, model._get_prediction_index, *(204, None, False))
+    # assert_raises(ValueError, model._get_prediction_index, *('2010Q1', None, True))
+    # assert_raises(ValueError, model._get_prediction_index, *('2010Q1', None, False))
 
     # works - in-sample
     # None
@@ -1069,17 +1067,19 @@ def test_arima_predict_indices():
         _check_end(*((model,)+case))
 
     # check higher k_diff
+    # model.k_diff = 2
+    model = ARIMA(cpi, (4,2,1), dates=cpi_dates, freq='Q')
+    model.method = 'mle'
 
-    model.k_diff = 2
     # raises - pre-sample + dynamic
-    assert_raises(ValueError, model._get_predict_start, *(0, True))
-    assert_raises(ValueError, model._get_predict_start, *(5, True))
-    assert_raises(ValueError, model._get_predict_start, *('1959Q1', True))
-    assert_raises(ValueError, model._get_predict_start, *('1960Q1', True))
+    assert_raises(ValueError, model._get_prediction_index, *(0, None, True))
+    assert_raises(ValueError, model._get_prediction_index, *(5, None, True))
+    assert_raises(KeyError, model._get_prediction_index, *('1959Q1', None, True))
+    assert_raises(ValueError, model._get_prediction_index, *('1960Q1', None, True))
 
     # raises - index differenced away
-    assert_raises(ValueError, model._get_predict_start, *(1, False))
-    assert_raises(ValueError, model._get_predict_start, *('1959Q2', False))
+    assert_raises(ValueError, model._get_prediction_index, *(1, None, False))
+    assert_raises(KeyError, model._get_prediction_index, *('1959Q2', None, False))
 
     start_test_cases = [(None, 4, True),
                   # all start get moved back by k_diff
@@ -1131,10 +1131,10 @@ def test_arima_predict_indices_css():
     model = ARIMA(cpi, (4,1,1))
     model.method = 'css'
 
-    assert_raises(ValueError, model._get_predict_start, *(0, False))
-    assert_raises(ValueError, model._get_predict_start, *(0, True))
-    assert_raises(ValueError, model._get_predict_start, *(2, False))
-    assert_raises(ValueError, model._get_predict_start, *(2, True))
+    assert_raises(ValueError, model._get_prediction_index, *(0, None, False))
+    assert_raises(ValueError, model._get_prediction_index, *(0, None, True))
+    assert_raises(ValueError, model._get_prediction_index, *(2, None, False))
+    assert_raises(ValueError, model._get_prediction_index, *(2, None, True))
 
 
 def test_arima_predict_css():
@@ -1588,7 +1588,8 @@ def test_arima_predict_bug():
     #predict_start_date wasn't getting set on start = None
     from statsmodels.datasets import sunspots
     dta = sunspots.load_pandas().data.SUNACTIVITY
-    dta.index = pd.Index(dates_from_range('1700', '2008'))
+    dta.index = pd.DatetimeIndex(start='1700', end='2009', freq='A')[:309]
+    print(dta.index)
     arma_mod20 = ARMA(dta, (2,0)).fit(disp=-1)
     arma_mod20.predict(None, None)
 
@@ -1598,7 +1599,7 @@ def test_arima_predict_bug():
     predict = arma_mod20.predict(dta.index[-20], dta.index[-1], dynamic=True)
     assert_(predict.index.equals(dta.index[-20:]))
     # partially out of sample
-    predict_dates = pd.Index(dates_from_range('2000', '2015'))
+    predict_dates = pd.DatetimeIndex(start='2000', end='2015', freq='A')
     predict = arma_mod20.predict(predict_dates[0], predict_dates[-1])
     assert_(predict.index.equals(predict_dates))
     #assert_(1 == 0)
@@ -1632,13 +1633,13 @@ def test_arima_predict_pandas_nofreq():
     assert_(predict.index.equals(data.index))
 
     # check that this raises an exception when date not on index
-    assert_raises(ValueError, arma.predict, start="2010-1-9", end=10)
-    assert_raises(ValueError, arma.predict, start="2010-1-9", end="2010-1-17")
+    assert_raises(KeyError, arma.predict, start="2010-1-9", end=10)
+    assert_raises(KeyError, arma.predict, start="2010-1-9", end="2010-1-17")
 
     # raise because end not on index
-    assert_raises(ValueError, arma.predict, start="2010-1-4", end="2010-1-10")
+    assert_raises(KeyError, arma.predict, start="2010-1-4", end="2010-1-10")
     # raise because end not on index
-    assert_raises(ValueError, arma.predict, start=3, end="2010-1-10")
+    assert_raises(KeyError, arma.predict, start=3, end="2010-1-10")
 
     predict = arma.predict(start="2010-1-7", end=10) # should be of length 10
     assert_(len(predict) == 8)
@@ -1744,13 +1745,13 @@ def test_arima_predict_noma():
 
 def test_arimax():
     dta = load_macrodata_pandas().data
-    dates = dates_from_range("1959Q1", length=len(dta))
+    dates = pd.date_range("1959", periods=len(dta), freq='Q')
     dta.index = cpi_dates
     dta = dta[["realdpi", "m1", "realgdp"]]
     y = dta.pop("realdpi")
 
     # 1 exog
-    #X = dta.ix[1:]["m1"]
+    #X = dta.iloc[1:]["m1"]
     #res = ARIMA(y, (2, 1, 1), X).fit(disp=-1)
     #params = [23.902305009084373, 0.024650911502790, -0.162140641341602,
     #          0.165262136028113, -0.066667022903974]
@@ -1817,7 +1818,7 @@ def test_arima_small_data_bug():
 
     vals = [96.2, 98.3, 99.1, 95.5, 94.0, 87.1, 87.9, 86.7402777504474]
 
-    dr = dates_from_range("1990q1", length=len(vals))
+    dr = pd.date_range("1990", periods=len(vals), freq='Q')
     ts = pd.Series(vals, index=dr)
     df = pd.DataFrame(ts)
     mod = sm.tsa.ARIMA(df, (2, 0, 2))
@@ -1832,7 +1833,7 @@ def test_arima_dataframe_integer_name():
     vals = [96.2, 98.3, 99.1, 95.5, 94.0, 87.1, 87.9, 86.7402777504474,
             94.0, 96.5, 93.3, 97.5, 96.3, 92.]
 
-    dr = dates_from_range("1990q1", length=len(vals))
+    dr = pd.date_range("1990", periods=len(vals), freq='Q')
     ts = pd.Series(vals, index=dr)
     df = pd.DataFrame(ts)
     mod = sm.tsa.ARIMA(df, (2, 0, 2))
@@ -1859,7 +1860,7 @@ def test_arima_1123():
 
     nobs = 20
 
-    dates = dates_from_range('1980',length=nobs)
+    dates = pd.date_range(start='1980', periods=nobs, freq='A')
 
     y = arma_generate_sample(arparams, maparams, nobs)
 
@@ -2006,7 +2007,7 @@ def test_plot_predict():
     from statsmodels.datasets.sunspots import load_pandas
 
     dta = load_pandas().data[['SUNACTIVITY']]
-    dta.index = DatetimeIndex(start='1700', end='2009', freq='A')
+    dta.index = DatetimeIndex(start='1700', end='2009', freq='A')[:309]
     res = ARMA(dta, (3, 0)).fit(disp=-1)
     fig = res.plot_predict('1990', '2012', dynamic=True, plot_insample=False)
     plt.close(fig)
@@ -2019,7 +2020,7 @@ def test_plot_predict():
 
 def test_arima_diff2():
     dta = load_macrodata_pandas().data['cpi']
-    dates = dates_from_range("1959Q1", length=len(dta))
+    dates = pd.date_range("1959", periods=len(dta), freq='Q')
     dta.index = cpi_dates
     mod = ARIMA(dta, (3, 2, 1)).fit(disp=-1)
     fc, fcerr, conf_int = mod.forecast(10)
@@ -2115,8 +2116,8 @@ def test_ARIMA_exog_predict():
     # test forecasting and dynamic prediction with exog against Stata
 
     dta = load_macrodata_pandas().data
-    dates = dates_from_range("1959Q1", length=len(dta))
-    cpi_dates = dates_from_range('1959Q1', '2009Q3')
+    dates = pd.date_range("1959", periods=len(dta), freq='Q')
+    cpi_dates = PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
     dta.index = cpi_dates
 
     data = dta
@@ -2124,9 +2125,9 @@ def test_ARIMA_exog_predict():
     data['loggdp'] = np.log(data['realgdp'])
     data['logcons'] = np.log(data['realcons'])
 
-    forecast_period = dates_from_range('2008Q2', '2009Q3')
+    forecast_period = PeriodIndex(start='2008Q2', end='2009Q4', freq='Q')
     end = forecast_period[0]
-    data_sample = data.ix[dta.index < end]
+    data_sample = data.loc[dta.index < end]
 
     exog_full = data[['loggdp', 'logcons']]
 
@@ -2250,6 +2251,39 @@ def test_long_ar_start_params():
     res = model.fit(method='css-mle',start_ar_lags=10, disp=0)
     res = model.fit(method='mle',start_ar_lags=10, disp=0)
     assert_raises(ValueError, model.fit, start_ar_lags=nobs+5, disp=0)
+
+
+def test_arma_pickle():
+    np.random.seed(9876565)
+    x = fa.ArmaFft([1, -0.5], [1., 0.4], 40).generate_sample(nsample=200,
+                                                             burnin=1000)
+    mod = ARMA(x, (1, 1))
+    pkl_mod = cPickle.loads(cPickle.dumps(mod))
+
+    res = mod.fit(trend="c", disp=-1)
+    pkl_res = pkl_mod.fit(trend="c", disp=-1)
+
+    assert_allclose(res.params, pkl_res.params)
+    assert_allclose(res.llf, pkl_res.llf)
+    assert_almost_equal(res.resid, pkl_res.resid)
+    assert_almost_equal(res.fittedvalues, pkl_res.fittedvalues)
+    assert_almost_equal(res.pvalues, pkl_res.pvalues)
+
+
+def test_arima_pickle():
+    endog = y_arma[:, 6]
+    mod = ARIMA(endog, (1, 1, 1))
+    pkl_mod = cPickle.loads(cPickle.dumps(mod))
+
+    res = mod.fit(trend="c", disp=-1)
+    pkl_res = pkl_mod.fit(trend="c", disp=-1)
+
+    assert_allclose(res.params, pkl_res.params)
+    assert_allclose(res.llf, pkl_res.llf)
+    assert_almost_equal(res.resid, pkl_res.resid)
+    assert_almost_equal(res.fittedvalues, pkl_res.fittedvalues)
+    assert_almost_equal(res.pvalues, pkl_res.pvalues)
+
 
 if __name__ == "__main__":
     import nose

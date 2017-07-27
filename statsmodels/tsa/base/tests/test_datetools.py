@@ -1,32 +1,9 @@
 from datetime import datetime
 from pandas import DatetimeIndex
 import numpy.testing as npt
-from statsmodels.tsa.base.datetools import (_date_from_idx,
-                _idx_from_dates, date_parser, date_range_str, dates_from_str,
-                dates_from_range, _infer_freq, _freq_to_pandas)
+from statsmodels.tsa.base.datetools import (
+    date_parser, date_range_str, dates_from_str, dates_from_range)
 from pandas import DatetimeIndex, PeriodIndex
-
-def test_date_from_idx():
-    d1 = datetime(2008, 12, 31)
-    idx = 15
-    npt.assert_equal(_date_from_idx(d1, idx, 'Q'), datetime(2012, 9, 30))
-    npt.assert_equal(_date_from_idx(d1, idx, 'A'), datetime(2023, 12, 31))
-    npt.assert_equal(_date_from_idx(d1, idx, 'B'), datetime(2009, 1, 21))
-    npt.assert_equal(_date_from_idx(d1, idx, 'D'), datetime(2009, 1, 15))
-    npt.assert_equal(_date_from_idx(d1, idx, 'W'), datetime(2009, 4, 12))
-    npt.assert_equal(_date_from_idx(d1, idx, 'M'), datetime(2010, 3, 31))
-
-def test_idx_from_date():
-    d1 = datetime(2008, 12, 31)
-    idx = 15
-    npt.assert_equal(_idx_from_dates(d1, datetime(2012, 9, 30), 'Q'), idx)
-    npt.assert_equal(_idx_from_dates(d1, datetime(2023, 12, 31), 'A'), idx)
-    npt.assert_equal(_idx_from_dates(d1, datetime(2009, 1, 21), 'B'), idx)
-    npt.assert_equal(_idx_from_dates(d1, datetime(2009, 1, 15), 'D'), idx)
-    # move d1 and d2 forward to end of week
-    npt.assert_equal(_idx_from_dates(datetime(2009, 1, 4),
-                      datetime(2009, 4, 17), 'W'), idx-1)
-    npt.assert_equal(_idx_from_dates(d1, datetime(2010, 3, 31), 'M'), idx)
 
 def test_regex_matching_month():
     t1 = "1999m4"
@@ -107,35 +84,3 @@ def test_dates_from_range():
                datetime(1961, 10, 31, 0, 0)]
 
     dt_range = dates_from_range("1959m3", length=len(results))
-
-
-def test_infer_freq():
-    d1 = datetime(2008, 12, 31)
-    d2 = datetime(2012, 9, 30)
-
-    b = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['B']).values
-    d = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['D']).values
-    w = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['W']).values
-    m = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['M']).values
-    a = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['A']).values
-    q = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['Q']).values
-
-    npt.assert_(_infer_freq(w) == 'W-SUN')
-    npt.assert_(_infer_freq(a) == 'A-DEC')
-    npt.assert_(_infer_freq(q) == 'Q-DEC')
-    npt.assert_(_infer_freq(w[:3]) == 'W-SUN')
-    npt.assert_(_infer_freq(a[:3]) == 'A-DEC')
-    npt.assert_(_infer_freq(q[:3]) == 'Q-DEC')
-    npt.assert_(_infer_freq(b[2:5]) == 'B')
-    npt.assert_(_infer_freq(b[:3]) == 'D')
-    npt.assert_(_infer_freq(b) == 'B')
-    npt.assert_(_infer_freq(d) == 'D')
-    npt.assert_(_infer_freq(m) == 'M')
-    npt.assert_(_infer_freq(d[:3]) == 'D')
-    npt.assert_(_infer_freq(m[:3]) == 'M')
-
-def test_period_index():
-    # tests 1285
-    from pandas import PeriodIndex
-    dates = PeriodIndex(start="1/1/1990", periods=20, freq="M")
-    npt.assert_(_infer_freq(dates) == "M")

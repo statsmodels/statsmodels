@@ -12,7 +12,8 @@ from .genmod.api import GLM, GEE, OrdinalGEE, NominalGEE, families, cov_struct
 from . import robust
 from .robust.robust_linear_model import RLM
 from .discrete.discrete_model import (Poisson, Logit, Probit,
-                                      MNLogit, NegativeBinomial)
+                                      MNLogit, NegativeBinomial,
+                                      GeneralizedPoisson)
 from .tsa import api as tsa
 from .duration.survfunc import SurvfuncRight
 from .duration.hazard_regression import PHReg
@@ -28,6 +29,7 @@ from .stats import api as stats
 from .emplike import api as emplike
 from .duration import api as duration
 from .multivariate.pca import PCA
+from .multivariate.manova import MANOVA
 
 from .formula import api as formula
 

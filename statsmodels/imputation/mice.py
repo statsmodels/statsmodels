@@ -128,15 +128,15 @@ _mice_data_example_1 = """
     >>> imp = mice.MICEData(data)
     >>> imp.set_imputer('x1', formula='x2 + np.square(x2) + x3')
     >>> for j in range(20):
-            imp.update_all()
-            imp.data.to_csv('data%02d.csv' % j)"""
+    ...     imp.update_all()
+    ...     imp.data.to_csv('data%02d.csv' % j)"""
 
 _mice_data_example_2 = """
     >>> imp = mice.MICEData(data)
     >>> j = 0
     >>> for data in imp:
-            imp.data.to_csv('data%02d.csv' % j)
-            j += 1"""
+    ...     imp.data.to_csv('data%02d.csv' % j)
+    ...     j += 1"""
 
 
 class PatsyFormula(object):
@@ -196,6 +196,9 @@ class MICEData(object):
 
     def __init__(self, data, perturbation_method='gaussian',
                  k_pmm=20, history_callback=None):
+
+        if data.columns.dtype != np.dtype('O'):
+            raise ValueError("MICEData data column names should be string type")
 
         # Drop observations where all variables are missing.  This
         # also has the effect of copying the data frame.
@@ -1073,16 +1076,18 @@ class MICEData(object):
         ix = dxi[[jj, ir]]
         iz = ixm[[jj, ix]]
 
-        imputed_miss = np.array(endog_obs[iz])
+        imputed_miss = np.array(endog_obs[iz]).squeeze()
         self._store_changes(vname, imputed_miss)
 
 
 _mice_example_1 = """
-    >>> imp = mice.MICEData(data)
-    >>> fml = 'y ~ x1 + x2 + x3 + x4'
-    >>> mice = mice.MICE(fml, sm.OLS, imp)
-    >>> results = mice.fit(10, 10)
-    >>> print(results.summary())
+>>> imp = mice.MICEData(data)
+>>> fml = 'y ~ x1 + x2 + x3 + x4'
+>>> mice = mice.MICE(fml, sm.OLS, imp)
+>>> results = mice.fit(10, 10)
+>>> print(results.summary())
+
+::
 
                               Results: MICE
     =================================================================
@@ -1101,53 +1106,53 @@ _mice_example_1 = """
 """
 
 _mice_example_2 = """
-    >>> imp = mice.MICEData(data)
-    >>> fml = 'y ~ x1 + x2 + x3 + x4'
-    >>> mice = mice.MICE(fml, sm.OLS, imp)
-    >>> results = []
-    >>> for k in range(10):
-    >>>     x = mice.next_sample()
-    >>>     results.append(x)
+>>> imp = mice.MICEData(data)
+>>> fml = 'y ~ x1 + x2 + x3 + x4'
+>>> mice = mice.MICE(fml, sm.OLS, imp)
+>>> results = []
+>>> for k in range(10):
+>>>     x = mice.next_sample()
+>>>     results.append(x)
 """
 
 class MICE(object):
 
     __doc__ = """\
-    Multiple Imputation with Chained Equations.
+Multiple Imputation with Chained Equations.
 
-    This class can be used to fit most Statsmodels models to data sets
-    with missing values using the 'multiple imputation with chained
-    equations' (MICE) approach..
+This class can be used to fit most Statsmodels models to data sets
+with missing values using the 'multiple imputation with chained
+equations' (MICE) approach..
 
-    Parameters
-    ----------
-    model_formula : string
-        The model formula to be fit to the imputed data sets.  This
-        formula is for the 'analysis model'.
-    model_class : statsmodels model
-        The model to be fit to the imputed data sets.  This model
-        class if for the 'analysis model'.
-    data : MICEData instance
-        MICEData object containing the data set for which
-        missing values will be imputed
-    n_skip : int
-        The number of imputed datasets to skip between consecutive
-        imputed datasets that are used for analysis.
-    init_kwds : dict-like
-        Dictionary of keyword arguments passed to the init method
-        of the analysis model.
-    fit_kwds : dict-like
-        Dictionary of keyword arguments passed to the fit method
-        of the analysis model.
+Parameters
+----------
+model_formula : string
+    The model formula to be fit to the imputed data sets.  This
+    formula is for the 'analysis model'.
+model_class : statsmodels model
+    The model to be fit to the imputed data sets.  This model
+    class if for the 'analysis model'.
+data : MICEData instance
+    MICEData object containing the data set for which
+    missing values will be imputed
+n_skip : int
+    The number of imputed datasets to skip between consecutive
+    imputed datasets that are used for analysis.
+init_kwds : dict-like
+    Dictionary of keyword arguments passed to the init method
+    of the analysis model.
+fit_kwds : dict-like
+    Dictionary of keyword arguments passed to the fit method
+    of the analysis model.
 
-    Examples
-    --------
-    Run all MICE steps and obtain results:
-    %(mice_example_1)s
+Examples
+--------
+Run all MICE steps and obtain results:
+%(mice_example_1)s
 
-    Obtain a sequence of fitted analysis models without combining
-    to obtain summary:
-    %(mice_example_2)s
+Obtain a sequence of fitted analysis models without combining
+to obtain summary:
+%(mice_example_2)s
     """ % {'mice_example_1' : _mice_example_1,
            'mice_example_2' : _mice_example_2}
 

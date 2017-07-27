@@ -45,6 +45,9 @@ Most moving window statistics, like rolling mean, moments (up to 4th order), min
 max, mean, and variance, are covered by the functions for `Moving (rolling)
 statistics/moments <http://pandas.pydata.org/pandas-docs/stable/computation.html#moving-rolling-statistics-moments>`_ in Pandas.
 
+.. module:: statsmodels.sandbox.tsa
+   :synopsis: Experimental time-series analysis models
+
 .. currentmodule:: statsmodels.sandbox.tsa
 
 .. autosummary::
@@ -58,6 +61,9 @@ statistics/moments <http://pandas.pydata.org/pandas-docs/stable/computation.html
 
 Regression and ANOVA
 ^^^^^^^^^^^^^^^^^^^^
+
+.. module:: statsmodels.sandbox.regression.anova_nistcertified
+   :synopsis: Experimental ANOVA estimator
 
 .. currentmodule:: statsmodels.sandbox.regression.anova_nistcertified
 
@@ -81,6 +87,9 @@ The following are helper functions for working with dummy variables and
 generating ANOVA results with OLS. They are best considered as recipes since
 they were written with a specific use in mind. These function will eventually
 be rewritten or reorganized.
+
+.. module:: statsmodels.sandbox.regression
+   :synopsis: Experimental regression tools
 
 .. currentmodule:: statsmodels.sandbox.regression
 
@@ -124,6 +133,9 @@ parameters have been verified as accurate, this code is still very
 experimental, and the usage of the models will very likely change significantly
 before they are added to the main codebase.
 
+.. module:: statsmodels.sandbox.sysreg
+   :synopsis: Experimental system regression models
+
 .. currentmodule:: statsmodels.sandbox.sysreg
 
 .. autosummary::
@@ -134,11 +146,17 @@ before they are added to the main codebase.
 
 Miscellaneous
 ^^^^^^^^^^^^^
- .. currentmodule:: statsmodels.sandbox.tools.tools_tsa
+.. module:: statsmodels.sandbox.tools.tools_tsa
+   :synopsis: Experimental tools for working with time-series
+
+.. currentmodule:: statsmodels.sandbox.tools.tools_tsa
 
 
 Descriptive Statistics Printing
 """""""""""""""""""""""""""""""
+
+.. module:: statsmodels.sandbox
+   :synopsis: Experimental tools that have not been fully vetted
 
 .. currentmodule:: statsmodels.sandbox
 

@@ -138,7 +138,7 @@ class Model(object):
         #TODO: provide a docs template for args/kwargs from child models
         #TODO: subset could use syntax. issue #469.
         if subset is not None:
-            data = data.ix[subset]
+            data = data.loc[subset]
         eval_env = kwargs.pop('eval_env', None)
         if eval_env is None:
             eval_env = 2
@@ -273,6 +273,7 @@ class LikelihoodModel(Model):
             - 'cg' for conjugate gradient
             - 'ncg' for Newton-conjugate gradient
             - 'basinhopping' for global basin-hopping solver
+            - 'minimize' for generic wrapper of scipy minimize (BFGS by default)
 
             The explicit arguments in `fit` are passed to the solver,
             with the exception of the basin-hopping solver. Each
@@ -408,6 +409,13 @@ class LikelihoodModel(Model):
                       - `args` <- `fargs`
                       - `jac` <- `score`
                       - `hess` <- `hess`
+            'minimize'
+                min_method : str, optional
+                    Name of minimization method to use.
+                    Any method specific arguments can be passed directly.
+                    For a list of methods and their arguments, see
+                    documentation of `scipy.optimize.minimize`.
+                    If no method is specified, then BFGS is used.
         """
         Hinv = None  # JP error if full_output=0, Hinv not defined
 
@@ -426,17 +434,24 @@ class LikelihoodModel(Model):
         # args in most (any?) of the optimize function
 
         nobs = self.endog.shape[0]
-        f = lambda params, *args: -self.loglike(params, *args) / nobs
-        score = lambda params, *args: -self.score(params, *args) / nobs
-        try:
-            hess = lambda params, *args: -self.hessian(params, *args) / nobs
-        except:
-            hess = None
+        # f = lambda params, *args: -self.loglike(params, *args) / nobs
+
+        def f(params, *args):
+            return -self.loglike(params, *args) / nobs
 
         if method == 'newton':
-            score = lambda params, *args: self.score(params, *args) / nobs
-            hess = lambda params, *args: self.hessian(params, *args) / nobs
-            #TODO: why are score and hess positive?
+            # TODO: why are score and hess positive?
+            def score(params, *args):
+                return self.score(params, *args) / nobs
+
+            def hess(params, *args):
+                return self.hessian(params, *args) / nobs
+        else:
+            def score(params, *args):
+                return -self.score(params, *args) / nobs
+
+            def hess(params, *args):
+                return -self.hessian(params, *args) / nobs
 
         warn_convergence = kwargs.pop('warn_convergence', True)
         optimizer = Optimizer()
@@ -668,9 +683,6 @@ class GenericLikelihoodModel(LikelihoodModel):
         kwds.setdefault('centered', True)
         return approx_fprime(params, self.loglikeobs, **kwds)
 
-    jac = np.deprecate(score_obs, 'jac', 'score_obs', "Use score_obs method."
-                       " jac will be removed in 0.7.")
-
     def hessian(self, params):
         '''
         Hessian of log-likelihood evaluated at params
@@ -678,6 +690,30 @@ class GenericLikelihoodModel(LikelihoodModel):
         from statsmodels.tools.numdiff import approx_hess
         # need options for hess (epsilon)
         return approx_hess(params, self.loglike)
+
+    def hessian_factor(self, params, scale=None, observed=True):
+        """Weights for calculating Hessian
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which Hessian is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+        observed : bool
+            If True, then the observed Hessian is returned. If false then the
+            expected information matrix is returned.
+
+        Returns
+        -------
+        hessian_factor : ndarray, 1d
+            A 1d weight vector used in the calculation of the Hessian.
+            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
+        """
+
+        raise NotImplementedError
 
     def fit(self, start_params=None, method='nm', maxiter=500, full_output=1,
             disp=1, callback=None, retall=0, **kwargs):
@@ -769,6 +805,9 @@ class Results(object):
 
         if transform and hasattr(self.model, 'formula') and exog is not None:
             from patsy import dmatrix
+            exog = pd.DataFrame(exog)  # user may pass series, if one predictor
+            if exog_index is None:  # user passed in a dictionary
+                exog_index = exog.index
             exog = dmatrix(self.model.data.design_info.builder,
                            exog, return_type="dataframe")
             if len(exog) < len(exog_index):
@@ -1023,7 +1062,14 @@ class LikelihoodModelResults(Results):
 
     @cache_readonly
     def bse(self):
-        return np.sqrt(np.diag(self.cov_params()))
+        # Issue 3299
+        if ((not hasattr(self, 'cov_params_default')) and
+                (self.normalized_cov_params is None)):
+            bse_ = np.empty(len(self.params))
+            bse_[:] = np.nan
+        else:
+            bse_ = np.sqrt(np.diag(self.cov_params()))
+        return bse_
 
     @cache_readonly
     def tvalues(self):
@@ -1516,9 +1562,9 @@ class LikelihoodModelResults(Results):
         C(Weight, Sum)                    12.432445  3.99943118767e-05              2        51
         C(Duration, Sum):C(Weight, Sum)    0.176002      0.83912310946              2        51
 
-        >>> res_poi = Poisson.from_formula("Days ~ C(Weight) * C(Duration)",
+        >>> res_poi = Poisson.from_formula("Days ~ C(Weight) * C(Duration)", \
                                            data).fit(cov_type='HC0')
-        >>> wt = res_poi.wald_test_terms(skip_single=False,
+        >>> wt = res_poi.wald_test_terms(skip_single=False, \
                                          combine_terms=['Duration', 'Weight'])
         >>> print(wt)
                                     chi2             P>chi2  df constraint
@@ -1538,7 +1584,7 @@ class LikelihoodModelResults(Results):
             extra_constraints = []
         if combine_terms is None:
             combine_terms = []
-        design_info = getattr(result.model.data.orig_exog, 'design_info', None)
+        design_info = getattr(result.model.data, 'design_info', None)
 
         if design_info is None and extra_constraints is None:
             raise ValueError('no constraints, nothing to do')
@@ -1844,10 +1890,6 @@ class ResultMixin(object):
         '''cached Jacobian of log-likelihood
         '''
         return self.model.score_obs(self.params)
-
-    jacv = np.deprecate(score_obsv, 'jacv', 'score_obsv',
-                        "Use score_obsv attribute."
-                       " jacv will be removed in 0.7.")
 
     @cache_readonly
     def hessv(self):

@@ -37,6 +37,7 @@ marks.bzr
 .#*
 *.bak
 *.tmp
+/.idea
 *.tgz
 *.rej
 *.org
@@ -53,9 +54,14 @@ marks.bzr
 .DS_Store
 help
 
+# Coverage report output
+.coverage
+coverage_html_report/
+
 # Project specific
 statsmodels/version.py
 cythonize.dat
+cythonize_exclusions.dat
 statsmodels.egg-info/
 iterate.dat
 hash_dict.pickle
@@ -64,3 +70,16 @@ salary.table
 .ipynb_checkpoints
 statsmodels/tsa/statespace/_statespace.pyx
 statsmodels/tsa/regime_switching/_hamilton_filter.pyx
+statsmodels/tsa/regime_switching/_kim_smoother.pyx
+statsmodels/tsa/statespace/_representation.pyx
+statsmodels/tsa/statespace/_kalman_filter.pyx
+statsmodels/tsa/statespace/_kalman_smoother.pyx
+statsmodels/tsa/statespace/_simulation_smoother.pyx
+statsmodels/tsa/statespace/_tools.pyx
+statsmodels/tsa/statespace/_filters/_conventional.pyx
+statsmodels/tsa/statespace/_filters/_inversions.pyx
+statsmodels/tsa/statespace/_filters/_univariate.pyx
+statsmodels/tsa/statespace/_smoothers/_conventional.pyx
+statsmodels/tsa/statespace/_smoothers/_univariate.pyx
+statsmodels/tsa/statespace/_smoothers/_alternative.pyx
+statsmodels/tsa/statespace/_smoothers/_classical.pyx

@@ -26,7 +26,8 @@ class BaseIRAnalysis(object):
     able to handle known and estimated processes
     """
 
-    def __init__(self, model, P=None, periods=10, order=None, svar=False):
+    def __init__(self, model, P=None, periods=10, order=None, svar=False,
+                 vecm=False):
         self.model = model
         self.periods = periods
         self.neqs, self.lags, self.T = model.neqs, model.k_ar, model.nobs
@@ -62,15 +63,20 @@ class BaseIRAnalysis(object):
         else:
             self.orth_cum_effects = self.orth_irfs.cumsum(axis=0)
 
-        self.lr_effects = model.long_run_effects()
-        if svar:
-            self.svar_lr_effects = np.dot(model.long_run_effects(), P)
-        else:
-            self.orth_lr_effects = np.dot(model.long_run_effects(), P)
+        # long-run effects may be infinite for VECMs.
+        if not vecm:
+            self.lr_effects = model.long_run_effects()
+            if svar:
+                self.svar_lr_effects = np.dot(model.long_run_effects(), P)
+            else:
+                self.orth_lr_effects = np.dot(model.long_run_effects(), P)
 
 
         # auxiliary stuff
-        self._A = util.comp_matrix(model.coefs)
+        if vecm:
+            self._A = util.comp_matrix(model.var_rep)
+        else:
+            self._A = util.comp_matrix(model.coefs)
 
     def cov(self, *args, **kwargs):
         raise NotImplementedError
@@ -233,11 +239,15 @@ class IRAnalysis(BaseIRAnalysis):
     -----
     Using Lutkepohl (2005) notation
     """
-    def __init__(self, model, P=None, periods=10, order=None, svar=False):
+    def __init__(self, model, P=None, periods=10, order=None, svar=False,
+                 vecm=False):
         BaseIRAnalysis.__init__(self, model, P=P, periods=periods,
-                                order=order, svar=svar)
+                                order=order, svar=svar, vecm=vecm)
 
-        self.cov_a = model._cov_alpha
+        if vecm:
+            self.cov_a = model.cov_var_repr
+        else:
+            self.cov_a = model._cov_alpha
         self.cov_sig = model._cov_sigma
 
         # memoize dict for G matrix function
@@ -343,7 +353,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         return lower, upper
 
-    def err_band_sz2(self, orth=False, repl=1000, signif=0.05,
+    def err_band_sz2(self, orth=False, svar=False, repl=1000, signif=0.05,
                      seed=None, burn=100, component=None):
         """
         IRF Sims-Zha error band method 2.
@@ -412,7 +422,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         return lower, upper
 
-    def err_band_sz3(self, orth=False, repl=1000, signif=0.05,
+    def err_band_sz3(self, orth=False, svar=False, repl=1000, signif=0.05,
                      seed=None, burn=100, component=None):
         """
         IRF Sims-Zha error band method 3. Does not assume symmetric error bands around mean.

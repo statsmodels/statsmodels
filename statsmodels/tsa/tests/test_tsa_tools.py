@@ -108,11 +108,13 @@ class TestLagmat(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         data = sm.datasets.macrodata.load()
-        cls.macro_data = data.data[['year', 'quarter', 'realgdp', 'cpi']]
+        cls.macro_df = pd.DataFrame.from_records(data.data)
+        cls.macro_df = cls.macro_df[['year', 'quarter', 'realgdp', 'cpi']]
+        cls.macro_data = cls.macro_df.to_records(index=False)
         cls.random_data = np.random.randn(100)
         year = cls.macro_data['year']
         quarter = cls.macro_data['quarter']
-        cls.macro_df = pd.DataFrame.from_records(cls.macro_data)
+
         index = [str(int(yr)) + '-Q' + str(int(qu))
                  for yr, qu in zip(cls.macro_df.year, cls.macro_df.quarter)]
         cls.macro_df.index = index
@@ -554,11 +556,10 @@ class TestLagmat2DS(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         data = sm.datasets.macrodata.load()
-        cls.macro_data = data.data[['year', 'quarter', 'realgdp', 'cpi']]
+        cls.macro_df = pd.DataFrame.from_records(data.data)
+        cls.macro_df = cls.macro_df[['year', 'quarter', 'realgdp', 'cpi']]
+        cls.macro_data = cls.macro_df.to_records(index=False)
         cls.random_data = np.random.randn(100)
-        year = cls.macro_data['year']
-        quarter = cls.macro_data['quarter']
-        cls.macro_df = pd.DataFrame.from_records(cls.macro_data)
         index = [str(int(yr)) + '-Q' + str(int(qu))
                  for yr, qu in zip(cls.macro_df.year, cls.macro_df.quarter)]
         cls.macro_df.index = index

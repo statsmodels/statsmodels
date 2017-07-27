@@ -693,7 +693,11 @@ def test_outlier_influence_funcs():
     x = add_constant(np.random.randn(10, 2))
     y = x.sum(1) + np.random.randn(10)
     res = OLS(y, x).fit()
-    oi.summary_table(res, alpha=0.05)
+    out_05 = oi.summary_table(res)
+    # GH3344 : Check alpha has an effect
+    out_01 = oi.summary_table(res, alpha=0.01)
+    assert_(np.all(out_01[1][:, 6] <= out_05[1][:, 6]))
+    assert_(np.all(out_01[1][:, 7] >= out_05[1][:, 7]))
 
     res2 = OLS(y, x[:,0]).fit()
     oi.summary_table(res2, alpha=0.05)

@@ -127,6 +127,9 @@ wendog : array
 Module Reference
 ----------------
 
+.. module:: statsmodels.regression.linear_model
+   :synopsis: Least squares linear models
+
 Model Classes
 ^^^^^^^^^^^^^
 
@@ -139,12 +142,18 @@ Model Classes
    GLSAR
    yule_walker
 
+.. module:: statsmodels.regression.quantile_regression
+   :synopsis: Quantile regression
+
 .. currentmodule:: statsmodels.regression.quantile_regression
 
 .. autosummary::
    :toctree: generated/
 
    QuantReg
+
+.. module:: statsmodels.regression.recursive_ls
+   :synopsis: Recursive least squares using the Kalman Filter
 
 .. currentmodule:: statsmodels.regression.recursive_ls
 

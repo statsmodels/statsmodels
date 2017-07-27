@@ -115,3 +115,7 @@ class SpecificationWarning(UserWarning):
 
 class HessianInversionWarning(UserWarning):
     pass
+
+
+class ColinearityWarning(UserWarning):
+    pass

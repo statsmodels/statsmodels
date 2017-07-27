@@ -3,9 +3,7 @@ Functions that are general enough to use for any model fitting. The idea is
 to untie these from LikelihoodModel so that they may be re-used generally.
 """
 from __future__ import print_function
-import distutils.version
 
-from scipy import __version__ as scipy_version
 import numpy as np
 from scipy import optimize
 
@@ -16,7 +14,6 @@ def _check_method(method, methods):
 
 
 class Optimizer(object):
-
     def _fit(self, objective, gradient, start_params, fargs, kwargs,
              hessian=None, method='newton', maxiter=100, full_output=True,
              disp=True, callback=None, retall=False):
@@ -28,12 +25,14 @@ class Optimizer(object):
         start_params : array-like, optional
             Initial guess of the solution for the loglikelihood maximization.
             The default is an array of zeros.
-        method : str {'newton','nm','bfgs','powell','cg','ncg','basinhopping'}
+        method : str {'newton','nm','bfgs','powell','cg','ncg','basinhopping',
+            'minimize'}
             Method can be 'newton' for Newton-Raphson, 'nm' for Nelder-Mead,
             'bfgs' for Broyden-Fletcher-Goldfarb-Shanno, 'powell' for modified
             Powell's method, 'cg' for conjugate gradient, 'ncg' for Newton-
-            conjugate gradient or 'basinhopping' for global basin-hopping
-            solver, if available. `method` determines which solver from
+            conjugate gradient, 'basinhopping' for global basin-hopping
+            solver, if available or a generic 'minimize' which is a wrapper for
+            scipy.optimize.minimize. `method` determines which solver from
             scipy.optimize is used. The explicit arguments in `fit` are passed
             to the solver, with the exception of the basin-hopping solver. Each
             solver has several optional arguments that are not the same across
@@ -150,13 +149,20 @@ class Optimizer(object):
                     - `args` <- `fargs`
                     - `jac` <- `score`
                     - `hess` <- `hess`
+            'minimize'
+                min_method : str, optional
+                    Name of minimization method to use.
+                    Any method specific arguments can be passed directly.
+                    For a list of methods and their arguments, see
+                    documentation of `scipy.optimize.minimize`.
+                    If no method is specified, then BFGS is used.
         """
         #TODO: generalize the regularization stuff
         # Extract kwargs specific to fit_regularized calling fit
         extra_fit_funcs = kwargs.setdefault('extra_fit_funcs', dict())
 
         methods = ['newton', 'nm', 'bfgs', 'lbfgs', 'powell', 'cg', 'ncg',
-                'basinhopping']
+                'basinhopping', 'minimize']
         methods += extra_fit_funcs.keys()
         method = method.lower()
         _check_method(method, methods)
@@ -170,6 +176,7 @@ class Optimizer(object):
             'ncg': _fit_ncg,
             'powell': _fit_powell,
             'basinhopping': _fit_basinhopping,
+            'minimize': _fit_minimize # wrapper for scipy.optimize.minimize
         }
 
         #NOTE: fit_regularized checks the methods for these but it should be
@@ -216,6 +223,40 @@ class Optimizer(object):
 
 ########################################
 # Helper functions to fit
+
+
+def _fit_minimize(f, score, start_params, fargs, kwargs, disp=True,
+                        maxiter=100, callback=None, retall=False,
+                        full_output=True, hess=None):
+    kwargs.setdefault('min_method', 'BFGS')
+
+    # prepare options dict for minimize
+    filter_opts = ['extra_fit_funcs', 'niter', 'min_method', 'tol']
+    options = dict((k,v) for k,v in kwargs.items() if k not in filter_opts)
+    options['disp']    = disp
+    options['maxiter'] = maxiter
+
+    # Use Hessian/Jacobian only if they're required by the method
+    no_hess = ['Nelder-Mead', 'Powell', 'CG', 'BFGS', 'COBYLA', 'SLSQP']
+    no_jac  = ['Nelder-Mead', 'Powell', 'COBYLA']
+    if kwargs['min_method'] in no_hess: hess = None
+    if kwargs['min_method'] in no_jac: score = None
+
+    res = optimize.minimize(f, start_params, args=fargs, method=kwargs['min_method'],
+                            jac=score, hess=hess, callback=callback, options=options)
+
+    xopt    = res.x
+    retvals = None
+    if full_output:
+        nit = getattr(res, 'nit', np.nan) # scipy 0.14 compat
+        retvals = {'fopt': res.fun, 'iterations': nit,
+                   'fcalls': res.nfev, 'warnflag': res.status,
+                   'converged': res.success}
+        if retall:
+            retvals.update({'allvecs': res.values()})
+
+    return xopt, retvals
+
 
 def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
                     maxiter=100, callback=None, retall=False,
@@ -363,19 +404,10 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
     elif approx_grad:
         func = f
 
-    # Customize the fmin_l_bfgs_b call according to the scipy version.
-    # Old scipy does not support maxiter and callback.
-    scipy_version_curr = distutils.version.LooseVersion(scipy_version)
-    scipy_version_12 = distutils.version.LooseVersion('0.12.0')
-    if scipy_version_curr < scipy_version_12:
-        retvals = optimize.fmin_l_bfgs_b(func, start_params, args=fargs,
-                                         bounds=bounds, disp=disp,
-                                         **extra_kwargs)
-    else:
-        retvals = optimize.fmin_l_bfgs_b(func, start_params, maxiter=maxiter,
-                                         callback=callback, args=fargs,
-                                         bounds=bounds, disp=disp,
-                                         **extra_kwargs)
+    retvals = optimize.fmin_l_bfgs_b(func, start_params, maxiter=maxiter,
+                                     callback=callback, args=fargs,
+                                     bounds=bounds, disp=disp,
+                                     **extra_kwargs)
 
     if full_output:
         xopt, fopt, d = retvals

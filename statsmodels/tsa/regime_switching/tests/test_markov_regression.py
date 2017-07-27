@@ -958,6 +958,28 @@ class TestFedFundsConstShort(MarkovRegression):
         for i in range(3):
             assert_allclose(actual[i], desired[i])
 
+    def test_py_kim_smoother(self):
+        mod = self.model
+        params = self.true['params']
+
+        regime_transition = mod.regime_transition_matrix(params)
+        initial_probabilities = mod.initial_probabilities(
+            params, regime_transition)
+        conditional_likelihoods = mod._conditional_likelihoods(params)
+
+        # Hamilton filter
+        filter_output = markov_switching.cy_hamilton_filter(
+            initial_probabilities, regime_transition, conditional_likelihoods)
+
+        # Kim smoother
+        actual = markov_switching.py_kim_smoother(
+            regime_transition, filter_output[1], filter_output[3])
+        desired = markov_switching.cy_kim_smoother(
+            regime_transition, filter_output[1], filter_output[3])
+
+        for i in range(2):
+            assert_allclose(actual[i], desired[i])
+
 
 class TestFedFundsConstL1(MarkovRegression):
     # Results from Stata, see http://www.stata.com/manuals14/tsmswitch.pdf
@@ -1000,9 +1022,9 @@ class TestFedFundsConstL1Exog(MarkovRegression):
             'bse_oim': np.r_[.0929915, .0641179, .1373889, .1279231, .0333236,
                              .0270852, .0294113, .0240138, .0408057, .0297351,
                              np.nan],
-            'predict0': results.ix[4:, 'constL1exog_syhat1'],
-            'predict1': results.ix[4:, 'constL1exog_syhat2'],
-            'predict_smoothed': results.ix[4:, 'constL1exog_syhat'],
+            'predict0': results.iloc[4:]['constL1exog_syhat1'],
+            'predict1': results.iloc[4:]['constL1exog_syhat2'],
+            'predict_smoothed': results.iloc[4:]['constL1exog_syhat'],
         }
         super(TestFedFundsConstL1Exog, cls).setup_class(
             true, fedfunds[4:], k_regimes=2,

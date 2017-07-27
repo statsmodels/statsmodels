@@ -7,12 +7,14 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-from statsmodels.tools.sm_exceptions import (IterationLimitWarning,
-    iteration_limit_doc)
 import numpy as np
 import scipy.sparse as sparse
 from scipy.sparse.linalg import svds
 from scipy.optimize import fminbound
+
+from statsmodels.tools.tools import Bunch
+from statsmodels.tools.sm_exceptions import (IterationLimitWarning,
+    iteration_limit_doc)
 
 def clip_evals(x, value=0): #threshold=0, value=0):
     evals, evecs = np.linalg.eigh(x)
@@ -414,14 +416,6 @@ def _project_correlation_factors(X):
         X[ii,:] /= nm[ii][:, None]
 
 
-#TODO does this belong in a tools module somewhere?
-class Bunch(object):
-
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
-
-
-
 class FactoredPSDMatrix:
     """
     Representation of a positive semidefinite matrix in factored form.
@@ -792,17 +786,17 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
 
     Notes
     -----
-    This is an alternative to C = np.corrcoef(data); C *= (np.abs(C)
+    This is an alternative to C = np.corrcoef(data); C \*= (np.abs(C)
     >= absmin), suitable for very tall data matrices.
 
     If the data are jointly Gaussian, the marginal sampling
     distributions of the elements of the sample correlation matrix are
     approximately Gaussian with standard deviation 1 / sqrt(n).  The
-    default value of `minabs` is thus equal to 1 standard error, which
+    default value of ``minabs`` is thus equal to 1 standard error, which
     will set to zero approximately 68% of the estimated correlation
     coefficients for which the population value is zero.
 
-    No intermediate matrix with more than `max_elt` values will be
+    No intermediate matrix with more than ``max_elt`` values will be
     constructed.  However memory use could still be high if a large
     number of correlation values exceed `minabs` in magnitude.
 

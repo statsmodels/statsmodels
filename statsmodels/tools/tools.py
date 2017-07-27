@@ -109,9 +109,11 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
     Univariate examples
 
     >>> import string
-    >>> string_var = [string.lowercase[0:5], string.lowercase[5:10],   \
-                string.lowercase[10:15], string.lowercase[15:20],   \
-                string.lowercase[20:25]]
+    >>> string_var = [string.ascii_lowercase[0:5], \
+                      string.ascii_lowercase[5:10], \
+                      string.ascii_lowercase[10:15], \
+                      string.ascii_lowercase[15:20],   \
+                      string.ascii_lowercase[20:25]]
     >>> string_var *= 5
     >>> string_var = np.asarray(sorted(string_var))
     >>> design = sm.tools.categorical(string_var, drop=True)
@@ -242,12 +244,12 @@ def add_constant(data, prepend=True, has_constant='skip'):
     Parameters
     ----------
     data : array-like
-        `data` is the column-ordered design matrix
+        ``data`` is the column-ordered design matrix
     prepend : bool
         If true, the constant is in the first column.  Else the constant is
         appended (last column).
     has_constant : str {'raise', 'add', 'skip'}
-        Behavior if ``data'' already has a constant. The default will return
+        Behavior if ``data`` already has a constant. The default will return
         data without adding another constant. If 'raise', will raise an
         error if a constant is present. Using 'add' will duplicate the
         constant, if one is present.
@@ -381,23 +383,6 @@ def clean0(matrix):
     return np.array(np.transpose(val))
 
 
-def rank(X, cond=1.0e-12):
-    """
-    Return the rank of a matrix X based on its generalized inverse,
-    not the SVD.
-    """
-    from warnings import warn
-    warn("rank is deprecated and will be removed in 0.7."
-         " Use np.linalg.matrix_rank instead.", FutureWarning)
-    X = np.asarray(X)
-    if len(X.shape) == 2:
-        D = svdvals(X)
-        return int(np.add.reduce(np.greater(D / D.max(),
-                                            cond).astype(np.int32)))
-    else:
-        return int(not np.alltrue(np.equal(X, 0.)))
-
-
 def fullrank(X, r=None):
     """
     Return a matrix whose column span is the same as X.
@@ -498,21 +483,13 @@ def maybe_unwrap_results(results):
     """
     return getattr(results, '_results', results)
 
-
 class Bunch(dict):
     """
     Returns a dict-like object with keys accessible via attribute lookup.
     """
-    def __init__(self, **kw):
-        dict.__init__(self, kw)
+    def __init__(self, *args, **kwargs):
+        super(Bunch, self).__init__(*args, **kwargs)
         self.__dict__ = self
-
-webuse = np.deprecate(webuse,
-                      old_name='statsmodels.tools.tools.webuse',
-                      new_name='statsmodels.datasets.webuse',
-                      message='webuse will be removed from the tools '
-                              'namespace in the 0.7.0 release. Please use the'
-                              ' new import.')
 
 
 def _ensure_2d(x, ndarray=False):

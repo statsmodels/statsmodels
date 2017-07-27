@@ -10,7 +10,6 @@ include tools/hash_funcs.py
 include tools/cythonize.py
 
 graft statsmodels/datasets
-graft statsmodels/tests
 graft statsmodels/sandbox/regression/data
 graft statsmodels/sandbox/tests
 graft statsmodels/sandbox/tsa/examples

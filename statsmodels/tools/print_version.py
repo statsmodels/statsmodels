@@ -212,6 +212,7 @@ def show_versions(show_dirs=True):
         import matplotlib as mpl
         print("matplotlib: %s (%s)" % (safe_version(mpl),
                                        dirname(mpl.__file__)))
+        print("    backend: %s " % mpl.rcParams['backend'])
     except ImportError:
         print("matplotlib: Not installed")
 

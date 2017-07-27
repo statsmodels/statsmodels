@@ -511,7 +511,7 @@ class T_estGLMProbit(CheckDiscreteGLM):
         endog_bin = (endog > endog.mean()).astype(int)
         cls.cov_type = 'cluster'
 
-        mod1 = GLM(endog_bin, exog, family=families.Gaussian(link=links.CDFLink))
+        mod1 = GLM(endog_bin, exog, family=families.Gaussian(link=links.CDFLink()))
         cls.res1 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
 
         mod1 = smd.Probit(endog_bin, exog)
@@ -647,7 +647,7 @@ class TestGLMGaussHACPanelGroups(CheckDiscreteGLM):
         # time index is just made up to have a test case
         groups = np.repeat(np.arange(5), 7)[:-1]
         mod1 = GLM(endog.copy(), exog.copy(), family=families.Gaussian())
-        kwds = dict(groups=groups,
+        kwds = dict(groups=pd.Series(groups),  # check for #3606
                     maxlags=2,
                     kernel=sw.weights_uniform,
                     use_correction='hac',
@@ -666,7 +666,7 @@ class TestGLMGaussHACGroupsum(CheckDiscreteGLM):
         # time index is just made up to have a test case
         time = np.tile(np.arange(7), 5)[:-1]
         mod1 = GLM(endog, exog, family=families.Gaussian())
-        kwds = dict(time=time,
+        kwds = dict(time=pd.Series(time),  # check for #3606
                     maxlags=2,
                     use_correction='hac',
                     df_correction=False)

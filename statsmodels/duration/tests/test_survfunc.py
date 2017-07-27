@@ -258,7 +258,7 @@ def test_weights1():
     st = np.r_[1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0]
     wt = np.r_[1, 2, 3, 2, 3, 1, 2, 1, 1, 2, 2, 3, 1]
 
-    sf = SurvfuncRight(tm, st, "", freq_weights=wt)
+    sf = SurvfuncRight(tm, st, freq_weights=wt)
     assert_allclose(sf.surv_times, np.r_[1, 3, 6, 7, 9])
     assert_allclose(sf.surv_prob,
                     np.r_[0.875, 0.65625, 0.51041667, 0.29166667, 0.])
@@ -272,7 +272,7 @@ def test_weights2():
     # st = c(1, 1, 0, 1, 1, 1, 1, 0, 1, 1)
     # wt = c(1, 1, 1, 1, 1, 2, 2, 2, 2, 2)
     # library(survival)
-    # sf = survfit(Surv(tm, st) ~ 1, weights=wt, err='tsiatis')
+    # sf =s urvfit(Surv(tm, st) ~ 1, weights=wt, err='tsiatis')
 
     tm = np.r_[1, 3, 5, 6, 7, 2, 4, 6, 8, 10]
     st = np.r_[1, 1, 0, 1, 1, 1, 1, 0, 1, 1]
@@ -280,8 +280,8 @@ def test_weights2():
     tm0 = np.r_[1, 3, 5, 6, 7, 2, 4, 6, 8, 10, 2, 4, 6, 8, 10]
     st0 = np.r_[1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1]
 
-    sf0 = SurvfuncRight(tm, st, "", freq_weights=wt)
-    sf1 = SurvfuncRight(tm0, st0, "")
+    sf0 = SurvfuncRight(tm, st, freq_weights=wt)
+    sf1 = SurvfuncRight(tm0, st0)
 
     assert_allclose(sf0.surv_times, sf1.surv_times)
     assert_allclose(sf0.surv_prob, sf1.surv_prob)
@@ -300,6 +300,10 @@ def test_incidence():
     #
     # The standard errors agree with Stata, not with R (cmprisk
     # package), which uses a different SE formula from Aalen (1978)
+    #
+    # To check with Stata:
+    # stset ftime failure(fstat==1)
+    # stcompet ci=ci, compet1(2)
 
     ftime = np.r_[1, 1, 2, 4, 4, 4, 6, 6, 7, 8, 9, 9, 9, 1, 2, 2, 4, 4]
     fstat = np.r_[1, 1, 1, 2, 2, 2, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -307,21 +311,21 @@ def test_incidence():
     ci = CumIncidenceRight(ftime, fstat)
 
     cinc = [np.array([0.11111111, 0.17037037, 0.17037037, 0.17037037,
-                       0.17037037, 0.17037037, 0.17037037]),
-             np.array([0., 0., 0.20740741, 0.20740741,
-                       0.20740741, 0.20740741, 0.20740741]),
-             np.array([0., 0., 0., 0.17777778,
-                       0.26666667, 0.26666667, 0.26666667])]
+                      0.17037037, 0.17037037, 0.17037037]),
+            np.array([0., 0., 0.20740741, 0.20740741,
+                      0.20740741, 0.20740741, 0.20740741]),
+            np.array([0., 0., 0., 0.17777778,
+                      0.26666667, 0.26666667, 0.26666667])]
     assert_allclose(cinc[0], ci.cinc[0])
     assert_allclose(cinc[1], ci.cinc[1])
     assert_allclose(cinc[2], ci.cinc[2])
 
     cinc_se = [np.array([0.07407407, 0.08976251, 0.08976251, 0.08976251,
-                          0.08976251, 0.08976251, 0.08976251]),
-                np.array([0., 0., 0.10610391, 0.10610391, 0.10610391,
-                          0.10610391, 0.10610391]),
-                np.array([0., 0., 0., 0.11196147, 0.12787781,
-                          0.12787781, 0.12787781])]
+                         0.08976251, 0.08976251, 0.08976251]),
+               np.array([0., 0., 0.10610391, 0.10610391, 0.10610391,
+                         0.10610391, 0.10610391]),
+               np.array([0., 0., 0., 0.11196147, 0.12787781,
+                         0.12787781, 0.12787781])]
     assert_allclose(cinc_se[0], ci.cinc_se[0])
     assert_allclose(cinc_se[1], ci.cinc_se[1])
     assert_allclose(cinc_se[2], ci.cinc_se[2])
@@ -332,3 +336,217 @@ def test_incidence():
     assert_allclose(ci.cinc[0], ciw.cinc[0])
     assert_allclose(ci.cinc[1], ciw.cinc[1])
     assert_allclose(ci.cinc[2], ciw.cinc[2])
+
+
+def test_survfunc_entry_1():
+    # times = c(1, 3, 3, 5, 5, 7, 7, 8, 8, 9, 10, 10)
+    # status = c(1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 1)
+    # entry = c(0, 1, 1, 2, 2, 2, 3, 4, 4, 4, 4, 0)
+    # sv = Surv(entry, times, event=status)
+    # sdf = survfit(coxph(sv ~ 1), type='kaplan-meier')
+
+    times = np.r_[1, 3, 3, 5, 5, 7, 7, 8, 8, 9, 10, 10]
+    status = np.r_[1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 1]
+    entry = np.r_[0, 1, 1, 2, 2, 2, 3, 4, 4, 4, 4, 0]
+
+    sf = SurvfuncRight(times, status, entry=entry)
+
+    assert_allclose(sf.n_risk, np.r_[2, 6, 9, 7, 5, 3, 2])
+    assert_allclose(sf.surv_times, np.r_[1, 3, 5, 7, 8, 9, 10])
+    assert_allclose(sf.surv_prob, np.r_[
+        0.5000, 0.4167, 0.3241, 0.2778, 0.2222, 0.1481, 0.0741],
+        atol=1e-4)
+    assert_allclose(sf.surv_prob_se, np.r_[
+        0.3536, 0.3043, 0.2436, 0.2132, 0.1776, 0.1330, 0.0846],
+        atol=1e-4)
+
+
+def test_survfunc_entry_2():
+    # entry = 0 is equivalent to no entry time
+
+    times = np.r_[1, 3, 3, 5, 5, 7, 7, 8, 8, 9, 10, 10]
+    status = np.r_[1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 1]
+    entry = np.r_[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+    sf = SurvfuncRight(times, status, entry=entry)
+    sf0 = SurvfuncRight(times, status)
+
+    assert_allclose(sf.n_risk, sf0.n_risk)
+    assert_allclose(sf.surv_times, sf0.surv_times)
+    assert_allclose(sf.surv_prob, sf0.surv_prob)
+    assert_allclose(sf.surv_prob_se, sf0.surv_prob_se)
+
+
+def test_survfunc_entry_3():
+    # times = c(1, 2, 5, 6, 6, 6, 6, 6, 9)
+    # status = c(0, 0, 1, 1, 1, 0, 1, 1, 0)
+    # entry = c(0, 1, 1, 2, 2, 2, 3, 4, 4)
+    # sv = Surv(entry, times, event=status)
+    # sdf = survfit(coxph(sv ~ 1), type='kaplan-meier')
+
+    times = np.r_[1, 2, 5, 6, 6, 6, 6, 6, 9]
+    status = np.r_[0, 0, 1, 1, 1, 0, 1, 1, 0]
+    entry = np.r_[0, 1, 1, 2, 2, 2, 3, 4, 4]
+
+    sf = SurvfuncRight(times, status, entry=entry)
+
+    assert_allclose(sf.n_risk, np.r_[7, 6])
+    assert_allclose(sf.surv_times, np.r_[5, 6])
+    assert_allclose(sf.surv_prob, np.r_[0.857143, 0.285714], atol=1e-5)
+    assert_allclose(sf.surv_prob_se, np.r_[0.13226, 0.170747], atol=1e-5)
+
+
+def test_survdiff_entry_1():
+    # entry times = 0 is equivalent to no entry times
+    ti = np.r_[1, 3, 4, 2, 5, 4, 6, 7, 5, 9]
+    st = np.r_[1, 1, 0, 1, 1, 0, 1, 1, 0, 0]
+    gr = np.r_[0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
+    entry = np.r_[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    z1, p1 = survdiff(ti, st, gr, entry=entry)
+    z2, p2 = survdiff(ti, st, gr)
+    assert_allclose(z1, z2)
+    assert_allclose(p1, p2)
+
+
+def test_survdiff_entry_2():
+    # Tests against Stata:
+    #
+    # stset time, failure(status) entry(entry)
+    # sts test group, logrank
+
+    ti = np.r_[5, 3, 4, 2, 5, 4, 6, 7, 5, 9]
+    st = np.r_[1, 1, 0, 1, 1, 0, 1, 1, 0, 0]
+    gr = np.r_[0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
+    entry = np.r_[1, 2, 2, 1, 3, 3, 5, 4, 2, 5]
+
+    # Check with no entry times
+    z, p = survdiff(ti, st, gr)
+    assert_allclose(z, 6.694424)
+    assert_allclose(p, 0.00967149)
+
+    # Check with entry times
+    z, p = survdiff(ti, st, gr, entry=entry)
+    assert_allclose(z, 3.0)
+    assert_allclose(p, 0.083264516)
+
+
+def test_survdiff_entry_3():
+    # Tests against Stata:
+    #
+    # stset time, failure(status) entry(entry)
+    # sts test group, logrank
+
+    ti = np.r_[2, 1, 5, 8, 7, 8, 8, 9, 4, 9]
+    st = np.r_[1, 1, 1, 1, 1, 0, 1, 0, 0, 0]
+    gr = np.r_[0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
+    entry = np.r_[1, 1, 2, 2, 3, 3, 2, 1, 2, 0]
+
+    # Check with no entry times
+    z, p = survdiff(ti, st, gr)
+    assert_allclose(z, 6.9543024)
+    assert_allclose(p, 0.008361789)
+
+    # Check with entry times
+    z, p = survdiff(ti, st, gr, entry=entry)
+    assert_allclose(z, 6.75082959)
+    assert_allclose(p, 0.00937041)
+
+
+def test_incidence2():
+    # Check that the cumulative incidence functions for all competing
+    # risks sum to the complementary survival function.
+
+    np.random.seed(2423)
+    n = 200
+    time = -np.log(np.random.uniform(size=n))
+    status = np.random.randint(0, 3, size=n)
+    ii = np.argsort(time)
+    time = time[ii]
+    status = status[ii]
+    ci = CumIncidenceRight(time, status)
+    statusa = 1*(status >= 1)
+    sf = SurvfuncRight(time, statusa)
+    x = 1 - sf.surv_prob
+    y = (ci.cinc[0] + ci.cinc[1])[np.flatnonzero(statusa)]
+    assert_allclose(x, y)
+
+
+def test_kernel_survfunc1():
+    # Regression test
+    n = 100
+    np.random.seed(3434)
+    x = np.random.normal(size=(n, 3))
+    time = np.random.uniform(size=n)
+    status = np.random.randint(0, 2, size=n)
+
+    result = SurvfuncRight(time, status, exog=x)
+
+    timex = np.r_[0.30721103, 0.0515439, 0.69246897, 0.16446079, 0.31308528]
+    sprob = np.r_[0.98948277, 0.98162275, 0.97129237, 0.96044668, 0.95030368]
+
+    assert_allclose(result.time[0:5], timex)
+    assert_allclose(result.surv_prob[0:5], sprob)
+
+
+def test_kernel_survfunc2():
+    # Check that when bandwidth is very large, the kernel procedure
+    # agrees with standard KM. (Note: the results do not agree
+    # perfectly when there are tied times).
+
+    n = 100
+    np.random.seed(3434)
+    x = np.random.normal(size=(n, 3))
+    time = np.random.uniform(0, 10, size=n)
+    status = np.random.randint(0, 2, size=n)
+
+    resultkm = SurvfuncRight(time, status)
+    result = SurvfuncRight(time, status, exog=x, bw_factor=10000)
+
+    assert_allclose(resultkm.surv_times, result.surv_times)
+    assert_allclose(resultkm.surv_prob, result.surv_prob, rtol=1e-6, atol=1e-6)
+
+
+def test_kernel_survfunc3():
+    # Smoke test for tied times
+
+    n = 100
+    np.random.seed(3434)
+    x = np.random.normal(size=(n, 3))
+    time = np.random.randint(0, 10, size=n)
+    status = np.random.randint(0, 2, size=n)
+    SurvfuncRight(time, status, exog=x, bw_factor=10000)
+    SurvfuncRight(time, status, exog=x, bw_factor=np.r_[10000, 10000])
+
+
+def test_kernel_cumincidence1():
+    # Check that when the bandwidth is very large, the kernel
+    # procedure agrees with standard cumulative incidence
+    # calculations. (Note: the results do not agree perfectly when
+    # there are tied times).
+
+    n = 100
+    np.random.seed(3434)
+    x = np.random.normal(size=(n, 3))
+    time = np.random.uniform(0, 10, size=n)
+    status = np.random.randint(0, 3, size=n)
+
+    result1 = CumIncidenceRight(time, status)
+
+    for dimred in False, True:
+        result2 = CumIncidenceRight(time, status, exog=x, bw_factor=10000,
+                                    dimred=dimred)
+
+        assert_allclose(result1.times, result2.times)
+        for k in 0, 1:
+            assert_allclose(result1.cinc[k], result2.cinc[k], rtol=1e-5)
+
+
+def test_kernel_cumincidence2():
+    # Smoke tests for tied times
+
+    n = 100
+    np.random.seed(3434)
+    x = np.random.normal(size=(n, 3))
+    time = np.random.randint(0, 10, size=n)
+    status = np.random.randint(0, 3, size=n)
+    CumIncidenceRight(time, status, exog=x, bw_factor=10000)

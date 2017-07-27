@@ -1,0 +1,117 @@
+#cython: boundscheck=False
+#cython: wraparound=False
+#cython: cdivision=False
+"""
+Kim smoother
+
+Author: Chad Fulton  
+License: Simplified-BSD
+"""
+
+{{py:
+
+TYPES = {
+    "s": ("np.float32_t", "np.float32", "np.NPY_FLOAT32"),
+    "d": ("np.float64_t", "float", "np.NPY_FLOAT64"),
+    "c": ("np.complex64_t", "np.complex64", "np.NPY_COMPLEX64"),
+    "z": ("np.complex128_t", "complex", "np.NPY_COMPLEX128"),
+}
+
+}}
+
+# Typical imports
+import numpy as np
+import warnings
+cimport numpy as np
+cimport cython
+
+cdef int FORTRAN = 1
+
+{{for prefix, types in TYPES.items()}}
+{{py:cython_type, dtype, typenum = types}}
+
+cpdef {{prefix}}kim_smoother(int nobs, int k_regimes, int order,
+                             {{cython_type}} [:,:,:] regime_transition,
+                             {{cython_type}} [:,:] predicted_joint_probabilities,
+                             {{cython_type}} [:,:] filtered_joint_probabilities,
+                             {{cython_type}} [:,:] smoothed_joint_probabilities):
+    cdef int t, i, j, k, ix, regime_transition_t = 0, time_varying_regime_transition
+    cdef:
+        int k_regimes_order_m1 = k_regimes**(order - 1)
+        int k_regimes_order = k_regimes**order
+        int k_regimes_order_p1 = k_regimes**(order + 1)
+        int k_regimes_order_p2 = k_regimes**(order + 2)
+        {{cython_type}} [:] tmp_joint_probabilities, tmp_probabilities_fraction
+
+    time_varying_regime_transition = regime_transition.shape[2] > 1
+    tmp_joint_probabilities = np.zeros(k_regimes_order_p2, dtype={{dtype}})
+    tmp_probabilities_fraction = np.zeros(k_regimes_order_p1, dtype={{dtype}})
+
+    # S_T, S_{T-1}, ..., S_{T-r} | T
+    smoothed_joint_probabilities[:, nobs-1] = filtered_joint_probabilities[:, nobs-1]
+
+    for t in range(nobs - 2, -1, -1):
+        if time_varying_regime_transition:
+            regime_transition_t = t + 1
+
+        {{prefix}}kim_smoother_iteration(k_regimes, order,
+                                         tmp_joint_probabilities,
+                                         tmp_probabilities_fraction,
+                                         regime_transition[:, :, regime_transition_t],
+                                         predicted_joint_probabilities[:, t+1],
+                                         filtered_joint_probabilities[:, t],
+                                         smoothed_joint_probabilities[:, t+1],
+                                         smoothed_joint_probabilities[:, t])
+
+
+cdef {{prefix}}kim_smoother_iteration(int k_regimes, int order,
+                             {{cython_type}} [:] tmp_joint_probabilities,
+                             {{cython_type}} [:] tmp_probabilities_fraction,
+                             {{cython_type}} [:,:] regime_transition,
+                             {{cython_type}} [:] predicted_joint_probabilities,
+                             {{cython_type}} [:] filtered_joint_probabilities,
+                             {{cython_type}} [:] prev_smoothed_joint_probabilities,
+                             {{cython_type}} [:] next_smoothed_joint_probabilities):
+    cdef int t, i, j, k, ix
+    cdef:
+        int k_regimes_order_m1 = k_regimes**(order - 1)
+        int k_regimes_order = k_regimes**order
+        int k_regimes_order_p1 = k_regimes**(order + 1)
+        int k_regimes_order_p2 = k_regimes**(order + 2)
+
+    # Pr[S_{t+1}, S_t, ..., S_{t-r+1} | t] = Pr[S_{t+1} | S_t] * Pr[S_t, ..., S_{t-r+1} | t]
+    ix = 0
+    for i in range(k_regimes):
+        for j in range(k_regimes):
+            for k in range(k_regimes_order):
+                tmp_joint_probabilities[ix] = (
+                    filtered_joint_probabilities[j * k_regimes_order + k] *
+                    regime_transition[i, j])
+                ix += 1
+
+    # S_{t+1}, S_t, ..., S_{t-r+2} | T / S_{t+1}, S_t, ..., S_{t-r+2} | t
+    for i in range(k_regimes_order_p1):
+        if predicted_joint_probabilities[i] == 0:
+            tmp_probabilities_fraction[i] = np.inf
+        else:
+            tmp_probabilities_fraction[i] = (
+                prev_smoothed_joint_probabilities[i] /
+                predicted_joint_probabilities[i])
+
+    # S_{t+1}, S_t, ..., S_{t-r+1} | T
+    ix = 0
+    for i in range(k_regimes_order_p1):
+        for j in range(k_regimes):
+            tmp_joint_probabilities[ix] = (
+                tmp_probabilities_fraction[i] *
+                tmp_joint_probabilities[ix])
+            ix = ix + 1
+
+    for i in range(k_regimes_order_p1):
+        for j in range(k_regimes):
+            ix = j * k_regimes_order_p1 + i
+            next_smoothed_joint_probabilities[i] = (
+                next_smoothed_joint_probabilities[i] +
+                tmp_joint_probabilities[ix])
+
+{{endfor}}

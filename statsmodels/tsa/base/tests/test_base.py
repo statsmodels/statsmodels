@@ -1,9 +1,9 @@
 import numpy as np
 import numpy.testing as npt
 import pandas as pd
-
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
-from statsmodels.tools.testing import assert_equal
+from statsmodels.tools.testing import assert_equal, assert_raises
+from datetime import datetime
 
 
 def test_pandas_nodates_index():
@@ -12,7 +12,32 @@ def test_pandas_nodates_index():
     dates = ['a', 'b', 'c']
     s = pd.Series(data, index=dates)
 
-    npt.assert_raises(ValueError, TimeSeriesModel, s)
+    # TODO: Remove this, this is now valid
+    # npt.assert_raises(ValueError, TimeSeriesModel, s)
+
+    # Test with a non-date index that doesn't raise an exception because it
+    # can be coerced into a nanosecond DatetimeIndex
+    # (This test doesn't make sense for Numpy < 1.7 since they don't have
+    # nanosecond support)
+    # (This test also doesn't make sense for Pandas < 0.14 since we don't
+    # support nanosecond index in Pandas < 0.14)
+    try:
+        # Check for Numpy < 1.7
+        pd.to_offset('N')
+    except:
+        pass
+    else:
+        data = [988, 819, 964]
+        # index=pd.date_range('1970-01-01', periods=3, freq='QS')
+        index = pd.to_datetime([100, 101, 102])
+        s = pd.Series(data, index=index)
+
+        actual_str = (index[0].strftime('%Y-%m-%d %H:%M:%S.%f') +
+                      str(index[0].value))
+        assert_equal(actual_str, '1970-01-01 00:00:00.000000100')
+        mod = TimeSeriesModel(s)
+        start, end, out_of_sample, _ = mod._get_prediction_index(0, 4)
+        assert_equal(len(mod.data.predict_dates), 5)
 
 def test_predict_freq():
     # test that predicted dates have same frequency
@@ -24,11 +49,10 @@ def test_predict_freq():
     series = pd.Series(x, index=dates)
     model = TimeSeriesModel(series)
     #npt.assert_(model.data.freq == "AS-APR")
-    npt.assert_(model.data.freq == "A-APR")
+    assert_equal(model._index.freqstr, "A-APR")
 
-    start = model._get_predict_start("2006-4-30")
-    end = model._get_predict_end("2016-4-30")
-    model._make_predict_dates()
+    start, end, out_of_sample, _ = (
+        model._get_prediction_index("2006-4-30", "2016-4-30"))
 
     predict_dates = model.data.predict_dates
 
@@ -48,7 +72,7 @@ def test_keyerror_start_date():
     series = pd.Series(x, index=dates)
     model = TimeSeriesModel(series)
 
-    npt.assert_raises(ValueError, model._get_predict_start, "1970-4-30")
+    npt.assert_raises(KeyError, model._get_prediction_index, "1970-4-30", None)
 
 def test_period_index():
     # test 1285
@@ -57,7 +81,7 @@ def test_period_index():
     x = np.arange(1, 21.)
 
     model = TimeSeriesModel(pd.Series(x, index=dates))
-    npt.assert_(model.data.freq == "M")
+    assert_equal(model._index.freqstr, "M")
     model = TimeSeriesModel(pd.Series(x, index=dates))
     npt.assert_(model.data.freq == "M")
 
@@ -69,8 +93,21 @@ def test_pandas_dates():
     datetime_dates = pd.to_datetime(dates)
 
     result = pd.Series(data=data, index=datetime_dates, name='price')
-    df = pd.DataFrame(data={'price': data}, index=dates)
+    df = pd.DataFrame(data={'price': data}, index=pd.DatetimeIndex(dates, freq='MS'))
 
     model = TimeSeriesModel(df['price'])
 
     assert_equal(model.data.dates, result.index)
+
+def test_get_predict_start_end():
+    index = pd.DatetimeIndex(start='1970-01-01', end='1990-01-01', freq='AS')
+    endog = pd.Series(np.zeros(10), index[:10])
+    model = TimeSeriesModel(endog)
+
+    predict_starts = [1, '1971-01-01', datetime(1971, 1, 1), index[1]]
+    predict_ends = [20, '1990-01-01', datetime(1990, 1, 1), index[-1]]
+
+    desired = (1, 9, 11)
+    for start in predict_starts:
+        for end in predict_ends:
+            assert_equal(model._get_prediction_index(start, end)[:3], desired)

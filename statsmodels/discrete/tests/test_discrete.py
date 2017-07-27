@@ -16,7 +16,9 @@ from numpy.testing import (assert_, assert_raises, assert_almost_equal,
                            assert_array_less)
 
 from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
-                                                 Poisson, NegativeBinomial)
+                                                Poisson, NegativeBinomial,
+                                                CountModel, GeneralizedPoisson
+                                                )
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
@@ -35,6 +37,12 @@ try:
     has_basinhopping = True
 except ImportError:
     has_basinhopping = False
+
+try:
+    from scipy.optimize._trustregion_dogleg import  _minimize_dogleg
+    has_dogleg = True
+except ImportError:
+    has_dogleg = False
 
 DECIMAL_14 = 14
 DECIMAL_10 = 10
@@ -144,6 +152,12 @@ class CheckMargEff(object):
                 self.res2.margeff_nodummy_dydx, DECIMAL_4)
         assert_almost_equal(me.margeff_se,
                 self.res2.margeff_nodummy_dydx_se, DECIMAL_4)
+
+        me_frame = me.summary_frame()
+        eff = me_frame["dy/dx"].values
+        assert_allclose(eff, me.margeff, rtol=1e-13)
+        assert_equal(me_frame.shape, (me.margeff.size, 6))
+
 
     def test_nodummy_dydxmean(self):
         me = self.res1.get_margeff(at='mean')
@@ -411,6 +425,44 @@ class TestProbitBasinhopping(CheckBinaryResults):
         fit = Probit(data.endog, data.exog).fit
         cls.res1 = fit(method="basinhopping", disp=0, niter=5,
                         minimizer={'method' : 'L-BFGS-B', 'tol' : 1e-8})
+
+class TestProbitMinimizeDefault(CheckBinaryResults):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=False)
+        res2 = Spector()
+        res2.probit()
+        cls.res2 = res2
+        fit = Probit(data.endog, data.exog).fit
+        cls.res1 = fit(method="minimize", disp=0, niter=5, tol = 1e-8)
+
+class TestProbitMinimizeDogleg(CheckBinaryResults):
+    @classmethod
+    def setupClass(cls):
+        if not has_dogleg:
+            raise SkipTest("Skipped TestProbitMinimizeDogleg since "
+                           "dogleg method is not available")
+
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=False)
+        res2 = Spector()
+        res2.probit()
+        cls.res2 = res2
+        fit = Probit(data.endog, data.exog).fit
+        cls.res1 = fit(method="minimize", disp=0, niter=5, tol = 1e-8, min_method = 'dogleg')
+
+class TestProbitMinimizeAdditionalOptions(CheckBinaryResults):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=False)
+        res2 = Spector()
+        res2.probit()
+        cls.res2 = res2
+        cls.res1 = Probit(data.endog, data.exog).fit(method="minimize", disp=0,
+                                                     maxiter=500, min_method='Nelder-Mead',
+                                                     xtol=1e-4, ftol=1e-4)
 
 class CheckLikelihoodModelL1(object):
     """
@@ -837,6 +889,55 @@ class TestLogitNewton(CheckBinaryResults, CheckMargEff):
         assert_almost_equal(me.margeff_se,
                 self.res2.margeff_dummy_atexog2_se, DECIMAL_4)
 
+
+class TestLogitNewtonPrepend(CheckMargEff):
+    # same as previous version but adjusted vor add_constant prepend=True
+    # bug #3695
+    @classmethod
+    def setup_class(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
+        cls.res1 = Logit(data.endog, data.exog).fit(method="newton", disp=0)
+        res2 = Spector()
+        res2.logit()
+        cls.res2 = res2
+        cls.slice = np.roll(np.arange(len(cls.res1.params)), 1) #.astype(int)
+
+    def test_resid_pearson(self):
+        assert_almost_equal(self.res1.resid_pearson,
+                            self.res2.resid_pearson, 5)
+
+    def test_nodummy_exog1(self):
+        me = self.res1.get_margeff(atexog={1 : 2.0, 3 : 1.})
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_nodummy_atexog1, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_atexog1_se, DECIMAL_4)
+
+    def test_nodummy_exog2(self):
+        me = self.res1.get_margeff(atexog={2 : 21., 3 : 0}, at='mean')
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_nodummy_atexog2, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_nodummy_atexog2_se, DECIMAL_4)
+
+    def test_dummy_exog1(self):
+        me = self.res1.get_margeff(atexog={1 : 2.0, 3 : 1.}, dummy=True)
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_dummy_atexog1, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_dummy_atexog1_se, DECIMAL_4)
+
+    def test_dummy_exog2(self):
+        me = self.res1.get_margeff(atexog={2 : 21., 3 : 0}, at='mean',
+                dummy=True)
+        assert_almost_equal(me.margeff,
+                self.res2.margeff_dummy_atexog2, DECIMAL_4)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_dummy_atexog2_se, DECIMAL_4)
+
+
+
 class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
     @classmethod
     def setupClass(cls):
@@ -1136,6 +1237,10 @@ class CheckMNLogitBaseZero(CheckModelResults):
         me = self.res1.get_margeff()
         assert_almost_equal(me.margeff, self.res2.margeff_dydx_overall, 6)
         assert_almost_equal(me.margeff_se, self.res2.margeff_dydx_overall_se, 6)
+        me_frame = me.summary_frame()
+        eff = me_frame["dy/dx"].values.reshape(me.margeff.shape, order="F")
+        assert_allclose(eff, me.margeff, rtol=1e-13)
+        assert_equal(me_frame.shape, (np.size(me.margeff), 6))
 
     def test_margeff_mean(self):
         me = self.res1.get_margeff(at='mean')
@@ -1333,6 +1438,9 @@ def test_issue_339():
     test_case_file = os.path.join(cur_dir, 'results', 'mn_logit_summary.txt')
     test_case = open(test_case_file, 'r').read()
     np.testing.assert_equal(smry, test_case[:-1])
+    # smoke test for summary2
+    res1.summary2()  # see #3651
+
 
 def test_issue_341():
     data = sm.datasets.anes96.load()
@@ -1407,6 +1515,34 @@ def test_formula_missing_exposure():
     assert_raises(ValueError, sm.Poisson, df.Foo, df[['constant', 'Bar']],
                   exposure=exposure)
 
+def test_predict_with_exposure():
+    # Case where CountModel.predict is called with exog = None and exposure
+    # or offset not-None
+    # See 3565
+
+    # Setup copied from test_formula_missing_exposure
+    import pandas as pd
+    d = {'Foo': [1, 2, 10, 149], 'Bar': [1, 2, 3, 4],
+         'constant': [1] * 4, 'exposure' : [np.exp(1)]*4,
+         'x': [1, 3, 2, 1.5]}
+    df = pd.DataFrame(d)
+
+    mod1 = CountModel.from_formula('Foo ~ Bar', data=df, exposure=df['exposure'])
+
+    params = np.array([1, .4])
+    pred = mod1.predict(params, linear=True)
+    # No exposure is passed, so default to using mod1.exposure, which
+    # should have been logged
+    X = df[['constant', 'Bar']].values # mod1.exog
+    expected = np.dot(X, params) + 1
+    assert_allclose(pred, expected)
+    # The above should have passed without the current patch.  The next
+    # test would fail under the old code
+
+    pred2 = mod1.predict(params, exposure=[np.exp(2)]*4, linear=True)
+    expected2 = expected + 1
+    assert_allclose(pred2, expected2)
+
 
 def test_binary_pred_table_zeros():
     # see 2968
@@ -1421,6 +1557,221 @@ def test_binary_pred_table_zeros():
     res = MNLogit(y, np.ones(nobs)).fit(disp=0)
     expected = np.array([[ 8.,  0.], [ 2.,  0.]])
     assert_equal(res.pred_table(), expected)
+
+
+class TestGeneralizedPoisson_p2(object):
+    """
+    Test Generalized Poisson model
+    """
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.randhie.load()
+        data.exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = GeneralizedPoisson(data.endog, data.exog, p=2).fit(method='newton')
+        res2 = RandHIE()
+        res2.generalizedpoisson_gp2()
+        cls.res2 = res2
+
+    def test_bse(self):
+        assert_allclose(self.res1.bse, self.res2.bse, atol=1e-5)
+
+    def test_params(self):
+        assert_allclose(self.res1.params, self.res2.params, atol=1e-5)
+
+    def test_alpha(self):
+        assert_allclose(self.res1.lnalpha, self.res2.lnalpha)
+        assert_allclose(self.res1.lnalpha_std_err,
+                            self.res2.lnalpha_std_err, atol=1e-5)
+
+    def test_conf_int(self):
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int,
+                        atol=1e-3)
+
+    def test_aic(self):
+        assert_allclose(self.res1.aic, self.res2.aic)
+
+    def test_bic(self):
+        assert_allclose(self.res1.bic, self.res2.bic)
+
+    def test_df(self):
+        assert_equal(self.res1.df_model, self.res2.df_model)
+
+    def test_llf(self):
+        assert_allclose(self.res1.llf, self.res2.llf)
+
+    def test_wald(self):
+        result = self.res1.wald_test(np.eye(len(self.res1.params))[:-2])
+        assert_allclose(result.statistic, self.res2.wald_statistic)
+        assert_allclose(result.pvalue, self.res2.wald_pvalue, atol=1e-15)
+
+    def test_t(self):
+        unit_matrix = np.identity(self.res1.params.size)
+        t_test = self.res1.t_test(unit_matrix)
+        assert_allclose(self.res1.tvalues, t_test.tvalue)
+
+class TestGeneralizedPoisson_transparams(object):
+    """
+    Test Generalized Poisson model
+    """
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.randhie.load()
+        data.exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = GeneralizedPoisson(data.endog, data.exog, p=2).fit(
+            method='newton', use_transparams=True)
+        res2 = RandHIE()
+        res2.generalizedpoisson_gp2()
+        cls.res2 = res2
+
+    def test_bse(self):
+        assert_allclose(self.res1.bse, self.res2.bse, atol=1e-5)
+
+    def test_params(self):
+        assert_allclose(self.res1.params, self.res2.params, atol=1e-5)
+
+    def test_alpha(self):
+        assert_allclose(self.res1.lnalpha, self.res2.lnalpha)
+        assert_allclose(self.res1.lnalpha_std_err,
+                        self.res2.lnalpha_std_err, atol=1e-5)
+
+    def test_conf_int(self):
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int,
+                        atol=1e-3)
+
+    def test_aic(self):
+        assert_allclose(self.res1.aic, self.res2.aic)
+
+    def test_bic(self):
+        assert_allclose(self.res1.bic, self.res2.bic)
+
+    def test_df(self):
+        assert_equal(self.res1.df_model, self.res2.df_model)
+
+    def test_llf(self):
+        assert_allclose(self.res1.llf, self.res2.llf)
+
+class TestGeneralizedPoisson_p1(object):
+    """
+    Test Generalized Poisson model
+    """
+    @classmethod
+    def setupClass(cls):
+        cls.data = sm.datasets.randhie.load()
+        cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
+        cls.res1 = GeneralizedPoisson(
+            cls.data.endog, cls.data.exog, p=1).fit(method='newton')
+
+    def test_llf(self):
+        poisson_llf = sm.Poisson(
+            self.data.endog, self.data.exog).loglike(
+            self.res1.params[:-1])
+        genpoisson_llf = sm.GeneralizedPoisson(
+            self.data.endog, self.data.exog, p=1).loglike(
+            list(self.res1.params[:-1]) + [0])
+        assert_allclose(genpoisson_llf, poisson_llf)
+
+    def test_score(self):
+        poisson_score = sm.Poisson(
+            self.data.endog, self.data.exog).score(
+            self.res1.params[:-1])
+        genpoisson_score = sm.GeneralizedPoisson(
+            self.data.endog, self.data.exog, p=1).score(
+            list(self.res1.params[:-1]) + [0])
+        assert_allclose(genpoisson_score[:-1], poisson_score, atol=1e-9)
+
+    def test_hessian(self):
+        poisson_score = sm.Poisson(
+            self.data.endog, self.data.exog).hessian(
+            self.res1.params[:-1])
+        genpoisson_score = sm.GeneralizedPoisson(
+            self.data.endog, self.data.exog, p=1).hessian(
+            list(self.res1.params[:-1]) + [0])
+        assert_allclose(genpoisson_score[:-1,:-1], poisson_score, atol=1e-10)
+
+    def test_t(self):
+        unit_matrix = np.identity(self.res1.params.size)
+        t_test = self.res1.t_test(unit_matrix)
+        assert_allclose(self.res1.tvalues, t_test.tvalue)
+
+    def test_fit_regularized(self):
+        model = self.res1.model
+
+        # don't penalize constant and dispersion parameter
+        alpha = np.ones(len(self.res1.params))
+        alpha[-2:] = 0
+        # the first prints currently a warning, irrelevant here
+        res_reg1 = model.fit_regularized(alpha=alpha*0.01, disp=0)
+        res_reg2 = model.fit_regularized(alpha=alpha*100, disp=0)
+        res_reg3 = model.fit_regularized(alpha=alpha*1000, disp=0)
+
+        assert_allclose(res_reg1.params, self.res1.params, atol=5e-5)
+        assert_allclose(res_reg1.bse, self.res1.bse, atol=1e-5)
+
+        # check shrinkage, regression numbers
+        assert_allclose((self.res1.params[:-2]**2).mean(), 0.016580955543320779)
+        assert_allclose((res_reg1.params[:-2]**2).mean(), 0.016580734975068664)
+        assert_allclose((res_reg2.params[:-2]**2).mean(), 0.010672558641545994)
+        assert_allclose((res_reg3.params[:-2]**2).mean(), 0.00035544919793048415)
+
+class TestGeneralizedPoisson_underdispersion(object):
+    @classmethod
+    def setupClass(cls):
+        cls.expected_params = [1, -0.5, -0.05]
+        np.random.seed(1234)
+        nobs = 200
+        exog = np.ones((nobs, 2))
+        exog[:nobs//2, 1] = 2
+        mu_true = np.exp(exog.dot(cls.expected_params[:-1]))
+        cls.endog = sm.distributions.genpoisson_p.rvs(mu_true,
+            cls.expected_params[-1], 1, size=len(mu_true))
+        model_gp = sm.GeneralizedPoisson(cls.endog, exog, p=1)
+        cls.res = model_gp.fit(method='nm', maxiter=5000, maxfun=5000)
+
+    def test_basic(self):
+        res = self.res
+        endog = res.model.endog
+        # check random data generation, regression test
+        assert_allclose(endog.mean(), 1.42, rtol=1e-3)
+        assert_allclose(endog.var(), 1.2836, rtol=1e-3)
+
+        # check estimation
+        assert_allclose(res.params, self.expected_params, atol=0.07, rtol=0.1)
+        assert_(res.mle_retvals['converged'] is True)
+        assert_allclose(res.mle_retvals['fopt'], 1.418753161722015, rtol=0.01)
+
+    def test_newton(self):
+        # check newton optimization with start_params
+        res = self.res
+        res2 = res.model.fit(start_params=res.params, method='newton')
+        assert_allclose(res.model.score(res.params),
+                        np.zeros(len(res2.params)), atol=5e-3)
+        assert_allclose(res.model.score(res2.params),
+                        np.zeros(len(res2.params)), atol=1e-10)
+        assert_allclose(res.params, res2.params, atol=1e-4)
+
+    def test_mean_var(self):
+        assert_allclose(self.res.predict().mean(), self.endog.mean(),
+                        atol=1e-1, rtol=1e-1)
+
+        assert_allclose(
+            self.res.predict().mean() * self.res._dispersion_factor.mean(),
+            self.endog.var(), atol=2e-1, rtol=2e-1)
+
+    def test_predict_prob(self):
+        res = self.res
+        endog = res.model.endog
+        freq = np.bincount(endog)
+
+        pr = res.predict(which='prob')
+        pr2 = sm.distributions.genpoisson_p.pmf(np.arange(6)[:, None],
+                                        res.predict(), res.params[-1], 1).T
+        assert_allclose(pr, pr2, rtol=1e-10, atol=1e-10)
+
+        from scipy import stats
+        chi2 = stats.chisquare(freq, pr.sum(0))
+        assert_allclose(chi2[:], (0.64628806058715882, 0.98578597726324468),
+                        rtol=0.01)
+
 
 
 if __name__ == "__main__":

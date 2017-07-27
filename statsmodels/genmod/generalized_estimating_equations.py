@@ -257,9 +257,9 @@ _gee_init_doc = """
 
 _gee_family_doc = """\
         The default is Gaussian.  To specify the binomial
-        distribution use `family=sm.family.Binomial()`. Each family
+        distribution use `family=sm.families.Binomial()`. Each family
         can take a link instance as an argument.  See
-        statsmodels.family.family for more information."""
+        statsmodels.genmod.families.family for more information."""
 
 _gee_ordinal_family_doc = """\
         The only family supported is `Binomial`.  The default `Logit`
@@ -382,7 +382,7 @@ _gee_example = """
     >>> import statsmodels.api as sm
     >>> fam = sm.families.Poisson()
     >>> ind = sm.cov_struct.Independence()
-    >>> model = sm.GEE.from_formula("y ~ age + trt + base", "subject",
+    >>> model = sm.GEE.from_formula("y ~ age + trt + base", "subject", \
                                  data, cov_struct=ind, family=fam)
     >>> result = model.fit()
     >>> print(result.summary())
@@ -393,7 +393,7 @@ _gee_example = """
     >>> import statsmodels.formula.api as smf
     >>> fam = sm.families.Poisson()
     >>> ind = sm.cov_struct.Independence()
-    >>> model = smf.gee("y ~ age + trt + base", "subject",
+    >>> model = smf.gee("y ~ age + trt + base", "subject", \
                     data, cov_struct=ind, family=fam)
     >>> result = model.fit()
     >>> print(result.summary())
@@ -2392,7 +2392,7 @@ class NominalGEEResults(GEEResults):
         exog_names = [x.split("[")[0] for x in exog_names]
 
         params = np.reshape(self.params,
-                            (ncut, len(self.params) / ncut))
+                            (ncut, len(self.params) // ncut))
 
         for ev in exog_values:
 

@@ -8,9 +8,9 @@ from __future__ import division, absolute_import, print_function
 
 import numpy as np
 from .tools import (
-    find_best_blas_type, prefix_dtype_map, prefix_statespace_map,
-    validate_matrix_shape, validate_vector_shape
+    find_best_blas_type, validate_matrix_shape, validate_vector_shape
 )
+from . import tools
 
 
 class OptionWrapper(object):
@@ -59,8 +59,8 @@ class MatrixWrapper(object):
 
     def _set_matrix(self, obj, value, shape):
         # Expand 1-dimensional array if possible
-        if (value.ndim == 1 and shape[0] == 1
-                and value.shape[0] == shape[1]):
+        if (value.ndim == 1 and shape[0] == 1 and
+                value.shape[0] == shape[1]):
             value = value[None, :]
 
         # Enforce that the matrix is appropriate size
@@ -117,7 +117,7 @@ class Representation(object):
         If an endogenous vector is not given (i.e. `k_endog` is an integer),
         the number of observations can optionally be specified. If not
         specified, they will be set to zero until data is bound to the model.
-    dtype : dtype, optional
+    dtype : np.dtype, optional
         If an endogenous vector is not given (i.e. `k_endog` is an integer),
         the default datatype of the state space matrices can optionally be
         specified. Default is `np.float64`.
@@ -253,7 +253,7 @@ class Representation(object):
                  initial_variance=1e6, nobs=0, dtype=np.float64,
                  design=None, obs_intercept=None, obs_cov=None,
                  transition=None, state_intercept=None, selection=None,
-                 state_cov=None, **kwargs):
+                 state_cov=None, statespace_classes=None, **kwargs):
         self.shapes = {}
 
         # Check if k_endog is actually the endog array
@@ -262,7 +262,8 @@ class Representation(object):
             endog = k_endog
             # If so, assume that it is either column-ordered and in wide format
             # or row-ordered and in long format
-            if endog.flags['C_CONTIGUOUS'] and (endog.shape[0] > 1 or nobs == 1):
+            if (endog.flags['C_CONTIGUOUS'] and
+                    (endog.shape[0] > 1 or nobs == 1)):
                 endog = endog.T
             k_endog = endog.shape[0]
 
@@ -315,7 +316,11 @@ class Representation(object):
                 setattr(self, name, scope[name])
 
         # Options
+        self._compatibility_mode = tools.compatibility_mode
         self.initial_variance = initial_variance
+        self.prefix_statespace_map = (statespace_classes
+                                      if statespace_classes is not None
+                                      else tools.prefix_statespace_map.copy())
 
         # State-space initialization data
         self.initialization = kwargs.get('initialization', None)
@@ -328,10 +333,10 @@ class Representation(object):
         elif self.initialization == 'stationary':
             self.initialize_stationary()
         elif self.initialization == 'known':
-            if not 'initial_state' in kwargs:
+            if 'initial_state' not in kwargs:
                 raise ValueError('Initial state must be provided when "known"'
                                  ' is the specified initialization method.')
-            if not 'initial_state_cov' in kwargs:
+            if 'initial_state_cov' not in kwargs:
                 raise ValueError('Initial state covariance matrix must be'
                                  ' provided when "known" is the specified'
                                  ' initialization method.')
@@ -345,6 +350,9 @@ class Representation(object):
 
         # Setup the underlying statespace object storage
         self._statespaces = {}
+
+        # Caches
+        self._time_invariant = None
 
     def __getitem__(self, key):
         _type = type(key)
@@ -444,7 +452,7 @@ class Representation(object):
         """
         (dtype) Datatype of currently active representation matrices
         """
-        return prefix_dtype_map[self.prefix]
+        return tools.prefix_dtype_map[self.prefix]
 
     @property
     def time_invariant(self):
@@ -452,12 +460,15 @@ class Representation(object):
         (bool) Whether or not currently active representation matrices are
         time-invariant
         """
-        return (
-            self._design.shape[2] == self._obs_intercept.shape[1] ==
-            self._obs_cov.shape[2] == self._transition.shape[2] ==
-            self._state_intercept.shape[1] == self._selection.shape[2] ==
-            self._state_cov.shape[2]
-        )
+        if self._time_invariant is None:
+            return (
+                self._design.shape[2] == self._obs_intercept.shape[1] ==
+                self._obs_cov.shape[2] == self._transition.shape[2] ==
+                self._state_intercept.shape[1] == self._selection.shape[2] ==
+                self._state_cov.shape[2]
+            )
+        else:
+            return self._time_invariant
 
     @property
     def _statespace(self):
@@ -618,7 +629,7 @@ class Representation(object):
     def _initialize_representation(self, prefix=None):
         if prefix is None:
             prefix = self.prefix
-        dtype = prefix_dtype_map[prefix]
+        dtype = tools.prefix_dtype_map[prefix]
 
         # If the dtype-specific representation matrices do not exist, create
         # them
@@ -648,7 +659,6 @@ class Representation(object):
                     else:
                         existing = new
 
-
         # Determine if we need to (re-)create the _statespace models
         # (if time-varying matrices changed)
         if prefix in self._statespaces:
@@ -673,7 +683,7 @@ class Representation(object):
                 del self._statespaces[prefix]
 
             # Setup the base statespace object
-            cls = prefix_statespace_map[prefix]
+            cls = self.prefix_statespace_map[prefix]
             self._statespaces[prefix] = cls(
                 self._representations[prefix]['obs'],
                 self._representations[prefix]['design'],
@@ -690,7 +700,7 @@ class Representation(object):
     def _initialize_state(self, prefix=None, complex_step=False):
         if prefix is None:
             prefix = self.prefix
-        dtype = prefix_dtype_map[prefix]
+        dtype = tools.prefix_dtype_map[prefix]
 
         # (Re-)initialize the statespace model
         if self.initialization == 'known':
@@ -792,6 +802,7 @@ class FrozenRepresentation(object):
     def update_representation(self, model):
         # Model
         self.model = model
+        self._compatibility_mode = model._compatibility_mode
 
         # Data type
         self.prefix = model.prefix

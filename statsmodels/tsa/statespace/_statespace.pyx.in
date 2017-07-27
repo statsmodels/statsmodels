@@ -17,7 +17,7 @@ TYPES = {
     "z": ("np.complex128_t", "complex", "np.NPY_COMPLEX128"),
 }
 
-BLAS_FUNCTIONS = ["gemm", "gemv", "copy", "axpy", "scal"]
+BLAS_FUNCTIONS = ["gemm", "gemv", "copy", "axpy", "swap", "scal"]
 LAPACK_FUNCTIONS = ["getrf", "getri", "getrs", "potrf", "potri", "potrs", "trtrs"]
 
 }}
@@ -58,6 +58,11 @@ cdef int MEMORY_CONSERVE = (
     MEMORY_NO_FORECAST | MEMORY_NO_PREDICTED | MEMORY_NO_FILTERED |
     MEMORY_NO_LIKELIHOOD
 )
+
+# ### Timing options
+# By default, assume filter is initialized with predicted values (as in
+# Durbin and Koopman 2012)
+cdef int TIMING_INIT_PREDICTED = 0
 
 # Typical imports
 import numpy as np
@@ -318,6 +323,8 @@ cdef class {{prefix}}Statespace(object):
 
         # Set the flag for initialization to be false
         self.initialized = False
+        self.initial_state = None
+        self.initial_state_cov = None
 
         # Allocate selected state covariance matrix
         dim3[0] = self.k_states; dim3[1] = self.k_states; dim3[2] = 1;
@@ -334,6 +341,26 @@ cdef class {{prefix}}Statespace(object):
         # Holds arrays of dimension $(m \times m)$
         dim2[0] = self.k_states; dim2[1] = self.k_states;
         self.tmp = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+
+    def __reduce__(self):
+        args = (np.array(self.obs, copy=True, order='F'), np.array(self.design, copy=True, order='F'),
+                np.array(self.obs_intercept, copy=True, order='F'), np.array(self.obs_cov, copy=True, order='F'),
+                np.array(self.transition, copy=True, order='F'), np.array(self.state_intercept, copy=True, order='F'),
+                np.array(self.selection, copy=True, order='F'), np.array(self.state_cov, copy=True, order='F'))
+        state = {'initialized': self.initialized,
+                 'initial_state': self.initial_state,
+                 'initial_state_cov': self.initial_state_cov,
+                 }
+        if self.initialized:
+            state['initial_state'] =  np.array(self.initial_state, copy=True, order='F')
+            state['initial_state_cov'] = np.array(self.initial_state_cov, copy=True, order='F')
+
+        return (self.__class__, args, state)
+
+    def __setstate__(self, state):
+        self.initialized = state['initialized']
+        self.initial_state = state['initial_state']
+        self.initial_state_cov = state['initial_state_cov']
 
     # ## Initialize: known values
     #
@@ -390,7 +417,15 @@ cdef class {{prefix}}Statespace(object):
         from tools import solve_discrete_lyapunov
 
         dim[0] = self.k_states
-        self.initial_state = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
+        if np.sum(self.state_intercept) == 0:
+            self.initial_state = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
+        else:
+            eye = np.eye(self.k_states).astype({{dtype}})
+            T = np.array(self.transition[:,:,0], dtype={{dtype}})
+            # (I - T)^{-1} c = x => (I - T) x = c
+            self.initial_state = np.linalg.solve(
+                eye - T, np.array(self.state_intercept[:, 0], dtype={{dtype}}))
+
         self.initial_state_cov = np.asfortranarray(solve_discrete_lyapunov(
             np.array(self.transition[:,:,0], dtype={{dtype}}),
             np.array(self.selected_state_cov[:,:,0], dtype={{dtype}}),
@@ -1055,6 +1090,8 @@ cdef class {{prefix}}KalmanFilter(object):
     # Whether or not to conserve memory
     # If True, only stores filtered states and covariance matrices
     cdef readonly int conserve_memory
+    # Filter timing
+    cdef public int filter_timing
     # If conserving loglikelihood, the number of periods to "burn"
     # before starting to record the loglikelihood
     cdef readonly int loglikelihood_burn
@@ -1096,6 +1133,7 @@ cdef class {{prefix}}KalmanFilter(object):
     # design matrices, and observation covariance matrices in the case of
     # missing data.  
     cdef readonly {{cython_type}} [:] selected_obs
+    cdef readonly {{cython_type}} [:] selected_obs_intercept
     # The following are contiguous memory segments which are then used to
     # store the data in the above matrices.
     cdef readonly {{cython_type}} [:] selected_design
@@ -1183,6 +1221,7 @@ cdef class {{prefix}}KalmanFilter(object):
                  int inversion_method=INVERT_UNIVARIATE | SOLVE_CHOLESKY,
                  int stability_method=STABILITY_FORCE_SYMMETRY,
                  int conserve_memory=MEMORY_STORE_ALL,
+                 int filter_timing=TIMING_INIT_PREDICTED,
                  np.float64_t tolerance=1e-19,
                  int loglikelihood_burn=0):
         # Local variables
@@ -1203,6 +1242,7 @@ cdef class {{prefix}}KalmanFilter(object):
         self.inversion_method = inversion_method
         self.stability_method = stability_method
         self.conserve_memory = conserve_memory
+        self.filter_timing = filter_timing
         self.loglikelihood_burn = loglikelihood_burn
 
         # Initialize the constant values
@@ -1215,6 +1255,10 @@ cdef class {{prefix}}KalmanFilter(object):
         self.k_endogstates = self.model.k_endog * self.model.k_states
         # TODO replace with optimal work array size
         self.ldwork = self.model.k_endog
+
+        # Check for valid options
+        if not self.filter_timing == TIMING_INIT_PREDICTED:
+            raise NotImplementedError("Invalid timing option.")
 
         # #### Allocate arrays for calculations
 
@@ -1308,6 +1352,8 @@ cdef class {{prefix}}KalmanFilter(object):
         # Arrays for missing data
         dim1[0] = self.k_endog;
         self.selected_obs = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+        dim1[0] = self.k_endog;
+        self.selected_obs_intercept = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
         dim1[0] = self.k_endog * self.k_states;
         self.selected_design = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
         dim1[0] = self.k_endog2;
@@ -1317,6 +1363,83 @@ cdef class {{prefix}}KalmanFilter(object):
         self.t = 0
         self.converged = 0
         self.period_converged = 0
+
+    def __reduce__(self):
+        args = (self.model, self.filter_method, self.inversion_method,
+                self.stability_method, self.conserve_memory, self.filter_timing,
+                 self.tolerance, self.loglikelihood_burn)
+        state = {
+            'converged_determinant': self.converged_determinant,
+            'determinant': self.determinant,
+            'converged': self.converged,
+            'period_converged': self.period_converged,
+            't': self.t,
+            'converged_filtered_state_cov': np.array(self.converged_filtered_state_cov, copy=True, order='F'),
+            'converged_forecast_error_cov': np.array(self.converged_forecast_error_cov, copy=True, order='F'),
+            'converged_predicted_state_cov': np.array(self.converged_predicted_state_cov, copy=True, order='F'),
+            'filtered_state': np.array(self.filtered_state, copy=True, order='F'),
+            'filtered_state_cov': np.array(self.filtered_state_cov, copy=True, order='F'),
+            'forecast': np.array(self.forecast, copy=True, order='F'),
+            'forecast_error': np.array(self.forecast_error, copy=True, order='F'),
+            'forecast_error_cov': np.array(self.forecast_error_cov, copy=True, order='F'),
+            'forecast_error_fac': np.array(self.forecast_error_fac, copy=True, order='F'),
+            'forecast_error_ipiv': np.array(self.forecast_error_ipiv, copy=True, order='F'),
+            'forecast_error_work': np.array(self.forecast_error_work, copy=True, order='F'),
+            'loglikelihood': np.array(self.loglikelihood, copy=True, order='F'),
+            'predicted_state': np.array(self.predicted_state, copy=True, order='F'),
+            'predicted_state_cov': np.array(self.predicted_state_cov, copy=True, order='F'),
+            'selected_design': np.array(self.selected_design, copy=True, order='F'),
+            'selected_obs': np.array(self.selected_obs, copy=True, order='F'),
+            'selected_obs_cov': np.array(self.selected_obs_cov, copy=True, order='F'),
+            'selected_obs_intercept': np.array(self.selected_obs_intercept, copy=True, order='F'),
+            'tmp0': np.array(self.tmp0, copy=True, order='F'),
+            'tmp1': np.array(self.tmp1, copy=True, order='F'),
+            'tmp2': np.array(self.tmp2, copy=True, order='F'),
+            'tmp3': np.array(self.tmp3, copy=True, order='F')
+        }
+        return (self.__class__, args, state)
+
+    def __setstate__(self, state):
+        self.converged_determinant = state['converged_determinant']
+        self.determinant = state['determinant']
+        self.converged = state['converged']
+        self.period_converged = state['period_converged']
+        self.t = state['t']
+        self.converged_filtered_state_cov = state['converged_filtered_state_cov']
+        self.converged_forecast_error_cov = state['converged_forecast_error_cov']
+        self.converged_predicted_state_cov = state['converged_predicted_state_cov']
+        self.filtered_state = state['filtered_state']
+        self.filtered_state_cov = state['filtered_state_cov']
+        self.forecast = state['forecast']
+        self.forecast_error = state['forecast_error']
+        self.forecast_error_cov = state['forecast_error_cov']
+        self.forecast_error_fac = state['forecast_error_fac']
+        self.forecast_error_ipiv = state['forecast_error_ipiv']
+        self.forecast_error_work = state['forecast_error_work']
+        self.loglikelihood = state['loglikelihood']
+        self.predicted_state = state['predicted_state']
+        self.predicted_state_cov = state['predicted_state_cov']
+        self.selected_design = state['selected_design']
+        self.selected_obs = state['selected_obs']
+        self.selected_obs_cov = state['selected_obs_cov']
+        self.selected_obs_intercept = state['selected_obs_intercept']
+        self.tmp0 = state['tmp0']
+        self.tmp1 = state['tmp1']
+        self.tmp2 = state['tmp2']
+        self.tmp3 = state['tmp3']
+        self._reinitialize_pointers()
+
+    cdef void _reinitialize_pointers(self) except *:
+        self._converged_forecast_error_cov = &self.converged_forecast_error_cov[0,0]
+        self._converged_filtered_state_cov = &self.converged_filtered_state_cov[0,0]
+        self._converged_predicted_state_cov = &self.converged_predicted_state_cov[0,0]
+        self._forecast_error_fac = &self.forecast_error_fac[0,0]
+        self._forecast_error_work = &self.forecast_error_work[0,0]
+        self._forecast_error_ipiv = &self.forecast_error_ipiv[0]
+        self._tmp0 = &self.tmp0[0, 0]
+        self._tmp1 = &self.tmp1[0, 0]
+        self._tmp2 = &self.tmp2[0]
+        self._tmp3 = &self.tmp3[0, 0]
 
     cpdef set_filter_method(self, int filter_method, int force_reset=True):
         """
@@ -1620,6 +1743,7 @@ cdef class {{prefix}}KalmanFilter(object):
             if not self.model.missing[i, self.t]:
 
                 self.selected_obs[k] = self.model.obs[i, self.t]
+                self.selected_obs_intercept[k] = self._obs_intercept[i]
 
                 # i is rows
                 # k is rows
@@ -1636,6 +1760,7 @@ cdef class {{prefix}}KalmanFilter(object):
                         l += 1
                 k += 1
         self._obs = &self.selected_obs[0]
+        self._obs_intercept = &self.selected_obs_intercept[0]
         self._design = &self.selected_design[0]
         self._obs_cov = &self.selected_obs_cov[0]
 
@@ -2109,5 +2234,357 @@ cpdef _{{prefix}}constrain_sv_less_than_one({{cython_type}} [::1,:] unconstraine
         {{prefix}}trtrs("L", "N", "N", &k_endog, &k_endog, &tmp[0, 0], &k_endog,
                                                            &constrained[0, i*k_endog], &k_endog, &info)
     return constrained
+
+
+cdef int _{{prefix}}reorder_missing_diagonal({{cython_type}} * a, int * missing, int n):
+    """
+    a is a pointer to an n x n diagonal array A
+    missing is a pointer to an n x 1 array
+    n is the dimension of A
+    """
+    cdef int i, j, k, nobs
+
+    nobs = n
+    # Construct the non-missing index
+    for i in range(n):
+        nobs = nobs - missing[i]
+
+    # Perform replacement
+    k = nobs-1
+    for i in range(n-1,-1,-1):
+        if not missing[i]:
+            a[i + i*n] = a[k + k*n]
+            k = k - 1
+        else:
+            a[i + i*n] = 0
+
+cdef int _{{prefix}}reorder_missing_submatrix({{cython_type}} * a, int * missing, int n):
+    """
+    a is a pointer to an n x n array A
+    missing is a pointer to an n x 1 array
+    n is the dimension of A
+    """
+    cdef int i, j, k, nobs
+
+    _{{prefix}}reorder_missing_rows(a, missing, n, n)
+    _{{prefix}}reorder_missing_cols(a, missing, n, n)
+
+cdef int _{{prefix}}reorder_missing_rows({{cython_type}} * a, int * missing, int n, int m):
+    """
+    a is a pointer to an n x m array A
+    missing is a pointer to an n x 1 array
+    n is the number of rows of A
+    m is the number of columns of A
+    """
+    cdef int i, j, k, nobs
+
+    nobs = n
+    # Construct the non-missing index
+    for i in range(n):
+        nobs = nobs - missing[i]
+
+    # Perform replacement
+    k = nobs-1
+    for i in range(n-1,-1,-1):
+        if not missing[i]:
+            {{prefix}}swap(&m, &a[i], &n, &a[k], &n)
+            k = k - 1
+
+
+cdef int _{{prefix}}reorder_missing_cols({{cython_type}} * a, int * missing, int n, int m):
+    """
+    a is a pointer to an n x m array A
+    missing is a pointer to an m x 1 array
+    n is the number of rows of A
+    m is the number of columns of A
+    """
+    cdef int i, j, k, nobs, inc = 1
+
+    nobs = m
+    # Construct the non-missing index
+    for i in range(m):
+        nobs = nobs - missing[i]
+
+    # Perform replacement
+    k = nobs-1
+    for i in range(m-1,-1,-1):
+        if not missing[i]:
+            {{prefix}}swap(&n, &a[i*n], &inc, &a[k*n], &inc)
+            k = k - 1
+
+cpdef int {{prefix}}reorder_missing_matrix({{cython_type}} [::1, :, :] A, int [::1, :] missing, int reorder_rows, int reorder_cols, int diagonal) except *:
+    cdef int n, m, T, t
+
+    n, m, T = A.shape[0:3]
+
+    if reorder_rows and reorder_cols:
+        if not n == m:
+            raise RuntimeError('Reordering a submatrix requires n = m')
+        if diagonal:
+            for t in range(T):
+                _{{prefix}}reorder_missing_diagonal(&A[0, 0, t], &missing[0, t], n)
+        else:
+            for t in range(T):
+                _{{prefix}}reorder_missing_submatrix(&A[0, 0, t], &missing[0, t], n)
+    elif diagonal:
+        raise RuntimeError('`diagonal` argument only valid with reordering a submatrix')
+    elif reorder_rows:
+        for t in range(T):
+            _{{prefix}}reorder_missing_rows(&A[0, 0, t], &missing[0, t], n, m)
+    elif reorder_cols:
+        for t in range(T):
+            _{{prefix}}reorder_missing_cols(&A[0, 0, t], &missing[0, t], n, m)
+
+
+cpdef int {{prefix}}reorder_missing_vector({{cython_type}} [::1, :] A, int [::1, :] missing) except *:
+    cdef int i, k, t, n, T, nobs
+
+    n, T = A.shape[0:2]
+
+    for t in range(T):
+        _{{prefix}}reorder_missing_rows(&A[0, t], &missing[0, t], n, 1)
+
+
+cdef int _{{prefix}}copy_missing_diagonal({{cython_type}} * a, {{cython_type}} * b, int * missing, int n):
+    """
+    Copy the non-missing block of diagonal entries
+
+    a is a pointer to an n x n diagonal array A (copy from)
+    b is a pointer to an n x n diagonal array B (copy to)
+    missing is a pointer to an n x 1 array
+    n is the dimension of A, B
+    """
+    cdef int i, j, k, nobs
+
+    nobs = n
+    # Construct the non-missing index
+    for i in range(n):
+        nobs = nobs - missing[i]
+
+    # Perform replacement
+    k = nobs-1
+    for i in range(nobs):
+        b[i + i*n] = a[i + i*n]
+
+
+cdef int _{{prefix}}copy_missing_submatrix({{cython_type}} * a, {{cython_type}} * b, int * missing, int n):
+    """
+    Copy the non-missing submatrix
+
+    a is a pointer to an n x n diagonal array A (copy from)
+    b is a pointer to an n x n diagonal array B (copy to)
+    missing is a pointer to an n x 1 array
+    n is the dimension of A, B
+    """
+    cdef int i, j, k, nobs, inc = 1
+
+    nobs = n
+    # Construct the non-missing index
+    for i in range(n):
+        nobs = nobs - missing[i]
+
+    # Perform replacement
+    for i in range(nobs):
+        {{prefix}}copy(&nobs, &a[i*n], &inc, &b[i*n], &inc)
+
+
+cdef int _{{prefix}}copy_missing_rows({{cython_type}} * a, {{cython_type}} * b, int * missing, int n, int m):
+    """
+    a is a pointer to an n x m array A
+    b is a pointer to an n x n diagonal array B (copy to)
+    missing is a pointer to an n x 1 array
+    n is the number of rows of A
+    m is the number of columns of A
+    """
+    cdef int i, j, k, nobs
+
+    nobs = n
+    # Construct the non-missing index
+    for i in range(n):
+        nobs = nobs - missing[i]
+
+    # Perform replacement
+    for i in range(nobs):
+        {{prefix}}copy(&m, &a[i], &n, &b[i], &n)
+
+
+cdef int _{{prefix}}copy_missing_cols({{cython_type}} * a, {{cython_type}} * b, int * missing, int n, int m):
+    """
+    a is a pointer to an n x m array A
+    b is a pointer to an n x n diagonal array B (copy to)
+    missing is a pointer to an m x 1 array
+    n is the number of rows of A
+    m is the number of columns of A
+    """
+    cdef int i, j, k, nobs, inc = 1
+
+    nobs = m
+    # Construct the non-missing index
+    for i in range(m):
+        nobs = nobs - missing[i]
+
+    # Perform replacement
+    for i in range(nobs):
+        {{prefix}}copy(&n, &a[i*n], &inc, &b[i*n], &inc)
+
+
+cpdef int {{prefix}}copy_missing_matrix({{cython_type}} [::1, :, :] A, {{cython_type}} [::1, :, :] B, int [::1, :] missing, int missing_rows, int missing_cols, int diagonal) except *:
+    cdef int n, m, T, t, A_T, A_t = 0, time_varying
+
+    n, m, T = B.shape[0:3]
+    A_T = A.shape[2]
+    time_varying = (A_T == T)
+
+    if missing_rows and missing_cols:
+        if not n == m:
+            raise RuntimeError('Copying a submatrix requires n = m')
+        if diagonal:
+            for t in range(T):
+                if time_varying:
+                    A_t = t
+                _{{prefix}}copy_missing_diagonal(&A[0, 0, A_t], &B[0, 0, t], &missing[0, t], n)
+        else:
+            for t in range(T):
+                if time_varying:
+                    A_t = t
+                _{{prefix}}copy_missing_submatrix(&A[0, 0, A_t], &B[0, 0, t], &missing[0, t], n)
+    elif diagonal:
+        raise RuntimeError('`diagonal` argument only valid with copying a submatrix')
+    elif missing_rows:
+        for t in range(T):
+            if time_varying:
+                    A_t = t
+            _{{prefix}}copy_missing_rows(&A[0, 0, A_t], &B[0, 0, t], &missing[0, t], n, m)
+    elif missing_cols:
+        for t in range(T):
+            if time_varying:
+                    A_t = t
+            _{{prefix}}copy_missing_cols(&A[0, 0, A_t], &B[0, 0, t], &missing[0, t], n, m)
+    pass
+
+
+cpdef int {{prefix}}copy_missing_vector({{cython_type}} [::1, :] A, {{cython_type}} [::1, :] B, int [::1, :] missing) except *:
+    cdef int n, t, T, A_t = 0, A_T
+
+    n, T = B.shape[0:2]
+    A_T = A.shape[1]
+    time_varying = (A_T == T)
+
+    for t in range(T):
+        if time_varying:
+            A_t = t
+        _{{prefix}}copy_missing_rows(&A[0, A_t], &B[0, t], &missing[0, t], n, 1)
+
+
+cdef int _{{prefix}}copy_index_diagonal({{cython_type}} * a, {{cython_type}} * b, int * index, int n):
+    """
+    Copy the non-index block of diagonal entries
+
+    a is a pointer to an n x n diagonal array A (copy from)
+    b is a pointer to an n x n diagonal array B (copy to)
+    index is a pointer to an n x 1 array
+    n is the dimension of A, B
+    """
+    cdef int i, j, k, nobs
+
+    # Perform replacement
+    for i in range(n):
+        if index[i]:
+            b[i + i*n] = a[i + i*n]
+
+
+cdef int _{{prefix}}copy_index_submatrix({{cython_type}} * a, {{cython_type}} * b, int * index, int n):
+    """
+    Copy the non-index submatrix
+
+    a is a pointer to an n x n diagonal array A (copy from)
+    b is a pointer to an n x n diagonal array B (copy to)
+    index is a pointer to an n x 1 array
+    n is the dimension of A, B
+    """
+    cdef int i, j, k, nobs, inc = 1
+
+    _{{prefix}}copy_index_rows(a, b, index, n, n)
+    _{{prefix}}copy_index_cols(a, b, index, n, n)
+
+
+cdef int _{{prefix}}copy_index_rows({{cython_type}} * a, {{cython_type}} * b, int * index, int n, int m):
+    """
+    a is a pointer to an n x m array A
+    b is a pointer to an n x n diagonal array B (copy to)
+    index is a pointer to an n x 1 array
+    n is the number of rows of A
+    m is the number of columns of A
+    """
+    cdef int i, j, k, nobs
+
+    # Perform replacement
+    for i in range(n):
+        if index[i]:
+            {{prefix}}copy(&m, &a[i], &n, &b[i], &n)
+
+
+cdef int _{{prefix}}copy_index_cols({{cython_type}} * a, {{cython_type}} * b, int * index, int n, int m):
+    """
+    a is a pointer to an n x m array A
+    b is a pointer to an n x n diagonal array B (copy to)
+    index is a pointer to an m x 1 array
+    n is the number of rows of A
+    m is the number of columns of A
+    """
+    cdef int i, j, k, nobs, inc = 1
+
+    # Perform replacement
+    for i in range(m):
+        if index[i]:
+            {{prefix}}copy(&n, &a[i*n], &inc, &b[i*n], &inc)
+
+
+cpdef int {{prefix}}copy_index_matrix({{cython_type}} [::1, :, :] A, {{cython_type}} [::1, :, :] B, int [::1, :] index, int index_rows, int index_cols, int diagonal) except *:
+    cdef int n, m, T, t, A_T, A_t = 0, time_varying
+
+    n, m, T = B.shape[0:3]
+    A_T = A.shape[2]
+    time_varying = (A_T == T)
+
+    if index_rows and index_cols:
+        if not n == m:
+            raise RuntimeError('Copying a submatrix requires n = m')
+        if diagonal:
+            for t in range(T):
+                if time_varying:
+                    A_t = t
+                _{{prefix}}copy_index_diagonal(&A[0, 0, A_t], &B[0, 0, t], &index[0, t], n)
+        else:
+            for t in range(T):
+                if time_varying:
+                    A_t = t
+                _{{prefix}}copy_index_submatrix(&A[0, 0, A_t], &B[0, 0, t], &index[0, t], n)
+    elif diagonal:
+        raise RuntimeError('`diagonal` argument only valid with copying a submatrix')
+    elif index_rows:
+        for t in range(T):
+            if time_varying:
+                    A_t = t
+            _{{prefix}}copy_index_rows(&A[0, 0, A_t], &B[0, 0, t], &index[0, t], n, m)
+    elif index_cols:
+        for t in range(T):
+            if time_varying:
+                    A_t = t
+            _{{prefix}}copy_index_cols(&A[0, 0, A_t], &B[0, 0, t], &index[0, t], n, m)
+
+
+cpdef int {{prefix}}copy_index_vector({{cython_type}} [::1, :] A, {{cython_type}} [::1, :] B, int [::1, :] index) except *:
+    cdef int n, t, T, A_t = 0, A_T
+
+    n, T = B.shape[0:2]
+    A_T = A.shape[1]
+    time_varying = (A_T == T)
+
+    for t in range(T):
+        if time_varying:
+            A_t = t
+        _{{prefix}}copy_index_rows(&A[0, A_t], &B[0, t], &index[0, t], n, 1)
+
 
 {{endfor}}

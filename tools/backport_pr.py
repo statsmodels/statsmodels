@@ -162,7 +162,7 @@ if __name__ == '__main__':
         print ("The following PRs should be backported:")
         to_backport = []
         if already:
-            should = should.ix[set(should.index).difference(already)]
+            should = should.loc[set(should.index).difference(already)]
         should.sort()
         for pr, date in should.iteritems():
             print (pr)

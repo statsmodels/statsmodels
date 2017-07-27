@@ -7,7 +7,7 @@ import warnings
 import pandas
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_approx_equal, assert_,
-                            assert_raises, assert_equal, assert_allclose)
+                           assert_raises, assert_equal, assert_allclose)
 from scipy.linalg import toeplitz
 from statsmodels.tools.tools import add_constant, categorical
 from statsmodels.compat.numpy import np_matrix_rank
@@ -32,28 +32,28 @@ class CheckRegressionResults(object):
     decimal_params = DECIMAL_4
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params,
-                self.decimal_params)
+                            self.decimal_params)
 
     decimal_standarderrors = DECIMAL_4
     def test_standarderrors(self):
-        assert_almost_equal(self.res1.bse,self.res2.bse,
-                self.decimal_standarderrors)
+        assert_almost_equal(self.res1.bse, self.res2.bse,
+                            self.decimal_standarderrors)
 
     decimal_confidenceintervals = DECIMAL_4
     def test_confidenceintervals(self):
-    #NOTE: stata rounds residuals (at least) to sig digits so approx_equal
+        # NOTE: stata rounds residuals (at least) to sig digits so approx_equal
         conf1 = self.res1.conf_int()
         conf2 = self.res2.conf_int()
         for i in range(len(conf1)):
             assert_approx_equal(conf1[i][0], conf2[i][0],
-                    self.decimal_confidenceintervals)
+                                self.decimal_confidenceintervals)
             assert_approx_equal(conf1[i][1], conf2[i][1],
-                    self.decimal_confidenceintervals)
+                                self.decimal_confidenceintervals)
 
     decimal_conf_int_subset = DECIMAL_4
     def test_conf_int_subset(self):
         if len(self.res1.params) > 1:
-            ci1 = self.res1.conf_int(cols=(1,2))
+            ci1 = self.res1.conf_int(cols=(1, 2))
             ci2 = self.res1.conf_int()[1:3]
             assert_almost_equal(ci1, ci2, self.decimal_conf_int_subset)
         else:
@@ -62,17 +62,17 @@ class CheckRegressionResults(object):
     decimal_scale = DECIMAL_4
     def test_scale(self):
         assert_almost_equal(self.res1.scale, self.res2.scale,
-                self.decimal_scale)
+                            self.decimal_scale)
 
     decimal_rsquared = DECIMAL_4
     def test_rsquared(self):
         assert_almost_equal(self.res1.rsquared, self.res2.rsquared,
-                self.decimal_rsquared)
+                            self.decimal_rsquared)
 
     decimal_rsquared_adj = DECIMAL_4
     def test_rsquared_adj(self):
         assert_almost_equal(self.res1.rsquared_adj, self.res2.rsquared_adj,
-                    self.decimal_rsquared_adj)
+                            self.decimal_rsquared_adj)
 
     def test_degrees(self):
         assert_equal(self.res1.model.df_model, self.res2.df_model)
@@ -80,9 +80,9 @@ class CheckRegressionResults(object):
 
     decimal_ess = DECIMAL_4
     def test_ess(self):
-        #Explained Sum of Squares
+        # Explained Sum of Squares
         assert_almost_equal(self.res1.ess, self.res2.ess,
-                    self.decimal_ess)
+                            self.decimal_ess)
 
     decimal_ssr = DECIMAL_4
     def test_sumof_squaredresids(self):
@@ -90,26 +90,27 @@ class CheckRegressionResults(object):
 
     decimal_mse_resid = DECIMAL_4
     def test_mse_resid(self):
-        #Mean squared error of residuals
+        # Mean squared error of residuals
         assert_almost_equal(self.res1.mse_model, self.res2.mse_model,
-                    self.decimal_mse_resid)
+                            self.decimal_mse_resid)
 
     decimal_mse_model = DECIMAL_4
     def test_mse_model(self):
         assert_almost_equal(self.res1.mse_resid, self.res2.mse_resid,
-                    self.decimal_mse_model)
+                            self.decimal_mse_model)
 
     decimal_mse_total = DECIMAL_4
     def test_mse_total(self):
         assert_almost_equal(self.res1.mse_total, self.res2.mse_total,
-                    self.decimal_mse_total, err_msg="Test class %s" % self)
+                            self.decimal_mse_total,
+                            err_msg="Test class %s" % self)
 
     decimal_fvalue = DECIMAL_4
     def test_fvalue(self):
-        #didn't change this, not sure it should complain -inf not equal -inf
-        #if not (np.isinf(self.res1.fvalue) and np.isinf(self.res2.fvalue)):
+        # didn't change this, not sure it should complain -inf not equal -inf
+        # if not (np.isinf(self.res1.fvalue) and np.isinf(self.res2.fvalue)):
         assert_almost_equal(self.res1.fvalue, self.res2.fvalue,
-                self.decimal_fvalue)
+                            self.decimal_fvalue)
 
     decimal_loglike = DECIMAL_4
     def test_loglike(self):
@@ -126,24 +127,25 @@ class CheckRegressionResults(object):
     decimal_pvalues = DECIMAL_4
     def test_pvalues(self):
         assert_almost_equal(self.res1.pvalues, self.res2.pvalues,
-            self.decimal_pvalues)
+                            self.decimal_pvalues)
 
     decimal_wresid = DECIMAL_4
     def test_wresid(self):
         assert_almost_equal(self.res1.wresid, self.res2.wresid,
-            self.decimal_wresid)
+                            self.decimal_wresid)
 
     decimal_resids = DECIMAL_4
     def test_resids(self):
         assert_almost_equal(self.res1.resid, self.res2.resid,
-            self.decimal_resids)
+                            self.decimal_resids)
 
     decimal_norm_resids = DECIMAL_4
     def test_norm_resids(self):
         assert_almost_equal(self.res1.resid_pearson, self.res2.resid_pearson,
                             self.decimal_norm_resids)
 
-#TODO: test fittedvalues and what else?
+# TODO: test fittedvalues and what else?
+
 
 class TestOLS(CheckRegressionResults):
     @classmethod
@@ -153,7 +155,7 @@ class TestOLS(CheckRegressionResults):
         data.exog = add_constant(data.exog, prepend=False)
         res1 = OLS(data.endog, data.exog).fit()
         res2 = Longley()
-        res2.wresid = res1.wresid # workaround hack
+        res2.wresid = res1.wresid  # workaround hack
         cls.res1 = res1
         cls.res2 = res2
 
@@ -161,7 +163,7 @@ class TestOLS(CheckRegressionResults):
 
         model_qr = OLS(data.endog, data.exog)
         Q, R = np.linalg.qr(data.exog)
-        model_qr.exog_Q, model_qr.exog_R  = Q, R
+        model_qr.exog_Q, model_qr.exog_R = Q, R
         model_qr.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
         model_qr.rank = np_matrix_rank(R)
         res_qr2 = model_qr.fit(method="qr")
@@ -170,44 +172,45 @@ class TestOLS(CheckRegressionResults):
         cls.res_qr_manual = res_qr2
 
     def test_eigenvalues(self):
-        eigenval_perc_diff = (self.res_qr.eigenvals - self.res_qr_manual.eigenvals)
+        eigenval_perc_diff = (self.res_qr.eigenvals -
+                              self.res_qr_manual.eigenvals)
         eigenval_perc_diff /= self.res_qr.eigenvals
         zeros = np.zeros_like(eigenval_perc_diff)
         assert_almost_equal(eigenval_perc_diff, zeros, DECIMAL_7)
 
-
-    #  Robust error tests.  Compare values computed with SAS
+    # Robust error tests.  Compare values computed with SAS
     def test_HC0_errors(self):
-        #They are split up because the copied results do not have any DECIMAL_4
-        #places for the last place.
+        # They are split up because the copied results do not have any
+        # DECIMAL_4 places for the last place.
         assert_almost_equal(self.res1.HC0_se[:-1],
-                self.res2.HC0_se[:-1], DECIMAL_4)
-        assert_approx_equal(np.round(self.res1.HC0_se[-1]), self.res2.HC0_se[-1])
+                            self.res2.HC0_se[:-1], DECIMAL_4)
+        assert_approx_equal(np.round(self.res1.HC0_se[-1]),
+                            self.res2.HC0_se[-1])
 
     def test_HC1_errors(self):
         assert_almost_equal(self.res1.HC1_se[:-1],
-                self.res2.HC1_se[:-1], DECIMAL_4)
+                            self.res2.HC1_se[:-1], DECIMAL_4)
         assert_approx_equal(self.res1.HC1_se[-1], self.res2.HC1_se[-1])
 
     def test_HC2_errors(self):
         assert_almost_equal(self.res1.HC2_se[:-1],
-                self.res2.HC2_se[:-1], DECIMAL_4)
+                            self.res2.HC2_se[:-1], DECIMAL_4)
         assert_approx_equal(self.res1.HC2_se[-1], self.res2.HC2_se[-1])
 
     def test_HC3_errors(self):
         assert_almost_equal(self.res1.HC3_se[:-1],
-                self.res2.HC3_se[:-1], DECIMAL_4)
+                            self.res2.HC3_se[:-1], DECIMAL_4)
         assert_approx_equal(self.res1.HC3_se[-1], self.res2.HC3_se[-1])
 
     def test_qr_params(self):
         assert_almost_equal(self.res1.params,
-                self.res_qr.params, 6)
+                            self.res_qr.params, 6)
 
     def test_qr_normalized_cov_params(self):
-        #todo: need assert_close
+        # todo: need assert_close
         assert_almost_equal(np.ones_like(self.res1.normalized_cov_params),
-                self.res1.normalized_cov_params /
-                self.res_qr.normalized_cov_params, 5)
+                            self.res1.normalized_cov_params /
+                            self.res_qr.normalized_cov_params, 5)
 
     def test_missing(self):
         data = longley.load()
@@ -241,7 +244,7 @@ class TestOLS(CheckRegressionResults):
     def test_norm_resid_zero_variance(self):
         with warnings.catch_warnings(record=True):
             y = self.res1.model.endog
-            res = OLS(y,y).fit()
+            res = OLS(y, y).fit()
             assert_allclose(res.scale, 0, atol=1e-20)
             assert_allclose(res.wresid, res.resid_pearson, atol=5e-11)
 
@@ -253,7 +256,7 @@ class TestRTO(CheckRegressionResults):
         data = longley.load()
         res1 = OLS(data.endog, data.exog).fit()
         res2 = LongleyRTO()
-        res2.wresid = res1.wresid # workaround hack
+        res2.wresid = res1.wresid  # workaround hack
         cls.res1 = res1
         cls.res2 = res2
 
@@ -269,7 +272,7 @@ class TestFtest(object):
         data = longley.load()
         data.exog = add_constant(data.exog, prepend=False)
         cls.res1 = OLS(data.endog, data.exog).fit()
-        R = np.identity(7)[:-1,:]
+        R = np.identity(7)[:-1, :]
         cls.Ftest = cls.res1.f_test(R)
 
     def test_F(self):
@@ -297,7 +300,7 @@ class TestFTest2(object):
         data = longley.load()
         data.exog = add_constant(data.exog, prepend=False)
         res1 = OLS(data.endog, data.exog).fit()
-        R2 = [[0,1,-1,0,0,0,0],[0, 0, 0, 0, 1, -1, 0]]
+        R2 = [[0, 1, -1, 0, 0, 0, 0], [0, 0, 0, 0, 1, -1, 0]]
         cls.Ftest1 = res1.f_test(R2)
         hyp = 'x2 = x3, x5 = x6'
         cls.NewFtest1 = res1.f_test(hyp)
@@ -318,6 +321,7 @@ class TestFTest2(object):
     def test_df_num(self):
         assert_equal(self.Ftest1.df_num, 2)
 
+
 class TestFtestQ(object):
     """
     A joint hypothesis test that Rb = q.  Coefficient tests are essentially
@@ -328,13 +332,13 @@ class TestFtestQ(object):
         data = longley.load()
         data.exog = add_constant(data.exog, prepend=False)
         res1 = OLS(data.endog, data.exog).fit()
-        R = np.array([[0,1,1,0,0,0,0],
-              [0,1,0,1,0,0,0],
-              [0,1,0,0,0,0,0],
-              [0,0,0,0,1,0,0],
-              [0,0,0,0,0,1,0]])
-        q = np.array([0,0,0,1,0])
-        cls.Ftest1 = res1.f_test((R,q))
+        R = np.array([[0, 1, 1, 0, 0, 0, 0],
+                      [0, 1, 0, 1, 0, 0, 0],
+                      [0, 1, 0, 0, 0, 0, 0],
+                      [0, 0, 0, 0, 1, 0, 0],
+                      [0, 0, 0, 0, 0, 1, 0]])
+        q = np.array([0, 0, 0, 1, 0])
+        cls.Ftest1 = res1.f_test((R, q))
 
     def test_fvalue(self):
         assert_almost_equal(self.Ftest1.fvalue, 70.115557, 5)
@@ -375,8 +379,8 @@ class TestTtest(object):
 
     def test_pvalue(self):
         assert_almost_equal(self.Ttest.pvalue, student_t.sf(
-                        np.abs(self.res1.tvalues), self.res1.model.df_resid)*2,
-                        DECIMAL_4)
+            np.abs(self.res1.tvalues), self.res1.model.df_resid)*2,
+                            DECIMAL_4)
 
     def test_df_denom(self):
         assert_equal(self.Ttest.df_denom, self.res1.model.df_resid)
@@ -394,7 +398,7 @@ class TestTtest2(object):
     @classmethod
     def setupClass(cls):
         R = np.zeros(7)
-        R[4:6] = [1,-1]
+        R[4:6] = [1, -1]
         data = longley.load()
         data.exog = add_constant(data.exog, prepend=False)
         res1 = OLS(data.endog, data.exog).fit()
@@ -402,14 +406,14 @@ class TestTtest2(object):
 
     def test_tvalue(self):
         assert_almost_equal(self.Ttest1.tvalue, -4.0167754636397284,
-                DECIMAL_4)
+                            DECIMAL_4)
 
     def test_sd(self):
         assert_almost_equal(self.Ttest1.sd, 455.39079425195314, DECIMAL_4)
 
     def test_pvalue(self):
         assert_almost_equal(self.Ttest1.pvalue, 2*0.0015163772380932246,
-            DECIMAL_4)
+                            DECIMAL_4)
 
     def test_df_denom(self):
         assert_equal(self.Ttest1.df_denom, 9)
@@ -426,11 +430,11 @@ class TestGLS(object):
         from .results.results_regression import LongleyGls
 
         data = longley.load()
-        exog = add_constant(np.column_stack((data.exog[:,1],
-                                             data.exog[:,4])), prepend=False)
+        exog = add_constant(np.column_stack(
+            (data.exog[:, 1], data.exog[:, 4])), prepend=False)
         tmp_results = OLS(data.endog, exog).fit()
         rho = np.corrcoef(tmp_results.resid[1:],
-                tmp_results.resid[:-1])[0][1] # by assumption
+                          tmp_results.resid[:-1])[0][1]  # by assumption
         order = toeplitz(np.arange(16))
         sigma = rho**order
         GLS_results = GLS(data.endog, exog, sigma=sigma).fit()
@@ -467,18 +471,18 @@ class TestGLS(object):
 
     def test_fittedvalues(self):
         assert_almost_equal(self.res1.fittedvalues, self.res2.fittedvalues,
-                DECIMAL_4)
+                            DECIMAL_4)
 
     def test_pvalues(self):
         assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL_4)
 
     def test_missing(self):
-        endog = self.endog.copy() # copy or changes endog for other methods
-        endog[[4,7,14]] = np.nan
+        endog = self.endog.copy()  # copy or changes endog for other methods
+        endog[[4, 7, 14]] = np.nan
         mod = GLS(endog, self.exog, sigma=self.sigma, missing='drop')
         assert_equal(mod.endog.shape[0], 13)
         assert_equal(mod.exog.shape[0], 13)
-        assert_equal(mod.sigma.shape, (13,13))
+        assert_equal(mod.sigma.shape, (13, 13))
 
 class TestGLS_alt_sigma(CheckRegressionResults):
     """
@@ -500,11 +504,13 @@ class TestGLS_alt_sigma(CheckRegressionResults):
 
     def test_wrong_size_sigma_1d(self):
         n = len(self.endog)
-        assert_raises(ValueError, GLS, self.endog, self.exog, sigma=np.ones(n-1))
+        assert_raises(ValueError, GLS, self.endog, self.exog,
+                      sigma=np.ones(n-1))
 
     def test_wrong_size_sigma_2d(self):
         n = len(self.endog)
-        assert_raises(ValueError, GLS, self.endog, self.exog, sigma=np.ones((n-1,n-1)))
+        assert_raises(ValueError, GLS, self.endog, self.exog,
+                      sigma=np.ones((n-1, n-1)))
 
 #    def check_confidenceintervals(self, conf1, conf2):
 #        assert_almost_equal(conf1, conf2, DECIMAL_4)
@@ -515,15 +521,15 @@ class TestLM(object):
     @classmethod
     def setupClass(cls):
         # TODO: Test HAC method
-        X = np.random.randn(100,3)
-        b = np.ones((3,1))
-        e = np.random.randn(100,1)
-        y = np.dot(X,b) + e
+        X = np.random.randn(100, 3)
+        b = np.ones((3, 1))
+        e = np.random.randn(100, 1)
+        y = np.dot(X, b) + e
         # Cases?
         # Homoskedastic
         # HC0
-        cls.res1_full = OLS(y,X).fit()
-        cls.res1_restricted = OLS(y,X[:,0]).fit()
+        cls.res1_full = OLS(y, X).fit()
+        cls.res1_restricted = OLS(y, X[:, 0]).fit()
 
         cls.res2_full = cls.res1_full.get_robustcov_results('HC0')
         cls.res2_restricted = cls.res1_restricted.get_robustcov_results('HC0')
@@ -531,15 +537,14 @@ class TestLM(object):
         cls.X = X
         cls.Y = y
 
-
     def test_LM_homoskedastic(self):
         resid = self.res1_restricted.wresid
         n = resid.shape[0]
         X = self.X
-        S = np.dot(resid,resid) / n * np.dot(X.T,X) / n
+        S = np.dot(resid, resid) / n * np.dot(X.T, X) / n
         Sinv = np.linalg.inv(S)
-        s = np.mean(X * resid[:,None], 0)
-        LMstat = n * np.dot(np.dot(s,Sinv),s.T)
+        s = np.mean(X * resid[:, None], 0)
+        LMstat = n * np.dot(np.dot(s, Sinv), s.T)
         LMstat_OLS = self.res1_full.compare_lm_test(self.res1_restricted)
         LMstat2 = LMstat_OLS[0]
         assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
@@ -548,12 +553,13 @@ class TestLM(object):
         resid = self.res1_restricted.wresid
         n = resid.shape[0]
         X = self.X
-        scores = X * resid[:,None]
-        S = np.dot(scores.T,scores) / n
+        scores = X * resid[:, None]
+        S = np.dot(scores.T, scores) / n
         Sinv = np.linalg.inv(S)
         s = np.mean(scores, 0)
-        LMstat = n * np.dot(np.dot(s,Sinv),s.T)
-        LMstat_OLS = self.res2_full.compare_lm_test(self.res2_restricted, demean=False)
+        LMstat = n * np.dot(np.dot(s, Sinv), s.T)
+        LMstat_OLS = self.res2_full.compare_lm_test(self.res2_restricted,
+                                                    demean=False)
         LMstat2 = LMstat_OLS[0]
         assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
 
@@ -561,12 +567,12 @@ class TestLM(object):
         resid = self.res1_restricted.wresid
         n = resid.shape[0]
         X = self.X
-        scores = X * resid[:,None]
+        scores = X * resid[:, None]
         scores_demean = scores - scores.mean(0)
-        S = np.dot(scores_demean.T,scores_demean) / n
+        S = np.dot(scores_demean.T, scores_demean) / n
         Sinv = np.linalg.inv(S)
         s = np.mean(scores, 0)
-        LMstat = n * np.dot(np.dot(s,Sinv),s.T)
+        LMstat = n * np.dot(np.dot(s, Sinv), s.T)
         LMstat_OLS = self.res2_full.compare_lm_test(self.res2_restricted)
         LMstat2 = LMstat_OLS[0]
         assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
@@ -576,18 +582,21 @@ class TestLM(object):
         resid_full = self.res1_full.wresid
         n = resid.shape[0]
         X = self.X
-        scores = X * resid[:,None]
+        scores = X * resid[:, None]
         s = np.mean(scores, 0)
-        scores = X * resid_full[:,None]
-        S = np.dot(scores.T,scores) / n
+        scores = X * resid_full[:, None]
+        S = np.dot(scores.T, scores) / n
         Sinv = np.linalg.inv(S)
-        LMstat = n * np.dot(np.dot(s,Sinv),s.T)
-        LMstat_OLS = self.res2_full.compare_lm_test(self.res2_restricted, use_lr = True)
+        LMstat = n * np.dot(np.dot(s, Sinv), s.T)
+        LMstat_OLS = self.res2_full.compare_lm_test(self.res2_restricted,
+                                                    use_lr=True)
         LMstat2 = LMstat_OLS[0]
         assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
 
+
     def test_LM_nonnested(self):
-        assert_raises(ValueError, self.res2_restricted.compare_lm_test, self.res2_full)
+        assert_raises(ValueError, self.res2_restricted.compare_lm_test,
+                      self.res2_full)
 
 
 class TestOLS_GLS_WLS_equivalence(object):
@@ -677,6 +686,7 @@ class TestNonFit(object):
         df_resid = self.endog.shape[0] - self.exog.shape[1]
         assert_equal(self.ols_model.df_resid, long(9))
 
+
 class TestWLS_CornerCases(object):
     @classmethod
     def setupClass(cls):
@@ -686,13 +696,13 @@ class TestWLS_CornerCases(object):
         cls.wls_res = WLS(cls.endog, cls.exog, weights=weights).fit()
 
     def test_wrong_size_weights(self):
-        weights = np.ones((10,10))
+        weights = np.ones((10, 10))
         assert_raises(ValueError, WLS, self.endog, self.exog, weights=weights)
 
 
 class TestWLSExogWeights(CheckRegressionResults):
-    #Test WLS with Greene's credit card data
-    #reg avgexp age income incomesq ownrent [aw=1/incomesq]
+    # Test WLS with Greene's credit card data
+    # reg avgexp age income incomesq ownrent [aw=1/incomesq]
     def __init__(self):
         from .results.results_regression import CCardWLS
         from statsmodels.datasets.ccard import load
@@ -701,9 +711,9 @@ class TestWLSExogWeights(CheckRegressionResults):
         dta.exog = add_constant(dta.exog, prepend=False)
         nobs = 72.
 
-        weights = 1/dta.exog[:,2]
+        weights = 1 / dta.exog[:, 2]
         # for comparison with stata analytic weights
-        scaled_weights = ((weights * nobs)/weights.sum())
+        scaled_weights = ((weights * nobs) / weights.sum())
 
         self.res1 = WLS(dta.endog, dta.exog, weights=scaled_weights).fit()
         self.res2 = CCardWLS()
@@ -717,15 +727,16 @@ class TestWLSExogWeights(CheckRegressionResults):
 
 
 def test_wls_example():
-    #example from the docstring, there was a note about a bug, should
-    #be fixed now
-    Y = [1,3,4,5,2,3,4]
-    X = lrange(1,8)
+    # example from the docstring, there was a note about a bug, should
+    # be fixed now
+    Y = [1, 3, 4, 5, 2, 3, 4]
+    X = lrange(1, 8)
     X = add_constant(X, prepend=False)
-    wls_model = WLS(Y,X, weights=lrange(1,8)).fit()
-    #taken from R lm.summary
+    wls_model = WLS(Y, X, weights=lrange(1, 8)).fit()
+    # taken from R lm.summary
     assert_almost_equal(wls_model.fvalue, 0.127337843215, 6)
     assert_almost_equal(wls_model.scale, 2.44608530786**2, 6)
+
 
 def test_wls_tss():
     y = np.array([22, 22, 22, 23, 23, 23])
@@ -734,11 +745,12 @@ def test_wls_tss():
     ols_mod = OLS(y, add_constant(X, prepend=False)).fit()
 
     yw = np.array([22, 22, 23.])
-    Xw = [[1,0],[1,1],[0,1]]
+    Xw = [[1, 0], [1, 1], [0, 1]]
     w = np.array([2, 1, 3.])
 
     wls_mod = WLS(yw, add_constant(Xw, prepend=False), weights=w).fit()
     assert_equal(ols_mod.centered_tss, wls_mod.centered_tss)
+
 
 class TestWLSScalarVsArray(CheckRegressionResults):
     @classmethod
@@ -763,16 +775,17 @@ class TestWLSScalarVsArray(CheckRegressionResults):
 #    def check_confidenceintervals(self, conf1, conf2):
 #        assert_almost_equal(conf1, conf2(), DECIMAL_4)
 
+
 def test_wls_missing():
     from statsmodels.datasets.ccard import load
     data = load()
     endog = data.endog
     endog[[10, 25]] = np.nan
-    mod = WLS(data.endog, data.exog, weights = 1/data.exog[:,2], missing='drop')
+    mod = WLS(data.endog, data.exog, weights=1 / data.exog[:, 2],
+              missing='drop')
     assert_equal(mod.endog.shape[0], 70)
     assert_equal(mod.exog.shape[0], 70)
     assert_equal(mod.weights.shape[0], 70)
-
 
 
 class TestWLS_OLS(CheckRegressionResults):
@@ -786,6 +799,7 @@ class TestWLS_OLS(CheckRegressionResults):
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2(), DECIMAL_4)
 
+
 class TestGLS_OLS(CheckRegressionResults):
     @classmethod
     def setupClass(cls):
@@ -797,19 +811,19 @@ class TestGLS_OLS(CheckRegressionResults):
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2(), DECIMAL_4)
 
-#TODO: test AR
+# TODO: test AR
 # why the two-stage in AR?
-#class test_ar(object):
-#    from statsmodels.datasets.sunspots import load
-#    data = load()
-#    model = AR(data.endog, rho=4).fit()
-#    R_res = RModel(data.endog, aic="FALSE", order_max=4)
+# class test_ar(object):
+#     from statsmodels.datasets.sunspots import load
+#     data = load()
+#     model = AR(data.endog, rho=4).fit()
+#     R_res = RModel(data.endog, aic="FALSE", order_max=4)#
 
-#    def test_params(self):
-#        assert_almost_equal(self.model.rho,
-#        pass
+#     def test_params(self):
+#         assert_almost_equal(self.model.rho,
+#         pass
 
-#    def test_order(self):
+#     def test_order(self):
 # In R this can be defined or chosen by minimizing the AIC if aic=True
 #        pass
 
@@ -820,21 +834,22 @@ class TestYuleWalker(object):
         from statsmodels.datasets.sunspots import load
         data = load()
         cls.rho, cls.sigma = yule_walker(data.endog, order=4,
-                method="mle")
+                                         method="mle")
         cls.R_params = [1.2831003105694765, -0.45240924374091945,
-                -0.20770298557575195, 0.047943648089542337]
+                        -0.20770298557575195, 0.047943648089542337]
 
     def test_params(self):
         assert_almost_equal(self.rho, self.R_params, DECIMAL_4)
+
 
 class TestDataDimensions(CheckRegressionResults):
     @classmethod
     def setupClass(cls):
         np.random.seed(54321)
-        cls.endog_n_ = np.random.uniform(0,20,size=30)
-        cls.endog_n_one = cls.endog_n_[:,None]
-        cls.exog_n_ = np.random.uniform(0,20,size=30)
-        cls.exog_n_one = cls.exog_n_[:,None]
+        cls.endog_n_ = np.random.uniform(0, 20, size=30)
+        cls.endog_n_one = cls.endog_n_[:, None]
+        cls.exog_n_ = np.random.uniform(0, 20, size=30)
+        cls.exog_n_one = cls.exog_n_[:, None]
         cls.degen_exog = cls.exog_n_one[:-1]
         cls.mod1 = OLS(cls.endog_n_one, cls.exog_n_one)
         cls.mod1.df_model += 1
@@ -848,16 +863,17 @@ class TestDataDimensions(CheckRegressionResults):
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2(), DECIMAL_4)
 
+
 class TestGLS_large_data(TestDataDimensions):
     @classmethod
     def setupClass(cls):
         nobs = 1000
-        y = np.random.randn(nobs,1)
-        X = np.random.randn(nobs,20)
+        y = np.random.randn(nobs, 1)
+        X = np.random.randn(nobs, 20)
         sigma = np.ones_like(y)
         cls.gls_res = GLS(y, X, sigma=sigma).fit()
         cls.gls_res_scalar = GLS(y, X, sigma=1).fit()
-        cls.gls_res_none= GLS(y, X).fit()
+        cls.gls_res_none = GLS(y, X).fit()
         cls.ols_res = OLS(y, X).fit()
 
     def test_large_equal_params(self):
@@ -900,27 +916,30 @@ class TestNxNxOne(TestDataDimensions):
 
 def test_bad_size():
     np.random.seed(54321)
-    data = np.random.uniform(0,20,31)
+    data = np.random.uniform(0, 20, 31)
     assert_raises(ValueError, OLS, data, data[1:])
+
 
 def test_const_indicator():
     np.random.seed(12345)
     X = np.random.randint(0, 3, size=30)
     X = categorical(X, drop=True)
     y = np.dot(X, [1., 2., 3.]) + np.random.normal(size=30)
-    modc = OLS(y, add_constant(X[:,1:], prepend=True)).fit()
+    modc = OLS(y, add_constant(X[:, 1:], prepend=True)).fit()
     mod = OLS(y, X, hasconst=True).fit()
     assert_almost_equal(modc.rsquared, mod.rsquared, 12)
+
 
 def test_706():
     # make sure one regressor pandas Series gets passed to DataFrame
     # for conf_int.
     y = pandas.Series(np.random.randn(10))
     x = pandas.Series(np.ones(10))
-    res = OLS(y,x).fit()
+    res = OLS(y, x).fit()
     conf_int = res.conf_int()
     np.testing.assert_equal(conf_int.shape, (1, 2))
     np.testing.assert_(isinstance(conf_int, pandas.DataFrame))
+
 
 def test_summary():
     # test 734
@@ -971,25 +990,29 @@ def test_summary():
 \\bottomrule
 \\end{tabular}
 %\\caption{OLS Regression Results}
-\\end{center}"""
+\\end{center}
+
+Warnings: \\newline
+ [1] Standard Errors assume that the covariance matrix of the errors is correctly specified. \\newline
+ [2] The condition number is large, 4.86e+09. This might indicate that there are \\newline
+ strong multicollinearity or other numerical problems."""
     assert_equal(table, expected)
+
 
 class TestRegularizedFit(object):
 
-    # Make sure there are no issues when there are no selected
-    # variables.
+    # Make sure there are no problems when no variables are selected.
     def test_empty_model(self):
 
-       np.random.seed(742)
-       n = 100
-       endog = np.random.normal(size=n)
-       exog = np.random.normal(size=(n, 3))
+        np.random.seed(742)
+        n = 100
+        endog = np.random.normal(size=n)
+        exog = np.random.normal(size=(n, 3))
 
-       model = OLS(endog, exog)
-       result = model.fit_regularized(alpha=1000)
-
-       assert_equal(result.params, 0.)
-
+        for cls in OLS, WLS, GLS:
+            model = cls(endog, exog)
+            result = model.fit_regularized(alpha=1000)
+            assert_equal(result.params, 0.)
 
     def test_regularized(self):
 
@@ -1020,15 +1043,49 @@ class TestRegularizedFit(object):
             exog = exog - exog.mean(0)
             exog /= exog.std(0, ddof=1)
 
-            mod = OLS(endog, exog)
-            rslt = mod.fit_regularized(L1_wt=L1_wt, alpha=lam)
-            assert_almost_equal(rslt.params, params, decimal=3)
+            for cls in OLS, WLS, GLS:
+                mod = cls(endog, exog)
+                rslt = mod.fit_regularized(L1_wt=L1_wt, alpha=lam)
+                assert_almost_equal(rslt.params, params, decimal=3)
 
-            # Smoke test for summary
-            smry = rslt.summary()
+                # Smoke test for summary
+                rslt.summary()
 
-            # Smoke test for profile likeihood
-            result = mod.fit_regularized(L1_wt=L1_wt, alpha=lam, profile_scale=True)
+                # Smoke test for profile likeihood
+                mod.fit_regularized(L1_wt=L1_wt, alpha=lam,
+                                    profile_scale=True)
+
+    def test_regularized_weights(self):
+
+        np.random.seed(1432)
+        exog1 = np.random.normal(size=(100, 3))
+        endog1 = exog1[:, 0] + exog1[:, 1] + np.random.normal(size=100)
+        exog2 = np.random.normal(size=(100, 3))
+        endog2 = exog2[:, 0] + exog2[:, 1] + np.random.normal(size=100)
+
+        exog_a = np.vstack((exog1, exog1, exog2))
+        endog_a = np.concatenate((endog1, endog1, endog2))
+
+        # Should be equivalent to exog_a, endog_a.
+        exog_b = np.vstack((exog1, exog2))
+        endog_b = np.concatenate((endog1, endog2))
+        wgts = np.ones(200)
+        wgts[0:100] = 2
+        sigma = np.diag(1/wgts)
+
+        for L1_wt in 0, 0.5, 1:
+            for alpha in 0, 1:
+                mod1 = OLS(endog_a, exog_a)
+                rslt1 = mod1.fit_regularized(L1_wt=L1_wt, alpha=alpha)
+
+                mod2 = WLS(endog_b, exog_b, weights=wgts)
+                rslt2 = mod2.fit_regularized(L1_wt=L1_wt, alpha=alpha)
+
+                mod3 = GLS(endog_b, exog_b, sigma=sigma)
+                rslt3 = mod3.fit_regularized(L1_wt=L1_wt, alpha=alpha)
+
+                assert_almost_equal(rslt1.params, rslt2.params, decimal=3)
+                assert_almost_equal(rslt1.params, rslt3.params, decimal=3)
 
 
 def test_formula_missing_cat():
@@ -1039,7 +1096,7 @@ def test_formula_missing_cat():
     from patsy import PatsyError
 
     dta = sm.datasets.grunfeld.load_pandas().data
-    dta.ix[0, 'firm'] = np.nan
+    dta.loc[dta.index[0], 'firm'] = np.nan
 
     mod = ols(formula='value ~ invest + capital + firm + year',
               data=dta.dropna())
@@ -1067,16 +1124,16 @@ def test_missing_formula_predict():
     data['y'] = beta[0] + beta[1] * data['x'] + e
     model = OLS.from_formula('y ~ x', data=data)
     fit = model.fit()
-    pred = fit.predict(exog=data[:-1])
+    fit.predict(exog=data[:-1])
 
 
 def test_fvalue_implicit_constant():
+    # if constant is implicit, return nan see #2444
     nobs = 100
     np.random.seed(2)
     x = np.random.randn(nobs, 1)
     x = ((x > 0) == [True, False]).astype(int)
     y = x.sum(1) + np.random.randn(nobs)
-    w = 1 + 0.25 * np.random.rand(nobs)
 
     from statsmodels.regression.linear_model import OLS, WLS
 
@@ -1091,15 +1148,106 @@ def test_fvalue_implicit_constant():
     res.summary()
 
 
-if __name__=="__main__":
+def test_fvalue_only_constant():
+    # if only constant in model, return nan see #3642
+    nobs = 20
+    np.random.seed(2)
+    x = np.ones(nobs)
+    y = np.random.randn(nobs)
+
+    from statsmodels.regression.linear_model import OLS, WLS
+
+    res = OLS(y, x).fit(cov_type='hac', cov_kwds={'maxlags': 3})
+    assert_(np.isnan(res.fvalue))
+    assert_(np.isnan(res.f_pvalue))
+    res.summary()
+
+    res = WLS(y, x).fit(cov_type='HC1')
+    assert_(np.isnan(res.fvalue))
+    assert_(np.isnan(res.f_pvalue))
+    res.summary()
+
+
+def test_ridge():
+    n = 100
+    p = 5
+    np.random.seed(3132)
+    xmat = np.random.normal(size=(n, p))
+    yvec = xmat.sum(1) + np.random.normal(size=n)
+
+    v = np.ones(p)
+    v[0] = 0
+
+    for a in (0, 1, 10):
+        for alpha in (a, a*np.ones(p), a*v):
+            model1 = OLS(yvec, xmat)
+            result1 = model1._fit_ridge(alpha=alpha)
+            model2 = OLS(yvec, xmat)
+            result2 = model2.fit_regularized(alpha=alpha, L1_wt=0)
+            assert_allclose(result1.params, result2.params)
+            model3 = OLS(yvec, xmat)
+            result3 = model3.fit_regularized(alpha=alpha, L1_wt=1e-10)
+            assert_allclose(result1.params, result3.params)
+
+    fv1 = result1.fittedvalues
+    fv2 = np.dot(xmat, result1.params)
+    assert_allclose(fv1, fv2)
+
+
+def test_regularized_refit():
+    n = 100
+    p = 5
+    np.random.seed(3132)
+    xmat = np.random.normal(size=(n, p))
+    yvec = xmat.sum(1) + np.random.normal(size=n)
+    model1 = OLS(yvec, xmat)
+    result1 = model1.fit_regularized(alpha=2., L1_wt=0.5, refit=True)
+    model2 = OLS(yvec, xmat)
+    result2 = model2.fit_regularized(alpha=2., L1_wt=0.5, refit=True)
+    assert_allclose(result1.params, result2.params)
+    assert_allclose(result1.bse, result2.bse)
+
+
+def test_regularized_predict():
+    n = 100
+    p = 5
+    np.random.seed(3132)
+    xmat = np.random.normal(size=(n, p))
+    yvec = xmat.sum(1) + np.random.normal(size=n)
+    wgt = np.random.uniform(1, 2, n)
+
+    for klass in WLS, GLS:
+        model1 = klass(yvec, xmat,  weights=wgt)
+        result1 = model1.fit_regularized(alpha=2., L1_wt=0.5, refit=True)
+
+        params = result1.params
+        fittedvalues = np.dot(xmat, params)
+        pr = model1.predict(result1.params)
+        assert_allclose(fittedvalues, pr)
+        assert_allclose(result1.fittedvalues, pr)
+
+        pr = result1.predict()
+        assert_allclose(fittedvalues, pr)
+
+def test_regularized_options():
+    n = 100
+    p = 5
+    np.random.seed(3132)
+    xmat = np.random.normal(size=(n, p))
+    yvec = xmat.sum(1) + np.random.normal(size=n)
+    model1 = OLS(yvec - 1, xmat)
+    result1 = model1.fit_regularized(alpha=1., L1_wt=0.5)
+    model2 = OLS(yvec, xmat, offset=1)
+    result2 = model2.fit_regularized(alpha=1., L1_wt=0.5,
+                                     start_params=np.zeros(5))
+    assert_allclose(result1.params, result2.params)
+
+
+if __name__ == "__main__":
 
     import nose
     # run_module_suite()
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb', '--pdb-failure'],
+    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb', '--pdb-failure'],
                    exit=False)
 
     # nose.runmodule(argv=[__file__,'-vvs','-x'], exit=False) #, '--pdb'
-
-
-
-

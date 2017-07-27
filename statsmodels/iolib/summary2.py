@@ -246,7 +246,7 @@ def _measure_tables(tables, settings):
 _model_types = {'OLS' : 'Ordinary least squares',
                 'GLS' : 'Generalized least squares',
                 'GLSAR' : 'Generalized least squares with AR(p)',
-                'WLS' : 'Weigthed least squares',
+                'WLS' : 'Weighted least squares',
                 'RLM' : 'Robust linear model',
                 'NBin': 'Negative binomial model',
                 'GLM' : 'Generalized linear model'
@@ -327,7 +327,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     '''
 
     if isinstance(results, tuple):
-        results, params, std_err, tvalues, pvalues, conf_int = results
+        results, params, bse, tvalues, pvalues, conf_int = results
     else:
         params = results.params
         bse = results.bse
@@ -365,17 +365,17 @@ def _col_params(result, float_format='%.4f', stars=True):
     for col in res.columns[:2]:
         res[col] = res[col].apply(lambda x: float_format % x)
     # Std.Errors in parentheses
-    res.ix[:, 1] = '(' + res.ix[:, 1] + ')'
+    res.iloc[:, 1] = '(' + res.iloc[:, 1] + ')'
     # Significance stars
     if stars:
-        idx = res.ix[:, 3] < .1
-        res.ix[idx, 0] = res.ix[idx, 0] + '*'
-        idx = res.ix[:, 3] < .05
-        res.ix[idx, 0] = res.ix[idx, 0] + '*'
-        idx = res.ix[:, 3] < .01
-        res.ix[idx, 0] = res.ix[idx, 0] + '*'
+        idx = res.iloc[:, 3] < .1
+        res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + '*'
+        idx = res.iloc[:, 3] < .05
+        res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + '*'
+        idx = res.iloc[:, 3] < .01
+        res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + '*'
     # Stack Coefs and Std.Errors
-    res = res.ix[:, :2]
+    res = res.iloc[:, :2]
     res = res.stack()
     res = pd.DataFrame(res)
     res.columns = [str(result.model.endog_names)]
@@ -526,7 +526,7 @@ def _df_to_simpletable(df, align='r', float_format="%.4f", header=True,
     if index:
         stubs = [str(x) + int(pad_index) * ' ' for x in dat.index.tolist()]
     else:
-        dat.ix[:, 0] = [str(x) + int(pad_index) * ' ' for x in dat.ix[:, 0]]
+        dat.iloc[:, 0] = [str(x) + int(pad_index) * ' ' for x in dat.iloc[:, 0]]
         stubs = None
     st = SimpleTable(np.array(dat), headers=headers, stubs=stubs,
                      ltx_fmt=fmt_latex, txt_fmt=fmt_txt)

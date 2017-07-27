@@ -1,3 +1,6 @@
+.. module:: statsmodels.stats
+   :synopsis: Statistical methods and tests
+
 .. currentmodule:: statsmodels.stats
 
 .. _stats:
@@ -22,6 +25,9 @@ instead of only the raw numbers.
 Residual Diagnostics and Specification Tests
 --------------------------------------------
 
+.. module:: statsmodels.stats.stattools
+   :synopsis: Statistical methods and tests that do not fit into other categories
+
 .. currentmodule:: statsmodels.stats.stattools
 
 .. autosummary::
@@ -34,6 +40,9 @@ Residual Diagnostics and Specification Tests
    robust_skewness
    robust_kurtosis
    expected_robust_kurtosis
+
+.. module:: statsmodels.stats.diagnostic
+   :synopsis: Statistical methods and tests to diagnose model fit problems
 
 .. currentmodule:: statsmodels.stats.diagnostic
 
@@ -70,6 +79,9 @@ Residual Diagnostics and Specification Tests
 
 Outliers and influence measures
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. module:: statsmodels.stats.outliers_influence
+   :synopsis: Statistical methods and measures for outliers and influence
 
 .. currentmodule:: statsmodels.stats.outliers_influence
 
@@ -120,6 +132,9 @@ Goodness of Fit Tests and Measures
 
 some tests for goodness of fit for univariate distributions
 
+.. module:: statsmodels.stats.gof
+   :synopsis: Goodness of fit measures and tests
+
 .. currentmodule:: statsmodels.stats.gof
 
 .. autosummary::
@@ -142,6 +157,9 @@ some tests for goodness of fit for univariate distributions
 Non-Parametric Tests
 --------------------
 
+.. module:: statsmodels.sandbox.stats.runs
+   :synopsis: Experimental statistical methods and tests to analyze runs
+
 .. currentmodule:: statsmodels.sandbox.stats.runs
 
 .. autosummary::
@@ -155,6 +173,9 @@ Non-Parametric Tests
    cochrans_q
    Runs
 
+.. module:: statsmodels.stats.descriptivestats
+   :synopsis: Descriptive statistics
+
 .. currentmodule:: statsmodels.stats.descriptivestats
 
 .. autosummary::
@@ -162,7 +183,7 @@ Non-Parametric Tests
 
    sign_test
 
-.. _interrater:   
+.. _interrater:
 
 Interrater Reliability and Agreement
 ------------------------------------
@@ -171,6 +192,7 @@ The main function that statsmodels has currently available for interrater
 agreement measures and tests is Cohen's Kappa. Fleiss' Kappa is currently
 only implemented as a measures but without associated results statistics.
 
+.. module:: statsmodels.stats.inter_rater
 .. currentmodule:: statsmodels.stats.inter_rater
 
 .. autosummary::
@@ -186,10 +208,13 @@ Multiple Tests and Multiple Comparison Procedures
 
 `multipletests` is a function for p-value correction, which also includes p-value
 correction based on fdr in `fdrcorrection`.
-`tukeyhsd` performs simulatenous testing for the comparison of (independent) means.
+`tukeyhsd` performs simultaneous testing for the comparison of (independent) means.
 These three functions are verified.
 GroupsStats and MultiComparison are convenience classes to multiple comparisons similar
 to one way ANOVA, but still in developement
+
+.. module:: statsmodels.sandbox.stats.multicomp
+   :synopsis: Experimental methods for controlling size while performing multiple comparisons
 
 .. currentmodule:: statsmodels.sandbox.stats.multicomp
 
@@ -203,12 +228,28 @@ to one way ANOVA, but still in developement
    MultiComparison
    TukeyHSDResults
 
+.. module:: statsmodels.stats.multicomp
+   :synopsis: Methods for controlling size while performing multiple comparisons
+
 .. currentmodule:: statsmodels.stats.multicomp
 
 .. autosummary::
    :toctree: generated/
 
    pairwise_tukeyhsd
+
+.. module:: statsmodels.stats.multitest
+   :synopsis: Multiple testing p-value and FDR adjustments
+
+.. currentmodule:: statsmodels.stats.multitest
+
+.. autosummary::
+   :toctree: generated/
+
+   local_fdr
+   fdrcorrection_twostage
+   NullDistribution
+   RegressionFDR
 
 The following functions are not (yet) public
 
@@ -257,6 +298,9 @@ for two, either paired or independent, samples. These tests are based on TOST,
 two one-sided tests, which have as null hypothesis that the means are not
 "close" to each other.
 
+.. module:: statsmodels.stats.weightstats
+   :synopsis: Weighted statistics
+
 .. currentmodule:: statsmodels.stats.weightstats
 
 .. autosummary::
@@ -297,6 +341,9 @@ three shortcut functions, ``tt_solve_power``, ``tt_ind_solve_power`` and
 equations.
 
 
+.. module:: statsmodels.stats.power
+   :synopsis: Power and size calculations for common tests
+
 .. currentmodule:: statsmodels.stats.power
 
 .. autosummary::
@@ -321,6 +368,9 @@ Proportion
 
 Also available are hypothesis test, confidence intervals and effect size for
 proportions that can be used with NormalIndPower.
+
+.. module:: statsmodels.stats.proportion
+   :synopsis: Tests for proportions
 
 .. currentmodule:: statsmodels.stats.proportion
 
@@ -357,17 +407,27 @@ covariance matrix is not positive semi-definite. The following three
 functions can be used to find a correlation or covariance matrix that is
 positive definite and close to the original matrix.
 
+.. module:: statsmodels.stats.correlation_tools
+   :synopsis: Procedures for ensuring correlations are positive semi-definite
+
 .. currentmodule:: statsmodels.stats.correlation_tools
 
 .. autosummary::
    :toctree: generated/
 
-	corr_nearest
-	corr_clipped
-	cov_nearest
+   corr_clipped
+   corr_nearest
+   corr_nearest_factor
+   corr_thresholded
+   cov_nearest
+   cov_nearest_factor_homog
+   FactoredPSDMatrix
 
 These are utility functions to convert between central and non-central moments, skew,
 kurtosis and cummulants.
+
+.. module:: statsmodels.stats.moment_helpers
+   :synopsis: Tools for converting moments
 
 .. currentmodule:: statsmodels.stats.moment_helpers
 
@@ -386,3 +446,27 @@ kurtosis and cummulants.
    corr2cov
    se_cov
 
+
+Mediation Analysis
+------------------
+
+Mediation analysis focuses on the relationships among three key variables:
+an 'outcome', a 'treatment', and a 'mediator'. Since mediation analysis is a
+form of causal inference, there are several assumptions involved that are
+difficult or impossible to verify. Ideally, mediation analysis is conducted in
+the context of an experiment such as this one in which the treatment is
+randomly assigned. It is also common for people to conduct mediation analyses
+using observational data in which the treatment may be thought of as an
+'exposure'. The assumptions behind mediation analysis are even more difficult
+to verify in an observational setting.
+
+.. module:: statsmodels.stats.mediation
+   :synopsis: Mediation analysis
+
+.. currentmodule:: statsmodels.stats.mediation
+
+.. autosummary::
+   :toctree: generated/
+
+   Mediation
+   MediationResults

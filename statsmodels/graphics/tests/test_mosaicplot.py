@@ -18,9 +18,6 @@ try:
 except:
     have_matplotlib = False
 
-from statsmodels.compat.pandas import version as pandas_version
-pandas_old = pandas_version < '0.9'
-
 # the main drawing function
 from statsmodels.graphics.mosaicplot import mosaic
 # other functions to be tested for accuracy
@@ -31,7 +28,7 @@ from statsmodels.graphics.mosaicplot import _normalize_split
 from statsmodels.graphics.mosaicplot import _split_rect
 
 
-@dec.skipif(not have_matplotlib or pandas_old)
+@dec.skipif(not have_matplotlib)
 def test_data_conversion():
     # It will not reorder the elements
     # so the dictionary will look odd
@@ -104,7 +101,7 @@ def test_mosaic_simple():
     pylab.close('all')
 
 
-@dec.skipif(not have_matplotlib or pandas_old)
+@dec.skipif(not have_matplotlib)
 def test_mosaic():
     # make the same analysis on a known dataset
 
@@ -203,7 +200,7 @@ def test_axes_labeling():
     #pylab.show()
     pylab.close('all')
 
-@dec.skipif(not have_matplotlib or pandas_old)
+@dec.skipif(not have_matplotlib)
 def test_mosaic_empty_cells():
     # SMOKE test  see #2286
     import pandas as pd
@@ -430,7 +427,7 @@ def test_gap_split():
     eq(_split_rect(*pure_square, **conf_h), h_2split)
 
 
-@dec.skipif(not have_matplotlib or pandas_old)
+@dec.skipif(not have_matplotlib)
 def test_default_arg_index():
     # 2116
     import pandas as pd

@@ -5,11 +5,6 @@
 language: python
 sudo: required
 
-services:
-    - docker
-
-before_install:
-    - docker pull ubuntu:14.04
 
 env:
   # Default values for common packages, override as needed
@@ -17,58 +12,57 @@ env:
     - OPTIONAL=
     - COVERAGE=false
     - USEMPL=true
+    - MATPLOTLIB=
+    - DOCBUILD=false
 
 matrix:
   fast_finish: true
   include:
   - python: 2.7
     env:
-    - PYTHON=2.6
-    - dateutil=
-    - NUMPY="1.6.2=py26_4"
-    - SCIPY="0.11.0=np16py26_3"
-    - MATPLOTLIB=1.2
-  - python: 2.7
-    env:
     - PYTHON=2.7
-    - dateutil=
-    - NUMPY=1.7
-    - SCIPY=0.12
-    - OPTIONAL="mkl mkl-rt libgfortran=1.0"
+    - NUMPY=1.11
+    - PANDAS=0.19
+    - MATPLOTLIB=1.5
     - COVERAGE=true
   - python: 2.7
     env:
+    - PYTHON=2.7
+    - NUMPY=1.9
+    - SCIPY=0.15
+    - PANDAS=0.15
+    - USEMPL=false
+    - OPTIONAL="libgfortran=1.0"
+  - python: 2.7
+    env:
     - PYTHON=3.3
-    - dateutil=
-    - NUMPY=1.8
-    - SCIPY=0.13
-    - MATPLOTLIB=1.3
-    - PANDAS=0.13
+    - NUMPY=1.9
+    - SCIPY=0.14
+    - MATPLOTLIB=1.4
+    - PANDAS=0.14
   - python: 2.7
     env:
     - PYTHON=3.4
-    - dateutil=
-    - NUMPY=1.9
-    - SCIPY=0.14
-    - PANDAS=0.14
+    - NUMPY=1.10
+    - SCIPY=0.16
+    - PANDAS=0.16
     - MATPLOTLIB=1.4
-    - OPTIONAL=libgfortran=1.0
-  - python: 2.7
-    env:
-    - PYTHON=2.7
-    - dateutil=
-    - NUMPY=
-    - SCIPY=
-    - USEMPL=false
-    - PANDAS=
+    - OPTIONAL="libgfortran=1.0"
   - python: 2.7
     env:
     - PYTHON=3.5
-    - python-dateutil=
-    - NUMPY=
-    - SCIPY=
-    - PANDAS=
-    - MATPLOTLIB=1.4
+    - NUMPY=1.10
+    - SCIPY=0.17
+    - PANDAS=0.18
+    - MATPLOTLIB=1.5
+  - python: 2.7
+    env:
+    - PYTHON=3.6
+    - COVERAGE=true
+  - python: 2.7
+    env:
+    - PYTHON=3.6
+    - DOCBUILD=true
 
 notifications:
   email:
@@ -81,19 +75,15 @@ before_install:
   - ./miniconda.sh -b
   - export PATH=/home/travis/miniconda/bin:$PATH
   - export PATH=/home/travis/miniconda2/bin:$PATH
-  - conda update --yes --quiet conda
+  - conda config --set always_yes yes
+  - conda update --quiet conda
   # Fix for headless TravisCI
   - "export DISPLAY=:99.0"
   - "sh -e /etc/init.d/xvfb start"
   # Avoid noise from matplotlib
-  - mkdir $HOME/.config
-  - mkdir $HOME/.config/matplotlib
+  - mkdir -p $HOME/.config/matplotlib
   - SRCDIR=$PWD
-  - cp $SRCDIR/tools/matplotlibrc $HOME/.config/matplotlib/matplotlibrc
-  # Location for older version of matplotlib
-  - if [ ${MATPLOTLIB} = "1.2" ]; then mkdir $HOME/.matplotlib; fi
-  - if [ ${MATPLOTLIB} = "1.2" ]; then cp ${SRCDIR}/tools/matplotlibrc $HOME/.matplotlib/matplotlibrc; fi
-  # Build package list to avoid empty package=versions; only needed for versioned pacakges
+  # Build package list to avoid empty package=versions; only needed for versioned packages
   - PKGS="python=${PYTHON}"
   - PKGS="${PKGS} numpy"; if [ ${NUMPY} ]; then PKGS="${PKGS}=${NUMPY}"; fi
   - PKGS="${PKGS} scipy"; if [ ${SCIPY} ]; then PKGS="${PKGS}=${SCIPY}"; fi
@@ -101,17 +91,18 @@ before_install:
   - PKGS="${PKGS} pandas"; if [ ${PANDAS} ]; then PKGS="${PKGS}=${PANDAS}"; fi
   - PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}=${CYTHON}"; fi
   - if [ ${USEMPL} = true ]; then PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi; fi
-
-# Install packages
-install:
   - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} nose pip pyyaml setuptools
   - source activate statsmodels-test
   - if [ ${COVERAGE} = true ]; then pip install coverage coveralls; fi
-  - python setup.py install
+  - if [ ${DOCBUILD} = true ]; then bash tools/ci_docbuild_install.sh; fi;
+
+# Install packages
+install:
+  - python setup.py develop
 
 script:
-  - SRCDIR=$PWD
-  - python setup.py install
+  - export SRCDIR=$PWD
+  - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; bash ${SRCDIR}/tools/ci_docbuild.sh; exit 0; fi;
   - mkdir -p "${SRCDIR}/travis-test"; cd "${SRCDIR}/travis-test"
   # Show versions
   - python -c 'import statsmodels.api as sm; sm.show_versions();'

@@ -1,3 +1,6 @@
+.. module:: statsmodels.tsa.statespace
+   :synopsis: Statespace models for time-series analysis
+
 .. currentmodule:: statsmodels.tsa.statespace
 
 
@@ -114,7 +117,7 @@ arbitrary trend polynomials.
    sarimax.SARIMAXResults
 
 For an example of the use of this model, see the
-`SARIMAX example notebook <examples/notebooks/generated/statespace_sarimax_stata_notebook.html>`__
+`SARIMAX example notebook <examples/notebooks/generated/statespace_sarimax_stata.html>`__
 or the very brief code snippet below:
 
 
@@ -165,7 +168,7 @@ The `UnobservedComponents` class is another example of a statespace model.
    structural.UnobservedComponents
    structural.UnobservedComponentsResults
 
-For examples of the use of this model, see the `example notebook <examples/notebooks/generated/statespace_structural_harvey_jaeger_notebook.html>`__ or a notebook on using the unobserved components model to `decompose a time series into a trend and cycle <examples/notebooks/generated/statespace_cycles_notebook.html>`__ or the very brief code snippet below:
+For examples of the use of this model, see the `example notebook <examples/notebooks/generated/statespace_structural_harvey_jaeger.html>`__ or a notebook on using the unobserved components model to `decompose a time series into a trend and cycle <examples/notebooks/generated/statespace_cycles.html>`__ or the very brief code snippet below:
 
 .. code-block:: python
 
@@ -212,7 +215,7 @@ The `VARMAX` class is an example of a multivariate statespace model.
    varmax.VARMAX
    varmax.VARMAXResults
 
-For an example of the use of this model, see the `VARMAX example notebook <examples/notebooks/generated/statespace_varmax_notebook.html>`__ or the very brief code snippet below:
+For an example of the use of this model, see the `VARMAX example notebook <examples/notebooks/generated/statespace_varmax.html>`__ or the very brief code snippet below:
 
 .. code-block:: python
 
@@ -248,7 +251,7 @@ model.
    dynamic_factor.DynamicFactor
    dynamic_factor.DynamicFactorResults
 
-For an example of the use of this model, see the `Dynamic Factor example notebook <examples/notebooks/generated/statespace_dfm_coincident_notebook.html>`__ or the very brief code snippet below:
+For an example of the use of this model, see the `Dynamic Factor example notebook <examples/notebooks/generated/statespace_dfm_coincident.html>`__ or the very brief code snippet below:
 
 .. code-block:: python
 
@@ -288,7 +291,7 @@ likelihood fitting functionality for estimation and results output.
    mlemodel.MLEResults
 
 For a basic example demonstrating creating and estimating a custom state space
-model, see the `Local Linear Trend example notebook <examples/notebooks/generated/statespace_local_linear_trend_notebook.html>`__.
+model, see the `Local Linear Trend example notebook <examples/notebooks/generated/statespace_local_linear_trend.html>`__.
 For a more sophisticated example, see the source code for the `SARIMAX` and
 `SARIMAXResults` classes, which are built by extending `MLEModel` and
 `MLEResults`.
@@ -304,7 +307,7 @@ estimated using only the following code:
    import statsmodels.api as sm
 
    # True model parameters
-   nobs = 1e3
+   nobs = int(1e3)
    true_phi = np.r_[0.5, -0.2]
    true_sigma = 1**0.5
 
@@ -327,8 +330,8 @@ estimated using only the following code:
            self['selection', 0, 0] = 1
 
        # Describe how parameters enter the model
-       def update(self, params, transformed=True):
-           params = super(AR2, self).update(params, transformed)
+       def update(self, params, transformed=True, **kwargs):
+           params = super(AR2, self).update(params, transformed, **kwargs)
 
            self['transition', 0, :] = params[:2]
            self['state_cov', 0, 0] = params[2]
@@ -349,15 +352,15 @@ This results in the following summary table::
    ==============================================================================
    Dep. Variable:                      y   No. Observations:                 1000
    Model:                            AR2   Log Likelihood               -1389.437
-   Date:                Sat, 13 Feb 2016   AIC                           2784.874
-   Time:                        00:25:30   BIC                           2799.598
+   Date:                Wed, 26 Oct 2016   AIC                           2784.874
+   Time:                        00:42:03   BIC                           2799.598
    Sample:                             0   HQIC                          2790.470
                                   - 1000                                         
    Covariance Type:                  opg                                         
    ==============================================================================
                     coef    std err          z      P>|z|      [0.025      0.975]
    ------------------------------------------------------------------------------
-   param.0        0.4395      0.030     14.729      0.000       0.381       0.498
+   param.0        0.4395      0.030     14.730      0.000       0.381       0.498
    param.1       -0.2055      0.032     -6.523      0.000      -0.267      -0.144
    param.2        0.9425      0.042     22.413      0.000       0.860       1.025
    ===================================================================================
@@ -368,7 +371,7 @@ This results in the following summary table::
    ===================================================================================
    
    Warnings:
-   [1] Covariance matrix calculated using the outer product of gradients.
+   [1] Covariance matrix calculated using the outer product of gradients (complex-step).
 
 The results object has many of the attributes and methods you would expect from
 other Statsmodels results objects, including standard errors, z-statistics,

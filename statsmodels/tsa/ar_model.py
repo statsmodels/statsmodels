@@ -16,7 +16,6 @@ from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.tsa.kalmanf.kalmanfilter import KalmanFilter
 import statsmodels.base.wrapper as wrap
 from statsmodels.tsa.vector_ar import util
-from statsmodels.tsa.base.datetools import _index_date
 
 
 __all__ = ['AR']
@@ -24,27 +23,13 @@ __all__ = ['AR']
 
 def sumofsq(x, axis=0):
     """Helper function to calculate sum of squares along first axis"""
-    return np.sum(x**2, axis=0)
+    return np.sum(x**2, axis=axis)
 
 
 def _check_ar_start(start, k_ar, method, dynamic):
     if (method == 'cmle' or dynamic) and start < k_ar:
         raise ValueError("Start must be >= k_ar for conditional MLE "
                          "or dynamic forecast. Got %d" % start)
-
-
-def _validate(start, k_ar, dates, method):
-    """
-    Checks the date and then returns an integer
-    """
-    from datetime import datetime
-    if isinstance(start, (string_types, datetime)):
-        start_date = start
-        start = _index_date(start, dates)
-    if 'mle' not in method and start < k_ar:
-        raise ValueError("Start must be >= k_ar for conditional MLE or "
-                         "dynamic forecast. Got %s" % start_date)
-    return start
 
 
 def _ar_predict_out_of_sample(y, params, p, k_trend, steps, start=0):
@@ -145,7 +130,7 @@ class AR(tsbase.TimeSeriesModel):
             if i >= start - 1:  # only record if we ask for it
                 predictedvalues[i + 1 - start] = dot(Z_mat, alpha)
 
-    def _get_predict_start(self, start, dynamic):
+    def _get_prediction_index(self, start, end, dynamic, index=None):
         method = getattr(self, 'method', 'mle')
         k_ar = getattr(self, 'k_ar', 0)
         if start is None:
@@ -153,14 +138,21 @@ class AR(tsbase.TimeSeriesModel):
                 start = 0
             else:  # can't do presample fit for cmle or dynamic
                 start = k_ar
-        elif isinstance(start, (int, long)):
-            start = super(AR, self)._get_predict_start(start)
-        else:  # should be a date
-            start = _validate(start, k_ar, self.data.dates, method)
-            start = super(AR, self)._get_predict_start(start)
+            start = self._index[start]
+        if end is None:
+            end = self._index[-1]
+
+        start, end, out_of_sample, prediction_index = (
+            super(AR, self)._get_prediction_index(start, end, index))
+
+        # This replaces the _validate() call
+        if 'mle' not in method and start < k_ar:
+            raise ValueError("Start must be >= k_ar for conditional MLE or "
+                             "dynamic forecast. Got %s" % start)
+        # Other validation
         _check_ar_start(start, k_ar, method, dynamic)
-        self._set_predict_start_date(start)
-        return start
+
+        return start, end, out_of_sample, prediction_index
 
     def predict(self, params, start=None, end=None, dynamic=False):
         """
@@ -196,8 +188,8 @@ class AR(tsbase.TimeSeriesModel):
         in the references for more information.
         """
         # will return an index of a date
-        start = self._get_predict_start(start, dynamic)
-        end, out_of_sample = self._get_predict_end(end)
+        start, end, out_of_sample, _ = (
+            self._get_prediction_index(start, end, dynamic))
 
         if start - end > 1:
             raise ValueError("end is before start")
@@ -800,8 +792,8 @@ class ARResults(tsbase.TimeSeriesModelResults):
         predictedvalues = self.model.predict(params, start, end, dynamic)
         return predictedvalues
 
-        #start = self.model._get_predict_start(start)
-        #end, out_of_sample = self.model._get_predict_end(end)
+        # start, end, out_of_sample, prediction_index = (
+        #     self.model._get_prediction_index(start, end, index))
 
         ##TODO: return forecast errors and confidence intervals
         #from statsmodels.tsa.arima_process import arma2ma

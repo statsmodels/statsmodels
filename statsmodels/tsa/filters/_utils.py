@@ -1,7 +1,6 @@
 from functools import wraps
 
 from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tsa.base import datetools
 from statsmodels.tsa.tsatools import freq_to_period
 
 

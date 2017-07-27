@@ -30,6 +30,7 @@ except ImportError:
 dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start='1959-01-01', end='2009-07-01', freq='QS')
 
+
 def run_ucm(name):
     true = getattr(results_structural, name)
 
@@ -53,7 +54,7 @@ def run_ucm(name):
             # Also allow a check with a 1-dim numpy array
             if kwargs['exog'] == 'numpy':
                 exog = exog.values.squeeze()
-            
+
             kwargs['exog'] = exog
 
         # Create the model
@@ -115,7 +116,9 @@ def test_irregular():
 
 
 def test_fixed_intercept():
-    warnings.simplefilter("always")
+    # Clear warnings
+    structural.__warningregistry__ = {}
+
     with warnings.catch_warnings(record=True) as w:
         run_ucm('fixed_intercept')
         message = ("Specified model does not contain a stochastic element;"
@@ -140,7 +143,9 @@ def test_fixed_slope():
 
 
 def test_fixed_slope():
-    warnings.simplefilter("always")
+    # Clear warnings
+    structural.__warningregistry__ = {}
+
     with warnings.catch_warnings(record=True) as w:
         run_ucm('fixed_slope')
         message = ("Specified model does not contain a stochastic element;"
@@ -211,11 +216,13 @@ def test_mle_reg():
 
 
 def test_specifications():
+    # Clear warnings
+    structural.__warningregistry__ = {}
+
     endog = [1, 2]
 
     # Test that when nothing specified, a warning is issued and the model that
     # is fit is one with irregular=True and nothing else.
-    warnings.simplefilter("always")
     with warnings.catch_warnings(record=True) as w:
         mod = UnobservedComponents(endog)
 
@@ -282,11 +289,11 @@ def test_forecast():
     endog = np.arange(50) + 10
     exog = np.arange(50)
 
-    mod = UnobservedComponents(endog, exog=exog, level='dconstant')
-    res = mod.smooth([1e-15, 1])
+    mod = UnobservedComponents(endog, exog=exog, level='dconstant', seasonal=4)
+    res = mod.smooth([1e-15, 0, 1])
 
     actual = res.forecast(10, exog=np.arange(50,60)[:,np.newaxis])
-    desired = np.arange(50,60) + 10
+    desired = np.arange(50, 60) + 10
     assert_allclose(actual, desired)
 
 
@@ -340,3 +347,12 @@ def test_misc_exog():
     # Test invalid model specifications
     assert_raises(ValueError, UnobservedComponents, endog, 'llevel',
                   exog=np.zeros((10, 4)))
+
+
+def test_predict_custom_index():
+    np.random.seed(328423)
+    endog = pd.DataFrame(np.random.normal(size=50))
+    mod = structural.UnobservedComponents(endog, 'llevel')
+    res = mod.smooth(mod.start_params)
+    out = res.predict(start=1, end=1, index=['a'])
+    assert_equal(out.index.equals(pd.Index(['a'])), True)

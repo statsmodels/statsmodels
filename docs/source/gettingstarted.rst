@@ -27,17 +27,17 @@ comma-separated values file to a ``DataFrame`` object.
 
 `patsy <https://github.com/pydata/patsy>`_ is a Python library for describing
 statistical models and building `Design Matrices
-<http://en.wikipedia.org/wiki/Design_matrix>`_ using ``R``-like formulas.
+<https://en.wikipedia.org/wiki/Design_matrix>`_ using ``R``-like formulas.
 
 Data
 ----
 
 We download the `Guerry dataset
-<http://vincentarelbundock.github.com/Rdatasets/doc/HistData/Guerry.html>`_, a
+<http://vincentarelbundock.github.io/Rdatasets/doc/HistData/Guerry.html>`_, a
 collection of historical data used in support of Andre-Michel Guerry's 1833
 *Essay on the Moral Statistics of France*. The data set is hosted online in
 comma-separated values format (CSV) by the `Rdatasets
-<http://vincentarelbundock.github.com/Rdatasets/>`_ repository.
+<http://vincentarelbundock.github.io/Rdatasets/>`_ repository.
 We could download the file locally and then load it using ``read_csv``, but
 ``pandas`` takes care of all of this automatically for us:
 
@@ -93,8 +93,7 @@ capita (*Lottery*). :math:`X` is :math:`N \times 7` with an intercept, the
 *Literacy* and *Wealth* variables, and 4 region binary variables.
 
 The ``patsy`` module provides a convenient function to prepare design matrices
-using ``R``-like formulas. You can find more information here:
-http://patsy.readthedocs.org
+using ``R``-like formulas. You can find more information `here <http://patsy.readthedocs.io/en/latest/>`_.
 
 We use ``patsy``'s ``dmatrices`` function to create design matrices:
 
@@ -116,7 +115,7 @@ Notice that ``dmatrices`` has
 * returned ``pandas`` DataFrames instead of simple numpy arrays. This is useful because DataFrames allow ``statsmodels`` to carry-over meta-data (e.g. variable names) when reporting results.
 
 The above behavior can of course be altered. See the `patsy doc pages
-<http://patsy.readthedocs.org/>`_.
+<http://patsy.readthedocs.io/en/latest/>`_.
 
 Model fit and summary
 ---------------------

@@ -220,9 +220,9 @@ class KDEMultivariate(GenericKDE):
         The multivariate CDF for mixed data (continuous and ordered/unordered
         discrete) is estimated by:
 
-        ..math:: F(x^{c},x^{d})=n^{-1}\sum_{i=1}^{n}\left[G(
-            \frac{x^{c}-X_{i}}{h})\sum_{u\leq x^{d}}L(X_{i}^{d},x_{i}^{d},
-            \lambda)\right]
+        .. math:: 
+        
+            F(x^{c},x^{d})=n^{-1}\sum_{i=1}^{n}\left[G(\frac{x^{c}-X_{i}}{h})\sum_{u\leq x^{d}}L(X_{i}^{d},x_{i}^{d}, \lambda)\right]
 
         where G() is the product kernel CDF estimator for the continuous
         and L() for the discrete variables.
@@ -460,7 +460,7 @@ class KDEMultivariateConditional(GenericKDE):
 
         Notes
         -----
-        Similar to ``KDE.loo_likelihood`, but substitute ``f(y|x)=f(x,y)/f(y)``
+        Similar to ``KDE.loo_likelihood`, but substitute ``f(y|x)=f(x,y)/f(x)``
         for ``f(x)``.
         """
         yLOO = LeaveOneOut(self.data)
@@ -499,12 +499,12 @@ class KDEMultivariateConditional(GenericKDE):
         -----
         The formula for the conditional probability density is:
 
-        .. math:: f(X|Y)=\frac{f(X,Y)}{f(Y)}
+        .. math:: f(y|x)=\frac{f(x,y)}{f(x)}
 
         with
 
-        .. math:: f(X)=\prod_{s=1}^{q}h_{s}^{-1}k
-                            \left(\frac{X_{is}-X_{js}}{h_{s}}\right)
+        .. math:: f(x)=\prod_{s=1}^{q}h_{s}^{-1}k
+                            \left(\frac{x_{is}-x_{js}}{h_{s}}\right)
 
         where :math:`k` is the appropriate kernel for each variable.
         """
@@ -555,8 +555,9 @@ class KDEMultivariateConditional(GenericKDE):
         The multivariate conditional CDF for mixed data (continuous and
         ordered/unordered discrete) is estimated by:
 
-        ..math:: F(y|x)=\frac{n^{-1}\sum_{i=1}^{n}G(\frac{y-Y_{i}}{h_{0}})
-                              W_{h}(X_{i},x)}{\widehat{\mu}(x)}
+        .. math:: 
+            
+            F(y|x)=\frac{n^{-1}\sum_{i=1}^{n}G(\frac{y-Y_{i}}{h_{0}}) W_{h}(X_{i},x)}{\widehat{\mu}(x)}
 
         where G() is the product kernel CDF estimator for the dependent (y)
         variable(s) and W() is the product kernel CDF estimator for the

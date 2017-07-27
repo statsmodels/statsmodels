@@ -1,0 +1,295 @@
+#cython: boundscheck=False
+#cython: wraparound=False
+#cython: cdivision=False
+"""
+State Space Models
+
+Author: Chad Fulton  
+License: Simplified-BSD
+"""
+
+{{py:
+
+TYPES = {
+    "s": ("np.float32_t", "np.float32", "np.NPY_FLOAT32"),
+    "d": ("np.float64_t", "float", "np.NPY_FLOAT64"),
+    "c": ("np.complex64_t", "np.complex64", "np.NPY_COMPLEX64"),
+    "z": ("np.complex128_t", "complex", "np.NPY_COMPLEX128"),
+}
+
+}}
+
+# Typical imports
+cimport numpy as np
+from statsmodels.src.math cimport *
+cimport scipy.linalg.cython_blas as blas
+cimport scipy.linalg.cython_lapack as lapack
+
+
+{{for prefix, types in TYPES.items()}}
+{{py:cython_type, dtype, typenum = types}}
+{{py:
+combined_prefix = prefix
+combined_cython_type = cython_type
+if prefix == 'c':
+    combined_prefix = 'z'
+    combined_cython_type = 'np.complex128_t'
+if prefix == 's':
+    combined_prefix = 'd'
+    combined_cython_type = 'np.float64_t'
+}}
+
+# ### Missing Observation Conventional Kalman filter
+#
+# See Durbin and Koopman (2012) Chapter 4.10
+#
+# Here k_endog is the same as usual, but the design matrix and observation
+# covariance matrix are enforced to be zero matrices, and the loglikelihood
+# is defined to be zero.
+
+cdef int {{prefix}}forecast_missing_conventional({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
+    cdef int i, j
+    cdef int inc = 1, design_t = 0
+    cdef {{cython_type}} alpha = 1
+
+    # #### Forecast for time t  
+    # `forecast` $= Z_t a_t + d_t$
+    # Just set to zeros, see below (this means if forecasts are required for
+    # this part, they must be done in the wrappe)
+
+    # #### Forecast error for time t  
+    # It is undefined here, since obs is nan
+    # Note: use kfilter dimensions since we just want to set the whole array
+    # to zero
+    for i in range(kfilter.k_endog):
+        kfilter._forecast[i] = 0
+        kfilter._forecast_error[i] = 0
+
+    # #### Forecast error covariance matrix for time t  
+    # $F_t \equiv 0$
+    # Note: use kfilter dimensions since we just want to set the whole array
+    # to zeros
+    for i in range(kfilter.k_endog): # columns
+        for j in range(kfilter.k_endog): # rows
+            kfilter._forecast_error_cov[j + i*kfilter.k_endog] = 0
+
+cdef int {{prefix}}updating_missing_conventional({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
+    cdef int inc = 1
+
+    # Simply copy over the input arrays ($a_t, P_t$) to the filtered arrays
+    # ($a_{t|t}, P_{t|t}$)
+    # Note: use kfilter dimensions since we just want to copy whole arrays;
+    blas.{{prefix}}copy(&kfilter.k_states, kfilter._input_state, &inc, kfilter._filtered_state, &inc)
+    blas.{{prefix}}copy(&kfilter.k_states2, kfilter._input_state_cov, &inc, kfilter._filtered_state_cov, &inc)
+
+cdef {{cython_type}} {{prefix}}inverse_missing_conventional({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, {{cython_type}} determinant)  except *:
+    # Since the inverse of the forecast error covariance matrix is not
+    # stored, we don't need to fill it (e.g. with NPY_NAN values). Instead,
+    # just do a noop here and return a zero determinant ($|0|$).
+    return 0.0
+
+cdef {{cython_type}} {{prefix}}loglikelihood_missing_conventional({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, {{cython_type}} determinant):
+    return 0.0
+
+# ### Conventional Kalman filter
+#
+# The following are the above routines as defined in the conventional Kalman
+# filter.
+#
+# See Durbin and Koopman (2012) Chapter 4
+
+cdef int {{prefix}}forecast_conventional({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
+
+    # Constants
+    cdef:
+        int inc = 1, ld, i, j
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+        {{cython_type}} gamma = -1.0
+
+    # #### Forecast for time t  
+    # `forecast` $= Z_t a_t + d_t$
+    # 
+    # *Note*: $a_t$ is given from the initialization (for $t = 0$) or
+    # from the previous iteration of the filter (for $t > 0$).
+
+    # $\\# = d_t$
+    blas.{{prefix}}copy(&model._k_endog, model._obs_intercept, &inc, kfilter._forecast, &inc)
+    # `forecast` $= 1.0 * Z_t a_t + 1.0 * \\#$  
+    # $(p \times 1) = (p \times m) (m \times 1) + (p \times 1)$
+    blas.{{prefix}}gemv("N", &model._k_endog, &model._k_states,
+          &alpha, model._design, &model._k_endog,
+                  kfilter._input_state, &inc,
+          &alpha, kfilter._forecast, &inc)
+
+    # #### Forecast error for time t  
+    # `forecast_error` $\equiv v_t = y_t -$ `forecast`
+
+    # $\\# = y_t$
+    blas.{{prefix}}copy(&model._k_endog, model._obs, &inc, kfilter._forecast_error, &inc)
+    # $v_t = -1.0 * $ `forecast` $ + \\#$
+    # $(p \times 1) = (p \times 1) + (p \times 1)$
+    blas.{{prefix}}axpy(&model._k_endog, &gamma, kfilter._forecast, &inc, kfilter._forecast_error, &inc)
+
+    # *Intermediate calculation* (used just below and then once more)  
+    # `tmp1` array used here, dimension $(m \times p)$  
+    # $\\#_1 = P_t Z_t'$  
+    # $(m \times p) = (m \times m) (p \times m)'$
+    blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_endog, &model._k_states,
+          &alpha, kfilter._input_state_cov, &kfilter.k_states,
+                  model._design, &model._k_endog,
+          &beta, kfilter._tmp1, &kfilter.k_states)
+
+    # #### Forecast error covariance matrix for time t  
+    # $F_t \equiv Z_t P_t Z_t' + H_t$
+    # 
+    # *Note*: this and does nothing at all to `forecast_error_cov` if
+    # converged == True
+    # TODO make sure when converged, the copies are made correctly
+    if not kfilter.converged:
+        # $\\# = H_t$
+        # blas.{{prefix}}copy(&kfilter.k_endog2, kfilter._obs_cov, &inc, kfilter._forecast_error_cov, &inc)
+        for i in range(model._k_endog): # columns
+            for j in range(model._k_endog): # rows
+                kfilter._forecast_error_cov[j + i*kfilter.k_endog] = model._obs_cov[j + i*model._k_endog]
+
+        # $F_t = 1.0 * Z_t \\#_1 + 1.0 * \\#$
+        blas.{{prefix}}gemm("N", "N", &model._k_endog, &model._k_endog, &model._k_states,
+              &alpha, model._design, &model._k_endog,
+                     kfilter._tmp1, &kfilter.k_states,
+              &alpha, kfilter._forecast_error_cov, &kfilter.k_endog)
+
+    return 0
+
+cdef int {{prefix}}updating_conventional({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
+    # Constants
+    cdef:
+        int inc = 1
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+        {{cython_type}} gamma = -1.0
+    
+    # #### Filtered state for time t
+    # $a_{t|t} = a_t + P_t Z_t' F_t^{-1} v_t$  
+    # $a_{t|t} = 1.0 * \\#_1 \\#_2 + 1.0 a_t$
+    blas.{{prefix}}copy(&kfilter.k_states, kfilter._input_state, &inc, kfilter._filtered_state, &inc)
+    blas.{{prefix}}gemv("N", &model._k_states, &model._k_endog,
+          &alpha, kfilter._tmp1, &kfilter.k_states,
+                  kfilter._tmp2, &inc,
+          &alpha, kfilter._filtered_state, &inc)
+
+    # #### Filtered state covariance for time t
+    # $P_{t|t} = P_t - P_t Z_t' F_t^{-1} Z_t P_t$  
+    # $P_{t|t} = P_t - \\#_1 \\#_3 P_t$  
+    # 
+    # *Note*: this and does nothing at all to `filtered_state_cov` if
+    # converged == True
+    if not kfilter.converged:
+        blas.{{prefix}}copy(&kfilter.k_states2, kfilter._input_state_cov, &inc, kfilter._filtered_state_cov, &inc)
+
+        # `tmp0` array used here, dimension $(m \times m)$  
+        # $\\#_0 = 1.0 * \\#_1 \\#_3$  
+        # $(m \times m) = (m \times p) (p \times m)$
+        blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_endog,
+              &alpha, kfilter._tmp1, &kfilter.k_states,
+                      kfilter._tmp3, &kfilter.k_endog,
+              &beta, kfilter._tmp0, &kfilter.k_states)
+
+        # $P_{t|t} = - 1.0 * \\# P_t + 1.0 * P_t$  
+        # $(m \times m) = (m \times m) (m \times m) + (m \times m)$
+        blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
+              &gamma, kfilter._tmp0, &kfilter.k_states,
+                      kfilter._input_state_cov, &kfilter.k_states,
+              &alpha, kfilter._filtered_state_cov, &kfilter.k_states)
+
+    # #### Kalman gain for time t
+    # $K_t = T_t P_t Z_t' F_t^{-1}$
+    #
+    # *Note*: this and does nothing at all to `kalman_gain` if
+    # converged == True
+    # *Note*: Kim and Nelson (1999) have a different version of the Kalman
+    # gain, defined as $P_t Z_t' F_t^{-1}$. That is not adopted here.
+    if not kfilter.converged:
+        # `tmp00` array used here, dimension $(m \times m)$  
+        # $\\#_{00} = 1.0 * T_t P_t$  
+        # $(m \times m) = (m \times m) (m \times m)$
+        blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
+              &alpha, model._transition, &model._k_states,
+                      kfilter._input_state_cov, &kfilter.k_states,
+              &beta, kfilter._tmp00, &kfilter.k_states)
+
+        # K_t = 1.0 * \\#_{00} \\#_3'
+        # $(m \times p) = (m \times m) (m \times p)$
+        blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_endog, &model._k_states,
+              &alpha, kfilter._tmp00, &kfilter.k_states,
+                      kfilter._tmp3, &kfilter.k_endog,
+              &beta, kfilter._kalman_gain, &kfilter.k_states)
+
+    return 0
+
+cdef int {{prefix}}prediction_conventional({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
+
+    # Constants
+    cdef:
+        int inc = 1
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+        {{cython_type}} gamma = -1.0
+
+    # #### Predicted state for time t+1
+    # $a_{t+1} = T_t a_{t|t} + c_t$
+    blas.{{prefix}}copy(&model._k_states, model._state_intercept, &inc, kfilter._predicted_state, &inc)
+    blas.{{prefix}}gemv("N", &model._k_states, &model._k_states,
+          &alpha, model._transition, &model._k_states,
+                  kfilter._filtered_state, &inc,
+          &alpha, kfilter._predicted_state, &inc)
+
+    # #### Predicted state covariance matrix for time t+1
+    # $P_{t+1} = T_t P_{t|t} T_t' + Q_t^*$
+    #
+    # *Note*: this and does nothing at all to `predicted_state_cov` if
+    # converged == True
+    if not kfilter.converged:
+        blas.{{prefix}}copy(&model._k_states2, model._selected_state_cov, &inc, kfilter._predicted_state_cov, &inc)
+        # `tmp0` array used here, dimension $(m \times m)$  
+
+        # $\\#_0 = T_t P_{t|t} $
+
+        # $(m \times m) = (m \times m) (m \times m)$
+        blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
+              &alpha, model._transition, &model._k_states,
+                      kfilter._filtered_state_cov, &kfilter.k_states,
+              &beta, kfilter._tmp0, &kfilter.k_states)
+        # $P_{t+1} = 1.0 \\#_0 T_t' + 1.0 \\#$  
+        # $(m \times m) = (m \times m) (m \times m) + (m \times m)$
+        blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
+              &alpha, kfilter._tmp0, &kfilter.k_states,
+                      model._transition, &model._k_states,
+              &alpha, kfilter._predicted_state_cov, &kfilter.k_states)
+
+    return 0
+
+
+cdef {{cython_type}} {{prefix}}loglikelihood_conventional({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, {{cython_type}} determinant):
+    # Constants
+    cdef:
+        {{cython_type}} loglikelihood
+        int inc = 1
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+
+    loglikelihood = -0.5*(model._k_endog*{{combined_prefix}}log(2*NPY_PI) + {{combined_prefix}}log(determinant))
+
+    {{if combined_prefix == 'd'}}
+    loglikelihood = loglikelihood - 0.5*blas.{{prefix}}dot(&model._k_endog, kfilter._forecast_error, &inc, kfilter._tmp2, &inc)
+    {{else}}
+    blas.{{prefix}}gemv("N", &inc, &model._k_endog,
+                   &alpha, kfilter._forecast_error, &inc,
+                           kfilter._tmp2, &inc,
+                   &beta, kfilter._tmp0, &inc)
+    loglikelihood = loglikelihood - 0.5 * kfilter._tmp0[0]
+    {{endif}}
+
+    return loglikelihood
+
+{{endfor}}

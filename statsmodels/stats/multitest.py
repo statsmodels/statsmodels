@@ -8,7 +8,7 @@ License: BSD-3
 
 from statsmodels.compat.python import range
 from statsmodels.compat.collections import OrderedDict
-
+from ._knockoff import RegressionFDR
 import numpy as np
 
 
@@ -351,13 +351,13 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
     alpha : float
         error rate
     method : {'bky', 'bh')
-         see Notes for details
+        see Notes for details
 
-        'bky' : implements the procedure in Definition 6 of Benjamini, Krieger
+        * 'bky' - implements the procedure in Definition 6 of Benjamini, Krieger
            and Yekuteli 2006
-        'bh' : implements the two stage method of Benjamini and Hochberg
+        * 'bh' - the two stage method of Benjamini and Hochberg
 
-    iter ; bool
+    iter : bool
 
     Returns
     -------
@@ -591,7 +591,7 @@ class NullDistribution(object):
         # Extract the null z-scores
         ii = np.flatnonzero((zscores >= null_lb) & (zscores <= null_ub))
         if len(ii) == 0:
-            raise RunTimeError("No Z-scores fall between null_lb and null_ub")
+            raise RuntimeError("No Z-scores fall between null_lb and null_ub")
         zscores0 = zscores[ii]
 
         # Number of Z-scores, and null Z-scores
@@ -684,4 +684,3 @@ class NullDistribution(object):
 
         zval = (zscores - self.mean) / self.sd
         return np.exp(-0.5*zval**2 - np.log(self.sd) - 0.5*np.log(2*np.pi))
-
