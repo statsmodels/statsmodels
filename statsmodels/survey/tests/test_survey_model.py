@@ -20,9 +20,10 @@ X = data[:, [1,2]]
 
 def test_jack_repw():
     design = ss.SurveyDesign(strata, cluster, weights)
-    model_class = sm.WLS
+    assert_equal(design.clust, np.r_[0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4])
+    model_class = sm.GLM
     model = smod.SurveyModel(design, model_class=model_class)
-    rslt = model.fit(y, X, cov_method='jack', center_by='est')
+    rslt = model.fit(y, X, cov_method='linearized', center_by='est')
 
     rw = []
     for k in range(5):
@@ -34,7 +35,7 @@ def test_jack_repw():
     model_rw = smod.SurveyModel(design_rw, model_class=model_class)
     model_rw.fit(y, X, cov_method='jack')
 
-    # assert_allclose(model.params, model_rw.params)
+    assert_allclose(model.params, model_rw.params)
     """
     comparison between stderr fails because model has
     nh = self.design.clust_per_strat[self.design.strat_for_clust].astype(np.float64)
