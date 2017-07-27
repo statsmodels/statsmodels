@@ -29,12 +29,19 @@ class SurveyModel(object):
     def _get_linearization_vcov(self, X, y, technique):
         model = self.model(y, X, **self.init_args)
         params = self.params.copy()
-        d_hat = model.score_obs(params=params).T
+        lin_pred = np.dot(X, self.params)
+        idl = model.family.link.inverse_deriv(lin_pred)
+        # d_hat is the matrix of partial derivatives of the link function
+        # w.r.t self.params.
+        d_hat = (X * idl[:, None]).T
+        # d_hat = model.score_obs(params=params).T
+
         cond_mean = self.result.mu
-        # let w = self.design.weights.copy() or self.design.rep_weights[:,c] if
-        # user wants to specify jack-sandwhich or something
+        # TODO: let w = self.design.weights.copy() or self.design.rep_weights[:,c] if
+        # user wants to specify jack-sandwich or something
         w = self.design.weights.copy()
         e = []
+        # calculate e for each stratum
         for c in range(self.design.n_clust):
             ind = (self.design.clust == c)
             cond_inv = np.linalg.inv(np.diag(cond_mean[ind]) - np.dot(cond_mean[ind], cond_mean.T[ind]))
@@ -49,6 +56,8 @@ class SurveyModel(object):
         g_hat = (len(y) - 1) / (len(y) - X.shape[1]) * np.dot(e.T, e)
 
         if technique=="newton":
+            # TODO: Figure out if hessian should be used when
+            # 'jack-sandwich' or 'boot-sandwich' is requested
             q_hat = model.hessian(self.params)
         else:
             cond_inv = np.linalg.inv(np.diag(cond_mean) - np.dot(cond_mean, cond_mean.T))
