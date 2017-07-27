@@ -18,11 +18,11 @@ W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 from __future__ import division
 
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
-           "GeneralizedPoisson"]
+           "GeneralizedPoisson", "NegativeBinomial_p"]
 
 from statsmodels.compat.python import lmap, lzip, range
 import numpy as np
-from scipy.special import gammaln
+from scipy.special import gammaln, digamma, polygamma
 from scipy import stats, special, optimize  # opt just for nbin
 from scipy.stats import nbinom
 import statsmodels.tools.tools as tools
@@ -2739,7 +2739,7 @@ class NegativeBinomial_p(CountModel):
 
     def loglike(self, params):
         """
-        Loglikelihood of Generic Zero Inflated model
+        Loglikelihood of Negative Binomial model
         Parameters
         ----------
         params : array-like
@@ -2749,17 +2749,12 @@ class NegativeBinomial_p(CountModel):
         loglike : float
             The log-likelihood function of the model evaluated at `params`.
             See notes.
-        Notes
-        --------
-        .. math:: \\ln L=\\sum_{y_{i}=0}\\ln(w_{i}+(1-w_{i})*P_{main\\_model})+
-            \\sum_{y_{i}>0}(\\ln(1-w_{i})+L_{main\\_model})
-            where P - pdf of main model, L - loglike function of main model.
         """
         return np.sum(self.loglikeobs(params))
 
     def loglikeobs(self, params):
         """
-        Loglikelihood for observations of Generic Zero Inflated model
+        Loglikelihood for observations of Negative Binomial model
         Parameters
         ----------
         params : array-like
@@ -2769,16 +2764,6 @@ class NegativeBinomial_p(CountModel):
         loglike : ndarray (nobs,)
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
-        Notes
-        --------
-        ..math::
-           \lambda_i &= exp(X\beta) \\
-           \theta &= 1 / \alpha \\
-           g_i &= \theta \lambda_i^p \\
-           w_i &= g_i/(g_i + \lambda_i) \\
-           r_i &= \theta / (\theta+\lambda_i) \\
-           ln \mathcal{L}_i &= ln \Gamma(y_i+g_i) - ln \Gamma(1+y_i) + g_iln (r_i) + y_i ln(1-r_i)
-        for observations :math:`i=1,...,n`
         """
         if self._transparams:
             alpha = np.exp(params[-1])
@@ -2825,7 +2810,7 @@ class NegativeBinomial_p(CountModel):
                                  digamma(a1) +
                                  np.log(a1 / a2) +
                                  1 - a3 / a2))
- 
+
         return np.concatenate((dparams, np.atleast_2d(dalpha).T),
                               axis=1)
 
@@ -2838,7 +2823,7 @@ class NegativeBinomial_p(CountModel):
             return score
 
     def hessian(self, params):
-        if self._transparams: # lnalpha came in during fit
+        if self._transparams:
             alpha = np.exp(params[-1])
         else:
             alpha = params[-1]
@@ -2957,8 +2942,7 @@ class NegativeBinomial_p(CountModel):
                 full_output=full_output, disp=0, callback=callback,
                 alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
-            if self.loglike_method.startswith('nb'):
-                start_params = np.append(start_params, 0.1)
+            start_params = np.append(start_params, 0.1)
 
         cntfit = super(CountModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
