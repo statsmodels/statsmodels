@@ -11,7 +11,8 @@ from numpy.testing import assert_almost_equal, assert_equal
 import pandas as pd
 
 def test_bartlett_sphericity():
-    dataset = pd.DataFrame.from_csv('tests.csv',header=None,sep=',',index_col=None)
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    dataset = pd.DataFrame.from_csv(os.path.join(cur_dir, 'results', "tests.csv"),header=None,sep=',',index_col=None)
       
      
     chi2,ddl,pvalue = bartlett_sphericity(dataset, corr_method="spearman")
@@ -37,7 +38,8 @@ from statsmodels.stats.descriptivestats import sign_test
 from numpy.testing import assert_almost_equal, assert_equal
 
 def test_kmo():
-    dataset = pd.DataFrame.from_csv('tests.csv',header=None,sep=',',index_col=None)
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    dataset = pd.DataFrame.from_csv(os.path.join(cur_dir, 'results', "tests.csv"),header=None,sep=',',index_col=None)
       
     dataset_corr = dataset.corr(method="spearman")
      
