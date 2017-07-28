@@ -55,6 +55,16 @@ def test_mean_boot():
     assert_allclose(avg_mse.est, np.r_[3.636364, 4.636364, 3.727273])
     assert_allclose(avg_mse.stderr, np.r_[0.5762342, 0.6967576, 0.5428541], rtol=1e-5, atol=0)
 
+def test_mean_linearized():
+    avg = ss.SurveyMean(design, data, cov_method='linearized', center_by='stratum')
+    assert_allclose(avg.est, np.r_[3.625, 4.6875, 3.9375])
+    assert_allclose(avg.stderr, np.r_[0.8623882, 1.220708, .993394], rtol=1e-2, atol=0)
+
+    avg_fpc = ss.SurveyMean(design_fpc, data, cov_method='linearized', center_by='stratum')
+    assert_allclose(avg_fpc.est, np.r_[3.625, 4.6875, 3.9375])
+    assert_allclose(avg_fpc.stderr, np.r_[0.787975, 1.054243, .8248248],  rtol=1e-5, atol=0)
+
+
 def test_total_jack():
     tot_fpc = ss.SurveyTotal(design_fpc, data, cov_method='jack', center_by='stratum')
     assert_allclose(tot_fpc.est, np.r_[58, 75, 63])
@@ -80,6 +90,16 @@ def test_total_boot():
     tot = ss.SurveyTotal(design_rw, data, cov_method='boot', center_by='est')
     assert_allclose(tot.est, np.r_[40, 51, 41])
     assert_allclose(tot.stderr, np.r_[4.062019 , 10.2323, 4.549725],  rtol=1e-5, atol=0)
+
+def test_total_linearized():
+    tot = ss.SurveyTotal(design, data, cov_method='linearized', center_by='stratum')
+    assert_allclose(tot.est, np.r_[58, 75, 63])
+    assert_allclose(tot.stderr, np.r_[10.58301, 23.38803, 13.49074], rtol=1e-2, atol=0)
+
+    tot_fpc = ss.SurveyTotal(design_fpc, data, cov_method='linearized', center_by='stratum')
+    assert_allclose(tot_fpc.est, np.r_[58, 75, 63])
+    assert_allclose(tot_fpc.stderr, np.r_[9.402127, 20.82066, 10.51665],  rtol=1e-5, atol=0)
+
 
 # For now, no SE is given by STATA. So for now, will only have
 # test_quantile_jack() check the estimate, and comment out

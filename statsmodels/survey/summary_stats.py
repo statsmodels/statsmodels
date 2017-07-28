@@ -404,7 +404,6 @@ class SurveyStat(object):
         for c in range(self.design.n_clust):
             # get jackknife weights
             w = self.design.get_rep_weights(c=c, cov_method='jack')
-            print(w)
             jdata.append(self._stat(w))
         jdata = np.asarray(jdata)
         if self.center_by == 'est':
@@ -422,7 +421,6 @@ class SurveyStat(object):
                                                          :].mean(0)
             else:
                 raise ValueError("Can not center by stratum when rep_weights given")
-
         if self.design.rep_weights is None:
             nh = self.design.clust_per_strat[self.design.strat_for_clust].astype(np.float64)
             _pseudo = jdata + nh[:, None] * (np.dot(self.design.weights,
@@ -440,6 +438,35 @@ class SurveyStat(object):
         else:
             self.stderr = np.sqrt(self.vcov)
 
+    def _linearized(self):
+        if self.center_by != 'stratum':
+            raise ValueError("center_by option %s not supported with linearized variance" % self.center_by)
+        self.est = self._stat(self.design.weights)
+        jdata = []
+        # for each cluster
+        for c in range(design.n_clust):
+            w = design.weights.copy()
+            # but if you're not in that cluster, set as 0
+            w[self.design.clust != c] = 0
+            jdata.append(self._weighted_score(w))
+        jdata = np.asarray(jdata)
+
+        for s in range(self.design.n_strat):
+            # center the 'delete 1' statistic
+            jdata[self.design.ii[s], :] -= jdata[self.design.ii[s],
+                                                 :].mean(0)
+        nh = self.design.clust_per_strat[self.design.strat_for_clust].astype(np.float64)
+        _pseudo = jdata + nh[:, None] * (np.dot(self.design.weights,
+                                            self.data) - jdata)
+        mh = np.sqrt(nh / (nh-1))
+        fh = np.sqrt(1 - self.design.fpc)
+        jdata = fh[:, None] * mh[:, None] * jdata
+        self.vcov = np.dot(jdata.T, jdata)
+
+        if self.vcov.ndim == 2:
+            self.stderr = np.sqrt(np.diag(self.vcov))
+        else:
+            self.stderr = np.sqrt(self.vcov)
 
 class SurveyMean(SurveyStat):
     """
@@ -471,8 +498,12 @@ class SurveyMean(SurveyStat):
         super().__init__(design, data, center_by)
         if cov_method == "jack":
             self._jackknife()
-        else:
+        elif cov_method == 'boot':
             self._bootstrap(n_reps, bsn)
+        elif cov_method == 'linearized':
+            self._linearized()
+        else:
+            raise ValueError("cov_method %s is not supported" %s)
 
     def _stat(self, weights):
         """
@@ -493,6 +524,31 @@ class SurveyMean(SurveyStat):
 
         return np.dot(weights, self.data) / np.sum(weights)
 
+    def _weighted_score(self, weights):
+        """
+        Returns weighted sum of the score variable for linearized variance.
+
+
+        Parameters
+        ----------
+        weights : np.array
+            The weights used to calculate the total, will either be
+            original design weights or recalculated weights via jk,
+            boot, etc
+
+        Returns
+        -------
+        An array containing the statistic calculated on the columns
+        of the dataset.
+        """
+
+        # using try/except to prevent self._z from being calculated
+        # with each call
+        try:
+            return np.dot(weights, self._z)
+        except AttributeError:
+            self._z = (self.data - self.est) / np.sum(self.design.weights)
+        return np.dot(weights, self._z)
 
 class SurveyTotal(SurveyStat):
     """
@@ -525,12 +581,35 @@ class SurveyTotal(SurveyStat):
 
         if cov_method == "jack":
             self._jackknife()
-        else:
+        elif cov_method == 'boot':
             self._bootstrap(n_reps, bsn)
+        elif cov_method == 'linearized':
+            self._linearized()
+        else:
+            raise ValueError("cov_method %s is not supported" %s)
 
     def _stat(self, weights):
         """
         Returns calculation of total.
+
+        Parameters
+        ----------
+        weights : np.array
+            The weights used to calculate the total, will either be
+            original design weights or recalculated weights via jk,
+            boot, etc
+
+        Returns
+        -------
+        An array containing the statistic calculated on the columns
+        of the dataset.
+        """
+        return np.dot(weights, self.data)
+
+    def _weighted_score(self, weights):
+        """
+        Returns weighted sum of the score variable for linearized variance.
+        For SurveyTotal, this is just the data
 
         Parameters
         ----------
@@ -591,8 +670,10 @@ class SurveyQuantile(SurveyStat):
         # self.stderr = np.empty(self.data.shape[1])
         if cov_method == "jack":
             self._jackknife()
-        else:
+        elif cov_method == 'boot':
             self._bootstrap()
+        else:
+            raise ValueError("cov_method %s is not supported" %s)
 
     def _stat(self, weights):
         quant_list = []
@@ -627,3 +708,19 @@ class SurveyMedian(SurveyQuantile):
         # initialize SurveyQuantile
         super().__init__(design, data, quantile, cov_method, n_reps,
         center_by, bsn)
+
+
+strata = np.r_[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
+cluster = np.r_[0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4]
+weights = np.r_[1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1].astype(np.float64)
+fpc = np.r_[.5, .5, .5, .5, .5, .5, .1, .1, .1, .1, .1]
+data = np.asarray([[1, 3, 2, 5, 4, 1, 2, 3, 4, 6, 9],
+                   [5, 3, 2, 1, 4, 7, 8, 9, 5, 4, 3],
+                   [3, 2, 1, 5, 6, 7, 4, 2, 1, 6, 4]], dtype=np.float64).T
+
+design = SurveyDesign(strata, cluster, weights, fpc=fpc)
+
+tot = SurveyTotal(design, data, cov_method='linearized', center_by='stratum')
+print(tot.est, tot.stderr)
+avg = SurveyMean(design, data, cov_method='linearized', center_by='stratum')
+print(avg.est, avg.stderr)
