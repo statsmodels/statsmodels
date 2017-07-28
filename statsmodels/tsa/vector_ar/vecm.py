@@ -318,7 +318,7 @@ def _endog_matrices(endog, exog, exog_coint, diff_lags, deterministic,
         delta_x_stack.append(np.ones(T))
     if seasons > 0:
         delta_x_stack.append(seasonal_dummies(seasons, delta_x.shape[1],
-                                              first_period=first_season,
+                                              first_period=first_season + diff_lags + 1,
                                               centered=True).T)
     if "lo" in deterministic:
         delta_x_stack.append(_linear_trend(T, p))
