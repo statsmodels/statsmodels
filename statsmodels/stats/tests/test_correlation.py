@@ -10,6 +10,7 @@ from statsmodels.stats.descriptivestats import sign_test
 from numpy.testing import assert_almost_equal, assert_equal
 import pandas as pd
 import os
+from statsmodels.stats.correlation import kmo, bartlett_sphericity
 
 def test_bartlett_sphericity():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
