@@ -884,7 +884,7 @@ class Table2x2(SquareTable):
                                   self.oddsratio_pvalue()]],
                 [fmt(x) for x in [self.log_oddsratio, self.log_oddsratio_se,
                                   lcb2, ucb2, self.oddsratio_pvalue()]],
-                [fmt(x) for x in [self.riskratio, "", lcb2, ucb2,
+                [fmt(x) for x in [self.riskratio, "", lcb3, ucb3,
                                   self.riskratio_pvalue()]],
                 [fmt(x) for x in [self.log_riskratio, self.log_riskratio_se,
                                   lcb4, ucb4, self.riskratio_pvalue()]]]

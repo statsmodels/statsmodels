@@ -542,6 +542,10 @@ class Check2x2Mixin(object):
         assert_equal(self.tbl_obj.summary().as_text(),
                      self.tbl_data_obj.summary().as_text())
 
+    def test_summary(self):
+
+        assert_equal(self.tbl_obj.summary().as_text(),
+                     self.summary_string)
 
 
 class Test2x2_1(Check2x2Mixin):
@@ -569,3 +573,11 @@ class Test2x2_1(Check2x2Mixin):
                                   3.9984381579173824]
         self.log_riskratio_confint = [-1.3859038243496782,
                                       1.3859038243496782]
+        ss = [  '               Estimate   SE   LCB    UCB   p-value',
+                '---------------------------------------------------',
+                'Odds ratio        1.000        0.063 15.988   1.000',
+                'Log odds ratio    0.000 1.414 -2.772  2.772   1.000',
+                'Risk ratio        1.000        0.250  3.998   1.000',
+                'Log risk ratio    0.000 0.707 -1.386  1.386   1.000',
+                '---------------------------------------------------']
+        self.summary_string = '\n'.join(ss)
