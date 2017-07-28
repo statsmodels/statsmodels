@@ -24,7 +24,7 @@ def test_bartlett_sphericity():
     # from R
     assert_almost_equal(pvalue, 1.968257e-60, 5)
     # from R
-    assert_almost_equal(chi2, 410.623, 1)
+    assert_almost_equal(chi2, 410.623, 0)
     # from R
     assert_equal(ddl, 45)
     
