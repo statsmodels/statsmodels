@@ -215,6 +215,9 @@ def get_lilliefors_table(dist='norm'):
 
     return lf
 
+lilliefors_table_norm = get_lilliefors_table(dist='norm')
+lilliefors_table_expon = get_lilliefors_table(dist='exp')
+
 def pval_lf(Dmax, n):
     '''approximate pvalues for Lilliefors test
 
@@ -313,12 +316,11 @@ def kstest_lilliefors(x, dist='norm', pvalmethod='approx'):
     if dist == 'norm':
         z = (x-x.mean())/x.std(ddof=1)
         test_d = stats.norm.cdf
-        lilliefors_table = get_lilliefors_table(dist='norm')
+        lilliefors_table = lilliefors_table_norm
     elif dist == 'exp':
-        z = x
-        ex = stats.expon(scale=1./x.mean())
-        test_d = ex.cdf
-        lilliefors_table = get_lilliefors_table(dist='exp')
+        z = x/x.mean()
+        test_d = stats.expon.cdf
+        lilliefors_table = lilliefors_table_expon
         pvalmethod = 'table'
     else:
         print('test distribution must be norm or exp.')
