@@ -416,10 +416,11 @@ class AnovaRM(object):
 
     The full model regression residual sum of squares is
     used to compare with the reduced model for calculating the
-    within subject effect sum of squares [1]
+    within-subject effect sum of squares [1].
 
-    Between subject effect and Greenhouse-Geisser correction is not yet
-    supported.
+    Currently, only fully balanced within-subject designs are supported.
+    Calculation of between-subject effects and corrections for violation of
+    sphericity are not yet implemented.
 
     Parameters
     ----------
@@ -432,10 +433,33 @@ class AnovaRM(object):
         The within-subject factors
     between : a list of string(s)
         The between-subject factors, this is not yet implemented
+    aggregate_func : None, 'mean', or function
+        If the data set contains more than a single observation per subject
+        and cell of the specified model, this function will be used to
+        aggregate the data before running the Anova. `None` (the default) will
+        not perform any aggregation; 'mean' is s shortcut to `numpy.mean`.
+        An exception will be raised if aggregation is required, but no
+        aggregation function was specified.
 
     Returns
     -------
     results: AnovaResults instance
+
+    Raises
+    ------
+    ValueError
+        If the data need to be aggregated, but `aggregate_func` was not
+        specified.
+
+    Notes
+    -----
+    This implementation currently only supports fully balanced designs. If the
+    data contain more than one observation per subject and cell of the design,
+    these observations need to be aggregated into a single observation
+    before the Anova is calculated, either manually or by passing an aggregation
+    function via the `aggregate_func` keyword argument.
+    Note that if the input data set was not balanced before performing the
+    aggregation, the implied heteroscedasticity of the data is ignored.
 
     References
     ----------
@@ -443,7 +467,8 @@ class AnovaRM(object):
 
     """
 
-    def __init__(self, data, depvar, subject, within=None, between=None):
+    def __init__(self, data, depvar, subject, within=None, between=None,
+                 aggregate_func=None):
         self.data = data
         self.depvar = depvar
         self.within = within
@@ -455,7 +480,28 @@ class AnovaRM(object):
             raise NotImplementedError('Between subject effect not '
                                       'yet supported!')
         self.subject = subject
+
+        if aggregate_func == 'mean':
+            self.aggregate_func = np.mean
+        else:
+            self.aggregate_func = aggregate_func
+
+        if not data.equals(data.drop_duplicates(subset=[subject] + within)):
+            if self.aggregate_func is not None:
+                self._aggregate()
+            else:
+                msg = ('The data set contains more than one observation per '
+                       'subject and cell. Either aggregate the data manually, '
+                       'or pass the `aggregate_func` parameter.')
+                raise ValueError(msg)
+
         self._check_data_balanced()
+
+    def _aggregate(self):
+        self.data = (self.data
+                     .groupby([self.subject] + self.within,
+                              as_index=False)[self.depvar]
+                     .agg(self.aggregate_func))
 
     def _check_data_balanced(self):
         """raise if data is not balanced
