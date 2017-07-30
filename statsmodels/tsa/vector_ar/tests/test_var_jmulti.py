@@ -18,7 +18,7 @@ data = {}
 results_ref = {}
 results_sm = {}
 
-debug_mode = True
+debug_mode = False
 dont_test_se_t_p = False
 deterministic_terms_list = ["nc", "c", "ct"]
 seasonal_list = [0, 4]
