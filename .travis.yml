@@ -13,7 +13,6 @@ env:
     - COVERAGE=false
     - USEMPL=true
     - MATPLOTLIB=
-    - NOSE=false
     - DOCBUILD=false
 
 matrix:
@@ -56,11 +55,6 @@ matrix:
     - SCIPY=0.17
     - PANDAS=0.18
     - MATPLOTLIB=1.5
-    - NOSE=true
-  - python: 2.7
-    env:
-    - PYTHON=3.6
-    - NOSE=true
   - python: 2.7
     env:
     - PYTHON=3.6
@@ -98,10 +92,10 @@ before_install:
   - PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}=${CYTHON}"; fi
   - if [ ${USEMPL} = true ]; then PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi; fi
   - if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --cov-config=.travis_coveragerc --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
-  - echo conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} nose pyyaml
-  - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} nose pyyaml
+  - echo conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml
+  - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml
   - source activate statsmodels-test
-  - pip install pytest pytest-xdist
+  - pip install 'pytest<4' pytest-xdist nose
   - if [ ${COVERAGE} = true ]; then pip install codecov coverage coveralls pytest-cov; fi
   - if [ ${DOCBUILD} = true ]; then bash tools/ci_docbuild_install.sh; fi;
   - export SRCDIR=$PWD
@@ -119,14 +113,8 @@ script:
   # docbuild and exit, if required
   - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; bash ${SRCDIR}/tools/ci_docbuild.sh; exit 0; fi;
   # Run tests
-  - |
-    if [ ${NOSE} = true ]
-      then echo nosetests statsmodels
-      nosetests statsmodels
-    else
-      echo pytest -n 2 ${COVERAGE_OPTS} statsmodels --skip-examples
-      pytest -n 2 ${COVERAGE_OPTS} statsmodels --skip-examples
-    fi
+  - echo pytest -n 2 ${COVERAGE_OPTS} statsmodels --skip-examples
+  - pytest -n 2 ${COVERAGE_OPTS} statsmodels --skip-examples
 
 after_success:
   - if [ ${COVERAGE} = true ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi

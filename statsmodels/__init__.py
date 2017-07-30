@@ -44,8 +44,7 @@ class PytestTester(object):
             extra_args = ['--tb=short','--disable-pytest-warnings'] if extra_args is None else extra_args
             cmd = [self.package_path] + extra_args
             print('Running pytest ' + ' '.join(cmd))
-            errno = pytest.main(cmd)
-            sys.exit(errno)
+            pytest.main(cmd)
         except ImportError:
             raise ImportError('pytest>=3 required to run the test')
 
