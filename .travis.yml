@@ -75,6 +75,9 @@ before_install:
   - ./miniconda.sh -b
   - export PATH=/home/travis/miniconda/bin:$PATH
   - export PATH=/home/travis/miniconda2/bin:$PATH
+  - export MKL_NUM_THREADS=1
+  - export NUMEXPR_NUM_THREADS=1
+  - export OMP_NUM_THREADS=1
   - conda config --set always_yes yes
   - conda update --quiet conda
   # Fix for headless TravisCI
@@ -113,8 +116,9 @@ script:
   # docbuild and exit, if required
   - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; bash ${SRCDIR}/tools/ci_docbuild.sh; exit 0; fi;
   # Run tests
-  - echo pytest -n 2 ${COVERAGE_OPTS} statsmodels --skip-examples
-  - pytest -n 2 ${COVERAGE_OPTS} statsmodels --skip-examples
+  # Remove xdist (-n 2) until warning reporting is working
+  - echo pytest ${COVERAGE_OPTS} statsmodels --skip-examples
+  - pytest ${COVERAGE_OPTS} statsmodels --skip-examples
 
 after_success:
   - if [ ${COVERAGE} = true ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi
