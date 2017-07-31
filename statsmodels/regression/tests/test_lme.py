@@ -1,23 +1,28 @@
 from statsmodels.compat.testing import skipif
 
+import csv
+import itertools
+import os
 import warnings
+
+import nose
 import numpy as np
-import pandas as pd
-from statsmodels.regression.mixed_linear_model import MixedLM, MixedLMParams
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
-                           assert_)
+                           assert_, dec)
+import pandas as pd
+import pytest
+import scipy
+
+from statsmodels.regression.mixed_linear_model import MixedLM, MixedLMParams
 from . import lme_r_results
 from statsmodels.base import _penalties as penalties
-from numpy.testing import dec
 import statsmodels.tools.numdiff as nd
-import os
-import csv
-import scipy
 
 # TODO: add tests with unequal group sizes
 
 v = scipy.__version__.split(".")[1]
 old_scipy = int(v) < 16
+
 
 class R_Results(object):
     """
@@ -36,7 +41,6 @@ class R_Results(object):
     """
 
     def __init__(self, meth, irfs, ds_ix):
-
         bname = "_%s_%s_%d" % (meth, irfs, ds_ix)
 
         self.coef = getattr(lme_r_results, "coef" + bname)
@@ -86,7 +90,6 @@ def loglike_function(model, profile_fe, has_fe):
 
 
 class TestMixedLM(object):
-
     # Test analytic scores and Hessian using numeric differentiation
     @dec.slow
     def test_compare_numdiff(self):
@@ -306,12 +309,12 @@ class TestMixedLM(object):
 
         # Compare to R
         assert_allclose(result1.fe_params, [
-                        0.16527, 0.99911, 0.96217], rtol=1e-4)
+            0.16527, 0.99911, 0.96217], rtol=1e-4)
         assert_allclose(result1.cov_re, [
-                        [1.244,  0.146], [0.146, 1.371]], rtol=1e-3)
+            [1.244, 0.146], [0.146, 1.371]], rtol=1e-3)
         assert_allclose(result1.vcomp, [4.024, 3.997], rtol=1e-3)
         assert_allclose(result1.bse.iloc[0:3], [
-                        0.12610, 0.03938, 0.03848], rtol=1e-3)
+            0.12610, 0.03938, 0.03848], rtol=1e-3)
 
     @skipif(old_scipy, 'SciPy too old')
     def test_vcomp_3(self):
@@ -391,7 +394,7 @@ class TestMixedLM(object):
         assert_equal(result.bic, np.nan)
 
         resid = np.r_[0.17133538, -0.02866462, -
-                      1.08662875, 1.11337125, -0.12093607]
+        1.08662875, 1.11337125, -0.12093607]
         assert_allclose(result.resid[0:5], resid, rtol=1e-3)
 
         fit = np.r_[62.62866, 62.62866, 61.18663, 61.18663, 62.82094]
@@ -529,9 +532,9 @@ class TestMixedLM(object):
         exog = np.random.normal(size=(400, 5))
         groups = np.kron(np.arange(100), np.ones(4))
         expected_endog = exog[:, 0] - exog[:, 2]
-        endog = expected_endog +\
-            np.kron(np.random.normal(size=100), np.ones(4)) +\
-            np.random.normal(size=400)
+        endog = expected_endog + \
+                np.kron(np.random.normal(size=100), np.ones(4)) + \
+                np.random.normal(size=400)
 
         # L1 regularization
         md = MixedLM(endog, exog, groups)
@@ -560,75 +563,85 @@ class TestMixedLM(object):
         mdf5 = md.fit_regularized(method=pen, alpha=1.)
         mdf5.summary()
 
-    def do1(self, reml, irf, ds_ix):
 
-        # No need to check independent random effects when there is
-        # only one of them.
-        if irf and ds_ix < 6:
-            return
+def do1(reml, irf, ds_ix):
+    # No need to check independent random effects when there is
+    # only one of them.
+    if irf and ds_ix < 6:
+        return
 
-        irfs = "irf" if irf else "drf"
-        meth = "reml" if reml else "ml"
+    irfs = "irf" if irf else "drf"
+    meth = "reml" if reml else "ml"
 
-        rslt = R_Results(meth, irfs, ds_ix)
+    rslt = R_Results(meth, irfs, ds_ix)
 
-        # Fit the model
-        md = MixedLM(rslt.endog, rslt.exog_fe, rslt.groups,
-                     rslt.exog_re)
-        if not irf:  # Free random effects covariance
-            if np.any(np.diag(rslt.cov_re_r) < 1e-5):
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    mdf = md.fit(gtol=1e-7, reml=reml)
-            else:
+    # Fit the model
+    md = MixedLM(rslt.endog, rslt.exog_fe, rslt.groups,
+                 rslt.exog_re)
+    if not irf:  # Free random effects covariance
+        if np.any(np.diag(rslt.cov_re_r) < 1e-5):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
                 mdf = md.fit(gtol=1e-7, reml=reml)
-        else:  # Independent random effects
-            k_fe = rslt.exog_fe.shape[1]
-            k_re = rslt.exog_re.shape[1]
-            free = MixedLMParams(k_fe, k_re, 0)
-            free.fe_params = np.ones(k_fe)
-            free.cov_re = np.eye(k_re)
-            free.vcomp = np.array([])
-            if np.any(np.diag(rslt.cov_re_r) < 1e-5):
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    mdf = md.fit(reml=reml, gtol=1e-7, free=free)
-            else:
+        else:
+            mdf = md.fit(gtol=1e-7, reml=reml)
+    else:  # Independent random effects
+        k_fe = rslt.exog_fe.shape[1]
+        k_re = rslt.exog_re.shape[1]
+        free = MixedLMParams(k_fe, k_re, 0)
+        free.fe_params = np.ones(k_fe)
+        free.cov_re = np.eye(k_re)
+        free.vcomp = np.array([])
+        if np.any(np.diag(rslt.cov_re_r) < 1e-5):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
                 mdf = md.fit(reml=reml, gtol=1e-7, free=free)
+        else:
+            mdf = md.fit(reml=reml, gtol=1e-7, free=free)
 
-        assert_almost_equal(mdf.fe_params, rslt.coef, decimal=4)
-        assert_almost_equal(mdf.cov_re, rslt.cov_re_r, decimal=4)
-        assert_almost_equal(mdf.scale, rslt.scale_r, decimal=4)
+    assert_almost_equal(mdf.fe_params, rslt.coef, decimal=4)
+    assert_almost_equal(mdf.cov_re, rslt.cov_re_r, decimal=4)
+    assert_almost_equal(mdf.scale, rslt.scale_r, decimal=4)
 
-        k_fe = md.k_fe
-        assert_almost_equal(rslt.vcov_r, mdf.cov_params()[0:k_fe, 0:k_fe],
+    k_fe = md.k_fe
+    assert_almost_equal(rslt.vcov_r, mdf.cov_params()[0:k_fe, 0:k_fe],
+                        decimal=3)
+
+    assert_almost_equal(mdf.llf, rslt.loglike[0], decimal=2)
+
+    # Not supported in R except for independent random effects
+    if not irf:
+        assert_almost_equal(mdf.random_effects[0], rslt.ranef_postmean,
+                            decimal=3)
+        assert_almost_equal(mdf.random_effects_cov[0],
+                            rslt.ranef_condvar,
                             decimal=3)
 
-        assert_almost_equal(mdf.llf, rslt.loglike[0], decimal=2)
+        # Run all the tests against R
 
-        # Not supported in R except for independent random effects
-        if not irf:
-            assert_almost_equal(mdf.random_effects[0], rslt.ranef_postmean,
-                                decimal=3)
-            assert_almost_equal(mdf.random_effects_cov[0],
-                                rslt.ranef_condvar,
-                                decimal=3)
 
-    # Run all the tests against R
-    def test_r(self):
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+rdir = os.path.join(cur_dir, 'results')
+fnames = os.listdir(rdir)
+fnames = [x for x in fnames if x.startswith("lme")
+          and x.endswith(".csv")]
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, 'results')
-        fnames = os.listdir(rdir)
-        fnames = [x for x in fnames if x.startswith("lme")
-                  and x.endswith(".csv")]
 
-        for fname in fnames:
-            for reml in False, True:
-                for irf in False, True:
-                    ds_ix = int(fname[3:5])
+@nose.tools.nottest
+@pytest.mark.parametrize('fname,reml,irf',
+                         itertools.product(fnames, [False, True], [False, True]))
+def test_r(fname, reml, irf):
+    ds_ix = int(fname[3:5])
+    do1(reml, irf, ds_ix)
 
-                    yield self.do1, reml, irf, ds_ix
+
+# TODO: Remove after nose is permanently dropped
+def test_r_all():
+    for fname in fnames:
+        for reml in [False, True]:
+            for irf in [False, True]:
+                ds_ix = int(fname[3:5])
+                do1(reml, irf, ds_ix)
 
 
 def test_mixed_lm_wrapper():
@@ -684,8 +697,8 @@ def test_mixed_lm_wrapper():
     bse_re = result.bse_re
     assert_(bse_re.index.tolist() == re_names_full)
 
-def test_random_effects():
 
+def test_random_effects():
     np.random.seed(23429)
 
     # Default model (random effects only)
@@ -693,9 +706,9 @@ def test_random_effects():
     gsize = 10
     rsd = 2
     gsd = 3
-    mn = gsd*np.random.normal(size=ngrp)
+    mn = gsd * np.random.normal(size=ngrp)
     gmn = np.kron(mn, np.ones(gsize))
-    y = gmn + rsd*np.random.normal(size=ngrp*gsize)
+    y = gmn + rsd * np.random.normal(size=ngrp * gsize)
     gr = np.kron(np.arange(ngrp), np.ones(gsize))
     x = np.ones(ngrp * gsize)
     model = MixedLM(y, x, groups=gr)
@@ -716,7 +729,7 @@ def test_random_effects():
     assert_(len(re[0]) == 1)
 
     # Random intercept and slope
-    xr = np.random.normal(size=(ngrp*gsize, 2))
+    xr = np.random.normal(size=(ngrp * gsize, 2))
     xr[:, 0] = 1
     qp = np.linspace(-1, 1, gsize)
     xr[:, 1] = np.kron(np.ones(ngrp), qp)
@@ -730,7 +743,6 @@ def test_random_effects():
 
 
 def test_handle_missing():
-
     np.random.seed(23423)
     df = np.random.normal(size=(100, 6))
     df = pd.DataFrame(df)
@@ -787,4 +799,5 @@ def test_handle_missing():
 
 if __name__ == "__main__":
     import pytest
+
     pytest.main([__file__, '-vvs', '-x', '--pdb'])

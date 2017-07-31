@@ -1,9 +1,13 @@
+import itertools
 import os
+
+import nose
 import numpy as np
 from statsmodels.duration.hazard_regression import PHReg
 from numpy.testing import (assert_allclose,
                            assert_equal, assert_)
 import pandas as pd
+import pytest
 
 # TODO: Include some corner cases: data sets with empty strata, strata
 #      with no events, entry times after censoring times, etc.
@@ -27,6 +31,7 @@ survival_r_results module.
 # Arguments passed to the PHReg fit method.
 args = {"method": "bfgs", "disp": 0}
 
+
 def get_results(n, p, ext, ties):
     if ext is None:
         coef_name = "coef_%d_%d_%s" % (n, p, ties)
@@ -44,26 +49,27 @@ def get_results(n, p, ext, ties):
     hazard = getattr(survival_r_results, hazard_name)
     return coef, se, time, hazard
 
-class TestPHReg(object):
 
+class TestPHReg(object):
     # Load a data file from the results directory
-    def load_file(self, fname):
+    @staticmethod
+    def load_file(fname):
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         data = np.genfromtxt(os.path.join(cur_dir, 'results', fname),
                              delimiter=" ")
-        time = data[:,0]
-        status = data[:,1]
-        entry = data[:,2]
-        exog = data[:,3:]
+        time = data[:, 0]
+        status = data[:, 1]
+        entry = data[:, 2]
+        exog = data[:, 3:]
 
         return time, status, entry, exog
 
-
     # Run a single test against R output
-    def do1(self, fname, ties, entry_f, strata_f):
+    @staticmethod
+    def do1(fname, ties, entry_f, strata_f):
 
         # Read the test data.
-        time, status, entry, exog = self.load_file(fname)
+        time, status, entry, exog = TestPHReg.load_file(fname)
         n = len(time)
 
         vs = fname.split("_")
@@ -91,7 +97,7 @@ class TestPHReg(object):
 
         # Stratification but no entry times
         phrb = PHReg(time, exog, status, strata=strata,
-                      ties=ties).fit(**args)
+                     ties=ties).fit(**args)
         coef, se, time_r, hazard_r = get_results(n, p, "st", ties1)
         assert_allclose(phrb.params, coef, rtol=1e-4)
         assert_allclose(phrb.bse, se, rtol=1e-4)
@@ -103,11 +109,12 @@ class TestPHReg(object):
         assert_allclose(phrb.params, coef, rtol=1e-3)
         assert_allclose(phrb.bse, se, rtol=1e-4)
 
-        #smoke test
+        # smoke test
         time_h, cumhaz, surv = phrb.baseline_cumulative_hazard[0]
 
-
     # Run all the tests
+    # TODO: Remove after nose is fully dropped in favor of version below
+    # TODO: Restructure file to remove class
     def test_r(self):
 
         cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -117,34 +124,33 @@ class TestPHReg(object):
                   and x.endswith(".csv")]
 
         for fname in fnames:
-            for ties in "breslow","efron":
-                for entry_f in False,True:
-                    for strata_f in False,True:
-                        yield (self.do1, fname, ties, entry_f,
-                               strata_f)
+            for ties in "breslow", "efron":
+                for entry_f in False, True:
+                    for strata_f in False, True:
+                        self.do1(fname, ties, entry_f, strata_f)
 
     def test_missing(self):
 
         np.random.seed(34234)
         time = 50 * np.random.uniform(size=200)
         status = np.random.randint(0, 2, 200).astype(np.float64)
-        exog = np.random.normal(size=(200,4))
+        exog = np.random.normal(size=(200, 4))
 
         time[0:5] = np.nan
         status[5:10] = np.nan
-        exog[10:15,:] = np.nan
+        exog[10:15, :] = np.nan
 
         md = PHReg(time, exog, status, missing='drop')
         assert_allclose(len(md.endog), 185)
         assert_allclose(len(md.status), 185)
-        assert_allclose(md.exog.shape, np.r_[185,4])
+        assert_allclose(md.exog.shape, np.r_[185, 4])
 
     def test_formula(self):
 
         np.random.seed(34234)
         time = 50 * np.random.uniform(size=200)
         status = np.random.randint(0, 2, 200).astype(np.float64)
-        exog = np.random.normal(size=(200,4))
+        exog = np.random.normal(size=(200, 4))
         entry = np.zeros_like(time)
         entry[0:10] = time[0:10] / 2
 
@@ -205,7 +211,7 @@ class TestPHReg(object):
 
         pr1 = result1.predict()
         pr2 = result1.predict(exog=df)
-        pr3 = model1.predict(result1.params, exog=dfp) # No standard errors
+        pr3 = model1.predict(result1.params, exog=dfp)  # No standard errors
         pr4 = model1.predict(result1.params, cov_params=result1.cov_params(), exog=dfp)
 
         prl = (pr1, pr2, pr3, pr4)
@@ -244,12 +250,12 @@ class TestPHReg(object):
         np.random.seed(34234)
         time = 50 * np.random.uniform(size=200)
         status = np.random.randint(0, 2, 200).astype(np.float64)
-        exog = np.random.normal(size=(200,4))
+        exog = np.random.normal(size=(200, 4))
 
         for ties in "breslow", "efron":
             mod1 = PHReg(time, exog, status)
             rslt1 = mod1.fit()
-            offset = exog[:,0] * rslt1.params[0]
+            offset = exog[:, 0] * rslt1.params[0]
             exog = exog[:, 1:]
 
             mod2 = PHReg(time, exog, status, offset=offset, ties=ties)
@@ -262,7 +268,7 @@ class TestPHReg(object):
         np.random.seed(34234)
         time = 50 * np.random.uniform(size=200)
         status = np.random.randint(0, 2, 200).astype(np.float64)
-        exog = np.random.normal(size=(200,4))
+        exog = np.random.normal(size=(200, 4))
 
         mod = PHReg(time, exog, status)
         rslt = mod.fit()
@@ -271,7 +277,7 @@ class TestPHReg(object):
 
         w_avg = rslt.weighted_covariate_averages
         assert_allclose(np.abs(w_avg[0]).sum(0),
-               np.r_[7.31008415, 9.77608674,10.89515885, 13.1106801])
+                        np.r_[7.31008415, 9.77608674, 10.89515885, 13.1106801])
 
         bc_haz = rslt.baseline_cumulative_hazard
         v = [np.mean(np.abs(x)) for x in bc_haz[0]]
@@ -280,7 +286,7 @@ class TestPHReg(object):
         assert_allclose(v, w)
 
         score_resid = rslt.score_residuals
-        v = np.r_[ 0.50924792, 0.4533952, 0.4876718, 0.5441128]
+        v = np.r_[0.50924792, 0.4533952, 0.4876718, 0.5441128]
         w = np.abs(score_resid).mean(0)
         assert_allclose(v, w)
 
@@ -303,7 +309,7 @@ class TestPHReg(object):
         np.random.seed(34234)
         time = 50 * np.random.uniform(size=200)
         status = np.random.randint(0, 2, 200).astype(np.float64)
-        exog = np.random.normal(size=(200,4))
+        exog = np.random.normal(size=(200, 4))
 
         mod = PHReg(time, exog, status)
         rslt = mod.fit()
@@ -336,7 +342,7 @@ class TestPHReg(object):
         np.random.seed(34234)
         endog = 50 * np.random.uniform(size=200)
         status = np.random.randint(0, 2, 200).astype(np.float64)
-        exog = np.random.normal(size=(200,4))
+        exog = np.random.normal(size=(200, 4))
 
         mod = PHReg(endog, exog, status)
         rslt = mod.fit()
@@ -344,7 +350,7 @@ class TestPHReg(object):
         for pred_type in 'lhr', 'hr', 'cumhaz', 'surv':
             rslt.predict(pred_type=pred_type)
             rslt.predict(endog=endog[0:10], pred_type=pred_type)
-            rslt.predict(endog=endog[0:10], exog=exog[0:10,:],
+            rslt.predict(endog=endog[0:10], exog=exog[0:10, :],
                          pred_type=pred_type)
 
     def test_get_distribution(self):
@@ -370,15 +376,13 @@ class TestPHReg(object):
         fitted_sd = dist.std()
         sample = dist.rvs()
 
-
     def test_fit_regularized(self):
 
         # Data set sizes
-        for n,p in (50,2),(100,5):
+        for n, p in (50, 2), (100, 5):
 
             # Penalty weights
-            for js,s in enumerate([0,0.1]):
-
+            for js, s in enumerate([0, 0.1]):
                 coef_name = "coef_%d_%d_%d" % (n, p, js)
                 params = getattr(survival_enet_r_results, coef_name)
 
@@ -402,7 +406,7 @@ class TestPHReg(object):
                 def plf(params):
                     llf = model.loglike(params) / len(time)
                     L1_wt = 1
-                    llf = llf - s * ((1 - L1_wt)*np.sum(params**2) / 2 + L1_wt*np.sum(np.abs(params)))
+                    llf = llf - s * ((1 - L1_wt) * np.sum(params ** 2) / 2 + L1_wt * np.sum(np.abs(params)))
                     return llf
 
                 # Confirm that we are doing better than glmnet.
@@ -412,6 +416,26 @@ class TestPHReg(object):
                 assert_equal(np.sign(llf_sm - llf_r), 1)
 
 
-if  __name__=="__main__":
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+rdir = os.path.join(cur_dir, 'results')
+fnames = os.listdir(rdir)
+fnames = [x for x in fnames if x.startswith("survival")
+          and x.endswith(".csv")]
+
+ties = ("breslow", "efron")
+entry_f = (False, True)
+strata_f = (False, True)
+
+
+# TODO: Re-enable after nose is fully dropped
+@nose.tools.nottest
+@pytest.mark.parametrize('fname,ties,entry_f,strata_f',
+                         list(itertools.product(fnames, ties, entry_f, strata_f)))
+def test_r(fname, ties, entry_f, strata_f):
+    TestPHReg.do1(fname, ties, entry_f, strata_f)
+
+
+if __name__ == "__main__":
     import pytest
+
     pytest.main([__file__, '-vvs', '-x', '--pdb'])

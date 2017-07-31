@@ -13,7 +13,7 @@ import os
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_raises,
                            assert_equal)
-#import statsmodels.api as sm
+# import statsmodels.api as sm
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
 # Number of decimals to test equality with.
@@ -23,10 +23,9 @@ rpath = os.path.join(curdir, 'results')
 
 
 class TestLowess(object):
-
     def test_import(self):
-        #this doesn't work
-        #from statsmodels.api.nonparametric import lowess as lowess1
+        # this doesn't work
+        # from statsmodels.api.nonparametric import lowess as lowess1
         import statsmodels.api as sm
         lowess1 = sm.nonparametric.lowess
         assert_(lowess is lowess1)
@@ -45,39 +44,48 @@ class TestLowess(object):
         actual_lowess = lowess(test_data['y'], test_data['x'])
         assert_almost_equal(expected_lowess, actual_lowess, 7)
 
-    def test_all(self):
-        def generate(name, fname,
-                     x='x', y='y', out='out', kwargs={}, decimal=7):
-            data = np.genfromtxt(
-                os.path.join(rpath, fname), delimiter=',', names=True)
-            assert_almost_equal.description = name
-            if callable(kwargs):
-                kwargs = kwargs(data)
-            result = lowess(data[y], data[x], **kwargs)
-            expect = np.array([data[x], data[out]]).T
-            return assert_almost_equal, result, expect, decimal
+    @staticmethod
+    def generate(name, fname, x='x', y='y', out='out', kwargs={}, decimal=7):
+        data = np.genfromtxt(os.path.join(rpath, fname), delimiter=',', names=True)
+        assert_almost_equal.description = name
+        if callable(kwargs):
+            kwargs = kwargs(data)
+        result = lowess(data[y], data[x], **kwargs)
+        expect = np.array([data[x], data[out]]).T
+        assert_almost_equal(result, expect, decimal)
 
-        yield generate('test_simple', 'test_lowess_simple.csv')
-        yield generate('test_iter_0', 'test_lowess_iter.csv', out='out_0',
-                       kwargs={'it': 0})
-        yield generate('test_iter_0', 'test_lowess_iter.csv', out='out_3',
-                       kwargs={'it': 3})
-        yield generate('test_frac_2_3', 'test_lowess_frac.csv', out='out_2_3',
-                       kwargs={'frac': 2. / 3})
-        yield generate('test_frac_1_5', 'test_lowess_frac.csv', out='out_1_5',
-                       kwargs={'frac': 1. / 5})
-        yield generate('test_delta_0', 'test_lowess_delta.csv', out='out_0',
-                       kwargs={'frac': 0.1})
-        yield generate('test_delta_Rdef', 'test_lowess_delta.csv', out='out_Rdef',
-                       kwargs=lambda data: {'frac': .1,
-                                            'delta': .01 * data['x'].ptp()})
-        yield generate('test_delta_1', 'test_lowess_delta.csv', out='out_1',
-                       kwargs={'frac': 0.1, 'delta': 1 + 1e-10}, decimal=10)
+    # TODO: Refactor as parameterized test once nose is permanently dropped
+    def test_simple(self):
+        self.generate('test_simple', 'test_lowess_simple.csv')
+
+    def test_iter_0(self):
+        self.generate('test_iter_0', 'test_lowess_iter.csv', out='out_0', kwargs={'it': 0})
+
+    def test_iter_0_3(self):
+        self.generate('test_iter_0', 'test_lowess_iter.csv', out='out_3', kwargs={'it': 3})
+
+    def test_frac_2_3(self):
+        self.generate('test_frac_2_3', 'test_lowess_frac.csv', out='out_2_3', kwargs={'frac': 2. / 3})
+
+    def test_frac_1_5(self):
+        self.generate('test_frac_1_5', 'test_lowess_frac.csv', out='out_1_5', kwargs={'frac': 1. / 5})
+
+    def test_delta_0(self):
+        self.generate('test_delta_0', 'test_lowess_delta.csv', out='out_0', kwargs={'frac': 0.1})
+
+    def test_delta_rdef(self):
+        self.generate('test_delta_Rdef', 'test_lowess_delta.csv', out='out_Rdef',
+                      kwargs=lambda data: {'frac': .1, 'delta': .01 * data['x'].ptp()})
+
+    def test_delta_1(self):
+        self.generate('test_delta_1', 'test_lowess_delta.csv', out='out_1',
+                      kwargs={'frac': 0.1, 'delta': 1 + 1e-10},
+                      decimal=10)
 
     def test_options(self):
         rfile = os.path.join(rpath, 'test_lowess_simple.csv')
         test_data = np.genfromtxt(open(rfile, 'rb'),
-                                  delimiter = ',', names = True)
+                                  delimiter=',', names=True)
         y, x = test_data['y'], test_data['x']
         res1_fitted = test_data['out']
         expected_lowess = np.array([test_data['x'], test_data['out']]).T
@@ -114,7 +122,7 @@ class TestLowess(object):
         y[[5, 6]] = np.nan
         x[3] = np.nan
         mask_valid = np.isfinite(x) & np.isfinite(y)
-        #actual_lowess1[[3, 5, 6], 1] = np.nan
+        # actual_lowess1[[3, 5, 6], 1] = np.nan
         actual_lowess = lowess(y, x, is_sorted=True)
         actual_lowess1 = lowess(y[mask_valid], x[mask_valid], is_sorted=True)
         assert_almost_equal(actual_lowess, actual_lowess1, decimal=13)
@@ -135,7 +143,7 @@ class TestLowess(object):
         sort_idx = np.argsort(xperm)
         yhat = actual_lowess3[sort_idx]
         yhat = yhat[np.isfinite(yhat)]
-        assert_almost_equal(yhat, actual_lowess2[:,1], decimal=13)
+        assert_almost_equal(yhat, actual_lowess2[:, 1], decimal=13)
 
 
 def test_returns_inputs():
@@ -145,6 +153,8 @@ def test_returns_inputs():
     result = lowess(y, x, frac=.4)
     assert_almost_equal(result, np.column_stack((x, y)))
 
+
 if __name__ == '__main__':
     import pytest
+
     pytest.main([__file__, '-vvs', '-x', '--pdb'])
