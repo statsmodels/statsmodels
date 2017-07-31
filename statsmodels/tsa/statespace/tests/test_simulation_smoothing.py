@@ -5,6 +5,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat.testing import SkipTest
 
 import numpy as np
 import pandas as pd
@@ -21,12 +22,14 @@ from statsmodels.tsa.statespace.kalman_smoother import (
 from statsmodels.tsa.statespace.simulation_smoother import (
     SIMULATION_STATE, SIMULATION_DISTURBANCE, SIMULATION_ALL)
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal, assert_raises
-from nose.exc import SkipTest
+import pytest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 if compatibility_mode:
-    raise SkipTest
+    raise SkipTest('Not testable in compatibility mode')
+    pytestmark = pytest.mark.skipif(compatibility_mode,
+                                    reason='Not testable in compatibility mode')
 
 
 class MultivariateVARKnown(object):
@@ -434,9 +437,6 @@ class TestDFM(TestMultivariateVARKnown):
 
     @classmethod
     def setup_class(cls, which='none', *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
-
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')

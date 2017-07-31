@@ -1,8 +1,8 @@
-from statsmodels.compat.python import PY3
+from statsmodels.compat.testing import SkipTest
+
 import os
 
-from nose import SkipTest
-from numpy.testing import assert_, assert_array_equal, dec
+from numpy.testing import assert_, assert_array_equal
 
 from statsmodels.datasets import get_rdataset, webuse, check_internet, utils
 
@@ -16,12 +16,7 @@ def test_get_rdataset():
         raise SkipTest('Unable to retrieve file - skipping test')
     duncan = get_rdataset("Duncan", "car", cache=cur_dir)
     assert_(isinstance(duncan, utils.Dataset))
-    if not PY3:
-        #NOTE: there's no way to test both since the cached files were
-        #created with Python 2.x, they're strings, but Python 3 expects
-        #bytes and the index file path is hard-coded so both can't live
-        #side by side
-        assert_(duncan.from_cache)
+    assert_(duncan.from_cache)
 
 def test_webuse():
     # test copied and adjusted from iolib/tests/test_foreign

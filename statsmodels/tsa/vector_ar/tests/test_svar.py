@@ -15,7 +15,7 @@ DECIMAL_4 = 4
 
 class TestSVAR(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         mdata = sm.datasets.macrodata.load_pandas().data
         mdata = mdata[['realgdp','realcons','realinv']]
         data = mdata.values

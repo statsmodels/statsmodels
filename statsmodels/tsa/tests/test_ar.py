@@ -46,7 +46,7 @@ class TestAROLSConstant(CheckARMixin):
     Test AR fit by OLS with a constant.
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.sunspots.load()
         cls.res1 = AR(data.endog).fit(maxlag=9, method='cmle')
         cls.res2 = results_ar.ARResultsOLS(constant=True)
@@ -83,7 +83,7 @@ class TestAROLSNoConstant(CheckARMixin):
     Test AR fit by OLS without a constant.
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.sunspots.load()
         cls.res1 = AR(data.endog).fit(maxlag=9,method='cmle',trend='nc')
         cls.res2 = results_ar.ARResultsOLS(constant=False)
@@ -119,7 +119,7 @@ class TestAROLSNoConstant(CheckARMixin):
 
 class TestARMLEConstant(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.sunspots.load()
         cls.res1 = AR(data.endog).fit(maxlag=9,method="mle", disp=-1)
         cls.res2 = results_ar.ARResultsMLE(constant=True)
@@ -222,7 +222,7 @@ class TestARMLEConstant(object):
 
 class TestAutolagAR(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.sunspots.load()
         endog = data.endog
         results = []

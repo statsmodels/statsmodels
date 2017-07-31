@@ -1,5 +1,5 @@
+from statsmodels.compat.testing import skipif
 import numpy as np
-from numpy.testing import dec
 
 from statsmodels.graphics.correlation import plot_corr, plot_corr_grid
 from statsmodels.datasets import randhie
@@ -12,7 +12,7 @@ except:
     have_matplotlib = False
 
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plot_corr():
     hie_data = randhie.load_pandas()
     corr_matrix = np.corrcoef(hie_data.data.values.T)
@@ -27,7 +27,7 @@ def test_plot_corr():
     plt.close(fig)
 
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plot_corr_grid():
     hie_data = randhie.load_pandas()
     corr_matrix = np.corrcoef(hie_data.data.values.T)

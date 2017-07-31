@@ -13,11 +13,12 @@ class GenRes(object):
     Loads data and creates class instance ot be tested
 
     """
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         data = stackloss.load()
         data.exog = add_constant(data.exog)
-        self.res1 = OLS(data.endog, data.exog).fit()
-        self.res2 = RegressionResults()
+        cls.res1 = OLS(data.endog, data.exog).fit()
+        cls.res2 = RegressionResults()
 
 
 class TestRegressionPowell(GenRes):
@@ -31,8 +32,6 @@ class TestRegressionPowell(GenRes):
     test_descriptive.py, test_ci_skew
 
     """
-    def __init__(self):
-        super(TestRegressionPowell, self).__init__()
 
     @slow
     def test_hypothesis_beta0(self):
@@ -94,8 +93,6 @@ class TestRegressionNM(GenRes):
     test_descriptive.py, test_ci_skew
 
     """
-    def __init__(self):
-        super(TestRegressionNM, self).__init__()
 
     def test_hypothesis_beta0(self):
         beta0res = self.res1.el_test([-30], [0], return_weights=1,
@@ -127,17 +124,15 @@ class TestRegressionNM(GenRes):
 
     @slow
     def test_ci_beta0(self):
-        """
-        All confidence intervals are tested by conducting a hypothesis
-        tests at the confidence interval values since el_test
-        is already tested against Matlab
+        # All confidence intervals are tested by conducting a hypothesis
+        # tests at the confidence interval values since el_test
+        # is already tested against Matlab
+        #
+        # See Also
+        # --------
+        #
+        # test_descriptive.py, test_ci_skew
 
-        See Also
-        --------
-
-        test_descriptive.py, test_ci_skew
-
-        """
         beta0ci = self.res1.conf_int_el(0, method='nm')
         assert_almost_equal(beta0ci, self.res2.test_ci_beta0, 6)
 
