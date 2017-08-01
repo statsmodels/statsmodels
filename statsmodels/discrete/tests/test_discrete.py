@@ -25,6 +25,7 @@ import statsmodels.formula.api as smf
 from nose import SkipTest
 from .results.results_discrete import Spector, DiscreteL1, RandHIE, Anes
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
+from scipy.stats import nbinom
 
 try:
     import cvxopt
@@ -1564,7 +1565,7 @@ class TestGeneralizedPoisson_p2(object):
     Test Generalized Poisson model
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = GeneralizedPoisson(data.endog, data.exog, p=2).fit(method='newton')
@@ -1614,7 +1615,7 @@ class TestGeneralizedPoisson_transparams(object):
     Test Generalized Poisson model
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = GeneralizedPoisson(data.endog, data.exog, p=2).fit(
@@ -1655,7 +1656,7 @@ class TestGeneralizedPoisson_p1(object):
     Test Generalized Poisson model
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.data = sm.datasets.randhie.load()
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
         cls.res1 = GeneralizedPoisson(
@@ -1715,7 +1716,7 @@ class TestGeneralizedPoisson_p1(object):
 
 class TestGeneralizedPoisson_underdispersion(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.expected_params = [1, -0.5, -0.05]
         np.random.seed(1234)
         nobs = 200
@@ -1774,7 +1775,7 @@ class TestGeneralizedPoisson_underdispersion(object):
 
 class TestNegativeBinomial_pNB2Newton(CheckModelResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial_p(data.endog, exog, p=2).fit(method='newton', disp=0)
@@ -1818,7 +1819,7 @@ class TestNegativeBinomial_pNB2Newton(CheckModelResults):
 
 class TestNegativeBinomial_pNB1Newton(CheckModelResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial_p(data.endog, exog, p=1).fit(method="newton",
@@ -1858,7 +1859,7 @@ class TestNegativeBinomial_pNB1Newton(CheckModelResults):
 
 class TestNegativeBinomial_pNB2BFGS(CheckModelResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial_p(data.endog, exog, p=2).fit(
@@ -1906,7 +1907,7 @@ class TestNegativeBinomial_pNB2BFGS(CheckModelResults):
 
 class TestNegativeBinomial_pNB1BFGS(CheckModelResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial_p(data.endog, exog, p=1).fit(method="bfgs",
@@ -1944,7 +1945,7 @@ class TestNegativeBinomial_pNB1BFGS(CheckModelResults):
 
 class TestNegativeBinomial_pL1Compatability(CheckL1Compatability):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.kvars = 10 # Number of variables
         cls.m = 7 # Number of unregularized parameters
         rand_data = sm.datasets.randhie.load()
@@ -1965,6 +1966,52 @@ class TestNegativeBinomial_pL1Compatability(CheckL1Compatability):
             method='l1', alpha=alpha, disp=False, acc=1e-10, maxiter=2000,
             trim_mode='auto')
         cls.k_extra = 1  # 1 extra parameter in nb2
+
+class  TestNegativeBinomial_pPredictProb(object):
+    def test_predict_prob_p1(self):
+        expected_params = [1, -0.5]
+        np.random.seed(1234)
+        nobs = 200
+        exog = np.ones((nobs, 2))
+        exog[:nobs//2, 1] = 2
+        mu_true = np.exp(exog.dot(expected_params))
+        alpha = 0.05
+        size = 1. / alpha * mu_true
+        prob = size / (size + mu_true)
+        endog = nbinom.rvs(size, prob, size=len(mu_true))
+
+        res = sm.NegativeBinomial_p(endog, exog).fit()
+
+        mu = res.predict()
+        size = 1. / alpha * mu
+        prob = size / (size + mu)
+
+        assert_allclose(res.predict(which='prob'),
+            nbinom.pmf(np.arange(8)[:,None], size, prob).T,
+            atol=1e-2, rtol=1e-2)
+
+    def test_predict_prob_p2(self):
+        expected_params = [1, -0.5]
+        np.random.seed(1234)
+        nobs = 200
+        exog = np.ones((nobs, 2))
+        exog[:nobs//2, 1] = 2
+        mu_true = np.exp(exog.dot(expected_params))
+        alpha = 0.05
+        size = 1. / alpha
+        prob = size / (size + mu_true)
+        endog = nbinom.rvs(size, prob, size=len(mu_true))
+
+        res = sm.NegativeBinomial_p(endog, exog, p=2).fit()
+
+        mu = res.predict()
+        size = 1. / alpha
+        prob = size / (size + mu)
+
+        assert_allclose(res.predict(which='prob'),
+            nbinom.pmf(np.arange(8)[:,None], size, prob).T,
+            atol=1e-2, rtol=1e-2)
+
 
 if __name__ == "__main__":
     import nose
