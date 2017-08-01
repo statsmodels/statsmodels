@@ -2727,6 +2727,7 @@ class NegativeBinomial_p(CountModel):
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
     """ + base._missing_param_doc}
+
     def __init__(self, endog, exog, p=1, offset=None,
                        exposure=None, missing='none', **kwargs):
         super(NegativeBinomial_p, self).__init__(endog, exog, offset=offset,
@@ -2986,11 +2987,21 @@ class NegativeBinomial_p(CountModel):
             return linpred
         elif which =='prob':
             counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-            mu = self.predict(params, exog=exog, exposure=exposure,
-                              offset=offset)[:,None]
-            return nbinom.pmf(counts, mu, params[-1], self.parametrization)
+            size, prob = self.convert_params(params)
+            return nbinom.pmf(counts, size[:,None], prob[:,None])
         else:
             raise TypeError('keyword \'which\' = %s not recognized' % which)
+
+    def convert_params(self, params):
+        alpha = params[-1]
+        params = params[:-1]
+        p = 2 - self.parametrization
+        mu = self.predict(params)
+
+        size = 1. / alpha * mu**p
+        prob = size / (size + mu)
+
+        return (size, prob)
 
 
 ### Results Class ###
