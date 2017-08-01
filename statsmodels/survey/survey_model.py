@@ -65,7 +65,26 @@ class SurveyModel(object):
         vcov = np.dot(np.linalg.inv(q_hat), np.dot(g_hat, np.linalg.inv(q_hat)))
         return vcov
 
-    def fit(self, y, X, cov_method='jack', center_by='est', replicates=None, technique=None):
+    def _get_jackknife_vcov(self, X, y):
+        replicate_params = []
+        for c in range(self.design.n_clust):
+            w = self.design.get_rep_weights(cov_method='jack', c=c)
+            self.init_args["weights"] = w
+            replicate_params.append(self._get_params(y, X))
+        replicate_params = np.asarray(replicate_params)
+        self.replicate_params = self._centering(replicate_params)
+        try:
+            nh = self.design.clust_per_strat[self.design.strat_for_clust].astype(np.float64)
+            mh = np.sqrt((nh - 1) / nh)
+            self.replicate_params = mh[:, None] * self.replicate_params
+        except AttributeError:
+            nh = self.design.rep_weights.shape[1]
+            mh = np.sqrt((nh - 1) / nh)
+            self.replicate_params *= mh
+        vcov = np.dot(self.replicate_params.T, self.replicate_params)
+        return vcov
+
+    def fit(self, y, X, cov_method='jack', center_by='est', technique=None):
         self.center_by = center_by
         self.init_args["weights"] = self.design.weights
         self.params = self._get_params(y, X)
@@ -73,30 +92,7 @@ class SurveyModel(object):
 
         # for now, just working with jackknife to see if it works
         if cov_method == 'jack':
-            if replicates is None:
-                k = self.design.n_clust
-            else:
-                k = replicates
-            replicate_params = []
-            for c in range(k):
-                w = self.design.get_rep_weights(cov_method=cov_method, c=c)
-                self.init_args["weights"] = w
-                print('weights', self.init_args['weights'])
-                replicate_params.append(self._get_params(y, X))
-
-            replicate_params = np.asarray(replicate_params)
-            print('new params', replicate_params)
-            self.replicate_params = self._centering(replicate_params)
-
-            try:
-                nh = self.design.clust_per_strat[self.design.strat_for_clust].astype(np.float64)
-                mh = np.sqrt((nh - 1) / nh)
-                self.replicate_params = mh[:, None] * self.replicate_params
-            except AttributeError:
-                nh = self.design.rep_weights.shape[1]
-                mh = np.sqrt((nh - 1) / nh)
-                self.replicate_params *= mh
-            self.vcov = np.dot(self.replicate_params.T, self.replicate_params)
+            self.vcov = self._get_jackknife_vcov(X, y)
         elif cov_method == 'linearized':
             self.vcov = self._get_linearization_vcov(X, y, technique)
 
@@ -109,22 +105,3 @@ class SurveyModel(object):
         model = self.model(y, X, **self.init_args)
         self.result = model.fit(**self.fit_args)
         return self.result.params
-
-
-
-# questions
-"""
-# use glm for prototyping
-weights is called freq_weights for now until later.
-
-1. It seems like 'weights' is not a uniform keyword for the models?
-Bc I dont see any mention of it anywhere except OLS and WLS
-
-2. The linearized variance is just (see STATA equation and confirm)
-But how do I extract those? I remember Josef mentioned "score factor/obs"
-but can't find out exactly where
-
-3. Who is your contact for the jackknife STATA stuff? I can't find out why
-my results are different
-pi_hij are just conditional means
-"""
