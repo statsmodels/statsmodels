@@ -741,3 +741,12 @@ class TestIV2SLSSt1(CheckIV2SLS):
                     else:
                         assert_allclose(res.params, res2.params)
 
+def test_noconstant():
+    exog = exog_st[:, :-1]  # with const removed at end
+
+    mod = gmm.IV2SLS(endog, exog, instrument)
+    res = mod.fit()
+
+    assert_equal(res.fvalue, np.nan)
+    # smoke test
+    res.summary()

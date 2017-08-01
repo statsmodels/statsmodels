@@ -213,17 +213,21 @@ class IVRegressionResults(RegressionResults):
 
     @cache_readonly
     def fvalue(self):
-        k_vars = len(self.params)
-        restriction = np.eye(k_vars)
-        idx_noconstant = lrange(k_vars)
-        del idx_noconstant[self.model.data.const_idx]
-        fval = self.f_test(restriction[idx_noconstant]).fvalue # without constant
-        return fval
+        const_idx = self.model.data.const_idx
+        # if constant is implicit or missing, return nan see #2444, #3544
+        if const_idx is None:
+            return np.nan
+        else:
+            k_vars = len(self.params)
+            restriction = np.eye(k_vars)
+            idx_noconstant = lrange(k_vars)
+            del idx_noconstant[const_idx]
+            fval = self.f_test(restriction[idx_noconstant]).fvalue # without constant
+            return fval
 
 
     def spec_hausman(self, dof=None):
         '''Hausman's specification test
-
 
         See Also
         --------
