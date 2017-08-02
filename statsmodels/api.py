@@ -29,6 +29,7 @@ from .emplike import api as emplike
 from .duration import api as duration
 from .multivariate.pca import PCA
 from .multivariate.manova import MANOVA
+from .survey import api as survey
 
 from .formula import api as formula
 
@@ -36,7 +37,6 @@ from .iolib.smpickle import load_pickle as load
 
 from .tools.print_version import show_versions
 from .tools.web import webdoc
-
 import os
 
 chmpath = os.path.join(os.path.dirname(__file__), 'statsmodelsdoc.chm')
