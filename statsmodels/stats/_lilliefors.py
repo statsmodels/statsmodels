@@ -325,7 +325,7 @@ def kstest_lilliefors(x, dist='norm', pvalmethod='approx'):
         lilliefors_table = lilliefors_table_expon
         pvalmethod = 'table'
     else:
-        print('test distribution must be norm or exp.')
+        raise ValueError("Invalid dist parameter. dist must be 'norm' or 'exp'")
         return
 
     d_ks = ksstat(z, test_d, alternative='two_sided')
@@ -342,12 +342,17 @@ def kstest_lilliefors(x, dist='norm', pvalmethod='approx'):
     return d_ks, pval
 
 
+
 lilliefors = kstest_lilliefors
 
 lillifors = np.deprecate(lilliefors, 'lillifors', 'lilliefors',
                                "Use lilliefors, lillifors will be "
                                "removed in 0.9 \n(Note: misspelling missing 'e')")
 
+# namespace aliases
+#from functools import partial
+#kstest_normal = kstest_lilliefors
+#kstest_exponential = partial(kstest_lilliefors, dist='exp')
 
 #old version:
 #------------
