@@ -1318,7 +1318,7 @@ class RegressionResults(base.LikelihoodModelResults):
     cov_type
         Parameter covariance estimator used for standard errors and t-stats
     df_model
-        Model degress of freedom. The number of regressors `p`. Does not
+        Model degrees of freedom. The number of regressors `p`. Does not
         include the constant if one is present
     df_resid
         Residual degrees of freedom. `n - p - 1`, if a constant is present.
