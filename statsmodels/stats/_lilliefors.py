@@ -1,5 +1,13 @@
 # -*- coding: utf-8 -*-
 """
+Implements Lilliefors corrected Kolmogorov-Smirnov tests for normal and
+exponential distributions.
+
+`kstest_fit` is provided as a top-level function to access both tests.
+`kstest_normal` and `kstest_exponential` are provided as convenience functions
+with the appropriate test as the default.
+`lilliefors` is provided as an alias for `kstest_fit`.
+
 Created on Sat Oct 01 13:16:49 2011
 
 Author: Josef Perktold
@@ -264,7 +272,7 @@ def pval_lf(Dmax, n):
     return pval
 
 
-def kstest_lilliefors(x, dist='norm', pvalmethod='approx'):
+def kstest_fit(x, dist='norm', pvalmethod='approx'):
     '''lilliefors test for normality or an exponential distribution.
 
     Kolmogorov Smirnov test with estimated mean and variance
@@ -343,21 +351,21 @@ def kstest_lilliefors(x, dist='norm', pvalmethod='approx'):
 
 
 
-lilliefors = kstest_lilliefors
+lilliefors = kstest_fit
 
 lillifors = np.deprecate(lilliefors, 'lillifors', 'lilliefors',
                                "Use lilliefors, lillifors will be "
                                "removed in 0.9 \n(Note: misspelling missing 'e')")
 
 # namespace aliases
-#from functools import partial
-#kstest_normal = kstest_lilliefors
-#kstest_exponential = partial(kstest_lilliefors, dist='exp')
+from functools import partial
+kstest_normal = kstest_fit
+kstest_exponential = partial(kstest_fit, dist='exp')
 
 #old version:
 #------------
-
-tble = '''\
+'''
+tble = \
 00 20 15 10 05 01 .1
 4 .303 .321 .346 .376 .413 .433
 5 .289 .303 .319 .343 .397 .439
