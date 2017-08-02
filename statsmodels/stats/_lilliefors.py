@@ -169,6 +169,8 @@ def get_lilliefors_table(dist='norm'):
         alpha_large = alpha[:-1]
         size_large = np.concatenate([size, higher_sizes])
         crit_lf_large = np.vstack([crit_lf[:-4,:-1], higher_crit_lf])
+        lf = TableDist(alpha, size, crit_lf)
+
 
     elif dist == 'exp':
         alpha = np.array([0.2,  0.15,  0.1,  0.05, 0.01])[::-1]
@@ -208,10 +210,10 @@ def get_lilliefors_table(dist='norm'):
 
         size = np.concatenate([size, higher_sizes])
         crit_lf = np.vstack([crit_lf, higher_crit_lf])
-
-
-
-    lf = TableDist(alpha, size, crit_lf)
+        lf = TableDist(alpha, size, crit_lf)
+    else:
+        print('Must specify distribution as "norm" or "exp"')
+        return None
 
     return lf
 

@@ -1,18 +1,3 @@
-'''
-Test Lilliefors corrected K-S tests for normality and exponential distributions
-
-Reference values from R packages:
-    `nortest` (lillie.test)
-    `KScorrect` (LcKS)
-
-Note : p-values rounded to within the bounds of the Lilliefors tables.
-        R implementation provides more precise p-values with a Monte Carlo
-        simulation.
-
-Jacob C. Kimmel
-2 August 2017
-'''
-
 from numpy.testing import assert_, assert_raises, assert_almost_equal
 from scipy import stats
 import nose
@@ -24,10 +9,16 @@ class TestLilliefors(object):
     def test_normal(self):
         np.random.seed(3975)
         x_n = stats.norm.rvs(size=500)
+        # R function call:
+        # require(nortest)
+        # lillie.test(x_n)
         d_ks_norm, p_norm = lilliefors(x_n, dist='norm')
         # shift normal distribution > 0 to exactly mirror R `KScorrect` test
         # R `KScorrect` requires all values tested for exponential
         # distribution to be > 0
+        # R function call:
+        # require(KScorrect)
+        # LcKS(x_n+abs(min(x_n))+0.001, 'pexp')
         d_ks_exp, p_exp = lilliefors(x_n+np.abs(x_n.min()) + 0.001, dist='exp')
         # assert normal
         assert_almost_equal(d_ks_norm, 0.025957, decimal=3)
@@ -40,7 +31,13 @@ class TestLilliefors(object):
     def test_expon(self):
         np.random.seed(3975)
         x_e = stats.expon.rvs(size=500)
+        # R function call:
+        # require(nortest)
+        # lillie.test(x_n)
         d_ks_norm, p_norm = lilliefors(x_e, dist='norm')
+        # R function call:
+        # require(KScorrect)
+        # LcKS(x_e, 'pexp')
         d_ks_exp, p_exp = lilliefors(x_e, dist='exp')
         # assert normal
         assert_almost_equal(d_ks_norm, 0.15581, decimal=3)
