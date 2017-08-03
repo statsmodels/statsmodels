@@ -232,9 +232,10 @@ class Family(object):
         """
         return self.link(mu)
 
-    def loglike(self, endog, mu, iweights=1., scale=1.):
+    def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
         """
-        The log-likelihood function in terms of the fitted mean response.
+        The log-likelihood function for each observation in terms of the fitted
+        mean response.
 
         Parameters
         ----------
@@ -242,8 +243,8 @@ class Family(object):
             Usually the endogenous response variable.
         mu : array
             Usually but not always the fitted mean response variable.
-        iweights : array-like
-            1d array of weights. The default is 1.
+        var_weights : array-like
+            1d array of variance (analytic) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
 
@@ -261,6 +262,39 @@ class Family(object):
         likelihood ratio.
         """
         raise NotImplementedError
+
+    def loglike(self, endog, mu, var_weights=1., freq_weights=1., scale=1.):
+        """
+        The log-likelihood function in terms of the fitted mean response.
+
+        Parameters
+        ----------
+        endog : array
+            Usually the endogenous response variable.
+        mu : array
+            Usually but not always the fitted mean response variable.
+        var_weights : array-like
+            1d array of variance (analytic) weights. The default is 1.
+        freq_weights : array-like
+            1d array of frequency weights. The default is 1.
+        scale : float
+            The scale parameter. The default is 1.
+
+        Returns
+        -------
+        llf : float
+            The value of the loglikelihood evaluated at
+            (endog,mu,iweights,scale) as defined below.
+
+        Notes
+        -----
+        This is defined for each family.  endog and mu are not restricted to
+        `endog` and `mu` respectively.  For instance, the deviance function
+        calls both loglike(endog,endog) and loglike(endog,mu) to get the
+        likelihood ratio.
+        """
+        ll_obs = self.loglike_obs(endog, mu, var_weights, scale)
+        return np.sum(ll_obs * freq_weights)
 
     def resid_anscombe(self, endog, mu, iweights=1., scale=1.):
         r"""
@@ -410,20 +444,20 @@ class Poisson(Family):
         return 2 * np.sum(iweights * (endog * np.log(endog_mu) -
                                       (endog - mu))) / scale
 
-    def loglike(self, endog, mu, iweights=1., scale=1.):
+    def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
         r"""
         The log-likelihood function in terms of the fitted mean response.
 
         Parameters
         ----------
-        endog : array-like
-            Endogenous response variable
-        mu : array-like
-            Fitted mean response variable
-        iweights : array-like
-            1d array of weights. The default is 1.
-        scale : float, optional
-            Not used for in the Poisson loglike.
+        endog : array
+            Usually the endogenous response variable.
+        mu : array
+            Usually but not always the fitted mean response variable.
+        var_weights : array-like
+            1d array of variance (analytic) weights. The default is 1.
+        scale : float
+            The scale parameter. The default is 1.
 
         Returns
         -------
@@ -438,8 +472,8 @@ class Poisson(Family):
            llf = scale * \sum_i iweights_i * (Y_i * \log(\mu_i) - \mu_i -
                  \ln \Gamma(Y_i + 1))
         """
-        return np.sum(iweights * (endog * np.log(mu) - mu -
-                      special.gammaln(endog + 1)))
+        return var_weights / scale * (endog * np.log(mu) - mu -
+                                      special.gammaln(endog + 1))
 
     def resid_anscombe(self, endog, mu, scale=1.):
         r"""
@@ -530,7 +564,7 @@ class Gaussian(Family):
            resid\_dev_i = (Y_i - \mu_i) / \sqrt{scale}
         """
 
-        return (endog - mu) / scale**(0.5)
+        return (endog - mu) / scale ** (0.5)
 
     def deviance(self, endog, mu, iweights=1., scale=1.):
         r"""
@@ -561,7 +595,7 @@ class Gaussian(Family):
         """
         return np.sum((iweights * (endog - mu) ** 2)) / scale
 
-    def loglike(self, endog, mu, iweights=1., scale=1.):
+    def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
         r"""
         The log-likelihood in terms of the fitted mean response.
 
@@ -571,8 +605,8 @@ class Gaussian(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        iweights : array-like
-            1d array of weights. The default is 1.
+        var_weights : array-like
+            1d array of (analytic) weights. The default is 1.
         scale : float, optional
             Scales the loglikelihood function. The default is 1.
 
@@ -605,6 +639,9 @@ class Gaussian(Family):
            llf = -1 / 2 \sum_i  * iweights_i * ((Y_i - mu_i)^2 / scale +
                                                 \log(2 * \pi * scale))
         """
+        """
+        # This is probably supposed to match what comes out of stata
+        # For simplicity, we'll use SPSS's way
         if isinstance(self.link, L.Power) and self.link.power == 1:
             # This is just the loglikelihood for classical OLS
             nobs2 = np.sum(iweights, axis=0) / 2.
@@ -615,6 +652,11 @@ class Gaussian(Family):
         else:
             return np.sum(-0.5 * iweights * ((endog - mu) ** 2 / scale +
                                              np.log(2 * np.pi * scale)))
+        """
+        ll_obs = -var_weights * (endog - mu) ** 2 / scale
+        ll_obs += -np.log(scale / var_weights) - np.log(2 * np.pi)
+        ll_obs /= 2
+        return ll_obs
 
     def resid_anscombe(self, endog, mu, scale=1.):
         r"""
@@ -741,7 +783,7 @@ class Gamma(Family):
         return np.sign(endog - mu) * np.sqrt(2 *
                 ((endog - mu)/mu - np.log(endog_mu))/scale)
 
-    def loglike(self, endog, mu, iweights=1., scale=1.):
+    def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
         r"""
         The log-likelihood function in terms of the fitted mean response.
 
@@ -751,8 +793,8 @@ class Gamma(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        iweights : array-like
-            1d array of weights. The default is 1.
+        var_weights : array-like
+            1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             The default is 1.
 
@@ -771,9 +813,17 @@ class Gamma(Family):
                  \ln \Gamma(1 / scale))
         """
         endog_mu = self._clean(endog / mu)
+        weight_scale = var_weights / scale
+        ll_obs = weight_scale * np.log(weight_scale * endog_mu)
+        ll_obs -= weight_scale * endog_mu
+        ll_obs -= special.gammaln(weight_scale) - np.log(endog)
+        return ll_obs
+        """
+        endog_mu = self._clean(endog / mu)
         return - np.sum((endog_mu - np.log(endog_mu) + scale *
                          np.log(endog) + np.log(scale) + scale *
-                         special.gammaln(1./scale)) * iweights) / scale
+                         special.gammaln(1./scale)) * var_weights) / scale
+        """
 
         # in Stata scale is set to equal 1 for reporting llf
         # in R it's the dispersion, though there is a loss of precision vs.
@@ -977,7 +1027,7 @@ class Binomial(Family):
                 np.sqrt(2 * self.n * (endog * np.log(endog_mu) +
                         (1. - endog) * np.log(n_endog_mu))/scale))
 
-    def loglike(self, endog, mu, iweights=1, scale=1.):
+    def loglike_obs(self, endog, mu, var_weights=1, scale=1.):
         r"""
         The log-likelihood function in terms of the fitted mean response.
 
@@ -1021,15 +1071,13 @@ class Binomial(Family):
         """
         if np.shape(self.n) == () and self.n == 1:
             return np.sum((endog * np.log(mu/(1 - mu)) +
-                           np.log(1 - mu)) * iweights)
+                           np.log(1 - mu)) * var_weights)
         else:
             y = endog * self.n  # convert back to successes
             # note that mu is still in (0,1), i.e. not convertet back
-            return np.sum((special.gammaln(self.n + 1) -
-                            special.gammaln(y + 1) -
-                            special.gammaln(self.n - y + 1) + y *
-                            np.log(mu/(1 - mu)) + self.n *
-                            np.log(1 - mu)) * iweights)
+            return (special.gammaln(self.n + 1) - special.gammaln(y + 1) -
+                    special.gammaln(self.n - y + 1) + y * np.log(mu/(1 - mu)) +
+                    self.n * np.log(1 - mu)) * var_weights
 
     def resid_anscombe(self, endog, mu, scale=1.):
         r'''
@@ -1188,7 +1236,7 @@ class InverseGaussian(Family):
         """
         return np.sum(iweighs*(endog-mu)**2/(endog*mu**2))/scale
 
-    def loglike(self, endog, mu, iweights=1., scale=1.):
+    def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
         r"""
         The log-likelihood function in terms of the fitted mean response.
 
@@ -1198,8 +1246,8 @@ class InverseGaussian(Family):
             Endogenous response variable
         mu : array-like
             Fitted mean response variable
-        iweights : array-like
-            1d array of weights. The default is 1.
+        var_weights : array-like
+            1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             The default is 1.
 
@@ -1216,9 +1264,10 @@ class InverseGaussian(Family):
            llf = -1/2 * \sum_i iweights_i * ((Y_i - \mu_i)^2 / (Y_i *
                  \mu_i^2 * scale) + \log(scale * Y_i^3) + \log(2 * \pi))
         """
-        return -.5 * np.sum(((endog - mu)**2/(endog * mu**2 * scale) +
-                             np.log(scale * endog**3) + np.log(2 * np.pi)) *
-                            iweights)
+        ll_obs = -var_weights * (endog - mu) ** 2 / (scale * endog * mu ** 2)
+        ll_obs += -np.log(scale * endog ** 3 / var_weights) - np.log(2 * np.pi)
+        ll_obs /= 2
+        return ll_obs
 
     def resid_anscombe(self, endog, mu, scale=1.):
         r"""
@@ -1335,9 +1384,8 @@ class NegativeBinomial(Family):
         endog_mu = self._clean(endog / mu)
         tmp = self._clean((1 + self.alpha * endog) / (1 + self.alpha * mu))
         return np.sum(iweights * (2 * endog * np.log(endog_mu) -
-                        2 / self.alpha * (1 + self.alpha * endog) *
-                        np.log(tmp))) / scale
-
+                      2 / self.alpha * (1 + self.alpha * endog) *
+                     np.log(tmp))) / scale
 
     def resid_dev(self, endog, mu, scale=1.):
         r"""
@@ -1373,7 +1421,7 @@ class NegativeBinomial(Family):
                         2 / self.alpha * (1 + self.alpha * endog) *
                         np.log(tmp)) / scale))
 
-    def loglike(self, endog, mu, iweights=1., scale=1.):
+    def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
         r"""
         The log-likelihood function in terms of the fitted mean response.
 
@@ -1383,8 +1431,8 @@ class NegativeBinomial(Family):
             Endogenous response variable
         mu : array-like
             The fitted mean response values
-        iweights : array-like
-            1d array of weights. The default is 1.
+        var_weights : array-like
+            1d array of variance (analytics) weights. The default is 1.
         scale : float
             The scale parameter. The default is 1.
 
@@ -1413,10 +1461,9 @@ class NegativeBinomial(Family):
         """
         constant = (special.gammaln(endog + 1 / self.alpha) -
                     special.gammaln(endog+1)-special.gammaln(1/self.alpha))
-        return np.sum((endog * np.log(self.alpha * mu /
-                                      (1 + self.alpha * mu)) -
-                      np.log(1 + self.alpha * mu) / self.alpha +
-                      constant) * iweights)
+        return (endog * np.log(self.alpha * mu / (1 + self.alpha * mu)) -
+                np.log(1 + self.alpha * mu) / self.alpha +
+                constant) * var_weights
 
     def resid_anscombe(self, endog, mu, scale=1.):
         r"""
@@ -1642,7 +1689,7 @@ class Tweedie(Family):
                    endog * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
         return np.sign(endog - mu) * np.sqrt(2 * dev / scale)
 
-    def loglike(self, endog, mu, iweights=1., scale=1.):
+    def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
         r"""
         The log-likelihood function in terms of the fitted mean response.
 

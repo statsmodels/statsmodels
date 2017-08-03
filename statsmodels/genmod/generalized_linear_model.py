@@ -728,37 +728,34 @@ class GLM(base.LikelihoodModel):
 
         See also
         --------
-        statsmodels.genmod.generalized_linear_model.GLM.fit for more information
+        statsmodels.genmod.generalized_linear_model.GLM.fit for more
+        information
         """
         if not self.scaletype:
             if isinstance(self.family, (families.Binomial, families.Poisson)):
                 return 1.
             else:
-                resid = self.endog - mu
-                return ((self.iweights * (np.power(resid, 2) /
-                         self.family.variance(mu))).sum() /
-                        (self.df_resid))
+                return self._estimate_x2_scale(mu)
 
         if isinstance(self.scaletype, float):
             return np.array(self.scaletype)
 
         if isinstance(self.scaletype, str):
             if self.scaletype.lower() == 'x2':
-                resid = self.endog - mu
-                return ((self.iweights * (np.power(resid, 2) /
-                         self.family.variance(mu))).sum() /
-                        (self.df_resid))
+                return self._estimate_x2_scale(mu)
             elif self.scaletype.lower() == 'dev':
-                return (self.family.deviance(self.endog, mu,
-                                             self.iweights) /
+                return (self.family.deviance(self.endog, mu, self.iweights) /
                         (self.df_resid))
             else:
                 raise ValueError("Scale %s with type %s not understood" %
                                  (self.scaletype, type(self.scaletype)))
-
         else:
             raise ValueError("Scale %s with type %s not understood" %
                              (self.scaletype, type(self.scaletype)))
+
+    def _estimate_x2_scale(self, mu):
+        resid = np.power(self.endog - mu, 2) * self.iweights
+        return np.sum(resid / self.family.variance(mu)) / self.df_resid
 
     def estimate_tweedie_power(self, mu, method='brentq', low=1.01, high=5.):
         """
@@ -1516,26 +1513,29 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def llnull(self):
-        return self.family.loglike(self._endog, self.null, self._iweights,
+        return self.family.loglike(self._endog, self.null,
+                                   var_weights=self._var_weights,
+                                   freq_weights=self._freq_weights,
                                    scale=self.scale)
 
     @cache_readonly
     def llf(self):
         _modelfamily = self.family
-        val = _modelfamily.loglike(self._endog, self.mu, self._iweights,
+        val = _modelfamily.loglike(self._endog, self.mu,
+                                   var_weights=self._var_weights,
+                                   freq_weights=self._freq_weights,
                                    scale=self.scale)
         return val
 
     @cache_readonly
     def aic(self):
-        return -2 * self.llf + 2*(self.df_model+1)
+        return -2 * self.llf + 2 * (self.df_model + 1)
 
     @cache_readonly
     def bic(self):
         return (self.deviance -
                 (self.model.wnobs - self.df_model - 1) *
                 np.log(self.model.wnobs))
-
 
     def get_prediction(self, exog=None, exposure=None, offset=None,
                        transform=True, linear=False,
