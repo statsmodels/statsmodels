@@ -117,6 +117,16 @@ def test_quantile_jack():
     med = ss.SurveyMedian(design, data)
     assert_equal(quant[:,3], med.est)
 
+def test_ratio_linearized():
+    ratio_fpc = ss.SurveyRatio(design_fpc, data[:, :2], cov_method='linearized', center_by='stratum')
+    assert_allclose(ratio_fpc.est, np.r_[.7733333])
+    assert_allclose(ratio_fpc.stderr, np.r_[.3391315], rtol=1e-2, atol=0)
+
+def test_ratio_jackknife():
+    ratio_fpc = ss.SurveyRatio(design_fpc, data[:, :2], cov_method='jack', center_by='stratum')
+    assert_allclose(ratio_fpc.est, np.r_[.7733333])
+    assert_allclose(ratio_fpc.stderr, np.r_[.3609269], rtol=1e-2, atol=0)
+
 # import pandas as pd
 # df = pd.read_stata("/home/jarvis/Downloads/nhanes2jknife.dta")
 
