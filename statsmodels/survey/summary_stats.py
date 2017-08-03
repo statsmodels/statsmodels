@@ -775,19 +775,3 @@ class SurveyMedian(SurveyQuantile):
         center_by, bsn)
 
 
-# strata = np.r_[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
-# cluster = np.r_[0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4]
-# weights = np.r_[1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1].astype(np.float64)
-# fpc = np.r_[.5, .5, .5, .5, .5, .5, .1, .1, .1, .1, .1]
-# data = np.asarray([[1, 3, 2, 5, 4, 1, 2, 3, 4, 6, 9],
-#                    [5, 3, 2, 1, 4, 7, 8, 9, 5, 4, 3],
-#                    [3, 2, 1, 5, 6, 7, 4, 2, 1, 6, 4]], dtype=np.float64).T
-
-# design = SurveyDesign(strata, cluster, weights, fpc=fpc)
-
-# # tot = SurveyTotal(design, data, cov_method='linearized', center_by='stratum')
-# # print(tot.est, tot.stderr)
-# # avg = SurveyMean(design, data, cov_method='linearized', center_by='stratum')
-# # print(avg.est, avg.stderr)
-# ratio = SurveyRatio(design, data[:,:2], cov_method='linearized', center_by='stratum')
-# ratio.vcov
