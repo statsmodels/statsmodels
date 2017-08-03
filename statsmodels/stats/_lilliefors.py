@@ -220,8 +220,8 @@ def get_lilliefors_table(dist='norm'):
         crit_lf = np.vstack([crit_lf, higher_crit_lf])
         lf = TableDist(alpha, size, crit_lf)
     else:
-        print('Must specify distribution as "norm" or "exp"')
-        return None
+        raise ValueError("Invalid dist parameter. dist must be 'norm' or 'exp'")
+
 
     return lf
 
@@ -334,7 +334,6 @@ def kstest_fit(x, dist='norm', pvalmethod='approx'):
         pvalmethod = 'table'
     else:
         raise ValueError("Invalid dist parameter. dist must be 'norm' or 'exp'")
-        return
 
     d_ks = ksstat(z, test_d, alternative='two_sided')
 
