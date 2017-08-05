@@ -816,7 +816,7 @@ class Gamma(Family):
         weight_scale = var_weights / scale
         ll_obs = weight_scale * np.log(weight_scale * endog_mu)
         ll_obs -= weight_scale * endog_mu
-        ll_obs -= special.gammaln(weight_scale) - np.log(endog)
+        ll_obs -= special.gammaln(weight_scale) + np.log(endog)
         return ll_obs
         """
         endog_mu = self._clean(endog / mu)
@@ -1070,8 +1070,7 @@ class Binomial(Family):
         original number of successes.
         """
         if np.shape(self.n) == () and self.n == 1:
-            return np.sum((endog * np.log(mu/(1 - mu)) +
-                           np.log(1 - mu)) * var_weights)
+            return (endog * np.log(mu/(1 - mu)) + np.log(1 - mu)) * var_weights
         else:
             y = endog * self.n  # convert back to successes
             # note that mu is still in (0,1), i.e. not convertet back

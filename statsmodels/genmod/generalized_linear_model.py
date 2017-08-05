@@ -432,8 +432,8 @@ class GLM(base.LikelihoodModel):
         """
         Evaluate the log-likelihood for a generalized linear model.
         """
-        return self.family.loglike(mu, self.endog, self.exog, self.iweights,
-                                   scale)
+        return self.family.loglike(mu, self.endog, self.exog, self.var_weights,
+                                   self.freq_weights, scale)
 
     def loglike(self, params, scale=None):
         """
@@ -443,7 +443,8 @@ class GLM(base.LikelihoodModel):
         expval = self.family.link.inverse(lin_pred)
         if scale is None:
             scale = self.estimate_scale(expval)
-        llf = self.family.loglike(self.endog, expval, self.iweights, scale)
+        llf = self.family.loglike(self.endog, expval, self.var_weights,
+                                  self.freq_weights, scale)
         return llf
 
     def score_obs(self, params, scale=None):
