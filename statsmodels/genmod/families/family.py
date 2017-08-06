@@ -176,7 +176,7 @@ class Family(object):
         analytically defined for each family.
 
         Internally, we calculate deviance as:
-            
+
         .. math:
             D = \sum_i freq\_weights_i * resid\_dev_i  / scale
         """
@@ -594,6 +594,8 @@ class Gaussian(Family):
            ll_i = -1 / 2 \sum_i  * iweights_i * ((Y_i - mu_i)^2 / scale +
                                                 \log(2 * \pi * scale))
         """
+        if isinstance(self.link, L.Power) and self.link.power == 1:
+            scale = np.sum(var_weights * (endog - mu) ** 2 / len(endog))
         ll_obs = -var_weights * (endog - mu) ** 2 / scale
         ll_obs += -np.log(scale / var_weights) - np.log(2 * np.pi)
         ll_obs /= 2
