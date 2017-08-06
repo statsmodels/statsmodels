@@ -17,6 +17,7 @@ import statsmodels.api as sm
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.tools.tools import add_constant
 from statsmodels.discrete import discrete_model as discrete
+import pytest
 
 from .results import results_glm_poisson_weights as res_stata
 from .results import res_R_var_weight as res_r
@@ -277,10 +278,10 @@ class TestGlmGammaAwNr(CheckWeight):
 
     def test_r_llf(self):
         scale = self.res1.deviance / self.res1._iweights.sum()
-        ll = self.res1.model.family.loglike(self.res1.model.endog,
-                                            self.res1.mu,
-                                            self.res1._iweights,
-                                            scale)
+        ll = self.res1.family.loglike(self.res1.model.endog,
+                                      self.res1.mu,
+                                      freq_weights=self.res1._var_weights,
+                                      scale=scale)
         assert_allclose(ll, self.res2.ll, atol=1e-6, rtol=1e-7)
 
 
@@ -315,7 +316,9 @@ class TestGlmGaussianAwNr(CheckWeight):
         scale = res1.scale * model.df_resid / model.wnobs
         # Calculate llf using adj scale and wts = freq_weights
         wts = model.freq_weights
-        llf = model.family.loglike(model.endog, res1.mu, wts, scale)
+        llf = model.family.loglike(model.endog, res1.mu,
+                                   freq_weights=wts,
+                                   scale=scale)
         # SM uses (essentially) stat's loglike formula... first term is
         # (endog - mu) ** 2 / scale
         adj_sm = -1 / 2 * ((model.endog - res1.mu) ** 2).sum() / scale
@@ -753,8 +756,6 @@ def test_weights_different_formats_all():
     check_weights_as_formats(weights)
     check_weights_as_formats(np.asarray(weights))
     check_weights_as_formats(pd.Series(weights))
-
-
 def check_weights_as_formats(weights):
     res = GLM(cpunish_data.endog, cpunish_data.exog,
               family=sm.families.Poisson(), freq_weights=weights

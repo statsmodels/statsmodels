@@ -704,7 +704,9 @@ class GLM(base.LikelihoodModel):
         """
         history['params'].append(tmp_result.params)
         history['deviance'].append(self.family.deviance(self.endog, mu,
-                                                        self.iweights))
+                                                        self.var_weights,
+                                                        self.freq_weights,
+                                                        self.scale))
         return history
 
     def estimate_scale(self, mu):
@@ -745,7 +747,8 @@ class GLM(base.LikelihoodModel):
             if self.scaletype.lower() == 'x2':
                 return self._estimate_x2_scale(mu)
             elif self.scaletype.lower() == 'dev':
-                return (self.family.deviance(self.endog, mu, self.iweights) /
+                return (self.family.deviance(self.endog, mu, self.var_weights,
+                                             self.freq_weights, self.scale) /
                         (self.df_resid))
             else:
                 raise ValueError("Scale %s with type %s not understood" %
@@ -1095,7 +1098,9 @@ class GLM(base.LikelihoodModel):
         else:
             lin_pred = np.dot(wlsexog, start_params) + self._offset_exposure
             mu = self.family.fitted(lin_pred)
-        dev = self.family.deviance(self.endog, mu, self.iweights)
+        self.scale = self.estimate_scale(mu)
+        dev = self.family.deviance(self.endog, mu, self.var_weights,
+                                   self.freq_weights, self.scale)
         if np.isnan(dev):
             raise ValueError("The first guess on the deviance function "
                              "returned a nan.  This could be a boundary "
@@ -1469,8 +1474,9 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def resid_deviance(self):
-        dev = self.family.resid_dev(self._endog, self.fittedvalues)
-        return dev * np.sqrt(self._var_weights)
+        dev = self.family.resid_dev(self._endog, self.fittedvalues,
+                                    self._var_weights)
+        return np.sign(self._endog - self.fittedvalues) * np.sqrt(dev)
 
     @cache_readonly
     def pearson_chi2(self):
@@ -1506,11 +1512,13 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def deviance(self):
-        return self.family.deviance(self._endog, self.mu, self._iweights)
+        return self.family.deviance(self._endog, self.mu, self._var_weights,
+                                    self._freq_weights)
 
     @cache_readonly
     def null_deviance(self):
-        return self.family.deviance(self._endog, self.null, self._iweights)
+        return self.family.deviance(self._endog, self.null, self._var_weights,
+                                    self._freq_weights)
 
     @cache_readonly
     def llnull(self):

@@ -131,7 +131,7 @@ class Family(object):
         """
         return 1. / (self.link.deriv(mu)**2 * self.variance(mu))
 
-    def deviance(self, endog, mu, iweights=1., scale=1.):
+    def deviance(self, endog, mu, var_weights=1., freq_weights=1., scale=1.):
         r"""
         The deviance function evaluated at (endog,mu,iweights,mu).
 
@@ -165,9 +165,10 @@ class Family(object):
         where y is the endogenous variable. The deviance functions are
         analytically defined for each family.
         """
-        raise NotImplementedError
+        resid_dev = self.resid_dev(endog, mu, var_weights)
+        return np.sum(resid_dev * freq_weights / scale)
 
-    def resid_dev(self, endog, mu, scale=1.):
+    def resid_dev(self, endog, mu, var_weights):
         r"""
         The deviance residuals
 
@@ -177,9 +178,6 @@ class Family(object):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        scale : float, optional
-            An optional argument to divide the residuals by sqrt(scale).
-            The default is 1.
 
         Returns
         -------
@@ -381,7 +379,7 @@ class Poisson(Family):
             link = L.log()
         super(Poisson, self).__init__(link=link, variance=Poisson.variance)
 
-    def resid_dev(self, endog, mu, scale=1.):
+    def resid_dev(self, endog, mu, var_weights=1.):
         r"""Poisson deviance residual
 
         Parameters
@@ -407,42 +405,8 @@ class Poisson(Family):
                           (Y_i * \log(Y_i / \mu_i) - (Y_i - \mu_i))/ scale}
         """
         endog_mu = self._clean(endog / mu)
-        return (np.sign(endog - mu) *
-            np.sqrt(2 * (endog * np.log(endog_mu) - (endog - mu)) / scale))
-
-    def deviance(self, endog, mu, iweights=1., scale=1.):
-        r'''
-        Poisson deviance function
-
-        Parameters
-        ----------
-        endog : array-like
-            Endogenous response variable
-        mu : array-like
-            Fitted mean response variable
-        iweights : array-like
-            1d array of weights. The default is 1.
-        scale : float, optional
-            An optional scale argument. The default is 1.
-
-        Returns
-        -------
-        deviance : float
-            The deviance function at (endog,mu,iweights,scale) as defined
-            below.
-
-        Notes
-        -----
-        If a constant term is included it is defined as
-
-        .. math::
-
-           D = 2 * \sum_i (iweights_i *
-           (Y_i * \log(Y_i / \mu_i) - (Y_i - \mu_i)))/ scale
-        '''
-        endog_mu = self._clean(endog / mu)
-        return 2 * np.sum(iweights * (endog * np.log(endog_mu) -
-                                      (endog - mu))) / scale
+        resid_dev = endog * np.log(endog_mu) - (endog - mu)
+        return 2 * var_weights * resid_dev
 
     def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
         r"""
@@ -500,8 +464,8 @@ class Poisson(Family):
 
            resid\_anscombe_i = (3/2) * (Y_i^{2/3} - \mu_i^{2/3}) / \mu_i^{1/6}
         """
-        return ( (3 / 2.) * (endog**(2/3.) - mu**(2 / 3.)) /
-                (mu**(1 / 6.) * scale**(0.5)) )
+        return ((3 / 2.) * (endog**(2 / 3.) - mu**(2 / 3.)) /
+                (mu ** (1 / 6.) * scale ** 0.5))
 
 
 class Gaussian(Family):
@@ -538,7 +502,7 @@ class Gaussian(Family):
             link = L.identity()
         super(Gaussian, self).__init__(link=link, variance=Gaussian.variance)
 
-    def resid_dev(self, endog, mu, scale=1.):
+    def resid_dev(self, endog, mu, var_weights=1.):
         r"""
         Gaussian deviance residuals
 
@@ -563,37 +527,7 @@ class Gaussian(Family):
 
            resid\_dev_i = (Y_i - \mu_i) / \sqrt{scale}
         """
-
-        return (endog - mu) / scale ** (0.5)
-
-    def deviance(self, endog, mu, iweights=1., scale=1.):
-        r"""
-        Gaussian deviance function
-
-        Parameters
-        ----------
-        endog : array-like
-            Endogenous response variable
-        mu : array-like
-            Fitted mean response variable
-        iweights : array-like
-            1d array of weights. The default is 1.
-        scale : float, optional
-            An optional scale argument. The default is 1.
-
-        Returns
-        -------
-        deviance : float
-            The deviance function at (endog,mu,iweights,scale)
-            as defined below.
-
-        Notes
-        --------
-        .. math::
-
-           D = \sum_i iweights_i * (Y_i - \mu_i)^2 / scale
-        """
-        return np.sum((iweights * (endog - mu) ** 2)) / scale
+        return var_weights * (endog - mu) ** 2
 
     def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
         r"""
@@ -638,20 +572,6 @@ class Gaussian(Family):
 
            llf = -1 / 2 \sum_i  * iweights_i * ((Y_i - mu_i)^2 / scale +
                                                 \log(2 * \pi * scale))
-        """
-        """
-        # This is probably supposed to match what comes out of stata
-        # For simplicity, we'll use SPSS's way
-        if isinstance(self.link, L.Power) and self.link.power == 1:
-            # This is just the loglikelihood for classical OLS
-            nobs2 = np.sum(iweights, axis=0) / 2.
-            SSR = np.sum((endog-self.fitted(mu))**2, axis=0)
-            llf = -np.log(SSR) * nobs2
-            llf -= (1+np.log(np.pi/nobs2))*nobs2
-            return llf
-        else:
-            return np.sum(-0.5 * iweights * ((endog - mu) ** 2 / scale +
-                                             np.log(2 * np.pi * scale)))
         """
         ll_obs = -var_weights * (endog - mu) ** 2 / scale
         ll_obs += -np.log(scale / var_weights) - np.log(2 * np.pi)
@@ -723,37 +643,7 @@ class Gamma(Family):
             link = L.inverse_power()
         super(Gamma, self).__init__(link=link, variance=Gamma.variance)
 
-    def deviance(self, endog, mu, iweights=1., scale=1.):
-        r"""
-        Gamma deviance function
-
-        Parameters
-        -----------
-        endog : array-like
-            Endogenous response variable
-        mu : array-like
-            Fitted mean response variable
-        iweights : array-like
-            1d array of weights. The default is 1.
-        scale : float, optional
-            An optional scale argument. The default is 1.
-
-        Returns
-        -------
-        deviance : float
-            Deviance function as defined below
-
-        Notes
-        -----
-        .. math::
-
-           D = 2 * \sum_i iweights_i *
-           ((Y_i - \mu_i)/\mu_i - \log(Y_i / \mu_i)) / scale
-        """
-        endog_mu = self._clean(endog / mu)
-        return 2*np.sum(iweights*((endog-mu)/mu-np.log(endog_mu)))/scale
-
-    def resid_dev(self, endog, mu, scale=1.):
+    def resid_dev(self, endog, mu, var_weights=1.):
         r"""
         Gamma deviance residuals
 
@@ -780,8 +670,8 @@ class Gamma(Family):
                           ((Y_i - \mu_i) / \mu_i - \log(Y_i / \mu_i))/scale}
         """
         endog_mu = self._clean(endog / mu)
-        return np.sign(endog - mu) * np.sqrt(2 *
-                ((endog - mu)/mu - np.log(endog_mu))/scale)
+        resid_dev = -np.log(endog_mu) + (endog - mu) / mu
+        return 2 * var_weights * resid_dev
 
     def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
         r"""
@@ -818,12 +708,6 @@ class Gamma(Family):
         ll_obs -= weight_scale * endog_mu
         ll_obs -= special.gammaln(weight_scale) + np.log(endog)
         return ll_obs
-        """
-        endog_mu = self._clean(endog / mu)
-        return - np.sum((endog_mu - np.log(endog_mu) + scale *
-                         np.log(endog) + np.log(scale) + scale *
-                         special.gammaln(1./scale)) * var_weights) / scale
-        """
 
         # in Stata scale is set to equal 1 for reporting llf
         # in R it's the dispersion, though there is a loss of precision vs.
@@ -901,7 +785,8 @@ class Binomial(Family):
         self.n = 1
         # overwritten by initialize if needed but always used to initialize
         # variance since endog is assumed/forced to be (0,1)
-        super(Binomial, self).__init__(link=link, variance=V.Binomial(n=self.n))
+        super(Binomial, self).__init__(link=link,
+                                       variance=V.Binomial(n=self.n))
 
     def starting_mu(self, y):
         r"""
@@ -940,51 +825,7 @@ class Binomial(Family):
         else:
             return endog, np.ones(endog.shape[0])
 
-    def deviance(self, endog, mu, iweights=1, scale=1.):
-        r'''
-        Deviance function for either Bernoulli or Binomial data.
-
-        Parameters
-        ----------
-        endog : array-like
-            Endogenous response variable (already transformed to a probability
-            if appropriate).
-        mu : array
-            Fitted mean response variable
-        iweights : array-like
-            1d array of weights. The default is 1.
-        scale : float, optional
-            An optional scale argument. The default is 1.
-
-        Returns
-        --------
-        deviance : float
-            The deviance function as defined below
-
-        Notes
-        -----
-        Binomial in general:
-
-        .. math::
-
-           D = 2 * \sum_i iweights * (Y_i * \log(Y_i / \mu_i)
-           + (n_i - Y_i) * \log((n_i - Y_i) / (n_i - \mu_i))) / scale
-
-        Since :math:`Y_i` and :math:`\mu_i` are transformed to :math:`[0,1]`
-        in Binomial.initialize, the following version is implemented:
-
-        .. math::
-
-           D = 2 * \sum_i iweights n_i * (Y_i * \log(Y_i / \mu_i)
-           + (1 - Y_i) * \log((1 - Y_i) / (1 - \mu_i))) / scale
-        '''
-        endog_mu = self._clean(endog / mu)
-        n_endog_mu = self._clean((1. - endog) / (1. - mu))
-        return 2 * np.sum(iweights * self.n *
-                           (endog * np.log(endog_mu) +
-                           (1. - endog) * np.log(n_endog_mu))) / scale
-
-    def resid_dev(self, endog, mu, scale=1.):
+    def resid_dev(self, endog, mu, var_weights=1.):
         r"""
         Binomial deviance residuals
 
@@ -1023,9 +864,8 @@ class Binomial(Family):
         """
         endog_mu = self._clean(endog / mu)
         n_endog_mu = self._clean((1. - endog) / (1. - mu))
-        return (np.sign(endog - mu) *
-                np.sqrt(2 * self.n * (endog * np.log(endog_mu) +
-                        (1. - endog) * np.log(n_endog_mu))/scale))
+        resid_dev = endog * np.log(endog_mu) + (1 - endog) * np.log(n_endog_mu)
+        return 2 * var_weights * self.n * resid_dev
 
     def loglike_obs(self, endog, mu, var_weights=1, scale=1.):
         r"""
@@ -1178,7 +1018,7 @@ class InverseGaussian(Family):
         super(InverseGaussian, self).__init__(
             link=link, variance=InverseGaussian.variance)
 
-    def resid_dev(self, endog, mu, scale=1.):
+    def resid_dev(self, endog, mu, var_weights=1.):
         r"""
         Returns the deviance residuals for the inverse Gaussian family.
 
@@ -1204,36 +1044,7 @@ class InverseGaussian(Family):
            resid\_dev_i = sign(Y_i - \mu_i) *
                           \sqrt{(Y_i - \mu_i)^2 / (Y_i * \mu_i^2) / scale}
         """
-        return np.sign(endog-mu) * np.sqrt((endog-mu)**2/(endog*mu**2)/scale)
-
-    def deviance(self, endog, mu, iweighs=1., scale=1.):
-        r"""
-        Inverse Gaussian deviance function
-
-        Parameters
-        -----------
-        endog : array-like
-            Endogenous response variable
-        mu : array-like
-            Fitted mean response variable
-        iweights : array-like
-            1d array of weights. The default is 1.
-        scale : float, optional
-            An optional scale argument. The default is 1.
-
-        Returns
-        -------
-        deviance : float
-            Deviance function as defined below
-
-        Notes
-        -----
-        .. math::
-
-           D = \sum_i iweights_i * ((Y_i - \mu_i)^2 / (Y_i *\mu_i^2)) /
-               scale
-        """
-        return np.sum(iweighs*(endog-mu)**2/(endog*mu**2))/scale
+        return var_weights / (endog * mu ** 2) * (endog - mu) ** 2
 
     def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
         r"""
@@ -1336,8 +1147,6 @@ class NegativeBinomial(Family):
      \left(\frac{\alpha\mu}{1+\alpha\mu}\right)^y`
 
     with :math:`E[Y]=\mu\,` and :math:`Var[Y]=\mu+\alpha\mu^2`.
-
-
     """
     links = [L.log, L.cloglog, L.identity, L.nbinom, L.Power]
     # TODO: add the ability to use the power links with an if test
@@ -1352,41 +1161,7 @@ class NegativeBinomial(Family):
         super(NegativeBinomial, self).__init__(
             link=link, variance=V.NegativeBinomial(alpha=self.alpha))
 
-    def deviance(self, endog, mu, iweights=1., scale=1.):
-        r"""
-        Returns the value of the deviance function.
-
-        Parameters
-        -----------
-        endog : array-like
-            Endogenous response variable
-        mu : array-like
-            Fitted mean response variable
-        iweights : array-like
-            1d array of weights. The default is 1.
-        scale : float, optional
-            An optional scale argument. The default is 1.
-
-        Returns
-        -------
-        deviance : float
-            Deviance function as defined below
-
-        Notes
-        -----
-        .. math:
-
-           D = 2 * Y_i * \log(Y_i / \mu_i) - (2 / \alpha) *
-            (1 + \alpha * Y_i) * \ln(1 + \alpha * Y_i) / (1 + \alpha * \mu_i)
-
-        """
-        endog_mu = self._clean(endog / mu)
-        tmp = self._clean((1 + self.alpha * endog) / (1 + self.alpha * mu))
-        return np.sum(iweights * (2 * endog * np.log(endog_mu) -
-                      2 / self.alpha * (1 + self.alpha * endog) *
-                     np.log(tmp))) / scale
-
-    def resid_dev(self, endog, mu, scale=1.):
+    def resid_dev(self, endog, mu, var_weights=1.):
         r"""
         Negative Binomial Deviance Residual
 
@@ -1414,11 +1189,11 @@ class NegativeBinomial(Family):
             * \log((1 + \alpha * Y_i) / (1 + \alpha * \mu_i)))/scale}
         """
         endog_mu = self._clean(endog / mu)
-        tmp = self._clean((1 + self.alpha * endog) / (1 + self.alpha * mu))
-        return (np.sign(endog - mu) *
-                np.sqrt((2 * endog * np.log(endog_mu) -
-                        2 / self.alpha * (1 + self.alpha * endog) *
-                        np.log(tmp)) / scale))
+        endog_alpha = endog + 1 / self.alpha
+        mu_alpha = mu + 1 / self.alpha
+        resid_dev = endog * np.log(endog_mu)
+        resid_dev -= endog_alpha * np.log(endog_alpha / mu_alpha)
+        return 2 * var_weights * resid_dev
 
     def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
         r"""
@@ -1551,76 +1326,7 @@ class Tweedie(Family):
         super(Tweedie, self).__init__(
             link=link, variance=V.Power(power=var_power * 1.))
 
-    def deviance(self, endog, mu, iweights=1., scale=1.):
-        r"""
-        Returns the value of the deviance function.
-
-        Parameters
-        -----------
-        endog : array-like
-            Endogenous response variable
-        mu : array-like
-            Fitted mean response variable
-        iweights : array-like
-            1d array of weights. The default is 1.
-        scale : float, optional
-            An optional scale argument. The default is 1.
-
-        Returns
-        -------
-        deviance : float
-            Deviance function as defined below
-
-        Notes
-        -----
-        When :math:`p = 1`,
-
-        .. math::
-
-            dev_i = \mu
-
-        when :math:`Y_i = 0` and
-
-        .. math::
-
-            dev_i = Y_i * \log(Y_i / \mu_i) + (\mu_i - Y_i)
-
-        otherwise.
-
-        When :math:`p = 2`,
-
-        .. math::
-
-            dev_i =  (Y_i - \mu_i) / \mu_i - \log(Y_i / \mu_i)
-
-        For all other p,
-
-        .. math::
-
-            dev_i = Y_i^{2 - p} / ((1 - p) * (2 - p)) -
-                    Y_i * \mu_i^{1 - p} / (1 - p) + \mu_i^{2 - p} /
-                    (2 - p)
-
-        Once :math:`dev_i` is calculated, then deviance is calculated as
-
-        .. math::
-
-            D = \sum{2 * iweights * dev_i / scale}
-        """
-        p = self.var_power
-        if p == 1:
-            dev = np.where(endog == 0,
-                           mu,
-                           endog * np.log(endog / mu) + (mu - endog))
-        elif p == 2:
-            endog1 = np.clip(endog, FLOAT_EPS, np.inf)
-            dev = ((endog - mu) / mu) - np.log(endog1 / mu)
-        else:
-            dev = (endog ** (2 - p) / ((1 - p) * (2 - p)) -
-                   endog * mu ** (1 - p) / (1 - p) + mu ** (2 - p) / (2 - p))
-        return np.sum(2 * iweights * dev / scale)
-
-    def resid_dev(self, endog, mu, scale=1.):
+    def resid_dev(self, endog, mu, var_weights=1.):
         r"""
         Tweedie Deviance Residual
 
@@ -1686,7 +1392,7 @@ class Tweedie(Family):
         else:
             dev = (endog ** (2 - p) / ((1 - p) * (2 - p)) -
                    endog * mu ** (1-p) / (1 - p) + mu ** (2 - p) / (2 - p))
-        return np.sign(endog - mu) * np.sqrt(2 * dev / scale)
+        return 2 * dev * var_weights
 
     def loglike_obs(self, endog, mu, var_weights=1., scale=1.):
         r"""
