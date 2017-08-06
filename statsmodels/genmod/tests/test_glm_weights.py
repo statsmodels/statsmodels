@@ -756,7 +756,6 @@ def test_weights_different_formats_all():
     check_weights_as_formats(weights)
     check_weights_as_formats(np.asarray(weights))
     check_weights_as_formats(pd.Series(weights))
-def check_weights_as_formats(weights):
     res = GLM(cpunish_data.endog, cpunish_data.exog,
               family=sm.families.Poisson(), freq_weights=weights
               ).fit()

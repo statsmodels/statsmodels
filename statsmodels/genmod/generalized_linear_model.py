@@ -735,7 +735,8 @@ class GLM(base.LikelihoodModel):
         information
         """
         if not self.scaletype:
-            if isinstance(self.family, (families.Binomial, families.Poisson)):
+            if isinstance(self.family, (families.Binomial, families.Poisson,
+                                        families.NegativeBinomial)):
                 return 1.
             else:
                 return self._estimate_x2_scale(mu)
