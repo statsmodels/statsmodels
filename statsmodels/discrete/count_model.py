@@ -10,9 +10,11 @@ from statsmodels.distributions import truncatedpoisson
 from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
                                                  Poisson, Logit, CountResults,
                                                  L1CountResults, Probit,
+                                                 NegativeBinomial,
                                                  _discrete_results_docs)
 from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
                                        approx_hess_cs, approx_fprime_cs)
+from statsmodels.tools.decorators import resettable_cache, cache_readonly
 
 class GenericTruncated(CountModel):
     __doc__ = """
@@ -351,6 +353,237 @@ class TruncatedPoisson(GenericTruncated):
         self.result_reg = L1TruncatedPoissonResults
         self.result_reg_wrapper = L1TruncatedPoissonResultsWrapper
 
+class GenericCensored(CountModel):
+    __doc__ = """
+    Generic Censored model for count data
+
+    %(params)s
+    %(extra_params)s
+
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    """ % {'params' : base._model_params_doc,
+           'extra_params' :
+           """offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+
+    """ + base._missing_param_doc}
+
+    def __init__(self, endog, exog, offset=None,
+                       exposure=None, missing='none', **kwargs):
+        self.zero_idx = np.nonzero(endog == 0)[0]
+        self.nonzero_idx = np.nonzero(endog)[0]
+        super(GenericCensored, self).__init__(endog, exog, offset=offset,
+                                                  exposure=exposure,
+                                                  missing=missing, **kwargs)
+
+    def loglike(self, params):
+        """
+        Loglikelihood of Generic Censored model
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model.
+
+        Returns
+        -------
+        loglike : float
+            The log-likelihood function of the model evaluated at `params`.
+            See notes.
+
+        Notes
+        --------
+
+        """
+        return np.sum(self.loglikeobs(params))
+
+    def loglikeobs(self, params):
+        """
+        Loglikelihood for observations of Generic Censored model
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model.
+
+        Returns
+        -------
+        loglike : ndarray (nobs,)
+            The log likelihood for each observation of the model evaluated
+            at `params`. See Notes
+
+        Notes
+        --------
+
+        """
+        llf_main = self.model_main.loglikeobs(params)
+        
+        llf = np.concatenate((llf_main[self.zero_idx],
+            np.log(1 - np.exp(llf_main[self.nonzero_idx]))))
+
+        return llf
+
+    def score_obs(self, params):
+        """
+        Generic Censored model score (gradient) vector of the log-likelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        score : ndarray, 1-D
+            The score vector of the model, i.e. the first derivative of the
+            loglikelihood function, evaluated at `params`
+        """
+        return approx_fprime(params, self.loglikeobs)
+
+    def score(self, params):
+        """
+        Generic Censored model score (gradient) vector of the log-likelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        score : ndarray, 1-D
+            The score vector of the model, i.e. the first derivative of the
+            loglikelihood function, evaluated at `params`
+        """
+        return self.score_obs(params).sum(0)
+
+    def fit(self, start_params=None, method='bfgs', maxiter=35,
+            full_output=1, disp=1, callback=None,
+            cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
+        if start_params is None:
+            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+            if np.size(offset) == 1 and offset == 0:
+                offset = None
+            model = self.model_main_name(self.endog, self.exog, offset=offset)
+            start_params = model.fit(disp=0).params
+        mlefit = super(GenericCensored, self).fit(start_params=start_params,
+                       maxiter=maxiter, disp=disp,
+                       full_output=full_output, callback=lambda x:x,
+                       **kwargs)
+
+        zipfit = self.result(self, mlefit._results)
+        result = self.result_wrapper(zipfit)
+
+        if cov_kwds is None:
+            cov_kwds = {}
+
+        result._get_robustcov_results(cov_type=cov_type,
+                                      use_self=True, use_t=use_t, **cov_kwds)
+        return result
+
+    fit.__doc__ = DiscreteModel.fit.__doc__
+
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+
+        if np.size(alpha) == 1 and alpha != 0:
+            k_params = self.exog.shape[1]
+            alpha = alpha * np.ones(k_params)
+
+        alpha_p = alpha
+        if start_params is None:
+            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+            if np.size(offset) == 1 and offset == 0:
+                offset = None
+            model = self.model_main_name(self.endog, self.exog, offset=offset)
+            start_params = model.fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=0, callback=callback,
+                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
+        cntfit = super(CountModel, self).fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+
+        if method in ['l1', 'l1_cvxopt_cp']:
+            discretefit = self.result_reg(self, cntfit)
+        else:
+            raise TypeError(
+                    "argument method == %s, which is not handled" % method)
+
+        return self.result_reg_wrapper(discretefit)
+
+    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
+
+    def hessian(self, params):
+        """
+        Generic Censored model Hessian matrix of the loglikelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        hess : ndarray, (k_vars, k_vars)
+            The Hessian, second derivative of loglikelihood function,
+            evaluated at `params`
+
+        Notes
+        -----
+        """
+        return approx_hess(params, self.loglike)
+
+class Censored(GenericCensored):
+    """
+    Censored model for count data
+
+    %(params)s
+    %(extra_params)s
+
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    """ % {'params' : base._model_params_doc,
+           'extra_params' :
+           """offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+
+    """ + base._missing_param_doc}
+
+    def __init__(self, endog, exog, model=Poisson,
+                 distribution=truncatedpoisson, offset=None,
+                 exposure=None, missing='none', **kwargs):
+        super(Censored, self).__init__(endog, exog, offset=offset,
+                                               exposure=exposure,
+                                               missing=missing, **kwargs)
+        self.model_main_name = model
+        self.model_main = model(np.zeros_like(self.endog), self.exog)
+        self.model_dist = distribution
+        self.result = GenericTruncatedResults
+        self.result_wrapper = GenericTruncatedResultsWrapper
+        self.result_reg = L1GenericTruncatedResults
+        self.result_reg_wrapper = L1GenericTruncatedResultsWrapper 
+
 class GenericHurdle(CountModel):
     __doc__ = """
     Generic Hurdle model for count data
@@ -379,140 +612,8 @@ class GenericHurdle(CountModel):
         super(GenericHurdle, self).__init__(endog, exog, offset=offset,
                                             exposure=exposure,
                                             missing=missing, **kwargs)
-        self.model1 = self.model_name1(
-            np.zeros_like(self.endog, dtype=np.float64), self.exog)
+        self.model1 = Censored(self.endog, self.exog, model=self.model_name1)
         self.model2 = Truncated(self.endog, self.exog, model=self.model_name2)
-        self.zero_idx = np.nonzero(self.endog == 0)[0]
-        self.nonzero_idx = np.nonzero(self.endog)[0]
-        
-    def loglikeobs(self, params):
-        """
-        Loglikelihood for observations of Generic Hurdle model
-
-        Parameters
-        ----------
-        params : array-like
-            The parameters of the model.
-
-        Returns
-        -------
-        loglike : ndarray (nobs,)
-            The log likelihood for each observation of the model evaluated
-            at `params`. See Notes
-
-        Notes
-        --------
-
-        for observations :math:`i=1,...,n`
-        """
-        llf = np.zeros_like(self.endog, dtype=np.float64)
-
-        llf1 = self.model1.loglikeobs(params)
-        llf2 = self.model2.loglikeobs(params)
-
-        llf[self.zero_idx] = llf1[self.zero_idx]
-        llf[self.nonzero_idx] = (np.log(1 -
-            np.exp(llf1[self.nonzero_idx])) + llf2)
-
-        return llf
-
-    def loglike(self, params):
-        """
-        Loglikelihood of Generic Hurdle model
-
-        Parameters
-        ----------
-        params : array-like
-            The parameters of the model.
-
-        Returns
-        -------
-        loglike : float
-            The log-likelihood function of the model evaluated at `params`.
-            See notes.
-
-        Notes
-        --------
-        """
-        return np.sum(self.loglikeobs(params))
-
-    def score_obs(self, params):
-        llf1 = self.model1.loglikeobs(params)
-        score1 = self.model1.score_obs(params)
-        score2 = self.model2.score_obs(params)
-
-        score = np.zeros_like(self.exog, dtype=np.float64)
-        score[self.zero_idx,:] = score1[self.zero_idx,:]
-        score[self.nonzero_idx,:] = ((score1[self.nonzero_idx,:].T *
-            -np.exp(llf1[self.nonzero_idx]) /
-            (1 - np.exp(llf1[self.nonzero_idx]))).T + score2)
-
-        return score
-
-    def score(self, params):
-        return np.sum(self.score_obs(params), axis=0)
-
-    def hessian(self, params):
-        return approx_hess(params, self.loglike)
-
-    def fit(self, start_params=None, method='bfgs', maxiter=35,
-            full_output=1, disp=1, callback=None,
-            cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
-        if start_params is None:
-            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
-            if np.size(offset) == 1 and offset == 0:
-                offset = None
-            model = self.model_name2(self.endog, self.exog, offset=offset)
-            start_params = model.fit(disp=0).params
-        mlefit = super(GenericHurdle, self).fit(start_params=start_params,
-                       maxiter=maxiter, disp=disp,
-                       full_output=full_output, callback=lambda x:x,
-                       **kwargs)
-
-        zipfit = self.result(self, mlefit._results)
-        result = self.result_wrapper(zipfit)
-
-
-        if cov_kwds is None:
-            cov_kwds = {}
-
-        result._get_robustcov_results(cov_type=cov_type,
-                                      use_self=True, use_t=use_t, **cov_kwds)
-        return result
-
-    def fit_regularized(self, start_params=None, method='l1',
-            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
-            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
-            qc_tol=0.03, **kwargs):
-
-        if np.size(alpha) == 1 and alpha != 0:
-            k_params = self.exog.shape[1]
-            alpha = alpha * np.ones(k_params)
-
-        alpha_p = alpha
-        if start_params is None:
-            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
-            if np.size(offset) == 1 and offset == 0:
-                offset = None
-            model = self.model_name1(self.endog, self.exog, offset=offset)
-            start_params = model.fit_regularized(
-                start_params=start_params, method=method, maxiter=maxiter,
-                full_output=full_output, disp=0, callback=callback,
-                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
-                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
-        cntfit = super(CountModel, self).fit_regularized(
-                start_params=start_params, method=method, maxiter=maxiter,
-                full_output=full_output, disp=disp, callback=callback,
-                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
-                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
-
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = self.result_reg(self, cntfit)
-        else:
-            raise TypeError(
-                    "argument method == %s, which is not handled" % method)
-
-        return self.result_reg_wrapper(discretefit)
 
 class HurdlePoisson(GenericHurdle):
     """
@@ -585,11 +686,6 @@ class L1TruncatedPoissonResultsWrapper(lm.RegressionResultsWrapper):
 wrap.populate_wrapper(L1TruncatedPoissonResultsWrapper,
                       L1TruncatedPoissonResults)
 
-class HurdlePoissonResults(CountResults):
-    __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Hurdle",
-                    "extra_attr" : ""}
-
 class L1HurdlePoissonResults(L1CountResults, HurdlePoissonResults):
     pass
 
@@ -605,3 +701,10 @@ wrap.populate_wrapper(L1HurdlePoissonResultsWrapper,
 if __name__=="__main__":
     import numpy as np
     import statsmodels.api as sm
+
+    data = sm.datasets.randhie.load()
+    endog = data.endog
+    exog = sm.add_constant(data.exog[:,:2], prepend=False)
+    res1 = HurdlePoisson(endog, exog)
+
+    #print(res1.summary())
