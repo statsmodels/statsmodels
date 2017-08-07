@@ -640,9 +640,8 @@ def pacf_burg(x, nlags=None, demean=True):
     return pacf, sigma2
 
 
-#NOTE: this is incorrect.
-def pacf_ols(x, nlags=40):
-    '''Calculate partial autocorrelations
+def pacf_ols(x, nlags=40, unbiased=True):
+    '''Calculate partial autocorrelations via OLS
 
     Parameters
     ----------
@@ -659,20 +658,29 @@ def pacf_ols(x, nlags=40):
     Notes
     -----
     This solves a separate OLS estimation for each desired lag.
-    '''
-    #TODO: add warnings for Yule-Walker
-    #NOTE: demeaning and not using a constant gave incorrect answers?
-    #JP: demeaning should have a better estimate of the constant
-    #maybe we can compare small sample properties with a MonteCarlo
-    xlags, x0 = lagmat(x, nlags, original='sep')
-    #xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
-    xlags = add_constant(xlags)
-    pacf = [1.]
-    for k in range(1, nlags+1):
-        res = OLS(x0[k:], xlags[k:, :k+1]).fit()
-        #np.take(xlags[k:], range(1,k+1)+[-1],
 
-        pacf.append(res.params[-1])
+    References
+    ----------
+    .. [1] Box, G. E., Jenkins, G. M., Reinsel, G. C., & Ljung, G. M. (2015).
+    Time series analysis: forecasting and control.
+    John Wiley & Sons, p. 66
+
+    '''
+    n = len(x)
+    # Demean the series
+    x = x - np.mean(x)
+    # Create lags for multivariate OLS
+    xlags, x0 = lagmat(x, nlags, original='sep')
+    pacf = [1.]
+    for k in range(1, nlags + 1):
+        res = OLS(x0, xlags[:, :k]).fit()
+        # Last coefficient corresponds to PACF value (see [1])
+        coeff = res.params[-1]
+        if unbiased:
+            coeff = coeff * n / (n - k)
+
+        pacf.append(coeff)
+
     return np.array(pacf)
 
 
