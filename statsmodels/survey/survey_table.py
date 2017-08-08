@@ -2,6 +2,9 @@ from __future__ import division
 import numpy as np
 import pandas as pd
 import summary_stats as ss
+import statsmodels.api as sm
+from patsy.contrasts import Treatment
+from patsy.contrasts import Poly
 
 # TODO: compute corrected statistics
 # add documentation
@@ -66,30 +69,38 @@ class SurveyTable(object):
         self.lrt = (self._col_prop * np.log(self._col_prop / self._null)).sum().sum()
         self.lrt = 2 * self._m
 
-    def _stderr(self):
+    def _stderr(self, cell_prop=True):
         # Essentially, we are calculating a total for each level combination
         # between the two variables. Using pandas doesnt allow for the use of
         # summary stats to compute the linearized stderr. Thus, this function
         # gets the indices that make up each 'group', and calculates the stderr
         # however, the indices are a dictionary, so we cant currently match the
         # stderr to the total calculated for each group
+        self.stderr_dict = {}
         for ind in self.df_group.indices.values():
             # make vector of zeros
             group_weights = np.zeros(self._m)
             # except at the indices in a particular group
             group_weights[ind] = self.design.weights[ind]
+            # if cell_prop is true, we calculate the variance of p_rc under the survey design
+            if cell_prop:
+                group_weights[ind] /= self.design.weights.sum()
             group_design = ss.SurveyDesign(self.design.strat, self.design.clust,
                                            group_weights)
-            stderr = ss.SurveyTotal(group_design, np.ones(self._m),
+            self.stderr_dict[tuple(ind)] = ss.SurveyTotal(group_design, np.ones(self._m),
                                     cov_method='linearized', center_by='stratum').stderr
 
-
-"""
-issues:
-    - currently, there is no way to know which stderr corresponds to
-    which combination of levels between the two variables
-    - I could do this if I incorporated SurveyDesign, bc each total
-    automotically comes wht the stderr. However, not sure how to keep it in
-    a table format, as it can not consider each combination between possible
-    factors if it is not in the data (ie we can't do a 'fill_value=0' to show
-    that certain combinations are not in the data)
+    def _delta(self):
+        D_inv = np.linarg.inv(np.diag(st._cell_prop.values))
+        v_hat = np.diag(self._stderr())
+        # need to get off diagonal elements of v_srs. But can't find what
+        # 'p_st' is in the documentation
+        v_srs = np.diag(self._cell_prop * (1 - self._cell_prop) / self._m)
+        dat = pd.DataFrame(self.df.var1.astype('category').cat.codes,
+                           self.df.var2.astype('category').cat.codes)
+        dat = sm.add_constant(dat)
+        dat.columns = ['const', 'var1', 'var2']
+        model_fit = sm.OLS(dat[['const', 'var1']], dat['var2']).fit()
+        # Does not fit the dimensions RCx(R-1)(C-1)
+        # R is the number of rows in the table, C is number of columns
+        model_fit.resid
