@@ -360,6 +360,8 @@ class SurveyStat(object):
             w = self.design.get_rep_weights(c=i, cov_method='boot', bsn=bsn)
             jdata.append(self._stat(w))
         jdata = np.asarray(jdata)
+        if jdata.ndim == 1:
+            jdata = jdata[:, None]
         if self.center_by == 'est':
             print("centering by est")
             jdata -= self.est
@@ -406,6 +408,8 @@ class SurveyStat(object):
             w = self.design.get_rep_weights(c=c, cov_method='jack')
             jdata.append(self._stat(w))
         jdata = np.asarray(jdata)
+        if jdata.ndim == 1:
+            jdata = jdata[:, None]
         if self.center_by == 'est':
             print('centering by estimate')
             jdata -= self.est
@@ -444,13 +448,16 @@ class SurveyStat(object):
         self.est = self._stat(self.design.weights)
         jdata = []
         # for each cluster
-        for c in range(design.n_clust):
-            w = design.weights.copy()
+        for c in range(self.design.n_clust):
+            w = self.design.weights.copy()
             # but if you're not in that cluster, set as 0
             w[self.design.clust != c] = 0
             jdata.append(self._weighted_score(w))
         jdata = np.asarray(jdata)
-
+        # we usually deal w/ jdata as nxp
+        # unless w/ ratio, in which 2 columns
+        if jdata.ndim == 1:
+            jdata = jdata[:, None]
         for s in range(self.design.n_strat):
             # center the 'delete 1' statistic
             jdata[self.design.ii[s], :] -= jdata[self.design.ii[s],
@@ -626,6 +633,64 @@ class SurveyTotal(SurveyStat):
         return np.dot(weights, self.data)
 
 
+class SurveyRatio(SurveyStat):
+    def __init__(self, design, data, cov_method='jack', n_reps=None, center_by='global', bsn=None):
+        super().__init__(design, data, center_by)
+
+        if cov_method == "jack":
+            self._jackknife()
+        elif cov_method == 'boot':
+            self._bootstrap(n_reps, bsn)
+        elif cov_method == 'linearized':
+            self._linearized()
+        else:
+            raise ValueError("cov_method %s is not supported" %s)
+
+    def _stat(self, weights):
+        """
+        Returns calculation of total.
+
+        Parameters
+        ----------
+        weights : np.array
+            The weights used to calculate the total, will either be
+            original design weights or recalculated weights via jk,
+            boot, etc
+
+        Returns
+        -------
+        An array containing the statistic calculated on the columns
+        of the dataset.
+        """
+        return np.dot(weights, self.data[:,0]) / np.dot(weights, self.data[:,1])
+
+    def _weighted_score(self, weights):
+        """
+        Returns weighted sum of the score variable for linearized variance.
+        For SurveyTotal, this is just the data
+
+        Parameters
+        ----------
+        weights : np.array
+            The weights used to calculate the total, will either be
+            original design weights or recalculated weights via jk,
+            boot, etc
+
+        Returns
+        -------
+        An array containing the statistic calculated on the columns
+        of the dataset.
+        """
+        # using try/except to prevent self._z from being calculated
+        # with each call
+        try:
+            return np.dot(weights, self._z)
+        except AttributeError:
+            self._z = (self.data[:,0] - (self.est * self.data[:, 1]))
+            self._z = self._z / np.dot(self.design.weights, self.data[:, 1])
+        return np.dot(weights, self._z)
+
+
 class SurveyQuantile(SurveyStat):
     """
     Calculates the quantiles[s] for each column.
@@ -710,17 +775,3 @@ class SurveyMedian(SurveyQuantile):
         center_by, bsn)
 
 
-strata = np.r_[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
-cluster = np.r_[0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4]
-weights = np.r_[1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1].astype(np.float64)
-fpc = np.r_[.5, .5, .5, .5, .5, .5, .1, .1, .1, .1, .1]
-data = np.asarray([[1, 3, 2, 5, 4, 1, 2, 3, 4, 6, 9],
-                   [5, 3, 2, 1, 4, 7, 8, 9, 5, 4, 3],
-                   [3, 2, 1, 5, 6, 7, 4, 2, 1, 6, 4]], dtype=np.float64).T
-
-design = SurveyDesign(strata, cluster, weights, fpc=fpc)
-
-tot = SurveyTotal(design, data, cov_method='linearized', center_by='stratum')
-print(tot.est, tot.stderr)
-avg = SurveyMean(design, data, cov_method='linearized', center_by='stratum')
-print(avg.est, avg.stderr)
