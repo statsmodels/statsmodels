@@ -17,6 +17,15 @@ data = np.asarray([[1, 3, 2, 5, 4, 1, 2, 3, 4, 6, 9],
 # need to get stata results to compare
 y = np.random.choice([0,1], 11)
 X = data[:, [1,2]]
+design = SurveyDesign(strata, cluster, weights)
+# assert_equal(design.clust, np.r_[0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4])
+model_class = sm.GLM(y, X, family = sm.families.Binomial())
+model_class.fit()
+
+init_args = {'family': sm.families.Binomial()}
+model_class = sm.GLM
+model = SurveyModel(design, model_class=model_class, init_args=init_args)
+model.fit(y, X, cov_method='linearized_stata',center_by='est')
 
 def test_jack_repw():
     design = ss.SurveyDesign(strata, cluster, weights)
@@ -24,7 +33,7 @@ def test_jack_repw():
     model_class = sm.GLM
     init_args = {'family': sm.families.Binomial()}
     model = smod.SurveyModel(design, model_class=model_class, init_args=init_args)
-    rslt = model.fit(y, X, cov_method='linearized', center_by='est')
+    rslt = model.fit(y, X, cov_method='linearized_sas', center_by='est')
 
     rw = []
     for k in range(5):

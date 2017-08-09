@@ -12,6 +12,7 @@ class SurveyModel(object):
         # can be used to overwrite center_by if necessasry
         if center_by is None:
             center_by = self.center_by
+
         if center_by == 'est':
             array -= self.params
         elif center_by == 'global':
@@ -26,15 +27,47 @@ class SurveyModel(object):
             raise ValueError("Centering option not implemented")
         return array
 
-    def _get_linearization_vcov(self, X, y, technique):
+    def _stata_linearization_vcov(self, X, y):
         model = self.model(y, X, **self.init_args)
-        params = self.params.copy()
+        # doing model.fit() to get the hessian
+        model.fit(**self.fit_args)
+
+        hessian = model.hessian(self.params)
+        hess_inv = np.linalg.inv(hessian)
+
+        lin_pred = np.dot(X, self.params)
+        idl = model.family.link.inverse_deriv(lin_pred)
+        # d_hat is the matrix of partial derivatives of the link function
+        # w.r.t self.params.
+        d_hat = (X * idl[:, None])
+
+        jdata = []
+        for c in range(self.design.n_clust):
+            w = self.design.weights.copy()
+            # but if you're not in that cluster, set as 0
+            w[self.design.clust != c] = 0
+            jdata.append(np.dot(w, d_hat))
+        jdata = np.asarray(jdata)
+        # we usually deal w/ jdata as nxp
+        # unless w/ ratio, in which 2 columns
+        if jdata.ndim == 1:
+            jdata = jdata[:, None]
+        jdata = self._centering(jdata, 'stratum')
+        nh = self.design.clust_per_strat[self.design.strat_for_clust].astype(np.float64)
+        mh = np.sqrt(nh / (nh-1))
+        fh = np.sqrt(1 - self.design.fpc)
+        jdata = fh[:, None] * mh[:, None] * jdata
+        vcov = np.dot(jdata.T, jdata)
+
+        return vcov
+
+    def _sas_linearization_vcov(self, X, y, technique):
+        model = self.model(y, X, **self.init_args)
         lin_pred = np.dot(X, self.params)
         idl = model.family.link.inverse_deriv(lin_pred)
         # d_hat is the matrix of partial derivatives of the link function
         # w.r.t self.params.
         d_hat = (X * idl[:, None]).T
-        # d_hat = model.score_obs(params=params).T
 
         cond_mean = self.result.mu
         # TODO: let w = self.design.weights.copy() or self.design.rep_weights[:,c] if
@@ -58,11 +91,14 @@ class SurveyModel(object):
         if technique=="newton":
             # TODO: Figure out if hessian should be used when
             # 'jack-sandwich' or 'boot-sandwich' is requested
-            q_hat = model.hessian(self.params)
+            model.fit(**self.fit_args)
+            factor = model.hessian_factor(self.params)
+            q_hat = -np.dot(X.T * factor, X)
         else:
             cond_inv = np.linalg.inv(np.diag(cond_mean) - np.dot(cond_mean, cond_mean.T))
             q_hat = np.dot(w * d_hat, np.dot(cond_inv, d_hat.T))
-        vcov = np.dot(np.linalg.inv(q_hat), np.dot(g_hat, np.linalg.inv(q_hat)))
+        q_hat_inv = np.linalg.inv(q_hat)
+        vcov = np.dot(q_hat_inv, np.dot(g_hat, q_hat_inv))
         return vcov
 
     def _get_jackknife_vcov(self, X, y):
@@ -93,9 +129,12 @@ class SurveyModel(object):
         # for now, just working with jackknife to see if it works
         if cov_method == 'jack':
             self.vcov = self._get_jackknife_vcov(X, y)
-        elif cov_method == 'linearized':
-            self.vcov = self._get_linearization_vcov(X, y, technique)
-
+        elif cov_method == 'linearized_sas':
+            self.vcov = self._sas_linearization_vcov(X, y, technique)
+        elif cov_method == 'linearized_stata':
+            self.vcov = self._stata_linearization_vcov(X, y)
+        else:
+            return ValueError('cov_method %s not supported' %cov_method)
         if self.vcov.ndim == 2:
             self.stderr = np.sqrt(np.diag(self.vcov))
         else:
