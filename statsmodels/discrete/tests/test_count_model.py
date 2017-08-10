@@ -14,7 +14,7 @@ class TestZeroInflatedModel_logit(object):
         cls.endog = data.endog
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
-        cls.res1 = sm.PoissonZeroInflated(data.endog, exog, 
+        cls.res1 = sm.ZeroInflatedPoisson(data.endog, exog, 
             exog_infl=exog_infl, inflation='logit').fit(method='newton', maxiter=500)
         res2 = RandHIE()
         res2.zero_inflated_poisson_logit()
@@ -55,7 +55,7 @@ class TestZeroInflatedModel_probit(object):
         cls.endog = data.endog
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
-        cls.res1 = sm.PoissonZeroInflated(data.endog, exog,
+        cls.res1 = sm.ZeroInflatedPoisson(data.endog, exog,
             exog_infl=exog_infl, inflation='probit').fit(method='newton', maxiter=500)
         res2 = RandHIE()
         res2.zero_inflated_poisson_probit()
@@ -86,7 +86,7 @@ class TestZeroInflatedModel_offset(object):
         cls.endog = data.endog
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
-        cls.res1 = sm.PoissonZeroInflated(data.endog, exog,
+        cls.res1 = sm.ZeroInflatedPoisson(data.endog, exog,
             exog_infl=exog_infl, offset=data.exog[:,7]).fit(method='newton', maxiter=500)
         res2 = RandHIE()
         res2.zero_inflated_poisson_offset()
@@ -121,7 +121,7 @@ class TestZeroInflatedModel_predict(object):
         mu_true = exog.dot(expected_params)
         cls.endog = sm.distributions.zipoisson.rvs(mu_true, expected_params[-1],
                                                    size=mu_true.shape)
-        model = sm.PoissonZeroInflated(cls.endog, exog, p=1)
+        model = sm.ZeroInflatedPoisson(cls.endog, exog, p=1)
         cls.res = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
 
     def test_mean(self):

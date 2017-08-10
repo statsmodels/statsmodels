@@ -1,6 +1,6 @@
 from __future__ import division
 
-__all__ = ["PoissonZeroInflated"]
+__all__ = ["ZeroInflatedPoisson"]
 
 import numpy as np
 import statsmodels.base.model as base
@@ -9,7 +9,8 @@ import statsmodels.regression.linear_model as lm
 from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
                                                  Poisson, Logit, CountResults,
                                                  L1CountResults, Probit,
-                                                 _discrete_results_docs)
+                                                 _discrete_results_docs,
+                                                 GeneralizedPoisson)
 from statsmodels.distributions import zipoisson
 from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
                                        approx_hess_cs, approx_fprime_cs)
@@ -397,7 +398,7 @@ class GenericZeroInflated(CountModel):
         else:
             raise ValueError('keyword `which` not recognized')
 
-class PoissonZeroInflated(GenericZeroInflated):
+class ZeroInflatedPoisson(GenericZeroInflated):
     """
     Poisson Zero Inflated model for count data
 
@@ -424,7 +425,7 @@ class PoissonZeroInflated(GenericZeroInflated):
 
     def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
                  inflation='logit', missing='none', **kwargs):
-        super(PoissonZeroInflated, self).__init__(endog, exog, offset=offset,
+        super(ZeroInflatedPoisson, self).__init__(endog, exog, offset=offset,
                                                   inflation=inflation,
                                                   exog_infl=exog_infl,
                                                   exposure=exposure,
@@ -466,12 +467,48 @@ class PoissonZeroInflated(GenericZeroInflated):
 
         return hess_arr
 
-class GenericZeroInflatedResults(CountResults):
-    __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Generic Zero Inflated",
-                    "extra_attr" : ""}
+class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
+    """
+    Poisson Zero Inflated model for count data
 
-class ZeroInflatedPoissonResults(GenericZeroInflatedResults):
+    %(params)s
+    %(extra_params)s
+
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    exog_infl: array
+        A reference to the zero-inflated exogenous design.
+    """ % {'params' : base._model_params_doc,
+           'extra_params' :
+           """offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+
+    """ + base._missing_param_doc}
+
+    def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
+                 inflation='logit', missing='none', p=1, **kwargs):
+        super(ZeroInflatedGeneralizedPoisson, self).__init__(endog, exog,
+                                                  offset=offset,
+                                                  inflation=inflation,
+                                                  exog_infl=exog_infl,
+                                                  exposure=exposure,
+                                                  missing=missing, **kwargs)
+        self.model_main = GeneralizedPoisson(self.endog, self.exog,
+            offset=offset, exposure=exposure, p=p)
+        self.distribution = zigeneralizedpoisson_gen
+        self.result = ZeroInflatedGeneralizedPoissonResults
+        self.result_wrapper = ZeroInflatedGeneralizedPoissonResultsWrapper
+        self.result_reg = L1ZeroInflatedGeneralizedPoissonResults
+        self.result_reg_wrapper = L1ZeroInflatedGeneralizedPoissonResultsWrapper
+
+class ZeroInflatedPoissonResults(CountResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description" : "A results class for Zero Inflated Poisson",
                     "extra_attr" : ""}
@@ -482,31 +519,45 @@ class ZeroInflatedPoissonResults(GenericZeroInflatedResults):
         w = 1 - self.predict() / np.exp(self.predict(which='linear'))
         return (1 + w * np.exp(mu))
 
-class L1GenericZeroInflatedResults(L1CountResults, GenericZeroInflatedResults):
-    pass
-
 class L1ZeroInflatedPoissonResults(L1CountResults, ZeroInflatedPoissonResults):
     pass
-
-class GenericZeroInflatedResultsWrapper(lm.RegressionResultsWrapper):
-    pass
-wrap.populate_wrapper(GenericZeroInflatedResultsWrapper,
-                      GenericZeroInflatedResults)
 
 class ZeroInflatedPoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(ZeroInflatedPoissonResultsWrapper,
                       ZeroInflatedPoissonResults)
 
-class L1GenericZeroInflatedResultsWrapper(lm.RegressionResultsWrapper):
-    pass
-wrap.populate_wrapper(L1GenericZeroInflatedResultsWrapper,
-                      L1GenericZeroInflatedResults)
-
 class L1ZeroInflatedPoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1ZeroInflatedPoissonResultsWrapper,
                       L1ZeroInflatedPoissonResults)
+
+class ZeroInflatedGeneralizedPoissonResults(CountResults):
+    __doc__ = _discrete_results_docs % {
+        "one_line_description" : "A results class for Zero Inflated Generalized Poisson",
+                    "extra_attr" : ""}
+
+    @cache_readonly
+    def _dispersion_factor(self):
+        mu = self.predict(which='linear')
+        w = 1 - self.predict() / np.exp(self.predict(which='linear'))
+        return (1 + w * np.exp(mu))
+
+class L1ZeroInflatedGeneralizedPoissonResults(L1CountResults,
+        ZeroInflatedGeneralizedPoissonResults):
+    pass
+
+class ZeroInflatedGeneralizedPoissonResultsWrapper(
+        lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(ZeroInflatedGeneralizedPoissonResultsWrapper,
+                      ZeroInflatedGeneralizedPoissonResults)
+
+class L1ZeroInflatedGeneralizedPoissonResultsWrapper(
+        lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(L1ZeroInflatedGeneralizedPoissonResultsWrapper,
+                      L1ZeroInflatedGeneralizedPoissonResults)
 
 
 if __name__=="__main__":
