@@ -41,3 +41,22 @@ class zipoisson_gen(rv_discrete):
 
 zipoisson = zipoisson_gen(name='zipoisson',
                           longname='Zero Inflated Poisson')
+
+class zigeneralizedpoisson_gen(rv_discrete):
+    '''A Zero Inflated Generalized Poisson distribution
+    '''
+    def _argcheck(self, mu, alpha, p, w):
+        return (mu > 0) & (w >= 0) & (w<=1)
+
+    def _logpmf(self, x, mu, alpha, p, w):
+        return _lazywhere(x != 0, (x, mu, alpha, p, w),
+                          (lambda x, mu, alpha, p, w: np.log(1. - w) + 
+                          genpoisson_p.logpmf(x, mu, alpha, p)),
+                          np.log(w + (1. - w) *
+                          genpoisson_p.pmf(x, mu, alpha, p)))
+
+    def _pmf(self, x, mu, alpha, p, w):
+        return np.exp(self._logpmf(x, mu, alpha, p, w))
+
+zigenpoisson = zigeneralizedpoisson_gen(name='zigenpoisson',
+                          longname='Zero Inflated Generalized Poisson')
