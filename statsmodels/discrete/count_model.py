@@ -390,11 +390,7 @@ class GenericZeroInflated(CountModel):
         elif which == 'prob-zero':
             return  prob_zero
         elif which == 'prob':
-            counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-            w = self.model_infl.predict(params_infl)[:, None]
-            w[w == 1.] = np.nextafter(1, 0)
-            mu = self.model_main.predict(params_main)[:, None]
-            return self.distribution.pmf(counts, mu, w)
+            return self._predict_prob(params)
         else:
             raise ValueError('keyword `which` not recognized')
 
@@ -467,6 +463,16 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
         return hess_arr
 
+    def _predict_prob(self, params):
+        params_infl = params[:self.k_inflate]
+        params_main = params[self.k_inflate:]
+
+        counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+        w = self.model_infl.predict(params_infl)[:, None]
+        w[w == 1.] = np.nextafter(1, 0)
+        mu = self.model_main.predict(params_main)[:, None]
+        return self.distribution.pmf(counts, mu, w)
+
 class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
     """
     Poisson Zero Inflated model for count data
@@ -500,6 +506,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
                                                   exog_infl=exog_infl,
                                                   exposure=exposure,
                                                   missing=missing, **kwargs)
+        self.parametrization = p
         self.model_main = GeneralizedPoisson(self.endog, self.exog,
             offset=offset, exposure=exposure, p=p)
         self.distribution = zigeneralizedpoisson_gen
@@ -507,6 +514,16 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         self.result_wrapper = ZeroInflatedGeneralizedPoissonResultsWrapper
         self.result_reg = L1ZeroInflatedGeneralizedPoissonResults
         self.result_reg_wrapper = L1ZeroInflatedGeneralizedPoissonResultsWrapper
+
+    def _predict_prob(self, params):
+        params_infl = params[:self.k_inflate]
+        params_main = params[self.k_inflate:]
+
+        counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+        w = self.model_infl.predict(params_infl)[:, None]
+        w[w == 1.] = np.nextafter(1, 0)
+        mu = self.model_main.predict(params_main)[:, None]
+        return self.distribution.pmf(counts, mu, params_main[-1], self.parametrization, w)
 
 class ZeroInflatedPoissonResults(CountResults):
     __doc__ = _discrete_results_docs % {
@@ -539,9 +556,10 @@ class ZeroInflatedGeneralizedPoissonResults(CountResults):
 
     @cache_readonly
     def _dispersion_factor(self):
+        alpha = self.params[self.model.k_inflate:][-1]
         mu = self.predict(which='linear')
         w = 1 - self.predict() / np.exp(self.predict(which='linear'))
-        return (1 + w * np.exp(mu))
+        return ((1 + alpha * np.exp(mu))**2 + w * np.exp(mu))
 
 class L1ZeroInflatedGeneralizedPoissonResults(L1CountResults,
         ZeroInflatedGeneralizedPoissonResults):

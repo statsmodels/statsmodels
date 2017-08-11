@@ -60,6 +60,26 @@ class TestZIPoisson(object):
         zipoisson_logpmf = sm.distributions.zipoisson.logpmf(7, 3, 0.1)
         assert_allclose(poisson_logpmf, zipoisson_logpmf, rtol=5e-2, atol=5e-2)
 
+class TestZIGneralizedPoisson(object):
+    def test_pmf_zero(self):
+        gp_pmf = sm.distributions.genpoisson_p.pmf(3, 2, 1, 1)
+        zigp_pmf = sm.distributions.zigenpoisson.pmf(3, 2, 1, 1, 0)
+        assert_allclose(gp_pmf, zigp_pmf, rtol=1e-12)
+    
+    def test_logpmf_zero(self):
+        gp_logpmf = sm.distributions.genpoisson_p.logpmf(7, 3, 1, 1)
+        zigp_logpmf = sm.distributions.zigenpoisson.logpmf(7, 3, 1, 1, 0)
+        assert_allclose(gp_logpmf, zigp_logpmf, rtol=1e-12)
+
+    def test_pmf(self):
+        gp_pmf = sm.distributions.genpoisson_p.pmf(3, 2, 2, 2)
+        zigp_pmf = sm.distributions.zigenpoisson.pmf(3, 2, 2, 2, 0.1)
+        assert_allclose(gp_pmf, zigp_pmf, rtol=5e-2, atol=5e-2)
+    
+    def test_logpmf(self):
+        gp_logpmf = sm.distributions.genpoisson_p.logpmf(2, 3, 0, 2)
+        zigp_logpmf = sm.distributions.zigenpoisson.logpmf(2, 3, 0, 2, 0.1)
+        assert_allclose(gp_logpmf, zigp_logpmf, rtol=5e-2, atol=5e-2)
 
 if __name__ == "__main__":
     import pytest
