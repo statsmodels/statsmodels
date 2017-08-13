@@ -905,14 +905,13 @@ class Binomial(Family):
         defined in Binomial initialize.  This simply makes :math:`y_i` the
         original number of successes.
         """
-        if np.shape(self.n) == () and self.n == 1:
-            return (endog * np.log(mu/(1 - mu)) + np.log(1 - mu)) * var_weights
-        else:
-            y = endog * self.n  # convert back to successes
-            # note that mu is still in (0,1), i.e. not convertet back
-            return (special.gammaln(self.n + 1) - special.gammaln(y + 1) -
-                    special.gammaln(self.n - y + 1) + y * np.log(mu/(1 - mu)) +
-                    self.n * np.log(1 - mu)) * var_weights
+        n = self.n     # Number of trials
+        y = endog * n  # Number of successes
+
+        # note that mu is still in (0,1), i.e. not converted back
+        return (special.gammaln(n + 1) - special.gammaln(y + 1) -
+                special.gammaln(n - y + 1) + y * np.log(mu / (1 - mu)) +
+                n * np.log(1 - mu)) * var_weights
 
     def resid_anscombe(self, endog, mu, scale=1.):
         r'''
