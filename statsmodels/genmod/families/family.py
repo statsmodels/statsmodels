@@ -36,25 +36,18 @@ class Family(object):
     # TODO: change these class attributes, use valid somewhere...
     valid = [-np.inf, np.inf]
     links = []
-    family_doc = 'Base'
-    loglike_obs_doc = """
-        Notes
-        -----
-        This is defined for each family.  endog and mu are not restricted to
-        `endog` and `mu` respectively.  For instance, the deviance function
-        calls both loglike(endog,endog) and loglike(endog,mu) to get the
-        likelihood ratio."""
 
     def _setlink(self, link):
         """
         Helper method to set the link for a family.
 
-        Raises a ValueError exception if the link is not available. Note that
-        the error message might not be that informative because it tells you
-        that the link should be in the base class for the link function.
+        Raises a ``ValueError`` exception if the link is not available. Note
+        that  the error message might not be that informative because it tells
+        you that the link should be in the base class for the link function.
 
-        See glm.GLM for a list of appropriate links for each family but note
-        that not all of these are currently available.
+        See statsmodels.genmod.generalized_linear_model.GLM for a list of
+        appropriate links for each family but note that not all of these are
+        currently available.
         """
         # TODO: change the links class attribute in the families to hold
         # meaningful information instead of a list of links instances such as
@@ -169,16 +162,16 @@ class Family(object):
 
         .. math::
 
-           D = 2\sum_i (iweights_i * (llf(Y_i, Y_i) -
-               llf(Y_i, \mu_i)))
+           D = 2\sum_i (freq\_weights_i * (llf(endog_i, endog_i) -
+               llf(endog_i, \mu_i)))
 
         where y is the endogenous variable. The deviance functions are
         analytically defined for each family.
 
         Internally, we calculate deviance as:
 
-        .. math:
-            D = \sum_i freq\_weights_i * resid\_dev_i  / scale
+        .. math::
+           D = \sum_i freq\_weights_i * resid\_dev_i  / scale
         """
         resid_dev = self.resid_dev(endog, mu, var_weights)
         return np.sum(resid_dev * freq_weights / scale)
@@ -207,20 +200,19 @@ class Family(object):
         observation i to the deviance as
 
         .. math::
-
            resid\_dev_i = sign(y_i-\mu_i) \sqrt{D_i}
         """
         raise NotImplementedError
 
     def fitted(self, lin_pred):
-        """
+        r"""
         Fitted values based on linear predictors lin_pred.
 
         Parameters
         -----------
         lin_pred : array
             Values of the linear predictor of the model.
-            dot(X,beta) in a classical linear model.
+            :math:`X \cdot \beta` in a classical linear model.
 
         Returns
         --------
@@ -266,16 +258,16 @@ class Family(object):
 
         Returns
         -------
-        lli : float
+        ll_i : float
             The value of the loglikelihood evaluated at
             (endog, mu, var_weights, scale) as defined below.
 
         Notes
         -----
         This is defined for each family. endog and mu are not restricted to
-        `endog` and `mu` respectively.  For instance, the deviance function
-        calls both loglike(endog,endog) and loglike(endog,mu) to get the
-        likelihood ratio.
+        ``endog`` and ``mu`` respectively.  For instance, the deviance function
+        calls both ``loglike(endog, endog)`` and ``loglike(endog, mu)`` to get
+        the likelihood ratio.
         """
         raise NotImplementedError
 
@@ -306,18 +298,18 @@ class Family(object):
         -----
         Where :math:`ll_i` is the by-observation log-likelihood:
 
-        .. math:
-            ll = \sum(ll_i * freq\_weights_i)
+        .. math::
+           ll = \sum(ll_i * freq\_weights_i)
 
-        :math:`ll_i` is defined for each family. endog and mu are not
-        restricted to `endog` and `mu` respectively.  For instance, the
-        deviance function calls both loglike(endog,endog) and loglike(endog,mu)
-        to get the likelihood ratio.
+        ``logliek`` is defined for each family. ``endog`` and ``mu`` are not
+        restricted to ``endog`` and ``mu`` respectively.  For instance, the
+        deviance function calls both ``loglike(endog, endog)`` and
+        ``loglike(endog, mu)`` to get the likelihood ratio.
         """
         ll_obs = self.loglike_obs(endog, mu, var_weights, scale)
         return np.sum(ll_obs * freq_weights)
 
-    def resid_anscombe(self, endog, mu, iweights=1., scale=1.):
+    def resid_anscombe(self, endog, mu, scale=1.):
         r"""
         The Anscombe residuals
 
@@ -327,8 +319,6 @@ class Family(object):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
-        iweights : array-like
-            1d array of frequency weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -343,7 +333,6 @@ class Family(object):
         Anscombe residuals are defined by
 
         .. math::
-
            resid\_anscombe_i = \frac{A(y)-A(\mu)}{A'(\mu)\sqrt{Var[\mu]}}
 
         where :math:`A'(y)=v(y)^{-\frac{1}{3}}` and :math:`v(\mu)` is the
@@ -453,9 +442,9 @@ class Poisson(Family):
 
         Notes
         -----
-        .. math:
+        .. math::
             ll_i = var\_weights_i / scale * (endog_i * \ln(\mu_i) - \mu_i -
-            \ln \Gamma(endog_i + 1)
+            \ln \Gamma(endog_i + 1))
         """
         return var_weights / scale * (endog * np.log(mu) - mu -
                                       special.gammaln(endog + 1))
@@ -483,7 +472,8 @@ class Poisson(Family):
         -----
         .. math::
 
-           resid\_anscombe_i = (3/2) * (Y_i^{2/3} - \mu_i^{2/3}) / \mu_i^{1/6}
+           resid\_anscombe_i = (3/2) * (endog_i^{2/3} - \mu_i^{2/3}) /
+           \mu_i^{1/6}
         """
         return ((3 / 2.) * (endog**(2 / 3.) - mu**(2 / 3.)) /
                 (mu ** (1 / 6.) * scale ** 0.5))
@@ -511,7 +501,6 @@ class Gaussian(Family):
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
-
     """
 
     links = [L.log, L.identity, L.inverse_power]
@@ -545,7 +534,7 @@ class Gaussian(Family):
         --------
         .. math::
 
-           resid\_dev_i = var\_weights_i * (endog_i - \mu_i)
+           resid\_dev_i = var\_weights_i * (endog_i - \mu_i) ** 2
         """
         return var_weights * (endog - mu) ** 2
 
@@ -591,11 +580,9 @@ class Gaussian(Family):
 
         .. math::
 
-           ll_i = -1 / 2 \sum_i  * iweights_i * ((Y_i - mu_i)^2 / scale +
+           ll_i = -1 / 2 \sum_i  * var\_weights * ((Y_i - mu_i)^2 / scale +
                                                 \log(2 * \pi * scale))
         """
-        if isinstance(self.link, L.Power) and self.link.power == 1:
-            scale = np.sum(var_weights * (endog - mu) ** 2 / len(endog))
         ll_obs = -var_weights * (endog - mu) ** 2 / scale
         ll_obs += -np.log(scale / var_weights) - np.log(2 * np.pi)
         ll_obs /= 2
@@ -629,7 +616,7 @@ class Gaussian(Family):
 
            resid\_anscombe_i = (Y_i - \mu_i) / \sqrt{scale}
         """
-        return (endog - mu) / scale**(0.5)
+        return (endog - mu) / scale ** 0.5
 
 
 class Gamma(Family):
@@ -687,7 +674,7 @@ class Gamma(Family):
         .. math::
 
            resid\_dev_i = 2 * var\_weights_i * ((endog_i - \mu_i) / \mu_i -
-           \log(endog i / \mu_i))
+           \log(endog_i / \mu_i))
         """
         endog_mu = self._clean(endog / mu)
         resid_dev = -np.log(endog_mu) + (endog - mu) / mu
@@ -757,7 +744,7 @@ class Gamma(Family):
         -----
         .. math::
 
-           resid\_anscombe_i = 3 * (Y_i^{1/3} - \mu_i^{1/3}) / \mu_i^{1/3}
+           resid\_anscombe_i = 3 * (endog_i^{1/3} - \mu_i^{1/3}) / \mu_i^{1/3}
            / \sqrt{scale}
         """
         return 3 * (endog**(1/3.) - mu**(1/3.)) / mu**(1/3.) / scale**(0.5)
@@ -789,7 +776,6 @@ class Binomial(Family):
     Notes
     -----
     endog for Binomial can be specified in one of three ways.
-
     """
 
     links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog, L.identity]
@@ -912,8 +898,8 @@ class Binomial(Family):
         .. math::
 
            ll_i = \sum_i var\_weights_i * (\ln \Gamma(n+1) -
-                 \ln \Gamma(y_i + 1) - \ln \Gamma(n_i - y_i +1) + y_i *
-                 \log(\mu_i / (n_i - \mu_i)) + n * \log(1 - \mu_i/n_i))
+                  \ln \Gamma(y_i + 1) - \ln \Gamma(n_i - y_i +1) + y_i *
+                  \log(\mu_i / (n_i - \mu_i)) + n * \log(1 - \mu_i/n_i))
 
         where :math:`y_i = Y_i * n_i` with :math:`Y_i` and :math:`n_i` as
         defined in Binomial initialize.  This simply makes :math:`y_i` the
@@ -951,8 +937,8 @@ class Binomial(Family):
         -----
         .. math::
 
-            n^{2/3}*(cox_snell(endog)-cox_snell(mu))
-            / (mu*(1-mu/n)*scale^3)^{1/6}
+            n^{2/3}*(cox\_snell(endog)-cox\_snell(mu)) /
+            (mu*(1-mu/n)*scale^3)^{1/6}
 
         where cox_snell is defined as
         cox_snell(x) = betainc(2/3., 2/3., x)*betainc(2/3.,2/3.)
@@ -963,7 +949,7 @@ class Binomial(Family):
         The name 'cox_snell' is idiosyncratic and is simply used for
         convenience following the approach suggested in Cox and Snell (1968).
         Further note that
-        :math:`cox_snell(x) = \frac{3}{2}*x^{2/3} *
+        :math:`cox\_snell(x) = \frac{3}{2}*x^{2/3} *
         hyp2f1(2/3.,1/3.,5/3.,x)`
         where hyp2f1 is the hypergeometric 2f1 function.  The Anscombe
         residuals are sometimes defined in the literature using the
@@ -980,11 +966,12 @@ class Binomial(Family):
         endog = endog * self.n  # convert back to successes
         mu = mu * self.n  # convert back to successes
 
-        cox_snell = lambda x: (special.betainc(2/3., 2/3., x)
-                               * special.beta(2/3., 2/3.))
-        return self.n**(2/3.) * (cox_snell(endog*1./self.n) \
-                            - cox_snell(mu*1./self.n)) \
-                            / (mu * (1 - mu*1./self.n) * scale**3)**(1/6.)
+        def cox_snell(x):
+            return special.betainc(2/3., 2/3., x) * special.beta(2/3., 2/3.)
+
+        return (self.n ** (2/3.) * (cox_snell(endog * 1. / self.n) -
+                                    cox_snell(mu * 1. / self.n)) /
+                (mu * (1 - mu * 1. / self.n) * scale ** 3) ** (1 / 6.))
 
 
 class InverseGaussian(Family):
@@ -1004,7 +991,7 @@ class InverseGaussian(Family):
     InverseGaussian.link : a link instance
         The link function of the inverse Gaussian instance
     InverseGaussian.variance : varfunc instance
-        `variance` is an instance of statsmodels.family.varfuncs.mu_cubed
+        ``variance`` is an instance of statsmodels.family.varfuncs.mu_cubed
 
     See also
     --------
@@ -1051,7 +1038,7 @@ class InverseGaussian(Family):
         .. math::
 
            resid\_dev_i = var\_weights_i / (endog_i * \mu_i^2) * (endog_i -
-           \mu_i)^2
+                          \mu_i)^2
         """
         return var_weights / (endog * mu ** 2) * (endog - mu) ** 2
 
@@ -1134,7 +1121,6 @@ class NegativeBinomial(Family):
         For now `alpha` is assumed to be nonstochastic.  The default value
         is 1.  Permissible values are usually assumed to be between .01 and 2.
 
-
     Attributes
     ----------
     NegativeBinomial.link : a link instance
@@ -1151,9 +1137,10 @@ class NegativeBinomial(Family):
     -----
     Power link functions are not yet supported.
 
-    Parameterization for :math:`y=0,1,2,\ldots` is
+    Parameterization for :math:`y=0, 1, 2, \ldots` is
 
-     :math:`f(y) = \frac{\Gamma(y+\frac{1}{\alpha})}{y!\Gamma(\frac{1}{\alpha})}
+     :math:`f(y) = \frac{\Gamma(y+\frac{1}{\alpha})}
+                        {y!\Gamma(\frac{1}{\alpha})}
      \left(\frac{1}{1+\alpha\mu}\right)^{\frac{1}{\alpha}}
      \left(\frac{\alpha\mu}{1+\alpha\mu}\right)^y`
 
@@ -1285,17 +1272,19 @@ class NegativeBinomial(Family):
 
         .. math::
 
-            resid_anscombe_i = \frac{3}{2} *
+            resid\_anscombe_i = \frac{3}{2} *
             (Y_i^(2/3)*H2F1(-\alpha*Y_i) - \mu_i^(2/3)*H2F1(-\alpha*\mu_i))
             / (\mu_i * (1+\alpha*\mu_i) * scale^3)^(1/6)
 
         Note that for the (unregularized) Beta function, one has
         :math:`Beta(z,a,b) = z^a/a * H2F1(a,1-b,a+1,z)`
         """
-        hyp2f1 = lambda x: special.hyp2f1(2 / 3., 1 / 3., 5 / 3., x)
-        return 3/2. * (endog**(2/3.) * hyp2f1(-self.alpha * endog) -
-                        mu**(2/3.) * hyp2f1(-self.alpha * mu)) \
-                    / (mu * (1+self.alpha * mu)*scale**3)**(1/6)
+        def hyp2f1(x):
+            return special.hyp2f1(2 / 3., 1 / 3., 5 / 3., x)
+
+        return (3 / 2. * (endog ** (2 / 3.) * hyp2f1(-self.alpha * endog) -
+                          mu ** (2 / 3.) * hyp2f1(-self.alpha * mu)) /
+                (mu * (1 + self.alpha * mu) * scale ** 3) ** (1 / 6.))
 
 
 class Tweedie(Family):
@@ -1329,8 +1318,8 @@ class Tweedie(Family):
     -----
     Logliklihood function not implemented because of the complexity of
     calculating an infinite series of summations. The variance power can be
-    estimated using the `estimate_tweedie_power` function that is part of the
-    `GLM` class.
+    estimated using the ``estimate_tweedie_power`` function that is part of the
+    statsmodels.genmod.GLM class.
     """
     links = [L.log, L.Power]
     variance = V.Power
@@ -1464,7 +1453,7 @@ class Tweedie(Family):
 
         .. math::
 
-            resid\_anscombe_i = \log(Y_i / \mu_i) / \sqrt{\mu_i * scale}
+            resid\_anscombe_i = \log(endog_i / \mu_i) / \sqrt{\mu_i * scale}
 
         Otherwise,
 
@@ -1474,7 +1463,7 @@ class Tweedie(Family):
 
         .. math::
 
-            resid\_anscombe_i = (1 / c) * (Y_i^c - \mu_i^c) / \mu_i^{p / 6}
+            resid\_anscombe_i = (1 / c) * (endog_i^c - \mu_i^c) / \mu_i^{p / 6}
             / \sqrt{scale}
         """
         if self.var_power == 3:

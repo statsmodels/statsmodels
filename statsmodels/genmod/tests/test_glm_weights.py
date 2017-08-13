@@ -742,14 +742,14 @@ def test_warnings_raised():
         assert len(w) >= 1
 
 
-weights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
-# TODO: Re-enable once nose is permanently dropped
-@nose.tools.nottest
-@pytest.mark.parametrize('formatted', [weights, np.asarray(weights), pd.Series(weights)],
-                         ids=['list', 'ndarray', 'Series'])
-def test_weights_different_formats(formatted):
-    check_weights_as_formats(formatted)
+def test_weights_different_formats_all():
+    weights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
+    check_weights_as_formats(weights)
+    check_weights_as_formats(np.asarray(weights))
+    check_weights_as_formats(pd.Series(weights))
 
+
+def check_weights_as_formats(weights):
 
 # TODO: Remove once nose is permanently dropped
 def test_weights_different_formats_all():
