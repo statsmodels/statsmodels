@@ -59,7 +59,6 @@ class Family(object):
         if not isinstance(link, L.Link):
             raise TypeError("The input should be a valid Link object.")
         if hasattr(self, "links"):
-            validlink = link in self.links
             validlink = max([isinstance(link, _) for _ in self.links])
             if not validlink:
                 errmsg = "Invalid link for family, should be in %s. (got %s)"
