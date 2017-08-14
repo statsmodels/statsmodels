@@ -1035,3 +1035,11 @@ class RandHIE(object):
                          [ 1.330598,  1.36443]]
         self.aic = 116427.3
         self.bic = 116474.8
+
+    def zero_inflated_generalized_poisson(self):
+        self.params = [3.57337, -17.95797, -0.21380, 0.03847,
+                       -0.05348, 1.15666, 1.36468]
+        self.llf = -43630.6
+        self.bse = [1.66109, 7.62052, 0.02066, 0.00339, 
+                    0.00289, 0.01680, 0.01606]
+        self.aic = 87275
