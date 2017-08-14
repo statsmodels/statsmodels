@@ -15,7 +15,8 @@ from .discrete.discrete_model import (Poisson, Logit, Probit,
                                       MNLogit, NegativeBinomial,
                                       GeneralizedPoisson,
                                       NegativeBinomialP)
-from .discrete.count_model import (ZeroInflatedPoisson)
+from .discrete.count_model import (ZeroInflatedPoisson,
+                                   ZeroInflatedGeneralizedPoisson)
 from .tsa import api as tsa
 from .duration.survfunc import SurvfuncRight
 from .duration.hazard_regression import PHReg
