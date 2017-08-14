@@ -98,8 +98,43 @@ class TestZeroInflatedModel_predict(object):
                         self.res._dispersion_factor.mean()),
                         self.endog.var(), atol=5e-2, rtol=5e-2)
 
+class TestZeroInflatedGeneralizedPoisson(ChechGeneric):
+    @classmethod
+    def setup_class(cls):
+        data = sm.datasets.randhie.load()
+        cls.endog = data.endog
+        exog = sm.add_constant(data.exog[:,1:4], prepend=False)
+        exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
+        cls.res1 = sm.ZeroInflatedGeneralizedPoisson(data.endog, exog,
+            exog_infl=exog_infl).fit(method='newton', maxiter=500)
+        res2 = RandHIE()
+        res2.zero_inflated_generalized_poisson()
+        cls.res2 = res2
+
+    def test_bse(self):
+        pass
+
+    def test_conf_int(self):
+        pass
+
+    def test_bic(self):
+        pass
+
+    def test_t(self):
+         unit_matrix = np.identity(self.res1.params.size)
+         t_test = self.res1.t_test(unit_matrix)
+         assert_allclose(self.res1.tvalues, t_test.tvalue)
+
+    def test_fit_regularized(self):
+        model = self.res1.model
+
+        alpha = np.ones(len(self.res1.params))
+        alpha[-2:] = 0
+        res_reg = model.fit_regularized(alpha=alpha*0.01, disp=0, maxiter=500)
+
+        assert_allclose(res_reg.params[2:], self.res1.params[2:],
+            atol=5e-2, rtol=5e-2)
 
 if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'],
-                   exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])
