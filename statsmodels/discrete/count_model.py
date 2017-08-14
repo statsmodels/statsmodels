@@ -1,6 +1,6 @@
 from __future__ import division
 
-__all__ = ["ZeroInflatedPoisson"]
+__all__ = ["ZeroInflatedPoisson", "ZeroInflatedGeneralizedPoisson"]
 
 import numpy as np
 import statsmodels.base.model as base
@@ -11,7 +11,7 @@ from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
                                                  L1CountResults, Probit,
                                                  _discrete_results_docs,
                                                  GeneralizedPoisson)
-from statsmodels.distributions import zipoisson
+from statsmodels.distributions import zipoisson, zigenpoisson
 from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
                                        approx_hess_cs, approx_fprime_cs)
 from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
@@ -154,7 +154,7 @@ class GenericZeroInflated(CountModel):
             if np.size(offset) == 1 and offset == 0:
                 offset = None
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            start_params = mod_poi.fit(disp=0).params
+            start_params = self.model_main.fit(disp=0).params
             start_params = np.append(np.zeros(self.k_inflate), start_params)
         mlefit = super(GenericZeroInflated, self).fit(start_params=start_params,
                        maxiter=maxiter, disp=disp,
@@ -238,7 +238,7 @@ class GenericZeroInflated(CountModel):
 
         mu = self.model_main.predict(params_main)
 
-        dldp = np.zeros_like(self.exog, dtype=np.float64)
+        dldp = np.zeros((self.exog.shape[0], self.k_exog), dtype=np.float64)
         dldw = np.zeros_like(self.exog_infl, dtype=np.float64)
 
         dldp[zero_idx,:] = (score_main[zero_idx].T *
@@ -509,7 +509,9 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         self.parametrization = p
         self.model_main = GeneralizedPoisson(self.endog, self.exog,
             offset=offset, exposure=exposure, p=p)
-        self.distribution = zigeneralizedpoisson_gen
+        self.distribution = zigenpoisson
+        self.k_exog = self.k_exog + 1
+        self.k_extra += 1
         self.result = ZeroInflatedGeneralizedPoissonResults
         self.result_wrapper = ZeroInflatedGeneralizedPoissonResultsWrapper
         self.result_reg = L1ZeroInflatedGeneralizedPoissonResults
