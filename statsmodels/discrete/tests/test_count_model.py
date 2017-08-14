@@ -7,7 +7,26 @@ from numpy.testing import (assert_, assert_raises, assert_almost_equal,
 import statsmodels.api as sm
 from .results.results_discrete import RandHIE
 
-class TestZeroInflatedModel_logit(object):
+class ChechGeneric(object):
+    def test_params(self):
+        assert_allclose(self.res1.params, self.res2.params, atol=1e-5, rtol=1e-5)
+
+    def test_llf(self):
+        assert_allclose(self.res1.llf, self.res2.llf, atol=1e-5, rtol=1e-5)
+
+    def test_conf_int(self):
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int, atol=1e-3, rtol=1e-5)
+
+    def test_bse(self):
+        assert_allclose(self.res1.bse, self.res2.bse, atol=1e-3)
+
+    def test_aic(self):
+        assert_allclose(self.res1.aic, self.res2.aic, atol=1e-2, rtol=1e-2)
+
+    def test_bic(self):
+        assert_allclose(self.res1.aic, self.res2.aic, atol=1e-1, rtol=1e-1)
+
+class TestZeroInflatedModel_logit(ChechGeneric):
     @classmethod
     def setup_class(cls):
         data = sm.datasets.randhie.load()
@@ -20,24 +39,6 @@ class TestZeroInflatedModel_logit(object):
         res2.zero_inflated_poisson_logit()
         cls.res2 = res2
 
-    def test_params(self):
-        assert_allclose(self.res1.params, self.res2.params, atol=1e-5, rtol=1e-5)
-
-    def test_llf(self):
-        assert_allclose(self.res1.llf, self.res2.llf, atol=1e-5, rtol=1e-5)
-
-    def test_conf_int(self):
-        assert_allclose(self.res1.conf_int(), self.res2.conf_int, atol=1e-3, rtol=1e-5)
-
-    def test_bse(self):
-        assert_allclose(self.res1.bse, self.res2.bse, atol=1e-3)
-
-    def test_aic(self):
-        assert_allclose(self.res1.aic, self.res2.aic, atol=1e-2, rtol=1e-2)
-
-    def test_bic(self):
-        assert_allclose(self.res1.aic, self.res2.aic, atol=1e-1, rtol=1e-1)
-
     def test_fit_regularized(self):
         model = self.res1.model
 
@@ -48,7 +49,7 @@ class TestZeroInflatedModel_logit(object):
         assert_allclose(res_reg.params, self.res1.params, atol=5e-5)
         assert_allclose(res_reg.bse, self.res1.bse, atol=5e-5)
 
-class TestZeroInflatedModel_probit(object):
+class TestZeroInflatedModel_probit(ChechGeneric):
     @classmethod
     def setup_class(cls):
         data = sm.datasets.randhie.load()
@@ -61,25 +62,7 @@ class TestZeroInflatedModel_probit(object):
         res2.zero_inflated_poisson_probit()
         cls.res2 = res2
 
-    def test_params(self):
-        assert_allclose(self.res1.params, self.res2.params, atol=1e-5, rtol=1e-5)
-
-    def test_llf(self):
-        assert_allclose(self.res1.llf, self.res2.llf, atol=1e-5, rtol=1e-5)
-
-    def test_conf_int(self):
-        assert_allclose(self.res1.conf_int(), self.res2.conf_int, atol=1e-3, rtol=1e-5)
-
-    def test_bse(self):
-        assert_allclose(self.res1.bse, self.res2.bse, atol=1e-3)
-
-    def test_aic(self):
-        assert_allclose(self.res1.aic, self.res2.aic, atol=1e-2, rtol=1e-2)
-
-    def test_bic(self):
-        assert_allclose(self.res1.aic, self.res2.aic, atol=1e-1, rtol=1e-1)
-
-class TestZeroInflatedModel_offset(object):
+class TestZeroInflatedModel_offset(ChechGeneric):
     @classmethod
     def setup_class(cls):
         data = sm.datasets.randhie.load()
@@ -91,24 +74,6 @@ class TestZeroInflatedModel_offset(object):
         res2 = RandHIE()
         res2.zero_inflated_poisson_offset()
         cls.res2 = res2
-
-    def test_params(self):
-        assert_allclose(self.res1.params, self.res2.params, atol=1e-5, rtol=1e-5)
-
-    def test_llf(self):
-        assert_allclose(self.res1.llf, self.res2.llf, atol=1e-5, rtol=1e-5)
-
-    def test_conf_int(self):
-        assert_allclose(self.res1.conf_int(), self.res2.conf_int, atol=1e-3, rtol=1e-5)
-
-    def test_bse(self):
-        assert_allclose(self.res1.bse, self.res2.bse, atol=1e-3)
-
-    def test_aic(self):
-        assert_allclose(self.res1.aic, self.res2.aic, atol=1e-2, rtol=1e-2)
-
-    def test_bic(self):
-        assert_allclose(self.res1.aic, self.res2.aic, atol=1e-1, rtol=1e-1)
 
 class TestZeroInflatedModel_predict(object):
     @classmethod
