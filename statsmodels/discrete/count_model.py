@@ -375,7 +375,7 @@ class GenericZeroInflated(CountModel):
         elif self.infl == 'probit':
             raise NotImplemented('Predict for Probit inflation not implemented')
 
-        lin_pred = np.dot(exog, params_main) + exposure + offset
+        lin_pred = np.dot(exog, params_main[:self.exog.shape[1]]) + exposure + offset
         prob_zero = ((1 - prob_poisson) +
             prob_poisson * np.exp(self.model_main.loglikeobs(params_main)))
 
@@ -511,7 +511,8 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
             offset=offset, exposure=exposure, p=p)
         self.distribution = zigenpoisson
         self.k_exog = self.k_exog + 1
-        self.k_extra += 1
+        self.k_extra += 2
+        self.exog_names.append("alpha")
         self.result = ZeroInflatedGeneralizedPoissonResults
         self.result_wrapper = ZeroInflatedGeneralizedPoissonResultsWrapper
         self.result_reg = L1ZeroInflatedGeneralizedPoissonResults
