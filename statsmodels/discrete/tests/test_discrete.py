@@ -22,7 +22,7 @@ import pytest
 from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
                                                 Poisson, NegativeBinomial,
                                                 CountModel, GeneralizedPoisson,
-                                                NegativeBinomial_p)
+                                                NegativeBinomialP)
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
@@ -1785,12 +1785,12 @@ class TestGeneralizedPoisson_underdispersion(object):
         assert_allclose(chi2[:], (0.64628806058715882, 0.98578597726324468),
                         rtol=0.01)
 
-class TestNegativeBinomial_pNB2Newton(CheckModelResults):
+class TestNegativeBinomialPNB2Newton(CheckModelResults):
     @classmethod
     def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
-        cls.res1 = NegativeBinomial_p(data.endog, exog, p=2).fit(method='newton', disp=0)
+        cls.res1 = NegativeBinomialP(data.endog, exog, p=2).fit(method='newton', disp=0)
         res2 = RandHIE()
         res2.negativebinomial_nb2_bfgs()
         cls.res2 = res2
@@ -1829,12 +1829,12 @@ class TestNegativeBinomial_pNB2Newton(CheckModelResults):
         assert_almost_equal(self.res1.predict(which='linear')[:10],
                             self.res2.fittedvalues[:10], DECIMAL_3)
 
-class TestNegativeBinomial_pNB1Newton(CheckModelResults):
+class TestNegativeBinomialPNB1Newton(CheckModelResults):
     @classmethod
     def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
-        cls.res1 = NegativeBinomial_p(data.endog, exog, p=1).fit(method="newton",
+        cls.res1 = NegativeBinomialP(data.endog, exog, p=1).fit(method="newton",
                                                                  maxiter=100,
                                                                  disp=0,
                                                                  use_transparams=True)
@@ -1869,12 +1869,12 @@ class TestNegativeBinomial_pNB1Newton(CheckModelResults):
                             self.res2.fittedvalues[:10], DECIMAL_3)
 
 
-class TestNegativeBinomial_pNB2BFGS(CheckModelResults):
+class TestNegativeBinomialPNB2BFGS(CheckModelResults):
     @classmethod
     def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
-        cls.res1 = NegativeBinomial_p(data.endog, exog, p=2).fit(
+        cls.res1 = NegativeBinomialP(data.endog, exog, p=2).fit(
                                                 method='bfgs', disp=0,
                                                 maxiter=1000,
                                                 use_transparams=True)
@@ -1917,12 +1917,12 @@ class TestNegativeBinomial_pNB2BFGS(CheckModelResults):
                             self.res2.fittedvalues[:10], DECIMAL_3)
 
 
-class TestNegativeBinomial_pNB1BFGS(CheckModelResults):
+class TestNegativeBinomialPNB1BFGS(CheckModelResults):
     @classmethod
     def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
-        cls.res1 = NegativeBinomial_p(data.endog, exog, p=1).fit(method="bfgs",
+        cls.res1 = NegativeBinomialP(data.endog, exog, p=1).fit(method="bfgs",
                                                                  maxiter=100,
                                                                  disp=0)
         res2 = RandHIE()
@@ -1955,7 +1955,7 @@ class TestNegativeBinomial_pNB1BFGS(CheckModelResults):
         assert_almost_equal(self.res1.predict(which='linear')[:10],
                             self.res2.fittedvalues[:10], DECIMAL_3)
 
-class TestNegativeBinomial_pL1Compatability(CheckL1Compatability):
+class TestNegativeBinomialPL1Compatability(CheckL1Compatability):
     @classmethod
     def setup_class(cls):
         cls.kvars = 10 # Number of variables
@@ -1966,20 +1966,20 @@ class TestNegativeBinomial_pL1Compatability(CheckL1Compatability):
         rand_exog = sm.add_constant(rand_exog_st, prepend=True)
         # Drop some columns and do an unregularized fit
         exog_no_PSI = rand_exog[:, :cls.m]
-        mod_unreg = sm.NegativeBinomial_p(rand_data.endog, exog_no_PSI)
+        mod_unreg = sm.NegativeBinomialP(rand_data.endog, exog_no_PSI)
         cls.res_unreg = mod_unreg.fit(method="newton", disp=False)
         # Do a regularized fit with alpha, effectively dropping the last column
         alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars + 1)
         alpha[:cls.m] = 0
         alpha[-1] = 0  # don't penalize alpha
 
-        mod_reg = sm.NegativeBinomial_p(rand_data.endog, rand_exog)
+        mod_reg = sm.NegativeBinomialP(rand_data.endog, rand_exog)
         cls.res_reg = mod_reg.fit_regularized(
             method='l1', alpha=alpha, disp=False, acc=1e-10, maxiter=2000,
             trim_mode='auto')
         cls.k_extra = 1  # 1 extra parameter in nb2
 
-class  TestNegativeBinomial_pPredictProb(object):
+class  TestNegativeBinomialPPredictProb(object):
     def test_predict_prob_p1(self):
         expected_params = [1, -0.5]
         np.random.seed(1234)
@@ -1992,7 +1992,7 @@ class  TestNegativeBinomial_pPredictProb(object):
         prob = size / (size + mu_true)
         endog = nbinom.rvs(size, prob, size=len(mu_true))
 
-        res = sm.NegativeBinomial_p(endog, exog).fit()
+        res = sm.NegativeBinomialP(endog, exog).fit()
 
         mu = res.predict()
         size = 1. / alpha * mu
@@ -2014,7 +2014,7 @@ class  TestNegativeBinomial_pPredictProb(object):
         prob = size / (size + mu_true)
         endog = nbinom.rvs(size, prob, size=len(mu_true))
 
-        res = sm.NegativeBinomial_p(endog, exog, p=2).fit()
+        res = sm.NegativeBinomialP(endog, exog, p=2).fit()
 
         mu = res.predict()
         size = 1. / alpha
