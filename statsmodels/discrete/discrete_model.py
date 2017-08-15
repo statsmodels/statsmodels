@@ -18,7 +18,7 @@ W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 from __future__ import division
 
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
-           "GeneralizedPoisson", "NegativeBinomial_p"]
+           "GeneralizedPoisson", "NegativeBinomialP"]
 
 from statsmodels.compat.python import lmap, lzip, range
 import numpy as np
@@ -2706,7 +2706,7 @@ class NegativeBinomial(CountModel):
 
         return L1NegativeBinomialResultsWrapper(discretefit)
 
-class NegativeBinomial_p(CountModel):
+class NegativeBinomialP(CountModel):
     __doc__ = """
     Negative Binomial model for count data
     %(params)s
@@ -2728,7 +2728,7 @@ class NegativeBinomial_p(CountModel):
 
     def __init__(self, endog, exog, p=1, offset=None,
                        exposure=None, missing='none', **kwargs):
-        super(NegativeBinomial_p, self).__init__(endog, exog, offset=offset,
+        super(NegativeBinomialP, self).__init__(endog, exog, offset=offset,
                                                   exposure=exposure,
                                                   missing=missing, **kwargs)
         self.parametrization = p
@@ -2739,6 +2739,7 @@ class NegativeBinomial_p(CountModel):
     def loglike(self, params):
         """
         Loglikelihood of Negative Binomial model
+
         Parameters
         ----------
         params : array-like
@@ -2754,6 +2755,7 @@ class NegativeBinomial_p(CountModel):
     def loglikeobs(self, params):
         """
         Loglikelihood for observations of Negative Binomial model
+
         Parameters
         ----------
         params : array-like
@@ -2785,6 +2787,21 @@ class NegativeBinomial_p(CountModel):
         return llf
 
     def score_obs(self, params):
+        """
+        Negative Binomial model score (gradient) vector of the log-likelihood
+        for each observations.
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        score : ndarray, 1-D
+            The score vector of the model, i.e. the first derivative of the
+            loglikelihood function, evaluated at `params`
+        """
         if self._transparams:
             alpha = np.exp(params[-1])
         else:
@@ -2814,6 +2831,20 @@ class NegativeBinomial_p(CountModel):
                               axis=1)
 
     def score(self, params):
+        """
+        Negative Binomial model score (gradient) vector of the log-likelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        score : ndarray, 1-D
+            The score vector of the model, i.e. the first derivative of the
+            loglikelihood function, evaluated at `params`
+        """
         score = np.sum(self.score_obs(params), axis=0)
         if self._transparams:
             score[-1] == score[-1] ** 2
@@ -2822,6 +2853,19 @@ class NegativeBinomial_p(CountModel):
             return score
 
     def hessian(self, params):
+        """
+        Negative Binomial model hessian maxtrix of the log-likelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        hessian : ndarray, 2-D
+            The hessian matrix of the model.
+        """
         if self._transparams:
             alpha = np.exp(params[-1])
         else:
@@ -2899,7 +2943,7 @@ class NegativeBinomial_p(CountModel):
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             start_params = mod_poi.fit(disp=0).params
             start_params = np.append(start_params, 0.1)
-        mlefit = super(NegativeBinomial_p, self).fit(start_params=start_params,
+        mlefit = super(NegativeBinomialP, self).fit(start_params=start_params,
                         maxiter=maxiter, method=method, disp=disp,
                         full_output=full_output, callback=lambda x:x,
                         **kwargs)
