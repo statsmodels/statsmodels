@@ -15,6 +15,7 @@ from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
 from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
                                        approx_hess_cs, approx_fprime_cs)
 from statsmodels.tools.decorators import resettable_cache, cache_readonly
+from copy import deepcopy
 
 class GenericTruncated(CountModel):
     __doc__ = """
@@ -95,7 +96,7 @@ class GenericTruncated(CountModel):
 
         pmf = np.zeros_like(self.endog, dtype=np.float64)
         for i in range(self.trunc + 1):
-            model = self.model_main_name(np.ones_like(self.endog) * i,
+            model = self.model_main.__class__(np.ones_like(self.endog) * i,
                                          self.exog)
             pmf +=  np.exp(model.loglikeobs(params))
 
@@ -123,7 +124,7 @@ class GenericTruncated(CountModel):
         pmf = np.zeros_like(self.endog, dtype=np.float64)
         score_trunc = np.zeros_like(score_main, dtype=np.float64)
         for i in range(self.trunc + 1):
-            model = self.model_main_name(np.ones_like(self.endog) * i,
+            model = self.model_main.__class__(np.ones_like(self.endog) * i,
                                          self.exog)
             pmf_i =  np.exp(model.loglikeobs(params))
             score_trunc += (model.score_obs(params).T * pmf_i).T
@@ -157,7 +158,7 @@ class GenericTruncated(CountModel):
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
-            model = self.model_main_name(self.endog, self.exog, offset=offset)
+            model = self.model_main.__class__(self.endog, self.exog, offset=offset)
             start_params = model.fit(disp=0).params
         mlefit = super(GenericTruncated, self).fit(start_params=start_params,
                        maxiter=maxiter, disp=disp,
@@ -190,7 +191,7 @@ class GenericTruncated(CountModel):
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
-            model = self.model_main_name(self.endog, self.exog, offset=offset)
+            model = self.model_main.__class__(self.endog, self.exog, offset=offset)
             start_params = model.fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=0, callback=callback,
@@ -308,7 +309,6 @@ class Truncated(GenericTruncated):
                                                exposure=exposure,
                                                truncation=truncation,
                                                missing=missing, **kwargs)
-        self.model_main_name = model
         self.model_main = model(self.endog, self.exog)
         self.model_dist = distribution
         self.result = GenericTruncatedResults
@@ -345,7 +345,6 @@ class TruncatedPoisson(GenericTruncated):
                                                exposure=exposure,
                                                truncation=truncation,
                                                missing=missing, **kwargs)
-        self.model_main_name = Poisson
         self.model_main = Poisson(self.endog, self.exog)
         self.model_dist = truncatedpoisson
         self.result = TruncatedPoissonResults
@@ -472,7 +471,7 @@ class GenericCensored(CountModel):
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
-            model = self.model_main_name(self.endog, self.exog, offset=offset)
+            model = self.model_main.__class__(self.endog, self.exog, offset=offset)
             start_params = model.fit(disp=0).params
         mlefit = super(GenericCensored, self).fit(start_params=start_params,
                        maxiter=maxiter, disp=disp,
@@ -505,7 +504,7 @@ class GenericCensored(CountModel):
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
-            model = self.model_main_name(self.endog, self.exog, offset=offset)
+            model = self.model_main.__class__(self.endog, self.exog, offset=offset)
             start_params = model.fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=0, callback=callback,
@@ -576,7 +575,6 @@ class Censored(GenericCensored):
         super(Censored, self).__init__(endog, exog, offset=offset,
                                                exposure=exposure,
                                                missing=missing, **kwargs)
-        self.model_main_name = model
         self.model_main = model(np.zeros_like(self.endog), self.exog)
         self.model_dist = distribution
         self.result = GenericTruncatedResults
@@ -614,6 +612,63 @@ class GenericHurdle(CountModel):
                                             missing=missing, **kwargs)
         self.model1 = Censored(self.endog, self.exog, model=self.model_name1)
         self.model2 = Truncated(self.endog, self.exog, model=self.model_name2)
+        self.exog_names.insert(0, 'inflate_const') 
+        for i in range(self.exog.shape[1], 1, -1): 
+            self.exog_names.insert(0, 'zero_x%d' % (i-1))
+
+    def loglike(self, params):
+        """
+        Loglikelihood of Generic Hurdle model
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model.
+
+        Returns
+        -------
+        loglike : float
+            The log-likelihood function of the model evaluated at `params`.
+            See notes.
+
+        Notes
+        --------
+
+        """
+        k = int((len(params) - self.k_extra1 - self.k_extra2) / 2) + self.k_extra1
+        return self.model1.loglike(params[:k]) + self.model2.loglike(params[k:])
+
+    def fit(self, start_params=None, method='bfgs', maxiter=35,
+            full_output=1, disp=1, callback=None,
+            cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
+        results1 = self.model1.fit(start_params=start_params,
+                       method=method, maxiter=maxiter, disp=disp,
+                       full_output=full_output, callback=lambda x:x,
+                       **kwargs)
+
+        results2 = self.model2.fit(start_params=start_params,
+                       method=method, maxiter=maxiter, disp=disp,
+                       full_output=full_output, callback=lambda x:x,
+                       **kwargs)        
+
+        result = deepcopy(results1)
+        result._results.model = self
+        result.mle_retvals['converged'] = [results1.mle_retvals['converged'], results2.mle_retvals['converged']]
+        result._results.params = np.append(results1._results.params, results2._results.params)
+        result._results.df_resid += results2._results.df_resid
+        result._results.df_model += results2._results.df_model
+
+        modelfit = self.result(self, result._results, results1, results2)
+        result = self.result_wrapper(modelfit)
+
+        if cov_kwds is None:
+            cov_kwds = {}
+
+        result._get_robustcov_results(cov_type=cov_type,
+                                      use_self=True, use_t=use_t, **cov_kwds)
+        return result
+
+    fit.__doc__ = DiscreteModel.fit.__doc__
 
 class HurdlePoisson(GenericHurdle):
     """
@@ -642,6 +697,8 @@ class HurdlePoisson(GenericHurdle):
                        exposure=None, missing='none', **kwargs):
         self.model_name1 = Poisson
         self.model_name2 = Poisson
+        self.k_extra1 = 0
+        self.k_extra2 = 0
         super(HurdlePoisson, self).__init__(endog, exog, offset=offset,
                                             exposure=exposure,
                                             missing=missing, **kwargs)
@@ -686,6 +743,26 @@ class L1TruncatedPoissonResultsWrapper(lm.RegressionResultsWrapper):
 wrap.populate_wrapper(L1TruncatedPoissonResultsWrapper,
                       L1TruncatedPoissonResults)
 
+class HurdlePoissonResults(CountResults):
+    __doc__ = _discrete_results_docs % {
+        "one_line_description" : "A results class for Hurdle model",
+                    "extra_attr" : ""}
+    
+    def __init__(self, model, mlefit, model1, model2, cov_type='nonrobust', cov_kwds=None,
+                 use_t=None):
+        super(HurdlePoissonResults, self).__init__(model, mlefit,
+                cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t)
+        self.model1 = model1
+        self.model2 = model2
+
+    @cache_readonly
+    def llnull(self):
+        return 1.0
+
+    @cache_readonly
+    def bse(self):
+        return np.append(self.model1.bse, self.model2.bse)
+
 class L1HurdlePoissonResults(L1CountResults, HurdlePoissonResults):
     pass
 
@@ -705,6 +782,11 @@ if __name__=="__main__":
     data = sm.datasets.randhie.load()
     endog = data.endog
     exog = sm.add_constant(data.exog[:,:2], prepend=False)
-    res1 = HurdlePoisson(endog, exog)
+    res1 = HurdlePoisson(endog, exog).fit()
 
-    #print(res1.summary())
+    print(res1.params)
+    print(res1.llf)
+    print(res1.aic)
+    print(res1.df_model)
+    print(res1.llnull)
+    print(res1.summary())
