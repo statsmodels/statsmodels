@@ -2708,7 +2708,7 @@ class NegativeBinomial(CountModel):
 
 class NegativeBinomialP(CountModel):
     __doc__ = """
-    Negative Binomial model for count data
+    Generalized Negative Binomial (NB-P) model for count data
     %(params)s
     %(extra_params)s
     Attributes
@@ -2716,7 +2716,10 @@ class NegativeBinomialP(CountModel):
     endog : array
         A reference to the endogenous response variable
     exog : array
-        A reference to the exogenous design.
+        A reference to the exogenous design.    
+    p : scalar
+        P denotes parametrizations for NB-P regression. p=1 for NB-1 and
+    p=2 for NB-2. Default is p=1.
     """ % {'params' : base._model_params_doc,
            'extra_params' :
            """offset : array_like
@@ -2738,12 +2741,13 @@ class NegativeBinomialP(CountModel):
 
     def loglike(self, params):
         """
-        Loglikelihood of Negative Binomial model
+        Loglikelihood of Generalized Negative Binomial (NB-P) model
 
         Parameters
         ----------
         params : array-like
             The parameters of the model.
+
         Returns
         -------
         loglike : float
@@ -2754,12 +2758,14 @@ class NegativeBinomialP(CountModel):
 
     def loglikeobs(self, params):
         """
-        Loglikelihood for observations of Negative Binomial model
+        Loglikelihood for observations of Generalized Negative Binomial
+        (NB-P) model
 
         Parameters
         ----------
         params : array-like
             The parameters of the model.
+
         Returns
         -------
         loglike : ndarray (nobs,)
@@ -2788,8 +2794,8 @@ class NegativeBinomialP(CountModel):
 
     def score_obs(self, params):
         """
-        Negative Binomial model score (gradient) vector of the log-likelihood
-        for each observations.
+        Generalized Negative Binomial (NB-P) model score (gradient)
+        vector of the log-likelihood for each observations.
 
         Parameters
         ----------
@@ -2832,7 +2838,8 @@ class NegativeBinomialP(CountModel):
 
     def score(self, params):
         """
-        Negative Binomial model score (gradient) vector of the log-likelihood
+        Generalized Negative Binomial (NB-P) model score (gradient)
+        vector of the log-likelihood
 
         Parameters
         ----------
@@ -2854,7 +2861,8 @@ class NegativeBinomialP(CountModel):
 
     def hessian(self, params):
         """
-        Negative Binomial model hessian maxtrix of the log-likelihood
+        Generalized Negative Binomial (NB-P) model hessian maxtrix
+        of the log-likelihood
 
         Parameters
         ----------
@@ -2932,7 +2940,7 @@ class NegativeBinomialP(CountModel):
             self._transparams = True
         else:
             if use_transparams:
-                warnings.warn("Paramter \"use_transparams\" is ignored",
+                warnings.warn('Parameter "use_transparams" is ignored',
                               RuntimeWarning)
             self._transparams = False
 
@@ -2967,6 +2975,10 @@ class NegativeBinomialP(CountModel):
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
 
+        if method not in ['l1', 'l1_cvxopt_cp']:
+            raise TypeError(
+                    "argument method == %s, which is not handled" % method)
+
         if np.size(alpha) == 1 and alpha != 0:
             k_params = self.exog.shape[1] + self.k_extra
             alpha = alpha * np.ones(k_params)
@@ -2992,22 +3004,43 @@ class NegativeBinomialP(CountModel):
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1NegativeBinomialResults(self, cntfit)
-        else:
-            raise TypeError(
-                    "argument method == %s, which is not handled" % method)
+
+        discretefit = L1NegativeBinomialResults(self, cntfit)
 
         return L1NegativeBinomialResultsWrapper(discretefit)
 
     def predict(self, params, exog=None, exposure=None, offset=None,
                 which='mean'):
         """
-        Predict response variable of a count model given exogenous variables.
+        Predict response variable of a model given exogenous variables.
+
+        Parameters
+        ----------
+        params : array-like
+            2d array of fitted parameters of the model. Should be in the
+            order returned from the model.
+        exog : array-like, optional
+            1d or 2d array of exogenous values.  If not supplied, the
+            whole exog attribute of the model is used. If a 1d array is given
+            it assumed to be 1 row of exogenous variables. If you only have
+            one regressor and would like to do prediction, you must provide
+            a 2d array with shape[1] == 1.
+        linear : bool, optional
+            If True, returns the linear predictor dot(exog,params).  Else,
+            returns the value of the cdf at the linear predictor.
+        offset : array_like, optional
+            Offset is added to the linear prediction with coefficient equal to 1.
+        exposure : array_like, optional
+            Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+        which : 'mean', 'linear', 'prob', optional.
+            'mean' returns the exp of linear predictor exp(dot(exog,params)).
+            'linear' returns the linear predictor dot(exog,params).
+            'prob' return probabilities for counts from 0 to max(endog).
+            Default is 'mean'.
+
         Notes
         -----
-        If exposure is specified, then it will be logged by the method.
-        The user does not need to log it first.
         """
         if exog is None:
             exog = self.exog
