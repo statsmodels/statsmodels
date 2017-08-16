@@ -1797,37 +1797,39 @@ class TestNegativeBinomialPNB2Newton(CheckModelResults):
 
     #NOTE: The bse is much closer precitions to stata
     def test_bse(self):
-        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_3)
+        assert_allclose(self.res1.bse, self.res2.bse,
+                        atol=1e-3, rtol=1e-3)
 
     def test_params(self):
-        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
+        assert_allclose(self.res1.params, self.res2.params,
+                        atol=1e-7)
 
     def test_alpha(self):
         self.res1.bse # attaches alpha_std_err
-        assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha,
-                            DECIMAL_4)
-        assert_almost_equal(self.res1.lnalpha_std_err,
-                            self.res2.lnalpha_std_err, DECIMAL_4)
+        assert_allclose(self.res1.lnalpha, self.res2.lnalpha)
+        assert_allclose(self.res1.lnalpha_std_err,
+                        self.res2.lnalpha_std_err,
+                        atol=1e-7)
 
     def test_conf_int(self):
-        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
-                            DECIMAL_3)
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int,
+                        atol=1e-3, rtol=1e-3)
 
     def test_zstat(self): # Low precision because Z vs. t
-        assert_almost_equal(self.res1.pvalues[:-1], self.res2.pvalues,
-                            DECIMAL_2)
+        assert_allclose(self.res1.pvalues[:-1], self.res2.pvalues,
+                        atol=5e-3, rtol=5e-3)
 
     def test_fittedvalues(self):
-        assert_almost_equal(self.res1.fittedvalues[:10],
-                            self.res2.fittedvalues[:10], DECIMAL_3)
+        assert_allclose(self.res1.fittedvalues[:10],
+                        self.res2.fittedvalues[:10])
 
     def test_predict(self):
-        assert_almost_equal(self.res1.predict()[:10],
-                            np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
+        assert_allclose(self.res1.predict()[:10],
+                        np.exp(self.res2.fittedvalues[:10]))
 
     def test_predict_xb(self):
-        assert_almost_equal(self.res1.predict(which='linear')[:10],
-                            self.res2.fittedvalues[:10], DECIMAL_3)
+        assert_allclose(self.res1.predict(which='linear')[:10],
+                        self.res2.fittedvalues[:10])
 
 class TestNegativeBinomialPNB1Newton(CheckModelResults):
     @classmethod
@@ -1843,30 +1845,33 @@ class TestNegativeBinomialPNB1Newton(CheckModelResults):
         cls.res2 = res2
 
     def test_zstat(self):
-        assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_1)
+        assert_allclose(self.res1.tvalues, self.res2.z,
+                        atol=5e-3, rtol=5e-3)
 
     def test_lnalpha(self):
         self.res1.bse # attaches alpha_std_err
-        assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha, 3)
-        assert_almost_equal(self.res1.lnalpha_std_err,
-                            self.res2.lnalpha_std_err, DECIMAL_4)
+        assert_allclose(self.res1.lnalpha, self.res2.lnalpha)
+        assert_allclose(self.res1.lnalpha_std_err,
+                            self.res2.lnalpha_std_err)
 
     def test_params(self):
-        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
+        assert_allclose(self.res1.params, self.res2.params)
 
     def test_conf_int(self):
         # the bse for alpha is not high precision from the hessian
         # approximation
-        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
-                            DECIMAL_2)
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int,
+                        atol=1e-3, rtol=1e-3)
 
     def test_predict(self):
-        assert_almost_equal(self.res1.predict()[:10],
-                            np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
+        assert_allclose(self.res1.predict()[:10],
+                        np.exp(self.res2.fittedvalues[:10]),
+                        atol=1e-3, rtol=1e-3)
 
     def test_predict_xb(self):
-        assert_almost_equal(self.res1.predict(which='linear')[:10],
-                            self.res2.fittedvalues[:10], DECIMAL_3)
+        assert_allclose(self.res1.predict(which='linear')[:10],
+                        self.res2.fittedvalues[:10],
+                        atol=1e-3, rtol=1e-3)
 
 
 class TestNegativeBinomialPNB2BFGS(CheckModelResults):
@@ -1884,37 +1889,43 @@ class TestNegativeBinomialPNB2BFGS(CheckModelResults):
 
     #NOTE: The bse is much closer precitions to stata
     def test_bse(self):
-        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_3)
+        assert_allclose(self.res1.bse, self.res2.bse,
+                        atol=1e-3, rtol=1e-3)
 
     def test_params(self):
-        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_3)
+        assert_allclose(self.res1.params, self.res2.params,
+                        atol=1e-3, rtol=1e-3)
 
     def test_alpha(self):
         self.res1.bse # attaches alpha_std_err
-        assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha,
-                            DECIMAL_4)
-        assert_almost_equal(self.res1.lnalpha_std_err,
-                            self.res2.lnalpha_std_err, DECIMAL_4)
+        assert_allclose(self.res1.lnalpha, self.res2.lnalpha,
+                        atol=1e-5, rtol=1e-5)
+        assert_allclose(self.res1.lnalpha_std_err,
+                        self.res2.lnalpha_std_err,
+                        atol=1e-5, rtol=1e-5)
 
     def test_conf_int(self):
-        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
-                            DECIMAL_3)
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int,
+                        atol=1e-3, rtol=1e-3)
 
     def test_zstat(self): # Low precision because Z vs. t
-        assert_almost_equal(self.res1.pvalues[:-1], self.res2.pvalues,
-                            DECIMAL_2)
+        assert_allclose(self.res1.pvalues[:-1], self.res2.pvalues,
+                        atol=5e-3, rtol=5e-3)
 
     def test_fittedvalues(self):
-        assert_almost_equal(self.res1.fittedvalues[:10],
-                            self.res2.fittedvalues[:10], DECIMAL_3)
+        assert_allclose(self.res1.fittedvalues[:10],
+                        self.res2.fittedvalues[:10],
+                        atol=1e-4, rtol=1e-4)
 
     def test_predict(self):
-        assert_almost_equal(self.res1.predict()[:10],
-                            np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
+        assert_allclose(self.res1.predict()[:10],
+                        np.exp(self.res2.fittedvalues[:10]),
+                        atol=1e-3, rtol=1e-3)
 
     def test_predict_xb(self):
-        assert_almost_equal(self.res1.predict(which='linear')[:10],
-                            self.res2.fittedvalues[:10], DECIMAL_3)
+        assert_allclose(self.res1.predict(which='linear')[:10],
+                        self.res2.fittedvalues[:10],
+                        atol=1e-3, rtol=1e-3)
 
 
 class TestNegativeBinomialPNB1BFGS(CheckModelResults):
@@ -1929,31 +1940,56 @@ class TestNegativeBinomialPNB1BFGS(CheckModelResults):
         res2.negativebinomial_nb1_bfgs()
         cls.res2 = res2
 
+    def test_bse(self):
+        assert_allclose(self.res1.bse, self.res2.bse,
+                        atol=5e-3, rtol=5e-3)
+
+    def test_aic(self):
+        assert_allclose(self.res1.aic, self.res2.aic,
+                        atol=0.5, rtol=0.5)
+
+    def test_bic(self):
+        assert_allclose(self.res1.bic, self.res2.bic,
+                        atol=0.5, rtol=0.5)
+
+    def test_llf(self):
+        assert_allclose(self.res1.llf, self.res2.llf,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_llr(self):
+        assert_allclose(self.res1.llf, self.res2.llf,
+                        atol=1e-3, rtol=1e-3)
+
     def test_zstat(self):
-        assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_1)
+        assert_allclose(self.res1.tvalues, self.res2.z,
+                        atol=0.5, rtol=0.5)
 
     def test_lnalpha(self):
-        self.res1.bse # attaches alpha_std_err
-        assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha, 3)
-        assert_almost_equal(self.res1.lnalpha_std_err,
-                            self.res2.lnalpha_std_err, DECIMAL_4)
+        assert_allclose(self.res1.lnalpha, self.res2.lnalpha,
+                        atol=1e-3, rtol=1e-3)
+        assert_allclose(self.res1.lnalpha_std_err,
+                        self.res2.lnalpha_std_err,
+                        atol=1e-3, rtol=1e-3)
 
     def test_params(self):
-        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
+        assert_allclose(self.res1.params, self.res2.params,
+                        atol=5e-2, rtol=5e-2)
 
     def test_conf_int(self):
         # the bse for alpha is not high precision from the hessian
         # approximation
-        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
-                            DECIMAL_2)
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int,
+                        atol=5e-2, rtol=5e-2)
 
     def test_predict(self):
-        assert_almost_equal(self.res1.predict()[:10],
-                            np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
+        assert_allclose(self.res1.predict()[:10],
+                        np.exp(self.res2.fittedvalues[:10]),
+                        atol=5e-3, rtol=5e-3)
 
     def test_predict_xb(self):
-        assert_almost_equal(self.res1.predict(which='linear')[:10],
-                            self.res2.fittedvalues[:10], DECIMAL_3)
+        assert_allclose(self.res1.predict(which='linear')[:10],
+                        self.res2.fittedvalues[:10],
+                        atol=5e-3, rtol=5e-3)
 
 class TestNegativeBinomialPL1Compatability(CheckL1Compatability):
     @classmethod
