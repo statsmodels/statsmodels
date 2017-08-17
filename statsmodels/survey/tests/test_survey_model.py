@@ -16,16 +16,23 @@ y = np.asarray(data['y'])
 X = np.asarray(data[['x1', 'x2']])
 X = sm.add_constant(X)
 
-def test_jack_repw():
-    design = ss.SurveyDesign(strata, cluster, weights)
-    assert_equal(design.clust, np.r_[0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4])
-    model_class = sm.GLM
-    init_args = {'family': sm.families.Binomial()}
+design = ss.SurveyDesign(strata, cluster, weights=weights)
+assert_equal(design.clust, np.r_[0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4])
+model_class = sm.GLM
+init_args = {'family': sm.families.Binomial()}
+def test_linearized():
     model = smod.SurveyModel(design, model_class=model_class, init_args=init_args)
     rslt = model.fit(y, X, cov_method='linearized_stata', center_by='stratum')
-    print(model.params)
-    print(model.stderr)
-    raise ValueError('stop here')
+    assert_allclose(model.params, np.r_[-2.094691, .4969399, -.1307789], rtol=1e-5, atol=0)
+    assert_allclose(model.stderr, np.r_[2.42054, .2064146, .3907528],rtol=1e-5, atol=0)
+
+    # don't specify init_args. family is default gaussian
+    model = smod.SurveyModel(design, model_class=model_class)
+    model.fit(y, X, cov_method='linearzed_stata', center_by='stratum')
+    # assert_allclose(model.params, np.r_[])
+    # assert_allclose(model.stderr, np.r_[])
+
+def test_jack():
     rw = []
     for k in range(5):
         rw.append(design.get_rep_weights(c=k, cov_method='jack'))

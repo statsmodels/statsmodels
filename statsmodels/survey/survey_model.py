@@ -13,6 +13,8 @@ only be utilized by models w/ a freq_weight or weight parameter
 
 from __future__ import division
 import numpy as np
+import statsmodels
+
 
 class SurveyModel(object):
     """
@@ -46,6 +48,10 @@ class SurveyModel(object):
         self.model = model_class
         self.init_args = dict(init_args)
         self.fit_args = dict(fit_args)
+        if self.model == statsmodels.genmod.generalized_linear_model.GLM:
+            self.glm_flag = True
+        else:
+            self.glm_flag = False
 
     def _centering(self, array=None, center_by=None):
         # can be used to overwrite center_by if necessasry
@@ -63,7 +69,7 @@ class SurveyModel(object):
                     array[self.design.ii[s], :] -= array[self.design.ii[s],
                                                          :].mean(0)
         else:
-            raise ValueError("Centering option %s not implemented" %center_by)
+            raise ValueError("Centering option %s not implemented" % center_by)
         return array
 
     def _stata_linearization_vcov(self, X, y):
@@ -105,19 +111,16 @@ class SurveyModel(object):
         hessian = self.initialized_model.hessian(self.params, observed=True)
         hess_inv = np.linalg.inv(hessian)
 
-        lin_pred = np.dot(X, self.params)
-        #  derivative of the log pseudolikelihood w.r.t x_j * beta
-        s = self.initialized_model.family.link.inverse_deriv(lin_pred)
-        # d_hat = s_j * x_j is equivalent to STATA's d_j
-        d_hat = (X * s[:, None])
-
+        d_hat = self.initialized_model.score_obs(self.params)
+        # d_hat /= self.design.weights[:, None]
         jdata = []
         # design-based variance estimator for a total
         # This is the same as getting linearized variance
         # of SurveyTotal
         for c in range(self.design.n_clust):
-            w = self.design.weights.copy()
-            # If you're not in that cluster, set tp 0
+            # d_hat already incorporates weights
+            w = np.ones(len(self.design.weights))
+            # If you're not in that cluster, set to 0
             w[self.design.clust != c] = 0
             # calculate the total
             jdata.append(np.dot(w, d_hat))
@@ -126,15 +129,12 @@ class SurveyModel(object):
         if jdata.ndim == 1:
             jdata = jdata[:, None]
         jdata = self._centering(jdata, 'stratum')
-
-        # multiplying by constants
         nh = self.design.clust_per_strat[self.design.strat_for_clust].astype(np.float64)
         mh = np.sqrt(nh / (nh-1))
         fh = np.sqrt(1 - self.design.fpc)
         jdata = fh[:, None] * mh[:, None] * jdata
-
-        v_hat = np.dot(jdata.T, jdata)
-        vcov = np.dot(np.dot(hess_inv, v_hat), hess_inv.T)
+        vcov = np.dot(jdata.T, jdata)
+        vcov = np.dot(hess_inv, vcov).dot(hess_inv.T)
         return vcov
 
     def _sas_linearization_vcov(self, X, y, lin_method):
@@ -175,7 +175,6 @@ class SurveyModel(object):
         https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_surveylogistic_a0000000364.htm
         """
 
-        # model = self.model(y, X, **self.init_args)
         lin_pred = np.dot(X, self.params)
         idl = self.initialized_model.family.link.inverse_deriv(lin_pred)
         # d_hat is the matrix of partial derivatives of the link function
@@ -183,15 +182,15 @@ class SurveyModel(object):
         d_hat = (X * idl[:, None]).T
 
         cond_mean = self.result.mu
-        # TODO: let w = self.design.weights.copy() or self.design.rep_weights[:,c] if
-        # user wants to specify jack-sandwich or something
         w = self.design.weights.copy()
         e = []
         # calculate e for each stratum
         for c in range(self.design.n_clust):
             ind = (self.design.clust == c)
-            cond_inv = np.linalg.inv(np.diag(cond_mean[ind]) - np.dot(cond_mean[ind], cond_mean.T[ind]))
-            e.append(np.dot(w[ind] * d_hat[:,ind], np.dot((y - cond_mean)[ind], cond_inv)))
+            cond_inv = np.linalg.inv(np.diag(cond_mean[ind]) -
+                                     np.dot(cond_mean[ind], cond_mean.T[ind]))
+            e.append(np.dot(w[ind] * d_hat[:, ind],
+                            np.dot((y - cond_mean)[ind], cond_inv)))
         e = np.asarray(e)
         e = self._centering(e, 'stratum')
         nh = self.design.clust_per_strat[self.design.strat_for_clust].astype(np.float64)
@@ -201,14 +200,16 @@ class SurveyModel(object):
         e = fh[:, None] * mh[:, None] * e
         g_hat = (len(y) - 1) / (len(y) - X.shape[1]) * np.dot(e.T, e)
 
-        if lin_method=="newton":
+        if lin_method == "newton":
             # TODO: Figure out if hessian should be used when
             # 'jack-sandwich' or 'boot-sandwich' is requested
             # self.initialized_model.fit(**self.fit_args)
             q_hat = self.initialized_model.hessian(self.params, observed=False)
         else:
-            cond_inv = np.linalg.inv(np.diag(cond_mean) - np.dot(cond_mean, cond_mean.T))
+            cond_inv = np.linalg.inv(np.diag(cond_mean) -
+                                     np.dot(cond_mean, cond_mean.T))
             q_hat = np.dot(w * d_hat, np.dot(cond_inv, d_hat.T))
+
         q_hat_inv = np.linalg.inv(q_hat)
         vcov = np.dot(q_hat_inv, np.dot(g_hat, q_hat_inv))
         return vcov
@@ -217,7 +218,10 @@ class SurveyModel(object):
         replicate_params = []
         for c in range(self.design.n_clust):
             w = self.design.get_rep_weights(cov_method='jack', c=c)
-            self.init_args["freq_weights"] = w
+            if self.glm_flag:
+                self.init_args["freq_weights"] = w
+            else:
+                self.init_args["weights"] = w
             replicate_params.append(self._get_params(y, X))
         replicate_params = np.asarray(replicate_params)
         self.replicate_params = self._centering(replicate_params)
@@ -236,11 +240,12 @@ class SurveyModel(object):
 
     def fit(self, y, X, cov_method='jack', center_by='est', lin_method=None):
         self.center_by = center_by
-        self.init_args["freq_weights"] = self.design.weights
+        if self.glm_flag:
+            self.init_args["freq_weights"] = self.design.weights
+        else:
+            self.init_args["weights"] = self.design.weights
         self.params = self._get_params(y, X)
 
-
-        # for now, just working with jackknife to see if it works
         if cov_method == 'jack':
             self.vcov = self._jackknife_vcov(X, y)
         elif cov_method == 'linearized_sas':
@@ -248,7 +253,7 @@ class SurveyModel(object):
         elif cov_method == 'linearized_stata':
             self.vcov = self._stata_linearization_vcov(X, y)
         else:
-            return ValueError('cov_method %s not supported' %cov_method)
+            return ValueError('cov_method %s not supported' % cov_method)
         if self.vcov.ndim == 2:
             self.stderr = np.sqrt(np.diag(self.vcov))
         else:
