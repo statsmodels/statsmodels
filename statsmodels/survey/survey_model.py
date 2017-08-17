@@ -229,7 +229,8 @@ class SurveyModel(object):
         if hasattr(self.design, 'clust_per_strat'):
             nh = self.design.clust_per_strat[self.design.strat_for_clust].astype(np.float64)
             mh = np.sqrt((nh - 1) / nh)
-            self.replicate_params = mh[:, None] * self.replicate_params
+            fh = np.sqrt(1 - self.design.fpc)
+            self.replicate_params *= (mh[:, None] * fh[:, None])
         else:
             nh = self.design.rep_weights.shape[1]
             mh = np.sqrt((nh - 1) / nh)
