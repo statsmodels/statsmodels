@@ -5,7 +5,6 @@ from statsmodels.nonparametric.kernel_density import KDEMultivariate
 from statsmodels.compat.python import combinations, range
 import numpy as np
 from scipy.misc import factorial
-import matplotlib.pyplot as plt
 
 from . import utils
 
@@ -307,7 +306,7 @@ def hdrboxplot(data, ncomp=2, alpha=[], threshold=0.95, optimize=False,
         pass
 
     if labels is not None:
-        handles, labels = plt.gca().get_legend_handles_labels()
+        handles, labels = ax.get_legend_handles_labels()
         by_label = dict(zip(labels, handles))
         ax.legend(by_label.values(), by_label.keys(), loc='best')
 
