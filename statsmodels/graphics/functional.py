@@ -215,7 +215,9 @@ def hdrboxplot(data, ncomp=2, alpha=[], threshold=0.95, optimize=False,
 
     # Evaluate density on a regular grid
     min_max = np.array([data_r.min(axis=0), data_r.max(axis=0)]).T
-    contour_grid = np.meshgrid(*[np.linspace(*min_max[i], n_contours)
+    contour_grid = np.meshgrid(*[np.linspace(min_max[i, 0],
+                                             min_max[i, 1],
+                                             n_contours)
                                  for i in range(ncomp)])
     contour_stack = np.dstack(contour_grid).reshape(-1, ncomp)
 
