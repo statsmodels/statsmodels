@@ -239,7 +239,7 @@ def hdrboxplot(data, ncomp=2, alpha=[], threshold=0.95, optimize=False,
 
     outliers = np.where(pdf_r < pvalues[alpha.index(threshold)])
     labels = labels[outliers]
-    outliers = data_r[outliers]
+    outliers = data[outliers]
 
     extreme_percentile = np.where((pdf > pvalues[alpha.index(0.9)])
                                   & (pdf < pvalues[alpha.index(0.5)]))
@@ -263,7 +263,6 @@ def hdrboxplot(data, ncomp=2, alpha=[], threshold=0.95, optimize=False,
 
     # Inverse transform from bivariate plot to dataset
     median = inverse_transform_(pca, median)[0]
-    outliers = inverse_transform_(pca, outliers)
     extreme_percentile = inverse_transform_(pca, extreme_percentile)
     mean_percentile = inverse_transform_(pca, mean_percentile)
 
