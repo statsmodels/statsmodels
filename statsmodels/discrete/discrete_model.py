@@ -803,7 +803,9 @@ class CountModel(DiscreteModel):
         # group 3 poisson, nbreg, zip, zinb
         if exog is None:
             exog = self.exog
-        margeff = self.predict(params, exog)[:,None] * params[None,:]
+        k_extra = getattr(self, 'k_extra', 0)
+        params_exog = params if k_extra == 0 else params[:-k_extra]
+        margeff = self.predict(params, exog)[:,None] * params_exog[None,:]
         if 'ex' in transform:
             margeff *= exog
         if 'ey' in transform:
