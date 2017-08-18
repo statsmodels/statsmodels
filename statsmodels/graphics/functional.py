@@ -12,7 +12,7 @@ from . import utils
 __all__ = ['hdrboxplot', 'fboxplot', 'rainbowplot', 'banddepth']
 
 
-def kernel_smoothing_(data, optimize=False):
+def _kernel_smoothing(data, optimize=False):
     """Create gaussian kernel.
 
     Parameters
@@ -41,7 +41,7 @@ def kernel_smoothing_(data, optimize=False):
     return kde
 
 
-def inverse_transform_(pca, data):
+def _inverse_transform(pca, data):
     """Inverse transform on PCA.
 
     Use PCA's `project` method by temporary replacing its factors with
@@ -71,35 +71,14 @@ def inverse_transform_(pca, data):
     return projection
 
 
-def hdrboxplot(data, ncomp=2, alpha=[], threshold=0.95, optimize=False,
+def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
                n_contours=50, xdata=None, labels=None, ax=None):
     """Plot High Density Region boxplot.
 
     1. Compute a multivariate kernel density estimation,
-    2. Compute contour lines for percentiles 90%, 50% and `alpha`%,
+    2. Compute contour lines for quantiles 90%, 50% and `alpha`%,
     3. Plot the bivariate plot,
-    4. Compute mediane curve along with percentiles and outliers curves.
-
-    Behind the scene, the dataset is represented as a matrix. Each line
-    corresponding to a 1D curve. This matrix is then decomposed using Principal
-    Components Analysis (PCA). This allows to represent the data using a finite
-    number of modes, or components. This compression process allows to turn the
-    functional representation into a scalar representation of the matrix. In
-    other words, you can visualize each curve from its components. With 2
-    components, this is called a bivariate plot.
-
-    This visualization exhibit a cluster of points. It indicate that a lot of
-    curve lead to common components. The center of the cluster is the mediane
-    curve. An the more you get away from the cluster, the more the curve is
-    unlikely to be similar to the other curves.
-
-    Using a kernel smoothing technique, the probability density function (PDF)
-    of the multivariate space can be recover. From this PDF, it is possible to
-    compute the density probability linked to the cluster and plot its
-    contours.
-
-    Finally, using these contours, the different quantiles can be extracted
-    allong with the median curve and the outliers.
+    4. Compute mediane curve along with quantiles and outliers curves.
 
     Parameters
     ----------
@@ -112,9 +91,9 @@ def hdrboxplot(data, ncomp=2, alpha=[], threshold=0.95, optimize=False,
     ncomp : int, optional
         Number of components to use.  If None, returns the as many as the
         smaller of the number of rows or columns in data.
-    alpha : list, optional
-        Extra percentile values to compute.
-    threshold : float
+    alpha : list of floats between 0 and 1, optional
+        Extra quantile values to compute. Default is None
+    threshold : float between 0 and 1
         Percentile threshold value for outliers detection. High value means
         a lower sensitivity to outliers. Default is `0.95`.
     optimize: bool
@@ -122,11 +101,11 @@ def hdrboxplot(data, ncomp=2, alpha=[], threshold=0.95, optimize=False,
     n_contours : int
         Discretization per dimension of the reduced space.
     xdata : ndarray, optional
-        The independent variable for the data.  If not given, it is assumed to
+        The independent variable for the data. If not given, it is assumed to
         be an array of integers 0..N with N the length of the vectors in
         `data`.
     labels : sequence of scalar or str, optional
-        The labels or identifiers of the curves in `data`.  If given, outliers
+        The labels or identifiers of the curves in `data`. If given, outliers
         are labeled in the plot.
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
@@ -140,10 +119,10 @@ def hdrboxplot(data, ncomp=2, alpha=[], threshold=0.95, optimize=False,
     hdr_res : dict
 
          - 'median', array. Median curve.
-         - 'mean_percentile', array. 50% percentile band. [sup, inf] curves
-         - 'extreme_percentile', list of array. 90% percentile band. [sup, inf]
+         - 'mean_quantile', array. 50% quantile band. [sup, inf] curves
+         - 'extreme_quantile', list of array. 90% quantile band. [sup, inf]
             curves.
-         - 'extra_percentiles', list of array. Extra percentile band.
+         - 'extra_quantiles', list of array. Extra quantile band.
             [sup, inf] curves.
          - 'outliers', ndarray. Outlier curves.
 
@@ -157,15 +136,38 @@ def hdrboxplot(data, ncomp=2, alpha=[], threshold=0.95, optimize=False,
     space of a Principal Component Analysis (PCA).
 
     Outliers are defined as curves that fall outside the band corresponding
-    to the percentile given by `threshold`.
+    to the quantile given by `threshold`.
 
     The non-outlying region is defined as the band made up of all the
     non-outlying curves.
 
+    Behind the scene, the dataset is represented as a matrix. Each line
+    corresponding to a 1D curve. This matrix is then decomposed using Principal
+    Components Analysis (PCA). This allows to represent the data using a finite
+    number of modes, or components. This compression process allows to turn the
+    functional representation into a scalar representation of the matrix. In
+    other words, you can visualize each curve from its components. Each curve
+    is thus a point in this reduced space. With 2 components, this is called a
+    bivariate plot (2D plot).
+
+    In this plot, if some points are adjacent (similar components), it means
+    that back in the original space, the curves are similar. Then, finding the
+    median curve means finding the higher density region (HDR) in the reduced
+    space. Moreover, the more you get away from this HDR, the more the curve is
+    unlikely to be similar to the other curves.
+
+    Using a kernel smoothing technique, the probability density function (PDF)
+    of the multivariate space can be recover. From this PDF, it is possible to
+    compute the density probability linked to the cluster of points and plot
+    its contours.
+
+    Finally, using these contours, the different quantiles can be extracted
+    allong with the median curve and the outliers.
+
     References
     ----------
     [1] R.J. Hyndman and H.L. Shang, "Rainbow Plots, Bagplots, and Boxplots for
-        Functional Data", vol. 19, pp. 29-25, 2010.
+        Functional Data", vol. 19, pp. 29-45, 2010.
 
     Examples
     --------
@@ -210,7 +212,7 @@ def hdrboxplot(data, ncomp=2, alpha=[], threshold=0.95, optimize=False,
     data_r = pca.factors
 
     # Create gaussian kernel
-    ks_gaussian = kernel_smoothing_(data_r, optimize)
+    ks_gaussian = _kernel_smoothing(data_r, optimize)
 
     # Evaluate density on a regular grid
     min_max = np.array([data_r.min(axis=0), data_r.max(axis=0)]).T
@@ -223,15 +225,18 @@ def hdrboxplot(data, ncomp=2, alpha=[], threshold=0.95, optimize=False,
     pdf = ks_gaussian.pdf(contour_stack).flatten()
 
     # Compute contour line of pvalue linked to a given probability level
-    alpha.extend([threshold, 0.9, 0.5])
-    alpha = list(set(alpha))
-    alpha.sort(reverse=True)
+    if alpha is None:
+        alpha = [threshold, 0.9, 0.5]
+    else:
+        alpha.extend([threshold, 0.9, 0.5])
+        alpha = list(set(alpha))
+        alpha.sort(reverse=True)
 
-    n_percentiles = len(alpha)
+    n_quantiles = len(alpha)
     pdf_r = ks_gaussian.pdf(data_r).flatten()
-    pvalues = [np.percentile(pdf_r, (1 - alpha[i]) * 100,
-                             interpolation='linear')
-               for i in range(n_percentiles)]
+    pvalues = [np.quantile(pdf_r, (1 - alpha[i]) * 100,
+                           interpolation='linear')
+               for i in range(n_quantiles)]
 
     # Find mean, quartiles and outliers curves
     median = pdf.argmax()
@@ -241,68 +246,63 @@ def hdrboxplot(data, ncomp=2, alpha=[], threshold=0.95, optimize=False,
     labels = labels[outliers]
     outliers = data[outliers]
 
-    extreme_percentile = np.where((pdf > pvalues[alpha.index(0.9)])
-                                  & (pdf < pvalues[alpha.index(0.5)]))
-    extreme_percentile = contour_stack[extreme_percentile]
+    extreme_quantile = np.where((pdf > pvalues[alpha.index(0.9)])
+                                & (pdf < pvalues[alpha.index(0.5)]))
+    extreme_quantile = contour_stack[extreme_quantile]
 
-    mean_percentile = np.where(pdf > pvalues[alpha.index(0.5)])
-    mean_percentile = contour_stack[mean_percentile]
+    mean_quantile = np.where(pdf > pvalues[alpha.index(0.5)])
+    mean_quantile = contour_stack[mean_quantile]
 
     extra_alpha = [i for i in alpha
                    if 0.5 != i and 0.9 != i and threshold != i]
     if extra_alpha != []:
-        extra_percentiles = []
+        extra_quantiles = []
         for i in extra_alpha:
-            extra_percentile = np.where(pdf > pvalues[alpha.index(i)])
-            extra_percentile = contour_stack[extra_percentile]
-            extra_percentile = inverse_transform_(pca, extra_percentile)
-            extra_percentiles.extend([extra_percentile.max(axis=0),
-                                      extra_percentile.min(axis=0)])
+            extra_quantile = np.where(pdf > pvalues[alpha.index(i)])
+            extra_quantile = contour_stack[extra_quantile]
+            extra_quantile = _inverse_transform(pca, extra_quantile)
+            extra_quantiles.extend([extra_quantile.max(axis=0),
+                                    extra_quantile.min(axis=0)])
     else:
-        extra_percentiles = None
+        extra_quantiles = None
 
     # Inverse transform from bivariate plot to dataset
-    median = inverse_transform_(pca, median)[0]
-    extreme_percentile = inverse_transform_(pca, extreme_percentile)
-    mean_percentile = inverse_transform_(pca, mean_percentile)
+    median = _inverse_transform(pca, median)[0]
+    extreme_quantile = _inverse_transform(pca, extreme_quantile)
+    mean_quantile = _inverse_transform(pca, mean_quantile)
 
-    extreme_percentile = [extreme_percentile.max(axis=0),
-                          extreme_percentile.min(axis=0)]
-    mean_percentile = [mean_percentile.max(axis=0),
-                       mean_percentile.min(axis=0)]
+    extreme_quantile = [extreme_quantile.max(axis=0),
+                        extreme_quantile.min(axis=0)]
+    mean_quantile = [mean_quantile.max(axis=0),
+                     mean_quantile.min(axis=0)]
 
     hdr_res = {
         "median": median,
-        "mean_percentile": mean_percentile,
-        "extreme_percentile": extreme_percentile,
-        "extra_percentiles": extra_percentiles,
+        "mean_quantile": mean_quantile,
+        "extreme_quantile": extreme_quantile,
+        "extra_quantiles": extra_quantiles,
         "outliers": outliers
     }
 
     # Plots
     ax.plot(np.array([xdata] * n_samples).T, data.T,
             c='c', alpha=.1, label='dataset')
-    ax.fill_between(xdata, *mean_percentile,
-                    color='gray', alpha=.4,  label='50th percentile')
-    ax.fill_between(xdata, *extreme_percentile,
-                    color='gray', alpha=.3, label='90th percentile')
+    ax.plot(xdata, median, c='k', label='Median')
+    ax.fill_between(xdata, *mean_quantile,
+                    color='gray', alpha=.4,  label='50th quantile')
+    ax.fill_between(xdata, *extreme_quantile,
+                    color='gray', alpha=.3, label='90th quantile')
 
-    try:
-        ax.plot(np.array([xdata] * len(extra_percentiles)).T,
-                np.array(extra_percentiles).T,
-                c='y', ls='-.', alpha=.4, label='Extra percentiles')
-    except TypeError:
-        pass
+    if len(extra_quantiles) != 0:
+        ax.plot(np.array([xdata] * len(extra_quantiles)).T,
+                np.array(extra_quantiles).T,
+                c='y', ls='-.', alpha=.4, label='Extra quantiles')
 
-    ax.plot(xdata, median, c='k')
-
-    try:
+    if len(outliers) != 0:
         for ii, outlier in enumerate(outliers):
             label = str(labels[ii]) if labels is not None else None
             ax.plot(xdata, outlier,
                     ls='--', alpha=0.7, label=label)
-    except ValueError:
-        pass
 
     if labels is not None:
         handles, labels = ax.get_legend_handles_labels()
@@ -397,7 +397,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     [1] Y. Sun and M.G. Genton, "Functional Boxplots", Journal of Computational
         and Graphical Statistics, vol. 20, pp. 1-19, 2011.
     [2] R.J. Hyndman and H.L. Shang, "Rainbow Plots, Bagplots, and Boxplots for
-        Functional Data", vol. 19, pp. 29-25, 2010.
+        Functional Data", vol. 19, pp. 29-45, 2010.
 
     Examples
     --------
