@@ -234,8 +234,8 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
 
     n_quantiles = len(alpha)
     pdf_r = ks_gaussian.pdf(data_r).flatten()
-    pvalues = [np.quantile(pdf_r, (1 - alpha[i]) * 100,
-                           interpolation='linear')
+    pvalues = [np.percentile(pdf_r, (1 - alpha[i]) * 100,
+                             interpolation='linear')
                for i in range(n_quantiles)]
 
     # Find mean, quartiles and outliers curves
@@ -243,7 +243,8 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
     median = contour_stack[median]
 
     outliers = np.where(pdf_r < pvalues[alpha.index(threshold)])
-    labels = labels[outliers]
+    if labels is not None:
+        labels = labels[outliers]
     outliers = data[outliers]
 
     extreme_quantile = np.where((pdf > pvalues[alpha.index(0.9)])
@@ -264,7 +265,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
             extra_quantiles.extend([extra_quantile.max(axis=0),
                                     extra_quantile.min(axis=0)])
     else:
-        extra_quantiles = None
+        extra_quantiles = []
 
     # Inverse transform from bivariate plot to dataset
     median = _inverse_transform(pca, median)[0]
