@@ -43,6 +43,7 @@ Functional Plots
 .. autosummary::
    :toctree: generated/
 
+   functional.hdrboxplot
    functional.fboxplot
    functional.rainbowplot
    functional.banddepth
