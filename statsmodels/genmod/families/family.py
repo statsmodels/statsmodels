@@ -133,7 +133,7 @@ class Family(object):
     def deviance(self, endog, mu, var_weights=1., freq_weights=1., scale=1.):
         r"""
         The deviance function evaluated at (endog, mu, var_weights,
-        freq_weights, mu) for the distribution.
+        freq_weights, scale) for the distribution.
 
         Deviance is usually defined as twice the loglikelihood ratio.
 
@@ -264,9 +264,9 @@ class Family(object):
         Notes
         -----
         This is defined for each family. endog and mu are not restricted to
-        ``endog`` and ``mu`` respectively.  For instance, the deviance function
-        calls both ``loglike(endog, endog)`` and ``loglike(endog, mu)`` to get
-        the likelihood ratio.
+        ``endog`` and ``mu`` respectively.  For instance, you could call
+        both ``loglike(endog, endog)`` and ``loglike(endog, mu)`` to get the
+        log-likelihood ratio.
         """
         raise NotImplementedError
 
@@ -300,10 +300,10 @@ class Family(object):
         .. math::
            ll = \sum(ll_i * freq\_weights_i)
 
-        ``logliek`` is defined for each family. ``endog`` and ``mu`` are not
-        restricted to ``endog`` and ``mu`` respectively.  For instance, the
-        deviance function calls both ``loglike(endog, endog)`` and
-        ``loglike(endog, mu)`` to get the likelihood ratio.
+        ``ll_i`` is defined for each family. endog and mu are not restricted
+        to ``endog`` and ``mu`` respectively.  For instance, you could call
+        both ``loglike(endog, endog)`` and ``loglike(endog, mu)`` to get the
+        log-likelihood ratio.
         """
         ll_obs = self.loglike_obs(endog, mu, var_weights, scale)
         return np.sum(ll_obs * freq_weights)
@@ -362,7 +362,7 @@ class Poisson(Family):
     ----------
     link : a link instance, optional
         The default link for the Poisson family is the log link. Available
-        links are log, identity, and sqrt. See statsmodels.family.links for
+        links are log, identity, and sqrt. See statsmodels.families.links for
         more information.
 
     Attributes
@@ -370,8 +370,8 @@ class Poisson(Family):
     Poisson.link : a link instance
         The link function of the Poisson instance.
     Poisson.variance : varfuncs instance
-        `variance` is an instance of
-        statsmodels.genmod.families.family.varfuncs.mu
+        ``variance`` is an instance of
+        statsmodels.genmod.families.varfuncs.mu
 
     See also
     --------
@@ -487,14 +487,15 @@ class Gaussian(Family):
     link : a link instance, optional
         The default link for the Gaussian family is the identity link.
         Available links are log, identity, and inverse.
-        See statsmodels.family.links for more information.
+        See statsmodels.genmod.families.links for more information.
 
     Attributes
     ----------
     Gaussian.link : a link instance
         The link function of the Gaussian instance
     Gaussian.variance : varfunc instance
-        `variance` is an instance of statsmodels.family.varfuncs.constant
+        ``variance`` is an instance of
+        statsmodels.genmod.families.varfuncs.constant
 
     See also
     --------
@@ -627,14 +628,15 @@ class Gamma(Family):
     link : a link instance, optional
         The default link for the Gamma family is the inverse link.
         Available links are log, identity, and inverse.
-        See statsmodels.family.links for more information.
+        See statsmodels.genmod.families.links for more information.
 
     Attributes
     ----------
     Gamma.link : a link instance
         The link function of the Gamma instance
     Gamma.variance : varfunc instance
-        `variance` is an instance of statsmodels.family.varfuncs.mu_squared
+        ``variance`` is an instance of
+        statsmodels.genmod.family.varfuncs.mu_squared
 
     See also
     --------
@@ -758,14 +760,15 @@ class Binomial(Family):
     link : a link instance, optional
         The default link for the Binomial family is the logit link.
         Available links are logit, probit, cauchy, log, and cloglog.
-        See statsmodels.family.links for more information.
+        See statsmodels.genmod.families.links for more information.
 
     Attributes
     ----------
     Binomial.link : a link instance
         The link function of the Binomial instance
     Binomial.variance : varfunc instance
-        `variance` is an instance of statsmodels.family.varfuncs.binary
+        ``variance`` is an instance of
+        statsmodels.genmod.families.varfuncs.binary
 
     See also
     --------
@@ -982,14 +985,15 @@ class InverseGaussian(Family):
         The default link for the inverse Gaussian family is the
         inverse squared link.
         Available links are inverse_squared, inverse, log, and identity.
-        See statsmodels.family.links for more information.
+        See statsmodels.genmod.families.links for more information.
 
     Attributes
     ----------
     InverseGaussian.link : a link instance
         The link function of the inverse Gaussian instance
     InverseGaussian.variance : varfunc instance
-        ``variance`` is an instance of statsmodels.family.varfuncs.mu_cubed
+        ``variance`` is an instance of
+        statsmodels.genmod.families.varfuncs.mu_cubed
 
     See also
     --------
@@ -1113,10 +1117,10 @@ class NegativeBinomial(Family):
     link : a link instance, optional
         The default link for the negative binomial family is the log link.
         Available links are log, cloglog, identity, nbinom and power.
-        See statsmodels.family.links for more information.
+        See statsmodels.genmod.families.links for more information.
     alpha : float, optional
         The ancillary parameter for the negative binomial distribution.
-        For now `alpha` is assumed to be nonstochastic.  The default value
+        For now ``alpha`` is assumed to be nonstochastic.  The default value
         is 1.  Permissible values are usually assumed to be between .01 and 2.
 
     Attributes
@@ -1124,7 +1128,8 @@ class NegativeBinomial(Family):
     NegativeBinomial.link : a link instance
         The link function of the negative binomial instance
     NegativeBinomial.variance : varfunc instance
-        `variance` is an instance of statsmodels.family.varfuncs.nbinom
+        ``variance`` is an instance of
+        statsmodels.genmod.families.varfuncs.nbinom
 
     See also
     --------
@@ -1294,7 +1299,7 @@ class Tweedie(Family):
     link : a link instance, optional
         The default link for the Tweedie family is the log link.
         Available links are log and Power.
-        See statsmodels.family.links for more information.
+        See statsmodels.genmod.families.links for more information.
     var_power : float, optional
         The variance power. The default is 1.
 
@@ -1303,7 +1308,8 @@ class Tweedie(Family):
     Tweedie.link : a link instance
         The link function of the Tweedie instance
     Tweedie.variance : varfunc instance
-        `variance` is an instance of statsmodels.family.varfuncs.Power
+        ``variance`` is an instance of
+        statsmodels.genmod.families.varfuncs.Power
     Tweedie.var_power : float
         The power of the variance function.
 
@@ -1311,13 +1317,12 @@ class Tweedie(Family):
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
-
     Notes
     -----
     Logliklihood function not implemented because of the complexity of
     calculating an infinite series of summations. The variance power can be
     estimated using the ``estimate_tweedie_power`` function that is part of the
-    statsmodels.genmod.GLM class.
+    statsmodels.genmod.generalized_linear_model.GLM class.
     """
     links = [L.log, L.Power]
     variance = V.Power
