@@ -357,14 +357,16 @@ class RegressionModel(base.LikelihoodModel):
         exog : array-like
             The predictor variable matrix.
         dist_class : class
-            A random number generator class.  Must take 'loc' and
-            'scale' as arguments and return a random number generator
-            implementing an `rvs` method for simulating random values.
-            Defaults to Gaussian.
+            A random number generator class.  Must take 'loc' and 'scale'
+            as arguments and return a random number generator implementing
+            an ``rvs`` method for simulating random values. Defaults to Gaussian.
 
-        Returns a frozen random number generator object with mean and
-        variance determined by the fitted linear model.  Use the
-        ``rvs`` method to generate random values.
+        Returns
+        -------
+        gen
+            Frozen random number generator object with mean and variance
+            determined by the fitted linear model.  Use the ``rvs`` method
+            to generate random values.
 
         Notes
         -----
@@ -677,7 +679,8 @@ class WLS(RegressionModel):
 
         Returns
         -------
-        sqrt(weights)*X
+        whitened : array-like
+            sqrt(weights)*X
         """
 
         X = np.asarray(X)
@@ -1315,7 +1318,7 @@ class RegressionResults(base.LikelihoodModelResults):
     cov_type
         Parameter covariance estimator used for standard errors and t-stats
     df_model
-        Model degress of freedom. The number of regressors `p`. Does not
+        Model degrees of freedom. The number of regressors `p`. Does not
         include the constant if one is present
     df_resid
         Residual degrees of freedom. `n - p - 1`, if a constant is present.
@@ -1580,6 +1583,8 @@ class RegressionResults(base.LikelihoodModelResults):
                 idx = lrange(k_params)
                 idx.pop(const_idx)
                 mat = mat[idx]  # remove constant
+                if mat.size == 0:  # see  #3642
+                    return np.nan
             ft = self.f_test(mat)
             # using backdoor to set another attribute that we already have
             self._cache['f_pvalue'] = ft.pvalue
@@ -1713,7 +1718,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         Returns
         -------
-        An array wresid/sqrt(scale)
+        An array wresid standardized by the sqrt if scale
         """
 
         if not hasattr(self, 'resid'):
@@ -2240,9 +2245,11 @@ class RegressionResults(base.LikelihoodModelResults):
             weights_func = kwds.get('weights_func', sw.weights_bartlett)
             res.cov_kwds['weights_func'] = weights_func
             if groups is not None:
+                groups = np.asarray(groups)
                 tt = (np.nonzero(groups[:-1] != groups[1:])[0] + 1).tolist()
                 nobs_ = len(groups)
             elif time is not None:
+                time = np.asarray(time)
                 # TODO: clumsy time index in cov_nw_panel
                 tt = (np.nonzero(time[1:] < time[:-1])[0] + 1).tolist()
                 nobs_ = len(time)

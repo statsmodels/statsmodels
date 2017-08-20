@@ -484,10 +484,12 @@ class KernelCensoredReg(KernelReg):
     bw: array_like
         The bandwidth parameters
 
-    *Methods*
-
-    r-squared : calculates the R-Squared coefficient for the model.
-    fit : calculates the conditional mean and marginal effects.
+    Methods
+    -------
+    r-squared
+        Calculate the R-Squared coefficient for the model
+    fit
+        Calculate the conditional mean and marginal effects
 
     """
     def __init__(self, endog, exog, var_type, reg_type, bw='cv_ls',

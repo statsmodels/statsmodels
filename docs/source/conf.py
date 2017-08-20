@@ -29,9 +29,8 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.doctest',
               'sphinx.ext.intersphinx',
               'sphinx.ext.todo',
-              # 'sphinx.ext.mathjax', # One of mathjax, pngmath or imgmath
-              # 'sphinx.ext.imgmath'
-              'sphinx.ext.pngmath',
+              'sphinx.ext.mathjax', # One of mathjax or imgmath
+              # 'sphinx.ext.imgmath',
               'sphinx.ext.viewcode',
               'sphinx.ext.autosummary',
               'sphinx.ext.inheritance_diagram',
@@ -40,11 +39,9 @@ extensions = ['sphinx.ext.autodoc',
               'IPython.sphinxext.ipython_console_highlighting',
               'IPython.sphinxext.ipython_directive',
               'github',  # for GitHub links,
-              'numpydoc',  # numpydoc or napoleon, but not both
-              # 'sphinx.ext.napoleon'
+              # 'numpydoc',  # numpydoc or napoleon, but not both
+              'sphinx.ext.napoleon'
               ]
-
-ipython_savefig_dir = '../build/html/_static'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -251,10 +248,6 @@ latex_documents = [
 imgmath_image_format = 'png'
 imgmath_latex_preamble = r'\usepackage[active]{preview}'
 imgmath_use_preview = True
-# pngmath options
-# http://sphinx-doc.org/ext/math.html#module-sphinx.ext.pngmath
-pngmath_latex_preamble=r'\usepackage[active]{preview}' # + other custom stuff for inline math, such as non-default math fonts etc.
-pngmath_use_preview=True
 
 # -- Options for manual page output --------------------------------------------
 

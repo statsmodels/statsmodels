@@ -445,11 +445,11 @@ def randmvn(rho, size=(1, 2), standardize=False):
     size : tuple of int
         size is interpreted (nobs, nvars) where each row
 
-
     Returns
     -------
-    rvs : ndarray, (nobs, nvars)
-        where each row is a independent random draw of nvars-dimensional correlated rvs
+    rvs : ndarray
+        nobs by nvars where each row is a independent random draw of nvars-
+        dimensional correlated rvs
 
     '''
     nobs, nvars = size

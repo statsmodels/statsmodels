@@ -5,12 +5,13 @@ from __future__ import print_function
 # pylint: disable=W0612,W0231
 from statsmodels.compat.python import (iteritems, StringIO, lrange, BytesIO,
                                        range)
-from nose.tools import assert_raises
-import nose
+from statsmodels.compat.testing import skipif
+
 import os
 import sys
 
 import numpy as np
+import pytest
 
 import statsmodels.api as sm
 import statsmodels.tsa.vector_ar.util as util
@@ -152,12 +153,12 @@ def teardown_module():
     sys.stdout = _orig_stdout
     close_plots()
 
-def have_matplotlib():
-    try:
-        import matplotlib
-        return True
-    except ImportError:
-        return False
+have_matplotlib = False
+try:
+    import matplotlib
+    have_matplotlib = True
+except ImportError:
+    pass
 
 class CheckIRF(object):
 
@@ -179,10 +180,8 @@ class CheckIRF(object):
             assert_almost_equal(ref_irfs, res_irfs)
 
 
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_irf(self):
-        if not have_matplotlib():
-            raise nose.SkipTest
-
         import matplotlib.pyplot as plt
         self.irf.plot()
         plt.close('all')
@@ -201,10 +200,8 @@ class CheckIRF(object):
         self.irf.plot(impulse=0, response=1, orth=True)
         close_plots()
 
-
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_cum_effects(self):
-        if not have_matplotlib():
-            raise nose.SkipTest
         # I need close after every plot to avoid segfault, see #3158
         import matplotlib.pyplot as plt
         plt.close('all')
@@ -228,10 +225,8 @@ class CheckFEVD(object):
     #---------------------------------------------------------------------------
     # FEVD tests
 
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_fevd_plot(self):
-        if not have_matplotlib():
-            raise nose.SkipTest
-
         self.fevd.plot()
         close_plots()
 
@@ -251,7 +246,7 @@ class CheckFEVD(object):
 class TestVARResults(CheckIRF, CheckFEVD):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.p = 2
 
         cls.data = get_macrodata()
@@ -289,7 +284,8 @@ class TestVARResults(CheckIRF, CheckFEVD):
             assert_equal(idx, i)
             assert_equal(idx, idx2)
 
-        assert_raises(Exception, self.res.get_eq_index, 'foo')
+        with pytest.raises(Exception):
+            self.res.get_eq_index('foo')
 
     def test_repr(self):
         # just want this to work
@@ -337,7 +333,8 @@ class TestVARResults(CheckIRF, CheckFEVD):
         for ic in ics:
             res = self.model.fit(maxlags=10, ic=ic, verbose=True)
 
-        assert_raises(Exception, self.model.fit, ic='foo')
+        with pytest.raises(Exception):
+            self.model.fit(ic='foo')
 
     def test_nobs(self):
         assert_equal(self.res.nobs, self.ref.nobs)
@@ -361,12 +358,12 @@ class TestVARResults(CheckIRF, CheckFEVD):
         for i, name in enumerate(self.names):
             variables = self.names[:i] + self.names[i + 1:]
             result = self.res.test_causality(name, variables, kind='f')
-            assert_almost_equal(result['pvalue'], causedby[i], DECIMAL_4)
+            assert_almost_equal(result.pvalue, causedby[i], DECIMAL_4)
 
             rng = lrange(self.k)
             rng.remove(i)
             result2 = self.res.test_causality(i, rng, kind='f')
-            assert_almost_equal(result['pvalue'], result2['pvalue'], DECIMAL_12)
+            assert_almost_equal(result.pvalue, result2.pvalue, DECIMAL_12)
 
             # make sure works
             result = self.res.test_causality(name, variables, kind='wald')
@@ -375,7 +372,8 @@ class TestVARResults(CheckIRF, CheckFEVD):
         _ = self.res.test_causality(self.names[0], self.names[1])
         _ = self.res.test_causality(0, 1)
 
-        assert_raises(Exception,self.res.test_causality, 0, 1, kind='foo')
+        with pytest.raises(Exception):
+            self.res.test_causality(0, 1, kind='foo')
 
     def test_select_order(self):
         result = self.model.fit(10, ic='aic', verbose=True)
@@ -407,31 +405,23 @@ class TestVARResults(CheckIRF, CheckFEVD):
         y = self.res.y[:-self.p:]
         point, lower, upper = self.res.forecast_interval(y, 5)
 
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_sim(self):
-        if not have_matplotlib():
-            raise nose.SkipTest
-
         self.res.plotsim(steps=100)
         close_plots()
 
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot(self):
-        if not have_matplotlib():
-            raise nose.SkipTest
-
         self.res.plot()
         close_plots()
 
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_acorr(self):
-        if not have_matplotlib():
-            raise nose.SkipTest
-
         self.res.plot_acorr()
         close_plots()
 
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_forecast(self):
-        if not have_matplotlib():
-            raise nose.SkipTest
-
         self.res.plot_forecast(5)
         close_plots()
 
@@ -523,18 +513,19 @@ class TestVARResultsLutkepohl(object):
     Verify calculations using results from Lutkepohl's book
     """
 
-    def __init__(self):
-        self.p = 2
+    @classmethod
+    def setup_class(cls):
+        cls.p = 2
         sdata, dates = get_lutkepohl_data('e1')
 
         data = data_util.struct_to_ndarray(sdata)
         adj_data = np.diff(np.log(data), axis=0)
         # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
 
-        self.model = VAR(adj_data[:-16], dates=dates[1:-16], freq='BQ-MAR')
-        self.res = self.model.fit(maxlags=self.p)
-        self.irf = self.res.irf(10)
-        self.lut = E1_Results()
+        cls.model = VAR(adj_data[:-16], dates=dates[1:-16], freq='BQ-MAR')
+        cls.res = cls.model.fit(maxlags=cls.p)
+        cls.irf = cls.res.irf(10)
+        cls.lut = E1_Results()
 
     def test_approx_mse(self):
         # 3.5.18, p. 99
@@ -592,7 +583,8 @@ def test_var_constant():
     data.index = DatetimeIndex(index)
 
     model = VAR(data)
-    assert_raises(ValueError, model.fit, 1)
+    with pytest.raises(ValueError):
+        model.fit(1)
 
 def test_var_trend():
     # see 2271
@@ -606,7 +598,8 @@ def test_var_trend():
     data_nc = data - data.mean(0)
     model_nc = sm.tsa.VAR(data_nc)
     results_nc = model_nc.fit(4, trend = 'nc')
-    assert_raises(ValueError, model.fit, 4, trend='t')
+    with pytest.raises(ValueError):
+        model.fit(4, trend='t')
 
 
 def test_irf_trend():
@@ -640,6 +633,5 @@ def test_irf_trend():
 
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb', '--pdb-failure'],
-                   exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

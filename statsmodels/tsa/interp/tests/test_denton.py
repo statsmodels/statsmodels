@@ -23,5 +23,5 @@ def test_denton_quarterly2():
     np.testing.assert_almost_equal(x_denton, x_stata, 5)
 
 if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x', '--pdb'], exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

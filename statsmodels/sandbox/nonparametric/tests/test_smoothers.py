@@ -36,54 +36,58 @@ class CheckSmoother(object):
 
 class BasePolySmoother(object):
 
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         #DGP: simple polynomial
         order = 3
         sigma_noise = 0.5
         nobs = 100
         lb, ub = -1, 2
-        self.x = x = np.linspace(lb, ub, nobs)
-        self.exog = exog = x[:,None]**np.arange(order+1)
+        cls.x = x = np.linspace(lb, ub, nobs)
+        cls.exog = exog = x[:,None]**np.arange(order+1)
         y_true = exog.sum(1)
         np.random.seed(987567)
-        self.y = y = y_true + sigma_noise * np.random.randn(nobs)
+        cls.y = y = y_true + sigma_noise * np.random.randn(nobs)
 
 
 class TestPolySmoother1(BasePolySmoother, CheckSmoother):
 
-    def __init__(self):
-        super(self.__class__, self).__init__() #initialize DGP
+    @classmethod
+    def setup_class(cls):
+        super(TestPolySmoother1, cls).setup_class() #initialize DGP
 
-        y, x, exog = self.y, self.x, self.exog
+        y, x, exog = cls.y, cls.x, cls.exog
 
         #use order = 2 in regression
         pmod = smoothers.PolySmoother(2, x)
         pmod.fit(y)  #no return
 
-        self.res_ps = pmod
-        self.res2 = OLS(y, exog[:,:2+1]).fit()
+        cls.res_ps = pmod
+        cls.res2 = OLS(y, exog[:,:2+1]).fit()
 
 class TestPolySmoother2(BasePolySmoother, CheckSmoother):
 
-    def __init__(self):
-        super(self.__class__, self).__init__() #initialize DGP
+    @classmethod
+    def setup_class(cls):
+        super(TestPolySmoother2, cls).setup_class() #initialize DGP
 
-        y, x, exog = self.y, self.x, self.exog
+        y, x, exog = cls.y, cls.x, cls.exog
 
         #use order = 3 in regression
         pmod = smoothers.PolySmoother(3, x)
         #pmod.fit(y)  #no return
         pmod.smooth(y)  #no return, use alias for fit
 
-        self.res_ps = pmod
-        self.res2 = OLS(y, exog[:,:3+1]).fit()
+        cls.res_ps = pmod
+        cls.res2 = OLS(y, exog[:,:3+1]).fit()
 
 class TestPolySmoother3(BasePolySmoother, CheckSmoother):
 
-    def __init__(self):
-        super(self.__class__, self).__init__() #initialize DGP
+    @classmethod
+    def setup_class(cls):
+        super(TestPolySmoother3, cls).setup_class() #initialize DGP
 
-        y, x, exog = self.y, self.x, self.exog
+        y, x, exog = cls.y, cls.x, cls.exog
         nobs = y.shape[0]
         weights = np.ones(nobs)
         weights[:nobs//3] = 0.1
@@ -93,8 +97,8 @@ class TestPolySmoother3(BasePolySmoother, CheckSmoother):
         pmod = smoothers.PolySmoother(2, x)
         pmod.fit(y, weights=weights)  #no return
 
-        self.res_ps = pmod
-        self.res2 = WLS(y, exog[:,:2+1], weights=weights).fit()
+        cls.res_ps = pmod
+        cls.res2 = WLS(y, exog[:,:2+1], weights=weights).fit()
 
 
 if __name__ == '__main__':

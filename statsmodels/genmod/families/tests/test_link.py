@@ -36,11 +36,7 @@ def get_domainvalue(link):
     return z
 
 def test_inverse():
-    """
-    Logic check that link.inverse(link) and link(link.inverse) are the
-    identity.
-    """
-
+    # Logic check that link.inverse(link) and link(link.inverse) are the identity.
     np.random.seed(3285)
 
     for link in Links:
@@ -55,9 +51,7 @@ def test_inverse():
 
 
 def test_deriv():
-    """
-    Check link function derivatives using numeric differentiation.
-    """
+    # Check link function derivatives using numeric differentiation.
 
     np.random.seed(24235)
 
@@ -71,10 +65,8 @@ def test_deriv():
 
 
 def test_deriv2():
-    """
-    Check link function second derivatives using numeric
-    differentiation.
-    """
+    # Check link function second derivatives using numeric differentiation.
+
 
     np.random.seed(24235)
 
@@ -93,9 +85,7 @@ def test_deriv2():
                             err_msg=str(link))
 
 def test_inverse_deriv():
-    """
-    Logic check that inverse_deriv equals 1/link.deriv(link.inverse)
-    """
+    # Logic check that inverse_deriv equals 1/link.deriv(link.inverse)
 
     np.random.seed(24235)
 
@@ -126,8 +116,5 @@ def test_invlogit_stability():
     assert_equal(zinv, np.ones_like(z))
 
 if __name__=="__main__":
-    #run_module_suite()
-    #taken from Fernando Perez:
-    import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb'],
-                       exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

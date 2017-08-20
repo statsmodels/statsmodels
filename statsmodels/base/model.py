@@ -434,17 +434,24 @@ class LikelihoodModel(Model):
         # args in most (any?) of the optimize function
 
         nobs = self.endog.shape[0]
-        f = lambda params, *args: -self.loglike(params, *args) / nobs
-        score = lambda params, *args: -self.score(params, *args) / nobs
-        try:
-            hess = lambda params, *args: -self.hessian(params, *args) / nobs
-        except:
-            hess = None
+        # f = lambda params, *args: -self.loglike(params, *args) / nobs
+
+        def f(params, *args):
+            return -self.loglike(params, *args) / nobs
 
         if method == 'newton':
-            score = lambda params, *args: self.score(params, *args) / nobs
-            hess = lambda params, *args: self.hessian(params, *args) / nobs
-            #TODO: why are score and hess positive?
+            # TODO: why are score and hess positive?
+            def score(params, *args):
+                return self.score(params, *args) / nobs
+
+            def hess(params, *args):
+                return self.hessian(params, *args) / nobs
+        else:
+            def score(params, *args):
+                return -self.score(params, *args) / nobs
+
+            def hess(params, *args):
+                return -self.hessian(params, *args) / nobs
 
         warn_convergence = kwargs.pop('warn_convergence', True)
         optimizer = Optimizer()
@@ -1055,7 +1062,14 @@ class LikelihoodModelResults(Results):
 
     @cache_readonly
     def bse(self):
-        return np.sqrt(np.diag(self.cov_params()))
+        # Issue 3299
+        if ((not hasattr(self, 'cov_params_default')) and
+                (self.normalized_cov_params is None)):
+            bse_ = np.empty(len(self.params))
+            bse_[:] = np.nan
+        else:
+            bse_ = np.sqrt(np.diag(self.cov_params()))
+        return bse_
 
     @cache_readonly
     def tvalues(self):
@@ -1570,7 +1584,7 @@ class LikelihoodModelResults(Results):
             extra_constraints = []
         if combine_terms is None:
             combine_terms = []
-        design_info = getattr(result.model.data.orig_exog, 'design_info', None)
+        design_info = getattr(result.model.data, 'design_info', None)
 
         if design_info is None and extra_constraints is None:
             raise ValueError('no constraints, nothing to do')

@@ -91,14 +91,15 @@ class CheckCohens(object):
 
 class UnweightedCohens(CheckCohens):
     #comparison to printout of a SAS example
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         #temporary: res instance is at last position
-        self.res = cohens_kappa(table10)
+        cls.res = cohens_kappa(table10)
         res10_sas = [0.4842, 0.1380, 0.2137, 0.7547]
         res10_sash0 = [0.1484, 3.2626, 0.0006, 0.0011]  #for test H0:kappa=0
-        self.res2 = res10_sas + res10_sash0 #concatenate
+        cls.res2 = res10_sas + res10_sash0 #concatenate
 
-        self.res_string = '''\
+        cls.res_string = '''\
                   Simple Kappa Coefficient
               --------------------------------
               Kappa                     0.4842
@@ -119,14 +120,15 @@ class UnweightedCohens(CheckCohens):
 
 class TestWeightedCohens(CheckCohens):
     #comparison to printout of a SAS example
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         #temporary: res instance is at last position
-        self.res = cohens_kappa(table10, weights=[0, 1, 2])
+        cls.res = cohens_kappa(table10, weights=[0, 1, 2])
         res10w_sas = [0.4701, 0.1457, 0.1845, 0.7558]
         res10w_sash0 = [0.1426, 3.2971, 0.0005, 0.0010]  #for test H0:kappa=0
-        self.res2 = res10w_sas + res10w_sash0 #concatenate
+        cls.res2 = res10w_sas + res10w_sash0 #concatenate
 
-        self.res_string = '''\
+        cls.res_string = '''\
                   Weighted Kappa Coefficient
               --------------------------------
               Kappa                     0.4701
@@ -317,7 +319,6 @@ def test_aggregate_raters():
 
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x'#, '--pdb-failures'
-                        ], exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])
 

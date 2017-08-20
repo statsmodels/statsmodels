@@ -794,7 +794,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
     Parameters
     ----------
-    x : array, 2d, (nobs,2)
+    x : array, 2d
         data for test whether the time series in the second column Granger
         causes the time series in the first column
     maxlag : integer

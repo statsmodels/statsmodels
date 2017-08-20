@@ -989,9 +989,13 @@ class ARIMA(ARMA):
             return mod
 
     def __getnewargs__(self):
+        # using same defaults as in __init__
+        dates = getattr(self, 'dates', None)
+        freq = getattr(self, 'freq', None)
+        missing = getattr(self, 'missing', 'none')
         return ((self.endog),
                 (self.k_lags, self.k_diff, self.k_ma),
-                self.exog, self.dates, self.freq, self.missing)
+                self.exog, dates, freq, missing)
 
     def __init__(self, endog, order, exog=None, dates=None, freq=None,
                  missing='none'):
@@ -1497,7 +1501,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
     def _forecast_error(self, steps):
         sigma2 = self.sigma2
         ma_rep = arma2ma(np.r_[1, -self.arparams],
-                         np.r_[1, self.maparams], nobs=steps)
+                         np.r_[1, self.maparams], lags=steps)
 
         fcasterr = np.sqrt(sigma2 * np.cumsum(ma_rep**2))
         return fcasterr
@@ -1815,7 +1819,7 @@ class ARIMAResults(ARMAResults):
     def _forecast_error(self, steps):
         sigma2 = self.sigma2
         ma_rep = arma2ma(np.r_[1, -self.arparams],
-                         np.r_[1, self.maparams], nobs=steps)
+                         np.r_[1, self.maparams], lags=steps)
 
         fcerr = np.sqrt(np.cumsum(cumsum_n(ma_rep, self.k_diff)**2)*sigma2)
         return fcerr

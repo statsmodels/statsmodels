@@ -6,8 +6,9 @@
 extensively ensure the stability and accuracy of the functions"""
 
 from statsmodels.compat.python import iterkeys, lzip, lmap
+from statsmodels.compat.testing import skip
 
-from numpy.testing import TestCase, rand, assert_, assert_equal, \
+from numpy.testing import rand, assert_, assert_equal, \
     assert_almost_equal, assert_array_almost_equal, assert_array_equal, \
     assert_approx_equal, assert_raises, run_module_suite, dec
 
@@ -15,13 +16,15 @@ import numpy as np
 
 from statsmodels.stats.libqsturng import qsturng, psturng,p_keys,v_keys
 
+
 def read_ch(fname):
     with open(fname) as f:
         lines = f.readlines()
     ps,rs,vs,qs = lzip(*[L.split(',') for L in lines])
     return lmap(float, ps), lmap(float, rs),lmap(float, vs), lmap(float, qs)
 
-class test_qsturng(TestCase):
+
+class TestQsturng(object):
     def test_scalar(self):
         # scalar input -> scalar output
         assert_almost_equal(4.43645545899562, qsturng(.9,5,6), 5)
@@ -75,8 +78,8 @@ class test_qsturng(TestCase):
 
     #remove from testsuite, used only for table generation and fails on
     #Debian S390, no idea why
-    @dec.slow
-    def t_est_all_to_tbl(self):
+    @skip
+    def test_all_to_tbl(self):
         from statsmodels.stats.libqsturng.make_tbls import T,R
         ps, rs, vs, qs = [], [], [], []
         for p in T:
@@ -128,7 +131,7 @@ class test_qsturng(TestCase):
         errors = np.abs(qs-qsturng(ps,rs,vs))/qs
         assert_equal(np.array([]), np.where(errors > .03)[0])
 
-class test_psturng(TestCase):
+class TestPsturng(object):
     def test_scalar(self):
         "scalar input -> scalar output"
         assert_almost_equal(.1, psturng(4.43645545899562,5,6), 5)

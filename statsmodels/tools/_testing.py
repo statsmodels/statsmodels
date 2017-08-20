@@ -8,10 +8,10 @@ during refactoring arises.
 The first group of functions provide consistency checks
 
 """
-
+from statsmodels.compat.testing import SkipTest
 import numpy as np
 from numpy.testing import assert_allclose, assert_
-from nose import SkipTest
+import pytest
 
 # the following are copied from
 # statsmodels.base.tests.test_generic_methods.CheckGenericMixin
@@ -87,7 +87,7 @@ def check_fitted(results):
         results = results
     if (isinstance(results, GLMResults) or
         isinstance(results, DiscreteResults)):
-        raise SkipTest
+        raise SkipTest()
 
     res = results
     fitted = res.fittedvalues

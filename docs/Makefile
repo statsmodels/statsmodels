@@ -3,7 +3,7 @@
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
-SPHINXBUILD   = sphinx-build
+SPHINXBUILD   = sphinx-build -j 2
 PAPER         =
 BUILDDIR      = build
 TOOLSPATH	  = ../tools/
@@ -67,7 +67,7 @@ html:
 	@echo "Generating datasets from installed statsmodels.datasets"
 	$(TOOLSPATH)$(DATASETBUILD)
 	@echo "Generating notebooks from examples/notebooks folder"
-	$(TOOLSPATH)$(NOTEBOOKBUILD) --execute=True --allow_errors=True
+	$(TOOLSPATH)$(NOTEBOOKBUILD) --parallel --report-errors
 	@echo "Running sphinx-build"
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo "Copying rendered example notebooks"

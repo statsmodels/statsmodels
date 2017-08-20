@@ -246,7 +246,7 @@ def _measure_tables(tables, settings):
 _model_types = {'OLS' : 'Ordinary least squares',
                 'GLS' : 'Generalized least squares',
                 'GLSAR' : 'Generalized least squares with AR(p)',
-                'WLS' : 'Weigthed least squares',
+                'WLS' : 'Weighted least squares',
                 'RLM' : 'Robust linear model',
                 'NBin': 'Negative binomial model',
                 'GLM' : 'Generalized linear model'
@@ -327,7 +327,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     '''
 
     if isinstance(results, tuple):
-        results, params, std_err, tvalues, pvalues, conf_int = results
+        results, params, bse, tvalues, pvalues, conf_int = results
     else:
         params = results.params
         bse = results.bse

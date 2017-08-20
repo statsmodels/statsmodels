@@ -3,7 +3,7 @@
 REM Command file for Sphinx documentation
 
 if "%SPHINXBUILD%" == "" (
-	set SPHINXBUILD=sphinx-build
+	set SPHINXBUILD=sphinx-build -j 2
 )
 set BUILDDIR=build
 set TOOLSPATH=../tools
@@ -48,8 +48,8 @@ if "%1" == "html" (
     REM python %TOOLSPATH%/%EXAMPLEBUILD%
     echo mkdir %BUILDDIR%\html\_static
     mkdir %BUILDDIR%\html\_static
-	echo python %TOOLSPATH%/%NOTEBOOKBUILD% --execute=True --allow_errors=True
-    python %TOOLSPATH%/%NOTEBOOKBUILD% --execute=True --allow_errors=True
+	echo python %TOOLSPATH%/%NOTEBOOKBUILD% --parallel --report-errors
+    REM python %TOOLSPATH%/%NOTEBOOKBUILD% --parallel --report-errors
     echo python %TOOLSPATH%/%DATASETBUILD%
     python %TOOLSPATH%/%DATASETBUILD%
 	echo %SPHINXBUILD% -b html %ALLSPHINXOPTS% %BUILDDIR%/html
