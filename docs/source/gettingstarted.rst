@@ -15,6 +15,7 @@ few modules and functions:
 
 .. ipython:: python
 
+    from __future__ import print_function
     import statsmodels.api as sm
     import pandas
     from patsy import dmatrices
@@ -132,7 +133,7 @@ For OLS, this is achieved by:
 
     mod = sm.OLS(y, X)    # Describe model
     res = mod.fit()       # Fit model
-    print res.summary()   # Summarize model
+    print(res.summary())   # Summarize model
 
 
 The ``res`` object has many useful attributes. For example, we can extract
@@ -163,7 +164,7 @@ relationship is properly modelled as linear):
 
 Admittedly, the output produced above is not very verbose, but we know from
 reading the `docstring <generated/statsmodels.stats.diagnostic.linear_rainbow.html>`_
-(also, ``print sm.stats.linear_rainbow.__doc__``) that the
+(also, ``print(sm.stats.linear_rainbow.__doc__)``) that the
 first number is an F-statistic and that the second is the p-value.
 
 ``statsmodels`` also provides graphics functions. For example, we can draw a
