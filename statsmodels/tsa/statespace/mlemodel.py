@@ -1801,7 +1801,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     def _cov_params_opg(self, approx_complex_step=True, approx_centered=False):
         nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
 
-        evaluated_hessian = nobs * self.model.hessian_opg(self.params,
+        evaluated_hessian = nobs * self.model._hessian_opg(self.params,
                                         transformed=True,
                                         approx_complex_step=approx_complex_step,
                                         approx_centered=approx_centered)
