@@ -497,20 +497,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         # Wrap in a results object
         if not return_ssm:
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs['cov_type'] = cov_type
-            if cov_kwds is not None:
-                result_kwargs['cov_kwds'] = cov_kwds
-
-            if results_class is None:
-                results_class = MLEResults
-            if results_wrapper_class is None:
-                results_wrapper_class = MLEResultsWrapper
-
-            result = results_wrapper_class(
-                results_class(self, params, result, **result_kwargs)
-            )
+            result = self._wrap_results(result, params, cov_type, cov_kwds, results_class, results_wrapper_class)
 
         return result
 
@@ -557,22 +544,27 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         # Wrap in a results object
         if not return_ssm:
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs['cov_type'] = cov_type
-            if cov_kwds is not None:
-                result_kwargs['cov_kwds'] = cov_kwds
-
-            if results_class is None:
-                results_class = MLEResults
-            if results_wrapper_class is None:
-                results_wrapper_class = MLEResultsWrapper
-
-            result = results_wrapper_class(
-                results_class(self, params, result, **result_kwargs)
-            )
+            result = self._wrap_results(result, params, cov_type, cov_kwds, results_class, results_wrapper_class)
 
         return result
+
+    def _wrap_results(self, result, params, cov_type, cov_kwds, results_class, results_wrapper_class):
+        result_kwargs = {}
+        if cov_type is not None:
+            result_kwargs['cov_type'] = cov_type
+        if cov_kwds is not None:
+            result_kwargs['cov_kwds'] = cov_kwds
+
+        results_class = results_class or self._results_class[0]
+        results_wrapper_class = results_wrapper_class or self._results_class[1]
+
+        result = results_class(self, params, result, **result_kwargs)
+        wrapped = results_wrapper_class(result)
+        return wrapped
+
+    @property
+    def _results_class(self):
+        return (MLEResults, MLEResultsWrapper)
 
     def _handle_args(self, names, defaults, *args, **kwargs):
         output_args = []
