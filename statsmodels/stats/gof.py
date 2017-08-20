@@ -447,7 +447,7 @@ def chisquare_effectsize(probs0, probs1, correction=None, cohen=True, axis=0):
         and broadcast in the other dimensions
         Both probs0 and probs1 are normalized to add to one (in the ``axis``
         dimension).
-    correction : None or tuple (nobs, df)
+    correction : None or tuple
         If None, then the effect size is the chisquare statistic divide by
         the number of observations.
         If the correction is a tuple (nobs, df), then the effectsize is

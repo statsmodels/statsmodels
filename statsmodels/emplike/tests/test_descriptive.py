@@ -12,18 +12,20 @@ class GenRes(object):
     Reads in the data and creates class instance to be tested
 
     """
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         data = star98.load()
         desc_stat_data = data.exog[:50, 5]
         mv_desc_stat_data = data.exog[:50, 5:7]  # mv = multivariate
-        self.res1 = DescStat(desc_stat_data)
-        self.res2 = DescStatRes()
-        self.mvres1 = DescStat(mv_desc_stat_data)
+        cls.res1 = DescStat(desc_stat_data)
+        cls.res2 = DescStatRes()
+        cls.mvres1 = DescStat(mv_desc_stat_data)
 
 
 class TestDescriptiveStatistics(GenRes):
-    def __init__(self):
-        super(TestDescriptiveStatistics, self).__init__()
+    @classmethod
+    def setup_class(cls):
+        super(TestDescriptiveStatistics, cls).setup_class()
 
     def test_test_mean(self):
         assert_almost_equal(self.res1.test_mean(14),
@@ -61,15 +63,12 @@ class TestDescriptiveStatistics(GenRes):
                             self.res2.test_skew, 4)
 
     def test_ci_skew(self):
-        """
-        This will be tested in a round about way since MATLAB fails when
-        computing CI with multiple nuisance parameters.  The process is:
-
-        (1) Get CI for skewness from ci.skew()
-        (2) In MATLAB test the hypotheis that skew=results of test_skew.
-        (3) If p-value approx .05, test confirmed
-
-        """
+        # This will be tested in a round about way since MATLAB fails when
+        # computing CI with multiple nuisance parameters.  The process is:
+        #
+        # (1) Get CI for skewness from ci.skew()
+        # (2) In MATLAB test the hypotheis that skew=results of test_skew.
+        # (3) If p-value approx .05, test confirmed
         skew_ci = self.res1.ci_skew()
         lower_lim = skew_ci[0]
         upper_lim = skew_ci[1]
@@ -87,11 +86,7 @@ class TestDescriptiveStatistics(GenRes):
                             self.res2.test_kurt_0, 4)
 
     def test_ci_kurt(self):
-        """
-
-        Same strategy for skewness CI
-
-        """
+        # Same strategy for skewness CI
         kurt_ci = self.res1.ci_kurt(upper_bound=.5, lower_bound=-1.5)
         lower_lim = kurt_ci[0]
         upper_lim = kurt_ci[1]

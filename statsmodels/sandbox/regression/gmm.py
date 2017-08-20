@@ -921,9 +921,9 @@ class GMM(Model):
 
         Parameters
         ----------
-        moms : array, (nobs, nmoms)
-            moment conditions for all observations evaluated at a parameter
-            value
+        moms : array
+            moment conditions (nobs x nmoms) for all observations evaluated at
+            a parameter value
         weights_method : string 'cov'
             If method='cov' is cov then the matrix is calculated as simple
             covariance of the moment conditions.

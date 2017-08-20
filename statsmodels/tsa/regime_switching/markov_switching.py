@@ -15,7 +15,6 @@ from statsmodels.compat.collections import OrderedDict
 from scipy.misc import logsumexp
 from statsmodels.base.data import PandasData
 import statsmodels.tsa.base.tsa_model as tsbase
-from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
@@ -25,7 +24,8 @@ from statsmodels.tools.sm_exceptions import EstimationWarning
 import statsmodels.base.wrapper as wrap
 
 
-from statsmodels.tsa.statespace.tools import find_best_blas_type
+from statsmodels.tsa.statespace.tools import find_best_blas_type, prepare_exog
+
 from statsmodels.tsa.regime_switching._hamilton_filter import (
     shamilton_filter, dhamilton_filter, chamilton_filter, zhamilton_filter)
 from statsmodels.tsa.regime_switching._kim_smoother import (
@@ -42,22 +42,6 @@ prefix_kim_smoother_map = {
 }
 
 
-def _prepare_exog(exog):
-    k_exog = 0
-    if exog is not None:
-        exog_is_using_pandas = _is_using_pandas(exog, None)
-        if not exog_is_using_pandas:
-            exog = np.asarray(exog)
-
-        # Make sure we have 2-dimensional array
-        if exog.ndim == 1:
-            if not exog_is_using_pandas:
-                exog = exog[:, None]
-            else:
-                exog = pd.DataFrame(exog)
-
-        k_exog = exog.shape[1]
-    return k_exog, exog
 
 
 def _logistic(x):
@@ -675,7 +659,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         # Exogenous data
         # TODO add checks for exog_tvtp consistent shape and indices
-        self.k_tvtp, self.exog_tvtp = _prepare_exog(exog_tvtp)
+        self.k_tvtp, self.exog_tvtp = prepare_exog(exog_tvtp)
 
         # Initialize the base model
         super(MarkovSwitching, self).__init__(endog, exog, dates=dates,

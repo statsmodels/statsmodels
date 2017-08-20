@@ -185,8 +185,8 @@ Prefix commit messages in the master branch of the main shared repository with t
     TST: Change to a test, adding a test. Only used if not directly related to a bug.
     REF: Refactoring changes
 
-
-vbench
-------
-
-See :ref:`vbenchdoc` notes for working with the `statsmodels vbench suite <http://www.statsmodels.org/vbench>`_. The github repository is available `here <https://github.com/statsmodels/vbench>`_.
+.. Notes: vbench is not currently available and it is unclear whether it will return
+.. vbench
+.. ------
+..
+.. See :ref:`vbenchdoc` notes for working with the `statsmodels vbench suite <http://www.statsmodels.org/vbench>`_. The github repository is available `here <https://github.com/statsmodels/vbench>`_.

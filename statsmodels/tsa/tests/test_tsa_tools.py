@@ -1,7 +1,6 @@
 '''tests for some time series analysis functions
 
 '''
-import unittest
 from statsmodels.compat.python import zip
 
 import numpy as np
@@ -104,9 +103,9 @@ def test_vech():
     assert (np.array_equal(vech(arr), [1, 4, 7, 5, 8, 9]))
 
 
-class TestLagmat(unittest.TestCase):
+class TestLagmat(object):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         data = sm.datasets.macrodata.load()
         cls.macro_df = pd.DataFrame.from_records(data.data)
         cls.macro_df = cls.macro_df[['year', 'quarter', 'realgdp', 'cpi']]
@@ -377,7 +376,7 @@ def test_freq_to_period():
         assert_equal(tools.freq_to_period(to_offset(i)), j)
 
 
-class TestDetrend(unittest.TestCase):
+class TestDetrend(object):
     @classmethod
     def setup_class(cls):
         cls.data_1d = np.arange(5.0)
@@ -424,7 +423,7 @@ class TestDetrend(unittest.TestCase):
     def test_detrend_dim_too_large(self):
         assert_raises(NotImplementedError, sm.tsa.detrend, np.ones((3, 3, 3)))
 
-class TestAddTrend(unittest.TestCase):
+class TestAddTrend(object):
     @classmethod
     def setup_class(cls):
         cls.n = 200
@@ -552,9 +551,9 @@ class TestAddTrend(unittest.TestCase):
         assert_raises(ValueError, tools.add_trend, x=self.arr_1d, trend='unknown')
 
 
-class TestLagmat2DS(unittest.TestCase):
+class TestLagmat2DS(object):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         data = sm.datasets.macrodata.load()
         cls.macro_df = pd.DataFrame.from_records(data.data)
         cls.macro_df = cls.macro_df[['year', 'quarter', 'realgdp', 'cpi']]
@@ -661,6 +660,5 @@ class TestLagmat2DS(unittest.TestCase):
         assert_raises(TypeError, sm.tsa.lagmat2ds, data, 5)
 
 if __name__ == '__main__':
-    import nose
-
-    nose.runmodule()
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

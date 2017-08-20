@@ -15,7 +15,8 @@ from .kalman_filter import KalmanFilter
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
     companion_matrix, diff, is_invertible, constrain_stationary_univariate,
-    unconstrain_stationary_univariate, solve_discrete_lyapunov
+    unconstrain_stationary_univariate, solve_discrete_lyapunov,
+    prepare_exog
 )
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.data import _is_using_pandas
@@ -412,20 +413,8 @@ class SARIMAX(MLEModel):
                 self._k_order = 0
 
         # Exogenous data
-        self.k_exog = 0
-        if exog is not None:
-            exog_is_using_pandas = _is_using_pandas(exog, None)
-            if not exog_is_using_pandas:
-                exog = np.asarray(exog)
+        (self.k_exog, exog) = prepare_exog(exog)
 
-            # Make sure we have 2-dimensional array
-            if exog.ndim < 2:
-                if not exog_is_using_pandas:
-                    exog = np.atleast_2d(exog).T
-                else:
-                    exog = pd.DataFrame(exog)
-
-            self.k_exog = exog.shape[1]
         # Redefine mle_regression to be true only if it was previously set to
         # true and there are exogenous regressors
         self.mle_regression = (

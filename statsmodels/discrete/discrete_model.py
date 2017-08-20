@@ -17,7 +17,8 @@ W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 """
 from __future__ import division
 
-__all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial"]
+__all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
+           "GeneralizedPoisson"]
 
 from statsmodels.compat.python import lmap, lzip, range
 import numpy as np
@@ -38,14 +39,17 @@ from statsmodels.base.data import handle_data  # for mnlogit
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 from statsmodels.compat.numpy import np_matrix_rank
-from pandas.core.api import get_dummies
+from pandas import get_dummies
 
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
+from statsmodels.distributions import genpoisson_p
 try:
     import cvxopt
     have_cvxopt = True
 except ImportError:
     have_cvxopt = False
+
+import warnings
 
 #TODO: When we eventually get user-settable precision, we need to change
 #      this
@@ -799,7 +803,9 @@ class CountModel(DiscreteModel):
         # group 3 poisson, nbreg, zip, zinb
         if exog is None:
             exog = self.exog
-        margeff = self.predict(params, exog)[:,None] * params[None,:]
+        k_extra = getattr(self, 'k_extra', 0)
+        params_exog = params if k_extra == 0 else params[:-k_extra]
+        margeff = self.predict(params, exog)[:,None] * params_exog[None,:]
         if 'ex' in transform:
             margeff *= exog
         if 'ey' in transform:
@@ -967,7 +973,7 @@ class Poisson(CountModel):
 
         Returns
         -------
-        loglike : ndarray (nobs,)
+        loglike : array-like
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -1124,8 +1130,8 @@ class Poisson(CountModel):
 
         Returns
         -------
-        score : ndarray (nobs, k_vars)
-            The score vector of the model evaluated at `params`
+        score : array-like
+            The score vector (nobs, k_vars) of the model evaluated at `params`
 
         Notes
         -----
@@ -1172,6 +1178,374 @@ class Poisson(CountModel):
         X = self.exog
         L = np.exp(np.dot(X,params) + exposure + offset)
         return -np.dot(L*X.T, X)
+
+class GeneralizedPoisson(CountModel):
+    __doc__ = """
+    Generalized Poisson model for count data
+
+    %(params)s
+    %(extra_params)s
+
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    """ % {'params' : base._model_params_doc,
+           'extra_params' :
+    """
+    p: scalar
+        P denotes parametrizations for GP regression. p=1 for GP-1 and
+    p=2 for GP-2. Default is p=1.
+    offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+
+    """ + base._missing_param_doc}
+
+    def __init__(self, endog, exog, p = 1, offset=None,
+                       exposure=None, missing='none', **kwargs):
+        super(GeneralizedPoisson, self).__init__(endog, exog, offset=offset,
+                                               exposure=exposure,
+                                               missing=missing, **kwargs)
+        self.parameterization = p - 1
+        self.exog_names.append('alpha')
+        self.k_extra = 1
+        self._transparams = False
+
+    def loglike(self, params):
+        """
+        Loglikelihood of Generalized Poisson model
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model.
+
+        Returns
+        -------
+        loglike : float
+            The log-likelihood function of the model evaluated at `params`.
+            See notes.
+
+        Notes
+        --------
+        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[\\mu_{i}+(y_{i}-1)*ln(\\mu_{i}+
+            \\alpha*\\mu_{i}^{p-1}*y_{i})-y_{i}*ln(1+\\alpha*\\mu_{i}^{p-1})-
+            ln(y_{i}!)-\\frac{\\mu_{i}+\\alpha*\\mu_{i}^{p-1}*y_{i}}{1+\\alpha*
+            \\mu_{i}^{p-1}}\\right]
+
+        """
+        return np.sum(self.loglikeobs(params))
+
+    def loglikeobs(self, params):
+        """
+        Loglikelihood for observations of Generalized Poisson model
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model.
+
+        Returns
+        -------
+        loglike : ndarray (nobs,)
+            The log likelihood for each observation of the model evaluated
+            at `params`. See Notes
+
+        Notes
+        --------
+        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[\\mu_{i}+(y_{i}-1)*ln(\\mu_{i}+
+            \\alpha*\\mu_{i}^{p-1}*y_{i})-y_{i}*ln(1+\\alpha*\\mu_{i}^{p-1})-
+            ln(y_{i}!)-\\frac{\\mu_{i}+\\alpha*\\mu_{i}^{p-1}*y_{i}}{1+\\alpha*
+            \\mu_{i}^{p-1}}\\right]
+
+        for observations :math:`i=1,...,n`
+        """
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+        params = params[:-1]
+        p = self.parameterization
+        endog = self.endog
+        mu = self.predict(params)
+        mu_p = np.power(mu, p)
+        a1 = 1 + alpha * mu_p
+        a2 = mu + (a1 - 1) * endog
+        return (np.log(mu) + (endog - 1) * np.log(a2) - endog *
+                np.log(a1) - gammaln(endog + 1) - a2 / a1)
+
+    def fit(self, start_params=None, method='bfgs', maxiter=35,
+            full_output=1, disp=1, callback=None, use_transparams = False,
+            cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
+        """
+        Parameters
+        ----------
+        use_transparams : bool
+            This parameter enable internal transformation to impose non-negativity.
+            True to enable. Default is False.
+            use_transparams=True imposes the no underdispersion (alpha > 0) constaint.
+            In case use_transparams=True and method="newton" or "ncg" transformation
+            is ignored.
+        """
+        if use_transparams and method not in ['newton', 'ncg']:
+            self._transparams = True
+        else:
+            if use_transparams:
+                warnings.warn("Paramter \"use_transparams\" is ignored",
+                              RuntimeWarning)
+            self._transparams = False 
+
+        if start_params is None:
+            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+            if np.size(offset) == 1 and offset == 0:
+                offset = None
+            mod_poi = Poisson(self.endog, self.exog, offset=offset)
+            start_params = mod_poi.fit(disp=0, method=method).params
+            start_params = np.append(start_params, 0.1)
+        mlefit = super(GeneralizedPoisson, self).fit(start_params=start_params,
+                        maxiter=maxiter, method=method, disp=disp,
+                        full_output=full_output, callback=lambda x:x,
+                        **kwargs)
+
+
+        if use_transparams and method not in ["newton", "ncg"]:
+            self._transparams = False
+            mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
+
+        gpfit = GeneralizedPoissonResults(self, mlefit._results)
+        result = GeneralizedPoissonResultsWrapper(gpfit)
+
+        if cov_kwds is None:
+            cov_kwds = {}
+
+        result._get_robustcov_results(cov_type=cov_type,
+                                      use_self=True, use_t=use_t, **cov_kwds)
+        return result
+
+    fit.__doc__ = DiscreteModel.fit.__doc__ + fit.__doc__
+
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+        
+        if np.size(alpha) == 1 and alpha != 0:
+            k_params = self.exog.shape[1] + self.k_extra
+            alpha = alpha * np.ones(k_params)
+            alpha[-1] = 0
+
+        alpha_p = alpha[:-1] if (self.k_extra and np.size(alpha) > 1) else alpha
+        self._transparams = False
+        if start_params is None:
+            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+            if np.size(offset) == 1 and offset == 0:
+                offset = None
+            mod_poi = Poisson(self.endog, self.exog, offset=offset)
+            start_params = mod_poi.fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=0, callback=callback,
+                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
+            start_params = np.append(start_params, 0.1)
+
+        cntfit = super(CountModel, self).fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+
+        if method in ['l1', 'l1_cvxopt_cp']:
+            discretefit = L1GeneralizedPoissonResults(self, cntfit)
+        else:
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
+
+        return L1GeneralizedPoissonResultsWrapper(discretefit)
+
+    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
+
+    def score(self, params):
+        """
+        Generalized Poisson model score (gradient) vector of the log-likelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        score : ndarray, 1-D
+            The score vector of the model, i.e. the first derivative of the
+            loglikelihood function, evaluated at `params`
+        """
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+        params = params[:-1]
+        p = self.parameterization
+        exog = self.exog
+        y = self.endog[:,None]
+        mu = self.predict(params)[:,None]
+        mu_p = np.power(mu, p)
+        a1 = 1 + alpha * mu_p
+        a2 = mu + alpha * mu_p * y
+        a3 = alpha * p * mu ** (p - 1)
+        a4 = a3 * y
+        dmudb = mu * exog
+
+        dalpha = (mu_p * (y * ((y - 1) / a2 - 2 / a1) + a2 / a1**2)).sum()
+        dparams = dmudb * (-a4 / a1 + a3 * a2 / (a1 ** 2) + (1 + a4) *
+                  ((y - 1) / a2 - 1 / a1) + 1 / mu)
+
+        if self._transparams:
+            return np.r_[dparams.sum(0), dalpha*alpha]
+        else:
+            return np.r_[dparams.sum(0), dalpha]
+
+    def _score_p(self, params):
+        """
+        Generalized Poisson model derivative of the log-likelihood by p-parameter
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        dldp : float
+            dldp is first derivative of the loglikelihood function, 
+        evaluated at `p-parameter`.
+        """
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+        params = params[:-1]
+        p = self.parameterization
+        exog = self.exog
+        y = self.endog[:,None]
+        mu = self.predict(params)[:,None]
+        mu_p = np.power(mu, p)
+        a1 = 1 + alpha * mu_p
+        a2 = mu + alpha * mu_p * y
+
+        dp = np.sum((np.log(mu) * ((a2 - mu) * ((y - 1) / a2 - 2 / a1) + (a1 - 1) *
+              a2 / a1 ** 2)))
+        return dp
+
+    def hessian(self, params):
+        """
+        Generalized Poisson model Hessian matrix of the loglikelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        hess : ndarray, (k_vars, k_vars)
+            The Hessian, second derivative of loglikelihood function,
+            evaluated at `params`
+        """
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+
+        params = params[:-1]
+        p = self.parameterization
+        exog = self.exog
+        y = self.endog[:,None]
+        mu = self.predict(params)[:,None]
+        mu_p = np.power(mu, p)
+        a1 = 1 + alpha * mu_p
+        a2 = mu + alpha * mu_p * y
+        a3 = alpha * p * mu ** (p - 1)
+        a4 = a3 * y
+        a5 = p * mu ** (p - 1)
+        dmudb = mu * exog
+
+        # for dl/dparams dparams
+        dim = exog.shape[1]
+        hess_arr = np.empty((dim+1,dim+1))
+
+        for i in range(dim):
+            for j in range(i + 1):
+                hess_arr[i,j] = np.sum(mu * exog[:,i,None] * exog[:,j,None] *
+                    (mu * (a3 * a4 / a1**2 - 2 * a3**2 * a2 / a1**3 + 2 * a3 *
+                    (a4 + 1) / a1**2 - a4 * p / (mu * a1) + a3 * p * a2 /
+                    (mu * a1**2) + a4 / (mu * a1) - a3 * a2 / (mu * a1**2) +
+                    (y - 1) * a4 * (p - 1) / (a2 * mu) - (y - 1) *
+                    (1 + a4)**2 / a2**2 - a4 * (p - 1) / (a1 * mu) - 1 /
+                    mu**2) + (-a4 / a1 + a3 * a2 / a1**2 + (y - 1) *
+                    (1 + a4) / a2 - (1 + a4) / a1 + 1 / mu)), axis=0)
+        tri_idx = np.triu_indices(dim, k=1)
+        hess_arr[tri_idx] = hess_arr.T[tri_idx]
+
+        # for dl/dparams dalpha
+        dldpda = np.sum((2 * a4 * mu_p / a1**2 - 2 * a3 * mu_p * a2 / a1**3 -
+                        mu_p * y * (y - 1) * (1 + a4) / a2**2 + mu_p *
+                        (1 + a4) / a1**2 + a5 * y * (y - 1) / a2 - 2 *
+                        a5 * y / a1 + a5 * a2 / a1**2) * dmudb,
+                        axis=0)
+
+        hess_arr[-1,:-1] = dldpda
+        hess_arr[:-1,-1] = dldpda
+
+        # for dl/dalpha dalpha
+        dldada = mu_p**2 * (3 * y / a1**2 - y**2 * (y - 1) / a2**2 - 2 * a2 /
+                            a1**3)
+
+        hess_arr[-1,-1] = dldada.sum()
+
+        return hess_arr
+
+    def predict(self, params, exog=None, exposure=None, offset=None,
+                which='mean'):
+        """
+        Predict response variable of a count model given exogenous variables.
+
+        Notes
+        -----
+        If exposure is specified, then it will be logged by the method.
+        The user does not need to log it first.
+        """
+        if exog is None:
+            exog = self.exog
+        
+        if exposure is None:
+            exposure = getattr(self, 'exposure', 0)
+        elif exposure != 0:
+            exposure = np.log(exposure)
+
+        if offset is None:
+            offset = getattr(self, 'offset', 0)
+
+        fitted = np.dot(exog, params[:exog.shape[1]])
+        linpred = fitted + exposure + offset
+
+        if which == 'mean':
+            return np.exp(linpred)
+        elif which == 'linear':
+            return linpred
+        elif which =='prob':
+            counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+            mu = self.predict(params, exog=exog, exposure=exposure,
+                              offset=offset)[:,None]
+            return genpoisson_p.pmf(counts, mu, params[-1],
+                                    self.parameterization + 1)
+        else:
+            raise ValueError('keyword \'which\' not recognized')
+
 
 class Logit(BinaryModel):
     __doc__ = """
@@ -1272,7 +1646,7 @@ class Logit(BinaryModel):
 
         Returns
         -------
-        loglike : ndarray (nobs,)
+        loglike : ndarray
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -1325,7 +1699,7 @@ class Logit(BinaryModel):
 
         Returns
         -------
-        jac : ndarray, (nobs, k_vars)
+        jac : array-like
             The derivative of the loglikelihood for each observation evaluated
             at `params`.
 
@@ -1473,7 +1847,7 @@ class Probit(BinaryModel):
 
         Returns
         -------
-        loglike : ndarray (nobs,)
+        loglike : array-like
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -1533,7 +1907,7 @@ class Probit(BinaryModel):
 
         Returns
         -------
-        jac : ndarray, (nobs, k_vars)
+        jac : array-like
             The derivative of the loglikelihood for each observation evaluated
             at `params`.
 
@@ -1703,7 +2077,7 @@ class MNLogit(MultinomialModel):
 
         Returns
         -------
-        loglike : ndarray (nobs,)
+        loglike : array-like
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -1778,7 +2152,7 @@ class MNLogit(MultinomialModel):
 
         Returns
         --------
-        jac : ndarray, (nobs, k_vars*(J-1))
+        jac : array-like
             The derivative of the loglikelihood for each observation evaluated
             at `params` .
 
@@ -1831,10 +2205,10 @@ class MNLogit(MultinomialModel):
         X = self.exog
         pr = self.cdf(np.dot(X,params))
         partials = []
-        J = self.wendog.shape[1] - 1
-        K = self.exog.shape[1]
-        for i in range(J):
-            for j in range(J): # this loop assumes we drop the first col.
+        J = self.J
+        K = self.K
+        for i in range(J-1):
+            for j in range(J-1): # this loop assumes we drop the first col.
                 if i == j:
                     partials.append(\
                         -np.dot(((pr[:,i+1]*(1-pr[:,j+1]))[:,None]*X).T,X))
@@ -1842,7 +2216,7 @@ class MNLogit(MultinomialModel):
                     partials.append(-np.dot(((pr[:,i+1]*-pr[:,j+1])[:,None]*X).T,X))
         H = np.array(partials)
         # the developer's notes on multinomial should clear this math up
-        H = np.transpose(H.reshape(J,J,K,K), (0,2,1,3)).reshape(J*K,J*K)
+        H = np.transpose(H.reshape(J-1, J-1, K, K), (0, 2, 1, 3)).reshape((J-1)*K, (J-1)*K)
         return H
 
 
@@ -2650,6 +3024,17 @@ class NegativeBinomialResults(CountResults):
         return -2*self.llf + np.log(self.nobs)*(self.df_model +
                                                 self.k_constant + k_extra)
 
+class GeneralizedPoissonResults(NegativeBinomialResults):
+    __doc__ = _discrete_results_docs % {
+        "one_line_description" : "A results class for Generalized Poisson",
+                    "extra_attr" : ""}
+
+    @cache_readonly
+    def _dispersion_factor(self):
+        p = getattr(self.model, 'parameterization', 0)
+        mu = self.predict()
+        return (1 + self.params[-1] * mu**p)**2
+
 class L1CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
             "A results class for count data fit by l1 regularization",
@@ -2707,6 +3092,9 @@ class L1PoissonResults(L1CountResults, PoissonResults):
     pass
 
 class L1NegativeBinomialResults(L1CountResults, NegativeBinomialResults):
+    pass
+
+class L1GeneralizedPoissonResults(L1CountResults, GeneralizedPoissonResults):
     pass
 
 class OrderedResults(DiscreteResults):
@@ -3069,6 +3457,11 @@ class NegativeBinomialResultsWrapper(lm.RegressionResultsWrapper):
 wrap.populate_wrapper(NegativeBinomialResultsWrapper,
                       NegativeBinomialResults)
 
+class GeneralizedPoissonResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(GeneralizedPoissonResultsWrapper,
+                      GeneralizedPoissonResults)
+
 class PoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
     #_methods = {
@@ -3096,6 +3489,11 @@ class L1NegativeBinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1NegativeBinomialResultsWrapper,
                       L1NegativeBinomialResults)
+
+class L1GeneralizedPoissonResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(L1GeneralizedPoissonResultsWrapper,
+                      L1GeneralizedPoissonResults)
 
 class BinaryResultsWrapper(lm.RegressionResultsWrapper):
     _attrs = {"resid_dev" : "rows",
@@ -3125,52 +3523,3 @@ wrap.populate_wrapper(L1MultinomialResultsWrapper, L1MultinomialResults)
 if __name__=="__main__":
     import numpy as np
     import statsmodels.api as sm
-# Scratch work for negative binomial models
-# dvisits was written using an R package, I can provide the dataset
-# on request until the copyright is cleared up
-#TODO: request permission to use dvisits
-    data2 = np.genfromtxt('../datasets/dvisits/dvisits.csv', names=True)
-# note that this has missing values for Accident
-    endog = data2['doctorco']
-    exog = data2[['sex','age','agesq','income','levyplus','freepoor',
-            'freerepa','illness','actdays','hscore','chcond1',
-            'chcond2']].view(float, np.ndarray).reshape(len(data2),-1)
-    exog = sm.add_constant(exog, prepend=True)
-    poisson_mod = Poisson(endog, exog)
-    poisson_res = poisson_mod.fit()
-#    nb2_mod = NegBinTwo(endog, exog)
-#    nb2_res = nb2_mod.fit()
-# solvers hang (with no error and no maxiter warn...)
-# haven't derived hessian (though it will be block diagonal) to check
-# newton, note that Lawless (1987) has the derivations
-# appear to be something wrong with the score?
-# according to Lawless, traditionally the likelihood is maximized wrt to B
-# and a gridsearch on a to determin ahat?
-# or the Breslow approach, which is 2 step iterative.
-    nb2_params = [-2.190,.217,-.216,.609,-.142,.118,-.497,.145,.214,.144,
-            .038,.099,.190,1.077] # alpha is last
-    # taken from Cameron and Trivedi
-# the below is from Cameron and Trivedi as well
-#    endog2 = np.array(endog>=1, dtype=float)
-# skipped for now, binary poisson results look off?
-    data = sm.datasets.randhie.load()
-    nbreg = NegativeBinomial
-    mod = nbreg(data.endog, data.exog.view((float,9)))
-#FROM STATA:
-    params = np.asarray([-.05654133,  -.21214282, .0878311, -.02991813, .22903632,
-            .06210226, .06799715, .08407035, .18532336])
-    bse = [0.0062541, 0.0231818, 0.0036942, 0.0034796, 0.0305176, 0.0012397,
-            0.0198008, 0.0368707, 0.0766506]
-    lnalpha = .31221786
-    mod.loglike(np.r_[params,np.exp(lnalpha)])
-    poiss_res = Poisson(data.endog, data.exog.view((float,9))).fit()
-    func = lambda x: -mod.loglike(x)
-    grad = lambda x: -mod.score(x)
-    from scipy import optimize
-#    res1 = optimize.fmin_l_bfgs_b(func, np.r_[poiss_res.params,.1],
-#                        approx_grad=True)
-    res1 = optimize.fmin_bfgs(func, np.r_[poiss_res.params,.1], fprime=grad)
-    from statsmodels.tools.numdiff import approx_hess_cs
-#    np.sqrt(np.diag(-np.linalg.inv(approx_hess_cs(np.r_[params,lnalpha], mod.loglike))))
-#NOTE: this is the hessian in terms of alpha _not_ lnalpha
-    hess_arr = mod.hessian(res1)

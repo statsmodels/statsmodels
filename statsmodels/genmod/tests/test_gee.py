@@ -10,6 +10,8 @@ exactly.
 """
 
 from statsmodels.compat import lrange
+from statsmodels.compat.testing import skipif
+
 import numpy as np
 import os
 
@@ -100,10 +102,8 @@ def check_wrapper(results):
 class TestGEE(object):
 
     def test_margins_gaussian(self):
-        """
-        Check marginal effects for a Gaussian GEE fit.  Marginal
-        effects and ordinary effects should be equal.
-        """
+        # Check marginal effects for a Gaussian GEE fit.  Marginal
+        # effects and ordinary effects should be equal.
 
         n = 40
         np.random.seed(34234)
@@ -126,10 +126,8 @@ class TestGEE(object):
         marg.summary()
 
     def test_margins_logistic(self):
-        """
-        Check marginal effects for a binomial GEE fit.  Comparison
-        comes from Stata.
-        """
+        # Check marginal effects for a binomial GEE fit.  Comparison
+        # comes from Stata.
 
         np.random.seed(34234)
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
@@ -148,11 +146,9 @@ class TestGEE(object):
         assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
 
     def test_margins_multinomial(self):
-        """
-        Check marginal effects for a 2-class multinomial GEE fit,
-        which should be equivalent to logistic regression.  Comparison
-        comes from Stata.
-        """
+        # Check marginal effects for a 2-class multinomial GEE fit,
+        # which should be equivalent to logistic regression.  Comparison
+        # comes from Stata.
 
         np.random.seed(34234)
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
@@ -170,7 +166,7 @@ class TestGEE(object):
         assert_allclose(marg.margeff, np.r_[-0.41197961], rtol=1e-5)
         assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_nominal_plot(self):
         np.random.seed(34234)
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
@@ -189,9 +185,7 @@ class TestGEE(object):
         plt.close(fig)
 
     def test_margins_poisson(self):
-        """
-        Check marginal effects for a Poisson GEE fit.
-        """
+        # Check marginal effects for a Poisson GEE fit.
 
         np.random.seed(34234)
         endog = np.r_[10, 15, 12, 13, 20, 18, 26, 29]
@@ -819,7 +813,7 @@ class TestGEE(object):
             model1 = NominalGEE(y, x, groups, cov_struct=nmi)
             model1.fit()
 
-    @dec.skipif(not have_matplotlib)
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_ordinal_plot(self):
         family = Binomial()
 
@@ -1573,7 +1567,7 @@ class TestGEEMultinomialCovType(CheckConsistency):
         check_wrapper(rslt2)
 
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plots():
 
     np.random.seed(378)
@@ -1660,8 +1654,5 @@ def test_missing():
 
 
 if __name__ == "__main__":
-
-    import nose
-
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb', '--pdb-failure'],
-                   exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

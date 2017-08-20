@@ -7,6 +7,7 @@ from unittest import TestCase
 
 import numpy as np
 from numpy.testing import (assert_array_almost_equal, assert_almost_equal,
+                           assert_allclose,
                            assert_equal, assert_raises, assert_, dec)
 
 from statsmodels.tsa.arima_process import (arma_generate_sample, arma_acovf,
@@ -41,6 +42,24 @@ def test_arma_acovf():
     rep2 = [1. * sigma * phi ** i / (1 - phi ** 2) for i in range(N)]
     assert_almost_equal(rep1, rep2, 7)  # 7 is max precision here
 
+def test_arma_acovf_persistent():
+    # Test arma_acovf in case where there is a near-unit root.
+    # .999 is high enough to trigger the "while ir[-1] > 5*1e-5:" clause,
+    # but not high enough to trigger the "nobs_ir > 50000" clause.
+    ar = np.array([1, -.9995])
+    ma = np.array([1])
+    process = ArmaProcess(ar, ma)
+    res = process.acovf(10)
+
+    # Theoretical variance sig2 given by:
+    # sig2 = .9995**2 * sig2 + 1
+    sig2 = 1/(1-.9995**2)
+
+    corrs = .9995**np.arange(10)
+    expected = sig2*corrs
+    assert_equal(res.ndim, 1)
+    assert_allclose(res, expected, atol=1e-6)
+    # atol=7 breaks at .999, worked at .995
 
 def test_arma_acf():
     # Check for specific AR(1)

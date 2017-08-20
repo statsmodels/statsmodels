@@ -434,17 +434,24 @@ class LikelihoodModel(Model):
         # args in most (any?) of the optimize function
 
         nobs = self.endog.shape[0]
-        f = lambda params, *args: -self.loglike(params, *args) / nobs
-        score = lambda params, *args: -self.score(params, *args) / nobs
-        try:
-            hess = lambda params, *args: -self.hessian(params, *args) / nobs
-        except:
-            hess = None
+        # f = lambda params, *args: -self.loglike(params, *args) / nobs
+
+        def f(params, *args):
+            return -self.loglike(params, *args) / nobs
 
         if method == 'newton':
-            score = lambda params, *args: self.score(params, *args) / nobs
-            hess = lambda params, *args: self.hessian(params, *args) / nobs
-            #TODO: why are score and hess positive?
+            # TODO: why are score and hess positive?
+            def score(params, *args):
+                return self.score(params, *args) / nobs
+
+            def hess(params, *args):
+                return self.hessian(params, *args) / nobs
+        else:
+            def score(params, *args):
+                return -self.score(params, *args) / nobs
+
+            def hess(params, *args):
+                return -self.hessian(params, *args) / nobs
 
         warn_convergence = kwargs.pop('warn_convergence', True)
         optimizer = Optimizer()

@@ -29,19 +29,16 @@ def check_pickle(obj):
 
 class RemoveDataPickle(object):
 
-    def __init__(self):
-        self.predict_kwds = {}
-
     @classmethod
-    def setup_class(self):
-
+    def setup_class(cls):
         nobs = 10000
         np.random.seed(987689)
         x = np.random.randn(nobs, 3)
         x = sm.add_constant(x)
-        self.exog = x
-        self.xf = 0.25 * np.ones((2, 4))
-        self.l_max = 20000
+        cls.exog = x
+        cls.xf = 0.25 * np.ones((2, 4))
+        cls.l_max = 20000
+        cls.predict_kwds = {}
 
     def test_remove_data_pickle(self):
         import pandas as pd
@@ -216,6 +213,7 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
 class TestPickleFormula(RemoveDataPickle):
     @classmethod
     def setup_class(cls):
+        super(TestPickleFormula, cls).setup_class()
         nobs = 10000
         np.random.seed(987689)
         x = np.random.randn(nobs, 3)
@@ -237,6 +235,7 @@ class TestPickleFormula(RemoveDataPickle):
 class TestPickleFormula2(RemoveDataPickle):
     @classmethod
     def setup_class(cls):
+        super(TestPickleFormula2, cls).setup_class()
         nobs = 500
         np.random.seed(987689)
         data = np.random.randn(nobs, 4)

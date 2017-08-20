@@ -1,6 +1,8 @@
 """
 Miscellaneous utility code for VAR estimation
 """
+from __future__ import division
+
 from statsmodels.compat.python import range, string_types, asbytes, long
 from statsmodels.compat.pandas import frequencies
 import numpy as np
@@ -45,7 +47,7 @@ def get_trendorder(trend='c'):
         trendorder = 3
     return trendorder
 
-def make_lag_names(names, lag_order, trendorder=1):
+def make_lag_names(names, lag_order, trendorder=1, exog=None):
     """
     Produce list of lag-variable names. Constant / trends go at the beginning
 
@@ -70,10 +72,12 @@ def make_lag_names(names, lag_order, trendorder=1):
     if trendorder != 0:
         lag_names.insert(0, 'const')
     if trendorder > 1:
-        lag_names.insert(0, 'trend')
+        lag_names.insert(1, 'trend')
     if trendorder > 2:
-        lag_names.insert(0, 'trend**2')
-
+        lag_names.insert(2, 'trend**2')
+    if exog is not None:
+        for i in range(exog.shape[1]):
+            lag_names.insert(trendorder + i, "exog" + str(i))
     return lag_names
 
 def comp_matrix(coefs):
@@ -109,8 +113,6 @@ def parse_lutkepohl_data(path): # pragma: no cover
 
     Source for data files: www.jmulti.de
     """
-
-    from statsmodels.compat.pandas import datetools as dt
 
     from collections import deque
     from datetime import datetime
@@ -193,7 +195,10 @@ def varsim(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
     p, k, k = coefs.shape
     ugen = rmvnorm(np.zeros(len(sig_u)), sig_u, steps)
     result = np.zeros((steps, k))
-    result[p:] = intercept + ugen[p:]
+    if intercept is not None:
+        result[p:] = intercept + ugen[p:]
+    else:
+        result[p:] = ugen[p:]
 
     # add in AR terms
     for t in range(p, steps):
@@ -243,3 +248,39 @@ def vech(A):
     vechvec=np.asarray(vechvec)
     return vechvec
 
+
+def seasonal_dummies(n_seasons, len_endog, first_period=0, centered=False):
+    """
+
+    Parameters
+    ----------
+    n_seasons : int >= 0
+        Number of seasons (e.g. 12 for monthly data and 4 for quarterly data).
+    len_endog : int >= 0
+        Total number of observations.
+    first_period : int, default: 0
+        Season of the first observation. As an example, suppose we have monthly
+        data and the first observation is in March (third month of the year).
+        In this case we pass 2 as first_period. (0 for the first season,
+        1 for the second, ..., n_seasons-1 for the last season).
+        An integer greater than n_seasons-1 are treated in the same way as the
+        integer modulo n_seasons.
+    centered : bool, default: False
+        If True, center (demean) the dummy variables. That is useful in order
+        to get seasonal dummies that are orthogonal to the vector of constant
+        dummy variables (a vector of ones).
+
+    Returns
+    -------
+    seasonal_dummies : ndarray (len_endog x n_seasons-1)
+    """
+    if n_seasons == 0:
+        return np.empty((len_endog, 0))
+    if n_seasons > 0:
+        season_exog = np.zeros((len_endog, n_seasons - 1))
+        for i in range(n_seasons - 1):
+            season_exog[(i-first_period) % n_seasons::n_seasons, i] = 1
+
+        if centered:
+            season_exog -= 1 / n_seasons
+        return season_exog

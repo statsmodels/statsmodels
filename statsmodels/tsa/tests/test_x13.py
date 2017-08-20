@@ -1,21 +1,16 @@
-from nose import SkipTest
+from statsmodels.compat.testing import SkipTest
 from numpy.testing import assert_
-
 from statsmodels.tsa.x13 import _find_x12, x13_arima_select_order
 
 x13path = _find_x12()
 
 if x13path is False:
-    _have_x13 = False
-else:
-    _have_x13 = True
+    raise SkipTest('X13/X12 not available')
+
 
 class TestX13(object):
     @classmethod
-    def setupClass(cls):
-        if not _have_x13:
-            raise SkipTest('X13/X12 not available')
-
+    def setup_class(cls):
         import pandas as pd
         from statsmodels.datasets import macrodata, co2
         dta = macrodata.load_pandas().data

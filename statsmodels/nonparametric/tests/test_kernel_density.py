@@ -2,14 +2,12 @@ import numpy as np
 import numpy.testing as npt
 import numpy.testing.decorators as dec
 
-from unittest import TestCase
-
 import statsmodels.api as sm
 nparam = sm.nonparametric
 
 
-class KDETestBase(TestCase):
-    def setUp(self):
+class KDETestBase(object):
+    def setup(self):
         nobs = 60
         np.random.seed(123456)
         self.o = np.random.binomial(2, 0.7, size=(nobs, 1))
@@ -390,6 +388,5 @@ class TestKDEMultivariateConditional(KDETestBase):
         npt.assert_equal(dens.bw, bw_user)
 
 if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb'],
-                       exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

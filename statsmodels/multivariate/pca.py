@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 
 from statsmodels.compat.python import range
-from statsmodels.compat.numpy import nanmean
 from statsmodels.tools.sm_exceptions import (ValueWarning,
                                              EstimationWarning)
 
@@ -409,8 +408,8 @@ class PCA(object):
         if np.all(np.isnan(adj_data)):
             return np.empty(adj_data.shape[1]).fill(np.nan)
 
-        self._mu = nanmean(adj_data, axis=0)
-        self._sigma = np.sqrt(nanmean((adj_data - self._mu) ** 2.0, axis=0))
+        self._mu = np.nanmean(adj_data, axis=0)
+        self._sigma = np.sqrt(np.nanmean((adj_data - self._mu) ** 2.0, axis=0))
         if self._standardize:
             data = (adj_data - self._mu) / self._sigma
         elif self._demean:
@@ -489,7 +488,7 @@ class PCA(object):
         mask = np.isnan(data)
 
         # 4. Compute mean
-        mu = nanmean(data, 0)
+        mu = np.nanmean(data, 0)
 
         # 5. Replace missing with mean
         projection = np.ones((self._nobs, 1)) * mu

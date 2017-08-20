@@ -2,7 +2,7 @@
 # TODO: Test robust kurtosis
 import numpy as np
 import pandas as pd
-from numpy.testing import (assert_almost_equal, assert_raises, TestCase)
+from numpy.testing import (assert_almost_equal, assert_raises)
 from statsmodels.stats.stattools import (omni_normtest, jarque_bera,
                                          durbin_watson, _medcouple_1d, medcouple,
                                          robust_kurtosis, robust_skewness)
@@ -163,7 +163,7 @@ def test_durbin_watson_pandas():
     assert_almost_equal(durbin_watson(x), durbin_watson(x_series), decimal=13)
 
 
-class TestStattools(TestCase):
+class TestStattools(object):
     @classmethod
     def setup_class(cls):
         x = np.random.standard_normal(1000)
@@ -280,7 +280,7 @@ class TestStattools(TestCase):
         assert_almost_equal(expected, kurtosis)
 
     def test_robust_kurtosis_ab(self):
-        """Test custom alpha, beta in kr3"""
+        # Test custom alpha, beta in kr3
         x = self.kurtosis_x
         alpha, beta = (10.0, 45.0)
         kurtosis = robust_kurtosis(self.kurtosis_x, ab=(alpha,beta), excess=False)
@@ -289,7 +289,7 @@ class TestStattools(TestCase):
         assert_almost_equal(kurtosis[2], num/denom)
 
     def test_robust_kurtosis_dg(self):
-        """Test custom delta, gamma in kr4"""
+        # Test custom delta, gamma in kr4
         x = self.kurtosis_x
         delta, gamma = (10.0, 45.0)
         kurtosis = robust_kurtosis(self.kurtosis_x, dg=(delta,gamma), excess=False)
@@ -298,10 +298,5 @@ class TestStattools(TestCase):
 
 
 if __name__ == "__main__":
-    import nose
-
-    nose.runmodule(argv=[__file__, '-vvs', '-x'], exit=False) #, '--pdb'
-    # run_module_suite()
-    #nose.runmodule(argv=[__file__,'-vvs','-x','--pdb', '--pdb-failure'],
-    #               exit=False)
-
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

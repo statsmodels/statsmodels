@@ -1,9 +1,14 @@
-from statsmodels.compat.python import lrange, lmap
 import numpy as np
 from scipy import stats
+import pandas as pd
 from pandas import DataFrame, Index
+import patsy
+
+from statsmodels.regression.linear_model import OLS
+from statsmodels.compat.python import lrange, lmap
 from statsmodels.formula.formulatools import (_remove_intercept_patsy,
                                     _has_intercept, _intercept_idx)
+from statsmodels.iolib import summary2
 
 def _get_covariance(model, robust):
     if robust is None:
@@ -27,7 +32,7 @@ def _get_covariance(model, robust):
 
 def anova_single(model, **kwargs):
     """
-    ANOVA table for one fitted linear model.
+    Anova table for one fitted linear model.
 
     Parameters
     ----------
@@ -87,7 +92,7 @@ def anova_single(model, **kwargs):
 def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
                      pr_test, robust):
     """
-    ANOVA table for one fitted linear model.
+    Anova table for one fitted linear model.
 
     Parameters
     ----------
@@ -143,7 +148,7 @@ def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
 #NOTE: the below is not agnostic about formula...
 def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
     """
-    ANOVA type II table for one fitted linear model.
+    Anova type II table for one fitted linear model.
 
     Parameters
     ----------
@@ -270,7 +275,7 @@ def anova3_lm_single(model, design_info, n_rows, test, pr_test, robust):
 
 def anova_lm(*args, **kwargs):
     """
-    ANOVA table for one or more fitted linear models.
+    Anova table for one or more fitted linear models.
 
     Parameters
     ----------
@@ -282,7 +287,7 @@ def anova_lm(*args, **kwargs):
     test : str {"F", "Chisq", "Cp"} or None
         Test statistics to provide. Default is "F".
     typ : str or int {"I","II","III"} or {1,2,3}
-        The type of ANOVA test to perform. See notes.
+        The type of Anova test to perform. See notes.
     robust : {None, "hc0", "hc1", "hc2", "hc3"}
         Use heteroscedasticity-corrected coefficient covariance matrix.
         If robust covariance is desired, it is recommended to use `hc3`.
@@ -311,12 +316,12 @@ def anova_lm(*args, **kwargs):
     ...                             "partner_status"}) # make name pythonic
     >>> moore_lm = ols('conformity ~ C(fcategory, Sum)*C(partner_status, Sum)',
     ...                 data=data).fit()
-    >>> table = sm.stats.anova_lm(moore_lm, typ=2) # Type 2 ANOVA DataFrame
+    >>> table = sm.stats.anova_lm(moore_lm, typ=2) # Type 2 Anova DataFrame
     >>> print(table)
     """
     typ = kwargs.get('typ', 1)
 
-    ### Farm Out Single model ANOVA Type I, II, III, and IV ###
+    ### Farm Out Single model Anova Type I, II, III, and IV ###
 
     if len(args) == 1:
         model = args[0]
@@ -328,7 +333,7 @@ def anova_lm(*args, **kwargs):
         raise ValueError("Multiple models only supported for type I. "
                          "Got type %s" % str(typ))
 
-    ### COMPUTE ANOVA TYPE I ###
+    ### COMPUTE Anova TYPE I ###
 
     # if given a single model
     if len(args) == 1:
@@ -361,6 +366,272 @@ def anova_lm(*args, **kwargs):
 
     return table
 
+
+def _not_slice(slices, slices_to_exclude, n):
+    ind = np.array([True]*n)
+    for term in slices_to_exclude:
+        s = slices[term]
+        ind[s] = False
+    return ind
+
+
+def _ssr_reduced_model(y, x, term_slices, params, keys):
+    """
+    Residual sum of squares of OLS model excluding factors in `keys`
+    Assumes x matrix is orthogonal
+
+    Parameters
+    ----------
+    y : array_like
+        dependent variable
+    x : array_like
+        independent variables
+    term_slices : a dict of slices
+        term_slices[key] is a boolean array specifies the parameters
+        associated with the factor `key`
+    params : ndarray
+        OLS solution of y = x * params
+    keys : keys for term_slices
+        factors to be excluded
+
+    Returns
+    -------
+    rss : float
+        residual sum of squares
+    df : int
+        degrees of freedom
+
+    """
+    ind = _not_slice(term_slices, keys, x.shape[1])
+    params1 = params[ind]
+    ssr = np.subtract(y, x[:, ind].dot(params1))
+    ssr = ssr.T.dot(ssr)
+    df_resid = len(y) - len(params1)
+    return ssr, df_resid
+
+
+class AnovaRM(object):
+    """
+    Repeated measures Anova using least squares regression
+
+    The full model regression residual sum of squares is
+    used to compare with the reduced model for calculating the
+    within-subject effect sum of squares [1].
+
+    Currently, only fully balanced within-subject designs are supported.
+    Calculation of between-subject effects and corrections for violation of
+    sphericity are not yet implemented.
+
+    Parameters
+    ----------
+    data : DataFrame
+    depvar : string
+        The dependent variable in `data`
+    subject : string
+        Specify the subject id
+    within : a list of string(s)
+        The within-subject factors
+    between : a list of string(s)
+        The between-subject factors, this is not yet implemented
+    aggregate_func : None, 'mean', or function
+        If the data set contains more than a single observation per subject
+        and cell of the specified model, this function will be used to
+        aggregate the data before running the Anova. `None` (the default) will
+        not perform any aggregation; 'mean' is s shortcut to `numpy.mean`.
+        An exception will be raised if aggregation is required, but no
+        aggregation function was specified.
+
+    Returns
+    -------
+    results: AnovaResults instance
+
+    Raises
+    ------
+    ValueError
+        If the data need to be aggregated, but `aggregate_func` was not
+        specified.
+
+    Notes
+    -----
+    This implementation currently only supports fully balanced designs. If the
+    data contain more than one observation per subject and cell of the design,
+    these observations need to be aggregated into a single observation
+    before the Anova is calculated, either manually or by passing an aggregation
+    function via the `aggregate_func` keyword argument.
+    Note that if the input data set was not balanced before performing the
+    aggregation, the implied heteroscedasticity of the data is ignored.
+
+    References
+    ----------
+    .. [1] Rutherford, Andrew. Anova and ANCOVA: a GLM approach. John Wiley & Sons, 2011.
+
+    """
+
+    def __init__(self, data, depvar, subject, within=None, between=None,
+                 aggregate_func=None):
+        self.data = data
+        self.depvar = depvar
+        self.within = within
+        if 'C' in within:
+            raise ValueError("Factor name cannot be 'C'! This is in conflict "
+                             "with patsy's contrast function name.")
+        self.between = between
+        if between is not None:
+            raise NotImplementedError('Between subject effect not '
+                                      'yet supported!')
+        self.subject = subject
+
+        if aggregate_func == 'mean':
+            self.aggregate_func = np.mean
+        else:
+            self.aggregate_func = aggregate_func
+
+        if not data.equals(data.drop_duplicates(subset=[subject] + within)):
+            if self.aggregate_func is not None:
+                self._aggregate()
+            else:
+                msg = ('The data set contains more than one observation per '
+                       'subject and cell. Either aggregate the data manually, '
+                       'or pass the `aggregate_func` parameter.')
+                raise ValueError(msg)
+
+        self._check_data_balanced()
+
+    def _aggregate(self):
+        self.data = (self.data
+                     .groupby([self.subject] + self.within,
+                              as_index=False)[self.depvar]
+                     .agg(self.aggregate_func))
+
+    def _check_data_balanced(self):
+        """raise if data is not balanced
+
+        This raises a ValueError if the data is not balanced, and
+        returns None if it is balance
+
+        Return might change
+
+        """
+        factor_levels = 1
+        for wi in self.within:
+            factor_levels *= len(self.data[wi].unique())
+
+        cell_count = {}
+        for index in range(self.data.shape[0]):
+            key = []
+            for col in self.within:
+                key.append(self.data[col].iloc[index])
+            key = tuple(key)
+            if key in cell_count:
+                cell_count[key] = cell_count[key] + 1
+            else:
+                cell_count[key] = 1
+        error_message = "Data is unbalanced."
+        if len(cell_count) != factor_levels:
+            raise ValueError(error_message)
+        count = cell_count[key]
+        for key in cell_count:
+            if count != cell_count[key]:
+                raise ValueError(error_message)
+        if self.data.shape[0] > count * factor_levels:
+            raise ValueError('There are more than 1 element in a cell! Missing'
+                             ' factors?')
+
+    def fit(self):
+        """estimate the model and compute the Anova table
+
+        Returns
+        -------
+        AnovaResults instance
+
+        """
+        y = self.data[self.depvar].values
+
+        # Construct OLS endog and exog from string using patsy
+        within = ['C(%s, Sum)' % i for i in self.within]
+        subject = 'C(%s, Sum)' % self.subject
+        factors = within + [subject]
+        x = patsy.dmatrix('*'.join(factors), data=self.data)
+        term_slices = x.design_info.term_name_slices
+        for key in term_slices:
+            ind = np.array([False]*x.shape[1])
+            ind[term_slices[key]] = True
+            term_slices[key] = np.array(ind)
+        term_exclude = [':'.join(factors)]
+        ind = _not_slice(term_slices, term_exclude, x.shape[1])
+        x = x[:, ind]
+
+        # Fit OLS
+        model = OLS(y, x)
+        results = model.fit()
+        if model.rank < x.shape[1]:
+            raise ValueError('Independent variables are collinear.')
+        for i in term_exclude:
+            term_slices.pop(i)
+        for key in term_slices:
+            term_slices[key] = term_slices[key][ind]
+        params = results.params
+        df_resid = results.df_resid
+        ssr = results.ssr
+
+        anova_table = pd.DataFrame(
+            {'F Value': [], 'Num DF': [], 'Den DF': [], 'Pr > F': []})
+
+        for key in term_slices:
+            if self.subject not in key and key != 'Intercept':
+                #  Independen variables are orthogonal
+                ssr1, df_resid1 = _ssr_reduced_model(
+                    y, x, term_slices, params, [key])
+                df1 = df_resid1 - df_resid
+                msm = (ssr1 - ssr) / df1
+                if (key == ':'.join(factors[:-1]) or
+                        (key + ':' + subject not in term_slices)):
+                    mse = ssr / df_resid
+                    df2 = df_resid
+                else:
+                    ssr1, df_resid1 = _ssr_reduced_model(
+                        y, x, term_slices, params,
+                        [key + ':' + subject])
+                    df2 = df_resid1 - df_resid
+                    mse = (ssr1 - ssr) / df2
+                F = msm / mse
+                p = stats.f.sf(F, df1, df2)
+                term = key.replace('C(', '').replace(', Sum)', '')
+                anova_table.loc[term, 'F Value'] = F
+                anova_table.loc[term, 'Num DF'] = df1
+                anova_table.loc[term, 'Den DF'] = df2
+                anova_table.loc[term, 'Pr > F'] = p
+
+        return AnovaResults(anova_table.iloc[:, [1, 2, 0, 3]])
+
+
+class AnovaResults(object):
+    """
+    Anova results class
+
+    Attributes
+    ----------
+    anova_table : DataFrame
+    """
+    def __init__(self, anova_table):
+        self.anova_table = anova_table
+
+    def __str__(self):
+        return self.summary().__str__()
+
+    def summary(self):
+        """create summary results
+
+        Returns
+        -------
+        summary : Summary instance
+
+        """
+        summ = summary2.Summary()
+        summ.add_title('Anova')
+        summ.add_df(self.anova_table)
+
+        return summ
 
 if __name__ == "__main__":
     import pandas

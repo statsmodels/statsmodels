@@ -117,7 +117,7 @@ class Representation(object):
         If an endogenous vector is not given (i.e. `k_endog` is an integer),
         the number of observations can optionally be specified. If not
         specified, they will be set to zero until data is bound to the model.
-    dtype : dtype, optional
+    dtype : np.dtype, optional
         If an endogenous vector is not given (i.e. `k_endog` is an integer),
         the default datatype of the state space matrices can optionally be
         specified. Default is `np.float64`.
