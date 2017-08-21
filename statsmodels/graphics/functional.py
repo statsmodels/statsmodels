@@ -5,7 +5,12 @@ from statsmodels.nonparametric.kernel_density import KDEMultivariate
 from statsmodels.compat.python import combinations, range, zip
 import numpy as np
 from scipy.misc import factorial
-from scipy.optimize import differential_evolution
+try:
+    from scipy.optimize import differential_evolution
+    have_de_optim = True
+except ImportError:
+    from scipy.optimize import brute, fmin
+    have_de_optim = False
 from multiprocessing import Pool
 import itertools
 
@@ -15,33 +20,24 @@ from . import utils
 __all__ = ['hdrboxplot', 'fboxplot', 'rainbowplot', 'banddepth']
 
 
-def _kernel_smoothing(data, optimize=False):
-    """Create gaussian kernel.
+class HdrResults(object):
 
-    Parameters
-    ----------
-    data : sequence of ndarrays or 2-D ndarray
-        The vectors of functions to create a functional boxplot from.  If a
-        sequence of 1-D arrays, these should all be the same size.
-        The first axis is the function index, the second axis the one along
-        which the function is defined.  So ``data[0, :]`` is the first
-        functional curve.
-    optimize : bool, optional
-        Use `normal_reference` or `cv_ml`. Default is False.
+    """Wrap results and pretty print them."""
 
-    Returns
-    -------
-    kde : KDEMultivariate instance
+    def __init__(self, kwds):
+        self.__dict__.update(kwds)
 
-    """
-    _, dim = data.shape
+    def __repr__(self):
+        msg = ("HDR boxplot summary:\n"
+               "-> median:\n{}\n"
+               "-> 50% HDR (max, min):\n{}\n"
+               "-> 90% HDR (max, min):\n{}\n"
+               "-> Extra quantiles (max, min):\n{}\n"
+               "-> Outliers:\n{}"
+               ).format(self.median, self.hdr_50, self.hdr_90,
+                        self.extra_quantiles, self.outliers)
 
-    if optimize:
-        kde = KDEMultivariate(data, bw='cv_ml', var_type='c' * dim)
-    else:
-        kde = KDEMultivariate(data, bw='normal_reference', var_type='c' * dim)
-
-    return kde
+        return msg
 
 
 def _inverse_transform(pca, data):
@@ -137,19 +133,26 @@ def _min_max_band(args):
     """
     idx, args = args
     band, pca, bounds, ks_gaussian = args
-    differential_evolution
-    max_ = differential_evolution(_curve_constrain, bounds=bounds,
-                                  args=(idx, -1, band, pca, ks_gaussian),
-                                  maxiter=7).x
-    min_ = differential_evolution(_curve_constrain, bounds=bounds,
-                                  args=(idx, 1, band, pca, ks_gaussian),
-                                  maxiter=7).x
+    if have_de_optim:
+        max_ = differential_evolution(_curve_constrain, bounds=bounds,
+                                      args=(idx, -1, band, pca, ks_gaussian),
+                                      maxiter=7).x
+        min_ = differential_evolution(_curve_constrain, bounds=bounds,
+                                      args=(idx, 1, band, pca, ks_gaussian),
+                                      maxiter=7).x
+    else:
+        max_ = brute(_curve_constrain, ranges=bounds, finish=fmin,
+                     args=(idx, -1, band, pca, ks_gaussian))
+
+        min_ = brute(_curve_constrain, ranges=bounds, finish=fmin,
+                     args=(idx, 1, band, pca, ks_gaussian))
+
     band = (_inverse_transform(pca, max_)[0][idx],
             _inverse_transform(pca, min_)[0][idx])
     return band
 
 
-def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
+def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
                n_contours=50, xdata=None, labels=None, ax=None):
     """Plot High Density Region boxplot.
 
@@ -174,8 +177,14 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
     threshold : float between 0 and 1
         Percentile threshold value for outliers detection. High value means
         a lower sensitivity to outliers. Default is `0.95`.
-    optimize: bool
-        Bandwidth optimization with cross validation or normal inferance
+    bw: array_like or str, optional
+        If an array, it is a fixed user-specified bandwidth.  If a string,
+        should be one of:
+
+            - normal_reference: normal reference rule of thumb (default)
+            - cv_ml: cross validation maximum likelihood
+            - cv_ls: cross validation least squares
+
     n_contours : int
         Discretization per dimension of the reduced space.
     xdata : ndarray, optional
@@ -194,7 +203,8 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
     fig : Matplotlib figure instance
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
-    hdr_res : dict
+    hdr_res : HdrResults instance
+        An `HdrResults` instance with the following attributes:
 
          - 'median', array. Median curve.
          - 'hdr_50', array. 50% quantile band. [sup, inf] curves
@@ -290,7 +300,8 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
     data_r = pca.factors
 
     # Create gaussian kernel
-    ks_gaussian = _kernel_smoothing(data_r, optimize)
+    ks_gaussian = KDEMultivariate(data_r, bw=bw,
+                                  var_type='c' * data_r.shape[1])
 
     # Boundaries of the n-variate space
     bounds = np.array([data_r.min(axis=0), data_r.max(axis=0)]).T
@@ -310,8 +321,12 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
                for i in range(n_quantiles)]
 
     # Find mean, outliers curves
-    median = differential_evolution(lambda x: -ks_gaussian.pdf(x),
-                                    bounds=bounds, maxiter=5).x
+    if have_de_optim:
+        median = differential_evolution(lambda x: - ks_gaussian.pdf(x),
+                                        bounds=bounds, maxiter=5).x
+    else:
+        median = brute(lambda x: - ks_gaussian.pdf(x),
+                       ranges=bounds, finish=fmin)
 
     outliers = np.where(pdf_r < pvalues[alpha.index(threshold)])
     if labels is not None:
@@ -319,6 +334,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
     outliers = data[outliers]
 
     # Find HDR given some quantiles
+
     def _band_quantiles(band):
         """Find extreme curves for a quantile band.
 
@@ -373,13 +389,13 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
     hdr_90 = _band_quantiles([0.9, 0.5])
     hdr_50 = _band_quantiles([0.5])
 
-    hdr_res = {
-        "median": median,
-        "hdr_50": hdr_50,
-        "hdr_90": hdr_90,
-        "extra_quantiles": extra_quantiles,
-        "outliers": outliers
-    }
+    hdr_res = HdrResults({
+                            "median": median,
+                            "hdr_50": hdr_50,
+                            "hdr_90": hdr_90,
+                            "extra_quantiles": extra_quantiles,
+                            "outliers": outliers
+                         })
 
     # Plots
     ax.plot(np.array([xdata] * n_samples).T, data.T,
