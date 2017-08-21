@@ -2731,7 +2731,7 @@ class NegativeBinomialP(CountModel):
         equal to 1.
     """ + base._missing_param_doc}
 
-    def __init__(self, endog, exog, p=1, offset=None,
+    def __init__(self, endog, exog, p=2, offset=None,
                        exposure=None, missing='none', **kwargs):
         super(NegativeBinomialP, self).__init__(endog, exog, offset=offset,
                                                   exposure=exposure,
