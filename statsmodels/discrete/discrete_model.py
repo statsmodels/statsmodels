@@ -2758,8 +2758,7 @@ class NegativeBinomialP(CountModel):
 
     def loglikeobs(self, params):
         """
-        Loglikelihood for observations of Generalized Negative Binomial
-        (NB-P) model
+        Loglikelihood for observations of Generalized Negative Binomial (NB-P) model
 
         Parameters
         ----------
@@ -2794,8 +2793,7 @@ class NegativeBinomialP(CountModel):
 
     def score_obs(self, params):
         """
-        Generalized Negative Binomial (NB-P) model score (gradient)
-        vector of the log-likelihood for each observations.
+        Generalized Negative Binomial (NB-P) model score (gradient) vector of the log-likelihood for each observations.
 
         Parameters
         ----------
@@ -2838,8 +2836,7 @@ class NegativeBinomialP(CountModel):
 
     def score(self, params):
         """
-        Generalized Negative Binomial (NB-P) model score (gradient)
-        vector of the log-likelihood
+        Generalized Negative Binomial (NB-P) model score (gradient) vector of the log-likelihood
 
         Parameters
         ----------
@@ -2861,8 +2858,7 @@ class NegativeBinomialP(CountModel):
 
     def hessian(self, params):
         """
-        Generalized Negative Binomial (NB-P) model hessian maxtrix
-        of the log-likelihood
+        Generalized Negative Binomial (NB-P) model hessian maxtrix of the log-likelihood
 
         Parameters
         ----------
@@ -2908,16 +2904,14 @@ class NegativeBinomialP(CountModel):
                                 digamma(a3) + 1)) / mu)
 
         for i in range(dim):
-            for j in range(i, -1, -1):
-                hess_arr[i, j] = np.sum(self.exog[:, i] * self.exog[:, j] * coeff)
+            hess_arr[i, :-1] = np.sum(self.exog[:,:].T * self.exog[:, i] * coeff, axis=1)
 
-        for i in range(dim):
-            hess_arr[-1, i] = (self.exog[:, i] * mu * a1 *
+                
+        hess_arr[-1,:-1] = (self.exog[:,:].T * mu * a1 *
                 ((1 + a4) * (1 - a3 / a2) / a2 -
                  p * (np.log(a1 / a2) - digamma(a1) + digamma(a3) + 2) / mu +
                  p * (a3 / mu + a4) / a2 +
-                 a4 * (polygamma(1, a1) - polygamma(1, a3))) / alpha).sum()
-                
+                 a4 * (polygamma(1, a1) - polygamma(1, a3))) / alpha).sum(axis=1)
 
         da2 = (a1 * (2 * np.log(a1) - 2 * np.log(a2) -
                      2 * digamma(a1) + 2 *digamma(a3) + 3 -
@@ -2935,7 +2929,16 @@ class NegativeBinomialP(CountModel):
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, use_transparams = False,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
-
+        """
+        Parameters
+        ----------
+        use_transparams : bool
+            This parameter enable internal transformation to impose non-negativity.
+            True to enable. Default is False.
+            use_transparams=True imposes the no underdispersion (alpha > 0) constaint.
+            In case use_transparams=True and method="newton" or "ncg" transformation
+            is ignored.
+        """
         if use_transparams and method not in ['newton', 'ncg']:
             self._transparams = True
         else:
@@ -2969,6 +2972,7 @@ class NegativeBinomialP(CountModel):
                                     use_self=True, use_t=use_t, **cov_kwds)
         return result
 
+    fit.__doc__ += DiscreteModel.fit.__doc__
 
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
@@ -3008,6 +3012,8 @@ class NegativeBinomialP(CountModel):
         discretefit = L1NegativeBinomialResults(self, cntfit)
 
         return L1NegativeBinomialResultsWrapper(discretefit)
+
+    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
     def predict(self, params, exog=None, exposure=None, offset=None,
                 which='mean'):
