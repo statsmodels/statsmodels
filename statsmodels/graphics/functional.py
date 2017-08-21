@@ -153,7 +153,7 @@ def _min_max_band(args):
 
 
 def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
-               n_contours=50, xdata=None, labels=None, ax=None):
+               xdata=None, labels=None, ax=None):
     """Plot High Density Region boxplot.
 
     1. Compute a multivariate kernel density estimation,
@@ -185,8 +185,6 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
             - cv_ml: cross validation maximum likelihood
             - cv_ls: cross validation least squares
 
-    n_contours : int
-        Discretization per dimension of the reduced space.
     xdata : ndarray, optional
         The independent variable for the data. If not given, it is assumed to
         be an array of integers 0..N with N the length of the vectors in

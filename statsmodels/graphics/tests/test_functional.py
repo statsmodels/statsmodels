@@ -3,8 +3,9 @@ from statsmodels.compat.testing import skipif
 import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal
 
+from statsmodels.datasets import elnino
 from statsmodels.graphics.functional import \
-            banddepth, fboxplot, rainbowplot
+            hdrboxplot, banddepth, fboxplot, rainbowplot
 
 
 try:
@@ -13,6 +14,121 @@ try:
     have_matplotlib = True
 except ImportError:
     have_matplotlib = False
+
+
+data = elnino.load()
+labels = data.raw_data[:, 0].astype(int)
+data = data.raw_data[:, 1:]
+
+
+@skipif(not have_matplotlib, reason='matplotlib not available')
+def test_hdr_basic():
+    fig, hdr = hdrboxplot(data, labels=labels)
+    print(hdr)
+
+    assert len(hdr.extra_quantiles) == 0
+
+    median_t = [24.247, 25.625, 25.964, 24.999, 23.648, 22.302,
+                21.231, 20.366, 20.168, 20.434, 21.111, 22.299]
+
+    assert_almost_equal(hdr.median, median_t, decimal=2)
+
+    quant = np.vstack([hdr.outliers, hdr.hdr_90, hdr.hdr_50])
+    quant_t = np.vstack([[24.36, 25.42, 25.40, 24.96, 24.21, 23.35,
+                          22.50, 21.89, 22.04, 22.88, 24.57, 25.89],
+                         [27.25, 28.23, 28.85, 28.82, 28.37, 27.43,
+                          25.73, 23.88, 22.26, 22.22, 22.21, 23.19],
+                         [23.70, 26.08, 27.17, 26.74, 26.77, 26.15,
+                          25.59, 24.95, 24.69, 24.64, 25.85, 27.08],
+                         [28.12, 28.82, 29.24, 28.45, 27.36, 25.19,
+                          23.61, 22.27, 21.31, 21.37, 21.60, 22.81],
+                         [25.48, 26.99, 27.51, 27.04, 26.23, 24.94,
+                          23.69, 22.72, 22.26, 22.64, 23.33, 24.44],
+                         [23.11, 24.50, 24.66, 23.44, 21.74, 20.58,
+                          19.68, 18.84, 18.76, 18.99, 19.66, 20.86],
+                         [24.84, 26.23, 26.67, 25.93, 24.87, 23.57,
+                          22.46, 21.45, 21.26, 21.57, 22.14, 23.41],
+                         [23.62, 25.10, 25.34, 24.22, 22.74, 21.52,
+                          20.40, 19.56, 19.63, 19.67, 20.37, 21.76]])
+
+    assert_almost_equal(quant, quant_t, decimal=0)
+
+    labels_pos = np.all(np.isin(data, hdr.outliers), axis=1)
+    outliers = labels[labels_pos]
+    assert_equal([1982, 1983, 1997, 1998], outliers)
+    plt.close(fig)
+
+
+@skipif(not have_matplotlib, reason='matplotlib not available')
+def test_hdr_plot():
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    fig, res = hdrboxplot(data, labels=labels, ax=ax)
+
+    ax.set_xlabel("Month of the year")
+    ax.set_ylabel("Sea surface temperature (C)")
+    ax.set_xticks(np.arange(13, step=3) - 1)
+    ax.set_xticklabels(["", "Mar", "Jun", "Sep", "Dec"])
+    ax.set_xlim([-0.2, 11.2])
+    plt.close(fig)
+
+
+@skipif(not have_matplotlib, reason='matplotlib not available')
+def test_hdr_alpha():
+    fig, hdr = hdrboxplot(data, alpha=[0.7])
+    extra_quant_t = np.vstack([[25.1, 26.5, 27.0, 26.4, 25.4, 24.1,
+                                23.0, 22.0, 21.7, 22.1, 22.7, 23.8],
+                               [23.4, 24.8, 25.0, 23.9, 22.4, 21.1,
+                                20.0, 19.3, 19.2, 19.4, 20.1, 21.3]])
+    assert_almost_equal(hdr.extra_quantiles, extra_quant_t, decimal=1)
+    plt.close(fig)
+
+
+@skipif(not have_matplotlib, reason='matplotlib not available')
+def test_hdr_multiple_alpha():
+    fig, hdr = hdrboxplot(data, alpha=[0.4, 0.92])
+    extra_quant_t = [[25.712, 27.052, 27.711, 27.200,
+                      26.162, 24.833, 23.639, 22.378,
+                      22.250, 22.640, 23.472, 24.649],
+                     [22.973, 24.526, 24.608, 23.343,
+                      21.908, 20.655, 19.750, 19.046,
+                      18.812, 18.989, 19.520, 20.685],
+                     [24.667, 26.033, 26.416, 25.584,
+                      24.308, 22.849, 21.684, 20.948,
+                      20.483, 21.019, 21.751, 22.890],
+                     [23.873, 25.371, 25.667, 24.644,
+                      23.177, 21.923, 20.791, 20.015,
+                      19.697, 19.951, 20.622, 21.858]]
+    assert_almost_equal(hdr.extra_quantiles, np.vstack(extra_quant_t), decimal=0)
+    plt.close(fig)
+
+
+@skipif(not have_matplotlib, reason='matplotlib not available')
+def test_hdr_threshold():
+    fig, hdr = hdrboxplot(data, alpha=[0.8], threshold=0.93)
+    labels_pos = np.all(np.isin(data, hdr.outliers), axis=1)
+    outliers = labels[labels_pos]
+    assert_equal([1968, 1982, 1983, 1997, 1998], outliers)
+    plt.close(fig)
+
+
+@skipif(not have_matplotlib, reason='matplotlib not available')
+def test_hdr_bw():
+    fig, hdr = hdrboxplot(data, bw='cv_ml')
+    median_t = [24.25, 25.64, 25.99, 25.04, 23.71, 22.38,
+                21.31, 20.44, 20.24, 20.51, 21.19, 22.38]
+    assert_almost_equal(hdr.median, median_t, decimal=2)
+    plt.close(fig)
+
+
+@skipif(not have_matplotlib, reason='matplotlib not available')
+def test_hdr_ncomp():
+    fig, hdr = hdrboxplot(data, ncomp=3)
+    median_t = [24.33, 25.71, 26.04, 25.08, 23.74, 22.40,
+                21.32, 20.45, 20.25, 20.53, 21.2 , 22.39]
+    assert_almost_equal(hdr.median, median_t, decimal=2)
+    plt.close(fig)
 
 
 def test_banddepth_BD2():
@@ -34,7 +150,7 @@ def test_banddepth_BD2():
     #    ax.plot(xx, yy, label="y%s" % ii)
 
     #ax.legend()
-    #plt.show()
+    #plt.close(fig)
 
 
 def test_banddepth_MBD():
