@@ -2,9 +2,12 @@
 
 from statsmodels.multivariate.pca import PCA
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
-from statsmodels.compat.python import combinations, range
+from statsmodels.compat.python import combinations, range, zip
 import numpy as np
 from scipy.misc import factorial
+from scipy.optimize import differential_evolution
+from multiprocessing import Pool
+import itertools
 
 from . import utils
 
@@ -71,6 +74,81 @@ def _inverse_transform(pca, data):
     return projection
 
 
+def _curve_constrain(x, idx, sign, band, pca, ks_gaussian):
+    """Find out if the curve is within the band.
+
+    The curve value at :attr:`idx` for a given PDF is only returned if
+    within bounds defined by the band. Otherwise, 1E6 is returned.
+
+    Parameters
+    ----------
+    x : float
+        Curve in reduced space.
+    idx : int
+        Index value of the components to compute.
+    sign : int
+        Return positive or negative value.
+    band : list of float
+        PDF values `[min_pdf, max_pdf]` to be within.
+    pca : statsmodels Principal Component Analysis instance
+        The PCA object to use.
+    ks_gaussian : KDEMultivariate instance
+
+    Returns
+    -------
+    value : float
+        Curve value at `idx`.
+
+    """
+    x = x.reshape(1, -1)
+    pdf = ks_gaussian.pdf(x)
+    if band[0] < pdf < band[1]:
+        value = sign * _inverse_transform(pca, x)[0][idx]
+    else:
+        value = 1E6
+    return value
+
+
+def _min_max_band(args):
+    """Min an max values at `idx`.
+
+    Global optimization to find the extrema per component.
+
+    Parameters
+    ----------
+    args: list
+        It is a list of an idx and other arguments as a tuple:
+            idx : int
+                Index value of the components to compute
+        The tuple contains:
+            band : list of float
+                PDF values `[min_pdf, max_pdf]` to be within.
+            pca : statsmodels Principal Component Analysis instance
+                The PCA object to use.
+            bounds : sequence
+                ``(min, max)`` pair for each components
+            ks_gaussian : KDEMultivariate instance
+
+    Returns
+    -------
+    band : tuple of float
+        ``(max, min)`` curve values at `idx`
+
+    """
+    idx, args = args
+    band, pca, bounds, ks_gaussian = args
+    differential_evolution
+    max_ = differential_evolution(_curve_constrain, bounds=bounds,
+                                  args=(idx, -1, band, pca, ks_gaussian),
+                                  maxiter=7).x
+    min_ = differential_evolution(_curve_constrain, bounds=bounds,
+                                  args=(idx, 1, band, pca, ks_gaussian),
+                                  maxiter=7).x
+    band = (_inverse_transform(pca, max_)[0][idx],
+            _inverse_transform(pca, min_)[0][idx])
+    return band
+
+
 def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
                n_contours=50, xdata=None, labels=None, ax=None):
     """Plot High Density Region boxplot.
@@ -119,8 +197,8 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
     hdr_res : dict
 
          - 'median', array. Median curve.
-         - 'mean_quantile', array. 50% quantile band. [sup, inf] curves
-         - 'extreme_quantile', list of array. 90% quantile band. [sup, inf]
+         - 'hdr_50', array. 50% quantile band. [sup, inf] curves
+         - 'hdr_90', list of array. 90% quantile band. [sup, inf]
             curves.
          - 'extra_quantiles', list of array. Extra quantile band.
             [sup, inf] curves.
@@ -214,15 +292,8 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
     # Create gaussian kernel
     ks_gaussian = _kernel_smoothing(data_r, optimize)
 
-    # Evaluate density on a regular grid
-    min_max = np.array([data_r.min(axis=0), data_r.max(axis=0)]).T
-    contour_grid = np.meshgrid(*[np.linspace(min_max[i, 0],
-                                             min_max[i, 1],
-                                             n_contours)
-                                 for i in range(ncomp)])
-    contour_stack = np.dstack(contour_grid).reshape(-1, ncomp)
-
-    pdf = ks_gaussian.pdf(contour_stack).flatten()
+    # Boundaries of the n-variate space
+    bounds = np.array([data_r.min(axis=0), data_r.max(axis=0)]).T
 
     # Compute contour line of pvalue linked to a given probability level
     if alpha is None:
@@ -238,49 +309,74 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
                              interpolation='linear')
                for i in range(n_quantiles)]
 
-    # Find mean, quartiles and outliers curves
-    median = pdf.argmax()
-    median = contour_stack[median]
+    # Find mean, outliers curves
+    median = differential_evolution(lambda x: -ks_gaussian.pdf(x),
+                                    bounds=bounds, maxiter=5).x
 
     outliers = np.where(pdf_r < pvalues[alpha.index(threshold)])
     if labels is not None:
         labels = labels[outliers]
     outliers = data[outliers]
 
-    extreme_quantile = np.where((pdf > pvalues[alpha.index(0.9)])
-                                & (pdf < pvalues[alpha.index(0.5)]))
-    extreme_quantile = contour_stack[extreme_quantile]
+    # Find HDR given some quantiles
+    def _band_quantiles(band):
+        """Find extreme curves for a quantile band.
 
-    mean_quantile = np.where(pdf > pvalues[alpha.index(0.5)])
-    mean_quantile = contour_stack[mean_quantile]
+        From the `band` of quantiles, the associated PDF extrema values
+        are computed. If `min_alpha` is not provided (single quantile value),
+        `max_pdf` is set to `1E6` in order not to constrain the problem on high
+        values.
+
+        An optimization is performed per component in order to find the min and
+        max curves. This is done by comparing the PDF value of a given curve
+        with the band PDF.
+
+        Parameters
+        ----------
+        band : array_like
+            alpha values ``(max_alpha, min_alpha)`` ex: ``[0.9, 0.5]``
+
+        Returns
+        -------
+        band_quantiles : list of 1-D array
+            ``(max_quantile, min_quantile)`` (2, n_features)
+
+        """
+        min_pdf = pvalues[alpha.index(band[0])]
+        try:
+            max_pdf = pvalues[alpha.index(band[1])]
+        except IndexError:
+            max_pdf = 1E6
+        band = [min_pdf, max_pdf]
+
+        pool = Pool()
+        data = zip(range(dim), itertools.repeat((band, pca,
+                                                 bounds, ks_gaussian)))
+        band_quantiles = pool.map(_min_max_band, data)
+        pool.terminate()
+        pool.close()
+
+        band_quantiles = list(zip(*band_quantiles))
+
+        return band_quantiles
 
     extra_alpha = [i for i in alpha
                    if 0.5 != i and 0.9 != i and threshold != i]
     if extra_alpha != []:
-        extra_quantiles = []
-        for i in extra_alpha:
-            extra_quantile = np.where(pdf > pvalues[alpha.index(i)])
-            extra_quantile = contour_stack[extra_quantile]
-            extra_quantile = _inverse_transform(pca, extra_quantile)
-            extra_quantiles.extend([extra_quantile.max(axis=0),
-                                    extra_quantile.min(axis=0)])
+            extra_quantiles = [y for x in extra_alpha
+                               for y in _band_quantiles([x])]
     else:
         extra_quantiles = []
 
-    # Inverse transform from bivariate plot to dataset
+    # Inverse transform from n-variate plot to dataset dataset's shape
     median = _inverse_transform(pca, median)[0]
-    extreme_quantile = _inverse_transform(pca, extreme_quantile)
-    mean_quantile = _inverse_transform(pca, mean_quantile)
-
-    extreme_quantile = [extreme_quantile.max(axis=0),
-                        extreme_quantile.min(axis=0)]
-    mean_quantile = [mean_quantile.max(axis=0),
-                     mean_quantile.min(axis=0)]
+    hdr_90 = _band_quantiles([0.9, 0.5])
+    hdr_50 = _band_quantiles([0.5])
 
     hdr_res = {
         "median": median,
-        "mean_quantile": mean_quantile,
-        "extreme_quantile": extreme_quantile,
+        "hdr_50": hdr_50,
+        "hdr_90": hdr_90,
         "extra_quantiles": extra_quantiles,
         "outliers": outliers
     }
@@ -289,10 +385,10 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
     ax.plot(np.array([xdata] * n_samples).T, data.T,
             c='c', alpha=.1, label='dataset')
     ax.plot(xdata, median, c='k', label='Median')
-    ax.fill_between(xdata, *mean_quantile,
-                    color='gray', alpha=.4,  label='50th quantile')
-    ax.fill_between(xdata, *extreme_quantile,
-                    color='gray', alpha=.3, label='90th quantile')
+    ax.fill_between(xdata, *hdr_50,
+                    color='gray', alpha=.4,  label='50% HDR')
+    ax.fill_between(xdata, *hdr_90,
+                    color='gray', alpha=.3, label='90% HDR')
 
     if len(extra_quantiles) != 0:
         ax.plot(np.array([xdata] * len(extra_quantiles)).T,
@@ -301,7 +397,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
 
     if len(outliers) != 0:
         for ii, outlier in enumerate(outliers):
-            label = str(labels[ii]) if labels is not None else None
+            label = str(labels[ii]) if labels is not None else 'Outliers'
             ax.plot(xdata, outlier,
                     ls='--', alpha=0.7, label=label)
 
