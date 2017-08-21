@@ -14,7 +14,7 @@ from .robust.robust_linear_model import RLM
 from .discrete.discrete_model import (Poisson, Logit, Probit,
                                       MNLogit, NegativeBinomial,
                                       GeneralizedPoisson,
-                                      NegativeBinomialP)
+                                      NegativeBinomialP,
                                       GeneralizedPoisson)
 from .discrete.count_model import TruncatedPoisson, HurdlePoisson
 from .tsa import api as tsa

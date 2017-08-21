@@ -11,6 +11,7 @@ from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
                                                  Poisson, Logit, CountResults,
                                                  L1CountResults, Probit,
                                                  NegativeBinomial,
+                                                 NegativeBinomialP,
                                                  _discrete_results_docs)
 from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
                                        approx_hess_cs, approx_fprime_cs)
@@ -309,7 +310,10 @@ class Truncated(GenericTruncated):
                                                exposure=exposure,
                                                truncation=truncation,
                                                missing=missing, **kwargs)
-        self.model_main = model(self.endog, self.exog)
+        self.model_main = model(self.endog, self.exog,
+                                offset=offset, exposure=exposure)
+        self.k_extra = getattr(self.model_main, "k_extra", 0)
+        self.exog_names.extend(list(set(self.model_main.exog_names) - set(self.exog_names)))
         self.model_dist = distribution
         self.result = GenericTruncatedResults
         self.result_wrapper = GenericTruncatedResultsWrapper
@@ -445,7 +449,15 @@ class GenericCensored(CountModel):
             The score vector of the model, i.e. the first derivative of the
             loglikelihood function, evaluated at `params`
         """
-        return approx_fprime(params, self.loglikeobs)
+        score_main = self.model_main.score_obs(params)
+        llf_main = self.model_main.loglikeobs(params)
+        
+        score = np.concatenate((score_main[self.zero_idx],
+            (score_main[self.nonzero_idx].T *
+            -np.exp(llf_main[self.nonzero_idx]) /
+            (1 - np.exp(llf_main[self.nonzero_idx]))).T))
+
+        return score
 
     def score(self, params):
         """
@@ -544,6 +556,7 @@ class GenericCensored(CountModel):
         Notes
         -----
         """
+        #print '1', params, self.loglike(params)
         return approx_hess(params, self.loglike)
 
 class Censored(GenericCensored):
@@ -655,7 +668,6 @@ class GenericHurdle(CountModel):
         result._results.model = self
         result.mle_retvals['converged'] = [results1.mle_retvals['converged'], results2.mle_retvals['converged']]
         result._results.params = np.append(results1._results.params, results2._results.params)
-        result._results.df_resid += results2._results.df_resid
         result._results.df_model += results2._results.df_model
 
         modelfit = self.result(self, result._results, results1, results2)
@@ -757,7 +769,7 @@ class HurdlePoissonResults(CountResults):
 
     @cache_readonly
     def llnull(self):
-        return 1.0
+        return self.model1._results.llnull + self.model2._results.llnull
 
     @cache_readonly
     def bse(self):
@@ -782,7 +794,7 @@ if __name__=="__main__":
     data = sm.datasets.randhie.load()
     endog = data.endog
     exog = sm.add_constant(data.exog[:,:2], prepend=False)
-    res1 = HurdlePoisson(endog, exog).fit()
+    res1 = HurdlePoisson(endog, exog, model=NegativeBinomialP).fit()
 
     print(res1.params)
     print(res1.llf)
