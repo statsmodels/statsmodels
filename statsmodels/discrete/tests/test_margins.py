@@ -7,7 +7,8 @@ Author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_allclose
-from statsmodels.discrete.discrete_model import Poisson, NegativeBinomial
+from statsmodels.discrete.discrete_model import (Poisson, NegativeBinomial,
+                                                 NegativeBinomialP)
 from statsmodels.tools.tools import add_constant
 
 import statsmodels.discrete.tests.results.results_count_margins as res_stata
@@ -105,3 +106,23 @@ class TestNegBinMarginDummy(CheckMarginMixin):
         cls.res1_slice = cls.res1_slice = [0, 1, 2, 3, 5, 6]
         cls.res1 = res_stata.results_negbin_margins_dummy
         cls.rtol_fac = 5e1
+
+
+class TestNegBinPMargin(CheckMarginMixin):
+    # this is the same as the nb2 version above for NB-P, p=2
+
+    @classmethod
+    def setup_class(cls):
+        # here we don't need to check convergence from default start_params
+        start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552,
+                        -2.88, 1.14]
+        mod = NegativeBinomialP(endog, exog)   # checks also that default p=2
+        res = mod.fit(start_params=start_params, method='nm', maxiter=2000)
+        marge = res.get_margeff()
+        cls.res = res
+        cls.margeff = marge
+
+        cls.res1_slice = slice(None, None, None)
+        cls.res1 = res_stata.results_negbin_margins_cont
+        cls.rtol_fac = 5e1
+        # negbin has lower agreement with Stata in this case
