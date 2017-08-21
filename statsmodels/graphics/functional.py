@@ -230,7 +230,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, optimize=False,
     else:
         alpha.extend([threshold, 0.9, 0.5])
         alpha = list(set(alpha))
-        alpha.sort(reverse=True)
+    alpha.sort(reverse=True)
 
     n_quantiles = len(alpha)
     pdf_r = ks_gaussian.pdf(data_r).flatten()
