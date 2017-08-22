@@ -53,7 +53,7 @@ def test_hdr_basic():
 
     assert_almost_equal(quant, quant_t, decimal=0)
 
-    labels_pos = np.all(np.isin(data, hdr.outliers), axis=1)
+    labels_pos = np.all(np.in1d(data, hdr.outliers).reshape(data.shape), axis=1)
     outliers = labels[labels_pos]
     assert_equal([1982, 1983, 1997, 1998], outliers)
     plt.close(fig)
@@ -107,7 +107,7 @@ def test_hdr_multiple_alpha():
 @skipif(not have_matplotlib, reason='matplotlib not available')
 def test_hdr_threshold():
     fig, hdr = hdrboxplot(data, alpha=[0.8], threshold=0.93)
-    labels_pos = np.all(np.isin(data, hdr.outliers), axis=1)
+    labels_pos = np.all(np.in1d(data, hdr.outliers).reshape(data.shape), axis=1)
     outliers = labels[labels_pos]
     assert_equal([1968, 1982, 1983, 1997, 1998], outliers)
     plt.close(fig)
