@@ -13,7 +13,10 @@ except ImportError:
     have_de_optim = False
 from multiprocessing import Pool
 import itertools
-import copy_reg
+try:
+    import copyreg
+except ImportError:
+    import copy_reg as copyreg
 import types
 
 from . import utils
@@ -30,7 +33,7 @@ def _pickle_method(m):
         return getattr, (m.im_self, m.im_func.func_name)
 
 
-copy_reg.pickle(types.MethodType, _pickle_method)
+copyreg.pickle(types.MethodType, _pickle_method)
 
 
 class HdrResults(object):
