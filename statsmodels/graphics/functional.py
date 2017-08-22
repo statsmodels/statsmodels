@@ -13,11 +13,24 @@ except ImportError:
     have_de_optim = False
 from multiprocessing import Pool
 import itertools
+import copy_reg
+import types
 
 from . import utils
 
 
 __all__ = ['hdrboxplot', 'fboxplot', 'rainbowplot', 'banddepth']
+
+
+def _pickle_method(m):
+    """Handle pickling issues with class instance."""
+    if m.im_self is None:
+        return getattr, (m.im_class, m.im_func.func_name)
+    else:
+        return getattr, (m.im_self, m.im_func.func_name)
+
+
+copy_reg.pickle(types.MethodType, _pickle_method)
 
 
 class HdrResults(object):
@@ -131,8 +144,7 @@ def _min_max_band(args):
         ``(max, min)`` curve values at `idx`
 
     """
-    idx, args = args
-    band, pca, bounds, ks_gaussian = args
+    idx, (band, pca, bounds, ks_gaussian) = args
     if have_de_optim:
         max_ = differential_evolution(_curve_constrain, bounds=bounds,
                                       args=(idx, -1, band, pca, ks_gaussian),
