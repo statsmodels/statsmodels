@@ -16,7 +16,9 @@ from .discrete.discrete_model import (Poisson, Logit, Probit,
                                       GeneralizedPoisson,
                                       NegativeBinomialP,
                                       GeneralizedPoisson)
-from .discrete.count_model import TruncatedPoisson, HurdlePoisson
+from .discrete.count_model import (TruncatedPoisson, HurdlePoisson,
+                                   TruncatedNegativeBinomialP,
+                                   Truncated)
 from .tsa import api as tsa
 from .duration.survfunc import SurvfuncRight
 from .duration.hazard_regression import PHReg

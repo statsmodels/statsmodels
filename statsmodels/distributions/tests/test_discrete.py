@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import statsmodels.api as sm
-from scipy.stats import poisson
+from scipy.stats import poisson, nbinom
 from numpy.testing import (assert_, assert_raises, assert_almost_equal,
                            assert_equal, assert_array_equal, assert_allclose,
                            assert_array_less)
@@ -59,6 +59,34 @@ class TestTruncatedPoisson(object):
         poisson_logpmf = poisson.logpmf(1, 1)
         tpoisson_logpmf = sm.distributions.truncatedpoisson.logpmf(1, 1, 50)
         assert_allclose(poisson_logpmf, tpoisson_logpmf, rtol=1e-7)
+
+class TestTruncatedNBP(object):
+    """
+    Test Truncated Poisson distribution
+    """
+    def test_pmf_zero(self):
+        n, p = sm.distributions.truncatednegbin.convert_params(30, 0.1, 2)
+        nb_pmf = nbinom.pmf(100, n, p)
+        tnb_pmf = sm.distributions.truncatednegbin.pmf(100, 30, 0.1, 2, 0)
+        assert_allclose(nb_pmf, tnb_pmf, rtol=1e-5)
+
+    def test_logpmf_zero(self):
+        n, p = sm.distributions.truncatednegbin.convert_params(10, 1, 2)
+        nb_logpmf = nbinom.logpmf(200, n, p)
+        tnb_logpmf = sm.distributions.truncatednegbin.logpmf(200, 10, 1, 2, 0)
+        assert_allclose(nb_logpmf, tnb_logpmf, rtol=1e-2, atol=1e-2)
+
+    def test_pmf(self):
+        n, p = sm.distributions.truncatednegbin.convert_params(2, 0.5, 2)
+        nb_logpmf = nbinom.pmf(2, n, p)
+        tnb_pmf = sm.distributions.truncatednegbin.pmf(2, 2, 0.5, 2, 50)
+        assert_allclose(nb_logpmf, tnb_pmf, rtol=1e-7)
+
+    def test_logpmf(self):
+        n, p = sm.distributions.truncatednegbin.convert_params(5, 0.1, 2)
+        nb_logpmf = nbinom.logpmf(1, n, p)
+        tnb_logpmf = sm.distributions.truncatednegbin.logpmf(1, 5, 0.1, 2, 50)
+        assert_allclose(nb_logpmf, tnb_logpmf, rtol=1e-7)
 
 if __name__ == "__main__":
     import pytest
