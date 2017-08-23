@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import statsmodels.api as sm
-from scipy.stats import poisson
+from scipy.stats import poisson, nbinom
 from numpy.testing import (assert_, assert_raises, assert_almost_equal,
                            assert_equal, assert_array_equal, assert_allclose,
                            assert_array_less)
@@ -80,6 +80,35 @@ class TestZIGneralizedPoisson(object):
         gp_logpmf = sm.distributions.genpoisson_p.logpmf(2, 3, 0, 2)
         zigp_logpmf = sm.distributions.zigenpoisson.logpmf(2, 3, 0, 2, 0.1)
         assert_allclose(gp_logpmf, zigp_logpmf, rtol=5e-2, atol=5e-2)
+
+
+class TestZiNBP(object):
+    """
+    Test Truncated Poisson distribution
+    """
+    def test_pmf_p2(self):
+        n, p = sm.distributions.zinegbin.convert_params(30, 0.1, 2)
+        nb_pmf = nbinom.pmf(100, n, p)
+        tnb_pmf = sm.distributions.zinegbin.pmf(100, 30, 0.1, 2, 0.01)
+        assert_allclose(nb_pmf, tnb_pmf, rtol=1e-5, atol=1e-5)
+
+    def test_logpmf_p2(self):
+        n, p = sm.distributions.zinegbin.convert_params(10, 1, 2)
+        nb_logpmf = nbinom.logpmf(200, n, p)
+        tnb_logpmf = sm.distributions.zinegbin.logpmf(200, 10, 1, 2, 0.01)
+        assert_allclose(nb_logpmf, tnb_logpmf, rtol=1e-2, atol=1e-2)
+
+    def test_pmf(self):
+        n, p = sm.distributions.zinegbin.convert_params(1, 0.9, 1)
+        nb_logpmf = nbinom.pmf(2, n, p)
+        tnb_pmf = sm.distributions.zinegbin.pmf(2, 1, 0.9, 2, 0.5)
+        assert_allclose(nb_logpmf, tnb_pmf * 2, rtol=1e-7)
+
+    def test_logpmf(self):
+        n, p = sm.distributions.zinegbin.convert_params(5, 1, 1)
+        nb_logpmf = nbinom.logpmf(2, n, p)
+        tnb_logpmf = sm.distributions.zinegbin.logpmf(2, 5, 1, 1, 0.005)
+        assert_allclose(nb_logpmf, tnb_logpmf, rtol=1e-2, atol=1e-2)
 
 if __name__ == "__main__":
     import pytest

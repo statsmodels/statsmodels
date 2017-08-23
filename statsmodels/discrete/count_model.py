@@ -1,6 +1,8 @@
 from __future__ import division
 
-__all__ = ["ZeroInflatedPoisson", "ZeroInflatedGeneralizedPoisson"]
+__all__ = ["ZeroInflatedPoisson", "ZeroInflatedGeneralizedPoisson",
+           "ZeroInflatedNegativeBinomialP"]
+
 
 import numpy as np
 import statsmodels.base.model as base
@@ -10,8 +12,9 @@ from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
                                                  Poisson, Logit, CountResults,
                                                  L1CountResults, Probit,
                                                  _discrete_results_docs,
-                                                 GeneralizedPoisson)
-from statsmodels.distributions import zipoisson, zigenpoisson
+                                                 GeneralizedPoisson,
+                                                 NegativeBinomialP)
+from statsmodels.distributions import zipoisson, zigenpoisson, zinegbin
 from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
                                        approx_hess_cs, approx_fprime_cs)
 from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
@@ -475,7 +478,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
 class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
     """
-    Poisson Zero Inflated model for count data
+    Zero Inflated Generalized Poisson model for count data
 
     %(params)s
     %(extra_params)s
@@ -499,14 +502,13 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
     """ + base._missing_param_doc}
 
     def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
-                 inflation='logit', missing='none', p=1, **kwargs):
+                 inflation='logit', missing='none', p=2, **kwargs):
         super(ZeroInflatedGeneralizedPoisson, self).__init__(endog, exog,
                                                   offset=offset,
                                                   inflation=inflation,
                                                   exog_infl=exog_infl,
                                                   exposure=exposure,
                                                   missing=missing, **kwargs)
-        self.parametrization = p
         self.model_main = GeneralizedPoisson(self.endog, self.exog,
             offset=offset, exposure=exposure, p=p)
         self.distribution = zigenpoisson
@@ -522,11 +524,67 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
+        p = self.model_main.parameterization
         counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
         w = self.model_infl.predict(params_infl)[:, None]
         w[w == 1.] = np.nextafter(1, 0)
         mu = self.model_main.predict(params_main)[:, None]
-        return self.distribution.pmf(counts, mu, params_main[-1], self.parametrization, w)
+        return self.distribution.pmf(counts, mu, params_main[-1], p, w)
+
+class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
+    """
+    Zero Inflated Generalized Negative Binomial model for count data
+
+    %(params)s
+    %(extra_params)s
+
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    exog_infl: array
+        A reference to the zero-inflated exogenous design.
+    """ % {'params' : base._model_params_doc,
+           'extra_params' :
+           """offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+
+    """ + base._missing_param_doc}
+
+    def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
+                 inflation='logit', missing='none', p=2, **kwargs):
+        super(ZeroInflatedNegativeBinomialP, self).__init__(endog, exog,
+                                                  offset=offset,
+                                                  inflation=inflation,
+                                                  exog_infl=exog_infl,
+                                                  exposure=exposure,
+                                                  missing=missing, **kwargs)
+        self.model_main = NegativeBinomialP(self.endog, self.exog,
+            offset=offset, exposure=exposure, p=p)
+        self.distribution = zinegbin
+        self.k_exog += 1
+        self.k_extra += 1
+        self.exog_names.append("alpha")
+        self.result = ZeroInflatedNegativeBinomialResults
+        self.result_wrapper = ZeroInflatedNegativeBinomialResultsWrapper
+        self.result_reg = L1ZeroInflatedNegativeBinomialResults
+        self.result_reg_wrapper = L1ZeroInflatedNegativeBinomialResultsWrapper
+
+    def _predict_prob(self, params):
+        params_infl = params[:self.k_inflate]
+        params_main = params[self.k_inflate:]
+
+        p = self.model_main.parameterization
+        counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+        w = self.model_infl.predict(params_infl)[:, None]
+        w[w == 1.] = np.nextafter(1, 0)
+        mu = self.model_main.predict(params_main)[:, None]
+        return self.distribution.pmf(counts, mu, params_main[-1], p, w)
 
 class ZeroInflatedPoissonResults(CountResults):
     __doc__ = _discrete_results_docs % {
@@ -581,7 +639,43 @@ class L1ZeroInflatedGeneralizedPoissonResultsWrapper(
 wrap.populate_wrapper(L1ZeroInflatedGeneralizedPoissonResultsWrapper,
                       L1ZeroInflatedGeneralizedPoissonResults)
 
+class ZeroInflatedNegativeBinomialResults(CountResults):
+    __doc__ = _discrete_results_docs % {
+        "one_line_description" : "A results class for Zero Inflated Genaralized Negative Binomial",
+                    "extra_attr" : ""}
+
+    @cache_readonly
+    def _dispersion_factor(self):
+        p = self.model.model_main.parameterization
+        alpha = self.params[self.model.k_inflate:][-1]
+        mu = np.exp(self.predict(which='linear'))
+        w = 1 - self.predict() / mu
+        return (1 + alpha * mu**(p-1) + w * mu)
+
+class L1ZeroInflatedNegativeBinomialResults(L1CountResults,
+        ZeroInflatedNegativeBinomialResults):
+    pass
+
+class ZeroInflatedNegativeBinomialResultsWrapper(
+        lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(ZeroInflatedNegativeBinomialResultsWrapper,
+                      ZeroInflatedNegativeBinomialResults)
+
+class L1ZeroInflatedNegativeBinomialResultsWrapper(
+        lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(L1ZeroInflatedNegativeBinomialResultsWrapper,
+                      L1ZeroInflatedNegativeBinomialResults)
 
 if __name__=="__main__":
     import numpy as np
     import statsmodels.api as sm
+
+    data = sm.datasets.randhie.load()
+    exog = sm.add_constant(data.exog[:,3], prepend=False)
+    exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
+    res1 = sm.ZeroInflatedNegativeBinomialP(data.endog, exog,
+            exog_infl=exog_infl, p=2).fit(method='bfgs', maxiter=500)
+
+    print(res1.params, res1.llf)

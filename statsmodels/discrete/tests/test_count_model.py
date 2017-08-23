@@ -176,6 +176,39 @@ class TestZeroInflatedGeneralizedPoisson_predict(object):
             res.predict().mean(), 0.05, 2, 0).T
         assert_allclose(pr2, pr2, rtol=1e-10, atol=1e-10)
 
+class TestZeroInflatedNegativeBinomial_predict(object):
+    @classmethod
+    def setup_class(cls):
+        expected_params = [1, 2, 0.05]
+        np.random.seed(123)
+        nobs = 200
+        exog = np.ones((nobs, 2))
+        exog[:nobs//2, 1] = 2
+        mu_true = exog.dot(expected_params[:-1])
+        cls.endog = sm.distributions.zinegbin.rvs(mu_true, expected_params[-1],
+                                                      1, 0.1, size=mu_true.shape)
+        model = sm.ZeroInflatedNegativeBinomialP(cls.endog, exog, p=1)
+        cls.res = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
+
+    def test_mean(self):
+        assert_allclose(self.res.predict().mean(), self.endog.mean(),
+                        atol=1e-2, rtol=1e-2)
+
+    def test_var(self):
+        assert_allclose((self.res.predict().mean() *
+                        self.res._dispersion_factor.mean()),
+                        self.endog.var(), atol=5e-2, rtol=5e-2)
+
+    def test_predict_prob(self):
+        res = self.res
+        endog = res.model.endog
+
+        pr = res.predict(which='prob')
+        pr2 = sm.distributions.zinegbin.pmf(np.arange(6),
+            res.predict().mean(), 0.05, 2, 0).T
+        assert_allclose(pr2, pr2, rtol=1e-10, atol=1e-10)
+
+
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__, '-vvs', '-x', '--pdb'])
