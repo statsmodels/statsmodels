@@ -156,10 +156,10 @@ class GenericZeroInflated(CountModel):
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
-            start_params = self.model_main.fit(disp=0).params
+            start_params = self.model_main.fit(disp=0, method=method).params
             start_params = np.append(np.zeros(self.k_inflate), start_params)
         mlefit = super(GenericZeroInflated, self).fit(start_params=start_params,
-                       maxiter=maxiter, disp=disp,
+                       maxiter=maxiter, disp=disp, method=method,
                        full_output=full_output, callback=lambda x:x,
                        **kwargs)
 
@@ -671,11 +671,3 @@ wrap.populate_wrapper(L1ZeroInflatedNegativeBinomialResultsWrapper,
 if __name__=="__main__":
     import numpy as np
     import statsmodels.api as sm
-
-    data = sm.datasets.randhie.load()
-    exog = sm.add_constant(data.exog[:,3], prepend=False)
-    exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
-    res1 = sm.ZeroInflatedNegativeBinomialP(data.endog, exog,
-            exog_infl=exog_infl, p=2).fit(method='bfgs', maxiter=500)
-
-    print(res1.params, res1.llf)

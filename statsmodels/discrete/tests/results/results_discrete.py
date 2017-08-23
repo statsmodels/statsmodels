@@ -12,7 +12,7 @@ cur_dir = os.path.abspath(os.path.dirname(__file__))
 
 class Anes(object):
     def __init__(self):
-        """
+        """r
         Results are from Stata 11 (checked vs R nnet package).
         """
         self.nobs = 944
@@ -1043,3 +1043,10 @@ class RandHIE(object):
         self.bse = [1.66109, 7.62052, 0.02066, 0.00339, 
                     0.00289, 0.01680, 0.01606]
         self.aic = 87275
+
+    def zero_inflated_negative_binomial(self):
+        self.params = [1.883859, -10.280888, -0.204769,
+                       1.137985, 1.344457]
+        self.llf = -44077.91
+        self.bse = [0.3653, 1.6694, 0.02178, 0.01163, 0.0217496]
+        self.aic = 88165.81
