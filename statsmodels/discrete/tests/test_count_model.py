@@ -75,7 +75,7 @@ class TestZeroInflatedModel_offset(ChechGeneric):
         res2.zero_inflated_poisson_offset()
         cls.res2 = res2
 
-class TestZeroInflatedModel_predict(object):
+class TestZeroInflatedPoisson_predict(object):
     @classmethod
     def setup_class(cls):
         expected_params = [1, 0.5]
@@ -97,6 +97,15 @@ class TestZeroInflatedModel_predict(object):
         assert_allclose((self.res.predict().mean() *
                         self.res._dispersion_factor.mean()),
                         self.endog.var(), atol=5e-2, rtol=5e-2)
+
+    def test_predict_prob(self):
+        res = self.res
+        endog = res.model.endog
+
+        pr = res.predict(which='prob')
+        pr2 = sm.distributions.zipoisson.pmf(np.arange(6),
+            res.predict().mean(), 0).T
+        assert_allclose(pr2, pr2, rtol=1e-10, atol=1e-10)
 
 class TestZeroInflatedGeneralizedPoisson(ChechGeneric):
     @classmethod
@@ -134,6 +143,38 @@ class TestZeroInflatedGeneralizedPoisson(ChechGeneric):
 
         assert_allclose(res_reg.params[2:], self.res1.params[2:],
             atol=5e-2, rtol=5e-2)
+
+class TestZeroInflatedGeneralizedPoisson_predict(object):
+    @classmethod
+    def setup_class(cls):
+        expected_params = [1, 0.5, 0.05]
+        np.random.seed(1234)
+        nobs = 200
+        exog = np.ones((nobs, 2))
+        exog[:nobs//2, 1] = 2
+        mu_true = exog.dot(expected_params[:-1])
+        cls.endog = sm.distributions.zigenpoisson.rvs(mu_true, expected_params[-1],
+                                                      1, 0.5, size=mu_true.shape)
+        model = sm.ZeroInflatedGeneralizedPoisson(cls.endog, exog, p=1)
+        cls.res = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
+
+    def test_mean(self):
+        assert_allclose(self.res.predict().mean(), self.endog.mean(),
+                        atol=1e-2, rtol=1e-2)
+
+    def test_var(self):
+        assert_allclose((self.res.predict().mean() *
+                        self.res._dispersion_factor.mean()),
+                        self.endog.var(), atol=5e-2, rtol=5e-2)
+
+    def test_predict_prob(self):
+        res = self.res
+        endog = res.model.endog
+
+        pr = res.predict(which='prob')
+        pr2 = sm.distributions.zigenpoisson.pmf(np.arange(6),
+            res.predict().mean(), 0.05, 2, 0).T
+        assert_allclose(pr2, pr2, rtol=1e-10, atol=1e-10)
 
 if __name__ == "__main__":
     import pytest
