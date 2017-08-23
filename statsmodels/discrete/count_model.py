@@ -559,10 +559,11 @@ class ZeroInflatedGeneralizedPoissonResults(CountResults):
 
     @cache_readonly
     def _dispersion_factor(self):
+        p = self.model.model_main.parameterization
         alpha = self.params[self.model.k_inflate:][-1]
-        mu = self.predict(which='linear')
-        w = 1 - self.predict() / np.exp(self.predict(which='linear'))
-        return ((1 + alpha * np.exp(mu))**2 + w * np.exp(mu))
+        mu = np.exp(self.predict(which='linear'))
+        w = 1 - self.predict() / mu
+        return ((1 + alpha * mu**p)**2 + w * mu)
 
 class L1ZeroInflatedGeneralizedPoissonResults(L1CountResults,
         ZeroInflatedGeneralizedPoissonResults):
