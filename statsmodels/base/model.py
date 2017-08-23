@@ -74,6 +74,9 @@ class Model(object):
         if hasconst is not None:
             self._init_keys.append('hasconst')
 
+    @property
+    def _results_class(self):
+        return (Results, wrap.ResultsWrapper)
 
     def _get_init_kwds(self):
         """return dictionary with extra keys used in model.__init__
@@ -222,6 +225,10 @@ class LikelihoodModel(Model):
 
     # TODO: if the intent is to re-initialize the model with new data then this
     # method needs to take inputs...
+
+    @property
+    def _results_class(self):
+        return (LikelihoodModelResults, LikelihoodResultsWrapper)
 
     def loglike(self, params):
         """
