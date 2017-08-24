@@ -314,9 +314,9 @@ class TruncatedPoisson(GenericTruncated):
                                   offset=offset)
         self.model_dist = truncatedpoisson
         self.result = TruncatedPoissonResults
-        self.result_wrapper = TruncatedPoissonResultsWrapper
-        self.result_reg = L1TruncatedPoissonResults
-        self.result_reg_wrapper = L1TruncatedPoissonResultsWrapper
+        self.result_wrapper = GenericTruncatedResultsWrapper
+        self.result_reg = L1GenericTruncatedResults
+        self.result_reg_wrapper = L1GenericTruncatedResultsWrapper 
 
     def predict(self, params, exog=None, exposure=None, offset=None,
                 which='mean', count_prob=None):
@@ -400,7 +400,7 @@ class TruncatedNegativeBinomialP(GenericTruncated):
                                             exposure=exposure,
                                             offset=offset, p=p)
         self.model_dist = truncatednegbin
-        self.result = GenericTruncatedResults
+        self.result = TruncatedNegativeBinomialResults
         self.result_wrapper = GenericTruncatedResultsWrapper
         self.result_reg = L1GenericTruncatedResults
         self.result_reg_wrapper = L1GenericTruncatedResultsWrapper
@@ -819,21 +819,31 @@ class GenericTruncatedResults(CountResults):
         "one_line_description" : "A results class for Generic Truncated",
                     "extra_attr" : ""}
 
+class TruncatedPoissonResults(GenericTruncatedResults):
+    __doc__ = _discrete_results_docs % {
+        "one_line_description" : "A results class for Truncated Poisson",
+                    "extra_attr" : ""}
+
     @cache_readonly
     def _dispersion_factor(self):
         mu = np.exp(self.predict(which='linear'))
 
         return (1 - mu / (np.exp(mu) - 1))
 
-class TruncatedPoissonResults(GenericTruncatedResults):
+class TruncatedNegativeBinomialResults(GenericTruncatedResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Truncated Poisson",
+        "one_line_description" : "A results class for Truncated Negative Binomial",
                     "extra_attr" : ""}
 
-class L1GenericTruncatedResults(L1CountResults, GenericTruncatedResults):
-    pass
+    @cache_readonly
+    def _dispersion_factor(self):
+        alpha = self.params[-1]
+        p = self.model.model_main.parametrization
+        mu = np.exp(self.predict(which='linear'))
 
-class L1TruncatedPoissonResults(L1CountResults, TruncatedPoissonResults):
+        return (1 - alpha * mu**(p-1) / (np.exp(mu**(p-1)) - 1))
+
+class L1GenericTruncatedResults(L1CountResults, GenericTruncatedResults):
     pass
 
 class GenericTruncatedResultsWrapper(lm.RegressionResultsWrapper):
@@ -841,20 +851,10 @@ class GenericTruncatedResultsWrapper(lm.RegressionResultsWrapper):
 wrap.populate_wrapper(GenericTruncatedResultsWrapper,
                       GenericTruncatedResults)
 
-class TruncatedPoissonResultsWrapper(lm.RegressionResultsWrapper):
-    pass
-wrap.populate_wrapper(TruncatedPoissonResultsWrapper,
-                      TruncatedPoissonResults)
-
 class L1GenericTruncatedResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1GenericTruncatedResultsWrapper,
                       L1GenericTruncatedResults)
-
-class L1TruncatedPoissonResultsWrapper(lm.RegressionResultsWrapper):
-    pass
-wrap.populate_wrapper(L1TruncatedPoissonResultsWrapper,
-                      L1TruncatedPoissonResults)
 
 class HurdlePoissonResults(CountResults):
     __doc__ = _discrete_results_docs % {
