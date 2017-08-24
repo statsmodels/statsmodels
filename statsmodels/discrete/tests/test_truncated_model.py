@@ -122,9 +122,9 @@ class TestTruncatedNBP_predict(object):
                         atol=2e-1, rtol=2e-1)
 
     def test_var(self):
-        #assert_allclose((self.res.predict().mean() *
-        #                self.res._dispersion_factor.mean()),
-        #                self.endog.var(), atol=5e-2, rtol=5e-2)
+        assert_allclose((self.res.predict().mean() *
+                        self.res._dispersion_factor.mean()),
+                        self.endog.var(), atol=5e-2, rtol=5e-2)
 
     def test_predict_prob(self):
         res = self.res
