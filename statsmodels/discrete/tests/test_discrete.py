@@ -21,13 +21,14 @@ import pytest
 
 from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
                                                 Poisson, NegativeBinomial,
-                                                CountModel, GeneralizedPoisson
-                                                )
+                                                CountModel, GeneralizedPoisson,
+                                                NegativeBinomialP)
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from .results.results_discrete import Spector, DiscreteL1, RandHIE, Anes
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
+from scipy.stats import nbinom
 
 try:
     import cvxopt
@@ -1784,6 +1785,280 @@ class TestGeneralizedPoisson_underdispersion(object):
         assert_allclose(chi2[:], (0.64628806058715882, 0.98578597726324468),
                         rtol=0.01)
 
+class TestNegativeBinomialPNB2Newton(CheckModelResults):
+    @classmethod
+    def setup_class(cls):
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomialP(data.endog, exog, p=2).fit(method='newton', disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_nb2_bfgs()
+        cls.res2 = res2
+
+    #NOTE: The bse is much closer precitions to stata
+    def test_bse(self):
+        assert_allclose(self.res1.bse, self.res2.bse,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_params(self):
+        assert_allclose(self.res1.params, self.res2.params,
+                        atol=1e-7)
+
+    def test_alpha(self):
+        self.res1.bse # attaches alpha_std_err
+        assert_allclose(self.res1.lnalpha, self.res2.lnalpha)
+        assert_allclose(self.res1.lnalpha_std_err,
+                        self.res2.lnalpha_std_err,
+                        atol=1e-7)
+
+    def test_conf_int(self):
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_zstat(self): # Low precision because Z vs. t
+        assert_allclose(self.res1.pvalues[:-1], self.res2.pvalues,
+                        atol=5e-3, rtol=5e-3)
+
+    def test_fittedvalues(self):
+        assert_allclose(self.res1.fittedvalues[:10],
+                        self.res2.fittedvalues[:10])
+
+    def test_predict(self):
+        assert_allclose(self.res1.predict()[:10],
+                        np.exp(self.res2.fittedvalues[:10]))
+
+    def test_predict_xb(self):
+        assert_allclose(self.res1.predict(which='linear')[:10],
+                        self.res2.fittedvalues[:10])
+
+class TestNegativeBinomialPNB1Newton(CheckModelResults):
+    @classmethod
+    def setup_class(cls):
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomialP(data.endog, exog, p=1).fit(method="newton",
+                                                                 maxiter=100,
+                                                                 disp=0,
+                                                                 use_transparams=True)
+        res2 = RandHIE()
+        res2.negativebinomial_nb1_bfgs()
+        cls.res2 = res2
+
+    def test_zstat(self):
+        assert_allclose(self.res1.tvalues, self.res2.z,
+                        atol=5e-3, rtol=5e-3)
+
+    def test_lnalpha(self):
+        self.res1.bse # attaches alpha_std_err
+        assert_allclose(self.res1.lnalpha, self.res2.lnalpha)
+        assert_allclose(self.res1.lnalpha_std_err,
+                            self.res2.lnalpha_std_err)
+
+    def test_params(self):
+        assert_allclose(self.res1.params, self.res2.params)
+
+    def test_conf_int(self):
+        # the bse for alpha is not high precision from the hessian
+        # approximation
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_predict(self):
+        assert_allclose(self.res1.predict()[:10],
+                        np.exp(self.res2.fittedvalues[:10]),
+                        atol=1e-3, rtol=1e-3)
+
+    def test_predict_xb(self):
+        assert_allclose(self.res1.predict(which='linear')[:10],
+                        self.res2.fittedvalues[:10],
+                        atol=1e-3, rtol=1e-3)
+
+
+class TestNegativeBinomialPNB2BFGS(CheckModelResults):
+    @classmethod
+    def setup_class(cls):
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomialP(data.endog, exog, p=2).fit(
+                                                method='bfgs', disp=0,
+                                                maxiter=1000,
+                                                use_transparams=True)
+        res2 = RandHIE()
+        res2.negativebinomial_nb2_bfgs()
+        cls.res2 = res2
+
+    #NOTE: The bse is much closer precitions to stata
+    def test_bse(self):
+        assert_allclose(self.res1.bse, self.res2.bse,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_params(self):
+        assert_allclose(self.res1.params, self.res2.params,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_alpha(self):
+        self.res1.bse # attaches alpha_std_err
+        assert_allclose(self.res1.lnalpha, self.res2.lnalpha,
+                        atol=1e-5, rtol=1e-5)
+        assert_allclose(self.res1.lnalpha_std_err,
+                        self.res2.lnalpha_std_err,
+                        atol=1e-5, rtol=1e-5)
+
+    def test_conf_int(self):
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_zstat(self): # Low precision because Z vs. t
+        assert_allclose(self.res1.pvalues[:-1], self.res2.pvalues,
+                        atol=5e-3, rtol=5e-3)
+
+    def test_fittedvalues(self):
+        assert_allclose(self.res1.fittedvalues[:10],
+                        self.res2.fittedvalues[:10],
+                        atol=1e-4, rtol=1e-4)
+
+    def test_predict(self):
+        assert_allclose(self.res1.predict()[:10],
+                        np.exp(self.res2.fittedvalues[:10]),
+                        atol=1e-3, rtol=1e-3)
+
+    def test_predict_xb(self):
+        assert_allclose(self.res1.predict(which='linear')[:10],
+                        self.res2.fittedvalues[:10],
+                        atol=1e-3, rtol=1e-3)
+
+
+class TestNegativeBinomialPNB1BFGS(CheckModelResults):
+    @classmethod
+    def setup_class(cls):
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomialP(data.endog, exog, p=1).fit(method="bfgs",
+                                                                 maxiter=100,
+                                                                 disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_nb1_bfgs()
+        cls.res2 = res2
+
+    def test_bse(self):
+        assert_allclose(self.res1.bse, self.res2.bse,
+                        atol=5e-3, rtol=5e-3)
+
+    def test_aic(self):
+        assert_allclose(self.res1.aic, self.res2.aic,
+                        atol=0.5, rtol=0.5)
+
+    def test_bic(self):
+        assert_allclose(self.res1.bic, self.res2.bic,
+                        atol=0.5, rtol=0.5)
+
+    def test_llf(self):
+        assert_allclose(self.res1.llf, self.res2.llf,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_llr(self):
+        assert_allclose(self.res1.llf, self.res2.llf,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_zstat(self):
+        assert_allclose(self.res1.tvalues, self.res2.z,
+                        atol=0.5, rtol=0.5)
+
+    def test_lnalpha(self):
+        assert_allclose(self.res1.lnalpha, self.res2.lnalpha,
+                        atol=1e-3, rtol=1e-3)
+        assert_allclose(self.res1.lnalpha_std_err,
+                        self.res2.lnalpha_std_err,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_params(self):
+        assert_allclose(self.res1.params, self.res2.params,
+                        atol=5e-2, rtol=5e-2)
+
+    def test_conf_int(self):
+        # the bse for alpha is not high precision from the hessian
+        # approximation
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int,
+                        atol=5e-2, rtol=5e-2)
+
+    def test_predict(self):
+        assert_allclose(self.res1.predict()[:10],
+                        np.exp(self.res2.fittedvalues[:10]),
+                        atol=5e-3, rtol=5e-3)
+
+    def test_predict_xb(self):
+        assert_allclose(self.res1.predict(which='linear')[:10],
+                        self.res2.fittedvalues[:10],
+                        atol=5e-3, rtol=5e-3)
+
+class TestNegativeBinomialPL1Compatability(CheckL1Compatability):
+    @classmethod
+    def setup_class(cls):
+        cls.kvars = 10 # Number of variables
+        cls.m = 7 # Number of unregularized parameters
+        rand_data = sm.datasets.randhie.load()
+        rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)
+        rand_exog_st = (rand_exog - rand_exog.mean(0)) / rand_exog.std(0)
+        rand_exog = sm.add_constant(rand_exog_st, prepend=True)
+        # Drop some columns and do an unregularized fit
+        exog_no_PSI = rand_exog[:, :cls.m]
+        mod_unreg = sm.NegativeBinomialP(rand_data.endog, exog_no_PSI)
+        cls.res_unreg = mod_unreg.fit(method="newton", disp=False)
+        # Do a regularized fit with alpha, effectively dropping the last column
+        alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars + 1)
+        alpha[:cls.m] = 0
+        alpha[-1] = 0  # don't penalize alpha
+
+        mod_reg = sm.NegativeBinomialP(rand_data.endog, rand_exog)
+        cls.res_reg = mod_reg.fit_regularized(
+            method='l1', alpha=alpha, disp=False, acc=1e-10, maxiter=2000,
+            trim_mode='auto')
+        cls.k_extra = 1  # 1 extra parameter in nb2
+
+class  TestNegativeBinomialPPredictProb(object):
+    def test_predict_prob_p1(self):
+        expected_params = [1, -0.5]
+        np.random.seed(1234)
+        nobs = 200
+        exog = np.ones((nobs, 2))
+        exog[:nobs//2, 1] = 2
+        mu_true = np.exp(exog.dot(expected_params))
+        alpha = 0.05
+        size = 1. / alpha * mu_true
+        prob = size / (size + mu_true)
+        endog = nbinom.rvs(size, prob, size=len(mu_true))
+
+        res = sm.NegativeBinomialP(endog, exog).fit()
+
+        mu = res.predict()
+        size = 1. / alpha * mu
+        prob = size / (size + mu)
+
+        assert_allclose(res.predict(which='prob'),
+            nbinom.pmf(np.arange(8)[:,None], size, prob).T,
+            atol=1e-2, rtol=1e-2)
+
+    def test_predict_prob_p2(self):
+        expected_params = [1, -0.5]
+        np.random.seed(1234)
+        nobs = 200
+        exog = np.ones((nobs, 2))
+        exog[:nobs//2, 1] = 2
+        mu_true = np.exp(exog.dot(expected_params))
+        alpha = 0.05
+        size = 1. / alpha
+        prob = size / (size + mu_true)
+        endog = nbinom.rvs(size, prob, size=len(mu_true))
+
+        res = sm.NegativeBinomialP(endog, exog, p=2).fit()
+
+        mu = res.predict()
+        size = 1. / alpha
+        prob = size / (size + mu)
+
+        assert_allclose(res.predict(which='prob'),
+            nbinom.pmf(np.arange(8)[:,None], size, prob).T,
+            atol=1e-2, rtol=1e-2)
 
 
 if __name__ == "__main__":

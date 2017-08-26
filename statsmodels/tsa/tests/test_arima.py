@@ -534,7 +534,7 @@ def test_start_params_bug():
     1600, 1876, 1885, 1962, 2280, 2711, 2591, 2411])
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        res = ARMA(data, order=(4,1)).fit(disp=-1)
+        res = ARMA(data, order=(4,1)).fit(start_ar_lags=5, disp=-1)
 
 
 class Test_ARIMA101(CheckArmaResultsMixin):
