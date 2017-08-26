@@ -137,7 +137,7 @@ class GenericZeroInflated(CountModel):
         y = self.endog
         w = self.model_infl.predict(params_infl)
 
-        w[w >= 1.] = np.nextafter(1, 0)
+        w = np.clip(w, 0., 1 - np.finfo(float).eps)
         llf_main = self.model_main.loglikeobs(params_main)
         zero_idx = np.nonzero(y == 0)[0]
         nonzero_idx = np.nonzero(y)[0]
@@ -156,7 +156,7 @@ class GenericZeroInflated(CountModel):
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
-            start_params = self.model_main.fit(disp=0, method=method).params
+            start_params = self.model_main.fit(disp=0, method="nm").params
             start_params = np.append(np.zeros(self.k_inflate), start_params)
         mlefit = super(GenericZeroInflated, self).fit(start_params=start_params,
                        maxiter=maxiter, disp=disp, method=method,
@@ -232,7 +232,7 @@ class GenericZeroInflated(CountModel):
 
         y = self.endog
         w = self.model_infl.predict(params_infl)
-        w[w == 1.] = np.nextafter(1, 0)
+        w = np.clip(w, 0., 1 - np.finfo(float).eps)
         score_main = self.model_main.score_obs(params_main)
         llf_main = self.model_main.loglikeobs(params_main)
         llf = self.loglikeobs(params)
@@ -272,7 +272,7 @@ class GenericZeroInflated(CountModel):
 
         y = self.endog
         w = self.model_infl.predict(params_infl)
-        w[w == 1.] = np.nextafter(1, 0)
+        w = np.clip(w, 0., 1 - np.finfo(float).eps)
         score_main = self.model_main.score_obs(params_main)
         llf_main = self.model_main.loglikeobs(params_main)
         llf = self.loglikeobs(params)
@@ -379,8 +379,16 @@ class GenericZeroInflated(CountModel):
             raise NotImplemented('Predict for Probit inflation not implemented')
 
         lin_pred = np.dot(exog, params_main[:self.exog.shape[1]]) + exposure + offset
-        prob_zero = ((1 - prob_poisson) +
-            prob_poisson * np.exp(self.model_main.loglikeobs(params_main)))
+        
+        tmp_exog = self.model_main.exog
+        tmp_endog = self.model_main.endog
+        self.model_main.exog = exog
+        self.model_main.endog = np.zeros((exog.shape[0]))
+        llf = self.model_main.loglikeobs(params_main)
+        self.model_main.exog = tmp_exog
+        self.model_main.endog = tmp_endog
+
+        prob_zero = (1 - prob_poisson) + prob_poisson * np.exp(llf)
 
         if which == 'mean':
             return prob_poisson * np.exp(lin_pred)
@@ -391,7 +399,7 @@ class GenericZeroInflated(CountModel):
         elif which == 'mean-nonzero':
             return prob_poisson * np.exp(lin_pred) / (1 - prob_zero)
         elif which == 'prob-zero':
-            return  prob_zero
+            return prob_zero
         elif which == 'prob':
             return self._predict_prob(params)
         else:
@@ -443,7 +451,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
         y = self.endog
         w = self.model_infl.predict(params_infl)
-        w[w == 1.] = np.nextafter(1, 0)
+        w = np.clip(w, 0., 1 - np.finfo(float).eps)
         score = self.score(params)
         zero_idx = np.nonzero(y == 0)[0]
         nonzero_idx = np.nonzero(y)[0]
@@ -472,7 +480,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
         counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
         w = self.model_infl.predict(params_infl)[:, None]
-        w[w == 1.] = np.nextafter(1, 0)
+        w = np.clip(w, 0., 1 - np.finfo(float).eps)
         mu = self.model_main.predict(params_main)[:, None]
         return self.distribution.pmf(counts, mu, w)
 
@@ -582,7 +590,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         p = self.model_main.parameterization
         counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
         w = self.model_infl.predict(params_infl)[:, None]
-        w[w == 1.] = np.nextafter(1, 0)
+        w = np.clip(w, 0., 1 - np.finfo(float).eps)
         mu = self.model_main.predict(params_main)[:, None]
         return self.distribution.pmf(counts, mu, params_main[-1], p, w)
 

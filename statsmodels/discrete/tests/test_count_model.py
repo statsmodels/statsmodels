@@ -7,7 +7,7 @@ from numpy.testing import (assert_, assert_raises, assert_almost_equal,
 import statsmodels.api as sm
 from .results.results_discrete import RandHIE
 
-class ChechGeneric(object):
+class CheckGeneric(object):
     def test_params(self):
         assert_allclose(self.res1.params, self.res2.params, atol=1e-5, rtol=1e-5)
 
@@ -41,7 +41,7 @@ class ChechGeneric(object):
         assert_allclose(res_reg.params[2:], self.res1.params[2:],
             atol=5e-2, rtol=5e-2)
 
-class TestZeroInflatedModel_logit(ChechGeneric):
+class TestZeroInflatedModel_logit(CheckGeneric):
     @classmethod
     def setup_class(cls):
         data = sm.datasets.randhie.load()
@@ -54,7 +54,7 @@ class TestZeroInflatedModel_logit(ChechGeneric):
         res2.zero_inflated_poisson_logit()
         cls.res2 = res2
 
-class TestZeroInflatedModel_probit(ChechGeneric):
+class TestZeroInflatedModel_probit(CheckGeneric):
     @classmethod
     def setup_class(cls):
         data = sm.datasets.randhie.load()
@@ -67,7 +67,7 @@ class TestZeroInflatedModel_probit(ChechGeneric):
         res2.zero_inflated_poisson_probit()
         cls.res2 = res2
 
-class TestZeroInflatedModel_offset(ChechGeneric):
+class TestZeroInflatedModel_offset(CheckGeneric):
     @classmethod
     def setup_class(cls):
         data = sm.datasets.randhie.load()
@@ -112,7 +112,7 @@ class TestZeroInflatedPoisson_predict(object):
             res.predict(), 0.05).T
         assert_allclose(pr, pr2, rtol=0.05, atol=0.05)
 
-class TestZeroInflatedGeneralizedPoisson(ChechGeneric):
+class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
     @classmethod
     def setup_class(cls):
         data = sm.datasets.randhie.load()
@@ -171,39 +171,7 @@ class TestZeroInflatedGeneralizedPoisson_predict(object):
             res.predict(), 0.5, 2, 0.5).T
         assert_allclose(pr, pr2, rtol=0.1, atol=0.1)
 
-class TestZeroInflatedNegativeBinomial_predict(object):
-    @classmethod
-    def setup_class(cls):
-        expected_params = [1, 0.5, 0.5]
-        np.random.seed(123)
-        nobs = 200
-        exog = np.ones((nobs, 2))
-        exog[:nobs//2, 1] = 2
-        mu_true = exog.dot(expected_params[:-1])
-        cls.endog = sm.distributions.zinegbin.rvs(mu_true, expected_params[-1],
-                                                  2, 0.5, size=mu_true.shape)
-        model = sm.ZeroInflatedNegativeBinomialP(cls.endog, exog, p=2)
-        cls.res = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
-
-    def test_mean(self):
-        assert_allclose(self.res.predict().mean(), self.endog.mean(),
-                        atol=1e-2, rtol=1e-2)
-
-    def test_var(self):
-        assert_allclose((self.res.predict().mean() *
-                        self.res._dispersion_factor.mean()),
-                        self.endog.var(), atol=5e-2, rtol=5e-2)
-
-    def test_predict_prob(self):
-        res = self.res
-        endog = res.model.endog
-
-        pr = res.predict(which='prob')
-        pr2 = sm.distributions.zinegbin.pmf(np.arange(10)[:,None],
-            res.predict(), 0.5, 2, 0.5).T
-        assert_allclose(pr, pr2, rtol=0.1, atol=0.1)
-
-class TestZeroInflatedNegativeBinomialP(ChechGeneric):
+class TestZeroInflatedNegativeBinomialP(CheckGeneric):
     @classmethod
     def setup_class(cls):
         data = sm.datasets.randhie.load()
@@ -235,6 +203,61 @@ class TestZeroInflatedNegativeBinomialP(ChechGeneric):
 
         assert_allclose(res_reg.params[2:], self.res1.params[2:],
             atol=1e-1, rtol=1e-1)
+    
+class TestZeroInflatedNegativeBinomialP_predict(object):
+    @classmethod
+    def setup_class(cls):
+        expected_params = [1, 0.5, 0.5]
+        np.random.seed(123)
+        nobs = 200
+        exog = np.ones((nobs, 2))
+        exog[:nobs//2, 1] = 2
+        mu_true = exog.dot(expected_params[:-1])
+        cls.endog = sm.distributions.zinegbin.rvs(mu_true, expected_params[-1],
+                                                  2, 0.5, size=mu_true.shape)
+        model = sm.ZeroInflatedNegativeBinomialP(cls.endog, exog, p=2)
+        cls.res = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
+
+    def test_mean(self):
+        assert_allclose(self.res.predict().mean(), self.endog.mean(),
+                        atol=1e-2, rtol=1e-2)
+
+    def test_var(self):
+        assert_allclose((self.res.predict().mean() *
+                        self.res._dispersion_factor.mean()),
+                        self.endog.var(), atol=5e-2, rtol=5e-2)
+
+    def test_predict_prob(self):
+        res = self.res
+        endog = res.model.endog
+
+        pr = res.predict(which='prob')
+        pr2 = sm.distributions.zinegbin.pmf(np.arange(10)[:,None],
+            res.predict(), 0.5, 2, 0.5).T
+        assert_allclose(pr, pr2, rtol=0.1, atol=0.1)
+
+class TestZeroInflatedNegativeBinomialP_predict2(object):
+        @classmethod
+        def setup_class(cls):
+            data = sm.datasets.randhie.load()
+
+            cls.endog = data.endog
+            exog = data.exog
+            res = sm.ZeroInflatedNegativeBinomialP(
+                cls.endog, exog, exog_infl=exog, p=2).fit(method="bfgs",
+                                                          maxiter=1000)
+
+            cls.res = res
+
+        def test_mean(self):
+            assert_allclose(self.res.predict().mean(), self.endog.mean(),
+                            atol=0.02)
+
+        def test_zero_nonzero_mean(self):
+            mean1 = self.endog.mean()
+            mean2 = ((1 - self.res.predict(which='prob-zero').mean()) *
+                     self.res.predict(which='mean-nonzero').mean())
+            assert_allclose(mean1, mean2, atol=0.2)
 
 if __name__ == "__main__":
     import pytest
