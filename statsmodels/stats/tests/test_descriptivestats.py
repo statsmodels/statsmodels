@@ -43,17 +43,17 @@ class TestSimpleTable(unittest.TestCase):
     #from statsmodels.iolib.table import SimpleTable, default_txt_fmt
 
     def test_noperc(self):
-    	t1 = Describe(data4)
-		noperc = ['obs', 'mean', 'std', 'min', 'max', 'ptp', #'mode',  #'var',
-		#                        'median', 'skew', 'uss', 'kurtosis']
-		#TODO: mode var raise exception,
-		#TODO: percentile writes list in cell (?), huge wide format
-		t1.summary(stats=noperc)
-		t1.summary()
-		t1.summary( orientation='varcols')
-		t1.summary(stats=['mean', 'median', 'min', 'max'],
-				   orientation=('varcols'))
-		t1.summary(stats='all')
+        t1 = Describe(data4)
+        noperc = ['obs', 'mean', 'std', 'min', 'max', 'ptp', #'mode',  #'var',
+        #                        'median', 'skew', 'uss', 'kurtosis']
+        #TODO: mode var raise exception,
+        #TODO: percentile writes list in cell (?), huge wide format
+        t1.summary(stats=noperc)
+        t1.summary()
+        t1.summary( orientation='varcols')
+        t1.summary(stats=['mean', 'median', 'min', 'max'],
+                   orientation=('varcols'))
+        t1.summary(stats='all')
 
     def test_basic_1(self):
         t1 = Describe(data1)
