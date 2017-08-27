@@ -1726,6 +1726,12 @@ class TestGeneralizedPoisson_p1(object):
         assert_allclose((res_reg2.params[:-2]**2).mean(), 0.010672558641545994)
         assert_allclose((res_reg3.params[:-2]**2).mean(), 0.00035544919793048415)
 
+    def test_init_kwds(self):
+        kwds = self.res1.model._get_init_kwds()
+        assert_('p' in kwds)
+        assert_equal(kwds['p'], 1)
+
+
 class TestGeneralizedPoisson_underdispersion(object):
     @classmethod
     def setup_class(cls):
@@ -1990,6 +1996,12 @@ class TestNegativeBinomialPNB1BFGS(CheckModelResults):
         assert_allclose(self.res1.predict(which='linear')[:10],
                         self.res2.fittedvalues[:10],
                         atol=5e-3, rtol=5e-3)
+
+    def test_init_kwds(self):
+        kwds = self.res1.model._get_init_kwds()
+        assert_('p' in kwds)
+        assert_equal(kwds['p'], 1)
+
 
 class TestNegativeBinomialPL1Compatability(CheckL1Compatability):
     @classmethod
