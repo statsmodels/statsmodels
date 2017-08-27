@@ -753,7 +753,7 @@ class CountModel(DiscreteModel):
         #TODO: add offset tp
         if exog is None:
             exog = self.exog
-        
+
         if exposure is None:
             # If self.exposure exists, it will already be in logs.
             exposure = getattr(self, 'exposure', 0)
@@ -1305,7 +1305,7 @@ class GeneralizedPoisson(CountModel):
             if use_transparams:
                 warnings.warn("Paramter \"use_transparams\" is ignored",
                               RuntimeWarning)
-            self._transparams = False 
+            self._transparams = False
 
         if start_params is None:
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
@@ -1340,7 +1340,7 @@ class GeneralizedPoisson(CountModel):
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
-        
+
         if np.size(alpha) == 1 and alpha != 0:
             k_params = self.exog.shape[1] + self.k_extra
             alpha = alpha * np.ones(k_params)
@@ -1421,7 +1421,7 @@ class GeneralizedPoisson(CountModel):
         Returns
         -------
         dldp : float
-            dldp is first derivative of the loglikelihood function, 
+            dldp is first derivative of the loglikelihood function,
         evaluated at `p-parameter`.
         """
         if self._transparams:
@@ -1521,7 +1521,7 @@ class GeneralizedPoisson(CountModel):
         """
         if exog is None:
             exog = self.exog
-        
+
         if exposure is None:
             exposure = getattr(self, 'exposure', 0)
         elif exposure != 0:
@@ -2716,7 +2716,7 @@ class NegativeBinomialP(CountModel):
     endog : array
         A reference to the endogenous response variable
     exog : array
-        A reference to the exogenous design.    
+        A reference to the exogenous design.
     p : scalar
         P denotes parameterizations for NB-P regression. p=1 for NB-1 and
     p=2 for NB-2. Default is p=1.
@@ -2911,7 +2911,7 @@ class NegativeBinomialP(CountModel):
         for i in range(dim):
             hess_arr[i, :-1] = np.sum(self.exog[:,:].T * self.exog[:, i] * coeff, axis=1)
 
-                
+
         hess_arr[-1,:-1] = (self.exog[:,:].T * mu * a1 *
                 ((1 + a4) * (1 - a3 / a2) / a2 -
                  p * (np.log(a1 / a2) - digamma(a1) + digamma(a3) + 2) / mu +
@@ -2923,9 +2923,9 @@ class NegativeBinomialP(CountModel):
                      2 * a3 / a2 - a1 * polygamma(1, a1) +
                      a1 * polygamma(1, a3) - 2 * a1 / a2 +
                      a1 * a3 / a2**2) / alpha**2)
-                        
+
         hess_arr[-1, -1] = da2.sum()
-        
+
         tri_idx = np.triu_indices(dim + 1, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
@@ -3055,7 +3055,7 @@ class NegativeBinomialP(CountModel):
         """
         if exog is None:
             exog = self.exog
-        
+
         if exposure is None:
             exposure = getattr(self, 'exposure', 0)
         elif exposure != 0:
