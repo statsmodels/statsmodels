@@ -1218,6 +1218,11 @@ class GeneralizedPoisson(CountModel):
         self.k_extra = 1
         self._transparams = False
 
+    def _get_init_kwds(self):
+        kwds = super(GeneralizedPoisson, self)._get_init_kwds()
+        kwds['p'] = self.parameterization + 1
+        return kwds
+
     def loglike(self, params):
         """
         Loglikelihood of Generalized Poisson model
@@ -2733,6 +2738,11 @@ class NegativeBinomialP(CountModel):
         self.exog_names.append('alpha')
         self.k_extra = 1
         self._transparams = False
+
+    def _get_init_kwds(self):
+        kwds = super(NegativeBinomialP, self)._get_init_kwds()
+        kwds['p'] = self.parameterization
+        return kwds
 
     def loglike(self, params):
         """
