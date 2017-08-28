@@ -26,7 +26,16 @@ survey_df = ss.SurveyDesign(strata= np.asarray(df['strata']), cluster= np.asarra
 y2 = np.asarray(df["y"])
 X2 = np.asarray(df[['api00', 'api99']])
 X2 = sm.add_constant(X2)
-def test_linearized():
+
+df_rw = pd.read_stata("/home/jarvis/Downloads/nhanes2jknife.dta")
+rw = [np.asarray(df_rw[x]) for x in df_rw.columns if x.startswith("jkw_")]
+rw = np.asarray(rw).T
+design_rw = ss.SurveyDesign(rep_weights=rw)
+y3 = np.asarray(df_rw['weight'])
+X3 = np.asarray(df_rw[['age', 'height']])
+X3 = sm.add_constant(X3)
+
+def test_linearized_stata():
     model = smod.SurveyModel(design, model_class=model_class, init_args=init_args)
     rslt = model.fit(y, X, cov_method='linearized_stata', center_by='stratum')
     assert_allclose(model.params, np.r_[-2.094691, .4969399, -.1307789], rtol=1e-5, atol=0)
@@ -34,7 +43,7 @@ def test_linearized():
 
     # don't specify init_args. family is default gaussian
     model = smod.SurveyModel(design, model_class=model_class)
-    model.fit(y, X, cov_method='linearized_stata', center_by='stratum')
+    model.fit(y, X, cov_method='stata', center_by='stratum')
     assert_allclose(model.params, np.r_[.0614334, .0982177, -.0214168], rtol=1e-5)
     assert_allclose(model.stderr, np.r_[.5023708, .0370594, .0822633], rtol=1e-5)
 
@@ -48,22 +57,20 @@ def test_jack_calculated():
     # fam = binomial does not work well w/ small data.
 
     model = smod.SurveyModel(survey_df, model_class=model_class, init_args=init_args)
-    model.fit(y2, X2, cov_method='jack', center_by='stratum')
+    model.fit(y2, X2, cov_method='jk', center_by='stratum')
 
     assert_allclose(model.params, np.r_[-.3752291, -.0034241, .0044153], rtol=1e-4)
     assert_allclose(model.stderr, np.r_[1.240397, .0057129, .0052336], rtol=1e-5)
 
 def test_jack_supplied():
-    rw = []
-    for k in range(5):
-        rw.append(design.get_rep_weights(c=k, cov_method='jack'))
-    rw = np.asarray(rw).T
-    design_rw = ss.SurveyDesign(weights = weights, rep_weights=rw)
-    model_rw = smod.SurveyModel(design_rw, model_class=model_class, init_args=init_args)
-    model_rw.fit(y, X, cov_method='jack')
-    # print("calculated rep_weights")
-    # print(model.params)
-    # print(model.stderr)
+    # rw = []
+    # for k in range(5):
+    #     rw.append(design.get_rep_weights(c=k, cov_method='jack'))
+    # rw = np.asarray(rw).T
+    model_rw = smod.SurveyModel(design_rw, model_class=model_class)
+    model_rw.fit(y3, X3, cov_method='jack')
+    print(model_rw.params)
+    print(model_rw.stderr)
     # print(" \n supplied rep_weights")
     # print(model_rw.params)
     # print(model_rw.stderr)

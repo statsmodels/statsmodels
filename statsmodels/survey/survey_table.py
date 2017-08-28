@@ -19,7 +19,7 @@ class SurveyTable(object):
         # the benefits is that it's easier to get the totals, SE, etc
         # but it'll not be as intuitive to derive col_prop, cell_prop, etc
         self._m, self._p =  data.shape
-        self.df = pd.concat([pd.DataFrame(data), pd.DataFrame(weights)], axis=1)
+        self.df = pd.concat([pd.DataFrame(data), pd.DataFrame(self.design.weights)], axis=1)
 
         # if just given one column
         if self.df.shape[1] == 2:
@@ -48,7 +48,9 @@ class SurveyTable(object):
         self._null = np.outer(self._row_marginal, self._col_marginal)
 
 
-
+        self._delta()
+        # self._trace = np.trace(self._delta)
+        # self._trace_sq = np.trace(np.square(self._delta))
     def __str__(self):
         tab = self._row_prop.copy()
         tab['col_tot'] = tab.sum(axis=1)
@@ -60,6 +62,8 @@ class SurveyTable(object):
         cell_diff_square = np.square((self._cell_prop - self._null))
         # uncorrected stat
         self.pearson = self._m * (cell_diff_square / self._null).sum().sum()
+        self.pearson *= (self._trace / self._trace_sq)
+        dof = np.square(self._trace) / self._trace_sq
 
     def test_lrt(self):
         # Note: this is not definited if there are zeros in self.table
@@ -68,15 +72,17 @@ class SurveyTable(object):
         # uncorrected stat
         self.lrt = (self._col_prop * np.log(self._col_prop / self._null)).sum().sum()
         self.lrt = 2 * self._m
+        self.lrt *= (self._trace / self._trace_sq)
+        dof = np.square(self._trace) / self._trace_sq
 
-    def _stderr(self, cell_prop=True):
+    def _group_variance(self, cell_prop=True):
         # Essentially, we are calculating a total for each level combination
         # between the two variables. Using pandas doesnt allow for the use of
         # summary stats to compute the linearized stderr. Thus, this function
         # gets the indices that make up each 'group', and calculates the stderr
         # however, the indices are a dictionary, so we cant currently match the
         # stderr to the total calculated for each group
-        self.stderr_dict = {}
+        self.var_dict = {}
         for ind in self.df_group.indices.values():
             # make vector of zeros
             group_weights = np.zeros(self._m)
@@ -87,20 +93,25 @@ class SurveyTable(object):
                 group_weights[ind] /= self.design.weights.sum()
             group_design = ss.SurveyDesign(self.design.strat, self.design.clust,
                                            group_weights)
-            self.stderr_dict[tuple(ind)] = ss.SurveyTotal(group_design, np.ones(self._m),
-                                    cov_method='linearized', center_by='stratum').stderr
+            self.var_dict[tuple(ind)] = np.square(ss.SurveyTotal(group_design, np.ones(self._m),
+                                    cov_method='linearized', center_by='stratum').stderr)
+            group_var = np.asarray(list(self.var_dict.values()))
+            group_var = group_var.reshape(len(group_var), )
+        return group_var
 
     def _delta(self):
-        D_inv = np.linarg.inv(np.diag(st._cell_prop.values))
-        v_hat = np.diag(self._stderr())
+        D_inv = np.linalg.inv(np.diag(np.diag(self._cell_prop.values)))
+
+        v_hat = np.diag(self._group_variance())
         # need to get off diagonal elements of v_srs. But can't find what
         # 'p_st' is in the documentation
-        v_srs = np.diag(self._cell_prop * (1 - self._cell_prop) / self._m)
-        dat = pd.DataFrame(self.df.var1.astype('category').cat.codes,
-                           self.df.var2.astype('category').cat.codes)
-        dat = sm.add_constant(dat)
-        dat.columns = ['const', 'var1', 'var2']
-        model_fit = sm.OLS(dat[['const', 'var1']], dat['var2']).fit()
-        # Does not fit the dimensions RCx(R-1)(C-1)
-        # R is the number of rows in the table, C is number of columns
-        model_fit.resid
+        v_srs = np.outer(self._col_prop, self._col_prop) / self._m
+        B = sm.add_constant(self.df.var1)
+        U, _, _ = np.linalg.svd(B)
+        r, s, t = np.linalg.svd(np.identity(len(U)) - np.dot(U.T, U))
+        column_index = np.isclose(s, 0)
+
+        C = r[:, ~column_index]
+        # delta_numer = np.dot(C.T, D_inv).dot(v_hat).dot(D_inv).dot(C)
+        # delta_denom = np.linalg.inv(np.dot(C.T, D_inv).dot(v_srs).dot(D_inv).dot(C))
+        # self.delta = np.dot(delta_denom, delta_numer)

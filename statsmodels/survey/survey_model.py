@@ -48,7 +48,8 @@ class SurveyModel(object):
         self.model = model_class
         self.init_args = dict(init_args)
         self.fit_args = dict(fit_args)
-        if self.model == statsmodels.genmod.generalized_linear_model.GLM:
+
+        if self.model is statsmodels.genmod.generalized_linear_model.GLM:
             self.glm_flag = True
         else:
             self.glm_flag = False
@@ -68,6 +69,8 @@ class SurveyModel(object):
                     # center the 'delete 1' statistic
                     array[self.design.ii[s], :] -= array[self.design.ii[s],
                                                          :].mean(0)
+            else:
+                raise ValueError("Can't center by stratum with rep_weights")
         else:
             raise ValueError("Centering option %s not implemented" % center_by)
         return array
@@ -112,7 +115,6 @@ class SurveyModel(object):
         hess_inv = np.linalg.inv(hessian)
 
         d_hat = self.initialized_model.score_obs(self.params)
-        # d_hat /= self.design.weights[:, None]
         jdata = []
         # design-based variance estimator for a total
         # This is the same as getting linearized variance
@@ -132,9 +134,9 @@ class SurveyModel(object):
         nh = self.design.clust_per_strat[self.design.strat_for_clust].astype(np.float64)
         mh = np.sqrt(nh / (nh-1))
         fh = np.sqrt(1 - self.design.fpc)
-        jdata = fh[:, None] * mh[:, None] * jdata
-        vcov = np.dot(jdata.T, jdata)
-        vcov = np.dot(hess_inv, vcov).dot(hess_inv.T)
+        jdata *= (fh[:, None] * mh[:, None])
+        v_hat = np.dot(jdata.T, jdata)
+        vcov = np.dot(hess_inv, v_hat).dot(hess_inv.T)
         return vcov
 
     def _sas_linearization_vcov(self, X, y, lin_method):
@@ -203,7 +205,6 @@ class SurveyModel(object):
         if lin_method == "newton":
             # TODO: Figure out if hessian should be used when
             # 'jack-sandwich' or 'boot-sandwich' is requested
-            # self.initialized_model.fit(**self.fit_args)
             q_hat = self.initialized_model.hessian(self.params, observed=False)
         else:
             cond_inv = np.linalg.inv(np.diag(cond_mean) -
@@ -239,7 +240,10 @@ class SurveyModel(object):
         vcov = np.dot(self.replicate_params.T, self.replicate_params)
         return vcov
 
-    def fit(self, y, X, cov_method='jack', center_by='est', lin_method=None):
+    def fit(self, y, X, cov_method='linearized', center_by='est', lin_method=None):
+        y = np.asarray(y)
+        X = np.asarray(X)
+
         self.center_by = center_by
         if self.glm_flag:
             self.init_args["freq_weights"] = self.design.weights
@@ -247,11 +251,11 @@ class SurveyModel(object):
             self.init_args["weights"] = self.design.weights
         self.params = self._get_params(y, X)
 
-        if cov_method == 'jack':
+        if cov_method.lower() in ('jack', 'jackknife', 'jk'):
             self.vcov = self._jackknife_vcov(X, y)
-        elif cov_method == 'linearized_sas':
+        elif cov_method.lower() in ('linearized_sas', 'sas'):
             self.vcov = self._sas_linearization_vcov(X, y, lin_method)
-        elif cov_method == 'linearized_stata':
+        elif cov_method.lower() in ('linearized_stata', 'stata'):
             self.vcov = self._stata_linearization_vcov(X, y)
         else:
             return ValueError('cov_method %s not supported' % cov_method)
@@ -261,10 +265,6 @@ class SurveyModel(object):
             self.stderr = np.sqrt(self.vcov)
 
     def _get_params(self, y, X):
-        # note, can make 'model' into self.initialized_model
-        # so that i dont have to worry about it getting called multiple times
-        # when doing linearized variance
-        # when doing jackknife, it'll get called mult times anyway
         self.initialized_model = self.model(y, X, **self.init_args)
         self.result = self.initialized_model.fit(**self.fit_args)
         return self.result.params
