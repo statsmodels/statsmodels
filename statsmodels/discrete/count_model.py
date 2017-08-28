@@ -232,50 +232,7 @@ class GenericTruncated(CountModel):
         Notes
         -----
         """
-        return approx_hess(params, self.loglike)
-
-class Truncated(GenericTruncated):
-    """
-    Truncated model for count data
-
-    %(params)s
-    %(extra_params)s
-
-    Attributes
-    -----------
-    endog : array
-        A reference to the endogenous response variable
-    exog : array
-        A reference to the exogenous design.
-    truncation : int, optional
-        Truncation parameter specify truncation point out of the support
-        of the distribution. pmf(k) = 0 for k <= truncation
-    """ % {'params' : base._model_params_doc,
-           'extra_params' :
-           """offset : array_like
-        Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
-        Log(exposure) is added to the linear prediction with coefficient
-        equal to 1.
-
-    """ + base._missing_param_doc}
-
-    def __init__(self, endog, exog, model=Poisson,
-                 distribution=truncatedpoisson, offset=None,
-                 exposure=None, truncation=0, missing='none', **kwargs):
-        super(Truncated, self).__init__(endog, exog, offset=offset,
-                                               exposure=exposure,
-                                               truncation=truncation,
-                                               missing=missing, **kwargs)
-        self.model_main = model(self.endog, self.exog,
-                                offset=offset, exposure=exposure)
-        self.k_extra = getattr(self.model_main, "k_extra", 0)
-        self.exog_names.extend(list(set(self.model_main.exog_names) - set(self.exog_names)))
-        self.model_dist = distribution
-        self.result = GenericTruncatedResults
-        self.result_wrapper = GenericTruncatedResultsWrapper
-        self.result_reg = L1GenericTruncatedResults
-        self.result_reg_wrapper = L1GenericTruncatedResultsWrapper   
+        return approx_hess(params, self.loglike)  
 
 class TruncatedPoisson(GenericTruncated):
     """
@@ -399,6 +356,8 @@ class TruncatedNegativeBinomialP(GenericTruncated):
         self.model_main = NegativeBinomialP(self.endog, self.exog,
                                             exposure=exposure,
                                             offset=offset, p=p)
+        self.k_extra = self.model_main.k_extra
+        self.exog_names.extend(self.model_main.exog_names[-self.k_extra:])
         self.model_dist = truncatednegbin
         self.result = TruncatedNegativeBinomialResults
         self.result_wrapper = GenericTruncatedResultsWrapper
@@ -654,6 +613,76 @@ class GenericCensored(CountModel):
         """
         return approx_hess(params, self.loglike)
 
+class CensoredPoisson(GenericCensored):
+    """
+    Censored Poisson model for count data
+
+    %(params)s
+    %(extra_params)s
+
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    """ % {'params' : base._model_params_doc,
+           'extra_params' :
+           """offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+
+    """ + base._missing_param_doc}
+
+    def __init__(self, endog, exog, offset=None,
+                 exposure=None, missing='none', **kwargs):
+        super(CensoredPoisson, self).__init__(endog, exog, offset=offset,
+                                               exposure=exposure,
+                                               missing=missing, **kwargs)
+        self.model_main = Poisson(np.zeros_like(self.endog), self.exog)
+        self.model_dist = None
+        self.result = GenericTruncatedResults
+        self.result_wrapper = GenericTruncatedResultsWrapper
+        self.result_reg = L1GenericTruncatedResults
+        self.result_reg_wrapper = L1GenericTruncatedResultsWrapper
+
+class CensoredNegativeBinomialP(GenericCensored):
+    """
+    Censored Negative Binomial model for count data
+
+    %(params)s
+    %(extra_params)s
+
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    """ % {'params' : base._model_params_doc,
+           'extra_params' :
+           """offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+
+    """ + base._missing_param_doc}
+
+    def __init__(self, endog, exog, offset=None, p=2,
+                 exposure=None, missing='none', **kwargs):
+        super(CensoredNegativeBinomialP, self).__init__(endog, exog, offset=offset,
+                                                       exposure=exposure,
+                                                       missing=missing, **kwargs)
+        self.model_main = NegativeBinomialP(np.zeros_like(self.endog), self.exog, p=p)
+        self.model_dist = None
+        self.result = GenericTruncatedResults
+        self.result_wrapper = GenericTruncatedResultsWrapper
+        self.result_reg = L1GenericTruncatedResults
+        self.result_reg_wrapper = L1GenericTruncatedResultsWrapper
+
 class Censored(GenericCensored):
     """
     Censored model for count data
@@ -690,9 +719,9 @@ class Censored(GenericCensored):
         self.result_reg = L1GenericTruncatedResults
         self.result_reg_wrapper = L1GenericTruncatedResultsWrapper 
 
-class GenericHurdle(CountModel):
-    __doc__ = """
-    Generic Hurdle model for count data
+class Hurdle(CountModel):
+    """
+    Hurdle model for count data
 
     %(params)s
     %(extra_params)s
@@ -703,6 +732,16 @@ class GenericHurdle(CountModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
+    dist : string
+        Log-likelihood type of count model family. 'poisson' or 'negbin'
+    zerodist : string
+        Log-likelihood type of zero hurdle model family. 'poisson', 'negbin'
+    p : scalar
+        Define parameterization for count model.
+        Used when dist='negbin'.
+    pzero : scalar
+        Define parameterization parameter zero hurdle model family.
+        Used when zerodist='negbin'.
     """ % {'params' : base._model_params_doc,
            'extra_params' :
            """offset : array_like
@@ -711,20 +750,44 @@ class GenericHurdle(CountModel):
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
-    """ + base._missing_param_doc}
+    """ + base._missing_param_doc}   
 
     def __init__(self, endog, exog, offset=None,
-                 exposure=None, missing='none', **kwargs):
-        super(GenericHurdle, self).__init__(endog, exog, offset=offset,
+                       dist="poisson", zerodist="poisson",
+                       p=2, pzero=2,
+                       exposure=None, missing='none', **kwargs):
+        super(Hurdle, self).__init__(endog, exog, offset=offset,
                                             exposure=exposure,
                                             missing=missing, **kwargs)
-        self.model1 = Censored(self.endog, self.exog, model=self.model_name1)
-        self.model2 = Truncated(self.endog, self.exog, model=self.model_name2)
         self.exog_names.insert(0, 'inflate_const')
-        self.k_extra1 = self
+        self.k_extra1 = 0
         self.k_extra2 = 0
         for i in range(self.exog.shape[1], 1, -1): 
             self.exog_names.insert(0, 'zero_x%d' % (i-1))
+
+        self._initialize(dist, zerodist, p, pzero)
+        self.result = HurdleResults
+        self.result_wrapper = HurdleResultsWrapper
+        self.result_reg = L1HurdleResults
+        self.result_reg_wrapper = L1HurdleResultsWrapper
+
+    def _initialize(self, dist, zerodist, p, pzero):
+        if (dist not in ["poisson", "negbin"] or
+            zerodist not in ["poisson", "negbin"]):
+            raise NotImplementedError('dist and zerodist must be "poisson",'
+                                      '"negbin"')
+
+        if zerodist == "poisson":
+            self.model1 = Censored(self.endog, self.exog, model=Poisson)
+        elif zerodist == "negbin":
+            self.model1 = Censored(self.endog, self.exog,
+                                   model=NegativeBinomialP)
+        
+        if dist == "poisson":
+            self.model2 = TruncatedPoisson(self.endog, self.exog)
+        elif dist == "negbin":
+            self.model2 = TruncatedNegativeBinomialP(self.endog, self.exog, p=p)
+
 
     def loglike(self, params):
         """
@@ -778,41 +841,7 @@ class GenericHurdle(CountModel):
         return result
 
     fit.__doc__ = DiscreteModel.fit.__doc__
-
-class HurdlePoisson(GenericHurdle):
-    """
-    Poisson Poisson Hurdle model for count data
-
-    %(params)s
-    %(extra_params)s
-
-    Attributes
-    -----------
-    endog : array
-        A reference to the endogenous response variable
-    exog : array
-        A reference to the exogenous design.
-    """ % {'params' : base._model_params_doc,
-           'extra_params' :
-           """offset : array_like
-        Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
-        Log(exposure) is added to the linear prediction with coefficient
-        equal to 1.
-
-    """ + base._missing_param_doc}   
-
-    def __init__(self, endog, exog, offset=None,
-                       exposure=None, missing='none', **kwargs):
-        self.model_name1 = Poisson
-        self.model_name2 = Poisson
-        super(HurdlePoisson, self).__init__(endog, exog, offset=offset,
-                                            exposure=exposure,
-                                            missing=missing, **kwargs)
-        self.result = HurdlePoissonResults
-        self.result_wrapper = HurdlePoissonResultsWrapper
-        self.result_reg = L1HurdlePoissonResults
-        self.result_reg_wrapper = L1HurdlePoissonResultsWrapper
+        
 
 class GenericTruncatedResults(CountResults):
     __doc__ = _discrete_results_docs % {
@@ -856,14 +885,14 @@ class L1GenericTruncatedResultsWrapper(lm.RegressionResultsWrapper):
 wrap.populate_wrapper(L1GenericTruncatedResultsWrapper,
                       L1GenericTruncatedResults)
 
-class HurdlePoissonResults(CountResults):
+class HurdleResults(CountResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description" : "A results class for Hurdle model",
                     "extra_attr" : ""}
     
     def __init__(self, model, mlefit, model1, model2, cov_type='nonrobust', cov_kwds=None,
                  use_t=None):
-        super(HurdlePoissonResults, self).__init__(model, mlefit,
+        super(HurdleResults, self).__init__(model, mlefit,
                 cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t)
         self.model1 = model1
         self.model2 = model2
@@ -876,17 +905,17 @@ class HurdlePoissonResults(CountResults):
     def bse(self):
         return np.append(self.model1.bse, self.model2.bse)
 
-class L1HurdlePoissonResults(L1CountResults, HurdlePoissonResults):
+class L1HurdleResults(L1CountResults, HurdleResults):
     pass
 
-class HurdlePoissonResultsWrapper(lm.RegressionResultsWrapper):
+class HurdleResultsWrapper(lm.RegressionResultsWrapper):
     pass
-wrap.populate_wrapper(HurdlePoissonResultsWrapper,
-                      HurdlePoissonResults)
-class L1HurdlePoissonResultsWrapper(lm.RegressionResultsWrapper):
+wrap.populate_wrapper(HurdleResultsWrapper,
+                      HurdleResults)
+class L1HurdleResultsWrapper(lm.RegressionResultsWrapper):
     pass
-wrap.populate_wrapper(L1HurdlePoissonResultsWrapper,
-                      L1HurdlePoissonResults)
+wrap.populate_wrapper(L1HurdleResultsWrapper,
+                      L1HurdleResults)
 
 if __name__=="__main__":
     import numpy as np
@@ -895,7 +924,8 @@ if __name__=="__main__":
     data = sm.datasets.randhie.load()
     endog = data.endog
     exog = sm.add_constant(data.exog[:,:3], prepend=False)
-    res1 = Truncated(endog, exog, model=NegativeBinomialP).fit(method="bfgs", maxiter=3500)
+    res1 = CensoredNegativeBinomialP(endog, exog,
+        p=2).fit(method="bfgs", maxiter=50)
 
     print(res1.params)
     print(res1.llf)
