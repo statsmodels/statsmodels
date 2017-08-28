@@ -137,7 +137,7 @@ class GenericZeroInflated(CountModel):
         y = self.endog
         w = self.model_infl.predict(params_infl)
 
-        w = np.clip(w, 0., 1 - np.finfo(float).eps)
+        w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
         llf_main = self.model_main.loglikeobs(params_main)
         zero_idx = np.nonzero(y == 0)[0]
         nonzero_idx = np.nonzero(y)[0]
@@ -232,7 +232,7 @@ class GenericZeroInflated(CountModel):
 
         y = self.endog
         w = self.model_infl.predict(params_infl)
-        w = np.clip(w, 0., 1 - np.finfo(float).eps)
+        w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
         score_main = self.model_main.score_obs(params_main)
         llf_main = self.model_main.loglikeobs(params_main)
         llf = self.loglikeobs(params)
@@ -272,7 +272,7 @@ class GenericZeroInflated(CountModel):
 
         y = self.endog
         w = self.model_infl.predict(params_infl)
-        w = np.clip(w, 0., 1 - np.finfo(float).eps)
+        w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
         score_main = self.model_main.score_obs(params_main)
         llf_main = self.model_main.loglikeobs(params_main)
         llf = self.loglikeobs(params)
@@ -451,7 +451,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
         y = self.endog
         w = self.model_infl.predict(params_infl)
-        w = np.clip(w, 0., 1 - np.finfo(float).eps)
+        w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
         score = self.score(params)
         zero_idx = np.nonzero(y == 0)[0]
         nonzero_idx = np.nonzero(y)[0]
@@ -480,7 +480,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
         counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
         w = self.model_infl.predict(params_infl)[:, None]
-        w = np.clip(w, 0., 1 - np.finfo(float).eps)
+        w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
         mu = self.model_main.predict(params_main)[:, None]
         return self.distribution.pmf(counts, mu, w)
 
@@ -590,7 +590,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         p = self.model_main.parameterization
         counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
         w = self.model_infl.predict(params_infl)[:, None]
-        w = np.clip(w, 0., 1 - np.finfo(float).eps)
+        w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
         mu = self.model_main.predict(params_main)[:, None]
         return self.distribution.pmf(counts, mu, params_main[-1], p, w)
 
