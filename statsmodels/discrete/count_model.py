@@ -349,10 +349,29 @@ class GenericZeroInflated(CountModel):
         """
         Predict response variable of a count model given exogenous variables.
 
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+        exog : array, optional
+            A reference to the exogenous design.
+            If not assigned, will be used exog from fitting.
+        exog_infl : array, optional
+            A reference to the zero-inflated exogenous design.
+            If not assigned, will be used exog from fitting.
+        offset : array, optional
+            Offset is added to the linear prediction with coefficient equal to 1.
+        exposure : array, optional
+            Log(exposure) is added to the linear prediction with coefficient
+            equal to 1. If exposure is specified, then it will be logged by the method.
+            The user does not need to log it first.
+        which : string, optional
+            Define values that will be predicted.
+            'mean', 'poisson-mean', 'linear', 'mean-nonzero', 'prob-zero, 'prob'
+            Default is 'mean'.
+
         Notes
         -----
-        If exposure is specified, then it will be logged by the method.
-        The user does not need to log it first.
         """
         if exog is None:
             exog = self.exog
@@ -403,7 +422,7 @@ class GenericZeroInflated(CountModel):
         elif which == 'prob':
             return self._predict_prob(params)
         else:
-            raise ValueError('keyword `which` not recognized')
+            raise ValueError('which = %s is not available' % which)
 
 class ZeroInflatedPoisson(GenericZeroInflated):
     """
@@ -499,6 +518,9 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         A reference to the exogenous design.
     exog_infl: array
         A reference to the zero-inflated exogenous design.
+    p: scalar
+        P denotes parametrizations for ZIGP regression. p=1 for ZIGP-1 and
+    p=2 for ZIGP-2. Default is p=2
     """ % {'params' : base._model_params_doc,
            'extra_params' :
            """offset : array_like
@@ -554,6 +576,9 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         A reference to the exogenous design.
     exog_infl: array
         A reference to the zero-inflated exogenous design.
+    p: scalar
+        P denotes parametrizations for ZINB regression. p=1 for ZINB-1 and
+    p=2 for ZINB-2. Default is p=2
     """ % {'params' : base._model_params_doc,
            'extra_params' :
            """offset : array_like
