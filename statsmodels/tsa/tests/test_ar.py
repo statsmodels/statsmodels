@@ -11,6 +11,8 @@ import numpy as np
 import numpy.testing as npt
 from pandas import Series, Index, DatetimeIndex, PeriodIndex
 
+from nose.plugins.attrib import attr
+
 
 DECIMAL_6 = 6
 DECIMAL_5 = 5
@@ -276,6 +278,7 @@ def test_ar_named_series():
     assert_(results.params.index.equals(Index(["const", "L1.foobar",
                                                "L2.foobar"])))
 
+@attr('smoke')
 def test_ar_start_params():
     # fix 236
     # smoke test
@@ -283,6 +286,7 @@ def test_ar_start_params():
     res = AR(data.endog).fit(maxlag=9, start_params=0.1*np.ones(10),
                              method="mle", disp=-1, maxiter=100)
 
+@attr('smoke')
 def test_ar_series():
     # smoke test for 773
     dta = sm.datasets.macrodata.load_pandas().data["cpi"].diff().dropna()

@@ -6,6 +6,7 @@ License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
 from statsmodels.compat.testing import skip
+from nose.plugins.attrib import attr
 
 import numpy as np
 import pandas as pd
@@ -57,6 +58,7 @@ class CheckDynamicFactor(object):
         if filter:
             cls.results = cls.model.smooth(true['params'], cov_type=cov_type)
 
+    @attr('smoke')
     def test_params(self):
         # Smoke test to make sure the start_params are well-defined and
         # lead to a well-defined model
@@ -72,6 +74,7 @@ class CheckDynamicFactor(object):
         self.model.enforce_stationarity = True
         assert_allclose(actual, self.model.start_params)
 
+    @attr('smoke')
     def test_results(self):
         # Smoke test for creating the summary
         with warnings.catch_warnings():

@@ -1,5 +1,7 @@
 from statsmodels.compat.numpy import recarray_select
 
+from nose.plugins.attrib import attr
+
 from statsmodels.compat.python import lrange
 from statsmodels.tools.sm_exceptions import ColinearityWarning
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
@@ -533,6 +535,7 @@ def test_arma_order_select_ic():
     assert_(res.aic.columns.equals(aic.columns))
     assert_equal(res.aic_min_order, (1, 2))
 
+@attr('smoke')
 def test_arma_order_select_ic_failure():
     # this should trigger an SVD convergence failure, smoke test that it
     # returns, likely platform dependent failure...

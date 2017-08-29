@@ -17,6 +17,9 @@ from .results import results_sarimax
 from statsmodels.tools import add_constant
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
 
+from nose.plugins.attrib import attr
+
+
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 realgdp_path = 'results' + os.sep + 'results_realgdpar_stata.csv'
@@ -1946,6 +1949,7 @@ def test_results():
     assert_almost_equal(res.maparams, [-0.5])
 
 
+@attr('smoke')
 def test_misc_exog():
     # Tests for missing data
     nobs = 20

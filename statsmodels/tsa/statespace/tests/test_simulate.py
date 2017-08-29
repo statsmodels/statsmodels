@@ -19,6 +19,7 @@ from statsmodels.tsa.statespace.tools import compatibility_mode
 from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal,
                            assert_raises)
 
+from nose.plugins.attrib import attr
 
 def test_arma_lfilter():
     # Tests of an ARMA model simulation against scipy.signal.lfilter
@@ -332,6 +333,7 @@ def test_structural():
     assert_allclose(actual, desired)
 
 
+@attr('smoke')
 def test_varmax():
     # Clear warnings
     varmax.__warningregistry__ = {}
@@ -443,6 +445,7 @@ def test_varmax():
     mod.simulate(mod.start_params, nobs)
 
 
+@attr('smoke')
 def test_dynamic_factor():
     np.random.seed(93739)
     nobs = 100

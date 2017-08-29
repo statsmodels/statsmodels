@@ -19,13 +19,15 @@ from numpy.testing import assert_equal, assert_almost_equal, assert_raises, asse
 import pytest
 from statsmodels.iolib.summary import forg
 
+from nose.plugins.attrib import attr
+
 current_path = os.path.dirname(os.path.abspath(__file__))
 
-var_path = 'results' + os.sep + 'results_var_stata.csv'
-var_results = pd.read_csv(current_path + os.sep + var_path)
+var_path = os.path.join('results', 'results_var_stata.csv')
+var_results = pd.read_csv(os.path.join(current_path, var_path))
 
-varmax_path = 'results' + os.sep + 'results_varmax_stata.csv'
-varmax_results = pd.read_csv(current_path + os.sep + varmax_path)
+varmax_path = os.path.join('results', 'results_varmax_stata.csv')
+varmax_results = pd.read_csv(os.path.join(current_path, varmax_path))
 
 
 class CheckVARMAX(object):
@@ -50,6 +52,7 @@ class CheckVARMAX(object):
             self.model.enforce_invertibility = True
             assert_allclose(results.llf, self.results.llf, rtol=1e-5)
 
+    @attr('smoke')
     def test_params(self):
         # Smoke test to make sure the start_params are well-defined and
         # lead to a well-defined model
@@ -67,6 +70,7 @@ class CheckVARMAX(object):
         self.model.enforce_invertibility = True
         assert_allclose(actual, self.model.start_params)
 
+    @attr('smoke')
     def test_results(self):
         # Smoke test for creating the summary
         self.results.summary()
@@ -259,6 +263,7 @@ class TestVAR_diagonal(CheckLutkepohl):
             assert_equal(re.search('%s +%.4f' % (names[i], params[i]), table) is None, False)
 
 
+@attr('smoke')
 class TestVAR_measurement_error(CheckLutkepohl):
     """
     Notes
@@ -786,6 +791,7 @@ def test_misspecifications():
     warnings.resetwarnings()
 
 
+@attr('smoke')
 def test_misc_exog():
     # Tests for missing data
     nobs = 20

@@ -27,6 +27,8 @@ from .results import results_kalman_filter
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
 import pytest
 
+from nose.plugins.attrib import attr
+
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 clark1989_path = 'results' + os.sep + 'results_clark1989_R.csv'
@@ -781,6 +783,7 @@ def test_loglike():
     assert_raises(RuntimeError, mod.loglikeobs)
 
 
+@attr('smoke')
 def test_predict():
     # Tests of invalid calls to the predict function
 
