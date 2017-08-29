@@ -12,6 +12,7 @@ from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
                                                  L1CountResults, Probit,
                                                  NegativeBinomial,
                                                  NegativeBinomialP,
+                                                 GeneralizedPoisson,
                                                  _discrete_results_docs)
 from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
                                        approx_hess_cs, approx_fprime_cs)
@@ -411,6 +412,96 @@ class TruncatedNegativeBinomialP(GenericTruncated):
             raise TypeError(
                 "argument wich == %s not handled" % which)
 
+class TruncatedGeneralizedPoisson(GenericTruncated):
+    """
+    Truncated Generalized Poisson model for count data
+
+    %(params)s
+    %(extra_params)s
+
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    truncation : int, optional
+        Truncation parameter specify truncation point out of the support
+        of the distribution. pmf(k) = 0 for k <= truncation
+    """ % {'params' : base._model_params_doc,
+           'extra_params' :
+           """offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+
+    """ + base._missing_param_doc}
+
+    def __init__(self, endog, exog, offset=None, exposure=None,
+                 truncation=0, p=2, missing='none', **kwargs):
+        super(TruncatedGeneralizedPoisson, self).__init__(endog, exog, offset=offset,
+                                               exposure=exposure,
+                                               truncation=truncation,
+                                               missing=missing, **kwargs)
+        self.model_main = GeneralizedPoisson(self.endog, self.exog,
+                                            exposure=exposure,
+                                            offset=offset, p=p)
+        self.k_extra = self.model_main.k_extra
+        self.exog_names.extend(self.model_main.exog_names[-self.k_extra:])
+        self.model_dist = None
+        self.result = TruncatedNegativeBinomialResults
+        self.result_wrapper = GenericTruncatedResultsWrapper
+        self.result_reg = L1GenericTruncatedResults
+        self.result_reg_wrapper = L1GenericTruncatedResultsWrapper
+
+    def predict(self, params, exog=None, exposure=None, offset=None,
+                which='mean', count_prob=None):
+        """
+        Paramaters
+        ----------
+        count_prob : array-like or int
+            The counts for which you want the probabilities. If count_prob is
+            None then the probabilities for each count from 0 to max(y) are
+            given.
+
+        Predict response variable of a count model given exogenous variables.
+        Notes
+        -----
+        If exposure is specified, then it will be logged by the method.
+        The user does not need to log it first.
+        """
+        if exog is None:
+            exog = self.exog
+        
+        if exposure is None:
+            exposure = getattr(self, 'exposure', 0)
+        elif exposure != 0:
+            exposure = np.log(exposure)
+
+        if offset is None:
+            offset = getattr(self, 'offset', 0)
+
+        fitted = np.dot(exog, params[:exog.shape[1]])
+        linpred = fitted + exposure + offset
+
+        if which == 'mean':
+            return np.exp(linpred) / (1 - np.exp(-np.exp(linpred)))
+        elif which == 'linear':
+            return linpred
+        elif which == 'prob':
+            if count_prob is not None:
+                counts = np.atleast_2d(count_prob)
+            else:
+                counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+            mu = self.predict(params, exog=exog, exposure=exposure,
+                              offset=offset)[:,None]
+            return self.model_dist.pmf(counts, mu, params[-1],
+                self.model_main.parametrization ,self.trunc)
+        else:
+            raise TypeError(
+                "argument wich == %s not handled" % which)
+
 class GenericCensored(CountModel):
     __doc__ = """
     Generic Censored model for count data
@@ -642,6 +733,42 @@ class CensoredPoisson(GenericCensored):
                                                exposure=exposure,
                                                missing=missing, **kwargs)
         self.model_main = Poisson(np.zeros_like(self.endog), self.exog)
+        self.model_dist = None
+        self.result = GenericTruncatedResults
+        self.result_wrapper = GenericTruncatedResultsWrapper
+        self.result_reg = L1GenericTruncatedResults
+        self.result_reg_wrapper = L1GenericTruncatedResultsWrapper
+
+class CensoredGeneralizedPoisson(GenericCensored):
+    """
+    Censored Generalized Poisson model for count data
+
+    %(params)s
+    %(extra_params)s
+
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    """ % {'params' : base._model_params_doc,
+           'extra_params' :
+           """offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+
+    """ + base._missing_param_doc}
+
+    def __init__(self, endog, exog, offset=None, p=2,
+                 exposure=None, missing='none', **kwargs):
+        super(CensoredGeneralizedPoisson, self).__init__(endog, exog, offset=offset,
+                                               exposure=exposure,
+                                               missing=missing, **kwargs)
+        self.model_main = GeneralizedPoisson(
+            np.zeros_like(self.endog), self.exog)
         self.model_dist = None
         self.result = GenericTruncatedResults
         self.result_wrapper = GenericTruncatedResultsWrapper
