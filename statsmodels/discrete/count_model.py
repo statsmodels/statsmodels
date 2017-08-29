@@ -630,9 +630,8 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         return self.distribution.pmf(counts, mu, params_main[-1], p, w)
 
     def _get_start_params(self):
-        start_params = ZeroInflatedPoisson(self.endog, self.exog,
-            exog_infl=self.exog_infl).fit(disp=0).params
-        start_params = np.append(start_params, 0.1)
+        start_params = self.model_main.fit(disp=0, method='nm').params
+        start_params = np.append(np.zeros(self.k_inflate), start_params)
         return start_params
 
 class ZeroInflatedPoissonResults(CountResults):

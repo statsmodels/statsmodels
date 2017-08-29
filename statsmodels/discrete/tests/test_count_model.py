@@ -179,7 +179,7 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
         exog = sm.add_constant(data.exog[:,1], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
         cls.res1 = sm.ZeroInflatedNegativeBinomialP(data.endog, exog,
-            exog_infl=exog_infl, p=2).fit(method='bfgs', maxiter=500)
+            exog_infl=exog_infl, p=2).fit(method='nm', maxiter=500)
         res2 = RandHIE()
         res2.zero_inflated_negative_binomial()
         cls.res2 = res2
