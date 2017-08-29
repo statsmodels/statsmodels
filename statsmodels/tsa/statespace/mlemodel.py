@@ -8,6 +8,9 @@ License: Simplified-BSD
 from __future__ import division, absolute_import, print_function
 from statsmodels.compat.python import long
 
+try: unicode
+except NameError: unicode = str
+
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
@@ -26,6 +29,31 @@ from statsmodels.tools.sm_exceptions import PrecisionWarning
 import statsmodels.genmod._prediction as pred
 from statsmodels.genmod.families.links import identity
 import warnings
+
+
+def _handle_args(names, defaults, *args, **kwargs):
+    output_args = []
+    # We need to handle positional arguments in two ways, in case this was
+    # called by a Scipy optimization routine
+    if len(args) > 0:
+        # the fit() method will pass a dictionary
+        if isinstance(args[0], dict):
+            flags = args[0]
+        # otherwise, a user may have just used positional arguments...
+        else:
+            flags = dict(zip(names, args))
+        for i in range(len(names)):
+            output_args.append(flags.get(names[i], defaults[i]))
+
+        for name, value in flags.items():
+            if name in kwargs:
+                raise TypeError("loglike() got multiple values for keyword"
+                                " argument '%s'" % name)
+    else:
+        for i in range(len(names)):
+            output_args.append(kwargs.pop(names[i], defaults[i]))
+
+    return tuple(output_args) + (kwargs,)
 
 
 class MLEModel(tsbase.TimeSeriesModel):
@@ -574,31 +602,6 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         return result
 
-    # TODO: _handle_args does not use `self`.  Does it need to be a method?
-    def _handle_args(self, names, defaults, *args, **kwargs):
-        output_args = []
-        # We need to handle positional arguments in two ways, in case this was
-        # called by a Scipy optimization routine
-        if len(args) > 0:
-            # the fit() method will pass a dictionary
-            if isinstance(args[0], dict):
-                flags = args[0]
-            # otherwise, a user may have just used positional arguments...
-            else:
-                flags = dict(zip(names, args))
-            for i in range(len(names)):
-                output_args.append(flags.get(names[i], defaults[i]))
-
-            for name, value in flags.items():
-                if name in kwargs:
-                    raise TypeError("loglike() got multiple values for keyword"
-                                    " argument '%s'" % name)
-        else:
-            for i in range(len(names)):
-                output_args.append(kwargs.pop(names[i], defaults[i]))
-
-        return tuple(output_args) + (kwargs,)
-
     _loglike_param_names = ['transformed', 'complex_step']
     _loglike_param_defaults = [True, False]
 
@@ -633,7 +636,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         update : modifies the internal state of the state space model to
                  reflect new params
         """
-        transformed, complex_step, kwargs = self._handle_args(
+        transformed, complex_step, kwargs = _handle_args(
             MLEModel._loglike_param_names, MLEModel._loglike_param_defaults,
             *args, **kwargs)
 
@@ -1053,8 +1056,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         params = np.array(params, ndmin=1)
 
         transformed, method, approx_complex_step, approx_centered, kwargs = (
-            self._handle_args(MLEModel._score_param_names,
-                              MLEModel._score_param_defaults, *args, **kwargs))
+            _handle_args(MLEModel._score_param_names,
+                         MLEModel._score_param_defaults, *args, **kwargs))
         # For fit() calls, the method is called 'score_method' (to distinguish
         # it from the method used for fit) but generally in kwargs the method
         # will just be called 'method'
@@ -1174,9 +1177,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         \*args (for example `scipy.optimize.fmin_l_bfgs`).
         """
         transformed, method, approx_complex_step, approx_centered, kwargs = (
-            self._handle_args(MLEModel._hessian_param_names,
-                              MLEModel._hessian_param_defaults,
-                              *args, **kwargs))
+            _handle_args(MLEModel._hessian_param_names,
+                         MLEModel._hessian_param_defaults,
+                         *args, **kwargs))
         # For fit() calls, the method is called 'hessian_method' (to
         # distinguish it from the method used for fit) but generally in kwargs
         # the method will just be called 'method'
@@ -1742,13 +1745,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         #         self.df_model * np.log(self.nobs_effective))
         return bic(self.llf, self.nobs_effective, self.df_model)
 
-
-    def _update_rank(self, singular_values):
-        self.model.update(self.params)
-        if self._rank is None:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
-        return
-
     def _cov_params_approx(self, approx_complex_step=True,
                            approx_centered=False):
         nobs = self.model.nobs - self.filter_results.loglikelihood_burn
@@ -1763,7 +1759,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
 
-        self._update_rank(singular_values)
+        self.model.update(self.params)
+        if self._rank is None:
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
         return -neg_cov
 
     @cache_readonly
@@ -1786,7 +1784,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
 
-        self._update_rank(singular_values)
+        self.model.update(self.params)
+        if self._rank is None:
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
         return -neg_cov
 
     @cache_readonly
@@ -1808,7 +1808,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
 
-        self._update_rank(singular_values)
+        self.model.update(self.params)
+        if self._rank is None:
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
         return -neg_cov
 
     @cache_readonly
@@ -1844,7 +1846,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
 
-        self._update_rank(singular_values)
+        self.model.update(self.params)
+        if self._rank is None:
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
         return cov_params
 
     @cache_readonly
@@ -1873,7 +1877,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
 
-        self._update_rank(singular_values)
+        self.model.update(self.params)
+        if self._rank is None:
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
         return cov_params
 
     @cache_readonly
@@ -2360,7 +2366,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             self.model._get_prediction_index(start, end, index))
 
         # Handle `dynamic`
-        if isinstance(dynamic, str): # TODO: bytes/unicode?
+        if isinstance(dynamic, (bytes, unicode)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
 
         # Perform the prediction
