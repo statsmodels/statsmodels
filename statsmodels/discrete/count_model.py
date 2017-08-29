@@ -156,8 +156,7 @@ class GenericZeroInflated(CountModel):
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
-            start_params = self.model_main.fit(disp=0, method="nm").params
-            start_params = np.append(np.zeros(self.k_inflate), start_params)
+            start_params = self._get_start_params()
         mlefit = super(GenericZeroInflated, self).fit(start_params=start_params,
                        maxiter=maxiter, disp=disp, method=method,
                        full_output=full_output, callback=lambda x:x,
@@ -503,6 +502,11 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         mu = self.model_main.predict(params_main)[:, None]
         return self.distribution.pmf(counts, mu, w)
 
+    def _get_start_params(self):
+        start_params = self.model_main.fit(disp=0, method="nm").params
+        start_params = np.append(np.ones(self.k_inflate) * 0.1, start_params)
+        return start_params
+
 class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
     """
     Zero Inflated Generalized Poisson model for count data
@@ -561,6 +565,12 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         mu = self.model_main.predict(params_main)[:, None]
         return self.distribution.pmf(counts, mu, params_main[-1], p, w)
 
+    def _get_start_params(self):
+        start_params = ZeroInflatedPoisson(self.endog, self.exog,
+            exog_infl=self.exog_infl).fit(disp=0).params
+        start_params = np.append(start_params, 0.1)
+        return start_params
+
 class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
     """
     Zero Inflated Generalized Negative Binomial model for count data
@@ -618,6 +628,12 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
         mu = self.model_main.predict(params_main)[:, None]
         return self.distribution.pmf(counts, mu, params_main[-1], p, w)
+
+    def _get_start_params(self):
+        start_params = ZeroInflatedPoisson(self.endog, self.exog,
+            exog_infl=self.exog_infl).fit(disp=0).params
+        start_params = np.append(start_params, 0.1)
+        return start_params
 
 class ZeroInflatedPoissonResults(CountResults):
     __doc__ = _discrete_results_docs % {
