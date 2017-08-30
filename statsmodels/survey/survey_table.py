@@ -3,12 +3,8 @@ import numpy as np
 import pandas as pd
 import summary_stats as ss
 import statsmodels.api as sm
-from patsy.contrasts import Treatment
-from patsy.contrasts import Poly
 
-# TODO: compute corrected statistics
-# add documentation
-# start testing
+
 class SurveyTable(object):
     # assumes data is nx2 ie the user specified which two
     # columns to work with
@@ -49,8 +45,12 @@ class SurveyTable(object):
 
 
         self._delta()
-        # self._trace = np.trace(self._delta)
-        # self._trace_sq = np.trace(np.square(self._delta))
+        if self._delta.ndim == 1:
+            self._trace = self.delta
+            self._trace_sq = np.square(self._delta)
+        else:
+            self._trace = np.trace(self._delta)
+            self._trace_sq = np.trace(np.square(self._delta))
     def __str__(self):
         tab = self._row_prop.copy()
         tab['col_tot'] = tab.sum(axis=1)
@@ -62,8 +62,9 @@ class SurveyTable(object):
         cell_diff_square = np.square((self._cell_prop - self._null))
         # uncorrected stat
         self.pearson = self._m * (cell_diff_square / self._null).sum().sum()
+        # rao and scott correction
         self.pearson *= (self._trace / self._trace_sq)
-        dof = np.square(self._trace) / self._trace_sq
+        self.dof = np.square(self._trace) / self._trace_sq
 
     def test_lrt(self):
         # Note: this is not definited if there are zeros in self.table
@@ -100,18 +101,40 @@ class SurveyTable(object):
         return group_var
 
     def _delta(self):
-        D_inv = np.linalg.inv(np.diag(np.diag(self._cell_prop.values)))
-
+        D_inv = np.linalg.inv(np.diag(self._cell_prop.values.flatten()))
+        # this may or may not be in order bc _group_variance() used dict
+        # indices to grab the observations, and dictionaries aren't ordered
         v_hat = np.diag(self._group_variance())
-        # need to get off diagonal elements of v_srs. But can't find what
-        # 'p_st' is in the documentation
         v_srs = np.outer(self._col_prop, self._col_prop) / self._m
-        B = sm.add_constant(self.df.var1)
-        U, _, _ = np.linalg.svd(B)
-        r, s, t = np.linalg.svd(np.identity(len(U)) - np.dot(U.T, U))
-        column_index = np.isclose(s, 0)
 
-        C = r[:, ~column_index]
-        # delta_numer = np.dot(C.T, D_inv).dot(v_hat).dot(D_inv).dot(C)
-        # delta_denom = np.linalg.inv(np.dot(C.T, D_inv).dot(v_srs).dot(D_inv).dot(C))
-        # self.delta = np.dot(delta_denom, delta_numer)
+        R, C = self.table.shape
+
+        ir = np.zeros((R, C))
+        ir[0, :] = 1
+        ir = ir.ravel()
+
+        mat = []
+        for i in range(R):
+            mat.append(ir)
+            ir = np.roll(ir, C)
+
+        ic = np.zeros((R, C))
+        ic[:, 0] = 1
+        ic = ic.ravel()
+
+        for i in range(C):
+            mat.append(ic)
+            ic = np.roll(ic, R)
+
+        mat = np.asarray(mat).T
+        cols = R + C - 2
+        B = sm.add_constant(mat[:, :cols])
+
+
+        U, S, Vt = np.linalg.svd(B, full_matrices=0)
+        F, D, Gt = np.linalg.svd((np.identity(len(U)) - np.dot(U, U.T)), 0)
+        contrast = F[:, D>1e-12]
+        delta_numer = np.dot(contrast.T, D_inv).dot(v_hat).dot(D_inv).dot(contrast)
+        delta_denom = np.linalg.inv(np.dot(contrast.T, D_inv).dot(v_srs).dot(D_inv).dot(contrast))
+        self._delta = np.dot(delta_denom, delta_numer)
+

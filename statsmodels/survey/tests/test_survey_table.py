@@ -16,6 +16,10 @@ weights = np.r_[1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1].astype(np.float64)
 design = ss.SurveyDesign(strata, cluster, weights)
 data = np.array([np.random.choice([0,1], 11),
                  np.random.choice([3,4], 11)]).T
-tab = stab.SurveyTable(design, data)
+
+def test_pearson():
+    tab = stab.SurveyTable(design, data)
+    tab.test_pearson()
+    print(tab.pearson, tab.dof)
 # print(tab.table)
 # print(tab) # does same but w/ cell proportions

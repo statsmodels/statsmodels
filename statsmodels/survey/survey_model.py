@@ -138,7 +138,8 @@ class SurveyModel(object):
         v_hat = np.dot(jdata.T, jdata)
         vcov = np.dot(hess_inv, v_hat).dot(hess_inv.T)
         return vcov
-
+# doesnt work whether lin_method is specified or not
+# which means it must be the calculation of g_hat
     def _sas_linearization_vcov(self, X, y, lin_method):
         """
         Get the linearized covariance matrix using STATA's methodology
@@ -177,22 +178,18 @@ class SurveyModel(object):
         https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_surveylogistic_a0000000364.htm
         """
 
-        lin_pred = np.dot(X, self.params)
-        idl = self.initialized_model.family.link.inverse_deriv(lin_pred)
-        # d_hat is the matrix of partial derivatives of the link function
-        # w.r.t self.params.
-        d_hat = (X * idl[:, None]).T
+        d_hat = self.initialized_model.score_obs(self.params)
 
         cond_mean = self.result.mu
         w = self.design.weights.copy()
         e = []
+
         # calculate e for each stratum
         for c in range(self.design.n_clust):
             ind = (self.design.clust == c)
             cond_inv = np.linalg.inv(np.diag(cond_mean[ind]) -
-                                     np.dot(cond_mean[ind], cond_mean.T[ind]))
-            e.append(np.dot(w[ind] * d_hat[:, ind],
-                            np.dot((y - cond_mean)[ind], cond_inv)))
+                                     np.outer(cond_mean[ind], cond_mean.T[ind]))
+            e.append(np.dot((y - cond_mean)[ind], cond_inv).dot(w[ind, None] * d_hat[ind, :]))
         e = np.asarray(e)
         e = self._centering(e, 'stratum')
         nh = self.design.clust_per_strat[self.design.strat_for_clust].astype(np.float64)
@@ -200,19 +197,22 @@ class SurveyModel(object):
         mh = np.sqrt(nh / (nh - 1))
         fh = np.sqrt(1 - self.design.fpc)
         e = fh[:, None] * mh[:, None] * e
-        g_hat = (len(y) - 1) / (len(y) - X.shape[1]) * np.dot(e.T, e)
+        n = len(y)
+        p = X.shape[1]
+        g_hat = (n - 1) / (n - p) * np.dot(e.T, e)
 
-        if lin_method == "newton":
+        if lin_method.lower() in ("newton", 'nt', 'newt'):
+            print('using hessian')
             # TODO: Figure out if hessian should be used when
             # 'jack-sandwich' or 'boot-sandwich' is requested
-            q_hat = self.initialized_model.hessian(self.params, observed=False)
+            self.q_hat = self.initialized_model.hessian(self.params, observed=False)
         else:
             cond_inv = np.linalg.inv(np.diag(cond_mean) -
-                                     np.dot(cond_mean, cond_mean.T))
-            q_hat = np.dot(w * d_hat, np.dot(cond_inv, d_hat.T))
+                                     np.outer(cond_mean, cond_mean.T))
+            self.q_hat = np.dot((w[:, None] * d_hat).T, np.dot(cond_inv, d_hat))
 
-        q_hat_inv = np.linalg.inv(q_hat)
-        vcov = np.dot(q_hat_inv, np.dot(g_hat, q_hat_inv))
+        q_hat_inv = np.linalg.inv(self.q_hat)
+        vcov = np.dot(q_hat_inv, g_hat).dot(q_hat_inv.T)
         return vcov
 
     def _jackknife_vcov(self, X, y):
@@ -240,7 +240,7 @@ class SurveyModel(object):
         vcov = np.dot(self.replicate_params.T, self.replicate_params)
         return vcov
 
-    def fit(self, y, X, cov_method='linearized', center_by='est', lin_method=None):
+    def fit(self, y, X, cov_method='linearized', center_by='est', lin_method=''):
         y = np.asarray(y)
         X = np.asarray(X)
 
@@ -268,3 +268,4 @@ class SurveyModel(object):
         self.initialized_model = self.model(y, X, **self.init_args)
         self.result = self.initialized_model.fit(**self.fit_args)
         return self.result.params
+

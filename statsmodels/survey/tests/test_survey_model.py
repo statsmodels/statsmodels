@@ -47,6 +47,23 @@ def test_linearized_stata():
     assert_allclose(model.params, np.r_[.0614334, .0982177, -.0214168], rtol=1e-5)
     assert_allclose(model.stderr, np.r_[.5023708, .0370594, .0822633], rtol=1e-5)
 
+def test_linearized_sas():
+    # df = pd.read_csv("~/Downloads/sas.csv", sep=' ')
+    # svy = ss.SurveyDesign(strata= np.asarray(df['strat']), cluster= np.asarray(df["psu"]), weights=np.asarray(df["wgt"]))
+    # y = np.asarray(df["y"])
+    # X = np.asarray(df['x1'])
+    # X = sm.add_constant(X)
+    # df = pd.read_csv("~/Downloads/big_logistic_df.csv")
+    # survey_df = ss.SurveyDesign(strata= np.asarray(df['strata']), cluster= np.asarray(df["dnum"]), weights=np.asarray(df["pw"]))
+    # y2 = np.asarray(df["y"])
+    # X2 = np.asarray(df['api00', 'api99'])
+    # X2 = sm.add_constant(X2)
+    model = smod.SurveyModel(survey_df, model_class=model_class, init_args=init_args)
+    model.fit(y2, X2, cov_method='linearized_sas', center_by='stratum')
+    print(model.params, model.stderr)
+    print(model.q_hat)
+    # raise ValueError('stop here')
+
 def test_jack_calculated():
     # fam = gaussian
     model = smod.SurveyModel(design, model_class=model_class)
