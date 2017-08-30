@@ -44,13 +44,7 @@ class SurveyTable(object):
         self._null = np.outer(self._row_marginal, self._col_marginal)
 
 
-        self._delta()
-        if self._delta.ndim == 1:
-            self._trace = self.delta
-            self._trace_sq = np.square(self._delta)
-        else:
-            self._trace = np.trace(self._delta)
-            self._trace_sq = np.trace(np.square(self._delta))
+
     def __str__(self):
         tab = self._row_prop.copy()
         tab['col_tot'] = tab.sum(axis=1)
@@ -58,24 +52,40 @@ class SurveyTable(object):
         print(tab)
         return 'cell_proportions'
 
-    def test_pearson(self):
+    def test_pearson(self, cell_prop=True):
         cell_diff_square = np.square((self._cell_prop - self._null))
         # uncorrected stat
         self.pearson = self._m * (cell_diff_square / self._null).sum().sum()
         # rao and scott correction
+        self._delta(cell_prop)
+        if self._delta_est.ndim == 1:
+            self._trace = self.delta_est
+            self._trace_sq = np.square(self._delta_est)
+        else:
+            self._trace = np.trace(self._delta_est)
+            self._trace_sq = np.trace(np.square(self._delta_est))
+
         self.pearson *= (self._trace / self._trace_sq)
         self.dof = np.square(self._trace) / self._trace_sq
 
-    def test_lrt(self):
+    def test_lrt(self, cell_prop=True):
         # Note: this is not definited if there are zeros in self.table
         if 0 in self.table:
             raise ValueError("table should not contain 0 for test_lrt")
         # uncorrected stat
         self.lrt = (self._col_prop * np.log(self._col_prop / self._null)).sum().sum()
         self.lrt = 2 * self._m
+        self._delta(cell_prop)
+        if self._delta_est.ndim == 1:
+            self._trace = self.delta_est
+            self._trace_sq = np.square(self._delta_est)
+        else:
+            self._trace = np.trace(self._delta_est)
+            self._trace_sq = np.trace(np.square(self._delta_est))
         self.lrt *= (self._trace / self._trace_sq)
         dof = np.square(self._trace) / self._trace_sq
 
+    # can't remember why I have cell_prop as an option... should always be true here
     def _group_variance(self, cell_prop=True):
         # Essentially, we are calculating a total for each level combination
         # between the two variables. Using pandas doesnt allow for the use of
@@ -98,14 +108,20 @@ class SurveyTable(object):
                                     cov_method='linearized', center_by='stratum').stderr)
             group_var = np.asarray(list(self.var_dict.values()))
             group_var = group_var.reshape(len(group_var), )
+            self.group_var = group_var
         return group_var
 
-    def _delta(self):
+    def _delta(self, cell_prop=True):
         D_inv = np.linalg.inv(np.diag(self._cell_prop.values.flatten()))
         # this may or may not be in order bc _group_variance() used dict
         # indices to grab the observations, and dictionaries aren't ordered
         v_hat = np.diag(self._group_variance())
-        v_srs = np.outer(self._col_prop, self._col_prop) / self._m
+
+        # get v_srs using cell proportions or proportions under the null
+        if cell_prop:
+            v_srs = np.outer(self._col_prop, self._col_prop) / self._m
+        else:
+            v_srs = np.outer(self._null, self._null) / self._m
 
         R, C = self.table.shape
 
@@ -130,11 +146,18 @@ class SurveyTable(object):
         cols = R + C - 2
         B = sm.add_constant(mat[:, :cols])
 
-
         U, S, Vt = np.linalg.svd(B, full_matrices=0)
         F, D, Gt = np.linalg.svd((np.identity(len(U)) - np.dot(U, U.T)), 0)
         contrast = F[:, D>1e-12]
         delta_numer = np.dot(contrast.T, D_inv).dot(v_hat).dot(D_inv).dot(contrast)
         delta_denom = np.linalg.inv(np.dot(contrast.T, D_inv).dot(v_srs).dot(D_inv).dot(contrast))
-        self._delta = np.dot(delta_denom, delta_numer)
+        self._delta_est = np.dot(delta_denom, delta_numer)
 
+
+""""
+questions:
+- getting travis to be successful
+- says 'no module names summary_stats', etc
+- have kerby look at SAS code
+
+"""
