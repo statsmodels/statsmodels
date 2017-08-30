@@ -69,7 +69,7 @@ class SurveyDesign(object):
             elif isinstance(rep_weights, np.ndarray):
                 self.rep_weights = rep_weights
             else:
-                return ValueError("rep_weights should be array-like")
+                raise ValueError("rep_weights should be array-like")
 
             if strata is not None or cluster is not None:
                 raise ValueError("If providing rep_weights, do not provide \
@@ -329,7 +329,7 @@ class SurveyStat(object):
     def __init__(self, design, data, center_by):
         self.design = design
         if center_by not in ['global', 'stratum', 'est']:
-            return ValueError("center_by = %s not supported" % center_by)
+            raise ValueError("center_by = %s not supported" % center_by)
         self.center_by = center_by
         self.data = np.asarray(data)
         if self.data.ndim == 1:
@@ -506,7 +506,7 @@ class SurveyMean(SurveyStat):
     """
     def __init__(self, design, data, cov_method='jack', center_by='global',
                  n_reps=None, bsn=None):
-        super().__init__(design, data, center_by)
+        super(SurveyMean, self).__init__(design, data, center_by)
         if cov_method == "jack":
             self._jackknife()
         elif cov_method == 'boot':
@@ -590,7 +590,7 @@ class SurveyTotal(SurveyStat):
     """
     def __init__(self, design, data, cov_method='jack', n_reps=None,
                  center_by='global', bsn=None):
-        super().__init__(design, data, center_by)
+        super(SurveyTotal, self).__init__(design, data, center_by)
 
         if cov_method == "jack":
             self._jackknife()
@@ -643,7 +643,7 @@ class SurveyRatio(SurveyStat):
     def __init__(self, design, data, cov_method='jack', n_reps=None,
                  center_by='global', bsn=None):
 
-        super().__init__(design, data, center_by)
+        super(SurveyRatio, self).__init__(design, data, center_by)
 
         if cov_method == "jack":
             self._jackknife()
@@ -731,7 +731,7 @@ class SurveyQuantile(SurveyStat):
     """
     def __init__(self, design, data, quantile, cov_method='jack', n_reps=None,
                  center_by='global', bsn=None):
-        super().__init__(design, data, center_by)
+        super(SurveyQuantile, self).__init__(design, data, center_by)
         self.quantile = quantile
 
         # give warning if user entered in quantile bigger than one
@@ -783,5 +783,6 @@ class SurveyMedian(SurveyQuantile):
     def __init__(self, design, data, quantile=.5, cov_method='jack',
                  n_reps=None, center_by='global', bsn=None):
         # initialize SurveyQuantile
-        super().__init__(design, data, quantile, cov_method, n_reps,
-                         center_by, bsn)
+        super(SurveyMedian, self).__init__(design, data, quantile,
+                                             cov_method, n_reps,
+                                             center_by, bsn)

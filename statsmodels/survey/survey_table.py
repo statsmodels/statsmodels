@@ -1,8 +1,7 @@
 from __future__ import division
 import numpy as np
 import pandas as pd
-import summary_stats as ss
-import statsmodels.api as sm
+from statsmodels.survey import summary_stats as ss
 
 
 class SurveyTable(object):
@@ -85,7 +84,6 @@ class SurveyTable(object):
         self.lrt *= (self._trace / self._trace_sq)
         dof = np.square(self._trace) / self._trace_sq
 
-    # can't remember why I have cell_prop as an option... should always be true here
     def _group_variance(self, cell_prop=True):
         # Essentially, we are calculating a total for each level combination
         # between the two variables. Using pandas doesnt allow for the use of
@@ -123,6 +121,15 @@ class SurveyTable(object):
         else:
             v_srs = np.outer(self._null, self._null) / self._m
 
+        b = self._contrast_matrix()
+        self.b = b.copy()
+
+
+        delta_numer = np.dot(b.T, D_inv).dot(v_hat).dot(D_inv).dot(b)
+        delta_denom = np.linalg.inv(np.dot(b.T, D_inv).dot(v_srs).dot(D_inv).dot(b))
+        self._delta_est = np.dot(delta_denom, delta_numer)
+
+    def _contrast_matrix(self):
         R, C = self.table.shape
 
         ir = np.zeros((R, C))
@@ -143,16 +150,14 @@ class SurveyTable(object):
             ic = np.roll(ic, R)
 
         mat = np.asarray(mat).T
-        cols = R + C - 2
-        B = sm.add_constant(mat[:, :cols])
+        self.mat = mat.copy()
+        u,s,vt = np.linalg.svd(mat, 0)
+        b = u[:, s>1e-12]
 
-        U, S, Vt = np.linalg.svd(B, full_matrices=0)
-        F, D, Gt = np.linalg.svd((np.identity(len(U)) - np.dot(U, U.T)), 0)
-        contrast = F[:, D>1e-12]
-        delta_numer = np.dot(contrast.T, D_inv).dot(v_hat).dot(D_inv).dot(contrast)
-        delta_denom = np.linalg.inv(np.dot(contrast.T, D_inv).dot(v_srs).dot(D_inv).dot(contrast))
-        self._delta_est = np.dot(delta_denom, delta_numer)
-
+        qm = np.eye(b.shape[0]) - np.dot(b, b.T)
+        u,s,vt = np.linalg.svd(qm, 0)
+        b = u[:, s > 1e-12]
+        return b
 
 """"
 questions:

@@ -1,8 +1,8 @@
 from __future__ import division
-import summary_stats as ss
+import statsmodels.survey.summary_stats as ss
 import statsmodels.api as sm
-import survey_model as smod
-import survey_table as stab
+import statsmodels.survey.survey_model as smod
+import statsmodels.survey.survey_table as stab
 import pandas as pd
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_array_less,
@@ -16,7 +16,7 @@ weights = np.r_[1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1].astype(np.float64)
 design = ss.SurveyDesign(strata, cluster, weights)
 np.random.seed(1)
 data = np.array([np.random.choice([0,1], 11),
-                 np.random.choice([3,4], 11)]).
+                 np.random.choice([3,4], 11)]).T
 
 # df = pd.concat([pd.DataFrame(strata), pd.DataFrame(cluster), pd.DataFrame(weights),
 #     pd.DataFrame(data)], axis=1)
@@ -28,6 +28,14 @@ def test_pearson():
     tab.test_pearson()
     tab.test_lrt()
     print(tab.pearson, tab.lrt)
-    raise ValueError("stop here")
+
+def test_contrast():
+    tab = stab.SurveyTable(design, data)
+    contrast = tab._contrast_matrix()
+    assert_equal(contrast.shape, (4,1))
+    print(np.dot(contrast.T, tab.mat))
+
+    # raise ValueError('stop here')
+
 # print(tab.table)
 # print(tab) # does same but w/ cell proportions

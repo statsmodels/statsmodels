@@ -1,7 +1,7 @@
 from __future__ import division
-import summary_stats as ss
+import statsmodels.survey.summary_stats as ss
 import statsmodels.api as sm
-import survey_model as smod
+import statsmodels.survey.survey_model as smod
 import pandas as pd
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_array_less,
