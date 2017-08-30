@@ -1,6 +1,5 @@
 from __future__ import division
 import statsmodels.survey.summary_stats as ss
-import statsmodels.api as sm
 import statsmodels.survey.survey_model as smod
 import statsmodels.survey.survey_table as stab
 import pandas as pd

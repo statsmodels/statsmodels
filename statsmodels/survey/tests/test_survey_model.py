@@ -4,6 +4,7 @@ import statsmodels.api as sm
 import statsmodels.survey.survey_model as smod
 import pandas as pd
 import numpy as np
+import os
 from numpy.testing import (assert_almost_equal, assert_equal, assert_array_less,
                            assert_raises, assert_allclose)
 
@@ -11,7 +12,11 @@ strata = np.r_[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
 cluster = np.r_[0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4]
 weights = np.r_[1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1].astype(np.float64)
 fpc = np.r_[.5, .5, .5, .5, .5, .5, .1, .1, .1, .1, .1]
-data = pd.read_csv("~/Downloads/logistic_df.csv")
+
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+fname = "logistic_df.csv"
+fpath = os.path.join(cur_dir, 'data', fname)
+data = pd.read_csv(fpath)
 y = np.asarray(data['y'])
 X = np.asarray(data[['x1', 'x2']])
 X = sm.add_constant(X)
@@ -21,13 +26,17 @@ assert_equal(design.clust, np.r_[0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4])
 model_class = sm.GLM
 init_args = {'family': sm.families.Binomial()}
 
-df = pd.read_csv("~/Downloads/big_logistic_df.csv")
+fname = "big_logistic_df.csv"
+fpath = os.path.join(cur_dir, 'data', fname)
+df = pd.read_csv(fpath)
 survey_df = ss.SurveyDesign(strata= np.asarray(df['strata']), cluster= np.asarray(df["dnum"]), weights=np.asarray(df["pw"]))
 y2 = np.asarray(df["y"])
 X2 = np.asarray(df[['api00', 'api99']])
 X2 = sm.add_constant(X2)
 
-df_rw = pd.read_stata("/home/jarvis/Downloads/nhanes2jknife.dta")
+fname = "nhanes2jknife.dta"
+fpath = os.path.join(cur_dir, 'data', fname)
+df_rw = pd.read_stata(fpath)
 rw = [np.asarray(df_rw[x]) for x in df_rw.columns if x.startswith("jkw_")]
 rw = np.asarray(rw).T
 design_rw = ss.SurveyDesign(rep_weights=rw)
