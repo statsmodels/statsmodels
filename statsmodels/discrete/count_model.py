@@ -399,10 +399,7 @@ class GenericZeroInflated(CountModel):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
-        if self.infl == 'logit':
-            prob_main = 1 / (1 + np.exp(np.dot(exog_infl, params_infl)))
-        elif self.infl == 'probit':
-            raise NotImplemented('Predict for Probit inflation not implemented')
+        prob_main = 1 - self.model_infl.predict(params_infl, exog_infl).mean()
 
         lin_pred = np.dot(exog, params_main[:self.exog.shape[1]]) + exposure + offset
         
