@@ -503,11 +503,20 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         params_main = params[self.k_inflate:]
 
         counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-        w = self.model_infl.predict(params_infl, exog_infl)[:, None]
+
+        if len(exog_infl.shape) < 2:
+            transform = True
+            w = np.atleast_2d(
+                self.model_infl.predict(params_infl, exog_infl))[:, None]
+        else:
+            transform = False
+            w = self.model_infl.predict(params_infl, exog_infl)[:, None]
+
         w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
         mu = self.model_main.predict(params_main, exog,
             offset=offset)[:, None]
-        return self.distribution.pmf(counts, mu, w)
+        result = self.distribution.pmf(counts, mu, w)
+        return result[0] if transform else result
 
     def _get_start_params(self):
         start_params = self.model_main.fit(disp=0, method="nm").params
@@ -567,11 +576,20 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
 
         p = self.model_main.parameterization
         counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-        w = self.model_infl.predict(params_infl, exog_infl)[:, None]
+
+        if len(exog_infl.shape) < 2:
+            transform = True
+            w = np.atleast_2d(
+                self.model_infl.predict(params_infl, exog_infl))[:, None]
+        else:
+            transform = False
+            w = self.model_infl.predict(params_infl, exog_infl)[:, None]
+
         w[w == 1.] = np.nextafter(1, 0)
         mu = self.model_main.predict(params_main, exog,
             exposure=exposure, offset=offset)[:, None]
-        return self.distribution.pmf(counts, mu, params_main[-1], p, w)
+        result = self.distribution.pmf(counts, mu, params_main[-1], p, w)
+        return result[0] if transform else result
 
     def _get_start_params(self):
         start_params = ZeroInflatedPoisson(self.endog, self.exog,
@@ -631,12 +649,21 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         params_main = params[self.k_inflate:]
 
         p = self.model_main.parameterization
-        counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-        w = self.model_infl.predict(params_infl, exog_infl)[:, None]
+        counts = np.arange(0, np.max(self.endog)+1)
+
+        if len(exog_infl.shape) < 2:
+            transform = True
+            w = np.atleast_2d(
+                self.model_infl.predict(params_infl, exog_infl))[:, None]
+        else:
+            transform = False
+            w = self.model_infl.predict(params_infl, exog_infl)[:, None]
+
         w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
         mu = self.model_main.predict(params_main, exog,
             exposure=exposure, offset=offset)[:, None]
-        return self.distribution.pmf(counts, mu, params_main[-1], p, w)
+        result = self.distribution.pmf(counts, mu, params_main[-1], p, w)
+        return result[0] if transform else result
 
     def _get_start_params(self):
         start_params = self.model_main.fit(disp=0, method='nm').params
