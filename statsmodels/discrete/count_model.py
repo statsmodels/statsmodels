@@ -398,7 +398,7 @@ class GenericZeroInflated(CountModel):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
-        prob_main = 1 - self.model_infl.predict(params_infl, exog_infl).mean()
+        prob_main = 1 - self.model_infl.predict(params_infl, exog_infl)
 
         lin_pred = np.dot(exog, params_main[:self.exog.shape[1]]) + exposure + offset
         
