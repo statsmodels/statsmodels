@@ -1198,7 +1198,7 @@ class GeneralizedPoisson(CountModel):
            'extra_params' :
     """
     p: scalar
-        P denotes parametrizations for GP regression. p=1 for GP-1 and
+        P denotes parameterizations for GP regression. p=1 for GP-1 and
     p=2 for GP-2. Default is p=1.
     offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
@@ -1371,25 +1371,12 @@ class GeneralizedPoisson(CountModel):
 
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
-    def score(self, params):
-        """
-        Generalized Poisson model score (gradient) vector of the log-likelihood
-
-        Parameters
-        ----------
-        params : array-like
-            The parameters of the model
-
-        Returns
-        -------
-        score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
-            loglikelihood function, evaluated at `params`
-        """
+    def score_obs(self, params):
         if self._transparams:
             alpha = np.exp(params[-1])
         else:
             alpha = params[-1]
+
         params = params[:-1]
         p = self.parameterization
         exog = self.exog
@@ -1402,14 +1389,20 @@ class GeneralizedPoisson(CountModel):
         a4 = a3 * y
         dmudb = mu * exog
 
-        dalpha = (mu_p * (y * ((y - 1) / a2 - 2 / a1) + a2 / a1**2)).sum()
+        dalpha = (mu_p * (y * ((y - 1) / a2 - 2 / a1) + a2 / a1**2))
         dparams = dmudb * (-a4 / a1 + a3 * a2 / (a1 ** 2) + (1 + a4) *
                   ((y - 1) / a2 - 1 / a1) + 1 / mu)
 
+        return np.concatenate((dparams, np.atleast_2d(dalpha)),
+                              axis=1)
+
+    def score(self, params):
+        score = np.sum(self.score_obs(params), axis=0)
         if self._transparams:
-            return np.r_[dparams.sum(0), dalpha*alpha]
+            score[-1] == score[-1] ** 2
+            return score
         else:
-            return np.r_[dparams.sum(0), dalpha]
+            return score
 
     def _score_p(self, params):
         """
@@ -2720,7 +2713,7 @@ class NegativeBinomialP(CountModel):
     exog : array
         A reference to the exogenous design.    
     p : scalar
-        P denotes parametrizations for NB-P regression. p=1 for NB-1 and
+        P denotes parameterizations for NB-P regression. p=1 for NB-1 and
     p=2 for NB-2. Default is p=1.
     """ % {'params' : base._model_params_doc,
            'extra_params' :
@@ -2736,7 +2729,7 @@ class NegativeBinomialP(CountModel):
         super(NegativeBinomialP, self).__init__(endog, exog, offset=offset,
                                                   exposure=exposure,
                                                   missing=missing, **kwargs)
-        self.parametrization = p
+        self.parameterization = p
         self.exog_names.append('alpha')
         self.k_extra = 1
         self._transparams = False
@@ -2779,7 +2772,7 @@ class NegativeBinomialP(CountModel):
             alpha = params[-1]
 
         params = params[:-1]
-        p = self.parametrization
+        p = self.parameterization
         y = self.endog
 
         mu = self.predict(params)
@@ -2814,7 +2807,7 @@ class NegativeBinomialP(CountModel):
             alpha = params[-1]
 
         params = params[:-1]
-        p = 2 - self.parametrization
+        p = 2 - self.parameterization
         y = self.endog
 
         mu = self.predict(params)
@@ -2878,7 +2871,7 @@ class NegativeBinomialP(CountModel):
             alpha = params[-1]
         params = params[:-1]
 
-        p = 2 - self.parametrization
+        p = 2 - self.parameterization
         y = self.endog
         exog = self.exog
         mu = self.predict(params)
@@ -3078,7 +3071,7 @@ class NegativeBinomialP(CountModel):
     def convert_params(self, params):
         alpha = params[-1]
         params = params[:-1]
-        p = 2 - self.parametrization
+        p = 2 - self.parameterization
         mu = self.predict(params)
 
         size = 1. / alpha * mu**p
