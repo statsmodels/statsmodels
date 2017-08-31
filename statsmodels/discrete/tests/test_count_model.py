@@ -155,12 +155,12 @@ class TestZeroInflatedGeneralizedPoisson_predict(object):
 
     def test_mean(self):
         assert_allclose(self.res.predict().mean(), self.endog.mean(),
-                        atol=1e-2, rtol=1e-2)
+                        atol=1e-4, rtol=1e-4)
 
     def test_var(self):
         assert_allclose((self.res.predict().mean() *
                         self.res._dispersion_factor.mean()),
-                        self.endog.var(), atol=0.1, rtol=0.1)
+                        self.endog.var(), atol=0.05, rtol=0.1)
 
     def test_predict_prob(self):
         res = self.res
@@ -169,7 +169,7 @@ class TestZeroInflatedGeneralizedPoisson_predict(object):
         pr = res.predict(which='prob')
         pr2 = sm.distributions.zinegbin.pmf(np.arange(12)[:,None],
             res.predict(), 0.5, 2, 0.5).T
-        assert_allclose(pr, pr2, rtol=0.1, atol=0.1)
+        assert_allclose(pr, pr2, rtol=0.08, atol=0.05)
 
 class TestZeroInflatedNegativeBinomialP(CheckGeneric):
     @classmethod
@@ -220,12 +220,12 @@ class TestZeroInflatedNegativeBinomialP_predict(object):
 
     def test_mean(self):
         assert_allclose(self.res.predict().mean(), self.endog.mean(),
-                        atol=1e-2, rtol=1e-2)
+                        atol=1e-4)
 
     def test_var(self):
         assert_allclose((self.res.predict().mean() *
                         self.res._dispersion_factor.mean()),
-                        self.endog.var(), atol=5e-2, rtol=5e-2)
+                        self.endog.var(), atol=1e-2)
 
     def test_predict_prob(self):
         res = self.res
