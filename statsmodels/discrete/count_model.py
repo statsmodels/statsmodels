@@ -224,6 +224,7 @@ class GenericZeroInflated(CountModel):
     def score_obs(self, params):
         """
         Generic Zero Inflated model score (gradient) vector of the log-likelihood
+
         Parameters
         ----------
         params : array-like
@@ -374,7 +375,7 @@ class GenericZeroInflated(CountModel):
             The user does not need to log it first.
         which : string, optional
             Define values that will be predicted.
-            'mean', 'mean-main', 'linear', 'mean-nonzero', 'prob-zero, 'prob'
+            'mean', 'mean-main', 'linear', 'mean-nonzero', 'prob-zero, 'prob', 'prob-main'
             Default is 'mean'.
 
         Notes
@@ -382,14 +383,12 @@ class GenericZeroInflated(CountModel):
         """
         if exog is None:
             exog = self.exog
-            offset = getattr(self, 'offset', 0)
-            exposure = getattr(self, 'exposure', 0)
 
         if exog_infl is None:
             exog_infl = self.exog_infl
 
         if exposure is None:
-            exposure = 0
+            exposure = getattr(self, 'exposure', 0)
         elif exposure != 0:
             exposure = np.log(exposure)
 
@@ -423,8 +422,10 @@ class GenericZeroInflated(CountModel):
             return prob_main * np.exp(lin_pred) / (1 - prob_zero)
         elif which == 'prob-zero':
             return prob_zero
+        elif which == 'prob-main':
+            return prob_main
         elif which == 'prob':
-            return self._predict_prob(params, exog, exog_infl)
+            return self._predict_prob(params, exog, exog_infl, exposure, offset)
         else:
             raise ValueError('which = %s is not available' % which)
 
@@ -497,14 +498,15 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
         return hess_arr
 
-    def _predict_prob(self, params, exog, exog_infl):
+    def _predict_prob(self, params, exog, exog_infl, exposure, offset):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
         counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
         w = self.model_infl.predict(params_infl, exog_infl)[:, None]
         w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
-        mu = self.model_main.predict(params_main, exog)[:, None]
+        mu = self.model_main.predict(params_main, exog,
+            offset=offset)[:, None]
         return self.distribution.pmf(counts, mu, w)
 
     def _get_start_params(self):
@@ -559,7 +561,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         self.result_class_reg = L1ZeroInflatedGeneralizedPoissonResults
         self.result_class_reg_wrapper = L1ZeroInflatedGeneralizedPoissonResultsWrapper
 
-    def _predict_prob(self, params, exog, exog_infl):
+    def _predict_prob(self, params, exog, exog_infl, exposure, offset):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
@@ -567,7 +569,8 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
         w = self.model_infl.predict(params_infl, exog_infl)[:, None]
         w[w == 1.] = np.nextafter(1, 0)
-        mu = self.model_main.predict(params_main, exog)[:, None]
+        mu = self.model_main.predict(params_main, exog,
+            exposure=exposure, offset=offset)[:, None]
         return self.distribution.pmf(counts, mu, params_main[-1], p, w)
 
     def _get_start_params(self):
@@ -623,7 +626,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         self.result_class_reg = L1ZeroInflatedNegativeBinomialResults
         self.result_class_reg_wrapper = L1ZeroInflatedNegativeBinomialResultsWrapper
 
-    def _predict_prob(self, params, exog, exog_infl):
+    def _predict_prob(self, params, exog, exog_infl, exposure, offset):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
 
@@ -631,7 +634,8 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
         w = self.model_infl.predict(params_infl, exog_infl)[:, None]
         w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
-        mu = self.model_main.predict(params_main, exog)[:, None]
+        mu = self.model_main.predict(params_main, exog,
+            exposure=exposure, offset=offset)[:, None]
         return self.distribution.pmf(counts, mu, params_main[-1], p, w)
 
     def _get_start_params(self):
