@@ -640,8 +640,8 @@ class SurveyTotal(SurveyStat):
 
 
 class SurveyRatio(SurveyStat):
-    def __init__(self, design, data, cov_method='jack', n_reps=None,
-                 center_by='global', bsn=None):
+    def __init__(self, design, data, cov_method='linearized', n_reps=None,
+                 center_by='stratum', bsn=None):
 
         super(SurveyRatio, self).__init__(design, data, center_by)
 
@@ -784,5 +784,5 @@ class SurveyMedian(SurveyQuantile):
                  n_reps=None, center_by='global', bsn=None):
         # initialize SurveyQuantile
         super(SurveyMedian, self).__init__(design, data, quantile,
-                                             cov_method, n_reps,
-                                             center_by, bsn)
+                                           cov_method, n_reps,
+                                           center_by, bsn)

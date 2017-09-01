@@ -138,6 +138,7 @@ class SurveyModel(object):
         v_hat = np.dot(jdata.T, jdata)
         vcov = np.dot(hess_inv, v_hat).dot(hess_inv.T)
         return vcov
+
 # doesnt work whether lin_method is specified or not
 # which means it must be the calculation of g_hat
     def _sas_linearization_vcov(self, X, y, lin_method):
@@ -188,8 +189,10 @@ class SurveyModel(object):
         for c in range(self.design.n_clust):
             ind = (self.design.clust == c)
             cond_inv = np.linalg.inv(np.diag(cond_mean[ind]) -
-                                     np.outer(cond_mean[ind], cond_mean.T[ind]))
-            e.append(np.dot((y - cond_mean)[ind], cond_inv).dot(w[ind, None] * d_hat[ind, :]))
+                                     np.outer(cond_mean[ind],
+                                              cond_mean.T[ind]))
+            e.append(np.dot((y - cond_mean)[ind], cond_inv).dot(w[ind, None] *
+                                                                d_hat[ind, :]))
         e = np.asarray(e)
         e = self._centering(e, 'stratum')
         nh = self.design.clust_per_strat[self.design.strat_for_clust].astype(np.float64)
@@ -205,11 +208,13 @@ class SurveyModel(object):
             print('using hessian')
             # TODO: Figure out if hessian should be used when
             # 'jack-sandwich' or 'boot-sandwich' is requested
-            self.q_hat = self.initialized_model.hessian(self.params, observed=False)
+            self.q_hat = self.initialized_model.hessian(self.params,
+                                                        observed=False)
         else:
             cond_inv = np.linalg.inv(np.diag(cond_mean) -
                                      np.outer(cond_mean, cond_mean.T))
-            self.q_hat = np.dot((w[:, None] * d_hat).T, np.dot(cond_inv, d_hat))
+            self.q_hat = np.dot((w[:, None] * d_hat).T,
+                                np.dot(cond_inv, d_hat))
 
         q_hat_inv = np.linalg.inv(self.q_hat)
         vcov = np.dot(q_hat_inv, g_hat).dot(q_hat_inv.T)
@@ -240,7 +245,8 @@ class SurveyModel(object):
         vcov = np.dot(self.replicate_params.T, self.replicate_params)
         return vcov
 
-    def fit(self, y, X, cov_method='linearized', center_by='est', lin_method=''):
+    def fit(self, y, X, cov_method='linearized', center_by='est',
+            lin_method=''):
         y = np.asarray(y)
         X = np.asarray(X)
 
@@ -268,4 +274,3 @@ class SurveyModel(object):
         self.initialized_model = self.model(y, X, **self.init_args)
         self.result = self.initialized_model.fit(**self.fit_args)
         return self.result.params
-
