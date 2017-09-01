@@ -155,7 +155,7 @@ class SurveyTable(object):
         return b
 
     def _main_effects_mat(self):
-        # Builds a matrix that contains “main effects” for the rows and columns
+        # Builds a matrix that contains "main effects" for the rows and columns
         R, C = self.table.shape
 
         ir = np.zeros((R, C))
