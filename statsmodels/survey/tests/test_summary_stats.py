@@ -16,13 +16,18 @@ data = np.asarray([[1, 3, 2, 5, 4, 1, 2, 3, 4, 6, 9],
 design = ss.SurveyDesign(strata, cluster, weights)
 design_fpc = ss.SurveyDesign(strata, cluster, weights, fpc=fpc)
 design_no_weights = ss.SurveyDesign(strata, cluster, fpc=fpc)
-rw = [design_no_weights.get_rep_weights(c=c, cov_method='jack') for c in range(design.n_clust)]
-rw = np.asarray(rw).T
+rw_list = [design_no_weights.get_rep_weights(c=c, cov_method='jack') for c in range(design.n_clust)]
+rw = np.asarray(rw_list).T
 design_rw = ss.SurveyDesign(rep_weights=rw)
 
 def test_design():
     assert_equal(design.clust_per_strat, np.array([3, 2]))
     assert_equal(design.strat_for_clust, np.array([0, 0, 0, 1, 1]))
+
+    # SurveyDesign works with lists
+    design_list = ss.SurveyDesign(rep_weights=rw_list, weights=weights)
+    assert_equal(design_list.rep_weights, design_rw.rep_weights)
+
 
 def test_mean_jack():
     avg_fpc = ss.SurveyMean(design_fpc, data, cov_method='jack', center_by='stratum')
@@ -54,6 +59,10 @@ def test_mean_boot():
     avg_mse = ss.SurveyMean(design_rw, data, cov_method='boot', center_by='est')
     assert_allclose(avg_mse.est, np.r_[3.636364, 4.636364, 3.727273])
     assert_allclose(avg_mse.stderr, np.r_[0.5762342, 0.6967576, 0.5428541], rtol=1e-5, atol=0)
+
+    reps_boot = [design_no_weights.get_rep_weights(c=c, cov_method='boot') for c in range(design.n_clust)]
+    reps_boot = np.asarray(reps_boot).T
+    assert_equal(reps_boot.shape, rw.shape)
 
 def test_mean_linearized():
     avg = ss.SurveyMean(design, data, cov_method='linearized', center_by='stratum')

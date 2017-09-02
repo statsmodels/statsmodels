@@ -68,7 +68,7 @@ class SurveyTable(object):
 
     def test_lrt(self, cell_prop=True):
         # Note: this is not definited if there are zeros in self.table
-        if 0 in self.table:
+        if self._cell_prop.isin([0]).sum().sum() == 1:
             raise ValueError("table should not contain 0 for test_lrt")
         # uncorrected stat
         self.lrt = (self._col_prop * np.log(self._col_prop /

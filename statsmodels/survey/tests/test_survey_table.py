@@ -24,7 +24,7 @@ data = data[['race', 'diabetes']]
 def test_pearson():
     tab = stab.SurveyTable(design, data)
     tab.test_pearson()
-    # tab.test_lrt()
+    tab.test_lrt()
     print(tab)
     print(tab.pearson, tab.pearson_chi, tab.pearson_f)
     print(tab.dof_F)
