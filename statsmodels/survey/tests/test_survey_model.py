@@ -109,4 +109,3 @@ def test_jack_supplied():
     which is what STATA uses as nh when PSU information is unknown..
     """
     # assert_allclose(model.stderr, model_rw.stderr)
-
