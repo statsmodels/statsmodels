@@ -42,8 +42,3 @@ def test_contrast():
     R, C = tab.table.shape
     assert_equal(contrast.shape, (R*C, (R-1)*(C-1)))
     assert_almost_equal(np.dot(contrast.T, mat), 0)
-
-    # raise ValueError('stop here')
-
-# print(tab.table)
-# print(tab) # does same but w/ cell proportions
