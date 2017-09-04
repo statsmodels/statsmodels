@@ -7,8 +7,8 @@ The main classes are:
   estimates and stderr
 
 Note: This makes use of survey weights, which is supplied to
-the 'freq_weights' parameter in StatsModel's GLM. SurveyModel can
-only be utilized by models w/ a freq_weight or weight parameter
+the 'freq_weights' parameter in StatsModel's GLM or 'weights' in
+StatsModels WLS.
 """
 
 from __future__ import division
@@ -18,29 +18,34 @@ import statsmodels
 
 class SurveyModel(object):
     """
+    Generalized Linear Models class for survey data
 
     Parameters
     -------
-    design : Instance of class SurveyDesign
-    model_class : Instance of class GLM
-    init_args : Dictionary of arguments
-        when initializing the model
-    fit_args : Dictionary of arguments
-        when fitting the model
+    design : Object
+        Instance of class SurveyDesign
+    model_class : Class
+        class GLM or WLS
+    init_args : dict-like
+        Keyword arguments passed on model initialization
+    fit_args : dict-like
+        Keyword arguments passed to model fit method.
 
     Attributes
     ----------
-    design : Instance of class SurveyDesign
-    model : Instance of class GLM
-    init_args : Dictionary of arguments
-        when initializing the model
-    fit_args : Dictionary of arguments
-        when fitting the model
-    params : (p, ) array
+    design : Object
+        Instance of class SurveyDesign
+    model : Class
+        Class GLM or WLS
+    init_args : dict-like
+        Keyword arguments passed on model initialization
+    fit_args : dict-like
+        Keyword arguments passed to model fit method.
+    params : (k_params, ) array
         Array of coefficients of model
-    vcov : (p, p) array
+    vcov : (k_params, k_params) array
         Covariance matrix
-    stderr : (p, ) array
+    stderr : (k_params, ) array
         Standard error of cofficients
     """
     def __init__(self, design, model_class, init_args={}, fit_args={}):
@@ -90,7 +95,7 @@ class SurveyModel(object):
 
         Returns
         -------
-        vcov : (p,p) array
+        vcov : (k_params, k_params) array
             The covariance matrix
 
         Notes
@@ -148,9 +153,9 @@ class SurveyModel(object):
         Parameters
         ----------
         X : array-like
-            A n x p array where 'n' is the number of observations and 'p'
-            is the number of regressors. An intercept is not included by
-            deault and should be added by the user
+            A n x k_params array where 'n' is the number of observations and
+            k_params is the number of regressors. An intercept is not included
+            by default and should be added by the user
         y : array-like
             1d array of the response variable
         lin_method : str
@@ -160,7 +165,7 @@ class SurveyModel(object):
 
         Returns
         -------
-        vcov : (p,p) array
+        vcov : (k_params, k_params) array
             The covariance matrix
 
         Notes

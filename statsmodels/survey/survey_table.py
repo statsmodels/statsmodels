@@ -1,3 +1,15 @@
+
+"""
+Methods for analyzing two-way contingency tables (i.e. frequency
+tables for observations that are cross-classified with respect to two
+categorical variables) with survey data.
+
+The main classes are:
+  * SurveyTable : implements methods that can be applied to any two-way
+  contingency table.
+
+"""
+
 from __future__ import division
 import numpy as np
 import pandas as pd
@@ -27,7 +39,7 @@ class SurveyTable(object):
             self.table = self.table.fillna(0)
 
         else:
-            return ValueError("data should only have 1 or 2 columns")
+            raise ValueError("data should only have 1 or 2 columns")
 
         self._row_sum = self.table.sum(axis=1)  # shape is (var1_unique_labs, )
         self._col_sum = self.table.sum(axis=0)  # shape is (var2_unique_labs, )
@@ -40,12 +52,20 @@ class SurveyTable(object):
         # estimated proportion under the null hypothesis of independence
         self._null = np.outer(self._row_marginal, self._col_marginal)
 
-    def __str__(self):
-        tab = self._cell_prop.copy()
-        # tab['col_tot'] = tab.sum(axis=1)
-        # tab.loc['row_tot'] = tab.sum(axis=0)
-        print(tab)
-        return 'key: cell_proportions'
+    def __str__(self, format='row'):
+        if format.lower() == 'cell':
+            tab = self._cell_prop.copy()
+            key = 'cell proportions'
+        elif format.lower() in ['col', 'column']:
+            tab = self._col_prop.copy()
+            key = 'column proportions'
+        elif format.lower() in ['row', 'rows']:
+            tab = self._row_prop.copy()
+            key = 'row proportions'
+        else:
+            raise ValueError("format %s not implemented" %format)
+
+        return str(tab) + '\n' +  ('key: %s' %key)
 
     def test_pearson(self, cell_prop=True):
         cell_diff_square = np.square((self._cell_prop - self._null))

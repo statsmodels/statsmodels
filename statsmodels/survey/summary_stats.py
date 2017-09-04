@@ -126,6 +126,7 @@ class SurveyDesign(object):
         summary_list = ["Number of observations: ", str(len(self.strat)),
                         "Sum of weights: ", str(self.weights.sum()),
                         "Number of strata: ", str(self.n_strat),
+                        "Number of PSU's: ", str(self.n_clust),
                         "Clusters per stratum: ", str(self.clust_per_strat)]
 
         return "\n".join(summary_list)
