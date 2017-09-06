@@ -82,15 +82,9 @@ class GenericZeroInflated(CountModel):
         self.inflation = inflation
         self.k_extra = self.k_inflate
 
-        if type(self.exog_infl) is pd.DataFrame:
-            for i in reversed(list(self.exog_infl)):
-                self.exog_names.insert(0, 'inflate_' + i)
-            self.exog_infl = self.exog_infl.as_matrix()
-        else:
-            self.exog_names.insert(0, 'inflate_const')
-            for i in range(self.k_extra - 1, 0, -1):
-                self.exog_names.insert(0, 'inflate_x%d' % i)
-            self.exog_infl = np.asarray(self.exog_infl, dtype=np.float64)
+        infl_names = ['inflate_%s' % i for i in self.model_infl.data.param_names]
+        self.exog_names[:] = infl_names + list(self.exog_names)
+        self.exog_infl = np.asarray(self.exog_infl, dtype=np.float64)
 
         self._init_keys.extend(['exog_infl', 'inflation'])
         self._null_drop_keys = ['exog_infl']
