@@ -48,7 +48,7 @@ class TestZeroInflatedModel_logit(CheckGeneric):
         cls.endog = data.endog
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
-        cls.res1 = sm.ZeroInflatedPoisson(data.endog, exog, 
+        cls.res1 = sm.ZeroInflatedPoisson(data.endog, exog,
             exog_infl=exog_infl, inflation='logit').fit(method='newton', maxiter=500)
         res2 = RandHIE()
         res2.zero_inflated_poisson_logit()
@@ -139,6 +139,43 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
          t_test = self.res1.t_test(unit_matrix)
          assert_allclose(self.res1.tvalues, t_test.tvalue)
 
+    def test_minimize(self):
+        # check additional optimizers using the `minimize` option
+        model = self.res1.model
+        # use the same start_params, but avoid recomputing
+        start_params = self.res1.mle_settings['start_params']
+
+        res_ncg = model.fit(start_params=start_params,
+                            method='minimize', min_method="trust-ncg",
+                            maxiter=500, disp=0)
+
+        assert_allclose(res_ncg.params, self.res2.params,
+                        atol=1e-3, rtol=0.04)
+        assert_allclose(res_ncg.bse, self.res2.bse,
+                        atol=1e-3, rtol=0.6)
+        assert_(res_ncg.mle_retvals['converged'] is True)
+
+        res_dog = model.fit(start_params=start_params,
+                            method='minimize', min_method="dogleg",
+                            maxiter=500, disp=0)
+
+        assert_allclose(res_dog.params, self.res2.params,
+                        atol=1e-3, rtol=3e-3)
+        assert_allclose(res_dog.bse, self.res2.bse,
+                        atol=1e-3, rtol=0.6)
+        assert_(res_dog.mle_retvals['converged'] is True)
+
+        res_bh = model.fit(start_params=start_params,
+                           method='basinhopping', maxiter=500,
+                           niter_success=3, disp=0)
+
+        assert_allclose(res_bh.params, self.res2.params,
+                        atol=1e-4, rtol=3e-5)
+        assert_allclose(res_bh.bse, self.res2.bse,
+                        atol=1e-3, rtol=0.6)
+        # skip, res_bh reports converged is false but params agree
+        #assert_(res_bh.mle_retvals['converged'] is True)
+
 class TestZeroInflatedGeneralizedPoisson_predict(object):
     @classmethod
     def setup_class(cls):
@@ -203,7 +240,46 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
 
         assert_allclose(res_reg.params[2:], self.res1.params[2:],
             atol=1e-1, rtol=1e-1)
-    
+
+    # possibly slow, adds 25 seconds
+    def test_minimize(self):
+        # check additional optimizers using the `minimize` option
+        model = self.res1.model
+        # use the same start_params, but avoid recomputing
+        start_params = self.res1.mle_settings['start_params']
+
+        res_ncg = model.fit(start_params=start_params,
+                            method='minimize', min_method="trust-ncg",
+                            maxiter=500, disp=0)
+
+        assert_allclose(res_ncg.params, self.res2.params,
+                        atol=1e-3, rtol=0.03)
+        assert_allclose(res_ncg.bse, self.res2.bse,
+                        atol=1e-3, rtol=0.06)
+        assert_(res_ncg.mle_retvals['converged'] is True)
+
+        res_dog = model.fit(start_params=start_params,
+                            method='minimize', min_method="dogleg",
+                            maxiter=500, disp=0)
+
+        assert_allclose(res_dog.params, self.res2.params,
+                        atol=1e-3, rtol=3e-3)
+        assert_allclose(res_dog.bse, self.res2.bse,
+                        atol=1e-3, rtol=7e-3)
+        assert_(res_dog.mle_retvals['converged'] is True)
+
+        res_bh = model.fit(start_params=start_params,
+                           method='basinhopping', maxiter=500,
+                           niter_success=3, disp=0)
+
+        assert_allclose(res_bh.params, self.res2.params,
+                        atol=1e-4, rtol=3e-4)
+        assert_allclose(res_bh.bse, self.res2.bse,
+                        atol=1e-3, rtol=1e-3)
+        # skip, res_bh reports converged is false but params agree
+        #assert_(res_bh.mle_retvals['converged'] is True)
+
+
 class TestZeroInflatedNegativeBinomialP_predict(object):
     @classmethod
     def setup_class(cls):
@@ -258,7 +334,3 @@ class TestZeroInflatedNegativeBinomialP_predict2(object):
             mean2 = ((1 - self.res.predict(which='prob-zero').mean()) *
                      self.res.predict(which='mean-nonzero').mean())
             assert_allclose(mean1, mean2, atol=0.2)
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

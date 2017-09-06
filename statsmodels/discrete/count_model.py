@@ -166,9 +166,14 @@ class GenericZeroInflated(CountModel):
             if np.size(offset) == 1 and offset == 0:
                 offset = None
             start_params = self._get_start_params()
+
+        if callback is None:
+            # work around perfect separation callback #3895
+            callback = lambda *x: x
+
         mlefit = super(GenericZeroInflated, self).fit(start_params=start_params,
                        maxiter=maxiter, disp=disp, method=method,
-                       full_output=full_output, callback=lambda x:x,
+                       full_output=full_output, callback=callback,
                        **kwargs)
 
         zipfit = self.result_class(self, mlefit._results)
@@ -288,7 +293,7 @@ class GenericZeroInflated(CountModel):
         nonzero_idx = np.nonzero(y)[0]
 
         hess_arr = np.zeros((self.k_inflate, self.k_exog + self.k_inflate))
-    
+
         pmf = np.exp(llf)
 
         #d2l/dw2
@@ -310,7 +315,7 @@ class GenericZeroInflated(CountModel):
                 hess_arr[i, j + self.k_inflate] = -(score_main[zero_idx, j] *
                     w[zero_idx] * (1 - w[zero_idx]) *
                     self.exog_infl[zero_idx, i] / pmf[zero_idx]).sum()
-        
+
         return hess_arr
 
     def _hessian_probit(self, params):
@@ -401,7 +406,7 @@ class GenericZeroInflated(CountModel):
         prob_main = 1 - self.model_infl.predict(params_infl, exog_infl)
 
         lin_pred = np.dot(exog, params_main[:self.exog.shape[1]]) + exposure + offset
-        
+
         tmp_exog = self.model_main.exog
         tmp_endog = self.model_main.endog
         self.model_main.exog = exog

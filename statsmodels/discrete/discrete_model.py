@@ -1314,9 +1314,14 @@ class GeneralizedPoisson(CountModel):
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             start_params = mod_poi.fit(disp=0, method=method).params
             start_params = np.append(start_params, 0.1)
+
+        if callback is None:
+            # work around perfect separation callback #3895
+            callback = lambda *x: x
+
         mlefit = super(GeneralizedPoisson, self).fit(start_params=start_params,
                         maxiter=maxiter, method=method, disp=disp,
-                        full_output=full_output, callback=lambda x:x,
+                        full_output=full_output, callback=callback,
                         **kwargs)
 
 
@@ -2638,9 +2643,14 @@ class NegativeBinomial(CountModel):
             start_params = mod_poi.fit(disp=0).params
             if self.loglike_method.startswith('nb'):
                 start_params = np.append(start_params, 0.1)
+
+        if callback is None:
+            # work around perfect separation callback #3895
+            callback = lambda *x: x
+
         mlefit = super(NegativeBinomial, self).fit(start_params=start_params,
                         maxiter=maxiter, method=method, disp=disp,
-                        full_output=full_output, callback=lambda x:x,
+                        full_output=full_output, callback=callback,
                         **kwargs)
                         # TODO: Fix NBin _check_perfect_pred
         if self.loglike_method.startswith('nb'):
@@ -2959,9 +2969,14 @@ class NegativeBinomialP(CountModel):
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             start_params = mod_poi.fit(disp=0).params
             start_params = np.append(start_params, 0.1)
+
+        if callback is None:
+            # work around perfect separation callback #3895
+            callback = lambda *x: x
+
         mlefit = super(NegativeBinomialP, self).fit(start_params=start_params,
                         maxiter=maxiter, method=method, disp=disp,
-                        full_output=full_output, callback=lambda x:x,
+                        full_output=full_output, callback=callback,
                         **kwargs)
 
         if use_transparams and method not in ["newton", "ncg"]:
