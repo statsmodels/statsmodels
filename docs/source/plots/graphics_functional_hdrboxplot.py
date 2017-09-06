@@ -19,6 +19,7 @@ fig, res = sm.graphics.hdrboxplot(data.raw_data[:, 1:],
                                   labels=data.raw_data[:, 0].astype(int),
                                   ax=ax)
 
+ax.plot([0, 10], [25, 25])
 ax.set_xlabel("Month of the year")
 ax.set_ylabel("Sea surface temperature (C)")
 ax.set_xticks(np.arange(13, step=3) - 1)
