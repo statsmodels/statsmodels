@@ -92,6 +92,9 @@ class GenericZeroInflated(CountModel):
                 self.exog_names.insert(0, 'inflate_x%d' % i)
             self.exog_infl = np.asarray(self.exog_infl, dtype=np.float64)
 
+        self._init_keys.extend(['exog_infl', 'inflation'])
+        self._null_drop_keys = ['exog_infl']
+
     def loglike(self, params):
         """
         Loglikelihood of Generic Zero Inflated model
@@ -575,6 +578,11 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         self.result_class_reg = L1ZeroInflatedGeneralizedPoissonResults
         self.result_class_reg_wrapper = L1ZeroInflatedGeneralizedPoissonResultsWrapper
 
+    def _get_init_kwds(self):
+        kwds = super(ZeroInflatedGeneralizedPoisson, self)._get_init_kwds()
+        kwds['p'] = self.model_main.parameterization + 1
+        return kwds
+
     def _predict_prob(self, params, exog, exog_infl, exposure, offset):
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
@@ -648,6 +656,11 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         self.result_class_wrapper = ZeroInflatedNegativeBinomialResultsWrapper
         self.result_class_reg = L1ZeroInflatedNegativeBinomialResults
         self.result_class_reg_wrapper = L1ZeroInflatedNegativeBinomialResultsWrapper
+
+    def _get_init_kwds(self):
+        kwds = super(ZeroInflatedNegativeBinomialP, self)._get_init_kwds()
+        kwds['p'] = self.model_main.parameterization
+        return kwds
 
     def _predict_prob(self, params, exog, exog_infl, exposure, offset):
         params_infl = params[:self.k_inflate]

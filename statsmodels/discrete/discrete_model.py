@@ -3166,7 +3166,9 @@ class DiscreteResults(base.LikelihoodModelResults):
     def llnull(self):
 
         model = self.model
-        kwds = model._get_init_kwds()
+        kwds = model._get_init_kwds().copy()
+        for key in getattr(model, '_null_drop_keys', []):
+            del kwds[key]
         # TODO: what parameters to pass to fit?
         mod_null = model.__class__(model.endog, np.ones(self.nobs), **kwds)
         # TODO: consider catching and warning on convergence failure?
@@ -3174,6 +3176,9 @@ class DiscreteResults(base.LikelihoodModelResults):
         # TestPoissonConstrained1a.test_smoke
         res_null = mod_null.fit(disp=0, warn_convergence=False,
                                 maxiter=10000)
+        if getattr(self, '_attach_nullmodel', False) is not False:
+            self.res_null = res_null
+
         return res_null.llf
 
     @cache_readonly

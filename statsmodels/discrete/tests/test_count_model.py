@@ -27,9 +27,9 @@ class CheckGeneric(object):
         assert_allclose(self.res1.aic, self.res2.aic, atol=1e-1, rtol=1e-1)
 
     def test_t(self):
-         unit_matrix = np.identity(self.res1.params.size)
-         t_test = self.res1.t_test(unit_matrix)
-         assert_allclose(self.res1.tvalues, t_test.tvalue)
+        unit_matrix = np.identity(self.res1.params.size)
+        t_test = self.res1.t_test(unit_matrix)
+        assert_allclose(self.res1.tvalues, t_test.tvalue)
 
     def test_fit_regularized(self):
         model = self.res1.model
@@ -40,6 +40,11 @@ class CheckGeneric(object):
 
         assert_allclose(res_reg.params[2:], self.res1.params[2:],
             atol=5e-2, rtol=5e-2)
+
+    def test_summary(self):
+        # SMOKE test
+        self.res1.summary()
+
 
 class TestZeroInflatedModel_logit(CheckGeneric):
     @classmethod
@@ -121,6 +126,8 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
         cls.res1 = sm.ZeroInflatedGeneralizedPoisson(data.endog, exog,
             exog_infl=exog_infl, p=1).fit(method='newton', maxiter=500)
+        # for llnull test
+        cls.res1._results._attach_nullmodel = True
         res2 = RandHIE()
         res2.zero_inflated_generalized_poisson()
         cls.res2 = res2
@@ -135,9 +142,18 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         pass
 
     def test_t(self):
-         unit_matrix = np.identity(self.res1.params.size)
-         t_test = self.res1.t_test(unit_matrix)
-         assert_allclose(self.res1.tvalues, t_test.tvalue)
+        unit_matrix = np.identity(self.res1.params.size)
+        t_test = self.res1.t_test(unit_matrix)
+        assert_allclose(self.res1.tvalues, t_test.tvalue)
+
+    def test_llnull(self):
+        # regression test
+        #llnull = -44199.274632565
+        self.res1.llnull
+        # difference too small in test case, skip assert
+        #assert_allclose(self.res1.llnull, llnull, rtol=1e-10)
+        assert_array_equal(self.res1.res_null.model.exog_infl.shape,
+                     (len(self.res1.model.exog), 1))
 
     def test_minimize(self):
         # check additional optimizers using the `minimize` option
@@ -217,6 +233,8 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
         cls.res1 = sm.ZeroInflatedNegativeBinomialP(data.endog, exog,
             exog_infl=exog_infl, p=2).fit(method='nm', maxiter=500)
+        # for llnull test
+        cls.res1._results._attach_nullmodel = True
         res2 = RandHIE()
         res2.zero_inflated_negative_binomial()
         cls.res2 = res2
@@ -240,6 +258,15 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
 
         assert_allclose(res_reg.params[2:], self.res1.params[2:],
             atol=1e-1, rtol=1e-1)
+
+    def test_llnull(self):
+        # regression test
+        llnull = -44199.274632565
+        self.res1.llnull
+        # difference too small in test case, skip assert
+        #assert_allclose(self.res1.llnull, llnull, rtol=1e-10)
+        assert_array_equal(self.res1.res_null.model.exog_infl.shape,
+                     (len(self.res1.model.exog), 1))
 
     # possibly slow, adds 25 seconds
     def test_minimize(self):
