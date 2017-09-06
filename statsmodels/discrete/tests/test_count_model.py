@@ -41,6 +41,24 @@ class CheckGeneric(object):
         assert_allclose(res_reg.params[2:], self.res1.params[2:],
             atol=5e-2, rtol=5e-2)
 
+    def test_init_keys(self):
+        init_kwds = self.res1.model._get_init_kwds()
+        #assert_equal(sorted(list(init_kwds.keys())), self.init_keys)
+        assert_equal(set(init_kwds.keys()), set(self.init_keys))
+        for key, value in self.init_kwds.items():
+            assert_equal(init_kwds[key], value)
+
+    def test_null(self):
+        # call llnull, so null model is attached, side effect of cached attribute
+        self.res1.llnull
+        # check model instead of value
+        exog_null = self.res1.res_null.model.exog
+        exog_infl_null = self.res1.res_null.model.exog_infl
+        assert_array_equal(exog_infl_null.shape,
+                     (len(self.res1.model.exog), 1))
+        assert_equal(exog_null.ptp(), 0)
+        assert_equal(exog_infl_null.ptp(), 0)
+
     def test_summary(self):
         # SMOKE test
         self.res1.summary()
@@ -55,6 +73,10 @@ class TestZeroInflatedModel_logit(CheckGeneric):
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
         cls.res1 = sm.ZeroInflatedPoisson(data.endog, exog,
             exog_infl=exog_infl, inflation='logit').fit(method='newton', maxiter=500)
+        # for llnull test
+        cls.res1._results._attach_nullmodel = True
+        cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
+        cls.init_kwds = {'inflation': 'logit'}
         res2 = RandHIE()
         res2.zero_inflated_poisson_logit()
         cls.res2 = res2
@@ -68,6 +90,10 @@ class TestZeroInflatedModel_probit(CheckGeneric):
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
         cls.res1 = sm.ZeroInflatedPoisson(data.endog, exog,
             exog_infl=exog_infl, inflation='probit').fit(method='newton', maxiter=500)
+        # for llnull test
+        cls.res1._results._attach_nullmodel = True
+        cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
+        cls.init_kwds = {'inflation': 'probit'}
         res2 = RandHIE()
         res2.zero_inflated_poisson_probit()
         cls.res2 = res2
@@ -81,6 +107,10 @@ class TestZeroInflatedModel_offset(CheckGeneric):
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
         cls.res1 = sm.ZeroInflatedPoisson(data.endog, exog,
             exog_infl=exog_infl, offset=data.exog[:,7]).fit(method='newton', maxiter=500)
+        # for llnull test
+        cls.res1._results._attach_nullmodel = True
+        cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
+        cls.init_kwds = {'inflation': 'logit'}
         res2 = RandHIE()
         res2.zero_inflated_poisson_offset()
         cls.res2 = res2
@@ -128,6 +158,8 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
             exog_infl=exog_infl, p=1).fit(method='newton', maxiter=500)
         # for llnull test
         cls.res1._results._attach_nullmodel = True
+        cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset', 'p']
+        cls.init_kwds = {'inflation': 'logit', 'p': 1}
         res2 = RandHIE()
         res2.zero_inflated_generalized_poisson()
         cls.res2 = res2
@@ -145,15 +177,6 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         unit_matrix = np.identity(self.res1.params.size)
         t_test = self.res1.t_test(unit_matrix)
         assert_allclose(self.res1.tvalues, t_test.tvalue)
-
-    def test_llnull(self):
-        # regression test
-        #llnull = -44199.274632565
-        self.res1.llnull
-        # difference too small in test case, skip assert
-        #assert_allclose(self.res1.llnull, llnull, rtol=1e-10)
-        assert_array_equal(self.res1.res_null.model.exog_infl.shape,
-                     (len(self.res1.model.exog), 1))
 
     def test_minimize(self):
         # check additional optimizers using the `minimize` option
@@ -235,6 +258,8 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
             exog_infl=exog_infl, p=2).fit(method='nm', maxiter=500)
         # for llnull test
         cls.res1._results._attach_nullmodel = True
+        cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset', 'p']
+        cls.init_kwds = {'inflation': 'logit', 'p': 2}
         res2 = RandHIE()
         res2.zero_inflated_negative_binomial()
         cls.res2 = res2
@@ -258,15 +283,6 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
 
         assert_allclose(res_reg.params[2:], self.res1.params[2:],
             atol=1e-1, rtol=1e-1)
-
-    def test_llnull(self):
-        # regression test
-        llnull = -44199.274632565
-        self.res1.llnull
-        # difference too small in test case, skip assert
-        #assert_allclose(self.res1.llnull, llnull, rtol=1e-10)
-        assert_array_equal(self.res1.res_null.model.exog_infl.shape,
-                     (len(self.res1.model.exog), 1))
 
     # possibly slow, adds 25 seconds
     def test_minimize(self):
