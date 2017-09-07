@@ -115,6 +115,50 @@ class TestZeroInflatedModel_offset(CheckGeneric):
         res2.zero_inflated_poisson_offset()
         cls.res2 = res2
 
+    def test_exposure(self):
+        # This test mostly the equivalence of offset and exposure = exp(offset)
+        # use data arrays from class model
+        model1 = self.res1.model
+        offset = model1.offset
+        model3 = sm.ZeroInflatedPoisson(model1.endog, model1.exog,
+            exog_infl=model1.exog_infl, exposure=np.exp(offset))
+        res3 = model3.fit(start_params=self.res1.params,
+                          method='newton', maxiter=500)
+
+        assert_allclose(res3.params, self.res1.params, atol=1e-6, rtol=1e-6)
+        fitted1 = self.res1.predict()
+        fitted3 = self.res1.predict()
+        assert_allclose(fitted3, fitted1, atol=1e-6, rtol=1e-6)
+
+        ex = model1.exog
+        ex_infl = model1.exog_infl
+        offset = model1.offset
+        fitted1_0 = self.res1.predict(exog=ex, exog_infl=ex_infl,
+                                      offset=offset)
+        fitted3_0 = res3.predict(exog=ex, exog_infl=ex_infl,
+                                 exposure=np.exp(offset))
+        assert_allclose(fitted3_0, fitted1_0, atol=1e-6, rtol=1e-6)
+
+
+        ex = model1.exog[:10:2]
+        ex_infl = model1.exog_infl[:10:2]
+        offset = offset[:10:2]
+        # # TODO: this raises with shape mismatch,
+        # # i.e. uses offset or exposure from model -> fix it or not?
+        # GLM.predict to setting offset and exposure to zero
+        # fitted1_1 = self.res1.predict(exog=ex, exog_infl=ex_infl)
+        # fitted3_1 = res3.predict(exog=ex, exog_infl=ex_infl)
+        # assert_allclose(fitted3_1, fitted1_1, atol=1e-6, rtol=1e-6)
+
+        fitted1_2 = self.res1.predict(exog=ex, exog_infl=ex_infl,
+                                      offset=offset)
+        fitted3_2 = res3.predict(exog=ex, exog_infl=ex_infl,
+                                 exposure=np.exp(offset))
+        assert_allclose(fitted3_2, fitted1_2, atol=1e-6, rtol=1e-6)
+        assert_allclose(fitted1_2, fitted1[:10:2], atol=1e-6, rtol=1e-6)
+        assert_allclose(fitted3_2, fitted1[:10:2], atol=1e-6, rtol=1e-6)
+
+
 class TestZeroInflatedModelPandas(CheckGeneric):
     @classmethod
     def setup_class(cls):
@@ -402,9 +446,15 @@ class TestZeroInflatedNegativeBinomialP_predict2(object):
 
             cls.endog = data.endog
             exog = data.exog
-            res = sm.ZeroInflatedNegativeBinomialP(
-                cls.endog, exog, exog_infl=exog, p=2).fit(method="bfgs",
-                                                          maxiter=1000)
+            start_params = np.array(
+                [-2.83983767, -2.31595924, -3.9263248 , -4.01816431, -5.52251843,
+                -2.4351714 , -4.61636366, -4.17959785, -0.12960256, -0.05653484,
+                -0.21206673,  0.08782572, -0.02991995,  0.22901208,  0.0620983 ,
+                 0.06809681,  0.0841814 ,  0.185506  ,  1.36527888])
+            mod = sm.ZeroInflatedNegativeBinomialP(
+                cls.endog, exog, exog_infl=exog, p=2)
+            res = mod.fit(start_params=start_params, method="bfgs",
+                          maxiter=1000)
 
             cls.res = res
 

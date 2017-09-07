@@ -82,6 +82,10 @@ class GenericZeroInflated(CountModel):
         self.inflation = inflation
         self.k_extra = self.k_inflate
 
+        if len(self.exog) != len(self.exog_infl):
+            raise ValueError('exog and exog_infl have different number of'
+                             'observation. `missing` handling is not supported')
+
         infl_names = ['inflate_%s' % i for i in self.model_infl.data.param_names]
         self.exog_names[:] = infl_names + list(self.exog_names)
         self.exog_infl = np.asarray(self.exog_infl, dtype=np.float64)
@@ -391,7 +395,7 @@ class GenericZeroInflated(CountModel):
 
         if exposure is None:
             exposure = getattr(self, 'exposure', 0)
-        elif exposure != 0:
+        else:
             exposure = np.log(exposure)
 
         if offset is None:
@@ -404,13 +408,30 @@ class GenericZeroInflated(CountModel):
 
         lin_pred = np.dot(exog, params_main[:self.exog.shape[1]]) + exposure + offset
 
+        # Refactor: This is pretty hacky,
+        # there should be an appropriate predict method in model_main
+        # this is just prob(y=0 | model_main)
         tmp_exog = self.model_main.exog
         tmp_endog = self.model_main.endog
+        tmp_offset = getattr(self.model_main, 'offset', ['no'])
+        tmp_exposure = getattr(self.model_main, 'exposure', ['no'])
         self.model_main.exog = exog
         self.model_main.endog = np.zeros((exog.shape[0]))
+        self.model_main.offset = offset
+        self.model_main.exposure = exposure
         llf = self.model_main.loglikeobs(params_main)
         self.model_main.exog = tmp_exog
         self.model_main.endog = tmp_endog
+        # tmp_offset might be an array with elementwise equality testing
+        if len(tmp_offset) == 1 and tmp_offset[0] == 'no':
+            del self.model_main.offset
+        else:
+            self.model_main.offset = tmp_offset
+        if len(tmp_exposure) == 1 and tmp_exposure[0] == 'no':
+            del self.model_main.exposure
+        else:
+            self.model_main.exposure = tmp_exposure
+        # end hack
 
         prob_zero = (1 - prob_main) + prob_main * np.exp(llf)
 
