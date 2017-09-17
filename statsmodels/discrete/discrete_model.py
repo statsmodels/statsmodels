@@ -3088,16 +3088,15 @@ class NegativeBinomialP(CountModel):
             return linpred
         elif which =='prob':
             counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-            size, prob = self.convert_params(params)
+            mu = self.predict(params, exog, exposure, offset)
+            size, prob = self.convert_params(params, mu)
             return nbinom.pmf(counts, size[:,None], prob[:,None])
         else:
             raise TypeError('keyword \'which\' = %s not recognized' % which)
 
-    def convert_params(self, params):
+    def convert_params(self, params, mu):
         alpha = params[-1]
-        params = params[:-1]
         p = 2 - self.parameterization
-        mu = self.predict(params)
 
         size = 1. / alpha * mu**p
         prob = size / (size + mu)
