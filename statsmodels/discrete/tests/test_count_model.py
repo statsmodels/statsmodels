@@ -1,3 +1,5 @@
+
+from __future__ import division
 import os
 import numpy as np
 from numpy.testing import (assert_, assert_raises, assert_almost_equal,
@@ -410,34 +412,113 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
 class TestZeroInflatedNegativeBinomialP_predict(object):
     @classmethod
     def setup_class(cls):
-        expected_params = [1, 0.5, 0.5]
-        np.random.seed(123)
-        nobs = 200
+
+        expected_params = [1, 1, 0.5]
+        np.random.seed(987123)
+        nobs = 500
         exog = np.ones((nobs, 2))
-        exog[:nobs//2, 1] = 2
-        mu_true = exog.dot(expected_params[:-1])
-        cls.endog = sm.distributions.zinegbin.rvs(mu_true, expected_params[-1],
-                                                  2, 0.5, size=mu_true.shape)
+        exog[:nobs//2, 1] = 0
+
+        prob_infl = 0.15
+        mu_true = np.exp(exog.dot(expected_params[:-1]))
+        cls.endog = sm.distributions.zinegbin.rvs(mu_true,
+                    expected_params[-1], 2, prob_infl, size=mu_true.shape)
         model = sm.ZeroInflatedNegativeBinomialP(cls.endog, exog, p=2)
         cls.res = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
 
+        # attach others
+        cls.prob_infl = prob_infl
+
     def test_mean(self):
         assert_allclose(self.res.predict().mean(), self.endog.mean(),
-                        atol=1e-4)
+                        rtol=0.01)
 
     def test_var(self):
+        # todo check precision
         assert_allclose((self.res.predict().mean() *
                         self.res._dispersion_factor.mean()),
-                        self.endog.var(), atol=1e-2)
+                        self.endog.var(), rtol=0.2)
 
     def test_predict_prob(self):
         res = self.res
         endog = res.model.endog
 
         pr = res.predict(which='prob')
-        pr2 = sm.distributions.zinegbin.pmf(np.arange(10)[:,None],
-            res.predict(), 0.5, 2, 0.5).T
+        pr2 = sm.distributions.zinegbin.pmf(np.arange(pr.shape[1])[:,None],
+            res.predict(), 0.5, 2, self.prob_infl).T
         assert_allclose(pr, pr2, rtol=0.1, atol=0.1)
+        prm = pr.mean(0)
+        pr2m = pr2.mean(0)
+        freq = np.bincount(endog.astype(int)) / len(endog)
+        assert_allclose(((pr2m - prm)**2).mean(), 0, rtol=1e-10, atol=5e-4)
+        assert_allclose(((prm - freq)**2).mean(), 0, rtol=1e-10, atol=1e-4)
+
+    def test_predict_generic_zi(self):
+        # These tests don't use numbers from other packages.
+        # Tests are on closeness of estimated to true/DGP values
+        # and theoretical relationship between quantities
+        res = self.res
+        endog = self.endog
+        exog = self.res.model.exog
+        prob_infl = self.prob_infl
+        nobs = len(endog)
+
+        freq = np.bincount(endog.astype(int)) / len(endog)
+        probs = res.predict(which='prob')
+        probsm = probs.mean(0)
+        assert_allclose(freq, probsm, atol=0.02)
+
+        probs_unique = res.predict(exog=[[1, 0], [1, 1]],
+                                   exog_infl=np.asarray([[1], [1]]),
+                                   which='prob')
+        # no default for exog_infl yet
+        #probs_unique = res.predict(exog=[[1, 0], [1, 1]], which='prob')
+
+        probs_unique2 = probs[[1, nobs-1]]
+
+        assert_allclose(probs_unique, probs_unique2, atol=1e-10)
+
+        probs0_unique = res.predict(exog=[[1, 0], [1, 1]],
+                                    exog_infl=np.asarray([[1], [1]]),
+                                    which='prob-zero')
+        assert_allclose(probs0_unique, probs_unique2[:, 0], rtol=1e-10)
+
+        probs_main_unique = res.predict(exog=[[1, 0], [1, 1]],
+                                        exog_infl=np.asarray([[1], [1]]),
+                                        which='prob-main')
+        probs_main = res.predict(which='prob-main')
+        probs_main[[0,-1]]
+        assert_allclose(probs_main_unique, probs_main[[0,-1]],  rtol=1e-10)
+        assert_allclose(probs_main_unique, 1 - prob_infl, atol=0.01)
+
+        pred = res.predict(exog=[[1, 0], [1, 1]],
+                           exog_infl=np.asarray([[1], [1]]))
+        pred1 = endog[exog[:, 1] == 0].mean(), endog[exog[:, 1] == 1].mean()
+        assert_allclose(pred, pred1, rtol=0.05)
+
+        pred_main_unique = res.predict(exog=[[1, 0], [1, 1]],
+                                       exog_infl=np.asarray([[1], [1]]),
+                                       which='mean-main')
+        assert_allclose(pred_main_unique, np.exp(np.cumsum(res.params[1:3])),
+                        rtol=1e-10)
+
+        # TODO: why does the following fail, params are not close enough to DGP
+        # but results are close statistics of simulated data
+        # what is mu_true in DGP sm.distributions.zinegbin.rvs
+        # assert_allclose(pred_main_unique, mu_true[[1, -1]] * (1 - prob_infl), rtol=0.01)
+
+        # mean-nonzero
+        mean_nz = (endog[(exog[:, 1] == 0) & (endog > 0)].mean(),
+                   endog[(exog[:, 1] == 1) & (endog > 0)].mean())
+        pred_nonzero_unique = res.predict(exog=[[1, 0], [1, 1]],
+                                          exog_infl=np.asarray([[1], [1]]), which='mean-nonzero')
+        assert_allclose(pred_nonzero_unique, mean_nz, rtol=0.05)
+
+        pred_lin_unique = res.predict(exog=[[1, 0], [1, 1]],
+                                      exog_infl=np.asarray([[1], [1]]),
+                                      which='linear')
+        assert_allclose(pred_lin_unique, np.cumsum(res.params[1:3]), rtol=1e-10)
+
 
 class TestZeroInflatedNegativeBinomialP_predict2(object):
         @classmethod
