@@ -753,7 +753,7 @@ class CountModel(DiscreteModel):
         #TODO: add offset tp
         if exog is None:
             exog = self.exog
-        
+
         if exposure is None:
             # If self.exposure exists, it will already be in logs.
             exposure = getattr(self, 'exposure', 0)
@@ -1181,6 +1181,7 @@ class Poisson(CountModel):
         L = np.exp(np.dot(X,params) + exposure + offset)
         return -np.dot(L*X.T, X)
 
+
 class GeneralizedPoisson(CountModel):
     __doc__ = """
     Generalized Poisson model for count data
@@ -1198,8 +1199,8 @@ class GeneralizedPoisson(CountModel):
            'extra_params' :
     """
     p: scalar
-        P denotes parametrizations for GP regression. p=1 for GP-1 and
-    p=2 for GP-2. Default is p=1.
+        P denotes parameterizations for GP regression. p=1 for GP-1 and
+        p=2 for GP-2. Default is p=1.
     offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
@@ -1217,6 +1218,11 @@ class GeneralizedPoisson(CountModel):
         self.exog_names.append('alpha')
         self.k_extra = 1
         self._transparams = False
+
+    def _get_init_kwds(self):
+        kwds = super(GeneralizedPoisson, self)._get_init_kwds()
+        kwds['p'] = self.parameterization + 1
+        return kwds
 
     def loglike(self, params):
         """
@@ -1254,7 +1260,7 @@ class GeneralizedPoisson(CountModel):
 
         Returns
         -------
-        loglike : ndarray (nobs,)
+        loglike : ndarray
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -1300,7 +1306,7 @@ class GeneralizedPoisson(CountModel):
             if use_transparams:
                 warnings.warn("Paramter \"use_transparams\" is ignored",
                               RuntimeWarning)
-            self._transparams = False 
+            self._transparams = False
 
         if start_params is None:
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
@@ -1309,9 +1315,14 @@ class GeneralizedPoisson(CountModel):
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             start_params = mod_poi.fit(disp=0, method=method).params
             start_params = np.append(start_params, 0.1)
+
+        if callback is None:
+            # work around perfect separation callback #3895
+            callback = lambda *x: x
+
         mlefit = super(GeneralizedPoisson, self).fit(start_params=start_params,
                         maxiter=maxiter, method=method, disp=disp,
-                        full_output=full_output, callback=lambda x:x,
+                        full_output=full_output, callback=callback,
                         **kwargs)
 
 
@@ -1335,7 +1346,7 @@ class GeneralizedPoisson(CountModel):
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
-        
+
         if np.size(alpha) == 1 and alpha != 0:
             k_params = self.exog.shape[1] + self.k_extra
             alpha = alpha * np.ones(k_params)
@@ -1371,25 +1382,12 @@ class GeneralizedPoisson(CountModel):
 
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
-    def score(self, params):
-        """
-        Generalized Poisson model score (gradient) vector of the log-likelihood
-
-        Parameters
-        ----------
-        params : array-like
-            The parameters of the model
-
-        Returns
-        -------
-        score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
-            loglikelihood function, evaluated at `params`
-        """
+    def score_obs(self, params):
         if self._transparams:
             alpha = np.exp(params[-1])
         else:
             alpha = params[-1]
+
         params = params[:-1]
         p = self.parameterization
         exog = self.exog
@@ -1402,14 +1400,20 @@ class GeneralizedPoisson(CountModel):
         a4 = a3 * y
         dmudb = mu * exog
 
-        dalpha = (mu_p * (y * ((y - 1) / a2 - 2 / a1) + a2 / a1**2)).sum()
+        dalpha = (mu_p * (y * ((y - 1) / a2 - 2 / a1) + a2 / a1**2))
         dparams = dmudb * (-a4 / a1 + a3 * a2 / (a1 ** 2) + (1 + a4) *
                   ((y - 1) / a2 - 1 / a1) + 1 / mu)
 
+        return np.concatenate((dparams, np.atleast_2d(dalpha)),
+                              axis=1)
+
+    def score(self, params):
+        score = np.sum(self.score_obs(params), axis=0)
         if self._transparams:
-            return np.r_[dparams.sum(0), dalpha*alpha]
+            score[-1] == score[-1] ** 2
+            return score
         else:
-            return np.r_[dparams.sum(0), dalpha]
+            return score
 
     def _score_p(self, params):
         """
@@ -1423,7 +1427,7 @@ class GeneralizedPoisson(CountModel):
         Returns
         -------
         dldp : float
-            dldp is first derivative of the loglikelihood function, 
+            dldp is first derivative of the loglikelihood function,
         evaluated at `p-parameter`.
         """
         if self._transparams:
@@ -1523,7 +1527,7 @@ class GeneralizedPoisson(CountModel):
         """
         if exog is None:
             exog = self.exog
-        
+
         if exposure is None:
             exposure = getattr(self, 'exposure', 0)
         elif exposure != 0:
@@ -2640,9 +2644,14 @@ class NegativeBinomial(CountModel):
             start_params = mod_poi.fit(disp=0).params
             if self.loglike_method.startswith('nb'):
                 start_params = np.append(start_params, 0.1)
+
+        if callback is None:
+            # work around perfect separation callback #3895
+            callback = lambda *x: x
+
         mlefit = super(NegativeBinomial, self).fit(start_params=start_params,
                         maxiter=maxiter, method=method, disp=disp,
-                        full_output=full_output, callback=lambda x:x,
+                        full_output=full_output, callback=callback,
                         **kwargs)
                         # TODO: Fix NBin _check_perfect_pred
         if self.loglike_method.startswith('nb'):
@@ -2708,6 +2717,7 @@ class NegativeBinomial(CountModel):
 
         return L1NegativeBinomialResultsWrapper(discretefit)
 
+
 class NegativeBinomialP(CountModel):
     __doc__ = """
     Generalized Negative Binomial (NB-P) model for count data
@@ -2718,13 +2728,16 @@ class NegativeBinomialP(CountModel):
     endog : array
         A reference to the endogenous response variable
     exog : array
-        A reference to the exogenous design.    
+        A reference to the exogenous design.
     p : scalar
-        P denotes parametrizations for NB-P regression. p=1 for NB-1 and
-    p=2 for NB-2. Default is p=1.
+        P denotes parameterizations for NB-P regression. p=1 for NB-1 and
+        p=2 for NB-2. Default is p=1.
     """ % {'params' : base._model_params_doc,
            'extra_params' :
-           """offset : array_like
+           """p: scalar
+        P denotes parameterizations for NB regression. p=1 for NB-1 and
+        p=2 for NB-2. Default is p=2.
+    offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
@@ -2736,10 +2749,15 @@ class NegativeBinomialP(CountModel):
         super(NegativeBinomialP, self).__init__(endog, exog, offset=offset,
                                                   exposure=exposure,
                                                   missing=missing, **kwargs)
-        self.parametrization = p
+        self.parameterization = p
         self.exog_names.append('alpha')
         self.k_extra = 1
         self._transparams = False
+
+    def _get_init_kwds(self):
+        kwds = super(NegativeBinomialP, self)._get_init_kwds()
+        kwds['p'] = self.parameterization
+        return kwds
 
     def loglike(self, params):
         """
@@ -2769,7 +2787,7 @@ class NegativeBinomialP(CountModel):
 
         Returns
         -------
-        loglike : ndarray (nobs,)
+        loglike : ndarray
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
         """
@@ -2779,7 +2797,7 @@ class NegativeBinomialP(CountModel):
             alpha = params[-1]
 
         params = params[:-1]
-        p = self.parametrization
+        p = self.parameterization
         y = self.endog
 
         mu = self.predict(params)
@@ -2814,7 +2832,7 @@ class NegativeBinomialP(CountModel):
             alpha = params[-1]
 
         params = params[:-1]
-        p = 2 - self.parametrization
+        p = 2 - self.parameterization
         y = self.endog
 
         mu = self.predict(params)
@@ -2878,7 +2896,7 @@ class NegativeBinomialP(CountModel):
             alpha = params[-1]
         params = params[:-1]
 
-        p = 2 - self.parametrization
+        p = 2 - self.parameterization
         y = self.endog
         exog = self.exog
         mu = self.predict(params)
@@ -2908,7 +2926,7 @@ class NegativeBinomialP(CountModel):
         for i in range(dim):
             hess_arr[i, :-1] = np.sum(self.exog[:,:].T * self.exog[:, i] * coeff, axis=1)
 
-                
+
         hess_arr[-1,:-1] = (self.exog[:,:].T * mu * a1 *
                 ((1 + a4) * (1 - a3 / a2) / a2 -
                  p * (np.log(a1 / a2) - digamma(a1) + digamma(a3) + 2) / mu +
@@ -2920,9 +2938,9 @@ class NegativeBinomialP(CountModel):
                      2 * a3 / a2 - a1 * polygamma(1, a1) +
                      a1 * polygamma(1, a3) - 2 * a1 / a2 +
                      a1 * a3 / a2**2) / alpha**2)
-                        
+
         hess_arr[-1, -1] = da2.sum()
-        
+
         tri_idx = np.triu_indices(dim + 1, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
@@ -2956,9 +2974,14 @@ class NegativeBinomialP(CountModel):
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             start_params = mod_poi.fit(disp=0).params
             start_params = np.append(start_params, 0.1)
+
+        if callback is None:
+            # work around perfect separation callback #3895
+            callback = lambda *x: x
+
         mlefit = super(NegativeBinomialP, self).fit(start_params=start_params,
                         maxiter=maxiter, method=method, disp=disp,
-                        full_output=full_output, callback=lambda x:x,
+                        full_output=full_output, callback=callback,
                         **kwargs)
 
         if use_transparams and method not in ["newton", "ncg"]:
@@ -3052,7 +3075,7 @@ class NegativeBinomialP(CountModel):
         """
         if exog is None:
             exog = self.exog
-        
+
         if exposure is None:
             exposure = getattr(self, 'exposure', 0)
         elif exposure != 0:
@@ -3070,16 +3093,15 @@ class NegativeBinomialP(CountModel):
             return linpred
         elif which =='prob':
             counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
-            size, prob = self.convert_params(params)
+            mu = self.predict(params, exog, exposure, offset)
+            size, prob = self.convert_params(params, mu)
             return nbinom.pmf(counts, size[:,None], prob[:,None])
         else:
             raise TypeError('keyword \'which\' = %s not recognized' % which)
 
-    def convert_params(self, params):
+    def convert_params(self, params, mu):
         alpha = params[-1]
-        params = params[:-1]
-        p = 2 - self.parametrization
-        mu = self.predict(params)
+        p = 2 - self.parameterization
 
         size = 1. / alpha * mu**p
         prob = size / (size + mu)
@@ -3148,7 +3170,9 @@ class DiscreteResults(base.LikelihoodModelResults):
     def llnull(self):
 
         model = self.model
-        kwds = model._get_init_kwds()
+        kwds = model._get_init_kwds().copy()
+        for key in getattr(model, '_null_drop_keys', []):
+            del kwds[key]
         # TODO: what parameters to pass to fit?
         mod_null = model.__class__(model.endog, np.ones(self.nobs), **kwds)
         # TODO: consider catching and warning on convergence failure?
@@ -3156,6 +3180,9 @@ class DiscreteResults(base.LikelihoodModelResults):
         # TestPoissonConstrained1a.test_smoke
         res_null = mod_null.fit(disp=0, warn_convergence=False,
                                 maxiter=10000)
+        if getattr(self, '_attach_nullmodel', False) is not False:
+            self.res_null = res_null
+
         return res_null.llf
 
     @cache_readonly

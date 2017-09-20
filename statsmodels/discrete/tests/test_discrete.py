@@ -1726,6 +1726,12 @@ class TestGeneralizedPoisson_p1(object):
         assert_allclose((res_reg2.params[:-2]**2).mean(), 0.010672558641545994)
         assert_allclose((res_reg3.params[:-2]**2).mean(), 0.00035544919793048415)
 
+    def test_init_kwds(self):
+        kwds = self.res1.model._get_init_kwds()
+        assert_('p' in kwds)
+        assert_equal(kwds['p'], 1)
+
+
 class TestGeneralizedPoisson_underdispersion(object):
     @classmethod
     def setup_class(cls):
@@ -1991,6 +1997,12 @@ class TestNegativeBinomialPNB1BFGS(CheckModelResults):
                         self.res2.fittedvalues[:10],
                         atol=5e-3, rtol=5e-3)
 
+    def test_init_kwds(self):
+        kwds = self.res1.model._get_init_kwds()
+        assert_('p' in kwds)
+        assert_equal(kwds['p'], 1)
+
+
 class TestNegativeBinomialPL1Compatability(CheckL1Compatability):
     @classmethod
     def setup_class(cls):
@@ -2016,6 +2028,7 @@ class TestNegativeBinomialPL1Compatability(CheckL1Compatability):
         cls.k_extra = 1  # 1 extra parameter in nb2
 
 class  TestNegativeBinomialPPredictProb(object):
+
     def test_predict_prob_p1(self):
         expected_params = [1, -0.5]
         np.random.seed(1234)
@@ -2034,9 +2047,13 @@ class  TestNegativeBinomialPPredictProb(object):
         size = 1. / alpha * mu
         prob = size / (size + mu)
 
-        assert_allclose(res.predict(which='prob'),
+        probs = res.predict(which='prob')
+        assert_allclose(probs,
             nbinom.pmf(np.arange(8)[:,None], size, prob).T,
             atol=1e-2, rtol=1e-2)
+
+        probs_ex = res.predict(exog=exog[[0, -1]], which='prob')
+        assert_allclose(probs_ex, probs[[0, -1]], rtol=1e-10, atol=1e-15)
 
     def test_predict_prob_p2(self):
         expected_params = [1, -0.5]
