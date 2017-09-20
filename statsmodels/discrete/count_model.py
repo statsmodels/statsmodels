@@ -5,7 +5,6 @@ __all__ = ["ZeroInflatedPoisson", "ZeroInflatedGeneralizedPoisson",
 
 
 import numpy as np
-import pandas as pd
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 import statsmodels.regression.linear_model as lm
@@ -33,6 +32,7 @@ _doc_zi_params = """
     inflation : string, 'logit' or 'probit'
         The model for the zero inflation, either Logit (default) or Probit
     """
+
 
 class GenericZeroInflated(CountModel):
     __doc__ = """
@@ -134,7 +134,7 @@ class GenericZeroInflated(CountModel):
 
         Returns
         -------
-        loglike : ndarray (nobs,)
+        loglike : ndarray
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -241,6 +241,7 @@ class GenericZeroInflated(CountModel):
         ----------
         params : array-like
             The parameters of the model
+
         Returns
         -------
         score : ndarray, 1-D
@@ -546,6 +547,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         start_params = np.append(np.ones(self.k_inflate) * 0.1, start_params)
         return start_params
 
+
 class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
     __doc__ = """
     Zero Inflated Generalized Poisson model for count data
@@ -620,6 +622,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
             exog_infl=self.exog_infl).fit(disp=0).params
         start_params = np.append(start_params, 0.1)
         return start_params
+
 
 class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
     __doc__ = """
@@ -696,6 +699,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         start_params = np.append(np.zeros(self.k_inflate), start_params)
         return start_params
 
+
 class ZeroInflatedPoissonResults(CountResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description" : "A results class for Zero Inflated Poisson",
@@ -719,15 +723,18 @@ class ZeroInflatedPoissonResults(CountResults):
 class L1ZeroInflatedPoissonResults(L1CountResults, ZeroInflatedPoissonResults):
     pass
 
+
 class ZeroInflatedPoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(ZeroInflatedPoissonResultsWrapper,
                       ZeroInflatedPoissonResults)
 
+
 class L1ZeroInflatedPoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1ZeroInflatedPoissonResultsWrapper,
                       L1ZeroInflatedPoissonResults)
+
 
 class ZeroInflatedGeneralizedPoissonResults(CountResults):
     __doc__ = _discrete_results_docs % {
@@ -755,17 +762,20 @@ class L1ZeroInflatedGeneralizedPoissonResults(L1CountResults,
         ZeroInflatedGeneralizedPoissonResults):
     pass
 
+
 class ZeroInflatedGeneralizedPoissonResultsWrapper(
         lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(ZeroInflatedGeneralizedPoissonResultsWrapper,
                       ZeroInflatedGeneralizedPoissonResults)
 
+
 class L1ZeroInflatedGeneralizedPoissonResultsWrapper(
         lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1ZeroInflatedGeneralizedPoissonResultsWrapper,
                       L1ZeroInflatedGeneralizedPoissonResults)
+
 
 class ZeroInflatedNegativeBinomialResults(CountResults):
     __doc__ = _discrete_results_docs % {
@@ -793,18 +803,16 @@ class L1ZeroInflatedNegativeBinomialResults(L1CountResults,
         ZeroInflatedNegativeBinomialResults):
     pass
 
+
 class ZeroInflatedNegativeBinomialResultsWrapper(
         lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(ZeroInflatedNegativeBinomialResultsWrapper,
                       ZeroInflatedNegativeBinomialResults)
 
+
 class L1ZeroInflatedNegativeBinomialResultsWrapper(
         lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1ZeroInflatedNegativeBinomialResultsWrapper,
                       L1ZeroInflatedNegativeBinomialResults)
-
-if __name__=="__main__":
-    import numpy as np
-    import statsmodels.api as sm

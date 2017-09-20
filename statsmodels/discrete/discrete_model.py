@@ -1181,6 +1181,7 @@ class Poisson(CountModel):
         L = np.exp(np.dot(X,params) + exposure + offset)
         return -np.dot(L*X.T, X)
 
+
 class GeneralizedPoisson(CountModel):
     __doc__ = """
     Generalized Poisson model for count data
@@ -1199,7 +1200,7 @@ class GeneralizedPoisson(CountModel):
     """
     p: scalar
         P denotes parameterizations for GP regression. p=1 for GP-1 and
-    p=2 for GP-2. Default is p=1.
+        p=2 for GP-2. Default is p=1.
     offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
@@ -1259,7 +1260,7 @@ class GeneralizedPoisson(CountModel):
 
         Returns
         -------
-        loglike : ndarray (nobs,)
+        loglike : ndarray
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -2716,6 +2717,7 @@ class NegativeBinomial(CountModel):
 
         return L1NegativeBinomialResultsWrapper(discretefit)
 
+
 class NegativeBinomialP(CountModel):
     __doc__ = """
     Generalized Negative Binomial (NB-P) model for count data
@@ -2729,10 +2731,13 @@ class NegativeBinomialP(CountModel):
         A reference to the exogenous design.
     p : scalar
         P denotes parameterizations for NB-P regression. p=1 for NB-1 and
-    p=2 for NB-2. Default is p=1.
+        p=2 for NB-2. Default is p=1.
     """ % {'params' : base._model_params_doc,
            'extra_params' :
-           """offset : array_like
+           """p: scalar
+        P denotes parameterizations for NB regression. p=1 for NB-1 and
+        p=2 for NB-2. Default is p=2.
+    offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
@@ -2782,7 +2787,7 @@ class NegativeBinomialP(CountModel):
 
         Returns
         -------
-        loglike : ndarray (nobs,)
+        loglike : ndarray
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
         """
