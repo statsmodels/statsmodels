@@ -21,6 +21,19 @@ from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
 from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
 
 
+_doc_zi_params = """
+    exog_infl : array_like or None
+        Explanatory variables for the binary inflation model, i.e. for
+        mixing probability model. If None, then a constant is used.
+    offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+    inflation : string, 'logit' or 'probit'
+        The model for the zero inflation, either Logit (default) or Probit
+    """
+
 class GenericZeroInflated(CountModel):
     __doc__ = """
     Generiz Zero Inflated model for count data
@@ -37,14 +50,7 @@ class GenericZeroInflated(CountModel):
     exog_infl: array
         A reference to the zero-inflated exogenous design.
     """ % {'params' : base._model_params_doc,
-           'extra_params' :
-           """offset : array_like
-        Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
-        Log(exposure) is added to the linear prediction with coefficient
-        equal to 1.
-
-    """ + base._missing_param_doc}
+           'extra_params' : _doc_zi_params + base._missing_param_doc}
 
     def __init__(self, endog, exog, exog_infl=None, offset=None,
                  inflation='logit', exposure=None, missing='none', **kwargs):
@@ -452,6 +458,7 @@ class GenericZeroInflated(CountModel):
         else:
             raise ValueError('which = %s is not available' % which)
 
+
 class ZeroInflatedPoisson(GenericZeroInflated):
     __doc__ = """
     Poisson Zero Inflated model for count data
@@ -468,14 +475,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
     exog_infl: array
         A reference to the zero-inflated exogenous design.
     """ % {'params' : base._model_params_doc,
-           'extra_params' :
-           """offset : array_like
-        Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
-        Log(exposure) is added to the linear prediction with coefficient
-        equal to 1.
-
-    """ + base._missing_param_doc}
+           'extra_params' : _doc_zi_params + base._missing_param_doc}
 
     def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
                  inflation='logit', missing='none', **kwargs):
@@ -554,7 +554,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
     %(extra_params)s
 
     Attributes
-    -----------
+    ----------
     endog : array
         A reference to the endogenous response variable
     exog : array
@@ -562,20 +562,16 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
     exog_infl: array
         A reference to the zero-inflated exogenous design.
     p: scalar
-        P denotes parametrizations for ZIGP regression. p=1 for ZIGP-1 and
-    p=2 for ZIGP-2. Default is p=2
+        P denotes parametrizations for ZIGP regression.
     """ % {'params' : base._model_params_doc,
-           'extra_params' :
-           """offset : array_like
-        Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
-        Log(exposure) is added to the linear prediction with coefficient
-        equal to 1.
-
+           'extra_params' : _doc_zi_params +
+           """p : float
+        dispersion power parameter for the GeneralizedPoisson model.  p=1 for
+        ZIGP-1 and p=2 for ZIGP-2. Default is p=2
     """ + base._missing_param_doc}
 
     def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
-                 inflation='logit', missing='none', p=2, **kwargs):
+                 inflation='logit', p=2, missing='none', **kwargs):
         super(ZeroInflatedGeneralizedPoisson, self).__init__(endog, exog,
                                                   offset=offset,
                                                   inflation=inflation,
@@ -644,17 +640,14 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         P denotes parametrizations for ZINB regression. p=1 for ZINB-1 and
     p=2 for ZINB-2. Default is p=2
     """ % {'params' : base._model_params_doc,
-           'extra_params' :
-           """offset : array_like
-        Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
-        Log(exposure) is added to the linear prediction with coefficient
-        equal to 1.
-
+           'extra_params' : _doc_zi_params +
+           """p : float
+        dispersion power parameter for the NegativeBinomialP model.  p=1 for
+        ZINB-1 and p=2 for ZINM-2. Default is p=2
     """ + base._missing_param_doc}
 
     def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
-                 inflation='logit', missing='none', p=2, **kwargs):
+                 inflation='logit', p=2, missing='none', **kwargs):
         super(ZeroInflatedNegativeBinomialP, self).__init__(endog, exog,
                                                   offset=offset,
                                                   inflation=inflation,
@@ -714,6 +707,15 @@ class ZeroInflatedPoissonResults(CountResults):
         w = 1 - self.predict() / np.exp(self.predict(which='linear'))
         return (1 + w * np.exp(mu))
 
+    def get_margeff(self, at='overall', method='dydx', atexog=None,
+            dummy=False, count=False):
+        """Get marginal effects of the fitted model.
+
+        Not yet implemented for Zero Inflated Models
+        """
+        raise NotImplementedError("not yet implemented for zero inflation")
+
+
 class L1ZeroInflatedPoissonResults(L1CountResults, ZeroInflatedPoissonResults):
     pass
 
@@ -739,6 +741,15 @@ class ZeroInflatedGeneralizedPoissonResults(CountResults):
         mu = np.exp(self.predict(which='linear'))
         w = 1 - self.predict() / mu
         return ((1 + alpha * mu**p)**2 + w * mu)
+
+    def get_margeff(self, at='overall', method='dydx', atexog=None,
+            dummy=False, count=False):
+        """Get marginal effects of the fitted model.
+
+        Not yet implemented for Zero Inflated Models
+        """
+        raise NotImplementedError("not yet implemented for zero inflation")
+
 
 class L1ZeroInflatedGeneralizedPoissonResults(L1CountResults,
         ZeroInflatedGeneralizedPoissonResults):
@@ -768,6 +779,15 @@ class ZeroInflatedNegativeBinomialResults(CountResults):
         mu = np.exp(self.predict(which='linear'))
         w = 1 - self.predict() / mu
         return (1 + alpha * mu**(p-1) + w * mu)
+
+    def get_margeff(self, at='overall', method='dydx', atexog=None,
+            dummy=False, count=False):
+        """Get marginal effects of the fitted model.
+
+        Not yet implemented for Zero Inflated Models
+        """
+        raise NotImplementedError("not yet implemented for zero inflation")
+
 
 class L1ZeroInflatedNegativeBinomialResults(L1CountResults,
         ZeroInflatedNegativeBinomialResults):
