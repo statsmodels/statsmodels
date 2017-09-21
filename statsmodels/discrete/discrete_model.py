@@ -1003,7 +1003,7 @@ class Poisson(CountModel):
     def _get_start_params_null(self):
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
-        const = self.endog.mean() / np.exp(offset + exposure)
+        const = (self.endog / np.exp(offset + exposure)).mean()
         params = [np.log(const)]
         return params
 

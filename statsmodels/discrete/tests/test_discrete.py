@@ -2077,6 +2077,65 @@ class  TestNegativeBinomialPPredictProb(object):
             nbinom.pmf(np.arange(8)[:,None], size, prob).T,
             atol=1e-2, rtol=1e-2)
 
+class CheckNull(object):
+
+    @classmethod
+    def _get_data(cls):
+        x = np.array([ 20.,  25.,  30.,  35.,  40.,  45.,  50.])
+        nobs = len(x)
+        exog = np.column_stack((np.ones(nobs), x))
+        endog = np.array([ 469, 5516, 6854, 6837, 5952, 4066, 3242])
+        return endog, exog
+
+    def test_llnull(self):
+        res = self.model.fit(start_params=self.start_params)
+        res._results._attach_nullmodel = True
+        llf0 = res.llnull
+        res_null0 = res.res_null
+        assert_allclose(llf0, res_null0.llf, rtol=1e-6)
+
+        res_null1 = self.res_null
+        assert_allclose(llf0, res_null1.llf, rtol=1e-6)
+        # Note default convergence tolerance doesn't get lower rtol
+        # from different starting values (using bfgs)
+        assert_allclose(res_null0.params, res_null1.params, rtol=1e-5)
+
+
+class TestPoissonNull(CheckNull):
+
+    @classmethod
+    def setup_class(cls):
+        endog, exog = cls._get_data()
+        cls.model = Poisson(endog, exog)
+        cls.res_null = Poisson(endog, exog[:, 0]).fit(start_params=[8.5])
+        # use start params to avoid warnings
+        cls.start_params = [8.5, 0]
+
+
+class TestNegativeBinomialNB1Null(CheckNull):
+
+    @classmethod
+    def setup_class(cls):
+        endog, exog = cls._get_data()
+        cls.model = NegativeBinomial(endog, exog, loglike_method='nb1')
+        cls.model_null = NegativeBinomial(endog, exog[:, 0], loglike_method='nb1')
+        cls.res_null = cls.model_null.fit(start_params=[8, 1000],
+                                          method='bfgs', gtol=1e-08, maxiter=300)
+        # for convergence with bfgs, I needed to round down alpha start_params
+        cls.start_params = np.array([7.730452, 2.01633068e-02, 1763.0])
+
+
+class TestNegativeBinomialNB2Null(CheckNull):
+
+    @classmethod
+    def setup_class(cls):
+        endog, exog = cls._get_data()
+        cls.model = NegativeBinomial(endog, exog, loglike_method='nb2')
+        cls.model_null = NegativeBinomial(endog, exog[:, 0], loglike_method='nb2')
+        cls.res_null = cls.model_null.fit(start_params=[8, 1],
+                                          method='bfgs', gtol=1e-08, maxiter=300)
+        cls.start_params = np.array([ 8.07216448,  0.01087238,  0.44024134])
+
 
 if __name__ == "__main__":
     import pytest
