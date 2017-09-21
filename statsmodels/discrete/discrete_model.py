@@ -2634,7 +2634,7 @@ class NegativeBinomial(CountModel):
 
         # Note: don't let super handle robust covariance because it has
         # transformed params
-
+        self._transparams = False # always define attribute
         if self.loglike_method.startswith('nb') and method not in ['newton',
                                                                    'ncg']:
             self._transparams = True # in case same Model instance is refit
@@ -2651,6 +2651,11 @@ class NegativeBinomial(CountModel):
             start_params = mod_poi.fit(disp=0).params
             if self.loglike_method.startswith('nb'):
                 start_params = np.append(start_params, 0.1)
+        else:
+            if self._transparams is True:
+                # transform user provided start_params dispersion, see #3918
+                start_params = start_params.copy()
+                start_params[-1] = np.log(start_params[-1])
 
         if callback is None:
             # work around perfect separation callback #3895
