@@ -56,6 +56,7 @@ def test_hdr_basic():
     labels_pos = np.all(np.in1d(data, hdr.outliers).reshape(data.shape), axis=1)
     outliers = labels[labels_pos]
     assert_equal([1982, 1983, 1997, 1998], outliers)
+    assert_equal(labels[hdr.outliers_idx], outliers)
     plt.close(fig)
 
 
@@ -64,7 +65,7 @@ def test_hdr_plot():
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    fig, res = hdrboxplot(data, labels=labels, ax=ax)
+    fig, res = hdrboxplot(data, labels=labels.tolist(), ax=ax)
 
     ax.set_xlabel("Month of the year")
     ax.set_ylabel("Sea surface temperature (C)")

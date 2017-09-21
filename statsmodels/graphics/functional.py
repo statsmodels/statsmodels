@@ -49,9 +49,10 @@ class HdrResults(object):
                "-> 50% HDR (max, min):\n{}\n"
                "-> 90% HDR (max, min):\n{}\n"
                "-> Extra quantiles (max, min):\n{}\n"
-               "-> Outliers:\n{}"
+               "-> Outliers:\n{}\n"
+               "-> Outliers indices:\n{}\n"
                ).format(self.median, self.hdr_50, self.hdr_90,
-                        self.extra_quantiles, self.outliers)
+                        self.extra_quantiles, self.outliers, self.outliers_idx)
 
         return msg
 
@@ -86,7 +87,7 @@ def _inverse_transform(pca, data):
     return projection
 
 
-def _curve_constrain(x, idx, sign, band, pca, ks_gaussian):
+def _curve_constrained(x, idx, sign, band, pca, ks_gaussian):
     """Find out if the curve is within the band.
 
     The curve value at :attr:`idx` for a given PDF is only returned if
@@ -122,7 +123,7 @@ def _curve_constrain(x, idx, sign, band, pca, ks_gaussian):
 
 
 def _min_max_band(args):
-    """Min an max values at `idx`.
+    """Min and max values at `idx`.
 
     Global optimization to find the extrema per component.
 
@@ -149,17 +150,17 @@ def _min_max_band(args):
     """
     idx, (band, pca, bounds, ks_gaussian) = args
     if have_de_optim:
-        max_ = differential_evolution(_curve_constrain, bounds=bounds,
+        max_ = differential_evolution(_curve_constrained, bounds=bounds,
                                       args=(idx, -1, band, pca, ks_gaussian),
                                       maxiter=7).x
-        min_ = differential_evolution(_curve_constrain, bounds=bounds,
+        min_ = differential_evolution(_curve_constrained, bounds=bounds,
                                       args=(idx, 1, band, pca, ks_gaussian),
                                       maxiter=7).x
     else:
-        max_ = brute(_curve_constrain, ranges=bounds, finish=fmin,
+        max_ = brute(_curve_constrained, ranges=bounds, finish=fmin,
                      args=(idx, -1, band, pca, ks_gaussian))
 
-        min_ = brute(_curve_constrain, ranges=bounds, finish=fmin,
+        min_ = brute(_curve_constrained, ranges=bounds, finish=fmin,
                      args=(idx, 1, band, pca, ks_gaussian))
 
     band = (_inverse_transform(pca, max_)[0][idx],
@@ -174,7 +175,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     1. Compute a multivariate kernel density estimation,
     2. Compute contour lines for quantiles 90%, 50% and `alpha`%,
     3. Plot the bivariate plot,
-    4. Compute mediane curve along with quantiles and outliers curves.
+    4. Compute median curve along with quantiles and outliers curves.
 
     Parameters
     ----------
@@ -193,8 +194,8 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
         Percentile threshold value for outliers detection. High value means
         a lower sensitivity to outliers. Default is `0.95`.
     bw: array_like or str, optional
-        If an array, it is a fixed user-specified bandwidth.  If a string,
-        should be one of:
+        If an array, it is a fixed user-specified bandwidth. If `None`, set to
+        `normal_reference`. If a string, should be one of:
 
             - normal_reference: normal reference rule of thumb (default)
             - cv_ml: cross validation maximum likelihood
@@ -202,7 +203,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
     xdata : ndarray, optional
         The independent variable for the data. If not given, it is assumed to
-        be an array of integers 0..N with N the length of the vectors in
+        be an array of integers 0..N-1 with N the length of the vectors in
         `data`.
     labels : sequence of scalar or str, optional
         The labels or identifiers of the curves in `data`. If given, outliers
@@ -258,7 +259,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     unlikely to be similar to the other curves.
 
     Using a kernel smoothing technique, the probability density function (PDF)
-    of the multivariate space can be recover. From this PDF, it is possible to
+    of the multivariate space can be recovered. From this PDF, it is possible to
     compute the density probability linked to the cluster of points and plot
     its contours.
 
@@ -341,10 +342,10 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
         median = brute(lambda x: - ks_gaussian.pdf(x),
                        ranges=bounds, finish=fmin)
 
-    outliers = np.where(pdf_r < pvalues[alpha.index(threshold)])[0]
+    outliers_idx = np.where(pdf_r < pvalues[alpha.index(threshold)])[0]
     if labels is not None:
-        labels = list(itertools.compress(labels, outliers))
-    outliers = data[outliers]
+        labels_outlier = [labels[i] for i in outliers_idx]
+    outliers = data[outliers_idx]
 
     # Find HDR given some quantiles
 
@@ -407,7 +408,8 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
                             "hdr_50": hdr_50,
                             "hdr_90": hdr_90,
                             "extra_quantiles": extra_quantiles,
-                            "outliers": outliers
+                            "outliers": outliers,
+                            "outliers_idx": outliers_idx
                          })
 
     # Plots
@@ -426,7 +428,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
     if len(outliers) != 0:
         for ii, outlier in enumerate(outliers):
-            label = str(labels[ii]) if labels is not None else 'Outliers'
+            label = str(labels_outlier[ii]) if labels_outlier is not None else 'Outliers'
             ax.plot(xdata, outlier,
                     ls='--', alpha=0.7, label=label)
 
@@ -460,7 +462,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
         functional curve.
     xdata : ndarray, optional
         The independent variable for the data.  If not given, it is assumed to
-        be an array of integers 0..N with N the length of the vectors in
+        be an array of integers 0..N-1 with N the length of the vectors in
         `data`.
     labels : sequence of scalar or str, optional
         The labels or identifiers of the curves in `data`.  If given, outliers
@@ -648,7 +650,7 @@ def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
         functional curve.
     xdata : ndarray, optional
         The independent variable for the data.  If not given, it is assumed to
-        be an array of integers 0..N with N the length of the vectors in
+        be an array of integers 0..N-1 with N the length of the vectors in
         `data`.
     depth : ndarray, optional
         A 1-D array of band depths for `data`, or equivalent order statistic.
