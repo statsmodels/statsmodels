@@ -1301,6 +1301,20 @@ class GeneralizedPoisson(CountModel):
         return (np.log(mu) + (endog - 1) * np.log(a2) - endog *
                 np.log(a1) - gammaln(endog + 1) - a2 / a1)
 
+    def _get_start_params_null(self):
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+        q = self.parameterization
+
+        const = (self.endog / np.exp(offset + exposure)).mean()
+        params = [np.log(const)]
+        mu = const * np.exp(offset + exposure)
+        resid = self.endog - mu
+        a = ((np.abs(resid) / np.sqrt(mu) - 1) * mu**(-q)).mean()
+        params.append(a)
+
+        return np.array(params)
+
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, use_transparams = False,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
@@ -2979,6 +2993,20 @@ class NegativeBinomialP(CountModel):
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
         return hess_arr
+
+    def _get_start_params_null(self):
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+        q = self.parameterization - 1
+
+        const = (self.endog / np.exp(offset + exposure)).mean()
+        params = [np.log(const)]
+        mu = const * np.exp(offset + exposure)
+        resid = self.endog - mu
+        a = ((resid**2 / mu - 1) * mu**(-q)).mean()
+        params.append(a)
+
+        return np.array(params)
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, use_transparams = False,
