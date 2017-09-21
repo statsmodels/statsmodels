@@ -3247,7 +3247,10 @@ class DiscreteResults(base.LikelihoodModelResults):
         else:
             sp_null = None
 
-        res_null = mod_null.fit(start_params=sp_null, method='bfgs',
+        res_null = mod_null.fit(start_params=sp_null, method='nm',
+                                warn_convergence=False,
+                                maxiter=10000, disp=0)
+        res_null = mod_null.fit(start_params=res_null.params, method='bfgs',
                                 warn_convergence=False,
                                 maxiter=10000, disp=0)
         if getattr(self, '_attach_nullmodel', False) is not False:

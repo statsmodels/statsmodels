@@ -2098,7 +2098,7 @@ class CheckNull(object):
         assert_allclose(llf0, res_null1.llf, rtol=1e-6)
         # Note default convergence tolerance doesn't get lower rtol
         # from different starting values (using bfgs)
-        assert_allclose(res_null0.params, res_null1.params, rtol=1e-5)
+        assert_allclose(res_null0.params, res_null1.params, rtol=5e-5)
 
 
 class TestPoissonNull(CheckNull):
@@ -2132,8 +2132,8 @@ class TestNegativeBinomialNB2Null(CheckNull):
         endog, exog = cls._get_data()
         cls.model = NegativeBinomial(endog, exog, loglike_method='nb2')
         cls.model_null = NegativeBinomial(endog, exog[:, 0], loglike_method='nb2')
-        cls.res_null = cls.model_null.fit(start_params=[8, 1],
-                                          method='bfgs', gtol=1e-08, maxiter=300)
+        cls.res_null = cls.model_null.fit(start_params=[8, 0.5],
+                                          method='bfgs', gtol=1e-06, maxiter=300)
         cls.start_params = np.array([ 8.07216448,  0.01087238,  0.44024134])
 
 
@@ -2145,7 +2145,7 @@ class TestNegativeBinomialNBP2Null(CheckNull):
         cls.model = NegativeBinomialP(endog, exog, p=2)
         cls.model_null = NegativeBinomialP(endog, exog[:, 0], p=2)
         cls.res_null = cls.model_null.fit(start_params=[8, 1],
-                                          method='bfgs', gtol=1e-08, maxiter=300)
+                                          method='bfgs', gtol=1e-06, maxiter=300)
         cls.start_params = np.array([ 8.07216448,  0.01087238,  0.44024134])
 
     def test_start_null(self):
@@ -2164,7 +2164,7 @@ class TestNegativeBinomialNBP1Null(CheckNull):
         cls.model = NegativeBinomialP(endog, exog, p=1.)
         cls.model_null = NegativeBinomialP(endog, exog[:, 0], p=1)
         cls.res_null = cls.model_null.fit(start_params=[8, 1],
-                                          method='bfgs', gtol=1e-08, maxiter=300)
+                                          method='bfgs', gtol=1e-06, maxiter=300)
         cls.start_params = np.array([7.730452, 2.01633068e-02, 1763.0])
 
     def test_start_null(self):
@@ -2182,7 +2182,7 @@ class TestGeneralizedPoissonNull(CheckNull):
         endog, exog = cls._get_data()
         cls.model = GeneralizedPoisson(endog, exog, p=1.5)
         cls.model_null = GeneralizedPoisson(endog, exog[:, 0], p=1.5)
-        cls.res_null = cls.model_null.fit(start_params=[7., 1],
+        cls.res_null = cls.model_null.fit(start_params=[8.4, 1],
                                           method='bfgs', gtol=1e-08, maxiter=300)
         cls.start_params = np.array([6.91127148, 0.04501334, 0.88393736])
 
