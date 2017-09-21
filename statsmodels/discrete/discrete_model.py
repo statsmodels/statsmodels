@@ -1522,7 +1522,7 @@ class GeneralizedPoisson(CountModel):
         hess_arr[:-1,-1] = dldpda
 
         # for dl/dalpha dalpha
-        dldada = mu_p**2 * (3 * y / a1**2 - y**2 * (y - 1) / a2**2 - 2 * a2 /
+        dldada = mu_p**2 * (3 * y / a1**2 - (y / a2)**2. * (y - 1) - 2 * a2 /
                             a1**3)
 
         hess_arr[-1,-1] = dldada.sum()
