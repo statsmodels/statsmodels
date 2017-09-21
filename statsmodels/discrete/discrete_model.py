@@ -2648,7 +2648,7 @@ class NegativeBinomial(CountModel):
             params.append(a)
         else: #self.loglike_method == 'nb1':
             params.append((resid**2 / mu - 1).mean())
-        return params
+        return np.array(params)
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None,
@@ -2676,7 +2676,7 @@ class NegativeBinomial(CountModel):
         else:
             if self._transparams is True:
                 # transform user provided start_params dispersion, see #3918
-                start_params = start_params.copy()
+                start_params = np.array(start_params, copy=True)
                 start_params[-1] = np.log(start_params[-1])
 
         if callback is None:
