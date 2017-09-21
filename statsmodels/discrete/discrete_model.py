@@ -1000,6 +1000,13 @@ class Poisson(CountModel):
         #np.sum(stats.poisson.logpmf(endog, np.exp(XB)))
         return -np.exp(XB) +  endog*XB - gammaln(endog+1)
 
+    def _get_start_params_null(self):
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+        const = self.endog.mean() / np.exp(offset + exposure)
+        params = [np.log(const)]
+        return params
+
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
         cntfit = super(CountModel, self).fit(start_params=start_params,
@@ -2628,6 +2635,21 @@ class NegativeBinomial(CountModel):
         sc = approx_fprime_cs(params, self.loglikeobs)
         return sc
 
+    def _get_start_params_null(self):
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+        const = (self.endog / np.exp(offset + exposure)).mean()
+        params = [np.log(const)]
+        mu = const * np.exp(offset + exposure)
+        resid = self.endog - mu
+        if self.loglike_method == 'nb2':
+            #params.append(np.linalg.pinv(mu[:,None]).dot(resid**2 / mu - 1))
+            a = ((resid**2 / mu - 1) / mu).mean()
+            params.append(a)
+        else: #self.loglike_method == 'nb1':
+            params.append((resid**2 / mu - 1).mean())
+        return params
+
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
@@ -3190,8 +3212,16 @@ class DiscreteResults(base.LikelihoodModelResults):
         # TODO: consider catching and warning on convergence failure?
         # in the meantime, try hard to converge. see
         # TestPoissonConstrained1a.test_smoke
-        res_null = mod_null.fit(disp=0, warn_convergence=False,
-                                maxiter=10000)
+
+
+        if hasattr(model, '_get_start_params_null'):
+            sp_null = model._get_start_params_null()
+        else:
+            sp_null = None
+
+        res_null = mod_null.fit(start_params=sp_null, method='bfgs',
+                                warn_convergence=False,
+                                maxiter=10000, disp=0)
         if getattr(self, '_attach_nullmodel', False) is not False:
             self.res_null = res_null
 
