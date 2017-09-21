@@ -1779,7 +1779,7 @@ class TestGeneralizedPoisson_underdispersion(object):
     def test_predict_prob(self):
         res = self.res
         endog = res.model.endog
-        freq = np.bincount(endog)
+        freq = np.bincount(endog.astype(int))
 
         pr = res.predict(which='prob')
         pr2 = sm.distributions.genpoisson_p.pmf(np.arange(6)[:, None],

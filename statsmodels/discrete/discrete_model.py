@@ -725,6 +725,13 @@ class CountModel(DiscreteModel):
         if exposure is None:
             delattr(self, 'exposure')
 
+        # promote dtype to float64 if needed
+        dt = np.promote_types(self.endog.dtype, np.float64)
+        self.endog = np.asarray(self.endog, dt)
+        dt = np.promote_types(self.exog.dtype, np.float64)
+        self.exog = np.asarray(self.exog, dt)
+
+
     def _check_inputs(self, offset, exposure, endog):
         if offset is not None and offset.shape[0] != endog.shape[0]:
             raise ValueError("offset is not the same length as endog")
