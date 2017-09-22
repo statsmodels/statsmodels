@@ -114,6 +114,17 @@ _l1_results_attr = """    nnz_params : Integer
     trimmed : Boolean array
         trimmed[i] == True if the ith parameter was trimmed from the model."""
 
+_get_start_params_null_docs = """
+Compute one-step moment estimator for null (constant-only) model
+
+This is a preliminary estimator used as start_params.
+
+Returns
+-------
+params : ndarray
+    parameter estimate based one one-step moment matching
+
+"""
 
 # helper for MNLogit (will be generally useful later)
 
@@ -1007,6 +1018,8 @@ class Poisson(CountModel):
         params = [np.log(const)]
         return params
 
+    _get_start_params_null.__doc__ = _get_start_params_null_docs
+
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
         cntfit = super(CountModel, self).fit(start_params=start_params,
@@ -1314,6 +1327,8 @@ class GeneralizedPoisson(CountModel):
         params.append(a)
 
         return np.array(params)
+
+    _get_start_params_null.__doc__ = _get_start_params_null_docs
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, use_transparams = False,
@@ -2664,6 +2679,8 @@ class NegativeBinomial(CountModel):
             params.append((resid**2 / mu - 1).mean())
         return np.array(params)
 
+    _get_start_params_null.__doc__ = _get_start_params_null_docs
+
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
@@ -3008,6 +3025,8 @@ class NegativeBinomialP(CountModel):
 
         return np.array(params)
 
+    _get_start_params_null.__doc__ = _get_start_params_null_docs
+
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, use_transparams = False,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
@@ -3231,17 +3250,19 @@ class DiscreteResults(base.LikelihoodModelResults):
     def set_null_options(self, llnull=None, attach_results=True, **kwds):
         """set fit options for Null (constant-only) model
 
-        This resets the cache for related attributes which is potentially fragile.
+        This resets the cache for related attributes which is potentially
+        fragile. This only sets the option, the null model is estimated
+        when llnull is accessed, if llnull is not yet in cache.
 
         Parameters
         ----------
         llnull : None or float
-            If llnull is not None, than the value will be directly assigned to
+            If llnull is not None, then the value will be directly assigned to
             the cached attribute "llnull".
-        attach_results : Bool
-            Sets and internal flag whether the results instance of the null
-            model is attached. By default without calling this method, the
-            null model results are not attached and only the loglikelihood
+        attach_results : bool
+            Sets an internal flag whether the results instance of the null
+            model should be attached. By default without calling this method,
+            thenull model results are not attached and only the loglikelihood
             value llnull is stored.
         kwds : keyword arguments
             `kwds` are directly used as fit keyword arguments for the null
