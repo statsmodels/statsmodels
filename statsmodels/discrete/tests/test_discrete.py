@@ -2186,6 +2186,41 @@ class TestGeneralizedPoissonNull(CheckNull):
                                           method='bfgs', gtol=1e-08, maxiter=300)
         cls.start_params = np.array([6.91127148, 0.04501334, 0.88393736])
 
+def test_null_options():
+    # this is a "nice" case because we only check that options are used
+    # correctly
+    nobs = 10
+    exog = np.ones((20, 2))
+    exog[:nobs // 2, 1] = 0
+    mu = np.exp(exog.sum(1))
+    endog = np.random.poisson(mu)  # Note no size=nobs in np.random
+    res = Poisson(endog, exog).fit(start_params=np.log([1, 1]))
+    llnull0 = res.llnull
+    assert_(hasattr(res, 'res_llnull') is False)
+    res.set_null_options(attach_results=True)
+    # default optimization
+    lln = res.llnull  # access to trigger computation
+    assert_allclose(res.res_null.mle_settings['start_params'], np.log(endog.mean()), rtol=1e-10)
+    assert_equal(res.res_null.mle_settings['optimizer'], 'bfgs')
+    assert_allclose(lln, llnull0)
+
+    res.set_null_options(attach_results=True, start_params=[0.5], method='nm')
+    lln = res.llnull  # access to trigger computation
+    assert_allclose(res.res_null.mle_settings['start_params'], [0.5], rtol=1e-10)
+    assert_equal(res.res_null.mle_settings['optimizer'], 'nm')
+
+    res.summary()  # call to fill cache
+    assert_('prsquared' in res._cache)
+    assert_equal(res._cache['llnull'],  lln)
+
+    assert_('prsquared' in res._cache)
+    assert_equal(res._cache['llnull'],  lln)
+
+    # check setting cache
+    res.set_null_options(llnull=999)
+    assert_('prsquared' not in res._cache)
+    assert_equal(res._cache['llnull'],  999)
+
 
 if __name__ == "__main__":
     import pytest

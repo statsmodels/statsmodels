@@ -3228,6 +3228,45 @@ class DiscreteResults(base.LikelihoodModelResults):
     def llr_pvalue(self):
         return stats.chisqprob(self.llr, self.df_model)
 
+    def set_null_options(self, llnull=None, attach_results=True, **kwds):
+        """set fit options for Null (constant-only) model
+
+        This resets the cache for related attributes which is potentially fragile.
+
+        Parameters
+        ----------
+        llnull : None or float
+            If llnull is not None, than the value will be directly assigned to
+            the cached attribute "llnull".
+        attach_results : Bool
+            Sets and internal flag whether the results instance of the null
+            model is attached. By default without calling this method, the
+            null model results are not attached and only the loglikelihood
+            value llnull is stored.
+        kwds : keyword arguments
+            `kwds` are directly used as fit keyword arguments for the null
+            model, overriding any provided defaults.
+
+        Returns
+        -------
+        no returns, modifies attributes of this instance
+
+        """
+        # reset cache, note we need to add here anything that depends on
+        # llnullor the null model. If something is missing, then the attribute
+        # might be incorrect.
+        self._cache.pop('llnull', None)
+        self._cache.pop('llr', None)
+        self._cache.pop('llr_pvalue', None)
+        self._cache.pop('prsquared', None)
+        if hasattr(self, 'res_null'):
+            del self.res_null
+
+        if llnull is not None:
+            self._cache['llnull'] = llnull
+        self._attach_nullmodel = attach_results
+        self._optim_kwds_null = kwds
+
     @cache_readonly
     def llnull(self):
 
@@ -3241,18 +3280,32 @@ class DiscreteResults(base.LikelihoodModelResults):
         # in the meantime, try hard to converge. see
         # TestPoissonConstrained1a.test_smoke
 
+        optim_kwds = getattr(self, '_optim_kwds_null', {}).copy()
 
-        if hasattr(model, '_get_start_params_null'):
+        if 'start_params' in optim_kwds:
+            # user provided
+            sp_null = optim_kwds.pop('start_params')
+        elif hasattr(model, '_get_start_params_null'):
+            # get moment estimates if available
             sp_null = model._get_start_params_null()
         else:
             sp_null = None
 
-        res_null = mod_null.fit(start_params=sp_null, method='nm',
-                                warn_convergence=False,
-                                maxiter=10000, disp=0)
-        res_null = mod_null.fit(start_params=res_null.params, method='bfgs',
-                                warn_convergence=False,
-                                maxiter=10000, disp=0)
+        opt_kwds = dict(method='bfgs', warn_convergence=False, maxiter=10000,
+                        disp=0)
+        opt_kwds.update(optim_kwds)
+
+        if optim_kwds:
+            res_null = mod_null.fit(start_params=sp_null, **opt_kwds)
+        else:
+            # this should be a reasonably method case across versions
+            res_null = mod_null.fit(start_params=sp_null, method='nm',
+                                    warn_convergence=False,
+                                    maxiter=10000, disp=0)
+            res_null = mod_null.fit(start_params=res_null.params, method='bfgs',
+                                    warn_convergence=False,
+                                    maxiter=10000, disp=0)
+
         if getattr(self, '_attach_nullmodel', False) is not False:
             self.res_null = res_null
 
