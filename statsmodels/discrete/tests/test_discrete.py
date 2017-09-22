@@ -1779,7 +1779,7 @@ class TestGeneralizedPoisson_underdispersion(object):
     def test_predict_prob(self):
         res = self.res
         endog = res.model.endog
-        freq = np.bincount(endog)
+        freq = np.bincount(endog.astype(int))
 
         pr = res.predict(which='prob')
         pr2 = sm.distributions.genpoisson_p.pmf(np.arange(6)[:, None],
@@ -2076,6 +2076,150 @@ class  TestNegativeBinomialPPredictProb(object):
         assert_allclose(res.predict(which='prob'),
             nbinom.pmf(np.arange(8)[:,None], size, prob).T,
             atol=1e-2, rtol=1e-2)
+
+class CheckNull(object):
+
+    @classmethod
+    def _get_data(cls):
+        x = np.array([ 20.,  25.,  30.,  35.,  40.,  45.,  50.])
+        nobs = len(x)
+        exog = np.column_stack((np.ones(nobs), x))
+        endog = np.array([ 469, 5516, 6854, 6837, 5952, 4066, 3242])
+        return endog, exog
+
+    def test_llnull(self):
+        res = self.model.fit(start_params=self.start_params)
+        res._results._attach_nullmodel = True
+        llf0 = res.llnull
+        res_null0 = res.res_null
+        assert_allclose(llf0, res_null0.llf, rtol=1e-6)
+
+        res_null1 = self.res_null
+        assert_allclose(llf0, res_null1.llf, rtol=1e-6)
+        # Note default convergence tolerance doesn't get lower rtol
+        # from different starting values (using bfgs)
+        assert_allclose(res_null0.params, res_null1.params, rtol=5e-5)
+
+
+class TestPoissonNull(CheckNull):
+
+    @classmethod
+    def setup_class(cls):
+        endog, exog = cls._get_data()
+        cls.model = Poisson(endog, exog)
+        cls.res_null = Poisson(endog, exog[:, 0]).fit(start_params=[8.5])
+        # use start params to avoid warnings
+        cls.start_params = [8.5, 0]
+
+
+class TestNegativeBinomialNB1Null(CheckNull):
+
+    @classmethod
+    def setup_class(cls):
+        endog, exog = cls._get_data()
+        cls.model = NegativeBinomial(endog, exog, loglike_method='nb1')
+        cls.model_null = NegativeBinomial(endog, exog[:, 0], loglike_method='nb1')
+        cls.res_null = cls.model_null.fit(start_params=[8, 1000],
+                                          method='bfgs', gtol=1e-08, maxiter=300)
+        # for convergence with bfgs, I needed to round down alpha start_params
+        cls.start_params = np.array([7.730452, 2.01633068e-02, 1763.0])
+
+
+class TestNegativeBinomialNB2Null(CheckNull):
+
+    @classmethod
+    def setup_class(cls):
+        endog, exog = cls._get_data()
+        cls.model = NegativeBinomial(endog, exog, loglike_method='nb2')
+        cls.model_null = NegativeBinomial(endog, exog[:, 0], loglike_method='nb2')
+        cls.res_null = cls.model_null.fit(start_params=[8, 0.5],
+                                          method='bfgs', gtol=1e-06, maxiter=300)
+        cls.start_params = np.array([ 8.07216448,  0.01087238,  0.44024134])
+
+
+class TestNegativeBinomialNBP2Null(CheckNull):
+
+    @classmethod
+    def setup_class(cls):
+        endog, exog = cls._get_data()
+        cls.model = NegativeBinomialP(endog, exog, p=2)
+        cls.model_null = NegativeBinomialP(endog, exog[:, 0], p=2)
+        cls.res_null = cls.model_null.fit(start_params=[8, 1],
+                                          method='bfgs', gtol=1e-06, maxiter=300)
+        cls.start_params = np.array([ 8.07216448,  0.01087238,  0.44024134])
+
+    def test_start_null(self):
+        endog, exog = self.model.endog, self.model.exog
+        model_nb2 = NegativeBinomial(endog, exog, loglike_method='nb2')
+        sp1 = model_nb2._get_start_params_null()
+        sp0 = self.model._get_start_params_null()
+        assert_allclose(sp0, sp1, rtol=1e-12)
+
+
+class TestNegativeBinomialNBP1Null(CheckNull):
+
+    @classmethod
+    def setup_class(cls):
+        endog, exog = cls._get_data()
+        cls.model = NegativeBinomialP(endog, exog, p=1.)
+        cls.model_null = NegativeBinomialP(endog, exog[:, 0], p=1)
+        cls.res_null = cls.model_null.fit(start_params=[8, 1],
+                                          method='bfgs', gtol=1e-06, maxiter=300)
+        cls.start_params = np.array([7.730452, 2.01633068e-02, 1763.0])
+
+    def test_start_null(self):
+        endog, exog = self.model.endog, self.model.exog
+        model_nb2 = NegativeBinomial(endog, exog, loglike_method='nb1')
+        sp1 = model_nb2._get_start_params_null()
+        sp0 = self.model._get_start_params_null()
+        assert_allclose(sp0, sp1, rtol=1e-12)
+
+
+class TestGeneralizedPoissonNull(CheckNull):
+
+    @classmethod
+    def setup_class(cls):
+        endog, exog = cls._get_data()
+        cls.model = GeneralizedPoisson(endog, exog, p=1.5)
+        cls.model_null = GeneralizedPoisson(endog, exog[:, 0], p=1.5)
+        cls.res_null = cls.model_null.fit(start_params=[8.4, 1],
+                                          method='bfgs', gtol=1e-08, maxiter=300)
+        cls.start_params = np.array([6.91127148, 0.04501334, 0.88393736])
+
+def test_null_options():
+    # this is a "nice" case because we only check that options are used
+    # correctly
+    nobs = 10
+    exog = np.ones((20, 2))
+    exog[:nobs // 2, 1] = 0
+    mu = np.exp(exog.sum(1))
+    endog = np.random.poisson(mu)  # Note no size=nobs in np.random
+    res = Poisson(endog, exog).fit(start_params=np.log([1, 1]))
+    llnull0 = res.llnull
+    assert_(hasattr(res, 'res_llnull') is False)
+    res.set_null_options(attach_results=True)
+    # default optimization
+    lln = res.llnull  # access to trigger computation
+    assert_allclose(res.res_null.mle_settings['start_params'], np.log(endog.mean()), rtol=1e-10)
+    assert_equal(res.res_null.mle_settings['optimizer'], 'bfgs')
+    assert_allclose(lln, llnull0)
+
+    res.set_null_options(attach_results=True, start_params=[0.5], method='nm')
+    lln = res.llnull  # access to trigger computation
+    assert_allclose(res.res_null.mle_settings['start_params'], [0.5], rtol=1e-10)
+    assert_equal(res.res_null.mle_settings['optimizer'], 'nm')
+
+    res.summary()  # call to fill cache
+    assert_('prsquared' in res._cache)
+    assert_equal(res._cache['llnull'],  lln)
+
+    assert_('prsquared' in res._cache)
+    assert_equal(res._cache['llnull'],  lln)
+
+    # check setting cache
+    res.set_null_options(llnull=999)
+    assert_('prsquared' not in res._cache)
+    assert_equal(res._cache['llnull'],  999)
 
 
 if __name__ == "__main__":

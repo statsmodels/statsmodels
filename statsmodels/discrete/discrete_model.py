@@ -114,6 +114,17 @@ _l1_results_attr = """    nnz_params : Integer
     trimmed : Boolean array
         trimmed[i] == True if the ith parameter was trimmed from the model."""
 
+_get_start_params_null_docs = """
+Compute one-step moment estimator for null (constant-only) model
+
+This is a preliminary estimator used as start_params.
+
+Returns
+-------
+params : ndarray
+    parameter estimate based one one-step moment matching
+
+"""
 
 # helper for MNLogit (will be generally useful later)
 
@@ -725,6 +736,13 @@ class CountModel(DiscreteModel):
         if exposure is None:
             delattr(self, 'exposure')
 
+        # promote dtype to float64 if needed
+        dt = np.promote_types(self.endog.dtype, np.float64)
+        self.endog = np.asarray(self.endog, dt)
+        dt = np.promote_types(self.exog.dtype, np.float64)
+        self.exog = np.asarray(self.exog, dt)
+
+
     def _check_inputs(self, offset, exposure, endog):
         if offset is not None and offset.shape[0] != endog.shape[0]:
             raise ValueError("offset is not the same length as endog")
@@ -992,6 +1010,15 @@ class Poisson(CountModel):
         endog = self.endog
         #np.sum(stats.poisson.logpmf(endog, np.exp(XB)))
         return -np.exp(XB) +  endog*XB - gammaln(endog+1)
+
+    def _get_start_params_null(self):
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+        const = (self.endog / np.exp(offset + exposure)).mean()
+        params = [np.log(const)]
+        return params
+
+    _get_start_params_null.__doc__ = _get_start_params_null_docs
 
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
@@ -1287,6 +1314,22 @@ class GeneralizedPoisson(CountModel):
         return (np.log(mu) + (endog - 1) * np.log(a2) - endog *
                 np.log(a1) - gammaln(endog + 1) - a2 / a1)
 
+    def _get_start_params_null(self):
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+        q = self.parameterization
+
+        const = (self.endog / np.exp(offset + exposure)).mean()
+        params = [np.log(const)]
+        mu = const * np.exp(offset + exposure)
+        resid = self.endog - mu
+        a = ((np.abs(resid) / np.sqrt(mu) - 1) * mu**(-q)).mean()
+        params.append(a)
+
+        return np.array(params)
+
+    _get_start_params_null.__doc__ = _get_start_params_null_docs
+
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, use_transparams = False,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
@@ -1508,7 +1551,7 @@ class GeneralizedPoisson(CountModel):
         hess_arr[:-1,-1] = dldpda
 
         # for dl/dalpha dalpha
-        dldada = mu_p**2 * (3 * y / a1**2 - y**2 * (y - 1) / a2**2 - 2 * a2 /
+        dldada = mu_p**2 * (3 * y / a1**2 - (y / a2)**2. * (y - 1) - 2 * a2 /
                             a1**3)
 
         hess_arr[-1,-1] = dldada.sum()
@@ -2621,13 +2664,30 @@ class NegativeBinomial(CountModel):
         sc = approx_fprime_cs(params, self.loglikeobs)
         return sc
 
+    def _get_start_params_null(self):
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+        const = (self.endog / np.exp(offset + exposure)).mean()
+        params = [np.log(const)]
+        mu = const * np.exp(offset + exposure)
+        resid = self.endog - mu
+        if self.loglike_method == 'nb2':
+            #params.append(np.linalg.pinv(mu[:,None]).dot(resid**2 / mu - 1))
+            a = ((resid**2 / mu - 1) / mu).mean()
+            params.append(a)
+        else: #self.loglike_method == 'nb1':
+            params.append((resid**2 / mu - 1).mean())
+        return np.array(params)
+
+    _get_start_params_null.__doc__ = _get_start_params_null_docs
+
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
 
         # Note: don't let super handle robust covariance because it has
         # transformed params
-
+        self._transparams = False # always define attribute
         if self.loglike_method.startswith('nb') and method not in ['newton',
                                                                    'ncg']:
             self._transparams = True # in case same Model instance is refit
@@ -2644,6 +2704,11 @@ class NegativeBinomial(CountModel):
             start_params = mod_poi.fit(disp=0).params
             if self.loglike_method.startswith('nb'):
                 start_params = np.append(start_params, 0.1)
+        else:
+            if self._transparams is True:
+                # transform user provided start_params dispersion, see #3918
+                start_params = np.array(start_params, copy=True)
+                start_params[-1] = np.log(start_params[-1])
 
         if callback is None:
             # work around perfect separation callback #3895
@@ -2946,6 +3011,22 @@ class NegativeBinomialP(CountModel):
 
         return hess_arr
 
+    def _get_start_params_null(self):
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+        q = self.parameterization - 1
+
+        const = (self.endog / np.exp(offset + exposure)).mean()
+        params = [np.log(const)]
+        mu = const * np.exp(offset + exposure)
+        resid = self.endog - mu
+        a = ((resid**2 / mu - 1) * mu**(-q)).mean()
+        params.append(a)
+
+        return np.array(params)
+
+    _get_start_params_null.__doc__ = _get_start_params_null_docs
+
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, use_transparams = False,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
@@ -3166,6 +3247,47 @@ class DiscreteResults(base.LikelihoodModelResults):
     def llr_pvalue(self):
         return stats.chisqprob(self.llr, self.df_model)
 
+    def set_null_options(self, llnull=None, attach_results=True, **kwds):
+        """set fit options for Null (constant-only) model
+
+        This resets the cache for related attributes which is potentially
+        fragile. This only sets the option, the null model is estimated
+        when llnull is accessed, if llnull is not yet in cache.
+
+        Parameters
+        ----------
+        llnull : None or float
+            If llnull is not None, then the value will be directly assigned to
+            the cached attribute "llnull".
+        attach_results : bool
+            Sets an internal flag whether the results instance of the null
+            model should be attached. By default without calling this method,
+            thenull model results are not attached and only the loglikelihood
+            value llnull is stored.
+        kwds : keyword arguments
+            `kwds` are directly used as fit keyword arguments for the null
+            model, overriding any provided defaults.
+
+        Returns
+        -------
+        no returns, modifies attributes of this instance
+
+        """
+        # reset cache, note we need to add here anything that depends on
+        # llnullor the null model. If something is missing, then the attribute
+        # might be incorrect.
+        self._cache.pop('llnull', None)
+        self._cache.pop('llr', None)
+        self._cache.pop('llr_pvalue', None)
+        self._cache.pop('prsquared', None)
+        if hasattr(self, 'res_null'):
+            del self.res_null
+
+        if llnull is not None:
+            self._cache['llnull'] = llnull
+        self._attach_nullmodel = attach_results
+        self._optim_kwds_null = kwds
+
     @cache_readonly
     def llnull(self):
 
@@ -3178,8 +3300,33 @@ class DiscreteResults(base.LikelihoodModelResults):
         # TODO: consider catching and warning on convergence failure?
         # in the meantime, try hard to converge. see
         # TestPoissonConstrained1a.test_smoke
-        res_null = mod_null.fit(disp=0, warn_convergence=False,
-                                maxiter=10000)
+
+        optim_kwds = getattr(self, '_optim_kwds_null', {}).copy()
+
+        if 'start_params' in optim_kwds:
+            # user provided
+            sp_null = optim_kwds.pop('start_params')
+        elif hasattr(model, '_get_start_params_null'):
+            # get moment estimates if available
+            sp_null = model._get_start_params_null()
+        else:
+            sp_null = None
+
+        opt_kwds = dict(method='bfgs', warn_convergence=False, maxiter=10000,
+                        disp=0)
+        opt_kwds.update(optim_kwds)
+
+        if optim_kwds:
+            res_null = mod_null.fit(start_params=sp_null, **opt_kwds)
+        else:
+            # this should be a reasonably method case across versions
+            res_null = mod_null.fit(start_params=sp_null, method='nm',
+                                    warn_convergence=False,
+                                    maxiter=10000, disp=0)
+            res_null = mod_null.fit(start_params=res_null.params, method='bfgs',
+                                    warn_convergence=False,
+                                    maxiter=10000, disp=0)
+
         if getattr(self, '_attach_nullmodel', False) is not False:
             self.res_null = res_null
 
