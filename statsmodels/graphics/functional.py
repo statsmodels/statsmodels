@@ -345,6 +345,8 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     outliers_idx = np.where(pdf_r < pvalues[alpha.index(threshold)])[0]
     if labels is not None:
         labels_outlier = [labels[i] for i in outliers_idx]
+    else:
+        labels_outlier = None
     outliers = data[outliers_idx]
 
     # Find HDR given some quantiles

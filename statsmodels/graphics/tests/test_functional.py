@@ -82,7 +82,7 @@ def test_hdr_alpha():
                                 23.0, 22.0, 21.7, 22.1, 22.7, 23.8],
                                [23.4, 24.8, 25.0, 23.9, 22.4, 21.1,
                                 20.0, 19.3, 19.2, 19.4, 20.1, 21.3]])
-    assert_almost_equal(hdr.extra_quantiles, extra_quant_t, decimal=1)
+    assert_almost_equal(hdr.extra_quantiles, extra_quant_t, decimal=0)
     plt.close(fig)
 
 
