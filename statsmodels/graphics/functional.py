@@ -3,6 +3,7 @@
 from statsmodels.multivariate.pca import PCA
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
 from statsmodels.compat.python import combinations, range, zip
+from collections import OrderedDict
 import numpy as np
 from scipy.misc import factorial
 try:
@@ -436,7 +437,13 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
     if labels is not None:
         handles, labels = ax.get_legend_handles_labels()
-        by_label = dict(zip(labels, handles))
+        by_label = OrderedDict(zip(labels, handles))
+        if len(outliers) != 0:
+            by_label.pop('dataset')
+            by_label.pop('Median')
+            by_label.pop('50% HDR')
+            by_label.pop('90% HDR')
+
         ax.legend(by_label.values(), by_label.keys(), loc='best')
 
     return fig, hdr_res
