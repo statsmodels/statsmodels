@@ -14,6 +14,7 @@ import os
 import warnings
 
 import numpy as np
+import pandas as pd
 from numpy.testing import (assert_, assert_raises, assert_almost_equal,
                            assert_equal, assert_array_equal, assert_allclose,
                            assert_array_less)
@@ -2220,6 +2221,50 @@ def test_null_options():
     res.set_null_options(llnull=999)
     assert_('prsquared' not in res._cache)
     assert_equal(res._cache['llnull'],  999)
+
+
+def test_optim_kwds_prelim():
+    # test that fit options for preliminary fit is correctly transmitted
+
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    filepath = os.path.join(cur_dir, "results", "sm3533.csv")
+    df = pd.read_csv(filepath)
+
+    features = ['pp']
+    X = (df[features] - df[features].mean())/df[features].std()
+    y = df['num'].values
+    exog = sm.add_constant(X[features].copy())
+    # offset=np.log(df['population'].values + 1)
+    # offset currently not used
+    offset = None
+
+    optim_kwds_prelim = dict(method='bfgs', maxiter=50)
+    model = Poisson(y, exog, offset=offset) #
+    res_poi = model.fit(disp=0, **optim_kwds_prelim)
+
+    # GPP with p=1.5 converges correctly,
+    # GPP fails when p=2 even with good start_params
+    model = GeneralizedPoisson(y, exog, offset=offset, p=1.5)
+    res = model.fit(disp=0, maxiter=200, optim_kwds_prelim=optim_kwds_prelim )
+
+    assert_allclose(res.mle_settings['start_params'][:-1], res_poi.params, rtol=1e-4)
+    assert_equal(res.mle_settings['optim_kwds_prelim'], optim_kwds_prelim)
+    # rough check that convergence makes sense
+    assert_allclose(res.predict().mean(), y.mean(), rtol=0.1)
+
+    model = NegativeBinomial(y, exog, offset=offset)
+    res = model.fit(disp=0, optim_kwds_prelim=optim_kwds_prelim)
+
+    assert_allclose(res.mle_settings['start_params'][:-1], res_poi.params, rtol=1e-4)
+    assert_equal(res.mle_settings['optim_kwds_prelim'], optim_kwds_prelim)
+    assert_allclose(res.predict().mean(), y.mean(), rtol=0.1)
+
+    model = NegativeBinomialP(y, exog, offset=offset, p=2)
+    res = model.fit(disp=0, optim_kwds_prelim=optim_kwds_prelim)
+
+    assert_allclose(res.mle_settings['start_params'][:-1], res_poi.params, rtol=1e-4)
+    assert_equal(res.mle_settings['optim_kwds_prelim'], optim_kwds_prelim)
+    assert_allclose(res.predict().mean(), y.mean(), rtol=0.1)
 
 
 if __name__ == "__main__":

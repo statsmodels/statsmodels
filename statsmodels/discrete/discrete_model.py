@@ -1355,8 +1355,11 @@ class GeneralizedPoisson(CountModel):
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
+            optim_kwds_prelim = {'disp': 0, 'skip_hessian': True,
+                                 'warn_convergence': False}
+            optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            start_params = mod_poi.fit(disp=0, method=method).params
+            start_params = mod_poi.fit(**optim_kwds_prelim).params
             start_params = np.append(start_params, 0.1)
 
         if callback is None:
@@ -2700,8 +2703,11 @@ class NegativeBinomial(CountModel):
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
+            optim_kwds_prelim = {'disp': 0, 'skip_hessian': True,
+                                 'warn_convergence': False}
+            optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            start_params = mod_poi.fit(disp=0).params
+            start_params = mod_poi.fit(**optim_kwds_prelim).params
             if self.loglike_method.startswith('nb'):
                 start_params = np.append(start_params, 0.1)
         else:
@@ -3052,8 +3058,13 @@ class NegativeBinomialP(CountModel):
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
+
+            optim_kwds_prelim = {'disp': 0, 'skip_hessian': True,
+                                 'warn_convergence': False}
+            optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
+            #print(optim_kwds_prelim)
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            start_params = mod_poi.fit(disp=0).params
+            start_params = mod_poi.fit(**optim_kwds_prelim).params
             start_params = np.append(start_params, 0.1)
 
         if callback is None:
