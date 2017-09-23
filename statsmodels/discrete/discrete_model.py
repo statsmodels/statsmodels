@@ -2701,7 +2701,7 @@ class NegativeBinomial(CountModel):
             if np.size(offset) == 1 and offset == 0:
                 offset = None
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            start_params = mod_poi.fit(disp=0).params
+            start_params = mod_poi.fit(disp=0, skip_hessian=True, full_output=False).params
             if self.loglike_method.startswith('nb'):
                 start_params = np.append(start_params, 0.1)
         else:
