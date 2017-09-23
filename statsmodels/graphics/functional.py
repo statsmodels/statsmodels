@@ -3,7 +3,8 @@
 from statsmodels.multivariate.pca import PCA
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
 from statsmodels.compat.python import combinations, range, zip
-from collections import OrderedDict
+from statsmodels.compat.collections import OrderedDict
+from statsmodels.graphics.utils import _import_mpl
 import numpy as np
 from scipy.misc import factorial
 try:
@@ -419,10 +420,11 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     ax.plot(np.array([xdata] * n_samples).T, data.T,
             c='c', alpha=.1, label='dataset')
     ax.plot(xdata, median, c='k', label='Median')
-    ax.fill_between(xdata, *hdr_50,
-                    color='gray', alpha=.4,  label='50% HDR')
-    ax.fill_between(xdata, *hdr_90,
-                    color='gray', alpha=.3, label='90% HDR')
+    fill_betweens = []
+    fill_betweens.append(ax.fill_between(xdata, *hdr_50, color='gray',
+                                         alpha=.4,  label='50% HDR'))
+    fill_betweens.append(ax.fill_between(xdata, *hdr_90, color='gray',
+                                         alpha=.3, label='90% HDR'))
 
     if len(extra_quantiles) != 0:
         ax.plot(np.array([xdata] * len(extra_quantiles)).T,
@@ -437,6 +439,16 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
     if labels is not None:
         handles, labels = ax.get_legend_handles_labels()
+
+        # Proxy artist for fill_between legend entry
+        # See http://matplotlib.org/1.3.1/users/legend_guide.html
+        plt = _import_mpl()
+        for label, fill_between in zip(['50% HDR', '90% HDR'], fill_betweens):
+            p = plt.Rectangle((0, 0), 1, 1,
+                              fc=fill_between.get_facecolor()[0])
+            handles.append(p)
+            labels.append(label)
+
         by_label = OrderedDict(zip(labels, handles))
         if len(outliers) != 0:
             by_label.pop('dataset')

@@ -65,7 +65,7 @@ def test_hdr_plot():
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    fig, res = hdrboxplot(data, labels=labels.tolist(), ax=ax)
+    fig, res = hdrboxplot(data, labels=labels.tolist(), ax=ax, threshold=1)
 
     ax.set_xlabel("Month of the year")
     ax.set_ylabel("Sea surface temperature (C)")
