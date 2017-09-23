@@ -45,7 +45,7 @@ class TestSimpleTable(unittest.TestCase):
     def test_noperc(self):
         t1 = Describe(data4)
         noperc = ['obs', 'mean', 'std', 'min', 'max', 'ptp', #'mode',  #'var',
-        #                        'median', 'skew', 'uss', 'kurtosis']
+                                'median', 'skew', 'uss', 'kurtosis']
         #TODO: mode var raise exception,
         #TODO: percentile writes list in cell (?), huge wide format
         t1.summary(stats=noperc)
