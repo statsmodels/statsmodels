@@ -1764,7 +1764,7 @@ class TestGeneralizedPoisson_underdispersion(object):
         res = self.res
         res2 = res.model.fit(start_params=res.params, method='newton')
         assert_allclose(res.model.score(res.params),
-                        np.zeros(len(res2.params)), atol=5e-3)
+                        np.zeros(len(res2.params)), atol=0.01)
         assert_allclose(res.model.score(res2.params),
                         np.zeros(len(res2.params)), atol=1e-10)
         assert_allclose(res.params, res2.params, atol=1e-4)
@@ -2242,16 +2242,6 @@ def test_optim_kwds_prelim():
     model = Poisson(y, exog, offset=offset) #
     res_poi = model.fit(disp=0, **optim_kwds_prelim)
 
-    # GPP with p=1.5 converges correctly,
-    # GPP fails when p=2 even with good start_params
-    model = GeneralizedPoisson(y, exog, offset=offset, p=1.5)
-    res = model.fit(disp=0, maxiter=200, optim_kwds_prelim=optim_kwds_prelim )
-
-    assert_allclose(res.mle_settings['start_params'][:-1], res_poi.params, rtol=1e-4)
-    assert_equal(res.mle_settings['optim_kwds_prelim'], optim_kwds_prelim)
-    # rough check that convergence makes sense
-    assert_allclose(res.predict().mean(), y.mean(), rtol=0.1)
-
     model = NegativeBinomial(y, exog, offset=offset)
     res = model.fit(disp=0, optim_kwds_prelim=optim_kwds_prelim)
 
@@ -2266,6 +2256,17 @@ def test_optim_kwds_prelim():
     assert_equal(res.mle_settings['optim_kwds_prelim'], optim_kwds_prelim)
     assert_allclose(res.predict().mean(), y.mean(), rtol=0.1)
 
+    # GPP with p=1.5 converges correctly,
+    # GPP fails when p=2 even with good start_params
+    # p = 1.5 also fails on older scipy with bfgs, use nm instead
+    optim_kwds_prelim = dict(method='nm', maxiter=50)
+    model = GeneralizedPoisson(y, exog, offset=offset, p=1.5)
+    res = model.fit(disp=0, maxiter=200, optim_kwds_prelim=optim_kwds_prelim )
+
+    assert_allclose(res.mle_settings['start_params'][:-1], res_poi.params, rtol=1e-4)
+    assert_equal(res.mle_settings['optim_kwds_prelim'], optim_kwds_prelim)
+    # rough check that convergence makes sense
+    assert_allclose(res.predict().mean(), y.mean(), rtol=0.1)
 
 if __name__ == "__main__":
     import pytest
