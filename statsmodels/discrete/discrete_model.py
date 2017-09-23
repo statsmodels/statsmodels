@@ -1022,6 +1022,12 @@ class Poisson(CountModel):
 
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
+
+        if start_params is None and self.data.const_idx is not None:
+            # k_params or k_exog not available?
+            start_params = 0.001 * np.ones(self.exog.shape[1])
+            start_params[self.data.const_idx] = self._get_start_params_null()[0]
+
         cntfit = super(CountModel, self).fit(start_params=start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
