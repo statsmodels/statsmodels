@@ -79,7 +79,7 @@ class SARIMAX(MLEModel):
     simple_differencing : boolean, optional
         Whether or not to use partially conditional maximum likelihood
         estimation. If True, differencing is performed prior to estimation,
-        which discards the first :math:`s D + d` initial rows but reuslts in a
+        which discards the first :math:`s D + d` initial rows but results in a
         smaller state-space formulation. If False, the full SARIMAX model is
         put in state-space form so that all datapoints can be used in
         estimation. Default is False.
