@@ -246,7 +246,7 @@ def _measure_tables(tables, settings):
 _model_types = {'OLS' : 'Ordinary least squares',
                 'GLS' : 'Generalized least squares',
                 'GLSAR' : 'Generalized least squares with AR(p)',
-                'WLS' : 'Weigthed least squares',
+                'WLS' : 'Weighted least squares',
                 'RLM' : 'Robust linear model',
                 'NBin': 'Negative binomial model',
                 'GLM' : 'Generalized linear model'

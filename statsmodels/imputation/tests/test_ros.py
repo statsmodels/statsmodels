@@ -1,14 +1,14 @@
 from __future__ import division
 
-import sys
 from textwrap import dedent
 
-import nose.tools as ntools
 import numpy.testing as npt
 import pandas.util.testing as pdtest
 
 import numpy
+from numpy.testing import assert_equal
 import pandas
+import pytest
 
 from statsmodels.imputation import ros
 from statsmodels.compat.python import StringIO
@@ -17,7 +17,6 @@ if pandas.__version__.split('.')[1] <  '14':
     __test__ = False
 
 
-@ntools.nottest
 def load_basic_data():
     raw_csv = StringIO(
         "res,qual\n2.00,=\n4.20,=\n4.62,=\n5.00,ND\n5.00,ND\n5.50,ND\n"
@@ -33,7 +32,6 @@ def load_basic_data():
     return df
 
 
-@ntools.nottest
 def load_intermediate_data():
     df = pandas.DataFrame([
         {'censored': True, 'conc': 5.0, 'det_limit_index': 1, 'rank': 1},
@@ -76,7 +74,6 @@ def load_intermediate_data():
     return df
 
 
-@ntools.nottest
 def load_advanced_data():
     df = pandas.DataFrame([
         {'Zprelim': -1.4456202174142005, 'censored': True, 'conc': 5.0,
@@ -154,7 +151,6 @@ def load_advanced_data():
     return df
 
 
-@ntools.nottest
 def load_basic_cohn():
     cohn = pandas.DataFrame([
         {'lower_dl': 2.0, 'ncen_equal': 0.0, 'nobs_below': 0.0,
@@ -246,7 +242,7 @@ class Test_cohn_numbers(object):
         _df = self.df.copy()
         _df['qual'] = False
         result = ros.cohn_numbers(_df, observations='conc', censorship='qual')
-        ntools.assert_tuple_equal(result.shape, (0, 6))
+        assert result.shape == (0, 6)
 
 
 class Test__detection_limit_index(object):
@@ -255,16 +251,16 @@ class Test__detection_limit_index(object):
         self.empty_cohn = pandas.DataFrame(numpy.empty((0, 7)))
 
     def test_empty(self):
-        ntools.assert_equal(ros._detection_limit_index(None, self.empty_cohn), 0)
+        assert_equal(ros._detection_limit_index(None, self.empty_cohn), 0)
 
     def test_populated(self):
-         ntools.assert_equal(ros._detection_limit_index(3.5, self.cohn), 0)
-         ntools.assert_equal(ros._detection_limit_index(6.0, self.cohn), 3)
-         ntools.assert_equal(ros._detection_limit_index(12.0, self.cohn), 5)
+         assert_equal(ros._detection_limit_index(3.5, self.cohn), 0)
+         assert_equal(ros._detection_limit_index(6.0, self.cohn), 3)
+         assert_equal(ros._detection_limit_index(12.0, self.cohn), 5)
 
-    @ntools.raises(IndexError)
     def test_out_of_bounds(self):
-        ros._detection_limit_index(0, self.cohn)
+        with pytest.raises(IndexError):
+            ros._detection_limit_index(0, self.cohn)
 
 
 def test__ros_group_rank():
@@ -286,22 +282,22 @@ class Test__ros_plot_pos(object):
     def test_uncensored_1(self):
         row = {'censored': False, 'det_limit_index': 2, 'rank': 1}
         result = ros._ros_plot_pos(row, 'censored', self.cohn)
-        ntools.assert_equal(result, 0.24713958810068648)
+        assert_equal(result, 0.24713958810068648)
 
     def test_uncensored_2(self):
         row = {'censored': False, 'det_limit_index': 2, 'rank': 12}
         result = ros._ros_plot_pos(row, 'censored', self.cohn)
-        ntools.assert_equal(result, 0.51899313501144173)
+        assert_equal(result, 0.51899313501144173)
 
     def test_censored_1(self):
         row = {'censored': True, 'det_limit_index': 5, 'rank': 4}
         result = ros._ros_plot_pos(row, 'censored', self.cohn)
-        ntools.assert_equal(result, 1.3714285714285714)
+        assert_equal(result, 1.3714285714285714)
 
     def test_censored_2(self):
         row = {'censored': True, 'det_limit_index': 4, 'rank': 2}
         result = ros._ros_plot_pos(row, 'censored', self.cohn)
-        ntools.assert_equal(result, 0.41739130434782606)
+        assert_equal(result, 0.41739130434782606)
 
 
 def test__norm_plot_pos():

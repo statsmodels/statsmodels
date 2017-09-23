@@ -135,7 +135,7 @@ def variance_inflation_factor(exog, exog_idx):
 
     Parameters
     ----------
-    exog : ndarray, (nobs, k_vars)
+    exog : ndarray
         design matrix with all explanatory variables, as for example used in
         regression
     exog_idx : int

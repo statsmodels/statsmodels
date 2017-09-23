@@ -1,14 +1,15 @@
 from statsmodels.compat.python import lrange, BytesIO, cPickle
+from statsmodels.compat.testing import skip, skipif
 
 import os
 import warnings
 
-from nose.tools import nottest
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_allclose,
-                           assert_raises, dec, TestCase)
+                           assert_raises, dec)
 import pandas as pd
 from pandas import PeriodIndex, DatetimeIndex
+import pytest
 
 from statsmodels.datasets.macrodata import load as load_macrodata
 from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
@@ -192,7 +193,7 @@ class CheckArimaResultsMixin(CheckArmaResultsMixin):
 
 class Test_Y_ARMA11_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,0]
         cls.res1 = ARMA(endog, order=(1,1)).fit(trend='nc', disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -210,7 +211,7 @@ class Test_Y_ARMA11_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA14_NoConst(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,1]
         cls.res1 = ARMA(endog, order=(1,4)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma14()
@@ -219,7 +220,7 @@ class Test_Y_ARMA14_NoConst(CheckArmaResultsMixin):
 @dec.slow
 class Test_Y_ARMA41_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,2]
         cls.res1 = ARMA(endog, order=(4,1)).fit(trend='nc', disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -230,7 +231,7 @@ class Test_Y_ARMA41_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA22_NoConst(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,3]
         cls.res1 = ARMA(endog, order=(2,2)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma22()
@@ -238,7 +239,7 @@ class Test_Y_ARMA22_NoConst(CheckArmaResultsMixin):
 
 class Test_Y_ARMA50_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,4]
         cls.res1 = ARMA(endog, order=(5,0)).fit(trend='nc', disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -248,7 +249,7 @@ class Test_Y_ARMA50_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA02_NoConst(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,5]
         cls.res1 = ARMA(endog, order=(0,2)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma02()
@@ -256,7 +257,7 @@ class Test_Y_ARMA02_NoConst(CheckArmaResultsMixin):
 
 class Test_Y_ARMA11_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,6]
         cls.res1 = ARMA(endog, order=(1,1)).fit(trend="c", disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -266,7 +267,7 @@ class Test_Y_ARMA11_Const(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA14_Const(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,7]
         cls.res1 = ARMA(endog, order=(1,4)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma14c()
@@ -274,7 +275,7 @@ class Test_Y_ARMA14_Const(CheckArmaResultsMixin):
 
 class Test_Y_ARMA41_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,8]
         cls.res2 = results_arma.Y_arma41c()
         cls.res1 = ARMA(endog, order=(4,1)).fit(trend="c", disp=-1,
@@ -289,7 +290,7 @@ class Test_Y_ARMA41_Const(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA22_Const(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,9]
         cls.res1 = ARMA(endog, order=(2,2)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma22c()
@@ -297,7 +298,7 @@ class Test_Y_ARMA22_Const(CheckArmaResultsMixin):
 
 class Test_Y_ARMA50_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,10]
         cls.res1 = ARMA(endog, order=(5,0)).fit(trend="c", disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -307,7 +308,7 @@ class Test_Y_ARMA50_Const(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA02_Const(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,11]
         cls.res1 = ARMA(endog, order=(0,2)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma02c()
@@ -316,7 +317,7 @@ class Test_Y_ARMA02_Const(CheckArmaResultsMixin):
 # cov_params and tvalues are off still but not as much vs. R
 class Test_Y_ARMA11_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,0]
         cls.res1 = ARMA(endog, order=(1,1)).fit(method="css", trend='nc',
                             disp=-1)
@@ -327,7 +328,7 @@ class Test_Y_ARMA11_NoConst_CSS(CheckArmaResultsMixin):
 # better vs. R
 class Test_Y_ARMA14_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,1]
         cls.res1 = ARMA(endog, order=(1,4)).fit(method="css", trend='nc',
                             disp=-1)
@@ -341,7 +342,7 @@ class Test_Y_ARMA14_NoConst_CSS(CheckArmaResultsMixin):
 # maroot is off because maparams is off a bit (adjust tolerance?)
 class Test_Y_ARMA41_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,2]
         cls.res1 = ARMA(endog, order=(4,1)).fit(method="css", trend='nc',
                         disp=-1)
@@ -355,7 +356,7 @@ class Test_Y_ARMA41_NoConst_CSS(CheckArmaResultsMixin):
 #same notes as above
 class Test_Y_ARMA22_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,3]
         cls.res1 = ARMA(endog, order=(2,2)).fit(method="css", trend='nc',
                             disp=-1)
@@ -374,7 +375,7 @@ class Test_Y_ARMA22_NoConst_CSS(CheckArmaResultsMixin):
 # consistent with the rest of the models
 class Test_Y_ARMA50_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,4]
         cls.res1 = ARMA(endog, order=(5,0)).fit(method="css", trend='nc',
                             disp=-1)
@@ -385,7 +386,7 @@ class Test_Y_ARMA50_NoConst_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA02_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,5]
         cls.res1 = ARMA(endog, order=(0,2)).fit(method="css", trend='nc',
                             disp=-1)
@@ -395,7 +396,7 @@ class Test_Y_ARMA02_NoConst_CSS(CheckArmaResultsMixin):
 #NOTE: our results are close to --x-12-arima option and R
 class Test_Y_ARMA11_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,6]
         cls.res1 = ARMA(endog, order=(1,1)).fit(trend="c", method="css",
                         disp=-1)
@@ -407,7 +408,7 @@ class Test_Y_ARMA11_Const_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA14_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,7]
         cls.res1 = ARMA(endog, order=(1,4)).fit(trend="c", method="css",
                         disp=-1)
@@ -418,7 +419,7 @@ class Test_Y_ARMA14_Const_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA41_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,8]
         cls.res1 = ARMA(endog, order=(4,1)).fit(trend="c", method="css",
                         disp=-1)
@@ -431,7 +432,7 @@ class Test_Y_ARMA41_Const_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA22_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,9]
         cls.res1 = ARMA(endog, order=(2,2)).fit(trend="c", method="css",
                         disp=-1)
@@ -442,7 +443,7 @@ class Test_Y_ARMA22_Const_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA50_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,10]
         cls.res1 = ARMA(endog, order=(5,0)).fit(trend="c", method="css",
                         disp=-1)
@@ -454,7 +455,7 @@ class Test_Y_ARMA50_Const_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA02_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,11]
         cls.res1 = ARMA(endog, order=(0,2)).fit(trend="c", method="css",
                         disp=-1)
@@ -533,13 +534,13 @@ def test_start_params_bug():
     1600, 1876, 1885, 1962, 2280, 2711, 2591, 2411])
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        res = ARMA(data, order=(4,1)).fit(disp=-1)
+        res = ARMA(data, order=(4,1)).fit(start_ar_lags=5, disp=-1)
 
 
 class Test_ARIMA101(CheckArmaResultsMixin):
     # just make sure this works
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,6]
         cls.res1 = ARIMA(endog, (1,0,1)).fit(trend="c", disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -553,7 +554,7 @@ class Test_ARIMA101(CheckArmaResultsMixin):
 class Test_ARIMA111(CheckArimaResultsMixin, CheckForecastMixin,
                     CheckDynamicForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cpi = load_macrodata().data['cpi']
         cls.res1 = ARIMA(cpi, (1,1,1)).fit(disp=-1)
         cls.res2 = results_arima.ARIMA111()
@@ -584,7 +585,7 @@ class Test_ARIMA111(CheckArimaResultsMixin, CheckForecastMixin,
 class Test_ARIMA111CSS(CheckArimaResultsMixin, CheckForecastMixin,
                        CheckDynamicForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cpi = load_macrodata().data['cpi']
         cls.res1 = ARIMA(cpi, (1,1,1)).fit(disp=-1, method='css')
         cls.res2 = results_arima.ARIMA111(method='css')
@@ -615,7 +616,7 @@ class Test_ARIMA111CSS(CheckArimaResultsMixin, CheckForecastMixin,
 
 class Test_ARIMA112CSS(CheckArimaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cpi = load_macrodata().data['cpi']
         cls.res1 = ARIMA(cpi, (1,1,2)).fit(disp=-1, method='css',
                                 start_params = [.905322, -.692425, 1.07366,
@@ -652,7 +653,7 @@ class Test_ARIMA112CSS(CheckArimaResultsMixin):
 
 #class Test_ARIMADates(CheckArmaResults, CheckForecast, CheckDynamicForecast):
 #    @classmethod
-#    def setupClass(cls):
+#    def setup_class(cls):
 #        cpi = load_macrodata().data['cpi']
 #        dates = pd.date_range('1959', periods=203, freq='Q')
 #        cls.res1 = ARIMA(cpi, dates=dates, freq='Q').fit(order=(1,1,1), disp=-1)
@@ -1914,7 +1915,7 @@ def test_small_data():
         res = mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
 
 
-class TestARMA00(TestCase):
+class TestARMA00(object):
 
     @classmethod
     def setup_class(cls):
@@ -1933,7 +1934,7 @@ class TestARMA00(TestCase):
         predictions = self.arma_00_res.predict()
         assert_almost_equal(self.y.mean() * np.ones_like(predictions), predictions)
 
-    @nottest
+    @skip
     def test_information_criteria(self):
         # This test is invalid since the ICs differ due to df_model differences
         # between OLS and ARIMA
@@ -2002,7 +2003,7 @@ def test_arma_missing():
     assert_raises(MissingDataError, ARMA, y, (1, 0), missing='raise')
 
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plot_predict():
     from statsmodels.datasets.sunspots import load_pandas
 
@@ -2272,7 +2273,7 @@ def test_arma_pickle():
 
 def test_arima_pickle():
     endog = y_arma[:, 6]
-    mod = ARIMA(endog, (1, 0, 1))
+    mod = ARIMA(endog, (1, 1, 1))
     pkl_mod = cPickle.loads(cPickle.dumps(mod))
 
     res = mod.fit(trend="c", disp=-1)
@@ -2286,5 +2287,5 @@ def test_arima_pickle():
 
 
 if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

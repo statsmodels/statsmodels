@@ -12,7 +12,12 @@ from .genmod.api import GLM, GEE, OrdinalGEE, NominalGEE, families, cov_struct
 from . import robust
 from .robust.robust_linear_model import RLM
 from .discrete.discrete_model import (Poisson, Logit, Probit,
-                                      MNLogit, NegativeBinomial)
+                                      MNLogit, NegativeBinomial,
+                                      GeneralizedPoisson,
+                                      NegativeBinomialP)
+from .discrete.count_model import (ZeroInflatedPoisson,
+                                   ZeroInflatedGeneralizedPoisson,
+                                   ZeroInflatedNegativeBinomialP)
 from .tsa import api as tsa
 from .duration.survfunc import SurvfuncRight
 from .duration.hazard_regression import PHReg

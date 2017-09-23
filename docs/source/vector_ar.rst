@@ -27,7 +27,7 @@ and their lagged values is the *vector autoregression process*:
 where :math:`A_i` is a :math:`K \times K` coefficient matrix.
 
 We follow in large part the methods and notation of `Lutkepohl (2005)
-<http://www.springer.com/economics/econometrics/book/978-3-540-40172-8?otherVersion=978-3-540-26239-8>`__,
+<http://www.springer.com/gb/book/9783540401728>`__,
 which we will not develop here.
 
 Model fitting

@@ -4,8 +4,8 @@ import warnings
 
 import numpy as np
 from numpy.polynomial.hermite_e import HermiteE
-from numpy.testing import (TestCase, run_module_suite, assert_equal,
-        assert_raises, assert_allclose)
+from numpy.testing import (run_module_suite, assert_equal, assert_raises, 
+                           assert_allclose)
 import numpy.testing as npt
 
 from scipy.misc import factorial, factorial2
@@ -15,7 +15,7 @@ import scipy.stats as stats
 from statsmodels.distributions.edgeworth import (_faa_di_bruno_partitions,
         cumulant_from_moments, ExpandedNormal)
 
-class TestFaaDiBruno(TestCase):
+class TestFaaDiBruno(object):
     def test_neg_arg(self):
         assert_raises(ValueError, _faa_di_bruno_partitions, -1)
         assert_raises(ValueError, _faa_di_bruno_partitions, 0)
@@ -47,7 +47,7 @@ def _chi2_cumulant(n, df):
     return 2**(n-1) * factorial(n - 1) * df
 
 
-class TestCumulants(TestCase):
+class TestCumulants(object):
     def test_badvalues(self):
         assert_raises(ValueError, cumulant_from_moments, [1, 2, 3], 0)
         assert_raises(ValueError, cumulant_from_moments, [1, 2, 3], 4)
@@ -69,7 +69,7 @@ class TestCumulants(TestCase):
             assert_allclose(kappa, _chi2_cumulant(n, df))
 
 
-class TestExpandedNormal(TestCase):
+class TestExpandedNormal(object):
     def test_too_few_cumulants(self):
         assert_raises(ValueError, ExpandedNormal, [1])
 

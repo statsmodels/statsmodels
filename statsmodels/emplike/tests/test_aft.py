@@ -9,18 +9,17 @@ from .results.el_results import AFTRes
 
 
 class GenRes(object):
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         data = heart.load()
         endog = np.log10(data.endog)
         exog = add_constant(data.exog)
-        self.mod1 = emplikeAFT(endog, exog, data.censors)
-        self.res1 = self.mod1.fit()
-        self.res2 = AFTRes()
+        cls.mod1 = emplikeAFT(endog, exog, data.censors)
+        cls.res1 = cls.mod1.fit()
+        cls.res2 = AFTRes()
 
 
 class Test_AFTModel(GenRes):
-    def __init__(self):
-        super(Test_AFTModel, self).__init__()
 
     def test_params(self):
         assert_almost_equal(self.res1.params(), self.res2.test_params,

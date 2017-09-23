@@ -3,9 +3,7 @@ Functions that are general enough to use for any model fitting. The idea is
 to untie these from LikelihoodModel so that they may be re-used generally.
 """
 from __future__ import print_function
-import distutils.version
 
-from scipy import __version__ as scipy_version
 import numpy as np
 from scipy import optimize
 
@@ -406,19 +404,10 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
     elif approx_grad:
         func = f
 
-    # Customize the fmin_l_bfgs_b call according to the scipy version.
-    # Old scipy does not support maxiter and callback.
-    scipy_version_curr = distutils.version.LooseVersion(scipy_version)
-    scipy_version_12 = distutils.version.LooseVersion('0.12.0')
-    if scipy_version_curr < scipy_version_12:
-        retvals = optimize.fmin_l_bfgs_b(func, start_params, args=fargs,
-                                         bounds=bounds, disp=disp,
-                                         **extra_kwargs)
-    else:
-        retvals = optimize.fmin_l_bfgs_b(func, start_params, maxiter=maxiter,
-                                         callback=callback, args=fargs,
-                                         bounds=bounds, disp=disp,
-                                         **extra_kwargs)
+    retvals = optimize.fmin_l_bfgs_b(func, start_params, maxiter=maxiter,
+                                     callback=callback, args=fargs,
+                                     bounds=bounds, disp=disp,
+                                     **extra_kwargs)
 
     if full_output:
         xopt, fopt, d = retvals

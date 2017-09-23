@@ -1,6 +1,3 @@
-from unittest import TestCase
-from nose.tools import assert_true
-
 import numpy as np
 import pandas as pd
 
@@ -28,12 +25,12 @@ class TestDatasets(object):
     def check(self, dataset_name):
         dataset = __import__('statsmodels.datasets.' + dataset_name, fromlist=[''])
         data = dataset.load()
-        assert_true(isinstance(data, Dataset))
-        assert_true(isinstance(data.data, np.recarray))
+        assert isinstance(data, Dataset)
+        assert isinstance(data.data, np.recarray)
 
         df_data = dataset.load_pandas()
-        assert_true(isinstance(data, Dataset))
-        assert_true(isinstance(df_data.data, pd.DataFrame))
+        assert isinstance(data, Dataset)
+        assert isinstance(df_data.data, pd.DataFrame)
 
     def test_all_datasets(self):
         for dataset_name in self.sets:

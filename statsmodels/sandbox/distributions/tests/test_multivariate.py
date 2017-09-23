@@ -15,15 +15,16 @@ class Test_MVN_MVT_prob(object):
     #test for block integratal, cdf, of multivariate t and normal
     #comparison results from R
 
-    def __init__(self):
-        self.corr_equal = np.asarray([[1.0, 0.5, 0.5],[0.5,1,0.5],[0.5,0.5,1]])
-        self.a = -1 * np.ones(3)
-        self.b = 3 * np.ones(3)
-        self.df = 4
+    @classmethod
+    def setup_class(cls):
+        cls.corr_equal = np.asarray([[1.0, 0.5, 0.5],[0.5,1,0.5],[0.5,0.5,1]])
+        cls.a = -1 * np.ones(3)
+        cls.b = 3 * np.ones(3)
+        cls.df = 4
 
-        corr2 = self.corr_equal.copy()
+        corr2 = cls.corr_equal.copy()
         corr2[2,1] = -0.5
-        self.corr2 = corr2
+        cls.corr2 = corr2
 
 
     def test_mvn_mvt_1(self):
@@ -106,19 +107,20 @@ class Test_MVN_MVT_prob(object):
 class TestMVDistributions(object):
     #this is not well organized
 
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         covx = np.array([[1.0, 0.5], [0.5, 1.0]])
         mu3 = [-1, 0., 2.]
         cov3 = np.array([[ 1.  ,  0.5 ,  0.75],
                          [ 0.5 ,  1.5 ,  0.6 ],
                          [ 0.75,  0.6 ,  2.  ]])
-        self.mu3 = mu3
-        self.cov3 = cov3
+        cls.mu3 = mu3
+        cls.cov3 = cov3
 
         mvn3 = MVNormal(mu3, cov3)
         mvn3c = MVNormal(np.array([0,0,0]), cov3)
-        self.mvn3 = mvn3
-        self.mvn3c = mvn3c
+        cls.mvn3 = mvn3
+        cls.mvn3c = mvn3c
 
 
     def test_mvn_pdf(self):
@@ -167,8 +169,5 @@ class TestMVDistributions(object):
 
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule(argv=['__main__','-vvs','-x'],#,'--pdb', '--pdb-failure'],
-                   exit=False)
-
-    print('Done')
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

@@ -123,7 +123,7 @@ class TLinearModel(GenericLikelihoodModel):
 
         Returns
         -------
-        loglike : array, (nobs,)
+        loglike : array
             The log likelihood of the model evaluated at `params` for each
             observation defined by self.endog and self.exog.
 

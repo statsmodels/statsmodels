@@ -549,7 +549,7 @@ class NullDistribution(object):
     zscores : array-like
         The observed Z-scores.
     null_lb : float
-        Z-scores between `null_lb` and `null_lb` are all considered to be
+        Z-scores between `null_lb` and `null_ub` are all considered to be
         true null hypotheses.
     null_ub : float
         See `null_lb`.

@@ -1,4 +1,4 @@
-from unittest import TestCase
+from statsmodels.compat.testing import skip
 
 import numpy as np
 import numpy.testing as npt
@@ -8,7 +8,7 @@ import statsmodels.api as sm
 nparam = sm.nonparametric
 
 
-class KernelRegressionTestBase(TestCase):
+class KernelRegressionTestBase(object):
     @classmethod
     def setup_class(cls):
         nobs = 60
@@ -174,8 +174,7 @@ class TestKernelReg(KernelRegressionTestBase):
         sm_R2 = model.r_squared()  # TODO: add expected result
         npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
 
-    @dec.skipif(True, "Test doesn't make much sense. "
-                      "It would pass with very small bw.")
+    @skip("Test doesn't make much sense - always passes with very small bw.")
     def test_mfx_nonlinear_ll_cvls(self, file_name='RegData.csv'):
         #FIXME
         nobs = 200
@@ -332,6 +331,5 @@ class TestKernelReg(KernelRegressionTestBase):
 
 
 if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb'],
-                       exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

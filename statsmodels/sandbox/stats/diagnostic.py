@@ -410,7 +410,7 @@ def het_arch(resid, maxlag=None, autolag=None, store=False, regresults=False,
 
     Parameters
     ----------
-    resid : ndarray, (nobs,)
+    resid : ndarray
         residuals from an estimation, or time series
     maxlag : int
         highest lag to use
@@ -553,13 +553,13 @@ def het_breuschpagan(resid, exog_het):
 
     Parameters
     ----------
-    resid : arraylike, (nobs,)
+    resid : array-like
         For the Breusch-Pagan test, this should be the residual of a regression.
         If an array is given in exog, then the residuals are calculated by
         the an OLS regression or resid on exog. In this case resid should
         contain the dependent variable. Exog can be the same as x.
         TODO: I dropped the exog option, should I add it back?
-    exog_het : array_like, (nobs, nvars)
+    exog_het : array_like
         This contains variables that might create data dependent
         heteroscedasticity.
 

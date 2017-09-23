@@ -12,36 +12,28 @@ Author: Josef Perktold
 """
 from statsmodels.compat.python import range
 import numpy as np
+import pandas as pd
 import statsmodels.api as sm
 from statsmodels.compat.scipy import NumpyVersion
+from statsmodels.compat.testing import SkipTest
 
 from numpy.testing import (assert_, assert_allclose, assert_equal,
                            assert_array_equal)
 
-from nose import SkipTest
 import platform
-
-
-iswin = platform.system() == 'Windows'
-npversionless15 = NumpyVersion(np.__version__) < '1.5.0'
-winoldnp = iswin & npversionless15
-
 
 
 class CheckGenericMixin(object):
 
-    def __init__(self):
-        self.predict_kwds = {}
-
     @classmethod
-    def setup_class(self):
-
+    def setup_class(cls):
         nobs = 500
         np.random.seed(987689)
         x = np.random.randn(nobs, 3)
         x = sm.add_constant(x)
-        self.exog = x
-        self.xf = 0.25 * np.ones((2, 4))
+        cls.exog = x
+        cls.xf = 0.25 * np.ones((2, 4))
+        cls.predict_kwds = {}
 
     def test_ttest_tvalues(self):
         # test that t_test has same results a params, bse, tvalues, ...
@@ -126,7 +118,7 @@ class CheckGenericMixin(object):
             results = self.results
         if (isinstance(results, GLMResults) or
             isinstance(results, DiscreteResults)):
-            raise SkipTest
+            raise SkipTest('Infeasible for {0}'.format(type(results)))
 
         res = self.results
         fitted = res.fittedvalues
@@ -358,7 +350,7 @@ class CheckAnovaMixin(object):
         import statsmodels.stats.tests.test_anova as ttmod
 
         test = ttmod.TestAnova3()
-        test.setupClass()
+        test.setup_class()
 
         cls.data = test.data.drop([0,1,2])
         cls.initialize()
@@ -431,7 +423,7 @@ class TestWaldAnovaOLS(CheckAnovaMixin):
     def test_noformula(self):
         endog = self.res.model.endog
         exog = self.res.model.data.orig_exog
-        del exog.design_info
+        exog = pd.DataFrame(exog)
 
         res = sm.OLS(endog, exog).fit()
         wa = res.wald_test_terms(skip_single=True,
