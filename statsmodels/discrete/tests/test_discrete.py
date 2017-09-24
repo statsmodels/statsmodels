@@ -1745,7 +1745,7 @@ class TestGeneralizedPoisson_underdispersion(object):
         cls.endog = sm.distributions.genpoisson_p.rvs(mu_true,
             cls.expected_params[-1], 1, size=len(mu_true))
         model_gp = sm.GeneralizedPoisson(cls.endog, exog, p=1)
-        cls.res = model_gp.fit(method='nm', maxiter=5000, maxfun=5000)
+        cls.res = model_gp.fit(method='nm', xtol=1e-6, maxiter=5000, maxfun=5000)
 
     def test_basic(self):
         res = self.res

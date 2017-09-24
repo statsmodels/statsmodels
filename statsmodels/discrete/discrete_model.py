@@ -1323,16 +1323,22 @@ class GeneralizedPoisson(CountModel):
     def _get_start_params_null(self):
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
-        q = self.parameterization
 
         const = (self.endog / np.exp(offset + exposure)).mean()
         params = [np.log(const)]
         mu = const * np.exp(offset + exposure)
         resid = self.endog - mu
-        a = ((np.abs(resid) / np.sqrt(mu) - 1) * mu**(-q)).mean()
+        a = self._estimate_dispersion(mu, resid, df_resid=resid.shape[0] - 1)
         params.append(a)
 
         return np.array(params)
+
+    def _estimate_dispersion(self, mu, resid, df_resid=None):
+        q = self.parameterization
+        if df_resid is None:
+            df_resid = resid.shape[0]
+        a = ((np.abs(resid) / np.sqrt(mu) - 1) * mu**(-q)).sum() / df_resid
+        return a
 
     _get_start_params_null.__doc__ = _get_start_params_null_docs
 
@@ -1365,8 +1371,11 @@ class GeneralizedPoisson(CountModel):
                                  'warn_convergence': False}
             optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            start_params = mod_poi.fit(**optim_kwds_prelim).params
-            start_params = np.append(start_params, 0.1)
+            res_poi = mod_poi.fit(**optim_kwds_prelim)
+            start_params = res_poi.params
+            a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
+                                          df_resid=res_poi.df_resid)
+            start_params = np.append(start_params, max(-0.1, a))
 
         if callback is None:
             # work around perfect separation callback #3895
@@ -3032,12 +3041,19 @@ class NegativeBinomialP(CountModel):
         params = [np.log(const)]
         mu = const * np.exp(offset + exposure)
         resid = self.endog - mu
-        a = ((resid**2 / mu - 1) * mu**(-q)).mean()
+        a = self._estimate_dispersion(mu, resid, df_resid=resid.shape[0] - 1)
         params.append(a)
 
         return np.array(params)
 
     _get_start_params_null.__doc__ = _get_start_params_null_docs
+
+    def _estimate_dispersion(self, mu, resid, df_resid=None):
+        q = self.parameterization - 1
+        if df_resid is None:
+            df_resid = resid.shape[0]
+        a = ((resid**2 / mu - 1) * mu**(-q)).mean()
+        return a
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, use_transparams = False,
@@ -3070,8 +3086,11 @@ class NegativeBinomialP(CountModel):
             optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
             #print(optim_kwds_prelim)
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            start_params = mod_poi.fit(**optim_kwds_prelim).params
-            start_params = np.append(start_params, 0.1)
+            res_poi = mod_poi.fit(**optim_kwds_prelim)
+            start_params = res_poi.params
+            a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
+                                          df_resid=res_poi.df_resid)
+            start_params = np.append(start_params, max(0.05, a))
 
         if callback is None:
             # work around perfect separation callback #3895
