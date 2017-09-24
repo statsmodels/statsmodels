@@ -1333,14 +1333,14 @@ class GeneralizedPoisson(CountModel):
 
         return np.array(params)
 
+    _get_start_params_null.__doc__ = _get_start_params_null_docs
+
     def _estimate_dispersion(self, mu, resid, df_resid=None):
         q = self.parameterization
         if df_resid is None:
             df_resid = resid.shape[0]
         a = ((np.abs(resid) / np.sqrt(mu) - 1) * mu**(-q)).sum() / df_resid
         return a
-
-    _get_start_params_null.__doc__ = _get_start_params_null_docs
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, use_transparams = False,
@@ -2689,15 +2689,21 @@ class NegativeBinomial(CountModel):
         params = [np.log(const)]
         mu = const * np.exp(offset + exposure)
         resid = self.endog - mu
-        if self.loglike_method == 'nb2':
-            #params.append(np.linalg.pinv(mu[:,None]).dot(resid**2 / mu - 1))
-            a = ((resid**2 / mu - 1) / mu).mean()
-            params.append(a)
-        else: #self.loglike_method == 'nb1':
-            params.append((resid**2 / mu - 1).mean())
+        a = self._estimate_dispersion(mu, resid, df_resid=resid.shape[0] - 1)
+        params.append(a)
         return np.array(params)
 
     _get_start_params_null.__doc__ = _get_start_params_null_docs
+
+    def _estimate_dispersion(self, mu, resid, df_resid=None):
+        if df_resid is None:
+            df_resid = resid.shape[0]
+        if self.loglike_method == 'nb2':
+            #params.append(np.linalg.pinv(mu[:,None]).dot(resid**2 / mu - 1))
+            a = ((resid**2 / mu - 1) / mu).sum() / df_resid
+        else: #self.loglike_method == 'nb1':
+            a = (resid**2 / mu - 1).sum() / df_resid
+        return a
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None,
@@ -2722,9 +2728,12 @@ class NegativeBinomial(CountModel):
                                  'warn_convergence': False}
             optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            start_params = mod_poi.fit(**optim_kwds_prelim).params
+            res_poi = mod_poi.fit(**optim_kwds_prelim)
+            start_params = res_poi.params
             if self.loglike_method.startswith('nb'):
-                start_params = np.append(start_params, 0.1)
+                a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
+                                              df_resid=res_poi.df_resid)
+                start_params = np.append(start_params, max(0.05, a))
         else:
             if self._transparams is True:
                 # transform user provided start_params dispersion, see #3918
@@ -3052,7 +3061,7 @@ class NegativeBinomialP(CountModel):
         q = self.parameterization - 1
         if df_resid is None:
             df_resid = resid.shape[0]
-        a = ((resid**2 / mu - 1) * mu**(-q)).mean()
+        a = ((resid**2 / mu - 1) * mu**(-q)).sum() / df_resid
         return a
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
@@ -3084,7 +3093,6 @@ class NegativeBinomialP(CountModel):
             optim_kwds_prelim = {'disp': 0, 'skip_hessian': True,
                                  'warn_convergence': False}
             optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
-            #print(optim_kwds_prelim)
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             res_poi = mod_poi.fit(**optim_kwds_prelim)
             start_params = res_poi.params
