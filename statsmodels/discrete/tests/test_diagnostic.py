@@ -55,7 +55,7 @@ class TestCountDiagnostic(object):
 
         # regression test
         tzi3_1 = (0.79863597832443878, 0.67077736750318928, 2, 2)
-        assert_allclose(tzi3, tzi3_1)
+        assert_allclose(tzi3, tzi3_1, rtol=5e-4)
 
     def test_probs(self):
         nobs = self.nobs
@@ -65,7 +65,7 @@ class TestCountDiagnostic(object):
         tzi = dia.test_chisquare_prob(self.res, probs[:, :2])
         # regression numbers
         tzi1 = (0.387770845, 0.5334734738)
-        assert_allclose(tzi[:2], tzi1)
+        assert_allclose(tzi[:2], tzi1, rtol=5e-5)
 
         # smoke test for plot
 

@@ -2249,6 +2249,8 @@ def test_optim_kwds_prelim():
     assert_equal(res.mle_settings['optim_kwds_prelim'], optim_kwds_prelim)
     assert_allclose(res.predict().mean(), y.mean(), rtol=0.1)
 
+    # NBP22 and GPP p=1.5 also fail on older scipy with bfgs, use nm instead
+    optim_kwds_prelim = dict(method='nm', maxiter=5000)
     model = NegativeBinomialP(y, exog, offset=offset, p=2)
     res = model.fit(disp=0, optim_kwds_prelim=optim_kwds_prelim)
 
@@ -2258,8 +2260,6 @@ def test_optim_kwds_prelim():
 
     # GPP with p=1.5 converges correctly,
     # GPP fails when p=2 even with good start_params
-    # p = 1.5 also fails on older scipy with bfgs, use nm instead
-    optim_kwds_prelim = dict(method='nm', maxiter=50)
     model = GeneralizedPoisson(y, exog, offset=offset, p=1.5)
     res = model.fit(disp=0, maxiter=200, optim_kwds_prelim=optim_kwds_prelim )
 
