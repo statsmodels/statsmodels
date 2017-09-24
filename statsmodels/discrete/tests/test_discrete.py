@@ -2238,7 +2238,8 @@ def test_optim_kwds_prelim():
     # offset currently not used
     offset = None
 
-    optim_kwds_prelim = dict(method='bfgs', maxiter=50)
+    # we use "nm", "bfgs" does not work for Poisson/exp with older scipy
+    optim_kwds_prelim = dict(method='nm', maxiter=5000)
     model = Poisson(y, exog, offset=offset) #
     res_poi = model.fit(disp=0, **optim_kwds_prelim)
 
