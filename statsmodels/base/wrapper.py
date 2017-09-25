@@ -2,7 +2,8 @@ import inspect
 import functools
 
 import numpy as np
-from statsmodels.compat.python import get_function_name, iteritems, getargspec
+from statsmodels.compat.python import (reduce, get_function_name,
+                                       iteritems, getargspec)
 
 
 
