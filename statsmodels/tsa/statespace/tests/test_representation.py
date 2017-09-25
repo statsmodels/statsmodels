@@ -13,6 +13,7 @@ Classical and Gibbs-Sampling Approaches with Applications".
 MIT Press Books. The MIT Press.
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat.testing import skip, SkipTest
 
 import warnings
 import numpy as np
@@ -24,8 +25,7 @@ from statsmodels.tsa.statespace.kalman_filter import KalmanFilter, FilterResults
 from statsmodels.tsa.statespace import tools, sarimax
 from .results import results_kalman_filter
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
-from nose.exc import SkipTest
-from statsmodels.compat.numpy import NumpyVersion
+import pytest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -139,6 +139,7 @@ class TestClark1987Double(Clark1987):
         cls.results = cls.run_filter()
 
 
+@skip('Not implemented')
 class TestClark1987SingleComplex(Clark1987):
     """
     Basic single precision complex test for the loglikelihood and filtered
@@ -146,7 +147,6 @@ class TestClark1987SingleComplex(Clark1987):
     """
     @classmethod
     def setup_class(cls):
-        raise SkipTest('Not implemented')
         super(TestClark1987SingleComplex, cls).setup_class(
             dtype=np.complex64, conserve_memory=0
         )

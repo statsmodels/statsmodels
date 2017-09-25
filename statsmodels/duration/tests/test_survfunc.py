@@ -1,3 +1,5 @@
+from statsmodels.compat.testing import skipif
+
 import numpy as np
 from statsmodels.duration.survfunc import (
     SurvfuncRight, survdiff, plot_survfunc,
@@ -190,7 +192,7 @@ def test_survdiff():
     assert_allclose(stat, 13.35259, atol=1e-4, rtol=1e-4)
 
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='requires matplotlib')
 def test_plot_km():
 
     if pdf_output:

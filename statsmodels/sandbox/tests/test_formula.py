@@ -7,13 +7,14 @@ import string
 import numpy as np
 import numpy.random as R
 import numpy.linalg as L
-from numpy.testing import *
+from numpy.testing import assert_almost_equal, assert_equal, assert_, \
+    assert_raises
 
 from statsmodels.sandbox import formula #, contrast #, utils
 from statsmodels.sandbox import contrast_old as contrast
 
 
-class TestTerm(TestCase):
+class TestTerm(object):
 
     def test_init(self):
         t1 = formula.Term("trivial")
@@ -21,7 +22,7 @@ class TestTerm(TestCase):
 
         t2 = formula.Term("not_so_trivial", sqr, "sqr")
 
-        self.assertRaises(ValueError, formula.Term, "name", termname=0)
+        assert_raises(ValueError, formula.Term, "name", termname=0)
 
 
     def test_str(self):
@@ -32,26 +33,26 @@ class TestTerm(TestCase):
         t1 = formula.Term("t1")
         t2 = formula.Term("t2")
         f = t1 + t2
-        self.assert_(isinstance(f, formula.Formula))
-        self.assert_(f.hasterm(t1))
-        self.assert_(f.hasterm(t2))
+        assert_(isinstance(f, formula.Formula))
+        assert_(f.hasterm(t1))
+        assert_(f.hasterm(t2))
 
     def test_mul(self):
         t1 = formula.Term("t1")
         t2 = formula.Term("t2")
         f = t1 * t2
-        self.assert_(isinstance(f, formula.Formula))
+        assert_(isinstance(f, formula.Formula))
 
         intercept = formula.Term("intercept")
         f = t1 * intercept
-        self.assertEqual(str(f), str(formula.Formula(t1)))
+        assert_equal(str(f), str(formula.Formula(t1)))
 
         f = intercept * t1
-        self.assertEqual(str(f), str(formula.Formula(t1)))
+        assert_equal(str(f), str(formula.Formula(t1)))
 
-class TestFormula(TestCase):
+class TestFormula(object):
 
-    def setUp(self):
+    def setup(self):
         self.X = R.standard_normal((40,10))
         self.namespace = {}
         self.terms = []
@@ -81,44 +82,44 @@ class TestFormula(TestCase):
         f = X + Y
 
         f.namespace = space1
-        self.assertEqual(f().shape, (2,50))
+        assert_equal(f().shape, (2,50))
         assert_almost_equal(Y(), np.arange(20)*2)
         assert_almost_equal(X(), np.arange(50))
 
         f.namespace = space2
-        self.assertEqual(f().shape, (2,20))
+        assert_equal(f().shape, (2,20))
         assert_almost_equal(Y(), np.arange(20)*2)
         assert_almost_equal(X(), np.arange(50))
 
         f.namespace = space3
-        self.assertEqual(f().shape, (2,30))
+        assert_equal(f().shape, (2,30))
         assert_almost_equal(Y(), np.arange(20)*2)
         assert_almost_equal(X(), np.arange(50))
 
         xx = X**2
-        self.assertEqual(xx().shape, (50,))
+        assert_equal(xx().shape, (50,))
 
         xx.namespace = space3
-        self.assertEqual(xx().shape, (30,))
+        assert_equal(xx().shape, (30,))
 
         xx = X * formula.I
-        self.assertEqual(xx().shape, (50,))
+        assert_equal(xx().shape, (50,))
         xx.namespace = space3
-        self.assertEqual(xx().shape, (30,))
+        assert_equal(xx().shape, (30,))
 
         xx = X * X
-        self.assertEqual(xx.namespace, X.namespace)
+        assert_equal(xx.namespace, X.namespace)
 
         xx = X + Y
-        self.assertEqual(xx.namespace, {})
+        assert_equal(xx.namespace, {})
 
         Y.namespace = {'X':np.arange(50), 'Y':np.arange(50)*2}
         xx = X + Y
-        self.assertEqual(xx.namespace, {})
+        assert_equal(xx.namespace, {})
 
         Y.namespace = X.namespace
         xx = X+Y
-        self.assertEqual(xx.namespace, Y.namespace)
+        assert_equal(xx.namespace, Y.namespace)
 
     def test_termcolumns(self):
         t1 = formula.Term("A")
@@ -141,11 +142,11 @@ class TestFormula(TestCase):
 
     def test_call(self):
         x = self.formula()
-        self.assertEquals(np.array(x).shape, (10, 40))
+        assert_equal(np.array(x).shape, (10, 40))
 
     def test_design(self):
         x = self.formula.design()
-        self.assertEquals(x.shape, (40, 10))
+        assert_equal(x.shape, (40, 10))
 
     def test_product(self):
         prod = self.formula['A'] * self.formula['C']
@@ -198,7 +199,7 @@ class TestFormula(TestCase):
         terms = dummy + self.terms[2]
         terms.namespace = self.formula.namespace
         c = contrast.Contrast(terms, self.formula)
-        self.assertEquals(c.matrix.shape, (10,))
+        assert_equal(c.matrix.shape, (10,))
 
     def test_power(self):
 
@@ -217,13 +218,13 @@ class TestFormula(TestCase):
         f = ['a','b','c']*10
         fac = formula.Factor('ff', f)
         fac.namespace = {'ff':f}
-        self.assertEquals(list(fac.values()), f)
+        assert_equal(list(fac.values()), f)
 
     def test_factor2(self):
         f = ['a','b','c']*10
         fac = formula.Factor('ff', f)
         fac.namespace = {'ff':f}
-        self.assertEquals(fac().shape, (3,30))
+        assert_equal(fac().shape, (3,30))
 
     def test_factor3(self):
         f = ['a','b','c']*10
@@ -231,7 +232,7 @@ class TestFormula(TestCase):
         fac.namespace = {'ff':f}
         m = fac.main_effect(reference=1)
         m.namespace = fac.namespace
-        self.assertEquals(m().shape, (2,30))
+        assert_equal(m().shape, (2,30))
 
     def test_factor4(self):
         f = ['a','b','c']*10
@@ -286,7 +287,7 @@ class TestFormula(TestCase):
 
         c = contrast.Contrast(self.terms[5], f)
 
-        self.assertEquals(estimable, False)
+        assert_equal(estimable, False)
 
     def test_interactions(self):
 

@@ -49,22 +49,24 @@ class TestADFConstant(CheckADF):
     """
     Dickey-Fuller test for unit root
     """
-    def __init__(self):
-        self.res1 = adfuller(self.x, regression="c", autolag=None,
+    @classmethod
+    def setup_class(cls):
+        cls.res1 = adfuller(cls.x, regression="c", autolag=None,
                 maxlag=4)
-        self.teststat = .97505319
-        self.pvalue = .99399563
-        self.critvalues = [-3.476, -2.883, -2.573]
+        cls.teststat = .97505319
+        cls.pvalue = .99399563
+        cls.critvalues = [-3.476, -2.883, -2.573]
 
 class TestADFConstantTrend(CheckADF):
     """
     """
-    def __init__(self):
-        self.res1 = adfuller(self.x, regression="ct", autolag=None,
+    @classmethod
+    def setup_class(cls):
+        cls.res1 = adfuller(cls.x, regression="ct", autolag=None,
                 maxlag=4)
-        self.teststat = -1.8566374
-        self.pvalue = .67682968
-        self.critvalues = [-4.007, -3.437, -3.137]
+        cls.teststat = -1.8566374
+        cls.pvalue = .67682968
+        cls.critvalues = [-4.007, -3.437, -3.137]
 
 #class TestADFConstantTrendSquared(CheckADF):
 #    """
@@ -75,42 +77,46 @@ class TestADFConstantTrend(CheckADF):
 class TestADFNoConstant(CheckADF):
     """
     """
-    def __init__(self):
-        self.res1 = adfuller(self.x, regression="nc", autolag=None,
+    @classmethod
+    def setup_class(cls):
+        cls.res1 = adfuller(cls.x, regression="nc", autolag=None,
                 maxlag=4)
-        self.teststat = 3.5227498
-        self.pvalue = .99999 # Stata does not return a p-value for noconstant.
+        cls.teststat = 3.5227498
+        cls.pvalue = .99999 # Stata does not return a p-value for noconstant.
                         # Tau^max in MacKinnon (1994) is missing, so it is
                         # assumed that its right-tail is well-behaved
-        self.critvalues = [-2.587, -1.950, -1.617]
+        cls.critvalues = [-2.587, -1.950, -1.617]
 
 # No Unit Root
 
 class TestADFConstant2(CheckADF):
-    def __init__(self):
-        self.res1 = adfuller(self.y, regression="c", autolag=None,
+    @classmethod
+    def setup_class(cls):
+        cls.res1 = adfuller(cls.y, regression="c", autolag=None,
                 maxlag=1)
-        self.teststat = -4.3346988
-        self.pvalue = .00038661
-        self.critvalues = [-3.476, -2.883, -2.573]
+        cls.teststat = -4.3346988
+        cls.pvalue = .00038661
+        cls.critvalues = [-3.476, -2.883, -2.573]
 
 class TestADFConstantTrend2(CheckADF):
-    def __init__(self):
-        self.res1 = adfuller(self.y, regression="ct", autolag=None,
+    @classmethod
+    def setup_class(cls):
+        cls.res1 = adfuller(cls.y, regression="ct", autolag=None,
                 maxlag=1)
-        self.teststat = -4.425093
-        self.pvalue = .00199633
-        self.critvalues = [-4.006, -3.437, -3.137]
+        cls.teststat = -4.425093
+        cls.pvalue = .00199633
+        cls.critvalues = [-4.006, -3.437, -3.137]
 
 class TestADFNoConstant2(CheckADF):
-    def __init__(self):
-        self.res1 = adfuller(self.y, regression="nc", autolag=None,
+    @classmethod
+    def setup_class(cls):
+        cls.res1 = adfuller(cls.y, regression="nc", autolag=None,
                 maxlag=1)
-        self.teststat = -2.4511596
-        self.pvalue = 0.013747 # Stata does not return a p-value for noconstant
+        cls.teststat = -2.4511596
+        cls.pvalue = 0.013747 # Stata does not return a p-value for noconstant
                                # this value is just taken from our results
-        self.critvalues = [-2.587,-1.950,-1.617]
-        _, _1, _2, self.store = adfuller(self.y, regression="nc", autolag=None,
+        cls.critvalues = [-2.587,-1.950,-1.617]
+        _, _1, _2, cls.store = adfuller(cls.y, regression="nc", autolag=None,
                                          maxlag=1, store=True)
 
     def test_store_str(self):
@@ -134,15 +140,14 @@ class TestACF(CheckCorrGram):
     """
     Test Autocorrelation Function
     """
-    def __init__(self):
-        self.acf = self.results['acvar']
-        #self.acf = np.concatenate(([1.], self.acf))
-        self.qstat = self.results['Q1']
-        self.res1 = acf(self.x, nlags=40, qstat=True, alpha=.05)
-        res = DataFrame.from_records(self.results)
-        self.confint_res = recarray_select(self.results, ['acvar_lb','acvar_ub'])
-        self.confint_res = self.confint_res.view((float, 2))
-
+    @classmethod
+    def setup_class(cls):
+        cls.acf = cls.results['acvar']
+        #cls.acf = np.concatenate(([1.], cls.acf))
+        cls.qstat = cls.results['Q1']
+        cls.res1 = acf(cls.x, nlags=40, qstat=True, alpha=.05)
+        cls.confint_res = cls.results[['acvar_lb','acvar_ub']].view((float,
+                                                                            2))
     def test_acf(self):
         assert_almost_equal(self.res1[0][1:41], self.acf, DECIMAL_8)
 
@@ -161,10 +166,11 @@ class TestACF(CheckCorrGram):
 
 class TestACF_FFT(CheckCorrGram):
     # Test Autocorrelation Function using FFT
-    def __init__(self):
-        self.acf = self.results['acvarfft']
-        self.qstat = self.results['Q1']
-        self.res1 = acf(self.x, nlags=40, qstat=True, fft=True)
+    @classmethod
+    def setup_class(cls):
+        cls.acf = cls.results['acvarfft']
+        cls.qstat = cls.results['Q1']
+        cls.res1 = acf(cls.x, nlags=40, qstat=True, fft=True)
 
     def test_acf(self):
         assert_almost_equal(self.res1[0][1:], self.acf, DECIMAL_8)
@@ -175,17 +181,18 @@ class TestACF_FFT(CheckCorrGram):
 
 class TestACFMissing(CheckCorrGram):
     # Test Autocorrelation Function using Missing
-    def __init__(self):
-        self.x = np.concatenate((np.array([np.nan]),self.x))
-        self.acf = self.results['acvar'] # drop and conservative
-        self.qstat = self.results['Q1']
-        self.res_drop = acf(self.x, nlags=40, qstat=True, alpha=.05,
+    @classmethod
+    def setup_class(cls):
+        cls.x = np.concatenate((np.array([np.nan]),cls.x))
+        cls.acf = cls.results['acvar'] # drop and conservative
+        cls.qstat = cls.results['Q1']
+        cls.res_drop = acf(cls.x, nlags=40, qstat=True, alpha=.05,
                             missing='drop')
-        self.res_conservative = acf(self.x, nlags=40, qstat=True, alpha=.05,
+        cls.res_conservative = acf(cls.x, nlags=40, qstat=True, alpha=.05,
                                     missing='conservative')
-        self.acf_none = np.empty(40) * np.nan # lags 1 to 40 inclusive
-        self.qstat_none = np.empty(40) * np.nan
-        self.res_none = acf(self.x, nlags=40, qstat=True, alpha=.05,
+        cls.acf_none = np.empty(40) * np.nan # lags 1 to 40 inclusive
+        cls.qstat_none = np.empty(40) * np.nan
+        cls.res_none = acf(cls.x, nlags=40, qstat=True, alpha=.05,
                         missing='none')
 
     def test_raise(self):
@@ -213,9 +220,10 @@ class TestACFMissing(CheckCorrGram):
 
 
 class TestPACF(CheckCorrGram):
-    def __init__(self):
-        self.pacfols = self.results['PACOLS']
-        self.pacfyw = self.results['PACYW']
+    @classmethod
+    def setup_class(cls):
+        cls.pacfols = cls.results['PACOLS']
+        cls.pacfyw = cls.results['PACYW']
 
     def test_ols(self):
         pacfols, confint = pacf(self.x, nlags=40, alpha=.05, method="ols")
@@ -262,11 +270,12 @@ class TestCoint_t(CheckCoint):
     """
     Get AR(1) parameter on residuals
     """
-    def __init__(self):
-        #self.coint_t = coint(self.y1, self.y2, trend="c")[0]
-        self.coint_t = coint(self.y1, self.y2, trend="c", maxlag=0, autolag=None)[0]
-        self.teststat = -1.8208817
-        self.teststat = -1.830170986148
+    @classmethod
+    def setup_class(cls):
+        #cls.coint_t = coint(cls.y1, cls.y2, trend="c")[0]
+        cls.coint_t = coint(cls.y1, cls.y2, trend="c", maxlag=0, autolag=None)[0]
+        cls.teststat = -1.8208817
+        cls.teststat = -1.830170986148
 
 
 def test_coint():
@@ -552,7 +561,5 @@ def test_acf_fft_dataframe():
     assert_equal(result.ndim, 1)
 
 if __name__=="__main__":
-    import nose
-#    nose.runmodule(argv=[__file__, '-vvs','-x','-pdb'], exit=False)
-    import numpy as np
-    np.testing.run_module_suite()
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

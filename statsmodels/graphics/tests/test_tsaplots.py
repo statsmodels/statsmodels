@@ -1,8 +1,11 @@
 from statsmodels.compat.python import lmap
+
+from distutils.version import LooseVersion
+
 import numpy as np
 import pandas as pd
 from numpy.testing import dec, assert_equal
-from distutils.version import LooseVersion
+from statsmodels.compat.testing import skipif
 
 import statsmodels.api as sm
 from statsmodels.graphics.tsaplots import (plot_acf, plot_pacf, month_plot,
@@ -19,7 +22,7 @@ except:
 pandas_lt_0_19_2 = LooseVersion(pd.__version__) < '0.19.1'
 
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plot_acf():
     # Just test that it runs.
     fig = plt.figure()
@@ -37,7 +40,7 @@ def test_plot_acf():
     plt.close(fig)
 
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plot_acf_irregular():
     # Just test that it runs.
     fig = plt.figure()
@@ -55,7 +58,7 @@ def test_plot_acf_irregular():
     plt.close(fig)
 
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plot_pacf():
     # Just test that it runs.
     fig = plt.figure()
@@ -72,7 +75,7 @@ def test_plot_pacf():
     plt.close(fig)
 
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plot_pacf_irregular():
     # Just test that it runs.
     fig = plt.figure()
@@ -89,8 +92,9 @@ def test_plot_pacf_irregular():
 
     plt.close(fig)
 
-@dec.skipif(not have_matplotlib)
-@dec.skipif(pandas_lt_0_19_2)
+
+@skipif(not have_matplotlib or pandas_lt_0_19_2,
+        reason='matplotlib not available or pandas too old')
 def test_plot_month():
     dta = sm.datasets.elnino.load_pandas().data
     dta['YEAR'] = dta.YEAR.astype(int).apply(str)
@@ -116,8 +120,9 @@ def test_plot_month():
     fig = month_plot(dta)
     plt.close(fig)
 
-@dec.skipif(not have_matplotlib)
-@dec.skipif(pandas_lt_0_19_2)
+
+@skipif(not have_matplotlib or pandas_lt_0_19_2,
+        reason='matplotlib not available or pandas too old')
 def test_plot_quarter():
     dta = sm.datasets.macrodata.load_pandas().data
     dates = lmap('Q'.join, zip(dta.year.astype(int).apply(str),
@@ -142,7 +147,7 @@ def test_plot_quarter():
     quarter_plot(dta.unemp)
     plt.close('all')
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_seasonal_plot():
     rs = np.random.RandomState(1234)
     data = rs.randn(20,12)

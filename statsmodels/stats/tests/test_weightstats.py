@@ -169,7 +169,8 @@ class TestSim2(CheckExternalMixin):
 
 class TestWeightstats(object):
 
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         np.random.seed(9876789)
         n1, n2 = 20, 20
         m1, m2 = 1, 1.2
@@ -177,13 +178,11 @@ class TestWeightstats(object):
         x2 = m2 + np.random.randn(n2)
         x1_2d = m1 + np.random.randn(n1, 3)
         x2_2d = m2 + np.random.randn(n2, 3)
-        w1_ = 2. * np.ones(n1)
-        w2_ = 2. * np.ones(n2)
-        w1 = np.random.randint(1, 4, n1)
-        w2 = np.random.randint(1, 4, n2)
-        self.x1, self.x2 = x1, x2
-        self.w1, self.w2 = w1, w2
-        self.x1_2d, self.x2_2d = x1_2d, x2_2d
+        w1 = np.random.randint(1,4, n1)
+        w2 = np.random.randint(1,4, n2)
+        cls.x1, cls.x2 = x1, x2
+        cls.w1, cls.w2 = w1, w2
+        cls.x1_2d, cls.x2_2d = x1_2d, x2_2d
 
     def test_weightstats_1(self):
         x1, x2 = self.x1, self.x2
@@ -435,7 +434,7 @@ class CheckWeightstats2dMixin(CheckWeightstats1dMixin):
 class TestWeightstats1d_ddof(CheckWeightstats1dMixin):
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         np.random.seed(9876789)
         n1, n2 = 20, 20
         m1, m2 = 1, 1.2
@@ -444,40 +443,38 @@ class TestWeightstats1d_ddof(CheckWeightstats1dMixin):
         w1 = np.random.randint(1, 4, n1)
         w2 = np.random.randint(1, 4, n2)
 
-        self.x1, self.x2 = x1, x2
-        self.w1, self.w2 = w1, w2
-        self.d1w = DescrStatsW(x1, weights=w1, ddof=1)
-        self.d2w = DescrStatsW(x2, weights=w2, ddof=1)
-        self.x1r = self.d1w.asrepeats()
-        self.x2r = self.d2w.asrepeats()
+        cls.x1, cls.x2 = x1, x2
+        cls.w1, cls.w2 = w1, w2
+        cls.d1w = DescrStatsW(x1, weights=w1, ddof=1)
+        cls.d2w = DescrStatsW(x2, weights=w2, ddof=1)
+        cls.x1r = cls.d1w.asrepeats()
+        cls.x2r = cls.d2w.asrepeats()
 
 
 class TestWeightstats2d(CheckWeightstats2dMixin):
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         np.random.seed(9876789)
         n1, n2 = 20, 20
         m1, m2 = 1, 1.2
         x1 = m1 + np.random.randn(n1, 3)
         x2 = m2 + np.random.randn(n2, 3)
-        w1_ = 2. * np.ones(n1)
-        w2_ = 2. * np.ones(n2)
         w1 = np.random.randint(1, 4, n1)
         w2 = np.random.randint(1, 4, n2)
-        self.x1, self.x2 = x1, x2
-        self.w1, self.w2 = w1, w2
+        cls.x1, cls.x2 = x1, x2
+        cls.w1, cls.w2 = w1, w2
 
-        self.d1w = DescrStatsW(x1, weights=w1)
-        self.d2w = DescrStatsW(x2, weights=w2)
-        self.x1r = self.d1w.asrepeats()
-        self.x2r = self.d2w.asrepeats()
+        cls.d1w = DescrStatsW(x1, weights=w1)
+        cls.d2w = DescrStatsW(x2, weights=w2)
+        cls.x1r = cls.d1w.asrepeats()
+        cls.x2r = cls.d2w.asrepeats()
 
 
 class TestWeightstats2d_ddof(CheckWeightstats2dMixin):
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         np.random.seed(9876789)
         n1, n2 = 20, 20
         m1, m2 = 1, 1.2
@@ -486,18 +483,18 @@ class TestWeightstats2d_ddof(CheckWeightstats2dMixin):
         w1 = np.random.randint(1, 4, n1)
         w2 = np.random.randint(1, 4, n2)
 
-        self.x1, self.x2 = x1, x2
-        self.w1, self.w2 = w1, w2
-        self.d1w = DescrStatsW(x1, weights=w1, ddof=1)
-        self.d2w = DescrStatsW(x2, weights=w2, ddof=1)
-        self.x1r = self.d1w.asrepeats()
-        self.x2r = self.d2w.asrepeats()
+        cls.x1, cls.x2 = x1, x2
+        cls.w1, cls.w2 = w1, w2
+        cls.d1w = DescrStatsW(x1, weights=w1, ddof=1)
+        cls.d2w = DescrStatsW(x2, weights=w2, ddof=1)
+        cls.x1r = cls.d1w.asrepeats()
+        cls.x2r = cls.d2w.asrepeats()
 
 
 class TestWeightstats2d_nobs(CheckWeightstats2dMixin):
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         np.random.seed(9876789)
         n1, n2 = 20, 30
         m1, m2 = 1, 1.2
@@ -506,12 +503,12 @@ class TestWeightstats2d_nobs(CheckWeightstats2dMixin):
         w1 = np.random.randint(1, 4, n1)
         w2 = np.random.randint(1, 4, n2)
 
-        self.x1, self.x2 = x1, x2
-        self.w1, self.w2 = w1, w2
-        self.d1w = DescrStatsW(x1, weights=w1, ddof=0)
-        self.d2w = DescrStatsW(x2, weights=w2, ddof=1)
-        self.x1r = self.d1w.asrepeats()
-        self.x2r = self.d2w.asrepeats()
+        cls.x1, cls.x2 = x1, x2
+        cls.w1, cls.w2 = w1, w2
+        cls.d1w = DescrStatsW(x1, weights=w1, ddof=0)
+        cls.d2w = DescrStatsW(x2, weights=w2, ddof=1)
+        cls.x1r = cls.d1w.asrepeats()
+        cls.x2r = cls.d2w.asrepeats()
 
 
 def test_ttest_ind_with_uneq_var():

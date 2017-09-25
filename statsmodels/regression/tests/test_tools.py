@@ -8,7 +8,7 @@ from statsmodels.regression._tools import _MinimalWLS
 
 class TestMinimalWLS(TestCase):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         rs = np.random.RandomState(1234)
         cls.exog1 = rs.randn(200,5)
         cls.endog1 = cls.exog1.sum(1) + rs.randn(200)

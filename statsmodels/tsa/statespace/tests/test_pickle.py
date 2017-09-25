@@ -13,12 +13,11 @@ Classical and Gibbs-Sampling Approaches with Applications".
 MIT Press Books. The MIT Press.
 """
 from __future__ import division, absolute_import, print_function
-
+from statsmodels.compat.testing import SkipTest
 from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
-from nose import SkipTest
 from numpy.testing import assert_equal, assert_allclose
 
 from statsmodels.compat import cPickle

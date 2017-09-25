@@ -13,9 +13,11 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat.testing import SkipTest
 
 import numpy as np
 import pandas as pd
+import pytest
 import os
 
 from statsmodels import datasets
@@ -27,7 +29,6 @@ from statsmodels.tsa.statespace.kalman_smoother import (
     SMOOTH_CONVENTIONAL, SMOOTH_CLASSICAL, SMOOTH_ALTERNATIVE,
     SMOOTH_UNIVARIATE)
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal, assert_raises
-from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -157,6 +158,7 @@ class TestStatesAR3(object):
         )
 
 
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestStatesAR3AlternateTiming(TestStatesAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
@@ -166,6 +168,7 @@ class TestStatesAR3AlternateTiming(TestStatesAR3):
             alternate_timing=True, *args, **kwargs)
 
 
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestStatesAR3AlternativeSmoothing(TestStatesAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
@@ -199,6 +202,7 @@ class TestStatesAR3AlternativeSmoothing(TestStatesAR3):
                      SMOOTH_ALTERNATIVE)
 
 
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestStatesAR3UnivariateSmoothing(TestStatesAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
@@ -330,6 +334,7 @@ class TestStatesMissingAR3(object):
         )
 
 
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestStatesMissingAR3AlternateTiming(TestStatesMissingAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
@@ -338,6 +343,7 @@ class TestStatesMissingAR3AlternateTiming(TestStatesMissingAR3):
         super(TestStatesMissingAR3AlternateTiming, cls).setup_class(alternate_timing=True, *args, **kwargs)
 
 
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestStatesMissingAR3AlternativeSmoothing(TestStatesMissingAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
@@ -354,6 +360,7 @@ class TestStatesMissingAR3AlternativeSmoothing(TestStatesMissingAR3):
                      SMOOTH_ALTERNATIVE)
 
 
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestStatesMissingAR3UnivariateSmoothing(TestStatesMissingAR3):
     @classmethod
     def setup_class(cls, *args, **kwargs):
@@ -517,6 +524,7 @@ class TestMultivariateMissing(object):
         )
 
 
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestMultivariateMissingClassicalSmoothing(TestMultivariateMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
@@ -533,6 +541,7 @@ class TestMultivariateMissingClassicalSmoothing(TestMultivariateMissing):
                      SMOOTH_CLASSICAL)
 
 
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestMultivariateMissingAlternativeSmoothing(TestMultivariateMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
@@ -548,7 +557,7 @@ class TestMultivariateMissingAlternativeSmoothing(TestMultivariateMissing):
         assert_equal(self.model.ssm._kalman_smoother._smooth_method,
                      SMOOTH_ALTERNATIVE)
 
-
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestMultivariateMissingUnivariateSmoothing(TestMultivariateMissing):
     @classmethod
     def setup_class(cls, *args, **kwargs):
@@ -714,6 +723,7 @@ class TestMultivariateVAR(object):
         )
 
 
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestMultivariateVARAlternativeSmoothing(TestMultivariateVAR):
     @classmethod
     def setup_class(cls, *args, **kwargs):
@@ -730,6 +740,7 @@ class TestMultivariateVARAlternativeSmoothing(TestMultivariateVAR):
                      SMOOTH_ALTERNATIVE)
 
 
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestMultivariateVARClassicalSmoothing(TestMultivariateVAR):
     @classmethod
     def setup_class(cls, *args, **kwargs):
@@ -746,6 +757,7 @@ class TestMultivariateVARClassicalSmoothing(TestMultivariateVAR):
                      SMOOTH_CLASSICAL)
 
 
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestMultivariateVARUnivariate(object):
     """
     Tests for most filtering and smoothing variables against output from the
@@ -899,6 +911,7 @@ class TestMultivariateVARUnivariate(object):
         )
 
 
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestMultivariateVARUnivariateSmoothing(TestMultivariateVARUnivariate):
     @classmethod
     def setup_class(cls, *args, **kwargs):
@@ -919,6 +932,7 @@ class TestMultivariateVARUnivariateSmoothing(TestMultivariateVARUnivariate):
                      SMOOTH_UNIVARIATE)
 
 
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestVARAutocovariances(object):
     @classmethod
     def setup_class(cls, which='mixed', *args, **kwargs):
@@ -992,6 +1006,7 @@ class TestVARAutocovariances(object):
                         atol=1e-7)
 
 
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestVARAutocovariancesAlternativeSmoothing(TestVARAutocovariances):
     @classmethod
     def setup_class(cls, *args, **kwargs):
@@ -1008,6 +1023,7 @@ class TestVARAutocovariancesAlternativeSmoothing(TestVARAutocovariances):
                      SMOOTH_ALTERNATIVE)
 
 
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestVARAutocovariancesClassicalSmoothing(TestVARAutocovariances):
     @classmethod
     def setup_class(cls, *args, **kwargs):
@@ -1024,6 +1040,7 @@ class TestVARAutocovariancesClassicalSmoothing(TestVARAutocovariances):
                      SMOOTH_CLASSICAL)
 
 
+@pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
 class TestVARAutocovariancesUnivariateSmoothing(TestVARAutocovariances):
     @classmethod
     def setup_class(cls, *args, **kwargs):

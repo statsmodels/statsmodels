@@ -60,6 +60,21 @@ def test_SquareTable_from_data():
     assert_equal(rslt2.summary().as_text(),
                  rslt3.summary().as_text())
 
+    s = str(rslt1)
+    assert_equal(s.startswith('A 5x5 contingency table with counts:\n[[ 8.'), True)
+
+
+def test_SquareTable_nonsquare():
+
+    tab = [[1, 0, 3], [2, 1, 4], [3, 0, 5]]
+    df = pd.DataFrame(tab, index=[0, 1, 3], columns=[0, 2, 3])
+
+    df2 = ctab.SquareTable(df, shift_zeros=False)
+
+    e = np.asarray([[1, 0, 0, 3], [2, 0, 1, 4], [0, 0, 0, 0], [3, 0, 0, 5]],
+                   dtype=np.float64)
+
+    assert_equal(e, df2.table)
 
 
 def test_cumulative_odds():
@@ -91,10 +106,8 @@ def test_local_odds():
 
 
 def test_stratified_table_cube():
-    """
-    Test that we can pass a rank 3 ndarray or a list of rank 2
-    ndarrays to StratifiedTable and get the same results.
-    """
+    # Test that we can pass a rank 3 ndarray or a list of rank 2
+    # ndarrays to StratifiedTable and get the same results.
 
     tab1 = [[[8, 9], [6, 7]], [[4, 9], [5, 5]], [[8, 8], [9, 11]]]
     tab2 = np.asarray(tab1).T
@@ -197,31 +210,56 @@ def test_mcnemar():
     b4 = ctab.mcnemar(tables[0], exact=True)
     assert_allclose(b4.pvalue, r_results.loc[0, "homog_binom_p"])
 
+def test_from_data_stratified():
+
+    df = pd.DataFrame([[1, 1, 1, 0, 1, 0, 1, 0], [0, 1, 0, 1, 0, 1, 0, 0],
+                       [0, 0, 0, 0, 1, 1, 1, 1]]).T
+    e = np.asarray([[[0, 1], [1, 1]], [[2, 2], [1, 0]]])
+
+    # Test pandas
+    tab1 = ctab.StratifiedTable.from_data(0, 1, 2, df)
+    assert_equal(tab1.table, e)
+
+    # Test ndarray
+    tab1 = ctab.StratifiedTable.from_data(0, 1, 2, np.asarray(df))
+    assert_equal(tab1.table, e)
+
+def test_from_data_2x2():
+
+    df = pd.DataFrame([[1, 1, 1, 0, 1, 0, 1, 0], [0, 1, 0, 1, 0, 1, 0, 0]]).T
+    e = np.asarray([[1, 2], [4, 1]])
+
+    # Test pandas
+    tab1 = ctab.Table2x2.from_data(df, shift_zeros=False)
+    assert_equal(tab1.table, e)
+
+    # Test ndarray
+    tab1 = ctab.Table2x2.from_data(np.asarray(df), shift_zeros=False)
+    assert_equal(tab1.table, e)
+
 
 def test_cochranq():
-    """
-    library(CVST)
-    table1 = matrix(c(1, 0, 1, 1,
-                      0, 1, 1, 1,
-                      1, 1, 1, 0,
-                      0, 1, 0, 0,
-                      0, 1, 0, 0,
-                      1, 0, 1, 0,
-                      0, 1, 0, 0,
-                      1, 1, 1, 1,
-                      0, 1, 0, 0), ncol=4, byrow=TRUE)
-    rslt1 = cochranq.test(table1)
-    table2 = matrix(c(0, 0, 1, 1, 0,
-                      0, 1, 0, 1, 0,
-                      0, 1, 1, 0, 1,
-                      1, 0, 0, 0, 1,
-                      1, 1, 0, 0, 0,
-                      1, 0, 1, 0, 0,
-                      0, 1, 0, 0, 0,
-                      0, 0, 1, 1, 0,
-                      0, 0, 0, 0, 0), ncol=5, byrow=TRUE)
-    rslt2 = cochranq.test(table2)
-    """
+    # library(CVST)
+    # table1 = matrix(c(1, 0, 1, 1,
+    #                   0, 1, 1, 1,
+    #                   1, 1, 1, 0,
+    #                   0, 1, 0, 0,
+    #                   0, 1, 0, 0,
+    #                   1, 0, 1, 0,
+    #                   0, 1, 0, 0,
+    #                   1, 1, 1, 1,
+    #                   0, 1, 0, 0), ncol=4, byrow=TRUE)
+    # rslt1 = cochranq.test(table1)
+    # table2 = matrix(c(0, 0, 1, 1, 0,
+    #                   0, 1, 0, 1, 0,
+    #                   0, 1, 1, 0, 1,
+    #                   1, 0, 0, 0, 1,
+    #                   1, 1, 0, 0, 0,
+    #                   1, 0, 1, 0, 0,
+    #                   0, 1, 0, 0, 0,
+    #                   0, 0, 1, 1, 0,
+    #                   0, 0, 0, 0, 0), ncol=5, byrow=TRUE)
+    # rslt2 = cochranq.test(table2)
 
     table = [[1, 0, 1, 1],
              [0, 1, 1, 1],
@@ -261,15 +299,18 @@ def test_cochranq():
     assert_allclose(b1.statistic, b2.statistic)
     assert_allclose(b1.pvalue, b2.pvalue)
 
+    # Test for printing bunch
+    assert_equal(str(b1).startswith("df          1\npvalue      0.65"), True)
 
 
 class CheckStratifiedMixin(object):
 
-    def initialize(self, tables):
-        self.rslt = ctab.StratifiedTable(tables)
-        self.rslt_0 = ctab.StratifiedTable(tables, shift_zeros=True)
+    @classmethod
+    def initialize(cls, tables):
+        cls.rslt = ctab.StratifiedTable(tables)
+        cls.rslt_0 = ctab.StratifiedTable(tables, shift_zeros=True)
         tables_pandas = [pd.DataFrame(x) for x in tables]
-        self.rslt_pandas = ctab.StratifiedTable(tables_pandas)
+        cls.rslt_pandas = ctab.StratifiedTable(tables_pandas)
 
 
     def test_oddsratio_pooled(self):
@@ -348,8 +389,8 @@ class TestStratified1(CheckStratifiedMixin):
     rslt = mantelhaen.test(data)
     """
 
-    def __init__(self):
-
+    @classmethod
+    def setup_class(cls):
         tables = [None] * 5
         tables[0] = np.array([[0, 0], [6, 5]])
         tables[1] = np.array([[3, 0], [3, 6]])
@@ -357,14 +398,14 @@ class TestStratified1(CheckStratifiedMixin):
         tables[3] = np.array([[5, 6], [1, 0]])
         tables[4] = np.array([[2, 5], [0, 0]])
 
-        self.initialize(tables)
+        cls.initialize(tables)
 
-        self.oddsratio_pooled = 7
-        self.logodds_pooled = np.log(7)
-        self.mh_stat = 3.9286
-        self.mh_pvalue = 0.04747
-        self.or_lcb = 1.026713
-        self.or_ucb = 47.725133
+        cls.oddsratio_pooled = 7
+        cls.logodds_pooled = np.log(7)
+        cls.mh_stat = 3.9286
+        cls.mh_pvalue = 0.04747
+        cls.or_lcb = 1.026713
+        cls.or_ucb = 47.725133
 
 
 class TestStratified2(CheckStratifiedMixin):
@@ -378,7 +419,8 @@ class TestStratified2(CheckStratifiedMixin):
     rslt = mantelhaen.test(data)
     """
 
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         tables = [None] * 5
         tables[0] = np.array([[20, 14], [10, 24]])
         tables[1] = np.array([[15, 12], [3, 15]])
@@ -386,16 +428,16 @@ class TestStratified2(CheckStratifiedMixin):
         tables[3] = np.array([[12, 3], [7, 5]])
         tables[4] = np.array([[1, 0], [3, 2]])
 
-        self.initialize(tables)
+        cls.initialize(tables)
 
-        self.oddsratio_pooled = 3.5912
-        self.logodds_pooled = np.log(3.5912)
+        cls.oddsratio_pooled = 3.5912
+        cls.logodds_pooled = np.log(3.5912)
 
-        self.mh_stat = 11.8852
-        self.mh_pvalue = 0.0005658
+        cls.mh_stat = 11.8852
+        cls.mh_pvalue = 0.0005658
 
-        self.or_lcb = 1.781135
-        self.or_ucb = 7.240633
+        cls.or_lcb = 1.781135
+        cls.or_ucb = 7.240633
 
 
 class TestStratified3(CheckStratifiedMixin):
@@ -410,8 +452,8 @@ class TestStratified3(CheckStratifiedMixin):
     rslt = mantelhaen.test(data)
     """
 
-    def __init__(self):
-
+    @classmethod
+    def setup_class(cls):
         tables = [None] * 6
         tables[0] = np.array([[313, 512], [19, 89]])
         tables[1] = np.array([[207, 353], [8, 17]])
@@ -420,26 +462,26 @@ class TestStratified3(CheckStratifiedMixin):
         tables[4] = np.array([[138, 53], [299, 94]])
         tables[5] = np.array([[351, 22], [317, 24]])
 
-        self.initialize(tables)
+        cls.initialize(tables)
 
-        self.oddsratio_pooled = 1.101879
-        self.logodds_pooled = np.log(1.101879)
+        cls.oddsratio_pooled = 1.101879
+        cls.logodds_pooled = np.log(1.101879)
 
-        self.mh_stat = 1.3368
-        self.mh_pvalue = 0.2476
+        cls.mh_stat = 1.3368
+        cls.mh_pvalue = 0.2476
 
-        self.or_lcb = 0.9402012
-        self.or_ucb = 1.2913602
+        cls.or_lcb = 0.9402012
+        cls.or_ucb = 1.2913602
 
-        self.or_homog = 18.83297
-        self.or_homog_p = 0.002064786
+        cls.or_homog = 18.83297
+        cls.or_homog_p = 0.002064786
 
 
 class Check2x2Mixin(object):
-
-    def initialize(self):
-        self.tbl_obj = ctab.Table2x2(self.table)
-        self.tbl_data_obj = ctab.Table2x2.from_data(self.data)
+    @classmethod
+    def initialize(cls):
+        cls.tbl_obj = ctab.Table2x2(cls.table)
+        cls.tbl_data_obj = ctab.Table2x2.from_data(cls.data)
 
     def test_oddsratio(self):
         assert_allclose(self.tbl_obj.oddsratio, self.oddsratio)
@@ -498,30 +540,41 @@ class Check2x2Mixin(object):
         assert_equal(self.tbl_obj.summary().as_text(),
                      self.tbl_data_obj.summary().as_text())
 
+    def test_summary(self):
+
+        assert_equal(self.tbl_obj.summary().as_text(),
+                     self.summary_string)
 
 
 class Test2x2_1(Check2x2Mixin):
 
-    def __init__(self):
-
+    @classmethod
+    def setup_class(cls):
         data = np.zeros((8, 2))
         data[:, 0] = [0, 0, 1, 1, 0, 0, 1, 1]
         data[:, 1] = [0, 1, 0, 1, 0, 1, 0, 1]
-        self.data = np.asarray(data)
-        self.table = np.asarray([[2, 2], [2, 2]])
+        cls.data = np.asarray(data)
+        cls.table = np.asarray([[2, 2], [2, 2]])
 
-        self.initialize()
-
-        self.oddsratio = 1.
-        self.log_oddsratio = 0.
-        self.log_oddsratio_se = np.sqrt(2)
-        self.oddsratio_confint = [0.062548836166112329, 15.987507702689751]
-        self.oddsratio_pvalue = 1.
-        self.riskratio = 1.
-        self.log_riskratio = 0.
-        self.log_riskratio_se = 1 / np.sqrt(2)
-        self.riskratio_pvalue = 1.
-        self.riskratio_confint = [0.25009765325990629,
+        cls.oddsratio = 1.
+        cls.log_oddsratio = 0.
+        cls.log_oddsratio_se = np.sqrt(2)
+        cls.oddsratio_confint = [0.062548836166112329, 15.987507702689751]
+        cls.oddsratio_pvalue = 1.
+        cls.riskratio = 1.
+        cls.log_riskratio = 0.
+        cls.log_riskratio_se = 1 / np.sqrt(2)
+        cls.riskratio_pvalue = 1.
+        cls.riskratio_confint = [0.25009765325990629,
                                   3.9984381579173824]
-        self.log_riskratio_confint = [-1.3859038243496782,
+        cls.log_riskratio_confint = [-1.3859038243496782,
                                       1.3859038243496782]
+        ss = [  '               Estimate   SE   LCB    UCB   p-value',
+                '---------------------------------------------------',
+                'Odds ratio        1.000        0.063 15.988   1.000',
+                'Log odds ratio    0.000 1.414 -2.772  2.772   1.000',
+                'Risk ratio        1.000        0.250  3.998   1.000',
+                'Log risk ratio    0.000 0.707 -1.386  1.386   1.000',
+                '---------------------------------------------------']
+        cls.summary_string = '\n'.join(ss)
+        cls.initialize()

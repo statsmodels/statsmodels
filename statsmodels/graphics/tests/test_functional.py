@@ -1,6 +1,7 @@
 from statsmodels.compat.python import range
+from statsmodels.compat.testing import skipif
 import numpy as np
-from numpy.testing import dec, assert_equal, assert_almost_equal
+from numpy.testing import assert_equal, assert_almost_equal
 
 from statsmodels.graphics.functional import \
             banddepth, fboxplot, rainbowplot
@@ -49,7 +50,7 @@ def test_banddepth_MBD():
     assert_almost_equal(depth, expected_depth, decimal=4)
 
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_fboxplot_rainbowplot():
     # Test fboxplot and rainbowplot together, is much faster.
     def harmfunc(t):

@@ -9,22 +9,26 @@ tests.
 """
 # pylint: disable-msg=E1101
 from statsmodels.compat.python import range
+from statsmodels.compat.testing import SkipTest, skip
 import os
+import warnings
+
 import numpy as np
 from numpy.testing import (assert_, assert_raises, assert_almost_equal,
                            assert_equal, assert_array_equal, assert_allclose,
                            assert_array_less)
+import pytest
 
 from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
                                                 Poisson, NegativeBinomial,
-                                                CountModel, GeneralizedPoisson
-                                                )
+                                                CountModel, GeneralizedPoisson,
+                                                NegativeBinomialP)
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
-from nose import SkipTest
 from .results.results_discrete import Spector, DiscreteL1, RandHIE, Anes
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
+from scipy.stats import nbinom
 
 try:
     import cvxopt
@@ -39,7 +43,7 @@ except ImportError:
     has_basinhopping = False
 
 try:
-    from scipy.optimize._trustregion_dogleg import  _minimize_dogleg
+    from scipy.optimize._trustregion_dogleg import _minimize_dogleg
     has_dogleg = True
 except ImportError:
     has_dogleg = False
@@ -137,7 +141,7 @@ class CheckBinaryResults(CheckModelResults):
         assert_almost_equal(self.res1.resid_generalized,
                             self.res2.resid_generalized, DECIMAL_4)
 
-    def smoke_test_resid_response(self):
+    def test_resid_response_smoke(self):
         self.res1.resid_response
 
 
@@ -323,7 +327,7 @@ class CheckMargEff(object):
 class TestProbitNewton(CheckBinaryResults):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Probit(data.endog, data.exog).fit(method="newton", disp=0)
@@ -338,7 +342,7 @@ class TestProbitNewton(CheckBinaryResults):
 class TestProbitBFGS(CheckBinaryResults):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Probit(data.endog, data.exog).fit(method="bfgs",
@@ -350,7 +354,7 @@ class TestProbitBFGS(CheckBinaryResults):
 
 class TestProbitNM(CheckBinaryResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -361,7 +365,7 @@ class TestProbitNM(CheckBinaryResults):
 
 class TestProbitPowell(CheckBinaryResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -372,7 +376,7 @@ class TestProbitPowell(CheckBinaryResults):
 
 class TestProbitCG(CheckBinaryResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -399,7 +403,7 @@ class TestProbitCG(CheckBinaryResults):
 
 class TestProbitNCG(CheckBinaryResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -410,13 +414,16 @@ class TestProbitNCG(CheckBinaryResults):
                                                      warn_convergence=False)
         # converges close enough but warnflag is 2 for precision loss
 
+
+@pytest.mark.skipif(not has_basinhopping, reason='Skipped TestProbitBasinhopping '
+                                                 'since basinhopping solver is '
+                                                 'not available')
 class TestProbitBasinhopping(CheckBinaryResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         if not has_basinhopping:
             raise SkipTest("Skipped TestProbitBasinhopping since"
                            " basinhopping solver is not available")
-
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -428,7 +435,7 @@ class TestProbitBasinhopping(CheckBinaryResults):
 
 class TestProbitMinimizeDefault(CheckBinaryResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -439,7 +446,7 @@ class TestProbitMinimizeDefault(CheckBinaryResults):
 
 class TestProbitMinimizeDogleg(CheckBinaryResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         if not has_dogleg:
             raise SkipTest("Skipped TestProbitMinimizeDogleg since "
                            "dogleg method is not available")
@@ -454,7 +461,7 @@ class TestProbitMinimizeDogleg(CheckBinaryResults):
 
 class TestProbitMinimizeAdditionalOptions(CheckBinaryResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -493,7 +500,7 @@ class CheckLikelihoodModelL1(object):
 
 class TestProbitL1(CheckLikelihoodModelL1):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
         alpha = np.array([0.1, 0.2, 0.3, 10]) #/ data.exog.shape[0]
@@ -511,7 +518,7 @@ class TestProbitL1(CheckLikelihoodModelL1):
 
 class TestMNLogitL1(CheckLikelihoodModelL1):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         anes_data = sm.datasets.anes96.load()
         anes_exog = anes_data.exog
         anes_exog = sm.add_constant(anes_exog, prepend=False)
@@ -528,7 +535,7 @@ class TestMNLogitL1(CheckLikelihoodModelL1):
 
 class TestLogitL1(CheckLikelihoodModelL1):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
         cls.alpha = 3 * np.array([0., 1., 1., 1.]) #/ data.exog.shape[0]
@@ -544,30 +551,33 @@ class TestLogitL1(CheckLikelihoodModelL1):
                 self.res1.cov_params(), self.res2.cov_params, DECIMAL_4)
 
 
+@pytest.mark.skipif(not has_cvxopt, reason='Skipped test_cvxopt since cvxopt '
+                                           'is not available')
 class TestCVXOPT(object):
     @classmethod
-    def setupClass(self):
-        self.data = sm.datasets.spector.load()
-        self.data.exog = sm.add_constant(self.data.exog, prepend=True)
+    def setup_class(cls):
+        if not has_cvxopt:
+            raise SkipTest('Skipped test_cvxopt since cvxopt is not available')
+        cls.data = sm.datasets.spector.load()
+        cls.data.exog = sm.add_constant(cls.data.exog, prepend=True)
 
     def test_cvxopt_versus_slsqp(self):
         #Compares resutls from cvxopt to the standard slsqp
-        if has_cvxopt:
-            self.alpha = 3. * np.array([0, 1, 1, 1.]) #/ self.data.endog.shape[0]
-            res_slsqp = Logit(self.data.endog, self.data.exog).fit_regularized(
-                method="l1", alpha=self.alpha, disp=0, acc=1e-10, maxiter=1000,
-                trim_mode='auto')
-            res_cvxopt = Logit(self.data.endog, self.data.exog).fit_regularized(
-                method="l1_cvxopt_cp", alpha=self.alpha, disp=0, abstol=1e-10,
-                trim_mode='auto', auto_trim_tol=0.01, maxiter=1000)
-            assert_almost_equal(res_slsqp.params, res_cvxopt.params, DECIMAL_4)
-        else:
-            raise SkipTest("Skipped test_cvxopt since cvxopt is not available")
+        self.alpha = 3. * np.array([0, 1, 1, 1.]) #/ self.data.endog.shape[0]
+        res_slsqp = Logit(self.data.endog, self.data.exog).fit_regularized(
+            method="l1", alpha=self.alpha, disp=0, acc=1e-10, maxiter=1000,
+            trim_mode='auto')
+        res_cvxopt = Logit(self.data.endog, self.data.exog).fit_regularized(
+            method="l1_cvxopt_cp", alpha=self.alpha, disp=0, abstol=1e-10,
+            trim_mode='auto', auto_trim_tol=0.01, maxiter=1000)
+        assert_almost_equal(res_slsqp.params, res_cvxopt.params, DECIMAL_4)
+
+
 
 
 class TestSweepAlphaL1(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
         cls.model = Logit(data.endog, data.exog)
@@ -644,7 +654,7 @@ class CheckL1Compatability(object):
 
 class TestPoissonL1Compatability(CheckL1Compatability):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.kvars = 10 # Number of variables
         cls.m = 7 # Number of unregularized parameters
         rand_data = sm.datasets.randhie.load()
@@ -664,7 +674,7 @@ class TestPoissonL1Compatability(CheckL1Compatability):
 
 class TestNegativeBinomialL1Compatability(CheckL1Compatability):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.kvars = 10 # Number of variables
         cls.m = 7 # Number of unregularized parameters
         rand_data = sm.datasets.randhie.load()
@@ -689,7 +699,7 @@ class TestNegativeBinomialL1Compatability(CheckL1Compatability):
 
 class TestNegativeBinomialGeoL1Compatability(CheckL1Compatability):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.kvars = 10 # Number of variables
         cls.m = 7 # Number of unregularized parameters
         rand_data = sm.datasets.randhie.load()
@@ -714,7 +724,7 @@ class TestNegativeBinomialGeoL1Compatability(CheckL1Compatability):
 
 class TestLogitL1Compatability(CheckL1Compatability):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.kvars = 4 # Number of variables
         cls.m = 3 # Number of unregularized parameters
         data = sm.datasets.spector.load()
@@ -731,7 +741,7 @@ class TestLogitL1Compatability(CheckL1Compatability):
 
 class TestMNLogitL1Compatability(CheckL1Compatability):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.kvars = 4 # Number of variables
         cls.m = 3 # Number of unregularized parameters
         data = sm.datasets.spector.load()
@@ -755,13 +765,14 @@ class TestMNLogitL1Compatability(CheckL1Compatability):
         assert_almost_equal(np.nan, t_reg.sd[m])
         assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:m, :m], DECIMAL_3)
 
+    @skip("Skipped test_f_test for MNLogit")
     def test_f_test(self):
-        raise SkipTest("Skipped test_f_test for MNLogit")
+        pass
 
 
 class TestProbitL1Compatability(CheckL1Compatability):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.kvars = 4 # Number of variables
         cls.m = 3 # Number of unregularized parameters
         data = sm.datasets.spector.load()
@@ -810,7 +821,7 @@ class TestL1AlphaZeroLogit(CompareL11D):
     Compares l1 model with alpha = 0 to the unregularized model.
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
         cls.res1 = Logit(data.endog, data.exog).fit_regularized(
@@ -824,7 +835,7 @@ class TestL1AlphaZeroProbit(CompareL11D):
     Compares l1 model with alpha = 0 to the unregularized model.
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
         cls.res1 = Probit(data.endog, data.exog).fit_regularized(
@@ -835,7 +846,7 @@ class TestL1AlphaZeroProbit(CompareL11D):
 
 class TestL1AlphaZeroMNLogit(CompareL1):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.anes96.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = MNLogit(data.endog, data.exog).fit_regularized(
@@ -848,7 +859,7 @@ class TestL1AlphaZeroMNLogit(CompareL1):
 
 class TestLogitNewton(CheckBinaryResults, CheckMargEff):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Logit(data.endog, data.exog).fit(method="newton", disp=0)
@@ -940,7 +951,7 @@ class TestLogitNewtonPrepend(CheckMargEff):
 
 class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -950,7 +961,7 @@ class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
 
 class TestPoissonNewton(CheckModelResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Poisson(data.endog, exog).fit(method='newton', disp=0)
@@ -986,7 +997,7 @@ class TestPoissonNewton(CheckModelResults):
 
 class TestNegativeBinomialNB2Newton(CheckModelResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial(data.endog, exog, 'nb2').fit(method='newton', disp=0)
@@ -1038,7 +1049,7 @@ class TestNegativeBinomialNB2Newton(CheckModelResults):
 
 class TestNegativeBinomialNB1Newton(CheckModelResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(
@@ -1078,7 +1089,7 @@ class TestNegativeBinomialNB1Newton(CheckModelResults):
 
 class TestNegativeBinomialNB2BFGS(CheckModelResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial(data.endog, exog, 'nb2').fit(
@@ -1133,7 +1144,7 @@ class TestNegativeBinomialNB2BFGS(CheckModelResults):
 
 class TestNegativeBinomialNB1BFGS(CheckModelResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(method="bfgs",
@@ -1179,7 +1190,7 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
     """
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial(data.endog, exog, 'geometric').fit(method='bfgs', disp=0)
@@ -1343,7 +1354,7 @@ class CheckMNLogitBaseZero(CheckModelResults):
 
 class TestMNLogitNewtonBaseZero(CheckMNLogitBaseZero):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
 
         data = sm.datasets.anes96.load()
         cls.data = data
@@ -1356,7 +1367,7 @@ class TestMNLogitNewtonBaseZero(CheckMNLogitBaseZero):
 
 class TestMNLogitLBFGSBaseZero(CheckMNLogitBaseZero):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.anes96.load()
         cls.data = data
         exog = data.exog
@@ -1392,6 +1403,7 @@ def test_perfect_prediction():
     from pandas.util.testing import assert_produces_warning
     # this is not thread-safe
     with assert_produces_warning():
+        warnings.simplefilter('always')
         mod.fit(disp=False, maxiter=50)  # should not raise but does warn
 
 def test_poisson_predict():
@@ -1421,6 +1433,7 @@ def test_poisson_newton():
     from pandas.util.testing import assert_produces_warning
     # this is not thread-safe
     with assert_produces_warning():
+        warnings.simplefilter('always')
         res = mod.fit(start_params=-np.ones(4), method='newton', disp=0)
     assert_(not res.mle_retvals['converged'])
 
@@ -1564,7 +1577,7 @@ class TestGeneralizedPoisson_p2(object):
     Test Generalized Poisson model
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = GeneralizedPoisson(data.endog, data.exog, p=2).fit(method='newton')
@@ -1614,7 +1627,7 @@ class TestGeneralizedPoisson_transparams(object):
     Test Generalized Poisson model
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.randhie.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = GeneralizedPoisson(data.endog, data.exog, p=2).fit(
@@ -1655,7 +1668,7 @@ class TestGeneralizedPoisson_p1(object):
     Test Generalized Poisson model
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.data = sm.datasets.randhie.load()
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
         cls.res1 = GeneralizedPoisson(
@@ -1713,9 +1726,15 @@ class TestGeneralizedPoisson_p1(object):
         assert_allclose((res_reg2.params[:-2]**2).mean(), 0.010672558641545994)
         assert_allclose((res_reg3.params[:-2]**2).mean(), 0.00035544919793048415)
 
+    def test_init_kwds(self):
+        kwds = self.res1.model._get_init_kwds()
+        assert_('p' in kwds)
+        assert_equal(kwds['p'], 1)
+
+
 class TestGeneralizedPoisson_underdispersion(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.expected_params = [1, -0.5, -0.05]
         np.random.seed(1234)
         nobs = 200
@@ -1760,7 +1779,7 @@ class TestGeneralizedPoisson_underdispersion(object):
     def test_predict_prob(self):
         res = self.res
         endog = res.model.endog
-        freq = np.bincount(endog)
+        freq = np.bincount(endog.astype(int))
 
         pr = res.predict(which='prob')
         pr2 = sm.distributions.genpoisson_p.pmf(np.arange(6)[:, None],
@@ -1772,9 +1791,437 @@ class TestGeneralizedPoisson_underdispersion(object):
         assert_allclose(chi2[:], (0.64628806058715882, 0.98578597726324468),
                         rtol=0.01)
 
+class TestNegativeBinomialPNB2Newton(CheckModelResults):
+    @classmethod
+    def setup_class(cls):
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomialP(data.endog, exog, p=2).fit(method='newton', disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_nb2_bfgs()
+        cls.res2 = res2
+
+    #NOTE: The bse is much closer precitions to stata
+    def test_bse(self):
+        assert_allclose(self.res1.bse, self.res2.bse,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_params(self):
+        assert_allclose(self.res1.params, self.res2.params,
+                        atol=1e-7)
+
+    def test_alpha(self):
+        self.res1.bse # attaches alpha_std_err
+        assert_allclose(self.res1.lnalpha, self.res2.lnalpha)
+        assert_allclose(self.res1.lnalpha_std_err,
+                        self.res2.lnalpha_std_err,
+                        atol=1e-7)
+
+    def test_conf_int(self):
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_zstat(self): # Low precision because Z vs. t
+        assert_allclose(self.res1.pvalues[:-1], self.res2.pvalues,
+                        atol=5e-3, rtol=5e-3)
+
+    def test_fittedvalues(self):
+        assert_allclose(self.res1.fittedvalues[:10],
+                        self.res2.fittedvalues[:10])
+
+    def test_predict(self):
+        assert_allclose(self.res1.predict()[:10],
+                        np.exp(self.res2.fittedvalues[:10]))
+
+    def test_predict_xb(self):
+        assert_allclose(self.res1.predict(which='linear')[:10],
+                        self.res2.fittedvalues[:10])
+
+class TestNegativeBinomialPNB1Newton(CheckModelResults):
+    @classmethod
+    def setup_class(cls):
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomialP(data.endog, exog, p=1).fit(method="newton",
+                                                                 maxiter=100,
+                                                                 disp=0,
+                                                                 use_transparams=True)
+        res2 = RandHIE()
+        res2.negativebinomial_nb1_bfgs()
+        cls.res2 = res2
+
+    def test_zstat(self):
+        assert_allclose(self.res1.tvalues, self.res2.z,
+                        atol=5e-3, rtol=5e-3)
+
+    def test_lnalpha(self):
+        self.res1.bse # attaches alpha_std_err
+        assert_allclose(self.res1.lnalpha, self.res2.lnalpha)
+        assert_allclose(self.res1.lnalpha_std_err,
+                            self.res2.lnalpha_std_err)
+
+    def test_params(self):
+        assert_allclose(self.res1.params, self.res2.params)
+
+    def test_conf_int(self):
+        # the bse for alpha is not high precision from the hessian
+        # approximation
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_predict(self):
+        assert_allclose(self.res1.predict()[:10],
+                        np.exp(self.res2.fittedvalues[:10]),
+                        atol=1e-3, rtol=1e-3)
+
+    def test_predict_xb(self):
+        assert_allclose(self.res1.predict(which='linear')[:10],
+                        self.res2.fittedvalues[:10],
+                        atol=1e-3, rtol=1e-3)
+
+
+class TestNegativeBinomialPNB2BFGS(CheckModelResults):
+    @classmethod
+    def setup_class(cls):
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomialP(data.endog, exog, p=2).fit(
+                                                method='bfgs', disp=0,
+                                                maxiter=1000,
+                                                use_transparams=True)
+        res2 = RandHIE()
+        res2.negativebinomial_nb2_bfgs()
+        cls.res2 = res2
+
+    #NOTE: The bse is much closer precitions to stata
+    def test_bse(self):
+        assert_allclose(self.res1.bse, self.res2.bse,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_params(self):
+        assert_allclose(self.res1.params, self.res2.params,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_alpha(self):
+        self.res1.bse # attaches alpha_std_err
+        assert_allclose(self.res1.lnalpha, self.res2.lnalpha,
+                        atol=1e-5, rtol=1e-5)
+        assert_allclose(self.res1.lnalpha_std_err,
+                        self.res2.lnalpha_std_err,
+                        atol=1e-5, rtol=1e-5)
+
+    def test_conf_int(self):
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_zstat(self): # Low precision because Z vs. t
+        assert_allclose(self.res1.pvalues[:-1], self.res2.pvalues,
+                        atol=5e-3, rtol=5e-3)
+
+    def test_fittedvalues(self):
+        assert_allclose(self.res1.fittedvalues[:10],
+                        self.res2.fittedvalues[:10],
+                        atol=1e-4, rtol=1e-4)
+
+    def test_predict(self):
+        assert_allclose(self.res1.predict()[:10],
+                        np.exp(self.res2.fittedvalues[:10]),
+                        atol=1e-3, rtol=1e-3)
+
+    def test_predict_xb(self):
+        assert_allclose(self.res1.predict(which='linear')[:10],
+                        self.res2.fittedvalues[:10],
+                        atol=1e-3, rtol=1e-3)
+
+
+class TestNegativeBinomialPNB1BFGS(CheckModelResults):
+    @classmethod
+    def setup_class(cls):
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomialP(data.endog, exog, p=1).fit(method="bfgs",
+                                                                 maxiter=100,
+                                                                 disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_nb1_bfgs()
+        cls.res2 = res2
+
+    def test_bse(self):
+        assert_allclose(self.res1.bse, self.res2.bse,
+                        atol=5e-3, rtol=5e-3)
+
+    def test_aic(self):
+        assert_allclose(self.res1.aic, self.res2.aic,
+                        atol=0.5, rtol=0.5)
+
+    def test_bic(self):
+        assert_allclose(self.res1.bic, self.res2.bic,
+                        atol=0.5, rtol=0.5)
+
+    def test_llf(self):
+        assert_allclose(self.res1.llf, self.res2.llf,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_llr(self):
+        assert_allclose(self.res1.llf, self.res2.llf,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_zstat(self):
+        assert_allclose(self.res1.tvalues, self.res2.z,
+                        atol=0.5, rtol=0.5)
+
+    def test_lnalpha(self):
+        assert_allclose(self.res1.lnalpha, self.res2.lnalpha,
+                        atol=1e-3, rtol=1e-3)
+        assert_allclose(self.res1.lnalpha_std_err,
+                        self.res2.lnalpha_std_err,
+                        atol=1e-3, rtol=1e-3)
+
+    def test_params(self):
+        assert_allclose(self.res1.params, self.res2.params,
+                        atol=5e-2, rtol=5e-2)
+
+    def test_conf_int(self):
+        # the bse for alpha is not high precision from the hessian
+        # approximation
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int,
+                        atol=5e-2, rtol=5e-2)
+
+    def test_predict(self):
+        assert_allclose(self.res1.predict()[:10],
+                        np.exp(self.res2.fittedvalues[:10]),
+                        atol=5e-3, rtol=5e-3)
+
+    def test_predict_xb(self):
+        assert_allclose(self.res1.predict(which='linear')[:10],
+                        self.res2.fittedvalues[:10],
+                        atol=5e-3, rtol=5e-3)
+
+    def test_init_kwds(self):
+        kwds = self.res1.model._get_init_kwds()
+        assert_('p' in kwds)
+        assert_equal(kwds['p'], 1)
+
+
+class TestNegativeBinomialPL1Compatability(CheckL1Compatability):
+    @classmethod
+    def setup_class(cls):
+        cls.kvars = 10 # Number of variables
+        cls.m = 7 # Number of unregularized parameters
+        rand_data = sm.datasets.randhie.load()
+        rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)
+        rand_exog_st = (rand_exog - rand_exog.mean(0)) / rand_exog.std(0)
+        rand_exog = sm.add_constant(rand_exog_st, prepend=True)
+        # Drop some columns and do an unregularized fit
+        exog_no_PSI = rand_exog[:, :cls.m]
+        mod_unreg = sm.NegativeBinomialP(rand_data.endog, exog_no_PSI)
+        cls.res_unreg = mod_unreg.fit(method="newton", disp=False)
+        # Do a regularized fit with alpha, effectively dropping the last column
+        alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars + 1)
+        alpha[:cls.m] = 0
+        alpha[-1] = 0  # don't penalize alpha
+
+        mod_reg = sm.NegativeBinomialP(rand_data.endog, rand_exog)
+        cls.res_reg = mod_reg.fit_regularized(
+            method='l1', alpha=alpha, disp=False, acc=1e-10, maxiter=2000,
+            trim_mode='auto')
+        cls.k_extra = 1  # 1 extra parameter in nb2
+
+class  TestNegativeBinomialPPredictProb(object):
+
+    def test_predict_prob_p1(self):
+        expected_params = [1, -0.5]
+        np.random.seed(1234)
+        nobs = 200
+        exog = np.ones((nobs, 2))
+        exog[:nobs//2, 1] = 2
+        mu_true = np.exp(exog.dot(expected_params))
+        alpha = 0.05
+        size = 1. / alpha * mu_true
+        prob = size / (size + mu_true)
+        endog = nbinom.rvs(size, prob, size=len(mu_true))
+
+        res = sm.NegativeBinomialP(endog, exog).fit()
+
+        mu = res.predict()
+        size = 1. / alpha * mu
+        prob = size / (size + mu)
+
+        probs = res.predict(which='prob')
+        assert_allclose(probs,
+            nbinom.pmf(np.arange(8)[:,None], size, prob).T,
+            atol=1e-2, rtol=1e-2)
+
+        probs_ex = res.predict(exog=exog[[0, -1]], which='prob')
+        assert_allclose(probs_ex, probs[[0, -1]], rtol=1e-10, atol=1e-15)
+
+    def test_predict_prob_p2(self):
+        expected_params = [1, -0.5]
+        np.random.seed(1234)
+        nobs = 200
+        exog = np.ones((nobs, 2))
+        exog[:nobs//2, 1] = 2
+        mu_true = np.exp(exog.dot(expected_params))
+        alpha = 0.05
+        size = 1. / alpha
+        prob = size / (size + mu_true)
+        endog = nbinom.rvs(size, prob, size=len(mu_true))
+
+        res = sm.NegativeBinomialP(endog, exog, p=2).fit()
+
+        mu = res.predict()
+        size = 1. / alpha
+        prob = size / (size + mu)
+
+        assert_allclose(res.predict(which='prob'),
+            nbinom.pmf(np.arange(8)[:,None], size, prob).T,
+            atol=1e-2, rtol=1e-2)
+
+class CheckNull(object):
+
+    @classmethod
+    def _get_data(cls):
+        x = np.array([ 20.,  25.,  30.,  35.,  40.,  45.,  50.])
+        nobs = len(x)
+        exog = np.column_stack((np.ones(nobs), x))
+        endog = np.array([ 469, 5516, 6854, 6837, 5952, 4066, 3242])
+        return endog, exog
+
+    def test_llnull(self):
+        res = self.model.fit(start_params=self.start_params)
+        res._results._attach_nullmodel = True
+        llf0 = res.llnull
+        res_null0 = res.res_null
+        assert_allclose(llf0, res_null0.llf, rtol=1e-6)
+
+        res_null1 = self.res_null
+        assert_allclose(llf0, res_null1.llf, rtol=1e-6)
+        # Note default convergence tolerance doesn't get lower rtol
+        # from different starting values (using bfgs)
+        assert_allclose(res_null0.params, res_null1.params, rtol=5e-5)
+
+
+class TestPoissonNull(CheckNull):
+
+    @classmethod
+    def setup_class(cls):
+        endog, exog = cls._get_data()
+        cls.model = Poisson(endog, exog)
+        cls.res_null = Poisson(endog, exog[:, 0]).fit(start_params=[8.5])
+        # use start params to avoid warnings
+        cls.start_params = [8.5, 0]
+
+
+class TestNegativeBinomialNB1Null(CheckNull):
+
+    @classmethod
+    def setup_class(cls):
+        endog, exog = cls._get_data()
+        cls.model = NegativeBinomial(endog, exog, loglike_method='nb1')
+        cls.model_null = NegativeBinomial(endog, exog[:, 0], loglike_method='nb1')
+        cls.res_null = cls.model_null.fit(start_params=[8, 1000],
+                                          method='bfgs', gtol=1e-08, maxiter=300)
+        # for convergence with bfgs, I needed to round down alpha start_params
+        cls.start_params = np.array([7.730452, 2.01633068e-02, 1763.0])
+
+
+class TestNegativeBinomialNB2Null(CheckNull):
+
+    @classmethod
+    def setup_class(cls):
+        endog, exog = cls._get_data()
+        cls.model = NegativeBinomial(endog, exog, loglike_method='nb2')
+        cls.model_null = NegativeBinomial(endog, exog[:, 0], loglike_method='nb2')
+        cls.res_null = cls.model_null.fit(start_params=[8, 0.5],
+                                          method='bfgs', gtol=1e-06, maxiter=300)
+        cls.start_params = np.array([ 8.07216448,  0.01087238,  0.44024134])
+
+
+class TestNegativeBinomialNBP2Null(CheckNull):
+
+    @classmethod
+    def setup_class(cls):
+        endog, exog = cls._get_data()
+        cls.model = NegativeBinomialP(endog, exog, p=2)
+        cls.model_null = NegativeBinomialP(endog, exog[:, 0], p=2)
+        cls.res_null = cls.model_null.fit(start_params=[8, 1],
+                                          method='bfgs', gtol=1e-06, maxiter=300)
+        cls.start_params = np.array([ 8.07216448,  0.01087238,  0.44024134])
+
+    def test_start_null(self):
+        endog, exog = self.model.endog, self.model.exog
+        model_nb2 = NegativeBinomial(endog, exog, loglike_method='nb2')
+        sp1 = model_nb2._get_start_params_null()
+        sp0 = self.model._get_start_params_null()
+        assert_allclose(sp0, sp1, rtol=1e-12)
+
+
+class TestNegativeBinomialNBP1Null(CheckNull):
+
+    @classmethod
+    def setup_class(cls):
+        endog, exog = cls._get_data()
+        cls.model = NegativeBinomialP(endog, exog, p=1.)
+        cls.model_null = NegativeBinomialP(endog, exog[:, 0], p=1)
+        cls.res_null = cls.model_null.fit(start_params=[8, 1],
+                                          method='bfgs', gtol=1e-06, maxiter=300)
+        cls.start_params = np.array([7.730452, 2.01633068e-02, 1763.0])
+
+    def test_start_null(self):
+        endog, exog = self.model.endog, self.model.exog
+        model_nb2 = NegativeBinomial(endog, exog, loglike_method='nb1')
+        sp1 = model_nb2._get_start_params_null()
+        sp0 = self.model._get_start_params_null()
+        assert_allclose(sp0, sp1, rtol=1e-12)
+
+
+class TestGeneralizedPoissonNull(CheckNull):
+
+    @classmethod
+    def setup_class(cls):
+        endog, exog = cls._get_data()
+        cls.model = GeneralizedPoisson(endog, exog, p=1.5)
+        cls.model_null = GeneralizedPoisson(endog, exog[:, 0], p=1.5)
+        cls.res_null = cls.model_null.fit(start_params=[8.4, 1],
+                                          method='bfgs', gtol=1e-08, maxiter=300)
+        cls.start_params = np.array([6.91127148, 0.04501334, 0.88393736])
+
+def test_null_options():
+    # this is a "nice" case because we only check that options are used
+    # correctly
+    nobs = 10
+    exog = np.ones((20, 2))
+    exog[:nobs // 2, 1] = 0
+    mu = np.exp(exog.sum(1))
+    endog = np.random.poisson(mu)  # Note no size=nobs in np.random
+    res = Poisson(endog, exog).fit(start_params=np.log([1, 1]))
+    llnull0 = res.llnull
+    assert_(hasattr(res, 'res_llnull') is False)
+    res.set_null_options(attach_results=True)
+    # default optimization
+    lln = res.llnull  # access to trigger computation
+    assert_allclose(res.res_null.mle_settings['start_params'], np.log(endog.mean()), rtol=1e-10)
+    assert_equal(res.res_null.mle_settings['optimizer'], 'bfgs')
+    assert_allclose(lln, llnull0)
+
+    res.set_null_options(attach_results=True, start_params=[0.5], method='nm')
+    lln = res.llnull  # access to trigger computation
+    assert_allclose(res.res_null.mle_settings['start_params'], [0.5], rtol=1e-10)
+    assert_equal(res.res_null.mle_settings['optimizer'], 'nm')
+
+    res.summary()  # call to fill cache
+    assert_('prsquared' in res._cache)
+    assert_equal(res._cache['llnull'],  lln)
+
+    assert_('prsquared' in res._cache)
+    assert_equal(res._cache['llnull'],  lln)
+
+    # check setting cache
+    res.set_null_options(llnull=999)
+    assert_('prsquared' not in res._cache)
+    assert_equal(res._cache['llnull'],  999)
 
 
 if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'],
-            exit=False)
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])
