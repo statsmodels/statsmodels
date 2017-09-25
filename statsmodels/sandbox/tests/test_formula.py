@@ -2,11 +2,13 @@
 Test functions for models.formula
 """
 
+import unittest
 import string
 
 import numpy as np
 import numpy.random as R
 import numpy.linalg as L
+
 from numpy.testing import assert_almost_equal, assert_equal, assert_, \
     assert_raises
 
@@ -14,7 +16,9 @@ from statsmodels.sandbox import formula #, contrast #, utils
 from statsmodels.sandbox import contrast_old as contrast
 
 
+
 class TestTerm(object):
+
 
     def test_init(self):
         t1 = formula.Term("trivial")
@@ -50,7 +54,9 @@ class TestTerm(object):
         f = intercept * t1
         assert_equal(str(f), str(formula.Formula(t1)))
 
+
 class TestFormula(object):
+
 
     def setup(self):
         self.X = R.standard_normal((40,10))
