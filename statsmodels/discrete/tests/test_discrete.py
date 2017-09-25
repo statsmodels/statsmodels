@@ -903,7 +903,7 @@ class TestLogitNewton(CheckBinaryResults, CheckMargEff):
 
 
 class TestLogitNewtonPrepend(CheckMargEff):
-    # same as previous version but adjusted vor add_constant prepend=True
+    # same as previous version but adjusted for add_constant prepend=True
     # bug #3695
     @classmethod
     def setup_class(cls):
@@ -913,7 +913,6 @@ class TestLogitNewtonPrepend(CheckMargEff):
         res2 = Spector()
         res2.logit()
         cls.res2 = res2
-        cls.slice = np.roll(np.arange(len(cls.res1.params)), 1) #.astype(int)
 
     def test_resid_pearson(self):
         assert_almost_equal(self.res1.resid_pearson,
@@ -948,6 +947,38 @@ class TestLogitNewtonPrepend(CheckMargEff):
         assert_almost_equal(me.margeff_se,
                 self.res2.margeff_dummy_atexog2_se, DECIMAL_4)
 
+
+class TestGEELogitNoPrepend(CheckMargEff):
+    # trying to test GEE Margins against Logit Margins
+    # bug #3695
+    @classmethod
+    def setup_class(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=False)
+        groups = np.ones(data.exog.shape[0], int)
+        mod = sm.GEE(data.endog, data.exog, groups, family=sm.families.Binomial())
+        cls.res1 = mod.fit(cov_type='naive')
+        mod._derivative_predict = mod._derivative_exog
+        res2 = Spector()
+        res2.logit()
+        cls.res2 = res2
+
+
+class TestGEELogitPrepend(TestLogitNewtonPrepend):
+    # trying to test GEE Margins against Logit Margins
+    # same as previous version but adjusted for add_constant prepend=True
+    # bug #3695
+    @classmethod
+    def setup_class(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
+        groups = np.ones(data.exog.shape[0], int)
+        mod = sm.GEE(data.endog, data.exog, groups, family=sm.families.Binomial())
+        cls.res1 = mod.fit(cov_type='naive')
+        mod._derivative_predict = mod._derivative_exog
+        res2 = Spector()
+        res2.logit()
+        cls.res2 = res2
 
 
 class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
