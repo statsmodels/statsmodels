@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 import statsmodels.api as sm
 #from statsmodels.sandbox import tsa
-from statsmodels.sandbox.tsa.garch import *  # local import
+from statsmodels.sandbox.tsa.garch import Garch, garchplot, Garch0, optimize, loglikeGARCH11
 
 #dta2 = ts.tsfromtxt(r'gspc_table.csv',
 #        datecols=0, skiprows=0, delimiter=',',names=True, freq='D')

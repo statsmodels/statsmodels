@@ -4,8 +4,7 @@ Test functions for models.robust.scale
 
 import numpy as np
 from numpy.random import standard_normal
-from numpy.testing import assert_almost_equal, assert_equal, run_module_suite
-
+from numpy.testing import assert_almost_equal, assert_equal
 # Example from Section 5.5, Venables & Ripley (2002)
 
 import statsmodels.robust.scale as scale
@@ -116,6 +115,3 @@ class TestHuberAxes(object):
     def test_axisneg1(self):
         m, s = self.h(self.X, axis=-1)
         assert_equal(m.shape, (40,10))
-
-if __name__=="__main__":
-    run_module_suite()
