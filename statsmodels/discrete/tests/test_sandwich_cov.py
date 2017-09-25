@@ -374,7 +374,7 @@ class TestNegbinClu(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_negbin_clu
         mod = smd.NegativeBinomial(endog, exog)
-        cls.res1 = mod.fit(disp=False)
+        cls.res1 = mod.fit(disp=False, gtol=1e-7)
         cls.get_robust_clu()
 
 
@@ -408,7 +408,7 @@ class TestNegbinCluGeneric(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_negbin_clu
         mod = smd.NegativeBinomial(endog, exog)
-        cls.res1 = res1 = mod.fit(disp=False)
+        cls.res1 = res1 = mod.fit(disp=False, gtol=1e-7)
 
         get_robustcov_results(cls.res1._results, 'cluster',
                                                   groups=group,
@@ -437,7 +437,7 @@ class TestNegbinCluFit(CheckCountRobustMixin):
                                                 use_correction=True,
                                                 df_correction=True),  #TODO has no effect
                                   use_t=False, #True,
-                                  )
+                                  gtol=1e-7)
         cls.bse_rob = cls.res1.bse
 
         nobs, k_vars = mod.exog.shape

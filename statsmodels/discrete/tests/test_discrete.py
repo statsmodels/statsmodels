@@ -14,6 +14,7 @@ import os
 import warnings
 
 import numpy as np
+import pandas as pd
 from numpy.testing import (assert_, assert_raises, assert_almost_equal,
                            assert_equal, assert_array_equal, assert_allclose,
                            assert_array_less)
@@ -1744,7 +1745,7 @@ class TestGeneralizedPoisson_underdispersion(object):
         cls.endog = sm.distributions.genpoisson_p.rvs(mu_true,
             cls.expected_params[-1], 1, size=len(mu_true))
         model_gp = sm.GeneralizedPoisson(cls.endog, exog, p=1)
-        cls.res = model_gp.fit(method='nm', maxiter=5000, maxfun=5000)
+        cls.res = model_gp.fit(method='nm', xtol=1e-6, maxiter=5000, maxfun=5000)
 
     def test_basic(self):
         res = self.res
@@ -1763,7 +1764,7 @@ class TestGeneralizedPoisson_underdispersion(object):
         res = self.res
         res2 = res.model.fit(start_params=res.params, method='newton')
         assert_allclose(res.model.score(res.params),
-                        np.zeros(len(res2.params)), atol=5e-3)
+                        np.zeros(len(res2.params)), atol=0.01)
         assert_allclose(res.model.score(res2.params),
                         np.zeros(len(res2.params)), atol=1e-10)
         assert_allclose(res.params, res2.params, atol=1e-4)
@@ -2221,6 +2222,52 @@ def test_null_options():
     assert_('prsquared' not in res._cache)
     assert_equal(res._cache['llnull'],  999)
 
+
+def test_optim_kwds_prelim():
+    # test that fit options for preliminary fit is correctly transmitted
+
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    filepath = os.path.join(cur_dir, "results", "sm3533.csv")
+    df = pd.read_csv(filepath)
+
+    features = ['pp']
+    X = (df[features] - df[features].mean())/df[features].std()
+    y = df['num'].values
+    exog = sm.add_constant(X[features].copy())
+    # offset=np.log(df['population'].values + 1)
+    # offset currently not used
+    offset = None
+
+    # we use "nm", "bfgs" does not work for Poisson/exp with older scipy
+    optim_kwds_prelim = dict(method='nm', maxiter=5000)
+    model = Poisson(y, exog, offset=offset) #
+    res_poi = model.fit(disp=0, **optim_kwds_prelim)
+
+    model = NegativeBinomial(y, exog, offset=offset)
+    res = model.fit(disp=0, optim_kwds_prelim=optim_kwds_prelim)
+
+    assert_allclose(res.mle_settings['start_params'][:-1], res_poi.params, rtol=1e-4)
+    assert_equal(res.mle_settings['optim_kwds_prelim'], optim_kwds_prelim)
+    assert_allclose(res.predict().mean(), y.mean(), rtol=0.1)
+
+    # NBP22 and GPP p=1.5 also fail on older scipy with bfgs, use nm instead
+    optim_kwds_prelim = dict(method='nm', maxiter=5000)
+    model = NegativeBinomialP(y, exog, offset=offset, p=2)
+    res = model.fit(disp=0, optim_kwds_prelim=optim_kwds_prelim)
+
+    assert_allclose(res.mle_settings['start_params'][:-1], res_poi.params, rtol=1e-4)
+    assert_equal(res.mle_settings['optim_kwds_prelim'], optim_kwds_prelim)
+    assert_allclose(res.predict().mean(), y.mean(), rtol=0.1)
+
+    # GPP with p=1.5 converges correctly,
+    # GPP fails when p=2 even with good start_params
+    model = GeneralizedPoisson(y, exog, offset=offset, p=1.5)
+    res = model.fit(disp=0, maxiter=200, optim_kwds_prelim=optim_kwds_prelim )
+
+    assert_allclose(res.mle_settings['start_params'][:-1], res_poi.params, rtol=1e-4)
+    assert_equal(res.mle_settings['optim_kwds_prelim'], optim_kwds_prelim)
+    # rough check that convergence makes sense
+    assert_allclose(res.predict().mean(), y.mean(), rtol=0.1)
 
 if __name__ == "__main__":
     import pytest
