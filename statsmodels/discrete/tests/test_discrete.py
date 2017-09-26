@@ -833,6 +833,8 @@ class CompareL1(object):
         assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_4)
         assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL_4)
 
+        assert_(self.res1.mle_retvals['converged'] is True)
+
 
 class CompareL11D(CompareL1):
     """
@@ -857,6 +859,14 @@ class TestL1AlphaZeroLogit(CompareL11D):
                 method="l1", alpha=0, disp=0, acc=1e-15, maxiter=1000,
                 trim_mode='auto', auto_trim_tol=0.01)
         cls.res2 = Logit(data.endog, data.exog).fit(disp=0, tol=1e-15)
+
+    def test_converged(self):
+        res = self.res1.model.fit_regularized(
+                method="l1", alpha=0, disp=0, acc=1e-15, maxiter=1,
+                trim_mode='auto', auto_trim_tol=0.01)
+
+        # see #2857
+        assert_(res.mle_retvals['converged'] is False)
 
 
 class TestL1AlphaZeroProbit(CompareL11D):
