@@ -1508,6 +1508,10 @@ class GeneralizedPoisson(CountModel):
               a2 / a1 ** 2)))
         return dp
 
+    def score_obs(self, params):
+        sc = approx_fprime_cs(params, self.loglikeobs)
+        return sc
+
     def hessian(self, params):
         """
         Generalized Poisson model Hessian matrix of the loglikelihood
