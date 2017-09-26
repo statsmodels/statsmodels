@@ -111,13 +111,15 @@ def ksstat(x, cdf, alternative='two_sided', args=()):
     return D
 
 
-#new version with tabledist
-#--------------------------
+# new version with tabledist
+# --------------------------
 
 def get_lilliefors_table(dist='norm'):
     '''
-    Generates tables for significance levels of test statistics for normal or
-    exponential distribution testing, as specified in Lilliefors references above
+    Generates tables for significance levels of Lilliefors test statistics
+
+    Tables for available normal and exponential distribution testing,
+    as specified in Lilliefors references above
 
     Parameters
     ----------
@@ -129,15 +131,15 @@ def get_lilliefors_table(dist='norm'):
     lf : TableDist object.
         table of critical values
     '''
-    #function just to keep things together
-    #for this test alpha is sf probability, i.e. right tail probability
+    # function just to keep things together
+    # for this test alpha is sf probability, i.e. right tail probability
 
     if dist == 'norm':
         alpha = np.array([ 0.2  ,  0.15 ,  0.1  ,  0.05 ,  0.01 ,  0.001])[::-1]
         size = np.array([ 4,   5,   6,   7,   8,   9,  10,  11,  12,  13,  14,  15,
                      16,  17,  18,  19,  20,  25,  30,  40, 100, 400, 900], float)
 
-        #critical values, rows are by sample size, columns are by alpha
+        # critical values, rows are by sample size, columns are by alpha
         crit_lf = np.array(   [[303, 321, 346, 376, 413, 433],
                                [289, 303, 319, 343, 397, 439],
                                [269, 281, 297, 323, 371, 424],
@@ -162,27 +164,27 @@ def get_lilliefors_table(dist='norm'):
                                [ 37,  39,  41,  45,  52,  61],
                                [ 25,  26,  28,  30,  35,  42]])[:,::-1] / 1000.
 
+
         # also build a table for larger sample sizes
         def f(n):
-            return np.array([.736/np.sqrt(n), .768/np.sqrt(n),
-            .805/np.sqrt(n), .886/np.sqrt(n), 1.031/np.sqrt(n)])
+            return np.array([0.736, 0.768, 0.805, 0.886, 1.031]) / np.sqrt(n)
 
         higher_sizes = np.array([35, 40, 45, 50, 60, 70,
-                                80, 100, 200, 500, 1000,
-                                2000, 3000, 5000, 10000, 100000], float)
+                                 80, 100, 200, 500, 1000,
+                                 2000, 3000, 5000, 10000, 100000], float)
         higher_crit_lf = np.zeros([higher_sizes.shape[0], crit_lf.shape[1]-1])
         for i in range(len(higher_sizes)):
-            higher_crit_lf[i,:] = f(higher_sizes[i])
+            higher_crit_lf[i, :] = f(higher_sizes[i])
 
         alpha_large = alpha[:-1]
         size_large = np.concatenate([size, higher_sizes])
         crit_lf_large = np.vstack([crit_lf[:-4,:-1], higher_crit_lf])
         lf = TableDist(alpha, size, crit_lf)
 
-
     elif dist == 'exp':
         alpha = np.array([0.2,  0.15,  0.1,  0.05, 0.01])[::-1]
-        size = np.array([3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,25,30], float)
+        size = np.array([3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,25,30],
+                        float)
 
         crit_lf = np.array([   [451, 479, 511, 551, 600],
                                 [396, 422, 499, 487, 548],
@@ -206,8 +208,7 @@ def get_lilliefors_table(dist='norm'):
                                 [155, 164, 174, 192, 226]])[:,::-1] / 1000.
 
         def f(n):
-            return np.array([.86/np.sqrt(n), .91/np.sqrt(n),
-            .96/np.sqrt(n), 1.06/np.sqrt(n), 1.25/np.sqrt(n)])
+            return np.array([.86, .91, .96, 1.06, 1.25]) / np.sqrt(n)
 
         higher_sizes = np.array([35, 40, 45, 50, 60, 70,
                                 80, 100, 200, 500, 1000,
@@ -222,11 +223,11 @@ def get_lilliefors_table(dist='norm'):
     else:
         raise ValueError("Invalid dist parameter. dist must be 'norm' or 'exp'")
 
-
     return lf
 
 lilliefors_table_norm = get_lilliefors_table(dist='norm')
 lilliefors_table_expon = get_lilliefors_table(dist='exp')
+
 
 def pval_lf(Dmax, n):
     '''approximate pvalues for Lilliefors test
@@ -263,12 +264,12 @@ def pval_lf(Dmax, n):
     '''
 
     #todo: check boundaries, valid range for n and Dmax
-    if n>100:
-        Dmax *= (n/100.)**0.49
+    if n > 100:
+        Dmax *= (n / 100.)**0.49
         n = 100
-    pval = np.exp(-7.01256*Dmax**2 *(n + 2.78019)
-                + 2.99587 * Dmax * np.sqrt(n + 2.78019) - 0.122119
-                + 0.974598/np.sqrt(n) + 1.67997/n)
+    pval = np.exp(-7.01256 * Dmax**2 * (n + 2.78019)
+                  + 2.99587 * Dmax * np.sqrt(n + 2.78019) - 0.122119
+                  + 0.974598/np.sqrt(n) + 1.67997/n)
     return pval
 
 
@@ -324,11 +325,11 @@ def kstest_fit(x, dist='norm', pvalmethod='approx'):
     nobs = len(x)
 
     if dist == 'norm':
-        z = (x-x.mean())/x.std(ddof=1)
+        z = (x - x.mean()) / x.std(ddof=1)
         test_d = stats.norm.cdf
         lilliefors_table = lilliefors_table_norm
     elif dist == 'exp':
-        z = x/x.mean()
+        z = x / x.mean()
         test_d = stats.expon.cdf
         lilliefors_table = lilliefors_table_expon
         pvalmethod = 'table'
@@ -343,7 +344,6 @@ def kstest_fit(x, dist='norm', pvalmethod='approx'):
         if pval > 0.1:
             pval = lilliefors_table.prob(d_ks, nobs)
     elif pvalmethod == 'table':
-        #pval = pval_lftable(d_ks, nobs)
         pval = lilliefors_table.prob(d_ks, nobs)
 
     return d_ks, pval
@@ -351,7 +351,6 @@ def kstest_fit(x, dist='norm', pvalmethod='approx'):
 
 
 lilliefors = kstest_fit
-
 lillifors = np.deprecate(lilliefors, 'lillifors', 'lilliefors',
                                "Use lilliefors, lillifors will be "
                                "removed in 0.9 \n(Note: misspelling missing 'e')")
@@ -361,8 +360,8 @@ from functools import partial
 kstest_normal = kstest_fit
 kstest_exponential = partial(kstest_fit, dist='exp')
 
-#old version:
-#------------
+# old version:
+# ------------
 '''
 tble = \
 00 20 15 10 05 01 .1
