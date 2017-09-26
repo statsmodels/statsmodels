@@ -3272,11 +3272,10 @@ class DiscreteResults(base.LikelihoodModelResults):
 
 
     def __getstate__(self):
-        try:
-            #remove unpicklable callback
-            self.mle_settings['callback'] = None
-        except (AttributeError, KeyError):
-            pass
+        # remove unpicklable methods
+        self.mle_settings['callback'] = None
+        if 'cov_params_func' in self.mle_settings:
+            self.mle_settings['cov_params_func'] = None
         return self.__dict__
 
     @cache_readonly
