@@ -20,21 +20,19 @@ from __future__ import division
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
            "GeneralizedPoisson", "NegativeBinomialP"]
 
-from statsmodels.compat.python import lmap, lzip, range
+from statsmodels.compat.python import lmap, range
 import numpy as np
+
 from scipy.special import gammaln, digamma, polygamma
 from scipy import stats, special, optimize  # opt just for nbin
 from scipy.stats import nbinom
+
 import statsmodels.tools.tools as tools
 from statsmodels.tools import data as data_tools
-from statsmodels.tools.decorators import (resettable_cache,
-        cache_readonly)
-from statsmodels.regression.linear_model import OLS
-from scipy import stats, special, optimize  # opt just for nbin
-from scipy.stats import nbinom
+from statsmodels.tools.decorators import resettable_cache, cache_readonly
+
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
-from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
-                                       approx_hess_cs, approx_fprime_cs)
+from statsmodels.tools.numdiff import approx_fprime_cs
 import statsmodels.base.model as base
 from statsmodels.base.data import handle_data  # for mnlogit
 import statsmodels.regression.linear_model as lm
@@ -179,9 +177,9 @@ class DiscreteModel(base.LikelihoodModel):
         and should contain any preprocessing that needs to be done for a model.
         """
         # assumes constant
-        self.df_model = float(np_matrix_rank(self.exog) - 1)
-        self.df_resid = (float(self.exog.shape[0] -
-                         np_matrix_rank(self.exog)))
+        exog_rank = np_matrix_rank(self.exog)
+        self.df_model = float(exog_rank - 1)
+        self.df_resid = float(self.exog.shape[0] - exog_rank)
 
     def cdf(self, X):
         """
@@ -2515,28 +2513,27 @@ class NegativeBinomial(CountModel):
             alpha = params[-1]
         params = params[:-1]
         exog = self.exog
-        y = self.endog[:,None]
-        mu = self.predict(params)[:,None]
+        y = self.endog[:, None]
+        mu = self.predict(params)[:, None]
         a1 = 1/alpha * mu**Q
+        # Note: Q is either 0 or 1, so a1 is either 1/alpha or mu/alpha.
+        prob = a1 / (a1 + mu)
+
+        digamma_part = (special.digamma(y + a1) - special.digamma(a1))
+        npdg = np.log(prob) + digamma_part
+
         if Q: # nb1
-            dparams = exog*mu/alpha*(np.log(1/(alpha + 1)) +
-                       special.digamma(y + mu/alpha) -
-                       special.digamma(mu/alpha))
-            dalpha = ((alpha*(y - mu*np.log(1/(alpha + 1)) -
-                              mu*(special.digamma(y + mu/alpha) -
-                              special.digamma(mu/alpha) + 1)) -
-                       mu*(np.log(1/(alpha + 1)) +
-                           special.digamma(y + mu/alpha) -
-                           special.digamma(mu/alpha)))/
-                       (alpha**2*(alpha + 1))).sum()
-
+            # Recall that Q is either 0 or 1, so in this case it is 1.
+            # Then a1 is mu/alpha.
+            # `prob` then simplifies to 1/(alpha+1)            
+            dparams = exog*a1*npdg
         else: # nb2
+            # In this case a1 is 1/alpha            
             dparams = exog*a1 * (y-mu)/(mu+a1)
-            da1 = -alpha**-2
-            dalpha = (special.digamma(a1+y) - special.digamma(a1) + np.log(a1)
-                        - np.log(a1+mu) - (a1+y)/(a1+mu) + 1).sum()*da1
-
-        #multiply above by constant outside sum to reduce rounding error
+        
+        dalpha = -(npdg*a1 - (y-mu)*prob).sum() / alpha
+        # Multiply/divide by constants above outside the sum() to reduce
+        # floating point error.
         if self._transparams:
             return np.r_[dparams.sum(0), dalpha*alpha]
         else:
@@ -2581,19 +2578,20 @@ class NegativeBinomial(CountModel):
 
         a1 = mu/alpha
 
+        # for dl/dalpha dalpha
+        digamma_part = special.digamma(y + a1) - special.digamma(a1)
+
         # for dl/dparams dparams
         dim = exog.shape[1]
         hess_arr = np.empty((dim+1,dim+1))
         #const_arr = a1*mu*(a1+y)/(mu+a1)**2
         # not all of dparams
-        dparams = exog/alpha*(np.log(1/(alpha + 1)) +
-                              special.digamma(y + mu/alpha) -
-                              special.digamma(mu/alpha))
+        dparams = exog/alpha*(np.log(1/(alpha + 1)) + digamma_part)
 
         dmudb = exog*mu
-        xmu_alpha = exog*mu/alpha
-        trigamma = (special.polygamma(1, mu/alpha + y) -
-                    special.polygamma(1, mu/alpha))
+        xmu_alpha = exog*a1
+        trigamma = (special.polygamma(1, a1 + y) -
+                    special.polygamma(1, a1))
         for i in range(dim):
             for j in range(dim):
                 if j > i:
@@ -2606,15 +2604,12 @@ class NegativeBinomial(CountModel):
 
         # for dl/dparams dalpha
         da1 = -alpha**-2
-        dldpda = np.sum(-mu/alpha * dparams + exog*mu/alpha *
-                        (-trigamma*mu/alpha**2 - 1/(alpha+1)), axis=0)
+        dldpda = np.sum(-a1 * dparams + exog*a1 *
+                        (-trigamma*a1**2 - 1/(alpha+1)), axis=0)
 
         hess_arr[-1,:-1] = dldpda
         hess_arr[:-1,-1] = dldpda
 
-        # for dl/dalpha dalpha
-        digamma_part = (special.digamma(y + mu/alpha) -
-                        special.digamma(mu/alpha))
 
         log_alpha = np.log(1/(alpha+1))
         alpha3 = alpha**3
@@ -3917,7 +3912,7 @@ class MultinomialResults(DiscreteResults):
             # use range below to ensure sortedness
             ynames = [ynames[key] for key in range(int(model.J))]
             ynames = ['='.join([yname, name]) for name in ynames]
-            if not all:
+            if not all: # TODO: Avoid built-in names
                 yname_list = ynames[1:] # assumes first variable is dropped
             else:
                 yname_list = ynames
@@ -4120,6 +4115,3 @@ class L1MultinomialResultsWrapper(lm.RegressionResultsWrapper):
 wrap.populate_wrapper(L1MultinomialResultsWrapper, L1MultinomialResults)
 
 
-if __name__=="__main__":
-    import numpy as np
-    import statsmodels.api as sm
