@@ -3270,7 +3270,6 @@ class DiscreteResults(base.LikelihoodModelResults):
                                            **cov_kwds)
 
 
-
     def __getstate__(self):
         # remove unpicklable methods
         mle_settings = getattr(self, 'mle_settings', None)
@@ -3291,7 +3290,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def llr_pvalue(self):
-        return stats.chisqprob(self.llr, self.df_model)
+        return stats.distributions.chi2.sf(self.llr, self.df_model)
 
     def set_null_options(self, llnull=None, attach_results=True, **kwds):
         """set fit options for Null (constant-only) model
