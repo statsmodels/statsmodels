@@ -124,11 +124,11 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
     return fig
 
 
-def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm', use_vlines=True,
-              title='Partial Autocorrelation', zero=True, **kwargs):
-    """Plot the partial autocorrelation function
-
-    Plots lags on the horizontal and the correlations on vertical axis.
+def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywunbiased',
+              use_vlines=True, title='Partial Autocorrelation', zero=True,
+              **kwargs):
+    """
+    Plot the partial autocorrelation function
 
     Parameters
     ----------
@@ -141,16 +141,16 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm', use_vlines=True,
         int or Array of lag values, used on horizontal axis. Uses
         np.arange(lags) when lags is an int.  If not provided,
         ``lags=np.arange(len(corr))`` is used.
-    alpha : scalar, optional
+    alpha : float, optional
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
         1/sqrt(len(x))
-    method : 'ywunbiased' (default) or 'ywmle' or 'ols'
-        specifies which method for the calculations to use:
+    method : {'ywunbiased', 'ywmle', 'ols'}
+        Specifies which method for the calculations to use:
 
         - yw or ywunbiased : yule walker with bias correction in denominator
-          for acovf
+          for acovf. Default.
         - ywm or ywmle : yule walker without bias correction
         - ols - regression of time series on lags of it and on constant
         - ld or ldunbiased : Levinson-Durbin recursion with bias correction
@@ -182,10 +182,10 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm', use_vlines=True,
 
     Notes
     -----
+    Plots lags on the horizontal and the correlations on vertical axis.
     Adapted from matplotlib's `xcorr`.
 
     Data are plotted as ``plot(lags, corr, **kwargs)``
-
     """
     fig, ax = utils.create_mpl_ax(ax)
 
