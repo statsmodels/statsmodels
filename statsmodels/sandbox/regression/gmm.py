@@ -153,13 +153,12 @@ class IV2SLS(LikelihoodModel):
                        normalized_cov_params=self.normalized_cov_params)
 
         lfit.exog_hat_params = xhatparams
-        lfit.exog_hat = xhat # TODO: do we want to store this, might be large
-        self._results = lfit  # TODO : remove this
+        lfit.exog_hat = xhat  # TODO: do we want to store this, might be large
         self._results_ols2nd = OLS(y, xhat).fit()
 
         return RegressionResultsWrapper(lfit)
 
-    #copied from GLS, because I subclass currently LikelihoodModel and not GLS
+    # copied from GLS, because I subclass currently LikelihoodModel and not GLS
     def predict(self, params, exog=None):
         """
         Return linear predicted values from a design matrix.
@@ -181,16 +180,8 @@ class IV2SLS(LikelihoodModel):
         """
         if exog is None:
             exog = self.exog
-        return np.dot(exog, params)
-        #JP: this doesn't look correct for GLMAR
-        #SS: it needs its own predict method
-        if self._results is None and params is None:
-            raise ValueError("If the model has not been fit, then you must specify the params argument.")
-        if self._results is not None:
-            return np.dot(exog, self._results.params)
-        else:
-            return np.dot(exog, params)
 
+        return np.dot(exog, params)
 
 
 class IVRegressionResults(RegressionResults):
