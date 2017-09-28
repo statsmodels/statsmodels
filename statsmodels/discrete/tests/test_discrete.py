@@ -1635,6 +1635,30 @@ def test_binary_pred_table_zeros():
     assert_equal(res.pred_table(), expected)
 
 
+def test_unchanging_degrees_of_freedom():
+    # see GH3734
+    data = sm.datasets.randhie.load()
+    model = sm.NegativeBinomial(data.endog, data.exog, loglike_method='nb2')
+    
+    params = np.array([-0.05654134, -0.21213734,  0.08783102, -0.02991825,  0.22902315,
+        0.06210253,  0.06799444,  0.08406794,  0.18530092,  1.36645186])
+    
+    res1 = model.fit(start_params=params)
+    assert_equal(res1.df_model, 8)
+
+    reg_params = np.array([-0.04854   , -0.15019404,  0.08363671, -0.03032834,  0.17592454,
+        0.06440753,  0.01584555,  0.        ,  0.        ,  1.36984628])
+
+    res2 = model.fit_regularized(alpha=100, start_params=reg_params)
+    assert_(res2.df_model != 8)
+    # If res2.df_model == res1.df_model, then this test is invalid.
+
+    res3 = model.fit()
+    # Test that the call to `fit_regularized` didn't modify model.df_model inplace.
+    assert_equal(res3.df_model, res1.df_model)
+    assert_equal(res3.df_resid, res1.df_resid)
+
+
 class TestGeneralizedPoisson_p2(object):
     # Test Generalized Poisson model
 
