@@ -3646,16 +3646,14 @@ class L1CountResults(DiscreteResults):
         # entry in params has been set zero'd out.
         self.trimmed = cntfit.mle_retvals['trimmed']
         self.nnz_params = (self.trimmed == False).sum()
-        # update degrees of freedom
-        self.model.df_model = self.nnz_params - 1
-        self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
+
+        # Set degrees of freedom.  In doing so,
         # adjust for extra parameter in NegativeBinomial nb1 and nb2
         # extra parameter is not included in df_model
         k_extra = getattr(self.model, 'k_extra', 0)
-        self.model.df_model -= k_extra
-        self.model.df_resid += k_extra
-        self.df_model = self.model.df_model
-        self.df_resid = self.model.df_resid
+
+        self.df_model = self.nnz_params - 1 - k_extra
+        self.df_resid = float(self.model.endog.shape[0] - self.nnz_params) + k_extra
 
 class PoissonResults(CountResults):
     def predict_prob(self, n=None, exog=None, exposure=None, offset=None,
@@ -3884,10 +3882,8 @@ class L1BinaryResults(BinaryResults):
         # entry in params has been set zero'd out.
         self.trimmed = bnryfit.mle_retvals['trimmed']
         self.nnz_params = (self.trimmed == False).sum()
-        self.model.df_model = self.nnz_params - 1
-        self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
-        self.df_model = self.model.df_model
-        self.df_resid = self.model.df_resid
+        self.df_model = self.nnz_params - 1
+        self.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
 
 
 class MultinomialResults(DiscreteResults):
@@ -4034,11 +4030,9 @@ class L1MultinomialResults(MultinomialResults):
         self.trimmed = mlefit.mle_retvals['trimmed']
         self.nnz_params = (self.trimmed == False).sum()
 
-        #Note: J-1 constants
-        self.model.df_model = self.nnz_params - (self.model.J - 1)
-        self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
-        self.df_model = self.model.df_model
-        self.df_resid = self.model.df_resid
+        # Note: J-1 constants
+        self.df_model = self.nnz_params - (self.model.J - 1)
+        self.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
 
 
 #### Results Wrappers ####
