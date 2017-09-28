@@ -448,6 +448,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
     def test_pickle(self):
         fh = BytesIO()
         #test wrapped results load save pickle
+        del self.res.model.data.orig_endog
         self.res.save(fh)
         fh.seek(0,0)
         res_unpickled = self.res.__class__.load(fh)
