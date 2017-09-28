@@ -40,13 +40,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 from __future__ import absolute_import
-from .scipy import NumpyVersion
 import numpy as np
 
-import sys
-PY3 = sys.version_info.major == 3
+from .python import PY3
+from .scipy import NumpyVersion
+
 
 np_matrix_rank = np.linalg.matrix_rank
+
 
 if NumpyVersion(np.__version__) >= '1.9.0':
     np_new_unique = np.unique

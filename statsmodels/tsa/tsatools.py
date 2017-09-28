@@ -1,6 +1,6 @@
-import sys
-from statsmodels.compat.python import range, lrange, lzip, long
-from statsmodels.compat.numpy import recarray_select, PY3
+
+from statsmodels.compat.python import range, lrange, lzip, long, PY3
+from statsmodels.compat.numpy import recarray_select
 
 import numpy as np
 import numpy.lib.recfunctions as nprf
@@ -11,9 +11,6 @@ from pandas.tseries.frequencies import to_offset
 
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.data import _is_using_pandas, _is_recarray
-
-
-
 
 
 def add_trend(x, trend="c", prepend=False, has_constant='skip'):
