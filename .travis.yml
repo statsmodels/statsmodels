@@ -79,7 +79,8 @@ before_install:
   - export NUMEXPR_NUM_THREADS=1
   - export OMP_NUM_THREADS=1
   - conda config --set always_yes yes
-  - conda update --quiet conda
+  # Temporarily disabled until conda is fixed
+  # - conda update --quiet conda
   # Fix for headless TravisCI
   - "export DISPLAY=:99.0"
   - "sh -e /etc/init.d/xvfb start"
