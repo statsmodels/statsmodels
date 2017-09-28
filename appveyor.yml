@@ -7,9 +7,12 @@ environment:
   matrix:
     - PY_MAJOR_VER: 2
       PYTHON_ARCH: "x86_64"
+      PANDAS: "0.19"
+      TEST_TYPE: --skip-slow
     - PY_MAJOR_VER: 2
       PYTHON_ARCH: "x86_64"
       SCIPY: "0.14"
+      TEST_TYPE: --skip-slow
     - PY_MAJOR_VER: 3
       PYTHON_ARCH: "x86_64"
 
@@ -33,4 +36,5 @@ build_script:
 
 test_script:
   # Remove xdist (-n auto) until warning reporting is working
-  - pytest statsmodels
+  - echo pytest statsmodels %TEST_TYPE% --skip-examples
+  - pytest statsmodels %TEST_TYPE% --skip-examples
