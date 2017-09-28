@@ -5,7 +5,7 @@
 cd ${SRCDIR}/docs
 
 # Run notebooks as tests
-nosetests -v ../statsmodels/examples/tests
+pytest ../statsmodels/examples/tests
 
 # Clean up
 echo '================================= Clean ================================='
