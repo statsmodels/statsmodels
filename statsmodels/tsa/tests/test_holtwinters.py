@@ -7,12 +7,8 @@ Created on Wed Jul 12 09:44:01 2017
 import numpy as np
 import pandas as pd
 from numpy.testing import assert_almost_equal, assert_equal, assert_raises
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from statsmodels.tsa.holtwinters import ExponentialSmoothing, SimpleExpSmoothing, Holt
 from pandas import DataFrame, DatetimeIndex
-
-holt_winters = ExponentialSmoothing.holt_winters
-simple_exp_smoothing = ExponentialSmoothing.simple_exp_smoothing
-holt = ExponentialSmoothing.holt
 
 class TestHoltWinters(object):
     @classmethod
@@ -56,33 +52,33 @@ class TestHoltWinters(object):
         assert_almost_equal(fit1.predict('2011-01-01 00:00:00', '2011-10-01 00:00:00'), [61.3083,37.3730,46.9652,51.5578], 3)
         
     def test_ndarray(self):
-        fit1 = holt_winters(self.aust.values, h=4, m=4, trend='add', seasonal='mul')
-        assert_almost_equal(fit1.fcast, [61.3083,37.3730,46.9652,51.5578], 3)
+        fit1 = ExponentialSmoothing(self.aust.values, m=4, trend='add', seasonal='mul').fit()
+        assert_almost_equal(fit1.forecast(4), [61.3083,37.3730,46.9652,51.5578], 3)
         
     def test_forecast(self):
         fit1 = ExponentialSmoothing(self.aust, m=4, trend='add', seasonal='add').fit()
         assert_almost_equal(fit1.forecast(steps=4), [60.9542,36.8505,46.1628,50.1272], 3)
         
     def test_simple_exp_smoothing(self):
-        fit1 = simple_exp_smoothing(self.oildata_oil,0.2,optimized=False)
-        fit2 = simple_exp_smoothing(self.oildata_oil,0.6,optimized=False)
-        fit3 = simple_exp_smoothing(self.oildata_oil)
-        assert_almost_equal(fit1.fcast, [484.802468], 4)
-        assert_almost_equal(fit2.fcast, [501.837461], 4)
-        assert_almost_equal(fit3.fcast, [496.493543], 4)
+        fit1 = SimpleExpSmoothing(self.oildata_oil).fit(0.2,optimized=False)
+        fit2 = SimpleExpSmoothing(self.oildata_oil).fit(0.6,optimized=False)
+        fit3 = SimpleExpSmoothing(self.oildata_oil).fit()
+        assert_almost_equal(fit1.forecast(1), [484.802468], 4)
+        assert_almost_equal(fit2.forecast(1), [501.837461], 4)
+        assert_almost_equal(fit3.forecast(1), [496.493543], 4)
         assert_almost_equal(fit3.params['alpha'], 0.891998, 4)
     
     def test_holt(self):
-        fit1 = holt(self.air_ausair, alpha=0.8, beta=0.2, optimized=False, h=5)
-        fit2 = holt(self.air_ausair, alpha=0.8, beta=0.2, exponential=True, optimized=False, h=5)
-        fit3 = holt(self.air_ausair, alpha=0.8, beta=0.2, damped=True, h=5)
-        assert_almost_equal(fit1.fcast, [43.76,45.59,47.43,49.27,51.10], 2)
-        assert_almost_equal(fit2.fcast, [44.60,47.24,50.04,53.01,56.15], 2)
-        assert_almost_equal(fit3.fcast, [42.85,43.81,44.66,45.41,46.06], 2)
+        fit1 = Holt(self.air_ausair).fit(alpha=0.8, beta=0.2, optimized=False)
+        fit2 = Holt(self.air_ausair, exponential=True).fit(alpha=0.8, beta=0.2, optimized=False)
+        fit3 = Holt(self.air_ausair, damped=True).fit(alpha=0.8, beta=0.2)
+        assert_almost_equal(fit1.forecast(5), [43.76,45.59,47.43,49.27,51.10], 2)
+        assert_almost_equal(fit2.forecast(5), [44.60,47.24,50.04,53.01,56.15], 2)
+        assert_almost_equal(fit3.forecast(5), [42.85,43.81,44.66,45.41,46.06], 2)
         
-    def test_holt_damp(self):        
-        fit4 = holt(self.livestock2_livestock,damped=True,phi=0.98)
-        fit5 = holt(self.livestock2_livestock,exponential=True,damped=True)
+    def test_holt_damp(self):
+        fit4 = Holt(self.livestock2_livestock,damped=True).fit(phi=0.98)
+        fit5 = Holt(self.livestock2_livestock,exponential=True,damped=True).fit()
         assert_almost_equal(fit4.params['alpha'],0.98, 2)
         assert_almost_equal(fit4.params['beta'],0.00, 2)
         assert_almost_equal(fit4.params['phi'],0.98, 2)
@@ -97,18 +93,18 @@ class TestHoltWinters(object):
         assert_almost_equal(fit5.SSE,6082.00, 2)        
         
     def test_hw_seasonal(self):
-        fit1 = holt_winters(self.aust, h=8, m=4, trend='add', seasonal='add', use_boxcox=True)
-        fit2 = holt_winters(self.aust, h=8, m=4, trend='add', seasonal='mul', use_boxcox=True)
-        fit3 = holt_winters(self.aust, h=8, m=4, seasonal='add', use_boxcox=True)
-        fit4 = holt_winters(self.aust, h=8, m=4, seasonal='mul', use_boxcox=True)
-        fit5 = holt_winters(self.aust, h=1, m=4, trend='mul', seasonal='add', use_boxcox='log')
-        fit6 = holt_winters(self.aust, h=1, m=4, trend='mul', seasonal='mul', use_boxcox='log')
-        assert_almost_equal(fit1.fcast, [61.34,37.24,46.84,51.01,64.47,39.78,49.64,53.90], 2)
-        assert_almost_equal(fit2.fcast, [60.97,36.99,46.71,51.48,64.46,39.02,49.29,54.32], 2)
-        assert_almost_equal(fit3.fcast, [59.91,35.71,44.64,47.62,59.91,35.71,44.64,47.62], 2)
-        assert_almost_equal(fit4.fcast, [60.71,35.70,44.63,47.55,60.71,35.70,44.63,47.55], 2)
-        assert_almost_equal(fit5.fcast, [78.53], 2)
-        assert_almost_equal(fit6.fcast, [54.82], 2)
+        fit1 = ExponentialSmoothing(self.aust, m=4, trend='add', seasonal='add').fit(use_boxcox=True)
+        fit2 = ExponentialSmoothing(self.aust, m=4, trend='add', seasonal='mul').fit(use_boxcox=True)
+        fit3 = ExponentialSmoothing(self.aust, m=4, seasonal='add').fit(use_boxcox=True)
+        fit4 = ExponentialSmoothing(self.aust, m=4, seasonal='mul').fit(use_boxcox=True)
+        fit5 = ExponentialSmoothing(self.aust, m=4, trend='mul', seasonal='add').fit(use_boxcox='log')
+        fit6 = ExponentialSmoothing(self.aust, m=4, trend='mul', seasonal='mul').fit(use_boxcox='log')
+        assert_almost_equal(fit1.forecast(8), [61.34,37.24,46.84,51.01,64.47,39.78,49.64,53.90], 2)
+        assert_almost_equal(fit2.forecast(8), [60.97,36.99,46.71,51.48,64.46,39.02,49.29,54.32], 2)
+        assert_almost_equal(fit3.forecast(8), [59.91,35.71,44.64,47.62,59.91,35.71,44.64,47.62], 2)
+        assert_almost_equal(fit4.forecast(8), [60.71,35.70,44.63,47.55,60.71,35.70,44.63,47.55], 2)
+        assert_almost_equal(fit5.forecast(1), [78.53], 2)
+        assert_almost_equal(fit6.forecast(1), [54.82], 2)
     
     def test_raises(self):
         pass

@@ -208,13 +208,11 @@ class HoltWintersResultsWrapper(wrap.ResultsWrapper):
               'level': 'rows',
               'resid': 'rows',
               'season': 'rows',
-              'slope': 'rows'
-              }
-    _wrap_attrs = wrap.union_dicts(wrap.ResultsWrapper._wrap_attrs,
-                                   _attrs)
+              'slope': 'rows'}
+    _wrap_attrs = wrap.union_dicts(wrap.ResultsWrapper._wrap_attrs, _attrs)
     _methods = {'predict': 'dates'}
-    _wrap_methods = wrap.union_dicts(wrap.ResultsWrapper._wrap_methods,
-                                     _methods)
+    _wrap_methods = wrap.union_dicts(
+        wrap.ResultsWrapper._wrap_methods, _methods)
 
 
 wrap.populate_wrapper(HoltWintersResultsWrapper, HoltWintersResults)
@@ -236,27 +234,27 @@ class ExponentialSmoothing(tsbase.TimeSeriesModel):
         Type of seasonal component.
     m : int, optional
         The number of seasons to consider for the holt winters.
+
+    Returns
+    -------
+    results : ExponentialSmoothing class        
+
+    Notes
+    -----
+    This is a full implementation of the holt winters exponential smoothing as
+    per [1]. This includes all the unstable methods as well as the stable methods.
+    The implementaion of the library follows as per the R library as much as possible
+    whilest still being pythonic.
+
+    References
+    ----------
+    [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice. OTexts, 2014.
     """
 
-    def __init__(
-            self,
-            endog,
-            trend=None,
-            damped=False,
-            seasonal=None,
-            m=None,
-            dates=None,
-            freq=None,
-            missing='none',
-            **kwargs):
-        super(
-            ExponentialSmoothing,
-            self).__init__(
-            endog,
-            None,
-            dates,
-            freq,
-            missing=missing)
+    def __init__(self, endog, trend=None, damped=False, seasonal=None,
+                 m=None, dates=None, freq=None, missing='none', **kwargs):
+        super(ExponentialSmoothing, self).__init__(
+            endog, None, dates, freq, missing=missing)
         self.trend = trend
         self.damped = damped
         self.seasonal = seasonal
@@ -283,18 +281,10 @@ class ExponentialSmoothing(tsbase.TimeSeriesModel):
             res = self._predict(h=0, **params)
         return res.fittedfcast[start:end + out_of_sample + 1]
 
-    def fit(
-            self,
-            alpha=None,
-            beta=None,
-            gamma=None,
-            phi=None,
-            optimized=True,
-            use_boxcox=False,
-            remove_bias=False,
-            use_basinhopping=False):
+    def fit(self, alpha=None, beta=None, gamma=None, phi=None, optimized=True,
+            use_boxcox=False, remove_bias=False, use_basinhopping=False):
         """
-        Holt Winter's Exponential Smoothing
+        fit Holt Winter's Exponential Smoothing
 
         Parameters
         ----------
@@ -392,12 +382,8 @@ class ExponentialSmoothing(tsbase.TimeSeriesModel):
             if seasoning:
                 init_gamma = gamma if gamma is not None else 0.05 * \
                     (1 - init_alpha)
-                xi = np.array([alpha is None,
-                               beta is None,
-                               gamma is None,
-                               True,
-                               trending,
-                               phi is None and damped] + [True] * m)
+                xi = np.array([alpha is None, beta is None, gamma is None,
+                               True, trending, phi is None and damped] + [True] * m)
                 func = func_dict[(seasonal, trend)]
             elif trending:
                 xi = np.array([alpha is None, beta is None, False,
@@ -416,90 +402,32 @@ class ExponentialSmoothing(tsbase.TimeSeriesModel):
                 [True, True, True, False, False, True] + [False] * m)
             bounds = np.array([(0.0, 1.0), (0.0, 1.0), (0.0, 1.0),
                                (0.0, None), (0.0, None), (0.0, 1.0)] + [(None, None), ] * m)
-            res = brute(
-                func,
-                bounds[txi],
-                (txi,
-                 p,
-                 y,
-                 l,
-                 b,
-                 s,
-                 m,
-                 n,
-                 max_seen),
-                Ns=20,
-                full_output=True,
-                finish=None)
+            res = brute(func, bounds[txi], (txi, p, y, l, b, s, m, n, max_seen),
+                        Ns=20, full_output=True, finish=None)
             (p[txi], max_seen, grid, Jout) = res
-            [alpha, beta, gamma, l0, b0, phi] = p[:6]; s0 = p[6:]
+            [alpha, beta, gamma, l0, b0, phi] = p[:6];  s0 = p[6:]
             #bounds = np.array([(0.0,1.0),(0.0,1.0),(0.0,1.0),(0.0,None),(0.0,None),(0.8,1.0)] + [(None,None),]*m)
             if use_basinhopping:
                 # Take a deeper look in the local minimum we are in to find the best
                 # solution to parameters, maybe hop around to try escape the local
                 # minimum we may be in.
-                res = basinhopping(
-                    func,
-                    p[xi],
-                    minimizer_kwargs={
-                        'args': (
-                            xi,
-                            p,
-                            y,
-                            l,
-                            b,
-                            s,
-                            m,
-                            n,
-                            max_seen),
-                        'bounds': bounds[xi]},
-                    stepsize=0.01)
+                res = basinhopping(func, p[xi], minimizer_kwargs={'args': (
+                    xi, p, y, l, b, s, m, n, max_seen), 'bounds': bounds[xi]}, stepsize=0.01)
             else:
                 # Take a deeper look in the local minimum we are in to find the best
                 # solution to parameters
-                res = minimize(
-                    func,
-                    p[xi],
-                    args=(
-                        xi,
-                        p,
-                        y,
-                        l,
-                        b,
-                        s,
-                        m,
-                        n,
-                        max_seen),
-                    bounds=bounds[xi])
+                res = minimize(func, p[xi], args=(
+                    xi, p, y, l, b, s, m, n, max_seen), bounds=bounds[xi])
             p[xi] = res.x
             [alpha, beta, gamma, l0, b0, phi] = p[:6]; s0 = p[6:]
             opt = res
-        hwfit = self._predict(h=0,
-                              alpha=alpha,
-                              beta=beta,
-                              gamma=gamma,
-                              phi=phi,
-                              l0=l0,
-                              b0=b0,
-                              s0=s0,
-                              use_boxcox=use_boxcox,
-                              lamda=lamda,
-                              remove_bias=remove_bias)
+        hwfit = self._predict(h=0, alpha=alpha, beta=beta, gamma=gamma, phi=phi, l0=l0,
+                              b0=b0, s0=s0, use_boxcox=use_boxcox, lamda=lamda, remove_bias=remove_bias)
         hwfit.opt = opt
         return hwfit
 
-    def _predict(self,
-                 h=None,
-                 alpha=None,
-                 beta=None,
-                 gamma=None,
-                 l0=None,
-                 b0=None,
-                 phi=None,
-                 s0=None,
-                 use_boxcox=None,
-                 lamda=None,
-                 remove_bias=None):
+    def _predict(self, h=None, alpha=None, beta=None, gamma=None, l0=None, b0=None,
+                 phi=None, s0=None, use_boxcox=None, lamda=None, remove_bias=None):
         """
         Helper prediction function
 
@@ -571,7 +499,8 @@ class ExponentialSmoothing(tsbase.TimeSeriesModel):
                     b[i] = (beta * detrend(l[i], l[i - 1])) + \
                         (betac * dampen(b[i - 1], phi))
                 s[i + m - 1] = y_gamma[i - 1] / \
-                    trended(l[i - 1], dampen(b[i - 1], phi)) + (gammac * s[i - 1])
+                    trended(l[i - 1], dampen(b[i - 1], phi)) + \
+                    (gammac * s[i - 1])
             slope = b[:i].copy()
             season = s[m:i + m].copy()
             l[i:] = l[i]
@@ -587,7 +516,8 @@ class ExponentialSmoothing(tsbase.TimeSeriesModel):
                     b[i] = (beta * detrend(l[i], l[i - 1])) + \
                         (betac * dampen(b[i - 1], phi))
                 s[i + m - 1] = y_gamma[i - 1] - \
-                    (gamma * trended(l[i - 1], dampen(b[i - 1], phi))) + (gammac * s[i - 1])
+                    (gamma * trended(l[i - 1],
+                                     dampen(b[i - 1], phi))) + (gammac * s[i - 1])
             slope = b[:i].copy()
             season = s[m:i + m].copy()
             l[i:] = l[i]
@@ -637,111 +567,48 @@ class ExponentialSmoothing(tsbase.TimeSeriesModel):
                        'use_boxcox': use_boxcox,
                        'lamda': lamda,
                        'remove_bias': remove_bias}
-        hwfit = HoltWintersResults(self,
-                                   self.params,
-                                   fittedfcast=fitted,
-                                   fittedvalues=fitted[:-h],
-                                   fcast=fitted[-h_fcast:],
-                                   SSE=SSE,
-                                   level=level,
-                                   slope=slope,
-                                   season=season,
-                                   AIC=AIC,
-                                   BIC=BIC,
-                                   AICc=AICc,
-                                   resid=resid,
-                                   k=k)
+        hwfit = HoltWintersResults(self, self.params, fittedfcast=fitted, fittedvalues=fitted[:-h],
+                                   fcast=fitted[-h_fcast:], SSE=SSE, level=level,
+                                   slope=slope, season=season, AIC=AIC, BIC=BIC,
+                                   AICc=AICc, resid=resid, k=k)
         return HoltWintersResultsWrapper(hwfit)
 
-    @staticmethod
-    def holt_winters(
-            endog,
-            alpha=None,
-            beta=None,
-            gamma=None,
-            m=None,
-            h=1,
-            trend=None,
-            damped=False,
-            seasonal=None,
-            phi=None,
-            optimized=True,
-            use_boxcox=False):
+
+class SimpleExpSmoothing(ExponentialSmoothing):
+    """
+    Simple Exponential Smoothing wrapper(...)
+
+    Parameters
+    ----------
+    endog : array-like
+        Time series
+
+    Returns
+    -------
+    results : SimpleExpSmoothing class
+
+    Notes
+    -----
+    This is a full implementation of the simple exponential smoothing as
+    per [1].
+
+    References
+    ----------
+    [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice. OTexts, 2014.
+    """
+
+    def __init__(self, endog):
+        super(SimpleExpSmoothing, self).__init__(endog)
+
+    def fit(self, alpha=None, optimized=True):
         """
-        Holt Winter's Exponential Smoothing helper wrapper (...)
-        Parameters
-        ----------
-        data : array-like
-            Time series
-        alpha : float, optional
-            The alpha value of the simple exponential smoothing, if the value is
-            set then this value will be used as the value.
-        beta :  float, optional
-            The beta value of the holts trend method, if the value is
-            set then this value will be used as the value.
-        gamma : float, optional
-            The gamma value of the holt winters seasonal method, if the value is
-            set then this value will be used as the value.
-        m : int, optional
-            The number of seasons to consider for the holt winters.
-        h : int, optional
-            The number of time steps to forecast ahead.
-        trend : {"add", "mul", None}, optional
-            Type of trend component.
-        damped : bool, optional
-            Should the trend component be damped.
-        seasonal : {"add", "mul", None}, optional
-            Type of seasonal component.
-        phi : float, optional
-            The phi value of the damped method, if the value is
-            set then this value will be used as the value.
-        optimized : bool, optional
-            Should the values that have not beem set above be optimized automatically?
-        use_boxcox : {True, False, 'log'}, optional
-            Should the boxcox tranform be applied to the data first? If 'log' then
-            apply the log.
-
-        Returns
-        -------
-        results : HoltWintersResults class
-            See statsmodels.tsa.holtwinters.HoltWintersResults
-
-        Notes
-        -----
-        This is a full implementation of the holt winters exponential smoothing as
-        per [1]. This includes all the unstable methods as well as the stable methods.
-        The implementaion of the library follows as per the R library as much as possible
-        whilest still being pythonic.
-
-        References
-        ----------
-        [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice. OTexts, 2014.
-        """
-        es = ExponentialSmoothing(
-            endog,
-            trend=trend,
-            damped=damped,
-            seasonal=seasonal,
-            m=m)
-        res = es.fit(alpha=alpha, beta=beta,
-                     gamma=gamma, phi=phi, optimized=optimized,
-                     use_boxcox=use_boxcox)
-        return es._predict(h=h, **res.params)
-
-    @staticmethod
-    def simple_exp_smoothing(endog, alpha=None, h=1, optimized=True):
-        """
-        Simple Exponential Smoothing helper wrapper(...)
+        fit Simple Exponential Smoothing wrapper(...)
 
         Parameters
         ----------
-        data : array-like
-            Time series
         alpha : float, optional
             The alpha value of the simple exponential smoothing, if the value is
             set then this value will be used as the value.
-        h : int, optional
-            The number of time steps to forecast ahead.
         optimized : bool
             Should the values that have not been set above be optimized automatically?
 
@@ -759,39 +626,51 @@ class ExponentialSmoothing(tsbase.TimeSeriesModel):
         ----------
         [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice. OTexts, 2014.
         """
-        es = ExponentialSmoothing(endog)
-        res = es.fit(alpha=alpha, optimized=optimized)
-        return es._predict(h=h, **res.params)
+        return super(SimpleExpSmoothing, self).fit(alpha=alpha, optimized=optimized)
 
-    @staticmethod
-    def holt(
-            endog,
-            alpha=None,
-            beta=None,
-            h=1,
-            exponential=False,
-            damped=False,
-            phi=None,
-            optimized=True):
+
+class Holt(ExponentialSmoothing):
+    """
+    Holt's Exponential Smoothing wrapper(...)
+
+    Parameters
+    ----------
+    endog : array-like
+        Time series
+    phi : float, optional
+        The phi value of the damped method, if the value is
+        set then this value will be used as the value.
+
+    Returns
+    -------
+    results : Holt class        
+
+    Notes
+    -----
+    This is a full implementation of the holts exponential smoothing as
+    per [1].
+
+    References
+    ----------
+    [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice. OTexts, 2014.
+    """
+
+    def __init__(self, endog, exponential=False, damped=False):
+        trend = 'mul' if exponential else 'add'
+        super(Holt, self).__init__(endog, trend=trend, damped=damped)
+
+    def fit(self, alpha=None, beta=None, phi=None, optimized=True):
         """
-        Holt's Exponential Smoothing helper wrapper(...)
+        fit Holt's Exponential Smoothing wrapper(...)
 
         Parameters
         ----------
-        data : array-like
-            Time series
         alpha : float, optional
             The alpha value of the simple exponential smoothing, if the value is
             set then this value will be used as the value.
         beta :  float, optional
             The beta value of the holts trend method, if the value is
             set then this value will be used as the value.
-        h : int, optional
-            The number of time steps to forecast ahead.
-        exponential : bool, optional
-            If true use a multipicative trend else use a additive trend.
-        damped : bool
-            Should the trend component be damped.
         phi : float, optional
             The phi value of the damped method, if the value is
             set then this value will be used as the value.
@@ -812,10 +691,4 @@ class ExponentialSmoothing(tsbase.TimeSeriesModel):
         ----------
         [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice. OTexts, 2014.
         """
-        trend = 'mul' if exponential else 'add'
-        es = ExponentialSmoothing(
-            endog,
-            trend=trend,
-            damped=damped)
-        res = es.fit(alpha=alpha, beta=beta, phi=phi, optimized=optimized)
-        return es._predict(h=h, **res.params)
+        return super(Holt, self).fit(alpha=alpha, beta=beta, phi=phi, optimized=optimized)
