@@ -14,9 +14,9 @@ Author: Terence L van Zyl
 """
 import numpy as np
 
-import statsmodels.base.model as base
-import statsmodels.base.wrapper as wrap
-import statsmodels.tsa.base.tsa_model as tsbase
+from statsmodels.base.model import Results
+from statsmodels.base.wrapper import populate_wrapper, union_dicts, ResultsWrapper
+from statsmodels.tsa.base.tsa_model import TimeSeriesModel
 
 from scipy.optimize import basinhopping, brute, minimize
 from scipy.spatial.distance import sqeuclidean
@@ -24,7 +24,7 @@ try:
     from scipy.special import inv_boxcox
 except ImportError:
     def inv_boxcox(x, lmbda):
-        np.exp(np.log1p(lmbda * x) / lmbda) if lmbda != 0 else np.exp(x)
+        return np.exp(np.log1p(lmbda * x) / lmbda) if lmbda != 0 else np.exp(x)
 from scipy.stats import boxcox
 
 
@@ -191,7 +191,7 @@ def _holt_win_mul_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
     return sqeuclidean((l * phi * b) + s[:-(m - 1)], y)
 
 
-class HoltWintersResults(base.Results):
+class HoltWintersResults(Results):
     def __init__(self, model, params, **kwds):
         self.data = model.data
         super(HoltWintersResults, self).__init__(model, params, **kwds)
@@ -203,22 +203,21 @@ class HoltWintersResults(base.Results):
         return self.model._predict(h=steps, **self.params).fcast
 
 
-class HoltWintersResultsWrapper(wrap.ResultsWrapper):
+class HoltWintersResultsWrapper(ResultsWrapper):
     _attrs = {'fittedvalues': 'rows',
               'level': 'rows',
               'resid': 'rows',
               'season': 'rows',
               'slope': 'rows'}
-    _wrap_attrs = wrap.union_dicts(wrap.ResultsWrapper._wrap_attrs, _attrs)
+    _wrap_attrs = union_dicts(ResultsWrapper._wrap_attrs, _attrs)
     _methods = {'predict': 'dates'}
-    _wrap_methods = wrap.union_dicts(
-        wrap.ResultsWrapper._wrap_methods, _methods)
+    _wrap_methods = union_dicts(ResultsWrapper._wrap_methods, _methods)
 
 
-wrap.populate_wrapper(HoltWintersResultsWrapper, HoltWintersResults)
+populate_wrapper(HoltWintersResultsWrapper, HoltWintersResults)
 
 
-class ExponentialSmoothing(tsbase.TimeSeriesModel):
+class ExponentialSmoothing(TimeSeriesModel):
     """
     Holt Winter's Exponential Smoothing
 
@@ -476,21 +475,18 @@ class ExponentialSmoothing(tsbase.TimeSeriesModel):
         s[:m] = s0
         phi_h = np.cumsum(np.repeat(phi, h)**np.arange(1, h + 1)
                           ) if damped else np.arange(1, h + 1)
-        trended = {
-            'mul': np.multiply,
-            'add': np.add,
-            None: lambda l,
-            b: l}[trend]
-        detrend = {
-            'mul': np.divide,
-            'add': np.subtract,
-            None: lambda l,
-            b: 0}[trend]
-        dampen = {
-            'mul': np.power,
-            'add': np.multiply,
-            None: lambda b,
-            phi: 0}[trend]
+        trended = {'mul': np.multiply,
+                   'add': np.add,
+                   None: lambda l,
+                   b: l}[trend]
+        detrend = {'mul': np.divide,
+                   'add': np.subtract,
+                   None: lambda l,
+                   b: 0}[trend]
+        dampen = {'mul': np.power,
+                  'add': np.multiply,
+                  None: lambda b,
+                  phi: 0}[trend]
         if seasonal == 'mul':
             for i in range(1, n + 1):
                 l[i] = y_alpha[i - 1] / s[i - 1] + \
