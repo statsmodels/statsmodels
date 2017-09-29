@@ -7,8 +7,12 @@ Created on Wed Jul 12 09:44:01 2017
 import numpy as np
 import pandas as pd
 from numpy.testing import assert_almost_equal, assert_equal, assert_raises
-from statsmodels.tsa.holtwinters import holt_winters, simple_exp_smoothing, holt
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from pandas import DataFrame, DatetimeIndex
+
+holt_winters = ExponentialSmoothing.holt_winters
+simple_exp_smoothing = ExponentialSmoothing.simple_exp_smoothing
+holt = ExponentialSmoothing.holt
 
 class TestHoltWinters(object):
     @classmethod
@@ -47,46 +51,49 @@ class TestHoltWinters(object):
         aust.index = pd.DatetimeIndex(aust.index, freq=pd.infer_freq(aust.index))
         cls.aust = aust
 
+    def test_predict(self):
+        fit1 = ExponentialSmoothing(self.aust, m=4, trend='add', seasonal='mul').fit()
+        assert_almost_equal(fit1.predict('2011-01-01 00:00:00', '2011-10-01 00:00:00'), [61.3083,37.3730,46.9652,51.5578], 3)
         
     def test_ndarray(self):
         fit1 = holt_winters(self.aust.values, h=4, m=4, trend='add', seasonal='mul')
         assert_almost_equal(fit1.fcast, [61.3083,37.3730,46.9652,51.5578], 3)
         
-    def test_pandas(self):
-        fit1 = holt_winters(self.aust, h=4, m=4, trend='add', seasonal='add')
-        assert_almost_equal(fit1.fcast.values, [60.9542,36.8505,46.1628,50.1272], 3)
+    def test_forecast(self):
+        fit1 = ExponentialSmoothing(self.aust, m=4, trend='add', seasonal='add').fit()
+        assert_almost_equal(fit1.forecast(steps=4), [60.9542,36.8505,46.1628,50.1272], 3)
         
-    def test_ses(self):
+    def test_simple_exp_smoothing(self):
         fit1 = simple_exp_smoothing(self.oildata_oil,0.2,optimized=False)
         fit2 = simple_exp_smoothing(self.oildata_oil,0.6,optimized=False)
         fit3 = simple_exp_smoothing(self.oildata_oil)
-        assert_almost_equal(fit1.fcast.values, [484.802468], 4)
-        assert_almost_equal(fit2.fcast.values, [501.837461], 4)
-        assert_almost_equal(fit3.fcast.values, [496.493543], 4)
-        assert_almost_equal(fit3.alpha, 0.891998, 4)
+        assert_almost_equal(fit1.fcast, [484.802468], 4)
+        assert_almost_equal(fit2.fcast, [501.837461], 4)
+        assert_almost_equal(fit3.fcast, [496.493543], 4)
+        assert_almost_equal(fit3.params['alpha'], 0.891998, 4)
     
     def test_holt(self):
         fit1 = holt(self.air_ausair, alpha=0.8, beta=0.2, optimized=False, h=5)
         fit2 = holt(self.air_ausair, alpha=0.8, beta=0.2, exponential=True, optimized=False, h=5)
         fit3 = holt(self.air_ausair, alpha=0.8, beta=0.2, damped=True, h=5)
-        assert_almost_equal(fit1.fcast.values, [43.76,45.59,47.43,49.27,51.10], 2)
-        assert_almost_equal(fit2.fcast.values, [44.60,47.24,50.04,53.01,56.15], 2)
-        assert_almost_equal(fit3.fcast.values, [42.85,43.81,44.66,45.41,46.06], 2)
+        assert_almost_equal(fit1.fcast, [43.76,45.59,47.43,49.27,51.10], 2)
+        assert_almost_equal(fit2.fcast, [44.60,47.24,50.04,53.01,56.15], 2)
+        assert_almost_equal(fit3.fcast, [42.85,43.81,44.66,45.41,46.06], 2)
         
     def test_holt_damp(self):        
         fit4 = holt(self.livestock2_livestock,damped=True,phi=0.98)
         fit5 = holt(self.livestock2_livestock,exponential=True,damped=True)
-        assert_almost_equal(fit4.alpha,0.98, 2)
-        assert_almost_equal(fit4.beta,0.00, 2)
-        assert_almost_equal(fit4.phi,0.98, 2)
-        assert_almost_equal(fit4.l0,257.36, 2)
-        assert_almost_equal(fit4.b0,6.64, 2)
+        assert_almost_equal(fit4.params['alpha'],0.98, 2)
+        assert_almost_equal(fit4.params['beta'],0.00, 2)
+        assert_almost_equal(fit4.params['phi'],0.98, 2)
+        assert_almost_equal(fit4.params['l0'],257.36, 2)
+        assert_almost_equal(fit4.params['b0'],6.64, 2)
         assert_almost_equal(fit4.SSE,6036.56, 2)
-        assert_almost_equal(fit5.alpha,0.97, 2)
-        assert_almost_equal(fit5.beta,0.00, 2)
-        assert_almost_equal(fit5.phi,0.98, 2)
-        assert_almost_equal(fit5.l0,258.95, 2)
-        assert_almost_equal(fit5.b0,1.02, 2)
+        assert_almost_equal(fit5.params['alpha'],0.97, 2)
+        assert_almost_equal(fit5.params['beta'],0.00, 2)
+        assert_almost_equal(fit5.params['phi'],0.98, 2)
+        assert_almost_equal(fit5.params['l0'],258.95, 2)
+        assert_almost_equal(fit5.params['b0'],1.02, 2)
         assert_almost_equal(fit5.SSE,6082.00, 2)        
         
     def test_hw_seasonal(self):
@@ -96,12 +103,12 @@ class TestHoltWinters(object):
         fit4 = holt_winters(self.aust, h=8, m=4, seasonal='mul', use_boxcox=True)
         fit5 = holt_winters(self.aust, h=1, m=4, trend='mul', seasonal='add', use_boxcox='log')
         fit6 = holt_winters(self.aust, h=1, m=4, trend='mul', seasonal='mul', use_boxcox='log')
-        assert_almost_equal(fit1.fcast.values, [61.34,37.24,46.84,51.01,64.47,39.78,49.64,53.90], 2)
-        assert_almost_equal(fit2.fcast.values, [60.97,36.99,46.71,51.48,64.46,39.02,49.29,54.32], 2)
-        assert_almost_equal(fit3.fcast.values, [59.91,35.71,44.64,47.62,59.91,35.71,44.64,47.62], 2)
-        assert_almost_equal(fit4.fcast.values, [60.71,35.70,44.63,47.55,60.71,35.70,44.63,47.55], 2)
-        assert_almost_equal(fit5.fcast.values, [78.53], 2)
-        assert_almost_equal(fit6.fcast.values, [54.82], 2)
+        assert_almost_equal(fit1.fcast, [61.34,37.24,46.84,51.01,64.47,39.78,49.64,53.90], 2)
+        assert_almost_equal(fit2.fcast, [60.97,36.99,46.71,51.48,64.46,39.02,49.29,54.32], 2)
+        assert_almost_equal(fit3.fcast, [59.91,35.71,44.64,47.62,59.91,35.71,44.64,47.62], 2)
+        assert_almost_equal(fit4.fcast, [60.71,35.70,44.63,47.55,60.71,35.70,44.63,47.55], 2)
+        assert_almost_equal(fit5.fcast, [78.53], 2)
+        assert_almost_equal(fit6.fcast, [54.82], 2)
     
     def test_raises(self):
         pass
