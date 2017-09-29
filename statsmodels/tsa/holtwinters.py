@@ -202,8 +202,8 @@ class HoltWintersResults(base.Results):
 
     def forecast(self, steps=1):
         return self.model._predict(h=steps, **self.params).fcast
-        
-        
+
+
 class HoltWintersResultsWrapper(wrap.ResultsWrapper):
     _attrs = {'fittedvalues': 'rows',
               'level': 'rows',
@@ -276,12 +276,13 @@ class ExponentialSmoothing(tsbase.TimeSeriesModel):
     def predict(self, params, start=None, end=None):
         if start is None:
             start = self._index[0]
-        start, end, out_of_sample, prediction_index = self._get_prediction_index(start=start, end=end)
-        if out_of_sample>0:
+        start, end, out_of_sample, prediction_index = self._get_prediction_index(
+            start=start, end=end)
+        if out_of_sample > 0:
             res = self._predict(h=out_of_sample, **params)
         else:
             res = self._predict(h=0, **params)
-        return res.fittedfcast[start:end+out_of_sample+1]
+        return res.fittedfcast[start:end + out_of_sample + 1]
 
     def fit(
             self,
@@ -347,7 +348,7 @@ class ExponentialSmoothing(tsbase.TimeSeriesModel):
         opt = None
         phi = phi if damped else 1.0
         n = len(data)
-        if use_boxcox == 'log':            
+        if use_boxcox == 'log':
             lamda = 0.0
             y = boxcox(data, 0.0)
         elif use_boxcox:
@@ -510,8 +511,8 @@ class ExponentialSmoothing(tsbase.TimeSeriesModel):
         """
         # Start in sample and out of sample predictions
         h_fcast = h
-        if h==0:
-            h=1            
+        if h == 0:
+            h = 1
         data = self.endog
         damped = self.damped
         seasoning = self.seasoning
@@ -609,7 +610,7 @@ class ExponentialSmoothing(tsbase.TimeSeriesModel):
             b[i:] = dampen(b[i], phi_h)
             fitted = trended(l, b)
         level = l[:i].copy()
-        if use_boxcox or use_boxcox == 'log':            
+        if use_boxcox or use_boxcox == 'log':
             fitted = inv_boxcox(fitted, lamda)
             # TODO: Does it make sense to have a inv_boxcox transform of the level and trend?
             #level = inv_boxcox(level, lamda)
@@ -621,7 +622,7 @@ class ExponentialSmoothing(tsbase.TimeSeriesModel):
         k = m * seasoning + 2 * trending + 2 + 1 * damped
         AIC = n * np.log(SSE / n) + (k) * 2
         AICc = AIC + (2 * (k + 2) * (k + 3)) / (n - k - 3)
-        BIC = n * np.log(SSE / n) + (k) * np.log(n)        
+        BIC = n * np.log(SSE / n) + (k) * np.log(n)
         resid = data - fitted[:-h]
         if remove_bias:
             fitted += resid.mean()
