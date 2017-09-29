@@ -270,8 +270,28 @@ class ExponentialSmoothing(TimeSeriesModel):
             self.m = 0
 
     def predict(self, params, start=None, end=None):
+        """
+        Returns in-sample and out-of-sample prediction.
+
+        Parameters
+        ----------
+        params : array
+            The fitted model parameters.
+        start : int, str, or datetime
+            Zero-indexed observation number at which to start forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type.
+        end : int, str, or datetime
+            Zero-indexed observation number at which to end forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type.
+
+        Returns
+        -------
+        predicted values : array
+        """
         if start is None:
-            start = self._index[0]
+            start = self._index[-1]
         start, end, out_of_sample, prediction_index = self._get_prediction_index(
             start=start, end=end)
         if out_of_sample > 0:
@@ -645,7 +665,7 @@ class Holt(ExponentialSmoothing):
     -----
     This is a full implementation of the holts exponential smoothing as
     per [1].
-
+        
     References
     ----------
     [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice. OTexts, 2014.
