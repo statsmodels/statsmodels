@@ -49,7 +49,12 @@ class TestHoltWinters(object):
 
     def test_predict(self):
         fit1 = ExponentialSmoothing(self.aust, m=4, trend='add', seasonal='mul').fit()
+        fit2 = ExponentialSmoothing(self.aust, m=4, trend='add', seasonal='mul').fit()
+        fit3 = ExponentialSmoothing(self.aust, m=4, trend='add', seasonal='mul').fit(remove_bias=True, use_basinhopping=True)
         assert_almost_equal(fit1.predict('2011-01-01 00:00:00', '2011-10-01 00:00:00'), [61.3083,37.3730,46.9652,51.5578], 3)
+        assert_almost_equal(fit2.predict(end='2011-10-01 00:00:00'), [49.085, 61.3083,37.3730,46.9652,51.5578], 3)
+        assert_almost_equal(fit3.predict('2010-10-01 00:00:00', '2010-10-01 00:00:00'), [49.087], 3)
+
         
     def test_ndarray(self):
         fit1 = ExponentialSmoothing(self.aust.values, m=4, trend='add', seasonal='mul').fit()
