@@ -13,7 +13,6 @@ Author: Terence L van Zyl
 
 """
 import numpy as np
-import pandas as pd
 
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
