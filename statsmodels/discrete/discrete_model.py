@@ -204,7 +204,7 @@ class DiscreteModel(base.LikelihoodModel):
             msg = "Perfect separation detected, results not available"
             raise PerfectSeparationError(msg)
 
-    def fit(self, start_params=None, method='newton', maxiter=35,
+    def fit(self, start_params=None, method='newton', maxiter=500,
             full_output=1, disp=1, callback=None, **kwargs):
         """
         Fit the model using maximum likelihood.
