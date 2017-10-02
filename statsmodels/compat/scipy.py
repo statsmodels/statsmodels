@@ -250,3 +250,11 @@ def _lazywhere(cond, arrays, f, fillvalue=None, f2=None):
         np.place(out, ~cond, f2(*temp))
 
     return out
+
+
+# Work around for complex chnges in gammaln in 1.0.0.  loggamma introduced in 0.18.
+try:
+    from scipy.special import loggamma
+except ImportError:
+    from scipy.special import gammaln
+    loggamma = gammaln

@@ -21,6 +21,7 @@ __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
            "GeneralizedPoisson", "NegativeBinomialP"]
 
 from statsmodels.compat.python import lmap, lzip, range
+from statsmodels.compat.scipy import loggamma
 import numpy as np
 from scipy.special import gammaln, digamma, polygamma
 from scipy import stats, special, optimize  # opt just for nbin
@@ -2436,12 +2437,16 @@ class NegativeBinomial(CountModel):
         self._initialize()
 
     def _ll_nbin(self, params, alpha, Q=0):
+        if np.any(np.iscomplex(params)) or np.iscomplex(alpha):
+            gamma_ln = loggamma
+        else:
+            gamma_ln = gammaln
         endog = self.endog
         mu = self.predict(params)
         size = 1/alpha * mu**Q
         prob = size/(size+mu)
-        coeff = (gammaln(size+endog) - gammaln(endog+1) -
-                 gammaln(size))
+        coeff = (gamma_ln(size+endog) - gamma_ln(endog+1) -
+                 gamma_ln(size))
         llf = coeff + size*np.log(prob) + endog*np.log(1-prob)
         return llf
 
