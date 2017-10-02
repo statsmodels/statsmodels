@@ -349,10 +349,13 @@ class TestProbitBFGS(CheckBinaryResults):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Probit(data.endog, data.exog).fit(method="bfgs",
-            disp=0)
+            disp=0, maxiter=1000)
         res2 = Spector()
         res2.probit()
         cls.res2 = res2
+
+    def test_mleretvals(self):
+        assert_(self.res1.mle_retvals == '', msg=repr(self.res1.mle_retvals))
 
 
 class TestProbitNM(CheckBinaryResults):
@@ -998,7 +1001,11 @@ class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
         res2 = Spector()
         res2.logit()
         cls.res2 = res2
-        cls.res1 = Logit(data.endog, data.exog).fit(method="bfgs", disp=0)
+        cls.res1 = Logit(data.endog, data.exog).fit(method="bfgs", disp=0,
+                                                    maxiter=1000)
+
+    def test_mleretvals(self):
+        assert_(self.res1.mle_retvals == '', msg=repr(self.res1.mle_retvals))
 
 
 class TestPoissonNewton(CheckModelResults):

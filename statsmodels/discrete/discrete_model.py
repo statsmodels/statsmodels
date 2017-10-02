@@ -2686,7 +2686,7 @@ class NegativeBinomial(CountModel):
 
     #TODO: replace this with analytic where is it used?
     def score_obs(self, params):
-        sc = approx_fprime_cs(params, self.loglikeobs)
+        sc = approx_fprime(params, self.loglikeobs, centered=True)
         return sc
 
     def _get_start_params_null(self):
