@@ -1555,19 +1555,22 @@ def test_non_binary():
 def test_mnlogit_factor():
     dta = sm.datasets.anes96.load_pandas()
     dta['endog'] = dta.endog.replace(dict(zip(range(7), 'ABCDEFG')))
-    dta.exog['constant'] = 1
-    mod = sm.MNLogit(dta.endog, dta.exog)
+    exog = sm.add_constant(dta.exog, prepend=True)
+    mod = sm.MNLogit(dta.endog, exog)
     res = mod.fit(disp=0)
     # smoke tests
     params = res.params
     summary = res.summary()
+    predicted = res.predict(exog.iloc[:5, :])
 
     # with patsy
-    del dta.exog['constant']
     mod = smf.mnlogit('PID ~ ' + ' + '.join(dta.exog.columns), dta.data)
     res2 = mod.fit(disp=0)
-    res2.params
+    params_f = res2.params
     summary = res2.summary()
+    assert_allclose(params_f, params, rtol=1e-10)
+    predicted_f = res2.predict(dta.exog.iloc[:5, :])
+    assert_allclose(predicted_f, predicted, rtol=1e-10)
 
 
 def test_formula_missing_exposure():
