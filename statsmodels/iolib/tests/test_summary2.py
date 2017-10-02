@@ -1,3 +1,4 @@
+import warnings
 from numpy.testing import assert_equal, assert_
 from statsmodels.regression.linear_model import OLS, add_constant
 from statsmodels.iolib.summary2 import summary_col
@@ -43,7 +44,9 @@ x1    & -0.7500  & -1.5769   \\
         x = add_constant(x)
         y1 = [6,4,2,7,4]
         reg1 = OLS(y1,x).fit()
-        actual = reg1.summary().as_latex()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            actual = reg1.summary().as_latex()
         string_to_find = r'''\end{tabular}
 \begin{tabular}'''
         result = string_to_find in actual
