@@ -200,7 +200,12 @@ class HoltWintersResults(Results):
         return self.model.predict(self.params, start, end)
 
     def forecast(self, steps=1):
-        return self.model._predict(h=steps, **self.params).fcast
+        try:
+            start = self.model._index[-1] + 1
+            end = self.model._index[-1] + steps
+            return self.model.predict(self.params, start=start, end=end)
+        except:
+            return self.model._predict(h=steps, **self.params).fcast
 
 
 class HoltWintersResultsWrapper(ResultsWrapper):
@@ -210,7 +215,8 @@ class HoltWintersResultsWrapper(ResultsWrapper):
               'season': 'rows',
               'slope': 'rows'}
     _wrap_attrs = union_dicts(ResultsWrapper._wrap_attrs, _attrs)
-    _methods = {'predict': 'dates'}
+    _methods = {'predict': 'dates',
+                'forecast': 'dates'}
     _wrap_methods = union_dicts(ResultsWrapper._wrap_methods, _methods)
 
 
@@ -291,7 +297,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         predicted values : array
         """
         if start is None:
-            start = self._index[-1]
+            start = self._index[-1] + 1
         start, end, out_of_sample, prediction_index = self._get_prediction_index(
             start=start, end=end)
         if out_of_sample > 0:
@@ -608,6 +614,11 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     This is a full implementation of the simple exponential smoothing as
     per [1].
 
+    See Also
+    ---------
+    Exponential Smoothing
+    Holt
+
     References
     ----------
     [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice. OTexts, 2014.
@@ -665,7 +676,12 @@ class Holt(ExponentialSmoothing):
     -----
     This is a full implementation of the holts exponential smoothing as
     per [1].
-        
+
+    See Also
+    ---------
+    Exponential Smoothing
+    Simple Exponential Smoothing
+
     References
     ----------
     [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice. OTexts, 2014.
