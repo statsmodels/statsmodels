@@ -534,7 +534,7 @@ def test_start_params_bug():
     1600, 1876, 1885, 1962, 2280, 2711, 2591, 2411])
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        res = ARMA(data, order=(4,1)).fit(disp=-1)
+        res = ARMA(data, order=(4,1)).fit(start_ar_lags=5, disp=-1)
 
 
 class Test_ARIMA101(CheckArmaResultsMixin):
@@ -2110,7 +2110,7 @@ def test_arima111_predict_exog_2127():
             0.02372018,  0.02374833,  0.02367407,  0.0236443 ,  0.02362868,
             0.02362312])
 
-    assert_allclose(predicts, predicts_res, atol=1e-6)
+    assert_allclose(predicts, predicts_res, atol=5e-6)
 
 
 def test_ARIMA_exog_predict():

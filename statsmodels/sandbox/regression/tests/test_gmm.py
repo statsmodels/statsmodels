@@ -96,6 +96,9 @@ def test_iv2sls_r():
     #assert_allclose(res.bse * np.sqrt((n - k) / (n - k - 1.)), bse,
     assert_allclose(res.bse, bse, rtol=0, atol=3e-7)
 
+    # GH 3849
+    assert not hasattr(mod, '_results')
+
 
 
 def test_ivgmm0_r():
@@ -741,3 +744,12 @@ class TestIV2SLSSt1(CheckIV2SLS):
                     else:
                         assert_allclose(res.params, res2.params)
 
+def test_noconstant():
+    exog = exog_st[:, :-1]  # with const removed at end
+
+    mod = gmm.IV2SLS(endog, exog, instrument)
+    res = mod.fit()
+
+    assert_equal(res.fvalue, np.nan)
+    # smoke test
+    res.summary()

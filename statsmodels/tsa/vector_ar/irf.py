@@ -5,20 +5,16 @@ Impulse reponse-related code
 from __future__ import division
 
 import numpy as np
-import numpy.linalg as la
-import scipy.linalg as L
-
-from scipy import stats
+import scipy.linalg
 
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import chain_dot
 #from statsmodels.tsa.api import VAR
 from statsmodels.compat.python import range
 import statsmodels.tsa.tsatools as tsa
-import statsmodels.tsa.vector_ar.plotting as plotting
-import statsmodels.tsa.vector_ar.util as util
 
-mat = np.array
+from statsmodels.tsa.vector_ar import util, plotting
+
 
 class BaseIRAnalysis(object):
     """
@@ -45,7 +41,7 @@ class BaseIRAnalysis(object):
             #     if sigma.shape != model.sigma_u.shape:
             #         raise ValueError('variable order is wrong length')
 
-            P = la.cholesky(sigma)
+            P = np.linalg.cholesky(sigma)
 
         self.P = P
 
@@ -552,7 +548,7 @@ class IRAnalysis(BaseIRAnalysis):
                 if idx in self._g_memo:
                     apow = self._g_memo[idx]
                 else:
-                    apow = la.matrix_power(self._A.T, idx)
+                    apow = np.linalg.matrix_power(self._A.T, idx)
                     # apow = np.dot(J, apow)
                     apow = apow[:K]
                     self._g_memo[idx] = apow
@@ -689,13 +685,13 @@ class IRAnalysis(BaseIRAnalysis):
         # B = chain_dot(Lk, np.eye(k**2) + commutation_matrix(k, k),
         #               np.kron(self.P, np.eye(k)), Lk.T)
 
-        # return np.dot(Lk.T, L.inv(B))
+        # return np.dot(Lk.T, scipy.linalg.inv(B))
 
         B = chain_dot(Lk,
                       np.dot(np.kron(Ik, self.P), Kkk) + np.kron(self.P, Ik),
                       Lk.T)
 
-        return np.dot(Lk.T, L.inv(B))
+        return np.dot(Lk.T, scipy.linalg.inv(B))
 
     def fevd_table(self):
         pass

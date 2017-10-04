@@ -18,12 +18,14 @@ W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 from __future__ import division
 
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
-           "GeneralizedPoisson"]
+           "GeneralizedPoisson", "NegativeBinomialP"]
 
 from statsmodels.compat.python import lmap, lzip, range
+from statsmodels.compat.scipy import loggamma
 import numpy as np
-from scipy.special import gammaln
+from scipy.special import gammaln, digamma, polygamma
 from scipy import stats, special, optimize  # opt just for nbin
+from scipy.stats import nbinom
 import statsmodels.tools.tools as tools
 from statsmodels.tools import data as data_tools
 from statsmodels.tools.decorators import (resettable_cache,
@@ -43,6 +45,7 @@ from pandas import get_dummies
 
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 from statsmodels.distributions import genpoisson_p
+
 try:
     import cvxopt
     have_cvxopt = True
@@ -112,6 +115,17 @@ _l1_results_attr = """    nnz_params : Integer
     trimmed : Boolean array
         trimmed[i] == True if the ith parameter was trimmed from the model."""
 
+_get_start_params_null_docs = """
+Compute one-step moment estimator for null (constant-only) model
+
+This is a preliminary estimator used as start_params.
+
+Returns
+-------
+params : ndarray
+    parameter estimate based one one-step moment matching
+
+"""
 
 # helper for MNLogit (will be generally useful later)
 
@@ -528,6 +542,8 @@ class MultinomialModel(BinaryModel):
 
         # repeating from upstream...
         for key in kwargs:
+            if key in ['design_info', 'formula']:  # leave attached to data
+                continue
             try:
                 setattr(self, key, data.__dict__.pop(key))
             except KeyError:
@@ -723,6 +739,13 @@ class CountModel(DiscreteModel):
         if exposure is None:
             delattr(self, 'exposure')
 
+        # promote dtype to float64 if needed
+        dt = np.promote_types(self.endog.dtype, np.float64)
+        self.endog = np.asarray(self.endog, dt)
+        dt = np.promote_types(self.exog.dtype, np.float64)
+        self.exog = np.asarray(self.exog, dt)
+
+
     def _check_inputs(self, offset, exposure, endog):
         if offset is not None and offset.shape[0] != endog.shape[0]:
             raise ValueError("offset is not the same length as endog")
@@ -751,7 +774,7 @@ class CountModel(DiscreteModel):
         #TODO: add offset tp
         if exog is None:
             exog = self.exog
-        
+
         if exposure is None:
             # If self.exposure exists, it will already be in logs.
             exposure = getattr(self, 'exposure', 0)
@@ -803,7 +826,9 @@ class CountModel(DiscreteModel):
         # group 3 poisson, nbreg, zip, zinb
         if exog is None:
             exog = self.exog
-        margeff = self.predict(params, exog)[:,None] * params[None,:]
+        k_extra = getattr(self, 'k_extra', 0)
+        params_exog = params if k_extra == 0 else params[:-k_extra]
+        margeff = self.predict(params, exog)[:,None] * params_exog[None,:]
         if 'ex' in transform:
             margeff *= exog
         if 'ey' in transform:
@@ -989,8 +1014,23 @@ class Poisson(CountModel):
         #np.sum(stats.poisson.logpmf(endog, np.exp(XB)))
         return -np.exp(XB) +  endog*XB - gammaln(endog+1)
 
+    def _get_start_params_null(self):
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+        const = (self.endog / np.exp(offset + exposure)).mean()
+        params = [np.log(const)]
+        return params
+
+    _get_start_params_null.__doc__ = _get_start_params_null_docs
+
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
+
+        if start_params is None and self.data.const_idx is not None:
+            # k_params or k_exog not available?
+            start_params = 0.001 * np.ones(self.exog.shape[1])
+            start_params[self.data.const_idx] = self._get_start_params_null()[0]
+
         cntfit = super(CountModel, self).fit(start_params=start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
@@ -1177,6 +1217,7 @@ class Poisson(CountModel):
         L = np.exp(np.dot(X,params) + exposure + offset)
         return -np.dot(L*X.T, X)
 
+
 class GeneralizedPoisson(CountModel):
     __doc__ = """
     Generalized Poisson model for count data
@@ -1194,8 +1235,8 @@ class GeneralizedPoisson(CountModel):
            'extra_params' :
     """
     p: scalar
-        P denotes parametrizations for GP regression. p=1 for GP-1 and
-    p=2 for GP-2. Default is p=1.
+        P denotes parameterizations for GP regression. p=1 for GP-1 and
+        p=2 for GP-2. Default is p=1.
     offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
@@ -1213,6 +1254,11 @@ class GeneralizedPoisson(CountModel):
         self.exog_names.append('alpha')
         self.k_extra = 1
         self._transparams = False
+
+    def _get_init_kwds(self):
+        kwds = super(GeneralizedPoisson, self)._get_init_kwds()
+        kwds['p'] = self.parameterization + 1
+        return kwds
 
     def loglike(self, params):
         """
@@ -1250,7 +1296,7 @@ class GeneralizedPoisson(CountModel):
 
         Returns
         -------
-        loglike : ndarray (nobs,)
+        loglike : ndarray
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -1277,6 +1323,28 @@ class GeneralizedPoisson(CountModel):
         return (np.log(mu) + (endog - 1) * np.log(a2) - endog *
                 np.log(a1) - gammaln(endog + 1) - a2 / a1)
 
+    def _get_start_params_null(self):
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+
+        const = (self.endog / np.exp(offset + exposure)).mean()
+        params = [np.log(const)]
+        mu = const * np.exp(offset + exposure)
+        resid = self.endog - mu
+        a = self._estimate_dispersion(mu, resid, df_resid=resid.shape[0] - 1)
+        params.append(a)
+
+        return np.array(params)
+
+    _get_start_params_null.__doc__ = _get_start_params_null_docs
+
+    def _estimate_dispersion(self, mu, resid, df_resid=None):
+        q = self.parameterization
+        if df_resid is None:
+            df_resid = resid.shape[0]
+        a = ((np.abs(resid) / np.sqrt(mu) - 1) * mu**(-q)).sum() / df_resid
+        return a
+
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, use_transparams = False,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
@@ -1296,18 +1364,29 @@ class GeneralizedPoisson(CountModel):
             if use_transparams:
                 warnings.warn("Paramter \"use_transparams\" is ignored",
                               RuntimeWarning)
-            self._transparams = False 
+            self._transparams = False
 
         if start_params is None:
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
+            optim_kwds_prelim = {'disp': 0, 'skip_hessian': True,
+                                 'warn_convergence': False}
+            optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            start_params = mod_poi.fit(disp=0, method=method).params
-            start_params = np.append(start_params, 0.1)
+            res_poi = mod_poi.fit(**optim_kwds_prelim)
+            start_params = res_poi.params
+            a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
+                                          df_resid=res_poi.df_resid)
+            start_params = np.append(start_params, max(-0.1, a))
+
+        if callback is None:
+            # work around perfect separation callback #3895
+            callback = lambda *x: x
+
         mlefit = super(GeneralizedPoisson, self).fit(start_params=start_params,
                         maxiter=maxiter, method=method, disp=disp,
-                        full_output=full_output, callback=lambda x:x,
+                        full_output=full_output, callback=callback,
                         **kwargs)
 
 
@@ -1331,7 +1410,7 @@ class GeneralizedPoisson(CountModel):
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
-        
+
         if np.size(alpha) == 1 and alpha != 0:
             k_params = self.exog.shape[1] + self.k_extra
             alpha = alpha * np.ones(k_params)
@@ -1367,25 +1446,12 @@ class GeneralizedPoisson(CountModel):
 
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
-    def score(self, params):
-        """
-        Generalized Poisson model score (gradient) vector of the log-likelihood
-
-        Parameters
-        ----------
-        params : array-like
-            The parameters of the model
-
-        Returns
-        -------
-        score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
-            loglikelihood function, evaluated at `params`
-        """
+    def score_obs(self, params):
         if self._transparams:
             alpha = np.exp(params[-1])
         else:
             alpha = params[-1]
+
         params = params[:-1]
         p = self.parameterization
         exog = self.exog
@@ -1398,14 +1464,20 @@ class GeneralizedPoisson(CountModel):
         a4 = a3 * y
         dmudb = mu * exog
 
-        dalpha = (mu_p * (y * ((y - 1) / a2 - 2 / a1) + a2 / a1**2)).sum()
+        dalpha = (mu_p * (y * ((y - 1) / a2 - 2 / a1) + a2 / a1**2))
         dparams = dmudb * (-a4 / a1 + a3 * a2 / (a1 ** 2) + (1 + a4) *
                   ((y - 1) / a2 - 1 / a1) + 1 / mu)
 
+        return np.concatenate((dparams, np.atleast_2d(dalpha)),
+                              axis=1)
+
+    def score(self, params):
+        score = np.sum(self.score_obs(params), axis=0)
         if self._transparams:
-            return np.r_[dparams.sum(0), dalpha*alpha]
+            score[-1] == score[-1] ** 2
+            return score
         else:
-            return np.r_[dparams.sum(0), dalpha]
+            return score
 
     def _score_p(self, params):
         """
@@ -1419,7 +1491,7 @@ class GeneralizedPoisson(CountModel):
         Returns
         -------
         dldp : float
-            dldp is first derivative of the loglikelihood function, 
+            dldp is first derivative of the loglikelihood function,
         evaluated at `p-parameter`.
         """
         if self._transparams:
@@ -1500,7 +1572,7 @@ class GeneralizedPoisson(CountModel):
         hess_arr[:-1,-1] = dldpda
 
         # for dl/dalpha dalpha
-        dldada = mu_p**2 * (3 * y / a1**2 - y**2 * (y - 1) / a2**2 - 2 * a2 /
+        dldada = mu_p**2 * (3 * y / a1**2 - (y / a2)**2. * (y - 1) - 2 * a2 /
                             a1**3)
 
         hess_arr[-1,-1] = dldada.sum()
@@ -1519,7 +1591,7 @@ class GeneralizedPoisson(CountModel):
         """
         if exog is None:
             exog = self.exog
-        
+
         if exposure is None:
             exposure = getattr(self, 'exposure', 0)
         elif exposure != 0:
@@ -2365,12 +2437,16 @@ class NegativeBinomial(CountModel):
         self._initialize()
 
     def _ll_nbin(self, params, alpha, Q=0):
+        if np.any(np.iscomplex(params)) or np.iscomplex(alpha):
+            gamma_ln = loggamma
+        else:
+            gamma_ln = gammaln
         endog = self.endog
         mu = self.predict(params)
         size = 1/alpha * mu**Q
         prob = size/(size+mu)
-        coeff = (gammaln(size+endog) - gammaln(endog+1) -
-                 gammaln(size))
+        coeff = (gamma_ln(size+endog) - gamma_ln(endog+1) -
+                 gamma_ln(size))
         llf = coeff + size*np.log(prob) + endog*np.log(1-prob)
         return llf
 
@@ -2613,13 +2689,36 @@ class NegativeBinomial(CountModel):
         sc = approx_fprime_cs(params, self.loglikeobs)
         return sc
 
+    def _get_start_params_null(self):
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+        const = (self.endog / np.exp(offset + exposure)).mean()
+        params = [np.log(const)]
+        mu = const * np.exp(offset + exposure)
+        resid = self.endog - mu
+        a = self._estimate_dispersion(mu, resid, df_resid=resid.shape[0] - 1)
+        params.append(a)
+        return np.array(params)
+
+    _get_start_params_null.__doc__ = _get_start_params_null_docs
+
+    def _estimate_dispersion(self, mu, resid, df_resid=None):
+        if df_resid is None:
+            df_resid = resid.shape[0]
+        if self.loglike_method == 'nb2':
+            #params.append(np.linalg.pinv(mu[:,None]).dot(resid**2 / mu - 1))
+            a = ((resid**2 / mu - 1) / mu).sum() / df_resid
+        else: #self.loglike_method == 'nb1':
+            a = (resid**2 / mu - 1).sum() / df_resid
+        return a
+
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
 
         # Note: don't let super handle robust covariance because it has
         # transformed params
-
+        self._transparams = False # always define attribute
         if self.loglike_method.startswith('nb') and method not in ['newton',
                                                                    'ncg']:
             self._transparams = True # in case same Model instance is refit
@@ -2632,13 +2731,29 @@ class NegativeBinomial(CountModel):
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
+            optim_kwds_prelim = {'disp': 0, 'skip_hessian': True,
+                                 'warn_convergence': False}
+            optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            start_params = mod_poi.fit(disp=0).params
+            res_poi = mod_poi.fit(**optim_kwds_prelim)
+            start_params = res_poi.params
             if self.loglike_method.startswith('nb'):
-                start_params = np.append(start_params, 0.1)
+                a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
+                                              df_resid=res_poi.df_resid)
+                start_params = np.append(start_params, max(0.05, a))
+        else:
+            if self._transparams is True:
+                # transform user provided start_params dispersion, see #3918
+                start_params = np.array(start_params, copy=True)
+                start_params[-1] = np.log(start_params[-1])
+
+        if callback is None:
+            # work around perfect separation callback #3895
+            callback = lambda *x: x
+
         mlefit = super(NegativeBinomial, self).fit(start_params=start_params,
                         maxiter=maxiter, method=method, disp=disp,
-                        full_output=full_output, callback=lambda x:x,
+                        full_output=full_output, callback=callback,
                         **kwargs)
                         # TODO: Fix NBin _check_perfect_pred
         if self.loglike_method.startswith('nb'):
@@ -2705,6 +2820,427 @@ class NegativeBinomial(CountModel):
         return L1NegativeBinomialResultsWrapper(discretefit)
 
 
+class NegativeBinomialP(CountModel):
+    __doc__ = """
+    Generalized Negative Binomial (NB-P) model for count data
+    %(params)s
+    %(extra_params)s
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    p : scalar
+        P denotes parameterizations for NB-P regression. p=1 for NB-1 and
+        p=2 for NB-2. Default is p=1.
+    """ % {'params' : base._model_params_doc,
+           'extra_params' :
+           """p: scalar
+        P denotes parameterizations for NB regression. p=1 for NB-1 and
+        p=2 for NB-2. Default is p=2.
+    offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+    """ + base._missing_param_doc}
+
+    def __init__(self, endog, exog, p=2, offset=None,
+                       exposure=None, missing='none', **kwargs):
+        super(NegativeBinomialP, self).__init__(endog, exog, offset=offset,
+                                                  exposure=exposure,
+                                                  missing=missing, **kwargs)
+        self.parameterization = p
+        self.exog_names.append('alpha')
+        self.k_extra = 1
+        self._transparams = False
+
+    def _get_init_kwds(self):
+        kwds = super(NegativeBinomialP, self)._get_init_kwds()
+        kwds['p'] = self.parameterization
+        return kwds
+
+    def loglike(self, params):
+        """
+        Loglikelihood of Generalized Negative Binomial (NB-P) model
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model.
+
+        Returns
+        -------
+        loglike : float
+            The log-likelihood function of the model evaluated at `params`.
+            See notes.
+        """
+        return np.sum(self.loglikeobs(params))
+
+    def loglikeobs(self, params):
+        """
+        Loglikelihood for observations of Generalized Negative Binomial (NB-P) model
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model.
+
+        Returns
+        -------
+        loglike : ndarray
+            The log likelihood for each observation of the model evaluated
+            at `params`. See Notes
+        """
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+
+        params = params[:-1]
+        p = self.parameterization
+        y = self.endog
+
+        mu = self.predict(params)
+        mu_p = mu**(2 - p)
+        a1 = mu_p / alpha
+        a2 = mu + a1
+
+        llf = (gammaln(y + a1) - gammaln(y + 1) - gammaln(a1) +
+               a1 * np.log(a1) + y * np.log(mu) -
+               (y + a1) * np.log(a2))
+
+        return llf
+
+    def score_obs(self, params):
+        """
+        Generalized Negative Binomial (NB-P) model score (gradient) vector of the log-likelihood for each observations.
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        score : ndarray, 1-D
+            The score vector of the model, i.e. the first derivative of the
+            loglikelihood function, evaluated at `params`
+        """
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+
+        params = params[:-1]
+        p = 2 - self.parameterization
+        y = self.endog
+
+        mu = self.predict(params)
+        mu_p = mu**p
+        a1 = mu_p / alpha
+        a2 = mu + a1
+        a3 = y + a1
+        a4 = p * a1 / mu
+
+        dparams = ((a4 * (digamma(a3) - digamma(a1)) -
+                   (1 + a4) * a3 / a2) +
+                   y / mu + a4 * (1 + np.log(a1) - np.log(a2)))
+        dparams = (self.exog.T * mu * dparams).T
+        dalpha = (-a1 / alpha * (digamma(a3) -
+                                 digamma(a1) +
+                                 np.log(a1 / a2) +
+                                 1 - a3 / a2))
+
+        return np.concatenate((dparams, np.atleast_2d(dalpha).T),
+                              axis=1)
+
+    def score(self, params):
+        """
+        Generalized Negative Binomial (NB-P) model score (gradient) vector of the log-likelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        score : ndarray, 1-D
+            The score vector of the model, i.e. the first derivative of the
+            loglikelihood function, evaluated at `params`
+        """
+        score = np.sum(self.score_obs(params), axis=0)
+        if self._transparams:
+            score[-1] == score[-1] ** 2
+            return score
+        else:
+            return score
+
+    def hessian(self, params):
+        """
+        Generalized Negative Binomial (NB-P) model hessian maxtrix of the log-likelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        hessian : ndarray, 2-D
+            The hessian matrix of the model.
+        """
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+        params = params[:-1]
+
+        p = 2 - self.parameterization
+        y = self.endog
+        exog = self.exog
+        mu = self.predict(params)
+
+        mu_p = mu**p
+        a1 = mu_p / alpha
+        a2 = mu + a1
+        a3 = y + a1
+        a4 = p * a1 / mu
+        a5 = a4 * p / mu
+
+        dim = exog.shape[1]
+        hess_arr = np.zeros((dim + 1, dim + 1))
+
+        coeff = mu**2 * (((1 + a4)**2 * a3 / a2**2 -
+                          a3 * (a5 - a4 / mu) / a2 - y / mu**2 -
+                          2 * a4 * (1 + a4) / a2 +
+                          a5 * (np.log(a1) - np.log(a2) - digamma(a1) +
+                                digamma(a3) + 2) -
+                          a4 * (np.log(a1) - np.log(a2) - digamma(a1) +
+                                digamma(a3) + 1) / mu -
+                          a4**2 * (polygamma(1, a1) - polygamma(1, a3))) +
+                         (-(1 + a4) * a3 / a2 + y / mu +
+                          a4 * (np.log(a1) - np.log(a2) - digamma(a1) +
+                                digamma(a3) + 1)) / mu)
+
+        for i in range(dim):
+            hess_arr[i, :-1] = np.sum(self.exog[:,:].T * self.exog[:, i] * coeff, axis=1)
+
+
+        hess_arr[-1,:-1] = (self.exog[:,:].T * mu * a1 *
+                ((1 + a4) * (1 - a3 / a2) / a2 -
+                 p * (np.log(a1 / a2) - digamma(a1) + digamma(a3) + 2) / mu +
+                 p * (a3 / mu + a4) / a2 +
+                 a4 * (polygamma(1, a1) - polygamma(1, a3))) / alpha).sum(axis=1)
+
+        da2 = (a1 * (2 * np.log(a1) - 2 * np.log(a2) -
+                     2 * digamma(a1) + 2 *digamma(a3) + 3 -
+                     2 * a3 / a2 - a1 * polygamma(1, a1) +
+                     a1 * polygamma(1, a3) - 2 * a1 / a2 +
+                     a1 * a3 / a2**2) / alpha**2)
+
+        hess_arr[-1, -1] = da2.sum()
+
+        tri_idx = np.triu_indices(dim + 1, k=1)
+        hess_arr[tri_idx] = hess_arr.T[tri_idx]
+
+        return hess_arr
+
+    def _get_start_params_null(self):
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+        q = self.parameterization - 1
+
+        const = (self.endog / np.exp(offset + exposure)).mean()
+        params = [np.log(const)]
+        mu = const * np.exp(offset + exposure)
+        resid = self.endog - mu
+        a = self._estimate_dispersion(mu, resid, df_resid=resid.shape[0] - 1)
+        params.append(a)
+
+        return np.array(params)
+
+    _get_start_params_null.__doc__ = _get_start_params_null_docs
+
+    def _estimate_dispersion(self, mu, resid, df_resid=None):
+        q = self.parameterization - 1
+        if df_resid is None:
+            df_resid = resid.shape[0]
+        a = ((resid**2 / mu - 1) * mu**(-q)).sum() / df_resid
+        return a
+
+    def fit(self, start_params=None, method='bfgs', maxiter=35,
+            full_output=1, disp=1, callback=None, use_transparams = False,
+            cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
+        """
+        Parameters
+        ----------
+        use_transparams : bool
+            This parameter enable internal transformation to impose non-negativity.
+            True to enable. Default is False.
+            use_transparams=True imposes the no underdispersion (alpha > 0) constaint.
+            In case use_transparams=True and method="newton" or "ncg" transformation
+            is ignored.
+        """
+        if use_transparams and method not in ['newton', 'ncg']:
+            self._transparams = True
+        else:
+            if use_transparams:
+                warnings.warn('Parameter "use_transparams" is ignored',
+                              RuntimeWarning)
+            self._transparams = False
+
+        if start_params is None:
+            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+            if np.size(offset) == 1 and offset == 0:
+                offset = None
+
+            optim_kwds_prelim = {'disp': 0, 'skip_hessian': True,
+                                 'warn_convergence': False}
+            optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
+            mod_poi = Poisson(self.endog, self.exog, offset=offset)
+            res_poi = mod_poi.fit(**optim_kwds_prelim)
+            start_params = res_poi.params
+            a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
+                                          df_resid=res_poi.df_resid)
+            start_params = np.append(start_params, max(0.05, a))
+
+        if callback is None:
+            # work around perfect separation callback #3895
+            callback = lambda *x: x
+
+        mlefit = super(NegativeBinomialP, self).fit(start_params=start_params,
+                        maxiter=maxiter, method=method, disp=disp,
+                        full_output=full_output, callback=callback,
+                        **kwargs)
+
+        if use_transparams and method not in ["newton", "ncg"]:
+            self._transparams = False
+            mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
+
+        nbinfit = NegativeBinomialResults(self, mlefit._results)
+        result = NegativeBinomialResultsWrapper(nbinfit)
+
+        if cov_kwds is None:
+            cov_kwds = {}
+        result._get_robustcov_results(cov_type=cov_type,
+                                    use_self=True, use_t=use_t, **cov_kwds)
+        return result
+
+    fit.__doc__ += DiscreteModel.fit.__doc__
+
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+
+        if method not in ['l1', 'l1_cvxopt_cp']:
+            raise TypeError(
+                    "argument method == %s, which is not handled" % method)
+
+        if np.size(alpha) == 1 and alpha != 0:
+            k_params = self.exog.shape[1] + self.k_extra
+            alpha = alpha * np.ones(k_params)
+            alpha[-1] = 0
+
+        alpha_p = alpha[:-1] if (self.k_extra and np.size(alpha) > 1) else alpha
+
+        self._transparams = False
+        if start_params is None:
+            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+            if np.size(offset) == 1 and offset == 0:
+                offset = None
+            mod_poi = Poisson(self.endog, self.exog, offset=offset)
+            start_params = mod_poi.fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=0, callback=callback,
+                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
+            start_params = np.append(start_params, 0.1)
+
+        cntfit = super(CountModel, self).fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+
+        discretefit = L1NegativeBinomialResults(self, cntfit)
+
+        return L1NegativeBinomialResultsWrapper(discretefit)
+
+    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
+
+    def predict(self, params, exog=None, exposure=None, offset=None,
+                which='mean'):
+        """
+        Predict response variable of a model given exogenous variables.
+
+        Parameters
+        ----------
+        params : array-like
+            2d array of fitted parameters of the model. Should be in the
+            order returned from the model.
+        exog : array-like, optional
+            1d or 2d array of exogenous values.  If not supplied, the
+            whole exog attribute of the model is used. If a 1d array is given
+            it assumed to be 1 row of exogenous variables. If you only have
+            one regressor and would like to do prediction, you must provide
+            a 2d array with shape[1] == 1.
+        linear : bool, optional
+            If True, returns the linear predictor dot(exog,params).  Else,
+            returns the value of the cdf at the linear predictor.
+        offset : array_like, optional
+            Offset is added to the linear prediction with coefficient equal to 1.
+        exposure : array_like, optional
+            Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+        which : 'mean', 'linear', 'prob', optional.
+            'mean' returns the exp of linear predictor exp(dot(exog,params)).
+            'linear' returns the linear predictor dot(exog,params).
+            'prob' return probabilities for counts from 0 to max(endog).
+            Default is 'mean'.
+
+        Notes
+        -----
+        """
+        if exog is None:
+            exog = self.exog
+
+        if exposure is None:
+            exposure = getattr(self, 'exposure', 0)
+        elif exposure != 0:
+            exposure = np.log(exposure)
+
+        if offset is None:
+            offset = getattr(self, 'offset', 0)
+
+        fitted = np.dot(exog, params[:exog.shape[1]])
+        linpred = fitted + exposure + offset
+
+        if which == 'mean':
+            return np.exp(linpred)
+        elif which == 'linear':
+            return linpred
+        elif which =='prob':
+            counts = np.atleast_2d(np.arange(0, np.max(self.endog)+1))
+            mu = self.predict(params, exog, exposure, offset)
+            size, prob = self.convert_params(params, mu)
+            return nbinom.pmf(counts, size[:,None], prob[:,None])
+        else:
+            raise TypeError('keyword \'which\' = %s not recognized' % which)
+
+    def convert_params(self, params, mu):
+        alpha = params[-1]
+        p = 2 - self.parameterization
+
+        size = 1. / alpha * mu**p
+        prob = size / (size + mu)
+
+        return (size, prob)
+
+
 ### Results Class ###
 
 class DiscreteResults(base.LikelihoodModelResults):
@@ -2741,13 +3277,14 @@ class DiscreteResults(base.LikelihoodModelResults):
                                            **cov_kwds)
 
 
-
     def __getstate__(self):
-        try:
-            #remove unpicklable callback
-            self.mle_settings['callback'] = None
-        except (AttributeError, KeyError):
-            pass
+        # remove unpicklable methods
+        mle_settings = getattr(self, 'mle_settings', None)
+        if mle_settings is not None:
+            if 'callback' in mle_settings:
+                mle_settings['callback'] = None
+            if 'cov_params_func' in mle_settings:
+                mle_settings['cov_params_func'] = None
         return self.__dict__
 
     @cache_readonly
@@ -2760,20 +3297,91 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def llr_pvalue(self):
-        return stats.chisqprob(self.llr, self.df_model)
+        return stats.distributions.chi2.sf(self.llr, self.df_model)
+
+    def set_null_options(self, llnull=None, attach_results=True, **kwds):
+        """set fit options for Null (constant-only) model
+
+        This resets the cache for related attributes which is potentially
+        fragile. This only sets the option, the null model is estimated
+        when llnull is accessed, if llnull is not yet in cache.
+
+        Parameters
+        ----------
+        llnull : None or float
+            If llnull is not None, then the value will be directly assigned to
+            the cached attribute "llnull".
+        attach_results : bool
+            Sets an internal flag whether the results instance of the null
+            model should be attached. By default without calling this method,
+            thenull model results are not attached and only the loglikelihood
+            value llnull is stored.
+        kwds : keyword arguments
+            `kwds` are directly used as fit keyword arguments for the null
+            model, overriding any provided defaults.
+
+        Returns
+        -------
+        no returns, modifies attributes of this instance
+
+        """
+        # reset cache, note we need to add here anything that depends on
+        # llnullor the null model. If something is missing, then the attribute
+        # might be incorrect.
+        self._cache.pop('llnull', None)
+        self._cache.pop('llr', None)
+        self._cache.pop('llr_pvalue', None)
+        self._cache.pop('prsquared', None)
+        if hasattr(self, 'res_null'):
+            del self.res_null
+
+        if llnull is not None:
+            self._cache['llnull'] = llnull
+        self._attach_nullmodel = attach_results
+        self._optim_kwds_null = kwds
 
     @cache_readonly
     def llnull(self):
 
         model = self.model
-        kwds = model._get_init_kwds()
+        kwds = model._get_init_kwds().copy()
+        for key in getattr(model, '_null_drop_keys', []):
+            del kwds[key]
         # TODO: what parameters to pass to fit?
         mod_null = model.__class__(model.endog, np.ones(self.nobs), **kwds)
         # TODO: consider catching and warning on convergence failure?
         # in the meantime, try hard to converge. see
         # TestPoissonConstrained1a.test_smoke
-        res_null = mod_null.fit(disp=0, warn_convergence=False,
-                                maxiter=10000)
+
+        optim_kwds = getattr(self, '_optim_kwds_null', {}).copy()
+
+        if 'start_params' in optim_kwds:
+            # user provided
+            sp_null = optim_kwds.pop('start_params')
+        elif hasattr(model, '_get_start_params_null'):
+            # get moment estimates if available
+            sp_null = model._get_start_params_null()
+        else:
+            sp_null = None
+
+        opt_kwds = dict(method='bfgs', warn_convergence=False, maxiter=10000,
+                        disp=0)
+        opt_kwds.update(optim_kwds)
+
+        if optim_kwds:
+            res_null = mod_null.fit(start_params=sp_null, **opt_kwds)
+        else:
+            # this should be a reasonably method case across versions
+            res_null = mod_null.fit(start_params=sp_null, method='nm',
+                                    warn_convergence=False,
+                                    maxiter=10000, disp=0)
+            res_null = mod_null.fit(start_params=res_null.params, method='bfgs',
+                                    warn_convergence=False,
+                                    maxiter=10000, disp=0)
+
+        if getattr(self, '_attach_nullmodel', False) is not False:
+            self.res_null = res_null
+
         return res_null.llf
 
     @cache_readonly
@@ -3045,16 +3653,14 @@ class L1CountResults(DiscreteResults):
         # entry in params has been set zero'd out.
         self.trimmed = cntfit.mle_retvals['trimmed']
         self.nnz_params = (self.trimmed == False).sum()
-        # update degrees of freedom
-        self.model.df_model = self.nnz_params - 1
-        self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
+
+        # Set degrees of freedom.  In doing so,
         # adjust for extra parameter in NegativeBinomial nb1 and nb2
         # extra parameter is not included in df_model
         k_extra = getattr(self.model, 'k_extra', 0)
-        self.model.df_model -= k_extra
-        self.model.df_resid += k_extra
-        self.df_model = self.model.df_model
-        self.df_resid = self.model.df_resid
+
+        self.df_model = self.nnz_params - 1 - k_extra
+        self.df_resid = float(self.model.endog.shape[0] - self.nnz_params) + k_extra
 
 class PoissonResults(CountResults):
     def predict_prob(self, n=None, exog=None, exposure=None, offset=None,
@@ -3283,10 +3889,8 @@ class L1BinaryResults(BinaryResults):
         # entry in params has been set zero'd out.
         self.trimmed = bnryfit.mle_retvals['trimmed']
         self.nnz_params = (self.trimmed == False).sum()
-        self.model.df_model = self.nnz_params - 1
-        self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
-        self.df_model = self.model.df_model
-        self.df_resid = self.model.df_resid
+        self.df_model = self.nnz_params - 1
+        self.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
 
 
 class MultinomialResults(DiscreteResults):
@@ -3433,11 +4037,9 @@ class L1MultinomialResults(MultinomialResults):
         self.trimmed = mlefit.mle_retvals['trimmed']
         self.nnz_params = (self.trimmed == False).sum()
 
-        #Note: J-1 constants
-        self.model.df_model = self.nnz_params - (self.model.J - 1)
-        self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
-        self.df_model = self.model.df_model
-        self.df_resid = self.model.df_resid
+        # Note: J-1 constants
+        self.df_model = self.nnz_params - (self.model.J - 1)
+        self.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
 
 
 #### Results Wrappers ####

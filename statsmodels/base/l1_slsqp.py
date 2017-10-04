@@ -99,13 +99,15 @@ def fit_l1_slsqp(
     if full_output:
         x_full, fx, its, imode, smode = results
         fopt = func(np.asarray(x_full))
-        converged = 'True' if imode == 0 else smode
+        converged = (imode == 0)
+        warnflag = str(imode) + ' ' + smode
         iterations = its
         gopt = float('nan')     # Objective is non-differentiable
         hopt = float('nan')
         retvals = {
             'fopt': fopt, 'converged': converged, 'iterations': iterations,
-            'gopt': gopt, 'hopt': hopt, 'trimmed': trimmed}
+            'gopt': gopt, 'hopt': hopt, 'trimmed': trimmed,
+            'warnflag': warnflag}
 
     ### Return
     if full_output:

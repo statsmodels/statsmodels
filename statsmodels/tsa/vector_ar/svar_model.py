@@ -9,14 +9,11 @@ from __future__ import print_function, division
 from statsmodels.compat.python import range
 
 import numpy as np
-import numpy.linalg as npl
-from numpy.linalg import slogdet
 
-from statsmodels.tools.numdiff import (approx_hess, approx_fprime)
+from statsmodels.tools.numdiff import approx_hess, approx_fprime
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
-from statsmodels.tsa.vector_ar.var_model import VARProcess, \
-                                                        VARResults
+from statsmodels.tsa.vector_ar.var_model import VARProcess, VARResults
 
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tsa.base.tsa_model as tsbase
@@ -288,13 +285,13 @@ class SVAR(tsbase.TimeSeriesModel):
         neqs = self.neqs
         sigma_u = self.sigma_u
 
-        W = np.dot(npl.inv(B),A)
+        W = np.dot(np.linalg.inv(B),A)
         trc_in = np.dot(np.dot(W.T,W),sigma_u)
-        sign, b_logdet = slogdet(B**2) #numpy 1.4 compat
+        sign, b_logdet = np.linalg.slogdet(B**2) #numpy 1.4 compat
         b_slogdet = sign * b_logdet
 
         likl = -nobs/2. * (neqs * np.log(2 * np.pi) - \
-                np.log(npl.det(A)**2) + b_slogdet + \
+                np.log(np.linalg.det(A)**2) + b_slogdet + \
                 np.trace(trc_in))
 
 
@@ -394,7 +391,7 @@ class SVAR(tsbase.TimeSeriesModel):
         D_nT = np.zeros([int((1.0 / 2) * (neqs) * (neqs + 1)), neqs**2])
 
         for j in range(neqs):
-            i=j
+            i = j
             while j <= i < neqs:
                 u=np.zeros([int((1.0/2)*neqs*(neqs+1)), 1])
                 u[int(j * neqs + (i + 1) - (1.0 / 2) * (j + 1) * j - 1)] = 1
@@ -404,8 +401,8 @@ class SVAR(tsbase.TimeSeriesModel):
                 D_nT=D_nT+np.dot(u,(Tij.ravel('F')[:,None]).T)
                 i=i+1
 
-        D_n=D_nT.T
-        D_pl=npl.pinv(D_n)
+        D_n = D_nT.T
+        D_pl = np.linalg.pinv(D_n)
 
         #generate S_B
         S_B = np.zeros((neqs**2, len(A_solve[A_mask])))
@@ -427,7 +424,7 @@ class SVAR(tsbase.TimeSeriesModel):
                     j_d +=1
 
         #now compute J
-        invA = npl.inv(A_solve)
+        invA = np.linalg.inv(A_solve)
         J_p1i = np.dot(np.dot(D_pl, np.kron(sigma_u, invA)), S_B)
         J_p1 = -2.0 * J_p1i
         J_p2 = np.dot(np.dot(D_pl, np.kron(invA, invA)), S_D)
@@ -496,7 +493,7 @@ class SVARProcess(VARProcess):
         if P is None:
             A_solve = self.A_solve
             B_solve = self.B_solve
-            P = np.dot(npl.inv(A_solve), B_solve)
+            P = np.dot(np.linalg.inv(A_solve), B_solve)
 
         ma_mats = self.ma_rep(maxn=maxn)
         return mat([np.dot(coefs, P) for coefs in ma_mats])
@@ -623,8 +620,8 @@ class SVARResults(SVARProcess, VARResults):
         irf : IRAnalysis
         """
         A = self.A
-        B= self.B
-        P = np.dot(npl.inv(A), B)
+        B = self.B
+        P = np.dot(np.linalg.inv(A), B)
 
         return IRAnalysis(self, P=P, periods=periods, svar=True)
 
@@ -733,9 +730,9 @@ class SVARResults(SVARProcess, VARResults):
                                  A_guess = opt_A, B_guess = opt_B).\
                                  svar_ma_rep(maxn=T)
 
-        ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
-        index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
-        lower = ma_sort[index[0],:, :, :]
-        upper = ma_sort[index[1],:, :, :]
+        ma_sort = np.sort(ma_coll, axis=0)  # sort to get quantiles
+        index = int(round(signif/2*repl)-1), int(round((1-signif/2)*repl)-1)
+        lower = ma_sort[index[0], :, :, :]
+        upper = ma_sort[index[1], :, :, :]
         return lower, upper
 

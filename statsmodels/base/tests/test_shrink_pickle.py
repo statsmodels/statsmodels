@@ -270,9 +270,22 @@ class TestPickleFormula5(TestPickleFormula2):
         self.results = sm.OLS.from_formula("Y ~ log(A) + B * C", data=self.data).fit()
 
 
+class TestRemoveDataPicklePoissonRegularized(RemoveDataPickle):
+
+    def setup(self):
+        #fit for each test, because results will be changed by test
+        x = self.exog
+        np.random.seed(987689)
+        y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
+        model = sm.Poisson(y_count, x)
+        self.results = model.fit_regularized(method='l1', disp=0, alpha=10)
+
+
+
 if __name__ == '__main__':
     for cls in [TestRemoveDataPickleOLS, TestRemoveDataPickleWLS,
                 TestRemoveDataPicklePoisson,
+                TestRemoveDataPicklePoissonRegularized,
                 TestRemoveDataPickleNegativeBinomial,
                 TestRemoveDataPickleLogit, TestRemoveDataPickleRLM,
                 TestRemoveDataPickleGLM]:
