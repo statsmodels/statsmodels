@@ -13,6 +13,7 @@ import warnings
 import numpy as np
 from numpy.testing import assert_, assert_equal
 import pandas as pd
+from pandas.util.testing import assert_series_equal
 
 import statsmodels.api as sm
 
@@ -44,25 +45,22 @@ class RemoveDataPickle(object):
         self.l_max = 20000
 
     def test_remove_data_pickle(self):
-        import pandas as pd
-        from pandas.util.testing import assert_series_equal
-
         results = self.results
         xf = self.xf
         pred_kwds = self.predict_kwds
         pred1 = results.predict(xf, **pred_kwds)
-        #create some cached attributes
+        # create some cached attributes
         results.summary()
         res = results.summary2()  # SMOKE test also summary2
 
         # uncomment the following to check whether tests run (7 failures now)
         #np.testing.assert_equal(res, 1)
 
-        #check pickle unpickle works on full results
+        # check pickle unpickle works on full results
         #TODO: drop of load save is tested
         res, l = check_pickle(results._results)
 
-        #remove data arrays, check predict still works
+        # remove data arrays, check predict still works
         with warnings.catch_warnings(record=True) as w:
             results.remove_data()
 
@@ -75,13 +73,13 @@ class RemoveDataPickle(object):
         else:
             np.testing.assert_equal(pred2, pred1)
 
-        #pickle, unpickle reduced array
+        # pickle, unpickle reduced array
         res, l = check_pickle(results._results)
 
         #for testing attach res
         self.res = res
 
-        #Note: l_max is just a guess for the limit on the length of the pickle
+        # Note: l_max is just a guess for the limit on the length of the pickle
         l_max = self.l_max
         assert_(l < l_max, msg='pickle length not %d < %d' % (l, l_max))
 

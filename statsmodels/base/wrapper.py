@@ -83,6 +83,10 @@ class SaveLoadMixin(object):
         result._data_attr_model : arrays attached to the model
             instance but not to the results instance
         """
+        if hasattr(self, '_results'):
+            # kludge
+            return self._results.remove_data()
+
         model_only = ['model.' + i for i in getattr(self, "_data_attr_model", [])]
         model_attr = ['model.' + i for i in self.model._data_attr]
         for att in self._data_attr + model_attr + model_only:
@@ -111,7 +115,6 @@ def _wipe(obj, att):
             setattr(obj_, att_, None)
     except AttributeError:
         pass
-
 
 
 class ResultsWrapper(SaveLoadMixin):
