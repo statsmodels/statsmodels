@@ -1286,7 +1286,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False,
 
 
 class RegressionResults(base.LikelihoodModelResults):
-    """
+    r"""
     This class summarizes the fit of a linear regression model.
 
     It handles the output of contrasts, estimates of covariance, etc.

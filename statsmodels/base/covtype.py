@@ -12,39 +12,6 @@ from statsmodels.compat.python import lrange, lzip, range
 import numpy as np
 
 
-descriptions = {
-    'fixed scale': 'Standard Errors are based on fixed scale',
-    'fixed_scale': 'Standard Errors are based on fixed scale',
-    'HC0': 'Standard Errors are heteroscedasticity robust (HC0)',
-    'HC1': 'Standard Errors are heteroscedasticity robust (HC1)',
-    'HC2': 'Standard Errors are heteroscedasticity robust (HC2)',
-    'HC3': 'Standard Errors are heteroscedasticity robust (HC3)',
-    'cluster': 'Standard Errors are robust to cluster correlation (cluster)',
-    'hac-panel': 'Standard Errors are robust to cluster correlation (hac-panel)',
-    'hac': 'Standard Errors are heteroscedasticity and autocorrelation '
-            'robust (HAC) using %d lags and %s small sample correction',
-    'nonrobust': 'Standard Errors assume that the covariance matrix of the '
-            'errors is correctly specified.',
-    'robust_approx': 'Quasi-maximum likelihood covariance matrix used for'
-            ' robustness to some misspecifications; calculated using'
-            ' numerical (%s) differentiation.',
-    'robust_oim': 'Quasi-maximum likelihood covariance matrix used for'
-            ' robustness to some misspecifications; calculated using the'
-            ' observed information matrix (%s) described in'
-            ' Harvey (1989).',
-    'opg': 'Covariance matrix calculated using the outer product of '
-            'gradients (%s).',
-    'oim': 'Covariance matrix calculated using the observed information '
-            'matrix (%s) described in Harvey (1989).',
-    'approx': 'Covariance matrix calculated using numerical (%s) differentiation.',
-    'none': 'Covariance matrix not calculated.',
-    'hac-groupsum': 'Driscoll and Kraay Standard Errors are robust to cluster '
-            'correlation (hac-groupsum)',
-    'k==0': 'No parameters estimated.',
-    'singular': 'Covariance matrix could not be calculated: singular '
-                'information matrix.',
-    }
-
 def _normalize_cov_type(cov_type):
     # normalize names
     if cov_type == 'nw-panel':
