@@ -2062,15 +2062,11 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
             self.df_model = model.df_model
         else:
             self.df_model = len(mlefit.params)
-            # retrofitting the model, used in t_test TODO: check design
-            self.model.df_model = self.df_model
 
         if hasattr(model, 'df_resid'):
             self.df_resid = model.df_resid
         else:
             self.df_resid = self.endog.shape[0] - self.df_model
-            # retrofitting the model, used in t_test TODO: check design
-            self.model.df_resid = self.df_resid
 
         self._cache = resettable_cache()
         self.__dict__.update(mlefit.__dict__)
