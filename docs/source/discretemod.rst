@@ -8,7 +8,12 @@ Regression with Discrete Dependent Variable
 
 Regression models for limited and qualitative dependent variables. The module
 currently allows the estimation of models with binary (Logit, Probit), nominal
-(MNLogit), or count (Poisson) data.
+(MNLogit), or count (Poisson, NegativeBinomial) data.
+
+Starting with version 0.9, this also includes new count models, that are still
+experimental in 0.9, NegativeBinomialP, GeneralizedPoisson and zero-inflated
+models, ZeroInflatedPoisson, ZeroInflatedNegativeBinomialP and
+ZeroInflatedGeneralizedPoisson.
 
 See `Module Reference`_ for commands and arguments.
 
@@ -73,8 +78,22 @@ The specific model classes are:
    MNLogit
    Poisson
    NegativeBinomial
+   NegativeBinomialP
+   GeneralizedPoisson
+
+.. module:: statsmodels.discrete.count_model
+
+.. autosummary::
+   :toctree: generated/
+
+   ZeroInflatedPoisson
+   ZeroInflatedNegativeBinomialP
+   ZeroInflatedGeneralizedPoisson
+
 
 The specific result classes are:
+
+.. module:: statsmodels.discrete.discrete_model
 
 .. autosummary::
    :toctree: generated/
@@ -84,6 +103,17 @@ The specific result classes are:
    CountResults
    MultinomialResults
    NegativeBinomialResults
+   GeneralizedPoissonResults
+
+.. module:: statsmodels.discrete.count_model
+
+.. autosummary::
+   :toctree: generated/
+
+   ZeroInflatedPoissonResults
+   ZeroInflatedNegativeBinomialResults
+   ZeroInflatedGeneralizedPoissonResults
+
 
 :class:`DiscreteModel` is a superclass of all discrete regression models. The
 estimation results are returned as an instance of one of the subclasses of
@@ -92,6 +122,8 @@ multinomial, have their own intermediate level of model and results classes.
 This intermediate classes are mostly to facilitate the implementation of the
 methods and attributes defined by :class:`DiscreteModel` and
 :class:`DiscreteResults`.
+
+.. module:: statsmodels.discrete.discrete_model
 
 .. autosummary::
    :toctree: generated/
@@ -102,3 +134,10 @@ methods and attributes defined by :class:`DiscreteModel` and
    BinaryResults
    CountModel
    MultinomialModel
+
+.. module:: statsmodels.discrete.count_model
+
+.. autosummary::
+   :toctree: generated/
+
+   GenericZeroInflated

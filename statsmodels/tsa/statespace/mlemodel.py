@@ -8,6 +8,9 @@ License: Simplified-BSD
 from __future__ import division, absolute_import, print_function
 from statsmodels.compat.python import long
 
+try: unicode
+except NameError: unicode = str
+
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
@@ -26,6 +29,31 @@ from statsmodels.tools.sm_exceptions import PrecisionWarning
 import statsmodels.genmod._prediction as pred
 from statsmodels.genmod.families.links import identity
 import warnings
+
+
+def _handle_args(names, defaults, *args, **kwargs):
+    output_args = []
+    # We need to handle positional arguments in two ways, in case this was
+    # called by a Scipy optimization routine
+    if len(args) > 0:
+        # the fit() method will pass a dictionary
+        if isinstance(args[0], dict):
+            flags = args[0]
+        # otherwise, a user may have just used positional arguments...
+        else:
+            flags = dict(zip(names, args))
+        for i in range(len(names)):
+            output_args.append(flags.get(names[i], defaults[i]))
+
+        for name, value in flags.items():
+            if name in kwargs:
+                raise TypeError("loglike() got multiple values for keyword"
+                                " argument '%s'" % name)
+    else:
+        for i in range(len(names)):
+            output_args.append(kwargs.pop(names[i], defaults[i]))
+
+    return tuple(output_args) + (kwargs,)
 
 
 class MLEModel(tsbase.TimeSeriesModel):
@@ -574,30 +602,6 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         return result
 
-    def _handle_args(self, names, defaults, *args, **kwargs):
-        output_args = []
-        # We need to handle positional arguments in two ways, in case this was
-        # called by a Scipy optimization routine
-        if len(args) > 0:
-            # the fit() method will pass a dictionary
-            if isinstance(args[0], dict):
-                flags = args[0]
-            # otherwise, a user may have just used positional arguments...
-            else:
-                flags = dict(zip(names, args))
-            for i in range(len(names)):
-                output_args.append(flags.get(names[i], defaults[i]))
-
-            for name, value in flags.items():
-                if name in kwargs:
-                    raise TypeError("loglike() got multiple values for keyword"
-                                    " argument '%s'" % name)
-        else:
-            for i in range(len(names)):
-                output_args.append(kwargs.pop(names[i], defaults[i]))
-
-        return tuple(output_args) + (kwargs,)
-
     _loglike_param_names = ['transformed', 'complex_step']
     _loglike_param_defaults = [True, False]
 
@@ -632,7 +636,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         update : modifies the internal state of the state space model to
                  reflect new params
         """
-        transformed, complex_step, kwargs = self._handle_args(
+        transformed, complex_step, kwargs = _handle_args(
             MLEModel._loglike_param_names, MLEModel._loglike_param_defaults,
             *args, **kwargs)
 
@@ -1052,8 +1056,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         params = np.array(params, ndmin=1)
 
         transformed, method, approx_complex_step, approx_centered, kwargs = (
-            self._handle_args(MLEModel._score_param_names,
-                              MLEModel._score_param_defaults, *args, **kwargs))
+            _handle_args(MLEModel._score_param_names,
+                         MLEModel._score_param_defaults, *args, **kwargs))
         # For fit() calls, the method is called 'score_method' (to distinguish
         # it from the method used for fit) but generally in kwargs the method
         # will just be called 'method'
@@ -1173,9 +1177,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         \*args (for example `scipy.optimize.fmin_l_bfgs`).
         """
         transformed, method, approx_complex_step, approx_centered, kwargs = (
-            self._handle_args(MLEModel._hessian_param_names,
-                              MLEModel._hessian_param_defaults,
-                              *args, **kwargs))
+            _handle_args(MLEModel._hessian_param_names,
+                         MLEModel._hessian_param_defaults,
+                         *args, **kwargs))
         # For fit() calls, the method is called 'hessian_method' (to
         # distinguish it from the method used for fit) but generally in kwargs
         # the method will just be called 'method'
@@ -1743,23 +1747,21 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
     def _cov_params_approx(self, approx_complex_step=True,
                            approx_centered=False):
-        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
-        if approx_complex_step:
-            evaluated_hessian = self.model._hessian_complex_step(
-                self.params, transformed=True
-            )
-        else:
-            evaluated_hessian = self.model._hessian_finite_difference(
-                self.params, transformed=True,
-                approx_centered=approx_centered
-            )
+        nobs = self.model.nobs - self.filter_results.loglikelihood_burn
+
+        evaluated_hessian = nobs * self.model.hessian(params=self.params,
+                                    transformed=True,
+                                    method='approx',
+                                    approx_complex_step=approx_complex_step,
+                                    approx_centered=approx_centered)
+        # TODO: Case with "not approx_complex_step" is not hit in
+        # tests as of 2017-05-19
+
+        (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
+
         self.model.update(self.params)
-
-        neg_cov, singular_values = pinv_extended(nobs * evaluated_hessian)
-
         if self._rank is None:
             self._rank = np.linalg.matrix_rank(np.diag(singular_values))
-
         return -neg_cov
 
     @cache_readonly
@@ -1771,21 +1773,21 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return self._cov_params_approx(self._cov_approx_complex_step,
                                        self._cov_approx_centered)
 
-    def _cov_params_oim(self, approx_complex_step=True,
-                        approx_centered=False):
+    def _cov_params_oim(self, approx_complex_step=True, approx_centered=False):
         nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
-        cov_params, singular_values = pinv_extended(
-            nobs * self.model.observed_information_matrix(
-                self.params, transformed=True,
-                approx_complex_step=approx_complex_step,
-                approx_centered=approx_centered)
-        )
-        self.model.update(self.params)
 
+        evaluated_hessian = nobs * self.model.hessian(self.params,
+                                        hessian_method='oim',
+                                        transformed=True,
+                                        approx_complex_step=approx_complex_step,
+                                        approx_centered=approx_centered)
+
+        (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
+
+        self.model.update(self.params)
         if self._rank is None:
             self._rank = np.linalg.matrix_rank(np.diag(singular_values))
-
-        return cov_params
+        return -neg_cov
 
     @cache_readonly
     def cov_params_oim(self):
@@ -1796,21 +1798,20 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return self._cov_params_oim(self._cov_approx_complex_step,
                                     self._cov_approx_centered)
 
-    def _cov_params_opg(self, approx_complex_step=True,
-                        approx_centered=False):
+    def _cov_params_opg(self, approx_complex_step=True, approx_centered=False):
         nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
-        cov_params, singular_values = pinv_extended(
-            nobs * self.model.opg_information_matrix(
-                self.params, transformed=True,
-                approx_complex_step=approx_complex_step,
-                approx_centered=approx_centered)
-        )
-        self.model.update(self.params)
 
+        evaluated_hessian = nobs * self.model._hessian_opg(self.params,
+                                        transformed=True,
+                                        approx_complex_step=approx_complex_step,
+                                        approx_centered=approx_centered)
+
+        (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
+
+        self.model.update(self.params)
         if self._rank is None:
             self._rank = np.linalg.matrix_rank(np.diag(singular_values))
-
-        return cov_params
+        return -neg_cov
 
     @cache_readonly
     def cov_params_opg(self):
@@ -1834,20 +1835,20 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
         cov_opg = self._cov_params_opg(approx_complex_step=approx_complex_step,
                                        approx_centered=approx_centered)
-        evaluated_hessian = (
-            nobs * self.model.observed_information_matrix(
-                self.params, transformed=True,
-                approx_complex_step=approx_complex_step,
-                approx_centered=approx_centered)
-        )
-        self.model.update(self.params)
+
+        evaluated_hessian = nobs * self.model.hessian(self.params,
+                                        hessian_method='oim',
+                                        transformed=True,
+                                        approx_complex_step=approx_complex_step,
+                                        approx_centered=approx_centered)
+
         cov_params, singular_values = pinv_extended(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
 
+        self.model.update(self.params)
         if self._rank is None:
             self._rank = np.linalg.matrix_rank(np.diag(singular_values))
-
         return cov_params
 
     @cache_readonly
@@ -1864,23 +1865,21 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
         cov_opg = self._cov_params_opg(approx_complex_step=approx_complex_step,
                                        approx_centered=approx_centered)
-        if approx_complex_step:
-            evaluated_hessian = nobs * self.model._hessian_complex_step(
-                self.params, transformed=True
-            )
-        else:
-            evaluated_hessian = nobs * self.model._hessian_finite_difference(
-                self.params, transformed=True,
-                approx_centered=approx_centered
-            )
-        self.model.update(self.params)
-        cov_params, singular_values = pinv_extended(
+
+        evaluated_hessian = nobs * self.model.hessian(self.params,
+                                        transformed=True,
+                                        method='approx',
+                                        approx_complex_step=approx_complex_step)
+        # TODO: Case with "not approx_complex_step" is not
+        # hit in tests as of 2017-05-19
+
+        (cov_params, singular_values) = pinv_extended(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
 
+        self.model.update(self.params)
         if self._rank is None:
             self._rank = np.linalg.matrix_rank(np.diag(singular_values))
-
         return cov_params
 
     @cache_readonly
@@ -2367,7 +2366,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             self.model._get_prediction_index(start, end, index))
 
         # Handle `dynamic`
-        if isinstance(dynamic, str):
+        if isinstance(dynamic, (bytes, unicode)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
 
         # Perform the prediction

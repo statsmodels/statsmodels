@@ -97,8 +97,7 @@ def _is_using_ndarray(endog, exog):
 
 
 def _is_using_pandas(endog, exog):
-    # TODO: Remove WidePanel when finished with it
-    klasses = (pd.Series, pd.DataFrame, pd.WidePanel, pd.Panel)
+    from statsmodels.compat.pandas import data_klasses as klasses
     return (isinstance(endog, klasses) or isinstance(exog, klasses))
 
 

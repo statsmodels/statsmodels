@@ -557,7 +557,8 @@ def pacf_ols(x, nlags=40):
 
 
 def pacf(x, nlags=40, method='ywunbiased', alpha=None):
-    '''Partial autocorrelation estimated
+    """
+    Partial autocorrelation estimated
 
     Parameters
     ----------
@@ -565,17 +566,16 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
         observations of time series for which pacf is calculated
     nlags : int
         largest lag for which pacf is returned
-    method : 'ywunbiased' (default) or 'ywmle' or 'ols'
+    method : {'ywunbiased', 'ywmle', 'ols'}
         specifies which method for the calculations to use:
 
         - yw or ywunbiased : yule walker with bias correction in denominator
-          for acovf
+          for acovf. Default.
         - ywm or ywmle : yule walker without bias correction
         - ols - regression of time series on lags of it and on constant
         - ld or ldunbiased : Levinson-Durbin recursion with bias correction
         - ldb or ldbiased : Levinson-Durbin recursion without bias correction
-
-    alpha : scalar, optional
+    alpha : float, optional
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
@@ -592,7 +592,7 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     -----
     This solves yule_walker equations or ols for each desired lag
     and contains currently duplicate calculations.
-    '''
+    """
 
     if method == 'ols':
         ret = pacf_ols(x, nlags=nlags)
