@@ -23,14 +23,15 @@ import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.wrapper as wrap
 from statsmodels.regression.linear_model import yule_walker, GLS
 from statsmodels.tsa.tsatools import (lagmat, add_trend,
-                                      _ar_transparams, _ar_invtransparams,
-                                      _ma_transparams, _ma_invtransparams,
                                       unintegrate, unintegrate_levels)
 from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.ar_model import AR
 from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
 from statsmodels.tsa.kalmanf import KalmanFilter
+from . import wold
+
+_unpack_params = wold.ARMAParams._unpack_params
 
 _armax_notes = """
     Notes
@@ -369,24 +370,6 @@ def _arma_predict_in_sample(start, end, endog, resid, k_ar, method):
     return fittedvalues[fv_start:fv_end]
 
 
-def _unpack_params(params, order, k_trend, k_exog, reverse=False):
-    p, q = order
-    k = k_trend + k_exog
-    maparams = params[k+p:]
-    arparams = params[k:k+p]
-    trend = params[:k_trend]
-    exparams = params[k_trend:k]
-    if reverse:
-        return trend, exparams, arparams[::-1], maparams[::-1]
-    return trend, exparams, arparams, maparams
-
-
-def _unpack_order(order):
-    k_ar, k_ma, k = order
-    k_lags = max(k_ar, k_ma+1)
-    return k_ar, k_ma, order, k_lags
-
-
 def _make_arma_names(data, k_trend, order, exog_names):
     k_ar, k_ma = order
     exog_names = exog_names or []
@@ -428,7 +411,7 @@ def _check_estimable(nobs, n_params):
         raise ValueError("Insufficient degrees of freedom to estimate")
 
 
-class ARMA(tsbase.TimeSeriesModel):
+class ARMA(tsbase.TimeSeriesModel, wold.ARMAParams):
 
     __doc__ = tsbase._tsa_doc % {"model" : _arma_model,
                                  "params" : _arma_params, "extra_params" : "",
@@ -595,49 +578,6 @@ class ARMA(tsbase.TimeSeriesModel):
         This is a numerical approximation.
         """
         return approx_hess_cs(params, self.loglike, args=(False,))
-
-    def _transparams(self, params):
-        """
-        Transforms params to induce stationarity/invertability.
-
-        Reference
-        ---------
-        Jones(1980)
-        """
-        k_ar, k_ma = self.k_ar, self.k_ma
-        k = self.k_exog + self.k_trend
-        newparams = np.zeros_like(params)
-
-        # just copy exogenous parameters
-        if k != 0:
-            newparams[:k] = params[:k]
-
-        # AR Coeffs
-        if k_ar != 0:
-            newparams[k:k+k_ar] = _ar_transparams(params[k:k+k_ar].copy())
-
-        # MA Coeffs
-        if k_ma != 0:
-            newparams[k+k_ar:] = _ma_transparams(params[k+k_ar:].copy())
-        return newparams
-
-    def _invtransparams(self, start_params):
-        """
-        Inverse of the Jones reparameterization
-        """
-        k_ar, k_ma = self.k_ar, self.k_ma
-        k = self.k_exog + self.k_trend
-        newparams = start_params.copy()
-        arcoefs = newparams[k:k+k_ar]
-        macoefs = newparams[k+k_ar:]
-        # AR coeffs
-        if k_ar != 0:
-            newparams[k:k+k_ar] = _ar_invtransparams(arcoefs)
-
-        # MA coeffs
-        if k_ma != 0:
-            newparams[k+k_ar:k+k_ar+k_ma] = _ma_invtransparams(macoefs)
-        return newparams
 
     def _get_prediction_index(self, start, end, dynamic, index=None):
         method = getattr(self, 'method', 'mle')
@@ -1264,7 +1204,7 @@ class ARIMA(ARMA):
     predict.__doc__ = _arima_predict
 
 
-class ARMAResults(tsbase.TimeSeriesModelResults):
+class ARMAResults(tsbase.TimeSeriesModelResults, wold.RootsMixin):
     """
     Class to hold results from fitting an ARMA model.
 
@@ -1368,14 +1308,19 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
     """
     _cache = {}
 
+    @cache_readonly
+    def nobs(self):
+        if self.method == 'css':
+            return self.n_totobs - self.k_ar
+        else:
+            return self.n_totobs
+
     #TODO: use this for docstring when we fix nobs issue
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(ARMAResults, self).__init__(model, params, normalized_cov_params,
                                           scale)
         self.sigma2 = model.sigma2
-        nobs = model.nobs
-        self.nobs = nobs
         k_exog = model.k_exog
         self.k_exog = k_exog
         k_trend = model.k_trend
@@ -1392,46 +1337,20 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         self._cache = resettable_cache()
 
     @cache_readonly
-    def arroots(self):
-        return np.roots(np.r_[1, -self.arparams])**-1
-
-    @cache_readonly
-    def maroots(self):
-        return np.roots(np.r_[1, self.maparams])**-1
-
-    @cache_readonly
-    def arfreq(self):
-        r"""
-        Returns the frequency of the AR roots.
-
-        This is the solution, x, to z = abs(z)*exp(2j*np.pi*x) where z are the
-        roots.
-        """
-        z = self.arroots
-        if not z.size:
-            return
-        return np.arctan2(z.imag, z.real) / (2*pi)
-
-    @cache_readonly
-    def mafreq(self):
-        r"""
-        Returns the frequency of the MA roots.
-
-        This is the solution, x, to z = abs(z)*exp(2j*np.pi*x) where z are the
-        roots.
-        """
-        z = self.maroots
-        if not z.size:
-            return
-        return np.arctan2(z.imag, z.real) / (2*pi)
-
-    @cache_readonly
     def arparams(self):
+        return np.r_[1, -self.arcoefs]
+
+    @cache_readonly
+    def maparams(self):
+        return np.r_[1, self.macoefs]
+
+    @cache_readonly
+    def arcoefs(self):
         k = self.k_exog + self.k_trend
         return self.params[k:k+self.k_ar]
 
     @cache_readonly
-    def maparams(self):
+    def macoefs(self):
         k = self.k_exog + self.k_trend
         k_ar = self.k_ar
         return self.params[k+k_ar:]
@@ -1502,8 +1421,8 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
     def _forecast_error(self, steps):
         sigma2 = self.sigma2
-        ma_rep = arma2ma(np.r_[1, -self.arparams],
-                         np.r_[1, self.maparams], lags=steps)
+        ma_rep = arma2ma(np.r_[1, -self.arcoefs],
+                         np.r_[1, self.macoefs], lags=steps)
 
         fcasterr = np.sqrt(sigma2 * np.cumsum(ma_rep**2))
         return fcasterr
@@ -1696,7 +1615,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         from pandas import DataFrame
         # get sample TODO: make better sample machinery for estimation
         k_diff = getattr(self, 'k_diff', 0)
-        if 'mle' in self.model.method:
+        if 'mle' in self.method:
             start = k_diff
         else:
             start = k_diff + self.k_ar
@@ -1820,8 +1739,8 @@ class ARIMAResults(ARMAResults):
 
     def _forecast_error(self, steps):
         sigma2 = self.sigma2
-        ma_rep = arma2ma(np.r_[1, -self.arparams],
-                         np.r_[1, self.maparams], lags=steps)
+        ma_rep = arma2ma(np.r_[1, -self.arcoefs],
+                         np.r_[1, self.macoefs], lags=steps)
 
         fcerr = np.sqrt(np.cumsum(cumsum_n(ma_rep, self.k_diff)**2)*sigma2)
         return fcerr

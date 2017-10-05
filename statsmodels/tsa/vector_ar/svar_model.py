@@ -468,14 +468,14 @@ class SVARProcess(VARProcess):
     """
     def __init__(self, coefs, intercept, sigma_u, A_solve, B_solve,
                  names=None):
-        self.k_ar = len(coefs)
-        self.neqs = coefs.shape[1]
-        self.coefs = coefs
+        VARProcess.__init__(self, coefs,
+                            exog=None, sigma_u=sigma_u, names=names)
+        assert self.k_ar == len(coefs), (self.k_ar, coefs.shape)
+        assert self.neqs == coefs.shape[1], (self.neqs, coeffs.shape)
         self.intercept = intercept
         self.sigma_u = sigma_u
         self.A_solve = A_solve
         self.B_solve = B_solve
-        self.names = names
 
     def orth_ma_rep(self, maxn=10, P=None):
 
@@ -577,7 +577,7 @@ class SVARResults(SVARProcess, VARResults):
         self.ys_lagged = self.endog_lagged = endog_lagged #keep alias for now
         self.dates = dates
 
-        self.n_totobs, self.neqs = self.y.shape
+        self.n_totobs, _ = self.y.shape
         self.nobs = self.n_totobs - lag_order
         k_trend = util.get_trendorder(trend)
         if k_trend > 0: # make this the polynomial trend order
@@ -593,7 +593,10 @@ class SVARResults(SVARProcess, VARResults):
 
         # Each matrix needs to be transposed
         reshaped = self.params[self.k_trend:]
-        reshaped = reshaped.reshape((lag_order, self.neqs, self.neqs))
+        neqs = int((reshaped.size / lag_order) ** 0.5)
+        # kludge b/c self.neqs is not available until after self.arparams
+        # is defined.
+        reshaped = reshaped.reshape((lag_order, neqs, neqs))
 
         # Need to transpose each coefficient matrix
         intercept = self.params[0]
@@ -606,6 +609,9 @@ class SVARResults(SVARProcess, VARResults):
         self.B = B
         self.A_mask = A_mask
         self.B_mask = B_mask
+
+        self.arparams = coefs  # alias used by wold properties
+        assert self.neqs == self.y.shape[1], (self.neqs, self.y.shape[1])
 
         super(SVARResults, self).__init__(coefs, intercept, sigma_u, A,
                              B, names=names)

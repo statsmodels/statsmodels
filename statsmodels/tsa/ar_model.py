@@ -6,8 +6,7 @@ from numpy import dot, identity
 from numpy.linalg import inv, slogdet
 from scipy.stats import norm
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tsa.tsatools import (lagmat, add_trend,
-                                      _ar_transparams, _ar_invtransparams)
+from statsmodels.tsa.tsatools import lagmat, add_trend
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.model as base
 from statsmodels.tools.decorators import (resettable_cache,
@@ -17,6 +16,7 @@ from statsmodels.tsa.kalmanf.kalmanfilter import KalmanFilter
 import statsmodels.base.wrapper as wrap
 from statsmodels.tsa.vector_ar import util
 
+from . import wold
 
 __all__ = ['AR']
 
@@ -52,7 +52,7 @@ def _ar_predict_out_of_sample(y, params, p, k_trend, steps, start=0):
     return forecast
 
 
-class AR(tsbase.TimeSeriesModel):
+class AR(tsbase.TimeSeriesModel, wold.ARMAParams):
     __doc__ = tsbase._tsa_doc % {"model" : "Autoregressive AR(p) model",
                                  "params" : """endog : array-like
         1-d endogenous response variable. The independent variable.""",
@@ -70,30 +70,6 @@ class AR(tsbase.TimeSeriesModel):
 
     def initialize(self):
         pass
-
-    def _transparams(self, params):
-        """
-        Transforms params to induce stationarity/invertability.
-
-        Reference
-        ---------
-        Jones(1980)
-        """
-        p = self.k_ar
-        k = self.k_trend
-        newparams = params.copy()
-        newparams[k:k+p] = _ar_transparams(params[k:k+p].copy())
-        return newparams
-
-    def _invtransparams(self, start_params):
-        """
-        Inverse of the Jones reparameterization
-        """
-        p = self.k_ar
-        k = self.k_trend
-        newparams = start_params.copy()
-        newparams[k:k+p] = _ar_invtransparams(start_params[k:k+p].copy())
-        return newparams
 
     def _presample_fit(self, params, start, p, end, y, predictedvalues):
         """
@@ -597,7 +573,7 @@ class AR(tsbase.TimeSeriesModel):
         return ARResultsWrapper(arfit)
 
 
-class ARResults(tsbase.TimeSeriesModelResults):
+class ARResults(tsbase.TimeSeriesModelResults, wold.RootsMixin):
     """
     Class to hold results from fitting an AR model.
 
@@ -778,10 +754,15 @@ class ARResults(tsbase.TimeSeriesModelResults):
     #    resid = self.resid
     #    return np.dot(resid, resid)
 
+    @property
+    def arparams(self):
+        k = self.k_trend
+        return self.params[k:]
+
     @cache_readonly
     def roots(self):
-        k = self.k_trend
-        return np.roots(np.r_[1, -self.params[k:]]) ** -1
+        # Inherit from RootMixin
+        return self.arroots
 
     @cache_readonly
     def fittedvalues(self):
