@@ -17,6 +17,7 @@ from statsmodels.tsa.statespace import (sarimax, structural, varmax,
                                         dynamic_factor)
 from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal,
                            assert_raises)
+from nose.plugins.attrib import attr
 
 
 def test_sarimax():
@@ -186,6 +187,7 @@ def test_structural():
     assert_allclose(actual, desired)
 
 
+@attr('smoke')
 def test_varmax():
     steps = 10
 
@@ -279,6 +281,7 @@ def test_varmax():
     mod.impulse_responses(mod.start_params, steps)
 
 
+@attr('smoke')
 def test_dynamic_factor():
     steps = 10
     exog = np.random.normal(size=steps)

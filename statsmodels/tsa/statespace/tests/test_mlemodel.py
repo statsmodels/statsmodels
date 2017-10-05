@@ -20,6 +20,9 @@ from statsmodels.datasets import nile
 from numpy.testing import assert_almost_equal, assert_equal, assert_allclose, assert_raises
 from statsmodels.tsa.statespace.tests.results import results_sarimax, results_var_misc
 
+from nose.plugins.attrib import attr
+
+
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 try:
@@ -322,6 +325,7 @@ def test_score_analytic_ar1():
                         analytic_hessian, atol=1e-1)
 
 
+@attr('smoke')
 def test_cov_params():
     mod, res = get_dummy_mod()
 
@@ -351,6 +355,7 @@ def test_cov_params():
         assert_raises(NotImplementedError, mod.fit, res.params, disp=-1, cov_type='invalid_cov_type')
 
 
+@attr('smoke')
 def test_transform():
     # The transforms in MLEModel are noops
     mod = MLEModel([1,2], **kwargs)
@@ -476,6 +481,7 @@ def test_forecast():
     assert_allclose(res.get_forecast(steps=10).predicted_mean, np.ones((10,)) * 2)
 
 
+@attr('smoke')
 def test_summary():
     dates = pd.date_range(start='1980-01-01', end='1984-01-01', freq='AS')
     endog = pd.Series([1,2,3,4,5], index=dates)
@@ -713,6 +719,8 @@ def test_pandas_endog():
     mod = check_endog(endog, k_endog=2, **kwargs2)
     mod.filter([])
 
+
+@attr('smoke')
 def test_diagnostics():
     mod, res = get_dummy_mod()
 
@@ -809,6 +817,8 @@ def test_diagnostics_nile_durbinkoopman():
     actual = res.test_heteroskedasticity(method='breakvar')[0, 0]
     assert_allclose(actual, [0.61], atol=1e-2)
 
+
+@attr('smoke')
 def test_prediction_results():
     # Just smoke tests for the PredictionResults class, which is copied from
     # elsewhere in Statsmodels

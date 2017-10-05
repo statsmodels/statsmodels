@@ -5,9 +5,12 @@ from statsmodels.tools.tools import categorical
 from statsmodels.datasets import grunfeld, anes96
 from pandas.util import testing as ptesting
 
+from nose.plugins.attrib import attr
+
 
 class CheckGrouping(object):
 
+    @attr('smoke')
     def test_reindex(self):
         # smoke test
         self.grouping.reindex(self.grouping.index)
@@ -122,6 +125,7 @@ class CheckGrouping(object):
             np.testing.assert_allclose(transformed_slices, expected.values,
                                        rtol=1e-12, atol=1e-25)
 
+    @attr('smoke')
     def test_dummies_groups(self):
         # smoke test, calls dummy_sparse under the hood
         self.grouping.dummies_groups()

@@ -4,6 +4,8 @@ import numpy as np
 from numpy.testing import (assert_, assert_allclose, assert_raises,
                            assert_array_equal)
 
+from nose.plugins.attrib import attr
+
 import statsmodels.datasets.interest_inflation.data as e6
 from statsmodels.compat.python import range
 from statsmodels.tools.testing import assert_equal
@@ -1464,6 +1466,7 @@ def test_exceptions():
         pass             # can't import assert_raises_regex.
 
 
+@attr('smoke')
 def test_select_coint_rank():  # This is only a smoke test.
     if debug_mode:
         if "select_coint_rank" not in to_test:  # pragma: no cover

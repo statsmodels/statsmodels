@@ -4,6 +4,8 @@ from statsmodels.compat.testing import skip, skipif
 import os
 import warnings
 
+from nose.plugins.attrib import attr
+
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_allclose,
                            assert_raises, dec)
@@ -149,6 +151,7 @@ class CheckArmaResultsMixin(object):
         assert_almost_equal(self.res1.sigma2, self.res2.sigma2,
                 self.decimal_sigma2)
 
+    @attr('smoke')
     def test_summary(self):
         # smoke tests
         table = self.res1.summary()
@@ -1564,6 +1567,7 @@ def test_arima_wrapper():
     assert_equal(res.model.endog_names, 'D.cpi')
 
 
+@attr('smoke')
 def test_1dexog():
     # smoke test, this will raise an error if broken
     dta = load_macrodata_pandas().data
@@ -1719,6 +1723,7 @@ def test_arima_predict_exog():
     #assert_almost_equal(predict, predict_expected.values, 3)
 
 
+@attr('smoke')
 def test_arima_no_diff():
     # issue 736
     # smoke test, predict will break if we have ARIMAResults but
@@ -1733,6 +1738,7 @@ def test_arima_no_diff():
     res.predict()
 
 
+@attr('smoke')
 def test_arima_predict_noma():
     # issue 657
     # smoke test
@@ -1826,6 +1832,7 @@ def test_arima_small_data_bug():
     assert_raises(ValueError, mod.fit)
 
 
+@attr('smoke')
 def test_arima_dataframe_integer_name():
     # Smoke Test for Issue 1038
     from datetime import datetime

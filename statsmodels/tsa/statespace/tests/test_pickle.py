@@ -27,6 +27,8 @@ from statsmodels.tsa.statespace.representation import Representation
 from statsmodels.tsa.statespace.structural import UnobservedComponents
 from .results import results_kalman_filter
 
+from nose.plugins.attrib import attr
+
 # Skip copy test on older NumPy since copy does not preserve order
 NP_LT_18 = LooseVersion(np.__version__).version[:2] < [1, 8]
 
@@ -57,6 +59,7 @@ def test_pickle_fit_sarimax():
     assert_allclose(res.impulse_responses(10), res.impulse_responses(10))
 
 
+@attr('smoke')
 def test_unobserved_components_pickle():
     # Tests for missing data
     nobs = 20

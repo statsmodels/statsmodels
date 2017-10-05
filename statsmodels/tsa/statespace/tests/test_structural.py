@@ -17,6 +17,7 @@ from statsmodels.tsa.statespace.structural import UnobservedComponents
 from statsmodels.tsa.statespace.tests.results import results_structural
 from statsmodels.tools import add_constant
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
+from nose.plugins.attrib import attr
 
 
 try:
@@ -30,6 +31,7 @@ dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start='1959-01-01', end='2009-07-01', freq='QS')
 
 
+@attr('smoke')
 def run_ucm(name):
     true = getattr(results_structural, name)
 
@@ -296,6 +298,7 @@ def test_forecast():
     assert_allclose(actual, desired)
 
 
+@attr('smoke')
 def test_misc_exog():
     # Tests for missing data
     nobs = 20

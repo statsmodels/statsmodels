@@ -14,6 +14,7 @@ import pandas as pd
 from statsmodels.tools import add_constant
 from statsmodels.tsa.regime_switching import markov_autoregression
 from numpy.testing import assert_equal, assert_allclose, assert_raises
+from nose.plugins.attrib import attr
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -232,6 +233,7 @@ class MarkovAutoregression(object):
         assert_allclose(res.llf, self.true['llf_fit'], atol=self.atol,
                         rtol=self.rtol)
 
+    @attr('smoke')
     def test_fit_em(self, **kwargs):
         # Test EM fitting (smoke test)
         res_em = self.model._fit_em(**kwargs)
