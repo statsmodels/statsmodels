@@ -7,6 +7,28 @@ import warnings
 __all__ = ['resettable_cache', 'cache_readonly', 'cache_writable']
 
 
+def copy_doc(docstring):
+    """
+
+    Add a docstring to a function, so that
+
+        def foo(x):
+            [...]
+        foo.__doc__ = bar
+
+    can be replaced with:
+
+        @copy_doc(bar)
+        def foo(x):
+            [...]
+
+    """
+    def decoration(func):
+        func.__doc__ = docstring
+        return func
+    return decoration
+
+
 class ResettableCache(dict):
     """
     Dictionary whose elements mey depend one from another.
