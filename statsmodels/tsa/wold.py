@@ -75,7 +75,7 @@ def _check_intercept_shape(intercept, neqs):
 # TODO: re-cover the ValueErrors here
 def _unpack_lags_and_neqs(ar, ma, intercept):
     # Check if these coefficients correspond to a vector-ARMA
-        
+
     k_ar = ar.shape[0]
     if len(ar.shape) > 1:
         _check_param_dims(ar)
@@ -94,57 +94,13 @@ def _unpack_lags_and_neqs(ar, ma, intercept):
             neqs = ma.shape[1]
     else:
         k_ma = 0
-    
+
     intercept = _check_intercept_shape(intercept, neqs)
     return (k_ar, k_ma, neqs, intercept)
 
 
 # -----------------------------------------------------------------------
 # Base/Mixin Classes
-
-class CoeffCompat(object):
-    def __getattr__(self, name, *args):
-        # `*args` allows for possibility user passed default val
-        try:
-            return object.__getattr__(self, name)
-        except AttributeError:
-            # TODO: handle AttributeError --> prevent recursion
-            if name == 'arcoefs':
-                arparams = object.__getattr__(self, 'arparams')
-                return -arparams[1:]
-            elif name == 'macoefs':
-                maparams = object.__getattr__(self, 'maparams')
-                return maparams[1:]
-            elif name == 'arparams':
-                arcoefs = object.__getattr__(self, 'arcoefs')
-                return np.r_[1, -arcoefs]
-            elif name == 'maparams':
-                macoefs = object.__getattr__(self, 'macoefs')
-                return np.r_[1, macoefs]
-            elif name == 'arpoly':
-                return np.polynomial.Polynomial(self.arparams)
-            elif name == 'mapoly':
-                return np.polynomial.Polynomial(self.maparams)
-            else:
-                raise
-
-
-    '''
-    def __getattr__(self, name, *args):
-        # *args allows for possibility user passed default val
-        try:
-            return object.__getattr__(name)
-        except AttributeError:
-            if name == 'arparams':
-                if not hasattr(self, 'arcoefs'):
-                    raise
-                arcoefs = object.__getattr__(self, 'arcoefs')
-                return np.r_[1, -arcoefs]
-            else:
-                raise
-    '''
-
-
 
 class _DimBase(object):
     @property
@@ -338,7 +294,7 @@ class ARMAParams(object):
         maparams = params[k+k_ar:]
 
         newparams = params.copy()
-        
+
         if k != 0:
             # just copy exogenous parameters
             newparams[:k] = params[:k]
@@ -415,7 +371,7 @@ class ARMAParams(object):
             for kiter in range(j):
                 tmp[kiter] = (params[kiter] + a * params[j-kiter-1])/(1-a**2)
             params[:j] = tmp[:j]
-        
+
         invarcoefs = -np.log((1-params)/(1+params))
         return invarcoefs
 
@@ -434,11 +390,11 @@ class ARMAParams(object):
             for kiter in range(j):
                 tmp[kiter] = (macoefs[kiter]-b * macoefs[j-kiter-1])/(1-b**2)
             macoefs[:j] = tmp[:j]
-        
+
         invmacoefs = -np.log((1-macoefs)/(1+macoefs))
         return invmacoefs
 
-    @staticmethod   
+    @staticmethod
     def _ma_transparams(params):
         """Transforms params to induce stationarity/invertability.
 
@@ -472,8 +428,8 @@ class VARRepresentation(_DimBase):
 
     Parameters
     ----------
-    arparams : ndarray (p x k x k)
-    maparams : ndarray (q x k x k), optional
+    arcoefs : ndarray (p x k x k)
+    macoefs : ndarray (q x k x k), optional
     intercept : ndarray (length k), optional
 
     Returns
@@ -490,27 +446,29 @@ class VARRepresentation(_DimBase):
 
     # k_trend? # TODO: fix docstring signature
     # TODO: clarify coefs vs params in arguments
-    def __init__(self, arparams, maparams=None, intercept=None):
+    def __init__(self, arcoefs, macoefs=None, intercept=None):
         """
-        
+
         Parameters
         ----------
-        arparams : ndarray (p x k x k)
+        arcoefs : ndarray (p x k x k)
+
+        # FIXME: macoefs?
 
         intercept : ndarray (k x 1), optional
-        
+
         """
-        self.coefs = arparams  # for the VAR classes that inherit from this
-        
-        arparams = _shape_params(arparams)
-        maparams = _shape_params(maparams)
+        self.coefs = arcoefs  # for the VAR classes that inherit from this
 
-        self.arparams = arparams
-        self.maparams = maparams
-        # TODO: i dont think we actually do anything useful with maparams
+        arcoefs = _shape_params(arcoefs)
+        macoefs = _shape_params(macoefs)
 
-        (k_ar, k_ma, neqs, intercept) = _unpack_lags_and_neqs(arparams,
-                                                              maparams, 
+        self.arcoefs = arcoefs
+        self.macoefs = macoefs
+        # TODO: i dont think we actually do anything useful with macoefs
+
+        (k_ar, k_ma, neqs, intercept) = _unpack_lags_and_neqs(arcoefs,
+                                                              macoefs,
                                                               intercept)
 
         self.intercept = intercept
@@ -518,13 +476,13 @@ class VARRepresentation(_DimBase):
     # TODO: maybe call this "arroots"?
     @cache_readonly
     def roots(self):
-        arparams = self.arparams
+        arcoefs = self.arcoefs
         neqs = self.neqs
         k_ar = self.k_ar
-        
+
         p = neqs * k_ar
         arr = np.zeros((p, p))
-        arr[:neqs, :] = np.column_stack(arparams)
+        arr[:neqs, :] = np.column_stack(arcoefs)
         arr[neqs:, :-neqs] = np.eye(p-neqs)
         roots = np.linalg.eig(arr)[0]**-1
         idx = np.argsort(np.abs(roots))[::-1]  # sort by reverse modulus
@@ -532,9 +490,9 @@ class VARRepresentation(_DimBase):
 
     @property
     def _char_mat(self):
-        arparams = self.arparams
+        arcoefs = self.arcoefs
         neqs = self.neqs
-        return np.eye(neqs) - arparams.sum(axis=0)
+        return np.eye(neqs) - arcoefs.sum(axis=0)
 
     # TODO: ARIMA
     def long_run_effects(self):
@@ -583,7 +541,7 @@ class VARRepresentation(_DimBase):
         Checks if det(I - Az) = 0 for any mod(z) <= 1, so all the
         eigenvalues of the companion matrix must lie outside the unit circle.
         """
-        coefs = self.arparams
+        coefs = self.arcoefs
 
         from statsmodels.tsa.vector_ar.util import comp_matrix
         A_var1 = comp_matrix(coefs)
@@ -625,11 +583,11 @@ class VARRepresentation(_DimBase):
         -------
         phis : ndarray (maxn + 1 x k x k)
         """
-        arparams = self.arparams
-        (p, k, k) = arparams.shape
-        maparams = self.maparams
-        #if maparams.shape[0] != 1:
-        #    raise NotImplementedError # FIXME: maparams can be None
+        arcoefs = self.arcoefs
+        (p, k, k) = arcoefs.shape
+        macoefs = self.macoefs
+        #if macoefs.shape[0] != 1:
+        #    raise NotImplementedError # FIXME: macoefs can be None
         phis = np.zeros((maxn+1, k, k))
         phis[0] = np.eye(k)
 
@@ -638,11 +596,11 @@ class VARRepresentation(_DimBase):
             for j in range(1, i+1):
                 if j > p:
                     break
-            
-                phis[i] += np.dot(phis[i-j], arparams[j-1])
-        
+
+                phis[i] += np.dot(phis[i-j], arcoefs[j-1])
+
         return phis
-        # TODO: theres an analytical solution for this isnt there?
+        # TODO: there's an analytical solution for this isnt there?
         # TODO: once we have the initial conditions, can we use an analytic
         # solution for the tail?
 
@@ -675,9 +633,9 @@ class ARMARepresentation(_DimBase, RootsMixin):
 
         Examples
         --------
-        >>> arparams = [.75, -.25]
-        >>> maparams = [.65, .35]
-        >>> arma_process = sm.tsa.ArmaProcess.from_coeffs(ar, ma)
+        >>> arcoefs = [.75, -.25]
+        >>> macoefs = [.65, .35]
+        >>> arma_process = sm.tsa.ArmaProcess.from_coeffs(arcoefs, macoefs)
         >>> arma_process.isstationary
         True
         >>> arma_process.isinvertible
@@ -700,7 +658,7 @@ class ARMARepresentation(_DimBase, RootsMixin):
         return not self.__eq__(other)
 
     def __mul__(self, other):
-        if isinstance(other, self.__class__) or issubclass(other.__class__, ARMARepresentation): # Second condition subsumes first
+        if issubclass(other.__class__, ARMARepresentation):
             ar = (self.arpoly * other.arpoly).coef
             ma = (self.mapoly * other.mapoly).coef
         elif not isinstance(other, (list, tuple)) or len(other) != 2:
@@ -721,9 +679,11 @@ class ARMARepresentation(_DimBase, RootsMixin):
         cname = self.__class__.__name__
         nobs = getattr(self, 'nobs', None)
         if nobs is not None:
-            return '{0}(AR: {1}, MA: {2}, nobs={3}) at {4}'.format(cname, arlist, malist, nobs, hex(id(self)))
+            msg = '{0}(AR: {1}, MA: {2}, nobs={3}) at {4}'
+            return msg.format(cname, arlist, malist, nobs, hex(id(self)))
         else:
-            return '%{0}(AR: {1}, MA: {2}) at {3}'.format(cname, arlist, malist, hex(id(self)))
+            msg = '%{0}(AR: {1}, MA: {2}) at {3}'
+            return msg.format(cname, arlist, malist, hex(id(self)))
 
     def __str__(self):
         arlist = self.ar.tolist()
@@ -742,16 +702,16 @@ class ARMARepresentation(_DimBase, RootsMixin):
 
         self.arcoefs = -self.ar[1:]
         self.macoefs = self.ma[1:] # TODO: should we call these e.g. "macoefs" and "arcoefs"?
-        
+
         (k_ar, k_ma, neqs, intercept) = _unpack_lags_and_neqs(self.ar, self.ma, intercept)
         self.intercept = intercept
 
         if neqs != 1:
             raise NotImplementedError('Lag Polynomials for the vector case not implemented.')
-        
+
         self.arpoly = np.polynomial.Polynomial(self.ar)
         self.mapoly = np.polynomial.Polynomial(self.ma)
-        
+
         # TOOD: I'd rather this not be an attribute at this juncture.
         self.nobs = nobs
 
@@ -860,7 +820,7 @@ class ARMARepresentation(_DimBase, RootsMixin):
         This might be more accurately referred to as a Spectral Density.
         Spectral Density refers to the population function, while Periodiogram
         refers to the sample estimate of the Spectral Density [citation needed]
-        
+
         Periodogram for ARMA process given by lag-polynomials ar and ma
 
         Let $\phi$ and $\theta$ be lag polynomials so that we can write
@@ -910,7 +870,9 @@ class ARMARepresentation(_DimBase, RootsMixin):
         _check_is_poly(np.array(ar)) # TODO: get rid of redundant checking
         _check_is_poly(np.array(ma))
         (w, h) = scipy.signal.freqz(ma, ar, worN=worN, whole=whole)
-        sd = np.abs(h)**2/np.sqrt(2*np.pi)  # TODO: is this normalization standard in the literature?  Fourier Transforms are like armpits...
+        sd = np.abs(h)**2/np.sqrt(2*np.pi)
+        # TODO: is this normalization standard in the literature?
+        # Fourier Transforms are like armpits...
         if np.isnan(h).any():
             # This happens with unit root or seasonal unit root
             msg = 'nan in frequency response h, may be a unit root'
@@ -925,6 +887,7 @@ def arma_periodogram(ar, ma, worN=None, whole=0):
     arma = ARMARepresentation(ar, ma)
     return arma.arma_periodogram(worN=worN, whole=whole)
 
+@pandas.util.decorators.deprecate_kwarg(old_arg_name='nobs', new_arg_name='lags')
 def arma2ar(ar, ma, lags):  # TODO: not hit in tests
     arma = ARMARepresentation(ar, ma)
     return arma.arma2ar(lags)

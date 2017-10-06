@@ -1310,7 +1310,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults, wold.RootsMixin):
 
     @cache_readonly
     def nobs(self):
-        if self.method == 'css':
+        if self.model.method == 'css':
             return self.n_totobs - self.k_ar
         else:
             return self.n_totobs
@@ -1338,19 +1338,34 @@ class ARMAResults(tsbase.TimeSeriesModelResults, wold.RootsMixin):
 
     @cache_readonly
     def arparams(self):
-        return np.r_[1, -self.arcoefs]
+        # TODO: standardize naming conventions, under which `arparams`
+        # corresponds to `np.r_[1, -self.arcoefs]`
+        k = self.k_exog + self.k_trend
+        return self.params[k:k+self.k_ar]
 
     @cache_readonly
     def maparams(self):
-        return np.r_[1, self.macoefs]
+        # TODO: standardize naming conventions, under which `macoefs`
+        # corresponds to `np.r_[1, self.macoefs]`
+        k = self.k_exog + self.k_trend
+        k_ar = self.k_ar
+        return self.params[k+k_ar:]
 
     @cache_readonly
     def arcoefs(self):
+        """Alias for arparams used for naming convention compatibility.
+        In the future, `arparams` may be changed to correspond
+        to np.r_[1, -arcoefs]
+        """
         k = self.k_exog + self.k_trend
         return self.params[k:k+self.k_ar]
 
     @cache_readonly
     def macoefs(self):
+        """Alias for maparams used for naming convention compatibility.
+        In the future, `maparams` may be changed to correspond
+        to np.r_[1, macoefs]
+        """
         k = self.k_exog + self.k_trend
         k_ar = self.k_ar
         return self.params[k+k_ar:]
@@ -1615,7 +1630,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults, wold.RootsMixin):
         from pandas import DataFrame
         # get sample TODO: make better sample machinery for estimation
         k_diff = getattr(self, 'k_diff', 0)
-        if 'mle' in self.method:
+        if 'mle' in self.model.method:
             start = k_diff
         else:
             start = k_diff + self.k_ar

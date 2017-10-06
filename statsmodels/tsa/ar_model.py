@@ -755,6 +755,15 @@ class ARResults(tsbase.TimeSeriesModelResults, wold.RootsMixin):
     #    return np.dot(resid, resid)
 
     @property
+    def arcoefs(self):
+        """Alias for arparams used for naming convention compatibility.
+        In the future, `arparams` may be changed to correspond
+        to np.r_[1, -arcoefs]
+        """
+        k = self.k_trend
+        return self.params[k:]
+
+    @property
     def arparams(self):
         k = self.k_trend
         return self.params[k:]

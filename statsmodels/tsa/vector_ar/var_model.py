@@ -1044,7 +1044,7 @@ class VARResults(VARProcess):
         self.arparams = coefs  # alias used by wold properties
         # print(coefs.round(3))
         super(VARResults, self).__init__(coefs, exog, sigma_u, names=names)
-        wold.VARRepresentation.__init__(self, arparams=coefs, maparams=None)
+        wold.VARRepresentation.__init__(self, arcoefs=coefs, macoefs=None)
 
     def plot(self):
         """Plot input time series

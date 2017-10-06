@@ -122,8 +122,8 @@ class UnivariateVARTest(unittest.TestCase):
         maparams = np.array(ma)
         cls.varma = VARRepresentation(arparams, maparams)
 
-    def test_k_ar(self):
-        assert self.varma.k_ma == 0, self.varma.k_ma
+    def test_k_ma(self):
+        assert self.varma.k_ma == 0, (self.varma.k_ma, self.varma.macoefs)
 
     def test_neqs(self):
         assert self.varma.neqs == 1, self.varma.neqs
@@ -153,10 +153,10 @@ class VARRepTest(unittest.TestCase):
         cls.varma2 = VARRepresentation(arparams, maparams, intercept)
 
     def test_k_ar(self):
-        assert self.varma.k_ar == 3, self.varma.k_ar
+        assert self.varma.k_ar == 3, (self.varma.k_ar, self.varma.arcoefs)
 
     def test_k_ma(self):
-        assert self.varma.k_ma == 1, (self.varma.k_ma, self.varma.maparams)
+        assert self.varma.k_ma == 1, (self.varma.k_ma, self.varma.macoefs)
 
     def test_neqs(self):
         assert self.varma.neqs == 2, self.varma.neqs
