@@ -13,7 +13,8 @@ if version >= LooseVersion('0.17.0'):
         return df.sort_values(*args, **kwargs)
 else:
     def sort_values(df, *args, **kwargs):
-        kwargs.setdefault('inplace', False)  # always set inplace with 'False' as default
+        # always set inplace with 'False' as default
+        kwargs.setdefault('inplace', False)
         return df.sort(*args, **kwargs)
 
 try:
@@ -45,8 +46,12 @@ except ImportError:
 
 if version >= '0.20':
     from pandas.tseries import frequencies
+    data_klasses = (pandas.Series, pandas.DataFrame, pandas.Panel)
 else:
     try:
         import pandas.tseries.frequencies as frequencies
     except ImportError:
-        from pandas.core import datetools as frequencies
+        from pandas.core import datetools as frequencies  # noqa
+
+    data_klasses = (pandas.Series, pandas.DataFrame, pandas.Panel,
+                    pandas.WidePanel)

@@ -1,6 +1,7 @@
 '''backported compatibility functions for Python's collections
 
 '''
+from __future__ import absolute_import
 
 try:
     #python >= 2.7

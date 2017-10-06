@@ -2110,7 +2110,7 @@ def test_arima111_predict_exog_2127():
             0.02372018,  0.02374833,  0.02367407,  0.0236443 ,  0.02362868,
             0.02362312])
 
-    assert_allclose(predicts, predicts_res, atol=1e-6)
+    assert_allclose(predicts, predicts_res, atol=5e-6)
 
 
 def test_ARIMA_exog_predict():
