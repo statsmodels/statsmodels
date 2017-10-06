@@ -113,7 +113,7 @@ def test_mult():
 
 class UnivariateVARTest(unittest.TestCase):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         # AR Process that we'll treat as a VAR
         ar = [1, -.25]
         # Note that this induces an AR Polynomial L^0 - L^1 + .25 L^2 --> (1-.5L)**2
@@ -138,7 +138,7 @@ class UnivariateVARTest(unittest.TestCase):
 
 class VARRepTest(unittest.TestCase):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         # VAR with 2 variables and 3 lags
         ar = [[[.1, .2], [.3, .4]], [[.5, .6], [.7, .8]], [[.9, 0], [-.1, -.2]]]
         arparams = np.array(ar)
@@ -190,7 +190,7 @@ class VARRepTest(unittest.TestCase):
 class TestVARNotStationary(unittest.TestCase):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         ar = [[[1., 2, 3], [0, 1., 4], [0, 0, 1.]]]
         # Choose AR params to be not-stationary
         arparams = np.array(ar)
@@ -212,13 +212,14 @@ class TestVARNotStationary(unittest.TestCase):
         # eigenvalues should all be 1
 
         assert self.varma.is_stable(verbose=True)
-        # pass verbose=True just for coverage, the printed output doesnt affect anything
+        # pass verbose=True just for coverage, the printed output
+        # doesnt affect anything
 
 
 class ARRepresentationCase(unittest.TestCase):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         # Basic AR(1)
         cls.ar = [1, -0.5]
         cls.ma = [1]
