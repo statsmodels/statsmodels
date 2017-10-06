@@ -879,7 +879,7 @@ default_latex_fmt = dict(
     empty='',
     missing='--',
     #replacements will be processed in lexicographical order
-    replacements={"#" : "\#", "$" : "\$", "%" : "\%", "&" : "\&", ">" : "$>$", "_" : "\_", "|" : "$|$"} 
+    replacements={"#" : r"\#", "$" : r"\$", "%" : r"\%", "&" : r"\&", ">" : "$>$", "_" : r"\_", "|" : "$|$"} 
 )
 
 default_fmts = dict(
