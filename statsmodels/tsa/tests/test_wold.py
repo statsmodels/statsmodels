@@ -6,6 +6,8 @@ import unittest
 import numpy as np
 import scipy.signal
 
+from numpy.testing import assert_allclose, assert_equal
+
 from statsmodels.tsa import wold
 from statsmodels.tsa.wold import ARMARepresentation, VARRepresentation
 
@@ -42,7 +44,7 @@ def test_arma_periodiogram_AR1():
     (w, h) = scipy.signal.freqz(ma, ar, worN=None, whole=0)
     sd = np.abs(h)**2/np.sqrt(2*np.pi)
 
-    hrng = np.arange(-100, 100) # 100 is an arbitrary cutoff
+    hrng = np.arange(-100, 100)  # 100 is an arbitrary cutoff
     # Autocorrelations
     # The reader can verify that the variance of this process is 4/3
     variance = 4./3.
@@ -51,11 +53,14 @@ def test_arma_periodiogram_AR1():
     fw = 0 * w
     for n in range(len(fw)):
         omega = w[n]
-        val = gammas * np.exp(-1j*omega*hrng) # Note we are not multiplying by 2 here.  I dont know of an especially good reason why not.
-        fw[n] = val.sum().real / np.sqrt(2*np.pi)  # Note that the denominator is not standard across implementations
+        val = gammas * np.exp(-1j*omega*hrng)
+        # Note we are not multiplying by 2 here.  I dont know of an
+        # especially good reason why not.
+        fw[n] = val.sum().real / np.sqrt(2*np.pi)
+        # Note that the denominator is not standard across implementations
 
-    np.testing.assert_allclose(fw, sd)
-    np.testing.assert_equal(wsd[1], sd)
+    assert_allclose(fw, sd)
+    assert_equal(wsd[1], sd)
 
 
 def test_arma_periodiogram_MA1():
@@ -70,9 +75,9 @@ def test_arma_periodiogram_MA1():
     (w, h) = scipy.signal.freqz(ma, ar, worN=None, whole=0)
     sd = np.abs(h)**2/np.sqrt(2*np.pi)
 
-    hrng = np.arange(-100, 100) # 100 is an arbitrary cutoff
+    hrng = np.arange(-100, 100)  # 100 is an arbitrary cutoff
     # Autocorrelations
-    gammas =  np.array([0. for n in hrng])
+    gammas = np.array([0. for n in hrng])
     gammas[100] = 1. + .4**2
     gammas[99] = .4
     gammas[101] = .4
@@ -80,12 +85,14 @@ def test_arma_periodiogram_MA1():
     fw = 0 * w
     for n in range(len(fw)):
         omega = w[n]
-        val = gammas * np.exp(-1j*omega*hrng) # Note we are not multiplying by 2 here.  I dont know of an especially good reason why not.
-        fw[n] = val.sum().real / np.sqrt(2*np.pi)  # Note that the denominator is not standard across implementations
+        val = gammas * np.exp(-1j*omega*hrng)
+        # Note we are not multiplying by 2 here.  I dont know of an
+        # especially good reason why not.
+        fw[n] = val.sum().real / np.sqrt(2*np.pi)
+        # Note that the denominator is not standard across implementations
 
-    np.testing.assert_allclose(fw, sd)
-    np.testing.assert_equal(wsd[1], sd)
-
+    assert_allclose(fw, sd)
+    assert_equal(wsd[1], sd)
 
 
 def test_mult():
@@ -116,7 +123,8 @@ class UnivariateVARTest(unittest.TestCase):
     def setup_class(cls):
         # AR Process that we'll treat as a VAR
         ar = [1, -.25]
-        # Note that this induces an AR Polynomial L^0 - L^1 + .25 L^2 --> (1-.5L)**2
+        # Note that this induces an
+        # AR Polynomial L^0 - L^1 + .25 L^2 --> (1-.5L)**2
         arparams = np.array(ar)
         ma = []
         maparams = np.array(ma)
@@ -129,7 +137,8 @@ class UnivariateVARTest(unittest.TestCase):
         assert self.varma.neqs == 1, self.varma.neqs
 
     def test_roots(self):
-        # Our ar params induce an AR Polynomial L^0 - L^1 + .25 L^2 --> (1-.5L)**2
+        # Our ar params induce an
+        # AR Polynomial L^0 - L^1 + .25 L^2 --> (1-.5L)**2
         # so the roots should both be 2
         roots = self.varma.roots
         assert roots.shape == (2,)
@@ -140,7 +149,9 @@ class VARRepTest(unittest.TestCase):
     @classmethod
     def setup_class(cls):
         # VAR with 2 variables and 3 lags
-        ar = [[[.1, .2], [.3, .4]], [[.5, .6], [.7, .8]], [[.9, 0], [-.1, -.2]]]
+        ar = [[[.1, .2], [.3, .4]],
+              [[.5, .6], [.7, .8]],
+              [[.9, 0], [-.1, -.2]]]
         arparams = np.array(ar)
 
         ma = [[0, .1], [.2, -.3]]
@@ -165,10 +176,11 @@ class VARRepTest(unittest.TestCase):
         # Since no intercept was passed to the constructor, an vector of
         # zeros should have been generated.  The length of this vector should
         # be equal to neqs
-        intercept = self.varma.intercept
+        varma = self.varma
+        intercept = varma.intercept
         assert isinstance(intercept, np.ndarray)
         assert (intercept == 0).all()
-        assert intercept.shape == (self.varma.neqs,), (intercept.shape, self.varma.neqs)
+        assert intercept.shape == (varma.neqs,), (intercept.shape, varma.neqs)
 
     def test_mean(self):
         # the arparams are invertible, so zero-intercept implies zero mean.
@@ -177,14 +189,14 @@ class VARRepTest(unittest.TestCase):
         # TODO: assertion for self.varma2.mean()
 
     def test_long_run_effects(self):
-        assert (self.varma.long_run_effects() == self.varma2.long_run_effects()).all()
+        assert (self.varma.long_run_effects() ==
+                self.varma2.long_run_effects()).all()
 
     def test_roots(self):
         roots = self.varma.roots
         assert roots.shape == (6,)
-        
-        # TODO: meaningful assertion about these
 
+        # TODO: meaningful assertion about these
 
 
 class TestVARNotStationary(unittest.TestCase):
@@ -227,29 +239,32 @@ class ARRepresentationCase(unittest.TestCase):
 
     def test_stationary(self):
         # $y_t = 0.5 * y_{t-1}$ is stationary
-        assert self.arma.isstationary # TODO: This belongs in a separate test
+        assert self.arma.isstationary  # TODO: This belongs in a separate test
 
-    def test_invertible(self): # TODO: get a less-dumb test case
+    def test_invertible(self):  # TODO: get a less-dumb test case
         # The MA component is just a [1], so the roots is an empty array
         assert self.arma.maroots.size == 0
-        # All on an empty set always returns True, so self.maroots is invertible.
+        # All on an empty set always returns True, so self.maroots
+        # is invertible.
         assert self.arma.isinvertible, (self.ar, self.ma)
 
     def test_2ar(self):
-        # Getting the AR Representation should be effectively the identity operation
+        # Getting the AR Representation should be effectively the
+        # identity operation
         ar = self.ar
         ma = self.ma
         arma = self.arma
         arrep = arma.arma2ar(5)
-        
+
         assert (arrep[:2] == ar).all()
 
         # get the same object via the wold.arma2ar function
         arrep2 = wold.arma2ar(ar, ma, 5)
-        assert (arrep2 == arrep).all() # TODO: belongs in separate test?
+        assert (arrep2 == arrep).all()  # TODO: belongs in separate test?
 
     def test_2ma(self):
-        # Getting the MA Representation should be an exponential decay with rate .5
+        # Getting the MA Representation should be an exponential decay
+        # with rate .5
         ar = self.ar
         ma = self.ma
         arma = self.arma

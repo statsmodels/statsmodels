@@ -6,14 +6,13 @@ Decompositions of (difference) stationary time series according
 to Wold's Theorem.
 
 """
-
 import warnings
 
 import numpy as np
+from pandas.util.decorators import deprecate_kwarg
 import scipy.linalg
 import scipy.signal
 
-import pandas.util.decorators
 from statsmodels.tools.decorators import cache_readonly
 
 # -----------------------------------------------------------------------
@@ -39,7 +38,8 @@ def _check_is_poly(params):
     if np.ndim(params) != 1:  # pragma: no cover
         raise ValueError(params.shape, params)
     elif params[0] != 1:  # pragma: no cover
-        raise ValueError('Params must be in the form of a Lag Polynomial', params)
+        msg = 'Params must be in the form of a Lag Polynomial'
+        raise ValueError(msg, params)
 
 
 # TODO: re-cover the ValueErrors here
@@ -47,13 +47,14 @@ def _check_param_dims(params):
     """
     `params` are either `ar` or `ma`
     """
-    #if len(params.shape) == 2:
+    # if len(params.shape) == 2:
     #    params = params[None, :, :]
     if len(params.shape) != 3:  # pragma: no cover
         msg = 'AR and MA should each be 1 or 3-dimensional.'
         raise ValueError(params.shape, msg)
     if params.shape[1] != params.shape[2]:  # pragma: no cover
-        msg = 'Dimensions 1 and 2 of AR coefficients should be equal.  i.e. K x N x N'
+        msg = ('Dimensions 1 and 2 of AR coefficients should be equal.  '
+               'i.e. K x N x N')
         raise ValueError(params.shape, msg)
 
 
@@ -147,7 +148,8 @@ class _DimBase(object):
 class RootsMixin(object):
     @property
     def arroots(self):
-        """Roots of autoregressive lag-polynomial"""  # TODO: should docstring say "inverse"?
+        """Roots of autoregressive lag-polynomial"""
+        # TODO: should docstring say "inverse"?
         return np.roots(np.r_[1, -self.arcoefs])**-1
         # Equiv: self.arpoly.roots()
 
@@ -155,7 +157,8 @@ class RootsMixin(object):
     # you just passed [1, 0]
     @property
     def maroots(self):
-        """Roots of moving average lag-polynomial"""  # TODO: should say "inverse"?
+        """Roots of moving average lag-polynomial"""
+        # TODO: should docstring say "inverse"?
         return np.roots(np.r_[1, self.macoefs])**-1
         # Equiv: self.mapoly.roots()
 
@@ -167,7 +170,7 @@ class RootsMixin(object):
         are the roots.
         """
         z = self.arroots
-        #if not z.size:
+        # if not z.size:
         #    return np.nan
         return np.arctan2(z.imag, z.real) / (2*np.pi)
 
@@ -179,7 +182,7 @@ class RootsMixin(object):
         are the roots.
         """
         z = self.maroots
-        #if not z.size:
+        # if not z.size:
         #    return np.nan
         return np.arctan2(z.imag, z.real) / (2*np.pi)
 
@@ -259,7 +262,6 @@ class RootsMixin(object):
             return (mainv, invertible)
 
 
-
 class ARMAParams(object):
 
     @staticmethod
@@ -275,7 +277,6 @@ class ARMAParams(object):
             maparams = maparams[::-1]
         return (trend, exparams, arparams, maparams)
 
-
     def _transparams(self, params):
         """Transforms params to induce stationarity/invertability.
 
@@ -285,7 +286,6 @@ class ARMAParams(object):
         """
         k_ar = self.k_ar
         k_ma = getattr(self, 'k_ma', 0)
-        #k = self.k_trend
 
         k = getattr(self, 'k_exog', 0) + self.k_trend
 
@@ -443,8 +443,7 @@ class VARRepresentation(_DimBase):
     # def isindependent --> property from varma_process
     # def isstructured --> property from varma_process
 
-
-    # k_trend? # TODO: fix docstring signature
+    # k_trend? # FIXME: fix docstring signature --> macoefs
     # TODO: clarify coefs vs params in arguments
     def __init__(self, arcoefs, macoefs=None, intercept=None):
         """
@@ -452,8 +451,6 @@ class VARRepresentation(_DimBase):
         Parameters
         ----------
         arcoefs : ndarray (p x k x k)
-
-        # FIXME: macoefs?
 
         intercept : ndarray (k x 1), optional
 
@@ -504,7 +501,7 @@ class VARRepresentation(_DimBase):
         """
         try:
             ret = scipy.linalg.inv(self._char_mat)
-        except np.linalg.LinAlgError: ## warn?
+        except np.linalg.LinAlgError:  # TODO: warn?
             # Singular matrix
             ret = np.nan
         return ret
@@ -545,7 +542,7 @@ class VARRepresentation(_DimBase):
 
         from statsmodels.tsa.vector_ar.util import comp_matrix
         A_var1 = comp_matrix(coefs)
-        eigs = np.linalg.eigvals(A_var1) ## TODO: cache?
+        eigs = np.linalg.eigvals(A_var1)  # TODO: cache?
 
         if verbose:
             print('Eigenvalues of VAR(1) rep')
@@ -557,7 +554,8 @@ class VARRepresentation(_DimBase):
     # TODO: scipy.signal.lfilter is very similar to this in the 1-dimensional
     # case.  Does it have an implementation we should be using for the
     # general case?
-    # FIXME: If there are any ma coefficients already attached, they are ignored
+    # FIXME: If there are any ma coefficients already attached, they
+    # are ignored
     def ma_rep(self, maxn=10):
         r"""MA(\infty) representation of VAR(p) process
 
@@ -585,9 +583,10 @@ class VARRepresentation(_DimBase):
         """
         arcoefs = self.arcoefs
         (p, k, k) = arcoefs.shape
-        macoefs = self.macoefs
-        #if macoefs.shape[0] != 1:
-        #    raise NotImplementedError # FIXME: macoefs can be None
+        # macoefs = self.macoefs  # TODO: Wait, do we want macoefs or maparams?
+        # if macoefs is not None and macoefs.shape[0] != 1:
+        #    raise NotImplementedError
+
         phis = np.zeros((maxn+1, k, k))
         phis[0] = np.eye(k)
 
@@ -611,7 +610,6 @@ class ARMARepresentation(_DimBase, RootsMixin):
     # quantecon.arma.set_params docstring is nice
     # def spectral_density(self) # See quantecon.arma
     # def autocorrelation(self)
-
 
     # TODO: I *really* don't think `nobs` should be an attribute here.
     @classmethod
@@ -652,7 +650,10 @@ class ARMARepresentation(_DimBase, RootsMixin):
 
     def __eq__(self, other):
         # Easier to check polynomials than coefficients
-        return self.arpoly == other.arpoly and self.mapoly == other.mapoly
+        # TODO: I'd rather `nobs` not be an attribute at this level.
+        return (self.arpoly == other.arpoly and
+                self.mapoly == other.mapoly and
+                getattr(self, 'nobs', None) == getattr(other, 'nobs', None))
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -691,23 +692,27 @@ class ARMARepresentation(_DimBase, RootsMixin):
         cname = self.__class__.__name__
         return '{0}\nAR: {1}\nMA: {2}'.format(cname, arlist, malist)
 
-
+    # TODO: Make the inputs fooparams or foocoefs; don't pile on another
+    # naming scheme.
     def __init__(self, ar, ma, intercept=0, nobs=None):
         # The inputs ar and ma are array-like in the form of lag
         # polynomials, i.e. always start with a [1]
-        self.ar = np.asarray(ar) ## im confused about this vs arparams vs arpoly ... we need a consistent way of passing inptus
+        self.ar = np.asarray(ar)
         self.ma = np.asarray(ma)
         _check_is_poly(self.ar)
         _check_is_poly(self.ma)
 
         self.arcoefs = -self.ar[1:]
-        self.macoefs = self.ma[1:] # TODO: should we call these e.g. "macoefs" and "arcoefs"?
+        self.macoefs = self.ma[1:]
 
-        (k_ar, k_ma, neqs, intercept) = _unpack_lags_and_neqs(self.ar, self.ma, intercept)
+        (k_ar, k_ma, neqs, intercept) = _unpack_lags_and_neqs(self.ar,
+                                                              self.ma,
+                                                              intercept)
         self.intercept = intercept
 
         if neqs != 1:
-            raise NotImplementedError('Lag Polynomials for the vector case not implemented.')
+            msg = 'Lag Polynomials for the vector case not implemented.'
+            raise NotImplementedError(msg)
 
         self.arpoly = np.polynomial.Polynomial(self.ar)
         self.mapoly = np.polynomial.Polynomial(self.ma)
@@ -715,9 +720,9 @@ class ARMARepresentation(_DimBase, RootsMixin):
         # TOOD: I'd rather this not be an attribute at this juncture.
         self.nobs = nobs
 
-
-    # TODO: Should this return a ARMARepresentation object instead of just an array?
-    @pandas.util.decorators.deprecate_kwarg(old_arg_name='nobs', new_arg_name='lags')
+    # TODO: Should this return a ARMARepresentation object instead of
+    # just an array?
+    @deprecate_kwarg(old_arg_name='nobs', new_arg_name='lags')
     def arma2ma(self, lags=None):
         """get the impulse response function (MA representation) for
         ARMA process
@@ -774,14 +779,15 @@ class ARMARepresentation(_DimBase, RootsMixin):
         """
         ar = self.ar
         ma = self.ma
-        _check_is_poly(np.array(ar)) # TODO: get rid of redundant checking
+        _check_is_poly(np.array(ar))  # TODO: get rid of redundant checking
         _check_is_poly(np.array(ma))
         impulse = np.zeros(lags)
         impulse[0] = 1.0
         return scipy.signal.lfilter(ma, ar, impulse)
 
-    # TODO: Should this return a ARMARepresentation object instead of just an array?
-    @pandas.util.decorators.deprecate_kwarg(old_arg_name='nobs', new_arg_name='lags')
+    # TODO: Should this return a ARMARepresentation object instead
+    # of just an array?
+    @deprecate_kwarg(old_arg_name='nobs', new_arg_name='lags')
     def arma2ar(self, lags):
         """get the AR representation of an ARMA process
 
@@ -867,7 +873,7 @@ class ARMARepresentation(_DimBase, RootsMixin):
         """
         ar = self.ar
         ma = self.ma
-        _check_is_poly(np.array(ar)) # TODO: get rid of redundant checking
+        _check_is_poly(np.array(ar))  # TODO: get rid of redundant checking
         _check_is_poly(np.array(ma))
         (w, h) = scipy.signal.freqz(ma, ar, worN=worN, whole=whole)
         sd = np.abs(h)**2/np.sqrt(2*np.pi)
@@ -880,24 +886,24 @@ class ARMARepresentation(_DimBase, RootsMixin):
         return (w, sd)
 
 
-
-
-
 def arma_periodogram(ar, ma, worN=None, whole=0):
     arma = ARMARepresentation(ar, ma)
     return arma.arma_periodogram(worN=worN, whole=whole)
 
-@pandas.util.decorators.deprecate_kwarg(old_arg_name='nobs', new_arg_name='lags')
-def arma2ar(ar, ma, lags):  # TODO: not hit in tests
+
+# TODO: not hit in tests
+@deprecate_kwarg(old_arg_name='nobs', new_arg_name='lags')
+def arma2ar(ar, ma, lags):
     arma = ARMARepresentation(ar, ma)
     return arma.arma2ar(lags)
+
 
 def arma2ma(ar, ma, lags):
     arma = ARMARepresentation(ar, ma)
     return arma.arma2ma(lags)
 
-# alias, easier to remember
-@pandas.util.decorators.deprecate_kwarg(old_arg_name='nobs', new_arg_name='leads')
-def arma_impulse_response(ar, ma, leads=100):
-    return arma2ma(ar, ma, lags=leads)
 
+@deprecate_kwarg(old_arg_name='nobs', new_arg_name='leads')
+def arma_impulse_response(ar, ma, leads=100):
+    """alias for arma2ma"""
+    return arma2ma(ar, ma, lags=leads)
