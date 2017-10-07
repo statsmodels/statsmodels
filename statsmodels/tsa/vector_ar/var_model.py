@@ -31,10 +31,12 @@ from statsmodels.tsa.vector_ar import output, plotting, util
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.wrapper as wrap
 
+from statsmodels.tsa import wold
 
 # -------------------------------------------------------------------------------
 # VAR process routines
 
+# TODO: Deprecate; for now this is still used by vecm
 def ma_rep(coefs, maxn=10):
     r"""
     MA(\infty) representation of VAR(p) process
@@ -74,30 +76,6 @@ def ma_rep(coefs, maxn=10):
             phis[i] += np.dot(phis[i-j], coefs[j-1])
 
     return phis
-
-
-def is_stable(coefs, verbose=False):
-    """
-    Determine stability of VAR(p) system by examining the eigenvalues of the
-    VAR(1) representation
-
-    Parameters
-    ----------
-    coefs : ndarray (p x k x k)
-
-    Returns
-    -------
-    is_stable : bool
-    """
-    A_var1 = util.comp_matrix(coefs)
-    eigs = np.linalg.eigvals(A_var1)
-
-    if verbose:
-        print('Eigenvalues of VAR(1) rep')
-        for val in np.abs(eigs):
-            print(val)
-
-    return (np.abs(eigs) <= 1).all()
 
 
 def var_acf(coefs, sig_u, nlags=None):
@@ -748,7 +726,7 @@ class VAR(tsbase.TimeSeriesModel):
         return LagOrderResults(ics, selected_orders, vecm=False)
 
 
-class VARProcess(object):
+class VARProcess(wold.VARRepresentation):
     """
     Class represents a known VAR(p) process
 
@@ -764,9 +742,10 @@ class VARProcess(object):
     **Attributes**:
     """
     def __init__(self, coefs, exog, sigma_u, names=None):
-        self.k_ar = len(coefs)
-        self.neqs = coefs.shape[1]
         self.coefs = coefs
+        self.arcoefs = coefs
+        assert self.k_ar == len(coefs), (self.k_ar, len(coefs))
+        assert self.neqs == coefs.shape[1], (self.neqs, coefs.shape[1])
         self.exog = exog
         self.sigma_u = sigma_u
         self.names = names
@@ -783,21 +762,6 @@ class VARProcess(object):
 
         return output
 
-    def is_stable(self, verbose=False):
-        """Determine stability based on model coefficients
-
-        Parameters
-        ----------
-        verbose : bool
-            Print eigenvalues of the VAR(1) companion
-
-        Notes
-        -----
-        Checks if det(I - Az) = 0 for any mod(z) <= 1, so all the eigenvalues of
-        the companion matrix must lie outside the unit circle
-        """
-        return is_stable(self.coefs, verbose=verbose)
-
     def plotsim(self, steps=1000):
         """
         Plot a simulation from the VAR(p) process for the desired number of
@@ -805,29 +769,6 @@ class VARProcess(object):
         """
         Y = util.varsim(self.coefs, self.exog, self.sigma_u, steps=steps)
         plotting.plot_mts(Y)
-
-    def mean(self):
-        r"""Mean of stable process
-
-        Lutkepohl eq. 2.1.23
-
-        .. math:: \mu = (I - A_1 - \dots - A_p)^{-1} \alpha
-        """
-        return np.linalg.solve(self._char_mat, self.exog)
-
-    def ma_rep(self, maxn=10):
-        r"""Compute MA(:math:`\infty`) coefficient matrices
-
-        Parameters
-        ----------
-        maxn : int
-            Number of coefficient matrices to compute
-
-        Returns
-        -------
-        coefs : ndarray (maxn x k x k)
-        """
-        return ma_rep(self.coefs, maxn=maxn)
 
     def orth_ma_rep(self, maxn=10, P=None):
         r"""Compute orthogonalized MA coefficient matrices using P matrix such
@@ -847,23 +788,9 @@ class VARProcess(object):
         """
         return orth_ma_rep(self, maxn, P)
 
-    def long_run_effects(self):
-        """Compute long-run effect of unit impulse
-
-        .. math::
-
-            \Psi_\infty = \sum_{i=0}^\infty \Phi_i
-
-        """
-        return scipy.linalg.inv(self._char_mat)
-
     @cache_readonly
     def _chol_sigma_u(self):
         return np.linalg.cholesky(self.sigma_u)
-
-    @cache_readonly
-    def _char_mat(self):
-        return np.eye(self.neqs) - self.coefs.sum(0)
 
     def acf(self, nlags=None):
         """Compute theoretical autocovariance function
@@ -1114,8 +1041,10 @@ class VARResults(VARProcess):
         self.coefs_exog = params[:endog_start].T
         self.k_trend = self.coefs_exog.shape[1]
 
+        self.arparams = coefs  # alias used by wold properties
         # print(coefs.round(3))
         super(VARResults, self).__init__(coefs, exog, sigma_u, names=names)
+        wold.VARRepresentation.__init__(self, arcoefs=coefs, macoefs=None)
 
     def plot(self):
         """Plot input time series
@@ -1935,18 +1864,6 @@ class VARResults(VARProcess):
     def bic(self):
         """Bayesian a.k.a. Schwarz info criterion"""
         return self.info_criteria['bic']
-
-    @cache_readonly
-    def roots(self):
-        neqs = self.neqs
-        k_ar = self.k_ar
-        p = neqs * k_ar
-        arr = np.zeros((p, p))
-        arr[:neqs, :] = np.column_stack(self.coefs)
-        arr[neqs:, :-neqs] = np.eye(p-neqs)
-        roots = np.linalg.eig(arr)[0]**-1
-        idx = np.argsort(np.abs(roots))[::-1]  # sort by reverse modulus
-        return roots[idx]
 
 
 class VARResultsWrapper(wrap.ResultsWrapper):
