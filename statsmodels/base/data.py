@@ -245,8 +245,9 @@ class ModelData(object):
                 nan_mask |= combined_nans  # for updating extra arrays only
 
             if combined_2d:
-                combined_2d_nans = _nan_rows(combined_2d)
-                # TODO: Why is this arg to _nan_rows not `*combined_2d`?
+                c2dvals = tuple(combined_2d.values())
+                combined_2d_nans = _nan_rows(c2dvals)
+                # TODO: Why is this arg to _nan_rows not `*c2dvals`?
                 if combined_2d_nans.shape[0] != nan_mask.shape[0]:
                     raise ValueError("Shape mismatch between endog/exog "
                                      "and extra 2d arrays given to model.")
@@ -259,7 +260,8 @@ class ModelData(object):
         else:
             nan_mask = _nan_rows(*combined)
             if combined_2d:
-                nan_mask = _nan_rows(*(nan_mask[:, None],) + combined_2d)
+                c2dvals = tuple(combined_2d.values())
+                nan_mask = _nan_rows(*(nan_mask[:, None],) + c2dvals)
 
         if not np.any(nan_mask):
             # no missing don't do anything
