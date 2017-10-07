@@ -443,7 +443,8 @@ class VARRepresentation(_DimBase):
     # def isindependent --> property from varma_process
     # def isstructured --> property from varma_process
 
-    # k_trend? # FIXME: fix docstring signature --> macoefs
+    # TODO: k_trend?
+    # FIXME: fix docstring signature --> macoefs
     # TODO: clarify coefs vs params in arguments
     def __init__(self, arcoefs, macoefs=None, intercept=None):
         """
@@ -779,7 +780,7 @@ class ARMARepresentation(_DimBase, RootsMixin):
         """
         ar = self.ar
         ma = self.ma
-        _check_is_poly(np.array(ar))  # TODO: get rid of redundant checking
+        _check_is_poly(np.array(ar))
         _check_is_poly(np.array(ma))
         impulse = np.zeros(lags)
         impulse[0] = 1.0
@@ -808,7 +809,7 @@ class ARMARepresentation(_DimBase, RootsMixin):
         Notes
         -----
         This is an alias for
-        ``ar_representation = arma_impulse_response(ma, ar, lags=100)``
+        `ar_representation = arma_impulse_response(ma, ar, lags=100)`
         which has been fully tested against MATLAB.
 
         Examples
@@ -873,7 +874,7 @@ class ARMARepresentation(_DimBase, RootsMixin):
         """
         ar = self.ar
         ma = self.ma
-        _check_is_poly(np.array(ar))  # TODO: get rid of redundant checking
+        _check_is_poly(np.array(ar))
         _check_is_poly(np.array(ma))
         (w, h) = scipy.signal.freqz(ma, ar, worN=worN, whole=whole)
         sd = np.abs(h)**2/np.sqrt(2*np.pi)
