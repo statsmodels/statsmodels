@@ -14,6 +14,7 @@ import re
 import warnings
 from statsmodels.tsa.statespace import mlemodel, sarimax
 from statsmodels import datasets
+from statsmodels.compat.testing import SkipTest
 from numpy.testing import assert_almost_equal, assert_equal, assert_allclose, assert_raises
 from .results import results_sarimax
 
@@ -227,9 +228,18 @@ class LargeStateCovAR1(mlemodel.MLEModel):
         self['state_cov', 0, 0] = params[1]
 
 
+def test_large_kposdef():
+    assert_raises(ValueError, LargeStateCovAR1, np.arange(10))
+
+
 class TestLargeStateCovAR1(object):
     @classmethod
     def setup_class(cls):
+        # TODO This test is skipped since an exception is currently raised if
+        # k_posdef > k_states. However, this test could be used if models of
+        # those types were allowed.
+        raise SkipTest
+
         # Data: just some sample data
         endog = [0.2, -1.5, -.3, -.1, 1.5, 0.2, -0.3, 0.2, 0.5, 0.8]
 
