@@ -251,6 +251,7 @@ cdef class {{prefix}}SimulationSmoother(object):
         # Temporary arrays
         dim2[0] = self.model.k_states; dim2[1] = self.model.k_states;
         self.tmp0 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN) # chol(P_1)
+        dim2[0] = self.model.k_posdef; dim2[1] = self.model.k_posdef;
         self.tmp2 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN) # chol(Q_t)
         dim2[0] = self.model.k_endog; dim2[1] = self.model.k_endog;
         self.tmp1 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN) # chol(H_t)

@@ -281,6 +281,13 @@ class Representation(object):
         self.k_states = k_states
         self.k_posdef = k_posdef if k_posdef is not None else k_states
 
+        # Make sure k_posdef <= k_states
+        # TODO: we could technically allow k_posdef > k_states, but the Cython
+        # code needs to be more thoroughly checked to avoid seg faults.
+        if self.k_posdef > self.k_states:
+            raise ValueError('Dimension of state innovation `k_posdef` cannot'
+                             ' be larger than the dimension of the state.')
+
         # Bind endog, if it was given
         if endog is not None:
             self.bind(endog)
