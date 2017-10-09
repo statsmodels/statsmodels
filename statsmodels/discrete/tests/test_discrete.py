@@ -1638,6 +1638,8 @@ def test_binary_pred_table_zeros():
     expected = np.array([[ 8.,  0.], [ 2.,  0.]])
     assert_equal(res.pred_table(), expected)
 
+    check_inherited_attributes(res)
+
 
 class TestGeneralizedPoisson_p2(object):
     # Test Generalized Poisson model
@@ -2381,6 +2383,10 @@ def test_unchanging_degrees_of_freedom():
     # Test that the call to `fit_regularized` didn't modify model.df_model inplace.
     assert_equal(res3.df_model, res1.df_model)
     assert_equal(res3.df_resid, res1.df_resid)
+
+    check_inherited_attributes(res1)
+    check_inherited_attributes(res2)
+    check_inherited_attributes(res3)
 
 
 def check_inherited_attributes(res):
