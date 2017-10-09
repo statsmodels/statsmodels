@@ -3896,6 +3896,12 @@ class L1BinaryResults(BinaryResults):
 class MultinomialResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
             "A results class for multinomial data", "extra_attr" : ""}
+
+    def __init__(self, model, mlefit):
+        super(MultinomialResults, self).__init__(model, mlefit)
+        self.J = model.J
+        self.K = model.K
+
     def _maybe_convert_ynames_int(self, ynames):
         # see if they're integers
         try:
@@ -3917,7 +3923,7 @@ class MultinomialResults(DiscreteResults):
             ynames = model._ynames_map
             ynames = self._maybe_convert_ynames_int(ynames)
             # use range below to ensure sortedness
-            ynames = [ynames[key] for key in range(int(model.J))]
+            ynames = [ynames[key] for key in range(int(self.J))]
             ynames = ['='.join([yname, name]) for name in ynames]
             if not all:
                 yname_list = ynames[1:] # assumes first variable is dropped
@@ -3934,7 +3940,7 @@ class MultinomialResults(DiscreteResults):
         pred_table[i,j] refers to the number of times "i" was observed and
         the model predicted "j". Correct predictions are along the diagonal.
         """
-        ju = self.model.J - 1  # highest index
+        ju = self.J - 1  # highest index
         # these are the actual, predicted indices
         #idx = lzip(self.model.endog, self.predict().argmax(1))
         bins = np.concatenate(([0], np.linspace(0.5, ju - 0.5, ju), [ju]))
@@ -3948,11 +3954,11 @@ class MultinomialResults(DiscreteResults):
 
     @cache_readonly
     def aic(self):
-        return -2*(self.llf - (self.df_model+self.model.J-1))
+        return -2*(self.llf - (self.df_model+self.J-1))
 
     @cache_readonly
     def bic(self):
-        return -2*self.llf + np.log(self.nobs)*(self.df_model+self.model.J-1)
+        return -2*self.llf + np.log(self.nobs)*(self.df_model+self.J-1)
 
     def conf_int(self, alpha=.05, cols=None):
         confint = super(DiscreteResults, self).conf_int(alpha=alpha,
@@ -4038,7 +4044,7 @@ class L1MultinomialResults(MultinomialResults):
         self.nnz_params = (self.trimmed == False).sum()
 
         # Note: J-1 constants
-        self.df_model = self.nnz_params - (self.model.J - 1)
+        self.df_model = self.nnz_params - (self.J - 1)
         self.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
 
 
