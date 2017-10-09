@@ -2092,8 +2092,8 @@ def test_arima111_predict_exog_2127():
     # rescaling results in convergence failure
     #model = sm.tsa.ARIMA(np.array(ef)*100, (1,1,1), exog=ue)
     model = ARIMA(ef, (1,1,1), exog=ue)
-    res = model.fit(transparams=False, iprint=0, disp=0)
-
+    res = model.fit(transparams=False, pgtol=1e-8, iprint=0, disp=0)
+    assert_equal(res.mle_retvals['warnflag'],  0)
     predicts = res.predict(start=len(ef), end = len(ef)+10,
                            exog=ue[-11:], typ = 'levels')
 
