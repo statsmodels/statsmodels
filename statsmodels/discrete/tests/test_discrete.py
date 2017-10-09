@@ -2388,7 +2388,7 @@ def check_inherited_attributes(res):
     # object; this can help ensure that Results objects can still be useful
     # after `remove_data` and a pickle/unpickle cycle.
     model = res.model
-    if isinstance(model, Multinomial):
+    if isinstance(model, MultinomialModel):
         assert res.J == model.J
         assert res.K == model.K
 
