@@ -23,6 +23,7 @@ import pytest
 from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
                                                 Poisson, NegativeBinomial,
                                                 CountModel, GeneralizedPoisson,
+                                                MultinomialModel,
                                                 NegativeBinomialP)
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
@@ -2380,6 +2381,16 @@ def test_unchanging_degrees_of_freedom():
     # Test that the call to `fit_regularized` didn't modify model.df_model inplace.
     assert_equal(res3.df_model, res1.df_model)
     assert_equal(res3.df_resid, res1.df_resid)
+
+
+def check_inherited_attributes(res):
+    # check that specific attributes are directly defined in the Results
+    # object; this can help ensure that Results objects can still be useful
+    # after `remove_data` and a pickle/unpickle cycle.
+    model = res.model
+    if isinstance(model, Multinomial):
+        assert res.J == model.J
+        assert res.K == model.K
 
 
 if __name__ == "__main__":
