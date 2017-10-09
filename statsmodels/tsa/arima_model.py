@@ -820,7 +820,7 @@ class ARMA(tsbase.TimeSeriesModel):
         return llf
 
     def fit(self, start_params=None, trend='c', method="css-mle",
-            transparams=True, solver='lbfgs', maxiter=50, full_output=1,
+            transparams=True, solver='lbfgs', maxiter=500, full_output=1,
             disp=5, callback=None, start_ar_lags=None, **kwargs):
         """
         Fits ARMA(p,q) model using exact maximum likelihood via Kalman filter.
@@ -1068,7 +1068,7 @@ class ARIMA(ARMA):
         return start, end, out_of_sample, prediction_index
 
     def fit(self, start_params=None, trend='c', method="css-mle",
-            transparams=True, solver='lbfgs', maxiter=50, full_output=1,
+            transparams=True, solver='lbfgs', maxiter=500, full_output=1,
             disp=5, callback=None, start_ar_lags=None, **kwargs):
         """
         Fits ARIMA(p,d,q) model by exact maximum likelihood via Kalman filter.

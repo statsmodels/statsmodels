@@ -419,8 +419,10 @@ def _fit_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
         converged = (warnflag == 0)
         gopt = d['grad']
         fcalls = d['funcalls']
+        iterations = d['nit']
         retvals = {'fopt': fopt, 'gopt': gopt, 'fcalls': fcalls,
-                   'warnflag': warnflag, 'converged': converged}
+                   'warnflag': warnflag, 'converged': converged,
+                   'iterations': iterations}
     else:
         xopt = retvals[0]
         retvals = None
