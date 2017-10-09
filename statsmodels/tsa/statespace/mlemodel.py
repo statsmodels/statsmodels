@@ -2872,7 +2872,7 @@ class PredictionResults(pred.PredictionResults):
     def summary_frame(self, endog=0, what='all', alpha=0.05):
         # TODO: finish and cleanup
         # import pandas as pd
-        from statsmodels.compat.collections import OrderedDict
+        from collections import OrderedDict
         # ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
         ci_mean = np.asarray(self.conf_int(alpha=alpha))
         to_include = OrderedDict()

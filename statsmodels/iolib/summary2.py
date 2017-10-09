@@ -1,7 +1,7 @@
 from statsmodels.compat.python import (lrange, iterkeys, iteritems, lzip,
                                        reduce, itervalues, zip, string_types,
                                        range)
-from statsmodels.compat.collections import OrderedDict
+from collections import OrderedDict
 import numpy as np
 import pandas as pd
 import datetime

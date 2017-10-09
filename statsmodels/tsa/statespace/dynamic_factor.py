@@ -7,7 +7,7 @@ License: Simplified-BSD
 from __future__ import division, absolute_import, print_function
 
 from warnings import warn
-from statsmodels.compat.collections import OrderedDict
+from collections import OrderedDict
 
 import numpy as np
 import pandas as pd

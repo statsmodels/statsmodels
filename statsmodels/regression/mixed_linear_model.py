@@ -152,7 +152,7 @@ from scipy.stats.distributions import norm
 from scipy import sparse
 import pandas as pd
 import patsy
-from statsmodels.compat.collections import OrderedDict
+from collections import OrderedDict
 from statsmodels.compat.python import string_types
 from statsmodels.compat import range
 import warnings
