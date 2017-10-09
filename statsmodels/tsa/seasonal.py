@@ -4,7 +4,8 @@ Seasonal Decomposition by Moving Averages
 from statsmodels.compat.python import lmap, range, iteritems
 import numpy as np
 from pandas.core.nanops import nanmean as pd_nanmean
-from .filters._utils import _maybe_get_pandas_wrapper_freq
+from .filters._utils import (_maybe_get_pandas_wrapper_freq,
+                             _maybe_get_pandas_wrapper)
 from .filters.filtertools import convolution_filter
 from statsmodels.tsa.tsatools import freq_to_period
 
@@ -65,7 +66,11 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True
     statsmodels.tsa.filters.hp_filter.hpfilter
     statsmodels.tsa.filters.convolution_filter
     """
-    _pandas_wrapper, pfreq = _maybe_get_pandas_wrapper_freq(x)
+    if freq is None:
+        _pandas_wrapper, pfreq = _maybe_get_pandas_wrapper_freq(x)
+    else:
+        _pandas_wrapper = _maybe_get_pandas_wrapper(x)
+        pfreq = None
     x = np.asanyarray(x).squeeze()
     nobs = len(x)
 

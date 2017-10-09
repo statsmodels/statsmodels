@@ -1,5 +1,7 @@
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal, assert_raises
+import pandas as pd
+from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
+                           assert_allclose)
 from statsmodels.tsa.seasonal import seasonal_decompose
 from pandas import DataFrame, DatetimeIndex
 
@@ -138,6 +140,21 @@ class TestDecompose:
         assert_equal(res_mult.seasonal.index.values.squeeze(),
                             self.data.index.values)
 
+    def test_pandas_nofreq(self):
+        # issue #3503
+        nobs = 100
+        dta = pd.Series([x%3 for x in range(nobs)] + np.random.randn(nobs))
+        res_np = seasonal_decompose(dta.values, freq=3)
+        res = seasonal_decompose(dta, freq=3)
+
+        atol = 1e-8
+        rtol = 1e-10
+        assert_allclose(res.seasonal.values.squeeze(), res_np.seasonal,
+                        atol=atol, rtol=rtol)
+        assert_allclose(res.trend.values.squeeze(), res_np.trend,
+                        atol=atol, rtol=rtol)
+        assert_allclose(res.resid.values.squeeze(), res_np.resid,
+                        atol=atol, rtol=rtol)
 
     def test_filt(self):
         filt = np.array([1/8., 1/4., 1./4, 1/4., 1/8.])
