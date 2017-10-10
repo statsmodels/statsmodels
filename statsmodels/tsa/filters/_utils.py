@@ -35,7 +35,7 @@ def _maybe_get_pandas_wrapper(X, trim_head=None, trim_tail=None):
     if _is_using_pandas(X, None):
         return _get_pandas_wrapper(X, trim_head, trim_tail)
     else:
-        return
+        return lambda x : x
 
 
 def _maybe_get_pandas_wrapper_freq(X, trim=None):
