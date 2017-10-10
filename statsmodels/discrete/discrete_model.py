@@ -23,6 +23,8 @@ __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
 from statsmodels.compat.python import lmap, lzip, range
 from statsmodels.compat.scipy import loggamma
 import numpy as np
+import pandas as pd
+
 from scipy.special import gammaln, digamma, polygamma
 from scipy import stats, special, optimize  # opt just for nbin
 from scipy.stats import nbinom
@@ -887,7 +889,7 @@ class Poisson(CountModel):
     __doc__ = """
     Poisson model for count data
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -1626,7 +1628,7 @@ class Logit(BinaryModel):
     __doc__ = """
     Binary choice logit model
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -1828,7 +1830,7 @@ class Probit(BinaryModel):
     __doc__ = """
     Binary choice Probit model
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -3916,6 +3918,38 @@ def _maybe_convert_ynames_int(ynames):
     return ynames
 
 
+def _wrap_conf_int(model_data, conf_int):
+    # conf_int should have shape == params.shape[::-1] + (2,)
+    assert conf_int.shape[-1] == 2
+    #
+    lower = conf_int[:, :, 0]
+    upper = conf_int[:, :, 1]
+    #
+    try:
+        # kludge; implement in data.py
+        index = model_data.orig_endog.cat.categories[1:]
+    except AttributeError:
+        try:
+            # pd.Series
+            index = model_data.orig_endog.unique()[1:]
+        except AttributeError:
+            index = np.unique(model_data.orig_endog)[1:]
+    #
+    pre_frames = [lower, upper]
+    #
+    frames = [pd.DataFrame(x, index=index, columns=model_data.xnames)
+              for x in pre_frames]
+    for frame in frames:
+        frame.index.name = 'equations'
+        frame.columns.name = 'exog_names'
+    #
+    cidata = {'lower': frames[0].stack(dropna=False),
+              'upper': frames[1].stack(dropna=False)}
+    frame = pd.DataFrame(cidata,
+                         columns=['lower', 'upper'])
+    return frame
+
+
 class MultinomialResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {
             "one_line_description" :"A results class for multinomial data",
@@ -3939,7 +3973,7 @@ class MultinomialResults(DiscreteResults):
             ynames = model._ynames_map
             ynames = _maybe_convert_ynames_int(ynames)
             # use range below to ensure sortedness
-            ynames = [ynames[key] for key in range(int(model.J))]
+            ynames = [ynames[key] for key in range(int(self.J))]
             ynames = ['='.join([yname, name]) for name in ynames]
             if not use_all:
                 yname_list = ynames[1:] # assumes first variable is dropped
@@ -3947,13 +3981,14 @@ class MultinomialResults(DiscreteResults):
                 yname_list = ynames
         return yname, yname_list
 
+    # TODO: wrap
     def pred_table(self):
         """
         Returns the J x J prediction table.
 
         Notes
         -----
-        pred_table[i,j] refers to the number of times "i" was observed and
+        pred_table[i, j] refers to the number of times "i" was observed and
         the model predicted "j". Correct predictions are along the diagonal.
         """
         ju = self.model.J - 1  # highest index
@@ -3979,6 +4014,7 @@ class MultinomialResults(DiscreteResults):
     def conf_int(self, alpha=.05, cols=None):
         confint = super(DiscreteResults, self).conf_int(alpha=alpha, cols=cols)
         return confint.transpose(2, 0, 1)
+    conf_int._wrap_func = _wrap_conf_int
 
     def margeff(self):
         raise NotImplementedError("Use get_margeff instead")
@@ -4141,8 +4177,3 @@ wrap.populate_wrapper(MultinomialResultsWrapper, MultinomialResults)
 class L1MultinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1MultinomialResultsWrapper, L1MultinomialResults)
-
-
-if __name__=="__main__":
-    import numpy as np
-    import statsmodels.api as sm

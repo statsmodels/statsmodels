@@ -1554,12 +1554,16 @@ def test_non_binary():
 
 def test_mnlogit_factor():
     dta = sm.datasets.anes96.load_pandas()
-    dta['endog'] = dta.endog.replace(dict(zip(range(7), 'ABCDEFG')))
+    dta['endog'] = dta.endog.replace(dict(zip(range(7), 'ABCDEFG'))).astype('category')
     exog = sm.add_constant(dta.exog, prepend=True)
     mod = sm.MNLogit(dta.endog, exog)
     res = mod.fit(disp=0)
-    # smoke tests
+
     params = res.params
+    assert (params.index == exog.columns).all()
+    assert (params.columns == list('BCDEFGH')).all()
+
+    # smoke tests
     summary = res.summary()
     predicted = res.predict(exog.iloc[:5, :])
 
