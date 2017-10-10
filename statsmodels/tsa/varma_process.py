@@ -37,6 +37,8 @@ from scipy.signal.signaltools import _centered as trim_centered
 
 from statsmodels.tsa.tsatools import lagmat
 
+from statsmodels.tools.decorators import deprecated_alias
+
 
 def varfilter(x, a):
     '''apply an autoregressive filter to a series x
@@ -464,11 +466,14 @@ class VarmaPoly(object):
 
 
     '''
+
+    nvars = deprecated_alias('nvars', 'neqs', '0.11.0')
+
     def __init__(self, ar, ma=None):
         self.ar = ar
         self.ma = ma
         nlags, nvarall, nvars = ar.shape
-        self.nlags, self.nvarall, self.nvars = nlags, nvarall, nvars
+        self.nlags, self.nvarall, self.neqs = nlags, nvarall, nvars
         self.isstructured = not (ar[0,:nvars] == np.eye(nvars)).all()
         if self.ma is None:
             self.ma = np.eye(nvars)[None,...]

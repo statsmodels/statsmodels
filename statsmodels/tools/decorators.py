@@ -4,7 +4,26 @@ from numpy.testing import assert_equal
 from statsmodels.compat.python import get_function_name
 import warnings
 
-__all__ = ['resettable_cache', 'cache_readonly', 'cache_writable']
+__all__ = ['resettable_cache', 'cache_readonly', 'cache_writable',
+           'deprecated_alias']
+
+
+def deprecated_alias(old_name, new_name, remove_version=None):
+    msg = '%s is a deprecated alias for %s' % (old_name, new_name)
+    if remove_version is not None:
+        msg += ', will be removed in version %s' % remove_version
+
+    def fget(self):
+        warnings.warn(msg)
+        return getattr(self, new_name)
+
+    def fset(self, value):
+        warnings.warn(msg)
+        setattr(self, new_name, value)
+
+    res = property(fget=fget, fset=fset)
+    return res
+
 
 
 class ResettableCache(dict):
