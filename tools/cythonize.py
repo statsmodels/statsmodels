@@ -66,6 +66,11 @@ def process_pyx(fromfile, tofile):
     if tofile.endswith('.cxx'):
         flags += ['--cplus']
 
+    from Cython.Build import cythonize
+    cythonize(fromfile, compiler_directives=directives)
+
+    return
+
     try:
         try:
             r = subprocess.call(['cython'] + flags + ["-o", tofile, fromfile])
