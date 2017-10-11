@@ -1,5 +1,5 @@
 """Module for functional boxplots."""
-from itertools import cobinations
+from itertools import combinations
 
 from statsmodels.compat.python import range
 import numpy as np
