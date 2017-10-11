@@ -1,9 +1,14 @@
 # .coveragerc to control coverage.py
 [run]
 branch = False
+plugins = Cython.Coverage
 
 [report]
 show_missing = True
+
+omit=
+    */tests/*
+    */datasets/*
 
 # Regexes for lines to exclude from consideration
 exclude_lines =

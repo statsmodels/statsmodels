@@ -1,0 +1,8 @@
+cython >= 0.27.1
+numpy >= 1.13.1
+scipy >= 0.19.1
+pandas >= 0.20.3
+
+patsy >= 0.4.1
+
+matplotlib >= 2.1.0
