@@ -1043,8 +1043,6 @@ class LikelihoodModelResults(Results):
     def _get_robustcov_results(self, cov_type='nonrobust', use_self=True,
                                    use_t=None, **cov_kwds):
         from statsmodels.base.covtype import get_robustcov_results
-        if cov_kwds is None:
-            cov_kwds = {}
 
         if cov_type == 'nonrobust':
             self.cov_type = 'nonrobust'
