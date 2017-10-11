@@ -981,6 +981,11 @@ class GLM(base.LikelihoodModel):
             :math:`rtol * prior + atol > abs(current - prior)`
         tol_criterion : str, optional
             Defaults to ``'deviance'``. Can optionally be ``'params'``.
+        wls_method : str, optional
+            options are 'lstsq', 'pinv' and 'qr'
+            specifies which linear algebra function to use for the irls
+            optimization. Default is `lstsq` which uses the same underlying
+            svd based approach as 'pinv', but is faster during iterations.
 
         If a scipy optimizer is used, the following additional parameter is
         available:
@@ -1063,9 +1068,11 @@ class GLM(base.LikelihoodModel):
         Fits a generalized linear model for a given family using
         iteratively reweighted least squares (IRLS).
         """
+        attach_wls = kwargs.pop('attach_wls', False)
         atol = kwargs.get('atol')
         rtol = kwargs.get('rtol', 0.)
         tol_criterion = kwargs.get('tol_criterion', 'deviance')
+        wls_method = kwargs.get('wls_method', 'lstsq')
         atol = tol if atol is None else atol
 
         endog = self.endog
@@ -1100,7 +1107,8 @@ class GLM(base.LikelihoodModel):
                             self.family.weights(mu))
             wlsendog = (lin_pred + self.family.link.deriv(mu) * (self.endog-mu)
                         - self._offset_exposure)
-            wls_results = reg_tools._MinimalWLS(wlsendog, wlsexog, self.weights).fit(method='lstsq')
+            wls_model = reg_tools._MinimalWLS(wlsendog, wlsexog, self.weights)
+            wls_results = wls_model.fit(method=wls_method)
             lin_pred = np.dot(self.exog, wls_results.params) + self._offset_exposure
             mu = self.family.fitted(lin_pred)
             history = self._update_history(wls_results, mu, history)
@@ -1115,7 +1123,9 @@ class GLM(base.LikelihoodModel):
         self.mu = mu
 
         if maxiter > 0:  # Only if iterative used
-            wls_results = lm.WLS(wlsendog, wlsexog, self.weights).fit()
+            wls_method2 = 'pinv' if wls_method == 'lstsq' else wls_method
+            wls_model = lm.WLS(wlsendog, wlsexog, self.weights)
+            wls_results = wls_model.fit(method=wls_method2)
 
         glm_results = GLMResults(self, wls_results.params,
                                  wls_results.normalized_cov_params,
@@ -1124,6 +1134,11 @@ class GLM(base.LikelihoodModel):
                                  use_t=use_t)
 
         glm_results.method = "IRLS"
+        glm_results.mle_settings = {}
+        glm_results.mle_settings['wls_method'] = wls_method
+        glm_results.mle_settings['optimizer'] = glm_results.method
+        if (maxiter > 0) and (attach_wls is True):
+            glm_results.results_wls = wls_results
         history['iteration'] = iteration + 1
         glm_results.fit_history = history
         glm_results.converged = converged
@@ -1160,8 +1175,8 @@ class GLM(base.LikelihoodModel):
         The penalty is the ``elastic net`` penalty, which is a
         combination of L1 and L2 penalties.
 
-        The function that is minimized is: 
-        
+        The function that is minimized is:
+
         .. math::
 
             -loglike/n + alpha*((1-L1\_wt)*|params|_2^2/2 + L1\_wt*|params|_1)
