@@ -1,0 +1,6 @@
+cython >= 0.24
+numpy >= 1.09
+scipy >= 0.14
+pandas >= 0.15
+patsy >= 0.4
+matplotlib >= 1.5

@@ -4,9 +4,11 @@ to a function's reference
 """
 import webbrowser
 
+import statsmodels
 from statsmodels.compat.python import urlencode
 from statsmodels import __version__
 
+release = '+' not in statsmodels.__version__
 BASE_URL = 'https://www.statsmodels.org/'
 
 

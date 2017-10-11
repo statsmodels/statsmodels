@@ -7,6 +7,7 @@ import os
 import sys
 
 from warnings import simplefilter
+from ._version import get_versions
 from statsmodels.tools.sm_exceptions import (ConvergenceWarning, CacheWriteWarning,
                                              IterationLimitWarning, InvalidTestWarning)
 
@@ -53,6 +54,5 @@ class PytestTester(object):
 
 test = PytestTester()
 
-from ._version import get_versions
 __version__ = get_versions()['version']
 del get_versions
