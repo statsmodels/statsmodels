@@ -55,11 +55,11 @@ class ModelData(object):
     _param_names = None
 
     def __init__(self, endog, exog=None, missing='none', hasconst=None,
-                 **kwargs):
-        if 'design_info' in kwargs:
-            self.design_info = kwargs.pop('design_info')
-        if 'formula' in kwargs:
-            self.formula = kwargs.pop('formula')
+                design_info=None, formula=None, **kwargs):
+
+        self.design_info = design_info
+        self.formula = formula
+
         if missing != 'none':
             arrays, nan_idx = self.handle_missing(endog, exog, missing,
                                                   **kwargs)
@@ -83,7 +83,7 @@ class ModelData(object):
     def __getstate__(self):
         from copy import copy
         d = copy(self.__dict__)
-        if "design_info" in d:
+        if d.get("design_info", None) is not None:
             del d["design_info"]
             d["restore_design_info"] = True
         return d
@@ -177,7 +177,6 @@ class ModelData(object):
                 self.k_constant = int(rank_orig == rank_augm)
                 self.const_idx = None
 
-
     @classmethod
     def _drop_nans(cls, x, nan_mask):
         return x[nan_mask]
@@ -187,17 +186,15 @@ class ModelData(object):
         return x[nan_mask][:, nan_mask]
 
     @classmethod
-    def handle_missing(cls, endog, exog, missing, **kwargs):
+    def handle_missing(cls, endog, exog, missing, missing_idx=None, **kwargs):
         """
         This returns a dictionary with keys endog, exog and the keys of
         kwargs. It preserves Nones.
         """
         none_array_names = []
 
-        # patsy's already dropped NaNs in y/X
-        missing_idx = kwargs.pop('missing_idx', None)
-
         if missing_idx is not None:
+            # patsy's already dropped NaNs in y/X
             # y, X already handled by patsy. add back in later.
             combined = ()
             combined_names = []
@@ -310,7 +307,6 @@ class ModelData(object):
             raise ValueError("missing option %s not understood" % missing)
 
     def _convert_endog_exog(self, endog, exog):
-
         # for consistent outputs if endog is (n,1)
         yarr = self._get_yarr(endog)
         xarr = None

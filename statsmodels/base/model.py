@@ -56,11 +56,8 @@ class Model(object):
     """ % {'params_doc' : _model_params_doc,
            'extra_params_doc' : _missing_param_doc + _extra_param_doc}
 
-    def __init__(self, endog, exog=None, **kwargs):
-        missing = kwargs.pop('missing', 'none')
-        hasconst = kwargs.pop('hasconst', None)
-        self.data = self._handle_data(endog, exog, missing, hasconst,
-                                      **kwargs)
+    def __init__(self, endog, exog=None, missing='none', hasconst=None, **kwargs):
+        self.data = self._handle_data(endog, exog, missing, hasconst, **kwargs)
         self.k_constant = self.data.k_constant
         self.exog = self.data.exog
         self.endog = self.data.endog
