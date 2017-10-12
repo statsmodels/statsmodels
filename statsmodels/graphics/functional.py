@@ -454,7 +454,6 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
     by_label = OrderedDict(zip(labels, handles))
     if len(outliers) != 0:
-        by_label.pop('dataset')
         by_label.pop('Median')
         by_label.pop('50% HDR')
         by_label.pop('90% HDR')
