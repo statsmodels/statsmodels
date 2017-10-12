@@ -2506,11 +2506,14 @@ class NegativeBinomial(CountModel):
         return llf
 
     def _score_geom(self, params):
+        return self._score_obs_geom(params).sum(0)
+
+    def _score_obs_geom(self, params):
         exog = self.exog
-        y = self.endog[:,None]
-        mu = self.predict(params)[:,None]
+        y = self.endog[:, None]
+        mu = self.predict(params)[:, None]
         dparams = exog * (y-mu)/(mu+1)
-        return dparams.sum(0)
+        return dparams
 
     def _score_nbin(self, params, Q=0):
         """
@@ -2525,25 +2528,28 @@ class NegativeBinomial(CountModel):
         y = self.endog[:,None]
         mu = self.predict(params)[:,None]
         a1 = 1/alpha * mu**Q
+
+        prob = a1 / (a1+mu)
         if Q: # nb1
-            dparams = exog*mu/alpha*(np.log(1/(alpha + 1)) +
+            # Note: 1/(alpha+1) == (mu/alpha) / (mu+mu/alpha) == a1/(mu+a1)
+            dparams = exog * a1 * (np.log(prob) +
                        special.digamma(y + mu/alpha) -
                        special.digamma(mu/alpha))
-            dalpha = ((alpha*(y - mu*np.log(1/(alpha + 1)) -
+            dalpha = ((alpha*(y - mu*np.log(prob) -
                               mu*(special.digamma(y + mu/alpha) -
                               special.digamma(mu/alpha) + 1)) -
-                       mu*(np.log(1/(alpha + 1)) +
+                       mu*(np.log(prob) +
                            special.digamma(y + mu/alpha) -
                            special.digamma(mu/alpha)))/
                        (alpha**2*(alpha + 1))).sum()
 
         else: # nb2
-            dparams = exog*a1 * (y-mu)/(mu+a1)
+            dparams = exog * a1 * (y-mu)/(mu+a1)
             da1 = -alpha**-2
-            dalpha = (special.digamma(a1+y) - special.digamma(a1) + np.log(a1)
-                        - np.log(a1+mu) - (a1+y)/(a1+mu) + 1).sum()*da1
+            dalpha = (special.digamma(a1+y) - special.digamma(a1) + np.log(prob)
+                        - (y-mu)/(a1+mu)).sum()*da1
 
-        #multiply above by constant outside sum to reduce rounding error
+        # multiply above by constant outside sum to reduce rounding error
         if self._transparams:
             return np.r_[dparams.sum(0), dalpha*alpha]
         else:
@@ -2588,17 +2594,20 @@ class NegativeBinomial(CountModel):
 
         a1 = mu/alpha
 
+        prob = a1 / (a1+mu)
+        # Note: 1/(alpha+1) == (mu/alpha) / (mu + mu/alpha) == a1/(mu+a1)
+
         # for dl/dparams dparams
         dim = exog.shape[1]
         hess_arr = np.empty((dim+1,dim+1))
         #const_arr = a1*mu*(a1+y)/(mu+a1)**2
         # not all of dparams
-        dparams = exog/alpha*(np.log(1/(alpha + 1)) +
+        dparams = exog/alpha*(np.log(prob) +
                               special.digamma(y + mu/alpha) -
                               special.digamma(mu/alpha))
 
         dmudb = exog*mu
-        xmu_alpha = exog*mu/alpha
+        xmu_alpha = exog*a1
         trigamma = (special.polygamma(1, mu/alpha + y) -
                     special.polygamma(1, mu/alpha))
         for i in range(dim):
@@ -2613,8 +2622,8 @@ class NegativeBinomial(CountModel):
 
         # for dl/dparams dalpha
         da1 = -alpha**-2
-        dldpda = np.sum(-mu/alpha * dparams + exog*mu/alpha *
-                        (-trigamma*mu/alpha**2 - 1/(alpha+1)), axis=0)
+        dldpda = np.sum(-a1 * dparams + exog * a1 *
+                        (-trigamma*mu/alpha**2 - prob), axis=0)
 
         hess_arr[-1,:-1] = dldpda
         hess_arr[:-1,-1] = dldpda
@@ -2623,7 +2632,7 @@ class NegativeBinomial(CountModel):
         digamma_part = (special.digamma(y + mu/alpha) -
                         special.digamma(mu/alpha))
 
-        log_alpha = np.log(1/(alpha+1))
+        log_alpha = np.log(prob)
         alpha3 = alpha**3
         alpha2 = alpha**2
         mu2 = mu**2
@@ -2653,6 +2662,8 @@ class NegativeBinomial(CountModel):
         y = self.endog[:,None]
         mu = self.predict(params)[:,None]
 
+        prob = a1 / (a1+mu)
+
         # for dl/dparams dparams
         dim = exog.shape[1]
         hess_arr = np.empty((dim+1,dim+1))
@@ -2676,7 +2687,7 @@ class NegativeBinomial(CountModel):
         #NOTE: polygamma(1,x) is the trigamma function
         da2 = 2*alpha**-3
         dalpha = da1 * (special.digamma(a1+y) - special.digamma(a1) +
-                    np.log(a1) - np.log(a1+mu) - (a1+y)/(a1+mu) + 1)
+                    np.log(prob) - (y-mu)/(a1+mu))
         dada = (da2 * dalpha/da1 + da1**2 * (special.polygamma(1, a1+y) -
                     special.polygamma(1, a1) + 1/a1 - 1/(a1 + mu) +
                     (y - mu)/(mu + a1)**2)).sum()
@@ -2686,6 +2697,8 @@ class NegativeBinomial(CountModel):
 
     #TODO: replace this with analytic where is it used?
     def score_obs(self, params):
+        if self.loglike_method == 'geometric':
+            return self._score_obs_geom(params)
         sc = approx_fprime_cs(params, self.loglikeobs)
         return sc
 
