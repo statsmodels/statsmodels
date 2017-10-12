@@ -2510,8 +2510,8 @@ class NegativeBinomial(CountModel):
 
     def _score_obs_geom(self, params):
         exog = self.exog
-        y = self.endog[:, None]
-        mu = self.predict(params)[:, None]
+        y = self.endog[:,None]
+        mu = self.predict(params)[:,None]
         dparams = exog * (y-mu)/(mu+1)
         return dparams
 
