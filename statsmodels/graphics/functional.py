@@ -208,8 +208,8 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
         be an array of integers 0..N-1 with N the length of the vectors in
         `data`.
     labels : sequence of scalar or str, optional
-        The labels or identifiers of the curves in `data`. If given, outliers
-        are labeled in the plot.
+        The labels or identifiers of the curves in `data`. If not given,
+        outliers are labeled in the plot with array indices.
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
@@ -306,6 +306,13 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     """
     fig, ax = utils.create_mpl_ax(ax)
 
+    if labels is None:
+        # For use with pandas, get the labels
+        if hasattr(data, 'index'): 
+            labels = data.index
+        else: 
+            labels = np.arange(len(data))
+
     data = np.asarray(data)
     if xdata is None:
         xdata = np.arange(data.shape[1])
@@ -345,10 +352,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
                        ranges=bounds, finish=fmin)
 
     outliers_idx = np.where(pdf_r < pvalues[alpha.index(threshold)])[0]
-    if labels is not None:
-        labels_outlier = [labels[i] for i in outliers_idx]
-    else:
-        labels_outlier = None
+    labels_outlier = [labels[i] for i in outliers_idx]
     outliers = data[outliers_idx]
 
     # Find HDR given some quantiles
@@ -418,7 +422,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
     # Plots
     ax.plot(np.array([xdata] * n_samples).T, data.T,
-            c='c', alpha=.1, label='dataset')
+            c='c', alpha=.1, label=None)
     ax.plot(xdata, median, c='k', label='Median')
     fill_betweens = []
     fill_betweens.append(ax.fill_between(xdata, *hdr_50, color='gray',
@@ -437,26 +441,25 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
             ax.plot(xdata, outlier,
                     ls='--', alpha=0.7, label=label)
 
-    if labels is not None:
-        handles, labels = ax.get_legend_handles_labels()
+    handles, labels = ax.get_legend_handles_labels()
 
-        # Proxy artist for fill_between legend entry
-        # See http://matplotlib.org/1.3.1/users/legend_guide.html
-        plt = _import_mpl()
-        for label, fill_between in zip(['50% HDR', '90% HDR'], fill_betweens):
-            p = plt.Rectangle((0, 0), 1, 1,
-                              fc=fill_between.get_facecolor()[0])
-            handles.append(p)
-            labels.append(label)
+    # Proxy artist for fill_between legend entry
+    # See http://matplotlib.org/1.3.1/users/legend_guide.html
+    plt = _import_mpl()
+    for label, fill_between in zip(['50% HDR', '90% HDR'], fill_betweens):
+        p = plt.Rectangle((0, 0), 1, 1,
+                          fc=fill_between.get_facecolor()[0])
+        handles.append(p)
+        labels.append(label)
 
-        by_label = OrderedDict(zip(labels, handles))
-        if len(outliers) != 0:
-            by_label.pop('dataset')
-            by_label.pop('Median')
-            by_label.pop('50% HDR')
-            by_label.pop('90% HDR')
+    by_label = OrderedDict(zip(labels, handles))
+    if len(outliers) != 0:
+        by_label.pop('dataset')
+        by_label.pop('Median')
+        by_label.pop('50% HDR')
+        by_label.pop('90% HDR')
 
-        ax.legend(by_label.values(), by_label.keys(), loc='best')
+    ax.legend(by_label.values(), by_label.keys(), loc='best')
 
     return fig, hdr_res
 
