@@ -1682,8 +1682,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         if k_params == 0:
             res.cov_params_default = np.zeros((0, 0))
             res._rank = 0
-            res.cov_kwds['description'] = (
-                'No parameters estimated.')
+            res.cov_kwds['description'] = 'No parameters estimated.'
         elif cov_type == 'custom':
             res.cov_type = kwargs['custom_cov_type']
             res.cov_params_default = kwargs['custom_cov_params']
@@ -1692,8 +1691,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         elif cov_type == 'none':
             res.cov_params_default = np.zeros((k_params, k_params)) * np.nan
             res._rank = np.nan
-            res.cov_kwds['description'] = (
-                'Covariance matrix not calculated.')
+            res.cov_kwds['description'] = 'Covariance matrix not calculated.'
         elif self.cov_type == 'approx':
             res.cov_params_default = res.cov_params_approx
             res.cov_kwds['description'] = (
