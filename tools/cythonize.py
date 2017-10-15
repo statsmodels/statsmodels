@@ -52,7 +52,7 @@ except NameError:
 #
 # Rules
 #
-def process_pyx(fromfile, tofile):
+def process_pyx(fromfile, tofile, directives):
     try:
         from Cython.Compiler.Version import version as cython_version
         from distutils.version import LooseVersion
@@ -67,29 +67,13 @@ def process_pyx(fromfile, tofile):
         flags += ['--cplus']
 
     from Cython.Build import cythonize
+    print('Compiler Directives:' + str(directives))
     cythonize(fromfile, compiler_directives=directives)
 
     return
 
-    try:
-        try:
-            r = subprocess.call(['cython'] + flags + ["-o", tofile, fromfile])
-            if r != 0:
-                raise Exception('Cython failed')
-        except OSError:
-            # There are ways of installing Cython that don't result in a cython
-            # executable on the path, see gh-2397.
-            r = subprocess.call([sys.executable, '-c',
-                                 'import sys; from Cython.Compiler.Main import '
-                                 'setuptools_main as main; sys.exit(main())'] + flags +
-                                 ["-o", tofile, fromfile])
-            if r != 0:
-                raise Exception('Cython failed')
-    except OSError:
-        raise OSError('Cython needs to be installed')
 
-
-def process_tempita_pyx(fromfile, tofile):
+def process_tempita_pyx(fromfile, tofile, directives):
     try:
         try:
             from Cython import Tempita as tempita
@@ -98,14 +82,18 @@ def process_tempita_pyx(fromfile, tofile):
     except ImportError:
         raise Exception('Building Statsmodels requires Tempita: '
                         'pip install --user Tempita')
+    print(fromfile)
     with open(fromfile, "r") as f:
         tmpl = f.read()
     pyxcontent = tempita.sub(tmpl)
     assert fromfile.endswith('.pyx.in')
     pyxfile = fromfile[:-len('.pyx.in')] + '.pyx'
     with open(pyxfile, "w") as f:
+        print(pyxfile)
+        print(os.getcwd())
         f.write(pyxcontent)
-    process_pyx(pyxfile, tofile)
+    process_pyx(pyxfile, tofile, directives)
+
 
 
 rules = {
@@ -137,10 +125,11 @@ def save_hashes(hash_db, filename):
             f.write("%s %s %s\n" % (key, value[0], value[1]))
 
 
-def sha1_of_file(filename):
+def sha1_of_file(filename, directives):
     h = hashlib.sha1()
     with open(filename, "rb") as f:
         h.update(f.read())
+    h.update(str(directives).encode('utf8'))
     return h.hexdigest()
 
 
@@ -168,16 +157,17 @@ def normpath(path):
     return path
 
 
+
 def get_hash(frompath, topath):
     from_hash = sha1_of_file(frompath)
     to_hash = sha1_of_file(topath) if os.path.exists(topath) else None
     return (from_hash, to_hash)
 
 
-def process(path, fromfile, tofile, processor_function, hash_db):
+def process(path, fromfile, tofile, processor_function, hash_db, directives):
     fullfrompath = os.path.join(path, fromfile)
     fulltopath = os.path.join(path, tofile)
-    current_hash = get_hash(fullfrompath, fulltopath)
+    current_hash = get_hash(fullfrompath, fulltopath, directives)
     if current_hash == hash_db.get(normpath(fullfrompath), None):
         print('%s has not changed' % fullfrompath)
         return
@@ -186,16 +176,17 @@ def process(path, fromfile, tofile, processor_function, hash_db):
     try:
         os.chdir(path)
         print('Processing %s' % fullfrompath)
-        processor_function(fromfile, tofile)
+        processor_function(fromfile, tofile, directives)
     finally:
         os.chdir(orig_cwd)
     # changed target file, recompute hash
-    current_hash = get_hash(fullfrompath, fulltopath)
+    current_hash = get_hash(fullfrompath, fulltopath, directives)
+    # TODO: Rebuild if CYTHON_COVERAGE changes
     # store hash in db
     hash_db[normpath(fullfrompath)] = current_hash
 
 
-def find_process_files(root_dir):
+def find_process_files(root_dir, directives):
     hash_db = load_hashes(HASH_FILE)
     exclusions = load_exclusions(EXCLUSION_FILE)
     for cur_dir, dirs, files in os.walk(root_dir):
@@ -215,7 +206,7 @@ def find_process_files(root_dir):
                             toext = ".cxx"
                     fromfile = filename
                     tofile = filename[:-len(fromext)] + toext
-                    process(cur_dir, fromfile, tofile, function, hash_db)
+                    process(cur_dir, fromfile, tofile, function, hash_db, directives)
                     save_hashes(hash_db, HASH_FILE)
 
 
