@@ -23,7 +23,7 @@ cdef extern from "math.h":
 cdef extern from "capsule.h":
     void* Capsule_AsVoidPtr(object ptr)
 
-from ...src.blas_lapack cimport dgemm_t, zgemm_t, ddot_t, dgemv_t, zgemv_t, zdotu_t
+from statsmodels.src.blas_lapack cimport dgemm_t, zgemm_t, ddot_t, dgemv_t, zgemv_t, zdotu_t
 
 cdef dgemm_t *dgemm = <dgemm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.get_blas_funcs('gemm', dtype=float64)._cpointer)
 cdef zgemm_t *zgemm = <zgemm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.get_blas_funcs('gemm', dtype=complex128)._cpointer)
