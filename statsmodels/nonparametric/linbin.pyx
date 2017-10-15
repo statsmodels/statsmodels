@@ -1,5 +1,4 @@
-# cython linetrace=True
-# distutils: define_macros=CYTHON_TRACE=1
+#cython profile=True
 """
 cython -a fast_linbin.pyx
 gcc -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing -I/usr/include/python2.7 -I/usr/local/lib/python2.7/dist-packages/numpy/core/include/ -o fast_linbin.so fast_linbin.c

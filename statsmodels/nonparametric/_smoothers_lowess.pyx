@@ -1,8 +1,7 @@
-# cython: linetrace=True
-# cython: boundscheck=False
-# cython: wraparound=False
-# cython: cdivision=True
-# distutils: define_macros=CYTHON_TRACE=1
+#cython: boundscheck = False
+#cython: wraparound = False
+#cython: cdivision = True
+
 '''
 Univariate lowess function, like in R.
 
