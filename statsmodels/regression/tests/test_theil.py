@@ -102,8 +102,8 @@ class TestTheilTextile(object):
     def test_no_penalization(self):
         res_ols = OLS(self.res1.model.endog, self.res1.model.exog).fit()
         res_theil = self.res1.model.fit(lambd=0, cov_type='data-prior')
-        assert_allclose(res_theil.params, res_ols.params, rtol=1e-11)
-        assert_allclose(res_theil.bse, res_ols.bse, rtol=1e-11)
+        assert_allclose(res_theil.params, res_ols.params, rtol=1e-10)
+        assert_allclose(res_theil.bse, res_ols.bse, rtol=1e-10)
 
 
     def test_smoke(self):
