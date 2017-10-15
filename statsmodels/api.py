@@ -25,7 +25,6 @@ from .imputation.mice import MICE, MICEData
 from .nonparametric import api as nonparametric
 from . import distributions
 from .__init__ import test
-from . import version
 from .info import __doc__
 from .graphics.gofplots import qqplot, qqplot_2samples, qqline, ProbPlot
 from .graphics import api as graphics

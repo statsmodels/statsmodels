@@ -15,6 +15,8 @@ from Cython import Tempita as tempita
 
 import numpy
 
+import versioneer
+
 NUMPY_INCLUDES = [numpy.get_include()]
 NUMPY_INCLUDES += [pkg_resources.resource_filename('numpy', 'core/include')]
 
@@ -35,12 +37,6 @@ URL = 'http://www.statsmodels.org/'
 LICENSE = 'BSD License'
 DOWNLOAD_URL = ''
 
-MAJ = 0
-MIN = 9
-REV = 0
-ISRELEASED = False
-VERSION = '%d.%d.%d' % (MAJ, MIN, REV)
-
 CLASSIFIERS = ['Development Status :: 4 - Beta',
                'Environment :: Console',
                'Programming Language :: Cython',
@@ -56,6 +52,7 @@ CLASSIFIERS = ['Development Status :: 4 - Beta',
                'License :: OSI Approved :: BSD License',
                'Topic :: Scientific/Engineering']
 
+cmdclass=versioneer.get_cmdclass()
 cmdclass = {'build_ext': build_ext}
 
 from numpy.distutils.misc_util import get_info
@@ -264,7 +261,7 @@ extras = {'docs': ['sphinx>=1.3.5',
                    'pandas-datareader']}
 
 setup(name=DISTNAME,
-      version=VERSION,
+      version=versioneer.get_version(),
       maintainer=MAINTAINER,
       ext_modules=extensions,
       maintainer_email=MAINTAINER_EMAIL,

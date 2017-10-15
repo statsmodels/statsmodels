@@ -55,3 +55,7 @@ try:
     from .version import version as __version__
 except ImportError:
     __version__ = 'not-yet-built'
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
