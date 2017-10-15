@@ -27,7 +27,6 @@ class TestTheilTextile(object):
         filepath = os.path.join(cur_dir, "results", "theil_textile_predict.csv")
         cls.res_predict = np.recfromtxt(filepath, delimiter=",")
 
-
         names = "year	lconsump	lincome	lprice".split()
 
         data = np.array('''\
@@ -89,7 +88,6 @@ class TestTheilTextile(object):
         corr_fact = self.res1.df_resid / self.res2.df_r
         assert_allclose(np.sqrt(self.res1.mse_resid * corr_fact), self.res2.rmse, rtol=2e-6)
 
-
     def test_other(self):
         tc = self.res1.test_compatibility()
         assert_allclose(np.squeeze(tc[0]), self.res2.compat, rtol=2e-6)
@@ -98,13 +96,11 @@ class TestTheilTextile(object):
         frac = self.res1.share_data()
         assert_allclose(frac, self.res2.frac_sample, rtol=2e-6)
 
-
     def test_no_penalization(self):
         res_ols = OLS(self.res1.model.endog, self.res1.model.exog).fit()
         res_theil = self.res1.model.fit(lambd=0, cov_type='data-prior')
         assert_allclose(res_theil.params, res_ols.params, rtol=1e-10)
         assert_allclose(res_theil.bse, res_ols.bse, rtol=1e-10)
-
 
     def test_smoke(self):
         self.res1.summary()
@@ -113,7 +109,6 @@ class TestTheilTextile(object):
 class CheckEquivalenceMixin(object):
 
     tol = {'default': (1e-4, 1e-20)}
-
 
     @classmethod
     def get_sample(cls):
@@ -124,8 +119,6 @@ class CheckEquivalenceMixin(object):
         x[:, 0] = 1
         y = np.dot(x, beta) + 2 * np.random.randn(nobs)
         return y, x
-
-
 
     def test_attributes(self):
 
@@ -167,7 +160,6 @@ class TestTheil1(CheckEquivalenceMixin):
         mod1 = TheilGLS(y, x, sigma_prior=[0, 0, 1., 1.])
         cls.res1 = mod1.fit(200000)
         cls.res2 = OLS(y, x[:, :3]).fit()
-
 
 class TestTheil2(CheckEquivalenceMixin):
     # no penalization = same as OLS
@@ -228,6 +220,7 @@ class TestTheilLinRestriction(CheckEquivalenceMixin):
                'tvalues': (5e-4, 0)}
         tol.update(cls.tol)
         cls.tol = tol
+
 
 class TestTheilLinRestrictionApprox(CheckEquivalenceMixin):
     # impose linear restriction with some uncertainty

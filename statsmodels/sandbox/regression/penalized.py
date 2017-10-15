@@ -48,9 +48,8 @@ def atleast_2dcols(x):
     return x
 
 
-
 class TheilGLS(GLS):
-    '''GLS with stochastic restrictions
+    """GLS with stochastic restrictions
 
     TheilGLS estimates the following linear model
 
@@ -127,8 +126,7 @@ class TheilGLS(GLS):
         Sigma is the covariance matrix of the error term that is used in the same
         way as in GLS.
 
-    '''
-
+    """
 
     def __init__(self, endog, exog, r_matrix=None, q_matrix=None,
                  sigma_prior=None, sigma=None):
@@ -178,7 +176,6 @@ class TheilGLS(GLS):
         self.sigma_prior = sigma_prior
         self.sigma_prior_inv = np.linalg.pinv(sigma_prior) #or inv
 
-
     def fit(self, lambd=1., cov_type='sandwich'):
         """Estimate parameters and return results instance
 
@@ -194,6 +191,9 @@ class TheilGLS(GLS):
             restriction (R and q) as fixed and has a sandwich form analogously
             to M-estimators.
 
+        Returns
+        -------
+        results : TheilRegressionResults instance
 
         Notes
         -----
@@ -296,6 +296,7 @@ class TheilGLS(GLS):
         lambd = optimize.fmin(get_ic, start_params, **optim_args)
         return lambd
 
+
 #TODO:
 #I need the hatmatrix in the model if I want to do iterative fitting, e.g. GCV
 #move to model or use it from a results instance inside the model,
@@ -311,10 +312,9 @@ class TheilRegressionResults(RegressionResults):
         self.df_model = self.hatmatrix_trace() - 1 #assume constant
         self.df_resid = self.model.endog.shape[0] - self.df_model - 1
 
-    #cache
     @cache_readonly
     def hatmatrix_diag(self):
-        '''
+        '''diagonal of hat matrix
 
         diag(X' xpxi X)
 
@@ -342,6 +342,8 @@ class TheilRegressionResults(RegressionResults):
 
     #@cache_readonly
     def hatmatrix_trace(self):
+        """trace of hat matrix
+        """
         return self.hatmatrix_diag.sum()
 
 ##    #this doesn't update df_resid
@@ -406,7 +408,7 @@ class TheilRegressionResults(RegressionResults):
         return (self.df_model + 1) / self.model.rank  # + 1 is for constant
 
 
-#contrast/restriction matrices, temporary location
+# contrast/restriction matrices, temporary location
 
 def coef_restriction_meandiff(n_coeffs, n_vars=None, position=0):
 
