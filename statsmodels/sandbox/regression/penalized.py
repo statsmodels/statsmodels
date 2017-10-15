@@ -238,18 +238,22 @@ class TheilGLS(GLS):
         #xpy = xpy[:,None]
 
         xpxi = np.linalg.pinv(xpx, rcond=1e-15**2)  #to match pinv(x) in OLS case
+        xpxi_sandwich = xpxi.dot(xx).dot(xpxi)
         params = np.dot(xpxi, xpy)    #or solve
         params = np.squeeze(params)
         # normalized_cov_params should have sandwich form xpxi @ xx @ xpxi
         if cov_type == 'sandwich':
-            self.normalized_cov_params = xpxi.dot(xx).dot(xpxi)
+            normalized_cov_params = xpxi_sandwich
         elif cov_type == 'data-prior':
-            self.normalized_cov_params = xpxi    #why attach it to self, i.e. model?
+            normalized_cov_params = xpxi    #why attach it to self, i.e. model?
         else:
             raise ValueError("cov_type has to be 'sandwich' or 'data-prior'")
 
+        self.normalized_cov_params = xpxi_sandwich
+        self.xpxi = xpxi
+        self.sigma2_e = sigma2_e
         lfit = TheilRegressionResults(self, params,
-                       normalized_cov_params=xpxi)
+                       normalized_cov_params=normalized_cov_params)
 
         lfit.penalization_factor = lambd
         return lfit
