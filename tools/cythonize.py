@@ -49,22 +49,10 @@ except NameError:
     WindowsError = None
 
 
-# Determine whether or not to enable coverage in cython files.
-linetrace = os.environ.get('linetrace', False)
-CYTHON_TRACE = str(int(bool(linetrace)))
-
-directives = {'linetrace': False}
-macros = []
-if linetrace:
-    # https://pypkg.com/pypi/pytest-cython/f/tests/example-project/setup.py
-    directives['linetrace'] = True
-    macros = [('CYTHON_TRACE', '1'), ('CYTHON_TRACE_NOGIL', '1')]
-
-
 #
 # Rules
 #
-def process_pyx(fromfile, tofile):
+def process_pyx(fromfile, tofile, directives):
     try:
         from Cython.Compiler.Version import version as cython_version
         from distutils.version import LooseVersion
@@ -79,28 +67,13 @@ def process_pyx(fromfile, tofile):
         flags += ['--cplus']
 
     from Cython.Build import cythonize
+    print('Compiler Directives:' + str(directives))
     cythonize(fromfile, compiler_directives=directives)
 
     return
 
-    try:
-        try:
-            r = subprocess.call(['cython'] + flags + ["-o", tofile, fromfile])
-            if r != 0:
-                raise Exception('Cython failed')
-        except OSError:
-            # There are ways of installing Cython that don't result in a cython
-            # executable on the path, see gh-2397.
-            r = subprocess.call([sys.executable, '-c',
-                                 'import sys; from Cython.Compiler.Main import '
-                                 'setuptools_main as main; sys.exit(main())'] + flags +
-                                 ["-o", tofile, fromfile])
-            if r != 0:
-                raise Exception('Cython failed')
-    except OSError:
-        raise OSError('Cython needs to be installed')
 
-def process_tempita_pyx(fromfile, tofile):
+def process_tempita_pyx(fromfile, tofile, directives):
     try:
         try:
             from Cython import Tempita as tempita
@@ -109,20 +82,26 @@ def process_tempita_pyx(fromfile, tofile):
     except ImportError:
         raise Exception('Building Statsmodels requires Tempita: '
                         'pip install --user Tempita')
+    print(fromfile)
     with open(fromfile, "r") as f:
         tmpl = f.read()
     pyxcontent = tempita.sub(tmpl)
     assert fromfile.endswith('.pyx.in')
     pyxfile = fromfile[:-len('.pyx.in')] + '.pyx'
     with open(pyxfile, "w") as f:
+        print(pyxfile)
+        print(os.getcwd())
         f.write(pyxcontent)
-    process_pyx(pyxfile, tofile)
+    process_pyx(pyxfile, tofile, directives)
+
 
 rules = {
     # fromext : function
-    '.pyx' : process_pyx,
-    '.pyx.in' : process_tempita_pyx
-    }
+    '.pyx': process_pyx,
+    '.pyx.in': process_tempita_pyx
+}
+
+
 #
 # Hash db
 #
@@ -138,16 +117,20 @@ def load_hashes(filename):
         hashes = {}
     return hashes
 
+
 def save_hashes(hash_db, filename):
     with open(filename, 'w') as f:
         for key, value in sorted(hash_db.items()):
             f.write("%s %s %s\n" % (key, value[0], value[1]))
 
-def sha1_of_file(filename):
+
+def sha1_of_file(filename, directives):
     h = hashlib.sha1()
     with open(filename, "rb") as f:
         h.update(f.read())
+    h.update(str(directives).encode('utf8'))
     return h.hexdigest()
+
 
 #
 # Exclusions
@@ -172,15 +155,17 @@ def normpath(path):
         path = path[2:]
     return path
 
-def get_hash(frompath, topath):
-    from_hash = sha1_of_file(frompath)
-    to_hash = sha1_of_file(topath) if os.path.exists(topath) else None
+
+def get_hash(frompath, topath, directives):
+    from_hash = sha1_of_file(frompath, directives)
+    to_hash = sha1_of_file(topath, directives) if os.path.exists(topath) else None
     return (from_hash, to_hash)
 
-def process(path, fromfile, tofile, processor_function, hash_db):
+
+def process(path, fromfile, tofile, processor_function, hash_db, directives):
     fullfrompath = os.path.join(path, fromfile)
     fulltopath = os.path.join(path, tofile)
-    current_hash = get_hash(fullfrompath, fulltopath)
+    current_hash = get_hash(fullfrompath, fulltopath, directives)
     if current_hash == hash_db.get(normpath(fullfrompath), None):
         print('%s has not changed' % fullfrompath)
         return
@@ -189,16 +174,17 @@ def process(path, fromfile, tofile, processor_function, hash_db):
     try:
         os.chdir(path)
         print('Processing %s' % fullfrompath)
-        processor_function(fromfile, tofile)
+        processor_function(fromfile, tofile, directives)
     finally:
         os.chdir(orig_cwd)
     # changed target file, recompute hash
-    current_hash = get_hash(fullfrompath, fulltopath)
+    current_hash = get_hash(fullfrompath, fulltopath, directives)
+    # TODO: Rebuild if CYTHON_COVERAGE changes
     # store hash in db
     hash_db[normpath(fullfrompath)] = current_hash
 
 
-def find_process_files(root_dir):
+def find_process_files(root_dir, directives):
     hash_db = load_hashes(HASH_FILE)
     exclusions = load_exclusions(EXCLUSION_FILE)
     for cur_dir, dirs, files in os.walk(root_dir):
@@ -213,13 +199,14 @@ def find_process_files(root_dir):
                     toext = ".c"
                     with open(os.path.join(cur_dir, filename), 'rb') as f:
                         data = f.read()
-                        m = re.search(br"^\s*#\s*distutils:\s*language\s*=\s*c\+\+\s*$", data, re.I|re.M)
+                        m = re.search(br"^\s*#\s*distutils:\s*language\s*=\s*c\+\+\s*$", data, re.I | re.M)
                         if m:
                             toext = ".cxx"
                     fromfile = filename
                     tofile = filename[:-len(fromext)] + toext
-                    process(cur_dir, fromfile, tofile, function, hash_db)
+                    process(cur_dir, fromfile, tofile, function, hash_db, directives)
                     save_hashes(hash_db, HASH_FILE)
+
 
 def main():
     try:

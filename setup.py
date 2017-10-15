@@ -12,13 +12,26 @@ from os.path import relpath, join as pjoin
 import sys
 import subprocess
 import re
-from distutils.version import StrictVersion, LooseVersion
+import pkg_resources
+from distutils.version import LooseVersion
 
+from setuptools import Command, Extension, find_packages, setup
+from setuptools.dist import Distribution
+
+from Cython.Distutils import build_ext as _build_ext
+import Cython.Build
 
 # temporarily redirect config directory to prevent matplotlib importing
 # testing that for writeable directory which results in sandbox error in
 # certain easy_install versions
 os.environ["MPLCONFIGDIR"] = "."
+
+# Determine whether to build the cython extensions with coverage
+# measurement enabled.
+CYTHON_COVERAGE = bool(os.environ.get('CYTHON_COVERAGE', False))
+CYTHON_TRACE_NOGIL = str(int(CYTHON_COVERAGE))
+if CYTHON_COVERAGE:
+    print('Building with coverage for Cython code')
 
 no_frills = (len(sys.argv) >= 2 and ('--help' in sys.argv[1:] or
                                      sys.argv[1] in ('--help-commands',
@@ -26,29 +39,6 @@ no_frills = (len(sys.argv) >= 2 and ('--help' in sys.argv[1:] or
                                                      'clean')))
 
 # try bootstrapping setuptools if it doesn't exist
-try:
-    import pkg_resources
-    try:
-        pkg_resources.require("setuptools>=0.6c5")
-    except pkg_resources.VersionConflict:
-        from ez_setup import use_setuptools
-        use_setuptools(version="0.6c5")
-    from setuptools import setup, Command, find_packages
-    _have_setuptools = True
-except ImportError:
-    # no setuptools installed
-    from distutils.core import setup, Command
-    _have_setuptools = False
-
-if _have_setuptools:
-    setuptools_kwargs = {"zip_safe": False,
-                         "test_suite": "nose.collector"}
-else:
-    setuptools_kwargs = {}
-    if sys.version_info[0] >= 3:
-        sys.exit("Need setuptools to install statsmodels for Python 3.x")
-
-
 curdir = os.path.abspath(os.path.dirname(__file__))
 README = open(pjoin(curdir, "README.rst")).read()
 CYTHON_EXCLUSION_FILE = 'cythonize_exclusions.dat'
@@ -57,17 +47,11 @@ DISTNAME = 'statsmodels'
 DESCRIPTION = 'Statistical computations and models for Python'
 LONG_DESCRIPTION = README
 MAINTAINER = 'Skipper Seabold, Josef Perktold'
-MAINTAINER_EMAIL ='pystatsmodels@googlegroups.com'
+MAINTAINER_EMAIL = 'pystatsmodels@googlegroups.com'
 URL = 'http://www.statsmodels.org/'
 LICENSE = 'BSD License'
 DOWNLOAD_URL = ''
 
-# These imports need to be here; setuptools needs to be imported first.
-from distutils.extension import Extension
-from distutils.command.build import build
-
-# from distutils.command.build_ext import build_ext as _build_ext
-from Cython.Distutils import build_ext as _build_ext
 
 class build_ext(_build_ext):
     def build_extensions(self):
@@ -75,12 +59,13 @@ class build_ext(_build_ext):
 
         for ext in self.extensions:
             if (hasattr(ext, 'include_dirs') and
-                    not numpy_incl in ext.include_dirs):
+                        numpy_incl not in ext.include_dirs):
                 ext.include_dirs.append(numpy_incl)
         _build_ext.build_extensions(self)
 
 
 def generate_cython():
+    directives = {'linetrace': CYTHON_COVERAGE}
     cwd = os.path.abspath(os.path.dirname(__file__))
     tools_dir = os.path.join(cwd, 'tools')
 
@@ -88,7 +73,7 @@ def generate_cython():
     try:
         sys.path.insert(0, tools_dir)
         import cythonize
-        cythonize.find_process_files('statsmodels')
+        cythonize.find_process_files('statsmodels', directives)
     finally:
         sys.path.remove(tools_dir)
     return
@@ -175,12 +160,11 @@ MAJ = 0
 MIN = 8
 REV = 0
 ISRELEASED = False
-VERSION = '%d.%d.%d' % (MAJ,MIN,REV)
+VERSION = '%d.%d.%d' % (MAJ, MIN, REV)
 
 classifiers = ['Development Status :: 4 - Beta',
                'Environment :: Console',
                'Programming Language :: Cython',
-               'Programming Language :: Python :: 2.6',
                'Programming Language :: Python :: 2.7',
                'Programming Language :: Python :: 3.3',
                'Programming Language :: Python :: 3.4',
@@ -192,6 +176,7 @@ classifiers = ['Development Status :: 4 - Beta',
                'Natural Language :: English',
                'License :: OSI Approved :: BSD License',
                'Topic :: Scientific/Engineering']
+
 
 # Return the git revision as a string
 def git_version():
@@ -206,7 +191,7 @@ def git_version():
         env['LANGUAGE'] = 'C'
         env['LANG'] = 'C'
         env['LC_ALL'] = 'C'
-        out = subprocess.Popen(" ".join(cmd), stdout = subprocess.PIPE, env=env,
+        out = subprocess.Popen(" ".join(cmd), stdout=subprocess.PIPE, env=env,
                                shell=True).communicate()[0]
         return out
 
@@ -218,16 +203,17 @@ def git_version():
 
     return GIT_REVISION
 
+
 def write_version_py(filename=pjoin(curdir, 'statsmodels/version.py')):
     cnt = "\n".join(["",
-                    "# THIS FILE IS GENERATED FROM SETUP.PY",
-                    "short_version = '%(version)s'",
-                    "version = '%(version)s'",
-                    "full_version = '%(full_version)s'",
-                    "git_revision = '%(git_revision)s'",
-                    "release = %(isrelease)s", "",
-                    "if not release:",
-                    "    version = full_version"])
+                     "# THIS FILE IS GENERATED FROM SETUP.PY",
+                     "short_version = '%(version)s'",
+                     "version = '%(version)s'",
+                     "full_version = '%(full_version)s'",
+                     "git_revision = '%(git_revision)s'",
+                     "release = %(isrelease)s", "",
+                     "if not release:",
+                     "    version = full_version"])
     # Adding the git rev number needs to be done inside write_version_py(),
     # otherwise the import of numpy.version messes up the build under Python 3.
     FULLVERSION = VERSION
@@ -247,13 +233,12 @@ def write_version_py(filename=pjoin(curdir, 'statsmodels/version.py')):
     if not ISRELEASED:
         FULLVERSION += '.dev0+' + GIT_REVISION[:7]
 
-
     if dowrite:
         try:
             a = open(filename, 'w')
             a.write(cnt % {'version': VERSION,
-                           'full_version' : FULLVERSION,
-                           'git_revision' : GIT_REVISION,
+                           'full_version': FULLVERSION,
+                           'git_revision': GIT_REVISION,
                            'isrelease': str(ISRELEASED)})
         finally:
             a.close()
@@ -321,30 +306,10 @@ class CheckingBuildExt(build_ext):
         build_ext.build_extensions(self)
 
 
-class DummyBuildSrc(Command):
-    """ numpy's build_src command interferes with Cython's build_ext.
-    """
-    user_options = []
-
-    def initialize_options(self):
-        self.py_modules_dict = {}
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        pass
-
-
-cmdclass = {'clean': CleanCommand,
-            'build': build}
-
-cmdclass["build_src"] = DummyBuildSrc
-cmdclass["build_ext"] = CheckingBuildExt
-
+cmdclass = {'clean': CleanCommand, 'build_ext': build_ext}
 
 # some linux distros require it
-#NOTE: we are not currently using this but add it to Extension, if needed.
+# NOTE: we are not currently using this but add it to Extension, if needed.
 # libraries = ['m'] if 'win32' not in sys.platform else []
 
 from numpy.distutils.misc_util import get_info
@@ -354,102 +319,93 @@ init_cython_exclusion(CYTHON_EXCLUSION_FILE)
 
 npymath_info = get_info("npymath")
 ext_data = dict(
-    kalman_loglike = {"name" : "statsmodels/tsa/kalmanf/kalman_loglike.c",
-              "depends" : ["statsmodels/src/capsule.h"],
-              "include_dirs": ["statsmodels/src"],
-              "sources" : []},
-    _hamilton_filter = {"name" : "statsmodels/tsa/regime_switching/_hamilton_filter.c",
-              "depends" : [],
-              "include_dirs": [],
-              "sources" : []},
-    _kim_smoother = {"name" : "statsmodels/tsa/regime_switching/_kim_smoother.c",
-              "depends" : [],
-              "include_dirs": [],
-              "sources" : []},
-    _statespace = {"name" : "statsmodels/tsa/statespace/_statespace.c",
-              "depends" : ["statsmodels/src/capsule.h"],
-              "include_dirs": ["statsmodels/src"] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources" : []},
-    linbin = {"name" : "statsmodels/nonparametric/linbin.c",
-             "depends" : [],
-             "sources" : []},
-    _smoothers_lowess = {"name" : "statsmodels/nonparametric/_smoothers_lowess.c",
-             "depends" : [],
-             "sources" : []}
-    )
+    _hamilton_filter={"name": "statsmodels/tsa/regime_switching/_hamilton_filter.c",
+                      "depends": [],
+                      "include_dirs": [],
+                      "sources": []},
+    _kim_smoother={"name": "statsmodels/tsa/regime_switching/_kim_smoother.c",
+                   "depends": [],
+                   "include_dirs": [],
+                   "sources": []},
+    _statespace={"name": "statsmodels/tsa/statespace/_statespace.c",
+                 "depends": ["statsmodels/src/capsule.h"],
+                 "include_dirs": ["statsmodels/src"] + npymath_info['include_dirs'],
+                 "libraries": npymath_info['libraries'],
+                 "library_dirs": npymath_info['library_dirs'],
+                 "sources": []},
+)
 
 statespace_ext_data = dict(
-    _representation = {"name" : "statsmodels/tsa/statespace/_representation.c",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_filter = {"name" : "statsmodels/tsa/statespace/_kalman_filter.c",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_filter_conventional = {"name" : "statsmodels/tsa/statespace/_filters/_conventional.c",
-              "filename": "_conventional",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_filter_inversions = {"name" : "statsmodels/tsa/statespace/_filters/_inversions.c",
-              "filename": "_inversions",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_filter_univariate = {"name" : "statsmodels/tsa/statespace/_filters/_univariate.c",
-              "filename": "_univariate",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_smoother = {"name" : "statsmodels/tsa/statespace/_kalman_smoother.c",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_smoother_alternative = {"name" : "statsmodels/tsa/statespace/_smoothers/_alternative.c",
-              "filename": "_alternative",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_smoother_classical = {"name" : "statsmodels/tsa/statespace/_smoothers/_classical.c",
-              "filename": "_classical",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_smoother_conventional = {"name" : "statsmodels/tsa/statespace/_smoothers/_conventional.c",
-              "filename": "_conventional",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_smoother_univariate = {"name" : "statsmodels/tsa/statespace/_smoothers/_univariate.c",
-              "filename": "_univariate",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_simulation_smoother = {"name" : "statsmodels/tsa/statespace/_simulation_smoother.c",
-              "filename": "_simulation_smoother",
-              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources": []},
-    _kalman_tools = {"name" : "statsmodels/tsa/statespace/_tools.c",
-              "filename": "_tools",
-              "sources": []},
+    _representation={"name": "statsmodels/tsa/statespace/_representation.c",
+                     "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
+                     "libraries": npymath_info['libraries'],
+                     "library_dirs": npymath_info['library_dirs'],
+                     "sources": []},
+    _kalman_filter={"name": "statsmodels/tsa/statespace/_kalman_filter.c",
+                    "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
+                    "libraries": npymath_info['libraries'],
+                    "library_dirs": npymath_info['library_dirs'],
+                    "sources": []},
+    _kalman_filter_conventional={"name": "statsmodels/tsa/statespace/_filters/_conventional.c",
+                                 "filename": "_conventional",
+                                 "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
+                                 "libraries": npymath_info['libraries'],
+                                 "library_dirs": npymath_info['library_dirs'],
+                                 "sources": []},
+    _kalman_filter_inversions={"name": "statsmodels/tsa/statespace/_filters/_inversions.c",
+                               "filename": "_inversions",
+                               "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
+                               "libraries": npymath_info['libraries'],
+                               "library_dirs": npymath_info['library_dirs'],
+                               "sources": []},
+    _kalman_filter_univariate={"name": "statsmodels/tsa/statespace/_filters/_univariate.c",
+                               "filename": "_univariate",
+                               "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
+                               "libraries": npymath_info['libraries'],
+                               "library_dirs": npymath_info['library_dirs'],
+                               "sources": []},
+    _kalman_smoother={"name": "statsmodels/tsa/statespace/_kalman_smoother.c",
+                      "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
+                      "libraries": npymath_info['libraries'],
+                      "library_dirs": npymath_info['library_dirs'],
+                      "sources": []},
+    _kalman_smoother_alternative={"name": "statsmodels/tsa/statespace/_smoothers/_alternative.c",
+                                  "filename": "_alternative",
+                                  "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
+                                  "libraries": npymath_info['libraries'],
+                                  "library_dirs": npymath_info['library_dirs'],
+                                  "sources": []},
+    _kalman_smoother_classical={"name": "statsmodels/tsa/statespace/_smoothers/_classical.c",
+                                "filename": "_classical",
+                                "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
+                                "libraries": npymath_info['libraries'],
+                                "library_dirs": npymath_info['library_dirs'],
+                                "sources": []},
+    _kalman_smoother_conventional={"name": "statsmodels/tsa/statespace/_smoothers/_conventional.c",
+                                   "filename": "_conventional",
+                                   "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
+                                   "libraries": npymath_info['libraries'],
+                                   "library_dirs": npymath_info['library_dirs'],
+                                   "sources": []},
+    _kalman_smoother_univariate={"name": "statsmodels/tsa/statespace/_smoothers/_univariate.c",
+                                 "filename": "_univariate",
+                                 "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
+                                 "libraries": npymath_info['libraries'],
+                                 "library_dirs": npymath_info['library_dirs'],
+                                 "sources": []},
+    _kalman_simulation_smoother={"name": "statsmodels/tsa/statespace/_simulation_smoother.c",
+                                 "filename": "_simulation_smoother",
+                                 "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
+                                 "libraries": npymath_info['libraries'],
+                                 "library_dirs": npymath_info['library_dirs'],
+                                 "sources": []},
+    _kalman_tools={"name": "statsmodels/tsa/statespace/_tools.c",
+                   "filename": "_tools",
+                   "sources": []},
 )
 try:
     from scipy.linalg import cython_blas
+
     ext_data.update(statespace_ext_data)
 except ImportError:
     for name, data in statespace_ext_data.items():
@@ -457,28 +413,31 @@ except ImportError:
         append_cython_exclusion(path.replace('/', os.path.sep),
                                 CYTHON_EXCLUSION_FILE)
 
-# Determine whether to build the cython extensions with coverage
-# measurement enabled.
-linetrace = os.environ.get('linetrace', False)
-CYTHON_TRACE = str(int(bool(linetrace)))
-
-directives = {'linetrace': False}
-macros = []
-if linetrace:
-    # https://pypkg.com/pypi/pytest-cython/f/tests/example-project/setup.py
-    directives['linetrace'] = True
-    macros = [('CYTHON_TRACE', '1'), ('CYTHON_TRACE_NOGIL', '1')]
+# https://pypkg.com/pypi/pytest-cython/f/tests/example-project/setup.py
+macros = [('CYTHON_TRACE_NOGIL', CYTHON_TRACE_NOGIL)]
 
 extensions = []
+ext = Extension('statsmodels.tsa.kalmanf.kalman_loglike',
+                ['statsmodels/tsa/kalmanf/kalman_loglike.pyx'],
+                include_dirs=['./', "statsmodels/src"],
+                depends=["statsmodels/src/capsule.h","statsmodels/src/blas_lapack.pxd"],
+                define_macros=macros)
+extensions.extend(Cython.Build.cythonize(ext))
+ext = Extension('statsmodels.nonparametric.linbin',
+                ["statsmodels/nonparametric/linbin.pyx"],
+                define_macros=macros)
+extensions.extend(Cython.Build.cythonize(ext, compiler_directives={'linetrace': CYTHON_COVERAGE}))
+ext = Extension('statsmodels.nonparametric._smoothers_lowess',
+                ["statsmodels/nonparametric/_smoothers_lowess.pyx"],
+                define_macros=macros)
+extensions.extend(Cython.Build.cythonize(ext, compiler_directives={'linetrace': CYTHON_COVERAGE}))
+
+
 for name, data in ext_data.items():
     data['sources'] = data.get('sources', []) + [data['name']]
-
+    data['define_macros'] = macros
     destdir = ".".join(os.path.dirname(data["name"]).split("/"))
     data.pop('name')
-
-    if linetrace:
-        assert 'define_macros' not in data
-        data['define_macros'] = macros
 
     filename = data.pop('filename', name)
     obj = Extension('%s.%s' % (destdir, filename), **data)
@@ -496,17 +455,22 @@ def get_data_files():
             continue
         path = pjoin(root, i)
         if os.path.isdir(path):
-            data_files.update({relpath(path, start=curdir).replace(sep, ".") : ["*.csv",
-                                                                  "*.dta"]})
+            data_files.update({relpath(path, start=curdir).replace(sep, "."): ["*.csv",
+                                                                               "*.dta"]})
     # add all the tests and results files
     for r, ds, fs in os.walk(pjoin(curdir, "statsmodels")):
         r_ = relpath(r, start=curdir)
         if r_.endswith('results'):
-            data_files.update({r_.replace(sep, ".") : ["*.csv",
-                                                       "*.txt",
-                                                       "*.dta"]})
+            data_files.update({r_.replace(sep, "."): ["*.csv",
+                                                      "*.txt",
+                                                      "*.dta"]})
 
     return data_files
+
+
+class BinaryDistribution(Distribution):
+    def is_pure(self):
+        return False
 
 
 if __name__ == "__main__":
@@ -514,23 +478,19 @@ if __name__ == "__main__":
         os.unlink('MANIFEST')
 
     min_versions = {
-        'numpy' : '1.6.2',
-        'scipy' : '0.11',
-        'pandas' : '0.13',
-        'patsy' : '0.2.1',
-                   }
+        'numpy': '1.8',
+        'scipy': '0.16',
+        'pandas': '0.18',
+        'patsy': '0.4',
+    }
     if sys.version_info[0] == 3 and sys.version_info[1] >= 3:
         # 3.3 needs numpy 1.7+
-        min_versions.update({"numpy" : "1.7.0"})
+        min_versions.update({"numpy": "1.9.0"})
 
     (setup_requires,
      install_requires) = check_dependency_versions(min_versions)
 
-    if _have_setuptools:
-        setuptools_kwargs['setup_requires'] = setup_requires
-        setuptools_kwargs['install_requires'] = install_requires
-
-        write_version_py()
+    write_version_py()
 
     # this adds *.csv and *.dta files in datasets folders
     # and *.csv and *.txt files in test/results folders
@@ -543,20 +503,20 @@ if __name__ == "__main__":
     package_data["statsmodels.stats.tests.results"].append("*.json")
     package_data["statsmodels.tsa.vector_ar.tests.results"].append("*.npz")
     # data files that don't follow the tests/results pattern. should fix.
-    package_data.update({"statsmodels.stats.tests" : ["*.txt"]})
+    package_data.update({"statsmodels.stats.tests": ["*.txt"]})
 
-    package_data.update({"statsmodels.stats.libqsturng" :
-                         ["*.r", "*.txt", "*.dat"]})
-    package_data.update({"statsmodels.stats.libqsturng.tests" :
-                         ["*.csv", "*.dat"]})
-    package_data.update({"statsmodels.tsa.vector_ar.data" : ["*.dat"]})
-    package_data.update({"statsmodels.tsa.vector_ar.data" : ["*.dat"]})
+    package_data.update({"statsmodels.stats.libqsturng":
+                             ["*.r", "*.txt", "*.dat"]})
+    package_data.update({"statsmodels.stats.libqsturng.tests":
+                             ["*.csv", "*.dat"]})
+    package_data.update({"statsmodels.tsa.vector_ar.data": ["*.dat"]})
+    package_data.update({"statsmodels.tsa.vector_ar.data": ["*.dat"]})
     # temporary, until moved:
-    package_data.update({"statsmodels.sandbox.regression.tests" :
-                         ["*.dta", "*.csv"]})
+    package_data.update({"statsmodels.sandbox.regression.tests":
+                             ["*.dta", "*.csv"]})
 
-    #TODO: deal with this. Not sure if it ever worked for bdists
-    #('docs/build/htmlhelp/statsmodelsdoc.chm',
+    # TODO: deal with this. Not sure if it ever worked for bdists
+    # ('docs/build/htmlhelp/statsmodelsdoc.chm',
     # 'statsmodels/statsmodelsdoc.chm')
 
     cwd = os.path.abspath(os.path.dirname(__file__))
@@ -588,6 +548,9 @@ if __name__ == "__main__":
           cmdclass=cmdclass,
           packages=packages,
           package_data=package_data,
-          include_package_data=False,  # True will install all files in repo
+          distclass=BinaryDistribution,
+          include_package_data=True,  # True will install all files in repo
           extras_require=extras,
-          **setuptools_kwargs)
+          zip_safe=False,
+          setup_requires=setup_requires,
+          install_requires=install_requires)
