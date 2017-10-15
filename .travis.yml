@@ -124,8 +124,7 @@ before_install:
 
 # Install packages
 install:
-  - python setup.py build_ext --inplace
-  - python setup.py develop
+  - python setup_coverage.py develop
 
 script:
   # Show versions

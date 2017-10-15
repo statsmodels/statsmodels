@@ -6,6 +6,12 @@ include = */statsmodels/nonparametric/*
 plugins = Cython.Coverage
 
 [report]
+show_missing = True
+
+omit=
+    */tests/*
+    */datasets/*
+
 # Regexes for lines to exclude from consideration
 exclude_lines =
     # Have to re-enable the standard pragma
@@ -28,3 +34,6 @@ exclude_lines =
 
 include = */statsmodels/*
 ignore_errors = True
+
+[html]
+directory = coverage_html_report
