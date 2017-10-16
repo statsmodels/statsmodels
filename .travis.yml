@@ -23,6 +23,7 @@ env:
     - BLAS="mkl blas=*=mkl" # Use Intel MKL by default
     - BUILD_INIT=tools/ci/travis_conda.sh
     - DEPEND_ALWAYS="pyyaml joblib pip colorama"
+    - CYTHON_COVERAGE=
 
 matrix:
   fast_finish: true
@@ -111,6 +112,9 @@ before_install:
   # Source recipe to install packages
   - source $BUILD_INIT
   - pip install pytest pytest-xdist pip pytest-randomly nose
+  - if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --cov-config=.travis_coveragerc --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
+  - if [ ${COVERAGE} = true ]; then export CYTHON_COVERAGE=1; fi
+  - echo "Cython coverage:" ${CYTHON_COVERAGE}
   - |
     if [ ${COVERAGE} = true ]; then
         pip install codecov coverage coveralls pytest-cov
