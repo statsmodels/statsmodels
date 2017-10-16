@@ -255,3 +255,94 @@ class TestTheilLinRestrictionApprox(CheckEquivalenceMixin):
                 }
         tol.update(tol2)
         cls.tol = tol
+
+
+class TestTheilPanel(object):
+
+    @classmethod
+    def setup_class(cls):
+        #example 3
+        nobs = 300
+        nobs_i = 5
+        n_groups = nobs // nobs_i
+        k_vars = 3
+
+        from statsmodels.sandbox.panel.random_panel import PanelSample
+        dgp = PanelSample(nobs, k_vars, n_groups)
+        dgp.group_means = 2 + np.random.randn(n_groups) #add random intercept
+        print('seed', dgp.seed)
+        y = dgp.generate_panel()
+        x = np.column_stack((dgp.exog[:,1:],
+                             dgp.groups[:,None] == np.arange(n_groups)))
+        cls.dgp = dgp
+        cls.endog = y
+        cls.exog = x
+        cls.res_ols = OLS(y, x).fit()
+
+    def test_regression(self):
+        y = self.endog
+        x = self.exog
+        n_groups, k_vars = self.dgp.n_groups, self.dgp.k_vars
+
+        R = np.c_[np.zeros((n_groups, k_vars-1)), np.eye(n_groups)]
+        r = np.zeros(n_groups)
+        R = np.c_[np.zeros((n_groups-1, k_vars)),
+                  np.eye(n_groups-1)-1./n_groups * np.ones((n_groups-1, n_groups-1))]
+        r = np.zeros(n_groups-1)
+        R[:, k_vars-1] = -1
+
+        lambd = 1 #1e-4
+        mod = TheilGLS(y, x, r_matrix=R, q_matrix=r, sigma_prior=lambd)
+        res = mod.fit()
+
+        # regression test
+        params1 = np.array([
+            0.96518694,  1.06152005,  0.31844136,  3.02747485,  3.25308031,
+            3.76229199,  1.99795797,  3.9831158 ,  3.1055317 ,  1.91599103,
+            4.5354633 ,  4.14332517,  3.69462963,  3.79567255,  2.18633118,
+            2.02848738,  3.74269763,  3.60041509,  3.27734962,  2.47771329,
+            3.23858674,  4.2973348 ,  3.98013994,  3.73415254,  2.88870379,
+            3.91311563,  3.71043309,  1.80506601,  3.78067131,  1.77164485,
+            3.88247   ,  3.28328127,  3.1313951 ,  3.03006754,  3.31012921,
+            3.08761618,  2.96735903,  1.54005178,  1.27778498,  1.47949121,
+            4.87184321,  3.03812406,  3.43574332,  2.16983158,  4.45339409,
+            2.64502381,  4.04767553,  4.42282326,  2.40153298,  3.55409206,
+            2.71256315,  3.32197196,  3.56054788,  2.58639318,  0.96230275,
+            1.8382348 ,  2.30788361,  2.49415769,  0.74777288,  3.04014659,
+            1.82256153,  4.89165865])
+        assert_allclose(res.params, params1)
+
+
+    def test_combine_subset_regression(self):
+        # split sample into two, use first sample as prior for second
+        endog = self.endog
+        exog = self.exog
+        nobs = len(endog)
+
+        n05 = nobs // 2
+        np.random.seed(987125)
+        # shuffle to get random subsamples
+        shuffle_idx = np.random.permutation(np.arange(nobs))
+        ys = endog[shuffle_idx]
+        xs = exog[shuffle_idx]
+        k = 10
+        res_ols0 = OLS(ys[:n05], xs[:n05, :k]).fit()
+        res_ols1 = OLS(ys[n05:], xs[n05:, :k]).fit()
+
+        w = res_ols1.scale / res_ols0.scale   #1.01
+        mod_1 = TheilGLS(ys[n05:], xs[n05:, :k], r_matrix=np.eye(k), q_matrix=res_ols0.params, sigma_prior=w * res_ols0.cov_params())
+        res_1p = mod_1.fit(cov_type='data-prior')
+        res_1s = mod_1.fit(cov_type='sandwich')
+        res_olsf = OLS(ys, xs[:, :k]).fit()
+
+        assert_allclose(res_1p.params, res_olsf.params, rtol=1e-9)
+        corr_fact = 0.96156318 # corrct for differences in scale computation
+        assert_allclose(res_1p.bse, res_olsf.bse * corr_fact, rtol=1e-3)
+
+        # regression test, does not verify numbers
+        # especially why are these smaller than OLS on full sample
+        # in larger sample, nobs=600, those were close to full OLS
+        bse1 = np.array([
+            0.27609914,  0.15808869,  0.39880789,  0.78583194,  0.68619331,
+            0.56252314,  0.55757562,  0.68538523,  0.39695081,  0.55988991])
+        assert_allclose(res_1s.bse, bse1, rtol=1e-3)
