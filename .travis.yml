@@ -14,6 +14,7 @@ env:
     - USEMPL=true
     - MATPLOTLIB=
     - DOCBUILD=false
+    - CYTHON_COVERAGE=
 
 matrix:
   fast_finish: true
@@ -94,7 +95,9 @@ before_install:
   - PKGS="${PKGS} pandas"; if [ ${PANDAS} ]; then PKGS="${PKGS}=${PANDAS}"; fi
   - PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}=${CYTHON}"; fi
   - if [ ${USEMPL} = true ]; then PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi; fi
-  - if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --cov-config=.travis_coveragerc --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
+  - if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --skip-slow --cov-config=.travis_coveragerc --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
+  - if [ ${COVERAGE} = true ]; then export CYTHON_COVERAGE=1; fi
+  - echo "Cython coverage:" ${CYTHON_COVERAGE}
   - echo conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml
   - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml
   - source activate statsmodels-test

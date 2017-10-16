@@ -20,7 +20,7 @@ import versioneer
 
 REQUIREMENTS = {'numpy': '1.9',
                 'scipy': '0.14',
-                'pandas': '0.15',
+                'pandas': '0.14',
                 'patsy': '0.4.0'}
 
 EXTRAS = {'build': ['cython>=0.24'],
@@ -188,7 +188,10 @@ for config in ext_data.values():
         with open(pyx_filename, 'w') as pyx_file:
             pyx_file.write(pyx)
         file_stats = os.stat(source)
-        os.utime(pyx_filename, ns=(file_stats.st_atime_ns, file_stats.st_mtime_ns))
+        try:
+            os.utime(pyx_filename, ns=(file_stats.st_atime_ns, file_stats.st_mtime_ns))
+        except AttributeError:
+            os.utime(pyx_filename, (file_stats.st_atime, file_stats.st_mtime))
         source = pyx_filename
 
     name = source.replace('/', '.').replace('.pyx', '')
