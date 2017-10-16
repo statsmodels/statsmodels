@@ -108,7 +108,7 @@ class TestTheilTextile(object):
 
     def test_no_penalization(self):
         res_ols = OLS(self.res1.model.endog, self.res1.model.exog).fit()
-        res_theil = self.res1.model.fit(lambd=0, cov_type='data-prior')
+        res_theil = self.res1.model.fit(pen_weight=0, cov_type='data-prior')
         assert_allclose(res_theil.params, res_ols.params, rtol=1e-10)
         assert_allclose(res_theil.bse, res_ols.bse, rtol=1e-10)
 
@@ -312,6 +312,17 @@ class TestTheilPanel(object):
             1.82256153,  4.89165865])
         assert_allclose(res.params, params1)
 
+        pen_weight_aicc = mod.select_pen_weight(method='aicc')
+        pen_weight_gcv = mod.select_pen_weight(method='gcv')
+        pen_weight_cv = mod.select_pen_weight(method='cv')
+        pen_weight_bic = mod.select_pen_weight(method='bic')
+        assert_allclose(pen_weight_gcv, pen_weight_aicc, rtol=0.1)
+        # regression tests:
+        assert_allclose(pen_weight_aicc, 2.98779297, rtol=1e-4)
+        assert_allclose(pen_weight_gcv,  2.69970703, rtol=1e-4)
+        assert_allclose(pen_weight_bic, 5.76005859, rtol=1e-4)
+        assert_allclose(pen_weight_cv, 1.3, rtol=1e-4)
+
 
     def test_combine_subset_regression(self):
         # split sample into two, use first sample as prior for second
@@ -345,4 +356,4 @@ class TestTheilPanel(object):
         bse1 = np.array([
             0.27609914,  0.15808869,  0.39880789,  0.78583194,  0.68619331,
             0.56252314,  0.55757562,  0.68538523,  0.39695081,  0.55988991])
-        assert_allclose(res_1s.bse, bse1, rtol=1e-3)
+        assert_allclose(res_1s.bse, bse1, rtol=1e-7)

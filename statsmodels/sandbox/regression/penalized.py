@@ -78,10 +78,11 @@ class TheilGLS(GLS):
 
     .. math:: (X' \\Sigma X + \\lambda R' \\sigma^2 \\Simga_p^{-1} R) b = X' \\Sigma y + \\lambda R' \\Simga_p^{-1} q
 
-    :math:`\\lambda` is the penalization parameter similar to Ridge regression.
+    :math:`\\lambda` is the penalization weight similar to Ridge regression.
 
     If lambda is zero, then the parameter estimate is the same as OLS. If
     lambda goes to infinity, then the restriction is imposed with equality.
+    In the model `pen_weight` is used as name instead of $\\lambda$
 
     R does not have to be square. The number of rows of R can be smaller
     than the number of parameters. In this case not all linear combination
@@ -95,7 +96,8 @@ class TheilGLS(GLS):
        to impose without uncertainty.
      - With a full rank square restriction matrix R, the parameter estimate
        is the same as a Bayesian posterior mean for the case of an informative
-       normal prior, normal likelihood and known error variance \sigma.
+       normal prior, normal likelihood and known error variance Sigma. If R
+       is less than full rank, then it defines a partial prior.
 
     References
     ----------
@@ -176,12 +178,12 @@ class TheilGLS(GLS):
         self.sigma_prior = sigma_prior
         self.sigma_prior_inv = np.linalg.pinv(sigma_prior) #or inv
 
-    def fit(self, lambd=1., cov_type='sandwich'):
+    def fit(self, pen_weight=1., cov_type='sandwich'):
         """Estimate parameters and return results instance
 
         Paramters
         ---------
-        lambd : float
+        pen_weight : float
             penalization factor for the restriction, default is 1.
         cov_type : string, 'data-prior' or 'sandwich'
             'data-prior' assumes that the stochastic restriction reflects a
@@ -216,6 +218,7 @@ class TheilGLS(GLS):
         misspecified heteroscedasticity or autocorrelation.
 
         """
+        lambd = pen_weight
         #this does duplicate transformation, but I need resid not wresid
         res_gls = GLS(self.endog, self.exog, sigma=self.sigma).fit()
         self.res_gls = res_gls
@@ -258,7 +261,7 @@ class TheilGLS(GLS):
         lfit.penalization_factor = lambd
         return lfit
 
-    def fit_minic(self, method='aicc', start_params=1., optim_args=None):
+    def select_pen_weight(self, method='aicc', start_params=1., optim_args=None):
         """find penalization factor that minimizes gcv or an information criterion
 
         Parameters
@@ -275,7 +278,7 @@ class TheilGLS(GLS):
 
         Returns
         -------
-        min_lambd : float
+        min_pen_weight : float
             The penalization factor at which the target criterion is (locally)
             minimized.
 
