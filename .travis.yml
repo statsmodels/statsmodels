@@ -20,6 +20,27 @@ matrix:
   include:
   - python: 2.7
     env:
+    - PYTHON=2.7
+    - NUMPY=1.11
+    - MATPLOTLIB=1.5
+    - COVERAGE=true
+  - python: 2.7
+    env:
+    - PYTHON=2.7
+    - NUMPY=1.9
+    - SCIPY=0.15
+    - PANDAS=0.15
+    - USEMPL=false
+    - OPTIONAL="libgfortran=1.0"
+  - python: 2.7
+    env:
+    - PYTHON=3.3
+    - NUMPY=1.9
+    - SCIPY=0.14
+    - MATPLOTLIB=1.4
+    - PANDAS=0.14
+  - python: 2.7
+    env:
     - PYTHON=3.4
     - NUMPY=1.10
     - SCIPY=0.16

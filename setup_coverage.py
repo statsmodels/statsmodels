@@ -19,8 +19,8 @@ import importlib
 import versioneer
 
 REQUIREMENTS = {'numpy': '1.9',
-                'scipy': '0.16',
-                'pandas': '0.16.2',
+                'scipy': '0.14',
+                'pandas': '0.15',
                 'patsy': '0.4.0'}
 
 EXTRAS = {'build': ['cython>=0.24'],
@@ -109,20 +109,12 @@ cmdclass['build_ext'] = build_ext
 # Extension Building
 ##############################################################################
 ext_data = dict(
-    _hamilton_filter={'source': 'statsmodels/tsa/regime_switching/_hamilton_filter.pyx.in',
-                      'depends': [],
-                      'include_dirs': [],
-                      'sources': []},
-    _kim_smoother={'source': 'statsmodels/tsa/regime_switching/_kim_smoother.pyx.in',
-                   'depends': [],
-                   'include_dirs': [],
-                   'sources': []},
+    _hamilton_filter={'source': 'statsmodels/tsa/regime_switching/_hamilton_filter.pyx.in'},
+    _kim_smoother={'source': 'statsmodels/tsa/regime_switching/_kim_smoother.pyx.in'},
     _statespace={'source': 'statsmodels/tsa/statespace/_statespace.pyx.in',
                  'depends': ['statsmodels/src/capsule.h'],
-                 'include_dirs': ['statsmodels/src'] + NUMPY_MATH_LIBS['include_dirs'],
-                 'libraries': NUMPY_MATH_LIBS['libraries'],
-                 'library_dirs': NUMPY_MATH_LIBS['library_dirs'],
-                 'sources': []},
+                 'include_dirs': ['statsmodels/src'],
+                 'numpy_libraries': True},
     linbin={'source': 'statsmodels/nonparametric/linbin.pyx'},
     _smoothers_lowess={'source': 'statsmodels/nonparametric/_smoothers_lowess.pyx'},
     kalman_loglike={'source': 'statsmodels/tsa/kalmanf/kalman_loglike.pyx',
@@ -130,81 +122,46 @@ ext_data = dict(
                     'depends': ['statsmodels/src/capsule.h']},
     _representation={'source': 'statsmodels/tsa/statespace/_representation.pyx.in',
                      'include_dirs': ['statsmodels/src'],
-                     'libraries': NUMPY_MATH_LIBS['libraries'],
-                     'library_dirs': NUMPY_MATH_LIBS['library_dirs'],
-                     'sources': [],
                      'blas': True},
     _kalman_filter={'source': 'statsmodels/tsa/statespace/_kalman_filter.pyx.in',
                     'include_dirs': ['statsmodels/src'],
-                    'libraries': NUMPY_MATH_LIBS['libraries'],
-                    'library_dirs': NUMPY_MATH_LIBS['library_dirs'],
                     'sources': [],
                     'blas': True},
     _kalman_filter_conventional={'source': 'statsmodels/tsa/statespace/_filters/_conventional.pyx.in',
                                  'filename': '_conventional',
                                  'include_dirs': ['statsmodels/src'],
-                                 'libraries': NUMPY_MATH_LIBS['libraries'],
-                                 'library_dirs': NUMPY_MATH_LIBS['library_dirs'],
-                                 'sources': [],
                                  'blas': True},
     _kalman_filter_inversions={'source': 'statsmodels/tsa/statespace/_filters/_inversions.pyx.in',
                                'filename': '_inversions',
                                'include_dirs': ['statsmodels/src'],
-                               'libraries': NUMPY_MATH_LIBS['libraries'],
-                               'library_dirs': NUMPY_MATH_LIBS['library_dirs'],
-                               'sources': [],
                                'blas': True},
     _kalman_filter_univariate={'source': 'statsmodels/tsa/statespace/_filters/_univariate.pyx.in',
                                'filename': '_univariate',
                                'include_dirs': ['statsmodels/src'],
-                               'libraries': NUMPY_MATH_LIBS['libraries'],
-                               'library_dirs': NUMPY_MATH_LIBS['library_dirs'],
-                               'sources': [],
                                'blas': True},
     _kalman_smoother={'source': 'statsmodels/tsa/statespace/_kalman_smoother.pyx.in',
                       'include_dirs': ['statsmodels/src'],
-                      'libraries': NUMPY_MATH_LIBS['libraries'],
-                      'library_dirs': NUMPY_MATH_LIBS['library_dirs'],
-                      'sources': [],
                       'blas': True},
     _kalman_smoother_alternative={'source': 'statsmodels/tsa/statespace/_smoothers/_alternative.pyx.in',
                                   'filename': '_alternative',
                                   'include_dirs': ['statsmodels/src'],
-                                  'libraries': NUMPY_MATH_LIBS['libraries'],
-                                  'library_dirs': NUMPY_MATH_LIBS['library_dirs'],
-                                  'sources': [],
                                   'blas': True},
     _kalman_smoother_classical={'source': 'statsmodels/tsa/statespace/_smoothers/_classical.pyx.in',
-                                'filename': '_classical',
                                 'include_dirs': ['statsmodels/src'],
-                                'libraries': NUMPY_MATH_LIBS['libraries'],
-                                'library_dirs': NUMPY_MATH_LIBS['library_dirs'],
-                                'sources': [],
                                 'blas': True},
     _kalman_smoother_conventional={'source': 'statsmodels/tsa/statespace/_smoothers/_conventional.pyx.in',
-                                   'filename': '_conventional',
                                    'include_dirs': ['statsmodels/src'],
-                                   'libraries': NUMPY_MATH_LIBS['libraries'],
-                                   'library_dirs': NUMPY_MATH_LIBS['library_dirs'],
-                                   'sources': [],
                                    'blas': True},
     _kalman_smoother_univariate={'source': 'statsmodels/tsa/statespace/_smoothers/_univariate.pyx.in',
                                  'filename': '_univariate',
                                  'include_dirs': ['statsmodels/src'],
-                                 'libraries': NUMPY_MATH_LIBS['libraries'],
-                                 'library_dirs': NUMPY_MATH_LIBS['library_dirs'],
-                                 'sources': [],
                                  'blas': True},
     _kalman_simulation_smoother={'source': 'statsmodels/tsa/statespace/_simulation_smoother.pyx.in',
                                  'filename': '_simulation_smoother',
                                  'include_dirs': ['statsmodels/src'],
-                                 'libraries': NUMPY_MATH_LIBS['libraries'],
-                                 'library_dirs': NUMPY_MATH_LIBS['library_dirs'],
-                                 'sources': [],
                                  'blas': True},
     _kalman_tools={'source': 'statsmodels/tsa/statespace/_tools.pyx.in',
                    'filename': '_tools',
-                   'sources': [],
                    'blas': True},
 )
 
@@ -239,6 +196,11 @@ for config in ext_data.values():
     depends = config.get('depends', [])
     libraries = config.get('libraries', [])
     library_dirs = config.get('library_dirs', [])
+    uses_blas = config.get('blas', False)
+    uses_numpy_libraries = config.get('numpy_libraries', False)
+    if uses_blas or uses_numpy_libraries:
+        libraries.extend(NUMPY_MATH_LIBS['libraries'])
+        library_dirs.extend(NUMPY_MATH_LIBS['library_dirs'])
 
     ext = Extension(name, [source],
                     include_dirs=include_dirs, depends=depends,
@@ -253,8 +215,10 @@ class BinaryDistribution(Distribution):
     def is_pure(self):
         return False
 
-
-data_files = defaultdict(list)
+##############################################################################
+# Construct package data
+##############################################################################
+package_data = defaultdict(list)
 filetypes = ['*.csv', '*.txt', '*.dta']
 for root, dirnames, filenames in os.walk(pjoin(os.getcwd(), 'statsmodels', 'datasets')):
     matches = []
@@ -262,20 +226,17 @@ for root, dirnames, filenames in os.walk(pjoin(os.getcwd(), 'statsmodels', 'data
         for filename in fnmatch.filter(filenames, filetype):
             matches.append(filename)
     if matches:
-        data_files['.'.join(relpath(root).split(os.path.sep))] = filetypes
+        package_data['.'.join(relpath(root).split(os.path.sep))] = filetypes
 for root, dirnames, filenames in os.walk(pjoin(os.getcwd(), 'statsmodels')):
     if root.endswith('results'):
-        data_files['.'.join(relpath(root).split(os.path.sep))] = filetypes
+        package_data['.'.join(relpath(root).split(os.path.sep))] = filetypes
 
-if os.path.exists('MANIFEST'):
-    os.unlink('MANIFEST')
-
-package_data = data_files
 for path, filetypes in ADDITIONAL_PACKAGE_DATA.items():
     package_data[path].extend(filetypes)
 
-packages = find_packages()
-packages.append('statsmodels.tsa.vector_ar.data')
+
+if os.path.exists('MANIFEST'):
+    os.unlink('MANIFEST')
 
 setup(name=DISTNAME,
       version=versioneer.get_version(),
@@ -289,7 +250,7 @@ setup(name=DISTNAME,
       long_description=LONG_DESCRIPTION,
       classifiers=CLASSIFIERS,
       cmdclass=cmdclass,
-      packages=packages,
+      packages=find_packages(),
       package_data=package_data,
       distclass=BinaryDistribution,
       include_package_data=False,  # True will install all files in repo
