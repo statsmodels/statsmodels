@@ -2,7 +2,6 @@
 [run]
 source = statsmodels
 branch = True
-include = */statsmodels/nonparametric/*
 plugins = Cython.Coverage
 
 [report]

@@ -1,7 +1,8 @@
 [run]
+source = statsmodels
 branch = True
-include =
-    */statsmodels/*
+plugins = Cython.Coverage
+include = */statsmodels/*
 
 omit =
     # print_version is untestable
@@ -29,20 +30,32 @@ omit =
 
 
 [report]
+show_missing = True
+
+omit=
+    */tests/*
+    */datasets/*
+
 # Regexes for lines to exclude from consideration
 exclude_lines =
     # Have to re-enable the standard pragma
     pragma: no cover
 
+    # Don't complain if tests don't hit defensive assertion code:
+    raise NotImplementedError
+    except NotImplementedError
+    raise AssertionError
+    # Ignore pass
+    pass
+
     # Don't complain about missing debug-only code:
     def __repr__
     if self\.debug
-
-    # Don't complain if tests don't hit defensive assertion code:
-    raise AssertionError
-    raise NotImplementedError
 
     # Don't complain if non-runnable code isn't run:
     if 0:
     if __name__ == .__main__.:
     if name == .__main__.:
+
+include = */statsmodels/*
+ignore_errors = True

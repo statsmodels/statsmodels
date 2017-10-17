@@ -18,6 +18,13 @@ import importlib
 
 import versioneer
 
+try:
+    from scipy.linalg import cython_blas
+
+    SCIPY_GTE_16 = True
+except ImportError:
+    SCIPY_GTE_16 = False
+
 REQUIREMENTS = {'numpy': '1.9',
                 'scipy': '0.14',
                 'pandas': '0.14',
@@ -35,16 +42,6 @@ EXTRAS = {'build': ['cython>=0.24'],
                    'numpydoc>=0.6.0',
                    'pandas-datareader']}
 
-DISTNAME = 'statsmodels'
-DESCRIPTION = 'Statistical computations and models for Python'
-MAINTAINER = 'Skipper Seabold, Josef Perktold'
-MAINTAINER_EMAIL = 'pystatsmodels@googlegroups.com'
-URL = 'http://www.statsmodels.org/'
-LICENSE = 'BSD License'
-README = open(pjoin(os.getcwd(), 'README.rst')).read()
-LONG_DESCRIPTION = README
-DOWNLOAD_URL = ''
-
 CLASSIFIERS = ['Development Status :: 4 - Beta',
                'Environment :: Console',
                'Programming Language :: Cython',
@@ -60,13 +57,23 @@ CLASSIFIERS = ['Development Status :: 4 - Beta',
                'License :: OSI Approved :: BSD License',
                'Topic :: Scientific/Engineering']
 
+DISTNAME = 'statsmodels'
+DESCRIPTION = 'Statistical computations and models for Python'
+MAINTAINER = 'Skipper Seabold, Josef Perktold'
+MAINTAINER_EMAIL = 'pystatsmodels@googlegroups.com'
+URL = 'http://www.statsmodels.org/'
+LICENSE = 'BSD License'
+README = open(pjoin(os.getcwd(), 'README.rst')).read()
+LONG_DESCRIPTION = README
+DOWNLOAD_URL = ''
+
 NUMPY_INCLUDES = [numpy.get_include()]
 NUMPY_INCLUDES += [pkg_resources.resource_filename('numpy', 'core/include')]
 NUMPY_MATH_LIBS = get_info('npymath')
 
 # Determine whether to build the cython extensions with coverage
 # measurement enabled.
-CYTHON_COVERAGE = bool(os.environ.get('CYTHON_COVERAGE', True))
+CYTHON_COVERAGE = bool(os.environ.get('CYTHON_COVERAGE', False))
 CYTHON_TRACE_NOGIL = str(int(CYTHON_COVERAGE))
 if CYTHON_COVERAGE:
     print('Building with coverage for Cython code')
@@ -165,19 +172,12 @@ ext_data = dict(
                    'blas': True},
 )
 
+
 define_macros = [('CYTHON_TRACE_NOGIL', CYTHON_TRACE_NOGIL)]
 extensions = []
-has_scipy_blas = False
-try:
-    from scipy.linalg import cython_blas
-
-    has_scipy_blas = True
-except ImportError:
-    pass
-
 for config in ext_data.values():
-    blas_required = config.get('blas', False)
-    if blas_required and not has_scipy_blas:
+    uses_blas = config.get('blas', False)
+    if uses_blas and not SCIPY_GTE_16:
         continue
     source = config['source']
     if source.endswith('pyx.in'):
@@ -199,7 +199,7 @@ for config in ext_data.values():
     depends = config.get('depends', [])
     libraries = config.get('libraries', [])
     library_dirs = config.get('library_dirs', [])
-    uses_blas = config.get('blas', False)
+
     uses_numpy_libraries = config.get('numpy_libraries', False)
     if uses_blas or uses_numpy_libraries:
         libraries.extend(NUMPY_MATH_LIBS['libraries'])
