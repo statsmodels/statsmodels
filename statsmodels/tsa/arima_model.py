@@ -973,6 +973,10 @@ class ARMA(tsbase.TimeSeriesModel):
         armafit.mle_settings = mlefit.mle_settings
         return ARMAResultsWrapper(armafit)
 
+    # base class of "from_formula" is "class Model(object)"
+    @classmethod
+    def from_formula(cls, formula, data, subset=None, drop_cols=None, *args, **kwargs):
+            raise NotImplementedError("from_formula is not supported for ARMA models.")
 
 #NOTE: the length of endog changes when we give a difference to fit
 #so model methods are not the same on unfit models as fit ones
