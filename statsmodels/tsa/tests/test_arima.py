@@ -2302,6 +2302,10 @@ def test_arima_pickle():
     assert_almost_equal(res.pvalues, pkl_res.pvalues)
 
 
+def test_arima_not_implemented():
+    assert_raises(NotImplementedError, ARIMA.from_formula, ' WUE ~ 1 + SFO3 ', 5)
+
+
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__, '-vvs', '-x', '--pdb'])
