@@ -65,9 +65,8 @@ DOWNLOAD_URL = ''
 # These imports need to be here; setuptools needs to be imported first.
 from distutils.extension import Extension
 from distutils.command.build import build
+from distutils.command.build_ext import build_ext as _build_ext
 
-# from distutils.command.build_ext import build_ext as _build_ext
-from Cython.Distutils import build_ext as _build_ext
 
 class build_ext(_build_ext):
     def build_extensions(self):
@@ -82,16 +81,13 @@ class build_ext(_build_ext):
 
 def generate_cython():
     cwd = os.path.abspath(os.path.dirname(__file__))
-    tools_dir = os.path.join(cwd, 'tools')
-
     print("Cythonizing sources")
-    try:
-        sys.path.insert(0, tools_dir)
-        import cythonize
-        cythonize.find_process_files('statsmodels')
-    finally:
-        sys.path.remove(tools_dir)
-    return
+    p = subprocess.call([sys.executable,
+                          os.path.join(cwd, 'tools', 'cythonize.py'),
+                          'statsmodels'],
+                         cwd=cwd)
+    if p != 0:
+        raise RuntimeError("Running cythonize failed!")
 
 
 def init_cython_exclusion(filename):
@@ -457,18 +453,6 @@ except ImportError:
         append_cython_exclusion(path.replace('/', os.path.sep),
                                 CYTHON_EXCLUSION_FILE)
 
-# Determine whether to build the cython extensions with coverage
-# measurement enabled.
-linetrace = os.environ.get('linetrace', False)
-CYTHON_TRACE = str(int(bool(linetrace)))
-
-directives = {'linetrace': False}
-macros = []
-if linetrace:
-    # https://pypkg.com/pypi/pytest-cython/f/tests/example-project/setup.py
-    directives['linetrace'] = True
-    macros = [('CYTHON_TRACE', '1'), ('CYTHON_TRACE_NOGIL', '1')]
-
 extensions = []
 for name, data in ext_data.items():
     data['sources'] = data.get('sources', []) + [data['name']]
@@ -476,11 +460,8 @@ for name, data in ext_data.items():
     destdir = ".".join(os.path.dirname(data["name"]).split("/"))
     data.pop('name')
 
-    if linetrace:
-        assert 'define_macros' not in data
-        data['define_macros'] = macros
-
     filename = data.pop('filename', name)
+
     obj = Extension('%s.%s' % (destdir, filename), **data)
 
     extensions.append(obj)
@@ -563,7 +544,6 @@ if __name__ == "__main__":
     if not os.path.exists(os.path.join(cwd, 'PKG-INFO')) and not no_frills:
         # Generate Cython sources, unless building from source release
         generate_cython()
-
     extras = {'docs': ['sphinx>=1.3.5',
                        'nbconvert>=4.2.0',
                        'jupyter_client',
@@ -573,21 +553,21 @@ if __name__ == "__main__":
                        'numpydoc>=0.6.0',
                        'pandas-datareader']}
 
-    setup(name=DISTNAME,
-          version=VERSION,
-          maintainer=MAINTAINER,
-          ext_modules=extensions,
-          maintainer_email=MAINTAINER_EMAIL,
-          description=DESCRIPTION,
-          license=LICENSE,
-          url=URL,
-          download_url=DOWNLOAD_URL,
-          long_description=LONG_DESCRIPTION,
-          classifiers=classifiers,
-          platforms='any',
-          cmdclass=cmdclass,
-          packages=packages,
-          package_data=package_data,
+    setup(name = DISTNAME,
+          version = VERSION,
+          maintainer = MAINTAINER,
+          ext_modules = extensions,
+          maintainer_email = MAINTAINER_EMAIL,
+          description = DESCRIPTION,
+          license = LICENSE,
+          url = URL,
+          download_url = DOWNLOAD_URL,
+          long_description = LONG_DESCRIPTION,
+          classifiers = classifiers,
+          platforms = 'any',
+          cmdclass = cmdclass,
+          packages = packages,
+          package_data = package_data,
           include_package_data=False,  # True will install all files in repo
           extras_require=extras,
           **setuptools_kwargs)
