@@ -1,29 +1,20 @@
-import os
 import fnmatch
-from os.path import relpath, join as pjoin
-import pkg_resources
-from distutils.version import LooseVersion
+import importlib
+import os
 from collections import defaultdict
+from distutils.version import LooseVersion
+from os.path import relpath, join as pjoin
 
+import numpy
+import pkg_resources
+from Cython import Tempita as tempita
+from Cython.Build import cythonize
+from Cython.Distutils import build_ext
+from numpy.distutils.misc_util import get_info
 from setuptools import Extension, find_packages, setup
 from setuptools.dist import Distribution
 
-from Cython.Distutils import build_ext
-from Cython.Build import cythonize
-from Cython import Tempita as tempita
-
-import numpy
-from numpy.distutils.misc_util import get_info
-import importlib
-
 import versioneer
-
-try:
-    from scipy.linalg import cython_blas
-
-    SCIPY_GTE_16 = True
-except ImportError:
-    SCIPY_GTE_16 = False
 
 REQUIREMENTS = {'numpy': '1.9',
                 'scipy': '0.14',
@@ -103,8 +94,8 @@ for pkg, req_ver in REQUIREMENTS.items():
         pass
     if problems:
         raise RuntimeError('''
-Some packages are older then the minimum required. setup will not force 
-upgradecore PyData packages.  Please update or install in an environment
+Some packages are older then the minimum required. setup will not force
+upgrade core PyData packages.  Please update or install in an environment
 without old packages.  The identified packages were:
 {problems}
 '''.format(problems='\n'.join(problems)))
@@ -116,69 +107,82 @@ cmdclass['build_ext'] = build_ext
 # Extension Building
 ##############################################################################
 ext_data = dict(
-    _hamilton_filter={'source': 'statsmodels/tsa/regime_switching/_hamilton_filter.pyx.in'},
-    _kim_smoother={'source': 'statsmodels/tsa/regime_switching/_kim_smoother.pyx.in'},
-    _statespace={'source': 'statsmodels/tsa/statespace/_statespace.pyx.in',
-                 'depends': ['statsmodels/src/capsule.h'],
-                 'include_dirs': ['statsmodels/src'],
-                 'numpy_libraries': True},
+    _hamilton_filter={'source': 'statsmodels/tsa/regime_switching/_hamilton_filter.pyx.in'},  # noqa
+    _kim_smoother={'source': 'statsmodels/tsa/regime_switching/_kim_smoother.pyx.in'},   # noqa
     linbin={'source': 'statsmodels/nonparametric/linbin.pyx'},
-    _smoothers_lowess={'source': 'statsmodels/nonparametric/_smoothers_lowess.pyx'},
+    _smoothers_lowess={'source': 'statsmodels/nonparametric/_smoothers_lowess.pyx'},  # noqa
+    _exponential_smoothers={'source': 'statsmodels/tsa/_exponential_smoothers.pyx'},  # noqa
     kalman_loglike={'source': 'statsmodels/tsa/kalmanf/kalman_loglike.pyx',
                     'include_dirs': ['statsmodels/src'],
                     'depends': ['statsmodels/src/capsule.h']},
-    _representation={'source': 'statsmodels/tsa/statespace/_representation.pyx.in',
+    _initialization={'source': 'statsmodels/tsa/statespace/_initialization.pyx.in',  # noqa
                      'include_dirs': ['statsmodels/src'],
                      'blas': True},
-    _kalman_filter={'source': 'statsmodels/tsa/statespace/_kalman_filter.pyx.in',
+    _representation={'source': 'statsmodels/tsa/statespace/_representation.pyx.in',  # noqa
+                     'include_dirs': ['statsmodels/src'],
+                     'blas': True},
+    _kalman_filter={'source': 'statsmodels/tsa/statespace/_kalman_filter.pyx.in',  # noqa
+                    'filename': '_kalman_filter',
                     'include_dirs': ['statsmodels/src'],
-                    'sources': [],
                     'blas': True},
-    _kalman_filter_conventional={'source': 'statsmodels/tsa/statespace/_filters/_conventional.pyx.in',
-                                 'filename': '_conventional',
-                                 'include_dirs': ['statsmodels/src'],
-                                 'blas': True},
-    _kalman_filter_inversions={'source': 'statsmodels/tsa/statespace/_filters/_inversions.pyx.in',
+    _kalman_filter_conventional={
+        'source': 'statsmodels/tsa/statespace/_filters/_conventional.pyx.in',  # noqa
+        'filename': '_conventional',
+        'include_dirs': ['statsmodels/src'],
+        'blas': True},
+    _kalman_filter_inversions={'source': 'statsmodels/tsa/statespace/_filters/_inversions.pyx.in',  # noqa
                                'filename': '_inversions',
                                'include_dirs': ['statsmodels/src'],
                                'blas': True},
-    _kalman_filter_univariate={'source': 'statsmodels/tsa/statespace/_filters/_univariate.pyx.in',
+    _kalman_filter_univariate={'source': 'statsmodels/tsa/statespace/_filters/_univariate.pyx.in',  # noqa
                                'filename': '_univariate',
                                'include_dirs': ['statsmodels/src'],
                                'blas': True},
-    _kalman_smoother={'source': 'statsmodels/tsa/statespace/_kalman_smoother.pyx.in',
+    _kalman_filter_univariate_diffuse={
+        'source': 'statsmodels/tsa/statespace/_filters/_univariate_diffuse.pyx.in',  # noqa
+        'filename': '_univariate_diffuse',
+        'include_dirs': ['statsmodels/src'],
+        'blas': True},
+    _kalman_smoother={'source': 'statsmodels/tsa/statespace/_kalman_smoother.pyx.in',  # noqa
                       'include_dirs': ['statsmodels/src'],
                       'blas': True},
-    _kalman_smoother_alternative={'source': 'statsmodels/tsa/statespace/_smoothers/_alternative.pyx.in',
-                                  'filename': '_alternative',
-                                  'include_dirs': ['statsmodels/src'],
-                                  'blas': True},
-    _kalman_smoother_classical={'source': 'statsmodels/tsa/statespace/_smoothers/_classical.pyx.in',
-                                'include_dirs': ['statsmodels/src'],
-                                'blas': True},
-    _kalman_smoother_conventional={'source': 'statsmodels/tsa/statespace/_smoothers/_conventional.pyx.in',
-                                   'include_dirs': ['statsmodels/src'],
-                                   'blas': True},
-    _kalman_smoother_univariate={'source': 'statsmodels/tsa/statespace/_smoothers/_univariate.pyx.in',
-                                 'filename': '_univariate',
-                                 'include_dirs': ['statsmodels/src'],
-                                 'blas': True},
-    _kalman_simulation_smoother={'source': 'statsmodels/tsa/statespace/_simulation_smoother.pyx.in',
-                                 'filename': '_simulation_smoother',
-                                 'include_dirs': ['statsmodels/src'],
-                                 'blas': True},
+    _kalman_smoother_alternative={
+        'source': 'statsmodels/tsa/statespace/_smoothers/_alternative.pyx.in',  # noqa
+        'filename': '_alternative',
+        'include_dirs': ['statsmodels/src'],
+        'blas': True},
+    _kalman_smoother_classical={
+        'source': 'statsmodels/tsa/statespace/_smoothers/_classical.pyx.in',  # noqa
+        'include_dirs': ['statsmodels/src'],
+        'blas': True},
+    _kalman_smoother_conventional={
+        'source': 'statsmodels/tsa/statespace/_smoothers/_conventional.pyx.in',  # noqa
+        'include_dirs': ['statsmodels/src'],
+        'blas': True},
+    _kalman_smoother_univariate={
+        'source': 'statsmodels/tsa/statespace/_smoothers/_univariate.pyx.in',
+        'filename': '_univariate',
+        'include_dirs': ['statsmodels/src'],
+        'blas': True},
+    _kalman_smoother_univariate_diffuse={
+        'source': 'statsmodels/tsa/statespace/_smoothers/_univariate_diffuse.pyx.in',  # noqa
+        'filename': '_univariate',
+        'include_dirs': ['statsmodels/src'],
+        'blas': True},
+    _kalman_simulation_smoother={
+        'source': 'statsmodels/tsa/statespace/_simulation_smoother.pyx.in',
+        'filename': '_simulation_smoother',
+        'include_dirs': ['statsmodels/src'],
+        'blas': True},
     _kalman_tools={'source': 'statsmodels/tsa/statespace/_tools.pyx.in',
                    'filename': '_tools',
                    'blas': True},
 )
 
-
 define_macros = [('CYTHON_TRACE_NOGIL', CYTHON_TRACE_NOGIL)]
 extensions = []
 for config in ext_data.values():
-    uses_blas = config.get('blas', False)
-    if uses_blas and not SCIPY_GTE_16:
-        continue
+    uses_blas = True
     source = config['source']
     if source.endswith('pyx.in'):
         with open(source, 'r') as templated:
@@ -189,7 +193,7 @@ for config in ext_data.values():
             pyx_file.write(pyx)
         file_stats = os.stat(source)
         try:
-            os.utime(pyx_filename, ns=(file_stats.st_atime_ns, file_stats.st_mtime_ns))
+            os.utime(pyx_filename, ns=(file_stats.st_atime_ns, file_stats.st_mtime_ns))  # noqa
         except AttributeError:
             os.utime(pyx_filename, (file_stats.st_atime, file_stats.st_mtime))
         source = pyx_filename
@@ -218,12 +222,13 @@ class BinaryDistribution(Distribution):
     def is_pure(self):
         return False
 
+
 ##############################################################################
 # Construct package data
 ##############################################################################
 package_data = defaultdict(list)
 filetypes = ['*.csv', '*.txt', '*.dta']
-for root, dirnames, filenames in os.walk(pjoin(os.getcwd(), 'statsmodels', 'datasets')):
+for root, dirnames, filenames in os.walk(pjoin(os.getcwd(), 'statsmodels', 'datasets')):  # noqa
     matches = []
     for filetype in filetypes:
         for filename in fnmatch.filter(filenames, filetype):
@@ -236,7 +241,6 @@ for root, dirnames, filenames in os.walk(pjoin(os.getcwd(), 'statsmodels')):
 
 for path, filetypes in ADDITIONAL_PACKAGE_DATA.items():
     package_data[path].extend(filetypes)
-
 
 if os.path.exists('MANIFEST'):
     os.unlink('MANIFEST')
