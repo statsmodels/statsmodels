@@ -181,7 +181,7 @@ class Initialization(object):
 
     def __init__(self, k_states, initialization_type=None,
                  initialization_classes=None, approximate_diffuse_variance=1e6,
-                 **kwargs):
+                 constant=None, stationary_cov=None):
         # Parameters
         self.k_states = k_states
 
@@ -207,7 +207,8 @@ class Initialization(object):
 
         # If given a global initialization, use it now
         if initialization_type is not None:
-            self.set(None, initialization_type, **kwargs)
+            self.set(None, initialization_type, constant=constant,
+                     stationary_cov=stationary_cov)
 
     def _initialize_initialization(self, prefix):
         dtype = tools.prefix_dtype_map[prefix]
