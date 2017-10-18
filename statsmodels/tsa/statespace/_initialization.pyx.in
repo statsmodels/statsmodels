@@ -209,7 +209,7 @@ cdef class {{prefix}}Initialization(object):
 
         # Create selected state covariance matrix
         tools._{{prefix}}select_cov(self.k_states, model.k_posdef, model.k_states,
-                             &self._tmp_transition[0,0],
+                             &model.tmp[0,0],
                              &model.selection[offset,0,0],
                              &model.state_cov[0,0,0],
                              &self._tmp_selected_state_cov[0,0])
