@@ -330,20 +330,29 @@ class Representation(object):
         self._initial_variance = None
 
         if self.initialization == 'approximate_diffuse':
-            self.initialize_approximate_diffuse()
+            self.initialize('approximate_diffuse')
         elif self.initialization == 'stationary':
-            self.initialize_stationary()
+            self.initialize('stationary')
         elif self.initialization == 'known':
-            if 'initial_state' not in kwargs:
+            if 'constant' in kwargs:
+                constant = kwargs['constant']
+            elif 'initial_state' in kwargs:
+                constant = kwargs['initial_state']
+            else:
                 raise ValueError('Initial state must be provided when "known"'
                                  ' is the specified initialization method.')
-            if 'initial_state_cov' not in kwargs:
+            if 'stationary_cov' in kwargs:
+                stationary_cov = kwargs['stationary_cov']
+            elif 'initial_state_cov' in kwargs:
+                stationary_cov = kwargs['initial_state_cov']
+            else:
                 raise ValueError('Initial state covariance matrix must be'
                                  ' provided when "known" is the specified'
                                  ' initialization method.')
-            self.initialize_known(kwargs['initial_state'],
-                                  kwargs['initial_state_cov'])
-        elif self.initialization is not None:
+            self.initialize('known', constant=constant,
+                            stationary_cov=stationary_cov)
+        elif (not isinstance(self.initialization, Initialization) and
+                self.initialization is not None):
             raise ValueError("Invalid state space initialization method.")
 
         # Matrix representations storage
@@ -568,6 +577,28 @@ class Representation(object):
         if hasattr(self, 'shapes'):
             self.shapes['obs'] = self.endog.shape
 
+    def initialize(self, initialization, approximate_diffuse_variance=None,
+                   constant=None, stationary_cov=None):
+        # Create an Initialization object if necessary
+        if initialization == 'known':
+            initialization = Initialization(self.k_states, 'known',
+                                            constant=constant,
+                                            stationary_cov=stationary_cov)
+        elif initialization == 'approximate_diffuse':
+            if approximate_diffuse_variance is None:
+                approximate_diffuse_variance = self.initial_variance
+            initialization = Initialization(
+                self.k_states, 'approximate_diffuse',
+                approximate_diffuse_variance=approximate_diffuse_variance)
+        elif initialization == 'stationary':
+            initialization = Initialization(self.k_states, 'stationary')
+
+        # We must have an initialization object at this point
+        if not isinstance(initialization, Initialization):
+            raise ValueError("Invalid state space initialization method.")
+
+        self.initialization = initialization
+
     def initialize_known(self, initial_state, initial_state_cov):
         """
         Initialize the statespace model with known distribution for initial
@@ -597,9 +628,8 @@ class Representation(object):
                              (self.k_states, self.k_states,
                               str(initial_state.shape)))
 
-        self._initial_state = initial_state
-        self._initial_state_cov = initial_state_cov
-        self.initialization = 'known'
+        self.initialize('known', constant=initial_state,
+                        stationary_cov=initial_state_cov)
 
     def initialize_approximate_diffuse(self, variance=None):
         """
@@ -618,14 +648,14 @@ class Representation(object):
         if variance is None:
             variance = self.initial_variance
 
-        self._initial_variance = variance
-        self.initialization = 'approximate_diffuse'
+        self.initialize('approximate_diffuse',
+                        approximate_diffuse_variance=variance)
 
     def initialize_stationary(self):
         """
         Initialize the statespace model as stationary.
         """
-        self.initialization = 'stationary'
+        self.initialize('stationary')
 
     def _initialize_representation(self, prefix=None):
         if prefix is None:
