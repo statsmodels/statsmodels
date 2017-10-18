@@ -104,16 +104,16 @@ def test_wrapping():
     mod.initialize_default()  # no-op here
 
     mod.initialize_approximate_diffuse(1e5)
-    assert_equal(mod.initialization, 'approximate_diffuse')
-    assert_equal(mod.ssm._initial_variance, 1e5)
+    assert_equal(mod.initialization.initialization_type, 'approximate_diffuse')
+    assert_equal(mod.initialization.approximate_diffuse_variance, 1e5)
 
     mod.initialize_known([5.], [[40]])
-    assert_equal(mod.initialization, 'known')
-    assert_equal(mod.ssm._initial_state, [5.])
-    assert_equal(mod.ssm._initial_state_cov, [[40]])
+    assert_equal(mod.initialization.initialization_type, 'known')
+    assert_equal(mod.initialization.constant, [5.])
+    assert_equal(mod.initialization.stationary_cov, [[40]])
 
     mod.initialize_stationary()
-    assert_equal(mod.initialization, 'stationary')
+    assert_equal(mod.initialization.initialization_type, 'stationary')
 
     # Test that we can use the following wrapper methods: set_filter_method,
     # set_stability_method, set_conserve_memory, set_smoother_output
