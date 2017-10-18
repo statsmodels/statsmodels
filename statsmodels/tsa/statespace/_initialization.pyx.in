@@ -72,9 +72,9 @@ cdef class {{prefix}}Initialization(object):
         tools.validate_matrix_shape('known covariance', &self.stationary_cov.shape[0], self.k_states, self.k_states, None)
 
         # Internal temporary matrices
-        dim2[0] = self.k_states; dim2[0] = self.k_states;
+        dim2[0] = self.k_states; dim2[1] = self.k_states;
         self._tmp_transition = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
-        dim2[0] = self.k_states; dim2[0] = self.k_states;
+        dim2[0] = self.k_states; dim2[1] = self.k_states;
         self._tmp_selected_state_cov = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
     cpdef int initialize(self, initialization_type, int offset,
