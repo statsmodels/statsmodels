@@ -8,7 +8,7 @@ namespace : dictionary
 
 
 """
-from statsmodels.compat.collections import OrderedDict
+from collections import OrderedDict
 from statsmodels.compat.python import (iterkeys, lrange, callable, string_types,
                                 itervalues, range)
 import copy
