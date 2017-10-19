@@ -7,7 +7,6 @@ import sys
 import urllib
 
 PY3 = (sys.version_info[0] >= 3)
-PY3_2 = sys.version_info[:2] == (3, 2)
 
 if PY3:
     import builtins
@@ -237,29 +236,4 @@ def get_class(func):
     except AttributeError:
         #Python 3
         return func.__self__.__class__
-
-try:
-    combinations = itertools.combinations
-except:
-    # Python 2.6 only
-    def combinations(iterable, r):
-        # combinations('ABCD', 2) --> AB AC AD BC BD CD
-        # combinations(lrange(4), 3) --> 012 013 023 123
-        pool = tuple(iterable)
-        n = len(pool)
-        if r > n:
-            return
-        indices = lrange(r)
-        yield tuple(pool[i] for i in indices)
-        while True:
-            for i in reversed(lrange(r)):
-                if indices[i] != i + n - r:
-                    break
-            else:
-                return
-            indices[i] += 1
-            for j in range(i+1, r):
-                indices[j] = indices[j-1] + 1
-            yield tuple(pool[i] for i in indices)
-
 
