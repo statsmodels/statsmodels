@@ -1165,6 +1165,36 @@ class SARIMAX(MLEModel):
             'variance': int(self.state_error),
         }
 
+    @cached_property
+    def _slices(self):
+        orders = self.model_orders
+        ret = {}
+        start = 0
+        for name in self.params_complete:
+            if name == 'exog' and not self.mle_regression:
+                continue
+            elif name == 'exog_variance' and not (self.state_regression and
+                                                  self.time_varying_regression):
+                continue
+            elif name == 'measurement_variance' and not self.measurement_error:
+                continue
+            #elif name in ['reduced_ar', 'reduced_ma']:
+            #   continue
+            elif name == 'ar':
+                length = self.k_ar_params
+            elif name == 'ma':
+                length = self.k_ma_params
+            elif name == 'seasonal_ar':
+                length = self.k_seasonal_ar_params
+            elif name == 'seasonal_ma':
+                length = self.k_seasonal_ma_params
+            else:
+                length = orders[name]
+            end = start + length
+            ret[name] = slice(start, end)
+            start += length
+        return ret
+
     @property
     def model_names(self):
         """
