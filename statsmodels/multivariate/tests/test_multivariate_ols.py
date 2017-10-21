@@ -38,7 +38,7 @@ def compare_r_output_dogs_data(method):
           of freedoms can be different. This is due to the fact that this
           implementation is based on SAS formula [1]
 
-    .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
+    .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
     '''
 
 

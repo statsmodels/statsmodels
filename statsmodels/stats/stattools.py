@@ -171,7 +171,7 @@ def robust_skewness(y, axis=0):
 
         SK_{4}=\\frac{\\mu-\\hat{q}_{0.5}}{\\hat{\\sigma}}
 
-    .. [1] Tae-Hwan Kim and Halbert White, "On more robust estimation of
+    .. [*] Tae-Hwan Kim and Halbert White, "On more robust estimation of
        skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
        March 2004.
     """
@@ -224,7 +224,7 @@ def _kr3(y, alpha=5.0, beta=50.0):
 
     Notes
     -----
-    .. [1] Tae-Hwan Kim and Halbert White, "On more robust estimation of
+    .. [*] Tae-Hwan Kim and Halbert White, "On more robust estimation of
        skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
        March 2004.
     """
@@ -341,7 +341,7 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
 
     where :math:`\\hat{q}_{p}` is the estimated quantile at :math:`p`.
 
-    .. [1] Tae-Hwan Kim and Halbert White, "On more robust estimation of
+    .. [*] Tae-Hwan Kim and Halbert White, "On more robust estimation of
        skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
        March 2004.
     """
@@ -389,7 +389,7 @@ def _medcouple_1d(y):
     The current algorithm requires a O(N**2) memory allocations, and so may
     not work for very large arrays (N>10000).
 
-    .. [1] M. Huberta and E. Vandervierenb, "An adjusted boxplot for skewed
+    .. [*] M. Huberta and E. Vandervierenb, "An adjusted boxplot for skewed
        distributions" Computational Statistics & Data Analysis, vol. 52, pp.
        5186-5201, August 2008.
     """
@@ -441,7 +441,7 @@ def medcouple(y, axis=0):
     The current algorithm requires a O(N**2) memory allocations, and so may
     not work for very large arrays (N>10000).
 
-    .. [1] M. Huberta and E. Vandervierenb, "An adjusted boxplot for skewed
+    .. [*] M. Huberta and E. Vandervierenb, "An adjusted boxplot for skewed
        distributions" Computational Statistics & Data Analysis, vol. 52, pp.
        5186-5201, August 2008.
     """

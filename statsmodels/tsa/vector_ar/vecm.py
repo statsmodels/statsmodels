@@ -805,7 +805,9 @@ class VECM(tsbase.TimeSeriesModel):
     References
     ----------
     .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
-    .. [2] Johansen, S. 1995. *Likelihood-Based Inference in Cointegrated Vector Autoregressive Models*. Oxford University Press.
+
+    .. [2] Johansen, S. 1995. *Likelihood-Based Inference in Cointegrated *
+           *Vector Autoregressive Models*. Oxford University Press.
 
     """
 

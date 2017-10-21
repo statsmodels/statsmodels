@@ -93,7 +93,7 @@ The specific model classes are:
 
 The specific result classes are:
 
-.. module:: statsmodels.discrete.discrete_model
+.. currentmodule:: statsmodels.discrete.discrete_model
 
 .. autosummary::
    :toctree: generated/
@@ -105,7 +105,7 @@ The specific result classes are:
    NegativeBinomialResults
    GeneralizedPoissonResults
 
-.. module:: statsmodels.discrete.count_model
+.. currentmodule:: statsmodels.discrete.count_model
 
 .. autosummary::
    :toctree: generated/
@@ -123,7 +123,7 @@ This intermediate classes are mostly to facilitate the implementation of the
 methods and attributes defined by :class:`DiscreteModel` and
 :class:`DiscreteResults`.
 
-.. module:: statsmodels.discrete.discrete_model
+.. currentmodule:: statsmodels.discrete.discrete_model
 
 .. autosummary::
    :toctree: generated/
@@ -135,7 +135,7 @@ methods and attributes defined by :class:`DiscreteModel` and
    CountModel
    MultinomialModel
 
-.. module:: statsmodels.discrete.count_model
+.. currentmodule:: statsmodels.discrete.count_model
 
 .. autosummary::
    :toctree: generated/

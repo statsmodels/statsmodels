@@ -187,15 +187,15 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
     References
     ----------
-    .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
+    .. [*] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 
-    .. [2] Hamilton, J.D.  "Time Series Analysis".  Princeton, 1994.
+    .. [*] Hamilton, J.D.  "Time Series Analysis".  Princeton, 1994.
 
-    .. [3] MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
+    .. [*] MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
         unit-root and cointegration tests.  `Journal of Business and Economic
         Statistics` 12, 167-76.
 
-    .. [4] MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
+    .. [*] MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
         University, Dept of Economics, Working Papers.  Available at
         http://ideas.repec.org/p/qed/wpaper/1227.html
     """
@@ -319,7 +319,7 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
 
     References
     -----------
-    .. [1] Parzen, E., 1963. On spectral analysis with missing observations
+    .. [*] Parzen, E., 1963. On spectral analysis with missing observations
            and amplitude modulation. Sankhya: The Indian Journal of
            Statistics, Series A, pp.383-392.
     """
@@ -465,7 +465,7 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None,
 
     References
     ----------
-    .. [1] Parzen, E., 1963. On spectral analysis with missing observations
+    .. [*] Parzen, E., 1963. On spectral analysis with missing observations
        and amplitude modulation. Sankhya: The Indian Journal of
        Statistics, Series A, pp.383-392.
 

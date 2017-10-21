@@ -412,7 +412,10 @@ def test_normality(results, signif=0.05):
     References
     ----------
     .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
-    .. [2] Kilian, L. & Demiroglu, U. (2000). *Residual-Based Tests for Normality in Autoregressions: Asymptotic Theory and Simulation Evidence*. Journal of Business & Economic Statistics
+
+    .. [2] Kilian, L. & Demiroglu, U. (2000). "Residual-Based Tests for
+       Normality in Autoregressions: Asymptotic Theory and Simulation
+       Evidence." Journal of Business & Economic Statistics
     """
     resid_c = results.resid - results.resid.mean(0)
     sig = np.dot(resid_c.T, resid_c) / results.nobs
@@ -1716,17 +1719,24 @@ class VARResults(VARProcess):
         -------
         results : dict
             A dict holding the test's results. The dict's keys are:
-            * "statistic" : float
-                The claculated test statistic.
-            * "crit_value" : float
-                The critical value of the \Chi^2-distribution.
-            * "pvalue" : float
-                The p-value corresponding to the test statistic.
-            * "df" : float
-                The degrees of freedom of the \Chi^2-distribution.
-            * "conclusion" : str {"reject", "fail to reject"}
-                 Whether H0 can be rejected or not.
-            * "signif" : float
+
+            "statistic" : float
+              The calculated test statistic.
+
+            "crit_value" : float
+              The critical value of the Chi^2-distribution.
+
+            "pvalue" : float
+              The p-value corresponding to the test statistic.
+
+            "df" : float
+              The degrees of freedom of the Chi^2-distribution.
+
+            "conclusion" : str {"reject", "fail to reject"}
+              Whether H0 can be rejected or not.
+
+            "signif" : float
+              Signifigance level
 
         Notes
         -----

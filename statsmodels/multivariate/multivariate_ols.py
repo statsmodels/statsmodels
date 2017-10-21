@@ -75,7 +75,7 @@ def _multivariate_ols_fit(endog, exog, method='svd', tolerance=1e-8):
     -------
     a tuple of matrices or values necessary for hypotheses testing
 
-    .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
+    .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
     Notes
     -----
     Status: experimental and incomplete
@@ -153,7 +153,7 @@ def multivariate_stats(eigenvals,
 
     References
     ----------
-    .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
+    .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
     """
     v = df_resid
     p = r_err_sscp
@@ -338,7 +338,7 @@ _multivariate_test.__doc__ = (
             E =  M'(Y'Y - B'X'XB)M
         And then finding the eigenvalues of inv(H + E)*H
 
-        .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
+        .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
 
         Parameters
         ----------

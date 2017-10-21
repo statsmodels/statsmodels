@@ -43,7 +43,7 @@ class MANOVA(Model):
 
     References
     ----------
-    .. [1] ftp://public.dhe.ibm.com/software/analytics/spss/documentation/statistics/20.0/en/client/Manuals/IBM_SPSS_Statistics_Algorithms.pdf
+    .. [*] ftp://public.dhe.ibm.com/software/analytics/spss/documentation/statistics/20.0/en/client/Manuals/IBM_SPSS_Statistics_Algorithms.pdf
     """
     def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
         if len(endog.shape) == 1 or endog.shape[1] == 1:

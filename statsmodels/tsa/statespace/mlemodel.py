@@ -1934,10 +1934,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         References
         ----------
-        .. [1] Lütkepohl, Helmut. 2007.
-           New Introduction to Multiple Time Series Analysis.
-           Berlin: Springer.
-
+        .. [*] Lütkepohl, Helmut. 2007. *New Introduction to Multiple Time*
+           *Series Analysis.* Berlin: Springer.
         """
         criteria = criteria.lower()
         method = method.lower()
@@ -2172,10 +2170,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         References
         ----------
-        .. [1] Harvey, Andrew C. 1990.
-           Forecasting, Structural Time Series Models and the Kalman Filter.
-           Cambridge University Press.
-
+        .. [1] Harvey, Andrew C. 1990. *Forecasting, Structural Time Series*
+               *Models and the Kalman Filter.* Cambridge University Press.
         """
         if method is None:
             method = 'breakvar'

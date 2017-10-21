@@ -136,7 +136,7 @@ class DynamicFactor(MLEModel):
 
     References
     ----------
-    .. [1] Lutkepohl, Helmut. 2007.
+    .. [*] Lutkepohl, Helmut. 2007.
        New Introduction to Multiple Time Series Analysis.
        Berlin: Springer.
 
