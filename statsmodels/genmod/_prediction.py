@@ -171,7 +171,7 @@ def get_prediction_glm(self, exog=None, transform=True, weights=None,
 
     Returns
     -------
-    prediction_results : instance
+    prediction_results : PredictionResults
         The prediction results instance contains prediction and prediction
         variance and can on demand calculate confidence intervals and summary
         tables for the prediction of the mean and of new observations.
