@@ -37,16 +37,6 @@ If you want to keep up to date with the source on github just periodically do::
 
 in the statsmodels directory.
 
-Windows Nightly Binaries
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-If you are not able to follow the build instructions below, we occasionally
-upload builds of the GitHub repository to
-`https://anaconda.org/statsmodels/statsmodels <https://anaconda.org/statsmodels/statsmodels/>`__.
-This version can be installed using conda
-
-    conda install -c statsmodels statsmodels=0.8.0_dev
-
 Installation from Source
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
