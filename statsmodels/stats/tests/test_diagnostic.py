@@ -307,8 +307,26 @@ class TestDiagnosticG(object):
         assert_almost_equal(bg2, bg3, decimal=13)
 
     def test_acorr_ljung_box(self):
+
+        #unit-test which may be useful later
+        #ddof correction for fitted parameters in ARMA(p,q) fitdf=p+q
+        #> bt = Box.test(residuals(fm), lag=4, type = "Ljung-Box", fitdf=2)
+        #> mkhtest(bt, "ljung_box_4df2", "chi2")
+        # ljung_box_4df2 = dict(statistic=5.23587172795227,
+        #                       pvalue=0.0729532930400377,
+        #                       parameters=(2,), distr='chi2')
+
+        #> bt = Box.test(residuals(fm), lag=4, type = "Box-Pierce", fitdf=2)
+        #> mkhtest(bt, "ljung_box_bp_4df2", "chi2")
+        # ljung_box_bp_4df2 = dict(statistic=5.12462932741681,
+        #                          pvalue=0.0771260128929921,
+        #                          parameters=(2,), distr='chi2')
+
+
         res = self.res
 
+        #general test
+        
         #> bt = Box.test(residuals(fm), lag=4, type = "Ljung-Box")
         #> mkhtest(bt, "ljung_box_4", "chi2")
         ljung_box_4 = dict(statistic=5.23587172795227, pvalue=0.263940335284713,
@@ -320,24 +338,47 @@ class TestDiagnosticG(object):
                               pvalue=0.2747471266820692,
                               parameters=(4,), distr='chi2')
 
-        #ddof correction for fitted parameters in ARMA(p,q) fitdf=p+q
-        #> bt = Box.test(residuals(fm), lag=4, type = "Ljung-Box", fitdf=2)
-        #> mkhtest(bt, "ljung_box_4df2", "chi2")
-        ljung_box_4df2 = dict(statistic=5.23587172795227,
-                              pvalue=0.0729532930400377,
-                              parameters=(2,), distr='chi2')
-
-        #> bt = Box.test(residuals(fm), lag=4, type = "Box-Pierce", fitdf=2)
-        #> mkhtest(bt, "ljung_box_bp_4df2", "chi2")
-        ljung_box_bp_4df2 = dict(statistic=5.12462932741681,
-                                 pvalue=0.0771260128929921,
-                                 parameters=(2,), distr='chi2')
-
 
         lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(res.resid, 4,
                                                        boxpierce=True)
         compare_t_est([lb[-1], lbpval[-1]], ljung_box_4, decimal=(13, 14))
         compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_4, decimal=(13, 14))
+
+
+        #test with big dataset and default lag
+
+        #> bt = Box.test(residuals(fm), type = "Ljung-Box")
+        #> mkhtest(bt, "ljung_box_none", "chi2")
+        ljung_box_none = dict(statistic=51.03724531797195, pvalue=0.11334744923390,
+                              distr='chi2')
+
+        #> bt = Box.test(residuals(fm), type = "Box-Pierce")
+        #> mkhtest(bt, "ljung_box_bp_none", "chi2")
+        ljung_box_bp_none = dict(statistic=45.12238537034000,
+                              pvalue=0.26638168491464,
+                              distr='chi2')
+        lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(res.resid, boxpierce=True)
+        compare_t_est([lb[-1], lbpval[-1]], ljung_box_none, decimal=(13, 14))
+        compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_none, decimal=(13, 14))
+
+
+
+        #test with small dataset and default lag
+        
+        #> bt = Box.test(residuals(fm), type = "Ljung-Box")
+        #> mkhtest(bt, "ljung_box_small", "chi2")
+        ljung_box_small = dict(statistic=9.61503968281915, pvalue=0.72507000996945,
+                           parameters=(0,), distr='chi2')
+
+        #> bt = Box.test(residuals(fm), type = "Box-Pierce")
+        #> mkhtest(bt, "ljung_box_bp_small", "chi2")
+        ljung_box_bp_small = dict(statistic=7.41692150864936,
+                              pvalue=0.87940785887006,
+                              parameters=(0,), distr='chi2')
+
+        lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(res.resid[:30], boxpierce=True)
+        compare_t_est([lb[-1], lbpval[-1]], ljung_box_small, decimal=(13, 14))
+        compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_small, decimal=(13, 14))
 
 
     def test_harvey_collier(self):
