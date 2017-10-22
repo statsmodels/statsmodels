@@ -204,7 +204,7 @@ class DiscreteModel(base.LikelihoodModel):
             msg = "Perfect separation detected, results not available"
             raise PerfectSeparationError(msg)
 
-    def fit(self, start_params=None, method='newton', maxiter=35,
+    def fit(self, start_params=None, method='newton', maxiter=500,
             full_output=1, disp=1, callback=None, **kwargs):
         """
         Fit the model using maximum likelihood.
@@ -2686,7 +2686,7 @@ class NegativeBinomial(CountModel):
 
     #TODO: replace this with analytic where is it used?
     def score_obs(self, params):
-        sc = approx_fprime_cs(params, self.loglikeobs)
+        sc = approx_fprime(params, self.loglikeobs, centered=True)
         return sc
 
     def _get_start_params_null(self):
