@@ -14,6 +14,7 @@ env:
     - USEMPL=true
     - MATPLOTLIB=
     - DOCBUILD=false
+    - SCIPY_RC=false
 
 matrix:
   fast_finish: true
@@ -24,6 +25,7 @@ matrix:
     - NUMPY=1.11
     - MATPLOTLIB=1.5
     - COVERAGE=true
+    - SCIPY_RC=true
   - python: 2.7
     env:
     - PYTHON=2.7
@@ -58,6 +60,7 @@ matrix:
     env:
     - PYTHON=3.6
     - COVERAGE=true
+    - SCIPY_RC=true
   - python: 2.7
     env:
     - PYTHON=3.6
@@ -98,6 +101,7 @@ before_install:
   - echo conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml
   - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml
   - source activate statsmodels-test
+  - if [ ${SCIPY_RC} = true ]; then conda remove scipy && pip install scipy==1.0.0rc2; fi
   - pip install 'pytest<4' pytest-xdist nose
   - if [ ${COVERAGE} = true ]; then pip install codecov coverage coveralls pytest-cov; fi
   - if [ ${DOCBUILD} = true ]; then bash tools/ci_docbuild_install.sh; fi;
