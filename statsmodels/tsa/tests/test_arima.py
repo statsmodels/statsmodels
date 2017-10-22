@@ -2234,8 +2234,24 @@ def test_arima_fit_mutliple_calls():
         mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
     assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
     with warnings.catch_warnings(record=True) as w:
-        mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
+        res= mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
     assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
+
+    #ensure summary() works
+    res.summary()
+
+    #test multiple calls when there is only a constant term
+    mod = ARIMA(y, (0, 0, 0))
+    # Make multiple calls to fit
+    with warnings.catch_warnings(record=True) as w:
+        mod.fit(disp=0, start_params=[np.mean(y)])
+    assert_equal(mod.exog_names,  ['const'])
+    with warnings.catch_warnings(record=True) as w:
+        res = mod.fit(disp=0, start_params=[np.mean(y)])
+    assert_equal(mod.exog_names,  ['const'])
+
+    # ensure summary() works
+    res.summary()
 
 def test_long_ar_start_params():
     np.random.seed(12345)
@@ -2284,6 +2300,12 @@ def test_arima_pickle():
     assert_almost_equal(res.resid, pkl_res.resid)
     assert_almost_equal(res.fittedvalues, pkl_res.fittedvalues)
     assert_almost_equal(res.pvalues, pkl_res.pvalues)
+
+
+def test_arima_not_implemented():
+    formula = ' WUE ~ 1 + SFO3 '
+    data = [-1214.360173, -1848.209905, -2100.918158]
+    assert_raises(NotImplementedError, ARIMA.from_formula, formula, data)
 
 
 if __name__ == "__main__":

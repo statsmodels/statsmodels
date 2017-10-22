@@ -105,8 +105,6 @@ class Family(object):
 
            \mu_0 = (Y + \overline{Y})/2
 
-        Notes
-        -----
         Only the Binomial family takes a different initial value.
         """
         return (y + y.mean())/2.
@@ -638,7 +636,7 @@ class Gaussian(Family):
             The Anscombe residuals for the Gaussian family defined below
 
         Notes
-        --------
+        -----
         For the Gaussian distribution, Anscombe residuals are the same as
         deviance residuals.
 
@@ -765,7 +763,7 @@ class Gamma(Family):
             (endog,mu,iweights,scale) as defined below.
 
         Notes
-        --------
+        -----
         .. math::
 
            llf = -1 / scale * \sum_i *(Y_i / \mu_i+ \log(\mu_i)+
@@ -1001,7 +999,7 @@ class Binomial(Family):
             (endog,mu,iweights,scale) as defined below.
 
         Notes
-        --------
+        -----
         If the endogenous variable is binary:
 
         .. math::

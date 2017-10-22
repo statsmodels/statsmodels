@@ -36,11 +36,12 @@ from statsmodels.graphics._regressionplots_doc import (
 
 # need import in module instead of lazily to copy `__doc__`
 from . import _prediction as pred
+from statsmodels.genmod._prediction import PredictionResults
 
 from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
                                              DomainWarning)
 
-__all__ = ['GLM']
+__all__ = ['GLM', 'PredictionResults']
 
 
 def _check_convergence(criterion, iteration, atol, rtol):
