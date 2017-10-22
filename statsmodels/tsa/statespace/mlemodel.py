@@ -1004,9 +1004,10 @@ class MLEModel(tsbase.TimeSeriesModel):
         partials = np.zeros((self.nobs, n))
         k_endog = self.k_endog
         for t in range(self.nobs):
-            for i in range(n):
-                inv_forecasts_error_cov = np.linalg.inv(
+            inv_forecasts_error_cov = np.linalg.inv(
                     res.forecasts_error_cov[:, :, t])
+
+            for i in range(n):
                 partials[t, i] += np.trace(np.dot(
                     np.dot(inv_forecasts_error_cov,
                            partials_forecasts_error_cov[:, :, t, i]),
@@ -1208,10 +1209,10 @@ class MLEModel(tsbase.TimeSeriesModel):
                 approx_complex_step=approx_complex_step,
                 approx_centered=approx_centered, **kwargs)
         elif method == 'approx' and approx_complex_step:
-            return self._hessian_complex_step(
+            hessian = self._hessian_complex_step(
                 params, transformed=transformed, **kwargs)
         elif method == 'approx':
-            return self._hessian_finite_difference(
+            hessian = self._hessian_finite_difference(
                 params, transformed=transformed,
                 approx_centered=approx_centered, **kwargs)
         else:
@@ -1571,7 +1572,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         # Handle covariance matrix calculation
         if cov_kwds is None:
-                cov_kwds = {}
+            cov_kwds = {}
         self._cov_approx_complex_step = (
             cov_kwds.pop('approx_complex_step', True))
         self._cov_approx_centered = cov_kwds.pop('approx_centered', False)
@@ -1678,12 +1679,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             approx_type_str = 'centered finite differences'
         else:
             approx_type_str = 'finite differences'
+
         k_params = len(self.params)
         if k_params == 0:
             res.cov_params_default = np.zeros((0, 0))
             res._rank = 0
-            res.cov_kwds['description'] = (
-                'No parameters estimated.')
+            res.cov_kwds['description'] = 'No parameters estimated.'
         elif cov_type == 'custom':
             res.cov_type = kwargs['custom_cov_type']
             res.cov_params_default = kwargs['custom_cov_params']
@@ -1692,8 +1693,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         elif cov_type == 'none':
             res.cov_params_default = np.zeros((k_params, k_params)) * np.nan
             res._rank = np.nan
-            res.cov_kwds['description'] = (
-                'Covariance matrix not calculated.')
+            res.cov_kwds['description'] = 'Covariance matrix not calculated.'
         elif self.cov_type == 'approx':
             res.cov_params_default = res.cov_params_approx
             res.cov_kwds['description'] = (
@@ -1708,8 +1708,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             res.cov_params_default = res.cov_params_opg
             res.cov_kwds['description'] = (
                 'Covariance matrix calculated using the outer product of'
-                ' gradients (%s).' % approx_type_str
-            )
+                ' gradients (%s).' % approx_type_str)
         elif self.cov_type == 'robust' or self.cov_type == 'robust_oim':
             res.cov_params_default = res.cov_params_robust_oim
             res.cov_kwds['description'] = (
@@ -1718,7 +1717,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 ' observed information matrix (%s) described in'
                 ' Harvey (1989).' % approx_type_str)
         elif self.cov_type == 'robust_approx':
-            res.cov_params_default = res.cov_params_robust
+            res.cov_params_default = res.cov_params_robust_approx
             res.cov_kwds['description'] = (
                 'Quasi-maximum likelihood covariance matrix used for'
                 ' robustness to some misspecifications; calculated using'
