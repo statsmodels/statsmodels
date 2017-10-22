@@ -80,7 +80,6 @@ These include:
   residuals similar to the Goldfeld-Quandt test
 * `test_serial_correlation` implements the Ljung-Box (or Box-Pierce) test for
   serial correlation of residuals
-* 'acorr_ljungbox' short series crushing bug fixed (#3229)
 
 These test statistics are also now included in the `summary` method output. In
 addition, a `plot_diagnostics` method is available which provides four plots

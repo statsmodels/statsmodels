@@ -341,10 +341,11 @@ class TestDiagnosticG(object):
 
         lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(res.resid, 4,
                                                        boxpierce=True)
-        compare_t_est([lb[-1], lbpval[-1]], ljung_box_4, decimal=(13, 14))
-        compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_4, decimal=(13, 14))
+        compare_t_est([lb[-1], lbpval[-1]], ljung_box_4, decimal=(13, 13))
+        compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_4, decimal=(13, 13))
 
-
+    def test_acorr_ljung_box_big_default(self):
+        res = self.res
         #test with big dataset and default lag
 
         #> bt = Box.test(residuals(fm), type = "Ljung-Box")
@@ -358,11 +359,11 @@ class TestDiagnosticG(object):
                               pvalue=0.26638168491464,
                               distr='chi2')
         lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(res.resid, boxpierce=True)
-        compare_t_est([lb[-1], lbpval[-1]], ljung_box_none, decimal=(13, 14))
-        compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_none, decimal=(13, 14))
+        compare_t_est([lb[-1], lbpval[-1]], ljung_box_none, decimal=(13, 13))
+        compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_none, decimal=(13, 13))
 
-
-
+    def test_acorr_ljung_box_small_default(self):
+        res = self.res
         #test with small dataset and default lag
         
         #> bt = Box.test(residuals(fm), type = "Ljung-Box")
@@ -377,8 +378,8 @@ class TestDiagnosticG(object):
                               parameters=(0,), distr='chi2')
 
         lb, lbpval, bp, bppval = smsdia.acorr_ljungbox(res.resid[:30], boxpierce=True)
-        compare_t_est([lb[-1], lbpval[-1]], ljung_box_small, decimal=(13, 14))
-        compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_small, decimal=(13, 14))
+        compare_t_est([lb[-1], lbpval[-1]], ljung_box_small, decimal=(13, 13))
+        compare_t_est([bp[-1], bppval[-1]], ljung_box_bp_small, decimal=(13, 13))
 
 
     def test_harvey_collier(self):

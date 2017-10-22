@@ -227,7 +227,8 @@ compare_j.__doc__ = CompareJ.__doc__
 
 
 def acorr_ljungbox(x, lags=None, boxpierce=False):
-    '''Ljung-Box test for no autocorrelation
+    """
+    Ljung-Box test for no autocorrelation
 
     Parameters
     ----------
@@ -265,7 +266,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
     1d or nd ? axis ? ravel ?
     needs more testing
 
-    ''Verification''
+    *Verification*
 
     Looks correctly sized in Monte Carlo studies.
     not yet compared to verified values
@@ -278,16 +279,15 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
     ----------
     Greene
     Wikipedia
-
-    '''
+    """
     x = np.asarray(x)
     nobs = x.shape[0]
     if lags is None:
-        lags = lrange(1, min((nobs // 2 - 2), 40) + 1)
+        lags = np.arange(1, min((nobs // 2 - 2), 40) + 1)
     elif isinstance(lags, (int, long)):
-        lags = lrange(1, lags + 1)
-    maxlag = lags[-1]
+        lags = np.arange(1, lags + 1)
     lags = np.asarray(lags)
+    maxlag = max(lags)
     acfx = acf(x, nlags=maxlag) # normalize by nobs not (nobs-nlags)
                              # SS: unbiased=False is default now
     acf2norm = acfx[1:maxlag+1]**2 / (nobs - np.arange(1,maxlag+1))
