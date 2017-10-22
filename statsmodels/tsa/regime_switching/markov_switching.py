@@ -1948,9 +1948,6 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                 'Quasi-maximum likelihood covariance matrix used for'
                 ' robustness to some misspecifications; calculated using'
                 ' numerical (%s) differentiation.' % approx_type_str)
-        elif self.cov_type == 'robust_approx':
-            # TODO: Implement here to achieve parity with statespace.mlemodel
-            raise NotImplementedError('Invalid covariance matrix type.')
         else:
             raise NotImplementedError('Invalid covariance matrix type.')
 
