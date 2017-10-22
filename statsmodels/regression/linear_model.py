@@ -52,11 +52,12 @@ import warnings
 from statsmodels.tools.sm_exceptions import InvalidTestWarning
 
 # need import in module instead of lazily to copy `__doc__`
+from statsmodels.regression._prediction import PredictionResults
 from . import _prediction as pred
 
 __docformat__ = 'restructuredtext en'
 
-__all__ = ['GLS', 'WLS', 'OLS', 'GLSAR']
+__all__ = ['GLS', 'WLS', 'OLS', 'GLSAR', 'PredictionResults']
 
 
 _fit_regularized_doc =\

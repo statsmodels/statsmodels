@@ -132,6 +132,7 @@ Results Class
    :toctree: generated/
 
    GLMResults
+   PredictionResults
 
 .. _families:
 
