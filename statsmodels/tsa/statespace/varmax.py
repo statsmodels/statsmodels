@@ -255,7 +255,7 @@ class VARMAX(MLEModel):
     params_complete = ['trend', 'ar', 'ma', 'regression',
                        'state_cov', 'obs_cov']
 
-    @cached_property
+    @cache_readonly
     def _slices(self):
         orders = self.model_orders
         ret = {}
@@ -268,7 +268,7 @@ class VARMAX(MLEModel):
             start += length
         return ret
 
-    @cached_property
+    @cache_readonly
     def _idx_slices(self):
         # Cache some indices
         k_endog = self.k_endog

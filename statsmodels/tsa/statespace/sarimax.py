@@ -1165,7 +1165,7 @@ class SARIMAX(MLEModel):
             'variance': int(self.state_error),
         }
 
-    @cached_property
+    @cache_readonly
     def _slices(self):
         orders = self.model_orders
         ret = {}

@@ -250,7 +250,7 @@ class DynamicFactor(MLEModel):
     params_complete = ['factor_loadings', 'exog', 'error_cov',
                        'factor_transition', 'error_transition']
 
-    @cached_property
+    @cache_readonly
     def _slices(self):
         orders = self.model_orders
 
