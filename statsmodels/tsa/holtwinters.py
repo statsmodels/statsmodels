@@ -642,7 +642,8 @@ class ExponentialSmoothing(TimeSeriesModel):
             b[:i] = dampen(b[:i], phi)
             b[i:] = dampen(b[i], phi_h)
             s[i + m - 1:] = [s[(i - 1) + j % m] for j in range(h + 1)]
-            fitted = trended(l, b) * s[:-m]
+            trend = trended(l, b)
+            fitted = trend * s[:-m]
         elif seasonal == 'add':
             for i in range(1, n + 1):
                 l[i] = y_alpha[i - 1] - (alpha * s[i - 1]) + \
@@ -659,7 +660,8 @@ class ExponentialSmoothing(TimeSeriesModel):
             b[:i] = dampen(b[:i], phi)
             b[i:] = dampen(b[i], phi_h)
             s[i + m - 1:] = [s[(i - 1) + j % m] for j in range(h + 1)]
-            fitted = trended(l, b) + s[:-m]
+            trend = trended(l, b)
+            fitted = trend + s[:-m]
         else:
             for i in range(1, n + 1):
                 l[i] = y_alpha[i - 1] + \
@@ -672,15 +674,19 @@ class ExponentialSmoothing(TimeSeriesModel):
             l[i:] = l[i]
             b[:i] = dampen(b[:i], phi)
             b[i:] = dampen(b[i], phi_h)
-            fitted = trended(l, b)
+            trend = trended(l, b)
+            fitted = trend
         level = l[:i].copy()
-        if use_boxcox or use_boxcox == 'log':
+        if use_boxcox or use_boxcox == 'log' or isinstance(use_boxcox, float):
             fitted = inv_boxcox(fitted, lamda)
-            # TODO: Does it make sense to have a inv_boxcox transform of the level and trend?
-            #level = inv_boxcox(level, lamda)
-            #slope = inv_boxcox(slope, lamda)
-            # TODO: How do we deal with the inv_boxcox transform on negative seasonal components?
-            #season = inv_boxcox(season, lamda)
+            level = inv_boxcox(level, lamda)
+            slope = detrend(trend, level)
+            if seasonal == 'add':
+                season = fitted - inv_boxcox(trend, lamda)
+            elif seasonal == 'mul':
+                season = fitted / inv_boxcox(trend, lamda)
+            else:
+                pass
         SSE = sqeuclidean(fitted[:-h], data)
         # (s0 + gamma) + (b0 + beta) + (l0 + alpha) + phi
         k = m * seasoning + 2 * trending + 2 + 1 * damped
