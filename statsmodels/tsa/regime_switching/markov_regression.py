@@ -191,19 +191,10 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
         return conditional_likelihoods
 
-    def filter(self, *args, **kwargs):
-        kwargs.setdefault('results_class', MarkovRegressionResults)
-        kwargs.setdefault('results_wrapper_class',
-                          MarkovRegressionResultsWrapper)
-        return super(MarkovRegression, self).filter(*args, **kwargs)
-    filter.__doc__ = markov_switching.MarkovSwitching.filter.__doc__
-
-    def smooth(self, *args, **kwargs):
-        kwargs.setdefault('results_class', MarkovRegressionResults)
-        kwargs.setdefault('results_wrapper_class',
-                          MarkovRegressionResultsWrapper)
-        return super(MarkovRegression, self).smooth(*args, **kwargs)
-    smooth.__doc__ = markov_switching.MarkovSwitching.smooth.__doc__
+    @property
+    def _res_classes(self):
+        return {'fit': (MarkovRegressionResults,
+                        MarkovRegressionResultsWrapper)}
 
     def _em_iteration(self, params0):
         """

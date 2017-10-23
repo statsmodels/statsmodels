@@ -873,15 +873,9 @@ class SARIMAX(MLEModel):
                 selection[-i, -i] = 1
         return selection
 
-    def filter(self, params, **kwargs):
-        kwargs.setdefault('results_class', SARIMAXResults)
-        kwargs.setdefault('results_wrapper_class', SARIMAXResultsWrapper)
-        return super(SARIMAX, self).filter(params, **kwargs)
-
-    def smooth(self, params, **kwargs):
-        kwargs.setdefault('results_class', SARIMAXResults)
-        kwargs.setdefault('results_wrapper_class', SARIMAXResultsWrapper)
-        return super(SARIMAX, self).smooth(params, **kwargs)
+    @property
+    def _res_classes(self):
+        return {'fit': (SARIMAXResults, SARIMAXResultsWrapper)}
 
     @staticmethod
     def _conditional_sum_squares(endog, k_ar, polynomial_ar, k_ma,
