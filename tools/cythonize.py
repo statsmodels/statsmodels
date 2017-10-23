@@ -48,6 +48,19 @@ try:
 except NameError:
     WindowsError = None
 
+
+# Determine whether or not to enable coverage in cython files.
+linetrace = os.environ.get('linetrace', False)
+CYTHON_TRACE = str(int(bool(linetrace)))
+
+directives = {'linetrace': False}
+macros = []
+if linetrace:
+    # https://pypkg.com/pypi/pytest-cython/f/tests/example-project/setup.py
+    directives['linetrace'] = True
+    macros = [('CYTHON_TRACE', '1'), ('CYTHON_TRACE_NOGIL', '1')]
+
+
 #
 # Rules
 #
@@ -64,6 +77,11 @@ def process_pyx(fromfile, tofile):
     flags = ['--fast-fail']
     if tofile.endswith('.cxx'):
         flags += ['--cplus']
+
+    from Cython.Build import cythonize
+    cythonize(fromfile, compiler_directives=directives)
+
+    return
 
     try:
         try:
