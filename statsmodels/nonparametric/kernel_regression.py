@@ -85,11 +85,12 @@ class KernelReg(GenericKDE):
     bw: array_like
         The bandwidth parameters.
 
-    **Methods**
-
-    r-squared : calculates the R-Squared coefficient for the model.
-    fit : calculates the conditional mean and marginal effects.
-
+    Methods
+    -------
+    r_squared
+        Calculates the R-Squared coefficient for the model.
+    fit
+        Calculates the conditional mean and marginal effects.
     """
     def __init__(self, endog, exog, var_type, reg_type='ll', bw='cv_ls',
                  defaults=EstimatorSettings()):
@@ -486,7 +487,7 @@ class KernelCensoredReg(KernelReg):
 
     Methods
     -------
-    r-squared
+    r_squared
         Calculate the R-Squared coefficient for the model
     fit
         Calculate the conditional mean and marginal effects

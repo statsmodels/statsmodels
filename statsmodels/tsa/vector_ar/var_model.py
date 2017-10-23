@@ -1737,7 +1737,7 @@ class VARResults(VARProcess):
               Whether H0 can be rejected or not.
 
             "signif" : float
-              Signifigance level
+              Significance level
 
         Notes
         -----
