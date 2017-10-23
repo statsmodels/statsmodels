@@ -265,7 +265,7 @@ class HoltWintersResults(Results):
         the k parameter used to remove the bias in AIC, BIC etc.
 
     """
-    
+
     def __init__(self, model, params, **kwds):
         self.data = model.data
         super(HoltWintersResults, self).__init__(model, params, **kwds)
@@ -304,7 +304,7 @@ class HoltWintersResults(Results):
         steps : int
             The number of out of sample forecasts from the end of the
             sample.
-        
+
         Returns
         -------
         forecast : array
@@ -680,11 +680,11 @@ class ExponentialSmoothing(TimeSeriesModel):
         if use_boxcox or use_boxcox == 'log' or isinstance(use_boxcox, float):
             fitted = inv_boxcox(fitted, lamda)
             level = inv_boxcox(level, lamda)
-            slope = detrend(trend, level)
+            slope = detrend(trend[:i], level)
             if seasonal == 'add':
-                season = fitted - inv_boxcox(trend, lamda)
+                season = (fitted - inv_boxcox(trend, lamda))[:i]
             elif seasonal == 'mul':
-                season = fitted / inv_boxcox(trend, lamda)
+                season = (fitted / inv_boxcox(trend, lamda))[:i]
             else:
                 pass
         SSE = sqeuclidean(fitted[:-h], data)
