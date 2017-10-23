@@ -29,6 +29,7 @@ from scipy.stats import boxcox
 
 
 def _holt_init(x, xi, p, y, l, b):
+    """Initialization for the Holt Models"""
     p[xi] = x
     alpha, beta, _, l0, b0, phi = p[:6];
     alphac = 1 - alpha
@@ -41,15 +42,23 @@ def _holt_init(x, xi, p, y, l, b):
 
 
 def _holt__(x, xi, p, y, l, b, s, m, n, max_seen):
+    """
+    Simple Exponential Smoothing
+    Minimization Function
+    (,)
+    """
     alpha, beta, phi, alphac, betac, y_alpha = _holt_init(x, xi, p, y, l, b)
     for i in range(1, n):
         l[i] = (y_alpha[i - 1]) + (alphac * (l[i - 1]))
     return sqeuclidean(l, y)
 
-#(M,) (Md,)
-
 
 def _holt_mul_dam(x, xi, p, y, l, b, s, m, n, max_seen):
+    """
+    Multiplicative and Multiplicative Damped 
+    Minimization Function
+    (M,) & (Md,)
+    """
     alpha, beta, phi, alphac, betac, y_alpha = _holt_init(x, xi, p, y, l, b)
     if alpha == 0.0:
         return max_seen
@@ -60,10 +69,13 @@ def _holt_mul_dam(x, xi, p, y, l, b, s, m, n, max_seen):
         b[i] = (beta * (l[i] / l[i - 1])) + (betac * b[i - 1]**phi)
     return sqeuclidean(l * b**phi, y)
 
-#(A,) (Ad,)
-
 
 def _holt_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
+    """
+    Additive and Additive Damped 
+    Minimization Function
+    (A,) & (Ad,)
+    """
     alpha, beta, phi, alphac, betac, y_alpha = _holt_init(x, xi, p, y, l, b)
     if alpha == 0.0:
         return max_seen
@@ -76,6 +88,7 @@ def _holt_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
 
 
 def _holt_win_init(x, xi, p, y, l, b, s, m):
+    """Initialization for the Holt Winters Seasonal Models"""
     p[xi] = x
     alpha, beta, gamma, l0, b0, phi = p[:6]; s0 = p[6:]
     alphac = 1 - alpha
@@ -87,10 +100,13 @@ def _holt_win_init(x, xi, p, y, l, b, s, m):
     l[0] = l0; b[0] = b0; s[:m] = s0
     return alpha, beta, gamma, phi, alphac, betac, gammac, y_alpha, y_gamma
 
-#(,M)
-
 
 def _holt_win__mul(x, xi, p, y, l, b, s, m, n, max_seen):
+    """
+    Multiplicative Seasonal 
+    Minimization Function
+    (,M)
+    """
     alpha, beta, gamma, phi, alphac, betac, gammac, y_alpha, y_gamma = _holt_win_init(
         x, xi, p, y, l, b, s, m)
     if alpha == 0.0:
@@ -102,10 +118,13 @@ def _holt_win__mul(x, xi, p, y, l, b, s, m, n, max_seen):
         s[i + m - 1] = (y_gamma[i - 1] / (l[i - 1])) + (gammac * s[i - 1])
     return sqeuclidean(l * s[:-(m - 1)], y)
 
-#(,A)
-
 
 def _holt_win__add(x, xi, p, y, l, b, s, m, n, max_seen):
+    """
+    Additive Seasonal 
+    Minimization Function
+    (,A)
+    """
     alpha, beta, gamma, phi, alphac, betac, gammac, y_alpha, y_gamma = _holt_win_init(
         x, xi, p, y, l, b, s, m)
     if alpha == 0.0:
@@ -118,10 +137,13 @@ def _holt_win__add(x, xi, p, y, l, b, s, m, n, max_seen):
             (gamma * (l[i - 1])) + (gammac * s[i - 1])
     return sqeuclidean(l + s[:-(m - 1)], y)
 
-#(A,M) (Ad,M)
-
 
 def _holt_win_add_mul_dam(x, xi, p, y, l, b, s, m, n, max_seen):
+    """
+    Additive and Additive Damped with Multiplicative Seasonal 
+    Minimization Function
+    (A,M) & (Ad,M)
+    """
     alpha, beta, gamma, phi, alphac, betac, gammac, y_alpha, y_gamma = _holt_win_init(
         x, xi, p, y, l, b, s, m)
     if alpha * beta == 0.0:
@@ -136,10 +158,13 @@ def _holt_win_add_mul_dam(x, xi, p, y, l, b, s, m, n, max_seen):
                                           b[i - 1])) + (gammac * s[i - 1])
     return sqeuclidean((l + phi * b) * s[:-(m - 1)], y)
 
-#(M,M) (Md,M)
-
 
 def _holt_win_mul_mul_dam(x, xi, p, y, l, b, s, m, n, max_seen):
+    """
+    Multiplicative and Multiplicative Damped with Multiplicative Seasonal 
+    Minimization Function
+    (M,M) & (Md,M)
+    """
     alpha, beta, gamma, phi, alphac, betac, gammac, y_alpha, y_gamma = _holt_win_init(
         x, xi, p, y, l, b, s, m)
     if alpha * beta == 0.0:
@@ -154,10 +179,13 @@ def _holt_win_mul_mul_dam(x, xi, p, y, l, b, s, m, n, max_seen):
                                           b[i - 1]**phi)) + (gammac * s[i - 1])
     return sqeuclidean((l * b**phi) * s[:-(m - 1)], y)
 
-#(A,A) (Ad,A)
-
 
 def _holt_win_add_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
+    """
+    Additive and Additive Damped with Additive Seasonal 
+    Minimization Function
+    (A,A) & (Ad,A)
+    """
     alpha, beta, gamma, phi, alphac, betac, gammac, y_alpha, y_gamma = _holt_win_init(
         x, xi, p, y, l, b, s, m)
     if alpha * beta == 0.0:
@@ -172,10 +200,13 @@ def _holt_win_add_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
             (gamma * (l[i - 1] + phi * b[i - 1])) + (gammac * s[i - 1])
     return sqeuclidean((l + phi * b) + s[:-(m - 1)], y)
 
-#(M,A) (M,Ad)
-
 
 def _holt_win_mul_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
+    """
+    Multiplicative and Multiplicative Damped with Additive Seasonal 
+    Minimization Function
+    (M,A) & (M,Ad)
+    """
     alpha, beta, gamma, phi, alphac, betac, gammac, y_alpha, y_gamma = _holt_win_init(
         x, xi, p, y, l, b, s, m)
     if alpha * beta == 0.0:
@@ -192,14 +223,93 @@ def _holt_win_mul_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
 
 
 class HoltWintersResults(Results):
+    """
+    Holt Winter's Exponential Smoothing Results
+
+    Parameters
+    ----------
+    model : ExponentialSmoothing instance
+        The fitted model instance
+
+    Attributes
+    ----------
+    specification : dictionary
+        Dictionary including all attributes from the VARMAX model instance.
+    params: dictionary
+        All the parameters for the Exponential Smoothing model.
+    fittedfcast: array
+        An array of both the fitted values and forecast values.
+    fittedvalues: array
+        An array of the fitted values. Fitted by the Exponential Smoothing 
+        model.
+    fcast: array
+        An array of the forecast values forecast by the Exponential Smoothing
+        model.
+    SSE: float
+        The sum of squared errors
+    level: array
+        An array of the levels values that make up the fitted values.
+    slope: array
+        An array of the slope values that make up the fitted values.
+    season: array
+        An array of the seaonal values that make up the fitted values.
+    AIC: float
+        The Akaike information criterion.
+    BIC: float
+        The Bayesian information criterion.
+    AICc: float
+        AIC with a correction for finite sample sizes.
+    resid: array
+        An array of the residuals of the fittedvalues and actual values.
+    k: int
+        the k parameter used to remove the bias in AIC, BIC etc.
+
+    """
+    
     def __init__(self, model, params, **kwds):
         self.data = model.data
         super(HoltWintersResults, self).__init__(model, params, **kwds)
 
     def predict(self, start=None, end=None):
+        """
+        In-sample prediction and out-of-sample forecasting
+
+        Parameters
+        ----------
+        start : int, str, or datetime, optional
+            Zero-indexed observation number at which to start forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type. Default is the the zeroth observation.
+        end : int, str, or datetime, optional
+            Zero-indexed observation number at which to end forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type. However, if the dates index does not
+            have a fixed frequency, end must be an integer index if you
+            want out of sample prediction. Default is the last observation in
+            the sample.        
+
+        Returns
+        -------
+        forecast : array
+            Array of out of sample forecasts.
+        """
         return self.model.predict(self.params, start, end)
 
     def forecast(self, steps=1):
+        """
+        Out-of-sample forecasts
+
+        Parameters
+        ----------
+        steps : int
+            The number of out of sample forecasts from the end of the
+            sample.
+        
+        Returns
+        -------
+        forecast : array
+            Array of out of sample forecasts
+        """
         try:
             start = self.model._index[-1] + 1
             end = self.model._index[-1] + steps
@@ -237,7 +347,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         Should the trend component be damped.
     seasonal : {"add", "mul", None}, optional
         Type of seasonal component.
-    m : int, optional
+    season_length : int, optional
         The number of seasons to consider for the holt winters.
 
     Returns
@@ -257,7 +367,7 @@ class ExponentialSmoothing(TimeSeriesModel):
     """
 
     def __init__(self, endog, trend=None, damped=False, seasonal=None,
-                 m=None, dates=None, freq=None, missing='none', **kwargs):
+                 season_length=None, dates=None, freq=None, missing='none', **kwargs):
         super(ExponentialSmoothing, self).__init__(
             endog, None, dates, freq, missing=missing)
         self.trend = trend
@@ -268,12 +378,12 @@ class ExponentialSmoothing(TimeSeriesModel):
         if self.damped and not self.trending:
             raise NotImplementedError('Can only dampen the trend component')
         if self.seasoning:
-            if (m is None or m == 0):
+            if (season_length is None or season_length == 0):
                 raise NotImplementedError(
                     'Unable to detect season automatically')
-            self.m = m
+            self.season_length = season_length
         else:
-            self.m = 0
+            self.season_length = 0
 
     def predict(self, params, start=None, end=None):
         """
@@ -327,9 +437,9 @@ class ExponentialSmoothing(TimeSeriesModel):
             set then this value will be used as the value.
         optimized : bool, optional
             Should the values that have not been set above be optimized automatically?
-        use_boxcox : {True, False, 'log'}, optional
+        use_boxcox : {True, False, 'log', float}, optional
             Should the boxcox tranform be applied to the data first? If 'log' then
-            apply the log.
+            apply the log. If float then use lambda equal to float.
         remove_bias : bool, optional
             Should the bias be removed from the fcast and fitted values before being
             returned?
@@ -358,20 +468,23 @@ class ExponentialSmoothing(TimeSeriesModel):
         trending = self.trending
         trend = self.trend
         seasonal = self.seasonal
-        m = self.m
+        m = self.season_length
         opt = None
         phi = phi if damped else 1.0
         n = len(data)
         if use_boxcox == 'log':
             lamda = 0.0
-            y = boxcox(data, 0.0)
+            y = boxcox(data, lamda)
+        elif isinstance(use_boxcox, float):
+            lamda = use_boxcox
+            y = boxcox(data, lamda)
         elif use_boxcox:
             y, lamda = boxcox(data)
         else:
             lamda = None
             y = data.squeeze()
-            if np.ndim(y) != 1:
-                raise NotImplementedError('Only 1 dimensional data supported')
+        if np.ndim(y) != 1:
+            raise NotImplementedError('Only 1 dimensional data supported')
         l = np.zeros((n,))
         b = np.zeros((n,))
         s = np.zeros((n + m - 1,))
@@ -471,7 +584,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         trending = self.trending
         trend = self.trend
         seasonal = self.seasonal
-        m = self.m
+        m = self.season_length
         phi = phi if damped else 1.0
         n = len(data)
         if use_boxcox == 'log':
