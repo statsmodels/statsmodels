@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Test VAR Model
 """
@@ -457,7 +458,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
 class E1_Results(object):
     """
-    Results from Lutkepohl (2005) using E2 dataset
+    Results from Lütkepohl (2005) using E2 dataset
     """
 
     def __init__(self):
@@ -511,7 +512,7 @@ def test_lutkepohl_parse():
 
 class TestVARResultsLutkepohl(object):
     """
-    Verify calculations using results from Lutkepohl's book
+    Verify calculations using results from Lütkepohl's book
     """
 
     @classmethod

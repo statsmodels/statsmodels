@@ -1,9 +1,10 @@
+# -*- coding: utf-8 -*-
 """
 Vector Autoregression (VAR) processes
 
 References
 ----------
-Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
+Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
 
 from __future__ import division, print_function
@@ -116,7 +117,7 @@ def var_acf(coefs, sig_u, nlags=None):
 
     Notes
     -----
-    Ref: Lutkepohl p.28-29
+    Ref: Lütkepohl p.28-29
 
     Returns
     -------
@@ -147,7 +148,7 @@ def _var_acf(coefs, sig_u):
 
     Notes
     -----
-    Lutkepohl (2005) p.29
+    Lütkepohl (2005) p.29
     """
     p, k, k2 = coefs.shape
     assert(k == k2)
@@ -217,7 +218,7 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
 
     Notes
     -----
-    Lutkepohl p. 37
+    Lütkepohl p. 37
 
     Also used by DynamicVAR class
     """
@@ -411,7 +412,7 @@ def test_normality(results, signif=0.05):
 
     References
     ----------
-    .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+    .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
 
     .. [2] Kilian, L. & Demiroglu, U. (2000). "Residual-Based Tests for
        Normality in Autoregressions: Asymptotic Theory and Simulation
@@ -509,7 +510,7 @@ class VAR(tsbase.TimeSeriesModel):
 
     References
     ----------
-    Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
+    Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
     """
     def __init__(self, endog, exog=None, dates=None, freq=None,
                  missing='none'):
@@ -600,7 +601,7 @@ class VAR(tsbase.TimeSeriesModel):
 
         Notes
         -----
-        Lutkepohl pp. 146-153
+        Lütkepohl pp. 146-153
 
         Returns
         -------
@@ -684,7 +685,7 @@ class VAR(tsbase.TimeSeriesModel):
                 z[:, i] = (np.sqrt(z[:, i]) + lags)**2
 
         y_sample = endog[lags:]
-        # Lutkepohl p75, about 5x faster than stated formula
+        # Lütkepohl p75, about 5x faster than stated formula
         params = np.linalg.lstsq(z, y_sample)[0]
         resid = y_sample - np.dot(z, params)
 
@@ -812,7 +813,7 @@ class VARProcess(object):
     def mean(self):
         r"""Mean of stable process
 
-        Lutkepohl eq. 2.1.23
+        Lütkepohl eq. 2.1.23
 
         .. math:: \mu = (I - A_1 - \dots - A_p)^{-1} \alpha
         """
@@ -905,7 +906,7 @@ class VARProcess(object):
 
         Notes
         -----
-        Lutkepohl pp 37-38
+        Lütkepohl pp 37-38
         """
         if self.exog is None and exog_future is not None:
             raise ValueError("No exog in model, so no exog_future supported "
@@ -982,7 +983,7 @@ class VARProcess(object):
 
         Notes
         -----
-        Lutkepohl pp. 39-40
+        Lütkepohl pp. 39-40
 
         Returns
         -------
@@ -1208,7 +1209,7 @@ class VARResults(VARProcess):
         [params_for_deterministic_terms, A_1, ..., A_p] with the shape
         (K x (Kp + number_of_deterministic_terms))
         Adjusted to be an unbiased estimator
-        Ref: Lutkepohl p.74-75
+        Ref: Lütkepohl p.74-75
         """
         z = self.ys_lagged
         return np.kron(scipy.linalg.inv(np.dot(z.T, z)), self.sigma_u)
@@ -1225,7 +1226,7 @@ class VARResults(VARProcess):
 
         Notes
         -----
-        Lutkepohl Proposition 3.3
+        Lütkepohl Proposition 3.3
         """
 
         Ainv = scipy.linalg.inv(np.eye(self.neqs) - self.coefs.sum(0))
@@ -1340,7 +1341,7 @@ class VARResults(VARProcess):
         -----
         .. math:: \Sigma_{\hat y}(h) = \Sigma_y(h) + \Omega(h) / T
 
-        Ref: Lutkepohl pp. 96-97
+        Ref: Lütkepohl pp. 96-97
 
         Returns
         -------
@@ -1377,7 +1378,7 @@ class VARResults(VARProcess):
 
         Notes
         -----
-        Lutkepohl (2005) Appendix D
+        Lütkepohl (2005) Appendix D
 
         Returns
         -------
@@ -1620,7 +1621,7 @@ class VARResults(VARProcess):
 
         References
         ----------
-        .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+        .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
         """
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
@@ -1747,7 +1748,7 @@ class VARResults(VARProcess):
 
         References
         ----------
-        .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+        .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
         """
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
@@ -1816,7 +1817,7 @@ class VARResults(VARProcess):
 
         References
         ----------
-        .. [1] Lutkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+        .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
         """
         statistic = 0
         u = np.asarray(self.resid)
@@ -1932,7 +1933,7 @@ class VARResults(VARProcess):
     def fpe(self):
         """Final Prediction Error (FPE)
 
-        Lutkepohl p. 147, see info_criteria
+        Lütkepohl p. 147, see info_criteria
         """
         return self.info_criteria['fpe']
 

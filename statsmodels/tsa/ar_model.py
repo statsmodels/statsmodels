@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import division
 from statsmodels.compat.python import iteritems, range, string_types, lmap, long
 
@@ -632,7 +633,7 @@ class ARResults(tsbase.TimeSeriesModelResults):
         initial values are computed via the Kalman Filter if the model is
         fit by `mle`.
     fpe : float
-        Final prediction error using Lutkepohl's definition
+        Final prediction error using Lütkepohl's definition
         ((n_totobs+k_trend)/(n_totobs-k_ar-k_trend))*sigma
     hqic : float
         Hannan-Quinn Information Criterion.

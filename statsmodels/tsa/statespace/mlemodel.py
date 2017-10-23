@@ -1944,7 +1944,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             out = getattr(self, criteria)
         elif method == 'lutkepohl':
             if self.filter_results.state_cov.shape[-1] > 1:
-                raise ValueError('Cannot compute Lutkepohl statistics for'
+                raise ValueError('Cannot compute Lütkepohl statistics for'
                                  ' models with time-varying state covariance'
                                  ' matrix.')
 

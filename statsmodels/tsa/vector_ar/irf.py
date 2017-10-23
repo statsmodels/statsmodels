@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Impulse reponse-related code
 """
@@ -237,7 +238,7 @@ class IRAnalysis(BaseIRAnalysis):
 
     Notes
     -----
-    Using Lutkepohl (2005) notation
+    Using Lütkepohl (2005) notation
     """
     def __init__(self, model, P=None, periods=10, order=None, svar=False,
                  vecm=False):
@@ -259,7 +260,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         Notes
         -----
-        Lutkepohl eq 3.7.5
+        Lütkepohl eq 3.7.5
 
         Returns
         -------

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Dynamic factor model
 
@@ -136,7 +137,7 @@ class DynamicFactor(MLEModel):
 
     References
     ----------
-    .. [*] Lutkepohl, Helmut. 2007.
+    .. [*] Lütkepohl, Helmut. 2007.
        New Introduction to Multiple Time Series Analysis.
        Berlin: Springer.
 
