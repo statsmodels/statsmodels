@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import warnings
 
+import pytest
 from numpy.testing import assert_
 
 from statsmodels.tools.decorators import deprecated_alias
@@ -22,18 +23,21 @@ class TestDeprecatedAlias(object):
 
     def test_get(self):
         inst = self.Dummy(4)
-        with warnings.catch_warnings(record=True) as record:
-            assert_(inst.y == 4)
 
-        assert_(len(record) == 1)
-        assert_('is a deprecated alias' in str(record[0]))
+        with pytest.deprecated_call() as context:
+            assert_(inst.y == 4)
+            captured = context._list
+
+        assert_(len(captured) == 1)
+        assert_('is a deprecated alias' in str(captured[0]))
 
     def test_set(self):
         inst = self.Dummy(4)
 
-        with warnings.catch_warnings(record=True) as record:
+        with pytest.deprecated_call() as context:            
             inst.y = 5
+            captured = context._list
 
-        assert_(len(record) == 1)
-        assert_('is a deprecated alias' in str(record[0]))
+        assert_(len(captured) == 1)
+        assert_('is a deprecated alias' in str(captured[0]))
         assert_(inst.x == 5)

@@ -14,11 +14,11 @@ def deprecated_alias(old_name, new_name, remove_version=None):
         msg += ', will be removed in version %s' % remove_version
 
     def fget(self):
-        warnings.warn(msg)
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
         return getattr(self, new_name)
 
     def fset(self, value):
-        warnings.warn(msg)
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
         setattr(self, new_name, value)
 
     res = property(fget=fget, fset=fset)
