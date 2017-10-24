@@ -1387,6 +1387,7 @@ class GeneralizedPoisson(CountModel):
         mlefit = super(GeneralizedPoisson, self).fit(start_params=start_params,
                         maxiter=maxiter, method=method, disp=disp,
                         full_output=full_output, callback=callback,
+                        cov_kwds=cov_kwds, cov_type=cov_type, use_t=use_t,
                         **kwargs)
 
 
@@ -1396,12 +1397,6 @@ class GeneralizedPoisson(CountModel):
 
         gpfit = GeneralizedPoissonResults(self, mlefit._results)
         result = GeneralizedPoissonResultsWrapper(gpfit)
-
-        if cov_kwds is None:
-            cov_kwds = {}
-
-        result._get_robustcov_results(cov_type=cov_type,
-                                      use_self=True, use_t=use_t, **cov_kwds)
         return result
 
     fit.__doc__ = DiscreteModel.fit.__doc__ + fit.__doc__
@@ -2754,6 +2749,7 @@ class NegativeBinomial(CountModel):
         mlefit = super(NegativeBinomial, self).fit(start_params=start_params,
                         maxiter=maxiter, method=method, disp=disp,
                         full_output=full_output, callback=callback,
+                        cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t,
                         **kwargs)
                         # TODO: Fix NBin _check_perfect_pred
         if self.loglike_method.startswith('nb'):
@@ -2768,10 +2764,6 @@ class NegativeBinomial(CountModel):
         else:
             result = mlefit
 
-        if cov_kwds is None:
-            cov_kwds = {}  #TODO: make this unnecessary ?
-        result._get_robustcov_results(cov_type=cov_type,
-                                    use_self=True, use_t=use_t, **cov_kwds)
         return result
 
 
@@ -3114,6 +3106,7 @@ class NegativeBinomialP(CountModel):
         mlefit = super(NegativeBinomialP, self).fit(start_params=start_params,
                         maxiter=maxiter, method=method, disp=disp,
                         full_output=full_output, callback=callback,
+                        cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t,
                         **kwargs)
 
         if use_transparams and method not in ["newton", "ncg"]:
@@ -3122,11 +3115,6 @@ class NegativeBinomialP(CountModel):
 
         nbinfit = NegativeBinomialResults(self, mlefit._results)
         result = NegativeBinomialResultsWrapper(nbinfit)
-
-        if cov_kwds is None:
-            cov_kwds = {}
-        result._get_robustcov_results(cov_type=cov_type,
-                                    use_self=True, use_t=use_t, **cov_kwds)
         return result
 
     fit.__doc__ += DiscreteModel.fit.__doc__

@@ -181,16 +181,11 @@ class GenericZeroInflated(CountModel):
         mlefit = super(GenericZeroInflated, self).fit(start_params=start_params,
                        maxiter=maxiter, disp=disp, method=method,
                        full_output=full_output, callback=callback,
+                       cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t,
                        **kwargs)
 
         zipfit = self.result_class(self, mlefit._results)
         result = self.result_class_wrapper(zipfit)
-
-        if cov_kwds is None:
-            cov_kwds = {}
-
-        result._get_robustcov_results(cov_type=cov_type,
-                                      use_self=True, use_t=use_t, **cov_kwds)
         return result
 
     fit.__doc__ = DiscreteModel.fit.__doc__
