@@ -1014,8 +1014,8 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
             if results_class is None:
                 results_class = self._res_classes['fit'][0]
-            if results_wrapper_class is None:
-                results_wrapper_class = self._res_classes['fit'][1]
+            if wrapper_class is None:
+                wrapper_class = self._res_classes['fit'][1]
 
             res = results_class(self, params, result, **result_kwargs)
             result = wrapper_class(res)
