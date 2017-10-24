@@ -34,7 +34,7 @@ class TestDeprecatedAlias(object):
     def test_set(self):
         inst = self.Dummy(4)
 
-        with pytest.deprecated_call() as context:            
+        with pytest.deprecated_call() as context:
             inst.y = 5
             captured = context._list
 
