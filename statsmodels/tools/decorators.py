@@ -9,6 +9,28 @@ __all__ = ['resettable_cache', 'cache_readonly', 'cache_writable',
 
 
 def deprecated_alias(old_name, new_name, remove_version=None):
+    """
+    Older or less-used classes may not conform to statsmodels naming
+    conventions.  `deprecated_alias` lets us bring them into conformance
+    without breaking backward-compatibility.
+
+    Example
+    -------
+    Instances of the `Foo` class have a `nvars` attribute, but it _should_
+    be called `neqs`:
+
+    class Foo(object):
+        nvars = deprecated_alias('nvars', 'neqs')
+
+        def __init__(self, neqs):
+            self.neqs = neqs
+
+    >>> foo = Foo(3)
+    >>> foo.nvars
+    __main__:1: FutureWarning: nvars is a deprecated alias for neqs
+    3
+
+    """
     msg = '%s is a deprecated alias for %s' % (old_name, new_name)
     if remove_version is not None:
         msg += ', will be removed in version %s' % remove_version
