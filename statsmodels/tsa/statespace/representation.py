@@ -210,7 +210,7 @@ class Representation(object):
 
     References
     ----------
-    .. [1] Durbin, James, and Siem Jan Koopman. 2012.
+    .. [*] Durbin, James, and Siem Jan Koopman. 2012.
        Time Series Analysis by State Space Methods: Second Edition.
        Oxford University Press.
     """

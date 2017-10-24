@@ -48,7 +48,7 @@ class RecursiveLS(MLEModel):
 
     References
     ----------
-    .. [1] Durbin, James, and Siem Jan Koopman. 2012.
+    .. [*] Durbin, James, and Siem Jan Koopman. 2012.
        Time Series Analysis by State Space Methods: Second Edition.
        Oxford University Press.
 
@@ -328,7 +328,7 @@ class RecursiveLSResults(MLEResults):
 
         References
         ----------
-        .. [1] Brown, R. L., J. Durbin, and J. M. Evans. 1975.
+        .. [*] Brown, R. L., J. Durbin, and J. M. Evans. 1975.
            "Techniques for Testing the Constancy of
            Regression Relationships over Time."
            Journal of the Royal Statistical Society.
@@ -366,7 +366,7 @@ class RecursiveLSResults(MLEResults):
 
         References
         ----------
-        .. [1] Brown, R. L., J. Durbin, and J. M. Evans. 1975.
+        .. [*] Brown, R. L., J. Durbin, and J. M. Evans. 1975.
            "Techniques for Testing the Constancy of
            Regression Relationships over Time."
            Journal of the Royal Statistical Society.
@@ -551,7 +551,7 @@ class RecursiveLSResults(MLEResults):
 
         References
         ----------
-        .. [1] Brown, R. L., J. Durbin, and J. M. Evans. 1975.
+        .. [*] Brown, R. L., J. Durbin, and J. M. Evans. 1975.
            "Techniques for Testing the Constancy of
            Regression Relationships over Time."
            Journal of the Royal Statistical Society.
@@ -643,16 +643,16 @@ class RecursiveLSResults(MLEResults):
         statistic moves out of the significance bounds.
 
         Critical values used in creating the significance bounds are computed
-        using the approximate formula of [2]_.
+        using the approximate formula of [1]_.
 
         References
         ----------
-        .. [1] Brown, R. L., J. Durbin, and J. M. Evans. 1975.
+        .. [*] Brown, R. L., J. Durbin, and J. M. Evans. 1975.
            "Techniques for Testing the Constancy of
            Regression Relationships over Time."
            Journal of the Royal Statistical Society.
            Series B (Methodological) 37 (2): 149-92.
-        .. [2] Edgerton, David, and Curt Wells. 1994.
+        .. [1] Edgerton, David, and Curt Wells. 1994.
            "Critical Values for the Cusumsq Statistic
            in Medium and Large Sized Samples."
            Oxford Bulletin of Economics and Statistics 56 (3): 355-65.

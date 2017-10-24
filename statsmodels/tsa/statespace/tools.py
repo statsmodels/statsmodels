@@ -550,7 +550,7 @@ def constrain_stationary_univariate(unconstrained):
 
     References
     ----------
-    .. [1] Monahan, John F. 1984.
+    .. [*] Monahan, John F. 1984.
        "A Note on Enforcing Stationarity in
        Autoregressive-moving Average Models."
        Biometrika 71 (2) (August 1): 403-404.
@@ -587,7 +587,7 @@ def unconstrain_stationary_univariate(constrained):
 
     References
     ----------
-    .. [1] Monahan, John F. 1984.
+    .. [*] Monahan, John F. 1984.
        "A Note on Enforcing Stationarity in
        Autoregressive-moving Average Models."
        Biometrika 71 (2) (August 1): 403-404.
@@ -889,7 +889,7 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
        "A Note on Reparameterizing a Vector Autoregressive Moving Average Model
        to Enforce Stationarity."
        Journal of Statistical Computation and Simulation 24 (2): 99-106.
-    .. [2] Ansley, Craig F, and Paul Newbold. 1979.
+    .. [*] Ansley, Craig F, and Paul Newbold. 1979.
        "Multivariate Partial Autocorrelations."
        In Proceedings of the Business and Economic Statistics Section, 349-53.
        American Statistical Association
@@ -1061,7 +1061,7 @@ def _compute_multivariate_sample_acovf(endog, maxlag):
 
     References
     ----------
-    .. [1] Wei, William. 1990.
+    .. [*] Wei, William. 1990.
         Time Series Analysis : Univariate and Multivariate Methods.
        Boston: Pearson.
     """
@@ -1471,7 +1471,7 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
 
     References
     ----------
-    .. [1] Ansley, Craig F., and Robert Kohn. 1986.
+    .. [*] Ansley, Craig F., and Robert Kohn. 1986.
        "A Note on Reparameterizing a Vector Autoregressive Moving Average Model
        to Enforce Stationarity."
        Journal of Statistical Computation and Simulation 24 (2): 99-106.

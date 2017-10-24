@@ -685,7 +685,7 @@ class TukeyHSDResults(object):
 
         References
         ----------
-        .. [1] Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures.
+        .. [*] Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures.
                Hoboken, NJ: John Wiley & Sons, 1987.
 
         Examples
@@ -1321,7 +1321,7 @@ def simultaneous_ci(q_crit, var, groupnobs, pairindices=None):
 
     References
     ----------
-    .. [1] Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures.
+    .. [*] Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures.
            Hoboken, NJ: John Wiley & Sons, 1987.)
     """
     # Set initial variables

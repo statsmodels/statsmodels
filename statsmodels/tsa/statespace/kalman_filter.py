@@ -1669,7 +1669,7 @@ class FilterResults(FrozenRepresentation):
 
         Returns
         -------
-        results : PredictionResults
+        results : kalman_filter.PredictionResults
             A PredictionResults object.
 
         Notes

@@ -463,7 +463,7 @@ class AnovaRM(object):
 
     References
     ----------
-    .. [1] Rutherford, Andrew. Anova and ANCOVA: a GLM approach. John Wiley & Sons, 2011.
+    .. [*] Rutherford, Andrew. Anova and ANCOVA: a GLM approach. John Wiley & Sons, 2011.
 
     """
 

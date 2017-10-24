@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Vector Autoregressive Moving Average with eXogenous regressors model
 
@@ -108,7 +109,7 @@ class VARMAX(MLEModel):
 
     References
     ----------
-    .. [1] Lutkepohl, Helmut. 2007.
+    .. [1] Lütkepohl, Helmut. 2007.
        New Introduction to Multiple Time Series Analysis.
        Berlin: Springer.
 
