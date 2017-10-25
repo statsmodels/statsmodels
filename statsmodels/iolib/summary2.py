@@ -1,14 +1,17 @@
 from statsmodels.compat.python import (lrange, iterkeys, iteritems, lzip,
                                        reduce, itervalues, zip, string_types,
                                        range)
-from statsmodels.compat.collections import OrderedDict
+
+from collections import OrderedDict
+import datetime
+import re
+import textwrap
+
 import numpy as np
 import pandas as pd
-import datetime
-import textwrap
+
 from .table import SimpleTable
 from .tableformatting import fmt_latex, fmt_txt
-import re
 
 
 class Summary(object):
@@ -426,23 +429,24 @@ def _make_unique(list_of_names):
     return header
 
 
-def summary_col(results, float_format='%.4f', model_names=[], stars=False,
-                info_dict=None, regressor_order=[]):
+def summary_col(results, float_format='%.4f', model_names=(), stars=False,
+                info_dict=None, regressor_order=(), drop_omitted=False):
     """
     Summarize multiple results instances side-by-side (coefs and SEs)
 
     Parameters
     ----------
     results : statsmodels results instance or list of result instances
-    float_format : string
+    float_format : string, optional
         float format for coefficients and standard errors
         Default : '%.4f'
-    model_names : list of strings of length len(results) if the names are not
+    model_names : list of strings, optional
+        Must have same length as the number of results. If the names are not
         unique, a roman number will be appended to all model names
     stars : bool
         print significance stars
     info_dict : dict
-        dict of lambda functions to be applied to results instances to retrieve
+        dict of functions to be applied to results instances to retrieve
         model info. To use specific information for different models, add a
         (nested) info_dict with model name as the key.
         Example: `info_dict = {"N":..., "R2": ..., "OLS":{"R2":...}}` would
@@ -450,9 +454,13 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
         all other results.
         Default : None (use the info_dict specified in
         result.default_model_infos, if this property exists)
-    regressor_order : list of strings
+    regressor_order : list of strings, optional
         list of names of the regressors in the desired order. All regressors
         not specified will be appended to the end of the list.
+    drop_omitted : bool, optional
+        Includes regressors that are not specified in regressor_order. If False,
+        regressors not specified will be appended to end of the list. If True,
+        only regressors in regressors_list will be included.
     """
 
     if not isinstance(results, list):
@@ -483,6 +491,8 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
         summ.index = f(np.unique(varnames))
         summ = summ.reindex(f(order))
         summ.index = [x[:-4] for x in summ.index]
+        if drop_omitted:
+            summ = summ.loc[regressor_order]
 
     idx = pd.Series(lrange(summ.shape[0])) % 2 == 1
     summ.index = np.where(idx, '', summ.index.get_level_values(0))
@@ -495,7 +505,7 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
         cols = [_col_info(x, getattr(x, "default_model_infos", None)) for x in
                 results]
     # use unique column names, otherwise the merge will not succeed
-    for df , name in zip(cols, _make_unique([df.columns[0] for df in cols])):
+    for df, name in zip(cols, _make_unique([df.columns[0] for df in cols])):
         df.columns = [name]
     merg = lambda x, y: x.merge(y, how='outer', right_index=True,
                                 left_index=True)
