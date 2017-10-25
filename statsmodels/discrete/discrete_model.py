@@ -454,16 +454,19 @@ class BinaryModel(DiscreteModel):
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
+
+        if method not in ['l1', 'l1_cvxopt_cp']:
+            # FIXME: This should be a ValueError, right?
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
+
         bnryfit = super(BinaryModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1BinaryResults(self, bnryfit)
-        else:
-            raise Exception(
-                    "argument method == %s, which is not handled" % method)
+        
+        discretefit = L1BinaryResults(self, bnryfit)
         return L1BinaryResultsWrapper(discretefit)
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
@@ -859,16 +862,18 @@ class CountModel(DiscreteModel):
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
+
+        if method not in ['l1', 'l1_cvxopt_cp']:
+            # FIXME: This should be a ValueError, right?
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
         cntfit = super(CountModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1CountResults(self, cntfit)
-        else:
-            raise Exception(
-                    "argument method == %s, which is not handled" % method)
+        
+        discretefit = L1CountResults(self, cntfit)
         return L1CountResultsWrapper(discretefit)
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
@@ -1048,16 +1053,19 @@ class Poisson(CountModel):
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
+
+        if method not in ['l1', 'l1_cvxopt_cp']:
+            # FIXME: This should be a ValueError, right?
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
+
         cntfit = super(CountModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1PoissonResults(self, cntfit)
-        else:
-            raise Exception(
-                    "argument method == %s, which is not handled" % method)
+
+        discretefit = L1PoissonResults(self, cntfit)
         return L1PoissonResultsWrapper(discretefit)
 
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
@@ -1411,6 +1419,11 @@ class GeneralizedPoisson(CountModel):
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
 
+        if method not in ['l1', 'l1_cvxopt_cp']:
+            # FIXME: This should be a ValueError, right?
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
+
         if np.size(alpha) == 1 and alpha != 0:
             k_params = self.exog.shape[1] + self.k_extra
             alpha = alpha * np.ones(k_params)
@@ -1436,12 +1449,7 @@ class GeneralizedPoisson(CountModel):
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
 
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1GeneralizedPoissonResults(self, cntfit)
-        else:
-            raise Exception(
-                    "argument method == %s, which is not handled" % method)
-
+        discretefit = L1GeneralizedPoissonResults(self, cntfit)
         return L1GeneralizedPoissonResultsWrapper(discretefit)
 
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
@@ -2780,6 +2788,11 @@ class NegativeBinomial(CountModel):
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
 
+        if method not in ['l1', 'l1_cvxopt_cp']:
+            # FIXME: This should be a ValueError, right?
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
+
         if self.loglike_method.startswith('nb') and (np.size(alpha) == 1 and
                                                      alpha != 0):
             # don't penalize alpha if alpha is scalar
@@ -2811,12 +2824,8 @@ class NegativeBinomial(CountModel):
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1NegativeBinomialResults(self, cntfit)
-        else:
-            raise Exception(
-                    "argument method == %s, which is not handled" % method)
-
+        
+        discretefit = L1NegativeBinomialResults(self, cntfit)
         return L1NegativeBinomialResultsWrapper(discretefit)
 
 
@@ -3137,6 +3146,7 @@ class NegativeBinomialP(CountModel):
             qc_tol=0.03, **kwargs):
 
         if method not in ['l1', 'l1_cvxopt_cp']:
+            # FIXME: This should be a ValueError, right?
             raise TypeError(
                     "argument method == %s, which is not handled" % method)
 
