@@ -1,10 +1,10 @@
-from statsmodels.compat.python import lmap
+from statsmodels.compat.python import lmap, BytesIO
 
 from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
-from numpy.testing import dec, assert_equal
+from numpy.testing import assert_equal, assert_
 from statsmodels.compat.testing import skipif
 
 import statsmodels.api as sm
@@ -73,6 +73,83 @@ def test_plot_pacf():
     plot_pacf(pacf, ax=ax, alpha=None)
 
     plt.close(fig)
+
+
+@skipif(not have_matplotlib, reason='matplotlib not available')
+def test_plot_pacf_kwargs():
+    # Just test that it runs.
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ar = np.r_[1., -0.9]
+    ma = np.r_[1., 0.9]
+    armaprocess = tsp.ArmaProcess(ar, ma)
+    rs = np.random.RandomState(1234)
+    pacf = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+
+    buff = BytesIO()
+    plot_pacf(pacf, ax=ax)
+    fig.savefig(buff, format='rgba')
+    plt.close(fig)
+
+    buff_linestyle = BytesIO()
+    fig_linestyle = plt.figure()
+    ax = fig_linestyle.add_subplot(111)
+    plot_pacf(pacf, ax=ax, ls='-')
+    fig_linestyle.savefig(buff_linestyle, format='rgba')
+    plt.close(fig_linestyle)
+
+    buff_with_vlines = BytesIO()
+    fig_with_vlines = plt.figure()
+    ax = fig_with_vlines.add_subplot(111)
+    vlines_kwargs = {'linestyles': 'dashdot'}
+    plot_pacf(pacf, ax=ax, vlines_kwargs=vlines_kwargs)
+    fig_with_vlines.savefig(buff_with_vlines, format='rgba')
+    plt.close(fig_with_vlines)
+
+    buff.seek(0)
+    buff_linestyle.seek(0)
+    buff_with_vlines.seek(0)
+    plain = buff.read()
+    linestyle = buff_linestyle.read()
+    with_vlines = buff_with_vlines.read()
+
+    assert_(plain != linestyle)
+    assert_(with_vlines != plain)
+    assert_(linestyle != with_vlines)
+
+
+@skipif(not have_matplotlib, reason='matplotlib not available')
+def test_plot_acf_kwargs():
+    # Just test that it runs.
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ar = np.r_[1., -0.9]
+    ma = np.r_[1., 0.9]
+    armaprocess = tsp.ArmaProcess(ar, ma)
+    rs = np.random.RandomState(1234)
+    acf = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+
+    buff = BytesIO()
+    plot_acf(acf, ax=ax)
+    fig.savefig(buff, format='rgba')
+    plt.close(fig)
+
+    buff_with_vlines = BytesIO()
+    fig_with_vlines = plt.figure()
+    ax = fig_with_vlines.add_subplot(111)
+    vlines_kwargs = {'linestyles': 'dashdot'}
+    plot_acf(acf, ax=ax, vlines_kwargs=vlines_kwargs)
+    fig_with_vlines.savefig(buff_with_vlines, format='rgba')
+    plt.close(fig_with_vlines)
+
+    buff.seek(0)
+    buff_with_vlines.seek(0)
+    plain = buff.read()
+    with_vlines = buff_with_vlines.read()
+
+    assert_(with_vlines != plain)
 
 
 @skipif(not have_matplotlib, reason='matplotlib not available')

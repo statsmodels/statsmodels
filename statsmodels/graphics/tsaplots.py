@@ -23,19 +23,22 @@ def _prepare_data_corr_plot(x, lags, zero):
     return lags, nlags, irregular
 
 
-def _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines, **kwargs):
+def _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines,
+               vlines_kwargs, **kwargs):
     if irregular:
         acf_x = acf_x[lags]
         if confint is not None:
             confint = confint[lags]
 
     if use_vlines:
-        ax.vlines(lags, [0], acf_x, **kwargs)
+        ax.vlines(lags, [0], acf_x, **vlines_kwargs)
         ax.axhline(**kwargs)
 
     kwargs.setdefault('marker', 'o')
     kwargs.setdefault('markersize', 5)
-    kwargs.setdefault('linestyle', 'None')
+    if 'ls' not in kwargs:
+        # gh-2369
+        kwargs.setdefault('linestyle', 'None')
     ax.margins(.05)
     ax.plot(lags, acf_x, **kwargs)
     ax.set_title(title)
@@ -49,7 +52,8 @@ def _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines, **kwargs)
 
 
 def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
-             fft=False, title='Autocorrelation', zero=True, **kwargs):
+             fft=False, title='Autocorrelation', zero=True,
+             vlines_kwargs=None, **kwargs):
     """Plot the autocorrelation function
 
     Plots lags on the horizontal and the correlations on vertical axis.
@@ -83,6 +87,8 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
     zero : bool, optional
         Flag indicating whether to include the 0-lag autocorrelation.
         Default is True.
+    vlines_kwargs : dict, optional
+        Optional dictionary of keyword arguments that are passed to vlines.
     **kwargs : kwargs, optional
         Optional keyword arguments that are directly passed on to the
         Matplotlib ``plot`` and ``axhline`` functions.
@@ -105,10 +111,18 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
 
     Data are plotted as ``plot(lags, corr, **kwargs)``
 
+    kwargs is used to pass matplotlib optional arguments to both the line
+    tracing the autocorrelations and for the horizontal line at 0. These
+    options must be valid for a Line2D object.
+
+    vlines_kwargs is used to pass additional optional arguments to the
+    vertical lines connecting each autocorrelation to the axis.  These options
+    must be valid for a LineCollection object.
     """
     fig, ax = utils.create_mpl_ax(ax)
 
     lags, nlags, irregular = _prepare_data_corr_plot(x, lags, zero)
+    vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
 
     confint = None
     # acf has different return type based on alpha
@@ -119,14 +133,15 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
         acf_x, confint = acf(x, nlags=nlags, alpha=alpha, fft=fft,
                              unbiased=unbiased)
 
-    _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines, **kwargs)
+    _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines,
+               vlines_kwargs, **kwargs)
 
     return fig
 
 
 def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywunbiased',
               use_vlines=True, title='Partial Autocorrelation', zero=True,
-              **kwargs):
+              vlines_kwargs=None, **kwargs):
     """
     Plot the partial autocorrelation function
 
@@ -164,6 +179,8 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywunbiased',
     zero : bool, optional
         Flag indicating whether to include the 0-lag autocorrelation.
         Default is True.
+    vlines_kwargs : dict, optional
+        Optional dictionary of keyword arguments that are passed to vlines.
     **kwargs : kwargs, optional
         Optional keyword arguments that are directly passed on to the
         Matplotlib ``plot`` and ``axhline`` functions.
@@ -186,9 +203,17 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywunbiased',
     Adapted from matplotlib's `xcorr`.
 
     Data are plotted as ``plot(lags, corr, **kwargs)``
+
+    kwargs is used to pass matplotlib optional arguments to both the line
+    tracing the autocorrelations and for the horizontal line at 0. These
+    options must be valid for a Line2D object.
+
+    vlines_kwargs is used to pass additional optional arguments to the
+    vertical lines connecting each autocorrelation to the axis.  These options
+    must be valid for a LineCollection object.
     """
     fig, ax = utils.create_mpl_ax(ax)
-
+    vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
     lags, nlags, irregular = _prepare_data_corr_plot(x, lags, zero)
 
     confint = None
@@ -197,7 +222,8 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywunbiased',
     else:
         acf_x, confint = pacf(x, nlags=nlags, alpha=alpha, method=method)
 
-    _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines, **kwargs)
+    _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines,
+               vlines_kwargs, **kwargs)
 
     return fig
 
