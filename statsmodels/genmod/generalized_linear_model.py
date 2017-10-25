@@ -986,6 +986,10 @@ class GLM(base.LikelihoodModel):
             specifies which linear algebra function to use for the irls
             optimization. Default is `lstsq` which uses the same underlying
             svd based approach as 'pinv', but is faster during iterations.
+            'lstsq' and 'pinv' regularize the estimate in singular and
+            near-singular cases by truncating small singular values based
+            on `rcond` of the respective numpy.linalg function. 'qr' is
+            only valied for cases that are not singular nor near-singular.
 
         If a scipy optimizer is used, the following additional parameter is
         available:
@@ -994,6 +998,15 @@ class GLM(base.LikelihoodModel):
             When 'oim', the default, the observed Hessian is used in fitting.
             'eim' is the expected Hessian. This may provide more stable fits,
             but adds assumption that the Hessian is correctly specified.
+
+        Notes
+        -----
+        If method is 'IRLS', then an additional keyword 'attach_wls' is
+        availble. This is currently for internal use only and might change
+        in future versions. If attach_wls' is true, then the final WLS
+        instance of the IRLS iteration is attached to the results instance
+        as `results_wls` attribute.
+
         """
         self.scaletype = scale
 
