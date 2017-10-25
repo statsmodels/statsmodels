@@ -2483,7 +2483,7 @@ class RegressionResults(base.LikelihoodModelResults):
                                                  omni_normtest,
                                                  durbin_watson)
 
-        from statsmodels.compat.collections import OrderedDict
+        from collections import OrderedDict
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
         dw = durbin_watson(self.wresid)

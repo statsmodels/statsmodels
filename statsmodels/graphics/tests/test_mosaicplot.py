@@ -8,7 +8,7 @@ from numpy.testing import run_module_suite
 # utilities for the tests
 
 from statsmodels.compat.pandas import sort_values
-from statsmodels.compat.collections import OrderedDict
+from collections import OrderedDict
 from statsmodels.api import datasets
 
 import numpy as np
