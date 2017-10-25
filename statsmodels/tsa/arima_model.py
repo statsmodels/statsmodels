@@ -1824,7 +1824,7 @@ wrap.populate_wrapper(ARMAResultsWrapper, ARMAResults)
 class ARIMAResults(ARMAResults):
     def __init__(self, model, params, normalized_cov_params=None,
                  scale=1., method=None, mlefit=None):
-        super(ARIMAREsults, self).__init__(model, params,
+        super(ARIMAResults, self).__init__(model, params,
                                            normalized_cov_params,
                                            scale=scale, method=method,
                                            mlefit=mlefit)
