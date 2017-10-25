@@ -216,13 +216,19 @@ to one way ANOVA, but still in developement
 .. module:: statsmodels.sandbox.stats.multicomp
    :synopsis: Experimental methods for controlling size while performing multiple comparisons
 
-.. currentmodule:: statsmodels.sandbox.stats.multicomp
+
+.. currentmodule:: statsmodels.stats.multitest
 
 .. autosummary::
    :toctree: generated/
 
    multipletests
-   fdrcorrection0
+   fdrcorrection
+
+.. currentmodule:: statsmodels.sandbox.stats.multicomp
+
+.. autosummary::
+   :toctree: generated/
 
    GroupsStats
    MultiComparison
