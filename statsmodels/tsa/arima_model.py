@@ -968,9 +968,8 @@ class ARMA(tsbase.TimeSeriesModel):
         self.transparams = False  # so methods don't expect transf.
 
         normalized_cov_params = None  # TODO: fix this
-        armafit = ARMAResults(self, params, normalized_cov_params)
-        armafit.mle_retvals = mlefit.mle_retvals
-        armafit.mle_settings = mlefit.mle_settings
+        armafit = ARMAResults(self, params, normalized_cov_params,
+                              method=method, mlefit=mlefit)
         return ARMAResultsWrapper(armafit)
 
     # base class of "from_formula" is "class Model(object)"
@@ -1160,12 +1159,8 @@ class ARIMA(ARMA):
                                            callback, start_ar_lags, **kwargs)
         normalized_cov_params = None  # TODO: fix this?
         arima_fit = ARIMAResults(self, mlefit._results.params,
-                                 normalized_cov_params)
-        arima_fit.k_diff = self.k_diff
-
-        arima_fit.mle_retvals = mlefit.mle_retvals
-        arima_fit.mle_settings = mlefit.mle_settings
-
+                                 normalized_cov_params, method=method,
+                                 mlefit=mlefit)
         return ARIMAResultsWrapper(arima_fit)
 
     def predict(self, params, start=None, end=None, exog=None, typ='linear',
@@ -1379,9 +1374,14 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
     #TODO: use this for docstring when we fix nobs issue
 
-    def __init__(self, model, params, normalized_cov_params=None, scale=1.):
+    def __init__(self, model, params, normalized_cov_params=None,
+                 scale=1., method=None, mlefit=None):
         super(ARMAResults, self).__init__(model, params, normalized_cov_params,
                                           scale)
+        self.method = method
+        self.mle_retvals = mlefit.mle_retvals
+        self.mle_settings = mlefit.mle_settings
+
         self.sigma2 = model.sigma2
         nobs = model.nobs
         self.nobs = nobs
@@ -1483,9 +1483,9 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         k_ar = self.k_ar
         exog = model.exog  # this is a copy
         if exog is not None:
-            if model.method == "css" and k_ar > 0:
+            if self.method == "css" and k_ar > 0:
                 exog = exog[k_ar:]
-        if model.method == "css" and k_ar > 0:
+        if self.method == "css" and k_ar > 0:
             endog = endog[k_ar:]
         fv = endog - self.resid
         # add deterministic part back in
@@ -1570,7 +1570,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
                                                steps, self.resid, self.k_ar,
                                                self.k_ma, self.k_trend,
                                                self.k_exog, self.model.endog,
-                                               exog, method=self.model.method)
+                                               exog, method=self.method)
 
         # compute the standard errors
         fcasterr = self._forecast_error(steps)
@@ -1599,7 +1599,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         from statsmodels.iolib.summary import Summary
         model = self.model
         title = model.__class__.__name__ + ' Model Results'
-        method = model.method
+        method = self.method
         # get sample TODO: make better sample machinery for estimation
         k_diff = getattr(self, 'k_diff', 0)
         if 'mle' in method:
@@ -1705,7 +1705,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         from pandas import DataFrame
         # get sample TODO: make better sample machinery for estimation
         k_diff = getattr(self, 'k_diff', 0)
-        if 'mle' in self.model.method:
+        if 'mle' in self.method:
             start = k_diff
         else:
             start = k_diff + self.k_ar
@@ -1751,7 +1751,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
         # Model info
         model_info = summary2.summary_model(self)
-        model_info['Method:'] = self.model.method
+        model_info['Method:'] = self.method
         model_info['Sample:'] = sample[0]
         model_info['   '] = sample[-1]
         model_info['S.D. of innovations:'] = "%#5.3f" % self.sigma2**.5
@@ -1822,6 +1822,14 @@ wrap.populate_wrapper(ARMAResultsWrapper, ARMAResults)
 
 
 class ARIMAResults(ARMAResults):
+    def __init__(self, model, params, normalized_cov_params=None,
+                 scale=1., method=None, mlefit=None):
+        super(ARIMAREsults, self).__init__(model, params,
+                                           normalized_cov_params,
+                                           scale=scale, method=method,
+                                           mlefit=mlefit)
+        self.k_diff = model.k_diff
+
     def predict(self, start=None, end=None, exog=None, typ='linear',
                 dynamic=False):
         return self.model.predict(self.params, start, end, exog, typ, dynamic)
@@ -1883,7 +1891,7 @@ class ARIMAResults(ARMAResults):
                                                self.k_ar, self.k_ma,
                                                self.k_trend, self.k_exog,
                                                self.model.endog,
-                                               exog, method=self.model.method)
+                                               exog, method=self.method)
 
         d = self.k_diff
         endog = self.model.data.endog[-d:]
