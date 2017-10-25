@@ -28,6 +28,8 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ValueWarning
 import statsmodels.base.wrapper as wrap
 
+from .initialization import initialize_error_cov
+
 
 class DynamicFactor(MLEModel):
     r"""
@@ -161,7 +163,7 @@ class DynamicFactor(MLEModel):
 
         # Exogenous data
         (self.k_exog, exog) = prepare_exog(exog)
-        
+
         # Note: at some point in the future might add state regression, as in
         # SARIMAX.
         self.mle_regression = self.k_exog > 0
@@ -220,23 +222,47 @@ class DynamicFactor(MLEModel):
         self._initialize_error_cov()
         self._initialize_factor_transition()
         self._initialize_error_transition()
-        self.k_params = sum(self.parameters.values())
-
-        # Cache parameter vector slices
-        def _slice(key, offset):
-            length = self.parameters[key]
-            param_slice = np.s_[offset:offset + length]
-            offset += length
-            return param_slice, offset
+        self.k_params = sum(self.model_orders.values())
 
         offset = 0
-        self._params_loadings, offset = _slice('factor_loadings', offset)
-        self._params_exog, offset = _slice('exog', offset)
-        self._params_error_cov, offset = _slice('error_cov', offset)
-        self._params_factor_transition, offset = (
-            _slice('factor_transition', offset))
-        self._params_error_transition, offset = (
-            _slice('error_transition', offset))
+        self._params_loadings = self._slices['factor_loadings']
+        self._params_exog = self._slices['exog']
+        self._params_error_cov = self._slices['error_cov']
+        self._params_factor_transition = self._slices['factor_transition']
+        self._params_error_transition = self._slices['error_transition']
+
+    @property
+    def model_orders(self):
+        orders = {}
+        orders['factor_loadings'] = self.k_endog * self.k_factors
+        orders['exog'] = self.k_exog * self.k_endog
+        orders['error_cov'] = initialize_error_cov(self.k_endog,
+                                                   self.error_cov_type)
+        orders['factor_transition'] = self.factor_order*self.k_factors**2
+
+        if self.error_order == 0:
+            orders['error_transition'] = 0
+        elif self.error_var:
+            orders['error_transition'] = self._error_order * self.k_endog
+        else:
+            orders['error_transition'] = self._error_order
+        return orders
+
+    params_complete = ['factor_loadings', 'exog', 'error_cov',
+                       'factor_transition', 'error_transition']
+
+    @cache_readonly
+    def _slices(self):
+        orders = self.model_orders
+
+        # Cache parameter vector slices
+        ret = {}
+        start = 0
+        for name in self.params_complete:
+            length = orders[name]
+            ret[name] = slice(start, start+length)
+            start += length
+        return ret
 
     def _initialize_loadings(self):
         # Initialize the parameters

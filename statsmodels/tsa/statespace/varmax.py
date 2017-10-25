@@ -24,6 +24,8 @@ from statsmodels.tsa.vector_ar import var_model
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.sm_exceptions import (EstimationWarning, ValueWarning)
 
+from .initialization import initialize_error_cov
+
 
 class VARMAX(MLEModel):
     r"""
@@ -187,22 +189,7 @@ class VARMAX(MLEModel):
         if self.k_exog > 0 or self.k_trend > 1:
             self.ssm._time_invariant = False
 
-        # Initialize the parameters
-        self.parameters = OrderedDict()
-        self.parameters['trend'] = self.k_endog * self.k_trend
-        self.parameters['ar'] = self.k_endog**2 * self.k_ar
-        self.parameters['ma'] = self.k_endog**2 * self.k_ma
-        self.parameters['regression'] = self.k_endog * self.k_exog
-        if self.error_cov_type == 'diagonal':
-            self.parameters['state_cov'] = self.k_endog
-        # These parameters fill in a lower-triangular matrix which is then
-        # dotted with itself to get a positive definite matrix.
-        elif self.error_cov_type == 'unstructured':
-            self.parameters['state_cov'] = (
-                int(self.k_endog * (self.k_endog + 1) / 2)
-            )
-        self.parameters['obs_cov'] = self.k_endog * self.measurement_error
-        self.k_params = sum(self.parameters.values())
+        self.k_params = sum(self.model_orders.values())
 
         # Initialize known elements of the state space matrices
 
@@ -240,37 +227,76 @@ class VARMAX(MLEModel):
         if self.k_ma > 0:
             self.ssm[('selection',) + idx] = 1
 
+        self._idx_state_intercept = self._idx_slices['state_intercept']
+        self._idx_transition = self._idx_slices['transition']
+        self._idx_state_cov = self._idx_slices['state_cov']
+        self._idx_lower_state_cov = self._idx_slices['lower_state_cov']
+        self._idx_obs_cov = self._idx_slices['obs_cov']
+
+        self._params_trend = self._slices['trend']
+        self._params_ar = self._slices['ar']
+        self._params_ma = self._slices['ma']
+        self._params_regression = self._slices['regression']
+        self._params_state_cov = self._slices['state_cov']
+        self._params_obs_cov = self._slices['obs_cov']
+
+    @property
+    def model_orders(self):
+        orders = {
+            'state_cov': initialize_error_cov(self.k_endog,
+                                              self.error_cov_type),
+            'obs_cov': self.k_endog * self.measurement_error,
+            'trend': self.k_endog * self.k_trend,
+            'ma': self.k_endog**2 * self.k_ma,
+            'ar': self.k_endog**2 * self.k_ar,
+            'regression': self.k_endog * self.k_exog,
+            }
+        return orders
+
+    params_complete = ['trend', 'ar', 'ma', 'regression',
+                       'state_cov', 'obs_cov']
+
+    @cache_readonly
+    def _slices(self):
+        orders = self.model_orders
+        ret = {}
+        start = 0
+        for name in self.params_complete:
+            if name in orders:
+                length = orders[name]
+            end = start + length
+            ret[name] = slice(start, end)
+            start += length
+        return ret
+
+    @cache_readonly
+    def _idx_slices(self):
         # Cache some indices
+        k_endog = self.k_endog
+
+        idxs = {}
         if self.trend == 'c' and self.k_exog == 0:
-            self._idx_state_intercept = np.s_['state_intercept', :k_endog]
+            idxs['state_intercept'] = np.s_['state_intercept', :k_endog]
         elif self.k_exog > 0:
-            self._idx_state_intercept = np.s_['state_intercept', :k_endog, :]
+            idxs['state_intercept'] = np.s_['state_intercept', :k_endog, :]
+
         if self.k_ar > 0:
-            self._idx_transition = np.s_['transition', :k_endog, :]
+            idxs['transition'] = np.s_['transition', :k_endog, :]
         else:
-            self._idx_transition = np.s_['transition', :k_endog, k_endog:]
+            idxs['transition'] = np.s_['transition', :k_endog, k_endog:]
+
         if self.error_cov_type == 'diagonal':
-            self._idx_state_cov = (
-                ('state_cov',) + np.diag_indices(self.k_endog))
+            idxs['state_cov'] = ('state_cov',) + np.diag_indices(k_endog)
+            idxs['lower_state_cov'] = None
         elif self.error_cov_type == 'unstructured':
-            self._idx_lower_state_cov = np.tril_indices(self.k_endog)
+            idxs['lower_state_cov'] = np.tril_indices(k_endog)
+            idxs['state_cov'] = None
+
         if self.measurement_error:
-            self._idx_obs_cov = ('obs_cov',) + np.diag_indices(self.k_endog)
-
-        # Cache some slices
-        def _slice(key, offset):
-            length = self.parameters[key]
-            param_slice = np.s_[offset:offset + length]
-            offset += length
-            return param_slice, offset
-
-        offset = 0
-        self._params_trend, offset = _slice('trend', offset)
-        self._params_ar, offset = _slice('ar', offset)
-        self._params_ma, offset = _slice('ma', offset)
-        self._params_regression, offset = _slice('regression', offset)
-        self._params_state_cov, offset = _slice('state_cov', offset)
-        self._params_obs_cov, offset = _slice('obs_cov', offset)
+            idxs['obs_cov'] = ('obs_cov',) + np.diag_indices(k_endog)
+        else:
+            idxs['obs_cov'] = None
+        return idxs
 
     def filter(self, params, **kwargs):
         kwargs.setdefault('results_class', VARMAXResults)

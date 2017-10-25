@@ -2847,27 +2847,26 @@ class PredictionResults(pred.PredictionResults):
         # TODO: this performs metadata wrapping, and that should be handled
         #       by attach_* methods. However, they don't currently support
         #       this use case.
-        conf_int = super(PredictionResults, self).conf_int(
-            method, alpha, **kwds)
+        conf_int = super(PredictionResults, self).conf_int(method, alpha,
+                                                           **kwds)
 
         # Create a dataframe
         if self.row_labels is not None:
-            conf_int = pd.DataFrame(conf_int, index=self.row_labels)
-
             # Attach the endog names
             ynames = self.model.data.ynames
             if not type(ynames) == list:
                 ynames = [ynames]
             names = (['lower %s' % name for name in ynames] +
                      ['upper %s' % name for name in ynames])
-            conf_int.columns = names
+
+            conf_int = pd.DataFrame(conf_int,
+                                    index=self.row_labels, columns=names)
 
         return conf_int
 
     def summary_frame(self, endog=0, what='all', alpha=0.05):
         # TODO: finish and cleanup
-        # import pandas as pd
-        from statsmodels.compat.collections import OrderedDict
+        from collections import OrderedDict
         # ci_obs = self.conf_int(alpha=alpha, obs=True) # need to split
         ci_mean = np.asarray(self.conf_int(alpha=alpha))
         to_include = OrderedDict()
