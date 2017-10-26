@@ -28,7 +28,7 @@ import pandas as pd
 from scipy.special import gammaln, digamma, polygamma
 from scipy import stats, special, optimize  # opt just for nbin
 from scipy.stats import nbinom
-from pandas.util._decorators import deprecate_kwarg
+import pandas.util._decorators as pud
 
 
 import statsmodels.tools.tools as tools
@@ -3961,7 +3961,7 @@ class MultinomialResults(DiscreteResults):
         self.K = model.K
         self.nobs = model.nobs
 
-    @deprecate_kwarg('all', 'use_all')
+    @pud.deprecate_kwarg('all', 'use_all')
     def _get_endog_name(self, yname, yname_list, use_all=False):
         """
         If use_all is False, the first variable name is dropped
