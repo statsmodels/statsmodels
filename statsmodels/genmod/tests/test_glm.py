@@ -859,6 +859,7 @@ def test_formula_missing_exposure():
     assert_(type(mod.exposure) is np.ndarray, msg='Exposure is not ndarray')
 
     exposure = pd.Series(np.random.uniform(size=5))
+    df.loc[3, 'Bar'] = 4   # nan not relevant for Valueerror for shape mismatch
     assert_raises(ValueError, smf.glm, "Foo ~ Bar", data=df,
                   exposure=exposure, family=family)
     assert_raises(ValueError, GLM, df.Foo, df[['constant', 'Bar']],

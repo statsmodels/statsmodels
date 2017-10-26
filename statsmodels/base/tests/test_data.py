@@ -891,6 +891,20 @@ def test_formula_missing_extra_arrays():
     assert_raises(ValueError, sm_data.handle_data, endog, exog, **kwargs)
 
 
+def test_raise_nonfinite_exog():
+    # we raise now in the has constant check before hitting the linear algebra
+    from statsmodels.regression.linear_model import OLS
+    from statsmodels.tools.sm_exceptions import MissingDataError
+    x = np.arange(10)[:,None]**([0., 1.])
+    # random numbers for y
+    y = np.array([-0.6, -0.1, 0., -0.7, -0.5, 0.5, 0.1, -0.8, -2., 1.1])
+
+    x[1, 1] = np.inf
+    assert_raises(MissingDataError, OLS, y, x)
+    x[1, 1] = np.nan
+    assert_raises(MissingDataError, OLS, y, x)
+
+
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__, '-vvs', '-x', '--pdb'])
