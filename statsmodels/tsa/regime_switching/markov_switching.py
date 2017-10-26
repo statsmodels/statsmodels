@@ -1914,12 +1914,19 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         res.cov_type = cov_type
         res.cov_kwds = {}
 
+        approx_type_str = 'complex-step'
+
         # Calculate the new covariance matrix
         k_params = len(self.params)
         if k_params == 0:
             res.cov_params_default = np.zeros((0, 0))
             res._rank = 0
             res.cov_kwds['description'] = 'No parameters estimated.'
+        elif cov_type == 'custom':
+            res.cov_type = kwargs['custom_cov_type']
+            res.cov_params_default = kwargs['custom_cov_params']
+            res.cov_kwds['description'] = kwargs['custom_description']
+            res._rank = np.linalg.matrix_rank(res.cov_params_default)
         elif cov_type == 'none':
             res.cov_params_default = np.zeros((k_params, k_params)) * np.nan
             res._rank = np.nan
@@ -1927,20 +1934,20 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         elif self.cov_type == 'approx':
             res.cov_params_default = res.cov_params_approx
             res.cov_kwds['description'] = (
-                'Covariance matrix calculated using numerical'
-                ' differentiation.')
+                'Covariance matrix calculated using numerical (%s)'
+                ' differentiation.' % approx_type_str)
         elif self.cov_type == 'opg':
             res.cov_params_default = res.cov_params_opg
             res.cov_kwds['description'] = (
                 'Covariance matrix calculated using the outer product of'
-                ' gradients.'
+                ' gradients (%s).' % approx_type_str
             )
         elif self.cov_type == 'robust':
             res.cov_params_default = res.cov_params_robust
             res.cov_kwds['description'] = (
                 'Quasi-maximum likelihood covariance matrix used for'
                 ' robustness to some misspecifications; calculated using'
-                ' numerical differentiation.')
+                ' numerical (%s) differentiation.' % approx_type_str)
         else:
             raise NotImplementedError('Invalid covariance matrix type.')
 
