@@ -156,15 +156,14 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
 
 def _single_violin(ax, pos, pos_data, width, side, plot_opts):
     """"""
-    factor = plot_opts.get('factor', None)
+    bw_factor = plot_opts.get('bw_factor', None)
 
     def _violin_range(pos_data, plot_opts):
         """Return array with correct range, with which violins can be plotted."""
         cutoff = plot_opts.get('cutoff', False)
         cutoff_type = plot_opts.get('cutoff_type', 'std')
         cutoff_val = plot_opts.get('cutoff_val', 1.5)
-        bw_factor = plot_opts.get('bw_factor', None)
-
+        
         s = 0.0
         if not cutoff:
             if cutoff_type == 'std':
