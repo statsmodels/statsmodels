@@ -1,37 +1,34 @@
 import numpy as np
 import pandas as pd
+import nose
+import pytest
 
-import statsmodels.datasets as datasets
-from statsmodels.datasets import co2
+import statsmodels.datasets
 from statsmodels.datasets.utils import Dataset
 
+exclude = ['check_internet', 'clear_data_home', 'get_data_home',
+           'get_rdataset', 'tests', 'utils', 'webuse']
+datasets = []
+for dataset_name in dir(statsmodels.datasets):
+    if not dataset_name.startswith('_') and dataset_name not in exclude:
+        datasets.append(dataset_name)
 
-def test_co2_python3():
-    # this failed in pd.to_datetime on Python 3 with pandas <= 0.12.0
-    dta = co2.load_pandas()
+
+# TODO: Enable when nose is completely dropped
+@nose.tools.nottest
+@pytest.mark.parametrize('dataset_name', datasets)
+def test_dataset(dataset_name):
+    dataset = __import__('statsmodels.datasets.' + dataset_name, fromlist=[''])
+    data = dataset.load()
+    assert isinstance(data, Dataset)
+    assert isinstance(data.data, np.recarray)
+
+    df_data = dataset.load_pandas()
+    assert isinstance(data, Dataset)
+    assert isinstance(df_data.data, pd.DataFrame)
 
 
-class TestDatasets(object):
-
-    @classmethod
-    def setup_class(cls):
-        exclude = ['check_internet', 'clear_data_home', 'get_data_home',
-                   'get_rdataset', 'tests', 'utils', 'webuse']
-        cls.sets = []
-        for dataset_name in dir(datasets):
-            if not dataset_name.startswith('_') and dataset_name not in exclude:
-                cls.sets.append(dataset_name)
-
-    def check(self, dataset_name):
-        dataset = __import__('statsmodels.datasets.' + dataset_name, fromlist=[''])
-        data = dataset.load()
-        assert isinstance(data, Dataset)
-        assert isinstance(data.data, np.recarray)
-
-        df_data = dataset.load_pandas()
-        assert isinstance(data, Dataset)
-        assert isinstance(df_data.data, pd.DataFrame)
-
-    def test_all_datasets(self):
-        for dataset_name in self.sets:
-            yield (self.check, dataset_name)
+# TODO: Remove when nose is completely dropped
+def test_all_datasets():
+    for dataset in datasets:
+        test_dataset(dataset)
