@@ -16,30 +16,62 @@ def seasonal_mean(x, freq):
     number of periods per cycle. E.g., 12 for monthly. NaNs are ignored
     in the mean.
     """
-    return np.array([pd_nanmean(x[i::freq]) for i in range(freq)])
+    return np.array([pd_nanmean(x[i::freq], axis=0) for i in range(freq)])
 
 
-def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True):
+def _extrapolate_trend(trend, npoints):
+    """
+    Replace nan values on trend's end-points with least-squares extrapolated
+    values with regression considering npoints closest defined points.
+    """
+    front = next(i for i, vals in enumerate(trend)
+                 if not np.any(np.isnan(vals)))
+    back = trend.shape[0] - 1 - next(i for i, vals in enumerate(trend[::-1])
+                                     if not np.any(np.isnan(vals)))
+    front_last = min(front + npoints, back)
+    back_first = max(front, back - npoints)
+
+    k, n = np.linalg.lstsq(
+        np.c_[np.arange(front, front_last), np.ones(front_last - front)],
+        trend[front:front_last])[0]
+    trend[:front] = (np.arange(0, front) * np.c_[k] + np.c_[n]).T
+
+    k, n = np.linalg.lstsq(
+        np.c_[np.arange(back_first, back), np.ones(back - back_first)],
+        trend[back_first:back])[0]
+    trend[back + 1:] = (np.arange(back + 1, trend.shape[0]) * np.c_[k] + np.c_[n]).T
+
+    return trend
+
+
+def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True,
+                       extrapolate_trend=0):
     """
     Seasonal decomposition using moving averages
 
     Parameters
     ----------
     x : array-like
-        Time series
+        Time series. If 2d, individual series are in columns.
     model : str {"additive", "multiplicative"}
         Type of seasonal component. Abbreviations are accepted.
     filt : array-like
         The filter coefficients for filtering out the seasonal component.
         The concrete moving average method used in filtering is determined by two_sided.
     freq : int, optional
-        Frequency of the series. Must be used if x is not  a pandas object.
+        Frequency of the series. Must be used if x is not a pandas object.
         Overrides default periodicity of x if x is a pandas
         object with a timeseries index.
     two_sided : bool
         The moving average method used in filtering.
         If True (default), a centered moving average is computed using the filt.
         If False, the filter coefficients are for past values only.
+    extrapolate_trend : int or 'freq', optional
+        If set to > 0, the trend resulting from the convolution is
+        linear least-squares extrapolated on both ends (or the single one
+        if two_sided is False) considering this many (+1) closest points.
+        If set to 'freq', use `freq` closest points. Setting this parameter
+        results in no NaN values in trend or resid components.
 
     Returns
     -------
@@ -99,7 +131,12 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True
     nsides = int(two_sided) + 1
     trend = convolution_filter(x, filt, nsides)
 
-    # nan pad for conformability - convolve doesn't do it
+    if extrapolate_trend == 'freq':
+        extrapolate_trend = freq - 1
+
+    if extrapolate_trend > 0:
+        trend = _extrapolate_trend(trend, extrapolate_trend + 1)
+
     if model.startswith('m'):
         detrended = x / trend
     else:
@@ -108,11 +145,11 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None, two_sided=True
     period_averages = seasonal_mean(detrended, freq)
 
     if model.startswith('m'):
-        period_averages /= np.mean(period_averages)
+        period_averages /= np.mean(period_averages, axis=0)
     else:
-        period_averages -= np.mean(period_averages)
+        period_averages -= np.mean(period_averages, axis=0)
 
-    seasonal = np.tile(period_averages, nobs // freq + 1)[:nobs]
+    seasonal = np.tile(period_averages.T, nobs // freq + 1).T[:nobs]
 
     if model.startswith('m'):
         resid = x / seasonal / trend
