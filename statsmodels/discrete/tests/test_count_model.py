@@ -1,6 +1,8 @@
 
 from __future__ import division
 import os
+
+import pytest
 import numpy as np
 from numpy.testing import (assert_, assert_raises, assert_almost_equal,
                            assert_equal, assert_array_equal, assert_allclose,

@@ -11,6 +11,7 @@ import os
 import pandas as pd
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal, assert_
+import pytest
 
 import statsmodels.discrete.discrete_model as smd
 from statsmodels.genmod.generalized_linear_model import GLM
