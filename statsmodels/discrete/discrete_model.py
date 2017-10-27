@@ -22,32 +22,30 @@ __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
 
 from statsmodels.compat.python import lmap, lzip, range
 from statsmodels.compat.scipy import loggamma
+
 import numpy as np
+from pandas import get_dummies
+
 from scipy.special import gammaln, digamma, polygamma
-from scipy import stats, special, optimize  # opt just for nbin
+from scipy import stats, special
 from scipy.stats import nbinom
+
 import statsmodels.tools.tools as tools
 from statsmodels.tools import data as data_tools
-from statsmodels.tools.decorators import (resettable_cache,
-        cache_readonly)
-from statsmodels.regression.linear_model import OLS
-from scipy import stats, special, optimize  # opt just for nbin
-from scipy.stats import nbinom
+from statsmodels.tools.decorators import resettable_cache, cache_readonly
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
-from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
-                                       approx_hess_cs, approx_fprime_cs)
+from statsmodels.tools.numdiff import approx_fprime_cs
 import statsmodels.base.model as base
 from statsmodels.base.data import handle_data  # for mnlogit
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 from statsmodels.compat.numpy import np_matrix_rank
-from pandas import get_dummies
 
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 from statsmodels.distributions import genpoisson_p
 
 try:
-    import cvxopt
+    import cvxopt  # noqa:F401
     have_cvxopt = True
 except ImportError:
     have_cvxopt = False
@@ -107,7 +105,7 @@ _discrete_results_docs = """
         with degrees of freedom `df_model`.
     prsquared : float
         McFadden's pseudo-R-squared. `1 - (llf / llnull)`
-%(extra_attr)s"""
+    %(extra_attr)s"""
 
 _l1_results_attr = """    nnz_params : Integer
         The number of nonzero parameters in the model.  Train with
@@ -882,7 +880,7 @@ class Poisson(CountModel):
     __doc__ = """
     Poisson model for count data
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -1621,7 +1619,7 @@ class Logit(BinaryModel):
     __doc__ = """
     Binary choice logit model
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -1823,7 +1821,7 @@ class Probit(BinaryModel):
     __doc__ = """
     Binary choice Probit model
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -2353,7 +2351,7 @@ class NegativeBinomial(CountModel):
     __doc__ = """
     Negative Binomial Model for count data
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
