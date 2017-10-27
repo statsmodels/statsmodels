@@ -61,6 +61,7 @@ class CheckGeneric(object):
         assert_equal(exog_null.ptp(), 0)
         assert_equal(exog_infl_null.ptp(), 0)
 
+    @pytest.mark.smoke
     def test_summary(self):
         # SMOKE test
         self.res1.summary()
@@ -233,6 +234,7 @@ class TestZeroInflatedPoisson_predict(object):
             res.predict(), 0.05).T
         assert_allclose(pr, pr2, rtol=0.05, atol=0.05)
 
+
 class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
     @classmethod
     def setup_class(cls):
@@ -301,6 +303,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         # skip, res_bh reports converged is false but params agree
         #assert_(res_bh.mle_retvals['converged'] is True)
 
+
 class TestZeroInflatedGeneralizedPoisson_predict(object):
     @classmethod
     def setup_class(cls):
@@ -332,6 +335,7 @@ class TestZeroInflatedGeneralizedPoisson_predict(object):
         pr2 = sm.distributions.zinegbin.pmf(np.arange(12)[:,None],
             res.predict(), 0.5, 2, 0.5).T
         assert_allclose(pr, pr2, rtol=0.08, atol=0.05)
+
 
 class TestZeroInflatedNegativeBinomialP(CheckGeneric):
     @classmethod

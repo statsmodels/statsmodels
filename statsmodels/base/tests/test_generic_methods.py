@@ -10,17 +10,18 @@ Created on Wed Oct 30 14:01:27 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat.python import range
-import numpy as np
-import pandas as pd
-import statsmodels.api as sm
-from statsmodels.compat.scipy import NumpyVersion
-from statsmodels.compat.testing import SkipTest
+import platform
 
+import pytest
+import pandas as pd
+import numpy as np
 from numpy.testing import (assert_, assert_allclose, assert_equal,
                            assert_array_equal)
 
-import platform
+from statsmodels.compat.scipy import NumpyVersion
+from statsmodels.compat.testing import SkipTest
+from statsmodels.compat.python import range
+import statsmodels.api as sm
 
 
 class CheckGenericMixin(object):
@@ -507,7 +508,8 @@ class TestWaldAnovaNegBin1(CheckAnovaMixin):
         cls.res = mod.fit(cov_type='HC0')
 
 
-class T_estWaldAnovaOLSNoFormula(object):
+@pytest.mark.xfail
+class TestWaldAnovaOLSNoFormula(object):
 
     @classmethod
     def initialize(cls):

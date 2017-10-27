@@ -7,8 +7,11 @@ Author: Josef Perktold
 """
 
 import os
-import numpy as np
+
 import pandas as pd
+import numpy as np
+from numpy.testing import assert_allclose, assert_equal, assert_
+
 import statsmodels.discrete.discrete_model as smd
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
@@ -20,7 +23,6 @@ import statsmodels.stats.sandwich_covariance as sw
 from statsmodels.tools.tools import add_constant
 
 
-from numpy.testing import assert_allclose, assert_equal, assert_
 import statsmodels.tools._testing as smt
 
 
@@ -503,7 +505,8 @@ class TestGLMLogit(CheckDiscreteGLM):
         cls.res2 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
 
 
-class T_estGLMProbit(CheckDiscreteGLM):
+@pytest.mark.xfail
+class TestGLMProbit(CheckDiscreteGLM):
     # invalid link. What's Probit as GLM?
 
     @classmethod
