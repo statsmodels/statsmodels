@@ -2758,12 +2758,19 @@ class NegativeBinomial(CountModel):
             # change from lnalpha to alpha
             if method not in ["newton", "ncg"]:
                 mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
+            if hasattr(mlefit._results, 'cov_type'):
+                del mlefit._results.cov_type
 
-            nbinfit = NegativeBinomialResults(self, mlefit._results)
+            nbinfit = NegativeBinomialResults(self, mlefit._results,
+                                              cov_type=cov_type,
+                                              cov_kwds=cov_kwds, use_t=use_t)
             result = NegativeBinomialResultsWrapper(nbinfit)
         else:
             result = mlefit
-
+            cov_kwds = cov_kwds or {}
+            result._get_robustcov_results(cov_type=cov_type,
+                                          use_self=True, use_t=use_t,
+                                          **cov_kwds)
         return result
 
 
@@ -3253,6 +3260,8 @@ class DiscreteResults(base.LikelihoodModelResults):
             if use_t is not None:
                 self.use_t = use_t
             if cov_type == 'nonrobust':
+                # TODO: remove this clause as it is redundant with
+                # self._get_robustcov_results
                 self.cov_type = 'nonrobust'
                 self.cov_kwds = {'description' : 'Standard Errors assume that the ' +
                                  'covariance matrix of the errors is correctly ' +
@@ -3260,9 +3269,8 @@ class DiscreteResults(base.LikelihoodModelResults):
             else:
                 if cov_kwds is None:
                     cov_kwds = {}
-                from statsmodels.base.covtype import get_robustcov_results
-                get_robustcov_results(self, cov_type=cov_type, use_self=True,
-                                           **cov_kwds)
+                self._get_robustcov_results(cov_type=cov_type, use_self=True,
+                                            use_t=use_t, **cov_kwds)
 
 
     def __getstate__(self):
