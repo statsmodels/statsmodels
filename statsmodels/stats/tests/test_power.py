@@ -728,10 +728,17 @@ def test_power_solver():
     assert_equal(nip.cache_fit_res[0], 1)
     assert_equal(len(nip.cache_fit_res), 4)
 
+    # Test our edge-case where effect_size = 0
+    es = nip.solve_power(nobs1=1600, alpha=0.01, effect_size=0, power=None)
+    assert_almost_equal(es, 0.01)
+
     # I let this case fail, could be fixed for some statistical tests
     # (we shouldn't get here in the first place)
     # effect size is negative, but last stage brentq uses [1e-8, 1-1e-8]
     assert_raises(ValueError, nip.solve_power, None, nobs1=1600, alpha=0.01,
+                  power=0.005, ratio=1, alternative='larger')
+
+    assert_raises(ValueError, nip.solve_power, nobs1=None, effect_size=0, alpha=0.01,
                   power=0.005, ratio=1, alternative='larger')
 
 @skipif(SM_GT_10, 'Known failure on modern SciPy')

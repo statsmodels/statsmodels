@@ -219,6 +219,18 @@ class Power(object):
             del kwds['power']
             return self.power(**kwds)
 
+        if kwds['effect_size'] == 0:
+            import warnings
+            from statsmodels.tools.sm_exceptions import HypothesisTestWarning
+            warnings.warn('Warning: Effect size of 0 detected', HypothesisTestWarning)
+            if key == 'power':
+                return alpha
+            if key == 'alpha':
+                return power
+            else:
+                raise ValueError('Cannot detect an effect-size of 0. Try changing your effect-size.')
+
+
         self._counter = 0
         def func(x):
             kwds[key] = x
