@@ -2424,17 +2424,22 @@ class NegativeBinomial(CountModel):
             raise NotImplementedError("Likelihood type must nb1, nb2 or "
                                       "geometric")
 
-    # Workaround to pickle instance methods
     def __getstate__(self):
-        odict = self.__dict__.copy() # copy the dict since we change it
-        del odict['hessian']
-        del odict['score']
-        del odict['loglikeobs']
+        # Workaround to pickle instance methods
+        odict = self.__dict__.copy()  # copy the dict since we change it
+        import types
+        methods = [key for key in odict if
+                   isinstance(odict[key], types.MethodType)]
+        for key in methods:
+            # In this case we need to get rid of hessian, score, and
+            # loglikeobs.  The implementation here is more general.
+            del odict[key]
         return odict
 
     def __setstate__(self, indict):
         self.__dict__.update(indict)
-        self._initialize()
+        if hasattr(self, '_initialize'):
+            self._initialize()
 
     def _ll_nbin(self, params, alpha, Q=0):
         if np.any(np.iscomplex(params)) or np.iscomplex(alpha):
@@ -3281,10 +3286,11 @@ class DiscreteResults(base.LikelihoodModelResults):
         # remove unpicklable methods
         mle_settings = getattr(self, 'mle_settings', None)
         if mle_settings is not None:
-            if 'callback' in mle_settings:
-                mle_settings['callback'] = None
-            if 'cov_params_func' in mle_settings:
-                mle_settings['cov_params_func'] = None
+            # `callback` and `cov_params_func` are the most likely culprits
+            methods = [key for key in mle_settings
+                       if callable(mle_settings[key])]
+            for key in methods:
+                mle_settings[key] = None
         return self.__dict__
 
     @cache_readonly
