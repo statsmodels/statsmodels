@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 Limited dependent variable and qualitative variables.
 
@@ -20,30 +22,33 @@ from __future__ import division
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
            "GeneralizedPoisson", "NegativeBinomialP"]
 
-from statsmodels.compat.python import lmap, lzip, range
+from statsmodels.compat.python import range
+from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.compat.scipy import loggamma
+
 import numpy as np
+
+import pandas as pd
+import pandas.util.decorators
 from scipy.special import gammaln, digamma, polygamma
-from scipy import stats, special, optimize  # opt just for nbin
 from scipy.stats import nbinom
+from scipy import stats, special
+
 import statsmodels.tools.tools as tools
 from statsmodels.tools import data as data_tools
-from statsmodels.tools.decorators import (resettable_cache,
-        cache_readonly)
-from statsmodels.regression.linear_model import OLS
-from scipy import stats, special, optimize  # opt just for nbin
-from scipy.stats import nbinom
+from statsmodels.tools.decorators import resettable_cache, cache_readonly
+
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
                                        approx_hess_cs, approx_fprime_cs)
+
 import statsmodels.base.model as base
 from statsmodels.base.data import handle_data  # for mnlogit
-import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
-from statsmodels.compat.numpy import np_matrix_rank
-from pandas import get_dummies
-
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
+
+from statsmodels.regression.linear_model import OLS, RegressionResultsWrapper
+
 from statsmodels.distributions import genpoisson_p
 
 try:
@@ -146,16 +151,27 @@ def _pandas_to_dummies(endog):
     if endog.ndim == 2:
         if endog.shape[1] == 1:
             yname = endog.columns[0]
-            endog_dummies = get_dummies(endog.iloc[:, 0])
+            endog_dummies = pd.get_dummies(endog.iloc[:, 0])
         else:  # series
             yname = 'y'
             endog_dummies = endog
     else:
         yname = endog.name
-        endog_dummies = get_dummies(endog)
+        endog_dummies = pd.get_dummies(endog)
     ynames = endog_dummies.columns.tolist()
 
     return endog_dummies, ynames, yname
+
+
+def _maybe_convert_ynames_int(ynames):
+    # see if they're integers
+    try:
+        for idx in ynames:
+            if ynames[idx] % 1 == 0:
+                ynames[idx] = str(int(ynames[idx]))
+    except TypeError:
+        pass
+    return ynames
 
 
 #### Private Model Classes ####
@@ -215,7 +231,7 @@ class DiscreteModel(base.LikelihoodModel):
         if callback is None:
             callback = self._check_perfect_pred
         else:
-            pass # make a function factory to have multiple call-backs
+            pass # TODO: make a function factory to have multiple call-backs
 
         mlefit = super(DiscreteModel, self).fit(start_params=start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
@@ -338,7 +354,7 @@ class DiscreteModel(base.LikelihoodModel):
         try:
             kwargs['alpha'] = alpha
         except TypeError:
-            kwargs = dict(alpha=alpha)
+            kwargs = {'alpha': alpha}
         kwargs['alpha_rescaled'] = kwargs['alpha'] / float(self.endog.shape[0])
         kwargs['trim_mode'] = trim_mode
         kwargs['size_trim_tol'] = size_trim_tol
@@ -650,7 +666,8 @@ class MultinomialModel(BinaryModel):
 
         eXB = np.exp(np.dot(exog, params))
         sum_eXB = (1 + eXB.sum(1))[:,None]
-        J, K = lmap(int, [self.J, self.K])
+        J = int(self.J)
+        K = int(self.K)
         repeat_eXB = np.repeat(eXB, J, axis=1)
         X = np.tile(exog, J-1)
         # this is the derivative wrt the base level
@@ -882,7 +899,7 @@ class Poisson(CountModel):
     __doc__ = """
     Poisson model for count data
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -891,8 +908,8 @@ class Poisson(CountModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    """ % {'params' : base._model_params_doc,
-           'extra_params' :
+    """ % {'params': base._model_params_doc,
+           'extra_params':
            """offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
@@ -1621,7 +1638,7 @@ class Logit(BinaryModel):
     __doc__ = """
     Binary choice logit model
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -1630,8 +1647,8 @@ class Logit(BinaryModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    """ % {'params' : base._model_params_doc,
-           'extra_params' : base._missing_param_doc}
+    """ % {'params': base._model_params_doc,
+           'extra_params': base._missing_param_doc}
 
     def cdf(self, X):
         """
@@ -1823,7 +1840,7 @@ class Probit(BinaryModel):
     __doc__ = """
     Binary choice Probit model
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -1832,8 +1849,8 @@ class Probit(BinaryModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    """ % {'params' : base._model_params_doc,
-           'extra_params' : base._missing_param_doc}
+    """ % {'params': base._model_params_doc,
+           'extra_params': base._missing_param_doc}
 
     def cdf(self, X):
         """
@@ -2079,7 +2096,7 @@ class MNLogit(MultinomialModel):
     Notes
     -----
     See developer notes for further information on `MNLogit` internals.
-    """ % {'extra_params' : base._missing_param_doc}
+    """ % {'extra_params': base._missing_param_doc}
 
     def pdf(self, eXB):
         """
@@ -2290,70 +2307,14 @@ class MNLogit(MultinomialModel):
         return H
 
 
-#TODO: Weibull can replaced by a survival analsysis function
-# like stat's streg (The cox model as well)
-#class Weibull(DiscreteModel):
-#    """
-#    Binary choice Weibull model
-#
-#    Notes
-#    ------
-#    This is unfinished and untested.
-#    """
-##TODO: add analytic hessian for Weibull
-#    def initialize(self):
-#        pass
-#
-#    def cdf(self, X):
-#        """
-#        Gumbell (Log Weibull) cumulative distribution function
-#        """
-##        return np.exp(-np.exp(-X))
-#        return stats.gumbel_r.cdf(X)
-#        # these two are equivalent.
-#        # Greene table and discussion is incorrect.
-#
-#    def pdf(self, X):
-#        """
-#        Gumbell (LogWeibull) probability distribution function
-#        """
-#        return stats.gumbel_r.pdf(X)
-#
-#    def loglike(self, params):
-#        """
-#        Loglikelihood of Weibull distribution
-#        """
-#        X = self.exog
-#        cdf = self.cdf(np.dot(X,params))
-#        y = self.endog
-#        return np.sum(y*np.log(cdf) + (1-y)*np.log(1-cdf))
-#
-#    def score(self, params):
-#        y = self.endog
-#        X = self.exog
-#        F = self.cdf(np.dot(X,params))
-#        f = self.pdf(np.dot(X,params))
-#        term = (y*f/F + (1 - y)*-f/(1-F))
-#        return np.dot(term,X)
-#
-#    def hessian(self, params):
-#        hess = nd.Jacobian(self.score)
-#        return hess(params)
-#
-#    def fit(self, start_params=None, method='newton', maxiter=35, tol=1e-08):
-## The example had problems with all zero start values, Hessian = 0
-#        if start_params is None:
-#            start_params = OLS(self.endog, self.exog).fit().params
-#        mlefit = super(Weibull, self).fit(start_params=start_params,
-#                method=method, maxiter=maxiter, tol=tol)
-#        return mlefit
-#
+
+
 
 class NegativeBinomial(CountModel):
     __doc__ = """
     Negative Binomial Model for count data
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -2372,8 +2333,8 @@ class NegativeBinomial(CountModel):
         for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University
         Press.
-    """ % {'params' : base._model_params_doc,
-           'extra_params' :
+    """ % {'params': base._model_params_doc,
+           'extra_params':
            """loglike_method : string
         Log-likelihood type. 'nb2','nb1', or 'geometric'.
         Fitted value :math:`\\mu`
@@ -3244,9 +3205,9 @@ class NegativeBinomialP(CountModel):
 ### Results Class ###
 
 class DiscreteResults(base.LikelihoodModelResults):
-    __doc__ = _discrete_results_docs % {"one_line_description" :
+    __doc__ = _discrete_results_docs % {"one_line_description":
         "A results class for the discrete dependent variable models.",
-        "extra_attr" : ""}
+        "extra_attr": ""}
 
     def __init__(self, model, mlefit, cov_type='nonrobust', cov_kwds=None,
                  use_t=None):
@@ -3266,7 +3227,7 @@ class DiscreteResults(base.LikelihoodModelResults):
                 self.use_t = use_t
             if cov_type == 'nonrobust':
                 self.cov_type = 'nonrobust'
-                self.cov_kwds = {'description' : 'Standard Errors assume that the ' +
+                self.cov_kwds = {'description': 'Standard Errors assume that the ' +
                                  'covariance matrix of the errors is correctly ' +
                                  'specified.'}
             else:
@@ -3352,7 +3313,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         # TODO: consider catching and warning on convergence failure?
         # in the meantime, try hard to converge. see
         # TestPoissonConstrained1a.test_smoke
-
         optim_kwds = getattr(self, '_optim_kwds_null', {}).copy()
 
         if 'start_params' in optim_kwds:
@@ -3586,8 +3546,8 @@ class DiscreteResults(base.LikelihoodModelResults):
 
 class CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {
-                    "one_line_description" : "A results class for count data",
-                    "extra_attr" : ""}
+                    "one_line_description": "A results class for count data",
+                    "extra_attr": ""}
     @cache_readonly
     def resid(self):
         """
@@ -3606,8 +3566,8 @@ class CountResults(DiscreteResults):
 
 class NegativeBinomialResults(CountResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for NegativeBinomial 1 and 2",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for NegativeBinomial 1 and 2",
+        "extra_attr": ""}
 
     @cache_readonly
     def lnalpha(self):
@@ -3644,7 +3604,7 @@ class GeneralizedPoissonResults(NegativeBinomialResults):
 class L1CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
             "A results class for count data fit by l1 regularization",
-            "extra_attr" : _l1_results_attr}
+            "extra_attr": _l1_results_attr}
         #discretefit = CountResults(self, cntfit)
 
     def __init__(self, model, cntfit):
@@ -3702,11 +3662,15 @@ class L1GeneralizedPoissonResults(L1CountResults, GeneralizedPoissonResults):
     pass
 
 class OrderedResults(DiscreteResults):
-    __doc__ = _discrete_results_docs % {"one_line_description" : "A results class for ordered discrete data." , "extra_attr" : ""}
+    __doc__ = _discrete_results_docs % {
+        "one_line_description": "A results class for ordered discrete data.",
+        "extra_attr": ""}
     pass
 
 class BinaryResults(DiscreteResults):
-    __doc__ = _discrete_results_docs % {"one_line_description" : "A results class for binary data", "extra_attr" : ""}
+    __doc__ = _discrete_results_docs % {
+        "one_line_description": "A results class for binary data",
+        "extra_attr" : ""}
 
     def pred_table(self, threshold=.5):
         """
@@ -3779,9 +3743,7 @@ class BinaryResults(DiscreteResults):
         For now :math:`M_j` is always set to 1.
         """
         #These are the deviance residuals
-        #model = self.model
         endog = self.model.endog
-        #exog = model.exog
         # M = # of individuals that share a covariate pattern
         # so M[i] = 2 for i = two share a covariate pattern
         M = 1
@@ -3810,9 +3772,7 @@ class BinaryResults(DiscreteResults):
         For now :math:`M_j` is always set to 1.
         """
         # Pearson residuals
-        #model = self.model
         endog = self.model.endog
-        #exog = model.exog
         # M = # of individuals that share a covariate pattern
         # so M[i] = 2 for i = two share a covariate pattern
         # use unique row pattern?
@@ -3837,8 +3797,8 @@ class BinaryResults(DiscreteResults):
 
 class LogitResults(BinaryResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Logit Model",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for Logit Model",
+        "extra_attr": ""}
     @cache_readonly
     def resid_generalized(self):
         """
@@ -3858,8 +3818,8 @@ class LogitResults(BinaryResults):
 
 class ProbitResults(BinaryResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description" : "A results class for Probit Model",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for Probit Model",
+                    "extra_attr": ""}
     @cache_readonly
     def resid_generalized(self):
         """
@@ -3894,32 +3854,25 @@ class L1BinaryResults(BinaryResults):
 
 
 class MultinomialResults(DiscreteResults):
-    __doc__ = _discrete_results_docs % {"one_line_description" :
-            "A results class for multinomial data", "extra_attr" : ""}
-    def _maybe_convert_ynames_int(self, ynames):
-        # see if they're integers
-        try:
-            for i in ynames:
-                if ynames[i] % 1 == 0:
-                    ynames[i] = str(int(ynames[i]))
-        except TypeError:
-            pass
-        return ynames
+    __doc__ = _discrete_results_docs % {
+            "one_line_description": "A results class for multinomial data",
+            "extra_attr": ""}
 
-    def _get_endog_name(self, yname, yname_list, all=False):
+    @pandas.util.decorators.deprecate_kwarg(old_arg_name='all', new_arg_name='use_all')
+    def _get_endog_name(self, yname, yname_list, use_all=False):
         """
-        If all is False, the first variable name is dropped
+        If use_all is False, the first variable name is dropped
         """
         model = self.model
         if yname is None:
             yname = model.endog_names
         if yname_list is None:
             ynames = model._ynames_map
-            ynames = self._maybe_convert_ynames_int(ynames)
+            ynames = _maybe_convert_ynames_int(ynames)
             # use range below to ensure sortedness
             ynames = [ynames[key] for key in range(int(model.J))]
             ynames = ['='.join([yname, name]) for name in ynames]
-            if not all:
+            if not use_all:
                 yname_list = ynames[1:] # assumes first variable is dropped
             else:
                 yname_list = ynames
@@ -3936,7 +3889,6 @@ class MultinomialResults(DiscreteResults):
         """
         ju = self.model.J - 1  # highest index
         # these are the actual, predicted indices
-        #idx = lzip(self.model.endog, self.predict().argmax(1))
         bins = np.concatenate(([0], np.linspace(0.5, ju - 0.5, ju), [ju]))
         return np.histogram2d(self.model.endog, self.predict().argmax(1),
                               bins=bins)[0]
@@ -3955,9 +3907,8 @@ class MultinomialResults(DiscreteResults):
         return -2*self.llf + np.log(self.nobs)*(self.df_model+self.model.J-1)
 
     def conf_int(self, alpha=.05, cols=None):
-        confint = super(DiscreteResults, self).conf_int(alpha=alpha,
-                                                            cols=cols)
-        return confint.transpose(2,0,1)
+        confint = super(DiscreteResults, self).conf_int(alpha=alpha, cols=cols)
+        return confint.transpose(2, 0, 1)
 
     def margeff(self):
         raise NotImplementedError("Use get_margeff instead")
@@ -4044,82 +3995,77 @@ class L1MultinomialResults(MultinomialResults):
 
 #### Results Wrappers ####
 
-class OrderedResultsWrapper(lm.RegressionResultsWrapper):
+class OrderedResultsWrapper(RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(OrderedResultsWrapper, OrderedResults)
 
-class CountResultsWrapper(lm.RegressionResultsWrapper):
+class CountResultsWrapper(RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(CountResultsWrapper, CountResults)
 
-class NegativeBinomialResultsWrapper(lm.RegressionResultsWrapper):
+class NegativeBinomialResultsWrapper(RegressionResultsWrapper):
     pass
-wrap.populate_wrapper(NegativeBinomialResultsWrapper,
-                      NegativeBinomialResults)
+wrap.populate_wrapper(NegativeBinomialResultsWrapper, NegativeBinomialResults)
 
-class GeneralizedPoissonResultsWrapper(lm.RegressionResultsWrapper):
+
+class GeneralizedPoissonResultsWrapper(RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(GeneralizedPoissonResultsWrapper,
                       GeneralizedPoissonResults)
 
-class PoissonResultsWrapper(lm.RegressionResultsWrapper):
+class PoissonResultsWrapper(RegressionResultsWrapper):
     pass
     #_methods = {
     #        "predict_prob" : "rows",
     #        }
-    #_wrap_methods = lm.wrap.union_dicts(
-    #                            lm.RegressionResultsWrapper._wrap_methods,
+    #_wrap_methods = wrap.union_dicts(
+    #                            RegressionResultsWrapper._wrap_methods,
     #                            _methods)
 wrap.populate_wrapper(PoissonResultsWrapper, PoissonResults)
 
-class L1CountResultsWrapper(lm.RegressionResultsWrapper):
+class L1CountResultsWrapper(RegressionResultsWrapper):
     pass
 
-class L1PoissonResultsWrapper(lm.RegressionResultsWrapper):
+class L1PoissonResultsWrapper(RegressionResultsWrapper):
     pass
     #_methods = {
     #        "predict_prob" : "rows",
     #        }
-    #_wrap_methods = lm.wrap.union_dicts(
-    #                            lm.RegressionResultsWrapper._wrap_methods,
+    #_wrap_methods = wrap.union_dicts(
+    #                            RegressionResultsWrapper._wrap_methods,
     #                            _methods)
 wrap.populate_wrapper(L1PoissonResultsWrapper, L1PoissonResults)
 
-class L1NegativeBinomialResultsWrapper(lm.RegressionResultsWrapper):
+class L1NegativeBinomialResultsWrapper(RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1NegativeBinomialResultsWrapper,
                       L1NegativeBinomialResults)
 
-class L1GeneralizedPoissonResultsWrapper(lm.RegressionResultsWrapper):
+
+class L1GeneralizedPoissonResultsWrapper(RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1GeneralizedPoissonResultsWrapper,
                       L1GeneralizedPoissonResults)
 
-class BinaryResultsWrapper(lm.RegressionResultsWrapper):
-    _attrs = {"resid_dev" : "rows",
-              "resid_generalized" : "rows",
-              "resid_pearson" : "rows",
-              "resid_response" : "rows"
+class BinaryResultsWrapper(RegressionResultsWrapper):
+    _attrs = {"resid_dev": "rows",
+              "resid_generalized": "rows",
+              "resid_pearson": "rows",
+              "resid_response": "rows"
               }
-    _wrap_attrs = wrap.union_dicts(lm.RegressionResultsWrapper._wrap_attrs,
-                                   _attrs)
+    _wrap_attrs = wrap.union_dicts(RegressionResultsWrapper._wrap_attrs, _attrs)
 wrap.populate_wrapper(BinaryResultsWrapper, BinaryResults)
 
-class L1BinaryResultsWrapper(lm.RegressionResultsWrapper):
+class L1BinaryResultsWrapper(RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1BinaryResultsWrapper, L1BinaryResults)
 
-class MultinomialResultsWrapper(lm.RegressionResultsWrapper):
-    _attrs = {"resid_misclassified" : "rows"}
-    _wrap_attrs = wrap.union_dicts(lm.RegressionResultsWrapper._wrap_attrs,
-            _attrs)
+class MultinomialResultsWrapper(RegressionResultsWrapper):
+    _attrs = {"resid_misclassified": "rows"}
+    _wrap_attrs = wrap.union_dicts(RegressionResultsWrapper._wrap_attrs, _attrs)
 wrap.populate_wrapper(MultinomialResultsWrapper, MultinomialResults)
 
-class L1MultinomialResultsWrapper(lm.RegressionResultsWrapper):
+class L1MultinomialResultsWrapper(RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1MultinomialResultsWrapper, L1MultinomialResults)
 
-
-if __name__=="__main__":
-    import numpy as np
-    import statsmodels.api as sm
