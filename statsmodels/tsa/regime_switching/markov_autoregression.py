@@ -237,19 +237,10 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
         return conditional_likelihoods
 
-    def filter(self, *args, **kwargs):
-        kwargs.setdefault('results_class', MarkovAutoregressionResults)
-        kwargs.setdefault('results_wrapper_class',
-                          MarkovAutoregressionResultsWrapper)
-        return super(MarkovAutoregression, self).filter(*args, **kwargs)
-    filter.__doc__ = markov_regression.MarkovRegression.filter.__doc__
-
-    def smooth(self, *args, **kwargs):
-        kwargs.setdefault('results_class', MarkovAutoregressionResults)
-        kwargs.setdefault('results_wrapper_class',
-                          MarkovAutoregressionResultsWrapper)
-        return super(MarkovAutoregression, self).smooth(*args, **kwargs)
-    smooth.__doc__ = markov_regression.MarkovRegression.smooth.__doc__
+    @property
+    def _res_classes(self):
+        return {'fit': (MarkovAutoregressionResults,
+                        MarkovAutoregressionResultsWrapper)}
 
     def _em_iteration(self, params0):
         """

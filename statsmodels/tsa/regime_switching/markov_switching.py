@@ -982,23 +982,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             self, Bunch(**dict(zip(names, self._filter(params)))))
 
         # Wrap in a results object
-        if not return_raw:
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs['cov_type'] = cov_type
-            if cov_kwds is not None:
-                result_kwargs['cov_kwds'] = cov_kwds
-
-            if results_class is None:
-                results_class = MarkovSwitchingResults
-            if results_wrapper_class is None:
-                results_wrapper_class = MarkovSwitchingResultsWrapper
-
-            result = results_wrapper_class(
-                results_class(self, params, result, **result_kwargs)
-            )
-
-        return result
+        return self._wrap_results(params, result, return_raw, cov_type,
+                                  cov_kwds, results_class,
+                                  results_wrapper_class)
 
     def _smooth(self, params, filtered_marginal_probabilities,
                 predicted_joint_probabilities,
@@ -1011,6 +997,29 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         return cy_kim_smoother(regime_transition,
                                predicted_joint_probabilities,
                                filtered_joint_probabilities)
+
+    @property
+    def _res_classes(self):
+        return {'fit': (MarkovSwitchingResults, MarkovSwitchingResultsWrapper)}
+
+    def _wrap_results(self, params, result, return_raw, cov_type=None,
+                      cov_kwds=None, results_class=None, wrapper_class=None):
+        if not return_raw:
+            # Wrap in a results object
+            result_kwargs = {}
+            if cov_type is not None:
+                result_kwargs['cov_type'] = cov_type
+            if cov_kwds is not None:
+                result_kwargs['cov_kwds'] = cov_kwds
+
+            if results_class is None:
+                results_class = self._res_classes['fit'][0]
+            if wrapper_class is None:
+                wrapper_class = self._res_classes['fit'][1]
+
+            res = results_class(self, params, result, **result_kwargs)
+            result = wrapper_class(res)
+        return result
 
     def smooth(self, params, transformed=True, cov_type=None, cov_kwds=None,
                return_raw=False, results_class=None,
@@ -1070,23 +1079,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         result = KimSmootherResults(self, result)
 
         # Wrap in a results object
-        if not return_raw:
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs['cov_type'] = cov_type
-            if cov_kwds is not None:
-                result_kwargs['cov_kwds'] = cov_kwds
-
-            if results_class is None:
-                results_class = MarkovSwitchingResults
-            if results_wrapper_class is None:
-                results_wrapper_class = MarkovSwitchingResultsWrapper
-
-            result = results_wrapper_class(
-                results_class(self, params, result, **result_kwargs)
-            )
-
-        return result
+        return self._wrap_results(params, result, return_raw, cov_type,
+                                  cov_kwds, results_class,
+                                  results_wrapper_class)
 
     def loglikeobs(self, params, transformed=True):
         """

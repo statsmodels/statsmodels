@@ -672,17 +672,10 @@ class UnobservedComponents(MLEModel):
 
         self.ssm.initialize_known(initial_state, initial_state_cov)
 
-    def filter(self, params, **kwargs):
-        kwargs.setdefault('results_class', UnobservedComponentsResults)
-        kwargs.setdefault('results_wrapper_class',
-                          UnobservedComponentsResultsWrapper)
-        return super(UnobservedComponents, self).filter(params, **kwargs)
-
-    def smooth(self, params, **kwargs):
-        kwargs.setdefault('results_class', UnobservedComponentsResults)
-        kwargs.setdefault('results_wrapper_class',
-                          UnobservedComponentsResultsWrapper)
-        return super(UnobservedComponents, self).smooth(params, **kwargs)
+    @property
+    def _res_classes(self):
+        return {'fit': (UnobservedComponentsResults,
+                        UnobservedComponentsResultsWrapper)}
 
     @property
     def start_params(self):

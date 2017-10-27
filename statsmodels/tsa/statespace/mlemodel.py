@@ -482,6 +482,29 @@ class MLEModel(tsbase.TimeSeriesModel):
 
             return res
 
+    @property
+    def _res_classes(self):
+        return {'fit': (MLEResults, MLEResultsWrapper)}
+
+    def _wrap_results(self, params, result, return_raw, cov_type=None,
+                      cov_kwds=None, results_class=None, wrapper_class=None):
+        if not return_raw:
+            # Wrap in a results object
+            result_kwargs = {}
+            if cov_type is not None:
+                result_kwargs['cov_type'] = cov_type
+            if cov_kwds is not None:
+                result_kwargs['cov_kwds'] = cov_kwds
+
+            if results_class is None:
+                results_class = self._res_classes['fit'][0]
+            if wrapper_class is None:
+                wrapper_class = self._res_classes['fit'][1]
+
+            res = results_class(self, params, result, **result_kwargs)
+            result = wrapper_class(res)
+        return result
+
     def filter(self, params, transformed=True, complex_step=False,
                cov_type=None, cov_kwds=None, return_ssm=False,
                results_class=None, results_wrapper_class=None, **kwargs):
@@ -524,23 +547,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         result = self.ssm.filter(complex_step=complex_step, **kwargs)
 
         # Wrap in a results object
-        if not return_ssm:
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs['cov_type'] = cov_type
-            if cov_kwds is not None:
-                result_kwargs['cov_kwds'] = cov_kwds
-
-            if results_class is None:
-                results_class = MLEResults
-            if results_wrapper_class is None:
-                results_wrapper_class = MLEResultsWrapper
-
-            result = results_wrapper_class(
-                results_class(self, params, result, **result_kwargs)
-            )
-
-        return result
+        return self._wrap_results(params, result, return_ssm, cov_type,
+                                  cov_kwds, results_class,
+                                  results_wrapper_class)
 
     def smooth(self, params, transformed=True, complex_step=False,
                cov_type=None, cov_kwds=None, return_ssm=False,
@@ -584,23 +593,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         result = self.ssm.smooth(complex_step=complex_step, **kwargs)
 
         # Wrap in a results object
-        if not return_ssm:
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs['cov_type'] = cov_type
-            if cov_kwds is not None:
-                result_kwargs['cov_kwds'] = cov_kwds
-
-            if results_class is None:
-                results_class = MLEResults
-            if results_wrapper_class is None:
-                results_wrapper_class = MLEResultsWrapper
-
-            result = results_wrapper_class(
-                results_class(self, params, result, **result_kwargs)
-            )
-
-        return result
+        return self._wrap_results(params, result, return_ssm, cov_type,
+                                  cov_kwds, results_class,
+                                  results_wrapper_class)
 
     _loglike_param_names = ['transformed', 'complex_step']
     _loglike_param_defaults = [True, False]
