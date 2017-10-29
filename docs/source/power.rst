@@ -62,9 +62,26 @@ Note that this family of "solver" functions identifies which three of the four p
 Two Independent Sample T-Tests
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Similar to the difference in proportions, we can use the :code:`tt_ind_solve_power` function to calculate
-tt_ind_solve_power 
+Similar to the difference in proportions, we can use the :code:`tt_ind_solve_power` function to analyze the power of an experiment where we'll use a t-test (e.g., if we want to compare the difference in means between two groups in our study).
 
+Imagine we're working on a study to compare the spending habits between two groups of students where the outcome of interest is the average amount spent on books.
+
+In this example, let's assume that we have are conducting a study where we know what our sample-size will be in advance, and we want to calculate the smallest effect-size we'll be able to detect with 80% power.
+
+.. ipython:: python
+    
+    import statsmodels.api as sm
+    import statsmodels.stats.power as smp
+    required_alpha = .05
+    required_power = .80
+    total_sample = 200 # 200 students in our study
+    nobs1 = total_sample / 2 # We're going to assign half to each experiment arm
+    # Solve for effect-size
+    smp.tt_ind_solve_power(nobs1=nobs1, alpha=required_alpha, power=required_power, ratio=1) 
+
+This indicates that within our study we'll only be able to detect effect sizes greater than or equal to 0.398.
+
+Here the "effect-size" is the unit-less standardized effect size (i.e., the difference between the two means divided by the standard deviation).
 
 One Sample Or Paired Sample T-Tests
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
