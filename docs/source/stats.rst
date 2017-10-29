@@ -342,8 +342,8 @@ Power and Sample Size Calculations
 The :mod:`power` module currently implements power and sample size calculations
 for the t-tests, normal based test, F-tests and Chisquare goodness of fit test.
 The implementation is class based, but the module also provides
-three shortcut functions, ``tt_solve_power``, ``tt_ind_solve_power`` and
-``zt_ind_solve_power`` to solve for any one of the parameters of the power
+three shortcut functions, ``tt_solve_power`` (solver for one-sample or paired t-tests), ``tt_ind_solve_power`` (solver for two-independent-sample t-tests) and
+``zt_ind_solve_power`` (solver for a two-sample z-test) to solve for any one of the parameters of the power
 equations.
 
 

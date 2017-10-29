@@ -1152,3 +1152,4 @@ class _GofChisquareIndPower(Power):
 tt_solve_power = TTestPower().solve_power
 tt_ind_solve_power = TTestIndPower().solve_power
 zt_ind_solve_power = NormalIndPower().solve_power
+prop_ind_solve_power = NormalIndPower().solve_power
