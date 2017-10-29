@@ -249,7 +249,9 @@ class Power(object):
             start_value = self.start_ttp[key]
         except KeyError:
             start_value = 0.9
-            print('Warning: using default start_value for {0}'.format(key))
+            import warnings
+            from statsmodels.tools.sm_exceptions import ValueWarning
+            warnings.warn('Warning: using default start_value for {0}'.format(key), ValueWarning)
 
         fit_kwds = self.start_bqexp[key]
         fit_res = []
