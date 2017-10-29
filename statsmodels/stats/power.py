@@ -219,6 +219,18 @@ class Power(object):
             del kwds['power']
             return self.power(**kwds)
 
+        if kwds['effect_size'] == 0:
+            import warnings
+            from statsmodels.tools.sm_exceptions import HypothesisTestWarning
+            warnings.warn('Warning: Effect size of 0 detected', HypothesisTestWarning)
+            if key == 'power':
+                return alpha
+            if key == 'alpha':
+                return power
+            else:
+                raise ValueError('Cannot detect an effect-size of 0. Try changing your effect-size.')
+
+
         self._counter = 0
         def func(x):
             kwds[key] = x
@@ -237,7 +249,9 @@ class Power(object):
             start_value = self.start_ttp[key]
         except KeyError:
             start_value = 0.9
-            print('Warning: using default start_value for {0}'.format(key))
+            import warnings
+            from statsmodels.tools.sm_exceptions import ValueWarning
+            warnings.warn('Warning: using default start_value for {0}'.format(key), ValueWarning)
 
         fit_kwds = self.start_bqexp[key]
         fit_res = []
