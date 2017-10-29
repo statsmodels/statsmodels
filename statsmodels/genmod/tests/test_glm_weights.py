@@ -765,11 +765,17 @@ def test_warnings_raised():
         assert len(w) >= 1
 
 
-def test_weights_different_formats():
+class TestWeightFormats:
     weights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
-    yield check_weights_as_formats, weights
-    yield check_weights_as_formats, np.asarray(weights)
-    yield check_weights_as_formats, pd.Series(weights)
+
+    def test_list_weights(self):
+        check_weights_as_formats(self.weights)
+
+    def test_array_weights(self):
+        check_weights_as_formats(np.asarray(self.weights))
+
+    def test_list_weights(self):
+        check_weights_as_formats(pd.Series(self.weights))
 
 
 def check_weights_as_formats(weights):
