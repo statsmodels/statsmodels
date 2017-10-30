@@ -1002,7 +1002,7 @@ class GLM(base.LikelihoodModel):
         Notes
         -----
         If method is 'IRLS', then an additional keyword 'attach_wls' is
-        availble. This is currently for internal use only and might change
+        available. This is currently for internal use only and might change
         in future versions. If attach_wls' is true, then the final WLS
         instance of the IRLS iteration is attached to the results instance
         as `results_wls` attribute.
