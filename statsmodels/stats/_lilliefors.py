@@ -274,7 +274,8 @@ def pval_lf(Dmax, n):
 
 
 def kstest_fit(x, dist='norm', pvalmethod='approx'):
-    '''lilliefors test for normality or an exponential distribution.
+    """
+    Lilliefors test for normality or an exponential distribution.
 
     Kolmogorov Smirnov test with estimated mean and variance
 
@@ -282,9 +283,9 @@ def kstest_fit(x, dist='norm', pvalmethod='approx'):
     ----------
     x : array_like, 1d
         data series, sample
-    dist : string.
-        distribution to test in set {'norm', 'exp'}.
-    pvalmethod : 'approx', 'table'
+    dist : {'norm', 'exp'}, optional
+        Distribution to test in set.
+    pvalmethod : {'approx', 'table'}, optional
         'approx' is only valid for normality. if `dist = 'exp'`,
         `table` is returned.
         'approx' uses the approximation formula of Dalal and Wilkinson,
@@ -318,9 +319,7 @@ def kstest_fit(x, dist='norm', pvalmethod='approx'):
     than with the Anderson-Darling test.
 
     could be vectorized
-
-    '''
-
+    """
     x = np.asarray(x)
     nobs = len(x)
 

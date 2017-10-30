@@ -172,12 +172,8 @@ def _min_max_band(args):
 
 def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
                xdata=None, labels=None, ax=None):
-    """Plot High Density Region boxplot.
-
-    1. Compute a multivariate kernel density estimation,
-    2. Compute contour lines for quantiles 90%, 50% and `alpha`%,
-    3. Plot the bivariate plot,
-    4. Compute median curve along with quantiles and outliers curves.
+    """
+    High Density Region boxplot
 
     Parameters
     ----------
@@ -192,7 +188,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
         smaller of the number of rows or columns in data.
     alpha : list of floats between 0 and 1, optional
         Extra quantile values to compute. Default is None
-    threshold : float between 0 and 1
+    threshold : float between 0 and 1, optional
         Percentile threshold value for outliers detection. High value means
         a lower sensitivity to outliers. Default is `0.95`.
     bw: array_like or str, optional
@@ -230,10 +226,6 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
             [sup, inf] curves.
          - 'outliers', ndarray. Outlier curves.
 
-    See Also
-    --------
-    banddepth, rainbowplot, fboxplot
-
     Notes
     -----
     The median curve is the curve with the highest probability on the reduced
@@ -266,7 +258,14 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
     its contours.
 
     Finally, using these contours, the different quantiles can be extracted
-    allong with the median curve and the outliers.
+    along with the median curve and the outliers.
+
+    Steps to produce the HDR boxplot include:
+
+    1. Compute a multivariate kernel density estimation
+    2. Compute contour lines for quantiles 90%, 50% and `alpha` %
+    3. Plot the bivariate plot
+    4. Compute median curve along with quantiles and outliers curves.
 
     References
     ----------
@@ -303,6 +302,9 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
     .. plot:: plots/graphics_functional_hdrboxplot.py
 
+    See Also
+    --------
+    banddepth, rainbowplot, fboxplot
     """
     fig, ax = utils.create_mpl_ax(ax)
 
