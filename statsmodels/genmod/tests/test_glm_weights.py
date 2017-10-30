@@ -4,18 +4,18 @@
 from __future__ import division
 from statsmodels.compat.testing import SkipTest
 
-import os
-import pandas as pd
+import warnings
+
+import nose
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
-                           assert_allclose, assert_, assert_array_less, dec)
-from scipy import stats
+from numpy.testing import (assert_raises, assert_allclose)
+import pandas as pd
+import pytest
+
 import statsmodels.api as sm
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.tools.tools import add_constant
-from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.discrete import discrete_model as discrete
-import warnings
 
 from .results import results_glm_poisson_weights as res_stata
 from .results import res_R_var_weight as res_r
@@ -765,11 +765,20 @@ def test_warnings_raised():
         assert len(w) >= 1
 
 
-def test_weights_different_formats():
-    weights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
-    yield check_weights_as_formats, weights
-    yield check_weights_as_formats, np.asarray(weights)
-    yield check_weights_as_formats, pd.Series(weights)
+weights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
+# TODO: Re-enable once nose is permanently dropped
+@nose.tools.nottest
+@pytest.mark.parametrize('formatted', [weights, np.asarray(weights), pd.Series(weights)],
+                         ids=['list', 'ndarray', 'Series'])
+def test_weights_different_formats(formatted):
+    check_weights_as_formats(formatted)
+
+
+# TODO: Remove once nose is permanently dropped
+def test_weights_different_formats_all():
+    check_weights_as_formats(weights)
+    check_weights_as_formats(np.asarray(weights))
+    check_weights_as_formats(pd.Series(weights))
 
 
 def check_weights_as_formats(weights):
