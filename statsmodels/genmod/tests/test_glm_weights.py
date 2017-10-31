@@ -1,5 +1,29 @@
-"""Test for weights in GLM, Poisson and OLS/WLS, continuous test_glm.py
+"""
+Test for weights in GLM, Poisson and OLS/WLS, continuous test_glm.py
 
+
+Below is a table outlining the test coverage.
+================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ====
+Test                              Compared To            params normalized_cov_params bse loglike deviance resid_response resid_pearson resid_deviance resid_working resid_anscombe chi2
+================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ====
+TestGlmPoissonPlain               stata                  X                            X   X       X        X              X             X              X             X              X
+TestGlmPoissonFwNr                stata                  X                            X   X       X        X              X             X              X             X              X
+TestGlmPoissonAwNr                stata                  X                            X   X       X        X              X             X              X             X              X
+TestGlmPoissonFwHC                stata                  X                            X   X       X                                                                                 X
+TestGlmPoissonAwHC                stata                  X                            X   X       X                                                                                 X
+TestGlmPoissonFwClu               stata                  X                            X   X       X                                                                                 X
+TestGlmTweedieAwNr                R                      X                            X           X        X              X             X              X
+TestGlmGammaAwNr                  R                      X                            X   special X        X              X             X              X
+TestGlmGaussianAwNr               R                      X                            X   special X        X              X             X              X
+TestRepeatedvsAggregated          statsmodels.GLM        X      X
+TestRepeatedvsAverage             statsmodels.GLM        X      X
+TestTweedieRepeatedvsAggregated   statsmodels.GLM        X      X
+TestTweedieRepeatedvsAverage      statsmodels.GLM        X      X
+TestBinomial0RepeatedvsAverage    statsmodels.GLM        X      X
+TestBinomial0RepeatedvsDuplicated statsmodels.GLM        X      X
+TestBinomialVsVarWeights          statsmodels.GLM        X      X                     X
+TestGlmGaussianWLS                statsmodels.WLS        X      X                     X
+================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ====
 """
 from __future__ import division
 from statsmodels.compat.testing import SkipTest
