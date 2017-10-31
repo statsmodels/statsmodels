@@ -11,6 +11,7 @@ R Venables, B Ripley. 'Modern Applied Statistics in S'
 C Croux, PJ Rousseeuw, 'Time-efficient algorithms for two highly robust
 estimators of scale' Computational statistics. Physica, Heidelberg, 1992.
 """
+
 import numpy as np
 from scipy import stats
 from scipy.stats import norm as Gaussian
@@ -20,6 +21,7 @@ from statsmodels.tools.validation import array_like, float_like
 
 from . import norms
 from ._qn import _qn
+
 
 class Holder():
     def __init__(self, **kwds):
@@ -492,7 +494,7 @@ def scale_trimmed(data, alpha, center='median', axis=0, distr=None,
     sl[axis] = slice(cut_idx, -cut_idx)
     # x_trimmed = x[cut_idx:-cut_idx]
     # cut in axis
-    x_trimmed = x[sl]
+    x_trimmed = x[tuple(sl)]
 
     center_type = center
     if center in ['med', 'median']:
