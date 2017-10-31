@@ -3,6 +3,7 @@
 Author: Josef Perktold
 License: BSD-3
 """
+from __future__ import division
 
 import numpy as np
 from scipy import integrate, stats
@@ -121,7 +122,7 @@ def transform_corr_normal(corr, method, return_var=False, possdef=True):
             rf2 = integrate.odeint(f2 , 0, t=t, hmax=hmax).squeeze()
             rf3 = integrate.odeint(f3 , 0, t=t, hmax=hmax).squeeze()
             rf4 = integrate.odeint(f4 , 0, t=t, hmax=hmax).squeeze()
-            fact = 1 + 144 * (-9 / 4 * pi2i * np.arcsin(rhos / 2)**2 +
+            fact = 1 + 144 * (-9 / 4. * pi2i * np.arcsin(rhos / 2)**2 +
                               pi2i * rf1 +
                               2 * pi2i * rf2 + pi2i * rf3 +
                               0.5 * pi2i * rf4)
