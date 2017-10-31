@@ -1579,10 +1579,7 @@ class VARResults(VARProcess):
 
     def test_causality(self, caused, causing=None, kind='f', signif=0.05):
         """
-        Test for Granger-causality as described in chapter 7.6.3 of [1]_.
-        Test H0: "`causing` does not Granger-cause the remaining variables of
-        the system" against  H1: "`causing` is Granger-causal for the
-        remaining variables".
+        Test Granger causality
 
         Parameters
         ----------
@@ -1614,6 +1611,11 @@ class VARResults(VARProcess):
         number of variables in the VAR system, that is, degrees of freedom
         are equal to the number of equations in the VAR times degree of freedom
         of a single equation.
+
+        Test for Granger-causality as described in chapter 7.6.3 of [1]_.
+        Test H0: "`causing` does not Granger-cause the remaining variables of
+        the system" against  H1: "`causing` is Granger-causal for the
+        remaining variables".
 
         Returns
         -------
@@ -1692,16 +1694,7 @@ class VARResults(VARProcess):
 
     def test_inst_causality(self, causing, signif=0.05):
         """
-        Test for instantaneous causality as described in chapters 3.6.3 and
-        7.6.4 of [1]_.
-        Test H0: "No instantaneous causality between caused and causing"
-        against H1: "Instantaneous causality between caused and causing
-        exists".
-        Note that instantaneous causality is a symmetric relation
-        (i.e. if causing is "instantaneously causing" caused, then also caused
-        is "instantaneously causing" causing), thus the naming of the
-        parameters (which is chosen to be in accordance with
-        test_granger_causality()) may be misleading.
+        Test for instantaneous causality
 
         Parameters
         ----------
@@ -1741,6 +1734,17 @@ class VARResults(VARProcess):
 
         Notes
         -----
+        Test for instantaneous causality as described in chapters 3.6.3 and
+        7.6.4 of [1]_.
+        Test H0: "No instantaneous causality between caused and causing"
+        against H1: "Instantaneous causality between caused and causing
+        exists".
+
+        Instantaneous causality is a symmetric relation (i.e. if causing is
+        "instantaneously causing" caused, then also caused is "instantaneously
+        causing" causing), thus the naming of the parameters (which is chosen
+        to be in accordance with test_granger_causality()) may be misleading.
+
         This method is not returning the same result as JMulTi. This is because
         the test is based on a VAR(k_ar) model in statsmodels (in accordance to
         pp. 104, 320-321 in [1]_) whereas JMulTi seems to be using a
@@ -1802,8 +1806,7 @@ class VARResults(VARProcess):
 
     def test_whiteness_new(self, nlags=10, signif=0.05, adjusted=False):
         """
-        Test the whiteness of the residuals using the Portmanteau test as
-        described in [1]_, chapter 4.4.3.
+        Residual whiteness tests using Portmanteau
 
         Parameters
         ----------
@@ -1814,6 +1817,11 @@ class VARResults(VARProcess):
         Returns
         -------
         results : WhitenessTestResults
+
+        Notes
+        -----
+        Test the whiteness of the residuals using the Portmanteau test as
+        described in [1]_, chapter 4.4.3.
 
         References
         ----------
