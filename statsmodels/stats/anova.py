@@ -284,18 +284,25 @@ def anova_lm(*args, **kwargs):
     scale : float
         Estimate of variance, If None, will be estimated from the largest
         model. Default is None.
-    test : str {"F", "Chisq", "Cp"} or None
-        Test statistics to provide. Default is "F".
-    typ : str or int {"I","II","III"} or {1,2,3}
+    test : str {'F', 'Chisq', 'Cp'} or None
+        Test statistics to provide. Default is 'F'.
+    typ : str or int {'I','II','III'} or {1,2,3}
         The type of Anova test to perform. See notes.
-    robust : {None, "hc0", "hc1", "hc2", "hc3"}
+    robust : {None, 'hc0', 'hc1', 'hc2', 'hc3'}
         Use heteroscedasticity-corrected coefficient covariance matrix.
         If robust covariance is desired, it is recommended to use `hc3`.
 
     Returns
     -------
     anova : DataFrame
-    A DataFrame containing.
+        A DataFrame with columns:
+
+        - 'sum_sq': Sum of squared residuals
+        - 'df': Difference in sum of squared residuals
+        - Test Name: this column has a name that depends on the test used, for
+          example 'F'.  It contains the value of the test statistic.
+        - Pvalue: The column has a name that depends on the type of the test,
+          for example PR(>F).  Contains the p-value of the test.
 
     Notes
     -----
@@ -310,10 +317,10 @@ def anova_lm(*args, **kwargs):
     --------
     >>> import statsmodels.api as sm
     >>> from statsmodels.formula.api import ols
-    >>> moore = sm.datasets.get_rdataset("Moore", "car", cache=True) # load
+    >>> moore = sm.datasets.get_rdataset('Moore', 'car', cache=True) # load
     >>> data = moore.data
-    >>> data = data.rename(columns={"partner.status" :
-    ...                             "partner_status"}) # make name pythonic
+    >>> data = data.rename(columns={'partner.status' :
+    ...                             'partner_status'}) # make name pythonic
     >>> moore_lm = ols('conformity ~ C(fcategory, Sum)*C(partner_status, Sum)',
     ...                 data=data).fit()
     >>> table = sm.stats.anova_lm(moore_lm, typ=2) # Type 2 Anova DataFrame
@@ -348,7 +355,7 @@ def anova_lm(*args, **kwargs):
     model_formula = []
     pr_test = "Pr(>%s)" % test
     names = ['df_resid', 'ssr', 'df_diff', 'ss_diff', test, pr_test]
-    table = DataFrame(np.zeros((n_models, 6)), columns = names)
+    table = DataFrame(np.zeros((n_models, 6)), columns=names)
 
     if not scale: # assume biggest model is last
         scale = args[-1].scale
