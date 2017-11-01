@@ -29,7 +29,7 @@ from scipy.stats import nbinom
 import statsmodels.tools.tools as tools
 from statsmodels.tools import data as data_tools
 from statsmodels.tools.decorators import (resettable_cache,
-        cache_readonly)
+        cache_readonly, copy_doc)
 from statsmodels.regression.linear_model import OLS
 from scipy import stats, special, optimize  # opt just for nbin
 from scipy.stats import nbinom
@@ -450,6 +450,7 @@ class BinaryModel(DiscreteModel):
         else:
             return np.dot(exog, params)
 
+    @copy_doc(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
@@ -465,7 +466,6 @@ class BinaryModel(DiscreteModel):
             raise Exception(
                     "argument method == %s, which is not handled" % method)
         return L1BinaryResultsWrapper(discretefit)
-    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
@@ -595,6 +595,7 @@ class MultinomialModel(BinaryModel):
             pred = np.column_stack((np.zeros(len(exog)), pred))
         return pred
 
+    @copy_doc(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
         if start_params is None:
@@ -609,8 +610,8 @@ class MultinomialModel(BinaryModel):
         mnfit.params = mnfit.params.reshape(self.K, -1, order='F')
         mnfit = MultinomialResults(self, mnfit)
         return MultinomialResultsWrapper(mnfit)
-    fit.__doc__ = DiscreteModel.fit.__doc__
 
+    @copy_doc(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
@@ -627,8 +628,6 @@ class MultinomialModel(BinaryModel):
         mnfit.params = mnfit.params.reshape(self.K, -1, order='F')
         mnfit = L1MultinomialResults(self, mnfit)
         return L1MultinomialResultsWrapper(mnfit)
-    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
-
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
@@ -846,6 +845,7 @@ class CountModel(DiscreteModel):
                     self, params)
         return margeff
 
+    @copy_doc(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
         cntfit = super(CountModel, self).fit(start_params=start_params,
@@ -853,8 +853,8 @@ class CountModel(DiscreteModel):
                 disp=disp, callback=callback, **kwargs)
         discretefit = CountResults(self, cntfit)
         return CountResultsWrapper(discretefit)
-    fit.__doc__ = DiscreteModel.fit.__doc__
 
+    @copy_doc(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
@@ -870,7 +870,6 @@ class CountModel(DiscreteModel):
             raise Exception(
                     "argument method == %s, which is not handled" % method)
         return L1CountResultsWrapper(discretefit)
-    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
 
 class OrderedModel(DiscreteModel):
@@ -882,7 +881,7 @@ class Poisson(CountModel):
     __doc__ = """
     Poisson model for count data
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -1014,6 +1013,7 @@ class Poisson(CountModel):
         #np.sum(stats.poisson.logpmf(endog, np.exp(XB)))
         return -np.exp(XB) +  endog*XB - gammaln(endog+1)
 
+    @copy_doc(_get_start_params_null_docs)
     def _get_start_params_null(self):
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
@@ -1021,8 +1021,7 @@ class Poisson(CountModel):
         params = [np.log(const)]
         return params
 
-    _get_start_params_null.__doc__ = _get_start_params_null_docs
-
+    @copy_doc(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
 
@@ -1042,8 +1041,8 @@ class Poisson(CountModel):
             kwds = {}
         discretefit = PoissonResults(self, cntfit, **kwds)
         return PoissonResultsWrapper(discretefit)
-    fit.__doc__ = DiscreteModel.fit.__doc__
 
+    @copy_doc(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
@@ -1059,9 +1058,6 @@ class Poisson(CountModel):
             raise Exception(
                     "argument method == %s, which is not handled" % method)
         return L1PoissonResultsWrapper(discretefit)
-
-    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
-
 
     def fit_constrained(self, constraints, start_params=None, **fit_kwds):
         """fit the model subject to linear equality constraints
@@ -1323,6 +1319,7 @@ class GeneralizedPoisson(CountModel):
         return (np.log(mu) + (endog - 1) * np.log(a2) - endog *
                 np.log(a1) - gammaln(endog + 1) - a2 / a1)
 
+    @copy_doc(_get_start_params_null_docs)
     def _get_start_params_null(self):
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
@@ -1335,8 +1332,6 @@ class GeneralizedPoisson(CountModel):
         params.append(a)
 
         return np.array(params)
-
-    _get_start_params_null.__doc__ = _get_start_params_null_docs
 
     def _estimate_dispersion(self, mu, resid, df_resid=None):
         q = self.parameterization
@@ -1406,6 +1401,7 @@ class GeneralizedPoisson(CountModel):
 
     fit.__doc__ = DiscreteModel.fit.__doc__ + fit.__doc__
 
+    @copy_doc(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
@@ -1443,8 +1439,6 @@ class GeneralizedPoisson(CountModel):
                     "argument method == %s, which is not handled" % method)
 
         return L1GeneralizedPoissonResultsWrapper(discretefit)
-
-    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
     def score_obs(self, params):
         if self._transparams:
@@ -1621,7 +1615,7 @@ class Logit(BinaryModel):
     __doc__ = """
     Binary choice logit model
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -1809,6 +1803,7 @@ class Logit(BinaryModel):
         L = self.cdf(np.dot(X,params))
         return -np.dot(L*(1-L)*X.T,X)
 
+    @copy_doc(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
         bnryfit = super(Logit, self).fit(start_params=start_params,
@@ -1817,13 +1812,13 @@ class Logit(BinaryModel):
 
         discretefit = LogitResults(self, bnryfit)
         return BinaryResultsWrapper(discretefit)
-    fit.__doc__ = DiscreteModel.fit.__doc__
+
 
 class Probit(BinaryModel):
     __doc__ = """
     Binary choice Probit model
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -2029,6 +2024,7 @@ class Probit(BinaryModel):
         L = q*self.pdf(q*XB)/self.cdf(q*XB)
         return np.dot(-L*(L+XB)*X.T,X)
 
+    @copy_doc(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
         bnryfit = super(Probit, self).fit(start_params=start_params,
@@ -2036,7 +2032,6 @@ class Probit(BinaryModel):
                 disp=disp, callback=callback, **kwargs)
         discretefit = ProbitResults(self, bnryfit)
         return BinaryResultsWrapper(discretefit)
-    fit.__doc__ = DiscreteModel.fit.__doc__
 
 class MNLogit(MultinomialModel):
     __doc__ = """
@@ -2353,7 +2348,7 @@ class NegativeBinomial(CountModel):
     __doc__ = """
     Negative Binomial Model for count data
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -2689,6 +2684,7 @@ class NegativeBinomial(CountModel):
         sc = approx_fprime_cs(params, self.loglikeobs)
         return sc
 
+    @copy_doc(_get_start_params_null_docs)
     def _get_start_params_null(self):
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
@@ -2699,8 +2695,6 @@ class NegativeBinomial(CountModel):
         a = self._estimate_dispersion(mu, resid, df_resid=resid.shape[0] - 1)
         params.append(a)
         return np.array(params)
-
-    _get_start_params_null.__doc__ = _get_start_params_null_docs
 
     def _estimate_dispersion(self, mu, resid, df_resid=None):
         if df_resid is None:
@@ -3048,6 +3042,7 @@ class NegativeBinomialP(CountModel):
 
         return hess_arr
 
+    @copy_doc(_get_start_params_null_docs)
     def _get_start_params_null(self):
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
@@ -3061,8 +3056,6 @@ class NegativeBinomialP(CountModel):
         params.append(a)
 
         return np.array(params)
-
-    _get_start_params_null.__doc__ = _get_start_params_null_docs
 
     def _estimate_dispersion(self, mu, resid, df_resid=None):
         q = self.parameterization - 1
@@ -3131,6 +3124,7 @@ class NegativeBinomialP(CountModel):
 
     fit.__doc__ += DiscreteModel.fit.__doc__
 
+    @copy_doc(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
@@ -3169,8 +3163,6 @@ class NegativeBinomialP(CountModel):
         discretefit = L1NegativeBinomialResults(self, cntfit)
 
         return L1NegativeBinomialResultsWrapper(discretefit)
-
-    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
     def predict(self, params, exog=None, exposure=None, offset=None,
                 which='mean'):
@@ -3729,7 +3721,7 @@ class BinaryResults(DiscreteResults):
         bins = np.array([0, 0.5, 1])
         return np.histogram2d(actual, pred, bins=bins)[0]
 
-
+    @copy_doc(DiscreteResults.summary.__doc__)
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 yname_list=None):
         smry = super(BinaryResults, self).summary(yname, xname, title, alpha,
@@ -3758,7 +3750,6 @@ class BinaryResults(DiscreteResults):
         if etext:
             smry.add_extra_txt(etext)
         return smry
-    summary.__doc__ = DiscreteResults.summary.__doc__
 
     @cache_readonly
     def resid_dev(self):
@@ -4118,8 +4109,3 @@ wrap.populate_wrapper(MultinomialResultsWrapper, MultinomialResults)
 class L1MultinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1MultinomialResultsWrapper, L1MultinomialResults)
-
-
-if __name__=="__main__":
-    import numpy as np
-    import statsmodels.api as sm

@@ -17,7 +17,8 @@ from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
 from statsmodels.distributions import zipoisson, zigenpoisson, zinegbin
 from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
                                        approx_hess_cs, approx_fprime_cs)
-from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
+from statsmodels.tools.decorators import (resettable_cache, cache_readonly,
+                                          copy_doc)
 
 
 _doc_zi_params = """
@@ -165,6 +166,7 @@ class GenericZeroInflated(CountModel):
 
         return llf
 
+    @copy_doc(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
@@ -193,8 +195,7 @@ class GenericZeroInflated(CountModel):
                                       use_self=True, use_t=use_t, **cov_kwds)
         return result
 
-    fit.__doc__ = DiscreteModel.fit.__doc__
-
+    @copy_doc(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
@@ -230,8 +231,6 @@ class GenericZeroInflated(CountModel):
                     "argument method == %s, which is not handled" % method)
 
         return self.result_class_reg_wrapper(discretefit)
-
-    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
     def score_obs(self, params):
         """
