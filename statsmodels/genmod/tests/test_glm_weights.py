@@ -7,10 +7,10 @@ from statsmodels.compat.testing import SkipTest
 import warnings
 
 import nose
+import pytest
+import pandas as pd
 import numpy as np
 from numpy.testing import (assert_raises, assert_allclose)
-import pandas as pd
-import pytest
 
 import statsmodels.api as sm
 from statsmodels.genmod.generalized_linear_model import GLM
@@ -80,7 +80,8 @@ class CheckWeight(object):
             return None
         assert_allclose(res1.resid_anscombe, resid_all['resid_anscombe'], atol= 1e-6, rtol=2e-6)
 
-    def t_est_compare_bfgs(self):
+    @pytest.mark.xfail
+    def test_compare_bfgs(self):
         res1 = self.res1
         if isinstance(res1.model.family, sm.families.Tweedie):
             # Can't do this on Tweedie as loglikelihood is too complex

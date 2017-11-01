@@ -6,17 +6,19 @@ from statsmodels.compat import range
 from statsmodels.compat.testing import skipif
 
 import os
+import warnings
+
+import pytest
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
                            assert_allclose, assert_, assert_array_less, dec)
 from scipy import stats
+
 import statsmodels.api as sm
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.tools.tools import add_constant
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.discrete import discrete_model as discrete
-import pytest
-import warnings
 
 # Test Precisions
 DECIMAL_4 = 4
@@ -162,6 +164,7 @@ class CheckModelResultsMixin(object):
             assert_allclose(self.res1.pearson_chi2, self.res2.pearson_chi2,
                             atol=1e-6, rtol=1e-6)
 
+    @pytest.mark.smoke
     def test_summary(self):
         #SMOKE test
         self.res1.summary()
@@ -945,6 +948,7 @@ def gen_endog(lin_pred, family_class, link, binom_version=0):
     return endog
 
 
+@pytest.mark.smoke
 def test_summary():
     # Smoke test for summary.
 
