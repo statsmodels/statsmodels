@@ -359,8 +359,8 @@ class ExponentialSmoothing(TimeSeriesModel):
     -----
     This is a full implementation of the holt winters exponential smoothing as
     per [1]. This includes all the unstable methods as well as the stable methods.
-    The implementaion of the library follows as per the R library as much as possible
-    whilest still being pythonic.
+    The implementation of the library covers the functionality of the R 
+    library as much as possible whilest still being pythonic.
 
     References
     ----------
@@ -370,12 +370,15 @@ class ExponentialSmoothing(TimeSeriesModel):
     def __init__(self, endog, trend=None, damped=False, seasonal=None,
                  season_length=None, dates=None, freq=None, missing='none', **kwargs):
         super(ExponentialSmoothing, self).__init__(
-            endog, None, dates, freq, missing=missing)
+            endog, None, dates, freq, missing=missing)      
         self.trend = trend
         self.damped = damped
         self.seasonal = seasonal
         self.trending = trend in ['mul', 'add']
         self.seasoning = seasonal in ['mul', 'add']
+        if (self.trend == 'mul' or self.seasonal == 'mul') and (endog<=0.0).any():
+            raise NotImplementedError(
+                    'Unable to correct for negative or zero values')
         if self.damped and not self.trending:
             raise NotImplementedError('Can only dampen the trend component')
         if self.seasoning:
@@ -384,7 +387,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                     'Unable to detect season automatically')
             self.season_length = season_length
         else:
-            self.season_length = 0
+            self.season_length = 0        
 
     def predict(self, params, start=None, end=None):
         """
@@ -456,8 +459,8 @@ class ExponentialSmoothing(TimeSeriesModel):
         -----
         This is a full implementation of the holt winters exponential smoothing as
         per [1]. This includes all the unstable methods as well as the stable methods.
-        The implementaion of the library follows as per the R library as much as possible
-        whilest still being pythonic.
+        The implementation of the library covers the functionality of the R 
+        library as much as possible whilest still being pythonic.
 
         References
         ----------
@@ -576,9 +579,6 @@ class ExponentialSmoothing(TimeSeriesModel):
             The number of time steps to forecast ahead.
         """
         # Start in sample and out of sample predictions
-        h_fcast = h
-        if h == 0:
-            h = 1
         data = self.endog
         damped = self.damped
         seasoning = self.seasoning
@@ -607,14 +607,14 @@ class ExponentialSmoothing(TimeSeriesModel):
         if seasoning:
             gammac = 1 - gamma
             y_gamma[:] = gamma * y
-        l = np.zeros((n + h,))
-        b = np.zeros((n + h,))
-        s = np.zeros((n + h + m,))
+        l = np.zeros((n + h + 1,))
+        b = np.zeros((n + h + 1,))
+        s = np.zeros((n + h + m + 1,))
         l[0] = l0
         b[0] = b0
         s[:m] = s0
-        phi_h = np.cumsum(np.repeat(phi, h)**np.arange(1, h + 1)
-                          ) if damped else np.arange(1, h + 1)
+        phi_h = np.cumsum(np.repeat(phi, h + 1)**np.arange(1, h + 1 + 1)
+                          ) if damped else np.arange(1, h + 1 + 1)
         trended = {'mul': np.multiply,
                    'add': np.add,
                    None: lambda l,
@@ -637,12 +637,12 @@ class ExponentialSmoothing(TimeSeriesModel):
                 s[i + m - 1] = y_gamma[i - 1] / \
                     trended(l[i - 1], dampen(b[i - 1], phi)) + \
                     (gammac * s[i - 1])
-            slope = b[:i].copy()
+            slope = b[1:i+1].copy()
             season = s[m:i + m].copy()
             l[i:] = l[i]
             b[:i] = dampen(b[:i], phi)
             b[i:] = dampen(b[i], phi_h)
-            s[i + m - 1:] = [s[(i - 1) + j % m] for j in range(h + 1)]
+            s[i + m - 1:] = [s[(i - 1) + j % m] for j in range(h + 1 + 1)]
             trend = trended(l, b)
             fitted = trend * s[:-m]
         elif seasonal == 'add':
@@ -655,12 +655,12 @@ class ExponentialSmoothing(TimeSeriesModel):
                 s[i + m - 1] = y_gamma[i - 1] - \
                     (gamma * trended(l[i - 1],
                                      dampen(b[i - 1], phi))) + (gammac * s[i - 1])
-            slope = b[:i].copy()
+            slope = b[1:i+1].copy()
             season = s[m:i + m].copy()
             l[i:] = l[i]
             b[:i] = dampen(b[:i], phi)
             b[i:] = dampen(b[i], phi_h)
-            s[i + m - 1:] = [s[(i - 1) + j % m] for j in range(h + 1)]
+            s[i + m - 1:] = [s[(i - 1) + j % m] for j in range(h + 1 + 1)]
             trend = trended(l, b)
             fitted = trend + s[:-m]
         else:
@@ -670,14 +670,14 @@ class ExponentialSmoothing(TimeSeriesModel):
                 if trending:
                     b[i] = (beta * detrend(l[i], l[i - 1])) + \
                         (betac * dampen(b[i - 1], phi))
-            slope = b[:i].copy()
+            slope = b[1:i+1].copy()
             season = s[m:i + m].copy()
             l[i:] = l[i]
             b[:i] = dampen(b[:i], phi)
             b[i:] = dampen(b[i], phi_h)
             trend = trended(l, b)
             fitted = trend
-        level = l[:i].copy()
+        level = l[1:i+1].copy()
         if use_boxcox or use_boxcox == 'log' or isinstance(use_boxcox, float):
             fitted = inv_boxcox(fitted, lamda)
             level = inv_boxcox(level, lamda)
@@ -688,13 +688,13 @@ class ExponentialSmoothing(TimeSeriesModel):
                 season = (fitted / inv_boxcox(trend, lamda))[:i]
             else:
                 pass
-        SSE = sqeuclidean(fitted[:-h], data)
+        SSE = sqeuclidean(fitted[:-h-1], data)
         # (s0 + gamma) + (b0 + beta) + (l0 + alpha) + phi
         k = m * seasoning + 2 * trending + 2 + 1 * damped
         AIC = n * np.log(SSE / n) + (k) * 2
         AICc = AIC + (2 * (k + 2) * (k + 3)) / (n - k - 3)
         BIC = n * np.log(SSE / n) + (k) * np.log(n)
-        resid = data - fitted[:-h]
+        resid = data - fitted[:-h-1]
         if remove_bias:
             fitted += resid.mean()
         if not damped:
@@ -709,8 +709,8 @@ class ExponentialSmoothing(TimeSeriesModel):
                        'use_boxcox': use_boxcox,
                        'lamda': lamda,
                        'remove_bias': remove_bias}
-        hwfit = HoltWintersResults(self, self.params, fittedfcast=fitted, fittedvalues=fitted[:-h],
-                                   fcast=fitted[-h_fcast:], SSE=SSE, level=level,
+        hwfit = HoltWintersResults(self, self.params, fittedfcast=fitted, fittedvalues=fitted[:-h-1],
+                                   fcast=fitted[-h-1:], SSE=SSE, level=level,
                                    slope=slope, season=season, AIC=AIC, BIC=BIC,
                                    AICc=AICc, resid=resid, k=k)
         return HoltWintersResultsWrapper(hwfit)
@@ -784,9 +784,10 @@ class Holt(ExponentialSmoothing):
     ----------
     endog : array-like
         Time series
-    phi : float, optional
-        The phi value of the damped method, if the value is
-        set then this value will be used as the value.
+    expoential : bool, optional
+        Type of trend component.
+    damped : bool, optional
+        Should the trend component be damped.
 
     Returns
     -------
