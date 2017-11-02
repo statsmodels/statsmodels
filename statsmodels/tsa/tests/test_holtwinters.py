@@ -101,7 +101,8 @@ class TestHoltWinters(object):
         assert_almost_equal(fit2.forecast(1), [501.837461], 4)
         assert_almost_equal(fit3.forecast(1), [496.493543], 4)
         assert_almost_equal(fit3.params['alpha'], 0.891998, 4)
-        assert_almost_equal(fit3.params['l0'], 447.478440, 4)        
+        #has to be 3 for old python2.7 scipy versions
+        assert_almost_equal(fit3.params['l0'], 447.478440, 3)
     
     def test_holt(self):
         fit1 = Holt(self.air_ausair).fit(alpha=0.8, beta=0.2, optimized=False)
