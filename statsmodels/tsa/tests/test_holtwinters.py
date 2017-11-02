@@ -72,9 +72,9 @@ class TestHoltWinters(object):
         cls.aust = aust
 
     def test_predict(self):
-        fit1 = ExponentialSmoothing(self.aust, season_length=4, trend='add', seasonal='mul').fit()
-        fit2 = ExponentialSmoothing(self.aust, season_length=4, trend='add', seasonal='mul').fit()
-#        fit3 = ExponentialSmoothing(self.aust, season_length=4, trend='add', seasonal='mul').fit(remove_bias=True, use_basinhopping=True)
+        fit1 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='add', seasonal='mul').fit()
+        fit2 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='add', seasonal='mul').fit()
+#        fit3 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='add', seasonal='mul').fit(remove_bias=True, use_basinhopping=True)
         assert_almost_equal(fit1.predict('2011-03-01 00:00:00', '2011-12-01 00:00:00'), 
                             [61.3083,37.3730,46.9652,51.5578], 3)
         assert_almost_equal(fit2.predict(end='2011-12-01 00:00:00'), 
@@ -82,11 +82,11 @@ class TestHoltWinters(object):
 #        assert_almost_equal(fit3.predict('2010-10-01 00:00:00', '2010-10-01 00:00:00'), [49.087], 3)
         
     def test_ndarray(self):
-        fit1 = ExponentialSmoothing(self.aust.values, season_length=4, trend='add', seasonal='mul').fit()
+        fit1 = ExponentialSmoothing(self.aust.values, seasonal_periods=4, trend='add', seasonal='mul').fit()
         assert_almost_equal(fit1.forecast(4), [61.3083,37.3730,46.9652,51.5578], 3)
         
     def test_forecast(self):
-        fit1 = ExponentialSmoothing(self.aust, season_length=4, trend='add', seasonal='add').fit()
+        fit1 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='add', seasonal='add').fit()
         assert_almost_equal(fit1.forecast(steps=4), [60.9542,36.8505,46.1628,50.1272], 3)
         
     def test_simple_exp_smoothing(self):
@@ -136,17 +136,17 @@ class TestHoltWinters(object):
         assert_almost_equal(fit5.SSE,6082.00, 2) #6100.11       
         
     def test_hw_seasonal(self):
-        fit1 = ExponentialSmoothing(self.aust, season_length=4, trend='add', 
+        fit1 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='add', 
                                     seasonal='add').fit(use_boxcox=True)
-        fit2 = ExponentialSmoothing(self.aust, season_length=4, trend='add', 
+        fit2 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='add', 
                                     seasonal='mul').fit(use_boxcox=True)
-        fit3 = ExponentialSmoothing(self.aust, season_length=4, 
+        fit3 = ExponentialSmoothing(self.aust, seasonal_periods=4, 
                                     seasonal='add').fit(use_boxcox=True)
-        fit4 = ExponentialSmoothing(self.aust, season_length=4, 
+        fit4 = ExponentialSmoothing(self.aust, seasonal_periods=4, 
                                     seasonal='mul').fit(use_boxcox=True)
-        fit5 = ExponentialSmoothing(self.aust, season_length=4, 
+        fit5 = ExponentialSmoothing(self.aust, seasonal_periods=4, 
                                     trend='mul', seasonal='add').fit(use_boxcox='log')
-        fit6 = ExponentialSmoothing(self.aust, season_length=4, 
+        fit6 = ExponentialSmoothing(self.aust, seasonal_periods=4, 
                                     trend='mul', seasonal='mul').fit(use_boxcox='log')
         assert_almost_equal(fit1.forecast(8), [61.34,37.24,46.84,51.01,64.47,39.78,49.64,53.90], 2)
         assert_almost_equal(fit2.forecast(8), [60.97,36.99,46.71,51.48,64.46,39.02,49.29,54.32], 2)
