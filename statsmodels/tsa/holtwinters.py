@@ -377,13 +377,13 @@ class ExponentialSmoothing(TimeSeriesModel):
                  seasonal_periods=None, dates=None, freq=None, missing='none', **kwargs):
         super(ExponentialSmoothing, self).__init__(
             endog, None, dates, freq, missing=missing)
+        if trend in ['additive', 'multiplicative']:
+            trend = {'additive': 'add', 'multiplicative': 'mul'}[trend]
         self.trend = trend
         self.damped = damped
         if seasonal in ['additive', 'multiplicative']:
-            seasonal = {'additive': 'add', 'multiplicative': 'mul'}
+            seasonal = {'additive': 'add', 'multiplicative': 'mul'}[seasonal]
         self.seasonal = seasonal
-        if trend in ['additive', 'multiplicative']:
-            trend = {'additive': 'add', 'multiplicative': 'mul'}
         self.trending = trend in ['mul', 'add']
         self.seasoning = seasonal in ['mul', 'add']
         if (self.trend == 'mul' or self.seasonal == 'mul') and (endog <= 0.0).any():

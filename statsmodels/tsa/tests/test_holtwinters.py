@@ -137,8 +137,8 @@ class TestHoltWinters(object):
         assert_almost_equal(fit5.SSE,6082.00, 2) #6100.11       
         
     def test_hw_seasonal(self):
-        fit1 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='add', 
-                                    seasonal='add').fit(use_boxcox=True)
+        fit1 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='additive', 
+                                    seasonal='additive').fit(use_boxcox=True)
         fit2 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='add', 
                                     seasonal='mul').fit(use_boxcox=True)
         fit3 = ExponentialSmoothing(self.aust, seasonal_periods=4, 
@@ -148,7 +148,7 @@ class TestHoltWinters(object):
         fit5 = ExponentialSmoothing(self.aust, seasonal_periods=4, 
                                     trend='mul', seasonal='add').fit(use_boxcox='log')
         fit6 = ExponentialSmoothing(self.aust, seasonal_periods=4, 
-                                    trend='mul', seasonal='mul').fit(use_boxcox='log')
+                                    trend='multiplicative', seasonal='multiplicative').fit(use_boxcox='log')
         assert_almost_equal(fit1.forecast(8), [61.34,37.24,46.84,51.01,64.47,39.78,49.64,53.90], 2)
         assert_almost_equal(fit2.forecast(8), [60.97,36.99,46.71,51.48,64.46,39.02,49.29,54.32], 2)
         assert_almost_equal(fit3.forecast(8), [59.91,35.71,44.64,47.62,59.91,35.71,44.64,47.62], 2)
