@@ -42,7 +42,7 @@ class TestHoltWinters(object):
         #aust_json = '{"1104537600000":41.727458,"1112313600000":24.04185,"1120176000000":32.328103,"1128124800000":37.328708,"1136073600000":46.213153,"1143849600000":29.346326,"1151712000000":36.48291,"1159660800000":42.977719,"1167609600000":48.901525,"1175385600000":31.180221,"1183248000000":37.717881,"1191196800000":40.420211,"1199145600000":51.206863,"1207008000000":31.887228,"1214870400000":40.978263,"1222819200000":43.772491,"1230768000000":55.558567,"1238544000000":33.850915,"1246406400000":42.076383,"1254355200000":45.642292,"1262304000000":59.76678,"1270080000000":35.191877,"1277942400000":44.319737,"1285891200000":47.913736}'
         #aust = pd.read_json(aust_json, typ='Series').sort_index()
         data = [41.727457999999999, 24.04185, 32.328102999999999, 37.328707999999999, 46.213152999999998, 29.346326000000001, 36.482909999999997, 42.977719, 48.901524999999999, 31.180221, 37.717880999999998, 40.420211000000002, 51.206862999999998, 31.887228, 40.978262999999998, 43.772491000000002, 55.558566999999996, 33.850915000000001, 42.076383, 45.642291999999998, 59.766779999999997, 35.191876999999998, 44.319737000000003, 47.913736]
-        index= ['2005-01-01 00:00:00', '2005-04-01 00:00:00', '2005-07-01 00:00:00', '2005-10-01 00:00:00', '2006-01-01 00:00:00', '2006-04-01 00:00:00', '2006-07-01 00:00:00', '2006-10-01 00:00:00', '2007-01-01 00:00:00', '2007-04-01 00:00:00', '2007-07-01 00:00:00', '2007-10-01 00:00:00', '2008-01-01 00:00:00', '2008-04-01 00:00:00', '2008-07-01 00:00:00', '2008-10-01 00:00:00', '2009-01-01 00:00:00', '2009-04-01 00:00:00', '2009-07-01 00:00:00', '2009-10-01 00:00:00', '2010-01-01 00:00:00', '2010-04-01 00:00:00', '2010-07-01 00:00:00', '2010-10-01 00:00:00']
+        index= ['2005-03-01 00:00:00', '2005-04-01 00:00:00', '2005-07-01 00:00:00', '2005-10-01 00:00:00', '2006-01-01 00:00:00', '2006-04-01 00:00:00', '2006-07-01 00:00:00', '2006-10-01 00:00:00', '2007-01-01 00:00:00', '2007-04-01 00:00:00', '2007-07-01 00:00:00', '2007-10-01 00:00:00', '2008-01-01 00:00:00', '2008-04-01 00:00:00', '2008-07-01 00:00:00', '2008-10-01 00:00:00', '2009-01-01 00:00:00', '2009-04-01 00:00:00', '2009-07-01 00:00:00', '2009-10-01 00:00:00', '2010-01-01 00:00:00', '2010-04-01 00:00:00', '2010-07-01 00:00:00', '2010-10-01 00:00:00']
         aust = pd.Series(data, index)
         aust.index = pd.DatetimeIndex(aust.index, freq=pd.infer_freq(aust.index))
         cls.aust = aust
@@ -54,7 +54,6 @@ class TestHoltWinters(object):
         assert_almost_equal(fit1.predict('2011-01-01 00:00:00', '2011-10-01 00:00:00'), [61.3083,37.3730,46.9652,51.5578], 3)
         assert_almost_equal(fit2.predict(end='2011-10-01 00:00:00'), [61.3083,37.3730,46.9652,51.5578], 3)
 #        assert_almost_equal(fit3.predict('2010-10-01 00:00:00', '2010-10-01 00:00:00'), [49.087], 3)
-
         
     def test_ndarray(self):
         fit1 = ExponentialSmoothing(self.aust.values, season_length=4, trend='add', seasonal='mul').fit()
@@ -68,42 +67,61 @@ class TestHoltWinters(object):
         fit1 = SimpleExpSmoothing(self.oildata_oil).fit(0.2,optimized=False)
         fit2 = SimpleExpSmoothing(self.oildata_oil).fit(0.6,optimized=False)
         fit3 = SimpleExpSmoothing(self.oildata_oil).fit()
-        assert_almost_equal(fit1.forecast(1), [484.802468], 4)
+        assert_almost_equal(fit1.forecast(1), [484.802468], 4)        
+        assert_almost_equal(fit1.level, [446.65652290,448.21987962,449.7084985, 
+                                         444.49324656,446.84886283,445.59670028,
+                                         441.54386424,450.26498098,461.4216172,
+                                         474.49569042,482.45033014,484.80246797], 4)
         assert_almost_equal(fit2.forecast(1), [501.837461], 4)
         assert_almost_equal(fit3.forecast(1), [496.493543], 4)
         assert_almost_equal(fit3.params['alpha'], 0.891998, 4)
+        assert_almost_equal(fit3.params['l0'], 447.478440, 4)        
     
     def test_holt(self):
         fit1 = Holt(self.air_ausair).fit(alpha=0.8, beta=0.2, optimized=False)
         fit2 = Holt(self.air_ausair, exponential=True).fit(alpha=0.8, beta=0.2, optimized=False)
         fit3 = Holt(self.air_ausair, damped=True).fit(alpha=0.8, beta=0.2)
         assert_almost_equal(fit1.forecast(5), [43.76,45.59,47.43,49.27,51.10], 2)
+        assert_almost_equal(fit1.slope, [3.617628  ,3.59006512,3.33438212,3.23657639,2.69263502,
+                                         2.46388914,2.2229097 ,1.95959226,1.47054601,1.3604894 ,
+                                         1.28045881,1.20355193,1.88267152,2.09564416,1.83655482], 4)
+        assert_almost_equal(fit1.fittedfcast, [21.8601    ,22.032368  ,25.48461872,27.54058587,
+                                               30.28813356,30.26106173,31.58122149,32.599234  ,
+                                               33.24223906,32.26755382,33.07776017,33.95806605,
+                                               34.77708354,40.05535303,43.21586036,43.75696849], 4)
         assert_almost_equal(fit2.forecast(5), [44.60,47.24,50.04,53.01,56.15], 2)
         assert_almost_equal(fit3.forecast(5), [42.85,43.81,44.66,45.41,46.06], 2)
         
     def test_holt_damp(self):
         fit4 = Holt(self.livestock2_livestock,damped=True).fit(phi=0.98)
         fit5 = Holt(self.livestock2_livestock,exponential=True,damped=True).fit()
+        #We accept the below values as we getting a better SSE than text book
         assert_almost_equal(fit4.params['alpha'],0.98, 2)
         assert_almost_equal(fit4.params['beta'],0.00, 2)
         assert_almost_equal(fit4.params['phi'],0.98, 2)
         assert_almost_equal(fit4.params['l0'],257.36, 2)
-        assert_almost_equal(fit4.params['b0'],6.64, 2)
-        assert_almost_equal(fit4.SSE,6036.56, 2)
+        assert_almost_equal(fit4.params['b0'],6.64, 2)        
+        assert_almost_equal(fit4.SSE,6036.56, 2) #6080.26
         assert_almost_equal(fit5.params['alpha'],0.97, 2)
         assert_almost_equal(fit5.params['beta'],0.00, 2)
         assert_almost_equal(fit5.params['phi'],0.98, 2)
         assert_almost_equal(fit5.params['l0'],258.95, 2)
         assert_almost_equal(fit5.params['b0'],1.02, 2)
-        assert_almost_equal(fit5.SSE,6082.00, 2)        
+        assert_almost_equal(fit5.SSE,6082.00, 2) #6100.11       
         
     def test_hw_seasonal(self):
-        fit1 = ExponentialSmoothing(self.aust, season_length=4, trend='add', seasonal='add').fit(use_boxcox=True)
-        fit2 = ExponentialSmoothing(self.aust, season_length=4, trend='add', seasonal='mul').fit(use_boxcox=True)
-        fit3 = ExponentialSmoothing(self.aust, season_length=4, seasonal='add').fit(use_boxcox=True)
-        fit4 = ExponentialSmoothing(self.aust, season_length=4, seasonal='mul').fit(use_boxcox=True)
-        fit5 = ExponentialSmoothing(self.aust, season_length=4, trend='mul', seasonal='add').fit(use_boxcox='log')
-        fit6 = ExponentialSmoothing(self.aust, season_length=4, trend='mul', seasonal='mul').fit(use_boxcox='log')
+        fit1 = ExponentialSmoothing(self.aust, season_length=4, trend='add', 
+                                    seasonal='add').fit(use_boxcox=True)
+        fit2 = ExponentialSmoothing(self.aust, season_length=4, trend='add', 
+                                    seasonal='mul').fit(use_boxcox=True)
+        fit3 = ExponentialSmoothing(self.aust, season_length=4, 
+                                    seasonal='add').fit(use_boxcox=True)
+        fit4 = ExponentialSmoothing(self.aust, season_length=4, 
+                                    seasonal='mul').fit(use_boxcox=True)
+        fit5 = ExponentialSmoothing(self.aust, season_length=4, 
+                                    trend='mul', seasonal='add').fit(use_boxcox='log')
+        fit6 = ExponentialSmoothing(self.aust, season_length=4, 
+                                    trend='mul', seasonal='mul').fit(use_boxcox='log')
         assert_almost_equal(fit1.forecast(8), [61.34,37.24,46.84,51.01,64.47,39.78,49.64,53.90], 2)
         assert_almost_equal(fit2.forecast(8), [60.97,36.99,46.71,51.48,64.46,39.02,49.29,54.32], 2)
         assert_almost_equal(fit3.forecast(8), [59.91,35.71,44.64,47.62,59.91,35.71,44.64,47.62], 2)
