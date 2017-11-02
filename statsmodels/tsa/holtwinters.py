@@ -360,7 +360,7 @@ class ExponentialSmoothing(TimeSeriesModel):
     This is a full implementation of the holt winters exponential smoothing as
     per [1]. This includes all the unstable methods as well as the stable methods.
     The implementation of the library covers the functionality of the R 
-    library as much as possible whilest still being pythonic.
+    library as much as possible whilst still being pythonic.
 
     References
     ----------
@@ -370,7 +370,7 @@ class ExponentialSmoothing(TimeSeriesModel):
     def __init__(self, endog, trend=None, damped=False, seasonal=None,
                  season_length=None, dates=None, freq=None, missing='none', **kwargs):
         super(ExponentialSmoothing, self).__init__(
-            endog, None, dates, freq, missing=missing)      
+            endog, None, dates, freq, missing=missing)            
         self.trend = trend
         self.damped = damped
         self.seasonal = seasonal
@@ -388,6 +388,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             self.season_length = season_length
         else:
             self.season_length = 0        
+        self.nobs = len(self.endog)
 
     def predict(self, params, start=None, end=None):
         """
@@ -446,7 +447,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             apply the log. If float then use lambda equal to float.
         remove_bias : bool, optional
             Should the bias be removed from the fcast and fitted values before being
-            returned?
+            returned? Does this by enforcing average residuals equal to zero.
         use_basinhopping : bool, optional
             Should the opptimser try harder using basinhopping to find optimal values?
 
@@ -460,7 +461,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         This is a full implementation of the holt winters exponential smoothing as
         per [1]. This includes all the unstable methods as well as the stable methods.
         The implementation of the library covers the functionality of the R 
-        library as much as possible whilest still being pythonic.
+        library as much as possible whilst still being pythonic.
 
         References
         ----------
@@ -474,8 +475,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         seasonal = self.seasonal
         m = self.season_length
         opt = None
-        phi = phi if damped else 1.0
-        n = len(data)
+        phi = phi if damped else 1.0        
         if use_boxcox == 'log':
             lamda = 0.0
             y = boxcox(data, lamda)
@@ -489,13 +489,13 @@ class ExponentialSmoothing(TimeSeriesModel):
             y = data.squeeze()
         if np.ndim(y) != 1:
             raise NotImplementedError('Only 1 dimensional data supported')
-        l = np.zeros((n,))
-        b = np.zeros((n,))
-        s = np.zeros((n + m - 1,))
+        l = np.zeros((self.nobs,))
+        b = np.zeros((self.nobs,))
+        s = np.zeros((self.nobs + m - 1,))
         p = np.zeros(6 + m)
         max_seen = np.finfo(np.double).max
         if seasoning:
-            l0 = y[np.arange(n) % m == 0].mean()
+            l0 = y[np.arange(self.nobs) % m == 0].mean()
             b0 = ((y[m:m + m] - y[:m]) / m).mean() if trending else None
             s0 = list(y[:m] / l0) if seasonal == 'mul' else list(y[:m] - l0)
         elif trending:
@@ -544,7 +544,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 [True, True, True, False, False, True] + [False] * m)
             bounds = np.array([(0.0, 1.0), (0.0, 1.0), (0.0, 1.0),
                                (0.0, None), (0.0, None), (0.0, 1.0)] + [(None, None), ] * m)
-            res = brute(func, bounds[txi], (txi, p, y, l, b, s, m, n, max_seen),
+            res = brute(func, bounds[txi], (txi, p, y, l, b, s, m, self.nobs, max_seen),
                         Ns=20, full_output=True, finish=None)
             (p[txi], max_seen, grid, Jout) = res
             [alpha, beta, gamma, l0, b0, phi] = p[:6];  s0 = p[6:]
@@ -554,12 +554,12 @@ class ExponentialSmoothing(TimeSeriesModel):
                 # solution to parameters, maybe hop around to try escape the local
                 # minimum we may be in.
                 res = basinhopping(func, p[xi], minimizer_kwargs={'args': (
-                    xi, p, y, l, b, s, m, n, max_seen), 'bounds': bounds[xi]}, stepsize=0.01)
+                    xi, p, y, l, b, s, m, self.nobs, max_seen), 'bounds': bounds[xi]}, stepsize=0.01)
             else:
                 # Take a deeper look in the local minimum we are in to find the best
                 # solution to parameters
                 res = minimize(func, p[xi], args=(
-                    xi, p, y, l, b, s, m, n, max_seen), bounds=bounds[xi])
+                    xi, p, y, l, b, s, m, self.nobs, max_seen), bounds=bounds[xi])
             p[xi] = res.x
             [alpha, beta, gamma, l0, b0, phi] = p[:6]; s0 = p[6:]
             opt = res
@@ -586,8 +586,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         trend = self.trend
         seasonal = self.seasonal
         m = self.season_length
-        phi = phi if damped else 1.0
-        n = len(data)
+        phi = phi if damped else 1.0        
         if use_boxcox == 'log':
             lamda = 0.0
             y = boxcox(data, 0.0)
@@ -598,8 +597,8 @@ class ExponentialSmoothing(TimeSeriesModel):
             y = data.squeeze()
             if np.ndim(y) != 1:
                 raise NotImplementedError('Only 1 dimensional data supported')
-        y_alpha = np.zeros((n,))
-        y_gamma = np.zeros((n,))
+        y_alpha = np.zeros((self.nobs,))
+        y_gamma = np.zeros((self.nobs,))
         alphac = 1 - alpha
         y_alpha[:] = alpha * y
         if trending:
@@ -607,9 +606,9 @@ class ExponentialSmoothing(TimeSeriesModel):
         if seasoning:
             gammac = 1 - gamma
             y_gamma[:] = gamma * y
-        l = np.zeros((n + h + 1,))
-        b = np.zeros((n + h + 1,))
-        s = np.zeros((n + h + m + 1,))
+        l = np.zeros((self.nobs + h + 1,))
+        b = np.zeros((self.nobs + h + 1,))
+        s = np.zeros((self.nobs + h + m + 1,))
         l[0] = l0
         b[0] = b0
         s[:m] = s0
@@ -628,7 +627,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                   None: lambda b,
                   phi: 0}[trend]
         if seasonal == 'mul':
-            for i in range(1, n + 1):
+            for i in range(1, self.nobs + 1):
                 l[i] = y_alpha[i - 1] / s[i - 1] + \
                     (alphac * trended(l[i - 1], dampen(b[i - 1], phi)))
                 if trending:
@@ -646,7 +645,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             trend = trended(l, b)
             fitted = trend * s[:-m]
         elif seasonal == 'add':
-            for i in range(1, n + 1):
+            for i in range(1, self.nobs + 1):
                 l[i] = y_alpha[i - 1] - (alpha * s[i - 1]) + \
                     (alphac * trended(l[i - 1], dampen(b[i - 1], phi)))
                 if trending:
@@ -664,7 +663,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             trend = trended(l, b)
             fitted = trend + s[:-m]
         else:
-            for i in range(1, n + 1):
+            for i in range(1, self.nobs + 1):
                 l[i] = y_alpha[i - 1] + \
                     (alphac * trended(l[i - 1], dampen(b[i - 1], phi)))
                 if trending:
@@ -691,9 +690,9 @@ class ExponentialSmoothing(TimeSeriesModel):
         SSE = sqeuclidean(fitted[:-h-1], data)
         # (s0 + gamma) + (b0 + beta) + (l0 + alpha) + phi
         k = m * seasoning + 2 * trending + 2 + 1 * damped
-        AIC = n * np.log(SSE / n) + (k) * 2
-        AICc = AIC + (2 * (k + 2) * (k + 3)) / (n - k - 3)
-        BIC = n * np.log(SSE / n) + (k) * np.log(n)
+        AIC = self.nobs * np.log(SSE / self.nobs) + (k) * 2
+        AICc = AIC + (2 * (k + 2) * (k + 3)) / (self.nobs - k - 3)
+        BIC = self.nobs * np.log(SSE / self.nobs) + (k) * np.log(self.nobs)
         resid = data - fitted[:-h-1]
         if remove_bias:
             fitted += resid.mean()
