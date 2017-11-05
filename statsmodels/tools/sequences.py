@@ -3,7 +3,7 @@ from __future__ import division
 import numpy as np
 
 
-def discrepancy(sample, feature_range=(0, 1)):
+def discrepancy(sample, bounds=(0, 1)):
     """Discrepancy.
 
     Compute the centered discrepancy on a given sample.
@@ -14,7 +14,7 @@ def discrepancy(sample, feature_range=(0, 1)):
     ----------
     sample : array_like (n_samples, k_vars)
         The sample to compute the discrepancy from.
-    feature_range : tuple or array_like ([min, k_vars], [max, k_vars])
+    bounds : tuple or array_like ([min, k_vars], [max, k_vars])
         Desired range of transformed data.
 
     Returns
@@ -32,9 +32,9 @@ def discrepancy(sample, feature_range=(0, 1)):
     sample = np.asarray(sample)
     n_sample, dim = sample.shape
 
-    # Sample scaling from feature_range to unit hypercube
-    min_ = feature_range.min(axis=0)
-    max_ = feature_range.max(axis=0)
+    # Sample scaling from bounds to unit hypercube
+    min_ = bounds.min(axis=0)
+    max_ = bounds.max(axis=0)
     sample = (sample - min_) / (max_ - min_)
 
     abs_ = abs(sample - 0.5)
@@ -153,7 +153,7 @@ def van_der_corput(n_sample, base=2, start_index=0):
     return sequence
 
 
-def halton(dim, n_sample, feature_range=None, start_index=0):
+def halton(dim, n_sample, bounds=None, start_index=0):
     """Halton sequence.
 
     Pseudo-random number generator that generalize the Van der Corput sequence
@@ -167,8 +167,10 @@ def halton(dim, n_sample, feature_range=None, start_index=0):
         Dimension of the parameter space.
     n_sample : int
         Number of samples to generate in the parametr space.
-    feature_range : tuple or array_like ([min, k_vars], [max, k_vars])
-        Desired range of transformed data.
+    bounds : tuple or array_like ([min, k_vars], [max, k_vars])
+        Desired range of transformed data. The transformation apply the bounds
+        on the sample and not the theoretical space, unit cube. Thus min and
+        max values of the sample will coincide with the bounds.
     start_index : int
         Index to start the sequence from.
 
@@ -205,9 +207,9 @@ def halton(dim, n_sample, feature_range=None, start_index=0):
     sample = np.array(sample).T[1:]
 
     # Sample scaling from unit hypercube to feature range
-    if feature_range is not None:
-        min_ = feature_range.min(axis=0)
-        max_ = feature_range.max(axis=0)
+    if bounds is not None:
+        min_ = bounds.min(axis=0)
+        max_ = bounds.max(axis=0)
         sample = sample * (max_ - min_) + min_
 
     return sample
