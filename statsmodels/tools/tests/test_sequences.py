@@ -1,4 +1,3 @@
-import pytest
 import numpy as np
 import numpy.testing as npt
 from statsmodels.tools import sequences
@@ -11,8 +10,8 @@ def test_discrepancy():
     corners = np.array([[0.5, 0.5], [6.5, 6.5]])
 
     # From Fang et al. Design and modeling for computer experiments, 2006
-    assert sequences.discrepancy(space_1, corners) == pytest.approx(0.0081, abs=0.0001)
-    assert sequences.discrepancy(space_2, corners) == pytest.approx(0.0105, abs=0.0001)
+    npt.assert_allclose(sequences.discrepancy(space_1, corners), 0.0081, atol=1e-4)
+    npt.assert_allclose(sequences.discrepancy(space_2, corners), 0.0105, atol=1e-4)
 
 
 def test_van_der_corput():
@@ -20,11 +19,15 @@ def test_van_der_corput():
     out = [0., 0.5, 0.25, 0.75, 0.125, 0.625, 0.375, 0.875, 0.0625, 0.5625]
     npt.assert_almost_equal(sample, out)
 
+    sample = sequences.van_der_corput(5, start_index=3)
+    out = [0.75, 0.125, 0.625, 0.375, 0.875]
+    npt.assert_almost_equal(sample, out)
+
 
 def test_primes():
     primes = sequences.primes_from_2_to(50)
     out = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
-    npt.assert_almost_equal(primes, out)
+    npt.assert_allclose(primes, out)
 
 
 def test_halton():
@@ -32,4 +35,9 @@ def test_halton():
     sample = sequences.halton(dim=2, n_sample=5, feature_range=corners)
 
     out = np.array([[5., 3.], [2.5, 4.], [7.5, 2.3], [1.25, 3.3], [6.25, 4.3]])
+    npt.assert_almost_equal(sample, out, decimal=1)
+
+    sample = sequences.halton(dim=2, n_sample=3, feature_range=corners,
+                              start_index=2)
+    out = np.array([[7.5, 2.3], [1.25, 3.3], [6.25, 4.3]])
     npt.assert_almost_equal(sample, out, decimal=1)

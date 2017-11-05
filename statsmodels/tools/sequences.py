@@ -1,4 +1,5 @@
 """Low discrepancy sequence tools."""
+from __future__ import division
 import numpy as np
 
 
@@ -11,9 +12,9 @@ def discrepancy(sample, feature_range=(0, 1)):
 
     Parameters
     ----------
-    sample : array_like (n_samples, n_features)
+    sample : array_like (n_samples, k_vars)
         The sample to compute the discrepancy from.
-    feature_range : tuple or array_like ([min, n_features], [max, n_features])
+    feature_range : tuple or array_like ([min, k_vars], [max, k_vars])
         Desired range of transformed data.
 
     Returns
@@ -119,8 +120,10 @@ def n_primes(n):
     return primes
 
 
-def van_der_corput(n_sample, base=2):
+def van_der_corput(n_sample, base=2, start_index=0):
     """Van der Corput sequence.
+
+    Pseudo-random number generator based on a b-adic expansion.
 
     Parameters
     ----------
@@ -128,6 +131,8 @@ def van_der_corput(n_sample, base=2):
         Number of element of the sequence.
     base : int
         Base of the sequence.
+    start_index : int
+        Index to start the sequence from.
 
     Returns
     -------
@@ -136,7 +141,7 @@ def van_der_corput(n_sample, base=2):
 
     """
     sequence = []
-    for i in range(n_sample):
+    for i in range(start_index, start_index + n_sample):
         n_th_number, denom = 0., 1.
         quotient = i
         while quotient > 0:
@@ -148,8 +153,13 @@ def van_der_corput(n_sample, base=2):
     return sequence
 
 
-def halton(dim, n_sample, feature_range=(0, 1)):
+def halton(dim, n_sample, feature_range=None, start_index=0):
     """Halton sequence.
+
+    Pseudo-random number generator that generalize the Van der Corput sequence
+    for multiple dimensions. Halton sequence use base-two Van der Corput
+    sequence for the first dimension, base-three for its second and base-n for
+    its n-dimension.
 
     Parameters
     ----------
@@ -157,12 +167,14 @@ def halton(dim, n_sample, feature_range=(0, 1)):
         Dimension of the parameter space.
     n_sample : int
         Number of samples to generate in the parametr space.
-    feature_range : tuple or array_like ([min, n_features], [max, n_features])
+    feature_range : tuple or array_like ([min, k_vars], [max, k_vars])
         Desired range of transformed data.
+    start_index : int
+        Index to start the sequence from.
 
     Returns
     -------
-    sequence : array_like (n_samples, n_features)
+    sequence : array_like (n_samples, k_vars)
         Sequence of Halton.
 
     References
@@ -170,16 +182,32 @@ def halton(dim, n_sample, feature_range=(0, 1)):
     [1] Halton, "On the efficiency of certain quasi-random sequences of points
       in evaluating multi-dimensional integrals", Numerische Mathematik, 1960.
 
+    Examples
+    --------
+    Generate samples from a low discrepancy sequence of Halton.
+
+    >>> from statsmodels.tools import sequences
+    >>> sample = sequences.halton(dim=2, n_sample=5)
+
+    Compute the quality of the sample using the discrepancy criterion.
+
+    >>> uniformity = sequences.discrepancy(sample)
+
+    If some wants to continue an existing design, extra points can be obtained.
+
+    >>> sample_continued = sequences.halton(dim=2, n_sample=5, start_index=5)
+
     """
     base = n_primes(dim)
 
     # Generate a sample using a Van der Corput sequence per dimension.
-    sample = [van_der_corput(n_sample + 1, dim) for dim in base]
-    sample = np.stack(sample, axis=-1)[1:]
+    sample = [van_der_corput(n_sample + 1, dim, start_index) for dim in base]
+    sample = np.array(sample).T[1:]
 
     # Sample scaling from unit hypercube to feature range
-    min_ = feature_range.min(axis=0)
-    max_ = feature_range.max(axis=0)
-    sample = sample * (max_ - min_) + min_
+    if feature_range is not None:
+        min_ = feature_range.min(axis=0)
+        max_ = feature_range.max(axis=0)
+        sample = sample * (max_ - min_) + min_
 
     return sample
