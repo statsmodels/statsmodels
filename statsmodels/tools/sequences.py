@@ -3,7 +3,7 @@ from __future__ import division
 import numpy as np
 
 
-def discrepancy(sample, bounds=(0, 1)):
+def discrepancy(sample, bounds=None):
     """Discrepancy.
 
     Compute the centered discrepancy on a given sample.
@@ -15,7 +15,9 @@ def discrepancy(sample, bounds=(0, 1)):
     sample : array_like (n_samples, k_vars)
         The sample to compute the discrepancy from.
     bounds : tuple or array_like ([min, k_vars], [max, k_vars])
-        Desired range of transformed data.
+        Desired range of transformed data. The transformation apply the bounds
+        on the sample and not the theoretical space, unit cube. Thus min and
+        max values of the sample will coincide with the bounds.
 
     Returns
     -------
@@ -33,9 +35,10 @@ def discrepancy(sample, bounds=(0, 1)):
     n_sample, dim = sample.shape
 
     # Sample scaling from bounds to unit hypercube
-    min_ = bounds.min(axis=0)
-    max_ = bounds.max(axis=0)
-    sample = (sample - min_) / (max_ - min_)
+    if bounds is not None:
+        min_ = bounds.min(axis=0)
+        max_ = bounds.max(axis=0)
+        sample = (sample - min_) / (max_ - min_)
 
     abs_ = abs(sample - 0.5)
     disc1 = np.sum(np.prod(1 + 0.5 * abs_ - 0.5 * abs_ ** 2, axis=1))
