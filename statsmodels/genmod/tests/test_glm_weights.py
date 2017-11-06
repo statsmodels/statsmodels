@@ -3,27 +3,27 @@ Test for weights in GLM, Poisson and OLS/WLS, continuous test_glm.py
 
 
 Below is a table outlining the test coverage.
-================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ====
-Test                              Compared To            params normalized_cov_params bse loglike deviance resid_response resid_pearson resid_deviance resid_working resid_anscombe chi2
-================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ====
-TestGlmPoissonPlain               stata                  X                            X   X       X        X              X             X              X             X              X
-TestGlmPoissonFwNr                stata                  X                            X   X       X        X              X             X              X             X              X
-TestGlmPoissonAwNr                stata                  X                            X   X       X        X              X             X              X             X              X
+================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ==== =========
+Test                              Compared To            params normalized_cov_params bse loglike deviance resid_response resid_pearson resid_deviance resid_working resid_anscombe chi2 optimizer
+================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ==== =========
+TestGlmPoissonPlain               stata                  X                            X   X       X        X              X             X              X             X              X    X
+TestGlmPoissonFwNr                stata                  X                            X   X       X        X              X             X              X             X              X    X
+TestGlmPoissonAwNr                stata                  X                            X   X       X        X              X             X              X             X              X    X
 TestGlmPoissonFwHC                stata                  X                            X   X       X                                                                                 X
 TestGlmPoissonAwHC                stata                  X                            X   X       X                                                                                 X
 TestGlmPoissonFwClu               stata                  X                            X   X       X                                                                                 X
-TestGlmTweedieAwNr                R                      X                            X           X        X              X             X              X
-TestGlmGammaAwNr                  R                      X                            X   special X        X              X             X              X
-TestGlmGaussianAwNr               R                      X                            X   special X        X              X             X              X
-TestRepeatedvsAggregated          statsmodels.GLM        X      X
-TestRepeatedvsAverage             statsmodels.GLM        X      X
-TestTweedieRepeatedvsAggregated   statsmodels.GLM        X      X
-TestTweedieRepeatedvsAverage      statsmodels.GLM        X      X
+TestGlmTweedieAwNr                R                      X                            X           X        X              X             X              X                                 X
+TestGlmGammaAwNr                  R                      X                            X   special X        X              X             X              X                                 X
+TestGlmGaussianAwNr               R                      X                            X   special X        X              X             X              X                                 X
+TestRepeatedvsAggregated          statsmodels.GLM        X      X                                                                                                                        X
+TestRepeatedvsAverage             statsmodels.GLM        X      X                                                                                                                        X
+TestTweedieRepeatedvsAggregated   statsmodels.GLM        X      X                                                                                                                        X
+TestTweedieRepeatedvsAverage      statsmodels.GLM        X      X                                                                                                                        X
 TestBinomial0RepeatedvsAverage    statsmodels.GLM        X      X
-TestBinomial0RepeatedvsDuplicated statsmodels.GLM        X      X
-TestBinomialVsVarWeights          statsmodels.GLM        X      X                     X
-TestGlmGaussianWLS                statsmodels.WLS        X      X                     X
-================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ====
+TestBinomial0RepeatedvsDuplicated statsmodels.GLM        X      X                                                                                                                        X
+TestBinomialVsVarWeights          statsmodels.GLM        X      X                     X                                                                                                  X
+TestGlmGaussianWLS                statsmodels.WLS        X      X                     X                                                                                                  X
+================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ==== =========
 """
 from __future__ import division
 from statsmodels.compat.testing import SkipTest
@@ -106,14 +106,19 @@ class CheckWeight(object):
             return None
         assert_allclose(res1.resid_anscombe, resid_all['resid_anscombe'], atol= 1e-6, rtol=2e-6)
 
-    @pytest.mark.xfail
-    def test_compare_bfgs(self):
+    def test_compare_optimizers(self):
         res1 = self.res1
         if isinstance(res1.model.family, sm.families.Tweedie):
-            # Can't do this on Tweedie as loglikelihood is too complex
+            method = 'newton'
+            optim_hessian = 'eim'
+        else:
+            method = 'bfgs'
+            optim_hessian = 'oim'
+        if isinstance(self, (TestGlmPoissonFwHC, TestGlmPoissonAwHC,
+                             TestGlmPoissonFwClu,
+                             TestBinomial0RepeatedvsAverage)):
             return None
-        
-        res2 = self.res1.model.fit(method='bfgs', gtol=1e-50)
+        res2 = self.res1.model.fit(method=method, optim_hessian=optim_hessian)
         assert_allclose(res1.params, res2.params, atol=1e-3, rtol=2e-3)
         H = res2.model.hessian(res2.params, observed=False)
         res2_bse = np.sqrt(-np.diag(np.linalg.inv(H)))
