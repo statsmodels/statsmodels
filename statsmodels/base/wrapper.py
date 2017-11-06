@@ -89,10 +89,16 @@ def make_wrapper(func, how):
     def wrapper(self, *args, **kwargs):
         results = object.__getattribute__(self, '_results')
         data = results.model.data
+        
+        if hasattr(func, '_wrap_func'):
+            # Allow custom overrides
+            how = func._wrap_func
+
+        raw = func(results, *args, **kwargs)
         if how and isinstance(how, tuple):
-            obj = data.wrap_output(func(results, *args, **kwargs), how[0], how[1:])
+            obj = data.wrap_output(raw, how[0], how[1:])
         elif how:
-            obj = data.wrap_output(func(results, *args, **kwargs), how)
+            obj = data.wrap_output(raw, how)
         return obj
 
     argspec = getargspec(func)

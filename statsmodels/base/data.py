@@ -2,7 +2,8 @@
 Base tools for handling various kinds of data structures, attaching metadata to
 results, and doing data cleaning
 """
-from statsmodels.compat.python import reduce, iteritems, lmap, zip, range
+from statsmodels.compat.python import (reduce, iteritems, lmap, zip,
+                                       range, callable)
 from statsmodels.compat.numpy import np_matrix_rank
 import numpy as np
 from pandas import DataFrame, Series, isnull
@@ -424,6 +425,9 @@ class ModelData(object):
             return self.attach_generic_columns_2d(obj, names)
         elif how == 'ynames':
             return self.attach_ynames(obj)
+        elif callable(how):
+            # allow custom overrides
+            return how(self, obj)
         else:
             return obj
 
