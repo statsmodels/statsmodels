@@ -50,6 +50,33 @@ def bland_altman_plot(m1, m2,
     Returns
     -------
     ax: matplotlib Axis object
+
+    References
+    ----------
+    Bland JM, Altman DG (1986). "Statistical methods for assessing agreement
+    between two methods of clinical measurement"
+
+    Example
+    --------
+
+    Load relevant libraries.
+
+    >>> import statsmodels.api as sm
+    >>> import numpy as np
+    >>> import matplotlib.pyplot as plt
+
+    Making a Bland-Altman plot.
+
+    >>> # Seed the random number generator.
+    >>> # This ensures that the results below are reproducible.
+    >>> np.random.seed(9999)
+    >>> m1 = np.random.random(20)
+    >>> m2 = np.random.random(20)
+    >>> f, ax = plt.subplots(1, figsize = (8,5))
+    >>> sm.graphics.bland_altman_plot(m1, m2, ax = ax)
+    >>> plt.show()
+
+    .. plot:: plots/graphics-bland_altman.py
     """
 
     import numpy as np
