@@ -19,7 +19,7 @@ TestRepeatedvsAggregated          statsmodels.GLM        X      X               
 TestRepeatedvsAverage             statsmodels.GLM        X      X                                                                                                                        bfgs
 TestTweedieRepeatedvsAggregated   statsmodels.GLM        X      X                                                                                                                        bfgs
 TestTweedieRepeatedvsAverage      statsmodels.GLM        X      X                                                                                                                        bfgs
-TestBinomial0RepeatedvsAverage    statsmodels.GLM        X      X                                                                                                                        newton
+TestBinomial0RepeatedvsAverage    statsmodels.GLM        X      X
 TestBinomial0RepeatedvsDuplicated statsmodels.GLM        X      X                                                                                                                        bfgs
 TestBinomialVsVarWeights          statsmodels.GLM        X      X                     X                                                                                                  bfgs
 TestGlmGaussianWLS                statsmodels.WLS        X      X                     X                                                                                                  bfgs
@@ -108,15 +108,15 @@ class CheckWeight(object):
 
     def test_compare_optimizers(self):
         res1 = self.res1
-        if (isinstance(res1.model.family, sm.families.Tweedie) or
-                isinstance(self, TestBinomial0RepeatedvsAverage)):
+        if isinstance(res1.model.family, sm.families.Tweedie):
             method = 'newton'
             optim_hessian = 'eim'
         else:
             method = 'bfgs'
             optim_hessian = 'oim'
         if isinstance(self, (TestGlmPoissonFwHC, TestGlmPoissonAwHC,
-                             TestGlmPoissonFwClu)):
+                             TestGlmPoissonFwClu,
+                             TestBinomial0RepeatedvsAverage)):
             return None
         res2 = self.res1.model.fit(method=method, optim_hessian=optim_hessian)
         assert_allclose(res1.params, res2.params, atol=1e-3, rtol=2e-3)
