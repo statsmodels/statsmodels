@@ -81,3 +81,4 @@ Other Plots
 
    factorplots.interaction_plot
    mosaicplot.mosaic
+   bland_altman_plot
