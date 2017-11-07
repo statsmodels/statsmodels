@@ -49,6 +49,7 @@ agecat	smokes	deaths	pyears
 5	0	31	1462'''
 
 data = pd.read_csv(StringIO(ss), delimiter='\t')
+data = data.astype(int)
 data['logpyears'] = np.log(data['pyears'])
 
 
