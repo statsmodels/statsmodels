@@ -9,3 +9,5 @@ from .regressionplots import (abline_plot, plot_regress_exog, plot_fit,
 from .factorplots import interaction_plot
 from .plottools import rainbow
 from . import tsaplots as tsa
+
+from .bland_altman import bland_altman_plot
