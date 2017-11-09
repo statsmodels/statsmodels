@@ -23,9 +23,17 @@ __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
 from statsmodels.compat.python import lmap, lzip, range
 from statsmodels.compat.scipy import loggamma
 import numpy as np
+import pandas as pd
+
 from scipy.special import gammaln, digamma, polygamma
 from scipy import stats, special, optimize  # opt just for nbin
 from scipy.stats import nbinom
+try:
+    from pandas.util._decorators import deprecate_kwarg
+except ImportError:
+    # ancient pandas
+    from pandas.util.decorators import deprecate_kwarg
+
 import statsmodels.tools.tools as tools
 from statsmodels.tools import data as data_tools
 from statsmodels.tools.decorators import (resettable_cache,
@@ -518,6 +526,7 @@ class BinaryModel(DiscreteModel):
                     self, params)
         return margeff
 
+
 class MultinomialModel(BinaryModel):
 
     def _handle_data(self, endog, exog, missing, hasconst, **kwargs):
@@ -559,8 +568,9 @@ class MultinomialModel(BinaryModel):
         self.endog = self.endog.argmax(1)  # turn it into an array of col idx
         self.J = self.wendog.shape[1]
         self.K = self.exog.shape[1]
+        self.nobs = self.exog.shape[0]
         self.df_model *= (self.J-1)  # for each J - 1 equation.
-        self.df_resid = self.exog.shape[0] - self.df_model - (self.J-1)
+        self.df_resid = self.nobs - (self.df_model + (self.J-1))
 
     def predict(self, params, exog=None, linear=False):
         """
@@ -586,7 +596,7 @@ class MultinomialModel(BinaryModel):
         Column 0 is the base case, the rest conform to the rows of params
         shifted up one for the base case.
         """
-        if exog is None: # do here to accomodate user-given exog
+        if exog is None:  # do here to accomodate user-given exog
             exog = self.exog
         if exog.ndim == 1:
             exog = exog[None]
@@ -601,7 +611,7 @@ class MultinomialModel(BinaryModel):
             start_params = np.zeros((self.K * (self.J-1)))
         else:
             start_params = np.asarray(start_params)
-        callback = lambda x : None # placeholder until check_perfect_pred
+        callback = lambda x : None  # placeholder until check_perfect_pred
         # skip calling super to handle results from LikelihoodModel
         mnfit = base.LikelihoodModel.fit(self, start_params = start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
@@ -882,7 +892,7 @@ class Poisson(CountModel):
     __doc__ = """
     Poisson model for count data
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -1621,7 +1631,7 @@ class Logit(BinaryModel):
     __doc__ = """
     Binary choice logit model
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -1823,7 +1833,7 @@ class Probit(BinaryModel):
     __doc__ = """
     Binary choice Probit model
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -2038,6 +2048,7 @@ class Probit(BinaryModel):
         return BinaryResultsWrapper(discretefit)
     fit.__doc__ = DiscreteModel.fit.__doc__
 
+
 class MNLogit(MultinomialModel):
     __doc__ = """
     Multinomial logit model
@@ -2107,7 +2118,7 @@ class MNLogit(MultinomialModel):
         .. math:: \\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}
         """
         eXB = np.column_stack((np.ones(len(X)), np.exp(X)))
-        return eXB/eXB.sum(1)[:,None]
+        return eXB/eXB.sum(1)[:, None]
 
     def loglike(self, params):
         """
@@ -2133,7 +2144,8 @@ class MNLogit(MultinomialModel):
         """
         params = params.reshape(self.K, -1, order='F')
         d = self.wendog
-        logprob = np.log(self.cdf(np.dot(self.exog,params)))
+        Xb = np.dot(self.exog, params)
+        logprob = np.log(self.cdf(Xb))
         return np.sum(d * logprob)
 
     def loglikeobs(self, params):
@@ -2162,7 +2174,8 @@ class MNLogit(MultinomialModel):
         """
         params = params.reshape(self.K, -1, order='F')
         d = self.wendog
-        logprob = np.log(self.cdf(np.dot(self.exog,params)))
+        Xb = np.dot(self.exog, params)
+        logprob = np.log(self.cdf(Xb))
         return d * logprob
 
     def score(self, params):
@@ -2191,9 +2204,9 @@ class MNLogit(MultinomialModel):
         as a flattened array to work with the solvers.
         """
         params = params.reshape(self.K, -1, order='F')
-        firstterm = self.wendog[:,1:] - self.cdf(np.dot(self.exog,
-                                                  params))[:,1:]
-        #NOTE: might need to switch terms if params is reshaped
+        Xb = np.dot(self.exog, params)
+        firstterm = self.wendog[:,1:] - self.cdf(Xb)[:, 1:]
+        # NOTE: might need to switch terms if params is reshaped
         return np.dot(firstterm.T, self.exog).flatten()
 
     def loglike_and_score(self, params):
@@ -2205,7 +2218,8 @@ class MNLogit(MultinomialModel):
 
         """
         params = params.reshape(self.K, -1, order='F')
-        cdf_dot_exog_params = self.cdf(np.dot(self.exog, params))
+        Xb = np.dot(self.exog, params)
+        cdf_dot_exog_params = self.cdf(Xb)
         loglike_value = np.sum(self.wendog * np.log(cdf_dot_exog_params))
         firstterm = self.wendog[:, 1:] - cdf_dot_exog_params[:, 1:]
         score_array = np.dot(firstterm.T, self.exog).flatten()
@@ -2237,10 +2251,10 @@ class MNLogit(MultinomialModel):
         the flatteded array of derivatives in columns.
         """
         params = params.reshape(self.K, -1, order='F')
-        firstterm = self.wendog[:,1:] - self.cdf(np.dot(self.exog,
-                                                  params))[:,1:]
-        #NOTE: might need to switch terms if params is reshaped
-        return (firstterm[:,:,None] * self.exog[:,None,:]).reshape(self.exog.shape[0], -1)
+        Xb = np.dot(self.exog, params)
+        firstterm = self.wendog[:, 1:] - self.cdf(Xb)[:, 1:]
+        # NOTE: might need to switch terms if params is reshaped
+        return (firstterm[:, :, None] * self.exog[:, None, :]).reshape(self.exog.shape[0], -1)
 
     def hessian(self, params):
         """
@@ -2273,17 +2287,20 @@ class MNLogit(MultinomialModel):
         """
         params = params.reshape(self.K, -1, order='F')
         X = self.exog
-        pr = self.cdf(np.dot(X,params))
+        pr = self.cdf(np.dot(X, params))
         partials = []
         J = self.J
         K = self.K
         for i in range(J-1):
+            pri = pr[:, i+1]
             for j in range(J-1): # this loop assumes we drop the first col.
+                prj = pr[:, j+1]
                 if i == j:
-                    partials.append(\
-                        -np.dot(((pr[:,i+1]*(1-pr[:,j+1]))[:,None]*X).T,X))
+                    part = -np.dot(((pr[:, i+1]*(1-pr[:, j+1]))[:, None]*X).T, X)
                 else:
-                    partials.append(-np.dot(((pr[:,i+1]*-pr[:,j+1])[:,None]*X).T,X))
+                    part = -np.dot(((pr[:, i+1]*-pr[:, j+1])[:, None]*X).T, X)
+                partials.append(part)
+
         H = np.array(partials)
         # the developer's notes on multinomial should clear this math up
         H = np.transpose(H.reshape(J-1, J-1, K, K), (0, 2, 1, 3)).reshape((J-1)*K, (J-1)*K)
@@ -2353,7 +2370,7 @@ class NegativeBinomial(CountModel):
     __doc__ = """
     Negative Binomial Model for count data
 
-%(params)s
+    %(params)s
     %(extra_params)s
 
     Attributes
@@ -3893,45 +3910,88 @@ class L1BinaryResults(BinaryResults):
         self.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
 
 
-class MultinomialResults(DiscreteResults):
-    __doc__ = _discrete_results_docs % {"one_line_description" :
-            "A results class for multinomial data", "extra_attr" : ""}
-    def _maybe_convert_ynames_int(self, ynames):
-        # see if they're integers
-        try:
-            for i in ynames:
-                if ynames[i] % 1 == 0:
-                    ynames[i] = str(int(ynames[i]))
-        except TypeError:
-            pass
-        return ynames
+def _maybe_convert_ynames_int(ynames):
+    # see if they're integers
+    try:
+        for i in ynames:
+            if ynames[i] % 1 == 0:
+                ynames[i] = str(int(ynames[i]))
+    except TypeError:
+        pass
+    return ynames
 
-    def _get_endog_name(self, yname, yname_list, all=False):
+
+def _wrap_conf_int(model_data, conf_int):
+    # conf_int should have shape == params.shape[::-1] + (2,)
+    assert conf_int.shape[-1] == 2
+    #
+    lower = conf_int[:, :, 0]
+    upper = conf_int[:, :, 1]
+    #
+    try:
+        # kludge; implement in data.py
+        index = model_data.orig_endog.cat.categories[1:]
+    except AttributeError:
+        try:
+            # pd.Series
+            index = model_data.orig_endog.unique()[1:]
+        except AttributeError:
+            index = np.unique(model_data.orig_endog)[1:]
+    #
+    pre_frames = [lower, upper]
+    #
+    frames = [pd.DataFrame(x, index=index, columns=model_data.xnames)
+              for x in pre_frames]
+    for frame in frames:
+        frame.index.name = 'equations'
+        frame.columns.name = 'exog_names'
+    #
+    cidata = {'lower': frames[0].stack(dropna=False),
+              'upper': frames[1].stack(dropna=False)}
+    frame = pd.DataFrame(cidata,
+                         columns=['lower', 'upper'])
+    return frame
+
+
+class MultinomialResults(DiscreteResults):
+    __doc__ = _discrete_results_docs % {
+            "one_line_description" :"A results class for multinomial data",
+            "extra_attr" : ""}
+
+    def __init__(self, model, mlefit):
+        super(MultinomialResults, self).__init__(model, mlefit)
+        self.J = model.J
+        self.K = model.K
+        self.nobs = model.nobs
+
+    @deprecate_kwarg('all', 'use_all')
+    def _get_endog_name(self, yname, yname_list, use_all=False):
         """
-        If all is False, the first variable name is dropped
+        If use_all is False, the first variable name is dropped
         """
         model = self.model
         if yname is None:
             yname = model.endog_names
         if yname_list is None:
             ynames = model._ynames_map
-            ynames = self._maybe_convert_ynames_int(ynames)
+            ynames = _maybe_convert_ynames_int(ynames)
             # use range below to ensure sortedness
-            ynames = [ynames[key] for key in range(int(model.J))]
+            ynames = [ynames[key] for key in range(int(self.J))]
             ynames = ['='.join([yname, name]) for name in ynames]
-            if not all:
+            if not use_all:
                 yname_list = ynames[1:] # assumes first variable is dropped
             else:
                 yname_list = ynames
         return yname, yname_list
 
+    # TODO: wrap
     def pred_table(self):
         """
         Returns the J x J prediction table.
 
         Notes
         -----
-        pred_table[i,j] refers to the number of times "i" was observed and
+        pred_table[i, j] refers to the number of times "i" was observed and
         the model predicted "j". Correct predictions are along the diagonal.
         """
         ju = self.model.J - 1  # highest index
@@ -3955,9 +4015,9 @@ class MultinomialResults(DiscreteResults):
         return -2*self.llf + np.log(self.nobs)*(self.df_model+self.model.J-1)
 
     def conf_int(self, alpha=.05, cols=None):
-        confint = super(DiscreteResults, self).conf_int(alpha=alpha,
-                                                            cols=cols)
-        return confint.transpose(2,0,1)
+        confint = super(DiscreteResults, self).conf_int(alpha=alpha, cols=cols)
+        return confint.transpose(2, 0, 1)
+    conf_int._wrap_func = _wrap_conf_int
 
     def margeff(self):
         raise NotImplementedError("Use get_margeff instead")
@@ -4014,14 +4074,16 @@ class MultinomialResults(DiscreteResults):
         eqn = self.params.shape[1]
         confint = self.conf_int(alpha)
         for i in range(eqn):
-            coefs = summary2.summary_params((self, self.params[:,i],
-                    self.bse[:,i], self.tvalues[:,i], self.pvalues[:,i],
-                    confint[i]), alpha=alpha)
+            coefs = summary2.summary_params((self, self.params[:, i],
+                                            self.bse[:, i], self.tvalues[:, i],
+                                            self.pvalues[:, i],
+                                            confint[i]), alpha=alpha)
             # Header must show value of endog
-            level_str =  self.model.endog_names + ' = ' + str(i)
+            level_str = self.model.endog_names + ' = ' + str(i)
             coefs[level_str] = coefs.index
-            coefs = coefs.iloc[:,[-1,0,1,2,3,4,5]]
-            smry.add_df(coefs, index=False, header=True, float_format=float_format)
+            coefs = coefs.iloc[:, [-1, 0, 1, 2, 3, 4, 5]]
+            smry.add_df(coefs, index=False, header=True,
+                        float_format=float_format)
             smry.add_title(results=self)
         return smry
 
@@ -4118,8 +4180,3 @@ wrap.populate_wrapper(MultinomialResultsWrapper, MultinomialResults)
 class L1MultinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1MultinomialResultsWrapper, L1MultinomialResults)
-
-
-if __name__=="__main__":
-    import numpy as np
-    import statsmodels.api as sm
