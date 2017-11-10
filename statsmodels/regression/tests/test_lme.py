@@ -560,76 +560,94 @@ class TestMixedLM(object):
         mdf5 = md.fit_regularized(method=pen, alpha=1.)
         mdf5.summary()
 
-    def do1(self, reml, irf, ds_ix):
 
-        # No need to check independent random effects when there is
-        # only one of them.
-        if irf and ds_ix < 6:
-            return
+# ------------------------------------------------------------------
 
-        irfs = "irf" if irf else "drf"
-        meth = "reml" if reml else "ml"
+# TODO: better name
+def do1(reml, irf, ds_ix):
 
-        rslt = R_Results(meth, irfs, ds_ix)
+    # No need to check independent random effects when there is
+    # only one of them.
+    if irf and ds_ix < 6:
+        return
 
-        # Fit the model
-        md = MixedLM(rslt.endog, rslt.exog_fe, rslt.groups,
-                     rslt.exog_re)
-        if not irf:  # Free random effects covariance
-            if np.any(np.diag(rslt.cov_re_r) < 1e-5):
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    mdf = md.fit(gtol=1e-7, reml=reml)
-            else:
+    irfs = "irf" if irf else "drf"
+    meth = "reml" if reml else "ml"
+
+    rslt = R_Results(meth, irfs, ds_ix)
+
+    # Fit the model
+    md = MixedLM(rslt.endog, rslt.exog_fe, rslt.groups,
+                 rslt.exog_re)
+    if not irf:  # Free random effects covariance
+        if np.any(np.diag(rslt.cov_re_r) < 1e-5):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
                 mdf = md.fit(gtol=1e-7, reml=reml)
-        else:  # Independent random effects
-            k_fe = rslt.exog_fe.shape[1]
-            k_re = rslt.exog_re.shape[1]
-            free = MixedLMParams(k_fe, k_re, 0)
-            free.fe_params = np.ones(k_fe)
-            free.cov_re = np.eye(k_re)
-            free.vcomp = np.array([])
-            if np.any(np.diag(rslt.cov_re_r) < 1e-5):
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    mdf = md.fit(reml=reml, gtol=1e-7, free=free)
-            else:
+        else:
+            mdf = md.fit(gtol=1e-7, reml=reml)
+    
+    else:  # Independent random effects
+        k_fe = rslt.exog_fe.shape[1]
+        k_re = rslt.exog_re.shape[1]
+        free = MixedLMParams(k_fe, k_re, 0)
+        free.fe_params = np.ones(k_fe)
+        free.cov_re = np.eye(k_re)
+        free.vcomp = np.array([])
+        if np.any(np.diag(rslt.cov_re_r) < 1e-5):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
                 mdf = md.fit(reml=reml, gtol=1e-7, free=free)
+        else:
+            mdf = md.fit(reml=reml, gtol=1e-7, free=free)
 
-        assert_almost_equal(mdf.fe_params, rslt.coef, decimal=4)
-        assert_almost_equal(mdf.cov_re, rslt.cov_re_r, decimal=4)
-        assert_almost_equal(mdf.scale, rslt.scale_r, decimal=4)
+    assert_almost_equal(mdf.fe_params, rslt.coef, decimal=4)
+    assert_almost_equal(mdf.cov_re, rslt.cov_re_r, decimal=4)
+    assert_almost_equal(mdf.scale, rslt.scale_r, decimal=4)
 
-        k_fe = md.k_fe
-        assert_almost_equal(rslt.vcov_r, mdf.cov_params()[0:k_fe, 0:k_fe],
+    k_fe = md.k_fe
+    assert_almost_equal(rslt.vcov_r, mdf.cov_params()[0:k_fe, 0:k_fe],
+                        decimal=3)
+
+    assert_almost_equal(mdf.llf, rslt.loglike[0], decimal=2)
+
+    # Not supported in R except for independent random effects
+    if not irf:
+        assert_almost_equal(mdf.random_effects[0], rslt.ranef_postmean,
+                            decimal=3)
+        assert_almost_equal(mdf.random_effects_cov[0],
+                            rslt.ranef_condvar,
                             decimal=3)
 
-        assert_almost_equal(mdf.llf, rslt.loglike[0], decimal=2)
+# ------------------------------------------------------------------
 
-        # Not supported in R except for independent random effects
-        if not irf:
-            assert_almost_equal(mdf.random_effects[0], rslt.ranef_postmean,
-                                decimal=3)
-            assert_almost_equal(mdf.random_effects_cov[0],
-                                rslt.ranef_condvar,
-                                decimal=3)
+# Run all the tests against R
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+rdir = os.path.join(cur_dir, 'results')
+fnames = os.listdir(rdir)
+fnames = [x for x in fnames if x.startswith("lme") and x.endswith(".csv")]
 
-    # Run all the tests against R
-    def test_r(self):
+import itertools
+import nose.tools
+import pytest
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, 'results')
-        fnames = os.listdir(rdir)
-        fnames = [x for x in fnames if x.startswith("lme")
-                  and x.endswith(".csv")]
+# Copied from bashtage's #3847
+@nose.tools.nottest
+@pytest.mark.parametrize('fname,reml,irf',
+                         itertools.product(fnames, [False, True], [False, True]))
+def test_r(fname, reml, irf):
+    ds_ix = int(fname[3:5])
+    do1(reml, irf, ds_ix)
 
-        for fname in fnames:
-            for reml in False, True:
-                for irf in False, True:
-                    ds_ix = int(fname[3:5])
+# TODO: Remove after nose is permanently dropped
+def test_r_all():
+    for fname in fnames:
+        for reml in [False, True]:
+            for irf in [False, True]:
+                ds_ix = int(fname[3:5])
+                do1(reml, irf, ds_ix)
 
-                    yield self.do1, reml, irf, ds_ix
-
+# ------------------------------------------------------------------
 
 def test_mixed_lm_wrapper():
     # a bit more complicated model to test
