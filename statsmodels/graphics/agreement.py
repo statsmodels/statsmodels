@@ -1,18 +1,18 @@
 # Author: Joses W. Ho
 
 
-def bland_altman_plot(m1, m2,
-                      sd_limit=1.96,
-                      ax=None,
-                      scatter_kwds=None,
-                      mean_line_kwds=None,
-                      limit_lines_kwds=None):
+def mean_diff_plot(m1, m2,
+                    sd_limit=1.96,
+                    ax=None,
+                    scatter_kwds=None,
+                    mean_line_kwds=None,
+                    limit_lines_kwds=None):
     """
-    Bland-Altman Plot.
+    Tukey's Mean Difference Plot.
 
-    A Bland-Altman plot is a graphical method to analyze the differences
-    between two methods of measurement. The mean of the measures is plotted
-    against their difference.
+    Tukey's Mean Difference Plot (also known as a Bland-Altman plot) is a
+    graphical method to analyze the differences between two methods of
+    measurement. The mean of the measures is plotted against their difference.
 
     For more information see
     https://en.wikipedia.org/wiki/Bland-Altman_plot
@@ -65,7 +65,7 @@ def bland_altman_plot(m1, m2,
     >>> import numpy as np
     >>> import matplotlib.pyplot as plt
 
-    Making a Bland-Altman plot.
+    Making a mean difference plot.
 
     >>> # Seed the random number generator.
     >>> # This ensures that the results below are reproducible.
@@ -76,7 +76,7 @@ def bland_altman_plot(m1, m2,
     >>> sm.graphics.bland_altman_plot(m1, m2, ax = ax)
     >>> plt.show()
 
-    .. plot:: plots/graphics-bland_altman.py
+    .. plot:: plots/graphics-mean_diff_plot.py
     """
 
     import numpy as np
