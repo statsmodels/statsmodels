@@ -4,10 +4,13 @@ from statsmodels.tools import sequences
 
 
 def test_discrepancy():
+    space_0 = [[0.1, 0.5], [0.2, 0.4], [0.3, 0.3], [0.4, 0.2], [0.5, 0.1]]
     space_1 = [[1, 3], [2, 6], [3, 2], [4, 5], [5, 1], [6, 4]]
     space_2 = [[1, 5], [2, 4], [3, 3], [4, 2], [5, 1], [6, 6]]
 
     corners = np.array([[0.5, 0.5], [6.5, 6.5]])
+
+    npt.assert_allclose(sequences.discrepancy(space_0), 0.1353, atol=1e-4)
 
     # From Fang et al. Design and modeling for computer experiments, 2006
     npt.assert_allclose(sequences.discrepancy(space_1, corners), 0.0081, atol=1e-4)
