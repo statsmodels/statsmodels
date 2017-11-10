@@ -146,8 +146,7 @@ _predict_returns = """predict : array
 """
 
 _arma_predict = _predict % {"Model" : "ARMA",
-                            "params" : """
-            params : array-like
+                            "params" : """params : array-like
             The fitted parameters of the model.""",
                             "extra_params" : "",
                             "returns" : _predict_returns,
@@ -157,27 +156,23 @@ _arma_results_predict = _predict % {"Model" : "ARMA", "params" : "",
                                     "extra_params" : "",
                                     "returns" : _predict_returns,
                                     "extra_section" : _results_notes}
+_arima_extras = """typ : str {'linear', 'levels'}
+
+            - 'linear' : Linear prediction in terms of the differenced
+              endogenous variables.
+            - 'levels' : Predict the levels of the original endogenous
+              variables.\n"""
 
 _arima_predict = _predict % {"Model" : "ARIMA",
                              "params" : """params : array-like
             The fitted parameters of the model.""",
-                             "extra_params" : """typ : str {'linear', 'levels'}
-
-            - 'linear' : Linear prediction in terms of the differenced
-              endogenous variables.
-            - 'levels' : Predict the levels of the original endogenous
-              variables.\n""", "returns" : _predict_returns,
+                             "extra_params" : _arima_extras,
+                             "returns" : _predict_returns,
                              "extra_section" : _predict_notes}
 
 _arima_results_predict = _predict % {"Model" : "ARIMA",
                                      "params" : "",
-                                     "extra_params" :
-                                     """typ : str {'linear', 'levels'}
-
-            - 'linear' : Linear prediction in terms of the differenced
-              endogenous variables.
-            - 'levels' : Predict the levels of the original endogenous
-              variables.\n""",
+                                     "extra_params" :_arima_extras,
                                      "returns" : _predict_returns,
                                      "extra_section" : _results_notes}
 
@@ -199,16 +194,18 @@ _arima_plot_predict_example = """        Examples
         .. plot:: plots/arma_predict_plot.py
 """
 
-_plot_predict = ("""
-        Plot forecasts
-                      """ + '\n'.join(_predict.split('\n')[2:])) % {
-                      "params" : "",
-                          "extra_params" : """alpha : float, optional
+_plot_extras = """alpha : float, optional
             The confidence intervals for the forecasts are (1 - alpha)%
         plot_insample : bool, optional
             Whether to plot the in-sample series. Default is True.
         ax : matplotlib.Axes, optional
-            Existing axes to plot with.""",
+            Existing axes to plot with."""
+
+_plot_predict = ("""
+        Plot forecasts
+                      """ + '\n'.join(_predict.split('\n')[2:])) % {
+                      "params" : "",
+                          "extra_params" : _plot_extras,
                       "returns" : """fig : matplotlib.Figure
             The plotted Figure instance""",
                       "extra_section" : ('\n' + _arima_plot_predict_example +
@@ -218,16 +215,11 @@ _plot_predict = ("""
 _arima_plot_predict = ("""
         Plot forecasts
                       """ + '\n'.join(_predict.split('\n')[2:])) % {
-                      "params" : "",
-                          "extra_params" : """alpha : float, optional
-            The confidence intervals for the forecasts are (1 - alpha)%
-        plot_insample : bool, optional
-            Whether to plot the in-sample series. Default is True.
-        ax : matplotlib.Axes, optional
-            Existing axes to plot with.""",
-                      "returns" : """fig : matplotlib.Figure
+    "params" : "",
+    "extra_params" : _plot_extras,
+    "returns" : """fig : matplotlib.Figure
             The plotted Figure instance""",
-                "extra_section" : ('\n' + _arima_plot_predict_example +
+    "extra_section" : ('\n' + _arima_plot_predict_example +
                                    '\n' +
                                    '\n'.join(_results_notes.split('\n')[:3]) +
                               ("""
