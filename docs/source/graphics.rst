@@ -81,4 +81,4 @@ Other Plots
 
    factorplots.interaction_plot
    mosaicplot.mosaic
-   bland_altman.bland_altman_plot
+   agreement.mean_diff_plot
