@@ -3,6 +3,7 @@ Test for weights in GLM, Poisson and OLS/WLS, continuous test_glm.py
 
 
 Below is a table outlining the test coverage.
+
 ================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ==== =========
 Test                              Compared To            params normalized_cov_params bse loglike deviance resid_response resid_pearson resid_deviance resid_working resid_anscombe chi2 optimizer
 ================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ==== =========
@@ -41,7 +42,6 @@ import statsmodels.api as sm
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.tools.tools import add_constant
 from statsmodels.discrete import discrete_model as discrete
-import pytest
 
 from .results import results_glm_poisson_weights as res_stata
 from .results import res_R_var_weight as res_r

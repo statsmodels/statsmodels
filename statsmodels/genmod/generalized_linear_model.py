@@ -156,16 +156,19 @@ class GLM(base.LikelihoodModel):
 
     Notes
     -----
-    Only the following combinations make sense for family and link ::
+    Only the following combinations make sense for family and link:
 
-                   + ident log logit probit cloglog pow opow nbinom loglog logc
-      Gaussian     |   x    x                        x
-      inv Gaussian |   x    x                        x
-      binomial     |   x    x    x     x       x     x    x           x      x
-      Poission     |   x    x                        x
-      neg binomial |   x    x                        x          x
-      gamma        |   x    x                        x
-      Tweedie      |   x    x                        x
+     ============= ===== === ===== ====== ======= === ==== ====== ====== ====
+     Family        ident log logit probit cloglog pow opow nbinom loglog logc
+     ============= ===== === ===== ====== ======= === ==== ====== ====== ====
+     Gaussian      x     x   x     x      x       x   x     x      x
+     inv Gaussian  x     x                        x
+     binomial      x     x   x     x      x       x   x           x      x
+     Poission      x     x                        x
+     neg binomial  x     x                        x        x
+     gamma         x     x                        x
+     Tweedie       x     x                        x
+     ============= ===== === ===== ====== ======= === ==== ====== ====== ====
 
     Not all of these link functions are currently available.
 
@@ -214,12 +217,12 @@ class GLM(base.LikelihoodModel):
     | Working       | ``n_trials``                     |
     +---------------+----------------------------------+
 
-    WARNING: Loglikelihood, llf, deviance, etc. is not valid in models where
+    WARNING: Loglikelihood and deviance are not valid in models where
     scale is equal to 1 (i.e., ``Binomial``, ``NegativeBinomial``, and
     ``Poisson``). If variance weights are specified, then results such as
     ``loglike`` and ``deviance`` are based on a quasi-likelihood
     interpretation. The loglikelihood is not correctly specified in this case,
-    and statistics based on it, such AIC or likelihood ratio tests, are not\
+    and statistics based on it, such AIC or likelihood ratio tests, are not
     appropriate.
 
     Attributes
