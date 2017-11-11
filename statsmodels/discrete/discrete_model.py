@@ -2596,6 +2596,9 @@ class NegativeBinomial(CountModel):
 
         prob = a1 / (a1+mu)
         # Note: 1/(alpha+1) == (mu/alpha) / (mu + mu/alpha) == a1/(mu+a1)
+        if alpha == 0:
+            # See discussion in GH#4026
+            prob = 1
 
         # for dl/dparams dparams
         dim = exog.shape[1]
@@ -2663,6 +2666,9 @@ class NegativeBinomial(CountModel):
         mu = self.predict(params)[:,None]
 
         prob = a1 / (a1+mu)
+        if alpha == 0:
+            # See discussion in GH#4026
+            prob = 1
 
         # for dl/dparams dparams
         dim = exog.shape[1]
