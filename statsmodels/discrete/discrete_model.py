@@ -2613,7 +2613,7 @@ class NegativeBinomial(CountModel):
         # for dl/dparams dalpha
         da1 = -alpha**-2
         dldpda = np.sum(-a1 * dparams + exog*a1 *
-                        (-trigamma*a1**2 - 1/(alpha+1)), axis=0)
+                        (-trigamma*a1/alpha - 1/(alpha+1)), axis=0)
 
         hess_arr[-1,:-1] = dldpda
         hess_arr[:-1,-1] = dldpda
