@@ -2530,6 +2530,9 @@ class NegativeBinomial(CountModel):
         a1 = 1/alpha * mu**Q
 
         prob = a1 / (a1+mu)
+        if alpha == 0:
+            # See discussion in GH#4026
+            prob = 1
         if Q: # nb1
             # Note: 1/(alpha+1) == (mu/alpha) / (mu+mu/alpha) == a1/(mu+a1)
             dparams = exog * a1 * (np.log(prob) +
