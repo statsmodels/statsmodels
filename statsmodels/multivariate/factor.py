@@ -2,7 +2,15 @@
 
 from statsmodels.base.model import Model
 from .factor_rotation import rotate_factors, promax
-from .plots import plot_scree, plot_loadings
+
+try:
+    import matplotlib.pyplot as plt
+    missing_matplotlib = False
+except ImportError:
+    missing_matplotlib = True
+
+if not missing_matplotlib:
+    from .plots import plot_scree, plot_loadings
 
 import numpy as np
 from numpy.linalg import eig, inv, norm, matrix_rank
@@ -152,6 +160,8 @@ class Factor(Model):
         fig : figure
             Handle to the figure
         """
+        if missing_matplotlib:
+            raise ImportError("Matplotlib missing")
         return plot_scree(self.eigenvals, self.n_comp, ncomp)
 
     def plot_loadings(self, loading_pairs=None, plot_prerotated=False):
@@ -173,6 +183,9 @@ class Factor(Model):
         figs : a list of figure handles
 
         """
+        if missing_matplotlib:
+            raise ImportError("Matplotlib missing")
+
         if self.rotation is None:
             plot_prerotated = True
         loadings = self.loadings_no_rot if plot_prerotated else self.loadings
