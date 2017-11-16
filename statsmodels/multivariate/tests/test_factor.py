@@ -3,7 +3,6 @@
 import numpy as np
 import pandas as pd
 from statsmodels.multivariate.factor import Factor
-from numpy.testing import assert_array_almost_equal
 from numpy.testing import assert_equal
 from numpy.testing.decorators import skipif
 
@@ -40,7 +39,7 @@ def test_example_compare_to_R_output():
                   [0.97113975, 0.17207499],
                   [0.9618705, -0.2004196],
                   [0.37570708, -0.45821379]])
-    #assert_array_almost_equal(mod.loadings, a, decimal=8)
+    # assert_array_almost_equal(mod.loadings, a, decimal=8)
 
     # Same as R GRArotation
     results = mod.fit(rotation='varimax')
@@ -48,7 +47,7 @@ def test_example_compare_to_R_output():
                   [0.97424206, -0.15354033],
                   [0.84418097, -0.502714],
                   [0.20601929, -0.55558235]])
-    #assert_array_almost_equal(mod.loadings, a, decimal=8)
+    # assert_array_almost_equal(mod.loadings, a, decimal=8)
 
     results = mod.fit(rotation='quartimax')  # Same as R fa
     a = np.array([[0.98935598, 0.98242714, 0.94078972, 0.33442284],
