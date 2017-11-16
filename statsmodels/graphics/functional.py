@@ -3,8 +3,8 @@
 from statsmodels.multivariate.pca import PCA
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
 from statsmodels.compat.python import range, zip
-from statsmodels.compat.collections import OrderedDict
 from statsmodels.graphics.utils import _import_mpl
+from collections import OrderedDict
 from itertools import combinations
 import numpy as np
 from statsmodels.compat.scipy import factorial
