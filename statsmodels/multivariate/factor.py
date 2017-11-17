@@ -13,7 +13,7 @@ if not missing_matplotlib:
     from .plots import plot_scree, plot_loadings
 
 import numpy as np
-from numpy.linalg import eig, inv, norm, matrix_rank
+from numpy.linalg import eigh, inv, norm, matrix_rank
 import pandas as pd
 
 from statsmodels.iolib import summary2
@@ -108,7 +108,7 @@ class Factor(Model):
             # communality
             for j in range(len(R)):
                 R[j, j] = c[j]
-            L, V = eig(R)
+            L, V = eigh(R)
             c_last = np.array(c)
             ind = np.argsort(L)
             ind = ind[::-1]
