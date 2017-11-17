@@ -82,7 +82,7 @@ class Factor(Model):
                             'equamax', 'oblimin', 'parsimax', 'parsimony',
                             'biquartimin', 'promax']:
             raise ValueError('Unknown rotation method %s' % (rotation))
-        R = pd.DataFrame(self.endog).corr().values
+        R = np.corrcoef(self.endog, rowvar=0)
         self.n_comp = matrix_rank(R)
         if self.n_factor > self.n_comp:
             raise ValueError('n_factor must be smaller or equal to the rank'
