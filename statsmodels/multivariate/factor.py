@@ -51,15 +51,12 @@ class Factor(Model):
                              ' of columns of endog! %d > %d' %
                              (n_factor, endog.shape[1]))
         self.n_factor = n_factor
-        self.rotation = None
         self.loadings = None
-        self.loadings_no_rot = None
         self.communality = None
         self.eigenvals = None
         super(Factor, self).__init__(endog, exog)
 
-    def fit(self, n_max_iter=50, tolerance=1e-6, rotation=None,
-            SMC=True):
+    def fit(self, n_max_iter=50, tolerance=1e-6, SMC=True):
         """
         Fit the factor model
 
@@ -70,18 +67,12 @@ class Factor(Model):
         tolerance : float
             If `norm(communality - last_communality)  < tolerance`,
             estimation stops
-        rotation : string
-            rotation to be applied
         SMC : True or False
             Whether or not to apply squared multiple correlations
 
         -------
 
         """
-        if rotation not in [None, 'varimax', 'quartimax', 'biquartimax',
-                            'equamax', 'oblimin', 'parsimax', 'parsimony',
-                            'biquartimin', 'promax']:
-            raise ValueError('Unknown rotation method %s' % (rotation))
         R = np.corrcoef(self.endog, rowvar=0)
         self.n_comp = matrix_rank(R)
         if self.n_factor > self.n_comp:
@@ -108,7 +99,7 @@ class Factor(Model):
             # communality
             for j in range(len(R)):
                 R[j, j] = c[j]
-            L, V = eigh(R)
+            L, V = eigh(R, UPLO='U')
             c_last = np.array(c)
             ind = np.argsort(L)
             ind = ind[::-1]
@@ -129,21 +120,91 @@ class Factor(Model):
                 break
         self.eigenvals = eigenvals
         self.communality = c
-        # Perform rotation of the loadings
-        self.loadings_no_rot = np.array(A)
-        if rotation in ['varimax', 'quartimax', 'biquartimax', 'equamax',
-                        'parsimax', 'parsimony', 'biquartimin']:
-            A, T = rotate_factors(A, rotation)
-        elif rotation == 'oblimin':
-            A, T = rotate_factors(A, 'quartimin')
-        elif rotation == 'promax':
-            A, T = promax(A)
-
-        if rotation is not None:  # Rotated
-            c = np.power(A, 2).sum(axis=1)
         self.loadings = A
-        self.rotation = rotation
         return FactorResults(self)
+
+
+class FactorResults(object):
+    """
+    Factor results class
+
+    Parameters
+    ----------
+    factor : Factor
+        Fitted Factor class
+
+    """
+    def __init__(self, factor):
+        if not isinstance(factor, Factor):
+            raise ValueError('Input must be a `Factor` class. Got %s instead'
+                             % (factor.__str__))
+        self.endog_names = factor.endog_names
+        self.loadings_no_rot = factor.loadings
+        self.loadings = factor.loadings
+        self.eigenvals = factor.eigenvals
+        self.communality = factor.communality
+        self.rotation_method = None
+        self.n_comp = factor.n_comp
+
+    def __str__(self):
+        return self.summary().__str__()
+
+    def rotate(self, method):
+        """
+        Apply rotation
+
+        Parameters
+        ----------
+        method : string
+            rotation to be applied
+        -------
+        """
+        self.rotation_method = method
+        if method not in ['varimax', 'quartimax', 'biquartimax',
+                            'equamax', 'oblimin', 'parsimax', 'parsimony',
+                            'biquartimin', 'promax']:
+            raise ValueError('Unknown rotation method %s' % (method))
+
+        if method in ['varimax', 'quartimax', 'biquartimax', 'equamax',
+                        'parsimax', 'parsimony', 'biquartimin']:
+            self.loadings, T = rotate_factors(self.loadings_no_rot, method)
+        elif method == 'oblimin':
+            self.loadings, T = rotate_factors(self.loadings_no_rot, 'quartimin')
+        elif method == 'promax':
+            self.loadings, T = promax(self.loadings_no_rot)
+
+    def summary(self):
+        summ = summary2.Summary()
+        summ.add_title('Factor analysis results')
+        loadings_no_rot = pd.DataFrame(
+            self.loadings_no_rot,
+            columns=["factor %d" % (i)
+                     for i in range(self.loadings_no_rot.shape[1])],
+            index=self.endog_names
+        )
+        eigenvals = pd.DataFrame([self.eigenvals], columns=self.endog_names,
+                                 index=[''])
+        summ.add_dict({'': 'Eigenvalues'})
+        summ.add_df(eigenvals)
+        communality = pd.DataFrame([self.communality],
+                                   columns=self.endog_names, index=[''])
+        summ.add_dict({'': ''})
+        summ.add_dict({'': 'Communality'})
+        summ.add_df(communality)
+        summ.add_dict({'': ''})
+        summ.add_dict({'': 'Pre-rotated loadings'})
+        summ.add_df(loadings_no_rot)
+        summ.add_dict({'': ''})
+        if self.rotation is not None:
+            loadings = pd.DataFrame(
+                self.loadings,
+                columns=["factor %d" % (i)
+                         for i in range(self.loadings.shape[1])],
+                index=self.endog_names
+            )
+            summ.add_dict({'': '%s rotated loadings' % (self.rotation)})
+            summ.add_df(loadings)
+        return summ
 
     def plot_scree(self, ncomp=None):
         """
@@ -186,73 +247,15 @@ class Factor(Model):
         if missing_matplotlib:
             raise ImportError("Matplotlib missing")
 
-        if self.rotation is None:
+        if self.rotation_method is None:
             plot_prerotated = True
         loadings = self.loadings_no_rot if plot_prerotated else self.loadings
         if plot_prerotated:
             title = 'Prerotated Factor Pattern'
         else:
-            title = '%s Rotated Factor Pattern' % (self.rotation)
+            title = '%s Rotated Factor Pattern' % (self.rotation_method)
         var_explained = self.eigenvals / self.n_comp * 100
 
         return plot_loadings(loadings, loading_pairs=loading_pairs,
                              title=title, row_names=self.endog_names,
                              percent_variance=var_explained)
-
-
-class FactorResults(object):
-    """
-    Factor results class
-
-    Parameters
-    ----------
-    factor : Factor
-        Fitted Factor class
-
-    """
-    def __init__(self, factor):
-        if not isinstance(factor, Factor):
-            raise ValueError('Input must be a `Factor` class. Got %s instead'
-                             % (factor.__str__))
-        self.endog_names = factor.endog_names
-        self.loadings = factor.loadings
-        self.loadings_no_rot = factor.loadings_no_rot
-        self.eigenvals = factor.eigenvals
-        self.communality = factor.communality
-        self.rotation = factor.rotation
-
-    def __str__(self):
-        return self.summary().__str__()
-
-    def summary(self):
-        summ = summary2.Summary()
-        summ.add_title('Factor analysis results')
-        loadings_no_rot = pd.DataFrame(
-            self.loadings_no_rot,
-            columns=["factor %d" % (i)
-                     for i in range(self.loadings_no_rot.shape[1])],
-            index=self.endog_names
-        )
-        eigenvals = pd.DataFrame([self.eigenvals], columns=self.endog_names,
-                                 index=[''])
-        summ.add_dict({'': 'Eigenvalues'})
-        summ.add_df(eigenvals)
-        communality = pd.DataFrame([self.communality],
-                                   columns=self.endog_names, index=[''])
-        summ.add_dict({'': ''})
-        summ.add_dict({'': 'Communality'})
-        summ.add_df(communality)
-        summ.add_dict({'': ''})
-        summ.add_dict({'': 'Pre-rotated loadings'})
-        summ.add_df(loadings_no_rot)
-        summ.add_dict({'': ''})
-        if self.rotation is not None:
-            loadings = pd.DataFrame(
-                self.loadings,
-                columns=["factor %d" % (i)
-                         for i in range(self.loadings.shape[1])],
-                index=self.endog_names
-            )
-            summ.add_dict({'': '%s rotated loadings' % (self.rotation)})
-            summ.add_df(loadings)
-        return summ
