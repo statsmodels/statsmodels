@@ -116,8 +116,7 @@ script:
   # docbuild and exit, if required
   - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; bash ${SRCDIR}/tools/ci_docbuild.sh; exit 0; fi;
   # Run tests
-  # Remove xdist (-n 2) until warning reporting is working
-  - echo pytest ${COVERAGE_OPTS} statsmodels --skip-examples
+  - echo pytest -n 2 ${COVERAGE_OPTS} statsmodels --skip-examples
   - pytest ${COVERAGE_OPTS} statsmodels --skip-examples
 
 after_success:
