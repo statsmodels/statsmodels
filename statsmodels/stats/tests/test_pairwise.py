@@ -5,13 +5,14 @@ Created on Wed Mar 28 15:34:18 2012
 
 Author: Josef Perktold
 """
-import warnings
 from statsmodels.compat.python import BytesIO, asbytes, range
-from statsmodels.compat.numpy import recarray_select
+
+import warnings
 
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal, assert_,
-                           assert_raises, assert_allclose)
+import pandas as pd
+from numpy.testing import assert_, assert_allclose, assert_almost_equal, assert_equal, \
+    assert_raises
 
 from statsmodels.stats.libqsturng import qsturng
 
@@ -134,11 +135,16 @@ ss2 = asbytes(ss2)
 ss3 = asbytes(ss3)
 ss5 = asbytes(ss5)
 
-dta = np.recfromtxt(BytesIO(ss), names=("Rust","Brand","Replication"))
-dta2 = np.recfromtxt(BytesIO(ss2), names = ("idx", "Treatment", "StressReduction"))
-dta3 = np.recfromtxt(BytesIO(ss3), names = ("Brand", "Relief"))
-dta5 = np.recfromtxt(BytesIO(ss5), names = ('pair', 'mean', 'lower', 'upper', 'sig'), delimiter='\t')
-sas_ = dta5[[1,3,2]]
+dta = np.recfromtxt(BytesIO(ss), names=("Rust", "Brand", "Replication"))
+dta2 = np.recfromtxt(BytesIO(ss2), names=("idx", "Treatment", "StressReduction"))
+dta3 = np.recfromtxt(BytesIO(ss3), names=("Brand", "Relief"))
+dta5 = np.recfromtxt(BytesIO(ss5), names=('pair', 'mean', 'lower', 'upper', 'sig'), delimiter='\t')
+
+dta = pd.DataFrame.from_records(dta)
+dta2 = pd.DataFrame.from_records(dta2)
+dta3 = pd.DataFrame.from_records(dta3)
+dta5 = pd.DataFrame.from_records(dta5)
+sas_ = dta5.iloc[[1, 3, 2]]
 
 from statsmodels.stats.multicomp import (tukeyhsd, pairwise_tukeyhsd,
                                          MultiComparison)
@@ -318,7 +324,7 @@ class TestTuckeyHSD3(CheckTuckeyHSDMixin):
         #super(cls, cls).setup_class_()
         #CheckTuckeyHSD.setup_class_()
         cls.meandiff2 = sas_['mean']
-        cls.confint2 = sas_[['lower','upper']].view(float).reshape((3,2))
+        cls.confint2 = sas_[['lower','upper']].astype(float).values.reshape((3, 2))
         cls.reject2 = sas_['sig'] == asbytes('***')
 
 

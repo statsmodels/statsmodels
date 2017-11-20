@@ -71,7 +71,9 @@ def _calc_survfunc_right(time, status, weights=None, entry=None, compress=True,
         se[(n == d) | (n == 0)] = np.nan
         se = np.cumsum(se)
         se = np.sqrt(se)
-        se *= sp
+        locs = np.isfinite(se) | (sp != 0)
+        se[locs] *= sp[locs]
+        se[~locs] = np.nan
     else:
         # Tsiatis' (1981) formula
         se = d / (n * n).astype(np.float64)

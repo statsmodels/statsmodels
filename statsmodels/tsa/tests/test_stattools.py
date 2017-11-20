@@ -126,7 +126,7 @@ class CheckCorrGram(object):
     """
     Set up for ACF, PACF tests.
     """
-    data = macrodata.load()
+    data = macrodata.load_pandas()
     x = data.data['realgdp']
     filename = os.path.dirname(os.path.abspath(__file__))+\
             "/results/results_corrgram.csv"

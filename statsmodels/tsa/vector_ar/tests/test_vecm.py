@@ -69,9 +69,9 @@ to_test = all_tests  # ["beta"]
 
 
 def load_data(dataset, data_dict):
-    dtset = dataset.data_module.load()
+    dtset = dataset.data_module.load_pandas()
     variables = dataset.variable_names
-    loaded = dtset.data[variables].view(float, type=np.ndarray)
+    loaded = dtset.data[variables].astype(float).values
     data_dict[dataset] = loaded.reshape((-1, len(variables)))
 
 

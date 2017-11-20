@@ -269,12 +269,18 @@ class Power(object):
             success = 1
         else:
             # try backup
-            #TODO: check more cases to make this robust
-            val, infodict, ier, msg = optimize.fsolve(func, start_value,
-                                                      full_output=True) #scalar
-            #val = optimize.newton(func, start_value) #scalar
-            fval = infodict['fvec']
-            fit_res.append(infodict)
+            # TODO: check more cases to make this robust
+            if not np.isnan(start_value):
+                val, infodict, ier, msg = optimize.fsolve(func, start_value,
+                                                          full_output=True) #scalar
+                #val = optimize.newton(func, start_value) #scalar
+                fval = infodict['fvec']
+                fit_res.append(infodict)
+            else:
+                ier = -1
+                fval = 1
+                fit_res.append([None])
+
             if ier == 1 and np.abs(fval) < 1e-4 :
                 success = 1
             else:

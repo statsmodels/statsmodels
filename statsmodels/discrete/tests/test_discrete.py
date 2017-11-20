@@ -1575,9 +1575,6 @@ def test_mnlogit_factor():
 
 def test_formula_missing_exposure():
     # see 2083
-    import statsmodels.formula.api as smf
-    import pandas as pd
-
     d = {'Foo': [1, 2, 10, 149], 'Bar': [1, 2, 3, np.nan],
          'constant': [1] * 4, 'exposure' : np.random.uniform(size=4),
          'x': [1, 3, 2, 1.5]}
@@ -1589,7 +1586,7 @@ def test_formula_missing_exposure():
 
     # make sure this raises
     exposure = pd.Series(np.random.uniform(size=5))
-    df.loc[3, 'Bar'] = 4   # nan not relevant for Valueerror for shape mismatch
+    df.loc[3, 'Bar'] = 4   # nan not relevant for ValueError for shape mismatch
     assert_raises(ValueError, sm.Poisson, df.Foo, df[['constant', 'Bar']],
                   exposure=exposure)
 
