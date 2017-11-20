@@ -867,6 +867,7 @@ class VECM(tsbase.TimeSeriesModel):
         s00, s01, s10, s11, s11_, _, v = _sij(delta_x, delta_y_1_T, y_lag1)
 
         beta_tilde = (v[:, :self.coint_rank].T.dot(s11_)).T
+        beta_tilde = np.real_if_close(beta_tilde)
         # normalize beta tilde such that eye(r) forms the first r rows of it:
         beta_tilde = np.dot(beta_tilde, inv(beta_tilde[:self.coint_rank]))
         alpha_tilde = s01.dot(beta_tilde).dot(

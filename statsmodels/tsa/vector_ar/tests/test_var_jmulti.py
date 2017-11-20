@@ -31,9 +31,9 @@ to_test = all_tests  #["coefs", "det", "Sigma_u", "log_like", "fc", "causality"]
 
 
 def load_data(dataset, data_dict):
-    dtset = dataset.load()
+    dtset = dataset.load_pandas()
     variables = dataset.variable_names
-    loaded = dtset.data[variables].view(float, type=np.ndarray)
+    loaded = dtset.data[variables].astype(float).values
     data_dict[dataset] = loaded.reshape((-1, len(variables)))
 
 
