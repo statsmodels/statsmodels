@@ -37,6 +37,14 @@ class RecursiveLS(MLEModel):
         The observed time-series process :math:`y`
     exog : array_like
         Array of exogenous regressors, shaped nobs x k.
+    constraints : array-like, str, or tuple
+            - array : An r x k array where r is the number of restrictions to
+              test and k is the number of regressors. It is assumed that the
+              linear combination is equal to zero.
+            - str : The full hypotheses to test can be given as a string.
+              See the examples.
+            - tuple : A tuple of arrays in the form (R, q), ``q`` can be
+              either a scalar or a length p row vector.
 
     Notes
     -----
@@ -53,7 +61,7 @@ class RecursiveLS(MLEModel):
        Oxford University Press.
 
     """
-    def __init__(self, endog, exog, **kwargs):
+    def __init__(self, endog, exog, constraints=None, **kwargs):
         # Standardize data
         if not _is_using_pandas(endog, None):
             endog = np.asanyarray(endog)
@@ -71,20 +79,35 @@ class RecursiveLS(MLEModel):
 
         self.k_exog = exog.shape[1]
 
+        # Handle constraints
+        r_matrix = q_matrix = None
+        if constraints is not None:
+            from patsy import DesignInfo
+            from statsmodels.base.data import handle_data
+            data = handle_data(endog, exog, **kwargs)
+            names = data.param_names
+            LC = DesignInfo(names).linear_constraint(constraints)
+            r_matrix, q_matrix = LC.coefs, LC.constants
+
+            endog = np.c_[endog, np.zeros((len(endog), len(r_matrix)))]
+            endog[:, 1:] = q_matrix
+
         # Handle coefficient initialization
         kwargs.setdefault('loglikelihood_burn', self.k_exog)
         kwargs.setdefault('initialization', 'diffuse')
 
         # Initialize the state space representation
         super(RecursiveLS, self).__init__(
-            endog, k_states=self.k_exog, exog=exog, **kwargs
-        )
+            endog, k_states=self.k_exog, exog=exog, **kwargs)
 
         # Use univariate filtering by default
         self.ssm.filter_univariate = True
 
         # Setup the state space representation
-        self['design'] = self.exog[:, :, None].T
+        self['design'] = np.zeros((self.k_endog, self.k_states, self.nobs))
+        self['design', 0] = self.exog[:, :, None].T
+        if r_matrix is not None:
+            self['design', 1:, :] = r_matrix[:, :, None]
         self['transition'] = np.eye(self.k_states)
 
         # Notice that the filter output does not depend on the measurement
@@ -288,7 +311,7 @@ class RecursiveLSResults(MLEResults):
         # the standardized forecast errors assume unit variance. To convert
         # to Harvey's definition, we need to multiply by the standard
         # deviation.
-        return (self.filter_results.standardized_forecasts_error.squeeze() *
+        return (self.filter_results.standardized_forecasts_error[0] *
                 self.filter_results.obs_cov[0, 0]**0.5)
 
     @cache_readonly
