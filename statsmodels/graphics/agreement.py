@@ -1,5 +1,7 @@
 # Author: Joses W. Ho
 
+import numpy as np
+import matplotlib.pyplot as plt
 
 def mean_diff_plot(m1, m2,
                     sd_limit=1.96,
@@ -79,9 +81,6 @@ def mean_diff_plot(m1, m2,
     .. plot:: plots/graphics-mean_diff_plot.py
     """
 
-    import numpy as np
-    import matplotlib.pyplot as plt
-
     if len(m1) != len(m2):
         raise ValueError('m1 does not have the same length as m2.')
     if sd_limit < 0:
@@ -110,7 +109,7 @@ def mean_diff_plot(m1, m2,
     if 'linestyle' not in limit_lines_kwds:
         kwds['linestyle'] = ':'
 
-    ax.scatter(means, diffs, **scatter_kwds)
+    ax.scatter(means, diffs, **scatter_kwds) # Plot the means against the diffs.
     ax.axhline(mean_diff, **mean_line_kwds)  # draw mean line.
 
     # Annotate mean line with mean difference.
@@ -125,7 +124,6 @@ def mean_diff_plot(m1, m2,
         half_ylim = (1.5 * sd_limit) * std_diff
         ax.set_ylim(mean_diff - half_ylim,
                     mean_diff + half_ylim)
-
         limit_of_agreement = sd_limit * std_diff
         lower = mean_diff - limit_of_agreement
         upper = mean_diff + limit_of_agreement
