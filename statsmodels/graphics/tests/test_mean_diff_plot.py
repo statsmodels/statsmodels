@@ -2,7 +2,7 @@ from statsmodels.compat.testing import skipif
 
 import numpy as np
 
-from statsmodels.graphics.bland_altman import bland_altman_plot
+from statsmodels.agreement import mean_diff_plot
 
 
 try:
@@ -13,7 +13,7 @@ except:
 
 
 @skipif(not have_matplotlib, reason='matplotlib not available')
-def test_bland_altman():
+def test_mean_diff_plot():
 
     # Seed the random number generator.
     # This ensures that the results below are reproducible.
@@ -23,27 +23,27 @@ def test_bland_altman():
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    bland_altman_plot(m1, m2)
+    mean_diff_plot(m1, m2)
     plt.close(fig)
 
     fig, ax = plt.subplots(2)
-    bland_altman_plot(m1, m2, ax = ax[0])
+    mean_diff_plot(m1, m2, ax = ax[0])
     plt.close(fig)
 
     fig, ax = plt.subplots(1)
-    bland_altman_plot(m1, m2, sd_limit = 0)
+    mean_diff_plot(m1, m2, sd_limit = 0)
     plt.close(fig)
 
     fig, ax = plt.subplots(1)
-    bland_altman_plot(m1, m2, scatter_kwds={'color':'green', 's':10})
+    mean_diff_plot(m1, m2, scatter_kwds={'color':'green', 's':10})
     plt.close(fig)
 
     fig, ax = plt.subplots(1)
-    bland_altman_plot(m1, m2, mean_line_kwds={'color':'green','lw':5})
+    mean_diff_plot(m1, m2, mean_line_kwds={'color':'green','lw':5})
     plt.close(fig)
 
     fig, ax = plt.subplots(1)
-    bland_altman_plot(m1, m2, limit_lines_kwds={'color':'green',
+    mean_diff_plot(m1, m2, limit_lines_kwds={'color':'green',
                                                 'lw':5,
                                                 'ls':'dotted'})
     plt.close(fig)
