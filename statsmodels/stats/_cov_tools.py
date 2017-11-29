@@ -28,10 +28,12 @@ def vec(x):
 
 def vech(x):
     """ravel lower triangular part of matrix in fortran order (stacking columns)
+
+    behavior for arrays with more than 2 dimensions not checked yet
     """
     if x.ndim == 2:
         idx = np.triu_indices_from(x.T)
-        return x.T[idx[0], idx[1]], x[idx[1], idx[0]]
+        return x.T[idx[0], idx[1]] #, x[idx[1], idx[0]]
     elif x.ndim > 2:
         #try ravel last two indices
         #idx = np.triu_indices(x.shape[-2::-1])
@@ -39,6 +41,19 @@ def vech(x):
         idr, idc = np.array([[i, j] for j in range(n_cols)
                                     for i in range(j, n_rows)]).T
         return x[..., idr, idc]
+
+
+def veclow(x):
+    """ravel lower triangular part of matrix excluding diagonal
+
+    This is the same as vech after dropping diagonal elements
+
+    """
+    if x.ndim == 2:
+        idx = np.triu_indices_from(x.T, k=1)
+        return x.T[idx[0], idx[1]] #, x[idx[1], idx[0]]
+    else:
+        raise ValueError('x needs to be 2-dimensional')
 
 
 def vech_cross_product(x0, x1):
@@ -220,9 +235,7 @@ def _cov_cov(cov, nobs, assume='elliptical', kurt=0, data=None):
         # The normal result can be extended to elliptically symmetric case with
         # dependence on the kurtosis parameter
 
-        n=2
-
-        k = K(n)
+        k = K(k_vars)
         V_e = (1 + kurt) * ((np.eye(*k.shape) + k)).dot(np.kron(mom2, mom2))
         V_e += kurt * np.outer(vec(mom2), vec(mom2))
         return V_e
@@ -266,7 +279,7 @@ def cov_cov_data(data, assume='elliptical', kurt=0):
 
 
 def _cov_corr(cov, cov_cov, nobs):
-    """covariance of the correlation matrix with normaly distributed data
+    """covariance of the correlation matrix, general case
 
     """
     n = cov.shape[0]   # k_vars, n is used in reference
@@ -277,8 +290,32 @@ def _cov_corr(cov, cov_cov, nobs):
     outer = np.eye(n**2) - Ms(n).dot(np.kron(np.eye(n), corr).dot(Md(n)))
     outer = outer.dot(np.kron(std_inv_mat, std_inv_mat))
 
-    cov_corr_ = outer.dot(cov_cov).dot(outer) / nobs
+    cov_corr_ = outer.dot(cov_cov).dot(outer.T) / nobs
     return cov_corr_
+
+
+def _cov_corr_elliptical_vech(corr, nobs, kurt=0, drop=False):
+    """covariance of the correlation matrix for elliptical distribution
+
+    This returns the covariance matrix of vech.
+    In article it is veclow, excluding diagonal
+    If drop is True, then we artificially drop down to veclow. This needs
+    Duplow.
+
+    """
+    n = corr.shape[0]   # k_vars, n is used in reference
+    # Neudecker 1996 eq (4), notation Kd is Md
+
+    # Note dropping the outer Dup doesn't work
+    outer = np.eye(n**2) - (np.kron(np.eye(n), corr).dot(Md(n)))
+    cov_corr_ = outer.dot(np.kron(corr, corr)).dot(outer.T)
+    dd = Dup(n)
+    if drop:
+        dd = dd[:, dd.sum(0) == 2]
+    cov_corr_ = (dd.T.dot(cov_corr_).dot(dd)) / 2
+    if kurt != 0:
+        cov_corr_ *= (1 + kurt)
+    return cov_corr_ / nobs
 
 
 def _cov_cov_vech(cov, nobs):
