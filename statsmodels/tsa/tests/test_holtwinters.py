@@ -100,14 +100,14 @@ class TestHoltWinters(object):
                                          474.49569042,482.45033014,484.80246797], 4)
         assert_almost_equal(fit2.forecast(1), [501.837461], 4)
         assert_almost_equal(fit3.forecast(1), [496.493543], 4)
-        assert_almost_equal(fit3.params['alpha'], 0.891998, 4)
+        assert_almost_equal(fit3.params['smoothing_level'], 0.891998, 4)
         #has to be 3 for old python2.7 scipy versions
-        assert_almost_equal(fit3.params['l0'], 447.478440, 3)
+        assert_almost_equal(fit3.params['initial_level'], 447.478440, 3)
     
     def test_holt(self):
-        fit1 = Holt(self.air_ausair).fit(alpha=0.8, beta=0.2, optimized=False)
-        fit2 = Holt(self.air_ausair, exponential=True).fit(alpha=0.8, beta=0.2, optimized=False)
-        fit3 = Holt(self.air_ausair, damped=True).fit(alpha=0.8, beta=0.2)
+        fit1 = Holt(self.air_ausair).fit(smoothing_level=0.8, smoothing_slope=0.2, optimized=False)
+        fit2 = Holt(self.air_ausair, exponential=True).fit(smoothing_level=0.8, smoothing_slope=0.2, optimized=False)
+        fit3 = Holt(self.air_ausair, damped=True).fit(smoothing_level=0.8, smoothing_slope=0.2)
         assert_almost_equal(fit1.forecast(5), [43.76,45.59,47.43,49.27,51.10], 2)
         assert_almost_equal(fit1.slope, [3.617628  ,3.59006512,3.33438212,3.23657639,2.69263502,
                                          2.46388914,2.2229097 ,1.95959226,1.47054601,1.3604894 ,
@@ -119,22 +119,30 @@ class TestHoltWinters(object):
         assert_almost_equal(fit2.forecast(5), [44.60,47.24,50.04,53.01,56.15], 2)
         assert_almost_equal(fit3.forecast(5), [42.85,43.81,44.66,45.41,46.06], 2)
         
-    def test_holt_damp(self):
-        fit4 = Holt(self.livestock2_livestock,damped=True).fit(phi=0.98)
+    def test_holt_damp(self):        
+        fit1 = SimpleExpSmoothing(self.livestock2_livestock).fit()        
+        fit4 = Holt(self.livestock2_livestock,damped=True).fit(damping_slope=0.98)
         fit5 = Holt(self.livestock2_livestock,exponential=True,damped=True).fit()
         #We accept the below values as we getting a better SSE than text book
-        assert_almost_equal(fit4.params['alpha'],0.98, 2)
-        assert_almost_equal(fit4.params['beta'],0.00, 2)
-        assert_almost_equal(fit4.params['phi'],0.98, 2)
-        assert_almost_equal(fit4.params['l0'],257.36, 2)
-        assert_almost_equal(fit4.params['b0'],6.64, 2)        
-        assert_almost_equal(fit4.SSE,6036.56, 2) #6080.26
-        assert_almost_equal(fit5.params['alpha'],0.97, 2)
-        assert_almost_equal(fit5.params['beta'],0.00, 2)
-        assert_almost_equal(fit5.params['phi'],0.98, 2)
-        assert_almost_equal(fit5.params['l0'],258.95, 2)
-        assert_almost_equal(fit5.params['b0'],1.02, 2)
-        assert_almost_equal(fit5.SSE,6082.00, 2) #6100.11       
+        assert_almost_equal(fit1.params['smoothing_level'],1.00, 2)
+        assert_almost_equal(fit1.params['smoothing_slope'],np.NaN, 2)
+        assert_almost_equal(fit1.params['damping_slope'],np.NaN, 2)
+        assert_almost_equal(fit1.params['initial_level'],263.92, 2)
+        assert_almost_equal(fit1.params['initial_slope'],np.NaN, 2)      
+        assert_almost_equal(fit1.sse,6761.35, 2) #6080.26
+
+        assert_almost_equal(fit4.params['smoothing_level'],0.98, 2)
+        assert_almost_equal(fit4.params['smoothing_slope'],0.00, 2)
+        assert_almost_equal(fit4.params['damping_slope'],0.98, 2)
+        assert_almost_equal(fit4.params['initial_level'],257.36, 2)
+        assert_almost_equal(fit4.params['initial_slope'],6.51, 2)
+        assert_almost_equal(fit4.sse,6036.56, 2) #6080.26
+        assert_almost_equal(fit5.params['smoothing_level'],0.97, 2)
+        assert_almost_equal(fit5.params['smoothing_slope'],0.00, 2)
+        assert_almost_equal(fit5.params['damping_slope'],0.98, 2)
+        assert_almost_equal(fit5.params['initial_level'],258.95, 2)
+        assert_almost_equal(fit5.params['initial_slope'],1.02, 2)
+        assert_almost_equal(fit5.sse,6082.00, 2) #6100.11       
         
     def test_hw_seasonal(self):
         fit1 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='additive', 
