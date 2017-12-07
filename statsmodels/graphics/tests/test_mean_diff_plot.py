@@ -2,7 +2,7 @@ from statsmodels.compat.testing import skipif
 
 import numpy as np
 
-from statsmodels.agreement import mean_diff_plot
+from statsmodels.graphics.agreement import mean_diff_plot
 
 
 try:
