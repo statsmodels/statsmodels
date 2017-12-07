@@ -1,7 +1,12 @@
-# Author: Joses W. Ho
+'''
+Bland-Altman mean-difference plots
+
+Author: Joses Ho
+License: BSD-3
+'''
 
 import numpy as np
-import matplotlib.pyplot as plt
+
 
 def mean_diff_plot(m1, m2,
                     sd_limit=1.96,
@@ -80,6 +85,8 @@ def mean_diff_plot(m1, m2,
 
     .. plot:: plots/graphics-mean_diff_plot.py
     """
+    import matplotlib.pyplot as plt
+
 
     if len(m1) != len(m2):
         raise ValueError('m1 does not have the same length as m2.')
