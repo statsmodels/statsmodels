@@ -236,6 +236,8 @@ class HoltWintersResults(Results):
     ----------
     model : ExponentialSmoothing instance
         The fitted model instance
+    params : dictionary
+        All the parameters for the Exponential Smoothing model.
 
     Attributes
     ----------
@@ -251,7 +253,7 @@ class HoltWintersResults(Results):
     fcast: array
         An array of the forecast values forecast by the Exponential Smoothing
         model.
-    SSE: float
+    sse: float
         The sum of squared errors
     level: array
         An array of the levels values that make up the fitted values.
@@ -259,11 +261,11 @@ class HoltWintersResults(Results):
         An array of the slope values that make up the fitted values.
     season: array
         An array of the seaonal values that make up the fitted values.
-    AIC: float
+    aic: float
         The Akaike information criterion.
-    BIC: float
+    bic: float
         The Bayesian information criterion.
-    AICc: float
+    aicc: float
         AIC with a correction for finite sample sizes.
     resid: array
         An array of the residuals of the fittedvalues and actual values.
@@ -322,7 +324,7 @@ class HoltWintersResults(Results):
             return self.model.predict(self.params, start=start, end=end)
         except ValueError:
             # May occur when the index doesn't have a freq
-            return self.model._predict(h=steps, **self.params).fcast
+            return self.model._predict(h=steps, **self.params).fcastvalues
 
 
 class HoltWintersResultsWrapper(ResultsWrapper):
@@ -374,7 +376,7 @@ class ExponentialSmoothing(TimeSeriesModel):
     """
 
     def __init__(self, endog, trend=None, damped=False, seasonal=None,
-                 seasonal_periods=None, dates=None, freq=None, missing='none', **kwargs):
+                 seasonal_periods=None, dates=None, freq=None, missing='none'):
         super(ExponentialSmoothing, self).__init__(
             endog, None, dates, freq, missing=missing)
         if trend in ['additive', 'multiplicative']:
@@ -431,35 +433,39 @@ class ExponentialSmoothing(TimeSeriesModel):
             res = self._predict(h=0, **params)
         return res.fittedfcast[start:end + out_of_sample + 1]
 
-    def fit(self, alpha=None, beta=None, gamma=None, phi=None, optimized=True,
-            use_boxcox=False, remove_bias=False, use_basinhopping=False):
+    def fit(self, smoothing_level=None, smoothing_slope=None, smoothing_seasonal=None,
+            damping_slope=None, optimized=True, use_boxcox=False, remove_bias=False,
+            use_basinhopping=False):
         """
         fit Holt Winter's Exponential Smoothing
 
         Parameters
         ----------
-        alpha : float, optional
+        smoothing_level : float, optional
             The alpha value of the simple exponential smoothing, if the value is
             set then this value will be used as the value.
-        beta :  float, optional
+        smoothing_slope :  float, optional
             The beta value of the holts trend method, if the value is
             set then this value will be used as the value.
-        gamma : float, optional
+        smoothing_seasonal : float, optional
             The gamma value of the holt winters seasonal method, if the value is
             set then this value will be used as the value.
-        phi : float, optional
+        damping_slope : float, optional
             The phi value of the damped method, if the value is
             set then this value will be used as the value.
         optimized : bool, optional
-            Should the values that have not been set above be optimized automatically?
+            Should the values that have not been set above be optimized 
+            automatically?
         use_boxcox : {True, False, 'log', float}, optional
-            Should the boxcox tranform be applied to the data first? If 'log' then
-            apply the log. If float then use lambda equal to float.
+            Should the boxcox tranform be applied to the data first? If 'log' 
+            then apply the log. If float then use lambda equal to float.
         remove_bias : bool, optional
-            Should the bias be removed from the fcast and fitted values before being
-            returned? Does this by enforcing average residuals equal to zero.
+            Should the bias be removed from the forecast values and fitted values 
+            before being returned? Does this by enforcing average residuals equal 
+            to zero.
         use_basinhopping : bool, optional
-            Should the opptimser try harder using basinhopping to find optimal values?
+            Should the opptimser try harder using basinhopping to find optimal 
+            values?
 
         Returns
         -------
@@ -477,6 +483,13 @@ class ExponentialSmoothing(TimeSeriesModel):
         ----------
         [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice. OTexts, 2014.
         """
+        # Variable renames to alpha,beta, etc as this helps with following the
+        # mathematical notation in general
+        alpha = smoothing_level
+        beta = smoothing_slope
+        gamma = smoothing_seasonal
+        phi = damping_slope
+
         data = self.endog
         damped = self.damped
         seasoning = self.seasoning
@@ -518,7 +531,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             s0 = []
         if optimized:
             init_alpha = alpha if alpha is not None else 0.5 / max(m, 1)
-            init_beta = beta if beta is not None else 0.1 * init_alpha
+            init_beta = beta if beta is not None else 0.1 * init_alpha if trending else beta
             init_gamma = None
             init_phi = phi if phi is not None else 0.99
             # Selection of functions to optimize for approporate parameters
@@ -546,7 +559,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                                True, False, False] + [False] * m)
                 func = func_dict[(None, None)]
             p[:] = [init_alpha, init_beta, init_gamma, l0, b0, init_phi] + s0
-
+            
             # txi [alpha, beta, gamma, l0, b0, phi, s0,..,s_(m-1)]
             # Have a quick look in the region for a good starting place for alpha etc.
             # using guestimates for the levels
@@ -558,7 +571,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                         Ns=20, full_output=True, finish=None)
             (p[txi], max_seen, grid, Jout) = res
             [alpha, beta, gamma, l0, b0, phi] = p[:6]
-            s0 = p[6:]
+            s0 = p[6:]            
             #bounds = np.array([(0.0,1.0),(0.0,1.0),(0.0,1.0),(0.0,None),(0.0,None),(0.8,1.0)] + [(None,None),]*m)
             if use_basinhopping:
                 # Take a deeper look in the local minimum we are in to find the best
@@ -570,18 +583,21 @@ class ExponentialSmoothing(TimeSeriesModel):
                 # Take a deeper look in the local minimum we are in to find the best
                 # solution to parameters
                 res = minimize(func, p[xi], args=(
-                    xi, p, y, l, b, s, m, self.nobs, max_seen), bounds=bounds[xi])
-            p[xi] = res.x
+                    xi, p, y, l, b, s, m, self.nobs, max_seen), bounds=bounds[xi])                
+            p[xi] = res.x            
             [alpha, beta, gamma, l0, b0, phi] = p[:6]
             s0 = p[6:]
             opt = res
-        hwfit = self._predict(h=0, alpha=alpha, beta=beta, gamma=gamma, phi=phi, l0=l0,
-                              b0=b0, s0=s0, use_boxcox=use_boxcox, lamda=lamda, remove_bias=remove_bias)
-        hwfit.opt = opt
+        hwfit = self._predict(h=0, smoothing_level=alpha, smoothing_slope=beta,
+                              smoothing_seasonal=gamma, damping_slope=phi,
+                              initial_level=l0, initial_slope=b0, initial_seasons=s0,
+                              use_boxcox=use_boxcox, lamda=lamda, remove_bias=remove_bias)
+        hwfit._results.mle_retvals = opt
         return hwfit
 
-    def _predict(self, h=None, alpha=None, beta=None, gamma=None, l0=None, b0=None,
-                 phi=None, s0=None, use_boxcox=None, lamda=None, remove_bias=None):
+    def _predict(self, h=None, smoothing_level=None, smoothing_slope=None,
+                 smoothing_seasonal=None, initial_level=None, initial_slope=None,
+                 damping_slope=None, initial_seasons=None, use_boxcox=None, lamda=None, remove_bias=None):
         """
         Helper prediction function
 
@@ -590,6 +606,13 @@ class ExponentialSmoothing(TimeSeriesModel):
         h : int, optional
             The number of time steps to forecast ahead.
         """
+        # Variable renames to alpha,beta, etc as this helps with following the
+        # mathematical notation in general
+        alpha = smoothing_level
+        beta = smoothing_slope
+        gamma = smoothing_seasonal
+        phi = damping_slope
+
         # Start in sample and out of sample predictions
         data = self.endog
         damped = self.damped
@@ -602,6 +625,9 @@ class ExponentialSmoothing(TimeSeriesModel):
         if use_boxcox == 'log':
             lamda = 0.0
             y = boxcox(data, 0.0)
+        elif isinstance(use_boxcox, float):
+            lamda = use_boxcox
+            y = boxcox(data, lamda)
         elif use_boxcox:
             y, lamda = boxcox(data)
         else:
@@ -621,23 +647,23 @@ class ExponentialSmoothing(TimeSeriesModel):
         l = np.zeros((self.nobs + h + 1,))
         b = np.zeros((self.nobs + h + 1,))
         s = np.zeros((self.nobs + h + m + 1,))
-        l[0] = l0
-        b[0] = b0
-        s[:m] = s0
+        l[0] = initial_level
+        b[0] = initial_slope
+        s[:m] = initial_seasons
         phi_h = np.cumsum(np.repeat(phi, h + 1)**np.arange(1, h + 1 + 1)
                           ) if damped else np.arange(1, h + 1 + 1)
         trended = {'mul': np.multiply,
                    'add': np.add,
-                   None: lambda l,
-                   b: l}[trend]
+                   None: lambda l, b: l
+                   }[trend]
         detrend = {'mul': np.divide,
                    'add': np.subtract,
-                   None: lambda l,
-                   b: 0}[trend]
+                   None: lambda l, b: 0
+                   }[trend]
         dampen = {'mul': np.power,
                   'add': np.multiply,
-                  None: lambda b,
-                  phi: 0}[trend]
+                  None: lambda b, phi: 0
+                  }[trend]
         if seasonal == 'mul':
             for i in range(1, self.nobs + 1):
                 l[i] = y_alpha[i - 1] / s[i - 1] + \
@@ -651,10 +677,11 @@ class ExponentialSmoothing(TimeSeriesModel):
             slope = b[1:i + 1].copy()
             season = s[m:i + m].copy()
             l[i:] = l[i]
-            b[:i] = dampen(b[:i], phi)
-            b[i:] = dampen(b[i], phi_h)
-            s[i + m - 1:] = [s[(i - 1) + j % m] for j in range(h + 1 + 1)]
+            if trending:
+                b[:i] = dampen(b[:i], phi)
+                b[i:] = dampen(b[i], phi_h)
             trend = trended(l, b)
+            s[i + m - 1:] = [s[(i - 1) + j % m] for j in range(h + 1 + 1)]            
             fitted = trend * s[:-m]
         elif seasonal == 'add':
             for i in range(1, self.nobs + 1):
@@ -669,10 +696,11 @@ class ExponentialSmoothing(TimeSeriesModel):
             slope = b[1:i + 1].copy()
             season = s[m:i + m].copy()
             l[i:] = l[i]
-            b[:i] = dampen(b[:i], phi)
-            b[i:] = dampen(b[i], phi_h)
-            s[i + m - 1:] = [s[(i - 1) + j % m] for j in range(h + 1 + 1)]
+            if trending:
+                b[:i] = dampen(b[:i], phi)
+                b[i:] = dampen(b[i], phi_h)
             trend = trended(l, b)
+            s[i + m - 1:] = [s[(i - 1) + j % m] for j in range(h + 1 + 1)]            
             fitted = trend + s[:-m]
         else:
             for i in range(1, self.nobs + 1):
@@ -684,8 +712,9 @@ class ExponentialSmoothing(TimeSeriesModel):
             slope = b[1:i + 1].copy()
             season = s[m:i + m].copy()
             l[i:] = l[i]
-            b[:i] = dampen(b[:i], phi)
-            b[i:] = dampen(b[i], phi_h)
+            if trending:
+                b[:i] = dampen(b[:i], phi)
+                b[i:] = dampen(b[i], phi_h)
             trend = trended(l, b)
             fitted = trend
         level = l[1:i + 1].copy()
@@ -699,31 +728,31 @@ class ExponentialSmoothing(TimeSeriesModel):
                 season = (fitted / inv_boxcox(trend, lamda))[:i]
             else:
                 pass
-        SSE = sqeuclidean(fitted[:-h - 1], data)
+        sse = sqeuclidean(fitted[:-h - 1], data)
         # (s0 + gamma) + (b0 + beta) + (l0 + alpha) + phi
         k = m * seasoning + 2 * trending + 2 + 1 * damped
-        AIC = self.nobs * np.log(SSE / self.nobs) + (k) * 2
-        AICc = AIC + (2 * (k + 2) * (k + 3)) / (self.nobs - k - 3)
-        BIC = self.nobs * np.log(SSE / self.nobs) + (k) * np.log(self.nobs)
+        aic = self.nobs * np.log(sse / self.nobs) + (k) * 2
+        aicc = aic + (2 * (k + 2) * (k + 3)) / (self.nobs - k - 3)
+        bic = self.nobs * np.log(sse / self.nobs) + (k) * np.log(self.nobs)
         resid = data - fitted[:-h - 1]
         if remove_bias:
             fitted += resid.mean()
         if not damped:
-            phi = None
-        self.params = {'alpha': alpha,
-                       'beta': beta,
-                       'gamma': gamma,
-                       'phi': phi,
-                       'l0': l0,
-                       'b0': b0,
-                       's0': s0,
+            phi = np.NaN
+        self.params = {'smoothing_level': alpha,
+                       'smoothing_slope': beta,
+                       'smoothing_seasonal': gamma,
+                       'damping_slope': phi,
+                       'initial_level': l[0],
+                       'initial_slope': b[0],
+                       'initial_seasons': s[:m],
                        'use_boxcox': use_boxcox,
                        'lamda': lamda,
                        'remove_bias': remove_bias}
         hwfit = HoltWintersResults(self, self.params, fittedfcast=fitted, fittedvalues=fitted[:-h - 1],
-                                   fcast=fitted[-h - 1:], SSE=SSE, level=level,
-                                   slope=slope, season=season, AIC=AIC, BIC=BIC,
-                                   AICc=AICc, resid=resid, k=k)
+                                   fcastvalues=fitted[-h - 1:], sse=sse, level=level,
+                                   slope=slope, season=season, aic=aic, bic=bic,
+                                   aicc=aicc, resid=resid, k=k)
         return HoltWintersResultsWrapper(hwfit)
 
 
@@ -758,14 +787,14 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     def __init__(self, endog):
         super(SimpleExpSmoothing, self).__init__(endog)
 
-    def fit(self, alpha=None, optimized=True):
+    def fit(self, smoothing_level=None, optimized=True):
         """
         fit Simple Exponential Smoothing wrapper(...)
 
         Parameters
         ----------
-        alpha : float, optional
-            The alpha value of the simple exponential smoothing, if the value is
+        smoothing_level : float, optional
+            The smoothing_level value of the simple exponential smoothing, if the value is
             set then this value will be used as the value.
         optimized : bool
             Should the values that have not been set above be optimized automatically?
@@ -784,7 +813,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
         ----------
         [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice. OTexts, 2014.
         """
-        return super(SimpleExpSmoothing, self).fit(alpha=alpha, optimized=optimized)
+        return super(SimpleExpSmoothing, self).fit(smoothing_level=smoothing_level, optimized=optimized)
 
 
 class Holt(ExponentialSmoothing):
@@ -823,19 +852,19 @@ class Holt(ExponentialSmoothing):
         trend = 'mul' if exponential else 'add'
         super(Holt, self).__init__(endog, trend=trend, damped=damped)
 
-    def fit(self, alpha=None, beta=None, phi=None, optimized=True):
+    def fit(self, smoothing_level=None, smoothing_slope=None, damping_slope=None, optimized=True):
         """
         fit Holt's Exponential Smoothing wrapper(...)
 
         Parameters
         ----------
-        alpha : float, optional
+        smoothing_level : float, optional
             The alpha value of the simple exponential smoothing, if the value is
             set then this value will be used as the value.
-        beta :  float, optional
+        smoothing_slope :  float, optional
             The beta value of the holts trend method, if the value is
             set then this value will be used as the value.
-        phi : float, optional
+        damping_slope : float, optional
             The phi value of the damped method, if the value is
             set then this value will be used as the value.
         optimized : bool, optional
@@ -855,4 +884,6 @@ class Holt(ExponentialSmoothing):
         ----------
         [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice. OTexts, 2014.
         """
-        return super(Holt, self).fit(alpha=alpha, beta=beta, phi=phi, optimized=optimized)
+        return super(Holt, self).fit(smoothing_level=smoothing_level,
+                                     smoothing_slope=smoothing_slope, damping_slope=damping_slope,
+                                     optimized=optimized)
