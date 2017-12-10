@@ -23,10 +23,13 @@ class Factor(Model):
     """
     Principle axis factor analysis
 
-    .. [1] http://www.real-statistics.com/multivariate-statistics/
+    .. [1] Hofacker, C. (2004). Exploratory Factor Analysis, Mathematical Marketing
+    http://www.openaccesstexts.org/pdf/Quant_Chapter_11_efa.pdf
+
+    .. [2] http://www.real-statistics.com/multivariate-statistics/
     factor-analysis/principal-axis-method/
 
-    .. [2] http://stats.stackexchange.com/questions/102882/
+    .. [3] http://stats.stackexchange.com/questions/102882/
     steps-done-in-factor-analysis-compared-to-steps-done-in-pca/102999#102999
 
     Supported rotations:
