@@ -21,16 +21,10 @@ from statsmodels.iolib import summary2
 
 class Factor(Model):
     """
-    Principle axis factor analysis
+    Factor analysis
 
-    .. [1] Hofacker, C. (2004). Exploratory Factor Analysis, Mathematical Marketing
+    .. [1] Hofacker, C. (2004). Exploratory Factor Analysis, Mathematical Marketing.
     http://www.openaccesstexts.org/pdf/Quant_Chapter_11_efa.pdf
-
-    .. [2] http://www.real-statistics.com/multivariate-statistics/
-    factor-analysis/principal-axis-method/
-
-    .. [3] http://stats.stackexchange.com/questions/102882/
-    steps-done-in-factor-analysis-compared-to-steps-done-in-pca/102999#102999
 
     Supported rotations:
         'varimax', 'quartimax', 'biquartimax', 'equamax', 'oblimin',
@@ -44,8 +38,12 @@ class Factor(Model):
     n_factor : int
         The number of factors to extract
 
+    method : str
+        Specify the method to extract factors.
+        'pa' - Principal axis factor analysis
+
     """
-    def __init__(self, endog, n_factor, exog=None, **kwargs):
+    def __init__(self, endog, n_factor, exog=None, method='pa', **kwargs):
         if n_factor <= 0:
             raise ValueError('n_factor must be larger than 0! %d < 0' %
                              (n_factor))
@@ -57,11 +55,21 @@ class Factor(Model):
         self.loadings = None
         self.communality = None
         self.eigenvals = None
+        self.method = method
         super(Factor, self).__init__(endog, exog)
 
-    def fit(self, n_max_iter=50, tolerance=1e-6, SMC=True):
+    def fit(self, **kwargs):
         """
-        Fit the factor model
+        Extract factors
+        """
+        if self.method == 'pa':
+            return self.fit_pa(**kwargs)
+        else:
+            raise ValueError("Unknown factor extraction approach '%s'" % self.method)
+
+    def fit_pa(self, n_max_iter=50, tolerance=1e-6, SMC=True):
+        """
+        Extract factors using the iterative principal axis method
 
         Parameters
         ----------
@@ -164,12 +172,12 @@ class FactorResults(object):
         """
         self.rotation_method = method
         if method not in ['varimax', 'quartimax', 'biquartimax',
-                            'equamax', 'oblimin', 'parsimax', 'parsimony',
-                            'biquartimin', 'promax']:
+                          'equamax', 'oblimin', 'parsimax', 'parsimony',
+                          'biquartimin', 'promax']:
             raise ValueError('Unknown rotation method %s' % (method))
 
         if method in ['varimax', 'quartimax', 'biquartimax', 'equamax',
-                        'parsimax', 'parsimony', 'biquartimin']:
+                      'parsimax', 'parsimony', 'biquartimin']:
             self.loadings, T = rotate_factors(self.loadings_no_rot, method)
         elif method == 'oblimin':
             self.loadings, T = rotate_factors(self.loadings_no_rot, 'quartimin')

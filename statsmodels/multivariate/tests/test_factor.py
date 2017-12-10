@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.multivariate.factor import Factor
 from numpy.testing import assert_equal, assert_array_almost_equal
+from numpy.testing import assert_raises
 from numpy.testing.decorators import skipif
 
 try:
@@ -29,6 +30,12 @@ X = pd.DataFrame([['Minas Graes', 2.068, 2.070, 1.580, 1, 0],
                   ['Santa Cruz', 2.100, 2.106, 1.623, 12, 1],
                   ['Santa Cruz', 2.104, 2.101, 1.653, 13, 0]],
                  columns=['Loc', 'Basal', 'Occ', 'Max', 'id', 'alt'])
+
+
+def test_unknown_fa_method_error():
+    # Test raise error if an unkonwn FA method is specified in fa.method
+    mod = Factor(X.iloc[:, 1:-1], 2, method='ab')
+    assert_raises(ValueError, mod.fit)
 
 
 def test_example_compare_to_R_output():
