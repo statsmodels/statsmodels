@@ -32,13 +32,19 @@ X = pd.DataFrame([['Minas Graes', 2.068, 2.070, 1.580, 1, 0],
                  columns=['Loc', 'Basal', 'Occ', 'Max', 'id', 'alt'])
 
 
+def test_specify_nobs():
+    # Test specifying nobs
+    Factor(np.zeros([10, 3]), 2, nobs=10)
+    assert_raises(ValueError, Factor, np.zeros([10, 3]), 2, nobs=9)
+
+
 def test_auto_col_name():
     # Test auto generated variable names when endog_names is None
-    mod = Factor(None, 2, corr=np.zeros([11, 11]),endog_names=None,
+    mod = Factor(None, 2, corr=np.zeros([11, 11]), endog_names=None,
                  smc=False)
     assert_array_equal(mod.endog_names,
                        ['var00', 'var01', 'var02', 'var03', 'var04', 'var05',
-                        'var06', 'var07', 'var08', 'var09', 'var10',])
+                        'var06', 'var07', 'var08', 'var09', 'var10'])
 
 
 def test_direct_corr_matrix():

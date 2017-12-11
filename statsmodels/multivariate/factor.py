@@ -48,13 +48,13 @@ class Factor(Model):
     endog_names: str
         Names of endogeous variables.
         If specified, it will be used instead of the column names in endog
-    n_obs: int
+    nobs: int
         The number of observations. To be used together with `corr`
         Should be equals to the number of rows in `endog`.
 
     """
     def __init__(self, endog, n_factor, corr=None, method='pa', smc=True,
-                 missing='drop', endog_names=None, n_obs=None):
+                 missing='drop', endog_names=None, nobs=None):
         if endog is not None:
             k_endog = endog.shape[1]
         elif corr is not None:
@@ -101,8 +101,8 @@ class Factor(Model):
             self.corr = None
 
         # Check validity of n_obs
-        if n_obs is not None:
-            if endog is not None and endog.shape[0] != n_obs:
+        if nobs is not None:
+            if endog is not None and endog.shape[0] != nobs:
                 raise ValueError('n_obs must be equal to the number of rows in endog')
 
         # Do not preprocess endog if None
