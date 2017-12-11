@@ -152,6 +152,10 @@ class Factor(Model):
         tol : float
             Stopping critera (error tolerance) for iterative estimation algorithms
 
+        Returns
+        -------
+        results: FactorResults
+
         """
         if self.method == 'pa':
             return self._fit_pa(maxiter=maxiter, tol=tol)
@@ -232,6 +236,7 @@ class Factor(Model):
 class FactorResults(object):
     """
     Factor results class
+    For result summary, scree/loading plots and factor rotations
 
     Parameters
     ----------
