@@ -32,17 +32,25 @@ X = pd.DataFrame([['Minas Graes', 2.068, 2.070, 1.580, 1, 0],
                  columns=['Loc', 'Basal', 'Occ', 'Max', 'id', 'alt'])
 
 
+def test_auto_col_name():
+    # Test auto generated variable names when endog_names is None
+    mod = Factor(None, 2, corr=np.zeros([11, 11]),endog_names=None,
+                 smc=False)
+    assert_array_equal(mod.endog_names,
+                       ['var00', 'var01', 'var02', 'var03', 'var04', 'var05',
+                        'var06', 'var07', 'var08', 'var09', 'var10',])
+
+
 def test_direct_corr_matrix():
     # Test specifying the correlation matrix directly
     mod = Factor(None, 2, corr=np.corrcoef(X.iloc[:, 1:-1], rowvar=0),
                  smc=False)
-    results = mod.fit(tolerance=1e-10)
+    results = mod.fit(tol=1e-10)
     a = np.array([[0.965392158864, 0.225880658666255],
                   [0.967587154301, 0.212758741910989],
                   [0.929891035996, -0.000603217967568],
                   [0.486822656362, -0.869649573289374]])
     assert_array_almost_equal(results.loadings, a, decimal=8)
-
     # Test set and get endog_names
     mod.endog_names = X.iloc[:, 1:-1].columns
     assert_array_equal(mod.endog_names, ['Basal', 'Occ', 'Max', 'id'])
@@ -62,7 +70,7 @@ def test_example_compare_to_R_output():
     # No rotation without squared multiple correlations prior
     # produce same results as in R `fa`
     mod = Factor(X.iloc[:, 1:-1], 2, smc=False)
-    results = mod.fit(tolerance=1e-10)
+    results = mod.fit(tol=1e-10)
     a = np.array([[0.965392158864, 0.225880658666255],
                   [0.967587154301, 0.212758741910989],
                   [0.929891035996, -0.000603217967568],
