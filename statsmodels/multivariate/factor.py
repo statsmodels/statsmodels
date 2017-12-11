@@ -34,40 +34,94 @@ class Factor(Model):
     ----------
     endog : array-like
         Variables in columns, observations in rows
-
+        Could be `None` if `corr` is not `None`
     n_factor : int
         The number of factors to extract
-
+    corr : array-like
+        Directly specify the correlation matrix instead of estimating from endog
+        If not `None`, `endog` will not be used
     method : str
-        Specify the method to extract factors.
+        Specify the method to extract factors
         'pa' - Principal axis factor analysis
+    smc : True or False
+        Whether or not to apply squared multiple correlations
+    endog_names: str
+        Names of endogeous variables.
+        If specified, it will be used instead of the column names in endog
 
     """
-    def __init__(self, endog, n_factor, exog=None, method='pa', **kwargs):
+    def __init__(self, endog, n_factor, corr=None, method='pa', smc=True,
+                 missing='drop', endog_names=None):
+        # CHeck validity of n_factor
         if n_factor <= 0:
             raise ValueError('n_factor must be larger than 0! %d < 0' %
                              (n_factor))
-        if n_factor > endog.shape[1]:
+        if endog is not None and n_factor > endog.shape[1]:
             raise ValueError('n_factor must be smaller or equal to the number'
                              ' of columns of endog! %d > %d' %
                              (n_factor, endog.shape[1]))
         self.n_factor = n_factor
+
+        if corr is None and endog is None:
+            raise ValueError('Both endog and corr is None!')
+
         self.loadings = None
         self.communality = None
         self.eigenvals = None
         self.method = method
-        super(Factor, self).__init__(endog, exog)
+        self.smc = smc
 
-    def fit(self, **kwargs):
+        # Check validity of corr
+        if corr is not None:
+            if corr.shape[0] != corr.shape[1]:
+                raise ValueError('Correlation matrix corr must be a square')
+            if endog is not None and endog.shape[1] != corr.shape[0]:
+                    raise ValueError('The number of columns in endog must be '
+                                     'equal to the number of columns and rows corr')
+        self.corr = corr
+        self.endog_names = endog_names
+
+        # Do not preprocess endog if None
+        if endog is not None:
+            super(Factor, self).__init__(endog, exog=None, missing=missing)
+        else:
+            self.endog = None
+
+    @property
+    def endog_names(self):
+        """Names of endogenous variables"""
+        if self._endog_names is not None:
+            return self._endog_names
+        else:
+            if self.endog is not None:
+                return self.data.ynames
+            else:
+                return None
+
+    @endog_names.setter
+    def endog_names(self, value):
+        # Check validity of endog_names:
+        if value is not None:
+            if self.corr is not None and len(value) != self.corr.shape[0]:
+                raise ValueError('The number of elements in endog_names must '
+                                 'be equal to the number of columns and rows in corr')
+            if self.endog is not None and len(value) != self.endog.shape[1]:
+                raise ValueError('The number of elements in endog_names must '
+                                 'be equal to the number of columns in endog')
+            self._endog_names = np.asarray(value)
+        else:
+            self._endog_names = None
+
+    def fit(self, n_max_iter=50, tolerance=1e-6):
         """
         Extract factors
         """
         if self.method == 'pa':
-            return self.fit_pa(**kwargs)
+            return self._fit_pa(n_max_iter=n_max_iter, tolerance=tolerance)
         else:
             raise ValueError("Unknown factor extraction approach '%s'" % self.method)
 
-    def fit_pa(self, n_max_iter=50, tolerance=1e-6, SMC=True):
+    def _fit_pa(self, n_max_iter=50, tolerance=1e-6):
         """
         Extract factors using the iterative principal axis method
 
@@ -78,13 +132,15 @@ class Factor(Model):
         tolerance : float
             If `norm(communality - last_communality)  < tolerance`,
             estimation stops
-        SMC : True or False
-            Whether or not to apply squared multiple correlations
-
-        -------
 
         """
-        R = np.corrcoef(self.endog, rowvar=0)
+        # Estimate correlation matrix
+        if self.corr is not None:
+            R = self.corr
+        else:
+            R = np.corrcoef(self.endog, rowvar=0)
+
+        # Parameter validation
         self.n_comp = matrix_rank(R)
         if self.n_factor > self.n_comp:
             raise ValueError('n_factor must be smaller or equal to the rank'
@@ -96,12 +152,12 @@ class Factor(Model):
         if tolerance <= 0 or tolerance > 0.01:
             raise ValueError('tolerance must be larger than 0 and smaller than'
                              ' 0.01! Got %f instead' % (tolerance))
+
         #  Initial communality estimation
-        if SMC:
+        if self.smc:
             c = 1 - 1 / np.diag(inv(R))
-            self.SMC = np.array(c)
         else:
-            c = np.ones([1, len(R)])
+            c = np.ones(len(R))
 
         # Iterative communality estimation
         eigenvals = None
@@ -129,6 +185,7 @@ class Factor(Model):
             c = np.power(A, 2).sum(axis=1)
             if norm(c_last - c) < tolerance:
                 break
+
         self.eigenvals = eigenvals
         self.communality = c
         self.loadings = A
@@ -155,6 +212,7 @@ class FactorResults(object):
         self.eigenvals = factor.eigenvals
         self.communality = factor.communality
         self.rotation_method = None
+        self.fa_method = factor.method
         self.n_comp = factor.n_comp
 
     def __str__(self):
