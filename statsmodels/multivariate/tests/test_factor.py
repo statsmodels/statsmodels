@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.multivariate.factor import Factor
 from numpy.testing import assert_equal, assert_array_almost_equal
-from numpy.testing import assert_raises
+from numpy.testing import assert_raises, assert_array_equal
 from numpy.testing.decorators import skipif
 
 try:
@@ -32,6 +32,26 @@ X = pd.DataFrame([['Minas Graes', 2.068, 2.070, 1.580, 1, 0],
                  columns=['Loc', 'Basal', 'Occ', 'Max', 'id', 'alt'])
 
 
+def test_direct_corr_matrix():
+    # Test specifying the correlation matrix directly
+    mod = Factor(None, 2, corr=np.corrcoef(X.iloc[:, 1:-1], rowvar=0),
+                 smc=False)
+    results = mod.fit(tolerance=1e-10)
+    a = np.array([[0.965392158864, 0.225880658666255],
+                  [0.967587154301, 0.212758741910989],
+                  [0.929891035996, -0.000603217967568],
+                  [0.486822656362, -0.869649573289374]])
+    assert_array_almost_equal(results.loadings, a, decimal=8)
+
+    # Test set and get endog_names
+    mod.endog_names = X.iloc[:, 1:-1].columns
+    assert_array_equal(mod.endog_names, ['Basal', 'Occ', 'Max', 'id'])
+
+    # Test set endog_names with the wrong number of elements
+    assert_raises(ValueError, setattr, mod, 'endog_names',
+                  X.iloc[:, :1].columns)
+
+
 def test_unknown_fa_method_error():
     # Test raise error if an unkonwn FA method is specified in fa.method
     mod = Factor(X.iloc[:, 1:-1], 2, method='ab')
@@ -39,8 +59,19 @@ def test_unknown_fa_method_error():
 
 
 def test_example_compare_to_R_output():
-    # No rotation produce same results as in R fa
-    mod = Factor(X.iloc[:, 1:-1], 2)
+    # No rotation without squared multiple correlations prior
+    # produce same results as in R `fa`
+    mod = Factor(X.iloc[:, 1:-1], 2, smc=False)
+    results = mod.fit(tolerance=1e-10)
+    a = np.array([[0.965392158864, 0.225880658666255],
+                  [0.967587154301, 0.212758741910989],
+                  [0.929891035996, -0.000603217967568],
+                  [0.486822656362, -0.869649573289374]])
+    assert_array_almost_equal(results.loadings, a, decimal=8)
+
+    # No rotation WITH squared multiple correlations prior
+    # produce same results as in R `fa`
+    mod = Factor(X.iloc[:, 1:-1], 2, smc=True)
     results = mod.fit()
     a = np.array([[0.97541115, 0.20280987],
                   [0.97113975, 0.17207499],
