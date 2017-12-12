@@ -22,6 +22,7 @@ from statsmodels.iolib import summary2
 class Factor(Model):
     """
     Factor analysis
+    Status: experimental
 
     .. [1] Hofacker, C. (2004). Exploratory Factor Analysis, Mathematical Marketing.
     http://www.openaccesstexts.org/pdf/Quant_Chapter_11_efa.pdf
@@ -237,6 +238,7 @@ class FactorResults(object):
     """
     Factor results class
     For result summary, scree/loading plots and factor rotations
+    Status: experimental
 
     Parameters
     ----------
