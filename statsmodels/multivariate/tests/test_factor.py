@@ -73,6 +73,32 @@ def test_unknown_fa_method_error():
 
 
 def test_example_compare_to_R_output():
+    # Testing basic functions and compare to R output
+
+    # R code for producing the results:
+    # library(psych)
+    # library(GPArotation)
+    # Basal = c(2.068,	2.068,	2.09,	2.097,	2.117,	2.14,	2.045,	2.076,	2.09,	2.111,	2.093,	2.1,	2.104)
+    # Occ = c(2.07,	2.074,	2.09,	2.093,	2.125,	2.146,	2.054,	2.088,	2.093,	2.114,	2.098,	2.106,	2.101)
+    # Max = c(1.58,	1.602,	1.613,	1.613,	1.663,	1.681,	1.58,	1.602,	1.643,	1.643,	1.653,	1.623,	1.653)
+    # id = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13)
+    # Y <- cbind(Basal, Occ, Max, id)
+    # a <- fa(Y, nfactors=2, fm="pa", rotate="none", SMC=FALSE, min.err=1e-10)
+    # b <- cbind(a$loadings[,1], -a$loadings[,2])
+    # b
+    # a <- fa(Y, nfactors=2, fm="pa", rotate="Promax", SMC=TRUE, min.err=1e-10)
+    # b <- cbind(a$loadings[,1], a$loadings[,2])
+    # b
+    # a <- fa(Y, nfactors=2, fm="pa", rotate="Varimax", SMC=TRUE, min.err=1e-10)
+    # b <- cbind(a$loadings[,1], a$loadings[,2])
+    # b
+    # a <- fa(Y, nfactors=2, fm="pa", rotate="quartimax", SMC=TRUE, min.err=1e-10)
+    # b <- cbind(a$loadings[,1], -a$loadings[,2])
+    # b
+    # a <- fa(Y, nfactors=2, fm="pa", rotate="oblimin", SMC=TRUE, min.err=1e-10)
+    # b <- cbind(a$loadings[,1], a$loadings[,2])
+    # b
+
     # No rotation without squared multiple correlations prior
     # produce same results as in R `fa`
     mod = Factor(X.iloc[:, 1:-1], 2, smc=False)
@@ -117,6 +143,51 @@ def test_example_compare_to_R_output():
                    -0.00013510048],
                   [0.06563421, 0.03096076, -0.39658839, -0.59261944]])
     assert_array_almost_equal(results.loadings, a.T, decimal=8)
+
+    # Testing result summary string
+    results.rotate('varimax')
+    desired = (
+"""   Factor analysis results
+=============================
+      Eigenvalues            
+-----------------------------
+ Basal   Occ    Max      id  
+-----------------------------
+ 2.9609 0.3209 0.0000 -0.0000
+-----------------------------
+                             
+-----------------------------
+      Communality            
+-----------------------------
+  Basal   Occ    Max     id  
+-----------------------------
+  0.9926 0.9727 0.9654 0.3511
+-----------------------------
+                             
+-----------------------------
+   Pre-rotated loadings      
+-----------------------------------
+            factor 0       factor 1
+-----------------------------------
+Basal         0.9754         0.2028
+Occ           0.9711         0.1721
+Max           0.9619        -0.2004
+id            0.3757        -0.4582
+-----------------------------
+                             
+-----------------------------
+   varimax rotated loadings  
+-----------------------------------
+            factor 0       factor 1
+-----------------------------------
+Basal         0.9883        -0.1259
+Occ           0.9742        -0.1535
+Max           0.8442        -0.5027
+id            0.2060        -0.5556
+=============================
+""")
+    actual = results.summary().as_text()
+    assert_equal(actual, desired)
 
 
 @skipif(missing_matplotlib)

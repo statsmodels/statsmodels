@@ -308,14 +308,14 @@ class FactorResults(object):
         summ.add_dict({'': 'Pre-rotated loadings'})
         summ.add_df(loadings_no_rot)
         summ.add_dict({'': ''})
-        if self.rotation is not None:
+        if self.rotation_method is not None:
             loadings = pd.DataFrame(
                 self.loadings,
                 columns=["factor %d" % (i)
                          for i in range(self.loadings.shape[1])],
                 index=self.endog_names
             )
-            summ.add_dict({'': '%s rotated loadings' % (self.rotation)})
+            summ.add_dict({'': '%s rotated loadings' % (self.rotation_method)})
             summ.add_df(loadings)
         return summ
 
