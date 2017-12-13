@@ -246,7 +246,7 @@ def _measure_tables(tables, settings):
     pad_index = []
 
     for i in range(len(tab)):
-        nsep = tables[i].shape[1] - 1
+        nsep = max(tables[i].shape[1] - 1, 1)
         pad = int((len_max - length[i]) / nsep)
         pad_sep.append(pad)
         len_new = length[i] + nsep * pad

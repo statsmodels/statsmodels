@@ -32,15 +32,9 @@ X = pd.DataFrame([['Minas Graes', 2.068, 2.070, 1.580, 1, 0],
                  columns=['Loc', 'Basal', 'Occ', 'Max', 'id', 'alt'])
 
 
-def test_specify_nobs():
-    # Test specifying nobs
-    Factor(np.zeros([10, 3]), 2, nobs=10)
-    assert_raises(ValueError, Factor, np.zeros([10, 3]), 2, nobs=9)
-
-
 def test_auto_col_name():
     # Test auto generated variable names when endog_names is None
-    mod = Factor(None, 2, corr=np.zeros([11, 11]), endog_names=None,
+    mod = Factor(None, 2, corr=np.eye(11), endog_names=None,
                  smc=False)
     assert_array_equal(mod.endog_names,
                        ['var00', 'var01', 'var02', 'var03', 'var04', 'var05',
@@ -149,23 +143,23 @@ def test_example_compare_to_R_output():
     desired = (
 """   Factor analysis results
 =============================
-      Eigenvalues            
+      Eigenvalues
 -----------------------------
- Basal   Occ    Max      id  
+ Basal   Occ    Max      id
 -----------------------------
  2.9609 0.3209 0.0000 -0.0000
 -----------------------------
-                             
+
 -----------------------------
-      Communality            
+      Communality
 -----------------------------
-  Basal   Occ    Max     id  
+  Basal   Occ    Max     id
 -----------------------------
   0.9926 0.9727 0.9654 0.3511
 -----------------------------
-                             
+
 -----------------------------
-   Pre-rotated loadings      
+   Pre-rotated loadings
 -----------------------------------
             factor 0       factor 1
 -----------------------------------
@@ -174,9 +168,9 @@ Occ           0.9711         0.1721
 Max           0.9619        -0.2004
 id            0.3757        -0.4582
 -----------------------------
-                             
+
 -----------------------------
-   varimax rotated loadings  
+   varimax rotated loadings
 -----------------------------------
             factor 0       factor 1
 -----------------------------------
@@ -187,6 +181,7 @@ id            0.2060        -0.5556
 =============================
 """)
     actual = results.summary().as_text()
+    actual = "\n".join(line.rstrip() for line in actual.splitlines()) + "\n"
     assert_equal(actual, desired)
 
 
