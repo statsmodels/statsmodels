@@ -605,6 +605,60 @@ class FactorResults(object):
     def get_loadings_frame(self, style='display', sort_=True, threshold=0.3,
                            highlight_max=True, color_max='yellow',
                            precision=None):
+        """get loadings matrix as DataFrame or pandas Styler
+
+        Parameters
+        ----------
+        style : 'display' (default), 'raw' or 'strings'
+            'raw' returns just a DataFrame of the loadings matrix, no options are
+                applied
+            'display' add sorting and styling as defined by other keywords
+            'strings' returns a DataFrame with string elements with optional sorting
+                and surpressing small loading coefficients.
+
+        sort_ : boolean
+            If True, then the rows of the DataFrame is sorted by contribution of each
+            factor. applies if style is either 'display' or 'strings'
+        threshold : float
+            If the threshold is larger than zero, then loading coefficients are
+            either colored white (if style is 'display') or replace by empty
+            string (if style is 'strings').
+        highlight_max : boolean
+            This add a background color to the largest coefficient in each row.
+        color_max : html color
+            default is 'yellow'. color for background of row maximum
+        precision : None or int
+            If None, then pandas default precision applies. Otherwise values are
+            rounded to precision decimals. If style is 'display', then the
+            underlying dataframe is not changed. If style is 'strings', then
+            values are rounded before conversion to strings.
+
+        Returns
+        -------
+        loadings : DataFrame or pandas Styler instance
+            The return is a pandas Styler instance, if style is 'display' and
+            at least one of highlight_max, threshold or precision is applied.
+            Otherwise, the returned loadings is a DataFrame.
+
+        Examples
+        --------
+        mod = Factor(df, 3, smc=True)
+        res = mod.fit()
+        res.get_loadings_frame(style='display', precision=3, threshold=0.2)
+
+        To get a sorted DataFrame, all styling options need to be turned off:
+
+        df_sorted = res.get_loadings_frame(style='display',
+                    highlight_max=False, precision=None, threshold=0)
+
+        Options except for highlighting are available for plain test or Latex
+        usage:
+
+        lds = res_u.get_loadings_frame(style='strings', precision=3,
+                                       threshold=0.3)
+        print(lds.to_latex())
+
+        """
 
         loadings_df = pd.DataFrame(
                 self.loadings,
