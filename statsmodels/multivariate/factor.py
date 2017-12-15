@@ -602,6 +602,83 @@ class FactorResults(object):
             summ.add_df(loadings)
         return summ
 
+    def get_loadings_frame(self, style='display', sort_=True, threshold=0.3,
+                           highlight_max=True, color_max='yellow',
+                           precision=None):
+
+        loadings_df = pd.DataFrame(
+                self.loadings,
+                columns=["factor %d" % (i)
+                         for i in range(self.loadings.shape[1])],
+                index=self.endog_names
+                )
+
+        if style not in ['raw', 'display', 'strings']:
+            msg = "style has to be one of 'raw', 'display', 'strings'"
+            raise ValueError(msg)
+
+        if style == 'raw':
+            return loadings_df
+
+        # add sorting and some formatting
+        if sort_ is True:
+            loadings_df2 = loadings_df.copy()
+            n_f = len(loadings_df2)
+            high = np.abs(loadings_df2.values).argmax(1)
+            loadings_df2['high'] = high
+            loadings_df2['largest'] = np.abs(loadings_df.values[np.arange(n_f), high])
+            loadings_df2.sort_values(by=['high', 'largest'], ascending=[True, False], inplace=True)
+            loadings_df = loadings_df2.drop(['high', 'largest'], axis=1)
+
+        if style == 'display':
+            sty = None
+            if threshold > 0:
+                def color_white_small(val):
+                    """
+                    Takes a scalar and returns a string with
+                    the css property `'color: white'` for small values, black otherwise.
+
+                    takes threshold from outer scope
+                    """
+                    color = 'white' if np.abs(val) < threshold else 'black'
+                    return 'color: %s' % color
+
+                sty = loadings_df.style.applymap(color_white_small)
+
+            if highlight_max is True:
+                def highlight_max(s):
+                    '''
+                    highlight the maximum in a Series yellow.
+                    '''
+                    s = np.abs(s)
+                    is_max = s == s.max()
+                    return ['background-color: '+ color_max if v else '' for v in is_max]
+
+                if sty is None:
+                    sty = loadings_df.style
+
+                sty = sty.apply(highlight_max, axis=1)
+
+            if precision is not None:
+                if sty is None:
+                    sty = loadings_df.style
+
+                sty.set_precision(precision)
+
+            if sty is None:
+                return loadings_df
+            else:
+                return sty
+
+        if style == 'strings':
+            ld = loadings_df
+            if precision is not None:
+                ld = ld.round(precision)
+            ld = ld.astype(str)
+            if threshold > 0:
+                ld[loadings_df.abs() < threshold] = ''
+            return ld
+
     def plot_scree(self, ncomp=None):
         """
         Plot of the ordered eigenvalues and variance explained for the loadings

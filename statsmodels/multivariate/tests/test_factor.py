@@ -4,12 +4,14 @@ import numpy as np
 import pandas as pd
 from statsmodels.multivariate.factor import Factor
 from numpy.testing import assert_equal, assert_array_almost_equal
-from numpy.testing import assert_raises, assert_array_equal
+from numpy.testing import assert_raises, assert_array_equal, assert_
 from numpy.testing.decorators import skipif
 
 try:
     import matplotlib.pyplot as plt
     missing_matplotlib = False
+    plt.switch_backend('Agg')
+
 except ImportError:
     missing_matplotlib = True
 
@@ -190,6 +192,33 @@ def test_plots():
     mod = Factor(X.iloc[:, 1:], 3)
     results = mod.fit()
     results.rotate('oblimin')
-    results.plot_scree()
+    fig = results.plot_scree()
+    plt.close(fig)
+
     fig_loadings = results.plot_loadings()
     assert_equal(3, len(fig_loadings))
+    for fig in fig_loadings[:-1]:
+        plt.close(fig)
+    plt.close('all')
+
+
+def test_getframe_smoke():
+    #  mostly smoke tests for now
+    mod = Factor(X.iloc[:, 1:-1], 2, smc=True)
+    res = mod.fit()
+
+    df = res.get_loadings_frame(style='raw')
+    assert_(isinstance(df, pd.DataFrame))
+    ldf = res.get_loadings_frame(style='display')
+
+    assert_(isinstance(ldf, pd.formats.style.Styler))
+    assert_(isinstance(ldf.data, pd.DataFrame))
+
+    res.get_loadings_frame(style='display', precision=3, threshold=0.2)
+
+    res.get_loadings_frame(style='display', precision=3, color_max='GAINSBORO')
+
+    res.get_loadings_frame(style='display', precision=3, threshold=0.45, highlight_max=False, sort_=False)
+
+    lds = res.get_loadings_frame(style='strings', precision=3, threshold=0.3)
+    lds.to_latex()
