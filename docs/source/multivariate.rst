@@ -25,3 +25,67 @@ Principal Component Analysis
 
    PCA
    pca
+
+
+Factor Analysis
+---------------
+
+.. currentmodule:: statsmodels.multivariate.factor
+
+.. autosummary::
+   :toctree: generated/
+
+   Factor
+   FactorResults
+
+
+Factor Rotation
+---------------
+
+.. currentmodule:: statsmodels.multivariate.factor_rotation
+
+.. autosummary::
+   :toctree: generated/
+
+   rotate_factors
+   target_rotation
+   procrustes
+   promax
+
+
+Canonical Correlation
+---------------------
+
+.. currentmodule:: statsmodels.multivariate.cancor
+
+.. autosummary::
+   :toctree: generated/
+
+   CanCor
+
+
+MANOVA
+------
+
+.. currentmodule:: statsmodels.multivariate.manova
+
+.. autosummary::
+   :toctree: generated/
+
+   MANOVA
+
+
+MultivariateOLS
+---------------
+
+`_MultivariateOLS` is a model class with limited features. Currently it
+supports multivariate hypothesis tests and is used as backend for MANOVA.
+
+.. currentmodule:: statsmodels.multivariate.multivariate_ols
+
+.. autosummary::
+   :toctree: generated/
+
+   _MultivariateOLS
+   _MultivariateOLSResults
+   MultivariateTestResults

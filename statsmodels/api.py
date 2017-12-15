@@ -34,6 +34,8 @@ from .emplike import api as emplike
 from .duration import api as duration
 from .multivariate.pca import PCA
 from .multivariate.manova import MANOVA
+from .multivariate.factor import Factor
+from .multivariate import api as multivariate
 
 from .formula import api as formula
 
