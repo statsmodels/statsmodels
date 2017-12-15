@@ -209,8 +209,17 @@ def test_getframe_smoke():
 
     df = res.get_loadings_frame(style='raw')
     assert_(isinstance(df, pd.DataFrame))
-    ldf = res.get_loadings_frame(style='display')
 
+    lds = res.get_loadings_frame(style='strings', precision=3, threshold=0.3)
+    lds.to_latex()
+
+    # The Styler option require jinja2, skip if not available
+    try:
+        from jinja2 import Template
+    except ImportError:
+        return
+
+    ldf = res.get_loadings_frame(style='display')
     assert_(isinstance(ldf, pd.formats.style.Styler))
     assert_(isinstance(ldf.data, pd.DataFrame))
 
@@ -220,5 +229,4 @@ def test_getframe_smoke():
 
     res.get_loadings_frame(style='display', precision=3, threshold=0.45, highlight_max=False, sort_=False)
 
-    lds = res.get_loadings_frame(style='strings', precision=3, threshold=0.3)
-    lds.to_latex()
+
