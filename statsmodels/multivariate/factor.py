@@ -365,24 +365,28 @@ class Factor(Model):
             warnings.warn("some uniquenesses are nearly zero")
 
         # Rotate solution to satisfy IC3 of Bai and Li
-        load3, load0 = self._rotate(load)
+        load = self._rotate(load, uniq)
 
         self.uniqueness = uniq
         self.communality = 1 - uniq
-        self.loadings = load3
-        self.loadings_unrotated = load0
+        self.loadings = load
 
         return FactorResults(self)
 
-    def _rotate(self, load):
+    def _rotate(self, load, uniq):
         # Rotations used in ML estimation.
-        load0, s, _ = np.linalg.svd(load, 0)
-        if self.nobs is not None:
-            load3 = load0 * np.sqrt(self.nobs)
+        load, s, _ = np.linalg.svd(load, 0)
+        load *= s
+
+        if self.nobs is None:
+            nobs = 1
         else:
-            load3 = load0
-        load0 *= s
-        return load3, load0
+            nobs = self.nobs
+
+        cm = np.dot(load.T, load / uniq[:, None]) / nobs
+        _, f = np.linalg.eig(cm)
+        load = np.dot(load, f)
+        return load
 
 
 class FactorResults(object):
@@ -568,13 +572,9 @@ class FactorResults(object):
         Returns the fitted covariance matrix.
         """
 
-        if hasattr(self, "loadings_unrotated"):
-            c = np.dot(self.loadings, self.loadings.T)
-            c.flat[::c.shape[0]+1] += self.uniqueness
-            return c
-        else:
-            msg = "Cannot compute fitted covariance"
-            raise ValueError(msg)
+        c = np.dot(self.loadings, self.loadings.T)
+        c.flat[::c.shape[0]+1] += self.uniqueness
+        return c
 
     @cache_readonly
     def uniq_stderr(self, kurt=0):

@@ -21,7 +21,7 @@ def test_exact():
             fa = Factor(corr=c, n_factor=n_factor, method='ml')
             rslt = fa.fit()
             assert_allclose(rslt.fitted_cov, c, rtol=1e-4, atol=1e-4)
-            rslt.summary() # smoke test
+            rslt.summary()  # smoke test
 
 
 def test_1factor():
@@ -84,10 +84,10 @@ def test_2factor():
 
     loads = [np.r_[0.323, 0.586, 0.519, 0.519, 0.586, 0.323],
              np.r_[0.337, 0.538, 0.187, -0.187, -0.538, -0.337]]
-    for k in 0,1:
-        if np.dot(loads[k], rslt.loadings_unrotated[:, k]) < 0:
+    for k in 0, 1:
+        if np.dot(loads[k], rslt.loadings[:, k]) < 0:
             loads[k] *= -1
-        assert_allclose(loads[k], rslt.loadings_unrotated[:, k], rtol=1e-3, atol=1e-3)
+        assert_allclose(loads[k], rslt.loadings[:, k], rtol=1e-3, atol=1e-3)
 
     assert_equal(rslt.df, 4)
 
