@@ -409,8 +409,6 @@ class FactorResults(object):
         1 - uniqueness
     loadings : ndarray
         Each column is the loading vector for one factor
-    loadings_canonical : ndarray
-        A rotation of the loadings, see notes
     n_comp : int
         Number of components (factors)
     nbs : int
@@ -422,13 +420,11 @@ class FactorResults(object):
     Notes
     -----
     Under ML estimation, the default rotation (used for `loadings`) is
-    condition IC3 of Bai and Li (2012).  The standard errors are only
-    applicable under this rotation.  An alternative rotation is the
-    'canonical loadings' given by `loadings_canonical`.  Under the
-    canonical loadings, the factor scores are iid and standardized.
-    If `G` is the canonical loadings and `U` is the vector of
-    uniquenesses, then the covariance matrix implied by the factor
-    analysis is `GG' + diag(U)`.
+    condition IC3 of Bai and Li (2012).  Under this rotation, the
+    factor scores are iid and standardized.  If `G` is the canonical
+    loadings and `U` is the vector of uniquenesses, then the
+    covariance matrix implied by the factor analysis is `GG' +
+    diag(U)`.
     """
     def __init__(self, factor):
         self.endog_names = factor.endog_names
@@ -436,8 +432,6 @@ class FactorResults(object):
         self.loadings = factor.loadings
         if hasattr(factor, "eigenvals"):
             self.eigenvals = factor.eigenvals
-        if hasattr(factor, "loadings_unrotated"):
-            self.loadings_unrotated = factor.loadings_unrotated
         self.communality = factor.communality
         self.uniqueness = factor.uniqueness
         self.rotation_method = None
