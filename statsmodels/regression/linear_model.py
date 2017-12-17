@@ -1335,7 +1335,7 @@ class RegressionResults(base.LikelihoodModelResults):
     f_pvalue
         p-value of the F-statistic
     fittedvalues
-        The predicted the values for the original (unwhitened) design.
+        The predicted values for the original (unwhitened) design.
     het_scale
         adjusted squared residuals for heteroscedasticity robust standard
         errors. Is only available after `HC#_se` or `cov_HC#` is called.
