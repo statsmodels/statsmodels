@@ -280,8 +280,8 @@ class Factor(Model):
         return FactorResults(self)
 
     # Unpacks the model parameters from a flat vector, used for ML
-    # estimation.  The first k_endog elements of par are the standard
-    # deviations of the uniquenesses.  The remaining elements are the
+    # estimation.  The first k_endog elements of par are the square
+    # roots of the uniquenesses.  The remaining elements are the
     # factor loadings, packed one factor at a time.
     def _unpack(self, par):
         return (par[0:self.k_endog]**2,
@@ -320,8 +320,8 @@ class Factor(Model):
         b = np.dot(gamma, b) / sig2[:, None]
         w -= np.trace(b)
 
-        # Negative log-likelihood
-        return (v + w) / (2*self.k_endog)
+        # Scaled log-likelihood
+        return -(v + w) / (2*self.k_endog)
 
     # Maximum likelihood factor analysis.
     def _fit_ml(self, start, opt_method, opt):
@@ -350,49 +350,81 @@ class Factor(Model):
             raise ValueError("Invalid starting values")
 
         # Do the optimization
-        def qloglike(par):
-            return self.loglike(par)
-
+        def nloglike(par):
+            return -self.loglike(par)
         if opt is not None:
             opt = dict(opt)
         else:
             opt = {}
         opt.update(_opt_defaults)
-        r = minimize(qloglike, start, method=opt_method, options=opt)
+        r = minimize(nloglike, start, method=opt_method, options=opt)
         par = r.x
         uniq, load = self._unpack(par)
 
+        if uniq.min() < 1e-10:
+            warnings.warn("some uniquenesses are nearly zero")
+
         # Rotate solution to satisfy IC3 of Bai and Li
-        if uniq.min() > 1e-10:
-            load = _rotate(load, uniq)
-        else:
-            warnings.warn("some error variances are nearly zero, " +
-                          "skipping rotation")
+        load3, load0 = self._rotate(load)
 
         self.uniqueness = uniq
         self.communality = 1 - uniq
-        self.loadings = load
+        self.loadings = load3
+        self.loadings_unrotated = load0
 
         return FactorResults(self)
 
-
-def _rotate(load, uniq, type="ic3"):
-    qm = np.dot(load.T, load / uniq[:, None])
-    _, b = np.linalg.eig(qm)
-    return np.dot(load, b)
+    def _rotate(self, load):
+        # Rotations used in ML estimation.
+        load0, s, _ = np.linalg.svd(load, 0)
+        if self.nobs is not None:
+            load3 = load0 * np.sqrt(self.nobs)
+        else:
+            load3 = load0
+        load0 *= s
+        return load3, load0
 
 
 class FactorResults(object):
     """
-    Factor results class
+    Factor results class (status experimental)
+
     For result summary, scree/loading plots and factor rotations
-    Status: experimental
 
     Parameters
     ----------
     factor : Factor
         Fitted Factor class
 
+    Attributes
+    ----------
+    uniqueness: ndarray
+        The uniqueness (variance of uncorrelated errors unique to
+        each variable)
+    communality: ndarray
+        1 - uniqueness
+    loadings : ndarray
+        Each column is the loading vector for one factor
+    loadings_canonical : ndarray
+        A rotation of the loadings, see notes
+    n_comp : int
+        Number of components (factors)
+    nbs : int
+        Number of observations
+    fa_method : string
+        The method used to obtain the decomposition, either 'pa' for
+        'principal axes' or 'ml' for maximum likelihood.
+
+    Notes
+    -----
+    Under ML estimation, the default rotation (used for `loadings`) is
+    condition IC3 of Bai and Li (2012).  The standard errors are only
+    applicable under this rotation.  An alternative rotation is the
+    'canonical loadings' given by `loadings_canonical`.  Under the
+    canonical loadings, the factor scores are iid and standardized.
+    If `G` is the canonical loadings and `U` is the vector of
+    uniquenesses, then the covariance matrix implied by the factor
+    analysis is `GG' + diag(U)`.
     """
     def __init__(self, factor):
         self.endog_names = factor.endog_names
@@ -400,6 +432,8 @@ class FactorResults(object):
         self.loadings = factor.loadings
         if hasattr(factor, "eigenvals"):
             self.eigenvals = factor.eigenvals
+        if hasattr(factor, "loadings_unrotated"):
+            self.loadings_unrotated = factor.loadings_unrotated
         self.communality = factor.communality
         self.uniqueness = factor.uniqueness
         self.rotation_method = None
@@ -528,25 +562,33 @@ class FactorResults(object):
                              title=title, row_names=self.endog_names,
                              percent_variance=var_explained)
 
-    """
-    Returns the fitted covariance matrix.
-    """
     @cache_readonly
     def fitted_cov(self):
-        c = np.dot(self.loadings, self.loadings.T)
-        c.flat[::c.shape[0]+1] += self.uniqueness
-        return c
+        """
+        Returns the fitted covariance matrix.
+        """
 
-    """
-    The standard errors of the uniquenesses.
+        if hasattr(self, "loadings_unrotated"):
+            c = np.dot(self.loadings, self.loadings.T)
+            c.flat[::c.shape[0]+1] += self.uniqueness
+            return c
+        else:
+            msg = "Cannot compute fitted covariance"
+            raise ValueError(msg)
 
-    If excess kurtosis is known, provide as `kurt`.  Standard errors
-    are only available if the model was fit using maximum likelihood.
-    If `endog` is not provided, `nobs`must be provided to obtain
-    standard errors.
-    """
     @cache_readonly
     def uniq_stderr(self, kurt=0):
+        """
+        The standard errors of the uniquenesses.
+
+        If excess kurtosis is known, provide as `kurt`.  Standard
+        errors are only available if the model was fit using maximum
+        likelihood.  If `endog` is not provided, `nobs`must be
+        provided to obtain standard errors.
+
+        These are asymptotic standard errors.  See Bai and Li (2012)
+        for conditions under which the standard errors are valid.
+        """
 
         if self.fa_method.lower() != "ml":
             msg = "Standard errors only available under ML estimation"
@@ -556,18 +598,21 @@ class FactorResults(object):
             msg = "nobs is required to obtain standard errors."
             raise ValueError(msg)
 
-        v = self.uniqueness**2 * (2 + kurt) / self.nobs
-        return np.sqrt(v)
+        v = self.uniqueness**2 * (2 + kurt)
+        return np.sqrt(v / self.nobs)
 
-    """
-    The standard errors of the loadings.
-
-    Standard errors are only available if the model was fit using
-    maximim likelihood.  If `endog` is not provided, `nobs`must be
-    provided to obtain standard errors.
-    """
     @cache_readonly
-    def load_stderr(self, kurt=0):
+    def load_stderr(self):
+        """
+        The standard errors of the loadings.
+
+        Standard errors are only available if the model was fit using
+        maximum likelihood.  If `endog` is not provided, `nobs`must be
+        provided to obtain standard errors.
+
+        These are asymptotic standard errors.  See Bai and Li (2012)
+        for conditions under which the standard errors are valid.
+        """
 
         if self.fa_method.lower() != "ml":
             msg = "Standard errors only available under ML estimation"
@@ -578,4 +623,4 @@ class FactorResults(object):
             raise ValueError(msg)
 
         v = np.outer(self.uniqueness, np.ones(self.loadings.shape[1]))
-        return np.sqrt(v)
+        return np.sqrt(v / self.nobs)

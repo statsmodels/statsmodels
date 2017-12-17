@@ -1,18 +1,6 @@
 import numpy as np
-from statsmodels.multivariate.factor import Factor, _rotate
+from statsmodels.multivariate.factor import Factor
 from numpy.testing import assert_allclose, assert_equal
-
-
-def test_rotate():
-
-    np.random.seed(23324)
-
-    gamma = np.random.normal(size=(10, 4))
-    sigma = np.linspace(1, 3, 10)
-    g = _rotate(gamma, sigma)
-    f = np.dot(g.T, g/sigma[:, None])
-    f -= np.diag(np.diag(f))
-    assert_allclose(f, np.zeros_like(f), rtol=1e-8, atol=1e-8)
 
 
 def test_exact():
@@ -26,7 +14,6 @@ def test_exact():
         for n_factor in 1, 2, 3:
             gamma = np.random.normal(size=(k_var, n_factor))
             sigma2 = np.linspace(1, 2, k_var)
-            gamma = _rotate(gamma, sigma2)
             c = np.dot(gamma, gamma.T)
             c.flat[::c.shape[0]+1] += sigma2
             s = np.sqrt(np.diag(c))
@@ -34,7 +21,7 @@ def test_exact():
             fa = Factor(corr=c, n_factor=n_factor, method='ml')
             rslt = fa.fit()
             assert_allclose(rslt.fitted_cov, c, rtol=1e-4, atol=1e-4)
-            # print(rslt.summary()) # DEBUG
+            rslt.summary() # smoke test
 
 
 def test_1factor():
@@ -95,10 +82,12 @@ def test_2factor():
     uniq = np.r_[0.782, 0.367, 0.696, 0.696, 0.367, 0.782]
     assert_allclose(uniq, rslt.uniqueness, rtol=1e-3, atol=1e-3)
 
-    load = np.r_[0.323, 0.586, 0.519, 0.519, 0.586, 0.323]
-    assert_allclose(load, rslt.loadings[:, 0], rtol=1e-3, atol=1e-3)
-    load = np.r_[0.337, 0.538, 0.187, -0.187, -0.538, -0.337]
-    assert_allclose(load, rslt.loadings[:, 1], rtol=1e-3, atol=1e-3)
+    loads = [np.r_[0.323, 0.586, 0.519, 0.519, 0.586, 0.323],
+             np.r_[0.337, 0.538, 0.187, -0.187, -0.538, -0.337]]
+    for k in 0,1:
+        if np.dot(loads[k], rslt.loadings_unrotated[:, k]) < 0:
+            loads[k] *= -1
+        assert_allclose(loads[k], rslt.loadings_unrotated[:, k], rtol=1e-3, atol=1e-3)
 
     assert_equal(rslt.df, 4)
 
