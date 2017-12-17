@@ -604,7 +604,7 @@ class FactorResults(object):
 
     def get_loadings_frame(self, style='display', sort_=True, threshold=0.3,
                            highlight_max=True, color_max='yellow',
-                           precision=None):
+                           decimals=None):
         """get loadings matrix as DataFrame or pandas Styler
 
         Parameters
@@ -627,9 +627,9 @@ class FactorResults(object):
             This add a background color to the largest coefficient in each row.
         color_max : html color
             default is 'yellow'. color for background of row maximum
-        precision : None or int
+        decimals : None or int
             If None, then pandas default precision applies. Otherwise values are
-            rounded to precision decimals. If style is 'display', then the
+            rounded to the specified decimals. If style is 'display', then the
             underlying dataframe is not changed. If style is 'strings', then
             values are rounded before conversion to strings.
 
@@ -637,24 +637,24 @@ class FactorResults(object):
         -------
         loadings : DataFrame or pandas Styler instance
             The return is a pandas Styler instance, if style is 'display' and
-            at least one of highlight_max, threshold or precision is applied.
+            at least one of highlight_max, threshold or decimals is applied.
             Otherwise, the returned loadings is a DataFrame.
 
         Examples
         --------
         mod = Factor(df, 3, smc=True)
         res = mod.fit()
-        res.get_loadings_frame(style='display', precision=3, threshold=0.2)
+        res.get_loadings_frame(style='display', decimals=3, threshold=0.2)
 
         To get a sorted DataFrame, all styling options need to be turned off:
 
         df_sorted = res.get_loadings_frame(style='display',
-                    highlight_max=False, precision=None, threshold=0)
+                    highlight_max=False, decimals=None, threshold=0)
 
         Options except for highlighting are available for plain test or Latex
         usage:
 
-        lds = res_u.get_loadings_frame(style='strings', precision=3,
+        lds = res_u.get_loadings_frame(style='strings', decimals=3,
                                        threshold=0.3)
         print(lds.to_latex())
 
@@ -713,11 +713,11 @@ class FactorResults(object):
 
                 sty = sty.apply(highlight_max, axis=1)
 
-            if precision is not None:
+            if decimals is not None:
                 if sty is None:
                     sty = loadings_df.style
 
-                sty.set_precision(precision)
+                sty.format("{:.%sf}" % decimals)
 
             if sty is None:
                 return loadings_df
@@ -726,8 +726,8 @@ class FactorResults(object):
 
         if style == 'strings':
             ld = loadings_df
-            if precision is not None:
-                ld = ld.round(precision)
+            if decimals is not None:
+                ld = ld.round(decimals)
             ld = ld.astype(str)
             if threshold > 0:
                 ld[loadings_df.abs() < threshold] = ''

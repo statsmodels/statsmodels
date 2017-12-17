@@ -210,7 +210,7 @@ def test_getframe_smoke():
     df = res.get_loadings_frame(style='raw')
     assert_(isinstance(df, pd.DataFrame))
 
-    lds = res.get_loadings_frame(style='strings', precision=3, threshold=0.3)
+    lds = res.get_loadings_frame(style='strings', decimals=3, threshold=0.3)
     lds.to_latex()
 
     # The Styler option require jinja2, skip if not available
@@ -223,10 +223,10 @@ def test_getframe_smoke():
     assert_(isinstance(ldf, pd.formats.style.Styler))
     assert_(isinstance(ldf.data, pd.DataFrame))
 
-    res.get_loadings_frame(style='display', precision=3, threshold=0.2)
+    res.get_loadings_frame(style='display', decimals=3, threshold=0.2)
 
-    res.get_loadings_frame(style='display', precision=3, color_max='GAINSBORO')
+    res.get_loadings_frame(style='display', decimals=3, color_max='GAINSBORO')
 
-    res.get_loadings_frame(style='display', precision=3, threshold=0.45, highlight_max=False, sort_=False)
+    res.get_loadings_frame(style='display', decimals=3, threshold=0.45, highlight_max=False, sort_=False)
 
 
