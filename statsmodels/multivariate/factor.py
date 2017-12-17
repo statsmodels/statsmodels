@@ -409,6 +409,12 @@ class FactorResults(object):
         1 - uniqueness
     loadings : ndarray
         Each column is the loading vector for one factor
+    loadings_no_rot : ndarray
+        Unrotated loadings, not available under maximum likelihood
+        analyis.
+    eigenvalues : ndarray
+        The eigenvalues for a factor analysis obtained using
+        principal components; not available under ML estimation.
     n_comp : int
         Number of components (factors)
     nbs : int
@@ -416,6 +422,8 @@ class FactorResults(object):
     fa_method : string
         The method used to obtain the decomposition, either 'pa' for
         'principal axes' or 'ml' for maximum likelihood.
+    df : int
+        Degrees of freedom of the factor model.
 
     Notes
     -----
@@ -453,8 +461,9 @@ class FactorResults(object):
         Parameters
         ----------
         method : string
-            rotation to be applied
-        -------
+            Rotation to be applied.  Allowed methods are varimax,
+            quartimax, biquartimax, equamax, oblimin, parsimax,
+            parsimony, biquartimin, promax.
         """
         self.rotation_method = method
         if method not in ['varimax', 'quartimax', 'biquartimax',
@@ -582,6 +591,9 @@ class FactorResults(object):
 
         These are asymptotic standard errors.  See Bai and Li (2012)
         for conditions under which the standard errors are valid.
+
+        The standard errors are only applicable to the original,
+        unrotated maximum likelihood solution.
         """
 
         if self.fa_method.lower() != "ml":
@@ -606,6 +618,9 @@ class FactorResults(object):
 
         These are asymptotic standard errors.  See Bai and Li (2012)
         for conditions under which the standard errors are valid.
+
+        The standard errors are only applicable to the original,
+        unrotated maximum likelihood solution.
         """
 
         if self.fa_method.lower() != "ml":
