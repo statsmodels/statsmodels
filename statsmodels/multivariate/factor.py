@@ -298,10 +298,11 @@ class Factor(Model):
     # vector of uniquenesses.
     def loglike(self, par):
 
-        if len(par) == 2:
-            par = self._pack(par[0], par[1])
+        if type(par) is np.ndarray:
+            sig2, gamma = self._unpack(par)
+        else:
+            gamma, sig2 = par[0], par[1]
 
-        sig2, gamma = self._unpack(par)
         sigam = gamma / sig2[:, None]
         gamtsigam = np.dot(gamma.T, sigam)
 

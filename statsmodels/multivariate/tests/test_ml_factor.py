@@ -3,6 +3,22 @@ from statsmodels.multivariate.factor import Factor
 from numpy.testing import assert_allclose, assert_equal
 
 
+def test_loglike():
+
+    uniq = np.r_[4, 9, 16]
+    gamma = np.asarray([[3, 1, 2], [2, 5, 8]]).T
+    par = np.r_[2, 3, 4, 3, 1, 2, 2, 5, 8]
+
+    corr = np.asarray([[1, .5, .25], [.5, 1, .5], [.25, .5, 1]])
+    fa = Factor(n_factor=2, corr=corr)
+
+    # Two ways of passing the parameters to loglike
+    ll1 = fa.loglike((gamma, uniq))
+    ll2 = fa.loglike(par)
+
+    assert_allclose(ll1, ll2)
+
+
 def test_exact():
     # Test if we can recover exact factor-structured matrices with
     # default starting values.
