@@ -1,22 +1,44 @@
 import numpy as np
 from statsmodels.multivariate.factor import Factor
 from numpy.testing import assert_allclose, assert_equal
+from scipy.optimize import approx_fprime
+
+
+# A small model for basic testing
+def _toy():
+    uniq = np.r_[4, 9, 16]
+    load = np.asarray([[3, 1, 2], [2, 5, 8]]).T
+    par = np.r_[2, 3, 4, 3, 1, 2, 2, 5, 8]
+    corr = np.asarray([[1, .5, .25], [.5, 1, .5], [.25, .5, 1]])
+    return uniq, load, corr, par
 
 
 def test_loglike():
 
-    uniq = np.r_[4, 9, 16]
-    gamma = np.asarray([[3, 1, 2], [2, 5, 8]]).T
-    par = np.r_[2, 3, 4, 3, 1, 2, 2, 5, 8]
-
-    corr = np.asarray([[1, .5, .25], [.5, 1, .5], [.25, .5, 1]])
+    uniq, load, corr, par = _toy()
     fa = Factor(n_factor=2, corr=corr)
 
     # Two ways of passing the parameters to loglike
-    ll1 = fa.loglike((gamma, uniq))
+    ll1 = fa.loglike((load, uniq))
     ll2 = fa.loglike(par)
 
     assert_allclose(ll1, ll2)
+
+
+def test_score():
+
+    uniq, load, corr, par = _toy()
+    fa = Factor(n_factor=2, corr=corr)
+
+    def f(par):
+        return fa.loglike(par)
+
+    par2 = np.r_[0.1, 0.2, 0.3, 0.4, 0.3, 0.1, 0.2, -0.2, 0, 0.8, 0.5, 0]
+
+    for pt in (par, par2):
+        g1 = approx_fprime(pt, f, 1e-8)
+        g2 = fa.score(pt)
+        assert_allclose(g1, g2, atol=1e-3)
 
 
 def test_exact():
@@ -28,10 +50,10 @@ def test_exact():
     # Works for larger k_var but slow for routine testing.
     for k_var in 5, 10, 25:
         for n_factor in 1, 2, 3:
-            gamma = np.random.normal(size=(k_var, n_factor))
-            sigma2 = np.linspace(1, 2, k_var)
-            c = np.dot(gamma, gamma.T)
-            c.flat[::c.shape[0]+1] += sigma2
+            load = np.random.normal(size=(k_var, n_factor))
+            uniq = np.linspace(1, 2, k_var)
+            c = np.dot(load, load.T)
+            c.flat[::c.shape[0]+1] += uniq
             s = np.sqrt(np.diag(c))
             c /= np.outer(s, s)
             fa = Factor(corr=c, n_factor=n_factor, method='ml')

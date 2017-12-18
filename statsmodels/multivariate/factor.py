@@ -175,7 +175,7 @@ class Factor(Model):
         else:
             self._endog_names = None
 
-    def fit(self, maxiter=50, tol=1e-8, start=None, opt_method='bfgs',
+    def fit(self, maxiter=50, tol=1e-8, start=None, opt_method='BFGS',
             opt=None):
         """
         Estimate factor model parameters.
@@ -289,40 +289,95 @@ class Factor(Model):
 
     # Packs the model parameters into a flat parameter, used for ML
     # estimation.
-    def _pack(self, gamma, sigma):
-        return np.concatenate((np.sqrt(sigma), gamma.T.flat))
+    def _pack(self, load, uniq):
+        return np.concatenate((np.sqrt(uniq), load.T.flat))
 
-    # The log-likelihood function.  The input can be either a packed
-    # representation of the model parameters or a 2-tuple containing a
-    # `k_endog x n_factor` matrix of factor loadings and a `k_endog`
-    # vector of uniquenesses.
     def loglike(self, par):
+        """
+        Evaluate the log-likelihood function.
+
+        Arguments
+        ---------
+        par : ndarray or tuple of 2 ndarray's
+            The model parameters, either a packed representation of
+            the model parameters or a 2-tuple containing a `k_endog x
+            n_factor` matrix of factor loadings and a `k_endog` vector
+            of uniquenesses.
+        """
 
         if type(par) is np.ndarray:
-            sig2, gamma = self._unpack(par)
+            uniq, load = self._unpack(par)
         else:
-            gamma, sig2 = par[0], par[1]
+            load, uniq = par[0], par[1]
 
-        sigam = gamma / sig2[:, None]
-        gamtsigam = np.dot(gamma.T, sigam)
+        loadu = load / uniq[:, None]
+        lul = np.dot(load.T, loadu)
 
         # log|GG' + S|
         # Using matrix determinant lemma:
         # |GG' + S| = |I + G'S^{-1}G|*|S|
-        gamtsigam.flat[::gamtsigam.shape[0]+1] += 1
-        _, ld = np.linalg.slogdet(gamtsigam)
-        v = np.sum(np.log(sig2)) + ld
+        lul.flat[::lul.shape[0]+1] += 1
+        _, ld = np.linalg.slogdet(lul)
+        v = np.sum(np.log(uniq)) + ld
 
         # tr((GG' + S)^{-1}C)
         # Using Sherman-Morrison-Woodbury
-        w = np.sum(1 / sig2)
-        b = np.dot(gamma.T, self.corr / sig2[:, None])
-        b = np.linalg.solve(gamtsigam, b)
-        b = np.dot(gamma, b) / sig2[:, None]
+        w = np.sum(1 / uniq)
+        b = np.dot(load.T, self.corr / uniq[:, None])
+        b = np.linalg.solve(lul, b)
+        b = np.dot(loadu, b)
         w -= np.trace(b)
 
         # Scaled log-likelihood
         return -(v + w) / (2*self.k_endog)
+
+    def score(self, par):
+        """
+        Evaluate the score function.
+
+        Arguments
+        ---------
+        par : ndarray or tuple of 2 ndarray's
+            The model parameters, either a packed representation of
+            the model parameters or a 2-tuple containing a `k_endog x
+            n_factor` matrix of factor loadings and a `k_endog` vector
+            of uniquenesses.
+        """
+
+        if type(par) is np.ndarray:
+            uniq, load = self._unpack(par)
+        else:
+            load, uniq = par[0], par[1]
+
+        # Center term of SMW
+        loadu = load / uniq[:, None]
+        c = np.dot(load.T, loadu)
+        c.flat[::c.shape[0]+1] += 1
+        d = np.linalg.solve(c, load.T)
+
+        # Precompute these terms
+        lud = np.dot(loadu, d)
+        cu = (self.corr / uniq) / uniq[:, None]
+        r = np.dot(cu, load)
+        lul = np.dot(lud.T, load)
+        luz = np.dot(cu, lul)
+
+        # First term
+        du = 2*np.sqrt(uniq) * (1/uniq - (d * load.T).sum(0) / uniq**2)
+        dl = 2*(loadu - np.dot(lud, loadu))
+
+        # Second term
+        h = np.dot(lud, cu)
+        f = np.dot(h, lud.T)
+        du -= 2*np.sqrt(uniq) * (np.diag(cu) - 2*np.diag(h) + np.diag(f))
+        dl -= 2*r
+        dl += 2*np.dot(lud, r)
+        dl += 2*luz
+        dl -= 2*np.dot(lud, luz)
+
+        # Can't use _pack because we are working with the square root
+        # uniquenesses directly.
+        return -np.concatenate((du, dl.T.flat)) / (2*self.k_endog)
 
     # Maximum likelihood factor analysis.
     def _fit_ml(self, start, opt_method, opt):
@@ -350,15 +405,17 @@ class Factor(Model):
         else:
             raise ValueError("Invalid starting values")
 
-        # Do the optimization
         def nloglike(par):
             return -self.loglike(par)
-        if opt is not None:
-            opt = dict(opt)
-        else:
-            opt = {}
-        opt.update(_opt_defaults)
-        r = minimize(nloglike, start, method=opt_method, options=opt)
+
+        def nscore(par):
+            return -self.score(par)
+
+        # Do the optimization
+        if opt is None:
+            opt = _opt_defaults
+        r = minimize(nloglike, start, jac=nscore, method=opt_method,
+                     options=opt)
         par = r.x
         uniq, load = self._unpack(par)
 
