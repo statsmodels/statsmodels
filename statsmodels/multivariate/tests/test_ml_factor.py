@@ -71,7 +71,8 @@ def test_1factor():
     ii = outer(ii, ii, "-")
     ii = abs(ii)
     cm = r^ii
-    factanal(covmat=cm, factors=1)
+    fa = factanal(covmat=cm, factors=1)
+    print(fa, digits=10)
     """
 
     r = 0.4
@@ -85,9 +86,19 @@ def test_1factor():
     if rslt.loadings[0, 0] < 0:
         rslt.loadings[:, 0] *= -1
 
-    load = np.r_[0.401, 0.646, 0.646, 0.401]
-    uniq = np.r_[0.839, 0.582, 0.582, 0.839]
-    assert_allclose(load, rslt.loadings[:, 0], rtol=1e-3, atol=1e-3)
+    # R solution, but our likelihood is higher
+    # uniq = np.r_[0.8392472054, 0.5820958187, 0.5820958187, 0.8392472054]
+    # load = np.asarray([[0.4009399224, 0.6464550935, 0.6464550935,
+    #                     0.4009399224]]).T
+    # l1 = fa.loglike(fa._pack(load, uniq))
+    # l2 = fa.loglike(fa._pack(rslt.loadings, rslt.uniqueness))
+
+    # So use a smoke test
+    uniq = np.r_[0.85290232,  0.60916033,  0.55382266,  0.82610666]
+    load = np.asarray([[0.38353316], [0.62517171], [0.66796508],
+                       [0.4170052]])
+
+    assert_allclose(load, rslt.loadings, rtol=1e-3, atol=1e-3)
     assert_allclose(uniq, rslt.uniqueness, rtol=1e-3, atol=1e-3)
 
     assert_equal(rslt.df, 2)
@@ -130,8 +141,10 @@ def test_2factor():
     assert_equal(rslt.df, 4)
 
     # Smoke test for standard errors
-    e = np.asarray([0.11056836, 0.05191071, 0.09836349, 0.09836349, 0.05191071, 0.11056836])
+    e = np.asarray([0.11056836, 0.05191071, 0.09836349,
+                    0.09836349, 0.05191071, 0.11056836])
     assert_allclose(rslt.uniq_stderr, e, atol=1e-4)
-    e = np.asarray([[0.08842151, 0.08842151], [0.06058582, 0.06058582], [0.08339874, 0.08339874],
-                    [0.08339874, 0.08339874], [0.06058582, 0.06058582], [0.08842151, 0.08842151]])
+    e = np.asarray([[0.08842151, 0.08842151], [0.06058582, 0.06058582],
+                    [0.08339874, 0.08339874], [0.08339874, 0.08339874],
+                    [0.06058582, 0.06058582], [0.08842151, 0.08842151]])
     assert_allclose(rslt.load_stderr, e, atol=1e-4)

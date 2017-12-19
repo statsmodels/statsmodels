@@ -22,7 +22,7 @@ if not missing_matplotlib:
 
 # Factor analysis models can be hard to estimate, need stricter
 # conditions.
-_opt_defaults = {"gtol": 1e-8}
+_opt_defaults = {"gtol": 1e-12}
 
 
 def _check_args_1(endog, n_factor, corr, nobs):
@@ -177,7 +177,7 @@ class Factor(Model):
             self._endog_names = None
 
     def fit(self, maxiter=50, tol=1e-8, start=None, opt_method='BFGS',
-            opt=None):
+            opt=None, em_iter=3):
         """
         Estimate factor model parameters.
 
@@ -194,6 +194,9 @@ class Factor(Model):
             Optimization method for ML estimation
         opt : dict-like
             Keyword arguments passed to optimizer, only used for ML estimation
+        em_iter : int
+            The number of EM iterations before starting gradient optimization,
+            only used for ML estimation.
 
         Returns
         -------
@@ -204,7 +207,7 @@ class Factor(Model):
         if method == 'pa':
             return self._fit_pa(maxiter=maxiter, tol=tol)
         elif method == 'ml':
-            return self._fit_ml(start, opt_method, opt)
+            return self._fit_ml(start, em_iter, opt_method, opt)
         else:
             msg = "Unknown factor extraction approach '%s'" % self.method
             raise ValueError(msg)
@@ -381,23 +384,12 @@ class Factor(Model):
         return -np.concatenate((du, dl.T.flat)) / (2*self.k_endog)
 
     # Maximum likelihood factor analysis.
-    def _fit_ml(self, start, opt_method, opt):
-
-        corr = self.corr
-        n_factor = self.n_factor
-
-        # Dimension of the problem
-        k_endog = corr.shape[0]
+    def _fit_ml(self, start, em_iter, opt_method, opt):
 
         # Starting values
         if start is None:
-            # Use simple PCA procedure for starting values.
-            u, s, _ = np.linalg.svd(corr, 0)
-            u *= np.sqrt(s)
-            u = u[:, 0:n_factor]
-            f = 1 - s[0:n_factor].sum() / k_endog
-            start1 = f * np.ones(k_endog)
-            start = np.concatenate((start1, u.T.flat))
+            load, uniq = self._fit_ml_em(em_iter)
+            start = self._pack(load, uniq)
         elif len(start) == 2:
             if len(start[1]) != start[0].shape[0]:
                 msg = "Starting values have incompatible dimensions"
@@ -431,6 +423,39 @@ class Factor(Model):
         self.loadings = load
 
         return FactorResults(self)
+
+    def _fit_ml_em(self, iter):
+
+        # Starting values
+        np.random.seed(3427)
+        load = 0.1*np.random.normal(size=(self.k_endog, self.n_factor))
+        uniq = 0.5 * np.ones(self.k_endog)
+
+        for k in range(iter):
+
+            loadu = load / uniq[:, None]
+            f = np.dot(load.T, loadu)
+            f.flat[::f.shape[0]+1] += 1
+
+            flu = np.linalg.solve(f, loadu.T)
+            lflu = np.dot(load, flu)
+            e = self.corr - np.dot(lflu, self.corr)
+            e /= uniq[:, None]
+
+            d = np.dot(load.T, e)
+
+            c = load - np.dot(lflu, load)
+            c /= uniq[:, None]
+
+            a = np.dot(d, c)
+            a -= np.dot(load.T, c)
+            a.flat[::a.shape[0]+1] += 1
+            b = np.dot(self.corr, c)
+
+            load = np.linalg.solve(a, b.T).T
+            uniq = np.diag(self.corr - np.dot(load, d))
+
+        return load, uniq
 
     def _rotate(self, load, uniq):
         # Rotations used in ML estimation.
