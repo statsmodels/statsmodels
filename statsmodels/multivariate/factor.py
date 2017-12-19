@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import division
 from statsmodels.base.model import Model
 from .factor_rotation import rotate_factors, promax
 import numpy as np

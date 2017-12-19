@@ -130,5 +130,8 @@ def test_2factor():
     assert_equal(rslt.df, 4)
 
     # Smoke test for standard errors
-    rslt.uniq_stderr
-    rslt.load_stderr
+    e = np.asarray([0.11056836, 0.05191071, 0.09836349, 0.09836349, 0.05191071, 0.11056836])
+    assert_allclose(rslt.uniq_stderr, e, atol=1e-4)
+    e = np.asarray([[0.08842151, 0.08842151], [0.06058582, 0.06058582], [0.08339874, 0.08339874],
+                    [0.08339874, 0.08339874], [0.06058582, 0.06058582], [0.08842151, 0.08842151]])
+    assert_allclose(rslt.load_stderr, e, atol=1e-4)
