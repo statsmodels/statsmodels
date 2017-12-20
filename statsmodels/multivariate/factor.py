@@ -20,9 +20,7 @@ except ImportError:
 if not missing_matplotlib:
     from .plots import plot_scree, plot_loadings
 
-# Factor analysis models can be hard to estimate, need stricter
-# conditions.
-_opt_defaults = {"gtol": 1e-12}
+_opt_defaults = {'gtol': 1e-7}
 
 
 def _check_args_1(endog, n_factor, corr, nobs):
@@ -409,11 +407,13 @@ class Factor(Model):
             opt = _opt_defaults
         r = minimize(nloglike, start, jac=nscore, method=opt_method,
                      options=opt)
+        if not r.success:
+            warnings.warn("Fitting did not converge")
         par = r.x
         uniq, load = self._unpack(par)
 
         if uniq.min() < 1e-10:
-            warnings.warn("some uniquenesses are nearly zero")
+            warnings.warn("Some uniquenesses are nearly zero")
 
         # Rotate solution to satisfy IC3 of Bai and Li
         load = self._rotate(load, uniq)
@@ -421,6 +421,7 @@ class Factor(Model):
         self.uniqueness = uniq
         self.communality = 1 - uniq
         self.loadings = load
+        self.mle_retvals = r
 
         return FactorResults(self)
 
@@ -531,6 +532,8 @@ class FactorResults(object):
         self.n_comp = factor.loadings.shape[1]
         self.nobs = factor.nobs
         self._factor = factor
+        if hasattr(factor, "mle_retvals"):
+            self.mle_retvals = factor.mle_retvals
 
         p, k = self.loadings.shape
         self.df = ((p - k)**2 - (p + k)) // 2
