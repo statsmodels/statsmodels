@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
+import os
+
 import numpy as np
 import pandas as pd
 from statsmodels.multivariate.factor import Factor
-from numpy.testing import assert_equal, assert_array_almost_equal
-from numpy.testing import assert_raises, assert_array_equal, assert_
+from numpy.testing import (assert_equal, assert_array_almost_equal,
+        assert_raises, assert_array_equal, assert_, assert_array_less)
 from numpy.testing.decorators import skipif
 from numpy.testing.utils import assert_allclose
 
@@ -230,14 +232,54 @@ def test_getframe_smoke():
 
     res.get_loadings_frame(style='display', decimals=3, threshold=0.45, highlight_max=False, sort_=False)
 
+
+def _zscore(x):
+    # helper function
+    return (x - x.mean(0)) / x.std(0)
+
 def test_factor_scoring_smoke():
+    path = os.path.abspath(__file__)
+    dir_path = os.path.dirname(path)
+    csv_path = os.path.join(dir_path, 'results', 'factor_data.csv')
+    y = pd.read_csv(csv_path)
+    csv_path = os.path.join(dir_path, 'results', 'factors_stata.csv')
+    f_s = pd.read_csv(csv_path)
     #  mostly smoke tests for now
-    mod = Factor(X.iloc[:, 1:-2], 2, smc=True)
-    res = mod.fit()
+    mod = Factor(y, 2)
+    res = mod.fit(maxiter=1)
     res.rotate('varimax')
-    f_reg = res.factor_scoring()
-    f_bart = res.factor_scoring(method='reg')
-    assert_allclose(f_reg, f_bart, atol=0.1, rtol=0.1)
+    f_reg = res.factor_scoring(method='reg')
+    assert_allclose(f_reg * [1, -1], f_s[["f1", 'f2']].values,
+                    atol=1e-4, rtol=1e-3)
+    f_bart = res.factor_scoring()
+    assert_allclose(f_bart * [1, -1], f_s[["f1b", 'f2b']].values,
+                    atol=1e-4, rtol=1e-3)
+
+    # check we have high correlation to ols and gls
     f_ols = res.factor_scoring(method='ols')
     f_gls = res.factor_scoring(method='gls')
+    f_reg_z = _zscore(f_reg)
+    f_ols_z = _zscore(f_ols)
+    f_gls_z = _zscore(f_gls)
+    assert_array_less(0.98, (f_ols_z * f_reg_z).mean(0))
+    assert_array_less(0.999, (f_gls_z * f_reg_z).mean(0))
 
+    # with oblique rotation
+    res.rotate('oblimin')
+    # Note: Stata has second factor with flipped sign compared to statsmodels
+    assert_allclose(res._corr_factors()[0, 1],  (-1) * 0.25651037, rtol=1e-3)
+    f_reg = res.factor_scoring(method='reg')
+    assert_allclose(f_reg * [1, -1], f_s[["f1o", 'f2o']].values,
+                    atol=1e-4, rtol=1e-3)
+    f_bart = res.factor_scoring()
+    assert_allclose(f_bart * [1, -1], f_s[["f1ob", 'f2ob']].values,
+                    atol=1e-4, rtol=1e-3)
+
+    # check we have high correlation to ols and gls
+    f_ols = res.factor_scoring(method='ols')
+    f_gls = res.factor_scoring(method='gls')
+    f_reg_z = _zscore(f_reg)
+    f_ols_z = _zscore(f_ols)
+    f_gls_z = _zscore(f_gls)
+    assert_array_less(0.97, (f_ols_z * f_reg_z).mean(0))
+    assert_array_less(0.999, (f_gls_z * f_reg_z).mean(0))

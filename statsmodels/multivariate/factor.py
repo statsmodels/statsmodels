@@ -619,15 +619,20 @@ class FactorResults(object):
             s_mat = np.linalg.inv(L.T.dot(L/(uni[:,None]))).dot((L.T / uni)).T
         elif method.startswith('reg'):
             corr = self.model.corr
-            corr_f = T.T.dot(T)
+            corr_f = self._corr_factors()
             # if orthogonal then corr_f is just eye
             s_mat = corr_f.dot(L.T.dot(np.linalg.inv(corr))).T
         elif method == 'ols':
             # not verified
-            s_mat = np.linalg.pinv(L).T
+            corr = self.model.corr
+            corr_f = self._corr_factors()
+            s_mat = corr_f.dot(np.linalg.pinv(L)).T
         elif method == 'gls':
             # not verified
-            s_mat = np.linalg.inv(1*np.eye(L.shape[1]) + L.T.dot(L/(uni[:,None])))
+            #s_mat = np.linalg.inv(1*np.eye(L.shape[1]) + L.T.dot(L/(uni[:,None])))
+            corr = self.model.corr
+            corr_f = self._corr_factors()
+            s_mat = np.linalg.inv(np.linalg.inv(corr_f) + L.T.dot(L/(uni[:,None])))
             s_mat = s_mat.dot(L.T / uni).T
         else:
             raise ValueError('method not available, use "bartlett ' +
