@@ -536,7 +536,7 @@ class FactorResults(object):
         if hasattr(factor, "mle_retvals"):
             self.mle_retvals = factor.mle_retvals
 
-        p, k = self.loadings.shape
+        p, k = self.loadings_no_rot.shape
         self.df = ((p - k)**2 - (p + k)) // 2
 
         # no rotation, overwritten in `rotate`
