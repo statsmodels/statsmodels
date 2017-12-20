@@ -6,6 +6,7 @@ from statsmodels.multivariate.factor import Factor
 from numpy.testing import assert_equal, assert_array_almost_equal
 from numpy.testing import assert_raises, assert_array_equal, assert_
 from numpy.testing.decorators import skipif
+from numpy.testing.utils import assert_allclose
 
 try:
     import matplotlib.pyplot as plt
@@ -229,4 +230,14 @@ def test_getframe_smoke():
 
     res.get_loadings_frame(style='display', decimals=3, threshold=0.45, highlight_max=False, sort_=False)
 
+def test_factor_scoring_smoke():
+    #  mostly smoke tests for now
+    mod = Factor(X.iloc[:, 1:-2], 2, smc=True)
+    res = mod.fit()
+    res.rotate('varimax')
+    f_reg = res.factor_scoring()
+    f_bart = res.factor_scoring(method='reg')
+    assert_allclose(f_reg, f_bart, atol=0.1, rtol=0.1)
+    f_ols = res.factor_scoring(method='ols')
+    f_gls = res.factor_scoring(method='gls')
 

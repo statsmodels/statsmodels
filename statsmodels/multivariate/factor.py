@@ -224,10 +224,10 @@ class Factor(Model):
 
         """
         # Estimate correlation matrix
-        if self.corr is not None:
-            R = self.corr
-        else:
-            R = np.corrcoef(self.endog, rowvar=0)
+        if self.corr is None:
+            self.corr = np.corrcoef(self.endog, rowvar=0)
+
+        R = self.corr.copy()
 
         # Parameter validation
         self.n_comp = matrix_rank(R)
@@ -520,11 +520,12 @@ class FactorResults(object):
     diag(U)`.
     """
     def __init__(self, factor):
+        self.model = factor
         self.endog_names = factor.endog_names
         self.loadings_no_rot = factor.loadings
-        self.loadings = factor.loadings
         if hasattr(factor, "eigenvals"):
             self.eigenvals = factor.eigenvals
+
         self.communality = factor.communality
         self.uniqueness = factor.uniqueness
         self.rotation_method = None
@@ -537,6 +538,11 @@ class FactorResults(object):
 
         p, k = self.loadings.shape
         self.df = ((p - k)**2 - (p + k)) // 2
+
+        # no rotation, overwritten in `rotate`
+        self.loadings = factor.loadings
+        self.rotation_matrix = np.eye(self.n_comp)
+
 
     def __str__(self):
         return self.summary().__str__()
@@ -566,6 +572,90 @@ class FactorResults(object):
                                               'quartimin')
         elif method == 'promax':
             self.loadings, T = promax(self.loadings_no_rot)
+
+        self.rotation_matrix = T
+
+    def _corr_factors(self):
+        """correlation of factors
+
+        If the rotation is oblique, then the factors are correlated.
+
+        currently not cached
+        """
+        T = self.rotation_matrix
+        corr_f = T.T.dot(T)
+        return corr_f
+
+    def factor_score_params(self, method='bartlett'):
+        """compute factor scoring coefficient matrix
+
+        The coefficient matrix is not cached.
+
+        Parameters
+        ----------
+        method : 'bartlett' or 'regression'
+            Method to use for factor scoring.
+            'regression' can be abbreviated to `reg`
+
+        Returns :
+        coeff_matrix : ndarray
+            matrix s to compute factors f from endog y.
+            ``f = s dot y``
+
+        Notes
+        -----
+        The `regression` method follows the Stata definition.
+
+
+        See Also:
+        `factor_scoring`
+        """
+        L = self.loadings
+        T = self.rotation_matrix.T
+        #TODO: check row versus column convention for T
+        uni = 1 - self.communality #self.uniqueness
+
+        if method == 'bartlett':
+            s_mat = np.linalg.inv(L.T.dot(L/(uni[:,None]))).dot((L.T / uni)).T
+        elif method.startswith('reg'):
+            corr = self.model.corr
+            corr_f = T.T.dot(T)
+            # if orthogonal then corr_f is just eye
+            s_mat = corr_f.dot(L.T.dot(np.linalg.inv(corr))).T
+        elif method == 'ols':
+            # not verified
+            s_mat = np.linalg.pinv(L).T
+        elif method == 'gls':
+            # not verified
+            s_mat = np.linalg.inv(1*np.eye(L.shape[1]) + L.T.dot(L/(uni[:,None])))
+            s_mat = s_mat.dot(L.T / uni).T
+        else:
+            raise ValueError('method not available, use "bartlett ' +
+                             'or "regression"')
+        return s_mat
+
+    def factor_scoring(self, endog=None, method='bartlett'):
+        """factor scoring: compute factors for endog
+
+        Assumes that if endog is provided, then it is standardized already, with
+        original or appropriate mean and scale
+        TODO: I guess we should change this. Need original loc and scale
+
+        If endog was not provided when creating the factor class, then
+        an endog needs to be provided here.
+
+        """
+        if endog is None:
+            if self.model.endog is not None:
+                endog = self.model.endog
+                endog = (endog - endog.mean(0)) / endog.std(ddof=1, axis=0)
+            else:
+                raise ValueError('If factor.endog is None, then ' +
+                                 'endog needs to be given.')
+
+        s_mat = self.factor_score_params(method=method)
+        factors = endog.dot(s_mat)
+        return factors
 
     def summary(self):
         summ = summary2.Summary()
