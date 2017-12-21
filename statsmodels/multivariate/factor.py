@@ -107,11 +107,15 @@ class Factor(Model):
         _check_args_1(endog, n_factor, corr, nobs)
 
         if endog is not None:
+            super(Factor, self).__init__(endog, exog=None, missing=missing)
+            endog = self.endog   # after preprocessing like missing, asarray
             k_endog = endog.shape[1]
             nobs = endog.shape[0]
-            corr = np.corrcoef(endog, rowvar=0)
+            corr = self.corr = np.corrcoef(endog, rowvar=0)
         elif corr is not None:
-            k_endog = corr.shape[0]
+            corr = self.corr = np.asarray(corr)
+            k_endog = self.corr.shape[0]
+            self.endog = None
         else:
             msg = "Either endog or corr must be provided, but not both"
             raise ValueError(msg)
@@ -134,17 +138,6 @@ class Factor(Model):
             if hasattr(corr, 'columns'):
                 endog_names = corr.columns
         self.endog_names = endog_names
-
-        if corr is not None:
-            self.corr = np.asarray(corr)
-        else:
-            self.corr = None
-
-        if endog is not None:
-            # Do not preprocess endog if None
-            super(Factor, self).__init__(endog, exog=None, missing=missing)
-        else:
-            self.endog = None
 
     @property
     def endog_names(self):
@@ -223,11 +216,8 @@ class Factor(Model):
             estimation stops
 
         """
-        # Estimate correlation matrix
-        if self.corr is None:
-            self.corr = np.corrcoef(self.endog, rowvar=0)
 
-        R = self.corr.copy()
+        R = self.corr.copy()  # inplace modification below
 
         # Parameter validation
         self.n_comp = matrix_rank(R)

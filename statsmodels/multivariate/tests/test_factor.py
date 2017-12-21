@@ -234,9 +234,20 @@ def test_getframe_smoke():
     res.get_loadings_frame(style='display', decimals=3, threshold=0.45, highlight_max=False, sort_=False)
 
 
+def test_factor_missing():
+    xm = X.iloc[:, 1:-1].copy()
+    nobs, k_endog = xm.shape
+    xm.iloc[2,2] = np.nan
+    mod = Factor(xm, 2)
+    assert_equal(mod.nobs, nobs - 1)
+    assert_equal(mod.k_endog, k_endog)
+    assert_equal(mod.endog.shape, (nobs - 1, k_endog))
+
+
 def _zscore(x):
     # helper function
     return (x - x.mean(0)) / x.std(0)
+
 
 def test_factor_scoring():
     path = os.path.abspath(__file__)
