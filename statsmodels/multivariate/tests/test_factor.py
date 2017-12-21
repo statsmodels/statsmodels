@@ -212,7 +212,8 @@ def test_getframe_smoke():
 
     df = res.get_loadings_frame(style='raw')
     assert_(isinstance(df, pd.DataFrame))
-
+    if pd.__version__ < '0.17':
+        return
     lds = res.get_loadings_frame(style='strings', decimals=3, threshold=0.3)
     lds.to_latex()
 
@@ -237,7 +238,7 @@ def _zscore(x):
     # helper function
     return (x - x.mean(0)) / x.std(0)
 
-def test_factor_scoring_smoke():
+def test_factor_scoring():
     path = os.path.abspath(__file__)
     dir_path = os.path.dirname(path)
     csv_path = os.path.join(dir_path, 'results', 'factor_data.csv')
