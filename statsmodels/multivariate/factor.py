@@ -25,11 +25,12 @@ _opt_defaults = {'gtol': 1e-7}
 
 def _check_args_1(endog, n_factor, corr, nobs):
 
-    msg = "Either endog or corr must be provided, but not both"
+    msg = "Either endog or corr must be provided."
     if endog is not None and corr is not None:
         raise ValueError(msg)
     if endog is None and corr is None:
-        raise ValueError(msg)
+        warnings.warn('Both endog and corr are provided, ' +
+                      'corr will be used for factor analysis.')
 
     if n_factor <= 0:
         raise ValueError('n_factor must be larger than 0! %d < 0' %
@@ -75,7 +76,8 @@ class Factor(Model):
         The number of factors to extract
     corr : array-like
         Directly specify the correlation matrix instead of estimating
-        it from `endog`.  If provided, `endog` is not used.
+        it from `endog`.  If provided, `endog` is not used for the
+        factor analysis, it may be used in post-estimation.
     method : str
         The method to extract factors, currently must be either 'pa'
         for principal axis factor analysis or 'ml' for maximum
@@ -85,8 +87,14 @@ class Factor(Model):
     endog_names: str
         Names of endogeous variables.  If specified, it will be used
         instead of the column names in endog
-    nobs: int
-        The number of observations, not used if endog is present.
+    nobs : int
+        The number of observations, not used if endog is present. Needs to
+        be provided for inference if endog is None.
+    missing : 'none', 'drop', or 'raise'
+        Missing value handling for endog, default is row-wise deletion 'drop'
+        If 'none', no nan checking is done. If 'drop', any observations with
+        nans are dropped. If 'raise', an error is raised.
+
 
     Notes
     -----
@@ -102,18 +110,22 @@ class Factor(Model):
     dimension.  Annals of Statistics. https://arxiv.org/pdf/1205.6617.pdf
     """
     def __init__(self, endog=None, n_factor=1, corr=None, method='pa',
-                 smc=True, missing='drop', endog_names=None, nobs=None):
+                 smc=True, endog_names=None, nobs=None, missing='drop'):
 
         _check_args_1(endog, n_factor, corr, nobs)
 
         if endog is not None:
+            super(Factor, self).__init__(endog, exog=None, missing=missing)
+            endog = self.endog   # after preprocessing like missing, asarray
             k_endog = endog.shape[1]
             nobs = endog.shape[0]
-            corr = np.corrcoef(endog, rowvar=0)
+            corr = self.corr = np.corrcoef(endog, rowvar=0)
         elif corr is not None:
-            k_endog = corr.shape[0]
+            corr = self.corr = np.asarray(corr)
+            k_endog = self.corr.shape[0]
+            self.endog = None
         else:
-            msg = "Either endog or corr must be provided, but not both"
+            msg = "Either endog or corr must be provided."
             raise ValueError(msg)
 
         _check_args_2(endog, n_factor, corr, nobs, k_endog)
@@ -134,17 +146,6 @@ class Factor(Model):
             if hasattr(corr, 'columns'):
                 endog_names = corr.columns
         self.endog_names = endog_names
-
-        if corr is not None:
-            self.corr = np.asarray(corr)
-        else:
-            self.corr = None
-
-        if endog is not None:
-            # Do not preprocess endog if None
-            super(Factor, self).__init__(endog, exog=None, missing=missing)
-        else:
-            self.endog = None
 
     @property
     def endog_names(self):
@@ -222,12 +223,13 @@ class Factor(Model):
             If `norm(communality - last_communality)  < tolerance`,
             estimation stops
 
+        Returns
+        -------
+        results : FactorResults instance
+
         """
-        # Estimate correlation matrix
-        if self.corr is not None:
-            R = self.corr
-        else:
-            R = np.corrcoef(self.endog, rowvar=0)
+
+        R = self.corr.copy()  # inplace modification below
 
         # Parameter validation
         self.n_comp = matrix_rank(R)
@@ -298,13 +300,17 @@ class Factor(Model):
         """
         Evaluate the log-likelihood function.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         par : ndarray or tuple of 2 ndarray's
             The model parameters, either a packed representation of
             the model parameters or a 2-tuple containing a `k_endog x
             n_factor` matrix of factor loadings and a `k_endog` vector
             of uniquenesses.
+
+        Returns
+        -------
+        loglike : float
         """
 
         if type(par) is np.ndarray:
@@ -335,15 +341,19 @@ class Factor(Model):
 
     def score(self, par):
         """
-        Evaluate the score function.
+        Evaluate the score function (first derivative of loglike).
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         par : ndarray or tuple of 2 ndarray's
             The model parameters, either a packed representation of
             the model parameters or a 2-tuple containing a `k_endog x
             n_factor` matrix of factor loadings and a `k_endog` vector
             of uniquenesses.
+
+        Returns
+        -------
+        score : ndarray
         """
 
         if type(par) is np.ndarray:
@@ -383,6 +393,8 @@ class Factor(Model):
 
     # Maximum likelihood factor analysis.
     def _fit_ml(self, start, em_iter, opt_method, opt):
+        """estimate Factor model using Maximum Likelihood
+        """
 
         # Starting values
         if start is None:
@@ -426,7 +438,8 @@ class Factor(Model):
         return FactorResults(self)
 
     def _fit_ml_em(self, iter):
-
+        """estimate Factor model using EM algorithm
+        """
         # Starting values
         np.random.seed(3427)
         load = 0.1*np.random.normal(size=(self.k_endog, self.n_factor))
@@ -459,6 +472,8 @@ class Factor(Model):
         return load, uniq
 
     def _rotate(self, load, uniq):
+        """rotate loadings for MLE
+        """
         # Rotations used in ML estimation.
         load, s, _ = np.linalg.svd(load, 0)
         load *= s
@@ -476,7 +491,7 @@ class Factor(Model):
 
 class FactorResults(object):
     """
-    Factor results class (status experimental)
+    Factor results class
 
     For result summary, scree/loading plots and factor rotations
 
@@ -518,13 +533,18 @@ class FactorResults(object):
     loadings and `U` is the vector of uniquenesses, then the
     covariance matrix implied by the factor analysis is `GG' +
     diag(U)`.
+
+    Status: experimental, Some refactoring will be necessary when new
+        features are added.
+
     """
     def __init__(self, factor):
+        self.model = factor
         self.endog_names = factor.endog_names
         self.loadings_no_rot = factor.loadings
-        self.loadings = factor.loadings
         if hasattr(factor, "eigenvals"):
             self.eigenvals = factor.eigenvals
+
         self.communality = factor.communality
         self.uniqueness = factor.uniqueness
         self.rotation_method = None
@@ -535,15 +555,20 @@ class FactorResults(object):
         if hasattr(factor, "mle_retvals"):
             self.mle_retvals = factor.mle_retvals
 
-        p, k = self.loadings.shape
+        p, k = self.loadings_no_rot.shape
         self.df = ((p - k)**2 - (p + k)) // 2
+
+        # no rotation, overwritten in `rotate`
+        self.loadings = factor.loadings
+        self.rotation_matrix = np.eye(self.n_comp)
+
 
     def __str__(self):
         return self.summary().__str__()
 
     def rotate(self, method):
         """
-        Apply rotation
+        Apply rotation, inplace modification of this Results instance
 
         Parameters
         ----------
@@ -551,6 +576,21 @@ class FactorResults(object):
             Rotation to be applied.  Allowed methods are varimax,
             quartimax, biquartimax, equamax, oblimin, parsimax,
             parsimony, biquartimin, promax.
+
+        Returns
+        -------
+        None : nothing returned, modifications are inplace
+
+
+        Notes
+        -----
+        Warning: 'varimax', 'quartimax' and 'oblimin' are verified against R or
+        Stata. Some rotation methods such as promax do not produce the same
+        results as the R or Stata default functions.
+
+        See Also
+        --------
+        factor_rotation : subpackage that implements rotation methods
         """
         self.rotation_method = method
         if method not in ['varimax', 'quartimax', 'biquartimax',
@@ -566,6 +606,141 @@ class FactorResults(object):
                                               'quartimin')
         elif method == 'promax':
             self.loadings, T = promax(self.loadings_no_rot)
+        else:
+            raise ValueError('rotation method not recognized')
+
+        self.rotation_matrix = T
+
+    def _corr_factors(self):
+        """correlation of factors implied by rotation
+
+        If the rotation is oblique, then the factors are correlated.
+
+        currently not cached
+
+        Returns
+        -------
+        corr_f : ndarray
+            correlation matrix of rotated factors, assuming initial factors are
+            orthogonal
+        """
+        T = self.rotation_matrix
+        corr_f = T.T.dot(T)
+        return corr_f
+
+    def factor_score_params(self, method='bartlett'):
+        """compute factor scoring coefficient matrix
+
+        The coefficient matrix is not cached.
+
+        Parameters
+        ----------
+        method : 'bartlett' or 'regression'
+            Method to use for factor scoring.
+            'regression' can be abbreviated to `reg`
+
+        Returns
+        -------
+        coeff_matrix : ndarray
+            matrix s to compute factors f from a standardized endog ys.
+            ``f = ys dot s``
+
+        Notes
+        -----
+        The `regression` method follows the Stata definition.
+        Method bartlett and regression are verified against Stats.
+        Two inofficial methods, 'ols' and 'gls', produce similar factor scores
+        but are not verified.
+
+
+        See Also
+        --------
+        `factor_scoring` : compute factor scores using scoring matrix
+        """
+        L = self.loadings
+        T = self.rotation_matrix.T
+        #TODO: check row versus column convention for T
+        uni = 1 - self.communality #self.uniqueness
+
+        if method == 'bartlett':
+            s_mat = np.linalg.inv(L.T.dot(L/(uni[:,None]))).dot((L.T / uni)).T
+        elif method.startswith('reg'):
+            corr = self.model.corr
+            corr_f = self._corr_factors()
+            # if orthogonal then corr_f is just eye
+            s_mat = corr_f.dot(L.T.dot(np.linalg.inv(corr))).T
+        elif method == 'ols':
+            # not verified
+            corr = self.model.corr
+            corr_f = self._corr_factors()
+            s_mat = corr_f.dot(np.linalg.pinv(L)).T
+        elif method == 'gls':
+            # not verified
+            #s_mat = np.linalg.inv(1*np.eye(L.shape[1]) + L.T.dot(L/(uni[:,None])))
+            corr = self.model.corr
+            corr_f = self._corr_factors()
+            s_mat = np.linalg.inv(np.linalg.inv(corr_f) + L.T.dot(L/(uni[:,None])))
+            s_mat = s_mat.dot(L.T / uni).T
+        else:
+            raise ValueError('method not available, use "bartlett ' +
+                             'or "regression"')
+        return s_mat
+
+    def factor_scoring(self, endog=None, method='bartlett', transform=True):
+        """factor scoring: compute factors for endog
+
+         If endog was not provided when creating the factor class, then
+        a standarized endog needs to be provided here.
+
+        Parameters
+        ----------
+        method : 'bartlett' or 'regression'
+            Method to use for factor scoring.
+            'regression' can be abbreviated to `reg`
+        transform : bool
+            If transform is true and endog is provided, then it will be
+            standardized using mean and scale of original data, which has to
+            be available in this case.
+            If transform is False, then a provided endog will be used unchanged.
+            The original endog in the Factor class will
+            always be standardized if endog is None, independently of `transform`.
+
+        Returns
+        -------
+        factor_score : ndarray
+            estimated factors using scoring matrix s and standarized endog ys
+            ``f = ys dot s``
+
+        Notes
+        -----
+        Status: transform option is experimental and might change.
+
+        See Also
+        --------
+        `factor_score_params` : scoring matrix
+        """
+
+        if transform is False and endog is not None:
+            # no transformation in this case
+            endog = np.asarray(endog)
+        else:
+            # we need to standardize with the original mean and scale
+            if self.model.endog is not None:
+                m = self.model.endog.mean(0)
+                s = self.model.endog.std(ddof=1, axis=0)
+                if endog is None:
+                    endog = self.model.endog
+                else:
+                    endog = np.asarray(endog)
+            else:
+                raise ValueError('If transform is True, then `endog` needs ' +
+                                 'to be available in the Factor instance.')
+
+            endog = (endog - m) / s
+
+        s_mat = self.factor_score_params(method=method)
+        factors = endog.dot(s_mat)
+        return factors
 
     def summary(self):
         summ = summary2.Summary()
@@ -601,6 +776,137 @@ class FactorResults(object):
             summ.add_dict({'': '%s rotated loadings' % (self.rotation_method)})
             summ.add_df(loadings)
         return summ
+
+    def get_loadings_frame(self, style='display', sort_=True, threshold=0.3,
+                           highlight_max=True, color_max='yellow',
+                           decimals=None):
+        """get loadings matrix as DataFrame or pandas Styler
+
+        Parameters
+        ----------
+        style : 'display' (default), 'raw' or 'strings'
+            'raw' returns just a DataFrame of the loadings matrix, no options are
+                applied
+            'display' add sorting and styling as defined by other keywords
+            'strings' returns a DataFrame with string elements with optional sorting
+                and surpressing small loading coefficients.
+
+        sort_ : boolean
+            If True, then the rows of the DataFrame is sorted by contribution of each
+            factor. applies if style is either 'display' or 'strings'
+        threshold : float
+            If the threshold is larger than zero, then loading coefficients are
+            either colored white (if style is 'display') or replace by empty
+            string (if style is 'strings').
+        highlight_max : boolean
+            This add a background color to the largest coefficient in each row.
+        color_max : html color
+            default is 'yellow'. color for background of row maximum
+        decimals : None or int
+            If None, then pandas default precision applies. Otherwise values are
+            rounded to the specified decimals. If style is 'display', then the
+            underlying dataframe is not changed. If style is 'strings', then
+            values are rounded before conversion to strings.
+
+        Returns
+        -------
+        loadings : DataFrame or pandas Styler instance
+            The return is a pandas Styler instance, if style is 'display' and
+            at least one of highlight_max, threshold or decimals is applied.
+            Otherwise, the returned loadings is a DataFrame.
+
+        Examples
+        --------
+        mod = Factor(df, 3, smc=True)
+        res = mod.fit()
+        res.get_loadings_frame(style='display', decimals=3, threshold=0.2)
+
+        To get a sorted DataFrame, all styling options need to be turned off:
+
+        df_sorted = res.get_loadings_frame(style='display',
+                    highlight_max=False, decimals=None, threshold=0)
+
+        Options except for highlighting are available for plain test or Latex
+        usage:
+
+        lds = res_u.get_loadings_frame(style='strings', decimals=3,
+                                       threshold=0.3)
+        print(lds.to_latex())
+
+        """
+
+        loadings_df = pd.DataFrame(
+                self.loadings,
+                columns=["factor %d" % (i)
+                         for i in range(self.loadings.shape[1])],
+                index=self.endog_names
+                )
+
+        if style not in ['raw', 'display', 'strings']:
+            msg = "style has to be one of 'raw', 'display', 'strings'"
+            raise ValueError(msg)
+
+        if style == 'raw':
+            return loadings_df
+
+        # add sorting and some formatting
+        if sort_ is True:
+            loadings_df2 = loadings_df.copy()
+            n_f = len(loadings_df2)
+            high = np.abs(loadings_df2.values).argmax(1)
+            loadings_df2['high'] = high
+            loadings_df2['largest'] = np.abs(loadings_df.values[np.arange(n_f), high])
+            loadings_df2.sort_values(by=['high', 'largest'], ascending=[True, False], inplace=True)
+            loadings_df = loadings_df2.drop(['high', 'largest'], axis=1)
+
+        if style == 'display':
+            sty = None
+            if threshold > 0:
+                def color_white_small(val):
+                    """
+                    Takes a scalar and returns a string with
+                    the css property `'color: white'` for small values, black otherwise.
+
+                    takes threshold from outer scope
+                    """
+                    color = 'white' if np.abs(val) < threshold else 'black'
+                    return 'color: %s' % color
+
+                sty = loadings_df.style.applymap(color_white_small)
+
+            if highlight_max is True:
+                def highlight_max(s):
+                    '''
+                    highlight the maximum in a Series yellow.
+                    '''
+                    s = np.abs(s)
+                    is_max = s == s.max()
+                    return ['background-color: '+ color_max if v else '' for v in is_max]
+
+                if sty is None:
+                    sty = loadings_df.style
+
+                sty = sty.apply(highlight_max, axis=1)
+
+            if decimals is not None:
+                if sty is None:
+                    sty = loadings_df.style
+
+                sty.format("{:.%sf}" % decimals)
+
+            if sty is None:
+                return loadings_df
+            else:
+                return sty
+
+        if style == 'strings':
+            ld = loadings_df
+            if decimals is not None:
+                ld = ld.round(decimals)
+            ld = ld.astype(str)
+            if threshold > 0:
+                ld[loadings_df.abs() < threshold] = ''
+            return ld
 
     def plot_scree(self, ncomp=None):
         """
