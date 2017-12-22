@@ -25,11 +25,12 @@ _opt_defaults = {'gtol': 1e-7}
 
 def _check_args_1(endog, n_factor, corr, nobs):
 
-    msg = "Either endog or corr must be provided, but not both"
+    msg = "Either endog or corr must be provided."
     if endog is not None and corr is not None:
         raise ValueError(msg)
     if endog is None and corr is None:
-        raise ValueError(msg)
+        warnings.warn('Both endog and corr are provided, ' +
+                      'corr will be used for factor analysis.')
 
     if n_factor <= 0:
         raise ValueError('n_factor must be larger than 0! %d < 0' %
@@ -75,7 +76,8 @@ class Factor(Model):
         The number of factors to extract
     corr : array-like
         Directly specify the correlation matrix instead of estimating
-        it from `endog`.  If provided, `endog` is not used.
+        it from `endog`.  If provided, `endog` is not used for the
+        factor analysis, it may be used in post-estimation.
     method : str
         The method to extract factors, currently must be either 'pa'
         for principal axis factor analysis or 'ml' for maximum
@@ -85,8 +87,14 @@ class Factor(Model):
     endog_names: str
         Names of endogeous variables.  If specified, it will be used
         instead of the column names in endog
-    nobs: int
-        The number of observations, not used if endog is present.
+    nobs : int
+        The number of observations, not used if endog is present. Needs to
+        be provided for inference if endog is None.
+    missing : 'none', 'drop', or 'raise'
+        Missing value handling for endog, default is row-wise deletion 'drop'
+        If 'none', no nan checking is done. If 'drop', any observations with
+        nans are dropped. If 'raise', an error is raised.
+
 
     Notes
     -----
@@ -102,7 +110,7 @@ class Factor(Model):
     dimension.  Annals of Statistics. https://arxiv.org/pdf/1205.6617.pdf
     """
     def __init__(self, endog=None, n_factor=1, corr=None, method='pa',
-                 smc=True, missing='drop', endog_names=None, nobs=None):
+                 smc=True, endog_names=None, nobs=None, missing='drop'):
 
         _check_args_1(endog, n_factor, corr, nobs)
 
@@ -117,7 +125,7 @@ class Factor(Model):
             k_endog = self.corr.shape[0]
             self.endog = None
         else:
-            msg = "Either endog or corr must be provided, but not both"
+            msg = "Either endog or corr must be provided."
             raise ValueError(msg)
 
         _check_args_2(endog, n_factor, corr, nobs, k_endog)
@@ -215,6 +223,10 @@ class Factor(Model):
             If `norm(communality - last_communality)  < tolerance`,
             estimation stops
 
+        Returns
+        -------
+        results : FactorResults instance
+
         """
 
         R = self.corr.copy()  # inplace modification below
@@ -288,13 +300,17 @@ class Factor(Model):
         """
         Evaluate the log-likelihood function.
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         par : ndarray or tuple of 2 ndarray's
             The model parameters, either a packed representation of
             the model parameters or a 2-tuple containing a `k_endog x
             n_factor` matrix of factor loadings and a `k_endog` vector
             of uniquenesses.
+
+        Returns
+        -------
+        loglike : float
         """
 
         if type(par) is np.ndarray:
@@ -325,15 +341,19 @@ class Factor(Model):
 
     def score(self, par):
         """
-        Evaluate the score function.
+        Evaluate the score function (first derivative of loglike).
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         par : ndarray or tuple of 2 ndarray's
             The model parameters, either a packed representation of
             the model parameters or a 2-tuple containing a `k_endog x
             n_factor` matrix of factor loadings and a `k_endog` vector
             of uniquenesses.
+
+        Returns
+        -------
+        score : ndarray
         """
 
         if type(par) is np.ndarray:
@@ -373,6 +393,8 @@ class Factor(Model):
 
     # Maximum likelihood factor analysis.
     def _fit_ml(self, start, em_iter, opt_method, opt):
+        """estimate Factor model using Maximum Likelihood
+        """
 
         # Starting values
         if start is None:
@@ -416,7 +438,8 @@ class Factor(Model):
         return FactorResults(self)
 
     def _fit_ml_em(self, iter):
-
+        """estimate Factor model using EM algorithm
+        """
         # Starting values
         np.random.seed(3427)
         load = 0.1*np.random.normal(size=(self.k_endog, self.n_factor))
@@ -449,6 +472,8 @@ class Factor(Model):
         return load, uniq
 
     def _rotate(self, load, uniq):
+        """rotate loadings for MLE
+        """
         # Rotations used in ML estimation.
         load, s, _ = np.linalg.svd(load, 0)
         load *= s
@@ -466,7 +491,7 @@ class Factor(Model):
 
 class FactorResults(object):
     """
-    Factor results class (status experimental)
+    Factor results class
 
     For result summary, scree/loading plots and factor rotations
 
@@ -508,6 +533,10 @@ class FactorResults(object):
     loadings and `U` is the vector of uniquenesses, then the
     covariance matrix implied by the factor analysis is `GG' +
     diag(U)`.
+
+    Status: experimental, Some refactoring will be necessary when new
+        features are added.
+
     """
     def __init__(self, factor):
         self.model = factor
@@ -539,7 +568,7 @@ class FactorResults(object):
 
     def rotate(self, method):
         """
-        Apply rotation
+        Apply rotation, inplace modification of this Results instance
 
         Parameters
         ----------
@@ -547,6 +576,21 @@ class FactorResults(object):
             Rotation to be applied.  Allowed methods are varimax,
             quartimax, biquartimax, equamax, oblimin, parsimax,
             parsimony, biquartimin, promax.
+
+        Returns
+        -------
+        None : nothing returned, modifications are inplace
+
+
+        Notes
+        -----
+        Warning: 'varimax', 'quartimax' and 'oblimin' are verified against R or
+        Stata. Some rotation methods such as promax do not produce the same
+        results as the R or Stata default functions.
+
+        See Also
+        --------
+        factor_rotation : subpackage that implements rotation methods
         """
         self.rotation_method = method
         if method not in ['varimax', 'quartimax', 'biquartimax',
@@ -562,15 +606,23 @@ class FactorResults(object):
                                               'quartimin')
         elif method == 'promax':
             self.loadings, T = promax(self.loadings_no_rot)
+        else:
+            raise ValueError('rotation method not recognized')
 
         self.rotation_matrix = T
 
     def _corr_factors(self):
-        """correlation of factors
+        """correlation of factors implied by rotation
 
         If the rotation is oblique, then the factors are correlated.
 
         currently not cached
+
+        Returns
+        -------
+        corr_f : ndarray
+            correlation matrix of rotated factors, assuming initial factors are
+            orthogonal
         """
         T = self.rotation_matrix
         corr_f = T.T.dot(T)
@@ -587,18 +639,23 @@ class FactorResults(object):
             Method to use for factor scoring.
             'regression' can be abbreviated to `reg`
 
-        Returns :
+        Returns
+        -------
         coeff_matrix : ndarray
-            matrix s to compute factors f from endog y.
-            ``f = s dot y``
+            matrix s to compute factors f from a standardized endog ys.
+            ``f = ys dot s``
 
         Notes
         -----
         The `regression` method follows the Stata definition.
+        Method bartlett and regression are verified against Stats.
+        Two inofficial methods, 'ols' and 'gls', produce similar factor scores
+        but are not verified.
 
 
-        See Also:
-        `factor_scoring`
+        See Also
+        --------
+        `factor_scoring` : compute factor scores using scoring matrix
         """
         L = self.loadings
         T = self.rotation_matrix.T
@@ -629,24 +686,57 @@ class FactorResults(object):
                              'or "regression"')
         return s_mat
 
-    def factor_scoring(self, endog=None, method='bartlett'):
+    def factor_scoring(self, endog=None, method='bartlett', transform=True):
         """factor scoring: compute factors for endog
 
-        Assumes that if endog is provided, then it is standardized already, with
-        original or appropriate mean and scale
-        TODO: I guess we should change this. Need original loc and scale
+         If endog was not provided when creating the factor class, then
+        a standarized endog needs to be provided here.
 
-        If endog was not provided when creating the factor class, then
-        an endog needs to be provided here.
+        Parameters
+        ----------
+        method : 'bartlett' or 'regression'
+            Method to use for factor scoring.
+            'regression' can be abbreviated to `reg`
+        transform : bool
+            If transform is true and endog is provided, then it will be
+            standardized using mean and scale of original data, which has to
+            be available in this case.
+            If transform is False, then a provided endog will be used unchanged.
+            The original endog in the Factor class will
+            always be standardized if endog is None, independently of `transform`.
 
+        Returns
+        -------
+        factor_score : ndarray
+            estimated factors using scoring matrix s and standarized endog ys
+            ``f = ys dot s``
+
+        Notes
+        -----
+        Status: transform option is experimental and might change.
+
+        See Also
+        --------
+        `factor_score_params` : scoring matrix
         """
-        if endog is None:
+
+        if transform is False and endog is not None:
+            # no transformation in this case
+            endog = np.asarray(endog)
+        else:
+            # we need to standardize with the original mean and scale
             if self.model.endog is not None:
-                endog = self.model.endog
-                endog = (endog - endog.mean(0)) / endog.std(ddof=1, axis=0)
+                m = self.model.endog.mean(0)
+                s = self.model.endog.std(ddof=1, axis=0)
+                if endog is None:
+                    endog = self.model.endog
+                else:
+                    endog = np.asarray(endog)
             else:
-                raise ValueError('If factor.endog is None, then ' +
-                                 'endog needs to be given.')
+                raise ValueError('If transform is True, then `endog` needs ' +
+                                 'to be available in the Factor instance.')
+
+            endog = (endog - m) / s
 
         s_mat = self.factor_score_params(method=method)
         factors = endog.dot(s_mat)

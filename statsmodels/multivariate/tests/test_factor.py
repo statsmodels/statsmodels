@@ -295,3 +295,7 @@ def test_factor_scoring():
     f_gls_z = _zscore(f_gls)
     assert_array_less(0.97, (f_ols_z * f_reg_z).mean(0))
     assert_array_less(0.999, (f_gls_z * f_reg_z).mean(0))
+
+    # check provided endog
+    f_ols2 = res.factor_scoring(method='ols', endog=res.model.endog)
+    assert_allclose(f_ols2, f_ols, rtol=1e-13)
