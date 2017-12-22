@@ -119,6 +119,21 @@ Autogressive Moving-Average Processes (ARMA) and Kalman Filter
    arima_model.ARIMAResults
    kalmanf.kalmanfilter.KalmanFilter
 
+
+Exponential Smoothing
+~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: statsmodels.tsa
+
+.. autosummary::
+   :toctree: generated/
+
+   holtwinters.ExponentialSmoothing
+   holtwinters.SimpleExpSmoothing
+   holtwinters.Holt
+   holtwinters.HoltWintersResults
+
+
 Vector Autogressive Processes (VAR)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
