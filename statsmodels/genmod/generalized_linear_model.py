@@ -819,12 +819,6 @@ class GLM(base.LikelihoodModel):
             estimate solved with the `brentq` scipy optimizer. 'ols' will use
             Taylor's reggresion estimator. 'glm-gamma' will use Perry's gamma
             regression estimator which is a gamma-glm.
-        exposure : array-like, optional
-            Array of exposures
-        freq_weights : array-like, optional
-            Array of frequency weights
-        both : bool, optional
-            When `True`, return the scale and power parameters as a tuple.
 
         If the 'brentq' method is specified, the following additional arguments
         are accepted:
@@ -841,84 +835,51 @@ class GLM(base.LikelihoodModel):
         power : float
             The estimated shape or power
         """
-        if exposure is not None and not isinstance(self.family.link,
-                                                   families.links.Log):
-            raise ValueError("exposure can only be used with the log link function")
-
-        # Use fit exposure if appropriate
-        if exposure is None and hasattr(self, 'exposure'):
-            # Already logged
-            exposure = np.exp(self.exposure)
-        elif exposure is None:
-            exposure = 1
-
-        # Use fit freq_weights if appropriate
-        if freq_weights is None and hasattr(self, 'freq_weights'):
-            # Already logged
-            freq_weights = self.freq_weights
-        elif exposure is None:
-            freq_weights = np.ones(len(self.endog))
-
-        weights = freq_weights * exposure
-
-        endog2 = self.endog / exposure
         FLOAT_EPS = np.finfo(float).eps
         mu = np.clip(mu, FLOAT_EPS, np.inf)
-        mu2 = np.clip(mu / exposure, FLOAT_EPS, np.inf)
+        weights = self.iweights
 
         if method == 'brentq':
             from scipy.optimize import brentq
 
             low = kwargs.get('low', 1)
             high = kwargs.get('high', 10)
+            
 
             def x2scale(power):
-                scale = ((freq_weights * (self.endog - mu) ** 2 /
+                scale = ((weights * (self.endog - mu) ** 2 /
                           (mu ** power)).sum() / self.df_resid)
                 return scale
 
             def psi_p(power):
                 scale = x2scale(power)
-                p = (weights * (((endog2 - mu2) ** 2 /
-                                 (scale * (mu2 ** power))) - 1) *
-                     np.log(mu2)).sum()
+                p = (self.freq_weights * (((self.endog - mu) ** 2 /
+                                           (scale / self.var_weights *
+                                            (mu ** power))) - 1) *
+                     np.log(mu)).sum()
                 return p
 
             power = brentq(psi_p, low, high)
-            if both:
-                scale = x2scale(power)
-                return scale, power
-            else:
-                return power
 
         elif method == 'perry':
-            y = np.power(endog2 - mu2, 2)
-            x = np.column_stack((np.ones(len(endog2)), np.log(mu2)))
+            y = np.power(self.endog - mu, 2)
+            x = np.column_stack((np.ones(len(self.endog)), np.log(mu)))
             model = GLM(y, x, freq_weights=weights,
                         family=families.Gamma(families.links.log))
             res = model.fit()
             scale, power = res.params
 
-            if both:
-                return np.exp(scale), power
-            else:
-                return power
-
         elif method == 'taylor':
             from statsmodels.regression.linear_model import WLS
 
-            y = np.log(np.power(endog2 - mu2, 2))
-            x = np.column_stack((np.ones(len(endog2)), np.log(mu2)))
+            y = np.log(np.power(self.endog - mu, 2))
+            x = np.column_stack((np.ones(len(self.endog)), np.log(mu)))
             model = WLS(endog=y, exog=x, weights=weights)
             res = model.fit()
             scale, power = res.params
-
-            if both:
-                return np.exp(np.exp(scale)), power
-            else:
-                return power
         else:
-            raise NotImplementedError('Only brentq, taylor, and perry can currently be used')
+            raise NotImplementedError("Only brentq, taylor, and perry can "
+                                      "currently be used")
         return power
 
     def predict(self, params, exog=None, exposure=None, offset=None,
