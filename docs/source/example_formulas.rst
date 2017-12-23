@@ -158,9 +158,11 @@ To generate ``numpy`` arrays:
 
     import patsy
     f = 'Lottery ~ Literacy * Wealth'
-    y, X = patsy.dmatrices(f, df, return_type='dataframe')
+    y, X = patsy.dmatrices(f, df, return_type='matrix')
     print(y[:5])
     print(X[:5])
+
+``y`` and ``X`` would be instances of ``patsy.DesignMatrix`` which is a subclass of ``numpy.ndarray``.
 
 To generate pandas data frames:
 
