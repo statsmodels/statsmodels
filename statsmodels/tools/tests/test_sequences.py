@@ -1,6 +1,6 @@
 import numpy as np
 import numpy.testing as npt
-from statsmodels.doe import sequences
+from statsmodels.tools import sequences
 
 
 def test_discrepancy():

@@ -7,13 +7,13 @@ try:
     have_basinhopping = True
 except ImportError:
     have_basinhopping = False
-from .sequences import discrepancy
+from statsmodels.tools.sequences import discrepancy
 
 
-def olhs(dim, n_sample, bounds=None):
+def orthogonal_latin_hypercube(dim, n_sample, bounds=None):
     """Orthogonal array-based Latin hypercube sampling (OA-LHS).
 
-    On top of the constrain from the Latin Hypercube, an orthogonal array of
+    On top of the constraints from the Latin Hypercube, an orthogonal array of
     size n_sample is defined and only one point is allowed per subspace.
 
     Parameters
@@ -29,7 +29,7 @@ def olhs(dim, n_sample, bounds=None):
 
     Returns
     -------
-    sample : array_like (n_samples, k_vars)
+    sample : ndarray (n_samples, k_vars)
         Latin hypercube Sampling.
 
     References
@@ -60,7 +60,7 @@ def olhs(dim, n_sample, bounds=None):
     return sample
 
 
-def lhs(dim, n_sample, bounds=None, centered=False):
+def latin_hypercube(dim, n_sample, bounds=None, centered=False):
     """Latin hypercube sampling (LHS).
 
     The parameter space is subdivided into an orthogonal grid of n_sample per
@@ -80,7 +80,7 @@ def lhs(dim, n_sample, bounds=None, centered=False):
 
     Returns
     -------
-    sample : array_like (n_samples, k_vars)
+    sample : ndarray (n_samples, k_vars)
         Latin hypercube Sampling.
 
     References
@@ -108,7 +108,8 @@ def lhs(dim, n_sample, bounds=None, centered=False):
     return sample
 
 
-def optimal_design(dim, n_sample, bounds=None, doe=None, niter=1, force=False):
+def optimal_design(dim, n_sample, bounds=None, start_design=None, niter=1,
+                   force=False):
     """Optimal design.
 
     Optimize the design by doing random permutations to lower the centered
@@ -128,7 +129,7 @@ def optimal_design(dim, n_sample, bounds=None, doe=None, niter=1, force=False):
         Desired range of transformed data. The transformation apply the bounds
         on the sample and not the theoretical space, unit cube. Thus min and
         max values of the sample will coincide with the bounds.
-    doe : array_like (n_samples, k_vars)
+    start_design : array_like (n_samples, k_vars)
         Initial design of experiment to optimize.
 
     Returns
@@ -143,20 +144,21 @@ def optimal_design(dim, n_sample, bounds=None, doe=None, niter=1, force=False):
     Journal of Simulation, 2013.
 
     """
+    doe = start_design
     if doe is None:
-        doe = olhs(dim, n_sample, bounds)
+        doe = orthogonal_latin_hypercube(dim, n_sample, bounds)
 
-    def _disturb_doe(x, sample, bounds):
+    def _perturb_doe(x, sample, bounds):
         """Disturbe the Design of Experiment.
 
         Parameters
         ----------
-        x : list
+        x : list of int
             It is a list of:
                 idx : int
                     Index value of the components to compute
         sample : array_like (n_samples, k_vars)
-            Sample to perturbe.
+            Sample to perturb.
         bounds : tuple or array_like ([min, k_vars], [max, k_vars])
             Desired range of transformed data. The transformation apply the
             bounds on the sample and not the theoretical space, unit cube. Thus
@@ -186,10 +188,10 @@ def optimal_design(dim, n_sample, bounds=None, doe=None, niter=1, force=False):
         if have_basinhopping and ((complexity > 1e6) or force):
             minimizer_kwargs = {"method": "L-BFGS-B", "bounds": bounds_optim,
                                 "args": (doe, bounds)}
-            optimum = basinhopping(_disturb_doe, [0, 0, 0], niter=100,
+            optimum = basinhopping(_perturb_doe, [0, 0, 0], niter=100,
                                    minimizer_kwargs=minimizer_kwargs).x
         else:
-            optimum = brute(_disturb_doe, ranges=bounds_optim,
+            optimum = brute(_perturb_doe, ranges=bounds_optim,
                             finish=fmin, args=(doe, bounds))
 
         col, row_1, row_2 = map(int, optimum)
