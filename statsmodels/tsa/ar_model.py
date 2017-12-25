@@ -69,6 +69,11 @@ class AR(tsbase.TimeSeriesModel):
         elif endog.ndim > 1 and endog.shape[1] != 1:
             raise ValueError("Only the univariate case is implemented")
 
+    @property
+    def df_resid(self):
+        raise DeprecationWarning('AR.df_resid attribute is not set as of '
+                                 'version 0.9.1; use ARResults.df_resid.')
+
     def initialize(self):
         pass
 
@@ -694,7 +699,7 @@ class ARResults(tsbase.TimeSeriesModelResults):
         self.trendorder = trendorder
         #TODO: cmle vs mle?
         self.df_model = k_ar + k_trend
-        self.df_resid = self.model.df_resid = n_totobs - self.df_model
+        self.df_resid = n_totobs - self.df_model
 
     @cache_writable()
     def sigma2(self):
