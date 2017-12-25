@@ -302,3 +302,29 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         res.df_resid_inference = n_groups - 1
 
     return res
+
+
+def cov_params_func_l1(model, xopt, retvals):
+    """
+    Computes cov_params on a reduced parameter space
+    corresponding to the nonzero parameters resulting from the
+    l1 regularized fit.
+
+    Returns a full cov_params matrix, with entries corresponding
+    to zero'd values set to np.nan.
+    """
+    H = model.hessian(xopt)
+    trimmed = retvals['trimmed']
+    nz_idx = np.nonzero(trimmed == False)[0]
+
+    nnz_params = (trimmed == False).sum()
+    if nnz_params > 0:
+        H_restricted = H[nz_idx[:, None], nz_idx]
+        # Covariance estimate for the nonzero params
+        H_restricted_inv = np.linalg.inv(-H_restricted)
+    else:
+        H_restricted_inv = np.zeros(0)
+
+    cov_params = np.nan * np.ones(H.shape)
+    cov_params[nz_idx[:, None], nz_idx] = H_restricted_inv
+    return cov_params
