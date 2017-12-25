@@ -2119,6 +2119,7 @@ class RegressionResults(base.LikelihoodModelResults):
         """
 
         import statsmodels.stats.sandwich_covariance as sw
+        from statsmodels.base import covtype
 
         # normalize names
         if cov_type == 'nw-panel':
@@ -2165,16 +2166,11 @@ class RegressionResults(base.LikelihoodModelResults):
 
             res.cov_kwds['scale'] = scale = kwds.get('scale', 1.)
             res.cov_params_default = scale * res.normalized_cov_params
+
         elif cov_type.upper() in ('HC0', 'HC1', 'HC2', 'HC3'):
-            if kwds:
-                raise ValueError('heteroscedasticity robust covarians ' +
-                                 'does not use keywords')
-            res.cov_kwds['description'] = (
-                'Standard Errors are heteroscedasticity ' +
-                'robust ' + '(' + cov_type + ')')
-            # TODO cannot access cov without calling se first
-            getattr(self, cov_type.upper() + '_se')
-            res.cov_params_default = getattr(self, 'cov_' + cov_type.upper())
+            n_groups = covtype.heteroskedastic_stderrs(self, res, kwds,
+                                                       adjust_df, cov_type)
+
         elif cov_type.lower() == 'hac':
             maxlags = kwds['maxlags']   # required?, default in cov_hac_simple
             res.cov_kwds['maxlags'] = maxlags

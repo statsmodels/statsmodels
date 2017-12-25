@@ -168,17 +168,8 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     #       other models
     # TODO: make it DRYer   repeated code for checking kwds
     if cov_type.upper() in ('HC0', 'HC1', 'HC2', 'HC3'):
-        if kwds:
-            raise ValueError('heteroscedasticity robust covarians ' +
-                             'does not use keywords')
-        res.cov_kwds['description'] = ('Standard Errors are heteroscedasticity ' +
-                                       'robust ' + '(' + cov_type + ')')
+        n_groups = heteroskedastic_stderrs(self, res, kwds, adjust_df, cov_type)
 
-        res.cov_params_default = getattr(self, 'cov_' + cov_type.upper(), None)
-        if res.cov_params_default is None:
-            # results classes that don't have cov_HCx attribute
-            res.cov_params_default = sw.cov_white_simple(self,
-                                                         use_correction=False)
     elif cov_type.lower() == 'hac':
         maxlags = kwds['maxlags']   # required?, default in cov_hac_simple
         res.cov_kwds['maxlags'] = maxlags
@@ -302,3 +293,22 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         res.df_resid_inference = n_groups - 1
 
     return res
+
+
+def heteroskedastic_stderrs(self, res, kwds, adjust_df, cov_type):
+    import statsmodels.stats.sandwich_covariance as sw
+    if kwds:
+        raise ValueError('heteroscedasticity robust covariance '
+                         'does not use keywords')
+
+    res.cov_kwds['description'] = ('Standard Errors are heteroscedasticity '
+                                   'robust ' + '(' + cov_type + ')')
+
+    res.cov_params_default = getattr(self, 'cov_' + cov_type.upper(), None)
+    if res.cov_params_default is None:
+        # results classes that don't have cov_HCx attribute
+        # TODO: Warn in this case?
+        res.cov_params_default = sw.cov_white_simple(self,
+                                                     use_correction=False)
+    n_groups = None
+    return n_groups
