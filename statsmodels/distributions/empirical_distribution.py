@@ -94,7 +94,7 @@ class StepFunction(object):
         self.x = np.r_[-np.inf, _x]
         self.y = np.r_[ival, _y]
 
-        if not sorted:
+        if not sorted: # TODO: avoid built-in names
             asort = np.argsort(self.x)
             self.x = np.take(self.x, asort, 0)
             self.y = np.take(self.y, asort, 0)
@@ -140,7 +140,7 @@ class ECDF(StepFunction):
             y = np.linspace(1./nobs,1,nobs)
             super(ECDF, self).__init__(x, y, side=side, sorted=True)
         else:
-            return interp1d(x,y,drop_errors=False,fill_values=ival)
+            return interp1d(x,y,drop_errors=False,fill_values=ival) # FIXME: what is the intended outcome here?  `return` inside an `__init__` probably won't achieve it.
 
 def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
     """

@@ -16,6 +16,8 @@ outline for GEE.
 
 import numpy as np
 
+from statsmodels.stats.moment_helpers import corr2cov
+
 def corr_equi(k_vars, rho):
     '''create equicorrelated correlation matrix with rho on off diagonal
 
@@ -81,24 +83,8 @@ def corr_arma(k_vars, ar, ma):
     return toeplitz(ar)
 
 
-def corr2cov(corr, std):
-    '''convert correlation matrix to covariance matrix
 
-    Parameters
-    ----------
-    corr : ndarray, (k_vars, k_vars)
-        correlation matrix
-    std : ndarray, (k_vars,) or scalar
-        standard deviation for the vector of random variables. If scalar, then
-        it is assumed that all variables have the same scale given by std.
-
-    '''
-    if np.size(std) == 1:
-        std = std*np.ones(corr.shape[0])
-    cov = corr * std[:,None] * std[None, :]  #same as outer product
-    return cov
-
-
+# TODO: This is at least partially redundant with linear_model.GLSAR.whiten
 def whiten_ar(x, ar_coefs):
     """
     Whiten a series of columns according to an AR(p) covariance structure.
@@ -135,7 +121,7 @@ def whiten_ar(x, ar_coefs):
 
     return _x[self.order:]
 
-
+# TODO: More than a little redundant with regression.linear_model.yule_walker
 def yule_walker_acov(acov, order=1, method="unbiased", df=None, inv=False):
     """
     Estimate AR(p) parameters from acovf using Yule-Walker equation.

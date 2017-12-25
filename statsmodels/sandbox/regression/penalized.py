@@ -39,13 +39,8 @@ import numpy as np
 from statsmodels.tools.decorators import (cache_readonly)
 import statsmodels.base.model as base
 from statsmodels.regression.linear_model import OLS, GLS, RegressionResults
+from statsmodels.tools.shaping import atleast_2dcols
 
-
-def atleast_2dcols(x):
-    x = np.asarray(x)
-    if x.ndim == 1:
-        x = x[:,None]
-    return x
 
 
 class TheilGLS(GLS):

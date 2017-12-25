@@ -23,28 +23,13 @@ array([  2.12286549e+00,   1.27450889e+00,   7.86898619e-02,
          1.24504352e-03,  -8.81846018e-02])
 '''
 
+from statsmodels.tsa.stattools import acovf
+
 def acovf_fft(x, demean=True):
-    '''autocovariance function with call to fftconvolve, biased
+    """
+    acovf_fft is deprecated, will be removed [...].  It will continue
+    working until then.  Users are encouraged to
+    use sm.tsa.stattools.acovf instead.
+    """
+    return acovf(x, unbiased=False, demean=demean, fft=True, missing='none')
 
-    Parameters
-    ----------
-    x : array_like
-        timeseries, signal
-    demean : boolean
-        If true, then demean time series
-
-    Returns
-    -------
-    acovf : array
-        autocovariance for data, same length as x
-
-    might work for nd in parallel with time along axis 0
-
-    '''
-    from scipy import signal
-    x = np.asarray(x)
-
-    if demean:
-        x = x - x.mean()
-
-    signal.fftconvolve(x,x[::-1])[len(x)-1:len(x)+10]/x.shape[0]

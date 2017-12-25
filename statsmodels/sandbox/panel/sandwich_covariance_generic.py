@@ -16,6 +16,8 @@ License: BSD-3
 from statsmodels.compat.python import range
 import numpy as np
 
+from statsmodels.stats.sandwich_covariance import weights_bartlett
+
 def kernel(d1, d2, r=None, weights=None):
     '''general product kernel
 
@@ -89,9 +91,6 @@ def aggregate_cov(x, d, r=None, weights=None):
 
     return res, count
 
-def weights_bartlett(nlags):
-    #with lag zero, nlags is the highest lag included
-    return 1 - np.arange(nlags+1)/(nlags+1.)
 
 #------- examples, cases: hardcoded for d is time and two categorical groups
 def S_all_hac(x, d, nlags=1):
