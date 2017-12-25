@@ -200,6 +200,11 @@ class GenericZeroInflated(CountModel):
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
 
+        if method not in ['l1', 'l1_cvxopt_cp']:
+            # FIXME: This should be a ValueError right?
+            raise TypeError("argument method == %s, which is not handled" %
+                            method)
+
         if np.size(alpha) == 1 and alpha != 0:
             k_params = self.k_exog + self.k_inflate
             alpha = alpha * np.ones(k_params)
@@ -223,12 +228,7 @@ class GenericZeroInflated(CountModel):
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
 
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = self.result_class_reg(self, cntfit)
-        else:
-            raise TypeError(
-                    "argument method == %s, which is not handled" % method)
-
+        discretefit = self.result_class_reg(self, cntfit)
         return self.result_class_reg_wrapper(discretefit)
 
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
