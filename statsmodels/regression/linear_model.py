@@ -47,6 +47,7 @@ from statsmodels.tools.decorators import (resettable_cache,
                                           cache_writable)
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
+from statsmodels.base import covtype
 from statsmodels.emplike.elregress import _ELRegOpts
 import warnings
 from statsmodels.tools.sm_exceptions import InvalidTestWarning
@@ -2120,11 +2121,8 @@ class RegressionResults(base.LikelihoodModelResults):
 
         import statsmodels.stats.sandwich_covariance as sw
 
-        # normalize names
-        if cov_type == 'nw-panel':
-            cov_type = 'hac-panel'
-        if cov_type == 'nw-groupsum':
-            cov_type = 'hac-groupsum'
+        cov_type = covtype._normalize_cov_type(cov_type)
+
         if 'kernel' in kwds:
             kwds['weights_func'] = kwds.pop('kernel')
 
@@ -2145,14 +2143,7 @@ class RegressionResults(base.LikelihoodModelResults):
         res.cov_kwds = {'use_t': use_t}  # store for information
         res.use_t = use_t
 
-        adjust_df = False
-        if cov_type in ['cluster', 'hac-panel', 'hac-groupsum']:
-            df_correction = kwds.get('df_correction', None)
-            # TODO: check also use_correction, do I need all combinations?
-            if df_correction is not False:  # i.e. in [None, True]:
-                # user didn't explicitely set it to False
-                adjust_df = True
-
+        adjust_df = covtype._set_df_adjustment(kwds, cov_type)
         res.cov_kwds['adjust_df'] = adjust_df
 
         # verify and set kwds, and calculate cov
@@ -2266,26 +2257,8 @@ class RegressionResults(base.LikelihoodModelResults):
                 'cluster correlation ' + '(' + cov_type + ')')
         elif cov_type.lower() == 'hac-groupsum':
             # Driscoll-Kraay standard errors
-            res.cov_kwds['time'] = time = kwds['time']
-            # TODO: nlags is currently required
-            # nlags = kwds.get('nlags', True)
-            # res.cov_kwds['nlags'] = nlags
-            # TODO: `nlags` or `maxlags`
-            res.cov_kwds['maxlags'] = maxlags = kwds['maxlags']
-            use_correction = kwds.get('use_correction', 'cluster')
-            res.cov_kwds['use_correction'] = use_correction
-            weights_func = kwds.get('weights_func', sw.weights_bartlett)
-            res.cov_kwds['weights_func'] = weights_func
-            if adjust_df:
-                # need to find number of groups
-                tt = (np.nonzero(time[1:] < time[:-1])[0] + 1)
-                self.n_groups = n_groups = len(tt) + 1
-            res.cov_params_default = sw.cov_nw_groupsum(
-                self, maxlags, time, weights_func=weights_func,
-                use_correction=use_correction)
-            res.cov_kwds['description'] = (
-                        'Driscoll and Kraay Standard Errors are robust to ' +
-                        'cluster correlation ' + '(' + cov_type + ')')
+            n_groups = covtype.hac_groupsum(self, res, kwds,
+                                            adjust_df, cov_type)
         else:
             raise ValueError('cov_type not recognized. See docstring for ' +
                              'available options and spelling')
