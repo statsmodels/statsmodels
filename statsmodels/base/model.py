@@ -1027,13 +1027,11 @@ class LikelihoodModelResults(Results):
                                  'covariance matrix of the errors is correctly ' +
                                  'specified.'}
             else:
-                from statsmodels.base.covtype import get_robustcov_results
                 if cov_kwds is None:
                     cov_kwds = {}
                 use_t = self.use_t
-                # TODO: we shouldn't need use_t in get_robustcov_results
-                get_robustcov_results(self, cov_type=cov_type, use_self=True,
-                                           use_t=use_t, **cov_kwds)
+                self._get_robustcov_results(cov_type=cov_type, use_self=True,
+                                            use_t=use_t, **cov_kwds)
 
 
     def normalized_cov_params(self):
