@@ -155,6 +155,7 @@ class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
         cls.res1m = mod.fit_constrained(constr, start_params=start_params,
                                         method='bfgs', disp=0)
 
+    @pytest.mark.smoke
     def test_smoke(self):
         # trailing text in summary, assumes it's the first extra string
         #NOTE: see comment about convergence in llnull for self.res1m
@@ -472,7 +473,7 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
         assert_allclose(res1.mu, predicted, rtol=1e-10)
         assert_allclose(res1.fittedvalues, predicted, rtol=1e-10)
 
-
+    @pytest.mark.smoke
     def test_smoke(self):
         # trailing text in summary, assumes it's the first extra string
         summ = self.res1m.summary()

@@ -8,10 +8,10 @@ import warnings
 import sys
 
 import nose
+import pytest
+import pandas as pd
 import numpy as np
 from numpy.testing import (assert_raises, assert_allclose)
-import pandas as pd
-import pytest
 
 import statsmodels.api as sm
 from statsmodels.genmod.generalized_linear_model import GLM
