@@ -367,10 +367,9 @@ class GLM(base.LikelihoodModel):
         if (self.freq_weights is not None) and \
            (self.freq_weights.shape[0] == self.endog.shape[0]):
             self.wnobs = self.freq_weights.sum()
-            self.df_resid = self.wnobs - self.df_model - 1
         else:
             self.wnobs = self.exog.shape[0]
-            self.df_resid = self.exog.shape[0] - self.df_model - 1
+        self.df_resid = self.wnobs - (self.df_model + 1)
 
     def _check_inputs(self, family, offset, exposure, endog, freq_weights,
                       var_weights):
