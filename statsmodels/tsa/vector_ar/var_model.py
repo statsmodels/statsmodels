@@ -1409,7 +1409,7 @@ class VARResults(VARProcess):
             ma_coll[i, :, :, :] = fill_coll(sim)
 
         ma_sort = np.sort(ma_coll, axis=0)  # sort to get quantiles
-        index = round(signif/2*repl)-1, round((1-signif/2)*repl)-1
+        index = int(round(signif/2*repl)-1), int(round((1-signif/2)*repl)-1)
         lower = ma_sort[index[0], :, :, :]
         upper = ma_sort[index[1], :, :, :]
         return lower, upper
@@ -1476,33 +1476,49 @@ class VARResults(VARProcess):
         G = self._zz
         Ginv = scipy.linalg.inv(G)
 
+        phi_sig_cache = {}
+        trace_cache = {}
+
         # memoize powers of B for speedup
         # TODO: see if can memoize better
         # TODO: much lower-hanging fruit in caching `np.trace` and `chain_dot` below.
         B = self._bmat_forc_cov()
-        _B = {}
+        bpow_cache = {}
         def bpow(i):
-            if i not in _B:
-                _B[i] = np.linalg.matrix_power(B, i)
+            if i not in bpow_cache:
+                bpow_cache[i] = np.linalg.matrix_power(B, i)
 
-            return _B[i]
+            return bpow_cache[i]
 
         phis = self.ma_rep(steps)
         sig_u = self.sigma_u
 
         omegas = np.zeros((steps, self.neqs, self.neqs))
-        for h in range(1, steps + 1):
-            if h == 1:
-                omegas[h-1] = self.df_model * self.sigma_u
-                continue
-
+        omegas[0] = self.df_model * self.sigma_u
+        for h in range(2, steps + 1):
             om = omegas[h-1]
             for i in range(h):
+                Bi = bpow(h - 1 - i)
                 for j in range(h):
-                    Bi = bpow(h - 1 - i)
                     Bj = bpow(h - 1 - j)
-                    mult = np.trace(chain_dot(Bi.T, Ginv, Bj, G))
-                    om += mult * chain_dot(phis[i], sig_u, phis[j].T)
+
+                    if (h-1-i, h-1-j) not in trace_cache:
+                        trace_cache[(h-1-i, h-1-j)] = np.trace(chain_dot(Bi.T, Ginv, Bj, G))
+
+                    if (i, j) not in phi_sig_cache:
+                        phi_sig_cache[(i, j)] = phis[i].dot(sig_u).dot(phis[j].T)
+                        # TODO: For some sets of parameters, we might be able to speed
+                        # this up by pre-calculating the cholesky decomposition
+                        # of sigma_u, then calculate:
+                        # phi_sigs = {idx: phis[idx].dot(cho) for idx in range(steps+1)}
+                        # and then define:
+                        # phi_sig_cache[(i, j)] = phi_sigs[i].dot(phi_sigs[j])
+                        # This would only be useful if `steps` is sufficiently
+                        # large to offset the cost of the decomposition.
+
+                    mult = trace_cache[(h-1-i, h-1-j)]
+                    om += mult * phi_sig_cache[(i, j)]
+
             omegas[h-1] = om
 
         return omegas
