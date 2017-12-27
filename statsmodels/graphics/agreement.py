@@ -6,14 +6,16 @@ License: BSD-3
 '''
 
 import numpy as np
+import matplotlib.pyplot as plt
 
+from . import utils
 
 def mean_diff_plot(m1, m2,
-                    sd_limit=1.96,
-                    ax=None,
-                    scatter_kwds=None,
-                    mean_line_kwds=None,
-                    limit_lines_kwds=None):
+                   sd_limit=1.96,
+                   ax=None,
+                   scatter_kwds=None,
+                   mean_line_kwds=None,
+                   limit_lines_kwds=None):
     """
     Tukey's Mean Difference Plot.
 
@@ -27,7 +29,6 @@ def mean_diff_plot(m1, m2,
     Parameters
     ----------
     m1, m2: pandas Series or array-like
-
     sd_limit : float, default 1.96
         The limit of agreements expressed in terms of the standard deviation of
         the differences. If `md` is the mean of the differences, and `sd` is
@@ -38,25 +39,24 @@ def mean_diff_plot(m1, m2,
         of the differences.
         If sd_limit = 0, no limits will be plotted, and the ylimit of the plot
         defaults to 3 standard deviatons on either side of the mean.
-
-    ax: matplotlib.axis, optional
-        matplotlib axis object to plot on.
-
+    ax: matplotlib AxesSubplot instance, optional
+        If `ax` is None, then a figure is created. If an axis instance is
+        given, the mean difference plot is drawn on the axis.
     scatter_kwargs: keywords
         Options to to style the scatter plot. Accepts any keywords for the
         matplotlib Axes.scatter plotting method
-
     mean_line_kwds: keywords
         Options to to style the scatter plot. Accepts any keywords for the
         matplotlib Axes.axhline plotting method
-
     limit_lines_kwds: keywords
         Options to to style the scatter plot. Accepts any keywords for the
         matplotlib Axes.axhline plotting method
 
     Returns
     -------
-    ax: matplotlib Axis object
+    fig : matplotlib Figure
+        If `ax` is None, the created figure.  Otherwise the figure to which
+        `ax` is connected.
 
     References
     ----------
@@ -85,8 +85,7 @@ def mean_diff_plot(m1, m2,
 
     .. plot:: plots/graphics-mean_diff_plot.py
     """
-    import matplotlib.pyplot as plt
-
+    fig, ax = utils.create_mpl_ax(ax)
 
     if len(m1) != len(m2):
         raise ValueError('m1 does not have the same length as m2.')
@@ -97,9 +96,6 @@ def mean_diff_plot(m1, m2,
     diffs = m1 - m2
     mean_diff = np.mean(diffs)
     std_diff = np.std(diffs, axis=0)
-
-    if ax is None:
-        ax = plt.gca()
 
     scatter_kwds = scatter_kwds or {}
     if 's' not in scatter_kwds:
@@ -157,4 +153,4 @@ def mean_diff_plot(m1, m2,
     ax.set_xlabel('Means', fontsize=15)
     ax.tick_params(labelsize=13)
     plt.tight_layout()
-    return ax
+    return fig
