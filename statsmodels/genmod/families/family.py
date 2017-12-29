@@ -613,8 +613,10 @@ class Gaussian(Family):
             llf -= (1+np.log(np.pi/nobs2))*nobs2
             return llf
         else:
-            return np.sum(-0.5 * iweights * ((endog - mu) ** 2 / scale +
-                                             np.log(2 * np.pi * scale)))
+            # original: return np.sum(-0.5 * iweights * ((endog - mu) ** 2 / scale + np.log(2 * np.pi * scale)))
+            # refactoring common value out of summation:
+            common = np.log(2 * np.pi * scale)             
+            return np.sum(-0.5 * iweights * ((endog - mu) ** 2 / scale + common))
 
     def resid_anscombe(self, endog, mu, scale=1.):
         r"""
