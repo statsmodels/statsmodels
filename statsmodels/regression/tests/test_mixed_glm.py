@@ -1,5 +1,5 @@
 import numpy as np
-from .mixed_glm import MixedGLM, BinomialMixedGLM
+from statsmodels.regression.mixed_glm import MixedGLM, BinomialMixedGLM
 import statsmodels.api as sm
 from scipy import sparse
 from numpy.testing import assert_allclose

@@ -520,4 +520,6 @@ class BinomialMixedGLM(MixedGLM):
 
         sd_grad += 1 / vb_sd
 
+        # print("|G|=%f" % np.sqrt(np.sum(mean_grad**2) + np.sum(sd_grad**2)))
+
         return mean_grad, sd_grad
