@@ -1,3 +1,4 @@
+from __future__ import division
 import numpy as np
 from scipy.optimize import minimize
 from scipy import sparse
@@ -19,9 +20,9 @@ glw = [[0.2955242247147529, -0.1488743389816312],
        [0.0666713443086881, 0.9739065285171717]]
 
 
-class MixedGLM(object):
+class BayesMixedGLM(object):
     """
-    Fit a generalized linear mixed model.
+    Fit a generalized linear mixed model using Bayesian methods.
 
     The class implements the Laplace approximation to the posterior
     distribution.  See subclasses, e.g. BinomialMixedGLM for other
@@ -61,17 +62,26 @@ class MixedGLM(object):
 
     Notes
     -----
-    All random effects are modeled as being independent Gaussian
-    values.  Every column of `exog_vc` has a distinct realized random
-    effect that used to form the inear predictors.  Two columns of
-    `exog_vc` that have the same value in `ident` are constrinaed to
-    have the same variance.
-
     There are three types of values in the posterior: fixed effects
     parameters (fep), corresponding to the columns of `exog_fe`,
     random effects realizations (vc), corresponding to the columns of
-    `exog_vc`, and the variances of the random effects, corresponding
-    to the unique labels in `ident`.
+    `exog_vc`, and the variances of the random effects (vcp),
+    corresponding to the unique labels in `ident`.
+
+    All random effects are modeled as being independent Gaussian
+    values, given the variance parameters.  Every column of `exog_vc`
+    has a distinct realized random effect that is used to form the
+    linear predictors.  The elements of `ident` index the distinct
+    random effect variance parameters.  Two columns of `exog_vc` that
+    have the same value in `ident` are constrained to have the same
+    variance.
+
+    The random effect standard deviation parameters (vcp) have
+    log-normal prior distributions with mean 0 and standard deviation
+    `vcp_p`.
+
+    The prior for the fixed effects parameters is Gaussian with mean 0
+    and standard deviation `fe_p`.
     """
 
     def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=0.5,
@@ -80,6 +90,7 @@ class MixedGLM(object):
 
         if family is None:
             family = statsmodels.genmod.families.Gaussian()
+            warnings.Warn("Defaulting to Gaussian family")
 
         # Get the fixed effects parameter names
         if fep_names is None:
@@ -186,8 +197,9 @@ class MixedGLM(object):
 
         fep, vcp, vc = self._unpack(params)
 
+        lp = 0
         if self.k_fep > 0:
-            lp = np.dot(self.exog_fe, fep)
+            lp += np.dot(self.exog_fe, fep)
         if self.k_vc > 0:
             lp += self.exog_vc.dot(vc)
 
@@ -253,7 +265,7 @@ class MixedGLM(object):
                    np.sqrt(np.sum(r.jac**2)))
             warnings.warn(msg)
 
-        return MixedGLMResults(self, r.x, r.hess_inv, optim_retvals=r)
+        return BayesMixedGLMResults(self, r.x, r.hess_inv, optim_retvals=r)
 
     # Overall mean and variance of the linear predictor under the
     # given distribution parameters.
@@ -266,7 +278,7 @@ class MixedGLM(object):
 
         return tm, tv
 
-    def fit_vb(self, mean=None, sd=None, minim_opts=None):
+    def fit_vb(self, mean=None, sd=None, minim_opts=None, verbose=False):
         """
         Fit the model using variational Bayes.
 
@@ -276,8 +288,8 @@ class MixedGLM(object):
             Starting value for VB mean vector
         sd : array-like
             Starting value for VB standard deviation vector
-        n_iter : integer
-            Number of iterations
+        minim_opts : dict-like
+            Options passed to scipy.minimize
 
         Notes
         -----
@@ -295,6 +307,14 @@ class MixedGLM(object):
         ----------
         https://arxiv.org/pdf/1601.00670.pdf
         """
+
+        if type(self) is BayesMixedGLM:
+            msg = ("To fit the model using variational Bayes, create a " +
+                   "class for the appropriate family type, e.g. " +
+                   "BinomialBayesMixedGLM.")
+            raise ValueError(msg)
+
+        self.verbose = verbose
 
         n = self.k_fep + self.k_vcp + self.k_vc
         if mean is None:
@@ -332,10 +352,10 @@ class MixedGLM(object):
             warnings.warn("VB fitting did not converge")
 
         n = len(mm.x) // 2
-        return MixedGLMResults(self, mm.x[0:n], np.exp(2*mm.x[n:]), mm)
+        return BayesMixedGLMResults(self, mm.x[0:n], np.exp(2*mm.x[n:]), mm)
 
 
-class MixedGLMResults(object):
+class BayesMixedGLMResults(object):
 
     def __init__(self, model, params, cov_params,
                  optim_retvals=None):
@@ -393,19 +413,23 @@ class MixedGLMResults(object):
         return summ
 
 
-class BinomialMixedGLM(MixedGLM):
+class BinomialBayesMixedGLM(BayesMixedGLM):
 
     # Integration range (from -rng to +rng).  The integrals are with
     # respect to a standard Gaussian distribution so (-5, 5) will be
     # sufficient in many cases.
     rng = 5
 
+    verbose = False
+
     def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=0.5,
                  fe_p=0.5, fep_names=None, vcp_names=None):
 
-        super().__init__(endog, exog_fe, exog_vc, ident, vcp_p, fe_p,
-                         family=statsmodels.genmod.families.Binomial(),
-                         fep_names=fep_names, vcp_names=vcp_names)
+        super(BinomialBayesMixedGLM, self).__init__(
+            endog=endog, exog_fe=exog_fe, exog_vc=exog_vc,
+            ident=ident, vcp_p=vcp_p, fe_p=fe_p,
+            family=statsmodels.genmod.families.Binomial(),
+            fep_names=fep_names, vcp_names=vcp_names)
 
     def vb_elbo(self, vb_mean, vb_sd):
         """
@@ -520,6 +544,8 @@ class BinomialMixedGLM(MixedGLM):
 
         sd_grad += 1 / vb_sd
 
-        # print("|G|=%f" % np.sqrt(np.sum(mean_grad**2) + np.sum(sd_grad**2)))
+        if self.verbose:
+            print("|G|=%f" % np.sqrt(np.sum(mean_grad**2) +
+                                     np.sum(sd_grad**2)))
 
         return mean_grad, sd_grad
