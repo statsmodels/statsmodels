@@ -25,8 +25,8 @@ class BayesMixedGLM(object):
     Fit a generalized linear mixed model using Bayesian methods.
 
     The class implements the Laplace approximation to the posterior
-    distribution.  See subclasses, e.g. BinomialMixedGLM for other
-    estimation approaches.
+    distribution.  See subclasses, e.g. BinomialBayesMixedGLM for
+    other estimation approaches.
 
     Parameters
     ----------
@@ -43,14 +43,15 @@ class BayesMixedGLM(object):
         Array of labels showing which random terms have a common
         variance.
     vc_p : float
-        Prior standard deviation for variance component
-        parameters.
+        Prior standard deviation for variance component parameters
+        (the prior standard deviation of log(s) is vc_p, where s is
+        the standard deviation of a random effect).
     fe_p : float
         Prior standard deviation for fixed effects parameters.
     family : statsmodels.genmod.families instance
         The GLM family.
     fep_names : list of strings
-        The names of the fixed effects parameters (correspinding
+        The names of the fixed effects parameters (corresponding
         to columns of exog_fe).
     vcp_names : list of strings
         The names of the variance component parameters (corresponding
@@ -324,7 +325,9 @@ class BayesMixedGLM(object):
         if sd is None:
             s = -0.5 + 0.1 * np.random.normal(size=n)
         else:
-            s = sd
+            # s is parameterized on the log-scale internally
+            # (transparent to caller)
+            s = np.log(sd)
 
         # Don't allow the variance parameter starting mean values to
         # be too small.
