@@ -431,6 +431,24 @@ class _VariationalBayesMixedGLM(BayesMixedGLM):
 
 
 class BayesMixedGLMResults(object):
+    """
+    Attributes
+    ----------
+    fe_mean : array-like
+        Posterior mean of the fixed effects coefficients.
+    fe_sd : array-like
+        Posterior standard deviation of the fixed effects coefficients
+    vcp_mean : array-like
+        Posterior mean of the logged variance component standard
+        deviations.
+    vcp_sd : array-like
+        Posterior standard deviation of the logged variance component
+        standard deviations.
+    vc_mean : array-like
+        Posterior mean of the random coefficients
+    vc_sd : array-like
+        Posterior standard deviation of the random coefficients
+    """
 
     def __init__(self, model, params, cov_params,
                  optim_retvals=None):
@@ -440,7 +458,7 @@ class BayesMixedGLMResults(object):
         self.cov_params = cov_params
         self.optim_retvals = optim_retvals
 
-        self.fe_params, self.vcp_params, self.vc_params = (
+        self.fe_mean, self.vcp_mean, self.vc_mean = (
             model._unpack(params))
 
         if cov_params.ndim == 2:
