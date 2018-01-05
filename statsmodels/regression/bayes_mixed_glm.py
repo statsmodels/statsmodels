@@ -285,6 +285,17 @@ class BayesMixedGLM(object):
 
 class _VariationalBayesMixedGLM(BayesMixedGLM):
 
+    def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=0.5,
+                 fe_p=0.5, family=None, fep_names=None, vcp_names=None):
+
+        super(_VariationalBayesMixedGLM, self).__init__(
+            endog=endog, exog_fe=exog_fe, exog_vc=exog_vc,
+            ident=ident, vcp_p=vcp_p, fe_p=fe_p,
+            family=family, fep_names=fep_names, vcp_names=vcp_names)
+
+        # power would be better but not available in older scipy
+        self.exog_vc2 = self.exog_vc.multiply(self.exog_vc)
+
     # Returns the mean and variance of the linear predictor under the
     # given distribution parameters.
     def _lp_stats(self, fep_mean, fep_sd, vc_mean, vc_sd):
@@ -496,9 +507,6 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM):
             ident=ident, vcp_p=vcp_p, fe_p=fe_p,
             family=statsmodels.genmod.families.Binomial(),
             fep_names=fep_names, vcp_names=vcp_names)
-
-        # power would be better but not available in older scipy
-        self.exog_vc2 = self.exog_vc.multiply(self.exog_vc)
 
     def vb_elbo(self, vb_mean, vb_sd):
         """
