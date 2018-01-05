@@ -1,5 +1,5 @@
 import numpy as np
-from statsmodels.regression.mixed_glm import (
+from statsmodels.regression.bayes_mixed_glm import (
     BayesMixedGLM, BinomialBayesMixedGLM)
 import statsmodels.api as sm
 from scipy import sparse
