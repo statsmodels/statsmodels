@@ -91,6 +91,7 @@ _vb_fit_method = """
     posterior.  See the docstring to `fit_vb` for more information.
 """
 
+
 class BayesMixedGLM(object):
 
     __doc__ = _init_doc.format(fit_method=_laplace_fit_method)
@@ -371,6 +372,52 @@ class _VariationalBayesMixedGLM(BayesMixedGLM):
         n = len(mm.x) // 2
         return BayesMixedGLMResults(self, mm.x[0:n], np.exp(2*mm.x[n:]), mm)
 
+    # Handle terms in the ELBO that are common to all models.
+    def _elbo_common(self, fep_mean, fep_sd, vcp_mean, vcp_sd, vc_mean, vc_sd):
+
+        iv = 0
+
+        # p(vc | vcp) contributions
+        m = vcp_mean[self.ident]
+        s = vcp_sd[self.ident]
+        iv -= np.sum((vc_mean**2 + vc_sd**2) * np.exp(-2*m + 2*s**2)) / 2
+        iv -= np.sum(m)
+
+        # p(vcp) contributions
+        iv -= 0.5 * (vcp_mean**2 + vcp_sd**2).sum() / self.vcp_p**2
+
+        # p(b) contributions
+        iv -= 0.5 * (fep_mean**2 + fep_sd**2).sum() / self.fe_p**2
+
+        return iv
+
+    def _elbo_grad_common(self, fep_mean, fep_sd, vcp_mean, vcp_sd,
+                          vc_mean, vc_sd):
+
+        # p(vc | vcp) contributions
+        m = vcp_mean[self.ident]
+        s = vcp_sd[self.ident]
+        u = vc_mean**2 + vc_sd**2
+        ve = np.exp(2*(s**2 - m))
+        dm = u * ve - 1
+        ds = -2 * u * ve * s
+        vcp_mean_grad = np.bincount(self.ident, weights=dm)
+        vcp_sd_grad = np.bincount(self.ident, weights=ds)
+
+        vc_mean_grad = -vc_mean.copy() * ve
+        vc_sd_grad = -vc_sd.copy() * ve
+
+        # p(vcp) contributions
+        vcp_mean_grad -= vcp_mean / self.vcp_p**2
+        vcp_sd_grad -= vcp_sd / self.vcp_p**2
+
+        # p(b) contributions
+        fep_mean_grad = -fep_mean.copy() / self.fe_p**2
+        fep_sd_grad = -fep_sd.copy() / self.fe_p**2
+
+        return (fep_mean_grad, fep_sd_grad, vcp_mean_grad, vcp_sd_grad,
+                vc_mean_grad, vc_sd_grad)
+
 
 class BayesMixedGLMResults(object):
 
@@ -474,23 +521,14 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM):
         iv += self.endog * tm
         iv = iv.sum()
 
-        # p(vc | vcp) contributions
-        m = vcp_mean[self.ident]
-        s = vcp_sd[self.ident]
-        iv -= np.sum((vc_mean**2 + vc_sd**2) * np.exp(-2*m + 2*s**2)) / 2
-        iv -= np.sum(m)
-
-        # p(vcp) contributions
-        iv -= 0.5 * (vcp_mean**2 + vcp_sd**2).sum() / self.vcp_p**2
-
-        # p(b) contributions
-        iv -= 0.5 * (fep_mean**2 + fep_sd**2).sum() / self.fe_p**2
+        iv += self._elbo_common(fep_mean, fep_sd, vcp_mean, vcp_sd,
+                                vc_mean, vc_sd)
 
         return iv + np.sum(np.log(vb_sd))
 
     def vb_elbo_grad(self, vb_mean, vb_sd):
         """
-        Returns the gradient of the evidence lower bound (ELBO).
+        Returns the gradient of the model's evidence lower bound (ELBO).
         """
 
         fep_mean, vcp_mean, vc_mean = self._unpack(vb_mean)
@@ -536,26 +574,16 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM):
         fep_mean_grad += np.dot(self.endog, self.exog_fe)
         vc_mean_grad += self.exog_vc.transpose().dot(self.endog)
 
-        # p(vc | vcp) contributions
-        m = vcp_mean[self.ident]
-        s = vcp_sd[self.ident]
-        u = vc_mean**2 + vc_sd**2
-        ve = np.exp(2*(s**2 - m))
-        dm = u * ve - 1
-        ds = -2 * u * ve * s
-        vcp_mean_grad += np.bincount(self.ident, weights=dm)
-        vcp_sd_grad += np.bincount(self.ident, weights=ds)
+        (fep_mean_grad_i, fep_sd_grad_i, vcp_mean_grad_i, vcp_sd_grad_i,
+         vc_mean_grad_i, vc_sd_grad_i) = self._elbo_grad_common(
+            fep_mean, fep_sd, vcp_mean, vcp_sd, vc_mean, vc_sd)
 
-        vc_mean_grad -= vc_mean * ve
-        vc_sd_grad -= vc_sd * ve
-
-        # p(vcp) contributions
-        vcp_mean_grad -= vcp_mean / self.vcp_p**2
-        vcp_sd_grad -= vcp_sd / self.vcp_p**2
-
-        # p(b) contributions
-        fep_mean_grad -= fep_mean / self.fe_p**2
-        fep_sd_grad -= fep_sd / self.fe_p**2
+        fep_mean_grad += fep_mean_grad_i
+        fep_sd_grad += fep_sd_grad_i
+        vcp_mean_grad += vcp_mean_grad_i
+        vcp_sd_grad += vcp_sd_grad_i
+        vc_mean_grad += vc_mean_grad_i
+        vc_sd_grad += vc_sd_grad_i
 
         mean_grad = np.concatenate((fep_mean_grad, vcp_mean_grad,
                                     vc_mean_grad))
