@@ -74,7 +74,9 @@ _init_doc = r"""
 
     The random effect standard deviation parameters (vcp) have
     log-normal prior distributions with mean 0 and standard deviation
-    `vcp_p`.
+    `vcp_p`.  Note that for some families, e.g. Binomial, the
+    posterior mode may be difficult to find numerically if `vcp_p` is
+    set too large.  Setting `vcp_p` to 0.5 seems to work well.
 
     The prior for the fixed effects parameters is Gaussian with mean 0
     and standard deviation `fe_p`.
@@ -96,8 +98,8 @@ class BayesMixedGLM(object):
 
     __doc__ = _init_doc.format(fit_method=_laplace_fit_method)
 
-    def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=0.5,
-                 fe_p=0.5, family=None, fep_names=None,
+    def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=2,
+                 fe_p=2, family=None, fep_names=None,
                  vcp_names=None):
 
         if family is None:
@@ -251,6 +253,7 @@ class BayesMixedGLM(object):
             te[0] -= fep / self.fe_p**2
 
         te = [x for x in te if x is not None]
+
         return np.concatenate(te)
 
     def _get_start(self):
@@ -285,8 +288,8 @@ class BayesMixedGLM(object):
 
 class _VariationalBayesMixedGLM(BayesMixedGLM):
 
-    def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=0.5,
-                 fe_p=0.5, family=None, fep_names=None, vcp_names=None):
+    def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=2,
+                 fe_p=2, family=None, fep_names=None, vcp_names=None):
 
         super(_VariationalBayesMixedGLM, self).__init__(
             endog=endog, exog_fe=exog_fe, exog_vc=exog_vc,
@@ -517,8 +520,8 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM):
 
     verbose = False
 
-    def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=0.5,
-                 fe_p=0.5, fep_names=None, vcp_names=None):
+    def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=2,
+                 fe_p=2, fep_names=None, vcp_names=None):
 
         super(BinomialBayesMixedGLM, self).__init__(
             endog=endog, exog_fe=exog_fe, exog_vc=exog_vc,

@@ -5,7 +5,6 @@ import statsmodels.api as sm
 from scipy import sparse
 from numpy.testing import assert_allclose
 from scipy.optimize import approx_fprime
-import warnings
 
 
 def gen_simple_logit(nc, cs, s):
@@ -49,11 +48,12 @@ def test_logit_map():
     exog_vc = sparse.csr_matrix(exog_vc)
 
     glmm = BayesMixedGLM(y, exog_fe, exog_vc, ident,
-                         family=sm.families.Binomial())
-    rslt = glmm.fit_map(minim_opts={"gtol": 1e-4})
+                         family=sm.families.Binomial(),
+                         vcp_p=0.5)
+    rslt = glmm.fit_map()
 
     assert_allclose(glmm.logposterior_grad(rslt.params),
-                    np.zeros_like(rslt.params), atol=1e-4)
+                    np.zeros_like(rslt.params), atol=1e-3)
 
 
 def test_logit_map_crossed():
@@ -62,8 +62,9 @@ def test_logit_map_crossed():
     exog_vc = sparse.csr_matrix(exog_vc)
 
     glmm = BayesMixedGLM(y, exog_fe, exog_vc, ident,
-                         family=sm.families.Binomial())
-    rslt = glmm.fit_map(minim_opts={"gtol": 1e-4})
+                         family=sm.families.Binomial(),
+                         vcp_p=0.5)
+    rslt = glmm.fit_map()
 
     assert_allclose(glmm.logposterior_grad(rslt.params),
                     np.zeros_like(rslt.params), atol=1e-4)
@@ -80,7 +81,7 @@ def test_logit_elbo_grad():
 
         exog_vc = sparse.csr_matrix(exog_vc)
 
-        glmm1 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident)
+        glmm1 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
         rslt1 = glmm1.fit_map(minim_opts={"gtol": 1e-4})
 
         n = glmm1.k_fep + glmm1.k_vcp + glmm1.k_vc
@@ -119,16 +120,13 @@ def test_logit_vb():
     y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 0)
     exog_vc = sparse.csr_matrix(exog_vc)
 
-    glmm1 = BayesMixedGLM(y, exog_fe, exog_vc, ident,
-                          family=sm.families.Binomial())
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        rslt1 = glmm1.fit_map()
+    glmm1 = BayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
+                          fe_p=0.5, family=sm.families.Binomial())
+    rslt1 = glmm1.fit_map()
 
-    glmm2 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        rslt2 = glmm2.fit_vb(rslt1.params)
+    glmm2 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
+                                  fe_p=0.5)
+    rslt2 = glmm2.fit_vb(rslt1.params)
 
     rslt1.summary()
     rslt2.summary()
@@ -147,16 +145,13 @@ def test_logit_vb_crossed():
     y, exog_fe, exog_vc, ident = gen_logit_crossed(10, 10, 1, 2)
     exog_vc = sparse.csr_matrix(exog_vc)
 
-    glmm1 = BayesMixedGLM(y, exog_fe, exog_vc, ident,
-                          family=sm.families.Binomial())
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        rslt1 = glmm1.fit_map()
+    glmm1 = BayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
+                          fe_p=0.5, family=sm.families.Binomial())
+    rslt1 = glmm1.fit_map()
 
-    glmm2 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        rslt2 = glmm2.fit_vb(mean=rslt1.params)
+    glmm2 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
+                                  fe_p=0.5)
+    rslt2 = glmm2.fit_vb(mean=rslt1.params)
 
     rslt1.summary()
     rslt2.summary()
