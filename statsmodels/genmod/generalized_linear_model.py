@@ -840,26 +840,25 @@ class GLM(base.LikelihoodModel):
         weights = self.iweights
 
         if method == 'brentq':
-            from scipy.optimize import brentq
+            from scipy.optimize import brentq, minimize_scalar
 
-            low = kwargs.get('low', 1)
-            high = kwargs.get('high', 10)
-            
+            low = kwargs.get('low', 1.01)
+            high = kwargs.get('high', 1.99)
 
-            def x2scale(power):
-                scale = ((weights * (self.endog - mu) ** 2 /
-                          (mu ** power)).sum() / self.df_resid)
-                return scale
+            def difference(p):
+                scale = ((self.freq_weights * (self.endog - mu) ** 2 /
+                          mu ** p).sum() / self.df_resid)
+                scale /= self.var_weights
 
-            def psi_p(power):
-                scale = x2scale(power)
-                p = (self.freq_weights * (((self.endog - mu) ** 2 /
-                                           (scale / self.var_weights *
-                                            (mu ** power))) - 1) *
-                     np.log(mu)).sum()
-                return p
+                def psi_p(power):
+                    psi = ((self.endog - mu) ** 2 / (scale * mu ** power) - 1)
+                    psi *= np.log(mu) * self.freq_weights
+                    return psi.sum()
 
-            power = brentq(psi_p, low, high)
+                new_p = brentq(psi_p, -100, 100.)
+                return np.abs(new_p - p)
+
+            power = minimize_scalar(difference, bounds=(low, high)).x
 
         elif method == 'perry':
             y = np.power(self.endog - mu, 2)

@@ -1923,11 +1923,6 @@ def testTweediePowerEstimate():
     p = model1.estimate_tweedie_power(res1.mu, method='taylor')
     assert_allclose(p, res2.params[1], rtol=0.35)
 
-    assert_raises(ValueError,
-                  model1.estimate_tweedie_power, res1.mu, low=0.1, high=0.99)
-    assert_raises(ValueError,
-                  model1.estimate_tweedie_power, res1.mu, low=2, high=10)
-
     data = sm.datasets.fair.load_pandas()
     family_link = sm.families.Tweedie(link=sm.families.links.log(),
                                       var_power=1.5)
@@ -1952,11 +1947,11 @@ def testTweedieEstimateWeighted():
 
     family_link = sm.families.Tweedie(link=sm.families.links.log(),
                                       var_power=1.5)
-    model = sm.GLM(y_rep, x_rep, family=family_link)
+
+    model = sm.GLM(y, x, family=family_link, freq_weights=freq_weights)
     res = model.fit()
 
-    model_rep = sm.GLM(y, x, family=family_link,
-                       freq_weights=freq_weights)
+    model_rep = sm.GLM(y_rep, x_rep, family=family_link)
     res_rep = model_rep.fit()
 
     p = model.estimate_tweedie_power(res.mu, method='brentq')
