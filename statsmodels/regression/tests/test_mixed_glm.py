@@ -8,12 +8,9 @@ from scipy.optimize import approx_fprime
 import warnings
 
 
-def gen_simple_logit(s):
+def gen_simple_logit(nc, cs, s):
 
     np.random.seed(3799)
-
-    nc = 100
-    cs = 500
 
     exog_vc = np.kron(np.eye(nc), np.ones((cs, 1)))
     exog_fe = np.random.normal(size=(nc*cs, 2))
@@ -26,12 +23,9 @@ def gen_simple_logit(s):
     return y, exog_fe, exog_vc, ident
 
 
-def gen_logit_crossed(s1, s2):
+def gen_logit_crossed(nc, cs, s1, s2):
 
     np.random.seed(3799)
-
-    nc = 100
-    cs = 500
 
     a = np.kron(np.eye(nc), np.ones((cs, 1)))
     b = np.kron(np.ones((cs, 1)), np.eye(nc))
@@ -51,7 +45,7 @@ def gen_logit_crossed(s1, s2):
 
 def test_logit_map():
 
-    y, exog_fe, exog_vc, ident = gen_simple_logit(2)
+    y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 2)
     exog_vc = sparse.csr_matrix(exog_vc)
 
     glmm = BayesMixedGLM(y, exog_fe, exog_vc, ident,
@@ -64,7 +58,7 @@ def test_logit_map():
 
 def test_logit_map_crossed():
 
-    y, exog_fe, exog_vc, ident = gen_logit_crossed(1, 2)
+    y, exog_fe, exog_vc, ident = gen_logit_crossed(10, 10, 1, 2)
     exog_vc = sparse.csr_matrix(exog_vc)
 
     glmm = BayesMixedGLM(y, exog_fe, exog_vc, ident,
@@ -80,9 +74,9 @@ def test_logit_elbo_grad():
     for j in range(2):
 
         if j == 0:
-            y, exog_fe, exog_vc, ident = gen_simple_logit(2)
+            y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 2)
         else:
-            y, exog_fe, exog_vc, ident = gen_logit_crossed(1, 2)
+            y, exog_fe, exog_vc, ident = gen_logit_crossed(10, 10, 1, 2)
 
         exog_vc = sparse.csr_matrix(exog_vc)
 
@@ -122,55 +116,55 @@ def test_logit_elbo_grad():
 
 def test_logit_vb():
 
-    y, exog_fe, exog_vc, ident = gen_simple_logit(0)
+    y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 0)
     exog_vc = sparse.csr_matrix(exog_vc)
 
     glmm1 = BayesMixedGLM(y, exog_fe, exog_vc, ident,
                           family=sm.families.Binomial())
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        rslt1 = glmm1.fit_map(minim_opts={"gtol": 1e-4, "maxiter": 5})
+        rslt1 = glmm1.fit_map()
 
     glmm2 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        rslt2 = glmm2.fit_vb(mean=rslt1.params, minim_opts={"maxiter": 2})
+        rslt2 = glmm2.fit_vb(rslt1.params)
 
     rslt1.summary()
     rslt2.summary()
 
     assert_allclose(rslt1.params[0:5], np.r_[
-        0.64644962, -0.61266869, -1., -0.00961027, 0.02411796],
+        0.75330405, -0.71643228, -1., -0.00959806,  0.00450254],
                     rtol=1e-4, atol=1e-4)
 
     assert_allclose(rslt2.params[0:5], np.r_[
-        0.9017295, -0.95958884, -0.70822657, -0.00711374, 0.02673195],
+        0.79338836, -0.7599833, -0.64149356, -0.24772884,  0.10775366],
                     rtol=1e-4, atol=1e-4)
 
 
 def test_logit_vb_crossed():
 
-    y, exog_fe, exog_vc, ident = gen_logit_crossed(1, 2)
+    y, exog_fe, exog_vc, ident = gen_logit_crossed(10, 10, 1, 2)
     exog_vc = sparse.csr_matrix(exog_vc)
 
     glmm1 = BayesMixedGLM(y, exog_fe, exog_vc, ident,
                           family=sm.families.Binomial())
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        rslt1 = glmm1.fit_map(minim_opts={"gtol": 1e-4, "maxiter": 2})
+        rslt1 = glmm1.fit_map()
 
     glmm2 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        rslt2 = glmm2.fit_vb(mean=rslt1.params, minim_opts={"maxiter": 2})
+        rslt2 = glmm2.fit_vb(mean=rslt1.params)
 
     rslt1.summary()
     rslt2.summary()
 
     assert_allclose(rslt1.params[0:5], np.r_[
-        -0.84192649, 0.81152304, 0.81056098, -0.76727982, -0.94713751],
+        -0.54307398, -1., -1., -0.0096403, 0.00232701],
                     rtol=1e-4, atol=1e-4)
 
     assert_allclose(rslt2.params[0:5], np.r_[
-        -0.68311938,  0.75472554,  0.75218755, -0.71387273, -0.76462306],
+        -0.70834417, -0.3571011, 0.19126823, -0.36074489, 0.058976],
                     rtol=1e-4, atol=1e-4)

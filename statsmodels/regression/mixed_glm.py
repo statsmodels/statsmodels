@@ -63,19 +63,19 @@ class BayesMixedGLM(object):
 
     Notes
     -----
-    There are three types of values in the posterior: fixed effects
-    parameters (fep), corresponding to the columns of `exog_fe`,
-    random effects realizations (vc), corresponding to the columns of
-    `exog_vc`, and the variances of the random effects (vcp),
-    corresponding to the unique labels in `ident`.
+    There are three types of values in the posterior distribution:
+    fixed effects parameters (fep), corresponding to the columns of
+    `exog_fe`, random effects realizations (vc), corresponding to the
+    columns of `exog_vc`, and the variances of the random effects
+    realizations (vcp), corresponding to the unique labels in `ident`.
 
     All random effects are modeled as being independent Gaussian
-    values, given the variance parameters.  Every column of `exog_vc`
+    values (given the variance parameters).  Every column of `exog_vc`
     has a distinct realized random effect that is used to form the
-    linear predictors.  The elements of `ident` index the distinct
-    random effect variance parameters.  Two columns of `exog_vc` that
-    have the same value in `ident` are constrained to have the same
-    variance.
+    linear predictors.  The elements of `ident` determine the distinct
+    random effect variance parameters.  Two random effect realizations
+    that have the same value in `ident` are constrained to have the
+    same variance.
 
     The random effect standard deviation parameters (vcp) have
     log-normal prior distributions with mean 0 and standard deviation
@@ -147,20 +147,23 @@ class BayesMixedGLM(object):
         fep = vec[:ii+self.k_fep]
         ii += self.k_fep
 
-        # Variance component parameters (standard deviations)
+        # Variance component structure parameters (standard
+        # deviations).  These are on the log scale.  The standard
+        # deviation for random effect j is exp(vcp[ident[j]]).
         vcp = vec[ii:ii+self.k_vcp]
         ii += self.k_vcp
 
-        # Variance component realizations
+        # Random effect realizations
         vc = vec[ii:]
 
         return fep, vcp, vc
 
     def logposterior(self, params):
         """
-        Returns the overall log-density log p(y, fe, vc, vcp), which
-        differs by an additive constant from the log posterior log
-        p(fe, vc, vcp | y).
+        The overall log-density: log p(y, fe, vc, vcp).
+
+        This differs by an additive constant from the log posterior
+        log p(fe, vc, vcp | y).
         """
 
         fep, vcp, vc = self._unpack(params)
@@ -268,7 +271,7 @@ class BayesMixedGLM(object):
 
         return BayesMixedGLMResults(self, r.x, r.hess_inv, optim_retvals=r)
 
-    # Overall mean and variance of the linear predictor under the
+    # Returns the mean and variance of the linear predictor under the
     # given distribution parameters.
     def _lp_stats(self, fep_mean, fep_sd, vc_mean, vc_sd):
 
@@ -281,7 +284,7 @@ class BayesMixedGLM(object):
 
     def fit_vb(self, mean=None, sd=None, minim_opts=None, verbose=False):
         """
-        Fit the model using variational Bayes.
+        Fit a model using variational Bayes.
 
         Parameters:
         -----------
@@ -325,8 +328,9 @@ class BayesMixedGLM(object):
         if sd is None:
             s = -0.5 + 0.1 * np.random.normal(size=n)
         else:
-            # s is parameterized on the log-scale internally
-            # (transparent to caller)
+            # s is parameterized on the log-scale internally when
+            # optimizing the ELBO function (this is transparent to the
+            # caller)
             s = np.log(sd)
 
         # Don't allow the variance parameter starting mean values to
