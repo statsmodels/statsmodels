@@ -292,7 +292,7 @@ class _VariationalBayesMixedGLM(BayesMixedGLM):
         tm = np.dot(self.exog_fe, fep_mean)
         tv = np.dot(self.exog_fe**2, fep_sd**2)
         tm += self.exog_vc.dot(vc_mean)
-        tv += self.exog_vc.power(2).dot(vc_sd**2)
+        tv += self.exog_vc2.dot(vc_sd**2)
 
         return tm, tv
 
@@ -497,6 +497,9 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM):
             family=statsmodels.genmod.families.Binomial(),
             fep_names=fep_names, vcp_names=vcp_names)
 
+        # power would be better but not available in older scipy
+        self.exog_vc2 = self.exog_vc.multiply(self.exog_vc)
+
     def vb_elbo(self, vb_mean, vb_sd):
         """
         Returns the evidence lower bound (ELBO) for the model.
@@ -564,9 +567,10 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM):
             fep_mean_grad += w[0] * np.dot(u, self.exog_fe)
             vc_mean_grad += w[0] * self.exog_vc.transpose().dot(u)
             fep_sd_grad += w[0] * x * np.dot(r, self.exog_fe**2 * fep_sd)
-            v = self.exog_vc.power(2).multiply(vc_sd).transpose().dot(r)
+            v = self.exog_vc2.multiply(vc_sd).transpose().dot(r)
             v = np.squeeze(np.asarray(v))
             vc_sd_grad += w[0] * x * v
+
         fep_mean_grad *= -self.rng
         vc_mean_grad *= -self.rng
         fep_sd_grad *= -self.rng
