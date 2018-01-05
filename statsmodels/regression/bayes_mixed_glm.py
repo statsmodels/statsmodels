@@ -20,14 +20,9 @@ glw = [[0.2955242247147529, -0.1488743389816312],
        [0.0666713443086881, 0.9739065285171717]]
 
 
-class BayesMixedGLM(object):
-    """
+_init_doc = r"""
     Fit a generalized linear mixed model using Bayesian methods.
-
-    The class implements the Laplace approximation to the posterior
-    distribution.  See subclasses, e.g. BinomialBayesMixedGLM for
-    other estimation approaches.
-
+{fit_method}
     Parameters
     ----------
     endog : array-like
@@ -84,6 +79,21 @@ class BayesMixedGLM(object):
     The prior for the fixed effects parameters is Gaussian with mean 0
     and standard deviation `fe_p`.
     """
+
+_laplace_fit_method = """
+    The class implements the Laplace approximation to the posterior
+    distribution.  See subclasses, e.g. BinomialBayesMixedGLM for
+    other estimation approaches.
+"""
+
+_vb_fit_method = """
+    The class implements a variational Bayes approximation to the
+    posterior.  See the docstring to `fit_vb` for more information.
+"""
+
+class BayesMixedGLM(object):
+
+    __doc__ = _init_doc.format(fit_method=_laplace_fit_method)
 
     def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=0.5,
                  fe_p=0.5, family=None, fep_names=None,
@@ -271,6 +281,9 @@ class BayesMixedGLM(object):
 
         return BayesMixedGLMResults(self, r.x, r.hess_inv, optim_retvals=r)
 
+
+class _VariationalBayesMixedGLM(BayesMixedGLM):
+
     # Returns the mean and variance of the linear predictor under the
     # given distribution parameters.
     def _lp_stats(self, fep_mean, fep_sd, vc_mean, vc_sd):
@@ -284,7 +297,7 @@ class BayesMixedGLM(object):
 
     def fit_vb(self, mean=None, sd=None, minim_opts=None, verbose=False):
         """
-        Fit a model using variational Bayes.
+        Fit a model using the variational Bayes mean field approximation.
 
         Parameters:
         -----------
@@ -294,6 +307,9 @@ class BayesMixedGLM(object):
             Starting value for VB standard deviation vector
         minim_opts : dict-like
             Options passed to scipy.minimize
+        verbose : bool
+            If True, print the gradient norm to the screen each time
+            it is calculated.
 
         Notes
         -----
@@ -311,12 +327,6 @@ class BayesMixedGLM(object):
         ----------
         https://arxiv.org/pdf/1601.00670.pdf
         """
-
-        if type(self) is BayesMixedGLM:
-            msg = ("To fit the model using variational Bayes, create a " +
-                   "class for the appropriate family type, e.g. " +
-                   "BinomialBayesMixedGLM.")
-            raise ValueError(msg)
 
         self.verbose = verbose
 
@@ -420,7 +430,9 @@ class BayesMixedGLMResults(object):
         return summ
 
 
-class BinomialBayesMixedGLM(BayesMixedGLM):
+class BinomialBayesMixedGLM(_VariationalBayesMixedGLM):
+
+    __doc__ = _init_doc.format(fit_method=_vb_fit_method)
 
     # Integration range (from -rng to +rng).  The integrals are with
     # respect to a standard Gaussian distribution so (-5, 5) will be
