@@ -1681,7 +1681,7 @@ class GLMResults(base.LikelihoodModelResults):
         top_right = [('No. Observations:', None),
                      ('Df Residuals:', None),
                      ('Df Model:', None),
-                     ('Scale:', [self.scale]),
+                     ('Scale:', ["%#8.5g" % self.scale]),
                      ('Log-Likelihood:', None),
                      ('Deviance:', ["%#8.5g" % self.deviance]),
                      ('Pearson chi2:', ["%#6.3g" % self.pearson_chi2])
