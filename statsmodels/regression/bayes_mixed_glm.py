@@ -410,13 +410,21 @@ class _VariationalBayesMixedGLM(BayesMixedGLM):
         self.verbose = verbose
 
         n = self.k_fep + self.k_vcp + self.k_vc
+        ml = self.k_fep + self.k_vcp + self.k_vc
         if mean is None:
             m = np.zeros(n)
         else:
+            if len(mean) != ml:
+                raise ValueError("mean has incorrect length, %d != %d" %
+                                 (len(mean), ml))
             m = mean
         if sd is None:
             s = -0.5 + 0.1 * np.random.normal(size=n)
         else:
+            if len(sd) != ml:
+                raise ValueError("sd has incorrect length, %d != %d" %
+                                 (len(sd), ml))
+
             # s is parameterized on the log-scale internally when
             # optimizing the ELBO function (this is transparent to the
             # caller)
@@ -594,11 +602,13 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM):
             fep_names=fep_names, vcp_names=vcp_names)
 
     @classmethod
-    def from_formula(cls, formula, vc_formulas, data, vcp_p=1, fe_p=2):
+    def from_formula(cls, formula, vc_formulas, data, vcp_p=1, fe_p=2,
+                     vcp_names=None):
 
         fam = statsmodels.genmod.families.Binomial()
         x = BayesMixedGLM.from_formula(formula, vc_formulas, data,
-                                       family=fam, vcp_p=vcp_p, fe_p=fe_p)
+                                       family=fam, vcp_p=vcp_p, fe_p=fe_p,
+                                       vcp_names=vcp_names)
 
         return BinomialBayesMixedGLM(endog=x.endog, exog_fe=x.exog_fe,
                                      exog_vc=x.exog_vc, ident=x.ident,
