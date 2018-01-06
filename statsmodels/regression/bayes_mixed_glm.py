@@ -6,6 +6,7 @@ from statsmodels.iolib import summary2
 import pandas as pd
 import statsmodels
 import warnings
+import patsy
 
 # Gauss-Legendre weights
 glw = [[0.2955242247147529, -0.1488743389816312],
@@ -98,7 +99,7 @@ class BayesMixedGLM(object):
 
     __doc__ = _init_doc.format(fit_method=_laplace_fit_method)
 
-    def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=2,
+    def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=1,
                  fe_p=2, family=None, fep_names=None,
                  vcp_names=None):
 
@@ -263,6 +264,69 @@ class BayesMixedGLM(object):
         start = np.concatenate((start_fep, start_vcp, start_vc))
         return start
 
+    @classmethod
+    def from_formula(cls, formula, vc_formulas, data, family=None,
+                     vcp_p=1, fe_p=2, vcp_names=None):
+
+        """
+        Fit a BayesMixedGLM using a formula.
+
+        Parameters
+        ----------
+        formula : string
+            Formula for the endog and fixed effects terms (use ~ to separate
+            dependent and independent expressions).
+        vc_formula : list of strings
+            Each element of the list is a one-sided formula that
+            creates one collection of random effects with a common
+            variance prameter.  If using a categorical expression to
+            produce variance components, note that generally `0 + ...`
+            should be used so that an intercept is not included.
+        data : data frame
+            The data to which the formulas are applied.
+        family : genmod.families instance
+            A GLM family.
+        vcp_p : float
+            The prior standard deviation for the logarithms of the standard
+            deviations of the random effects.
+        fe_p : float
+            The prior standard deviation for the fixed effects parameters.
+        vcp_names : list
+            Names of variance component parameters
+        """
+
+        if not type(vc_formulas) is list:
+            vc_formulas = [vc_formulas]
+
+        endog, exog_fe = patsy.dmatrices(formula, data,
+                                         return_type='dataframe')
+
+        ident = []
+        exog_vc = []
+        for j, fml in enumerate(vc_formulas):
+            mat = patsy.dmatrix(fml, data, return_type='dataframe')
+            exog_vc.append(mat)
+            ident.append(j * np.ones(mat.shape[1]))
+        exog_vc = pd.concat(exog_vc, axis=1)
+
+        if vcp_names is None:
+            vcp_names = ["VC_%d" % (k + 1) for k in range(len(vc_formulas))]
+        else:
+            vcp_names = exog_vc.columns.tolist()
+        ident = np.concatenate(ident)
+
+        endog = np.squeeze(np.asarray(endog))
+
+        fep_names = exog_fe.columns.tolist()
+        exog_fe = np.asarray(exog_fe)
+        exog_vc = sparse.csr_matrix(np.asarray(exog_vc))
+
+        mod = BayesMixedGLM(endog, exog_fe, exog_vc, ident, vcp_p, fe_p,
+                            family=family, fep_names=fep_names,
+                            vcp_names=vcp_names)
+
+        return mod
+
     def fit_map(self, method="BFGS", minim_opts=None):
         """
         Construct the Laplace approximation to the posterior
@@ -288,7 +352,7 @@ class BayesMixedGLM(object):
 
 class _VariationalBayesMixedGLM(BayesMixedGLM):
 
-    def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=2,
+    def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=1,
                  fe_p=2, family=None, fep_names=None, vcp_names=None):
 
         super(_VariationalBayesMixedGLM, self).__init__(
@@ -520,7 +584,7 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM):
 
     verbose = False
 
-    def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=2,
+    def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=1,
                  fe_p=2, fep_names=None, vcp_names=None):
 
         super(BinomialBayesMixedGLM, self).__init__(
@@ -528,6 +592,19 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM):
             ident=ident, vcp_p=vcp_p, fe_p=fe_p,
             family=statsmodels.genmod.families.Binomial(),
             fep_names=fep_names, vcp_names=vcp_names)
+
+    @classmethod
+    def from_formula(cls, formula, vc_formulas, data, vcp_p=1, fe_p=2):
+
+        fam = statsmodels.genmod.families.Binomial()
+        x = BayesMixedGLM.from_formula(formula, vc_formulas, data,
+                                       family=fam, vcp_p=vcp_p, fe_p=fe_p)
+
+        return BinomialBayesMixedGLM(endog=x.endog, exog_fe=x.exog_fe,
+                                     exog_vc=x.exog_vc, ident=x.ident,
+                                     vcp_p=x.vcp_p, fe_p=x.fe_p,
+                                     fep_names=x.fep_names,
+                                     vcp_names=x.vcp_names)
 
     def vb_elbo(self, vb_mean, vb_sd):
         """

@@ -2,6 +2,7 @@ import numpy as np
 from statsmodels.regression.bayes_mixed_glm import (
     BayesMixedGLM, BinomialBayesMixedGLM)
 import statsmodels.api as sm
+import pandas as pd
 from scipy import sparse
 from numpy.testing import assert_allclose
 from scipy.optimize import approx_fprime
@@ -42,6 +43,34 @@ def gen_logit_crossed(nc, cs, s1, s2):
     return y, exog_fe, exog_vc, ident
 
 
+def gen_logit_crossed_pandas(nc, cs, s1, s2):
+
+    np.random.seed(3799)
+
+    a = np.kron(np.arange(nc), np.ones(cs))
+    b = np.kron(np.ones(cs), np.arange(nc))
+    fe = np.ones(nc * cs)
+
+    vc = np.zeros(nc * cs)
+    for i in np.unique(a):
+        ii = np.flatnonzero(a == i)
+        vc[ii] += s1*np.random.normal()
+    for i in np.unique(b):
+        ii = np.flatnonzero(b == i)
+        vc[ii] += s2*np.random.normal()
+
+    lp = -0.5 * fe + vc
+    pr = 1 / (1 + np.exp(-lp))
+    y = 1*(np.random.uniform(size=nc*cs) < pr)
+
+    ident = np.zeros(2*nc, dtype=np.int)
+    ident[nc:] = 1
+
+    df = pd.DataFrame({"fe": fe, "a": a, "b": b, "y": y})
+
+    return df
+
+
 def test_logit_map():
 
     y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 2)
@@ -68,6 +97,22 @@ def test_logit_map_crossed():
 
     assert_allclose(glmm.logposterior_grad(rslt.params),
                     np.zeros_like(rslt.params), atol=1e-4)
+
+
+def test_logit_map_crosed_formula():
+
+    data = gen_logit_crossed_pandas(10, 10, 1, 2)
+
+    fml = "y ~ fe"
+    fml_vc = ["0 + C(a)", "0 + C(b)"]
+    glmm = BayesMixedGLM.from_formula(
+        fml, fml_vc, data, family=sm.families.Binomial(), vcp_p=0.5)
+    rslt = glmm.fit_map()
+
+    assert_allclose(glmm.logposterior_grad(rslt.params),
+                    np.zeros_like(rslt.params), atol=1e-4)
+
+    rslt.summary()
 
 
 def test_logit_elbo_grad():
@@ -143,7 +188,6 @@ def test_logit_vb():
 def test_logit_vb_crossed():
 
     y, exog_fe, exog_vc, ident = gen_logit_crossed(10, 10, 1, 2)
-    exog_vc = sparse.csr_matrix(exog_vc)
 
     glmm1 = BayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
                           fe_p=0.5, family=sm.families.Binomial())
@@ -163,3 +207,23 @@ def test_logit_vb_crossed():
     assert_allclose(rslt2.params[0:5], np.r_[
         -0.70834417, -0.3571011, 0.19126823, -0.36074489, 0.058976],
                     rtol=1e-4, atol=1e-4)
+
+
+def test_logit_vb_crossed_formula():
+
+    data = gen_logit_crossed_pandas(10, 10, 1, 2)
+
+    fml = "y ~ fe"
+    fml_vc = ["0 + C(a)", "0 + C(b)"]
+    glmm1 = BinomialBayesMixedGLM.from_formula(
+        fml, fml_vc, data, vcp_p=0.5)
+    rslt1 = glmm1.fit_vb()
+
+    glmm2 = BinomialBayesMixedGLM(glmm1.endog, glmm1.exog_fe, glmm1.exog_vc,
+                                  glmm1.ident, vcp_p=0.5)
+    rslt2 = glmm2.fit_vb()
+
+    assert_allclose(rslt1.params, rslt2.params, atol=1e-4)
+
+    rslt1.summary()
+    rslt2.summary()
