@@ -62,8 +62,9 @@ _init_doc = r"""
     There are three types of values in the posterior distribution:
     fixed effects parameters (fep), corresponding to the columns of
     `exog_fe`, random effects realizations (vc), corresponding to the
-    columns of `exog_vc`, and the variances of the random effects
-    realizations (vcp), corresponding to the unique labels in `ident`.
+    columns of `exog_vc`, and the standard deviations of the random
+    effects realizations (vcp), corresponding to the unique labels in
+    `ident`.
 
     All random effects are modeled as being independent Gaussian
     values (given the variance parameters).  Every column of `exog_vc`
@@ -75,9 +76,11 @@ _init_doc = r"""
 
     The random effect standard deviation parameters (vcp) have
     log-normal prior distributions with mean 0 and standard deviation
-    `vcp_p`.  Note that for some families, e.g. Binomial, the
-    posterior mode may be difficult to find numerically if `vcp_p` is
-    set too large.  Setting `vcp_p` to 0.5 seems to work well.
+    `vcp_p`.
+
+    Note that for some families, e.g. Binomial, the posterior mode may
+    be difficult to find numerically if `vcp_p` is set to too large of
+    a value.  Setting `vcp_p` to 0.5 seems to work well.
 
     The prior for the fixed effects parameters is Gaussian with mean 0
     and standard deviation `fe_p`.
@@ -118,11 +121,8 @@ class BayesMixedGLM(object):
 
         # Get the variance parameter names
         if vcp_names is None:
-            if hasattr(exog_vc, "columns"):
-                vcp_names = exog_vc.columns.tolist()
-            else:
-                vcp_names = ["VC_%d" % (k + 1)
-                             for k in range(int(max(ident)) + 1)]
+            vcp_names = ["VC_%d" % (k + 1)
+                         for k in range(int(max(ident)) + 1)]
         self.vcp_names = vcp_names
 
         self.endog = np.asarray(endog)
@@ -312,7 +312,7 @@ class BayesMixedGLM(object):
         if vcp_names is None:
             vcp_names = ["VC_%d" % (k + 1) for k in range(len(vc_formulas))]
         else:
-            vcp_names = exog_vc.columns.tolist()
+            vcp_names = vcp_names
         ident = np.concatenate(ident)
 
         endog = np.squeeze(np.asarray(endog))
@@ -351,6 +351,10 @@ class BayesMixedGLM(object):
 
 
 class _VariationalBayesMixedGLM(BayesMixedGLM):
+    """
+    A private base class for family-specific variational Bayes GLM
+    implementations.
+    """
 
     def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=1,
                  fe_p=2, family=None, fep_names=None, vcp_names=None):
@@ -404,6 +408,8 @@ class _VariationalBayesMixedGLM(BayesMixedGLM):
 
         References
         ----------
+        Blei, Kucukelbir, McAuliffe (2017).  Variational Inference: A
+        review for Statisticians
         https://arxiv.org/pdf/1601.00670.pdf
         """
 
@@ -417,7 +423,7 @@ class _VariationalBayesMixedGLM(BayesMixedGLM):
             if len(mean) != ml:
                 raise ValueError("mean has incorrect length, %d != %d" %
                                  (len(mean), ml))
-            m = mean
+            m = mean.copy()
         if sd is None:
             s = -0.5 + 0.1 * np.random.normal(size=n)
         else:
@@ -466,7 +472,7 @@ class _VariationalBayesMixedGLM(BayesMixedGLM):
         # p(vc | vcp) contributions
         m = vcp_mean[self.ident]
         s = vcp_sd[self.ident]
-        iv -= np.sum((vc_mean**2 + vc_sd**2) * np.exp(-2*m + 2*s**2)) / 2
+        iv -= np.sum((vc_mean**2 + vc_sd**2) * np.exp(2*(s**2 - m))) / 2
         iv -= np.sum(m)
 
         # p(vcp) contributions
@@ -679,6 +685,144 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM):
         for w in glw:
             x = self.rng * w[1]
             u = h1(x)
+            r = u / np.sqrt(tv)
+            fep_mean_grad += w[0] * np.dot(u, self.exog_fe)
+            vc_mean_grad += w[0] * self.exog_vc.transpose().dot(u)
+            fep_sd_grad += w[0] * x * np.dot(r, self.exog_fe**2 * fep_sd)
+            v = self.exog_vc2.multiply(vc_sd).transpose().dot(r)
+            v = np.squeeze(np.asarray(v))
+            vc_sd_grad += w[0] * x * v
+
+        fep_mean_grad *= -self.rng
+        vc_mean_grad *= -self.rng
+        fep_sd_grad *= -self.rng
+        vc_sd_grad *= -self.rng
+        fep_mean_grad += np.dot(self.endog, self.exog_fe)
+        vc_mean_grad += self.exog_vc.transpose().dot(self.endog)
+
+        (fep_mean_grad_i, fep_sd_grad_i, vcp_mean_grad_i, vcp_sd_grad_i,
+         vc_mean_grad_i, vc_sd_grad_i) = self._elbo_grad_common(
+            fep_mean, fep_sd, vcp_mean, vcp_sd, vc_mean, vc_sd)
+
+        fep_mean_grad += fep_mean_grad_i
+        fep_sd_grad += fep_sd_grad_i
+        vcp_mean_grad += vcp_mean_grad_i
+        vcp_sd_grad += vcp_sd_grad_i
+        vc_mean_grad += vc_mean_grad_i
+        vc_sd_grad += vc_sd_grad_i
+
+        mean_grad = np.concatenate((fep_mean_grad, vcp_mean_grad,
+                                    vc_mean_grad))
+        sd_grad = np.concatenate((fep_sd_grad, vcp_sd_grad, vc_sd_grad))
+
+        sd_grad += 1 / vb_sd
+
+        if self.verbose:
+            print("|G|=%f" % np.sqrt(np.sum(mean_grad**2) +
+                                     np.sum(sd_grad**2)))
+
+        return mean_grad, sd_grad
+
+
+class PoissonBayesMixedGLM(_VariationalBayesMixedGLM):
+
+    __doc__ = _init_doc.format(fit_method=_vb_fit_method)
+
+    # Integration range (from -rng to +rng).  The integrals are with
+    # respect to a standard Gaussian distribution so (-5, 5) will be
+    # sufficient in many cases.
+    rng = 5
+
+    verbose = False
+
+    def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=1,
+                 fe_p=2, fep_names=None, vcp_names=None):
+
+        super(PoissonBayesMixedGLM, self).__init__(
+            endog=endog, exog_fe=exog_fe, exog_vc=exog_vc,
+            ident=ident, vcp_p=vcp_p, fe_p=fe_p,
+            family=statsmodels.genmod.families.Poisson(),
+            fep_names=fep_names, vcp_names=vcp_names)
+
+    @classmethod
+    def from_formula(cls, formula, vc_formulas, data, vcp_p=1, fe_p=2,
+                     vcp_names=None):
+
+        fam = statsmodels.genmod.families.Poisson()
+        x = BayesMixedGLM.from_formula(formula, vc_formulas, data,
+                                       family=fam, vcp_p=vcp_p, fe_p=fe_p,
+                                       vcp_names=vcp_names)
+
+        return PoissonBayesMixedGLM(endog=x.endog, exog_fe=x.exog_fe,
+                                     exog_vc=x.exog_vc, ident=x.ident,
+                                     vcp_p=x.vcp_p, fe_p=x.fe_p,
+                                     fep_names=x.fep_names,
+                                     vcp_names=x.vcp_names)
+
+    def vb_elbo(self, vb_mean, vb_sd):
+        """
+        Returns the evidence lower bound (ELBO) for the model.
+
+        -lam + k*log(lam)
+
+        -exp(lp) + k*lp
+
+        k*lp - exp(lp)
+
+        """
+
+        fep_mean, vcp_mean, vc_mean = self._unpack(vb_mean)
+        fep_sd, vcp_sd, vc_sd = self._unpack(vb_sd)
+
+        tm, tv = self._lp_stats(fep_mean, fep_sd, vc_mean, vc_sd)
+
+        def h(z):
+            y = np.exp(tm + np.sqrt(tv)*z)
+            y *= np.exp(-z**2 / 2)
+            y /= np.sqrt(2*np.pi)
+            return y
+
+        # p(y | vc) contributions
+        iv = 0
+        for w in glw:
+            iv += h(self.rng * w[1]) * w[0]
+        iv *= -self.rng
+        iv += self.endog * tm
+        iv = iv.sum()
+
+        iv += self._elbo_common(fep_mean, fep_sd, vcp_mean, vcp_sd,
+                                vc_mean, vc_sd)
+
+        r = iv + np.sum(np.log(vb_sd))
+        return r
+
+    def vb_elbo_grad(self, vb_mean, vb_sd):
+        """
+        Returns the gradient of the model's evidence lower bound (ELBO).
+        """
+
+        fep_mean, vcp_mean, vc_mean = self._unpack(vb_mean)
+        fep_sd, vcp_sd, vc_sd = self._unpack(vb_sd)
+
+        tm, tv = self._lp_stats(fep_mean, fep_sd, vc_mean, vc_sd)
+
+        def h(z):
+            y = np.exp(tm + np.sqrt(tv)*z)
+            y *= np.exp(-z**2 / 2)
+            y /= np.sqrt(2*np.pi)
+            return y
+
+        fep_mean_grad = 0.
+        fep_sd_grad = 0.
+        vcp_mean_grad = 0.
+        vcp_sd_grad = 0.
+        vc_mean_grad = 0.
+        vc_sd_grad = 0.
+
+        # p(y | vc) contributions
+        for w in glw:
+            x = self.rng * w[1]
+            u = h(x)
             r = u / np.sqrt(tv)
             fep_mean_grad += w[0] * np.dot(u, self.exog_fe)
             vc_mean_grad += w[0] * self.exog_vc.transpose().dot(u)

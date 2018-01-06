@@ -1,6 +1,6 @@
 import numpy as np
 from statsmodels.regression.bayes_mixed_glm import (
-    BayesMixedGLM, BinomialBayesMixedGLM)
+    BayesMixedGLM, BinomialBayesMixedGLM, PoissonBayesMixedGLM)
 import statsmodels.api as sm
 import pandas as pd
 from scipy import sparse
@@ -23,7 +23,22 @@ def gen_simple_logit(nc, cs, s):
     return y, exog_fe, exog_vc, ident
 
 
-def gen_logit_crossed(nc, cs, s1, s2):
+def gen_simple_poisson(nc, cs, s):
+
+    np.random.seed(3799)
+
+    exog_vc = np.kron(np.eye(nc), np.ones((cs, 1)))
+    exog_fe = np.random.normal(size=(nc*cs, 2))
+    vc = s*np.random.normal(size=nc)
+    lp = np.dot(exog_fe, np.r_[0.1, -0.1]) + np.dot(exog_vc, vc)
+    r = np.exp(lp)
+    y = np.random.poisson(r)
+    ident = np.zeros(nc, dtype=np.int)
+
+    return y, exog_fe, exog_vc, ident
+
+
+def gen_crossed_logit(nc, cs, s1, s2):
 
     np.random.seed(3799)
 
@@ -43,7 +58,27 @@ def gen_logit_crossed(nc, cs, s1, s2):
     return y, exog_fe, exog_vc, ident
 
 
-def gen_logit_crossed_pandas(nc, cs, s1, s2):
+def gen_crossed_poisson(nc, cs, s1, s2):
+
+    np.random.seed(3799)
+
+    a = np.kron(np.eye(nc), np.ones((cs, 1)))
+    b = np.kron(np.ones((cs, 1)), np.eye(nc))
+    exog_vc = np.concatenate((a, b), axis=1)
+
+    exog_fe = np.random.normal(size=(nc*cs, 1))
+    vc = s1 * np.random.normal(size=2*nc)
+    vc[nc:] *= s2 / s1
+    lp = np.dot(exog_fe, np.r_[-0.5]) + np.dot(exog_vc, vc)
+    r = np.exp(lp)
+    y = np.random.poisson(r)
+    ident = np.zeros(2*nc, dtype=np.int)
+    ident[nc:] = 1
+
+    return y, exog_fe, exog_vc, ident
+
+
+def gen_crossed_logit_pandas(nc, cs, s1, s2):
 
     np.random.seed(3799)
 
@@ -71,7 +106,7 @@ def gen_logit_crossed_pandas(nc, cs, s1, s2):
     return df
 
 
-def test_logit_map():
+def test_simple_logit_map():
 
     y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 2)
     exog_vc = sparse.csr_matrix(exog_vc)
@@ -85,9 +120,27 @@ def test_logit_map():
                     np.zeros_like(rslt.params), atol=1e-3)
 
 
-def test_logit_map_crossed():
+def test_simple_poisson_map():
 
-    y, exog_fe, exog_vc, ident = gen_logit_crossed(10, 10, 1, 2)
+    y, exog_fe, exog_vc, ident = gen_simple_poisson(10, 10, 0.2)
+    exog_vc = sparse.csr_matrix(exog_vc)
+
+    glmm1 = BayesMixedGLM(y, exog_fe, exog_vc, ident,
+                          family=sm.families.Poisson(),
+                          vcp_p=0.5)
+    rslt1 = glmm1.fit_map()
+    assert_allclose(glmm1.logposterior_grad(rslt1.params),
+                    np.zeros_like(rslt1.params), atol=1e-3)
+
+    # This should give the same answer as above
+    glmm2 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident,
+                                 vcp_p=0.5)
+    rslt2 = glmm2.fit_map()
+    assert_allclose(rslt1.params, rslt2.params, atol=1e-4)
+
+def test_crossed_logit_map():
+
+    y, exog_fe, exog_vc, ident = gen_crossed_logit(10, 10, 1, 2)
     exog_vc = sparse.csr_matrix(exog_vc)
 
     glmm = BayesMixedGLM(y, exog_fe, exog_vc, ident,
@@ -99,9 +152,23 @@ def test_logit_map_crossed():
                     np.zeros_like(rslt.params), atol=1e-4)
 
 
+def test_crossed_poisson_map():
+
+    y, exog_fe, exog_vc, ident = gen_crossed_poisson(10, 10, 1, 2)
+    exog_vc = sparse.csr_matrix(exog_vc)
+
+    glmm = BayesMixedGLM(y, exog_fe, exog_vc, ident,
+                         family=sm.families.Poisson(),
+                         vcp_p=0.5)
+    rslt = glmm.fit_map()
+
+    assert_allclose(glmm.logposterior_grad(rslt.params),
+                    np.zeros_like(rslt.params), atol=1e-4)
+
+
 def test_logit_map_crosed_formula():
 
-    data = gen_logit_crossed_pandas(10, 10, 1, 2)
+    data = gen_crossed_logit_pandas(10, 10, 1, 2)
 
     fml = "y ~ fe"
     fml_vc = ["0 + C(a)", "0 + C(b)"]
@@ -115,52 +182,70 @@ def test_logit_map_crosed_formula():
     rslt.summary()
 
 
-def test_logit_elbo_grad():
+def test_elbo_grad():
 
-    for j in range(2):
+    for f in range(2):
+        for j in range(2):
 
-        if j == 0:
-            y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 2)
-        else:
-            y, exog_fe, exog_vc, ident = gen_logit_crossed(10, 10, 1, 2)
+            if f == 0:
+                if j == 0:
+                    y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 2)
+                else:
+                    y, exog_fe, exog_vc, ident = gen_crossed_logit(
+                        10, 10, 1, 2)
+            elif f == 1:
+                if j == 0:
+                    y, exog_fe, exog_vc, ident = gen_simple_poisson(
+                        10, 10, 0.5)
+                else:
+                    y, exog_fe, exog_vc, ident = gen_crossed_poisson(
+                        10, 10, 1, 0.5)
 
-        exog_vc = sparse.csr_matrix(exog_vc)
+            exog_vc = sparse.csr_matrix(exog_vc)
 
-        glmm1 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
-        rslt1 = glmm1.fit_map(minim_opts={"gtol": 1e-4})
-
-        n = glmm1.k_fep + glmm1.k_vcp + glmm1.k_vc
-
-        for k in range(3):
-
-            if k == 0:
-                vb_mean = rslt1.params
-                vb_sd = np.ones_like(vb_mean)
-            elif k == 1:
-                vb_mean = np.zeros(len(vb_mean))
-                vb_sd = np.ones_like(vb_mean)
+            if f == 0:
+                glmm1 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident,
+                                              vcp_p=0.5)
             else:
-                vb_mean = np.random.normal(size=len(vb_mean))
-                vb_sd = np.random.uniform(1, 2, size=len(vb_mean))
+                glmm1 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident,
+                                             vcp_p=0.5)
 
-            mean_grad, sd_grad = glmm1.vb_elbo_grad(vb_mean, vb_sd)
+            rslt1 = glmm1.fit_map()
 
-            def elbo(vec):
-                n = len(vec) // 2
-                return glmm1.vb_elbo(vec[:n], vec[n:])
+            n = glmm1.k_fep + glmm1.k_vcp + glmm1.k_vc
 
-            x = np.concatenate((vb_mean, vb_sd))
-            g1 = approx_fprime(x, elbo, 1e-5)
-            n = len(x) // 2
+            for k in range(3):
 
-            mean_grad_n = g1[:n]
-            sd_grad_n = g1[n:]
+                if k == 0:
+                    vb_mean = rslt1.params
+                    vb_sd = np.ones_like(vb_mean)
+                elif k == 1:
+                    vb_mean = np.zeros(len(vb_mean))
+                    vb_sd = np.ones_like(vb_mean)
+                else:
+                    vb_mean = np.random.normal(size=len(vb_mean))
+                    vb_sd = np.random.uniform(1, 2, size=len(vb_mean))
 
-            assert_allclose(mean_grad, mean_grad_n, atol=1e-2, rtol=1e-2)
-            assert_allclose(sd_grad, sd_grad_n, atol=1e-2, rtol=1e-2)
+                mean_grad, sd_grad = glmm1.vb_elbo_grad(vb_mean, vb_sd)
+
+                def elbo(vec):
+                    n = len(vec) // 2
+                    return glmm1.vb_elbo(vec[:n], vec[n:])
+
+                x = np.concatenate((vb_mean, vb_sd))
+                g1 = approx_fprime(x, elbo, 1e-5)
+                n = len(x) // 2
+
+                mean_grad_n = g1[:n]
+                sd_grad_n = g1[n:]
+
+                assert_allclose(mean_grad, mean_grad_n, atol=1e-2,
+                                rtol=1e-2)
+                assert_allclose(sd_grad, sd_grad_n, atol=1e-2,
+                                rtol=1e-2)
 
 
-def test_logit_vb():
+def test_simple_logit_vb():
 
     y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 0)
     exog_vc = sparse.csr_matrix(exog_vc)
@@ -177,7 +262,7 @@ def test_logit_vb():
     rslt2.summary()
 
     assert_allclose(rslt1.params[0:5], np.r_[
-        0.75330405, -0.71643228, -1., -0.00959806,  0.00450254],
+        0.75330405, -0.71643228, -2.49091288, -0.00959806,  0.00450254],
                     rtol=1e-4, atol=1e-4)
 
     assert_allclose(rslt2.params[0:5], np.r_[
@@ -185,9 +270,33 @@ def test_logit_vb():
                     rtol=1e-4, atol=1e-4)
 
 
-def test_logit_vb_crossed():
+def test_simple_poisson_vb():
 
-    y, exog_fe, exog_vc, ident = gen_logit_crossed(10, 10, 1, 2)
+    y, exog_fe, exog_vc, ident = gen_simple_poisson(10, 10, 1)
+    exog_vc = sparse.csr_matrix(exog_vc)
+
+    glmm1 = BayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
+                          family=sm.families.Poisson())
+    rslt1 = glmm1.fit_map()
+
+    glmm2 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
+    rslt2 = glmm2.fit_vb(rslt1.params)
+
+    rslt1.summary()
+    rslt2.summary()
+
+    assert_allclose(rslt1.params[0:5], np.r_[
+        -0.07233493, -0.06706505, -0.47159649,  1.12575122, -1.02442201],
+                    rtol=1e-4, atol=1e-4)
+
+    assert_allclose(rslt2.params[0:5], np.r_[
+        -0.07088814, -0.06373107, -0.22770786,  1.12923746, -1.26161339],
+                    rtol=1e-4, atol=1e-4)
+
+
+def test_crossed_logit_vb():
+
+    y, exog_fe, exog_vc, ident = gen_crossed_logit(10, 10, 1, 2)
 
     glmm1 = BayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
                           fe_p=0.5, family=sm.families.Binomial())
@@ -201,7 +310,8 @@ def test_logit_vb_crossed():
     rslt2.summary()
 
     assert_allclose(rslt1.params[0:5], np.r_[
-        -0.54307398, -1., -1., -0.0096403, 0.00232701],
+        -5.43073978e-01, -2.46197518e+00, -2.36582801e+00,
+        -9.64030461e-03, 2.32701078e-03],
                     rtol=1e-4, atol=1e-4)
 
     assert_allclose(rslt2.params[0:5], np.r_[
@@ -209,9 +319,9 @@ def test_logit_vb_crossed():
                     rtol=1e-4, atol=1e-4)
 
 
-def test_logit_vb_crossed_formula():
+def test_crossed_logit_vb_formula():
 
-    data = gen_logit_crossed_pandas(10, 10, 1, 2)
+    data = gen_crossed_logit_pandas(10, 10, 1, 2)
 
     fml = "y ~ fe"
     fml_vc = ["0 + C(a)", "0 + C(b)"]
@@ -227,3 +337,27 @@ def test_logit_vb_crossed_formula():
 
     rslt1.summary()
     rslt2.summary()
+
+
+def test_crossed_poisson_vb():
+
+    y, exog_fe, exog_vc, ident = gen_crossed_poisson(10, 10, 1, 2)
+
+    glmm1 = BayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
+                          fe_p=0.5, family=sm.families.Poisson())
+    rslt1 = glmm1.fit_map()
+
+    glmm2 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
+                                  fe_p=0.5)
+    rslt2 = glmm2.fit_vb(mean=rslt1.params)
+
+    rslt1.summary()
+    rslt2.summary()
+
+    assert_allclose(rslt1.params[0:5], np.r_[
+              -0.46012702,  0.20564564,  0.48015114, -0.09004295,  0.92886591],
+                    rtol=1e-4, atol=1e-4)
+
+    assert_allclose(rslt2.params[0:5], np.r_[
+              -0.45982888,  0.24911954,  0.53073859, -0.10369905,  0.91920463],
+                    rtol=1e-4, atol=1e-4)
