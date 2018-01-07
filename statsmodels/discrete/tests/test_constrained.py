@@ -491,6 +491,34 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
         assert_allclose(res_wrap.params, res2.params, rtol=1e-6)
 
 
+class TestGLMLogitConstrained2HC(CheckGLMConstrainedMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.idx = slice(None)  # params sequence same as Stata
+        #res1ul = Logit(data.endog, data.exog).fit(method="newton", disp=0)
+        cls.res2 = reslogit.results_constraint2_robust
+
+        mod1 = GLM(spector_data.endog, spector_data.exog,
+                   family=families.Binomial())
+
+        # not used to match Stata for HC
+        # nobs, k_params = mod1.exog.shape
+        # k_params -= 1   # one constraint
+        cov_type = 'HC0'
+        cov_kwds = {'scaling_factor': 32/31}
+        # looks like nobs / (nobs - 1) and not (nobs - 1.) / (nobs - k_params)}
+        constr = 'x1 - x3 = 0'
+        cls.res1m = mod1.fit_constrained(constr, cov_type=cov_type,
+                                         cov_kwds=cov_kwds, atol=1e-10)
+
+        R, q = cls.res1m.constraints.coefs, cls.res1m.constraints.constants
+        cls.res1 = fit_constrained(mod1, R, q, fit_kwds={'atol': 1e-10,
+                                                         'cov_type': cov_type,
+                                                         'cov_kwds': cov_kwds})
+        cls.constraints_rq = (R, q)
+
+
 def junk():
     # Singular Matrix in mod1a.fit()
 
