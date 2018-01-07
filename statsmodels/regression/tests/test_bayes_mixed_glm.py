@@ -334,7 +334,7 @@ def test_crossed_logit_vb_formula():
 
 def test_crossed_poisson_vb():
 
-    y, exog_fe, exog_vc, ident = gen_crossed_poisson(10, 10, 1, 2)
+    y, exog_fe, exog_vc, ident = gen_crossed_poisson(10, 10, 1, 0.5)
 
     glmm1 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
                                  fe_p=0.5)
