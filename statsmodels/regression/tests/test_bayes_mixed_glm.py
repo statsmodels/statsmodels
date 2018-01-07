@@ -151,7 +151,7 @@ def test_crossed_logit_map():
 
 def test_crossed_poisson_map():
 
-    y, exog_fe, exog_vc, ident = gen_crossed_poisson(10, 10, 1, 2)
+    y, exog_fe, exog_vc, ident = gen_crossed_poisson(10, 10, 1, 1)
     exog_vc = sparse.csr_matrix(exog_vc)
 
     glmm = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident,

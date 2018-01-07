@@ -1,3 +1,28 @@
+"""
+Bayesian inference for generalized linear mixed models.
+
+Currently only families without additional scale or shape parameters
+are supported (binomial and Poisson).
+
+Two estimation approaches are supported: Laplace approximation
+(maximum a posteriori), and variational Bayes (mean field
+approximation to the posterior).
+
+Random effects are required to be independent in this implementation.
+
+The `exog_vc` matrix is the design matrix for the random effects.
+Every column of `exog_vc` corresponds to an independent realizattion
+of a random effect.  These random effects have mean zero and an
+unknown standard deviation.  The standard deviation parameters are
+constrained, so that a subset of the columns of `exog_vc` will have a
+common variance.  These subsets are specified through the parameer
+`ident`.
+
+In many applications, `exog_vc` will be sparse.  A sparse matrix may
+be passed when constructing a model class.  If a dense matrix is
+passed, it will be converted internally to a sparse matrix.
+"""
+
 from __future__ import division
 import numpy as np
 from scipy.optimize import minimize
@@ -352,7 +377,7 @@ class _BayesMixedGLM(object):
         return BayesMixedGLMResults(self, r.x, r.hess_inv, optim_retvals=r)
 
 
-class _VariationalBayesMixedGLM(_BayesMixedGLM):
+class _VariationalBayesMixedGLM(object):
     """
     A mixin providing generic (not family-specific) methods for
     variational Bayes mean field fitting.
