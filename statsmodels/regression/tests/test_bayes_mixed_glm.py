@@ -208,8 +208,6 @@ def test_elbo_grad():
 
             rslt1 = glmm1.fit_map()
 
-            n = glmm1.k_fep + glmm1.k_vcp + glmm1.k_vc
-
             for k in range(3):
 
                 if k == 0:
