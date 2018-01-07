@@ -311,8 +311,7 @@ class BayesMixedGLM(object):
 
         if vcp_names is None:
             vcp_names = ["VC_%d" % (k + 1) for k in range(len(vc_formulas))]
-        else:
-            vcp_names = vcp_names
+
         ident = np.concatenate(ident)
 
         endog = np.squeeze(np.asarray(endog))
