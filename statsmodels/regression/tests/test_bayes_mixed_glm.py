@@ -138,6 +138,7 @@ def test_simple_poisson_map():
     rslt2 = glmm2.fit_map()
     assert_allclose(rslt1.params, rslt2.params, atol=1e-4)
 
+
 def test_crossed_logit_map():
 
     y, exog_fe, exog_vc, ident = gen_crossed_logit(10, 10, 1, 2)
@@ -348,7 +349,7 @@ def test_crossed_poisson_vb():
     rslt1 = glmm1.fit_map()
 
     glmm2 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
-                                  fe_p=0.5)
+                                 fe_p=0.5)
     rslt2 = glmm2.fit_vb(mean=rslt1.params)
 
     rslt1.summary()
