@@ -401,8 +401,8 @@ class _VariationalBayesMixedGLM(object):
 
         return tm, tv
 
-    def vb_elbo(self, h, tm, fep_mean, vcp_mean, vc_mean, fep_sd,
-                vcp_sd, vc_sd):
+    def vb_elbo_base(self, h, tm, fep_mean, vcp_mean, vc_mean,
+                     fep_sd, vcp_sd, vc_sd):
         """
         Returns the evidence lower bound (ELBO) for the model.
 
@@ -433,8 +433,8 @@ class _VariationalBayesMixedGLM(object):
 
         return r
 
-    def vb_elbo_grad(self, h, tm, tv, fep_mean, vcp_mean, vc_mean, fep_sd,
-                     vcp_sd, vc_sd):
+    def vb_elbo_grad_base(self, h, tm, tv, fep_mean, vcp_mean, vc_mean,
+                          fep_sd, vcp_sd, vc_sd):
 
         fep_mean_grad = 0.
         fep_sd_grad = 0.
@@ -739,7 +739,7 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             x /= np.sqrt(2*np.pi)
             return x
 
-        return super(BinomialBayesMixedGLM, self).vb_elbo(
+        return self.vb_elbo_base(
             h, tm, fep_mean, vcp_mean, vc_mean, fep_sd, vcp_sd, vc_sd)
 
     def vb_elbo_grad(self, vb_mean, vb_sd):
@@ -758,7 +758,7 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             x /= np.sqrt(2*np.pi)
             return x
 
-        return super(BinomialBayesMixedGLM, self).vb_elbo_grad(
+        return self.vb_elbo_grad_base(
             h, tm, tv, fep_mean, vcp_mean, vc_mean, fep_sd, vcp_sd, vc_sd)
 
 
@@ -805,7 +805,7 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             y /= np.sqrt(2*np.pi)
             return y
 
-        return super(PoissonBayesMixedGLM, self).vb_elbo(
+        return self.vb_elbo_base(
             h, tm, fep_mean, vcp_mean, vc_mean, fep_sd, vcp_sd, vc_sd)
 
     def vb_elbo_grad(self, vb_mean, vb_sd):
@@ -823,5 +823,5 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             y /= np.sqrt(2*np.pi)
             return y
 
-        return super(PoissonBayesMixedGLM, self).vb_elbo_grad(
+        return self.vb_elbo_grad_base(
             h, tm, tv, fep_mean, vcp_mean, vc_mean, fep_sd, vcp_sd, vc_sd)
