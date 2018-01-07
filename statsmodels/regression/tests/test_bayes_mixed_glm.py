@@ -1,7 +1,6 @@
 import numpy as np
 from statsmodels.regression.bayes_mixed_glm import (
-    BayesMixedGLM, BinomialBayesMixedGLM, PoissonBayesMixedGLM)
-import statsmodels.api as sm
+    BinomialBayesMixedGLM, PoissonBayesMixedGLM)
 import pandas as pd
 from scipy import sparse
 from numpy.testing import assert_allclose
@@ -111,9 +110,8 @@ def test_simple_logit_map():
     y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 2)
     exog_vc = sparse.csr_matrix(exog_vc)
 
-    glmm = BayesMixedGLM(y, exog_fe, exog_vc, ident,
-                         family=sm.families.Binomial(),
-                         vcp_p=0.5)
+    glmm = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident,
+                                 vcp_p=0.5)
     rslt = glmm.fit_map()
 
     assert_allclose(glmm.logposterior_grad(rslt.params),
@@ -125,9 +123,8 @@ def test_simple_poisson_map():
     y, exog_fe, exog_vc, ident = gen_simple_poisson(10, 10, 0.2)
     exog_vc = sparse.csr_matrix(exog_vc)
 
-    glmm1 = BayesMixedGLM(y, exog_fe, exog_vc, ident,
-                          family=sm.families.Poisson(),
-                          vcp_p=0.5)
+    glmm1 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident,
+                                 vcp_p=0.5)
     rslt1 = glmm1.fit_map()
     assert_allclose(glmm1.logposterior_grad(rslt1.params),
                     np.zeros_like(rslt1.params), atol=1e-3)
@@ -144,9 +141,8 @@ def test_crossed_logit_map():
     y, exog_fe, exog_vc, ident = gen_crossed_logit(10, 10, 1, 2)
     exog_vc = sparse.csr_matrix(exog_vc)
 
-    glmm = BayesMixedGLM(y, exog_fe, exog_vc, ident,
-                         family=sm.families.Binomial(),
-                         vcp_p=0.5)
+    glmm = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident,
+                                 vcp_p=0.5)
     rslt = glmm.fit_map()
 
     assert_allclose(glmm.logposterior_grad(rslt.params),
@@ -158,9 +154,8 @@ def test_crossed_poisson_map():
     y, exog_fe, exog_vc, ident = gen_crossed_poisson(10, 10, 1, 2)
     exog_vc = sparse.csr_matrix(exog_vc)
 
-    glmm = BayesMixedGLM(y, exog_fe, exog_vc, ident,
-                         family=sm.families.Poisson(),
-                         vcp_p=0.5)
+    glmm = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident,
+                                vcp_p=0.5)
     rslt = glmm.fit_map()
 
     assert_allclose(glmm.logposterior_grad(rslt.params),
@@ -173,8 +168,8 @@ def test_logit_map_crosed_formula():
 
     fml = "y ~ fe"
     fml_vc = ["0 + C(a)", "0 + C(b)"]
-    glmm = BayesMixedGLM.from_formula(
-        fml, fml_vc, data, family=sm.families.Binomial(), vcp_p=0.5)
+    glmm = BinomialBayesMixedGLM.from_formula(
+        fml, fml_vc, data, vcp_p=0.5)
     rslt = glmm.fit_map()
 
     assert_allclose(glmm.logposterior_grad(rslt.params),
@@ -251,8 +246,8 @@ def test_simple_logit_vb():
     y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 0)
     exog_vc = sparse.csr_matrix(exog_vc)
 
-    glmm1 = BayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
-                          fe_p=0.5, family=sm.families.Binomial())
+    glmm1 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
+                                  fe_p=0.5)
     rslt1 = glmm1.fit_map()
 
     glmm2 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
@@ -276,8 +271,7 @@ def test_simple_poisson_vb():
     y, exog_fe, exog_vc, ident = gen_simple_poisson(10, 10, 1)
     exog_vc = sparse.csr_matrix(exog_vc)
 
-    glmm1 = BayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
-                          family=sm.families.Poisson())
+    glmm1 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
     rslt1 = glmm1.fit_map()
 
     glmm2 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
@@ -299,8 +293,8 @@ def test_crossed_logit_vb():
 
     y, exog_fe, exog_vc, ident = gen_crossed_logit(10, 10, 1, 2)
 
-    glmm1 = BayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
-                          fe_p=0.5, family=sm.families.Binomial())
+    glmm1 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
+                                  fe_p=0.5)
     rslt1 = glmm1.fit_map()
 
     glmm2 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
@@ -344,8 +338,8 @@ def test_crossed_poisson_vb():
 
     y, exog_fe, exog_vc, ident = gen_crossed_poisson(10, 10, 1, 2)
 
-    glmm1 = BayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
-                          fe_p=0.5, family=sm.families.Poisson())
+    glmm1 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,
+                                 fe_p=0.5)
     rslt1 = glmm1.fit_map()
 
     glmm2 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5,

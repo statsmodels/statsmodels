@@ -3,8 +3,8 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy import sparse
 from statsmodels.iolib import summary2
+import statsmodels.api as sm
 import pandas as pd
-import statsmodels
 import warnings
 import patsy
 
@@ -98,7 +98,7 @@ _vb_fit_method = """
 """
 
 
-class BayesMixedGLM(object):
+class _BayesMixedGLM(object):
 
     __doc__ = _init_doc.format(fit_method=_laplace_fit_method)
 
@@ -107,7 +107,7 @@ class BayesMixedGLM(object):
                  vcp_names=None):
 
         if family is None:
-            family = statsmodels.genmod.families.Gaussian()
+            family = sm.families.Gaussian()
             warnings.Warn("Defaulting to Gaussian family")
 
         # Get the fixed effects parameter names
@@ -152,6 +152,9 @@ class BayesMixedGLM(object):
         else:
             self.k_vc = exog_vc.shape[1]
             self.k_vcp = max(self.ident) + 1
+
+        # power would be better but not available in older scipy
+        self.exog_vc2 = self.exog_vc.multiply(self.exog_vc)
 
     def _unpack(self, vec):
 
@@ -320,9 +323,9 @@ class BayesMixedGLM(object):
         exog_fe = np.asarray(exog_fe)
         exog_vc = sparse.csr_matrix(np.asarray(exog_vc))
 
-        mod = BayesMixedGLM(endog, exog_fe, exog_vc, ident, vcp_p, fe_p,
-                            family=family, fep_names=fep_names,
-                            vcp_names=vcp_names)
+        mod = _BayesMixedGLM(endog, exog_fe, exog_vc, ident, vcp_p, fe_p,
+                             family=family, fep_names=fep_names,
+                             vcp_names=vcp_names)
 
         return mod
 
@@ -349,10 +352,10 @@ class BayesMixedGLM(object):
         return BayesMixedGLMResults(self, r.x, r.hess_inv, optim_retvals=r)
 
 
-class _VariationalBayesMixedGLM(BayesMixedGLM):
+class _VariationalBayesMixedGLM(_BayesMixedGLM):
     """
-    A private base class for family-specific variational Bayes GLM
-    implementations.
+    A mixin providing generic (not family-specific) methods for
+    variational Bayes mean field fitting.
     """
 
     # Integration range (from -rng to +rng).  The integrals are with
@@ -361,17 +364,6 @@ class _VariationalBayesMixedGLM(BayesMixedGLM):
     rng = 5
 
     verbose = False
-
-    def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=1,
-                 fe_p=2, family=None, fep_names=None, vcp_names=None):
-
-        super(_VariationalBayesMixedGLM, self).__init__(
-            endog=endog, exog_fe=exog_fe, exog_vc=exog_vc,
-            ident=ident, vcp_p=vcp_p, fe_p=fe_p,
-            family=family, fep_names=fep_names, vcp_names=vcp_names)
-
-        # power would be better but not available in older scipy
-        self.exog_vc2 = self.exog_vc.multiply(self.exog_vc)
 
     # Returns the mean and variance of the linear predictor under the
     # given distribution parameters.
@@ -679,7 +671,7 @@ class BayesMixedGLMResults(object):
         return summ
 
 
-class BinomialBayesMixedGLM(_VariationalBayesMixedGLM):
+class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
 
     __doc__ = _init_doc.format(fit_method=_vb_fit_method)
 
@@ -689,17 +681,17 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM):
         super(BinomialBayesMixedGLM, self).__init__(
             endog=endog, exog_fe=exog_fe, exog_vc=exog_vc,
             ident=ident, vcp_p=vcp_p, fe_p=fe_p,
-            family=statsmodels.genmod.families.Binomial(),
+            family=sm.families.Binomial(),
             fep_names=fep_names, vcp_names=vcp_names)
 
     @classmethod
     def from_formula(cls, formula, vc_formulas, data, vcp_p=1, fe_p=2,
                      vcp_names=None):
 
-        fam = statsmodels.genmod.families.Binomial()
-        x = BayesMixedGLM.from_formula(formula, vc_formulas, data,
-                                       family=fam, vcp_p=vcp_p, fe_p=fe_p,
-                                       vcp_names=vcp_names)
+        fam = sm.families.Binomial()
+        x = _BayesMixedGLM.from_formula(formula, vc_formulas, data,
+                                        family=fam, vcp_p=vcp_p, fe_p=fe_p,
+                                        vcp_names=vcp_names)
 
         return BinomialBayesMixedGLM(endog=x.endog, exog_fe=x.exog_fe,
                                      exog_vc=x.exog_vc, ident=x.ident,
@@ -745,7 +737,7 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM):
             h, tm, tv, fep_mean, vcp_mean, vc_mean, fep_sd, vcp_sd, vc_sd)
 
 
-class PoissonBayesMixedGLM(_VariationalBayesMixedGLM):
+class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
 
     __doc__ = _init_doc.format(fit_method=_vb_fit_method)
 
@@ -755,17 +747,17 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM):
         super(PoissonBayesMixedGLM, self).__init__(
             endog=endog, exog_fe=exog_fe, exog_vc=exog_vc,
             ident=ident, vcp_p=vcp_p, fe_p=fe_p,
-            family=statsmodels.genmod.families.Poisson(),
+            family=sm.families.Poisson(),
             fep_names=fep_names, vcp_names=vcp_names)
 
     @classmethod
     def from_formula(cls, formula, vc_formulas, data, vcp_p=1, fe_p=2,
                      vcp_names=None):
 
-        fam = statsmodels.genmod.families.Poisson()
-        x = BayesMixedGLM.from_formula(formula, vc_formulas, data,
-                                       family=fam, vcp_p=vcp_p, fe_p=fe_p,
-                                       vcp_names=vcp_names)
+        fam = sm.families.Poisson()
+        x = _BayesMixedGLM.from_formula(formula, vc_formulas, data,
+                                        family=fam, vcp_p=vcp_p, fe_p=fe_p,
+                                        vcp_names=vcp_names)
 
         return PoissonBayesMixedGLM(endog=x.endog, exog_fe=x.exog_fe,
                                     exog_vc=x.exog_vc, ident=x.ident,
