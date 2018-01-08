@@ -1116,7 +1116,12 @@ class Poisson(CountModel):
                                                         'iterations', np.nan)
         res.mle_retvals['converged'] = res_constr.mle_retvals['converged']
         res._results.params = params
-        res._results.normalized_cov_params = cov
+        res._results.cov_params_default = cov
+        cov_type = fit_kwds.get('cov_type', 'nonrobust')
+        if cov_type != 'nonrobust':
+            res._results.normalized_cov_params = cov # assume scale=1
+        else:
+            res._results.normalized_cov_params = None
         k_constr = len(q)
         res._results.df_resid += k_constr
         res._results.df_model -= k_constr

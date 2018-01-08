@@ -136,6 +136,9 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     if 'kernel' in kwds:
             kwds['weights_func'] = kwds.pop('kernel')
 
+    # pop because HCx raises if any kwds
+    sc_factor = kwds.pop('scaling_factor', None)
+
     # TODO: make separate function that returns a robust cov plus info
     use_self = kwds.pop('use_self', False)
     if use_self:
@@ -292,7 +295,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
                          'available options and spelling')
 
     # generic optional factor to scale covariance
-    sc_factor = kwds.get('scaling_factor', None)
+
     res.cov_kwds['scaling_factor'] = sc_factor
     if sc_factor is not None:
         res.cov_params_default *= sc_factor

@@ -1279,7 +1279,13 @@ class GLM(base.LikelihoodModel):
         #create dummy results Instance, TODO: wire up properly
         res = self.fit(start_params=params, maxiter=0) # we get a wrapper back
         res._results.params = params
-        res._results.normalized_cov_params = cov
+        res._results.cov_params_default = cov
+        cov_type = fit_kwds.get('cov_type', 'nonrobust')
+        if cov_type != 'nonrobust':
+            res._results.normalized_cov_params = cov / res_constr.scale
+        else:
+            res._results.normalized_cov_params = None
+        res._results.scale = res_constr.scale
         k_constr = len(q)
         res._results.df_resid += k_constr
         res._results.df_model -= k_constr
