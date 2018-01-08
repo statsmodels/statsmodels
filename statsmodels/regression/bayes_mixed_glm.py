@@ -135,6 +135,10 @@ class _BayesMixedGLM(object):
             family = sm.families.Gaussian()
             warnings.Warn("Defaulting to Gaussian family")
 
+        if len(ident) != exog_vc.shape[1]:
+            msg = "len(ident) should match the number of columns of exog_vc"
+            raise ValueError(msg)
+
         # Get the fixed effects parameter names
         if fep_names is None:
             if hasattr(exog_fe, "columns"):
@@ -148,6 +152,10 @@ class _BayesMixedGLM(object):
         if vcp_names is None:
             vcp_names = ["VC_%d" % (k + 1)
                          for k in range(int(max(ident)) + 1)]
+        else:
+            if len(vcp_names) != len(set(ident)):
+                msg = "The lengths of vcp_names and ident should be the same"
+                raise ValueError(msg)
         self.vcp_names = vcp_names
 
         self.endog = np.asarray(endog)
