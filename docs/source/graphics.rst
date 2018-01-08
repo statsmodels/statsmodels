@@ -81,3 +81,4 @@ Other Plots
 
    factorplots.interaction_plot
    mosaicplot.mosaic
+   agreement.mean_diff_plot
