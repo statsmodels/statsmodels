@@ -1,7 +1,8 @@
 """Latin Hypercube Sampling methods."""
 from __future__ import division
+import copy
 import numpy as np
-from scipy.optimize import brute, fmin
+from scipy.optimize import brute
 try:
     from scipy.optimize import basinhopping
     have_basinhopping = True
@@ -42,9 +43,9 @@ def orthogonal_latin_hypercube(dim, n_sample, bounds=None):
     step = 1.0 / n_sample
 
     for i in range(dim):
-        # Enforce a unique point per grid
-        temp = [np.random.uniform(low=j * step, high=(j + 1) * step)
-                for j in range(n_sample)]
+        # Enforce a unique point per grid        
+        j = np.arange(n_sample) * step
+        temp = j + np.random.uniform(low=0, high=step, size= n_sample)
         np.random.shuffle(temp)
 
         sample.append(temp)
@@ -109,11 +110,12 @@ def latin_hypercube(dim, n_sample, bounds=None, centered=False):
 
 
 def optimal_design(dim, n_sample, bounds=None, start_design=None, niter=1,
-                   force=False):
+                   force=False, optimization=True):
     """Optimal design.
 
     Optimize the design by doing random permutations to lower the centered
-    discrepancy.
+    discrepancy. If `optimization` is False, `niter` design are generated and
+    the one with lowest centered discrepancy is return. This option is faster.
 
     Centered discrepancy based design show better space filling robustness
     toward 2D and 3D subprojections. Distance based design better space filling
@@ -131,7 +133,14 @@ def optimal_design(dim, n_sample, bounds=None, start_design=None, niter=1,
         max values of the sample will coincide with the bounds.
     start_design : array_like (n_samples, k_vars)
         Initial design of experiment to optimize.
-
+    niter : int
+        Number of iteration to perform.
+    force : bool
+        If `optimization`, force *basinhopping* optimization. Otherwise
+        grid search is used.
+    optimization : bool
+        Optimal design using global optimization or random generation of
+        `niter` samples.
     Returns
     -------
     sample : array_like (n_samples, k_vars)
@@ -145,56 +154,72 @@ def optimal_design(dim, n_sample, bounds=None, start_design=None, niter=1,
 
     """
     doe = start_design
-    if doe is None:
-        doe = orthogonal_latin_hypercube(dim, n_sample, bounds)
+    if (bounds is None) and (doe is not None):
+            bounds = np.array([doe.min(axis=0), doe.max(axis=0)])
+    if optimization:
+        if doe is None:
+            doe = orthogonal_latin_hypercube(dim, n_sample, bounds)
 
-    def _perturb_doe(x, sample, bounds):
-        """Disturbe the Design of Experiment.
+        def _perturb_doe(x, sample, bounds):
+            """Perturb the Design of Experiment.
 
-        Parameters
-        ----------
-        x : list of int
-            It is a list of:
-                idx : int
-                    Index value of the components to compute
-        sample : array_like (n_samples, k_vars)
-            Sample to perturb.
-        bounds : tuple or array_like ([min, k_vars], [max, k_vars])
-            Desired range of transformed data. The transformation apply the
-            bounds on the sample and not the theoretical space, unit cube. Thus
-            min and max values of the sample will coincide with the bounds.
+            Parameters
+            ----------
+            x : list of int
+                It is a list of:
+                    idx : int
+                        Index value of the components to compute
+            sample : array_like (n_samples, k_vars)
+                Sample to perturb.
+            bounds : tuple or array_like ([min, k_vars], [max, k_vars])
+                Desired range of transformed data. The transformation apply the
+                bounds on the sample and not the theoretical space, unit cube.
+                Thus min and max values of the sample will coincide with the
+                bounds.
 
-        Returns
-        -------
-        discrepancy : float
-            Centered discrepancy.
+            Returns
+            -------
+            discrepancy : float
+                Centered discrepancy.
 
-        """
-        col, row_1, row_2 = map(int, x)
-        doe[row_1, col], doe[row_2, col] = doe[row_2, col], doe[row_1, col]
+            """
+            doe = copy.deepcopy(sample)
+            col, row_1, row_2 = np.round(x).astype(int)
+            doe[row_1, col], doe[row_2, col] = doe[row_2, col], doe[row_1, col]
 
-        return discrepancy(sample, bounds)
+            return discrepancy(doe, bounds)
 
-    # Total number of possible design
-    complexity = dim * n_sample ** 2
+        # Total number of possible design
+        complexity = dim * n_sample ** 2
 
-    if have_basinhopping and ((complexity > 1e6) or force):
-        bounds_optim = ([0, dim - 1], [0, n_sample - 1], [0, n_sample - 1])
-    else:
-        bounds_optim = (slice(0, dim - 1, 1), slice(0, n_sample - 1, 1),
-                        slice(0, n_sample - 1, 1))
-
-    for n in range(niter):
         if have_basinhopping and ((complexity > 1e6) or force):
-            minimizer_kwargs = {"method": "L-BFGS-B", "bounds": bounds_optim,
-                                "args": (doe, bounds)}
-            optimum = basinhopping(_perturb_doe, [0, 0, 0], niter=100,
-                                   minimizer_kwargs=minimizer_kwargs).x
+            bounds_optim = ([0, dim - 1], [0, n_sample - 1], [0, n_sample - 1])
         else:
-            optimum = brute(_perturb_doe, ranges=bounds_optim,
-                            finish=fmin, args=(doe, bounds))
+            bounds_optim = (slice(0, dim - 1, 1), slice(0, n_sample - 1, 1),
+                            slice(0, n_sample - 1, 1))
 
-        col, row_1, row_2 = map(int, optimum)
-        doe[row_1, col], doe[row_2, col] = doe[row_2, col], doe[row_1, col]
+        for n in range(niter):
+            if have_basinhopping and ((complexity > 1e6) or force):
+                minimizer_kwargs = {"method": "L-BFGS-B",
+                                    "bounds": bounds_optim,
+                                    "args": (doe, bounds)}
+                optimum = basinhopping(_perturb_doe, [0, 0, 0], niter=100,
+                                       minimizer_kwargs=minimizer_kwargs).x
+            else:
+                optimum = brute(_perturb_doe, ranges=bounds_optim,
+                                finish=None, args=(doe, bounds))
+
+            col, row_1, row_2 = np.round(optimum).astype(int)
+            doe[row_1, col], doe[row_2, col] = doe[row_2, col], doe[row_1, col]
+    else:
+        best_disc = np.inf
+        for n in range(niter):
+            doe = orthogonal_latin_hypercube(dim, n_sample, bounds)
+            disc = discrepancy(doe, bounds)
+            if disc < best_disc:
+                best_disc = disc
+                best = doe
+
+        doe = best
 
     return doe

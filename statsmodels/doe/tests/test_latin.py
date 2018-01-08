@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_equal
 from statsmodels.doe import latin
 
 
@@ -30,24 +30,45 @@ def test_orthogonal_lhs():
                     [0.253, 4.976], [8.753, 3.249]])
     assert_almost_equal(sample, out, decimal=1)
 
+    # Checking independency of the random numbers generated
+    n_sample = 500
+    sample = latin.orthogonal_latin_hypercube(dim=2, n_sample=n_sample)
+    min_b = 50  # number of bins
+    bins = np.linspace(0, 1, min(min_b, n_sample) + 1)
+    hist = np.histogram(sample[:, 0], bins=bins)
+    out = np.array([n_sample / min_b] * min_b)
+    assert_equal(hist[0], out)
+
+    hist = np.histogram(sample[:, 1], bins=bins)
+    assert_equal(hist[0], out)
 
 @pytest.mark.xfail(raises=AssertionError, reason='Global optimization')
 def test_optimal_design():
     np.random.seed(123456)
 
+    start_design = latin.orthogonal_latin_hypercube(2, 5)
+    sample = latin.optimal_design(dim=2, n_sample=5, start_design=start_design)
+    out = np.array([[0.025, 0.223], [0.779, 0.677], [0.452, 0.043],
+                    [0.393, 0.992], [0.875, 0.416]])
+    assert_almost_equal(sample, out, decimal=1)
+
     corners = np.array([[0, 2], [10, 5]])
-
-    sample = latin.optimal_design(dim=2, n_sample=5, bounds=corners)
-    out = np.array([[4.520, 2.670], [0.253, 4.031], [7.794, 2.129],
-                    [3.933, 4.976], [8.753, 3.249]])
+    sample = latin.optimal_design(2, 5, bounds=corners)
+    out = np.array([[6.275, 4.604], [5.189, 2.344], [3.553, 3.947],
+                    [0.457, 3.554], [9.705, 2.636]])
     assert_almost_equal(sample, out, decimal=1)
 
-    sample = latin.optimal_design(dim=2, n_sample=5, niter=2)
-    out = np.array([[0.045, 0.868], [0.518, 0.114], [0.355, 0.649],
-                    [0.627, 0.518], [0.970, 0.212]])
+    sample = latin.optimal_design(2, 5, niter=2)
+    out = np.array([[0.681, 0.231], [0.007, 0.719], [0.372, 0.101],
+                    [0.550, 0.456], [0.868, 0.845]])
     assert_almost_equal(sample, out, decimal=1)
 
-    sample = latin.optimal_design(dim=2, n_sample=5, bounds=corners, force=True)
-    out = np.array([[8.687, 2.695], [0.075, 4.159], [3.723, 2.305],
-                    [5.507, 3.368], [6.810, 4.535]])
+    sample = latin.optimal_design(2, 5, bounds=corners, force=True)
+    out = np.array([[8.610, 2.288], [5.318, 3.498], [7.323, 4.303],
+                    [1.135, 2.657], [3.561, 4.938]])
+    assert_almost_equal(sample, out, decimal=1)
+
+    sample = latin.optimal_design(2, 5, bounds=corners, optimization=False)
+    out = np.array([[1.052, 4.218], [2.477, 2.987], [7.616, 4.527],
+                    [9.134, 3.393], [4.064, 2.430]])
     assert_almost_equal(sample, out, decimal=1)
