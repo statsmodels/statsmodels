@@ -1431,7 +1431,7 @@ class GLMResults(base.LikelihoodModelResults):
             self.use_t = use_t
 
         # temporary warning
-        ct = (cov_type == 'nonrobust') or (cov_type.startswith('HC'))
+        ct = (cov_type == 'nonrobust') or (cov_type.upper().startswith('HC'))
         if self.model._has_freq_weights and not ct:
             import warnings
             from statsmodels.tools.sm_exceptions import SpecificationWarning
@@ -1686,6 +1686,9 @@ class GLMResults(base.LikelihoodModelResults):
                      ('Deviance:', ["%#8.5g" % self.deviance]),
                      ('Pearson chi2:', ["%#6.3g" % self.pearson_chi2])
                      ]
+
+        if hasattr(self, 'cov_type'):
+            top_right.append(('Covariance Type:', [self.cov_type]))
 
         if title is None:
             title = "Generalized Linear Model Regression Results"
