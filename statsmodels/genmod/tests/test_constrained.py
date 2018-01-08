@@ -83,19 +83,6 @@ class TestGLMGaussianConstrained(ConstrainedCompareMixin):
         cls.res1 = mod.fit_constrained('x1=0.5')
 
 
-class TestGLMGaussianConstrained1(ConstrainedCompareMixin):
-
-    @classmethod
-    def init(cls):
-        cls.res2 = cls.mod2.fit()
-        mod = GLM(cls.endog, cls.exog)
-        mod.exog_names[:] = ['const', 'x1', 'x2', 'x3', 'x4']
-        cls.res1 = mod.fit_constrained('x1=0.5')
-        cls.res1._results.cov_params_default = cls.res1.normalized_cov_params
-        # setting scale also works instead of setting cov_params_default
-        #cls.res1._results.scale = 1
-
-
 class TestGLMGaussianOffsetHC(ConstrainedCompareMixin):
 
     @classmethod
@@ -118,4 +105,3 @@ class TestGLMGaussianConstrainedHC(ConstrainedCompareMixin):
         mod = GLM(cls.endog, cls.exog)
         mod.exog_names[:] = ['const', 'x1', 'x2', 'x3', 'x4']
         cls.res1 = mod.fit_constrained('x1=0.5', cov_type=cov_type)
-        cls.res1._results.cov_params_default = cls.res1.normalized_cov_params

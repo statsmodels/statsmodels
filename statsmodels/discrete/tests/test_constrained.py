@@ -6,6 +6,7 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+from __future__ import division
 
 from statsmodels.compat.python import StringIO
 from statsmodels.compat.testing import SkipTest
