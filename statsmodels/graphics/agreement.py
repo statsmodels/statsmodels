@@ -6,8 +6,6 @@ License: BSD-3
 '''
 
 import numpy as np
-import matplotlib.pyplot as plt
-
 from . import utils
 
 def mean_diff_plot(m1, m2,
@@ -152,5 +150,5 @@ def mean_diff_plot(m1, m2,
     ax.set_ylabel('Difference', fontsize=15)
     ax.set_xlabel('Means', fontsize=15)
     ax.tick_params(labelsize=13)
-    plt.tight_layout()
+    fig.tight_layout()
     return fig

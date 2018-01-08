@@ -25,13 +25,13 @@ def test_mean_diff_plot():
     ax = fig.add_subplot(111)
 
     # basic test.
-    mean_diff_plot(m1, m2)
+    fig = mean_diff_plot(m1, m2, ax=ax)
     plt.close(fig)
 
     # Test with pandas Series.
     p1 = pd.Series(m1)
     p2 = pd.Series(m2)
-    mean_diff_plot(p1, p2)
+    fig = mean_diff_plot(p1, p2)
     plt.close(fig)
 
     # Test plotting on assigned axis.
@@ -40,21 +40,17 @@ def test_mean_diff_plot():
     plt.close(fig)
 
     # Test the setting of confidence intervals.
-    fig, ax = plt.subplots(1)
-    mean_diff_plot(m1, m2, sd_limit = 0)
+    fig = mean_diff_plot(m1, m2, sd_limit = 0)
     plt.close(fig)
 
     # Test asethetic controls.
-    fig, ax = plt.subplots(1)
-    mean_diff_plot(m1, m2, scatter_kwds={'color':'green', 's':10})
+    fig = mean_diff_plot(m1, m2, scatter_kwds={'color':'green', 's':10})
     plt.close(fig)
 
-    fig, ax = plt.subplots(1)
-    mean_diff_plot(m1, m2, mean_line_kwds={'color':'green', 'lw':5})
+    fig = mean_diff_plot(m1, m2, mean_line_kwds={'color':'green', 'lw':5})
     plt.close(fig)
 
-    fig, ax = plt.subplots(1)
-    mean_diff_plot(m1, m2, limit_lines_kwds={'color':'green',
+    fig = mean_diff_plot(m1, m2, limit_lines_kwds={'color':'green',
                                                 'lw':5,
                                                 'ls':'dotted'})
     plt.close(fig)
