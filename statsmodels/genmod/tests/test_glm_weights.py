@@ -1,5 +1,30 @@
-"""Test for weights in GLM, Poisson and OLS/WLS, continuous test_glm.py
+"""
+Test for weights in GLM, Poisson and OLS/WLS, continuous test_glm.py
 
+
+Below is a table outlining the test coverage.
+
+================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ==== =========
+Test                              Compared To            params normalized_cov_params bse loglike deviance resid_response resid_pearson resid_deviance resid_working resid_anscombe chi2 optimizer
+================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ==== =========
+TestGlmPoissonPlain               stata                  X                            X   X       X        X              X             X              X             X              X    bfgs
+TestGlmPoissonFwNr                stata                  X                            X   X       X        X              X             X              X             X              X    bfgs
+TestGlmPoissonAwNr                stata                  X                            X   X       X        X              X             X              X             X              X    bfgs
+TestGlmPoissonFwHC                stata                  X                            X   X       X                                                                                 X
+TestGlmPoissonAwHC                stata                  X                            X   X       X                                                                                 X
+TestGlmPoissonFwClu               stata                  X                            X   X       X                                                                                 X
+TestGlmTweedieAwNr                R                      X                            X           X        X              X             X              X                                 newton
+TestGlmGammaAwNr                  R                      X                            X   special X        X              X             X              X                                 bfgs
+TestGlmGaussianAwNr               R                      X                            X   special X        X              X             X              X                                 bfgs
+TestRepeatedvsAggregated          statsmodels.GLM        X      X                                                                                                                        bfgs
+TestRepeatedvsAverage             statsmodels.GLM        X      X                                                                                                                        bfgs
+TestTweedieRepeatedvsAggregated   statsmodels.GLM        X      X                                                                                                                        bfgs
+TestTweedieRepeatedvsAverage      statsmodels.GLM        X      X                                                                                                                        bfgs
+TestBinomial0RepeatedvsAverage    statsmodels.GLM        X      X
+TestBinomial0RepeatedvsDuplicated statsmodels.GLM        X      X                                                                                                                        bfgs
+TestBinomialVsVarWeights          statsmodels.GLM        X      X                     X                                                                                                  bfgs
+TestGlmGaussianWLS                statsmodels.WLS        X      X                     X                                                                                                  bfgs
+================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ==== =========
 """
 from __future__ import division
 from statsmodels.compat.testing import SkipTest
@@ -81,14 +106,19 @@ class CheckWeight(object):
             return None
         assert_allclose(res1.resid_anscombe, resid_all['resid_anscombe'], atol= 1e-6, rtol=2e-6)
 
-    @pytest.mark.xfail
-    def test_compare_bfgs(self):
+    def test_compare_optimizers(self):
         res1 = self.res1
         if isinstance(res1.model.family, sm.families.Tweedie):
-            # Can't do this on Tweedie as loglikelihood is too complex
+            method = 'newton'
+            optim_hessian = 'eim'
+        else:
+            method = 'bfgs'
+            optim_hessian = 'oim'
+        if isinstance(self, (TestGlmPoissonFwHC, TestGlmPoissonAwHC,
+                             TestGlmPoissonFwClu,
+                             TestBinomial0RepeatedvsAverage)):
             return None
-        
-        res2 = self.res1.model.fit(method='bfgs', gtol=1e-50)
+        res2 = self.res1.model.fit(method=method, optim_hessian=optim_hessian)
         assert_allclose(res1.params, res2.params, atol=1e-3, rtol=2e-3)
         H = res2.model.hessian(res2.params, observed=False)
         res2_bse = np.sqrt(-np.diag(np.linalg.inv(H)))
@@ -277,10 +307,10 @@ class TestGlmGammaAwNr(CheckWeight):
 
     def test_r_llf(self):
         scale = self.res1.deviance / self.res1._iweights.sum()
-        ll = self.res1.model.family.loglike(self.res1.model.endog,
-                                            self.res1.mu,
-                                            self.res1._iweights,
-                                            scale)
+        ll = self.res1.family.loglike(self.res1.model.endog,
+                                      self.res1.mu,
+                                      freq_weights=self.res1._var_weights,
+                                      scale=scale)
         assert_allclose(ll, self.res2.ll, atol=1e-6, rtol=1e-7)
 
 
@@ -315,7 +345,9 @@ class TestGlmGaussianAwNr(CheckWeight):
         scale = res1.scale * model.df_resid / model.wnobs
         # Calculate llf using adj scale and wts = freq_weights
         wts = model.freq_weights
-        llf = model.family.loglike(model.endog, res1.mu, wts, scale)
+        llf = model.family.loglike(model.endog, res1.mu,
+                                   freq_weights=wts,
+                                   scale=scale)
         # SM uses (essentially) stat's loglike formula... first term is
         # (endog - mu) ** 2 / scale
         adj_sm = -1 / 2 * ((model.endog - res1.mu) ** 2).sum() / scale
@@ -740,6 +772,8 @@ def test_warnings_raised():
 
 
 weights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
+
+
 # TODO: Re-enable once nose is permanently dropped
 @nose.tools.nottest
 @pytest.mark.parametrize('formatted', [weights, np.asarray(weights), pd.Series(weights)],

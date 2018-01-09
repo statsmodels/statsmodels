@@ -80,8 +80,8 @@ class CheckModelResultsMixin(object):
                 self.res1.resid_anscombe, self.res1.resid_response))
         assert_allclose(resids, resid2, rtol=1e-6, atol=atol)
 
-
     decimal_aic_R = DECIMAL_4
+
     def test_aic_R(self):
         # R includes the estimation of the scale as a lost dof
         # Doesn't with Gamma though
@@ -89,16 +89,28 @@ class CheckModelResultsMixin(object):
             dof = 2
         else:
             dof = 0
-        assert_almost_equal(self.res1.aic+dof, self.res2.aic_R,
+        if isinstance(self.res1.model.family, (sm.families.NegativeBinomial)):
+            llf = self.res1.model.family.loglike(self.res1.model.endog,
+                                                 self.res1.mu,
+                                                 self.res1.model.var_weights,
+                                                 self.res1.model.freq_weights,
+                                                 scale=1)
+            aic = (-2*llf+2*(self.res1.df_model+1))
+        else:
+            aic = self.res1.aic
+        assert_almost_equal(aic+dof, self.res2.aic_R,
                 self.decimal_aic_R)
 
     decimal_aic_Stata = DECIMAL_4
     def test_aic_Stata(self):
         # Stata uses the below llf for aic definition for these families
         if isinstance(self.res1.model.family, (sm.families.Gamma,
-            sm.families.InverseGaussian)):
+            sm.families.InverseGaussian, sm.families.NegativeBinomial)):
             llf = self.res1.model.family.loglike(self.res1.model.endog,
-                                                 self.res1.mu, self.res1.model.freq_weights, scale=1)
+                                                 self.res1.mu,
+                                                 self.res1.model.var_weights,
+                                                 self.res1.model.freq_weights,
+                                                 scale=1)
             aic = (-2*llf+2*(self.res1.df_model+1))/self.res1.nobs
         else:
             aic = self.res1.aic/self.res1.nobs
@@ -119,9 +131,12 @@ class CheckModelResultsMixin(object):
         # Stata uses the below llf for these families
         # We differ with R for them
         if isinstance(self.res1.model.family, (sm.families.Gamma,
-            sm.families.InverseGaussian)):
+            sm.families.InverseGaussian, sm.families.NegativeBinomial)):
             llf = self.res1.model.family.loglike(self.res1.model.endog,
-                                                 self.res1.mu, self.res1.model.freq_weights, scale=1)
+                                                 self.res1.mu,
+                                                 self.res1.model.var_weights,
+                                                 self.res1.model.freq_weights,
+                                                 scale=1)
         else:
             llf = self.res1.llf
         assert_almost_equal(llf, self.res2.llf, self.decimal_loglike)
@@ -632,7 +647,7 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
         cls.data.exog = np.column_stack((cls.data.exog,interaction))
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
         cls.res1 = GLM(cls.data.endog, cls.data.exog,
-                family=sm.families.NegativeBinomial()).fit()
+                family=sm.families.NegativeBinomial()).fit(scale='x2')
         from .results.results_glm import Committee
         res2 = Committee()
         res2.aic_R += 2 # They don't count a degree of freedom for the scale
