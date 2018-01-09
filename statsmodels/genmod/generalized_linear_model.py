@@ -206,7 +206,7 @@ class GLM(base.LikelihoodModel):
     +---------------+----------------------------------+
     | Residual Type | Applicable weights               |
     +===============+==================================+
-    | Anscombe      | Unweighted                       |
+    | Anscombe      | ``var_weights``                  |
     +---------------+----------------------------------+
     | Deviance      | ``var_weights``                  |
     +---------------+----------------------------------+
@@ -1364,7 +1364,14 @@ class GLMResults(base.LikelihoodModelResults):
         The two-tailed p-values for the parameters.
     resid_anscombe : array
         Anscombe residuals.  See statsmodels.families.family for distribution-
-        specific Anscombe residuals.
+        specific Anscombe residuals. Currently, the unscaled residuals are
+        provided. In a future version, the scaled residuals will be provided.
+    resid_anscombe_scaled : array
+        Scaled Anscombe residuals.  See statsmodels.families.family for
+        distribution-specific Anscombe residuals.
+    resid_anscombe_unscaled : array
+        Unscaled Anscombe residuals.  See statsmodels.families.family for
+        distribution-specific Anscombe residuals.
     resid_deviance : array
         Deviance residuals.  See statsmodels.families.family for distribution-
         specific deviance residuals.
@@ -1475,7 +1482,24 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def resid_anscombe(self):
-        return self.family.resid_anscombe(self._endog, self.fittedvalues)
+        import warnings
+        warnings.warn('Anscombe residuals currently unscaled. In a future '
+                      'release, they will be scaled.')
+        return self.family.resid_anscombe(self._endog, self.fittedvalues,
+                                          var_weights=self._var_weights,
+                                          scale=1.)
+
+    @cache_readonly
+    def resid_anscombe_scaled(self):
+        return self.family.resid_anscombe(self._endog, self.fittedvalues,
+                                          var_weights=self._var_weights,
+                                          scale=self.scale)
+
+    @cache_readonly
+    def resid_anscombe_unscaled(self):
+        return self.family.resid_anscombe(self._endog, self.fittedvalues,
+                                          var_weights=self._var_weights,
+                                          scale=1.)
 
     @cache_readonly
     def resid_deviance(self):

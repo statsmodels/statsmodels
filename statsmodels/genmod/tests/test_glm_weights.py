@@ -104,7 +104,9 @@ class CheckWeight(object):
         assert_allclose(res1.resid_working, resid_all['resid_working'], atol= 1e-6, rtol=2e-6)
         if resid_all.get('resid_anscombe') is None:
             return None
-        assert_allclose(res1.resid_anscombe, resid_all['resid_anscombe'], atol= 1e-6, rtol=2e-6)
+        # Stata doesn't use var_weights in anscombe residuals, it seems. 
+        # Adjust residuals to match our approach.
+        assert_allclose(res1.resid_anscombe, resid_all['resid_anscombe'] * np.sqrt(res1._var_weights), atol= 1e-6, rtol=2e-6)
 
     def test_compare_optimizers(self):
         res1 = self.res1
@@ -201,7 +203,7 @@ class TestGlmPoissonPwNr(CheckWeight):
     @pytest.mark.xfail(reason='Known to fail')
     def test_compare_optimizers(cls):
         super(cls, TestGlmPoissonPwNr).test_compare_optimizers(cls)
-    
+
 
 class TestGlmPoissonFwHC(CheckWeight):
     @classmethod

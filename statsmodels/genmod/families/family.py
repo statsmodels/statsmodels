@@ -308,7 +308,7 @@ class Family(object):
         ll_obs = self.loglike_obs(endog, mu, var_weights, scale)
         return np.sum(ll_obs * freq_weights)
 
-    def resid_anscombe(self, endog, mu, scale=1.):
+    def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
         r"""
         The Anscombe residuals
 
@@ -318,6 +318,8 @@ class Family(object):
             The endogenous response variable
         mu : array
             The inverse of the link function at the linear predicted values.
+        var_weights : array-like
+            1d array of variance (anlaytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -448,16 +450,18 @@ class Poisson(Family):
         return var_weights / scale * (endog * np.log(mu) - mu -
                                       special.gammaln(endog + 1))
 
-    def resid_anscombe(self, endog, mu, scale=1.):
+    def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
         r"""
-        Anscombe residuals for the Poisson distribution
+        The Anscombe residuals
 
         Parameters
         ----------
-        endog : array-like
-            Endogenous response variable
-        mu : array-like
-            Fitted mean response variable
+        endog : array
+            The endogenous response variable
+        mu : array
+            The inverse of the link function at the linear predicted values.
+        var_weights : array-like
+            1d array of variance (anlaytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -475,7 +479,7 @@ class Poisson(Family):
            \mu_i^{1/6}
         """
         return ((3 / 2.) * (endog**(2 / 3.) - mu**(2 / 3.)) /
-                (mu ** (1 / 6.) * scale ** 0.5))
+                (mu ** (1 / 6.) * (scale / var_weights) ** 0.5))
 
 
 class Gaussian(Family):
@@ -588,16 +592,18 @@ class Gaussian(Family):
         ll_obs /= 2
         return ll_obs
 
-    def resid_anscombe(self, endog, mu, scale=1.):
+    def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
         r"""
-        The Anscombe residuals for the Gaussian distribution
+        The Anscombe residuals
 
         Parameters
         ----------
         endog : array
-            Endogenous response variable
+            The endogenous response variable
         mu : array
-            Fitted mean response variable
+            The inverse of the link function at the linear predicted values.
+        var_weights : array-like
+            1d array of variance (anlaytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -616,7 +622,7 @@ class Gaussian(Family):
 
            resid\_anscombe_i = (Y_i - \mu_i) / \sqrt{scale}
         """
-        return (endog - mu) / scale ** 0.5
+        return (endog - mu) / (scale / var_weights) ** 0.5
 
 
 class Gamma(Family):
@@ -722,16 +728,18 @@ class Gamma(Family):
         # in R it's the dispersion, though there is a loss of precision vs.
         # our results due to an assumed difference in implementation
 
-    def resid_anscombe(self, endog, mu, scale=1.):
+    def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
         r"""
-        The Anscombe residuals for Gamma distribution
+        The Anscombe residuals
 
         Parameters
         ----------
         endog : array
-            Endogenous response variable
+            The endogenous response variable
         mu : array
-            Fitted mean response variable
+            The inverse of the link function at the linear predicted values.
+        var_weights : array-like
+            1d array of variance (anlaytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -748,7 +756,8 @@ class Gamma(Family):
            resid\_anscombe_i = 3 * (endog_i^{1/3} - \mu_i^{1/3}) / \mu_i^{1/3}
            / \sqrt{scale}
         """
-        return 3 * (endog**(1/3.) - mu**(1/3.)) / mu**(1/3.) / scale**(0.5)
+        return (3 * (endog**(1/3.) - mu**(1/3.)) / mu**(1/3.) /
+                (scale / var_weights) ** 0.5)
 
 
 class Binomial(Family):
@@ -915,16 +924,18 @@ class Binomial(Family):
                 special.gammaln(n - y + 1) + y * np.log(mu / (1 - mu)) +
                 n * np.log(1 - mu)) * var_weights
 
-    def resid_anscombe(self, endog, mu, scale=1.):
+    def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
         r'''
         The Anscombe residuals
 
         Parameters
         ----------
-        endog : array-like
-            Endogenous response variable
-        mu : array-like
-            Fitted mean response variable
+        endog : array
+            The endogenous response variable
+        mu : array
+            The inverse of the link function at the linear predicted values.
+        var_weights : array-like
+            1d array of variance (anlaytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -972,7 +983,8 @@ class Binomial(Family):
 
         return (self.n ** (2/3.) * (cox_snell(endog * 1. / self.n) -
                                     cox_snell(mu * 1. / self.n)) /
-                (mu * (1 - mu * 1. / self.n) * scale ** 3) ** (1 / 6.))
+                (mu * (1 - mu * 1. / self.n) *
+                 (scale / var_weights) ** 3) ** (1 / 6.))
 
 
 class InverseGaussian(Family):
@@ -1079,16 +1091,18 @@ class InverseGaussian(Family):
         ll_obs /= 2
         return ll_obs
 
-    def resid_anscombe(self, endog, mu, scale=1.):
+    def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
         r"""
-        The Anscombe residuals for the inverse Gaussian distribution
+        The Anscombe residuals
 
         Parameters
         ----------
         endog : array
-            Endogenous response variable
+            The endogenous response variable
         mu : array
-            Fitted mean response variable
+            The inverse of the link function at the linear predicted values.
+        var_weights : array-like
+            1d array of variance (anlaytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -1105,7 +1119,7 @@ class InverseGaussian(Family):
 
            resid\_anscombe_i = \log(Y_i / \mu_i) / \sqrt{\mu_i * scale}
         """
-        return np.log(endog / mu) / np.sqrt(mu * scale)
+        return np.log(endog / mu) / np.sqrt(mu * scale / var_weights)
 
 
 class NegativeBinomial(Family):
@@ -1247,16 +1261,18 @@ class NegativeBinomial(Family):
         ll_obs -= special.gammaln(endog + 1)
         return var_weights / scale * ll_obs
 
-    def resid_anscombe(self, endog, mu, scale=1.):
+    def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
         r"""
-        The Anscombe residuals for the negative binomial family
+        The Anscombe residuals
 
         Parameters
         ----------
-        endog : array-like
-            Endogenous response variable
-        mu : array-like
-            Fitted mean response variable
+        endog : array
+            The endogenous response variable
+        mu : array
+            The inverse of the link function at the linear predicted values.
+        var_weights : array-like
+            1d array of variance (anlaytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -1287,7 +1303,8 @@ class NegativeBinomial(Family):
 
         return (3 / 2. * (endog ** (2 / 3.) * hyp2f1(-self.alpha * endog) -
                           mu ** (2 / 3.) * hyp2f1(-self.alpha * mu)) /
-                (mu * (1 + self.alpha * mu) * scale ** 3) ** (1 / 6.))
+                (mu * (1 + self.alpha * mu) *
+                 (scale / var_weights) ** 3) ** (1 / 6.))
 
 
 class Tweedie(Family):
@@ -1431,16 +1448,18 @@ class Tweedie(Family):
         """
         return np.nan
 
-    def resid_anscombe(self, endog, mu, scale=1.):
+    def resid_anscombe(self, endog, mu, var_weights=1., scale=1.):
         r"""
-        The Anscombe residuals for the Tweedie family
+        The Anscombe residuals
 
         Parameters
         ----------
-        endog : array-like
-            Endogenous response variable
-        mu : array-like
-            Fitted mean response variable
+        endog : array
+            The endogenous response variable
+        mu : array
+            The inverse of the link function at the linear predicted values.
+        var_weights : array-like
+            1d array of variance (anlaytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -1474,4 +1493,4 @@ class Tweedie(Family):
         else:
             c = (3. - self.var_power) / 3.
             return ((1. / c) * (endog ** c - mu ** c) /
-                    mu ** (self.var_power / 6.)) / scale**(0.5)
+                    mu ** (self.var_power / 6.)) / (scale / var_weights) ** 0.5
