@@ -48,7 +48,12 @@ glw = [[0.2955242247147529, -0.1488743389816312],
 
 _init_doc = r"""
     Fit a generalized linear mixed model using Bayesian methods.
-{fit_method}
+
+    The class implements the Laplace approximation to the posterior
+    distribution (`fit_map`) and a variational Bayes approximation to
+    the posterior (`fit_vb`).  See the fit method docstrings for more
+    information about the fitting approaches.
+
     Parameters
     ----------
     endog : array-like
@@ -109,23 +114,35 @@ _init_doc = r"""
 
     The prior for the fixed effects parameters is Gaussian with mean 0
     and standard deviation `fe_p`.
+
+    Examples
+    --------{example}
     """
 
-_laplace_fit_method = """
-    The class implements the Laplace approximation to the posterior
-    distribution.  See subclasses, e.g. BinomialBayesMixedGLM for
-    other estimation approaches.
+_logit_example = """
+    A binomial (logistic) random effects model with random intercepts
+    for villages and random slopes for year within villages:
+
+    >>> data['year_cen'] = data['Year'] - data.Year.mean()
+    >>> random = ['0 + C(Village)', '0 + C(Village)*year_cen']
+    >>> model = BinomialBayesMixedGLM.from_formula('y ~ year_cen',
+                   random, data)
+    >>> result = model.fit()
 """
 
-_vb_fit_method = """
-    The class implements a variational Bayes approximation to the
-    posterior.  See the docstring to `fit_vb` for more information.
+_poisson_example = """
+    A Poisson random effects model with random intercepts for villages
+    and random slopes for year within villages:
+
+    >>> data['year_cen'] = data['Year'] - data.Year.mean()
+    >>> random = ['0 + C(Village)', '0 + C(Village)*year_cen']
+    >>> model = PoissonBayesMixedGLM.from_formula('y ~ year_cen',
+                    random, data)
+    >>> result = model.fit()
 """
 
 
 class _BayesMixedGLM(object):
-
-    __doc__ = _init_doc.format(fit_method=_laplace_fit_method)
 
     def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=1,
                  fe_p=2, family=None, fep_names=None,
@@ -706,7 +723,7 @@ class BayesMixedGLMResults(object):
 
 class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
 
-    __doc__ = _init_doc.format(fit_method=_vb_fit_method)
+    __doc__ = _init_doc.format(example=_logit_example)
 
     def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=1,
                  fe_p=2, fep_names=None, vcp_names=None):
@@ -772,7 +789,7 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
 
 class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
 
-    __doc__ = _init_doc.format(fit_method=_vb_fit_method)
+    __doc__ = _init_doc.format(example=_poisson_example)
 
     def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=1,
                  fe_p=2, fep_names=None, vcp_names=None):
