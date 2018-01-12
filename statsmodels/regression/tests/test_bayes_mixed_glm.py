@@ -162,9 +162,9 @@ def test_crossed_poisson_map():
                     np.zeros_like(rslt.params), atol=1e-4)
 
 
-def test_logit_map_crosed_formula():
+def test_logit_map_crossed_formula():
 
-    data = gen_crossed_logit_pandas(10, 10, 1, 2)
+    data = gen_crossed_logit_pandas(10, 10, 1, 0.5)
 
     fml = "y ~ fe"
     fml_vc = ["0 + C(a)", "0 + C(b)"]
@@ -179,7 +179,7 @@ def test_logit_map_crosed_formula():
 
     r = rslt.random_effects(0)
     assert_allclose(r.iloc[0, :].values,
-                    np.r_[-0.0258016, 0.0937002], atol=1e-4)
+                    np.r_[-0.02004904, 0.10013856], atol=1e-4)
 
 
 def test_elbo_grad():
