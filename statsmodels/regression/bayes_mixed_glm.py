@@ -146,7 +146,7 @@ class _BayesMixedGLM(object):
 
     def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=1,
                  fe_p=2, family=None, fep_names=None,
-                 vcp_names=None):
+                 vcp_names=None, vc_names=None):
 
         if family is None:
             family = sm.families.Gaussian()
@@ -174,6 +174,10 @@ class _BayesMixedGLM(object):
                 msg = "The lengths of vcp_names and ident should be the same"
                 raise ValueError(msg)
         self.vcp_names = vcp_names
+
+        # Get the variance component realization (random effect)
+        # names.
+        self.vc_names = vc_names
 
         self.endog = np.asarray(endog)
         self.exog_fe = np.asarray(exog_fe)
@@ -319,7 +323,7 @@ class _BayesMixedGLM(object):
 
     @classmethod
     def from_formula(cls, formula, vc_formulas, data, family=None,
-                     vcp_p=1, fe_p=2, vcp_names=None):
+                     vcp_p=1, fe_p=2, vcp_names=None, vc_names=None):
 
         """
         Fit a BayesMixedGLM using a formula.
@@ -346,6 +350,8 @@ class _BayesMixedGLM(object):
             The prior standard deviation for the fixed effects parameters.
         vcp_names : list
             Names of variance component parameters
+        vc_names : list
+            Names of random effects realizations
         """
 
         if not type(vc_formulas) is list:
@@ -361,6 +367,7 @@ class _BayesMixedGLM(object):
             exog_vc.append(mat)
             ident.append(j * np.ones(mat.shape[1]))
         exog_vc = pd.concat(exog_vc, axis=1)
+        vc_names = exog_vc.columns.tolist()
 
         if vcp_names is None:
             vcp_names = ["VC_%d" % (k + 1) for k in range(len(vc_formulas))]
@@ -375,7 +382,7 @@ class _BayesMixedGLM(object):
 
         mod = _BayesMixedGLM(endog, exog_fe, exog_vc, ident, vcp_p, fe_p,
                              family=family, fep_names=fep_names,
-                             vcp_names=vcp_names)
+                             vcp_names=vcp_names, vc_names=vc_names)
 
         return mod
 
@@ -720,34 +727,72 @@ class BayesMixedGLMResults(object):
 
         return summ
 
+    def random_effects(self, term=None):
+        """
+        Posterior mean and standard deviation of random effects.
+
+        Parameters
+        ----------
+        term : int or None
+            If None, results for all random effects are returned.  If
+            an integer, returns results for a given set of random
+            effects.  The value of `term` refers to an element of the
+            `ident` vector, or to a position in the `vc_formulas`
+            list.
+
+        Returns
+        -------
+        Data frame of posterior means and posterior standard
+        deviations of random effects.
+        """
+
+        z = self.vc_mean
+        s = self.vc_sd
+        na = self.model.vc_names
+
+        if term is not None:
+            ii = np.flatnonzero(self.model.ident == term)
+            z = z[ii]
+            s = s[ii]
+            na = [na[i] for i in ii]
+
+        x = pd.DataFrame({"Mean": z, "SD": s})
+
+        if na is not None:
+            x.index = na
+
+        return x
+
 
 class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
 
     __doc__ = _init_doc.format(example=_logit_example)
 
     def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=1,
-                 fe_p=2, fep_names=None, vcp_names=None):
+                 fe_p=2, fep_names=None, vcp_names=None,
+                 vc_names=None):
 
         super(BinomialBayesMixedGLM, self).__init__(
             endog=endog, exog_fe=exog_fe, exog_vc=exog_vc,
             ident=ident, vcp_p=vcp_p, fe_p=fe_p,
             family=sm.families.Binomial(),
-            fep_names=fep_names, vcp_names=vcp_names)
+            fep_names=fep_names, vcp_names=vcp_names,
+            vc_names=vc_names)
 
     @classmethod
     def from_formula(cls, formula, vc_formulas, data, vcp_p=1, fe_p=2,
-                     vcp_names=None):
+                     vcp_names=None, vc_names=None):
 
         fam = sm.families.Binomial()
-        x = _BayesMixedGLM.from_formula(formula, vc_formulas, data,
-                                        family=fam, vcp_p=vcp_p, fe_p=fe_p,
-                                        vcp_names=vcp_names)
+        x = _BayesMixedGLM.from_formula(
+            formula, vc_formulas, data, family=fam, vcp_p=vcp_p, fe_p=fe_p,
+            vcp_names=vcp_names, vc_names=vc_names)
 
-        return BinomialBayesMixedGLM(endog=x.endog, exog_fe=x.exog_fe,
-                                     exog_vc=x.exog_vc, ident=x.ident,
-                                     vcp_p=x.vcp_p, fe_p=x.fe_p,
-                                     fep_names=x.fep_names,
-                                     vcp_names=x.vcp_names)
+        return BinomialBayesMixedGLM(
+            endog=x.endog, exog_fe=x.exog_fe, exog_vc=x.exog_vc,
+            ident=x.ident, vcp_p=x.vcp_p, fe_p=x.fe_p,
+            fep_names=x.fep_names, vcp_names=x.vcp_names,
+            vc_names=x.vc_names)
 
     def vb_elbo(self, vb_mean, vb_sd):
         """
@@ -802,18 +847,18 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
 
     @classmethod
     def from_formula(cls, formula, vc_formulas, data, vcp_p=1, fe_p=2,
-                     vcp_names=None):
+                     vcp_names=None, vc_names=None):
 
         fam = sm.families.Poisson()
-        x = _BayesMixedGLM.from_formula(formula, vc_formulas, data,
-                                        family=fam, vcp_p=vcp_p, fe_p=fe_p,
-                                        vcp_names=vcp_names)
+        x = _BayesMixedGLM.from_formula(
+            formula, vc_formulas, data, family=fam, vcp_p=vcp_p, fe_p=fe_p,
+            vcp_names=vcp_names, vc_names=vc_names)
 
-        return PoissonBayesMixedGLM(endog=x.endog, exog_fe=x.exog_fe,
-                                    exog_vc=x.exog_vc, ident=x.ident,
-                                    vcp_p=x.vcp_p, fe_p=x.fe_p,
-                                    fep_names=x.fep_names,
-                                    vcp_names=x.vcp_names)
+        return PoissonBayesMixedGLM(
+            endog=x.endog, exog_fe=x.exog_fe, exog_vc=x.exog_vc,
+            ident=x.ident, vcp_p=x.vcp_p, fe_p=x.fe_p,
+            fep_names=x.fep_names, vcp_names=x.vcp_names,
+            vc_names=x.vc_names)
 
     def vb_elbo(self, vb_mean, vb_sd):
         """

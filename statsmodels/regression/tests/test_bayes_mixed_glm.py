@@ -177,6 +177,10 @@ def test_logit_map_crosed_formula():
 
     rslt.summary()
 
+    r = rslt.random_effects(0)
+    assert_allclose(r.iloc[0, :].values,
+                    np.r_[-0.0258016, 0.0937002], atol=1e-4)
+
 
 def test_elbo_grad():
 
