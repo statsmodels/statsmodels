@@ -684,7 +684,9 @@ class Lbw(object):
         # data set up for data not in datasets
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "stata_lbw_glm.csv")
-        data=np.recfromcsv(open(filename, 'rb'), converters={4: lambda s: s.strip(asbytes("\""))})
+        data=np.recfromcsv(open(filename, 'rb'))
+        vfunc = np.vectorize(lambda x: x.strip(asbytes("\"")))
+        data['race'] = vfunc(data['race'])
         data = categorical(data, col='race', drop=True)
         self.endog = data.low
         design = np.column_stack((data['age'], data['lwt'],
@@ -2191,7 +2193,9 @@ class Medpar1(object):
     def __init__(self):
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "stata_medpar1_glm.csv")
-        data = np.recfromcsv(open(filename, 'rb'), converters ={1: lambda s: s.strip(asbytes("\""))})
+        data = np.recfromcsv(open(filename, 'rb'))
+        vfunc = np.vectorize(lambda x: x.strip(asbytes('\"')))
+        data['admitype'] = vfunc(data['admitype'])
         self.endog = data.los
         design = np.column_stack((data.admitype, data.codes))
         design = categorical(design, col=0, drop=True)
