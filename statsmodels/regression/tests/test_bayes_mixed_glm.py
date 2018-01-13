@@ -2,6 +2,8 @@ import numpy as np
 from statsmodels.regression.bayes_mixed_glm import (
     BinomialBayesMixedGLM, PoissonBayesMixedGLM)
 import pandas as pd
+from distutils.version import LooseVersion
+import scipy
 from scipy import sparse
 from numpy.testing import assert_allclose
 from scipy.optimize import approx_fprime
@@ -177,9 +179,10 @@ def test_logit_map_crossed_formula():
 
     rslt.summary()
 
-    r = rslt.random_effects(0)
-    assert_allclose(r.iloc[0, :].values,
-                    np.r_[-0.02004904, 0.10013856], atol=1e-4)
+    if LooseVersion(scipy.__version__) >= LooseVersion("0.19.0"):
+        r = rslt.random_effects(0)
+        assert_allclose(r.iloc[0, :].values,
+                        np.r_[-0.02004904, 0.10013856], atol=1e-4)
 
 
 def test_elbo_grad():
@@ -286,6 +289,9 @@ def test_simple_poisson_vb():
         -0.07233493, -0.06706505, -0.47159649,  1.12575122, -1.02442201],
                     rtol=1e-4, atol=1e-4)
 
+    if LooseVersion(scipy.__version__) < LooseVersion("0.19.0"):
+        return
+
     assert_allclose(rslt1.cov_params.flat[0:5], np.r_[
         0.00737842, 0.0012137, -0.00033823, -0.00029894,  0.00072396],
                     rtol=1e-4, atol=1e-4)
@@ -318,6 +324,9 @@ def test_crossed_logit_vb():
         -5.43073978e-01, -2.46197518e+00, -2.36582801e+00,
         -9.64030461e-03, 2.32701078e-03],
                     rtol=1e-4, atol=1e-4)
+
+    if LooseVersion(scipy.__version__) < LooseVersion("0.19.0"):
+        return
 
     assert_allclose(rslt1.cov_params.flat[0:5], np.r_[
         0.03937444, 0.00218164, 0.00599386, 0.00039312, 0.00017214],
