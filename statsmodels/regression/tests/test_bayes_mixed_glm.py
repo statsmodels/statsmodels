@@ -286,8 +286,16 @@ def test_simple_poisson_vb():
         -0.07233493, -0.06706505, -0.47159649,  1.12575122, -1.02442201],
                     rtol=1e-4, atol=1e-4)
 
+    assert_allclose(rslt1.cov_params.flat[0:5], np.r_[
+        0.00737842, 0.0012137, -0.00033823, -0.00029894,  0.00072396],
+                    rtol=1e-4, atol=1e-4)
+
     assert_allclose(rslt2.params[0:5], np.r_[
         -0.07088814, -0.06373107, -0.22770786,  1.12923746, -1.26161339],
+                    rtol=1e-4, atol=1e-4)
+
+    assert_allclose(rslt2.cov_params[0:5], np.r_[
+        0.00747782, 0.0092554, 0.04508904, 0.02934488, 0.20312746],
                     rtol=1e-4, atol=1e-4)
 
 
@@ -311,8 +319,16 @@ def test_crossed_logit_vb():
         -9.64030461e-03, 2.32701078e-03],
                     rtol=1e-4, atol=1e-4)
 
+    assert_allclose(rslt1.cov_params.flat[0:5], np.r_[
+        0.03937444, 0.00218164, 0.00599386, 0.00039312, 0.00017214],
+                    rtol=1e-4, atol=1e-4)
+
     assert_allclose(rslt2.params[0:5], np.r_[
         -0.70834417, -0.3571011, 0.19126823, -0.36074489, 0.058976],
+                    rtol=1e-4, atol=1e-4)
+
+    assert_allclose(rslt2.cov_params[0:5], np.r_[
+        0.05212492, 0.04729656, 0.03916944, 0.25921842, 0.25782576],
                     rtol=1e-4, atol=1e-4)
 
 
