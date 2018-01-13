@@ -406,7 +406,11 @@ class _BayesMixedGLM(object):
                    np.sqrt(np.sum(r.jac**2)))
             warnings.warn(msg)
 
-        return BayesMixedGLMResults(self, r.x, r.hess_inv, optim_retvals=r)
+        from statsmodels.tools.numdiff import approx_fprime
+        hess = approx_fprime(r.x, grad)
+        hess_inv = np.linalg.inv(hess)
+
+        return BayesMixedGLMResults(self, r.x, hess_inv, optim_retvals=r)
 
 
 class _VariationalBayesMixedGLM(object):
