@@ -178,7 +178,6 @@ class TestGlmPoissonAwNr(CheckWeight):
 
 
 # prob_weights fail with HC, not properly implemented yet
-@pytest.mark.xfail
 class TestGlmPoissonPwNr(CheckWeight):
     @classmethod
     def setup_class(cls):
@@ -195,6 +194,14 @@ class TestGlmPoissonPwNr(CheckWeight):
         #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         cls.res2 = res_stata.results_poisson_pweight_nonrobust
 
+    @pytest.mark.xfail(reason='Known to fail')
+    def test_basic(cls):
+        super(cls, TestGlmPoissonPwNr).test_basic(cls)
+
+    @pytest.mark.xfail(reason='Known to fail')
+    def test_compare_optimizers(cls):
+        super(cls, TestGlmPoissonPwNr).test_compare_optimizers(cls)
+    
 
 class TestGlmPoissonFwHC(CheckWeight):
     @classmethod
