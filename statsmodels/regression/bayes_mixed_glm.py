@@ -11,16 +11,33 @@ approximation to the posterior).
 Random effects are required to be independent in this implementation.
 
 The `exog_vc` matrix is the design matrix for the random effects.
-Every column of `exog_vc` corresponds to an independent realizattion
-of a random effect.  These random effects have mean zero and an
-unknown standard deviation.  The standard deviation parameters are
-constrained, so that a subset of the columns of `exog_vc` will have a
-common variance.  These subsets are specified through the parameer
-`ident`.
+Every column of `exog_vc` corresponds to an independent realization of
+a random effect.  These random effects have mean zero and an unknown
+standard deviation.  The standard deviation parameters are constrained
+to be equal within subsets of the columns. These subsets are specified
+through the parameer `ident` when not using formulas.  When formulas
+are used, the columns of `exog_vc` derived from a common formula are
+constrained to have the same standard deviation.
 
 In many applications, `exog_vc` will be sparse.  A sparse matrix may
 be passed when constructing a model class.  If a dense matrix is
-passed, it will be converted internally to a sparse matrix.
+passed, it will be converted internally to a sparse matrix.  There
+currently is no way to avoid creating a temporary dense version of
+`exog_vc` when using formulas.
+
+Model and parameterization
+--------------------------
+The joint density of data and parameters factors as:
+
+  p(y | vc, fep) p(vc | vcp) p(vcp) p(fe)
+
+The terms p(vcp) and p(fe) are prior distributions that are taken to
+be Gaussian (the vcp parameters are log standard deviations so the
+variance parameters have log-normal distributions).  The random
+effects distribution p(vc | vcp) is independent Gaussian (random
+effect realizations are independent within and between values of the
+`ident` array).  The model p(y | vc, fep) is based on the specific GLM
+being fit.
 """
 
 from __future__ import division
@@ -51,8 +68,8 @@ _init_doc = r"""
 
     The class implements the Laplace approximation to the posterior
     distribution (`fit_map`) and a variational Bayes approximation to
-    the posterior (`fit_vb`).  See the fit method docstrings for more
-    information about the fitting approaches.
+    the posterior (`fit_vb`).  See the two fit method docstrings for
+    more information about the fitting approaches.
 
     Parameters
     ----------
@@ -66,8 +83,8 @@ _init_doc = r"""
         scipy.sparse array may be provided, or else the passed
         array will be converted to sparse internally.
     ident : array-like
-        Array of labels showing which random terms have a common
-        variance.
+        Array of labels showing which random terms (columns of
+        `exog_vc`) have a common variance.
     vc_p : float
         Prior standard deviation for variance component parameters
         (the prior standard deviation of log(s) is vc_p, where s is
@@ -77,11 +94,14 @@ _init_doc = r"""
     family : statsmodels.genmod.families instance
         The GLM family.
     fep_names : list of strings
-        The names of the fixed effects parameters (corresponding
-        to columns of exog_fe).
+        The names of the fixed effects parameters (corresponding to
+        columns of exog_fe).  If None, default names are constructed.
     vcp_names : list of strings
         The names of the variance component parameters (corresponding
-        to distinct labels in ident).
+        to distinct labels in ident).  If None, default names are
+        constructed.
+    vc_names : list of strings
+        The nmes of the random effect realizations.
 
     Returns
     -------
@@ -102,7 +122,9 @@ _init_doc = r"""
     linear predictors.  The elements of `ident` determine the distinct
     random effect variance parameters.  Two random effect realizations
     that have the same value in `ident` are constrained to have the
-    same variance.
+    same variance.  When fitting with a formula, `ident` is
+    constructed internally (each element of `vc_formulas` yields a
+    distinct label in `ident`).
 
     The random effect standard deviation parameters (vcp) have
     log-normal prior distributions with mean 0 and standard deviation
@@ -121,7 +143,7 @@ _init_doc = r"""
 
 _logit_example = """
     A binomial (logistic) random effects model with random intercepts
-    for villages and random slopes for year within villages:
+    for villages and random slopes for each year within each village:
 
     >>> data['year_cen'] = data['Year'] - data.Year.mean()
     >>> random = ['0 + C(Village)', '0 + C(Village)*year_cen']
@@ -132,7 +154,7 @@ _logit_example = """
 
 _poisson_example = """
     A Poisson random effects model with random intercepts for villages
-    and random slopes for year within villages:
+    and random slopes for each year within each village:
 
     >>> data['year_cen'] = data['Year'] - data.Year.mean()
     >>> random = ['0 + C(Village)', '0 + C(Village)*year_cen']
@@ -144,13 +166,9 @@ _poisson_example = """
 
 class _BayesMixedGLM(object):
 
-    def __init__(self, endog, exog_fe, exog_vc, ident, vcp_p=1,
-                 fe_p=2, family=None, fep_names=None,
+    def __init__(self, endog, exog_fe, exog_vc, ident, family,
+                 vcp_p=1, fe_p=2, fep_names=None,
                  vcp_names=None, vc_names=None):
-
-        if family is None:
-            family = sm.families.Gaussian()
-            warnings.Warn("Defaulting to Gaussian family")
 
         if len(ident) != exog_vc.shape[1]:
             msg = "len(ident) should match the number of columns of exog_vc"
@@ -380,8 +398,8 @@ class _BayesMixedGLM(object):
         exog_fe = np.asarray(exog_fe)
         exog_vc = sparse.csr_matrix(np.asarray(exog_vc))
 
-        mod = _BayesMixedGLM(endog, exog_fe, exog_vc, ident, vcp_p, fe_p,
-                             family=family, fep_names=fep_names,
+        mod = _BayesMixedGLM(endog, exog_fe, exog_vc, ident, family,
+                             vcp_p, fe_p, fep_names=fep_names,
                              vcp_names=vcp_names, vc_names=vc_names)
 
         return mod
@@ -390,6 +408,17 @@ class _BayesMixedGLM(object):
         """
         Construct the Laplace approximation to the posterior
         distribution.
+
+        Parameters
+        ----------
+        method : string
+            Optimization method for finding the posterior mode.
+        minim_opts : dict-like
+            Options passed to scipy.minimize.
+
+        Returns
+        -------
+        BayesMixedGLMResults instance.
         """
 
         def fun(params):
