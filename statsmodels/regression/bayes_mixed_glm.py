@@ -139,6 +139,18 @@ _init_doc = r"""
 
     Examples
     --------{example}
+
+
+    References
+    ----------
+    Introduction to generalized linear mixed models:
+    https://stats.idre.ucla.edu/other/mult-pkg/introduction-to-generalized-linear-mixed-models
+
+    SAS documentation:
+    https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_intromix_a0000000215.htm
+
+    An assessment of estimation methods for generalized linear mixed models with binary outcomes
+    https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3866838/
     """
 
 _logit_example = """
