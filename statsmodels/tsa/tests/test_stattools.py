@@ -7,9 +7,9 @@ from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
                                                coint, acovf, kpss, ResultsStore,
                                                arma_order_select_ic)
 import numpy as np
+import pandas as pd
 from numpy.testing import (assert_almost_equal, assert_equal, assert_warns,
                            assert_raises, dec, assert_, assert_allclose)
-from numpy import genfromtxt
 from statsmodels.datasets import macrodata, sunspots
 from pandas import Series, DatetimeIndex, DataFrame
 import os
@@ -130,7 +130,7 @@ class CheckCorrGram(object):
     x = data.data['realgdp']
     filename = os.path.dirname(os.path.abspath(__file__))+\
             "/results/results_corrgram.csv"
-    results = genfromtxt(open(filename, "rb"), delimiter=",", names=True,dtype=float)
+    results = pd.read_csv(filename, delimiter=',')
 
     #not needed: add 1. for lag zero
     #self.results['acvar'] = np.concatenate(([1.], self.results['acvar']))
@@ -146,8 +146,8 @@ class TestACF(CheckCorrGram):
         #cls.acf = np.concatenate(([1.], cls.acf))
         cls.qstat = cls.results['Q1']
         cls.res1 = acf(cls.x, nlags=40, qstat=True, alpha=.05)
-        cls.confint_res = cls.results[['acvar_lb','acvar_ub']].view((float,
-                                                                            2))
+        cls.confint_res = cls.results[['acvar_lb','acvar_ub']].as_matrix()
+
     def test_acf(self):
         assert_almost_equal(self.res1[0][1:41], self.acf, DECIMAL_8)
 

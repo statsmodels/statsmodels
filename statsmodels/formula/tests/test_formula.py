@@ -8,7 +8,6 @@ from statsmodels.datasets.longley import load, load_pandas
 
 import numpy.testing as npt
 from statsmodels.tools.testing import assert_equal
-from numpy.testing.utils import WarningManager
 
 
 longley_formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
@@ -34,14 +33,10 @@ class CheckFormulaOLS(object):
 
     def test_summary(self):
         # smoke test
-        warn_ctx = WarningManager()
-        warn_ctx.__enter__()
-        try:
+        with warnings.catch_warnings():
             warnings.filterwarnings("ignore",
                                     "kurtosistest only valid for n>=20")
             self.model.fit().summary()
-        finally:
-            warn_ctx.__exit__()
 
 
 class TestFormulaPandas(CheckFormulaOLS):

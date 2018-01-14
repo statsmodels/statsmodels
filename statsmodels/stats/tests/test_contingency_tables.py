@@ -61,7 +61,8 @@ def test_SquareTable_from_data():
                  rslt3.summary().as_text())
 
     s = str(rslt1)
-    assert_equal(s.startswith('A 5x5 contingency table with counts:\n[[ 8.'), True)
+    assert_equal(s.startswith('A 5x5 contingency table with counts:'), True)
+    assert_equal(rslt1.table[0, 0], 8.)
 
 
 def test_SquareTable_nonsquare():
