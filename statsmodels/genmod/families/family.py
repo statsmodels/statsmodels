@@ -281,7 +281,7 @@ class Family(object):
         mu : array
             Usually but not always the fitted mean response variable.
         var_weights : array-like
-            1d array of variance (anlaytic) weights. The default is 1.
+            1d array of variance (analytic) weights. The default is 1.
         freq_weights : array-like
             1d array of frequency weights. The default is 1.
         scale : float
@@ -319,7 +319,7 @@ class Family(object):
         mu : array
             The inverse of the link function at the linear predicted values.
         var_weights : array-like
-            1d array of variance (anlaytic) weights. The default is 1.
+            1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -334,7 +334,8 @@ class Family(object):
         Anscombe residuals are defined by
 
         .. math::
-           resid\_anscombe_i = \frac{A(y)-A(\mu)}{A'(\mu)\sqrt{Var[\mu]}}
+           resid\_anscombe_i = \frac{A(y)-A(\mu)}{A'(\mu)\sqrt{Var[\mu]}} *
+           \sqrt(var\_weights)
 
         where :math:`A'(y)=v(y)^{-\frac{1}{3}}` and :math:`v(\mu)` is the
         variance function :math:`Var[y]=\frac{\phi}{w}v(mu)`.
@@ -461,7 +462,7 @@ class Poisson(Family):
         mu : array
             The inverse of the link function at the linear predicted values.
         var_weights : array-like
-            1d array of variance (anlaytic) weights. The default is 1.
+            1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -476,10 +477,12 @@ class Poisson(Family):
         .. math::
 
            resid\_anscombe_i = (3/2) * (endog_i^{2/3} - \mu_i^{2/3}) /
-           \mu_i^{1/6}
+           \mu_i^{1/6} * \sqrt(var\_weights)
         """
-        return ((3 / 2.) * (endog**(2 / 3.) - mu**(2 / 3.)) /
-                (mu ** (1 / 6.) * (scale / var_weights) ** 0.5))
+        resid = ((3 / 2.) * (endog**(2 / 3.) - mu**(2 / 3.)) /
+                 (mu ** (1 / 6.) * scale ** 0.5))
+        resid *= np.sqrt(var_weights)
+        return resid
 
 
 class Gaussian(Family):
@@ -603,7 +606,7 @@ class Gaussian(Family):
         mu : array
             The inverse of the link function at the linear predicted values.
         var_weights : array-like
-            1d array of variance (anlaytic) weights. The default is 1.
+            1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -620,9 +623,12 @@ class Gaussian(Family):
 
         .. math::
 
-           resid\_anscombe_i = (Y_i - \mu_i) / \sqrt{scale}
+           resid\_anscombe_i = (Y_i - \mu_i) / \sqrt{scale} *
+           \sqrt(var\_weights)
         """
-        return (endog - mu) / (scale / var_weights) ** 0.5
+        resid = (endog - mu) / scale ** 0.5
+        resid *= np.sqrt(var_weights)
+        return resid
 
 
 class Gamma(Family):
@@ -739,7 +745,7 @@ class Gamma(Family):
         mu : array
             The inverse of the link function at the linear predicted values.
         var_weights : array-like
-            1d array of variance (anlaytic) weights. The default is 1.
+            1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -754,10 +760,11 @@ class Gamma(Family):
         .. math::
 
            resid\_anscombe_i = 3 * (endog_i^{1/3} - \mu_i^{1/3}) / \mu_i^{1/3}
-           / \sqrt{scale}
+           / \sqrt{scale} * \sqrt(var\_weights)
         """
-        return (3 * (endog**(1/3.) - mu**(1/3.)) / mu**(1/3.) /
-                (scale / var_weights) ** 0.5)
+        resid = 3 * (endog**(1/3.) - mu**(1/3.)) / mu**(1/3.) / scale ** 0.5
+        resid *= np.sqrt(var_weights)
+        return resid
 
 
 class Binomial(Family):
@@ -935,7 +942,7 @@ class Binomial(Family):
         mu : array
             The inverse of the link function at the linear predicted values.
         var_weights : array-like
-            1d array of variance (anlaytic) weights. The default is 1.
+            1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -950,7 +957,7 @@ class Binomial(Family):
         .. math::
 
             n^{2/3}*(cox\_snell(endog)-cox\_snell(mu)) /
-            (mu*(1-mu/n)*scale^3)^{1/6}
+            (mu*(1-mu/n)*scale^3)^{1/6} * \sqrt(var\_weights)
 
         where cox_snell is defined as
         cox_snell(x) = betainc(2/3., 2/3., x)*betainc(2/3.,2/3.)
@@ -981,10 +988,11 @@ class Binomial(Family):
         def cox_snell(x):
             return special.betainc(2/3., 2/3., x) * special.beta(2/3., 2/3.)
 
-        return (self.n ** (2/3.) * (cox_snell(endog * 1. / self.n) -
-                                    cox_snell(mu * 1. / self.n)) /
-                (mu * (1 - mu * 1. / self.n) *
-                 (scale / var_weights) ** 3) ** (1 / 6.))
+        resid = (self.n ** (2/3.) * (cox_snell(endog * 1. / self.n) -
+                                     cox_snell(mu * 1. / self.n)) /
+                 (mu * (1 - mu * 1. / self.n) * scale ** 3) ** (1 / 6.))
+        resid *= np.sqrt(var_weights)
+        return resid
 
 
 class InverseGaussian(Family):
@@ -1102,7 +1110,7 @@ class InverseGaussian(Family):
         mu : array
             The inverse of the link function at the linear predicted values.
         var_weights : array-like
-            1d array of variance (anlaytic) weights. The default is 1.
+            1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -1117,9 +1125,12 @@ class InverseGaussian(Family):
         -----
         .. math::
 
-           resid\_anscombe_i = \log(Y_i / \mu_i) / \sqrt{\mu_i * scale}
+           resid\_anscombe_i = \log(Y_i / \mu_i) / \sqrt{\mu_i * scale} *
+           \sqrt(var\_weights)
         """
-        return np.log(endog / mu) / np.sqrt(mu * scale / var_weights)
+        resid = np.log(endog / mu) / np.sqrt(mu * scale)
+        resid *= np.sqrt(var_weights)
+        return resid
 
 
 class NegativeBinomial(Family):
@@ -1272,7 +1283,7 @@ class NegativeBinomial(Family):
         mu : array
             The inverse of the link function at the linear predicted values.
         var_weights : array-like
-            1d array of variance (anlaytic) weights. The default is 1.
+            1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -1293,7 +1304,7 @@ class NegativeBinomial(Family):
 
             resid\_anscombe_i = \frac{3}{2} *
             (Y_i^(2/3)*H2F1(-\alpha*Y_i) - \mu_i^(2/3)*H2F1(-\alpha*\mu_i))
-            / (\mu_i * (1+\alpha*\mu_i) * scale^3)^(1/6)
+            / (\mu_i * (1+\alpha*\mu_i) * scale^3)^(1/6) * \sqrt(var\_weights)
 
         Note that for the (unregularized) Beta function, one has
         :math:`Beta(z,a,b) = z^a/a * H2F1(a,1-b,a+1,z)`
@@ -1301,10 +1312,12 @@ class NegativeBinomial(Family):
         def hyp2f1(x):
             return special.hyp2f1(2 / 3., 1 / 3., 5 / 3., x)
 
-        return (3 / 2. * (endog ** (2 / 3.) * hyp2f1(-self.alpha * endog) -
-                          mu ** (2 / 3.) * hyp2f1(-self.alpha * mu)) /
-                (mu * (1 + self.alpha * mu) *
-                 (scale / var_weights) ** 3) ** (1 / 6.))
+        resid = (3 / 2. * (endog ** (2 / 3.) * hyp2f1(-self.alpha * endog) -
+                           mu ** (2 / 3.) * hyp2f1(-self.alpha * mu)) /
+                 (mu * (1 + self.alpha * mu) *
+                 scale ** 3) ** (1 / 6.))
+        resid *= np.sqrt(var_weights)
+        return resid
 
 
 class Tweedie(Family):
@@ -1459,7 +1472,7 @@ class Tweedie(Family):
         mu : array
             The inverse of the link function at the linear predicted values.
         var_weights : array-like
-            1d array of variance (anlaytic) weights. The default is 1.
+            1d array of variance (analytic) weights. The default is 1.
         scale : float, optional
             An optional argument to divide the residuals by sqrt(scale).
             The default is 1.
@@ -1475,7 +1488,8 @@ class Tweedie(Family):
 
         .. math::
 
-            resid\_anscombe_i = \log(endog_i / \mu_i) / \sqrt{\mu_i * scale}
+            resid\_anscombe_i = \log(endog_i / \mu_i) / \sqrt{\mu_i * scale} *
+            \sqrt(var\_weights)
 
         Otherwise,
 
@@ -1486,11 +1500,13 @@ class Tweedie(Family):
         .. math::
 
             resid\_anscombe_i = (1 / c) * (endog_i^c - \mu_i^c) / \mu_i^{p / 6}
-            / \sqrt{scale}
+            / \sqrt{scale} * \sqrt(var\_weights)
         """
         if self.var_power == 3:
-            return np.log(endog / mu) / np.sqrt(mu * scale)
+            resid = np.log(endog / mu) / np.sqrt(mu * scale)
         else:
             c = (3. - self.var_power) / 3.
-            return ((1. / c) * (endog ** c - mu ** c) /
-                    mu ** (self.var_power / 6.)) / (scale / var_weights) ** 0.5
+            resid = ((1. / c) * (endog ** c - mu ** c) /
+                     mu ** (self.var_power / 6.)) / scale ** 0.5
+        resid *= np.sqrt(var_weights)
+        return resid
