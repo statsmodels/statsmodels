@@ -1504,8 +1504,9 @@ class GLMResults(base.LikelihoodModelResults):
     @cache_readonly
     def resid_deviance(self):
         dev = self.family.resid_dev(self._endog, self.fittedvalues,
-                                    self._var_weights)
-        return np.sign(self._endog - self.fittedvalues) * np.sqrt(dev)
+                                    var_weights=self._var_weights,
+                                    scale=1.)
+        return dev
 
     @cache_readonly
     def pearson_chi2(self):
