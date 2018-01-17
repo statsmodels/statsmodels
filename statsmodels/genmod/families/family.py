@@ -1048,8 +1048,6 @@ class InverseGaussian(Family):
             The endogenous response variable.
         mu : array
             The inverse of the link function at the linear predicted values.
-        var_weights : array
-            1d array of variance (analytic) weights. The default is 1.
 
         Returns
         -------
