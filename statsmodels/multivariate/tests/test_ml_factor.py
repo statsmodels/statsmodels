@@ -90,7 +90,7 @@ def test_em():
     cor = np.asarray([[1, 0.5, 0.3], [0.5, 1, 0], [0.3, 0, 1]])
 
     fa = Factor(corr=cor, n_factor=n_factor, method='ml')
-    rslt = fa.fit(opt={'gtol': 1e-4})
+    rslt = fa.fit(opt={'gtol': 1e-3})
     load_opt = rslt.loadings
     uniq_opt = rslt.uniqueness
 
