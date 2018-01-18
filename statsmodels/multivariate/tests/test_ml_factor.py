@@ -62,6 +62,45 @@ def test_exact():
             rslt.summary()  # smoke test
 
 
+def test_exact_em():
+    # Test if we can recover exact factor-structured matrices with
+    # default starting values using the EM algorithm.
+
+    np.random.seed(23324)
+
+    # Works for larger k_var but slow for routine testing.
+    for k_var in 5, 10, 25:
+        for n_factor in 1, 2, 3:
+            load = np.random.normal(size=(k_var, n_factor))
+            uniq = np.linspace(1, 2, k_var)
+            c = np.dot(load, load.T)
+            c.flat[::c.shape[0]+1] += uniq
+            s = np.sqrt(np.diag(c))
+            c /= np.outer(s, s)
+            fa = Factor(corr=c, n_factor=n_factor, method='ml')
+            load_e, uniq_e = fa._fit_ml_em(200)
+            c_e = np.dot(load_e, load_e.T)
+            c_e.flat[::c_e.shape[0]+1] += uniq_e
+            assert_allclose(c_e, c, rtol=1e-4, atol=1e-4)
+
+
+def test_em():
+
+    n_factor = 1
+    cor = np.asarray([[1, 0.5, 0.3], [0.5, 1, 0], [0.3, 0, 1]])
+
+    fa = Factor(corr=cor, n_factor=n_factor, method='ml')
+    rslt = fa.fit(opt={'gtol': 1e-4})
+    load_opt = rslt.loadings
+    uniq_opt = rslt.uniqueness
+
+    load_em, uniq_em = fa._fit_ml_em(1000)
+    cc = np.dot(load_em, load_em.T)
+    cc.flat[::cc.shape[0]+1] += uniq_em
+
+    assert_allclose(cc, rslt.fitted_cov, rtol=1e-2, atol=1e-2)
+
+
 def test_1factor():
     """
     # R code:
