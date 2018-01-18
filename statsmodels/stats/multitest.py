@@ -296,6 +296,26 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
     Method names can be abbreviated to first letter, 'i' or 'p' for fdr_bh and 'n' for
     fdr_by.
 
+    **Benjamini-Hochberg procedure** (see Benjamini and Hochberg, 1995)
+    
+    Define pvals as:
+    
+        ``pvals`` = ``pval_1`` <= ``pval_2`` <= ... ``pval_k`` ... <= ``pval_(m-1)`` <= ``pval_m``
+    
+    Compute raw adjusted p-values as:
+    
+        ``raw_adj_pval_k`` = ``pval_k`` * ``m``/``k``, where
+    
+    - ``raw_adj_pval_k`` is the adjusted ``pval_k`` BEFORE a final correction,
+    - ``pval_k`` is the p-value under consideration,
+    - ``m`` is the total number of p-values, and
+    - ``k`` is the rank of ``pval_k``.
+    
+    Perform a final correction to make sure that adjusted p-values are monotonic:
+    
+    The final correction is to make sure that ``adj_pval_k`` is less than or equal to 
+    ``adj_pval_(k+1)``. This procedure starts at the last p-value (``raw_adj_pval_m``)
+    and proceeds until the first p-value (``raw_adj_pval_1``).
 
 
     '''
@@ -308,6 +328,7 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
         pvals_sorted = pvals  # alias
 
     if method in ['i', 'indep', 'p', 'poscorr']:
+        # ecdffactor = k/m
         ecdffactor = _ecdf(pvals_sorted)
     elif method in ['n', 'negcorr']:
         cm = np.sum(1./np.arange(1, len(pvals_sorted)+1))   #corrected this
@@ -323,6 +344,7 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
         reject[:rejectmax] = True
 
     pvals_corrected_raw = pvals_sorted / ecdffactor
+    # adjust raw adjusted p-values to make them monotonic
     pvals_corrected = np.minimum.accumulate(pvals_corrected_raw[::-1])[::-1]
     del pvals_corrected_raw
     pvals_corrected[pvals_corrected>1] = 1
