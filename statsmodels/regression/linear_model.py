@@ -165,8 +165,12 @@ def _get_sigma(sigma, nobs):
         if sigma.shape != (nobs, nobs):
             raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
                              "array of shape %s x %s" % (nobs, nobs, nobs))
-        cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
-
+        ## Bug fix: np.linalg.pinv does not preserve positive definiteness.
+        ## Proposal: Use np.linalg.inv(sigma). The current implementation uses a squared matrix. I do not understand why the original author decided to use a pseudo inverse matrix instead of the actual inverse.
+        ## Original line
+        #cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
+        ## Bug fix:
+        cholsigmainv = np.linalg.cholesky(np.linalg.inv(sigma)).T
     return sigma, cholsigmainv
 
 
