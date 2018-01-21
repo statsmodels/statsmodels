@@ -448,26 +448,29 @@ class Factor(Model):
         for k in range(iter):
 
             loadu = load / uniq[:, None]
+
             f = np.dot(load.T, loadu)
             f.flat[::f.shape[0]+1] += 1
 
-            flu = np.linalg.solve(f, loadu.T)
-            lflu = np.dot(load, flu)
-            e = self.corr - np.dot(lflu, self.corr)
-            e /= uniq[:, None]
+            r = np.linalg.solve(f, loadu.T)
+            q = np.dot(loadu.T, load)
+            h = np.dot(r, load)
 
-            d = np.dot(load.T, e)
-
-            c = load - np.dot(lflu, load)
+            c = load - np.dot(load, h)
             c /= uniq[:, None]
+
+            g = np.dot(q, r)
+            e = np.dot(g, self.corr)
+            d = np.dot(loadu.T, self.corr) - e
 
             a = np.dot(d, c)
             a -= np.dot(load.T, c)
             a.flat[::a.shape[0]+1] += 1
+
             b = np.dot(self.corr, c)
 
             load = np.linalg.solve(a, b.T).T
-            uniq = np.diag(self.corr - np.dot(load, d))
+            uniq = np.diag(self.corr) - (load * d.T).sum(1)
 
         return load, uniq
 
