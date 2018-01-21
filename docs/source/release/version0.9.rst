@@ -28,6 +28,13 @@ are mentioned in the docstrings.
 
 The following major new features appear in this version.
 
+Generalized linear mixed models
+-------------------------------
+
+Limited support for GLIMMIX models is now included in the genmod
+module.  Binomial and Poisson models with independent random effects
+can be fit using Bayesian methods (Laplace and mean field
+approximations to the posterior).
 
 Documentation
 -------------
