@@ -453,18 +453,14 @@ class Factor(Model):
             f.flat[::f.shape[0]+1] += 1
 
             r = np.linalg.solve(f, loadu.T)
-
             q = np.dot(loadu.T, load)
-
             h = np.dot(r, load)
 
             c = load - np.dot(load, h)
             c /= uniq[:, None]
 
             g = np.dot(q, r)
-
             e = np.dot(g, self.corr)
-
             d = np.dot(loadu.T, self.corr) - e
 
             a = np.dot(d, c)
