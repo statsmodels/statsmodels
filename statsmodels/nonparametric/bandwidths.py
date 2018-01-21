@@ -4,8 +4,6 @@ import numpy as np
 from scipy.stats import scoreatpercentile as sap
 from statsmodels.sandbox.nonparametric import kernels
 
-#from scipy.stats import norm
-
 def _select_sigma(X):
     """
     Returns the smaller of std(X, ddof=1) or normalized IQR(X) over axis 0.
