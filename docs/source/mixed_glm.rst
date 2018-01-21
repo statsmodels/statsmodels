@@ -9,9 +9,9 @@ Statsmodels currently supports estimation of binomial and Poisson
 GLIMMIX models using two Bayesian methods: the Laplace approximation
 to the posterior, and a variational Bayes approximation to the
 posterior.  Both methods provide point estimates (posterior means) and
-assements of uncertainty (posterior standard deviation).
+assessments of uncertainty (posterior standard deviation).
 
-The current implimentation only supports independent random effects.
+The current implementation only supports independent random effects.
 
 Technical Documentation
 -----------------------
