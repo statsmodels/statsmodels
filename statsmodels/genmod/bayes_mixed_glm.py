@@ -45,7 +45,7 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy import sparse
 from statsmodels.iolib import summary2
-import statsmodels.api as sm
+from statsmodels.genmod import families
 import pandas as pd
 import warnings
 import patsy
@@ -820,7 +820,7 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
         super(BinomialBayesMixedGLM, self).__init__(
             endog=endog, exog_fe=exog_fe, exog_vc=exog_vc,
             ident=ident, vcp_p=vcp_p, fe_p=fe_p,
-            family=sm.families.Binomial(),
+            family=families.Binomial(),
             fep_names=fep_names, vcp_names=vcp_names,
             vc_names=vc_names)
 
@@ -828,7 +828,7 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
     def from_formula(cls, formula, vc_formulas, data, vcp_p=1, fe_p=2,
                      vcp_names=None, vc_names=None):
 
-        fam = sm.families.Binomial()
+        fam = families.Binomial()
         x = _BayesMixedGLM.from_formula(
             formula, vc_formulas, data, family=fam, vcp_p=vcp_p, fe_p=fe_p,
             vcp_names=vcp_names, vc_names=vc_names)
@@ -887,14 +887,14 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
         super(PoissonBayesMixedGLM, self).__init__(
             endog=endog, exog_fe=exog_fe, exog_vc=exog_vc,
             ident=ident, vcp_p=vcp_p, fe_p=fe_p,
-            family=sm.families.Poisson(),
+            family=families.Poisson(),
             fep_names=fep_names, vcp_names=vcp_names)
 
     @classmethod
     def from_formula(cls, formula, vc_formulas, data, vcp_p=1, fe_p=2,
                      vcp_names=None, vc_names=None):
 
-        fam = sm.families.Poisson()
+        fam = families.Poisson()
         x = _BayesMixedGLM.from_formula(
             formula, vc_formulas, data, family=fam, vcp_p=vcp_p, fe_p=fe_p,
             vcp_names=vcp_names, vc_names=vc_names)
