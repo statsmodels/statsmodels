@@ -2086,18 +2086,21 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
     **Attributes**
 
     model : class instance
-        Pointer to PHreg model instance that called fit.
+        Pointer to MixedLM model instance that called fit.
     normalized_cov_params : array
         The sampling covariance matrix of the estimates
     fe_params : array
         The fitted fixed-effects coefficients
-    re_params : array
+    cov_re : array
         The fitted random-effects covariance matrix
     bse_fe : array
         The standard errors of the fitted fixed effects coefficients
     bse_re : array
         The standard errors of the fitted random effects covariance
-        matrix
+        matrix and variance components.  The first `k_re * (k_re + 1)`
+        parameters are the standard errors for the lower triangle of
+        `cov_re`, the remaining elements are the standard errors for
+        the variance components.
 
     See Also
     --------
@@ -2162,11 +2165,17 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
     @cache_readonly
     def bse_re(self):
         """
-        Returns the standard errors of the variance parameters.  Note
-        that the sampling distribution of variance parameters is
+        Returns the standard errors of the variance parameters.
+
+        The first `k_re x (k_re + 1)` elements of the returned array
+        are the standard errors of the lower tirangle of `cov_re`.
+        The remaining elements are the standard errors of the variance
+        components.
+
+        Note that the sampling distribution of variance parameters is
         strongly skewed unless the sample size is large, so these
         standard errors may not give meaningful confidence intervals
-        of p-values if used in the usual way.
+        or p-values if used in the usual way.
         """
         p = self.model.exog.shape[1]
         return np.sqrt(self.scale * np.diag(self.cov_params())[p:])
