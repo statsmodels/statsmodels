@@ -144,9 +144,17 @@ class ProbPlot(object):
             else:
                 self.dist = dist(loc=0, scale=1)
         elif distargs or loc == 0 or scale == 1:
-            self.dist = dist(*distargs, **dict(loc=loc, scale=scale))
-            self.loc = loc
-            self.scale = scale
+            if len(distargs) > 2:
+                self.loc = distargs[-2]
+                self.scale = distargs[-1]
+            else:
+                self.loc = loc
+                self.scale = scale
+
+            # We can't pass both loc/scale as a kwarg *and* an arg from
+            # distargs, or we'll get TypeError due to conflict
+            shape = distargs[0]
+            self.dist = dist(shape, loc=self.loc, scale=self.scale)
         else:
             self.dist = dist
             self.loc = loc
