@@ -197,12 +197,12 @@ class TestGlmPoissonPwNr(CheckWeight):
         cls.res2 = res_stata.results_poisson_pweight_nonrobust
 
     @pytest.mark.xfail(reason='Known to fail')
-    def test_basic(cls):
-        super(cls, TestGlmPoissonPwNr).test_basic(cls)
+    def test_basic(self):
+        super(TestGlmPoissonPwNr, self).test_basic()
 
     @pytest.mark.xfail(reason='Known to fail')
-    def test_compare_optimizers(cls):
-        super(cls, TestGlmPoissonPwNr).test_compare_optimizers(cls)
+    def test_compare_optimizers(self):
+        super(TestGlmPoissonPwNr, self).test_compare_optimizers()
 
 
 class TestGlmPoissonFwHC(CheckWeight):
