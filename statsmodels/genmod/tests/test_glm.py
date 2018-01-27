@@ -75,9 +75,12 @@ class CheckModelResultsMixin(object):
         resid2[:, 2] *= self.res1.family.link.deriv(self.res1.mu)**2
 
         atol = 10**(-self.decimal_resids)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=FutureWarning)
+            resid_a = self.res1.resid_anscombe
         resids = np.column_stack((self.res1.resid_pearson,
                 self.res1.resid_deviance, self.res1.resid_working,
-                self.res1.resid_anscombe, self.res1.resid_response))
+                resid_a, self.res1.resid_response))
         assert_allclose(resids, resid2, rtol=1e-6, atol=atol)
 
     decimal_aic_R = DECIMAL_4
@@ -1750,7 +1753,8 @@ class CheckTweedieSpecial(object):
                         rtol=1e-5, atol=1e-5)
         assert_allclose(self.res1.resid_working, self.res2.resid_working,
                         rtol=1e-5, atol=1e-5)
-        assert_allclose(self.res1.resid_anscombe, self.res2.resid_anscombe,
+        assert_allclose(self.res1.resid_anscombe_unscaled,
+                        self.res2.resid_anscombe_unscaled,
                         rtol=1e-5, atol=1e-5)
 
 

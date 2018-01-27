@@ -48,6 +48,7 @@ from .results import res_R_var_weight as res_r
 
 # load data into module namespace
 from statsmodels.datasets.cpunish import load
+from warnings import catch_warnings
 cpunish_data = load()
 cpunish_data.exog[:, 3] = np.log(cpunish_data.exog[:, 3])
 cpunish_data.exog = add_constant(cpunish_data.exog, prepend=False)
@@ -104,9 +105,13 @@ class CheckWeight(object):
         assert_allclose(res1.resid_working, resid_all['resid_working'], atol= 1e-6, rtol=2e-6)
         if resid_all.get('resid_anscombe') is None:
             return None
-        # Stata doesn't use var_weights in anscombe residuals, it seems. 
+        # Stata doesn't use var_weights in anscombe residuals, it seems.
         # Adjust residuals to match our approach.
-        assert_allclose(res1.resid_anscombe, resid_all['resid_anscombe'] * np.sqrt(res1._var_weights), atol= 1e-6, rtol=2e-6)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=FutureWarning)
+            resid_a = res1.resid_anscombe
+
+        assert_allclose(resid_a, resid_all['resid_anscombe'] * np.sqrt(res1._var_weights), atol= 1e-6, rtol=2e-6)
 
     def test_compare_optimizers(self):
         res1 = self.res1
@@ -169,7 +174,7 @@ class TestGlmPoissonAwNr(CheckWeight):
                     family=sm.families.Poisson(), var_weights=aweights).fit()
         # compare with discrete, start close to save time
         modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
-        
+
         # Need to copy to avoid inplace adjustment
         from copy import copy
         cls.res2 = copy(res_stata.results_poisson_aweight_nonrobust)
@@ -237,7 +242,7 @@ class TestGlmPoissonAwHC(CheckWeight):
         # This is really close when corr_fact = (wsum - 1.) / wsum, but to
         # avoid having loosen precision of the assert_allclose, I'm doing this
         # manually. Its *possible* lowering the IRLS convergence criterion
-        # in stata and here will make this less sketchy. 
+        # in stata and here will make this less sketchy.
         cls.corr_fact = np.sqrt((wsum - 1.) / wsum) * 0.98518473599905609
         cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                         family=sm.families.Poisson(), var_weights=aweights
@@ -308,7 +313,7 @@ class TestGlmGammaAwNr(CheckWeight):
         aweights = np.repeat(1, len(endog))
         aweights[::5] = 5
         aweights[::13] = 3
-        model = sm.GLM(endog, exog, 
+        model = sm.GLM(endog, exog,
                        family=sm.families.Gamma(link=sm.families.links.log()),
                        var_weights=aweights)
         cls.res1 = model.fit(rtol=1e-25, atol=0)
@@ -902,7 +907,9 @@ def test_poisson_residuals():
                     res_poi_w.resid_response)
     assert_allclose(res_poi_e.resid_pearson, res_poi_w.resid_pearson)
     assert_allclose(res_poi_e.resid_deviance, res_poi_w.resid_deviance)
-    assert_allclose(res_poi_e.resid_anscombe, res_poi_w.resid_anscombe)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=FutureWarning)
+        assert_allclose(res_poi_e.resid_anscombe, res_poi_w.resid_anscombe)
     assert_allclose(res_poi_e.resid_anscombe_unscaled,
                     res_poi_w.resid_anscombe)
 

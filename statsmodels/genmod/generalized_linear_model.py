@@ -1484,7 +1484,7 @@ class GLMResults(base.LikelihoodModelResults):
     def resid_anscombe(self):
         import warnings
         warnings.warn('Anscombe residuals currently unscaled. In a future '
-                      'release, they will be scaled.')
+                      'release, they will be scaled.', category=FutureWarning)
         return self.family.resid_anscombe(self._endog, self.fittedvalues,
                                           var_weights=self._var_weights,
                                           scale=1.)
