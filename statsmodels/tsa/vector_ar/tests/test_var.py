@@ -3,6 +3,7 @@
 Test VAR Model
 """
 from __future__ import print_function
+import warnings
 # pylint: disable=W0612,W0231
 from statsmodels.compat.python import (iteritems, StringIO, lrange, BytesIO,
                                        range)
@@ -18,6 +19,7 @@ import statsmodels.api as sm
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tools.data as data_util
 from statsmodels.tsa.vector_ar.var_model import VAR
+from statsmodels.tools.sm_exceptions import ValueWarning
 
 
 from numpy.testing import (assert_almost_equal, assert_equal, assert_,
@@ -584,7 +586,10 @@ def test_var_constant():
 
     data.index = DatetimeIndex(index)
 
-    model = VAR(data)
+    #with pytest.warns(ValueWarning):  #does not silence warning in test output
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=ValueWarning)
+        model = VAR(data)
     with pytest.raises(ValueError):
         model.fit(1)
 
