@@ -1460,12 +1460,16 @@ def test_perfect_prediction():
     # this will raise if you set maxiter high enough with a singular matrix
     from pandas.util.testing import assert_produces_warning
     # this is not thread-safe
-    mod.fit(disp=False, maxiter=50)
-    #with assert_produces_warning():
-    import pytest
-    with pytest.warns(ConvergenceWarning):
-        warnings.simplefilter('always')
-        mod.fit(disp=False, maxiter=50)  # should not raise but does warn
+    # py 2.7 and 3.3 don't raise here anymore #4235
+    import sys
+    PY3_g3 = sys.version_info[:2] > (3, 3)
+    if PY3_g3:
+        with assert_produces_warning():
+            warnings.simplefilter('always')
+            res = mod.fit(disp=False, maxiter=50)  # should not raise but does warn
+    else:
+        res = mod.fit(disp=False, maxiter=50)
+    assert_(not res.mle_retvals['converged'])
 
 
 def test_poisson_predict():
