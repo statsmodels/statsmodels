@@ -28,7 +28,9 @@ from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from .results.results_discrete import Spector, DiscreteL1, RandHIE, Anes
-from statsmodels.tools.sm_exceptions import PerfectSeparationError
+from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
+                                             ConvergenceWarning)
+                                             #PerfectSeparationWarning)
 from scipy.stats import nbinom
 
 try:
@@ -1458,7 +1460,10 @@ def test_perfect_prediction():
     # this will raise if you set maxiter high enough with a singular matrix
     from pandas.util.testing import assert_produces_warning
     # this is not thread-safe
-    with assert_produces_warning():
+    mod.fit(disp=False, maxiter=50)
+    #with assert_produces_warning():
+    import pytest
+    with pytest.warns(ConvergenceWarning):
         warnings.simplefilter('always')
         mod.fit(disp=False, maxiter=50)  # should not raise but does warn
 
