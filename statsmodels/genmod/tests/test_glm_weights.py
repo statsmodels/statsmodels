@@ -30,6 +30,7 @@ from __future__ import division
 from statsmodels.compat.testing import SkipTest
 
 import warnings
+from warnings import catch_warnings
 import sys
 
 import nose
@@ -42,13 +43,14 @@ import statsmodels.api as sm
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.tools.tools import add_constant
 from statsmodels.discrete import discrete_model as discrete
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 
 from .results import results_glm_poisson_weights as res_stata
 from .results import res_R_var_weight as res_r
 
 # load data into module namespace
 from statsmodels.datasets.cpunish import load
-from warnings import catch_warnings
+
 cpunish_data = load()
 cpunish_data.exog[:, 3] = np.log(cpunish_data.exog[:, 3])
 cpunish_data.exog = add_constant(cpunish_data.exog, prepend=False)
@@ -125,7 +127,10 @@ class CheckWeight(object):
                              TestGlmPoissonFwClu,
                              TestBinomial0RepeatedvsAverage)):
             return None
-        res2 = self.res1.model.fit(method=method, optim_hessian=optim_hessian)
+
+        start_params = res1.params
+        res2 = self.res1.model.fit(start_params=start_params, method=method,
+                                   optim_hessian=optim_hessian)
         assert_allclose(res1.params, res2.params, atol=1e-3, rtol=2e-3)
         H = res2.model.hessian(res2.params, observed=False)
         res2_bse = np.sqrt(-np.diag(np.linalg.inv(H)))
@@ -220,6 +225,7 @@ class TestGlmPoissonFwHC(CheckWeight):
         nobs = len(cpunish_data.endog)
         aweights = fweights / wsum * nobs
         cls.corr_fact = np.sqrt((wsum - 1.) / wsum)
+
         cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                         family=sm.families.Poisson(), freq_weights=fweights
                         ).fit(cov_type='HC0') #, cov_kwds={'use_correction':False})
@@ -268,9 +274,11 @@ class TestGlmPoissonFwClu(CheckWeight):
         # no wnobs yet in sandwich covariance calcualtion
         cls.corr_fact = 1 / np.sqrt(n_groups / (n_groups - 1))   #np.sqrt((wsum - 1.) / wsum)
         cov_kwds = {'groups': gid, 'use_correction':False}
-        cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
-                        family=sm.families.Poisson(), freq_weights=fweights
-                        ).fit(cov_type='cluster', cov_kwds=cov_kwds)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=SpecificationWarning)
+            cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
+                            family=sm.families.Poisson(), freq_weights=fweights
+                            ).fit(cov_type='cluster', cov_kwds=cov_kwds)
         # compare with discrete, start close to save time
         #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         cls.res2 = res_stata.results_poisson_fweight_clu1
@@ -715,7 +723,7 @@ class TestBinomial0RepeatedvsAverage(CheckWeight):
         beta = np.array([-1, 0.1, -0.05, .2, 0.35])
         lin_pred = (exog * beta).sum(axis=1)
         family = sm.families.Binomial
-        link = sm.families.links.log
+        link = sm.families.links.logit
         endog = gen_endog(lin_pred, family, link, binom_version=0)
         mod1 = sm.GLM(endog, exog, family=family(link=link()))
         cls.res1 = mod1.fit(rtol=1e-10, atol=0, tol_criterion='params',
@@ -748,7 +756,7 @@ class TestBinomial0RepeatedvsDuplicated(CheckWeight):
         beta = np.array([-1, 0.1, -0.05, .2, 0.35])
         lin_pred = (exog * beta).sum(axis=1)
         family = sm.families.Binomial
-        link = sm.families.links.log
+        link = sm.families.links.logit
         endog = gen_endog(lin_pred, family, link, binom_version=0)
         wt = np.random.randint(1, 5, n)
         mod1 = sm.GLM(endog, exog, family=family(link=link), freq_weights=wt)
@@ -824,7 +832,9 @@ class TestBinomialVsVarWeights(CheckWeight):
     def setup_class(cls):
         from statsmodels.datasets.star98 import load
         data = load()
+        data.exog /= data.exog.std(0)
         data.exog = add_constant(data.exog, prepend=False)
+
         cls.res1 = GLM(data.endog, data.exog,
                         family=sm.families.Binomial()).fit()
         weights = data.endog.sum(axis=1)
