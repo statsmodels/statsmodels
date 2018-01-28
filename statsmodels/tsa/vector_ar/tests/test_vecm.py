@@ -15,6 +15,8 @@ from statsmodels.tsa.vector_ar.util import seasonal_dummies
 from statsmodels.tsa.vector_ar.var_model import VARProcess
 from statsmodels.tsa.vector_ar.vecm import VECM, select_order, select_coint_rank
 
+import pytest
+pytestmark = pytest.mark.filterwarnings('ignore:in the future np.array_split')
 
 class DataSet(object):
     """
