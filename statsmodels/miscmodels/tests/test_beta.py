@@ -56,7 +56,7 @@ def assert_close(a, b, eps):
 class TestBeta(object):
 
     @classmethod
-    def setupClass(self):
+    def setup_class(self):
         model = "I(food/income) ~ income + persons"
         self.income_fit =Beta.from_formula(model, income).fit()
 
