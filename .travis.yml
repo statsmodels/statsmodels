@@ -14,6 +14,7 @@ env:
     - USEMPL=true
     - MATPLOTLIB=
     - DOCBUILD=false
+    - USENUMBA=false
 
 matrix:
   fast_finish: true
@@ -35,6 +36,7 @@ matrix:
     - SCIPY=0.17
     - PANDAS=0.18
     - MATPLOTLIB=1.5
+    - USENUMBA=true
   - python: 2.7
     env:
     - PYTHON=3.4
@@ -94,6 +96,7 @@ before_install:
   - PKGS="${PKGS} pandas"; if [ ${PANDAS} ]; then PKGS="${PKGS}=${PANDAS}"; fi
   - PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}=${CYTHON}"; fi
   - if [ ${USEMPL} = true ]; then PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi; fi
+  - if [ ${USENUMBA} = true ]; then PKGS="${PKGS} numba"; fi;
   - if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --cov-config=.travis_coveragerc --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
   - echo conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml
   - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml joblib
