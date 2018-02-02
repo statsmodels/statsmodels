@@ -574,10 +574,10 @@ class KalmanFilter(object):
         """
         Returns just the errors of the Kalman Filter
         """
-        if issubdtype(paramsdtype, float):
+        if issubdtype(paramsdtype, np.float64):
             return kalman_loglike.kalman_filter_double(y, k, k_ar, k_ma,
                                 k_lags, int(nobs), Z_mat, R_mat, T_mat)[0]
-        elif issubdtype(paramsdtype, complex):
+        elif issubdtype(paramsdtype, np.complex128):
             return kalman_loglike.kalman_filter_complex(y, k, k_ar, k_ma,
                                 k_lags, int(nobs), Z_mat, R_mat, T_mat)[0]
         else:
@@ -643,11 +643,11 @@ class KalmanFilter(object):
         #TODO: this won't work for time-varying parameters
         (y, k, nobs, k_ar, k_ma, k_lags, newparams, Z_mat, m, R_mat, T_mat,
                 paramsdtype) = cls._init_kalman_state(params, arma_model)
-        if issubdtype(paramsdtype, float):
+        if issubdtype(paramsdtype, np.float64):
             loglike, sigma2 =  kalman_loglike.kalman_loglike_double(y, k,
                                     k_ar, k_ma, k_lags, int(nobs), Z_mat,
                                     R_mat, T_mat)
-        elif issubdtype(paramsdtype, complex):
+        elif issubdtype(paramsdtype, np.complex128):
             loglike, sigma2 =  kalman_loglike.kalman_loglike_complex(y, k,
                                     k_ar, k_ma, k_lags, int(nobs),
                                     Z_mat.astype(complex),
