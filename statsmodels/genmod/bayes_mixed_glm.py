@@ -149,7 +149,8 @@ _init_doc = r"""
     SAS documentation:
     https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_intromix_a0000000215.htm
 
-    An assessment of estimation methods for generalized linear mixed models with binary outcomes
+    An assessment of estimation methods for generalized linear mixed
+    models with binary outcomes
     https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3866838/
     """
 
@@ -488,16 +489,22 @@ class _VariationalBayesMixedGLM(object):
 
         Parameters
         ----------
-        h : function
-            Implements log p(y, fep, vcp, vc) in the form of a function of z,
-            where z is a standard normal random variable.
+        h : function mapping 1d vector to 1d vector
+            The contribution of the model to the ELBO function can be
+            expressed as y_i*lp_i + Eh_i(z), where y_i and lp_i are
+            the response and linear predictor for observation i, and z
+            is a standard normal rangom variable.  This formulation
+            can be achieved for any GLM with a canonical link
+            function.
         """
 
         # p(y | vc) contributions
         iv = 0
         for w in glw:
-            iv += h(self.rng * w[1]) * w[0]
-        iv *= -self.rng
+            z = self.rng * w[1]
+            iv += w[0] * h(z) * np.exp(-z**2 / 2)
+        iv /= np.sqrt(2*np.pi)
+        iv *= self.rng
         iv += self.endog * tm
         iv = iv.sum()
 
@@ -512,6 +519,11 @@ class _VariationalBayesMixedGLM(object):
 
     def vb_elbo_grad_base(self, h, tm, tv, fep_mean, vcp_mean, vc_mean,
                           fep_sd, vcp_sd, vc_sd):
+        """
+        Return the gradient of the ELBO function.
+
+        See vb_elbo_base for parameters.
+        """
 
         fep_mean_grad = 0.
         fep_sd_grad = 0.
@@ -522,20 +534,20 @@ class _VariationalBayesMixedGLM(object):
 
         # p(y | vc) contributions
         for w in glw:
-            x = self.rng * w[1]
-            u = h(x)
+            z = self.rng * w[1]
+            u = h(z) * np.exp(-z**2 / 2) / np.sqrt(2*np.pi)
             r = u / np.sqrt(tv)
             fep_mean_grad += w[0] * np.dot(u, self.exog_fe)
             vc_mean_grad += w[0] * self.exog_vc.transpose().dot(u)
-            fep_sd_grad += w[0] * x * np.dot(r, self.exog_fe**2 * fep_sd)
+            fep_sd_grad += w[0] * z * np.dot(r, self.exog_fe**2 * fep_sd)
             v = self.exog_vc2.multiply(vc_sd).transpose().dot(r)
             v = np.squeeze(np.asarray(v))
-            vc_sd_grad += w[0] * x * v
+            vc_sd_grad += w[0] * z * v
 
-        fep_mean_grad *= -self.rng
-        vc_mean_grad *= -self.rng
-        fep_sd_grad *= -self.rng
-        vc_sd_grad *= -self.rng
+        fep_mean_grad *= self.rng
+        vc_mean_grad *= self.rng
+        fep_sd_grad *= self.rng
+        vc_sd_grad *= self.rng
         fep_mean_grad += np.dot(self.endog, self.exog_fe)
         vc_mean_grad += self.exog_vc.transpose().dot(self.endog)
 
@@ -849,10 +861,7 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
         tm, tv = self._lp_stats(fep_mean, fep_sd, vc_mean, vc_sd)
 
         def h(z):
-            x = np.log(1 + np.exp(tm + np.sqrt(tv)*z))
-            x *= np.exp(-z**2 / 2)
-            x /= np.sqrt(2*np.pi)
-            return x
+            return -np.log(1 + np.exp(tm + np.sqrt(tv)*z))
 
         return self.vb_elbo_base(
             h, tm, fep_mean, vcp_mean, vc_mean, fep_sd, vcp_sd, vc_sd)
@@ -869,9 +878,7 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
         def h(z):
             u = tm + np.sqrt(tv)*z
             x = np.exp(u) / (1 + np.exp(u))
-            x *= np.exp(-z**2 / 2)
-            x /= np.sqrt(2*np.pi)
-            return x
+            return -x
 
         return self.vb_elbo_grad_base(
             h, tm, tv, fep_mean, vcp_mean, vc_mean, fep_sd, vcp_sd, vc_sd)
@@ -915,10 +922,7 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
         tm, tv = self._lp_stats(fep_mean, fep_sd, vc_mean, vc_sd)
 
         def h(z):
-            y = np.exp(tm + np.sqrt(tv)*z)
-            y *= np.exp(-z**2 / 2)
-            y /= np.sqrt(2*np.pi)
-            return y
+            return -np.exp(tm + np.sqrt(tv)*z)
 
         return self.vb_elbo_base(
             h, tm, fep_mean, vcp_mean, vc_mean, fep_sd, vcp_sd, vc_sd)
@@ -933,9 +937,7 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
         tm, tv = self._lp_stats(fep_mean, fep_sd, vc_mean, vc_sd)
 
         def h(z):
-            y = np.exp(tm + np.sqrt(tv)*z)
-            y *= np.exp(-z**2 / 2)
-            y /= np.sqrt(2*np.pi)
+            y = -np.exp(tm + np.sqrt(tv)*z)
             return y
 
         return self.vb_elbo_grad_base(
