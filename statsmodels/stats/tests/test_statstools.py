@@ -2,7 +2,7 @@
 # TODO: Test robust kurtosis
 import numpy as np
 import pandas as pd
-from numpy.testing import (assert_almost_equal, assert_raises)
+from numpy.testing import (assert_almost_equal, assert_raises, assert_equal)
 from statsmodels.stats.stattools import (omni_normtest, jarque_bera,
                                          durbin_watson, _medcouple_1d, medcouple,
                                          robust_kurtosis, robust_skewness)
@@ -192,18 +192,21 @@ class TestStattools(object):
         mc = medcouple(np.arange(5.0))
         assert_almost_equal(mc, 0)
 
-
     def test_medcouple_nonzero(self):
         mc = medcouple(np.array([1, 2, 7, 9, 10.0]))
         assert_almost_equal(mc, -0.3333333)
 
+    def test_medcouple_int(self):
+        # GH 4243
+        mc1 = medcouple(np.array([1, 2, 7, 9, 10]))
+        mc2 = medcouple(np.array([1, 2, 7, 9, 10.0]))
+        assert_equal(mc1, mc2)
 
     def test_medcouple_symmetry(self):
         x = np.random.standard_normal(100)
         mcp = medcouple(x)
         mcn = medcouple(-x)
         assert_almost_equal(mcp + mcn, 0)
-
 
     def test_durbin_watson(self):
         x = np.random.standard_normal(100)
