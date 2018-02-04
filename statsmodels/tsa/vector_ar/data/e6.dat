@@ -1,7 +1,7 @@
 /*
 sample: 1972Q2 -- 1998Q4 
 West German data until 1990Q2, all of Germany aferwards
-Dp - \Delta log gdp deflator (source: Deutsches Institut für Wirtschaftsforschung,
+Dp - \Delta log gdp deflator (source: Deutsches Institut fÃ¼r Wirtschaftsforschung,
                               Volkswirtschaftliche Gesamtrechnung)
 R - nominal long term interest rate (Umlaufsrendite) 
                    (source: Monatsberichte der Deutschen Bundesbank,
