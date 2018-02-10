@@ -56,6 +56,9 @@ While most bugs are usability problems, there is now a new label `type-bug-wrong
 for bugs that cause that silently incorrect numbers are returned.
 https://github.com/statsmodels/statsmodels/issues?q=label%3Atype-bug-wrong+is%3Aclosed
 
+* Refitting elastic net regularized models using the `refit=True`
+  option now returns the unregularized parameters for the coefficients
+  selected by the regularized fitter, as documented. #4213
 
 
 Backwards incompatible changes and deprecations

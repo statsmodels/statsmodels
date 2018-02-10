@@ -216,6 +216,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
         model1 = model.__class__(model.endog, model.exog[:, ii],
                                **init_args)
         rslt = model1.fit()
+        params[ii] = rslt.params
         cov[np.ix_(ii, ii)] = rslt.normalized_cov_params
     else:
         # Hack: no variables were selected but we need to run fit in
@@ -235,6 +236,12 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
         scale = rslt.scale
     else:
         scale = 1.
+
+    # The degrees of freedom should reflect the number of parameters
+    # in the refit model, not including the zeros that we present to
+    # indicate what was dropped.
+    model.df_model = len(ii)
+    model.df_resid = model.nobs - model.df_model
 
     # Assuming a standard signature for creating results classes.
     refit = klass(model, params, cov, scale=scale)

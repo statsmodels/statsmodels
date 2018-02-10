@@ -1201,13 +1201,15 @@ def test_regularized_refit():
     p = 5
     np.random.seed(3132)
     xmat = np.random.normal(size=(n, p))
-    yvec = xmat.sum(1) + np.random.normal(size=n)
+    # covariates 0 and 2 matter
+    yvec = xmat[:, 0] + xmat[:, 2] + np.random.normal(size=n)
     model1 = OLS(yvec, xmat)
     result1 = model1.fit_regularized(alpha=2., L1_wt=0.5, refit=True)
-    model2 = OLS(yvec, xmat)
-    result2 = model2.fit_regularized(alpha=2., L1_wt=0.5, refit=True)
-    assert_allclose(result1.params, result2.params)
-    assert_allclose(result1.bse, result2.bse)
+    model2 = OLS(yvec, xmat[:, [0, 2]])
+    result2 = model2.fit()
+    ii = [0, 2]
+    assert_allclose(result1.params[ii], result2.params)
+    assert_allclose(result1.bse[ii], result2.bse)
 
 
 def test_regularized_predict():
