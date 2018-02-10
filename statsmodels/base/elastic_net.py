@@ -238,8 +238,8 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
         scale = 1.
 
     # The degrees of freedom should reflect the number of parameters
-    # in the refit model, not including the zeros that we present to
-    # indicate what was dropped.
+    # in the refit model, not including the zeros that are displayed
+    # to indicate which variables were dropped.
     model.df_model = len(ii)
     model.df_resid = model.nobs - model.df_model
 
