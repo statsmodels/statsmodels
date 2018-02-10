@@ -2167,7 +2167,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         Returns the standard errors of the variance parameters.
 
         The first `k_re x (k_re + 1)` elements of the returned array
-        are the standard errors of the lower tirangle of `cov_re`.
+        are the standard errors of the lower triangle of `cov_re`.
         The remaining elements are the standard errors of the variance
         components.
 
