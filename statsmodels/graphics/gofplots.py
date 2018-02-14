@@ -134,13 +134,13 @@ class ProbPlot(object):
         if isinstance(dist, string_types):
             dist = getattr(stats, dist)
 
-        self.fit_params = dist.fit(data)
+        self._unfrozen_dist = dist
         if fit:
             self.loc = self.fit_params[-2]
             self.scale = self.fit_params[-1]
             if len(self.fit_params) > 2:
                 self.dist = dist(*self.fit_params[:-2],
-                                 **dict(loc = 0, scale = 1))
+                                 **dict(loc=0, scale=1))
             else:
                 self.dist = dist(loc=0, scale=1)
         elif distargs or loc == 0 or scale == 1:
@@ -154,6 +154,10 @@ class ProbPlot(object):
 
         # propertes
         self._cache = resettable_cache()
+
+    @cache_readonly
+    def fit_params(self):
+        return self._unfrozen_dist.fit(self.data)
 
     @cache_readonly
     def theoretical_percentiles(self):
