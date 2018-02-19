@@ -9,6 +9,7 @@ from statsmodels.compat.pandas import frequencies
 import numpy as np
 import scipy.stats as stats
 import scipy.linalg.decomp as decomp
+import pandas as pd
 
 import statsmodels.tsa.tsatools as tsa
 
@@ -108,6 +109,7 @@ def comp_matrix(coefs):
 #-------------------------------------------------------------------------------
 # Miscellaneous stuff
 
+
 def parse_lutkepohl_data(path): # pragma: no cover
     """
     Parse data files from Lütkepohl (2005) book
@@ -137,7 +139,8 @@ def parse_lutkepohl_data(path): # pragma: no cover
             year, freq, start_point = m.groups()
             break
 
-    data = np.genfromtxt(path, names=True, skip_header=to_skip+1)
+    data = (pd.read_csv(path, delimiter=r"\s+", header=to_skip+1)
+            .to_records(index=False))
 
     n = len(data)
 
