@@ -764,8 +764,10 @@ def proportions_ztest(count, nobs, value=None, alternative='two-sided',
     alternative : string in ['two-sided', 'smaller', 'larger']
         The alternative hypothesis can be either two-sided or one of the one-
         sided tests, smaller means that the alternative hypothesis is
-        ``prop < value` and larger means ``prop > value``, or the corresponding
-        inequality for the two sample test.
+        ``prop < value`` and larger means ``prop > value``. In the two sample
+        test, smaller means that the alternative hypothesis is ``p1 < p2`` and
+        larger means ``p1 > p2`` where ``p1`` is the proportion of the first
+        sample and ``p2`` of the second one.
     prop_var : False or float in (0, 1)
         If prop_var is false, then the variance of the proportion estimate is
         calculated based on the sample proportion. Alternatively, a proportion
