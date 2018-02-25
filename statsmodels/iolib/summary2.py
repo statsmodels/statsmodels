@@ -488,7 +488,7 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         order = ordered + list(np.unique(unordered))
 
         f = lambda idx: sum([[x + 'coef', x + 'stde'] for x in idx], [])
-        summ.index = f(np.unique(varnames))
+        summ.index = f(pd.unique(varnames))
         summ = summ.reindex(f(order))
         summ.index = [x[:-4] for x in summ.index]
         if drop_omitted:
