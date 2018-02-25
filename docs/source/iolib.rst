@@ -34,7 +34,6 @@ Module Reference
    smpickle.save_pickle
    smpickle.load_pickle
 
-
 The following are classes and functions used to return the summary of
 estimation results, and mostly intended for internal use. There are currently
 two versions for creating summaries.
@@ -44,3 +43,10 @@ two versions for creating summaries.
 
    summary.Summary
    summary2.Summary
+
+Utilities to assist in the visual representation of numeric data are provided in the following class:
+
+.. autosummary::
+   :toctree: generated/
+
+   decorations.pvalue_to_stars
