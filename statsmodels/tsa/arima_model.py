@@ -850,7 +850,7 @@ class ARMA(tsbase.TimeSeriesModel):
             approximate the Hessian, projected gradient tolerance of 1e-8 and
             factr = 1e2. You can change these by using kwargs.
         maxiter : int, optional
-            The maximum number of function evaluations. Default is 50.
+            The maximum number of function evaluations. Default is 500.
         tol : float
             The convergence tolerance.  Default is 1e-08.
         full_output : bool, optional
@@ -1104,7 +1104,7 @@ class ARIMA(ARMA):
             approximate the Hessian, projected gradient tolerance of 1e-8 and
             factr = 1e2. You can change these by using kwargs.
         maxiter : int, optional
-            The maximum number of function evaluations. Default is 50.
+            The maximum number of function evaluations. Default is 500.
         tol : float
             The convergence tolerance.  Default is 1e-08.
         full_output : bool, optional
