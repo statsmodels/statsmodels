@@ -586,7 +586,7 @@ def do1(reml, irf, ds_ix):
                 mdf = md.fit(gtol=1e-7, reml=reml)
         else:
             mdf = md.fit(gtol=1e-7, reml=reml)
-    
+
     else:  # Independent random effects
         k_fe = rslt.exog_fe.shape[1]
         k_re = rslt.exog_re.shape[1]
