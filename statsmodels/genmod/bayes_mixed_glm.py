@@ -8,7 +8,8 @@ Two estimation approaches are supported: Laplace approximation
 (maximum a posteriori), and variational Bayes (mean field
 approximation to the posterior).
 
-Random effects are required to be independent in this implementation.
+All realizations of random effects are required to be mutually
+independent in this implementation.
 
 The `exog_vc` matrix is the design matrix for the random effects.
 Every column of `exog_vc` corresponds to an independent realization of
@@ -354,7 +355,7 @@ class _BayesMixedGLM(object):
 
     @classmethod
     def from_formula(cls, formula, vc_formulas, data, family=None,
-                     vcp_p=1, fe_p=2, vcp_names=None, vc_names=None):
+                     vcp_p=1, fe_p=2, vc_names=None):
 
         """
         Fit a BayesMixedGLM using a formula.
@@ -364,12 +365,12 @@ class _BayesMixedGLM(object):
         formula : string
             Formula for the endog and fixed effects terms (use ~ to separate
             dependent and independent expressions).
-        vc_formula : list of strings
-            Each element of the list is a one-sided formula that
-            creates one collection of random effects with a common
-            variance prameter.  If using a categorical expression to
-            produce variance components, note that generally `0 + ...`
-            should be used so that an intercept is not included.
+        vc_formulas : dictionary
+            vc_formulas[name] is a one-sided formula that creates one
+            collection of random effects with a common variance
+            prameter.  If using a categorical expression to produce
+            variance components, note that generally `0 + ...` should
+            be used so that an intercept is not included.
         data : data frame
             The data to which the formulas are applied.
         family : genmod.families instance
@@ -379,29 +380,25 @@ class _BayesMixedGLM(object):
             deviations of the random effects.
         fe_p : float
             The prior standard deviation for the fixed effects parameters.
-        vcp_names : list
-            Names of variance component parameters
         vc_names : list
             Names of random effects realizations
         """
-
-        if not type(vc_formulas) is list:
-            vc_formulas = [vc_formulas]
 
         endog, exog_fe = patsy.dmatrices(formula, data,
                                          return_type='dataframe')
 
         ident = []
         exog_vc = []
-        for j, fml in enumerate(vc_formulas):
+        vcp_names = []
+        j = 0
+        for na, fml in vc_formulas.items():
             mat = patsy.dmatrix(fml, data, return_type='dataframe')
             exog_vc.append(mat)
+            vcp_names.append(na)
             ident.append(j * np.ones(mat.shape[1]))
+            j += 1
         exog_vc = pd.concat(exog_vc, axis=1)
         vc_names = exog_vc.columns.tolist()
-
-        if vcp_names is None:
-            vcp_names = ["VC_%d" % (k + 1) for k in range(len(vc_formulas))]
 
         ident = np.concatenate(ident)
 
@@ -808,7 +805,8 @@ class BayesMixedGLMResults(object):
         na = self.model.vc_names
 
         if term is not None:
-            ii = np.flatnonzero(self.model.ident == term)
+            termix = self.model.vcp_names.index(term)
+            ii = np.flatnonzero(self.model.ident == termix)
             z = z[ii]
             s = s[ii]
             na = [na[i] for i in ii]
@@ -838,12 +836,12 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
 
     @classmethod
     def from_formula(cls, formula, vc_formulas, data, vcp_p=1, fe_p=2,
-                     vcp_names=None, vc_names=None):
+                     vc_names=None):
 
         fam = families.Binomial()
         x = _BayesMixedGLM.from_formula(
             formula, vc_formulas, data, family=fam, vcp_p=vcp_p, fe_p=fe_p,
-            vcp_names=vcp_names, vc_names=vc_names)
+            vc_names=vc_names)
 
         return BinomialBayesMixedGLM(
             endog=x.endog, exog_fe=x.exog_fe, exog_vc=x.exog_vc,

@@ -167,7 +167,7 @@ def test_logit_map_crossed_formula():
     data = gen_crossed_logit_pandas(10, 10, 1, 0.5)
 
     fml = "y ~ fe"
-    fml_vc = ["0 + C(a)", "0 + C(b)"]
+    fml_vc = {"a": "0 + C(a)", "b": "0 + C(b)"}
     glmm = BinomialBayesMixedGLM.from_formula(
         fml, fml_vc, data, vcp_p=0.5)
     rslt = glmm.fit_map()
@@ -177,7 +177,7 @@ def test_logit_map_crossed_formula():
 
     rslt.summary()
 
-    r = rslt.random_effects(0)
+    r = rslt.random_effects("a")
     assert_allclose(r.iloc[0, :].values,
                     np.r_[-0.02004904, 0.094014], atol=1e-4)
 
@@ -338,7 +338,7 @@ def test_crossed_logit_vb_formula():
     data = gen_crossed_logit_pandas(10, 10, 1, 2)
 
     fml = "y ~ fe"
-    fml_vc = ["0 + C(a)", "0 + C(b)"]
+    fml_vc = {"a": "0 + C(a)", "b": "0 + C(b)"}
     glmm1 = BinomialBayesMixedGLM.from_formula(
         fml, fml_vc, data, vcp_p=0.5)
     rslt1 = glmm1.fit_vb()
