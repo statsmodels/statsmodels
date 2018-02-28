@@ -182,11 +182,16 @@ def py_hamilton_filter(initial_probabilities, regime_transition,
             transition_t = t
 
         # S_t, S_{t-1}, ..., S_{t-r} | t-1, stored at zero-indexed location t
-        predicted_joint_probabilities[..., t] = (
-            # S_t | S_{t-1}
-            regime_transition[..., transition_t] *
-            # S_{t-1}, S_{t-2}, ..., S_{t-r} | t-1
-            filtered_joint_probabilities[..., t].sum(axis=-1))
+        if order > 0:
+            predicted_joint_probabilities[..., t] = (
+                # S_t | S_{t-1}
+                regime_transition[..., transition_t] *
+                # S_{t-1}, S_{t-2}, ..., S_{t-r} | t-1
+                filtered_joint_probabilities[..., t].sum(axis=-1))
+        else:
+            predicted_joint_probabilities[..., t] = (
+                np.dot(regime_transition[..., transition_t],
+                       filtered_joint_probabilities[..., t]))
 
         # f(y_t, S_t, ..., S_{t-r} | t-1)
         tmp = (conditional_likelihoods[..., t] *
