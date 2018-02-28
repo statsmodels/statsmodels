@@ -1019,6 +1019,26 @@ class TestFedFundsConstShort(MarkovRegression):
             initial_probabilities, regime_transition, conditional_likelihoods)
         assert_allclose(cy_results[0], expected_marginals)
 
+    def test_hamilton_filter_shape_checks(self):
+        k_regimes = 3
+        nobs = 8
+        order = 3
+
+        initial_probabilities = np.ones(k_regimes) / k_regimes
+        regime_transition = np.ones((k_regimes, k_regimes, nobs)) / k_regimes
+        conditional_likelihoods = np.ones(order * (k_regimes,) + (nobs,))
+
+        for func in [markov_switching.py_hamilton_filter,
+                     markov_switching.cy_hamilton_filter]:
+            try:
+                func(initial_probabilities,
+                     regime_transition,
+                     conditional_likelihoods)
+            except ValueError:
+                pass
+            else:
+                raise AssertionError('Did not raise ValueError.')
+
     def test_py_hamilton_filter(self):
         mod = self.model
         params = self.true['params']
