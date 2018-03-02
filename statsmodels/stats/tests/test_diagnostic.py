@@ -326,7 +326,7 @@ class TestDiagnosticG(object):
         res = self.res
 
         #general test
-        
+
         #> bt = Box.test(residuals(fm), lag=4, type = "Ljung-Box")
         #> mkhtest(bt, "ljung_box_4", "chi2")
         ljung_box_4 = dict(statistic=5.23587172795227, pvalue=0.263940335284713,
@@ -365,7 +365,7 @@ class TestDiagnosticG(object):
     def test_acorr_ljung_box_small_default(self):
         res = self.res
         #test with small dataset and default lag
-        
+
         #> bt = Box.test(residuals(fm), type = "Ljung-Box")
         #> mkhtest(bt, "ljung_box_small", "chi2")
         ljung_box_small = dict(statistic=9.61503968281915, pvalue=0.72507000996945,

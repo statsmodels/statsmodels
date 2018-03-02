@@ -24,7 +24,7 @@ So, what we ought to have is:
 \hat \varepsilon_{t,i} = \sigma_{t,i}^2 F_{t,i}^{-1} (v_{t,i} - F_{t,i} K_{t,i}' r_{t,i})
 Var(\hat \varepsilon_{t,i}) = \sigma_{t,i}^2 - \sigma_{t,i}^4 F_{t,i}^{-2} (v_{t,i} - F_{t,i} K_{t,i}' r_{t,i})
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 """
 
@@ -69,7 +69,7 @@ if combined_prefix == 'z':
 # ### Univariate Kalman smoother
 #
 # The following are the routines as defined in the univariate Kalman filter.
-# 
+#
 # The only modification to the conventional Kalman smoother is the recursive
 # definition of the scaled smoothing error and the scaled smoothing error
 # covariance matrix.
@@ -101,8 +101,8 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate({{prefix}}KalmanSm
         smoother.scaled_smoothed_estimator[:, model.nobs-1] = 0
         smoother.scaled_smoothed_estimator_cov[:, :, model.nobs-1] = 0
 
-    # Smoothing error  
-    # (not used in the univariate approach)  
+    # Smoothing error
+    # (not used in the univariate approach)
 
     # Given r_{t,0}:
     # calculate r_{t-1,p}, ..., r_{t-1, 0} and N_{t-1,p}, ..., N_{t-1,0}
@@ -147,7 +147,7 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate({{prefix}}KalmanSm
                            &beta, &smoother._smoothed_measurement_disturbance_cov[i*kfilter.k_endog + i], &inc)
             {{endif}}
 
-        # $L_{t,i} = (I_m - K_{t,i} Z_{t,i})$  
+        # $L_{t,i} = (I_m - K_{t,i} Z_{t,i})$
         # $(m \times m) = (m \times m) - (m \times 1) (1 \times m)$
         # blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &inc,
         #           &gamma, &kfilter._kalman_gain[i*kfilter.k_states], &kfilter.k_states,
@@ -177,8 +177,8 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate({{prefix}}KalmanSm
                               smoother._tmpL, &kfilter.k_states,
                       &beta, smoother._tmpL2, &kfilter.k_states)
 
-        # Scaled smoothed estimator  
-        # $r_{t,i-1} = Z_{t,i}' v_{t,i} / F_{t,i} + L_{t,i}' r_{t,i}$  
+        # Scaled smoothed estimator
+        # $r_{t,i-1} = Z_{t,i}' v_{t,i} / F_{t,i} + L_{t,i}' r_{t,i}$
         # $(m \times 1) = (m \times 1) (1 \times 1) + (m \times m) (m \times 1)$
         # Note: save $r_{t-1}$ as scaled_smoothed_estimator[t] rather than
         # as scaled_smoothed_estimator[t-1] because we actually need to store
@@ -196,9 +196,9 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate({{prefix}}KalmanSm
                                                               smoother._scaled_smoothed_estimator, &inc)
 
         if smoother.smoother_output & (SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE_COV):
-            # Scaled smoothed estimator covariance matrix  
-            # $N_{t,i-1} = Z_{t,i}' Z_{t,i} / F_{t,i} + L_{t,i}' N_{t,i} L_{t,i}$  
-            # $(m \times m) = (m \times p) (p \times m) + (m \times m) (m \times m) (m \times m)$  
+            # Scaled smoothed estimator covariance matrix
+            # $N_{t,i-1} = Z_{t,i}' Z_{t,i} / F_{t,i} + L_{t,i}' N_{t,i} L_{t,i}$
+            # $(m \times m) = (m \times p) (p \times m) + (m \times m) (m \times m) (m \times m)$
             # Note: save $N_{t-1}$ as scaled_smoothed_estimator_cov[t] rather
             # than as scaled_smoothed_estimator_cov[t-1] because we actually
             # need to store T+1 of them (N_{T-1} to N_{-1} -> N_T to N_0)
@@ -268,7 +268,7 @@ cdef int {{prefix}}smoothed_disturbances_univariate({{prefix}}KalmanSmoother smo
 
     # Temporary arrays
 
-    # $\\#_0 = R_t Q_t$  
+    # $\\#_0 = R_t Q_t$
     # $(m \times r) = (m \times r) (r \times r)$
     blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_posdef, &model._k_posdef,
               &alpha, model._selection, &model._k_states,
@@ -277,13 +277,13 @@ cdef int {{prefix}}smoothed_disturbances_univariate({{prefix}}KalmanSmoother smo
 
     if smoother.smoother_output & SMOOTHER_DISTURBANCE:
         for i in range(model._k_endog):
-            # Smoothed measurement disturbance  
-            # $\hat \varepsilon_t = (H_{t,i} / F_{t,i}) (v_{t,i} - F_{t,i} K_{t,i}' r_{t,i})$  
+            # Smoothed measurement disturbance
+            # $\hat \varepsilon_t = (H_{t,i} / F_{t,i}) (v_{t,i} - F_{t,i} K_{t,i}' r_{t,i})$
             # Note: K_{t,i}' r_{t,i} was stored in _smoothed_measurement_disturbance[i]
             # in smoothed_estimators_univariate, above, so we just need to implement
             # $\hat \varepsilon_t = (H_{t,i} / F_{t,i}) (v_{t,i} - \\#)$ here
-            # (this is because we do not otherwise store the r_{t,i} values)  
-            # $(p \times 1) = (p \times p) (p \times 1)$  
+            # (this is because we do not otherwise store the r_{t,i} values)
+            # $(p \times 1) = (p \times p) (p \times 1)$
             smoother._smoothed_measurement_disturbance[i] = (
                 kfilter._tmp4[i + i*kfilter.k_endog] * (
                     kfilter._forecast_error[i] -
@@ -291,9 +291,9 @@ cdef int {{prefix}}smoothed_disturbances_univariate({{prefix}}KalmanSmoother smo
                 )
             )
 
-        # Smoothed state disturbance  
-        # $\hat \eta_t = \\#_0' r_t$  
-        # $(r \times 1) = (r \times m) (m \times 1)$  
+        # Smoothed state disturbance
+        # $\hat \eta_t = \\#_0' r_t$
+        # $(r \times 1) = (r \times m) (m \times 1)$
         blas.{{prefix}}gemv("T", &model._k_states, &model._k_posdef,
                       &alpha, smoother._tmp0, &kfilter.k_states,
                               smoother._input_scaled_smoothed_estimator, &inc,
@@ -301,23 +301,23 @@ cdef int {{prefix}}smoothed_disturbances_univariate({{prefix}}KalmanSmoother smo
 
     if smoother.smoother_output & SMOOTHER_DISTURBANCE_COV:
         for i in range(model._k_endog):
-            # Smoothed measurement disturbance covariance matrix  
-            # $Var(\varepsilon_{t,i} | Y_n) = H_{t,i} - (H_{t,i} / F_{t,i})^2 * (F_{t,i} + F_{t,i}^2 K_{t,i}' N_{t,i} K_{t,i})$  
+            # Smoothed measurement disturbance covariance matrix
+            # $Var(\varepsilon_{t,i} | Y_n) = H_{t,i} - (H_{t,i} / F_{t,i})^2 * (F_{t,i} + F_{t,i}^2 K_{t,i}' N_{t,i} K_{t,i})$
             # Note: K_{t,i}' N_{t,i} K_{t,i} was stored in _smoothed_measurement_disturbance_cov[i,i]
             # in smoothed_estimators_univariate, above, so we just need to implement
             # $Var(\varepsilon_{t,i} | Y_n) = H_{t,i} - (H_{t,i} / F_{t,i})^2 * (F_{t,i} + F_{t,i}^2 * \\#)$ here
-            # (this is because we do not otherwise store the N_{t,i} values)  
-            # $(1 \times 1) = (p \times p) - (p \times p) (p \times p) - (p \times m) (m \times m) (m \times p)$  
+            # (this is because we do not otherwise store the N_{t,i} values)
+            # $(1 \times 1) = (p \times p) - (p \times p) (p \times p) - (p \times m) (m \times m) (m \times p)$
             smoother._smoothed_measurement_disturbance_cov[i + i*kfilter.k_endog] = model._obs_cov[i + i*model._k_endog] - (
                 (kfilter._tmp4[i + i*kfilter.k_endog]**2) * (
                     kfilter._forecast_error_cov[i + i*kfilter.k_endog] +
                     kfilter._forecast_error_cov[i + i*kfilter.k_endog]**2 * smoother._smoothed_measurement_disturbance_cov[i + i*kfilter.k_endog]
                 )
             )
-        
-        # Smoothed state disturbance covariance matrix  
-        # $Var(\eta_t | Y_n) = Q_t - \\#_0' N_t \\#_0$  
-        # $(r \times r) = (r \times r) - (r \times m) (m \times m) (m \times r)$  
+
+        # Smoothed state disturbance covariance matrix
+        # $Var(\eta_t | Y_n) = Q_t - \\#_0' N_t \\#_0$
+        # $(r \times r) = (r \times r) - (r \times m) (m \times m) (m \times r)$
         blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_posdef, &model._k_states,
                   &alpha, smoother._input_scaled_smoothed_estimator_cov, &kfilter.k_states,
                           smoother._tmp0, &kfilter.k_states,

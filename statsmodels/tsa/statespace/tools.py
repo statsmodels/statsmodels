@@ -246,7 +246,7 @@ def companion_matrix(polynomial):
     Given coefficients of a lag polynomial of the form:
 
     .. math::
-    
+
         c(L) = c_0 + c_1 L + \dots + c_p L^p
 
     returns a matrix of the form

@@ -4,7 +4,7 @@
 """
 Kalman Filter declarations
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 """
 
@@ -20,7 +20,7 @@ cdef int FILTER_COLLAPSED        # ibid., Chapter 6.5
 cdef int FILTER_EXTENDED         # ibid., Chapter 10.2
 cdef int FILTER_UNSCENTED        # ibid., Chapter 10.3
 cdef int SMOOTHER_CLASSICAL      # ibid., Chapter 4.6.1
-cdef int SMOOTHER_ALTERNATIVE    # 
+cdef int SMOOTHER_ALTERNATIVE    #
 
 # ### Inversion methods
 # Methods by which the terms using the inverse of the forecast error
@@ -162,7 +162,7 @@ cdef class sKalmanFilter(object):
     # ### Define some constants
     cdef readonly int k_endog, k_states, k_posdef, k_endog2, k_states2, k_posdef2, k_endogstates, k_statesposdef
     cdef readonly int ldwork
-    
+
     cdef allocate_arrays(self)
     cdef void set_dimensions(self)
     cpdef set_filter_method(self, int filter_method, int force_reset=*)
@@ -288,7 +288,7 @@ cdef class dKalmanFilter(object):
     # ### Define some constants
     cdef readonly int k_endog, k_states, k_posdef, k_endog2, k_states2, k_posdef2, k_endogstates, k_statesposdef
     cdef readonly int ldwork
-    
+
     cdef allocate_arrays(self)
     cdef void set_dimensions(self)
     cpdef set_filter_method(self, int filter_method, int force_reset=*)
@@ -414,7 +414,7 @@ cdef class cKalmanFilter(object):
     # ### Define some constants
     cdef readonly int k_endog, k_states, k_posdef, k_endog2, k_states2, k_posdef2, k_endogstates, k_statesposdef
     cdef readonly int ldwork
-    
+
     cdef allocate_arrays(self)
     cdef void set_dimensions(self)
     cpdef set_filter_method(self, int filter_method, int force_reset=*)
@@ -540,7 +540,7 @@ cdef class zKalmanFilter(object):
     # ### Define some constants
     cdef readonly int k_endog, k_states, k_posdef, k_endog2, k_states2, k_posdef2, k_endogstates, k_statesposdef
     cdef readonly int ldwork
-    
+
     cdef allocate_arrays(self)
     cdef void set_dimensions(self)
     cpdef set_filter_method(self, int filter_method, int force_reset=*)

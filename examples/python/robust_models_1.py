@@ -10,14 +10,14 @@ import statsmodels.api as sm
 from statsmodels.compat.pandas import sort_values
 
 
-# * An M-estimator minimizes the function 
-# 
+# * An M-estimator minimizes the function
+#
 # $$Q(e_i, \rho) = \sum_i~\rho \left (\frac{e_i}{s}\right )$$
-# 
-# where $\rho$ is a symmetric function of the residuals 
-# 
+#
+# where $\rho$ is a symmetric function of the residuals
+#
 # * The effect of $\rho$ is to reduce the influence of outliers
-# * $s$ is an estimate of scale. 
+# * $s$ is an estimate of scale.
 # * The robust estimates $\hat{\beta}$ are computed by the iteratively re-weighted least squares algorithm
 
 # * We have several choices available for the weighting functions to be used
@@ -135,15 +135,15 @@ x.std()
 
 
 # Median Absolute Deviation
-# 
+#
 # $$ median_i |X_i - median_j(X_j)|) $$
 
 # Standardized Median Absolute Deviation is a consistent estimator for $\hat{\sigma}$
-# 
+#
 # $$\hat{\sigma}=K \cdot MAD$$
-# 
+#
 # where $K$ depends on the distribution. For the normal distribution for example,
-# 
+#
 # $$K = \Phi^{-1}(.75)$$
 
 stats.norm.ppf(.75)
@@ -320,7 +320,7 @@ wls_model = sm.WLS(y, X, weights=weights).fit()
 abline_plot(model_results=wls_model, ax=ax, color='green')
 
 
-# * MM estimators are good for this type of problem, unfortunately, we don't yet have these yet. 
+# * MM estimators are good for this type of problem, unfortunately, we don't yet have these yet.
 # * It's being worked on, but it gives a good excuse to look at the R cell magics in the notebook.
 
 yy = y.values[:,None]

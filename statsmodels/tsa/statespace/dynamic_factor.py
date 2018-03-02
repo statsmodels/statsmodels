@@ -161,7 +161,7 @@ class DynamicFactor(MLEModel):
 
         # Exogenous data
         (self.k_exog, exog) = prepare_exog(exog)
-        
+
         # Note: at some point in the future might add state regression, as in
         # SARIMAX.
         self.mle_regression = self.k_exog > 0

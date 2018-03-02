@@ -4,7 +4,7 @@
 """
 State Space Models
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 
 Notes
@@ -112,8 +112,8 @@ cdef int {{prefix}}smoothed_estimators_measurement_classical({{prefix}}KalmanSmo
                                     ' matrix encountered at period %d' %
                                     smoother.t)
 
-    # Scaled smoothed estimator  
-    # $r_t = P_{t+1}^{-1} (\hat \alpha_{t+1} - a_{t+1})$   
+    # Scaled smoothed estimator
+    # $r_t = P_{t+1}^{-1} (\hat \alpha_{t+1} - a_{t+1})$
     # $(m \times 1) = (m \times m) [(m \times 1) - (m \times 1)]$
     # Note: save $r_t$ as _input_scaled_smoothed_estimator not as
     # _scaled_smoothed_estimator
@@ -131,9 +131,9 @@ cdef int {{prefix}}smoothed_estimators_measurement_classical({{prefix}}KalmanSmo
                                         ' covariance matrix encountered at'
                                         ' period %d' % smoother.t)
 
-    # Scaled smoothed estimator covariance matrix  
+    # Scaled smoothed estimator covariance matrix
     # $N_t = P_{t+1}^{-1} (P_{t+1} - V_{t+1}) P_{t+1}^{-1}
-    # $(m \times m) = (m \times p) (p \times m) + (m \times m) (m \times m) (m \times m)$  
+    # $(m \times m) = (m \times p) (p \times m) + (m \times m) (m \times m) (m \times m)$
     # Note: save $N_t$ as _input_scaled_smoothed_estimator_cov not as
     # _scaled_smoothed_estimator_cov
     if smoother.t < model.nobs-1 and smoother.smoother_output & (SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE_COV):
@@ -167,9 +167,9 @@ cdef int {{prefix}}smoothed_estimators_measurement_classical({{prefix}}KalmanSmo
                                         ' covariance matrix encountered at'
                                         ' period %d' % smoother.t)
 
-    # Smoothing error  
-    # $u_t = \\#_2 - K_t' r_t$  
-    # $(p \times 1) = (p \times 1) - (p \times m) (m \times 1)$ 
+    # Smoothing error
+    # $u_t = \\#_2 - K_t' r_t$
+    # $(p \times 1) = (p \times 1) - (p \times m) (m \times 1)$
     if smoother.smoother_output & (SMOOTHER_DISTURBANCE):
         if not model._nmissing == model.k_endog:
             blas.{{prefix}}copy(&kfilter.k_endog, kfilter._tmp2, &inc, smoother._smoothing_error, &inc)
@@ -178,7 +178,7 @@ cdef int {{prefix}}smoothed_estimators_measurement_classical({{prefix}}KalmanSmo
                           smoother._input_scaled_smoothed_estimator, &inc,
                   &alpha, smoother._smoothing_error, &inc)
 
-    # $L_t = (T_t - K_t Z_t)$  
+    # $L_t = (T_t - K_t Z_t)$
     # $(m \times m) = (m \times m) + (m \times p) (p \times m)$
     # (this is required for any type of smoothing)
     blas.{{prefix}}copy(&model._k_states2, model._transition, &inc, smoother._tmpL, &inc)
@@ -206,8 +206,8 @@ cdef int {{prefix}}smoothed_state_classical({{prefix}}KalmanSmoother smoother, {
 
     # Smoothed state
     if smoother.smoother_output & SMOOTHER_STATE:
-        # $\hat \alpha_t = a_t|t + P_t|t T_t' r_t$  
-        # $(m \times 1) = (m \times 1) + (m \times m) (m \times 1)$  
+        # $\hat \alpha_t = a_t|t + P_t|t T_t' r_t$
+        # $(m \times 1) = (m \times 1) + (m \times m) (m \times 1)$
         blas.{{prefix}}copy(&kfilter.k_states, &kfilter.filtered_state[0,smoother.t], &inc, smoother._smoothed_state, &inc)
 
         blas.{{prefix}}gemv("N", &model._k_states, &model._k_states,
@@ -217,8 +217,8 @@ cdef int {{prefix}}smoothed_state_classical({{prefix}}KalmanSmoother smoother, {
 
     # Smoothed state covariance
     if smoother.smoother_output & SMOOTHER_STATE_COV:
-        # $V_t = P_t|t [I - T_t' N_t T_t P_t|t]$  
-        # $(m \times m) = (m \times m) [(m \times m) - (m \times m) (m \times m)]$  
+        # $V_t = P_t|t [I - T_t' N_t T_t P_t|t]$
+        # $(m \times m) = (m \times m) [(m \times m) - (m \times m) (m \times m)]$
         blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
               &alpha, smoother._input_scaled_smoothed_estimator_cov, &kfilter.k_states,
                       smoother._tmp0, &kfilter.k_states,

@@ -3836,11 +3836,11 @@ class CpunishTweediePower15(object):
     # From R
     setwd('c:/workspace')
     data <- read.csv('cpunish.csv', sep=",")
-    
+
     library(statmod)
     library(tweedie)
-    
-    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1, 
+
+    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1,
                 family=tweedie(var.power=1.5, link.power=1),
                 data=data))
     """
@@ -3903,11 +3903,11 @@ class CpunishTweediePower2(object):
     # From R
     setwd('c:/workspace')
     data <- read.csv('cpunish.csv', sep=",")
-    
+
     library(statmod)
     library(tweedie)
-    
-    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1, 
+
+    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1,
                 family=tweedie(var.power=2, link.power=1),
                 data=data))
     """
@@ -3971,11 +3971,11 @@ class CpunishTweedieLog1(object):
     # From R
     setwd('c:/workspace')
     data <- read.csv('cpunish.csv', sep=",")
-    
+
     library(statmod)
     library(tweedie)
-    
-    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1, 
+
+    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1,
                 family=tweedie(var.power=1, link.power=0),
                 data=data))
     """

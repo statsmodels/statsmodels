@@ -4,7 +4,7 @@
 """
 State Space Models
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 """
 
@@ -176,7 +176,7 @@ cdef class {{prefix}}Statespace(object):
     """
 
     # ### State space representation
-    # 
+    #
     # $$
     # \begin{align}
     # y_t & = Z_t \alpha_t + d_t + \varepsilon_t \hspace{3em} & \varepsilon_t & \sim N(0, H_t) \\\\
@@ -184,30 +184,30 @@ cdef class {{prefix}}Statespace(object):
     # & & \alpha_1 & \sim N(a_1, P_1)
     # \end{align}
     # $$
-    # 
-    # $y_t$ is $p \times 1$  
-    # $\varepsilon_t$ is $p \times 1$  
-    # $\alpha_t$ is $m \times 1$  
-    # $\eta_t$ is $r \times 1$  
+    #
+    # $y_t$ is $p \times 1$
+    # $\varepsilon_t$ is $p \times 1$
+    # $\alpha_t$ is $m \times 1$
+    # $\eta_t$ is $r \times 1$
     # $t = 1, \dots, T$
 
-    # `nobs` $\equiv T$ is the length of the time-series  
-    # `k_endog` $\equiv p$ is dimension of observation space  
-    # `k_states` $\equiv m$ is the dimension of the state space  
-    # `k_posdef` $\equiv r$ is the dimension of the state shocks  
+    # `nobs` $\equiv T$ is the length of the time-series
+    # `k_endog` $\equiv p$ is dimension of observation space
+    # `k_states` $\equiv m$ is the dimension of the state space
+    # `k_posdef` $\equiv r$ is the dimension of the state shocks
     # *Old notation: T, n, k, g*
     cdef readonly int nobs, k_endog, k_states, k_posdef
-    
-    # `obs` $\equiv y_t$ is the **observation vector** $(p \times T)$  
-    # `design` $\equiv Z_t$ is the **design vector** $(p \times m \times T)$  
-    # `obs_intercept` $\equiv d_t$ is the **observation intercept** $(p \times T)$  
-    # `obs_cov` $\equiv H_t$ is the **observation covariance matrix** $(p \times p \times T)$  
-    # `transition` $\equiv T_t$ is the **transition matrix** $(m \times m \times T)$  
-    # `state_intercept` $\equiv c_t$ is the **state intercept** $(m \times T)$  
-    # `selection` $\equiv R_t$ is the **selection matrix** $(m \times r \times T)$  
-    # `state_cov` $\equiv Q_t$ is the **state covariance matrix** $(r \times r \times T)$  
-    # `selected_state_cov` $\equiv R Q_t R'$ is the **selected state covariance matrix** $(m \times m \times T)$  
-    # `initial_state` $\equiv a_1$ is the **initial state mean** $(m \times 1)$  
+
+    # `obs` $\equiv y_t$ is the **observation vector** $(p \times T)$
+    # `design` $\equiv Z_t$ is the **design vector** $(p \times m \times T)$
+    # `obs_intercept` $\equiv d_t$ is the **observation intercept** $(p \times T)$
+    # `obs_cov` $\equiv H_t$ is the **observation covariance matrix** $(p \times p \times T)$
+    # `transition` $\equiv T_t$ is the **transition matrix** $(m \times m \times T)$
+    # `state_intercept` $\equiv c_t$ is the **state intercept** $(m \times T)$
+    # `selection` $\equiv R_t$ is the **selection matrix** $(m \times r \times T)$
+    # `state_cov` $\equiv Q_t$ is the **state covariance matrix** $(r \times r \times T)$
+    # `selected_state_cov` $\equiv R Q_t R'$ is the **selected state covariance matrix** $(m \times m \times T)$
+    # `initial_state` $\equiv a_1$ is the **initial state mean** $(m \times 1)$
     # `initial_state_cov` $\equiv P_1$ is the **initial state covariance matrix** $(m \times m)$
     #
     # With the exception of `obs`, these are *optionally* time-varying. If they are instead time-invariant,
@@ -215,7 +215,7 @@ cdef class {{prefix}}Statespace(object):
     #
     # *Note*: the initial vectors' notation 1-indexed as in Durbin and Koopman,
     # but in the recursions below it will be 0-indexed in the Python arrays.
-    # 
+    #
     # *Old notation: y, -, mu, beta_tt_init, P_tt_init*
     cdef readonly {{cython_type}} [::1,:] obs, obs_intercept, state_intercept
     cdef readonly {{cython_type}} [:] initial_state
@@ -224,7 +224,7 @@ cdef class {{prefix}}Statespace(object):
     cdef readonly {{cython_type}} [::1,:,:] design, obs_cov, transition, selection, state_cov, selected_state_cov
 
     # `missing` is a $(p \times T)$ boolean matrix where a row is a $(p \times 1)$ vector
-    # in which the $i$th position is $1$ if $y_{i,t}$ is to be considered a missing value.  
+    # in which the $i$th position is $1$ if $y_{i,t}$ is to be considered a missing value.
     # *Note:* This is created as the output of np.isnan(obs).
     cdef readonly int [::1,:] missing
     # `nmissing` is an `T \times 0` integer vector holding the number of *missing* observations
@@ -241,7 +241,7 @@ cdef class {{prefix}}Statespace(object):
     # Temporary arrays
     cdef {{cython_type}} [::1,:] tmp
 
-    # Pointers  
+    # Pointers
     # *Note*: These are not yet implemented to do anything in this base class
     # but are used in subclasses. Necessary to have them here due to problems
     # with redeclaring the model attribute of KalmanFilter children classes
@@ -275,7 +275,7 @@ cdef class {{prefix}}Statespace(object):
             np.npy_intp dim2[2]
             np.npy_intp dim3[3]
 
-        # #### State space representation variables  
+        # #### State space representation variables
         # **Note**: these arrays share data with the versions defined in
         # Python and passed to this constructor, so if they are updated in
         # Python they will also be updated here.
@@ -384,7 +384,7 @@ cdef class {{prefix}}Statespace(object):
     # Durbin and Koopman note that this initialization should only be coupled
     # with the standard Kalman filter for "approximate exploratory work" and
     # can lead to "large rounding errors" (p. 125).
-    # 
+    #
     # *Note:* see Durbin and Koopman section 5.6.1
     def initialize_approximate_diffuse(self, variance=1e2):
         """
@@ -399,7 +399,7 @@ cdef class {{prefix}}Statespace(object):
 
     # ## Initialize: stationary process
     # *Note:* see Durbin and Koopman section 5.6.2
-    # 
+    #
     # TODO improve efficiency with direct BLAS / LAPACK calls
     def initialize_stationary(self, complex_step=False):
         """
@@ -448,22 +448,22 @@ cdef int {{prefix}}select_state_cov(int k_states, int k_posdef,
     # (i.e k_posdof == 0)
     if k_posdef > 0:
 
-        # #### Calculate selected state covariance matrix  
+        # #### Calculate selected state covariance matrix
         # $Q_t^* = R_t Q_t R_t'$
-        # 
+        #
         # Combine the selection matrix and the state covariance matrix to get
         # the simplified (but possibly singular) "selected" state covariance
         # matrix (see e.g. Durbin and Koopman p. 43)
 
-        # `tmp0` array used here, dimension $(m \times r)$  
+        # `tmp0` array used here, dimension $(m \times r)$
 
-        # $\\#_0 = 1.0 * R_t Q_t$  
+        # $\\#_0 = 1.0 * R_t Q_t$
         # $(m \times r) = (m \times r) (r \times r)$
         {{prefix}}gemm("N", "N", &k_states, &k_posdef, &k_posdef,
               &alpha, selection, &k_states,
                       state_cov, &k_posdef,
               &beta, tmp, &k_states)
-        # $Q_t^* = 1.0 * \\#_0 R_t'$  
+        # $Q_t^* = 1.0 * \\#_0 R_t'$
         # $(m \times m) = (m \times r) (m \times r)'$
         {{prefix}}gemm("N", "T", &k_states, &k_states, &k_posdef,
               &alpha, tmp, &k_states,
@@ -471,7 +471,7 @@ cdef int {{prefix}}select_state_cov(int k_states, int k_posdef,
               &beta, selected_state_cov, &k_states)
 
 # ## Kalman filter Routines
-# 
+#
 # The following functions are the workhorse functions for the Kalman filter.
 # They represent four distinct but very general phases of the Kalman filtering
 # operations.
@@ -494,11 +494,11 @@ cdef int {{prefix}}select_state_cov(int k_states, int k_posdef,
 #
 # Other filter types (e.g. `exact_initial`, `augmented`, etc.) may be added in
 # the future.
-# 
+#
 # `forecast_<filter type>` generates the forecast, forecast error $v_t$ and
-# forecast error covariance matrix $F_t$  
+# forecast error covariance matrix $F_t$
 # `updating_<filter type>` is the updating step of the Kalman filter, and
-# generates the filtered state $a_{t|t}$ and covariance matrix $P_{t|t}$  
+# generates the filtered state $a_{t|t}$ and covariance matrix $P_{t|t}$
 # `prediction_<filter type>` is the prediction step of the Kalman filter, and
 # generates the predicted state $a_{t+1}$ and covariance matrix $P_{t+1}$.
 # `loglikelihood_<filter type>` calculates the loglikelihood for $y_t$
@@ -515,18 +515,18 @@ cdef int {{prefix}}forecast_missing_conventional({{prefix}}KalmanFilter kfilter)
     cdef int i, j
     cdef int inc = 1
 
-    # #### Forecast for time t  
+    # #### Forecast for time t
     # `forecast` $= Z_t a_t + d_t$
     # Just set to zeros, see below (this means if forecasts are required for
     # this part, they must be done in the wrappe)
 
-    # #### Forecast error for time t  
+    # #### Forecast error for time t
     # It is undefined here, since obs is nan
     for i in range(kfilter.k_endog):
         kfilter._forecast[i] = 0
         kfilter._forecast_error[i] = 0
 
-    # #### Forecast error covariance matrix for time t  
+    # #### Forecast error covariance matrix for time t
     # $F_t \equiv 0$
     for i in range(kfilter.k_endog):
         for j in range(kfilter.k_endog):
@@ -565,22 +565,22 @@ cdef int {{prefix}}forecast_conventional({{prefix}}KalmanFilter kfilter):
         {{cython_type}} beta = 0.0
         {{cython_type}} gamma = -1.0
 
-    # #### Forecast for time t  
+    # #### Forecast for time t
     # `forecast` $= Z_t a_t + d_t$
-    # 
+    #
     # *Note*: $a_t$ is given from the initialization (for $t = 0$) or
     # from the previous iteration of the filter (for $t > 0$).
 
     # $\\# = d_t$
     {{prefix}}copy(&kfilter.k_endog, kfilter._obs_intercept, &inc, kfilter._forecast, &inc)
-    # `forecast` $= 1.0 * Z_t a_t + 1.0 * \\#$  
+    # `forecast` $= 1.0 * Z_t a_t + 1.0 * \\#$
     # $(p \times 1) = (p \times m) (m \times 1) + (p \times 1)$
     {{prefix}}gemv("N", &kfilter.k_endog, &kfilter.k_states,
           &alpha, kfilter._design, &kfilter.k_endog,
                   kfilter._input_state, &inc,
           &alpha, kfilter._forecast, &inc)
 
-    # #### Forecast error for time t  
+    # #### Forecast error for time t
     # `forecast_error` $\equiv v_t = y_t -$ `forecast`
 
     # $\\# = y_t$
@@ -589,18 +589,18 @@ cdef int {{prefix}}forecast_conventional({{prefix}}KalmanFilter kfilter):
     # $(p \times 1) = (p \times 1) + (p \times 1)$
     {{prefix}}axpy(&kfilter.k_endog, &gamma, kfilter._forecast, &inc, kfilter._forecast_error, &inc)
 
-    # *Intermediate calculation* (used just below and then once more)  
-    # `tmp1` array used here, dimension $(m \times p)$  
-    # $\\#_1 = P_t Z_t'$  
+    # *Intermediate calculation* (used just below and then once more)
+    # `tmp1` array used here, dimension $(m \times p)$
+    # $\\#_1 = P_t Z_t'$
     # $(m \times p) = (m \times m) (p \times m)'$
     {{prefix}}gemm("N", "T", &kfilter.k_states, &kfilter.k_endog, &kfilter.k_states,
           &alpha, kfilter._input_state_cov, &kfilter.k_states,
                   kfilter._design, &kfilter.k_endog,
           &beta, kfilter._tmp1, &kfilter.k_states)
 
-    # #### Forecast error covariance matrix for time t  
+    # #### Forecast error covariance matrix for time t
     # $F_t \equiv Z_t P_t Z_t' + H_t$
-    # 
+    #
     # *Note*: this and does nothing at all to `forecast_error_cov` if
     # converged == True
     if not kfilter.converged:
@@ -622,9 +622,9 @@ cdef int {{prefix}}updating_conventional({{prefix}}KalmanFilter kfilter):
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
         {{cython_type}} gamma = -1.0
-    
+
     # #### Filtered state for time t
-    # $a_{t|t} = a_t + P_t Z_t' F_t^{-1} v_t$  
+    # $a_{t|t} = a_t + P_t Z_t' F_t^{-1} v_t$
     # $a_{t|t} = 1.0 * \\#_1 \\#_2 + 1.0 a_t$
     {{prefix}}copy(&kfilter.k_states, kfilter._input_state, &inc, kfilter._filtered_state, &inc)
     {{prefix}}gemv("N", &kfilter.k_states, &kfilter.k_endog,
@@ -633,23 +633,23 @@ cdef int {{prefix}}updating_conventional({{prefix}}KalmanFilter kfilter):
           &alpha, kfilter._filtered_state, &inc)
 
     # #### Filtered state covariance for time t
-    # $P_{t|t} = P_t - P_t Z_t' F_t^{-1} Z_t P_t$  
-    # $P_{t|t} = P_t - \\#_1 \\#_3 P_t$  
-    # 
+    # $P_{t|t} = P_t - P_t Z_t' F_t^{-1} Z_t P_t$
+    # $P_{t|t} = P_t - \\#_1 \\#_3 P_t$
+    #
     # *Note*: this and does nothing at all to `filtered_state_cov` if
     # converged == True
     if not kfilter.converged:
         {{prefix}}copy(&kfilter.k_states2, kfilter._input_state_cov, &inc, kfilter._filtered_state_cov, &inc)
 
-        # `tmp0` array used here, dimension $(m \times m)$  
-        # $\\#_0 = 1.0 * \\#_1 \\#_3$  
+        # `tmp0` array used here, dimension $(m \times m)$
+        # $\\#_0 = 1.0 * \\#_1 \\#_3$
         # $(m \times m) = (m \times p) (p \times m)$
         {{prefix}}gemm("N", "N", &kfilter.k_states, &kfilter.k_states, &kfilter.k_endog,
               &alpha, kfilter._tmp1, &kfilter.k_states,
                       kfilter._tmp3, &kfilter.k_endog,
               &beta, kfilter._tmp0, &kfilter.k_states)
 
-        # $P_{t|t} = - 1.0 * \\# P_t + 1.0 * P_t$  
+        # $P_{t|t} = - 1.0 * \\# P_t + 1.0 * P_t$
         # $(m \times m) = (m \times m) (m \times m) + (m \times m)$
         {{prefix}}gemm("N", "N", &kfilter.k_states, &kfilter.k_states, &kfilter.k_states,
               &gamma, kfilter._tmp0, &kfilter.k_states,
@@ -682,7 +682,7 @@ cdef int {{prefix}}prediction_conventional({{prefix}}KalmanFilter kfilter):
     # converged == True
     if not kfilter.converged:
         {{prefix}}copy(&kfilter.k_states2, kfilter._selected_state_cov, &inc, kfilter._predicted_state_cov, &inc)
-        # `tmp0` array used here, dimension $(m \times m)$  
+        # `tmp0` array used here, dimension $(m \times m)$
 
         # $\\#_0 = T_t P_{t|t} $
 
@@ -691,7 +691,7 @@ cdef int {{prefix}}prediction_conventional({{prefix}}KalmanFilter kfilter):
               &alpha, kfilter._transition, &kfilter.k_states,
                       kfilter._filtered_state_cov, &kfilter.k_states,
               &beta, kfilter._tmp0, &kfilter.k_states)
-        # $P_{t+1} = 1.0 \\#_0 T_t' + 1.0 \\#$  
+        # $P_{t+1} = 1.0 \\#_0 T_t' + 1.0 \\#$
         # $(m \times m) = (m \times m) (m \times m) + (m \times m)$
         {{prefix}}gemm("N", "T", &kfilter.k_states, &kfilter.k_states, &kfilter.k_states,
               &alpha, kfilter._tmp0, &kfilter.k_states,
@@ -819,7 +819,7 @@ cdef {{cython_type}} {{prefix}}factorize_lu({{prefix}}KalmanFilter kfilter, {{cy
     if not kfilter.converged:
         # Perform LU decomposition into `forecast_error_fac`
         {{prefix}}copy(&kfilter.k_endog2, kfilter._forecast_error_cov, &inc, kfilter._forecast_error_fac, &inc)
-        
+
         {{prefix}}getrf(&kfilter.k_endog, &kfilter.k_endog,
                         kfilter._forecast_error_fac, &kfilter.k_endog,
                         kfilter._forecast_error_ipiv, &info)
@@ -834,7 +834,7 @@ cdef {{cython_type}} {{prefix}}factorize_lu({{prefix}}KalmanFilter kfilter, {{cy
                                         kfilter.t)
 
         # Calculate the determinant (product of the diagonals, but with
-        # sign modifications according to the permutation matrix)    
+        # sign modifications according to the permutation matrix)
         determinant = 1
         for i in range(kfilter.k_endog):
             if not kfilter._forecast_error_ipiv[i] == i+1:
@@ -876,8 +876,8 @@ cdef {{cython_type}} {{prefix}}inverse_cholesky({{prefix}}KalmanFilter kfilter, 
 
     # Get `tmp2` and `tmp3` via matrix multiplications
 
-    # `tmp2` array used here, dimension $(p \times 1)$  
-    # $\\#_2 = F_t^{-1} v_t$  
+    # `tmp2` array used here, dimension $(p \times 1)$
+    # $\\#_2 = F_t^{-1} v_t$
     #{{prefix}}symv("U", &kfilter.k_endog, &alpha, kfilter._forecast_error_fac, &kfilter.k_endog,
     #               kfilter._forecast_error, &inc, &beta, kfilter._tmp2, &inc)
     {{prefix}}gemv("N", &kfilter.k_endog, &kfilter.k_endog,
@@ -885,7 +885,7 @@ cdef {{cython_type}} {{prefix}}inverse_cholesky({{prefix}}KalmanFilter kfilter, 
                            kfilter._forecast_error, &inc,
                    &beta, kfilter._tmp2, &inc)
 
-    # `tmp3` array used here, dimension $(p \times m)$  
+    # `tmp3` array used here, dimension $(p \times m)$
     # $\\#_3 = F_t^{-1} Z_t$
     #{{prefix}}symm("L", "U", &kfilter.k_endog, &kfilter.k_states,
     #               &alpha, kfilter._forecast_error_fac, &kfilter.k_endog,
@@ -921,14 +921,14 @@ cdef {{cython_type}} {{prefix}}inverse_lu({{prefix}}KalmanFilter kfilter, {{cyth
 
     # Get `tmp2` and `tmp3` via matrix multiplications
 
-    # `tmp2` array used here, dimension $(p \times 1)$  
-    # $\\#_2 = F_t^{-1} v_t$  
+    # `tmp2` array used here, dimension $(p \times 1)$
+    # $\\#_2 = F_t^{-1} v_t$
     {{prefix}}gemv("N", &kfilter.k_endog, &kfilter.k_endog,
                    &alpha, kfilter._forecast_error_fac, &kfilter.k_endog,
                            kfilter._forecast_error, &inc,
                    &beta, kfilter._tmp2, &inc)
 
-    # `tmp3` array used here, dimension $(p \times m)$  
+    # `tmp3` array used here, dimension $(p \times m)$
     # $\\#_3 = F_t^{-1} Z_t$
     {{prefix}}gemm("N", "N", &kfilter.k_endog, &kfilter.k_states, &kfilter.k_endog,
                    &alpha, kfilter._forecast_error_fac, &kfilter.k_endog,
@@ -952,13 +952,13 @@ cdef {{cython_type}} {{prefix}}solve_cholesky({{prefix}}KalmanFilter kfilter, {{
         # Perform the Cholesky decomposition and get the determinant
         determinant = {{prefix}}factorize_cholesky(kfilter, determinant)
 
-    # Solve the linear systems  
-    # `tmp2` array used here, dimension $(p \times 1)$  
-    # $F_t \\#_2 = v_t$  
+    # Solve the linear systems
+    # `tmp2` array used here, dimension $(p \times 1)$
+    # $F_t \\#_2 = v_t$
     {{prefix}}copy(&kfilter.k_endog, kfilter._forecast_error, &inc, kfilter._tmp2, &inc)
     {{prefix}}potrs("U", &kfilter.k_endog, &inc, kfilter._forecast_error_fac, &kfilter.k_endog, kfilter._tmp2, &kfilter.k_endog, &info)
 
-    # `tmp3` array used here, dimension $(p \times m)$  
+    # `tmp3` array used here, dimension $(p \times m)$
     # $F_t \\#_3 = Z_t$
     {{prefix}}copy(&kfilter.k_endogstates, kfilter._design, &inc, kfilter._tmp3, &inc)
     {{prefix}}potrs("U", &kfilter.k_endog, &kfilter.k_states, kfilter._forecast_error_fac, &kfilter.k_endog, kfilter._tmp3, &kfilter.k_endog, &info)
@@ -982,14 +982,14 @@ cdef {{cython_type}} {{prefix}}solve_lu({{prefix}}KalmanFilter kfilter, {{cython
         # Perform the Cholesky decomposition and get the determinant
         determinant = {{prefix}}factorize_lu(kfilter, determinant)
 
-    # Solve the linear systems  
-    # `tmp2` array used here, dimension $(p \times 1)$  
-    # $F_t \\#_2 = v_t$  
+    # Solve the linear systems
+    # `tmp2` array used here, dimension $(p \times 1)$
+    # $F_t \\#_2 = v_t$
     {{prefix}}copy(&kfilter.k_endog, kfilter._forecast_error, &inc, kfilter._tmp2, &inc)
     {{prefix}}getrs("N", &kfilter.k_endog, &inc, kfilter._forecast_error_fac, &kfilter.k_endog,
                     kfilter._forecast_error_ipiv, kfilter._tmp2, &kfilter.k_endog, &info)
 
-    # `tmp3` array used here, dimension $(p \times m)$  
+    # `tmp3` array used here, dimension $(p \times m)$
     # $F_t \\#_3 = Z_t$
     {{prefix}}copy(&kfilter.k_endogstates, kfilter._design, &inc, kfilter._tmp3, &inc)
     {{prefix}}getrs("N", &kfilter.k_endog, &kfilter.k_states, kfilter._forecast_error_fac, &kfilter.k_endog,
@@ -1034,23 +1034,23 @@ cdef class {{prefix}}KalmanFilter(object):
     steps.
 
     `initialize_object_pointers` initializes pointers to current-iteration
-    objects (i.e. the state space arrays and filter output arrays).  
+    objects (i.e. the state space arrays and filter output arrays).
 
     `initialize_function_pointers` initializes pointers to the appropriate
     Kalman filtering routines (i.e. `forecast_conventional` or
-    `forecast_exact_initial`, etc.).  
+    `forecast_exact_initial`, etc.).
 
     `select_arrays` converts the base arrays into "selected" arrays using
     selection matrices. In particular, it handles the state covariance matrix
-    and redefined matrices based on missing values.  
+    and redefined matrices based on missing values.
 
     `post_convergence` handles copying arrays from time $t-1$ to time $t$ when
-    the Kalman filter has converged and they don't need to be re-calculated.  
+    the Kalman filter has converged and they don't need to be re-calculated.
 
     `forecasting` calls the Kalman filter `forcasting_<filter type>` routine
 
     `inversion` calls the appropriate function to invert the forecast error
-    covariance matrix.  
+    covariance matrix.
 
     `updating` calls the Kalman filter `updating_<filter type>` routine
 
@@ -1059,7 +1059,7 @@ cdef class {{prefix}}KalmanFilter(object):
     `prediction` calls the Kalman filter `prediction_<filter type>` routine
 
     `numerical_stability` performs end-of-iteration tasks to improve the numerical
-    stability of the filter 
+    stability of the filter
 
     `check_convergence` checks for convergence of the filter to steady-state.
     """
@@ -1068,7 +1068,7 @@ cdef class {{prefix}}KalmanFilter(object):
     cdef readonly {{prefix}}Statespace model
 
     # ### Filter parameters
-    # Holds the time-iteration state of the filter  
+    # Holds the time-iteration state of the filter
     # *Note*: must be changed using the `seek` method
     cdef readonly int t
     # Holds the tolerance parameter for convergence
@@ -1080,7 +1080,7 @@ cdef class {{prefix}}KalmanFilter(object):
     # Holds whether or not the model is time-invariant
     # *Note*: is by default reset each time `seek` is called
     cdef readonly int time_invariant
-    # The Kalman filter procedure to use  
+    # The Kalman filter procedure to use
     cdef public int filter_method
     # The method by which the terms using the inverse of the forecast
     # error covariance matrix are solved.
@@ -1101,11 +1101,11 @@ cdef class {{prefix}}KalmanFilter(object):
     # `loglikelihood` $\equiv \log p(y_t | Y_{t-1})$
     cdef readonly {{cython_type}} [:] loglikelihood
 
-    # `filtered_state` $\equiv a_{t|t} = E(\alpha_t | Y_t)$ is the **filtered estimator** of the state $(m \times T)$  
-    # `predicted_state` $\equiv a_{t+1} = E(\alpha_{t+1} | Y_t)$ is the **one-step ahead predictor** of the state $(m \times T-1)$  
-    # `forecast` $\equiv E(y_t|Y_{t-1})$ is the **forecast** of the next observation $(p \times T)$   
-    # `forecast_error` $\equiv v_t = y_t - E(y_t|Y_{t-1})$ is the **one-step ahead forecast error** of the next observation $(p \times T)$  
-    # 
+    # `filtered_state` $\equiv a_{t|t} = E(\alpha_t | Y_t)$ is the **filtered estimator** of the state $(m \times T)$
+    # `predicted_state` $\equiv a_{t+1} = E(\alpha_{t+1} | Y_t)$ is the **one-step ahead predictor** of the state $(m \times T-1)$
+    # `forecast` $\equiv E(y_t|Y_{t-1})$ is the **forecast** of the next observation $(p \times T)$
+    # `forecast_error` $\equiv v_t = y_t - E(y_t|Y_{t-1})$ is the **one-step ahead forecast error** of the next observation $(p \times T)$
+    #
     # *Note*: Actual values in `filtered_state` will be from 1 to `nobs`+1. Actual
     # values in `predicted_state` will be from 0 to `nobs`+1 because the initialization
     # is copied over to the zeroth entry, and similar for the covariances, below.
@@ -1113,10 +1113,10 @@ cdef class {{prefix}}KalmanFilter(object):
     # *Old notation: beta_tt, beta_tt1, y_tt1, eta_tt1*
     cdef readonly {{cython_type}} [::1,:] filtered_state, predicted_state, forecast, forecast_error
 
-    # `filtered_state_cov` $\equiv P_{t|t} = Var(\alpha_t | Y_t)$ is the **filtered state covariance matrix** $(m \times m \times T)$  
-    # `predicted_state_cov` $\equiv P_{t+1} = Var(\alpha_{t+1} | Y_t)$ is the **predicted state covariance matrix** $(m \times m \times T)$  
-    # `forecast_error_cov` $\equiv F_t = Var(v_t | Y_{t-1})$ is the **forecast error covariance matrix** $(p \times p \times T)$  
-    # 
+    # `filtered_state_cov` $\equiv P_{t|t} = Var(\alpha_t | Y_t)$ is the **filtered state covariance matrix** $(m \times m \times T)$
+    # `predicted_state_cov` $\equiv P_{t+1} = Var(\alpha_{t+1} | Y_t)$ is the **predicted state covariance matrix** $(m \times m \times T)$
+    # `forecast_error_cov` $\equiv F_t = Var(v_t | Y_{t-1})$ is the **forecast error covariance matrix** $(p \times p \times T)$
+    #
     # *Old notation: P_tt, P_tt1, f_tt1*
     cdef readonly {{cython_type}} [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov
 
@@ -1131,7 +1131,7 @@ cdef class {{prefix}}KalmanFilter(object):
     # ### Temporary arrays
     # These matrices are used to temporarily hold selected observation vectors,
     # design matrices, and observation covariance matrices in the case of
-    # missing data.  
+    # missing data.
     cdef readonly {{cython_type}} [:] selected_obs
     cdef readonly {{cython_type}} [:] selected_obs_intercept
     # The following are contiguous memory segments which are then used to
@@ -1214,7 +1214,7 @@ cdef class {{prefix}}KalmanFilter(object):
 
     # ### Define some constants
     cdef readonly int k_endog, k_states, k_posdef, k_endog2, k_states2, k_endogstates, ldwork
-    
+
     def __init__(self,
                  {{prefix}}Statespace model,
                  int filter_method=FILTER_CONVENTIONAL,
@@ -1494,7 +1494,7 @@ cdef class {{prefix}}KalmanFilter(object):
         # Initialize pointers to appropriate Kalman filtering functions
         self.initialize_function_pointers()
 
-        # Convert base arrays into "selected" arrays  
+        # Convert base arrays into "selected" arrays
         # - State covariance matrix? $Q_t \to R_t Q_t R_t`$
         # - Missing values: $y_t \to W_t y_t$, $Z_t \to W_t Z_t$, $H_t \to W_t H_t$
         self.select_state_cov()
@@ -1602,8 +1602,8 @@ cdef class {{prefix}}KalmanFilter(object):
         # Copy initialization arrays to input arrays if we're starting the
         # filter
         if t == 0:
-            # `predicted_state[:,0]` $= a_1 =$ `initial_state`  
-            # `predicted_state_cov[:,:,0]` $= P_1 =$ `initial_state_cov`  
+            # `predicted_state[:,0]` $= a_1 =$ `initial_state`
+            # `predicted_state_cov[:,:,0]` $= P_1 =$ `initial_state_cov`
             {{prefix}}copy(&self.k_states, self._initial_state, &inc, self._input_state, &inc)
             {{prefix}}copy(&self.k_states2, self._initial_state_cov, &inc, self._input_state_cov, &inc)
 
@@ -1790,8 +1790,8 @@ cdef class {{prefix}}KalmanFilter(object):
             predicted_t = 1
 
         if self.stability_method & STABILITY_FORCE_SYMMETRY:
-            # Enforce symmetry of predicted covariance matrix  
-            # $P_{t+1} = 0.5 * (P_{t+1} + P_{t+1}')$  
+            # Enforce symmetry of predicted covariance matrix
+            # $P_{t+1} = 0.5 * (P_{t+1} + P_{t+1}')$
             # See Grewal (2001), Section 6.3.1.1
             for i in range(self.k_states):
                 for j in range(i, self.k_states):
@@ -1823,9 +1823,9 @@ cdef class {{prefix}}KalmanFilter(object):
 
         if self.time_invariant and not self.converged and self.model.nmissing[self.t] == 0:
             # #### Check for steady-state convergence
-            # 
-            # `tmp0` array used here, dimension $(m \times m)$  
-            # `tmp1` array used here, dimension $(1 \times 1)$  
+            #
+            # `tmp0` array used here, dimension $(m \times m)$
+            # `tmp1` array used here, dimension $(1 \times 1)$
             {{prefix}}copy(&self.k_states2, self._input_state_cov, &inc, self._tmp0, &inc)
             {{prefix}}axpy(&self.k_states2, &gamma, self._predicted_state_cov, &inc, self._tmp0, &inc)
 
@@ -1920,7 +1920,7 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
         {{cython_type}} * prev_backwards
     # ?trmm
     cdef {{prefix}}trmm_t *{{prefix}}trmm = <{{prefix}}trmm_t*>Capsule_AsVoidPtr(blas.{{prefix}}trmm._cpointer)
-    
+
     # dim2[0] = self.k_endog; dim2[1] = storage;
     # self.forecast = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
@@ -1960,7 +1960,7 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
     {{prefix}}copy(&k_endog2, &error_variance[0,0], &inc, &forward_variance[0,0], &inc)   # \Sigma_s
     {{prefix}}copy(&k_endog2, &error_variance[0,0], &inc, &backward_variance[0,0], &inc)  # \Sigma_s^*,  s = 0, ..., p
     {{prefix}}copy(&k_endog2, &error_variance[0,0], &inc, &autocovariances[0,0], &inc)  # \Gamma_s
-    
+
     # error_variance_factor = linalg.cholesky(error_variance, lower=True)
     {{prefix}}copy(&k_endog2, &error_variance[0,0], &inc, &forward_factors[0,0], &inc)
     {{prefix}}potrf("L", &k_endog, &forward_factors[0,0], &k_endog, &info)
@@ -2228,7 +2228,7 @@ cpdef _{{prefix}}constrain_sv_less_than_one({{cython_type}} [::1,:] unconstraine
                   &unconstrained[0, i*k_endog], &k_endog,
           &alpha, &tmp[0, 0], &k_endog)
         {{prefix}}potrf("L", &k_endog, &tmp[0, 0], &k_endog, &info)
-        
+
         {{prefix}}copy(&k_endog2, &unconstrained[0, i*k_endog], &inc, &constrained[0, i*k_endog], &inc)
         # constrained.append(linalg.solve_triangular(B, A, lower=lower))
         {{prefix}}trtrs("L", "N", "N", &k_endog, &k_endog, &tmp[0, 0], &k_endog,

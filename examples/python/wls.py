@@ -11,11 +11,11 @@ np.random.seed(1024)
 
 
 # ## WLS Estimation
-# 
-# ### Artificial data: Heteroscedasticity 2 groups 
-# 
+#
+# ### Artificial data: Heteroscedasticity 2 groups
+#
 # Model assumptions:
-# 
+#
 #  * Misspecification: true model is quadratic, estimate only linear
 #  * Independent noise/error term
 #  * Two groups for error variance, low and high variance groups
@@ -30,7 +30,7 @@ w = np.ones(nsample)
 w[nsample * 6/10:] = 3
 y_true = np.dot(X, beta)
 e = np.random.normal(size=nsample)
-y = y_true + sig * w * e 
+y = y_true + sig * w * e
 X = X[:,[0,1]]
 
 
@@ -42,8 +42,8 @@ print(res_wls.summary())
 
 
 # ## OLS vs. WLS
-# 
-# Estimate an OLS model for comparison: 
+#
+# Estimate an OLS model for comparison:
 
 res_ols = sm.OLS(y, X).fit()
 print(res_ols.params)
@@ -52,7 +52,7 @@ print(res_wls.params)
 
 # Compare the WLS standard errors to  heteroscedasticity corrected OLS standard errors:
 
-se = np.vstack([[res_wls.bse], [res_ols.bse], [res_ols.HC0_se], 
+se = np.vstack([[res_wls.bse], [res_ols.bse], [res_ols.HC0_se],
                 [res_ols.HC1_se], [res_ols.HC2_se], [res_ols.HC3_se]])
 se = np.round(se,4)
 colnames = ['x1', 'const']

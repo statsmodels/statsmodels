@@ -56,7 +56,7 @@ def _holt__(x, xi, p, y, l, b, s, m, n, max_seen):
 
 def _holt_mul_dam(x, xi, p, y, l, b, s, m, n, max_seen):
     """
-    Multiplicative and Multiplicative Damped 
+    Multiplicative and Multiplicative Damped
     Minimization Function
     (M,) & (Md,)
     """
@@ -73,7 +73,7 @@ def _holt_mul_dam(x, xi, p, y, l, b, s, m, n, max_seen):
 
 def _holt_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
     """
-    Additive and Additive Damped 
+    Additive and Additive Damped
     Minimization Function
     (A,) & (Ad,)
     """
@@ -109,7 +109,7 @@ def _holt_win_init(x, xi, p, y, l, b, s, m):
 
 def _holt_win__mul(x, xi, p, y, l, b, s, m, n, max_seen):
     """
-    Multiplicative Seasonal 
+    Multiplicative Seasonal
     Minimization Function
     (,M)
     """
@@ -127,7 +127,7 @@ def _holt_win__mul(x, xi, p, y, l, b, s, m, n, max_seen):
 
 def _holt_win__add(x, xi, p, y, l, b, s, m, n, max_seen):
     """
-    Additive Seasonal 
+    Additive Seasonal
     Minimization Function
     (,A)
     """
@@ -146,7 +146,7 @@ def _holt_win__add(x, xi, p, y, l, b, s, m, n, max_seen):
 
 def _holt_win_add_mul_dam(x, xi, p, y, l, b, s, m, n, max_seen):
     """
-    Additive and Additive Damped with Multiplicative Seasonal 
+    Additive and Additive Damped with Multiplicative Seasonal
     Minimization Function
     (A,M) & (Ad,M)
     """
@@ -167,7 +167,7 @@ def _holt_win_add_mul_dam(x, xi, p, y, l, b, s, m, n, max_seen):
 
 def _holt_win_mul_mul_dam(x, xi, p, y, l, b, s, m, n, max_seen):
     """
-    Multiplicative and Multiplicative Damped with Multiplicative Seasonal 
+    Multiplicative and Multiplicative Damped with Multiplicative Seasonal
     Minimization Function
     (M,M) & (Md,M)
     """
@@ -188,7 +188,7 @@ def _holt_win_mul_mul_dam(x, xi, p, y, l, b, s, m, n, max_seen):
 
 def _holt_win_add_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
     """
-    Additive and Additive Damped with Additive Seasonal 
+    Additive and Additive Damped with Additive Seasonal
     Minimization Function
     (A,A) & (Ad,A)
     """
@@ -209,7 +209,7 @@ def _holt_win_add_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
 
 def _holt_win_mul_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
     """
-    Multiplicative and Multiplicative Damped with Additive Seasonal 
+    Multiplicative and Multiplicative Damped with Additive Seasonal
     Minimization Function
     (M,A) & (M,Ad)
     """
@@ -248,7 +248,7 @@ class HoltWintersResults(Results):
     fittedfcast: array
         An array of both the fitted values and forecast values.
     fittedvalues: array
-        An array of the fitted values. Fitted by the Exponential Smoothing 
+        An array of the fitted values. Fitted by the Exponential Smoothing
         model.
     fcast: array
         An array of the forecast values forecast by the Exponential Smoothing
@@ -294,7 +294,7 @@ class HoltWintersResults(Results):
             parse or a datetime type. However, if the dates index does not
             have a fixed frequency, end must be an integer index if you
             want out of sample prediction. Default is the last observation in
-            the sample.        
+            the sample.
 
         Returns
         -------
@@ -361,13 +361,13 @@ class ExponentialSmoothing(TimeSeriesModel):
 
     Returns
     -------
-    results : ExponentialSmoothing class        
+    results : ExponentialSmoothing class
 
     Notes
     -----
     This is a full implementation of the holt winters exponential smoothing as
     per [1]. This includes all the unstable methods as well as the stable methods.
-    The implementation of the library covers the functionality of the R 
+    The implementation of the library covers the functionality of the R
     library as much as possible whilst still being pythonic.
 
     References
@@ -454,17 +454,17 @@ class ExponentialSmoothing(TimeSeriesModel):
             The phi value of the damped method, if the value is
             set then this value will be used as the value.
         optimized : bool, optional
-            Should the values that have not been set above be optimized 
+            Should the values that have not been set above be optimized
             automatically?
         use_boxcox : {True, False, 'log', float}, optional
-            Should the boxcox tranform be applied to the data first? If 'log' 
+            Should the boxcox tranform be applied to the data first? If 'log'
             then apply the log. If float then use lambda equal to float.
         remove_bias : bool, optional
-            Should the bias be removed from the forecast values and fitted values 
-            before being returned? Does this by enforcing average residuals equal 
+            Should the bias be removed from the forecast values and fitted values
+            before being returned? Does this by enforcing average residuals equal
             to zero.
         use_basinhopping : bool, optional
-            Should the opptimser try harder using basinhopping to find optimal 
+            Should the opptimser try harder using basinhopping to find optimal
             values?
 
         Returns
@@ -476,7 +476,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         -----
         This is a full implementation of the holt winters exponential smoothing as
         per [1]. This includes all the unstable methods as well as the stable methods.
-        The implementation of the library covers the functionality of the R 
+        The implementation of the library covers the functionality of the R
         library as much as possible whilst still being pythonic.
 
         References
@@ -559,7 +559,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                                True, False, False] + [False] * m)
                 func = func_dict[(None, None)]
             p[:] = [init_alpha, init_beta, init_gamma, l0, b0, init_phi] + s0
-            
+
             # txi [alpha, beta, gamma, l0, b0, phi, s0,..,s_(m-1)]
             # Have a quick look in the region for a good starting place for alpha etc.
             # using guestimates for the levels
@@ -571,7 +571,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                         Ns=20, full_output=True, finish=None)
             (p[txi], max_seen, grid, Jout) = res
             [alpha, beta, gamma, l0, b0, phi] = p[:6]
-            s0 = p[6:]            
+            s0 = p[6:]
             #bounds = np.array([(0.0,1.0),(0.0,1.0),(0.0,1.0),(0.0,None),(0.0,None),(0.8,1.0)] + [(None,None),]*m)
             if use_basinhopping:
                 # Take a deeper look in the local minimum we are in to find the best
@@ -583,8 +583,8 @@ class ExponentialSmoothing(TimeSeriesModel):
                 # Take a deeper look in the local minimum we are in to find the best
                 # solution to parameters
                 res = minimize(func, p[xi], args=(
-                    xi, p, y, l, b, s, m, self.nobs, max_seen), bounds=bounds[xi])                
-            p[xi] = res.x            
+                    xi, p, y, l, b, s, m, self.nobs, max_seen), bounds=bounds[xi])
+            p[xi] = res.x
             [alpha, beta, gamma, l0, b0, phi] = p[:6]
             s0 = p[6:]
             opt = res
@@ -681,7 +681,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 b[:i] = dampen(b[:i], phi)
                 b[i:] = dampen(b[i], phi_h)
             trend = trended(l, b)
-            s[i + m - 1:] = [s[(i - 1) + j % m] for j in range(h + 1 + 1)]            
+            s[i + m - 1:] = [s[(i - 1) + j % m] for j in range(h + 1 + 1)]
             fitted = trend * s[:-m]
         elif seasonal == 'add':
             for i in range(1, self.nobs + 1):
@@ -700,7 +700,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 b[:i] = dampen(b[:i], phi)
                 b[i:] = dampen(b[i], phi_h)
             trend = trended(l, b)
-            s[i + m - 1:] = [s[(i - 1) + j % m] for j in range(h + 1 + 1)]            
+            s[i + m - 1:] = [s[(i - 1) + j % m] for j in range(h + 1 + 1)]
             fitted = trend + s[:-m]
         else:
             for i in range(1, self.nobs + 1):
@@ -831,7 +831,7 @@ class Holt(ExponentialSmoothing):
 
     Returns
     -------
-    results : Holt class        
+    results : Holt class
 
     Notes
     -----

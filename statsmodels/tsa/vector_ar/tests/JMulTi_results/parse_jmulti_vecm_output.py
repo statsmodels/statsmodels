@@ -127,7 +127,7 @@ def load_results_jmulti(dataset):
     source = "jmulti"
 
     results_dict_per_det_terms = dict.fromkeys(dataset.dt_s_list)
-        
+
     for dt_s in dataset.dt_s_list:
         dt_string = dt_s_tup_to_string(dt_s)
         params_file = "vecm_"+dataset.__str__()+"_"+source+"_"+dt_string+".txt"
@@ -462,7 +462,7 @@ def load_results_jmulti(dataset):
             elif line.startswith(bic_start):
                 results["lagorder"]["bic"] = int(line[len(bic_start):])
         lagorder_file.close()
-        
+
         # ---------------------------------------------------------------------
         # parse output related to non-normality-test:
         test_norm_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \

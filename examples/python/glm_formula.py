@@ -2,7 +2,7 @@
 ## Generalized Linear Models (Formula)
 
 # This notebook illustrates how you can use R-style formulas to fit Generalized Linear Models.
-# 
+#
 # To begin, we load the ``Star98`` dataset and we construct a formula and pre-process the data:
 
 from __future__ import print_function

@@ -4,7 +4,7 @@
 """
 State Space Model Smoother declarations
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 """
 
@@ -420,7 +420,7 @@ cdef class zKalmanSmoother(object):
     )
 
     # cdef readonly int k_endog, k_states, k_posdef, k_endog2, k_states2, k_posdef2, k_endogstates, k_statesposdef
-    
+
     cdef allocate_arrays(self)
     cdef int check_filter_method_changed(self)
     cdef int reset_filter_method(self, int force_reset=*)

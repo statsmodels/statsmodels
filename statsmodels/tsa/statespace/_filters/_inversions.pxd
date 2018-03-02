@@ -4,7 +4,7 @@
 """
 State Space Models - Inversion methods declarations
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 """
 

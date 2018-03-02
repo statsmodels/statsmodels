@@ -55,7 +55,7 @@ def get_dummy_mod(fit=True, pandas=False):
             res = mod.fit(disp=-1)
     else:
         res = None
-    
+
     return mod, res
 
 
@@ -357,7 +357,7 @@ def test_transform():
 
     # Test direct transform, untransform
     assert_allclose(mod.transform_params([2, 3]), [2, 3])
-    assert_allclose(mod.untransform_params([2, 3]), [2, 3])    
+    assert_allclose(mod.untransform_params([2, 3]), [2, 3])
 
     # Smoke test for transformation in `filter`, `update`, `loglike`,
     # `loglikeobs`
@@ -747,7 +747,7 @@ def test_diagnostics():
     desired = res.test_serial_correlation(method='boxpierce')
 
 def test_diagnostics_nile_eviews():
-    # Test the diagnostic tests using the Nile dataset. Results are from 
+    # Test the diagnostic tests using the Nile dataset. Results are from
     # "Fitting State Space Models with EViews" (Van den Bossche 2011,
     # Journal of Statistical Software).
     # For parameter values, see Figure 2
@@ -776,7 +776,7 @@ def test_diagnostics_nile_eviews():
     assert_allclose(actual, [0.041686, 0.979373], atol=1e-5)
 
 def test_diagnostics_nile_durbinkoopman():
-    # Test the diagnostic tests using the Nile dataset. Results are from 
+    # Test the diagnostic tests using the Nile dataset. Results are from
     # Durbin and Koopman (2012); parameter values reported on page 37; test
     # statistics on page 40
     niledata = nile.data.load_pandas().data
