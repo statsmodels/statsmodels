@@ -1842,17 +1842,39 @@ class SARIMAXResults(MLEResults):
     def arparams(self):
         """
         (array) Autoregressive parameters actually estimated in the model.
-        Does not include parameters whose values are constrained to be zero.
+        Does not include seasonal autoregressive parameters (see
+        `seasonalarparams`) or parameters whose values are constrained to be
+        zero.
         """
         return self._params_ar
+
+    @cache_readonly
+    def seasonalarparams(self):
+        """
+        (array) Seasonal autoregressive parameters actually estimated in the
+        model. Does not include nonseasonal autoregressive parameters (see
+        `arparams`) or parameters whose values are constrained to be zero.
+        """
+        return self._params_seasonal_ar
 
     @cache_readonly
     def maparams(self):
         """
         (array) Moving average parameters actually estimated in the model.
-        Does not include parameters whose values are constrained to be zero.
+        Does not include seasonal moving average parameters (see
+        `seasonalmaparams`) or parameters whose values are constrained to be
+        zero.
         """
         return self._params_ma
+
+    @cache_readonly
+    def seasonalmaparams(self):
+        """
+        (array) Seasonal moving average parameters actually estimated in the
+        model. Does not include nonseasonal moving average parameters (see
+        `maparams`) or parameters whose values are constrained to be zero.
+        """
+        return self._params_seasonal_ma
 
     def get_prediction(self, start=None, end=None, dynamic=False, index=None,
                        exog=None, **kwargs):
