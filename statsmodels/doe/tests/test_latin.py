@@ -54,7 +54,7 @@ def test_optimal_design():
 
     corners = np.array([[0, 2], [10, 5]])
     sample = latin.optimal_design(2, 5, bounds=corners)
-    out = np.array([[6.275, 4.604], [5.189, 2.344], [3.553, 3.947],
+    out = np.array([[5.189, 4.604], [3.553, 2.344], [6.275, 3.947],
                     [0.457, 3.554], [9.705, 2.636]])
     assert_almost_equal(sample, out, decimal=1)
 
@@ -64,7 +64,7 @@ def test_optimal_design():
     assert_almost_equal(sample, out, decimal=1)
 
     sample = latin.optimal_design(2, 5, bounds=corners, force=True)
-    out = np.array([[8.610, 2.288], [5.318, 3.498], [7.323, 4.303],
+    out = np.array([[8.610, 4.303], [5.318, 3.498], [7.323, 2.288],
                     [1.135, 2.657], [3.561, 4.938]])
     assert_almost_equal(sample, out, decimal=1)
 
@@ -72,3 +72,4 @@ def test_optimal_design():
     out = np.array([[1.052, 4.218], [2.477, 2.987], [7.616, 4.527],
                     [9.134, 3.393], [4.064, 2.430]])
     assert_almost_equal(sample, out, decimal=1)
+
