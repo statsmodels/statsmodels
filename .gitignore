@@ -83,3 +83,7 @@ statsmodels/tsa/statespace/_smoothers/_conventional.pyx
 statsmodels/tsa/statespace/_smoothers/_univariate.pyx
 statsmodels/tsa/statespace/_smoothers/_alternative.pyx
 statsmodels/tsa/statespace/_smoothers/_classical.pyx
+
+#pytest
+.cache
+.pytest_cache
