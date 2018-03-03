@@ -445,6 +445,7 @@ def medcouple(y, axis=0):
        distributions" Computational Statistics & Data Analysis, vol. 52, pp.
        5186-5201, August 2008.
     """
+    y = np.asarray(y, dtype=np.double)  # GH 4243
     if axis is None:
         return _medcouple_1d(y.ravel())
 
