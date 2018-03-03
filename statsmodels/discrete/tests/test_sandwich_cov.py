@@ -14,7 +14,6 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
 from statsmodels.genmod.families import links
 from statsmodels.regression.linear_model import OLS
-import statsmodels.stats.sandwich_covariance as sc
 from statsmodels.base.covtype import get_robustcov_results
 import statsmodels.stats.sandwich_covariance as sw
 from statsmodels.tools.tools import add_constant
@@ -67,8 +66,8 @@ class CheckCountRobustMixin(object):
     @classmethod
     def get_robust_clu(cls):
         res1 = cls.res1
-        cov_clu = sc.cov_cluster(res1, group)
-        cls.bse_rob = sc.se_cov(cov_clu)
+        cov_clu = sw.cov_cluster(res1, group)
+        cls.bse_rob = sw.se_cov(cov_clu)
 
         nobs, k_vars = res1.model.exog.shape
         k_params = len(res1.params)
@@ -262,7 +261,7 @@ class TestPoissonCluExposureGeneric(CheckCountRobustMixin):
                                                   df_correction=True,  #TODO has no effect
                                                   use_t=False, #True,
                                                   use_self=True)
-        cls.bse_rob = cls.res1.bse #sc.se_cov(cov_clu)
+        cls.bse_rob = cls.res1.bse #sw.se_cov(cov_clu)
 
         nobs, k_vars = res1.model.exog.shape
         k_params = len(res1.params)
@@ -393,9 +392,9 @@ class TestNegbinCluExposure(CheckCountRobustMixin):
 #        mod_nb = smd.NegativeBinomial(endog, exog)
 #        res_nb = mod_nb.fit()
 #
-#        cov_clu_nb = sc.cov_cluster(res_nb, group)
+#        cov_clu_nb = sw.cov_cluster(res_nb, group)
 #        k_params = k_vars + 1
-#        print sc.se_cov(cov_clu_nb / ((nobs-1.) / float(nobs - k_params)))
+#        print sw.se_cov(cov_clu_nb / ((nobs-1.) / float(nobs - k_params)))
 #
 #        wt = res_nb.wald_test(np.eye(len(res_nb.params))[1:3], cov_p=cov_clu_nb/((nobs-1.) / float(nobs - k_params)))
 #        print wt
