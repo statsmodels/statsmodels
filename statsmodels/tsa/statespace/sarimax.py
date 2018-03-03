@@ -1785,9 +1785,19 @@ class SARIMAXResults(MLEResults):
         self.param_terms = self.model.param_terms
         start = end = 0
         for name in self.param_terms:
-            end += self.model_orders[name]
+            if name == 'ar':
+                k = self.model.k_ar_params
+            elif name == 'ma':
+                k = self.model.k_ma_params
+            elif name == 'seasonal_ar':
+                k = self.model.k_seasonal_ar_params
+            elif name == 'seasonal_ma':
+                k = self.model.k_seasonal_ma_params
+            else:
+                k = self.model_orders[name]
+            end += k
             setattr(self, '_params_%s' % name, self.params[start:end])
-            start += self.model_orders[name]
+            start += k
 
         # Handle removing data
         self._data_attr_model.extend(['orig_endog', 'orig_exog'])
