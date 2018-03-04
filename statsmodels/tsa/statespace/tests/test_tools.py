@@ -21,17 +21,17 @@ from numpy.testing import (
 class TestCompanionMatrix(object):
 
     cases = [
-        (2, np.array([[0,1],[0,0]])),
-        ([1,-1,-2], np.array([[1,1],
-                              [2,0]])),
-        ([1,-1,-2,-3], np.array([[1,1,0],
-                                 [2,0,1],
-                                 [3,0,0]])),
-        ([1,-np.array([[1,2],[3,4]]),-np.array([[5,6],[7,8]])],
-         np.array([[1,2,5,6],
-                   [3,4,7,8],
-                   [1,0,0,0],
-                   [0,1,0,0]]).T)
+        (2, np.array([[0, 1], [0, 0]])),
+        ([1, -1, -2], np.array([[1, 1],
+                              [2, 0]])),
+        ([1, -1, -2, -3], np.array([[1, 1, 0],
+                                 [2, 0, 1],
+                                 [3, 0, 0]])),
+        ([1, -np.array([[1, 2], [3, 4]]), -np.array([[5, 6], [7, 8]])],
+         np.array([[1, 2, 5, 6],
+                   [3, 4, 7, 8],
+                   [1, 0, 0, 0],
+                   [0, 1, 0, 0]]).T)
     ]
 
     def test_cases(self):
@@ -43,7 +43,7 @@ class TestDiff(object):
     x = np.arange(10)
     cases = [
         # diff = 1
-        ([1,2,3], 1, None, 1, [1, 1]),
+        ([1, 2, 3], 1, None, 1, [1, 1]),
         # diff = 2
         (x, 2, None, 1, [0]*8),
         # diff = 1, seasonal_diff=1, seasonal_periods=4
@@ -152,19 +152,19 @@ class TestConcat(object):
     x = np.arange(10)
     
     valid = [
-        (((1,2,3),(4,)), (1,2,3,4)),
-        (((1,2,3),[4]), (1,2,3,4)),
-        (([1,2,3],np.r_[4]), (1,2,3,4)),
-        ((np.r_[1,2,3],pd.Series([4])), 0, True, (1,2,3,4)),
-        ((pd.Series([1,2,3]),pd.Series([4])), 0, True, (1,2,3,4)),
-        ((np.c_[x[:2],x[:2]], np.c_[x[2:3],x[2:3]]), np.c_[x[:3],x[:3]]),
-        ((np.c_[x[:2],x[:2]].T, np.c_[x[2:3],x[2:3]].T), 1, np.c_[x[:3],x[:3]].T),
-        ((pd.DataFrame(np.c_[x[:2],x[:2]]), np.c_[x[2:3],x[2:3]]), 0, True, np.c_[x[:3],x[:3]]),
+        (((1, 2, 3), (4,)), (1, 2, 3, 4)),
+        (((1, 2, 3), [4]), (1, 2, 3, 4)),
+        (([1, 2, 3], np.r_[4]), (1, 2, 3, 4)),
+        ((np.r_[1, 2, 3], pd.Series([4])), 0, True, (1, 2, 3, 4)),
+        ((pd.Series([1, 2, 3]), pd.Series([4])), 0, True, (1, 2, 3, 4)),
+        ((np.c_[x[:2], x[:2]], np.c_[x[2:3], x[2:3]]), np.c_[x[:3], x[:3]]),
+        ((np.c_[x[:2], x[:2]].T, np.c_[x[2:3], x[2:3]].T), 1, np.c_[x[:3], x[:3]].T),
+        ((pd.DataFrame(np.c_[x[:2], x[:2]]), np.c_[x[2:3], x[2:3]]), 0, True, np.c_[x[:3], x[:3]]),
     ]
 
     invalid = [
-        (((1,2,3), pd.Series([4])), ValueError),
-        (((1,2,3), np.array([[1,2]])), ValueError)
+        (((1, 2, 3), pd.Series([4])), ValueError),
+        (((1, 2, 3), np.array([[1, 2]])), ValueError)
     ]
 
     def test_valid(self):
@@ -181,9 +181,9 @@ class TestIsInvertible(object):
         ([1, -0.5], True),
         ([1, 1-1e-9], True),
         ([1, 1], False),
-        ([1, 0.9,0.1], True),
-        (np.array([1,0.9,0.1]), True),
-        (pd.Series([1,0.9,0.1]), True)
+        ([1, 0.9, 0.1], True),
+        (np.array([1, 0.9, 0.1]), True),
+        (pd.Series([1, 0.9, 0.1]), True)
     ]
 
     def test_cases(self):
@@ -234,17 +234,17 @@ class TestStationaryUnivariate(object):
 class TestValidateMatrixShape(object):
     # name, shape, nrows, ncols, nobs
     valid = [
-        ('TEST', (5,2), 5, 2, None),
-        ('TEST', (5,2), 5, 2, 10),
-        ('TEST', (5,2,10), 5, 2, 10),
+        ('TEST', (5, 2), 5, 2, None),
+        ('TEST', (5, 2), 5, 2, 10),
+        ('TEST', (5, 2, 10), 5, 2, 10),
     ]
     invalid = [
         ('TEST', (5,), 5, None, None),
-        ('TEST', (5,1,1,1), 5, 1, None),
-        ('TEST', (5,2), 10, 2, None),
-        ('TEST', (5,2), 5, 1, None),
-        ('TEST', (5,2,10), 5, 2, None),
-        ('TEST', (5,2,10), 5, 2, 5),
+        ('TEST', (5, 1, 1, 1), 5, 1, None),
+        ('TEST', (5, 2), 10, 2, None),
+        ('TEST', (5, 2), 5, 1, None),
+        ('TEST', (5, 2, 10), 5, 2, None),
+        ('TEST', (5, 2, 10), 5, 2, 5),
     ]
 
     def test_valid_cases(self):
@@ -263,13 +263,13 @@ class TestValidateVectorShape(object):
     valid = [
         ('TEST', (5,), 5, None),
         ('TEST', (5,), 5, 10),
-        ('TEST', (5,10), 5, 10),
+        ('TEST', (5, 10), 5, 10),
     ]
     invalid = [
-        ('TEST', (5,2,10), 5, 10),
+        ('TEST', (5, 2, 10), 5, 10),
         ('TEST', (5,), 10, None),
-        ('TEST', (5,10), 5, None),
-        ('TEST', (5,10), 5, 5),
+        ('TEST', (5, 10), 5, None),
+        ('TEST', (5, 10), 5, 5),
     ]
 
     def test_valid_cases(self):

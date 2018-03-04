@@ -229,8 +229,8 @@ class TestStatesMissingAR3(object):
         # Matlab comparison
         path = current_path + os.sep+'results/results_wpi1_missing_ar3_matlab_ssm.csv'
         matlab_names = [
-            'a1','a2','a3','detP','alphahat1','alphahat2','alphahat3',
-            'detV','eps','epsvar','eta','etavar'
+            'a1', 'a2', 'a3', 'detP', 'alphahat1', 'alphahat2', 'alphahat3',
+            'detV', 'eps', 'epsvar', 'eta', 'etavar'
         ]
         cls.matlab_ssm = pd.read_csv(path, header=None, names=matlab_names)
         # KFAS comparison
@@ -242,7 +242,7 @@ class TestStatesMissingAR3(object):
         cls.stata.loc[cls.stata.index[10:21], 'dwpi'] = np.nan
 
         cls.model = sarimax.SARIMAX(
-            cls.stata.loc[cls.stata.index[1:],'dwpi'], order=(3, 0, 0),
+            cls.stata.loc[cls.stata.index[1:], 'dwpi'], order=(3, 0, 0),
             hamilton_representation=True, *args, **kwargs
         )
         if alternate_timing:
@@ -257,10 +257,10 @@ class TestStatesMissingAR3(object):
         cls.results.det_predicted_state_cov = np.zeros((1, cls.model.nobs))
         cls.results.det_smoothed_state_cov = np.zeros((1, cls.model.nobs))
         for i in range(cls.model.nobs):
-            cls.results.det_predicted_state_cov[0,i] = np.linalg.det(
-                cls.results.predicted_state_cov[:,:,i])
-            cls.results.det_smoothed_state_cov[0,i] = np.linalg.det(
-                cls.results.smoothed_state_cov[:,:,i])
+            cls.results.det_predicted_state_cov[0, i] = np.linalg.det(
+                cls.results.predicted_state_cov[:, :, i])
+            cls.results.det_smoothed_state_cov[0, i] = np.linalg.det(
+                cls.results.smoothed_state_cov[:, :, i])
 
         if not compatibility_mode:
             # Perform simulation smoothing
@@ -275,7 +275,7 @@ class TestStatesMissingAR3(object):
 
     def test_predicted_states(self):
         assert_almost_equal(
-            self.results.predicted_state[:,:-1].T,
+            self.results.predicted_state[:, :-1].T,
             self.matlab_ssm[['a1', 'a2', 'a3']], 4
         )
 
@@ -329,7 +329,7 @@ class TestStatesMissingAR3(object):
         #     self.matlab_ssm[['etavar']], 4
         # )
         assert_almost_equal(
-            self.results.smoothed_state_disturbance_cov[0,0,:],
+            self.results.smoothed_state_disturbance_cov[0, 0, :],
             self.R_ssm['detVeta'], 9
         )
 
@@ -397,7 +397,7 @@ class TestMultivariateMissing(object):
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = dta[['realgdp','realcons','realinv']].diff().iloc[1:]
+        obs = dta[['realgdp', 'realcons', 'realinv']].diff().iloc[1:]
         obs.iloc[0:50, 0] = np.nan
         obs.iloc[19:70, 1] = np.nan
         obs.iloc[39:90, 2] = np.nan
@@ -425,16 +425,16 @@ class TestMultivariateMissing(object):
             np.zeros((1, cls.model.nobs)))
 
         for i in range(cls.model.nobs):
-            cls.results.det_scaled_smoothed_estimator_cov[0,i] = (
+            cls.results.det_scaled_smoothed_estimator_cov[0, i] = (
                 np.linalg.det(
-                    cls.results.scaled_smoothed_estimator_cov[:,:,i]))
-            cls.results.det_predicted_state_cov[0,i] = np.linalg.det(
-                cls.results.predicted_state_cov[:,:,i+1])
-            cls.results.det_smoothed_state_cov[0,i] = np.linalg.det(
-                cls.results.smoothed_state_cov[:,:,i])
-            cls.results.det_smoothed_state_disturbance_cov[0,i] = (
+                    cls.results.scaled_smoothed_estimator_cov[:, :, i]))
+            cls.results.det_predicted_state_cov[0, i] = np.linalg.det(
+                cls.results.predicted_state_cov[:, :, i+1])
+            cls.results.det_smoothed_state_cov[0, i] = np.linalg.det(
+                cls.results.smoothed_state_cov[:, :, i])
+            cls.results.det_smoothed_state_disturbance_cov[0, i] = (
                 np.linalg.det(
-                    cls.results.smoothed_state_disturbance_cov[:,:,i]))
+                    cls.results.smoothed_state_disturbance_cov[:, :, i]))
 
     def test_loglike(self):
         assert_allclose(np.sum(self.results.llf_obs), -205310.9767)
@@ -471,7 +471,7 @@ class TestMultivariateMissing(object):
 
     def test_predicted_states(self):
         assert_allclose(
-            self.results.predicted_state[:,1:].T,
+            self.results.predicted_state[:, 1:].T,
             self.desired[['a1', 'a2', 'a3']]
         )
 
@@ -496,13 +496,13 @@ class TestMultivariateMissing(object):
     def test_smoothed_forecasts(self):
         assert_allclose(
             self.results.smoothed_forecasts.T,
-            self.desired[['muhat1','muhat2','muhat3']]
+            self.desired[['muhat1', 'muhat2', 'muhat3']]
         )
 
     def test_smoothed_state_disturbance(self):
         assert_allclose(
             self.results.smoothed_state_disturbance.T,
-            self.desired[['etahat1','etahat2','etahat3']]
+            self.desired[['etahat1', 'etahat2', 'etahat3']]
         )
 
     def test_smoothed_state_disturbance_cov(self):
@@ -514,13 +514,13 @@ class TestMultivariateMissing(object):
     def test_smoothed_measurement_disturbance(self):
         assert_allclose(
             self.results.smoothed_measurement_disturbance.T,
-            self.desired[['epshat1','epshat2','epshat3']]
+            self.desired[['epshat1', 'epshat2', 'epshat3']]
         )
 
     def test_smoothed_measurement_disturbance_cov(self):
         assert_allclose(
             self.results.smoothed_measurement_disturbance_cov.diagonal(),
-            self.desired[['Veps1','Veps2','Veps3']]
+            self.desired[['Veps1', 'Veps2', 'Veps3']]
         )
 
 
@@ -594,7 +594,7 @@ class TestMultivariateVAR(object):
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().iloc[1:]
+        obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().iloc[1:]
 
         # Create the model
         mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
@@ -623,16 +623,16 @@ class TestMultivariateVAR(object):
             np.zeros((1, cls.model.nobs)))
 
         for i in range(cls.model.nobs):
-            cls.results.det_scaled_smoothed_estimator_cov[0,i] = (
+            cls.results.det_scaled_smoothed_estimator_cov[0, i] = (
                 np.linalg.det(
-                    cls.results.scaled_smoothed_estimator_cov[:,:,i]))
-            cls.results.det_predicted_state_cov[0,i] = np.linalg.det(
-                cls.results.predicted_state_cov[:,:,i+1])
-            cls.results.det_smoothed_state_cov[0,i] = np.linalg.det(
-                cls.results.smoothed_state_cov[:,:,i])
-            cls.results.det_smoothed_state_disturbance_cov[0,i] = (
+                    cls.results.scaled_smoothed_estimator_cov[:, :, i]))
+            cls.results.det_predicted_state_cov[0, i] = np.linalg.det(
+                cls.results.predicted_state_cov[:, :, i+1])
+            cls.results.det_smoothed_state_cov[0, i] = np.linalg.det(
+                cls.results.smoothed_state_cov[:, :, i])
+            cls.results.det_smoothed_state_disturbance_cov[0, i] = (
                 np.linalg.det(
-                    cls.results.smoothed_state_disturbance_cov[:,:,i]))
+                    cls.results.smoothed_state_disturbance_cov[:, :, i]))
 
     def test_loglike(self):
         assert_allclose(np.sum(self.results.llf_obs), 1695.34872)
@@ -670,7 +670,7 @@ class TestMultivariateVAR(object):
 
     def test_predicted_states(self):
         assert_allclose(
-            self.results.predicted_state[:,1:].T,
+            self.results.predicted_state[:, 1:].T,
             self.desired[['a1', 'a2', 'a3']], atol=1e-6
         )
 
@@ -695,13 +695,13 @@ class TestMultivariateVAR(object):
     def test_smoothed_forecasts(self):
         assert_allclose(
             self.results.smoothed_forecasts.T,
-            self.desired[['muhat1','muhat2','muhat3']], atol=1e-6
+            self.desired[['muhat1', 'muhat2', 'muhat3']], atol=1e-6
         )
 
     def test_smoothed_state_disturbance(self):
         assert_allclose(
             self.results.smoothed_state_disturbance.T,
-            self.desired[['etahat1','etahat2','etahat3']], atol=1e-6
+            self.desired[['etahat1', 'etahat2', 'etahat3']], atol=1e-6
         )
 
     def test_smoothed_state_disturbance_cov(self):
@@ -713,13 +713,13 @@ class TestMultivariateVAR(object):
     def test_smoothed_measurement_disturbance(self):
         assert_allclose(
             self.results.smoothed_measurement_disturbance.T,
-            self.desired[['epshat1','epshat2','epshat3']], atol=1e-6
+            self.desired[['epshat1', 'epshat2', 'epshat3']], atol=1e-6
         )
 
     def test_smoothed_measurement_disturbance_cov(self):
         assert_allclose(
             self.results.smoothed_measurement_disturbance_cov.diagonal(),
-            self.desired[['Veps1','Veps2','Veps3']], atol=1e-6
+            self.desired[['Veps1', 'Veps2', 'Veps3']], atol=1e-6
         )
 
 
@@ -781,7 +781,7 @@ class TestMultivariateVARUnivariate(object):
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().iloc[1:]
+        obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().iloc[1:]
 
         # Create the model
         mod = mlemodel.MLEModel(obs, k_states=3, k_posdef=3, **kwargs)
@@ -811,16 +811,16 @@ class TestMultivariateVARUnivariate(object):
             np.zeros((1, cls.model.nobs)))
 
         for i in range(cls.model.nobs):
-            cls.results.det_scaled_smoothed_estimator_cov[0,i] = (
+            cls.results.det_scaled_smoothed_estimator_cov[0, i] = (
                 np.linalg.det(
-                    cls.results.scaled_smoothed_estimator_cov[:,:,i]))
-            cls.results.det_predicted_state_cov[0,i] = np.linalg.det(
-                cls.results.predicted_state_cov[:,:,i+1])
-            cls.results.det_smoothed_state_cov[0,i] = np.linalg.det(
-                cls.results.smoothed_state_cov[:,:,i])
-            cls.results.det_smoothed_state_disturbance_cov[0,i] = (
+                    cls.results.scaled_smoothed_estimator_cov[:, :, i]))
+            cls.results.det_predicted_state_cov[0, i] = np.linalg.det(
+                cls.results.predicted_state_cov[:, :, i+1])
+            cls.results.det_smoothed_state_cov[0, i] = np.linalg.det(
+                cls.results.smoothed_state_cov[:, :, i])
+            cls.results.det_smoothed_state_disturbance_cov[0, i] = (
                 np.linalg.det(
-                    cls.results.smoothed_state_disturbance_cov[:,:,i]))
+                    cls.results.smoothed_state_disturbance_cov[:, :, i]))
 
     def test_loglike(self):
         assert_allclose(np.sum(self.results.llf_obs), 1695.34872)
@@ -858,7 +858,7 @@ class TestMultivariateVARUnivariate(object):
 
     def test_predicted_states(self):
         assert_allclose(
-            self.results.predicted_state[:,1:].T,
+            self.results.predicted_state[:, 1:].T,
             self.desired[['a1', 'a2', 'a3']], atol=1e-8
         )
 
@@ -883,13 +883,13 @@ class TestMultivariateVARUnivariate(object):
     def test_smoothed_forecasts(self):
         assert_allclose(
             self.results.smoothed_forecasts.T,
-            self.desired[['muhat1','muhat2','muhat3']], atol=1e-6
+            self.desired[['muhat1', 'muhat2', 'muhat3']], atol=1e-6
         )
 
     def test_smoothed_state_disturbance(self):
         assert_allclose(
             self.results.smoothed_state_disturbance.T,
-            self.desired[['etahat1','etahat2','etahat3']], atol=1e-6
+            self.desired[['etahat1', 'etahat2', 'etahat3']], atol=1e-6
         )
 
     def test_smoothed_state_disturbance_cov(self):
@@ -901,13 +901,13 @@ class TestMultivariateVARUnivariate(object):
     def test_smoothed_measurement_disturbance(self):
         assert_allclose(
             self.results.smoothed_measurement_disturbance.T,
-            self.desired[['epshat1','epshat2','epshat3']], atol=1e-6
+            self.desired[['epshat1', 'epshat2', 'epshat3']], atol=1e-6
         )
 
     def test_smoothed_measurement_disturbance_cov(self):
         assert_allclose(
             self.results.smoothed_measurement_disturbance_cov.diagonal(),
-            self.desired[['Veps1','Veps2','Veps3']]
+            self.desired[['Veps1', 'Veps2', 'Veps3']]
         )
 
 
@@ -942,7 +942,7 @@ class TestVARAutocovariances(object):
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().iloc[1:]
+        obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().iloc[1:]
 
         if which == 'all':
             obs.iloc[:50, :] = np.nan
