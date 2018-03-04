@@ -1,33 +1,32 @@
 """
 Tools for working with dates
 """
-from statsmodels.compat.python import (lrange, lzip, lmap, string_types, long,
-                                       callable, asstr, reduce, zip, map)
+from statsmodels.compat.python import (lrange, lzip, lmap,
+                                       asstr, zip, map)
 import re
 import datetime
 
-from pandas import (Int64Index, Period, PeriodIndex, Timestamp, DatetimeIndex,
-                    to_datetime)
+from pandas import to_datetime
 import numpy as np
 
 _quarter_to_day = {
-        "1" : (3, 31),
-        "2" : (6, 30),
-        "3" : (9, 30),
-        "4" : (12, 31),
-        "I" : (3, 31),
-        "II" : (6, 30),
-        "III" : (9, 30),
-        "IV" : (12, 31)
+        "1": (3, 31),
+        "2": (6, 30),
+        "3": (9, 30),
+        "4": (12, 31),
+        "I": (3, 31),
+        "II": (6, 30),
+        "III": (9, 30),
+        "IV": (12, 31)
         }
 
 
 _mdays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-_months_with_days = lzip(lrange(1,13), _mdays)
-_month_to_day = dict(zip(map(str,lrange(1,13)), _months_with_days))
+_months_with_days = lzip(lrange(1, 13), _mdays)
+_month_to_day = dict(zip(map(str, lrange(1, 13)), _months_with_days))
 _month_to_day.update(dict(zip(["I", "II", "III", "IV", "V", "VI",
                                "VII", "VIII", "IX", "X", "XI", "XII"],
-                               _months_with_days)))
+                              _months_with_days)))
 
 # regex patterns
 _y_pattern = '^\d?\d?\d?\d$'
@@ -55,10 +54,12 @@ _m_pattern = '''
 $               # end of string
 '''
 
-#NOTE: see also ts.extras.isleapyear, which accepts a sequence
+
+# NOTE: see also ts.extras.isleapyear, which accepts a sequence
 def _is_leap(year):
     year = int(year)
     return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+
 
 def date_parser(timestr, parserinfo=None, **kwargs):
     """
@@ -69,11 +70,11 @@ def date_parser(timestr, parserinfo=None, **kwargs):
     """
     flags = re.IGNORECASE | re.VERBOSE
     if re.search(_q_pattern, timestr, flags):
-        y,q = timestr.replace(":","").lower().split('q')
+        y, q = timestr.replace(":", "").lower().split('q')
         month, day = _quarter_to_day[q.upper()]
         year = int(y)
     elif re.search(_m_pattern, timestr, flags):
-        y,m = timestr.replace(":","").lower().split('m')
+        y, m = timestr.replace(":", "").lower().split('m')
         month, day = _month_to_day[m.upper()]
         year = int(y)
         if _is_leap(y) and month == 2:
@@ -85,6 +86,7 @@ def date_parser(timestr, parserinfo=None, **kwargs):
         return to_datetime(timestr, **kwargs)
 
     return datetime.datetime(year, month, day)
+
 
 def date_range_str(start, end=None, length=None):
     """
@@ -115,32 +117,33 @@ def date_range_str(start, end=None, length=None):
         split = 'q'
     elif re.search(_y_pattern, start, flags):
         annual_freq = 1
-        start += 'a1' # hack
+        start += 'a1'  # hack
         if end:
             end += 'a1'
         split = 'a'
     else:
         raise ValueError("Date %s not understood" % start)
-    yr1, offset1 = lmap(int, start.replace(":","").split(split))
+    yr1, offset1 = lmap(int, start.replace(":", "").split(split))
     if end is not None:
         end = end.lower()
-        yr2, offset2 = lmap(int, end.replace(":","").split(split))
+        yr2, offset2 = lmap(int, end.replace(":", "").split(split))
         length = (yr2 - yr1) * annual_freq + offset2
     elif length:
         yr2 = yr1 + length // annual_freq
         offset2 = length % annual_freq + (offset1 - 1)
-    years = np.repeat(lrange(yr1+1, yr2), annual_freq).tolist()
-    years = np.r_[[str(yr1)]*(annual_freq+1-offset1), years] # tack on first year
-    years = np.r_[years, [str(yr2)]*offset2] # tack on last year
+    years = np.repeat(lrange(yr1 + 1, yr2), annual_freq).tolist()
+    years = np.r_[[str(yr1)] * (annual_freq + 1 - offset1), years]  # tack on first year
+    years = np.r_[years, [str(yr2)] * offset2]  # tack on last year
     if split != 'a':
-        offset = np.tile(np.arange(1, annual_freq+1), yr2-yr1-1)
-        offset = np.r_[np.arange(offset1, annual_freq+1).astype('a2'), offset]
-        offset = np.r_[offset, np.arange(1,offset2+1).astype('a2')]
-        date_arr_range = [''.join([i, split, asstr(j)]) for i,j in
+        offset = np.tile(np.arange(1, annual_freq + 1), yr2 - yr1 - 1)
+        offset = np.r_[np.arange(offset1, annual_freq + 1).astype('a2'), offset]
+        offset = np.r_[offset, np.arange(1, offset2 + 1).astype('a2')]
+        date_arr_range = [''.join([i, split, asstr(j)]) for i, j in
                                                         zip(years, offset)]
     else:
         date_arr_range = years.tolist()
     return date_arr_range
+
 
 def dates_from_str(dates):
     """
@@ -159,6 +162,7 @@ def dates_from_str(dates):
         A list of datetime types.
     """
     return lmap(date_parser, dates)
+
 
 def dates_from_range(start, end=None, length=None):
     """
