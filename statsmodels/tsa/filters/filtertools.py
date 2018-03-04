@@ -9,8 +9,8 @@ Created on Sat Oct 23 17:18:03 2010
 
 Author: Josef-pktd
 """
-#not original copied from various experimental scripts
-#version control history is there
+# not original copied from various experimental scripts
+# version control history is there
 
 from statsmodels.compat.python import range
 import numpy as np
@@ -43,13 +43,15 @@ def _pad_nans(x, head=None, tail=None):
     else:
         raise ValueError("Nan-padding for ndim > 2 not implemented")
 
-#original changes and examples in sandbox.tsa.try_var_convolve
+
+# original changes and examples in sandbox.tsa.try_var_convolve
 
 # don't do these imports, here just for copied fftconvolve
-#get rid of these imports
+# get rid of these imports
 #from scipy.fftpack import fft, ifft, ifftshift, fft2, ifft2, fftn, \
 #     ifftn, fftfreq
 #from numpy import product,array
+
 
 def fftconvolveinv(in1, in2, mode="full"):
     """Convolve two N-dimensional arrays using FFT. See convolve.
@@ -68,13 +70,13 @@ def fftconvolveinv(in1, in2, mode="full"):
     s2 = np.array(in2.shape)
     complex_result = (np.issubdtype(in1.dtype, np.complex) or
                       np.issubdtype(in2.dtype, np.complex))
-    size = s1+s2-1
+    size = s1 + s2 - 1
 
     # Always use 2**n-sized FFT
     fsize = 2**np.ceil(np.log2(size))
-    IN1 = fft.fftn(in1,fsize)
+    IN1 = fft.fftn(in1, fsize)
     #IN1 *= fftn(in2,fsize) #JP: this looks like the only change I made
-    IN1 /= fft.fftn(in2,fsize)  # use inverse filter
+    IN1 /= fft.fftn(in2, fsize)  # use inverse filter
     # note the inverse is elementwise not matrix inverse
     # is this correct, NO  doesn't seem to work for VARMA
     fslice = tuple([slice(0, int(sz)) for sz in size])
@@ -85,15 +87,16 @@ def fftconvolveinv(in1, in2, mode="full"):
     if mode == "full":
         return ret
     elif mode == "same":
-        if np.product(s1,axis=0) > np.product(s2,axis=0):
+        if np.product(s1, axis=0) > np.product(s2, axis=0):
             osize = s1
         else:
             osize = s2
-        return trim_centered(ret,osize)
+        return trim_centered(ret, osize)
     elif mode == "valid":
-        return trim_centered(ret,abs(s2-s1)+1)
+        return trim_centered(ret, abs(s2 - s1) + 1)
 
-#code duplication with fftconvolveinv
+
+# code duplication with fftconvolveinv
 def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     """Convolve two N-dimensional arrays using FFT. See convolve.
 
@@ -115,26 +118,25 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     if (in2 is None) and (in3 is None):
         raise ValueError('at least one of in2 and in3 needs to be given')
     s1 = np.array(in1.shape)
-    if not in2 is None:
+    if in2 is not None:
         s2 = np.array(in2.shape)
     else:
         s2 = 0
-    if not in3 is None:
+    if in3 is not None:
         s3 = np.array(in3.shape)
-        s2 = max(s2, s3) # try this looks reasonable for ARMA
+        s2 = max(s2, s3)  # try this looks reasonable for ARMA
         #s2 = s3
-
 
     complex_result = (np.issubdtype(in1.dtype, np.complex) or
                       np.issubdtype(in2.dtype, np.complex))
-    size = s1+s2-1
+    size = s1 + s2 - 1
 
     # Always use 2**n-sized FFT
     fsize = 2**np.ceil(np.log2(size))
-    #convolve shorter ones first, not sure if it matters
-    if not in2 is None:
+    # convolve shorter ones first, not sure if it matters
+    if in2 is not None:
         IN1 = fft.fftn(in2, fsize)
-    if not in3 is None:
+    if in3 is not None:
         IN1 /= fft.fftn(in3, fsize)  # use inverse filter
     # note the inverse is elementwise not matrix inverse
     # is this correct, NO  doesn't seem to work for VARMA
@@ -147,16 +149,17 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     if mode == "full":
         return ret
     elif mode == "same":
-        if np.product(s1,axis=0) > np.product(s2,axis=0):
+        if np.product(s1, axis=0) > np.product(s2, axis=0):
             osize = s1
         else:
             osize = s2
-        return trim_centered(ret,osize)
+        return trim_centered(ret, osize)
     elif mode == "valid":
-        return trim_centered(ret,abs(s2-s1)+1)
+        return trim_centered(ret, abs(s2 - s1) + 1)
 
-#original changes and examples in sandbox.tsa.try_var_convolve
-#examples and tests are there
+
+# original changes and examples in sandbox.tsa.try_var_convolve
+# examples and tests are there
 def recursive_filter(x, ar_coeff, init=None):
     '''
     Autoregressive, or recursive, filtering.
@@ -272,8 +275,8 @@ def convolution_filter(x, filt, nsides=2):
         trim_head = len(filt) - 1
         trim_tail = None
     elif nsides == 2:
-        trim_head = int(np.ceil(len(filt)/2.) - 1) or None
-        trim_tail = int(np.ceil(len(filt)/2.) - len(filt) % 2) or None
+        trim_head = int(np.ceil(len(filt) / 2.) - 1) or None
+        trim_tail = int(np.ceil(len(filt) / 2.) - len(filt) % 2) or None
     else:  # pragma : no cover
         raise ValueError("nsides must be 1 or 2")
 
@@ -306,7 +309,7 @@ def convolution_filter(x, filt, nsides=2):
     return result
 
 
-#copied from sandbox.tsa.garch
+# copied from sandbox.tsa.garch
 def miso_lfilter(ar, ma, x, useic=False): #[0.1,0.1]):
     '''
     use nd convolution to merge inputs,
@@ -349,23 +352,23 @@ def miso_lfilter(ar, ma, x, useic=False): #[0.1,0.1]):
     ar = np.asarray(ar)
     #inp = signal.convolve(x, ma, mode='valid')
     #inp = signal.convolve(x, ma)[:, (x.shape[1]+1)//2]
-    #Note: convolve mixes up the variable left-right flip
-    #I only want the flip in time direction
-    #this might also be a mistake or problem in other code where I
-    #switched from correlate to convolve
+    # Note: convolve mixes up the variable left-right flip
+    # I only want the flip in time direction
+    # this might also be a mistake or problem in other code where I
+    # switched from correlate to convolve
     # correct convolve version, for use with fftconvolve in other cases
     #inp2 = signal.convolve(x, ma[:,::-1])[:, (x.shape[1]+1)//2]
-    inp = signal.correlate(x, ma[::-1,:])[:, (x.shape[1]+1)//2]
-    #for testing 2d equivalence between convolve and correlate
+    inp = signal.correlate(x, ma[::-1, :])[:, (x.shape[1] + 1) // 2]
+    # for testing 2d equivalence between convolve and correlate
     #np.testing.assert_almost_equal(inp2, inp)
     nobs = x.shape[0]
     # cut of extra values at end
 
-    #todo initialize also x for correlate
+    # TODO: initialize also x for correlate
     if useic:
         return signal.lfilter([1], ar, inp,
                 #zi=signal.lfilter_ic(np.array([1.,0.]),ar, ic))[0][:nobs], inp[:nobs]
-                zi=signal.lfiltic(np.array([1.,0.]),ar, useic))[0][:nobs], inp[:nobs]
+                zi=signal.lfiltic(np.array([1.,0.]), ar, useic))[0][:nobs], inp[:nobs]
     else:
         return signal.lfilter([1], ar, inp)[:nobs], inp[:nobs]
     #return signal.lfilter([1], ar, inp), inp
