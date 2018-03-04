@@ -1,7 +1,7 @@
 
 import numpy as np
-from numpy import (dot, eye, diag_indices, zeros, column_stack, ones, diag,
-        asarray, r_)
+from numpy import (dot, eye, diag_indices, zeros, ones, diag,
+                   asarray, r_)
 from numpy.linalg import inv, solve
 #from scipy.linalg import block_diag
 from scipy import linalg
@@ -19,7 +19,7 @@ from scipy import linalg
 #        A low-frequency indicator series.  It is assumed that there are no
 #        pre-sample indicators.  Ie., the first indicators line up with
 #        the first benchmark.
-#    freq : str {"aq","qm", "other"}
+#    freq : str {"aq", "qm", "other"}
 #        "aq" - Benchmarking an annual series to quarterly.
 #        "mq" - Benchmarking a quarterly series to monthly.
 #        "other" - Custom stride.  A kwarg, k, must be supplied.
@@ -53,10 +53,10 @@ from scipy import linalg
 #    # check arrays and make 2d
 #    indicator = np.asarray(indicator)
 #    if indicator.ndim == 1:
-#        indicator = indicator[:,None]
+#        indicator = indicator[:, None]
 #    benchmark = np.asarray(benchmark)
 #    if benchmark.ndim == 1:
-#        benchmark = benchmark[:,None]
+#        benchmark = benchmark[:, None]
 #
 #    # get dimensions
 #    N = len(indicator) # total number of high-freq
@@ -78,7 +78,7 @@ from scipy import linalg
 #    n = k*m # number of indicator series with a benchmark for back-series
 #    # if k*m != n, then we are going to extrapolate q observations
 #
-#    B = block_diag(*(np.ones((k,1)),)*m)
+#    B = block_diag(*(np.ones((k, 1)), )*m)
 #
 #    r = benchmark - B.T.dot(indicator)
 #TODO: take code in the string at the end and implement Denton's original
@@ -100,7 +100,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     benchmark : array-like
         The higher frequency benchmark.  A 1d or 2d data series in columns.
         If 2d, then M series are assumed.
-    freq : str {"aq","qm", "other"}
+    freq : str {"aq", "qm", "other"}
         "aq" - Benchmarking an annual series to quarterly.
         "mq" - Benchmarking a quarterly series to monthly.
         "other" - Custom stride.  A kwarg, k, must be supplied.
@@ -115,8 +115,8 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 
     Examples
     --------
-    >>> indicator = [50,100,150,100] * 5
-    >>> benchmark = [500,400,300,400,500]
+    >>> indicator = [50, 100, 150, 100] * 5
+    >>> benchmark = [500, 400, 300, 400, 500]
     >>> benchmarked = dentonm(indicator, benchmark, freq="aq")
 
 
@@ -163,18 +163,17 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 #        D5 - sum((X[t]/I[t] / X[t-1]/I[t-1] - 1)**2)
 #NOTE: only D4 is the only one implemented, see IMF chapter 6.
 
-
     # check arrays and make 2d
     indicator = asarray(indicator)
     if indicator.ndim == 1:
-        indicator = indicator[:,None]
+        indicator = indicator[:, None]
     benchmark = asarray(benchmark)
     if benchmark.ndim == 1:
-        benchmark = benchmark[:,None]
+        benchmark = benchmark[:, None]
 
     # get dimensions
-    N = len(indicator) # total number of high-freq
-    m = len(benchmark) # total number of low-freq
+    N = len(indicator)  # total number of high-freq
+    m = len(benchmark)  # total number of low-freq
 
     # number of low-freq observations for aggregate measure
     # 4 for annual to quarter and 3 for quarter to monthly
@@ -189,7 +188,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     else:
         raise ValueError("freq %s not understood" % freq)
 
-    n = k*m # number of indicator series with a benchmark for back-series
+    n = k * m  # number of indicator series with a benchmark for back-series
     # if k*m != n, then we are going to extrapolate q observations
     if N > n:
         q = N - n
@@ -197,72 +196,72 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
         q = 0
 
     # make the aggregator matrix
-    #B = block_diag(*(ones((k,1)),)*m)
-    B = np.kron(np.eye(m), ones((k,1)))
+    #B = block_diag(*(ones((k, 1)), )*m)
+    B = np.kron(np.eye(m), ones((k, 1)))
 
     # following the IMF paper, we can do
-    Zinv = diag(1./indicator.squeeze()[:n])
+    Zinv = diag(1. / indicator.squeeze()[:n])
     # this is D in Denton's notation (not using initial value correction)
 #    D = eye(n)
     # make off-diagonal = -1
-#    D[((np.diag_indices(n)[0])[:-1]+1,(np.diag_indices(n)[1])[:-1])] = -1
+#    D[((np.diag_indices(n)[0])[:-1]+1, (np.diag_indices(n)[1])[:-1])] = -1
     # account for starting conditions
-#    H = D[1:,:]
-#    HTH = dot(H.T,H)
+#    H = D[1:, :]
+#    HTH = dot(H.T, H)
     # just make HTH
     HTH = eye(n)
     diag_idx0, diag_idx1 = diag_indices(n)
     HTH[diag_idx0[1:-1], diag_idx1[1:-1]] += 1
-    HTH[diag_idx0[:-1]+1, diag_idx1[:-1]] = -1
+    HTH[diag_idx0[:-1] + 1, diag_idx1[:-1]] = -1
     HTH[diag_idx0[:-1], diag_idx1[:-1]+1] = -1
 
-    W = dot(dot(Zinv,HTH),Zinv)
+    W = dot(dot(Zinv, HTH), Zinv)
 
     # make partitioned matrices
-    #TODO: break this out so that we can simplify the linalg?
-    I = zeros((n+m,n+m))
-    I[:n,:n] = W
-    I[:n,n:] = B
-    I[n:,:n] = B.T
+    # TODO: break this out so that we can simplify the linalg?
+    I = zeros((n + m, n + m))
+    I[:n, :n] = W
+    I[:n, n:] = B
+    I[n:, :n] = B.T
 
-    A = zeros((m+n,1)) # zero first-order constraints
-    A[-m:] = benchmark # adding up constraints
-    X = solve(I,A)
+    A = zeros((m + n, 1))  # zero first-order constraints
+    A[-m:] = benchmark  # adding up constraints
+    X = solve(I, A)
     X = X[:-m]  # drop the lagrange multipliers
 
     # handle extrapolation
     if q > 0:
         # get last Benchmark-Indicator ratio
-        bi = X[n-1]/indicator[n-1]
+        bi = X[n - 1] / indicator[n - 1]
         extrapolated = bi * indicator[n:]
-        X = r_[X,extrapolated]
+        X = r_[X, extrapolated]
 
     return X.squeeze()
 
+
 if __name__ == "__main__":
-    import numpy as np
-    #these will be the tests
+    # these will be the tests
     # from IMF paper
 
     # quarterly data
     indicator = np.array([98.2, 100.8, 102.2, 100.8, 99.0, 101.6,
                           102.7, 101.5, 100.5, 103.0, 103.5, 101.5])
     # two annual observations
-    benchmark = np.array([4000.,4161.4])
+    benchmark = np.array([4000., 4161.4])
     x_imf = dentonm(indicator, benchmark, freq="aq")
 
     imf_stata = np.array([969.8, 998.4, 1018.3, 1013.4, 1007.2, 1042.9,
-                                1060.3, 1051.0, 1040.6, 1066.5, 1071.7, 1051.0])
+                          1060.3, 1051.0, 1040.6, 1066.5, 1071.7, 1051.0])
     np.testing.assert_almost_equal(imf_stata, x_imf, 1)
 
     # Denton example
-    zQ = np.array([50,100,150,100] * 5)
-    Y = np.array([500,400,300,400,500])
+    zQ = np.array([50, 100, 150, 100] * 5)
+    Y = np.array([500, 400, 300, 400, 500])
     x_denton = dentonm(zQ, Y, freq="aq")
-    x_stata = np.array([64.334796,127.80616,187.82379,120.03526,56.563894,
-                    105.97568,147.50144,89.958987,40.547201,74.445963,
-                    108.34473,76.66211,42.763347,94.14664,153.41596,
-                    109.67405,58.290761,122.62556,190.41409,128.66959])
+    x_stata = np.array([64.334796, 127.80616, 187.82379, 120.03526, 56.563894,
+                        105.97568, 147.50144, 89.958987, 40.547201, 74.445963,
+                        108.34473, 76.66211, 42.763347, 94.14664, 153.41596,
+                        109.67405, 58.290761, 122.62556, 190.41409, 128.66959])
 
 
 """
@@ -271,11 +270,11 @@ k = 4
 m = 5
 n = m*k
 
-zQ = [50,100,150,100] * m
-Y = [500,400,300,400,500]
+zQ = [50, 100, 150, 100] * m
+Y = [500, 400, 300, 400, 500]
 
 A = np.eye(n)
-B = block_diag(*(np.ones((k,1)),)*m)
+B = block_diag(*(np.ones((k, 1)), )*m)
 
 r = Y - B.T.dot(zQ)
 #Ainv = inv(A)
@@ -306,8 +305,8 @@ Ainv = R.dot(R.T)
 C = Z.dot(Ainv).dot(Z).dot(B).dot(inv(B.T.dot(Z).dot(Ainv).dot(Z).dot(B)))
 x111 = zQ + C.dot(r)
 
-x_stata = np.array([64.334796,127.80616,187.82379,120.03526,56.563894,
-                    105.97568,147.50144,89.958987,40.547201,74.445963,
-                    108.34473,76.66211,42.763347,94.14664,153.41596,
-                    109.67405,58.290761,122.62556,190.41409,128.66959])
+x_stata = np.array([64.334796, 127.80616, 187.82379, 120.03526, 56.563894,
+                    105.97568, 147.50144, 89.958987, 40.547201, 74.445963,
+                    108.34473, 76.66211, 42.763347, 94.14664, 153.41596,
+                    109.67405, 58.290761, 122.62556, 190.41409, 128.66959])
 """
