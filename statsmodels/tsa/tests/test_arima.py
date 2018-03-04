@@ -3,6 +3,7 @@ from statsmodels.compat.testing import skip, skipif
 
 import os
 import warnings
+from distutils.version import LooseVersion
 
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_allclose,
@@ -20,6 +21,9 @@ from statsmodels.tsa.arima_model import ARMA, ARIMA
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.tests.results import results_arma, results_arima
 from statsmodels.tsa.arima_process import arma_generate_sample
+
+import scipy  # only needed for version check
+scipy_old = LooseVersion(scipy.__version__) < '0.16'
 
 try:
     import matplotlib.pyplot as plt
@@ -2054,7 +2058,7 @@ def test_arima_diff2():
                      229.457]
     assert_almost_equal(predicted, predicted_res, 3)
 
-
+@skipif(scipy_old, reason='scipy is old, test might fail')
 def test_arima111_predict_exog_2127():
     # regression test for issue #2127
     ef =  [ 0.03005,  0.03917,  0.02828,  0.03644,  0.03379,  0.02744,
