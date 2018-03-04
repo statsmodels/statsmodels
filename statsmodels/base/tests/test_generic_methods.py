@@ -104,8 +104,6 @@ class CheckGenericMixin(object):
         if summ2 is not None:
             assert_(string_use_t in summ2)
 
-    # TODO The following is not (yet) guaranteed across models
-    #@knownfailureif(True)
     def test_fitted(self):
         # ignore wrapper for isinstance check
         from statsmodels.genmod.generalized_linear_model import GLMResults
@@ -452,7 +450,7 @@ class TestGenericLogit(CheckGenericMixin):
         nobs = x.shape[0]
         np.random.seed(987689)
         y_bin = (np.random.rand(nobs) < 1.0 / (1 + np.exp(x.sum(1) - x.mean()))).astype(int)
-        model = sm.Logit(y_bin, x)  #, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
+        model = sm.Logit(y_bin, x)
         # use start_params to converge faster
         start_params = np.array([-0.73403806, -1.00901514, -0.97754543, -0.95648212])
         self.results = model.fit(start_params=start_params, method='bfgs', disp=0)
@@ -521,7 +519,6 @@ class TestGenericGEEPoissonNaive(CheckGenericMixin):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        #y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
         y_count = np.random.poisson(np.exp(x.sum(1) - x.sum(1).mean(0)))
         groups = np.random.randint(0, 4, size=x.shape[0])
         # use start_params to speed up test, difficult convergence not tested
@@ -540,7 +537,6 @@ class TestGenericGEEPoissonBC(CheckGenericMixin):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        #y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
         y_count = np.random.poisson(np.exp(x.sum(1) - x.sum(1).mean(0)))
         groups = np.random.randint(0, 4, size=x.shape[0])
         # use start_params to speed up test, difficult convergence not tested

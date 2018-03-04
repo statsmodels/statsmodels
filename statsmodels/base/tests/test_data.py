@@ -74,7 +74,6 @@ class TestArrays2dEndog(TestArrays):
         cls.endog = np.random.random((10,1))
         cls.exog = np.c_[np.ones(10), np.random.random((10,2))]
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
-        #cls.endog = endog.squeeze()
 
     def test_endogexog(self):
         np.testing.assert_equal(self.data.endog, self.endog.squeeze())
@@ -729,7 +728,7 @@ class CheckHasConstant(object):
     def test_hasconst(self):
         for x, result in zip(self.exogs, self.results):
             mod = self.mod(self.y, x)
-            assert_equal(mod.k_constant, result[0]) #['k_constant'])
+            assert_equal(mod.k_constant, result[0])
             assert_equal(mod.data.k_constant, result[0])
             if result[1] is None:
                 assert_(mod.data.const_idx is None)

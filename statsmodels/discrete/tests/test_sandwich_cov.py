@@ -32,7 +32,6 @@ filepath = os.path.join(cur_dir, "results", "ships.csv")
 data_raw = pd.read_csv(filepath, index_col=False)
 data = data_raw.dropna()
 
-#mod = smd.Poisson.from_formula('accident ~ yr_con + op_75_79', data=dat)
 # Don't use formula for tests against Stata because intercept needs to be last
 endog = data['accident']
 exog_data = data['yr_con op_75_79'.split()]
@@ -71,7 +70,6 @@ class CheckCountRobustMixin(object):
 
         nobs, k_vars = res1.model.exog.shape
         k_params = len(res1.params)
-        #n_groups = len(np.unique(group))
         corr_fact = (nobs-1.) / float(nobs - k_params)
         # for bse we need sqrt of correction factor
         cls.corr_fact = np.sqrt(corr_fact)
@@ -122,18 +120,16 @@ class TestPoissonCluGeneric(CheckCountRobustMixin):
 
         from statsmodels.base.covtype import get_robustcov_results
 
-        #res_hc0_ = cls.res1.get_robustcov_results('HC1')
         get_robustcov_results(cls.res1._results, 'cluster',
                                                   groups=group,
                                                   use_correction=True,
                                                   df_correction=True,  #TODO has no effect
-                                                  use_t=False, #True,
+                                                  use_t=False,
                                                   use_self=True)
         cls.bse_rob = cls.res1.bse
 
         nobs, k_vars = res1.model.exog.shape
         k_params = len(res1.params)
-        #n_groups = len(np.unique(group))
         corr_fact = (nobs-1.) / float(nobs - k_params)
         # for bse we need sqrt of correction factor
         cls.corr_fact = np.sqrt(corr_fact)
@@ -149,7 +145,6 @@ class TestPoissonHC1Generic(CheckCountRobustMixin):
 
         from statsmodels.base.covtype import get_robustcov_results
 
-        #res_hc0_ = cls.res1.get_robustcov_results('HC1')
         get_robustcov_results(cls.res1._results, 'HC1', use_self=True)
         cls.bse_rob = cls.res1.bse
         nobs, k_vars = mod.exog.shape
@@ -177,7 +172,7 @@ class TestPoissonCluFit(CheckCountRobustMixin):
                                          use_correction=True,
                                          scaling_factor=1. / sc_fact,
                                          df_correction=True),  #TODO has no effect
-                           use_t=False, #True,
+                           use_t=False,
                            )
 
         # The model results, t_test, ... should also work without
@@ -254,18 +249,16 @@ class TestPoissonCluExposureGeneric(CheckCountRobustMixin):
 
         from statsmodels.base.covtype import get_robustcov_results
 
-        #res_hc0_ = cls.res1.get_robustcov_results('HC1')
         get_robustcov_results(cls.res1._results, 'cluster',
                                                   groups=group,
                                                   use_correction=True,
                                                   df_correction=True,  #TODO has no effect
-                                                  use_t=False, #True,
+                                                  use_t=False,
                                                   use_self=True)
-        cls.bse_rob = cls.res1.bse #sw.se_cov(cov_clu)
+        cls.bse_rob = cls.res1.bse
 
         nobs, k_vars = res1.model.exog.shape
         k_params = len(res1.params)
-        #n_groups = len(np.unique(group))
         corr_fact = (nobs-1.) / float(nobs - k_params)
         # for bse we need sqrt of correction factor
         cls.corr_fact = np.sqrt(corr_fact)
@@ -294,13 +287,12 @@ class TestGLMPoissonCluGeneric(CheckCountRobustMixin):
                                                   groups=group,
                                                   use_correction=True,
                                                   df_correction=True,  #TODO has no effect
-                                                  use_t=False, #True,
+                                                  use_t=False,
                                                   use_self=True)
         cls.bse_rob = cls.res1.bse
 
         nobs, k_vars = res1.model.exog.shape
         k_params = len(res1.params)
-        #n_groups = len(np.unique(group))
         corr_fact = (nobs-1.) / float(nobs - k_params)
         # for bse we need sqrt of correction factor
         cls.corr_fact = np.sqrt(corr_fact)
@@ -314,7 +306,6 @@ class TestGLMPoissonHC1Generic(CheckCountRobustMixin):
         mod = GLM(endog, exog, family=families.Poisson())
         cls.res1 = mod.fit()
 
-        #res_hc0_ = cls.res1.get_robustcov_results('HC1')
         get_robustcov_results(cls.res1._results, 'HC1', use_self=True)
         cls.bse_rob = cls.res1.bse
         nobs, k_vars = mod.exog.shape
@@ -334,7 +325,7 @@ class TestGLMPoissonCluFit(CheckCountRobustMixin):
                                   cov_kwds=dict(groups=group,
                                                 use_correction=True,
                                                 df_correction=True),  #TODO has no effect
-                                  use_t=False, #True,
+                                  use_t=False,
                                                 )
 
         # The model results, t_test, ... should also work without
@@ -346,7 +337,6 @@ class TestGLMPoissonCluFit(CheckCountRobustMixin):
 
         nobs, k_vars = mod.exog.shape
         k_params = len(cls.res1.params)
-        #n_groups = len(np.unique(group))
         corr_fact = (nobs-1.) / float(nobs - k_params)
         # for bse we need sqrt of correction factor
         cls.corr_fact = np.sqrt(corr_fact)
@@ -387,20 +377,6 @@ class TestNegbinCluExposure(CheckCountRobustMixin):
         cls.get_robust_clu()
 
 
-#        mod_nbe = smd.NegativeBinomial(endog, exog, exposure=data['service'])
-#        res_nbe = mod_nbe.fit()
-#        mod_nb = smd.NegativeBinomial(endog, exog)
-#        res_nb = mod_nb.fit()
-#
-#        cov_clu_nb = sw.cov_cluster(res_nb, group)
-#        k_params = k_vars + 1
-#        print sw.se_cov(cov_clu_nb / ((nobs-1.) / float(nobs - k_params)))
-#
-#        wt = res_nb.wald_test(np.eye(len(res_nb.params))[1:3], cov_p=cov_clu_nb/((nobs-1.) / float(nobs - k_params)))
-#        print wt
-#
-#        print dir(results_st)
-
 class TestNegbinCluGeneric(CheckCountRobustMixin):
 
     @classmethod
@@ -413,13 +389,12 @@ class TestNegbinCluGeneric(CheckCountRobustMixin):
                                                   groups=group,
                                                   use_correction=True,
                                                   df_correction=True,  #TODO has no effect
-                                                  use_t=False, #True,
+                                                  use_t=False,
                                                   use_self=True)
         cls.bse_rob = cls.res1.bse
 
         nobs, k_vars = mod.exog.shape
         k_params = len(cls.res1.params)
-        #n_groups = len(np.unique(group))
         corr_fact = (nobs-1.) / float(nobs - k_params)
         # for bse we need sqrt of correction factor
         cls.corr_fact = np.sqrt(corr_fact)
@@ -435,13 +410,12 @@ class TestNegbinCluFit(CheckCountRobustMixin):
                                   cov_kwds=dict(groups=group,
                                                 use_correction=True,
                                                 df_correction=True),  #TODO has no effect
-                                  use_t=False, #True,
+                                  use_t=False,
                                   gtol=1e-7)
         cls.bse_rob = cls.res1.bse
 
         nobs, k_vars = mod.exog.shape
         k_params = len(cls.res1.params)
-        #n_groups = len(np.unique(group))
         corr_fact = (nobs-1.) / float(nobs - k_params)
         # for bse we need sqrt of correction factor
         cls.corr_fact = np.sqrt(corr_fact)
@@ -457,13 +431,12 @@ class TestNegbinCluExposureFit(CheckCountRobustMixin):
                                   cov_kwds=dict(groups=group,
                                                 use_correction=True,
                                                 df_correction=True),  #TODO has no effect
-                                  use_t=False, #True,
+                                  use_t=False,
                                   )
         cls.bse_rob = cls.res1.bse
 
         nobs, k_vars = mod.exog.shape
         k_params = len(cls.res1.params)
-        #n_groups = len(np.unique(group))
         corr_fact = (nobs-1.) / float(nobs - k_params)
         # for bse we need sqrt of correction factor
         cls.corr_fact = np.sqrt(corr_fact)
