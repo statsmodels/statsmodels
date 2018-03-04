@@ -1785,9 +1785,19 @@ class SARIMAXResults(MLEResults):
         self.param_terms = self.model.param_terms
         start = end = 0
         for name in self.param_terms:
-            end += self.model_orders[name]
+            if name == 'ar':
+                k = self.model.k_ar_params
+            elif name == 'ma':
+                k = self.model.k_ma_params
+            elif name == 'seasonal_ar':
+                k = self.model.k_seasonal_ar_params
+            elif name == 'seasonal_ma':
+                k = self.model.k_seasonal_ma_params
+            else:
+                k = self.model_orders[name]
+            end += k
             setattr(self, '_params_%s' % name, self.params[start:end])
-            start += self.model_orders[name]
+            start += k
 
         # Handle removing data
         self._data_attr_model.extend(['orig_endog', 'orig_exog'])
@@ -1832,17 +1842,39 @@ class SARIMAXResults(MLEResults):
     def arparams(self):
         """
         (array) Autoregressive parameters actually estimated in the model.
-        Does not include parameters whose values are constrained to be zero.
+        Does not include seasonal autoregressive parameters (see
+        `seasonalarparams`) or parameters whose values are constrained to be
+        zero.
         """
         return self._params_ar
+
+    @cache_readonly
+    def seasonalarparams(self):
+        """
+        (array) Seasonal autoregressive parameters actually estimated in the
+        model. Does not include nonseasonal autoregressive parameters (see
+        `arparams`) or parameters whose values are constrained to be zero.
+        """
+        return self._params_seasonal_ar
 
     @cache_readonly
     def maparams(self):
         """
         (array) Moving average parameters actually estimated in the model.
-        Does not include parameters whose values are constrained to be zero.
+        Does not include seasonal moving average parameters (see
+        `seasonalmaparams`) or parameters whose values are constrained to be
+        zero.
         """
         return self._params_ma
+
+    @cache_readonly
+    def seasonalmaparams(self):
+        """
+        (array) Seasonal moving average parameters actually estimated in the
+        model. Does not include nonseasonal moving average parameters (see
+        `maparams`) or parameters whose values are constrained to be zero.
+        """
+        return self._params_seasonal_ma
 
     def get_prediction(self, start=None, end=None, dynamic=False, index=None,
                        exog=None, **kwargs):

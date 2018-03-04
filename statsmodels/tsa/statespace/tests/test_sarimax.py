@@ -1776,6 +1776,13 @@ class Test_sarimax_exogenous(SARIMAXCoverageTest):
         kwargs['exog'] = (endog - np.floor(endog))**2
         super(Test_sarimax_exogenous, cls).setup_class(50, *args, **kwargs)
 
+    def test_results_params(self):
+        result = self.model.filter(self.true_params)
+        assert_allclose(self.true_params[1:4], result.arparams)
+        assert_allclose(self.true_params[4:6], result.maparams)
+        assert_allclose(self.true_params[6:9], result.seasonalarparams)
+        assert_allclose(self.true_params[9:11], result.seasonalmaparams)
+
 class Test_sarimax_exogenous_not_hamilton(SARIMAXCoverageTest):
     # // SARIMAX and exogenous
     # arima wpi x, arima(3,2,2) sarima(3,2,2,4) noconstant vce(oim)
