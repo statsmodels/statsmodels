@@ -7,10 +7,11 @@ from statsmodels.tools.tools import clean0, fullrank
 from statsmodels.compat.numpy import np_matrix_rank
 
 
-#TODO: should this be public if it's just a container?
+# TODO: should this be public if it's just a container?
 class ContrastResults(object):
     """
-    Class for results of tests of linear restrictions on coefficients in a model.
+    Class for results of tests of linear restrictions on coefficients
+    in a model.
 
     This class functions mainly as a container for `t_test`, `f_test` and
     `wald_test` for the parameters of a model.
@@ -47,7 +48,8 @@ class ContrastResults(object):
             self.distribution = kwds['distribution']
             self.statistic = kwds['statistic']
             self.tvalue = value = kwds['statistic']  # keep alias
-            # TODO: for results instance we decided to use tvalues also for normal
+            # TODO: for results instance we decided to use tvalues
+            #       also for normal
             self.sd = sd
             self.dist = getattr(stats, self.distribution)
             self.dist_args = ()
@@ -63,10 +65,10 @@ class ContrastResults(object):
         # should we return python scalar?
         self.pvalue = np.squeeze(self.pvalue)
 
-
     def conf_int(self, alpha=0.05):
         """
-        Returns the confidence interval of the value, `effect` of the constraint.
+        Returns the confidence interval of the value, `effect` of the
+        constraint.
 
         This is currently only available for t and z tests.
 
@@ -92,7 +94,6 @@ class ContrastResults(object):
         else:
             raise NotImplementedError('Confidence Interval not available')
 
-
     def __array__(self):
         if hasattr(self, "fvalue"):
             return self.fvalue
@@ -102,10 +103,8 @@ class ContrastResults(object):
     def __str__(self):
         return self.summary().__str__()
 
-
     def __repr__(self):
         return str(self.__class__) + '\n' + self.__str__()
-
 
     def summary(self, xname=None, alpha=0.05, title=None):
         """Summarize the Results of the hypothesis test
@@ -142,9 +141,9 @@ class ContrastResults(object):
                 title = None
             # we have everything for a params table
             use_t = (self.distribution == 't')
-            yname='constraints' # Not used in params_frame
+            yname = 'constraints'  # Not used in params_frame
             if xname is None:
-                xname = ['c%d'%ii for ii in range(len(self.effect))]
+                xname = ['c%d' % ii for ii in range(len(self.effect))]
             from statsmodels.iolib.summary import summary_params
             pvalues = np.atleast_1d(self.pvalue)
             summ = summary_params((self, self.effect, self.sd, self.statistic,
@@ -161,7 +160,6 @@ class ContrastResults(object):
             return '<Wald test: statistic=%s, p-value=%s>' % \
                    (self.statistic, self.pvalue)
 
-
     def summary_frame(self, xname=None, alpha=0.05):
         """Return the parameter table as a pandas DataFrame
 
@@ -170,20 +168,20 @@ class ContrastResults(object):
         if self.effect is not None:
             # we have everything for a params table
             use_t = (self.distribution == 't')
-            yname='constraints'  # Not used in params_frame
+            yname = 'constraints'  # Not used in params_frame
             if xname is None:
-                xname = ['c%d'%ii for ii in range(len(self.effect))]
+                xname = ['c%d' % ii for ii in range(len(self.effect))]
             from statsmodels.iolib.summary import summary_params_frame
             summ = summary_params_frame((self, self.effect, self.sd,
-                                         self.statistic,self.pvalue,
-                                         self.conf_int(alpha)), yname=yname,
-                                         xname=xname, use_t=use_t,
-                                         alpha=alpha)
+                                         self.statistic, self.pvalue,
+                                         self.conf_int(alpha)),
+                                        yname=yname,
+                                        xname=xname, use_t=use_t,
+                                        alpha=alpha)
             return summ
         else:
             # TODO: create something nicer
             raise NotImplementedError('only available for t and z')
-
 
 
 class Contrast(object):
@@ -277,7 +275,7 @@ class Contrast(object):
 
         T = self.term
         if T.ndim == 1:
-            T = T[:,None]
+            T = T[:, None]
 
         self.T = clean0(T)
         self.D = self.design
@@ -287,7 +285,8 @@ class Contrast(object):
         except:
             self.rank = 1
 
-#TODO: fix docstring after usage is settled
+
+# TODO: fix docstring after usage is settled
 def contrastfromcols(L, D, pseudo=None):
     """
     From an n x p design matrix D and a matrix L, tries
@@ -357,7 +356,6 @@ class WaldTestResults(object):
 
         self.distribution = distribution
         self.statistic = statistic
-        #self.sd = sd
         self.dist_args = dist_args
 
         # The following is because I don't know which we want
@@ -405,10 +403,8 @@ class WaldTestResults(object):
         self.dframe = self.table.rename(columns=renaming)
         return self.dframe
 
-
     def __str__(self):
         return self.summary_frame().to_string()
-
 
     def __repr__(self):
         return str(self.__class__) + '\n' + self.__str__()
