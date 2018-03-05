@@ -49,7 +49,7 @@ class PredictionResults(object):
 
 
     def t_test(self, value=0, alternative='two-sided'):
-        '''z- or t-test for hypothesis that mean is equal to value
+        """z- or t-test for hypothesis that mean is equal to value
 
         Parameters
         ----------
@@ -66,8 +66,7 @@ class PredictionResults(object):
             p-value of the hypothesis test, the distribution is given by
             the attribute of the instance, specified in `__init__`. Default
             if not specified is the normal distribution.
-
-        '''
+        """
         # from statsmodels.stats.weightstats
 
         # assumes symmetric distribution

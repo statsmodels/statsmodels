@@ -213,7 +213,7 @@ This is an alias of Binomial(n=1)
 """
 
 class NegativeBinomial(object):
-    '''
+    """
     Negative binomial variance function
 
     Parameters
@@ -238,7 +238,7 @@ class NegativeBinomial(object):
 
     A private method _clean trims the data by machine epsilon so that p is
     in (0,inf)
-    '''
+    """
 
     def __init__(self, alpha=1.):
         self.alpha = alpha
