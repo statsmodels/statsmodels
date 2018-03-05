@@ -17,8 +17,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal,
-                           assert_raises)
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 
 from statsmodels.tsa.base import tsa_model
 
@@ -265,8 +264,8 @@ def test_instantiation_valid():
         # Since only supported indexes are valid `dates` arguments, everything
         # else is invalid here
         for ix, freq in supported_increment_indexes + unsupported_indexes:
-            assert_raises(ValueError, tsa_model.TimeSeriesModel, endog,
-                          dates=ix)
+            with pytest.raises(ValueError):
+                tsa_model.TimeSeriesModel(endog, dates=ix)
 
     # Test pandas (Series, DataFrame); with index (no dates/freq argument)
     for base_endog in dta[2:4]:
@@ -432,26 +431,26 @@ def test_instantiation_valid():
 
     # Test (invalid) freq with no index
     endog = dta[0]
-    assert_raises(ValueError, tsa_model.TimeSeriesModel, endog,
-                  freq=date_indexes[1][0].freq)
+    with pytest.raises(ValueError):
+        tsa_model.TimeSeriesModel(endog, freq=date_indexes[1][0].freq)
 
     # Test conflicting index, freq specifications
     endog = dta[2].copy()
     endog.index = date_indexes[0][0]
-    assert_raises(ValueError, tsa_model.TimeSeriesModel, endog,
-                  freq=date_indexes[1][0].freq)
+    with pytest.raises(ValueError):
+        tsa_model.TimeSeriesModel(endog, freq=date_indexes[1][0].freq)
 
     # Test unsupported index, but a freq specification
     endog = dta[2].copy()
     endog.index = unsupported_indexes[0][0]
-    assert_raises(ValueError, tsa_model.TimeSeriesModel, endog,
-                  freq=date_indexes[1][0].freq)
+    with pytest.raises(ValueError):
+        tsa_model.TimeSeriesModel(endog, freq=date_indexes[1][0].freq)
 
     # Test index that can coerce to date time but incorrect freq
     endog = dta[2].copy()
     endog.index = numpy_datestr_indexes[0][0]
-    assert_raises(ValueError, tsa_model.TimeSeriesModel, endog,
-                  freq=date_indexes[1][0].freq)
+    with pytest.raises(ValueError):
+        tsa_model.TimeSeriesModel(endog, freq=date_indexes[1][0].freq)
 
 
 def test_prediction_increment_unsupported():
@@ -755,5 +754,5 @@ def test_custom_index():
     assert_equal(prediction_index.equals(pd.Index(['f', 'g'])), True)
 
     # Test invalid custom index
-    assert_raises(ValueError, mod._get_prediction_index, start_key, end_key,
-                  index=['f', 'g', 'h'])
+    with pytest.raises(ValueError):
+        mod._get_prediction_index(start_key, end_key, index=['f', 'g', 'h'])
