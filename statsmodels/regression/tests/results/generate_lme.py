@@ -69,8 +69,7 @@ for pr in 1,2:
 
             cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-            fname = os.path.join(cur_dir, "results",
-                                 "lme%02d.csv" % dsix)
+            fname = os.path.join(cur_dir, "lme%02d.csv" % dsix)
             np.savetxt(fname, data, fmt="%.3f", header=header,
                        delimiter=",", comments="")
             dsix += 1

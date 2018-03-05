@@ -13,18 +13,18 @@ import pytest
 #      with no events, entry times after censoring times, etc.
 
 # All the R results
-from . import survival_r_results
-from . import survival_enet_r_results
+from .results import survival_r_results
+from .results import survival_enet_r_results
 
 """
 Tests of PHReg against R coxph.
 
 Tests include entry times and stratification.
 
-phreg_gentests.py generates the test data sets and puts them into the
+results/phreg_gentests.py generates the test data sets and puts them into the
 results folder.
 
-survival.R runs R on all the test data sets and constructs the
+resultssurvival.R runs R on all the test data sets and constructs the
 survival_r_results module.
 """
 
