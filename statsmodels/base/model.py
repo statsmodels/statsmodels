@@ -250,6 +250,33 @@ class LikelihoodModel(Model):
         """
         raise NotImplementedError
 
+    def _get_start_params(self, start_params=None):
+        """
+        If no start_params are given, use reasonable defaults.
+
+        Parameters
+        ----------
+        start_params : None or np.ndarray (default None)
+
+        Returns
+        -------
+        start_params : np.ndarray
+
+        Raises
+        ------
+        ValueError if start_params cannot be found.
+        """
+        if start_params is None:
+            if hasattr(self, 'start_params'):
+                start_params = self.start_params
+            elif self.exog is not None:
+                # fails for shape (K,)?
+                start_params = [0] * self.exog.shape[1]
+            else:
+                raise ValueError("If exog is None, then start_params should "
+                                 "be specified")
+        return start_params
+
     def fit(self, start_params=None, method='newton', maxiter=100,
             full_output=True, disp=True, fargs=(), callback=None, retall=False,
             skip_hessian=False, **kwargs):
@@ -418,15 +445,7 @@ class LikelihoodModel(Model):
         """
         Hinv = None  # JP error if full_output=0, Hinv not defined
 
-        if start_params is None:
-            if hasattr(self, 'start_params'):
-                start_params = self.start_params
-            elif self.exog is not None:
-                # fails for shape (K,)?
-                start_params = [0] * self.exog.shape[1]
-            else:
-                raise ValueError("If exog is None, then start_params should "
-                                 "be specified")
+        start_params = self._get_start_params(start_params)
 
         # TODO: separate args from nonarg taking score and hessian, ie.,
         # user-supplied and numerically evaluated estimate frprime doesn't take
