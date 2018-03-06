@@ -13,7 +13,7 @@ from statsmodels.tools.sm_exceptions import ValueWarning, \
     HessianInversionWarning
 from statsmodels.formula import handle_formula_data
 from statsmodels.compat.numpy import np_matrix_rank
-from statsmodels.base.optimizer import Optimizer
+from statsmodels.base.optimizer import Optimizer, _fit_doc_notes
 
 
 _model_params_doc = """
@@ -312,109 +312,7 @@ class LikelihoodModel(Model):
 
         Notes
         -----
-        The 'basinhopping' solver ignores `maxiter`, `retall`, `full_output`
-        explicit arguments.
-
-        Optional arguments for solvers (see returned Results.mle_settings)::
-
-            'newton'
-                tol : float
-                    Relative error in params acceptable for convergence.
-            'nm' -- Nelder Mead
-                xtol : float
-                    Relative error in params acceptable for convergence
-                ftol : float
-                    Relative error in loglike(params) acceptable for
-                    convergence
-                maxfun : int
-                    Maximum number of function evaluations to make.
-            'bfgs'
-                gtol : float
-                    Stop when norm of gradient is less than gtol.
-                norm : float
-                    Order of norm (np.Inf is max, -np.Inf is min)
-                epsilon
-                    If fprime is approximated, use this value for the step
-                    size. Only relevant if LikelihoodModel.score is None.
-            'lbfgs'
-                m : int
-                    This many terms are used for the Hessian approximation.
-                factr : float
-                    A stop condition that is a variant of relative error.
-                pgtol : float
-                    A stop condition that uses the projected gradient.
-                epsilon
-                    If fprime is approximated, use this value for the step
-                    size. Only relevant if LikelihoodModel.score is None.
-                maxfun : int
-                    Maximum number of function evaluations to make.
-                bounds : sequence
-                    (min, max) pairs for each element in x,
-                    defining the bounds on that parameter.
-                    Use None for one of min or max when there is no bound
-                    in that direction.
-            'cg'
-                gtol : float
-                    Stop when norm of gradient is less than gtol.
-                norm : float
-                    Order of norm (np.Inf is max, -np.Inf is min)
-                epsilon : float
-                    If fprime is approximated, use this value for the step
-                    size. Can be scalar or vector.  Only relevant if
-                    Likelihoodmodel.score is None.
-            'ncg'
-                fhess_p : callable f'(x,*args)
-                    Function which computes the Hessian of f times an arbitrary
-                    vector, p.  Should only be supplied if
-                    LikelihoodModel.hessian is None.
-                avextol : float
-                    Stop when the average relative error in the minimizer
-                    falls below this amount.
-                epsilon : float or ndarray
-                    If fhess is approximated, use this value for the step size.
-                    Only relevant if Likelihoodmodel.hessian is None.
-            'powell'
-                xtol : float
-                    Line-search error tolerance
-                ftol : float
-                    Relative error in loglike(params) for acceptable for
-                    convergence.
-                maxfun : int
-                    Maximum number of function evaluations to make.
-                start_direc : ndarray
-                    Initial direction set.
-            'basinhopping'
-                niter : integer
-                    The number of basin hopping iterations.
-                niter_success : integer
-                    Stop the run if the global minimum candidate remains the
-                    same for this number of iterations.
-                T : float
-                    The "temperature" parameter for the accept or reject
-                    criterion. Higher "temperatures" mean that larger jumps
-                    in function value will be accepted. For best results
-                    `T` should be comparable to the separation (in function
-                    value) between local minima.
-                stepsize : float
-                    Initial step size for use in the random displacement.
-                interval : integer
-                    The interval for how often to update the `stepsize`.
-                minimizer : dict
-                    Extra keyword arguments to be passed to the minimizer
-                    `scipy.optimize.minimize()`, for example 'method' - the
-                    minimization method (e.g. 'L-BFGS-B'), or 'tol' - the
-                    tolerance for termination. Other arguments are mapped from
-                    explicit argument of `fit`:
-                      - `args` <- `fargs`
-                      - `jac` <- `score`
-                      - `hess` <- `hess`
-            'minimize'
-                min_method : str, optional
-                    Name of minimization method to use.
-                    Any method specific arguments can be passed directly.
-                    For a list of methods and their arguments, see
-                    documentation of `scipy.optimize.minimize`.
-                    If no method is specified, then BFGS is used.
+        %(doc_notes)s
         """
         Hinv = None  # JP error if full_output=0, Hinv not defined
 
@@ -508,6 +406,8 @@ class LikelihoodModel(Model):
 
         mlefit.mle_settings = optim_settings
         return mlefit
+
+    fit.__doc__ = fit.__doc__ % {'doc_notes': _fit_doc_notes.strip()}
 
 
 # TODO: the below is unfinished
