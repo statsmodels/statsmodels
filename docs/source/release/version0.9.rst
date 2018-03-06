@@ -44,6 +44,8 @@ Documentation
 Other important improvements
 ----------------------------
 
+* MICE (multiple imputation) can use regularized model fitters in the
+  imputation step.
 
 
 
