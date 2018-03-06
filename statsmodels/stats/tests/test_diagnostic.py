@@ -637,8 +637,9 @@ class TestDiagnosticG(object):
         #this test is slow
         infl = oi.OLSInfluence(res)
 
-        fp = open(os.path.join(cur_dir,"results/influence_lsdiag_R.json"))
-        lsdiag = json.load(fp)
+        path = os.path.join(cur_dir, "results", "influence_lsdiag_R.json")
+        with open(path, 'r') as fp:
+            lsdiag = json.load(fp)
 
         #basic
         assert_almost_equal(np.array(lsdiag['cov.scaled']).reshape(3, 3),
@@ -782,8 +783,9 @@ def test_influence_wrapped():
     assert_(isinstance(df, DataFrame))
 
     #this test is slow
-    fp = open(os.path.join(cur_dir,"results/influence_lsdiag_R.json"))
-    lsdiag = json.load(fp)
+    path = os.path.join(cur_dir, "results", "influence_lsdiag_R.json")
+    with open(path, "r") as fp:
+        lsdiag = json.load(fp)
 
     c0, c1 = infl.cooks_distance #TODO: what's c1, it's pvalues? -ss
 
