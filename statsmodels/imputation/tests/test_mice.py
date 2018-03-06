@@ -166,13 +166,15 @@ class TestMICEData(object):
 
         from statsmodels.duration.hazard_regression import PHReg
 
-        idata = mice.MICEData(df)
-        idata.set_imputer("time", "0 + x1 + x2", model_class=PHReg,
-                          init_kwds={"status": mice.PatsyFormula("status")},
-                          predict_kwds={"pred_type": "hr"})
+        for pm in "gaussian", "boot":
+            idata = mice.MICEData(df, perturbation_method=pm)
+            idata.set_imputer("time", "0 + x1 + x2", model_class=PHReg,
+                              init_kwds={"status": mice.PatsyFormula("status")},
+                              predict_kwds={"pred_type": "hr"},
+                              perturbation_method=pm)
 
-        x = idata.next_sample()
-        assert(isinstance(x, pd.DataFrame))
+            x = idata.next_sample()
+            assert(isinstance(x, pd.DataFrame))
 
 
     def test_set_imputer(self):

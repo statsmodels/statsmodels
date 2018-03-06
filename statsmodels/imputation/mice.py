@@ -912,14 +912,22 @@ class MICEData(object):
 
         return fig
 
+    # Try to identify any auxiliary arrays (e.g. status vector in
+    # PHReg) that need to be bootstrapped along with exog and endog.
     def _boot_kwds(self, kwds, rix):
 
         for k in kwds:
             v = kwds[k]
+
+            # This is only relevant for ndarrays
             if not isinstance(v, np.ndarray):
                 continue
+
+            # Handle 1d vectors
             if (v.ndim == 1) and (v.shape[0] == len(rix)):
                 kwds[k] = v[rix]
+
+            # Handle 2d arrays
             if (v.ndim == 2) and (v.shape[0] == len(rix)):
                 kwds[k] = v[rix, :]
 
