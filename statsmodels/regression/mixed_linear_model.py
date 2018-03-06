@@ -145,7 +145,6 @@ the Newton-Raphson algorithm cannot be used for model fitting.
 
 import numpy as np
 import statsmodels.base.model as base
-from scipy.optimize import fmin_ncg, fmin_cg, fmin_bfgs, fmin
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools import data as data_tools
 from scipy.stats.distributions import norm
@@ -159,7 +158,6 @@ import warnings
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.base._penalties import Penalty
 from statsmodels.compat.numpy import np_matrix_rank
-from pandas import DataFrame
 
 
 def _dot(x, y):
@@ -1960,8 +1958,6 @@ class MixedLM(base.LikelihoodModel):
         else:
             hist = None
 
-        success = False
-
         if start_params is None:
             params = MixedLMParams(self.k_fe, self.k_re, self.k_vc)
             params.fe_params = np.zeros(self.k_fe)
@@ -2495,7 +2491,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         k_fe = pmodel.k_fe
         k_re = pmodel.k_re
         k_vc = pmodel.k_vc
-        endog, exog, groups = pmodel.endog, pmodel.exog, pmodel.groups
+        endog, exog = pmodel.endog, pmodel.exog
 
         # Need to permute the columns of the random effects design
         # matrix so that the profiled variable is in the first column.
