@@ -166,8 +166,13 @@ class TestMICEData(object):
 
         from statsmodels.duration.hazard_regression import PHReg
 
+        # Save the dataset size at each iteration.
+        hist = []
+        def cb(imp):
+            hist.append(imp.data.shape)
+
         for pm in "gaussian", "boot":
-            idata = mice.MICEData(df, perturbation_method=pm)
+            idata = mice.MICEData(df, perturbation_method=pm, history_callback=cb)
             idata.set_imputer("time", "0 + x1 + x2", model_class=PHReg,
                               init_kwds={"status": mice.PatsyFormula("status")},
                               predict_kwds={"pred_type": "hr"},
@@ -176,6 +181,7 @@ class TestMICEData(object):
             x = idata.next_sample()
             assert(isinstance(x, pd.DataFrame))
 
+        assert(all([x == (299, 4) for x in hist]))
 
     def test_set_imputer(self):
         # Test with specified perturbation method.
