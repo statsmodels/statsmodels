@@ -200,6 +200,8 @@ class MICEData(object):
         if data.columns.dtype != np.dtype('O'):
             raise ValueError("MICEData data column names should be string type")
 
+        self.regularized = dict()
+
         # Drop observations where all variables are missing.  This
         # also has the effect of copying the data frame.
         self.data = data.dropna(how='all').reset_index(drop=True)
@@ -257,7 +259,6 @@ class MICEData(object):
 
         self.k_pmm = k_pmm
 
-
     def next_sample(self):
         """
         Returns the next imputed dataset in the imputation process.
@@ -308,7 +309,7 @@ class MICEData(object):
 
     def set_imputer(self, endog_name, formula=None, model_class=None,
                     init_kwds=None, fit_kwds=None, predict_kwds=None,
-                    k_pmm=20, perturbation_method=None):
+                    k_pmm=20, perturbation_method=None, regularized=False):
         """
         Specify the imputation process for a single variable.
 
@@ -337,6 +338,11 @@ class MICEData(object):
             Either 'gaussian' or 'bootstrap'. Determines the method
             for perturbing parameters in the imputation model.  If
             None, uses the default specified at class initialization.
+        regularized : dict
+            If regularized[name]=True, `fit_regularized` rather than
+            `fit` is called when fitting imputation models for this
+            variable.  When regularized[name]=True for any variable,
+            pertrurbation_method must be set to boot.
 
         Notes
         -----
@@ -376,7 +382,7 @@ class MICEData(object):
             self.perturbation_method[endog_name] = perturbation_method
 
         self.k_pmm = k_pmm
-
+        self.regularized[endog_name] = regularized
 
     def _store_changes(self, col, vals):
         """
@@ -948,7 +954,12 @@ class MICEData(object):
 
         klass = self.model_class[vname]
         self.models[vname] = klass(endog, exog, **init_kwds)
-        self.results[vname] = self.models[vname].fit(**fit_kwds)
+
+        if vname in self.regularized and self.regularized[vname]:
+            self.results[vname] = self.models[vname].fit_regularized(**fit_kwds)
+        else:
+            self.results[vname] = self.models[vname].fit(**fit_kwds)
+
         self.params[vname] = self.results[vname].params
 
 

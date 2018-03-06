@@ -301,6 +301,14 @@ class TestMICE(object):
             assert(issubclass(x.__class__, RegressionResultsWrapper))
 
 
+    def test_MICE1_regularized(self):
+
+        df = gendat()
+        imp = mice.MICEData(df, perturbation_method='boot')
+        imp.set_imputer('x1', 'x2 + y', fit_kwds={'alpha': 1, 'L1_wt': 0})
+        imp.update_all()
+
+
     def test_MICE2(self):
 
         from statsmodels.genmod.generalized_linear_model import GLMResultsWrapper
