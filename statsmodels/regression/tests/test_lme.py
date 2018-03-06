@@ -363,6 +363,62 @@ class TestMixedLM(object):
         assert_allclose(result.params, result2.params)
         assert_allclose(result.bse, result2.bse)
 
+    def test_dietox(self):
+        # dietox data from geepack
+        #
+        # Fit in R using
+        #
+        # library(geepack)
+        # rm = lmer(Weight ~ Time + (1 | Pig), data=dietox)
+        # rm = lmer(Weight ~ Time + (1 | Pig), REML=FALSE, data=dietox)
+
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        rdir = os.path.join(cur_dir, 'results')
+        fname = os.path.join(rdir, 'dietox.csv')
+
+        # REML
+        data = pd.read_csv(fname)
+        model = MixedLM.from_formula("Weight ~ Time", groups="Pig",
+                                     data = data)
+        result = model.fit()
+
+        # fixef(rm)
+        assert_allclose(result.fe_params, np.r_[15.723523, 6.942505], rtol=1e-5)
+
+        # sqrt(diag(vcov(rm)))
+        assert_allclose(result.bse[0:2], np.r_[0.78805374, 0.03338727], rtol=1e-5)
+
+        # attr(VarCorr(rm), "sc")^2
+        assert_allclose(result.scale, 11.36692, rtol=1e-5)
+
+        # VarCorr(rm)[[1]][[1]]
+        assert_allclose(result.cov_re, 40.39395, rtol=1e-5)
+
+        # logLik(rm)
+        assert_allclose(model.loglike(result.params_object), -2404.775, rtol=1e-5)
+
+        # ML
+        data = pd.read_csv(fname)
+        model = MixedLM.from_formula("Weight ~ Time", groups="Pig",
+                                     data = data)
+        result = model.fit(reml=False)
+
+        # fixef(rm)
+        assert_allclose(result.fe_params, np.r_[15.723517, 6.942506], rtol=1e-5)
+
+        # sqrt(diag(vcov(rm)))
+        assert_allclose(result.bse[0:2], np.r_[0.7829397, 0.0333661], rtol=1e-5)
+
+        # attr(VarCorr(rm), "sc")^2
+        assert_allclose(result.scale, 11.35251, rtol=1e-5)
+
+        # VarCorr(rm)[[1]][[1]]
+        assert_allclose(result.cov_re, 39.82097, rtol=1e-5)
+
+        # logLik(rm)
+        assert_allclose(model.loglike(result.params_object), -2402.932, rtol=1e-5)
+
+
     def test_pastes_vcomp(self):
         # pastes data from lme4
         #
