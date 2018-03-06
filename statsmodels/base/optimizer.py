@@ -55,7 +55,7 @@ _fit_doc_params = """
             Available in Results object's mle_retvals attribute.
 """
 
-_fit_doc_notes = """\
+_fit_doc_notes = """
         The 'basinhopping' solver ignores `maxiter`, `retall`, `full_output`
         explicit arguments.
 
