@@ -120,8 +120,7 @@ tested. The tests look something like
             cls.res1 = sm.Probit(data.endog, data.exog).fit(method='newton', disp=0)
 
             # set up results
-            res2 = Spector()
-            res2.probit()
+            res2 = Spector.probit
             cls.res2 = res2
 
             # set up precision
