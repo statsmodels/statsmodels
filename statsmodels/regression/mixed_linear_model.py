@@ -1916,8 +1916,15 @@ class MixedLM(base.LikelihoodModel):
         reml : bool
             If true, fit according to the REML likelihood, else
             fit the standard likelihood using ML.
+        niter_sa :
+            Currently this argument is ignored and has no effect
+            on the results.
         cov_pen : CovariancePenalty object
             A penalty for the random effects covariance matrix
+        do_cg : boolean, defaults to True
+            If False, the optimization is skipped and a results
+            object at the given (or default) starting values is
+            returned.
         fe_pen : Penalty object
             A penalty on the fixed effects
         free : MixedLMParams object
@@ -1984,6 +1991,9 @@ class MixedLM(base.LikelihoodModel):
             if "disp" not in kwargs:
                 kwargs["disp"] = False
             packed = params.get_packed(use_sqrt=self.use_sqrt, has_fe=False)
+
+            if niter_sa > 0:
+                warnings.warn("niter_sa is currently ignored")
 
             # It seems that the optimizers sometimes stop too soon, so
             # we run a few times.
