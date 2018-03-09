@@ -4,7 +4,7 @@ Miscellaneous utility code for VAR estimation
 """
 from __future__ import division
 
-from statsmodels.compat.python import range, string_types, asbytes, long
+from statsmodels.compat.python import range, string_types, long
 from statsmodels.compat.pandas import frequencies
 import numpy as np
 import scipy.stats as stats
@@ -13,7 +13,8 @@ import pandas as pd
 
 import statsmodels.tsa.tsatools as tsa
 
-#-------------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
 # Auxiliary functions for estimation
 def get_var_endog(y, lags, trend='c', has_constant='skip'):
     """
@@ -28,7 +29,7 @@ def get_var_endog(y, lags, trend='c', has_constant='skip'):
     """
     nobs = len(y)
     # Ravel C order, need to put in descending order
-    Z = np.array([y[t-lags : t][::-1].ravel() for t in range(lags, nobs)])
+    Z = np.array([y[t - lags: t][::-1].ravel() for t in range(lags, nobs)])
 
     # Add constant, trend, etc.
     if trend != 'nc':
@@ -36,6 +37,7 @@ def get_var_endog(y, lags, trend='c', has_constant='skip'):
                           has_constant=has_constant)
 
     return Z
+
 
 def get_trendorder(trend='c'):
     # Handle constant, etc.
@@ -48,6 +50,7 @@ def get_trendorder(trend='c'):
     elif trend == 'ctt':
         trendorder = 3
     return trendorder
+
 
 def make_lag_names(names, lag_order, trendorder=1, exog=None):
     """
@@ -67,8 +70,8 @@ def make_lag_names(names, lag_order, trendorder=1, exog=None):
     for i in range(1, lag_order + 1):
         for name in names:
             if not isinstance(name, string_types):
-                name = str(name) # will need consistent unicode handling
-            lag_names.append('L'+str(i)+'.'+name)
+                name = str(name)  # will need consistent unicode handling
+            lag_names.append('L' + str(i) + '.' + name)
 
     # handle the constant name
     if trendorder != 0:
@@ -82,6 +85,7 @@ def make_lag_names(names, lag_order, trendorder=1, exog=None):
             lag_names.insert(trendorder + i, "exog" + str(i))
     return lag_names
 
+
 def comp_matrix(coefs):
     """
     Return compansion matrix for the VAR(1) representation for a VAR(p) process
@@ -93,7 +97,7 @@ def comp_matrix(coefs):
          0 ...       I_K   0]
     """
     p, k, k2 = coefs.shape
-    assert(k == k2)
+    assert k == k2
 
     kp = k * p
 
@@ -102,15 +106,16 @@ def comp_matrix(coefs):
 
     # Set I_K matrices
     if p > 1:
-        result[np.arange(k, kp), np.arange(kp-k)] = 1
+        result[np.arange(k, kp), np.arange(kp - k)] = 1
 
     return result
 
-#-------------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
 # Miscellaneous stuff
 
 
-def parse_lutkepohl_data(path): # pragma: no cover
+def parse_lutkepohl_data(path):  # pragma: no cover
     """
     Parse data files from Lütkepohl (2005) book
 
@@ -119,16 +124,14 @@ def parse_lutkepohl_data(path): # pragma: no cover
 
     from collections import deque
     from datetime import datetime
-    import pandas
     import re
 
-    regex = re.compile(asbytes('<(.*) (\w)([\d]+)>.*'))
+    regex = re.compile(b'<(.*) (\w)([\d]+)>.*')
     with open(path, 'rb') as f:
         lines = deque(f)
 
     to_skip = 0
-    while asbytes('*/') not in lines.popleft():
-        #while '*/' not in lines.popleft():
+    while b'*/' not in lines.popleft():
         to_skip += 1
 
     while True:
@@ -139,8 +142,8 @@ def parse_lutkepohl_data(path): # pragma: no cover
             year, freq, start_point = m.groups()
             break
 
-    data = (pd.read_csv(path, delimiter=r"\s+", header=to_skip+1)
-            .to_records(index=False))
+    df = pd.read_csv(path, delimiter=r"\s+", header=to_skip + 1)
+    data = df.to_records(index=False)
 
     n = len(data)
 
@@ -149,9 +152,9 @@ def parse_lutkepohl_data(path): # pragma: no cover
     year = int(year)
 
     offsets = {
-        asbytes('Q') : frequencies.BQuarterEnd(),
-        asbytes('M') : frequencies.BMonthEnd(),
-        asbytes('A') : frequencies.BYearEnd()
+        b'Q': frequencies.BQuarterEnd(),
+        b'M': frequencies.BMonthEnd(),
+        b'A': frequencies.BYearEnd()
     }
 
     # create an instance
@@ -208,9 +211,10 @@ def varsim(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
     for t in range(p, steps):
         ygen = result[t]
         for j in range(p):
-            ygen += np.dot(coefs[j], result[t-j-1])
+            ygen += np.dot(coefs[j], result[t - j - 1])
 
     return result
+
 
 def get_index(lst, name):
     try:
@@ -221,6 +225,8 @@ def get_index(lst, name):
         result = name
     return result
     #method used repeatedly in Sims-Zha error bands
+
+
 def eigval_decomp(sym_array):
     """
     Returns
@@ -234,6 +240,7 @@ def eigval_decomp(sym_array):
     k = np.argmax(eigva)
     return W, eigva, k
 
+
 def vech(A):
     """
     Simple vech operator
@@ -242,14 +249,14 @@ def vech(A):
     vechvec: vector of all elements on and below diagonal
     """
 
-    length=A.shape[1]
-    vechvec=[]
+    length = A.shape[1]
+    vechvec = []
     for i in range(length):
-        b=i
+        b = i
         while b < length:
-            vechvec.append(A[b,i])
-            b=b+1
-    vechvec=np.asarray(vechvec)
+            vechvec.append(A[b, i])
+            b = b + 1
+    vechvec = np.asarray(vechvec)
     return vechvec
 
 
@@ -283,7 +290,7 @@ def seasonal_dummies(n_seasons, len_endog, first_period=0, centered=False):
     if n_seasons > 0:
         season_exog = np.zeros((len_endog, n_seasons - 1))
         for i in range(n_seasons - 1):
-            season_exog[(i-first_period) % n_seasons::n_seasons, i] = 1
+            season_exog[(i - first_period) % n_seasons::n_seasons, i] = 1
 
         if centered:
             season_exog -= 1 / n_seasons
