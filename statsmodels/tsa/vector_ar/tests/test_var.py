@@ -30,6 +30,7 @@ DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
 
+
 class CheckVAR(object):
     # just so pylint won't complain
     res1 = None
@@ -51,20 +52,23 @@ class CheckVAR(object):
         results = self.res1.results
         for i in range(len(results)):
             assert_almost_equal(results[i].mse_resid**.5,
-                    eval('self.res2.rmse_'+str(i+1)), DECIMAL_6)
+                                eval('self.res2.rmse_' + str(i + 1)),
+                                DECIMAL_6)
 
     def test_rsquared(self):
         results = self.res1.results
         for i in range(len(results)):
             assert_almost_equal(results[i].rsquared,
-                    eval('self.res2.rsquared_'+str(i+1)), DECIMAL_3)
+                                eval('self.res2.rsquared_' + str(i + 1)),
+                                DECIMAL_3)
 
     def test_llf(self):
         results = self.res1.results
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL_2)
         for i in range(len(results)):
             assert_almost_equal(results[i].llf,
-                    eval('self.res2.llf_'+str(i+1)), DECIMAL_2)
+                                eval('self.res2.llf_' + str(i + 1)),
+                                DECIMAL_2)
 
     def test_aic(self):
         assert_almost_equal(self.res1.aic, self.res2.aic)
@@ -84,12 +88,15 @@ class CheckVAR(object):
     def test_bse(self):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
 
+
 def get_macrodata():
-    data = sm.datasets.macrodata.load_pandas().data[['realgdp','realcons','realinv']]
+    dataset = sm.datasets.macrodata.load_pandas()
+    data = dataset.data[['realgdp', 'realcons', 'realinv']]
     data = data.to_records(index=False)
-    nd = data.view((float,3), type=np.ndarray)
+    nd = data.view((float, 3), type=np.ndarray)
     nd = np.diff(np.log(nd), axis=0)
     return nd.ravel().view(data.dtype, type=np.ndarray)
+
 
 def generate_var():
     from rpy2.robjects import r
@@ -97,9 +104,11 @@ def generate_var():
     r.source('tests/var.R')
     return prp.convert_robj(r['result'], use_pandas=False)
 
+
 def write_generate_var():
     result = generate_var()
     np.savez('tests/results/vars_results.npz', **result)
+
 
 class RResults(object):
     """
@@ -112,8 +121,10 @@ class RResults(object):
         data = var_results.__dict__
 
         self.names = data['coefs'].dtype.names
-        self.params = data['coefs'].view((float, len(self.names)), type=np.ndarray)
-        self.stderr = data['stderr'].view((float, len(self.names)), type=np.ndarray)
+        self.params = data['coefs'].view((float, len(self.names)),
+                                         type=np.ndarray)
+        self.stderr = data['stderr'].view((float, len(self.names)),
+                                          type=np.ndarray)
 
         self.irf = data['irf'].item()
         self.orth_irf = data['orthirf'].item()
@@ -136,50 +147,56 @@ class RResults(object):
 
         self.causality = data['causality']
 
+
 def close_plots():
     try:
-        import matplotlib.pyplot as plt
+        import matplotlib.pyplot as plt  # noqa:F401
         plt.close('all')
     except ImportError:
         pass
 
+
 _orig_stdout = None
+
 
 def setup_module():
     global _orig_stdout
     _orig_stdout = sys.stdout
     sys.stdout = StringIO()
 
+
 def teardown_module():
     sys.stdout = _orig_stdout
     close_plots()
 
+
 have_matplotlib = False
 try:
-    import matplotlib
+    import matplotlib  # noqa: F401
     have_matplotlib = True
 except ImportError:
     pass
 
+
 class CheckIRF(object):
 
-    ref = None; res = None; irf = None
+    ref = None
+    res = None
+    irf = None
     k = None
 
-    #---------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     # IRF tests
 
     def test_irf_coefs(self):
         self._check_irfs(self.irf.irfs, self.ref.irf)
         self._check_irfs(self.irf.orth_irfs, self.ref.orth_irf)
 
-
     def _check_irfs(self, py_irfs, r_irfs):
         for i, name in enumerate(self.res.names):
             ref_irfs = r_irfs[name].view((float, self.k), type=np.ndarray)
             res_irfs = py_irfs[:, :, i]
             assert_almost_equal(ref_irfs, res_irfs)
-
 
     @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_irf(self):
@@ -223,7 +240,7 @@ class CheckFEVD(object):
 
     fevd = None
 
-    #---------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     # FEVD tests
 
     @skipif(not have_matplotlib, reason='matplotlib not available')
@@ -243,6 +260,7 @@ class CheckFEVD(object):
         # covs = self.fevd.cov()
 
         pass
+
 
 class TestVARResults(CheckIRF, CheckFEVD):
 
@@ -267,7 +285,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         # make sure this works with no names
         ndarr = self.data.view((float, 3), type=np.ndarray)
         model = VAR(ndarr)
-        res = model.fit(self.p)
+        model.fit(self.p)
 
     def test_names(self):
         assert_equal(self.model.endog_names, self.ref.names)
@@ -290,8 +308,8 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     def test_repr(self):
         # just want this to work
-        foo = str(self.res)
-        bar = repr(self.res)
+        str(self.res)
+        repr(self.res)
 
     def test_params(self):
         assert_almost_equal(self.res.params, self.ref.params, DECIMAL_3)
@@ -310,8 +328,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         self.res.pvalues
 
     def test_summary(self):
-        summ = self.res.summary()
-
+        self.res.summary()
 
     def test_detsig(self):
         assert_almost_equal(self.res.detomega, self.ref.detomega)
@@ -332,7 +349,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         ics = ['aic', 'fpe', 'hqic', 'bic']
 
         for ic in ics:
-            res = self.model.fit(maxlags=10, ic=ic, verbose=True)
+            self.model.fit(maxlags=10, ic=ic, verbose=True)
 
         with pytest.raises(Exception):
             self.model.fit(ic='foo')
@@ -370,15 +387,15 @@ class TestVARResults(CheckIRF, CheckFEVD):
             result = self.res.test_causality(name, variables, kind='wald')
 
         # corner cases
-        _ = self.res.test_causality(self.names[0], self.names[1])
-        _ = self.res.test_causality(0, 1)
+        self.res.test_causality(self.names[0], self.names[1])
+        self.res.test_causality(0, 1)
 
         with pytest.raises(Exception):
             self.res.test_causality(0, 1, kind='foo')
 
     def test_select_order(self):
-        result = self.model.fit(10, ic='aic', verbose=True)
-        result = self.model.fit(10, ic='fpe', verbose=True)
+        self.model.fit(10, ic='aic', verbose=True)
+        self.model.fit(10, ic='fpe', verbose=True)
 
         # bug
         model = VAR(self.model.endog)
@@ -386,7 +403,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     def test_is_stable(self):
         # may not necessarily be true for other datasets
-        assert(self.res.is_stable(verbose=True))
+        assert self.res.is_stable(verbose=True)
 
     def test_acf(self):
         # test that it works...for now
@@ -394,17 +411,17 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
         # defaults to nlags=lag_order
         acfs = self.res.acf()
-        assert(len(acfs) == self.p + 1)
+        assert len(acfs) == self.p + 1
 
     def test_acorr(self):
-        acorrs = self.res.acorr(10)
+        self.res.acorr(10)
 
     def test_forecast(self):
-        point = self.res.forecast(self.res.y[-5:], 5)
+        self.res.forecast(self.res.y[-5:], 5)
 
     def test_forecast_interval(self):
         y = self.res.y[:-self.p:]
-        point, lower, upper = self.res.forecast_interval(y, 5)
+        self.res.forecast_interval(y, 5)
 
     @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_sim(self):
@@ -428,9 +445,12 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     def test_reorder(self):
         #manually reorder
-        data = self.data.view((float,3), type=np.ndarray)
+        data = self.data.view((float, 3), type=np.ndarray)
         names = self.names
-        data2 = np.append(np.append(data[:,2,None], data[:,0,None], axis=1), data[:,1,None], axis=1)
+        data2 = np.append(np.append(data[:, 2, None],
+                                    data[:, 0, None], axis=1),
+                          data[:, 1, None],
+                          axis=1)
         names2 = []
         names2.append(names[2])
         names2.append(names[0])
@@ -438,7 +458,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         res2 = VAR(data2).fit(maxlags=self.p)
 
         #use reorder function
-        res3 = self.res.reorder(['realinv','realgdp', 'realcons'])
+        res3 = self.res.reorder(['realinv', 'realgdp', 'realcons'])
 
         #check if the main results match
         assert_almost_equal(res2.params, res3.params)
@@ -451,7 +471,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         #test wrapped results load save pickle
         del self.res.model.data.orig_endog
         self.res.save(fh)
-        fh.seek(0,0)
+        fh.seek(0, 0)
         res_unpickled = self.res.__class__.load(fh)
         assert_(type(res_unpickled) is type(self.res))
 
@@ -467,7 +487,7 @@ class E1_Results(object):
         # I asked the author about these results and there is probably rounding
         # error in the book, so I adjusted these test results to match what is
         # coming out of the Python (double-checked) calculations
-        self.irf_stderr = np.array([[[.125, 0.546, 0.664 ],
+        self.irf_stderr = np.array([[[.125, 0.546, 0.664],
                                      [0.032, 0.139, 0.169],
                                      [0.026, 0.112, 0.136]],
 
@@ -479,7 +499,7 @@ class E1_Results(object):
                                      [.016, .079, .095],
                                      [.016, .078, .103]]])
 
-        self.cum_irf_stderr = np.array([[[.125, 0.546, 0.664 ],
+        self.cum_irf_stderr = np.array([[[.125, 0.546, 0.664],
                                          [0.032, 0.139, 0.169],
                                          [0.026, 0.112, 0.136]],
 
@@ -495,8 +515,10 @@ class E1_Results(object):
                                    [.048, .230, .288],
                                    [.043, .208, .260]])
 
+
 basepath = os.path.split(sm.__file__)[0]
 resultspath = basepath + '/tsa/vector_ar/tests/results/'
+
 
 def get_lutkepohl_data(name='e2'):
     lut_data = basepath + '/tsa/vector_ar/data/'
@@ -504,11 +526,13 @@ def get_lutkepohl_data(name='e2'):
 
     return util.parse_lutkepohl_data(path)
 
+
 def test_lutkepohl_parse():
     files = ['e%d' % i for i in range(1, 7)]
 
     for f in files:
         get_lutkepohl_data(f)
+
 
 class TestVARResultsLutkepohl(object):
     """
@@ -552,15 +576,16 @@ class TestVARResultsLutkepohl(object):
 
     def test_lr_effect_stderr(self):
         stderr = self.irf.lr_effect_stderr(orth=False)
-        orth_stderr = self.irf.lr_effect_stderr(orth=True)
+        self.irf.lr_effect_stderr(orth=True)
         assert_almost_equal(np.round(stderr, 3), self.lut.lr_stderr)
+
 
 def test_get_trendorder():
     results = {
-        'c' : 1,
-        'nc' : 0,
-        'ct' : 2,
-        'ctt' : 3
+        'c': 1,
+        'nc': 0,
+        'ct': 2,
+        'ctt': 3
     }
 
     for t, trendorder in iteritems(results):
@@ -588,18 +613,18 @@ def test_var_constant():
     with pytest.raises(ValueError):
         model.fit(1)
 
+
 def test_var_trend():
     # see 2271
-    data = get_macrodata().view((float,3), type=np.ndarray)
+    data = get_macrodata().view((float, 3), type=np.ndarray)
 
     model = sm.tsa.VAR(data)
     results = model.fit(4) #, trend = 'c')
-    irf = results.irf(10)
-
+    results.irf(10)
 
     data_nc = data - data.mean(0)
     model_nc = sm.tsa.VAR(data_nc)
-    results_nc = model_nc.fit(4, trend = 'nc')
+    model_nc.fit(4, trend='nc')
     with pytest.raises(ValueError):
         model.fit(4, trend='t')
 
@@ -608,32 +633,30 @@ def test_irf_trend():
     # test for irf with different trend see #1636
     # this is a rough comparison by adding trend or subtracting mean to data
     # to get similar AR coefficients and IRF
-    data = get_macrodata().view((float,3), type=np.ndarray)
+    data = get_macrodata().view((float, 3), type=np.ndarray)
 
     model = sm.tsa.VAR(data)
     results = model.fit(4) #, trend = 'c')
     irf = results.irf(10)
 
-
     data_nc = data - data.mean(0)
     model_nc = sm.tsa.VAR(data_nc)
-    results_nc = model_nc.fit(4, trend = 'nc')
+    results_nc = model_nc.fit(4, trend='nc')
     irf_nc = results_nc.irf(10)
 
     assert_allclose(irf_nc.stderr()[1:4], irf.stderr()[1:4], rtol=0.01)
 
     trend = 1e-3 * np.arange(len(data)) / (len(data) - 1)
     # for pandas version, currently not used, if data is a pd.DataFrame
-    #data_t = pd.DataFrame(data.values + trend[:,None], index=data.index, columns=data.columns)
-    data_t = data + trend[:,None]
+    #data_t = pd.DataFrame(data.values + trend[:, None], index=data.index, columns=data.columns)
+    data_t = data + trend[:, None]
 
     model_t = sm.tsa.VAR(data_t)
-    results_t = model_t.fit(4, trend = 'ct')
+    results_t = model_t.fit(4, trend='ct')
     irf_t = results_t.irf(10)
 
     assert_allclose(irf_t.stderr()[1:4], irf.stderr()[1:4], rtol=0.03)
 
 
 if __name__ == '__main__':
-    import pytest
     pytest.main([__file__, '-vvs', '-x', '--pdb'])
