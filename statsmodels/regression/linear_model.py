@@ -47,6 +47,7 @@ from statsmodels.tools.decorators import (resettable_cache,
                                           cache_writable)
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
+from statsmodels.base import covtype
 from statsmodels.emplike.elregress import _ELRegOpts
 import warnings
 from statsmodels.tools.sm_exceptions import InvalidTestWarning
@@ -543,33 +544,13 @@ class GLS(RegressionModel):
         return llf
 
     def hessian_factor(self, params, scale=None, observed=True):
-        """Weights for calculating Hessian
-
-        Parameters
-        ----------
-        params : ndarray
-            parameter at which Hessian is evaluated
-        scale : None or float
-            If scale is None, then the default scale will be calculated.
-            Default scale is defined by `self.scaletype` and set in fit.
-            If scale is not None, then it is used as a fixed scale.
-        observed : bool
-            If True, then the observed Hessian is returned. If false then the
-            expected information matrix is returned.
-
-        Returns
-        -------
-        hessian_factor : ndarray, 1d
-            A 1d weight vector used in the calculation of the Hessian.
-            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
-        """
-
         if self.sigma is None or self.sigma.shape == ():
             return np.ones(self.exog.shape[0])
         elif self.sigma.ndim == 1:
             return self.cholsigmainv
         else:
             return np.diag(self.cholsigmainv)
+    hessian_factor.__doc__ = base.GenericLikelihoodModel.hessian_factor.__doc__
 
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         L1_wt=1., start_params=None, profile_scale=False,
@@ -720,28 +701,8 @@ class WLS(RegressionModel):
         return llf
 
     def hessian_factor(self, params, scale=None, observed=True):
-        """Weights for calculating Hessian
-
-        Parameters
-        ----------
-        params : ndarray
-            parameter at which Hessian is evaluated
-        scale : None or float
-            If scale is None, then the default scale will be calculated.
-            Default scale is defined by `self.scaletype` and set in fit.
-            If scale is not None, then it is used as a fixed scale.
-        observed : bool
-            If True, then the observed Hessian is returned. If false then the
-            expected information matrix is returned.
-
-        Returns
-        -------
-        hessian_factor : ndarray, 1d
-            A 1d weight vector used in the calculation of the Hessian.
-            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
-        """
-
         return self.weights
+    hessian_factor.__doc__ = base.GenericLikelihoodModel.hessian_factor.__doc__
 
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         L1_wt=1., start_params=None, profile_scale=False,
@@ -934,28 +895,8 @@ class OLS(WLS):
             return -self._wexog_xprod / scale
 
     def hessian_factor(self, params, scale=None, observed=True):
-        """Weights for calculating Hessian
-
-        Parameters
-        ----------
-        params : ndarray
-            parameter at which Hessian is evaluated
-        scale : None or float
-            If scale is None, then the default scale will be calculated.
-            Default scale is defined by `self.scaletype` and set in fit.
-            If scale is not None, then it is used as a fixed scale.
-        observed : bool
-            If True, then the observed Hessian is returned. If false then the
-            expected information matrix is returned.
-
-        Returns
-        -------
-        hessian_factor : ndarray, 1d
-            A 1d weight vector used in the calculation of the Hessian.
-            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
-        """
-
         return np.ones(self.exog.shape[0])
+    hessian_factor.__doc__ = base.GenericLikelihoodModel.hessian_factor.__doc__
 
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         L1_wt=1., start_params=None, profile_scale=False,
@@ -2011,112 +1952,6 @@ class RegressionResults(base.LikelihoodModelResults):
         return lrstat, lr_pvalue, lrdf
 
     def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
-        """create new results instance with robust covariance as default
-
-        Parameters
-        ----------
-        cov_type : string
-            the type of robust sandwich estimator to use. see Notes below
-        use_t : bool
-            If true, then the t distribution is used for inference.
-            If false, then the normal distribution is used.
-            If `use_t` is None, then an appropriate default is used, which is
-            `true` if the cov_type is nonrobust, and `false` in all other
-            cases.
-        kwds : depends on cov_type
-            Required or optional arguments for robust covariance calculation.
-            see Notes below
-
-        Returns
-        -------
-        results : results instance
-            This method creates a new results instance with the
-            requested robust covariance as the default covariance of
-            the parameters.  Inferential statistics like p-values and
-            hypothesis tests will be based on this covariance matrix.
-
-        Notes
-        -----
-        The following covariance types and required or optional arguments are
-        currently available:
-
-        - 'fixed scale' and optional keyword argument 'scale' which uses
-            a predefined scale estimate with default equal to one.
-        - 'HC0', 'HC1', 'HC2', 'HC3' and no keyword arguments:
-            heteroscedasticity robust covariance
-        - 'HAC' and keywords
-
-            - `maxlag` integer (required) : number of lags to use
-            - `kernel` string (optional) : kernel, default is Bartlett
-            - `use_correction` bool (optional) : If true, use small sample
-                  correction
-
-        - 'cluster' and required keyword `groups`, integer group indicator
-
-            - `groups` array_like, integer (required) :
-                  index of clusters or groups
-            - `use_correction` bool (optional) :
-                  If True the sandwich covariance is calculated with a small
-                  sample correction.
-                  If False the sandwich covariance is calculated without
-                  small sample correction.
-            - `df_correction` bool (optional)
-                  If True (default), then the degrees of freedom for the
-                  inferential statistics and hypothesis tests, such as
-                  pvalues, f_pvalue, conf_int, and t_test and f_test, are
-                  based on the number of groups minus one instead of the
-                  total number of observations minus the number of explanatory
-                  variables. `df_resid` of the results instance is adjusted.
-                  If False, then `df_resid` of the results instance is not
-                  adjusted.
-
-        - 'hac-groupsum' Driscoll and Kraay, heteroscedasticity and
-            autocorrelation robust standard errors in panel data
-            keywords
-
-            - `time` array_like (required) : index of time periods
-            - `maxlag` integer (required) : number of lags to use
-            - `kernel` string (optional) : kernel, default is Bartlett
-            - `use_correction` False or string in ['hac', 'cluster'] (optional) :
-                  If False the the sandwich covariance is calulated without
-                  small sample correction.
-                  If `use_correction = 'cluster'` (default), then the same
-                  small sample correction as in the case of 'covtype='cluster''
-                  is used.
-            - `df_correction` bool (optional)
-                  adjustment to df_resid, see cov_type 'cluster' above
-                  # TODO: we need more options here
-
-        - 'hac-panel' heteroscedasticity and autocorrelation robust standard
-            errors in panel data.
-            The data needs to be sorted in this case, the time series
-            for each panel unit or cluster need to be stacked. The
-            membership to a timeseries of an individual or group can
-            be either specified by group indicators or by increasing
-            time periods.
-
-            keywords
-
-            - either `groups` or `time` : array_like (required)
-              `groups` : indicator for groups
-              `time` : index of time periods
-            - `maxlag` integer (required) : number of lags to use
-            - `kernel` string (optional) : kernel, default is Bartlett
-            - `use_correction` False or string in ['hac', 'cluster'] (optional) :
-                  If False the sandwich covariance is calculated without
-                  small sample correction.
-            - `df_correction` bool (optional)
-                  adjustment to df_resid, see cov_type 'cluster' above
-                  # TODO: we need more options here
-
-        Reminder:
-        `use_correction` in "hac-groupsum" and "hac-panel" is not bool,
-        needs to be in [False, 'hac', 'cluster']
-
-        TODO: Currently there is no check for extra or misspelled keywords,
-        except in the case of cov_type `HCx`
-        """
-
         import statsmodels.stats.sandwich_covariance as sw
 
         # normalize names
@@ -2294,6 +2129,7 @@ class RegressionResults(base.LikelihoodModelResults):
             res.df_resid_inference = n_groups - 1
 
         return res
+    get_robustcov_results.__doc__ = covtype.get_robustcov_results.__doc__
 
     def get_prediction(self, exog=None, transform=True, weights=None,
                        row_labels=None, **kwds):
@@ -2305,33 +2141,6 @@ class RegressionResults(base.LikelihoodModelResults):
     get_prediction.__doc__ = pred.get_prediction.__doc__
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
-        """Summarize the Regression Results
-
-        Parameters
-        -----------
-        yname : string, optional
-            Default is `y`
-        xname : list of strings, optional
-            Default is `var_##` for ## in p the number of regressors
-        title : string, optional
-            Title for the top table. If not None, then this replaces the
-            default title
-        alpha : float
-            significance level for the confidence intervals
-
-        Returns
-        -------
-        smry : Summary instance
-            this holds the summary tables and text, which can be printed or
-            converted to various output formats.
-
-        See Also
-        --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
-
-        """
-
         # TODO: import where we need it (for now), add as cached attributes
         from statsmodels.stats.stattools import (
             jarque_bera, omni_normtest, durbin_watson)
@@ -2446,6 +2255,7 @@ class RegressionResults(base.LikelihoodModelResults):
         #                      title="Linear Model")
         #
         #  return summary_return([top, par, diagn], return_fmt=return_fmt)
+    summary.__doc__ = base.GenericLikelihoodModelResults.__doc__
 
     def summary2(self, yname=None, xname=None, title=None, alpha=.05,
                  float_format="%.4f"):
