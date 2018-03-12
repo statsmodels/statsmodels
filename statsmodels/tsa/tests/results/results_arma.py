@@ -5,24 +5,32 @@ import os
 from numpy import genfromtxt
 
 current_path = os.path.dirname(os.path.abspath(__file__))
-yhat_mle = genfromtxt(open(current_path+"/yhat_exact_nc.csv", "rb"), delimiter=",", skip_header = 1, dtype=float)
+with open(current_path+"/yhat_exact_nc.csv", "rb") as fd:
+    yhat_mle = genfromtxt(fd, delimiter=",", skip_header = 1, dtype=float)
 
-yhat_css = genfromtxt(open(current_path+"/yhat_css_nc.csv", "rb"), delimiter=",", skip_header = 1, dtype=float)
+with open(current_path+"/yhat_css_nc.csv", "rb") as fd:
+    yhat_css = genfromtxt(fd, delimiter=",", skip_header = 1, dtype=float)
 
-yhatc_mle = genfromtxt(open(current_path+"/yhat_exact_c.csv", "rb"), delimiter=",", skip_header = 1, dtype=float)
+with open(current_path+"/yhat_exact_c.csv", "rb") as fd:
+    yhatc_mle = genfromtxt(fd, delimiter=",", skip_header = 1, dtype=float)
 
-yhatc_css = genfromtxt(open(current_path+"/yhat_css_c.csv", "rb"), delimiter=",", skip_header = 1, dtype=float)
+with open(current_path+"/yhat_css_c.csv", "rb") as fd:
+    yhatc_css = genfromtxt(fd, delimiter=",", skip_header = 1, dtype=float)
 
-resids_mle = genfromtxt(open(current_path+"/resids_exact_nc.csv", "rb"), delimiter=",", skip_header = 1, dtype=float)
+with open(current_path+"/resids_exact_nc.csv", "rb") as fd:
+    resids_mle = genfromtxt(fd, delimiter=",", skip_header = 1, dtype=float)
 
-resids_css = genfromtxt(open(current_path+"/resids_css_nc.csv", "rb"), delimiter=",", skip_header = 1, dtype=float)
+with open(current_path+"/resids_css_nc.csv", "rb") as fd:
+    resids_css = genfromtxt(fd, delimiter=",", skip_header = 1, dtype=float)
 
-residsc_mle = genfromtxt(open(current_path+"/resids_exact_c.csv", "rb"), delimiter=",", skip_header = 1, dtype=float)
+with open(current_path+"/resids_exact_c.csv", "rb") as fd:
+    residsc_mle = genfromtxt(fd, delimiter=",", skip_header = 1, dtype=float)
 
-residsc_css = genfromtxt(open(current_path+"/resids_css_c.csv", "rb"), delimiter=",", skip_header = 1, dtype=float)
+with open(current_path+"/resids_css_c.csv", "rb") as fd:
+    residsc_css = genfromtxt(fd, delimiter=",", skip_header = 1, dtype=float)
 
-forecast_results = genfromtxt(open(current_path+"/results_arma_forecasts.csv",
-                        "rb"), names=True, delimiter=",", dtype=float)
+with open(current_path+"/results_arma_forecasts.csv", "rb") as fd:
+    forecast_results = genfromtxt(fd, names=True, delimiter=",", dtype=float)
 
 class Y_arma11(object):
     def __init__(self, method="mle"):

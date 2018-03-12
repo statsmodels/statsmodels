@@ -56,10 +56,10 @@ class R_Results(object):
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         rdir = os.path.join(cur_dir, 'results')
         fname = os.path.join(rdir, "lme%02d.csv" % ds_ix)
-        fid = open(fname)
-        rdr = csv.reader(fid)
-        header = next(rdr)
-        data = [[float(x) for x in line] for line in rdr]
+        with open(fname) as fid:
+            rdr = csv.reader(fid)
+            header = next(rdr)
+            data = [[float(x) for x in line] for line in rdr]
         data = np.asarray(data)
 
         # Split into exog, endog, etc.

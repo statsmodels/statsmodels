@@ -37,8 +37,9 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 
 current_path = os.path.dirname(os.path.abspath(__file__))
-y_arma = np.genfromtxt(open(current_path + '/results/y_arma_data.csv', "rb"),
-        delimiter=",", skip_header=1, dtype=float)
+ydata_path = os.path.join(current_path, 'results', 'y_arma_data.csv')
+with open(ydata_path, "rb") as fd:
+    y_arma = np.genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
 
 cpi_dates = PeriodIndex(start='1959q1', end='2009q3', freq='Q')
 sun_dates = PeriodIndex(start='1700', end='2008', freq='A')
