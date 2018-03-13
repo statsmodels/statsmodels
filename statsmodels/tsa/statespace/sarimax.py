@@ -11,6 +11,7 @@ from warnings import warn
 
 import numpy as np
 import pandas as pd
+from .initialization import Initialization
 from .kalman_filter import KalmanFilter
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
@@ -504,20 +505,11 @@ class SARIMAX(MLEModel):
         if self.k_exog > 0 or len(self.polynomial_trend) > 1:
             self.ssm._time_invariant = False
 
-        # Handle kwargs specified initialization
-        if self.ssm.initialization is not None:
-            self._manual_initialization = True
-
         # Initialize the fixed components of the statespace model
         self.ssm['design'] = self.initial_design
         self.ssm['state_intercept'] = self.initial_state_intercept
         self.ssm['transition'] = self.initial_transition
         self.ssm['selection'] = self.initial_selection
-
-        # If we are estimating a simple ARMA model, then we can use a faster
-        # initialization method (unless initialization was already specified).
-        if k_diffuse_states == 0 and not self._manual_initialization:
-            self.initialize_stationary()
 
         # update _init_keys attached by super
         self._init_keys += ['order',  'seasonal_order', 'trend',
@@ -526,6 +518,10 @@ class SARIMAX(MLEModel):
                             'enforce_stationarity', 'enforce_invertibility',
                             'hamilton_representation'] + list(kwargs.keys())
         # TODO: I think the kwargs or not attached, need to recover from ???
+
+        # Initialize the state
+        if self.ssm.initialization is None:
+            self.initialize_default()
 
     def _get_init_kwds(self):
         kwds = super(SARIMAX, self)._get_init_kwds()
@@ -594,11 +590,6 @@ class SARIMAX(MLEModel):
         """
         super(SARIMAX, self).initialize()
 
-        # Internal flag for whether the default mixed approximate diffuse /
-        # stationary initialization has been overridden with a user-supplied
-        # initialization
-        self._manual_initialization = False
-
         # Cache the indexes of included polynomial orders (for update below)
         # (but we do not want the index of the constant term, so exclude the
         # first index)
@@ -644,105 +635,30 @@ class SARIMAX(MLEModel):
             self._exog_variance_idx = ('state_cov', idx[0][-self.k_exog:],
                                        idx[1][-self.k_exog:])
 
-    def initialize_known(self, initial_state, initial_state_cov):
-        self._manual_initialization = True
-        self.ssm.initialize_known(initial_state, initial_state_cov)
-    initialize_known.__doc__ = KalmanFilter.initialize_known.__doc__
+    def initialize_default(self, approximate_diffuse_variance=None):
+        if approximate_diffuse_variance is None:
+            approximate_diffuse_variance = self.ssm.initial_variance
 
-    def initialize_approximate_diffuse(self, variance=None):
-        self._manual_initialization = True
-        self.ssm.initialize_approximate_diffuse(variance)
-    initialize_approximate_diffuse.__doc__ = (
-        KalmanFilter.initialize_approximate_diffuse.__doc__
-    )
+        init = Initialization(
+            self.k_states,
+            approximate_diffuse_variance=approximate_diffuse_variance)
 
-    def initialize_stationary(self):
-        self._manual_initialization = True
-        self.ssm.initialize_stationary()
-    initialize_stationary.__doc__ = (
-        KalmanFilter.initialize_stationary.__doc__
-    )
-
-    def initialize_state(self, variance=None, complex_step=False):
-        """
-        Initialize state and state covariance arrays in preparation for the
-        Kalman filter.
-
-        Parameters
-        ----------
-        variance : float, optional
-            The variance for approximating diffuse initial conditions. Default
-            can be found in the Representation class documentation.
-
-        Notes
-        -----
-        Initializes the ARMA component of the state space to the typical
-        stationary values and the other components as approximate diffuse.
-
-        Can be overridden be calling one of the other initialization methods
-        before fitting the model.
-        """
-        # Check if a manual initialization has already been specified
-        if self._manual_initialization:
-            return
-
-        # If we're not enforcing stationarity, then we can't initialize a
+        if self.enforce_stationarity:
+            # Differencing operators are at the beginning
+            init.set((0, self._k_states_diff), 'approximate_diffuse')
+            # Stationary component in the middle
+            init.set((self._k_states_diff, self._k_states_diff + self._k_order),
+                     'stationary')
+            # Regression components at the end
+            init.set((self._k_states_diff + self._k_order,
+                      self._k_states_diff + self._k_order + self.k_exog),
+                     'approximate_diffuse')
+        # If we're not enforcing a stationarity, then we can't initialize a
         # stationary component
-        if not self.enforce_stationarity:
-            self.initialize_approximate_diffuse(variance)
-            return
-
-        # Otherwise, create the initial state and state covariance matrix
-        # as from a combination of diffuse and stationary components
-
-        # Create initialized non-stationary components
-        if variance is None:
-            variance = self.ssm.initial_variance
-
-        dtype = self.ssm.transition.dtype
-        initial_state = np.zeros(self.k_states, dtype=dtype)
-        initial_state_cov = np.eye(self.k_states, dtype=dtype) * variance
-
-        # Get the offsets (from the bottom or bottom right of the vector /
-        # matrix) for the stationary component.
-        if self.state_regression:
-            start = -(self.k_exog + self._k_order)
-            end = -self.k_exog if self.k_exog > 0 else None
         else:
-            start = -self._k_order
-            end = None
+            init.set(None, 'approximate_diffuse')
 
-        # Add in the initialized stationary components
-        if self._k_order > 0:
-            transition = self.ssm['transition', start:end, start:end, 0]
-
-            # Initial state
-            # In the Harvey representation, if we have a trend that
-            # is put into the state intercept and means we have a non-zero
-            # unconditional mean
-            if not self.hamilton_representation and self.k_trend > 0:
-                initial_intercept = (
-                    self['state_intercept', self._k_states_diff, 0])
-                initial_mean = (initial_intercept /
-                                (1 - np.sum(transition[:, 0])))
-                initial_state[self._k_states_diff] = initial_mean
-                _start = self._k_states_diff + 1
-                _end = _start + transition.shape[0] - 1
-                initial_state[_start:_end] = transition[1:, 0] * initial_mean
-
-            # Initial state covariance
-            selection_stationary = self.ssm['selection', start:end, :, 0]
-            selected_state_cov_stationary = np.dot(
-                np.dot(selection_stationary, self.ssm['state_cov', :, :, 0]),
-                selection_stationary.T)
-            initial_state_cov_stationary = solve_discrete_lyapunov(
-                transition, selected_state_cov_stationary,
-                complex_step=complex_step)
-
-            initial_state_cov[start:end, start:end] = (
-                initial_state_cov_stationary)
-
-        self.ssm.initialize_known(initial_state, initial_state_cov)
+        self.ssm.initialization = init
 
     @property
     def initial_design(self):
@@ -1671,10 +1587,6 @@ class SARIMAX(MLEModel):
             self.ssm['state_cov', 0, 0] = params_variance
             if self.state_regression and self.time_varying_regression:
                 self.ssm[self._exog_variance_idx] = params_exog_variance
-
-        # Initialize
-        if not self._manual_initialization:
-            self.initialize_state(complex_step=complex_step)
 
         return params
 

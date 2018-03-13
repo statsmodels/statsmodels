@@ -96,27 +96,24 @@ def test_wrapping():
     # initialize_known, initialize_stationary, initialize_approximate_diffuse
 
     # Initialization starts off as none
-    assert_equal(mod.initialization, None)
+    assert_equal(isinstance(mod.initialization, object), True)
 
     # Since the SARIMAX model may be fully stationary or may have diffuse
     # elements, it uses a custom initialization by default, but it can be
     # overridden by users
-    mod.initialize_state()
-    # (The default initialization in this case is known because there is a non-
-    # stationary state corresponding to the time-varying regression parameter)
-    assert_equal(mod.initialization, 'known')
+    mod.initialize_default()  # no-op here
 
     mod.initialize_approximate_diffuse(1e5)
-    assert_equal(mod.initialization, 'approximate_diffuse')
-    assert_equal(mod.ssm._initial_variance, 1e5)
+    assert_equal(mod.initialization.initialization_type, 'approximate_diffuse')
+    assert_equal(mod.initialization.approximate_diffuse_variance, 1e5)
 
     mod.initialize_known([5.], [[40]])
-    assert_equal(mod.initialization, 'known')
-    assert_equal(mod.ssm._initial_state, [5.])
-    assert_equal(mod.ssm._initial_state_cov, [[40]])
+    assert_equal(mod.initialization.initialization_type, 'known')
+    assert_equal(mod.initialization.constant, [5.])
+    assert_equal(mod.initialization.stationary_cov, [[40]])
 
     mod.initialize_stationary()
-    assert_equal(mod.initialization, 'stationary')
+    assert_equal(mod.initialization.initialization_type, 'stationary')
 
     # Test that we can use the following wrapper methods: set_filter_method,
     # set_stability_method, set_conserve_memory, set_smoother_output

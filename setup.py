@@ -377,6 +377,11 @@ ext_data = dict(
     )
 
 statespace_ext_data = dict(
+    _initialization = {"name" : "statsmodels/tsa/statespace/_initialization.c",
+              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
+              "libraries": npymath_info['libraries'],
+              "library_dirs": npymath_info['library_dirs'],
+              "sources": []},
     _representation = {"name" : "statsmodels/tsa/statespace/_representation.c",
               "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
               "libraries": npymath_info['libraries'],
