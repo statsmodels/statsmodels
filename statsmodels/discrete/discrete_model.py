@@ -280,7 +280,7 @@ class DiscreteModel(base.LikelihoodModel):
         Extra parameters are not penalized if alpha is given as a scalar.
         An example is the shape parameter in NegativeBinomial `nb1` and `nb2`.
 
-        Optional arguments for the solvers (available in Results.mle_settings)::
+        Optional arguments for the solvers (available in Results.mle_settings):
 
             'l1'
                 acc : float (default 1e-6)
@@ -901,7 +901,7 @@ class Poisson(CountModel):
 
 
     def cdf(self, X):
-        """
+        r"""
         Poisson model cumulative distribution function
 
         Parameters
@@ -917,13 +917,13 @@ class Poisson(CountModel):
         -----
         The CDF is defined as
 
-        .. math:: \\exp\\left(-\\lambda\\right)\\sum_{i=0}^{y}\\frac{\\lambda^{i}}{i!}
+        .. math:: \exp\left(-\lambda\right)\sum_{i=0}^{y}\frac{\lambda^{i}}{i!}
 
-        where :math:`\\lambda` assumes the loglinear model. I.e.,
+        where :math:`\lambda` assumes the loglinear model. I.e.,
 
-        .. math:: \\ln\\lambda_{i}=X\\beta
+        .. math:: \ln\lambda_{i}=X\beta
 
-        The parameter `X` is :math:`X\\beta` in the above formula.
+        The parameter `X` is :math:`X\beta` in the above formula.
         """
         y = self.endog
         return stats.poisson.cdf(y, np.exp(X))
@@ -959,7 +959,7 @@ class Poisson(CountModel):
         return np.exp(stats.poisson.logpmf(y, np.exp(X)))
 
     def loglike(self, params):
-        """
+        r"""
         Loglikelihood of Poisson model
 
         Parameters
@@ -975,7 +975,8 @@ class Poisson(CountModel):
 
         Notes
         --------
-        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        .. math:: \ln L
+            =\sum_{i=1}^{n}\left[-\lambda_{i}+y_{i}x_{i}^{\prime}\beta-\ln y_{i}!\right]
         """
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
@@ -984,7 +985,7 @@ class Poisson(CountModel):
         return np.sum(-np.exp(XB) +  endog*XB - gammaln(endog+1))
 
     def loglikeobs(self, params):
-        """
+        r"""
         Loglikelihood for observations of Poisson model
 
         Parameters
@@ -1000,7 +1001,8 @@ class Poisson(CountModel):
 
         Notes
         --------
-        .. math:: \\ln L_{i}=\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        .. math:: \ln L_{i}
+            =\left[-\lambda_{i}+y_{i}x_{i}^{\prime}\beta-\ln y_{i}!\right]
 
         for observations :math:`i=1,...,n`
 
@@ -1132,7 +1134,7 @@ class Poisson(CountModel):
 
 
     def score(self, params):
-        """
+        r"""
         Poisson model score (gradient) vector of the log-likelihood
 
         Parameters
@@ -1148,11 +1150,12 @@ class Poisson(CountModel):
 
         Notes
         -----
-        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta}=\\sum_{i=1}^{n}\\left(y_{i}-\\lambda_{i}\\right)x_{i}
+        .. math:: \frac{\partial\ln L}{\partial\beta}
+            =\sum_{i=1}^{n}\left(y_{i}-\lambda_{i}\right)x_{i}
 
         where the loglinear model is assumed
 
-        .. math:: \\ln\\lambda_{i}=x_{i}\\beta
+        .. math:: \ln\lambda_{i}=x_{i}\beta
         """
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
@@ -1161,7 +1164,7 @@ class Poisson(CountModel):
         return np.dot(self.endog - L, X)
 
     def score_obs(self, params):
-        """
+        r"""
         Poisson model Jacobian of the log-likelihood for each observation
 
         Parameters
@@ -1176,13 +1179,14 @@ class Poisson(CountModel):
 
         Notes
         -----
-        .. math:: \\frac{\\partial\\ln L_{i}}{\\partial\\beta}=\\left(y_{i}-\\lambda_{i}\\right)x_{i}
+        .. math:: \frac{\partial\ln L_{i}}{\partial\beta}
+            =\left(y_{i}-\lambda_{i}\right)x_{i}
 
         for observations :math:`i=1,...,n`
 
         where the loglinear model is assumed
 
-        .. math:: \\ln\\lambda_{i}=x_{i}\\beta
+        .. math:: \ln\lambda_{i}=x_{i}\beta
         """
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
@@ -1191,7 +1195,7 @@ class Poisson(CountModel):
         return (self.endog - L)[:,None] * X
 
     def hessian(self, params):
-        """
+        r"""
         Poisson model Hessian matrix of the loglikelihood
 
         Parameters
@@ -1207,12 +1211,12 @@ class Poisson(CountModel):
 
         Notes
         -----
-        .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\\sum_{i=1}^{n}\\lambda_{i}x_{i}x_{i}^{\\prime}
+        .. math:: \frac{\partial^{2}\ln L}{\partial\beta\partial\beta^{\prime}}
+            =-\sum_{i=1}^{n}\lambda_{i}x_{i}x_{i}^{\prime}
 
         where the loglinear model is assumed
 
-        .. math:: \\ln\\lambda_{i}=x_{i}\\beta
-
+        .. math:: \ln\lambda_{i}=x_{i}\beta
         """
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
@@ -1264,7 +1268,7 @@ class GeneralizedPoisson(CountModel):
         return kwds
 
     def loglike(self, params):
-        """
+        r"""
         Loglikelihood of Generalized Poisson model
 
         Parameters
@@ -1280,16 +1284,16 @@ class GeneralizedPoisson(CountModel):
 
         Notes
         --------
-        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[\\mu_{i}+(y_{i}-1)*ln(\\mu_{i}+
-            \\alpha*\\mu_{i}^{p-1}*y_{i})-y_{i}*ln(1+\\alpha*\\mu_{i}^{p-1})-
-            ln(y_{i}!)-\\frac{\\mu_{i}+\\alpha*\\mu_{i}^{p-1}*y_{i}}{1+\\alpha*
-            \\mu_{i}^{p-1}}\\right]
+        .. math:: \ln L=\sum_{i=1}^{n}\left[\mu_{i}+(y_{i}-1)*ln(\mu_{i}+
+            \alpha*\mu_{i}^{p-1}*y_{i})-y_{i}*ln(1+\alpha*\mu_{i}^{p-1})-
+            ln(y_{i}!)-\frac{\mu_{i}+\alpha*\mu_{i}^{p-1}*y_{i}}{1+\alpha*
+            \mu_{i}^{p-1}}\right]
 
         """
         return np.sum(self.loglikeobs(params))
 
     def loglikeobs(self, params):
-        """
+        r"""
         Loglikelihood for observations of Generalized Poisson model
 
         Parameters
@@ -1305,10 +1309,10 @@ class GeneralizedPoisson(CountModel):
 
         Notes
         --------
-        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[\\mu_{i}+(y_{i}-1)*ln(\\mu_{i}+
-            \\alpha*\\mu_{i}^{p-1}*y_{i})-y_{i}*ln(1+\\alpha*\\mu_{i}^{p-1})-
-            ln(y_{i}!)-\\frac{\\mu_{i}+\\alpha*\\mu_{i}^{p-1}*y_{i}}{1+\\alpha*
-            \\mu_{i}^{p-1}}\\right]
+        .. math:: \ln L=\sum_{i=1}^{n}\left[\mu_{i}+(y_{i}-1)*ln(\mu_{i}+
+            \alpha*\mu_{i}^{p-1}*y_{i})-y_{i}*ln(1+\alpha*\mu_{i}^{p-1})-
+            ln(y_{i}!)-\frac{\mu_{i}+\alpha*\mu_{i}^{p-1}*y_{i}}{1+\alpha*
+            \mu_{i}^{p-1}}\right]
 
         for observations :math:`i=1,...,n`
         """
@@ -1637,7 +1641,7 @@ class Logit(BinaryModel):
            'extra_params' : base._missing_param_doc}
 
     def cdf(self, X):
-        """
+        r"""
         The logistic cumulative distribution function
 
         Parameters
@@ -1653,13 +1657,14 @@ class Logit(BinaryModel):
         ------
         In the logit model,
 
-        .. math:: \\Lambda\\left(x^{\\prime}\\beta\\right)=\\text{Prob}\\left(Y=1|x\\right)=\\frac{e^{x^{\\prime}\\beta}}{1+e^{x^{\\prime}\\beta}}
+        .. math:: \Lambda\left(x^{\prime}\beta\right)
+            =\text{Prob}\left(Y=1|x\right)=\frac{e^{x^{\prime}\beta}}{1+e^{x^{\prime}\beta}}
         """
         X = np.asarray(X)
         return 1/(1+np.exp(-X))
 
     def pdf(self, X):
-        """
+        r"""
         The logistic probability density function
 
         Parameters
@@ -1677,13 +1682,14 @@ class Logit(BinaryModel):
         -----
         In the logit model,
 
-        .. math:: \\lambda\\left(x^{\\prime}\\beta\\right)=\\frac{e^{-x^{\\prime}\\beta}}{\\left(1+e^{-x^{\\prime}\\beta}\\right)^{2}}
+        .. math:: \lambda\left(x^{\prime}\beta\right)
+            =\frac{e^{-x^{\prime}\beta}}{\left(1+e^{-x^{\prime}\beta}\right)^{2}}
         """
         X = np.asarray(X)
         return np.exp(-X)/(1+np.exp(-X))**2
 
     def loglike(self, params):
-        """
+        r"""
         Log-likelihood of logit model.
 
         Parameters
@@ -1699,7 +1705,7 @@ class Logit(BinaryModel):
 
         Notes
         ------
-        .. math:: \\ln L=\\sum_{i}\\ln\\Lambda\\left(q_{i}x_{i}^{\\prime}\\beta\\right)
+        .. math:: \ln L=\sum_{i}\ln\Lambda\left(q_{i}x_{i}^{\prime}\beta\right)
 
         Where :math:`q=2y-1`. This simplification comes from the fact that the
         logistic distribution is symmetric.
@@ -1709,7 +1715,7 @@ class Logit(BinaryModel):
         return np.sum(np.log(self.cdf(q*np.dot(X,params))))
 
     def loglikeobs(self, params):
-        """
+        r"""
         Log-likelihood of logit model for each observation.
 
         Parameters
@@ -1725,7 +1731,7 @@ class Logit(BinaryModel):
 
         Notes
         ------
-        .. math:: \\ln L=\\sum_{i}\\ln\\Lambda\\left(q_{i}x_{i}^{\\prime}\\beta\\right)
+        .. math:: \ln L=\sum_{i}\ln\Lambda\left(q_{i}x_{i}^{\prime}\beta\right)
 
         for observations :math:`i=1,...,n`
 
@@ -1753,7 +1759,8 @@ class Logit(BinaryModel):
 
         Notes
         -----
-        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta}=\\sum_{i=1}^{n}\\left(y_{i}-\\Lambda_{i}\\right)x_{i}
+        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta}
+            =\\sum_{i=1}^{n}\\left(y_{i}-\\Lambda_{i}\\right)x_{i}
         """
 
         y = self.endog
@@ -1778,7 +1785,8 @@ class Logit(BinaryModel):
 
         Notes
         -----
-        .. math:: \\frac{\\partial\\ln L_{i}}{\\partial\\beta}=\\left(y_{i}-\\Lambda_{i}\\right)x_{i}
+        .. math:: \\frac{\\partial\\ln L_{i}}{\\partial\\beta}
+            =\\left(y_{i}-\\Lambda_{i}\\right)x_{i}
 
         for observations :math:`i=1,...,n`
 
@@ -1790,7 +1798,7 @@ class Logit(BinaryModel):
         return (y - L)[:,None] * X
 
     def hessian(self, params):
-        """
+        r"""
         Logit model Hessian matrix of the log-likelihood
 
         Parameters
@@ -1806,7 +1814,8 @@ class Logit(BinaryModel):
 
         Notes
         -----
-        .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\\sum_{i}\\Lambda_{i}\\left(1-\\Lambda_{i}\\right)x_{i}x_{i}^{\\prime}
+        .. math:: \frac{\partial^{2}\ln L}{\partial\beta\partial\beta^{\prime}}
+            =-\sum_{i}\Lambda_{i}\left(1-\Lambda_{i}\right)x_{i}x_{i}^{\prime}
         """
         X = self.exog
         L = self.cdf(np.dot(X,params))
@@ -1882,7 +1891,7 @@ class Probit(BinaryModel):
 
 
     def loglike(self, params):
-        """
+        r"""
         Log-likelihood of probit model (i.e., the normal distribution).
 
         Parameters
@@ -1898,7 +1907,7 @@ class Probit(BinaryModel):
 
         Notes
         -----
-        .. math:: \\ln L=\\sum_{i}\\ln\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)
+        .. math:: \ln L=\sum_{i}\ln\Phi\left(q_{i}x_{i}^{\prime}\beta\right)
 
         Where :math:`q=2y-1`. This simplification comes from the fact that the
         normal distribution is symmetric.
@@ -1940,7 +1949,7 @@ class Probit(BinaryModel):
 
 
     def score(self, params):
-        """
+        r"""
         Probit model score (gradient) vector
 
         Parameters
@@ -1956,7 +1965,8 @@ class Probit(BinaryModel):
 
         Notes
         -----
-        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta}=\\sum_{i=1}^{n}\\left[\\frac{q_{i}\\phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}{\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}\\right]x_{i}
+        .. math:: \frac{\partial\ln L}{\partial\beta}
+            =\sum_{i=1}^{n}\left[\frac{q_{i}\phi\left(q_{i}x_{i}^{\prime}\beta\right)}{\Phi\left(q_{i}x_{i}^{\prime}\beta\right)}\right]x_{i}
 
         Where :math:`q=2y-1`. This simplification comes from the fact that the
         normal distribution is symmetric.
@@ -1970,7 +1980,7 @@ class Probit(BinaryModel):
         return np.dot(L,X)
 
     def score_obs(self, params):
-        """
+        r"""
         Probit model Jacobian for each observation
 
         Parameters
@@ -1986,7 +1996,8 @@ class Probit(BinaryModel):
 
         Notes
         -----
-        .. math:: \\frac{\\partial\\ln L_{i}}{\\partial\\beta}=\\left[\\frac{q_{i}\\phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}{\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}\\right]x_{i}
+        .. math:: \frac{\partial\ln L_{i}}{\partial\beta}
+            =\left[\frac{q_{i}\phi\left(q_{i}x_{i}^{\prime}\beta\right)}{\Phi\left(q_{i}x_{i}^{\prime}\beta\right)}\right]x_{i}
 
         for observations :math:`i=1,...,n`
 
@@ -2002,7 +2013,7 @@ class Probit(BinaryModel):
         return L[:,None] * X
 
     def hessian(self, params):
-        """
+        r"""
         Probit model Hessian matrix of the log-likelihood
 
         Parameters
@@ -2018,11 +2029,13 @@ class Probit(BinaryModel):
 
         Notes
         -----
-        .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\\lambda_{i}\\left(\\lambda_{i}+x_{i}^{\\prime}\\beta\\right)x_{i}x_{i}^{\\prime}
+        .. math:: \frac{\partial^{2}\ln L}{\partial\beta\partial\beta^{\prime}}
+            =-\lambda_{i}\left(\lambda_{i}+x_{i}^{\prime}\beta\right)x_{i}x_{i}^{\prime}
 
         where
 
-        .. math:: \\lambda_{i}=\\frac{q_{i}\\phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}{\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}
+        .. math:: \lambda_{i}
+            =\frac{q_{i}\phi\left(q_{i}x_{i}^{\prime}\beta\right)}{\Phi\left(q_{i}x_{i}^{\prime}\beta\right)}
 
         and :math:`q=2y-1`
         """
@@ -2091,7 +2104,7 @@ class MNLogit(MultinomialModel):
         raise NotImplementedError
 
     def cdf(self, X):
-        """
+        r"""
         Multinomial logit cumulative distribution function.
 
         Parameters
@@ -2107,13 +2120,13 @@ class MNLogit(MultinomialModel):
         Notes
         -----
         In the multinomial logit model.
-        .. math:: \\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}
+        .. math:: \frac{\exp\left(\beta_{j}^{\prime}x_{i}\right)}{\sum_{k=0}^{J}\exp\left(\beta_{k}^{\prime}x_{i}\right)}
         """
         eXB = np.column_stack((np.ones(len(X)), np.exp(X)))
         return eXB/eXB.sum(1)[:,None]
 
     def loglike(self, params):
-        """
+        r"""
         Log-likelihood of the multinomial logit model.
 
         Parameters
@@ -2129,7 +2142,8 @@ class MNLogit(MultinomialModel):
 
         Notes
         ------
-        .. math:: \\ln L=\\sum_{i=1}^{n}\\sum_{j=0}^{J}d_{ij}\\ln\\left(\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)
+        .. math:: \ln L
+            =\sum_{i=1}^{n}\sum_{j=0}^{J}d_{ij}\ln\left(\frac{\exp\left(\beta_{j}^{\prime}x_{i}\right)}{\sum_{k=0}^{J}\exp\left(\beta_{k}^{\prime}x_{i}\right)}\right)
 
         where :math:`d_{ij}=1` if individual `i` chose alternative `j` and 0
         if not.
@@ -2140,7 +2154,7 @@ class MNLogit(MultinomialModel):
         return np.sum(d * logprob)
 
     def loglikeobs(self, params):
-        """
+        r"""
         Log-likelihood of the multinomial logit model for each observation.
 
         Parameters
@@ -2156,7 +2170,8 @@ class MNLogit(MultinomialModel):
 
         Notes
         ------
-        .. math:: \\ln L_{i}=\\sum_{j=0}^{J}d_{ij}\\ln\\left(\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)
+        .. math:: \ln L_{i}
+            =\sum_{j=0}^{J}d_{ij}\ln\left(\frac{\exp\left(\beta_{j}^{\prime}x_{i}\right)}{\sum_{k=0}^{J}\exp\left(\beta_{k}^{\prime}x_{i}\right)}\right)
 
         for observations :math:`i=1,...,n`
 
@@ -2169,7 +2184,7 @@ class MNLogit(MultinomialModel):
         return d * logprob
 
     def score(self, params):
-        """
+        r"""
         Score matrix for multinomial logit model log-likelihood
 
         Parameters
@@ -2186,7 +2201,8 @@ class MNLogit(MultinomialModel):
 
         Notes
         -----
-        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta_{j}}=\\sum_{i}\\left(d_{ij}-\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)x_{i}
+        .. math:: \frac{\partial\ln L}{\partial\beta_{j}}
+            =\sum_{i}\left(d_{ij}-\frac{\exp\left(\beta_{j}^{\prime}x_{i}\right)}{\sum_{k=0}^{J}\exp\left(\beta_{k}^{\prime}x_{i}\right)}\right)x_{i}
 
         for :math:`j=1,...,J`
 
@@ -2215,7 +2231,7 @@ class MNLogit(MultinomialModel):
         return loglike_value, score_array
 
     def score_obs(self, params):
-        """
+        r"""
         Jacobian matrix for multinomial logit model log-likelihood
 
         Parameters
@@ -2231,7 +2247,8 @@ class MNLogit(MultinomialModel):
 
         Notes
         -----
-        .. math:: \\frac{\\partial\\ln L_{i}}{\\partial\\beta_{j}}=\\left(d_{ij}-\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)x_{i}
+        .. math:: \frac{\partial\ln L_{i}}{\partial\beta_{j}}
+            =\left(d_{ij}-\frac{\exp\left(\beta_{j}^{\prime}x_{i}\right)}{\sum_{k=0}^{J}\exp\left(\beta_{k}^{\prime}x_{i}\right)}\right)x_{i}
 
         for :math:`j=1,...,J`, for observations :math:`i=1,...,n`
 
@@ -2246,7 +2263,7 @@ class MNLogit(MultinomialModel):
         return (firstterm[:,:,None] * self.exog[:,None,:]).reshape(self.exog.shape[0], -1)
 
     def hessian(self, params):
-        """
+        r"""
         Multinomial logit Hessian matrix of the log-likelihood
 
         Parameters
@@ -2262,10 +2279,11 @@ class MNLogit(MultinomialModel):
 
         Notes
         -----
-        .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta_{j}\\partial\\beta_{l}}=-\\sum_{i=1}^{n}\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\left[\\boldsymbol{1}\\left(j=l\\right)-\\frac{\\exp\\left(\\beta_{l}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right]x_{i}x_{l}^{\\prime}
+        .. math:: \frac{\partial^{2}\ln L}{\partial\beta_{j}\partial\beta_{l}}
+            =-\sum_{i=1}^{n}\frac{\exp\left(\beta_{j}^{\prime}x_{i}\right)}{\sum_{k=0}^{J}\exp\left(\beta_{k}^{\prime}x_{i}\right)}\left[\boldsymbol{1}\left(j=l\right)-\frac{\exp\left(\beta_{l}^{\prime}x_{i}\right)}{\sum_{k=0}^{J}\exp\left(\beta_{k}^{\prime}x_{i}\right)}\right]x_{i}x_{l}^{\prime}
 
         where
-        :math:`\\boldsymbol{1}\\left(j=l\\right)` equals 1 if `j` = `l` and 0
+        :math:`\boldsymbol{1}\left(j=l\right)` equals 1 if `j` = `l` and 0
         otherwise.
 
         The actual Hessian matrix has J**2 * K x K elements. Our Hessian
@@ -2499,7 +2517,8 @@ class NegativeBinomial(CountModel):
            g_i &= \theta \lambda_i^Q \\
            w_i &= g_i/(g_i + \lambda_i) \\
            r_i &= \theta / (\theta+\lambda_i) \\
-           ln \mathcal{L}_i &= ln \Gamma(y_i+g_i) - ln \Gamma(1+y_i) + g_iln (r_i) + y_i ln(1-r_i)
+           ln \mathcal{L}_i &= ln \Gamma(y_i+g_i)
+                - ln \Gamma(1+y_i) + g_iln (r_i) + y_i ln(1-r_i)
 
         where :math`Q=0` for NB2 and geometric and :math:`Q=1` for NB1.
         For the geometric, :math:`\alpha=0` as well.
@@ -3765,18 +3784,20 @@ class BinaryResults(DiscreteResults):
 
     @cache_readonly
     def resid_dev(self):
-        """
+        r"""
         Deviance residuals
 
         Notes
         -----
         Deviance residuals are defined
 
-        .. math:: d_j = \\pm\\left(2\\left[Y_j\\ln\\left(\\frac{Y_j}{M_jp_j}\\right) + (M_j - Y_j\\ln\\left(\\frac{M_j-Y_j}{M_j(1-p_j)} \\right) \\right] \\right)^{1/2}
+        .. math:: d_j
+            =\pm\left(2\left[Y_j\ln\left(\frac{Y_j}{M_jp_j}\right)
+                + (M_j - Y_j\ln\left(\frac{M_j-Y_j}{M_j(1-p_j)}\right)\right]\right)^{1/2}
 
         where
 
-        :math:`p_j = cdf(X\\beta)` and :math:`M_j` is the total number of
+        :math:`p_j = cdf(X\beta)` and :math:`M_j` is the total number of
         observations sharing the covariate pattern :math:`j`.
 
         For now :math:`M_j` is always set to 1.
@@ -3865,14 +3886,15 @@ class ProbitResults(BinaryResults):
                     "extra_attr" : ""}
     @cache_readonly
     def resid_generalized(self):
-        """
+        r"""
         Generalized residuals
 
         Notes
         -----
         The generalized residuals for the Probit model are defined
 
-        .. math:: y\\frac{\\phi(X\\beta)}{\\Phi(X\\beta)}-(1-y)\\frac{\\phi(X\\beta)}{1-\\Phi(X\\beta)}
+        .. math:: y\frac{\phi(X\beta)}{\Phi(X\beta)}
+            -(1-y)\frac{\phi(X\beta)}{1-\Phi(X\beta)}
         """
         # generalized residuals
         model = self.model
