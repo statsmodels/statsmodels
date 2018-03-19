@@ -363,53 +363,194 @@ class TestMixedLM(object):
         assert_allclose(result.params, result2.params)
         assert_allclose(result.bse, result2.bse)
 
+    def test_dietox(self):
+        # dietox data from geepack using random intercepts
+        #
+        # Fit in R using
+        #
+        # library(geepack)
+        # rm = lmer(Weight ~ Time + (1 | Pig), data=dietox)
+        # rm = lmer(Weight ~ Time + (1 | Pig), REML=FALSE, data=dietox)
+
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        rdir = os.path.join(cur_dir, 'results')
+        fname = os.path.join(rdir, 'dietox.csv')
+
+        # REML
+        data = pd.read_csv(fname)
+        model = MixedLM.from_formula("Weight ~ Time", groups="Pig",
+                                     data=data)
+        result = model.fit()
+
+        # fixef(rm)
+        assert_allclose(result.fe_params, np.r_[15.723523, 6.942505], rtol=1e-5)
+
+        # sqrt(diag(vcov(rm)))
+        assert_allclose(result.bse[0:2], np.r_[0.78805374, 0.03338727], rtol=1e-5)
+
+        # attr(VarCorr(rm), "sc")^2
+        assert_allclose(result.scale, 11.36692, rtol=1e-5)
+
+        # VarCorr(rm)[[1]][[1]]
+        assert_allclose(result.cov_re, 40.39395, rtol=1e-5)
+
+        # logLik(rm)
+        assert_allclose(model.loglike(result.params_object), -2404.775, rtol=1e-5)
+
+        # ML
+        data = pd.read_csv(fname)
+        model = MixedLM.from_formula("Weight ~ Time", groups="Pig",
+                                     data=data)
+        result = model.fit(reml=False)
+
+        # fixef(rm)
+        assert_allclose(result.fe_params, np.r_[15.723517, 6.942506], rtol=1e-5)
+
+        # sqrt(diag(vcov(rm)))
+        assert_allclose(result.bse[0:2], np.r_[0.7829397, 0.0333661], rtol=1e-5)
+
+        # attr(VarCorr(rm), "sc")^2
+        assert_allclose(result.scale, 11.35251, rtol=1e-5)
+
+        # VarCorr(rm)[[1]][[1]]
+        assert_allclose(result.cov_re, 39.82097, rtol=1e-5)
+
+        # logLik(rm)
+        assert_allclose(model.loglike(result.params_object), -2402.932, rtol=1e-5)
+
+
+    def test_dietox_slopes(self):
+        # dietox data from geepack using random intercepts
+        #
+        # Fit in R using
+        #
+        # library(geepack)
+        # r = lmer(Weight ~ Time + (1 + Time | Pig), data=dietox)
+        # r = lmer(Weight ~ Time + (1 + Time | Pig), REML=FALSE, data=dietox)
+
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        rdir = os.path.join(cur_dir, 'results')
+        fname = os.path.join(rdir, 'dietox.csv')
+
+        # REML
+        data = pd.read_csv(fname)
+        model = MixedLM.from_formula("Weight ~ Time", groups="Pig",
+                                     re_formula="1 + Time", data=data)
+        result = model.fit(method='powell')
+
+        # fixef(r)
+        assert_allclose(result.fe_params, np.r_[15.738650, 6.939014], rtol=1e-5)
+
+        # sqrt(diag(vcov(r)))
+        assert_allclose(result.bse[0:2], np.r_[0.5501253, 0.0798254], rtol=1e-3)
+
+        # attr(VarCorr(r), "sc")^2
+        assert_allclose(result.scale, 6.03745, rtol=1e-3)
+
+        # as.numeric(VarCorr(r)[[1]])
+        assert_allclose(result.cov_re.values.ravel(),
+                        np.r_[19.4934552, 0.2938323, 0.2938323, 0.4160620],
+                        rtol=1e-1)
+
+        # logLik(r)
+        assert_allclose(model.loglike(result.params_object), -2217.047, rtol=1e-5)
+
+        # ML
+        data = pd.read_csv(fname)
+        model = MixedLM.from_formula("Weight ~ Time", groups="Pig",
+                                     re_formula="1 + Time", data=data)
+        result = model.fit(method='powell', reml=False)
+
+        # fixef(r)
+        assert_allclose(result.fe_params, np.r_[15.73863, 6.93902], rtol=1e-5)
+
+        # sqrt(diag(vcov(r)))
+        assert_allclose(result.bse[0:2], np.r_[0.54629282, 0.07926954], rtol=1e-3)
+
+        # attr(VarCorr(r), "sc")^2
+        assert_allclose(result.scale, 6.037441, rtol=1e-3)
+
+        #  as.numeric(VarCorr(r)[[1]])
+        assert_allclose(result.cov_re.values.ravel(),
+                        np.r_[19.190922, 0.293568, 0.293568, 0.409695], rtol=1e-2)
+
+        # logLik(r)
+        assert_allclose(model.loglike(result.params_object), -2215.753, rtol=1e-5)
+
+
     def test_pastes_vcomp(self):
         # pastes data from lme4
         #
-        # Fit in R using formula:
+        # Fit in R using:
         #
-        # strength ~ (1|batch) + (1|batch:cask)
+        # r = lmer(strength ~ (1|batch) + (1|batch:cask), data=data)
+        # r = lmer(strength ~ (1|batch) + (1|batch:cask), data=data, reml=FALSE)
 
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         rdir = os.path.join(cur_dir, 'results')
         fname = os.path.join(rdir, 'pastes.csv')
-
-        # REML
         data = pd.read_csv(fname)
         vcf = {"cask": "0 + cask"}
+
+        # REML
         model = MixedLM.from_formula("strength ~ 1", groups="batch",
                                      re_formula="1", vc_formula=vcf,
                                      data=data)
         result = model.fit()
 
+        # fixef(r)
         assert_allclose(result.fe_params.iloc[0], 60.0533, rtol=1e-3)
+
+        # sqrt(diag(vcov(r)))
         assert_allclose(result.bse.iloc[0], 0.6769, rtol=1e-3)
+
+        # VarCorr(r)$batch[[1]]
         assert_allclose(result.cov_re.iloc[0, 0], 1.657, rtol=1e-3)
+
+        # attr(VarCorr(r), "sc")^2
         assert_allclose(result.scale, 0.678, rtol=1e-3)
+
+        # logLik(r)
         assert_allclose(result.llf, -123.49, rtol=1e-1)
-        assert_equal(result.aic, np.nan)  # don't provide aic/bic with REML
+
+        # don't provide aic/bic with REML
+        assert_equal(result.aic, np.nan)
         assert_equal(result.bic, np.nan)
 
-        resid = np.r_[0.17133538, -0.02866462, -
-                      1.08662875, 1.11337125, -0.12093607]
+        # resid(r)[1:5]
+        resid = np.r_[0.17133538, -0.02866462, -1.08662875, 1.11337125,
+                      -0.12093607]
         assert_allclose(result.resid[0:5], resid, rtol=1e-3)
 
+        # predict(r)[1:5]
         fit = np.r_[62.62866, 62.62866, 61.18663, 61.18663, 62.82094]
         assert_allclose(result.fittedvalues[0:5], fit, rtol=1e-4)
 
         # ML
-        data = pd.read_csv(fname)
-        vcf = {"cask": "0 + cask"}
         model = MixedLM.from_formula("strength ~ 1", groups="batch",
                                      re_formula="1", vc_formula=vcf,
                                      data=data)
         result = model.fit(reml=False)
+
+        # fixef(r)
         assert_allclose(result.fe_params.iloc[0], 60.0533, rtol=1e-3)
+
+        # sqrt(diag(vcov(r)))
         assert_allclose(result.bse.iloc[0], 0.642, rtol=1e-3)
+
+        # VarCorr(r)$batch[[1]]
         assert_allclose(result.cov_re.iloc[0, 0], 1.199, rtol=1e-3)
+
+        # attr(VarCorr(r), "sc")^2
         assert_allclose(result.scale, 0.67799, rtol=1e-3)
+
+        # logLik(r)
         assert_allclose(result.llf, -123.997, rtol=1e-1)
+
+        # AIC(r)
         assert_allclose(result.aic, 255.9944, rtol=1e-3)
+
+        # BIC(r)
         assert_allclose(result.bic, 264.3718, rtol=1e-3)
 
     def test_vcomp_formula(self):
