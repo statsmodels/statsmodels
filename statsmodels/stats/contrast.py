@@ -419,12 +419,38 @@ class WaldTestResults(object):
 
 
 def _get_pairs_labels(k_level, level_names):
+    """helper function for labels for pairwise comparisons
+    """
     idx_pairs_all = np.triu_indices(k_level, 1)
-    labels = ['%s-%s' % (level_names[name[1]], level_names[name[0]]) for name in zip(*idx_pairs_all)]
+    labels = ['%s-%s' % (level_names[name[1]], level_names[name[0]])
+              for name in zip(*idx_pairs_all)]
     return labels
 
-def contrast_pairs(k_params, k_level, idx_start, level_names=None):
+def _contrast_pairs(k_params, k_level, idx_start):
     """create pairwise contrast for reference coding
+
+    currently not used,
+    using encoding contrast matrix is more general, but requires requires
+    factor information from patsy design_info.
+
+
+    Parameters
+    ----------
+    k_params : int
+        number of parameters
+    k_level : int
+        number of levels or categories (including reference case)
+    idx_start : int
+        Index of the first parameter of this factor. The restrictions on the
+        factor are inserted as a block in the full restriction matrix starting
+        at column with index `idx_start`.
+
+    Returns
+    -------
+    contrasts : ndarray
+        restriction matrix with k_params columns and number of rows equal to
+        the number of restrictions.
+
     """
     k_level_m1 = k_level - 1
     idx_pairs = np.triu_indices(k_level_m1, 1)
@@ -443,7 +469,31 @@ def contrast_pairs(k_params, k_level, idx_start, level_names=None):
     return contrasts
 
 
-def t_test_multi(result, contrasts, method='hs', ci_method=None, contrast_names=None):
+def t_test_multi(result, contrasts, method='hs', ci_method=None,
+                 contrast_names=None):
+    """perform t_test and add multiplicity correction to results dataframe
+
+    Parameters
+    ----------
+    result results instance
+       results of an estimated model
+    contrasts : ndarray
+        restriction matrix for t_test
+    method : string or list of strings
+       method for multiple testing p-value correction, default is'hs'.
+    ci_method : None
+       not used yet, will be for multiplicity corrected confidence intervals
+    contrast_names : list of strings or None
+       If contrast_names are provided, then they are used in the index of the
+       returned dataframe, otherwise some generic default names are created.
+
+    Returns
+    -------
+    res_df : pandas DataFrame
+        The dataframe contains the results of the t_test and additional columns
+        for multiplicity corrected p-values and boolean indicator for whether
+        the Null hypothesis is rejected.
+    """
     tt = result.t_test(contrasts)
     res_df = tt.summary_frame(xname=contrast_names)
 
@@ -457,11 +507,39 @@ def t_test_multi(result, contrasts, method='hs', ci_method=None, contrast_names=
 
 
 class MultiCompResult(object):
+    """class to hold return of t_test_pairwise
+
+    currently just a minimal class to hold attributes.
+    """
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
 
 def _embed_constraints(contrasts, k_params, idx_start, index=None):
+    """helper function to expand constraints to a full restriction matrix
+
+    Parameters
+    ----------
+    contrasts : ndarray
+        restriction matrix for t_test
+    k_params : int
+        number of parameters
+    idx_start : int
+        Index of the first parameter of this factor. The restrictions on the
+        factor are inserted as a block in the full restriction matrix starting
+        at column with index `idx_start`.
+    index : slice or ndarray
+        Column index if constraints do not form a block in the full restriction
+        matrix, i.e. if parameters that are subject to restrictions are not
+        consecutive in the list of parameters.
+        If index is not None, then idx_start is ignored.
+
+    Returns
+    -------
+    contrasts : ndarray
+        restriction matrix with k_params columns and number of rows equal to
+        the number of restrictions.
+    """
 
     k_c, k_p = contrasts.shape
     c = np.zeros((k_c, k_params))
@@ -472,43 +550,50 @@ def _embed_constraints(contrasts, k_params, idx_start, index=None):
     return c
 
 
-def t_test_pairwise(result, term_name, method='hs', factor_labels=None, ignore=False):
-    """get pairwise t_test with multiple testing corrected p-values
+def t_test_pairwise(result, term_name, method='hs', factor_labels=None,
+                    ignore=False):
+    """perform pairwise t_test with multiple testing corrected p-values
 
-    This uses the formula design_info encoding contrast matrix and should work for
-    all encodings of a main effect.
+    This uses the formula design_info encoding contrast matrix and should
+    work for all encodings of a main effect.
 
     Parameters
     ----------
     result : result instance
+        The results of an estimated model with a categorical main effect.
     term_name : str
-        name of the term for which pairwise comparisons are computed
+        name of the term for which pairwise comparisons are computed.
+        Term names for categorical effects are created by patsy and
+        correspond to the main part of the exog names.
     method : str or list of strings
-        multiple testing p-value correction, default is 'hs', see stats.multipletesting
+        multiple testing p-value correction, default is 'hs',
+        see stats.multipletesting
     factor_labels : None, list of str
-        Labels for the factor levels used for pairwise labels. If not provided,
-        then the labels from the formula design_info are used.
+        Labels for the factor levels used for pairwise labels. If not
+        provided, then the labels from the formula design_info are used.
     ignore : boolean
-        This function tries to detect whether an appropriate factor encoding was
-        used and will raise if a ValueError if the factor encoding is not a simple
-        reference coding. These exceptions can be turned off.
+        Turn off some of the exceptions raised by input checks.
 
     Returns
     -------
     results : instance of a simple Results class
-        The results are stored as attributes, the main attributes are the following two. Other
-        attributes are added for debugging purposes or as background information.
+        The results are stored as attributes, the main attributes are the
+        following two. Other attributes are added for debugging purposes
+        or as background information.
 
-        - result_frame : pandas DataFrame with t_test results and multiple testing corrected p-values
-        - contrasts : matrix of constraints of the null hypothesis in the t_test
+        - result_frame : pandas DataFrame with t_test results and multiple
+          testing corrected p-values.
+        - contrasts : matrix of constraints of the null hypothesis in the
+          t_test.
 
     Notes
     -----
 
-    Status: experimental. Currently only checked for treatment coding with and without specified
-    reference level.
+    Status: experimental. Currently only checked for treatment coding with
+    and without specified reference level.
 
-    Currently there are no multiple testing corrected confidence intervals available
+    Currently there are no multiple testing corrected confidence intervals
+    available.
 
     """
 
@@ -537,7 +622,8 @@ def t_test_pairwise(result, term_name, method='hs', factor_labels=None, ignore=F
     c_all_pairs = -mc.contrast_allpairs(k_level)
     contrasts_sub = c_all_pairs.dot(cm)
     contrasts = _embed_constraints(contrasts_sub, k_params, idx_start)
-    res_df = t_test_multi(result, contrasts, method=method, ci_method=None, contrast_names=labels)
+    res_df = t_test_multi(result, contrasts, method=method, ci_method=None,
+                          contrast_names=labels)
     res = MultiCompResult(result_frame=res_df,
                           contrasts=contrasts,
                           term=term,

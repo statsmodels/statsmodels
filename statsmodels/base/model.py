@@ -1647,9 +1647,66 @@ class LikelihoodModelResults(Results):
         return res
 
     def t_test_pairwise(self, term_name, method='hs',
-                        factor_labels=None, ignore=False):
+                        factor_labels=None):
+        """perform pairwise t_test with multiple testing corrected p-values
+
+        This uses the formula design_info encoding contrast matrix and should
+        work for all encodings of a main effect.
+
+        Parameters
+        ----------
+        result : result instance
+            The results of an estimated model with a categorical main effect.
+        term_name : str
+            name of the term for which pairwise comparisons are computed.
+            Term names for categorical effects are created by patsy and
+            correspond to the main part of the exog names.
+        method : str or list of strings
+            multiple testing p-value correction, default is 'hs',
+            see stats.multipletesting
+        factor_labels : None, list of str
+            Labels for the factor levels used for pairwise labels. If not
+            provided, then the labels from the formula design_info are used.
+
+        Returns
+        -------
+        results : instance of a simple Results class
+            The results are stored as attributes, the main attributes are the
+            following two. Other attributes are added for debugging purposes
+            or as background information.
+
+            - result_frame : pandas DataFrame with t_test results and multiple
+              testing corrected p-values.
+            - contrasts : matrix of constraints of the null hypothesis in the
+              t_test.
+
+        Notes
+        -----
+
+        Status: experimental. Currently only checked for treatment coding with
+        and without specified reference level.
+
+        Currently there are no multiple testing corrected confidence intervals
+        available.
+
+        Examples
+        --------
+        >>> res = ols("np.log(Days+1) ~ C(Weight) + C(Duration)", data).fit()
+        >>> pw = res.t_test_pairwise("C(Weight)")
+        >>> pw.result_frame
+                 coef   std err         t         P>|t|  Conf. Int. Low  \
+        2-1  0.632315  0.230003  2.749157  8.028083e-03        0.171563
+        3-1  1.302555  0.230003  5.663201  5.331513e-07        0.841803
+        3-2  0.670240  0.230003  2.914044  5.119126e-03        0.209488
+
+             Conf. Int. Upp.  pvalue-hs reject-hs
+        2-1         1.093067   0.010212      True
+        3-1         1.763307   0.000002      True
+        3-2         1.130992   0.010212      True
+
+        """
         res = t_test_pairwise(self, term_name, method=method,
-                              factor_labels=factor_labels, ignore=ignore)
+                              factor_labels=factor_labels)
         return res
 
     def conf_int(self, alpha=.05, cols=None, method='default'):
