@@ -72,7 +72,7 @@ kidney_table = StringIO("""Days      Duration Weight ID
 """)
 
 kidney_table.seek(0)
-kidney_table = read_table(kidney_table, sep="\s+")
+kidney_table = read_table(kidney_table, sep="\s+").astype(int)
 
 class TestAnovaLM(object):
     @classmethod
