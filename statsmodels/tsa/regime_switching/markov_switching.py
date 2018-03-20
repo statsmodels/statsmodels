@@ -42,8 +42,6 @@ prefix_kim_smoother_map = {
 }
 
 
-
-
 def _logistic(x):
     """
     Note that this is not a vectorized function

@@ -216,7 +216,7 @@ def test_logistic():
     # For a vector, logistic(x) returns
     # np.exp(x[i]) / (1 + np.sum(np.exp(x[:]))) for each i
     # but squeezed
-    cases = [[1.], [0,1.], [-2,3.,1.2,-30.]]
+    cases = [[1.], [0, 1.], [-2, 3., 1.2, -30.]]
     for x in cases:
         actual = logistic(x)
         desired = [np.exp(i) / (1 + np.sum(np.exp(x))) for i in x]
@@ -227,7 +227,7 @@ def test_logistic():
     # but squeezed
     case = [[1.]]
     actual = logistic(case)
-    assert_equal(actual.shape, (1,1))
+    assert_equal(actual.shape, (1, 1))
     assert_allclose(actual, np.exp(1) / (1 + np.exp(1)))
 
     # Here, np.array(case) is 2x1, so it is interpreted as i=0,1 and t=0
@@ -268,7 +268,7 @@ def test_partials_logistic():
     # np.exp(x[i]) / (1 + np.sum(np.exp(x[:]))) for each i
     # Then d logistic(x[i]) / dx[i] = (logistix(x) - logistic(x)**2)[i]
     # And d logistic(x[i]) / dx[j] = -(logistic(x[i]) * logistic[x[j]])
-    cases = [[1.], [0,1.], [-2,3.,1.2,-30.]]
+    cases = [[1.], [0, 1.], [-2, 3., 1.2, -30.]]
     for x in cases:
         evaluated = np.atleast_1d(logistic(x))
         partials = np.diag(evaluated - evaluated**2)

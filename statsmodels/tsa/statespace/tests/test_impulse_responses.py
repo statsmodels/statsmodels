@@ -48,11 +48,11 @@ def test_sarimax():
                -.001951, .077133, -.004301]
     assert_allclose(actual, desired, atol=1e-6)
 
-    # SARIMAX(1,1,1)x(1,0,1,4) + constant + exog
+    # SARIMAX(1, 1, 1)x(1, 0, 1, 4) + constant + exog
     # Stata:
     # webuse lutkepohl2
     # gen exog = _n^2
-    # arima inc exog, arima(1,1,1) sarima(1,0,1,4)
+    # arima inc exog, arima(1, 1, 1) sarima(1, 0, 1, 4)
     # irf create irf2, set(irf2) step(10)
     # irf table irf
     params = [.12853289, 12.207156, .86384742, -.71463236,

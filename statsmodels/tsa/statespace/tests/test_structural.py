@@ -291,7 +291,7 @@ def test_forecast():
     mod = UnobservedComponents(endog, exog=exog, level='dconstant', seasonal=4)
     res = mod.smooth([1e-15, 0, 1])
 
-    actual = res.forecast(10, exog=np.arange(50,60)[:,np.newaxis])
+    actual = res.forecast(10, exog=np.arange(50, 60)[:, np.newaxis])
     desired = np.arange(50, 60) + 10
     assert_allclose(actual, desired)
 

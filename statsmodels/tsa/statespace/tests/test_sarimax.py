@@ -1067,30 +1067,30 @@ class SARIMAXCoverageTest(object):
 
 
 class Test_ar(SARIMAXCoverageTest):
-    # // AR: (p,0,0) x (0,0,0,0)
-    # arima wpi, arima(3,0,0) noconstant vce(oim)
+    # // AR: (p, 0, 0) x (0, 0, 0, 0)
+    # arima wpi, arima(3, 0, 0) noconstant vce(oim)
     # save_results 1
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,0,0)
+        kwargs['order'] = (3, 0, 0)
         super(Test_ar, cls).setup_class(0, *args, **kwargs)
 
 class Test_ar_as_polynomial(SARIMAXCoverageTest):
-    # // AR: (p,0,0) x (0,0,0,0)
-    # arima wpi, arima(3,0,0) noconstant vce(oim)
+    # // AR: (p, 0, 0) x (0, 0, 0, 0)
+    # arima wpi, arima(3, 0, 0) noconstant vce(oim)
     # save_results 1
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = ([1,1,1],0,0)
+        kwargs['order'] = ([1, 1, 1], 0, 0)
         super(Test_ar_as_polynomial, cls).setup_class(0, *args, **kwargs)
 
 class Test_ar_trend_c(SARIMAXCoverageTest):
     # // 'c'
-    # arima wpi c, arima(3,0,0) noconstant vce(oim)
+    # arima wpi c, arima(3, 0, 0) noconstant vce(oim)
     # save_results 2
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,0,0)
+        kwargs['order'] = (3, 0, 0)
         kwargs['trend'] = 'c'
         super(Test_ar_trend_c, cls).setup_class(1, *args, **kwargs)
         # Modify true params to convert from mean to intercept form
@@ -1098,65 +1098,65 @@ class Test_ar_trend_c(SARIMAXCoverageTest):
 
 class Test_ar_trend_ct(SARIMAXCoverageTest):
     # // 'ct'
-    # arima wpi c t, arima(3,0,0) noconstant vce(oim)
+    # arima wpi c t, arima(3, 0, 0) noconstant vce(oim)
     # save_results 3
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,0,0)
+        kwargs['order'] = (3, 0, 0)
         kwargs['trend'] = 'ct'
         super(Test_ar_trend_ct, cls).setup_class(2, *args, **kwargs)
         # Modify true params to convert from mean to intercept form
         cls.true_params[:2] = (1 - cls.true_params[2:5].sum()) * cls.true_params[:2]
 
 class Test_ar_trend_polynomial(SARIMAXCoverageTest):
-    # // polynomial [1,0,0,1]
-    # arima wpi c t3, arima(3,0,0) noconstant vce(oim)
+    # // polynomial [1, 0, 0, 1]
+    # arima wpi c t3, arima(3, 0, 0) noconstant vce(oim)
     # save_results 4
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,0,0)
-        kwargs['trend'] = [1,0,0,1]
+        kwargs['order'] = (3, 0, 0)
+        kwargs['trend'] = [1, 0, 0, 1]
         super(Test_ar_trend_polynomial, cls).setup_class(3, *args, **kwargs)
         # Modify true params to convert from mean to intercept form
         cls.true_params[:2] = (1 - cls.true_params[2:5].sum()) * cls.true_params[:2]
 
 class Test_ar_diff(SARIMAXCoverageTest):
-    # // AR and I(d): (p,d,0) x (0,0,0,0)
-    # arima wpi, arima(3,2,0) noconstant vce(oim)
+    # // AR and I(d): (p, d, 0) x (0, 0, 0, 0)
+    # arima wpi, arima(3, 2, 0) noconstant vce(oim)
     # save_results 5
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,2,0)
+        kwargs['order'] = (3, 2, 0)
         super(Test_ar_diff, cls).setup_class(4, *args, **kwargs)
 
 class Test_ar_seasonal_diff(SARIMAXCoverageTest):
-    # // AR and I(D): (p,0,0) x (0,D,0,s)
-    # arima wpi, arima(3,0,0) sarima(0,2,0,4) noconstant vce(oim)
+    # // AR and I(D): (p, 0, 0) x (0, D, 0, s)
+    # arima wpi, arima(3, 0, 0) sarima(0, 2, 0, 4) noconstant vce(oim)
     # save_results 6
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,0,0)
-        kwargs['seasonal_order'] = (0,2,0,4)
+        kwargs['order'] = (3, 0, 0)
+        kwargs['seasonal_order'] = (0, 2, 0, 4)
         super(Test_ar_seasonal_diff, cls).setup_class(5, *args, **kwargs)
 
 class Test_ar_diffuse(SARIMAXCoverageTest):
     # // AR and diffuse initialization
-    # arima wpi, arima(3,0,0) noconstant vce(oim) diffuse
+    # arima wpi, arima(3, 0, 0) noconstant vce(oim) diffuse
     # save_results 7
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,0,0)
+        kwargs['order'] = (3, 0, 0)
         kwargs['initialization'] = 'approximate_diffuse'
         kwargs['initial_variance'] = 1e9
         super(Test_ar_diffuse, cls).setup_class(6, *args, **kwargs)
 
 class Test_ar_no_enforce(SARIMAXCoverageTest):
-    # // AR: (p,0,0) x (0,0,0,0)
-    # arima wpi, arima(3,0,0) noconstant vce(oim)
+    # // AR: (p, 0, 0) x (0, 0, 0, 0)
+    # arima wpi, arima(3, 0, 0) noconstant vce(oim)
     # save_results 1
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,0,0)
+        kwargs['order'] = (3, 0, 0)
         kwargs['enforce_stationarity'] = False
         kwargs['enforce_invertibility'] = False
         kwargs['initial_variance'] = 1e9
@@ -1186,22 +1186,22 @@ class Test_ar_no_enforce(SARIMAXCoverageTest):
 
 class Test_ar_exogenous(SARIMAXCoverageTest):
     # // ARX
-    # arima wpi x, arima(3,0,0) noconstant vce(oim)
+    # arima wpi x, arima(3, 0, 0) noconstant vce(oim)
     # save_results 8
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,0,0)
+        kwargs['order'] = (3, 0, 0)
         endog = results_sarimax.wpi1_data
         kwargs['exog'] = (endog - np.floor(endog))**2
         super(Test_ar_exogenous, cls).setup_class(7, *args, **kwargs)
 
 class Test_ar_exogenous_in_state(SARIMAXCoverageTest):
     # // ARX
-    # arima wpi x, arima(3,0,0) noconstant vce(oim)
+    # arima wpi x, arima(3, 0, 0) noconstant vce(oim)
     # save_results 8
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,0,0)
+        kwargs['order'] = (3, 0, 0)
         endog = results_sarimax.wpi1_data
         kwargs['exog'] = (endog - np.floor(endog))**2
         kwargs['mle_regression'] = False
@@ -1233,110 +1233,110 @@ class Test_ar_exogenous_in_state(SARIMAXCoverageTest):
         )
 
 class Test_ma(SARIMAXCoverageTest):
-    # // MA: (0,0,q) x (0,0,0,0)
-    # arima wpi, arima(0,0,3) noconstant vce(oim)
+    # // MA: (0, 0, q) x (0, 0, 0, 0)
+    # arima wpi, arima(0, 0, 3) noconstant vce(oim)
     # save_results 9
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,3)
+        kwargs['order'] = (0, 0, 3)
         super(Test_ma, cls).setup_class(8, *args, **kwargs)
 
 class Test_ma_as_polynomial(SARIMAXCoverageTest):
-    # // MA: (0,0,q) x (0,0,0,0)
-    # arima wpi, arima(0,0,3) noconstant vce(oim)
+    # // MA: (0, 0, q) x (0, 0, 0, 0)
+    # arima wpi, arima(0, 0, 3) noconstant vce(oim)
     # save_results 9
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,[1,1,1])
+        kwargs['order'] = (0, 0, [1, 1, 1])
         super(Test_ma_as_polynomial, cls).setup_class(8, *args, **kwargs)
 
 class Test_ma_trend_c(SARIMAXCoverageTest):
     # // 'c'
-    # arima wpi c, arima(0,0,3) noconstant vce(oim)
+    # arima wpi c, arima(0, 0, 3) noconstant vce(oim)
     # save_results 10
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,3)
+        kwargs['order'] = (0, 0, 3)
         kwargs['trend'] = 'c'
         super(Test_ma_trend_c, cls).setup_class(9, *args, **kwargs)
 
 class Test_ma_trend_ct(SARIMAXCoverageTest):
     # // 'ct'
-    # arima wpi c t, arima(0,0,3) noconstant vce(oim)
+    # arima wpi c t, arima(0, 0, 3) noconstant vce(oim)
     # save_results 11
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,3)
+        kwargs['order'] = (0, 0, 3)
         kwargs['trend'] = 'ct'
         super(Test_ma_trend_ct, cls).setup_class(10, *args, **kwargs)
 
 class Test_ma_trend_polynomial(SARIMAXCoverageTest):
-    # // polynomial [1,0,0,1]
-    # arima wpi c t3, arima(0,0,3) noconstant vce(oim)
+    # // polynomial [1, 0, 0, 1]
+    # arima wpi c t3, arima(0, 0, 3) noconstant vce(oim)
     # save_results 12
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,3)
-        kwargs['trend'] = [1,0,0,1]
+        kwargs['order'] = (0, 0, 3)
+        kwargs['trend'] = [1, 0, 0, 1]
         super(Test_ma_trend_polynomial, cls).setup_class(11, *args, **kwargs)
 
 class Test_ma_diff(SARIMAXCoverageTest):
-    # // MA and I(d): (0,d,q) x (0,0,0,0)
-    # arima wpi, arima(0,2,3) noconstant vce(oim)
+    # // MA and I(d): (0, d, q) x (0, 0, 0, 0)
+    # arima wpi, arima(0, 2, 3) noconstant vce(oim)
     # save_results 13
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,2,3)
+        kwargs['order'] = (0, 2, 3)
         super(Test_ma_diff, cls).setup_class(12, *args, **kwargs)
 
 class Test_ma_seasonal_diff(SARIMAXCoverageTest):
-    # // MA and I(D): (p,0,0) x (0,D,0,s)
-    # arima wpi, arima(0,0,3) sarima(0,2,0,4) noconstant vce(oim)
+    # // MA and I(D): (p, 0, 0) x (0, D, 0, s)
+    # arima wpi, arima(0, 0, 3) sarima(0, 2, 0, 4) noconstant vce(oim)
     # save_results 14
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,3)
-        kwargs['seasonal_order'] = (0,2,0,4)
+        kwargs['order'] = (0, 0, 3)
+        kwargs['seasonal_order'] = (0, 2, 0, 4)
         super(Test_ma_seasonal_diff, cls).setup_class(13, *args, **kwargs)
 
 class Test_ma_diffuse(SARIMAXCoverageTest):
     # // MA and diffuse initialization
-    # arima wpi, arima(0,0,3) noconstant vce(oim) diffuse
+    # arima wpi, arima(0, 0, 3) noconstant vce(oim) diffuse
     # save_results 15
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,3)
+        kwargs['order'] = (0, 0, 3)
         kwargs['initialization'] = 'approximate_diffuse'
         kwargs['initial_variance'] = 1e9
         super(Test_ma_diffuse, cls).setup_class(14, *args, **kwargs)
 
 class Test_ma_exogenous(SARIMAXCoverageTest):
     # // MAX
-    # arima wpi x, arima(0,0,3) noconstant vce(oim)
+    # arima wpi x, arima(0, 0, 3) noconstant vce(oim)
     # save_results 16
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,3)
+        kwargs['order'] = (0, 0, 3)
         endog = results_sarimax.wpi1_data
         kwargs['exog'] = (endog - np.floor(endog))**2
         super(Test_ma_exogenous, cls).setup_class(15, *args, **kwargs)
 
 class Test_arma(SARIMAXCoverageTest):
-    # // ARMA: (p,0,q) x (0,0,0,0)
-    # arima wpi, arima(3,0,3) noconstant vce(oim)
+    # // ARMA: (p, 0, q) x (0, 0, 0, 0)
+    # arima wpi, arima(3, 0, 3) noconstant vce(oim)
     # save_results 17
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,0,3)
+        kwargs['order'] = (3, 0, 3)
         super(Test_arma, cls).setup_class(16, *args, **kwargs)
 
 class Test_arma_trend_c(SARIMAXCoverageTest):
     # // 'c'
-    # arima wpi c, arima(3,0,2) noconstant vce(oim)
+    # arima wpi c, arima(3, 0, 2) noconstant vce(oim)
     # save_results 18
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,0,2)
+        kwargs['order'] = (3, 0, 2)
         kwargs['trend'] = 'c'
         super(Test_arma_trend_c, cls).setup_class(17, *args, **kwargs)
         # Modify true params to convert from mean to intercept form
@@ -1344,107 +1344,107 @@ class Test_arma_trend_c(SARIMAXCoverageTest):
 
 class Test_arma_trend_ct(SARIMAXCoverageTest):
     # // 'ct'
-    # arima wpi c t, arima(3,0,2) noconstant vce(oim)
+    # arima wpi c t, arima(3, 0, 2) noconstant vce(oim)
     # save_results 19
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,0,2)
+        kwargs['order'] = (3, 0, 2)
         kwargs['trend'] = 'ct'
         super(Test_arma_trend_ct, cls).setup_class(18, *args, **kwargs)
         # Modify true params to convert from mean to intercept form
         cls.true_params[:2] = (1 - cls.true_params[2:5].sum()) * cls.true_params[:2]
 
 class Test_arma_trend_polynomial(SARIMAXCoverageTest):
-    # // polynomial [1,0,0,1]
-    # arima wpi c t3, arima(3,0,2) noconstant vce(oim)
+    # // polynomial [1, 0, 0, 1]
+    # arima wpi c t3, arima(3, 0, 2) noconstant vce(oim)
     # save_results 20
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,0,2)
-        kwargs['trend'] = [1,0,0,1]
+        kwargs['order'] = (3, 0, 2)
+        kwargs['trend'] = [1, 0, 0, 1]
         super(Test_arma_trend_polynomial, cls).setup_class(19, *args, **kwargs)
         # Modify true params to convert from mean to intercept form
         cls.true_params[:2] = (1 - cls.true_params[2:5].sum()) * cls.true_params[:2]
 
 class Test_arma_diff(SARIMAXCoverageTest):
-    # // ARMA and I(d): (p,d,q) x (0,0,0,0)
-    # arima wpi, arima(3,2,2) noconstant vce(oim)
+    # // ARMA and I(d): (p, d, q) x (0, 0, 0, 0)
+    # arima wpi, arima(3, 2, 2) noconstant vce(oim)
     # save_results 21
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,2,2)
+        kwargs['order'] = (3, 2, 2)
         super(Test_arma_diff, cls).setup_class(20, *args, **kwargs)
 
 class Test_arma_seasonal_diff(SARIMAXCoverageTest):
-    # // ARMA and I(D): (p,0,q) x (0,D,0,s)
-    # arima wpi, arima(3,0,2) sarima(0,2,0,4) noconstant vce(oim)
+    # // ARMA and I(D): (p, 0, q) x (0, D, 0, s)
+    # arima wpi, arima(3, 0, 2) sarima(0, 2, 0, 4) noconstant vce(oim)
     # save_results 22
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,0,2)
-        kwargs['seasonal_order'] = (0,2,0,4)
+        kwargs['order'] = (3, 0, 2)
+        kwargs['seasonal_order'] = (0, 2, 0, 4)
         super(Test_arma_seasonal_diff, cls).setup_class(21, *args, **kwargs)
 
 class Test_arma_diff_seasonal_diff(SARIMAXCoverageTest):
-    # // ARMA and I(d) and I(D): (p,d,q) x (0,D,0,s)
-    # arima wpi, arima(3,2,2) sarima(0,2,0,4) noconstant vce(oim)
+    # // ARMA and I(d) and I(D): (p, d, q) x (0, D, 0, s)
+    # arima wpi, arima(3, 2, 2) sarima(0, 2, 0, 4) noconstant vce(oim)
     # save_results 23
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,2,2)
-        kwargs['seasonal_order'] = (0,2,0,4)
+        kwargs['order'] = (3, 2, 2)
+        kwargs['seasonal_order'] = (0, 2, 0, 4)
         super(Test_arma_diff_seasonal_diff, cls).setup_class(22, *args, **kwargs)
 
 class Test_arma_diffuse(SARIMAXCoverageTest):
     # // ARMA and diffuse initialization
-    # arima wpi, arima(3,0,2) noconstant vce(oim) diffuse
+    # arima wpi, arima(3, 0, 2) noconstant vce(oim) diffuse
     # save_results 24
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,0,2)
+        kwargs['order'] = (3, 0, 2)
         kwargs['initialization'] = 'approximate_diffuse'
         kwargs['initial_variance'] = 1e9
         super(Test_arma_diffuse, cls).setup_class(23, *args, **kwargs)
 
 class Test_arma_exogenous(SARIMAXCoverageTest):
     # // ARMAX
-    # arima wpi x, arima(3,0,2) noconstant vce(oim)
+    # arima wpi x, arima(3, 0, 2) noconstant vce(oim)
     # save_results 25
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,0,2)
+        kwargs['order'] = (3, 0, 2)
         endog = results_sarimax.wpi1_data
         kwargs['exog'] = (endog - np.floor(endog))**2
         super(Test_arma_exogenous, cls).setup_class(24, *args, **kwargs)
 
 class Test_seasonal_ar(SARIMAXCoverageTest):
-    # // SAR: (0,0,0) x (P,0,0,s)
-    # arima wpi, sarima(3,0,0,4) noconstant vce(oim)
+    # // SAR: (0, 0, 0) x (P, 0, 0, s)
+    # arima wpi, sarima(3, 0, 0, 4) noconstant vce(oim)
     # save_results 26
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (3,0,0,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (3, 0, 0, 4)
         super(Test_seasonal_ar, cls).setup_class(25, *args, **kwargs)
 
 class Test_seasonal_ar_as_polynomial(SARIMAXCoverageTest):
-    # // SAR: (0,0,0) x (P,0,0,s)
-    # arima wpi, sarima(3,0,0,4) noconstant vce(oim)
+    # // SAR: (0, 0, 0) x (P, 0, 0, s)
+    # arima wpi, sarima(3, 0, 0, 4) noconstant vce(oim)
     # save_results 26
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = ([1,1,1],0,0,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = ([1, 1, 1], 0, 0, 4)
         super(Test_seasonal_ar_as_polynomial, cls).setup_class(25, *args, **kwargs)
 
 class Test_seasonal_ar_trend_c(SARIMAXCoverageTest):
     # // 'c'
-    # arima wpi c, sarima(3,0,0,4) noconstant vce(oim)
+    # arima wpi c, sarima(3, 0, 0, 4) noconstant vce(oim)
     # save_results 27
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (3,0,0,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (3, 0, 0, 4)
         kwargs['trend'] = 'c'
         super(Test_seasonal_ar_trend_c, cls).setup_class(26, *args, **kwargs)
         # Modify true params to convert from mean to intercept form
@@ -1452,191 +1452,191 @@ class Test_seasonal_ar_trend_c(SARIMAXCoverageTest):
 
 class Test_seasonal_ar_trend_ct(SARIMAXCoverageTest):
     # // 'ct'
-    # arima wpi c t, sarima(3,0,0,4) noconstant vce(oim)
+    # arima wpi c t, sarima(3, 0, 0, 4) noconstant vce(oim)
     # save_results 28
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (3,0,0,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (3, 0, 0, 4)
         kwargs['trend'] = 'ct'
         super(Test_seasonal_ar_trend_ct, cls).setup_class(27, *args, **kwargs)
         # Modify true params to convert from mean to intercept form
         cls.true_params[:2] = (1 - cls.true_params[2:5].sum()) * cls.true_params[:2]
 
 class Test_seasonal_ar_trend_polynomial(SARIMAXCoverageTest):
-    # // polynomial [1,0,0,1]
-    # arima wpi c t3, sarima(3,0,0,4) noconstant vce(oim)
+    # // polynomial [1, 0, 0, 1]
+    # arima wpi c t3, sarima(3, 0, 0, 4) noconstant vce(oim)
     # save_results 29
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (3,0,0,4)
-        kwargs['trend'] = [1,0,0,1]
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (3, 0, 0, 4)
+        kwargs['trend'] = [1, 0, 0, 1]
         super(Test_seasonal_ar_trend_polynomial, cls).setup_class(28, *args, **kwargs)
         # Modify true params to convert from mean to intercept form
         cls.true_params[:2] = (1 - cls.true_params[2:5].sum()) * cls.true_params[:2]
 
 class Test_seasonal_ar_diff(SARIMAXCoverageTest):
-    # // SAR and I(d): (0,d,0) x (P,0,0,s)
-    # arima wpi, arima(0,2,0) sarima(3,0,0,4) noconstant vce(oim)
+    # // SAR and I(d): (0, d, 0) x (P, 0, 0, s)
+    # arima wpi, arima(0, 2, 0) sarima(3, 0, 0, 4) noconstant vce(oim)
     # save_results 30
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,2,0)
-        kwargs['seasonal_order'] = (3,0,0,4)
+        kwargs['order'] = (0, 2, 0)
+        kwargs['seasonal_order'] = (3, 0, 0, 4)
         super(Test_seasonal_ar_diff, cls).setup_class(29, *args, **kwargs)
 
 class Test_seasonal_ar_seasonal_diff(SARIMAXCoverageTest):
-    # // SAR and I(D): (0,0,0) x (P,D,0,s)
-    # arima wpi, sarima(3,2,0,4) noconstant vce(oim)
+    # // SAR and I(D): (0, 0, 0) x (P, D, 0, s)
+    # arima wpi, sarima(3, 2, 0, 4) noconstant vce(oim)
     # save_results 31
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (3,2,0,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (3, 2, 0, 4)
         super(Test_seasonal_ar_seasonal_diff, cls).setup_class(30, *args, **kwargs)
 
 class Test_seasonal_ar_diffuse(SARIMAXCoverageTest):
     # // SAR and diffuse initialization
-    # arima wpi, sarima(3,0,0,4) noconstant vce(oim) diffuse
+    # arima wpi, sarima(3, 0, 0, 4) noconstant vce(oim) diffuse
     # save_results 32
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (3,0,0,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (3, 0, 0, 4)
         kwargs['initialization'] = 'approximate_diffuse'
         kwargs['initial_variance'] = 1e9
         super(Test_seasonal_ar_diffuse, cls).setup_class(31, *args, **kwargs)
 
 class Test_seasonal_ar_exogenous(SARIMAXCoverageTest):
     # // SARX
-    # arima wpi x, sarima(3,0,0,4) noconstant vce(oim)
+    # arima wpi x, sarima(3, 0, 0, 4) noconstant vce(oim)
     # save_results 33
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (3,0,0,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (3, 0, 0, 4)
         endog = results_sarimax.wpi1_data
         kwargs['exog'] = (endog - np.floor(endog))**2
         super(Test_seasonal_ar_exogenous, cls).setup_class(32, *args, **kwargs)
 
 class Test_seasonal_ma(SARIMAXCoverageTest):
     # // SMA
-    # arima wpi, sarima(0,0,3,4) noconstant vce(oim)
+    # arima wpi, sarima(0, 0, 3, 4) noconstant vce(oim)
     # save_results 34
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (0,0,3,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (0, 0, 3, 4)
         super(Test_seasonal_ma, cls).setup_class(33, *args, **kwargs)
 
 class Test_seasonal_ma_as_polynomial(SARIMAXCoverageTest):
     # // SMA
-    # arima wpi, sarima(0,0,3,4) noconstant vce(oim)
+    # arima wpi, sarima(0, 0, 3, 4) noconstant vce(oim)
     # save_results 34
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (0,0,[1,1,1],4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (0, 0, [1, 1, 1], 4)
         super(Test_seasonal_ma_as_polynomial, cls).setup_class(33, *args, **kwargs)
 
 class Test_seasonal_ma_trend_c(SARIMAXCoverageTest):
     # // 'c'
-    # arima wpi c, sarima(0,0,3,4) noconstant vce(oim)
+    # arima wpi c, sarima(0, 0, 3, 4) noconstant vce(oim)
     # save_results 35
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (0,0,3,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (0, 0, 3, 4)
         kwargs['trend'] = 'c'
         kwargs['decimal'] = 3
         super(Test_seasonal_ma_trend_c, cls).setup_class(34, *args, **kwargs)
 
 class Test_seasonal_ma_trend_ct(SARIMAXCoverageTest):
     # // 'ct'
-    # arima wpi c t, sarima(0,0,3,4) noconstant vce(oim)
+    # arima wpi c t, sarima(0, 0, 3, 4) noconstant vce(oim)
     # save_results 36
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (0,0,3,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (0, 0, 3, 4)
         kwargs['trend'] = 'ct'
         super(Test_seasonal_ma_trend_ct, cls).setup_class(35, *args, **kwargs)
 
 class Test_seasonal_ma_trend_polynomial(SARIMAXCoverageTest):
-    # // polynomial [1,0,0,1]
-    # arima wpi c t3, sarima(0,0,3,4) noconstant vce(oim)
+    # // polynomial [1, 0, 0, 1]
+    # arima wpi c t3, sarima(0, 0, 3, 4) noconstant vce(oim)
     # save_results 37
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (0,0,3,4)
-        kwargs['trend'] = [1,0,0,1]
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (0, 0, 3, 4)
+        kwargs['trend'] = [1, 0, 0, 1]
         kwargs['decimal'] = 3
         super(Test_seasonal_ma_trend_polynomial, cls).setup_class(36, *args, **kwargs)
 
 class Test_seasonal_ma_diff(SARIMAXCoverageTest):
-    # // SMA and I(d): (0,d,0) x (0,0,Q,s)
-    # arima wpi, arima(0,2,0) sarima(0,0,3,4) noconstant vce(oim)
+    # // SMA and I(d): (0, d, 0) x (0, 0, Q, s)
+    # arima wpi, arima(0, 2, 0) sarima(0, 0, 3, 4) noconstant vce(oim)
     # save_results 38
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,2,0)
-        kwargs['seasonal_order'] = (0,0,3,4)
+        kwargs['order'] = (0, 2, 0)
+        kwargs['seasonal_order'] = (0, 0, 3, 4)
         super(Test_seasonal_ma_diff, cls).setup_class(37, *args, **kwargs)
 
 class Test_seasonal_ma_seasonal_diff(SARIMAXCoverageTest):
-    # // SMA and I(D): (0,0,0) x (0,D,Q,s)
-    # arima wpi, sarima(0,2,3,4) noconstant vce(oim)
+    # // SMA and I(D): (0, 0, 0) x (0, D, Q, s)
+    # arima wpi, sarima(0, 2, 3, 4) noconstant vce(oim)
     # save_results 39
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (0,2,3,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (0, 2, 3, 4)
         super(Test_seasonal_ma_seasonal_diff, cls).setup_class(38, *args, **kwargs)
 
 class Test_seasonal_ma_diffuse(SARIMAXCoverageTest):
     # // SMA and diffuse initialization
-    # arima wpi, sarima(0,0,3,4) noconstant vce(oim) diffuse
+    # arima wpi, sarima(0, 0, 3, 4) noconstant vce(oim) diffuse
     # save_results 40
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (0,0,3,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (0, 0, 3, 4)
         kwargs['initialization'] = 'approximate_diffuse'
         kwargs['initial_variance'] = 1e9
         super(Test_seasonal_ma_diffuse, cls).setup_class(39, *args, **kwargs)
 
 class Test_seasonal_ma_exogenous(SARIMAXCoverageTest):
     # // SMAX
-    # arima wpi x, sarima(0,0,3,4) noconstant vce(oim)
+    # arima wpi x, sarima(0, 0, 3, 4) noconstant vce(oim)
     # save_results 41
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (0,0,3,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (0, 0, 3, 4)
         endog = results_sarimax.wpi1_data
         kwargs['exog'] = (endog - np.floor(endog))**2
         super(Test_seasonal_ma_exogenous, cls).setup_class(40, *args, **kwargs)
 
 class Test_seasonal_arma(SARIMAXCoverageTest):
-    # // SARMA: (0,0,0) x (P,0,Q,s)
-    # arima wpi, sarima(3,0,2,4) noconstant vce(oim)
+    # // SARMA: (0, 0, 0) x (P, 0, Q, s)
+    # arima wpi, sarima(3, 0, 2, 4) noconstant vce(oim)
     # save_results 42
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (3,0,2,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (3, 0, 2, 4)
         super(Test_seasonal_arma, cls).setup_class(41, *args, **kwargs)
 
 class Test_seasonal_arma_trend_c(SARIMAXCoverageTest):
     # // 'c'
-    # arima wpi c, sarima(3,0,2,4) noconstant vce(oim)
+    # arima wpi c, sarima(3, 0, 2, 4) noconstant vce(oim)
     # save_results 43
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (3,0,2,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (3, 0, 2, 4)
         kwargs['trend'] = 'c'
         super(Test_seasonal_arma_trend_c, cls).setup_class(42, *args, **kwargs)
         # Modify true params to convert from mean to intercept form
@@ -1644,26 +1644,26 @@ class Test_seasonal_arma_trend_c(SARIMAXCoverageTest):
 
 class Test_seasonal_arma_trend_ct(SARIMAXCoverageTest):
     # // 'ct'
-    # arima wpi c t, sarima(3,0,2,4) noconstant vce(oim)
+    # arima wpi c t, sarima(3, 0, 2, 4) noconstant vce(oim)
     # save_results 44
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (3,0,2,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (3, 0, 2, 4)
         kwargs['trend'] = 'ct'
         super(Test_seasonal_arma_trend_ct, cls).setup_class(43, *args, **kwargs)
         # Modify true params to convert from mean to intercept form
         cls.true_params[:2] = (1 - cls.true_params[2:5].sum()) * cls.true_params[:2]
 
 class Test_seasonal_arma_trend_polynomial(SARIMAXCoverageTest):
-    # // polynomial [1,0,0,1]
-    # arima wpi c t3, sarima(3,0,2,4) noconstant vce(oim)
+    # // polynomial [1, 0, 0, 1]
+    # arima wpi c t3, sarima(3, 0, 2, 4) noconstant vce(oim)
     # save_results 45
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (3,0,2,4)
-        kwargs['trend'] = [1,0,0,1]
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (3, 0, 2, 4)
+        kwargs['trend'] = [1, 0, 0, 1]
         kwargs['decimal'] = 3
         super(Test_seasonal_arma_trend_polynomial, cls).setup_class(44, *args, **kwargs)
         # Modify true params to convert from mean to intercept form
@@ -1690,33 +1690,33 @@ class Test_seasonal_arma_trend_polynomial(SARIMAXCoverageTest):
         self.result.cov_params_opg
 
 class Test_seasonal_arma_diff(SARIMAXCoverageTest):
-    # // SARMA and I(d): (0,d,0) x (P,0,Q,s)
-    # arima wpi, arima(0,2,0) sarima(3,0,2,4) noconstant vce(oim)
+    # // SARMA and I(d): (0, d, 0) x (P, 0, Q, s)
+    # arima wpi, arima(0, 2, 0) sarima(3, 0, 2, 4) noconstant vce(oim)
     # save_results 46
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,2,0)
-        kwargs['seasonal_order'] = (3,0,2,4)
+        kwargs['order'] = (0, 2, 0)
+        kwargs['seasonal_order'] = (3, 0, 2, 4)
         super(Test_seasonal_arma_diff, cls).setup_class(45, *args, **kwargs)
 
 class Test_seasonal_arma_seasonal_diff(SARIMAXCoverageTest):
-    # // SARMA and I(D): (0,0,0) x (P,D,Q,s)
-    # arima wpi, sarima(3,2,2,4) noconstant vce(oim)
+    # // SARMA and I(D): (0, 0, 0) x (P, D, Q, s)
+    # arima wpi, sarima(3, 2, 2, 4) noconstant vce(oim)
     # save_results 47
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (3,2,2,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (3, 2, 2, 4)
         super(Test_seasonal_arma_seasonal_diff, cls).setup_class(46, *args, **kwargs)
 
 class Test_seasonal_arma_diff_seasonal_diff(SARIMAXCoverageTest):
-    # // SARMA and I(d) and I(D): (0,d,0) x (P,D,Q,s)
-    # arima wpi, arima(0,2,0) sarima(3,2,2,4) noconstant vce(oim)
+    # // SARMA and I(d) and I(D): (0, d, 0) x (P, D, Q, s)
+    # arima wpi, arima(0, 2, 0) sarima(3, 2, 2, 4) noconstant vce(oim)
     # save_results 48
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,2,0)
-        kwargs['seasonal_order'] = (3,2,2,4)
+        kwargs['order'] = (0, 2, 0)
+        kwargs['seasonal_order'] = (3, 2, 2, 4)
         super(Test_seasonal_arma_diff_seasonal_diff, cls).setup_class(47, *args, **kwargs)
 
     def test_results(self):
@@ -1741,12 +1741,12 @@ class Test_seasonal_arma_diff_seasonal_diff(SARIMAXCoverageTest):
 
 class Test_seasonal_arma_diffuse(SARIMAXCoverageTest):
     # // SARMA and diffuse initialization
-    # arima wpi, sarima(3,0,2,4) noconstant vce(oim) diffuse
+    # arima wpi, sarima(3, 0, 2, 4) noconstant vce(oim) diffuse
     # save_results 49
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (3,0,2,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (3, 0, 2, 4)
         kwargs['decimal'] = 3
         kwargs['initialization'] = 'approximate_diffuse'
         kwargs['initial_variance'] = 1e9
@@ -1754,24 +1754,24 @@ class Test_seasonal_arma_diffuse(SARIMAXCoverageTest):
 
 class Test_seasonal_arma_exogenous(SARIMAXCoverageTest):
     # // SARMAX
-    # arima wpi x, sarima(3,0,2,4) noconstant vce(oim)
+    # arima wpi x, sarima(3, 0, 2, 4) noconstant vce(oim)
     # save_results 50
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (0,0,0)
-        kwargs['seasonal_order'] = (3,0,2,4)
+        kwargs['order'] = (0, 0, 0)
+        kwargs['seasonal_order'] = (3, 0, 2, 4)
         endog = results_sarimax.wpi1_data
         kwargs['exog'] = (endog - np.floor(endog))**2
         super(Test_seasonal_arma_exogenous, cls).setup_class(49, *args, **kwargs)
 
 class Test_sarimax_exogenous(SARIMAXCoverageTest):
     # // SARIMAX and exogenous
-    # arima wpi x, arima(3,2,2) sarima(3,2,2,4) noconstant vce(oim)
+    # arima wpi x, arima(3, 2, 2) sarima(3, 2, 2, 4) noconstant vce(oim)
     # save_results 51
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,2,2)
-        kwargs['seasonal_order'] = (3,2,2,4)
+        kwargs['order'] = (3, 2, 2)
+        kwargs['seasonal_order'] = (3, 2, 2, 4)
         endog = results_sarimax.wpi1_data
         kwargs['exog'] = (endog - np.floor(endog))**2
         super(Test_sarimax_exogenous, cls).setup_class(50, *args, **kwargs)
@@ -1785,12 +1785,12 @@ class Test_sarimax_exogenous(SARIMAXCoverageTest):
 
 class Test_sarimax_exogenous_not_hamilton(SARIMAXCoverageTest):
     # // SARIMAX and exogenous
-    # arima wpi x, arima(3,2,2) sarima(3,2,2,4) noconstant vce(oim)
+    # arima wpi x, arima(3, 2, 2) sarima(3, 2, 2, 4) noconstant vce(oim)
     # save_results 51
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,2,2)
-        kwargs['seasonal_order'] = (3,2,2,4)
+        kwargs['order'] = (3, 2, 2)
+        kwargs['seasonal_order'] = (3, 2, 2, 4)
         endog = results_sarimax.wpi1_data
         kwargs['exog'] = (endog - np.floor(endog))**2
         kwargs['hamilton_representation'] = False
@@ -1799,12 +1799,12 @@ class Test_sarimax_exogenous_not_hamilton(SARIMAXCoverageTest):
 
 class Test_sarimax_exogenous_diffuse(SARIMAXCoverageTest):
     # // SARIMAX and exogenous diffuse
-    # arima wpi x, arima(3,2,2) sarima(3,2,2,4) noconstant vce(oim) diffuse
+    # arima wpi x, arima(3, 2, 2) sarima(3, 2, 2, 4) noconstant vce(oim) diffuse
     # save_results 52
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        kwargs['order'] = (3,2,2)
-        kwargs['seasonal_order'] = (3,2,2,4)
+        kwargs['order'] = (3, 2, 2)
+        kwargs['seasonal_order'] = (3, 2, 2, 4)
         endog = results_sarimax.wpi1_data
         kwargs['exog'] = (endog - np.floor(endog))**2
         kwargs['decimal'] = 2
@@ -1816,7 +1816,7 @@ class Test_arma_exog_trend_polynomial_missing(SARIMAXCoverageTest):
     # // ARMA and exogenous and trend polynomial and missing
     # gen wpi2 = wpi
     # replace wpi2 = . in 10/19
-    # arima wpi2 x c t3, arima(3,0,2) noconstant vce(oim)
+    # arima wpi2 x c t3, arima(3, 0, 2) noconstant vce(oim)
     # save_results 53
     @classmethod
     def setup_class(cls, *args, **kwargs):
@@ -1826,8 +1826,8 @@ class Test_arma_exog_trend_polynomial_missing(SARIMAXCoverageTest):
         endog[9:19] = np.nan
         endog = endog[1:] - endog[:-1]
         endog[9] = np.nan
-        kwargs['order'] = (3,0,2)
-        kwargs['trend'] = [0,0,0,1]
+        kwargs['order'] = (3, 0, 2)
+        kwargs['trend'] = [0, 0, 0, 1]
         kwargs['decimal'] = 1
         super(Test_arma_exog_trend_polynomial_missing, cls).setup_class(52, endog=endog, *args, **kwargs)
         # Modify true params to convert from mean to intercept form
@@ -1839,7 +1839,7 @@ def test_simple_time_varying():
     # are not time-varying, and in fact the regression fit is perfect
     endog = np.arange(100)*1.0
     exog = 2*endog
-    mod = sarimax.SARIMAX(endog, exog=exog, order=(0,0,0), time_varying_regression=True, mle_regression=False)
+    mod = sarimax.SARIMAX(endog, exog=exog, order=(0, 0, 0), time_varying_regression=True, mle_regression=False)
 
     # Ignore the warning that MLE doesn't converge
     with warnings.catch_warnings():
@@ -1855,32 +1855,32 @@ def test_simple_time_varying():
     assert_almost_equal(res.filter_results.filtered_state[0][1:], [0.5]*99, 9)
 
 def test_invalid_time_varying():
-    assert_raises(ValueError, sarimax.SARIMAX, endog=[1,2,3], mle_regression=True, time_varying_regression=True)
+    assert_raises(ValueError, sarimax.SARIMAX, endog=[1, 2, 3], mle_regression=True, time_varying_regression=True)
 
 def test_manual_stationary_initialization():
     endog = results_sarimax.wpi1_data
 
     # Create the first model to compare against
-    mod1 = sarimax.SARIMAX(endog, order=(3,0,0))
-    res1 = mod1.filter([0.5,0.2,0.1,1])
+    mod1 = sarimax.SARIMAX(endog, order=(3, 0, 0))
+    res1 = mod1.filter([0.5, 0.2, 0.1, 1])
 
     # Create a second model with "known" initialization
-    mod2 = sarimax.SARIMAX(endog, order=(3,0,0))
+    mod2 = sarimax.SARIMAX(endog, order=(3, 0, 0))
     mod2.ssm.initialize_known(res1.filter_results.initial_state,
                               res1.filter_results.initial_state_cov)
     mod2.initialize_state()  # a noop in this case (include for coverage)
-    res2 = mod2.filter([0.5,0.2,0.1,1])
+    res2 = mod2.filter([0.5, 0.2, 0.1, 1])
 
     # Create a third model with "known" initialization, but specified in kwargs
-    mod3 = sarimax.SARIMAX(endog, order=(3,0,0),
+    mod3 = sarimax.SARIMAX(endog, order=(3, 0, 0),
                            initialization='known',
                            initial_state=res1.filter_results.initial_state,
                            initial_state_cov=res1.filter_results.initial_state_cov)
-    res3 = mod3.filter([0.5,0.2,0.1,1])
+    res3 = mod3.filter([0.5, 0.2, 0.1, 1])
 
     # Create the forth model with stationary initialization specified in kwargs
-    mod4 = sarimax.SARIMAX(endog, order=(3,0,0), initialization='stationary')
-    res4 = mod4.filter([0.5,0.2,0.1,1])
+    mod4 = sarimax.SARIMAX(endog, order=(3, 0, 0), initialization='stationary')
+    res4 = mod4.filter([0.5, 0.2, 0.1, 1])
 
     # Just test a couple of things to make sure the results are the same
     assert_almost_equal(res1.llf, res2.llf)
@@ -1899,30 +1899,30 @@ def test_manual_approximate_diffuse_initialization():
     endog = results_sarimax.wpi1_data
 
     # Create the first model to compare against
-    mod1 = sarimax.SARIMAX(endog, order=(3,0,0))
+    mod1 = sarimax.SARIMAX(endog, order=(3, 0, 0))
     mod1.ssm.initialize_approximate_diffuse(1e9)
-    res1 = mod1.filter([0.5,0.2,0.1,1])
+    res1 = mod1.filter([0.5, 0.2, 0.1, 1])
 
     # Create a second model with "known" initialization
-    mod2 = sarimax.SARIMAX(endog, order=(3,0,0))
+    mod2 = sarimax.SARIMAX(endog, order=(3, 0, 0))
     mod2.ssm.initialize_known(res1.filter_results.initial_state,
                               res1.filter_results.initial_state_cov)
     mod2.initialize_state()  # a noop in this case (include for coverage)
-    res2 = mod2.filter([0.5,0.2,0.1,1])
+    res2 = mod2.filter([0.5, 0.2, 0.1, 1])
 
     # Create a third model with "known" initialization, but specified in kwargs
-    mod3 = sarimax.SARIMAX(endog, order=(3,0,0),
+    mod3 = sarimax.SARIMAX(endog, order=(3, 0, 0),
                            initialization='known',
                            initial_state=res1.filter_results.initial_state,
                            initial_state_cov=res1.filter_results.initial_state_cov)
-    res3 = mod3.filter([0.5,0.2,0.1,1])
+    res3 = mod3.filter([0.5, 0.2, 0.1, 1])
 
     # Create the forth model with approximate diffuse initialization specified
     # in kwargs
-    mod4 = sarimax.SARIMAX(endog, order=(3,0,0),
+    mod4 = sarimax.SARIMAX(endog, order=(3, 0, 0),
                            initialization='approximate_diffuse',
                            initial_variance=1e9)
-    res4 = mod4.filter([0.5,0.2,0.1,1])
+    res4 = mod4.filter([0.5, 0.2, 0.1, 1])
 
     # Just test a couple of things to make sure the results are the same
     assert_almost_equal(res1.llf, res2.llf)
@@ -1940,8 +1940,8 @@ def test_manual_approximate_diffuse_initialization():
 def test_results():
     endog = results_sarimax.wpi1_data
 
-    mod = sarimax.SARIMAX(endog, order=(1,0,1))
-    res = mod.filter([0.5,-0.5,1], cov_type='oim')
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 1))
+    res = mod.filter([0.5, -0.5, 1], cov_type='oim')
 
     assert_almost_equal(res.arroots, 2.)
     assert_almost_equal(res.maroots, 2.)
@@ -2029,7 +2029,7 @@ def test_predict_custom_index():
 def test_arima000():
     from statsmodels.tsa.statespace.tools import compatibility_mode
 
-    # Test an ARIMA(0,0,0) with measurement error model (i.e. just estimating
+    # Test an ARIMA(0, 0, 0) with measurement error model (i.e. just estimating
     # a variance term)
     np.random.seed(328423)
     nobs = 50

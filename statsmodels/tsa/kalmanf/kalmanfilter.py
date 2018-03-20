@@ -17,7 +17,7 @@ This file follows Hamilton's notation pretty closely.
 The ARMA Model class follows Durbin and Koopman notation.
 Harvey uses Durbin and Koopman notation.
 """
-#Anderson and Moore `Optimal Filtering` provides a more efficient algorithm
+# Anderson and Moore `Optimal Filtering` provides a more efficient algorithm
 # namely the information filter
 # if the number of series is much greater than the number of states
 # e.g., with a DSGE model.  See also
@@ -27,21 +27,22 @@ Harvey uses Durbin and Koopman notation.
 from __future__ import print_function
 from statsmodels.compat.python import lzip, lmap, callable, range
 import numpy as np
-from numpy import dot, identity, kron, log, zeros, pi, exp, eye, issubdtype, ones
-from numpy.linalg import inv, pinv
+from numpy import dot, identity, kron, zeros, eye, issubdtype
+from numpy.linalg import inv
 from statsmodels.tools.tools import chain_dot
 from . import kalman_loglike
 
-#Fast filtering and smoothing for multivariate state space models
+# Fast filtering and smoothing for multivariate state space models
 # and The Riksbank -- Strid and Walentin (2008)
 # Block Kalman filtering for large-scale DSGE models
 # but this is obviously macro model specific
 
-def _init_diffuse(T,R):
-    m = T.shape[1] # number of states
-    r = R.shape[1] # should also be the number of states?
-    Q_0 = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F'))
-    return zeros((m,1)), Q_0.reshape(r,r,order='F')
+
+def _init_diffuse(T, R):
+    m = T.shape[1]  # number of states
+    r = R.shape[1]  # should also be the number of states?
+    Q_0 = dot(inv(identity(m**2)-kron(T, T)),dot(R, R.T).ravel('F'))
+    return zeros((m, 1)), Q_0.reshape(r, r, order='F')
 
 
 def kalmansmooth(F, A, H, Q, R, y, X, xi10):
@@ -92,7 +93,7 @@ def kalmanfilter(F, A, H, Q, R, y, X, xi10, ntrain, history=False):
     -----
     No input checking is done.
     """
-# uses log of Hamilton 13.4.1
+    # uses log of Hamilton 13.4.1
     F = np.asarray(F)
     H = np.atleast_2d(np.asarray(H))
     n = H.shape[1]  # remember that H gets transposed
@@ -112,31 +113,31 @@ def kalmanfilter(F, A, H, Q, R, y, X, xi10, ntrain, history=False):
 # Eq. 12.2.21, other version says P0 = Q
 #    p10 = np.dot(np.linalg.inv(np.eye(r**2)-np.kron(F,F)),Q.ravel('F'))
 #    p10 = np.reshape(P0, (r,r), order='F')
-# Assume a fixed, known intial point and set P0 = Q
-#TODO: this looks *slightly * different than Durbin-Koopman exact likelihood
-# initialization p 112 unless I've misunderstood the notational translation.
+    # Assume a fixed, known intial point and set P0 = Q
+    # TODO: this looks *slightly * different than Durbin-Koopman exact likelihood
+    # initialization p 112 unless I've misunderstood the notational translation.
     p10 = Q
 
     loglikelihood = 0
     for i in range(nobs):
-        HTPHR = np.atleast_1d(np.squeeze(chain_dot(H.T,p10,H)+R))
+        HTPHR = np.atleast_1d(np.squeeze(chain_dot(H.T, p10,H)+R))
 #        print HTPHR
 #        print HTPHR.ndim
 #        print HTPHR.shape
         if HTPHR.ndim == 1:
             HTPHRinv = 1./HTPHR
         else:
-            HTPHRinv = np.linalg.inv(HTPHR) # correct
+            HTPHRinv = np.linalg.inv(HTPHR)  # correct
 #        print A.T
 #        print X
 #        print H.T
 #        print xi10
 #        print y[i]
-        part1 = y[i] - np.dot(A.T,X) - np.dot(H.T,xi10) # correct
-        if i >= ntrain: # zero-index, but ntrain isn't
-            HTPHRdet = np.linalg.det(np.atleast_2d(HTPHR)) # correct
-            part2 = -.5*chain_dot(part1.T,HTPHRinv,part1) # correct
-#TODO: Need to test with ill-conditioned problem.
+        part1 = y[i] - np.dot(A.T,X) - np.dot(H.T, xi10)  # correct
+        if i >= ntrain:  # zero-index, but ntrain isn't
+            HTPHRdet = np.linalg.det(np.atleast_2d(HTPHR))  # correct
+            part2 = -.5*chain_dot(part1.T, HTPHRinv, part1)  # correct
+            # TODO: Need to test with ill-conditioned problem.
             loglike_interm = (-n/2.) * np.log(2*np.pi) - .5*\
                         np.log(HTPHRdet) + part2
             loglikelihood += loglike_interm
@@ -150,13 +151,13 @@ def kalmanfilter(F, A, H, Q, R, y, X, xi10, ntrain, history=False):
         if history:
             state_vector.append(xi10)
         # 13.2.21 Update the MSE of the forecast
-        p10 = chain_dot(F,p11,F.T) + Q
+        p10 = chain_dot(F, p11, F.T) + Q
     if not history:
         return -loglikelihood
     else:
         return -loglikelihood, np.asarray(state_vector[:-1])
 
-#TODO: this works if it gets refactored, but it's not quite as accurate
+# TODO: this works if it gets refactored, but it's not quite as accurate
 # as KalmanFilter
 #    def loglike_exact(self, params):
 #        """
@@ -433,16 +434,18 @@ class StateSpaceModel(object):
         if method.lower() == 'bfgs':
             (params, llf, score, cov_params, func_calls, grad_calls,
             warnflag) = optimize.fmin_bfgs(_updateloglike, params,
-                    args = (xi10, ntrain, penalty, upperbounds, lowerbounds,
-                        F,A,H,Q,R, False), gtol= 1e-8, epsilon=1e-5,
-                        full_output=1)
-            #TODO: provide more options to user for optimize
+                    args=(xi10, ntrain, penalty, upperbounds, lowerbounds,
+                          F, A, H, Q, R, False),
+                    gtol=1e-8, epsilon=1e-5,
+                    full_output=1)
+            # TODO: provide more options to user for optimize
         # Getting history would require one more call to _updatelikelihood
         self.params = params
         self.llf = llf
         self.gradient = score
-        self.cov_params = cov_params # how to interpret this?
+        self.cov_params = cov_params  # how to interpret this?
         self.warnflag = warnflag
+
 
 def updatematrices(params, y, xi10, ntrain, penalty, upperbound, lowerbound):
     """
@@ -452,18 +455,19 @@ def updatematrices(params, y, xi10, ntrain, penalty, upperbound, lowerbound):
     """
     paramsorig = params
     # are the bounds binding?
-    params = np.min((np.max((lowerbound,params),axis=0),upperbound), axis=0)
+    params = np.min((np.max((lowerbound, params),axis=0), upperbound), axis=0)
     rho = params[0]
     sigma1 = params[1]
     sigma2 = params[2]
 
-    F = np.array([[rho, 0],[0,0]])
-    cholQ = np.array([[sigma1,0],[0,sigma2]])
-    H = np.ones((2,1))
-    q = np.dot(cholQ,cholQ.T)
-    loglike = kalmanfilter(F,0,H,q,0, y, 0, xi10, ntrain)
+    F = np.array([[rho, 0], [0, 0]])
+    cholQ = np.array([[sigma1, 0], [0, sigma2]])
+    H = np.ones((2, 1))
+    q = np.dot(cholQ, cholQ.T)
+    loglike = kalmanfilter(F, 0, H, q, 0, y, 0, xi10, ntrain)
     loglike = loglike + penalty*np.sum((paramsorig-params)**2)
     return loglike
+
 
 class KalmanFilter(object):
     """
@@ -511,10 +515,10 @@ class KalmanFilter(object):
         params_padded = zeros(r, dtype=params.dtype,
                               order="F")
                         # handle zero coefficients if necessary
-        #NOTE: squeeze added for cg optimizer
+        # NOTE: squeeze added for cg optimizer
         params_padded[:p] = params[k:p+k]
-        arr[:,0] = params_padded   # first p params are AR coeffs w/ short params
-        arr[:-1,1:] = eye(r-1)
+        arr[:, 0] = params_padded   # first p params are AR coeffs w/ short params
+        arr[:-1, 1:] = eye(r-1)
         return arr
 
     @classmethod
@@ -544,7 +548,7 @@ class KalmanFilter(object):
         arr = zeros((r, 1), dtype=params.dtype, order="F")
                                # this allows zero coefficients
                                # dtype allows for compl. der.
-        arr[1:q+1,:] = params[p+k:p+k+q][:,None]
+        arr[1:q+1, :] = params[p+k:p+k+q][:, None]
         arr[0] = 1.0
         return arr
 
@@ -564,8 +568,8 @@ class KalmanFilter(object):
         Currently only returns a 1 x r vector [1,0,0,...0].  Will need to
         be generalized when the Kalman Filter becomes more flexible.
         """
-        arr = zeros((1,r), order="F")
-        arr[:,0] = 1.
+        arr = zeros((1, r), order="F")
+        arr[:, 0] = 1.
         return arr
 
     @classmethod
@@ -608,11 +612,11 @@ class KalmanFilter(object):
 
         # system matrices
         Z_mat = cls.Z(k_lags)
-        m = Z_mat.shape[1] # r
+        m = Z_mat.shape[1]  # r
         R_mat = cls.R(newparams, k_lags, k, k_ma, k_ar)
         T_mat = cls.T(newparams, k_lags, k, k_ar)
         return (y, k, nobs, k_ar, k_ma, k_lags,
-               newparams, Z_mat, m, R_mat, T_mat, paramsdtype)
+                newparams, Z_mat, m, R_mat, T_mat, paramsdtype)
 
     @classmethod
     def loglike(cls, params, arma_model, set_sigma2=True):
@@ -664,7 +668,6 @@ class KalmanFilter(object):
 if __name__ == "__main__":
     import numpy as np
     from scipy.linalg import block_diag
-    import numpy as np
     # Make our observations as in 13.1.13
     np.random.seed(54321)
     nobs = 600
@@ -672,7 +675,7 @@ if __name__ == "__main__":
     rho = [.5, -.25, .35, .25]
     sigma = 2.0 # std dev. or noise
     for i in range(4,nobs):
-        y[i] = np.dot(rho,y[i-4:i][::-1]) + np.random.normal(scale=sigma)
+        y[i] = np.dot(rho, y[i-4:i][::-1]) + np.random.normal(scale=sigma)
     y = y[100:]
 
     # make an MA(2) observation equation as in example 13.3
@@ -688,10 +691,10 @@ if __name__ == "__main__":
     x = np.ones_like(y)
 
     # For now, assume that F,Q,A,H, and R are known
-    F = np.array([[0,0],[1,0]])
-    Q = np.array([[1,0],[0,0]])
+    F = np.array([[0, 0], [1, 0]])
+    Q = np.array([[1, 0], [0, 0]])
     A = np.array([mu])
-    H = rho[:,None]
+    H = rho[:, None]
     R = 0
 
     # remember that the goal is to solve recursively for the
@@ -704,9 +707,9 @@ if __name__ == "__main__":
     # with variance = 1 we know that
 #    P0 = np.eye(2)  # really P_{1|0}
 
-# Using the note below
-    P0 = np.dot(np.linalg.inv(np.eye(r**2)-np.kron(F,F)),Q.ravel('F'))
-    P0 = np.reshape(P0, (r,r), order='F')
+    # Using the note below
+    P0 = np.dot(np.linalg.inv(np.eye(r**2)-np.kron(F, F)),Q.ravel('F'))
+    P0 = np.reshape(P0, (r, r), order='F')
 
     # more generally, if the eigenvalues for F are in the unit circle
     # (watch out for rounding error in LAPACK!) then
@@ -732,53 +735,53 @@ if __name__ == "__main__":
     MSE_forecast = []
     # must be numerical shortcuts for some of this...
     # this should be general enough to be reused
-    for i in range(len(y)-1):
+    for i in range(len(y) - 1):
         # update the state vector
         sv = state_vector[i]
         P = MSE_state[i]
-        HTPHR = np.dot(np.dot(H.T,P),H)+R
+        HTPHR = np.dot(np.dot(H.T, P), H)+R
         if np.ndim(HTPHR) < 2: # we have a scalar
             HTPHRinv = 1./HTPHR
         else:
             HTPHRinv = np.linalg.inv(HTPHR)
-        FPH = np.dot(np.dot(F,P),H)
-        gain_matrix = np.dot(FPH,HTPHRinv)  # correct
-        new_sv = np.dot(F,sv)
-        new_sv += np.dot(gain_matrix,y[i] - np.dot(A.T,x[i]) -
-                np.dot(H.T,sv))
+        FPH = np.dot(np.dot(F, P), H)
+        gain_matrix = np.dot(FPH, HTPHRinv)  # correct
+        new_sv = np.dot(F, sv)
+        new_sv += np.dot(gain_matrix, y[i] - np.dot(A.T, x[i]) -
+                np.dot(H.T, sv))
         state_vector.append(new_sv)
         # update the MSE of the state vector forecast using 13.2.28
-        new_MSEf = np.dot(np.dot(F - np.dot(gain_matrix,H.T),P),F.T - np.dot(H,
-            gain_matrix.T)) + np.dot(np.dot(gain_matrix,R),gain_matrix.T) + Q
+        new_MSEf = np.dot(np.dot(F - np.dot(gain_matrix, H.T), P), F.T - np.dot(H,
+            gain_matrix.T)) + np.dot(np.dot(gain_matrix, R),gain_matrix.T) + Q
         MSE_state.append(new_MSEf)
         # update the in sample forecast of y
-        forecast_vector.append(np.dot(A.T,x[i+1]) + np.dot(H.T,new_sv))
+        forecast_vector.append(np.dot(A.T, x[i+1]) + np.dot(H.T, new_sv))
         # update the MSE of the forecast
-        MSE_forecast.append(np.dot(np.dot(H.T,new_MSEf),H) + R)
+        MSE_forecast.append(np.dot(np.dot(H.T, new_MSEf), H) + R)
     MSE_forecast = np.array(MSE_forecast).squeeze()
     MSE_state = np.array(MSE_state)
     forecast_vector = np.array(forecast_vector)
     state_vector = np.array(state_vector).squeeze()
 
-##########
-#    Luca's example
+    ##########
+    #    Luca's example
     # choose parameters governing the signal extraction problem
     rho = .9
     sigma1 = 1
     sigma2 = 1
     nobs = 100
 
-# get the state space representation (Hamilton's notation)\
-    F = np.array([[rho, 0],[0, 0]])
-    cholQ = np.array([[sigma1, 0],[0,sigma2]])
-    H = np.ones((2,1))
+    # get the state space representation (Hamilton's notation)\
+    F = np.array([[rho, 0], [0, 0]])
+    cholQ = np.array([[sigma1, 0], [0, sigma2]])
+    H = np.ones((2, 1))
 
-# generate random data
+    # generate random data
     np.random.seed(12345)
-    xihistory = np.zeros((2,nobs))
-    for i in range(1,nobs):
-        xihistory[:,i] = np.dot(F,xihistory[:,i-1]) + \
-                np.dot(cholQ,np.random.randn(2,1)).squeeze()
+    xihistory = np.zeros((2, nobs))
+    for i in range(1, nobs):
+        xihistory[:, i] = np.dot(F,xihistory[:, i-1]) + \
+                np.dot(cholQ,np.random.randn(2, 1)).squeeze()
                 # this makes an ARMA process?
                 # check notes, do the math
     y = np.dot(H.T, xihistory)
@@ -788,24 +791,24 @@ if __name__ == "__main__":
     penalty = 1e5
     upperbounds = np.array([.999, 100, 100])
     lowerbounds = np.array([-.999, .001, .001])
-    xi10 = xihistory[:,0]
+    xi10 = xihistory[:, 0]
     ntrain = 1
-    bounds = lzip(lowerbounds,upperbounds) # if you use fmin_l_bfgs_b
+    bounds = lzip(lowerbounds, upperbounds)  # if you use fmin_l_bfgs_b
 #    results = optimize.fmin_bfgs(updatematrices, params,
 #        args=(y,xi10,ntrain,penalty,upperbounds,lowerbounds),
 #        gtol = 1e-8, epsilon=1e-10)
 #    array([ 0.83111567,  1.2695249 ,  0.61436685])
 
 
-    F = lambda x : np.array([[x[0],0],[0,0]])
+    F = lambda x : np.array([[x[0], 0], [0, 0]])
     def Q(x):
-        cholQ = np.array([[x[1],0],[0,x[2]]])
-        return np.dot(cholQ,cholQ.T)
-    H = np.ones((2,1))
+        cholQ = np.array([[x[1], 0], [0, x[2]]])
+        return np.dot(cholQ, cholQ.T)
+    H = np.ones((2, 1))
 #    ssm_model = StateSpaceModel(y)  # need to pass in Xi10!
 #    ssm_model.fit_kalman(start_params=params, xi10=xi10, F=F, Q=Q, H=H,
 #            upperbounds=upperbounds, lowerbounds=lowerbounds)
-# why does the above take 3 times as many iterations than direct max?
+    # why does the above take 3 times as many iterations than direct max?
 
     # compare directly to matlab output
     from scipy import io
@@ -814,7 +817,7 @@ if __name__ == "__main__":
 #    ssm_model2.fit_kalman(start_params=params, xi10=xi10, F=F, Q=Q, H=H,
 #            upperbounds=upperbounds, lowerbounds=lowerbounds)
 
-# matlab output
+    # matlab output
 #    thetaunc = np.array([0.7833, 1.1688, 0.5584])
 #    np.testing.assert_almost_equal(ssm_model2.params, thetaunc, 4)
     # maybe add a line search check to make sure we didn't get stuck in a local
@@ -822,12 +825,14 @@ if __name__ == "__main__":
 
 
 
-# Examples from Durbin and Koopman
+    # Examples from Durbin and Koopman
     import zipfile
     try:
         dk = zipfile.ZipFile('/home/skipper/statsmodels/statsmodels-skipper/scikits/statsmodels/sandbox/tsa/DK-data.zip')
     except:
-        raise IOError("Install DK-data.zip from http://www.ssfpack.com/DKbook.html or specify its correct local path.")
+        raise IOError("Install DK-data.zip from "
+                      "http://www.ssfpack.com/DKbook.html "
+                      "or specify its correct local path.")
     with dk.open('Nile.dat') as f:
         nile = f.readlines()
     nile = [float(_.strip()) for _ in nile[1:]]
@@ -852,23 +857,23 @@ if __name__ == "__main__":
 #    nile_ssm.fit_kalman(start_params=[1.0,1.0], xi10=0, F=[1.], H=[1.],
 #                Q=Q, R=R, penalty=False, ntrain=0)
 
-# p. 162 univariate structural time series example
+    # p. 162 univariate structural time series example
     with dk.open('Seatbelt.dat') as f:
         seatbelt = f.readlines()
     seatbelt = [lmap(float,_.split()) for _ in seatbelt[2:]]
     sb_ssm = StateSpaceModel(seatbelt)
-    s = 12 # monthly data
-# s p.
-    H = np.zeros((s+1,1)) # Z in DK, H' in Hamilton
+    s = 12  # monthly data
+    # s p.
+    H = np.zeros((s+1,1))  # Z in DK, H' in Hamilton
     H[::2] = 1.
     lambdaj = np.r_[1:6:6j]
     lambdaj *= 2*np.pi/s
     T = np.zeros((s+1,s+1))
     C = lambda j : np.array([[np.cos(j), np.sin(j)],[-np.sin(j), np.cos(j)]])
     Cj = [C(j) for j in lambdaj] + [-1]
-#NOTE: the above is for handling seasonality
-#TODO: it is just a rotation matrix.  See if Robert's link has a better way
-#http://citeseerx.ist.psu.edu/viewdoc/download;jsessionid=5F5145BE25D61F87478B25AD1493C8F4?doi=10.1.1.110.5134&rep=rep1&type=pdf&ei=QcetSefqF4GEsQPnx4jSBA&sig2=HjJILSBPFgJTfuifbvKrxw&usg=AFQjCNFbABIxusr-NEbgrinhtR6buvjaYA
+    # NOTE: the above is for handling seasonality
+    # TODO: it is just a rotation matrix.  See if Robert's link has a better way
+    # http://citeseerx.ist.psu.edu/viewdoc/download;jsessionid=5F5145BE25D61F87478B25AD1493C8F4?doi=10.1.1.110.5134&rep=rep1&type=pdf&ei=QcetSefqF4GEsQPnx4jSBA&sig2=HjJILSBPFgJTfuifbvKrxw&usg=AFQjCNFbABIxusr-NEbgrinhtR6buvjaYA
     from scipy import linalg
     F = linalg.block_diag(*Cj) # T in DK, F in Hamilton
     R = np.eye(s-1)

@@ -159,7 +159,7 @@ class TestVAR(CheckLutkepohl):
         true['predict'] = var_results.iloc[1:][['predict_1', 'predict_2', 'predict_3']]
         true['dynamic_predict'] = var_results.iloc[1:][['dyn_predict_1', 'dyn_predict_2', 'dyn_predict_3']]
         super(TestVAR, cls).setup_class(
-            true,  order=(1,0), trend='nc',
+            true,  order=(1, 0), trend='nc',
             error_cov_type="unstructured")
 
     def test_bse_approx(self):
@@ -212,7 +212,7 @@ class TestVAR_diagonal(CheckLutkepohl):
         true['predict'] = var_results.iloc[1:][['predict_diag1', 'predict_diag2', 'predict_diag3']]
         true['dynamic_predict'] = var_results.iloc[1:][['dyn_predict_diag1', 'dyn_predict_diag2', 'dyn_predict_diag3']]
         super(TestVAR_diagonal, cls).setup_class(
-            true,  order=(1,0), trend='nc',
+            true,  order=(1, 0), trend='nc',
             error_cov_type="diagonal")
 
     def test_bse_approx(self):
@@ -278,7 +278,7 @@ class TestVAR_measurement_error(CheckLutkepohl):
         true['predict'] = var_results.iloc[1:][['predict_diag1', 'predict_diag2', 'predict_diag3']]
         true['dynamic_predict'] = var_results.iloc[1:][['dyn_predict_diag1', 'dyn_predict_diag2', 'dyn_predict_diag3']]
         super(TestVAR_measurement_error, cls).setup_class(
-            true,  order=(1,0), trend='nc',
+            true,  order=(1, 0), trend='nc',
             error_cov_type="diagonal", measurement_error=True)
 
         # Create another filter results with positive measurement errors
@@ -317,7 +317,7 @@ class TestVAR_measurement_error(CheckLutkepohl):
                 pass
             elif name == 'obs_cov':
                 actual = self.results2.filter_results.obs_cov
-                desired = np.diag(self.true_measurement_error_variances)[:,:,np.newaxis]
+                desired = np.diag(self.true_measurement_error_variances)[:, :, np.newaxis]
                 assert_equal(actual, desired)
             else:
                 assert_equal(getattr(self.results2.filter_results, name),
@@ -366,7 +366,7 @@ class TestVAR_obs_intercept(CheckLutkepohl):
         true['predict'] = var_results.iloc[1:][['predict_int1', 'predict_int2', 'predict_int3']]
         true['dynamic_predict'] = var_results.iloc[1:][['dyn_predict_int1', 'dyn_predict_int2', 'dyn_predict_int3']]
         super(TestVAR_obs_intercept, cls).setup_class(
-            true, order=(1,0), trend='nc',
+            true, order=(1, 0), trend='nc',
             error_cov_type="diagonal", obs_intercept=true['obs_intercept'])
 
     def test_bse_approx(self):
@@ -399,7 +399,7 @@ class TestVAR_exog(CheckLutkepohl):
         true['fcast'] = var_results.iloc[76:][['fcast_exog1_dln_inv', 'fcast_exog1_dln_inc', 'fcast_exog1_dln_consump']]
         exog = np.arange(75) + 3
         super(TestVAR_exog, cls).setup_class(
-            true, order=(1,0), trend='nc', error_cov_type='unstructured',
+            true, order=(1, 0), trend='nc', error_cov_type='unstructured',
             exog=exog, initialization='approximate_diffuse', loglikelihood_burn=1)
 
     def test_mle(self):
@@ -495,9 +495,9 @@ class TestVAR_exog2(CheckLutkepohl):
         true['predict'] = var_results.iloc[1:76][['predict_exog2_1', 'predict_exog2_2', 'predict_exog2_3']]
         true['predict'].iloc[0, :] = 0
         true['fcast'] = var_results.iloc[76:][['fcast_exog2_dln_inv', 'fcast_exog2_dln_inc', 'fcast_exog2_dln_consump']]
-        exog = np.c_[np.ones((75,1)), (np.arange(75) + 3)[:, np.newaxis]]
+        exog = np.c_[np.ones((75, 1)), (np.arange(75) + 3)[:, np.newaxis]]
         super(TestVAR_exog2, cls).setup_class(
-            true, order=(1,0), trend='nc', error_cov_type='unstructured',
+            true, order=(1, 0), trend='nc', error_cov_type='unstructured',
             exog=exog, initialization='approximate_diffuse', loglikelihood_burn=1)
 
     def test_mle(self):
@@ -537,7 +537,7 @@ class TestVAR2(CheckLutkepohl):
         true['predict'] = var_results.iloc[1:][['predict_var2_1', 'predict_var2_2']]
         true['dynamic_predict'] = var_results.iloc[1:][['dyn_predict_var2_1', 'dyn_predict_var2_2']]
         super(TestVAR2, cls).setup_class(
-            true, order=(2,0), trend='nc', error_cov_type='unstructured',
+            true, order=(2, 0), trend='nc', error_cov_type='unstructured',
             included_vars=['dln_inv', 'dln_inc'])
 
     def test_bse_approx(self):
@@ -620,7 +620,7 @@ class TestVARMA(CheckFREDManufacturing):
         true['predict'] = varmax_results.iloc[1:][['predict_varma11_1', 'predict_varma11_2']]
         true['dynamic_predict'] = varmax_results.iloc[1:][['dyn_predict_varma11_1', 'dyn_predict_varma11_2']]
         super(TestVARMA, cls).setup_class(
-              true, order=(1,1), trend='nc', error_cov_type='diagonal')
+              true, order=(1, 1), trend='nc', error_cov_type='diagonal')
 
     def test_mle(self):
         # Since the VARMA model here is generic (we're just forcing zeros
@@ -662,7 +662,7 @@ class TestVARMA(CheckFREDManufacturing):
         params = self.true['params']
 
         # Check the model overview table
-        assert_equal(re.search(r'Model:.*VARMA\(1,1\)', tables[0]) is None, False)
+        assert_equal(re.search(r'Model:.*VARMA\(1, 1\)', tables[0]) is None, False)
 
         # For each endogenous variable, check the output
         for i in range(self.model.k_endog):
@@ -705,7 +705,7 @@ class TestVMA1(CheckFREDManufacturing):
         true['predict'] = varmax_results.iloc[1:][['predict_vma1_1', 'predict_vma1_2']]
         true['dynamic_predict'] = varmax_results.iloc[1:][['dyn_predict_vma1_1', 'dyn_predict_vma1_2']]
         super(TestVMA1, cls).setup_class(
-              true, order=(0,1), trend='nc', error_cov_type='diagonal')
+              true, order=(0, 1), trend='nc', error_cov_type='diagonal')
 
     def test_mle(self):
         # Since the VARMA model here is generic (we're just forcing zeros
@@ -744,43 +744,43 @@ class TestVMA1(CheckFREDManufacturing):
 
 def test_specifications():
     # Tests for model specification and state space creation
-    endog = np.arange(20).reshape(10,2)
+    endog = np.arange(20).reshape(10, 2)
     exog = np.arange(10)
     exog2 = pd.Series(exog, index=pd.date_range('2000-01-01', '2009-01-01', freq='AS'))
 
     # Test successful model creation
-    mod = varmax.VARMAX(endog, exog=exog, order=(1,0))
+    mod = varmax.VARMAX(endog, exog=exog, order=(1, 0))
 
     # Test successful model creation with pandas exog
-    mod = varmax.VARMAX(endog, exog=exog2, order=(1,0))
+    mod = varmax.VARMAX(endog, exog=exog2, order=(1, 0))
 
 
 def test_misspecifications():
     varmax.__warningregistry__ = {}
 
     # Tests for model specification and misspecification exceptions
-    endog = np.arange(20).reshape(10,2)
+    endog = np.arange(20).reshape(10, 2)
 
     # Bad trend specification
-    assert_raises(ValueError, varmax.VARMAX, endog, order=(1,0), trend='')
+    assert_raises(ValueError, varmax.VARMAX, endog, order=(1, 0), trend='')
 
     # Bad error_cov_type specification
-    assert_raises(ValueError, varmax.VARMAX, endog, order=(1,0), error_cov_type='')
+    assert_raises(ValueError, varmax.VARMAX, endog, order=(1, 0), error_cov_type='')
 
     # Bad order specification
-    assert_raises(ValueError, varmax.VARMAX, endog, order=(0,0))
+    assert_raises(ValueError, varmax.VARMAX, endog, order=(0, 0))
 
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter('always')
-        varmax.VARMAX(endog, order=(1,1))
+        varmax.VARMAX(endog, order=(1, 1))
 
     # Warning with VARMA specification
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter('always')
 
-        varmax.VARMAX(endog, order=(1,1))
+        varmax.VARMAX(endog, order=(1, 1))
 
-        message = ('Estimation of VARMA(p,q) models is not generically robust,'
+        message = ('Estimation of VARMA(p, q) models is not generically robust, '
                    ' due especially to identification issues.')
         assert_equal(str(w[0].message), message)
     warnings.resetwarnings()

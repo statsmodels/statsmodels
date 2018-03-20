@@ -88,20 +88,20 @@ class Trivariate(object):
 
     def test_forecasts(self):
         assert_allclose(
-            self.results_a.forecasts[0,:],
-            self.results_b.forecasts[0,:],
+            self.results_a.forecasts[0, :],
+            self.results_b.forecasts[0, :],
         )
 
     def test_forecasts_error(self):
         assert_allclose(
-            self.results_a.forecasts_error[0,:],
-            self.results_b.forecasts_error[0,:]
+            self.results_a.forecasts_error[0, :],
+            self.results_b.forecasts_error[0, :]
         )
 
     def test_forecasts_error_cov(self):
         assert_allclose(
-            self.results_a.forecasts_error_cov[0,0,:],
-            self.results_b.forecasts_error_cov[0,0,:]
+            self.results_a.forecasts_error_cov[0, 0, :],
+            self.results_b.forecasts_error_cov[0, 0, :]
         )
 
     def test_filtered_state(self):
@@ -513,20 +513,20 @@ class TestDFM(object):
 
     def test_forecasts(self):
         assert_allclose(
-            self.results_a.forecasts[0,:],
-            self.results_b.forecasts[0,:],
+            self.results_a.forecasts[0, :],
+            self.results_b.forecasts[0, :],
         )
 
     def test_forecasts_error(self):
         assert_allclose(
-            self.results_a.forecasts_error[0,:],
-            self.results_b.forecasts_error[0,:]
+            self.results_a.forecasts_error[0, :],
+            self.results_b.forecasts_error[0, :]
         )
 
     def test_forecasts_error_cov(self):
         assert_allclose(
-            self.results_a.forecasts_error_cov[0,0,:],
-            self.results_b.forecasts_error_cov[0,0,:]
+            self.results_a.forecasts_error_cov[0, 0, :],
+            self.results_b.forecasts_error_cov[0, 0, :]
         )
 
     def test_filtered_state(self):
