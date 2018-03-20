@@ -518,5 +518,38 @@ class T_estWaldAnovaOLSNoFormula(object):
         cls.res = mod.fit()  # default use_t=True
 
 
+class CheckPairwise(object):
+
+    def test_default(self):
+        res = self.res
+
+        tt = res.t_test(self.constraints)
+
+        pw = res.t_test_pairwise(self.term_name)
+        pw_frame = pw.result_frame
+        assert_allclose(pw_frame.iloc[:, :6].values,
+                        tt.summary_frame().values)
+
+
+class TestTTestPairwiseOLS(CheckPairwise):
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.formula.api import ols
+        import statsmodels.stats.tests.test_anova as ttmod
+
+        test = ttmod.TestAnova3()
+        test.setup_class()
+        cls.data = test.data.drop([0,1,2])
+
+        mod = ols("np.log(Days+1) ~ C(Duration) + C(Weight)", cls.data)
+        cls.res = mod.fit()
+        cls.term_name = "C(Weight)"
+        cls.constraints = ['C(Weight)[T.2]',
+                           'C(Weight)[T.3]',
+                           'C(Weight)[T.3] - C(Weight)[T.2]']
+
+
+
 if __name__ == '__main__':
     pass

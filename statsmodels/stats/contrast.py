@@ -5,6 +5,7 @@ from scipy.stats import t as student_t
 from scipy import stats
 from statsmodels.tools.tools import clean0, fullrank
 from statsmodels.compat.numpy import np_matrix_rank
+from statsmodels.stats.multitest import multipletests
 
 
 #TODO: should this be public if it's just a container?
@@ -412,3 +413,135 @@ class WaldTestResults(object):
 
     def __repr__(self):
         return str(self.__class__) + '\n' + self.__str__()
+
+
+# t_test for pairwise comparison and automatic contrast/restrictions
+
+
+def _get_pairs_labels(k_level, level_names):
+    idx_pairs_all = np.triu_indices(k_level, 1)
+    labels = ['%s-%s' % (level_names[name[1]], level_names[name[0]]) for name in zip(*idx_pairs_all)]
+    return labels
+
+def contrast_pairs(k_params, k_level, idx_start, level_names=None):
+    """create pairwise contrast for reference coding
+    """
+    k_level_m1 = k_level - 1
+    idx_pairs = np.triu_indices(k_level_m1, 1)
+
+    k = len(idx_pairs[0])
+    c_pairs = np.zeros((k, k_level_m1))
+    c_pairs[np.arange(k), idx_pairs[0]] = -1
+    c_pairs[np.arange(k), idx_pairs[1]] = 1
+    c_reference = np.eye(k_level_m1)
+    c = np.concatenate((c_reference, c_pairs), axis=0)
+    k_all = c.shape[0]
+
+    contrasts = np.zeros((k_all, k_params))
+    contrasts[:, idx_start : idx_start + k_level_m1] = c
+
+    return contrasts
+
+
+def t_test_multi(result, contrasts, method='hs', ci_method=None, contrast_names=None):
+    tt = result.t_test(contrasts)
+    res_df = tt.summary_frame(xname=contrast_names)
+
+    if type(method) is not list:
+        method = [method]
+    for meth in method:
+        mt = multipletests(tt.pvalue, method=meth)
+        res_df['pvalue-%s' % meth] = mt[1]
+        res_df['reject-%s' % meth] = mt[0]
+    return res_df
+
+
+class MultiCompResult(object):
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+
+def _embed_constraints(contrasts, k_params, idx_start):
+
+    k_c, k_p = contrasts.shape
+    c = np.zeros((k_c, k_params))
+    if isinstance(idx_start, int):
+        # no ducks, int_likes supported yet
+        c[:, idx_start : idx_start + k_p] = contrasts
+    else:
+        c[:, idx_start] = contrasts
+    return c
+
+
+def t_test_pairwise(result, term_name, method='hs', factor_labels=None, ignore=False):
+    """get pairwise t_test with multiple testing corrected p-values
+
+    This uses the formula design_info encoding contrast matrix and should work for
+    all encodings of a main effect.
+
+    Parameters
+    ----------
+    result : result instance
+    term_name : str
+        name of the term for which pairwise comparisons are computed
+    method : str or list of strings
+        multiple testing p-value correction, default is 'hs', see stats.multipletesting
+    factor_labels : None, list of str
+        Labels for the factor levels used for pairwise labels. If not provided,
+        then the labels from the formula design_info are used.
+    ignore : boolean
+        This function tries to detect whether an appropriate factor encoding was
+        used and will raise if a ValueError if the factor encoding is not a simple
+        reference coding. These exceptions can be turned off.
+
+    Returns
+    -------
+    results : instance of a simple Results class
+        The results are stored as attributes, the main attributes are the following two. Other
+        attributes are added for debugging purposes or as background information.
+
+        - result_frame : pandas DataFrame with t_test results and multiple testing corrected p-values
+        - contrasts : matrix of constraints of the null hypothesis in the t_test
+
+    Notes
+    -----
+
+    Status: experimental. Currently only checked for treatment coding with and without specified
+    reference level.
+
+    Currently there are no multiple testing corrected confidence intervals available
+
+    """
+
+    desinfo = result.model.data.design_info
+    term_idx = desinfo.term_names.index(term_name)
+    term = desinfo.terms[term_idx]
+    idx_start = desinfo.term_slices[term].start
+    if not ignore and len(term.factors) > 1:
+        raise ValueError('interaction effects not yet supported')
+    factor = term.factors[0]
+    cat = desinfo.factor_infos[factor].categories
+    if factor_labels is not None:
+        if len(factor_labels) == len(cat):
+            cat = factor_labels
+        else:
+            raise ValueError("factor_labels has the wrong length, should be %d" % len(cat))
+
+
+    k_level = len(cat)
+    cm = desinfo.term_codings[term][0].contrast_matrices[factor].matrix
+
+    k_params = len(result.params)
+    labels = _get_pairs_labels(k_level, cat)
+
+    import statsmodels.sandbox.stats.multicomp as mc
+    c_all_pairs = -mc.contrast_allpairs(k_level)
+    contrasts_sub = c_all_pairs.dot(cm)
+    contrasts = _embed_constraints(contrasts_sub, k_params, idx_start)
+    res_df = t_test_multi(result, contrasts, method=method, ci_method=None, contrast_names=labels)
+    res = MultiCompResult(result_frame=res_df,
+                          contrasts=contrasts,
+                          term=term,
+                          contrast_labels=labels,
+                          term_encoding_matrix=cm)
+    return res

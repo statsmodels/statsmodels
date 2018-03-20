@@ -5,7 +5,8 @@ from scipy import stats
 from statsmodels.base.data import handle_data
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.tools import recipr, nan_dot
-from statsmodels.stats.contrast import ContrastResults, WaldTestResults
+from statsmodels.stats.contrast import (ContrastResults, WaldTestResults,
+                                        t_test_pairwise)
 from statsmodels.tools.decorators import resettable_cache, cache_readonly
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import approx_fprime
@@ -1643,6 +1644,12 @@ class LikelihoodModelResults(Results):
         res = WaldTestResults(None, distribution, None, table=table)
         # TODO: remove temp again, added for testing
         res.temp = constraints + combined_constraints + extra_constraints
+        return res
+
+    def t_test_pairwise(self, term_name, method='hs',
+                        factor_labels=None, ignore=False):
+        res = t_test_pairwise(self, term_name, method=method,
+                              factor_labels=factor_labels, ignore=ignore)
         return res
 
     def conf_int(self, alpha=.05, cols=None, method='default'):
