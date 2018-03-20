@@ -550,6 +550,61 @@ class TestTTestPairwiseOLS(CheckPairwise):
                            'C(Weight)[T.3] - C(Weight)[T.2]']
 
 
+class TestTTestPairwiseOLS2(CheckPairwise):
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.formula.api import ols
+        import statsmodels.stats.tests.test_anova as ttmod
+
+        test = ttmod.TestAnova3()
+        test.setup_class()
+        cls.data = test.data.drop([0,1,2])
+
+        mod = ols("np.log(Days+1) ~ C(Weight) + C(Duration)", cls.data)
+        cls.res = mod.fit()
+        cls.term_name = "C(Weight)"
+        cls.constraints = ['C(Weight)[T.2]',
+                           'C(Weight)[T.3]',
+                           'C(Weight)[T.3] - C(Weight)[T.2]']
+
+
+class TestTTestPairwiseOLS3(CheckPairwise):
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.formula.api import ols
+        import statsmodels.stats.tests.test_anova as ttmod
+
+        test = ttmod.TestAnova3()
+        test.setup_class()
+        cls.data = test.data.drop([0,1,2])
+
+        mod = ols("np.log(Days+1) ~ C(Weight) + C(Duration) - 1", cls.data)
+        cls.res = mod.fit()
+        cls.term_name = "C(Weight)"
+        cls.constraints = ['C(Weight)[2] - C(Weight)[1]',
+                           'C(Weight)[3] - C(Weight)[1]',
+                           'C(Weight)[3] - C(Weight)[2]']
+
+class TestTTestPairwiseOLS4(CheckPairwise):
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.formula.api import ols
+        import statsmodels.stats.tests.test_anova as ttmod
+
+        test = ttmod.TestAnova3()
+        test.setup_class()
+        cls.data = test.data.drop([0,1,2])
+
+        mod = ols("np.log(Days+1) ~ C(Weight, Treatment(2)) + C(Duration)", cls.data)
+        cls.res = mod.fit()
+        cls.term_name = "C(Weight, Treatment(2))"
+        cls.constraints = ['-C(Weight, Treatment(2))[T.1]',
+                           'C(Weight, Treatment(2))[T.3] - C(Weight, Treatment(2))[T.1]',
+                           'C(Weight, Treatment(2))[T.3]',]
+
 
 if __name__ == '__main__':
     pass
