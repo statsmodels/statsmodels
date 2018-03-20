@@ -461,15 +461,14 @@ class MultiCompResult(object):
         self.__dict__.update(kwargs)
 
 
-def _embed_constraints(contrasts, k_params, idx_start):
+def _embed_constraints(contrasts, k_params, idx_start, index=None):
 
     k_c, k_p = contrasts.shape
     c = np.zeros((k_c, k_params))
-    if isinstance(idx_start, int):
-        # no ducks, int_likes supported yet
+    if index is None:
         c[:, idx_start : idx_start + k_p] = contrasts
     else:
-        c[:, idx_start] = contrasts
+        c[:, index] = contrasts
     return c
 
 

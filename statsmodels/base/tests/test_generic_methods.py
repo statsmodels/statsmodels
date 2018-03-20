@@ -606,5 +606,25 @@ class TestTTestPairwiseOLS4(CheckPairwise):
                            'C(Weight, Treatment(2))[T.3]',]
 
 
+class TestTTestPairwisePoisson(CheckPairwise):
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.discrete.discrete_model import Poisson
+        import statsmodels.stats.tests.test_anova as ttmod
+
+        test = ttmod.TestAnova3()
+        test.setup_class()
+        cls.data = test.data.drop([0,1,2])
+
+        mod = Poisson.from_formula("Days ~ C(Duration) + C(Weight)", cls.data)
+        cls.res = mod.fit(cov_type='HC0')
+        cls.term_name = "C(Weight)"
+        cls.constraints = ['C(Weight)[T.2]',
+                           'C(Weight)[T.3]',
+                           'C(Weight)[T.3] - C(Weight)[T.2]']
+
+
+
 if __name__ == '__main__':
     pass
