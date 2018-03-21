@@ -81,15 +81,3 @@ def series_density(y, mu, p, phi):
                         f=density_otherwise,
                         f2=density_at_zero)
     return density
-
-
-if __name__ == '__main__':
-    from scipy import stats
-    n = stats.poisson.rvs(.1, size=10000000)
-    y = stats.gamma.rvs(.1, scale=30000, size=10000000)
-    y = n * y
-    mu = stats.gamma.rvs(10, scale=30, size=10000000)
-    import time
-    t = time.time()
-    l = series_density(y=y, mu=mu, p=1.5, phi=20)
-    print('That took {} seconds'.format(time.time() - t))

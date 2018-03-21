@@ -279,20 +279,3 @@ class TestRemoveDataPicklePoissonRegularized(RemoveDataPickle):
         y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
         model = sm.Poisson(y_count, x)
         self.results = model.fit_regularized(method='l1', disp=0, alpha=10)
-
-
-
-if __name__ == '__main__':
-    for cls in [TestRemoveDataPickleOLS, TestRemoveDataPickleWLS,
-                TestRemoveDataPicklePoisson,
-                TestRemoveDataPicklePoissonRegularized,
-                TestRemoveDataPickleNegativeBinomial,
-                TestRemoveDataPickleLogit, TestRemoveDataPickleRLM,
-                TestRemoveDataPickleGLM]:
-        print(cls)
-        cls.setup_class()
-        tt = cls()
-        tt.setup()
-        tt.test_remove_data_pickle()
-        tt.test_remove_data_docstring()
-        tt.test_pickle_wrapper()

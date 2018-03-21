@@ -337,8 +337,3 @@ class TestMICE(object):
 
         tvalues = np.asarray([ -0.84781698,  15.10491582,  13.59998039])
         assert_allclose(result.tvalues, tvalues, atol=1e-5)
-
-
-if  __name__=="__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])
