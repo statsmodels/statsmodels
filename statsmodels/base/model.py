@@ -1646,7 +1646,7 @@ class LikelihoodModelResults(Results):
         res.temp = constraints + combined_constraints + extra_constraints
         return res
 
-    def t_test_pairwise(self, term_name, method='hs',
+    def t_test_pairwise(self, term_name, method='hs', alpha=0.05,
                         factor_labels=None):
         """perform pairwise t_test with multiple testing corrected p-values
 
@@ -1664,6 +1664,8 @@ class LikelihoodModelResults(Results):
         method : str or list of strings
             multiple testing p-value correction, default is 'hs',
             see stats.multipletesting
+        alpha : float
+            significance level for multiple testing reject decision.
         factor_labels : None, list of str
             Labels for the factor levels used for pairwise labels. If not
             provided, then the labels from the formula design_info are used.
@@ -1705,7 +1707,7 @@ class LikelihoodModelResults(Results):
         3-2         1.130992   0.010212      True
 
         """
-        res = t_test_pairwise(self, term_name, method=method,
+        res = t_test_pairwise(self, term_name, method=method, alpha=alpha,
                               factor_labels=factor_labels)
         return res
 

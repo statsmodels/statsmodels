@@ -469,23 +469,25 @@ def _contrast_pairs(k_params, k_level, idx_start):
     return contrasts
 
 
-def t_test_multi(result, contrasts, method='hs', ci_method=None,
+def t_test_multi(result, contrasts, method='hs', alpha=0.05, ci_method=None,
                  contrast_names=None):
     """perform t_test and add multiplicity correction to results dataframe
 
     Parameters
     ----------
     result results instance
-       results of an estimated model
+        results of an estimated model
     contrasts : ndarray
         restriction matrix for t_test
     method : string or list of strings
-       method for multiple testing p-value correction, default is'hs'.
+        method for multiple testing p-value correction, default is'hs'.
+    alpha : float
+        significance level for multiple testing reject decision.
     ci_method : None
-       not used yet, will be for multiplicity corrected confidence intervals
+        not used yet, will be for multiplicity corrected confidence intervals
     contrast_names : list of strings or None
-       If contrast_names are provided, then they are used in the index of the
-       returned dataframe, otherwise some generic default names are created.
+        If contrast_names are provided, then they are used in the index of the
+        returned dataframe, otherwise some generic default names are created.
 
     Returns
     -------
@@ -500,7 +502,7 @@ def t_test_multi(result, contrasts, method='hs', ci_method=None,
     if type(method) is not list:
         method = [method]
     for meth in method:
-        mt = multipletests(tt.pvalue, method=meth)
+        mt = multipletests(tt.pvalue, method=meth, alpha=alpha)
         res_df['pvalue-%s' % meth] = mt[1]
         res_df['reject-%s' % meth] = mt[0]
     return res_df
@@ -597,8 +599,8 @@ def _constraints_factor(encoding_matrix, comparison='pairwise', k_params=None,
     return contrasts
 
 
-def t_test_pairwise(result, term_name, method='hs', factor_labels=None,
-                    ignore=False):
+def t_test_pairwise(result, term_name, method='hs', alpha=0.05,
+                    factor_labels=None, ignore=False):
     """perform pairwise t_test with multiple testing corrected p-values
 
     This uses the formula design_info encoding contrast matrix and should
@@ -615,6 +617,8 @@ def t_test_pairwise(result, term_name, method='hs', factor_labels=None,
     method : str or list of strings
         multiple testing p-value correction, default is 'hs',
         see stats.multipletesting
+    alpha : float
+        significance level for multiple testing reject decision.
     factor_labels : None, list of str
         Labels for the factor levels used for pairwise labels. If not
         provided, then the labels from the formula design_info are used.
@@ -670,7 +674,7 @@ def t_test_pairwise(result, term_name, method='hs', factor_labels=None,
     contrasts_sub = c_all_pairs.dot(cm)
     contrasts = _embed_constraints(contrasts_sub, k_params, idx_start)
     res_df = t_test_multi(result, contrasts, method=method, ci_method=None,
-                          contrast_names=labels)
+                          alpha=alpha, contrast_names=labels)
     res = MultiCompResult(result_frame=res_df,
                           contrasts=contrasts,
                           term=term,

@@ -550,6 +550,22 @@ class TestTTestPairwiseOLS(CheckPairwise):
                            'C(Weight)[T.3] - C(Weight)[T.2]']
 
 
+    def test_alpha(self):
+        pw1 = self.res.t_test_pairwise(self.term_name, method='hommel',
+                                       factor_labels='A B C'.split())
+        pw2 = self.res.t_test_pairwise(self.term_name, method='hommel',
+                                       alpha=0.01)
+        assert_allclose(pw1.result_frame.iloc[:, :7].values,
+                        pw2.result_frame.iloc[:, :7].values, rtol=1e-10)
+        assert_equal(pw1.result_frame.iloc[:, -1].values,
+                     [True]*3)
+        assert_equal(pw2.result_frame.iloc[:, -1].values,
+                     [False, True, False])
+
+        assert_equal(pw1.result_frame.index.values,
+                     np.array(['B-A', 'C-A', 'C-B'], dtype=object))
+
+
 class TestTTestPairwiseOLS2(CheckPairwise):
 
     @classmethod
