@@ -1651,8 +1651,3 @@ def test_missing():
     res2 = mod2.fit()
 
     assert_almost_equal(res.params.values, res2.params.values)
-
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

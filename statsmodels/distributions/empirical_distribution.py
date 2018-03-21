@@ -160,24 +160,3 @@ def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
     a = np.argsort(y)
 
     return interp1d(y[a], x[a])
-
-if __name__ == "__main__":
-    #TODO: Make sure everything is correctly aligned and make a plotting
-    # function
-    from statsmodels.compat.python import urlopen
-    import matplotlib.pyplot as plt
-    nerve_data = urlopen('http://www.statsci.org/data/general/nerve.txt')
-    nerve_data = np.loadtxt(nerve_data)
-    x = nerve_data / 50. # was in 1/50 seconds
-    cdf = ECDF(x)
-    x.sort()
-    F = cdf(x)
-    plt.step(x, F, where='post')
-    lower, upper = _conf_set(F)
-    plt.step(x, lower, 'r', where='post')
-    plt.step(x, upper, 'r', where='post')
-    plt.xlim(0, 1.5)
-    plt.ylim(0, 1.05)
-    plt.vlines(x, 0, .05)
-    plt.show()
-

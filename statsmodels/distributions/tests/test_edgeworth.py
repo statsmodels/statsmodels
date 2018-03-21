@@ -188,7 +188,3 @@ def check_distribution_rvs(distfn, args, alpha, rvs):
         D,pval = stats.kstest(distfn.rvs, distfn.cdf, args=args, N=1000)
         npt.assert_(pval > alpha, "D = " + str(D) + "; pval = " + str(pval) +
                "; alpha = " + str(alpha) + "\nargs = " + str(args))
-
-
-if __name__ == "__main__":
-    run_module_suite()

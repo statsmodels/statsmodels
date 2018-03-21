@@ -96,9 +96,3 @@ def test_ic():
                         aic(0, n, k) + 2*k*(k+1.)/(n-k-1.), decimal=14)
     assert_almost_equal(bic(0, 10, 2), np.log(n)*k, decimal=14)
     assert_almost_equal(hqic(0, 10, 2), 2*np.log(np.log(n))*k, decimal=14)
-
-
-
-if __name__ == '__main__':
-    test_eval_measures()
-    test_ic()

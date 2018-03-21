@@ -2293,64 +2293,9 @@ class MNLogit(MultinomialModel):
         return H
 
 
-#TODO: Weibull can replaced by a survival analsysis function
-# like stat's streg (The cox model as well)
-#class Weibull(DiscreteModel):
-#    """
-#    Binary choice Weibull model
-#
-#    Notes
-#    ------
-#    This is unfinished and untested.
-#    """
-##TODO: add analytic hessian for Weibull
-#    def initialize(self):
-#        pass
-#
-#    def cdf(self, X):
-#        """
-#        Gumbell (Log Weibull) cumulative distribution function
-#        """
-##        return np.exp(-np.exp(-X))
-#        return stats.gumbel_r.cdf(X)
-#        # these two are equivalent.
-#        # Greene table and discussion is incorrect.
-#
-#    def pdf(self, X):
-#        """
-#        Gumbell (LogWeibull) probability distribution function
-#        """
-#        return stats.gumbel_r.pdf(X)
-#
-#    def loglike(self, params):
-#        """
-#        Loglikelihood of Weibull distribution
-#        """
-#        X = self.exog
-#        cdf = self.cdf(np.dot(X,params))
-#        y = self.endog
-#        return np.sum(y*np.log(cdf) + (1-y)*np.log(1-cdf))
-#
-#    def score(self, params):
-#        y = self.endog
-#        X = self.exog
-#        F = self.cdf(np.dot(X,params))
-#        f = self.pdf(np.dot(X,params))
-#        term = (y*f/F + (1 - y)*-f/(1-F))
-#        return np.dot(term,X)
-#
-#    def hessian(self, params):
-#        hess = nd.Jacobian(self.score)
-#        return hess(params)
-#
-#    def fit(self, start_params=None, method='newton', maxiter=35, tol=1e-08):
-## The example had problems with all zero start values, Hessian = 0
-#        if start_params is None:
-#            start_params = OLS(self.endog, self.exog).fit().params
-#        mlefit = super(Weibull, self).fit(start_params=start_params,
-#                method=method, maxiter=maxiter, tol=tol)
-#        return mlefit
-#
+# TODO: Consider implementing Weibull.  A commented-out quarter-implementation
+# existed in this location for ~7 years before being replaced with this comment.
+
 
 class NegativeBinomial(CountModel):
     __doc__ = """
@@ -4067,12 +4012,6 @@ wrap.populate_wrapper(GeneralizedPoissonResultsWrapper,
 
 class PoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
-    #_methods = {
-    #        "predict_prob" : "rows",
-    #        }
-    #_wrap_methods = lm.wrap.union_dicts(
-    #                            lm.RegressionResultsWrapper._wrap_methods,
-    #                            _methods)
 wrap.populate_wrapper(PoissonResultsWrapper, PoissonResults)
 
 class L1CountResultsWrapper(lm.RegressionResultsWrapper):
@@ -4080,12 +4019,6 @@ class L1CountResultsWrapper(lm.RegressionResultsWrapper):
 
 class L1PoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
-    #_methods = {
-    #        "predict_prob" : "rows",
-    #        }
-    #_wrap_methods = lm.wrap.union_dicts(
-    #                            lm.RegressionResultsWrapper._wrap_methods,
-    #                            _methods)
 wrap.populate_wrapper(L1PoissonResultsWrapper, L1PoissonResults)
 
 class L1NegativeBinomialResultsWrapper(lm.RegressionResultsWrapper):
@@ -4121,8 +4054,3 @@ wrap.populate_wrapper(MultinomialResultsWrapper, MultinomialResults)
 class L1MultinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1MultinomialResultsWrapper, L1MultinomialResults)
-
-
-if __name__=="__main__":
-    import numpy as np
-    import statsmodels.api as sm

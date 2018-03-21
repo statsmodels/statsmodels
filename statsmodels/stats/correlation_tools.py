@@ -854,8 +854,3 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
     cmat = sparse.coo_matrix((cor_values, (ipos, jpos)), (nrow, nrow))
 
     return cmat
-
-
-
-if __name__ == '__main__':
-    pass

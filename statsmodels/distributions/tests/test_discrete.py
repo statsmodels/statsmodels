@@ -109,7 +109,3 @@ class TestZiNBP(object):
         nb_logpmf = nbinom.logpmf(2, n, p)
         tnb_logpmf = sm.distributions.zinegbin.logpmf(2, 5, 1, 1, 0.005)
         assert_allclose(nb_logpmf, tnb_logpmf, rtol=1e-2, atol=1e-2)
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

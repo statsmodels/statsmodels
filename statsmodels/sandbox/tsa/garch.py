@@ -657,6 +657,9 @@ def gjrconvertparams(self, params, nar, nma):
 
     mu = params[-1]
     params2 = (ar, ma) #(mu, ar, ma)
+    raise NotImplementedError("paramsclass is not defined.  "
+                              "This area of statsmodels is not "
+                              "remotely maintained.")
     return paramsclass
 
 #TODO: this should be generalized to ARMA?
@@ -738,6 +741,10 @@ class AR(LikelihoodModel):
                 ylag[0]**2*(1-params**2)/(2*sigma2**2)*dsdr
         if self.penalty:
             pass
+        raise NotImplementedError("Jacobian is not defined.  "
+                                  "This area of statsmodels is not "
+                                  "remotely maintained.")
+
         j = Jacobian(self.loglike)
         return j(params)
 #        return gradient
@@ -753,7 +760,9 @@ class AR(LikelihoodModel):
         """
         Returns numerical hessian for now.  Depends on numdifftools.
         """
-
+        raise NotImplementedError("Hessian is not defined.  "
+                                  "This area of statsmodels is not "
+                                  "remotely maintained.")
         h = Hessian(self.loglike)
         return h(params)
 
