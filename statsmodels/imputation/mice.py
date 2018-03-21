@@ -392,7 +392,7 @@ class MICEData(object):
 
         ix = self.ix_miss[col]
         if len(ix) > 0:
-            self.data[col].iloc[ix] = vals
+            self.data[col].iloc[ix] = np.atleast_1d(vals)
 
 
     def update_all(self, n_iter=1):

@@ -339,6 +339,29 @@ class TestMICE(object):
         assert_allclose(result.tvalues, tvalues, atol=1e-5)
 
 
+def test_micedata_miss1():
+    # test for #4375
+    np.random.seed(0)
+    data = pd.DataFrame(np.random.rand(50, 4))
+    data.columns = ['var1', 'var2', 'var3', 'var4']
+    # one column with a single missing value
+    data.iloc[1, 1] = np.nan
+    data.iloc[[1, 3], 2] = np.nan
+
+    data_imp = mice.MICEData(data)
+    data_imp.update_all()
+
+    assert_equal(data_imp.data.isnull().values.sum(), 0)
+
+    ix_miss = {'var1': np.array([], dtype=np.int64),
+                 'var2': np.array([1], dtype=np.int64),
+                 'var3': np.array([1, 3], dtype=np.int64),
+                 'var4': np.array([], dtype=np.int64)}
+
+    for k in ix_miss:
+        assert_equal(data_imp.ix_miss[k], ix_miss[k])
+
+
 if  __name__=="__main__":
     import pytest
     pytest.main([__file__, '-vvs', '-x', '--pdb'])
