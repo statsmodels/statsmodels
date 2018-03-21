@@ -377,7 +377,7 @@ def mackinnoncrit(N=1, regression ="c", nobs=inf):
     """
     reg = regression
     if reg not in ['c','ct','nc','ctt']:
-        raise ValueError("regression keyword %s not understood") % reg
+        raise ValueError("regression keyword %s not understood" % reg)
     if nobs is inf:
         return eval("tau_"+reg+"_2010["+str(N-1)+",:,0]")
     else:
