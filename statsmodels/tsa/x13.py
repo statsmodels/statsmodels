@@ -603,32 +603,3 @@ class X13ArimaAnalysisResult(object):
 
         fig.tight_layout()
         return fig
-
-
-if __name__ == "__main__":
-    import numpy as np
-    from statsmodels.tsa.arima_process import ArmaProcess
-    np.random.seed(123)
-    ar = [1, .35, .8]
-    ma = [1, .8]
-    arma = ArmaProcess(ar, ma, nobs=100)
-    assert arma.isstationary()
-    assert arma.isinvertible()
-    y = arma.generate_sample()
-    dates = pd.date_range("1/1/1990", periods=len(y), freq='M')
-    ts = pd.Series(y, index=dates)
-
-    xpath = "/home/skipper/src/x12arima/x12a"
-
-    try:
-        results = x13_arima_analysis(xpath, ts)
-    except:
-        print("Caught exception")
-
-    results = x13_arima_analysis(xpath, ts, log=False)
-
-    # import pandas as pd
-    # seas_y = pd.read_csv("usmelec.csv")
-    # seas_y = pd.Series(seas_y["usmelec"].values,
-    #                        index=pd.DatetimeIndex(seas_y["date"], freq="MS"))
-    # results = x13_arima_analysis(xpath, seas_y)
