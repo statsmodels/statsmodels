@@ -2,14 +2,6 @@ from __future__ import absolute_import
 import numpy as np
 
 
-def _bit_length_26(x):
-    if x == 0:
-        return 0
-    elif x == 1:
-        return 1
-    else:
-        return len(bin(x)) - 2
-
 
 try:
     from scipy.lib._version import NumpyVersion
@@ -184,11 +176,7 @@ def _next_regular(target):
             # (quotient = ceil(target / p35))
             quotient = -(-target // p35)
             # Quickly find next power of 2 >= quotient
-            try:
-                p2 = 2 ** ((quotient - 1).bit_length())
-            except AttributeError:
-                # Fallback for Python <2.7
-                p2 = 2 ** _bit_length_26(quotient - 1)
+            p2 = 2 ** ((quotient - 1).bit_length())
 
             N = p2 * p35
             if N == target:
