@@ -144,6 +144,10 @@ class StatTestMC(object):
             #self.nreturn = nreturns = 1
             mcres = np.zeros(nrepl)
             mcres[0] = mcres0
+            raise NotImplementedError("`repl` is not defined.  "
+                                      "This area of statsmodels is not "
+                                      "remotely maintained.")
+
             for ii in range(1, repl-1, nreturns):
                 x = dgp(*dgpargs) #(1e-4+np.random.randn(nobs)).cumsum()
                 #should I ravel?

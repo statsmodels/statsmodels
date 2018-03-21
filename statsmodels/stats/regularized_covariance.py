@@ -32,6 +32,9 @@ def _calc_nodewise_row(exog, idx, alpha):
     p = exog.shape[1]
     # handle array alphas
     if not np.isscalar(alpha):
+        raise NotImplementedError("`ind` variable is undefined.  "
+                                  "This section of statsmodels is "
+                                  "not maintained.")
         alpha = alpha[ind]
 
     ind = list(range(p))
@@ -76,6 +79,9 @@ def _calc_nodewise_weight(exog, nodewise_row, idx, alpha):
     n, p = exog.shape
     # handle array alphas
     if not np.isscalar(alpha):
+        raise NotImplementedError("`ind` variable is undefined.  "
+                                  "This section of statsmodels is "
+                                  "not maintained.")
         alpha = alpha[ind]
 
     ind = list(range(p))
