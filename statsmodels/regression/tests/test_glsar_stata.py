@@ -91,8 +91,3 @@ class TestGLSARCorc(CheckStataResultsPMixin):
         assert_allclose(res0b.params, res1.params, rtol=1e-11)
         assert_allclose(res0.model.rho, rho, rtol=1e-11)
         assert_allclose(res0b.model.rho, rho, rtol=1e-11)
-
-
-if __name__=="__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

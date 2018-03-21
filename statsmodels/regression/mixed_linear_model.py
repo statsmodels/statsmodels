@@ -2364,6 +2364,8 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         statsmodels.iolib.summary.Summary : class to hold summary
             results
         """
+        # FIXME: docstring incorrectly says returns summary.Summary,
+        #        actually returns summary2.Summary
 
         from statsmodels.iolib import summary2
         smry = summary2.Summary()

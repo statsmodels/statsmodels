@@ -352,15 +352,3 @@ class Equation(object):
 
     def __init__(self, y, x):
         pass
-
-if __name__ == '__main__':
-    import pandas.util.testing as ptest
-
-    ptest.N = 500
-    data = ptest.makeTimeDataFrame().cumsum(0)
-
-    var = DynamicVAR(data, lag_order=2, window_type='expanding')
-    var2 = DynamicVAR(data, lag_order=2, window=10,
-                      window_type='rolling')
-
-

@@ -328,8 +328,3 @@ class TestKernelReg(KernelRegressionTestBase):
                                  defaults=nparam.EstimatorSettings(efficient=True))
         # Bandwidth
         npt.assert_equal(model.bw, bw_user)
-
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

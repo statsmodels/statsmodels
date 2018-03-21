@@ -559,7 +559,3 @@ def test_acf_fft_dataframe():
 
     result = acf(sunspots.load_pandas().data[['SUNACTIVITY']], fft=True)
     assert_equal(result.ndim, 1)
-
-if __name__=="__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

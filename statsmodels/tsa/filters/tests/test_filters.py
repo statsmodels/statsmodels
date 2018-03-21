@@ -726,8 +726,3 @@ class TestFilters(object):
         np.testing.assert_almost_equal(res.values.squeeze(), expected, 4)
         np.testing.assert_(res.index[0] == start)
         np.testing.assert_(res.index[-1] == end)
-
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

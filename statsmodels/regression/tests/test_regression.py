@@ -1243,8 +1243,3 @@ def test_regularized_options():
     result2 = model2.fit_regularized(alpha=1., L1_wt=0.5,
                                      start_params=np.zeros(5))
     assert_allclose(result1.params, result2.params)
-
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])
