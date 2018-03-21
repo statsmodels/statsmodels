@@ -223,15 +223,20 @@ class Power(object):
             import warnings
             from statsmodels.tools.sm_exceptions import HypothesisTestWarning
             warnings.warn('Warning: Effect size of 0 detected', HypothesisTestWarning)
-            raise NotImplementedError("`power` and `alpha` variables are "
-                                      "not defined.  This section of "
-                                      "statsmodels is not maintained.")
-            if key == 'power':
-                return alpha
-            if key == 'alpha':
-                return power
-            else:
-                raise ValueError('Cannot detect an effect-size of 0. Try changing your effect-size.')
+            try:
+                if key == 'power':
+                    return alpha
+                if key == 'alpha':
+                    return power
+                else:
+                    raise ValueError('Cannot detect an effect-size of 0. Try changing your effect-size.')
+            except NameError:
+                raise NotImplementedError('`power` or `alpha` is not defined '
+                                          'because "maintenance" in this '
+                                          'section of statsmodels is excellent '
+                                          'with respect to statistics and '
+                                          'flagrantly indifferent to code '
+                                          'quality.')
 
 
         self._counter = 0
