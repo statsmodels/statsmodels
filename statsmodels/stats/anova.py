@@ -132,16 +132,14 @@ def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
     index = term_names.tolist()
     table.index = Index(index + ['Residual'])
     table.loc[index, ['df', 'sum_sq']] = np.c_[arr[~idx].sum(1), sum_sq]
-    if test == 'F':
-        table.loc[table.index[:n_rows],  test] = ((table['sum_sq']/table['df']) /
-                                                             (model.ssr/model.df_resid))
-        table.loc[table.index[:n_rows], pr_test] = stats.f.sf(table["F"], table["df"],
-                                                                         model.df_resid)
-
     # fill in residual
-    table.loc['Residual', ['sum_sq','df', test, pr_test]] = (model.ssr,
-                                                             model.df_resid,
-                                                             np.nan, np.nan)
+    table.loc['Residual', ['sum_sq','df']] = model.ssr, model.df_resid
+    if test == 'F':
+        table[test] = ((table['sum_sq'] / table['df']) /
+                       (model.ssr / model.df_resid))
+        table[pr_test] = stats.f.sf(table["F"], table["df"],
+                                    model.df_resid)
+        table.loc['Residual', [test, pr_test]] = np.nan, np.nan
     table['mean_sq'] = table['sum_sq'] / table['df']
     return table
 
@@ -333,19 +331,9 @@ def anova_lm(*args, **kwargs):
         raise ValueError("Multiple models only supported for type I. "
                          "Got type %s" % str(typ))
 
-    ### COMPUTE Anova TYPE I ###
-
-    # if given a single model
-    if len(args) == 1:
-        return anova_single(*args, **kwargs)
-
-    # received multiple fitted models
-
     test = kwargs.get("test", "F")
     scale = kwargs.get("scale", None)
     n_models = len(args)
-
-    model_formula = []
     pr_test = "Pr(>%s)" % test
     names = ['df_resid', 'ssr', 'df_diff', 'ss_diff', test, pr_test]
     table = DataFrame(np.zeros((n_models, 6)), columns = names)
