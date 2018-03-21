@@ -1468,8 +1468,10 @@ class GeneralizedPoisson(CountModel):
         dmudb = mu * exog
 
         dalpha = (mu_p * (y * ((y - 1) / a2 - 2 / a1) + a2 / a1**2))
-        dparams = dmudb * (-a4 / a1 + a3 * a2 / (a1 ** 2) + (1 + a4) *
-                  ((y - 1) / a2 - 1 / a1) + 1 / mu)
+        dparams = dmudb * (-a4 / a1 +
+                           a3 * a2 / (a1 ** 2) +
+                           (1 + a4) * ((y - 1) / a2 - 1 / a1) +
+                           1 / mu)
 
         return np.concatenate((dparams, np.atleast_2d(dalpha)),
                               axis=1)
@@ -1510,8 +1512,8 @@ class GeneralizedPoisson(CountModel):
         a1 = 1 + alpha * mu_p
         a2 = mu + alpha * mu_p * y
 
-        dp = np.sum((np.log(mu) * ((a2 - mu) * ((y - 1) / a2 - 2 / a1) + (a1 - 1) *
-              a2 / a1 ** 2)))
+        dp = np.sum((np.log(mu) * ((a2 - mu) * ((y - 1) / a2 - 2 / a1) +
+                                   (a1 - 1) * a2 / a1 ** 2)))
         return dp
 
     def hessian(self, params):
@@ -1554,29 +1556,42 @@ class GeneralizedPoisson(CountModel):
         for i in range(dim):
             for j in range(i + 1):
                 hess_arr[i,j] = np.sum(mu * exog[:,i,None] * exog[:,j,None] *
-                    (mu * (a3 * a4 / a1**2 - 2 * a3**2 * a2 / a1**3 + 2 * a3 *
-                    (a4 + 1) / a1**2 - a4 * p / (mu * a1) + a3 * p * a2 /
-                    (mu * a1**2) + a4 / (mu * a1) - a3 * a2 / (mu * a1**2) +
-                    (y - 1) * a4 * (p - 1) / (a2 * mu) - (y - 1) *
-                    (1 + a4)**2 / a2**2 - a4 * (p - 1) / (a1 * mu) - 1 /
-                    mu**2) + (-a4 / a1 + a3 * a2 / a1**2 + (y - 1) *
-                    (1 + a4) / a2 - (1 + a4) / a1 + 1 / mu)), axis=0)
+                    (mu * (a3 * a4 / a1**2 -
+                           2 * a3**2 * a2 / a1**3 +
+                           2 * a3 * (a4 + 1) / a1**2 -
+                           a4 * p / (mu * a1) +
+                           a3 * p * a2 / (mu * a1**2) +
+                           a4 / (mu * a1) -
+                           a3 * a2 / (mu * a1**2) +
+                           (y - 1) * a4 * (p - 1) / (a2 * mu) -
+                           (y - 1) * (1 + a4)**2 / a2**2 -
+                           a4 * (p - 1) / (a1 * mu) -
+                           1 / mu**2) +
+                     (-a4 / a1 +
+                      a3 * a2 / a1**2 +
+                      (y - 1) * (1 + a4) / a2 -
+                      (1 + a4) / a1 +
+                      1 / mu)), axis=0)
         tri_idx = np.triu_indices(dim, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
         # for dl/dparams dalpha
-        dldpda = np.sum((2 * a4 * mu_p / a1**2 - 2 * a3 * mu_p * a2 / a1**3 -
-                        mu_p * y * (y - 1) * (1 + a4) / a2**2 + mu_p *
-                        (1 + a4) / a1**2 + a5 * y * (y - 1) / a2 - 2 *
-                        a5 * y / a1 + a5 * a2 / a1**2) * dmudb,
+        dldpda = np.sum((2 * a4 * mu_p / a1**2 -
+                         2 * a3 * mu_p * a2 / a1**3 -
+                         mu_p * y * (y - 1) * (1 + a4) / a2**2 +
+                         mu_p * (1 + a4) / a1**2 +
+                         a5 * y * (y - 1) / a2 -
+                         2 * a5 * y / a1 +
+                         a5 * a2 / a1**2) * dmudb,
                         axis=0)
 
         hess_arr[-1,:-1] = dldpda
         hess_arr[:-1,-1] = dldpda
 
         # for dl/dalpha dalpha
-        dldada = mu_p**2 * (3 * y / a1**2 - (y / a2)**2. * (y - 1) - 2 * a2 /
-                            a1**3)
+        dldada = mu_p**2 * (3 * y / a1**2 -
+                            (y / a2)**2. * (y - 1) -
+                            2 * a2 / a1**3)
 
         hess_arr[-1,-1] = dldada.sum()
 
@@ -3017,14 +3032,16 @@ class NegativeBinomialP(CountModel):
         hess_arr = np.zeros((dim + 1, dim + 1))
 
         coeff = mu**2 * (((1 + a4)**2 * a3 / a2**2 -
-                          a3 * (a5 - a4 / mu) / a2 - y / mu**2 -
+                          a3 * (a5 - a4 / mu) / a2 -
+                          y / mu**2 -
                           2 * a4 * (1 + a4) / a2 +
                           a5 * (np.log(a1) - np.log(a2) - digamma(a1) +
                                 digamma(a3) + 2) -
                           a4 * (np.log(a1) - np.log(a2) - digamma(a1) +
                                 digamma(a3) + 1) / mu -
                           a4**2 * (polygamma(1, a1) - polygamma(1, a3))) +
-                         (-(1 + a4) * a3 / a2 + y / mu +
+                         (-(1 + a4) * a3 / a2 +
+                          y / mu +
                           a4 * (np.log(a1) - np.log(a2) - digamma(a1) +
                                 digamma(a3) + 1)) / mu)
 
