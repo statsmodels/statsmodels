@@ -1661,7 +1661,7 @@ class TestGeneralizedPoisson_p2(object):
         data = sm.datasets.randhie.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         mod = GeneralizedPoisson(data.endog, data.exog, p=2)
-        cls.res1 = mod.fit(method='newton')
+        cls.res1 = mod.fit(method='newton', disp=0)
         res2 = RandHIE()
         res2.generalizedpoisson_gp2()
         cls.res2 = res2
@@ -1712,7 +1712,7 @@ class TestGeneralizedPoisson_transparams(object):
         data = sm.datasets.randhie.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = GeneralizedPoisson(data.endog, data.exog, p=2).fit(
-            method='newton', use_transparams=True)
+            method='newton', use_transparams=True, disp=0)
         res2 = RandHIE()
         res2.generalizedpoisson_gp2()
         cls.res2 = res2
@@ -1753,7 +1753,7 @@ class TestGeneralizedPoisson_p1(object):
         cls.data = sm.datasets.randhie.load()
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
         cls.res1 = GeneralizedPoisson(
-            cls.data.endog, cls.data.exog, p=1).fit(method='newton')
+            cls.data.endog, cls.data.exog, p=1).fit(method='newton', disp=0)
 
     def test_llf(self):
         poisson_llf = sm.Poisson(
@@ -1827,7 +1827,7 @@ class TestGeneralizedPoisson_underdispersion(object):
             cls.expected_params[-1], 1, size=len(mu_true))
         model_gp = sm.GeneralizedPoisson(cls.endog, exog, p=1)
         cls.res = model_gp.fit(method='nm', xtol=1e-6, maxiter=5000,
-                               maxfun=5000)
+                               maxfun=5000, disp=0)
 
     def test_basic(self):
         res = self.res
@@ -1844,7 +1844,7 @@ class TestGeneralizedPoisson_underdispersion(object):
     def test_newton(self):
         # check newton optimization with start_params
         res = self.res
-        res2 = res.model.fit(start_params=res.params, method='newton')
+        res2 = res.model.fit(start_params=res.params, method='newton', disp=0)
         assert_allclose(res.model.score(res.params),
                         np.zeros(len(res2.params)), atol=0.01)
         assert_allclose(res.model.score(res2.params),
@@ -2104,7 +2104,7 @@ class TestNegativeBinomialPL1Compatability(CheckL1Compatability):
         # Drop some columns and do an unregularized fit
         exog_no_PSI = rand_exog[:, :cls.m]
         mod_unreg = sm.NegativeBinomialP(rand_data.endog, exog_no_PSI)
-        cls.res_unreg = mod_unreg.fit(method="newton", disp=False)
+        cls.res_unreg = mod_unreg.fit(method="newton", disp=0)
         # Do a regularized fit with alpha, effectively dropping the last column
         alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars + 1)
         alpha[:cls.m] = 0
@@ -2131,7 +2131,7 @@ class  TestNegativeBinomialPPredictProb(object):
         prob = size / (size + mu_true)
         endog = nbinom.rvs(size, prob, size=len(mu_true))
 
-        res = sm.NegativeBinomialP(endog, exog).fit()
+        res = sm.NegativeBinomialP(endog, exog).fit(disp=0)
 
         mu = res.predict()
         size = 1. / alpha * mu
@@ -2157,7 +2157,7 @@ class  TestNegativeBinomialPPredictProb(object):
         prob = size / (size + mu_true)
         endog = nbinom.rvs(size, prob, size=len(mu_true))
 
-        res = sm.NegativeBinomialP(endog, exog, p=2).fit()
+        res = sm.NegativeBinomialP(endog, exog, p=2).fit(disp=0)
 
         mu = res.predict()
         size = 1. / alpha
@@ -2179,7 +2179,7 @@ class CheckNull(object):
         return endog, exog
 
     def test_llnull(self):
-        res = self.model.fit(start_params=self.start_params)
+        res = self.model.fit(start_params=self.start_params, disp=0)
         res._results._attach_nullmodel = True
         llf0 = res.llnull
         res_null0 = res.res_null
@@ -2198,7 +2198,7 @@ class TestPoissonNull(CheckNull):
     def setup_class(cls):
         endog, exog = cls._get_data()
         cls.model = Poisson(endog, exog)
-        cls.res_null = Poisson(endog, exog[:, 0]).fit(start_params=[8.5])
+        cls.res_null = Poisson(endog, exog[:, 0]).fit(start_params=[8.5], disp=0)
         # use start params to avoid warnings
         cls.start_params = [8.5, 0]
 
@@ -2213,7 +2213,7 @@ class TestNegativeBinomialNB1Null(CheckNull):
                                           loglike_method='nb1')
         cls.res_null = cls.model_null.fit(start_params=[8, 1000],
                                           method='bfgs', gtol=1e-08,
-                                          maxiter=300)
+                                          maxiter=300, disp=0)
         # for convergence with bfgs, I needed to round down alpha start_params
         cls.start_params = np.array([7.730452, 2.01633068e-02, 1763.0])
 
@@ -2228,7 +2228,7 @@ class TestNegativeBinomialNB2Null(CheckNull):
                                           loglike_method='nb2')
         cls.res_null = cls.model_null.fit(start_params=[8, 0.5],
                                           method='bfgs', gtol=1e-06,
-                                          maxiter=300)
+                                          maxiter=300, disp=0)
         cls.start_params = np.array([8.07216448, 0.01087238, 0.44024134])
 
 
@@ -2241,7 +2241,7 @@ class TestNegativeBinomialNBP2Null(CheckNull):
         cls.model_null = NegativeBinomialP(endog, exog[:, 0], p=2)
         cls.res_null = cls.model_null.fit(start_params=[8, 1],
                                           method='bfgs', gtol=1e-06,
-                                          maxiter=300)
+                                          maxiter=300, disp=0)
         cls.start_params = np.array([8.07216448, 0.01087238, 0.44024134])
 
     def test_start_null(self):
@@ -2261,7 +2261,7 @@ class TestNegativeBinomialNBP1Null(CheckNull):
         cls.model_null = NegativeBinomialP(endog, exog[:, 0], p=1)
         cls.res_null = cls.model_null.fit(start_params=[8, 1],
                                           method='bfgs', gtol=1e-06,
-                                          maxiter=300)
+                                          maxiter=300, disp=0)
         cls.start_params = np.array([7.730452, 2.01633068e-02, 1763.0])
 
     def test_start_null(self):
@@ -2281,7 +2281,7 @@ class TestGeneralizedPoissonNull(CheckNull):
         cls.model_null = GeneralizedPoisson(endog, exog[:, 0], p=1.5)
         cls.res_null = cls.model_null.fit(start_params=[8.4, 1],
                                           method='bfgs', gtol=1e-08,
-                                          maxiter=300)
+                                          maxiter=300, disp=0)
         cls.start_params = np.array([6.91127148, 0.04501334, 0.88393736])
 
 
@@ -2293,7 +2293,7 @@ def test_null_options():
     exog[:nobs // 2, 1] = 0
     mu = np.exp(exog.sum(1))
     endog = np.random.poisson(mu)  # Note no size=nobs in np.random
-    res = Poisson(endog, exog).fit(start_params=np.log([1, 1]))
+    res = Poisson(endog, exog).fit(start_params=np.log([1, 1]), disp=0)
     llnull0 = res.llnull
     assert_(hasattr(res, 'res_llnull') is False)
     res.set_null_options(attach_results=True)
@@ -2374,6 +2374,8 @@ def test_optim_kwds_prelim():
 
 
 def test_unchanging_degrees_of_freedom():
+    import warnings
+    warnings.simplefilter('error')
     # see GH3734
     data = sm.datasets.randhie.load()
     model = sm.NegativeBinomial(data.endog, data.exog, loglike_method='nb2')
@@ -2381,17 +2383,17 @@ def test_unchanging_degrees_of_freedom():
                        0.22902315,  0.06210253,  0.06799444,  0.08406794,
                        0.18530092,  1.36645186])
 
-    res1 = model.fit(start_params=params)
+    res1 = model.fit(start_params=params, disp=0)
     assert_equal(res1.df_model, 8)
 
     reg_params = np.array([-0.04854   , -0.15019404,  0.08363671, -0.03032834,  0.17592454,
         0.06440753,  0.01584555,  0.        ,  0.        ,  1.36984628])
 
-    res2 = model.fit_regularized(alpha=100, start_params=reg_params)
+    res2 = model.fit_regularized(alpha=100, start_params=reg_params, disp=0)
     assert_(res2.df_model != 8)
     # If res2.df_model == res1.df_model, then this test is invalid.
 
-    res3 = model.fit()
+    res3 = model.fit(start_params=params, disp=0)
     # Test that the call to `fit_regularized` didn't modify model.df_model inplace.
     assert_equal(res3.df_model, res1.df_model)
     assert_equal(res3.df_resid, res1.df_resid)
