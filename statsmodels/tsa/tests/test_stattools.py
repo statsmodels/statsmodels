@@ -8,8 +8,9 @@ from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
                                                arma_order_select_ic)
 import numpy as np
 import pandas as pd
+import pytest
 from numpy.testing import (assert_almost_equal, assert_equal, assert_warns,
-                           assert_raises, dec, assert_, assert_allclose)
+                           assert_raises, assert_, assert_allclose)
 from statsmodels.datasets import macrodata, sunspots
 from pandas import Series, DatetimeIndex, DataFrame
 import os
@@ -491,7 +492,7 @@ def test_acovf_fft_vs_convolution():
             F2 = acovf(q, demean=demean, unbiased=unbiased, fft=False)
             assert_almost_equal(F1, F2, decimal=7)
 
-@dec.slow
+@pytest.mark.slow
 def test_arma_order_select_ic():
     # smoke test, assumes info-criteria are right
     from statsmodels.tsa.arima_process import arma_generate_sample

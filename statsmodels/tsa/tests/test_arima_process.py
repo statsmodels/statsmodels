@@ -5,10 +5,11 @@ from distutils.version import LooseVersion
 from statsmodels.tsa.arima_model import ARMA
 from unittest import TestCase
 
+import pytest
 import numpy as np
 from numpy.testing import (assert_array_almost_equal, assert_almost_equal,
                            assert_allclose,
-                           assert_equal, assert_raises, assert_, dec)
+                           assert_equal, assert_raises, assert_)
 
 from statsmodels.tsa.arima_process import (arma_generate_sample, arma_acovf,
                                            arma_acf, arma_impulse_response, lpol_fiar, lpol_fima,
@@ -238,7 +239,7 @@ class TestArmaProcess(TestCase):
 
         assert_raises(TypeError, process1.__mul__, [3])
 
-    @dec.skipif(NP16)
+    @pytest.mark.skipif(NP16, reason='numpy<1.7')
     def test_str_repr(self):
         process1 = ArmaProcess.from_coeffs([.9], [.2])
         out = process1.__str__()
