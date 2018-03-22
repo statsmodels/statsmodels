@@ -169,7 +169,7 @@ def _lowess_initial_fit(x_copy, y_copy, k, n):
         X[:,1] = x_copy[nn_indices[0]:nn_indices[1]]
         y_i = weights[i,:] * y_copy[nn_indices[0]:nn_indices[1]]
 
-        beta = lstsq(weights[i,:].reshape(k,1) * X, y_i)[0]
+        beta = lstsq(weights[i,:].reshape(k,1) * X, y_i, rcond=-1)[0]
         fitted[i] = beta[0] + beta[1]*x_copy[i]
 
         _lowess_update_nn(x_copy, nn_indices, i+1)
@@ -255,7 +255,7 @@ def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
         y_i = total_weights * y_copy[nn_indices[0]:nn_indices[1]]
         total_weights.shape = (k,1)
 
-        beta = lstsq(total_weights * X, y_i)[0]
+        beta = lstsq(total_weights * X, y_i, rcond=-1)[0]
 
         fitted[i] = beta[0] + beta[1] * x_copy[i]
 

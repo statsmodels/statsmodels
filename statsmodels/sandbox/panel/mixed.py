@@ -415,7 +415,7 @@ class OneWayMixed(object):
     def initialize(self):
         S = sum([np.dot(unit.X.T, unit.X) for unit in self.units])
         Y = sum([np.dot(unit.X.T, unit.Y) for unit in self.units])
-        self.a = L.lstsq(S, Y)[0]
+        self.a = L.lstsq(S, Y, rcond=-1)[0]
 
         D = 0
         t = 0
@@ -423,10 +423,10 @@ class OneWayMixed(object):
         for unit in self.units:
             unit.r = unit.Y - np.dot(unit.X, self.a)
             if self.q > 1:
-                unit.b = L.lstsq(unit.Z, unit.r)[0]
+                unit.b = L.lstsq(unit.Z, unit.r, rcond=-1)[0]
             else:
                 Z = unit.Z.reshape((unit.Z.shape[0], 1))
-                unit.b = L.lstsq(Z, unit.r)[0]
+                unit.b = L.lstsq(Z, unit.r, rcond=-1)[0]
 
             sigmasq += (np.power(unit.Y, 2).sum() -
                         (self.a * np.dot(unit.X.T, unit.Y)).sum() -
