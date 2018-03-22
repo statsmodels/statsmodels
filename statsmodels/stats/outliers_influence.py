@@ -56,6 +56,8 @@ def outlier_test(model_results, method='bonf', alpha=.05, labels=None,
     df = df_resid - 1.
     """
     from scipy import stats # lazy import
+    if labels is None:
+        labels = getattr(model_results.model.data, 'row_labels', None)
     infl = getattr(model_results, 'get_influence', None)
     if infl is None:
         results = maybe_unwrap_results(model_results)
@@ -72,8 +74,7 @@ def outlier_test(model_results, method='bonf', alpha=.05, labels=None,
     adj_p = multipletests(unadj_p, alpha=alpha, method=method)
 
     data = np.c_[resid, unadj_p, adj_p[1]]
-    if labels is None:
-        labels = getattr(model_results.model.data, 'row_labels', None)
+
     if labels is not None:
         from pandas import DataFrame
         return DataFrame(data,
