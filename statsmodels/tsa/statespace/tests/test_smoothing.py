@@ -28,7 +28,7 @@ from statsmodels.tsa.statespace.kalman_filter import (
 from statsmodels.tsa.statespace.kalman_smoother import (
     SMOOTH_CONVENTIONAL, SMOOTH_CLASSICAL, SMOOTH_ALTERNATIVE,
     SMOOTH_UNIVARIATE)
-from numpy.testing import assert_allclose, assert_almost_equal, assert_equal, assert_raises
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
