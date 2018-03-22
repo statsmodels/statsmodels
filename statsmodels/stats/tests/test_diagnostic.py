@@ -937,6 +937,12 @@ def test_outlier_test():
     assert_equal(res_outl2.index.tolist(), sorted_labels)
     assert_array_equal(res_outl2.index, res_outl1.index)
 
+    # additional keywords in method
+    res_outl3 = res_pd.outlier_test(method='b', order=True)
+    assert_equal(res_outl3.index.tolist(), sorted_labels)
+    res_outl4 = res_pd.outlier_test(method='b', order=True, cutoff=0.15)
+    assert_equal(res_outl4.index.tolist(), sorted_labels[:1])
+
 
 if __name__ == '__main__':
     import pytest
