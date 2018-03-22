@@ -1499,9 +1499,16 @@ def test_poisson_newton():
     mod = sm.Poisson(y_count, x)
     from pandas.util.testing import assert_produces_warning
     # this is not thread-safe
-    with assert_produces_warning():
-        warnings.simplefilter('always')
+    # py 2.7 and 3.3 don't raise here anymore #4235
+    import sys
+    PY3_g3 = sys.version_info[:2] > (3, 3)
+    if PY3_g3:
+        with assert_produces_warning():
+            warnings.simplefilter('always')
+            res = mod.fit(start_params=-np.ones(4), method='newton', disp=0)
+    else:
         res = mod.fit(start_params=-np.ones(4), method='newton', disp=0)
+
     assert_(not res.mle_retvals['converged'])
 
 
