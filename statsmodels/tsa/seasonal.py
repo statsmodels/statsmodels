@@ -33,7 +33,7 @@ def _extrapolate_trend(trend, npoints):
 
     k, n = np.linalg.lstsq(
         np.c_[np.arange(front, front_last), np.ones(front_last - front)],
-        trend[front:front_last])[0]
+        trend[front:front_last], rcond=-1)[0]
     extra = (np.arange(0, front) * np.c_[k] + np.c_[n]).T
     if trend.ndim == 1:
         extra = extra.squeeze()
@@ -41,7 +41,7 @@ def _extrapolate_trend(trend, npoints):
 
     k, n = np.linalg.lstsq(
         np.c_[np.arange(back_first, back), np.ones(back - back_first)],
-        trend[back_first:back])[0]
+        trend[back_first:back], rcond=-1)[0]
     extra = (np.arange(back + 1, trend.shape[0]) * np.c_[k] + np.c_[n]).T
     if trend.ndim == 1:
         extra = extra.squeeze()

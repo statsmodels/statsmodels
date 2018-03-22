@@ -381,7 +381,7 @@ class _Var(object):
         lmat = lagmat(self.y, nlags, trim='both', original='in')
         self.yred = lmat[:,:nvars]
         self.xred = lmat[:,nvars:]
-        res = np.linalg.lstsq(self.xred, self.yred)
+        res = np.linalg.lstsq(self.xred, self.yred, rcond=-1)
         self.estresults = res
         self.arlhs = res[0].reshape(nlags, nvars, nvars)
         self.arhat = ar2full(self.arlhs)
@@ -677,7 +677,7 @@ if __name__ == "__main__":
     ut = np.random.randn(1000,2)
     ar2s = vargenerate(a22,ut)
     #res = np.linalg.lstsq(lagmat(ar2s,1)[:,1:], ar2s)
-    res = np.linalg.lstsq(lagmat(ar2s,1), ar2s)
+    res = np.linalg.lstsq(lagmat(ar2s,1), ar2s, rcond=-1)
     bhat = res[0].reshape(1,2,2)
     arhat = ar2full(bhat)
     #print(maxabs(arhat - a22)

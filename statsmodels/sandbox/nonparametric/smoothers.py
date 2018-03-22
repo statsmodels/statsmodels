@@ -195,7 +195,7 @@ class PolySmoother(object):
         _y = y * _w#[:,None]
         #self.coef = np.dot(L.pinv(X).T, _y[:,None])
         #self.coef = np.dot(L.pinv(X), _y)
-        self.coef = np.linalg.lstsq(X, _y)[0]
+        self.coef = np.linalg.lstsq(X, _y, rcond=-1)[0]
         self.params = np.squeeze(self.coef)
 
 
