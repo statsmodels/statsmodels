@@ -16,6 +16,11 @@ currently all tests are against R
 import os
 
 import numpy as np
+import pandas as pd
+
+# skipping some parts
+from distutils.version import LooseVersion
+PD_GE_17 = LooseVersion(pd.__version__) >= '0.17'
 
 from numpy.testing import (assert_, assert_almost_equal, assert_equal,
                            assert_approx_equal, assert_allclose,
@@ -921,21 +926,25 @@ def test_outlier_test():
     np.testing.assert_almost_equal(res.values, res2, 7)
     np.testing.assert_equal(res.index.tolist(), sorted_labels)  # pylint: disable-msg=E1103
 
-    import pandas as pd
     data = pd.DataFrame(np.column_stack((endog, exog)),
                         columns='y const var1 var2'.split(),
                         index=labels)
 
     # check `order` with pandas bug in #3971
     res_pd = OLS.from_formula('y ~ const + var1 + var2 - 0', data).fit()
-    res_outl1 = res_pd.outlier_test(method='b')
-    res_outl1 = res_outl1.sort_values(['unadj_p'], ascending=True)
+
     res_outl2 = oi.outlier_test(res_pd, method='b', order=True)
-    assert_almost_equal(res_outl1.values, res2, 7)
-    assert_equal(res_outl1.index.tolist(), sorted_labels)
     assert_almost_equal(res_outl2.values, res2, 7)
     assert_equal(res_outl2.index.tolist(), sorted_labels)
-    assert_array_equal(res_outl2.index, res_outl1.index)
+
+    if PD_GE_17:
+        # pandas < 0.17 does not have sort_values method
+        res_outl1 = res_pd.outlier_test(method='b')
+        res_outl1 = res_outl1.sort_values(['unadj_p'], ascending=True)
+        assert_almost_equal(res_outl1.values, res2, 7)
+        assert_equal(res_outl1.index.tolist(), sorted_labels)
+        assert_array_equal(res_outl2.index, res_outl1.index)
+
 
     # additional keywords in method
     res_outl3 = res_pd.outlier_test(method='b', order=True)
