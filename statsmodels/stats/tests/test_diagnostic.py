@@ -16,9 +16,15 @@ currently all tests are against R
 import os
 
 import numpy as np
+import pandas as pd
+
+# skipping some parts
+from distutils.version import LooseVersion
+PD_GE_17 = LooseVersion(pd.__version__) >= '0.17'
 
 from numpy.testing import (assert_, assert_almost_equal, assert_equal,
-                           assert_approx_equal, assert_allclose)
+                           assert_approx_equal, assert_allclose,
+                           assert_array_equal)
 import pytest
 
 from statsmodels.regression.linear_model import OLS, GLSAR
@@ -326,7 +332,7 @@ class TestDiagnosticG(object):
         res = self.res
 
         #general test
-        
+
         #> bt = Box.test(residuals(fm), lag=4, type = "Ljung-Box")
         #> mkhtest(bt, "ljung_box_4", "chi2")
         ljung_box_4 = dict(statistic=5.23587172795227, pvalue=0.263940335284713,
@@ -365,7 +371,7 @@ class TestDiagnosticG(object):
     def test_acorr_ljung_box_small_default(self):
         res = self.res
         #test with small dataset and default lag
-        
+
         #> bt = Box.test(residuals(fm), type = "Ljung-Box")
         #> mkhtest(bt, "ljung_box_small", "chi2")
         ljung_box_small = dict(statistic=9.61503968281915, pvalue=0.72507000996945,
@@ -919,6 +925,32 @@ def test_outlier_test():
     res = oi.outlier_test(ndarray_mod, method='b', labels=labels, order=True)
     np.testing.assert_almost_equal(res.values, res2, 7)
     np.testing.assert_equal(res.index.tolist(), sorted_labels)  # pylint: disable-msg=E1103
+
+    data = pd.DataFrame(np.column_stack((endog, exog)),
+                        columns='y const var1 var2'.split(),
+                        index=labels)
+
+    # check `order` with pandas bug in #3971
+    res_pd = OLS.from_formula('y ~ const + var1 + var2 - 0', data).fit()
+
+    res_outl2 = oi.outlier_test(res_pd, method='b', order=True)
+    assert_almost_equal(res_outl2.values, res2, 7)
+    assert_equal(res_outl2.index.tolist(), sorted_labels)
+
+    if PD_GE_17:
+        # pandas < 0.17 does not have sort_values method
+        res_outl1 = res_pd.outlier_test(method='b')
+        res_outl1 = res_outl1.sort_values(['unadj_p'], ascending=True)
+        assert_almost_equal(res_outl1.values, res2, 7)
+        assert_equal(res_outl1.index.tolist(), sorted_labels)
+        assert_array_equal(res_outl2.index, res_outl1.index)
+
+
+    # additional keywords in method
+    res_outl3 = res_pd.outlier_test(method='b', order=True)
+    assert_equal(res_outl3.index.tolist(), sorted_labels)
+    res_outl4 = res_pd.outlier_test(method='b', order=True, cutoff=0.15)
+    assert_equal(res_outl4.index.tolist(), sorted_labels[:1])
 
 
 if __name__ == '__main__':
