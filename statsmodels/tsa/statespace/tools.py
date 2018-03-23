@@ -246,7 +246,7 @@ def companion_matrix(polynomial):
     Given coefficients of a lag polynomial of the form:
 
     .. math::
-    
+
         c(L) = c_0 + c_1 L + \dots + c_p L^p
 
     returns a matrix of the form
@@ -1894,7 +1894,6 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
     copy(a, b, np.asfortranarray(index))
 
     return b
-
 
 
 def prepare_exog(exog):
