@@ -1809,11 +1809,13 @@ def test_bad_start_params():
          801.1112548 ,   796.16163313,   817.2496376 ,   857.73046447,
          838.849345  ,   761.92338873,   731.7842242 ,   770.4641844 ])
     mod = ARMA(endog, (15, 0))
-    assert_raises(ValueError, mod.fit)
+    with pytest.raises(ValueError):
+        mod.fit()
 
     inv = load_macrodata().data['realinv']
     arima_mod = ARIMA(np.log(inv), (1,1,2))
-    assert_raises(ValueError, mod.fit)
+    with pytest.raises(ValueError):
+        mod.fit()
 
 
 def test_arima_small_data_bug():
@@ -1827,7 +1829,8 @@ def test_arima_small_data_bug():
     ts = pd.Series(vals, index=dr)
     df = pd.DataFrame(ts)
     mod = sm.tsa.ARIMA(df, (2, 0, 2))
-    assert_raises(ValueError, mod.fit)
+    with pytest.raises(ValueError):
+        mod.fit()
 
 
 def test_arima_dataframe_integer_name():
@@ -1951,7 +1954,8 @@ class TestARMA00(object):
 
     def test_arma_00_nc(self):
         arma_00 = ARMA(self.y, order=(0, 0))
-        assert_raises(ValueError, arma_00.fit, trend='nc', disp=-1)
+        with pytest.raises(ValueError):
+            arma_00.fit(trend='nc', disp=-1)
 
     def test_css(self):
         arma = ARMA(self.y, order=(0, 0))
@@ -2004,7 +2008,8 @@ def test_arma_missing():
     # bug 1343
     y = np.random.random(40)
     y[-1] = np.nan
-    assert_raises(MissingDataError, ARMA, y, (1, 0), missing='raise')
+    with pytest.raises(MissingDataError):
+        ARMA(y, (1, 0), missing='raise')
 
 
 @skipif(not have_matplotlib, reason='matplotlib not available')
@@ -2271,7 +2276,8 @@ def test_long_ar_start_params():
     res = model.fit(method='css',start_ar_lags=10, disp=0)
     res = model.fit(method='css-mle',start_ar_lags=10, disp=0)
     res = model.fit(method='mle',start_ar_lags=10, disp=0)
-    assert_raises(ValueError, model.fit, start_ar_lags=nobs+5, disp=0)
+    with pytest.raises(ValueError):
+        model.fit(start_ar_lags=nobs + 5, disp=0)
 
 
 def test_arma_pickle():
@@ -2309,7 +2315,8 @@ def test_arima_pickle():
 def test_arima_not_implemented():
     formula = ' WUE ~ 1 + SFO3 '
     data = [-1214.360173, -1848.209905, -2100.918158]
-    assert_raises(NotImplementedError, ARIMA.from_formula, formula, data)
+    with pytest.raises(NotImplementedError):
+        ARIMA.from_formula(formula, data)
 
 
 if __name__ == "__main__":

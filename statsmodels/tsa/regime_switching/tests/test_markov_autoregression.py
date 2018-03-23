@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.tools import add_constant
 from statsmodels.tsa.regime_switching import markov_autoregression
-from numpy.testing import assert_equal, assert_allclose, assert_raises
+from numpy.testing import assert_equal, assert_allclose
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 

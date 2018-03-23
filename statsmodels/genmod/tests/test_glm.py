@@ -7,7 +7,7 @@ from statsmodels.compat.testing import skipif
 
 import os
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
+from numpy.testing import (assert_almost_equal, assert_equal,
                            assert_allclose, assert_, assert_array_less, dec)
 from scipy import stats
 import statsmodels.api as sm
@@ -770,7 +770,8 @@ def test_perfect_pred():
     y = y[y != 2]
     X = add_constant(X, prepend=True)
     glm = GLM(y, X, family=sm.families.Binomial())
-    assert_raises(PerfectSeparationError, glm.fit)
+    with pytest.raises(PerfectSeparationError):
+        glm.fit()
 
 
 def test_score_test_OLS():
@@ -875,10 +876,14 @@ def test_formula_missing_exposure():
 
     exposure = pd.Series(np.random.uniform(size=5))
     df.loc[3, 'Bar'] = 4   # nan not relevant for Valueerror for shape mismatch
-    assert_raises(ValueError, smf.glm, "Foo ~ Bar", data=df,
-                  exposure=exposure, family=family)
-    assert_raises(ValueError, GLM, df.Foo, df[['constant', 'Bar']],
-                  exposure=exposure, family=family)
+
+    with pytest.raises(ValueError):
+        smf.glm("Foo ~ Bar", data=df,
+                exposure=exposure, family=family)
+
+    with pytest.raises(ValueError):
+        GLM(df.Foo, df[['constant', 'Bar']],
+            exposure=exposure, family=family)
 
 
 @skipif(not have_matplotlib, reason='matplotlib not available')

@@ -15,7 +15,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from numpy.testing import (assert_, assert_raises, assert_almost_equal,
+from numpy.testing import (assert_, assert_almost_equal,
                            assert_equal, assert_array_equal, assert_allclose,
                            assert_array_less)
 import pytest
@@ -670,7 +670,8 @@ class CheckL1Compatability(object):
 
     def test_bad_r_matrix(self):
         kvars = self.kvars
-        assert_raises(ValueError, self.res_reg.f_test, np.eye(kvars) )
+        with pytest.raises(ValueError):
+            self.res_reg.f_test(np.eye(kvars))
 
 
 class TestPoissonL1Compatability(CheckL1Compatability):
@@ -1452,7 +1453,9 @@ def test_perfect_prediction():
     y = y[y != 2]
     X = sm.add_constant(X, prepend=True)
     mod = Logit(y,X)
-    assert_raises(PerfectSeparationError, mod.fit, maxiter=1000)
+    with pytest.raises(PerfectSeparationError):
+        mod.fit(maxiter=1000)
+
     #turn off raise PerfectSeparationError
     mod.raise_on_perfect_prediction = False
     # this will raise if you set maxiter high enough with a singular matrix
@@ -1550,7 +1553,8 @@ def test_isdummy():
 def test_non_binary():
     y = [1, 2, 1, 2, 1, 2]
     X = np.random.randn(6, 2)
-    np.testing.assert_raises(ValueError, Logit, y, X)
+    with pytest.raises(ValueError):
+        Logit(y, X)
 
 
 def test_mnlogit_factor():
@@ -1588,9 +1592,8 @@ def test_formula_missing_exposure():
     # make sure this raises
     exposure = pd.Series(np.random.uniform(size=5))
     df.loc[3, 'Bar'] = 4   # nan not relevant for ValueError for shape mismatch
-    assert_raises(ValueError, sm.Poisson, df.Foo, df[['constant', 'Bar']],
-                  exposure=exposure)
-
+    with pytest.raises(ValueError):
+        sm.Poisson(df.Foo, df[['constant', 'Bar']], exposure=exposure)
 
 def test_predict_with_exposure():
     # Case where CountModel.predict is called with exog = None and exposure
