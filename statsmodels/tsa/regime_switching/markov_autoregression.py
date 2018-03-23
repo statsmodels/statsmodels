@@ -488,5 +488,5 @@ class MarkovAutoregressionResults(markov_regression.MarkovRegressionResults):
 class MarkovAutoregressionResultsWrapper(
         markov_regression.MarkovRegressionResultsWrapper):
     pass
-wrap.populate_wrapper(MarkovAutoregressionResultsWrapper,
+wrap.populate_wrapper(MarkovAutoregressionResultsWrapper,  # noqa:E305
                       MarkovAutoregressionResults)
