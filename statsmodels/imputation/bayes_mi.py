@@ -6,12 +6,14 @@ class BayesMI(object):
     """
     BayesMI uses a Gaussian model to impute multivariate data.
 
-    The approach is Bayesian.  Conjugate priors for the population
-    mean and covariance matrix are used.  Then Gibbs sampling is used
-    to update the mean vector, covariance matrix, and missing data
-    values in turn.  After burn-in, the imputed complete data sets
-    from the Gibbs chain can be used in multiple imputation analyses
-    (MI).
+    The approach is Bayesian, the goal is to sample from the joint
+    distribution of the mean vector, covariance matrix, and missing
+    data values given the observed data values.  Conjugate priors for
+    the population mean and covariance matrix are used.  Gibbs
+    sampling is used to update the mean vector, covariance matrix, and
+    missing data values in turn.  After burn-in, the imputed complete
+    data sets from the Gibbs chain can be used in multiple imputation
+    analyses (MI).
 
     Parameters
     ----------
@@ -33,7 +35,6 @@ class BayesMI(object):
     Returns:
     -------
     MIResults object
-
 
     Examples:
     ---------
