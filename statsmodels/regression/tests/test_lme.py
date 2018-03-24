@@ -1,4 +1,3 @@
-from statsmodels.compat.testing import skipif
 
 import warnings
 import numpy as np
@@ -8,7 +7,7 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_)
 from . import lme_r_results
 from statsmodels.base import _penalties as penalties
-from numpy.testing import dec
+import pytest
 import statsmodels.tools.numdiff as nd
 import os
 import csv
@@ -88,7 +87,7 @@ def loglike_function(model, profile_fe, has_fe):
 class TestMixedLM(object):
 
     # Test analytic scores and Hessian using numeric differentiation
-    @dec.slow
+    @pytest.mark.slow
     def test_compare_numdiff(self):
 
         n_grp = 200
@@ -215,7 +214,7 @@ class TestMixedLM(object):
                         dist_high=0.5, num_high=3)
 
     # Fails on old versions of scipy/numpy
-    @skipif(old_scipy, 'SciPy too old')
+    @pytest.mark.skipif(old_scipy, reason='SciPy too old')
     def test_vcomp_1(self):
         # Fit the same model using constrained random effects and
         # variance components.
@@ -313,7 +312,7 @@ class TestMixedLM(object):
         assert_allclose(result1.bse.iloc[0:3], [
                         0.12610, 0.03938, 0.03848], rtol=1e-3)
 
-    @skipif(old_scipy, 'SciPy too old')
+    @pytest.mark.skipif(old_scipy, reason='SciPy too old')
     def test_vcomp_3(self):
         # Test a model with vcomp but no other random effects, using formulas.
 
@@ -339,7 +338,7 @@ class TestMixedLM(object):
                         np.r_[-0.101549, 0.028613, -0.224621, -0.126295],
                         rtol=1e-3)
 
-    @skipif(old_scipy, 'SciPy too old')
+    @pytest.mark.skipif(old_scipy, reason='SciPy too old')
     def test_sparse(self):
 
         cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -663,7 +662,7 @@ class TestMixedLM(object):
             rslt5 = mod5.fit()
         assert_almost_equal(rslt4.params, rslt5.params)
 
-    @skipif(old_scipy, 'SciPy too old')
+    @pytest.mark.skipif(old_scipy, reason='SciPy too old')
     def test_regularized(self):
 
         np.random.seed(3453)

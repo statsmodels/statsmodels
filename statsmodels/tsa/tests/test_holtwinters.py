@@ -6,7 +6,7 @@ Created on Wed Jul 12 09:44:01 2017
 
 import numpy as np
 import pandas as pd
-from numpy.testing import assert_almost_equal, assert_equal, assert_raises
+from numpy.testing import assert_almost_equal, assert_equal
 from statsmodels.tsa.holtwinters import (ExponentialSmoothing,
                                          SimpleExpSmoothing, Holt)
 from pandas import DataFrame, DatetimeIndex

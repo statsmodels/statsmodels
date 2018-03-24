@@ -1,8 +1,7 @@
-from statsmodels.compat.testing import skip
 
+import pytest
 import numpy as np
 import numpy.testing as npt
-import numpy.testing.decorators as dec
 
 import statsmodels.api as sm
 nparam = sm.nonparametric
@@ -174,7 +173,8 @@ class TestKernelReg(KernelRegressionTestBase):
         sm_R2 = model.r_squared()  # TODO: add expected result
         npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
 
-    @skip("Test doesn't make much sense - always passes with very small bw.")
+    @pytest.mark.skip(reason="Test doesn't make much sense - always passes "
+                             "with very small bw.")
     def test_mfx_nonlinear_ll_cvls(self, file_name='RegData.csv'):
         #FIXME
         nobs = 200
@@ -199,7 +199,7 @@ class TestKernelReg(KernelRegressionTestBase):
         #npt.assert_allclose(sm_mfx[0:10,1], mfx2[0:10], rtol=2e-1)
         npt.assert_allclose(sm_mean, Y, rtol = 2e-1)
 
-    @dec.slow
+    @pytest.mark.slow
     def test_continuous_cvls_efficient(self):
         nobs = 500
         np.random.seed(12345)
@@ -219,7 +219,7 @@ class TestKernelReg(KernelRegressionTestBase):
                                  var_type='c', bw='cv_ls')
         npt.assert_allclose(model.bw, model_efficient.bw, atol=5e-2, rtol=1e-1)
 
-    @dec.slow
+    @pytest.mark.slow
     def test_censored_ll_cvls(self):
         nobs = 200
         np.random.seed(1234)
@@ -234,7 +234,7 @@ class TestKernelReg(KernelRegressionTestBase):
         sm_mean, sm_mfx = model.fit()
         npt.assert_allclose(sm_mfx[0,:], [1.2, -0.9], rtol = 2e-1)
 
-    @dec.slow
+    @pytest.mark.slow
     def test_continuous_lc_aic(self):
         nobs = 200
         np.random.seed(1234)
@@ -255,7 +255,7 @@ class TestKernelReg(KernelRegressionTestBase):
         bw_expected = [0.3987821, 0.50933458]
         npt.assert_allclose(model.bw, bw_expected, rtol=1e-3)
 
-    @dec.slow
+    @pytest.mark.slow
     def test_significance_continuous(self):
         nobs = 250
         np.random.seed(12345)
@@ -279,7 +279,7 @@ class TestKernelReg(KernelRegressionTestBase):
         sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
         npt.assert_equal(sig_var2 == 'Not Significant', True)
 
-    @dec.slow
+    @pytest.mark.slow
     def test_significance_discrete(self):
         nobs = 200
         np.random.seed(12345)

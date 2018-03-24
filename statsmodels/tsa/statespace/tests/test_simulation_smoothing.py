@@ -21,7 +21,7 @@ from statsmodels.tsa.statespace.kalman_smoother import (
     SMOOTH_UNIVARIATE)
 from statsmodels.tsa.statespace.simulation_smoother import (
     SIMULATION_STATE, SIMULATION_DISTURBANCE, SIMULATION_ALL)
-from numpy.testing import assert_allclose, assert_almost_equal, assert_equal, assert_raises
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pytest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
