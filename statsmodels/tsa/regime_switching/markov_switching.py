@@ -42,8 +42,6 @@ prefix_kim_smoother_map = {
 }
 
 
-
-
 def _logistic(x):
     """
     Note that this is not a vectorized function
@@ -2272,4 +2270,5 @@ class MarkovSwitchingResultsWrapper(wrap.ResultsWrapper):
     }
     _wrap_methods = wrap.union_dicts(
         tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods)
-wrap.populate_wrapper(MarkovSwitchingResultsWrapper, MarkovSwitchingResults)
+wrap.populate_wrapper(MarkovSwitchingResultsWrapper,  # noqa:E305
+                      MarkovSwitchingResults)
