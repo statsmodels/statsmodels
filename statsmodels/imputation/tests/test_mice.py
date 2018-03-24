@@ -166,14 +166,22 @@ class TestMICEData(object):
 
         from statsmodels.duration.hazard_regression import PHReg
 
-        idata = mice.MICEData(df)
-        idata.set_imputer("time", "0 + x1 + x2", model_class=PHReg,
-                          init_kwds={"status": mice.PatsyFormula("status")},
-                          predict_kwds={"pred_type": "hr"})
+        # Save the dataset size at each iteration.
+        hist = []
+        def cb(imp):
+            hist.append(imp.data.shape)
 
-        x = idata.next_sample()
-        assert(isinstance(x, pd.DataFrame))
+        for pm in "gaussian", "boot":
+            idata = mice.MICEData(df, perturbation_method=pm, history_callback=cb)
+            idata.set_imputer("time", "0 + x1 + x2", model_class=PHReg,
+                              init_kwds={"status": mice.PatsyFormula("status")},
+                              predict_kwds={"pred_type": "hr"},
+                              perturbation_method=pm)
 
+            x = idata.next_sample()
+            assert(isinstance(x, pd.DataFrame))
+
+        assert(all([x == (299, 4) for x in hist]))
 
     def test_set_imputer(self):
         # Test with specified perturbation method.
@@ -299,6 +307,14 @@ class TestMICE(object):
         for j in range(3):
             x = mi.next_sample()
             assert(issubclass(x.__class__, RegressionResultsWrapper))
+
+
+    def test_MICE1_regularized(self):
+
+        df = gendat()
+        imp = mice.MICEData(df, perturbation_method='boot')
+        imp.set_imputer('x1', 'x2 + y', fit_kwds={'alpha': 1, 'L1_wt': 0})
+        imp.update_all()
 
 
     def test_MICE2(self):
