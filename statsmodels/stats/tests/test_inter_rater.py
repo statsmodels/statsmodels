@@ -7,7 +7,7 @@ Author: Josef Perktold
 """
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
 
 from statsmodels.stats.inter_rater import (fleiss_kappa, cohens_kappa,
                                            to_table, aggregate_raters)
@@ -74,6 +74,41 @@ def test_fleiss_kappa():
     #currently only example from Wikipedia page
     kappa_wp = 0.210
     assert_almost_equal(fleiss_kappa(table1), kappa_wp, decimal=3)
+
+
+def test_fleis_randolph():
+    # reference numbers from online calculator
+    # http://justusrandolph.net/kappa/#dInfo
+    table = [[7, 0], [7, 0]]
+    assert_equal(fleiss_kappa(table, method='unif'), 1)
+
+    table = [[6.99, 0.01], [6.99, 0.01]]
+    # % Overall Agreement 0.996671
+    # Fixed Marginal Kappa: -0.166667
+    # Free Marginal Kappa: 0.993343
+    assert_allclose(fleiss_kappa(table), -0.166667, atol=6e-6)
+    assert_allclose(fleiss_kappa(table, method='unif'), 0.993343, atol=6e-6)
+
+    table = [[7, 1], [3, 5]]
+    # % Overall Agreement 0.607143
+    # Fixed Marginal Kappa: 0.161905
+    # Free Marginal Kappa: 0.214286
+    assert_allclose(fleiss_kappa(table, method='fleiss'), 0.161905, atol=6e-6)
+    assert_allclose(fleiss_kappa(table, method='randolph'), 0.214286, atol=6e-6)
+
+    table = [[7, 0], [0, 7]]
+    # % Overall Agreement 1.000000
+    # Fixed Marginal Kappa: 1.000000
+    # Free Marginal Kappa: 1.000000
+    assert_allclose(fleiss_kappa(table), 1)
+    assert_allclose(fleiss_kappa(table, method='uniform'), 1)
+
+    table = [[6, 1, 0], [0, 7, 0]]
+    # % Overall Agreement 0.857143
+    # Fixed Marginal Kappa: 0.708333
+    # Free Marginal Kappa: 0.785714
+    assert_allclose(fleiss_kappa(table), 0.708333, atol=6e-6)
+    assert_allclose(fleiss_kappa(table, method='rand'), 0.785714, atol=6e-6)
 
 
 class CheckCohens(object):
@@ -316,9 +351,3 @@ def test_aggregate_raters():
     resf = aggregate_raters(data)
     colsum = np.array([26, 26, 30, 55, 43])
     assert_equal(resf[0].sum(0), colsum)
-
-
-if __name__ == '__main__':
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])
-
