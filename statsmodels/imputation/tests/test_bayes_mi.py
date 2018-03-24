@@ -5,7 +5,7 @@ from statsmodels.imputation.bayes_mi import BayesMI, MI
 from numpy.testing import assert_allclose
 
 
-def test_bmi():
+def test_pat():
 
     x = np.asarray([[1, np.nan, 3], [np.nan, 2, np.nan], [3, np.nan, 0],
                     [np.nan, 1, np.nan], [3, 2, 1]])
@@ -81,12 +81,12 @@ def test_MI():
         r = mi.fit()
         r.summary()  # smoke test
         assert_allclose(r.params, np.r_[
-            -0.05347919, -0.02479701, 0.10075517], 1e-4, 1e-4)
+            -0.05347919, -0.02479701, 0.10075517], 1e-3, 1e-2)
 
         c = np.asarray([[0.00418232, 0.00029746, -0.00035057],
                         [0.00029746, 0.00407264, 0.00019496],
                         [-0.00035057, 0.00019496, 0.00509413]])
-        assert_allclose(r.cov_params(), c, 1e-4, 1e-4)
+        assert_allclose(r.cov_params(), c, 1e-2, 1e-3)
 
         # Test with ndarray and pandas input
         x = pd.DataFrame(x)
