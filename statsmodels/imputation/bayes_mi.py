@@ -2,11 +2,11 @@ import numpy as np
 from statsmodels.base.model import LikelihoodModelResults
 
 
-class BayesMI(object):
+class BayesGaussMI(object):
     """
-    BayesMI uses a Gaussian model to impute multivariate data.
+    BayesGaussMI uses a Gaussian model to impute multivariate data.
 
-    The approach is Bayesian, the goal is to sample from the joint
+    The approach is Bayesian.  The goal is to sample from the joint
     distribution of the mean vector, covariance matrix, and missing
     data values given the observed data values.  Conjugate priors for
     the population mean and covariance matrix are used.  Gibbs
@@ -41,9 +41,9 @@ class BayesMI(object):
     A basic example with OLS:
 
     >> def model_args(x):
-           # Return endog, exog
+           # Return endog, exog from x
            return (x[:, 0], x[:, 1:])
-    >> imp = BayesMI(x)
+    >> imp = BayesGaussMI(x)
     >> mi = MI(imp, sm.OLS, model_args)
     """
 
@@ -100,6 +100,8 @@ class BayesMI(object):
         """
 
         self.update_data()
+
+        # Need to update data first
         self.update_mean()
         self.update_cov()
 
@@ -146,6 +148,7 @@ class BayesMI(object):
         vm = np.linalg.solve(self.cov, self.data.sum(0))
         vm = np.dot(cm, vm)
 
+        # Sample
         r = np.linalg.cholesky(cm)
         self.mean = vm + np.dot(r, np.random.normal(0, 1, self.nvar))
 
@@ -175,7 +178,7 @@ class MI(object):
     Parameters:
     -----------
     imp : object
-        An imputer class, such as BayesMI.
+        An imputer class, such as BayesGaussMI.
     model : model class
         Any statsmodels model class.
     model_args : list-like, optional
@@ -201,7 +204,7 @@ class MI(object):
 
     Notes
     -----
-    The imputer object must have an update method, and a data
+    The imputer object must have an 'update' method, and a 'data'
     attribute that contains the current imputed dataset.
 
     xfunc can be used to introduce domain constraints, e.g. when
@@ -251,6 +254,13 @@ class MI(object):
             imp.update()
 
     def fit(self):
+        """
+        fit imputes datasets, fits models, and pools results.
+
+        Returns
+        -------
+        A MIResults object.
+        """
 
         par = []
         cov = []
@@ -278,6 +288,7 @@ class MI(object):
         return r
 
     def _combine(self, par, cov):
+        # Helper function to apply "Rubin's combining rule"
 
         par = np.asarray(par)
 
