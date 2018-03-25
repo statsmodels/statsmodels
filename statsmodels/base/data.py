@@ -2,7 +2,7 @@
 Base tools for handling various kinds of data structures, attaching metadata to
 results, and doing data cleaning
 """
-from statsmodels.compat.python import reduce, iteritems, lmap, zip, range
+from statsmodels.compat.python import reduce, iteritems, zip, range
 from statsmodels.compat.numpy import np_matrix_rank
 import numpy as np
 from pandas import DataFrame, Series, isnull
@@ -177,9 +177,17 @@ class ModelData(object):
                 self.k_constant = int(rank_orig == rank_augm)
                 self.const_idx = None
 
-
     @classmethod
     def _drop_nans(cls, x, nan_mask):
+        if np.ndim(x) == 1:
+            return cls._drop_nans_1d(x, nan_mask)
+        elif np.ndim(x) == 2:
+            return cls._drop_nans_2d(x, nan_mask)
+        else:
+            raise ValueError(np.ndim)
+
+    @classmethod
+    def _drop_nans_1d(cls, x, nan_mask):
         return x[nan_mask]
 
     @classmethod
@@ -282,9 +290,8 @@ class ModelData(object):
 
         elif missing == 'drop':
             nan_mask = ~nan_mask
-            drop_nans = lambda x: cls._drop_nans(x, nan_mask)
-            drop_nans_2d = lambda x: cls._drop_nans_2d(x, nan_mask)
-            combined = dict(zip(combined_names, lmap(drop_nans, combined)))
+            combined = dict(zip(combined_names, [cls._drop_nans(x, nan_mask)
+                                                 for x in combined])
 
             if missing_idx is not None:
                 if updated_row_mask is not None:
@@ -300,7 +307,8 @@ class ModelData(object):
 
             if combined_2d:
                 combined.update(dict(zip(combined_2d_names,
-                                         lmap(drop_nans_2d, combined_2d))))
+                                         [cls._drop_nans(x, nan_mask)
+                                          for x in combined_2d]))
             if none_array_names:
                 combined.update(dict(zip(none_array_names,
                                          [None] * len(none_array_names))))
@@ -476,11 +484,11 @@ class PandasData(ModelData):
         return super(PandasData, self)._convert_endog_exog(endog, exog)
 
     @classmethod
-    def _drop_nans(cls, x, nan_mask):
+    def _drop_nans_1d(cls, x, nan_mask):
         if hasattr(x, 'ix'):
             return x.loc[nan_mask]
         else:  # extra arguments could be plain ndarrays
-            return super(PandasData, cls)._drop_nans(x, nan_mask)
+            return super(PandasData, cls)._drop_nans_1d(x, nan_mask)
 
     @classmethod
     def _drop_nans_2d(cls, x, nan_mask):
