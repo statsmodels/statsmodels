@@ -2,7 +2,7 @@
 ## Regression diagnostics
 
 # This example file shows how to use a few of the ``statsmodels`` regression diagnostic tests in a real-life context. You can learn about more tests and find out more information abou the tests here on the [Regression Diagnostics page.](http://www.statsmodels.org/stable/diagnostic.html)
-# 
+#
 # Note that most of the tests described here only return a tuple of numbers, without any annotation. A full description of outputs is always included in the docstring and in the online ``statsmodels`` documentation. For presentation purposes, we use the ``zip(name,test)`` construct to pretty-print(short descriptions in the examples below.
 
 # ## Estimate a regression model
@@ -43,7 +43,7 @@ lzip(name, test)
 
 
 # ## Influence tests
-# 
+#
 # Once created, an object of class ``OLSInfluence`` holds attributes and methods that allow users to assess the influence of each observation. For example, we can compute and extract the first few rows of DFbetas by:
 
 from statsmodels.stats.outliers_influence import OLSInfluence
@@ -52,7 +52,7 @@ test_class.dfbetas[:5,:]
 
 
 # Explore other options by typing ``dir(influence_test)``
-# 
+#
 # Useful information on leverage can also be plotted:
 
 from statsmodels.graphics.regressionplots import plot_leverage_resid2
@@ -62,17 +62,17 @@ print(plot_leverage_resid2(results))
 # Other plotting options can be found on the [Graphics page.](http://www.statsmodels.org/stable/graphics.html)
 
 # ## Multicollinearity
-# 
+#
 # Condition number:
 
 np.linalg.cond(results.model.exog)
 
 
 # ## Heteroskedasticity tests
-# 
+#
 # Breush-Pagan test:
 
-name = ['Lagrange multiplier statistic', 'p-value', 
+name = ['Lagrange multiplier statistic', 'p-value',
         'f-value', 'f p-value']
 test = sms.het_breushpagan(results.resid, results.model.exog)
 lzip(name, test)
@@ -86,7 +86,7 @@ lzip(name, test)
 
 
 # ## Linearity
-# 
+#
 # Harvey-Collier multiplier test for Null hypothesis that the linear specification is correct:
 
 name = ['t value', 'p value']

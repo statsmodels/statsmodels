@@ -5,7 +5,7 @@
 """
 State Space Models
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 """
 
@@ -362,7 +362,7 @@ cdef class {{prefix}}SimulationSmoother(object):
 
         if simulation_output == -1:
             simulation_output = self.simulation_output
-        
+
         # Forwards recursion
         # 0. Statespace initialization
         if not self.model.initialized:

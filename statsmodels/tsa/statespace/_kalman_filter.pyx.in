@@ -5,7 +5,7 @@
 """
 Kalman Filter
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 """
 
@@ -165,23 +165,23 @@ cdef class {{prefix}}KalmanFilter(object):
     steps.
 
     `initialize_object_pointers` initializes pointers to current-iteration
-    objects (i.e. the state space arrays and filter output arrays).  
+    objects (i.e. the state space arrays and filter output arrays).
 
     `initialize_function_pointers` initializes pointers to the appropriate
     Kalman filtering routines (i.e. `forecast_conventional` or
-    `forecast_exact_initial`, etc.).  
+    `forecast_exact_initial`, etc.).
 
     `select_arrays` converts the base arrays into "selected" arrays using
     selection matrices. In particular, it handles the state covariance matrix
-    and redefined matrices based on missing values.  
+    and redefined matrices based on missing values.
 
     `post_convergence` handles copying arrays from time $t-1$ to time $t$ when
-    the Kalman filter has converged and they don't need to be re-calculated.  
+    the Kalman filter has converged and they don't need to be re-calculated.
 
     `forecasting` calls the Kalman filter `forcasting_<filter type>` routine
 
     `inversion` calls the appropriate function to invert the forecast error
-    covariance matrix.  
+    covariance matrix.
 
     `updating` calls the Kalman filter `updating_<filter type>` routine
 
@@ -190,7 +190,7 @@ cdef class {{prefix}}KalmanFilter(object):
     `prediction` calls the Kalman filter `prediction_<filter type>` routine
 
     `numerical_stability` performs end-of-iteration tasks to improve the numerical
-    stability of the filter 
+    stability of the filter
 
     `check_convergence` checks for convergence of the filter to steady-state.
     """
@@ -199,7 +199,7 @@ cdef class {{prefix}}KalmanFilter(object):
     # cdef readonly {{prefix}}Statespace model
 
     # ### Filter parameters
-    # Holds the time-iteration state of the filter  
+    # Holds the time-iteration state of the filter
     # *Note*: must be changed using the `seek` method
     # cdef readonly int t
     # Holds the tolerance parameter for convergence
@@ -211,7 +211,7 @@ cdef class {{prefix}}KalmanFilter(object):
     # Holds whether or not the model is time-invariant
     # *Note*: is by default reset each time `seek` is called
     # cdef readonly int time_invariant
-    # The Kalman filter procedure to use  
+    # The Kalman filter procedure to use
     # cdef readonly int filter_method
     # The method by which the terms using the inverse of the forecast
     # error covariance matrix are solved.
@@ -233,11 +233,11 @@ cdef class {{prefix}}KalmanFilter(object):
     # `loglikelihood` $\equiv \log p(y_t | Y_{t-1})$
     # cdef readonly {{cython_type}} [:] loglikelihood
 
-    # `filtered_state` $\equiv a_{t|t} = E(\alpha_t | Y_t)$ is the **filtered estimator** of the state $(m \times T)$  
-    # `predicted_state` $\equiv a_{t+1} = E(\alpha_{t+1} | Y_t)$ is the **one-step ahead predictor** of the state $(m \times T-1)$  
-    # `forecast` $\equiv E(y_t|Y_{t-1})$ is the **forecast** of the next observation $(p \times T)$   
-    # `forecast_error` $\equiv v_t = y_t - E(y_t|Y_{t-1})$ is the **one-step ahead forecast error** of the next observation $(p \times T)$  
-    # 
+    # `filtered_state` $\equiv a_{t|t} = E(\alpha_t | Y_t)$ is the **filtered estimator** of the state $(m \times T)$
+    # `predicted_state` $\equiv a_{t+1} = E(\alpha_{t+1} | Y_t)$ is the **one-step ahead predictor** of the state $(m \times T-1)$
+    # `forecast` $\equiv E(y_t|Y_{t-1})$ is the **forecast** of the next observation $(p \times T)$
+    # `forecast_error` $\equiv v_t = y_t - E(y_t|Y_{t-1})$ is the **one-step ahead forecast error** of the next observation $(p \times T)$
+    #
     # *Note*: Actual values in `filtered_state` will be from 1 to `nobs`+1. Actual
     # values in `predicted_state` will be from 0 to `nobs`+1 because the initialization
     # is copied over to the zeroth entry, and similar for the covariances, below.
@@ -245,14 +245,14 @@ cdef class {{prefix}}KalmanFilter(object):
     # *Old notation: beta_tt, beta_tt1, y_tt1, eta_tt1*
     # cdef readonly {{cython_type}} [::1,:] filtered_state, predicted_state, forecast, forecast_error
 
-    # `filtered_state_cov` $\equiv P_{t|t} = Var(\alpha_t | Y_t)$ is the **filtered state covariance matrix** $(m \times m \times T)$  
-    # `predicted_state_cov` $\equiv P_{t+1} = Var(\alpha_{t+1} | Y_t)$ is the **predicted state covariance matrix** $(m \times m \times T)$  
-    # `forecast_error_cov` $\equiv F_t = Var(v_t | Y_{t-1})$ is the **forecast error covariance matrix** $(p \times p \times T)$  
-    # 
+    # `filtered_state_cov` $\equiv P_{t|t} = Var(\alpha_t | Y_t)$ is the **filtered state covariance matrix** $(m \times m \times T)$
+    # `predicted_state_cov` $\equiv P_{t+1} = Var(\alpha_{t+1} | Y_t)$ is the **predicted state covariance matrix** $(m \times m \times T)$
+    # `forecast_error_cov` $\equiv F_t = Var(v_t | Y_{t-1})$ is the **forecast error covariance matrix** $(p \times p \times T)$
+    #
     # *Old notation: P_tt, P_tt1, f_tt1*
     # cdef readonly {{cython_type}} [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov
 
-    # `kalman_gain` $\equiv K_{t} = T_t P_t Z_t' F_t^{-1}$ is the **Kalman gain** $(m \times p \times T)$  
+    # `kalman_gain` $\equiv K_{t} = T_t P_t Z_t' F_t^{-1}$ is the **Kalman gain** $(m \times p \times T)$
     # cdef readonly {{cython_type}} [::1,:,:] kalman_gain
 
     # ### Steady State Values
@@ -267,7 +267,7 @@ cdef class {{prefix}}KalmanFilter(object):
     # ### Temporary arrays
     # These matrices are used to temporarily hold selected observation vectors,
     # design matrices, and observation covariance matrices in the case of
-    # missing data.  
+    # missing data.
     # `forecast_error_fac` is a forecast error covariance matrix **factorization** $(p \times p)$.
     # Depending on the method for handling the inverse of the forecast error covariance matrix, it may be:
     # - a Cholesky factorization if `cholesky_solve` is used
@@ -282,7 +282,7 @@ cdef class {{prefix}}KalmanFilter(object):
     # cdef readonly {{cython_type}} [::1,:] forecast_error_work
     # These hold the memory allocations of the anonymous temporary arrays
     # cdef readonly {{cython_type}} [::1,:] tmp0, tmp00
-    # These hold the memory allocations of the named temporary arrays  
+    # These hold the memory allocations of the named temporary arrays
     # (these are all time-varying in the last dimension)
     # cdef readonly {{cython_type}} [::1,:] tmp2
     # cdef readonly {{cython_type}} [::1,:,:] tmp1, tmp3
@@ -353,7 +353,7 @@ cdef class {{prefix}}KalmanFilter(object):
     # ### Define some constants
     # cdef readonly int k_endog, k_states, k_posdef, k_endog2, k_states2, k_endogstates
     # cdef readonly ldwork
-    
+
     def __init__(self,
                  {{prefix}}Statespace model,
                  int filter_method=FILTER_CONVENTIONAL,
@@ -571,29 +571,29 @@ cdef class {{prefix}}KalmanFilter(object):
         self.tmp00 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         self._tmp00 = &self.tmp00[0, 0]
 
-        # Optionally we may not want to store temporary arrays required  
+        # Optionally we may not want to store temporary arrays required
         # for smoothing
         if self.conserve_memory & MEMORY_NO_SMOOTHING > 0:
             storage = 1
         else:
             storage = self.model.nobs
 
-        # Holds arrays of dimension $(m \times p \times T)$  
+        # Holds arrays of dimension $(m \times p \times T)$
         # $\\#_1 = P_t Z_t'$
         dim3[0] = self.k_states; dim3[1] = self.k_endog; dim3[2] = storage;
         self.tmp1 = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
 
-        # Holds arrays of dimension $(p \times T)$  
+        # Holds arrays of dimension $(p \times T)$
         # $\\#_2 = F_t^{-1} v_t$
         dim2[0] = self.k_endog; dim2[1] = storage;
         self.tmp2 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
-        # Holds arrays of dimension $(p \times m \times T)$  
+        # Holds arrays of dimension $(p \times m \times T)$
         # $\\#_3 = F_t^{-1} Z_t$
         dim3[0] = self.k_endog; dim3[1] = self.k_states; dim3[2] = storage;
         self.tmp3 = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
 
-        # Holds arrays of dimension $(p \times p \times T)$  
+        # Holds arrays of dimension $(p \times p \times T)$
         # $\\#_4 = F_t^{-1} H_t$
         dim3[0] = self.k_endog; dim3[1] = self.k_endog; dim3[2] = storage;
         self.tmp4 = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
@@ -723,7 +723,7 @@ cdef class {{prefix}}KalmanFilter(object):
         # Initialize pointers to appropriate Kalman filtering functions
         self.initialize_function_pointers()
 
-        # Convert base arrays into "selected" arrays  
+        # Convert base arrays into "selected" arrays
         # - State covariance matrix? $Q_t \to R_t Q_t R_t`$
         # - Missing values: $y_t \to W_t y_t$, $Z_t \to W_t Z_t$, $H_t \to W_t H_t$
         # self.select_state_cov()
@@ -869,8 +869,8 @@ cdef class {{prefix}}KalmanFilter(object):
         # Copy initialization arrays to input arrays if we're starting the
         # filter
         if t == 0 and self.filter_timing == TIMING_INIT_PREDICTED:
-            # `predicted_state[:,0]` $= a_1 =$ `initial_state`  
-            # `predicted_state_cov[:,:,0]` $= P_1 =$ `initial_state_cov`  
+            # `predicted_state[:,0]` $= a_1 =$ `initial_state`
+            # `predicted_state_cov[:,:,0]` $= P_1 =$ `initial_state_cov`
             # Under the default timing assumption (TIMING_INIT_PREDICTED), the
             # recursion takes $a_t, P_t$ as input, and as a last step computes
             # $a_{t+1}, P_{t+1}$, which can be input for the next recursion.
@@ -893,7 +893,7 @@ cdef class {{prefix}}KalmanFilter(object):
 
         self._filtered_state = &self.filtered_state[0, filtered_t]
         self._filtered_state_cov = &self.filtered_state_cov[0, 0, filtered_t]
-        
+
         if self.filter_timing == TIMING_INIT_PREDICTED:
             self._predicted_state = &self.predicted_state[0, predicted_t+1]
             self._predicted_state_cov = &self.predicted_state_cov[0, 0, predicted_t+1]
@@ -943,7 +943,7 @@ cdef class {{prefix}}KalmanFilter(object):
         else:
             raise NotImplementedError("Invalid filtering method")
 
-        # Handle completely missing data, can always just use conventional 
+        # Handle completely missing data, can always just use conventional
         # methods
         if self.model._nmissing == self.model.k_endog:
             # Change the forecasting step to set the forecast at the intercept
@@ -992,8 +992,8 @@ cdef class {{prefix}}KalmanFilter(object):
             predicted_t += 1
 
         if self.stability_method & STABILITY_FORCE_SYMMETRY:
-            # Enforce symmetry of predicted covariance matrix  
-            # $P_{t+1} = 0.5 * (P_{t+1} + P_{t+1}')$  
+            # Enforce symmetry of predicted covariance matrix
+            # $P_{t+1} = 0.5 * (P_{t+1} + P_{t+1}')$
             # See Grewal (2001), Section 6.3.1.1
             for i in range(self.k_states):
                 for j in range(i, self.k_states):
@@ -1032,9 +1032,9 @@ cdef class {{prefix}}KalmanFilter(object):
 
         if self.time_invariant and not self.converged and not missing_flag:
             # #### Check for steady-state convergence
-            # 
-            # `tmp0` array used here, dimension $(m \times m)$  
-            # `tmp00` array used here, dimension $(1 \times 1)$  
+            #
+            # `tmp0` array used here, dimension $(m \times m)$
+            # `tmp00` array used here, dimension $(1 \times 1)$
             if self.filter_timing == TIMING_INIT_PREDICTED:
                 blas.{{prefix}}copy(&self.k_states2, self._input_state_cov, &inc, self._tmp0, &inc)
                 blas.{{prefix}}axpy(&self.k_states2, &gamma, self._predicted_state_cov, &inc, self._tmp0, &inc)

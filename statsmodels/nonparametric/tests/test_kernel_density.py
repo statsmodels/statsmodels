@@ -253,7 +253,7 @@ class TestKDEMultivariate(KDETestBase):
         C1 = np.random.normal(size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
         bw_user=[0.23, 434697.22]
-        
+
         dens = nparam.KDEMultivariate(data=[C1, C2], var_type='cc',
             bw=bw_user, defaults=nparam.EstimatorSettings(efficient=True,
                                                           randomize=False,
@@ -380,7 +380,7 @@ class TestKDEMultivariateConditional(KDETestBase):
         C1 = np.random.normal(size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
         bw_user=[0.23, 434697.22]
-        
+
         dens = nparam.KDEMultivariate(data=[C1, C2], var_type='cc',
             bw=bw_user, defaults=nparam.EstimatorSettings(efficient=True,
                                                           randomize=False,

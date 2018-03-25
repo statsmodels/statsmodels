@@ -5,7 +5,7 @@
 """
 State Space Models
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 """
 
@@ -130,7 +130,7 @@ cdef class {{prefix}}KalmanSmoother(object):
     # cdef readonly {{prefix}}KalmanFilter kfilter
 
     # ### Smoother parameters
-    # Holds the time-iteration state of the filter  
+    # Holds the time-iteration state of the filter
     # *Note*: must be changed using the `seek` method
     # cdef readonly int t
     # cdef readonly int smoother_output
@@ -140,10 +140,10 @@ cdef class {{prefix}}KalmanSmoother(object):
 
     # ### Kalman smoother properties
 
-    # `scaled_smoothed_estimator` $\equiv r_t$ is the **scaled smoothed estimator** of $\eta_t$ $(m \times T)$  
+    # `scaled_smoothed_estimator` $\equiv r_t$ is the **scaled smoothed estimator** of $\eta_t$ $(m \times T)$
     # cdef readonly {{cython_type}} [::1,:] scaled_smoothed_estimator
 
-    # `scaled_smoothed_estimator_cov` $\equiv N_t$ is the **scaled smoothed estimator covariance matrix** $(m \times m \times T)$  
+    # `scaled_smoothed_estimator_cov` $\equiv N_t$ is the **scaled smoothed estimator covariance matrix** $(m \times m \times T)$
     # cdef readonly {{cython_type}} [::1,:,:] scaled_smoothed_estimator_cov
 
     # `smoothing_error` $\equiv u_t = F_{t}^{-1} v_t - K_t' r_t$ is the **smoothing error** $(p \times T)$
@@ -170,7 +170,7 @@ cdef class {{prefix}}KalmanSmoother(object):
     # ### Temporary arrays
     # These matrices are used to temporarily hold selected observation vectors,
     # design matrices, and observation covariance matrices in the case of
-    # missing data.  
+    # missing data.
     # The following are contiguous memory segments which are then used to
     # store the data in the above matrices.
     # cdef readonly {{cython_type}} [:] selected_design
@@ -230,7 +230,7 @@ cdef class {{prefix}}KalmanSmoother(object):
 
     # ### Define some constants
     # cdef readonly int k_endog, k_states, k_posdef, k_endog2, k_states2, k_posdef2, k_endogstates, k_statesposdef
-    
+
     def __init__(self,
                  {{prefix}}Statespace model,
                  {{prefix}}KalmanFilter kfilter,
@@ -424,7 +424,7 @@ cdef class {{prefix}}KalmanSmoother(object):
 
         # Make sure we don't have an invalid smooth method for our filter
         # method
-        if((_smooth_method & SMOOTH_UNIVARIATE) and not (self.filter_method & FILTER_UNIVARIATE) or 
+        if((_smooth_method & SMOOTH_UNIVARIATE) and not (self.filter_method & FILTER_UNIVARIATE) or
                 (self.filter_method & FILTER_UNIVARIATE) and not (_smooth_method & SMOOTH_UNIVARIATE)):
             raise ValueError('Invalid smoothing method: can only use'
                              ' univariate smoothing when univariate filtering'
@@ -483,7 +483,7 @@ cdef class {{prefix}}KalmanSmoother(object):
 
         # Reset the smoother
         self.reset()
-        
+
         # Perform backwards smoothing iterations
         for i in range(self.model.nobs-1,-1,-1):
             next(self)
@@ -515,18 +515,18 @@ cdef class {{prefix}}KalmanSmoother(object):
         self.initialize_function_pointers()
 
         # Conventional timing of the measurement step of the scaled smoothed
-        # estimator and covariance matrix, smoothing error  
+        # estimator and covariance matrix, smoothing error
         # $L_t, r_{t-1}, N_{t-1}, u_t$
         if self._smooth_method & (SMOOTH_CONVENTIONAL | SMOOTH_CLASSICAL | SMOOTH_UNIVARIATE):
             self.smooth_estimators_measurement(self, self.kfilter, self.model)
 
-        # Smoothed state and covariance matrix  
+        # Smoothed state and covariance matrix
         # $\hat \alpha_t, V_t$
         if self.smoother_output & (SMOOTHER_STATE | SMOOTHER_STATE_COV):
             self.smooth_state(self, self.kfilter, self.model)
 
         # Modified Byrson-Frazier timing of the measurement step of the scaled
-        # smoothed estimator and covariance matrix, smoothing error  
+        # smoothed estimator and covariance matrix, smoothing error
         # $L_t, r_{t-1}, N_{t-1}, u_t$
         if self._smooth_method & SMOOTH_ALTERNATIVE:
             self.smooth_estimators_measurement(self, self.kfilter, self.model)
@@ -539,7 +539,7 @@ cdef class {{prefix}}KalmanSmoother(object):
             if self.smooth_method & SMOOTH_ALTERNATIVE:
                 self._input_scaled_smoothed_estimator_cov = &self.scaled_smoothed_estimator_cov[0, 0, self.t]
 
-        # Smoothed disturbances  
+        # Smoothed disturbances
         # $\hat \eta_t, \hat \varepsilon_t, Var(\eta_t | Y_n), Var(\varepsilon_t | Y_n)$
         if self.smoother_output & SMOOTHER_DISTURBANCE:
             self.smooth_disturbances(self, self.kfilter, self.model)

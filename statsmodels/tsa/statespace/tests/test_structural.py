@@ -277,7 +277,7 @@ def test_start_params():
         endog[t+1] = phi[0] * endog[t] + phi[1] * endog[t-1] + eps[t]
     endog = endog[2:]
     endog += np.dot(exog, beta)
-    
+
     # Now just test that the starting parameters are approximately what they
     # ought to be (could make this arbitrarily precise by increasing nobs,
     # but that would slow down the test for no real gain)

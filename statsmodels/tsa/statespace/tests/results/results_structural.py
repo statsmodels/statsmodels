@@ -217,7 +217,7 @@ lltrend_cycle_seasonal_reg_ar1 = {
         # Numpy exog dataset
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
          'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
-         'exog': 'numpy', 'mle_regression': False,}, 
+         'exog': 'numpy', 'mle_regression': False,},
         # Annual frequency dataset
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
          'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,

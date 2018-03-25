@@ -4,7 +4,7 @@
 """
 State Space Models declarations
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 """
 
@@ -13,7 +13,7 @@ cimport numpy as np
 cdef class sStatespace(object):
     # Statespace dimensions
     cdef readonly int nobs, k_endog, k_states, k_posdef
-    
+
     # Statespace representation matrices
     cdef readonly np.float32_t [::1,:] obs, obs_intercept, state_intercept
     cdef readonly np.float32_t [:] initial_state
@@ -86,7 +86,7 @@ cdef class sStatespace(object):
 cdef class dStatespace(object):
     # Statespace dimensions
     cdef readonly int nobs, k_endog, k_states, k_posdef
-    
+
     # Statespace representation matrices
     cdef readonly np.float64_t [::1,:] obs, obs_intercept, state_intercept
     cdef readonly np.float64_t [:] initial_state
@@ -159,7 +159,7 @@ cdef class dStatespace(object):
 cdef class cStatespace(object):
     # Statespace dimensions
     cdef readonly int nobs, k_endog, k_states, k_posdef
-    
+
     # Statespace representation matrices
     cdef readonly np.complex64_t [::1,:] obs, obs_intercept, state_intercept
     cdef readonly np.complex64_t [:] initial_state
@@ -232,7 +232,7 @@ cdef class cStatespace(object):
 cdef class zStatespace(object):
     # Statespace dimensions
     cdef readonly int nobs, k_endog, k_states, k_posdef
-    
+
     # Statespace representation matrices
     cdef readonly np.complex128_t [::1,:] obs, obs_intercept, state_intercept
     cdef readonly np.complex128_t [:] initial_state

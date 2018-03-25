@@ -163,7 +163,7 @@ class ExpandedNormal(rv_continuous):
         else:
             self._herm_cdf = lambda x: 0.
 
-        # warn if pdf(x) < 0 for some values of x within 4 sigma 
+        # warn if pdf(x) < 0 for some values of x within 4 sigma
         r = np.real_if_close(self._herm_pdf.roots())
         r = (r - self._mu) / self._sigma
         if r[(np.imag(r) == 0) & (np.abs(r) < 4)].any():

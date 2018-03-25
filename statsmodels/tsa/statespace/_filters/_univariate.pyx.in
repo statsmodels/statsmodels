@@ -5,7 +5,7 @@
 """
 State Space Models
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 """
 
@@ -104,8 +104,8 @@ cdef int {{prefix}}forecast_univariate({{prefix}}KalmanFilter kfilter, {{prefix}
             {{prefix}}temp_arrays(kfilter, model, i, forecast_error_cov_inv)
 
             # #### Filtered state for time t
-            # $a_{t,i+1} = a_{t,i} + P_{t,i} Z_{t,i}' F_{t,i}^{-1} v_{t,i}$  
-            # Make a new temporary array  
+            # $a_{t,i+1} = a_{t,i} + P_{t,i} Z_{t,i}' F_{t,i}^{-1} v_{t,i}$
+            # Make a new temporary array
             # K_{t,i} = P_{t,i} Z_{t,i}' F_{t,i}^{-1}
             {{prefix}}filtered_state(kfilter, model, i, forecast_error_cov_inv)
 
@@ -113,7 +113,7 @@ cdef int {{prefix}}forecast_univariate({{prefix}}KalmanFilter kfilter, {{prefix}
             # $P_{t,i+1} = P_{t,i} - P_{t,i} Z_{t,i}' F_{t,i}^{-1} Z_{t,i} P_{t,i}'$
             if not kfilter.converged:
                 {{prefix}}filtered_state_cov(kfilter, model, i, forecast_error_cov_inv)
-            
+
             # #### Loglikelihood
             {{prefix}}loglikelihood(kfilter, model, i, forecast_error_cov, forecast_error_cov_inv)
 
@@ -169,9 +169,9 @@ cdef {{cython_type}} {{prefix}}forecast_error_cov({{prefix}}KalmanFilter kfilter
     if model.subset_design:
         k_states = model._k_posdef
 
-    # *Intermediate calculation* (used just below and then once more)  
-    # `tmp1` array used here, dimension $(m \times 1)$  
-    # $\\#_1 = P_{t,i} Z_{t,i}'$  
+    # *Intermediate calculation* (used just below and then once more)
+    # `tmp1` array used here, dimension $(m \times 1)$
+    # $\\#_1 = P_{t,i} Z_{t,i}'$
     # $(m \times 1) = (m \times m) (1 \times m)'$
     blas.{{prefix}}gemv("N", &model._k_states, &k_states,
           &alpha, kfilter._filtered_state_cov, &kfilter.k_states,
@@ -226,7 +226,7 @@ cdef void {{prefix}}temp_arrays({{prefix}}KalmanFilter kfilter, {{prefix}}States
 
 cdef void {{prefix}}filtered_state({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, int i, {{cython_type}} forecast_error_cov_inv):
     cdef int j
-    # $a_{t,i+1} = a_{t,i} + P_{t,i} Z_{t,i}' F_{t,i}^{-1} v_{t,i}$  
+    # $a_{t,i+1} = a_{t,i} + P_{t,i} Z_{t,i}' F_{t,i}^{-1} v_{t,i}$
     for j in range(model._k_states):
         if not kfilter.converged:
             kfilter._kalman_gain[j + i*kfilter.k_states] = kfilter._tmp1[j + i*kfilter.k_states] * forecast_error_cov_inv
@@ -283,7 +283,7 @@ cdef void {{prefix}}filtered_state_cov({{prefix}}KalmanFilter kfilter, {{prefix}
 cdef void {{prefix}}loglikelihood({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, int i, {{cython_type}} forecast_error_cov, {{cython_type}} forecast_error_cov_inv):
     kfilter._loglikelihood[0] = (
         kfilter._loglikelihood[0] - 0.5*(
-            {{combined_prefix}}log(2 * NPY_PI * forecast_error_cov) + 
+            {{combined_prefix}}log(2 * NPY_PI * forecast_error_cov) +
             kfilter._forecast_error[i]**2 * forecast_error_cov_inv
         )
     )
@@ -318,7 +318,7 @@ cdef int {{prefix}}prediction_univariate({{prefix}}KalmanFilter kfilter, {{prefi
             {{prefix}}companion_predicted_state_cov(kfilter, model)
 
     # #### Kalman gain for time t
-    # $K_t = T_t P_t Z_t' F_t^{-1}$  
+    # $K_t = T_t P_t Z_t' F_t^{-1}$
     # Kalman gain calculation done in forecasting step.
 
     return 0
@@ -343,7 +343,7 @@ cdef void {{prefix}}predicted_state_cov({{prefix}}KalmanFilter kfilter, {{prefix
 
     # $P_{t+1} = T_t P_{t,n} T_t' + Q_t^*$
     blas.{{prefix}}copy(&model._k_states2, model._selected_state_cov, &inc, kfilter._predicted_state_cov, &inc)
-    # `tmp0` array used here, dimension $(m \times m)$  
+    # `tmp0` array used here, dimension $(m \times m)$
 
     # $\\#_0 = T_t P_{t|t} $
 
@@ -352,7 +352,7 @@ cdef void {{prefix}}predicted_state_cov({{prefix}}KalmanFilter kfilter, {{prefix
           &alpha, model._transition, &model._k_states,
                   kfilter._filtered_state_cov, &kfilter.k_states,
           &beta, kfilter._tmp0, &kfilter.k_states)
-    # $P_{t+1} = 1.0 \\#_0 T_t' + 1.0 \\#$  
+    # $P_{t+1} = 1.0 \\#_0 T_t' + 1.0 \\#$
     # $(m \times m) = (m \times m) (m \times m) + (m \times m)$
     blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
           &alpha, kfilter._tmp0, &kfilter.k_states,
@@ -384,8 +384,8 @@ cdef void {{prefix}}companion_predicted_state_cov({{prefix}}KalmanFilter kfilter
         {{cython_type}} tmp
 
     # $P_{t+1} = T_t P_{t,n} T_t' + Q_t^*$
-    
-    # `tmp0` array used here, dimension $(p \times m)$  
+
+    # `tmp0` array used here, dimension $(p \times m)$
     # $\\#_0 = \phi_t P_{t|t} $
 
     # $(p \times m) = (p \times m) (m \times m)$
@@ -393,8 +393,8 @@ cdef void {{prefix}}companion_predicted_state_cov({{prefix}}KalmanFilter kfilter
           &alpha, model._transition, &model._k_states,
                   kfilter._filtered_state_cov, &kfilter.k_states,
           &beta, kfilter._tmp0, &kfilter.k_states)
-                
-    # $P_{t+1} = 1.0 \\#_0 \phi_t' + 1.0 \\#$  
+
+    # $P_{t+1} = 1.0 \\#_0 \phi_t' + 1.0 \\#$
     # $(m \times m) = (p \times m) (m \times p) + (m \times m)$
     blas.{{prefix}}gemm("N", "T", &model._k_posdef, &model._k_posdef, &model._k_states,
           &alpha, kfilter._tmp0, &kfilter.k_states,
@@ -409,7 +409,7 @@ cdef void {{prefix}}companion_predicted_state_cov({{prefix}}KalmanFilter kfilter
             # Add the Q matrix to the upper-left block
             if i < model._k_posdef and j < model._k_posdef:
                 kfilter._predicted_state_cov[idx] = (
-                    kfilter._predicted_state_cov[idx] + 
+                    kfilter._predicted_state_cov[idx] +
                     model._state_cov[j + i*model._k_posdef]
                 )
 
@@ -420,7 +420,7 @@ cdef void {{prefix}}companion_predicted_state_cov({{prefix}}KalmanFilter kfilter
                 kfilter._predicted_state_cov[idx] = tmp
                 kfilter._predicted_state_cov[i + j*model._k_states] = tmp
 
-            # Set the lower-right block 
+            # Set the lower-right block
             elif i >= model._k_posdef and j >= model._k_posdef:
                 kfilter._predicted_state_cov[idx] = (
                     kfilter._filtered_state_cov[(j - model._k_posdef) + (i - model._k_posdef)*kfilter.k_states]

@@ -4,7 +4,7 @@
 """
 State Space Models
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 """
 
@@ -56,7 +56,7 @@ cdef class {{prefix}}Statespace(object):
     """
 
     # ### State space representation
-    # 
+    #
     # $$
     # \begin{align}
     # y_t & = Z_t \alpha_t + d_t + \varepsilon_t \hspace{3em} & \varepsilon_t & \sim N(0, H_t) \\\\
@@ -64,30 +64,30 @@ cdef class {{prefix}}Statespace(object):
     # & & \alpha_1 & \sim N(a_1, P_1)
     # \end{align}
     # $$
-    # 
-    # $y_t$ is $p \times 1$  
-    # $\varepsilon_t$ is $p \times 1$  
-    # $\alpha_t$ is $m \times 1$  
-    # $\eta_t$ is $r \times 1$  
+    #
+    # $y_t$ is $p \times 1$
+    # $\varepsilon_t$ is $p \times 1$
+    # $\alpha_t$ is $m \times 1$
+    # $\eta_t$ is $r \times 1$
     # $t = 1, \dots, T$
 
-    # `nobs` $\equiv T$ is the length of the time-series  
-    # `k_endog` $\equiv p$ is dimension of observation space  
-    # `k_states` $\equiv m$ is the dimension of the state space  
-    # `k_posdef` $\equiv r$ is the dimension of the state shocks  
+    # `nobs` $\equiv T$ is the length of the time-series
+    # `k_endog` $\equiv p$ is dimension of observation space
+    # `k_states` $\equiv m$ is the dimension of the state space
+    # `k_posdef` $\equiv r$ is the dimension of the state shocks
     # *Old notation: T, n, k, g*
     # cdef readonly int nobs, k_endog, k_states, k_posdef
-    
-    # `obs` $\equiv y_t$ is the **observation vector** $(p \times T)$  
-    # `design` $\equiv Z_t$ is the **design vector** $(p \times m \times T)$  
-    # `obs_intercept` $\equiv d_t$ is the **observation intercept** $(p \times T)$  
-    # `obs_cov` $\equiv H_t$ is the **observation covariance matrix** $(p \times p \times T)$  
-    # `transition` $\equiv T_t$ is the **transition matrix** $(m \times m \times T)$  
-    # `state_intercept` $\equiv c_t$ is the **state intercept** $(m \times T)$  
-    # `selection` $\equiv R_t$ is the **selection matrix** $(m \times r \times T)$  
-    # `state_cov` $\equiv Q_t$ is the **state covariance matrix** $(r \times r \times T)$  
-    # `selected_state_cov` $\equiv R Q_t R'$ is the **selected state covariance matrix** $(m \times m \times T)$  
-    # `initial_state` $\equiv a_1$ is the **initial state mean** $(m \times 1)$  
+
+    # `obs` $\equiv y_t$ is the **observation vector** $(p \times T)$
+    # `design` $\equiv Z_t$ is the **design vector** $(p \times m \times T)$
+    # `obs_intercept` $\equiv d_t$ is the **observation intercept** $(p \times T)$
+    # `obs_cov` $\equiv H_t$ is the **observation covariance matrix** $(p \times p \times T)$
+    # `transition` $\equiv T_t$ is the **transition matrix** $(m \times m \times T)$
+    # `state_intercept` $\equiv c_t$ is the **state intercept** $(m \times T)$
+    # `selection` $\equiv R_t$ is the **selection matrix** $(m \times r \times T)$
+    # `state_cov` $\equiv Q_t$ is the **state covariance matrix** $(r \times r \times T)$
+    # `selected_state_cov` $\equiv R Q_t R'$ is the **selected state covariance matrix** $(m \times m \times T)$
+    # `initial_state` $\equiv a_1$ is the **initial state mean** $(m \times 1)$
     # `initial_state_cov` $\equiv P_1$ is the **initial state covariance matrix** $(m \times m)$
     #
     # With the exception of `obs`, these are *optionally* time-varying. If they are instead time-invariant,
@@ -95,7 +95,7 @@ cdef class {{prefix}}Statespace(object):
     #
     # *Note*: the initial vectors' notation 1-indexed as in Durbin and Koopman,
     # but in the recursions below it will be 0-indexed in the Python arrays.
-    # 
+    #
     # *Old notation: y, -, mu, beta_tt_init, P_tt_init*
     # cdef readonly {{cython_type}} [::1,:] obs, obs_intercept, state_intercept
     # cdef readonly {{cython_type}} [:] initial_state
@@ -104,7 +104,7 @@ cdef class {{prefix}}Statespace(object):
     # cdef readonly {{cython_type}} [::1,:,:] design, obs_cov, transition, selection, state_cov, selected_state_cov
 
     # `missing` is a $(p \times T)$ boolean matrix where a row is a $(p \times 1)$ vector
-    # in which the $i$th position is $1$ if $y_{i,t}$ is to be considered a missing value.  
+    # in which the $i$th position is $1$ if $y_{i,t}$ is to be considered a missing value.
     # *Note:* This is created as the output of np.isnan(obs).
     # cdef readonly int [::1,:] missing
     # `nmissing` is an `T \times 0` integer vector holding the number of *missing* observations
@@ -147,7 +147,7 @@ cdef class {{prefix}}Statespace(object):
     # cdef readonly {{cython_type}} [::1,:] collapse_cholesky
     # cdef readonly {{cython_type}} collapse_loglikelihood
 
-    # Pointers  
+    # Pointers
     # cdef {{cython_type}} * _obs
     # cdef {{cython_type}} * _design
     # cdef {{cython_type}} * _obs_intercept
@@ -184,7 +184,7 @@ cdef class {{prefix}}Statespace(object):
             np.npy_intp dim2[2]
             np.npy_intp dim3[3]
 
-        # #### State space representation variables  
+        # #### State space representation variables
         # **Note**: these arrays share data with the versions defined in
         # Python and passed to this constructor, so if they are updated in
         # Python they will also be updated here.
@@ -380,7 +380,7 @@ cdef class {{prefix}}Statespace(object):
     # Durbin and Koopman note that this initialization should only be coupled
     # with the standard Kalman filter for "approximate exploratory work" and
     # can lead to "large rounding errors" (p. 125).
-    # 
+    #
     # *Note:* see Durbin and Koopman section 5.6.1
     def initialize_approximate_diffuse(self, {{cython_type}} variance=1e2):
         """
@@ -704,7 +704,7 @@ cdef class {{prefix}}Statespace(object):
 
                 # Convert from L to C simply by setting the diagonal elements to ones
                 _transform_cholesky[i + i * self._k_endog] = 1
-        
+
         # Solve for y_t^*
         # (unless this is a completely missing observation)
         if not self._nmissing == self.k_endog:
@@ -738,7 +738,7 @@ cdef class {{prefix}}Statespace(object):
             elif info < 0:
                 raise np.linalg.LinAlgError('Invalid value in factorization of observation covariance matrix encountered at period %d' % t)
 
-        # Setup final pointers            
+        # Setup final pointers
         self._design = &self.transform_design[0,0]
         self._obs_cov = &self.transform_obs_cov[0,0]
 
@@ -758,9 +758,9 @@ cdef class {{prefix}}Statespace(object):
             int k_states2 = self._k_states2
             int k_endogstates = self._k_endogstates
 
-        # $y_t^* = \bar A^* y_t = C_t Z_t' H_t^{-1} y_t$  
-        # $Z_t^* = C_t^{-1}$  
-        # $H_t^* = I_m$  
+        # $y_t^* = \bar A^* y_t = C_t Z_t' H_t^{-1} y_t$
+        # $Z_t^* = C_t^{-1}$
+        # $H_t^* = I_m$
 
         # Make sure we have enough observations to perform collapse
         if self.k_endog < self.k_states:
@@ -796,7 +796,7 @@ cdef class {{prefix}}Statespace(object):
 
         # Perform the Cholesky decomposition of H_t, if necessary
         if t == 0 or self.obs_cov.shape[2] > 1 or reset_missing:
-            # Cholesky decomposition: $H = L L'$  
+            # Cholesky decomposition: $H = L L'$
             blas.{{prefix}}copy(&self._k_endog2, self._obs_cov, &inc, &self.transform_cholesky[0,0], &inc)
             # Use LDA=self.k_endog so that we can use the memoryview slicing below
             lapack.{{prefix}}potrf("L", &self._k_endog, &self.transform_cholesky[0,0], &self.k_endog, &info)
@@ -815,7 +815,7 @@ cdef class {{prefix}}Statespace(object):
                     self.transform_determinant = self.transform_determinant * self.transform_cholesky[i, i]
             self.transform_determinant = self.transform_determinant**2
 
-        # Get $Z_t \equiv C^{-1}$, if necessary  
+        # Get $Z_t \equiv C^{-1}$, if necessary
         if t == 0 or self.obs_cov.shape[2] > 1 or self.design.shape[2] > 1 or reset_missing:
             # Calculate $H_t^{-1} Z_t \equiv (Z_t' H_t^{-1})'$ via Cholesky solver
             blas.{{prefix}}copy(&self._k_endogstates, self._design, &inc, &self.transform_design[0,0], &inc)
@@ -827,19 +827,19 @@ cdef class {{prefix}}Statespace(object):
             # Check for errors
             if not info == 0:
                 raise np.linalg.LinAlgError('Invalid value in calculation of H_t^{-1}Z matrix encountered at period %d' % t)
-        
-            # Calculate $(H_t^{-1} Z_t)' Z_t$  
+
+            # Calculate $(H_t^{-1} Z_t)' Z_t$
             # $(m \times m) = (m \times p) (p \times p) (p \times m)$
             blas.{{prefix}}gemm("T", "N", &k_states, &k_states, &self._k_endog,
                    &alpha, self._design, &self._k_endog,
                            &self.transform_design[0,0], &self._k_endog,
                    &beta, &self.collapse_cholesky[0,0], &self._k_states)
 
-            # Calculate $(Z_t' H_t^{-1} Z_t)^{-1}$ via Cholesky inversion  
+            # Calculate $(Z_t' H_t^{-1} Z_t)^{-1}$ via Cholesky inversion
             lapack.{{prefix}}potrf("U", &k_states, &self.collapse_cholesky[0,0], &self.k_states, &info)
             lapack.{{prefix}}potri("U", &k_states, &self.collapse_cholesky[0,0], &self.k_states, &info)
 
-            # Calculate $C_t$ (the upper triangular cholesky decomposition of $(Z_t' H_t^{-1} Z_t)^{-1}$)  
+            # Calculate $C_t$ (the upper triangular cholesky decomposition of $(Z_t' H_t^{-1} Z_t)^{-1}$)
             lapack.{{prefix}}potrf("U", &k_states, &self.collapse_cholesky[0,0], &self.k_states, &info)
 
             # Check for errors
@@ -848,8 +848,8 @@ cdef class {{prefix}}Statespace(object):
             elif info < 0:
                 raise np.linalg.LinAlgError('Invalid value in ZHZ matrix encountered at period %d' % t)
 
-            # Calculate $C_t'^{-1} \equiv Z_t$  
-            # Do so by solving the system: $C_t' x = I$  
+            # Calculate $C_t'^{-1} \equiv Z_t$
+            # Do so by solving the system: $C_t' x = I$
             # (Recall that collapse_obs_cov is an identity matrix)
             blas.{{prefix}}copy(&self._k_states2, &self.collapse_obs_cov[0,0], &inc, &self.collapse_design[0,0], &inc)
             lapack.{{prefix}}trtrs("U", "T", "N", &k_states, &k_states,
@@ -857,7 +857,7 @@ cdef class {{prefix}}Statespace(object):
                         &self.collapse_design[0,0], &self._k_states,
                         &info)
 
-        # Calculate $\bar y_t^* = \bar A_t^* y_t = C_t Z_t' H_t^{-1} y_t$  
+        # Calculate $\bar y_t^* = \bar A_t^* y_t = C_t Z_t' H_t^{-1} y_t$
         # (unless this is a completely missing observation)
         self.collapse_loglikelihood = 0
         if not self._nmissing == self.k_endog:
@@ -869,7 +869,7 @@ cdef class {{prefix}}Statespace(object):
                   &alpha, &self.transform_design[0,0], &self._k_endog,
                           &self.selected_obs[0], &inc,
                   &beta, &self.collapse_obs[0], &inc)
-            # $y_t^* = C_t \\#$  
+            # $y_t^* = C_t \\#$
             blas.{{prefix}}trmv("U", "N", "N", &k_states,
                                 &self.collapse_cholesky[0,0], &self._k_states,
                                 &self.collapse_obs[0], &inc)
@@ -881,7 +881,7 @@ cdef class {{prefix}}Statespace(object):
             # See Jungbacker and Koopman (2014), section 2.5 where $e_t$ is
             # defined. In this case, $Z_t^dagger = Z_t C_t$ where
             # $C_t C_t' = (Z_t' \Sigma_\varepsilon^{-1} Z_t)^{-1}$.
-            # 
+            #
 
             # $ \\# = C_t' y_t^*$
             blas.{{prefix}}copy(&k_states, &self.collapse_obs[0], &inc, &self.collapse_obs_tmp[0], &inc)
@@ -895,10 +895,10 @@ cdef class {{prefix}}Statespace(object):
                           &self.collapse_obs_tmp[0], &inc,
                   &alpha, &self.selected_obs[0], &inc)
 
-            # Calculate e_t' H_t^{-1} e_t via Cholesky solver  
-            # $H_t^{-1} = (L L')^{-1} = L^{-1}' L^{-1}$  
-            # So we want $e_t' L^{-1}' L^{-1} e_t = (L^{-1} e_t)' L^{-1} e_t$  
-            # We have $L$ in `transform_cholesky`, so we want to do a linear  
+            # Calculate e_t' H_t^{-1} e_t via Cholesky solver
+            # $H_t^{-1} = (L L')^{-1} = L^{-1}' L^{-1}$
+            # So we want $e_t' L^{-1}' L^{-1} e_t = (L^{-1} e_t)' L^{-1} e_t$
+            # We have $L$ in `transform_cholesky`, so we want to do a linear
             # solve of $L x = e_t$  where L is lower triangular
             lapack.{{prefix}}trtrs("L", "N", "N", &self._k_endog, &inc,
                         &self.transform_cholesky[0,0], &self.k_endog,
@@ -907,15 +907,15 @@ cdef class {{prefix}}Statespace(object):
 
             # Calculate loglikelihood contribution of this observation
 
-            # $e_t' H_t^{-1} e_t = (L^{-1} e_t)' L^{-1} e_t = \sum_i e_{i,t}**2$  
+            # $e_t' H_t^{-1} e_t = (L^{-1} e_t)' L^{-1} e_t = \sum_i e_{i,t}**2$
             self.collapse_loglikelihood = 0
             for i in range(self._k_endog):
                 self.collapse_loglikelihood = self.collapse_loglikelihood + self.selected_obs[i]**2
-            
+
             # (p-m) log( 2*pi) + log( |H_t| )
             self.collapse_loglikelihood = (
                 self.collapse_loglikelihood +
-                (self._k_endog - k_states)*{{combined_prefix}}log(2*NPY_PI) + 
+                (self._k_endog - k_states)*{{combined_prefix}}log(2*NPY_PI) +
                 {{combined_prefix}}log(self.transform_determinant)
             )
 
@@ -944,25 +944,25 @@ cdef int {{prefix}}select_cov(int k, int k_posdef,
     # (i.e k_posdof == 0)
     if k_posdef > 0:
 
-        # #### Calculate selected state covariance matrix  
+        # #### Calculate selected state covariance matrix
         # $Q_t^* = R_t Q_t R_t'$
-        # 
+        #
         # Combine a selection matrix and a covariance matrix to get
         # a simplified (but possibly singular) "selected" covariance
         # matrix (see e.g. Durbin and Koopman p. 43)
 
-        # `tmp0` array used here, dimension $(m \times r)$  
+        # `tmp0` array used here, dimension $(m \times r)$
 
         # TODO this does not require two ?gemm calls, since we know that it
         # is just selection rows and columns of the Q matrix
 
-        # $\\#_0 = 1.0 * R_t Q_t$  
+        # $\\#_0 = 1.0 * R_t Q_t$
         # $(m \times r) = (m \times r) (r \times r)$
         blas.{{prefix}}gemm("N", "N", &k, &k_posdef, &k_posdef,
               &alpha, selection, &k,
                       cov, &k_posdef,
               &beta, tmp, &k)
-        # $Q_t^* = 1.0 * \\#_0 R_t'$  
+        # $Q_t^* = 1.0 * \\#_0 R_t'$
         # $(m \times m) = (m \times r) (m \times r)'$
         blas.{{prefix}}gemm("N", "T", &k, &k, &k_posdef,
               &alpha, tmp, &k,
