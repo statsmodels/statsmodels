@@ -236,8 +236,6 @@ cdef class {{prefix}}Statespace(object):
 
         # Set the flag for initialization to be false
         self.initialized = False
-        self.initial_state = None
-        self.initial_state_cov = None
 
         # Unless it is specified, check for a diagonal covariance matrix
         if diagonal_obs_cov == -1:
@@ -317,6 +315,7 @@ cdef class {{prefix}}Statespace(object):
         state = {'initialized': self.initialized,
                  'initial_state': None,
                  'initial_state_cov': None,
+                 'initial_diffuse_state_cov': None,
                  'missing': np.array(self.missing, copy=True, order='F'),
                  'nmissing': np.array(self.nmissing, copy=True, order='F'),
                  'has_missing': self.has_missing,
@@ -342,11 +341,13 @@ cdef class {{prefix}}Statespace(object):
         if self.initialized:
             state['initial_state'] = np.array(self.initial_state, copy=True, order='F')
             state['initial_state_cov'] = np.array(self.initial_state_cov, copy=True, order='F')
+            state['initial_diffuse_state_cov'] = np.array(self.initial_diffuse_state_cov, copy=True, order='F')
         return (self.__class__, init, state)
 
     def __setstate__(self, state):
         self.initial_state = state['initial_state']
         self.initial_state_cov = state['initial_state_cov']
+        self.initial_diffuse_state_cov = state['initial_diffuse_state_cov']
         self.initialized = state['initialized']
         self.selected_state_cov = state['selected_state_cov']
         self.missing = state['missing']
@@ -410,6 +411,7 @@ cdef class {{prefix}}Statespace(object):
 
         self.initial_state = initial_state
         self.initial_state_cov = initial_state_cov
+        self.initial_diffuse_state_cov[:] = 0
 
         self.initialized = True
 
@@ -428,6 +430,7 @@ cdef class {{prefix}}Statespace(object):
         dim[0] = self.k_states
         self.initial_state = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
         self.initial_state_cov = np.eye(self.k_states, dtype={{dtype}}).T * variance
+        self.initial_diffuse_state_cov[:] = 0
 
         self.initialized = True
 
@@ -502,6 +505,8 @@ cdef class {{prefix}}Statespace(object):
         # covariance matrix
         tools._{{prefix}}solve_discrete_lyapunov(&self.tmp[0,0], &self.initial_state_cov[0,0], self.k_states, complex_step)
 
+        self.initial_diffuse_state_cov[:] = 0
+
         self.initialized = True
 
     def __iter__(self):
@@ -560,6 +565,7 @@ cdef class {{prefix}}Statespace(object):
             raise RuntimeError("Statespace model not initialized.")
         self._initial_state = &self.initial_state[0]
         self._initial_state_cov = &self.initial_state_cov[0,0]
+        self._initial_diffuse_state_cov = &self.initial_diffuse_state_cov[0,0]
 
         # Create the selected state covariance matrix
         self.select_state_cov(t)

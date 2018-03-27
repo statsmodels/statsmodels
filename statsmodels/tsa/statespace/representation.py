@@ -57,6 +57,7 @@ class MatrixWrapper(object):
             value = self._set_vector(obj, value, shape)
 
         setattr(obj, self._attribute, value)
+        obj.shapes[self.attribute] = value.shape
 
     def _set_matrix(self, obj, value, shape):
         # Expand 1-dimensional array if possible
@@ -689,13 +690,14 @@ class Representation(object):
             for matrix in self.shapes.keys():
                 existing = self._representations[prefix][matrix]
                 if matrix == 'obs':
-                    existing = self.obs.astype(dtype)[:]
+                    # existing[:] = self.obs.astype(dtype)
+                    pass
                 else:
                     new = getattr(self, '_' + matrix).astype(dtype)
                     if existing.shape == new.shape:
                         existing[:] = new[:]
                     else:
-                        existing = new
+                        self._representations[prefix][matrix] = new
 
         # Determine if we need to (re-)create the _statespace models
         # (if time-varying matrices changed)

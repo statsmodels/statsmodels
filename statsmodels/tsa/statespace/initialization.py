@@ -12,7 +12,7 @@ from . import tools
 
 
 class Initialization(object):
-    """
+    r"""
     State space initialization
 
     Parameters
@@ -246,7 +246,7 @@ class Initialization(object):
 
     def set(self, index, initialization_type, constant=None,
             stationary_cov=None, approximate_diffuse_variance=None):
-        """
+        r"""
         Set initialization for states, either globally or for a block
 
         Parameters
@@ -474,7 +474,7 @@ class Initialization(object):
     def __call__(self, index=None, model=None, initial_state_mean=None,
                  initial_diffuse_state_cov=None,
                  initial_stationary_state_cov=None, complex_step=False):
-        """
+        r"""
         Construct initialization representation
 
         Parameters

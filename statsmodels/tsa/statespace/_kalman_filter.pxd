@@ -64,7 +64,8 @@ cdef class sKalmanFilter(object):
 
     # ### Filter parameters
     cdef readonly int t
-    cdef public np.float64_t tolerance
+    cdef public np.float64_t tolerance, tolerance_diffuse
+    cdef readonly int nobs_diffuse
     cdef readonly int converged
     cdef readonly int period_converged
     cdef readonly int time_invariant
@@ -78,7 +79,7 @@ cdef class sKalmanFilter(object):
     # ### Kalman filter properties
     cdef readonly np.float32_t [:] loglikelihood
     cdef readonly np.float32_t [::1,:] filtered_state, predicted_state, forecast, forecast_error, standardized_forecast_error
-    cdef readonly np.float32_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov
+    cdef readonly np.float32_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov, predicted_diffuse_state_cov, forecast_error_diffuse_cov
     cdef readonly np.float32_t [::1,:,:] kalman_gain
 
     # ### Steady State Values
@@ -95,6 +96,8 @@ cdef class sKalmanFilter(object):
     cdef readonly np.float32_t [::1,:] tmp0, tmp00
     cdef readonly np.float32_t [::1,:] tmp2
     cdef readonly np.float32_t [::1,:,:] tmp1, tmp3, tmp4
+    cdef readonly np.float32_t [:] tmpM_inf, tmpK0, tmpK1
+    cdef readonly np.float32_t [::1,:] tmpL0, tmpL1
 
     cdef readonly np.float32_t determinant
 
@@ -113,6 +116,7 @@ cdef class sKalmanFilter(object):
 
     cdef np.float32_t * _input_state
     cdef np.float32_t * _input_state_cov
+    cdef np.float32_t * _input_diffuse_state_cov
 
     cdef np.float32_t * _forecast
     cdef np.float32_t * _forecast_error
@@ -122,6 +126,9 @@ cdef class sKalmanFilter(object):
     cdef np.float32_t * _filtered_state_cov
     cdef np.float32_t * _predicted_state
     cdef np.float32_t * _predicted_state_cov
+
+    cdef np.float32_t * _forecast_error_diffuse_cov
+    cdef np.float32_t * _predicted_diffuse_state_cov
 
     cdef np.float32_t * _kalman_gain
     cdef np.float32_t * _loglikelihood
@@ -141,6 +148,12 @@ cdef class sKalmanFilter(object):
     cdef np.float32_t * _tmp2
     cdef np.float32_t * _tmp3
     cdef np.float32_t * _tmp4
+
+    cdef np.float32_t * _tmpM_inf
+    cdef np.float32_t * _tmpK0
+    cdef np.float32_t * _tmpK1
+    cdef np.float32_t * _tmpL0
+    cdef np.float32_t * _tmpL1
 
     # ### Pointers to current-iteration Kalman filtering functions
     cdef int (*forecasting)(
@@ -166,13 +179,14 @@ cdef class sKalmanFilter(object):
     cdef allocate_arrays(self)
     cdef void set_dimensions(self)
     cpdef set_filter_method(self, int filter_method, int force_reset=*)
-    cpdef seek(self, unsigned int t, int reset_convergence=*)
+    cpdef seek(self, unsigned int t, int reset=*)
 
     cdef void initialize_statespace_object_pointers(self) except *
     cdef void initialize_filter_object_pointers(self)
     cdef void initialize_function_pointers(self) except *
     cdef void post_convergence(self)
     cdef void numerical_stability(self)
+    cdef int check_diffuse(self)
     cdef void check_convergence(self)
     cdef void migrate_storage(self)
     cdef void _reinitialize_pointers(self) except *
@@ -190,7 +204,8 @@ cdef class dKalmanFilter(object):
 
     # ### Filter parameters
     cdef readonly int t
-    cdef public np.float64_t tolerance
+    cdef public np.float64_t tolerance, tolerance_diffuse
+    cdef readonly int nobs_diffuse
     cdef readonly int converged
     cdef readonly int period_converged
     cdef readonly int time_invariant
@@ -204,7 +219,7 @@ cdef class dKalmanFilter(object):
     # ### Kalman filter properties
     cdef readonly np.float64_t [:] loglikelihood
     cdef readonly np.float64_t [::1,:] filtered_state, predicted_state, forecast, forecast_error, standardized_forecast_error
-    cdef readonly np.float64_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov
+    cdef readonly np.float64_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov, predicted_diffuse_state_cov, forecast_error_diffuse_cov
     cdef readonly np.float64_t [::1,:,:] kalman_gain
 
     # ### Steady State Values
@@ -221,6 +236,8 @@ cdef class dKalmanFilter(object):
     cdef readonly np.float64_t [::1,:] tmp0, tmp00
     cdef readonly np.float64_t [::1,:] tmp2
     cdef readonly np.float64_t [::1,:,:] tmp1, tmp3, tmp4
+    cdef readonly np.float64_t [:] tmpM_inf, tmpK0, tmpK1
+    cdef readonly np.float64_t [::1,:] tmpL0, tmpL1
 
     cdef readonly np.float64_t determinant
 
@@ -239,6 +256,7 @@ cdef class dKalmanFilter(object):
 
     cdef np.float64_t * _input_state
     cdef np.float64_t * _input_state_cov
+    cdef np.float64_t * _input_diffuse_state_cov
 
     cdef np.float64_t * _forecast
     cdef np.float64_t * _forecast_error
@@ -248,6 +266,9 @@ cdef class dKalmanFilter(object):
     cdef np.float64_t * _filtered_state_cov
     cdef np.float64_t * _predicted_state
     cdef np.float64_t * _predicted_state_cov
+
+    cdef np.float64_t * _forecast_error_diffuse_cov
+    cdef np.float64_t * _predicted_diffuse_state_cov
 
     cdef np.float64_t * _kalman_gain
     cdef np.float64_t * _loglikelihood
@@ -267,6 +288,12 @@ cdef class dKalmanFilter(object):
     cdef np.float64_t * _tmp2
     cdef np.float64_t * _tmp3
     cdef np.float64_t * _tmp4
+
+    cdef np.float64_t * _tmpM_inf
+    cdef np.float64_t * _tmpK0
+    cdef np.float64_t * _tmpK1
+    cdef np.float64_t * _tmpL0
+    cdef np.float64_t * _tmpL1
 
     # ### Pointers to current-iteration Kalman filtering functions
     cdef int (*forecasting)(
@@ -292,13 +319,14 @@ cdef class dKalmanFilter(object):
     cdef allocate_arrays(self)
     cdef void set_dimensions(self)
     cpdef set_filter_method(self, int filter_method, int force_reset=*)
-    cpdef seek(self, unsigned int t, int reset_convergence=*)
+    cpdef seek(self, unsigned int t, int reset=*)
 
     cdef void initialize_statespace_object_pointers(self) except *
     cdef void initialize_filter_object_pointers(self)
     cdef void initialize_function_pointers(self) except *
     cdef void post_convergence(self)
     cdef void numerical_stability(self)
+    cdef int check_diffuse(self)
     cdef void check_convergence(self)
     cdef void migrate_storage(self)
     cdef void _reinitialize_pointers(self) except *
@@ -316,7 +344,8 @@ cdef class cKalmanFilter(object):
 
     # ### Filter parameters
     cdef readonly int t
-    cdef public np.float64_t tolerance
+    cdef public np.float64_t tolerance, tolerance_diffuse
+    cdef readonly int nobs_diffuse
     cdef readonly int converged
     cdef readonly int period_converged
     cdef readonly int time_invariant
@@ -330,7 +359,7 @@ cdef class cKalmanFilter(object):
     # ### Kalman filter properties
     cdef readonly np.complex64_t [:] loglikelihood
     cdef readonly np.complex64_t [::1,:] filtered_state, predicted_state, forecast, forecast_error, standardized_forecast_error
-    cdef readonly np.complex64_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov
+    cdef readonly np.complex64_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov, predicted_diffuse_state_cov, forecast_error_diffuse_cov
     cdef readonly np.complex64_t [::1,:,:] kalman_gain
 
     # ### Steady State Values
@@ -347,6 +376,8 @@ cdef class cKalmanFilter(object):
     cdef readonly np.complex64_t [::1,:] tmp0, tmp00
     cdef readonly np.complex64_t [::1,:] tmp2
     cdef readonly np.complex64_t [::1,:,:] tmp1, tmp3, tmp4
+    cdef readonly np.complex64_t [:] tmpM_inf, tmpK0, tmpK1
+    cdef readonly np.complex64_t [::1,:] tmpL0, tmpL1
 
     cdef readonly np.complex64_t determinant
 
@@ -365,6 +396,7 @@ cdef class cKalmanFilter(object):
 
     cdef np.complex64_t * _input_state
     cdef np.complex64_t * _input_state_cov
+    cdef np.complex64_t * _input_diffuse_state_cov
 
     cdef np.complex64_t * _forecast
     cdef np.complex64_t * _forecast_error
@@ -374,6 +406,9 @@ cdef class cKalmanFilter(object):
     cdef np.complex64_t * _filtered_state_cov
     cdef np.complex64_t * _predicted_state
     cdef np.complex64_t * _predicted_state_cov
+
+    cdef np.complex64_t * _forecast_error_diffuse_cov
+    cdef np.complex64_t * _predicted_diffuse_state_cov
 
     cdef np.complex64_t * _kalman_gain
     cdef np.complex64_t * _loglikelihood
@@ -393,6 +428,12 @@ cdef class cKalmanFilter(object):
     cdef np.complex64_t * _tmp2
     cdef np.complex64_t * _tmp3
     cdef np.complex64_t * _tmp4
+
+    cdef np.complex64_t * _tmpM_inf
+    cdef np.complex64_t * _tmpK0
+    cdef np.complex64_t * _tmpK1
+    cdef np.complex64_t * _tmpL0
+    cdef np.complex64_t * _tmpL1
 
     # ### Pointers to current-iteration Kalman filtering functions
     cdef int (*forecasting)(
@@ -418,13 +459,14 @@ cdef class cKalmanFilter(object):
     cdef allocate_arrays(self)
     cdef void set_dimensions(self)
     cpdef set_filter_method(self, int filter_method, int force_reset=*)
-    cpdef seek(self, unsigned int t, int reset_convergence=*)
+    cpdef seek(self, unsigned int t, int reset=*)
 
     cdef void initialize_statespace_object_pointers(self) except *
     cdef void initialize_filter_object_pointers(self)
     cdef void initialize_function_pointers(self) except *
     cdef void post_convergence(self)
     cdef void numerical_stability(self)
+    cdef int check_diffuse(self)
     cdef void check_convergence(self)
     cdef void migrate_storage(self)
     cdef void _reinitialize_pointers(self) except *
@@ -442,7 +484,8 @@ cdef class zKalmanFilter(object):
 
     # ### Filter parameters
     cdef readonly int t
-    cdef public np.float64_t tolerance
+    cdef public np.float64_t tolerance, tolerance_diffuse
+    cdef readonly int nobs_diffuse
     cdef readonly int converged
     cdef readonly int period_converged
     cdef readonly int time_invariant
@@ -456,7 +499,7 @@ cdef class zKalmanFilter(object):
     # ### Kalman filter properties
     cdef readonly np.complex128_t [:] loglikelihood
     cdef readonly np.complex128_t [::1,:] filtered_state, predicted_state, forecast, forecast_error, standardized_forecast_error
-    cdef readonly np.complex128_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov
+    cdef readonly np.complex128_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov, predicted_diffuse_state_cov, forecast_error_diffuse_cov
     cdef readonly np.complex128_t [::1,:,:] kalman_gain
 
     # ### Steady State Values
@@ -473,6 +516,8 @@ cdef class zKalmanFilter(object):
     cdef readonly np.complex128_t [::1,:] tmp0, tmp00
     cdef readonly np.complex128_t [::1,:] tmp2
     cdef readonly np.complex128_t [::1,:,:] tmp1, tmp3, tmp4
+    cdef readonly np.complex128_t [:] tmpM_inf, tmpK0, tmpK1
+    cdef readonly np.complex128_t [::1,:] tmpL0, tmpL1
 
     cdef readonly np.complex128_t determinant
 
@@ -491,6 +536,7 @@ cdef class zKalmanFilter(object):
 
     cdef np.complex128_t * _input_state
     cdef np.complex128_t * _input_state_cov
+    cdef np.complex128_t * _input_diffuse_state_cov
 
     cdef np.complex128_t * _forecast
     cdef np.complex128_t * _forecast_error
@@ -500,6 +546,9 @@ cdef class zKalmanFilter(object):
     cdef np.complex128_t * _filtered_state_cov
     cdef np.complex128_t * _predicted_state
     cdef np.complex128_t * _predicted_state_cov
+
+    cdef np.complex128_t * _forecast_error_diffuse_cov
+    cdef np.complex128_t * _predicted_diffuse_state_cov
 
     cdef np.complex128_t * _kalman_gain
     cdef np.complex128_t * _loglikelihood
@@ -519,6 +568,12 @@ cdef class zKalmanFilter(object):
     cdef np.complex128_t * _tmp2
     cdef np.complex128_t * _tmp3
     cdef np.complex128_t * _tmp4
+
+    cdef np.complex128_t * _tmpM_inf
+    cdef np.complex128_t * _tmpK0
+    cdef np.complex128_t * _tmpK1
+    cdef np.complex128_t * _tmpL0
+    cdef np.complex128_t * _tmpL1
 
     # ### Pointers to current-iteration Kalman filtering functions
     cdef int (*forecasting)(
@@ -544,13 +599,14 @@ cdef class zKalmanFilter(object):
     cdef allocate_arrays(self)
     cdef void set_dimensions(self)
     cpdef set_filter_method(self, int filter_method, int force_reset=*)
-    cpdef seek(self, unsigned int t, int reset_convergence=*)
+    cpdef seek(self, unsigned int t, int reset=*)
 
     cdef void initialize_statespace_object_pointers(self) except *
     cdef void initialize_filter_object_pointers(self)
     cdef void initialize_function_pointers(self) except *
     cdef void post_convergence(self)
     cdef void numerical_stability(self)
+    cdef int check_diffuse(self)
     cdef void check_convergence(self)
     cdef void migrate_storage(self)
     cdef void _reinitialize_pointers(self) except *

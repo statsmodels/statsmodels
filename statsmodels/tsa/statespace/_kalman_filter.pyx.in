@@ -104,6 +104,13 @@ from statsmodels.tsa.statespace._filters._univariate cimport (
     {{prefix}}prediction_univariate,
     {{prefix}}loglikelihood_univariate
 )
+from statsmodels.tsa.statespace._filters._univariate_diffuse cimport (
+    {{prefix}}forecast_univariate_diffuse,
+    {{prefix}}updating_univariate_diffuse,
+    {{prefix}}inverse_noop_univariate_diffuse,
+    {{prefix}}prediction_univariate_diffuse,
+    {{prefix}}loglikelihood_univariate_diffuse
+)
 from statsmodels.tsa.statespace._filters._inversions cimport (
     {{prefix}}inverse_univariate,
     {{prefix}}factorize_cholesky,
@@ -369,6 +376,7 @@ cdef class {{prefix}}KalmanFilter(object):
 
         # Initialize filter parameters
         self.tolerance = tolerance
+        self.tolerance_diffuse = 1e-19  # TODO replace hardcode with argument
         self.inversion_method = inversion_method
         self.stability_method = stability_method
         self.conserve_memory = conserve_memory
@@ -387,6 +395,7 @@ cdef class {{prefix}}KalmanFilter(object):
 
         # Initialize time and convergence status
         self.t = 0
+        self.nobs_diffuse = 0
         self.converged = 0
         self.period_converged = 0
 
@@ -395,7 +404,8 @@ cdef class {{prefix}}KalmanFilter(object):
                 self.stability_method,  self.conserve_memory, self.filter_timing,
                 self.tolerance, self.loglikelihood_burn)
         state = {'t': self.t,
-                 'converged' : self.converged ,
+                 'nobs_diffuse' : self.nobs_diffuse,
+                 'converged' : self.converged,
                  'converged_determinant' : self.converged_determinant,
                  'determinant' : self.determinant,
                  'period_converged' : self.period_converged,
@@ -416,18 +426,26 @@ cdef class {{prefix}}KalmanFilter(object):
                  'predicted_state': np.array(self.predicted_state, copy=True, order='F'),
                  'predicted_state_cov': np.array(self.predicted_state_cov, copy=True, order='F'),
                  'standardized_forecast_error': np.array(self.standardized_forecast_error, copy=True, order='F'),
+                 'predicted_diffuse_state_cov': np.array(self.standardized_forecast_error, copy=True, order='F'),
+                 'forecast_error_diffuse_cov': np.array(self.forecast_error_diffuse_cov, copy=True, order='F'),
                  'tmp0': np.array(self.tmp0, copy=True, order='F'),
                  'tmp00': np.array(self.tmp00, copy=True, order='F'),
                  'tmp1': np.array(self.tmp1, copy=True, order='F'),
                  'tmp2': np.array(self.tmp2, copy=True, order='F'),
                  'tmp3': np.array(self.tmp3, copy=True, order='F'),
-                 'tmp4': np.array(self.tmp4, copy=True, order='F')
+                 'tmp4': np.array(self.tmp4, copy=True, order='F'),
+                 'tmpM_inf': np.array(self.tmpM_inf, copy=True, order='F'),
+                 'tmpK0': np.array(self.tmpK0, copy=True, order='F'),
+                 'tmpK1': np.array(self.tmpK1, copy=True, order='F'),
+                 'tmpL0': np.array(self.tmpL0, copy=True, order='F'),
+                 'tmpL1': np.array(self.tmpL1, copy=True, order='F')
                  }
 
         return (self.__class__, args, state)
 
     def __setstate__(self, state):
         self.t = state['t']
+        self.nobs_diffuse  = state['nobs_diffuse']
         self.converged  = state['converged']
         self.converged_determinant = state['converged_determinant']
         self.determinant = state['determinant']
@@ -449,12 +467,19 @@ cdef class {{prefix}}KalmanFilter(object):
         self.predicted_state = state['predicted_state']
         self.predicted_state_cov = state['predicted_state_cov']
         self.standardized_forecast_error = state['standardized_forecast_error']
+        self.predicted_diffuse_state_cov = state['predicted_diffuse_state_cov']
+        self.forecast_error_diffuse_cov = state['forecast_error_diffuse_cov']
         self.tmp0 = state['tmp0']
         self.tmp00 = state['tmp00']
         self.tmp1 = state['tmp1']
         self.tmp2 = state['tmp2']
         self.tmp3 = state['tmp3']
         self.tmp4 = state['tmp4']
+        self.tmpM_inf = state['tmpM_inf']
+        self.tmpK0 = state['tmpK0']
+        self.tmpK1 = state['tmpK1']
+        self.tmpL0 = state['tmpL0']
+        self.tmpL1 = state['tmpL1']
         self._reinitialize_pointers()
 
     cdef void _reinitialize_pointers(self) except *:
@@ -467,6 +492,12 @@ cdef class {{prefix}}KalmanFilter(object):
         self._forecast_error_ipiv = &self.forecast_error_ipiv[0]
         self._tmp0 = &self.tmp0[0, 0]
         self._tmp00 = &self.tmp00[0, 0]
+
+        self._tmpM_inf = &self.tmpM_inf[0]
+        self._tmpK0 = &self.tmpK0[0]
+        self._tmpK1 = &self.tmpK1[0]
+        self._tmpL0 = &self.tmpL0[0,0]
+        self._tmpL1 = &self.tmpL1[0,0]
 
     cdef allocate_arrays(self):
         # Local variables
@@ -516,6 +547,25 @@ cdef class {{prefix}}KalmanFilter(object):
         self.predicted_state = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         dim3[0] = self.k_states; dim3[1] = self.k_states; dim3[2] = storage+1;
         self.predicted_state_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
+
+        # Exact diffuse initialization
+        # TODO: only create full nobs-length arrays if necessary
+        dim3[0] = self.k_endog; dim3[1] = self.k_endog; dim3[2] = storage;
+        self.forecast_error_diffuse_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
+        dim3[0] = self.k_states; dim3[1] = self.k_states; dim3[2] = storage+1;
+        self.predicted_diffuse_state_cov = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
+        dim1[0] = self.k_states;
+        self.tmpM_inf = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+        self._tmpM_inf = &self.tmpM_inf[0]
+        self.tmpK0 = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+        self._tmpK0 = &self.tmpK0[0]
+        self.tmpK1 = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+        self._tmpK1 = &self.tmpK1[0]
+        dim2[0] = self.k_states; dim2[1] = self.k_states;
+        self.tmpL0 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        self._tmpL0 = &self.tmpL0[0,0]
+        self.tmpL1 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        self._tmpL1 = &self.tmpL1[0,0]
 
         # Kalman Gain
         if self.conserve_memory & MEMORY_NO_GAIN > 0:
@@ -580,6 +630,7 @@ cdef class {{prefix}}KalmanFilter(object):
 
         # Holds arrays of dimension $(m \times p \times T)$  
         # $\\#_1 = P_t Z_t'$
+        # Also known as the matrix M
         dim3[0] = self.k_states; dim3[1] = self.k_endog; dim3[2] = storage;
         self.tmp1 = np.PyArray_ZEROS(3, dim3, {{typenum}}, FORTRAN)
 
@@ -661,9 +712,9 @@ cdef class {{prefix}}KalmanFilter(object):
             # Seek to the beginning
             self.seek(0, True)
 
-    cpdef seek(self, unsigned int t, int reset_convergence=True):
+    cpdef seek(self, unsigned int t, int reset=True):
         """
-        seek(self, t, reset_convergence = True)
+        seek(self, t, reset = True)
 
         Change the time-state of the filter
 
@@ -673,7 +724,8 @@ cdef class {{prefix}}KalmanFilter(object):
             raise IndexError("Observation index out of range")
         self.t = t
 
-        if reset_convergence:
+        if reset:
+            self.nobs_diffuse = 0
             self.converged = 0
             self.period_converged = 0
 
@@ -865,6 +917,7 @@ cdef class {{prefix}}KalmanFilter(object):
         # Initialize object-level pointers to input arrays
         self._input_state = &self.predicted_state[0, predicted_t]
         self._input_state_cov = &self.predicted_state_cov[0, 0, predicted_t]
+        self._input_diffuse_state_cov = &self.predicted_diffuse_state_cov[0, 0, predicted_t]
 
         # Copy initialization arrays to input arrays if we're starting the
         # filter
@@ -884,11 +937,13 @@ cdef class {{prefix}}KalmanFilter(object):
             # initial_state_* arrays).
             blas.{{prefix}}copy(&self.model._k_states, self.model._initial_state, &inc, self._input_state, &inc)
             blas.{{prefix}}copy(&self.model._k_states2, self.model._initial_state_cov, &inc, self._input_state_cov, &inc)
+            blas.{{prefix}}copy(&self.model._k_states2, self.model._initial_diffuse_state_cov, &inc, self._input_diffuse_state_cov, &inc)
 
         # Initialize object-level pointers to output arrays
         self._forecast = &self.forecast[0, forecast_t]
         self._forecast_error = &self.forecast_error[0, forecast_t]
         self._forecast_error_cov = &self.forecast_error_cov[0, 0, forecast_t]
+        self._forecast_error_diffuse_cov = &self.forecast_error_diffuse_cov[0, 0, forecast_t]
         self._standardized_forecast_error = &self.standardized_forecast_error[0, std_forecast_t]
 
         self._filtered_state = &self.filtered_state[0, filtered_t]
@@ -897,9 +952,11 @@ cdef class {{prefix}}KalmanFilter(object):
         if self.filter_timing == TIMING_INIT_PREDICTED:
             self._predicted_state = &self.predicted_state[0, predicted_t+1]
             self._predicted_state_cov = &self.predicted_state_cov[0, 0, predicted_t+1]
+            self._predicted_diffuse_state_cov = &self.predicted_diffuse_state_cov[0, 0, predicted_t+1]
         else:
             self._predicted_state = &self.predicted_state[0, predicted_t]
             self._predicted_state_cov = &self.predicted_state_cov[0, 0, predicted_t]
+            self._predicted_diffuse_state_cov = &self.predicted_diffuse_state_cov[0, 0, predicted_t]
 
         self._kalman_gain = &self.kalman_gain[0, 0, gain_t]
 
@@ -912,13 +969,24 @@ cdef class {{prefix}}KalmanFilter(object):
         self._tmp4 = &self.tmp4[0, 0, smoothing_t]
 
     cdef void initialize_function_pointers(self) except *:
+        cdef int diffuse = self.check_diffuse()
+
         # Filtering method
-        if self.filter_method & FILTER_UNIVARIATE:
+
+        # Must use univariate diffuse method if we are at a diffuse observation
+        if diffuse:
+            self.forecasting = {{prefix}}forecast_univariate_diffuse
+            self.updating = {{prefix}}updating_univariate_diffuse
+            self.inversion = {{prefix}}inverse_noop_univariate_diffuse
+            self.calculate_loglikelihood = {{prefix}}loglikelihood_univariate_diffuse
+            self.prediction = {{prefix}}prediction_univariate_diffuse
+        # Univariate method
+        elif self.filter_method & FILTER_UNIVARIATE:
             self.forecasting = {{prefix}}forecast_univariate
             self.updating = {{prefix}}updating_univariate
             self.inversion = {{prefix}}inverse_noop_univariate
             self.calculate_loglikelihood = {{prefix}}loglikelihood_univariate
-            self.prediction = {{prefix}}prediction_univariate
+            self.prediction = {{prefix}}prediction_univariate                
 
         # Conventional method
         elif self.filter_method & FILTER_CONVENTIONAL:
@@ -1003,6 +1071,25 @@ cdef class {{prefix}}KalmanFilter(object):
                     )
                     self.predicted_state_cov[i,j,predicted_t] = value
                     self.predicted_state_cov[j,i,predicted_t] = value
+
+    cdef int check_diffuse(self):
+        cdef:
+            int inc = 1
+            {{cython_type}} alpha = 1.0
+            {{cython_type}} beta = 0.0
+            {{cython_type}} scalar
+
+        if self.t == self.nobs_diffuse:
+            {{if combined_prefix == 'd'}}
+            if blas.{{prefix}}dot(&self.k_states2, self._input_diffuse_state_cov, &inc, self._input_diffuse_state_cov, &inc) > self.tolerance_diffuse:
+                self.nobs_diffuse = self.nobs_diffuse + 1
+            {{else}}
+            blas.{{prefix}}gemv("N", &inc, &self.k_states2, &alpha, self._input_diffuse_state_cov, &inc, self._input_diffuse_state_cov, &inc, &beta, self._tmp00, &inc)
+            if {{combined_prefix}}abs(self._tmp00[0]) > self.tolerance_diffuse:
+                self.nobs_diffuse = self.nobs_diffuse + 1
+            {{endif}}
+
+        return self.t < self.nobs_diffuse
 
     cdef void check_convergence(self):
         # Constants

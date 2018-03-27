@@ -1299,6 +1299,7 @@ class FilterResults(FrozenRepresentation):
         'conserve_memory', 'filter_timing', 'tolerance', 'loglikelihood_burn',
         'converged', 'period_converged', 'filtered_state',
         'filtered_state_cov', 'predicted_state', 'predicted_state_cov',
+        'forecasts_error_diffuse_cov', 'predicted_diffuse_state_cov',
         'tmp1', 'tmp2', 'tmp3', 'tmp4', 'forecasts',
         'forecasts_error', 'forecasts_error_cov', 'llf_obs',
         'collapsed_forecasts', 'collapsed_forecasts_error',
@@ -1361,6 +1362,9 @@ class FilterResults(FrozenRepresentation):
         )
         self.initial_state_cov = np.array(
             kalman_filter.model.initial_state_cov, copy=True
+        )
+        self.initial_diffuse_state_cov = np.array(
+            kalman_filter.model.initial_diffuse_state_cov, copy=True
         )
 
         # Save Kalman filter parameters
@@ -1444,6 +1448,13 @@ class FilterResults(FrozenRepresentation):
             kalman_filter.forecast_error_cov, copy=True
         )
         self.llf_obs = np.array(kalman_filter.loglikelihood, copy=True)
+
+        # Diffuse objects
+        self.nobs_diffuse = kalman_filter.nobs_diffuse
+        self.forecasts_error_diffuse_cov = np.array(
+            kalman_filter.forecast_error_diffuse_cov, copy=True)
+        self.predicted_diffuse_state_cov = np.array(
+            kalman_filter.predicted_diffuse_state_cov, copy=True)
 
         # If there was missing data, save the original values from the Kalman
         # filter output, since below will set the values corresponding to
