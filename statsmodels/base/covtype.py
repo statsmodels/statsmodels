@@ -134,7 +134,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     if cov_type == 'nw-groupsum':
         cov_type = 'hac-groupsum'
     if 'kernel' in kwds:
-            kwds['weights_func'] = kwds.pop('kernel')
+        kwds['weights_func'] = kwds.pop('kernel')
 
     # pop because HCx raises if any kwds
     sc_factor = kwds.pop('scaling_factor', None)
