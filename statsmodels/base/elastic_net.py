@@ -348,10 +348,6 @@ class RegularizedResults(Results):
     def __init__(self, model, params):
         super(RegularizedResults, self).__init__(model, params)
 
-    @cache_readonly
-    def fittedvalues(self):
-        return self.model.predict(self.params)
-
 
 class RegularizedResultsWrapper(wrap.ResultsWrapper):
     _attrs = {

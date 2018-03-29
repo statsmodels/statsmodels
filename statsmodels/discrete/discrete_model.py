@@ -3591,21 +3591,7 @@ class CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {
                     "one_line_description" : "A results class for count data",
                     "extra_attr" : ""}
-    @cache_readonly
-    def resid(self):
-        """
-        Residuals
 
-        Notes
-        -----
-        The residuals for Count models are defined as
-
-        .. math:: y - p
-
-        where :math:`p = \\exp(X\\beta)`. Any exposure and offset variables
-        are also handled.
-        """
-        return self.model.endog - self.predict()
 
 class NegativeBinomialResults(CountResults):
     __doc__ = _discrete_results_docs % {

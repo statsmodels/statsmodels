@@ -1409,14 +1409,6 @@ class GEEResults(base.LikelihoodModelResults):
         return self.standard_errors(self.cov_type)
 
     @cache_readonly
-    def resid(self):
-        """
-        Returns the residuals, the endogeneous data minus the fitted
-        values from the model.
-        """
-        return self.model.endog - self.fittedvalues
-
-    @cache_readonly
     def resid_split(self):
         """
         Returns the residuals, the endogeneous data minus the fitted
