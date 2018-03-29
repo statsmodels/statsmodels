@@ -771,7 +771,7 @@ class Results(object):
             self.k_constant = model.k_constant
 
     @cache_readonly
-    def fittedvalues
+    def fittedvalues(self):
         return self.model.predict(self.params)
 
     @cache_readonly
