@@ -1050,6 +1050,13 @@ class LikelihoodModelResults(Results):
                                   use_t=use_t, **cov_kwds)
 
     @cache_readonly
+    def llf_obs(self):
+        """
+        (float) The optimized value of the log-likelihood, pointwise.
+        """
+        return self.model.loglikeobs(self.params)
+
+    @cache_readonly
     def llf(self):
         return self.model.loglike(self.params)
 

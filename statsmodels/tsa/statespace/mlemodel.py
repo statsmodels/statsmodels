@@ -1989,13 +1989,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return hqic(self.llf, self.nobs_effective, self.df_model)
 
     @cache_readonly
-    def llf_obs(self):
-        """
-        (float) The value of the log-likelihood function evaluated at `params`.
-        """
-        return self.model.loglikeobs(self.params)
-
-    @cache_readonly
     def llf(self):
         """
         (float) The value of the log-likelihood function evaluated at `params`.
