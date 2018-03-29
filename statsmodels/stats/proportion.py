@@ -67,6 +67,10 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
 
     '''
 
+    pd_index = getattr(count, 'index', None)
+    count = np.asarray(count)
+    nobs = np.asarray(nobs)
+
     q_ = count * 1. / nobs
     alpha_2 = 0.5 * alpha
 
@@ -92,6 +96,13 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     elif method == 'beta':
         ci_low = stats.beta.ppf(alpha_2, count, nobs - count + 1)
         ci_upp = stats.beta.isf(alpha_2, count + 1, nobs - count)
+
+        if np.ndim(ci_low) > 0:
+            ci_low[q_ == 0] = 0
+            ci_upp[q_ == 1] = 1
+        else:
+            ci_low = ci_low if (q_ != 0) else 0
+            ci_upp = ci_upp if (q_ != 1) else 1
 
     elif method == 'agresti_coull':
         crit = stats.norm.isf(alpha / 2.)
@@ -119,6 +130,18 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
 
     else:
         raise NotImplementedError('method "%s" is not available' % method)
+
+    if method in ['normal', 'agresti_coull']:
+        ci_low = np.clip(ci_low, 0, 1)
+        ci_upp = np.clip(ci_upp, 0, 1)
+    if pd_index is not None and np.ndim(ci_low) > 0:
+        import pandas as pd
+        if np.ndim(ci_low) == 1:
+            ci_low = pd.Series(ci_low, index=pd_index)
+            ci_upp = pd.Series(ci_upp, index=pd_index)
+        if np.ndim(ci_low) == 2:
+            ci_low = pd.DataFrame(ci_low, index=pd_index)
+            ci_upp = pd.DataFrame(ci_upp, index=pd_index)
     return ci_low, ci_upp
 
 
