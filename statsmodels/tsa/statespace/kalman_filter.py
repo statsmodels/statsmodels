@@ -1435,6 +1435,8 @@ class FilterResults(FrozenRepresentation):
                 self.tmp2 = np.array(kalman_filter.tmp2, copy=True)
                 self.tmp3 = np.array(kalman_filter.tmp3, copy=True)
                 self.tmp4 = np.array(kalman_filter.tmp4, copy=True)
+                self.M = np.array(kalman_filter.M, copy=True)
+                self.M_diffuse = np.array(kalman_filter.M_inf, copy=True)
         else:
             self._kalman_gain = None
 

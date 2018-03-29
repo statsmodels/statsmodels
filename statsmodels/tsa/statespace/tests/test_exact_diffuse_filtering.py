@@ -50,7 +50,7 @@ import os
 from statsmodels.tools.tools import Bunch
 from statsmodels import datasets
 from statsmodels.tsa.statespace.initialization import Initialization
-from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
+from statsmodels.tsa.statespace.kalman_smoother import KalmanSmoother
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 from statsmodels.tsa.statespace.varmax import VARMAX
 from statsmodels.tsa.statespace.dynamic_factor import DynamicFactor
@@ -69,7 +69,7 @@ def test_local_level_analytic():
     sigma2_mu = 8.253
 
     # Construct the basic representation
-    mod = KalmanFilter(k_endog=1, k_states=1, k_posdef=1)
+    mod = KalmanSmoother(k_endog=1, k_states=1, k_posdef=1)
     endog = np.r_[y1, [1] * 9]
     mod.bind(endog)
     mod.initialize(Initialization(mod.k_states, initialization_type='diffuse'))
@@ -83,7 +83,7 @@ def test_local_level_analytic():
     mod['state_cov', :] = sigma2_mu
 
     # Perform filtering
-    res = mod.filter()
+    res = mod.smooth()
 
     # Basic initialization variables
     assert_allclose(res.predicted_state_cov[0, 0, 0], 0)
@@ -111,7 +111,7 @@ def test_local_linear_trend_analytic():
     sigma2_beta = 2.334
 
     # Construct the basic representation
-    mod = KalmanFilter(k_endog=1, k_states=2, k_posdef=2)
+    mod = KalmanSmoother(k_endog=1, k_states=2, k_posdef=2)
     endog = np.r_[y1, y2, y3, [1] * 7]
     mod.bind(endog)
     mod.initialize(Initialization(mod.k_states, initialization_type='diffuse'))
@@ -126,7 +126,7 @@ def test_local_linear_trend_analytic():
     mod['state_cov'] = np.diag([sigma2_mu, sigma2_beta])
 
     # Perform filtering
-    res = mod.filter()
+    res = mod.smooth()
 
     # Basic initialization variables
     assert_allclose(res.predicted_state_cov[..., 0], np.zeros((2, 2)))
@@ -165,7 +165,7 @@ def test_common_level_analytic():
     sigma2_mu = 3.2324
 
     # Construct the basic representation
-    mod = KalmanFilter(k_endog=2, k_states=2, k_posdef=1)
+    mod = KalmanSmoother(k_endog=2, k_states=2, k_posdef=1)
     mod.filter_univariate = True
     endog = np.column_stack([np.r_[y11, [1] * 9], np.r_[y21, [1] * 9]])
     mod.bind(endog.T)
@@ -180,7 +180,7 @@ def test_common_level_analytic():
     mod['state_cov', 0, 0] = sigma2_mu
 
     # Perform filtering
-    res = mod.filter()
+    res = mod.smooth()
 
     # Basic initialization variables
     assert_allclose(res.predicted_state_cov[..., 0], np.zeros((2, 2)))
@@ -220,7 +220,7 @@ def test_common_level_restricted_analytic():
     sigma2_mu = 3.2324
 
     # Construct the basic representation
-    mod = KalmanFilter(k_endog=2, k_states=1, k_posdef=1)
+    mod = KalmanSmoother(k_endog=2, k_states=1, k_posdef=1)
     endog = np.column_stack([np.r_[y11, [1] * 9], np.r_[y21, [1] * 9]])
     mod.bind(endog.T)
     mod.initialize(Initialization(mod.k_states, initialization_type='diffuse'))
@@ -234,7 +234,7 @@ def test_common_level_restricted_analytic():
     mod['state_cov', :] = sigma2_mu
 
     # Perform filtering
-    res = mod.filter()
+    res = mod.smooth()
 
     # Basic initialization variables
     assert_allclose(res.predicted_state_cov[..., 0], 0)
@@ -269,7 +269,7 @@ def test_local_linear_trend_missing_analytic():
     sigma2_beta = 2.334
 
     # Construct the basic representation
-    mod = KalmanFilter(k_endog=1, k_states=2, k_posdef=2)
+    mod = KalmanSmoother(k_endog=1, k_states=2, k_posdef=2)
     endog = np.r_[y1, y2, y3, [1] * 7]
     mod.bind(endog)
     mod.initialize(Initialization(mod.k_states, initialization_type='diffuse'))
@@ -283,7 +283,7 @@ def test_local_linear_trend_missing_analytic():
     mod['selection'] = np.eye(2)
     mod['state_cov'] = np.diag([sigma2_mu, sigma2_beta])
 
-    res = mod.filter()
+    res = mod.smooth()
 
     # Test output
     q_mu = sigma2_mu / sigma2_y
@@ -376,40 +376,40 @@ class Check(object):
                 self.results_a.llf_obs[d:],
                 self.results_b.llf_obs[d:])
 
-    # def test_smoothed_states(self):
-    #     assert_allclose(
-    #         self.results_a.smoothed_state,
-    #         self.results_b.smoothed_state)
+    def test_smoothed_state(self):
+        assert_allclose(
+            self.results_a.smoothed_state.T,
+            self.results_b.smoothed_state.T)
 
-    # def test_smoothed_states_cov(self):
-    #     assert_allclose(
-    #         self.results_a.smoothed_state_cov,
-    #         self.results_b.smoothed_state_cov)
+    def test_smoothed_state_cov(self):
+        assert_allclose(
+            self.results_a.smoothed_state_cov.T,
+            self.results_b.smoothed_state_cov.T)
 
-    # def test_smoothed_states_autocov(self):
-    #     assert_allclose(
-    #         self.results_a.smoothed_state_autocov,
-    #         self.results_b.smoothed_state_autocov)
+    def test_smoothed_state_autocov(self):
+        assert_allclose(
+            self.results_a.smoothed_state_autocov.T,
+            self.results_b.smoothed_state_autocov.T)
 
-    # def test_smoothed_measurement_disturbance(self):
-    #     assert_allclose(
-    #         self.results_a.smoothed_measurement_disturbance,
-    #         self.results_b.smoothed_measurement_disturbance)
+    def test_smoothed_measurement_disturbance(self):
+        assert_allclose(
+            self.results_a.smoothed_measurement_disturbance.T,
+            self.results_b.smoothed_measurement_disturbance.T)
 
-    # def test_smoothed_measurement_disturbance_cov(self):
-    #     assert_allclose(
-    #         self.results_a.smoothed_measurement_disturbance_cov,
-    #         self.results_b.smoothed_measurement_disturbance_cov)
+    def test_smoothed_measurement_disturbance_cov(self):
+        assert_allclose(
+            self.results_a.smoothed_measurement_disturbance_cov.T,
+            self.results_b.smoothed_measurement_disturbance_cov.T)
 
-    # def test_smoothed_state_disturbance(self):
-    #     assert_allclose(
-    #         self.results_a.smoothed_state_disturbance,
-    #         self.results_b.smoothed_state_disturbance)
+    def test_smoothed_state_disturbance(self):
+        assert_allclose(
+            self.results_a.smoothed_state_disturbance.T,
+            self.results_b.smoothed_state_disturbance.T)
 
-    # def test_smoothed_state_disturbance_cov(self):
-    #     assert_allclose(
-    #         self.results_a.smoothed_state_disturbance_cov,
-    #         self.results_b.smoothed_state_disturbance_cov)
+    def test_smoothed_state_disturbance_cov(self):
+        assert_allclose(
+            self.results_a.smoothed_state_disturbance_cov.T,
+            self.results_b.smoothed_state_disturbance_cov.T)
 
     # def test_simulation_smoothed_state(self):
     #     assert_allclose(
@@ -490,13 +490,13 @@ class TestVAR1(CheckApproximateDiffuse):
         # Exact diffuse
         init1 = Initialization(cls.ssm.k_states, 'diffuse')
         cls.ssm.initialize(init1)
-        cls.results_a = cls.ssm.filter()
+        cls.results_a = cls.ssm.smooth()
         cls.d = cls.results_a.nobs_diffuse
 
         # Approximate diffuse
         init2 = Initialization(cls.ssm.k_states, 'approximate_diffuse')
         cls.ssm.initialize(init2)
-        cls.results_b = cls.ssm.filter()
+        cls.results_b = cls.ssm.smooth()
 
     def test_initialization(self):
         assert_allclose(self.results_a.initial_state_cov, 0)
@@ -527,13 +527,13 @@ class TestVAR1_Missing(CheckApproximateDiffuse):
         # Exact diffuse
         init1 = Initialization(cls.ssm.k_states, 'diffuse')
         cls.ssm.initialize(init1)
-        cls.results_a = cls.ssm.filter()
+        cls.results_a = cls.ssm.smooth()
         cls.d = cls.results_a.nobs_diffuse
 
         # Approximate diffuse
         init2 = Initialization(cls.ssm.k_states, 'approximate_diffuse')
         cls.ssm.initialize(init2)
-        cls.results_b = cls.ssm.filter()
+        cls.results_b = cls.ssm.smooth()
 
     def test_initialization(self):
         assert_allclose(self.results_a.initial_state_cov, 0)
@@ -563,7 +563,7 @@ class TestVAR1_Mixed(CheckApproximateDiffuse):
         init1.set(0, 'diffuse')
         init1.set(1, 'stationary')
         cls.ssm.initialize(init1)
-        cls.results_a = cls.ssm.filter()
+        cls.results_a = cls.ssm.smooth()
         cls.d = cls.results_a.nobs_diffuse
 
         # Approximate diffuse
@@ -571,7 +571,7 @@ class TestVAR1_Mixed(CheckApproximateDiffuse):
         init2.set(0, 'approximate_diffuse')
         init2.set(1, 'stationary')
         cls.ssm.initialize(init2)
-        cls.results_b = cls.ssm.filter()
+        cls.results_b = cls.ssm.smooth()
 
     def test_initialization(self):
         assert_allclose(self.results_a.initial_state_cov, np.diag([0, 13.474315]))
@@ -599,13 +599,13 @@ class TestDFM(CheckApproximateDiffuse):
         # Exact diffuse
         init1 = Initialization(cls.ssm.k_states, 'diffuse')
         cls.ssm.initialize(init1)
-        cls.results_a = cls.ssm.filter()
+        cls.results_a = cls.ssm.smooth()
         cls.d = cls.results_a.nobs_diffuse
 
         # Approximate diffuse
         init2 = Initialization(cls.ssm.k_states, 'approximate_diffuse')
         cls.ssm.initialize(init2)
-        cls.results_b = cls.ssm.filter()
+        cls.results_b = cls.ssm.smooth()
 
     def test_initialization(self):
         assert_allclose(self.results_a.initial_state_cov, 0)
@@ -634,13 +634,13 @@ class TestDFMCollapsed(CheckApproximateDiffuse):
         # Exact diffuse
         init1 = Initialization(cls.ssm.k_states, 'diffuse')
         cls.ssm.initialize(init1)
-        cls.results_a = cls.ssm.filter()
+        cls.results_a = cls.ssm.smooth()
         cls.d = cls.results_a.nobs_diffuse
 
         # Approximate diffuse
         init2 = Initialization(cls.ssm.k_states, 'approximate_diffuse')
         cls.ssm.initialize(init2)
-        cls.results_b = cls.ssm.filter()
+        cls.results_b = cls.ssm.smooth()
 
     def test_initialization(self):
         assert_allclose(self.results_a.initial_state_cov, 0)
@@ -782,7 +782,7 @@ class TestLocalLevel(CheckKFAS):
         # Exact diffuse
         init1 = Initialization(cls.ssm.k_states, 'diffuse')
         cls.ssm.initialize(init1)
-        cls.results_a = cls.ssm.filter()
+        cls.results_a = cls.ssm.smooth()
         cls.d = cls.results_a.nobs_diffuse
 
         # Setup the base class with the results object
@@ -825,7 +825,7 @@ class TestLocalLinearTrend(CheckKFAS):
         # Exact diffuse
         init1 = Initialization(cls.ssm.k_states, 'diffuse')
         cls.ssm.initialize(init1)
-        cls.results_a = cls.ssm.filter()
+        cls.results_a = cls.ssm.smooth()
         cls.d = cls.results_a.nobs_diffuse
 
         # Setup the base class with the results object
@@ -885,7 +885,7 @@ class TestCommonLevel(CheckKFAS):
         sigma2_mu = 3.2324
 
         # Construct the basic representation
-        mod = KalmanFilter(k_endog=2, k_states=2, k_posdef=1)
+        mod = KalmanSmoother(k_endog=2, k_states=2, k_posdef=1)
         mod.filter_univariate = True
         endog = np.column_stack([np.r_[y11, [1] * 9], np.r_[y21, [1] * 9]])
         mod.bind(endog.T)
@@ -901,7 +901,7 @@ class TestCommonLevel(CheckKFAS):
 
         # Save model, results
         cls.ssm = mod
-        cls.results_a = mod.filter()
+        cls.results_a = mod.smooth()
 
         # Setup the base class with the results object
         results_path = os.path.join(

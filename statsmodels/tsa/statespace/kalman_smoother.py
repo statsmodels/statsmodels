@@ -668,6 +668,14 @@ class SmootherResults(FilterResults):
             else:
                 setattr(self, name, None)
 
+        # Diffuse objects
+        self.scaled_smoothed_diffuse_estimator = np.array(
+            smoother.scaled_smoothed_diffuse_estimator, copy=True)
+        self.scaled_smoothed_diffuse1_estimator_cov = np.array(
+            smoother.scaled_smoothed_diffuse1_estimator_cov, copy=True)
+        self.scaled_smoothed_diffuse2_estimator_cov = np.array(
+            smoother.scaled_smoothed_diffuse2_estimator_cov, copy=True)
+
         # Adjustments
 
         # For r_t (and similarly for N_t), what was calculated was

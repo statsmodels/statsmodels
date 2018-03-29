@@ -79,7 +79,7 @@ cdef class sKalmanFilter(object):
     # ### Kalman filter properties
     cdef readonly np.float32_t [:] loglikelihood
     cdef readonly np.float32_t [::1,:] filtered_state, predicted_state, forecast, forecast_error, standardized_forecast_error
-    cdef readonly np.float32_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov, predicted_diffuse_state_cov, forecast_error_diffuse_cov
+    cdef readonly np.float32_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov, predicted_diffuse_state_cov, forecast_error_diffuse_cov, M, M_inf
     cdef readonly np.float32_t [::1,:,:] kalman_gain
 
     # ### Steady State Values
@@ -96,7 +96,7 @@ cdef class sKalmanFilter(object):
     cdef readonly np.float32_t [::1,:] tmp0, tmp00
     cdef readonly np.float32_t [::1,:] tmp2
     cdef readonly np.float32_t [::1,:,:] tmp1, tmp3, tmp4
-    cdef readonly np.float32_t [:] tmpM_inf, tmpK0, tmpK1
+    cdef readonly np.float32_t [:] tmpK0, tmpK1
     cdef readonly np.float32_t [::1,:] tmpL0, tmpL1
 
     cdef readonly np.float32_t determinant
@@ -129,6 +129,8 @@ cdef class sKalmanFilter(object):
 
     cdef np.float32_t * _forecast_error_diffuse_cov
     cdef np.float32_t * _predicted_diffuse_state_cov
+    cdef np.float32_t * _M
+    cdef np.float32_t * _M_inf
 
     cdef np.float32_t * _kalman_gain
     cdef np.float32_t * _loglikelihood
@@ -219,7 +221,7 @@ cdef class dKalmanFilter(object):
     # ### Kalman filter properties
     cdef readonly np.float64_t [:] loglikelihood
     cdef readonly np.float64_t [::1,:] filtered_state, predicted_state, forecast, forecast_error, standardized_forecast_error
-    cdef readonly np.float64_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov, predicted_diffuse_state_cov, forecast_error_diffuse_cov
+    cdef readonly np.float64_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov, predicted_diffuse_state_cov, forecast_error_diffuse_cov, M, M_inf
     cdef readonly np.float64_t [::1,:,:] kalman_gain
 
     # ### Steady State Values
@@ -269,6 +271,8 @@ cdef class dKalmanFilter(object):
 
     cdef np.float64_t * _forecast_error_diffuse_cov
     cdef np.float64_t * _predicted_diffuse_state_cov
+    cdef np.float64_t * _M
+    cdef np.float64_t * _M_inf
 
     cdef np.float64_t * _kalman_gain
     cdef np.float64_t * _loglikelihood
@@ -359,7 +363,7 @@ cdef class cKalmanFilter(object):
     # ### Kalman filter properties
     cdef readonly np.complex64_t [:] loglikelihood
     cdef readonly np.complex64_t [::1,:] filtered_state, predicted_state, forecast, forecast_error, standardized_forecast_error
-    cdef readonly np.complex64_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov, predicted_diffuse_state_cov, forecast_error_diffuse_cov
+    cdef readonly np.complex64_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov, predicted_diffuse_state_cov, forecast_error_diffuse_cov, M, M_inf
     cdef readonly np.complex64_t [::1,:,:] kalman_gain
 
     # ### Steady State Values
@@ -409,6 +413,8 @@ cdef class cKalmanFilter(object):
 
     cdef np.complex64_t * _forecast_error_diffuse_cov
     cdef np.complex64_t * _predicted_diffuse_state_cov
+    cdef np.complex64_t * _M
+    cdef np.complex64_t * _M_inf
 
     cdef np.complex64_t * _kalman_gain
     cdef np.complex64_t * _loglikelihood
@@ -499,7 +505,7 @@ cdef class zKalmanFilter(object):
     # ### Kalman filter properties
     cdef readonly np.complex128_t [:] loglikelihood
     cdef readonly np.complex128_t [::1,:] filtered_state, predicted_state, forecast, forecast_error, standardized_forecast_error
-    cdef readonly np.complex128_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov, predicted_diffuse_state_cov, forecast_error_diffuse_cov
+    cdef readonly np.complex128_t [::1,:,:] filtered_state_cov, predicted_state_cov, forecast_error_cov, predicted_diffuse_state_cov, forecast_error_diffuse_cov, M, M_inf
     cdef readonly np.complex128_t [::1,:,:] kalman_gain
 
     # ### Steady State Values
@@ -549,6 +555,8 @@ cdef class zKalmanFilter(object):
 
     cdef np.complex128_t * _forecast_error_diffuse_cov
     cdef np.complex128_t * _predicted_diffuse_state_cov
+    cdef np.complex128_t * _M
+    cdef np.complex128_t * _M_inf
 
     cdef np.complex128_t * _kalman_gain
     cdef np.complex128_t * _loglikelihood
