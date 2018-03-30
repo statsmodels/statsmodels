@@ -75,6 +75,11 @@ def test_confint_proportion_ndim():
                         rtol=1e-13)
         assert_allclose((ci_arr[0][1, 2], ci_arr[1][1, 2]), ci12, rtol=1e-13)
 
+        # check that lists work as input
+        ci_li = proportion_confint(count.tolist(), nobs.tolist(), alpha=0.05, 
+                                   method=method)
+        assert_allclose(ci_arr, (ci_li[0], ci_li[1]), rtol=1e-13)
+
 
 def test_samplesize_confidenceinterval_prop():
     #consistency test for samplesize to achieve confidence_interval

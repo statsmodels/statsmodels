@@ -68,6 +68,9 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     '''
 
     pd_index = getattr(count, 'index', None)
+    if pd_index is not None and hasattr(pd_index, '__call__'):
+        # this rules out lists, lists have an index method
+        pd_index = None
     count = np.asarray(count)
     nobs = np.asarray(nobs)
 
