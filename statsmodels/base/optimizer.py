@@ -13,67 +13,53 @@ def _check_method(method, methods):
         raise ValueError(message)
 
 
-class Optimizer(object):
-    def _fit(self, objective, gradient, start_params, fargs, kwargs,
-             hessian=None, method='newton', maxiter=100, full_output=True,
-             disp=True, callback=None, retall=False):
-        """
-        Fit function for any model with an objective function.
-
-        Parameters
-        ----------
+_fit_doc_params = """
         start_params : array-like, optional
             Initial guess of the solution for the loglikelihood maximization.
             The default is an array of zeros.
-        method : str {'newton','nm','bfgs','powell','cg','ncg','basinhopping',
-            'minimize'}
-            Method can be 'newton' for Newton-Raphson, 'nm' for Nelder-Mead,
-            'bfgs' for Broyden-Fletcher-Goldfarb-Shanno, 'powell' for modified
-            Powell's method, 'cg' for conjugate gradient, 'ncg' for Newton-
-            conjugate gradient, 'basinhopping' for global basin-hopping
-            solver, if available or a generic 'minimize' which is a wrapper for
-            scipy.optimize.minimize. `method` determines which solver from
-            scipy.optimize is used. The explicit arguments in `fit` are passed
-            to the solver, with the exception of the basin-hopping solver. Each
+        method : str, optional
+            The `method` determines which solver from `scipy.optimize`
+            is used, and it can be chosen from among the following strings:
+
+            - 'newton' for Newton-Raphson, 'nm' for Nelder-Mead
+            - 'bfgs' for Broyden-Fletcher-Goldfarb-Shanno (BFGS)
+            - 'lbfgs' for limited-memory BFGS with optional box constraints
+            - 'powell' for modified Powell's method
+            - 'cg' for conjugate gradient
+            - 'ncg' for Newton-conjugate gradient
+            - 'basinhopping' for global basin-hopping solver
+            - 'minimize' for generic wrapper of scipy minimize (BFGS by default)
+
+            The explicit arguments in `fit` are passed to the solver,
+            with the exception of the basin-hopping solver. Each
             solver has several optional arguments that are not the same across
             solvers. See the notes section below (or scipy.optimize) for the
             available arguments and for the list of explicit arguments that the
-            basin-hopping solver supports..
-        maxiter : int
+            basin-hopping solver supports.
+        maxiter : int, optional
             The maximum number of iterations to perform.
-        full_output : bool
+        full_output : bool, optional
             Set to True to have all available output in the Results object's
             mle_retvals attribute. The output is dependent on the solver.
             See LikelihoodModelResults notes section for more information.
-        disp : bool
+        disp : bool, optional
             Set to True to print convergence messages.
-        fargs : tuple
+        fargs : tuple, optional
             Extra arguments passed to the likelihood function, i.e.,
             loglike(x,*args)
-        callback : callable callback(xk)
+        callback : callable callback(xk), optional
             Called after each iteration, as callback(xk), where xk is the
             current parameter vector.
-        retall : bool
+        retall : bool, optional
             Set to True to return list of solutions at each iteration.
             Available in Results object's mle_retvals attribute.
+"""
 
-        Returns
-        -------
-        xopt : array
-            The solution to the objective function
-        retvals : dict, None
-            If `full_output` is True then this is a dictionary which holds
-            information returned from the solver used. If it is False, this is
-            None.
-        optim_settings : dict
-            A dictionary that contains the parameters passed to the solver.
-
-        Notes
-        -----
+_fit_doc_notes = """
         The 'basinhopping' solver ignores `maxiter`, `retall`, `full_output`
         explicit arguments.
 
-        Optional arguments for the solvers (available in Results.mle_settings)::
+        Optional arguments for the solvers (available in Results.mle_settings):
 
             'newton'
                 tol : float
@@ -94,6 +80,23 @@ class Optimizer(object):
                 epsilon
                     If fprime is approximated, use this value for the step
                     size. Only relevant if LikelihoodModel.score is None.
+            'lbfgs'
+                m : int
+                    This many terms are used for the Hessian approximation.
+                factr : float
+                    A stop condition that is a variant of relative error.
+                pgtol : float
+                    A stop condition that uses the projected gradient.
+                epsilon
+                    If fprime is approximated, use this value for the step
+                    size. Only relevant if LikelihoodModel.score is None.
+                maxfun : int
+                    Maximum number of function evaluations to make.
+                bounds : sequence
+                    (min, max) pairs for each element in x,
+                    defining the bounds on that parameter.
+                    Use None for one of min or max when there is no bound
+                    in that direction.
             'cg'
                 gtol : float
                     Stop when norm of gradient is less than gtol.
@@ -146,9 +149,9 @@ class Optimizer(object):
                     minimization method (e.g. 'L-BFGS-B'), or 'tol' - the
                     tolerance for termination. Other arguments are mapped from
                     explicit argument of `fit`:
-                    - `args` <- `fargs`
-                    - `jac` <- `score`
-                    - `hess` <- `hess`
+                      - `args` <- `fargs`
+                      - `jac` <- `score`
+                      - `hess` <- `hess`
             'minimize'
                 min_method : str, optional
                     Name of minimization method to use.
@@ -156,6 +159,72 @@ class Optimizer(object):
                     For a list of methods and their arguments, see
                     documentation of `scipy.optimize.minimize`.
                     If no method is specified, then BFGS is used.
+"""
+
+
+class Optimizer(object):
+    def _fit(self, objective, gradient, start_params, fargs, kwargs,
+             hessian=None, method='newton', maxiter=100, full_output=True,
+             disp=True, callback=None, retall=False):
+        """
+        Fit function for any model with an objective function.
+
+        Parameters
+        ----------
+        start_params : array-like, optional
+            Initial guess of the solution for the loglikelihood maximization.
+            The default is an array of zeros.
+        method : str, optional
+            The `method` determines which solver from `scipy.optimize`
+            is used, and it can be chosen from among the following strings:
+
+            - 'newton' for Newton-Raphson, 'nm' for Nelder-Mead
+            - 'bfgs' for Broyden-Fletcher-Goldfarb-Shanno (BFGS)
+            - 'lbfgs' for limited-memory BFGS with optional box constraints
+            - 'powell' for modified Powell's method
+            - 'cg' for conjugate gradient
+            - 'ncg' for Newton-conjugate gradient
+            - 'basinhopping' for global basin-hopping solver
+            - 'minimize' for generic wrapper of scipy minimize (BFGS by default)
+
+            The explicit arguments in `fit` are passed to the solver,
+            with the exception of the basin-hopping solver. Each
+            solver has several optional arguments that are not the same across
+            solvers. See the notes section below (or scipy.optimize) for the
+            available arguments and for the list of explicit arguments that the
+            basin-hopping solver supports.
+        maxiter : int, optional
+            The maximum number of iterations to perform.
+        full_output : bool, optional
+            Set to True to have all available output in the Results object's
+            mle_retvals attribute. The output is dependent on the solver.
+            See LikelihoodModelResults notes section for more information.
+        disp : bool, optional
+            Set to True to print convergence messages.
+        fargs : tuple, optional
+            Extra arguments passed to the likelihood function, i.e.,
+            loglike(x,*args)
+        callback : callable callback(xk), optional
+            Called after each iteration, as callback(xk), where xk is the
+            current parameter vector.
+        retall : bool, optional
+            Set to True to return list of solutions at each iteration.
+            Available in Results object's mle_retvals attribute.
+
+        Returns
+        -------
+        xopt : array
+            The solution to the objective function
+        retvals : dict, None
+            If `full_output` is True then this is a dictionary which holds
+            information returned from the solver used. If it is False, this is
+            None.
+        optim_settings : dict
+            A dictionary that contains the parameters passed to the solver.
+
+        Notes
+        -----
+        %(doc_notes)s
         """
         #TODO: generalize the regularization stuff
         # Extract kwargs specific to fit_regularized calling fit
@@ -197,6 +266,9 @@ class Optimizer(object):
         optim_settings.update(kwargs)
         # set as attributes or return?
         return xopt, retvals, optim_settings
+
+    _fit.__doc__ = _fit.__doc__ % {'fit_params': _fit_doc_params.strip(),
+                                   'doc_notes': _fit_doc_notes.strip()}
 
     def _fit_constrained(self, params):
         """
