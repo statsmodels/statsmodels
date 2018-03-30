@@ -51,6 +51,8 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     The following covariance types and required or optional arguments are
     currently available:
 
+    - 'fixed scale' and optional keyword argument 'scale' which uses
+        a predefined scale estimate with default equal to one.
     - 'HC0', 'HC1', 'HC2', 'HC3' and no keyword arguments:
         heteroscedasticity robust covariance
     - 'HAC' and keywords
@@ -65,9 +67,9 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         - `groups` array_like, integer (required) :
               index of clusters or groups
         - `use_correction` bool (optional) :
-              If True the sandwich covariance is calulated with a small
+              If True the sandwich covariance is calculated with a small
               sample correction.
-              If False the the sandwich covariance is calulated without
+              If False the sandwich covariance is calculated without
               small sample correction.
         - `df_correction` bool (optional)
               If True (default), then the degrees of freedom for the
@@ -87,7 +89,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         - `maxlag` integer (required) : number of lags to use
         - `kernel` string (optional) : kernel, default is Bartlett
         - `use_correction` False or string in ['hac', 'cluster'] (optional) :
-              If False the the sandwich covariance is calulated without
+              If False the sandwich covariance is calculated without
               small sample correction.
               If `use_correction = 'cluster'` (default), then the same
               small sample correction as in the case of 'covtype='cluster''
@@ -111,7 +113,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         - `maxlag` integer (required) : number of lags to use
         - `kernel` string (optional) : kernel, default is Bartlett
         - `use_correction` False or string in ['hac', 'cluster'] (optional) :
-              If False the the sandwich covariance is calulated without
+              If False the sandwich covariance is calculated without
               small sample correction.
         - `df_correction` bool (optional)
               adjustment to df_resid, see cov_type 'cluster' above
@@ -170,7 +172,13 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     # TODO: this should be outsourced in a function so we can reuse it in
     #       other models
     # TODO: make it DRYer   repeated code for checking kwds
-    if cov_type.upper() in ('HC0', 'HC1', 'HC2', 'HC3'):
+    if cov_type in ['fixed scale', 'fixed_scale']:
+        res.cov_kwds['description'] = ('Standard Errors are based on ' +
+                                       'fixed scale')
+
+        res.cov_kwds['scale'] = scale = kwds.get('scale', 1.)
+        res.cov_params_default = scale * res.normalized_cov_params
+    elif cov_type.upper() in ('HC0', 'HC1', 'HC2', 'HC3'):
         if kwds:
             raise ValueError('heteroscedasticity robust covarians ' +
                              'does not use keywords')
