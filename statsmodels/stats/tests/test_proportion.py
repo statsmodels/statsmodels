@@ -55,7 +55,7 @@ def test_confint_proportion():
 
 
 def test_confint_proportion_ndim():
-    # check that 2-D, works including pandas
+    # check that it works with 1-D, 2-D and pandas
 
     count = np.arange(6).reshape(2, 3)
     nobs = 10 * np.ones((2, 3))
@@ -76,9 +76,20 @@ def test_confint_proportion_ndim():
         assert_allclose((ci_arr[0][1, 2], ci_arr[1][1, 2]), ci12, rtol=1e-13)
 
         # check that lists work as input
-        ci_li = proportion_confint(count.tolist(), nobs.tolist(), alpha=0.05, 
+        ci_li = proportion_confint(count.tolist(), nobs.tolist(), alpha=0.05,
                                    method=method)
         assert_allclose(ci_arr, (ci_li[0], ci_li[1]), rtol=1e-13)
+
+        # check pandas Series, 1-D
+        ci_pds = proportion_confint(count_pd.iloc[0], nobs_pd.iloc[0],
+                                    alpha=0.05, method=method)
+        assert_allclose((ci_pds[0].values, ci_pds[1].values),
+                        (ci_pd[0].values[0], ci_pd[1].values[0]), rtol=1e-13)
+
+        # check scalar nobs, verifying one value
+        ci_arr2 = proportion_confint(count, nobs[1, 2], alpha=0.05,
+                                     method=method)
+        assert_allclose((ci_arr2[0][1, 2], ci_arr[1][1, 2]), ci12, rtol=1e-13)
 
 
 def test_samplesize_confidenceinterval_prop():

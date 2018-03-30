@@ -20,8 +20,8 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
 
     Parameters
     ----------
-    count : int or array
-        number of successes
+    count : int or array_array_like
+        number of successes, can be pandas Series or DataFrame
     nobs : int
         total number of trials
     alpha : float in (0, 1)
@@ -39,16 +39,24 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
 
     Returns
     -------
-    ci_low, ci_upp : float
+    ci_low, ci_upp : float, ndarray, or pandas Series or DataFrame
         lower and upper confidence level with coverage (approximately) 1-alpha.
-        Note: Beta has coverage
-        coverage is only 1-alpha on average for some other methods.)
+        When a pandas object is returned, then the index is taken from the
+        `count`.
 
     Notes
     -----
-    Beta, the Clopper-Pearson interval has coverage at least 1-alpha, but is
-    in general conservative. Most of the other methods have average coverage
-    equal to 1-alpha, but will have smaller coverage in some cases.
+    Beta, the Clopper-Pearson exact interval has coverage at least 1-alpha,
+    but is in general conservative. Most of the other methods have average
+    coverage equal to 1-alpha, but will have smaller coverage in some cases.
+
+    The 'beta' and 'jeffreys' interval are central, they use alpha/2 in each
+    tail, and alpha is not adjusted at the boundaries. In the extreme case
+    when `count` is zero or equal to `nobs`, then the coverage will be only
+    1 - alpha/2 in the case of 'beta'.
+
+    The confidence intervals are clipped to be in the [0, 1] interval in the
+    case of 'normal' and 'agresti_coull'.
 
     Method "binom_test" directly inverts the binomial test in scipy.stats.
     which has discrete steps.
@@ -145,6 +153,7 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
         if np.ndim(ci_low) == 2:
             ci_low = pd.DataFrame(ci_low, index=pd_index)
             ci_upp = pd.DataFrame(ci_upp, index=pd_index)
+
     return ci_low, ci_upp
 
 
