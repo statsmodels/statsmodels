@@ -39,12 +39,6 @@ except ImportError:
     # no setuptools installed
     from distutils.core import setup, Command
     _have_setuptools = False
-
-if _have_setuptools:
-    setuptools_kwargs = {"zip_safe": False,
-                         "test_suite": "nose.collector"}
-else:
-    setuptools_kwargs = {}
     if sys.version_info[0] >= 3:
         sys.exit("Need setuptools to install statsmodels for Python 3.x")
 
@@ -57,7 +51,7 @@ DISTNAME = 'statsmodels'
 DESCRIPTION = 'Statistical computations and models for Python'
 LONG_DESCRIPTION = README
 MAINTAINER = 'Skipper Seabold, Josef Perktold'
-MAINTAINER_EMAIL ='pystatsmodels@googlegroups.com'
+MAINTAINER_EMAIL = 'pystatsmodels@googlegroups.com'
 URL = 'http://www.statsmodels.org/'
 LICENSE = 'BSD License'
 DOWNLOAD_URL = ''
@@ -167,6 +161,23 @@ def check_dependency_versions(min_versions):
     return setup_requires, install_requires
 
 
+extras = {'docs': ['sphinx>=1.3.5',
+                   'nbconvert>=4.2.0',
+                   'jupyter_client',
+                   'ipykernel',
+                   'matplotlib',
+                   'nbformat>=4.0.1',
+                   'numpydoc>=0.6.0',
+                   'pandas-datareader']}
+
+min_versions = {'numpy': '1.6.2',
+                'scipy': '0.11',
+                'pandas': '0.13',
+                'patsy': '0.2.1'}
+if sys.version_info[0] == 3 and sys.version_info[1] >= 3:
+    # 3.3 needs numpy 1.7+
+    min_versions["numpy"] = "1.7.0"
+
 MAJ = 0
 MIN = 8
 REV = 0
@@ -214,6 +225,7 @@ def git_version():
 
     return GIT_REVISION
 
+
 def write_version_py(filename=pjoin(curdir, 'statsmodels/version.py')):
     cnt = "\n".join(["",
                     "# THIS FILE IS GENERATED FROM SETUP.PY",
@@ -245,14 +257,11 @@ def write_version_py(filename=pjoin(curdir, 'statsmodels/version.py')):
 
 
     if dowrite:
-        try:
-            a = open(filename, 'w')
-            a.write(cnt % {'version': VERSION,
-                           'full_version' : FULLVERSION,
-                           'git_revision' : GIT_REVISION,
-                           'isrelease': str(ISRELEASED)})
-        finally:
-            a.close()
+        with open(filename, 'w') as fd:
+            fd.write(cnt % {'version': VERSION,
+                            'full_version': FULLVERSION,
+                            'git_revision': GIT_REVISION,
+                            'isrelease': str(ISRELEASED)})
 
 
 class CleanCommand(Command):
@@ -468,6 +477,10 @@ for name, data in ext_data.items():
 
 
 def get_data_files():
+    """
+    this adds *.csv and *.dta files in datasets folders
+    and *.csv and *.txt files in test/results folders
+    """
     sep = os.path.sep
     # install the datasets
     data_files = {}
@@ -477,16 +490,27 @@ def get_data_files():
             continue
         path = pjoin(root, i)
         if os.path.isdir(path):
-            data_files.update({relpath(path, start=curdir).replace(sep, ".") : ["*.csv",
-                                                                  "*.dta"]})
+            key = relpath(path, start=curdir).replace(sep, ".")
+            data_files[key] = ["*.csv", "*.dta"]
     # add all the tests and results files
     for r, ds, fs in os.walk(pjoin(curdir, "statsmodels")):
         r_ = relpath(r, start=curdir)
         if r_.endswith('results'):
-            data_files.update({r_.replace(sep, ".") : ["*.csv",
-                                                       "*.txt",
-                                                       "*.dta"]})
+            data_files[r_.replace(sep, ".")] = ["*.csv", "*.txt", "*.dta"]
 
+    # Manual additions.  TOOD: Try to make these systematic.
+    data_files["statsmodels.datasets.tests"].append("*.zip")
+    data_files["statsmodels.iolib.tests.results"].append("*.dta")
+    data_files["statsmodels.stats.tests.results"].append("*.json")
+    data_files["statsmodels.tsa.vector_ar.tests.results"].append("*.npz")
+    # data files that don't follow the tests/results pattern. should fix.
+    data_files["statsmodels.stats.tests"] = ["*.txt"]
+
+    data_files["statsmodels.stats.libqsturng"] = ["*.r", "*.txt", "*.dat"]
+    data_files["statsmodels.stats.libqsturng.tests"] = ["*.csv", "*.dat"]
+    data_files["statsmodels.tsa.vector_ar.data"] = ["*.dat"]
+    # temporary, until moved:
+    data_files["statsmodels.sandbox.regression.tests"] = ["*.dta", "*.csv"]
     return data_files
 
 
@@ -494,47 +518,16 @@ if __name__ == "__main__":
     if os.path.exists('MANIFEST'):
         os.unlink('MANIFEST')
 
-    min_versions = {
-        'numpy' : '1.6.2',
-        'scipy' : '0.11',
-        'pandas' : '0.13',
-        'patsy' : '0.2.1',
-                   }
-    if sys.version_info[0] == 3 and sys.version_info[1] >= 3:
-        # 3.3 needs numpy 1.7+
-        min_versions.update({"numpy" : "1.7.0"})
-
     (setup_requires,
      install_requires) = check_dependency_versions(min_versions)
 
-    if _have_setuptools:
-        setuptools_kwargs['setup_requires'] = setup_requires
-        setuptools_kwargs['install_requires'] = install_requires
+    assert _have_setuptools
+    setuptools_kwargs = {"zip_safe": False,
+                         "test_suite": "nose.collector"
+                         "setup_requires": setup_requires,
+                         "install_requires": install_requires}
 
-        write_version_py()
-
-    # this adds *.csv and *.dta files in datasets folders
-    # and *.csv and *.txt files in test/results folders
-    package_data = get_data_files()
-    packages = find_packages()
-    packages.append("statsmodels.tsa.vector_ar.data")
-
-    package_data["statsmodels.datasets.tests"].append("*.zip")
-    package_data["statsmodels.iolib.tests.results"].append("*.dta")
-    package_data["statsmodels.stats.tests.results"].append("*.json")
-    package_data["statsmodels.tsa.vector_ar.tests.results"].append("*.npz")
-    # data files that don't follow the tests/results pattern. should fix.
-    package_data.update({"statsmodels.stats.tests" : ["*.txt"]})
-
-    package_data.update({"statsmodels.stats.libqsturng" :
-                         ["*.r", "*.txt", "*.dat"]})
-    package_data.update({"statsmodels.stats.libqsturng.tests" :
-                         ["*.csv", "*.dat"]})
-    package_data.update({"statsmodels.tsa.vector_ar.data" : ["*.dat"]})
-    package_data.update({"statsmodels.tsa.vector_ar.data" : ["*.dat"]})
-    # temporary, until moved:
-    package_data.update({"statsmodels.sandbox.regression.tests" :
-                         ["*.dta", "*.csv"]})
+    write_version_py()
 
     #TODO: deal with this. Not sure if it ever worked for bdists
     #('docs/build/htmlhelp/statsmodelsdoc.chm',
@@ -544,14 +537,6 @@ if __name__ == "__main__":
     if not os.path.exists(os.path.join(cwd, 'PKG-INFO')) and not no_frills:
         # Generate Cython sources, unless building from source release
         generate_cython()
-    extras = {'docs': ['sphinx>=1.3.5',
-                       'nbconvert>=4.2.0',
-                       'jupyter_client',
-                       'ipykernel',
-                       'matplotlib',
-                       'nbformat>=4.0.1',
-                       'numpydoc>=0.6.0',
-                       'pandas-datareader']}
 
     setup(name = DISTNAME,
           version = VERSION,
@@ -566,8 +551,8 @@ if __name__ == "__main__":
           classifiers = classifiers,
           platforms = 'any',
           cmdclass = cmdclass,
-          packages = packages,
-          package_data = package_data,
+          packages = find_packages(),
+          package_data = get_data_files(),
           include_package_data=False,  # True will install all files in repo
           extras_require=extras,
           **setuptools_kwargs)
