@@ -1517,7 +1517,7 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def mu(self):
-        return self.fittevalues
+        return self.fittedvalues
 
     @cache_readonly
     def null(self):
