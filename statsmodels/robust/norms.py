@@ -1,7 +1,8 @@
 from statsmodels.compat.python import range
 import numpy as np
 
-#TODO: add plots to weighting functions for online docs.
+# TODO: add plots to weighting functions for online docs.
+
 
 class RobustNorm(object):
     """
@@ -83,6 +84,7 @@ class RobustNorm(object):
         """
         return self.rho(z)
 
+
 class LeastSquares(RobustNorm):
 
     """
@@ -163,6 +165,7 @@ class LeastSquares(RobustNorm):
         Used to estimate the robust covariance matrix.
         """
         return np.ones(z.shape, np.float64)
+
 
 class HuberT(RobustNorm):
     """
@@ -266,7 +269,8 @@ class HuberT(RobustNorm):
         """
         return np.less_equal(np.fabs(z), self.t)
 
-#TODO: untested, but looks right.  RamsayE not available in R or SAS?
+
+# TODO: untested, but looks right.  RamsayE not available in R or SAS?
 class RamsayE(RobustNorm):
     """
     Ramsay's Ea for M estimation.
@@ -282,7 +286,7 @@ class RamsayE(RobustNorm):
     statsmodels.robust.norms.RobustNorm
     """
 
-    def __init__(self, a = .3):
+    def __init__(self, a=.3):
         self.a = a
 
     def rho(self, z):
@@ -351,8 +355,9 @@ class RamsayE(RobustNorm):
         Used to estimate the robust covariance matrix.
         """
 
-        return np.exp(-self.a * np.fabs(z)) + z**2*\
-                np.exp(-self.a*np.fabs(z))*-self.a/np.fabs(z)
+        return (np.exp(-self.a * np.fabs(z)) +
+                z**2 * np.exp(-self.a * np.fabs(z)) * -self.a / np.fabs(z))
+
 
 class AndrewWave(RobustNorm):
 
@@ -369,7 +374,7 @@ class AndrewWave(RobustNorm):
     --------
     statsmodels.robust.norms.RobustNorm
     """
-    def __init__(self, a = 1.339):
+    def __init__(self, a=1.339):
         self.a = a
 
     def _subset(self, z):
@@ -461,7 +466,8 @@ class AndrewWave(RobustNorm):
         test = self._subset(z)
         return test*np.cos(z / self.a)/self.a
 
-#TODO: this is untested
+
+# TODO: this is untested
 class TrimmedMean(RobustNorm):
     """
     Trimmed mean function for M-estimation.
@@ -566,6 +572,7 @@ class TrimmedMean(RobustNorm):
         test = self._subset(z)
         return test
 
+
 class Hampel(RobustNorm):
     """
 
@@ -584,7 +591,7 @@ class Hampel(RobustNorm):
     statsmodels.robust.norms.RobustNorm
     """
 
-    def __init__(self, a = 2., b = 4., c = 8.):
+    def __init__(self, a=2., b=4., c=8.):
         self.a = a
         self.b = b
         self.c = c
@@ -621,7 +628,9 @@ class Hampel(RobustNorm):
         """
 
         z = np.fabs(z)
-        a = self.a; b = self.b; c = self.c
+        a = self.a
+        b = self.b
+        c = self.c
         t1, t2, t3 = self._subset(z)
         v = (t1 * z**2 * 0.5 +
              t2 * (a * z - a**2 * 0.5) +
@@ -652,7 +661,9 @@ class Hampel(RobustNorm):
             psi(z) = 0                            for \|z\| > c
         """
         z = np.asarray(z)
-        a = self.a; b = self.b; c = self.c
+        a = self.a
+        b = self.b
+        c = self.c
         t1, t2, t3 = self._subset(z)
         s = np.sign(z)
         z = np.fabs(z)
@@ -685,17 +696,20 @@ class Hampel(RobustNorm):
 
         """
         z = np.asarray(z)
-        a = self.a; b = self.b; c = self.c
+        a = self.a
+        b = self.b
+        c = self.c
         t1, t2, t3 = self._subset(z)
         v = (t1 +
-            t2 * a/np.fabs(z) +
-            t3 * a*(c-np.fabs(z))/(np.fabs(z)*(c-b)))
-        v[np.where(np.isnan(v))]=1. # for some reason 0 returns a nan?
+             t2 * a/np.fabs(z) +
+             t3 * a*(c-np.fabs(z))/(np.fabs(z)*(c-b)))
+        v[np.where(np.isnan(v))] = 1.  # for some reason 0 returns a nan?
         return v
 
     def psi_deriv(self, z):
         t1, t2, t3 = self._subset(z)
         return t1 + t3 * (self.a*np.sign(z)*z)/(np.fabs(z)*(self.c-self.b))
+
 
 class TukeyBiweight(RobustNorm):
     """
@@ -713,7 +727,7 @@ class TukeyBiweight(RobustNorm):
     Tukey's biweight is sometime's called bisquare.
     """
 
-    def __init__(self, c = 4.685):
+    def __init__(self, c=4.685):
         self.c = c
 
     def _subset(self, z):
@@ -765,7 +779,6 @@ class TukeyBiweight(RobustNorm):
         subset = self._subset(z)
         return z * (1 - (z / self.c)**2)**2 * subset
 
-
     def weights(self, z):
         """
         Tukey's biweight weighting function for the IRLS algorithm
@@ -797,8 +810,9 @@ class TukeyBiweight(RobustNorm):
         Used to estimate the robust covariance matrix.
         """
         subset = self._subset(z)
-        return subset*((1 - (z/self.c)**2)**2 - (4*z**2/self.c**2) *\
-                    (1-(z/self.c)**2))
+        return subset*((1 - (z/self.c)**2)**2 -
+                       (4*z**2/self.c**2) * (1-(z/self.c)**2))
+
 
 def estimate_location(a, scale, norm=None, axis=0, initial=None,
                       maxiter=30, tol=1.0e-06):
@@ -848,6 +862,5 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
             return nmu
         else:
             mu = nmu
-    raise ValueError("location estimator failed to converge in %d iterations"\
-            % maxiter)
-
+    raise ValueError("location estimator failed to converge in %d iterations"
+                     % maxiter)

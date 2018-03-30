@@ -10,11 +10,13 @@ R Venables, B Ripley. 'Modern Applied Statistics in S'
 """
 from statsmodels.compat.python import callable, range
 import numpy as np
-from scipy.stats import norm as Gaussian
+from scipy import stats
+
 from . import norms
 from statsmodels.tools import tools
 
-def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
+
+def mad(a, c=stats.norm.ppf(3/4.), axis=0, center=np.median):
     # c \approx .6745
     """
     The Median Absolute Deviation along given axis of an array
@@ -80,8 +82,8 @@ class Huber(object):
         self.maxiter = maxiter
         self.tol = tol
         self.norm = norm
-        tmp = 2 * Gaussian.cdf(c) - 1
-        self.gamma = tmp + c**2 * (1 - tmp) - 2 * c * Gaussian.pdf(c)
+        tmp = 2 * stats.norm.cdf(c) - 1
+        self.gamma = tmp + c**2 * (1 - tmp) - 2 * c * stats.norm.pdf(c)
 
     def __call__(self, a, mu=None, initscale=None, axis=0):
         """
@@ -150,7 +152,7 @@ class Huber(object):
                         mu+self.c*scale).sum(axis) / a.shape[axis]
                 else:
                     nmu = norms.estimate_location(a, scale, self.norm, axis, mu,
-                            self.maxiter, self.tol)
+                                                  self.maxiter, self.tol)
             else:
                 # Effectively, do nothing
                 nmu = mu.squeeze()
@@ -159,7 +161,7 @@ class Huber(object):
             subset = np.less_equal(np.fabs((a - mu)/scale), self.c)
             card = subset.sum(axis)
 
-            nscale = np.sqrt(np.sum(subset * (a - nmu)**2, axis) \
+            nscale = np.sqrt(np.sum(subset * (a - nmu)**2, axis)
                     / (n * self.gamma - (a.shape[axis] - card) * self.c**2))
             nscale = tools.unsqueeze(nscale, axis, a.shape)
 
@@ -167,10 +169,12 @@ class Huber(object):
                         nscale * self.tol))
             test2 = np.alltrue(np.less_equal(np.fabs(mu - nmu), nscale*self.tol))
             if not (test1 and test2):
-                mu = nmu; scale = nscale
+                mu = nmu
+                scale = nscale
             else:
                 return nmu.squeeze(), nscale.squeeze()
-        raise ValueError('joint estimation of location and scale failed to converge in %d iterations' % self.maxiter)
+        raise ValueError('joint estimation of location and scale failed to '
+                         'converge in %d iterations' % self.maxiter)
 
 huber = Huber()
 
@@ -215,15 +219,15 @@ class HuberScale(object):
         self.maxiter = maxiter
 
     def __call__(self, df_resid, nobs, resid):
-        h = (df_resid)/nobs*(self.d**2 + (1-self.d**2)*\
-                    Gaussian.cdf(self.d)-.5 - self.d/(np.sqrt(2*np.pi))*\
+        h = (df_resid)/nobs*(self.d**2 + (1-self.d**2)*
+                    stats.norm.cdf(self.d)-.5 - self.d/(np.sqrt(2*np.pi))*
                     np.exp(-.5*self.d**2))
         s = mad(resid)
         subset = lambda x: np.less(np.fabs(resid/x),self.d)
         chi = lambda s: subset(s)*(resid/s)**2/2+(1-subset(s))*(self.d**2/2)
         scalehist = [np.inf,s]
         niter = 1
-        while (np.abs(scalehist[niter-1] - scalehist[niter])>self.tol \
+        while (np.abs(scalehist[niter-1] - scalehist[niter])>self.tol
                 and niter < self.maxiter):
             nscale = np.sqrt(1/(nobs*h)*np.sum(chi(scalehist[-1]))*\
                     scalehist[-1]**2)
@@ -232,5 +236,6 @@ class HuberScale(object):
             #if niter == self.maxiter:
             #    raise ValueError("Huber's scale failed to converge")
         return scalehist[-1]
+
 
 hubers_scale = HuberScale()
