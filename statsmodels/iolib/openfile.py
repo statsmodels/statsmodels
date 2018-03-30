@@ -13,11 +13,11 @@ class EmptyContextManager(object):
         self._obj = obj
 
     def __enter__(self):
-        '''When entering, return the embedded object'''
+        """When entering, return the embedded object"""
         return self._obj
 
     def __exit__(self, *args):
-        '''Don't hide anything'''
+        """Don't hide anything"""
         return False
 
     def __getattr__(self, name):

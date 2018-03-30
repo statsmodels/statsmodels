@@ -51,7 +51,7 @@ class ResultsWrapper(object):
         self.__dict__.update(dict_)
 
     def save(self, fname, remove_data=False):
-        '''save a pickle of this instance
+        """save a pickle of this instance
 
         Parameters
         ----------
@@ -62,8 +62,7 @@ class ResultsWrapper(object):
             If True, then all arrays with length nobs are set to None before
             pickling. See the remove_data method.
             In some cases not all arrays will be set to None.
-
-        '''
+        """
         from statsmodels.iolib.smpickle import save_pickle
 
         if remove_data:

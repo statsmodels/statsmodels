@@ -1,6 +1,6 @@
-'''
+"""
 Utility functions models code
-'''
+"""
 from statsmodels.compat.python import reduce, lzip, lmap, asstr2, range, long
 import numpy as np
 import numpy.lib.recfunctions as nprf
@@ -64,7 +64,7 @@ def drop_missing(Y, X=None, axis=1):
 # want to cast it to float
 # TODO: add name validator (ie., bad names for datasets.grunfeld)
 def categorical(data, col=None, dictnames=False, drop=False, ):
-    '''
+    """
     Returns a dummy matrix given an array of categorical variables.
 
     Parameters
@@ -137,7 +137,7 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
     Or
 
     >>> design2 = sm.tools.categorical(struct_ar, col='str_instr', drop=True)
-    '''
+    """
     if isinstance(col, (list, tuple)):
         try:
             assert len(col) == 1

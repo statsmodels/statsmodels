@@ -24,7 +24,7 @@ def clip_evals(x, value=0): #threshold=0, value=0):
 
 
 def corr_nearest(corr, threshold=1e-15, n_fact=100):
-    '''
+    """
     Find the nearest correlation matrix that is positive semi-definite.
 
     The function iteratively adjust the correlation matrix by clipping the
@@ -66,7 +66,7 @@ def corr_nearest(corr, threshold=1e-15, n_fact=100):
     corr_clipped
     cov_nearest
 
-    '''
+    """
     k_vars = corr.shape[0]
     if k_vars != corr.shape[1]:
         raise ValueError("matrix is not square")
@@ -91,7 +91,7 @@ def corr_nearest(corr, threshold=1e-15, n_fact=100):
     return x_new
 
 def corr_clipped(corr, threshold=1e-15):
-    '''
+    """
     Find a near correlation matrix that is positive semi-definite
 
     This function clips the eigenvalues, replacing eigenvalues smaller than
@@ -139,7 +139,7 @@ def corr_clipped(corr, threshold=1e-15):
     corr_nearest
     cov_nearest
 
-    '''
+    """
     x_new, clipped = clip_evals(corr, value=threshold)
     if not clipped:
         return corr
@@ -153,7 +153,7 @@ def corr_clipped(corr, threshold=1e-15):
 def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
                 return_all=False):
 
-    '''
+    """
     Find the nearest covariance matrix that is postive (semi-) definite
 
     This leaves the diagonal, i.e. the variance, unchanged
@@ -204,7 +204,7 @@ def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
     corr_nearest
     corr_clipped
 
-    '''
+    """
 
     from statsmodels.stats.moment_helpers import cov2corr, corr2cov
     cov_, std_ = cov2corr(cov, return_std=True)
