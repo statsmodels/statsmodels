@@ -2,7 +2,7 @@ import numpy as np
 import numpy.testing as npt
 import pandas as pd
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
-from statsmodels.tools.testing import assert_equal, assert_raises
+from statsmodels.tools.testing import assert_equal
 from datetime import datetime
 
 
@@ -39,9 +39,10 @@ def test_pandas_nodates_index():
         start, end, out_of_sample, _ = mod._get_prediction_index(0, 4)
         assert_equal(len(mod.data.predict_dates), 5)
 
+
 def test_predict_freq():
     # test that predicted dates have same frequency
-    x = np.arange(1,36.)
+    x = np.arange(1, 36.)
 
     # there's a bug in pandas up to 0.10.2 for YearBegin
     #dates = date_range("1972-4-1", "2007-4-1", freq="AS-APR")
@@ -88,12 +89,14 @@ def test_period_index():
 def test_pandas_dates():
 
     data = [988, 819, 964]
-    dates = ['2016-01-01 12:00:00', '2016-02-01 12:00:00', '2016-03-01 12:00:00']
+    dates = ['2016-01-01 12:00:00',
+             '2016-02-01 12:00:00', '2016-03-01 12:00:00']
 
     datetime_dates = pd.to_datetime(dates)
 
     result = pd.Series(data=data, index=datetime_dates, name='price')
-    df = pd.DataFrame(data={'price': data}, index=pd.DatetimeIndex(dates, freq='MS'))
+    df = pd.DataFrame(data={'price': data},
+                      index=pd.DatetimeIndex(dates, freq='MS'))
 
     model = TimeSeriesModel(df['price'])
 

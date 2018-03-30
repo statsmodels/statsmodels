@@ -1,7 +1,5 @@
-from statsmodels.compat.python import lrange, long
+from statsmodels.compat.python import long
 from statsmodels.compat.pandas import is_numeric_dtype, Float64Index
-
-import datetime
 
 import warnings
 import numpy as np
@@ -12,7 +10,6 @@ from pandas.tseries.frequencies import to_offset
 from statsmodels.base import data
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
-from statsmodels.tsa.base import datetools
 from statsmodels.tools.sm_exceptions import ValueWarning
 
 _tsa_doc = """
@@ -525,14 +522,16 @@ class TimeSeriesModel(base.LikelihoodModel):
 class TimeSeriesModelResults(base.LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params, scale=1.):
         self.data = model.data
-        super(TimeSeriesModelResults,
-                self).__init__(model, params, normalized_cov_params, scale)
+        super(TimeSeriesModelResults, self).__init__(model, params,
+                                                     normalized_cov_params,
+                                                     scale)
+
 
 class TimeSeriesResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
     _wrap_attrs = wrap.union_dicts(base.LikelihoodResultsWrapper._wrap_attrs,
-                                    _attrs)
-    _methods = {'predict' : 'dates'}
+                                   _attrs)
+    _methods = {'predict': 'dates'}
     _wrap_methods = wrap.union_dicts(base.LikelihoodResultsWrapper._wrap_methods,
                                      _methods)
 wrap.populate_wrapper(TimeSeriesResultsWrapper,
@@ -544,10 +543,11 @@ if __name__ == "__main__":
 
     data = sm.datasets.macrodata.load()
 
-    #make a DataFrame
-    #TODO: attach a DataFrame to some of the datasets, for quicker use
-    dates = [str(int(x[0])) +':'+ str(int(x[1])) \
-             for x in data.data[['year','quarter']]]
+    # make a DataFrame
+    # TODO: attach a DataFrame to some of the datasets, for quicker use
+    dates = [str(int(x[0])) + ':' + str(int(x[1]))
+             for x in data.data[['year', 'quarter']]]
 
-    df = pandas.DataFrame(data.data[['realgdp','realinv','realcons']], index=dates)
+    df = pandas.DataFrame(data.data[['realgdp', 'realinv', 'realcons']],
+                          index=dates)
     ex_mod = TimeSeriesModel(df)
