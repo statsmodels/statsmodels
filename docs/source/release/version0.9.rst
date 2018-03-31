@@ -62,6 +62,9 @@ https://github.com/statsmodels/statsmodels/issues?q=label%3Atype-bug-wrong+is%3A
   option now returns the unregularized parameters for the coefficients
   selected by the regularized fitter, as documented. #4213
 
+* In MixedLM, a bug that produced exceptions when calling
+  `random_effects_cov` on models with variance components has been
+  fixed.
 
 Backwards incompatible changes and deprecations
 -----------------------------------------------
@@ -71,6 +74,11 @@ Backwards incompatible changes and deprecations
   impacts summary output, and also may require modifications to user
   code that extracted these parameters from the fitted results object
   by name.
+
+* In MixedLM, the names for the random effects realizations for
+  variance components have been changed.  When using formulas, the
+  random effect realizations are named using the column names produced
+  by Patsy when parsing the formula.
 
 Development summary and credits
 -------------------------------

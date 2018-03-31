@@ -817,15 +817,15 @@ class MixedLM(base.LikelihoodModel):
 
         Examples
         --------
-        Suppose we have an educational data set with students nested
-        in classrooms nested in schools.  The students take a test,
-        and we want to relate the test scores to the students' ages,
-        while accounting for the effects of classrooms and schools.
-        The school will be the top-level group, and the classroom is a
-        nested group that is specified as a variance component.  Note
-        that the schools may have different number of classrooms, and
-        the classroom labels may (but need not be) different across
-        the schools.
+        Suppose we have data from an educational study with students
+        nested in classrooms nested in schools.  The students take a
+        test, and we want to relate the test scores to the students'
+        ages, while accounting for the effects of classrooms and
+        schools.  The school will be the top-level group, and the
+        classroom is a nested group that is specified as a variance
+        component.  Note that the schools may have different number of
+        classrooms, and the classroom labels may (but need not be)
+        different across the schools.
 
         >>> vc = {'classroom': '0 + C(classroom)'}
         >>> MixedLM.from_formula('test_score ~ age', vc_formula=vc, \
