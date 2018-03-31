@@ -945,7 +945,7 @@ class MixedLM(base.LikelihoodModel):
 
         if vc_formula is not None:
             mod.data.vcomp_names = mod._vc_names
-            mod.exog_vc_names = exog_vc_names
+            mod._exog_vc_names = exog_vc_names
 
         return mod
 
@@ -2198,7 +2198,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         names = list(self.model.data.exog_re_names)
 
         for v in self.model._vc_names:
-            vg = self.model.exog_vc_names[group][v]
+            vg = self.model._exog_vc_names[group][v]
             na = ["%s[%s]" % (v, s) for s in vg]
             names.extend(na)
 
