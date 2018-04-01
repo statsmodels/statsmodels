@@ -88,75 +88,77 @@ class TestMixedLM(object):
 
     # Test analytic scores and Hessian using numeric differentiation
     @pytest.mark.slow
+    @pytest.mark.parametrize('use_sqrt', [False, True])
+    @pytest.mark.parametrize('reml', [False, True])
+    @pytest.mark.parametrize('profile_fe' [False, True])
     def test_compare_numdiff(self):
 
-        n_grp = 200
+        n_grp = 20
+        # Using n_grp == 20 instead of the older value of 200 exposes
+        # issues with numerical instability in MixedLM.loglike;
+        # it also makes the test much faster.
         grpsize = 5
         k_fe = 3
         k_re = 2
 
-        for use_sqrt in False, True:
-            for reml in False, True:
-                for profile_fe in False, True:
+        np.random.seed(3558)
+        exog_fe = np.random.normal(size=(n_grp * grpsize, k_fe))
+        exog_re = np.random.normal(size=(n_grp * grpsize, k_re))
+        exog_re[:, 0] = 1
+        exog_vc = np.random.normal(size=(n_grp * grpsize, 3))
+        slopes = np.random.normal(size=(n_grp, k_re))
+        slopes[:, -1] *= 2
+        slopes = np.kron(slopes, np.ones((grpsize, 1)))
+        slopes_vc = np.random.normal(size=(n_grp, 3))
+        slopes_vc = np.kron(slopes_vc, np.ones((grpsize, 1)))
+        slopes_vc[:, -1] *= 2
+        re_values = (slopes * exog_re).sum(1)
+        vc_values = (slopes_vc * exog_vc).sum(1)
+        err = np.random.normal(size=n_grp * grpsize)
+        endog = exog_fe.sum(1) + re_values + vc_values + err
+        groups = np.kron(range(n_grp), np.ones(grpsize))
 
-                    np.random.seed(3558)
-                    exog_fe = np.random.normal(size=(n_grp * grpsize, k_fe))
-                    exog_re = np.random.normal(size=(n_grp * grpsize, k_re))
-                    exog_re[:, 0] = 1
-                    exog_vc = np.random.normal(size=(n_grp * grpsize, 3))
-                    slopes = np.random.normal(size=(n_grp, k_re))
-                    slopes[:, -1] *= 2
-                    slopes = np.kron(slopes, np.ones((grpsize, 1)))
-                    slopes_vc = np.random.normal(size=(n_grp, 3))
-                    slopes_vc = np.kron(slopes_vc, np.ones((grpsize, 1)))
-                    slopes_vc[:, -1] *= 2
-                    re_values = (slopes * exog_re).sum(1)
-                    vc_values = (slopes_vc * exog_vc).sum(1)
-                    err = np.random.normal(size=n_grp * grpsize)
-                    endog = exog_fe.sum(1) + re_values + vc_values + err
-                    groups = np.kron(range(n_grp), np.ones(grpsize))
+        vc = {"a": {}, "b": {}}
+        for i in range(n_grp):
+            ix = np.flatnonzero(groups == i)
+            vc["a"][i] = exog_vc[ix, 0:2]
+            vc["b"][i] = exog_vc[ix, 2:3]
 
-                    vc = {"a": {}, "b": {}}
-                    for i in range(n_grp):
-                        ix = np.flatnonzero(groups == i)
-                        vc["a"][i] = exog_vc[ix, 0:2]
-                        vc["b"][i] = exog_vc[ix, 2:3]
+        model = MixedLM(endog, exog_fe, groups,
+                        exog_re, exog_vc=vc, use_sqrt=use_sqrt)
+        rslt = model.fit(reml=reml)
 
-                    model = MixedLM(endog, exog_fe, groups,
-                                    exog_re, exog_vc=vc, use_sqrt=use_sqrt)
-                    rslt = model.fit(reml=reml)
+        loglike = loglike_function(
+            model, profile_fe=profile_fe, has_fe=not profile_fe)
 
-                    loglike = loglike_function(
-                        model, profile_fe=profile_fe, has_fe=not profile_fe)
+        # Test the score at several points.
+        for kr in range(5):
+            fe_params = np.random.normal(size=k_fe)
+            cov_re = np.random.normal(size=(k_re, k_re))
+            cov_re = np.dot(cov_re.T, cov_re)
+            vcomp = np.random.normal(size=2) ** 2
+            params = MixedLMParams.from_components(
+                fe_params, cov_re=cov_re, vcomp=vcomp)
+            params_vec = params.get_packed(
+                has_fe=not profile_fe, use_sqrt=use_sqrt)
 
-                    # Test the score at several points.
-                    for kr in range(5):
-                        fe_params = np.random.normal(size=k_fe)
-                        cov_re = np.random.normal(size=(k_re, k_re))
-                        cov_re = np.dot(cov_re.T, cov_re)
-                        vcomp = np.random.normal(size=2) ** 2
-                        params = MixedLMParams.from_components(
-                            fe_params, cov_re=cov_re, vcomp=vcomp)
-                        params_vec = params.get_packed(
-                            has_fe=not profile_fe, use_sqrt=use_sqrt)
+            # Check scores
+            gr = -model.score(params, profile_fe=profile_fe)
+            ngr = nd.approx_fprime(params_vec, loglike)
+            assert_allclose(gr, ngr, rtol=1e-3)
 
-                        # Check scores
-                        gr = -model.score(params, profile_fe=profile_fe)
-                        ngr = nd.approx_fprime(params_vec, loglike)
-                        assert_allclose(gr, ngr, rtol=1e-3)
-
-                    # Check Hessian matrices at the MLE (we don't have
-                    # the profile Hessian matrix and we don't care
-                    # about the Hessian for the square root
-                    # transformed parameter).
-                    if (profile_fe is False) and (use_sqrt is False):
-                        hess = -model.hessian(rslt.params_object)
-                        params_vec = rslt.params_object.get_packed(
-                            use_sqrt=False, has_fe=True)
-                        loglike_h = loglike_function(
-                            model, profile_fe=False, has_fe=True)
-                        nhess = nd.approx_hess(params_vec, loglike_h)
-                        assert_allclose(hess, nhess, rtol=1e-3)
+        # Check Hessian matrices at the MLE (we don't have
+        # the profile Hessian matrix and we don't care
+        # about the Hessian for the square root
+        # transformed parameter).
+        if (profile_fe is False) and (use_sqrt is False):
+            hess = -model.hessian(rslt.params_object)
+            params_vec = rslt.params_object.get_packed(
+                use_sqrt=False, has_fe=True)
+            loglike_h = loglike_function(
+                model, profile_fe=False, has_fe=True)
+            nhess = nd.approx_hess(params_vec, loglike_h)
+            assert_allclose(hess, nhess, rtol=1e-3)
 
     def test_default_re(self):
 
