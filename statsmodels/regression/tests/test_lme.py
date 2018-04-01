@@ -90,7 +90,7 @@ class TestMixedLM(object):
     @pytest.mark.slow
     @pytest.mark.parametrize('use_sqrt', [False, True])
     @pytest.mark.parametrize('reml', [False, True])
-    @pytest.mark.parametrize('profile_fe' [False, True])
+    @pytest.mark.parametrize('profile_fe', [False, True])
     def test_compare_numdiff(self):
 
         n_grp = 20
