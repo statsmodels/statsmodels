@@ -91,7 +91,7 @@ class TestMixedLM(object):
     @pytest.mark.parametrize('use_sqrt', [False, True])
     @pytest.mark.parametrize('reml', [False, True])
     @pytest.mark.parametrize('profile_fe', [False, True])
-    def test_compare_numdiff(self):
+    def test_compare_numdiff(self, use_sqrt, reml, profile_fe):
 
         n_grp = 20
         # Using n_grp == 20 instead of the older value of 200 exposes
