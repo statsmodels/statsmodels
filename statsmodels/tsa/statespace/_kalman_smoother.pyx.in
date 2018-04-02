@@ -86,6 +86,7 @@ from statsmodels.tsa.statespace._smoothers._univariate_diffuse cimport (
     {{prefix}}smoothed_estimators_measurement_univariate_diffuse,
     {{prefix}}smoothed_estimators_time_univariate_diffuse,
     {{prefix}}smoothed_state_univariate_diffuse,
+    {{prefix}}smoothed_disturbances_univariate_diffuse,
     {{prefix}}smoothed_state_autocov_univariate_diffuse
 )
 from statsmodels.tsa.statespace._smoothers._classical cimport (
@@ -571,11 +572,16 @@ cdef class {{prefix}}KalmanSmoother(object):
         # Time step of the scaled smoothed estimator and covariance matrix
         self.smooth_estimators_time(self, self.kfilter, self.model)
 
-        # Alternative and classical methods have different timing for filling
-        # in the values we need (e.g. for scaled_smoothed_estimator), so we
-        # need to run some additional iterations
+        # Since the exact diffuse filtering and smoothing only uses the
+        # univariate method, if non-univariate filtering methods are used for
+        # the remaining filtering and smoothing, we need to run one or more
+        # univariate time smoothing steps to get the appropriate values (e.g.
+        # for scaled_smoothed_estimator). Moreover, the alternative and
+        # classical methods have different timing.
         if self.kfilter.nobs_diffuse > 0 and self.t == self.kfilter.nobs_diffuse:
             t = self.t
+            if self._smooth_method & SMOOTH_CONVENTIONAL:
+                {{prefix}}smoothed_estimators_time_univariate(self, self.kfilter, self.model)
             if self._smooth_method & SMOOTH_ALTERNATIVE:
                 self.t = self.t - 1
                 self.initialize_statespace_object_pointers()
@@ -711,10 +717,7 @@ cdef class {{prefix}}KalmanSmoother(object):
             self.smooth_estimators_measurement = {{prefix}}smoothed_estimators_measurement_univariate_diffuse
             self.smooth_estimators_time = {{prefix}}smoothed_estimators_time_univariate_diffuse
             self.smooth_state = {{prefix}}smoothed_state_univariate_diffuse
-            # Note: as long as we set the appropriate arrays in
-            # smoothed_estimators_measurement_univariate_diffuse,
-            # we can use the usual univariate disturbance smoother computations
-            self.smooth_disturbances = {{prefix}}smoothed_disturbances_univariate
+            self.smooth_disturbances = {{prefix}}smoothed_disturbances_univariate_diffuse
         # Multivariate modified Bryson-Frazier smoother
         elif self._smooth_method & SMOOTH_ALTERNATIVE:
             self.smooth_estimators_measurement = {{prefix}}smoothed_estimators_measurement_alternative
@@ -743,7 +746,7 @@ cdef class {{prefix}}KalmanSmoother(object):
             raise NotImplementedError("Smoother method not available.")
 
         # Handle completely missing data
-        # (All methods except the classical method can use the same routines in this case)
+        # (All methods except the conventional method can use the same routines in this case)
         # This is essentially just an application of the smoothed_estimators_time_* step.
         if self._smooth_method & SMOOTH_CONVENTIONAL and self.model._nmissing == self.model.k_endog:
             # Change the smoothing functions to take into account a missing observation

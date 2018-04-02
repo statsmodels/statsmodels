@@ -669,12 +669,16 @@ class SmootherResults(FilterResults):
                 setattr(self, name, None)
 
         # Diffuse objects
-        self.scaled_smoothed_diffuse_estimator = np.array(
-            smoother.scaled_smoothed_diffuse_estimator, copy=True)
-        self.scaled_smoothed_diffuse1_estimator_cov = np.array(
-            smoother.scaled_smoothed_diffuse1_estimator_cov, copy=True)
-        self.scaled_smoothed_diffuse2_estimator_cov = np.array(
-            smoother.scaled_smoothed_diffuse2_estimator_cov, copy=True)
+        self.scaled_smoothed_diffuse_estimator = None
+        self.scaled_smoothed_diffuse1_estimator_cov = None
+        self.scaled_smoothed_diffuse2_estimator_cov = None
+        if self.nobs_diffuse > 0:
+            self.scaled_smoothed_diffuse_estimator = np.array(
+                smoother.scaled_smoothed_diffuse_estimator, copy=True)
+            self.scaled_smoothed_diffuse1_estimator_cov = np.array(
+                smoother.scaled_smoothed_diffuse1_estimator_cov, copy=True)
+            self.scaled_smoothed_diffuse2_estimator_cov = np.array(
+                smoother.scaled_smoothed_diffuse2_estimator_cov, copy=True)
 
         # Adjustments
 

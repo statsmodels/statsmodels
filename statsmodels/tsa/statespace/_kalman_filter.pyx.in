@@ -426,7 +426,7 @@ cdef class {{prefix}}KalmanFilter(object):
                  'predicted_state': np.array(self.predicted_state, copy=True, order='F'),
                  'predicted_state_cov': np.array(self.predicted_state_cov, copy=True, order='F'),
                  'standardized_forecast_error': np.array(self.standardized_forecast_error, copy=True, order='F'),
-                 'predicted_diffuse_state_cov': np.array(self.standardized_forecast_error, copy=True, order='F'),
+                 'predicted_diffuse_state_cov': np.array(self.predicted_diffuse_state_cov, copy=True, order='F'),
                  'forecast_error_diffuse_cov': np.array(self.forecast_error_diffuse_cov, copy=True, order='F'),
                  'tmp0': np.array(self.tmp0, copy=True, order='F'),
                  'tmp00': np.array(self.tmp00, copy=True, order='F'),
@@ -1139,7 +1139,7 @@ cdef class {{prefix}}KalmanFilter(object):
         if self.model.nmissing[self.t] > 0 or (not self.t == 0 and self.model.nmissing[self.t-1] > 0):
             missing_flag = 1
 
-        if self.time_invariant and not self.converged and not missing_flag:
+        if self.time_invariant and not self.converged and not missing_flag and not self.t < self.nobs_diffuse + 1:
             # #### Check for steady-state convergence
             # 
             # `tmp0` array used here, dimension $(m \times m)$  
@@ -1183,6 +1183,7 @@ cdef class {{prefix}}KalmanFilter(object):
     cdef void migrate_storage(self):
         cdef:
             int inc = 1
+            int diffuse = self.check_diffuse()
 
 
         # Forecast: 1 -> 0
@@ -1200,10 +1201,15 @@ cdef class {{prefix}}KalmanFilter(object):
         if self.conserve_memory & MEMORY_NO_PREDICTED > 0:
             blas.{{prefix}}copy(&self.k_states, &self.predicted_state[0, 1], &inc, &self.predicted_state[0, 0], &inc)
             blas.{{prefix}}copy(&self.k_states2, &self.predicted_state_cov[0, 0, 1], &inc, &self.predicted_state_cov[0, 0, 0], &inc)
+            if diffuse:
+                blas.{{prefix}}copy(&self.k_states2, &self.predicted_diffuse_state_cov[0, 0, 1], &inc, &self.predicted_diffuse_state_cov[0, 0, 0], &inc)
 
             # Predicted: 2 -> 1
             if self.filter_timing == TIMING_INIT_PREDICTED:
                 blas.{{prefix}}copy(&self.k_states, &self.predicted_state[0, 2], &inc, &self.predicted_state[0, 1], &inc)
                 blas.{{prefix}}copy(&self.k_states2, &self.predicted_state_cov[0, 0, 2], &inc, &self.predicted_state_cov[0, 0, 1], &inc)
+                if diffuse:
+                    blas.{{prefix}}copy(&self.k_states2, &self.predicted_diffuse_state_cov[0, 0, 2], &inc, &self.predicted_diffuse_state_cov[0, 0, 1], &inc)
+            
 
 {{endfor}}

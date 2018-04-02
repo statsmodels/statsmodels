@@ -1363,9 +1363,6 @@ class FilterResults(FrozenRepresentation):
         self.initial_state_cov = np.array(
             kalman_filter.model.initial_state_cov, copy=True
         )
-        self.initial_diffuse_state_cov = np.array(
-            kalman_filter.model.initial_diffuse_state_cov, copy=True
-        )
 
         # Save Kalman filter parameters
         self.filter_method = kalman_filter.filter_method
@@ -1453,10 +1450,22 @@ class FilterResults(FrozenRepresentation):
 
         # Diffuse objects
         self.nobs_diffuse = kalman_filter.nobs_diffuse
-        self.forecasts_error_diffuse_cov = np.array(
-            kalman_filter.forecast_error_diffuse_cov, copy=True)
-        self.predicted_diffuse_state_cov = np.array(
-            kalman_filter.predicted_diffuse_state_cov, copy=True)
+        self.initial_diffuse_state_cov = None
+        self.forecasts_error_diffuse_cov = None
+        self.predicted_diffuse_state_cov = None
+        if self.nobs_diffuse > 0:
+            self.initial_diffuse_state_cov = np.array(
+                kalman_filter.model.initial_diffuse_state_cov, copy=True)
+            self.predicted_diffuse_state_cov = np.array(
+                    kalman_filter.predicted_diffuse_state_cov, copy=True)
+            if has_missing and not self.filter_collapsed:
+                self.forecasts_error_diffuse_cov = np.array(reorder_missing_matrix(
+                    kalman_filter.forecast_error_diffuse_cov, self.missing, reorder_cols=True, reorder_rows=True,
+                    prefix=self.prefix))
+            else:
+                self.forecasts_error_diffuse_cov = np.array(
+                    kalman_filter.forecast_error_diffuse_cov, copy=True)
+                
 
         # If there was missing data, save the original values from the Kalman
         # filter output, since below will set the values corresponding to
@@ -1535,6 +1544,11 @@ class FilterResults(FrozenRepresentation):
                     self.forecasts_error[:, t] = np.nan
                     self.forecasts_error[mask, t] = (
                         self.endog[mask, t] - self.forecasts[mask, t])
+                    # TODO: We should only fill in the non-masked elements of
+                    # this array. Also, this will give the multivariate version
+                    # even if univariate filtering was selected. Instead, we
+                    # should use the reordering methods and then replace the
+                    # masked values with NaNs
                     self.forecasts_error_cov[:, :, t] = np.dot(
                         np.dot(self.design[:, :, design_t],
                                self.predicted_state_cov[:, :, t]),
