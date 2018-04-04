@@ -68,6 +68,21 @@ class cache_writable(_cache_readonly):
                                        cachename=self.cachename)
 
 
+# cached_value and cached_data behave identically to cache_readonly, but
+# are used by `remove_data` to
+#   a) identify array-like attributes to remove (cached_data)
+#   b) make sure certain values are evaluated before caching (cached_value)
+from pandas._libs.properties import cache_readonly as CR
+
+
+class cached_data(CR):
+    pass
+
+
+class cached_value(CR):
+    pass
+
+
 def nottest(fn):
     fn.__test__ = False
     return fn

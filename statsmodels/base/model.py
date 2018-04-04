@@ -7,7 +7,8 @@ from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.tools import recipr, nan_dot
 from statsmodels.stats.contrast import (ContrastResults, WaldTestResults,
                                         t_test_pairwise)
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.decorators import (cache_readonly,
+                                          cached_value, cached_data)
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.tools.sm_exceptions import ValueWarning, \
@@ -1269,12 +1270,12 @@ class LikelihoodModelResults(Results):
             get_robustcov_results(self, cov_type=cov_type, use_self=True,
                                   use_t=use_t, **cov_kwds)
 
-    @cache_readonly
+    @cached_value
     def llf(self):
         """Log-likelihood of model"""
         return self.model.loglike(self.params)
 
-    @cache_readonly
+    @cached_value
     def bse(self):
         """The standard errors of the parameter estimates."""
         # Issue 3299
@@ -1286,14 +1287,14 @@ class LikelihoodModelResults(Results):
             bse_ = np.sqrt(np.diag(self.cov_params()))
         return bse_
 
-    @cache_readonly
+    @cached_value
     def tvalues(self):
         """
         Return the t-statistic for a given parameter estimate.
         """
         return self.params / self.bse
 
-    @cache_readonly
+    @cached_value
     def pvalues(self):
         """The two-tailed p values for the t-stats of the params."""
         if self.use_t:
@@ -2119,6 +2120,28 @@ class LikelihoodModelResults(Results):
         result._data_attr_model : arrays attached to the model
             instance but not to the results instance
         """
+        cls = self.__class__
+        # Note: we cannot just use `getattr(cls, x)` or `getattr(self, x)`
+        # because of redirection involved with property-like accessors
+        cls_attrs = {}
+        for name in dir(cls):
+            try:
+                attr = object.__getattribute__(cls, name)
+            except AttributeError:
+                pass
+            else:
+                cls_attrs[name] = attr
+        data_attrs = [x for x in cls_attrs
+                      if isinstance(cls_attrs[x], cached_data)]
+        value_attrs = [x for x in cls_attrs
+                       if isinstance(cls_attrs[x], cached_value)]
+        # make sure the cached for value_attrs are evaluated; this needs to
+        # occur _before_ any other attributes are removed.
+        for name in value_attrs:
+            getattr(self, name)
+        for name in data_attrs:
+            self._cache[name] = None
+
         def wipe(obj, att):
             # get to last element in attribute path
             p = att.split('.')
@@ -2133,6 +2156,10 @@ class LikelihoodModelResults(Results):
         model_only = ['model.' + i for i in getattr(self, "_data_attr_model", [])]
         model_attr = ['model.' + i for i in self.model._data_attr]
         for att in self._data_attr + model_attr + model_only:
+            if att in data_attrs:
+                # these have been handled above, and trying to call wipe
+                # would raise an Exception anyway, so skip these
+                continue
             wipe(self, att)
 
         data_in_cache = getattr(self, 'data_in_cache', [])

@@ -212,6 +212,30 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
         y = x.sum(1) + np.random.randn(x.shape[0])
         self.results = sm.GLM(y, self.exog).fit()
 
+    def test_cached_data_removed(self):
+        res = self.results
+        # fill data-like members of the cache
+        names = ['resid_response', 'resid_deviance',
+                 'resid_pearson', 'resid_anscombe']
+        for name in names:
+            getattr(res, name)
+        # check that the attributes are present before calling remove_data
+        for name in names:
+            assert name in res._cache
+            assert res._cache[name] is not None
+
+        res.remove_data()
+        for name in names:
+            assert res._cache[name] is None
+
+    def test_cached_values_evaluated(self):
+        # check that value-like attributes are evaluated before data
+        # is removed
+        res = self.results
+        assert res._cache == {}
+        res.remove_data()
+        assert 'bic' in res._cache
+
 
 class TestPickleFormula(RemoveDataPickle):
     @classmethod
