@@ -463,6 +463,9 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
 
     _, xname = _getnames(results, yname=yname, xname=xname)
 
+    if len(xname) != len(params):
+        raise ValueError('xnames and params do not have the same length')
+
     params_stubs = xname
 
     exog_idx = lrange(len(xname))
