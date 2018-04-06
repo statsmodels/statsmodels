@@ -2608,6 +2608,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         resid_nonmissing = resid[~(np.isnan(resid))]
         ax = fig.add_subplot(222)
         # temporarily disable Deprecation warning, normed -> density
+        # hist needs to use `density` in future when minimum matplotlib has it
         with warnings.catch_warnings(record=True) as w:
             ax.hist(resid_nonmissing, normed=True, label='Hist')
         from scipy.stats import gaussian_kde, norm

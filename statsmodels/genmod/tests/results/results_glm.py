@@ -694,11 +694,12 @@ class Lbw(object):
 
         # https://github.com/statsmodels/statsmodels/pull/4432#issuecomment-379279617
         if NUMPY_LT_113 or PY2:
-            data=np.recfromcsv(open(filename, 'rb'))
+            with open(filename, 'rb') as datafile:
+                data=np.recfromcsv(datafile)
             vfunc = np.vectorize(lambda x: x.strip(asbytes("\"")))
             data['race'] = vfunc(data['race'])
         else:
-            data = pd.read_csv(filename).to_records()
+            data = pd.read_csv(filename).to_records(index=False)
         # categorical does not work with pandas
         data = categorical(data, col='race', drop=True)
         self.endog = data.low
