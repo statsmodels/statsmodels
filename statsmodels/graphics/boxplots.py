@@ -125,6 +125,7 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
     """
     fig, ax = utils.create_mpl_ax(ax)
 
+    data = list(map(np.asarray, data))
     if positions is None:
         positions = np.arange(len(data)) + 1
 
@@ -325,6 +326,7 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
     """
     fig, ax = utils.create_mpl_ax(ax)
 
+    data = list(map(np.asarray, data))
     if positions is None:
         positions = np.arange(len(data)) + 1
 
@@ -383,7 +385,6 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
 
 def _jitter_envelope(pos_data, xvals, violin, side):
     """Determine envelope for jitter markers."""
-    pos_data = np.asarray(pos_data)
     if side == 'both':
         low, high = (-1., 1.)
     elif side == 'right':
