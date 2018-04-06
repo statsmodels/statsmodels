@@ -2607,7 +2607,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # elements
         resid_nonmissing = resid[~(np.isnan(resid))]
         ax = fig.add_subplot(222)
-        ax.hist(resid_nonmissing, normed=True, label='Hist')
+        # temporarily disable Deprecation warning, normed -> density
+        with warnings.catch_warnings(record=True) as w:
+            ax.hist(resid_nonmissing, normed=True, label='Hist')
         from scipy.stats import gaussian_kde, norm
         kde = gaussian_kde(resid_nonmissing)
         xlim = (-1.96*2, 1.96*2)
