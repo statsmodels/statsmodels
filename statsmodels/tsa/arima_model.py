@@ -1656,15 +1656,16 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         if len(stubs):  # not 0, 0
             modulus = np.abs(roots)
             data = np.column_stack((roots.real, roots.imag, modulus, freq))
-            roots_table = SimpleTable(data,
-                                      headers=['           Real',
+            roots_table = SimpleTable([('%17.4f' % row[0],
+                                        '%+17.4fj' % row[1],
+                                        '%17.4f' % row[2],
+                                        '%17.4f' % row[3]) for row in data],
+                                      headers=['            Real',
                                                '         Imaginary',
                                                '         Modulus',
                                                '        Frequency'],
                                       title="Roots",
-                                      stubs=stubs,
-                                      data_fmts=["%17.4f", "%+17.4fj",
-                                                 "%17.4f", "%17.4f"])
+                                      stubs=stubs)
 
             smry.tables.append(roots_table)
         return smry
