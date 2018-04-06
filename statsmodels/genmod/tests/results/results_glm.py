@@ -12,6 +12,10 @@ from . import glm_test_resids
 import os
 from statsmodels.api import add_constant, categorical
 
+# for genfromtxt changes
+from distutils.version import LooseVersion
+NUMPY_LT_113 = LooseVersion(np.__version__) < '1.13.0'
+
 # Test Precisions
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -685,7 +689,14 @@ class Lbw(object):
         # data set up for data not in datasets
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "stata_lbw_glm.csv")
-        data = pd.read_csv(filename).to_records()
+
+        # https://github.com/statsmodels/statsmodels/pull/4432#issuecomment-379279617
+        if NUMPY_LT_113:
+            data=np.recfromcsv(open(filename, 'rb'))
+            vfunc = np.vectorize(lambda x: x.strip(asbytes("\"")))
+            data['race'] = vfunc(data['race'])
+        else:
+            data = pd.read_csv(filename).to_records()
         # categorical does not work with pandas
         data = categorical(data, col='race', drop=True)
         self.endog = data.low
@@ -3834,11 +3845,11 @@ class CpunishTweediePower15(object):
     # From R
     setwd('c:/workspace')
     data <- read.csv('cpunish.csv', sep=",")
-    
+
     library(statmod)
     library(tweedie)
-    
-    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1, 
+
+    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1,
                 family=tweedie(var.power=1.5, link.power=1),
                 data=data))
     """
@@ -3901,11 +3912,11 @@ class CpunishTweediePower2(object):
     # From R
     setwd('c:/workspace')
     data <- read.csv('cpunish.csv', sep=",")
-    
+
     library(statmod)
     library(tweedie)
-    
-    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1, 
+
+    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1,
                 family=tweedie(var.power=2, link.power=1),
                 data=data))
     """
@@ -3969,11 +3980,11 @@ class CpunishTweedieLog1(object):
     # From R
     setwd('c:/workspace')
     data <- read.csv('cpunish.csv', sep=",")
-    
+
     library(statmod)
     library(tweedie)
-    
-    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1, 
+
+    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1,
                 family=tweedie(var.power=1, link.power=0),
                 data=data))
     """
