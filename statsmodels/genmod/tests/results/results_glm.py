@@ -13,6 +13,8 @@ import os
 from statsmodels.api import add_constant, categorical
 
 # for genfromtxt changes
+import sys
+PY2 = (sys.version_info[0] < 3)
 from distutils.version import LooseVersion
 NUMPY_LT_113 = LooseVersion(np.__version__) < '1.13.0'
 
@@ -691,7 +693,7 @@ class Lbw(object):
             "stata_lbw_glm.csv")
 
         # https://github.com/statsmodels/statsmodels/pull/4432#issuecomment-379279617
-        if NUMPY_LT_113:
+        if NUMPY_LT_113 or PY2:
             data=np.recfromcsv(open(filename, 'rb'))
             vfunc = np.vectorize(lambda x: x.strip(asbytes("\"")))
             data['race'] = vfunc(data['race'])
