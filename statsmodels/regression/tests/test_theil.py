@@ -7,6 +7,7 @@ Author: Josef Perktold
 
 import os
 import numpy as np
+import pandas as pd
 from scipy import stats
 
 from numpy.testing import assert_allclose, assert_equal, assert_warns
@@ -24,8 +25,9 @@ class TestTheilTextile(object):
     def setup_class(cls):
 
         cur_dir = os.path.dirname(os.path.abspath(__file__))
-        filepath = os.path.join(cur_dir, "results", "theil_textile_predict.csv")
-        cls.res_predict = np.recfromtxt(filepath, delimiter=",")
+        filepath = os.path.join(cur_dir, "results",
+                                "theil_textile_predict.csv")
+        cls.res_predict = pd.read_csv(filepath, sep=",")
 
         names = "year	lconsump	lincome	lprice".split()
 
@@ -90,7 +92,11 @@ class TestTheilTextile(object):
 
         # Note: tgmixed is using k_exog for df_resid
         corr_fact = self.res1.df_resid / self.res2.df_r
-        assert_allclose(np.sqrt(self.res1.mse_resid * corr_fact), self.res2.rmse, rtol=2e-6)
+        assert_allclose(np.sqrt(self.res1.mse_resid * corr_fact),
+                        self.res2.rmse, rtol=2e-6)
+
+        assert_allclose(self.res1.fittedvalues,
+                        self.res_predict['fittedvalues'], atol=5e7)
 
     def test_other(self):
         tc = self.res1.test_compatibility()
