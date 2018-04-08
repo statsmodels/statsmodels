@@ -19,7 +19,6 @@ import statsmodels.tsa.tsatools as tsa
 import statsmodels.tsa.vector_ar.plotting as plotting
 import statsmodels.tsa.vector_ar.util as util
 
-mat = np.array
 
 class BaseIRAnalysis(object):
     """
@@ -264,6 +263,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         Returns
         -------
+        TODO: finish this docstring
         """
         if orth:
             return self._orth_cov()
@@ -343,7 +343,8 @@ class IRAnalysis(BaseIRAnalysis):
             else:
                 k = component
 
-        # here take the kth column of W, which we determine by finding the largest eigenvalue of the covaraince matrix
+        # here take the kth column of W, which we determine by finding the
+        # largest eigenvalue of the covaraince matrix
         lower = np.copy(irfs)
         upper = np.copy(irfs)
         for i in range(neqs):
@@ -604,7 +605,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         Returns
         -------
-
+        TODO: finish this docstring
         """
         Ik = np.eye(self.neqs)
         PIk = np.kron(self.P.T, Ik)
@@ -649,7 +650,7 @@ class IRAnalysis(BaseIRAnalysis):
         """
         Returns
         -------
-
+        TODO: finish this docstring
         """
         lre = self.lr_effects
         Finfty = np.kron(np.tile(lre.T, self.lags), lre)
@@ -687,11 +688,6 @@ class IRAnalysis(BaseIRAnalysis):
         Kkk = tsa.commutation_matrix(k, k)
         Ik = np.eye(k)
 
-        # B = chain_dot(Lk, np.eye(k**2) + commutation_matrix(k, k),
-        #               np.kron(self.P, np.eye(k)), Lk.T)
-
-        # return np.dot(Lk.T, L.inv(B))
-
         B = chain_dot(Lk,
                       np.dot(np.kron(Ik, self.P), Kkk) + np.kron(self.P, Ik),
                       Lk.T)
@@ -699,6 +695,4 @@ class IRAnalysis(BaseIRAnalysis):
         return np.dot(Lk.T, L.inv(B))
 
     def fevd_table(self):
-        pass
-
-
+        raise NotImplementedError

@@ -915,6 +915,8 @@ class VARProcess(object):
             raise ValueError("Please provide an exog_future argument to "
                              "the forecast method.")
         trend_coefs = None if self.coefs_exog.size == 0 else self.coefs_exog.T
+        # TODO: coefs_exog aren't an attribute of this class; this
+        # should be implemented further down the inheritance hierarchy
 
         exogs = []
         if self.trend.startswith("c"):  # constant term
@@ -1101,8 +1103,6 @@ class VARResults(VARProcess):
         k_trend = util.get_trendorder(trend)
         self.exog_names = util.make_lag_names(names, lag_order, k_trend, exog)
         self.params = params
-        # print(params.shape)
-        # print(params.round(3))
 
         # Initialize VARProcess parent class
         # construct coefficient matrices
@@ -1118,7 +1118,6 @@ class VARResults(VARProcess):
         self.coefs_exog = params[:endog_start].T
         self.k_trend = self.coefs_exog.shape[1]
 
-        # print(coefs.round(3))
         super(VARResults, self).__init__(coefs, exog, sigma_u, names=names)
 
     def plot(self):
@@ -1154,7 +1153,7 @@ class VARResults(VARProcess):
 
     def sample_acorr(self, nlags=1):
         acovs = self.sample_acov(nlags=nlags)
-        return _acovs_to_acorrs(acovs)
+        return util.acf_to_acorr(acovs)
 
     def plot_sample_acorr(self, nlags=10, linewidth=8):
         "Plot theoretical autocorrelation function"
@@ -1186,7 +1185,7 @@ class VARResults(VARProcess):
         -------
         """
         acovs = self.resid_acov(nlags=nlags)
-        return _acovs_to_acorrs(acovs)
+        return util.acf_to_acorr(acovs)
 
     @cache_readonly
     def resid_corr(self):
@@ -2094,11 +2093,6 @@ def _compute_acov(x, nlags=1):
         result.append(r)
 
     return np.array(result) / len(x)
-
-
-def _acovs_to_acorrs(acovs):
-    sd = np.sqrt(np.diag(acovs[0]))
-    return acovs / np.outer(sd, sd)
 
 
 if __name__ == '__main__':
