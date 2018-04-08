@@ -22,7 +22,7 @@ import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.tsa.vector_ar.irf as irf
 import statsmodels.tsa.vector_ar.plotting as plot
 from statsmodels.tsa.vector_ar.hypothesis_test_results import \
-    CausalityTestResults, NormalityTestResults, WhitenessTestResults
+    CausalityTestResults, WhitenessTestResults
 from statsmodels.tsa.vector_ar.util import get_index, seasonal_dummies
 from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval, \
     VAR, ma_rep, orth_ma_rep, test_normality, LagOrderResults, _compute_acov
@@ -1286,7 +1286,6 @@ class VECMResults(object):
         # compare p. 93, 297 Lutkepohl (2005)
         return 2 * chain_dot(d_K_plus, np.kron(sigma_u, sigma_u), d_K_plus.T)
 
-
     @cache_readonly
     def cov_params_default(self):  # p.296 (7.2.21)
         # Sigma_co described on p. 287
@@ -1403,7 +1402,7 @@ class VECMResults(object):
                                        self.det_coef_coint.shape[0])
         ret_1dim = self.stderr_params[start:start+self.gamma.size]
         return ret_1dim.reshape(self.gamma.shape, order="F")
-    
+
     @cache_readonly
     def stderr_det_coef(self):
         if self.det_coef.size == 0:
@@ -2025,7 +2024,6 @@ class VECMResults(object):
 
         return WhitenessTestResults(statistic, crit_value, pvalue, df, signif,
                                     nlags, adjusted)
-
 
     def plot_data(self, with_presample=False):
         """
