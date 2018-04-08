@@ -767,12 +767,13 @@ class VARProcess(object):
     -------
     **Attributes**:
     """
-    def __init__(self, coefs, exog, sigma_u, names=None):
+    def __init__(self, coefs, exog, sigma_u, trend, names=None):
         self.k_ar = len(coefs)
         self.neqs = coefs.shape[1]
         self.coefs = coefs
         self.exog = exog
         self.sigma_u = sigma_u
+        self.trend = trend
         self.names = names
 
     def get_eq_index(self, name):
@@ -817,7 +818,17 @@ class VARProcess(object):
 
         .. math:: \mu = (I - A_1 - \dots - A_p)^{-1} \alpha
         """
-        return np.linalg.solve(self._char_mat, self.exog)
+        if self.trend != "c" or (self.exog is not None and
+                                 self.exog.shape[1] != 1):
+            # FIXME: there is no `trend` attribute at this lev
+            raise NotImplementedError("VAR Process mean is not well-defined "
+                                      "when there are exogenous regressors "
+                                      "other than a constant, or if there "
+                                      "is no constant term")
+        intercept = self.params[0, :]
+        # FIXME: confusion between self.params vs self.coefs;
+        #        params does not exist at this level
+        return np.linalg.solve(self._char_mat, intercept)
 
     def ma_rep(self, maxn=10):
         r"""Compute MA(:math:`\infty`) coefficient matrices
@@ -1117,6 +1128,8 @@ class VARResults(VARProcess):
 
         self.coefs_exog = params[:endog_start].T
         self.k_trend = self.coefs_exog.shape[1]
+        # TODO: Define self.k_exog = coefs_exog.shape[1] - k_trend
+        # and self.k_trend = k_trend defined above?
 
         if "c" in trend:
             self.intercept = self.params[0, :]
@@ -1124,7 +1137,8 @@ class VARResults(VARProcess):
             self.intercept = np.zeros(neqs)
 
         # print(coefs.round(3))
-        super(VARResults, self).__init__(coefs, exog, sigma_u, names=names)
+        super(VARResults, self).__init__(coefs, exog, sigma_u,
+                                         trend=trend, names=names)
 
     def plot(self):
         """Plot input time series
