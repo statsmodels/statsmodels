@@ -651,7 +651,7 @@ class VAR(tsbase.TimeSeriesModel):
             As per above
         """
         # have to do this again because select_order doesn't call fit
-        self.k_trend = k_trend = util.get_trendorder(trend)
+        k_trend = util.get_trendorder(trend)
 
         if offset < 0:  # pragma: no cover
             raise ValueError('offset must be >= 0')
@@ -671,13 +671,13 @@ class VAR(tsbase.TimeSeriesModel):
             del x_inst  # free memory
             temp_z = z
             z = np.empty((x.shape[0], x.shape[1]+z.shape[1]))
-            z[:, :self.k_trend] = temp_z[:, :self.k_trend]
-            z[:, self.k_trend:self.k_trend+x.shape[1]] = x
-            z[:, self.k_trend+x.shape[1]:] = temp_z[:, self.k_trend:]
+            z[:, :k_trend] = temp_z[:, :k_trend]
+            z[:, k_trend:k_trend+x.shape[1]] = x
+            z[:, k_trend+x.shape[1]:] = temp_z[:, k_trend:]
             del temp_z, x  # free memory
         # the following modification of z is necessary to get the same results
         # as JMulTi for the constant-term-parameter...
-        for i in range(self.k_trend):
+        for i in range(k_trend):
             if (np.diff(z[:, i]) == 1).all():  # modify the trend-column
                 z[:, i] += lags
             # make the same adjustment for the quadratic term
@@ -1117,6 +1117,11 @@ class VARResults(VARProcess):
 
         self.coefs_exog = params[:endog_start].T
         self.k_trend = self.coefs_exog.shape[1]
+
+        if "c" in trend:
+            self.intercept = self.params[0, :]
+        else:
+            self.intercept = np.zeros(neqs)
 
         # print(coefs.round(3))
         super(VARResults, self).__init__(coefs, exog, sigma_u, names=names)
