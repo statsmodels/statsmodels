@@ -6,10 +6,17 @@ Stata may be because Stata uses ML by default unless you specifically ask for
 IRLS.
 """
 import numpy as np
+import pandas as pd
 from statsmodels.compat.python import asbytes
 from . import glm_test_resids
 import os
 from statsmodels.api import add_constant, categorical
+
+# for genfromtxt changes
+import sys
+PY2 = (sys.version_info[0] < 3)
+from distutils.version import LooseVersion
+NUMPY_LT_113 = LooseVersion(np.__version__) < '1.13.0'
 
 # Test Precisions
 DECIMAL_4 = 4
@@ -684,9 +691,16 @@ class Lbw(object):
         # data set up for data not in datasets
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "stata_lbw_glm.csv")
-        data=np.recfromcsv(open(filename, 'rb'))
-        vfunc = np.vectorize(lambda x: x.strip(asbytes("\"")))
-        data['race'] = vfunc(data['race'])
+
+        # https://github.com/statsmodels/statsmodels/pull/4432#issuecomment-379279617
+        if NUMPY_LT_113 or PY2:
+            with open(filename, 'rb') as datafile:
+                data=np.recfromcsv(datafile)
+            vfunc = np.vectorize(lambda x: x.strip(asbytes("\"")))
+            data['race'] = vfunc(data['race'])
+        else:
+            data = pd.read_csv(filename).to_records(index=False)
+        # categorical does not work with pandas
         data = categorical(data, col='race', drop=True)
         self.endog = data.low
         design = np.column_stack((data['age'], data['lwt'],
@@ -2193,9 +2207,7 @@ class Medpar1(object):
     def __init__(self):
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "stata_medpar1_glm.csv")
-        data = np.recfromcsv(open(filename, 'rb'))
-        vfunc = np.vectorize(lambda x: x.strip(asbytes('\"')))
-        data['admitype'] = vfunc(data['admitype'])
+        data = pd.read_csv(filename).to_records()
         self.endog = data.los
         design = np.column_stack((data.admitype, data.codes))
         design = categorical(design, col=0, drop=True)
@@ -2210,7 +2222,7 @@ class InvGaussLog(Medpar1):
         super(InvGaussLog, self).__init__()
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "medparlogresids.csv")
-        self.resids = np.genfromtxt(open(filename, 'rb'), delimiter=",")
+        self.resids = pd.read_csv(filename, sep=',', header=None).values
         self.null_deviance = 335.1539777981053 # from R, Rpy bug
         self.params = np.array([ 0.09927544, -0.19161722,  1.05712336])
         self.bse = np.array([ 0.00600728,  0.02632126,  0.04915765])
@@ -2973,7 +2985,7 @@ class InvGaussIdentity(Medpar1):
         self.bse = np.array([ 0.02586783,  0.13830023,  0.20834864])
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
             "igaussident_resids.csv")
-        self.resids = np.genfromtxt(open(filename, 'rb'), delimiter=",")
+        self.resids = pd.read_csv(filename, sep=',', header=None).values
         self.null_deviance = 335.1539777981053  # from R, Rpy bug
         self.df_null = 3675
         self.deviance = 305.33661191013988
@@ -3836,11 +3848,11 @@ class CpunishTweediePower15(object):
     # From R
     setwd('c:/workspace')
     data <- read.csv('cpunish.csv', sep=",")
-    
+
     library(statmod)
     library(tweedie)
-    
-    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1, 
+
+    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1,
                 family=tweedie(var.power=1.5, link.power=1),
                 data=data))
     """
@@ -3903,11 +3915,11 @@ class CpunishTweediePower2(object):
     # From R
     setwd('c:/workspace')
     data <- read.csv('cpunish.csv', sep=",")
-    
+
     library(statmod)
     library(tweedie)
-    
-    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1, 
+
+    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1,
                 family=tweedie(var.power=2, link.power=1),
                 data=data))
     """
@@ -3971,11 +3983,11 @@ class CpunishTweedieLog1(object):
     # From R
     setwd('c:/workspace')
     data <- read.csv('cpunish.csv', sep=",")
-    
+
     library(statmod)
     library(tweedie)
-    
-    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1, 
+
+    summary(glm(EXECUTIONS ~ INCOME + SOUTH - 1,
                 family=tweedie(var.power=1, link.power=0),
                 data=data))
     """

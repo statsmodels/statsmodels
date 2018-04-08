@@ -2556,7 +2556,8 @@ class OLSResults(RegressionResults):
         from statsmodels.stats.outliers_influence import OLSInfluence
         return OLSInfluence(self)
 
-    def outlier_test(self, method='bonf', alpha=.05):
+    def outlier_test(self, method='bonf', alpha=.05, labels=None,
+                 order=False, cutoff=None):
         """
         Test observations for outliers according to method
 
@@ -2576,6 +2577,16 @@ class OLSResults(RegressionResults):
             See `statsmodels.stats.multitest.multipletests` for details.
         alpha : float
             familywise error rate
+        labels : None or array_like
+            If `labels` is not None, then it will be used as index to the
+            returned pandas DataFrame. See also Returns below
+        order : bool
+            Whether or not to order the results by the absolute value of the
+            studentized residuals. If labels are provided they will also be sorted.
+        cutoff : None or float in [0, 1]
+            If cutoff is not None, then the return only includes observations with
+            multiple testing corrected p-values strictly below the cutoff. The
+            returned array or dataframe can be empty if t
 
         Returns
         -------
@@ -2591,7 +2602,8 @@ class OLSResults(RegressionResults):
         df = df_resid - 1.
         """
         from statsmodels.stats.outliers_influence import outlier_test
-        return outlier_test(self, method, alpha)
+        return outlier_test(self, method, alpha, labels=labels,
+                            order=order, cutoff=cutoff)
 
     def el_test(self, b0_vals, param_nums, return_weights=0,
                 ret_params=0, method='nm',

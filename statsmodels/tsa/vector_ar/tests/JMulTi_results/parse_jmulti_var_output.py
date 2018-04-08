@@ -245,7 +245,8 @@ def load_results_jmulti(dataset, dt_s_list):
         # all possible combinations of potentially causing variables
         # (at least 1 variable and not all variables together):
         var_combs = sublists(vn, 1, len(vn)-1)
-        print("\n\n\n" + dt_string)
+        if debug_mode:
+            print("\n\n\n" + dt_string)
         for causing in var_combs:
             caused = tuple(name for name in vn if name not in causing)
             causality_file = dataset.__str__() + "_" + source + "_" \

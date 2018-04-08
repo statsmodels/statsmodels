@@ -7,7 +7,7 @@ from distutils.version import LooseVersion
 
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_allclose,
-                           assert_raises, dec)
+                           assert_raises)
 import pandas as pd
 from pandas import PeriodIndex, DatetimeIndex
 import pytest
@@ -37,8 +37,9 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 
 current_path = os.path.dirname(os.path.abspath(__file__))
-y_arma = np.genfromtxt(open(current_path + '/results/y_arma_data.csv', "rb"),
-        delimiter=",", skip_header=1, dtype=float)
+ydata_path = os.path.join(current_path, 'results', 'y_arma_data.csv')
+with open(ydata_path, "rb") as fd:
+    y_arma = np.genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
 
 cpi_dates = PeriodIndex(start='1959q1', end='2009q3', freq='Q')
 sun_dates = PeriodIndex(start='1700', end='2008', freq='A')
@@ -221,7 +222,7 @@ class Test_Y_ARMA14_NoConst(CheckArmaResultsMixin):
         cls.res2 = results_arma.Y_arma14()
 
 
-@dec.slow
+@pytest.mark.slow
 class Test_Y_ARMA41_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setup_class(cls):
@@ -474,7 +475,7 @@ def test_reset_trend():
     assert_equal(len(res1.params), len(res2.params)+1)
 
 
-@dec.slow
+@pytest.mark.slow
 def test_start_params_bug():
     data = np.array([1368., 1187, 1090, 1439, 2362, 2783, 2869, 2512, 1804,
     1544, 1028, 869, 1737, 2055, 1947, 1618, 1196, 867, 997, 1862, 2525,

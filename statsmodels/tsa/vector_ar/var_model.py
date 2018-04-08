@@ -686,7 +686,7 @@ class VAR(tsbase.TimeSeriesModel):
 
         y_sample = endog[lags:]
         # Lütkepohl p75, about 5x faster than stated formula
-        params = np.linalg.lstsq(z, y_sample)[0]
+        params = np.linalg.lstsq(z, y_sample, rcond=-1)[0]
         resid = y_sample - np.dot(z, params)
 
         # Unbiased estimate of covariance matrix $\Sigma_u$ of the white noise

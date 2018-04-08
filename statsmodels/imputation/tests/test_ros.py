@@ -204,7 +204,7 @@ class Test__ros_sort(object):
 
     def test_censored_greater_than_max(self):
         df = self.df.copy()
-        max_row = df['conc'].argmax()
+        max_row = df['conc'].idxmax()
         df.loc[max_row, 'censored'] = True
         result = ros._ros_sort(df, 'conc', 'censored')
         pdtest.assert_frame_equal(result, self.expected_with_warning)
@@ -254,9 +254,9 @@ class Test__detection_limit_index(object):
         assert_equal(ros._detection_limit_index(None, self.empty_cohn), 0)
 
     def test_populated(self):
-         assert_equal(ros._detection_limit_index(3.5, self.cohn), 0)
-         assert_equal(ros._detection_limit_index(6.0, self.cohn), 3)
-         assert_equal(ros._detection_limit_index(12.0, self.cohn), 5)
+        assert_equal(ros._detection_limit_index(3.5, self.cohn), 0)
+        assert_equal(ros._detection_limit_index(6.0, self.cohn), 3)
+        assert_equal(ros._detection_limit_index(12.0, self.cohn), 5)
 
     def test_out_of_bounds(self):
         with pytest.raises(IndexError):

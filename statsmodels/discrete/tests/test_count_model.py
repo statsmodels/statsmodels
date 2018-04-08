@@ -2,7 +2,7 @@
 from __future__ import division
 import os
 import numpy as np
-from numpy.testing import (assert_, assert_raises, assert_almost_equal,
+from numpy.testing import (assert_, assert_almost_equal,
                            assert_equal, assert_array_equal, assert_allclose,
                            assert_array_less)
 
@@ -74,7 +74,8 @@ class TestZeroInflatedModel_logit(CheckGeneric):
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
         cls.res1 = sm.ZeroInflatedPoisson(data.endog, exog,
-            exog_infl=exog_infl, inflation='logit').fit(method='newton', maxiter=500)
+            exog_infl=exog_infl, inflation='logit').fit(method='newton', maxiter=500,
+                                                        disp=0)
         # for llnull test
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
@@ -91,7 +92,8 @@ class TestZeroInflatedModel_probit(CheckGeneric):
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
         cls.res1 = sm.ZeroInflatedPoisson(data.endog, exog,
-            exog_infl=exog_infl, inflation='probit').fit(method='newton', maxiter=500)
+            exog_infl=exog_infl, inflation='probit').fit(method='newton', maxiter=500,
+                                                         disp=0)
         # for llnull test
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
@@ -108,7 +110,9 @@ class TestZeroInflatedModel_offset(CheckGeneric):
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
         cls.res1 = sm.ZeroInflatedPoisson(data.endog, exog,
-            exog_infl=exog_infl, offset=data.exog[:,7]).fit(method='newton', maxiter=500)
+            exog_infl=exog_infl, offset=data.exog[:,7]).fit(method='newton',
+                                                            maxiter=500,
+                                                            disp=0)
         # for llnull test
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
@@ -125,7 +129,7 @@ class TestZeroInflatedModel_offset(CheckGeneric):
         model3 = sm.ZeroInflatedPoisson(model1.endog, model1.exog,
             exog_infl=model1.exog_infl, exposure=np.exp(offset))
         res3 = model3.fit(start_params=self.res1.params,
-                          method='newton', maxiter=500)
+                          method='newton', maxiter=500, disp=0)
 
         assert_allclose(res3.params, self.res1.params, atol=1e-6, rtol=1e-6)
         fitted1 = self.res1.predict()
@@ -176,7 +180,7 @@ class TestZeroInflatedModelPandas(CheckGeneric):
         model = sm.ZeroInflatedPoisson(data.endog, exog,
             exog_infl=exog_infl, inflation='logit')
         cls.res1 = model.fit(start_params=start_params, method='newton',
-                             maxiter=500)
+                             maxiter=500, disp=0)
         # for llnull test
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset']
@@ -213,7 +217,7 @@ class TestZeroInflatedPoisson_predict(object):
         cls.endog = sm.distributions.zipoisson.rvs(mu_true, 0.05,
                                                    size=mu_true.shape)
         model = sm.ZeroInflatedPoisson(cls.endog, exog)
-        cls.res = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
+        cls.res = model.fit(method='bfgs', maxiter=5000, maxfun=5000, disp=0)
 
     def test_mean(self):
         assert_allclose(self.res.predict().mean(), self.endog.mean(),
@@ -241,7 +245,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
         cls.res1 = sm.ZeroInflatedGeneralizedPoisson(data.endog, exog,
-            exog_infl=exog_infl, p=1).fit(method='newton', maxiter=500)
+            exog_infl=exog_infl, p=1).fit(method='newton', maxiter=500, disp=0)
         # for llnull test
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset', 'p']
@@ -313,7 +317,7 @@ class TestZeroInflatedGeneralizedPoisson_predict(object):
         cls.endog = sm.distributions.zigenpoisson.rvs(mu_true, expected_params[-1],
                                                       2, 0.5, size=mu_true.shape)
         model = sm.ZeroInflatedGeneralizedPoisson(cls.endog, exog, p=2)
-        cls.res = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
+        cls.res = model.fit(method='bfgs', maxiter=5000, maxfun=5000, disp=0)
 
     def test_mean(self):
         assert_allclose(self.res.predict().mean(), self.endog.mean(),
@@ -345,7 +349,7 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
         sp = np.array([1.88, -10.28, -0.20, 1.14, 1.34])
         cls.res1 = sm.ZeroInflatedNegativeBinomialP(data.endog, exog,
             exog_infl=exog_infl, p=2).fit(start_params=sp, method='nm',
-                                          xtol=1e-6, maxiter=5000)
+                                          xtol=1e-6, maxiter=5000, disp=0)
         # for llnull test
         cls.res1._results._attach_nullmodel = True
         cls.init_keys = ['exog_infl', 'exposure', 'inflation', 'offset', 'p']
@@ -428,7 +432,7 @@ class TestZeroInflatedNegativeBinomialP_predict(object):
         cls.endog = sm.distributions.zinegbin.rvs(mu_true,
                     expected_params[-1], 2, prob_infl, size=mu_true.shape)
         model = sm.ZeroInflatedNegativeBinomialP(cls.endog, exog, p=2)
-        cls.res = model.fit(method='bfgs', maxiter=5000, maxfun=5000)
+        cls.res = model.fit(method='bfgs', maxiter=5000, maxfun=5000, disp=0)
 
         # attach others
         cls.prob_infl = prob_infl
@@ -539,7 +543,7 @@ class TestZeroInflatedNegativeBinomialP_predict2(object):
             mod = sm.ZeroInflatedNegativeBinomialP(
                 cls.endog, exog, exog_infl=exog, p=2)
             res = mod.fit(start_params=start_params, method="bfgs",
-                          maxiter=1000)
+                          maxiter=1000, disp=0)
 
             cls.res = res
 

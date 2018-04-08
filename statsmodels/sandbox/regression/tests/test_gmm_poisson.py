@@ -119,7 +119,8 @@ class CheckGMM(object):
 
     def test_smoke(self):
         res1 = self.res1
-        res1.summary()
+        summ = res1.summary()
+        assert_equal(len(summ.tables[1]), len(res1.params) + 1)
 
 
 class TestGMMAddOnestep(CheckGMM):

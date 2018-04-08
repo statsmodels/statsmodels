@@ -11,7 +11,6 @@ from warnings import warn
 from statsmodels.compat.collections import OrderedDict
 
 import numpy as np
-import pandas as pd
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
     is_invertible, prepare_exog,
@@ -161,7 +160,7 @@ class DynamicFactor(MLEModel):
 
         # Exogenous data
         (self.k_exog, exog) = prepare_exog(exog)
-        
+
         # Note: at some point in the future might add state regression, as in
         # SARIMAX.
         self.mle_regression = self.k_exog > 0
@@ -1354,4 +1353,5 @@ class DynamicFactorResultsWrapper(MLEResultsWrapper):
     _methods = {}
     _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
                                      _methods)
-wrap.populate_wrapper(DynamicFactorResultsWrapper, DynamicFactorResults)
+wrap.populate_wrapper(DynamicFactorResultsWrapper,  # noqa:E305
+                      DynamicFactorResults)

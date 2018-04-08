@@ -30,6 +30,7 @@ from __future__ import division
 from statsmodels.compat.testing import SkipTest
 
 import warnings
+from warnings import catch_warnings
 import sys
 
 import nose
@@ -42,12 +43,14 @@ import statsmodels.api as sm
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.tools.tools import add_constant
 from statsmodels.discrete import discrete_model as discrete
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 
 from .results import results_glm_poisson_weights as res_stata
 from .results import res_R_var_weight as res_r
 
 # load data into module namespace
 from statsmodels.datasets.cpunish import load
+
 cpunish_data = load()
 cpunish_data.exog[:, 3] = np.log(cpunish_data.exog[:, 3])
 cpunish_data.exog = add_constant(cpunish_data.exog, prepend=False)
@@ -104,9 +107,13 @@ class CheckWeight(object):
         assert_allclose(res1.resid_working, resid_all['resid_working'], atol= 1e-6, rtol=2e-6)
         if resid_all.get('resid_anscombe') is None:
             return None
-        # Stata doesn't use var_weights in anscombe residuals, it seems. 
+        # Stata doesn't use var_weights in anscombe residuals, it seems.
         # Adjust residuals to match our approach.
-        assert_allclose(res1.resid_anscombe, resid_all['resid_anscombe'] * np.sqrt(res1._var_weights), atol= 1e-6, rtol=2e-6)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=FutureWarning)
+            resid_a = res1.resid_anscombe
+
+        assert_allclose(resid_a, resid_all['resid_anscombe'] * np.sqrt(res1._var_weights), atol= 1e-6, rtol=2e-6)
 
     def test_compare_optimizers(self):
         res1 = self.res1
@@ -120,7 +127,10 @@ class CheckWeight(object):
                              TestGlmPoissonFwClu,
                              TestBinomial0RepeatedvsAverage)):
             return None
-        res2 = self.res1.model.fit(method=method, optim_hessian=optim_hessian)
+
+        start_params = res1.params
+        res2 = self.res1.model.fit(start_params=start_params, method=method,
+                                   optim_hessian=optim_hessian)
         assert_allclose(res1.params, res2.params, atol=1e-3, rtol=2e-3)
         H = res2.model.hessian(res2.params, observed=False)
         res2_bse = np.sqrt(-np.diag(np.linalg.inv(H)))
@@ -169,7 +179,7 @@ class TestGlmPoissonAwNr(CheckWeight):
                     family=sm.families.Poisson(), var_weights=aweights).fit()
         # compare with discrete, start close to save time
         modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
-        
+
         # Need to copy to avoid inplace adjustment
         from copy import copy
         cls.res2 = copy(res_stata.results_poisson_aweight_nonrobust)
@@ -197,12 +207,12 @@ class TestGlmPoissonPwNr(CheckWeight):
         cls.res2 = res_stata.results_poisson_pweight_nonrobust
 
     @pytest.mark.xfail(reason='Known to fail')
-    def test_basic(cls):
-        super(cls, TestGlmPoissonPwNr).test_basic(cls)
+    def test_basic(self):
+        super(TestGlmPoissonPwNr, self).test_basic()
 
     @pytest.mark.xfail(reason='Known to fail')
-    def test_compare_optimizers(cls):
-        super(cls, TestGlmPoissonPwNr).test_compare_optimizers(cls)
+    def test_compare_optimizers(self):
+        super(TestGlmPoissonPwNr, self).test_compare_optimizers()
 
 
 class TestGlmPoissonFwHC(CheckWeight):
@@ -215,6 +225,7 @@ class TestGlmPoissonFwHC(CheckWeight):
         nobs = len(cpunish_data.endog)
         aweights = fweights / wsum * nobs
         cls.corr_fact = np.sqrt((wsum - 1.) / wsum)
+
         cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                         family=sm.families.Poisson(), freq_weights=fweights
                         ).fit(cov_type='HC0') #, cov_kwds={'use_correction':False})
@@ -237,7 +248,7 @@ class TestGlmPoissonAwHC(CheckWeight):
         # This is really close when corr_fact = (wsum - 1.) / wsum, but to
         # avoid having loosen precision of the assert_allclose, I'm doing this
         # manually. Its *possible* lowering the IRLS convergence criterion
-        # in stata and here will make this less sketchy. 
+        # in stata and here will make this less sketchy.
         cls.corr_fact = np.sqrt((wsum - 1.) / wsum) * 0.98518473599905609
         cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                         family=sm.families.Poisson(), var_weights=aweights
@@ -263,9 +274,11 @@ class TestGlmPoissonFwClu(CheckWeight):
         # no wnobs yet in sandwich covariance calcualtion
         cls.corr_fact = 1 / np.sqrt(n_groups / (n_groups - 1))   #np.sqrt((wsum - 1.) / wsum)
         cov_kwds = {'groups': gid, 'use_correction':False}
-        cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
-                        family=sm.families.Poisson(), freq_weights=fweights
-                        ).fit(cov_type='cluster', cov_kwds=cov_kwds)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=SpecificationWarning)
+            cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
+                            family=sm.families.Poisson(), freq_weights=fweights
+                            ).fit(cov_type='cluster', cov_kwds=cov_kwds)
         # compare with discrete, start close to save time
         #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         cls.res2 = res_stata.results_poisson_fweight_clu1
@@ -308,7 +321,7 @@ class TestGlmGammaAwNr(CheckWeight):
         aweights = np.repeat(1, len(endog))
         aweights[::5] = 5
         aweights[::13] = 3
-        model = sm.GLM(endog, exog, 
+        model = sm.GLM(endog, exog,
                        family=sm.families.Gamma(link=sm.families.links.log()),
                        var_weights=aweights)
         cls.res1 = model.fit(rtol=1e-25, atol=0)
@@ -710,7 +723,7 @@ class TestBinomial0RepeatedvsAverage(CheckWeight):
         beta = np.array([-1, 0.1, -0.05, .2, 0.35])
         lin_pred = (exog * beta).sum(axis=1)
         family = sm.families.Binomial
-        link = sm.families.links.log
+        link = sm.families.links.logit
         endog = gen_endog(lin_pred, family, link, binom_version=0)
         mod1 = sm.GLM(endog, exog, family=family(link=link()))
         cls.res1 = mod1.fit(rtol=1e-10, atol=0, tol_criterion='params',
@@ -743,7 +756,7 @@ class TestBinomial0RepeatedvsDuplicated(CheckWeight):
         beta = np.array([-1, 0.1, -0.05, .2, 0.35])
         lin_pred = (exog * beta).sum(axis=1)
         family = sm.families.Binomial
-        link = sm.families.links.log
+        link = sm.families.links.logit
         endog = gen_endog(lin_pred, family, link, binom_version=0)
         wt = np.random.randint(1, 5, n)
         mod1 = sm.GLM(endog, exog, family=family(link=link), freq_weights=wt)
@@ -819,7 +832,9 @@ class TestBinomialVsVarWeights(CheckWeight):
     def setup_class(cls):
         from statsmodels.datasets.star98 import load
         data = load()
+        data.exog /= data.exog.std(0)
         data.exog = add_constant(data.exog, prepend=False)
+
         cls.res1 = GLM(data.endog, data.exog,
                         family=sm.families.Binomial()).fit()
         weights = data.endog.sum(axis=1)
@@ -902,7 +917,9 @@ def test_poisson_residuals():
                     res_poi_w.resid_response)
     assert_allclose(res_poi_e.resid_pearson, res_poi_w.resid_pearson)
     assert_allclose(res_poi_e.resid_deviance, res_poi_w.resid_deviance)
-    assert_allclose(res_poi_e.resid_anscombe, res_poi_w.resid_anscombe)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=FutureWarning)
+        assert_allclose(res_poi_e.resid_anscombe, res_poi_w.resid_anscombe)
     assert_allclose(res_poi_e.resid_anscombe_unscaled,
                     res_poi_w.resid_anscombe)
 

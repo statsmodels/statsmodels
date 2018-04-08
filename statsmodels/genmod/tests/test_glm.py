@@ -15,6 +15,7 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.tools.tools import add_constant
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.discrete import discrete_model as discrete
+from statsmodels.tools.sm_exceptions import DomainWarning
 import pytest
 import warnings
 
@@ -75,9 +76,12 @@ class CheckModelResultsMixin(object):
         resid2[:, 2] *= self.res1.family.link.deriv(self.res1.mu)**2
 
         atol = 10**(-self.decimal_resids)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=FutureWarning)
+            resid_a = self.res1.resid_anscombe
         resids = np.column_stack((self.res1.resid_pearson,
                 self.res1.resid_deviance, self.res1.resid_working,
-                self.res1.resid_anscombe, self.res1.resid_response))
+                resid_a, self.res1.resid_response))
         assert_allclose(resids, resid2, rtol=1e-6, atol=atol)
 
     decimal_aic_R = DECIMAL_4
@@ -646,8 +650,12 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
         interaction = cls.data.exog[:,2]*cls.data.exog[:,1]
         cls.data.exog = np.column_stack((cls.data.exog,interaction))
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=DomainWarning)
+            fam = sm.families.NegativeBinomial()
+
         cls.res1 = GLM(cls.data.endog, cls.data.exog,
-                family=sm.families.NegativeBinomial()).fit(scale='x2')
+                family=fam).fit(scale='x2')
         from .results.results_glm import Committee
         res2 = Committee()
         res2.aic_R += 2 # They don't count a degree of freedom for the scale
@@ -770,7 +778,9 @@ def test_perfect_pred():
     y = y[y != 2]
     X = add_constant(X, prepend=True)
     glm = GLM(y, X, family=sm.families.Binomial())
-    assert_raises(PerfectSeparationError, glm.fit)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        assert_raises(PerfectSeparationError, glm.fit)
 
 
 def test_score_test_OLS():
@@ -1419,14 +1429,17 @@ class TestWtdGlmNegativeBinomial(CheckWtdDuplicationMixin):
         '''
         super(TestWtdGlmNegativeBinomial, cls).setup_class()
         alpha = 1.
-        family_link = sm.families.NegativeBinomial(
-            link=sm.families.links.nbinom(alpha=alpha),
-            alpha=alpha)
-        cls.res1 = GLM(cls.endog, cls.exog,
-                       freq_weights=cls.weight,
-                       family=family_link).fit()
-        cls.res2 = GLM(cls.endog_big, cls.exog_big,
-                       family=family_link).fit()
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=DomainWarning)
+            family_link = sm.families.NegativeBinomial(
+                link=sm.families.links.nbinom(alpha=alpha),
+                alpha=alpha)
+            cls.res1 = GLM(cls.endog, cls.exog,
+                           freq_weights=cls.weight,
+                           family=family_link).fit()
+            cls.res2 = GLM(cls.endog_big, cls.exog_big,
+                           family=family_link).fit()
 
 
 class TestWtdGlmGamma(CheckWtdDuplicationMixin):
@@ -1750,7 +1763,8 @@ class CheckTweedieSpecial(object):
                         rtol=1e-5, atol=1e-5)
         assert_allclose(self.res1.resid_working, self.res2.resid_working,
                         rtol=1e-5, atol=1e-5)
-        assert_allclose(self.res1.resid_anscombe, self.res2.resid_anscombe,
+        assert_allclose(self.res1.resid_anscombe_unscaled,
+                        self.res2.resid_anscombe_unscaled,
                         rtol=1e-5, atol=1e-5)
 
 
@@ -2063,9 +2077,13 @@ def test_non_invertible_hessian_fails_summary():
     data = sm.datasets.cpunish.load_pandas()
 
     data.endog[:] = 1
-    mod = sm.GLM(data.endog, data.exog, family=sm.families.Gamma())
-    res = mod.fit(maxiter=1, method='bfgs', max_start_irls=0)
-    res.summary()
+    with warnings.catch_warnings():
+        # we filter DomainWarning, the convergence problems
+        # and warnings in summary
+        warnings.simplefilter("ignore")
+        mod = sm.GLM(data.endog, data.exog, family=sm.families.Gamma())
+        res = mod.fit(maxiter=1, method='bfgs', max_start_irls=0)
+        res.summary()
 
 
 if __name__ == "__main__":

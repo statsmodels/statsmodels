@@ -3,7 +3,7 @@ from __future__ import division
 __all__ = ["ZeroInflatedPoisson", "ZeroInflatedGeneralizedPoisson",
            "ZeroInflatedNegativeBinomialP"]
 
-
+import warnings
 import numpy as np
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -18,6 +18,7 @@ from statsmodels.distributions import zipoisson, zigenpoisson, zinegbin
 from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
                                        approx_hess_cs, approx_fprime_cs)
 from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 
 _doc_zi_params = """
@@ -543,10 +544,11 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         return result[0] if transform else result
 
     def _get_start_params(self, start_params=None):
-        if start_params is None:
-            start_params = self.model_main.fit(disp=0, method="nm").params
-            start_params = np.append(np.ones(self.k_inflate) * 0.1,
-                                     start_params)
+        if start_params is not None:
+            return start_params
+        
+        start_params = self.model_main.fit(disp=0, method="nm").params
+        start_params = np.append(np.ones(self.k_inflate) * 0.1, start_params)
         return start_params
 
 
@@ -620,11 +622,14 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         return result[0] if transform else result
 
     def _get_start_params(self, start_params=None):
-        if start_params is None:
-            zmod = ZeroInflatedPoisson(self.endog, self.exog,
-                                       exog_infl=self.exog_infl)
-            start_params = zmod.fit(disp=0).params
-            start_params = np.append(start_params, 0.1)
+        if start_params is not None:
+            return start_params
+        
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=ConvergenceWarning)
+            start_params = ZeroInflatedPoisson(self.endog, self.exog,
+                exog_infl=self.exog_infl).fit(disp=0).params
+        start_params = np.append(start_params, 0.1)
         return start_params
 
 
@@ -699,9 +704,12 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         return result[0] if transform else result
 
     def _get_start_params(self, start_params=None):
-        if start_params is None:
+        if start_params is not None:
+            return start_params
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=ConvergenceWarning)
             start_params = self.model_main.fit(disp=0, method='nm').params
-            start_params = np.append(np.zeros(self.k_inflate), start_params)
+        start_params = np.append(np.zeros(self.k_inflate), start_params)
         return start_params
 
 

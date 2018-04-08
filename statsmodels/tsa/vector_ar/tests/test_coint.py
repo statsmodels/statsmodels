@@ -6,15 +6,18 @@ Author: Josef Perktold
 
 """
 import os
+import warnings
 
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
+from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
 current_path = os.path.dirname(os.path.abspath(__file__))
-dta = np.genfromtxt(open(os.path.join(current_path, "Matlab_results",
-                                      "test_coint.csv"), "rb"))
+dta_path = os.path.join(current_path, "Matlab_results", "test_coint.csv")
+with open(dta_path, "rb") as fd:
+    dta = np.genfromtxt(fd)
 
 
 class CheckCointJoh(object):
@@ -112,7 +115,9 @@ class TestCointJoh25(CheckCointJoh):
 
     @classmethod
     def setup_class(cls):
-        cls.res = coint_johansen(dta, 2, 5)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=HypothesisTestWarning)
+            cls.res = coint_johansen(dta, 2, 5)
         cls.nobs_r = 173 - 1 - 5
 
         #Note: critical values not available if trend>1

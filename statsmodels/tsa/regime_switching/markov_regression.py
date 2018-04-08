@@ -452,4 +452,5 @@ class MarkovRegressionResults(markov_switching.MarkovSwitchingResults):
 class MarkovRegressionResultsWrapper(
         markov_switching.MarkovSwitchingResultsWrapper):
     pass
-wrap.populate_wrapper(MarkovRegressionResultsWrapper, MarkovRegressionResults)
+wrap.populate_wrapper(MarkovRegressionResultsWrapper,  # noqa:E305
+                      MarkovRegressionResults)

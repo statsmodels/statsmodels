@@ -8,8 +8,9 @@ from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
                                                arma_order_select_ic)
 import numpy as np
 import pandas as pd
+import pytest
 from numpy.testing import (assert_almost_equal, assert_equal, assert_warns,
-                           assert_raises, dec, assert_, assert_allclose)
+                           assert_raises, assert_, assert_allclose)
 from statsmodels.datasets import macrodata, sunspots
 from pandas import Series, DatetimeIndex, DataFrame
 import os
@@ -358,23 +359,22 @@ def test_coint_identical_series():
     with warnings.catch_warnings(record=True) as w:
         c = coint(y, y, trend="c", maxlag=0, autolag=None)
     assert_equal(len(w), 1)
-    assert_equal(c[0], 0.0)
-    # Limit of table
-    assert_(c[1] > .98)
+    assert_equal(c[1], 0.0)
+    assert_(np.isneginf(c[0]))
 
 
 def test_coint_perfect_collinearity():
+    # test uses nearly perfect collinearity
     nobs = 200
     scale_e = 1
     np.random.seed(123)
     x = scale_e * np.random.randn(nobs, 2)
-    y = 1 + x.sum(axis=1)
+    y = 1 + x.sum(axis=1) + 1e-7 * np.random.randn(nobs)
     warnings.simplefilter('always', ColinearityWarning)
     with warnings.catch_warnings(record=True) as w:
         c = coint(y, x, trend="c", maxlag=0, autolag=None)
-    assert_equal(c[0], 0.0)
-    # Limit of table
-    assert_(c[1] > .98)
+    assert_equal(c[1], 0.0)
+    assert_(np.isneginf(c[0]))
 
 
 class TestGrangerCausality(object):
@@ -491,7 +491,7 @@ def test_acovf_fft_vs_convolution():
             F2 = acovf(q, demean=demean, unbiased=unbiased, fft=False)
             assert_almost_equal(F1, F2, decimal=7)
 
-@dec.slow
+@pytest.mark.slow
 def test_arma_order_select_ic():
     # smoke test, assumes info-criteria are right
     from statsmodels.tsa.arima_process import arma_generate_sample

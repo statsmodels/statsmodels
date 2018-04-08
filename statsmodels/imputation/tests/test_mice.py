@@ -166,14 +166,22 @@ class TestMICEData(object):
 
         from statsmodels.duration.hazard_regression import PHReg
 
-        idata = mice.MICEData(df)
-        idata.set_imputer("time", "0 + x1 + x2", model_class=PHReg,
-                          init_kwds={"status": mice.PatsyFormula("status")},
-                          predict_kwds={"pred_type": "hr"})
+        # Save the dataset size at each iteration.
+        hist = []
+        def cb(imp):
+            hist.append(imp.data.shape)
 
-        x = idata.next_sample()
-        assert(isinstance(x, pd.DataFrame))
+        for pm in "gaussian", "boot":
+            idata = mice.MICEData(df, perturbation_method=pm, history_callback=cb)
+            idata.set_imputer("time", "0 + x1 + x2", model_class=PHReg,
+                              init_kwds={"status": mice.PatsyFormula("status")},
+                              predict_kwds={"pred_type": "hr"},
+                              perturbation_method=pm)
 
+            x = idata.next_sample()
+            assert(isinstance(x, pd.DataFrame))
+
+        assert(all([x == (299, 4) for x in hist]))
 
     def test_set_imputer(self):
         # Test with specified perturbation method.
@@ -301,6 +309,14 @@ class TestMICE(object):
             assert(issubclass(x.__class__, RegressionResultsWrapper))
 
 
+    def test_MICE1_regularized(self):
+
+        df = gendat()
+        imp = mice.MICEData(df, perturbation_method='boot')
+        imp.set_imputer('x1', 'x2 + y', fit_kwds={'alpha': 1, 'L1_wt': 0})
+        imp.update_all()
+
+
     def test_MICE2(self):
 
         from statsmodels.genmod.generalized_linear_model import GLMResultsWrapper
@@ -337,6 +353,29 @@ class TestMICE(object):
 
         tvalues = np.asarray([ -0.84781698,  15.10491582,  13.59998039])
         assert_allclose(result.tvalues, tvalues, atol=1e-5)
+
+
+def test_micedata_miss1():
+    # test for #4375
+    np.random.seed(0)
+    data = pd.DataFrame(np.random.rand(50, 4))
+    data.columns = ['var1', 'var2', 'var3', 'var4']
+    # one column with a single missing value
+    data.iloc[1, 1] = np.nan
+    data.iloc[[1, 3], 2] = np.nan
+
+    data_imp = mice.MICEData(data)
+    data_imp.update_all()
+
+    assert_equal(data_imp.data.isnull().values.sum(), 0)
+
+    ix_miss = {'var1': np.array([], dtype=np.int64),
+                 'var2': np.array([1], dtype=np.int64),
+                 'var3': np.array([1, 3], dtype=np.int64),
+                 'var4': np.array([], dtype=np.int64)}
+
+    for k in ix_miss:
+        assert_equal(data_imp.ix_miss[k], ix_miss[k])
 
 
 if  __name__=="__main__":
