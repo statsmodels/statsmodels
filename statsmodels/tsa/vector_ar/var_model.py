@@ -820,7 +820,6 @@ class VARProcess(object):
         """
         if self.trend != "c" or (self.exog is not None and
                                  self.exog.shape[1] != 1):
-            # FIXME: there is no `trend` attribute at this lev
             raise NotImplementedError("VAR Process mean is not well-defined "
                                       "when there are exogenous regressors "
                                       "other than a constant, or if there "
