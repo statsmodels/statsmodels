@@ -17,6 +17,16 @@ import numpy as np
 import pandas as pd
 import pytest
 
+# RangeIndex only introduced in Pandas 0.18, so we include a shim until
+# Statsmodels requires that version.
+has_range_index = False
+try:
+    from pandas import RangeIndex
+    has_range_index = True
+except ImportError:
+    class RangeIndex(object):
+        pass
+
 from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal,
                            assert_raises)
 
@@ -87,6 +97,11 @@ series_timestamp_indexes = [
 
 # Supported increment indexes
 supported_increment_indexes = [(pd.Int64Index(np.arange(nobs)), None)]
+if has_range_index:
+    supported_increment_indexes += [
+    (pd.RangeIndex(start=0, stop=nobs, step=1), None),
+    (pd.RangeIndex(start=-5, stop=nobs - 5, step=1), None),
+    (pd.RangeIndex(start=0, stop=nobs * 6, step=6), None)]
 
 # Supported date indexes
 # Only the Int64Index and the `date_indexes` are valid without
@@ -306,6 +321,20 @@ def test_instantiation_valid():
         assert_equal(mod._index_freq, None)
         assert_equal(mod.data.dates, None)
         assert_equal(mod.data.freq, None)
+
+        if has_range_index:
+            # RangeIndex (start=0, end=nobs, so equivalent to increment index)
+            endog = base_endog.copy()
+            endog.index = supported_increment_indexes[1][0]
+
+            mod = tsa_model.TimeSeriesModel(endog)
+            assert_equal(type(mod._index) == pd.RangeIndex, True)
+            assert_equal(mod._index_none, False)
+            assert_equal(mod._index_dates, False)
+            assert_equal(mod._index_generated, False)
+            assert_equal(mod._index_freq, None)
+            assert_equal(mod.data.dates, None)
+            assert_equal(mod.data.freq, None)
 
         # Supported indexes *when a freq is given*, should not raise a warning
         with warnings.catch_warnings():
@@ -707,6 +736,105 @@ def test_prediction_increment_pandas_dates_nanosecond():
     assert_equal(end, 4)
     assert_equal(out_of_sample, 3)
     desired_index = pd.DatetimeIndex(start='1970-01-01', periods=8, freq='N')
+    assert_equal(prediction_index.equals(desired_index), True)
+
+
+@pytest.mark.skipif(not has_range_index, reason='No RangeIndex')
+def test_range_index():
+    tsa_model.__warningregistry__ = {}
+
+    endog = pd.Series(np.random.normal(size=5))
+    assert_equal(isinstance(endog.index, pd.RangeIndex), True)
+    # Warning should not be given
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter('always')
+        mod = tsa_model.TimeSeriesModel(endog)
+        assert_equal(len(w), 0)
+
+
+@pytest.mark.skipif(not has_range_index, reason='No RangeIndex')
+def test_prediction_rangeindex():
+    index = supported_increment_indexes[2][0]
+    endog = pd.Series(dta[0], index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+
+    # Basic prediction: [0, end]
+    start_key = 0
+    end_key = None
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 0)
+    assert_equal(end, nobs - 1)
+    assert_equal(out_of_sample, 0)
+    desired_index = pd.RangeIndex(start=-5, stop=0, step=1)
+    assert_equal(prediction_index.equals(desired_index), True)
+
+    # Negative index: [-2, end]
+    start_key = -2
+    end_key = -1
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 3)
+    assert_equal(end, 4)
+    assert_equal(out_of_sample, 0)
+    desired_index = pd.RangeIndex(start=-2, stop=0, step=1)
+    assert_equal(prediction_index.equals(desired_index), True)
+
+    # Forecasting: [1, 5]
+    start_key = 1
+    end_key = nobs
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 1)
+    assert_equal(end, 4)
+    assert_equal(out_of_sample, 1)
+    desired_index = pd.RangeIndex(start=-4, stop=1, step=1)
+    assert_equal(prediction_index.equals(desired_index), True)
+
+
+@pytest.mark.skipif(not has_range_index, reason='No RangeIndex')
+def test_prediction_rangeindex_withstep():
+    index = supported_increment_indexes[3][0]
+    endog = pd.Series(dta[0], index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+
+    # Basic prediction: [0, end]
+    start_key = 0
+    end_key = None
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 0)
+    assert_equal(end, nobs - 1)
+    assert_equal(out_of_sample, 0)
+    desired_index = pd.RangeIndex(start=0, stop=nobs * 6, step=6)
+    assert_equal(prediction_index.equals(desired_index), True)
+
+    # Negative index: [-2, end]
+    start_key = -2
+    end_key = -1
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 3)
+    assert_equal(end, 4)
+    assert_equal(out_of_sample, 0)
+    desired_index = pd.RangeIndex(start=3 * 6, stop=nobs * 6, step=6)
+    assert_equal(prediction_index.equals(desired_index), True)
+
+    # Forecasting: [1, 5]
+    start_key = 1
+    end_key = nobs
+    start, end, out_of_sample, prediction_index = (
+        mod._get_prediction_index(start_key, end_key))
+
+    assert_equal(start, 1)
+    assert_equal(end, 4)
+    assert_equal(out_of_sample, 1)
+    desired_index = pd.RangeIndex(start=1 * 6, stop=(nobs + 1) * 6, step=6)
     assert_equal(prediction_index.equals(desired_index), True)
 
 
