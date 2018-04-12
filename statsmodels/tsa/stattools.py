@@ -15,7 +15,8 @@ from statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
 from statsmodels.tsa.adfvalues import mackinnonp, mackinnoncrit
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa.arima_model import ARMA
-from statsmodels.tools.sm_exceptions import InterpolationWarning, MissingDataError
+from statsmodels.tools.sm_exceptions import (InterpolationWarning,
+                                             MissingDataError)
 
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
@@ -24,8 +25,9 @@ __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
 
 SQRTEPS = np.sqrt(np.finfo(np.double).eps)
 
-#NOTE: now in two places to avoid circular import
-#TODO: I like the bunch pattern for this too.
+
+# NOTE: now in two places to avoid circular import
+# TODO: I like the bunch pattern for this too.
 class ResultsStore(object):
     def __str__(self):
         return self._str  # pylint: disable=E1101
@@ -76,8 +78,8 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
     assumed to be in contiguous columns from low to high lag length with
     the highest lag in the last column.
     """
-    #TODO: can tcol be replaced by maxlag + 2?
-    #TODO: This could be changed to laggedRHS and exog keyword arguments if
+    # TODO: can tcol be replaced by maxlag + 2?
+    # TODO: This could be changed to laggedRHS and exog keyword arguments if
     #    this will be more general.
 
     results = {}
@@ -91,7 +93,7 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
     elif method == "bic":
         icbest, bestlag = min((v.bic, k) for k, v in iteritems(results))
     elif method == "t-stat":
-        #stop = stats.norm.ppf(.95)
+        # i.e. stop = stats.norm.ppf(.95)
         stop = 1.6448536269514722
         for lag in range(startlag + maxlag, startlag - 1, -1):
             icbest = np.abs(results[lag].tvalues[-1])
@@ -108,14 +110,14 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
         return icbest, bestlag, results
 
 
-#this needs to be converted to a class like HetGoldfeldQuandt,
+# TODO: this needs to be converted to a class like HetGoldfeldQuandt,
 # 3 different returns are a mess
 # See:
-#Ng and Perron(2001), Lag length selection and the construction of unit root
-#tests with good size and power, Econometrica, Vol 69 (6) pp 1519-1554
-#TODO: include drift keyword, only valid with regression == "c"
+# Ng and Perron(2001), Lag length selection and the construction of unit root
+# tests with good size and power, Econometrica, Vol 69 (6) pp 1519-1554
+# TODO: include drift keyword, only valid with regression == "c"
 # just changes the distribution of the test statistic to a t distribution
-#TODO: autolag is untested
+# TODO: autolag is untested
 def adfuller(x, maxlag=None, regression="c", autolag='AIC',
              store=False, regresults=False):
     """
@@ -192,12 +194,12 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
     .. [*] Hamilton, J.D.  "Time Series Analysis".  Princeton, 1994.
 
-    .. [*] MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
-        unit-root and cointegration tests.  `Journal of Business and Economic
-        Statistics` 12, 167-76.
+    .. [*] MacKinnon, J.G. 1994.  "Approximate asymptotic distribution
+        functions for unit-root and cointegration tests.
+        `Journal of Business and Economic Statistics` 12, 167-76.
 
-    .. [*] MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
-        University, Dept of Economics, Working Papers.  Available at
+    .. [*] MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."
+        Queen's University, Dept of Economics, Working Papers.  Available at
         http://ideas.repec.org/p/qed/wpaper/1227.html
     """
 
@@ -209,12 +211,12 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         regression = trenddict[regression]
     regression = regression.lower()
     if regression not in ['c', 'nc', 'ct', 'ctt']:
-        raise ValueError("regression option %s not understood") % regression
+        raise ValueError("regression option %s not understood" % regression)
     x = np.asarray(x)
     nobs = x.shape[0]
 
     if maxlag is None:
-        #from Greene referencing Schwert 1989
+        # from Greene referencing Schwert 1989
         maxlag = int(np.ceil(12. * np.power(nobs / 100., 1 / 4.)))
 
     xdiff = np.diff(x)
@@ -231,10 +233,10 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
             fullRHS = add_trend(xdall, regression, prepend=True)
         else:
             fullRHS = xdall
-        startlag = fullRHS.shape[1] - xdall.shape[1] + 1  # 1 for level  # pylint: disable=E1103
-        #search for lag length with smallest information criteria
-        #Note: use the same number of observations to have comparable IC
-        #aic and bic: smaller is better
+        startlag = fullRHS.shape[1] - xdall.shape[1] + 1  # 1 for level
+        # search for lag length with smallest information criteria
+        # Note: use the same number of observations to have comparable IC
+        # aic and bic: smaller is better
 
         if not regresults:
             icbest, bestlag = _autolag(OLS, xdshort, fullRHS, startlag,
@@ -247,7 +249,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
         bestlag -= startlag  # convert to lag not column index
 
-        #rerun ols with best autolag
+        # rerun ols with best autolag
         xdall = lagmat(xdiff[:, None], bestlag, trim='both', original='in')
         nobs = xdall.shape[0]   # pylint: disable=E1103
         xdall[:, 0] = x[-nobs - 1:-1]  # replace 0 xdiff with level of x
@@ -263,7 +265,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         resols = OLS(xdshort, xdall[:, :usedlag + 1]).fit()
 
     adfstat = resols.tvalues[0]
-#    adfstat = (resols.params[0]-1.0)/resols.bse[0]
+    #adfstat = (resols.params[0]-1.0)/resols.bse[0]  # TODO: Is this needed?
     # the "asymptotically correct" z statistic is obtained as
     # nobs/(1-np.sum(resols.params[1:-(trendorder+1)])) (resols.params[0] - 1)
     # I think this is the statistic that is used for series that are integrated
@@ -272,8 +274,8 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     # Get approx p-value and critical values
     pvalue = mackinnonp(adfstat, regression=regression, N=1)
     critvalues = mackinnoncrit(N=1, regression=regression, nobs=nobs)
-    critvalues = {"1%" : critvalues[0], "5%" : critvalues[1],
-                  "10%" : critvalues[2]}
+    critvalues = {"1%": critvalues[0], "5%": critvalues[1],
+                  "10%": critvalues[2]}
     if store:
         resstore.resols = resols
         resstore.maxlag = maxlag
@@ -310,8 +312,8 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
         If True, use FFT convolution.  This method should be preferred
         for long time series.
     missing : str
-        A string in ['none', 'raise', 'conservative', 'drop'] specifying how the NaNs
-        are to be treated.
+        A string in ['none', 'raise', 'conservative', 'drop'] specifying
+        how the NaNs are to be treated.
 
     Returns
     -------
@@ -338,17 +340,18 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     if deal_with_masked:
         if missing == 'raise':
             raise MissingDataError("NaNs were encountered in the data")
-        notmask_bool = ~np.isnan(x) #bool
+        notmask_bool = ~np.isnan(x)
         if missing == 'conservative':
             x[~notmask_bool] = 0
-        else: #'drop'
-            x = x[notmask_bool] #copies non-missing
-        notmask_int = notmask_bool.astype(int) #int
+        else:
+            # 'drop'
+            x = x[notmask_bool]  # copies non-missing
+        notmask_int = notmask_bool.astype(int)
 
     if demean and deal_with_masked:
         # whether 'drop' or 'conservative':
-        xo = x - x.sum()/notmask_int.sum()
-        if missing=='conservative':
+        xo = x - x.sum() / notmask_int.sum()
+        if missing == 'conservative':
             xo[~notmask_bool] = 0
     elif demean:
         xo = x - x.mean()
@@ -356,14 +359,16 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
         xo = x
 
     n = len(x)
-    if unbiased and deal_with_masked and missing=='conservative':
+    if unbiased and deal_with_masked and missing == 'conservative':
         d = np.correlate(notmask_int, notmask_int, 'full')
     elif unbiased:
         xi = np.arange(1, n + 1)
         d = np.hstack((xi, xi[:-1][::-1]))
-    elif deal_with_masked: #biased and NaNs given and ('drop' or 'conservative')
+    elif deal_with_masked:
+        # biased and NaNs given and ('drop' or 'conservative')
         d = notmask_int.sum() * np.ones(2*n-1)
-    else: #biased and no NaNs or missing=='none'
+    else:
+        # biased and no NaNs or missing=='none'
         d = n * np.ones(2 * n - 1)
 
     if fft:
@@ -375,12 +380,11 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     else:
         acov = (np.correlate(xo, xo, 'full') / d)[n - 1:]
 
-    if deal_with_masked and missing=='conservative':
+    if deal_with_masked and missing == 'conservative':
         # restore data for the user
         x[~notmask_bool] = np.nan
 
     return acov
-
 
 
 def q_stat(x, nobs, type="ljungbox"):
@@ -412,8 +416,8 @@ def q_stat(x, nobs, type="ljungbox"):
     return ret, chi2
 
 
-#NOTE: Changed unbiased to False
-#see for example
+# NOTE: Changed unbiased to False
+# see for example
 # http://www.itl.nist.gov/div898/handbook/eda/section3/autocopl.htm
 def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None,
         missing='none'):
@@ -437,10 +441,10 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None,
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
-        Bartlett\'s formula.
+        Bartlett's formula.
     missing : str, optional
-        A string in ['none', 'raise', 'conservative', 'drop'] specifying how the NaNs
-        are to be treated.
+        A string in ['none', 'raise', 'conservative', 'drop'] specifying
+        how the NaNs are to be treated.
 
     Returns
     -------
@@ -469,7 +473,6 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None,
     .. [*] Parzen, E., 1963. On spectral analysis with missing observations
        and amplitude modulation. Sankhya: The Indian Journal of
        Statistics, Series A, pp.383-392.
-
     """
     nobs = len(x)  # should this shrink for missing='drop' and NaNs in x?
     avf = acovf(x, unbiased=unbiased, demean=True, fft=fft, missing=missing)
@@ -494,7 +497,7 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None,
 
 
 def pacf_yw(x, nlags=40, method='unbiased'):
-    '''Partial autocorrelation estimated with non-recursive yule_walker
+    """Partial autocorrelation estimated with non-recursive yule_walker
 
     Parameters
     ----------
@@ -514,16 +517,16 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     -----
     This solves yule_walker for each desired lag and contains
     currently duplicate calculations.
-    '''
+    """
     pacf = [1.]
     for k in range(1, nlags + 1):
         pacf.append(yule_walker(x, k, method=method)[0][-1])
     return np.array(pacf)
 
 
-#NOTE: this is incorrect.
+# FIXME: this is incorrect.  Discussion in GH#3839
 def pacf_ols(x, nlags=40):
-    '''Calculate partial autocorrelations
+    """Calculate partial autocorrelations
 
     Parameters
     ----------
@@ -540,18 +543,18 @@ def pacf_ols(x, nlags=40):
     Notes
     -----
     This solves a separate OLS estimation for each desired lag.
-    '''
-    #TODO: add warnings for Yule-Walker
-    #NOTE: demeaning and not using a constant gave incorrect answers?
-    #JP: demeaning should have a better estimate of the constant
-    #maybe we can compare small sample properties with a MonteCarlo
+    """
+    # TODO: add warnings for Yule-Walker
+    # NOTE: demeaning and not using a constant gave incorrect answers?
+    # JP: demeaning should have a better estimate of the constant
+    # maybe we can compare small sample properties with a MonteCarlo
     xlags, x0 = lagmat(x, nlags, original='sep')
     #xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
     xlags = add_constant(xlags)
     pacf = [1.]
     for k in range(1, nlags+1):
-        res = OLS(x0[k:], xlags[k:, :k+1]).fit()
-         #np.take(xlags[k:], range(1,k+1)+[-1],
+        res = OLS(x0[k:], xlags[k:, :k + 1]).fit()
+        #np.take(xlags[k:], range(1,k+1)+[-1],
 
         pacf.append(res.params[-1])
     return np.array(pacf)
@@ -604,9 +607,8 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     elif method in ['ld', 'ldu', 'ldunbiase', 'ld_unbiased']:
         acv = acovf(x, unbiased=True)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
-        #print 'ld', ld_
         ret = ld_[2]
-    # inconsistent naming with ywmle
+    # TODO: inconsistent naming with ywmle
     elif method in ['ldb', 'ldbiased', 'ld_biased']:
         acv = acovf(x, unbiased=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
@@ -614,7 +616,7 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     else:
         raise ValueError('method not available')
     if alpha is not None:
-        varacf = 1. / len(x) # for all lags >=1
+        varacf = 1. / len(x)  # for all lags >=1
         interval = stats.norm.ppf(1. - alpha / 2.) * np.sqrt(varacf)
         confint = np.array(lzip(ret - interval, ret + interval))
         confint[0] = ret[0]  # fix confidence interval for lag 0 to varpacf=0
@@ -624,7 +626,7 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
 
 
 def ccovf(x, y, unbiased=True, demean=True):
-    ''' crosscovariance for 1D
+    """crosscovariance for 1D
 
     Parameters
     ----------
@@ -642,7 +644,7 @@ def ccovf(x, y, unbiased=True, demean=True):
     -----
     This uses np.correlate which does full convolution. For very long time
     series it is recommended to use fft convolution instead.
-    '''
+    """
     n = len(x)
     if demean:
         xo = x - x.mean()
@@ -659,7 +661,7 @@ def ccovf(x, y, unbiased=True, demean=True):
 
 
 def ccf(x, y, unbiased=True):
-    '''cross-correlation function for 1d
+    """cross-correlation function for 1d
 
     Parameters
     ----------
@@ -680,8 +682,7 @@ def ccf(x, y, unbiased=True):
 
     If unbiased is true, the denominator for the autocovariance is adjusted
     but the autocorrelation is not an unbiased estimtor.
-
-    '''
+    """
     cvf = ccovf(x, y, unbiased=unbiased, demean=True)
     return cvf / (np.std(x) * np.std(y))
 
@@ -700,24 +701,23 @@ def periodogram(X):
     pgram : array
         1./len(X) * np.abs(np.fft.fft(X))**2
 
-
     References
     ----------
     Brockwell and Davis.
     """
     X = np.asarray(X)
     #if kernel == "bartlett":
-    #    w = 1 - np.arange(M+1.)/M   #JP removed integer division
+    #    w = 1 - np.arange(M+1.)/M   # JP removed integer division
 
     pergr = 1. / len(X) * np.abs(np.fft.fft(X))**2
     pergr[0] = 0.  # what are the implications of this?
     return pergr
 
 
-#copied from nitime and statsmodels\sandbox\tsa\examples\try_ld_nitime.py
-#TODO: check what to return, for testing and trying out returns everything
+# copied from nitime and statsmodels\sandbox\tsa\examples\try_ld_nitime.py
+# TODO: check what to return, for testing and trying out returns everything
 def levinson_durbin(s, nlags=10, isacov=False):
-    '''Levinson-Durbin recursion for autoregressive processes
+    """Levinson-Durbin recursion for autoregressive processes
 
     Parameters
     ----------
@@ -753,10 +753,9 @@ def levinson_durbin(s, nlags=10, isacov=False):
     If this function is called with the time series (isacov=False), then the
     sample autocovariance function is calculated with the default options
     (biased, no fft).
-    '''
+    """
     s = np.asarray(s)
     order = nlags  # rename compared to nitime
-    #from nitime
 
     ##if sxx is not None and type(sxx) == np.ndarray:
     ##    sxx_m = sxx[:order+1]
@@ -773,10 +772,10 @@ def levinson_durbin(s, nlags=10, isacov=False):
     phi[1, 1] = sxx_m[1] / sxx_m[0]
     sig[1] = sxx_m[0] - phi[1, 1] * sxx_m[1]
     for k in range(2, order + 1):
-        phi[k, k] = (sxx_m[k] - np.dot(phi[1:k, k-1],
-                                       sxx_m[1:k][::-1])) / sig[k-1]
+        phi[k, k] = (sxx_m[k] - np.dot(phi[1:k, k - 1],
+                                       sxx_m[1:k][::-1])) / sig[k - 1]
         for j in range(1, k):
-            phi[j, k] = phi[j, k-1] - phi[k, k] * phi[k-j, k-1]
+            phi[j, k] = phi[j, k - 1] - phi[k, k] * phi[k - j, k - 1]
         sig[k] = sig[k-1] * (1 - phi[k, k]**2)
 
     sigma_v = sig[-1]
@@ -836,7 +835,6 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     ----------
     http://en.wikipedia.org/wiki/Granger_causality
     Greene: Econometric Analysis
-
     """
     from scipy import stats
 
@@ -844,8 +842,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
     if x.shape[0] <= 3 * maxlag + int(addconst):
         raise ValueError("Insufficient observations. Maximum allowable "
-                         "lag is {0}".format(int((x.shape[0] - int(addconst)) /
-                                                 3) - 1))
+                         "lag is {0}"
+                         .format(int((x.shape[0] - int(addconst)) / 3) - 1))
 
     resli = {}
 
@@ -859,7 +857,6 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         # create lagmat of both time series
         dta = lagmat2ds(x, mxlg, trim='both', dropex=1)
 
-        #add constant
         if addconst:
             dtaown = add_constant(dta[:, 1:(mxlg + 1)], prepend=False)
             dtajoint = add_constant(dta[:, 1:], prepend=False)
@@ -872,20 +869,19 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         res2down = OLS(dta[:, 0], dtaown).fit()
         res2djoint = OLS(dta[:, 0], dtajoint).fit()
 
-        #print results
-        #for ssr based tests see:
-        #http://support.sas.com/rnd/app/examples/ets/granger/index.htm
-        #the other tests are made-up
+        # for ssr based tests see:
+        # http://support.sas.com/rnd/app/examples/ets/granger/index.htm
+        # the other tests are made-up
 
         # Granger Causality test using ssr (F statistic)
         fgc1 = ((res2down.ssr - res2djoint.ssr) /
                 res2djoint.ssr / mxlg * res2djoint.df_resid)
         if verbose:
             print('ssr based F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,'
-                   ' df_num=%d' % (fgc1,
-                                    stats.f.sf(fgc1, mxlg,
-                                               res2djoint.df_resid),
-                                    res2djoint.df_resid, mxlg))
+                  ' df_num=%d' % (fgc1,
+                                  stats.f.sf(fgc1, mxlg,
+                                             res2djoint.df_resid),
+                                  res2djoint.df_resid, mxlg))
         result['ssr_ftest'] = (fgc1,
                                stats.f.sf(fgc1, mxlg, res2djoint.df_resid),
                                res2djoint.df_resid, mxlg)
@@ -894,14 +890,14 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         fgc2 = res2down.nobs * (res2down.ssr - res2djoint.ssr) / res2djoint.ssr
         if verbose:
             print('ssr based chi2 test:   chi2=%-8.4f, p=%-8.4f, '
-                   'df=%d' % (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg))
+                  'df=%d' % (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg))
         result['ssr_chi2test'] = (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
 
-        #likelihood ratio test pvalue:
+        # likelihood ratio test pvalue:
         lr = -2 * (res2down.llf - res2djoint.llf)
         if verbose:
             print('likelihood ratio test: chi2=%-8.4f, p=%-8.4f, df=%d' %
-                   (lr, stats.chi2.sf(lr, mxlg), mxlg))
+                  (lr, stats.chi2.sf(lr, mxlg), mxlg))
         result['lrtest'] = (lr, stats.chi2.sf(lr, mxlg), mxlg)
 
         # F test that all lag coefficients of exog are zero
@@ -911,8 +907,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         ftres = res2djoint.f_test(rconstr)
         if verbose:
             print('parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,'
-                   ' df_num=%d' % (ftres.fvalue, ftres.pvalue, ftres.df_denom,
-                                    ftres.df_num))
+                  ' df_num=%d' % (ftres.fvalue, ftres.pvalue, ftres.df_denom,
+                                  ftres.df_num))
         result['params_ftest'] = (np.squeeze(ftres.fvalue)[()],
                                   np.squeeze(ftres.pvalue)[()],
                                   ftres.df_denom, ftres.df_num)
@@ -957,7 +953,6 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
         If True, then a results instance is returned. Otherwise, a tuple
         with the test outcome is returned.
         Set `return_results=False` to avoid future changes in return.
-
 
     Returns
     -------
@@ -1154,10 +1149,11 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     min_res = {}
     for i, result in iteritems(res):
         mins = np.where(result.min().min() == result)
-        min_res.update({i + '_min_order' : (mins[0][0], mins[1][0])})
+        min_res.update({i + '_min_order': (mins[0][0], mins[1][0])})
     res.update(min_res)
 
     return Bunch(**res)
+
 
 def has_missing(data):
     """
@@ -1261,9 +1257,11 @@ def kpss(x, regression='c', lags=None, store=False):
     p_value = np.interp(kpss_stat, crit, pvals)
 
     if p_value == pvals[-1]:
-        warn("p-value is smaller than the indicated p-value", InterpolationWarning)
+        warn("p-value is smaller than the indicated p-value",
+             InterpolationWarning)
     elif p_value == pvals[0]:
-        warn("p-value is greater than the indicated p-value", InterpolationWarning)
+        warn("p-value is greater than the indicated p-value",
+             InterpolationWarning)
 
     crit_dict = {'10%': crit[0], '5%': crit[1], '2.5%': crit[2], '1%': crit[3]}
 

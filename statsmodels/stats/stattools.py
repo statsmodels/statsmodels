@@ -62,8 +62,8 @@ def omni_normtest(resids, axis=0):
     -------
     Chi^2 score, two-tail probability
     """
-    #TODO: change to exception in summary branch and catch in summary()
-    #behavior changed between scipy 0.9 and 0.10
+    # TODO: change to exception in summary branch and catch in summary()
+    # behavior changed between scipy 0.9 and 0.10
     resids = np.asarray(resids)
     n = resids.shape[axis]
     if n < 8:
