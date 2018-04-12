@@ -126,35 +126,9 @@ params : ndarray
 """
 
 # helper for MNLogit (will be generally useful later)
-
-def _numpy_to_dummies(endog):
-    if endog.dtype.kind in ['S', 'O']:
-        endog_dummies, ynames = tools.categorical(endog, drop=True,
-                                                  dictnames=True)
-    elif endog.ndim == 2:
-        endog_dummies = endog
-        ynames = range(endog.shape[1])
-    else:
-        endog_dummies, ynames = tools.categorical(endog, drop=True,
-                                                  dictnames=True)
-    return endog_dummies, ynames
-
-
-def _pandas_to_dummies(endog):
-    if endog.ndim == 2:
-        if endog.shape[1] == 1:
-            yname = endog.columns[0]
-            endog_dummies = get_dummies(endog.iloc[:, 0])
-        else:  # series
-            yname = 'y'
-            endog_dummies = endog
-    else:
-        yname = endog.name
-        endog_dummies = get_dummies(endog)
-    ynames = endog_dummies.columns.tolist()
-
-    return endog_dummies, ynames, yname
-
+# aliases for backwards-compat
+_numpy_to_dummies = data_tools.numpy_to_dummies
+_pandas_to_dummies = data_tools.pandas_to_dummies
 
 #### Private Model Classes ####
 
