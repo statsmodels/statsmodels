@@ -212,6 +212,8 @@ cdef class {{prefix}}SimulationSmoother(object):
         else:
             dim2[0] = self.model.k_endog; dim2[1] = self.model.obs_intercept.shape[1];
             self.simulated_model.obs_intercept = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+            dim2[0] = self.model.k_states; dim2[1] = self.model.state_intercept.shape[1];
+            self.simulated_model.state_intercept = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
 
         # Initialize the simulated model memoryviews
@@ -388,7 +390,9 @@ cdef class {{prefix}}SimulationSmoother(object):
             self.cholesky(&self.model.initial_state_cov[0,0], self._tmp0, k_states)
             if not self.pretransformed_initial_state_variates:
                 self.transform_variates(&self.generated_state[0,0], self._tmp0, k_states)
-            blas.{{prefix}}axpy(&k_states, &alpha, &self.model.initial_state[0], &inc, &self.generated_state[0,0], &inc)
+            # In the case of no missing data, we want to keep the initial state at zero
+            if self.has_missing:
+                blas.{{prefix}}axpy(&k_states, &alpha, &self.model.initial_state[0], &inc, &self.generated_state[0,0], &inc)
 
 
         self.simulated_kfilter.seek(0) # reset the filter
