@@ -42,20 +42,13 @@ class ResettableCache(dict):
     """
 
     def __init__(self, reset=None, **items):
-        self._resetdict = reset or {}
         dict.__init__(self, **items)
 
     def __setitem__(self, key, value):
         dict.__setitem__(self, key, value)
-        # if hasattr needed for unpickling with protocol=2
-        if hasattr(self, '_resetdict'):
-            for mustreset in self._resetdict.get(key, []):
-                self[mustreset] = None
 
     def __delitem__(self, key):
         dict.__delitem__(self, key)
-        for mustreset in self._resetdict.get(key, []):
-            del(self[mustreset])
 
 
 resettable_cache = ResettableCache
@@ -63,11 +56,10 @@ resettable_cache = ResettableCache
 
 class CachedAttribute(object):
 
-    def __init__(self, func, cachename=None, resetlist=None):
+    def __init__(self, func, cachename=None):
         self.fget = func
         self.name = func.__name__
         self.cachename = cachename or '_cache'
-        self.resetlist = resetlist or ()
 
     def __get__(self, obj, type=None):
         if obj is None:
@@ -91,13 +83,6 @@ class CachedAttribute(object):
                 _cache[name] = _cachedval
             except KeyError:
                 setattr(_cache, name, _cachedval)
-            # Update the reset list if needed (and possible)
-            resetlist = self.resetlist
-            if resetlist is not ():
-                try:
-                    _cache._resetdict[name] = self.resetlist
-                except AttributeError:
-                    pass
         # else:
         # print("Reading %s from cache (%s)" % (name, _cachedval))
         return _cachedval
@@ -122,15 +107,13 @@ class _cache_readonly(object):
     Decorator for CachedAttribute
     """
 
-    def __init__(self, cachename=None, resetlist=None):
+    def __init__(self, cachename=None):
         self.func = None
         self.cachename = cachename
-        self.resetlist = resetlist or None
 
     def __call__(self, func):
         return CachedAttribute(func,
-                               cachename=self.cachename,
-                               resetlist=self.resetlist)
+                               cachename=self.cachename)
 
 
 cache_readonly = _cache_readonly()
@@ -142,8 +125,7 @@ class cache_writable(_cache_readonly):
     """
     def __call__(self, func):
         return CachedWritableAttribute(func,
-                                       cachename=self.cachename,
-                                       resetlist=self.resetlist)
+                                       cachename=self.cachename)
 
 
 def nottest(fn):
