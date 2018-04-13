@@ -2544,7 +2544,7 @@ class NegativeBinomial(CountModel):
         mu = self.predict(params)[:,None]
         a1 = 1/alpha * mu**Q
         prob = a1 / (a1 + mu)  # a1 aka "size" in _ll_nbin
-        if Q: # nb1
+        if Q == 1:  # nb1
             # Q == 1 --> a1 = mu / alpha --> prob = 1 / (alpha + 1)
             dparams = exog * a1 * (np.log(prob) +
                        special.digamma(y + mu/alpha) -
@@ -2557,7 +2557,7 @@ class NegativeBinomial(CountModel):
                            special.digamma(mu/alpha)))/
                        (alpha**2*(alpha + 1))).sum()
 
-        else: # nb2
+        elif Q == 0:  # nb2
             dparams = exog*a1 * (y-mu)/(mu+a1)
             da1 = -alpha**-2
             dalpha = (special.digamma(a1+y) - special.digamma(a1) + np.log(a1)
