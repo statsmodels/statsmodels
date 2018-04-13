@@ -150,10 +150,11 @@ def test_instantiation_valid():
     #
     # Each pandas index (of `endog`, `exog`, or passed to `dates`) can be:
     # 0. None
-    # 1. Int64Index with values exactly equal to 0, 1, ..., nobs-1
-    # 2. DatetimeIndex with frequency
-    # 3. PeriodIndex with frequency
-    # 4. Anything that doesn't fall into the above categories also should
+    # 1. RangeIndex (if applicable; i.e. if Pandas >= 0.18)
+    # 2. Int64Index with values exactly equal to 0, 1, ..., nobs-1
+    # 3. DatetimeIndex with frequency
+    # 4. PeriodIndex with frequency
+    # 5. Anything that doesn't fall into the above categories also should
     #    only raise an exception if it was passed to dates, and may trigger
     #    a warning otherwise.
     #
