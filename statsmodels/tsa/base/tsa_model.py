@@ -352,8 +352,15 @@ class TimeSeriesModel(base.LikelihoodModel):
             try:
                 index[key]
             # We want to raise a KeyError in this case, to keep the exception
-            # consistent across index types
-            except IndexError as e:
+            # consistent across index types.
+            # - Attempting to index with an out-of-bound location (e.g.
+            #   index[10] on an index of length 9) will raise an IndexError
+            #   (as of Pandas 0.22)
+            # - Attemtping to index with a type that cannot be cast to integer
+            #   (e.g. a non-numeric string) will raise a ValueError if the
+            #   index is RangeIndex (otherwise will raise an IndexError)
+            #   (as of Pandas 0.22)
+            except IndexError, ValueError as e:
                 raise KeyError(str(e))
             loc = key
         else:
