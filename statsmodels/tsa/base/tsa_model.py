@@ -229,7 +229,7 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         if ((date_index and has_freq) or (int_index and is_increment) or
                 range_index):
-            _index = index.copy()
+            _index = index
         else:
             _index = increment
             index_generated = True
@@ -361,10 +361,6 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         # Check if we now have a modified index
         index_was_expanded = index is not base_index
-
-        # (Never return the actual index object)
-        if not index_was_expanded:
-            index = index.copy()
 
         # Return the index through the end of the loc / slice
         if isinstance(loc, slice):
