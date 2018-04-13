@@ -212,7 +212,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         int_index = isinstance(index, Int64Index)
         range_index = isinstance(index, RangeIndex)
         has_freq = index.freq is not None if date_index else None
-        increment = Int64Index(np.arange(self.endog.shape[0]))
+        increment = Index(range(self.endog.shape[0]))
         is_increment = index.equals(increment) if int_index else None
 
         # Issue warnings for unsupported indexes
