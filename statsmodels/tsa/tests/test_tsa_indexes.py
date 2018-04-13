@@ -492,6 +492,9 @@ def test_prediction_increment_unsupported():
         warnings.simplefilter('ignore')
         mod = tsa_model.TimeSeriesModel(endog)
 
+    # Tests three common use cases: basic prediction, negative indexes, and
+    # out-of-sample indexes.
+
     # Basic prediction: [0, end]; notice that since this is an in-sample
     # prediction, the index returned is the (unsupported) original index
     start_key = 0
@@ -542,6 +545,9 @@ def test_prediction_increment_nonpandas():
     endog = dta[0]
     mod = tsa_model.TimeSeriesModel(endog)
 
+    # Tests three common use cases: basic prediction, negative indexes, and
+    # out-of-sample indexes.
+
     # Basic prediction: [0, end]; since there was no index at all and the data
     # is not Pandas, the returned prediction_index is None
     start_key = 0
@@ -582,6 +588,9 @@ def test_prediction_increment_nonpandas():
 def test_prediction_increment_pandas_noindex():
     endog = dta[2].copy()
     mod = tsa_model.TimeSeriesModel(endog)
+
+    # Tests three common use cases: basic prediction, negative indexes, and
+    # out-of-sample indexes.
 
     # Basic prediction: [0, end]; since there was no index and the data is
     # Pandas, the index is the generated incrementing index, and no warning is
@@ -628,6 +637,9 @@ def test_prediction_increment_pandas_dates():
     endog = dta[2].copy()
     endog.index = date_indexes[0][0]  # Daily, 1950-01-01, 1950-01-02, ...
     mod = tsa_model.TimeSeriesModel(endog)
+
+    # Tests three common use cases: basic prediction, negative indexes, and
+    # out-of-sample indexes.
 
     # Basic prediction: [0, end]; the index is the date index
     start_key = 0
@@ -689,6 +701,9 @@ def test_prediction_increment_pandas_dates_nanosecond():
         mod = tsa_model.TimeSeriesModel(endog)
     except:
         raise SkipTest
+
+    # Tests three common use cases: basic prediction, negative indexes, and
+    # out-of-sample indexes.
 
     # Basic prediction: [0, end]; the index is the date index
     start_key = 0
@@ -759,6 +774,9 @@ def test_prediction_rangeindex():
     endog = pd.Series(dta[0], index=index)
     mod = tsa_model.TimeSeriesModel(endog)
 
+    # Tests three common use cases: basic prediction, negative indexes, and
+    # out-of-sample indexes.
+
     # Basic prediction: [0, end]
     start_key = 0
     end_key = None
@@ -801,6 +819,9 @@ def test_prediction_rangeindex_withstep():
     index = supported_increment_indexes[3][0]
     endog = pd.Series(dta[0], index=index)
     mod = tsa_model.TimeSeriesModel(endog)
+
+    # Tests three common use cases: basic prediction, negative indexes, and
+    # out-of-sample indexes.
 
     # Basic prediction: [0, end]
     start_key = 0
