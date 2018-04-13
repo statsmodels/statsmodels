@@ -24,8 +24,7 @@ try:
     from pandas import RangeIndex
     has_range_index = True
 except ImportError:
-    class RangeIndex(object):
-        pass
+    pass
 
 from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal,
                            assert_raises)
