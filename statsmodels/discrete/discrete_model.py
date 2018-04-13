@@ -2652,7 +2652,7 @@ class NegativeBinomial(CountModel):
                 2*alpha3*y +
                 4*alpha2*mu*(log_alpha + digamma_part) +
                 alpha2 * (2*mu - y) +
-                2*alpha*mu2*trigamma + mu2 * trigamma + alpha2 * mu2 * trigamma
+                2*alpha*mu2*trigamma + mu2*trigamma + alpha2*mu2*trigamma +
                 2*alpha*mu*(log_alpha + digamma_part)
                 )/(alpha**4*(alpha2 + 2*alpha + 1)))
         hess_arr[-1,-1] = dada.sum()
