@@ -24,7 +24,8 @@ try:
     from pandas import RangeIndex
     has_range_index = True
 except ImportError:
-    pass
+    class RangeIndex(object):
+        pass
 
 from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal,
                            assert_raises)
@@ -209,7 +210,7 @@ def test_instantiation_valid():
 
             mod = tsa_model.TimeSeriesModel(endog)
             assert_equal(isinstance(mod._index,
-                                    (pd.Int64Index, pd.RangeIndex)), True)
+                                    (pd.Int64Index, RangeIndex)), True)
             assert_equal(mod._index_none, True)
             assert_equal(mod._index_dates, False)
             assert_equal(mod._index_generated, True)
@@ -329,7 +330,7 @@ def test_instantiation_valid():
             endog.index = supported_increment_indexes[1][0]
 
             mod = tsa_model.TimeSeriesModel(endog)
-            assert_equal(type(mod._index) == pd.RangeIndex, True)
+            assert_equal(type(mod._index) == RangeIndex, True)
             assert_equal(mod._index_none, False)
             assert_equal(mod._index_dates, False)
             assert_equal(mod._index_generated, False)
@@ -429,7 +430,7 @@ def test_instantiation_valid():
                 endog.index = ix
                 mod = tsa_model.TimeSeriesModel(endog)
                 assert_equal(isinstance(mod._index,
-                             (pd.Int64Index, pd.RangeIndex)), True)
+                             (pd.Int64Index, RangeIndex)), True)
                 assert_equal(mod._index_none, False)
                 assert_equal(mod._index_dates, False)
                 assert_equal(mod._index_generated, True)
@@ -452,7 +453,7 @@ def test_instantiation_valid():
                 endog.index = ix
                 mod = tsa_model.TimeSeriesModel(endog)
                 assert_equal(isinstance(mod._index,
-                             (pd.Int64Index, pd.RangeIndex)), True)
+                             (pd.Int64Index, RangeIndex)), True)
                 assert_equal(mod._index_none, False)
                 assert_equal(mod._index_dates, False)
                 assert_equal(mod._index_generated, True)
