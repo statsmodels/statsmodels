@@ -61,7 +61,7 @@ def isdummy(X):
     --------
     >>> X = np.random.randint(0, 2, size=(15,5)).astype(float)
     >>> X[:,1:3] = np.random.randn(15,2)
-    >>> ind = _isdummy(X)
+    >>> ind = isdummy(X)
     >>> ind
     array([0, 3, 4])
     """
@@ -108,7 +108,7 @@ def iscount(X):
     X = np.asarray(X)
     remainder = np.logical_and(np.logical_and(np.all(X % 1. == 0, axis = 0),
                                X.var(0) != 0), np.all(X >= 0, axis=0))
-    dummy = _isdummy(X)
+    dummy = isdummy(X)
     remainder = np.where(remainder)[0].tolist()
     for idx in dummy:
         remainder.remove(idx)
