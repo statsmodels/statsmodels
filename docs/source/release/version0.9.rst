@@ -47,6 +47,22 @@ model to the multiply imputed data sets and combining the results is
 provided.  This is an alternative to the existing MICE (Multiple
 Imputation via Chained Equations) procedures.
 
+Exponential smoothing models
+----------------------------
+
+Exponential smoothing models are now available (introduced in #4176 by
+Terence L van Zyl). These models are conceptually simple, decomposing a time
+series into level, trend, and seasonal components that are constructed from
+weighted averages of past observations. Nonetheless, they produce forecasts
+that are competitive with more advanced models and which may be easier to
+interpret.
+
+Available models include:
+
+- Simple exponential smoothing
+- Holt's method
+- Holt-Winters exponential smoothing
+
 Improved time series index support
 ----------------------------------
 
