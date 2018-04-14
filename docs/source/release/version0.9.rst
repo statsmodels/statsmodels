@@ -60,6 +60,29 @@ Although an effort was made to maintain backwards compatibility with this
 change, it is possible that some undocumented corner cases that previously
 worked will now raise warnings or exceptions.
 
+State space models
+------------------
+
+The state space model infrastructure has been rewritten and improved (#2845).
+New features include:
+
+- Kalman smoother rewritten in Cython for substantial performance improvements
+- Simulation smoother (Durbin and Koopman, 2002)
+- Fast simulation of time series for any state space model
+- Univariate Kalman filtering and smoothing (Koopman and Durbin, 2000)
+- Collapsed Kalman filtering and smoothing (Jungbacker and Koopman, 2014)
+- Optional computation of the lag-one state autocovariance
+- Use of the Scipy BLAS functions for Cython interface if available
+  (`scipy.linalg.cython_blas` for Scipy >= 0.16)
+
+These features yield new features and improve performance for the existing
+state space models (`SARIMAX`, `UnobservedComopnents`, `DynamicFactor`, and
+`VARMAX), and they also make Bayesian estimation by Gibbs-sampling possible.
+
+**Warning**: this will be the last version that includes the original state
+space code and supports Scipy < 0.16. The next release will only include the
+new state space code.
+
 Documentation
 -------------
 
