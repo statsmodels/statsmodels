@@ -450,7 +450,8 @@ def test_instantiation_valid():
                 endog = base_endog.copy()
                 endog.index = ix
                 mod = tsa_model.TimeSeriesModel(endog)
-                assert_equal(type(mod._index) == pd.Int64Index, True)
+                assert_equal(isinstance(mod._index,
+                             (pd.Int64Index, pd.RangeIndex)), True)
                 assert_equal(mod._index_none, False)
                 assert_equal(mod._index_dates, False)
                 assert_equal(mod._index_generated, True)
