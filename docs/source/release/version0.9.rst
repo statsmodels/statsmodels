@@ -47,6 +47,18 @@ model to the multiply imputed data sets and combining the results is
 provided.  This is an alternative to the existing MICE (Multiple
 Imputation via Chained Equations) procedures.
 
+Improved time series index support
+----------------------------------
+
+Handling of indexes for time series models has been overhauled (#3272) to
+take advantage of recent improvements in Pandas and to shift to Pandas much of
+the special case handling (espcially for date indexes) that had previously been
+done in Statsmodels. Benefits include more consistent behavior, a reduced
+number of bugs from corner cases, and a reduction in the maintenance burden.
+
+Although an effort was made to maintain backwards compatibility with this
+change, it is possible that some undocumented corner cases that previously
+worked will now raise warnings or exceptions.
 
 Documentation
 -------------
