@@ -360,7 +360,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             #   (e.g. a non-numeric string) will raise a ValueError if the
             #   index is RangeIndex (otherwise will raise an IndexError)
             #   (as of Pandas 0.22)
-            except IndexError, ValueError as e:
+            except (IndexError, ValueError) as e:
                 raise KeyError(str(e))
             loc = key
         else:
