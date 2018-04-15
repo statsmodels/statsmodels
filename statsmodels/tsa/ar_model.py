@@ -364,19 +364,6 @@ class AR(tsbase.TimeSeriesModel):
         loglike = self.loglike
         return approx_fprime(params, loglike, epsilon=1e-8)
 
-    def information(self, params):
-        """
-        Not Implemented Yet
-        """
-        return
-
-    def hessian(self, params):
-        """
-        Returns numerical hessian for now.
-        """
-        loglike = self.loglike
-        return approx_hess(params, loglike)
-
     def _stackX(self, k_ar, trend):
         """
         Private method to build the RHS matrix for estimation.
@@ -783,10 +770,6 @@ class ARResults(tsbase.TimeSeriesModelResults):
     def roots(self):
         k = self.k_trend
         return np.roots(np.r_[1, -self.params[k:]]) ** -1
-
-    @cache_readonly
-    def fittedvalues(self):
-        return self.model.predict(self.params)
 
     def predict(self, start=None, end=None, dynamic=False):
         params = self.params

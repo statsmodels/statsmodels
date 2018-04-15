@@ -316,14 +316,6 @@ class SVAR(tsbase.TimeSeriesModel):
         loglike = self.loglike
         return approx_fprime(AB_mask, loglike, epsilon=1e-8)
 
-
-    def hessian(self, AB_mask):
-        """
-        Returns numerical hessian.
-        """
-        loglike = self.loglike
-        return approx_hess(AB_mask, loglike)
-
     def _solve_AB(self, start_params, maxiter, maxfun, override=False,
             solver='bfgs'):
         """

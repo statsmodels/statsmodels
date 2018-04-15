@@ -475,27 +475,6 @@ class GLM(base.LikelihoodModel):
         score_factor = self.score_factor(params, scale=scale)
         return score_factor[:, None] * self.exog
 
-    def score(self, params, scale=None):
-        """score, first derivative of the loglikelihood function
-
-        Parameters
-        ----------
-        params : ndarray
-            parameter at which score is evaluated
-        scale : None or float
-            If scale is None, then the default scale will be calculated.
-            Default scale is defined by `self.scaletype` and set in fit.
-            If scale is not None, then it is used as a fixed scale.
-
-        Returns
-        -------
-        score : ndarray_1d
-            The first derivative of the loglikelihood function calculated as
-            the sum of `score_obs`
-
-        """
-        return self.score_obs(params, scale=scale).sum(0)
-
     def score_factor(self, params, scale=None):
         """weights for score for each observation
 
@@ -1516,12 +1495,8 @@ class GLMResults(base.LikelihoodModelResults):
         return chisqsum
 
     @cache_readonly
-    def fittedvalues(self):
-        return self.mu
-
-    @cache_readonly
     def mu(self):
-        return self.model.predict(self.params)
+        return self.fittedvalues
 
     @cache_readonly
     def null(self):

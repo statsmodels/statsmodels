@@ -1618,11 +1618,6 @@ class IVGMMResults(GMMResults):
     # this assumes that we have an additive error model `(y - f(x, params))`
 
     @cache_readonly
-    def fittedvalues(self):
-        return self.model.predict(self.params)
-
-
-    @cache_readonly
     def resid(self):
         return self.model.endog - self.fittedvalues
 
