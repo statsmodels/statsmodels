@@ -253,7 +253,14 @@ class LikelihoodModel(Model):
         Base class implementation sums over score_obs; more efficient
         implementations are often available.
         """
-        return self.score_obs(params, **kwargs).sum()
+        try:
+            # If an analytic score_obs is available, try this first before
+            # falling back to numerical differentiation below
+            return self.score_obs(params, **kwargs).sum(0)
+        except NotImplementedError:
+            # Fallback in case a `loglike` is implemented but `loglikeobs`
+            # is not.
+            return approx_fprime(params, self.loglike, **kwargs)
 
     def information(self, params):
         """
