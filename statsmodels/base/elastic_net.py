@@ -344,14 +344,7 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol,
 
 
 class RegularizedResults(Results):
-
-    def __init__(self, model, params):
-        super(RegularizedResults, self).__init__(model, params)
-
-    @cache_readonly
-    def fittedvalues(self):
-        return self.model.predict(self.params)
-
+    pass
 
 class RegularizedResultsWrapper(wrap.ResultsWrapper):
     _attrs = {

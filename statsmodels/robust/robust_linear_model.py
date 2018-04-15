@@ -134,9 +134,6 @@ class RLM(base.LikelihoodModel):
     def score(self, params):
         raise NotImplementedError
 
-    def information(self, params):
-        raise NotImplementedError
-
     def predict(self, params, exog=None):
         """
         Return linear predicted values from a design matrix.
@@ -397,10 +394,6 @@ class RLMResults(base.LikelihoodModelResults):
 
         self.cov_params_default = self.bcov_scaled
         #TODO: "pvals" should come from chisq on bse?
-
-    @cache_readonly
-    def fittedvalues(self):
-        return np.dot(self.model.exog, self.params)
 
     @cache_readonly
     def resid(self):

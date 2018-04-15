@@ -9,7 +9,7 @@ from statsmodels.stats.contrast import (ContrastResults, WaldTestResults,
                                         t_test_pairwise)
 from statsmodels.tools.decorators import resettable_cache, cache_readonly
 import statsmodels.base.wrapper as wrap
-from statsmodels.tools.numdiff import approx_fprime
+from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.tools.sm_exceptions import ValueWarning, \
     HessianInversionWarning
 from statsmodels.formula import handle_formula_data
@@ -223,19 +223,37 @@ class LikelihoodModel(Model):
     # TODO: if the intent is to re-initialize the model with new data then this
     # method needs to take inputs...
 
-    def loglike(self, params):
-        """
-        Log-likelihood of model.
-        """
+    def loglikeobs(self, params, **kwargs):
         raise NotImplementedError
 
-    def score(self, params):
+    def loglike(self, params, **kwargs):
+        """
+        Log-likelihood of model.
+
+        Base class implementation sums over self.loglikeobs; more efficient
+        implementations are often available.
+        """
+        return self.loglikeobs(params, **kwargs).sum(0)
+
+    def score_obs(self, params, **kwargs):
+        """
+        Jacobian/Gradient of log-likelihood evaluated at params for each
+        observation.
+
+        The base class implementation uses a numerical derivative.
+        """
+        return approx_fprime(params, self.loglikeobs, **kwargs)
+
+    def score(self, params, **kwargs):
         """
         Score vector of model.
 
-        The gradient of logL with respect to each parameter.
+        The gradient of loglike with respect to each parameter.
+
+        Base class implementation sums over score_obs; more efficient
+        implementations are often available.
         """
-        raise NotImplementedError
+        return self.score_obs(params, **kwargs).sum()
 
     def information(self, params):
         """
@@ -247,9 +265,11 @@ class LikelihoodModel(Model):
 
     def hessian(self, params):
         """
-        The Hessian matrix of the model
+        The Hessian matrix (of second derivatives) of the model loglikelihood
+
+        The base class implementation uses a numerical derivative
         """
-        raise NotImplementedError
+        return approx_hess(params, self.loglike)
 
     def fit(self, start_params=None, method='newton', maxiter=100,
             full_output=True, disp=True, fargs=(), callback=None, retall=False,
@@ -653,9 +673,6 @@ class GenericLikelihoodModel(LikelihoodModel):
     def reduceparams(self, params):
         return params[self.fixed_paramsmask]
 
-    def loglike(self, params):
-        return self.loglikeobs(params).sum(0)
-
     def nloglike(self, params):
         return -self.loglikeobs(params).sum(0)
 
@@ -682,6 +699,8 @@ class GenericLikelihoodModel(LikelihoodModel):
     def hessian(self, params):
         """
         Hessian of log-likelihood evaluated at params
+
+        Base class implementation uses numerical differentiation.
         """
         from statsmodels.tools.numdiff import approx_hess
         # need options for hess (epsilon)
@@ -1050,7 +1069,21 @@ class LikelihoodModelResults(Results):
                                   use_t=use_t, **cov_kwds)
 
     @cache_readonly
+    def fittedvalues(self):
+        return self.model.predict(self.params)
+
+    @cache_readonly
+    def llf_obs(self):
+        """
+        (float) The value of the log-likelihood function evaluated at `params`.
+        """
+        return self.model.loglikeobs(self.params)
+
+    @cache_readonly
     def llf(self):
+        """
+        (float) The value of the log-likelihood function evaluated at `params`.
+        """
         return self.model.loglike(self.params)
 
     @cache_readonly
