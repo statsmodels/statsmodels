@@ -92,7 +92,6 @@ def test_predict_se():
     np.testing.assert_allclose(iv_l, res3.fittedvalues[:3] - ci_half[:3],
                                rtol=1e-12)
 
-
     #use wrong size for exog
     #prstd, iv_l, iv_u = wls_prediction_std(res3, x2[-1,0], weights=3.)
     np.testing.assert_raises(ValueError, wls_prediction_std, res3, x2[-1,0],
@@ -158,6 +157,27 @@ class TestWLSPrediction(object):
         sf2 = pred_res2.summary_frame()
         assert_equal(sf2.columns.tolist(), col_names)
 
+        # check that list works, issue 4437
+        x = res_wls.model.exog.mean(0)
+        pred_res3 = res_wls.get_prediction(x)
+        ci3 = pred_res3.conf_int(obs=True)
+        pred_res3b = res_wls.get_prediction(x.tolist())
+        ci3b = pred_res3b.conf_int(obs=True)
+        assert_allclose(pred_res3b.se_obs, pred_res3.se_obs, rtol=1e-13)
+        assert_allclose(ci3b, ci3, rtol=1e-13)
+        res_df = pred_res3b.summary_frame()
+        assert_equal(res_df.index.values, [0])
+
+        x = res_wls.model.exog[-2:]
+        pred_res3 = res_wls.get_prediction(x)
+        ci3 = pred_res3.conf_int(obs=True)
+        pred_res3b = res_wls.get_prediction(x.tolist())
+        ci3b = pred_res3b.conf_int(obs=True)
+        assert_allclose(pred_res3b.se_obs, pred_res3.se_obs, rtol=1e-13)
+        assert_allclose(ci3b, ci3, rtol=1e-13)
+        res_df = pred_res3b.summary_frame()
+        assert_equal(res_df.index.values, [0, 1])
+
 
     def test_glm(self):
         # prelimnimary, getting started with basic test for GLM.get_prediction
@@ -217,3 +237,24 @@ class TestWLSPrediction(object):
         # prediction with exog and no weights does not error
         res_glm = mod_glm.fit()
         pred_glm = res_glm.get_prediction(X)
+
+        # check that list works, issue 4437
+        x = res_glm.model.exog.mean(0)
+        pred_res3 = res_glm.get_prediction(x)
+        ci3 = pred_res3.conf_int()
+        pred_res3b = res_glm.get_prediction(x.tolist())
+        ci3b = pred_res3b.conf_int()
+        assert_allclose(pred_res3b.se_mean, pred_res3.se_mean, rtol=1e-13)
+        assert_allclose(ci3b, ci3, rtol=1e-13)
+        res_df = pred_res3b.summary_frame()
+        assert_equal(res_df.index.values, [0])
+
+        x = res_glm.model.exog[-2:]
+        pred_res3 = res_glm.get_prediction(x)
+        ci3 = pred_res3.conf_int()
+        pred_res3b = res_glm.get_prediction(x.tolist())
+        ci3b = pred_res3b.conf_int()
+        assert_allclose(pred_res3b.se_mean, pred_res3.se_mean, rtol=1e-13)
+        assert_allclose(ci3b, ci3, rtol=1e-13)
+        res_df = pred_res3b.summary_frame()
+        assert_equal(res_df.index.values, [0, 1])

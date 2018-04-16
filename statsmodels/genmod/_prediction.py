@@ -186,9 +186,8 @@ def get_prediction_glm(self, exog=None, transform=True, weights=None,
 
     if exog is not None:
         if row_labels is None:
-            if hasattr(exog, 'index'):
-                row_labels = exog.index
-            else:
+            row_labels = getattr(exog, 'index', None)
+            if callable(row_labels):
                 row_labels = None
 
         exog = np.asarray(exog)
