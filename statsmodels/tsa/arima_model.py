@@ -739,7 +739,11 @@ class ARMA(tsbase.TimeSeriesModel):
         if dynamic:
             if self.k_exog > 0:
                 # need the last k_ar exog for the lag-polynomial
-                exog = np.vstack((self.exog[start - k_ar:, self.k_trend:], exog))
+                exog_insample = self.exog[start - k_ar:, self.k_trend:]
+                if exog is not None:
+                    exog = np.vstack((exog_insample, exog))
+                else:
+                    exog = exog_insample
             #TODO: now that predict does dynamic in-sample it should
             # also return error estimates and confidence intervals
             # but how? len(endog) is not tot_obs

@@ -2229,6 +2229,12 @@ def test_ARIMA_exog_predict():
                                    dynamic=True)
     assert_allclose(dpredict_002, res_d002[-len(dpredict_002):], rtol=1e-4, atol=1e-6)
 
+    # in-sample dynamic predict should not need exog, #2982
+    predict_3a = res_002.predict(start=100, end=120, dynamic=True)
+    predict_3b = res_002.predict(start=100, end=120,
+                                 exog=exog_full.values[100:120], dynamic=True)
+    assert_allclose(predict_3a, predict_3b, rtol=1e-10)
+
 
 def test_arima_fit_mutliple_calls():
     y = [-1214.360173, -1848.209905, -2100.918158, -3647.483678, -4711.186773]
