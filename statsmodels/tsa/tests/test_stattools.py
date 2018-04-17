@@ -349,6 +349,13 @@ def test_coint():
             r1 = res1[i][2]
             assert_allclose(r1, r2, rtol=0, atol=6e-7)
 
+    # use default autolag #4490
+    res1_0 = coint(y[:, 0], y[:, 1], trend='ct', maxlag=4)
+    assert_allclose(res1_0[2], res_egranger['ct'][0][1:], rtol=0, atol=6e-7)
+    # the following is just a regression test
+    assert_allclose(res1_0[:2], [-13.992946638547112, 2.270898990540678e-27],
+                    rtol=1e-10, atol=1e-27)
+
 
 def test_coint_identical_series():
     nobs = 200
