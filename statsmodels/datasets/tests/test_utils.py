@@ -8,6 +8,7 @@ from statsmodels.datasets import get_rdataset, webuse, check_internet, utils
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
+
 def test_get_rdataset():
     # smoke test
     test_url = "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/master/csv/datasets/cars.csv"
@@ -17,6 +18,17 @@ def test_get_rdataset():
     duncan = get_rdataset("Duncan", "car", cache=cur_dir)
     assert_(isinstance(duncan, utils.Dataset))
     assert_(duncan.from_cache)
+
+    # test writing and reading cache
+    guerry = get_rdataset("Guerry", "HistData", cache=cur_dir)
+    assert_(guerry.from_cache is False)
+    guerry2 = get_rdataset("Guerry", "HistData", cache=cur_dir)
+    assert_(guerry2.from_cache is True)
+    fn = "raw.github.com,vincentarelbundock,Rdatasets,master,csv,HistData,Guerry.csv.zip"
+    os.remove(os.path.join(cur_dir, fn))
+    fn = "raw.github.com,vincentarelbundock,Rdatasets,master,doc,HistData,rst,Guerry.rst.zip"
+    os.remove(os.path.join(cur_dir, fn))
+
 
 def test_webuse():
     # test copied and adjusted from iolib/tests/test_foreign

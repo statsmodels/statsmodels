@@ -171,6 +171,7 @@ def _cache_it(data, cache_path):
         # for some reason encode("zip") won't work for me in Python 3?
         import zlib
         # use protocol 2 so can open with python 2.x if cached in 3.x
+        data = data.decode('utf-8')
         open(cache_path, "wb").write(zlib.compress(cPickle.dumps(data,
                                                                  protocol=2)))
     else:
