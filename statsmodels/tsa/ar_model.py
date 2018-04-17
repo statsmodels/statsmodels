@@ -211,6 +211,8 @@ class AR(tsbase.TimeSeriesModel):
         if method == 'mle':  # use Kalman Filter to get initial values
             if k_trend:
                 mu = params[0]/(1-np.sum(params[k_trend:]))
+            else:
+                mu = 0
 
             # modifies predictedvalues in place
             if start < k_ar:
