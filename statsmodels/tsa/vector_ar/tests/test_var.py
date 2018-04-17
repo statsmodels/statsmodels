@@ -245,12 +245,12 @@ class CheckFEVD(object):
     def test_fevd_summary(self):
         self.fevd.summary()
 
+    @pytest.mark.xfail(reason="FEVD.cov() is not implemented")
     def test_fevd_cov(self):
         # test does not crash
         # not implemented
-        # covs = self.fevd.cov()
+        covs = self.fevd.cov()
 
-        pass
 
 class TestVARResults(CheckIRF, CheckFEVD):
 
