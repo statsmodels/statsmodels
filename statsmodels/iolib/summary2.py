@@ -360,7 +360,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
                         '[' + str(alpha/2), str(1-alpha/2) + ']']
 
     if not xname:
-        data.index = results.model.exog_names
+        data.index = results.model.data.param_names
     else:
         data.index = xname
 
