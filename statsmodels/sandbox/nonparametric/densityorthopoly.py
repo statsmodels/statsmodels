@@ -1,4 +1,4 @@
-# -*- coding: cp1252 -*-
+# -*- coding: utf-8 -*-
 # some cut and paste characters are not ASCII
 '''density estimation based on orthogonal polynomials
 
@@ -55,7 +55,7 @@ class FPoly(object):
     parameterization on [0,1] from
 
     Sam Efromovich: Orthogonal series density estimation,
-    2010 John Wiley & Sons, Inc. WIREs Comp Stat 2010 2 467–476
+    2010 John Wiley & Sons, Inc. WIREs Comp Stat 2010 2 467-476
 
 
     '''
