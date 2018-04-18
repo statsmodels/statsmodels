@@ -210,7 +210,7 @@ def _urlopen_cached(url, cache):
 
     # not using the cache or didn't find it in cache
     if not from_cache:
-        data = urlopen(url).read()
+        data = urlopen(url, timeout=3).read()
         if cache is not None:  # then put it in the cache
             _cache_it(data, cache_path)
     return data, from_cache
