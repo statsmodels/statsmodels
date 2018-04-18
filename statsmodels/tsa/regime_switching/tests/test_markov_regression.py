@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.tsa.regime_switching import (markov_switching,
                                               markov_regression)
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_raises
 
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -1030,14 +1030,10 @@ class TestFedFundsConstShort(MarkovRegression):
 
         for func in [markov_switching.py_hamilton_filter,
                      markov_switching.cy_hamilton_filter]:
-            try:
+            with assert_raises(ValueError):
                 func(initial_probabilities,
                      regime_transition,
                      conditional_likelihoods)
-            except ValueError:
-                pass
-            else:
-                raise AssertionError('Did not raise ValueError.')
 
     def test_py_hamilton_filter(self):
         mod = self.model
