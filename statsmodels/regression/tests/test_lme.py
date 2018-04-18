@@ -943,6 +943,39 @@ def test_handle_missing():
                 assert_equal(len(result1.fittedvalues), result1.nobs)
 
 
+def test_summary_col():
+    from statsmodels.iolib.summary2 import summary_col
+    ids = [1,1,1,1,1,2,2,2,2,3,3,3,3,3,3]
+    x = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+    # hard coded simulated y
+    # ids = np.asarray(ids)
+    # np.random.seed(123987)
+    # y = x + np.array([-1, 0, 1])[ids - 1] + 2 * np.random.randn(len(y))
+    y = np.array([ 1.727, -1.037, 2.904, 3.569, 4.629, 5.736, 6.747,
+                    7.020, 5.624, 10.155, 10.400, 17.164, 17.276, 14.988,
+                    14.453])
+    d = {'Y':y,'X':x,'IDS':ids}
+    d = pd.DataFrame(d)
+
+    # provide start_params to speed up convergence
+    sp1 = np.array([-1.26722599,  1.1617587 ,  0.19547518])
+    mod1 = MixedLM.from_formula('Y ~ X', d, groups=d ['IDS'])
+    results1 = mod1.fit(start_params=sp1)
+    sp2 = np.array([ 3.48416861,  0.55287862,  1.38537901])
+    mod2 = MixedLM.from_formula('X ~ Y', d, groups=d ['IDS'])
+    results2 = mod2.fit(start_params=sp2)
+
+    out = summary_col([results1,results2],stars=True)
+    s = ('\n=============================\n              Y         X    \n'
+        '-----------------------------\nGroup Var 0.1955    1.3854   \n'
+        '          (0.6032)  (2.7377) \nIntercept -1.2672   3.4842*  \n'
+        '          (1.6546)  (1.8882) \nX         1.1618***          \n'
+        '          (0.1959)           \nY                   0.5529***\n'
+        '                    (0.2080) \n=============================\n'
+        'Standard errors in\nparentheses.\n* p<.1, ** p<.05, ***p<.01')
+    assert_equal(str(out), s)
+
+
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__, '-vvs', '-x', '--pdb'])
