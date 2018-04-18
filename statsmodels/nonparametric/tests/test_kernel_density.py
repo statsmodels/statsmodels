@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.testing as npt
+from numpy.testing import assert_allclose, assert_equal
 import pytest
 
 import statsmodels.api as sm
@@ -253,7 +254,7 @@ class TestKDEMultivariate(KDETestBase):
         C1 = np.random.normal(size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
         bw_user=[0.23, 434697.22]
-        
+
         dens = nparam.KDEMultivariate(data=[C1, C2], var_type='cc',
             bw=bw_user, defaults=nparam.EstimatorSettings(efficient=True,
                                                           randomize=False,
@@ -330,6 +331,17 @@ class TestKDEMultivariateConditional(KDETestBase):
         # TODO: here we need a smaller tolerance.check!
         npt.assert_allclose(sm_result, R_result, atol=1e-1)
 
+        # test default bandwidth method, should be normal_reference
+        dens_nm2 = nparam.KDEMultivariateConditional(endog=[self.Italy_gdp],
+                                                    exog=[self.growth],
+                                                    dep_type='c',
+                                                    indep_type='c',
+                                                    bw=None)
+        assert_allclose(dens_nm2.bw, dens_nm.bw, rtol=1e-10)
+        assert_equal(dens_nm2._bw_method, 'normal_reference')
+        # check repr works #3125
+        repr(dens_nm2)
+
     def test_continuous_cdf(self):
         dens_nm = nparam.KDEMultivariateConditional(endog=[self.Italy_gdp],
                                                     exog=[self.growth],
@@ -380,7 +392,7 @@ class TestKDEMultivariateConditional(KDETestBase):
         C1 = np.random.normal(size=(nobs, ))
         C2 = np.random.normal(2, 1, size=(nobs, ))
         bw_user=[0.23, 434697.22]
-        
+
         dens = nparam.KDEMultivariate(data=[C1, C2], var_type='cc',
             bw=bw_user, defaults=nparam.EstimatorSettings(efficient=True,
                                                           randomize=False,
