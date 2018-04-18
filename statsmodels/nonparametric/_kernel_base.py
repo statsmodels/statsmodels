@@ -123,8 +123,7 @@ class GenericKDE (object):
         self.bw_func = dict(normal_reference=self._normal_reference,
                             cv_ml=self._cv_ml, cv_ls=self._cv_ls)
         if bw is None:
-            bwfunc = self.bw_func['normal_reference']
-            return bwfunc()
+            bw = 'normal_reference'
 
         if not isinstance(bw, string_types):
             self._bw_method = "user-specified"
