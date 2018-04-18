@@ -74,7 +74,7 @@ class CheckModelResults(object):
     def test_zstat(self):
         assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_4)
 
-    def pvalues(self):
+    def test_pvalues(self):
         assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL_4)
 
 #    def test_cov_params(self):
@@ -95,6 +95,7 @@ class CheckModelResults(object):
                 DECIMAL_4)
 
     def test_normalized_cov_params(self):
+        # TODO: Maybe test something here?
         pass
 
     def test_bse(self):
@@ -1088,11 +1089,6 @@ class TestNegativeBinomialNB2Newton(CheckModelResults):
         assert_almost_equal(self.res1.predict(linear=True)[:10],
                             self.res2.fittedvalues[:10], DECIMAL_3)
 
-    def no_info(self):
-        pass
-
-    test_jac = no_info
-
 
 class TestNegativeBinomialNB1Newton(CheckModelResults):
 
@@ -1186,11 +1182,6 @@ class TestNegativeBinomialNB2BFGS(CheckModelResults):
         assert_almost_equal(self.res1.predict(linear=True)[:10],
                             self.res2.fittedvalues[:10], DECIMAL_3)
 
-    def no_info(self):
-        pass
-
-    test_jac = no_info
-
 
 class TestNegativeBinomialNB1BFGS(CheckModelResults):
 
@@ -1283,9 +1274,6 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
     def test_zstat(self): # Low precision because Z vs. t
         assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_1)
 
-    def no_info(self):
-        pass
-
     def test_llf(self):
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL_1)
 
@@ -1295,7 +1283,6 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
     def test_bse(self):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_3)
 
-    test_jac = no_info
 
 
 class CheckMNLogitBaseZero(CheckModelResults):

@@ -205,7 +205,7 @@ class TestGlmPoissonPwNr(CheckWeight):
         #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         cls.res2 = res_stata.results_poisson_pweight_nonrobust
 
-    @pytest.mark.xfail(reason='Known to fail')
+    @pytest.mark.xfail(reason='Known to fail')  # TODO: better reason
     def test_basic(self):
         super(TestGlmPoissonPwNr, self).test_basic()
 
