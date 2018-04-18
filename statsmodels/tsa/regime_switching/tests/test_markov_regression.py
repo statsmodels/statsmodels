@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.tsa.regime_switching import (markov_switching,
                                               markov_regression)
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_raises
 
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -938,6 +938,102 @@ class TestFedFundsConstShort(MarkovRegression):
         # Smoothed, last entry
         assert_allclose(res.smoothed_joint_probabilities,
                         fedfunds_const_short_smoothed_joint_probabilities)
+
+    def test_hamilton_filter_order_zero(self):
+        k_regimes = 3
+        nobs = 4
+        initial_probabilities = np.ones(k_regimes) / k_regimes
+
+        # We don't actually transition between the 3 regimes.
+        regime_transition = np.eye(k_regimes)[:, :, np.newaxis]
+
+        # Regime i correponds to a sequence of iid draws from discrete
+        # random variables that are equally likely to be -1 and i for i=0,
+        # 1, 2.  We observe the sequence -1, -1, 1, -1.  The first two
+        # observations tell us nothing, but the third lets us know that we
+        # are in regime 1 the whole time.
+        conditional_likelihoods = np.ones((k_regimes, nobs)) / 2
+        conditional_likelihoods[:, 2] = [0, 1, 0]
+
+        expected_marginals = np.empty((k_regimes, nobs))
+        expected_marginals[:, :2] = [[1/3], [1/3], [1/3]]
+        expected_marginals[:, 2:] = [[0], [1], [0]]
+
+
+        py_results = markov_switching.py_hamilton_filter(
+            initial_probabilities, regime_transition, conditional_likelihoods)
+        assert_allclose(py_results[0], expected_marginals)
+
+        cy_results = markov_switching.cy_hamilton_filter(
+            initial_probabilities, regime_transition, conditional_likelihoods)
+        assert_allclose(cy_results[0], expected_marginals)
+
+    def test_hamilton_filter_order_zero_with_tvtp(self):
+        k_regimes = 3
+        nobs = 8
+        initial_probabilities = np.ones(k_regimes) / k_regimes
+
+        # We don't actually transition between the 3 regimes except from
+        # t=3 to t=4 where we reset to regimes 1 and 2 being equally
+        # likely.
+        regime_transition = np.zeros((k_regimes, k_regimes, nobs))
+        regime_transition[...] = np.eye(k_regimes)[:, :, np.newaxis]
+        regime_transition[..., 4] = [[0,     0,   0],
+                                     [1/2, 1/2, 1/2],
+                                     [1/2, 1/2, 1/2]]
+
+        # Regime i correponds to a sequence of iid draws from discrete
+        # random variables that are equally likely to be -1, i, and i + 1
+        # for i = 0, 1, 2.  We observe the sequence:
+        #
+        #     t =  0, 1, 2,  3,  4, 5, 6,  7
+        #   X_t = -1, 1, 2, -1, -1, 2, 3, -1
+        #
+        # The first observations tell us nothing, the second tells us that
+        # regime 0 and 1 are equally likely, and the third tells us that we
+        # must be in regime 1 for t = 0, 1, 2, 3.  At t=4 we transition to
+        # state 1 or 2.  In this case, neither a -1 or 2 changes our view
+        # that these states are equally likely, but a 3 tells we must be in
+        # state 2 for the second four timestamps.
+        conditional_likelihoods = np.empty((k_regimes, nobs))
+        conditional_likelihoods[:, 0] = [1/3, 1/3, 1/3]
+        conditional_likelihoods[:, 1] = [1/3, 1/3, 0]
+        conditional_likelihoods[:, 2] = [0, 1/3, 1/3]
+        conditional_likelihoods[:, 3:5] = [[1/3], [1/3], [1/3]]
+        conditional_likelihoods[:, 5] = [0, 1/3, 1/3]
+        conditional_likelihoods[:, 6] = [0, 0, 1/3]
+        conditional_likelihoods[:, 7] = [1/3, 1/3, 1/3]
+
+        expected_marginals = np.empty((k_regimes, nobs))
+        expected_marginals[:, 0] = [1/3, 1/3, 1/3]
+        expected_marginals[:, 1] = [1/2, 1/2, 0]
+        expected_marginals[:, 2:4] = [[0], [1], [0]]
+        expected_marginals[:, 4:6] = [[0], [1/2], [1/2]]
+        expected_marginals[:, 6:8] = [[0], [0], [1]]
+
+        py_results = markov_switching.py_hamilton_filter(
+            initial_probabilities, regime_transition, conditional_likelihoods)
+        assert_allclose(py_results[0], expected_marginals)
+
+        cy_results = markov_switching.cy_hamilton_filter(
+            initial_probabilities, regime_transition, conditional_likelihoods)
+        assert_allclose(cy_results[0], expected_marginals)
+
+    def test_hamilton_filter_shape_checks(self):
+        k_regimes = 3
+        nobs = 8
+        order = 3
+
+        initial_probabilities = np.ones(k_regimes) / k_regimes
+        regime_transition = np.ones((k_regimes, k_regimes, nobs)) / k_regimes
+        conditional_likelihoods = np.ones(order * (k_regimes,) + (nobs,))
+
+        for func in [markov_switching.py_hamilton_filter,
+                     markov_switching.cy_hamilton_filter]:
+            with assert_raises(ValueError):
+                func(initial_probabilities,
+                     regime_transition,
+                     conditional_likelihoods)
 
     def test_py_hamilton_filter(self):
         mod = self.model
