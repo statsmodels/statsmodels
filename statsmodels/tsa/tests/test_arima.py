@@ -300,6 +300,32 @@ class Test_Y_ARMA22_Const(CheckArmaResultsMixin):
         cls.res1 = ARMA(endog, order=(2,2)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma22c()
 
+    def test_summary(self):
+        # regression test for html of roots table #4434
+        # we ignore whitespace in the assert
+        summ = self.res1.summary()
+        summ_roots = """\
+        <tableclass="simpletable">
+        <caption>Roots</caption>
+        <tr>
+        <td></td><th>Real</th><th>Imaginary</th><th>Modulus</th><th>Frequency</th>
+        </tr>
+        <tr>
+        <th>AR.1</th><td>1.0991</td><td>-1.2571j</td><td>1.6698</td><td>-0.1357</td>
+        </tr>
+        <tr>
+        <th>AR.2</th><td>1.0991</td><td>+1.2571j</td><td>1.6698</td><td>0.1357</td>
+        </tr>
+        <tr>
+        <th>MA.1</th><td>-1.1702</td><td>+0.0000j</td><td>1.1702</td><td>0.5000</td>
+        </tr>
+        <tr>
+        <th>MA.2</th><td>1.2215</td><td>+0.0000j</td><td>1.2215</td><td>0.0000</td>
+        </tr>
+        </table>"""
+        assert_equal(summ.tables[2]._repr_html_().replace(' ', ''),
+                     summ_roots.replace(' ', ''))
+
 
 class Test_Y_ARMA50_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
