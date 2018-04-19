@@ -164,6 +164,13 @@ class TestTopLevel(object):
         fig = sm.qqplot(self.res, line='r')
 
     @skipif(not have_matplotlib, reason='matplotlib not available')
+    def test_qqplot_pltkwargs(self):
+        fig = sm.qqplot(self.res, line='r', marker='d',
+                                      markerfacecolor='cornflowerblue',
+                                      markeredgecolor='white',
+                                      alpha=0.5)
+
+    @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_qqplot_2samples_ProbPlotObjects(self):
         # also tests all values for line
         for line in ['r', 'q', '45', 's']:
