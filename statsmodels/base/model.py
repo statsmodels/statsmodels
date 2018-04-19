@@ -803,11 +803,18 @@ class Results(object):
             from patsy import dmatrix
             if isinstance(exog, pd.Series):
                 exog = pd.DataFrame(exog)
+            orig_exog_len = len(exog)
             exog = dmatrix(self.model.data.design_info.builder,
                            exog, return_type="dataframe")
+            if (exog_index is None) and (orig_exog_len > len(exog)):
+                import warnings
+                warnings.warn('nan values have been dropped', ValueWarning)
             if (exog_index is not None) and (len(exog) < len(exog_index)):
                 # missing values, rows have been dropped
+                import warnings
                 exog = exog.reindex(exog_index)
+                warnings.warn('nan values have been preserved and reindex',
+                              ValueWarning)
             exog_index = exog.index
 
         if exog is not None:
