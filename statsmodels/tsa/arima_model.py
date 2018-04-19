@@ -21,7 +21,7 @@ from statsmodels.tools.decorators import (cache_readonly,
                                           resettable_cache)
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.wrapper as wrap
-from statsmodels.regression.linear_model import yule_walker, GLS
+from statsmodels.regression.linear_model import yule_walker, OLS
 from statsmodels.tsa.tsatools import (lagmat, add_trend,
                                       _ar_transparams, _ar_invtransparams,
                                       _ma_transparams, _ma_invtransparams,
@@ -483,10 +483,11 @@ class ARMA(tsbase.TimeSeriesModel):
         """
         p, q, k = order
         start_params = zeros((p+q+k))
-        endog = self.endog.copy()  # copy because overwritten
+        # make copy of endog because overwritten
+        endog = np.array(self.endog, np.float64)
         exog = self.exog
         if k != 0:
-            ols_params = GLS(endog, exog).fit().params
+            ols_params = OLS(endog, exog).fit().params
             start_params[:k] = ols_params
             endog -= np.dot(exog, ols_params).squeeze()
         if q != 0:
@@ -526,7 +527,7 @@ class ARMA(tsbase.TimeSeriesModel):
                 lag_resid = lagmat(resid, q, 'both')[resid_start:]
                 # stack ar lags and resids
                 X = np.column_stack((lag_endog, lag_resid))
-                coefs = GLS(endog[max(p_tmp + q, p):], X).fit().params
+                coefs = OLS(endog[max(p_tmp + q, p):], X).fit().params
                 start_params[k:k+p+q] = coefs
             else:
                 start_params[k+p:k+p+q] = yule_walker(endog, order=q)[0]
