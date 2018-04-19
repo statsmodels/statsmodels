@@ -58,6 +58,8 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
           - 'label_fontsize', MPL fontsize.  Adjusts fontsize only if given.
           - 'label_rotation', scalar.  Adjusts label rotation only if given.
                 Specify in degrees.
+          - 'bw_factor', Adjusts the scipy gaussian_kde kernel. default: None. 
+                Options for scalar or callable.
 
     Returns
     -------
@@ -123,6 +125,11 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
     .. plot:: plots/graphics_boxplot_violinplot.py
 
     """
+    # MOD GROSS error check: data even in here?
+    if np.size(data) == 0:
+        msg = "No Data to make Violin: Try again!"
+        raise ValueError(msg)
+        
     fig, ax = utils.create_mpl_ax(ax)
 
     data = list(map(np.asarray, data))
@@ -150,13 +157,14 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
 
 def _single_violin(ax, pos, pos_data, width, side, plot_opts):
     """"""
+    bw_factor = plot_opts.get('bw_factor', None)
 
     def _violin_range(pos_data, plot_opts):
         """Return array with correct range, with which violins can be plotted."""
         cutoff = plot_opts.get('cutoff', False)
         cutoff_type = plot_opts.get('cutoff_type', 'std')
         cutoff_val = plot_opts.get('cutoff_val', 1.5)
-
+        
         s = 0.0
         if not cutoff:
             if cutoff_type == 'std':
@@ -170,7 +178,8 @@ def _single_violin(ax, pos, pos_data, width, side, plot_opts):
 
     pos_data = np.asarray(pos_data)
     # Kernel density estimate for data at this position.
-    kde = gaussian_kde(pos_data)
+    # MOD: add option for the kernel
+    kde = gaussian_kde(pos_data, bw_method=bw_factor)
 
     # Create violin for pos, scaled to the available space.
     xvals = _violin_range(pos_data, plot_opts)

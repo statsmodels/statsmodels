@@ -33,6 +33,16 @@ def test_violinplot_beanplot():
 
     plt.close(fig)
 
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    violinplot(age, ax=ax, labels=labels,
+               plot_opts={'cutoff_val':5, 'cutoff_type':'abs',
+                          'label_fontsize':'small',
+                          'label_rotation':30,
+                          'bw_factor':.2})
+
+    plt.close(fig)
+
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
