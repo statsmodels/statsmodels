@@ -166,8 +166,5 @@ def test_patsy_missing_data():
     data = data.to_records(index=False)
 
     res = ols('EXECUTIONS ~ SOUTH + INCOME', data=data).fit()
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        res2 = res.predict(data)
-        assert len(w) > 0
+    res2 = res.predict(data)
     assert_equal(res.fittedvalues, res2)  # No records wiill be dropped
