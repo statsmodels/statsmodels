@@ -17,7 +17,7 @@ from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
 import statsmodels.sandbox.tsa.fftarma as fa
 from statsmodels.tools.testing import assert_equal
 from statsmodels.tsa.arma_mle import Arma
-from statsmodels.tsa.arima_model import ARMA, ARIMA
+from statsmodels.tsa.arima_model import AR, ARMA, ARIMA
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.tests.results import results_arma, results_arima
 from statsmodels.tsa.arima_process import arma_generate_sample
@@ -2344,6 +2344,24 @@ def test_arima_not_implemented():
     assert_raises(NotImplementedError, ARIMA.from_formula, formula, data)
 
 
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])
+def test_endog_int():
+    # int endog should produce same result as float, #3504
+
+    np.random.seed(123987)
+    y = np.random.random_integers(0, 15, size=100)
+    yf = y.astype(np.float64)
+
+    res = AR(y).fit(5)
+    resf = AR(yf).fit(5)
+    assert_allclose(res.params, resf.params, atol=1e-6)
+    assert_allclose(res.bse, resf.bse, atol=1e-6)
+
+    res = ARMA(y, order=(2, 1)).fit(disp=0)
+    resf = ARMA(yf, order=(2, 1)).fit(disp=0)
+    assert_allclose(res.params, resf.params, atol=1e-6)
+    assert_allclose(res.bse, resf.bse, atol=1e-6)
+
+    res = ARIMA(y.cumsum(), order=(1,1,1)).fit(disp=0)
+    resf = ARIMA(yf.cumsum(), order=(1,1,1)).fit(disp=0)
+    assert_allclose(res.params, resf.params, atol=1e-6)
+    assert_allclose(res.bse, resf.bse, atol=1e-6)
