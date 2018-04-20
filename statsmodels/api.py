@@ -22,6 +22,7 @@ from .tsa import api as tsa
 from .duration.survfunc import SurvfuncRight
 from .duration.hazard_regression import PHReg
 from .imputation.mice import MICE, MICEData
+from .imputation.bayes_mi import BayesGaussMI, MI
 from .nonparametric import api as nonparametric
 from . import distributions
 from .__init__ import test

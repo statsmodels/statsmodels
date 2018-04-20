@@ -36,6 +36,18 @@ module.  Binomial and Poisson models with independent random effects
 can be fit using Bayesian methods (Laplace and mean field
 approximations to the posterior).
 
+Multiple imputation
+-------------------
+
+Multiple imputation using a multivariate Gaussian model is now
+included in the imputation module.  The model is fit via Gibbs
+sampling from the joint posterior of the mean vector, covariance
+matrix, and missing data values.  A convenience function for fitting a
+model to the multiply imputed data sets and combining the results is
+provided.  This is an alternative to the existing MICE (Multiple
+Imputation via Chained Equations) procedures.
+
+
 Documentation
 -------------
 
