@@ -975,6 +975,85 @@ def test_summary_col():
         'Standard errors in\nparentheses.\n* p<.1, ** p<.05, ***p<.01')
     assert_equal(str(out), s)
 
+def test_random_effects_getters():
+    # Simulation-based test to make sure that the BLUPs and actual
+    # random effects line up.
+
+    np.random.seed(34234)
+    ng = 500 # number of groups
+    m = 10 # group size
+
+    y, x, z, v0, v1, g, b, c0, c1 = [], [], [], [], [], [], [], [], []
+
+    for i in range(ng):
+
+        # Fixed effects
+        xx = np.random.normal(size=(m, 2))
+        yy = xx[:, 0] + 0.5*np.random.normal(size=m)
+
+        # Random effects (re_formula)
+        zz = np.random.normal(size=(m, 2))
+        bb = np.random.normal(size=2)
+        bb[0] *= 3
+        bb[1] *= 1
+        yy += np.dot(zz, bb).flat
+        b.append(bb)
+
+        # First variance component
+        vv0 = np.kron(np.r_[0, 1], np.ones(m//2)).astype(np.int)
+        cc0 = np.random.normal(size=2)
+        yy += cc0[vv0]
+        v0.append(vv0)
+        c0.append(cc0)
+
+        # Second variance component
+        vv1 = np.kron(np.ones(m//2), np.r_[0, 1]).astype(np.int)
+        cc1 = np.random.normal(size=2)
+        yy += cc1[vv1]
+        v1.append(vv1)
+        c1.append(cc1)
+
+        y.append(yy)
+        x.append(xx)
+        z.append(zz)
+        g.append(i*np.ones(m))
+
+    y = np.concatenate(y)
+    x = np.concatenate(x)
+    z = np.concatenate(z)
+    v0 = np.concatenate(v0)
+    v1 = np.concatenate(v1)
+    g = np.concatenate(g)
+    df = pd.DataFrame({"y": y, "x0": x[:, 0], "x1": x[:, 1], "z0": z[:, 0], "z1": z[:, 1],
+                       "v0": v0, "v1": v1, "g": g})
+
+    b = np.asarray(b)
+    c0 = np.asarray(c0)
+    c1 = np.asarray(c1)
+    cc = np.concatenate((c0, c1), axis=1)
+
+    model = MixedLM.from_formula("y ~ x0 + x1", re_formula="~0 + z0 + z1",
+                                 vc_formula={"v0": "~0+C(v0)", "v1": "0+C(v1)"},
+                                 groups="g", data=df)
+    result = model.fit()
+
+    ref = result.random_effects
+    b0 = [ref[k][0:2] for k in range(ng)]
+    b0 = np.asarray(b0)
+    assert(np.corrcoef(b0[:, 0], b[:, 0])[0, 1] > 0.8)
+    assert(np.corrcoef(b0[:, 1], b[:, 1])[0, 1] > 0.8)
+
+    cf0 = [ref[k][2:6] for k in range(ng)]
+    cf0 = np.asarray(cf0)
+    for k in range(4):
+        assert(np.corrcoef(cf0[:, k], cc[:, k])[0, 1] > 0.8)
+
+    # Smoke test for predictive covariances
+    refc = result.random_effects_cov
+    for g in refc.keys():
+        p = ref[g].size
+        assert(refc[g].shape == (p, p))
+
 
 if __name__ == "__main__":
     import pytest

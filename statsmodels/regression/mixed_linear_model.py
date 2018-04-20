@@ -817,15 +817,15 @@ class MixedLM(base.LikelihoodModel):
 
         Examples
         --------
-        Suppose we have an educational data set with students nested
-        in classrooms nested in schools.  The students take a test,
-        and we want to relate the test scores to the students' ages,
-        while accounting for the effects of classrooms and schools.
-        The school will be the top-level group, and the classroom is a
-        nested group that is specified as a variance component.  Note
-        that the schools may have different number of classrooms, and
-        the classroom labels may (but need not be) different across
-        the schools.
+        Suppose we have data from an educational study with students
+        nested in classrooms nested in schools.  The students take a
+        test, and we want to relate the test scores to the students'
+        ages, while accounting for the effects of classrooms and
+        schools.  The school will be the top-level group, and the
+        classroom is a nested group that is specified as a variance
+        component.  Note that the schools may have different number of
+        classrooms, and the classroom labels may (but need not be)
+        different across the schools.
 
         >>> vc = {'classroom': '0 + C(classroom)'}
         >>> MixedLM.from_formula('test_score ~ age', vc_formula=vc, \
@@ -861,6 +861,8 @@ class MixedLM(base.LikelihoodModel):
         if isinstance(groups, string_types):
             group_name = groups
             groups = np.asarray(data[groups])
+        else:
+            groups = np.asarray(groups)
         del kwargs["groups"]
 
         # Bypass all upstream missing data handling to properly handle
@@ -908,14 +910,18 @@ class MixedLM(base.LikelihoodModel):
             gb = data.groupby(groups)
             kylist = list(gb.groups.keys())
             kylist.sort()
+            exog_vc_names = {}
             for vc_name in vc_formula.keys():
                 exog_vc[vc_name] = {}
                 for group_ix, group in enumerate(kylist):
+                    if group not in exog_vc_names:
+                        exog_vc_names[group] = {}
                     ii = gb.groups[group]
                     vcg = vc_formula[vc_name]
                     mat = patsy.dmatrix(
                         vcg, data.loc[ii, :], eval_env=eval_env,
                         return_type='dataframe')
+                    exog_vc_names[group][vc_name] = mat.columns.tolist()
                     if use_sparse:
                         exog_vc[vc_name][group] = sparse.csr_matrix(mat)
                     else:
@@ -936,7 +942,10 @@ class MixedLM(base.LikelihoodModel):
         mod.data.param_names = param_names
         mod.data.exog_re_names = exog_re_names
         mod.data.exog_re_names_full = exog_re_names_full
-        mod.data.vcomp_names = mod._vc_names
+
+        if vc_formula is not None:
+            mod.data.vcomp_names = mod._vc_names
+            mod._exog_vc_names = exog_vc_names
 
         return mod
 
@@ -2189,10 +2198,10 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         names = list(self.model.data.exog_re_names)
 
         for v in self.model._vc_names:
-            if group in self.model.exog_vc[v]:
-                ix = range(self.model.exog_vc[v][group].shape[1])
-                na = ["%s[%d]" % (v, j + 1) for j in ix]
-                names.extend(na)
+            vg = self.model._exog_vc_names[group][v]
+            na = ["%s[%s]" % (v, s) for s in vg]
+            names.extend(na)
+
         return names
 
     @cache_readonly
@@ -2204,7 +2213,8 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         -------
         random_effects : dict
             A dictionary mapping the distinct `group` values to the
-            means of the random effects for the group.
+            conditional means of the random effects for the group
+            given the data.
         """
         try:
             cov_re_inv = np.linalg.inv(self.cov_re)
@@ -2277,7 +2287,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
             n = ex_r.shape[0]
             m = self.cov_re.shape[0]
-            mat1 = np.empty((n, m))
+            mat1 = np.empty((n, m + len(vc_var)))
             mat1[:, 0:m] = np.dot(ex_r[:, 0:m], self.cov_re)
             mat1[:, m:] = np.dot(ex_r[:, m:], np.diag(vc_var))
             mat2 = solver(mat1)
