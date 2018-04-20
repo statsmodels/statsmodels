@@ -170,9 +170,6 @@ class GenericZeroInflated(CountModel):
             full_output=1, disp=1, callback=None,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
         if start_params is None:
-            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
-            if np.size(offset) == 1 and offset == 0:
-                offset = None
             start_params = self._get_start_params()
 
         if callback is None:
@@ -209,9 +206,6 @@ class GenericZeroInflated(CountModel):
         alpha_p = alpha[:-(self.k_extra - extra)] if (self.k_extra
             and np.size(alpha) > 1) else alpha
         if start_params is None:
-            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
-            if np.size(offset) == 1 and offset == 0:
-                offset = None
             start_params = self.model_main.fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=0, callback=callback,
