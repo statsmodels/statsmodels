@@ -154,17 +154,17 @@ def test_patsy_missing_data():
     data = cpunish.load_pandas().data
     data['INCOME'].loc[0] = None
     res = ols('EXECUTIONS ~ SOUTH + INCOME', data=data).fit()
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        res2 = res.predict(data)
-        assert len(w) > 0
-    assert_equal(res.fittedvalues, res2[1:])  # First record will be dropped
+    res2 = res.predict(data)
+    # First record will be dropped during fit, but not during predict
+    assert_equal(res.fittedvalues, res2[1:])
 
     # Non-pandas version
     data = cpunish.load_pandas().data
     data['INCOME'].loc[0] = None
     data = data.to_records(index=False)
-
-    res = ols('EXECUTIONS ~ SOUTH + INCOME', data=data).fit()
-    res2 = res.predict(data)
-    assert_equal(res.fittedvalues, res2)  # No records wiill be dropped
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        res2 = res.predict(data)
+        assert_equal(len(w), 1)
+    # Frist record will be dropped in both cases
+    assert_equal(res.fittedvalues, res2)
