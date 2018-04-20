@@ -165,7 +165,7 @@ class Model(object):
                         cols.remove(col)
                     except ValueError:
                         pass  # OK if not present
-                design_info = design_info.builder.subset(cols).design_info
+                design_info = design_info.subset(cols).design_info
 
         kwargs.update({'missing_idx': missing_idx,
                        'missing': missing,
@@ -797,14 +797,16 @@ class Results(object):
         """
         import pandas as pd
 
-        exog_index = exog.index if _is_using_pandas(exog, None) else None
+        is_pandas = _is_using_pandas(exog, None)
+
+        exog_index = exog.index if is_pandas else None
 
         if transform and hasattr(self.model, 'formula') and (exog is not None):
             from patsy import dmatrix
             if isinstance(exog, pd.Series):
                 exog = pd.DataFrame(exog)
             orig_exog_len = len(exog)
-            exog = dmatrix(self.model.data.design_info.builder,
+            exog = dmatrix(self.model.data.design_info,
                            exog, return_type="dataframe")
             if orig_exog_len > len(exog):
                 import warnings
