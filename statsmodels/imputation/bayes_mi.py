@@ -20,15 +20,15 @@ class BayesGaussMI(object):
     data : ndarray
         The array of data to be imputed.  Values in the array equal to
         NaN are imputed.
-    pcovm : ndarray, optional
+    mean_prior : ndarray, optional
         The covariance matrix of the Gaussian prior distribution for
         the mean vector.  If not provided, the identity matrix is
         used.
-    pcov : ndarray, optional
+    cov_prior : ndarray, optional
         The center matrix for the inverse Wishart prior distribution
         for the covariance matrix.  If not provided, the identity
         matrix is used.
-    pdf : positive float
+    cov_prior_df : positive float
         The degrees of freedom of the inverse Wishart prior
         distribution for the covariance matrix.  Defaults to 1.
 
@@ -47,7 +47,7 @@ class BayesGaussMI(object):
     >> mi = MI(imp, sm.OLS, model_args)
     """
 
-    def __init__(self, data, pcovm=None, pcov=None, pdf=1):
+    def __init__(self, data, mean_prior=None, cov_prior=None, cov_prior_df=1):
 
         data = np.asarray(data)
         self.data = data
@@ -82,17 +82,17 @@ class BayesGaussMI(object):
         self.mean = np.asarray(mean)
 
         # Default covariance matrix of the (Gaussian) mean prior
-        if pcovm is None:
-            pcovm = np.eye(p)
-        self.pcovm = pcovm
+        if mean_prior is None:
+            mean_prior = np.eye(p)
+        self.mean_prior = mean_prior
 
         # Default center matrix of the (inverse Wishart) covariance prior
-        if pcov is None:
-            pcov = np.eye(p)
-        self.pcov = pcov
+        if cov_prior is None:
+            cov_prior = np.eye(p)
+        self.cov_prior = cov_prior
 
         # Degrees of freedom for the (inverse Wishart) covariance prior
-        self.pdf = pdf
+        self.cov_prior_df = cov_prior_df
 
     def update(self):
         """
@@ -140,8 +140,8 @@ class BayesGaussMI(object):
         # https://stats.stackexchange.com/questions/28744/multivariate-normal-posterior
 
         # Posterior covariance matrix of the mean
-        cm = np.linalg.solve(self.cov/self.nobs + self.pcovm,
-                             self.pcovm / self.nobs)
+        cm = np.linalg.solve(self.cov/self.nobs + self.mean_prior,
+                             self.mean_prior / self.nobs)
         cm = np.dot(self.cov, cm)
 
         # Posterior mean of the mean
@@ -162,8 +162,8 @@ class BayesGaussMI(object):
 
         r = self.data - self.mean
         gr = np.dot(r.T, r)
-        a = gr + self.pcov
-        df = int(np.ceil(self.nobs + self.pdf))
+        a = gr + self.cov_prior
+        df = int(np.ceil(self.nobs + self.cov_prior_df))
 
         r = np.linalg.cholesky(np.linalg.inv(a))
         x = np.dot(np.random.normal(size=(df, self.nvar)), r.T)
