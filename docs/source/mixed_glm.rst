@@ -31,3 +31,25 @@ References
 
 Blei, Kucukelbir, McAuliffe (2017).  Variational Inference: A review
 for Statisticians https://arxiv.org/pdf/1601.00670.pdf
+
+Module Reference
+----------------
+
+.. module:: statsmodels.genmod.bayes_mixed_glm
+   :synopsis: Bayes Mixed Generalized Linear Models
+
+
+The model class is:
+
+.. autosummary::
+   :toctree: generated/
+
+   BinomialBayesMixedGLM
+   PoissonBayesMixedGLM
+
+The result class is:
+
+.. autosummary::
+   :toctree: generated/
+
+   BayesMixedGLMResults
