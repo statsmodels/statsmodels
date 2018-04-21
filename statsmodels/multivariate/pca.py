@@ -110,15 +110,6 @@ class PCA(object):
     rows : array
         Array of indices indicating rows used in the PCA
 
-    Methods
-    -------
-    plot_scree
-        Scree plot of the eigenvalues
-    plot_rsquare
-        Individual series R-squared plotted against the number of factors
-    project
-        Compute projection for a given number of factors
-
     Examples
     --------
     Basic PCA using the correlation matrix of the data

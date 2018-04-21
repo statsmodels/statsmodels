@@ -83,5 +83,9 @@ def _get_data():
     filepath = dirname(abspath(__file__))
     ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
     with open(filepath + '/statecrime.csv', 'rb') as f:
-        data = np.recfromtxt(f, delimiter=",", names=True, dtype=None)
+        try:
+            data = np.recfromtxt(f, delimiter=",", names=True,
+                                 dtype=None, encoding='utf-8')
+        except TypeError:
+            data = np.recfromtxt(f, delimiter=",", names=True, dtype=None)
     return data

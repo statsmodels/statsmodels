@@ -262,8 +262,8 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol,
     """
     One-dimensional helper for elastic net.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     func : function
         A smooth function of a single variable to be optimized
         with L1 penaty.

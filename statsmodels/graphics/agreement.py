@@ -8,12 +8,8 @@ License: BSD-3
 import numpy as np
 from . import utils
 
-def mean_diff_plot(m1, m2,
-                   sd_limit=1.96,
-                   ax=None,
-                   scatter_kwds=None,
-                   mean_line_kwds=None,
-                   limit_lines_kwds=None):
+def mean_diff_plot(m1, m2, sd_limit=1.96, ax=None, scatter_kwds=None,
+                   mean_line_kwds=None, limit_lines_kwds=None):
     """
     Tukey's Mean Difference Plot.
 
@@ -32,7 +28,9 @@ def mean_diff_plot(m1, m2,
         the differences. If `md` is the mean of the differences, and `sd` is
         the standard deviation of those differences, then the limits of
         agreement that will be plotted will be
+                       
                        md - sd_limit * sd, md + sd_limit * sd
+
         The default of 1.96 will produce 95% confidence intervals for the means
         of the differences.
         If sd_limit = 0, no limits will be plotted, and the ylimit of the plot
@@ -78,7 +76,7 @@ def mean_diff_plot(m1, m2,
     >>> m1 = np.random.random(20)
     >>> m2 = np.random.random(20)
     >>> f, ax = plt.subplots(1, figsize = (8,5))
-    >>> sm.graphics.bland_altman_plot(m1, m2, ax = ax)
+    >>> sm.graphics.mean_diff_plot(m1, m2, ax = ax)
     >>> plt.show()
 
     .. plot:: plots/graphics-mean_diff_plot.py

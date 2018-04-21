@@ -568,8 +568,8 @@ def survdiff(time, status, group, weight_type=None, strata=None,
     """
     Test for the equality of two survival distributions.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     time : array-like
         The event or censoring times.
     status : array-like

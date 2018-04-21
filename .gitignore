@@ -10,7 +10,7 @@ docs/source/generated
 docs/source/dev/generated
 docs/source/examples/generated
 docs/source/examples/notebooks/generated
-docs/source/datasets
+docs/source/datasets/statsmodels.datasets.*
 docs/gettingstarted_0.png
 examples/executed
 
