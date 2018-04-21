@@ -36,8 +36,8 @@ def target_rotation(A, H, full_rank=False):
 
     see Schonemann (1966).
 
-    Parametes
-    ---------
+    Parameters
+    ----------
     A : numpy matrix (default None)
         non rotated factors
     H : numpy matrix
@@ -85,8 +85,8 @@ def procrustes(A, H):
 
     see Navarra, Simoncini (2010).
 
-    Parametes
-    ---------
+    Parameters
+    ----------
     A : numpy matrix
         non rotated factors
     H : numpy matrix
@@ -117,7 +117,7 @@ def promax(A, k=2):
 
     * Deterine varimax rotated patterns :math:`V`.
 
-    * Construct a rotation target matrix :math:`|V_{ij}|^k/V_{ij}
+    * Construct a rotation target matrix :math:`|V_{ij}|^k/V_{ij}`
 
     * Perform procrustes rotation towards the target to obtain T
 

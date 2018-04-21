@@ -33,6 +33,7 @@ def mean_diff_plot(m1, m2,
         the standard deviation of those differences, then the limits of
         agreement that will be plotted will be
                        md - sd_limit * sd, md + sd_limit * sd
+
         The default of 1.96 will produce 95% confidence intervals for the means
         of the differences.
         If sd_limit = 0, no limits will be plotted, and the ylimit of the plot

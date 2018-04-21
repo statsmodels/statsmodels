@@ -1167,8 +1167,8 @@ class NegativeBinomial(Family):
 
      :math:`f(y) = \frac{\Gamma(y+\frac{1}{\alpha})}
                         {y!\Gamma(\frac{1}{\alpha})}
-     \left(\frac{1}{1+\alpha\mu}\right)^{\frac{1}{\alpha}}
-     \left(\frac{\alpha\mu}{1+\alpha\mu}\right)^y`
+        \left(\frac{1}{1+\alpha\mu}\right)^{\frac{1}{\alpha}}
+        \left(\frac{\alpha\mu}{1+\alpha\mu}\right)^y`
 
     with :math:`E[Y]=\mu\,` and :math:`Var[Y]=\mu+\alpha\mu^2`.
     """

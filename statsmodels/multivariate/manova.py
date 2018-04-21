@@ -17,6 +17,7 @@ __docformat__ = 'restructuredtext en'
 class MANOVA(Model):
     """
     Multivariate analysis of variance
+
     The implementation of MANOVA is based on multivariate regression and does
     not assume that the explanatory variables are categorical. Any type of
     variables as in regression is allowed.
@@ -35,7 +36,7 @@ class MANOVA(Model):
         default.
 
     Attributes
-    -----------
+    ----------
     endog : array
         See Parameters.
     exog : array
@@ -76,20 +77,22 @@ class MANOVA(Model):
         return MultivariateTestResults(results, self.endog_names,
                                        self.exog_names)
     mv_test.__doc__ = (
-        """
-        Testing the linear hypotheses
-            L * params * M = 0
-        where `params` is the regression coefficient matrix for the
-        linear model y = x * params
+    """
+    Testing the linear hypotheses:
 
-        Parameters
-        ----------
-        """ + _hypotheses_doc +
-        """
+        L * params * M = 0
 
-        Returns
-        -------
-        results: MultivariateTestResults
+    where `params` is the regression coefficient matrix for the
+    linear model y = x * params.
 
-        """
+    Parameters
+    ----------
+    """ + _hypotheses_doc +
+    """
+
+    Returns
+    -------
+    results: MultivariateTestResults
+
+    """
     )

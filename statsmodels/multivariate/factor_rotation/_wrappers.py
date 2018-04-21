@@ -25,10 +25,44 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
     .. math::
         L =  A(T^*)^{-1},
+
     where :math:`T` is a normal matrix.
 
-    Methods
+    Parameters
+    ----------
+    A : numpy matrix (default None)
+        non rotated factors
+    method : string
+        should be one of the methods listed in Notes section
+    method_args : list
+        additional arguments that should be provided with each method
+    algorithm_kwargs : dictionary
+        algorithm : string (default gpa)
+            should be one of:
+
+            * 'gpa': a numerical method
+            * 'gpa_der_free': a derivative free numerical method
+            * 'analytic' : an analytic method
+
+        Depending on the algorithm, there are algorithm specific keyword
+        arguments. For the gpa and gpa_der_free, the following
+        keyword arguments are available:
+
+        max_tries : integer (default 501)
+            maximum number of iterations
+        tol : float
+            stop criterion, algorithm stops if Frobenius norm of gradient is
+            smaller then tol
+        For analytic, the supporeted arguments depend on the method, see above.
+
+        See the lower level functions for more details.
+
+    Returns
     -------
+    The tuple :math:`(L,T)`
+
+    Notes
+    -----
     What follows is a list of available methods. Depending on the method
     additional argument are required and different algorithms
     are available. The algorithm_kwargs are additional keyword arguments
@@ -58,6 +92,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
         * :math:`\gamma=\frac{1}{2}` corresponds to biquartimax,
         * :math:`\gamma=1` corresponds to varimax,
         * :math:`\gamma=\frac{1}{p}` corresponds to equamax.
+
         For oblique rotations rotations:
 
         * :math:`\gamma=0` corresponds to quartimin,
@@ -169,37 +204,6 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
         W : numpy matrix (default matrix with equal weight one for all entries)
             matrix with weights, entries can either be one or zero
 
-    Parameters
-    ---------
-    A : numpy matrix (default None)
-        non rotated factors
-    method : string
-        should be one of the methods listed above
-    method_args : list
-        additional arguments that should be provided with each method
-    algorithm_kwargs : dictionary
-        algorithm : string (default gpa)
-            should be one of:
-
-            * 'gpa': a numerical method
-            * 'gpa_der_free': a derivative free numerical method
-            * 'analytic' : an analytic method
-        Depending on the algorithm, there are algorithm specific keyword
-        arguments. For the gpa and gpa_der_free, the following
-        keyword arguments are available:
-
-        max_tries : integer (default 501)
-            maximum number of iterations
-        tol : float
-            stop criterion, algorithm stops if Frobenius norm of gradient is
-            smaller then tol
-        For analytic, the supporeted arguments depend on the method, see above.
-
-        See the lower level functions for more details.
-
-    Returns
-    -------
-    The tuple :math:`(L,T)`
 
     Examples
     -------
