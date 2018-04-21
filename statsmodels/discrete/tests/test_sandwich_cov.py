@@ -571,6 +571,23 @@ class TestGLMGaussHAC(CheckDiscreteGLM):
         cls.res2 = mod2.fit(cov_type='HAC', cov_kwds=kwds)
 
 
+class TestGLMGaussHAC2(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+
+        cls.cov_type = 'HAC'
+
+        # check kernel specified as string
+        kwds = {'kernel': 'bartlett', 'maxlags': 2}
+        mod1 = GLM(endog, exog, family=families.Gaussian())
+        cls.res1 = mod1.fit(cov_type='HAC', cov_kwds=kwds)
+
+        mod2 = OLS(endog, exog)
+        kwds2 = {'maxlags': 2}
+        cls.res2 = mod2.fit(cov_type='HAC', cov_kwds=kwds2)
+
+
 class TestGLMGaussHACUniform(CheckDiscreteGLM):
 
     @classmethod
@@ -592,7 +609,7 @@ class TestGLMGaussHACUniform(CheckDiscreteGLM):
     def test_cov_options(self):
 
         # check keyword `weights_func
-        kwdsa = {'weights_func':sw.weights_uniform, 'maxlags':2}
+        kwdsa = {'weights_func': sw.weights_uniform, 'maxlags': 2}
         res1a = self.res1.model.fit(cov_type='HAC', cov_kwds=kwdsa)
         res2a = self.res2.model.fit(cov_type='HAC', cov_kwds=kwdsa)
         assert_allclose(res1a.bse, self.res1.bse, rtol=1e-12)
@@ -604,7 +621,7 @@ class TestGLMGaussHACUniform(CheckDiscreteGLM):
 
         assert_(res1a.cov_kwds['weights_func'] is sw.weights_uniform)
 
-        kwdsb = {'kernel':sw.weights_bartlett, 'maxlags':2}
+        kwdsb = {'kernel': sw.weights_bartlett, 'maxlags': 2}
         res1a = self.res1.model.fit(cov_type='HAC', cov_kwds=kwdsb)
         res2a = self.res2.model.fit(cov_type='HAC', cov_kwds=kwdsb)
         assert_allclose(res1a.bse, res2a.bse, rtol=1e-12)
@@ -612,6 +629,24 @@ class TestGLMGaussHACUniform(CheckDiscreteGLM):
         # regression test for bse values
         bse = np.array([  2.502264,  3.697807,  9.193303])
         assert_allclose(res1a.bse, bse, rtol=1e-6)
+
+
+
+class TestGLMGaussHACUniform2(TestGLMGaussHACUniform):
+
+    @classmethod
+    def setup_class(cls):
+
+        cls.cov_type = 'HAC'
+
+        kwds={'kernel': sw.weights_uniform, 'maxlags': 2}
+        mod1 = GLM(endog, exog, family=families.Gaussian())
+        cls.res1 = mod1.fit(cov_type='HAC', cov_kwds=kwds)
+
+        # check kernel as string
+        mod2 = OLS(endog, exog)
+        kwds2 = {'kernel': 'uniform', 'maxlags': 2}
+        cls.res2 = mod2.fit(cov_type='HAC', cov_kwds=kwds)
 
 
 class TestGLMGaussHACPanel(CheckDiscreteGLM):

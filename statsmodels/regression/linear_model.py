@@ -2047,7 +2047,9 @@ class RegressionResults(base.LikelihoodModelResults):
         - 'HAC' and keywords
 
             - `maxlag` integer (required) : number of lags to use
-            - `kernel` string (optional) : kernel, default is Bartlett
+            - `kernel` callable or str (optional) : kernel
+                  currently available kernels are ['bartlett', 'uniform'],
+                  default is Bartlett
             - `use_correction` bool (optional) : If true, use small sample
                   correction
 
@@ -2076,7 +2078,9 @@ class RegressionResults(base.LikelihoodModelResults):
 
             - `time` array_like (required) : index of time periods
             - `maxlag` integer (required) : number of lags to use
-            - `kernel` string (optional) : kernel, default is Bartlett
+            - `kernel` callable or str (optional) : kernel
+                  currently available kernels are ['bartlett', 'uniform'],
+                  default is Bartlett
             - `use_correction` False or string in ['hac', 'cluster'] (optional) :
                   If False the the sandwich covariance is calulated without
                   small sample correction.
@@ -2101,7 +2105,9 @@ class RegressionResults(base.LikelihoodModelResults):
               `groups` : indicator for groups
               `time` : index of time periods
             - `maxlag` integer (required) : number of lags to use
-            - `kernel` string (optional) : kernel, default is Bartlett
+            - `kernel` callable or str (optional) : kernel
+                  currently available kernels are ['bartlett', 'uniform'],
+                  default is Bartlett
             - `use_correction` False or string in ['hac', 'cluster'] (optional) :
                   If False the sandwich covariance is calculated without
                   small sample correction.
@@ -2116,7 +2122,6 @@ class RegressionResults(base.LikelihoodModelResults):
         TODO: Currently there is no check for extra or misspelled keywords,
         except in the case of cov_type `HCx`
         """
-
         import statsmodels.stats.sandwich_covariance as sw
 
         # normalize names
@@ -2126,6 +2131,8 @@ class RegressionResults(base.LikelihoodModelResults):
             cov_type = 'hac-groupsum'
         if 'kernel' in kwds:
             kwds['weights_func'] = kwds.pop('kernel')
+        if 'weights_func' in kwds and not callable(kwds['weights_func']):
+            kwds['weights_func'] = sw.kernel_dict[kwds['weights_func']]
 
         # TODO: make separate function that returns a robust cov plus info
         use_self = kwds.pop('use_self', False)
