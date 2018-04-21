@@ -22,8 +22,10 @@ class CanCorr(Model):
 
     For matrices exog=x and endog=y, find projections x_cancoef and y_cancoef
     such that:
+
         x1 = x * x_cancoef, x1' * x1 is identity matrix
         y1 = y * y_cancoef, y1' * y1 is identity matrix
+
     and the correlation between x1 and y1 is maximized.
 
     Attributes

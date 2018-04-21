@@ -17,40 +17,45 @@ from statsmodels.base.model import Model
 from statsmodels.iolib import summary2
 __docformat__ = 'restructuredtext en'
 
-_hypotheses_doc = """
+_hypotheses_doc = """\
     hypotheses: A list of tuples
         Hypothesis `L*B*M = C` to be tested where B is the parameters in
         regression Y = X*B. Each element is a tuple of length 2, 3, or 4:
+
                        (name, contrast_L)
                        (name, contrast_L, transform_M)
                        (name, contrast_L, transform_M, constant_C)
+
         containing a string `name`, the contrast matrix L, the transform
         matrix M (for transforming dependent variables), and right-hand side
         constant matrix constant_C, respectively.
-        contrast_L : 2D array or an array of strings
+
+        - contrast_L : 2D array or an array of strings
            Left-hand side contrast matrix for hypotheses testing.
            If 2D array, each row is an hypotheses and each column is an
            independent variable. At least 1 row
            (1 by k_exog, the number of independent variables) is required.
            If an array of strings, it will be passed to
            patsy.DesignInfo().linear_constraint.
-        transform_M : 2D array or an array of strings or None, optional
+        - transform_M : 2D array or an array of strings or None, optional
             Left hand side transform matrix.
             If `None` or left out, it is set to a k_endog by k_endog
             identity matrix (i.e. do not transform y matrix).
             If an array of strings, it will be passed to
             patsy.DesignInfo().linear_constraint.
-        constant_C : 2D array or None, optional
+        - constant_C : 2D array or None, optional
             Right-hand side constant matrix.
             if `None` or left out it is set to a matrix of zeros
             Must has the same number of rows as contrast_L and the same
             number of columns as transform_M
+
         If `hypotheses` is None: 1) the effect of each independent variable
         on the dependent variables will be tested. Or 2) if model is created
         using a formula,  `hypotheses` will be created according to
         `design_info`. 1) and 2) is equivalent if no additional variables
         are created by the formula (e.g. dummy variables for categorical
         variables and interaction terms)
+
 """
 
 
@@ -333,9 +338,11 @@ _multivariate_test.__doc__ = (
         transforming the dependent variables in y.
 
         Algorithm:
+
             T = L*inv(X'X)*L'
             H = M'B'L'*inv(T)*LBM
             E =  M'(Y'Y - B'X'XB)M
+
         And then finding the eigenvalues of inv(H + E)*H
 
         .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm

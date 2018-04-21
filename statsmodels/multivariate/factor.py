@@ -692,7 +692,7 @@ class FactorResults(object):
     def factor_scoring(self, endog=None, method='bartlett', transform=True):
         """factor scoring: compute factors for endog
 
-         If endog was not provided when creating the factor class, then
+        If endog was not provided when creating the factor class, then
         a standarized endog needs to be provided here.
 
         Parameters
@@ -788,11 +788,11 @@ class FactorResults(object):
         Parameters
         ----------
         style : 'display' (default), 'raw' or 'strings'
-            'raw' returns just a DataFrame of the loadings matrix, no options are
-                applied
-            'display' add sorting and styling as defined by other keywords
-            'strings' returns a DataFrame with string elements with optional sorting
-                and surpressing small loading coefficients.
+            - 'raw' returns just a DataFrame of the loadings matrix, no options are
+              applied
+            - 'display' add sorting and styling as defined by other keywords
+            - 'strings' returns a DataFrame with string elements with optional sorting
+              and surpressing small loading coefficients.
 
         sort_ : boolean
             If True, then the rows of the DataFrame is sorted by contribution of each
@@ -1009,10 +1009,10 @@ class FactorResults(object):
         The standard errors of the loadings.
 
         Standard errors are only available if the model was fit using
-        maximum likelihood.  If `endog` is not provided, `nobs`must be
+        maximum likelihood.  If `endog` is not provided, `nobs` must be
         provided to obtain standard errors.
 
-        These are asymptotic standard errors.  See Bai and Li (2012)
+        These are asymptotic standard errors. See Bai and Li (2012)
         for conditions under which the standard errors are valid.
 
         The standard errors are only applicable to the original,

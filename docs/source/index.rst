@@ -110,6 +110,7 @@ Table of Contents
    rlm
    mixed_linear
    discretemod
+   mixed_glm
    anova
    tsa
    statespace
