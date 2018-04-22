@@ -39,7 +39,7 @@ Module Reference
    :synopsis: Bayes Mixed Generalized Linear Models
 
 
-The model class is:
+The model classes are:
 
 .. autosummary::
    :toctree: generated/
