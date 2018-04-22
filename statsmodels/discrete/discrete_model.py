@@ -1040,7 +1040,7 @@ class Poisson(CountModel):
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
 
-        discretefit = PoissonResults(self, cntfit, **kwds)
+        discretefit = PoissonResults(self, cntfit)
         return PoissonResultsWrapper(discretefit)
     fit.__doc__ = DiscreteModel.fit.__doc__
 
