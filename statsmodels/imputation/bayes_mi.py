@@ -175,8 +175,8 @@ class MI(object):
     """
     MI performs multiple imputation using a provided imputer object.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     imp : object
         An imputer class, such as BayesGaussMI.
     model : model class
@@ -318,8 +318,8 @@ class MIResults(LikelihoodModelResults):
     """
     A results class for multiple imputation (MI).
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     mi : MI instance
         The MI object that produced the results
     model : instance of statsmodels model class

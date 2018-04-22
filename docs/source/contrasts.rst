@@ -43,8 +43,8 @@ Example Data
 .. ipython:: python
 
    import pandas
-   url = 'http://www.ats.ucla.edu/stat/data/hsb2.csv'
-   hsb2 = pandas.read_table(url, delimiter=",")
+   url = 'https://stats.idre.ucla.edu/stat/data/hsb2.csv'
+   hsb2 = pandas.read_csv(url)
 
 It will be instructive to look at the mean of the dependent variable, write, for each level of race ((1 = Hispanic, 2 = Asian, 3 = African American and 4 = Caucasian)).
 

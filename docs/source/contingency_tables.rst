@@ -265,7 +265,7 @@ methods and attributes.
     data = sm.datasets.china_smoking.load()
 
     mat = np.asarray(data.data)
-    tables = [np.reshape(x, (2, 2)) for x in mat]
+    tables = [np.reshape(x.tolist()[1:], (2, 2)) for x in mat]
 
     st = sm.stats.StratifiedTable(tables)
     print(st.summary())

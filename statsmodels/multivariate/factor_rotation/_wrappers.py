@@ -18,17 +18,55 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
     For orthogonal rotations :math:`A` is rotated to :math:`L` according to
 
     .. math::
+
         L =  AT,
 
     where :math:`T` is an orthogonal matrix. And, for oblique rotations
     :math:`A` is rotated to :math:`L` according to
 
     .. math::
+
         L =  A(T^*)^{-1},
+
     where :math:`T` is a normal matrix.
 
-    Methods
+    Parameters
+    ----------
+    A : numpy matrix (default None)
+        non rotated factors
+    method : string
+        should be one of the methods listed below
+    method_args : list
+        additional arguments that should be provided with each method
+    algorithm_kwargs : dictionary
+        algorithm : string (default gpa)
+            should be one of:
+
+            * 'gpa': a numerical method
+            * 'gpa_der_free': a derivative free numerical method
+            * 'analytic' : an analytic method
+
+        Depending on the algorithm, there are algorithm specific keyword
+        arguments. For the gpa and gpa_der_free, the following
+        keyword arguments are available:
+
+        max_tries : integer (default 501)
+            maximum number of iterations
+
+        tol : float
+            stop criterion, algorithm stops if Frobenius norm of gradient is
+            smaller then tol
+
+        For analytic, the supporeted arguments depend on the method, see above.
+
+        See the lower level functions for more details.
+
+    Returns
     -------
+    The tuple :math:`(L,T)`
+
+    Notes
+    -----
     What follows is a list of available methods. Depending on the method
     additional argument are required and different algorithms
     are available. The algorithm_kwargs are additional keyword arguments
@@ -38,15 +76,15 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
     Below,
 
-    * :math:`L` is a :math:`p\times k` matrix;
-    * :math:`N` is :math:`k\times k` matrix with zeros on the diagonal and ones
-    elsewhere;
-    * :math:`M` is :math:`p\times p` matrix with zeros on the diagonal and ones
-    elsewhere;
-    * :math:`C` is a :math:`p\times p` matrix with elements equal to
-    :math:`1/p`;
-    * :math:`(X,Y)=\operatorname{Tr}(X^*Y)` is the Frobenius norm;
-    * :math:`\circ` is the element-wise product or Hadamard product.
+        * :math:`L` is a :math:`p\times k` matrix;
+        * :math:`N` is :math:`k\times k` matrix with zeros on the diagonal and ones
+          elsewhere;
+        * :math:`M` is :math:`p\times p` matrix with zeros on the diagonal and ones
+          elsewhere;
+        * :math:`C` is a :math:`p\times p` matrix with elements equal to
+          :math:`1/p`;
+        * :math:`(X,Y)=\operatorname{Tr}(X^*Y)` is the Frobenius norm;
+        * :math:`\circ` is the element-wise product or Hadamard product.
 
     oblimin : orthogonal or oblique rotation that minimizes
         .. math::
@@ -58,6 +96,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
         * :math:`\gamma=\frac{1}{2}` corresponds to biquartimax,
         * :math:`\gamma=1` corresponds to varimax,
         * :math:`\gamma=\frac{1}{p}` corresponds to equamax.
+
         For oblique rotations rotations:
 
         * :math:`\gamma=0` corresponds to quartimin,
@@ -71,6 +110,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
             should be one of {orthogonal, oblique}
 
     orthomax : orthogonal rotation that minimizes
+
         .. math::
             \phi(L) = -\frac{1}{4}(L\circ L,(I-\gamma C)(L\circ L)),
 
@@ -90,9 +130,11 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
     CF : Crawford-Ferguson family for orthogonal and oblique rotation which
     minimizes:
+
         .. math::
+
             \phi(L) =\frac{1-\kappa}{4} (L\circ L,(L\circ L)N)
-                      -\frac{1}{4}(L\circ L,M(L\circ L)),
+                     -\frac{1}{4}(L\circ L,M(L\circ L)),
 
         where :math:`0\leq\kappa\leq1`. For orthogonal rotations the oblimin
         (and orthomax) family of rotations is equivalent to the
@@ -137,8 +179,11 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
         minimizes the oblimin objective with :math:`\gamma=\frac{1}{2}`
 
     target : orthogonal or oblique rotation that rotates towards a target
-    matrix :math:`H` by minimizing the objective
+
+    matrix : math:`H` by minimizing the objective
+
         .. math::
+
             \phi(L) =\frac{1}{2}\|L-H\|^2.
 
         method_args:
@@ -149,17 +194,16 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
             should be one of {orthogonal, oblique}
 
         For orthogonal rotations the algorithm can be set to analytic in which
-        case
-        the following keyword arguments are available:
+        case the following keyword arguments are available:
 
         full_rank : boolean (default False)
             if set to true full rank is assumed
 
     partial_target : orthogonal (default) or oblique rotation that partially
-    rotates
-        towards a target matrix :math:`H` by minimizing the objective:
+    rotates towards a target matrix :math:`H` by minimizing the objective:
 
         .. math::
+
             \phi(L) =\frac{1}{2}\|W\circ(L-H)\|^2.
 
         method_args:
@@ -168,38 +212,6 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
             target matrix
         W : numpy matrix (default matrix with equal weight one for all entries)
             matrix with weights, entries can either be one or zero
-
-    Parameters
-    ---------
-    A : numpy matrix (default None)
-        non rotated factors
-    method : string
-        should be one of the methods listed above
-    method_args : list
-        additional arguments that should be provided with each method
-    algorithm_kwargs : dictionary
-        algorithm : string (default gpa)
-            should be one of:
-
-            * 'gpa': a numerical method
-            * 'gpa_der_free': a derivative free numerical method
-            * 'analytic' : an analytic method
-        Depending on the algorithm, there are algorithm specific keyword
-        arguments. For the gpa and gpa_der_free, the following
-        keyword arguments are available:
-
-        max_tries : integer (default 501)
-            maximum number of iterations
-        tol : float
-            stop criterion, algorithm stops if Frobenius norm of gradient is
-            smaller then tol
-        For analytic, the supporeted arguments depend on the method, see above.
-
-        See the lower level functions for more details.
-
-    Returns
-    -------
-    The tuple :math:`(L,T)`
 
     Examples
     -------

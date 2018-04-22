@@ -22,8 +22,8 @@ class DataSet(object):
     """
     A class for representing the data in a data module.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     data_module : module
         A module contained in the statsmodels/datasets directory.
     n_seasons : list
@@ -96,8 +96,8 @@ def load_results_statsmodels_exog(dataset):
     This is to check whether the same results are produced no matter whether
     `exog` or `seasons` is being used.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     dataset : DataSet
     """
     results_per_deterministic_terms = dict.fromkeys(dataset.dt_s_list)
@@ -132,8 +132,8 @@ def load_results_statsmodels_exog_coint(dataset):
     results are produced no matter whether `exog_coint` or the `deterministic`
     argument is being used.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     dataset : DataSet
     """
     results_per_deterministic_terms = dict.fromkeys(dataset.dt_s_list)

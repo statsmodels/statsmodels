@@ -53,6 +53,7 @@ explicitly:
     matplotlib.style.use('ggplot')
 
 .. ipython:: python
+   :okwarning:
 
     # some example data
     import numpy as np

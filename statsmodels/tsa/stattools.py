@@ -945,6 +945,7 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
         remaining elements in cointegrating vector
     trend : str {'c', 'ct'}
         trend term included in regression for cointegrating equation
+
         * 'c' : constant
         * 'ct' : constant and linear trend
         * also available quadratic trend 'ctt', and no constant 'nc'
@@ -956,6 +957,7 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
         keyword for `adfuller`, largest or given number of lags
     autolag : string
         keyword for `adfuller`, lag selection criterion.
+
         * if None, then maxlag lags are used without lag search
         * if 'AIC' (default) or 'BIC', then the number of lags is chosen
           to minimize the corresponding information criterion
@@ -968,7 +970,6 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
         If True, then a results instance is returned. Otherwise, a tuple
         with the test outcome is returned.
         Set `return_results=False` to avoid future changes in return.
-
 
     Returns
     -------

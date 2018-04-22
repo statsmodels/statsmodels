@@ -58,14 +58,6 @@ def _check_args_2(endog, n_factor, corr, nobs, k_endog):
 class Factor(Model):
     """
     Factor analysis
-    Status: experimental
-
-    .. [1] Hofacker, C. (2004). Exploratory Factor Analysis, Mathematical
-    Marketing. http://www.openaccesstexts.org/pdf/Quant_Chapter_11_efa.pdf
-
-    Supported rotations:
-        'varimax', 'quartimax', 'biquartimax', 'equamax', 'oblimin',
-        'parsimax', 'parsimony', 'biquartimin', 'promax'
 
     Parameters
     ----------
@@ -98,6 +90,12 @@ class Factor(Model):
 
     Notes
     -----
+    **Experimental**
+
+    Supported rotations: 'varimax', 'quartimax', 'biquartimax', 
+    'equamax', 'oblimin', 'parsimax', 'parsimony', 'biquartimin', 
+    'promax'
+
     If method='ml', the factors are rotated to satisfy condition IC3
     of Bai and Li (2012).  This means that the scores have covariance
     I, so the model for the covariance matrix is L * L' + diag(U),
@@ -106,8 +104,10 @@ class Factor(Model):
 
     References
     ----------
-    J Bai, K Li (2012).  Statistical analysis of factor models of high
-    dimension.  Annals of Statistics. https://arxiv.org/pdf/1205.6617.pdf
+    .. [*] Hofacker, C. (2004). Exploratory Factor Analysis, Mathematical
+       Marketing. http://www.openaccesstexts.org/pdf/Quant_Chapter_11_efa.pdf
+    .. [*] J Bai, K Li (2012).  Statistical analysis of factor models of high
+       dimension.  Annals of Statistics. https://arxiv.org/pdf/1205.6617.pdf
     """
     def __init__(self, endog=None, n_factor=1, corr=None, method='pa',
                  smc=True, endog_names=None, nobs=None, missing='drop'):
@@ -692,7 +692,7 @@ class FactorResults(object):
     def factor_scoring(self, endog=None, method='bartlett', transform=True):
         """factor scoring: compute factors for endog
 
-         If endog was not provided when creating the factor class, then
+        If endog was not provided when creating the factor class, then
         a standarized endog needs to be provided here.
 
         Parameters
@@ -788,11 +788,13 @@ class FactorResults(object):
         Parameters
         ----------
         style : 'display' (default), 'raw' or 'strings'
-            'raw' returns just a DataFrame of the loadings matrix, no options are
-                applied
-            'display' add sorting and styling as defined by other keywords
-            'strings' returns a DataFrame with string elements with optional sorting
-                and surpressing small loading coefficients.
+            Style to use for display
+
+            * 'raw' returns just a DataFrame of the loadings matrix, no options are
+               applied
+            * 'display' add sorting and styling as defined by other keywords
+            * 'strings' returns a DataFrame with string elements with optional sorting
+               and surpressing small loading coefficients.
 
         sort_ : boolean
             If True, then the rows of the DataFrame is sorted by contribution of each
@@ -820,22 +822,21 @@ class FactorResults(object):
 
         Examples
         --------
-        mod = Factor(df, 3, smc=True)
-        res = mod.fit()
-        res.get_loadings_frame(style='display', decimals=3, threshold=0.2)
+        >>> mod = Factor(df, 3, smc=True)
+        >>> res = mod.fit()
+        >>> res.get_loadings_frame(style='display', decimals=3, threshold=0.2)
 
         To get a sorted DataFrame, all styling options need to be turned off:
 
-        df_sorted = res.get_loadings_frame(style='display',
-                    highlight_max=False, decimals=None, threshold=0)
+        >>> df_sorted = res.get_loadings_frame(style='display',
+        ...             highlight_max=False, decimals=None, threshold=0)
 
         Options except for highlighting are available for plain test or Latex
         usage:
 
-        lds = res_u.get_loadings_frame(style='strings', decimals=3,
-                                       threshold=0.3)
-        print(lds.to_latex())
-
+        >>> lds = res_u.get_loadings_frame(style='strings', decimals=3,
+        ...                                threshold=0.3)
+        >>> print(lds.to_latex())
         """
 
         loadings_df = pd.DataFrame(
@@ -980,9 +981,16 @@ class FactorResults(object):
         """
         The standard errors of the uniquenesses.
 
+        Parameters
+        ----------
+        kurt: float
+            Excess kurtosis
+        
+        Notes
+        -----
         If excess kurtosis is known, provide as `kurt`.  Standard
         errors are only available if the model was fit using maximum
-        likelihood.  If `endog` is not provided, `nobs`must be
+        likelihood.  If `endog` is not provided, `nobs` must be
         provided to obtain standard errors.
 
         These are asymptotic standard errors.  See Bai and Li (2012)
@@ -1009,7 +1017,7 @@ class FactorResults(object):
         The standard errors of the loadings.
 
         Standard errors are only available if the model was fit using
-        maximum likelihood.  If `endog` is not provided, `nobs`must be
+        maximum likelihood.  If `endog` is not provided, `nobs` must be
         provided to obtain standard errors.
 
         These are asymptotic standard errors.  See Bai and Li (2012)

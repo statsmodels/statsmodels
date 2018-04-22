@@ -229,8 +229,8 @@ def oblimin_objective(L=None, A=None, T=None, gamma=0,
     * :math:`\gamma=0` corresponds to quartimin,
     * :math:`\gamma=\frac{1}{2}` corresponds to biquartimin.
 
-    Parametes
-    ---------
+    Parameters
+    ----------
     L : numpy matrix (default None)
         rotated factors, i.e., :math:`L=A(T^*)^{-1}=AT`
     A : numpy matrix (default None)
@@ -294,8 +294,8 @@ def orthomax_objective(L=None, A=None, T=None, gamma=0, return_gradient=True):
     * :math:`\gamma=1` corresponds to varimax,
     * :math:`\gamma=\frac{1}{p}` corresponds to equamax.
 
-    Parametes
-    ---------
+    Parameters
+    ----------
     L : numpy matrix (default None)
         rotated factors, i.e., :math:`L=A(T^*)^{-1}=AT`
     A : numpy matrix (default None)
@@ -375,8 +375,8 @@ def CF_objective(L=None, A=None, T=None, kappa=0,
     * :math:`\kappa=\frac{k-1}{p+k-2}` corresponds to parsimax,
     * :math:`\kappa=1` corresponds to factor parsimony.
 
-    Parametes
-    ---------
+    Parameters
+    ----------
     L : numpy matrix (default None)
         rotated factors, i.e., :math:`L=A(T^*)^{-1}=AT`
     A : numpy matrix (default None)
@@ -443,8 +443,8 @@ def vgQ_target(H, L=None, A=None, T=None, rotation_method='orthogonal'):
 
     where :math:`T` is a normal matrix.
 
-    Parametes
-    ---------
+    Parameters
+    ----------
     H : numpy matrix
         target matrix
     L : numpy matrix (default None)
@@ -486,8 +486,8 @@ def ff_target(H, L=None, A=None, T=None, rotation_method='orthogonal'):
 
     where :math:`T` is a normal matrix.
 
-    Parametes
-    ---------
+    Parameters
+    ----------
     H : numpy matrix
         target matrix
     L : numpy matrix (default None)
@@ -530,8 +530,8 @@ def vgQ_partial_target(H, W=None, L=None, A=None, T=None):
 
     where :math:`T` is an orthogonal matrix.
 
-    Parametes
-    ---------
+    Parameters
+    ----------
     H : numpy matrix
         target matrix
     W : numpy matrix (default matrix with equal weight one for all entries)
@@ -572,8 +572,8 @@ def ff_partial_target(H, W=None, L=None, A=None, T=None):
 
     where :math:`T` is an orthogonal matrix.
 
-    Parametes
-    ---------
+    Parameters
+    ----------
     H : numpy matrix
         target matrix
     W : numpy matrix (default matrix with equal weight one for all entries)

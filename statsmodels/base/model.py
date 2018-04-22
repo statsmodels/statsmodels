@@ -1684,7 +1684,6 @@ class LikelihoodModelResults(Results):
 
         Notes
         -----
-
         Status: experimental. Currently only checked for treatment coding with
         and without specified reference level.
 
@@ -1696,16 +1695,14 @@ class LikelihoodModelResults(Results):
         >>> res = ols("np.log(Days+1) ~ C(Weight) + C(Duration)", data).fit()
         >>> pw = res.t_test_pairwise("C(Weight)")
         >>> pw.result_frame
-                 coef   std err         t         P>|t|  Conf. Int. Low  \
+                 coef   std err         t         P>|t|  Conf. Int. Low  
         2-1  0.632315  0.230003  2.749157  8.028083e-03        0.171563
         3-1  1.302555  0.230003  5.663201  5.331513e-07        0.841803
         3-2  0.670240  0.230003  2.914044  5.119126e-03        0.209488
-
              Conf. Int. Upp.  pvalue-hs reject-hs
         2-1         1.093067   0.010212      True
         3-1         1.763307   0.000002      True
         3-2         1.130992   0.010212      True
-
         """
         res = t_test_pairwise(self, term_name, method=method, alpha=alpha,
                               factor_labels=factor_labels)

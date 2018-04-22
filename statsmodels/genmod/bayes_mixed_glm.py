@@ -577,8 +577,8 @@ class _VariationalBayesMixedGLM(object):
         """
         Fit a model using the variational Bayes mean field approximation.
 
-        Parameters:
-        -----------
+        Parameters
+        ----------
         mean : array-like
             Starting value for VB mean vector
         sd : array-like

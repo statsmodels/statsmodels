@@ -67,7 +67,7 @@ html:
 	@echo "Generating datasets from installed statsmodels.datasets"
 	$(TOOLSPATH)$(DATASETBUILD)
 	@echo "Generating notebooks from examples/notebooks folder"
-	$(TOOLSPATH)$(NOTEBOOKBUILD) --parallel --report-errors
+	$(TOOLSPATH)$(NOTEBOOKBUILD) --parallel --report-errors --skip-existing
 	@echo "Running sphinx-build"
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo "Copying rendered example notebooks"
