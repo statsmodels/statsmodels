@@ -99,6 +99,16 @@ state space models (`SARIMAX`, `UnobservedComopnents`, `DynamicFactor`, and
 space code and supports Scipy < 0.16. The next release will only include the
 new state space code.
 
+Unobserved components models: frequency-domain seasonals
+--------------------------------------------------------
+
+Unobserved components models now support modeling seasonal factors from a
+frequency-domain perspective with user-specified period and harmonics. This not
+only allows for multiple seasonal effects, but also allows the representation
+of seasonal components with fewer unobserved states. This can improve
+computational performance and, since it allows for a more parsimonious model,
+may also improve the out-of-sample performance of the model.
+
 Documentation
 -------------
 
@@ -109,7 +119,6 @@ Other important improvements
 
 * MICE (multiple imputation) can use regularized model fitters in the
   imputation step.
-
 
 
 Major Bugs fixed
