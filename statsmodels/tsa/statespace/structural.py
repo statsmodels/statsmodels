@@ -191,7 +191,7 @@ class UnobservedComponents(MLEModel):
     component time series are available in the results class in the
     `level` and `trend` attributes, respectively.
 
-    **Seasonal**
+    **Seasonal (Time-domain)**
 
     The seasonal component is modeled as:
 
@@ -214,19 +214,21 @@ class UnobservedComponents(MLEModel):
     time series is available in the results class in the `seasonal`
     attribute.
 
-    ** Freq. Seasonal**
+    ** Frequency-domain Seasonal**
 
     Each frequency-domain seasonal component is modeled as:
 
     .. math::
-        \gamma_t &=& \sum_{j=1}^h \gamma_{j, t}
-        \gamma_{j, t+1} &=& \gamma_{j, t}\cos(\lambda_j) \\
-                        && + \gamma^{*}_{j, t}\sin(\lambda_j) + \omega_{j,t} \\
-        \gamma^{*}_{j, t+1} &=^ -\gamma^{(1)}_{j, t}\sin(\lambda_j) \\
-                            &&+ \gamma^{*}_{j, t}\cos(\lambda_j) \\
+
+        \gamma_t & =  \sum_{j=1}^h \gamma_{j, t} \\
+        \gamma_{j, t+1} & = \gamma_{j, t}\cos(\lambda_j)
+                        + \gamma^{*}_{j, t}\sin(\lambda_j) + \omega_{j,t} \\
+        \gamma^{*}_{j, t+1} & = -\gamma^{(1)}_{j, t}\sin(\lambda_j)
+                            + \gamma^{*}_{j, t}\cos(\lambda_j)
                             + \omega^{*}_{j, t}, \\
-        \omega^{*}_{j, t}, \omega_{j, t} &\sim& N(0, \sigma_{\omega^2}
-        \lambda_j = \frac{2 \pi j}{s}
+        \omega^{*}_{j, t}, \omega_{j, t} & \sim N(0, \sigma_{\omega^2}) \\
+        \lambda_j & = \frac{2 \pi j}{s}
+
     where j ranges from 1 to h.
 
     The periodicity (number of "seasons" in a "year") is s and the number of
@@ -239,9 +241,9 @@ class UnobservedComponents(MLEModel):
     meaning they will not vary over time.
 
     This component results in one parameter to be fitted using maximum
-    likelihood: :math: `\sigma_{\omega^2}`, and up to two parameters to be
+    likelihood: :math:`\sigma_{\omega^2}`, and up to two parameters to be
     chosen, the number of seasons s and optionally the number of harmonics
-    h, with :math: 1 \leq h \leq \floor(s/2).
+    h, with :math:`1 \leq h \leq \floor(s/2)`.
 
     After fitting the model, each unobserved seasonal component modeled in the
     frequency domain is available in the results class in the `freq_seasonal`
