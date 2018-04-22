@@ -220,7 +220,9 @@ def get_index(lst, name):
             raise
         result = name
     return result
-    #method used repeatedly in Sims-Zha error bands
+
+
+# method used repeatedly in Sims-Zha error bands
 def eigval_decomp(sym_array):
     """
     Returns
