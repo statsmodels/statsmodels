@@ -868,11 +868,8 @@ class CountModel(DiscreteModel):
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1CountResults(self, cntfit)
-        else:
-            raise Exception(
-                    "argument method == %s, which is not handled" % method)
+
+        discretefit = L1CountResults(self, cntfit)
         return L1CountResultsWrapper(discretefit)
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
@@ -1043,11 +1040,6 @@ class Poisson(CountModel):
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
 
-        if 'cov_type' in kwargs:
-            cov_kwds = kwargs.get('cov_kwds', {})
-            kwds = {'cov_type':kwargs['cov_type'], 'cov_kwds':cov_kwds}
-        else:
-            kwds = {}
         discretefit = PoissonResults(self, cntfit, **kwds)
         return PoissonResultsWrapper(discretefit)
     fit.__doc__ = DiscreteModel.fit.__doc__
@@ -1061,11 +1053,8 @@ class Poisson(CountModel):
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1PoissonResults(self, cntfit)
-        else:
-            raise Exception(
-                    "argument method == %s, which is not handled" % method)
+
+        discretefit = L1PoissonResults(self, cntfit)
         return L1PoissonResultsWrapper(discretefit)
 
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
@@ -1464,7 +1453,7 @@ class GeneralizedPoisson(CountModel):
                         **kwargs)
 
 
-        if use_transparams and method not in ["newton", "ncg"]:
+        if self._transparams:
             self._transparams = False
             mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
 
@@ -1490,9 +1479,12 @@ class GeneralizedPoisson(CountModel):
             alpha = alpha * np.ones(k_params)
             alpha[-1] = 0
 
-        alpha_p = alpha[:-1] if (self.k_extra and np.size(alpha) > 1) else alpha
         self._transparams = False
         if start_params is None:
+            # Use poisson fit as first guess.
+            # alpha for regularized poisson to get starting values
+            alpha_p = alpha[:-1] if (self.k_extra and np.size(alpha) > 1) else alpha
+            # TODO, Warning: this assumes exposure is logged
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
@@ -1510,12 +1502,7 @@ class GeneralizedPoisson(CountModel):
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
 
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1GeneralizedPoissonResults(self, cntfit)
-        else:
-            raise Exception(
-                    "argument method == %s, which is not handled" % method)
-
+        discretefit = L1GeneralizedPoissonResults(self, cntfit)
         return L1GeneralizedPoissonResultsWrapper(discretefit)
 
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
@@ -2811,8 +2798,6 @@ class NegativeBinomial(CountModel):
         if self.loglike_method.startswith('nb') and method not in ['newton',
                                                                    'ncg']:
             self._transparams = True # in case same Model instance is refit
-        elif self.loglike_method.startswith('nb'): # method is newton/ncg
-            self._transparams = False # because we need to step in alpha space
 
         if start_params is None:
             # Use poisson fit as first guess.
@@ -2863,7 +2848,6 @@ class NegativeBinomial(CountModel):
                                     use_self=True, use_t=use_t, **cov_kwds)
         return result
 
-
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
@@ -2876,13 +2860,12 @@ class NegativeBinomial(CountModel):
             alpha = alpha * np.ones(k_params)
             alpha[-1] = 0
 
-        # alpha for regularized poisson to get starting values
-        alpha_p = alpha[:-1] if (self.k_extra and np.size(alpha) > 1) else alpha
-
         self._transparams = False
         if start_params is None:
             # Use poisson fit as first guess.
-            #TODO, Warning: this assumes exposure is logged
+            # alpha for regularized poisson to get starting values
+            alpha_p = alpha[:-1] if (self.k_extra and np.size(alpha) > 1) else alpha
+            # TODO, Warning: this assumes exposure is logged
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
@@ -2900,12 +2883,8 @@ class NegativeBinomial(CountModel):
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
-        if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1NegativeBinomialResults(self, cntfit)
-        else:
-            raise Exception(
-                    "argument method == %s, which is not handled" % method)
 
+        discretefit = L1NegativeBinomialResults(self, cntfit)
         return L1NegativeBinomialResultsWrapper(discretefit)
 
 
@@ -3208,7 +3187,7 @@ class NegativeBinomialP(CountModel):
                         full_output=full_output, callback=callback,
                         **kwargs)
 
-        if use_transparams and method not in ["newton", "ncg"]:
+        if self._transparams:
             self._transparams = False
             mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
 
@@ -3228,19 +3207,17 @@ class NegativeBinomialP(CountModel):
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
 
-        if method not in ['l1', 'l1_cvxopt_cp']:
-            raise TypeError(
-                    "argument method == %s, which is not handled" % method)
-
         if np.size(alpha) == 1 and alpha != 0:
             k_params = self.exog.shape[1] + self.k_extra
             alpha = alpha * np.ones(k_params)
             alpha[-1] = 0
 
-        alpha_p = alpha[:-1] if (self.k_extra and np.size(alpha) > 1) else alpha
-
         self._transparams = False
         if start_params is None:
+            # Use poisson fit as first guess.
+            # alpha for regularized poisson to get starting values
+            alpha_p = alpha[:-1] if (self.k_extra and np.size(alpha) > 1) else alpha
+            # TODO, Warning: this assumes exposure is logged
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
