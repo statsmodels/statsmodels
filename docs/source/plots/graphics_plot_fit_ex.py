@@ -17,8 +17,8 @@ import numpy as np
 
 data = sm.datasets.statecrime.load_pandas().data
 murder = data['murder']
-X = data[['poverty', 'hs_grad']]
-X["constant"] = 1
+X = data[['poverty', 'hs_grad']].copy()
+X['constant'] = 1
 
 y = murder
 model = sm.OLS(y, X)
