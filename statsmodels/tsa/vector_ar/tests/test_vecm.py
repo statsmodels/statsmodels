@@ -714,7 +714,7 @@ def test_var_to_vecm():
             sigma_u = results_sm[ds][dt].sigma_u
             coefs = results_sm[ds][dt].var_rep
             intercept = np.zeros(len(sigma_u))
-            var = VARProcess(coefs, intercept, sigma_u)
+            var = VARProcess(coefs, intercept, sigma_u, trend=dt)
             vecm_results = var.to_vecm()
             obtained_pi = vecm_results["Pi"]
             obtained_gamma = vecm_results["Gamma"]

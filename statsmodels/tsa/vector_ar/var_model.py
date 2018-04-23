@@ -651,7 +651,7 @@ class VAR(tsbase.TimeSeriesModel):
             As per above
         """
         # have to do this again because select_order doesn't call fit
-        self.k_trend = k_trend = util.get_trendorder(trend)
+        k_trend = util.get_trendorder(trend)
 
         if offset < 0:  # pragma: no cover
             raise ValueError('offset must be >= 0')
@@ -671,13 +671,13 @@ class VAR(tsbase.TimeSeriesModel):
             del x_inst  # free memory
             temp_z = z
             z = np.empty((x.shape[0], x.shape[1]+z.shape[1]))
-            z[:, :self.k_trend] = temp_z[:, :self.k_trend]
-            z[:, self.k_trend:self.k_trend+x.shape[1]] = x
-            z[:, self.k_trend+x.shape[1]:] = temp_z[:, self.k_trend:]
+            z[:, :k_trend] = temp_z[:, :k_trend]
+            z[:, k_trend:k_trend+x.shape[1]] = x
+            z[:, k_trend+x.shape[1]:] = temp_z[:, k_trend:]
             del temp_z, x  # free memory
         # the following modification of z is necessary to get the same results
         # as JMulTi for the constant-term-parameter...
-        for i in range(self.k_trend):
+        for i in range(k_trend):
             if (np.diff(z[:, i]) == 1).all():  # modify the trend-column
                 z[:, i] += lags
             # make the same adjustment for the quadratic term
@@ -767,12 +767,13 @@ class VARProcess(object):
     -------
     **Attributes**:
     """
-    def __init__(self, coefs, exog, sigma_u, names=None):
+    def __init__(self, coefs, exog, sigma_u, trend, names=None):
         self.k_ar = len(coefs)
         self.neqs = coefs.shape[1]
         self.coefs = coefs
         self.exog = exog
         self.sigma_u = sigma_u
+        self.trend = trend
         self.names = names
 
     def get_eq_index(self, name):
@@ -817,7 +818,16 @@ class VARProcess(object):
 
         .. math:: \mu = (I - A_1 - \dots - A_p)^{-1} \alpha
         """
-        return np.linalg.solve(self._char_mat, self.exog)
+        if self.trend != "c" or (self.exog is not None and
+                                 self.exog.shape[1] != 1):
+            raise NotImplementedError("VAR Process mean is not well-defined "
+                                      "when there are exogenous regressors "
+                                      "other than a constant, or if there "
+                                      "is no constant term")
+        intercept = self.params[0, :]
+        # FIXME: confusion between self.params vs self.coefs;
+        #        params does not exist at this level
+        return np.linalg.solve(self._char_mat, intercept)
 
     def ma_rep(self, maxn=10):
         r"""Compute MA(:math:`\infty`) coefficient matrices
@@ -1117,9 +1127,17 @@ class VARResults(VARProcess):
 
         self.coefs_exog = params[:endog_start].T
         self.k_trend = self.coefs_exog.shape[1]
+        # TODO: Define self.k_exog = coefs_exog.shape[1] - k_trend
+        # and self.k_trend = k_trend defined above?
+
+        if "c" in trend:
+            self.intercept = self.params[0, :]
+        else:
+            self.intercept = np.zeros(neqs)
 
         # print(coefs.round(3))
-        super(VARResults, self).__init__(coefs, exog, sigma_u, names=names)
+        super(VARResults, self).__init__(coefs, exog, sigma_u,
+                                         trend=trend, names=names)
 
     def plot(self):
         """Plot input time series
