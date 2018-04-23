@@ -808,7 +808,7 @@ class VARProcess(object):
         steps
         """
         Y = util.varsim(self.coefs, self.exog, self.sigma_u, steps=steps)
-        plotting.plot_mts(Y)
+        return plotting.plot_mts(Y)
 
     def mean(self):
         r"""Mean of stable process
@@ -889,7 +889,9 @@ class VARProcess(object):
 
     def plot_acorr(self, nlags=10, linewidth=8):
         "Plot theoretical autocorrelation function"
-        plotting.plot_full_acorr(self.acorr(nlags=nlags), linewidth=linewidth)
+        fig = plotting.plot_full_acorr(self.acorr(nlags=nlags),
+                                       linewidth=linewidth)
+        return fig
 
     def forecast(self, y, steps, exog_future=None):
         """Produce linear minimum MSE forecasts for desired number of steps
@@ -1124,7 +1126,7 @@ class VARResults(VARProcess):
     def plot(self):
         """Plot input time series
         """
-        plotting.plot_mts(self.y, names=self.names, index=self.dates)
+        return plotting.plot_mts(self.y, names=self.names, index=self.dates)
 
     @property
     def df_model(self):
@@ -1158,8 +1160,9 @@ class VARResults(VARProcess):
 
     def plot_sample_acorr(self, nlags=10, linewidth=8):
         "Plot theoretical autocorrelation function"
-        plotting.plot_full_acorr(self.sample_acorr(nlags=nlags),
-                                 linewidth=linewidth)
+        fig = plotting.plot_full_acorr(self.sample_acorr(nlags=nlags),
+                                       linewidth=linewidth)
+        return fig
 
     def resid_acov(self, nlags=1):
         """
@@ -1325,8 +1328,9 @@ class VARResults(VARProcess):
         """
         mid, lower, upper = self.forecast_interval(self.y[-self.k_ar:], steps,
                                                    alpha=alpha)
-        plotting.plot_var_forc(self.y, mid, lower, upper, names=self.names,
-                               plot_stderr=plot_stderr)
+        fig = plotting.plot_var_forc(self.y, mid, lower, upper,
+                                     names=self.names, plot_stderr=plot_stderr)
+        return fig
 
     # Forecast error covariance functions
 
@@ -1804,9 +1808,9 @@ class VARResults(VARProcess):
                                     crit_value, pvalue, df, signif,
                                     test="inst", method="wald")
 
-    def test_whiteness_new(self, nlags=10, signif=0.05, adjusted=False):
+    def test_whiteness(self, nlags=10, signif=0.05, adjusted=False):
         """
-        Residual whiteness tests using Portmanteau
+        Residual whiteness tests using Portmanteau test
 
         Parameters
         ----------
@@ -1846,35 +1850,41 @@ class VARResults(VARProcess):
         return WhitenessTestResults(statistic, crit_value, pvalue, df, signif,
                                     nlags, adjusted)
 
-    # TODO: This is not a formal test.  Deprecate in favor of `test_whiteness_new`
-    def test_whiteness(self, nlags=10, plot=True, linewidth=8):
+    def plot_acorr(self, nlags=10, resid=True, linewidth=8):
         """
-        Test white noise assumption. Sample (Y) autocorrelations are compared
-        with the standard :math:`2 / \sqrt{T}` bounds.
+        Plot autocorrelation of sample (endog) or residuals
+
+        Sample (Y) or Residual autocorrelations are plotted together with the
+        standard :math:`2 / \sqrt{T}` bounds.
 
         Parameters
         ----------
-        plot : boolean, default True
-            Plot autocorrelations with 2 / sqrt(T) bounds
+        nlags : int
+            number of lags to display (excluding 0)
+        resid: boolean
+            If True, then the autocorrelation of the residuals is plotted
+            If False, then the autocorrelation of endog is plotted.
+        linewidth : int
+            width of vertical bars
+
+        Returns
+        -------
+        fig : matplotlib figure instance
+
         """
-        acorrs = self.sample_acorr(nlags)
+        if resid:
+            acorrs = self.resid_acorr(nlags)
+        else:
+            acorrs = self.sample_acorr(nlags)
+
         bound = 2 / np.sqrt(self.nobs)
 
-        # TODO: this probably needs some UI work
-
-        if (np.abs(acorrs) > bound).any():
-            print('FAIL: Some autocorrelations exceed %.4f bound. '
-                   'See plot' % bound)
-        else:
-            print('PASS: No autocorrelations exceed %.4f bound' % bound)
-
-        if plot:
-            fig = plotting.plot_full_acorr(acorrs[1:],
-                                           xlabel=np.arange(1, nlags+1),
-                                           err_bound=bound,
-                                           linewidth=linewidth)
-            fig.suptitle(r"ACF plots with $2 / \sqrt{T}$ bounds "
-                         "for testing whiteness assumption")
+        fig = plotting.plot_full_acorr(acorrs[1:],
+                                       xlabel=np.arange(1, nlags+1),
+                                       err_bound=bound,
+                                       linewidth=linewidth)
+        fig.suptitle(r"ACF plots for residuals with $2 / \sqrt{T}$ bounds ")
+        return fig
 
     def test_normality(self, signif=0.05):
         """
@@ -2077,6 +2087,7 @@ class FEVD(object):
         handles, labels = ax.get_legend_handles_labels()
         fig.legend(handles, labels, loc='upper right')
         plotting.adjust_subplots(right=0.85)
+        return fig
 
 # -------------------------------------------------------------------------------
 
