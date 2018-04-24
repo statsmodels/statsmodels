@@ -767,13 +767,22 @@ class VARProcess(object):
     -------
     **Attributes**:
     """
-    def __init__(self, coefs, exog, sigma_u, names=None):
+    def __init__(self, coefs, coefs_exog, sigma_u, names=None, _params_info=None):
         self.k_ar = len(coefs)
         self.neqs = coefs.shape[1]
         self.coefs = coefs
-        self.exog = exog
+        self.coefs_exog = coefs_exog
         self.sigma_u = sigma_u
         self.names = names
+        if _params_info is not None:
+            self.k_trend = _params_info['k_trend']
+            self.k_exog_user = _params_info['k_exog_user']
+            # TODO: we need to distinguish exog including trend and exog_user
+            self.k_exog = self.k_trend + self.k_exog_user
+        if self.k_trend > 0:
+            self.intercept = coefs_exog[:, 0]
+        else:
+            self.intercept = np.zeros(self.neqs)
 
     def get_eq_index(self, name):
         "Return integer position of requested equation name"
@@ -802,13 +811,41 @@ class VARProcess(object):
         """
         return is_stable(self.coefs, verbose=verbose)
 
-    def plotsim(self, steps=1000):
+    def simulate_var(self, steps=None, offset=None, seed=None):
+        """
+        simulate the VAR(p) process for the desired number of steps
+        """
+        steps_ = None
+        if offset is None:
+            if self.exog is not None:
+                offset = self.exog.dot(self.coefs_exog)
+                steps_ = self.exog.shape[0]
+            else:
+                offset = self.intercept
+        else:
+            steps_ = offset.shape[0]
+
+        # default, but over written if exog or offset are used
+        if steps is None:
+            if steps_ is None:
+                steps = 1000
+            else:
+                steps = steps_
+        else:
+            if steps_ is not None and steps != steps_:
+                raise ValueError('if exog or offset are used, then steps must'
+                                 'be equal to their length or None')
+
+        y = util.varsim(self.coefs, offset, self.sigma_u, steps=steps, seed=seed)
+        return y
+
+    def plotsim(self, steps=None, offset=None, seed=None):
         """
         Plot a simulation from the VAR(p) process for the desired number of
         steps
         """
-        Y = util.varsim(self.coefs, self.exog, self.sigma_u, steps=steps)
-        return plotting.plot_mts(Y)
+        y = self.simulate_var(steps=steps, offset=offset, seed=seed)
+        return plotting.plot_mts(y)
 
     def mean(self):
         r"""Mean of stable process
@@ -817,7 +854,7 @@ class VARProcess(object):
 
         .. math:: \mu = (I - A_1 - \dots - A_p)^{-1} \alpha
         """
-        return np.linalg.solve(self._char_mat, self.exog)
+        return np.linalg.solve(self._char_mat, self.intercept)
 
     def ma_rep(self, maxn=10):
         r"""Compute MA(:math:`\infty`) coefficient matrices
@@ -1103,6 +1140,7 @@ class VARResults(VARProcess):
         k_trend = util.get_trendorder(trend)
         self.exog_names = util.make_lag_names(names, lag_order, k_trend, exog)
         self.params = params
+        self.exog = exog
         # print(params.shape)
         # print(params.round(3))
 
@@ -1111,7 +1149,10 @@ class VARResults(VARProcess):
         # Each matrix needs to be transposed
         endog_start = k_trend
         if exog is not None:
-            endog_start += exog.shape[1]
+            k_exog_user = exog.shape[1]
+            endog_start += k_exog_user
+        else:
+            k_exog_user = 0
         reshaped = self.params[endog_start:]
         reshaped = reshaped.reshape((lag_order, neqs, neqs))
         # Need to transpose each coefficient matrix
@@ -1120,8 +1161,14 @@ class VARResults(VARProcess):
         self.coefs_exog = params[:endog_start].T
         self.k_trend = self.coefs_exog.shape[1]
 
-        # print(coefs.round(3))
-        super(VARResults, self).__init__(coefs, exog, sigma_u, names=names)
+        # maybe change to params class, distinguish exog_all versus exog_user
+        # see issue #4535
+        _params_info = {'k_trend': k_trend,
+                        'k_exog_user': k_exog_user,
+                        'k_ar': lag_order}
+        super(VARResults, self).__init__(coefs, self.coefs_exog, sigma_u,
+                                         names=names,
+                                         _params_info=_params_info)
 
     def plot(self):
         """Plot input time series

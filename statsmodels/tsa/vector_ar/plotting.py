@@ -33,12 +33,12 @@ def plot_mts(Y, names=None, index=None):
     k = Y.shape[1]
     rows, cols = k, 1
 
-    plt.figure(figsize=(10, 10))
+    fig = plt.figure(figsize=(10, 10))
 
     for j in range(k):
         ts = Y[:, j]
 
-        ax = plt.subplot(rows, cols, j+1)
+        ax = fig.add_subplot(rows, cols, j+1)
         if index is not None:
             ax.plot(index, ts)
         else:
@@ -46,6 +46,8 @@ def plot_mts(Y, names=None, index=None):
 
         if names is not None:
             ax.set_title(names[j])
+
+    return fig
 
 def plot_var_forc(prior, forc, err_upper, err_lower,
                   index=None, names=None, plot_stderr=True,

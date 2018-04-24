@@ -639,6 +639,51 @@ def test_irf_trend():
     assert_allclose(irf_t.stderr()[1:4], irf.stderr()[1:4], rtol=0.03)
 
 
-if __name__ == '__main__':
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])
+class TestVARExtras(object):
+
+    @classmethod
+    def setup_class(cls):
+        mdata = sm.datasets.macrodata.load_pandas().data
+        mdata = mdata[['realgdp','realcons','realinv']]
+        data = mdata.values
+        data = np.diff(np.log(data), axis=0) * 400
+        cls.res0 = sm.tsa.VAR(data).fit(maxlags=2)
+
+    def test_process(self):
+        res0 = self.res0
+        k_ar = res0.k_ar
+        fc20 = res0.forecast(res0.endog[-k_ar:], 20)
+        mean_lr = res0.mean()
+        assert_allclose(mean_lr, fc20[-1], rtol=5e-4)
+
+        ysim = res0.simulate_var(seed=987128)
+        assert_allclose(ysim.mean(0), mean_lr, rtol=0.1)
+        # initialization does not use long run intercept, see #4542
+        assert_allclose(ysim[0], res0.intercept, rtol=1e-10)
+        assert_allclose(ysim[1], res0.intercept, rtol=1e-10)
+
+        n_sim = 900
+        ysimz = res0.simulate_var(steps=n_sim, offset=np.zeros((n_sim, 3)),
+                                  seed=987128)
+        zero3 = np.zeros(3)
+        assert_allclose(ysimz.mean(0), zero3, atol=0.4)
+        # initialization does not use long run intercept, see #4542
+        assert_allclose(ysimz[0], zero3, atol=1e-10)
+        assert_allclose(ysimz[1], zero3, atol=1e-10)
+
+        # check attributes
+        assert_equal(res0.k_trend, 1)
+        assert_equal(res0.k_exog_user, 0)
+        assert_equal(res0.k_exog, 1)
+        assert_equal(res0.k_ar, 2)
+
+        # SMOKE test
+        if have_matplotlib:
+            import matplotlib.pyplot as plt
+            fig = res0.plotsim()
+            plt.close(fig)
+            fig = res0.plot_acorr()
+            plt.close(fig)
+            fig = res0.plot_forecast(10)
+            plt.close(fig)
+            plt.close('all')
