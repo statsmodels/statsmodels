@@ -103,11 +103,12 @@ Unobserved components models: frequency-domain seasonals
 --------------------------------------------------------
 
 Unobserved components models now support modeling seasonal factors from a
-frequency-domain perspective with user-specified period and harmonics. This not
-only allows for multiple seasonal effects, but also allows the representation
-of seasonal components with fewer unobserved states. This can improve
-computational performance and, since it allows for a more parsimonious model,
-may also improve the out-of-sample performance of the model.
+frequency-domain perspective with user-specified period and harmonics 
+(introduced in #4250 by Jordan Yoder). This not only allows for multiple
+seasonal effects, but also allows the representation of seasonal components
+with fewer unobserved states. This can improve computational performance and,
+since it allows for a more parsimonious model, may also improve the
+out-of-sample performance of the model.
 
 Documentation
 -------------
