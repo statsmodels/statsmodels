@@ -209,13 +209,10 @@ class _BayesMixedGLM(base.Model):
         endog = np.asarray(endog)
         exog = np.asarray(exog)
 
-        if sparse.issparse(exog_vc):
-            exog_vc = exog_vc
-        else:
+        if not sparse.issparse(exog_vc):
             exog_vc = sparse.csr_matrix(exog_vc)
 
         ident = ident.astype(np.int)
-        family = family
         vcp_p = float(vcp_p)
         fe_p = float(fe_p)
 
