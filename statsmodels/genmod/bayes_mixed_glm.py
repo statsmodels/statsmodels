@@ -845,6 +845,7 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             x.endog, x.exog, exog_vc=x.exog_vc, ident=x.ident,
             vcp_p=x.vcp_p, fe_p=x.fe_p, fep_names=x.fep_names,
             vcp_names=x.vcp_names, vc_names=x.vc_names)
+        mod.data = x.data
 
         return mod
 
@@ -909,11 +910,15 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             formula, vc_formulas, data, family=fam, vcp_p=vcp_p, fe_p=fe_p,
             vcp_names=vcp_names, vc_names=vc_names)
 
-        return PoissonBayesMixedGLM(
+        # Copy over to the intended class structure
+        mod = PoissonBayesMixedGLM(
             endog=x.endog, exog=x.exog, exog_vc=x.exog_vc,
             ident=x.ident, vcp_p=x.vcp_p, fe_p=x.fe_p,
             fep_names=x.fep_names, vcp_names=x.vcp_names,
             vc_names=x.vc_names)
+        mod.data = x.data
+
+        return mod
 
     def vb_elbo(self, vb_mean, vb_sd):
         """
