@@ -714,6 +714,7 @@ def test_var_to_vecm():
             sigma_u = results_sm[ds][dt].sigma_u
             coefs = results_sm[ds][dt].var_rep
             intercept = np.zeros(len(sigma_u))
+            # Note: _params_info k_trend, k_exog, ... is inferred with defaults
             var = VARProcess(coefs, intercept, sigma_u)
             vecm_results = var.to_vecm()
             obtained_pi = vecm_results["Pi"]

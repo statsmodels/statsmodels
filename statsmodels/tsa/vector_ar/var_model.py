@@ -772,15 +772,27 @@ class VARProcess(object):
         self.neqs = coefs.shape[1]
         self.coefs = coefs
         self.coefs_exog = coefs_exog
+        # Note reshaping 1-D coefs_exog to 2_D makes unit tests fail
         self.sigma_u = sigma_u
         self.names = names
-        if _params_info is not None:
-            self.k_trend = _params_info['k_trend']
-            self.k_exog_user = _params_info['k_exog_user']
-            # TODO: we need to distinguish exog including trend and exog_user
-            self.k_exog = self.k_trend + self.k_exog_user
+
+        if _params_info is None:
+            _params_info = {}
+        self.k_exog_user = _params_info.get('k_exog_user', 0)
+        if self.coefs_exog is not None:
+            k_ex = self.coefs_exog.shape[0] if self.coefs_exog.ndim != 1 else 1
+            k_c = k_ex - self.k_exog_user
+        else:
+            k_c = 0
+        self.k_trend = _params_info.get('k_trend', k_c)
+        # TODO: we need to distinguish exog including trend and exog_user
+        self.k_exog = self.k_trend + self.k_exog_user
+
         if self.k_trend > 0:
-            self.intercept = coefs_exog[:, 0]
+            if coefs_exog.ndim == 2:
+                self.intercept = coefs_exog[:, 0]
+            else:
+                self.intercept = coefs_exog
         else:
             self.intercept = np.zeros(self.neqs)
 
@@ -1159,7 +1171,9 @@ class VARResults(VARProcess):
         coefs = reshaped.swapaxes(1, 2).copy()
 
         self.coefs_exog = params[:endog_start].T
-        self.k_trend = self.coefs_exog.shape[1]
+        #self.k_trend = self.coefs_exog.shape[1]
+        self.k_exog = self.coefs_exog.shape[1]
+        self.k_exog_user = k_exog_user
 
         # maybe change to params class, distinguish exog_all versus exog_user
         # see issue #4535
@@ -1179,7 +1193,7 @@ class VARResults(VARProcess):
     def df_model(self):
         """Number of estimated parameters, including the intercept / trends
         """
-        return self.neqs * self.k_ar + self.k_trend
+        return self.neqs * self.k_ar + self.k_exog
 
     @property
     def df_resid(self):
@@ -1296,7 +1310,7 @@ class VARResults(VARProcess):
         Estimated covariance matrix of model coefficients w/o exog
         """
         # drop exog
-        return self.cov_params[self.k_trend*self.neqs:, self.k_trend*self.neqs:]
+        return self.cov_params[self.k_exog*self.neqs:, self.k_exog*self.neqs:]
 
     @cache_readonly
     def _cov_sigma(self):
@@ -1325,12 +1339,12 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def stderr_endog_lagged(self):
-        start = self.k_trend
+        start = self.k_exog
         return self.stderr[start:]
 
     @cache_readonly
     def stderr_dt(self):
-        end = self.k_trend
+        end = self.k_exog
         return self.stderr[:end]
 
     @cache_readonly
@@ -1342,12 +1356,12 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def tvalues_endog_lagged(self):
-        start = self.k_trend
+        start = self.k_exog
         return self.tvalues[start:]
 
     @cache_readonly
     def tvalues_dt(self):
-        end = self.k_trend
+        end = self.k_exog
         return self.tvalues[:end]
 
     @cache_readonly
@@ -1359,12 +1373,12 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def pvalues_endog_lagged(self):
-        start = self.k_trend
+        start = self.k_exog
         return self.pvalues[start:]
 
     @cache_readonly
     def pvalues_dt(self):
-        end = self.k_trend
+        end = self.k_exog
         return self.pvalues[:end]
 
     # todo: --------------------------------------------------------------------
@@ -1560,12 +1574,12 @@ class VARResults(VARProcess):
 
     def _bmat_forc_cov(self):
         # B as defined on p. 96 of Lut
-        upper = np.zeros((self.k_trend, self.df_model))
-        upper[:, :self.k_trend] = np.eye(self.k_trend)
+        upper = np.zeros((self.k_exog, self.df_model))
+        upper[:, :self.k_exog] = np.eye(self.k_exog)
 
         lower_dim = self.neqs * (self.k_ar - 1)
         I = np.eye(lower_dim)
-        lower = np.column_stack((np.zeros((lower_dim, self.k_trend)), I,
+        lower = np.column_stack((np.zeros((lower_dim, self.k_exog)), I,
                                  np.zeros((lower_dim, self.neqs))))
 
         return np.vstack((upper, self.params.T, lower))
@@ -1707,7 +1721,7 @@ class VARResults(VARProcess):
 
         # number of restrictions
         num_restr = len(causing) * len(caused) * p
-        num_det_terms = self.k_trend
+        num_det_terms = self.k_exog
 
         # Make restriction matrix
         C = np.zeros((num_restr, k * num_det_terms + k**2 * p), dtype=float)
@@ -1971,7 +1985,7 @@ class VARResults(VARProcess):
         nobs = self.nobs
         neqs = self.neqs
         lag_order = self.k_ar
-        free_params = lag_order * neqs ** 2 + neqs * self.k_trend
+        free_params = lag_order * neqs ** 2 + neqs * self.k_exog
 
         ld = logdet_symm(self.sigma_u_mle)
 

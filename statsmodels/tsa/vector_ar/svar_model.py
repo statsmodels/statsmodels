@@ -586,6 +586,7 @@ class SVARResults(SVARProcess, VARResults):
         else:
             trendorder = None
         self.k_trend = k_trend
+        self.k_exog = k_trend  # now required by VARProcess
         self.trendorder = trendorder
 
         self.exog_names = util.make_lag_names(names, lag_order, k_trend)
