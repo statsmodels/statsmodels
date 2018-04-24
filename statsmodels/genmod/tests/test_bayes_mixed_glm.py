@@ -174,7 +174,6 @@ def test_logit_map_crossed_formula():
 
     assert_allclose(glmm.logposterior_grad(rslt.params),
                     np.zeros_like(rslt.params), atol=1e-4)
-
     rslt.summary()
 
     r = rslt.random_effects("a")
@@ -343,7 +342,7 @@ def test_crossed_logit_vb_formula():
         fml, fml_vc, data, vcp_p=0.5)
     rslt1 = glmm1.fit_vb()
 
-    glmm2 = BinomialBayesMixedGLM(glmm1.endog, glmm1.exog_fe, glmm1.exog_vc,
+    glmm2 = BinomialBayesMixedGLM(glmm1.endog, glmm1.exog, glmm1.exog_vc,
                                   glmm1.ident, vcp_p=0.5)
     rslt2 = glmm2.fit_vb()
 
