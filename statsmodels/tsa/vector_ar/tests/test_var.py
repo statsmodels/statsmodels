@@ -15,6 +15,18 @@ import sys
 import numpy as np
 import pytest
 
+have_matplotlib = False
+try:
+    import matplotlib
+    have_matplotlib = True
+    import matplotlib.pyplot as plt
+    plt.switch_backend('Agg')  # otherwise segfault on windows
+    from distutils.version import LooseVersion
+    MATPLOTLIB_GT_15 = LooseVersion(matplotlib.__version__) >= '1.5.0'
+except ImportError:
+    pass
+
+
 import statsmodels.api as sm
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tools.data as data_util
@@ -156,14 +168,6 @@ def teardown_module():
     sys.stdout = _orig_stdout
     close_plots()
 
-have_matplotlib = False
-try:
-    import matplotlib
-    have_matplotlib = True
-    import matplotlib.pyplot as plt
-    plt.switch_backend('Agg')
-except ImportError:
-    pass
 
 class CheckIRF(object):
 
@@ -682,7 +686,7 @@ class TestVARExtras(object):
         irf = res0.irf()
 
         # partially SMOKE test
-        if have_matplotlib:
+        if have_matplotlib and MATPLOTLIB_GT_15:
             fig = res0.plotsim()
             plt.close(fig)
             fig = res0.plot_acorr()
