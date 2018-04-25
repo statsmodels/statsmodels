@@ -701,3 +701,23 @@ class TestVARExtras(object):
             plt.close(fig_asym)
             plt.close(fig_mc)
             plt.close('all')
+
+    def test_exog(self):
+        # check that trend and exog are equivalent for basics and varsim
+        data = self.res0.model.endog
+        res_lin_trend = sm.tsa.VAR(data).fit(maxlags=2, trend='ct')
+        ex = np.arange(len(data))
+        res_lin_trend1 = sm.tsa.VAR(data, exog=ex).fit(maxlags=2)
+        ex2 = np.arange(len(data))[:, None]**[0, 1]
+        res_lin_trend2 = sm.tsa.VAR(data, exog=ex2).fit(maxlags=2, trend='nc')
+        # TODO: intercept differs by 4e-3, others are < 1e-12
+        assert_allclose(res_lin_trend.params, res_lin_trend1.params, rtol=5e-3)
+        assert_allclose(res_lin_trend.params, res_lin_trend2.params, rtol=5e-3)
+        assert_allclose(res_lin_trend1.params, res_lin_trend2.params, rtol=1e-10)
+
+        y1 = res_lin_trend.simulate_var(seed=987128)
+        y2 = res_lin_trend1.simulate_var(seed=987128)
+        y3 = res_lin_trend2.simulate_var(seed=987128)
+        assert_allclose(y2.mean(0), y1.mean(0), rtol=1e-12)
+        assert_allclose(y3.mean(0), y1.mean(0), rtol=1e-12)
+        assert_allclose(y3.mean(0), y2.mean(0), rtol=1e-12)
