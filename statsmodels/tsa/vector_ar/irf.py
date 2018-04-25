@@ -163,10 +163,12 @@ class BaseIRAnalysis(object):
                                            seed=seed,
                                            component=component)
 
-        plotting.irf_grid_plot(irfs, stderr, impulse, response,
-                               self.model.names, title, signif=signif,
-                               subplot_params=subplot_params,
-                               plot_params=plot_params, stderr_type=stderr_type)
+        fig = plotting.irf_grid_plot(irfs, stderr, impulse, response,
+                                     self.model.names, title, signif=signif,
+                                     subplot_params=subplot_params,
+                                     plot_params=plot_params,
+                                     stderr_type=stderr_type)
+        return fig
 
     def plot_cum_effects(self, orth=False, impulse=None, response=None,
                          signif=0.05, plot_params=None,
@@ -222,10 +224,14 @@ class BaseIRAnalysis(object):
         if not plot_stderr:
             stderr = None
 
-        plotting.irf_grid_plot(cum_effects, stderr, impulse, response,
-                               self.model.names, title, signif=signif,
-                               hlines=lr_effects, subplot_params=subplot_params,
-                               plot_params=plot_params, stderr_type=stderr_type)
+        fig = plotting.irf_grid_plot(cum_effects, stderr, impulse, response,
+                                   self.model.names, title, signif=signif,
+                                   hlines=lr_effects,
+                                   subplot_params=subplot_params,
+                                   plot_params=plot_params,
+                                   stderr_type=stderr_type)
+        return fig
+
 
 class IRAnalysis(BaseIRAnalysis):
     """

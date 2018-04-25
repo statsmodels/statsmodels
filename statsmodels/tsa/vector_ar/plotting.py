@@ -236,6 +236,8 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
         sz = subplot_params.get('fontsize', 12)
         ax.set_title(subtitle_temp % (names[j], names[i]), fontsize=sz)
 
+    return fig
+
 
 def _get_irf_plot_config(names, impcol, rescol):
     nrows = ncols = k = len(names)

@@ -160,6 +160,8 @@ have_matplotlib = False
 try:
     import matplotlib
     have_matplotlib = True
+    import matplotlib.pyplot as plt
+    plt.switch_backend('Agg')
 except ImportError:
     pass
 
@@ -677,6 +679,8 @@ class TestVARExtras(object):
         assert_equal(res0.k_exog, 1)
         assert_equal(res0.k_ar, 2)
 
+        irf = res0.irf()
+
         # SMOKE test
         if have_matplotlib:
             import matplotlib.pyplot as plt
@@ -686,4 +690,14 @@ class TestVARExtras(object):
             plt.close(fig)
             fig = res0.plot_forecast(10)
             plt.close(fig)
+            plt.close('all')
+            fig_asym = irf.plot()
+            fig_mc = irf.plot(stderr_type='mc')
+
+            for k in range(3):
+                a = fig_asym.axes[1].get_children()[k].get_ydata()
+                m = fig_mc.axes[1].get_children()[k].get_ydata()
+                assert_allclose(m, a, atol=0.03, rtol=0.01)
+            plt.close(fig_asym)
+            plt.close(fig_mc)
             plt.close('all')
