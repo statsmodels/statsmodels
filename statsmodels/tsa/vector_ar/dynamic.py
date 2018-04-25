@@ -10,6 +10,7 @@ from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.vector_ar import plotting
 from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.vector_ar import var_model as _model
+import warnings
 
 FULL_SAMPLE = 0
 ROLLING = 1
@@ -27,7 +28,7 @@ def _window_ols(y, x, window=None, window_type=None, min_periods=None):
     x : pd.DataFrame
         Exogenous variables, always adds a constant
     window: {None, int}
-        
+
     window_type : {str, int}
     min_periods : {None, int}
 
@@ -165,8 +166,10 @@ class DynamicVAR(object):
         major_axis : dates
         minor_axis : VAR equation names
     """
+
     def __init__(self, data, lag_order=1, window=None, window_type='expanding',
                  trend='c', min_periods=None):
+
         self.lag_order = lag_order
 
         self.names = list(data.columns)
@@ -185,6 +188,8 @@ class DynamicVAR(object):
         self.trendorder = util.get_trendorder(trend)
 
         self._set_window(window_type, window, min_periods)
+
+        warnings.warn('DynamicVAR is depricated and will be removed in a future version, use VAR or VARMAX.', DeprecationWarning)
 
     def _set_window(self, window_type, window, min_periods):
         self._window_type = _get_window_type(window_type)
@@ -353,8 +358,8 @@ class DynamicVAR(object):
             forc_handle = ax.plot(dates, forc_ts.values, 'k-')
 
         lines = (y_handle[0], forc_handle[0])
-        labels =  ('Y', 'Forecast')
-        fig.legend(lines,labels)
+        labels = ('Y', 'Forecast')
+        fig.legend(lines, labels)
         fig.autofmt_xdate()
 
         fig.suptitle('Dynamic %d-step forecast' % steps)
@@ -373,6 +378,7 @@ class DynamicVAR(object):
         data = dict((eq, r.r2) for eq, r in iteritems(self.equations))
         return pd.DataFrame(data)
 
+
 class DynamicPanelVAR(DynamicVAR):
     """
     Dynamic (time-varying) panel vector autoregression using panel ordinary
@@ -381,6 +387,7 @@ class DynamicPanelVAR(DynamicVAR):
     Parameters
     ----------
     """
+
     def __init__(self, data, lag_order=1, window=None, window_type='expanding',
                  trend='c', min_periods=None):
         self.lag_order = lag_order
@@ -399,6 +406,8 @@ class DynamicPanelVAR(DynamicVAR):
         self.trendorder = util.get_trendorder(trend)
 
         self._set_window(window_type, window, min_periods)
+
+        warnings.warn('DynamicPanelVAR is depricated and will be removed in a future version, use VAR or VARMAX.', DeprecationWarning)
 
 
 def _filter_data(lhs, rhs):
@@ -442,16 +451,18 @@ def _filter_data(lhs, rhs):
 
     return filtered_lhs, filtered_rhs, pre_filtered_rhs, index, valid
 
+
 def _make_lag_matrix(x, lags):
     data = {}
     columns = []
     for i in range(1, 1 + lags):
-        lagstr = 'L%d.'% i
+        lagstr = 'L%d.' % i
         lag = x.shift(i).rename(columns=lambda c: lagstr + c)
         data.update(lag._series)
         columns.extend(lag.columns)
 
     return pd.DataFrame(data, columns=columns)
+
 
 class Equation(object):
     """
@@ -460,6 +471,7 @@ class Equation(object):
 
     def __init__(self, y, x):
         pass
+
 
 if __name__ == '__main__':
     import pandas.util.testing as ptest
