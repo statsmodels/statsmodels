@@ -512,7 +512,7 @@ def test_whiteness():
             assert_allclose(obtained.pvalue, desired, rtol, atol, False, err_msg)
 
             obtained = results_sm[ds][dt].test_whiteness(nlags=lags,
-                                                             adjusted=True)
+                                                         adjusted=True)
             # test statistic (adjusted Portmanteau test)
             err_msg = build_err_msg(ds, dt, "WHITENESS OF RESIDUALS - "
                                             "TEST STATISTIC (ADJUSTED TEST)")

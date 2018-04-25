@@ -1207,8 +1207,6 @@ class VARResults(VARProcess):
         self.exog_names = util.make_lag_names(names, lag_order, k_trend, exog)
         self.params = params
         self.exog = exog
-        # print(params.shape)
-        # print(params.round(3))
 
         # Initialize VARProcess parent class
         # construct coefficient matrices
@@ -1225,7 +1223,6 @@ class VARResults(VARProcess):
         coefs = reshaped.swapaxes(1, 2).copy()
 
         self.coefs_exog = params[:endog_start].T
-        #self.k_trend = self.coefs_exog.shape[1]
         self.k_exog = self.coefs_exog.shape[1]
         self.k_exog_user = k_exog_user
 

@@ -225,11 +225,11 @@ class BaseIRAnalysis(object):
             stderr = None
 
         fig = plotting.irf_grid_plot(cum_effects, stderr, impulse, response,
-                                   self.model.names, title, signif=signif,
-                                   hlines=lr_effects,
-                                   subplot_params=subplot_params,
-                                   plot_params=plot_params,
-                                   stderr_type=stderr_type)
+                                     self.model.names, title, signif=signif,
+                                     hlines=lr_effects,
+                                     subplot_params=subplot_params,
+                                     plot_params=plot_params,
+                                     stderr_type=stderr_type)
         return fig
 
 
@@ -297,6 +297,7 @@ class IRAnalysis(BaseIRAnalysis):
             return model.irf_errband_mc(orth=orth, repl=repl, T=periods,
                                         signif=signif, seed=seed,
                                         burn=burn, cum=False)
+
     def err_band_sz1(self, orth=False, svar=False, repl=1000,
                      signif=0.05, seed=None, burn=100, component=None):
         """
