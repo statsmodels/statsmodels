@@ -681,23 +681,33 @@ class TestVARExtras(object):
 
         irf = res0.irf()
 
-        # SMOKE test
+        # partially SMOKE test
         if have_matplotlib:
-            import matplotlib.pyplot as plt
             fig = res0.plotsim()
             plt.close(fig)
             fig = res0.plot_acorr()
             plt.close(fig)
-            fig = res0.plot_forecast(10)
+
+            fig = res0.plot_forecast(20)
+            fcp = fig.axes[0].get_children()[1].get_ydata()[-20:]
+            # Note values are equal, but keep rtol buffer
+            assert_allclose(fc20[:, 0], fcp, rtol=1e-13)
+            fcp = fig.axes[1].get_children()[1].get_ydata()[-20:]
+            assert_allclose(fc20[:, 1], fcp, rtol=1e-13)
+            fcp = fig.axes[2].get_children()[1].get_ydata()[-20:]
+            assert_allclose(fc20[:, 2], fcp, rtol=1e-13)
             plt.close(fig)
             plt.close('all')
+
             fig_asym = irf.plot()
-            fig_mc = irf.plot(stderr_type='mc')
+            fig_mc = irf.plot(stderr_type='mc', repl=1000, seed=987128)
 
             for k in range(3):
                 a = fig_asym.axes[1].get_children()[k].get_ydata()
                 m = fig_mc.axes[1].get_children()[k].get_ydata()
-                assert_allclose(m, a, atol=0.03, rtol=0.01)
+                # use m as desired because it is larger
+                # a is for some irf much smaller than m
+                assert_allclose(a, m, atol=0.1, rtol=0.9)
             plt.close(fig_asym)
             plt.close(fig_mc)
             plt.close('all')
@@ -721,3 +731,15 @@ class TestVARExtras(object):
         assert_allclose(y2.mean(0), y1.mean(0), rtol=1e-12)
         assert_allclose(y3.mean(0), y1.mean(0), rtol=1e-12)
         assert_allclose(y3.mean(0), y2.mean(0), rtol=1e-12)
+
+        h = 10
+        fc1 = res_lin_trend.forecast(res_lin_trend.endog[-2:], h)
+        exf = np.arange(len(data), len(data) + h)
+        fc2 = res_lin_trend1.forecast(res_lin_trend1.endog[-2:], h,
+                                      exog_future=exf)
+        exf2 = exf[:, None]**[0, 1]
+        fc3 = res_lin_trend2.forecast(res_lin_trend2.endog[-2:], h,
+                                      exog_future=exf2)
+        assert_allclose(fc2, fc1, rtol=1e-12)
+        assert_allclose(fc3, fc1, rtol=1e-12)
+        assert_allclose(fc3, fc2, rtol=1e-12)
