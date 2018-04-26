@@ -165,6 +165,7 @@ def test_patsy_missing_data():
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
         res2 = res.predict(data)
-        assert_equal(len(w), 1)
+        assert_equal(repr(w[-1].message),
+                     "ValueWarning('nan values have been dropped',)")
     # Frist record will be dropped in both cases
     assert_equal(res.fittedvalues, res2)
