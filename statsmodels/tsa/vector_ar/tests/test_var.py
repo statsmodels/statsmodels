@@ -716,6 +716,31 @@ class TestVARExtras(object):
             plt.close(fig_mc)
             plt.close('all')
 
+    def test_forecast_cov(self):
+        # forecast_cov can include parameter uncertainty if contant-only
+        res = self.res0
+
+        covfc1 = res.forecast_cov(3)
+        assert_allclose(covfc1, res.mse(3), rtol=1e-13)
+        # ignore warning, TODO: assert OutputWarning
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            covfc2 = res.forecast_cov(3, method='auto')
+        assert_allclose(covfc2, covfc1, rtol=0.05)
+        # regression test, TODO: replace with verified numbers (Stata)
+        res_covfc2 = np.array([[[ 9.45802013,  4.94142038,  37.1999646 ],
+                                [ 4.94142038,  7.09273624,   5.66215089],
+                                [37.1999646 ,  5.66215089, 259.61275869]],
+
+                               [[11.30364479,  5.72569141,  49.28744123],
+                                [ 5.72569141,  7.409761  ,  10.98164091],
+                                [49.28744123, 10.98164091, 336.4484723 ]],
+
+                               [[12.36188803,  6.44426905,  53.54588026],
+                                [ 6.44426905,  7.88850029,  13.96382545],
+                                [53.54588026, 13.96382545, 352.19564327]]])
+        assert_allclose(covfc2, res_covfc2, atol=1e-6)
+
     def test_exog(self):
         # check that trend and exog are equivalent for basics and varsim
         data = self.res0.model.endog
@@ -747,3 +772,14 @@ class TestVARExtras(object):
         assert_allclose(fc2, fc1, rtol=1e-12)
         assert_allclose(fc3, fc1, rtol=1e-12)
         assert_allclose(fc3, fc2, rtol=1e-12)
+
+        fci1 = res_lin_trend.forecast_interval(res_lin_trend.endog[-2:], h)
+        exf = np.arange(len(data), len(data) + h)
+        fci2 = res_lin_trend1.forecast_interval(res_lin_trend1.endog[-2:], h,
+                                                exog_future=exf)
+        exf2 = exf[:, None]**[0, 1]
+        fci3 = res_lin_trend2.forecast_interval(res_lin_trend2.endog[-2:], h,
+                                               exog_future=exf2)
+        assert_allclose(fci2, fci1, rtol=1e-12)
+        assert_allclose(fci3, fci1, rtol=1e-12)
+        assert_allclose(fci3, fci2, rtol=1e-12)

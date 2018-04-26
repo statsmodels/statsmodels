@@ -18,6 +18,7 @@ import scipy.linalg
 
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tools.tools import chain_dot
 from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tsa.tsatools import vec, unvec, duplication_matrix
@@ -1446,7 +1447,7 @@ class VARResults(VARProcess):
 
     # Forecast error covariance functions
 
-    def forecast_cov(self, steps=1):
+    def forecast_cov(self, steps=1, method='mse'):
         r"""Compute forecast covariance matrices for desired number of steps
 
         Parameters
@@ -1463,10 +1464,20 @@ class VARResults(VARProcess):
         -------
         covs : ndarray (steps x k x k)
         """
-        mse = self.mse(steps)
-        omegas = self._omega_forc_cov(steps)
-        # TODO: use omega or don't define it.
-        return mse  # + omegas / self.nobs
+        fc_cov = self.mse(steps)
+        if method == 'mse':
+            pass
+        elif method == 'auto':
+            if self.k_exog == 1 and self.k_trend < 2:
+                # currently only supported if no exog and trend in ['nc', 'c']
+                fc_cov += self._omega_forc_cov(steps) / self.nobs
+                import warnings
+                warnings.warn('forecast cov takes parameter uncertainty into'
+                              'account', OutputWarning)
+        else:
+            raise ValueError("method has to be either 'mse' or 'auto'")
+
+        return fc_cov
 
     # Monte Carlo irf standard errors
     def irf_errband_mc(self, orth=False, repl=1000, T=10,
