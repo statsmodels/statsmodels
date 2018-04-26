@@ -91,6 +91,13 @@ class SARIMAX(MLEModel):
     hamilton_representation : boolean, optional
         Whether or not to use the Hamilton representation of an ARMA process
         (if True) or the Harvey representation (if False). Default is False.
+    trend_as_exog : boolean, optional
+        Whether or not to include the trend as prepended to the `exog` array.
+        If False, the trend is included separately as part of the state
+        intercept. This option generally has little effect on parameter
+        estimation, and is most useful for fine-tuned control over the state
+        space representation. Default is False unless `hamilton_representation`
+        is set to True.
     **kwargs
         Keyword arguments may be used to provide default values for state space
         matrices or for Kalman filtering options. See `Representation`, and
@@ -282,7 +289,7 @@ class SARIMAX(MLEModel):
                  measurement_error=False, time_varying_regression=False,
                  mle_regression=True, simple_differencing=False,
                  enforce_stationarity=True, enforce_invertibility=True,
-                 hamilton_representation=False, **kwargs):
+                 hamilton_representation=False, trend_as_exog=None, **kwargs):
 
         # Model parameters
         self.seasonal_periods = seasonal_order[3]
@@ -293,6 +300,9 @@ class SARIMAX(MLEModel):
         self.enforce_stationarity = enforce_stationarity
         self.enforce_invertibility = enforce_invertibility
         self.hamilton_representation = hamilton_representation
+        self.trend_as_exog = trend_as_exog
+        if self.trend_as_exog is None:
+            self.trend_as_exog = self.hamilton_representation
 
         # Save given orders
         self.order = order
@@ -305,6 +315,13 @@ class SARIMAX(MLEModel):
                              ' must integrate the coefficients as part of the'
                              ' state vector, so that `mle_regression` must'
                              ' be set to False.')
+        # Enforce that Hamilton representation uses trend_as_exog=True
+        # TODO we may be able to relax this restriction.
+        if self.hamilton_representation and not self.trend_as_exog:
+            raise ValueError('The Hamilton representation is currently only'
+                             ' available with models for which the trend is'
+                             ' represented as part of the exogenous array;'
+                             ' `trend_as_exog` cannot be False.')
 
         # Lag polynomials
         # Assume that they are given from lowest degree to highest, that all
@@ -719,7 +736,7 @@ class SARIMAX(MLEModel):
             # In the Harvey representation, if we have a trend that
             # is put into the state intercept and means we have a non-zero
             # unconditional mean
-            if not self.hamilton_representation and self.k_trend > 0:
+            if not self.trend_as_exog and self.k_trend > 0:
                 initial_intercept = (
                     self['state_intercept', self._k_states_diff, 0])
                 initial_mean = (initial_intercept /
@@ -777,7 +794,7 @@ class SARIMAX(MLEModel):
         """Initial state intercept vector"""
         # TODO make this self.k_trend > 1 and adjust the update to take
         # into account that if the trend is a constant, it is not time-varying
-        if self.k_trend > 0:
+        if not self.trend_as_exog and self.k_trend > 0:
             state_intercept = np.zeros((self.k_states, self.nobs))
         else:
             state_intercept = np.zeros((self.k_states,))
@@ -1623,16 +1640,15 @@ class SARIMAX(MLEModel):
         # any differencing elements)
         if self.k_trend > 0:
             data = np.dot(self._trend_data, params_trend).astype(params.dtype)
-            if not self.hamilton_representation:
+            if not self.trend_as_exog:
                 self.ssm['state_intercept', self._k_states_diff, :] = data
             else:
-                # The way the trend enters in the Hamilton representation means
-                # that the parameter is not an ``intercept'' but instead the
-                # mean of the process. The trend values in `data` are meant for
-                # an intercept, and so must be transformed to represent the
+                # The way the trend / exog enters in the observation equation
+                # means that the parameter is not an ``intercept'' but instead
+                # the mean of the process. The trend values in `data` are meant
+                # for an intercept, and so must be transformed to represent the
                 # mean instead
-                if self.hamilton_representation:
-                    data /= np.sum(-reduced_polynomial_ar)
+                data /= np.sum(-reduced_polynomial_ar)
 
                 # If we already set the observation intercept for MLE
                 # regression, just add to it
