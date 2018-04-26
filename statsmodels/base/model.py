@@ -804,11 +804,12 @@ class Results(object):
         if transform and hasattr(self.model, 'formula') and (exog is not None):
             from patsy import dmatrix
             if isinstance(exog, pd.Series):
-                exog = pd.DataFrame(exog)
+                exog = pd.DataFrame(exog).T
             orig_exog_len = len(exog)
+            is_dict = isinstance(exog, dict)
             exog = dmatrix(self.model.data.design_info,
                            exog, return_type="dataframe")
-            if orig_exog_len > len(exog):
+            if orig_exog_len > len(exog) and not is_dict:
                 import warnings
                 if exog_index is None:
                     warnings.warn('nan values have been dropped', ValueWarning)
