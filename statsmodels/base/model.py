@@ -165,7 +165,7 @@ class Model(object):
                         cols.remove(col)
                     except ValueError:
                         pass  # OK if not present
-                design_info = design_info.builder.subset(cols).design_info
+                design_info = design_info.subset(cols).design_info
 
         kwargs.update({'missing_idx': missing_idx,
                        'missing': missing,
@@ -797,22 +797,24 @@ class Results(object):
         """
         import pandas as pd
 
-        exog_index = exog.index if _is_using_pandas(exog, None) else None
+        is_pandas = _is_using_pandas(exog, None)
 
-        if transform and hasattr(self.model, 'formula') and exog is not None:
+        exog_index = exog.index if is_pandas else None
+
+        if transform and hasattr(self.model, 'formula') and (exog is not None):
             from patsy import dmatrix
-            exog = pd.DataFrame(exog)  # user may pass series, if one predictor
-            if exog_index is None:  # user passed in a dictionary
-                exog_index = exog.index
-            exog = dmatrix(self.model.data.design_info.builder,
+            if isinstance(exog, pd.Series):
+                exog = pd.DataFrame(exog)
+            orig_exog_len = len(exog)
+            exog = dmatrix(self.model.data.design_info,
                            exog, return_type="dataframe")
-            if len(exog) < len(exog_index):
-                # missing values, rows have been dropped
-                if exog_index is not None:
-                    exog = exog.reindex(exog_index)
+            if orig_exog_len > len(exog):
+                import warnings
+                if exog_index is None:
+                    warnings.warn('nan values have been dropped', ValueWarning)
                 else:
-                    import warnings
-                    warnings.warn("nan rows have been dropped", ValueWarning)
+                    exog = exog.reindex(exog_index)
+            exog_index = exog.index
 
         if exog is not None:
             exog = np.asarray(exog)
@@ -821,17 +823,16 @@ class Results(object):
                 exog = exog[:, None]
             exog = np.atleast_2d(exog)  # needed in count model shape[1]
 
-        predict_results = self.model.predict(self.params, exog, *args, **kwargs)
+        predict_results = self.model.predict(self.params, exog, *args,
+                                             **kwargs)
 
-        if exog_index is not None and not hasattr(predict_results, 'predicted_values'):
-
+        if exog_index is not None and not hasattr(predict_results,
+                                                  'predicted_values'):
             if predict_results.ndim == 1:
                 return pd.Series(predict_results, index=exog_index)
             else:
                 return pd.DataFrame(predict_results, index=exog_index)
-
         else:
-
             return predict_results
 
     def summary(self):
