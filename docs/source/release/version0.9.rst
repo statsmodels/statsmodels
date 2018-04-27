@@ -343,7 +343,7 @@ Thanks to all of the contributors for the 0.9 release (based on git log):
 * Jorge C. Leitao
 * Josef Perktold
 * Joses W. Ho
-* Jos� Lopez
+* José Lopez
 * Joshua Engelman
 * Juan Escamilla
 * Justin Bois
