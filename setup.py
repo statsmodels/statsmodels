@@ -168,19 +168,18 @@ def check_dependency_versions(min_versions):
 
 
 MAJ = 0
-MIN = 8
+MIN = 9
 REV = 0
-ISRELEASED = False
+ISRELEASED = True
 VERSION = '%d.%d.%d' % (MAJ,MIN,REV)
 
 classifiers = ['Development Status :: 4 - Beta',
                'Environment :: Console',
                'Programming Language :: Cython',
-               'Programming Language :: Python :: 2.6',
                'Programming Language :: Python :: 2.7',
-               'Programming Language :: Python :: 3.3',
                'Programming Language :: Python :: 3.4',
                'Programming Language :: Python :: 3.5',
+               'Programming Language :: Python :: 3.6',
                'Operating System :: OS Independent',
                'Intended Audience :: End Users/Desktop',
                'Intended Audience :: Developers',
