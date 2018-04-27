@@ -165,7 +165,7 @@ class Model(object):
                         cols.remove(col)
                     except ValueError:
                         pass  # OK if not present
-                design_info = design_info.builder.subset(cols).design_info
+                design_info = design_info.subset(cols).design_info
 
         kwargs.update({'missing_idx': missing_idx,
                        'missing': missing,
@@ -777,7 +777,7 @@ class Results(object):
         Parameters
         ----------
         exog : array-like, optional
-            The values for which you want to predict.
+            The values for which you want to predict. see Notes below.
         transform : bool, optional
             If the model was fit via a formula, do you want to pass
             exog through the formula. Default is True. E.g., if you fit
@@ -794,25 +794,54 @@ class Results(object):
         prediction : ndarray, pandas.Series or pandas.DataFrame
             See self.model.predict
 
+        Notes
+        -----
+        The types of exog that are supported depends on whether a formula
+        was used in the specification of the model.
+
+        If a formula was used, then exog is processed in the same way as
+        the original data. This transformation needs to have key access to the
+        same variable names, and can be a pandas DataFrame or a dict like
+        object.
+
+        If no formula was used, then the provided exog needs to have the
+        same number of columns as the original exog in the model. No
+        transformation of the data is performed except converting it to
+        a numpy array.
+
+        Row indices as in pandas data frames are supported, and added to the
+        returned prediction.
+
         """
         import pandas as pd
 
-        exog_index = exog.index if _is_using_pandas(exog, None) else None
+        is_pandas = _is_using_pandas(exog, None)
 
-        if transform and hasattr(self.model, 'formula') and exog is not None:
+        exog_index = exog.index if is_pandas else None
+
+        if transform and hasattr(self.model, 'formula') and (exog is not None):
+            design_info = self.model.data.design_info
             from patsy import dmatrix
-            exog = pd.DataFrame(exog)  # user may pass series, if one predictor
-            if exog_index is None:  # user passed in a dictionary
-                exog_index = exog.index
-            exog = dmatrix(self.model.data.design_info.builder,
-                           exog, return_type="dataframe")
-            if len(exog) < len(exog_index):
-                # missing values, rows have been dropped
-                if exog_index is not None:
-                    exog = exog.reindex(exog_index)
+            if isinstance(exog, pd.Series):
+                # we are guessing whether it should be column or row
+                if (hasattr(exog, 'name') and
+                    isinstance(exog.name, str) and
+                    exog.name in design_info.describe()):
+                    # assume we need one column
+                    exog = pd.DataFrame(exog)
                 else:
-                    import warnings
-                    warnings.warn("nan rows have been dropped", ValueWarning)
+                    # assume we need a row
+                    exog = pd.DataFrame(exog).T
+            orig_exog_len = len(exog)
+            is_dict = isinstance(exog, dict)
+            exog = dmatrix(design_info, exog, return_type="dataframe")
+            if orig_exog_len > len(exog) and not is_dict:
+                import warnings
+                if exog_index is None:
+                    warnings.warn('nan values have been dropped', ValueWarning)
+                else:
+                    exog = exog.reindex(exog_index)
+            exog_index = exog.index
 
         if exog is not None:
             exog = np.asarray(exog)
@@ -821,17 +850,16 @@ class Results(object):
                 exog = exog[:, None]
             exog = np.atleast_2d(exog)  # needed in count model shape[1]
 
-        predict_results = self.model.predict(self.params, exog, *args, **kwargs)
+        predict_results = self.model.predict(self.params, exog, *args,
+                                             **kwargs)
 
-        if exog_index is not None and not hasattr(predict_results, 'predicted_values'):
-
+        if exog_index is not None and not hasattr(predict_results,
+                                                  'predicted_values'):
             if predict_results.ndim == 1:
                 return pd.Series(predict_results, index=exog_index)
             else:
                 return pd.DataFrame(predict_results, index=exog_index)
-
         else:
-
             return predict_results
 
     def summary(self):
@@ -1695,7 +1723,7 @@ class LikelihoodModelResults(Results):
         >>> res = ols("np.log(Days+1) ~ C(Weight) + C(Duration)", data).fit()
         >>> pw = res.t_test_pairwise("C(Weight)")
         >>> pw.result_frame
-                 coef   std err         t         P>|t|  Conf. Int. Low  
+                 coef   std err         t         P>|t|  Conf. Int. Low
         2-1  0.632315  0.230003  2.749157  8.028083e-03        0.171563
         3-1  1.302555  0.230003  5.663201  5.331513e-07        0.841803
         3-2  0.670240  0.230003  2.914044  5.119126e-03        0.209488
