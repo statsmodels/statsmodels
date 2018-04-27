@@ -1412,8 +1412,6 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         roots.
         """
         z = self.arroots
-        if not z.size:
-            return
         return np.arctan2(z.imag, z.real) / (2*pi)
 
     @cache_readonly
@@ -1425,8 +1423,6 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         roots.
         """
         z = self.maroots
-        if not z.size:
-            return
         return np.arctan2(z.imag, z.real) / (2*pi)
 
     @cache_readonly

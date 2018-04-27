@@ -1980,6 +1980,18 @@ class TestARMA00(object):
         predictions = self.arma_00_res.predict()
         assert_almost_equal(self.y.mean() * np.ones_like(predictions), predictions)
 
+    def test_arroots(self):
+        # regression test; older implementation of arroots returned None
+        # instead of en empty array
+        roots = self.arma_00_res.arroots
+        assert roots.size == 0
+
+    def test_maroots(self):
+        # regression test; older implementation of arroots returned None
+        # instead of en empty array
+        roots = self.arma_00_res.maroots
+        assert roots.size == 0
+
     @pytest.mark.skip
     def test_information_criteria(self):
         # This test is invalid since the ICs differ due to df_model differences
