@@ -223,8 +223,13 @@ def test_getframe_smoke():
     except ImportError:
         return
 
+    try:
+        from pandas.io import formats as pd_formats
+    except ImportError:
+        from pandas import formats as pd_formats
+
     ldf = res.get_loadings_frame(style='display')
-    assert_(isinstance(ldf, pd.formats.style.Styler))
+    assert_(isinstance(ldf, pd_formats.style.Styler))
     assert_(isinstance(ldf.data, pd.DataFrame))
 
     res.get_loadings_frame(style='display', decimals=3, threshold=0.2)
