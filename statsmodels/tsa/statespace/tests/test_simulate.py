@@ -22,6 +22,7 @@ from statsmodels.compat.testing import skipif
 
 WIN = sys.platform.startswith("win")
 
+@skipif(WIN, 'Windows')
 def test_arma_lfilter():
     # Tests of an ARMA model simulation against scipy.signal.lfilter
     # Note: the first elements of the generated SARIMAX datasets are based on
@@ -52,6 +53,7 @@ def test_arma_lfilter():
     assert_allclose(actual[1:], desired)
 
 
+@skipif(WIN, 'Windows')
 def test_arma_direct():
     # Tests of an ARMA model simulation against direct construction
     # This is useful for e.g. trend components
@@ -335,6 +337,7 @@ def test_structural():
     assert_allclose(actual, desired)
 
 
+@skipif(WIN, 'Windows')
 def test_varmax():
     # Clear warnings
     varmax.__warningregistry__ = {}
