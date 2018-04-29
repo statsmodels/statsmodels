@@ -11,13 +11,16 @@ import warnings
 import numpy as np
 import pandas as pd
 import os
+import sys
 from scipy.signal import lfilter
 
 from statsmodels.tsa.statespace import (sarimax, structural, varmax,
                                         dynamic_factor)
 from statsmodels.tsa.statespace.tools import compatibility_mode
 from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal)
+from statsmodels.compat.testing import skipif
 
+WIN = sys.platform.startswith("win")
 
 def test_arma_lfilter():
     # Tests of an ARMA model simulation against scipy.signal.lfilter
@@ -149,6 +152,7 @@ def test_arma_direct():
     assert_allclose(actual[1:], desired)
 
 
+@skipif(WIN, 'Windows')
 def test_structural():
     # Clear warnings
     structural.__warningregistry__ = {}
@@ -442,6 +446,7 @@ def test_varmax():
     mod.simulate(mod.start_params, nobs)
 
 
+@skipif(WIN, 'Windows')
 def test_dynamic_factor():
     np.random.seed(93739)
     nobs = 100
