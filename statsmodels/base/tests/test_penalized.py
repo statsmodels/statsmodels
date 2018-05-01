@@ -139,13 +139,10 @@ class TestPenalizedPoissonOracleHC(CheckPenalizedPoisson):
                            0.33096260487556745, 0.27415680046693747])
         bse = np.array([0.028126650444581985, 0.033099984564283147,
                         0.033184585514904545, 0.034282504130503301])
-        assert_allclose(res2.params[:self.k_nonzero], params)
-        assert_allclose(res2.bse[:self.k_nonzero], bse)
+        assert_allclose(res2.params[:self.k_nonzero], params, atol=1e-5)
+        assert_allclose(res2.bse[:self.k_nonzero], bse, rtol=1e-6)
         assert_allclose(res1.params[:self.k_nonzero], params, atol=self.atol)
-        assert_allclose(res1.bse[:self.k_nonzero], bse, rtol=0.04)
-
-
-
+        assert_allclose(res1.bse[:self.k_nonzero], bse, rtol=0.02)
 
 
 class TestPenalizedPoissonOraclePenalized(CheckPenalizedPoisson):
@@ -238,9 +235,9 @@ class TestPenalizedPoissonOraclePenalized2HC(CheckPenalizedPoisson):
         bse = np.array([0.028126650444581985, 0.033099984564283147,
                         0.033184585514904545, 0.034282504130503301])
         assert_allclose(res2.params[:self.k_nonzero], params, atol=1e-5)
-        assert_allclose(res2.bse[:self.k_nonzero], bse, rtol=1e-6)
+        assert_allclose(res2.bse[:self.k_nonzero], bse, rtol=5e-6)
         assert_allclose(res1.params[:self.k_nonzero], params, atol=1e-5)
-        assert_allclose(res1.bse[:self.k_nonzero], bse, rtol=0.04)
+        assert_allclose(res1.bse[:self.k_nonzero], bse, rtol=5e-6)
 
 
 # copy and Replace

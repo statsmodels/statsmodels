@@ -251,8 +251,9 @@ class CheckGenericMixin(object):
         if (isinstance(self.results.model, (sm.GEE))):#, sm.OLS, sm.WLS))):
             raise SkipTest
 
-        use_start_params = not isinstance(self.results.model, (sm.RLM, sm.OLS, sm.WLS, sm.GLM))
-                                                               #sm.NegativeBinomial))
+        use_start_params = not isinstance(self.results.model,
+                                          (sm.RLM, sm.OLS, sm.WLS, sm.GLM))
+                                           # sm.NegativeBinomial))
         self.use_start_params = use_start_params  # attach for _get_constrained
 
         keep_index = list(range(self.results.model.exog.shape[1]))
@@ -316,11 +317,16 @@ class CheckGenericMixin(object):
             if hasattr(res2, 'mle_settings'):
                 assert_equal(res1.results_constrained.mle_settings['optimizer'],
                              res2.mle_settings['optimizer'])
-                assert_allclose(res1.results_constrained.mle_settings['start_params'],
-                                res2.mle_settings['start_params'], rtol=1e-10, atol=1e-20)
-                assert_equal(res1.mle_settings['optimizer'], res2.mle_settings['optimizer'])
-                assert_allclose(res1.mle_settings['start_params'],
-                                res2.mle_settings['start_params'], rtol=1e-10, atol=1e-20)
+                if 'start_params' in res2.mle_settings:
+                    spc = res1.results_constrained.mle_settings['start_params']
+                    assert_allclose(spc,
+                                    res2.mle_settings['start_params'],
+                                    rtol=1e-10, atol=1e-20)
+                    assert_equal(res1.mle_settings['optimizer'],
+                                 res2.mle_settings['optimizer'])
+                    assert_allclose(res1.mle_settings['start_params'],
+                                    res2.mle_settings['start_params'],
+                                    rtol=1e-10, atol=1e-20)
 
             # Poisson has reduced precision in params, difficult optimization?
             assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-6) #rtol=1e-10)
