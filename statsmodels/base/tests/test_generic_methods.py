@@ -34,6 +34,7 @@ class CheckGenericMixin(object):
         cls.exog = x
         cls.xf = 0.25 * np.ones((2, 4))
         cls.predict_kwds = {}
+        cls.transform_index = None
 
     def test_ttest_tvalues(self):
         # test that t_test has same results a params, bse, tvalues, ...
@@ -255,7 +256,6 @@ class CheckGenericMixin(object):
                                           (sm.RLM, sm.OLS, sm.WLS, sm.GLM))
                                            # sm.NegativeBinomial))
         self.use_start_params = use_start_params  # attach for _get_constrained
-
         keep_index = list(range(self.results.model.exog.shape[1]))
         # index for params might include extra params
         keep_index_p = list(range(self.results.params.shape[0]))
@@ -291,6 +291,10 @@ class CheckGenericMixin(object):
                 start_params = np.zeros(k_vars + k_extra)
                 method =  self.results.mle_settings['optimizer']  #string not mutable
                 sp =  self.results.mle_settings['start_params'].copy()
+                if self.transform_index is not None:
+                    # work around internal transform_params, currently in NB
+                    sp[self.transform_index] = np.exp(sp[self.transform_index])
+
                 start_params[keep_index_p] = sp #self.results.params
                 res1 = mod._fit_collinear(cov_type=cov_type, start_params=start_params,
                                           method=method, disp=0)
@@ -425,6 +429,7 @@ class TestGenericNegativeBinomial(CheckGenericMixin):
                                  0.2685168 ,   0.03811594, -0.04426238,  0.01614795,
                                  0.17490962,  0.66461151,   1.2925957 ])
         self.results = mod.fit(start_params=start_params, disp=0)
+        self.transform_index = -1
 
 
 class TestGenericLogit(CheckGenericMixin):
