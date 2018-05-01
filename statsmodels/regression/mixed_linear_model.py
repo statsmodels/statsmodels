@@ -2382,6 +2382,18 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         info["Model:"] = "MixedLM"
         if yname is None:
             yname = self.model.endog_names
+        param_names = self.model.data.param_names[:]
+        k_fe_params = len(self.fe_params)
+        k_re_params = len(param_names) - len(self.fe_params)
+        if xname_fe is not None:
+            if len(xname_fe) != k_fe_params:
+                raise ValueError("xname_fe should be a list of length %d" % k_fe_params)
+            param_names[:k_fe_params] = xname_fe
+        if xname_re is not None:
+            if len(xname_re) != k_re_params:
+                raise ValueError("xname_re should be a list of length %d" % k_re_params)
+            param_names[k_fe_params:] = xname_re
+
         info["No. Observations:"] = str(self.model.n_totobs)
         info["No. Groups:"] = str(self.model.n_groups)
 
@@ -2433,7 +2445,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             sdf[jj, 1] = np.sqrt(self.scale) * self.bse[jj]
             jj += 1
 
-        sdf = pd.DataFrame(index=self.model.data.param_names, data=sdf)
+        sdf = pd.DataFrame(index=param_names, data=sdf)
         sdf.columns = ['Coef.', 'Std.Err.', 'z', 'P>|z|',
                        '[' + str(alpha/2), str(1-alpha/2) + ']']
         for col in sdf.columns:
