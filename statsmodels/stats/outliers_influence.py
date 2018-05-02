@@ -121,7 +121,7 @@ def reset_ramsey(res, degree=5):
 
 
 
-def variance_inflation_factor(exog, exog_idx, add_constants=True):
+def variance_inflation_factor(exog, exog_idx, add_constant=True):
     '''variance inflation factor, VIF, for one exogenous variable
 
     The variance inflation factor is a measure for the increase of the
@@ -164,7 +164,7 @@ def variance_inflation_factor(exog, exog_idx, add_constants=True):
     x_i = exog[:, exog_idx]
     mask = np.arange(k_vars) != exog_idx
 
-    if add_constants:
+    if add_constant:
         x_noti = sm.add_constant(exog[:, mask])
     else:
         x_noti = exog[:, mask]
