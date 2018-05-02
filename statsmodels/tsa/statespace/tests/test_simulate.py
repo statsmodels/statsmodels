@@ -20,9 +20,7 @@ from statsmodels.tsa.statespace.tools import compatibility_mode
 from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal)
 from statsmodels.compat.testing import skipif
 
-WIN = sys.platform.startswith("win")
 
-@skipif(WIN, 'Windows')
 def test_arma_lfilter():
     # Tests of an ARMA model simulation against scipy.signal.lfilter
     # Note: the first elements of the generated SARIMAX datasets are based on
@@ -53,7 +51,6 @@ def test_arma_lfilter():
     assert_allclose(actual[1:], desired)
 
 
-@skipif(WIN, 'Windows')
 def test_arma_direct():
     # Tests of an ARMA model simulation against direct construction
     # This is useful for e.g. trend components
@@ -154,7 +151,6 @@ def test_arma_direct():
     assert_allclose(actual[1:], desired)
 
 
-@skipif(WIN, 'Windows')
 def test_structural():
     # Clear warnings
     structural.__warningregistry__ = {}
@@ -337,7 +333,6 @@ def test_structural():
     assert_allclose(actual, desired)
 
 
-@skipif(WIN, 'Windows')
 def test_varmax():
     # Clear warnings
     varmax.__warningregistry__ = {}
@@ -449,7 +444,6 @@ def test_varmax():
     mod.simulate(mod.start_params, nobs)
 
 
-@skipif(WIN, 'Windows')
 def test_dynamic_factor():
     np.random.seed(93739)
     nobs = 100
