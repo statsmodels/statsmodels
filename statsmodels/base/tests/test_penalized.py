@@ -139,7 +139,7 @@ class TestPenalizedGLMPoissonOracle(CheckPenalizedPoisson):
         cls.res2 = modp.fit()
 
         mod = GLMPenalized(y, x, family=family.Poisson())
-        mod.pen_weight *= 1.7 # increased from discrete Poisson 1.5
+        mod.pen_weight *= 1.5 # same as discrete Poisson
         mod.penal.tau = 0.05
         cls.res1 = mod.fit(method='bfgs', maxiter=100)
         # TODO trim=True raises exception about missing mle_setting)
@@ -198,13 +198,35 @@ class TestPenalizedGLMPoissonOracleHC(CheckPenalizedPoisson):
         cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
 
         mod = GLMPenalized(y, x, family=family.Poisson())
-        mod.pen_weight *= 1.7  # increased from ddiscrete Poisson 1.5
+        mod.pen_weight *= 1.5  # same as ddiscrete Poisson
         mod.penal.tau = 0.05
         cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 
         cls.atol = 5e-3
+
+
+class TestPenalizedPoissonGLMOracleHC(CheckPenalizedPoisson):
+    # compare discrete Poisson and GLM-Poisson
+
+    @classmethod
+    def _initialize(cls):
+        y, x = cls.y, cls.x
+        cov_type = 'HC0'
+        modp = PoissonPenalized(y, x)
+        modp.pen_weight *= 1.5  # increased from ddiscrete Poisson 1.5
+        modp.penal.tau = 0.05
+        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+
+        mod = GLMPenalized(y, x, family=family.Poisson())
+        mod.pen_weight *= 1.5  # increased from ddiscrete Poisson 1.5
+        mod.penal.tau = 0.05
+        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+
+        cls.exog_index = slice(None, None, None)
+
+        cls.atol = 1e-4
 
 
 class TestPenalizedPoissonOraclePenalized(CheckPenalizedPoisson):
