@@ -3,13 +3,14 @@
 
 Created on Sun Jan 29 11:16:09 2012
 
-Author: Josef Perktold
+Author: Josef Perktold, Young Ju Kim
 License: BSD-3
 """
 from statsmodels.compat.python import lzip
 from collections import defaultdict
 import numpy as np
 
+import statsmodels.api as sm
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.stats.multitest import multipletests
@@ -134,7 +135,7 @@ def reset_ramsey(res, degree=5):
 
 
 
-def variance_inflation_factor(exog, exog_idx):
+def variance_inflation_factor(exog, exog_idx, add_constant=True):
     '''variance inflation factor, VIF, for one exogenous variable
 
     The variance inflation factor is a measure for the increase of the
@@ -176,7 +177,12 @@ def variance_inflation_factor(exog, exog_idx):
     k_vars = exog.shape[1]
     x_i = exog[:, exog_idx]
     mask = np.arange(k_vars) != exog_idx
-    x_noti = exog[:, mask]
+
+    if add_constant:
+        x_noti = sm.add_constant(exog[:, mask])
+    else:
+        x_noti = exog[:, mask]
+
     r_squared_i = OLS(x_i, x_noti).fit().rsquared
     vif = 1. / (1. - r_squared_i)
     return vif
