@@ -74,11 +74,11 @@ class PenalizedMixin(object):
         return sc
 
 
-    def score_obs(self, params, pen_weight=None):
+    def score_obs(self, params, pen_weight=None, **kwargs):
         if pen_weight is None:
             pen_weight = self.pen_weight
 
-        sc = super(PenalizedMixin, self).score_obs(params)
+        sc = super(PenalizedMixin, self).score_obs(params, **kwargs)
         nobs_sc = float(sc.shape[0])
         if pen_weight != 0:
             sc -= pen_weight / nobs_sc  * self.penal.grad(params)

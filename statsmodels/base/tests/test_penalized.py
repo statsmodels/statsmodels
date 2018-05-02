@@ -9,6 +9,8 @@ License: BSD-3
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 from statsmodels.discrete.discrete_model import Poisson, Logit, Probit
+from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.genmod.families import family
 from statsmodels.base._penalized import PenalizedMixin
 import statsmodels.base._penalties as smpen
 
@@ -19,6 +21,9 @@ class LogitPenalized(PenalizedMixin, Logit):
     pass
 
 class ProbitPenalized(PenalizedMixin, Probit):
+    pass
+
+class GLMPenalized(PenalizedMixin, GLM):
     pass
 
 
@@ -88,6 +93,22 @@ class TestPenalizedPoissonNoPenal(CheckPenalizedPoisson):
 
         cls.atol = 5e-6
 
+class TestPenalizedGLMPoissonNoPenal(CheckPenalizedPoisson):
+    # TODO: check, adjust cov_type
+
+    @classmethod
+    def _initialize(cls):
+        y, x = cls.y, cls.x
+
+        modp = GLM(y, x, family=family.Poisson())
+        cls.res2 = modp.fit()
+
+        mod = GLMPenalized(y, x, family=family.Poisson())
+        mod.pen_weight = 0
+        cls.res1 = mod.fit(method='bfgs', maxiter=100)
+
+        cls.atol = 5e-6
+
 
 class TestPenalizedPoissonOracle(CheckPenalizedPoisson):
     # TODO: check, adjust cov_type
@@ -106,6 +127,27 @@ class TestPenalizedPoissonOracle(CheckPenalizedPoisson):
         cls.exog_index = slice(None, cls.k_nonzero, None)
 
         cls.atol = 5e-3
+
+
+class TestPenalizedGLMPoissonOracle(CheckPenalizedPoisson):
+    # TODO: check, adjust cov_type
+
+    @classmethod
+    def _initialize(cls):
+        y, x = cls.y, cls.x
+        modp = GLM(y, x[:, :cls.k_nonzero], family=family.Poisson())
+        cls.res2 = modp.fit()
+
+        mod = GLMPenalized(y, x, family=family.Poisson())
+        mod.pen_weight *= 1.7 # increased from discrete Poisson 1.5
+        mod.penal.tau = 0.05
+        cls.res1 = mod.fit(method='bfgs', maxiter=100)
+        # TODO trim=True raises exception about missing mle_setting)
+
+        cls.exog_index = slice(None, cls.k_nonzero, None)
+
+        cls.atol = 5e-3
+
 
 class TestPenalizedPoissonOracleHC(CheckPenalizedPoisson):
     # TODO: check, adjust cov_type
@@ -143,6 +185,26 @@ class TestPenalizedPoissonOracleHC(CheckPenalizedPoisson):
         assert_allclose(res2.bse[:self.k_nonzero], bse, rtol=1e-6)
         assert_allclose(res1.params[:self.k_nonzero], params, atol=self.atol)
         assert_allclose(res1.bse[:self.k_nonzero], bse, rtol=0.02)
+
+
+class TestPenalizedGLMPoissonOracleHC(CheckPenalizedPoisson):
+    # TODO: check, adjust cov_type
+
+    @classmethod
+    def _initialize(cls):
+        y, x = cls.y, cls.x
+        cov_type = 'HC0'
+        modp = GLM(y, x[:, :cls.k_nonzero], family=family.Poisson())
+        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+
+        mod = GLMPenalized(y, x, family=family.Poisson())
+        mod.pen_weight *= 1.7  # increased from ddiscrete Poisson 1.5
+        mod.penal.tau = 0.05
+        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+
+        cls.exog_index = slice(None, cls.k_nonzero, None)
+
+        cls.atol = 5e-3
 
 
 class TestPenalizedPoissonOraclePenalized(CheckPenalizedPoisson):
