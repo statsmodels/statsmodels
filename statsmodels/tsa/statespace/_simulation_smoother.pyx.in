@@ -400,7 +400,13 @@ cdef class {{prefix}}SimulationSmoother(object):
             self.secondary_simulated_kfilter.seek(0) # reset the filter
         measurement_idx = 0
         state_idx = nobs_endog
-        if not self.has_missing:
+        # Note: it is only when we are simulating a series that we might have
+        # self.model.nobs != self.simulated_model.nobs, and in that case we do
+        # not need to copy over the observations.
+        # TODO: Need more explicit support for the pure simulation case, both
+        # to avoid errors (like the copy statement below) and because we can
+        # probably speed up the process by not running the filter parts.
+        if not self.has_missing and (self.model.nobs == self.simulated_model.nobs):
             # reset the obs data in the primary simulated model
             # (but only if there is not missing data - in that case we will
             # combine the actual data with the generated data in the primary
@@ -540,6 +546,14 @@ cdef class {{prefix}}SimulationSmoother(object):
             {{cython_type}} alpha = 1.0
 
         # Get indices for possibly time-varying arrays
+        # Note that this would be problematic if simulating a
+        # time-varying system if the number of simulated observations was
+        # greater than the number of observations in the model (because then
+        # e.g. self.model.design[0,0,design_t] would be an invalid memory
+        # location).
+        # However, this problem is ruled out in the constructor since for
+        # time-varying systems, the number of simulated observations must be
+        # less than the number of observations in the model.
         if not self.model.time_invariant:
             if self.model.design.shape[2] > 1:             design_t = t
             if self.model.obs_intercept.shape[1] > 1:      obs_intercept_t = t
