@@ -254,7 +254,7 @@ def cc_stats(x1, x2, demean=True):
     return res
 
 
-def feature_selection_vif(data, thresh=5.0):
+def feature_selection_vif(data, threshold=5.0):
     '''Stepwise Feature Selection for multivariate analysis.
 
     It calculates OLS regressions and the variance inflation factors iterating
@@ -327,9 +327,6 @@ def feature_selection_vif(data, thresh=5.0):
             # Drop it
             data = data.drop(maxVar, axis=1)
 
-            # Print it
-            print("Dropping '" + str(maxVar) + "' " + " VIF: " + str(maxVal))
-
             # Since a variable has been dropped, the assumption remains
             dropCondition = True
 
@@ -338,18 +335,5 @@ def feature_selection_vif(data, thresh=5.0):
             # No variable dropped, the assumption has been rejected
             dropCondition = False
 
-    # Print Massages
-    remainsMsg = '# Remaining Variables '
-    msgWrapper = '-' * (len(remainsMsg)+1)
-
-    print('\n' + msgWrapper + '\n' + remainsMsg + '\n' + msgWrapper)
-    print(list(data.columns))
-    print('\n')
-
-    droppedMsg = '# Dropped Variables '
-    msgWrapper = '-' * (len(remainsMsg)+1)
-    print('\n' + msgWrapper + '\n' + droppedMsg + '\n' + msgWrapper)
-    print(list(dropped.loc[:, 'var']))
-    print('\n')
-
     return data, dropped
+
