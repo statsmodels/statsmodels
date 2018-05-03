@@ -1,5 +1,5 @@
 import scipy.linalg.blas
-from numpy cimport float64_t, ndarray, complex128_t, complex64_t
+from numpy cimport float64_t, ndarray, complex128_t
 from numpy import log as nplog
 from numpy import (identity, dot, kron, pi, sum, zeros_like, ones, asarray,
                    complex128, float64, asfortranarray)
@@ -14,7 +14,6 @@ from numpy cimport PyArray_ZEROS
 
 ctypedef float64_t DOUBLE
 ctypedef complex128_t dcomplex
-ctypedef complex64_t COMPLEX64
 cdef int FORTRAN = 1
 
 cdef extern from "math.h":
@@ -217,8 +216,8 @@ def kalman_filter_complex(dcomplex[:] y,
         int ldt = T_mat.strides[1] / sizeof(dcomplex)
         int ldr = R_mat.strides[1] / sizeof(dcomplex)
         # forecast errors
-        ndarray[complex64_t, ndim=2] v = PyArray_ZEROS(2, yshape,
-                                                       cnp.NPY_CDOUBLE, FORTRAN)
+        ndarray[complex, ndim=2] v = PyArray_ZEROS(2, yshape,
+                                                   cnp.NPY_CDOUBLE, FORTRAN)
         # store variance of forecast errors
         dcomplex[::1, :] F = ones((nobs, 1), dtype=complex, order='F')
         dcomplex loglikelihood = 0 + 0j
