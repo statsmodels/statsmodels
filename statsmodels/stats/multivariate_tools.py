@@ -1,7 +1,7 @@
 '''Tools for multivariate analysis
 
 
-Author : Josef Perktold
+Author : Josef Perktold, Young Ju Kim
 License : BSD-3
 
 
@@ -15,8 +15,11 @@ TODO:
 
 
 import numpy as np
+import pandas as pd
 
 from statsmodels.tools.tools import Bunch
+from statsmodels.stats.outliers_influence import variance_inflation_factor as vif
+
 
 def partial_project(endog, exog):
     '''helper function to get linear projection or partialling out of variables
@@ -244,3 +247,108 @@ def cc_stats(x1, x2, demean=True):
     res['df_resid'] = df_resid
     res['df_m'] = m
     return res
+
+
+def feature_selection_vif(data, threshold=5.0):
+    """Stepwise Feature Selection for multivariate analysis.
+
+    It calculates OLS regressions and the variance inflation factors iterating
+    all explanatory variables. If the maximum VIF of a variable is over the
+    given threshold, It will be dropped. This process is repeated until all
+    VIFs are lower than the given threshold.
+
+    Recommended threshold is lower than 5, because if VIF is greater than 5,
+    then the explanatory variable selected is highly collinear with the other
+    explanatory variables, and the parameter estimates will have large standard
+    errors because of this.
+
+    Parameters
+    ----------
+    data : array-like (rows: observed values, columns: multivariate variables)
+        design dataframe with all explanatory variables, as for example used in
+        regression
+    thresh : int, float
+        A lower threshold of VIF
+
+    Returns
+    -------
+    Filtered_data : array-like
+        A subset of the input
+    dropped_List : DataFrame
+        'col_idx' column : The indices of dropped variables(columns) from input data columns
+        'vif' column : The variance inflation factor ratio of dropped variables
+
+    Notes
+    -----
+    This function does not save the auxiliary regression.
+    In case of multiple occurrences of the maximum VIF values,
+    the indices corresponding to the first occurrence are returned.
+
+    See Also
+    --------
+    stats.outliers_influence.variance_inflation_factor
+
+    Examples
+    --------
+    >>> import statsmodels.api as sm
+    >>> from statsmodels.stats.multivariate_tools import feature_selection_vif as fsv
+    >>> data = sm.datasets.star98.load_pandas().data
+    >>> filtered, dropped = fsv(data, threshold=5)
+    >>> print(filtered)
+    >>> print(dropped)
+
+    References
+    ----------
+    http://en.wikipedia.org/wiki/Variance_inflation_factor
+
+    """
+    if isinstance(data, pd.DataFrame):
+        data = data.as_matrix()
+
+    # 0. Check the column axis length.
+    if data.shape[1] < 3:
+        raise AttributeError("Column axis is too small. At least 3 Columns are needed")
+    idx_memory = np.arange(data.shape[1]).tolist()
+
+    # Create Dropped variable list
+    dropped = pd.DataFrame(columns=['col_idx', 'vif'])
+
+    # Startswith 'drop = True'(Assume that some variables will be dropped)
+    drop_condition = True
+
+    # Calculate a VIF & Drop columns(variables)
+    while drop_condition:
+        
+        # 1. Calculate a VIF
+        vif_array = np.array([vif(data, i) for i in range(data.shape[1])])
+        if all(vif_array >= threshold):
+            return data, dropped
+            raise AttributeError("threshold value is too small. "
+                                 "All VIF values are greater than threshold.")
+
+        # Get the MAXIMUM VIF and its index
+        max_var = idx_memory[np.nanargmax(vif_array)]
+        max_val = np.nanmax(vif_array)
+
+        # 2. IF VIF values are over the threshold, THEN drop it
+        if max_val >= threshold:
+
+            # Save it
+            dropped = dropped.append({'col_idx': max_var, 'vif': max_val},
+                                     ignore_index=True)
+
+            # Drop it
+            mask = np.array(idx_memory) != max_var
+            data = data[:, mask]
+            idx_memory.remove(max_var)
+
+            # Check the remaining column length.
+            if data.shape[1] < 3:
+                drop_condition = False
+
+        else:
+            # No variable dropped, the assumption has been rejected
+            drop_condition = False
+
+    return data, dropped
+
