@@ -16,6 +16,7 @@ from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tools.tools import chain_dot
+from statsmodels.tools.linalg import _mat_sqrt
 from statsmodels.tsa.tsatools import duplication_matrix, vec
 
 import statsmodels.tsa.base.tsa_model as tsbase
@@ -208,24 +209,6 @@ def _deterministic_to_exog(deterministic, seasons, nobs_tot, first_season=0,
     if exog is not None:
         exogs.append(exog)
     return np.column_stack(exogs) if exogs else None
-
-
-def _mat_sqrt(_2darray):
-    """Calculates the square root of a matrix.
-
-    Parameters
-    ----------
-    _2darray : ndarray
-        A 2-dimensional ndarray representing a square matrix.
-
-    Returns
-    -------
-    result : ndarray
-        Square root of the matrix given as function argument.
-    """
-    u_, s_, v_ = svd(_2darray, full_matrices=False)
-    s_ = np.sqrt(s_)
-    return u_.dot(s_[:, None] * v_)
 
 
 def _endog_matrices(endog, exog, exog_coint, diff_lags, deterministic,

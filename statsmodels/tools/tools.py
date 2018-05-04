@@ -11,6 +11,8 @@ import pandas as pd
 from statsmodels.datasets import webuse
 from statsmodels.tools.data import _is_using_pandas, _is_recarray
 from statsmodels.compat.numpy import np_matrix_rank
+from statsmodels.tools.linalg import (pinv_extended, chain_dot,  # noqa:F841
+                                      nan_dot)
 
 
 def _make_dictnames(tmp_arr, offset=0):
@@ -330,30 +332,6 @@ def isestimable(C, D):
     return True
 
 
-def pinv_extended(X, rcond=1e-15):
-    """
-    Return the pinv of an array X as well as the singular values
-    used in computation.
-
-    Code adapted from numpy.
-    """
-    X = np.asarray(X)
-    X = X.conjugate()
-    u, s, vt = np.linalg.svd(X, 0)
-    s_orig = np.copy(s)
-    m = u.shape[0]
-    n = vt.shape[1]
-    cutoff = rcond * np.maximum.reduce(s)
-    for i in range(min(n, m)):
-        if s[i] > cutoff:
-            s[i] = 1./s[i]
-        else:
-            s[i] = 0.
-    res = np.dot(np.transpose(vt), np.multiply(s[:, np.core.newaxis],
-                                               np.transpose(u)))
-    return res, s_orig
-
-
 def recipr(x):
     """
     Return the reciprocal of an array, setting all entries less than or
@@ -435,56 +413,6 @@ def unsqueeze(data, axis, oldshape):
     newshape = list(oldshape)
     newshape[axis] = 1
     return data.reshape(newshape)
-
-
-def chain_dot(*arrs):
-    """
-    Returns the dot product of the given matrices.
-
-    Parameters
-    ----------
-    arrs: argument list of ndarray
-
-    Returns
-    -------
-    Dot product of all arguments.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> from statsmodels.tools import chain_dot
-    >>> A = np.arange(1,13).reshape(3,4)
-    >>> B = np.arange(3,15).reshape(4,3)
-    >>> C = np.arange(5,8).reshape(3,1)
-    >>> chain_dot(A,B,C)
-    array([[1820],
-       [4300],
-       [6780]])
-    """
-    return reduce(lambda x, y: np.dot(y, x), arrs[::-1])
-
-
-def nan_dot(A, B):
-    """
-    Returns np.dot(left_matrix, right_matrix) with the convention that
-    nan * 0 = 0 and nan * x = nan if x != 0.
-
-    Parameters
-    ----------
-    A, B : np.ndarrays
-    """
-    # Find out who should be nan due to nan * nonzero
-    should_be_nan_1 = np.dot(np.isnan(A), (B != 0))
-    should_be_nan_2 = np.dot((A != 0), np.isnan(B))
-    should_be_nan = should_be_nan_1 + should_be_nan_2
-
-    # Multiply after setting all nan to 0
-    # This is what happens if there were no nan * nonzero conflicts
-    C = np.dot(np.nan_to_num(A), np.nan_to_num(B))
-
-    C[should_be_nan] = np.nan
-
-    return C
 
 
 def maybe_unwrap_results(results):
