@@ -5,15 +5,14 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
-from __future__ import division, absolute_import #, print_function
+from __future__ import division, absolute_import, print_function
 
 import numpy as np
 import pandas as pd
 
 import warnings
 from statsmodels.tsa.statespace import sarimax
-from numpy.testing import assert_equal, assert_allclose, assert_raises
-from nose.exc import SkipTest
+from numpy.testing import assert_equal, assert_allclose
 
 
 def test_predict_dates():

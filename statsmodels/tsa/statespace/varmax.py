@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Vector Autoregressive Moving Average with eXogenous regressors model
 
@@ -11,12 +12,10 @@ from statsmodels.compat.collections import OrderedDict
 
 import pandas as pd
 import numpy as np
-from .kalman_filter import (
-    KalmanFilter, FilterResults, INVERT_UNIVARIATE, SOLVE_LU
-)
+from .kalman_filter import (INVERT_UNIVARIATE, SOLVE_LU)
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
-    companion_matrix, diff, is_invertible,
+    is_invertible, prepare_exog,
     constrain_stationary_multivariate, unconstrain_stationary_multivariate
 )
 from statsmodels.tools.tools import Bunch
@@ -57,7 +56,7 @@ class VARMAX(MLEModel):
     enforce_invertibility : boolean, optional
         Whether or not to transform the MA parameters to enforce invertibility
         in the moving average component of the model. Default is True.
-    **kwargs
+    kwargs
         Keyword arguments may be used to provide default values for state space
         matrices or for Kalman filtering options. See `Representation`, and
         `KalmanFilter` for more details.
@@ -110,7 +109,7 @@ class VARMAX(MLEModel):
 
     References
     ----------
-    .. [1] Lutkepohl, Helmut. 2007.
+    .. [1] Lütkepohl, Helmut. 2007.
        New Introduction to Multiple Time Series Analysis.
        Berlin: Springer.
 
@@ -153,20 +152,7 @@ class VARMAX(MLEModel):
                  EstimationWarning)
 
         # Exogenous data
-        self.k_exog = 0
-        if exog is not None:
-            exog_is_using_pandas = _is_using_pandas(exog, None)
-            if not exog_is_using_pandas:
-                exog = np.asarray(exog)
-
-            # Make sure we have 2-dimensional array
-            if exog.ndim == 1:
-                if not exog_is_using_pandas:
-                    exog = exog[:, None]
-                else:
-                    exog = pd.DataFrame(exog)
-
-            self.k_exog = exog.shape[1]
+        (self.k_exog, exog) = prepare_exog(exog)
 
         # Note: at some point in the future might add state regression, as in
         # SARIMAX.
@@ -286,15 +272,9 @@ class VARMAX(MLEModel):
         self._params_state_cov, offset = _slice('state_cov', offset)
         self._params_obs_cov, offset = _slice('obs_cov', offset)
 
-    def filter(self, params, **kwargs):
-        kwargs.setdefault('results_class', VARMAXResults)
-        kwargs.setdefault('results_wrapper_class', VARMAXResultsWrapper)
-        return super(VARMAX, self).filter(params, **kwargs)
-
-    def smooth(self, params, **kwargs):
-        kwargs.setdefault('results_class', VARMAXResults)
-        kwargs.setdefault('results_wrapper_class', VARMAXResultsWrapper)
-        return super(VARMAX, self).smooth(params, **kwargs)
+    @property
+    def _res_classes(self):
+        return {'fit': (VARMAXResults, VARMAXResultsWrapper)}
 
     @property
     def start_params(self):
@@ -354,8 +334,8 @@ class VARMAX(MLEModel):
 
             if not stationary:
                 raise ValueError('Non-stationary starting autoregressive'
-                         ' parameters found with `enforce_stationarity`'
-                         ' set to True.')
+                                 ' parameters found with'
+                                 ' `enforce_stationarity` set to True.')
 
         # C. Run a VAR model on the residuals to get MA parameters
         ma_params = []
@@ -376,8 +356,8 @@ class VARMAX(MLEModel):
 
                 if not invertible:
                     raise ValueError('Non-invertible starting moving-average'
-                             ' parameters found with `enforce_stationarity`'
-                             ' set to True.')
+                                     ' parameters found with'
+                                     ' `enforce_stationarity` set to True.')
 
         # 1. Intercept terms
         if self.trend == 'c':
@@ -764,7 +744,7 @@ class VARMAXResults(MLEResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
-        **kwargs
+        kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
 
@@ -918,7 +898,8 @@ class VARMAXResults(MLEResults):
 
                 # 5. Measurement error variance terms
                 if self.model.measurement_error:
-                    masks.append(np.array(self.model.k_params - i - 1, ndmin=1))
+                    masks.append(
+                        np.array(self.model.k_params - i - 1, ndmin=1))
 
                 # Create the table
                 mask = np.concatenate(masks)

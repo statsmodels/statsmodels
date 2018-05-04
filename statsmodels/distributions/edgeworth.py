@@ -22,7 +22,7 @@ _faa_di_bruno_cache = {
 
 
 def _faa_di_bruno_partitions(n):
-    """ Return all non-negative integer solutions of the diophantine equation::
+    """ Return all non-negative integer solutions of the diophantine equation
 
             n*k_n + ... + 2*k_2 + 1*k_1 = n   (1)
 
@@ -144,12 +144,12 @@ class ExpandedNormal(rv_continuous):
 
     References
     ----------
-    .. [1] E.A. Cornish and R.A. Fisher, Moments and cumulants in the
+    .. [*] E.A. Cornish and R.A. Fisher, Moments and cumulants in the
          specification of distributions, Revue de l'Institut Internat.
          de Statistique. 5: 307 (1938), reprinted in
          R.A. Fisher, Contributions to Mathematical Statistics. Wiley, 1950.
-    .. [2] http://en.wikipedia.org/wiki/Edgeworth_series
-    .. [3] S. Blinnikov and R. Moessner, Expansions for nearly Gaussian
+    .. [*] http://en.wikipedia.org/wiki/Edgeworth_series
+    .. [*] S. Blinnikov and R. Moessner, Expansions for nearly Gaussian
         distributions, Astron. Astrophys. Suppl. Ser. 130, 193 (1998)
 
     """

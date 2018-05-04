@@ -8,7 +8,7 @@ License: BSD-3
 
 from statsmodels.compat.python import range
 from statsmodels.compat.collections import OrderedDict
-
+from ._knockoff import RegressionFDR
 import numpy as np
 
 
@@ -59,29 +59,29 @@ for m in _alias_list:
 
 def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
                   returnsorted=False):
-    '''test results and p-value correction for multiple tests
-
+    """
+    Test results and p-value correction for multiple tests
 
     Parameters
     ----------
-    pvals : array_like
-        uncorrected p-values
+    pvals : array_like, 1-d
+        uncorrected p-values.   Must be 1-dimensional.
     alpha : float
         FWER, family-wise error rate, e.g. 0.1
     method : string
         Method used for testing and adjustment of pvalues. Can be either the
-        full name or initial letters. Available methods are ::
+        full name or initial letters. Available methods are:
 
-        `bonferroni` : one-step correction
-        `sidak` : one-step correction
-        `holm-sidak` : step down method using Sidak adjustments
-        `holm` : step-down method using Bonferroni adjustments
-        `simes-hochberg` : step-up method  (independent)
-        `hommel` : closed method based on Simes tests (non-negative)
-        `fdr_bh` : Benjamini/Hochberg  (non-negative)
-        `fdr_by` : Benjamini/Yekutieli (negative)
-        `fdr_tsbh` : two stage fdr correction (non-negative)
-        `fdr_tsbky` : two stage fdr correction (non-negative)
+        - `bonferroni` : one-step correction
+        - `sidak` : one-step correction
+        - `holm-sidak` : step down method using Sidak adjustments
+        - `holm` : step-down method using Bonferroni adjustments
+        - `simes-hochberg` : step-up method  (independent)
+        - `hommel` : closed method based on Simes tests (non-negative)
+        - `fdr_bh` : Benjamini/Hochberg  (non-negative)
+        - `fdr_by` : Benjamini/Yekutieli (negative)
+        - `fdr_tsbh` : two stage fdr correction (non-negative)
+        - `fdr_tsbky` : two stage fdr correction (non-negative)
 
     is_sorted : bool
         If False (default), the p_values will be sorted, but the corrected
@@ -131,7 +131,7 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
 
     Method='hommel' is very slow for large arrays, since it requires the
     evaluation of n partitions, where n is the number of p-values.
-    '''
+    """
     import gc
     pvals = np.asarray(pvals)
     alphaf = alpha  # Notation ?
@@ -351,13 +351,13 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
     alpha : float
         error rate
     method : {'bky', 'bh')
-         see Notes for details
+        see Notes for details
 
-        'bky' : implements the procedure in Definition 6 of Benjamini, Krieger
+        * 'bky' - implements the procedure in Definition 6 of Benjamini, Krieger
            and Yekuteli 2006
-        'bh' : implements the two stage method of Benjamini and Hochberg
+        * 'bh' - the two stage method of Benjamini and Hochberg
 
-    iter ; bool
+    iter : bool
 
     Returns
     -------
@@ -549,7 +549,7 @@ class NullDistribution(object):
     zscores : array-like
         The observed Z-scores.
     null_lb : float
-        Z-scores between `null_lb` and `null_lb` are all considered to be
+        Z-scores between `null_lb` and `null_ub` are all considered to be
         true null hypotheses.
     null_ub : float
         See `null_lb`.
@@ -591,7 +591,7 @@ class NullDistribution(object):
         # Extract the null z-scores
         ii = np.flatnonzero((zscores >= null_lb) & (zscores <= null_ub))
         if len(ii) == 0:
-            raise RunTimeError("No Z-scores fall between null_lb and null_ub")
+            raise RuntimeError("No Z-scores fall between null_lb and null_ub")
         zscores0 = zscores[ii]
 
         # Number of Z-scores, and null Z-scores
@@ -684,4 +684,3 @@ class NullDistribution(object):
 
         zval = (zscores - self.mean) / self.sd
         return np.exp(-0.5*zval**2 - np.log(self.sd) - 0.5*np.log(2*np.pi))
-

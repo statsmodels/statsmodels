@@ -9,5 +9,6 @@ from statsmodels.sandbox.stats.diagnostic import (
     het_breushpagan, acorr_breush_godfrey  # deprecated because of misspelling
     )
 
-from ._lilliefors import kstest_normal, lilliefors, lillifors # lillifors is deprecated
+from ._lilliefors import (kstest_fit, lilliefors, lillifors, kstest_normal,
+                          kstest_exponential)  # lillifors is deprecated
 from ._adnorm import normal_ad

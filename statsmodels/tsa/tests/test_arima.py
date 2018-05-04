@@ -1,24 +1,29 @@
-from statsmodels.compat.python import lrange, BytesIO
+from statsmodels.compat.python import lrange, BytesIO, cPickle
+from statsmodels.compat.testing import skip, skipif
 
 import os
 import warnings
+from distutils.version import LooseVersion
 
-from nose.tools import nottest
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_allclose,
-                           assert_raises, dec, TestCase)
+                           assert_raises)
 import pandas as pd
 from pandas import PeriodIndex, DatetimeIndex
+import pytest
 
 from statsmodels.datasets.macrodata import load as load_macrodata
 from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
 import statsmodels.sandbox.tsa.fftarma as fa
 from statsmodels.tools.testing import assert_equal
 from statsmodels.tsa.arma_mle import Arma
-from statsmodels.tsa.arima_model import ARMA, ARIMA
+from statsmodels.tsa.arima_model import AR, ARMA, ARIMA
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.tests.results import results_arma, results_arima
 from statsmodels.tsa.arima_process import arma_generate_sample
+
+import scipy  # only needed for version check
+scipy_old = LooseVersion(scipy.__version__) < '0.16'
 
 try:
     import matplotlib.pyplot as plt
@@ -32,8 +37,9 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 
 current_path = os.path.dirname(os.path.abspath(__file__))
-y_arma = np.genfromtxt(open(current_path + '/results/y_arma_data.csv', "rb"),
-        delimiter=",", skip_header=1, dtype=float)
+ydata_path = os.path.join(current_path, 'results', 'y_arma_data.csv')
+with open(ydata_path, "rb") as fd:
+    y_arma = np.genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
 
 cpi_dates = PeriodIndex(start='1959q1', end='2009q3', freq='Q')
 sun_dates = PeriodIndex(start='1700', end='2008', freq='A')
@@ -153,6 +159,7 @@ class CheckArmaResultsMixin(object):
         table = self.res1.summary()
 
 
+
 class CheckForecastMixin(object):
     decimal_forecast = DECIMAL_4
     def test_forecast(self):
@@ -191,7 +198,7 @@ class CheckArimaResultsMixin(CheckArmaResultsMixin):
 
 class Test_Y_ARMA11_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,0]
         cls.res1 = ARMA(endog, order=(1,1)).fit(trend='nc', disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -209,16 +216,16 @@ class Test_Y_ARMA11_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA14_NoConst(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,1]
         cls.res1 = ARMA(endog, order=(1,4)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma14()
 
 
-@dec.slow
+@pytest.mark.slow
 class Test_Y_ARMA41_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,2]
         cls.res1 = ARMA(endog, order=(4,1)).fit(trend='nc', disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -229,7 +236,7 @@ class Test_Y_ARMA41_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA22_NoConst(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,3]
         cls.res1 = ARMA(endog, order=(2,2)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma22()
@@ -237,7 +244,7 @@ class Test_Y_ARMA22_NoConst(CheckArmaResultsMixin):
 
 class Test_Y_ARMA50_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,4]
         cls.res1 = ARMA(endog, order=(5,0)).fit(trend='nc', disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -247,7 +254,7 @@ class Test_Y_ARMA50_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA02_NoConst(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,5]
         cls.res1 = ARMA(endog, order=(0,2)).fit(trend='nc', disp=-1)
         cls.res2 = results_arma.Y_arma02()
@@ -255,7 +262,7 @@ class Test_Y_ARMA02_NoConst(CheckArmaResultsMixin):
 
 class Test_Y_ARMA11_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,6]
         cls.res1 = ARMA(endog, order=(1,1)).fit(trend="c", disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -265,7 +272,7 @@ class Test_Y_ARMA11_Const(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA14_Const(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,7]
         cls.res1 = ARMA(endog, order=(1,4)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma14c()
@@ -273,7 +280,7 @@ class Test_Y_ARMA14_Const(CheckArmaResultsMixin):
 
 class Test_Y_ARMA41_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,8]
         cls.res2 = results_arma.Y_arma41c()
         cls.res1 = ARMA(endog, order=(4,1)).fit(trend="c", disp=-1,
@@ -288,15 +295,41 @@ class Test_Y_ARMA41_Const(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA22_Const(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,9]
         cls.res1 = ARMA(endog, order=(2,2)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma22c()
 
+    def test_summary(self):
+        # regression test for html of roots table #4434
+        # we ignore whitespace in the assert
+        summ = self.res1.summary()
+        summ_roots = """\
+        <tableclass="simpletable">
+        <caption>Roots</caption>
+        <tr>
+        <td></td><th>Real</th><th>Imaginary</th><th>Modulus</th><th>Frequency</th>
+        </tr>
+        <tr>
+        <th>AR.1</th><td>1.0991</td><td>-1.2571j</td><td>1.6698</td><td>-0.1357</td>
+        </tr>
+        <tr>
+        <th>AR.2</th><td>1.0991</td><td>+1.2571j</td><td>1.6698</td><td>0.1357</td>
+        </tr>
+        <tr>
+        <th>MA.1</th><td>-1.1702</td><td>+0.0000j</td><td>1.1702</td><td>0.5000</td>
+        </tr>
+        <tr>
+        <th>MA.2</th><td>1.2215</td><td>+0.0000j</td><td>1.2215</td><td>0.0000</td>
+        </tr>
+        </table>"""
+        assert_equal(summ.tables[2]._repr_html_().replace(' ', ''),
+                     summ_roots.replace(' ', ''))
+
 
 class Test_Y_ARMA50_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,10]
         cls.res1 = ARMA(endog, order=(5,0)).fit(trend="c", disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -306,7 +339,7 @@ class Test_Y_ARMA50_Const(CheckArmaResultsMixin, CheckForecastMixin):
 
 class Test_Y_ARMA02_Const(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,11]
         cls.res1 = ARMA(endog, order=(0,2)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma02c()
@@ -315,7 +348,7 @@ class Test_Y_ARMA02_Const(CheckArmaResultsMixin):
 # cov_params and tvalues are off still but not as much vs. R
 class Test_Y_ARMA11_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,0]
         cls.res1 = ARMA(endog, order=(1,1)).fit(method="css", trend='nc',
                             disp=-1)
@@ -326,7 +359,7 @@ class Test_Y_ARMA11_NoConst_CSS(CheckArmaResultsMixin):
 # better vs. R
 class Test_Y_ARMA14_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,1]
         cls.res1 = ARMA(endog, order=(1,4)).fit(method="css", trend='nc',
                             disp=-1)
@@ -340,7 +373,7 @@ class Test_Y_ARMA14_NoConst_CSS(CheckArmaResultsMixin):
 # maroot is off because maparams is off a bit (adjust tolerance?)
 class Test_Y_ARMA41_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,2]
         cls.res1 = ARMA(endog, order=(4,1)).fit(method="css", trend='nc',
                         disp=-1)
@@ -354,7 +387,7 @@ class Test_Y_ARMA41_NoConst_CSS(CheckArmaResultsMixin):
 #same notes as above
 class Test_Y_ARMA22_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,3]
         cls.res1 = ARMA(endog, order=(2,2)).fit(method="css", trend='nc',
                             disp=-1)
@@ -373,7 +406,7 @@ class Test_Y_ARMA22_NoConst_CSS(CheckArmaResultsMixin):
 # consistent with the rest of the models
 class Test_Y_ARMA50_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,4]
         cls.res1 = ARMA(endog, order=(5,0)).fit(method="css", trend='nc',
                             disp=-1)
@@ -384,7 +417,7 @@ class Test_Y_ARMA50_NoConst_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA02_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,5]
         cls.res1 = ARMA(endog, order=(0,2)).fit(method="css", trend='nc',
                             disp=-1)
@@ -394,7 +427,7 @@ class Test_Y_ARMA02_NoConst_CSS(CheckArmaResultsMixin):
 #NOTE: our results are close to --x-12-arima option and R
 class Test_Y_ARMA11_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,6]
         cls.res1 = ARMA(endog, order=(1,1)).fit(trend="c", method="css",
                         disp=-1)
@@ -406,7 +439,7 @@ class Test_Y_ARMA11_Const_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA14_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,7]
         cls.res1 = ARMA(endog, order=(1,4)).fit(trend="c", method="css",
                         disp=-1)
@@ -417,7 +450,7 @@ class Test_Y_ARMA14_Const_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA41_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,8]
         cls.res1 = ARMA(endog, order=(4,1)).fit(trend="c", method="css",
                         disp=-1)
@@ -430,7 +463,7 @@ class Test_Y_ARMA41_Const_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA22_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,9]
         cls.res1 = ARMA(endog, order=(2,2)).fit(trend="c", method="css",
                         disp=-1)
@@ -441,7 +474,7 @@ class Test_Y_ARMA22_Const_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA50_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,10]
         cls.res1 = ARMA(endog, order=(5,0)).fit(trend="c", method="css",
                         disp=-1)
@@ -453,7 +486,7 @@ class Test_Y_ARMA50_Const_CSS(CheckArmaResultsMixin):
 
 class Test_Y_ARMA02_Const_CSS(CheckArmaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,11]
         cls.res1 = ARMA(endog, order=(0,2)).fit(trend="c", method="css",
                         disp=-1)
@@ -468,7 +501,7 @@ def test_reset_trend():
     assert_equal(len(res1.params), len(res2.params)+1)
 
 
-@dec.slow
+@pytest.mark.slow
 def test_start_params_bug():
     data = np.array([1368., 1187, 1090, 1439, 2362, 2783, 2869, 2512, 1804,
     1544, 1028, 869, 1737, 2055, 1947, 1618, 1196, 867, 997, 1862, 2525,
@@ -532,13 +565,13 @@ def test_start_params_bug():
     1600, 1876, 1885, 1962, 2280, 2711, 2591, 2411])
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        res = ARMA(data, order=(4,1)).fit(disp=-1)
+        res = ARMA(data, order=(4,1)).fit(start_ar_lags=5, disp=-1)
 
 
 class Test_ARIMA101(CheckArmaResultsMixin):
     # just make sure this works
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         endog = y_arma[:,6]
         cls.res1 = ARIMA(endog, (1,0,1)).fit(trend="c", disp=-1)
         (cls.res1.forecast_res, cls.res1.forecast_err,
@@ -552,7 +585,7 @@ class Test_ARIMA101(CheckArmaResultsMixin):
 class Test_ARIMA111(CheckArimaResultsMixin, CheckForecastMixin,
                     CheckDynamicForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cpi = load_macrodata().data['cpi']
         cls.res1 = ARIMA(cpi, (1,1,1)).fit(disp=-1)
         cls.res2 = results_arima.ARIMA111()
@@ -583,7 +616,7 @@ class Test_ARIMA111(CheckArimaResultsMixin, CheckForecastMixin,
 class Test_ARIMA111CSS(CheckArimaResultsMixin, CheckForecastMixin,
                        CheckDynamicForecastMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cpi = load_macrodata().data['cpi']
         cls.res1 = ARIMA(cpi, (1,1,1)).fit(disp=-1, method='css')
         cls.res2 = results_arima.ARIMA111(method='css')
@@ -614,7 +647,7 @@ class Test_ARIMA111CSS(CheckArimaResultsMixin, CheckForecastMixin,
 
 class Test_ARIMA112CSS(CheckArimaResultsMixin):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cpi = load_macrodata().data['cpi']
         cls.res1 = ARIMA(cpi, (1,1,2)).fit(disp=-1, method='css',
                                 start_params = [.905322, -.692425, 1.07366,
@@ -651,7 +684,7 @@ class Test_ARIMA112CSS(CheckArimaResultsMixin):
 
 #class Test_ARIMADates(CheckArmaResults, CheckForecast, CheckDynamicForecast):
 #    @classmethod
-#    def setupClass(cls):
+#    def setup_class(cls):
 #        cpi = load_macrodata().data['cpi']
 #        dates = pd.date_range('1959', periods=203, freq='Q')
 #        cls.res1 = ARIMA(cpi, dates=dates, freq='Q').fit(order=(1,1,1), disp=-1)
@@ -1587,8 +1620,7 @@ def test_arima_predict_bug():
     #predict_start_date wasn't getting set on start = None
     from statsmodels.datasets import sunspots
     dta = sunspots.load_pandas().data.SUNACTIVITY
-    dta.index = pd.DatetimeIndex(start='1700', end='2009', freq='A')
-    print(dta.index)
+    dta.index = pd.DatetimeIndex(start='1700', end='2009', freq='A')[:309]
     arma_mod20 = ARMA(dta, (2,0)).fit(disp=-1)
     arma_mod20.predict(None, None)
 
@@ -1750,7 +1782,7 @@ def test_arimax():
     y = dta.pop("realdpi")
 
     # 1 exog
-    #X = dta.ix[1:]["m1"]
+    #X = dta.iloc[1:]["m1"]
     #res = ARIMA(y, (2, 1, 1), X).fit(disp=-1)
     #params = [23.902305009084373, 0.024650911502790, -0.162140641341602,
     #          0.165262136028113, -0.066667022903974]
@@ -1913,7 +1945,7 @@ def test_small_data():
         res = mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
 
 
-class TestARMA00(TestCase):
+class TestARMA00(object):
 
     @classmethod
     def setup_class(cls):
@@ -1932,7 +1964,7 @@ class TestARMA00(TestCase):
         predictions = self.arma_00_res.predict()
         assert_almost_equal(self.y.mean() * np.ones_like(predictions), predictions)
 
-    @nottest
+    @skip
     def test_information_criteria(self):
         # This test is invalid since the ICs differ due to df_model differences
         # between OLS and ARIMA
@@ -2001,12 +2033,12 @@ def test_arma_missing():
     assert_raises(MissingDataError, ARMA, y, (1, 0), missing='raise')
 
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plot_predict():
     from statsmodels.datasets.sunspots import load_pandas
 
     dta = load_pandas().data[['SUNACTIVITY']]
-    dta.index = DatetimeIndex(start='1700', end='2009', freq='A')
+    dta.index = DatetimeIndex(start='1700', end='2009', freq='A')[:309]
     res = ARMA(dta, (3, 0)).fit(disp=-1)
     fig = res.plot_predict('1990', '2012', dynamic=True, plot_insample=False)
     plt.close(fig)
@@ -2053,7 +2085,7 @@ def test_arima_diff2():
                      229.457]
     assert_almost_equal(predicted, predicted_res, 3)
 
-
+@skipif(scipy_old, reason='scipy is old, test might fail')
 def test_arima111_predict_exog_2127():
     # regression test for issue #2127
     ef =  [ 0.03005,  0.03917,  0.02828,  0.03644,  0.03379,  0.02744,
@@ -2090,8 +2122,8 @@ def test_arima111_predict_exog_2127():
     # rescaling results in convergence failure
     #model = sm.tsa.ARIMA(np.array(ef)*100, (1,1,1), exog=ue)
     model = ARIMA(ef, (1,1,1), exog=ue)
-    res = model.fit(transparams=False, iprint=0, disp=0)
-
+    res = model.fit(transparams=False, pgtol=1e-8, iprint=0, disp=0)
+    assert_equal(res.mle_retvals['warnflag'],  0)
     predicts = res.predict(start=len(ef), end = len(ef)+10,
                            exog=ue[-11:], typ = 'levels')
 
@@ -2108,7 +2140,7 @@ def test_arima111_predict_exog_2127():
             0.02372018,  0.02374833,  0.02367407,  0.0236443 ,  0.02362868,
             0.02362312])
 
-    assert_allclose(predicts, predicts_res, atol=1e-6)
+    assert_allclose(predicts, predicts_res, atol=5e-6)
 
 
 def test_ARIMA_exog_predict():
@@ -2126,7 +2158,7 @@ def test_ARIMA_exog_predict():
 
     forecast_period = PeriodIndex(start='2008Q2', end='2009Q4', freq='Q')
     end = forecast_period[0]
-    data_sample = data.ix[dta.index < end]
+    data_sample = data.loc[dta.index < end]
 
     exog_full = data[['loggdp', 'logcons']]
 
@@ -2223,6 +2255,12 @@ def test_ARIMA_exog_predict():
                                    dynamic=True)
     assert_allclose(dpredict_002, res_d002[-len(dpredict_002):], rtol=1e-4, atol=1e-6)
 
+    # in-sample dynamic predict should not need exog, #2982
+    predict_3a = res_002.predict(start=100, end=120, dynamic=True)
+    predict_3b = res_002.predict(start=100, end=120,
+                                 exog=exog_full.values[100:120], dynamic=True)
+    assert_allclose(predict_3a, predict_3b, rtol=1e-10)
+
 
 def test_arima_fit_mutliple_calls():
     y = [-1214.360173, -1848.209905, -2100.918158, -3647.483678, -4711.186773]
@@ -2232,8 +2270,24 @@ def test_arima_fit_mutliple_calls():
         mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
     assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
     with warnings.catch_warnings(record=True) as w:
-        mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
+        res= mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
     assert_equal(mod.exog_names,  ['const', 'ar.L1.y', 'ma.L1.y', 'ma.L2.y'])
+
+    #ensure summary() works
+    res.summary()
+
+    #test multiple calls when there is only a constant term
+    mod = ARIMA(y, (0, 0, 0))
+    # Make multiple calls to fit
+    with warnings.catch_warnings(record=True) as w:
+        mod.fit(disp=0, start_params=[np.mean(y)])
+    assert_equal(mod.exog_names,  ['const'])
+    with warnings.catch_warnings(record=True) as w:
+        res = mod.fit(disp=0, start_params=[np.mean(y)])
+    assert_equal(mod.exog_names,  ['const'])
+
+    # ensure summary() works
+    res.summary()
 
 def test_long_ar_start_params():
     np.random.seed(12345)
@@ -2251,6 +2305,63 @@ def test_long_ar_start_params():
     res = model.fit(method='mle',start_ar_lags=10, disp=0)
     assert_raises(ValueError, model.fit, start_ar_lags=nobs+5, disp=0)
 
-if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
+
+def test_arma_pickle():
+    np.random.seed(9876565)
+    x = fa.ArmaFft([1, -0.5], [1., 0.4], 40).generate_sample(nsample=200,
+                                                             burnin=1000)
+    mod = ARMA(x, (1, 1))
+    pkl_mod = cPickle.loads(cPickle.dumps(mod))
+
+    res = mod.fit(trend="c", disp=-1)
+    pkl_res = pkl_mod.fit(trend="c", disp=-1)
+
+    assert_allclose(res.params, pkl_res.params)
+    assert_allclose(res.llf, pkl_res.llf)
+    assert_almost_equal(res.resid, pkl_res.resid)
+    assert_almost_equal(res.fittedvalues, pkl_res.fittedvalues)
+    assert_almost_equal(res.pvalues, pkl_res.pvalues)
+
+
+def test_arima_pickle():
+    endog = y_arma[:, 6]
+    mod = ARIMA(endog, (1, 1, 1))
+    pkl_mod = cPickle.loads(cPickle.dumps(mod))
+
+    res = mod.fit(trend="c", disp=-1)
+    pkl_res = pkl_mod.fit(trend="c", disp=-1)
+
+    assert_allclose(res.params, pkl_res.params)
+    assert_allclose(res.llf, pkl_res.llf)
+    assert_almost_equal(res.resid, pkl_res.resid)
+    assert_almost_equal(res.fittedvalues, pkl_res.fittedvalues)
+    assert_almost_equal(res.pvalues, pkl_res.pvalues)
+
+
+def test_arima_not_implemented():
+    formula = ' WUE ~ 1 + SFO3 '
+    data = [-1214.360173, -1848.209905, -2100.918158]
+    assert_raises(NotImplementedError, ARIMA.from_formula, formula, data)
+
+
+def test_endog_int():
+    # int endog should produce same result as float, #3504
+
+    np.random.seed(123987)
+    y = np.random.random_integers(0, 15, size=100)
+    yf = y.astype(np.float64)
+
+    res = AR(y).fit(5)
+    resf = AR(yf).fit(5)
+    assert_allclose(res.params, resf.params, atol=1e-6)
+    assert_allclose(res.bse, resf.bse, atol=1e-6)
+
+    res = ARMA(y, order=(2, 1)).fit(disp=0)
+    resf = ARMA(yf, order=(2, 1)).fit(disp=0)
+    assert_allclose(res.params, resf.params, atol=1e-6)
+    assert_allclose(res.bse, resf.bse, atol=1e-6)
+
+    res = ARIMA(y.cumsum(), order=(1,1,1)).fit(disp=0)
+    resf = ARIMA(yf.cumsum(), order=(1,1,1)).fit(disp=0)
+    assert_allclose(res.params, resf.params, atol=1e-6)
+    assert_allclose(res.bse, resf.bse, atol=1e-6)

@@ -1,14 +1,468 @@
 """Module for functional boxplots."""
 
-from statsmodels.compat.python import combinations, range
+from statsmodels.multivariate.pca import PCA
+from statsmodels.nonparametric.kernel_density import KDEMultivariate
+from statsmodels.compat.python import combinations, range, zip
+from statsmodels.compat.collections import OrderedDict
+from statsmodels.graphics.utils import _import_mpl
 import numpy as np
-from scipy import stats
 from scipy.misc import factorial
+try:
+    from scipy.optimize import differential_evolution
+    have_de_optim = True
+except ImportError:
+    from scipy.optimize import brute, fmin
+    have_de_optim = False
+from multiprocessing import Pool
+import itertools
+try:
+    import copyreg
+except ImportError:
+    import copy_reg as copyreg
+import types
 
 from . import utils
 
 
-__all__ = ['fboxplot', 'rainbowplot', 'banddepth']
+__all__ = ['hdrboxplot', 'fboxplot', 'rainbowplot', 'banddepth']
+
+
+def _pickle_method(m):
+    """Handle pickling issues with class instance."""
+    if m.im_self is None:
+        return getattr, (m.im_class, m.im_func.func_name)
+    else:
+        return getattr, (m.im_self, m.im_func.func_name)
+
+
+copyreg.pickle(types.MethodType, _pickle_method)
+
+
+class HdrResults(object):
+
+    """Wrap results and pretty print them."""
+
+    def __init__(self, kwds):
+        self.__dict__.update(kwds)
+
+    def __repr__(self):
+        msg = ("HDR boxplot summary:\n"
+               "-> median:\n{}\n"
+               "-> 50% HDR (max, min):\n{}\n"
+               "-> 90% HDR (max, min):\n{}\n"
+               "-> Extra quantiles (max, min):\n{}\n"
+               "-> Outliers:\n{}\n"
+               "-> Outliers indices:\n{}\n"
+               ).format(self.median, self.hdr_50, self.hdr_90,
+                        self.extra_quantiles, self.outliers, self.outliers_idx)
+
+        return msg
+
+
+def _inverse_transform(pca, data):
+    """Inverse transform on PCA.
+
+    Use PCA's `project` method by temporary replacing its factors with
+    `data`.
+
+    Parameters
+    ----------
+    pca : statsmodels Principal Component Analysis instance
+        The PCA object to use.
+    data : sequence of ndarrays or 2-D ndarray
+        The vectors of functions to create a functional boxplot from.  If a
+        sequence of 1-D arrays, these should all be the same size.
+        The first axis is the function index, the second axis the one along
+        which the function is defined.  So ``data[0, :]`` is the first
+        functional curve.
+
+    Returns
+    -------
+    projection : array
+        nobs by nvar array of the projection onto ncomp factors
+
+    """
+    factors = pca.factors
+    pca.factors = data.reshape(-1, factors.shape[1])
+    projection = pca.project()
+    pca.factors = factors
+    return projection
+
+
+def _curve_constrained(x, idx, sign, band, pca, ks_gaussian):
+    """Find out if the curve is within the band.
+
+    The curve value at :attr:`idx` for a given PDF is only returned if
+    within bounds defined by the band. Otherwise, 1E6 is returned.
+
+    Parameters
+    ----------
+    x : float
+        Curve in reduced space.
+    idx : int
+        Index value of the components to compute.
+    sign : int
+        Return positive or negative value.
+    band : list of float
+        PDF values `[min_pdf, max_pdf]` to be within.
+    pca : statsmodels Principal Component Analysis instance
+        The PCA object to use.
+    ks_gaussian : KDEMultivariate instance
+
+    Returns
+    -------
+    value : float
+        Curve value at `idx`.
+
+    """
+    x = x.reshape(1, -1)
+    pdf = ks_gaussian.pdf(x)
+    if band[0] < pdf < band[1]:
+        value = sign * _inverse_transform(pca, x)[0][idx]
+    else:
+        value = 1E6
+    return value
+
+
+def _min_max_band(args):
+    """Min and max values at `idx`.
+
+    Global optimization to find the extrema per component.
+
+    Parameters
+    ----------
+    args: list
+        It is a list of an idx and other arguments as a tuple:
+            idx : int
+                Index value of the components to compute
+        The tuple contains:
+            band : list of float
+                PDF values `[min_pdf, max_pdf]` to be within.
+            pca : statsmodels Principal Component Analysis instance
+                The PCA object to use.
+            bounds : sequence
+                ``(min, max)`` pair for each components
+            ks_gaussian : KDEMultivariate instance
+
+    Returns
+    -------
+    band : tuple of float
+        ``(max, min)`` curve values at `idx`
+
+    """
+    idx, (band, pca, bounds, ks_gaussian) = args
+    if have_de_optim:
+        max_ = differential_evolution(_curve_constrained, bounds=bounds,
+                                      args=(idx, -1, band, pca, ks_gaussian),
+                                      maxiter=7).x
+        min_ = differential_evolution(_curve_constrained, bounds=bounds,
+                                      args=(idx, 1, band, pca, ks_gaussian),
+                                      maxiter=7).x
+    else:
+        max_ = brute(_curve_constrained, ranges=bounds, finish=fmin,
+                     args=(idx, -1, band, pca, ks_gaussian))
+
+        min_ = brute(_curve_constrained, ranges=bounds, finish=fmin,
+                     args=(idx, 1, band, pca, ks_gaussian))
+
+    band = (_inverse_transform(pca, max_)[0][idx],
+            _inverse_transform(pca, min_)[0][idx])
+    return band
+
+
+def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
+               xdata=None, labels=None, ax=None):
+    """
+    High Density Region boxplot
+
+    Parameters
+    ----------
+    data : sequence of ndarrays or 2-D ndarray
+        The vectors of functions to create a functional boxplot from.  If a
+        sequence of 1-D arrays, these should all be the same size.
+        The first axis is the function index, the second axis the one along
+        which the function is defined.  So ``data[0, :]`` is the first
+        functional curve.
+    ncomp : int, optional
+        Number of components to use.  If None, returns the as many as the
+        smaller of the number of rows or columns in data.
+    alpha : list of floats between 0 and 1, optional
+        Extra quantile values to compute. Default is None
+    threshold : float between 0 and 1, optional
+        Percentile threshold value for outliers detection. High value means
+        a lower sensitivity to outliers. Default is `0.95`.
+    bw: array_like or str, optional
+        If an array, it is a fixed user-specified bandwidth. If `None`, set to
+        `normal_reference`. If a string, should be one of:
+
+            - normal_reference: normal reference rule of thumb (default)
+            - cv_ml: cross validation maximum likelihood
+            - cv_ls: cross validation least squares
+
+    xdata : ndarray, optional
+        The independent variable for the data. If not given, it is assumed to
+        be an array of integers 0..N-1 with N the length of the vectors in
+        `data`.
+    labels : sequence of scalar or str, optional
+        The labels or identifiers of the curves in `data`. If not given,
+        outliers are labeled in the plot with array indices.
+    ax : Matplotlib AxesSubplot instance, optional
+        If given, this subplot is used to plot in instead of a new figure being
+        created.
+
+    Returns
+    -------
+    fig : Matplotlib figure instance
+        If `ax` is None, the created figure.  Otherwise the figure to which
+        `ax` is connected.
+    hdr_res : HdrResults instance
+        An `HdrResults` instance with the following attributes:
+
+         - 'median', array. Median curve.
+         - 'hdr_50', array. 50% quantile band. [sup, inf] curves
+         - 'hdr_90', list of array. 90% quantile band. [sup, inf]
+            curves.
+         - 'extra_quantiles', list of array. Extra quantile band.
+            [sup, inf] curves.
+         - 'outliers', ndarray. Outlier curves.
+
+    Notes
+    -----
+    The median curve is the curve with the highest probability on the reduced
+    space of a Principal Component Analysis (PCA).
+
+    Outliers are defined as curves that fall outside the band corresponding
+    to the quantile given by `threshold`.
+
+    The non-outlying region is defined as the band made up of all the
+    non-outlying curves.
+
+    Behind the scene, the dataset is represented as a matrix. Each line
+    corresponding to a 1D curve. This matrix is then decomposed using Principal
+    Components Analysis (PCA). This allows to represent the data using a finite
+    number of modes, or components. This compression process allows to turn the
+    functional representation into a scalar representation of the matrix. In
+    other words, you can visualize each curve from its components. Each curve
+    is thus a point in this reduced space. With 2 components, this is called a
+    bivariate plot (2D plot).
+
+    In this plot, if some points are adjacent (similar components), it means
+    that back in the original space, the curves are similar. Then, finding the
+    median curve means finding the higher density region (HDR) in the reduced
+    space. Moreover, the more you get away from this HDR, the more the curve is
+    unlikely to be similar to the other curves.
+
+    Using a kernel smoothing technique, the probability density function (PDF)
+    of the multivariate space can be recovered. From this PDF, it is possible to
+    compute the density probability linked to the cluster of points and plot
+    its contours.
+
+    Finally, using these contours, the different quantiles can be extracted
+    along with the median curve and the outliers.
+
+    Steps to produce the HDR boxplot include:
+
+    1. Compute a multivariate kernel density estimation
+    2. Compute contour lines for quantiles 90%, 50% and `alpha` %
+    3. Plot the bivariate plot
+    4. Compute median curve along with quantiles and outliers curves.
+
+    References
+    ----------
+    [1] R.J. Hyndman and H.L. Shang, "Rainbow Plots, Bagplots, and Boxplots for
+        Functional Data", vol. 19, pp. 29-45, 2010.
+
+    Examples
+    --------
+    Load the El Nino dataset.  Consists of 60 years worth of Pacific Ocean sea
+    surface temperature data.
+
+    >>> import matplotlib.pyplot as plt
+    >>> import statsmodels.api as sm
+    >>> data = sm.datasets.elnino.load()
+
+    Create a functional boxplot.  We see that the years 1982-83 and 1997-98 are
+    outliers; these are the years where El Nino (a climate pattern
+    characterized by warming up of the sea surface and higher air pressures)
+    occurred with unusual intensity.
+
+    >>> fig = plt.figure()
+    >>> ax = fig.add_subplot(111)
+    >>> res = sm.graphics.hdrboxplot(data.raw_data[:, 1:],
+    ...                              labels=data.raw_data[:, 0].astype(int),
+    ...                              ax=ax)
+
+    >>> ax.set_xlabel("Month of the year")
+    >>> ax.set_ylabel("Sea surface temperature (C)")
+    >>> ax.set_xticks(np.arange(13, step=3) - 1)
+    >>> ax.set_xticklabels(["", "Mar", "Jun", "Sep", "Dec"])
+    >>> ax.set_xlim([-0.2, 11.2])
+
+    >>> plt.show()
+
+    .. plot:: plots/graphics_functional_hdrboxplot.py
+
+    See Also
+    --------
+    banddepth, rainbowplot, fboxplot
+    """
+    fig, ax = utils.create_mpl_ax(ax)
+
+    if labels is None:
+        # For use with pandas, get the labels
+        if hasattr(data, 'index'): 
+            labels = data.index
+        else: 
+            labels = np.arange(len(data))
+
+    data = np.asarray(data)
+    if xdata is None:
+        xdata = np.arange(data.shape[1])
+
+    n_samples, dim = data.shape
+    # PCA and bivariate plot
+    pca = PCA(data, ncomp=ncomp)
+    data_r = pca.factors
+
+    # Create gaussian kernel
+    ks_gaussian = KDEMultivariate(data_r, bw=bw,
+                                  var_type='c' * data_r.shape[1])
+
+    # Boundaries of the n-variate space
+    bounds = np.array([data_r.min(axis=0), data_r.max(axis=0)]).T
+
+    # Compute contour line of pvalue linked to a given probability level
+    if alpha is None:
+        alpha = [threshold, 0.9, 0.5]
+    else:
+        alpha.extend([threshold, 0.9, 0.5])
+        alpha = list(set(alpha))
+    alpha.sort(reverse=True)
+
+    n_quantiles = len(alpha)
+    pdf_r = ks_gaussian.pdf(data_r).flatten()
+    pvalues = [np.percentile(pdf_r, (1 - alpha[i]) * 100,
+                             interpolation='linear')
+               for i in range(n_quantiles)]
+
+    # Find mean, outliers curves
+    if have_de_optim:
+        median = differential_evolution(lambda x: - ks_gaussian.pdf(x),
+                                        bounds=bounds, maxiter=5).x
+    else:
+        median = brute(lambda x: - ks_gaussian.pdf(x),
+                       ranges=bounds, finish=fmin)
+
+    outliers_idx = np.where(pdf_r < pvalues[alpha.index(threshold)])[0]
+    labels_outlier = [labels[i] for i in outliers_idx]
+    outliers = data[outliers_idx]
+
+    # Find HDR given some quantiles
+
+    def _band_quantiles(band):
+        """Find extreme curves for a quantile band.
+
+        From the `band` of quantiles, the associated PDF extrema values
+        are computed. If `min_alpha` is not provided (single quantile value),
+        `max_pdf` is set to `1E6` in order not to constrain the problem on high
+        values.
+
+        An optimization is performed per component in order to find the min and
+        max curves. This is done by comparing the PDF value of a given curve
+        with the band PDF.
+
+        Parameters
+        ----------
+        band : array_like
+            alpha values ``(max_alpha, min_alpha)`` ex: ``[0.9, 0.5]``
+
+        Returns
+        -------
+        band_quantiles : list of 1-D array
+            ``(max_quantile, min_quantile)`` (2, n_features)
+
+        """
+        min_pdf = pvalues[alpha.index(band[0])]
+        try:
+            max_pdf = pvalues[alpha.index(band[1])]
+        except IndexError:
+            max_pdf = 1E6
+        band = [min_pdf, max_pdf]
+
+        pool = Pool()
+        data = zip(range(dim), itertools.repeat((band, pca,
+                                                 bounds, ks_gaussian)))
+        band_quantiles = pool.map(_min_max_band, data)
+        pool.terminate()
+        pool.close()
+
+        band_quantiles = list(zip(*band_quantiles))
+
+        return band_quantiles
+
+    extra_alpha = [i for i in alpha
+                   if 0.5 != i and 0.9 != i and threshold != i]
+    if extra_alpha != []:
+            extra_quantiles = [y for x in extra_alpha
+                               for y in _band_quantiles([x])]
+    else:
+        extra_quantiles = []
+
+    # Inverse transform from n-variate plot to dataset dataset's shape
+    median = _inverse_transform(pca, median)[0]
+    hdr_90 = _band_quantiles([0.9, 0.5])
+    hdr_50 = _band_quantiles([0.5])
+
+    hdr_res = HdrResults({
+                            "median": median,
+                            "hdr_50": hdr_50,
+                            "hdr_90": hdr_90,
+                            "extra_quantiles": extra_quantiles,
+                            "outliers": outliers,
+                            "outliers_idx": outliers_idx
+                         })
+
+    # Plots
+    ax.plot(np.array([xdata] * n_samples).T, data.T,
+            c='c', alpha=.1, label=None)
+    ax.plot(xdata, median, c='k', label='Median')
+    fill_betweens = []
+    fill_betweens.append(ax.fill_between(xdata, *hdr_50, color='gray',
+                                         alpha=.4,  label='50% HDR'))
+    fill_betweens.append(ax.fill_between(xdata, *hdr_90, color='gray',
+                                         alpha=.3, label='90% HDR'))
+
+    if len(extra_quantiles) != 0:
+        ax.plot(np.array([xdata] * len(extra_quantiles)).T,
+                np.array(extra_quantiles).T,
+                c='y', ls='-.', alpha=.4, label='Extra quantiles')
+
+    if len(outliers) != 0:
+        for ii, outlier in enumerate(outliers):
+            label = str(labels_outlier[ii]) if labels_outlier is not None else 'Outliers'
+            ax.plot(xdata, outlier,
+                    ls='--', alpha=0.7, label=label)
+
+    handles, labels = ax.get_legend_handles_labels()
+
+    # Proxy artist for fill_between legend entry
+    # See http://matplotlib.org/1.3.1/users/legend_guide.html
+    plt = _import_mpl()
+    for label, fill_between in zip(['50% HDR', '90% HDR'], fill_betweens):
+        p = plt.Rectangle((0, 0), 1, 1,
+                          fc=fill_between.get_facecolor()[0])
+        handles.append(p)
+        labels.append(label)
+
+    by_label = OrderedDict(zip(labels, handles))
+    if len(outliers) != 0:
+        by_label.pop('Median')
+        by_label.pop('50% HDR')
+        by_label.pop('90% HDR')
+
+    ax.legend(by_label.values(), by_label.keys(), loc='best')
+
+    return fig, hdr_res
 
 
 def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
@@ -33,7 +487,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
         functional curve.
     xdata : ndarray, optional
         The independent variable for the data.  If not given, it is assumed to
-        be an array of integers 0..N with N the length of the vectors in
+        be an array of integers 0..N-1 with N the length of the vectors in
         `data`.
     labels : sequence of scalar or str, optional
         The labels or identifiers of the curves in `data`.  If given, outliers
@@ -96,7 +550,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     [1] Y. Sun and M.G. Genton, "Functional Boxplots", Journal of Computational
         and Graphical Statistics, vol. 20, pp. 1-19, 2011.
     [2] R.J. Hyndman and H.L. Shang, "Rainbow Plots, Bagplots, and Boxplots for
-        Functional Data", vol. 19, pp. 29-25, 2010.
+        Functional Data", vol. 19, pp. 29-45, 2010.
 
     Examples
     --------
@@ -176,11 +630,11 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     lower_nonout = data[ix_nonout, :].min(axis=0)
     upper_nonout = data[ix_nonout, :].max(axis=0)
     ax.fill_between(xdata, lower_nonout, upper_nonout,
-                    color=plot_opts.get('c_outer', (0.75,0.75,0.75)))
+                    color=plot_opts.get('c_outer', (0.75, 0.75, 0.75)))
 
     # Plot central 50% region
     ax.fill_between(xdata, lower, upper,
-                    color=plot_opts.get('c_inner', (0.5,0.5,0.5)))
+                    color=plot_opts.get('c_inner', (0.5, 0.5, 0.5)))
 
     # Plot median curve
     ax.plot(xdata, median_curve, color=plot_opts.get('c_median', 'k'),
@@ -205,7 +659,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
 
 
 def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
-                 cmap=None):
+                cmap=None):
     """Create a rainbow plot for a set of curves.
 
     A rainbow plot contains line plots of all curves in the dataset, colored in
@@ -221,7 +675,7 @@ def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
         functional curve.
     xdata : ndarray, optional
         The independent variable for the data.  If not given, it is assumed to
-        be an array of integers 0..N with N the length of the vectors in
+        be an array of integers 0..N-1 with N the length of the vectors in
         `data`.
     depth : ndarray, optional
         A 1-D array of band depths for `data`, or equivalent order statistic.

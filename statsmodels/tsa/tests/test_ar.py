@@ -4,6 +4,7 @@ Test AR Model
 import statsmodels.api as sm
 from statsmodels.compat.python import range
 from statsmodels.tsa.ar_model import AR
+from statsmodels.tsa.arima_model import ARMA
 from numpy.testing import (assert_almost_equal, assert_allclose, assert_)
 from statsmodels.tools.testing import assert_equal
 from .results import results_ar
@@ -46,7 +47,7 @@ class TestAROLSConstant(CheckARMixin):
     Test AR fit by OLS with a constant.
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.sunspots.load()
         cls.res1 = AR(data.endog).fit(maxlag=9, method='cmle')
         cls.res2 = results_ar.ARResultsOLS(constant=True)
@@ -83,9 +84,9 @@ class TestAROLSNoConstant(CheckARMixin):
     Test AR fit by OLS without a constant.
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.sunspots.load()
-        cls.res1 = AR(data.endog).fit(maxlag=9,method='cmle',trend='nc')
+        cls.res1 = AR(data.endog).fit(maxlag=9, method='cmle', trend='nc')
         cls.res2 = results_ar.ARResultsOLS(constant=False)
 
     def test_predict(self):
@@ -114,12 +115,23 @@ class TestAROLSNoConstant(CheckARMixin):
         assert_almost_equal(model.predict(params, start=308, end=327),
                 self.res2.FVOLSn15start312, DECIMAL_4)
 
-        #class TestARMLEConstant(CheckAR):
+    def test_mle(self):
+        # check predict with no constant, #3945
+        res1 = self.res1
+        endog = res1.model.endog
+        res0 = AR(endog).fit(maxlag=9, method='mle', trend='nc', disp=0)
+        assert_allclose(res0.fittedvalues[-10:], res0.fittedvalues[-10:],
+                        rtol=0.015)
+
+        res_arma = ARMA(endog, (9, 0)).fit(method='mle', trend='nc', disp=0)
+        assert_allclose(res0.params, res_arma.params, atol=5e-6)
+        assert_allclose(res0.fittedvalues[-10:], res_arma.fittedvalues[-10:],
+                        rtol=1e-4)
 
 
 class TestARMLEConstant(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.sunspots.load()
         cls.res1 = AR(data.endog).fit(maxlag=9,method="mle", disp=-1)
         cls.res2 = results_ar.ARResultsMLE(constant=True)
@@ -222,7 +234,7 @@ class TestARMLEConstant(object):
 
 class TestAutolagAR(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = sm.datasets.sunspots.load()
         endog = data.endog
         results = []
@@ -264,7 +276,7 @@ def test_ar_dates():
     endog = Series(data.endog, index=dates)
     ar_model = sm.tsa.AR(endog, freq='A').fit(maxlag=9, method='mle', disp=-1)
     pred = ar_model.predict(start='2005', end='2015')
-    predict_dates = DatetimeIndex(start='2005', end='2016', freq='A')
+    predict_dates = DatetimeIndex(start='2005', end='2016', freq='A')[:11]
 
     assert_equal(ar_model.data.predict_dates, predict_dates)
     assert_equal(pred.index, predict_dates)

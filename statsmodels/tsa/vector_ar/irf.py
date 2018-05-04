@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Impulse reponse-related code
 """
@@ -26,7 +27,8 @@ class BaseIRAnalysis(object):
     able to handle known and estimated processes
     """
 
-    def __init__(self, model, P=None, periods=10, order=None, svar=False):
+    def __init__(self, model, P=None, periods=10, order=None, svar=False,
+                 vecm=False):
         self.model = model
         self.periods = periods
         self.neqs, self.lags, self.T = model.neqs, model.k_ar, model.nobs
@@ -62,15 +64,20 @@ class BaseIRAnalysis(object):
         else:
             self.orth_cum_effects = self.orth_irfs.cumsum(axis=0)
 
-        self.lr_effects = model.long_run_effects()
-        if svar:
-            self.svar_lr_effects = np.dot(model.long_run_effects(), P)
-        else:
-            self.orth_lr_effects = np.dot(model.long_run_effects(), P)
+        # long-run effects may be infinite for VECMs.
+        if not vecm:
+            self.lr_effects = model.long_run_effects()
+            if svar:
+                self.svar_lr_effects = np.dot(model.long_run_effects(), P)
+            else:
+                self.orth_lr_effects = np.dot(model.long_run_effects(), P)
 
 
         # auxiliary stuff
-        self._A = util.comp_matrix(model.coefs)
+        if vecm:
+            self._A = util.comp_matrix(model.var_rep)
+        else:
+            self._A = util.comp_matrix(model.coefs)
 
     def cov(self, *args, **kwargs):
         raise NotImplementedError
@@ -156,10 +163,12 @@ class BaseIRAnalysis(object):
                                            seed=seed,
                                            component=component)
 
-        plotting.irf_grid_plot(irfs, stderr, impulse, response,
-                               self.model.names, title, signif=signif,
-                               subplot_params=subplot_params,
-                               plot_params=plot_params, stderr_type=stderr_type)
+        fig = plotting.irf_grid_plot(irfs, stderr, impulse, response,
+                                     self.model.names, title, signif=signif,
+                                     subplot_params=subplot_params,
+                                     plot_params=plot_params,
+                                     stderr_type=stderr_type)
+        return fig
 
     def plot_cum_effects(self, orth=False, impulse=None, response=None,
                          signif=0.05, plot_params=None,
@@ -215,10 +224,14 @@ class BaseIRAnalysis(object):
         if not plot_stderr:
             stderr = None
 
-        plotting.irf_grid_plot(cum_effects, stderr, impulse, response,
-                               self.model.names, title, signif=signif,
-                               hlines=lr_effects, subplot_params=subplot_params,
-                               plot_params=plot_params, stderr_type=stderr_type)
+        fig = plotting.irf_grid_plot(cum_effects, stderr, impulse, response,
+                                     self.model.names, title, signif=signif,
+                                     hlines=lr_effects,
+                                     subplot_params=subplot_params,
+                                     plot_params=plot_params,
+                                     stderr_type=stderr_type)
+        return fig
+
 
 class IRAnalysis(BaseIRAnalysis):
     """
@@ -231,13 +244,17 @@ class IRAnalysis(BaseIRAnalysis):
 
     Notes
     -----
-    Using Lutkepohl (2005) notation
+    Using Lütkepohl (2005) notation
     """
-    def __init__(self, model, P=None, periods=10, order=None, svar=False):
+    def __init__(self, model, P=None, periods=10, order=None, svar=False,
+                 vecm=False):
         BaseIRAnalysis.__init__(self, model, P=P, periods=periods,
-                                order=order, svar=svar)
+                                order=order, svar=svar, vecm=vecm)
 
-        self.cov_a = model._cov_alpha
+        if vecm:
+            self.cov_a = model.cov_var_repr
+        else:
+            self.cov_a = model._cov_alpha
         self.cov_sig = model._cov_sigma
 
         # memoize dict for G matrix function
@@ -249,7 +266,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         Notes
         -----
-        Lutkepohl eq 3.7.5
+        Lütkepohl eq 3.7.5
 
         Returns
         -------
@@ -280,6 +297,7 @@ class IRAnalysis(BaseIRAnalysis):
             return model.irf_errband_mc(orth=orth, repl=repl, T=periods,
                                         signif=signif, seed=seed,
                                         burn=burn, cum=False)
+
     def err_band_sz1(self, orth=False, svar=False, repl=1000,
                      signif=0.05, seed=None, burn=100, component=None):
         """
@@ -343,7 +361,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         return lower, upper
 
-    def err_band_sz2(self, orth=False, repl=1000, signif=0.05,
+    def err_band_sz2(self, orth=False, svar=False, repl=1000, signif=0.05,
                      seed=None, burn=100, component=None):
         """
         IRF Sims-Zha error band method 2.
@@ -412,7 +430,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         return lower, upper
 
-    def err_band_sz3(self, orth=False, repl=1000, signif=0.05,
+    def err_band_sz3(self, orth=False, svar=False, repl=1000, signif=0.05,
                      seed=None, burn=100, component=None):
         """
         IRF Sims-Zha error band method 3. Does not assume symmetric error bands around mean.

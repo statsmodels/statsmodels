@@ -10,7 +10,7 @@ docs/source/generated
 docs/source/dev/generated
 docs/source/examples/generated
 docs/source/examples/notebooks/generated
-docs/source/datasets
+docs/source/datasets/statsmodels.datasets.*
 docs/gettingstarted_0.png
 examples/executed
 
@@ -37,6 +37,7 @@ marks.bzr
 .#*
 *.bak
 *.tmp
+/.idea
 *.tgz
 *.rej
 *.org
@@ -53,6 +54,10 @@ marks.bzr
 .DS_Store
 help
 
+# Coverage report output
+.coverage
+coverage_html_report/
+
 # Project specific
 statsmodels/version.py
 cythonize.dat
@@ -65,6 +70,7 @@ salary.table
 .ipynb_checkpoints
 statsmodels/tsa/statespace/_statespace.pyx
 statsmodels/tsa/regime_switching/_hamilton_filter.pyx
+statsmodels/tsa/regime_switching/_kim_smoother.pyx
 statsmodels/tsa/statespace/_representation.pyx
 statsmodels/tsa/statespace/_kalman_filter.pyx
 statsmodels/tsa/statespace/_kalman_smoother.pyx
@@ -75,3 +81,9 @@ statsmodels/tsa/statespace/_filters/_inversions.pyx
 statsmodels/tsa/statespace/_filters/_univariate.pyx
 statsmodels/tsa/statespace/_smoothers/_conventional.pyx
 statsmodels/tsa/statespace/_smoothers/_univariate.pyx
+statsmodels/tsa/statespace/_smoothers/_alternative.pyx
+statsmodels/tsa/statespace/_smoothers/_classical.pyx
+
+#pytest
+.cache
+.pytest_cache

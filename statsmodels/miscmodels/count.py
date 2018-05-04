@@ -115,7 +115,7 @@ class PoissonGMLE(GenericLikelihoodModel):
 
         Notes
         --------
-        .. math :: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
         """
         XB = np.dot(self.exog, params)
         endog = self.endog
@@ -176,7 +176,7 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
 
         Notes
         --------
-        .. math :: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
         """
 
         XB = self.offset + np.dot(self.exog, params)
@@ -238,7 +238,7 @@ class PoissonZiGMLE(GenericLikelihoodModel):
 
         Notes
         --------
-        .. math :: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
         """
         beta = params[:-1]
         gamm = 1 / (1 + np.exp(params[-1]))  #check this

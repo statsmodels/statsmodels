@@ -43,6 +43,7 @@ Functional Plots
 .. autosummary::
    :toctree: generated/
 
+   functional.hdrboxplot
    functional.fboxplot
    functional.rainbowplot
    functional.banddepth
@@ -80,3 +81,4 @@ Other Plots
 
    factorplots.interaction_plot
    mosaicplot.mosaic
+   agreement.mean_diff_plot

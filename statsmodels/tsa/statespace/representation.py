@@ -59,8 +59,8 @@ class MatrixWrapper(object):
 
     def _set_matrix(self, obj, value, shape):
         # Expand 1-dimensional array if possible
-        if (value.ndim == 1 and shape[0] == 1
-                and value.shape[0] == shape[1]):
+        if (value.ndim == 1 and shape[0] == 1 and
+                value.shape[0] == shape[1]):
             value = value[None, :]
 
         # Enforce that the matrix is appropriate size
@@ -117,7 +117,7 @@ class Representation(object):
         If an endogenous vector is not given (i.e. `k_endog` is an integer),
         the number of observations can optionally be specified. If not
         specified, they will be set to zero until data is bound to the model.
-    dtype : dtype, optional
+    dtype : np.dtype, optional
         If an endogenous vector is not given (i.e. `k_endog` is an integer),
         the default datatype of the state space matrices can optionally be
         specified. Default is `np.float64`.
@@ -210,7 +210,7 @@ class Representation(object):
 
     References
     ----------
-    .. [1] Durbin, James, and Siem Jan Koopman. 2012.
+    .. [*] Durbin, James, and Siem Jan Koopman. 2012.
        Time Series Analysis by State Space Methods: Second Edition.
        Oxford University Press.
     """
@@ -262,7 +262,8 @@ class Representation(object):
             endog = k_endog
             # If so, assume that it is either column-ordered and in wide format
             # or row-ordered and in long format
-            if endog.flags['C_CONTIGUOUS'] and (endog.shape[0] > 1 or nobs == 1):
+            if (endog.flags['C_CONTIGUOUS'] and
+                    (endog.shape[0] > 1 or nobs == 1)):
                 endog = endog.T
             k_endog = endog.shape[0]
 
@@ -279,6 +280,13 @@ class Representation(object):
                              ' positive number.')
         self.k_states = k_states
         self.k_posdef = k_posdef if k_posdef is not None else k_states
+
+        # Make sure k_posdef <= k_states
+        # TODO: we could technically allow k_posdef > k_states, but the Cython
+        # code needs to be more thoroughly checked to avoid seg faults.
+        if self.k_posdef > self.k_states:
+            raise ValueError('Dimension of state innovation `k_posdef` cannot'
+                             ' be larger than the dimension of the state.')
 
         # Bind endog, if it was given
         if endog is not None:
@@ -332,10 +340,10 @@ class Representation(object):
         elif self.initialization == 'stationary':
             self.initialize_stationary()
         elif self.initialization == 'known':
-            if not 'initial_state' in kwargs:
+            if 'initial_state' not in kwargs:
                 raise ValueError('Initial state must be provided when "known"'
                                  ' is the specified initialization method.')
-            if not 'initial_state_cov' in kwargs:
+            if 'initial_state_cov' not in kwargs:
                 raise ValueError('Initial state covariance matrix must be'
                                  ' provided when "known" is the specified'
                                  ' initialization method.')
@@ -657,7 +665,6 @@ class Representation(object):
                         existing[:] = new[:]
                     else:
                         existing = new
-
 
         # Determine if we need to (re-)create the _statespace models
         # (if time-varying matrices changed)

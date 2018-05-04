@@ -129,6 +129,7 @@ cdef class sKalmanSmoother(object):
     cdef void initialize_filter_object_pointers(self)
     cdef void initialize_smoother_object_pointers(self) except *
     cdef void initialize_function_pointers(self) except *
+    cdef void _initialize_temp_pointers(self) except *
 
 # Double precision
 cdef class dKalmanSmoother(object):
@@ -229,6 +230,7 @@ cdef class dKalmanSmoother(object):
     cdef void initialize_filter_object_pointers(self)
     cdef void initialize_smoother_object_pointers(self) except *
     cdef void initialize_function_pointers(self) except *
+    cdef void _initialize_temp_pointers(self) except *
 
 # Single precision complex
 cdef class cKalmanSmoother(object):
@@ -329,6 +331,7 @@ cdef class cKalmanSmoother(object):
     cdef void initialize_filter_object_pointers(self)
     cdef void initialize_smoother_object_pointers(self) except *
     cdef void initialize_function_pointers(self) except *
+    cdef void _initialize_temp_pointers(self) except *
 
 # Double precision complex
 cdef class zKalmanSmoother(object):
@@ -429,3 +432,4 @@ cdef class zKalmanSmoother(object):
     cdef void initialize_filter_object_pointers(self)
     cdef void initialize_smoother_object_pointers(self) except *
     cdef void initialize_function_pointers(self) except *
+    cdef void _initialize_temp_pointers(self) except *

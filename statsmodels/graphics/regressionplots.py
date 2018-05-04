@@ -694,23 +694,34 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     from matplotlib.lines import Line2D
 
     class ABLine2D(Line2D):
+        def __init__(self, *args, **kwargs):
+            super(ABLine2D, self).__init__(*args, **kwargs)
+            self.id_xlim_callback = None
+            self.id_ylim_callback = None
+
+        def remove(self):
+            ax = self.axes
+            if self.id_xlim_callback:
+                ax.callbacks.disconnect(self.id_xlim_callback)
+            if self.id_ylim_callback:
+                ax.callbacks.disconnect(self.id_ylim_callback)
+            super(ABLine2D, self).remove()
 
         def update_datalim(self, ax):
             ax.set_autoscale_on(False)
-
             children = ax.get_children()
-            abline = [children[i] for i in range(len(children))
-                      if isinstance(children[i], ABLine2D)][0]
+            ablines = [child for child in children if child is self]
+            abline = ablines[0]
             x = ax.get_xlim()
-            y = [x[0]*slope+intercept, x[1]*slope+intercept]
+            y = [x[0] * slope + intercept, x[1] * slope + intercept]
             abline.set_data(x, y)
             ax.figure.canvas.draw()
-    #TODO: how to intercept something like a margins call and adjust?
 
+    # TODO: how to intercept something like a margins call and adjust?
     line = ABLine2D(x, data_y, **kwargs)
     ax.add_line(line)
-    ax.callbacks.connect('xlim_changed', line.update_datalim)
-    ax.callbacks.connect('ylim_changed', line.update_datalim)
+    line.id_xlim_callback = ax.callbacks.connect('xlim_changed', line.update_datalim)
+    line.id_ylim_callback = ax.callbacks.connect('ylim_changed', line.update_datalim)
 
     if horiz:
         ax.hline(horiz)

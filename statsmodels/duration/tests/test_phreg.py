@@ -1,9 +1,13 @@
+import itertools
 import os
+
+import nose
 import numpy as np
 from statsmodels.duration.hazard_regression import PHReg
 from numpy.testing import (assert_allclose,
                            assert_equal, assert_)
 import pandas as pd
+import pytest
 
 # TODO: Include some corner cases: data sets with empty strata, strata
 #      with no events, entry times after censoring times, etc.
@@ -27,6 +31,7 @@ survival_r_results module.
 # Arguments passed to the PHReg fit method.
 args = {"method": "bfgs", "disp": 0}
 
+
 def get_results(n, p, ext, ties):
     if ext is None:
         coef_name = "coef_%d_%d_%s" % (n, p, ties)
@@ -47,7 +52,8 @@ def get_results(n, p, ext, ties):
 class TestPHReg(object):
 
     # Load a data file from the results directory
-    def load_file(self, fname):
+    @staticmethod
+    def load_file(fname):
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         data = np.genfromtxt(os.path.join(cur_dir, 'results', fname),
                              delimiter=" ")
@@ -58,12 +64,12 @@ class TestPHReg(object):
 
         return time, status, entry, exog
 
-
     # Run a single test against R output
-    def do1(self, fname, ties, entry_f, strata_f):
+    @staticmethod
+    def do1(fname, ties, entry_f, strata_f):
 
         # Read the test data.
-        time, status, entry, exog = self.load_file(fname)
+        time, status, entry, exog = TestPHReg.load_file(fname)
         n = len(time)
 
         vs = fname.split("_")
@@ -106,8 +112,9 @@ class TestPHReg(object):
         #smoke test
         time_h, cumhaz, surv = phrb.baseline_cumulative_hazard[0]
 
-
     # Run all the tests
+    # TODO: Remove after nose is fully dropped in favor of parameterized version
+    # TODO: Restructure file to remove class
     def test_r(self):
 
         cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -120,8 +127,7 @@ class TestPHReg(object):
             for ties in "breslow","efron":
                 for entry_f in False,True:
                     for strata_f in False,True:
-                        yield (self.do1, fname, ties, entry_f,
-                               strata_f)
+                        self.do1(fname, ties, entry_f, strata_f)
 
     def test_missing(self):
 
@@ -412,9 +418,25 @@ class TestPHReg(object):
                 assert_equal(np.sign(llf_sm - llf_r), 1)
 
 
-if  __name__=="__main__":
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+rdir = os.path.join(cur_dir, 'results')
+fnames = os.listdir(rdir)
+fnames = [x for x in fnames if x.startswith("survival")
+          and x.endswith(".csv")]
 
-    import nose
+ties = ("breslow", "efron")
+entry_f = (False, True)
+strata_f = (False, True)
 
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb', '--pdb-failure'],
-                   exit=False)
+
+# TODO: Re-enable after nose is fully dropped
+@nose.tools.nottest
+@pytest.mark.parametrize('fname,ties,entry_f,strata_f',
+                         list(itertools.product(fnames, ties, entry_f, strata_f)))
+def test_r(fname, ties, entry_f, strata_f):
+    TestPHReg.do1(fname, ties, entry_f, strata_f)
+
+
+if __name__ == "__main__":
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

@@ -1,19 +1,19 @@
 Dependencies
 ------------
 
-python >= 2.6
+python >= 2.7
 
     www.python.org
 
-numpy >= 1.5.1
+numpy >= 1.8
 
     www.numpy.org
 
-scipy >= 0.9.0
+scipy >= 0.14
     
     www.scipy.org
 
-pandas >= 0.7.1
+pandas >= 0.14
 
     pandas.pydata.org
 
@@ -21,16 +21,15 @@ patsy >= 0.3.0
 
     patsy.readthedocs.org
 
-
-cython >= 0.20.1
+cython >= 0.24
 
     http://cython.org/
 
     Cython is required if you are building the source from github. However,
     if you have are building from source distribution archive then the 
     generated C files are included and Cython is not necessary. If you are 
-    building for Python 3.4, then you must use Cython >= 0.20.1. Earlier 
-    versions may be ok for Python < 3.4.
+    building for Python 3.4, then you must use Cython >= 0.24. Earlier
+    versions may be ok for earlier versions of Python.
 
 Optional Dependencies
 ---------------------
@@ -44,41 +43,39 @@ X-12-ARIMA or X-13ARIMA-SEATS
     appropriate executable on your PATH or set the X12PATH or X13PATH 
     environmental variable to take advantage.
 
-matplotlib >= 1.1
+matplotlib >= 1.3
 
-    http://matplotlib.sf.net/
+    http://matplotlib.org/
 
     Matplotlib is needed for plotting functionality and running many of the 
     examples.
 
-sphinx >= 1.0.0
+sphinx >= 1.3
 
     http://sphinx.pocoo.org/
 
     Sphinx is used to build the documentation.
 
-nose >= 1.0.0
+nose >= 1.3
 
     http://readthedocs.org/docs/nose/en/latest/
 
     Nose is needed to run the tests.
 
-IPython >= 1.0
+IPython >= 3.0
 
     Needed to build the docs.
 
 
-Easy Install
-------------
+Installing
+----------
 
-To get the latest release using easy_install you need setuptools (easy_install):
+To get the latest release using pip
 
-    http://peak.telecommunity.com/DevCenter/EasyInstall
+    pip install statsmodels --upgrade-strategy only-if-needed
 
-Then you can do (with proper permissions):
-
-    easy_install -U statsmodels
-
+The additional parameter pip --upgrade-strategy only-if-needed will ensure
+that dependencies, e.g. NumPy or pandas, are not upgraded unless required.
 
 Ubuntu/Debian
 -------------
@@ -86,8 +83,7 @@ Ubuntu/Debian
 On Ubuntu you can get dependencies through:
 
     sudo apt-get install python python-dev python-setuptools python-numpy python-scipy
-    easy_install -U pandas 
-    easy_install -U cython
+    pip install cython pandas
 
 Alternatively, you can install from the NeuroDebian repository:
     
@@ -108,7 +104,6 @@ Or clone the bleeding edge code from our repository on github at
 
 In the statsmodels directory do (with proper permissions)
 
-    python setup.py build
     python setup.py install
 
 You will need a C compiler installed.
@@ -116,7 +111,7 @@ You will need a C compiler installed.
 Installing from Source on Windows
 ---------------------------------
 
-See http://statsmodels.sf.net/devel/install.html#windows.
+See http://www.statsmodels.org/devel/install.html#windows.
 
 
 Documentation
@@ -125,4 +120,4 @@ Documentation
 You may find more information about the project and installation in our 
 documentation
 
-http://statsmodels.sf.net/devel/install.html
+http://www.statsmodels.org/devel/install.html

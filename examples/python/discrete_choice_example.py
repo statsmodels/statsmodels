@@ -47,7 +47,7 @@ mfx = affair_mod.get_margeff()
 print(mfx.summary())
 
 
-respondent1000 = dta.ix[1000]
+respondent1000 = dta.iloc[1000]
 print(respondent1000)
 
 

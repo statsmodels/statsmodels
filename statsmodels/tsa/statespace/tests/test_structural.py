@@ -17,7 +17,6 @@ from statsmodels.tsa.statespace.structural import UnobservedComponents
 from statsmodels.tsa.statespace.tests.results import results_structural
 from statsmodels.tools import add_constant
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
-from nose.exc import SkipTest
 
 
 try:
@@ -142,7 +141,7 @@ def test_fixed_slope():
     run_ucm('fixed_slope')
 
 
-def test_fixed_slope():
+def test_fixed_slope_warn():
     # Clear warnings
     structural.__warningregistry__ = {}
 
@@ -183,6 +182,10 @@ def test_cycle():
 
 def test_seasonal():
     run_ucm('seasonal')
+
+
+def test_freq_seasonal():
+    run_ucm('freq_seasonal')
 
 
 def test_reg():
@@ -289,11 +292,11 @@ def test_forecast():
     endog = np.arange(50) + 10
     exog = np.arange(50)
 
-    mod = UnobservedComponents(endog, exog=exog, level='dconstant')
-    res = mod.smooth([1e-15, 1])
+    mod = UnobservedComponents(endog, exog=exog, level='dconstant', seasonal=4)
+    res = mod.smooth([1e-15, 0, 1])
 
     actual = res.forecast(10, exog=np.arange(50,60)[:,np.newaxis])
-    desired = np.arange(50,60) + 10
+    desired = np.arange(50, 60) + 10
     assert_allclose(actual, desired)
 
 
@@ -356,3 +359,89 @@ def test_predict_custom_index():
     res = mod.smooth(mod.start_params)
     out = res.predict(start=1, end=1, index=['a'])
     assert_equal(out.index.equals(pd.Index(['a'])), True)
+
+
+def test_matrices_somewhat_complicated_model():
+    values = dta.copy()
+
+    model = UnobservedComponents(values['unemp'],
+                                 level='lltrend',
+                                 freq_seasonal=[{'period': 4},
+                                                {'period': 9, 'harmonics': 3}],
+                                 cycle=True,
+                                 cycle_period_bounds=[2, 30],
+                                 damped_cycle=True,
+                                 stochastic_freq_seasonal=[True, False],
+                                 stochastic_cycle=True
+                                 )
+    # Selected parameters
+    params = [1,  # irregular_var
+              3, 4,  # lltrend parameters:  level_var, trend_var
+              5,   # freq_seasonal parameters: freq_seasonal_var_0
+              # cycle parameters: cycle_var, cycle_freq, cycle_damp
+              6, 2*np.pi/30., .9
+              ]
+    model.update(params)
+
+    # Check scalar properties
+    assert_equal(model.k_states, 2 + 4 + 6 + 2)
+    assert_equal(model.k_state_cov, 2 + 1 + 0 + 1)
+    assert_equal(model.loglikelihood_burn, 2 + 4 + 6 + 2)
+    assert_allclose(model.ssm.k_posdef, 2 + 4 + 0 + 2)
+    assert_equal(model.k_params, len(params))
+
+    # Check the statespace model matrices against hand-constructed answers
+    # We group the terms by the component
+    expected_design = np.r_[[1, 0],
+                            [1, 0, 1, 0],
+                            [1, 0, 1, 0, 1, 0],
+                            [1, 0]].reshape(1, 14)
+    assert_allclose(model.ssm.design[:, :, 0], expected_design)
+
+    expected_transition = __direct_sum([
+        np.array([[1, 1],
+                  [0, 1]]),
+        np.array([[ 0, 1, 0, 0],
+                  [-1, 0, 0, 0],
+                  [0, 0, -1,  0],
+                  [0, 0,  0, -1]]),
+        np.array([[ np.cos(2*np.pi*1/9.), np.sin(2*np.pi*1/9.), 0, 0, 0, 0],
+                  [-np.sin(2*np.pi*1/9.), np.cos(2*np.pi*1/9.), 0, 0, 0, 0],
+                  [0, 0,  np.cos(2*np.pi*2/9.), np.sin(2*np.pi*2/9.), 0, 0],
+                  [0, 0, -np.sin(2*np.pi*2/9.), np.cos(2*np.pi*2/9.), 0, 0],
+                  [0, 0, 0, 0,  np.cos(2*np.pi/3.), np.sin(2*np.pi/3.)],
+                  [0, 0, 0, 0, -np.sin(2*np.pi/3.), np.cos(2*np.pi/3.)]]),
+        np.array([[.9*np.cos(2*np.pi/30.), .9*np.sin(2*np.pi/30.)],
+                 [-.9*np.sin(2*np.pi/30.), .9*np.cos(2*np.pi/30.)]])
+    ])
+    assert_allclose(
+        model.ssm.transition[:, :, 0], expected_transition, atol=1e-7)
+
+    # Since the second seasonal term is not stochastic,
+    # the dimensionality of the state disturbance is 14 - 6 = 8
+    expected_selection = np.zeros((14, 14 - 6))
+    expected_selection[0:2, 0:2] = np.eye(2)
+    expected_selection[2:6, 2:6] = np.eye(4)
+    expected_selection[-2:, -2:] = np.eye(2)
+    assert_allclose(model.ssm.selection[:, :, 0], expected_selection)
+
+    expected_state_cov = __direct_sum([
+        np.diag(params[1:3]),
+        np.eye(4)*params[3],
+        np.eye(2)*params[4]
+    ])
+    assert_allclose(model.ssm.state_cov[:, :, 0], expected_state_cov)
+
+
+def __direct_sum(square_matrices):
+    """Compute the matrix direct sum of an iterable of square numpy 2-d arrays
+    """
+    new_shape = np.sum([m.shape for m in square_matrices], axis=0)
+    new_array = np.zeros(new_shape)
+    offset = 0
+    for m in square_matrices:
+        rows, cols = m.shape
+        assert rows == cols
+        new_array[offset:offset + rows, offset:offset + rows] = m
+        offset += rows
+    return new_array

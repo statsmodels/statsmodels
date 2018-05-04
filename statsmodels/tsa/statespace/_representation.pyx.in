@@ -232,6 +232,8 @@ cdef class {{prefix}}Statespace(object):
 
         # Set the flag for initialization to be false
         self.initialized = False
+        self.initial_state = None
+        self.initial_state_cov = None
 
         # Unless it is specified, check for a diagonal covariance matrix
         if diagonal_obs_cov == -1:
@@ -260,7 +262,7 @@ cdef class {{prefix}}Statespace(object):
 
         # Create the temporary array
         # Holds arrays of dimension $(m \times m)$
-        dim2[0] = self.k_states; dim2[1] = self.k_states;
+        dim2[0] = self.k_states; dim2[1] = max(self.k_states, self.k_posdef);
         self.tmp = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
         # Arrays for missing data
@@ -293,6 +295,68 @@ cdef class {{prefix}}Statespace(object):
 
         # Initialize dimensions
         self.set_dimensions(self.k_endog, self.k_states, self.k_posdef)
+
+    def __reduce__(self):
+        init = (np.array(self.obs, copy=True, order='F'), np.array(self.design, copy=True, order='F'),
+                np.array(self.obs_intercept, copy=True, order='F'), np.array(self.obs_cov, copy=True, order='F'),
+                np.array(self.transition, copy=True, order='F'), np.array(self.state_intercept, copy=True, order='F'),
+                np.array(self.selection, copy=True, order='F'), np.array(self.state_cov, copy=True, order='F'),
+                self.diagonal_obs_cov)
+        state = {'initialized': self.initialized,
+                 'initial_state': None,
+                 'initial_state_cov': None,
+                 'missing': np.array(self.missing, copy=True, order='F'),
+                 'nmissing': np.array(self.nmissing, copy=True, order='F'),
+                 'has_missing': self.has_missing,
+                 'tmp': np.array(self.tmp, copy=True, order='F'),
+                 'selected_state_cov': np.array(self.selected_state_cov, copy=True, order='F'),
+                 'selected_obs': np.array(self.selected_obs, copy=True, order='F'),
+                 'selected_obs_intercept': np.array(self.selected_obs_intercept, copy=True, order='F'),
+                 'selected_design': np.array(self.selected_design, copy=True, order='F'),
+                 'selected_obs_cov': np.array(self.selected_obs_cov, copy=True, order='F'),
+                 'transform_cholesky': np.array(self.transform_cholesky, copy=True, order='F'),
+                 'transform_obs_cov': np.array(self.transform_obs_cov, copy=True, order='F'),
+                 'transform_design': np.array(self.transform_design, copy=True, order='F'),
+                 'collapse_obs': np.array(self.collapse_obs, copy=True, order='F'),
+                 'collapse_obs_tmp': np.array(self.collapse_obs_tmp, copy=True, order='F'),
+                 'collapse_design': np.array(self.collapse_design, copy=True, order='F'),
+                 'collapse_obs_cov': np.array(self.collapse_obs_cov, copy=True, order='F'),
+                 'collapse_cholesky': np.array(self.collapse_cholesky, copy=True, order='F'),
+                 't': self.t,
+                 'collapse_loglikelihood': self.collapse_loglikelihood,
+                 'companion_transition': self.companion_transition,
+                 'transform_determinant': self.transform_determinant,
+                 }
+        if self.initialized:
+            state['initial_state'] = np.array(self.initial_state, copy=True, order='F')
+            state['initial_state_cov'] = np.array(self.initial_state_cov, copy=True, order='F')
+        return (self.__class__, init, state)
+
+    def __setstate__(self, state):
+        self.initial_state = state['initial_state']
+        self.initial_state_cov = state['initial_state_cov']
+        self.initialized = state['initialized']
+        self.selected_state_cov = state['selected_state_cov']
+        self.missing = state['missing']
+        self.nmissing =state['nmissing']
+        self.has_missing = state['has_missing']
+        self.tmp = state['tmp']
+        self.selected_obs  = state['selected_obs']
+        self.selected_obs_intercept  = state['selected_obs_intercept']
+        self.selected_design  = state['selected_design']
+        self.selected_obs_cov  =state['selected_obs_cov']
+        self.transform_cholesky  = state['transform_cholesky']
+        self.transform_obs_cov  = state['transform_obs_cov']
+        self.transform_design = state['transform_design']
+        self.collapse_obs = state['collapse_obs']
+        self.collapse_obs_tmp = state['collapse_obs_tmp']
+        self.collapse_design = state['collapse_design']
+        self.collapse_obs_cov = state['collapse_obs_cov']
+        self.collapse_cholesky = state['collapse_cholesky']
+        self.t = state['t']
+        self.collapse_loglikelihood = state['collapse_loglikelihood']
+        self.companion_transition = state['companion_transition']
+        self.transform_determinant = state['transform_determinant']
 
     # ## Initialize: known values
     #
@@ -337,8 +401,11 @@ cdef class {{prefix}}Statespace(object):
         """
         cdef np.npy_intp dim1[1]
         cdef np.npy_intp dim2[2]
-        cdef int inc = 1
+        cdef int i, info, inc = 1
         cdef int k_states2 = self.k_states**2
+        cdef np.float64_t asum, tol = 1e-9
+        cdef {{cython_type}} scalar
+        cdef int [::1,:] ipiv
 
         # Create selected state covariance matrix
         {{prefix}}select_cov(self.k_states, self.k_posdef,
@@ -347,9 +414,40 @@ cdef class {{prefix}}Statespace(object):
                                    &self.state_cov[0,0,0],
                                    &self.selected_state_cov[0,0,0])
 
-        # Initial state means are all zero
+        # Initial state mean
+        {{if combined_prefix == 'd'}}
+        asum = blas.{{prefix}}asum(&self.k_states, &self.state_intercept[0, 0], &inc)
+        {{elif prefix == 'c'}}
+        asum = blas.scasum(&self.k_states, &self.state_intercept[0, 0], &inc)
+        {{else}}
+        asum = blas.dzasum(&self.k_states, &self.state_intercept[0, 0], &inc)
+        {{endif}}
+
         dim1[0] = self.k_states
         self.initial_state = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+        if asum > tol:
+            dim2[0] = self.k_states
+            dim2[1] = self.k_states
+            ipiv = np.PyArray_ZEROS(2, dim2, np.NPY_INT32, FORTRAN)
+
+            # I - T
+            blas.{{prefix}}copy(&k_states2, &self.transition[0,0,0], &inc,
+                                            &self.tmp[0,0], &inc)
+            scalar = -1.0
+            blas.{{prefix}}scal(&k_states2, &scalar, &self.tmp[0, 0], &inc)
+            for i in range(self.k_states):
+                self.tmp[i, i] = self.tmp[i, i] + 1
+
+            # c
+            blas.{{prefix}}copy(&self.k_states, &self.state_intercept[0,0], &inc,
+                                                &self.initial_state[0], &inc)
+
+            # Solve (I - T) x = c
+            lapack.{{prefix}}getrf(&self.k_states, &self.k_states, &self.tmp[0, 0], &self.k_states,
+                                   &ipiv[0, 0], &info)
+            lapack.{{prefix}}getrs('N', &self.k_states, &inc, &self.tmp[0, 0], &self.k_states,
+                                   &ipiv[0, 0], &self.initial_state[0], &self.k_states, &info)
+
         dim2[0] = self.k_states; dim2[1] = self.k_states;
         self.initial_state_cov = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 

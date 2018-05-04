@@ -13,10 +13,8 @@ import pandas as pd
 from statsmodels.compat.collections import OrderedDict
 
 from scipy.misc import logsumexp
-from scipy.stats import norm
 from statsmodels.base.data import PandasData
 import statsmodels.tsa.base.tsa_model as tsbase
-from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
@@ -26,7 +24,8 @@ from statsmodels.tools.sm_exceptions import EstimationWarning
 import statsmodels.base.wrapper as wrap
 
 
-from statsmodels.tsa.statespace.tools import find_best_blas_type
+from statsmodels.tsa.statespace.tools import find_best_blas_type, prepare_exog
+
 from statsmodels.tsa.regime_switching._hamilton_filter import (
     shamilton_filter, dhamilton_filter, chamilton_filter, zhamilton_filter)
 from statsmodels.tsa.regime_switching._kim_smoother import (
@@ -41,24 +40,6 @@ prefix_kim_smoother_map = {
     's': skim_smoother, 'd': dkim_smoother,
     'c': ckim_smoother, 'z': zkim_smoother
 }
-
-
-def _prepare_exog(exog):
-    k_exog = 0
-    if exog is not None:
-        exog_is_using_pandas = _is_using_pandas(exog, None)
-        if not exog_is_using_pandas:
-            exog = np.asarray(exog)
-
-        # Make sure we have 2-dimensional array
-        if exog.ndim == 1:
-            if not exog_is_using_pandas:
-                exog = exog[:, None]
-            else:
-                exog = pd.DataFrame(exog)
-
-        k_exog = exog.shape[1]
-    return k_exog, exog
 
 
 def _logistic(x):
@@ -104,14 +85,15 @@ def _partials_logistic(x):
         partials = [np.diag(tmp[:, t] - tmp[:, t]**2)
                     for t in range(tmp.shape[1])]
         shape = tmp.shape[1], tmp.shape[0], tmp.shape[0]
-        partials = np.concatenate(partials).reshape(shape).transpose((1,2,0))
+        partials = np.concatenate(partials).reshape(shape).transpose((1, 2, 0))
     # k x k x j x t
     else:
         partials = [[np.diag(tmp[:, j, t] - tmp[:, j, t]**2)
                      for t in range(tmp.shape[2])]
                     for j in range(tmp.shape[1])]
         shape = tmp.shape[1], tmp.shape[2], tmp.shape[0], tmp.shape[0]
-        partials = np.concatenate(partials).reshape(shape).transpose((2,3,0,1))
+        partials = np.concatenate(partials).reshape(shape).transpose(
+            (2, 3, 0, 1))
 
     for i in range(tmp.shape[0]):
         for j in range(i):
@@ -128,11 +110,18 @@ def py_hamilton_filter(initial_probabilities, regime_transition,
     Parameters
     ----------
     initial_probabilities : array
-        Array of initial probabilities, shaped (k_regimes,).
+        Array of initial probabilities, shaped (k_regimes,) giving the
+        distribution of the regime process at time t = -order where order
+        is a nonnegative integer.
     regime_transition : array
         Matrix of regime transition probabilities, shaped either
         (k_regimes, k_regimes, 1) or if there are time-varying transition
-        probabilities (k_regimes, k_regimes, nobs).
+        probabilities (k_regimes, k_regimes, nobs + order).  Entry [i, j,
+        t] contains the probability of moving from j at time t-1 to i at
+        time t, so each matrix regime_transition[:, :, t] should be left
+        stochastic.  The first order entries and initial_probabilities are
+        used to produce the initial joint distribution of dimension order +
+        1 at time t=0.
     conditional_likelihoods : array
         Array of likelihoods conditional on the last `order+1` regimes,
         shaped (k_regimes,)*(order + 1) + (nobs,).
@@ -154,6 +143,7 @@ def py_hamilton_filter(initial_probabilities, regime_transition,
         the joint probability of the current and previous `order` periods
         being in each combination of regimes conditional on time t
         information. Shaped (k_regimes,) * (order + 1) + (nobs,).
+
     """
 
     # Dimensions
@@ -161,6 +151,14 @@ def py_hamilton_filter(initial_probabilities, regime_transition,
     nobs = conditional_likelihoods.shape[-1]
     order = conditional_likelihoods.ndim - 2
     dtype = conditional_likelihoods.dtype
+
+    # Check for compatible shapes.
+    incompatible_shapes = (
+        regime_transition.shape[-1] not in (1, nobs + order)
+        or regime_transition.shape[:2] != (k_regimes, k_regimes)
+        or conditional_likelihoods.shape[0] != k_regimes)
+    if incompatible_shapes:
+        raise ValueError('Arguments do not have compatible shapes')
 
     # Storage
     # Pr[S_t = s_t | Y_t]
@@ -183,6 +181,11 @@ def py_hamilton_filter(initial_probabilities, regime_transition,
         tmp = np.reshape(regime_transition[..., i], shape + (1,) * i) * tmp
     filtered_joint_probabilities[..., 0] = tmp
 
+    # Check that regime_transition is oriented correctly.
+    if not np.allclose(np.sum(regime_transition, axis=0), 1):
+        raise ValueError('regime_transition does not contain '
+                         'left stochastic matrices.')
+
     # Reshape regime_transition so we can use broadcasting
     shape = (k_regimes, k_regimes)
     shape += (1,) * (order-1)
@@ -200,11 +203,16 @@ def py_hamilton_filter(initial_probabilities, regime_transition,
             transition_t = t
 
         # S_t, S_{t-1}, ..., S_{t-r} | t-1, stored at zero-indexed location t
-        predicted_joint_probabilities[..., t] = (
-            # S_t | S_{t-1}
-            regime_transition[..., transition_t] *
-            # S_{t-1}, S_{t-2}, ..., S_{t-r} | t-1
-            filtered_joint_probabilities[..., t].sum(axis=-1))
+        if order > 0:
+            predicted_joint_probabilities[..., t] = (
+                # S_t | S_{t-1}
+                regime_transition[..., transition_t] *
+                # S_{t-1}, S_{t-2}, ..., S_{t-r} | t-1
+                filtered_joint_probabilities[..., t].sum(axis=-1))
+        else:
+            predicted_joint_probabilities[..., t] = (
+                np.dot(regime_transition[..., transition_t],
+                       filtered_joint_probabilities[..., t]))
 
         # f(y_t, S_t, ..., S_{t-r} | t-1)
         tmp = (conditional_likelihoods[..., t] *
@@ -234,11 +242,18 @@ def cy_hamilton_filter(initial_probabilities, regime_transition,
     Parameters
     ----------
     initial_probabilities : array
-        Array of initial probabilities, shaped (k_regimes,).
+        Array of initial probabilities, shaped (k_regimes,) giving the
+        distribution of the regime process at time t = -order where order
+        is a nonnegative integer.
     regime_transition : array
         Matrix of regime transition probabilities, shaped either
         (k_regimes, k_regimes, 1) or if there are time-varying transition
-        probabilities (k_regimes, k_regimes, nobs).
+        probabilities (k_regimes, k_regimes, nobs + order).  Entry [i, j,
+        t] contains the probability of moving from j at time t-1 to i at
+        time t, so each matrix regime_transition[:, :, t] should be left
+        stochastic.  The first order entries and initial_probabilities are
+        used to produce the initial joint distribution of dimension order +
+        1 at time t=0.
     conditional_likelihoods : array
         Array of likelihoods conditional on the last `order+1` regimes,
         shaped (k_regimes,)*(order + 1) + (nobs,).
@@ -267,6 +282,14 @@ def cy_hamilton_filter(initial_probabilities, regime_transition,
     nobs = conditional_likelihoods.shape[-1]
     order = conditional_likelihoods.ndim - 2
     dtype = conditional_likelihoods.dtype
+
+    # Check for compatible shapes.
+    incompatible_shapes = (
+        regime_transition.shape[-1] not in (1, nobs + order)
+        or regime_transition.shape[:2] != (k_regimes, k_regimes)
+        or conditional_likelihoods.shape[0] != k_regimes)
+    if incompatible_shapes:
+        raise ValueError('Arguments do not have compatible shapes')
 
     # Storage
     # Pr[S_t = s_t | Y_t]
@@ -675,7 +698,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         # Exogenous data
         # TODO add checks for exog_tvtp consistent shape and indices
-        self.k_tvtp, self.exog_tvtp = _prepare_exog(exog_tvtp)
+        self.k_tvtp, self.exog_tvtp = prepare_exog(exog_tvtp)
 
         # Initialize the base model
         super(MarkovSwitching, self).__init__(endog, exog, dates=dates,
@@ -998,23 +1021,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             self, Bunch(**dict(zip(names, self._filter(params)))))
 
         # Wrap in a results object
-        if not return_raw:
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs['cov_type'] = cov_type
-            if cov_kwds is not None:
-                result_kwargs['cov_kwds'] = cov_kwds
-
-            if results_class is None:
-                results_class = MarkovSwitchingResults
-            if results_wrapper_class is None:
-                results_wrapper_class = MarkovSwitchingResultsWrapper
-
-            result = results_wrapper_class(
-                results_class(self, params, result, **result_kwargs)
-            )
-
-        return result
+        return self._wrap_results(params, result, return_raw, cov_type,
+                                  cov_kwds, results_class,
+                                  results_wrapper_class)
 
     def _smooth(self, params, filtered_marginal_probabilities,
                 predicted_joint_probabilities,
@@ -1027,6 +1036,29 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         return cy_kim_smoother(regime_transition,
                                predicted_joint_probabilities,
                                filtered_joint_probabilities)
+
+    @property
+    def _res_classes(self):
+        return {'fit': (MarkovSwitchingResults, MarkovSwitchingResultsWrapper)}
+
+    def _wrap_results(self, params, result, return_raw, cov_type=None,
+                      cov_kwds=None, results_class=None, wrapper_class=None):
+        if not return_raw:
+            # Wrap in a results object
+            result_kwargs = {}
+            if cov_type is not None:
+                result_kwargs['cov_type'] = cov_type
+            if cov_kwds is not None:
+                result_kwargs['cov_kwds'] = cov_kwds
+
+            if results_class is None:
+                results_class = self._res_classes['fit'][0]
+            if wrapper_class is None:
+                wrapper_class = self._res_classes['fit'][1]
+
+            res = results_class(self, params, result, **result_kwargs)
+            result = wrapper_class(res)
+        return result
 
     def smooth(self, params, transformed=True, cov_type=None, cov_kwds=None,
                return_raw=False, results_class=None,
@@ -1086,23 +1118,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         result = KimSmootherResults(self, result)
 
         # Wrap in a results object
-        if not return_raw:
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs['cov_type'] = cov_type
-            if cov_kwds is not None:
-                result_kwargs['cov_kwds'] = cov_kwds
-
-            if results_class is None:
-                results_class = MarkovSwitchingResults
-            if results_wrapper_class is None:
-                results_wrapper_class = MarkovSwitchingResultsWrapper
-
-            result = results_wrapper_class(
-                results_class(self, params, result, **result_kwargs)
-            )
-
-        return result
+        return self._wrap_results(params, result, return_raw, cov_type,
+                                  cov_kwds, results_class,
+                                  results_wrapper_class)
 
     def loglikeobs(self, params, transformed=True):
         """
@@ -1608,7 +1626,6 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         # Otherwise do logistic transformation
         else:
             # Transition probabilities
-            offset = 0
             for i in range(self.k_regimes):
                 tmp1 = unconstrained[self.parameters[i, 'regime_transition']]
                 tmp2 = np.r_[0, tmp1]
@@ -1904,8 +1921,8 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         # Make into Pandas arrays if using Pandas data
         if isinstance(self.data, PandasData):
-            index = self.data.row_labels[self.order:]
-            if self.expected_durations.ndim > 1:                
+            index = self.data.row_labels
+            if self.expected_durations.ndim > 1:
                 self.expected_durations = pd.DataFrame(
                     self.expected_durations, index=index)
             self.predicted_marginal_probabilities = pd.DataFrame(
@@ -1917,8 +1934,6 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                     self.smoothed_marginal_probabilities, index=index)
 
     def _get_robustcov_results(self, cov_type='opg', **kwargs):
-        import statsmodels.stats.sandwich_covariance as sw
-
         use_self = kwargs.pop('use_self', False)
         if use_self:
             res = self
@@ -1933,12 +1948,19 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         res.cov_type = cov_type
         res.cov_kwds = {}
 
+        approx_type_str = 'complex-step'
+
         # Calculate the new covariance matrix
         k_params = len(self.params)
         if k_params == 0:
             res.cov_params_default = np.zeros((0, 0))
             res._rank = 0
             res.cov_kwds['description'] = 'No parameters estimated.'
+        elif cov_type == 'custom':
+            res.cov_type = kwargs['custom_cov_type']
+            res.cov_params_default = kwargs['custom_cov_params']
+            res.cov_kwds['description'] = kwargs['custom_description']
+            res._rank = np.linalg.matrix_rank(res.cov_params_default)
         elif cov_type == 'none':
             res.cov_params_default = np.zeros((k_params, k_params)) * np.nan
             res._rank = np.nan
@@ -1946,20 +1968,20 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         elif self.cov_type == 'approx':
             res.cov_params_default = res.cov_params_approx
             res.cov_kwds['description'] = (
-                'Covariance matrix calculated using numerical'
-                ' differentiation.')
+                'Covariance matrix calculated using numerical (%s)'
+                ' differentiation.' % approx_type_str)
         elif self.cov_type == 'opg':
             res.cov_params_default = res.cov_params_opg
             res.cov_kwds['description'] = (
                 'Covariance matrix calculated using the outer product of'
-                ' gradients.'
+                ' gradients (%s).' % approx_type_str
             )
         elif self.cov_type == 'robust':
             res.cov_params_default = res.cov_params_robust
             res.cov_kwds['description'] = (
                 'Quasi-maximum likelihood covariance matrix used for'
                 ' robustness to some misspecifications; calculated using'
-                ' numerical differentiation.')
+                ' numerical (%s) differentiation.' % approx_type_str)
         else:
             raise NotImplementedError('Invalid covariance matrix type.')
 
@@ -2209,6 +2231,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         # Make parameters tables for each regime
         from statsmodels.iolib.summary import summary_params
         import re
+
         def make_table(self, mask, title, strip_end=True):
             res = (self, self.params[mask], self.bse[mask],
                    self.tvalues[mask], self.pvalues[mask],
@@ -2288,4 +2311,5 @@ class MarkovSwitchingResultsWrapper(wrap.ResultsWrapper):
     }
     _wrap_methods = wrap.union_dicts(
         tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods)
-wrap.populate_wrapper(MarkovSwitchingResultsWrapper, MarkovSwitchingResults)
+wrap.populate_wrapper(MarkovSwitchingResultsWrapper,  # noqa:E305
+                      MarkovSwitchingResults)

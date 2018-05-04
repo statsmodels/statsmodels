@@ -128,7 +128,10 @@ class ModelData(object):
         else:
             # detect where the constant is
             check_implicit = False
-            const_idx = np.where(self.exog.ptp(axis=0) == 0)[0].squeeze()
+            ptp_ = self.exog.ptp(axis=0)
+            if not np.isfinite(ptp_).all():
+                raise MissingDataError('exog contains inf or nans')
+            const_idx = np.where(ptp_ == 0)[0].squeeze()
             self.k_constant = const_idx.size
 
             if self.k_constant == 1:
@@ -475,14 +478,14 @@ class PandasData(ModelData):
     @classmethod
     def _drop_nans(cls, x, nan_mask):
         if hasattr(x, 'ix'):
-            return x.ix[nan_mask]
+            return x.loc[nan_mask]
         else:  # extra arguments could be plain ndarrays
             return super(PandasData, cls)._drop_nans(x, nan_mask)
 
     @classmethod
     def _drop_nans_2d(cls, x, nan_mask):
         if hasattr(x, 'ix'):
-            return x.ix[nan_mask].ix[:, nan_mask]
+            return x.loc[nan_mask].loc[:, nan_mask]
         else:  # extra arguments could be plain ndarrays
             return super(PandasData, cls)._drop_nans_2d(x, nan_mask)
 

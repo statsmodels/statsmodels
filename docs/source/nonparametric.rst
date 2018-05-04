@@ -84,6 +84,9 @@ References
 Module Reference
 ----------------
 
+.. module:: statsmodels.nonparametric
+   :synopsis: Nonparametric estimation of densities and curves
+
 The public functions and classes are
 
 .. autosummary::

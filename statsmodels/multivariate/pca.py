@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 
 from statsmodels.compat.python import range
-from statsmodels.compat.numpy import nanmean
 from statsmodels.tools.sm_exceptions import (ValueWarning,
                                              EstimationWarning)
 
@@ -111,23 +110,14 @@ class PCA(object):
     rows : array
         Array of indices indicating rows used in the PCA
 
-    Methods
-    -------
-    plot_scree
-        Scree plot of the eigenvalues
-    plot_rsquare
-        Individual series R-squared plotted against the number of factors
-    project
-        Compute projection for a given number of factors
-
     Examples
     --------
     Basic PCA using the correlation matrix of the data
 
     >>> import numpy as np
-    >>> from statsmodels.tools.pca import PCA
+    >>> from statsmodels.multivariate.pca import PCA
     >>> x = np.random.randn(100)[:, None]
-    >>> x = x + np.random.randn((100, 100))
+    >>> x = x + np.random.randn(100, 100)
     >>> pc = PCA(x)
 
     Note that the principal components are computed using a SVD and so the
@@ -187,7 +177,7 @@ class PCA(object):
 
     where the number of factors is less than the rank of X
 
-    .. [1] J. Bai and S. Ng, "Determining the number of factors in approximate
+    .. [*] J. Bai and S. Ng, "Determining the number of factors in approximate
        factor models," Econometrica, vol. 70, number 1, pp. 191-221, 2002
     """
 
@@ -335,6 +325,10 @@ class PCA(object):
         else:
             raise ValueError('missing method is not known.')
 
+        if self._index is not None:
+            self._columns = self._columns[self.cols]
+            self._index = self._index[self.rows]
+
         # Check adjusted data size
         if self._adjusted_data.size == 0:
             raise ValueError('Removal of missing values has eliminated all data.')
@@ -405,8 +399,8 @@ class PCA(object):
         if np.all(np.isnan(adj_data)):
             return np.empty(adj_data.shape[1]).fill(np.nan)
 
-        self._mu = nanmean(adj_data, axis=0)
-        self._sigma = np.sqrt(nanmean((adj_data - self._mu) ** 2.0, axis=0))
+        self._mu = np.nanmean(adj_data, axis=0)
+        self._sigma = np.sqrt(np.nanmean((adj_data - self._mu) ** 2.0, axis=0))
         if self._standardize:
             data = (adj_data - self._mu) / self._sigma
         elif self._demean:
@@ -471,7 +465,7 @@ class PCA(object):
             return self.data
 
         # 1. Standardized data as needed
-        data = self.transformed_data = self._prepare_data()
+        data = self.transformed_data = np.asarray(self._prepare_data())
 
         ncomp = self._ncomp
 
@@ -485,7 +479,7 @@ class PCA(object):
         mask = np.isnan(data)
 
         # 4. Compute mean
-        mu = nanmean(data, 0)
+        mu = np.nanmean(data, 0)
 
         # 5. Replace missing with mean
         projection = np.ones((self._nobs, 1)) * mu
@@ -503,7 +497,7 @@ class PCA(object):
             self._compute_eig()
             # Call function to compute factors and projection
             self._compute_pca_from_eig()
-            projection = self.project(transform=False, unweight=False)
+            projection = np.asarray(self.project(transform=False, unweight=False))
             projection_masked = projection[mask]
             data[mask] = projection_masked
             delta = last_projection_masked - projection_masked
@@ -511,7 +505,7 @@ class PCA(object):
             _iter += 1
         # Must copy to avoid overwriting original data since replacing values
         data = self._adjusted_data + 0.0
-        projection = self.project()
+        projection = np.asarray(self.project())
         data[mask] = projection[mask]
 
         return data
@@ -656,10 +650,12 @@ class PCA(object):
                           index=index)
         self.projection = df
         # Weights
-        df = pd.DataFrame(self.coeff, index=cols, columns=self._columns)
+        df = pd.DataFrame(self.coeff, index=cols,
+                          columns=self._columns)
         self.coeff = df
         # Loadings
-        df = pd.DataFrame(self.loadings, index=self._columns, columns=cols)
+        df = pd.DataFrame(self.loadings,
+                          index=self._columns, columns=cols)
         self.loadings = df
         # eigenvals
         self.eigenvals = pd.Series(self.eigenvals)

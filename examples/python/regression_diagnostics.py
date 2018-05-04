@@ -19,7 +19,7 @@ import statsmodels.stats.api as sms
 url = 'http://vincentarelbundock.github.io/Rdatasets/csv/HistData/Guerry.csv'
 dat = pd.read_csv(url)
 
-# Fit regression model (using the natural log of one of the regressaors)
+# Fit regression model (using the natural log of one of the regressors)
 results = smf.ols('Lottery ~ Literacy + np.log(Pop1831)', data=dat).fit()
 
 # Inspect the results

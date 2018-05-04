@@ -216,34 +216,34 @@ def test_logistic():
     # For a vector, logistic(x) returns
     # np.exp(x[i]) / (1 + np.sum(np.exp(x[:]))) for each i
     # but squeezed
-    cases = [[1.], [0,1.], [-2,3.,1.2,-30.]]
+    cases = [[1.], [0, 1.], [-2, 3., 1.2, -30.]]
     for x in cases:
         actual = logistic(x)
         desired = [np.exp(i) / (1 + np.sum(np.exp(x))) for i in x]
         assert_allclose(actual, desired)
 
     # For a 2-dim, logistic(x) returns
-    # np.exp(x[i,t]) / (1 + np.sum(np.exp(x[:,t]))) for each i, each t
+    # np.exp(x[i, t]) / (1 + np.sum(np.exp(x[:, t]))) for each i, each t
     # but squeezed
     case = [[1.]]
     actual = logistic(case)
-    assert_equal(actual.shape, (1,1))
+    assert_equal(actual.shape, (1, 1))
     assert_allclose(actual, np.exp(1) / (1 + np.exp(1)))
 
-    # Here, np.array(case) is 2x1, so it is interpreted as i=0,1 and t=0
+    # Here, np.array(case) is 2x1, so it is interpreted as i=0, 1 and t=0
     case = [[0], [1.]]
     actual = logistic(case)
     desired = [np.exp(i) / (1 + np.sum(np.exp(case))) for i in case]
     assert_allclose(actual, desired)
 
-    # Here, np.array(case) is 1x2, so it is interpreted as i=0 and t=0,1
+    # Here, np.array(case) is 1x2, so it is interpreted as i=0 and t=0, 1
     case = [[0, 1.]]
     actual = logistic(case)
     desired = np.exp(case) / (1 + np.exp(case))
     assert_allclose(actual, desired)
 
     # For a 3-dim, logistic(x) returns
-    # np.exp(x[i,j,t]) / (1 + np.sum(np.exp(x[:,j,t])))
+    # np.exp(x[i, j, t]) / (1 + np.sum(np.exp(x[:, j, t])))
     # for each i, each j, each t
     case = np.arange(2*3*4).reshape(2, 3, 4)
     actual = logistic(case)
@@ -268,7 +268,7 @@ def test_partials_logistic():
     # np.exp(x[i]) / (1 + np.sum(np.exp(x[:]))) for each i
     # Then d logistic(x[i]) / dx[i] = (logistix(x) - logistic(x)**2)[i]
     # And d logistic(x[i]) / dx[j] = -(logistic(x[i]) * logistic[x[j]])
-    cases = [[1.], [0,1.], [-2,3.,1.2,-30.]]
+    cases = [[1.], [0, 1.], [-2, 3., 1.2, -30.]]
     for x in cases:
         evaluated = np.atleast_1d(logistic(x))
         partials = np.diag(evaluated - evaluated**2)
@@ -279,7 +279,7 @@ def test_partials_logistic():
         assert_allclose(partials_logistic(x), approx_fprime_cs(x, logistic))
 
     # For a 2-dim, logistic(x) returns
-    # np.exp(x[i,t]) / (1 + np.sum(np.exp(x[:,t]))) for each i, each t
+    # np.exp(x[i, t]) / (1 + np.sum(np.exp(x[:, t]))) for each i, each t
     # but squeezed
     case = [[1.]]
     evaluated = logistic(case)
@@ -287,7 +287,7 @@ def test_partials_logistic():
     assert_allclose(partials_logistic(case), partial)
     assert_allclose(partials_logistic(case), approx_fprime_cs(case, logistic))
 
-    # # Here, np.array(case) is 2x1, so it is interpreted as i=0,1 and t=0
+    # # Here, np.array(case) is 2x1, so it is interpreted as i=0, 1 and t=0
     case = [[0], [1.]]
     evaluated = logistic(case)[:, 0]
     partials = np.diag(evaluated - evaluated**2)
@@ -296,7 +296,7 @@ def test_partials_logistic():
     assert_allclose(partials_logistic(case),
                     approx_fprime_cs(np.squeeze(case), logistic)[..., None])
 
-    # Here, np.array(case) is 1x2, so it is interpreted as i=0 and t=0,1
+    # Here, np.array(case) is 1x2, so it is interpreted as i=0 and t=0, 1
     case = [[0, 1.]]
     evaluated = logistic(case)
     partials = (evaluated - evaluated**2)[None, ...]
@@ -305,7 +305,7 @@ def test_partials_logistic():
                     approx_fprime_cs(case, logistic).T)
 
     # For a 3-dim, logistic(x) returns
-    # np.exp(x[i,j,t]) / (1 + np.sum(np.exp(x[:,j,t])))
+    # np.exp(x[i, j, t]) / (1 + np.sum(np.exp(x[:, j, t])))
     # for each i, each j, each t
     case = np.arange(2*3*4).reshape(2, 3, 4)
     evaluated = logistic(case)

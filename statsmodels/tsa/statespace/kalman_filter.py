@@ -434,26 +434,26 @@ class KalmanFilter(Representation):
         Examples
         --------
         >>> mod = sm.tsa.statespace.SARIMAX(range(10))
-        >>> mod.filter_method
+        >>> mod.ssm.filter_method
         1
-        >>> mod.filter_conventional
+        >>> mod.ssm.filter_conventional
         True
-        >>> mod.filter_univariate = True
-        >>> mod.filter_method
+        >>> mod.ssm.filter_univariate = True
+        >>> mod.ssm.filter_method
         17
-        >>> mod.set_filter_method(filter_univariate=False,
-                                  filter_collapsed=True)
-        >>> mod.filter_method
+        >>> mod.ssm.set_filter_method(filter_univariate=False,
+        ...                           filter_collapsed=True)
+        >>> mod.ssm.filter_method
         33
-        >>> mod.set_filter_method(filter_method=1)
-        >>> mod.filter_conventional
+        >>> mod.ssm.set_filter_method(filter_method=1)
+        >>> mod.ssm.filter_conventional
         True
-        >>> mod.filter_univariate
+        >>> mod.ssm.filter_univariate
         False
-        >>> mod.filter_collapsed
+        >>> mod.ssm.filter_collapsed
         False
-        >>> mod.filter_univariate = True
-        >>> mod.filter_method
+        >>> mod.ssm.filter_univariate = True
+        >>> mod.ssm.filter_method
         17
         """
         if filter_method is not None:
@@ -531,20 +531,20 @@ class KalmanFilter(Representation):
         Examples
         --------
         >>> mod = sm.tsa.statespace.SARIMAX(range(10))
-        >>> mod.inversion_method
+        >>> mod.ssm.inversion_method
         1
-        >>> mod.solve_cholesky
+        >>> mod.ssm.solve_cholesky
         True
-        >>> mod.invert_univariate
+        >>> mod.ssm.invert_univariate
         True
-        >>> mod.invert_lu
+        >>> mod.ssm.invert_lu
         False
-        >>> mod.invert_univariate = False
-        >>> mod.inversion_method
+        >>> mod.ssm.invert_univariate = False
+        >>> mod.ssm.inversion_method
         8
-        >>> mod.set_inversion_method(solve_cholesky=False,
-                                     invert_cholesky=True)
-        >>> mod.inversion_method
+        >>> mod.ssm.set_inversion_method(solve_cholesky=False,
+        ...                              invert_cholesky=True)
+        >>> mod.ssm.inversion_method
         16
         """
         if inversion_method is not None:
@@ -597,12 +597,12 @@ class KalmanFilter(Representation):
         Examples
         --------
         >>> mod = sm.tsa.statespace.SARIMAX(range(10))
-        >>> mod.stability_method
+        >>> mod.ssm.stability_method
         1
-        >>> mod.stability_force_symmetry
+        >>> mod.ssm.stability_force_symmetry
         True
-        >>> mod.stability_force_symmetry = False
-        >>> mod.stability_method
+        >>> mod.ssm.stability_force_symmetry = False
+        >>> mod.ssm.stability_method
         0
         """
         if stability_method is not None:
@@ -680,16 +680,16 @@ class KalmanFilter(Representation):
         Examples
         --------
         >>> mod = sm.tsa.statespace.SARIMAX(range(10))
-        >>> mod.conserve_memory
+        >>> mod.ssm..conserve_memory
         0
-        >>> mod.memory_no_predicted
+        >>> mod.ssm.memory_no_predicted
         False
-        >>> mod.memory_no_predicted = True
-        >>> mod.conserve_memory
+        >>> mod.ssm.memory_no_predicted = True
+        >>> mod.ssm.conserve_memory
         2
-        >>> mod.set_conserve_memory(memory_no_filtered=True,
-                                    memory_no_forecast=True)
-        >>> mod.conserve_memory
+        >>> mod.ssm.set_conserve_memory(memory_no_filtered=True,
+        ...                             memory_no_forecast=True)
+        >>> mod.ssm.conserve_memory
         7
         """
         if conserve_memory is not None:
@@ -748,6 +748,8 @@ class KalmanFilter(Representation):
 
         # Run the filter
         kfilter()
+        tmp = np.array(kfilter.loglikelihood)
+        tmp2 = np.array(kfilter.predicted_state)
 
         return kfilter
 
@@ -793,7 +795,7 @@ class KalmanFilter(Representation):
         kfilter = self._filter(
             filter_method, inversion_method, stability_method, conserve_memory,
             filter_timing, tolerance, loglikelihood_burn, complex_step)
-
+        tmp = np.array(kfilter.loglikelihood)
         # Create the results object
         results = self.results_class(self)
         results.update_representation(self)
@@ -948,8 +950,22 @@ class KalmanFilter(Representation):
                 raise ValueError('Invalid shape of provided initial state'
                                  ' vector. Required (%d, 1)' % self.k_states)
         elif self.initialization == 'known':
-            initial_state = self._initial_state
-        elif self.initialization in ['approximate_diffuse', 'stationary']:
+            initial_state = np.random.multivariate_normal(
+                self._initial_state, self._initial_state_cov)
+        elif self.initialization == 'stationary':
+            from scipy.linalg import solve_discrete_lyapunov
+            # (I - T)^{-1} c = x => (I - T) x = c
+            initial_state_mean = np.linalg.solve(
+                np.eye(self.k_states) - self['transition', :, :, 0],
+                self['state_intercept', :, 0])
+            R = self['selection', :, :, 0]
+            Q = self['state_cov', :, :, 0]
+            selected_state_cov = R.dot(Q).dot(R.T)
+            initial_state_cov = solve_discrete_lyapunov(
+                self['transition', :, :, 0], selected_state_cov)
+            initial_state = np.random.multivariate_normal(
+                initial_state_mean, initial_state_cov)
+        elif self.initialization == 'approximate_diffuse':
             initial_state = np.zeros(self.k_states)
         else:
             initial_state = np.zeros(self.k_states)
@@ -1134,8 +1150,8 @@ class KalmanFilter(Representation):
                 else:
                     mat = np.asarray(kwargs[name])
                     validate_matrix_shape(name, mat.shape, shape[0],
-                                          shape[1], nforecast)
-                    if mat.ndim < 3 or not mat.shape[2] == nforecast:
+                                          shape[1], steps)
+                    if mat.ndim < 3 or not mat.shape[2] == steps:
                         raise ValueError(exception % name)
                     representation[name] = np.c_[representation[name], mat]
 
@@ -1332,7 +1348,7 @@ class FilterResults(FrozenRepresentation):
 
         Parameters
         ----------
-        kalman_filter : KalmanFilter
+        kalman_filter : statespace.kalman_filter.KalmanFilter
             The model object from which to take the updated values.
 
         Notes
@@ -1559,7 +1575,6 @@ class FilterResults(FrozenRepresentation):
                     )
                 else:
                     mask = ~self.missing[:, t].astype(bool)
-                    n = self.k_endog - self.nmissing[t]
                     F = self.forecasts_error_cov[np.ix_(mask, mask, [t])]
                     self._kalman_gain[:, mask, t] = np.dot(
                         np.dot(
@@ -1654,7 +1669,7 @@ class FilterResults(FrozenRepresentation):
 
         Returns
         -------
-        results : PredictionResults
+        results : kalman_filter.PredictionResults
             A PredictionResults object.
 
         Notes
@@ -1840,8 +1855,6 @@ class FilterResults(FrozenRepresentation):
         # with predicted data during dynamic forecasting
         endog = model._representations[model.prefix]['obs']
 
-        # print(nstatic, ndynamic, nforecast, model.nobs)
-
         for t in range(kfilter.model.nobs):
             # Run the Kalman filter for the first `nstatic` periods (for
             # which dynamic computation will not be performed)
@@ -1973,8 +1986,6 @@ class PredictionResults(FilterResults):
     ]
 
     def __init__(self, results, start, end, nstatic, ndynamic, nforecast):
-        from scipy import stats
-
         # Save the filter results object
         self.results = results
 

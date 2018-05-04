@@ -1,38 +1,55 @@
-from statsmodels.compat.python import PY3
+from statsmodels.compat.testing import SkipTest
+
 import os
-from statsmodels.datasets import get_rdataset, webuse, check_internet
-from numpy.testing import assert_, assert_array_equal, dec
+
+from numpy.testing import assert_, assert_array_equal
+
+from statsmodels.datasets import get_rdataset, webuse, check_internet, utils
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-dec.skipif(PY3, 'Not testable on Python 3.x')
+
 def test_get_rdataset():
     # smoke test
-    if not PY3:
-        #NOTE: there's no way to test both since the cached files were
-        #created with Python 2.x, they're strings, but Python 3 expects
-        #bytes and the index file path is hard-coded so both can't live
-        #side by side
-        duncan = get_rdataset("Duncan", "car", cache=cur_dir)
-        assert_(duncan.from_cache)
+    test_url = "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/master/csv/datasets/cars.csv"
+    internet_available = check_internet(test_url)
+    if not internet_available:
+        raise SkipTest('Unable to retrieve file - skipping test')
+    duncan = get_rdataset("Duncan", "car", cache=cur_dir)
+    assert_(isinstance(duncan, utils.Dataset))
+    assert_(duncan.from_cache)
 
-#internet_available = check_internet()
-#@dec.skipif(not internet_available)
-def t_est_webuse():
+    # test writing and reading cache
+    guerry = get_rdataset("Guerry", "HistData", cache=cur_dir)
+    assert_(guerry.from_cache is False)
+    guerry2 = get_rdataset("Guerry", "HistData", cache=cur_dir)
+    assert_(guerry2.from_cache is True)
+    fn = "raw.github.com,vincentarelbundock,Rdatasets,master,csv,HistData,Guerry.csv.zip"
+    os.remove(os.path.join(cur_dir, fn))
+    fn = "raw.github.com,vincentarelbundock,Rdatasets,master,doc,HistData,rst,Guerry.rst.zip"
+    os.remove(os.path.join(cur_dir, fn))
+
+
+def test_webuse():
     # test copied and adjusted from iolib/tests/test_foreign
     from statsmodels.iolib.tests.results.macrodata import macrodata_result as res2
-    #base_gh = "http://github.com/statsmodels/statsmodels/raw/master/statsmodels/datasets/macrodata/"
-    base_gh = "http://www.statsmodels.org/devel/_static/"
+    base_gh = "http://github.com/statsmodels/statsmodels/raw/master/statsmodels/datasets/macrodata/"
+    internet_available = check_internet(base_gh)
+    if not internet_available:
+        raise SkipTest('Unable to retrieve file - skipping test')
     res1 = webuse('macrodata', baseurl=base_gh, as_df=False)
-    assert_array_equal(res1 == res2, True)
+    assert_array_equal(res1, res2)
 
-#@dec.skipif(not internet_available)
-def t_est_webuse_pandas():
+
+def test_webuse_pandas():
     # test copied and adjusted from iolib/tests/test_foreign
     from pandas.util.testing import assert_frame_equal
     from statsmodels.datasets import macrodata
     dta = macrodata.load_pandas().data
     base_gh = "http://github.com/statsmodels/statsmodels/raw/master/statsmodels/datasets/macrodata/"
+    internet_available = check_internet(base_gh)
+    if not internet_available:
+        raise SkipTest('Unable to retrieve file - skipping test')
     res1 = webuse('macrodata', baseurl=base_gh)
     res1 = res1.astype(float)
     assert_frame_equal(res1, dta)

@@ -1,11 +1,15 @@
 from statsmodels.compat.python import (lrange, iterkeys, iteritems, lzip,
                                        reduce, itervalues, zip, string_types,
                                        range)
-from statsmodels.compat.collections import OrderedDict
+
+from collections import OrderedDict
+import datetime
+import re
+import textwrap
+
 import numpy as np
 import pandas as pd
-import datetime
-import textwrap
+
 from .table import SimpleTable
 from .tableformatting import fmt_latex, fmt_txt
 
@@ -16,6 +20,7 @@ class Summary(object):
         self.settings = []
         self.extra_txt = []
         self.title = None
+        self._merge_latex = False
 
     def __str__(self):
         return self.as_text()
@@ -203,14 +208,22 @@ class Summary(object):
         tables = self.tables
         settings = self.settings
         title = self.title
+
         if title is not None:
-            title = '\\caption{' + title + '} \\\\'
+            title = '\\caption{' + title + '}'
         else:
             title = '\\caption{}'
 
         simple_tables = _simple_tables(tables, settings)
         tab = [x.as_latex_tabular() for x in simple_tables]
         tab = '\n\\hline\n'.join(tab)
+
+        to_replace = ('\\\\hline\\n\\\\hline\\n\\\\'
+        'end{tabular}\\n\\\\begin{tabular}{.*}\\n')
+
+        if self._merge_latex:
+             # create single tabular object for summary_col
+            tab = re.sub(to_replace,'\midrule\n\midrule\n', tab)
 
         out = '\\begin{table}', title, tab, '\\end{table}'
         out = '\n'.join(out)
@@ -233,7 +246,7 @@ def _measure_tables(tables, settings):
     pad_index = []
 
     for i in range(len(tab)):
-        nsep = tables[i].shape[1] - 1
+        nsep = max(tables[i].shape[1] - 1, 1)
         pad = int((len_max - length[i]) / nsep)
         pad_sep.append(pad)
         len_new = length[i] + nsep * pad
@@ -246,7 +259,7 @@ def _measure_tables(tables, settings):
 _model_types = {'OLS' : 'Ordinary least squares',
                 'GLS' : 'Generalized least squares',
                 'GLSAR' : 'Generalized least squares with AR(p)',
-                'WLS' : 'Weigthed least squares',
+                'WLS' : 'Weighted least squares',
                 'RLM' : 'Robust linear model',
                 'NBin': 'Negative binomial model',
                 'GLM' : 'Generalized linear model'
@@ -327,7 +340,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     '''
 
     if isinstance(results, tuple):
-        results, params, std_err, tvalues, pvalues, conf_int = results
+        results, params, bse, tvalues, pvalues, conf_int = results
     else:
         params = results.params
         bse = results.bse
@@ -347,7 +360,10 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
                         '[' + str(alpha/2), str(1-alpha/2) + ']']
 
     if not xname:
-        data.index = results.model.exog_names
+        try:
+            data.index = results.model.data.param_names
+        except AttributeError:
+            data.index = results.model.exog_names
     else:
         data.index = xname
 
@@ -365,17 +381,17 @@ def _col_params(result, float_format='%.4f', stars=True):
     for col in res.columns[:2]:
         res[col] = res[col].apply(lambda x: float_format % x)
     # Std.Errors in parentheses
-    res.ix[:, 1] = '(' + res.ix[:, 1] + ')'
+    res.iloc[:, 1] = '(' + res.iloc[:, 1] + ')'
     # Significance stars
     if stars:
-        idx = res.ix[:, 3] < .1
-        res.ix[idx, 0] = res.ix[idx, 0] + '*'
-        idx = res.ix[:, 3] < .05
-        res.ix[idx, 0] = res.ix[idx, 0] + '*'
-        idx = res.ix[:, 3] < .01
-        res.ix[idx, 0] = res.ix[idx, 0] + '*'
+        idx = res.iloc[:, 3] < .1
+        res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + '*'
+        idx = res.iloc[:, 3] < .05
+        res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + '*'
+        idx = res.iloc[:, 3] < .01
+        res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + '*'
     # Stack Coefs and Std.Errors
-    res = res.ix[:, :2]
+    res = res.iloc[:, :2]
     res = res.stack()
     res = pd.DataFrame(res)
     res.columns = [str(result.model.endog_names)]
@@ -416,23 +432,24 @@ def _make_unique(list_of_names):
     return header
 
 
-def summary_col(results, float_format='%.4f', model_names=[], stars=False,
-                info_dict=None, regressor_order=[]):
+def summary_col(results, float_format='%.4f', model_names=(), stars=False,
+                info_dict=None, regressor_order=(), drop_omitted=False):
     """
     Summarize multiple results instances side-by-side (coefs and SEs)
 
     Parameters
     ----------
     results : statsmodels results instance or list of result instances
-    float_format : string
+    float_format : string, optional
         float format for coefficients and standard errors
         Default : '%.4f'
-    model_names : list of strings of length len(results) if the names are not
+    model_names : list of strings, optional
+        Must have same length as the number of results. If the names are not
         unique, a roman number will be appended to all model names
     stars : bool
         print significance stars
     info_dict : dict
-        dict of lambda functions to be applied to results instances to retrieve
+        dict of functions to be applied to results instances to retrieve
         model info. To use specific information for different models, add a
         (nested) info_dict with model name as the key.
         Example: `info_dict = {"N":..., "R2": ..., "OLS":{"R2":...}}` would
@@ -440,9 +457,13 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
         all other results.
         Default : None (use the info_dict specified in
         result.default_model_infos, if this property exists)
-    regressor_order : list of strings
+    regressor_order : list of strings, optional
         list of names of the regressors in the desired order. All regressors
         not specified will be appended to the end of the list.
+    drop_omitted : bool, optional
+        Includes regressors that are not specified in regressor_order. If False,
+        regressors not specified will be appended to end of the list. If True,
+        only regressors in regressors_list will be included.
     """
 
     if not isinstance(results, list):
@@ -470,9 +491,11 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
         order = ordered + list(np.unique(unordered))
 
         f = lambda idx: sum([[x + 'coef', x + 'stde'] for x in idx], [])
-        summ.index = f(np.unique(varnames))
+        summ.index = f(pd.unique(varnames))
         summ = summ.reindex(f(order))
         summ.index = [x[:-4] for x in summ.index]
+        if drop_omitted:
+            summ = summ.loc[regressor_order]
 
     idx = pd.Series(lrange(summ.shape[0])) % 2 == 1
     summ.index = np.where(idx, '', summ.index.get_level_values(0))
@@ -485,7 +508,7 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
         cols = [_col_info(x, getattr(x, "default_model_infos", None)) for x in
                 results]
     # use unique column names, otherwise the merge will not succeed
-    for df , name in zip(cols, _make_unique([df.columns[0] for df in cols])):
+    for df, name in zip(cols, _make_unique([df.columns[0] for df in cols])):
         df.columns = [name]
     merg = lambda x, y: x.merge(y, how='outer', right_index=True,
                                 left_index=True)
@@ -498,6 +521,7 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
     summ = summ.fillna('')
 
     smry = Summary()
+    smry._merge_latex = True
     smry.add_df(summ, header=True, align='l')
     smry.add_text('Standard errors in parentheses.')
     if stars:
@@ -526,7 +550,7 @@ def _df_to_simpletable(df, align='r', float_format="%.4f", header=True,
     if index:
         stubs = [str(x) + int(pad_index) * ' ' for x in dat.index.tolist()]
     else:
-        dat.ix[:, 0] = [str(x) + int(pad_index) * ' ' for x in dat.ix[:, 0]]
+        dat.iloc[:, 0] = [str(x) + int(pad_index) * ' ' for x in dat.iloc[:, 0]]
         stubs = None
     st = SimpleTable(np.array(dat), headers=headers, stubs=stubs,
                      ltx_fmt=fmt_latex, txt_fmt=fmt_txt)

@@ -58,13 +58,16 @@ notebooks:
 	$(TOOLSPATH)$(NOTEBOOKBUILD) --execute=True --allow_errors=True
 
 html:
+    # make directories for images
+	@echo "Make static directory for images"
+	mkdir -p $(BUILDDIR)/html/_static
 	# generate the examples rst files
 	@echo "Generating reST from examples folder"
 	#$(TOOLSPATH)$(EXAMPLEBUILD)
 	@echo "Generating datasets from installed statsmodels.datasets"
 	$(TOOLSPATH)$(DATASETBUILD)
 	@echo "Generating notebooks from examples/notebooks folder"
-	$(TOOLSPATH)$(NOTEBOOKBUILD) --execute=True --allow_errors=True
+	$(TOOLSPATH)$(NOTEBOOKBUILD) --parallel --report-errors --skip-existing
 	@echo "Running sphinx-build"
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo "Copying rendered example notebooks"

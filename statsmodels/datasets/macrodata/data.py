@@ -88,3 +88,10 @@ def _get_data():
         data = recfromtxt(f, delimiter=",",
                           names=True, dtype=float)
     return data
+
+variable_names = ["realcons", "realgdp", "realinv"]
+
+
+def __str__():
+    return "macrodata"
+

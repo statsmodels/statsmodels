@@ -21,7 +21,7 @@ from statsmodels.tools.decorators import (cache_readonly,
                                           resettable_cache)
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.wrapper as wrap
-from statsmodels.regression.linear_model import yule_walker, GLS
+from statsmodels.regression.linear_model import yule_walker, OLS
 from statsmodels.tsa.tsatools import (lagmat, add_trend,
                                       _ar_transparams, _ar_invtransparams,
                                       _ma_transparams, _ma_invtransparams,
@@ -33,27 +33,26 @@ from statsmodels.tools.numdiff import approx_hess_cs, approx_fprime_cs
 from statsmodels.tsa.kalmanf import KalmanFilter
 
 _armax_notes = """
+    Notes
+    -----
+    If exogenous variables are given, then the model that is fit is
 
-        Notes
-        -----
-        If exogenous variables are given, then the model that is fit is
+    .. math::
 
-        .. math::
+       \\phi(L)(y_t - X_t\\beta) = \\theta(L)\epsilon_t
 
-           \\phi(L)(y_t - X_t\\beta) = \\theta(L)\epsilon_t
-
-        where :math:`\\phi` and :math:`\\theta` are polynomials in the lag
-        operator, :math:`L`. This is the regression model with ARMA errors,
-        or ARMAX model. This specification is used, whether or not the model
-        is fit using conditional sum of square or maximum-likelihood, using
-        the `method` argument in
-        :meth:`statsmodels.tsa.arima_model.%(Model)s.fit`. Therefore, for
-        now, `css` and `mle` refer to estimation methods only. This may
-        change for the case of the `css` model in future versions.
+    where :math:`\\phi` and :math:`\\theta` are polynomials in the lag
+    operator, :math:`L`. This is the regression model with ARMA errors,
+    or ARMAX model. This specification is used, whether or not the model
+    is fit using conditional sum of square or maximum-likelihood, using
+    the `method` argument in
+    :meth:`statsmodels.tsa.arima_model.%(Model)s.fit`. Therefore, for
+    now, `css` and `mle` refer to estimation methods only. This may
+    change for the case of the `css` model in future versions.
 """
 
-_arma_params = """\
-    endog : array-like
+_arma_params = \
+"""endog : array-like
         The endogenous variable.
     order : iterable
         The (p,q) order of the model for the number of AR parameters,
@@ -66,8 +65,8 @@ _arma_model = "Autoregressive Moving Average ARMA(p,q) Model"
 
 _arima_model = "Autoregressive Integrated Moving Average ARIMA(p,d,q) Model"
 
-_arima_params = """\
-    endog : array-like
+_arima_params = \
+"""endog : array-like
         The endogenous variable.
     order : iterable
         The (p,d,q) order of the model for the number of AR parameters,
@@ -147,8 +146,7 @@ _predict_returns = """predict : array
 """
 
 _arma_predict = _predict % {"Model" : "ARMA",
-                            "params" : """
-            params : array-like
+                            "params" : """params : array-like
             The fitted parameters of the model.""",
                             "extra_params" : "",
                             "returns" : _predict_returns,
@@ -158,27 +156,23 @@ _arma_results_predict = _predict % {"Model" : "ARMA", "params" : "",
                                     "extra_params" : "",
                                     "returns" : _predict_returns,
                                     "extra_section" : _results_notes}
+_arima_extras = """typ : str {'linear', 'levels'}
+
+            - 'linear' : Linear prediction in terms of the differenced
+              endogenous variables.
+            - 'levels' : Predict the levels of the original endogenous
+              variables.\n"""
 
 _arima_predict = _predict % {"Model" : "ARIMA",
                              "params" : """params : array-like
             The fitted parameters of the model.""",
-                             "extra_params" : """typ : str {'linear', 'levels'}
-
-            - 'linear' : Linear prediction in terms of the differenced
-              endogenous variables.
-            - 'levels' : Predict the levels of the original endogenous
-              variables.\n""", "returns" : _predict_returns,
+                             "extra_params" : _arima_extras,
+                             "returns" : _predict_returns,
                              "extra_section" : _predict_notes}
 
 _arima_results_predict = _predict % {"Model" : "ARIMA",
                                      "params" : "",
-                                     "extra_params" :
-                                     """typ : str {'linear', 'levels'}
-
-            - 'linear' : Linear prediction in terms of the differenced
-              endogenous variables.
-            - 'levels' : Predict the levels of the original endogenous
-              variables.\n""",
+                                     "extra_params" :_arima_extras,
                                      "returns" : _predict_returns,
                                      "extra_section" : _results_notes}
 
@@ -192,7 +186,7 @@ _arima_plot_predict_example = """        Examples
         >>> dta.index = pd.DatetimeIndex(start='1700', end='2009', freq='A')
         >>> res = sm.tsa.ARMA(dta, (3, 0)).fit()
         >>> fig, ax = plt.subplots()
-        >>> ax = dta.ix['1950':].plot(ax=ax)
+        >>> ax = dta.loc['1950':].plot(ax=ax)
         >>> fig = res.plot_predict('1990', '2012', dynamic=True, ax=ax,
         ...                        plot_insample=False)
         >>> plt.show()
@@ -200,16 +194,18 @@ _arima_plot_predict_example = """        Examples
         .. plot:: plots/arma_predict_plot.py
 """
 
-_plot_predict = ("""
-        Plot forecasts
-                      """ + '\n'.join(_predict.split('\n')[2:])) % {
-                      "params" : "",
-                          "extra_params" : """alpha : float, optional
+_plot_extras = """alpha : float, optional
             The confidence intervals for the forecasts are (1 - alpha)%
         plot_insample : bool, optional
             Whether to plot the in-sample series. Default is True.
         ax : matplotlib.Axes, optional
-            Existing axes to plot with.""",
+            Existing axes to plot with."""
+
+_plot_predict = ("""
+        Plot forecasts
+                      """ + '\n'.join(_predict.split('\n')[2:])) % {
+                      "params" : "",
+                          "extra_params" : _plot_extras,
                       "returns" : """fig : matplotlib.Figure
             The plotted Figure instance""",
                       "extra_section" : ('\n' + _arima_plot_predict_example +
@@ -219,16 +215,11 @@ _plot_predict = ("""
 _arima_plot_predict = ("""
         Plot forecasts
                       """ + '\n'.join(_predict.split('\n')[2:])) % {
-                      "params" : "",
-                          "extra_params" : """alpha : float, optional
-            The confidence intervals for the forecasts are (1 - alpha)%
-        plot_insample : bool, optional
-            Whether to plot the in-sample series. Default is True.
-        ax : matplotlib.Axes, optional
-            Existing axes to plot with.""",
-                      "returns" : """fig : matplotlib.Figure
+    "params" : "",
+    "extra_params" : _plot_extras,
+    "returns" : """fig : matplotlib.Figure
             The plotted Figure instance""",
-                "extra_section" : ('\n' + _arima_plot_predict_example +
+    "extra_section" : ('\n' + _arima_plot_predict_example +
                                    '\n' +
                                    '\n'.join(_results_notes.split('\n')[:3]) +
                               ("""
@@ -399,10 +390,13 @@ def _make_arma_names(data, k_trend, order, exog_names):
 
     # ensure exog_names stays unchanged when the `fit` method
     # is called multiple times.
-    if exog_names[-k_ma:] == ma_lag_names and \
-       exog_names[-(k_ar+k_ma):-k_ma] == ar_lag_names and \
-       (not exog_names or not trend_name or trend_name[0] == exog_names[0]):
-        return exog_names
+    if k_ma ==0 and k_ar ==0:
+        if len(exog_names) != 0:
+          return exog_names
+    elif  (exog_names[-k_ma:] == ma_lag_names ) and \
+           exog_names[-(k_ar+k_ma):-k_ma] == ar_lag_names and \
+           (not exog_names or not trend_name or trend_name[0] == exog_names[0]):
+           return exog_names
 
     exog_names = trend_name + exog_names + ar_lag_names + ma_lag_names
     return exog_names
@@ -489,10 +483,11 @@ class ARMA(tsbase.TimeSeriesModel):
         """
         p, q, k = order
         start_params = zeros((p+q+k))
-        endog = self.endog.copy()  # copy because overwritten
+        # make copy of endog because overwritten
+        endog = np.array(self.endog, np.float64)
         exog = self.exog
         if k != 0:
-            ols_params = GLS(endog, exog).fit().params
+            ols_params = OLS(endog, exog).fit().params
             start_params[:k] = ols_params
             endog -= np.dot(exog, ols_params).squeeze()
         if q != 0:
@@ -532,7 +527,7 @@ class ARMA(tsbase.TimeSeriesModel):
                 lag_resid = lagmat(resid, q, 'both')[resid_start:]
                 # stack ar lags and resids
                 X = np.column_stack((lag_endog, lag_resid))
-                coefs = GLS(endog[max(p_tmp + q, p):], X).fit().params
+                coefs = OLS(endog[max(p_tmp + q, p):], X).fit().params
                 start_params[k:k+p+q] = coefs
             else:
                 start_params[k+p:k+p+q] = yule_walker(endog, order=q)[0]
@@ -572,7 +567,9 @@ class ARMA(tsbase.TimeSeriesModel):
                                             approx_grad=True, m=12,
                                             pgtol=1e-7, factr=1e3,
                                             bounds=bounds, iprint=-1)
-            start_params = self._transparams(mlefit[0])
+            start_params = mlefit[0]
+            if self.transparams:
+                start_params = self._transparams(start_params)
         return start_params
 
     def score(self, params):
@@ -743,7 +740,11 @@ class ARMA(tsbase.TimeSeriesModel):
         if dynamic:
             if self.k_exog > 0:
                 # need the last k_ar exog for the lag-polynomial
-                exog = np.vstack((self.exog[start - k_ar:, self.k_trend:], exog))
+                exog_insample = self.exog[start - k_ar:, self.k_trend:]
+                if exog is not None:
+                    exog = np.vstack((exog_insample, exog))
+                else:
+                    exog = exog_insample
             #TODO: now that predict does dynamic in-sample it should
             # also return error estimates and confidence intervals
             # but how? len(endog) is not tot_obs
@@ -819,7 +820,7 @@ class ARMA(tsbase.TimeSeriesModel):
         return llf
 
     def fit(self, start_params=None, trend='c', method="css-mle",
-            transparams=True, solver='lbfgs', maxiter=50, full_output=1,
+            transparams=True, solver='lbfgs', maxiter=500, full_output=1,
             disp=5, callback=None, start_ar_lags=None, **kwargs):
         """
         Fits ARMA(p,q) model using exact maximum likelihood via Kalman filter.
@@ -854,7 +855,7 @@ class ARMA(tsbase.TimeSeriesModel):
             approximate the Hessian, projected gradient tolerance of 1e-8 and
             factr = 1e2. You can change these by using kwargs.
         maxiter : int, optional
-            The maximum number of function evaluations. Default is 50.
+            The maximum number of function evaluations. Default is 500.
         tol : float
             The convergence tolerance.  Default is 1e-08.
         full_output : bool, optional
@@ -969,12 +970,17 @@ class ARMA(tsbase.TimeSeriesModel):
         armafit.mle_settings = mlefit.mle_settings
         return ARMAResultsWrapper(armafit)
 
+    # base class of "from_formula" is "class Model(object)"
+    @classmethod
+    def from_formula(cls, formula, data, subset=None, drop_cols=None, *args, **kwargs):
+        raise NotImplementedError("from_formula is not supported"
+                                  " for ARMA models.")
+
 
 #NOTE: the length of endog changes when we give a difference to fit
 #so model methods are not the same on unfit models as fit ones
 #starting to think that order of model should be put in instantiation...
 class ARIMA(ARMA):
-
     __doc__ = tsbase._tsa_doc % {"model" : _arima_model,
                                  "params" : _arima_params, "extra_params" : "",
                                  "extra_sections" : _armax_notes %
@@ -989,6 +995,15 @@ class ARIMA(ARMA):
             mod = super(ARIMA, cls).__new__(cls)
             mod.__init__(endog, order, exog, dates, freq, missing)
             return mod
+
+    def __getnewargs__(self):
+        # using same defaults as in __init__
+        dates = getattr(self, 'dates', None)
+        freq = getattr(self, 'freq', None)
+        missing = getattr(self, 'missing', 'none')
+        return ((self.endog),
+                (self.k_lags, self.k_diff, self.k_ma),
+                self.exog, dates, freq, missing)
 
     def __init__(self, endog, order, exog=None, dates=None, freq=None,
                  missing='none'):
@@ -1059,7 +1074,7 @@ class ARIMA(ARMA):
         return start, end, out_of_sample, prediction_index
 
     def fit(self, start_params=None, trend='c', method="css-mle",
-            transparams=True, solver='lbfgs', maxiter=50, full_output=1,
+            transparams=True, solver='lbfgs', maxiter=500, full_output=1,
             disp=5, callback=None, start_ar_lags=None, **kwargs):
         """
         Fits ARIMA(p,d,q) model by exact maximum likelihood via Kalman filter.
@@ -1094,7 +1109,7 @@ class ARIMA(ARMA):
             approximate the Hessian, projected gradient tolerance of 1e-8 and
             factr = 1e2. You can change these by using kwargs.
         maxiter : int, optional
-            The maximum number of function evaluations. Default is 50.
+            The maximum number of function evaluations. Default is 500.
         tol : float
             The convergence tolerance.  Default is 1e-08.
         full_output : bool, optional
@@ -1494,7 +1509,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
     def _forecast_error(self, steps):
         sigma2 = self.sigma2
         ma_rep = arma2ma(np.r_[1, -self.arparams],
-                         np.r_[1, self.maparams], nobs=steps)
+                         np.r_[1, self.maparams], lags=steps)
 
         fcasterr = np.sqrt(sigma2 * np.cumsum(ma_rep**2))
         return fcasterr
@@ -1646,15 +1661,16 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         if len(stubs):  # not 0, 0
             modulus = np.abs(roots)
             data = np.column_stack((roots.real, roots.imag, modulus, freq))
-            roots_table = SimpleTable(data,
-                                      headers=['           Real',
+            roots_table = SimpleTable([('%17.4f' % row[0],
+                                        '%+17.4fj' % row[1],
+                                        '%17.4f' % row[2],
+                                        '%17.4f' % row[3]) for row in data],
+                                      headers=['            Real',
                                                '         Imaginary',
                                                '         Modulus',
                                                '        Frequency'],
                                       title="Roots",
-                                      stubs=stubs,
-                                      data_fmts=["%17.4f", "%+17.4fj",
-                                                 "%17.4f", "%17.4f"])
+                                      stubs=stubs)
 
             smry.tables.append(roots_table)
         return smry
@@ -1812,7 +1828,7 @@ class ARIMAResults(ARMAResults):
     def _forecast_error(self, steps):
         sigma2 = self.sigma2
         ma_rep = arma2ma(np.r_[1, -self.arparams],
-                         np.r_[1, self.maparams], nobs=steps)
+                         np.r_[1, self.maparams], lags=steps)
 
         fcerr = np.sqrt(np.cumsum(cumsum_n(ma_rep, self.k_diff)**2)*sigma2)
         return fcerr

@@ -1,3 +1,4 @@
+from statsmodels.compat.numpy import recarray_select
 from statsmodels.compat.python import (range, StringIO, urlopen,
                                        HTTPError, URLError, lrange,
                                        cPickle, urljoin, BytesIO, long, PY3)
@@ -98,7 +99,7 @@ def process_recarray(data, endog_idx=0, exog_idx=None, stack=True, dtype=None):
     if stack:
         exog = np.column_stack(data[field] for field in exog_name)
     else:
-        exog = data[exog_name]
+        exog = recarray_select(data, exog_name)
 
     if dtype:
         endog = endog.astype(dtype)
@@ -124,7 +125,7 @@ def process_recarray_pandas(data, endog_idx=0, exog_idx=None, dtype=None,
         else:
             exog = data.filter(names[exog_idx])
     else:
-        endog = data.ix[:, endog_idx]
+        endog = data.loc[:, endog_idx]
         endog_name = list(endog.columns)
         if exog_idx is None:
             exog = data.drop(endog_name, axis=1)
@@ -134,8 +135,8 @@ def process_recarray_pandas(data, endog_idx=0, exog_idx=None, dtype=None,
             exog = data.filter(names[exog_idx])
 
     if index_idx is not None:  # NOTE: will have to be improved for dates
-        endog.index = Index(data.ix[:, index_idx])
-        exog.index = Index(data.ix[:, index_idx])
+        endog.index = Index(data.iloc[:, index_idx])
+        exog.index = Index(data.iloc[:, index_idx])
         data = data.set_index(names[index_idx])
 
     exog_name = list(exog.columns)
@@ -170,6 +171,7 @@ def _cache_it(data, cache_path):
         # for some reason encode("zip") won't work for me in Python 3?
         import zlib
         # use protocol 2 so can open with python 2.x if cached in 3.x
+        data = data.decode('utf-8')
         open(cache_path, "wb").write(zlib.compress(cPickle.dumps(data,
                                                                  protocol=2)))
     else:
@@ -208,7 +210,7 @@ def _urlopen_cached(url, cache):
 
     # not using the cache or didn't find it in cache
     if not from_cache:
-        data = urlopen(url).read()
+        data = urlopen(url, timeout=3).read()
         if cache is not None:  # then put it in the cache
             _cache_it(data, cache_path)
     return data, from_cache
@@ -239,7 +241,7 @@ def _get_dataset_meta(dataname, package, cache):
         data = data.decode('utf-8', 'strict')
     index = read_csv(StringIO(data))
     idx = np.logical_and(index.Item == dataname, index.Package == package)
-    dataset_meta = index.ix[idx]
+    dataset_meta = index.loc[idx]
     return dataset_meta["Title"].item()
 
 
@@ -263,7 +265,7 @@ def get_rdataset(dataname, package="datasets", cache=False):
     -------
     dataset : Dataset instance
         A `statsmodels.data.utils.Dataset` instance. This objects has
-        attributes::
+        attributes:
 
         * data - A pandas DataFrame containing the data
         * title - The dataset title
@@ -328,10 +330,11 @@ def clear_data_home(data_home=None):
     data_home = get_data_home(data_home)
     shutil.rmtree(data_home)
 
-def check_internet():
+def check_internet(url=None):
     """Check if internet is available"""
+    url = "https://github.com" if url is None else url
     try:
-        urlopen("https://github.com")
+        urlopen(url)
     except URLError as err:
         return False
     return True

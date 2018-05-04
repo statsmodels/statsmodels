@@ -79,18 +79,22 @@ cdef class sSimulationSmoother(object):
 
     # ### Parameters
     cdef readonly int nobs
-    cdef readonly int pretransformed_variates
+    cdef readonly int pretransformed_disturbance_variates
+    cdef readonly int pretransformed_initial_state_variates
+    cdef readonly int fixed_initial_state
 
     cpdef draw_disturbance_variates(self)
     cpdef draw_initial_state_variates(self)
-    cpdef set_disturbance_variates(self, np.float32_t [:] variates)
-    cpdef set_initial_state_variates(self, np.float32_t [:] variates)
+    cpdef set_disturbance_variates(self, np.float32_t [:] variates, int pretransformed=*)
+    cpdef set_initial_state_variates(self, np.float32_t [:] variates, int pretransformed=*)
+    cpdef set_initial_state(self, np.float32_t [:] initial_state)
     cpdef simulate(self, int simulation_output=*)
 
     cdef np.float32_t generate_obs(self, int t, np.float32_t * obs, np.float32_t * state, np.float32_t * variates)
     cdef np.float32_t generate_state(self, int t, np.float32_t * state, np.float32_t * input_state, np.float32_t * variates)
     cdef void cholesky(self, np.float32_t * source, np.float32_t * destination, int n)
     cdef void transform_variates(self, np.float32_t * variates, np.float32_t * cholesky_factor, int n)
+    cdef void _reinitialize_temp_pointers(self) except *
 
 # Double precision
 cdef class dSimulationSmoother(object):
@@ -144,18 +148,22 @@ cdef class dSimulationSmoother(object):
 
     # ### Parameters
     cdef readonly int nobs
-    cdef readonly int pretransformed_variates
+    cdef readonly int pretransformed_disturbance_variates
+    cdef readonly int pretransformed_initial_state_variates
+    cdef readonly int fixed_initial_state
 
     cpdef draw_disturbance_variates(self)
     cpdef draw_initial_state_variates(self)
-    cpdef set_disturbance_variates(self, np.float64_t [:] variates)
-    cpdef set_initial_state_variates(self, np.float64_t [:] variates)
+    cpdef set_disturbance_variates(self, np.float64_t [:] variates, int pretransformed=*)
+    cpdef set_initial_state_variates(self, np.float64_t [:] variates, int pretransformed=*)
+    cpdef set_initial_state(self, np.float64_t [:] initial_state)
     cpdef simulate(self, int simulation_output=*)
 
     cdef np.float64_t generate_obs(self, int t, np.float64_t * obs, np.float64_t * state, np.float64_t * variates)
     cdef np.float64_t generate_state(self, int t, np.float64_t * state, np.float64_t * input_state, np.float64_t * variates)
     cdef void cholesky(self, np.float64_t * source, np.float64_t * destination, int n)
     cdef void transform_variates(self, np.float64_t * variates, np.float64_t * cholesky_factor, int n)
+    cdef void _reinitialize_temp_pointers(self) except *
 
 # Single precision complex
 cdef class cSimulationSmoother(object):
@@ -209,18 +217,22 @@ cdef class cSimulationSmoother(object):
 
     # ### Parameters
     cdef readonly int nobs
-    cdef readonly int pretransformed_variates
+    cdef readonly int pretransformed_disturbance_variates
+    cdef readonly int pretransformed_initial_state_variates
+    cdef readonly int fixed_initial_state
 
     cpdef draw_disturbance_variates(self)
     cpdef draw_initial_state_variates(self)
-    cpdef set_disturbance_variates(self, np.complex64_t [:] variates)
-    cpdef set_initial_state_variates(self, np.complex64_t [:] variates)
+    cpdef set_disturbance_variates(self, np.complex64_t [:] variates, int pretransformed=*)
+    cpdef set_initial_state_variates(self, np.complex64_t [:] variates, int pretransformed=*)
+    cpdef set_initial_state(self, np.complex64_t [:] initial_state)
     cpdef simulate(self, int simulation_output=*)
 
     cdef np.complex64_t generate_obs(self, int t, np.complex64_t * obs, np.complex64_t * state, np.complex64_t * variates)
     cdef np.complex64_t generate_state(self, int t, np.complex64_t * state, np.complex64_t * input_state, np.complex64_t * variates)
     cdef void cholesky(self, np.complex64_t * source, np.complex64_t * destination, int n)
     cdef void transform_variates(self, np.complex64_t * variates, np.complex64_t * cholesky_factor, int n)
+    cdef void _reinitialize_temp_pointers(self) except *
 
 # Double precision complex
 cdef class zSimulationSmoother(object):
@@ -274,15 +286,19 @@ cdef class zSimulationSmoother(object):
 
     # ### Parameters
     cdef readonly int nobs
-    cdef readonly int pretransformed_variates
+    cdef readonly int pretransformed_disturbance_variates
+    cdef readonly int pretransformed_initial_state_variates
+    cdef readonly int fixed_initial_state
 
     cpdef draw_disturbance_variates(self)
     cpdef draw_initial_state_variates(self)
-    cpdef set_disturbance_variates(self, np.complex128_t [:] variates)
-    cpdef set_initial_state_variates(self, np.complex128_t [:] variates)
+    cpdef set_disturbance_variates(self, np.complex128_t [:] variates, int pretransformed=*)
+    cpdef set_initial_state_variates(self, np.complex128_t [:] variates, int pretransformed=*)
+    cpdef set_initial_state(self, np.complex128_t [:] initial_state)
     cpdef simulate(self, int simulation_output=*)
 
     cdef np.complex128_t generate_obs(self, int t, np.complex128_t * obs, np.complex128_t * state, np.complex128_t * variates)
     cdef np.complex128_t generate_state(self, int t, np.complex128_t * state, np.complex128_t * input_state, np.complex128_t * variates)
     cdef void cholesky(self, np.complex128_t * source, np.complex128_t * destination, int n)
     cdef void transform_variates(self, np.complex128_t * variates, np.complex128_t * cholesky_factor, int n)
+    cdef void _reinitialize_temp_pointers(self) except *

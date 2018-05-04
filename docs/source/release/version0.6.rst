@@ -148,8 +148,7 @@ Wrapping X-12-ARIMA/X-13-ARIMA
 
 It is now possible to call out to X-12-ARIMA or X-13ARIMA-SEATS from statsmodels. These libraries must be installed separately.
 
-.. plot::
-   :include-source:
+.. code-block:: python
 
     import statsmodels.api as sm
 

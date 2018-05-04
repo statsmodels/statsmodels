@@ -56,7 +56,7 @@ CYTHON_EXCLUSION_FILE = 'cythonize_exclusions.dat'
 DISTNAME = 'statsmodels'
 DESCRIPTION = 'Statistical computations and models for Python'
 LONG_DESCRIPTION = README
-MAINTAINER = 'Skipper Seabold, Josef Perktold'
+MAINTAINER = 'Josef Perktold, Chad Fulton, Kerby Shedden'
 MAINTAINER_EMAIL ='pystatsmodels@googlegroups.com'
 URL = 'http://www.statsmodels.org/'
 LICENSE = 'BSD License'
@@ -168,7 +168,7 @@ def check_dependency_versions(min_versions):
 
 
 MAJ = 0
-MIN = 8
+MIN = 10
 REV = 0
 ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJ,MIN,REV)
@@ -176,17 +176,18 @@ VERSION = '%d.%d.%d' % (MAJ,MIN,REV)
 classifiers = ['Development Status :: 4 - Beta',
                'Environment :: Console',
                'Programming Language :: Cython',
-               'Programming Language :: Python :: 2.6',
                'Programming Language :: Python :: 2.7',
                'Programming Language :: Python :: 3.3',
                'Programming Language :: Python :: 3.4',
                'Programming Language :: Python :: 3.5',
+               'Programming Language :: Python :: 3.6',
                'Operating System :: OS Independent',
                'Intended Audience :: End Users/Desktop',
                'Intended Audience :: Developers',
                'Intended Audience :: Science/Research',
                'Natural Language :: English',
                'License :: OSI Approved :: BSD License',
+               'Topic :: Office/Business :: Financial',
                'Topic :: Scientific/Engineering']
 
 # Return the git revision as a string
@@ -450,7 +451,8 @@ try:
 except ImportError:
     for name, data in statespace_ext_data.items():
         path = '.'.join([data["name"].split('.')[0], 'pyx.in'])
-        append_cython_exclusion(path, CYTHON_EXCLUSION_FILE)
+        append_cython_exclusion(path.replace('/', os.path.sep),
+                                CYTHON_EXCLUSION_FILE)
 
 extensions = []
 for name, data in ext_data.items():
@@ -494,14 +496,11 @@ if __name__ == "__main__":
         os.unlink('MANIFEST')
 
     min_versions = {
-        'numpy' : '1.6.2',
-        'scipy' : '0.11',
-        'pandas' : '0.13',
-        'patsy' : '0.2.1',
+        'numpy' : '1.9',
+        'scipy' : '0.14',
+        'pandas' : '0.14',
+        'patsy' : '0.4.0',
                    }
-    if sys.version_info[0] == 3 and sys.version_info[1] >= 3:
-        # 3.3 needs numpy 1.7+
-        min_versions.update({"numpy" : "1.7.0"})
 
     (setup_requires,
      install_requires) = check_dependency_versions(min_versions)
@@ -543,13 +542,14 @@ if __name__ == "__main__":
     if not os.path.exists(os.path.join(cwd, 'PKG-INFO')) and not no_frills:
         # Generate Cython sources, unless building from source release
         generate_cython()
-    extras = {'docs': ['sphinx>=1.3.5',
-                       'nbconvert>=4.2.0',
+    extras = {'docs': ['sphinx',
+                       'nbconvert',
                        'jupyter_client',
                        'ipykernel',
                        'matplotlib',
-                       'nbformat>=4.0.1',
-                       'numpydoc>=0.6.0']}
+                       'nbformat',
+                       'numpydoc',
+                       'pandas-datareader']}
 
     setup(name = DISTNAME,
           version = VERSION,

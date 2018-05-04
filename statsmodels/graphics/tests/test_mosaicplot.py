@@ -1,5 +1,6 @@
 from __future__ import division
 from statsmodels.compat.python import iterkeys, zip, lrange, iteritems, range
+from statsmodels.compat.testing import skipif
 
 from numpy.testing import assert_, assert_raises, dec
 from numpy.testing import run_module_suite
@@ -31,7 +32,8 @@ from statsmodels.graphics.mosaicplot import _normalize_split
 from statsmodels.graphics.mosaicplot import _split_rect
 
 
-@dec.skipif(not have_matplotlib or pandas_old)
+@skipif(not have_matplotlib or pandas_old,
+        reason='matplotlib not available or pandas too old')
 def test_data_conversion():
     # It will not reorder the elements
     # so the dictionary will look odd
@@ -73,7 +75,7 @@ def test_data_conversion():
     #pylab.show()
     pylab.close('all')
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_mosaic_simple():
     # display a simple plot of 4 categories of data, splitted in four
     # levels with increasing size for each group
@@ -104,7 +106,8 @@ def test_mosaic_simple():
     pylab.close('all')
 
 
-@dec.skipif(not have_matplotlib or pandas_old)
+@skipif(not have_matplotlib or pandas_old,
+        reason='matplotlib not available or pandas too old')
 def test_mosaic():
     # make the same analysis on a known dataset
 
@@ -142,7 +145,7 @@ def test_mosaic():
     #pylab.show()
     pylab.close('all')
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_mosaic_very_complex():
     # make a scattermatrix of mosaic plots to show the correlations between
     # each pair of variable in a dataset. Could be easily converted into a
@@ -184,7 +187,7 @@ def test_mosaic_very_complex():
     #pylab.show()
     pylab.close('all')
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_axes_labeling():
     from numpy.random import rand
     key_set = (['male', 'female'], ['old', 'adult', 'young'],
@@ -203,7 +206,8 @@ def test_axes_labeling():
     #pylab.show()
     pylab.close('all')
 
-@dec.skipif(not have_matplotlib or pandas_old)
+@skipif(not have_matplotlib or pandas_old,
+        reason='matplotlib not available or pandas too old')
 def test_mosaic_empty_cells():
     # SMOKE test  see #2286
     import pandas as pd
@@ -430,7 +434,8 @@ def test_gap_split():
     eq(_split_rect(*pure_square, **conf_h), h_2split)
 
 
-@dec.skipif(not have_matplotlib or pandas_old)
+@skipif(not have_matplotlib or pandas_old,
+        reason='matplotlib not available or pandas too old')
 def test_default_arg_index():
     # 2116
     import pandas as pd

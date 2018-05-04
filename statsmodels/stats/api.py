@@ -14,7 +14,8 @@ from .diagnostic import (
             )
 
 from . import multicomp
-from .multitest import (multipletests, fdrcorrection, fdrcorrection_twostage)
+from .multitest import (multipletests, fdrcorrection, fdrcorrection_twostage,
+                        local_fdr, NullDistribution, RegressionFDR)
 from .multicomp import tukeyhsd
 from . import gof
 from .gof import (powerdiscrepancy, gof_chisquare_discrete,
@@ -39,7 +40,7 @@ from .proportion import (binom_test_reject_interval, binom_test,
             proportion_confint, proportion_effectsize,
             proportions_chisquare, proportions_chisquare_allpairs,
             proportions_chisquare_pairscontrol, proportions_ztest,
-            proportions_ztost)
+            proportions_ztost, multinomial_proportions_confint)
 
 from .power import (TTestPower, TTestIndPower, GofChisquarePower,
                     NormalIndPower, FTestAnovaPower, FTestPower,
@@ -50,7 +51,9 @@ from .descriptivestats import Describe
 from .anova import anova_lm
 
 from . import moment_helpers
-from .correlation_tools import corr_nearest, corr_clipped, cov_nearest
+from .correlation_tools import (corr_clipped, corr_nearest,
+            corr_nearest_factor, corr_thresholded, cov_nearest,
+            cov_nearest_factor_homog, FactoredPSDMatrix)
 
 from statsmodels.sandbox.stats.runs import (Runs, runstest_1samp, runstest_2samp)
 
@@ -59,3 +62,4 @@ from statsmodels.stats.contingency_tables import (mcnemar, cochrans_q,
                                                   Table2x2,
                                                   Table,
                                                   StratifiedTable)
+from .mediation import Mediation

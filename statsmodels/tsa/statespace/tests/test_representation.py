@@ -13,6 +13,7 @@ Classical and Gibbs-Sampling Approaches with Applications".
 MIT Press Books. The MIT Press.
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat.testing import skip, SkipTest
 
 import warnings
 import numpy as np
@@ -24,8 +25,7 @@ from statsmodels.tsa.statespace.kalman_filter import KalmanFilter, FilterResults
 from statsmodels.tsa.statespace import tools, sarimax
 from .results import results_kalman_filter
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
-from nose.exc import SkipTest
-from statsmodels.compat.numpy import NumpyVersion
+import pytest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -139,6 +139,7 @@ class TestClark1987Double(Clark1987):
         cls.results = cls.run_filter()
 
 
+@skip('Not implemented')
 class TestClark1987SingleComplex(Clark1987):
     """
     Basic single precision complex test for the loglikelihood and filtered
@@ -146,7 +147,6 @@ class TestClark1987SingleComplex(Clark1987):
     """
     @classmethod
     def setup_class(cls):
-        raise SkipTest('Not implemented')
         super(TestClark1987SingleComplex, cls).setup_class(
             dtype=np.complex64, conserve_memory=0
         )
@@ -1010,7 +1010,7 @@ def test_simulate():
     actual = mod.simulate(
         nsimulations, measurement_shocks=measurement_shocks,
         state_shocks=state_shocks)[0].squeeze()
-    desired = np.r_[0, np.cumsum(state_shocks)[:-1] + np.arange(1,10)]
+    desired = np.r_[0, np.cumsum(state_shocks)[:-1] + np.arange(1, 10)]
 
     assert_allclose(actual, desired)
 
@@ -1027,24 +1027,25 @@ def test_simulate():
     # ARMA(1,1): phi = [0.1], theta = [0.5], sigma^2 = 2
     phi = np.r_[0.1]
     theta = np.r_[0.5]
-    mod = sarimax.SARIMAX([0], order=(1,0,1))
+    mod = sarimax.SARIMAX([0], order=(1, 0, 1))
     mod.update(np.r_[phi, theta, sigma2])
 
     actual = mod.ssm.simulate(
         nsimulations, measurement_shocks=measurement_shocks,
-        state_shocks=state_shocks)[0].squeeze()
+        state_shocks=state_shocks,
+        initial_state=np.zeros(mod.k_states))[0].squeeze()
     desired = lfilter([1, theta], [1, -phi], np.r_[0, state_shocks[:-1]])
 
     assert_allclose(actual, desired)
 
     # SARIMAX(1,0,1)x(1,0,1,4), this time using the results object call
-    mod = sarimax.SARIMAX([0.1, 0.5, -0.2], order=(1,0,1),
-                          seasonal_order=(1,0,1,4))
+    mod = sarimax.SARIMAX([0.1, 0.5, -0.2], order=(1, 0, 1),
+                          seasonal_order=(1, 0, 1, 4))
     res = mod.filter([0.1, 0.5, 0.2, -0.3, 1])
 
     actual = res.simulate(
         nsimulations, measurement_shocks=measurement_shocks,
-        state_shocks=state_shocks)
+        state_shocks=state_shocks, initial_state=np.zeros(mod.k_states))
     desired = lfilter(
         res.polynomial_reduced_ma, res.polynomial_reduced_ar,
         np.r_[0, state_shocks[:-1]])

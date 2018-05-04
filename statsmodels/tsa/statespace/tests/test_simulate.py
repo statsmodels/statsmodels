@@ -11,14 +11,14 @@ import warnings
 import numpy as np
 import pandas as pd
 import os
+import sys
 from scipy.signal import lfilter
 
 from statsmodels.tsa.statespace import (sarimax, structural, varmax,
                                         dynamic_factor)
 from statsmodels.tsa.statespace.tools import compatibility_mode
-from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal,
-                           assert_raises)
-from nose.exc import SkipTest
+from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal)
+from statsmodels.compat.testing import skipif
 
 
 def test_arma_lfilter():
@@ -31,19 +31,22 @@ def test_arma_lfilter():
 
     # AR(1)
     mod = sarimax.SARIMAX([0], order=(1, 0, 0))
-    actual = mod.simulate([0.5, 1.], nobs + 1, state_shocks=np.r_[eps, 0])
+    actual = mod.simulate([0.5, 1.], nobs + 1, state_shocks=np.r_[eps, 0],
+                          initial_state=np.zeros(mod.k_states))
     desired = lfilter([1], [1, -0.5], eps)
     assert_allclose(actual[1:], desired)
 
     # MA(1)
     mod = sarimax.SARIMAX([0], order=(0, 0, 1))
-    actual = mod.simulate([0.5, 1.], nobs + 1, state_shocks=np.r_[eps, 0])
+    actual = mod.simulate([0.5, 1.], nobs + 1, state_shocks=np.r_[eps, 0],
+                          initial_state=np.zeros(mod.k_states))
     desired = lfilter([1, 0.5], [1], eps)
     assert_allclose(actual[1:], desired)
 
     # ARMA(1, 1)
     mod = sarimax.SARIMAX([0], order=(1, 0, 1))
-    actual = mod.simulate([0.5, 0.2, 1.], nobs + 1, state_shocks=np.r_[eps, 0])
+    actual = mod.simulate([0.5, 0.2, 1.], nobs + 1, state_shocks=np.r_[eps, 0],
+                          initial_state=np.zeros(mod.k_states))
     desired = lfilter([1, 0.2], [1, -0.5], eps)
     assert_allclose(actual[1:], desired)
 
@@ -60,7 +63,8 @@ def test_arma_direct():
 
     # AR(1)
     mod = sarimax.SARIMAX([0], order=(1, 0, 0))
-    actual = mod.simulate([0.5, 1.], nobs + 1, state_shocks=np.r_[eps, 0])
+    actual = mod.simulate([0.5, 1.], nobs + 1, state_shocks=np.r_[eps, 0],
+                          initial_state=np.zeros(mod.k_states))
     desired = np.zeros(nobs)
     for i in range(nobs):
         if i == 0:
@@ -71,7 +75,8 @@ def test_arma_direct():
 
     # MA(1)
     mod = sarimax.SARIMAX([0], order=(0, 0, 1))
-    actual = mod.simulate([0.5, 1.], nobs + 1, state_shocks=np.r_[eps, 0])
+    actual = mod.simulate([0.5, 1.], nobs + 1, state_shocks=np.r_[eps, 0],
+                          initial_state=np.zeros(mod.k_states))
     desired = np.zeros(nobs)
     for i in range(nobs):
         if i == 0:
@@ -82,7 +87,8 @@ def test_arma_direct():
 
     # ARMA(1, 1)
     mod = sarimax.SARIMAX([0], order=(1, 0, 1))
-    actual = mod.simulate([0.5, 0.2, 1.], nobs + 1, state_shocks=np.r_[eps, 0])
+    actual = mod.simulate([0.5, 0.2, 1.], nobs + 1, state_shocks=np.r_[eps, 0],
+                          initial_state=np.zeros(mod.k_states))
     desired = np.zeros(nobs)
     for i in range(nobs):
         if i == 0:
@@ -94,7 +100,8 @@ def test_arma_direct():
     # ARMA(1, 1) + intercept
     mod = sarimax.SARIMAX([0], order=(1, 0, 1), trend='c')
     actual = mod.simulate([1.3, 0.5, 0.2, 1.], nobs + 1,
-                          state_shocks=np.r_[eps, 0])
+                          state_shocks=np.r_[eps, 0],
+                          initial_state=np.zeros(mod.k_states))
     desired = np.zeros(nobs)
     for i in range(nobs):
         trend = 1.3
@@ -110,7 +117,8 @@ def test_arma_direct():
     # give it 101 observations up front
     mod = sarimax.SARIMAX(np.zeros(nobs + 1), order=(1, 0, 1), trend='ct')
     actual = mod.simulate([1.3, 0.2, 0.5, 0.2, 1.], nobs + 1,
-                          state_shocks=np.r_[eps, 0])
+                          state_shocks=np.r_[eps, 0],
+                          initial_state=np.zeros(mod.k_states))
     desired = np.zeros(nobs)
     for i in range(nobs):
         trend = 1.3 + 0.2 * (i + 1)
@@ -129,7 +137,8 @@ def test_arma_direct():
     mod = sarimax.SARIMAX(np.zeros(nobs + 1), exog=np.r_[0, exog],
                           order=(1, 0, 1), trend='ct')
     actual = mod.simulate([1.3, 0.2, -0.5, 0.5, 0.2, 1.], nobs + 1,
-                          state_shocks=np.r_[eps, 0])
+                          state_shocks=np.r_[eps, 0],
+                          initial_state=np.zeros(mod.k_states))
     desired = np.zeros(nobs)
     for i in range(nobs):
         trend = 1.3 + 0.2 * (i + 1)
@@ -160,21 +169,26 @@ def test_structural():
     # AR(1)
     mod1 = structural.UnobservedComponents([0], autoregressive=1)
     mod2 = sarimax.SARIMAX([0], order=(1, 0, 0))
-    actual = mod1.simulate([1, 0.5], nobs, state_shocks=eps)
-    desired = mod2.simulate([0.5, 1], nobs, state_shocks=eps)
+    actual = mod1.simulate([1, 0.5], nobs, state_shocks=eps,
+                           initial_state=np.zeros(mod1.k_states))
+    desired = mod2.simulate([0.5, 1], nobs, state_shocks=eps,
+                            initial_state=np.zeros(mod2.k_states))
     assert_allclose(actual, desired)
 
     # ARX(1)
     mod1 = structural.UnobservedComponents(np.zeros(nobs), exog=exog,
                                            autoregressive=1)
     mod2 = sarimax.SARIMAX(np.zeros(nobs), exog=exog, order=(1, 0, 0))
-    actual = mod1.simulate([1, 0.5, 0.2], nobs, state_shocks=eps)
-    desired = mod2.simulate([0.2, 0.5, 1], nobs, state_shocks=eps)
+    actual = mod1.simulate([1, 0.5, 0.2], nobs, state_shocks=eps,
+                           initial_state=np.zeros(mod2.k_states))
+    desired = mod2.simulate([0.2, 0.5, 1], nobs, state_shocks=eps,
+                            initial_state=np.zeros(mod2.k_states))
     assert_allclose(actual, desired)
 
     # Irregular
     mod = structural.UnobservedComponents([0], 'irregular')
-    actual = mod.simulate([1.], nobs, measurement_shocks=eps)
+    actual = mod.simulate([1.], nobs, measurement_shocks=eps,
+                          initial_state=np.zeros(mod.k_states))
     assert_allclose(actual, eps)
 
     # Fixed intercept
@@ -196,13 +210,15 @@ def test_structural():
     # Local level
     mod = structural.UnobservedComponents([0], 'local level')
     actual = mod.simulate([1., 1.], nobs, measurement_shocks=eps,
-                          state_shocks=eps2)
+                          state_shocks=eps2,
+                          initial_state=np.zeros(mod.k_states))
     assert_allclose(actual, eps + eps3)
 
     # Random walk
     mod = structural.UnobservedComponents([0], 'random walk')
     actual = mod.simulate([1.], nobs, measurement_shocks=eps,
-                          state_shocks=eps2)
+                          state_shocks=eps2,
+                          initial_state=np.zeros(mod.k_states))
     assert_allclose(actual, eps + eps3)
 
     # Fixed slope
@@ -335,15 +351,19 @@ def test_varmax():
     # VAR(2) - single series
     mod1 = varmax.VARMAX([[0]], order=(2, 0), trend='nc')
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 0))
-    actual = mod1.simulate([0.5, 0.2, 1], nobs, state_shocks=eps)
-    desired = mod2.simulate([0.5, 0.2, 1], nobs, state_shocks=eps)
+    actual = mod1.simulate([0.5, 0.2, 1], nobs, state_shocks=eps,
+                           initial_state=np.zeros(mod1.k_states))
+    desired = mod2.simulate([0.5, 0.2, 1], nobs, state_shocks=eps,
+                            initial_state=np.zeros(mod2.k_states))
     assert_allclose(actual, desired)
 
     # VMA(2) - single series
     mod1 = varmax.VARMAX([[0]], order=(0, 2), trend='nc')
     mod2 = sarimax.SARIMAX([0], order=(0, 0, 2))
-    actual = mod1.simulate([0.5, 0.2, 1], nobs, state_shocks=eps)
-    desired = mod2.simulate([0.5, 0.2, 1], nobs, state_shocks=eps)
+    actual = mod1.simulate([0.5, 0.2, 1], nobs, state_shocks=eps,
+                           initial_state=np.zeros(mod1.k_states))
+    desired = mod2.simulate([0.5, 0.2, 1], nobs, state_shocks=eps,
+                            initial_state=np.zeros(mod2.k_states))
     assert_allclose(actual, desired)
 
     # VARMA(2, 2) - single series
@@ -351,17 +371,21 @@ def test_varmax():
         warnings.simplefilter("ignore")
         mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='nc')
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 2))
-    actual = mod1.simulate([0.5, 0.2, 0.1, -0.2, 1], nobs, state_shocks=eps)
-    desired = mod2.simulate([0.5, 0.2, 0.1, -0.2, 1], nobs, state_shocks=eps)
+    actual = mod1.simulate([0.5, 0.2, 0.1, -0.2, 1], nobs, state_shocks=eps,
+                           initial_state=np.zeros(mod1.k_states))
+    desired = mod2.simulate([0.5, 0.2, 0.1, -0.2, 1], nobs, state_shocks=eps,
+                            initial_state=np.zeros(mod2.k_states))
     assert_allclose(actual, desired)
 
     # VARMA(2, 2) + trend - single series
     mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='c')
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 2), trend='c')
     actual = mod1.simulate([10, 0.5, 0.2, 0.1, -0.2, 1], nobs,
-                           state_shocks=eps)
+                           state_shocks=eps,
+                           initial_state=np.zeros(mod1.k_states))
     desired = mod2.simulate([10, 0.5, 0.2, 0.1, -0.2, 1], nobs,
-                            state_shocks=eps)
+                            state_shocks=eps,
+                            initial_state=np.zeros(mod2.k_states))
     assert_allclose(actual, desired)
 
     # VAR(1)
@@ -370,7 +394,8 @@ def test_varmax():
 
     mod = varmax.VARMAX([[0, 0]], order=(1, 0), trend='nc')
     actual = mod.simulate(np.r_[transition.ravel(), 1., 0, 1.], nobs,
-                          state_shocks=np.c_[eps1, eps1])
+                          state_shocks=np.c_[eps1, eps1],
+                          initial_state=np.zeros(mod.k_states))
     assert_allclose(actual, 0)
 
     actual = mod.simulate(np.r_[transition.ravel(), 1., 0, 1.], nobs,
@@ -387,7 +412,8 @@ def test_varmax():
                         measurement_error=True)
     actual = mod.simulate(np.r_[transition.ravel(), 1., 0, 1., 1., 1.], nobs,
                           measurement_shocks=np.c_[eps, eps],
-                          state_shocks=np.c_[eps1, eps1])
+                          state_shocks=np.c_[eps1, eps1],
+                          initial_state=np.zeros(mod.k_states))
     assert_allclose(actual, np.c_[eps, eps])
 
     # VARX(1)
@@ -406,7 +432,6 @@ def test_varmax():
     # TODO: This is just a smoke test
     mod = varmax.VARMAX(
         np.random.normal(size=(nobs, 2)), order=(0, 1), trend='nc')
-    print(mod.start_params)
     mod.simulate(mod.start_params, nobs)
 
     # VARMA(2, 2) + trend + exog
@@ -436,8 +461,10 @@ def test_dynamic_factor():
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 0))
     actual = mod1.simulate([-0.9, 0.8, 1., 1., 0.5, 0.2], nobs,
                            measurement_shocks=np.c_[eps1, eps1],
-                           state_shocks=eps)
-    desired = mod2.simulate([0.5, 0.2, 1], nobs, state_shocks=eps)
+                           state_shocks=eps,
+                           initial_state=np.zeros(mod1.k_states))
+    desired = mod2.simulate([0.5, 0.2, 1], nobs, state_shocks=eps,
+                            initial_state=np.zeros(mod2.k_states))
     assert_allclose(actual[:, 0], -0.9 * desired)
     assert_allclose(actual[:, 1], 0.8 * desired)
 
@@ -447,8 +474,10 @@ def test_dynamic_factor():
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 0))
     actual = mod1.simulate([-0.9, 0.8, 5, -2, 1., 1., 0.5, 0.2], nobs,
                            measurement_shocks=np.c_[eps1, eps1],
-                           state_shocks=eps)
-    desired = mod2.simulate([0.5, 0.2, 1], nobs, state_shocks=eps)
+                           state_shocks=eps,
+                           initial_state=np.zeros(mod1.k_states))
+    desired = mod2.simulate([0.5, 0.2, 1], nobs, state_shocks=eps,
+                            initial_state=np.zeros(mod2.k_states))
     assert_allclose(actual[:, 0], -0.9 * desired + 5 * exog[:, 0])
     assert_allclose(actual[:, 1], 0.8 * desired - 2 * exog[:, 0])
 

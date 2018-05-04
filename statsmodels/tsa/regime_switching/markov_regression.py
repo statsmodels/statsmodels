@@ -95,7 +95,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         self.switching_variance = switching_variance
 
         # Exogenous data
-        self.k_exog, exog = markov_switching._prepare_exog(exog)
+        self.k_exog, exog = markov_switching.prepare_exog(exog)
 
         # Trend
         nobs = len(endog)
@@ -191,19 +191,10 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
         return conditional_likelihoods
 
-    def filter(self, *args, **kwargs):
-        kwargs.setdefault('results_class', MarkovRegressionResults)
-        kwargs.setdefault('results_wrapper_class',
-                          MarkovRegressionResultsWrapper)
-        return super(MarkovRegression, self).filter(*args, **kwargs)
-    filter.__doc__ = markov_switching.MarkovSwitching.filter.__doc__
-
-    def smooth(self, *args, **kwargs):
-        kwargs.setdefault('results_class', MarkovRegressionResults)
-        kwargs.setdefault('results_wrapper_class',
-                          MarkovRegressionResultsWrapper)
-        return super(MarkovRegression, self).smooth(*args, **kwargs)
-    smooth.__doc__ = markov_switching.MarkovSwitching.smooth.__doc__
+    @property
+    def _res_classes(self):
+        return {'fit': (MarkovRegressionResults,
+                        MarkovRegressionResultsWrapper)}
 
     def _em_iteration(self, params0):
         """
@@ -461,4 +452,5 @@ class MarkovRegressionResults(markov_switching.MarkovSwitchingResults):
 class MarkovRegressionResultsWrapper(
         markov_switching.MarkovSwitchingResultsWrapper):
     pass
-wrap.populate_wrapper(MarkovRegressionResultsWrapper, MarkovRegressionResults)
+wrap.populate_wrapper(MarkovRegressionResultsWrapper,  # noqa:E305
+                      MarkovRegressionResults)

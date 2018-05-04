@@ -164,11 +164,21 @@ cycle = {
 seasonal = {
     'models': [{'irregular': True, 'seasonal': 4}],
     'params': [38.1704278, 0.1],
-    'llf': -655.3337155,
-    'kwargs': {},
+    'llf': -678.8138005,
+    'kwargs': {'loglikelihood_burn': 0},
     'rtol': 1e-6
 }
 
+freq_seasonal = {
+    'models': [{'irregular': True,
+                'freq_seasonal': [{'period': 5}]}],
+    'params': [38.95352534, 0.05],
+    'llf': -688.9697249,
+    'rtol': 1e-6,
+    'kwargs': {
+        'loglikelihood_burn': 0  # No idea why KFAS includes all data in this
+    }
+}
 reg = {
     # Note: The test needs to fill in exog=np.log(dta['realgdp'])
     'models': [

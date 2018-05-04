@@ -19,7 +19,7 @@ def _conf_set(F, alpha=.05):
     -----
     Based on the DKW inequality.
 
-    ..math:: P \left( \sup_x \left| F(x) - \hat(F)_n(X) \right| > \epsilon \right) \leq 2e^{-2n\epsilon^2}
+    .. math:: P \left( \sup_x \left| F(x) - \hat(F)_n(X) \right| > \epsilon \right) \leq 2e^{-2n\epsilon^2}
 
     References
     ----------
@@ -172,10 +172,10 @@ if __name__ == "__main__":
     cdf = ECDF(x)
     x.sort()
     F = cdf(x)
-    plt.step(x, F)
+    plt.step(x, F, where='post')
     lower, upper = _conf_set(F)
-    plt.step(x, lower, 'r')
-    plt.step(x, upper, 'r')
+    plt.step(x, lower, 'r', where='post')
+    plt.step(x, upper, 'r', where='post')
     plt.xlim(0, 1.5)
     plt.ylim(0, 1.05)
     plt.vlines(x, 0, .05)

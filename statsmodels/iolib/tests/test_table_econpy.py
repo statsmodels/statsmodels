@@ -7,9 +7,9 @@ Unit tests table.py.
 '''
 from __future__ import absolute_import
 from statsmodels.compat.python import zip
-import unittest
 
 import numpy as np
+from numpy.testing import assert_equal
 
 __docformat__ = "restructuredtext en"
 
@@ -55,15 +55,15 @@ def custom_labeller(cell):
         return 'missing'
 
 
-
-class test_Cell(unittest.TestCase):
+class TestCell(object):
     def test_celldata(self):
         celldata = cell0data, cell1data, row1data[0], row1data[1]
         cells = [Cell(datum, datatype=i%2) for i, datum in enumerate(celldata)]
         for cell, datum in zip(cells, celldata):
-            self.assertEqual(cell.data, datum)
+            assert_equal(cell.data, datum)
 
-class test_SimpleTable(unittest.TestCase):
+
+class TestSimpleTable(object):
     def test_txt_fmt1(self):
         # Limited test of custom txt_fmt
         desired = """
@@ -79,9 +79,9 @@ class test_SimpleTable(unittest.TestCase):
         #print(actual)
         #print('desired')
         #print(desired)
-        self.assertEqual(actual, desired)
+        assert_equal(actual, desired)
     def test_ltx_fmt1(self):
-        """Limited test of custom ltx_fmt"""
+        # Limited test of custom ltx_fmt
         desired = r"""
 \begin{center}
 \begin{tabular}{lcc}
@@ -97,7 +97,8 @@ class test_SimpleTable(unittest.TestCase):
         actual = '\n%s\n' % tbl.as_latex_tabular()
         #print(actual)
         #print(desired)
-        self.assertEqual(actual, desired)
+        assert_equal(actual, desired)
+
     def test_html_fmt1(self):
         # Limited test of custom html_fmt
         desired = """
@@ -120,7 +121,8 @@ class test_SimpleTable(unittest.TestCase):
         #print(actual)
         #print(desired)
         #print len(actual), len(desired)
-        self.assertEqual(actual, desired)
+        assert_equal(actual, desired)
+
     def test_customlabel(self):
         # Limited test of custom custom labeling
         tbl = SimpleTable(table1data, test1header, test1stubs, txt_fmt=txt_fmt1)
@@ -136,8 +138,4 @@ class test_SimpleTable(unittest.TestCase):
 *****************************
 """
         actual = '\n%s\n' % tbl.as_text(missing='--')
-        self.assertEqual(actual, desired)
-
-if __name__=="__main__":
-    unittest.main()
-
+        assert_equal(actual, desired)

@@ -68,7 +68,7 @@ def _ros_sort(df, observations, censorship, warn=False):
 
 
 def cohn_numbers(df, observations, censorship):
-    """
+    r"""
     Computes the Cohn numbers for the detection limits in the dataset.
 
     The Cohn Numbers are:

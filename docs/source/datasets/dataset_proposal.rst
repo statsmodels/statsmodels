@@ -151,4 +151,4 @@ Although the datasets package emerged from the learn package, we try to keep it
 independant from everything else, that is once we agree on the remaining
 problems and where the package should go, it can easily be put elsewhere
 without too much trouble. If there is interest in re-using the datasets package,
-please contact the developers on the `mailing list <https://groups.google.com/group/pystatsmodels?hl=en>`_.
+please contact the developers on the `mailing list <https://groups.google.com/forum/?hl=en#!forum/pystatsmodels>`_.

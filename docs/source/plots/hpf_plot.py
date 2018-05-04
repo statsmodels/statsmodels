@@ -3,7 +3,7 @@ import pandas as pd
 from load_macrodata import dta
 
 cycle, trend = sm.tsa.filters.hpfilter(dta.realgdp, 1600)
-gdp_decomp = dta[['realgdp']]
+gdp_decomp = dta[['realgdp']].copy()
 gdp_decomp["cycle"] = cycle
 gdp_decomp["trend"] = trend
 

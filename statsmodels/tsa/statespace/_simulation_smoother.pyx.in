@@ -127,8 +127,7 @@ cdef class {{prefix}}SimulationSmoother(object):
                  int loglikelihood_burn=0,
                  int smoother_output=SMOOTHER_ALL,
                  int simulation_output=SIMULATE_ALL,
-                 int nobs=-1,
-                 int pretransformed_variates=0):
+                 int nobs=-1):
         cdef int inc = 1
         cdef:
             np.npy_intp dim1[1]
@@ -151,7 +150,9 @@ cdef class {{prefix}}SimulationSmoother(object):
         self.nobs = nobs
         nobs_endog = self.nobs * model.k_endog
 
-        self.pretransformed_variates = pretransformed_variates
+        self.pretransformed_disturbance_variates = False
+        self.pretransformed_initial_state_variates = False
+        self.fixed_initial_state = False
 
         # Model objects
         self.model = model
@@ -211,6 +212,8 @@ cdef class {{prefix}}SimulationSmoother(object):
         else:
             dim2[0] = self.model.k_endog; dim2[1] = self.model.obs_intercept.shape[1];
             self.simulated_model.obs_intercept = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+            dim2[0] = self.model.k_states; dim2[1] = self.model.state_intercept.shape[1];
+            self.simulated_model.state_intercept = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
 
         # Initialize the simulated model memoryviews
@@ -250,6 +253,7 @@ cdef class {{prefix}}SimulationSmoother(object):
         # Temporary arrays
         dim2[0] = self.model.k_states; dim2[1] = self.model.k_states;
         self.tmp0 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN) # chol(P_1)
+        dim2[0] = self.model.k_posdef; dim2[1] = self.model.k_posdef;
         self.tmp2 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN) # chol(Q_t)
         dim2[0] = self.model.k_endog; dim2[1] = self.model.k_endog;
         self.tmp1 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN) # chol(H_t)
@@ -259,25 +263,82 @@ cdef class {{prefix}}SimulationSmoother(object):
         self._tmp1 = &self.tmp1[0,0]
         self._tmp2 = &self.tmp2[0,0]
 
+    def __reduce__(self):
+        args = (self.model, self.filter_method, self.inversion_method,
+                self.stability_method, self.conserve_memory, self.filter_timing,
+                self.tolerance, self.loglikelihood_burn, self.smoother_output,
+                self.simulation_output, self.nobs, self.pretransformed_variates)
+        state = {
+            'disturbance_variates': np.array(self.disturbance_variates, copy=True, order='F'),
+            'initial_state_variates': np.array(self.initial_state_variates, copy=True, order='F'),
+            'simulated_measurement_disturbance': np.array(self.simulated_measurement_disturbance, copy=True, order='F'),
+            'simulated_state_disturbance': np.array(self.simulated_state_disturbance, copy=True, order='F'),
+            'simulated_state': np.array(self.simulated_state, copy=True, order='F'),
+            'generated_obs': np.array(self.generated_obs, copy=True, order='F'),
+            'generated_state': np.array(self.generated_state, copy=True, order='F'),
+            'tmp0': np.array(self.tmp0, copy=True, order='F'),
+            'tmp2': np.array(self.tmp2, copy=True, order='F'),
+            'tmp1': np.array(self.tmp1, copy=True, order='F')
+        }
+        return (self.__class__, args, state)
+
+    def __setstate__(self, state):
+        self.disturbance_variates = state['disturbance_variates']
+        self.initial_state_variates = state['initial_state_variates']
+        self.simulated_measurement_disturbance  = state['simulated_measurement_disturbance']
+        self.simulated_state_disturbance = state['simulated_state_disturbance']
+        self.simulated_state = state['simulated_state']
+        self.generated_obs = state['generated_obs']
+        self.generated_state = state['generated_state']
+        self.tmp0 = state['tmp0']
+        self.tmp2 = state['tmp2']
+        self.tmp1 = state['tmp1']
+
+    cdef void _reinitialize_temp_pointers(self) except *:
+        self._tmp0 = &self.tmp0[0,0]
+        self._tmp1 = &self.tmp1[0,0]
+        self._tmp2 = &self.tmp2[0,0]
+
 
     cpdef draw_disturbance_variates(self):
         self.disturbance_variates = np.random.normal(size=self.n_disturbance_variates)
+        self.pretransformed_disturbance_variates = False
 
     cpdef draw_initial_state_variates(self):
         self.initial_state_variates = np.random.normal(size=self.n_initial_state_variates)
+        self.pretransformed_initial_state_variates = False
+        self.fixed_initial_state = False
 
-    cpdef set_disturbance_variates(self, {{cython_type}} [:] variates):
+    cpdef set_disturbance_variates(self, {{cython_type}} [:] variates, int pretransformed=0):
         # TODO allow variates to be an iterator or callback
         tools.validate_vector_shape('disturbance variates', &variates.shape[0],
                                     self.n_disturbance_variates)
         self.disturbance_variates = variates
+        self.pretransformed_disturbance_variates = pretransformed
 
-    cpdef set_initial_state_variates(self, {{cython_type}} [:] variates):
+    cpdef set_initial_state_variates(self, {{cython_type}} [:] variates, int pretransformed=0):
+        # Note that the initial state is set to be:
+        # initial_state = mod.initial_state + initial_state_variate * cholesky(mod.initial_state_cov)
+        # so is can be difficult to set the initial state itself via this method;
+        # see instead set_initial_state
         # TODO allow variates to be an iterator or callback
         tools.validate_vector_shape('initial state variates',
                                     &variates.shape[0],
                                     self.n_initial_state_variates)
         self.initial_state_variates = variates
+        self.pretransformed_initial_state_variates = pretransformed
+        self.fixed_initial_state = False
+
+    cpdef set_initial_state(self, {{cython_type}} [:] initial_state):
+        # Using this method sets a flag that indicates the self.initial_state_variates
+        # variable should be interpreted as the actual initial_state.
+        # TODO allow variates to be an iterator or callback
+        tools.validate_vector_shape('initial state',
+                                    &initial_state.shape[0],
+                                    self.n_initial_state_variates)
+        self.initial_state_variates = initial_state
+        self.pretransformed_initial_state_variates = True
+        self.fixed_initial_state = True
 
     cpdef simulate(self, int simulation_output=-1):
         """
@@ -322,11 +383,16 @@ cdef class {{prefix}}SimulationSmoother(object):
         # If pretransformed_variates is True, then the variates should already
         # be N(0, initial_state_cov), and then we just need:
         # alpha_1^+ = initial_state + variate
-        self.cholesky(&self.model.initial_state_cov[0,0], self._tmp0, k_states)
+        # However, if fixed_initial_state is True, then we just set:
+        # alpha_1^+ = variate
         blas.{{prefix}}copy(&k_states, &self.initial_state_variates[0], &inc, &self.generated_state[0,0], &inc)
-        if not self.pretransformed_variates:
-            self.transform_variates(&self.generated_state[0,0], self._tmp0, k_states)
-        blas.{{prefix}}axpy(&k_states, &alpha, &self.model.initial_state[0], &inc, &self.generated_state[0,0], &inc)
+        if not self.fixed_initial_state:
+            self.cholesky(&self.model.initial_state_cov[0,0], self._tmp0, k_states)
+            if not self.pretransformed_initial_state_variates:
+                self.transform_variates(&self.generated_state[0,0], self._tmp0, k_states)
+            # In the case of no missing data, we want to keep the initial state at zero
+            if self.has_missing:
+                blas.{{prefix}}axpy(&k_states, &alpha, &self.model.initial_state[0], &inc, &self.generated_state[0,0], &inc)
 
 
         self.simulated_kfilter.seek(0) # reset the filter
@@ -334,7 +400,13 @@ cdef class {{prefix}}SimulationSmoother(object):
             self.secondary_simulated_kfilter.seek(0) # reset the filter
         measurement_idx = 0
         state_idx = nobs_endog
-        if not self.has_missing:
+        # Note: it is only when we are simulating a series that we might have
+        # self.model.nobs != self.simulated_model.nobs, and in that case we do
+        # not need to copy over the observations.
+        # TODO: Need more explicit support for the pure simulation case, both
+        # to avoid errors (like the copy statement below) and because we can
+        # probably speed up the process by not running the filter parts.
+        if not self.has_missing and (self.model.nobs == self.simulated_model.nobs):
             # reset the obs data in the primary simulated model
             # (but only if there is not missing data - in that case we will
             # combine the actual data with the generated data in the primary
@@ -353,7 +425,7 @@ cdef class {{prefix}}SimulationSmoother(object):
                 self.cholesky(&self.model.obs_cov[0,0,t], self._tmp1, k_endog)
 
             # eps_t^+ = ind_eps * chol(H_t)
-            if not self.pretransformed_variates:
+            if not self.pretransformed_disturbance_variates:
                 self.transform_variates(&self.disturbance_variates[measurement_idx], self._tmp1, k_endog)
             # y_t^+
             self.generate_obs(t, &self.generated_obs[0,t], &self.generated_state[0,t], &self.disturbance_variates[measurement_idx])
@@ -366,7 +438,7 @@ cdef class {{prefix}}SimulationSmoother(object):
                 self.cholesky(&self.model.state_cov[0,0,t], self._tmp2, k_posdef)
 
             # eta_t^+ = ind_eta * chol(Q_t)
-            if not self.pretransformed_variates:
+            if not self.pretransformed_disturbance_variates:
                 self.transform_variates(&self.disturbance_variates[state_idx], self._tmp2, k_posdef)
             # alpha_t+1^+
             self.generate_state(t, &self.generated_state[0,t+1], &self.generated_state[0,t], &self.disturbance_variates[state_idx])
@@ -474,6 +546,14 @@ cdef class {{prefix}}SimulationSmoother(object):
             {{cython_type}} alpha = 1.0
 
         # Get indices for possibly time-varying arrays
+        # Note that this would be problematic if simulating a
+        # time-varying system if the number of simulated observations was
+        # greater than the number of observations in the model (because then
+        # e.g. self.model.design[0,0,design_t] would be an invalid memory
+        # location).
+        # However, this problem is ruled out in the constructor since for
+        # time-varying systems, the number of simulated observations must be
+        # less than the number of observations in the model.
         if not self.model.time_invariant:
             if self.model.design.shape[2] > 1:             design_t = t
             if self.model.obs_intercept.shape[1] > 1:      obs_intercept_t = t

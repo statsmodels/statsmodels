@@ -6,17 +6,13 @@ License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
 
-import warnings
-
 import numpy as np
 
 from statsmodels.tsa.statespace.representation import OptionWrapper
 from statsmodels.tsa.statespace.kalman_filter import (KalmanFilter,
                                                       FilterResults)
-from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tsa.statespace.tools import (
-    reorder_missing_matrix, reorder_missing_vector,
-    copy_index_matrix, copy_index_vector)
+    reorder_missing_matrix, reorder_missing_vector, copy_index_matrix)
 from statsmodels.tsa.statespace import tools
 
 SMOOTHER_STATE = 0x01              # Durbin and Koopman (2012), Chapter 4.4.2
@@ -156,9 +152,8 @@ class KalmanSmoother(KalmanFilter):
             if not create_smoother:
                 kalman_smoother = self._kalman_smoothers[prefix]
 
-                create_smoother = (
-                    not kalman_smoother.kfilter is self._kalman_filters[prefix]
-                )
+                create_smoother = (kalman_smoother.kfilter is not
+                                   self._kalman_filters[prefix])
 
             # If the dtype-specific _kalman_smoother does not exist (or if we
             # need to re-create it), create it
@@ -234,7 +229,8 @@ class KalmanSmoother(KalmanFilter):
 
         Examples
         --------
-        >>> mod = sm.tsa.statespace.KalmanSmoother(1,1)
+        >>> import statsmodels.tsa.statespace.kalman_smoother as ks
+        >>> mod = ks.KalmanSmoother(1,1)
         >>> mod.smoother_output
         15
         >>> mod.set_smoother_output(smoother_output=0)
@@ -336,7 +332,7 @@ class KalmanSmoother(KalmanFilter):
             if name in kwargs:
                 setattr(self, name, kwargs[name])
 
-        if self._compatibility_mode and not self.smooth_method in [0,1]:
+        if self._compatibility_mode and self.smooth_method not in [0, 1]:
             raise NotImplementedError('Only conventional Kalman filtering'
                                       ' is available. Consider updating'
                                       ' dependencies for more options.')
@@ -419,7 +415,7 @@ class KalmanSmoother(KalmanFilter):
 
 
 class SmootherResults(FilterResults):
-    """
+    r"""
     Results from applying the Kalman smoother and/or filter to a state space
     model.
 

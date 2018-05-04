@@ -5,6 +5,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
+from statsmodels.compat.testing import skip
 
 import numpy as np
 import pandas as pd
@@ -15,7 +16,6 @@ import warnings
 from statsmodels.tsa.statespace import dynamic_factor
 from .results import results_varmax, results_dynamic_factor
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
-from nose.exc import SkipTest
 from statsmodels.iolib.summary import forg
 
 try:
@@ -45,10 +45,10 @@ class CheckDynamicFactor(object):
         dta['dln_inc'] = np.log(dta['inc']).diff()
         dta['dln_consump'] = np.log(dta['consump']).diff()
 
-        endog = dta.ix['1960-04-01':'1978-10-01', included_vars]
+        endog = dta.loc['1960-04-01':'1978-10-01', included_vars]
 
         if demean:
-            endog -= dta.ix[1:, included_vars].mean()
+            endog -= dta.iloc[1:][included_vars].mean()
 
         cls.model = dynamic_factor.DynamicFactor(endog, k_factors=k_factors,
                                                   factor_order=factor_order,
@@ -74,7 +74,9 @@ class CheckDynamicFactor(object):
 
     def test_results(self):
         # Smoke test for creating the summary
-        self.results.summary()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.results.summary()
 
         # Test cofficient matrix creation (via a different, more direct, method)
         if self.model.factor_order > 0:
@@ -105,6 +107,7 @@ class CheckDynamicFactor(object):
 
     def test_mle(self):
         with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
             results = self.model.fit(method='powell', maxiter=100, disp=False)
             results = self.model.fit(results.params, maxiter=1000, disp=False)
             results = self.model.fit(results.params, method='nm', maxiter=1000,
@@ -144,8 +147,8 @@ class TestDynamicFactor(CheckDynamicFactor):
     @classmethod
     def setup_class(cls):
         true = results_dynamic_factor.lutkepohl_dfm.copy()
-        true['predict'] = output_results.ix[1:, ['predict_dfm_1', 'predict_dfm_2', 'predict_dfm_3']]
-        true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_1', 'dyn_predict_dfm_2', 'dyn_predict_dfm_3']]
+        true['predict'] = output_results.iloc[1:][['predict_dfm_1', 'predict_dfm_2', 'predict_dfm_3']]
+        true['dynamic_predict'] = output_results.iloc[1:][['dyn_predict_dfm_1', 'dyn_predict_dfm_2', 'dyn_predict_dfm_3']]
         super(TestDynamicFactor, cls).setup_class(true, k_factors=1, factor_order=2)
 
     def test_bse_approx(self):
@@ -159,8 +162,8 @@ class TestDynamicFactor2(CheckDynamicFactor):
     @classmethod
     def setup_class(cls):
         true = results_dynamic_factor.lutkepohl_dfm2.copy()
-        true['predict'] = output_results.ix[1:, ['predict_dfm2_1', 'predict_dfm2_2', 'predict_dfm2_3']]
-        true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm2_1', 'dyn_predict_dfm2_2', 'dyn_predict_dfm2_3']]
+        true['predict'] = output_results.iloc[1:][['predict_dfm2_1', 'predict_dfm2_2', 'predict_dfm2_3']]
+        true['dynamic_predict'] = output_results.iloc[1:][['dyn_predict_dfm2_1', 'dyn_predict_dfm2_2', 'dyn_predict_dfm2_3']]
         super(TestDynamicFactor2, cls).setup_class(true, k_factors=2, factor_order=1)
 
     def test_mle(self):
@@ -186,7 +189,9 @@ class TestDynamicFactor2(CheckDynamicFactor):
         pass
 
     def test_summary(self):
-        summary = self.results.summary()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            summary = self.results.summary()
         tables = [str(table) for table in summary.tables]
         params = self.true['params']
 
@@ -253,8 +258,8 @@ class TestDynamicFactor_exog1(CheckDynamicFactor):
     @classmethod
     def setup_class(cls):
         true = results_dynamic_factor.lutkepohl_dfm_exog1.copy()
-        true['predict'] = output_results.ix[1:, ['predict_dfm_exog1_1', 'predict_dfm_exog1_2', 'predict_dfm_exog1_3']]
-        true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_exog1_1', 'dyn_predict_dfm_exog1_2', 'dyn_predict_dfm_exog1_3']]
+        true['predict'] = output_results.iloc[1:][['predict_dfm_exog1_1', 'predict_dfm_exog1_2', 'predict_dfm_exog1_3']]
+        true['dynamic_predict'] = output_results.iloc[1:][['dyn_predict_dfm_exog1_1', 'dyn_predict_dfm_exog1_2', 'dyn_predict_dfm_exog1_3']]
         exog = np.ones((75,1))
         super(TestDynamicFactor_exog1, cls).setup_class(true, k_factors=1, factor_order=1, exog=exog)
 
@@ -278,8 +283,8 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
     @classmethod
     def setup_class(cls):
         true = results_dynamic_factor.lutkepohl_dfm_exog2.copy()
-        true['predict'] = output_results.ix[1:, ['predict_dfm_exog2_1', 'predict_dfm_exog2_2', 'predict_dfm_exog2_3']]
-        true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_exog2_1', 'dyn_predict_dfm_exog2_2', 'dyn_predict_dfm_exog2_3']]
+        true['predict'] = output_results.iloc[1:][['predict_dfm_exog2_1', 'predict_dfm_exog2_2', 'predict_dfm_exog2_3']]
+        true['dynamic_predict'] = output_results.iloc[1:][['dyn_predict_dfm_exog2_1', 'dyn_predict_dfm_exog2_2', 'dyn_predict_dfm_exog2_3']]
         exog = np.c_[np.ones((75,1)), (np.arange(75) + 2)[:, np.newaxis]]
         super(TestDynamicFactor_exog2, cls).setup_class(true, k_factors=1, factor_order=1, exog=exog)
 
@@ -296,7 +301,9 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
         super(TestDynamicFactor_exog2, self).test_dynamic_predict(exog=exog)
 
     def test_summary(self):
-        summary = self.results.summary()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            summary = self.results.summary()
         tables = [str(table) for table in summary.tables]
         params = self.true['params']
 
@@ -366,8 +373,8 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
     @classmethod
     def setup_class(cls):
         true = results_dynamic_factor.lutkepohl_dfm_gen.copy()
-        true['predict'] = output_results.ix[1:, ['predict_dfm_gen_1', 'predict_dfm_gen_2', 'predict_dfm_gen_3']]
-        true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_gen_1', 'dyn_predict_dfm_gen_2', 'dyn_predict_dfm_gen_3']]
+        true['predict'] = output_results.iloc[1:][['predict_dfm_gen_1', 'predict_dfm_gen_2', 'predict_dfm_gen_3']]
+        true['dynamic_predict'] = output_results.iloc[1:][['dyn_predict_dfm_gen_1', 'dyn_predict_dfm_gen_2', 'dyn_predict_dfm_gen_3']]
         super(TestDynamicFactor_general_errors, cls).setup_class(true, k_factors=1, factor_order=1, error_var=True, error_order=1, error_cov_type='unstructured')
 
     def test_bse_approx(self):
@@ -375,9 +382,8 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         assert_allclose(bse[:3], self.true['var_oim'][:3], atol=1e-5)
         assert_allclose(bse[-10:], self.true['var_oim'][-10:], atol=2e-4)
 
+    @skip("Known failure, no sequence of optimizers has been found which can achieve the maximum.")
     def test_mle(self):
-        raise SkipTest("Known failure, no sequence of optimizers has been"
-                       " found which can achieve the maximum.")
         # The following gets us to llf=546.53, which is still not good enough
         # llf = 300.842477412
         # res = mod.fit(method='lbfgs', maxiter=10000)
@@ -395,9 +401,12 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         # res = mod.fit(res.params, method='nm', maxiter=10000, maxfev=10000)
         # llf = 559.049076604
         # ...
+        pass
 
     def test_summary(self):
-        summary = self.results.summary()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            summary = self.results.summary()
         tables = [str(table) for table in summary.tables]
         params = self.true['params']
 
@@ -485,8 +494,8 @@ class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
     @classmethod
     def setup_class(cls):
         true = results_dynamic_factor.lutkepohl_dfm_ar2.copy()
-        true['predict'] = output_results.ix[1:, ['predict_dfm_ar2_1', 'predict_dfm_ar2_2', 'predict_dfm_ar2_3']]
-        true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_ar2_1', 'dyn_predict_dfm_ar2_2', 'dyn_predict_dfm_ar2_3']]
+        true['predict'] = output_results.iloc[1:][['predict_dfm_ar2_1', 'predict_dfm_ar2_2', 'predict_dfm_ar2_3']]
+        true['dynamic_predict'] = output_results.iloc[1:][['dyn_predict_dfm_ar2_1', 'dyn_predict_dfm_ar2_2', 'dyn_predict_dfm_ar2_3']]
         super(TestDynamicFactor_ar2_errors, cls).setup_class(true, k_factors=1, factor_order=1, error_order=2)
 
     def test_bse_approx(self):
@@ -510,8 +519,8 @@ class TestDynamicFactor_scalar_error(CheckDynamicFactor):
     @classmethod
     def setup_class(cls):
         true = results_dynamic_factor.lutkepohl_dfm_scalar.copy()
-        true['predict'] = output_results.ix[1:, ['predict_dfm_scalar_1', 'predict_dfm_scalar_2', 'predict_dfm_scalar_3']]
-        true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_dfm_scalar_1', 'dyn_predict_dfm_scalar_2', 'dyn_predict_dfm_scalar_3']]
+        true['predict'] = output_results.iloc[1:][['predict_dfm_scalar_1', 'predict_dfm_scalar_2', 'predict_dfm_scalar_3']]
+        true['dynamic_predict'] = output_results.iloc[1:][['dyn_predict_dfm_scalar_1', 'dyn_predict_dfm_scalar_2', 'dyn_predict_dfm_scalar_3']]
         exog = np.ones((75,1))
         super(TestDynamicFactor_scalar_error, cls).setup_class(true, k_factors=1, factor_order=1, exog=exog, error_cov_type='scalar')
 
@@ -535,8 +544,8 @@ class TestStaticFactor(CheckDynamicFactor):
     @classmethod
     def setup_class(cls):
         true = results_dynamic_factor.lutkepohl_sfm.copy()
-        true['predict'] = output_results.ix[1:, ['predict_sfm_1', 'predict_sfm_2', 'predict_sfm_3']]
-        true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_sfm_1', 'dyn_predict_sfm_2', 'dyn_predict_sfm_3']]
+        true['predict'] = output_results.iloc[1:][['predict_sfm_1', 'predict_sfm_2', 'predict_sfm_3']]
+        true['dynamic_predict'] = output_results.iloc[1:][['dyn_predict_sfm_1', 'dyn_predict_sfm_2', 'dyn_predict_sfm_3']]
         super(TestStaticFactor, cls).setup_class(true, k_factors=1, factor_order=0)
 
     def test_bse_approx(self):
@@ -557,8 +566,8 @@ class TestSUR(CheckDynamicFactor):
     @classmethod
     def setup_class(cls):
         true = results_dynamic_factor.lutkepohl_sur.copy()
-        true['predict'] = output_results.ix[1:, ['predict_sur_1', 'predict_sur_2', 'predict_sur_3']]
-        true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_sur_1', 'dyn_predict_sur_2', 'dyn_predict_sur_3']]
+        true['predict'] = output_results.iloc[1:][['predict_sur_1', 'predict_sur_2', 'predict_sur_3']]
+        true['dynamic_predict'] = output_results.iloc[1:][['dyn_predict_sur_1', 'dyn_predict_sur_2', 'dyn_predict_sur_3']]
         exog = np.c_[np.ones((75,1)), (np.arange(75) + 2)[:, np.newaxis]]
         super(TestSUR, cls).setup_class(true, k_factors=0, factor_order=0, exog=exog, error_cov_type='unstructured')
 
@@ -584,8 +593,8 @@ class TestSUR_autocorrelated_errors(CheckDynamicFactor):
     @classmethod
     def setup_class(cls):
         true = results_dynamic_factor.lutkepohl_sur_auto.copy()
-        true['predict'] = output_results.ix[1:, ['predict_sur_auto_1', 'predict_sur_auto_2']]
-        true['dynamic_predict'] = output_results.ix[1:, ['dyn_predict_sur_auto_1', 'dyn_predict_sur_auto_2']]
+        true['predict'] = output_results.iloc[1:][['predict_sur_auto_1', 'predict_sur_auto_2']]
+        true['dynamic_predict'] = output_results.iloc[1:][['dyn_predict_sur_auto_1', 'dyn_predict_sur_auto_2']]
         exog = np.c_[np.ones((75,1)), (np.arange(75) + 2)[:, np.newaxis]]
         super(TestSUR_autocorrelated_errors, cls).setup_class(true, k_factors=0, factor_order=0, exog=exog, error_order=1, error_var=True, error_cov_type='diagonal', included_vars=['dln_inv', 'dln_inc'])
 

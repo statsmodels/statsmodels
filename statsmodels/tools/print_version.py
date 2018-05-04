@@ -92,6 +92,12 @@ def _show_versions_only():
     except ImportError:
         print("cvxopt: Not installed")
 
+    try:
+        import joblib
+        print("joblib: %s " % (safe_version(joblib)))
+    except ImportError:
+        print("joblib: Not installed")
+
     print("\nDeveloper Tools\n================\n")
 
     try:
@@ -122,6 +128,12 @@ def _show_versions_only():
         print("nose: %s" % safe_version(nose))
     except ImportError:
         print("nose: Not installed")
+
+    try:
+        import pytest
+        print("pytest: %s (%s)" % (safe_version(pytest), dirname(pytest.__file__)))
+    except ImportError:
+        print("pytest: Not installed")
 
     try:
         import virtualenv
@@ -212,6 +224,7 @@ def show_versions(show_dirs=True):
         import matplotlib as mpl
         print("matplotlib: %s (%s)" % (safe_version(mpl),
                                        dirname(mpl.__file__)))
+        print("    backend: %s " % mpl.rcParams['backend'])
     except ImportError:
         print("matplotlib: Not installed")
 
@@ -221,6 +234,13 @@ def show_versions(show_dirs=True):
                                    dirname(info.__file__)))
     except ImportError:
         print("cvxopt: Not installed")
+
+    try:
+        import joblib
+        print("joblib: %s (%s)" % (safe_version(joblib),
+                                   dirname(joblib.__file__)))
+    except ImportError:
+        print("joblib: Not installed")
 
     print("\nDeveloper Tools\n================\n")
 
@@ -256,6 +276,12 @@ def show_versions(show_dirs=True):
         print("nose: %s (%s)" % (safe_version(nose), dirname(nose.__file__)))
     except ImportError:
         print("nose: Not installed")
+
+    try:
+        import pytest
+        print("pytest: %s (%s)" % (safe_version(pytest), dirname(pytest.__file__)))
+    except ImportError:
+        print("pytest: Not installed")
 
     try:
         import virtualenv

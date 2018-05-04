@@ -1,4 +1,4 @@
-# -*- coding: cp1252 -*-
+# -*- coding: utf-8 -*-
 # some cut and paste characters are not ASCII
 '''density estimation based on orthogonal polynomials
 
@@ -55,7 +55,7 @@ class FPoly(object):
     parameterization on [0,1] from
 
     Sam Efromovich: Orthogonal series density estimation,
-    2010 John Wiley & Sons, Inc. WIREs Comp Stat 2010 2 467–476
+    2010 John Wiley & Sons, Inc. WIREs Comp Stat 2010 2 467-476
 
 
     '''
@@ -337,7 +337,7 @@ class DensityOrthoPoly(object):
         xeval = self._transform(xeval)
         if order is None:
             order = len(self.polys)
-        res = sum(c*p(xeval) for c, p in zip(self.coeffs, self.polys)[:order])
+        res = sum(c*p(xeval) for c, p in list(zip(self.coeffs, self.polys))[:order])
         res = self._correction(res)
         return res
 
@@ -429,7 +429,7 @@ if __name__ == '__main__':
     nobs = 10000
 
     import matplotlib.pyplot as plt
-    from statsmodels.sandbox.distributions.mixture_rvs import (
+    from statsmodels.distributions.mixture_rvs import (
                                                 mixture_rvs, MixtureDistribution)
 
     #np.random.seed(12345)

@@ -123,8 +123,7 @@ class GenericKDE (object):
         self.bw_func = dict(normal_reference=self._normal_reference,
                             cv_ml=self._cv_ml, cv_ls=self._cv_ls)
         if bw is None:
-            bwfunc = self.bw_func['normal_reference']
-            return bwfunc()
+            bw = 'normal_reference'
 
         if not isinstance(bw, string_types):
             self._bw_method = "user-specified"
@@ -276,7 +275,7 @@ class GenericKDE (object):
         return bw
 
     def _cv_ml(self):
-        """
+        r"""
         Returns the cross validation maximum likelihood bandwidth parameter.
 
         Notes
@@ -307,7 +306,7 @@ class GenericKDE (object):
         return bw
 
     def _cv_ls(self):
-        """
+        r"""
         Returns the cross-validation least squares bandwidth parameter(s).
 
         Notes
@@ -455,7 +454,7 @@ def _adjust_shape(dat, k_vars):
 
 def gpke(bw, data, data_predict, var_type, ckertype='gaussian',
          okertype='wangryzin', ukertype='aitchisonaitken', tosum=True):
-    """
+    r"""
     Returns the non-normalized Generalized Product Kernel Estimator
 
     Parameters

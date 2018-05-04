@@ -293,15 +293,15 @@ cdef class {{prefix}}KalmanSmoother(object):
         # *Note*: in math notation below, a $\\#$ will represent a generic
         # temporary array, and a $\\#_i$ will represent a named temporary array.
 
-        # # $L_t$ $(m \times m)$
-        dim2[0] = self.kfilter.k_states; dim2[1] = self.kfilter.k_states;
+        # # $L_t$ $(m \times m)$, also holds $(m \times r)$ sometimes
+        dim2[0] = self.kfilter.k_states; dim2[1] = max(self.kfilter.k_states, self.kfilter.k_posdef);
         self.tmpL = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         self._tmpL = &self.tmpL[0, 0]
         self.tmpL2 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         self._tmpL2 = &self.tmpL2[0, 0]
 
         # # Holds arrays of dimension $(m \times m)$ and $(m \times r)$
-        dim2[0] = self.kfilter.k_states; dim2[1] = self.kfilter.k_states;
+        dim2[0] = self.kfilter.k_states; dim2[1] = max(self.kfilter.k_states, self.kfilter.k_posdef);
         self.tmp0 = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         self._tmp0 = &self.tmp0[0, 0]
 
@@ -328,6 +328,60 @@ cdef class {{prefix}}KalmanSmoother(object):
         # self.selected_design = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
         # dim1[0] = self.kfilter.k_endog2;
         # self.selected_obs_cov = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+
+    def __reduce__(self):
+        state = {
+            't': self.t,
+            '_smooth_method': self._smooth_method,
+            'scaled_smoothed_estimator': np.array(self.scaled_smoothed_estimator, copy=True, order='F'),
+            'scaled_smoothed_estimator_cov': np.array(self.scaled_smoothed_estimator_cov, copy=True, order='F'),
+            'smoothing_error': np.array(self.smoothing_error, copy=True, order='F'),
+            'smoothed_state': np.array(self.smoothed_state, copy=True, order='F'),
+            'smoothed_state_cov': np.array(self.smoothed_state_cov, copy=True, order='F'),
+            'smoothed_measurement_disturbance': np.array(self.smoothed_measurement_disturbance, copy=True, order='F'),
+            'smoothed_state_disturbance': np.array(self.smoothed_state_disturbance, copy=True, order='F'),
+            'smoothed_measurement_disturbance_cov': np.array(self.smoothed_measurement_disturbance_cov, copy=True, order='F'),
+            'smoothed_state_disturbance_cov': np.array(self.smoothed_state_disturbance_cov, copy=True, order='F'),
+            'smoothed_state_autocov': np.array(self.smoothed_state_autocov, copy=True, order='F'),
+            'tmp_autocov': np.array(self.tmp_autocov, copy=True, order='F'),
+            'tmpL': np.array(self.tmpL, copy=True, order='F'),
+            'tmpL2': np.array(self.tmpL2, copy=True, order='F'),
+            'tmp0': np.array(self.tmp0, copy=True, order='F'),
+            'tmp00': np.array(self.tmp00, copy=True, order='F'),
+            'tmp000': np.array(self.tmp000, copy=True, order='F')
+        }
+        args = (self.model, self.kfilter, self.smoother_output, self.smooth_method)
+        return (self.__class__, args, state)
+
+    def __setstate__(self, state):
+        self.t = state['t']
+        self._smooth_method = state['_smooth_method']
+        self.scaled_smoothed_estimator = state['scaled_smoothed_estimator']
+        self.scaled_smoothed_estimator_cov = state['scaled_smoothed_estimator_cov']
+        self.smoothing_error = state['smoothing_error']
+        self.smoothed_state = state['smoothed_state']
+        self.smoothed_state_cov = state['smoothed_state_cov']
+        self.smoothed_measurement_disturbance = state['smoothed_measurement_disturbance']
+        self.smoothed_state_disturbance = state['smoothed_state_disturbance']
+        self.smoothed_measurement_disturbance_cov = state['smoothed_measurement_disturbance_cov']
+        self.smoothed_state_disturbance_cov = state['smoothed_state_disturbance_cov']
+        self.smoothed_state_autocov = state['smoothed_state_autocov']
+        self.tmp_autocov = state['tmp_autocov']
+        self.tmpL = state['tmpL']
+        self.tmpL2 = state['tmpL2']
+        self.tmp0 = state['tmp0']
+        self.tmp00 = state['tmp00']
+        self.tmp000 = state['tmp000']
+        self.initialize_smoother_object_pointers()
+        self._initialize_temp_pointers()
+
+    cdef void _initialize_temp_pointers(self) except *:
+        self._tmpL = &self.tmpL[0, 0]
+        self._tmpL2 = &self.tmpL2[0, 0]
+        self._tmp0 = &self.tmp0[0, 0]
+        self._tmp00 = &self.tmp00[0, 0]
+        self._tmp000 = &self.tmp000[0, 0]
+        self._tmp_autocov = &self.tmp_autocov[0, 0]
 
     cdef int check_filter_method_changed(self):
         return not self.kfilter.filter_method == self.filter_method

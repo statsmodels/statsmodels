@@ -3,6 +3,7 @@ import numpy.testing as npt
 import pandas as pd
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
 from statsmodels.tools.testing import assert_equal, assert_raises
+from datetime import datetime
 
 
 def test_pandas_nodates_index():
@@ -31,18 +32,12 @@ def test_pandas_nodates_index():
         index = pd.to_datetime([100, 101, 102])
         s = pd.Series(data, index=index)
 
-        # Alternate test for Pandas < 0.14
-        from distutils.version import LooseVersion
-        from pandas import __version__ as pd_version
-        if LooseVersion(pd_version) < '0.14':
-            assert_raises(NotImplementedError, TimeSeriesModel, s)
-        else:
-            actual_str = (index[0].strftime('%Y-%m-%d %H:%M:%S.%f') +
-                          str(index[0].value))
-            assert_equal(actual_str, '1970-01-01 00:00:00.000000100')
-            mod = TimeSeriesModel(s)
-            start, end, out_of_sample, _ = mod._get_prediction_index(0, 4)
-            assert_equal(len(mod.data.predict_dates), 5)
+        actual_str = (index[0].strftime('%Y-%m-%d %H:%M:%S.%f') +
+                      str(index[0].value))
+        assert_equal(actual_str, '1970-01-01 00:00:00.000000100')
+        mod = TimeSeriesModel(s)
+        start, end, out_of_sample, _ = mod._get_prediction_index(0, 4)
+        assert_equal(len(mod.data.predict_dates), 5)
 
 def test_predict_freq():
     # test that predicted dates have same frequency
@@ -103,3 +98,16 @@ def test_pandas_dates():
     model = TimeSeriesModel(df['price'])
 
     assert_equal(model.data.dates, result.index)
+
+def test_get_predict_start_end():
+    index = pd.DatetimeIndex(start='1970-01-01', end='1990-01-01', freq='AS')
+    endog = pd.Series(np.zeros(10), index[:10])
+    model = TimeSeriesModel(endog)
+
+    predict_starts = [1, '1971-01-01', datetime(1971, 1, 1), index[1]]
+    predict_ends = [20, '1990-01-01', datetime(1990, 1, 1), index[-1]]
+
+    desired = (1, 9, 11)
+    for start in predict_starts:
+        for end in predict_ends:
+            assert_equal(model._get_prediction_index(start, end)[:3], desired)

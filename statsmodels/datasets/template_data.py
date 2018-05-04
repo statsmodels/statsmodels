@@ -58,6 +58,6 @@ def load_pandas():
 def _get_data():
     filepath = dirname(abspath(__file__))
     ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
-    data = np.recfromtxt(open(filepath + '/DatasetName.csv', 'rb'),
-                         delimiter=",", names=True, dtype=float)
+    with open(filepath + '/DatasetName.csv', 'rb') as fd:
+        data = np.recfromtxt(fd, delimiter=",", names=True, dtype=float)
     return data

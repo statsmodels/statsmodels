@@ -4,7 +4,8 @@ Tests for simulation smoothing
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from __future__ import division, absolute_import#, print_function
+from __future__ import division, absolute_import, print_function
+from statsmodels.compat.testing import SkipTest
 
 import numpy as np
 import pandas as pd
@@ -20,13 +21,15 @@ from statsmodels.tsa.statespace.kalman_smoother import (
     SMOOTH_UNIVARIATE)
 from statsmodels.tsa.statespace.simulation_smoother import (
     SIMULATION_STATE, SIMULATION_DISTURBANCE, SIMULATION_ALL)
-from numpy.testing import assert_allclose, assert_almost_equal, assert_equal, assert_raises
-from nose.exc import SkipTest
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+import pytest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
 if compatibility_mode:
-    raise SkipTest
+    raise SkipTest('Not testable in compatibility mode')
+    pytestmark = pytest.mark.skipif(compatibility_mode,
+                                    reason='Not testable in compatibility mode')
 
 
 class MultivariateVARKnown(object):
@@ -42,18 +45,18 @@ class MultivariateVARKnown(object):
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01',
                                   freq='QS')
-        obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().ix[1:]
+        obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().iloc[1:]
 
         if missing == 'all':
-            obs.ix[0:50, :] = np.nan
+            obs.iloc[0:50, :] = np.nan
         elif missing == 'partial':
-            obs.ix[0:50, 0] = np.nan
+            obs.iloc[0:50, 0] = np.nan
         elif missing == 'mixed':
-            obs.ix[0:50, 0] = np.nan
-            obs.ix[19:70, 1] = np.nan
-            obs.ix[39:90, 2] = np.nan
-            obs.ix[119:130, 0] = np.nan
-            obs.ix[119:130, 2] = np.nan
+            obs.iloc[0:50, 0] = np.nan
+            obs.iloc[19:70, 1] = np.nan
+            obs.iloc[39:90, 2] = np.nan
+            obs.iloc[119:130, 0] = np.nan
+            obs.iloc[119:130, 2] = np.nan
             obs.iloc[-10:, :] = np.nan
 
         if test_against_KFAS:
@@ -434,26 +437,23 @@ class TestDFM(TestMultivariateVARKnown):
 
     @classmethod
     def setup_class(cls, which='none', *args, **kwargs):
-        if compatibility_mode:
-            raise SkipTest
-
         # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01', freq='QS')
-        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().ix[1:] * 400
+        obs = np.log(dta[['realgdp','realcons','realinv']]).diff().iloc[1:] * 400
 
         if which == 'all':
-            obs.ix[:50, :] = np.nan
-            obs.ix[119:130, :] = np.nan
+            obs.iloc[:50, :] = np.nan
+            obs.iloc[119:130, :] = np.nan
         elif which == 'partial':
-            obs.ix[0:50, 0] = np.nan
-            obs.ix[119:130, 0] = np.nan
+            obs.iloc[0:50, 0] = np.nan
+            obs.iloc[119:130, 0] = np.nan
         elif which == 'mixed':
-            obs.ix[0:50, 0] = np.nan
-            obs.ix[19:70, 1] = np.nan
-            obs.ix[39:90, 2] = np.nan
-            obs.ix[119:130, 0] = np.nan
-            obs.ix[119:130, 2] = np.nan
+            obs.iloc[0:50, 0] = np.nan
+            obs.iloc[19:70, 1] = np.nan
+            obs.iloc[39:90, 2] = np.nan
+            obs.iloc[119:130, 0] = np.nan
+            obs.iloc[119:130, 2] = np.nan
 
         # Create the model with typical state space
         mod = mlemodel.MLEModel(obs, k_states=2, k_posdef=2, **kwargs)
@@ -489,18 +489,18 @@ class MultivariateVAR(object):
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start='1959-01-01', end='2009-7-01',
                                   freq='QS')
-        obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().ix[1:]
+        obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().iloc[1:]
 
         if missing == 'all':
-            obs.ix[0:50, :] = np.nan
+            obs.iloc[0:50, :] = np.nan
         elif missing == 'partial':
-            obs.ix[0:50, 0] = np.nan
+            obs.iloc[0:50, 0] = np.nan
         elif missing == 'mixed':
-            obs.ix[0:50, 0] = np.nan
-            obs.ix[19:70, 1] = np.nan
-            obs.ix[39:90, 2] = np.nan
-            obs.ix[119:130, 0] = np.nan
-            obs.ix[119:130, 2] = np.nan
+            obs.iloc[0:50, 0] = np.nan
+            obs.iloc[19:70, 1] = np.nan
+            obs.iloc[39:90, 2] = np.nan
+            obs.iloc[119:130, 0] = np.nan
+            obs.iloc[119:130, 2] = np.nan
             obs.iloc[-10:, :] = np.nan
 
         # Create the model
@@ -573,7 +573,7 @@ def test_misc():
     dta = datasets.macrodata.load_pandas().data
     dta.index = pd.date_range(start='1959-01-01', end='2009-7-01',
                               freq='QS')
-    obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().ix[1:]
+    obs = np.log(dta[['realgdp', 'realcons', 'realinv']]).diff().iloc[1:]
 
     mod = sarimax.SARIMAX(obs['realgdp'], order=(1, 0, 0))
     mod['design', 0, 0] = 0.
@@ -623,3 +623,19 @@ def test_simulation_smoothing_obs_intercept():
     sim.simulate(disturbance_variates=np.zeros(mod.nobs * 2),
                  initial_state_variates=np.zeros(1))
     assert_equal(sim.simulated_state[0], 0)
+
+
+def test_simulation_smoothing_state_intercept():
+    nobs = 10
+    intercept = 100
+    endog = np.ones(nobs) * intercept
+
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), trend='c',
+                          measurement_error=True)
+    mod.initialize_known([100], [[0]])
+    mod.update([intercept, 1., 1.])
+
+    sim = mod.simulation_smoother()
+    sim.simulate(disturbance_variates=np.zeros(mod.nobs * 2),
+                 initial_state_variates=np.zeros(1))
+    assert_equal(sim.simulated_state[0], intercept)

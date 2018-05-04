@@ -56,7 +56,9 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     - 'HAC' and keywords
 
         - `maxlag` integer (required) : number of lags to use
-        - `kernel` string (optional) : kernel, default is Bartlett
+        - `kernel` callable or str (optional) : kernel
+              currently available kernels are ['bartlett', 'uniform'],
+              default is Bartlett
         - `use_correction` bool (optional) : If true, use small sample
               correction
 
@@ -85,7 +87,9 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
 
         - `time` array_like (required) : index of time periods
         - `maxlag` integer (required) : number of lags to use
-        - `kernel` string (optional) : kernel, default is Bartlett
+        - `kernel` callable or str (optional) : kernel
+              currently available kernels are ['bartlett', 'uniform'],
+              default is Bartlett
         - `use_correction` False or string in ['hac', 'cluster'] (optional) :
               If False the the sandwich covariance is calulated without
               small sample correction.
@@ -109,7 +113,9 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
           `groups` : indicator for groups
           `time` : index of time periods
         - `maxlag` integer (required) : number of lags to use
-        - `kernel` string (optional) : kernel, default is Bartlett
+        - `kernel` callable or str (optional) : kernel
+              currently available kernels are ['bartlett', 'uniform'],
+              default is Bartlett
         - `use_correction` False or string in ['hac', 'cluster'] (optional) :
               If False the the sandwich covariance is calulated without
               small sample correction.
@@ -134,7 +140,12 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
     if cov_type == 'nw-groupsum':
         cov_type = 'hac-groupsum'
     if 'kernel' in kwds:
-            kwds['weights_func'] = kwds.pop('kernel')
+        kwds['weights_func'] = kwds.pop('kernel')
+    if 'weights_func' in kwds and not callable(kwds['weights_func']):
+        kwds['weights_func'] = sw.kernel_dict[kwds['weights_func']]
+
+    # pop because HCx raises if any kwds
+    sc_factor = kwds.pop('scaling_factor', None)
 
     # TODO: make separate function that returns a robust cov plus info
     use_self = kwds.pop('use_self', False)
@@ -248,10 +259,12 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         res.cov_kwds['weights_func'] = weights_func
         # TODO: clumsy time index in cov_nw_panel
         if groups is not None:
+            groups = np.asarray(groups)
             tt = (np.nonzero(groups[:-1] != groups[1:])[0] + 1).tolist()
             nobs_ = len(groups)
         elif time is not None:
             # TODO: clumsy time index in cov_nw_panel
+            time = np.asarray(time)
             tt = (np.nonzero(time[1:] < time[:-1])[0] + 1).tolist()
             nobs_ = len(time)
         else:
@@ -290,7 +303,7 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
                          'available options and spelling')
 
     # generic optional factor to scale covariance
-    sc_factor = kwds.get('scaling_factor', None)
+
     res.cov_kwds['scaling_factor'] = sc_factor
     if sc_factor is not None:
         res.cov_params_default *= sc_factor

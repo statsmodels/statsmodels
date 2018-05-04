@@ -5,7 +5,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
-
+from statsmodels.compat.testing import skipif
 import numpy as np
 import pandas as pd
 import os
@@ -17,7 +17,7 @@ from statsmodels.regression.recursive_ls import RecursiveLS
 from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.tools import add_constant
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
-from nose.exc import SkipTest
+import pytest
 
 try:
     import matplotlib.pyplot as plt
@@ -84,11 +84,11 @@ def test_estimates():
     # Due to initialization issues, we get more agreement as we get
     # farther from the initial values.
     assert_allclose(res.recursive_coefficients.filtered[:, 2:10].T,
-                    results_R.ix[:7, ['beta1', 'beta2']], atol=1e-2, rtol=1e-3)
+                    results_R.iloc[:8][['beta1', 'beta2']], atol=1e-2, rtol=1e-3)
     assert_allclose(res.recursive_coefficients.filtered[:, 9:20].T,
-                    results_R.ix[7:17, ['beta1', 'beta2']], atol=1e-3, rtol=1e-4)
+                    results_R.iloc[7:18][['beta1', 'beta2']], atol=1e-3, rtol=1e-4)
     assert_allclose(res.recursive_coefficients.filtered[:, 19:].T,
-                    results_R.ix[17:, ['beta1', 'beta2']], atol=1e-4, rtol=1e-4)
+                    results_R.iloc[17:][['beta1', 'beta2']], atol=1e-4, rtol=1e-4)
 
     # Test the RLS estimates against OLS estimates
     mod_ols = OLS(endog, exog)
@@ -96,10 +96,8 @@ def test_estimates():
     assert_allclose(res.params, res_ols.params)
 
 
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plots():
-    if not have_matplotlib:
-        raise SkipTest
-
     exog = add_constant(dta[['m1', 'pop']])
     mod = RecursiveLS(endog, exog)
     res = mod.fit()
@@ -167,15 +165,15 @@ def test_resid_recursive():
     # Due to initialization issues, we get more agreement as we get
     # farther from the initial values.
     assert_allclose(res.resid_recursive[2:10].T,
-                    results_R.ix[:7, 'rec_resid'], atol=1e-2, rtol=1e-3)
+                    results_R.iloc[:8]['rec_resid'], atol=1e-2, rtol=1e-3)
     assert_allclose(res.resid_recursive[9:20].T,
-                    results_R.ix[7:17, 'rec_resid'], atol=1e-3, rtol=1e-4)
+                    results_R.iloc[7:18]['rec_resid'], atol=1e-3, rtol=1e-4)
     assert_allclose(res.resid_recursive[19:].T,
-                    results_R.ix[17:, 'rec_resid'], atol=1e-4, rtol=1e-4)
+                    results_R.iloc[17:]['rec_resid'], atol=1e-4, rtol=1e-4)
 
     # Test the RLS estimates against those from Stata (cusum6)
     assert_allclose(res.resid_recursive[3:],
-                    results_stata.ix[3:, 'rr'], atol=1e-3)
+                    results_stata.iloc[3:]['rr'], atol=1e-3)
 
     # Test the RLS estimates against statsmodels estimates
     mod_ols = OLS(endog, exog)
@@ -205,7 +203,7 @@ def test_cusum():
     cusum -= res.resid_recursive[llb]
     cusum /= np.std(res.resid_recursive[llb+1:], ddof=1)
     cusum = cusum[1:]
-    assert_allclose(cusum, results_stata.ix[3:, 'cusum'], atol=1e-3, rtol=1e-3)
+    assert_allclose(cusum, results_stata.iloc[3:]['cusum'], atol=1e-3, rtol=1e-3)
 
     # Test the cusum statistics against statsmodels estimates
     mod_ols = OLS(endog, exog)
@@ -218,7 +216,7 @@ def test_cusum():
     # change the ddof and points.
     actual_bounds = res._cusum_significance_bounds(
         alpha=0.05, ddof=1, points=np.arange(llb+1, res.nobs))
-    desired_bounds = results_stata.ix[3:, ['lw', 'uw']].T
+    desired_bounds = results_stata.iloc[3:][['lw', 'uw']].T
     assert_allclose(actual_bounds, desired_bounds, atol=1e-4)
 
     # Test the cusum bounds against statsmodels
@@ -240,20 +238,20 @@ def test_stata():
     res = mod.fit()
     llb = res.loglikelihood_burn
 
-    assert_allclose(res.resid_recursive[3:], results_stata.ix[3:, 'rr'],
+    assert_allclose(res.resid_recursive[3:], results_stata.iloc[3:]['rr'],
                     atol=1e-4, rtol=1e-4)
-    assert_allclose(res.cusum, results_stata.ix[3:, 'cusum'], atol=1e-4)
-    assert_allclose(res.cusum_squares, results_stata.ix[3:, 'cusum2'],
+    assert_allclose(res.cusum, results_stata.iloc[3:]['cusum'], atol=1e-4)
+    assert_allclose(res.cusum_squares, results_stata.iloc[3:]['cusum2'],
                     atol=1e-4)
 
     actual_bounds = res._cusum_significance_bounds(
         alpha=0.05, ddof=0, points=np.arange(llb+1, res.nobs+1))
-    desired_bounds = results_stata.ix[3:, ['lw', 'uw']].T
+    desired_bounds = results_stata.iloc[3:][['lw', 'uw']].T
     assert_allclose(actual_bounds, desired_bounds, atol=1e-4)
 
     # Note: Stata uses a set of tabulated critical values whereas we use an
     # approximation formula, so this test is quite imprecise
     actual_bounds = res._cusum_squares_significance_bounds(
         alpha=0.05, points=np.arange(llb+1, res.nobs+1))
-    desired_bounds = results_stata.ix[3:, ['lww', 'uww']].T
+    desired_bounds = results_stata.iloc[3:][['lww', 'uww']].T
     assert_allclose(actual_bounds, desired_bounds, atol=1e-2)

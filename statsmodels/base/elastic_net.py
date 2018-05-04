@@ -1,5 +1,4 @@
 import numpy as np
-import statsmodels.base.wrapper as wrap
 from statsmodels.base.model import Results
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.decorators import cache_readonly
@@ -10,7 +9,8 @@ Elastic net regularization.
 Routines for fitting regression models using elastic net
 regularization.  The elastic net minimizes the objective function
 
--llf / nobs + alpha((1 - L1_wt) * sum(params**2) / 2 + L1_wt * sum(abs(params)))
+-llf / nobs + alpha((1 - L1_wt) * sum(params**2) / 2 +
+    L1_wt * sum(abs(params)))
 
 The algorithm implemented here closely follows the implementation in
 the R glmnet package, documented here:
@@ -53,17 +53,16 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
     def nphess(params, model):
         nobs = model.nobs
         pen_hess = alpha[k] * (1 - L1_wt)
-        h = -model.hessian(np.r_[params], **hess_kwds)[0,0] / nobs + pen_hess
+        h = -model.hessian(np.r_[params], **hess_kwds)[0, 0] / nobs + pen_hess
         return h
 
     return nploglike, npscore, nphess
 
 
-
-def fit_elasticnet(model, method="coord_descent", maxiter=100, alpha=0.,
-         L1_wt=1., start_params=None, cnvrg_tol=1e-7, zero_tol=1e-8,
-         refit=False, loglike_kwds=None, score_kwds=None,
-         hess_kwds=None):
+def fit_elasticnet(model, method="coord_descent", maxiter=100,
+                   alpha=0., L1_wt=1., start_params=None, cnvrg_tol=1e-7,
+                   zero_tol=1e-8, refit=False, check_step=True,
+                   loglike_kwds=None, score_kwds=None, hess_kwds=None):
     """
     Return an elastic net regularized fit to a regression model.
 
@@ -99,6 +98,9 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100, alpha=0.,
         If True, the model is refit using only the variables that have
         non-zero coefficients in the regularized fit.  The refitted
         model is not regularized.
+    check_step : bool
+        If True, confirm that the first step is an improvement and search
+        further if it is not.
     loglike_kwds : dict-like or None
         Keyword arguments for the log-likelihood function.
     score_kwds : dict-like or None
@@ -131,7 +133,6 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100, alpha=0.,
     """
 
     k_exog = model.exog.shape[1]
-    n_exog = model.exog.shape[0]
 
     loglike_kwds = {} if loglike_kwds is None else loglike_kwds
     score_kwds = {} if score_kwds is None else score_kwds
@@ -146,7 +147,6 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100, alpha=0.,
     else:
         params = start_params.copy()
 
-    converged = False
     btol = 1e-4
     params_zero = np.zeros(len(params), dtype=bool)
 
@@ -154,8 +154,9 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100, alpha=0.,
                       if k != "offset" and hasattr(model, k)])
     init_args['hasconst'] = False
 
-    fgh_list = [_gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds)
-                for k in range(k_exog)]
+    fgh_list = [
+        _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds)
+        for k in range(k_exog)]
 
     for itr in range(maxiter):
 
@@ -179,12 +180,14 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100, alpha=0.,
                 offset += model.offset
 
             # Create a one-variable model for optimization.
-            model_1var = model.__class__(model.endog, model.exog[:, k], offset=offset,
-                                         **init_args)
+            model_1var = model.__class__(
+                model.endog, model.exog[:, k], offset=offset, **init_args)
 
             # Do the one-dimensional optimization.
             func, grad, hess = fgh_list[k]
-            params[k] = _opt_1d(func, grad, hess, model_1var, params[k], alpha[k]*L1_wt, tol=btol)
+            params[k] = _opt_1d(
+                func, grad, hess, model_1var, params[k], alpha[k]*L1_wt,
+                tol=btol, check_step=check_step)
 
             # Update the active set
             if itr > 0 and np.abs(params[k]) < zero_tol:
@@ -194,7 +197,6 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100, alpha=0.,
         # Check for convergence
         pchange = np.max(np.abs(params - params_save))
         if pchange < cnvrg_tol:
-            converged = True
             break
 
     # Set approximate zero coefficients to be exactly zero
@@ -210,9 +212,10 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100, alpha=0.,
     cov = np.zeros((k_exog, k_exog))
     init_args = dict([(k, getattr(model, k, None)) for k in model._init_keys])
     if len(ii) > 0:
-        model1 = model.__class__(model.endog, model.exog[:, ii],
-                               **init_args)
+        model1 = model.__class__(
+            model.endog, model.exog[:, ii], **init_args)
         rslt = model1.fit()
+        params[ii] = rslt.params
         cov[np.ix_(ii, ii)] = rslt.normalized_cov_params
     else:
         # Hack: no variables were selected but we need to run fit in
@@ -233,21 +236,34 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100, alpha=0.,
     else:
         scale = 1.
 
+    # The degrees of freedom should reflect the number of parameters
+    # in the refit model, not including the zeros that are displayed
+    # to indicate which variables were dropped.  See issue #1723 for
+    # discussion about setting df parameters in model and results
+    # classes.
+    p, q = model.df_model, model.df_resid
+    model.df_model = len(ii)
+    model.df_resid = model.nobs - model.df_model
+
     # Assuming a standard signature for creating results classes.
     refit = klass(model, params, cov, scale=scale)
     refit.regularized = True
     refit.method = method
-    refit.fit_history = {'iteration' : itr + 1}
+    refit.fit_history = {'iteration': itr + 1}
+
+    # Restore df in model class, see issue #1723 for discussion.
+    model.df_model, model.df_resid = p, q
 
     return refit
 
 
-def _opt_1d(func, grad, hess, model, start, L1_wt, tol):
+def _opt_1d(func, grad, hess, model, start, L1_wt, tol,
+            check_step=True):
     """
     One-dimensional helper for elastic net.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     func : function
         A smooth function of a single variable to be optimized
         with L1 penaty.
@@ -263,6 +279,10 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol):
         The weight for the L1 penalty function.
     tol : non-negative real
         A convergence threshold.
+    check_step : bool
+        If True, check that the first step is an improvement and
+        use bisection if it is not.  If False, return after the
+        first step regardless.
 
     Notes
     -----
@@ -311,6 +331,8 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol):
     # If the new point is not uphill for the target function, take it
     # and return.  This check is a bit expensive and un-necessary for
     # OLS
+    if not check_step:
+        return x + h
     f1 = func(x + h, model) + L1_wt*np.abs(x + h)
     if f1 <= f + L1_wt*np.abs(x) + 1e-10:
         return x + h

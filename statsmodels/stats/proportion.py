@@ -20,8 +20,8 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
 
     Parameters
     ----------
-    count : int or array
-        number of successes
+    count : int or array_array_like
+        number of successes, can be pandas Series or DataFrame
     nobs : int
         total number of trials
     alpha : float in (0, 1)
@@ -39,16 +39,24 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
 
     Returns
     -------
-    ci_low, ci_upp : float
+    ci_low, ci_upp : float, ndarray, or pandas Series or DataFrame
         lower and upper confidence level with coverage (approximately) 1-alpha.
-        Note: Beta has coverage
-        coverage is only 1-alpha on average for some other methods.)
+        When a pandas object is returned, then the index is taken from the
+        `count`.
 
     Notes
     -----
-    Beta, the Clopper-Pearson interval has coverage at least 1-alpha, but is
-    in general conservative. Most of the other methods have average coverage
-    equal to 1-alpha, but will have smaller coverage in some cases.
+    Beta, the Clopper-Pearson exact interval has coverage at least 1-alpha,
+    but is in general conservative. Most of the other methods have average
+    coverage equal to 1-alpha, but will have smaller coverage in some cases.
+
+    The 'beta' and 'jeffreys' interval are central, they use alpha/2 in each
+    tail, and alpha is not adjusted at the boundaries. In the extreme case
+    when `count` is zero or equal to `nobs`, then the coverage will be only
+    1 - alpha/2 in the case of 'beta'.
+
+    The confidence intervals are clipped to be in the [0, 1] interval in the
+    case of 'normal' and 'agresti_coull'.
 
     Method "binom_test" directly inverts the binomial test in scipy.stats.
     which has discrete steps.
@@ -66,6 +74,13 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
         TODO: Is this the correct one ?
 
     '''
+
+    pd_index = getattr(count, 'index', None)
+    if pd_index is not None and hasattr(pd_index, '__call__'):
+        # this rules out lists, lists have an index method
+        pd_index = None
+    count = np.asarray(count)
+    nobs = np.asarray(nobs)
 
     q_ = count * 1. / nobs
     alpha_2 = 0.5 * alpha
@@ -93,6 +108,13 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
         ci_low = stats.beta.ppf(alpha_2, count, nobs - count + 1)
         ci_upp = stats.beta.isf(alpha_2, count + 1, nobs - count)
 
+        if np.ndim(ci_low) > 0:
+            ci_low[q_ == 0] = 0
+            ci_upp[q_ == 1] = 1
+        else:
+            ci_low = ci_low if (q_ != 0) else 0
+            ci_upp = ci_upp if (q_ != 1) else 1
+
     elif method == 'agresti_coull':
         crit = stats.norm.isf(alpha / 2.)
         nobs_c = nobs + crit**2
@@ -119,6 +141,19 @@ def proportion_confint(count, nobs, alpha=0.05, method='normal'):
 
     else:
         raise NotImplementedError('method "%s" is not available' % method)
+
+    if method in ['normal', 'agresti_coull']:
+        ci_low = np.clip(ci_low, 0, 1)
+        ci_upp = np.clip(ci_upp, 0, 1)
+    if pd_index is not None and np.ndim(ci_low) > 0:
+        import pandas as pd
+        if np.ndim(ci_low) == 1:
+            ci_low = pd.Series(ci_low, index=pd_index)
+            ci_upp = pd.Series(ci_upp, index=pd_index)
+        if np.ndim(ci_low) == 2:
+            ci_low = pd.DataFrame(ci_low, index=pd_index)
+            ci_upp = pd.DataFrame(ci_upp, index=pd_index)
+
     return ci_low, ci_upp
 
 
@@ -729,8 +764,10 @@ def proportions_ztest(count, nobs, value=None, alternative='two-sided',
     alternative : string in ['two-sided', 'smaller', 'larger']
         The alternative hypothesis can be either two-sided or one of the one-
         sided tests, smaller means that the alternative hypothesis is
-        ``prop < value` and larger means ``prop > value``, or the corresponding
-        inequality for the two sample test.
+        ``prop < value`` and larger means ``prop > value``. In the two sample
+        test, smaller means that the alternative hypothesis is ``p1 < p2`` and
+        larger means ``p1 > p2`` where ``p1`` is the proportion of the first
+        sample and ``p2`` of the second one.
     prop_var : False or float in (0, 1)
         If prop_var is false, then the variance of the proportion estimate is
         calculated based on the sample proportion. Alternatively, a proportion

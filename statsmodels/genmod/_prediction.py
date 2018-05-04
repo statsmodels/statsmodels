@@ -171,7 +171,7 @@ def get_prediction_glm(self, exog=None, transform=True, weights=None,
 
     Returns
     -------
-    prediction_results : instance
+    prediction_results : generalized_linear_model.PredictionResults
         The prediction results instance contains prediction and prediction
         variance and can on demand calculate confidence intervals and summary
         tables for the prediction of the mean and of new observations.
@@ -186,9 +186,8 @@ def get_prediction_glm(self, exog=None, transform=True, weights=None,
 
     if exog is not None:
         if row_labels is None:
-            if hasattr(exog, 'index'):
-                row_labels = exog.index
-            else:
+            row_labels = getattr(exog, 'index', None)
+            if callable(row_labels):
                 row_labels = None
 
         exog = np.asarray(exog)
@@ -220,12 +219,15 @@ def get_prediction_glm(self, exog=None, transform=True, weights=None,
 
     link_deriv = self.model.family.link.inverse_deriv(linpred.predicted_mean)
     var_pred_mean = link_deriv**2 * (exog * np.dot(covb, exog.T).T).sum(1)
+    var_resid = self.scale  # self.mse_resid / weights
 
     # TODO: check that we have correct scale, Refactor scale #???
-    var_resid = self.scale / weights # self.mse_resid / weights
     # special case for now:
     if self.cov_type == 'fixed scale':
-        var_resid = self.cov_kwds['scale'] / weights
+        var_resid = self.cov_kwds['scale']
+
+    if weights is not None:
+        var_resid /= weights
 
     dist = ['norm', 't'][self.use_t]
     return PredictionResults(predicted_mean, var_pred_mean, var_resid,

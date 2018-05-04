@@ -12,8 +12,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.tsa.regime_switching import (markov_switching,
                                               markov_regression)
-from numpy.testing import assert_equal, assert_allclose, assert_raises
-from nose.exc import SkipTest
+from numpy.testing import assert_allclose, assert_raises
 
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -437,8 +436,8 @@ class MarkovRegression(object):
                         rtol=self.rtol)
 
 
-fedfunds_const_filtered_joint_probabilities = np.array([[[
-           9.81875427e-01,   9.99977639e-01,   9.99982269e-01,
+fedfunds_const_filtered_joint_probabilities = np.array([
+         [[9.81875427e-01,   9.99977639e-01,   9.99982269e-01,
            9.99977917e-01,   9.99961064e-01,   9.99932206e-01,
            9.99919386e-01,   9.99894144e-01,   9.99875287e-01,
            9.99853807e-01,   9.99852600e-01,   9.99839056e-01,
@@ -514,7 +513,7 @@ fedfunds_const_filtered_joint_probabilities = np.array([[[
            9.99996082e-01,   9.99996179e-01,   9.99996370e-01,
            9.99996334e-01,   9.99996045e-01,   9.99996030e-01,
            9.99996030e-01],
-        [  1.79021167e-02,   1.14091306e-05,   5.61557959e-07,
+          [1.79021167e-02,   1.14091306e-05,   5.61557959e-07,
            8.80398735e-07,   1.08717798e-06,   1.94073468e-06,
            3.37670187e-06,   3.96039606e-06,   5.22475895e-06,
            6.12683114e-06,   7.18211108e-06,   7.18979687e-06,
@@ -591,7 +590,7 @@ fedfunds_const_filtered_joint_probabilities = np.array([[[
            1.76579974e-07,   1.78918351e-07,   1.93625709e-07,
            1.93628651e-07]],
 
-       [[  1.12025955e-05,   1.08238349e-05,   1.71596282e-05,
+         [[1.12025955e-05,   1.08238349e-05,   1.71596282e-05,
            2.11831999e-05,   3.78067714e-05,   6.57213848e-05,
            7.69689076e-05,   1.01479702e-04,   1.18846167e-04,
            1.39184231e-04,   1.39184063e-04,   1.52618987e-04,
@@ -667,7 +666,7 @@ fedfunds_const_filtered_joint_probabilities = np.array([[[
            3.72600486e-06,   3.62917375e-06,   3.44299546e-06,
            3.48862495e-06,   3.77538503e-06,   3.77538498e-06,
            3.77538498e-06],
-        [  2.11253415e-04,   1.27726353e-07,   9.96660517e-09,
+          [2.11253415e-04,   1.27726353e-07,   9.96660517e-09,
            1.92893528e-08,   4.25132434e-08,   1.31928738e-07,
            2.68831493e-07,   4.15719953e-07,   6.42307057e-07,
            8.82117691e-07,   1.03405286e-06,   1.13509493e-06,
@@ -818,80 +817,79 @@ class TestFedFundsConst(MarkovRegression):
         assert_allclose(bse[:-1], self.true['bse_oim'][:-1], atol=1e-7)
 
 
-
-fedfunds_const_short_filtered_joint_probabilities = np.array([[[
-           9.81370301e-01,   9.99956215e-01,   9.99995966e-01,
+fedfunds_const_short_filtered_joint_probabilities = np.array([
+         [[9.81370301e-01,   9.99956215e-01,   9.99995966e-01,
            9.99996082e-01,   9.99996179e-01,   9.99996370e-01,
            9.99996334e-01,   9.99996045e-01,   9.99996030e-01,
            9.99996030e-01],
-        [  1.78929069e-02,   3.78065881e-05,   3.06546640e-07,
+          [1.78929069e-02,   3.78065881e-05,   3.06546640e-07,
            1.91118379e-07,   1.91095611e-07,   1.86129447e-07,
            1.76579974e-07,   1.78918351e-07,   1.93625709e-07,
            1.93628651e-07]],
 
-       [[  3.71038873e-05,   5.75327472e-06,   3.72600443e-06,
+         [[3.71038873e-05,   5.75327472e-06,   3.72600443e-06,
            3.72600486e-06,   3.62917375e-06,   3.44299546e-06,
            3.48862495e-06,   3.77538503e-06,   3.77538498e-06,
            3.77538498e-06],
-        [  6.99688113e-04,   2.24977302e-07,   1.18135050e-09,
+          [6.99688113e-04,   2.24977302e-07,   1.18135050e-09,
            7.36520203e-10,   7.17294043e-10,   6.62811758e-10,
            6.37139329e-10,   6.98642410e-10,   7.56071871e-10,
            7.56083358e-10]]])
 
 
-fedfunds_const_short_predicted_joint_probabilities = np.array([[[[
-            7.11514435e-01,   9.63797786e-01,   9.82050899e-01,
+fedfunds_const_short_predicted_joint_probabilities = np.array([
+         [[[7.11514435e-01,   9.63797786e-01,   9.82050899e-01,
             9.82089938e-01,   9.82090052e-01,   9.82090147e-01,
             9.82090335e-01,   9.82090300e-01,   9.82090016e-01,
             9.82090001e-01],
-         [  1.29727398e-02,   1.75725147e-02,   3.71296195e-05,
+           [1.29727398e-02,   1.75725147e-02,   3.71296195e-05,
             3.01057585e-07,   1.87696195e-07,   1.87673833e-07,
             1.82796594e-07,   1.73418115e-07,   1.75714621e-07,
             1.90158628e-07]],
 
-        [[  6.65201476e-04,   1.86850353e-06,   2.89727435e-07,
+          [[6.65201476e-04,   1.86850353e-06,   2.89727435e-07,
             1.87636739e-07,   1.87636761e-07,   1.82760472e-07,
             1.73384775e-07,   1.75682617e-07,   1.90123482e-07,
             1.90123479e-07],
-         [  1.25440648e-02,   3.52353838e-05,   1.13295645e-08,
+           [1.25440648e-02,   3.52353838e-05,   1.13295645e-08,
             5.94912755e-11,   3.70902000e-11,   3.61219955e-11,
             3.33783385e-11,   3.20855083e-11,   3.51827235e-11,
             3.80747965e-11]]],
 
 
-       [[[  1.29727398e-02,   1.75725147e-02,   1.79053160e-02,
+         [[[1.29727398e-02,   1.75725147e-02,   1.79053160e-02,
             1.79060278e-02,   1.79060298e-02,   1.79060316e-02,
             1.79060350e-02,   1.79060344e-02,   1.79060292e-02,
             1.79060289e-02],
-         [  2.36526442e-04,   3.20392181e-04,   6.76968547e-07,
+           [2.36526442e-04,   3.20392181e-04,   6.76968547e-07,
             5.48905479e-09,   3.42218481e-09,   3.42177711e-09,
             3.33285249e-09,   3.16185867e-09,   3.20372988e-09,
             3.46708131e-09]],
 
-        [[  1.25440648e-02,   3.52353838e-05,   5.46354728e-06,
+          [[1.25440648e-02,   3.52353838e-05,   5.46354728e-06,
             3.53836769e-06,   3.53836810e-06,   3.44641328e-06,
             3.26961068e-06,   3.31294233e-06,   3.58526155e-06,
             3.58526150e-06],
-         [  2.36550228e-01,   6.64452729e-04,   2.13647738e-07,
+           [2.36550228e-01,   6.64452729e-04,   2.13647738e-07,
             1.12185923e-09,   6.99430003e-10,   6.81172047e-10,
             6.29433420e-10,   6.05053821e-10,   6.63459686e-10,
             7.17997074e-10]]]])
 
-fedfunds_const_short_smoothed_joint_probabilities = np.array([[[
-           9.82056759e-01,   9.99961887e-01,   9.99999502e-01,
+fedfunds_const_short_smoothed_joint_probabilities = np.array([
+         [[9.82056759e-01,   9.99961887e-01,   9.99999502e-01,
            9.99999618e-01,   9.99999623e-01,   9.99999637e-01,
            9.99999644e-01,   9.99999627e-01,   9.99999612e-01,
            9.99996030e-01],
-        [  1.79054228e-02,   3.78068025e-05,   3.06547724e-07,
+          [1.79054228e-02,   3.78068025e-05,   3.06547724e-07,
            1.91119055e-07,   1.91096269e-07,   1.86130055e-07,
            1.76580558e-07,   1.78918992e-07,   1.93626403e-07,
            1.93628651e-07]],
 
-       [[  1.90448249e-06,   2.95069837e-07,   1.91096241e-07,
+         [[1.90448249e-06,   2.95069837e-07,   1.91096241e-07,
            1.91095282e-07,   1.86127261e-07,   1.76579242e-07,
            1.78922146e-07,   1.93629492e-07,   1.94345814e-07,
            3.77538498e-06],
-        [  3.59138585e-05,   1.15384749e-08,   6.05881299e-11,
+          [3.59138585e-05,   1.15384749e-08,   6.05881299e-11,
            3.77738466e-11,   3.67874300e-11,   3.39933060e-11,
            3.26771544e-11,   3.58315175e-11,   3.89203762e-11,
            7.56083358e-10]]])
@@ -940,6 +938,102 @@ class TestFedFundsConstShort(MarkovRegression):
         # Smoothed, last entry
         assert_allclose(res.smoothed_joint_probabilities,
                         fedfunds_const_short_smoothed_joint_probabilities)
+
+    def test_hamilton_filter_order_zero(self):
+        k_regimes = 3
+        nobs = 4
+        initial_probabilities = np.ones(k_regimes) / k_regimes
+
+        # We don't actually transition between the 3 regimes.
+        regime_transition = np.eye(k_regimes)[:, :, np.newaxis]
+
+        # Regime i correponds to a sequence of iid draws from discrete
+        # random variables that are equally likely to be -1 and i for i=0,
+        # 1, 2.  We observe the sequence -1, -1, 1, -1.  The first two
+        # observations tell us nothing, but the third lets us know that we
+        # are in regime 1 the whole time.
+        conditional_likelihoods = np.ones((k_regimes, nobs)) / 2
+        conditional_likelihoods[:, 2] = [0, 1, 0]
+
+        expected_marginals = np.empty((k_regimes, nobs))
+        expected_marginals[:, :2] = [[1/3], [1/3], [1/3]]
+        expected_marginals[:, 2:] = [[0], [1], [0]]
+
+
+        py_results = markov_switching.py_hamilton_filter(
+            initial_probabilities, regime_transition, conditional_likelihoods)
+        assert_allclose(py_results[0], expected_marginals)
+
+        cy_results = markov_switching.cy_hamilton_filter(
+            initial_probabilities, regime_transition, conditional_likelihoods)
+        assert_allclose(cy_results[0], expected_marginals)
+
+    def test_hamilton_filter_order_zero_with_tvtp(self):
+        k_regimes = 3
+        nobs = 8
+        initial_probabilities = np.ones(k_regimes) / k_regimes
+
+        # We don't actually transition between the 3 regimes except from
+        # t=3 to t=4 where we reset to regimes 1 and 2 being equally
+        # likely.
+        regime_transition = np.zeros((k_regimes, k_regimes, nobs))
+        regime_transition[...] = np.eye(k_regimes)[:, :, np.newaxis]
+        regime_transition[..., 4] = [[0,     0,   0],
+                                     [1/2, 1/2, 1/2],
+                                     [1/2, 1/2, 1/2]]
+
+        # Regime i correponds to a sequence of iid draws from discrete
+        # random variables that are equally likely to be -1, i, and i + 1
+        # for i = 0, 1, 2.  We observe the sequence:
+        #
+        #     t =  0, 1, 2,  3,  4, 5, 6,  7
+        #   X_t = -1, 1, 2, -1, -1, 2, 3, -1
+        #
+        # The first observations tell us nothing, the second tells us that
+        # regime 0 and 1 are equally likely, and the third tells us that we
+        # must be in regime 1 for t = 0, 1, 2, 3.  At t=4 we transition to
+        # state 1 or 2.  In this case, neither a -1 or 2 changes our view
+        # that these states are equally likely, but a 3 tells we must be in
+        # state 2 for the second four timestamps.
+        conditional_likelihoods = np.empty((k_regimes, nobs))
+        conditional_likelihoods[:, 0] = [1/3, 1/3, 1/3]
+        conditional_likelihoods[:, 1] = [1/3, 1/3, 0]
+        conditional_likelihoods[:, 2] = [0, 1/3, 1/3]
+        conditional_likelihoods[:, 3:5] = [[1/3], [1/3], [1/3]]
+        conditional_likelihoods[:, 5] = [0, 1/3, 1/3]
+        conditional_likelihoods[:, 6] = [0, 0, 1/3]
+        conditional_likelihoods[:, 7] = [1/3, 1/3, 1/3]
+
+        expected_marginals = np.empty((k_regimes, nobs))
+        expected_marginals[:, 0] = [1/3, 1/3, 1/3]
+        expected_marginals[:, 1] = [1/2, 1/2, 0]
+        expected_marginals[:, 2:4] = [[0], [1], [0]]
+        expected_marginals[:, 4:6] = [[0], [1/2], [1/2]]
+        expected_marginals[:, 6:8] = [[0], [0], [1]]
+
+        py_results = markov_switching.py_hamilton_filter(
+            initial_probabilities, regime_transition, conditional_likelihoods)
+        assert_allclose(py_results[0], expected_marginals)
+
+        cy_results = markov_switching.cy_hamilton_filter(
+            initial_probabilities, regime_transition, conditional_likelihoods)
+        assert_allclose(cy_results[0], expected_marginals)
+
+    def test_hamilton_filter_shape_checks(self):
+        k_regimes = 3
+        nobs = 8
+        order = 3
+
+        initial_probabilities = np.ones(k_regimes) / k_regimes
+        regime_transition = np.ones((k_regimes, k_regimes, nobs)) / k_regimes
+        conditional_likelihoods = np.ones(order * (k_regimes,) + (nobs,))
+
+        for func in [markov_switching.py_hamilton_filter,
+                     markov_switching.cy_hamilton_filter]:
+            with assert_raises(ValueError):
+                func(initial_probabilities,
+                     regime_transition,
+                     conditional_likelihoods)
 
     def test_py_hamilton_filter(self):
         mod = self.model
@@ -1022,9 +1116,9 @@ class TestFedFundsConstL1Exog(MarkovRegression):
             'bse_oim': np.r_[.0929915, .0641179, .1373889, .1279231, .0333236,
                              .0270852, .0294113, .0240138, .0408057, .0297351,
                              np.nan],
-            'predict0': results.ix[4:, 'constL1exog_syhat1'],
-            'predict1': results.ix[4:, 'constL1exog_syhat2'],
-            'predict_smoothed': results.ix[4:, 'constL1exog_syhat'],
+            'predict0': results.iloc[4:]['constL1exog_syhat1'],
+            'predict1': results.iloc[4:]['constL1exog_syhat2'],
+            'predict_smoothed': results.iloc[4:]['constL1exog_syhat'],
         }
         super(TestFedFundsConstL1Exog, cls).setup_class(
             true, fedfunds[4:], k_regimes=2,

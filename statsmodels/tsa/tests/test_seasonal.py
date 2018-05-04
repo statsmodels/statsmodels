@@ -1,12 +1,14 @@
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal, assert_raises
+import pandas as pd
+from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
+                           assert_allclose)
 from statsmodels.tsa.seasonal import seasonal_decompose
 from pandas import DataFrame, DatetimeIndex
 
 
 class TestDecompose:
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         # even
         data = [-50, 175, 149, 214, 247, 237, 225, 329, 729, 809,
                 530, 489, 540, 457, 195, 176, 337, 239, 128, 102,
@@ -138,6 +140,21 @@ class TestDecompose:
         assert_equal(res_mult.seasonal.index.values.squeeze(),
                             self.data.index.values)
 
+    def test_pandas_nofreq(self):
+        # issue #3503
+        nobs = 100
+        dta = pd.Series([x%3 for x in range(nobs)] + np.random.randn(nobs))
+        res_np = seasonal_decompose(dta.values, freq=3)
+        res = seasonal_decompose(dta, freq=3)
+
+        atol = 1e-8
+        rtol = 1e-10
+        assert_allclose(res.seasonal.values.squeeze(), res_np.seasonal,
+                        atol=atol, rtol=rtol)
+        assert_allclose(res.trend.values.squeeze(), res_np.trend,
+                        atol=atol, rtol=rtol)
+        assert_allclose(res.resid.values.squeeze(), res_np.resid,
+                        atol=atol, rtol=rtol)
 
     def test_filt(self):
         filt = np.array([1/8., 1/4., 1./4, 1/4., 1/8.])
@@ -236,13 +253,42 @@ class TestDecompose:
         assert_almost_equal(res_add.trend, trend, 2)
         assert_almost_equal(res_add.resid, random, 3)
 
+    def test_2d(self):
+        x = np.tile(np.arange(6), (2, 1)).T
+        trend = seasonal_decompose(x, freq=2).trend
+        expected = np.tile(np.arange(6, dtype=float), (2, 1)).T
+        expected[0] = expected[-1] = np.nan
+        assert_equal(trend, expected)
+
+    def test_interpolate_trend(self):
+        x = np.arange(12)
+        freq = 4
+        trend = seasonal_decompose(x, freq=freq).trend
+        assert_equal(trend[0], np.nan)
+
+        trend = seasonal_decompose(x, freq=freq, extrapolate_trend=5).trend
+        assert_almost_equal(trend, x)
+
+        trend = seasonal_decompose(x, freq=freq, extrapolate_trend='freq').trend
+        assert_almost_equal(trend, x)
+
+        trend = seasonal_decompose(x[:, None], freq=freq, extrapolate_trend=5).trend
+        assert_almost_equal(trend, x)
+
+        # 2d case
+        x = np.tile(np.arange(12), (2, 1)).T
+        trend = seasonal_decompose(x, freq=freq, extrapolate_trend=1).trend
+        assert_almost_equal(trend, x)
+
+        trend = seasonal_decompose(x, freq=freq, extrapolate_trend='freq').trend
+        assert_almost_equal(trend, x)
 
     def test_raises(self):
         assert_raises(ValueError, seasonal_decompose, self.data.values)
         assert_raises(ValueError, seasonal_decompose, self.data, 'm',
                       freq=4)
         x = self.data.astype(float).copy()
-        x.ix[2] = np.nan
+        x.iloc[2] = np.nan
         assert_raises(ValueError, seasonal_decompose, x)
 
 

@@ -16,6 +16,9 @@ tools modules, for example :mod:`statsmodels.tsa.tsatools`
 Module Reference
 ----------------
 
+.. module:: statsmodels.tools
+   :synopsis: Tools for variable transformation and common numerical operations
+
 Basic tools :mod:`tools`
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -37,7 +40,6 @@ insufficiently tested.
    tools.clean0
    tools.fullrank
    tools.isestimable
-   tools.rank
    tools.recipr
    tools.recipr0
    tools.unsqueeze

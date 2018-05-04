@@ -1,4 +1,3 @@
-from unittest import TestCase
 import scipy.stats
 import numpy as np
 import statsmodels.api as sm
@@ -21,21 +20,21 @@ idx = ['income', 'Intercept']
 
 class CheckModelResultsMixin(object):
     def test_params(self):
-        assert_allclose(np.ravel(self.res1.params.ix[idx]),
+        assert_allclose(np.ravel(self.res1.params.loc[idx]),
                         self.res2.table[:, 0], rtol=1e-3)
 
     def test_bse(self):
         assert_equal(self.res1.scale, 1)
-        assert_allclose(np.ravel(self.res1.bse.ix[idx]),
+        assert_allclose(np.ravel(self.res1.bse.loc[idx]),
                         self.res2.table[:, 1], rtol=1e-3)
 
     def test_tvalues(self):
-        assert_allclose(np.ravel(self.res1.tvalues.ix[idx]),
+        assert_allclose(np.ravel(self.res1.tvalues.loc[idx]),
                         self.res2.table[:, 2], rtol=1e-2)
 
     def test_pvalues(self):
         pvals_stata = scipy.stats.t.sf(self.res2.table[:, 2], self.res2.df_r)
-        assert_allclose(np.ravel(self.res1.pvalues.ix[idx]),
+        assert_allclose(np.ravel(self.res1.pvalues.loc[idx]),
                         pvals_stata, rtol=1.1)
 
         # test that we use the t distribution for the p-values
@@ -44,7 +43,7 @@ class CheckModelResultsMixin(object):
                         pvals_t, rtol=1e-9, atol=1e-10)
 
     def test_conf_int(self):
-        assert_allclose(self.res1.conf_int().ix[idx],
+        assert_allclose(self.res1.conf_int().loc[idx],
                         self.res2.table[:, -2:], rtol=1e-3)
 
     def test_nobs(self):
@@ -113,7 +112,7 @@ def test_fitted_residuals():
     assert_almost_equal(np.array(res.resid), Rquantreg.residuals, 5)
 
 
-class TestEpanechnikovHsheatherQ75(TestCase, CheckModelResultsMixin):
+class TestEpanechnikovHsheatherQ75(CheckModelResultsMixin):
     # Vincent Arel-Bundock also spot-checked q=.1
     @classmethod
     def setup_class(cls):
@@ -123,106 +122,106 @@ class TestEpanechnikovHsheatherQ75(TestCase, CheckModelResultsMixin):
         cls.res2 = epanechnikov_hsheather_q75
 
 
-class TestEpanechnikovBofinger(TestCase, CheckModelResultsMixin):
+class TestEpanechnikovBofinger(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
         cls.res1, cls.res2 = setup_fun('epa', 'bofinger')
 
 
-class TestEpanechnikovChamberlain(TestCase, CheckModelResultsMixin):
+class TestEpanechnikovChamberlain(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
         cls.res1, cls.res2 = setup_fun('epa', 'chamberlain')
 
 
-class TestEpanechnikovHsheather(TestCase, CheckModelResultsMixin):
+class TestEpanechnikovHsheather(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
         cls.res1, cls.res2 = setup_fun('epa', 'hsheather')
 
 
-class TestGaussianBofinger(TestCase, CheckModelResultsMixin):
+class TestGaussianBofinger(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
         cls.res1, cls.res2 = setup_fun('gau', 'bofinger')
 
 
-class TestGaussianChamberlain(TestCase, CheckModelResultsMixin):
+class TestGaussianChamberlain(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
         cls.res1, cls.res2 = setup_fun('gau', 'chamberlain')
 
 
-class TestGaussianHsheather(TestCase, CheckModelResultsMixin):
+class TestGaussianHsheather(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
         cls.res1, cls.res2 = setup_fun('gau', 'hsheather')
 
 
-class TestBiweightBofinger(TestCase, CheckModelResultsMixin):
+class TestBiweightBofinger(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
         cls.res1, cls.res2 = setup_fun('biw', 'bofinger')
 
 
-class TestBiweightChamberlain(TestCase, CheckModelResultsMixin):
+class TestBiweightChamberlain(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
         cls.res1, cls.res2 = setup_fun('biw', 'chamberlain')
 
 
-class TestBiweightHsheather(TestCase, CheckModelResultsMixin):
+class TestBiweightHsheather(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
         cls.res1, cls.res2 = setup_fun('biw', 'hsheather')
 
 
-class TestCosineBofinger(TestCase, CheckModelResultsMixin):
+class TestCosineBofinger(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
         cls.res1, cls.res2 = setup_fun('cos', 'bofinger')
 
 
-class TestCosineChamberlain(TestCase, CheckModelResultsMixin):
+class TestCosineChamberlain(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
         cls.res1, cls.res2 = setup_fun('cos', 'chamberlain')
 
 
-class TestCosineHsheather(TestCase, CheckModelResultsMixin):
+class TestCosineHsheather(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
         cls.res1, cls.res2 = setup_fun('cos', 'hsheather')
 
 
-class TestParzeneBofinger(TestCase, CheckModelResultsMixin):
+class TestParzeneBofinger(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
         cls.res1, cls.res2 = setup_fun('par', 'bofinger')
 
 
-class TestParzeneChamberlain(TestCase, CheckModelResultsMixin):
+class TestParzeneChamberlain(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
         cls.res1, cls.res2 = setup_fun('par', 'chamberlain')
 
 
-class TestParzeneHsheather(TestCase, CheckModelResultsMixin):
+class TestParzeneHsheather(CheckModelResultsMixin):
     @classmethod
     def setup_class(cls):
         cls.res1, cls.res2 = setup_fun('par', 'hsheather')
 
-# class TestTriangleBofinger(TestCase, CheckModelResultsMixin):
+# class TestTriangleBofinger(CheckModelResultsMixin):
 #    @classmethod
 #    def setup_class(cls):
 #        cls.res1, cls.res2 = setup_fun('tri', 'bofinger')
 
-# class TestTriangleChamberlain(TestCase, CheckModelResultsMixin):
+# class TestTriangleChamberlain(CheckModelResultsMixin):
 #    @classmethod
 #    def setup_class(cls):
 #        cls.res1, cls.res2 = setup_fun('tri', 'chamberlain')
 
-# class TestTriangleHsheather(TestCase, CheckModelResultsMixin):
+# class TestTriangleHsheather(CheckModelResultsMixin):
 #    @classmethod
 #    def setup_class(cls):
 #        cls.res1, cls.res2 = setup_fun('tri', 'hsheather')

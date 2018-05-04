@@ -46,11 +46,11 @@ class TestDiff(object):
         ([1,2,3], 1, None, 1, [1, 1]),
         # diff = 2
         (x, 2, None, 1, [0]*8),
-        # diff = 1, seasonal_diff=1, k_seasons=4
+        # diff = 1, seasonal_diff=1, seasonal_periods=4
         (x, 1, 1, 4, [0]*5),
         (x**2, 1, 1, 4, [8]*5),
         (x**3, 1, 1, 4, [60, 84, 108, 132, 156]),
-        # diff = 1, seasonal_diff=2, k_seasons=2
+        # diff = 1, seasonal_diff=2, seasonal_periods=2
         (x, 1, 2, 2, [0]*5),
         (x**2, 1, 2, 2, [0]*5),
         (x**3, 1, 2, 2, [24]*5),
@@ -59,10 +59,10 @@ class TestDiff(object):
 
     def test_cases(self):
         # Basic cases
-        for series, diff, seasonal_diff, k_seasons, result in self.cases:
+        for series, diff, seasonal_diff, seasonal_periods, result in self.cases:
             
             # Test numpy array
-            x = tools.diff(series, diff, seasonal_diff, k_seasons)
+            x = tools.diff(series, diff, seasonal_diff, seasonal_periods)
             assert_almost_equal(x, result)
 
             # Test as Pandas Series
@@ -73,12 +73,12 @@ class TestDiff(object):
             result = np.c_[result, result]
 
             # Test Numpy array
-            x = tools.diff(series, diff, seasonal_diff, k_seasons)
+            x = tools.diff(series, diff, seasonal_diff, seasonal_periods)
             assert_almost_equal(x, result)
 
             # Test as Pandas Dataframe
             series = pd.DataFrame(series)
-            x = tools.diff(series, diff, seasonal_diff, k_seasons)
+            x = tools.diff(series, diff, seasonal_diff, seasonal_periods)
             assert_almost_equal(x, result)
 
 class TestSolveDiscreteLyapunov(object):
@@ -944,9 +944,6 @@ def test_copy_index_vector():
                 A[i, t] = 1.
     B = np.zeros((k_endog, nobs), order='F')
 
-    print(A[:, 3])
-
     index = np.asfortranarray(index.astype(np.int32))
     tools.copy_index_vector(A, B, index, inplace=True)
-    print(B[:, 3])
     assert_equal(B, A)

@@ -20,7 +20,7 @@ recent numpy and pandas releases.
 Statsmodels is using now github to store the updated documentation which
 is available under
 http://www.statsmodels.org/stable for the last release, and
-http://www.statsmodels.org/dev/ for the development version.
+http://www.statsmodels.org/devel/ for the development version.
 
 This is the last release that supports Python 2.6.
 
@@ -120,42 +120,6 @@ Other improvements to the state space framework include:
 * Ongoing refactoring and bug fixes in fringes and corner cases
 
 
-New functionality in statistics
--------------------------------
-
-Contingency Tables #2418 (Kerby Shedden)
-
-Local FDR, multiple testing #2297 (Kerby Shedden)
-
-Mediation Analysis #2352 (Kerby Shedden)
-
-other:
-
-* weighted quantiles in DescrStatsW #2707 (Kerby Shedden)
-
-
-Duration
---------
-
-Kaplan Meier Survival Function #2614 (Kerby Shedden)
-
-Cumulative incidence rate function #3016 (Kerby Shedden)
-
-other:
-
-* frequency weights in Kaplan-Meier #2992 (Kerby Shedden)
-
-
-Imputation
-----------
-
-new subpackage in `statsmodels.imputation`
-
-MICE #2076  (Frank Cheng GSOC 2014 and Kerby Shedden)
-
-Imputation by regression on Order Statistic  #3019 (Paul Hobson)
-
-
 Time Series Analysis
 --------------------
 
@@ -174,6 +138,47 @@ Statistics
 * KPSS stationarity, unit root test #2775 (N-Wouda)
 * The Brock Dechert Scheinkman (BDS) test for nonlinear dependence is now
   available (introduced in #934 by Chad Fulton)
+* Augmented Engle/Granger cointegration test (refactor hidden function) #3146 (Josef Perktold)
+
+
+New functionality in statistics
+-------------------------------
+
+Contingency Tables #2418 (Kerby Shedden)
+
+Local FDR, multiple testing #2297 (Kerby Shedden)
+
+Mediation Analysis #2352 (Kerby Shedden)
+
+Confidence intervals for multinomial proportions #3162 (Sebastien Lerique, Josef Perktold)
+
+other:
+
+* weighted quantiles in DescrStatsW #2707 (Kerby Shedden)
+
+
+Duration
+--------
+
+Kaplan Meier Survival Function #2614 (Kerby Shedden)
+
+Cumulative incidence rate function #3016 (Kerby Shedden)
+
+other:
+
+* frequency weights in Kaplan-Meier #2992 (Kerby Shedden)
+* entry times for Kaplan-Meier #3126 (Kerby Shedden)
+* intercept handling for PHReg #3095 (Kerby Shedden)
+
+
+Imputation
+----------
+
+new subpackage in `statsmodels.imputation`
+
+MICE #2076  (Frank Cheng GSOC 2014 and Kerby Shedden)
+
+Imputation by regression on Order Statistic  #3019 (Paul Hobson)
 
 
 Penalized Estimation
@@ -218,9 +223,12 @@ several existing functions have received improvements
 * tools add_constant, add_trend: refactoring and pandas compatibility #2240 (Kevin Sheppard)
 * acf, pacf, acovf: option for missing handling #3020 (joesnacks ?)
 * acf, pacf plots: allow array of lags #2989 (Kevin Sheppard)
+* pickling support for ARIMA #3412 (zaemyung)
 * io SimpleTable (summary): allow names with special characters #3015 (tvanessa ?)
 * tsa tools lagmat, lagmat2ds: pandas support #2310 #3042 (Kevin Sheppard)
 * CompareMeans: from_data, summary methods #2754 (Valery Tyumen)
+* API cleanup for robust, sandwich covariances #3162 (Josef Perktold)
+* influence plot used swapped arguments (bug) #3158
 
 
 
@@ -229,11 +237,17 @@ Major Bugs fixed
 
 * see github issues
 
+While most bugs are usability problems, there is now a new label `type-bug-wrong`
+for bugs that cause that silently incorrect numbers are returned.
+https://github.com/statsmodels/statsmodels/issues?q=label%3Atype-bug-wrong+is%3Aclosed
+
+
+
 Backwards incompatible changes and deprecations
 -----------------------------------------------
 
-* ???
-* predict now returns a pandas Series if the exog argument is a DataFrame
+* predict now returns a pandas Series if the exog argument is a DataFrame,
+  including missing/NaN values
 * PCA moved to multivariate compared to 0.7
 
 
@@ -254,7 +268,7 @@ and the general maintainer and code reviewer
 Additionally, many users contributed by participation in github issues and
 providing feedback.
 
-Thanks to all of the contributors for the 0.8 release:
+Thanks to all of the contributors for the 0.8 release (based on git log):
 
 .. note::
 
@@ -264,6 +278,7 @@ Thanks to all of the contributors for the 0.8 release:
    * BrianLondon
    * Chad Fulton
    * Chris Fonnesbeck
+   * Christian Lorentzen
    * Christoph T. Weidemann
    * James Kerns
    * Josef Perktold
@@ -284,6 +299,7 @@ Thanks to all of the contributors for the 0.8 release:
    * ValeryTyumen
    * Vanessa
    * Yaroslav Halchenko
+   * dhpiyush
    * joesnacks
    * kokes
    * matiumerca

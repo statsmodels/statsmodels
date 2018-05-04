@@ -34,9 +34,7 @@ prefix_copy_index_vector_map = {}
 
 
 def set_mode(compatibility=None):
-    global compatibility_mode, has_trmm, prefix_statespace_map,        \
-        prefix_kalman_filter_map, prefix_kalman_smoother_map,          \
-        prefix_simulation_smoother_map, prefix_pacf_map, prefix_sv_map
+    global compatibility_mode, has_trmm
 
     # Determine mode automatically if none given
     if compatibility is None:
@@ -67,8 +65,10 @@ def set_mode(compatibility=None):
             'c': _representation.cStatespace, 'z': _representation.zStatespace
         })
         prefix_kalman_filter_map.update({
-            's': _kalman_filter.sKalmanFilter, 'd': _kalman_filter.dKalmanFilter,
-            'c': _kalman_filter.cKalmanFilter, 'z': _kalman_filter.zKalmanFilter
+            's': _kalman_filter.sKalmanFilter,
+            'd': _kalman_filter.dKalmanFilter,
+            'c': _kalman_filter.cKalmanFilter,
+            'z': _kalman_filter.zKalmanFilter
         })
         prefix_kalman_smoother_map.update({
             's': _kalman_smoother.sKalmanSmoother,
@@ -246,6 +246,7 @@ def companion_matrix(polynomial):
     Given coefficients of a lag polynomial of the form:
 
     .. math::
+
         c(L) = c_0 + c_1 L + \dots + c_p L^p
 
     returns a matrix of the form
@@ -340,7 +341,7 @@ def companion_matrix(polynomial):
     return matrix
 
 
-def diff(series, k_diff=1, k_seasonal_diff=None, k_seasons=1):
+def diff(series, k_diff=1, k_seasonal_diff=None, seasonal_periods=1):
     r"""
     Difference a series simply and/or seasonally along the zero-th axis.
 
@@ -350,7 +351,7 @@ def diff(series, k_diff=1, k_seasonal_diff=None, k_seasons=1):
 
         \Delta^d \Delta_s^D y_t
 
-    where :math:`d =` `diff`, :math:`s =` `k_seasons`,
+    where :math:`d =` `diff`, :math:`s =` `seasonal_periods`,
     :math:`D =` `seasonal\_diff`, and :math:`\Delta` is the difference
     operator.
 
@@ -363,7 +364,7 @@ def diff(series, k_diff=1, k_seasonal_diff=None, k_seasons=1):
     seasonal_diff : int or None, optional
         The number of seasonal differences to perform. Default is no seasonal
         differencing.
-    k_seasons : int, optional
+    seasonal_periods : int, optional
         The seasonal lag. Default is 1. Unused if there is no seasonal
         differencing.
 
@@ -380,10 +381,10 @@ def diff(series, k_diff=1, k_seasonal_diff=None, k_seasons=1):
         while k_seasonal_diff > 0:
             if not pandas:
                 differenced = (
-                    differenced[k_seasons:] - differenced[:-k_seasons]
+                    differenced[seasonal_periods:] - differenced[:-seasonal_periods]
                 )
             else:
-                differenced = differenced.diff(k_seasons)[k_seasons:]
+                differenced = differenced.diff(seasonal_periods)[seasonal_periods:]
             k_seasonal_diff -= 1
 
     # Simple differencing
@@ -430,7 +431,7 @@ def concat(series, axis=0, allow_mix=False):
     return concatenated
 
 
-def is_invertible(polynomial, threshold=1.):
+def is_invertible(polynomial, threshold=1 - 1e-10):
     r"""
     Determine if a polynomial is invertible.
 
@@ -513,7 +514,7 @@ def solve_discrete_lyapunov(a, q, complex_step=False):
     (usually the transition matrix) in order to allow complex step
     differentiation.
     """
-    eye = np.eye(a.shape[0])
+    eye = np.eye(a.shape[0], dtype=a.dtype)
     if not complex_step:
         aH = a.conj().transpose()
         aHI_inv = np.linalg.inv(aH + eye)
@@ -549,7 +550,7 @@ def constrain_stationary_univariate(unconstrained):
 
     References
     ----------
-    .. [1] Monahan, John F. 1984.
+    .. [*] Monahan, John F. 1984.
        "A Note on Enforcing Stationarity in
        Autoregressive-moving Average Models."
        Biometrika 71 (2) (August 1): 403-404.
@@ -586,7 +587,7 @@ def unconstrain_stationary_univariate(constrained):
 
     References
     ----------
-    .. [1] Monahan, John F. 1984.
+    .. [*] Monahan, John F. 1984.
        "A Note on Enforcing Stationarity in
        Autoregressive-moving Average Models."
        Biometrika 71 (2) (August 1): 403-404.
@@ -888,7 +889,7 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
        "A Note on Reparameterizing a Vector Autoregressive Moving Average Model
        to Enforce Stationarity."
        Journal of Statistical Computation and Simulation 24 (2): 99-106.
-    .. [2] Ansley, Craig F, and Paul Newbold. 1979.
+    .. [*] Ansley, Craig F, and Paul Newbold. 1979.
        "Multivariate Partial Autocorrelations."
        In Proceedings of the Business and Economic Statistics Section, 349-53.
        American Statistical Association
@@ -1060,7 +1061,7 @@ def _compute_multivariate_sample_acovf(endog, maxlag):
 
     References
     ----------
-    .. [1] Wei, William. 1990.
+    .. [*] Wei, William. 1990.
         Time Series Analysis : Univariate and Multivariate Methods.
        Boston: Pearson.
     """
@@ -1086,7 +1087,7 @@ def _compute_multivariate_sample_acovf(endog, maxlag):
 def _compute_multivariate_acovf_from_coefficients(
         coefficients, error_variance, maxlag=None,
         forward_autocovariances=False):
-    """
+    r"""
     Compute multivariate autocovariances from vector autoregression coefficient
     matrices
 
@@ -1118,14 +1119,14 @@ def _compute_multivariate_acovf_from_coefficients(
     -----
     Computes
 
-    ..math::
+    .. math::
 
         \Gamma(j) = E(y_t y_{t-j}')
 
     for j = 1, ..., `maxlag`, unless `forward_autocovariances` is specified,
     in which case it computes:
 
-    ..math::
+    .. math::
 
         E(y_t y_{t+j}') = \Gamma(j)'
 
@@ -1470,15 +1471,12 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
 
     References
     ----------
-    .. [1] Ansley, Craig F., and Robert Kohn. 1986.
+    .. [*] Ansley, Craig F., and Robert Kohn. 1986.
        "A Note on Reparameterizing a Vector Autoregressive Moving Average Model
        to Enforce Stationarity."
        Journal of Statistical Computation and Simulation 24 (2): 99-106.
 
     """
-
-    from scipy import linalg
-
     use_list = type(constrained) == list
     if not use_list:
         k_endog, order = constrained.shape
@@ -1896,3 +1894,21 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
     copy(a, b, np.asfortranarray(index))
 
     return b
+
+
+def prepare_exog(exog):
+    k_exog = 0
+    if exog is not None:
+        exog_is_using_pandas = _is_using_pandas(exog, None)
+        if not exog_is_using_pandas:
+            exog = np.asarray(exog)
+
+        # Make sure we have 2-dimensional array
+        if exog.ndim == 1:
+            if not exog_is_using_pandas:
+                exog = exog[:, None]
+            else:
+                exog = pd.DataFrame(exog)
+
+        k_exog = exog.shape[1]
+    return (k_exog, exog)

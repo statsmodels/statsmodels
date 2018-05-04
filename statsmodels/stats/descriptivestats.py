@@ -324,7 +324,6 @@ if __name__ == "__main__":
     print(t1.summary(stats='all'))
 
 
-    import unittest
     data1 = np.array([(1,2,'a','aa'),
                       (2,3,'b','bb'),
                       (2,4,'b','cc')],
@@ -343,7 +342,7 @@ if __name__ == "__main__":
                       [6,5,4,3,2,1],
                       [9,9,9,9,9,9]])
 
-    class TestSimpleTable(unittest.TestCase):
+    class TestSimpleTable(object):
         #from statsmodels.iolib.table import SimpleTable, default_txt_fmt
 
         def test_basic_1(self):

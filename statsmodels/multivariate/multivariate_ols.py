@@ -17,40 +17,46 @@ from statsmodels.base.model import Model
 from statsmodels.iolib import summary2
 __docformat__ = 'restructuredtext en'
 
-_hypotheses_doc = """
-    hypotheses: A list of tuples
-        Hypothesis `L*B*M = C` to be tested where B is the parameters in
-        regression Y = X*B. Each element is a tuple of length 2, 3, or 4:
-                       (name, contrast_L)
-                       (name, contrast_L, transform_M)
-                       (name, contrast_L, transform_M, constant_C)
-        containing a string `name`, the contrast matrix L, the transform
-        matrix M (for transforming dependent variables), and right-hand side
-        constant matrix constant_C, respectively.
-        contrast_L : 2D array or an array of strings
-           Left-hand side contrast matrix for hypotheses testing.
-           If 2D array, each row is an hypotheses and each column is an
-           independent variable. At least 1 row
-           (1 by k_exog, the number of independent variables) is required.
-           If an array of strings, it will be passed to
-           patsy.DesignInfo().linear_constraint.
-        transform_M : 2D array or an array of strings or None, optional
-            Left hand side transform matrix.
-            If `None` or left out, it is set to a k_endog by k_endog
-            identity matrix (i.e. do not transform y matrix).
-            If an array of strings, it will be passed to
-            patsy.DesignInfo().linear_constraint.
-        constant_C : 2D array or None, optional
-            Right-hand side constant matrix.
-            if `None` or left out it is set to a matrix of zeros
-            Must has the same number of rows as contrast_L and the same
-            number of columns as transform_M
-        If `hypotheses` is None: 1) the effect of each independent variable
-        on the dependent variables will be tested. Or 2) if model is created
-        using a formula,  `hypotheses` will be created according to
-        `design_info`. 1) and 2) is equivalent if no additional variables
-        are created by the formula (e.g. dummy variables for categorical
-        variables and interaction terms)
+_hypotheses_doc = \
+"""hypotheses: A list of tuples
+    Hypothesis `L*B*M = C` to be tested where B is the parameters in
+    regression Y = X*B. Each element is a tuple of length 2, 3, or 4:
+    
+      * (name, contrast_L)
+      * (name, contrast_L, transform_M)
+      * (name, contrast_L, transform_M, constant_C)
+
+    containing a string `name`, the contrast matrix L, the transform
+    matrix M (for transforming dependent variables), and right-hand side
+    constant matrix constant_C, respectively.
+
+    contrast_L : 2D array or an array of strings
+        Left-hand side contrast matrix for hypotheses testing.
+        If 2D array, each row is an hypotheses and each column is an
+        independent variable. At least 1 row
+        (1 by k_exog, the number of independent variables) is required.
+        If an array of strings, it will be passed to
+        patsy.DesignInfo().linear_constraint.
+
+    transform_M : 2D array or an array of strings or None, optional
+        Left hand side transform matrix.
+        If `None` or left out, it is set to a k_endog by k_endog
+        identity matrix (i.e. do not transform y matrix).
+        If an array of strings, it will be passed to
+        patsy.DesignInfo().linear_constraint.
+
+    constant_C : 2D array or None, optional
+        Right-hand side constant matrix.
+        if `None` or left out it is set to a matrix of zeros
+        Must has the same number of rows as contrast_L and the same
+        number of columns as transform_M
+
+    If `hypotheses` is None: 1) the effect of each independent variable
+    on the dependent variables will be tested. Or 2) if model is created
+    using a formula,  `hypotheses` will be created according to
+    `design_info`. 1) and 2) is equivalent if no additional variables
+    are created by the formula (e.g. dummy variables for categorical
+    variables and interaction terms)
 """
 
 
@@ -75,7 +81,7 @@ def _multivariate_ols_fit(endog, exog, method='svd', tolerance=1e-8):
     -------
     a tuple of matrices or values necessary for hypotheses testing
 
-    .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
+    .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
     Notes
     -----
     Status: experimental and incomplete
@@ -153,7 +159,7 @@ def multivariate_stats(eigenvals,
 
     References
     ----------
-    .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
+    .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
     """
     v = df_resid
     p = r_err_sscp
@@ -166,19 +172,22 @@ def multivariate_stats(eigenvals,
     m = (np.abs(p - q) - 1) / 2
     n = (v - p - 1) / 2
 
-    results = pd.DataFrame({'Value': [], 'F Value': [], 'Num DF': [],
-                            'Den DF': [], 'Pr > F': []})
+    cols = ['Value', 'Num DF', 'Den DF', 'F Value', 'Pr > F']
+    index = ["Wilks' lambda", "Pillai's trace",
+             "Hotelling-Lawley trace", "Roy's greatest root"]
+    results = pd.DataFrame(columns=cols,
+                           index=index)
 
     def fn(x):
         return np.real([x])[0]
 
-    results.loc["Wilks’ lambda", 'Value'] = fn(np.prod(1 - eigv2))
+    results.loc["Wilks' lambda", 'Value'] = fn(np.prod(1 - eigv2))
 
-    results.loc["Pillai’s trace", 'Value'] = fn(eigv2.sum())
+    results.loc["Pillai's trace", 'Value'] = fn(eigv2.sum())
 
     results.loc["Hotelling-Lawley trace", 'Value'] = fn(eigv1.sum())
 
-    results.loc["Roy’s greatest root", 'Value'] = fn(eigv1.max())
+    results.loc["Roy's greatest root", 'Value'] = fn(eigv1.max())
 
     r = v - (p - q + 1)/2
     u = (p*q - 2) / 4
@@ -188,24 +197,24 @@ def multivariate_stats(eigenvals,
     else:
         t = 1
     df2 = r*t - 2*u
-    lmd = results.loc["Wilks’ lambda", 'Value']
+    lmd = results.loc["Wilks' lambda", 'Value']
     lmd = np.power(lmd, 1 / t)
     F = (1 - lmd) / lmd * df2 / df1
-    results.loc["Wilks’ lambda", 'Num DF'] = df1
-    results.loc["Wilks’ lambda", 'Den DF'] = df2
-    results.loc["Wilks’ lambda", 'F Value'] = F
+    results.loc["Wilks' lambda", 'Num DF'] = df1
+    results.loc["Wilks' lambda", 'Den DF'] = df2
+    results.loc["Wilks' lambda", 'F Value'] = F
     pval = stats.f.sf(F, df1, df2)
-    results.loc["Wilks’ lambda", 'Pr > F'] = pval
+    results.loc["Wilks' lambda", 'Pr > F'] = pval
 
-    V = results.loc["Pillai’s trace", 'Value']
+    V = results.loc["Pillai's trace", 'Value']
     df1 = s * (2*m + s + 1)
     df2 = s * (2*n + s + 1)
     F = df2 / df1 * V / (s - V)
-    results.loc["Pillai’s trace", 'Num DF'] = df1
-    results.loc["Pillai’s trace", 'Den DF'] = df2
-    results.loc["Pillai’s trace", 'F Value'] = F
+    results.loc["Pillai's trace", 'Num DF'] = df1
+    results.loc["Pillai's trace", 'Den DF'] = df2
+    results.loc["Pillai's trace", 'F Value'] = F
     pval = stats.f.sf(F, df1, df2)
-    results.loc["Pillai’s trace", 'Pr > F'] = pval
+    results.loc["Pillai's trace", 'Pr > F'] = pval
 
     U = results.loc["Hotelling-Lawley trace", 'Value']
     if n > 0:
@@ -224,17 +233,17 @@ def multivariate_stats(eigenvals,
     pval = stats.f.sf(F, df1, df2)
     results.loc["Hotelling-Lawley trace", 'Pr > F'] = pval
 
-    sigma = results.loc["Roy’s greatest root", 'Value']
+    sigma = results.loc["Roy's greatest root", 'Value']
     r = np.max([p, q])
     df1 = r
     df2 = v - r + q
     F = df2 / df1 * sigma
-    results.loc["Roy’s greatest root", 'Num DF'] = df1
-    results.loc["Roy’s greatest root", 'Den DF'] = df2
-    results.loc["Roy’s greatest root", 'F Value'] = F
+    results.loc["Roy's greatest root", 'Num DF'] = df1
+    results.loc["Roy's greatest root", 'Den DF'] = df2
+    results.loc["Roy's greatest root", 'F Value'] = F
     pval = stats.f.sf(F, df1, df2)
-    results.loc["Roy’s greatest root", 'Pr > F'] = pval
-    return results.iloc[:, [4, 2, 0, 1, 3]]
+    results.loc["Roy's greatest root", 'Pr > F'] = pval
+    return results
 
 
 def _multivariate_ols_test(hypotheses, fit_results, exog_names,
@@ -335,7 +344,7 @@ _multivariate_test.__doc__ = (
             E =  M'(Y'Y - B'X'XB)M
         And then finding the eigenvalues of inv(H + E)*H
 
-        .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
+        .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
 
         Parameters
         ----------
@@ -435,23 +444,27 @@ class _MultivariateOLSResults(object):
         return MultivariateTestResults(results,
                                        self.endog_names,
                                        self.exog_names)
-    mv_test.__doc__=(
-        """
-        Testing the linear hypotheses
-            L * params * M = C
-        where `params` is the regression coefficient matrix for the
-        linear model y = x * params, `L` is the contrast matrix, `M` is the
-         dependent variable transform matrix and C is the constant matrix.
+    mv_test.__doc__ = ("""
+Linear hypotheses testing
 
-        Parameters
-        ----------
-        """ + _hypotheses_doc +
-        """
-        Returns
-        -------
-        results: _MultivariateOLSResults
+Parameters
+----------
+""" + _hypotheses_doc + """
 
-        """)
+Returns
+-------
+results: _MultivariateOLSResults
+
+Notes
+-----
+Tests hypotheses of the form 
+
+    L * params * M = C
+
+where `params` is the regression coefficient matrix for the
+linear model y = x * params, `L` is the contrast matrix, `M` is the
+dependent variable transform matrix and C is the constant matrix.
+""")
     def summary(self):
         raise NotImplementedError
 

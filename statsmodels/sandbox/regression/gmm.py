@@ -83,7 +83,7 @@ class IV2SLS(LikelihoodModel):
        Endogenous variable, 1-dimensional or 2-dimensional array nobs by 1
     exog : array
        Explanatory variables, 1-dimensional or 2-dimensional array nobs by k
-    instruments : array
+    instrument : array
        Instruments for explanatory variables. Must contain both exog
        variables that are not being instrumented and instruments
 
@@ -153,13 +153,12 @@ class IV2SLS(LikelihoodModel):
                        normalized_cov_params=self.normalized_cov_params)
 
         lfit.exog_hat_params = xhatparams
-        lfit.exog_hat = xhat # TODO: do we want to store this, might be large
-        self._results = lfit  # TODO : remove this
+        lfit.exog_hat = xhat  # TODO: do we want to store this, might be large
         self._results_ols2nd = OLS(y, xhat).fit()
 
         return RegressionResultsWrapper(lfit)
 
-    #copied from GLS, because I subclass currently LikelihoodModel and not GLS
+    # copied from GLS, because I subclass currently LikelihoodModel and not GLS
     def predict(self, params, exog=None):
         """
         Return linear predicted values from a design matrix.
@@ -181,16 +180,8 @@ class IV2SLS(LikelihoodModel):
         """
         if exog is None:
             exog = self.exog
-        return np.dot(exog, params)
-        #JP: this doesn't look correct for GLMAR
-        #SS: it needs its own predict method
-        if self._results is None and params is None:
-            raise ValueError("If the model has not been fit, then you must specify the params argument.")
-        if self._results is not None:
-            return np.dot(exog, self._results.params)
-        else:
-            return np.dot(exog, params)
 
+        return np.dot(exog, params)
 
 
 class IVRegressionResults(RegressionResults):
@@ -213,17 +204,21 @@ class IVRegressionResults(RegressionResults):
 
     @cache_readonly
     def fvalue(self):
-        k_vars = len(self.params)
-        restriction = np.eye(k_vars)
-        idx_noconstant = lrange(k_vars)
-        del idx_noconstant[self.model.data.const_idx]
-        fval = self.f_test(restriction[idx_noconstant]).fvalue # without constant
-        return fval
+        const_idx = self.model.data.const_idx
+        # if constant is implicit or missing, return nan see #2444, #3544
+        if const_idx is None:
+            return np.nan
+        else:
+            k_vars = len(self.params)
+            restriction = np.eye(k_vars)
+            idx_noconstant = lrange(k_vars)
+            del idx_noconstant[const_idx]
+            fval = self.f_test(restriction[idx_noconstant]).fvalue # without constant
+            return fval
 
 
     def spec_hausman(self, dof=None):
         '''Hausman's specification test
-
 
         See Also
         --------
@@ -533,8 +528,32 @@ class GMM(Model):
                 # cut in front for poisson multiplicative
                 self.data.xnames = xnames[-len(params):]
             elif len(params) > len(xnames):
-                # cut at the end
-                self.data.xnames = xnames[:len(params)]
+                # use generic names
+                self.data.xnames = ['p%2d' % i for i in range(len(params))]
+
+    def set_param_names(self, param_names, k_params=None):
+        """set the parameter names in the model
+
+        Parameters
+        ----------
+        param_names : list of strings
+            param_names should have the same length as the number of params
+        k_params : None or int
+            If k_params is None, then the k_params attribute is used, unless
+            it is None.
+            If k_params is not None, then it will also set the k_params
+            attribute.
+        """
+        if k_params is not None:
+            self.k_params = k_params
+        else:
+            k_params = self.k_params
+
+        if k_params == len(param_names):
+            self.data.xnames = param_names
+        else:
+            raise ValueError('param_names has the wrong length')
+
 
     def fit(self, start_params=None, maxiter=10, inv_weights=None,
                   weights_method='cov', wargs=(),
@@ -921,9 +940,9 @@ class GMM(Model):
 
         Parameters
         ----------
-        moms : array, (nobs, nmoms)
-            moment conditions for all observations evaluated at a parameter
-            value
+        moms : array
+            moment conditions (nobs x nmoms) for all observations evaluated at
+            a parameter value
         weights_method : string 'cov'
             If method='cov' is cov then the matrix is calculated as simple
             covariance of the moment conditions.
@@ -1407,7 +1426,7 @@ class LinearIVGMM(IVGMM):
     exog : array_like
         explanatory, right hand side variables, including explanatory variables
         that are endogenous
-    instruments : array_like
+    instrument : array_like
         Instrumental variables, variables that are exogenous to the error
         in the linear model containing both included and excluded exogenous
         variables

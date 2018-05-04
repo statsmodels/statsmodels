@@ -23,7 +23,7 @@ from scipy.special import erf
 
 
 def aitchison_aitken(h, Xi, x, num_levels=None):
-    """
+    r"""
     The Aitchison-Aitken kernel, used for unordered discrete random variables.
 
     Parameters
@@ -52,9 +52,9 @@ def aitchison_aitken(h, Xi, x, num_levels=None):
 
     References
     ----------
-    .. [1] J. Aitchison and C.G.G. Aitken, "Multivariate binary discrimination
+    .. [*] J. Aitchison and C.G.G. Aitken, "Multivariate binary discrimination
            by the kernel method", Biometrika, vol. 63, pp. 413-420, 1976.
-    .. [2] Racine, Jeff. "Nonparametric Econometrics: A Primer," Foundation
+    .. [*] Racine, Jeff. "Nonparametric Econometrics: A Primer," Foundation
            and Trends in Econometrics: Vol 3: No 1, pp1-88., 2008.
     """
     Xi = Xi.reshape(Xi.size)  # seems needed in case Xi is scalar
@@ -68,7 +68,7 @@ def aitchison_aitken(h, Xi, x, num_levels=None):
 
 
 def wang_ryzin(h, Xi, x):
-    """
+    r"""
     The Wang-Ryzin kernel, used for ordered discrete random variables.
 
     Parameters
@@ -94,10 +94,10 @@ def wang_ryzin(h, Xi, x):
 
     References
     ----------
-    .. [1] Racine, Jeff. "Nonparametric Econometrics: A Primer," Foundation
+    .. [*] Racine, Jeff. "Nonparametric Econometrics: A Primer," Foundation
            and Trends in Econometrics: Vol 3: No 1, pp1-88., 2008.
            http://dx.doi.org/10.1561/0800000009
-    .. [2] M.-C. Wang and J. van Ryzin, "A class of smooth estimators for
+    .. [*] M.-C. Wang and J. van Ryzin, "A class of smooth estimators for
            discrete distributions", Biometrika, vol. 68, pp. 301-309, 1981.
     """
     Xi = Xi.reshape(Xi.size)  # seems needed in case Xi is scalar

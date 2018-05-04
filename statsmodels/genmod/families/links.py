@@ -77,11 +77,6 @@ class Link(object):
         """
         Derivative of the inverse link function g^(-1)(z).
 
-        Notes
-        -----
-        This reference implementation gives the correct result but is
-        inefficient, so it can be overriden in subclasses.
-
         Parameters
         ----------
         z : array-like
@@ -92,6 +87,10 @@ class Link(object):
         g'^(-1)(z) : array
             The value of the derivative of the inverse of the link function
 
+        Notes
+        -----
+        This reference implementation gives the correct result but is
+        inefficient, so it can be overriden in subclasses.
         """
         return 1 / self.deriv(self.inverse(z))
 
@@ -211,7 +210,6 @@ class Logit(Link):
         t = np.exp(z)
         return t/(1 + t)**2
 
-
     def deriv2(self, p):
         """
         Second derivative of the logit function.
@@ -228,6 +226,7 @@ class Logit(Link):
         """
         v = p * (1 - p)
         return (2*p - 1) / v**2
+
 
 class logit(Logit):
     pass
@@ -272,9 +271,10 @@ class Power(Link):
         -----
         g(p) = x**self.power
         """
-
-        z = np.power(p, self.power)
-        return z
+        if self.power == 1:
+            return p
+        else:
+            return np.power(p, self.power)
 
     def inverse(self, z):
         """
@@ -294,9 +294,10 @@ class Power(Link):
         -----
         g^(-1)(z`) = `z`**(1/`power`)
         """
-
-        p = np.power(z, 1. / self.power)
-        return p
+        if self.power == 1:
+            return z
+        else:
+            return np.power(z, 1. / self.power)
 
     def deriv(self, p):
         """
@@ -316,7 +317,10 @@ class Power(Link):
         -----
         g'(`p`) = `power` * `p`**(`power` - 1)
         """
-        return self.power * np.power(p, self.power - 1)
+        if self.power == 1:
+            return np.ones_like(p)
+        else:
+            return self.power * np.power(p, self.power - 1)
 
     def deriv2(self, p):
         """
@@ -336,7 +340,10 @@ class Power(Link):
         -----
         g''(`p`) = `power` * (`power` - 1) * `p`**(`power` - 2)
         """
-        return self.power * (self.power - 1) * np.power(p, self.power - 2)
+        if self.power == 1:
+            return np.zeros_like(p)
+        else:
+            return self.power * (self.power - 1) * np.power(p, self.power - 2)
 
     def inverse_deriv(self, z):
         """
@@ -353,7 +360,10 @@ class Power(Link):
             The value of the derivative of the inverse of the power transform
         function
         """
-        return np.power(z, (1 - self.power)/self.power) / self.power
+        if self.power == 1:
+            return np.ones_like(z)
+        else:
+            return np.power(z, (1 - self.power)/self.power) / self.power
 
 
 class inverse_power(Power):
@@ -390,7 +400,7 @@ class inverse_squared(Power):
 
     Notes
     -----
-    g(`p`) = 1/(`p`\ \*\*2)
+    g(`p`) = 1/(`p`\*\*2)
 
     Alias of statsmodels.family.links.Power(power=2.)
     """
@@ -653,7 +663,7 @@ class probit(CDFLink):
     The probit (standard normal CDF) transform
 
     Notes
-    --------
+    -----
     g(p) = scipy.stats.norm.ppf(p)
 
     probit is an alias of CDFLink.
@@ -692,6 +702,7 @@ class cauchy(CDFLink):
         a = np.pi * (p - 0.5)
         d2 = 2 * np.pi**2 * np.sin(a) / np.cos(a)**3
         return d2
+
 
 class CLogLog(Logit):
     """
@@ -818,7 +829,7 @@ class cloglog(CLogLog):
     pass
 
 
-class NegativeBinomial(object):
+class NegativeBinomial(Link):
     '''
     The negative binomial link function
 
@@ -897,7 +908,7 @@ class NegativeBinomial(object):
         '''
         return 1/(p + self.alpha * p**2)
 
-    def deriv2(self,p):
+    def deriv2(self, p):
         '''
         Second derivative of the negative binomial link function.
 
