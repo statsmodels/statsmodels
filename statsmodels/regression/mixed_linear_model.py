@@ -439,7 +439,7 @@ def _smw_solver(s, A, AtA, Qi, di):
         x r diagonal block whose inverse is `Qi`, and a s x s diagonal
         block, whose inverse is diag(di).
     di : 1d array-like
-        See docstring for Qi.
+        See documentation for Qi.
 
     Returns
     -------
@@ -503,7 +503,7 @@ def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
         x r diagonal block whose inverse is `Qi`, and a s x s diagonal
         block, whose inverse is diag(di).
     di : 1d array-like
-        See docstring for Qi.
+        See documentation for Qi.
     B_logdet : real
         The log determinant of B
 
