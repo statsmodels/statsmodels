@@ -659,8 +659,8 @@ class ArmaProcess(object):
     >>> np.random.seed(12345)
     >>> arparams = np.array([.75, -.25])
     >>> maparams = np.array([.65, .35])
-    >>> ar = np.r_[1, -ar] # add zero-lag and negate
-    >>> ma = np.r_[1, ma] # add zero-lag
+    >>> ar = np.r_[1, -arparams] # add zero-lag and negate
+    >>> ma = np.r_[1, maparams] # add zero-lag
     >>> arma_process = sm.tsa.ArmaProcess(ar, ma)
     >>> arma_process.isstationary
     True
