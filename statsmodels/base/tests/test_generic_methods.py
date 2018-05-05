@@ -224,13 +224,13 @@ class CheckGenericMixin(object):
             assert_allclose(res1.resid, res2.resid, rtol=1e-10)
 
         ex = self.results.model.exog.mean(0)
-        predicted1 = res1.predict(ex)
-        predicted2 = res2.predict(ex[keep_index])
+        predicted1 = res1.predict(ex, **self.predict_kwds)
+        predicted2 = res2.predict(ex[keep_index], **self.predict_kwds)
         assert_allclose(predicted1, predicted2, rtol=1e-10)
 
         ex = self.results.model.exog[:5]
-        predicted1 = res1.predict(ex)
-        predicted2 = res2.predict(ex[:, keep_index])
+        predicted1 = res1.predict(ex, **self.predict_kwds)
+        predicted2 = res2.predict(ex[:, keep_index], **self.predict_kwds)
         assert_allclose(predicted1, predicted2, rtol=1e-10)
 
 
@@ -335,9 +335,9 @@ class CheckGenericMixin(object):
             # Poisson has reduced precision in params, difficult optimization?
             assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-6) #rtol=1e-10)
             assert_allclose(res1.params[drop_index], 0, rtol=1e-10)
-            assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-10)
+            assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-8)
             assert_allclose(res1.bse[drop_index], 0, rtol=1e-10)
-            assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=1e-8)
+            assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=5e-8)
             assert_allclose(res1.pvalues[keep_index_p], res2.pvalues, rtol=1e-6, atol=1e-30)
 
             if hasattr(res1, 'resid'):
@@ -345,15 +345,16 @@ class CheckGenericMixin(object):
                 assert_allclose(res1.resid, res2.resid, rtol=1e-5, atol=1e-10)
 
             ex = res1.model.exog.mean(0)
-            predicted1 = res1.predict(ex)
-            predicted2 = res2.predict(ex[keep_index])
+            predicted1 = res1.predict(ex, **self.predict_kwds)
+            predicted2 = res2.predict(ex[keep_index], **self.predict_kwds)
             assert_allclose(predicted1, predicted2, rtol=1e-8, atol=1e-11)
 
             ex = res1.model.exog[:5]
-            predicted1 = res1.predict(ex)
-            predicted2 = res2.predict(ex[:, keep_index])
-            assert_allclose(predicted1, predicted2, rtol=1e-8, atol=1e-11)
+            kwds = getattr(self, 'predict_kwds_5', {})
 
+            predicted1 = res1.predict(ex, **kwds)
+            predicted2 = res2.predict(ex[:, keep_index], **kwds)
+            assert_allclose(predicted1, predicted2, rtol=1e-8, atol=1e-11)
 
 
 #########  subclasses for individual models, unchanged from test_shrink_pickle
@@ -402,13 +403,29 @@ class TestGenericPoisson(CheckGenericMixin):
         x = self.exog
         np.random.seed(987689)
         y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
-        model = sm.Poisson(y_count, x)  #, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
+        model = sm.Poisson(y_count, x)
         # use start_params to converge faster
         start_params = np.array([0.75334818, 0.99425553, 1.00494724, 1.00247112])
         self.results = model.fit(start_params=start_params, method='bfgs',
                                  disp=0)
 
-        #TODO: temporary, fixed in master
+
+class TestGenericPoissonOffset(CheckGenericMixin):
+
+    def setup(self):
+        #fit for each test, because results will be changed by test
+        x = self.exog
+        nobs = x.shape[0]
+        np.random.seed(987689)
+        y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
+        model = sm.Poisson(y_count, x, offset=0.01 * np.ones(nobs),
+                           exposure=np.ones(nobs)) #bug with default
+        # use start_params to converge faster
+        start_params = np.array([0.75334818, 0.99425553, 1.00494724, 1.00247112])
+        self.results = model.fit(start_params=start_params, method='bfgs',
+                                 disp=0)
+
+        self.predict_kwds_5 = dict(exposure=0.01 * np.ones(5), offset=np.ones(5))
         self.predict_kwds = dict(exposure=1, offset=0)
 
 
@@ -464,6 +481,26 @@ class TestGenericGLM(CheckGenericMixin):
         np.random.seed(987689)
         y = x.sum(1) + np.random.randn(x.shape[0])
         self.results = sm.GLM(y, self.exog).fit()
+
+
+class TestGenericGLMPoissonOffset(CheckGenericMixin):
+
+    def setup(self):
+        #fit for each test, because results will be changed by test
+        x = self.exog
+        nobs = x.shape[0]
+        np.random.seed(987689)
+        y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
+        model = sm.GLM(y_count, x, family=sm.families.Poisson(),
+                       offset=0.01 * np.ones(nobs),
+                       exposure=np.ones(nobs))
+        # use start_params to converge faster
+        start_params = np.array([0.75334818, 0.99425553, 1.00494724, 1.00247112])
+        self.results = model.fit(start_params=start_params, method='bfgs',
+                                 disp=0)
+
+        self.predict_kwds_5 = dict(exposure=0.01 * np.ones(5), offset=np.ones(5))
+        self.predict_kwds = dict(exposure=1, offset=0)
 
 
 class TestGenericGEEPoisson(CheckGenericMixin):

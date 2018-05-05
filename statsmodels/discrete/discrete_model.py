@@ -769,18 +769,24 @@ class CountModel(DiscreteModel):
         If exposure is specified, then it will be logged by the method.
         The user does not need to log it first.
         """
-        #TODO: add offset tp
-        if exog is None:
-            exog = self.exog
+        # the following is copied from GLM predict (without family/link check)
+        # Use fit offset if appropriate
+        if offset is None and exog is None and hasattr(self, 'offset'):
+            offset = self.offset
+        elif offset is None:
+            offset = 0.
 
-        if exposure is None:
-            # If self.exposure exists, it will already be in logs.
-            exposure = getattr(self, 'exposure', 0)
+        # Use fit exposure if appropriate
+        if exposure is None and exog is None and hasattr(self, 'exposure'):
+            # Already logged
+            exposure = self.exposure
+        elif exposure is None:
+            exposure = 0.
         else:
             exposure = np.log(exposure)
 
-        if offset is None:
-            offset = getattr(self, 'offset', 0)
+        if exog is None:
+            exog = self.exog
 
         fitted = np.dot(exog, params[:exog.shape[1]])
         linpred = fitted + exposure + offset
