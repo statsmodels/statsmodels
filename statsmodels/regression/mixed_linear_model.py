@@ -431,16 +431,14 @@ def _smw_solver(s, A, AtA, Qi, di):
     s : scalar
         See above for usage
     A : ndarray
-        p x q matrix, in general q << p.  This matrix may be provided
-        in dense or sparse form, but A and AtA should have the same type.
+        p x q matrix, in general q << p, may be sparse.
     AtA : square ndarray
-        :math:`A^\prime  A`, a q x q matrix.  This matrix may be provided
-        in dense or sparse form, but AtA and A should have the same type.
+        :math:`A^\prime  A`, a q x q matrix.
     Qi : square symmetric ndarray
         The matrix `B` is q x q, where q = r + s.  `B` consists of a r
         x r diagonal block whose inverse is `Qi`, and a s x s diagonal
         block, whose inverse is diag(di).
-    di : array-like
+    di : 1d array-like
         See docstring for Qi.
 
     Returns
@@ -497,15 +495,14 @@ def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
     s : positive scalar
         See above for usage
     A : ndarray
-        p x q matrix, in general q << p.  This matrix may be provided
-        in dense or sparse form.
+        p x q matrix, in general q << p.
     AtA : square ndarray
-        :math:`A^\prime  A`, a q x q matrix, may be sparse or dense.
+        :math:`A^\prime  A`, a q x q matrix.
     Qi : square symmetric ndarray
         The matrix `B` is q x q, where q = r + s.  `B` consists of a r
         x r diagonal block whose inverse is `Qi`, and a s x s diagonal
         block, whose inverse is diag(di).
-    di : array-like
+    di : 1d array-like
         See docstring for Qi.
     B_logdet : real
         The log determinant of B
@@ -513,13 +510,16 @@ def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
     Returns
     -------
     The log determinant of s*I + A*B*A'.
+
+    Notes
+    -----
+    Uses the matrix determinant lemma:
+        https://en.wikipedia.org/wiki/Matrix_determinant_lemma
     """
 
     p = A.shape[0]
     ld = p * np.log(s)
     qmat = AtA / s
-    if sparse.issparse(qmat):
-        qmat = qmat.todense()
     m = Qi.shape[0]
     qmat[0:m, 0:m] += Qi
     d = qmat.shape[0]
@@ -736,7 +736,12 @@ class MixedLM(base.LikelihoodModel):
         for i in range(self.n_groups):
             a = self._augment_exog(i)
             self._aex_r.append(a)
-            self._aex_r2.append(_dot(a.T, a))
+
+            # This matrix is not very sparse so convert it to dense.
+            ma = _dot(a.T, a)
+            if sparse.issparse(ma):
+                ma = ma.todense()
+            self._aex_r2.append(ma)
 
         # Precompute this
         self._lin, self._quad = self._reparam()
