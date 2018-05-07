@@ -718,6 +718,7 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
         mod2 = GLM(endog, exog, family=sm.families.Poisson(),
                    offset=offset2).fit()
         assert_almost_equal(mod1.params, mod2.params)
+        assert_allclose(mod1.null, mod2.null, rtol=1e-10)
 
         # test recreating model
         mod1_ = mod1.model
