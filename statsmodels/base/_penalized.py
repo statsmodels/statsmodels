@@ -8,6 +8,7 @@ License: BSD-3
 
 import numpy as np
 from ._penalties import SCADSmoothed
+from statsmodels.tools.numdiff import approx_fprime_cs, approx_fprime
 
 class PenalizedMixin(object):
     """Mixin class for Maximum Penalized Likelihood
@@ -39,22 +40,22 @@ class PenalizedMixin(object):
 
 
 
-    def loglike(self, params, pen_weight=None):
+    def loglike(self, params, pen_weight=None, **kwds):
         if pen_weight is None:
             pen_weight = self.pen_weight
 
-        llf = super(PenalizedMixin, self).loglike(params)
+        llf = super(PenalizedMixin, self).loglike(params, **kwds)
         if pen_weight != 0:
             llf -= pen_weight * self.penal.func(params)
 
         return llf
 
 
-    def loglikeobs(self, params, pen_weight=None):
+    def loglikeobs(self, params, pen_weight=None, **kwds):
         if pen_weight is None:
             pen_weight = self.pen_weight
 
-        llf = super(PenalizedMixin, self).loglikeobs(params)
+        llf = super(PenalizedMixin, self).loglikeobs(params, **kwds)
         nobs_llf = float(llf.shape[0])
 
         if pen_weight != 0:
@@ -62,12 +63,23 @@ class PenalizedMixin(object):
 
         return llf
 
-
-    def score(self, params, pen_weight=None):
+    def score_numdiff(self, params, pen_weight=None, method='cs', **kwds):
         if pen_weight is None:
             pen_weight = self.pen_weight
 
-        sc = super(PenalizedMixin, self).score(params)
+        loglike = lambda p: self.loglike(p, pen_weight=pen_weight, **kwds)
+
+        if method == 'cs':
+            return approx_fprime_cs(params, loglike)
+        else:
+            return approx_fprime(params, loglike)
+
+
+    def score(self, params, pen_weight=None, **kwds):
+        if pen_weight is None:
+            pen_weight = self.pen_weight
+
+        sc = super(PenalizedMixin, self).score(params, **kwds)
         if pen_weight != 0:
             sc -= pen_weight * self.penal.grad(params)
 
@@ -86,22 +98,20 @@ class PenalizedMixin(object):
         return sc
 
 
-    def hessian_(self, params, pen_weight=None):
+    def hessian_numdiff(self, params, pen_weight=None, **kwds):
         if pen_weight is None:
             pen_weight = self.pen_weight
-            loglike = self.loglike
-        else:
-            loglike = lambda p: self.loglike(p, pen_weight=pen_weight)
+        loglike = lambda p: self.loglike(p, pen_weight=pen_weight, **kwds)
 
         from statsmodels.tools.numdiff import approx_hess
         return approx_hess(params, loglike)
 
 
-    def hessian(self, params, pen_weight=None):
+    def hessian(self, params, pen_weight=None, **kwds):
         if pen_weight is None:
             pen_weight = self.pen_weight
 
-        hess = super(PenalizedMixin, self).hessian(params)
+        hess = super(PenalizedMixin, self).hessian(params, **kwds)
         if pen_weight != 0:
             h = self.penal.deriv2(params)
             if h.ndim == 1:
