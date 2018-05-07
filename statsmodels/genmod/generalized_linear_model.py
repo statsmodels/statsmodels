@@ -342,6 +342,9 @@ class GLM(base.LikelihoodModel):
         self._init_keys.append('family')
 
         self._setup_binomial()
+        # internal usage for recreating a model
+        if 'n_trials' in kwargs:
+            self.n_trials = kwargs['n_trials']
 
         # Construct a combined offset/exposure term.  Note that
         # exposure has already been logged if present.
@@ -921,6 +924,7 @@ class GLM(base.LikelihoodModel):
             tmp = self.family.initialize(self.endog, self.freq_weights)
             self.endog = tmp[0]
             self.n_trials = tmp[1]
+            self._init_keys.append('n_trials')
 
     def fit(self, start_params=None, maxiter=100, method='IRLS', tol=1e-8,
             scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
@@ -1528,15 +1532,14 @@ class GLMResults(base.LikelihoodModelResults):
         endog = self._endog
         model = self.model
         exog = np.ones((len(endog), 1))
-        kwargs = {}
-        if hasattr(model, 'offset'):
-            kwargs['offset'] = model.offset
-        if hasattr(model, 'exposure'):
-            kwargs['exposure'] = model.exposure
-        if len(kwargs) > 0:
+
+        kwargs = model._get_init_kwds()
+        kwargs.pop('family')
+        if hasattr(self, '_offset_exposure'):
             return GLM(endog, exog, family=self.family,
                        **kwargs).fit().fittedvalues
         else:
+            # correct if fitted is identical across observations
             wls_model = lm.WLS(endog, exog,
                                weights=self._iweights * self._n_trials)
             return wls_model.fit().fittedvalues
