@@ -51,9 +51,10 @@ class ContrastResults(object):
             # TODO: for results instance we decided to use tvalues also for normal
             self.sd = sd
             self.dist = getattr(stats, self.distribution)
-            self.dist_args = ()
+            self.dist_args = kwds.get('dist_args', ())
             if self.distribution is 'chi2':
                 self.pvalue = self.dist.sf(self.statistic, df_denom)
+                self.df_denom = df_denom
             else:
                 "normal"
                 self.pvalue = np.full_like(value, np.nan)
@@ -157,6 +158,9 @@ class ContrastResults(object):
             # TODO: create something nicer for these casee
             return '<F test: F=%s, p=%s, df_denom=%d, df_num=%d>' % \
                    (repr(self.fvalue), self.pvalue, self.df_denom, self.df_num)
+        elif self.distribution == 'chi2':
+            return '<Wald test (%s): statistic=%s, p-value=%s, df_denom=%d>' % \
+                   (self.distribution, self.statistic, self.pvalue, self.df_denom)
         else:
             # generic
             return '<Wald test: statistic=%s, p-value=%s>' % \
