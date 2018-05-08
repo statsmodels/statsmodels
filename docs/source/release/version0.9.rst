@@ -131,6 +131,10 @@ see https://github.com/statsmodels/statsmodels/issues?q=is%3Aissue+label%3Atype-
 - scale in GLM fit_constrained, #4193 fixed in #4195
   cov_params and bse were incorrect if scale is estimated as in Gaussian. (This did not affect families with scale=1 such as Poisson)
 - incorrect `pearson_chi2` with binomial counts, #3612 fixed as part of #3692
+- null_deviance and llnull in GLMResults were wrong if exposure was used and when offset was used with Binomial counts.
+- GLM Binomial in the non-binary, count case used incorrect endog in recreating models which is
+  used by fit_regularized and fit_constrained #4599.
+  This case is still not sufficiently tested for extra methods.
 - discrete predict with offset or exposure, #3569 fixed in 3696
   If either offset or exposure are not None but exog is None, then offset and exposure arguments in predict were ignored.
 - discrete margins had wrong dummy and count effect if constant is prepended, #3695 fixed in #3696

@@ -842,8 +842,8 @@ class TestWLSOLSRobustSmall(object):
             mat = np.eye(len(res1.params))
             ft1 = res1.f_test(mat)
             ft2 = res2.f_test(mat)
-            assert_allclose(ft1.fvalue, ft2.fvalue, rtol=1e-13)
-            assert_allclose(ft1.pvalue, ft2.pvalue, rtol=1e-12)
+            assert_allclose(ft1.fvalue, ft2.fvalue, rtol=1e-12)
+            assert_allclose(ft1.pvalue, ft2.pvalue, rtol=5e-11)
 
     def test_fixed_scale(self):
         cov_type = 'fixed_scale'
