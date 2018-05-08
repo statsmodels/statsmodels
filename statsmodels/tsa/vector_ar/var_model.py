@@ -1536,9 +1536,11 @@ class VARResults(VARProcess):
             ma_coll[i, :, :, :] = fill_coll(sim)
 
         ma_sort = np.sort(ma_coll, axis=0)  # sort to get quantiles
-        index = round(signif/2*repl)-1, round((1-signif/2)*repl)-1
-        lower = ma_sort[index[0], :, :, :]
-        upper = ma_sort[index[1], :, :, :]
+        # python 2: round returns float
+        low_idx = int(round(signif / 2 * repl) - 1)
+        upp_idx = int(round((1 - signif / 2) * repl) - 1)
+        lower = ma_sort[low_idx, :, :, :]
+        upper = ma_sort[upp_idx, :, :, :]
         return lower, upper
 
     def irf_resim(self, orth=False, repl=1000, T=10,
