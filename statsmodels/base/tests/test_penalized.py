@@ -13,6 +13,7 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod.families import family
 from statsmodels.base._penalized import PenalizedMixin
 import statsmodels.base._penalties as smpen
+from statsmodels.compat.testing import skipif
 
 class PoissonPenalized(PenalizedMixin, Poisson):
     pass
@@ -75,6 +76,20 @@ class CheckPenalizedPoisson(object):
     def test_smoke(self):
         self.res1.summary()
 
+    @skipif(0, 'fails in 4 models')
+    def test_numdiff(self):
+        res1 = self.res1
+
+        assert_allclose(res1.model.score(res1.params * 0.98)[self.exog_index],
+                        res1.model.score_numdiff(res1.params * 0.98)[self.exog_index], rtol=0.02)
+
+        if isinstance(self.exog_index, slice):
+            idx1 = idx2 = self.exog_index
+        else:
+            idx1 = self.exog_index[:, None]
+            idx2 = self.exog_index
+        assert_allclose(res1.model.hessian(res1.params * 0.98)[idx1, idx2],
+                        res1.model.hessian_numdiff(res1.params * 0.98)[idx1, idx2], rtol=0.02)
 
 
 class TestPenalizedPoissonNoPenal(CheckPenalizedPoisson):
@@ -437,6 +452,73 @@ class TestPenalizedLogitOraclePenalized2(CheckPenalizedLogit):
         assert_equal(self.res1.params[self.k_nonzero:], 0)
         # we also set bse to zero, TODO: check fit_regularized
         assert_equal(self.res1.bse[self.k_nonzero:], 0)
+
+
+# the following classes are copies of Poisson with model adjustments
+class CheckPenalizedBinomCount(CheckPenalizedPoisson):
+
+    @classmethod
+    def _generate_endog(self, linpred):
+        mu = 1 / (1 + np.exp(-linpred + linpred.mean() - 0.5))
+        np.random.seed(999)
+        n_trials = 5 * np.ones(len(mu), int)
+        n_trials[:len(mu)//2] += 5
+        y = np.random.binomial(n_trials, mu)
+        return np.column_stack((y, n_trials - y))
+
+
+class TestPenalizedGLMGLMBinomCountNoPenal(CheckPenalizedBinomCount):
+    # TODO: check, adjust cov_type
+
+    @classmethod
+    def _initialize(cls):
+        y, x = cls.y, cls.x
+        x = x[:, :4]
+        offset = -0.25 * np.ones(len(y))  # also check offset
+        modp = GLM(y, x, family=family.Binomial(), offset=offset)
+        cls.res2 = modp.fit(method='bfgs', max_start_irls=100)
+
+        mod = GLMPenalized(y, x, family=family.Binomial(), offset=offset)
+        mod.pen_weight = 0
+        cls.res1 = mod.fit(method='bfgs', max_start_irls=3, maxiter=100, disp=1,
+                           start_params=cls.res2.params*0.9)
+
+        cls.atol = 1e-10 #0.000003
+        cls.k_params = 4
+
+
+    def test_deriv(self):
+        res1 = self.res1
+        res2 = self.res2
+        assert_allclose(res1.model.score(res2.params),
+                        res2.model.score(res2.params), rtol=1e-10)
+        assert_allclose(res1.model.score_obs(res2.params),
+                        res2.model.score_obs(res2.params), rtol=1e-10)
+
+
+class TestPenalizedGLMBinomCountOracleHC(CheckPenalizedBinomCount):
+    # TODO: There are still problems with this case
+    # using the standard optimization, I get convergence failures and
+    # different estimates depending on details, e.g. small changes in pen_weight
+    # most likely convexity fails with SCAD in this case
+
+    @classmethod
+    def _initialize(cls):
+        y, x = cls.y, cls.x
+        offset = -0.25 * np.ones(len(y))  # also check offset
+        cov_type = 'HC0'
+        modp = GLM(y, x[:, :cls.k_nonzero], family=family.Binomial(), offset=offset)
+        cls.res2 = modp.fit(cov_type=cov_type, method='newton', maxiter=1000, disp=0)
+
+        mod = GLMPenalized(y, x, family=family.Binomial(), offset=offset)
+        mod.pen_weight *= 1  # lower than in other cases
+        mod.penal.tau = 0.05
+        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', max_start_irls=0,
+                           maxiter=3000, disp=1)
+
+        cls.exog_index = slice(None, cls.k_nonzero, None)
+
+        cls.atol = 0.001
 
 
 # the following classes are copies of Poisson with model adjustments
