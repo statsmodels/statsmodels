@@ -324,7 +324,7 @@ class TestPenalizedPoissonOraclePenalized2HC(CheckPenalizedPoisson):
         assert_allclose(res1.bse[:self.k_nonzero], bse, rtol=5e-6)
 
 
-# copy and Replace
+# the following classes are copies of Poisson with model adjustments
 
 class CheckPenalizedLogit(CheckPenalizedPoisson):
 
@@ -363,6 +363,25 @@ class TestPenalizedLogitOracle(CheckPenalizedLogit):
         cls.res2 = modp.fit()
 
         mod = LogitPenalized(y, x)
+        mod.pen_weight *= .5
+        mod.penal.tau = 0.05
+        cls.res1 = mod.fit(method='bfgs', maxiter=100)
+
+        cls.exog_index = slice(None, cls.k_nonzero, None)
+
+        cls.atol = 5e-3
+
+
+class TestPenalizedGLMLogitOracle(CheckPenalizedLogit):
+    # TODO: check, adjust cov_type
+
+    @classmethod
+    def _initialize(cls):
+        y, x = cls.y, cls.x
+        modp = GLM(y, x[:, :cls.k_nonzero], family=family.Binomial())
+        cls.res2 = modp.fit()
+
+        mod = GLMPenalized(y, x, family=family.Binomial())
         mod.pen_weight *= .5
         mod.penal.tau = 0.05
         cls.res1 = mod.fit(method='bfgs', maxiter=100)
@@ -418,3 +437,36 @@ class TestPenalizedLogitOraclePenalized2(CheckPenalizedLogit):
         assert_equal(self.res1.params[self.k_nonzero:], 0)
         # we also set bse to zero, TODO: check fit_regularized
         assert_equal(self.res1.bse[self.k_nonzero:], 0)
+
+
+# the following classes are copies of Poisson with model adjustments
+class CheckPenalizedGaussian(CheckPenalizedPoisson):
+
+    @classmethod
+    def _generate_endog(self, linpred):
+        sig_e = np.sqrt(0.1)
+        np.random.seed(999)
+        y = linpred + sig_e * np.random.rand(len(linpred))
+        return y
+
+
+class TestPenalizedGLMGaussianOracleHC(CheckPenalizedGaussian):
+    # TODO: check, adjust cov_type
+
+    @classmethod
+    def _initialize(cls):
+        y, x = cls.y, cls.x
+        # adding 10 to avoid strict rtol at predicted values close to zero
+        y = y + 10
+        cov_type = 'HC0'
+        modp = GLM(y, x[:, :cls.k_nonzero], family=family.Gaussian())
+        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+
+        mod = GLMPenalized(y, x, family=family.Gaussian())
+        mod.pen_weight *= 1.5  # same as discrete Poisson
+        mod.penal.tau = 0.05
+        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+
+        cls.exog_index = slice(None, cls.k_nonzero, None)
+
+        cls.atol = 5e-3
