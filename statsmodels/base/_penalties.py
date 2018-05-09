@@ -135,7 +135,7 @@ class SCAD(Penalty):
         # 3 segments in absolute value
         tau = self.tau
         p_abs = np.atleast_1d(np.abs(params))
-        res = np.empty(p_abs.shape)#, p_abs.dtype)
+        res = np.empty(p_abs.shape, p_abs.dtype)
         res.fill(np.nan)
         mask1 = p_abs < tau
         mask3 = p_abs >= self.c * tau
@@ -185,13 +185,12 @@ class SCAD(Penalty):
         p = np.atleast_1d(params)
         p_abs = np.abs(p)
         p_sign = np.sign(p)
-        res = np.zeros(p_abs.shape)#, p_abs.dtype)
+        res = np.zeros(p_abs.shape)
 
         mask1 = p_abs < tau
         mask3 = p_abs >= self.c * tau
         mask2 = ~mask1 & ~mask3
-
-        res[mask2] = -p_sign[mask2] / (self.c - 1)
+        res[mask2] = -1 / (self.c - 1)
 
         return self.weights * res
 

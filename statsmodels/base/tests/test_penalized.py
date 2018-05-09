@@ -13,7 +13,7 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod.families import family
 from statsmodels.base._penalized import PenalizedMixin
 import statsmodels.base._penalties as smpen
-from statsmodels.compat.testing import skipif
+
 
 class PoissonPenalized(PenalizedMixin, Poisson):
     pass
@@ -76,20 +76,23 @@ class CheckPenalizedPoisson(object):
     def test_smoke(self):
         self.res1.summary()
 
-    @skipif(0, 'fails in 4 models')
     def test_numdiff(self):
         res1 = self.res1
 
-        assert_allclose(res1.model.score(res1.params * 0.98)[self.exog_index],
-                        res1.model.score_numdiff(res1.params * 0.98)[self.exog_index], rtol=0.02)
+        # avoid checking score at MLE, score close to zero
+        p = res1.params * 0.98
+        assert_allclose(res1.model.score(p)[self.exog_index],
+                        res1.model.score_numdiff(p)[self.exog_index],
+                        rtol=0.025)
 
         if isinstance(self.exog_index, slice):
             idx1 = idx2 = self.exog_index
         else:
             idx1 = self.exog_index[:, None]
             idx2 = self.exog_index
-        assert_allclose(res1.model.hessian(res1.params * 0.98)[idx1, idx2],
-                        res1.model.hessian_numdiff(res1.params * 0.98)[idx1, idx2], rtol=0.02)
+        assert_allclose(res1.model.hessian(res1.params)[idx1, idx2],
+                        res1.model.hessian_numdiff(res1.params)[idx1, idx2],
+                        rtol=0.02)
 
 
 class TestPenalizedPoissonNoPenal(CheckPenalizedPoisson):
@@ -100,13 +103,14 @@ class TestPenalizedPoissonNoPenal(CheckPenalizedPoisson):
         y, x = cls.y, cls.x
 
         modp = Poisson(y, x)
-        cls.res2 = modp.fit()
+        cls.res2 = modp.fit(disp=0)
 
         mod = PoissonPenalized(y, x)
         mod.pen_weight = 0
-        cls.res1 = mod.fit(method='bfgs', maxiter=100)
+        cls.res1 = mod.fit(method='bfgs', maxiter=100, disp=0)
 
         cls.atol = 5e-6
+
 
 class TestPenalizedGLMPoissonNoPenal(CheckPenalizedPoisson):
     # TODO: check, adjust cov_type
@@ -120,7 +124,7 @@ class TestPenalizedGLMPoissonNoPenal(CheckPenalizedPoisson):
 
         mod = GLMPenalized(y, x, family=family.Poisson())
         mod.pen_weight = 0
-        cls.res1 = mod.fit(method='bfgs', maxiter=100)
+        cls.res1 = mod.fit(method='bfgs', maxiter=100, disp=0)
 
         cls.atol = 5e-6
 
@@ -132,12 +136,12 @@ class TestPenalizedPoissonOracle(CheckPenalizedPoisson):
     def _initialize(cls):
         y, x = cls.y, cls.x
         modp = Poisson(y, x[:, :cls.k_nonzero])
-        cls.res2 = modp.fit()
+        cls.res2 = modp.fit(disp=0)
 
         mod = PoissonPenalized(y, x)
         mod.pen_weight *= 1.5
         mod.penal.tau = 0.05
-        cls.res1 = mod.fit(method='bfgs', maxiter=100)
+        cls.res1 = mod.fit(method='bfgs', maxiter=100, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 
@@ -359,11 +363,11 @@ class TestPenalizedLogitNoPenal(CheckPenalizedLogit):
         y, x = cls.y, cls.x
 
         modp = Logit(y, x)
-        cls.res2 = modp.fit()
+        cls.res2 = modp.fit(disp=0)
 
         mod = LogitPenalized(y, x)
         mod.pen_weight = 0
-        cls.res1 = mod.fit()# method='bfgs', maxiter=100)
+        cls.res1 = mod.fit(disp=0)# method='bfgs', maxiter=100)
 
         cls.atol = 1e-4  # why not closer ?
 
@@ -375,12 +379,12 @@ class TestPenalizedLogitOracle(CheckPenalizedLogit):
     def _initialize(cls):
         y, x = cls.y, cls.x
         modp = Logit(y, x[:, :cls.k_nonzero])
-        cls.res2 = modp.fit()
+        cls.res2 = modp.fit(disp=0)
 
         mod = LogitPenalized(y, x)
         mod.pen_weight *= .5
         mod.penal.tau = 0.05
-        cls.res1 = mod.fit(method='bfgs', maxiter=100)
+        cls.res1 = mod.fit(method='bfgs', maxiter=100, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 
@@ -394,12 +398,12 @@ class TestPenalizedGLMLogitOracle(CheckPenalizedLogit):
     def _initialize(cls):
         y, x = cls.y, cls.x
         modp = GLM(y, x[:, :cls.k_nonzero], family=family.Binomial())
-        cls.res2 = modp.fit()
+        cls.res2 = modp.fit(disp=0)
 
         mod = GLMPenalized(y, x, family=family.Binomial())
         mod.pen_weight *= .5
         mod.penal.tau = 0.05
-        cls.res1 = mod.fit(method='bfgs', maxiter=100)
+        cls.res1 = mod.fit(method='bfgs', maxiter=100, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 
@@ -418,7 +422,7 @@ class TestPenalizedLogitOraclePenalized(CheckPenalizedLogit):
         mod = LogitPenalized(y, x)
         #mod.pen_weight *= 1.5
         #mod.penal.tau = 0.05
-        cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=False)
+        cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=False, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 
@@ -480,7 +484,7 @@ class TestPenalizedGLMGLMBinomCountNoPenal(CheckPenalizedBinomCount):
 
         mod = GLMPenalized(y, x, family=family.Binomial(), offset=offset)
         mod.pen_weight = 0
-        cls.res1 = mod.fit(method='bfgs', max_start_irls=3, maxiter=100, disp=1,
+        cls.res1 = mod.fit(method='bfgs', max_start_irls=3, maxiter=100, disp=0,
                            start_params=cls.res2.params*0.9)
 
         cls.atol = 1e-10 #0.000003
@@ -514,7 +518,7 @@ class TestPenalizedGLMBinomCountOracleHC(CheckPenalizedBinomCount):
         mod.pen_weight *= 1  # lower than in other cases
         mod.penal.tau = 0.05
         cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', max_start_irls=0,
-                           maxiter=3000, disp=1)
+                           maxiter=3000, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 

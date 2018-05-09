@@ -63,7 +63,7 @@ class PenalizedMixin(object):
 
         return llf
 
-    def score_numdiff(self, params, pen_weight=None, method='cs', **kwds):
+    def score_numdiff(self, params, pen_weight=None, method='fd', **kwds):
         if pen_weight is None:
             pen_weight = self.pen_weight
 
@@ -71,9 +71,10 @@ class PenalizedMixin(object):
 
         if method == 'cs':
             return approx_fprime_cs(params, loglike)
+        elif method == 'fd':
+            return approx_fprime(params, loglike, centered=True)
         else:
-            return approx_fprime(params, loglike)
-
+            raise ValueError('method not recognize, should be "fd" or "cs"')
 
     def score(self, params, pen_weight=None, **kwds):
         if pen_weight is None:
@@ -84,7 +85,6 @@ class PenalizedMixin(object):
             sc -= pen_weight * self.penal.grad(params)
 
         return sc
-
 
     def score_obs(self, params, pen_weight=None, **kwargs):
         if pen_weight is None:
