@@ -526,7 +526,7 @@ class GLM(base.LikelihoodModel):
 
         score_factor = (self.endog - mu) / self.family.link.deriv(mu)
         score_factor /= self.family.variance(mu)
-        score_factor *= self.iweights
+        score_factor *= self.iweights * self.n_trials
 
         if not scale == 1:
             score_factor /= scale
@@ -578,9 +578,9 @@ class GLM(base.LikelihoodModel):
         tmp = self.family.variance(mu) * self.family.link.deriv2(mu)
         tmp += self.family.variance.deriv(mu) * self.family.link.deriv(mu)
 
-        tmp = score_factor * eim_factor * tmp
+        tmp = score_factor * tmp
         # correct for duplicatee iweights in oim_factor and score_factor
-        tmp /= self.iweights
+        tmp /= self.iweights * self.n_trials
         oim_factor = eim_factor * (1 + tmp)
 
         if tmp.ndim > 1:
