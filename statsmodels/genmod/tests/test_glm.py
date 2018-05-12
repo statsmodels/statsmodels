@@ -1068,8 +1068,9 @@ def test_gradient_irls():
                elif (family_class, link) == (fam.Gaussian, lnk.inverse_power):
                    # adding skip because of convergence failure
                    skip_one = True
-#                elif family_class == fam.Gamma:
-#                    lin_pred = 0.5 * exog.sum(1) + np.random.uniform(size=exog.shape[0])
+               # the following fails with identity link, because endog < 0
+               # elif family_class == fam.Gamma:
+               #     lin_pred = 0.5 * exog.sum(1) + np.random.uniform(size=exog.shape[0])
                else:
                    lin_pred = np.random.uniform(size=exog.shape[0])
 
@@ -1081,13 +1082,9 @@ def test_gradient_irls():
                rslt_irls = mod_irls.fit(method="IRLS")
 
                if not (family_class, link) in [(fam.Poisson, lnk.sqrt),
-                                               # (fam.Gamma, lnk.log),
-                                               # (fam.Gamma, lnk.identity),
                                                (fam.Gamma, lnk.inverse_power),
-                                               # (fam.InverseGaussian, lnk.log),
-                                               (fam.InverseGaussian, lnk.identity),
-                                               # (fam.InverseGaussian, lnk.inverse_power)
-                                                ]:
+                                               (fam.InverseGaussian, lnk.identity)
+                                               ]:
                    check_score_hessian(rslt_irls)
 
                # Try with and without starting values.
