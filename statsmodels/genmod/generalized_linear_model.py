@@ -114,8 +114,6 @@ class GLM(base.LikelihoodModel):
         See Parameters.
     normalized_cov_params : array
         `p` x `p` normalized covariance of the design / exogenous data.
-    pinv_wexog : array
-        For GLM this is just the pseudo inverse of the original design.
     scale : float
         The estimate of the scale / dispersion.  Available after fit is called.
     scaletype : str
@@ -277,11 +275,6 @@ class GLM(base.LikelihoodModel):
         This is approximately equal to (X.T X)^(-1)
     offset : array-like
         Include offset in model with coefficient constrained to 1.
-    pinv_wexog : array
-        The pseudoinverse of the design / exogenous data array.  Note that
-        GLM has no whiten method, so this is just the pseudo inverse of the
-        design.
-        The pseudoinverse is approximately equal to (X.T X)^(-1)X.T
     scale : float
         The estimate of the scale / dispersion of the model fit.  Only
         available after fit is called.  See GLM.fit and GLM.estimate_scale
@@ -335,7 +328,7 @@ class GLM(base.LikelihoodModel):
         self.nobs = self.endog.shape[0]
 
         # things to remove_data
-        self._data_attr.extend(['weights', 'pinv_wexog', 'mu', 'freq_weights',
+        self._data_attr.extend(['weights', 'mu', 'freq_weights',
                                 'var_weights', 'iweights', '_offset_exposure',
                                 'n_trials'])
         # register kwds for __init__, offset and exposure are added by super
@@ -365,10 +358,6 @@ class GLM(base.LikelihoodModel):
         self.history = {'fittedvalues': [],
                         'params': [np.inf],
                         'deviance': [np.inf]}
-
-        self.pinv_wexog = np.linalg.pinv(self.exog)
-        self.normalized_cov_params = np.dot(self.pinv_wexog,
-                                            np.transpose(self.pinv_wexog))
 
         self.df_model = np_matrix_rank(self.exog) - 1
 
@@ -1369,8 +1358,6 @@ class GLMResults(base.LikelihoodModelResults):
     pearson_chi2 : array
         Pearson's Chi-Squared statistic is defined as the sum of the squares
         of the Pearson residuals.
-    pinv_wexog : array
-        See GLM docstring.
     pvalues : array
         The two-tailed p-values for the parameters.
     resid_anscombe : array
@@ -1428,7 +1415,6 @@ class GLMResults(base.LikelihoodModelResults):
             self._n_trials = 1
         self.df_resid = model.df_resid
         self.df_model = model.df_model
-        self.pinv_wexog = model.pinv_wexog
         self._cache = resettable_cache()
         # are these intermediate results needed or can we just
         # call the model's attributes?
