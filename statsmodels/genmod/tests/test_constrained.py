@@ -55,7 +55,7 @@ class ConstrainedCompareMixin(object):
         assert_allclose(res1.scale, res2.scale, rtol=1e-10)
         assert_allclose(res1.bse[self.idx_p_uc], res2.bse, rtol=1e-10)
         assert_allclose(res1.cov_params()[self.idx_p_uc[:, None],
-                        self.idx_p_uc], res2.cov_params(), rtol=1e-10, atol=1e-15)
+                        self.idx_p_uc], res2.cov_params(), rtol=5e-9, atol=1e-15)
 
     def test_resid(self):
         res1 = self.res1

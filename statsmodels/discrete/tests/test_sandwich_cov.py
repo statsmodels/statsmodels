@@ -479,13 +479,9 @@ class CheckDiscreteGLM(object):
         assert_equal(res1.cov_type, self.cov_type)
         assert_equal(res2.cov_type, self.cov_type)
 
-        assert_allclose(res1.params, res2.params, rtol=1e-13)
-        # bug TODO res1.scale missing ?  in Gaussian/OLS
-        assert_allclose(res1.bse, res2.bse, rtol=1e-13)
-#         if not self.cov_type == 'nonrobust':
-#             assert_allclose(res1.bse * res1.scale, res2.bse, rtol=1e-13)
-#         else:
-#             assert_allclose(res1.bse, res2.bse, rtol=1e-13)
+        rtol = getattr(res1, 'rtol', 1e-13)
+        assert_allclose(res1.params, res2.params, rtol=rtol)
+        assert_allclose(res1.bse, res2.bse, rtol=1e-10)
 
 
 class TestGLMLogit(CheckDiscreteGLM):
@@ -502,19 +498,32 @@ class TestGLMLogit(CheckDiscreteGLM):
         cls.res2 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
 
 
-class T_estGLMProbit(CheckDiscreteGLM):
-    # invalid link. What's Probit as GLM?
+class TestGLMProbit(CheckDiscreteGLM):
 
     @classmethod
     def setup_class(cls):
         endog_bin = (endog > endog.mean()).astype(int)
         cls.cov_type = 'cluster'
 
-        mod1 = GLM(endog_bin, exog, family=families.Gaussian(link=links.CDFLink()))
-        cls.res1 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+        mod1 = GLM(endog_bin, exog, family=families.Binomial(link=links.probit()))
+        cls.res1 = mod1.fit(method='newton',
+                            cov_type='cluster', cov_kwds=dict(groups=group))
 
         mod1 = smd.Probit(endog_bin, exog)
         cls.res2 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+        cls.rtol = 1e-6
+
+    def test_score_hessian(self):
+        res1 = self.res1
+        res2 = self.res2
+        # Note scale is fixed at 1, so we don't need to fix it explicitly
+        score1 = res1.model.score(res1.params * 0.98)
+        score2 = res2.model.score(res1.params * 0.98)
+        assert_allclose(score1, score2, rtol=1e-13)
+
+        hess1 = res1.model.hessian(res1.params)
+        hess2 = res2.model.hessian(res1.params)
+        assert_allclose(hess1, hess2, rtol=1e-10)
 
 
 class TestGLMGaussNonRobust(CheckDiscreteGLM):
