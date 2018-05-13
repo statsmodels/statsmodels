@@ -1040,10 +1040,11 @@ class GLM(base.LikelihoodModel):
         if (max_start_irls > 0) and (start_params is None):
             irls_rslt = self._fit_irls(start_params=start_params,
                                        maxiter=max_start_irls,
-                                       tol=tol, scale=scale, cov_type=cov_type,
-                                       cov_kwds=cov_kwds, use_t=use_t,
+                                       tol=tol, scale=1., cov_type='nonrobust',
+                                       cov_kwds=None, use_t=None,
                                        **kwargs)
             start_params = irls_rslt.params
+            del irls_rslt
 
         rslt = super(GLM, self).fit(start_params=start_params, tol=tol,
                                     maxiter=maxiter, full_output=full_output,
