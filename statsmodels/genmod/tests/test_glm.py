@@ -196,21 +196,22 @@ class CheckComparisonMixin(object):
         resd = self.resd
 
         assert_allclose(res1.llf, resd.llf, rtol=1e-10)
-        score_obs1 = res1.model.score_obs(res1.params)
-        score_obsd = resd.model.score_obs(resd.params)
+        score_obs1 = res1.model.score_obs(res1.params * 0.98)
+        score_obsd = resd.model.score_obs(resd.params * 0.98)
         assert_allclose(score_obs1, score_obsd, rtol=1e-10)
 
         # score
-        score1 = res1.model.score(res1.params)
+        score1 = res1.model.score(res1.params * 0.98)
         assert_allclose(score1, score_obs1.sum(0), atol=1e-20)
-        assert_allclose(score1, np.zeros(score_obs1.shape[1]), atol=1e-7)
+        score0 = res1.model.score(res1.params)
+        assert_allclose(score0, np.zeros(score_obs1.shape[1]), atol=1e-7)
 
-        hessian1 = res1.model.hessian(res1.params, observed=False)
-        hessiand = resd.model.hessian(resd.params)
+        hessian1 = res1.model.hessian(res1.params * 0.98, observed=False)
+        hessiand = resd.model.hessian(resd.params * 0.98)
         assert_allclose(hessian1, hessiand, rtol=1e-10)
 
-        hessian1 = res1.model.hessian(res1.params, observed=True)
-        hessiand = resd.model.hessian(resd.params)
+        hessian1 = res1.model.hessian(res1.params * 0.98, observed=True)
+        hessiand = resd.model.hessian(resd.params * 0.98)
         assert_allclose(hessian1, hessiand, rtol=1e-9)
 
     def test_score_test(self):
