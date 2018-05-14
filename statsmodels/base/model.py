@@ -1505,6 +1505,7 @@ class LikelihoodModelResults(Results):
 
         cparams = np.dot(r_matrix, self.params[:, None])
         J = float(r_matrix.shape[0])  # number of restrictions
+
         if q_matrix is None:
             q_matrix = np.zeros(J)
         else:
@@ -1521,7 +1522,15 @@ class LikelihoodModelResults(Results):
                 raise ValueError("r_matrix performs f_test for using "
                                  "dimensions that are asymptotically "
                                  "non-normal")
-            invcov = np.linalg.inv(cov_p)
+            invcov = np.linalg.pinv(cov_p)
+            J_ = np.linalg.matrix_rank(cov_p)
+            if J_ < J:
+                import warnings
+                from statsmodels.tools.sm_exceptions import ValueWarning
+                warnings.warn('covariance of constraints does not have full '
+                              'rank. The number of constraints is %d, but '
+                              'rank is %d' % (J, J_), ValueWarning)
+                J = J_
 
         if (hasattr(self, 'mle_settings') and
                 self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']):
@@ -1533,7 +1542,7 @@ class LikelihoodModelResults(Results):
         if use_f:
             F /= J
             return ContrastResults(F=F, df_denom=df_resid,
-                                   df_num=invcov.shape[0])
+                                   df_num=J) #invcov.shape[0])
         else:
             return ContrastResults(chi2=F, df_denom=J, statistic=F,
                                    distribution='chi2', distargs=(J,))

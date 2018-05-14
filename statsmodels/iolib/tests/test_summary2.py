@@ -7,7 +7,6 @@ from numpy.testing import assert_equal
 from statsmodels.iolib.summary2 import summary_col
 from statsmodels.regression.linear_model import OLS, add_constant
 
-
 class TestSummaryLatex(object):
 
     def test_summarycol(self):
@@ -95,3 +94,5 @@ x1    & -0.7500  & -1.5769   \\
 \begin{tabular}'''
         result = string_to_find in actual
         assert(result is True)
+
+

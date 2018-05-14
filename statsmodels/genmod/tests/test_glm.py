@@ -16,6 +16,8 @@ from statsmodels.tools.tools import add_constant
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.discrete import discrete_model as discrete
 from statsmodels.tools.sm_exceptions import DomainWarning
+from statsmodels.tools.numdiff import (approx_fprime, approx_fprime_cs,
+                                       approx_hess)
 import pytest
 import warnings
 
@@ -194,21 +196,22 @@ class CheckComparisonMixin(object):
         resd = self.resd
 
         assert_allclose(res1.llf, resd.llf, rtol=1e-10)
-        score_obs1 = res1.model.score_obs(res1.params)
-        score_obsd = resd.model.score_obs(resd.params)
+        score_obs1 = res1.model.score_obs(res1.params * 0.98)
+        score_obsd = resd.model.score_obs(resd.params * 0.98)
         assert_allclose(score_obs1, score_obsd, rtol=1e-10)
 
         # score
-        score1 = res1.model.score(res1.params)
+        score1 = res1.model.score(res1.params * 0.98)
         assert_allclose(score1, score_obs1.sum(0), atol=1e-20)
-        assert_allclose(score1, np.zeros(score_obs1.shape[1]), atol=1e-7)
+        score0 = res1.model.score(res1.params)
+        assert_allclose(score0, np.zeros(score_obs1.shape[1]), atol=1e-7)
 
-        hessian1 = res1.model.hessian(res1.params, observed=False)
-        hessiand = resd.model.hessian(resd.params)
+        hessian1 = res1.model.hessian(res1.params * 0.98, observed=False)
+        hessiand = resd.model.hessian(resd.params * 0.98)
         assert_allclose(hessian1, hessiand, rtol=1e-10)
 
-        hessian1 = res1.model.hessian(res1.params, observed=True)
-        hessiand = resd.model.hessian(resd.params)
+        hessian1 = res1.model.hessian(res1.params * 0.98, observed=True)
+        hessiand = resd.model.hessian(resd.params * 0.98)
         assert_allclose(hessian1, hessiand, rtol=1e-9)
 
     def test_score_test(self):
@@ -718,6 +721,7 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
         mod2 = GLM(endog, exog, family=sm.families.Poisson(),
                    offset=offset2).fit()
         assert_almost_equal(mod1.params, mod2.params)
+        assert_allclose(mod1.null, mod2.null, rtol=1e-10)
 
         # test recreating model
         mod1_ = mod1.model
@@ -727,6 +731,11 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
         mod3 = mod1_.__class__(mod1_.endog, mod1_.exog, **kwds)
         assert_allclose(mod3.exposure, mod1_.exposure, rtol=1e-14)
         assert_allclose(mod3.offset, mod1_.offset, rtol=1e-14)
+
+        # test fit_regularized exposure, see #4605
+        resr1 = mod1.model.fit_regularized()
+        resr2 = mod2.model.fit_regularized()
+        assert_allclose(resr1.params, resr2.params, rtol=1e-10)
 
 
     def test_predict(self):
@@ -986,6 +995,27 @@ def test_summary():
         rslt = model.fit(method=method)
         s = rslt.summary()
 
+
+def check_score_hessian(results):
+    # compare models core and hessian with numerical derivatives
+
+    params = results.params
+    # avoid checking score at MLE, score close to zero
+    sc = results.model.score(params * 0.98, scale=1)
+    # cs currently (0.9) does not work for all families
+    # sc2 = approx_fprime_cs(params * 0.98, results.model.loglike)
+    llfunc = lambda x: results.model.loglike(x, scale=1)
+    sc2 = approx_fprime(params * 0.98, llfunc)
+    assert_allclose(sc, sc2, rtol=0.05)
+
+    hess = results.model.hessian(params, scale=1)
+    hess2 = approx_hess(params, llfunc)
+    assert_allclose(hess, hess2, rtol=0.05)
+    scfunc = lambda x: results.model.score(x, scale=1)
+    hess3 = approx_fprime(params, scfunc)
+    assert_allclose(hess, hess3, rtol=0.05)
+
+
 def test_gradient_irls():
     # Compare the results when using gradient optimization and IRLS.
 
@@ -1044,6 +1074,9 @@ def test_gradient_irls():
                elif (family_class, link) == (fam.Gaussian, lnk.inverse_power):
                    # adding skip because of convergence failure
                    skip_one = True
+               # the following fails with identity link, because endog < 0
+               # elif family_class == fam.Gamma:
+               #     lin_pred = 0.5 * exog.sum(1) + np.random.uniform(size=exog.shape[0])
                else:
                    lin_pred = np.random.uniform(size=exog.shape[0])
 
@@ -1053,6 +1086,12 @@ def test_gradient_irls():
                    warnings.simplefilter("ignore")
                    mod_irls = sm.GLM(endog, exog, family=family_class(link=link()))
                rslt_irls = mod_irls.fit(method="IRLS")
+
+               if not (family_class, link) in [(fam.Poisson, lnk.sqrt),
+                                               (fam.Gamma, lnk.inverse_power),
+                                               (fam.InverseGaussian, lnk.identity)
+                                               ]:
+                   check_score_hessian(rslt_irls)
 
                # Try with and without starting values.
                for max_start_irls, start_params in (0, rslt_irls.params), (3, None):
@@ -1064,7 +1103,7 @@ def test_gradient_irls():
                        mod_gradient = sm.GLM(endog, exog, family=family_class(link=link()))
                    rslt_gradient = mod_gradient.fit(max_start_irls=max_start_irls,
                                                     start_params=start_params,
-                                                    method="newton")
+                                                    method="newton", maxiter=300)
 
                    assert_allclose(rslt_gradient.params,
                                    rslt_irls.params, rtol=1e-6, atol=5e-5)
@@ -1080,6 +1119,8 @@ def test_gradient_irls():
                    ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
                    gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
                    assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=5e-5)
+
+
 
 
 def test_gradient_irls_eim():

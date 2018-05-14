@@ -114,8 +114,6 @@ class GLM(base.LikelihoodModel):
         See Parameters.
     normalized_cov_params : array
         `p` x `p` normalized covariance of the design / exogenous data.
-    pinv_wexog : array
-        For GLM this is just the pseudo inverse of the original design.
     scale : float
         The estimate of the scale / dispersion.  Available after fit is called.
     scaletype : str
@@ -277,11 +275,6 @@ class GLM(base.LikelihoodModel):
         This is approximately equal to (X.T X)^(-1)
     offset : array-like
         Include offset in model with coefficient constrained to 1.
-    pinv_wexog : array
-        The pseudoinverse of the design / exogenous data array.  Note that
-        GLM has no whiten method, so this is just the pseudo inverse of the
-        design.
-        The pseudoinverse is approximately equal to (X.T X)^(-1)X.T
     scale : float
         The estimate of the scale / dispersion of the model fit.  Only
         available after fit is called.  See GLM.fit and GLM.estimate_scale
@@ -335,13 +328,16 @@ class GLM(base.LikelihoodModel):
         self.nobs = self.endog.shape[0]
 
         # things to remove_data
-        self._data_attr.extend(['weights', 'pinv_wexog', 'mu', 'freq_weights',
+        self._data_attr.extend(['weights', 'mu', 'freq_weights',
                                 'var_weights', 'iweights', '_offset_exposure',
                                 'n_trials'])
         # register kwds for __init__, offset and exposure are added by super
         self._init_keys.append('family')
 
         self._setup_binomial()
+        # internal usage for recreating a model
+        if 'n_trials' in kwargs:
+            self.n_trials = kwargs['n_trials']
 
         # Construct a combined offset/exposure term.  Note that
         # exposure has already been logged if present.
@@ -362,10 +358,6 @@ class GLM(base.LikelihoodModel):
         self.history = {'fittedvalues': [],
                         'params': [np.inf],
                         'deviance': [np.inf]}
-
-        self.pinv_wexog = np.linalg.pinv(self.exog)
-        self.normalized_cov_params = np.dot(self.pinv_wexog,
-                                            np.transpose(self.pinv_wexog))
 
         self.df_model = np_matrix_rank(self.exog) - 1
 
@@ -494,7 +486,8 @@ class GLM(base.LikelihoodModel):
             the sum of `score_obs`
 
         """
-        return self.score_obs(params, scale=scale).sum(0)
+        score_factor = self.score_factor(params, scale=scale)
+        return np.dot(score_factor, self.exog)
 
     def score_factor(self, params, scale=None):
         """weights for score for each observation
@@ -523,7 +516,7 @@ class GLM(base.LikelihoodModel):
 
         score_factor = (self.endog - mu) / self.family.link.deriv(mu)
         score_factor /= self.family.variance(mu)
-        score_factor *= self.iweights
+        score_factor *= self.iweights * self.n_trials
 
         if not scale == 1:
             score_factor /= scale
@@ -575,9 +568,9 @@ class GLM(base.LikelihoodModel):
         tmp = self.family.variance(mu) * self.family.link.deriv2(mu)
         tmp += self.family.variance.deriv(mu) * self.family.link.deriv(mu)
 
-        tmp = score_factor * eim_factor * tmp
+        tmp = score_factor * tmp
         # correct for duplicatee iweights in oim_factor and score_factor
-        tmp /= self.iweights
+        tmp /= self.iweights * self.n_trials
         oim_factor = eim_factor * (1 + tmp)
 
         if tmp.ndim > 1:
@@ -921,6 +914,7 @@ class GLM(base.LikelihoodModel):
             tmp = self.family.initialize(self.endog, self.freq_weights)
             self.endog = tmp[0]
             self.n_trials = tmp[1]
+            self._init_keys.append('n_trials')
 
     def fit(self, start_params=None, maxiter=100, method='IRLS', tol=1e-8,
             scale=None, cov_type='nonrobust', cov_kwds=None, use_t=None,
@@ -1040,17 +1034,25 @@ class GLM(base.LikelihoodModel):
         using the scipy gradient optimizers.
         """
 
+        # fix scale during optimization, see #4616
+        scaletype = self.scaletype
+        self.scaletype = 1.
+
         if (max_start_irls > 0) and (start_params is None):
             irls_rslt = self._fit_irls(start_params=start_params,
                                        maxiter=max_start_irls,
-                                       tol=tol, scale=scale, cov_type=cov_type,
-                                       cov_kwds=cov_kwds, use_t=use_t,
+                                       tol=tol, scale=1., cov_type='nonrobust',
+                                       cov_kwds=None, use_t=None,
                                        **kwargs)
             start_params = irls_rslt.params
+            del irls_rslt
 
         rslt = super(GLM, self).fit(start_params=start_params, tol=tol,
                                     maxiter=maxiter, full_output=full_output,
                                     method=method, disp=disp, **kwargs)
+
+        # reset scaletype to original
+        self.scaletype = scaletype
 
         mu = self.predict(rslt.params)
         scale = self.estimate_scale(mu)
@@ -1128,7 +1130,7 @@ class GLM(base.LikelihoodModel):
             wls_results = reg_tools._MinimalWLS(
                     wlsendog,
                     wlsexog,
-                    self.weights).fit(method='lstsq')
+                    self.weights).fit(method=wls_method)
             lin_pred = np.dot(self.exog, wls_results.params)
             lin_pred += self._offset_exposure
             mu = self.family.fitted(lin_pred)
@@ -1358,8 +1360,6 @@ class GLMResults(base.LikelihoodModelResults):
     pearson_chi2 : array
         Pearson's Chi-Squared statistic is defined as the sum of the squares
         of the Pearson residuals.
-    pinv_wexog : array
-        See GLM docstring.
     pvalues : array
         The two-tailed p-values for the parameters.
     resid_anscombe : array
@@ -1417,7 +1417,6 @@ class GLMResults(base.LikelihoodModelResults):
             self._n_trials = 1
         self.df_resid = model.df_resid
         self.df_model = model.df_model
-        self.pinv_wexog = model.pinv_wexog
         self._cache = resettable_cache()
         # are these intermediate results needed or can we just
         # call the model's attributes?
@@ -1528,15 +1527,14 @@ class GLMResults(base.LikelihoodModelResults):
         endog = self._endog
         model = self.model
         exog = np.ones((len(endog), 1))
-        kwargs = {}
-        if hasattr(model, 'offset'):
-            kwargs['offset'] = model.offset
-        if hasattr(model, 'exposure'):
-            kwargs['exposure'] = model.exposure
-        if len(kwargs) > 0:
+
+        kwargs = model._get_init_kwds()
+        kwargs.pop('family')
+        if hasattr(self, '_offset_exposure'):
             return GLM(endog, exog, family=self.family,
                        **kwargs).fit().fittedvalues
         else:
+            # correct if fitted is identical across observations
             wls_model = lm.WLS(endog, exog,
                                weights=self._iweights * self._n_trials)
             return wls_model.fit().fittedvalues
