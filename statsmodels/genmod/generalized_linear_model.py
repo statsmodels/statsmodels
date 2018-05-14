@@ -486,7 +486,8 @@ class GLM(base.LikelihoodModel):
             the sum of `score_obs`
 
         """
-        return self.score_obs(params, scale=scale).sum(0)
+        score_factor = self.score_factor(params, scale=scale)
+        return np.dot(score_factor, self.exog)
 
     def score_factor(self, params, scale=None):
         """weights for score for each observation
