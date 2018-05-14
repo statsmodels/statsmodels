@@ -22,6 +22,7 @@ __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
            'adfuller', 'kpss', 'bds']
 
+SQRTEPS = np.sqrt(np.finfo(np.double).eps)
 
 #NOTE: now in two places to avoid circular import
 #TODO: I like the bunch pattern for this too.
@@ -187,15 +188,15 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
     References
     ----------
-    .. [1] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
+    .. [*] W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 
-    .. [2] Hamilton, J.D.  "Time Series Analysis".  Princeton, 1994.
+    .. [*] Hamilton, J.D.  "Time Series Analysis".  Princeton, 1994.
 
-    .. [3] MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
+    .. [*] MacKinnon, J.G. 1994.  "Approximate asymptotic distribution functions for
         unit-root and cointegration tests.  `Journal of Business and Economic
         Statistics` 12, 167-76.
 
-    .. [4] MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
+    .. [*] MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
         University, Dept of Economics, Working Papers.  Available at
         http://ideas.repec.org/p/qed/wpaper/1227.html
     """
@@ -319,7 +320,7 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
 
     References
     -----------
-    .. [1] Parzen, E., 1963. On spectral analysis with missing observations
+    .. [*] Parzen, E., 1963. On spectral analysis with missing observations
            and amplitude modulation. Sankhya: The Indian Journal of
            Statistics, Series A, pp.383-392.
     """
@@ -465,7 +466,7 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None,
 
     References
     ----------
-    .. [1] Parzen, E., 1963. On spectral analysis with missing observations
+    .. [*] Parzen, E., 1963. On spectral analysis with missing observations
        and amplitude modulation. Sankhya: The Indian Journal of
        Statistics, Series A, pp.383-392.
 
@@ -557,7 +558,8 @@ def pacf_ols(x, nlags=40):
 
 
 def pacf(x, nlags=40, method='ywunbiased', alpha=None):
-    '''Partial autocorrelation estimated
+    """
+    Partial autocorrelation estimated
 
     Parameters
     ----------
@@ -565,17 +567,16 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
         observations of time series for which pacf is calculated
     nlags : int
         largest lag for which pacf is returned
-    method : 'ywunbiased' (default) or 'ywmle' or 'ols'
+    method : {'ywunbiased', 'ywmle', 'ols'}
         specifies which method for the calculations to use:
 
         - yw or ywunbiased : yule walker with bias correction in denominator
-          for acovf
+          for acovf. Default.
         - ywm or ywmle : yule walker without bias correction
         - ols - regression of time series on lags of it and on constant
         - ld or ldunbiased : Levinson-Durbin recursion with bias correction
         - ldb or ldbiased : Levinson-Durbin recursion without bias correction
-
-    alpha : scalar, optional
+    alpha : float, optional
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
@@ -592,7 +593,7 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     -----
     This solves yule_walker equations or ols for each desired lag
     and contains currently duplicate calculations.
-    '''
+    """
 
     if method == 'ols':
         ret = pacf_ols(x, nlags=nlags)
@@ -794,7 +795,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
     Parameters
     ----------
-    x : array, 2d, (nobs,2)
+    x : array, 2d
         data for test whether the time series in the second column Granger
         causes the time series in the first column
     maxlag : integer
@@ -932,6 +933,10 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
     Constant or trend is included in 1st stage regression, i.e. in
     cointegrating equation.
 
+    **Warning:** The autolag default has changed compared to statsmodels 0.8.
+    In 0.8 autolag was always None, no the keyword is used and defaults to
+    'aic'. Use `autolag=None` to avoid the lag search.
+
     Parameters
     ----------
     y1 : array_like, 1d
@@ -940,6 +945,7 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
         remaining elements in cointegrating vector
     trend : str {'c', 'ct'}
         trend term included in regression for cointegrating equation
+
         * 'c' : constant
         * 'ct' : constant and linear trend
         * also available quadratic trend 'ctt', and no constant 'nc'
@@ -951,12 +957,19 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
         keyword for `adfuller`, largest or given number of lags
     autolag : string
         keyword for `adfuller`, lag selection criterion.
+
+        * if None, then maxlag lags are used without lag search
+        * if 'AIC' (default) or 'BIC', then the number of lags is chosen
+          to minimize the corresponding information criterion
+        * 't-stat' based choice of maxlag.  Starts with maxlag and drops a
+          lag until the t-statistic on the last lag length is significant
+          using a 5%-sized test
+
     return_results : bool
         for future compatibility, currently only tuple available.
         If True, then a results instance is returned. Otherwise, a tuple
         with the test outcome is returned.
         Set `return_results=False` to avoid future changes in return.
-
 
     Returns
     -------
@@ -978,6 +991,11 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
 
     P-values and critical values are obtained through regression surface
     approximation from MacKinnon 1994 and 2010.
+
+    If the two series are almost perfectly collinear, then computing the
+    test is numerically unstable. However, the two series will be cointegrated
+    under the maintained assumption that they are integrated. In this case
+    the t-statistic will be set to -inf and the pvalue to zero.
 
     TODO: We could handle gaps in data by dropping rows with nans in the
     auxiliary regressions. Not implemented yet, currently assumes no nans
@@ -1010,15 +1028,15 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
 
     res_co = OLS(y0, xx).fit()
 
-    if res_co.rsquared < 1 - np.sqrt(np.finfo(np.double).eps):
-        res_adf = adfuller(res_co.resid, maxlag=maxlag, autolag=None,
+    if res_co.rsquared < 1 - 100 * SQRTEPS:
+        res_adf = adfuller(res_co.resid, maxlag=maxlag, autolag=autolag,
                            regression='nc')
     else:
         import warnings
-        warnings.warn("y0 and y1 are perfectly colinear.  Cointegration test "
-                      "is not reliable in this case.")
+        warnings.warn("y0 and y1 are (almost) perfectly colinear."
+                      "Cointegration test is not reliable in this case.")
         # Edge case where series are too similar
-        res_adf = (0,)
+        res_adf = (-np.inf,)
 
     # no constant or trend, see egranger in Stata and MacKinnon
     if trend == 'nc':

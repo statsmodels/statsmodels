@@ -26,7 +26,7 @@ class MANOVA(Model):
     endog : array_like
         Dependent variables. A nobs x k_endog array where nobs is
         the number of observations and k_endog is the number of dependent
-         variables.
+        variables.
     exog : array_like
         Independent variables. A nobs x k_exog array where nobs is the
         number of observations and k_exog is the number of independent
@@ -35,7 +35,7 @@ class MANOVA(Model):
         default.
 
     Attributes
-    -----------
+    ----------
     endog : array
         See Parameters.
     exog : array
@@ -43,7 +43,7 @@ class MANOVA(Model):
 
     References
     ----------
-    .. [1] ftp://public.dhe.ibm.com/software/analytics/spss/documentation/statistics/20.0/en/client/Manuals/IBM_SPSS_Statistics_Algorithms.pdf
+    .. [*] ftp://public.dhe.ibm.com/software/analytics/spss/documentation/statistics/20.0/en/client/Manuals/IBM_SPSS_Statistics_Algorithms.pdf
     """
     def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
         if len(endog.shape) == 1 or endog.shape[1] == 1:
@@ -76,20 +76,23 @@ class MANOVA(Model):
         return MultivariateTestResults(results, self.endog_names,
                                        self.exog_names)
     mv_test.__doc__ = (
-        """
-        Testing the linear hypotheses
-            L * params * M = 0
-        where `params` is the regression coefficient matrix for the
-        linear model y = x * params
+"""
+Linear hypotheses testing
 
-        Parameters
-        ----------
-        """ + _hypotheses_doc +
-        """
+Parameters
+----------
+""" + _hypotheses_doc + """
 
-        Returns
-        -------
-        results: MultivariateTestResults
+Returns
+-------
+results: MultivariateTestResults
 
-        """
-    )
+Notes
+-----
+Testing the linear hypotheses
+
+    L * params * M = 0
+
+where `params` is the regression coefficient matrix for the
+linear model y = x * params
+""")

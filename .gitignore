@@ -10,7 +10,7 @@ docs/source/generated
 docs/source/dev/generated
 docs/source/examples/generated
 docs/source/examples/notebooks/generated
-docs/source/datasets
+docs/source/datasets/statsmodels.datasets.*
 docs/gettingstarted_0.png
 examples/executed
 
@@ -54,6 +54,10 @@ marks.bzr
 .DS_Store
 help
 
+# Coverage report output
+.coverage
+coverage_html_report/
+
 # Project specific
 statsmodels/version.py
 cythonize.dat
@@ -79,3 +83,7 @@ statsmodels/tsa/statespace/_smoothers/_conventional.pyx
 statsmodels/tsa/statespace/_smoothers/_univariate.pyx
 statsmodels/tsa/statespace/_smoothers/_alternative.pyx
 statsmodels/tsa/statespace/_smoothers/_classical.pyx
+
+#pytest
+.cache
+.pytest_cache

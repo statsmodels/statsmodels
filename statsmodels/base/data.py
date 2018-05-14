@@ -128,7 +128,10 @@ class ModelData(object):
         else:
             # detect where the constant is
             check_implicit = False
-            const_idx = np.where(self.exog.ptp(axis=0) == 0)[0].squeeze()
+            ptp_ = self.exog.ptp(axis=0)
+            if not np.isfinite(ptp_).all():
+                raise MissingDataError('exog contains inf or nans')
+            const_idx = np.where(ptp_ == 0)[0].squeeze()
             self.k_constant = const_idx.size
 
             if self.k_constant == 1:

@@ -1,9 +1,10 @@
+# -*- coding: utf-8 -*-
 """
 Vector Autoregression (VAR) processes
 
 References
 ----------
-Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
+Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
 from __future__ import print_function, division
 from statsmodels.compat.python import range
@@ -153,7 +154,7 @@ class SVAR(tsbase.TimeSeriesModel):
 
         Notes
         -----
-        Lutkepohl pp. 146-153
+        Lütkepohl pp. 146-153
         Hamilton pp. 324-336
 
         Returns
@@ -228,7 +229,7 @@ class SVAR(tsbase.TimeSeriesModel):
         y_sample = y[lags:]
 
         # Lutkepohl p75, about 5x faster than stated formula
-        var_params = np.linalg.lstsq(z, y_sample)[0]
+        var_params = np.linalg.lstsq(z, y_sample, rcond=-1)[0]
         resid = y_sample - np.dot(z, var_params)
 
         # Unbiased estimate of covariance matrix $\Sigma_u$ of the white noise
@@ -585,6 +586,7 @@ class SVARResults(SVARProcess, VARResults):
         else:
             trendorder = None
         self.k_trend = k_trend
+        self.k_exog = k_trend  # now (0.9) required by VARProcess
         self.trendorder = trendorder
 
         self.exog_names = util.make_lag_names(names, lag_order, k_trend)
@@ -653,7 +655,7 @@ class SVARResults(SVARProcess, VARResults):
 
         Notes
         -----
-        Lutkepohl (2005) Appendix D
+        Lütkepohl (2005) Appendix D
 
         Returns
         -------

@@ -33,12 +33,12 @@ def plot_mts(Y, names=None, index=None):
     k = Y.shape[1]
     rows, cols = k, 1
 
-    plt.figure(figsize=(10, 10))
+    fig = plt.figure(figsize=(10, 10))
 
     for j in range(k):
         ts = Y[:, j]
 
-        ax = plt.subplot(rows, cols, j+1)
+        ax = fig.add_subplot(rows, cols, j+1)
         if index is not None:
             ax.plot(index, ts)
         else:
@@ -47,8 +47,11 @@ def plot_mts(Y, names=None, index=None):
         if names is not None:
             ax.set_title(names[j])
 
+    return fig
+
 def plot_var_forc(prior, forc, err_upper, err_lower,
-                  index=None, names=None, plot_stderr=True):
+                  index=None, names=None, plot_stderr=True,
+                  legend_options=None):
     import matplotlib.pyplot as plt
 
     n, k = prior.shape
@@ -75,7 +78,10 @@ def plot_var_forc(prior, forc, err_upper, err_lower,
         if names is not None:
             ax.set_title(names[j])
 
-        ax.legend(loc='upper right')
+        if legend_options is None:
+            legend_options = {"loc": "upper right"}
+        ax.legend(**legend_options)
+    return fig
 
 def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
                     error_fmt='k--', alpha=0.05, stderr_type = 'asym'):
@@ -229,6 +235,8 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
 
         sz = subplot_params.get('fontsize', 12)
         ax.set_title(subtitle_temp % (names[j], names[i]), fontsize=sz)
+
+    return fig
 
 
 def _get_irf_plot_config(names, impcol, rescol):

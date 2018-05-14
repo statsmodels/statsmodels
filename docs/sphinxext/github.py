@@ -152,4 +152,4 @@ def setup(app):
     app.add_role('ghuser', ghuser_role)
     app.add_role('ghcommit', ghcommit_role)
     app.add_config_value('github_project_url', None, 'env')
-    return
+    return {'parallel_read_safe': True}

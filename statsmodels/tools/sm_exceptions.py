@@ -11,6 +11,8 @@ warning_name_doc that services as a generic message to use when the warning is
 raised.
 """
 
+import warnings
+
 # Errors
 class PerfectSeparationError(Exception):
     pass
@@ -119,3 +121,5 @@ class HessianInversionWarning(UserWarning):
 
 class ColinearityWarning(UserWarning):
     pass
+
+warnings.simplefilter('always', category=UserWarning)

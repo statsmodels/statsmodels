@@ -1471,7 +1471,7 @@ class GEEResults(base.LikelihoodModelResults):
     @cache_readonly
     def resid_working(self):
         val = self.resid_response
-        val = val / self.family.link.deriv(self.fittedvalues)
+        val = val * self.family.link.deriv(self.fittedvalues)
         return val
 
     @cache_readonly

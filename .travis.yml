@@ -1,15 +1,10 @@
 # Travis script that uses miniconda in place of the system installed python
-# versions.  Allows substantial flexability for choosing versions of
+# versions.  Allows substantial flexibility for choosing versions of
 # required packages and is simpler to use to test up-to-date scientific Python
 # stack
-language: python
+dist: trusty
 sudo: required
-
-services:
-    - docker
-
-before_install:
-    - docker pull ubuntu:14.04
+language: python
 
 env:
   # Default values for common packages, override as needed
@@ -18,16 +13,40 @@ env:
     - COVERAGE=false
     - USEMPL=true
     - MATPLOTLIB=
+    - DOCBUILD=false
 
 matrix:
   fast_finish: true
   include:
   - python: 2.7
     env:
+    - PYTHON=3.6
+    - COVERAGE=true
+  - python: 2.7
+    env:
     - PYTHON=2.7
     - NUMPY=1.11
     - MATPLOTLIB=1.5
     - COVERAGE=true
+  - python: 2.7
+    env:
+    - PYTHON=3.5
+    - NUMPY=1.10
+    - SCIPY=0.17
+    - PANDAS=0.18
+    - MATPLOTLIB=1.5
+  - python: 2.7
+    env:
+    - PYTHON=3.4
+    - NUMPY=1.10
+    - SCIPY=0.16
+    - PANDAS=0.16
+    - MATPLOTLIB=1.4
+    - OPTIONAL="libgfortran=1.0"
+  - python: 2.7
+    env:
+    - PYTHON=3.6
+    - DOCBUILD=true
   - python: 2.7
     env:
     - PYTHON=2.7
@@ -43,26 +62,6 @@ matrix:
     - SCIPY=0.14
     - MATPLOTLIB=1.4
     - PANDAS=0.14
-  - python: 2.7
-    env:
-    - PYTHON=3.4
-    - NUMPY=1.10
-    - SCIPY=0.16
-    - PANDAS=0.16
-    - MATPLOTLIB=1.4
-    - OPTIONAL="libgfortran=1.0"
-  - python: 2.7
-    env:
-    - PYTHON=3.5
-    - NUMPY=1.10
-    - SCIPY=0.17
-    - PANDAS=0.18
-    - MATPLOTLIB=1.5
-  - python: 2.7
-    env:
-    - PYTHON=3.6
-    - COVERAGE=true
-
 
 notifications:
   email:
@@ -70,20 +69,22 @@ notifications:
 
 # Setup anaconda
 before_install:
-  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   - chmod +x miniconda.sh
-  - ./miniconda.sh -b
+  - ./miniconda.sh -b -p /home/travis/miniconda
   - export PATH=/home/travis/miniconda/bin:$PATH
-  - export PATH=/home/travis/miniconda2/bin:$PATH
-  - conda update --yes --quiet conda
+  - export MKL_NUM_THREADS=1
+  - export NUMEXPR_NUM_THREADS=1
+  - export OMP_NUM_THREADS=1
+  - conda config --set always_yes yes
+  - conda update --quiet conda
   # Fix for headless TravisCI
   - "export DISPLAY=:99.0"
   - "sh -e /etc/init.d/xvfb start"
   # Avoid noise from matplotlib
-  - mkdir $HOME/.config
-  - mkdir $HOME/.config/matplotlib
+  - mkdir -p $HOME/.config/matplotlib
   - SRCDIR=$PWD
-  # Build package list to avoid empty package=versions; only needed for versioned pacakges
+  # Build package list to avoid empty package=versions; only needed for versioned packages
   - PKGS="python=${PYTHON}"
   - PKGS="${PKGS} numpy"; if [ ${NUMPY} ]; then PKGS="${PKGS}=${NUMPY}"; fi
   - PKGS="${PKGS} scipy"; if [ ${SCIPY} ]; then PKGS="${PKGS}=${SCIPY}"; fi
@@ -91,24 +92,31 @@ before_install:
   - PKGS="${PKGS} pandas"; if [ ${PANDAS} ]; then PKGS="${PKGS}=${PANDAS}"; fi
   - PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}=${CYTHON}"; fi
   - if [ ${USEMPL} = true ]; then PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi; fi
+  - if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --cov-config=.travis_coveragerc --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
+  - echo conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml
+  - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml joblib
+  - source activate statsmodels-test
+  - pip install 'pytest<4' pytest-xdist nose
+  - if [ ${COVERAGE} = true ]; then pip install codecov coverage coveralls pytest-cov; fi
+  - if [ ${DOCBUILD} = true ]; then bash tools/ci_docbuild_install.sh; fi;
+  - export SRCDIR=$PWD
+  # Ensure tests are correctly gathered by xdist
+  - export PYTHONHASHSEED=0
 
 # Install packages
 install:
-  - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} nose pip pyyaml setuptools
-  - source activate statsmodels-test
-  - if [ ${COVERAGE} = true ]; then pip install coverage coveralls; fi
-  - python setup.py install
+  - python setup.py build_ext --inplace
+  - python setup.py develop
 
 script:
-  - SRCDIR=$PWD
-  - python setup.py install
-  - mkdir -p "${SRCDIR}/travis-test"; cd "${SRCDIR}/travis-test"
   # Show versions
   - python -c 'import statsmodels.api as sm; sm.show_versions();'
-  # Compose a script to run testing with coverage
-  - echo 'import statsmodels as sm; a=sm.test(label="full", verbose=3); import sys; sys.exit((len(a.failures)+len(a.errors))>0)' > test.py
-  - if [ ${COVERAGE} = true ]; then coverage run --rcfile=${SRCDIR}/.travis_coveragerc test.py; else python test.py; fi
+  # docbuild and exit, if required
+  - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; bash ${SRCDIR}/tools/ci_docbuild.sh; exit 0; fi;
+  # Run tests
+  - echo pytest -n 2 ${COVERAGE_OPTS} statsmodels --skip-examples
+  - pytest ${COVERAGE_OPTS} statsmodels --skip-examples
 
 after_success:
-  # Coverage only for 2.7
   - if [ ${COVERAGE} = true ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi
+  - if [ ${COVERAGE} = true ]; then codecov; fi

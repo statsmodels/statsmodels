@@ -31,10 +31,9 @@ from __future__ import print_function
 from statsmodels.compat.python import lrange, lzip, range
 import numpy as np
 import pandas as pd
-from statsmodels.compat.numpy import npc_unique
 from statsmodels.compat.pandas import sort_values
 import statsmodels.tools.data as data_util
-from pandas.core.index import Index, MultiIndex
+from pandas import Index, MultiIndex
 
 
 def combine_indices(groups, prefix='', sep='.', return_labels=False):
@@ -59,8 +58,8 @@ def combine_indices(groups, prefix='', sep='.', return_labels=False):
     else:
         groups_ = groups
 
-    uni, uni_idx, uni_inv = npc_unique(groups_, return_index=True,
-                                       return_inverse=True)
+    uni, uni_idx, uni_inv = np.unique(groups_, return_index=True,
+                                      return_inverse=True)
 
     if is2d:
         uni = uni.view(dt).reshape(-1, ncols)

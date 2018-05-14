@@ -29,19 +29,16 @@ def check_pickle(obj):
 
 class RemoveDataPickle(object):
 
-    def __init__(self):
-        self.predict_kwds = {}
-
     @classmethod
-    def setup_class(self):
-
+    def setup_class(cls):
         nobs = 10000
         np.random.seed(987689)
         x = np.random.randn(nobs, 3)
         x = sm.add_constant(x)
-        self.exog = x
-        self.xf = 0.25 * np.ones((2, 4))
-        self.l_max = 20000
+        cls.exog = x
+        cls.xf = 0.25 * np.ones((2, 4))
+        cls.l_max = 20000
+        cls.predict_kwds = {}
 
     def test_remove_data_pickle(self):
         import pandas as pd
@@ -216,6 +213,7 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
 class TestPickleFormula(RemoveDataPickle):
     @classmethod
     def setup_class(cls):
+        super(TestPickleFormula, cls).setup_class()
         nobs = 10000
         np.random.seed(987689)
         x = np.random.randn(nobs, 3)
@@ -237,6 +235,7 @@ class TestPickleFormula(RemoveDataPickle):
 class TestPickleFormula2(RemoveDataPickle):
     @classmethod
     def setup_class(cls):
+        super(TestPickleFormula2, cls).setup_class()
         nobs = 500
         np.random.seed(987689)
         data = np.random.randn(nobs, 4)
@@ -259,7 +258,7 @@ class TestPickleFormula3(TestPickleFormula2):
 class TestPickleFormula4(TestPickleFormula2):
 
     def setup(self):
-        self.results = sm.OLS.from_formula("Y ~ np.log(A) + B * C", data=self.data).fit()
+        self.results = sm.OLS.from_formula("Y ~ np.log(abs(A) + 1) + B * C", data=self.data).fit()
 
 # we need log in module namespace for the following test
 from numpy import log
@@ -268,12 +267,25 @@ class TestPickleFormula5(TestPickleFormula2):
     def setup(self):
         # if we import here, then unpickling fails -> exception in test
         #from numpy import log
-        self.results = sm.OLS.from_formula("Y ~ log(A) + B * C", data=self.data).fit()
+        self.results = sm.OLS.from_formula("Y ~ log(abs(A) + 1) + B * C", data=self.data).fit()
+
+
+class TestRemoveDataPicklePoissonRegularized(RemoveDataPickle):
+
+    def setup(self):
+        #fit for each test, because results will be changed by test
+        x = self.exog
+        np.random.seed(987689)
+        y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
+        model = sm.Poisson(y_count, x)
+        self.results = model.fit_regularized(method='l1', disp=0, alpha=10)
+
 
 
 if __name__ == '__main__':
     for cls in [TestRemoveDataPickleOLS, TestRemoveDataPickleWLS,
                 TestRemoveDataPicklePoisson,
+                TestRemoveDataPicklePoissonRegularized,
                 TestRemoveDataPickleNegativeBinomial,
                 TestRemoveDataPickleLogit, TestRemoveDataPickleRLM,
                 TestRemoveDataPickleGLM]:

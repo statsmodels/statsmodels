@@ -146,7 +146,7 @@ class CheckGrouping(object):
 
 class TestMultiIndexGrouping(CheckGrouping):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         grun_data = grunfeld.load_pandas().data
         multi_index_data = grun_data.set_index(['firm', 'year'])
         multi_index_panel = multi_index_data.index
@@ -158,7 +158,7 @@ class TestMultiIndexGrouping(CheckGrouping):
 
 class TestIndexGrouping(CheckGrouping):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         grun_data = grunfeld.load_pandas().data
         index_data = grun_data.set_index(['firm'])
         index_group = index_data.index

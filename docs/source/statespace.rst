@@ -432,6 +432,7 @@ additional prediction or forecasting results, including confidence intervals.
 
    kalman_filter.KalmanFilter
    kalman_filter.FilterResults
+   kalman_filter.PredictionResults
 
 The `KalmanSmoother` class is a subclass of `KalmanFilter` that provides
 smoothing capabilities. Once the state space representation matrices have been

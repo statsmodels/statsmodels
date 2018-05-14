@@ -1160,7 +1160,7 @@ class Test_ar_no_enforce(SARIMAXCoverageTest):
         kwargs['enforce_stationarity'] = False
         kwargs['enforce_invertibility'] = False
         kwargs['initial_variance'] = 1e9
-        # kwargs['loglikelihood_burn'] = 0
+        kwargs['loglikelihood_burn'] = 0
         super(Test_ar_no_enforce, cls).setup_class(6, *args, **kwargs)
         # Reset loglikelihood burn, which gets automatically set to the number
         # of states if enforce_stationarity = False
@@ -1775,6 +1775,13 @@ class Test_sarimax_exogenous(SARIMAXCoverageTest):
         endog = results_sarimax.wpi1_data
         kwargs['exog'] = (endog - np.floor(endog))**2
         super(Test_sarimax_exogenous, cls).setup_class(50, *args, **kwargs)
+
+    def test_results_params(self):
+        result = self.model.filter(self.true_params)
+        assert_allclose(self.true_params[1:4], result.arparams)
+        assert_allclose(self.true_params[4:6], result.maparams)
+        assert_allclose(self.true_params[6:9], result.seasonalarparams)
+        assert_allclose(self.true_params[9:11], result.seasonalmaparams)
 
 class Test_sarimax_exogenous_not_hamilton(SARIMAXCoverageTest):
     # // SARIMAX and exogenous

@@ -176,6 +176,7 @@ results class of the other linear models.
 
    RegressionResults
    OLSResults
+   PredictionResults
 
 .. currentmodule:: statsmodels.regression.quantile_regression
 

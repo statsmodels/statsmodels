@@ -1,7 +1,8 @@
+from statsmodels.compat.testing import skipif
+
 import numpy as np
 from statsmodels.graphics.dotplots import dot_plot
 import pandas as pd
-from numpy.testing import dec
 
 # If true, the output is written to a multi-page pdf file.
 pdf_output = False
@@ -20,7 +21,7 @@ def close_or_save(pdf, fig):
     else:
         plt.close(fig)
 
-@dec.skipif(not have_matplotlib)
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_all():
 
     if pdf_output:

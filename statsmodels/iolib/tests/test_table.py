@@ -1,5 +1,5 @@
 import numpy as np
-import unittest
+from numpy.testing import assert_equal
 from statsmodels.iolib.table import SimpleTable, default_txt_fmt
 from statsmodels.iolib.table import default_latex_fmt
 from statsmodels.iolib.table import default_html_fmt
@@ -9,7 +9,7 @@ from statsmodels.regression.linear_model import OLS
 ltx_fmt1 = default_latex_fmt.copy()
 html_fmt1 = default_html_fmt.copy()
 
-class TestSimpleTable(unittest.TestCase):
+class TestSimpleTable(object):
     def test_SimpleTable_1(self):
         # Basic test, test_SimpleTable_1
         desired = '''
@@ -26,7 +26,7 @@ stub2 1.95038 2.65765
         actual = SimpleTable(test1data, test1header, test1stubs,
                              txt_fmt=default_txt_fmt)
         actual = '\n%s\n' % actual.as_text()
-        self.assertEqual(desired, str(actual))
+        assert_equal(desired, str(actual))
 
     def test_SimpleTable_2(self):
         #  Test SimpleTable.extend_right()
@@ -48,7 +48,7 @@ stub R2 C1  90.30312  90.73999 stub R2 C2  40.95038  40.65765
         actual2 = SimpleTable(data2, header2, stubs2, txt_fmt=default_txt_fmt)
         actual1.extend_right(actual2)
         actual = '\n%s\n' % actual1.as_text()
-        self.assertEqual(desired, str(actual))
+        assert_equal(desired, str(actual))
 
     def test_SimpleTable_3(self):
         # Test SimpleTable.extend() as in extend down
@@ -74,7 +74,7 @@ stub R2 C2  40.95038  40.65765
         actual2 = SimpleTable(data2, header2, stubs2, txt_fmt=default_txt_fmt)
         actual1.extend(actual2)
         actual = '\n%s\n' % actual1.as_text()
-        self.assertEqual(desired, str(actual))
+        assert_equal(desired, str(actual))
 
     def test_SimpleTable_4(self):
         # Basic test, test_SimpleTable_4 test uses custom txt_fmt
@@ -119,7 +119,7 @@ stub R2 C2  40.95038  40.65765
             actual = '\n%s\n' % tbl.as_text()
             #print(actual)
             #print(desired)
-            self.assertEqual(actual, desired)
+            assert_equal(actual, desired)
         def test_ltx_fmt1(self):
             # Limited test of custom ltx_fmt
             desired = r"""
@@ -135,7 +135,7 @@ stub R2 C2  40.95038  40.65765
             actual = '\n%s\n' % tbl.as_latex_tabular(center=False)
             #print(actual)
             #print(desired)
-            self.assertEqual(actual, desired)
+            assert_equal(actual, desired)
             # Test "center=True" (the default):
             desired_centered = r"""
 \begin{center}
@@ -143,7 +143,7 @@ stub R2 C2  40.95038  40.65765
 \end{center}
 """ % desired[1:-1]
             actual_centered = '\n%s\n' % tbl.as_latex_tabular()
-            self.assertEqual(actual_centered, desired_centered)
+            assert_equal(actual_centered, desired_centered)
         def test_html_fmt1(self):
             # Limited test of custom html_fmt
             desired = """
@@ -160,7 +160,7 @@ stub R2 C2  40.95038  40.65765
 </table>
 """
             actual = '\n%s\n' % tbl.as_html()
-            self.assertEqual(actual, desired)
+            assert_equal(actual, desired)
         test_txt_fmt1(self)
         test_ltx_fmt1(self)
         test_html_fmt1(self)
@@ -187,7 +187,7 @@ stub R2 C2  40.95038  40.65765
 \end{tabular}
 """
             actual = '\n%s\n' % tbl_c.as_latex_tabular(center=False)
-            self.assertEqual(actual, desired)
+            assert_equal(actual, desired)
         test_ltx_special_chars(self)
     def test_regression_with_tuples(self):
         i = pandas.Series( [1,2,3,4]*10 , name="i")
@@ -216,7 +216,7 @@ stub R2 C2  40.95038  40.65765
                    "('y', 'sum')      1.4595      0.209   ",
                    "('y', 'amax')     0.2432      0.035   "]
 
-        self.assertEqual(sorted(desired), sorted(interesting_lines)  )
+        assert_equal(sorted(desired), sorted(interesting_lines)  )
 
 
 if __name__ == "__main__":

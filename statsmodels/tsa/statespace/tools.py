@@ -34,9 +34,7 @@ prefix_copy_index_vector_map = {}
 
 
 def set_mode(compatibility=None):
-    global compatibility_mode, has_trmm, prefix_statespace_map,        \
-        prefix_kalman_filter_map, prefix_kalman_smoother_map,          \
-        prefix_simulation_smoother_map, prefix_pacf_map, prefix_sv_map
+    global compatibility_mode, has_trmm
 
     # Determine mode automatically if none given
     if compatibility is None:
@@ -248,7 +246,7 @@ def companion_matrix(polynomial):
     Given coefficients of a lag polynomial of the form:
 
     .. math::
-    
+
         c(L) = c_0 + c_1 L + \dots + c_p L^p
 
     returns a matrix of the form
@@ -552,7 +550,7 @@ def constrain_stationary_univariate(unconstrained):
 
     References
     ----------
-    .. [1] Monahan, John F. 1984.
+    .. [*] Monahan, John F. 1984.
        "A Note on Enforcing Stationarity in
        Autoregressive-moving Average Models."
        Biometrika 71 (2) (August 1): 403-404.
@@ -589,7 +587,7 @@ def unconstrain_stationary_univariate(constrained):
 
     References
     ----------
-    .. [1] Monahan, John F. 1984.
+    .. [*] Monahan, John F. 1984.
        "A Note on Enforcing Stationarity in
        Autoregressive-moving Average Models."
        Biometrika 71 (2) (August 1): 403-404.
@@ -891,7 +889,7 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
        "A Note on Reparameterizing a Vector Autoregressive Moving Average Model
        to Enforce Stationarity."
        Journal of Statistical Computation and Simulation 24 (2): 99-106.
-    .. [2] Ansley, Craig F, and Paul Newbold. 1979.
+    .. [*] Ansley, Craig F, and Paul Newbold. 1979.
        "Multivariate Partial Autocorrelations."
        In Proceedings of the Business and Economic Statistics Section, 349-53.
        American Statistical Association
@@ -1063,7 +1061,7 @@ def _compute_multivariate_sample_acovf(endog, maxlag):
 
     References
     ----------
-    .. [1] Wei, William. 1990.
+    .. [*] Wei, William. 1990.
         Time Series Analysis : Univariate and Multivariate Methods.
        Boston: Pearson.
     """
@@ -1473,7 +1471,7 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
 
     References
     ----------
-    .. [1] Ansley, Craig F., and Robert Kohn. 1986.
+    .. [*] Ansley, Craig F., and Robert Kohn. 1986.
        "A Note on Reparameterizing a Vector Autoregressive Moving Average Model
        to Enforce Stationarity."
        Journal of Statistical Computation and Simulation 24 (2): 99-106.
@@ -1896,3 +1894,21 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
     copy(a, b, np.asfortranarray(index))
 
     return b
+
+
+def prepare_exog(exog):
+    k_exog = 0
+    if exog is not None:
+        exog_is_using_pandas = _is_using_pandas(exog, None)
+        if not exog_is_using_pandas:
+            exog = np.asarray(exog)
+
+        # Make sure we have 2-dimensional array
+        if exog.ndim == 1:
+            if not exog_is_using_pandas:
+                exog = exog[:, None]
+            else:
+                exog = pd.DataFrame(exog)
+
+        k_exog = exog.shape[1]
+    return (k_exog, exog)

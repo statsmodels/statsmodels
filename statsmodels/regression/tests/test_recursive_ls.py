@@ -5,7 +5,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
-
+from statsmodels.compat.testing import skipif
 import numpy as np
 import pandas as pd
 import os
@@ -17,7 +17,7 @@ from statsmodels.regression.recursive_ls import RecursiveLS
 from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.tools import add_constant
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
-from nose.exc import SkipTest
+import pytest
 
 try:
     import matplotlib.pyplot as plt
@@ -96,10 +96,8 @@ def test_estimates():
     assert_allclose(res.params, res_ols.params)
 
 
+@skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plots():
-    if not have_matplotlib:
-        raise SkipTest
-
     exog = add_constant(dta[['m1', 'pop']])
     mod = RecursiveLS(endog, exog)
     res = mod.fit()

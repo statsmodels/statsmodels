@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import division
 from statsmodels.compat.python import iteritems, range, string_types, lmap, long
 
@@ -210,6 +211,8 @@ class AR(tsbase.TimeSeriesModel):
         if method == 'mle':  # use Kalman Filter to get initial values
             if k_trend:
                 mu = params[0]/(1-np.sum(params[k_trend:]))
+            else:
+                mu = 0
 
             # modifies predictedvalues in place
             if start < k_ar:
@@ -632,7 +635,7 @@ class ARResults(tsbase.TimeSeriesModelResults):
         initial values are computed via the Kalman Filter if the model is
         fit by `mle`.
     fpe : float
-        Final prediction error using Lutkepohl's definition
+        Final prediction error using Lütkepohl's definition
         ((n_totobs+k_trend)/(n_totobs-k_ar-k_trend))*sigma
     hqic : float
         Hannan-Quinn Information Criterion.

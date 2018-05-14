@@ -96,6 +96,9 @@ def test_iv2sls_r():
     #assert_allclose(res.bse * np.sqrt((n - k) / (n - k - 1.)), bse,
     assert_allclose(res.bse, bse, rtol=0, atol=3e-7)
 
+    # GH 3849
+    assert not hasattr(mod, '_results')
+
 
 
 def test_ivgmm0_r():
@@ -154,7 +157,7 @@ exog_st = exog[:, idx]
 class TestGMMOLS(object):
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         exog = exog_st  # with const at end
         res_ols = OLS(endog, exog).fit()
 
@@ -167,8 +170,8 @@ class TestGMMOLS(object):
         res = mod.fit(np.ones(exog.shape[1], float), maxiter=0, inv_weights=w0inv,
                         optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0})
 
-        self.res1 = res
-        self.res2 = res_ols
+        cls.res1 = res
+        cls.res2 = res_ols
 
 
     def test_basic(self):
@@ -234,12 +237,18 @@ class CheckGMM(object):
         # Smoke test for Wald
         res_wald = res1.wald_test(restriction[:-1])
 
+    def test_smoke(self):
+        res1 = self.res1
+        summ = res1.summary()
+        # len + 1 is for header line
+        assert_equal(len(summ.tables[1]), len(res1.params) + 1)
+
 
 class TestGMMSt1(CheckGMM):
 
     @classmethod
-    def setup_class(self):
-        #self.bse_tol = [5e-7, 5e-7]
+    def setup_class(cls):
+        #cls.bse_tol = [5e-7, 5e-7]
         # compare to Stata default options, iterative GMM
         exog = exog_st  # with const at end
         start = OLS(endog, exog).fit().params
@@ -251,19 +260,19 @@ class TestGMMSt1(CheckGMM):
         res10 = mod.fit(start, maxiter=10, inv_weights=w0inv,
                         optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0},
                         wargs={'centered':False})
-        self.res1 = res10
+        cls.res1 = res10
 
         from .results_gmm_griliches_iter import results
-        self.res2 = results
+        cls.res2 = results
 
 class TestGMMStTwostep(CheckGMM):
     #compares has_optimal_weights=True with Stata's has_optimal_weights=False
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         # compare to Stata default options, twostep GMM
-        self.params_tol = [5e-5, 5e-6]
-        self.bse_tol = [5e-6, 5e-7]
+        cls.params_tol = [5e-5, 5e-6]
+        cls.bse_tol = [5e-6, 5e-7]
         exog = exog_st  # with const at end
         start = OLS(endog, exog).fit().params
         nobs, k_instr = instrument.shape
@@ -274,20 +283,20 @@ class TestGMMStTwostep(CheckGMM):
         res10 = mod.fit(start, maxiter=2, inv_weights=w0inv,
                         optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0},
                         wargs={'centered':False})
-        self.res1 = res10
+        cls.res1 = res10
 
         from .results_gmm_griliches import results_twostep as results
-        self.res2 = results
+        cls.res2 = results
 
 
 class TestGMMStTwostepNO(CheckGMM):
     #with Stata default `has_optimal_weights=False`
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         # compare to Stata default options, twostep GMM
-        self.params_tol = [5e-5, 5e-6]
-        self.bse_tol = [1e-6, 5e-5]
+        cls.params_tol = [5e-5, 5e-6]
+        cls.bse_tol = [1e-6, 5e-5]
         exog = exog_st  # with const at end
         start = OLS(endog, exog).fit().params
         nobs, k_instr = instrument.shape
@@ -298,19 +307,19 @@ class TestGMMStTwostepNO(CheckGMM):
         res10 = mod.fit(start, maxiter=2, inv_weights=w0inv,
                         optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
-        self.res1 = res10
+        cls.res1 = res10
 
         from .results_gmm_griliches import results_twostep as results
-        self.res2 = results
+        cls.res2 = results
 
 
 class TestGMMStOnestep(CheckGMM):
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         # compare to Stata default options, onestep GMM
-        self.params_tol = [5e-4, 5e-5]
-        self.bse_tol = [7e-3, 5e-4]
+        cls.params_tol = [5e-4, 5e-5]
+        cls.bse_tol = [7e-3, 5e-4]
         exog = exog_st  # with const at end
         start = OLS(endog, exog).fit().params
         nobs, k_instr = instrument.shape
@@ -321,10 +330,10 @@ class TestGMMStOnestep(CheckGMM):
         res = mod.fit(start, maxiter=0, inv_weights=w0inv,
                         optim_method='bfgs',
                         optim_args={'gtol':1e-6, 'disp': 0})
-        self.res1 = res
+        cls.res1 = res
 
         from .results_gmm_griliches import results_onestep as results
-        self.res2 = results
+        cls.res2 = results
 
     def test_bse_other(self):
         res1, res2 = self.res1, self.res2
@@ -343,10 +352,10 @@ class TestGMMStOnestepNO(CheckGMM):
     # matches Stats's defaults wargs={'centered':False}, has_optimal_weights=False
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         # compare to Stata default options, onestep GMM
-        self.params_tol = [1e-5, 1e-6]
-        self.bse_tol = [5e-6, 5e-7]
+        cls.params_tol = [1e-5, 1e-6]
+        cls.bse_tol = [5e-6, 5e-7]
         exog = exog_st  # with const at end
         start = OLS(endog, exog).fit().params
         nobs, k_instr = instrument.shape
@@ -357,19 +366,19 @@ class TestGMMStOnestepNO(CheckGMM):
         res = mod.fit(start, maxiter=0, inv_weights=w0inv,
                         optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
-        self.res1 = res
+        cls.res1 = res
 
         from .results_gmm_griliches import results_onestep as results
-        self.res2 = results
+        cls.res2 = results
 
 class TestGMMStOneiter(CheckGMM):
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         # compare to Stata default options, onestep GMM
         # this uses maxiter=1, one iteration in loop
-        self.params_tol = [5e-4, 5e-5]
-        self.bse_tol = [7e-3, 5e-4]
+        cls.params_tol = [5e-4, 5e-5]
+        cls.bse_tol = [7e-3, 5e-4]
         exog = exog_st  # with const at end
         start = OLS(endog, exog).fit().params
         nobs, k_instr = instrument.shape
@@ -379,10 +388,10 @@ class TestGMMStOneiter(CheckGMM):
         mod = gmm.IVGMM(endog, exog, instrument)
         res = mod.fit(start, maxiter=1, inv_weights=w0inv,
                         optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0})
-        self.res1 = res
+        cls.res1 = res
 
         from .results_gmm_griliches import results_onestep as results
-        self.res2 = results
+        cls.res2 = results
 
 
     def test_bse_other(self):
@@ -411,11 +420,11 @@ class TestGMMStOneiter(CheckGMM):
 class TestGMMStOneiterNO(CheckGMM):
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         # compare to Stata default options, onestep GMM
         # this uses maxiter=1, one iteration in loop
-        self.params_tol = [1e-5, 1e-6]
-        self.bse_tol = [5e-6, 5e-7]
+        cls.params_tol = [1e-5, 1e-6]
+        cls.bse_tol = [5e-6, 5e-7]
         exog = exog_st  # with const at end
         start = OLS(endog, exog).fit().params
         nobs, k_instr = instrument.shape
@@ -426,10 +435,10 @@ class TestGMMStOneiterNO(CheckGMM):
         res = mod.fit(start, maxiter=1, inv_weights=w0inv,
                         optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
-        self.res1 = res
+        cls.res1 = res
 
         from .results_gmm_griliches import results_onestep as results
-        self.res2 = results
+        cls.res2 = results
 
 
 #------------ Crosscheck subclasses
@@ -437,11 +446,11 @@ class TestGMMStOneiterNO(CheckGMM):
 class TestGMMStOneiterNO_Linear(CheckGMM):
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         # compare to Stata default options, onestep GMM
         # this uses maxiter=1, one iteration in loop
-        self.params_tol = [5e-9, 1e-9]
-        self.bse_tol = [5e-10, 1e-10]
+        cls.params_tol = [5e-9, 1e-9]
+        cls.bse_tol = [5e-10, 1e-10]
         exog = exog_st  # with const at end
         start = OLS(endog, exog).fit().params
         nobs, k_instr = instrument.shape
@@ -452,26 +461,26 @@ class TestGMMStOneiterNO_Linear(CheckGMM):
         res = mod.fit(start, maxiter=1, inv_weights=w0inv,
                         optim_method='bfgs', optim_args={'gtol':1e-8, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
-        self.res1 = res
+        cls.res1 = res
 
         mod = gmm.IVGMM(endog, exog, instrument)
         res = mod.fit(start, maxiter=1, inv_weights=w0inv,
                         optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
-        self.res3 = res
+        cls.res3 = res
 
         from .results_gmm_griliches import results_onestep as results
-        self.res2 = results
+        cls.res2 = results
 
 
 class TestGMMStOneiterNO_Nonlinear(CheckGMM):
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         # compare to Stata default options, onestep GMM
         # this uses maxiter=1, one iteration in loop
-        self.params_tol = [5e-5, 5e-6]
-        self.bse_tol = [5e-6, 1e-1]
+        cls.params_tol = [5e-5, 5e-6]
+        cls.bse_tol = [5e-6, 1e-1]
         exog = exog_st  # with const at end
         start = OLS(endog, exog).fit().params
         nobs, k_instr = instrument.shape
@@ -485,16 +494,16 @@ class TestGMMStOneiterNO_Nonlinear(CheckGMM):
         res = mod.fit(start, maxiter=1, inv_weights=w0inv,
                         optim_method='bfgs', optim_args={'gtol':1e-8, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
-        self.res1 = res
+        cls.res1 = res
 
         mod = gmm.IVGMM(endog, exog, instrument)
         res = mod.fit(start, maxiter=1, inv_weights=w0inv,
                         optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
-        self.res3 = res
+        cls.res3 = res
 
         from .results_gmm_griliches import results_onestep as results
-        self.res2 = results
+        cls.res2 = results
 
 
     def test_score(self):
@@ -515,10 +524,10 @@ class TestGMMStOneiterNO_Nonlinear(CheckGMM):
 class TestGMMStOneiterOLS_Linear(CheckGMM):
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         # replicating OLS by GMM - high agreement
-        self.params_tol = [1e-11, 1e-12]
-        self.bse_tol = [1e-12, 1e-12]
+        cls.params_tol = [1e-11, 1e-12]
+        cls.bse_tol = [1e-12, 1e-12]
         exog = exog_st  # with const at end
         res_ols = OLS(endog, exog).fit()
         #Note: start is irrelevant but required
@@ -538,11 +547,11 @@ class TestGMMStOneiterOLS_Linear(CheckGMM):
         # fix use of t distribution see #2495 comment
         res.use_t = True
         res.df_resid = res.nobs - len(res.params)
-        self.res1 = res
+        cls.res1 = res
 
         #from .results_gmm_griliches import results_onestep as results
-        #self.res2 = results
-        self.res2 = res_ols
+        #cls.res2 = results
+        cls.res2 = res_ols
 
 
 #------------------
@@ -552,7 +561,7 @@ class TestGMMSt2(object):
     # of options with Stats
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         # compare to Stata default options, iterative GMM
         exog = exog_st  # with const at end
         start = OLS(endog, exog).fit().params
@@ -564,10 +573,10 @@ class TestGMMSt2(object):
         res = mod.fit(start, maxiter=2, inv_weights=w0inv,
                       wargs={'ddof':0, 'centered':False},
                       optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0})
-        self.res1 = res
+        cls.res1 = res
 
         from .results_ivreg2_griliches import results_gmm2s_robust as results
-        self.res2 = results
+        cls.res2 = results
 
         # TODO: remove after testing, compare bse from 1 iteration
         # see test_basic
@@ -575,7 +584,7 @@ class TestGMMSt2(object):
         res = mod.fit(start, maxiter=1, inv_weights=w0inv,
                       wargs={'ddof':0, 'centered':False},
                       optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0})
-        self.res3 = res
+        cls.res3 = res
 
 
     def test_basic(self):
@@ -675,24 +684,25 @@ class CheckIV2SLS(object):
 
     def test_smoke(self):
         res1 = self.res1
-        res1.summary()
+        summ = res1.summary()
+        assert_equal(len(summ.tables[1]), len(res1.params) + 1)
 
 
 
 class TestIV2SLSSt1(CheckIV2SLS):
 
     @classmethod
-    def setup_class(self):
+    def setup_class(cls):
         exog = exog_st  # with const at end
         start = OLS(endog, exog).fit().params
         nobs, k_instr = instrument.shape
 
         mod = gmm.IV2SLS(endog, exog, instrument)
         res = mod.fit()
-        self.res1 = res
+        cls.res1 = res
 
         from .results_ivreg2_griliches import results_small as results
-        self.res2 = results
+        cls.res2 = results
 
 
     # See GH #2720
@@ -741,3 +751,53 @@ class TestIV2SLSSt1(CheckIV2SLS):
                     else:
                         assert_allclose(res.params, res2.params)
 
+def test_noconstant():
+    exog = exog_st[:, :-1]  # with const removed at end
+
+    mod = gmm.IV2SLS(endog, exog, instrument)
+    res = mod.fit()
+
+    assert_equal(res.fvalue, np.nan)
+    # smoke test
+    summ = res.summary()
+    assert_equal(len(summ.tables[1]), len(res.params) + 1)
+
+
+def test_gmm_basic():
+    # this currently tests mainly the param names, exog_names
+    # see #4340
+    cd = np.array([1.5, 1.5, 1.7, 2.2, 2.0, 1.8, 1.8, 2.2, 1.9, 1.6, 1.8, 2.2,
+                   2.0, 1.5, 1.1, 1.5, 1.4, 1.7, 1.42, 1.9])
+    dcd = np.array([0, 0.2 ,0.5, -0.2, -0.2, 0, 0.4, -0.3, -0.3, 0.2, 0.4,
+                    -0.2, -0.5, -0.4, 0.4, -0.1, 0.3, -0.28, 0.48, 0.2])
+    inst = np.column_stack((np.ones(len(cd)), cd))
+
+    class GMMbase(gmm.GMM):
+        def momcond(self, params):
+            p0, p1, p2, p3 = params
+            endog = self.endog[:, None]
+            exog = self.exog
+            inst = self.instrument
+
+            mom0 = (endog - p0 - p1 * exog) * inst
+            mom1 = ((endog - p0 - p1 * exog)**2 -
+                    p2 * (exog**(2 * p3)) / 12) * inst
+            g = np.column_stack((mom0, mom1))
+            return g
+
+    beta0 = np.array([0.1, 0.1, 0.01, 1])
+    res = GMMbase(endog=dcd, exog=cd, instrument=inst, k_moms=4,
+                  k_params=4).fit(beta0, optim_args={'disp': 0})
+    summ = res.summary()
+    assert_equal(len(summ.tables[1]), len(res.params) + 1)
+    pnames = ['p%2d' % i for i in range(len(res.params))]
+    assert_equal(res.model.exog_names, pnames)
+
+    # check set_param_names method
+    mod = GMMbase(endog=dcd, exog=cd, instrument=inst, k_moms=4,
+                  k_params=4)
+    # use arbitrary names
+    pnames = ['beta', 'gamma', 'psi', 'phi']
+    mod.set_param_names(pnames)
+    res1 = mod.fit(beta0, optim_args={'disp': 0})
+    assert_equal(res1.model.exog_names, pnames)

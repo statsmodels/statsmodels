@@ -149,7 +149,7 @@ class CheckRegressionResults(object):
 
 class TestOLS(CheckRegressionResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         from .results.results_regression import Longley
         data = longley.load()
         data.exog = add_constant(data.exog, prepend=False)
@@ -251,7 +251,7 @@ class TestOLS(CheckRegressionResults):
 
 class TestRTO(CheckRegressionResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         from .results.results_regression import LongleyRTO
         data = longley.load()
         res1 = OLS(data.endog, data.exog).fit()
@@ -268,7 +268,7 @@ class TestFtest(object):
     Tests f_test vs. RegressionResults
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = longley.load()
         data.exog = add_constant(data.exog, prepend=False)
         cls.res1 = OLS(data.endog, data.exog).fit()
@@ -296,7 +296,7 @@ class TestFTest2(object):
     Ftest1 is from statsmodels.  Results are from Rpy using R's car library.
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = longley.load()
         data.exog = add_constant(data.exog, prepend=False)
         res1 = OLS(data.endog, data.exog).fit()
@@ -328,7 +328,7 @@ class TestFtestQ(object):
     made up.  Test values taken from Stata.
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = longley.load()
         data.exog = add_constant(data.exog, prepend=False)
         res1 = OLS(data.endog, data.exog).fit()
@@ -359,7 +359,7 @@ class TestTtest(object):
 
         """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = longley.load()
         data.exog = add_constant(data.exog, prepend=False)
         cls.res1 = OLS(data.endog, data.exog).fit()
@@ -396,7 +396,7 @@ class TestTtest2(object):
     Results from RPy using 'car' package.
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         R = np.zeros(7)
         R[4:6] = [1, -1]
         data = longley.load()
@@ -426,7 +426,7 @@ class TestGLS(object):
     These test results were obtained by replication with R.
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         from .results.results_regression import LongleyGls
 
         data = longley.load()
@@ -489,7 +489,7 @@ class TestGLS_alt_sigma(CheckRegressionResults):
     Test that GLS with no argument is equivalent to OLS.
     """
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = longley.load()
         data.exog = add_constant(data.exog, prepend=False)
         ols_res = OLS(data.endog, data.exog).fit()
@@ -519,7 +519,7 @@ class TestGLS_alt_sigma(CheckRegressionResults):
 class TestLM(object):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         # TODO: Test HAC method
         X = np.random.randn(100, 3)
         b = np.ones((3, 1))
@@ -602,7 +602,7 @@ class TestLM(object):
 class TestOLS_GLS_WLS_equivalence(object):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = longley.load()
         data.exog = add_constant(data.exog, prepend=False)
         y = data.endog
@@ -648,7 +648,7 @@ class TestGLS_WLS_equivalence(TestOLS_GLS_WLS_equivalence):
     # reuse test methods
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = longley.load()
         data.exog = add_constant(data.exog, prepend=False)
         y = data.endog
@@ -675,7 +675,7 @@ class TestGLS_WLS_equivalence(TestOLS_GLS_WLS_equivalence):
 
 class TestNonFit(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = longley.load()
         data.exog = add_constant(data.exog, prepend=False)
         cls.endog = data.endog
@@ -689,7 +689,7 @@ class TestNonFit(object):
 
 class TestWLS_CornerCases(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.exog = np.ones((1,))
         cls.endog = np.ones((1,))
         weights = 1
@@ -703,7 +703,8 @@ class TestWLS_CornerCases(object):
 class TestWLSExogWeights(CheckRegressionResults):
     # Test WLS with Greene's credit card data
     # reg avgexp age income incomesq ownrent [aw=1/incomesq]
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
         from .results.results_regression import CCardWLS
         from statsmodels.datasets.ccard import load
         dta = load()
@@ -715,15 +716,15 @@ class TestWLSExogWeights(CheckRegressionResults):
         # for comparison with stata analytic weights
         scaled_weights = ((weights * nobs) / weights.sum())
 
-        self.res1 = WLS(dta.endog, dta.exog, weights=scaled_weights).fit()
-        self.res2 = CCardWLS()
-        self.res2.wresid = scaled_weights ** .5 * self.res2.resid
+        cls.res1 = WLS(dta.endog, dta.exog, weights=scaled_weights).fit()
+        cls.res2 = CCardWLS()
+        cls.res2.wresid = scaled_weights ** .5 * cls.res2.resid
 
         # correction because we use different definition for loglike/llf
-        corr_ic = 2 * (self.res1.llf - self.res2.llf)
-        self.res2.aic -= corr_ic
-        self.res2.bic -= corr_ic
-        self.res2.llf += 0.5 * np.sum(np.log(self.res1.model.weights))
+        corr_ic = 2 * (cls.res1.llf - cls.res2.llf)
+        cls.res2.aic -= corr_ic
+        cls.res2.bic -= corr_ic
+        cls.res2.llf += 0.5 * np.sum(np.log(cls.res1.model.weights))
 
 
 def test_wls_example():
@@ -754,7 +755,7 @@ def test_wls_tss():
 
 class TestWLSScalarVsArray(CheckRegressionResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         from statsmodels.datasets.longley import load
         dta = load()
         dta.exog = add_constant(dta.exog, prepend=True)
@@ -766,7 +767,7 @@ class TestWLSScalarVsArray(CheckRegressionResults):
 
 #class TestWLS_GLS(CheckRegressionResults):
 #    @classmethod
-#    def setupClass(cls):
+#    def setup_class(cls):
 #        from statsmodels.datasets.ccard import load
 #        data = load()
 #        cls.res1 = WLS(data.endog, data.exog, weights = 1/data.exog[:,2]).fit()
@@ -790,7 +791,7 @@ def test_wls_missing():
 
 class TestWLS_OLS(CheckRegressionResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = longley.load()
         data.exog = add_constant(data.exog, prepend=False)
         cls.res1 = OLS(data.endog, data.exog).fit()
@@ -802,7 +803,7 @@ class TestWLS_OLS(CheckRegressionResults):
 
 class TestGLS_OLS(CheckRegressionResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = longley.load()
         data.exog = add_constant(data.exog, prepend=False)
         cls.res1 = GLS(data.endog, data.exog).fit()
@@ -830,7 +831,7 @@ class TestGLS_OLS(CheckRegressionResults):
 
 class TestYuleWalker(object):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         from statsmodels.datasets.sunspots import load
         data = load()
         cls.rho, cls.sigma = yule_walker(data.endog, order=4,
@@ -844,7 +845,7 @@ class TestYuleWalker(object):
 
 class TestDataDimensions(CheckRegressionResults):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         np.random.seed(54321)
         cls.endog_n_ = np.random.uniform(0, 20, size=30)
         cls.endog_n_one = cls.endog_n_[:, None]
@@ -866,7 +867,8 @@ class TestDataDimensions(CheckRegressionResults):
 
 class TestGLS_large_data(TestDataDimensions):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
+        super(TestGLS_large_data, cls).setup_class()
         nobs = 1000
         y = np.random.randn(nobs, 1)
         X = np.random.randn(nobs, 20)
@@ -889,8 +891,8 @@ class TestGLS_large_data(TestDataDimensions):
 
 class TestNxNx(TestDataDimensions):
     @classmethod
-    def setupClass(cls):
-        super(TestNxNx, cls).setupClass()
+    def setup_class(cls):
+        super(TestNxNx, cls).setup_class()
         cls.mod2 = OLS(cls.endog_n_, cls.exog_n_)
         cls.mod2.df_model += 1
         cls.res2 = cls.mod2.fit()
@@ -898,8 +900,8 @@ class TestNxNx(TestDataDimensions):
 
 class TestNxOneNx(TestDataDimensions):
     @classmethod
-    def setupClass(cls):
-        super(TestNxOneNx, cls).setupClass()
+    def setup_class(cls):
+        super(TestNxOneNx, cls).setup_class()
         cls.mod2 = OLS(cls.endog_n_one, cls.exog_n_)
         cls.mod2.df_model += 1
         cls.res2 = cls.mod2.fit()
@@ -907,8 +909,8 @@ class TestNxOneNx(TestDataDimensions):
 
 class TestNxNxOne(TestDataDimensions):
     @classmethod
-    def setupClass(cls):
-        super(TestNxNxOne, cls).setupClass()
+    def setup_class(cls):
+        super(TestNxNxOne, cls).setup_class()
         cls.mod2 = OLS(cls.endog_n_, cls.exog_n_one)
         cls.mod2.df_model += 1
         cls.res2 = cls.mod2.fit()
@@ -990,14 +992,18 @@ def test_summary():
 \\bottomrule
 \\end{tabular}
 %\\caption{OLS Regression Results}
-\\end{center}"""
+\\end{center}
+
+Warnings: \\newline
+ [1] Standard Errors assume that the covariance matrix of the errors is correctly specified. \\newline
+ [2] The condition number is large, 4.86e+09. This might indicate that there are \\newline
+ strong multicollinearity or other numerical problems."""
     assert_equal(table, expected)
 
 
 class TestRegularizedFit(object):
 
-    # Make sure there are no issues when there are no selected
-    # variables.
+    # Make sure there are no problems when no variables are selected.
     def test_empty_model(self):
 
         np.random.seed(742)
@@ -1005,10 +1011,10 @@ class TestRegularizedFit(object):
         endog = np.random.normal(size=n)
         exog = np.random.normal(size=(n, 3))
 
-        model = OLS(endog, exog)
-        result = model.fit_regularized(alpha=1000)
-
-        assert_equal(result.params, 0.)
+        for cls in OLS, WLS, GLS:
+            model = cls(endog, exog)
+            result = model.fit_regularized(alpha=1000)
+            assert_equal(result.params, 0.)
 
     def test_regularized(self):
 
@@ -1039,16 +1045,49 @@ class TestRegularizedFit(object):
             exog = exog - exog.mean(0)
             exog /= exog.std(0, ddof=1)
 
-            mod = OLS(endog, exog)
-            rslt = mod.fit_regularized(L1_wt=L1_wt, alpha=lam)
-            assert_almost_equal(rslt.params, params, decimal=3)
+            for cls in OLS, WLS, GLS:
+                mod = cls(endog, exog)
+                rslt = mod.fit_regularized(L1_wt=L1_wt, alpha=lam)
+                assert_almost_equal(rslt.params, params, decimal=3)
 
-            # Smoke test for summary
-            rslt.summary()
+                # Smoke test for summary
+                rslt.summary()
 
-            # Smoke test for profile likeihood
-            mod.fit_regularized(L1_wt=L1_wt, alpha=lam,
-                                profile_scale=True)
+                # Smoke test for profile likeihood
+                mod.fit_regularized(L1_wt=L1_wt, alpha=lam,
+                                    profile_scale=True)
+
+    def test_regularized_weights(self):
+
+        np.random.seed(1432)
+        exog1 = np.random.normal(size=(100, 3))
+        endog1 = exog1[:, 0] + exog1[:, 1] + np.random.normal(size=100)
+        exog2 = np.random.normal(size=(100, 3))
+        endog2 = exog2[:, 0] + exog2[:, 1] + np.random.normal(size=100)
+
+        exog_a = np.vstack((exog1, exog1, exog2))
+        endog_a = np.concatenate((endog1, endog1, endog2))
+
+        # Should be equivalent to exog_a, endog_a.
+        exog_b = np.vstack((exog1, exog2))
+        endog_b = np.concatenate((endog1, endog2))
+        wgts = np.ones(200)
+        wgts[0:100] = 2
+        sigma = np.diag(1/wgts)
+
+        for L1_wt in 0, 0.5, 1:
+            for alpha in 0, 1:
+                mod1 = OLS(endog_a, exog_a)
+                rslt1 = mod1.fit_regularized(L1_wt=L1_wt, alpha=alpha)
+
+                mod2 = WLS(endog_b, exog_b, weights=wgts)
+                rslt2 = mod2.fit_regularized(L1_wt=L1_wt, alpha=alpha)
+
+                mod3 = GLS(endog_b, exog_b, sigma=sigma)
+                rslt3 = mod3.fit_regularized(L1_wt=L1_wt, alpha=alpha)
+
+                assert_almost_equal(rslt1.params, rslt2.params, decimal=3)
+                assert_almost_equal(rslt1.params, rslt3.params, decimal=3)
 
 
 def test_formula_missing_cat():
@@ -1091,6 +1130,7 @@ def test_missing_formula_predict():
 
 
 def test_fvalue_implicit_constant():
+    # if constant is implicit, return nan see #2444
     nobs = 100
     np.random.seed(2)
     x = np.random.randn(nobs, 1)
@@ -1110,6 +1150,26 @@ def test_fvalue_implicit_constant():
     res.summary()
 
 
+def test_fvalue_only_constant():
+    # if only constant in model, return nan see #3642
+    nobs = 20
+    np.random.seed(2)
+    x = np.ones(nobs)
+    y = np.random.randn(nobs)
+
+    from statsmodels.regression.linear_model import OLS, WLS
+
+    res = OLS(y, x).fit(cov_type='hac', cov_kwds={'maxlags': 3})
+    assert_(np.isnan(res.fvalue))
+    assert_(np.isnan(res.f_pvalue))
+    res.summary()
+
+    res = WLS(y, x).fit(cov_type='HC1')
+    assert_(np.isnan(res.fvalue))
+    assert_(np.isnan(res.f_pvalue))
+    res.summary()
+
+
 def test_ridge():
     n = 100
     p = 5
@@ -1117,12 +1177,19 @@ def test_ridge():
     xmat = np.random.normal(size=(n, p))
     yvec = xmat.sum(1) + np.random.normal(size=n)
 
-    for alpha in [1., np.ones(p), 10, 10*np.ones(p)]:
-        model1 = OLS(yvec, xmat)
-        result1 = model1._fit_ridge(alpha=1.)
-        model2 = OLS(yvec, xmat)
-        result2 = model2.fit_regularized(alpha=1., L1_wt=0)
-        assert_allclose(result1.params, result2.params)
+    v = np.ones(p)
+    v[0] = 0
+
+    for a in (0, 1, 10):
+        for alpha in (a, a*np.ones(p), a*v):
+            model1 = OLS(yvec, xmat)
+            result1 = model1._fit_ridge(alpha=alpha)
+            model2 = OLS(yvec, xmat)
+            result2 = model2.fit_regularized(alpha=alpha, L1_wt=0)
+            assert_allclose(result1.params, result2.params)
+            model3 = OLS(yvec, xmat)
+            result3 = model3.fit_regularized(alpha=alpha, L1_wt=1e-10)
+            assert_allclose(result1.params, result3.params)
 
     fv1 = result1.fittedvalues
     fv2 = np.dot(xmat, result1.params)
@@ -1134,14 +1201,37 @@ def test_regularized_refit():
     p = 5
     np.random.seed(3132)
     xmat = np.random.normal(size=(n, p))
-    yvec = xmat.sum(1) + np.random.normal(size=n)
+    # covariates 0 and 2 matter
+    yvec = xmat[:, 0] + xmat[:, 2] + np.random.normal(size=n)
     model1 = OLS(yvec, xmat)
     result1 = model1.fit_regularized(alpha=2., L1_wt=0.5, refit=True)
-    model2 = OLS(yvec, xmat)
-    result2 = model2.fit_regularized(alpha=2., L1_wt=0.5, refit=True)
-    assert_allclose(result1.params, result2.params)
-    assert_allclose(result1.bse, result2.bse)
+    model2 = OLS(yvec, xmat[:, [0, 2]])
+    result2 = model2.fit()
+    ii = [0, 2]
+    assert_allclose(result1.params[ii], result2.params)
+    assert_allclose(result1.bse[ii], result2.bse)
 
+
+def test_regularized_predict():
+    n = 100
+    p = 5
+    np.random.seed(3132)
+    xmat = np.random.normal(size=(n, p))
+    yvec = xmat.sum(1) + np.random.normal(size=n)
+    wgt = np.random.uniform(1, 2, n)
+
+    for klass in WLS, GLS:
+        model1 = klass(yvec, xmat,  weights=wgt)
+        result1 = model1.fit_regularized(alpha=2., L1_wt=0.5, refit=True)
+
+        params = result1.params
+        fittedvalues = np.dot(xmat, params)
+        pr = model1.predict(result1.params)
+        assert_allclose(fittedvalues, pr)
+        assert_allclose(result1.fittedvalues, pr)
+
+        pr = result1.predict()
+        assert_allclose(fittedvalues, pr)
 
 def test_regularized_options():
     n = 100
@@ -1158,10 +1248,5 @@ def test_regularized_options():
 
 
 if __name__ == "__main__":
-
-    import nose
-    # run_module_suite()
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb', '--pdb-failure'],
-                   exit=False)
-
-    # nose.runmodule(argv=[__file__,'-vvs','-x'], exit=False) #, '--pdb'
+    import pytest
+    pytest.main([__file__, '-vvs', '-x', '--pdb'])

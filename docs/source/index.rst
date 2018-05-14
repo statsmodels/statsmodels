@@ -110,9 +110,11 @@ Table of Contents
    rlm
    mixed_linear
    discretemod
+   mixed_glm
    anova
    tsa
    statespace
+   vector_ar
    duration
    stats
    nonparametric
@@ -136,4 +138,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

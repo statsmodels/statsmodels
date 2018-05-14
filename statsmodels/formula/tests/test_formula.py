@@ -5,10 +5,11 @@ from statsmodels.formula.api import ols
 from statsmodels.formula.formulatools import make_hypotheses_matrices
 from statsmodels.tools import add_constant
 from statsmodels.datasets.longley import load, load_pandas
+from statsmodels.datasets import cpunish
 
 import numpy.testing as npt
 from statsmodels.tools.testing import assert_equal
-from numpy.testing.utils import WarningManager
+import numpy as np
 
 
 longley_formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
@@ -16,7 +17,7 @@ longley_formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
 class CheckFormulaOLS(object):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.data = load()
 
     def test_endog_names(self):
@@ -34,38 +35,34 @@ class CheckFormulaOLS(object):
 
     def test_summary(self):
         # smoke test
-        warn_ctx = WarningManager()
-        warn_ctx.__enter__()
-        try:
+        with warnings.catch_warnings():
             warnings.filterwarnings("ignore",
                                     "kurtosistest only valid for n>=20")
             self.model.fit().summary()
-        finally:
-            warn_ctx.__exit__()
 
 
 class TestFormulaPandas(CheckFormulaOLS):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = load_pandas().data
         cls.model = ols(longley_formula, data)
-        super(TestFormulaPandas, cls).setupClass()
+        super(TestFormulaPandas, cls).setup_class()
 
 
 class TestFormulaDict(CheckFormulaOLS):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = dict((k, v.tolist()) for k, v in iteritems(load_pandas().data))
         cls.model = ols(longley_formula, data)
-        super(TestFormulaDict, cls).setupClass()
+        super(TestFormulaDict, cls).setup_class()
 
 
 class TestFormulaRecArray(CheckFormulaOLS):
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         data = load().data
         cls.model = ols(longley_formula, data)
-        super(TestFormulaRecArray, cls).setupClass()
+        super(TestFormulaRecArray, cls).setup_class()
 
 
 def test_tests():
@@ -123,3 +120,52 @@ def test_formula_predict_series():
     result = results.predict({"x": [1, 2, 3]})
     expected = pd.Series([1., 2., 3.], index=[0, 1, 2])
     tm.assert_series_equal(result, expected)
+
+
+def test_patsy_lazy_dict():
+    class LazyDict(dict):
+        def __init__(self, data):
+            self.data = data
+
+        def __missing__(self, key):
+            return np.array(self.data[key])
+
+    data = cpunish.load_pandas().data
+    data = LazyDict(data)
+    res = ols('EXECUTIONS ~ SOUTH + INCOME', data=data).fit()
+
+    res2 = res.predict(data)
+    npt.assert_allclose(res.fittedvalues, res2)
+
+    data = cpunish.load_pandas().data
+    data['INCOME'].loc[0] = None
+
+    data = LazyDict(data)
+    data.index = cpunish.load_pandas().data.index
+    res = ols('EXECUTIONS ~ SOUTH + INCOME', data=data).fit()
+
+    res2 = res.predict(data)
+    assert_equal(res.fittedvalues, res2)  # Should lose a record
+    assert_equal(len(res2) + 1, len(cpunish.load_pandas().data))
+
+
+def test_patsy_missing_data():
+    # Test pandas-style first
+    data = cpunish.load_pandas().data
+    data['INCOME'].loc[0] = None
+    res = ols('EXECUTIONS ~ SOUTH + INCOME', data=data).fit()
+    res2 = res.predict(data)
+    # First record will be dropped during fit, but not during predict
+    assert_equal(res.fittedvalues, res2[1:])
+
+    # Non-pandas version
+    data = cpunish.load_pandas().data
+    data['INCOME'].loc[0] = None
+    data = data.to_records(index=False)
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        res2 = res.predict(data)
+        assert_equal(repr(w[-1].message),
+                     "ValueWarning('nan values have been dropped',)")
+    # Frist record will be dropped in both cases
+    assert_equal(res.fittedvalues, res2)

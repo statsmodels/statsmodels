@@ -277,7 +277,7 @@ methods and attributes.
     data = sm.datasets.china_smoking.load()
 
     mat = np.asarray(data.data)
-    tables = [np.reshape(x, (2, 2)) for x in mat]
+    tables = [np.reshape(x.tolist()[1:], (2, 2)) for x in mat]
 
     st = sm.stats.StratifiedTable(tables)
     print(st.summary())
@@ -534,7 +534,7 @@ See also
 Scipy_ has several functions for analyzing contingency tables,
 including Fisher's exact test which is not currently in Statsmodels.
 
-.. _Scipy: http://docs.scipy.org/doc/scipy-0.14.0/reference/stats.html#contingency-table-functions
+.. _Scipy: https://docs.scipy.org/doc/scipy-0.18.0/reference/stats.html#contingency-table-functions
 
 The :class:`MultipleResponseTable` functionality in this package is for the most part a direct translation of the functionality in the R MRCV_ library.
 

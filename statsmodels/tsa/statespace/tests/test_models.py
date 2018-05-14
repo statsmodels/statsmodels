@@ -12,10 +12,10 @@ import os
 import re
 
 import warnings
-from statsmodels.tsa.statespace import mlemodel
+from statsmodels.tsa.statespace import mlemodel, sarimax
 from statsmodels import datasets
+from statsmodels.compat.testing import SkipTest
 from numpy.testing import assert_almost_equal, assert_equal, assert_allclose, assert_raises
-from nose.exc import SkipTest
 from .results import results_sarimax
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -194,3 +194,128 @@ class TestIntercepts(object):
             self.results.smoothed_measurement_disturbance_cov.diagonal(),
             self.desired[['Veps1', 'Veps2', 'Veps3']]
         )
+
+
+class LargeStateCovAR1(mlemodel.MLEModel):
+    """
+    Test class for k_posdef > k_states (which usually don't get tested in
+    other models).
+
+    This is just an AR(1) model with an extra unused state innovation
+    """
+    def __init__(self, endog, **kwargs):
+        k_states = 1
+        k_posdef = 2
+        super(LargeStateCovAR1, self).__init__(
+            endog, k_states=k_states, k_posdef=k_posdef, **kwargs)
+        self['design', 0, 0] = 1
+        self['selection', 0, 0] = 1
+        self['state_cov', 1, 1] = 1
+        self.initialize_stationary()
+
+    @property
+    def param_names(self):
+        return ['phi', 'sigma2']
+
+    @property
+    def start_params(self):
+        return [0.5, 1]
+
+    def update(self, params, **kwargs):
+        params = super(LargeStateCovAR1, self).update(params, **kwargs)
+
+        self['transition', 0, 0] = params[0]
+        self['state_cov', 0, 0] = params[1]
+
+
+def test_large_kposdef():
+    assert_raises(ValueError, LargeStateCovAR1, np.arange(10))
+
+
+class TestLargeStateCovAR1(object):
+    @classmethod
+    def setup_class(cls):
+        # TODO This test is skipped since an exception is currently raised if
+        # k_posdef > k_states. However, this test could be used if models of
+        # those types were allowed.
+        raise SkipTest
+
+        # Data: just some sample data
+        endog = [0.2, -1.5, -.3, -.1, 1.5, 0.2, -0.3, 0.2, 0.5, 0.8]
+
+        # Params
+        params = [0.5, 1]
+
+        # Desired model: AR(1)
+        mod_desired = sarimax.SARIMAX(endog)
+        cls.res_desired = mod_desired.smooth(params)
+
+        # Test class
+        mod = LargeStateCovAR1(endog)
+        cls.res = mod.smooth(params)
+
+    def test_dimensions(self):
+        assert_equal(self.res.filter_results.k_states, 1)
+        assert_equal(self.res.filter_results.k_posdef, 2)
+        assert_equal(self.res.smoothed_state_disturbance.shape, (2, 10))
+
+        assert_equal(self.res_desired.filter_results.k_states, 1)
+        assert_equal(self.res_desired.filter_results.k_posdef, 1)
+        assert_equal(self.res_desired.smoothed_state_disturbance.shape,
+                     (1, 10))
+
+    def test_loglike(self):
+        assert_allclose(self.res.llf_obs, self.res_desired.llf_obs)
+
+    def test_scaled_smoothed_estimator(self):
+        assert_allclose(self.res.scaled_smoothed_estimator[0],
+                        self.res_desired.scaled_smoothed_estimator[0])
+
+    def test_scaled_smoothed_estimator_cov(self):
+        assert_allclose(self.res.scaled_smoothed_estimator_cov[0],
+                        self.res_desired.scaled_smoothed_estimator_cov[0])
+
+    def test_forecasts(self):
+        assert_allclose(self.res.forecasts, self.res_desired.forecasts)
+
+    def test_forecasts_error(self):
+        assert_allclose(self.res.forecasts_error,
+                        self.res_desired.forecasts_error)
+
+    def test_forecasts_error_cov(self):
+        assert_allclose(self.res.forecasts_error_cov,
+                        self.res_desired.forecasts_error_cov)
+
+    def test_predicted_states(self):
+        assert_allclose(self.res.predicted_state[0],
+                        self.res_desired.predicted_state[0])
+
+    def test_predicted_states_cov(self):
+        assert_allclose(self.res.predicted_state_cov[0, 0],
+                        self.res_desired.predicted_state_cov[0, 0])
+
+    def test_smoothed_states(self):
+        assert_allclose(self.res.smoothed_state[0],
+                        self.res_desired.smoothed_state[0])
+
+    def test_smoothed_states_cov(self):
+        assert_allclose(self.res.smoothed_state_cov[0, 0],
+                        self.res_desired.smoothed_state_cov[0, 0])
+
+    def test_smoothed_state_disturbance(self):
+        assert_allclose(self.res.smoothed_state_disturbance[0],
+                        self.res_desired.smoothed_state_disturbance[0])
+        assert_allclose(self.res.smoothed_state_disturbance[1], 0)
+
+    def test_smoothed_state_disturbance_cov(self):
+        assert_allclose(self.res.smoothed_state_disturbance_cov[0, 0],
+                        self.res_desired.smoothed_state_disturbance_cov[0, 0])
+        assert_allclose(self.res.smoothed_state_disturbance[1, 1], 0)
+
+    def test_smoothed_measurement_disturbance(self):
+        assert_allclose(self.res.smoothed_measurement_disturbance,
+                        self.res_desired.smoothed_measurement_disturbance)
+
+    def test_smoothed_measurement_disturbance_cov(self):
+        assert_allclose(self.res.smoothed_measurement_disturbance_cov,
+                        self.res_desired.smoothed_measurement_disturbance_cov)

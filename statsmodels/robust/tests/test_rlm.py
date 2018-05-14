@@ -1,13 +1,14 @@
 """
 Test functions for sm.rlm
 """
-
+from statsmodels.compat.testing import SkipTest
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_allclose
+import pytest
 from scipy import stats
 import statsmodels.api as sm
 from statsmodels.robust.robust_linear_model import RLM
-from nose import SkipTest
+
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -93,23 +94,24 @@ class CheckRlmResultsMixin(object):
 
 
 class TestRlm(CheckRlmResultsMixin):
-    from statsmodels.datasets.stackloss import load
-    data = load()   # class attributes for subclasses
-    data.exog = sm.add_constant(data.exog, prepend=False)
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.datasets.stackloss import load
+        cls.data = load()  # class attributes for subclasses
+        cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
         # Test precisions
-        self.decimal_standarderrors = DECIMAL_1
-        self.decimal_scale = DECIMAL_3
+        cls.decimal_standarderrors = DECIMAL_1
+        cls.decimal_scale = DECIMAL_3
 
-        results = RLM(self.data.endog, self.data.exog,\
+        results = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.HuberT()).fit()   # default M
-        h2 = RLM(self.data.endog, self.data.exog,\
+        h2 = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.HuberT()).fit(cov="H2").bcov_scaled
-        h3 = RLM(self.data.endog, self.data.exog,\
+        h3 = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.HuberT()).fit(cov="H3").bcov_scaled
-        self.res1 = results
-        self.res1.h2 = h2
-        self.res1.h3 = h3
+        cls.res1 = results
+        cls.res1.h2 = h2
+        cls.res1.h3 = h3
 
 
     def setup(self):
@@ -124,21 +126,23 @@ class TestRlm(CheckRlmResultsMixin):
         self.res1.summary()
 
 class TestHampel(TestRlm):
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
+        super(TestHampel, cls).setup_class()
         # Test precisions
-        self.decimal_standarderrors = DECIMAL_2
-        self.decimal_scale = DECIMAL_3
-        self.decimal_bcov_scaled = DECIMAL_3
+        cls.decimal_standarderrors = DECIMAL_2
+        cls.decimal_scale = DECIMAL_3
+        cls.decimal_bcov_scaled = DECIMAL_3
 
-        results = RLM(self.data.endog, self.data.exog,
+        results = RLM(cls.data.endog, cls.data.exog,
                     M=sm.robust.norms.Hampel()).fit()
-        h2 = RLM(self.data.endog, self.data.exog,\
+        h2 = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.Hampel()).fit(cov="H2").bcov_scaled
-        h3 = RLM(self.data.endog, self.data.exog,\
+        h3 = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.Hampel()).fit(cov="H3").bcov_scaled
-        self.res1 = results
-        self.res1.h2 = h2
-        self.res1.h3 = h3
+        cls.res1 = results
+        cls.res1.h2 = h2
+        cls.res1.h3 = h3
 
     def setup(self):
 #        self.res2 = RModel(self.data.endog[:,None], self.data.exog,
@@ -149,21 +153,23 @@ class TestHampel(TestRlm):
 
 
 class TestRlmBisquare(TestRlm):
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
+        super(TestRlmBisquare, cls).setup_class()
         # Test precisions
-        self.decimal_standarderrors = DECIMAL_1
+        cls.decimal_standarderrors = DECIMAL_1
 
-        results = RLM(self.data.endog, self.data.exog,
+        results = RLM(cls.data.endog, cls.data.exog,
                     M=sm.robust.norms.TukeyBiweight()).fit()
-        h2 = RLM(self.data.endog, self.data.exog,\
+        h2 = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.TukeyBiweight()).fit(cov=\
                     "H2").bcov_scaled
-        h3 = RLM(self.data.endog, self.data.exog,\
+        h3 = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.TukeyBiweight()).fit(cov=\
                     "H3").bcov_scaled
-        self.res1 = results
-        self.res1.h2 = h2
-        self.res1.h3 = h3
+        cls.res1 = results
+        cls.res1.h2 = h2
+        cls.res1.h3 = h3
 
     def setup(self):
 #        self.res2 = RModel(self.data.endog, self.data.exog,
@@ -173,18 +179,20 @@ class TestRlmBisquare(TestRlm):
 
 
 class TestRlmAndrews(TestRlm):
-    def __init__(self):
-        results = RLM(self.data.endog, self.data.exog,
+    @classmethod
+    def setup_class(cls):
+        super(TestRlmAndrews, cls).setup_class()
+        results = RLM(cls.data.endog, cls.data.exog,
                     M=sm.robust.norms.AndrewWave()).fit()
-        h2 = RLM(self.data.endog, self.data.exog,
+        h2 = RLM(cls.data.endog, cls.data.exog,
                     M=sm.robust.norms.AndrewWave()).fit(cov=\
                     "H2").bcov_scaled
-        h3 = RLM(self.data.endog, self.data.exog,
+        h3 = RLM(cls.data.endog, cls.data.exog,
                     M=sm.robust.norms.AndrewWave()).fit(cov=\
                     "H3").bcov_scaled
-        self.res1 = results
-        self.res1.h2 = h2
-        self.res1.h3 = h3
+        cls.res1 = results
+        cls.res1.h2 = h2
+        cls.res1.h3 = h3
 
     def setup(self):
         from .results.results_rlm import Andrews
@@ -193,86 +201,93 @@ class TestRlmAndrews(TestRlm):
 ### tests with Huber scaling
 
 class TestRlmHuber(CheckRlmResultsMixin):
-    from statsmodels.datasets.stackloss import load
-    data = load()
-    data.exog = sm.add_constant(data.exog, prepend=False)
-    def __init__(self):
-        results = RLM(self.data.endog, self.data.exog,\
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.datasets.stackloss import load
+        cls.data = load()
+        cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
+        results = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.HuberT()).fit(scale_est=\
                     sm.robust.scale.HuberScale())
-        h2 = RLM(self.data.endog, self.data.exog,\
+        h2 = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.HuberT()).fit(cov="H2",
                     scale_est=sm.robust.scale.HuberScale()).bcov_scaled
-        h3 = RLM(self.data.endog, self.data.exog,\
+        h3 = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.HuberT()).fit(cov="H3",
                     scale_est=sm.robust.scale.HuberScale()).bcov_scaled
-        self.res1 = results
-        self.res1.h2 = h2
-        self.res1.h3 = h3
+        cls.res1 = results
+        cls.res1.h2 = h2
+        cls.res1.h3 = h3
 
     def setup(self):
         from .results.results_rlm import HuberHuber
         self.res2 = HuberHuber()
 
 class TestHampelHuber(TestRlm):
-    def __init__(self):
-        results = RLM(self.data.endog, self.data.exog,
+    @classmethod
+    def setup_class(cls):
+        super(TestHampelHuber, cls).setup_class()
+        results = RLM(cls.data.endog, cls.data.exog,
                     M=sm.robust.norms.Hampel()).fit(scale_est=\
                     sm.robust.scale.HuberScale())
-        h2 = RLM(self.data.endog, self.data.exog,\
+        h2 = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.Hampel()).fit(cov="H2",
                     scale_est=\
                     sm.robust.scale.HuberScale()).bcov_scaled
-        h3 = RLM(self.data.endog, self.data.exog,\
+        h3 = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.Hampel()).fit(cov="H3",
                     scale_est=\
                     sm.robust.scale.HuberScale()).bcov_scaled
-        self.res1 = results
-        self.res1.h2 = h2
-        self.res1.h3 = h3
+        cls.res1 = results
+        cls.res1.h2 = h2
+        cls.res1.h3 = h3
 
     def setup(self):
         from .results.results_rlm import HampelHuber
         self.res2 = HampelHuber()
 
 class TestRlmBisquareHuber(TestRlm):
-    def __init__(self):
-        results = RLM(self.data.endog, self.data.exog,
+    @classmethod
+    def setup_class(cls):
+        super(TestRlmBisquareHuber, cls).setup_class()
+        results = RLM(cls.data.endog, cls.data.exog,
                     M=sm.robust.norms.TukeyBiweight()).fit(\
                     scale_est=\
                     sm.robust.scale.HuberScale())
-        h2 = RLM(self.data.endog, self.data.exog,\
+        h2 = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.TukeyBiweight()).fit(cov=\
                     "H2", scale_est=\
                     sm.robust.scale.HuberScale()).bcov_scaled
-        h3 = RLM(self.data.endog, self.data.exog,\
+        h3 = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.TukeyBiweight()).fit(cov=\
                     "H3", scale_est=\
                     sm.robust.scale.HuberScale()).bcov_scaled
-        self.res1 = results
-        self.res1.h2 = h2
-        self.res1.h3 = h3
+        cls.res1 = results
+        cls.res1.h2 = h2
+        cls.res1.h3 = h3
 
     def setup(self):
         from .results.results_rlm import BisquareHuber
         self.res2 = BisquareHuber()
 
 class TestRlmAndrewsHuber(TestRlm):
-    def __init__(self):
-        results = RLM(self.data.endog, self.data.exog,
+    @classmethod
+    def setup_class(cls):
+        super(TestRlmAndrewsHuber, cls).setup_class()
+        results = RLM(cls.data.endog, cls.data.exog,
                     M=sm.robust.norms.AndrewWave()).fit(scale_est=\
                     sm.robust.scale.HuberScale())
-        h2 = RLM(self.data.endog, self.data.exog,
+        h2 = RLM(cls.data.endog, cls.data.exog,
                     M=sm.robust.norms.AndrewWave()).fit(cov=\
                     "H2", scale_est=\
                     sm.robust.scale.HuberScale()).bcov_scaled
-        h3 = RLM(self.data.endog, self.data.exog,
+        h3 = RLM(cls.data.endog, cls.data.exog,
                     M=sm.robust.norms.AndrewWave()).fit(cov=\
                     "H3", scale_est=\
                     sm.robust.scale.HuberScale()).bcov_scaled
-        self.res1 = results
-        self.res1.h2 = h2
-        self.res1.h3 = h3
+        cls.res1 = results
+        cls.res1.h2 = h2
+        cls.res1.h3 = h3
 
     def setup(self):
         from .results.results_rlm import AndrewsHuber
@@ -280,23 +295,24 @@ class TestRlmAndrewsHuber(TestRlm):
 
 class TestRlmSresid(CheckRlmResultsMixin):
     #Check GH:187
-    from statsmodels.datasets.stackloss import load
-    data = load()   # class attributes for subclasses
-    data.exog = sm.add_constant(data.exog, prepend=False)
-    def __init__(self):
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.datasets.stackloss import load
+        cls.data = load()  # class attributes for subclasses
+        cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
         # Test precisions
-        self.decimal_standarderrors = DECIMAL_1
-        self.decimal_scale = DECIMAL_3
+        cls.decimal_standarderrors = DECIMAL_1
+        cls.decimal_scale = DECIMAL_3
 
-        results = RLM(self.data.endog, self.data.exog,\
+        results = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.HuberT()).fit(conv='sresid') # default M
-        h2 = RLM(self.data.endog, self.data.exog,\
+        h2 = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.HuberT()).fit(cov="H2").bcov_scaled
-        h3 = RLM(self.data.endog, self.data.exog,\
+        h3 = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.HuberT()).fit(cov="H3").bcov_scaled
-        self.res1 = results
-        self.res1.h2 = h2
-        self.res1.h3 = h3
+        cls.res1 = results
+        cls.res1.h2 = h2
+        cls.res1.h3 = h3
 
 
     def setup(self):

@@ -189,8 +189,6 @@ class RLM(base.LikelihoodModel):
         if isinstance(self.scale_est, str):
             if self.scale_est.lower() == 'mad':
                 return scale.mad(resid, center=0)
-            if self.scale_est.lower() == 'stand_mad':
-                return scale.mad(resid)
             else:
                 raise ValueError("Option %s for scale_est not understood" %
                                  self.scale_est)

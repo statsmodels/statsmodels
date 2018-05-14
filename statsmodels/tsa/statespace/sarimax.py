@@ -10,12 +10,12 @@ from statsmodels.compat.python import long
 from warnings import warn
 
 import numpy as np
-import pandas as pd
 from .kalman_filter import KalmanFilter
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
     companion_matrix, diff, is_invertible, constrain_stationary_univariate,
-    unconstrain_stationary_univariate, solve_discrete_lyapunov
+    unconstrain_stationary_univariate, solve_discrete_lyapunov,
+    prepare_exog
 )
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.data import _is_using_pandas
@@ -78,7 +78,7 @@ class SARIMAX(MLEModel):
     simple_differencing : boolean, optional
         Whether or not to use partially conditional maximum likelihood
         estimation. If True, differencing is performed prior to estimation,
-        which discards the first :math:`s D + d` initial rows but reuslts in a
+        which discards the first :math:`s D + d` initial rows but results in a
         smaller state-space formulation. If False, the full SARIMAX model is
         put in state-space form so that all datapoints can be used in
         estimation. Default is False.
@@ -412,20 +412,8 @@ class SARIMAX(MLEModel):
                 self._k_order = 0
 
         # Exogenous data
-        self.k_exog = 0
-        if exog is not None:
-            exog_is_using_pandas = _is_using_pandas(exog, None)
-            if not exog_is_using_pandas:
-                exog = np.asarray(exog)
+        (self.k_exog, exog) = prepare_exog(exog)
 
-            # Make sure we have 2-dimensional array
-            if exog.ndim < 2:
-                if not exog_is_using_pandas:
-                    exog = np.atleast_2d(exog).T
-                else:
-                    exog = pd.DataFrame(exog)
-
-            self.k_exog = exog.shape[1]
         # Redefine mle_regression to be true only if it was previously set to
         # true and there are exogenous regressors
         self.mle_regression = (
@@ -884,15 +872,9 @@ class SARIMAX(MLEModel):
                 selection[-i, -i] = 1
         return selection
 
-    def filter(self, params, **kwargs):
-        kwargs.setdefault('results_class', SARIMAXResults)
-        kwargs.setdefault('results_wrapper_class', SARIMAXResultsWrapper)
-        return super(SARIMAX, self).filter(params, **kwargs)
-
-    def smooth(self, params, **kwargs):
-        kwargs.setdefault('results_class', SARIMAXResults)
-        kwargs.setdefault('results_wrapper_class', SARIMAXResultsWrapper)
-        return super(SARIMAX, self).smooth(params, **kwargs)
+    @property
+    def _res_classes(self):
+        return {'fit': (SARIMAXResults, SARIMAXResultsWrapper)}
 
     @staticmethod
     def _conditional_sum_squares(endog, k_ar, polynomial_ar, k_ma,
@@ -1802,9 +1784,19 @@ class SARIMAXResults(MLEResults):
         self.param_terms = self.model.param_terms
         start = end = 0
         for name in self.param_terms:
-            end += self.model_orders[name]
+            if name == 'ar':
+                k = self.model.k_ar_params
+            elif name == 'ma':
+                k = self.model.k_ma_params
+            elif name == 'seasonal_ar':
+                k = self.model.k_seasonal_ar_params
+            elif name == 'seasonal_ma':
+                k = self.model.k_seasonal_ma_params
+            else:
+                k = self.model_orders[name]
+            end += k
             setattr(self, '_params_%s' % name, self.params[start:end])
-            start += self.model_orders[name]
+            start += k
 
         # Handle removing data
         self._data_attr_model.extend(['orig_endog', 'orig_exog'])
@@ -1849,17 +1841,39 @@ class SARIMAXResults(MLEResults):
     def arparams(self):
         """
         (array) Autoregressive parameters actually estimated in the model.
-        Does not include parameters whose values are constrained to be zero.
+        Does not include seasonal autoregressive parameters (see
+        `seasonalarparams`) or parameters whose values are constrained to be
+        zero.
         """
         return self._params_ar
+
+    @cache_readonly
+    def seasonalarparams(self):
+        """
+        (array) Seasonal autoregressive parameters actually estimated in the
+        model. Does not include nonseasonal autoregressive parameters (see
+        `arparams`) or parameters whose values are constrained to be zero.
+        """
+        return self._params_seasonal_ar
 
     @cache_readonly
     def maparams(self):
         """
         (array) Moving average parameters actually estimated in the model.
-        Does not include parameters whose values are constrained to be zero.
+        Does not include seasonal moving average parameters (see
+        `seasonalmaparams`) or parameters whose values are constrained to be
+        zero.
         """
         return self._params_ma
+
+    @cache_readonly
+    def seasonalmaparams(self):
+        """
+        (array) Seasonal moving average parameters actually estimated in the
+        model. Does not include nonseasonal moving average parameters (see
+        `maparams`) or parameters whose values are constrained to be zero.
+        """
+        return self._params_seasonal_ma
 
     def get_prediction(self, start=None, end=None, dynamic=False, index=None,
                        exog=None, **kwargs):

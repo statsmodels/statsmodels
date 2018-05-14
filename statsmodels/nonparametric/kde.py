@@ -13,16 +13,12 @@ Silverman, B.W.  Density Estimation for Statistics and Data Analysis.
 """
 from __future__ import absolute_import, print_function, division
 from statsmodels.compat.python import range
-# for 2to3 with extensions
-import warnings
-
 import numpy as np
 from scipy import integrate, stats
 from statsmodels.sandbox.nonparametric import kernels
-from statsmodels.tools.decorators import (cache_readonly,
-                                                    resettable_cache)
+from statsmodels.tools.decorators import (cache_readonly, resettable_cache)
 from . import bandwidths
-from .kdetools import (forrt, revrt, silverman_transform, counts)
+from .kdetools import (forrt, revrt, silverman_transform)
 from .linbin import fast_linbin
 
 #### Kernels Switch for estimators ####
@@ -169,7 +165,6 @@ class KDEUnivariate(object):
         Will not work if fit has not been called.
         """
         _checkisfit(self)
-        density = self.density
         kern = self.kernel
         if kern.domain is None: # TODO: test for grid point at domain bound
             a,b = -np.inf,np.inf
@@ -181,8 +176,8 @@ class KDEUnivariate(object):
         support = np.r_[a,support]
         gridsize = len(support)
         endog = self.endog
-        probs = [integrate.quad(func, support[i-1], support[i],
-                    args=endog)[0] for i in range(1,gridsize)]
+        probs = [integrate.quad(func, support[i - 1], support[i],
+                    args=endog)[0] for i in range(1, gridsize)]
         return np.cumsum(probs)
 
     @cache_readonly
@@ -226,16 +221,15 @@ class KDEUnivariate(object):
             pdf = kern.density(s,x)
             return pdf*np.log(pdf+1e-12)
 
-        pdf = self.density
         kern = self.kernel
 
         if kern.domain is not None:
-            a,b = self.domain
+            a, b = self.domain
         else:
-            a,b = -np.inf,np.inf
+            a, b = -np.inf, np.inf
         endog = self.endog
         #TODO: below could run into integr problems, cf. stats.dist._entropy
-        return -integrate.quad(entr, a,b, args=(endog,))[0]
+        return -integrate.quad(entr, a, b, args=(endog,))[0]
 
     @cache_readonly
     def icdf(self):
@@ -249,8 +243,7 @@ class KDEUnivariate(object):
         """
         _checkisfit(self)
         gridsize = len(self.density)
-        return stats.mstats.mquantiles(self.endog, np.linspace(0,1,
-                    gridsize))
+        return stats.mstats.mquantiles(self.endog, np.linspace(0, 1, gridsize))
 
     def evaluate(self, point):
         """
@@ -268,7 +261,7 @@ class KDEUnivariate(object):
 #### Kernel Density Estimator Functions ####
 
 def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None,
-             adjust=1, clip=(-np.inf,np.inf), cut=3, retgrid=True):
+             adjust=1, clip=(-np.inf, np.inf), cut=3, retgrid=True):
     """
     Rosenblatt-Parzen univariate kernel density estimator.
 
@@ -320,8 +313,8 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
     """
     X = np.asarray(X)
     if X.ndim == 1:
-        X = X[:,None]
-    clip_x = np.logical_and(X>clip[0], X<clip[1])
+        X = X[:, None]
+    clip_x = np.logical_and(X > clip[0], X < clip[1])
     X = X[clip_x]
 
     nobs = len(X) # after trim
@@ -336,6 +329,7 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
     else:
         # ensure weights is a numpy array
         weights = np.asarray(weights)
+        
         if len(weights) != len(clip_x):
             msg = "The length of the weights must be the same as the given X."
             raise ValueError(msg)
@@ -352,11 +346,11 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
         bw = bandwidths.select_bandwidth(X, bw, kern)
     bw *= adjust
 
-    a = np.min(X,axis=0) - cut*bw
-    b = np.max(X,axis=0) + cut*bw
+    a = np.min(X, axis=0) - cut * bw
+    b = np.max(X, axis=0) + cut * bw
     grid = np.linspace(a, b, gridsize)
 
-    k = (X.T - grid[:,None])/bw  # uses broadcasting to make a gridsize x nobs
+    k = (X.T - grid[:, None])/bw  # uses broadcasting to make a gridsize x nobs
 
     # set kernel bandwidth
     kern.seth(bw)
@@ -370,9 +364,9 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
     else:
         k = kern(k) # estimate density
 
-    k[k<0] = 0 # get rid of any negative values, do we need this?
+    k[k < 0] = 0 # get rid of any negative values, do we need this?
 
-    dens = np.dot(k,weights)/(q*bw)
+    dens = np.dot(k, weights)/(q*bw)
 
     if retgrid:
         return dens, grid, bw
@@ -380,7 +374,7 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
         return dens, bw
 
 def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None,
-                adjust=1, clip=(-np.inf,np.inf), cut=3, retgrid=True):
+                adjust=1, clip=(-np.inf, np.inf), cut=3, retgrid=True):
     """
     Rosenblatt-Parzen univariate kernel density estimator
 
@@ -451,7 +445,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
         Series C. 31.2, 93-9.
     """
     X = np.asarray(X)
-    X = X[np.logical_and(X>clip[0], X<clip[1])] # won't work for two columns.
+    X = X[np.logical_and(X > clip[0], X < clip[1])] # won't work for two columns.
                                                 # will affect underlying data?
 
     # Get kernel object corresponding to selection
@@ -467,13 +461,13 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
 
     # 1 Make grid and discretize the data
     if gridsize == None:
-        gridsize = np.max((nobs,512.))
+        gridsize = np.max((nobs, 512.))
     gridsize = 2**np.ceil(np.log2(gridsize)) # round to next power of 2
 
-    a = np.min(X)-cut*bw
-    b = np.max(X)+cut*bw
-    grid,delta = np.linspace(a,b,gridsize,retstep=True)
-    RANGE = b-a
+    a = np.min(X) - cut * bw
+    b = np.max(X) + cut * bw
+    grid,delta = np.linspace(a, b, int(gridsize), retstep=True)
+    RANGE = b - a
 
 #TODO: Fix this?
 # This is the Silverman binning function, but I believe it's buggy (SS)
@@ -491,7 +485,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
 #    binned /= (nobs)*delta**2 # normalize binned to sum to 1/delta
 
 #NOTE: THE ABOVE IS WRONG, JUST TRY WITH LINEAR BINNING
-    binned = fast_linbin(X,a,b,gridsize)/(delta*nobs)
+    binned = fast_linbin(X, a, b, gridsize) / (delta * nobs)
 
     # step 2 compute FFT of the weights, using Munro (1976) FFT convention
     y = forrt(binned)

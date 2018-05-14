@@ -12,36 +12,28 @@ Author: Josef Perktold
 """
 from statsmodels.compat.python import range
 import numpy as np
+import pandas as pd
 import statsmodels.api as sm
 from statsmodels.compat.scipy import NumpyVersion
+from statsmodels.compat.testing import SkipTest
 
 from numpy.testing import (assert_, assert_allclose, assert_equal,
                            assert_array_equal)
 
-from nose import SkipTest
 import platform
-
-
-iswin = platform.system() == 'Windows'
-npversionless15 = NumpyVersion(np.__version__) < '1.5.0'
-winoldnp = iswin & npversionless15
-
 
 
 class CheckGenericMixin(object):
 
-    def __init__(self):
-        self.predict_kwds = {}
-
     @classmethod
-    def setup_class(self):
-
+    def setup_class(cls):
         nobs = 500
         np.random.seed(987689)
         x = np.random.randn(nobs, 3)
         x = sm.add_constant(x)
-        self.exog = x
-        self.xf = 0.25 * np.ones((2, 4))
+        cls.exog = x
+        cls.xf = 0.25 * np.ones((2, 4))
+        cls.predict_kwds = {}
 
     def test_ttest_tvalues(self):
         # test that t_test has same results a params, bse, tvalues, ...
@@ -126,7 +118,7 @@ class CheckGenericMixin(object):
             results = self.results
         if (isinstance(results, GLMResults) or
             isinstance(results, DiscreteResults)):
-            raise SkipTest
+            raise SkipTest('Infeasible for {0}'.format(type(results)))
 
         res = self.results
         fitted = res.fittedvalues
@@ -358,7 +350,7 @@ class CheckAnovaMixin(object):
         import statsmodels.stats.tests.test_anova as ttmod
 
         test = ttmod.TestAnova3()
-        test.setupClass()
+        test.setup_class()
 
         cls.data = test.data.drop([0,1,2])
         cls.initialize()
@@ -431,7 +423,7 @@ class TestWaldAnovaOLS(CheckAnovaMixin):
     def test_noformula(self):
         endog = self.res.model.endog
         exog = self.res.model.data.orig_exog
-        del exog.design_info
+        exog = pd.DataFrame(exog)
 
         res = sm.OLS(endog, exog).fit()
         wa = res.wald_test_terms(skip_single=True,
@@ -452,7 +444,6 @@ class TestWaldAnovaOLSF(CheckAnovaMixin):
 
         mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
         cls.res = mod.fit()  # default use_t=True
-
 
     def test_predict_missing(self):
         ex = self.data[:5].copy()
@@ -525,6 +516,130 @@ class T_estWaldAnovaOLSNoFormula(object):
 
         mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
         cls.res = mod.fit()  # default use_t=True
+
+
+class CheckPairwise(object):
+
+    def test_default(self):
+        res = self.res
+
+        tt = res.t_test(self.constraints)
+
+        pw = res.t_test_pairwise(self.term_name)
+        pw_frame = pw.result_frame
+        assert_allclose(pw_frame.iloc[:, :6].values,
+                        tt.summary_frame().values)
+
+
+class TestTTestPairwiseOLS(CheckPairwise):
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.formula.api import ols
+        import statsmodels.stats.tests.test_anova as ttmod
+
+        test = ttmod.TestAnova3()
+        test.setup_class()
+        cls.data = test.data.drop([0,1,2])
+
+        mod = ols("np.log(Days+1) ~ C(Duration) + C(Weight)", cls.data)
+        cls.res = mod.fit()
+        cls.term_name = "C(Weight)"
+        cls.constraints = ['C(Weight)[T.2]',
+                           'C(Weight)[T.3]',
+                           'C(Weight)[T.3] - C(Weight)[T.2]']
+
+
+    def test_alpha(self):
+        pw1 = self.res.t_test_pairwise(self.term_name, method='hommel',
+                                       factor_labels='A B C'.split())
+        pw2 = self.res.t_test_pairwise(self.term_name, method='hommel',
+                                       alpha=0.01)
+        assert_allclose(pw1.result_frame.iloc[:, :7].values,
+                        pw2.result_frame.iloc[:, :7].values, rtol=1e-10)
+        assert_equal(pw1.result_frame.iloc[:, -1].values,
+                     [True]*3)
+        assert_equal(pw2.result_frame.iloc[:, -1].values,
+                     [False, True, False])
+
+        assert_equal(pw1.result_frame.index.values,
+                     np.array(['B-A', 'C-A', 'C-B'], dtype=object))
+
+
+class TestTTestPairwiseOLS2(CheckPairwise):
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.formula.api import ols
+        import statsmodels.stats.tests.test_anova as ttmod
+
+        test = ttmod.TestAnova3()
+        test.setup_class()
+        cls.data = test.data.drop([0,1,2])
+
+        mod = ols("np.log(Days+1) ~ C(Weight) + C(Duration)", cls.data)
+        cls.res = mod.fit()
+        cls.term_name = "C(Weight)"
+        cls.constraints = ['C(Weight)[T.2]',
+                           'C(Weight)[T.3]',
+                           'C(Weight)[T.3] - C(Weight)[T.2]']
+
+
+class TestTTestPairwiseOLS3(CheckPairwise):
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.formula.api import ols
+        import statsmodels.stats.tests.test_anova as ttmod
+
+        test = ttmod.TestAnova3()
+        test.setup_class()
+        cls.data = test.data.drop([0,1,2])
+
+        mod = ols("np.log(Days+1) ~ C(Weight) + C(Duration) - 1", cls.data)
+        cls.res = mod.fit()
+        cls.term_name = "C(Weight)"
+        cls.constraints = ['C(Weight)[2] - C(Weight)[1]',
+                           'C(Weight)[3] - C(Weight)[1]',
+                           'C(Weight)[3] - C(Weight)[2]']
+
+class TestTTestPairwiseOLS4(CheckPairwise):
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.formula.api import ols
+        import statsmodels.stats.tests.test_anova as ttmod
+
+        test = ttmod.TestAnova3()
+        test.setup_class()
+        cls.data = test.data.drop([0,1,2])
+
+        mod = ols("np.log(Days+1) ~ C(Weight, Treatment(2)) + C(Duration)", cls.data)
+        cls.res = mod.fit()
+        cls.term_name = "C(Weight, Treatment(2))"
+        cls.constraints = ['-C(Weight, Treatment(2))[T.1]',
+                           'C(Weight, Treatment(2))[T.3] - C(Weight, Treatment(2))[T.1]',
+                           'C(Weight, Treatment(2))[T.3]',]
+
+
+class TestTTestPairwisePoisson(CheckPairwise):
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.discrete.discrete_model import Poisson
+        import statsmodels.stats.tests.test_anova as ttmod
+
+        test = ttmod.TestAnova3()
+        test.setup_class()
+        cls.data = test.data.drop([0,1,2])
+
+        mod = Poisson.from_formula("Days ~ C(Duration) + C(Weight)", cls.data)
+        cls.res = mod.fit(cov_type='HC0')
+        cls.term_name = "C(Weight)"
+        cls.constraints = ['C(Weight)[T.2]',
+                           'C(Weight)[T.3]',
+                           'C(Weight)[T.3] - C(Weight)[T.2]']
+
 
 
 if __name__ == '__main__':

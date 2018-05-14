@@ -89,7 +89,8 @@ class _MinimalWLS(object):
             Q, R = np.linalg.qr(self.wexog)
             params = np.linalg.solve(R, np.dot(Q.T, self.wendog))
         else:
-            params, _, _, _ = np.linalg.lstsq(self.wexog, self.wendog)
+            params, _, _, _ = np.linalg.lstsq(self.wexog, self.wendog,
+                                              rcond=-1)
 
         fitted_values = self.exog.dot(params)
         resid = self.endog - fitted_values

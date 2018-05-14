@@ -445,11 +445,11 @@ def randmvn(rho, size=(1, 2), standardize=False):
     size : tuple of int
         size is interpreted (nobs, nvars) where each row
 
-
     Returns
     -------
-    rvs : ndarray, (nobs, nvars)
-        where each row is a independent random draw of nvars-dimensional correlated rvs
+    rvs : ndarray
+        nobs by nvars where each row is a independent random draw of nvars-
+        dimensional correlated rvs
 
     '''
     nobs, nvars = size
@@ -685,7 +685,7 @@ class TukeyHSDResults(object):
 
         References
         ----------
-        .. [1] Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures.
+        .. [*] Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures.
                Hoboken, NJ: John Wiley & Sons, 1987.
 
         Examples
@@ -728,7 +728,7 @@ class TukeyHSDResults(object):
         else:
             if comparison_name not in self.groupsunique:
                 raise ValueError('comparison_name not found in group names.')
-            midx = np.where(self.groupsunique==comparison_name)[0]
+            midx = np.where(self.groupsunique==comparison_name)[0][0]
             for i in range(len(means)):
                 if self.groupsunique[i] == comparison_name:
                     continue
@@ -1321,7 +1321,7 @@ def simultaneous_ci(q_crit, var, groupnobs, pairindices=None):
 
     References
     ----------
-    .. [1] Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures.
+    .. [*] Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures.
            Hoboken, NJ: John Wiley & Sons, 1987.)
     """
     # Set initial variables

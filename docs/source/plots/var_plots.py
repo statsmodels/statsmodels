@@ -9,8 +9,9 @@ import pandas
 mdata = ds.macrodata.load_pandas().data
 
 # prepare the dates index
-dates = mdata[['year', 'quarter']].astype(int).astype('S4')
-quarterly = dates["year"] + "Q" + dates["quarter"]
+dates = mdata[['year', 'quarter']].astype(int)
+quarterly = [str(yr) + 'Q' + str(mo)
+             for yr, mo in zip(dates["year"], dates["quarter"])]
 quarterly = dates_from_str(quarterly)
 
 mdata = mdata[['realgdp','realcons','realinv']]

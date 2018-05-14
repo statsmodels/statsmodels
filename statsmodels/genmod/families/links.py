@@ -77,11 +77,6 @@ class Link(object):
         """
         Derivative of the inverse link function g^(-1)(z).
 
-        Notes
-        -----
-        This reference implementation gives the correct result but is
-        inefficient, so it can be overriden in subclasses.
-
         Parameters
         ----------
         z : array-like
@@ -92,6 +87,10 @@ class Link(object):
         g'^(-1)(z) : array
             The value of the derivative of the inverse of the link function
 
+        Notes
+        -----
+        This reference implementation gives the correct result but is
+        inefficient, so it can be overriden in subclasses.
         """
         return 1 / self.deriv(self.inverse(z))
 
@@ -664,7 +663,7 @@ class probit(CDFLink):
     The probit (standard normal CDF) transform
 
     Notes
-    --------
+    -----
     g(p) = scipy.stats.norm.ppf(p)
 
     probit is an alias of CDFLink.

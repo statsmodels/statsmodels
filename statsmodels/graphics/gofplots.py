@@ -404,7 +404,7 @@ class ProbPlot(object):
         return fig
 
 def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
-           line=None, ax=None):
+           line=None, ax=None, **plotkwargs):
     """
     Q-Q plot of the quantiles of x versus the quantiles/ppf of a distribution.
 
@@ -449,6 +449,9 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
+
+    **plotkwargs : additional matplotlib arguments to be passed to the
+            `plot` command.
 
     Returns
     -------
@@ -501,7 +504,7 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
     """
     probplot = ProbPlot(data, dist=dist, distargs=distargs,
                          fit=fit, a=a, loc=loc, scale=scale)
-    fig = probplot.qqplot(ax=ax, line=line)
+    fig = probplot.qqplot(ax=ax, line=line, **plotkwargs)
     return fig
 
 def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):

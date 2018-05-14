@@ -262,7 +262,7 @@ cdef class {{prefix}}Statespace(object):
 
         # Create the temporary array
         # Holds arrays of dimension $(m \times m)$
-        dim2[0] = self.k_states; dim2[1] = self.k_states;
+        dim2[0] = self.k_states; dim2[1] = max(self.k_states, self.k_posdef);
         self.tmp = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
         # Arrays for missing data

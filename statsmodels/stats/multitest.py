@@ -59,29 +59,29 @@ for m in _alias_list:
 
 def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
                   returnsorted=False):
-    '''test results and p-value correction for multiple tests
-
+    """
+    Test results and p-value correction for multiple tests
 
     Parameters
     ----------
-    pvals : array_like
-        uncorrected p-values
+    pvals : array_like, 1-d
+        uncorrected p-values.   Must be 1-dimensional.
     alpha : float
         FWER, family-wise error rate, e.g. 0.1
     method : string
         Method used for testing and adjustment of pvalues. Can be either the
-        full name or initial letters. Available methods are ::
+        full name or initial letters. Available methods are:
 
-        `bonferroni` : one-step correction
-        `sidak` : one-step correction
-        `holm-sidak` : step down method using Sidak adjustments
-        `holm` : step-down method using Bonferroni adjustments
-        `simes-hochberg` : step-up method  (independent)
-        `hommel` : closed method based on Simes tests (non-negative)
-        `fdr_bh` : Benjamini/Hochberg  (non-negative)
-        `fdr_by` : Benjamini/Yekutieli (negative)
-        `fdr_tsbh` : two stage fdr correction (non-negative)
-        `fdr_tsbky` : two stage fdr correction (non-negative)
+        - `bonferroni` : one-step correction
+        - `sidak` : one-step correction
+        - `holm-sidak` : step down method using Sidak adjustments
+        - `holm` : step-down method using Bonferroni adjustments
+        - `simes-hochberg` : step-up method  (independent)
+        - `hommel` : closed method based on Simes tests (non-negative)
+        - `fdr_bh` : Benjamini/Hochberg  (non-negative)
+        - `fdr_by` : Benjamini/Yekutieli (negative)
+        - `fdr_tsbh` : two stage fdr correction (non-negative)
+        - `fdr_tsbky` : two stage fdr correction (non-negative)
 
     is_sorted : bool
         If False (default), the p_values will be sorted, but the corrected
@@ -131,7 +131,7 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
 
     Method='hommel' is very slow for large arrays, since it requires the
     evaluation of n partitions, where n is the number of p-values.
-    '''
+    """
     import gc
     pvals = np.asarray(pvals)
     alphaf = alpha  # Notation ?
@@ -549,7 +549,7 @@ class NullDistribution(object):
     zscores : array-like
         The observed Z-scores.
     null_lb : float
-        Z-scores between `null_lb` and `null_lb` are all considered to be
+        Z-scores between `null_lb` and `null_ub` are all considered to be
         true null hypotheses.
     null_ub : float
         See `null_lb`.
