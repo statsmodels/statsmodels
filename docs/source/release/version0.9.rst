@@ -32,7 +32,6 @@ https://github.com/statsmodels/statsmodels/pulls?utf8=%E2%9C%93&q=is%3Apr+is%3Am
 the 0.8 release but not included in 0.8.)
 
 
-
 The Highlights
 --------------
 
@@ -43,7 +42,8 @@ The Highlights
   - new count models: GeneralizedPoisson, zero inflated models
  - Bayesian mixed GLM
  - Gaussian Imputation
- - new multivariate methods: factor analysis, MANOVA, repeated measures within ANOVA
+ - new multivariate methods: factor analysis, MANOVA, repeated measures
+   within ANOVA
  - GLM var_weights in addition to freq_weights
  - Holt-Winters and Exponential Smoothing
 
@@ -51,7 +51,8 @@ The Highlights
 What's new - an overview
 ------------------------
 
-The following lists the main new features of statsmodels 0.9. In addition, release 0.9 includes bug fixes, refactorings and improvements in many areas.
+The following lists the main new features of statsmodels 0.9. In addition,
+release 0.9 includes bug fixes, refactorings and improvements in many areas.
 
 **base**
  - distributed estimation #3396  (Leland Bybee GSOC, Kerby Shedden)
@@ -66,7 +67,8 @@ The following lists the main new features of statsmodels 0.9. In addition, relea
     - zero-inflated count models #3755 merged in #3908
 
  - discrete optimization improvements #3921, #3928 (Josef Perktold)
- - extend discrete margin when extra params, NegativeBinomial #3811 (Josef Perktold)
+ - extend discrete margin when extra params, NegativeBinomial #3811
+   (Josef Perktold)
 
 **duration**
  - dependent censoring in survival/duration #3090 (Kerby Shedden)
@@ -80,7 +82,8 @@ The following lists the main new features of statsmodels 0.9. In addition, relea
 
 **graphics**
  - graphics HDR functional boxplot #3876 merged in #4049 (Pamphile ROY)
- - graphics Bland-Altman or Tukey mean difference plot #4112 merged in #4200 (Joses W. Ho)
+ - graphics Bland-Altman or Tukey mean difference plot
+   #4112 merged in #4200 (Joses W. Ho)
  - bandwidth options in violinplots #4510 (Jim Correia)
 
 **imputation**
@@ -88,11 +91,13 @@ The following lists the main new features of statsmodels 0.9. In addition, relea
  - regularized fitting in MICE #4319 (Kerby Shedden)
 
 **iolib**
- - improvements of summary_coll #3702 merged #4064 (Natasha Watkins, Kevin Sheppard)
+ - improvements of summary_coll #3702 merged #4064 (Natasha Watkins,
+   Kevin Sheppard)
 
 **multivariate**
  - multivariate: MANOVA, CanCorr #3327 (Yichuan Liu)
- - Factor Analysis #4161, #4156, #4167, #4214 (Yichuan Liu, Kerby Shedden, Josef Perktold)
+ - Factor Analysis #4161, #4156, #4167, #4214 (Yichuan Liu, Kerby Shedden,
+   Josef Perktold)
  - statsmodels now includes the rotation code by ....
 
 **regression**
@@ -100,19 +105,24 @@ The following lists the main new features of statsmodels 0.9. In addition, relea
 
 **stats**
  - Knockoff FDR # 3204 (Kerby Shedden)
- - Repeated measures ANOVA #3303 merged in #3663, #3838 (Yichuan Liu, Richard Höchenberger)
- - lilliefors test for exponential distribution #3837 merged in #3936 (Jacob Kimmel, Josef Perktold)
+ - Repeated measures ANOVA #3303 merged in #3663, #3838 (Yichuan Liu, Richard
+   Höchenberger)
+ - lilliefors test for exponential distribution #3837 merged in #3936 (Jacob
+   Kimmel, Josef Perktold)
 
 **tools**
  - quasi-random, Halton sequences #4104 (Pamphile ROY)
 
 **tsa**
  - VECM #3246 (Aleksandar Karakas GSOC, Josef Perktold)
- - exog support in VAR, incomplete for extra results, part of VECM #3246, #4538 (Aleksandar Karakas GSOC, Josef Perktold)
+ - exog support in VAR, incomplete for extra results, part of VECM
+   #3246, #4538 (Aleksandar Karakas GSOC, Josef Perktold)
  - Markov switching, Kim smoother #3141 (Chad Fulton)
  - Holt-Winters #3817 merged in #4176 (tvanzyl)
- - seasonal_decompose: trend extrapolation and vectorized 2-D #3031 (kernc, Josef Perktold)
- - add frequency domain seasonal components to UnobservedComponents #4250 (Jordan Yoder)
+ - seasonal_decompose: trend extrapolation and vectorized 2-D #3031
+   (kernc, Josef Perktold)
+ - add frequency domain seasonal components to UnobservedComponents #4250
+   (Jordan Yoder)
  - refactoring of date handling in tsa #3276, #4457 (Chad Fulton)
  - SARIMAX without AR, MA #3383  (Chad Fulton)
 
@@ -124,26 +134,39 @@ The following lists the main new features of statsmodels 0.9. In addition, relea
 `bug-wrong`
 ~~~~~~~~~~~
 
-A new issue label `type-bug-wrong` indicates bugs that cause that incorrect numbers are returned without warnings.
-(Regular bugs are mostly usability bugs or bugs that raise an exception for unsupported use cases.)
+A new issue label `type-bug-wrong` indicates bugs that cause that incorrect
+numbers are returned without warnings.
+(Regular bugs are mostly usability bugs or bugs that raise an exception for
+unsupported use cases.)
 see https://github.com/statsmodels/statsmodels/issues?q=is%3Aissue+label%3Atype-bug-wrong+is%3Aclosed+milestone%3A0.9
 
 - scale in GLM fit_constrained, #4193 fixed in #4195
-  cov_params and bse were incorrect if scale is estimated as in Gaussian. (This did not affect families with scale=1 such as Poisson)
+  cov_params and bse were incorrect if scale is estimated as in Gaussian.
+  (This did not affect families with scale=1 such as Poisson)
 - incorrect `pearson_chi2` with binomial counts, #3612 fixed as part of #3692
-- null_deviance and llnull in GLMResults were wrong if exposure was used and when offset was used with Binomial counts.
-- GLM Binomial in the non-binary, count case used incorrect endog in recreating models which is
+- null_deviance and llnull in GLMResults were wrong if exposure was used and
+  when offset was used with Binomial counts.
+- GLM Binomial in the non-binary count case used incorrect endog in recreating
+  models which is
   used by fit_regularized and fit_constrained #4599.
-- GLM observed hessian was incorrectly computed if non-canonical link is used, fixed in #4620
+- GLM observed hessian was incorrectly computed if non-canonical link is used,
+  fixed in #4620
+  This fix improves convergence with gradient optimization and removes a usually
+  numerically small error in cov_params.
 - discrete predict with offset or exposure, #3569 fixed in #3696
-  If either offset or exposure are not None but exog is None, then offset and exposure arguments in predict were ignored.
-- discrete margins had wrong dummy and count effect if constant is prepended, #3695 fixed in #3696
+  If either offset or exposure are not None but exog is None, then offset and
+  exposure arguments in predict were ignored.
+- discrete margins had wrong dummy and count effect if constant is prepended,
+  #3695 fixed in #3696
 - OLS outlier test, wrong index if order is True, #3971 fixed in #4385
 - tsa coint ignored the autolag keyword, #3966 fixed in #4492
-  This is a backwards incompatible change in default, instead of fixed maxlag it defaults now to 'aic' lag selection. The default autolag is now the same as the adfuller default.
+  This is a backwards incompatible change in default, instead of fixed maxlag
+  it defaults now to 'aic' lag selection. The default autolag is now the same
+  as the adfuller default.
 - wrong confidence interval in contingency table summary, #3822 fixed in #3830
   This only affected the summary and not the corresponding attribute.
-- incorrect results in summary_col if regressor_order is used, #3767 fixed in #4271
+- incorrect results in summary_col if regressor_order is used,
+  #3767 fixed in #4271
 
 
 Description of selected new feature
@@ -363,6 +386,7 @@ Thanks to all of the contributors for the 0.9 release (based on git log):
 * Niels Wouda
 * Pamphile ROY
 * Peter Quackenbush
+* Quentin Andre
 * Richard Höchenberger
 * Rob Klooster
 * Roman Ring
@@ -380,5 +404,5 @@ Thanks to all of the contributors for the 0.9 release (based on git log):
 * weizhongg
 * zveryansky
 
-These lists of names are automatically generated based on git log, and may not be
-complete.
+These lists of names are automatically generated based on git log, and may not
+be complete.
