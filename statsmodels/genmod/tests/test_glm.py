@@ -731,6 +731,11 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
         assert_allclose(mod3.exposure, mod1_.exposure, rtol=1e-14)
         assert_allclose(mod3.offset, mod1_.offset, rtol=1e-14)
 
+        # test fit_regularized exposure, see #4605
+        resr1 = mod1.model.fit_regularized()
+        resr2 = mod2.model.fit_regularized()
+        assert_allclose(resr1.params, resr2.params, rtol=1e-10)
+
 
     def test_predict(self):
         np.random.seed(382304)
