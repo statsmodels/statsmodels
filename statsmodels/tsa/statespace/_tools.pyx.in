@@ -65,35 +65,6 @@ if prefix == 's':
     combined_cython_type = 'np.float64_t'
 }}
 
-# cpdef {{prefix}}solve_discrete_lyapunov({{cython_type}} [::1,:] a, {{cython_type}} [::1,:] q, int overwrite=False):
-#     cdef:
-#         int inc = 1
-#         int n = a.shape[0]
-#         int n2 = n**2
-#     cdef {{cython_type}} * _a
-#     cdef {{cython_type}} * _q
-#     cdef np.npy_intp dim[2]
-#     cdef {{cython_type}} [::1,:] a_copy, q_copy
-    
-#     if not overwrite:
-#         dim[0] = n; dim[1] = n;
-#         a_copy = np.PyArray_ZEROS(2, dim, {{typenum}}, FORTRAN)
-#         _a = &a_copy[0,0]
-#         blas.{{prefix}}copy(&n2, &a[0,0], &inc, _a, &inc)
-
-#         q_copy = np.PyArray_ZEROS(2, dim, {{typenum}}, FORTRAN)
-#         _q = &q_copy[0,0]
-#         blas.{{prefix}}copy(&n2, &q[0,0], &inc, _q, &inc)
-#     else:
-#         _a = &a[0,0]
-#         _q = &q[0,0]
-
-#     _{{prefix}}solve_discrete_lyapunov(_a, _q, n)
-
-#     if not overwrite:
-#         return np.array(q_copy)
-#     else:
-#         return np.array(q)
 
 cdef bint _{{prefix}}select1({{cython_type}} * a):
     return 0
