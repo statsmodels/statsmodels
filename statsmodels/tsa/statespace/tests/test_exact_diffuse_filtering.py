@@ -953,3 +953,31 @@ class TestDFMCollapsed_Approx(CheckApproximateDiffuseMixin, CheckDFMCollapsed):
 # - Common level model, above
 # - multivariate test with non-diagonal observation covariance matrix
 # - simulation smoother
+
+@pytest.mark.xfail
+def test_irrelevant_state():
+    # This test records a case in which exact diffuse initialization leads to
+    # numerical problems, becuase the existence of an irrelevant state
+    # initialized as diffuse means that there is never a transition to the
+    # usual Kalman filter.
+    endog = macrodata.infl
+
+    spec = {
+        'freq_seasonal': [{'period':8, 'harmonics': 6},
+                          {'period': 36, 'harmonics': 6}]
+    }
+
+    # Approximate diffuse version
+    mod = UnobservedComponents(endog, 'llevel', **spec)
+    mod.ssm.initialization = Initialization(mod.k_states,'approximate_diffuse')
+    res = mod.smooth([3.4, 7.2, 0.01, 0.01])
+
+    # Exact diffuse version
+    mod2 = UnobservedComponents(endog, 'llevel', **spec)
+    mod2.ssm.filter_univariate = True
+    mod2.ssm.initialization = Initialization(mod2.k_states, 'diffuse')
+    res2 = mod2.smooth([3.4, 7.2, 0.01, 0.01])
+
+    # Check that e.g. the filtered state for the level is equal
+    assert_allclose(res.filtered_state[0, 25:],
+                    res2.filtered_state[0, 25:], atol=1e-5)
