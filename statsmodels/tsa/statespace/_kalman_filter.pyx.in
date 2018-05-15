@@ -376,7 +376,7 @@ cdef class {{prefix}}KalmanFilter(object):
 
         # Initialize filter parameters
         self.tolerance = tolerance
-        self.tolerance_diffuse = 1e-19  # TODO replace hardcode with argument
+        self.tolerance_diffuse = 1e-10  # TODO replace hardcode with argument
         self.inversion_method = inversion_method
         self.stability_method = stability_method
         self.conserve_memory = conserve_memory

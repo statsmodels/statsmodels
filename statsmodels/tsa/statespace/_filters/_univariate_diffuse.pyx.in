@@ -81,6 +81,10 @@ cdef int {{prefix}}forecast_univariate_diffuse({{prefix}}KalmanFilter kfilter, {
 
         # F_{*,t}
         forecast_error_cov = {{prefix}}forecast_error_cov(kfilter, model, i)
+        if forecast_error_cov{{if combined_prefix == 'z'}}.real{{endif}} < 0:
+            kfilter._forecast_error_cov[i + i*kfilter.k_endog] = 0
+            forecast_error_cov = 0
+
         # Save temporary array data
         if not forecast_error_cov == 0:
             forecast_error_cov_inv = 1.0 / forecast_error_cov
@@ -88,9 +92,12 @@ cdef int {{prefix}}forecast_univariate_diffuse({{prefix}}KalmanFilter kfilter, {
 
         # F_{\infty,t}
         forecast_error_diffuse_cov = {{prefix}}forecast_error_diffuse_cov(kfilter, model, i)
+        if forecast_error_diffuse_cov{{if combined_prefix == 'z'}}.real{{endif}} < 0:
+            kfilter._forecast_error_diffuse_cov[i + i*kfilter.k_endog] = 0
+            forecast_error_diffuse_cov = 0
 
         # F_{\infty, i, i, t} > 0
-        if {{combined_prefix}}abs(forecast_error_diffuse_cov) > kfilter.tolerance_diffuse:
+        if forecast_error_diffuse_cov{{if combined_prefix == 'z'}}.real{{endif}} > kfilter.tolerance_diffuse:
             forecast_error_diffuse_cov_inv = 1.0 / forecast_error_diffuse_cov
 
             F1 = forecast_error_diffuse_cov_inv
