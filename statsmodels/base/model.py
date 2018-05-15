@@ -593,15 +593,16 @@ class LikelihoodModel(Model):
             res.model.scale = res._results.scale = res_constr.model.scale
 
         if hasattr(res_constr, 'mle_retvals'):
-            res.mle_retvals = res_constr.mle_retvals
+            res._results.mle_retvals = res_constr.mle_retvals
             # not available for not scipy optimization, e.g. glm irls
-#             res.mle_retvals['fcall'] = res_constr.mle_retvals.get('fcall', np.nan)
-#             res.mle_retvals['iterations'] = res_constr.mle_retvals.get(
-#                                                             'iterations', np.nan)
-#             res.mle_retvals['converged'] = res_constr.mle_retvals['converged']
-            # overwrite all settings
-            #res.mle_retvals.update(res_constr.mle_retvals)  #not yet
-            res.mle_settings.update(res_constr.mle_settings)
+            # TODO: what retvals should be required?
+            # res.mle_retvals['fcall'] = res_constr.mle_retvals.get('fcall', np.nan)
+            # res.mle_retvals['iterations'] = res_constr.mle_retvals.get(
+            #                                                 'iterations', np.nan)
+            # res.mle_retvals['converged'] = res_constr.mle_retvals['converged']
+        # overwrite all mle_settings
+        if hasattr(res_constr, 'mle_settings'):
+            res._results.mle_settings = res_constr.mle_settings
 
         res._results.params = params_full
         if not hasattr(res._results, 'normalized_cov_param') or res._results.normalized_cov_param is None:
@@ -610,7 +611,7 @@ class LikelihoodModel(Model):
             res._results.normalized_cov_params[...] = 0
 
         # TODO: sandwiches, add cov_params_default ?
-        # fanxy indexing requires integer attay
+        # fancy indexing requires integer array
         keep_index = np.array(keep_index)
         res._results.normalized_cov_params[keep_index[:, None], keep_index] = res_constr.normalized_cov_params
         k_constr = res_constr.df_resid - res._results.df_resid

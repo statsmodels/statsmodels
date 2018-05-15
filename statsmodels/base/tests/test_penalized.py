@@ -454,7 +454,7 @@ class TestPenalizedLogitOraclePenalized2(CheckPenalizedLogit):
 
         # first test for trimmed result
         assert_equal(self.res1.params[self.k_nonzero:], 0)
-        # we also set bse to zero, TODO: check fit_regularized
+        # we also set bse to zero
         assert_equal(self.res1.bse[self.k_nonzero:], 0)
 
 
@@ -471,7 +471,7 @@ class CheckPenalizedBinomCount(CheckPenalizedPoisson):
         return np.column_stack((y, n_trials - y))
 
 
-class TestPenalizedGLMGLMBinomCountNoPenal(CheckPenalizedBinomCount):
+class TestPenalizedGLMBinomCountNoPenal(CheckPenalizedBinomCount):
     # TODO: check, adjust cov_type
 
     @classmethod
@@ -487,17 +487,17 @@ class TestPenalizedGLMGLMBinomCountNoPenal(CheckPenalizedBinomCount):
         cls.res1 = mod.fit(method='bfgs', max_start_irls=3, maxiter=100, disp=0,
                            start_params=cls.res2.params*0.9)
 
-        cls.atol = 1e-10 #0.000003
+        cls.atol = 1e-10
         cls.k_params = 4
 
 
     def test_deriv(self):
         res1 = self.res1
         res2 = self.res2
-        assert_allclose(res1.model.score(res2.params),
-                        res2.model.score(res2.params), rtol=1e-10)
-        assert_allclose(res1.model.score_obs(res2.params),
-                        res2.model.score_obs(res2.params), rtol=1e-10)
+        assert_allclose(res1.model.score(res2.params * 0.98),
+                        res2.model.score(res2.params * 0.98), rtol=1e-10)
+        assert_allclose(res1.model.score_obs(res2.params * 0.98),
+                        res2.model.score_obs(res2.params * 0.98), rtol=1e-10)
 
 
 class TestPenalizedGLMBinomCountOracleHC(CheckPenalizedBinomCount):
@@ -518,11 +518,35 @@ class TestPenalizedGLMBinomCountOracleHC(CheckPenalizedBinomCount):
         mod.pen_weight *= 1  # lower than in other cases
         mod.penal.tau = 0.05
         cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', max_start_irls=0,
-                           maxiter=3000, disp=0)
+                           maxiter=100, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 
-        cls.atol = 0.001
+        cls.atol = 1e-3
+
+
+class TestPenalizedGLMBinomCountOracleHC2(CheckPenalizedBinomCount):
+    # TODO: There are still problems with this case, see other class
+    # with trimming of small parameters, needs larger trim threshold
+
+    @classmethod
+    def _initialize(cls):
+        y, x = cls.y, cls.x
+        offset = -0.25 * np.ones(len(y))  # also check offset
+        cov_type = 'HC0'
+        modp = GLM(y, x[:, :cls.k_nonzero], family=family.Binomial(), offset=offset)
+        cls.res2 = modp.fit(cov_type=cov_type, method='newton', maxiter=1000, disp=0)
+
+        mod = GLMPenalized(y, x, family=family.Binomial(), offset=offset)
+        mod.pen_weight *= 1  # lower than in other cases
+        mod.penal.tau = 0.05
+        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', max_start_irls=0,
+                           maxiter=100, disp=0, trim=0.001)
+
+        cls.exog_index = slice(None, cls.k_nonzero, None)
+
+        cls.atol = 1e-3
+        cls.k_params = cls.k_nonzero
 
 
 # the following classes are copies of Poisson with model adjustments
@@ -537,7 +561,6 @@ class CheckPenalizedGaussian(CheckPenalizedPoisson):
 
 
 class TestPenalizedGLMGaussianOracleHC(CheckPenalizedGaussian):
-    # TODO: check, adjust cov_type
 
     @classmethod
     def _initialize(cls):
@@ -555,4 +578,29 @@ class TestPenalizedGLMGaussianOracleHC(CheckPenalizedGaussian):
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 
-        cls.atol = 5e-3
+        cls.atol = 5e-6
+        cls.rtol = 1e-6
+
+
+class TestPenalizedGLMGaussianOracleHC2(CheckPenalizedGaussian):
+    # with trimming
+
+    @classmethod
+    def _initialize(cls):
+        y, x = cls.y, cls.x
+        # adding 10 to avoid strict rtol at predicted values close to zero
+        y = y + 10
+        cov_type = 'HC0'
+        modp = GLM(y, x[:, :cls.k_nonzero], family=family.Gaussian())
+        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+
+        mod = GLMPenalized(y, x, family=family.Gaussian())
+        mod.pen_weight *= 1.5  # same as discrete Poisson
+        mod.penal.tau = 0.05
+        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100,
+                           disp=0, trim=True)
+
+        cls.exog_index = slice(None, cls.k_nonzero, None)
+        cls.k_params = cls.k_nonzero
+        cls.atol = 1e-5
+        cls.rtol = 1e-5

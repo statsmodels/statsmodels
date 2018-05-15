@@ -144,11 +144,13 @@ class PenalizedMixin(object):
             # note boolean check for "is False" not evaluates to False
             return res
         else:
+            if trim is True:
+                trim = 1e-4  # trim threshold
             # TODO: make it penal function dependent
             # temporary standin, only works for Poisson and GLM,
             # and is computationally inefficient
-            drop_index = np.nonzero(np.abs(res.params) < 1e-4) [0]
-            keep_index = np.nonzero(np.abs(res.params) > 1e-4) [0]
+            drop_index = np.nonzero(np.abs(res.params) < trim) [0]
+            keep_index = np.nonzero(np.abs(res.params) > trim) [0]
             rmat = np.eye(len(res.params))[drop_index]
 
             # calling fit_constrained raise
