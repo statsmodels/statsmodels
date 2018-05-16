@@ -62,8 +62,7 @@ def load_pandas():
     data = load()
     # pandas <= 0.12.0 fails in the to_datetime regex on Python 3
     index = pd.DatetimeIndex(start=data.data['date'][0].decode('utf-8'),
-                             periods=len(data.data), format='%Y%m%d',
-                             freq='W-SAT')
+                             periods=len(data.data), freq='W-SAT')
     dataset = pd.DataFrame(data.data['co2'], index=index, columns=['co2'])
     #NOTE: this is how I got the missing values in co2.csv
     #new_index = pd.DatetimeIndex(start='1958-3-29', end=index[-1],
