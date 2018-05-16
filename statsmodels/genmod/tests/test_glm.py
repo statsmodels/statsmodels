@@ -204,7 +204,7 @@ class CheckComparisonMixin(object):
         score1 = res1.model.score(res1.params * 0.98)
         assert_allclose(score1, score_obs1.sum(0), atol=1e-20)
         score0 = res1.model.score(res1.params)
-        assert_allclose(score0, np.zeros(score_obs1.shape[1]), atol=1e-7)
+        assert_allclose(score0, np.zeros(score_obs1.shape[1]), atol=5e-7)
 
         hessian1 = res1.model.hessian(res1.params * 0.98, observed=False)
         hessiand = resd.model.hessian(resd.params * 0.98)
