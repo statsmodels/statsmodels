@@ -669,7 +669,7 @@ def test_pandas_endog():
     mod.filter([])
 
     # Example : pandas.Series, string datatype
-    endog = pd.Series(['a'], index=dates)
+    endog = pd.Series(['a', 'b'], index=dates)
     # raises error due to direct type casting check in Statsmodels base classes
     assert_raises(ValueError, check_endog, endog, **kwargs)
 
