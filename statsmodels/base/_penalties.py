@@ -122,11 +122,11 @@ class SCAD(Penalty):
     The SCAD penalty of Fan and Li
     """
 
-    def __init__(self, tau, c=3.7, wts=None):
-        if wts is None:
+    def __init__(self, tau, c=3.7, weights=None):
+        if weights is None:
             self.weights = 1.
         else:
-            self.weights = wts
+            self.weights = weights
         self.tau = tau
         self.c = c
 

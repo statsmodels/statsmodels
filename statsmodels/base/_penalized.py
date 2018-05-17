@@ -13,32 +13,42 @@ from statsmodels.tools.numdiff import approx_fprime_cs, approx_fprime
 class PenalizedMixin(object):
     """Mixin class for Maximum Penalized Likelihood
 
+    Parameters
+    ----------
+    args and kwds for the model super class
+    penal : None or instance of Penalized function class
+        If penal is None, then currently SmoothedSCAD is used.
+    pen_weight : float or None
+        factor for weighting the penalization term.
+        If None, then pen_weight is set to nobs.
+
 
     TODO: missing **kwds or explicit keywords
 
-    TODO: do we really need `pen_weight` keyword in likelihood methods?
+    TODO: do we adjust the inherited docstrings?
+    We would need templating to add the penalization parameters
 
     """
 
     def __init__(self, *args, **kwds):
-        super(PenalizedMixin, self).__init__(*args, **kwds)
 
-        penal = kwds.pop('penal', None)
-        # I keep the following instead of adding default in pop for future changes
-        if penal is None:
-            # TODO: switch to unpenalized by default
-            self.penal = SCADSmoothed(0.1, c0=0.0001)
-        else:
-            self.penal = penal
+        # pop extra kwds before calling super
+        self.penal = kwds.pop('penal', None)
+        self.pen_weight =  kwds.pop('pen_weight', None)
+
+        super(PenalizedMixin, self).__init__(*args, **kwds)
 
         # TODO: define pen_weight as average pen_weight? i.e. per observation
         # I would have prefered len(self.endog) * kwds.get('pen_weight', 1)
         # or use pen_weight_factor in signature
-        self.pen_weight =  kwds.get('pen_weight', len(self.endog))
+        if self.pen_weight is None:
+            self.pen_weight = len(self.endog)
+        # I keep the following instead of adding default in pop for future changes
+        if self.penal is None:
+            # TODO: switch to unpenalized by default
+            self.penal = SCADSmoothed(0.1, c0=0.0001)
 
         self._init_keys.extend(['penal', 'pen_weight'])
-
-
 
     def loglike(self, params, pen_weight=None, **kwds):
         if pen_weight is None:
@@ -64,6 +74,9 @@ class PenalizedMixin(object):
         return llf
 
     def score_numdiff(self, params, pen_weight=None, method='fd', **kwds):
+        """score based on finite difference derivative
+
+        """
         if pen_weight is None:
             pen_weight = self.pen_weight
 
@@ -97,15 +110,16 @@ class PenalizedMixin(object):
 
         return sc
 
-
     def hessian_numdiff(self, params, pen_weight=None, **kwds):
+        """hessian based on finite difference derivative
+
+        """
         if pen_weight is None:
             pen_weight = self.pen_weight
         loglike = lambda p: self.loglike(p, pen_weight=pen_weight, **kwds)
 
         from statsmodels.tools.numdiff import approx_hess
         return approx_hess(params, loglike)
-
 
     def hessian(self, params, pen_weight=None, **kwds):
         if pen_weight is None:
@@ -121,8 +135,27 @@ class PenalizedMixin(object):
 
         return hess
 
-
     def fit(self, method=None, trim=None, **kwds):
+        """minimize negative penalized log-likelihood
+
+        Parameters
+        ----------
+        method : None or str
+            Method specifies the scipy optimizer as in nonlinear MLE models.
+        trim : Boolean or float
+            Default is False or None, which uses no trimming.
+            If trim is True or a float, then small parameters are set to zero.
+            If True, then a default threshold is used. If trim is a float, then
+            it will be used as threshold.
+            The default threshold is currently 1e-4, but it will change in
+            future and become penalty function dependent.
+        kwds : extra keyword arguments
+            This keyword arguments are treated in the same way as in the
+            fit method of the underlying model class.
+            Specifically, additional optimizer keywords and cov_type related
+            keywords can be added.
+
+        """
         # If method is None, then we choose a default method ourselves
 
         # TODO: temporary hack, need extra fit kwds
@@ -151,14 +184,9 @@ class PenalizedMixin(object):
             # and is computationally inefficient
             drop_index = np.nonzero(np.abs(res.params) < trim) [0]
             keep_index = np.nonzero(np.abs(res.params) > trim) [0]
-            rmat = np.eye(len(res.params))[drop_index]
 
-            # calling fit_constrained raise
-            # "RuntimeError: maximum recursion depth exceeded in __instancecheck__"
-            # fit_constrained is calling fit, recursive endless loop
             if drop_index.any():
-                # todo : trim kwyword doesn't work, why not?
-                #res_aux = self.fit_constrained(rmat, trim=False)
+                # TODO: do we need to add results attributes?
                 res_aux = self._fit_zeros(keep_index, **kwds)
                 return res_aux
             else:
