@@ -288,11 +288,13 @@ class SCADSmoothed(SCAD):
         value = super(SCADSmoothed, self).func(params[None, ...])
         self.weights = weights
 
+        # shift down so func(0) == 0
+        value -= self.aq1
         #change the segment corrsponding to quadratic approximation
         p_abs = np.atleast_1d(np.abs(params))
         mask = p_abs < self.c0
         p_abs_masked = p_abs[mask]
-        value[mask] = self.aq1 + self.aq2 * p_abs_masked**2
+        value[mask] = self.aq2 * p_abs_masked**2
 
         return (self.weights * value).sum(0)
 
