@@ -7,7 +7,7 @@ License: BSD-3
 """
 
 import numpy as np
-from ._penalties import SCADSmoothed
+from ._penalties import NonePenalty
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_fprime
 
 class PenalizedMixin(object):
@@ -43,10 +43,11 @@ class PenalizedMixin(object):
         # or use pen_weight_factor in signature
         if self.pen_weight is None:
             self.pen_weight = len(self.endog)
-        # I keep the following instead of adding default in pop for future changes
+
         if self.penal is None:
-            # TODO: switch to unpenalized by default
-            self.penal = SCADSmoothed(0.1, c0=0.0001)
+            # unpenalized by default
+            self.penal = NonePenalty()
+            self.pen_weight = 0
 
         self._init_keys.extend(['penal', 'pen_weight'])
 

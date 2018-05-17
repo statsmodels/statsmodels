@@ -74,6 +74,30 @@ class Penalty(object):
         raise NotImplementedError
 
 
+class NonePenalty(Penalty):
+    """
+    A penalty that does not penalize.
+    """
+
+    def __init__(self, **kwds):
+        if kwds:
+            import warnings
+            warnings.warn('keywords will be ignored')
+
+    def func(self, params):
+        if params.ndim == 2:
+            return np.zeros(params.shape[1:])
+        else:
+            return 0
+
+    def deriv(self, params):
+        return np.zeros(params.shape)
+
+    def hessian(self, params):
+        # returns diagonal of hessian
+        return np.zeros(params.shape[0])
+
+
 class L2(Penalty):
     """
     The L2 (ridge) penalty.
