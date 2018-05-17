@@ -143,18 +143,27 @@ Replace `/x64` with `/x86` and `v7.0` with `v7.1` as needed.
 Dependencies
 ~~~~~~~~~~~~
 
-* `Python <https://www.python.org>`__ >= 2.7, including Python 3.x
-* `NumPy <http://www.scipy.org/>`__ >= 1.8
-* `SciPy <http://www.scipy.org/>`__ >= 0.14
-* `Pandas <http://pandas.pydata.org/>`__ >= 0.14
-* `Patsy <https://patsy.readthedocs.io/en/latest/>`__ >= 0.3.0
+The current minimum dependencies are:
+
+* `Python <https://www.python.org>`__ >= 2.7, including Python 3.4+
+* `NumPy <http://www.scipy.org/>`__ >= 1.11
+* `SciPy <http://www.scipy.org/>`__ >= 0.18
+* `Pandas <http://pandas.pydata.org/>`__ >= 0.19
+* `Patsy <https://patsy.readthedocs.io/en/latest/>`__ >= 0.4.0
 * `Cython <http://cython.org/>`__ >= 0.24 is required to build the code from
   github but not from a source distribution.
+
+Given the long release cycle, Statsmodels follows a loose time-based policy for
+dependencies: minimal dependencies are lagged about one and a half to two
+years. Our next planned update of minimum versions in `setup.py` is expected in
+September 2018, when we will update to reflect Numpy >= 1.12 (released January
+2017), Scipy >= 0.19 (released March 2017) and Pandas >= 0.20 (released May
+2017).
 
 Optional Dependencies
 ~~~~~~~~~~~~~~~~~~~~~
 
-* `Matplotlib <http://matplotlib.org/>`__ >= 1.4 is needed for plotting
+* `Matplotlib <http://matplotlib.org/>`__ >= 1.5 is needed for plotting
   functions and running many of the examples.
 * If installed, `X-12-ARIMA <http://www.census.gov/srd/www/x13as/>`__ or
   `X-13ARIMA-SEATS <http://www.census.gov/srd/www/x13as/>`__ can be used
