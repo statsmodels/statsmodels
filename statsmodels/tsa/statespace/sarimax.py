@@ -964,8 +964,10 @@ class SARIMAX(MLEModel):
         if self.state_regression and self.time_varying_regression:
             # TODO how to set the initial variance parameters?
             params_exog_variance = [1] * self.k_exog
-        if self.state_error and params_variance == []:
-            if not params_seasonal_variance == []:
+        if (self.state_error and type(params_variance) == list and
+                len(params_variance) == 0):
+            if not (type(params_variance) == list and
+                    params_seasonal_variance == []):
                 params_variance = params_seasonal_variance
             elif self.k_exog > 0:
                 params_variance = np.inner(endog, endog)
