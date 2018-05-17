@@ -496,11 +496,11 @@ if __name__ == "__main__":
         os.unlink('MANIFEST')
 
     min_versions = {
-        'numpy' : '1.12',   # released January 2017
-        'scipy' : '0.19',   # released March 2017
-        'pandas' : '0.20',  # released May 2017
+        'numpy' : '1.11',   # released March 2016
+        'scipy' : '0.18',   # released July 2016
+        'pandas' : '0.19',  # released October 2016
         'patsy' : '0.4.0',  # released July 2015
-        # 'matplotlib': '2.0.0',   #  released January 2017
+        # 'matplotlib': '1.5.0',   #  released October 2015
                    }
 
     (setup_requires,

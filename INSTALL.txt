@@ -5,15 +5,15 @@ python >= 2.7
 
     www.python.org
 
-numpy >= 1.12
+numpy >= 1.11
 
     www.numpy.org
 
-scipy >= 0.19
+scipy >= 0.18
     
     www.scipy.org
 
-pandas >= 0.20
+pandas >= 0.19
 
     pandas.pydata.org
 
@@ -43,7 +43,7 @@ X-12-ARIMA or X-13ARIMA-SEATS
     appropriate executable on your PATH or set the X12PATH or X13PATH 
     environmental variable to take advantage.
 
-matplotlib >= 2.0
+matplotlib >= 1.5
 
     http://matplotlib.org/
 
