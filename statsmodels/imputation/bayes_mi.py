@@ -66,7 +66,13 @@ class BayesGaussMI(object):
             if v not in rowmap:
                 rowmap[v] = []
             rowmap[v].append(i)
-        self.patterns = [np.asarray(x) for x in rowmap.values()]
+        patterns = [np.asarray(v) for v in rowmap.values()]
+
+        # Give the missing data patterns a deterministic order
+        np.random.seed(4234)
+        c = np.asarray([np.dot(x, np.random.uniform(size=len(x))) for x in patterns])
+        ii = np.argsort(c)
+        self.patterns = [patterns[i] for i in ii]
 
         # Simple starting values for mean and covariance
         p = self.data.shape[1]
