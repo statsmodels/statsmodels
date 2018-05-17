@@ -22,6 +22,8 @@ env:
     - OPENBLAS_NUM_THREADS=1
     - PYTHONHASHSEED=0 # Ensure tests are correctly gathered by xdist
     - BLAS="mkl blas=*=mkl" # Use Intel MKL by default
+    - BUILD_INIT=tools/travis_conda.sh
+    - DEPEND_ALWAYS="pyyaml joblib"
 
 matrix:
   fast_finish: true
@@ -86,13 +88,20 @@ matrix:
     - PANDAS=0.19
     - USEMPL=false
     - LINT=true
-
+  # Standard pip install
+  - python: 3.6
+    env:
+    - BUILD_INIT=tools/travis_pip.sh
+  # Latest pre-release packages
+  - python: 3.6
+    env:
+    - PIP_PRE=true
+    - BUILD_INIT=tools/travis_pip.sh
 
 notifications:
   email:
     on_success: always
 
-# Setup anaconda
 before_install:
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   - chmod +x miniconda.sh
@@ -118,8 +127,16 @@ before_install:
   - echo conda create --yes --quiet -n statsmodels-test python=${PYTHON} ${BLAS} ${PKGS} ${OPTIONAL} pyyaml joblib
   - conda create --yes --quiet -n statsmodels-test python=${PYTHON} ${BLAS} ${PKGS} ${OPTIONAL} pyyaml joblib
   - source activate statsmodels-test
+  # Source recipe to install packages
+  - source $BUILD_INIT
   - pip install 'pytest<4' pytest-xdist nose
-  - if [ ${COVERAGE} = true ]; then pip install codecov coverage coveralls pytest-cov; fi
+  - |
+    if [ ${COVERAGE} = true ]; then
+        pip install codecov coverage coveralls pytest-cov
+        export COVERAGE_OPTS="--cov-config=.travis_coveragerc --cov=statsmodels"
+    else
+        export COVERAGE_OPTS=""
+    fi
   - if [ ${DOCBUILD} = true ]; then bash tools/ci_docbuild_install.sh; fi;
   - pip install flake8
   - export SRCDIR=$PWD
