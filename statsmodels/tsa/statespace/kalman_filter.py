@@ -1204,6 +1204,8 @@ class FilterResults(FrozenRepresentation):
     ----------
     nobs : int
         Number of observations.
+    nobs_diffuse : int
+        Number of observations under the diffuse Kalman filter.
     k_endog : int
         The dimension of the observation series.
     k_states : int
@@ -1252,6 +1254,8 @@ class FilterResults(FrozenRepresentation):
         The state vector used to initialize the Kalamn filter.
     initial_state_cov : array_like
         The state covariance matrix used to initialize the Kalamn filter.
+    initial_diffuse_state_cov : array_like
+        Diffuse state covariance matrix used to initialize the Kalamn filter.
     filter_method : int
         Bitmask representing the Kalman filtering method
     inversion_method : int
@@ -1283,6 +1287,10 @@ class FilterResults(FrozenRepresentation):
         The predicted state vector at each time period.
     predicted_state_cov : array
         The predicted state covariance matrix at each time period.
+    forecast_error_diffuse_cov : array
+        Diffuse forecast error covariance matrix at each time period.
+    predicted_diffuse_state_cov : array
+        The predicted diffuse state covariance matrix at each time period.
     kalman_gain : array
         The Kalman gain at each time period.
     forecasts : array
