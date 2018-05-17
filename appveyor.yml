@@ -9,7 +9,7 @@ environment:
       PYTHON_ARCH: "x86_64"
     - PY_MAJOR_VER: 2
       PYTHON_ARCH: "x86_64"
-      SCIPY: "0.14"
+      SCIPY: "1.0"
     - PY_MAJOR_VER: 3
       PYTHON_ARCH: "x86_64"
 
