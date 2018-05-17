@@ -2,14 +2,12 @@
 import warnings
 import numpy as np
 import pandas as pd
-from statsmodels.regression.mixed_linear_model import (
-    MixedLM, MixedLMParams, _smw_solver, _smw_logdet)
+from statsmodels.regression.mixed_linear_model import MixedLM, MixedLMParams
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_)
 from . import lme_r_results
 from statsmodels.base import _penalties as penalties
 import pytest
-from scipy import sparse
 import statsmodels.tools.numdiff as nd
 import os
 import csv
@@ -1094,62 +1092,6 @@ def test_random_effects_getters():
     for g in refc.keys():
         p = ref[g].size
         assert(refc[g].shape == (p, p))
-
-
-def test_smw_solver():
-
-    np.random.seed(23)
-    p = 5
-    q = 4
-    r = 2
-    s = 2
-
-    A = np.random.normal(size=(p, q))
-    AtA = np.dot(A.T, A)
-
-    B = np.zeros((q, q))
-    B[0:r, 0:r] = np.random.normal(size=(r, r))
-    di = np.random.uniform(size=s)
-    B[r:q, r:q] = np.diag(1/di)
-    Qi = np.linalg.inv(B[0:r, 0:r])
-    s = 0.5
-
-    x = np.random.normal(size=p)
-    y2 = np.linalg.solve(s*np.eye(p, p) + np.dot(A, np.dot(B, A.T)), x)
-
-    f = _smw_solver(s, A, AtA, Qi, di)
-    y1 = f(x)
-    assert_allclose(y1, y2)
-
-    f = _smw_solver(s, sparse.csr_matrix(A), sparse.csr_matrix(AtA), Qi, di)
-    y1 = f(x)
-    assert_allclose(y1, y2)
-
-
-def test_smw_logdet():
-
-    np.random.seed(23)
-    p = 5
-    q = 4
-    r = 2
-    s = 2
-
-    A = np.random.normal(size=(p, q))
-    AtA = np.dot(A.T, A)
-
-    B = np.zeros((q, q))
-    c = np.random.normal(size=(r, r))
-    B[0:r, 0:r] = np.dot(c.T, c)
-    di = np.random.uniform(size=s)
-    B[r:q, r:q] = np.diag(1/di)
-    Qi = np.linalg.inv(B[0:r, 0:r])
-    s = 0.5
-
-    _, d2 = np.linalg.slogdet(s*np.eye(p, p) + np.dot(A, np.dot(B, A.T)))
-
-    _, bd = np.linalg.slogdet(B)
-    d1 = _smw_logdet(s, A, AtA, Qi, di, bd)
-    assert_allclose(d1, d2)
 
 
 if __name__ == "__main__":

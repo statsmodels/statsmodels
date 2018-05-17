@@ -413,117 +413,94 @@ class MixedLMParams(object):
         return pa
 
 
-def _smw_solver(s, A, AtA, Qi, di):
+def _smw_solver(s, A, AtA, BI, di):
     """
-    Returns a solver for the linear system:
+    Solves the system (s*I + A*B*A') * x = rhs for an arbitrary rhs.
 
-    .. math::
-
-        (sI + ABA^\prime) y = x
-
-    The returned function f satisfies f(x) = y as defined above.
-
-    B and its inverse matrix are block diagonal.  The upper left block
-    of :math:`B^{-1}` is Qi and its lower right block is diag(di).
+    The inverse matrix of B is block diagonal.  The upper left block
+    is BI and the lower right block is a diagonal matrix containing
+    di.
 
     Parameters
     ----------
     s : scalar
         See above for usage
     A : ndarray
-        p x q matrix, in general q << p, may be sparse.
+        See above for usage
     AtA : square ndarray
-        :math:`A^\prime  A`, a q x q matrix.
-    Qi : square symmetric ndarray
-        The matrix `B` is q x q, where q = r + s.  `B` consists of a r
-        x r diagonal block whose inverse is `Qi`, and a s x s diagonal
-        block, whose inverse is diag(di).
-    di : 1d array-like
-        See documentation for Qi.
+        A.T * A
+    BI : square symmetric ndarray
+        The inverse of `B`.
+    di : array-like
 
     Returns
     -------
-    A function for solving a linear system, as documented above.
-
-    Notes
-    -----
-    Uses Sherman-Morrison-Woodbury identity:
-        https://en.wikipedia.org/wiki/Woodbury_matrix_identity
+    A function that takes `rhs` as an input argument and returns a
+    solution to the linear system defined above.
     """
 
     # Use SMW identity
     qmat = AtA / s
-    if sparse.issparse(qmat):
-        qmat = qmat.todense()
-    m = Qi.shape[0]
-    qmat[0:m, 0:m] += Qi
-    d = qmat.shape[0]
-    qmat.flat[m*(d+1)::d+1] += di
+    m = BI.shape[0]
+    qmat[0:m, 0:m] += BI
+    ix = np.arange(m, A.shape[1])
+    qmat[ix, ix] += di
     if sparse.issparse(A):
-        qmati = sparse.linalg.spsolve(sparse.csc_matrix(qmat), A.T)
+        qi = sparse.linalg.inv(qmat)
+        qmati = A.dot(qi.T).T
     else:
         qmati = np.linalg.solve(qmat, A.T)
 
-    if sparse.issparse(A):
-        def solver(rhs):
+    def solver(rhs):
+        if sparse.issparse(A):
             ql = qmati.dot(rhs)
             ql = A.dot(ql)
-            return rhs / s - ql / s**2
-    else:
-        def solver(rhs):
+        else:
             ql = np.dot(qmati, rhs)
             ql = np.dot(A, ql)
-            return rhs / s - ql / s**2
+        rslt = rhs / s - ql / s**2
+        if sparse.issparse(rslt):
+            rslt = np.asarray(rslt.todense())
+        return rslt
 
     return solver
 
 
-def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
+def _smw_logdet(s, A, AtA, BI, di, B_logdet):
     """
-    Returns the log determinant of
-
-    .. math::
-
-        sI + ABA^\prime
+    Returns the log determinant of s*I + A*B*A'.
 
     Uses the matrix determinant lemma to accelerate the calculation.
-    B is assumed to be positive semidefinite, and s > 0, therefore the
-    determinant is positive.
 
     Parameters
     ----------
-    s : positive scalar
+    s : scalar
         See above for usage
-    A : ndarray
-        p x q matrix, in general q << p.
-    AtA : square ndarray
-        :math:`A^\prime  A`, a q x q matrix.
-    Qi : square symmetric ndarray
-        The matrix `B` is q x q, where q = r + s.  `B` consists of a r
-        x r diagonal block whose inverse is `Qi`, and a s x s diagonal
-        block, whose inverse is diag(di).
-    di : 1d array-like
-        See documentation for Qi.
+    A : square symmetric ndarray
+        See above for usage
+    AtA : square matrix
+        A.T * A
+    BI : square symmetric ndarray
+        The upper left block of B^-1.
+    di : array-like
+        The diagonal elements of the lower right block of B^-1.
     B_logdet : real
         The log determinant of B
 
     Returns
     -------
     The log determinant of s*I + A*B*A'.
-
-    Notes
-    -----
-    Uses the matrix determinant lemma:
-        https://en.wikipedia.org/wiki/Matrix_determinant_lemma
     """
 
     p = A.shape[0]
     ld = p * np.log(s)
     qmat = AtA / s
-    m = Qi.shape[0]
-    qmat[0:m, 0:m] += Qi
-    d = qmat.shape[0]
-    qmat.flat[m*(d+1)::d+1] += di
+    m = BI.shape[0]
+    qmat[0:m, 0:m] += BI
+    ix = np.arange(m, A.shape[1])
+    qmat[ix, ix] += di
+    if sparse.issparse(qmat):
+        qmat = qmat.todense()
     _, ld1 = np.linalg.slogdet(qmat)
     return B_logdet + ld + ld1
 
@@ -736,12 +713,7 @@ class MixedLM(base.LikelihoodModel):
         for i in range(self.n_groups):
             a = self._augment_exog(i)
             self._aex_r.append(a)
-
-            # This matrix is not very sparse so convert it to dense.
-            ma = _dot(a.T, a)
-            if sparse.issparse(ma):
-                ma = ma.todense()
-            self._aex_r2.append(ma)
+            self._aex_r2.append(_dot(a.T, a))
 
         # Precompute this
         self._lin, self._quad = self._reparam()
@@ -2415,13 +2387,11 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         k_re_params = len(param_names) - len(self.fe_params)
         if xname_fe is not None:
             if len(xname_fe) != k_fe_params:
-                msg = "xname_fe should be a list of length %d" % k_fe_params
-                raise ValueError(msg)
+                raise ValueError("xname_fe should be a list of length %d" % k_fe_params)
             param_names[:k_fe_params] = xname_fe
         if xname_re is not None:
             if len(xname_re) != k_re_params:
-                msg = "xname_re should be a list of length %d" % k_re_params
-                raise ValueError(msg)
+                raise ValueError("xname_re should be a list of length %d" % k_re_params)
             param_names[k_fe_params:] = xname_re
 
         info["No. Observations:"] = str(self.model.n_totobs)
