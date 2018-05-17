@@ -1175,7 +1175,6 @@ class Test_ar_no_enforce(SARIMAXCoverageTest):
 
         model2 = sarimax.SARIMAX(endog, exog, **kwargs)
         # Fixes needed for edge case model
-        model2.ssm._initial_variance = mod1.ssm._initial_variance
         model2.ssm.initialization = mod1.ssm.initialization
 
         res1 = self.model.filter(self.true_params)
