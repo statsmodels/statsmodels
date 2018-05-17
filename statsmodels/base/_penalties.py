@@ -93,6 +93,29 @@ class L2(Penalty):
         return 2 * self.wts * self.alpha * params
 
 
+class L2Univariate(Penalty):
+    """
+    The L2 (ridge) penalty applied to each parameter.
+    """
+
+    def __init__(self, weights=None):
+        if weights is None:
+            self.weights = 1.
+        else:
+            self.weights = weights
+
+    def func(self, params):
+        return self.weights * params**2
+
+    def deriv(self, params):
+        return 2 * self.weights * params
+
+    grad = deriv  # alias for compat
+
+    def deriv2(self, params):
+        return 2 * self.weights * np.ones(len(params))
+
+
 class PseudoHuber(Penalty):
     """
     The pseudo-Huber penalty.
@@ -288,9 +311,141 @@ class SCADSmoothed(SCAD):
 
         if self.restriction is not None and np.size(params) > 1:
             # note: super returns 1d array for diag, i.e. hessian_diag
+            # TODO: weights are missing
             return (self.restriction.T * value).dot(self.restriction)
         else:
             return value
+
+
+class ConstraintsPenalty(object):
+    """
+    Penalty applied to linear transformation of parameters
+
+    Parameters
+    ----------
+    penalty: instance of penalty function
+        currently this requires an instance of a univariate, vectorized
+        penalty class
+    weights : None or ndarray
+        weights for adding penalties of transformed params
+    restriction : None or ndarray
+        If it is not None, then restriction defines a linear transformation
+        of the parameters. The penalty function is applied to each transformed
+        parameter independently.
+
+
+    Notes
+    -----
+    `restrictions` allows us to impose penalization on contrasts or stochastic
+    constraints of the original parameters.
+    Examples for these contrast are difference penalities or all pairs
+    penalties.
+
+    """
+
+    def __init__(self, penalty, weights=None, restriction=None):
+
+        self.penalty = penalty
+        if weights is None:
+            self.weights = 1.
+        else:
+            self.weights = weights
+
+        if restriction is not None:
+            restriction = np.asarray(restriction)
+
+        self.restriction = restriction
+
+    def func(self, params):
+        """evaluate penalty function at params
+
+        Parameter
+        ---------
+        params : ndarray
+            array of parameters at which derivative is evaluated
+
+        Returns
+        -------
+        deriv2 : ndarray
+            value(s) of penalty function
+        """
+        # TODO: `and np.size(params) > 1` is hack for llnull, need better solution
+        if self.restriction is not None: # and np.size(params) > 1:
+            params = self.restriction.dot(params)
+
+        value = self.penalty.func(params)
+
+        return (self.weights * value.T).T.sum(0)
+
+    def deriv(self, params):
+        """first derivative of penalty function w.r.t. params
+
+        Parameter
+        ---------
+        params : ndarray
+            array of parameters at which derivative is evaluated
+
+        Returns
+        -------
+        deriv2 : ndarray
+            array of first partial derivatives
+        """
+        if self.restriction is not None: # and np.size(params) > 1:
+            params = self.restriction.dot(params)
+
+        value = self.penalty.deriv(params)
+
+        if self.restriction is not None: # and np.size(params) > 1:
+            return self.weights * value.T.dot(self.restriction)
+        else:
+            return (self.weights * value.T)
+
+    grad = deriv
+
+    def deriv2(self, params):
+        """second derivative of penalty function w.r.t. params
+
+        Parameter
+        ---------
+        params : ndarray
+            array of parameters at which derivative is evaluated
+
+        Returns
+        -------
+        deriv2 : ndarray, 2-D
+            second derivative matrix
+        """
+
+        if self.restriction is not None and np.size(params) > 1:
+            params = self.restriction.dot(params)
+
+        value = self.penalty.deriv2(params)
+
+        if self.restriction is not None:
+            # note: univariate penalty returns 1d array for diag,
+            # i.e. hessian_diag
+            v = (self.restriction.T * value * self.weights)
+            value = v.dot(self.restriction)
+        else:
+            value = np.diag(self.weights * value)
+
+        return value
+
+
+class L2ContraintsPenalty(ConstraintsPenalty):
+    """convenience class of ConstraintsPenalty with L2 penalization
+
+    """
+
+    def __init__(self, weights=None, restriction=None, sigma_prior=None):
+
+        if sigma_prior is not None:
+            raise NotImplementedError('sigma_prior is not implemented yet')
+
+        penalty = L2Univariate()
+
+        super(L2ContraintsPenalty, self).__init__(penalty, weights=weights,
+                                                  restriction=restriction)
 
 
 class CovariancePenalty(object):
