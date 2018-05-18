@@ -58,6 +58,8 @@ matrix:
   - python: 2.7
     env:
     - PYTHON=3.6
+    # (can't use pandas=0.23 with pandas-datareader <= 0.6)
+    - PANDAS=0.22
     - DOCBUILD=true
   # No Matplotlib (on Python 2.7 + baseline packages)
   - python: 2.7
