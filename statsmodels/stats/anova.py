@@ -562,8 +562,8 @@ class AnovaRM(object):
         df_resid = results.df_resid
         ssr = results.ssr
 
-        anova_table = pd.DataFrame(
-            {'F Value': [], 'Num DF': [], 'Den DF': [], 'Pr > F': []})
+        columns = ['F Value', 'Num DF', 'Den DF', 'Pr > F']
+        anova_table = pd.DataFrame(np.zeros((0, 4)), columns=columns)
 
         for key in term_slices:
             if self.subject not in key and key != 'Intercept':
@@ -590,7 +590,7 @@ class AnovaRM(object):
                 anova_table.loc[term, 'Den DF'] = df2
                 anova_table.loc[term, 'Pr > F'] = p
 
-        return AnovaResults(anova_table.iloc[:, [1, 2, 0, 3]])
+        return AnovaResults(anova_table)
 
 
 class AnovaResults(object):
