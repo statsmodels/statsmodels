@@ -1578,11 +1578,11 @@ class MixedLM(base.LikelihoodModel):
 
         # Handle the covariance penalty.
         if self.cov_pen is not None:
-            score_re -= self.cov_pen.grad(cov_re, cov_re_inv)
+            score_re -= self.cov_pen.deriv(cov_re, cov_re_inv)
 
         # Handle the fixed effects penalty.
         if calc_fe and (self.fe_pen is not None):
-            score_fe -= self.fe_pen.grad(fe_params)
+            score_fe -= self.fe_pen.deriv(fe_params)
 
         # resid' V^{-1} resid, summed over the groups (a scalar)
         rvir = 0.

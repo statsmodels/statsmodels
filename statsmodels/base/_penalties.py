@@ -22,6 +22,17 @@ penalties do not belong here).
 
 import numpy as np
 
+def _check_wts(weights, wts):
+    """helper function for deprecating `wts`
+    """
+    if wts is not None:
+        import warnings
+        warnings.warn('`wts` method is deprecated. Use `weights` instead',
+                      DeprecationWarning)
+    weights = weights if weights is not None else wts
+    return wts
+
+
 class Penalty(object):
     """
     A class for representing a scalar-value penalty.
@@ -38,8 +49,8 @@ class Penalty(object):
     The class has a member called `alpha` that scales the weights.
     """
 
-    def __init__(self, wts):
-        self.wts = wts
+    def __init__(self, weights):
+        self.weights = weights
         self.alpha = 1.
 
     def func(self, params):
@@ -58,7 +69,7 @@ class Penalty(object):
         """
         raise NotImplementedError
 
-    def grad(self, params):
+    def deriv(self, params):
         """
         The gradient of a penalty function.
 
@@ -73,6 +84,12 @@ class Penalty(object):
         `params`.
         """
         raise NotImplementedError
+
+    def grad(self, params):
+        import warnings
+        warnings.warn('grad method is deprecated. Use `deriv` instead',
+                      DeprecationWarning)
+        return self.deriv(params)
 
 
 class NonePenalty(Penalty):
@@ -104,18 +121,19 @@ class L2(Penalty):
     The L2 (ridge) penalty.
     """
 
-    def __init__(self, wts=None):
-        if wts is None:
-            self.wts = 1.
+    def __init__(self, weights=None, wts=None):
+        weights = _check_wts(weights, wts)  # for deprecation wts
+        if weights  is None:
+            self.weights  = 1.
         else:
-            self.wts = wts
+            self.weights  = weights
         self.alpha = 1.
 
     def func(self, params):
-        return np.sum(self.wts * self.alpha * params**2)
+        return np.sum(self.weights * self.alpha * params**2)
 
-    def grad(self, params):
-        return 2 * self.wts * self.alpha * params
+    def deriv(self, params):
+        return 2 * self.weights * self.alpha * params
 
 
 class L2Univariate(Penalty):
@@ -135,8 +153,6 @@ class L2Univariate(Penalty):
     def deriv(self, params):
         return 2 * self.weights * params
 
-    grad = deriv  # alias for compat
-
     def deriv2(self, params):
         return 2 * self.weights * np.ones(len(params))
 
@@ -146,23 +162,24 @@ class PseudoHuber(Penalty):
     The pseudo-Huber penalty.
     """
 
-    def __init__(self, dlt, wts=None):
+    def __init__(self, dlt, weights=None, wts=None):
         self.dlt = dlt
-        if wts is None:
-            self.wts = 1.
+        weights = _check_wts(weights, wts)  # for deprecation wts
+        if weights  is None:
+            self.weights  = 1.
         else:
-            self.wts = wts
+            self.weights  = weights
         self.alpha = 1.
 
     def func(self, params):
         v = np.sqrt(1 + (params / self.dlt)**2)
         v -= 1
         v *= self.dlt**2
-        return np.sum(self.wts * self.alpha * v, 0)
+        return np.sum(self.weights * self.alpha * v, 0)
 
-    def grad(self, params):
+    def deriv(self, params):
         v = np.sqrt(1 + (params / self.dlt)**2)
-        return params * self.wts * self.alpha / v
+        return params * self.weights * self.alpha / v
 
 
 class SCAD(Penalty):
@@ -496,8 +513,9 @@ class L2ContraintsPenalty(ConstraintsPenalty):
 
 class CovariancePenalty(object):
 
-    def __init__(self, wt):
-        self.wt = wt
+    def __init__(self, weight):
+        # weight should be scalar
+        self.weight = weight
 
     def func(self, mat, mat_inv):
         """
@@ -514,7 +532,7 @@ class CovariancePenalty(object):
         """
         raise NotImplementedError
 
-    def grad(self, mat, mat_inv):
+    def deriv(self, mat, mat_inv):
         """
         Parameters
         ----------
@@ -531,6 +549,12 @@ class CovariancePenalty(object):
         """
         raise NotImplementedError
 
+    def grad(self, mat, mat_inv):
+        import warnings
+        warnings.warn('grad method is deprecated. Use `deriv` instead',
+                      DeprecationWarning)
+        return self.deriv(mat, mat_inv)
+
 
 class PSD(CovariancePenalty):
     """
@@ -544,10 +568,10 @@ class PSD(CovariancePenalty):
             cy = np.linalg.cholesky(mat)
         except np.linalg.LinAlgError:
             return np.inf
-        return -2 * self.wt * np.sum(np.log(np.diag(cy)))
+        return -2 * self.weight * np.sum(np.log(np.diag(cy)))
 
-    def grad(self, mat, mat_inv):
+    def deriv(self, mat, mat_inv):
         cy = mat_inv.copy()
         cy = 2*cy - np.diag(np.diag(cy))
         i,j = np.tril_indices(mat.shape[0])
-        return -self.wt * cy[i,j]
+        return -self.weight * cy[i,j]
