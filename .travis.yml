@@ -81,6 +81,13 @@ matrix:
     - PIP_PRE=true
     - BUILD_INIT=tools/travis_pip.sh
 
+  allow_failures:
+  # pre-testing is a little fragile. Make it an FYI.
+  - python: 3.6
+    env:
+    - PIP_PRE=true
+    - BUILD_INIT=tools/travis_pip.sh
+
 notifications:
   email:
     on_success: always
