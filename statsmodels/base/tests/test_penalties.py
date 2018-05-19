@@ -90,3 +90,20 @@ class TestSmoothedSCAD(CheckPenalty):
         cls.params = np.column_stack((x0, x0))
         cls.pen = smpen.SCADSmoothed(tau=0.05, c0=0.05)
 
+
+class TestPseudoHuber(CheckPenalty):
+
+    @classmethod
+    def setup_class(cls):
+        x0 = np.linspace(-0.2, 0.2, 11)
+        cls.params = np.column_stack((x0, x0))
+        cls.pen = smpen.PseudoHuber(0.1)
+
+
+class TestL2(CheckPenalty):
+
+    @classmethod
+    def setup_class(cls):
+        x0 = np.linspace(-0.2, 0.2, 11)
+        cls.params = np.column_stack((x0, x0))
+        cls.pen = smpen.L2()

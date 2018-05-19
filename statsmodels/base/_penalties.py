@@ -19,6 +19,7 @@ The penaties should be smooth so that they can be subtracted from log
 likelihood functions and optimized using standard methods (i.e. L1
 penalties do not belong here).
 """
+from __future__ import division
 
 import numpy as np
 
@@ -135,6 +136,9 @@ class L2(Penalty):
     def deriv(self, params):
         return 2 * self.weights * self.alpha * params
 
+    def deriv2(self, params):
+        return 2 * self.weights * self.alpha * np.ones(len(params))
+
 
 class L2Univariate(Penalty):
     """
@@ -180,6 +184,10 @@ class PseudoHuber(Penalty):
     def deriv(self, params):
         v = np.sqrt(1 + (params / self.dlt)**2)
         return params * self.weights * self.alpha / v
+
+    def deriv2(self, params):
+        v = np.power(1 + (params / self.dlt)**2, -3/2)
+        return self.weights * self.alpha * v
 
 
 class SCAD(Penalty):
