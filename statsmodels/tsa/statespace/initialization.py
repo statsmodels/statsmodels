@@ -210,6 +210,9 @@ class Initialization(object):
             self.set(None, initialization_type, constant=constant,
                      stationary_cov=stationary_cov)
 
+    def __setitem__(self, index, initialization_type):
+        self.set(index, initialization_type)
+
     def _initialize_initialization(self, prefix):
         dtype = tools.prefix_dtype_map[prefix]
 
@@ -275,17 +278,19 @@ class Initialization(object):
         """
         # Construct the index, using a slice object as an intermediate step
         # to enforce regularity
-        if isinstance(index, int):
-            if index < 0 or index >= self.k_states:
+        if not isinstance(index, slice):
+            if isinstance(index, int):
+                if index < 0 or index >= self.k_states:
+                    raise ValueError('Invalid index.')
+                index = (index, index + 1)
+            elif index is None:
+                index = (index,)
+            elif not isinstance(index, tuple):
                 raise ValueError('Invalid index.')
-            index = (index, index + 1)
-        elif index is None:
-            index = (index,)
-        elif not isinstance(index, tuple):
-            raise ValueError('Invalid index.')
-        if len(index) > 2:
-            raise ValueError('Cannot include a slice step in `index`.')
-        index = self._states[slice(*index)]
+            if len(index) > 2:
+                raise ValueError('Cannot include a slice step in `index`.')
+            index = slice(*index)
+        index = self._states[index]
 
         # Compatibility with zero-length slices (can make it easier to set up
         # initialization without lots of if statements)
