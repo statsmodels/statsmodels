@@ -95,6 +95,12 @@ cdef class {{prefix}}Initialization(object):
                          {{cython_type}} [::1, :] initial_stationary_state_cov,
                          int complex_step=False) except 1:
 
+        if offset + self.k_states > model.k_states:
+            raise ValueError('Invalid offset.')
+        tools.validate_vector_shape('initial state mean', &initial_state_mean.shape[0], model.k_states, None)
+        tools.validate_matrix_shape('initial diffuse state cov', &initial_diffuse_state_cov.shape[0], model.k_states, model.k_states, None)
+        tools.validate_matrix_shape('initial stationary state cov', &initial_stationary_state_cov.shape[0], model.k_states, model.k_states, None)
+
         if initialization_type == 'known':
             self.initialize_known_constant(offset, initial_state_mean)
             self.initialize_known_stationary_cov(offset, initial_stationary_state_cov)
