@@ -25,7 +25,7 @@ platform:
     - x64
 
 build_script:
-  - If Defined PY_MAJOR_VER ( tools\appveyor_conda.bat ) else ( tools\appveyor_pip.bat )
+  - If Defined PY_MAJOR_VER ( call tools\appveyor_conda.bat ) else ( call tools\appveyor_pip.bat )
   - SET MKL_NUM_THREADS=1
   - SET NUMEXPR_NUM_THREADS=1
   - SET OMP_NUM_THREADS=1
