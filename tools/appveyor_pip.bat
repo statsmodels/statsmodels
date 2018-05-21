@@ -1,5 +1,6 @@
 REM Install packages using pip
-PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
+set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
+python -m pip install -U pip
 IF Defined SCIPY (
     pip install numpy scipy==%SCIPY% cython pandas nose patsy
 ) else (
