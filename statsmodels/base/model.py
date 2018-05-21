@@ -2053,7 +2053,7 @@ class ResultMixin(object):
         """
         results = []
         print(self.model.__class__)
-        hascloneattr = True if hasattr(self, 'cloneattr') else False
+        hascloneattr = True if hasattr(self.model, 'cloneattr') else False
         for i in range(nrep):
             rvsind = np.random.randint(self.nobs, size=self.nobs)
             # this needs to set startparam and get other defining attributes
