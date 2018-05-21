@@ -2177,7 +2177,7 @@ class ResultMixin(object):
         """
         return np.sqrt(np.diag(self.covjac))
 
-    def bootstrap(self, nrep=100, method='nm', disp=0, store=1):
+    def bootstrap(self, nrep=100, method='nm', disp=0, store=1, **kwargs):
         """simple bootstrap to get mean and variance of estimator
 
         see notes
@@ -2219,8 +2219,12 @@ class ResultMixin(object):
             rvsind = np.random.randint(self.nobs, size=self.nobs)
             # this needs to set startparam and get other defining attributes
             # need a clone method on model
-            fitmod = self.model.__class__(self.endog[rvsind],
-                                          self.exog[rvsind, :])
+            if self.exog is not None:
+                exog_resamp = self.exog[rvsind, :]
+            else:
+                exog_resamp = None
+            fitmod = self.model.__class__(self.endog[rvsind], exog=exog_resamp,
+                                          **kwargs)
             if hascloneattr:
                 for attr in self.model.cloneattr:
                     setattr(fitmod, attr, getattr(self.model, attr))
