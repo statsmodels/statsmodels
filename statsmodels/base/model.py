@@ -2213,13 +2213,17 @@ class ResultMixin(object):
         """
         results = []
         print(self.model.__class__)
-        hascloneattr = True if hasattr(self, 'cloneattr') else False
+        hascloneattr = True if hasattr(self.model, 'cloneattr') else False
         for i in range(nrep):
             rvsind = np.random.randint(self.nobs, size=self.nobs)
             # this needs to set startparam and get other defining attributes
             # need a clone method on model
+            if self.exog is not None:
+                exog_resamp = self.exog[rvsind, :]
+            else:
+                exog_resamp = None
             fitmod = self.model.__class__(self.endog[rvsind],
-                                          self.exog[rvsind, :])
+                                          exog=exog_resamp)
             if hascloneattr:
                 for attr in self.model.cloneattr:
                     setattr(fitmod, attr, getattr(self.model, attr))
