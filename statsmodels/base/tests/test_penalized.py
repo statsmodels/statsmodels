@@ -20,18 +20,20 @@ import statsmodels.base._penalties as smpen
 class PoissonPenalized(PenalizedMixin, Poisson):
     pass
 
+
 class LogitPenalized(PenalizedMixin, Logit):
     pass
 
+
 class ProbitPenalized(PenalizedMixin, Probit):
     pass
+
 
 class GLMPenalized(PenalizedMixin, GLM):
     pass
 
 
 class CheckPenalizedPoisson(object):
-
 
     @classmethod
     def setup_class(cls):
@@ -40,7 +42,8 @@ class CheckPenalizedPoisson(object):
 
         nobs, k_vars = 500, 10
         k_nonzero = 4
-        x = (np.random.rand(nobs, k_vars) + 0.5* (np.random.rand(nobs, 1)-0.5)) * 2 - 1
+        x = ((np.random.rand(nobs, k_vars) +
+              0.5* (np.random.rand(nobs, 1) - 0.5)) * 2 - 1)
         x *= 1.2
         x[:, 0] = 1
         beta = np.zeros(k_vars)
@@ -120,7 +123,7 @@ class TestPenalizedPoissonNonePenal(CheckPenalizedPoisson):
         modp = Poisson(y, x)
         cls.res2 = modp.fit(disp=0)
 
-        mod = PoissonPenalized(y, x) # default no penalty
+        mod = PoissonPenalized(y, x)  # default no penalty
         mod.pen_weight = 0
         cls.res1 = mod.fit(method='bfgs', maxiter=100, disp=0)
 
@@ -162,7 +165,7 @@ class TestPenalizedGLMPoissonNoPenal(CheckPenalizedPoisson):
 
 
 class TestPenalizedPoissonOracle(CheckPenalizedPoisson):
-    # TODO: check, adjust cov_type
+
 
     @classmethod
     def _initialize(cls):
@@ -190,10 +193,9 @@ class TestPenalizedGLMPoissonOracle(CheckPenalizedPoisson):
         cls.res2 = modp.fit()
 
         mod = GLMPenalized(y, x, family=family.Poisson(), penal=cls.penalty)
-        mod.pen_weight *= 1.5 # same as discrete Poisson
+        mod.pen_weight *= 1.5  # same as discrete Poisson
         mod.penal.tau = 0.05
         cls.res1 = mod.fit(method='bfgs', maxiter=100)
-        # TODO trim=True raises exception about missing mle_setting)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 
@@ -201,19 +203,20 @@ class TestPenalizedGLMPoissonOracle(CheckPenalizedPoisson):
 
 
 class TestPenalizedPoissonOracleHC(CheckPenalizedPoisson):
-    # TODO: check, adjust cov_type
 
     @classmethod
     def _initialize(cls):
         y, x = cls.y, cls.x
         cov_type = 'HC0'
         modp = Poisson(y, x[:, :cls.k_nonzero])
-        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100,
+                            disp=0)
 
         mod = PoissonPenalized(y, x, penal=cls.penalty)
         mod.pen_weight *= 1.5
         mod.penal.tau = 0.05
-        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100,
+                           disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 
@@ -224,7 +227,8 @@ class TestPenalizedPoissonOracleHC(CheckPenalizedPoisson):
         res2 = self.res2
 
         assert_equal(self.res1.cov_type, 'HC0')
-        cov_kwds = {'description': 'Standard Errors are heteroscedasticity robust (HC0)',
+        cov_kwds = {'description': 'Standard Errors are heteroscedasticity '
+                    'robust (HC0)',
                     'adjust_df': False, 'use_t': False, 'scaling_factor': None}
         assert_equal(self.res1.cov_kwds, cov_kwds)
         # numbers are regression test using bfgs
@@ -239,19 +243,20 @@ class TestPenalizedPoissonOracleHC(CheckPenalizedPoisson):
 
 
 class TestPenalizedGLMPoissonOracleHC(CheckPenalizedPoisson):
-    # TODO: check, adjust cov_type
 
     @classmethod
     def _initialize(cls):
         y, x = cls.y, cls.x
         cov_type = 'HC0'
         modp = GLM(y, x[:, :cls.k_nonzero], family=family.Poisson())
-        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100,
+                            disp=0)
 
         mod = GLMPenalized(y, x, family=family.Poisson(), penal=cls.penalty)
         mod.pen_weight *= 1.5  # same as ddiscrete Poisson
         mod.penal.tau = 0.05
-        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100,
+                           disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 
@@ -266,14 +271,16 @@ class TestPenalizedPoissonGLMOracleHC(CheckPenalizedPoisson):
         y, x = cls.y, cls.x
         cov_type = 'HC0'
         modp = PoissonPenalized(y, x, penal=cls.penalty)
-        modp.pen_weight *= 1.5  # increased from ddiscrete Poisson 1.5
+        modp.pen_weight *= 1.5  # same as discrete Poisson 1.5
         modp.penal.tau = 0.05
-        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100,
+                            disp=0)
 
         mod = GLMPenalized(y, x, family=family.Poisson(), penal=cls.penalty)
-        mod.pen_weight *= 1.5  # increased from ddiscrete Poisson 1.5
+        mod.pen_weight *= 1.5  # same as discrete Poisson 1.5
         mod.penal.tau = 0.05
-        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100,
+                           disp=0)
 
         cls.exog_index = slice(None, None, None)
 
@@ -281,7 +288,6 @@ class TestPenalizedPoissonGLMOracleHC(CheckPenalizedPoisson):
 
 
 class TestPenalizedPoissonOraclePenalized(CheckPenalizedPoisson):
-    # TODO: check, adjust cov_type
 
     @classmethod
     def _initialize(cls):
@@ -290,8 +296,8 @@ class TestPenalizedPoissonOraclePenalized(CheckPenalizedPoisson):
         cls.res2 = modp.fit(method='bfgs', maxiter=100, disp=0)
 
         mod = PoissonPenalized(y, x, penal=cls.penalty)
-        #mod.pen_weight *= 1.5
-        #mod.penal.tau = 0.05
+        # mod.pen_weight *= 1.5
+        # mod.penal.tau = 0.05
         cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=False, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
@@ -300,18 +306,17 @@ class TestPenalizedPoissonOraclePenalized(CheckPenalizedPoisson):
 
 
 class TestPenalizedPoissonOraclePenalized2(CheckPenalizedPoisson):
-    # TODO: check, adjust cov_type
 
     @classmethod
     def _initialize(cls):
         y, x = cls.y, cls.x
         modp = PoissonPenalized(y, x[:, :cls.k_nonzero], penal=cls.penalty)
-        modp.pen_weight *= 10  # meed to penalize more to get oracle selection
+        modp.pen_weight *= 10  # need to penalize more to get oracle selection
         modp.penal.tau = 0.05
         cls.res2 = modp.fit(method='bfgs', maxiter=100, disp=0)
 
         mod = PoissonPenalized(y, x, penal=cls.penalty)
-        mod.pen_weight *= 10  # meed to penalize more to get oracle selection
+        mod.pen_weight *= 10  # need to penalize more to get oracle selection
         mod.penal.tau = 0.05
         cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=True, disp=0)
 
@@ -329,24 +334,24 @@ class TestPenalizedPoissonOraclePenalized2(CheckPenalizedPoisson):
 
 
 class TestPenalizedPoissonOraclePenalized2HC(CheckPenalizedPoisson):
-    # TODO: check, adjust cov_type
 
     @classmethod
     def _initialize(cls):
         y, x = cls.y, cls.x
-        cov_type = 'HC0'#'nonrobust'#'HC0'
+        cov_type = 'HC0'
         modp = PoissonPenalized(y, x[:, :cls.k_nonzero], penal=cls.penalty)
-        modp.pen_weight *= 10  # meed to penalize more to get oracle selection
+        modp.pen_weight *= 10  # need to penalize more to get oracle selection
         modp.penal.tau = 0.05
-        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100,
+                            disp=0)
 
         mod = PoissonPenalized(y, x, penal=cls.penalty)
-        mod.pen_weight *= 10  # meed to penalize more to get oracle selection
+        mod.pen_weight *= 10  # need to penalize more to get oracle selection
         mod.penal.tau = 0.05
-        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100, trim=True, disp=0)
+        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100,
+                           trim=True, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
-
         cls.atol = 1e-12
         cls.k_params = cls.k_nonzero
 
@@ -357,14 +362,13 @@ class TestPenalizedPoissonOraclePenalized2HC(CheckPenalizedPoisson):
 
         assert_equal(self.res1.cov_type, 'HC0')
         assert_equal(self.res1.results_constrained.cov_type, 'HC0')
-        cov_kwds = {'description': 'Standard Errors are heteroscedasticity robust (HC0)',
+        cov_kwds = {'description': 'Standard Errors are heteroscedasticity '
+                                   'robust (HC0)',
                     'adjust_df': False, 'use_t': False, 'scaling_factor': None}
         assert_equal(self.res1.cov_kwds, cov_kwds)
         assert_equal(self.res1.cov_kwds, self.res1.results_constrained.cov_kwds)
 
         # numbers are regression test using bfgs
-        params = np.array([0.9681779773984035, 0.43674302990429331,
-                           0.33096262545149246, 0.27415839700062317])
         params = np.array([0.96817787574701109, 0.43674374940137434,
                            0.33096260487556745, 0.27415680046693747])
         bse = np.array([0.028126650444581985, 0.033099984564283147,
@@ -399,7 +403,7 @@ class TestPenalizedLogitNoPenal(CheckPenalizedLogit):
 
         mod = LogitPenalized(y, x, penal=cls.penalty)
         mod.pen_weight = 0
-        cls.res1 = mod.fit(disp=0)# method='bfgs', maxiter=100)
+        cls.res1 = mod.fit(disp=0)
 
         cls.atol = 1e-4  # why not closer ?
 
@@ -452,8 +456,8 @@ class TestPenalizedLogitOraclePenalized(CheckPenalizedLogit):
         cls.res2 = modp.fit(method='bfgs', maxiter=100, disp=0)
 
         mod = LogitPenalized(y, x, penal=cls.penalty)
-        #mod.pen_weight *= 1.5
-        #mod.penal.tau = 0.05
+        # mod.pen_weight *= 1.5
+        # mod.penal.tau = 0.05
         cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=False, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
@@ -462,18 +466,17 @@ class TestPenalizedLogitOraclePenalized(CheckPenalizedLogit):
 
 
 class TestPenalizedLogitOraclePenalized2(CheckPenalizedLogit):
-    # TODO: check, adjust cov_type
 
     @classmethod
     def _initialize(cls):
         y, x = cls.y, cls.x
         modp = LogitPenalized(y, x[:, :cls.k_nonzero], penal=cls.penalty)
-        modp.pen_weight *= 0.5  # meed to penalize more to get oracle selection
+        modp.pen_weight *= 0.5
         modp.penal.tau = 0.05
         cls.res2 = modp.fit(method='bfgs', maxiter=100, disp=0)
 
         mod = LogitPenalized(y, x, penal=cls.penalty)
-        mod.pen_weight *= 0.5  # meed to penalize more to get oracle selection
+        mod.pen_weight *= 0.5
         mod.penal.tau = 0.05
         cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=True, disp=0)
 
@@ -484,7 +487,7 @@ class TestPenalizedLogitOraclePenalized2(CheckPenalizedLogit):
 
     def test_zeros(self):
 
-        # first test for trimmed result
+        # test for trimmed result
         assert_equal(self.res1.params[self.k_nonzero:], 0)
         # we also set bse to zero
         assert_equal(self.res1.bse[self.k_nonzero:], 0)
@@ -544,8 +547,10 @@ class TestPenalizedGLMBinomCountOracleHC(CheckPenalizedBinomCount):
         y, x = cls.y, cls.x
         offset = -0.25 * np.ones(len(y))  # also check offset
         cov_type = 'HC0'
-        modp = GLM(y, x[:, :cls.k_nonzero], family=family.Binomial(), offset=offset)
-        cls.res2 = modp.fit(cov_type=cov_type, method='newton', maxiter=1000, disp=0)
+        modp = GLM(y, x[:, :cls.k_nonzero], family=family.Binomial(),
+                   offset=offset)
+        cls.res2 = modp.fit(cov_type=cov_type, method='newton', maxiter=1000,
+                            disp=0)
 
         mod = GLMPenalized(y, x, family=family.Binomial(), offset=offset,
                            penal=cls.penalty)
@@ -568,8 +573,10 @@ class TestPenalizedGLMBinomCountOracleHC2(CheckPenalizedBinomCount):
         y, x = cls.y, cls.x
         offset = -0.25 * np.ones(len(y))  # also check offset
         cov_type = 'HC0'
-        modp = GLM(y, x[:, :cls.k_nonzero], family=family.Binomial(), offset=offset)
-        cls.res2 = modp.fit(cov_type=cov_type, method='newton', maxiter=1000, disp=0)
+        modp = GLM(y, x[:, :cls.k_nonzero], family=family.Binomial(),
+                   offset=offset)
+        cls.res2 = modp.fit(cov_type=cov_type, method='newton', maxiter=1000,
+                            disp=0)
 
         mod = GLMPenalized(y, x, family=family.Binomial(), offset=offset,
                            penal=cls.penalty)
@@ -604,12 +611,14 @@ class TestPenalizedGLMGaussianOracleHC(CheckPenalizedGaussian):
         y = y + 10
         cov_type = 'HC0'
         modp = GLM(y, x[:, :cls.k_nonzero], family=family.Gaussian())
-        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100,
+                            disp=0)
 
         mod = GLMPenalized(y, x, family=family.Gaussian(), penal=cls.penalty)
         mod.pen_weight *= 1.5  # same as discrete Poisson
         mod.penal.tau = 0.05
-        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+        cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100,
+                           disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 
@@ -627,7 +636,8 @@ class TestPenalizedGLMGaussianOracleHC2(CheckPenalizedGaussian):
         y = y + 10
         cov_type = 'HC0'
         modp = GLM(y, x[:, :cls.k_nonzero], family=family.Gaussian())
-        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100,
+                            disp=0)
 
         mod = GLMPenalized(y, x, family=family.Gaussian(), penal=cls.penalty)
         mod.pen_weight *= 1.5  # same as discrete Poisson
@@ -651,7 +661,8 @@ class TestPenalizedGLMGaussianL2(CheckPenalizedGaussian):
         y = y + 10
         cov_type = 'HC0'
         modp = GLM(y, x[:, :cls.k_nonzero], family=family.Gaussian())
-        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100, disp=0)
+        cls.res2 = modp.fit(cov_type=cov_type, method='bfgs', maxiter=100,
+                            disp=0)
 
         weights = (np.arange(x.shape[1]) >= 4).astype(float)
         mod = GLMPenalized(y, x, family=family.Gaussian(),
@@ -686,7 +697,7 @@ class TestPenalizedGLMGaussianL2Theil(CheckPenalizedGaussian):
         pen = smpen.L2ContraintsPenalty(restriction=restriction)
         mod = GLMPenalized(y, x, family=family.Gaussian(),
                            penal=pen)
-        # make pen_weight large to force redundant to close to zero
+        # use default weight for GLMPenalized
         mod.pen_weight *= 1
         cls.res1 = mod.fit(cov_type=cov_type, method='bfgs', maxiter=100,
                            disp=0, trim=False)
@@ -696,19 +707,20 @@ class TestPenalizedGLMGaussianL2Theil(CheckPenalizedGaussian):
         cls.k_params = x.shape[1]
         cls.atol = 1e-5
         cls.rtol = 1e-5
-        # TODO: check bug or difficult numbers?
-        #cls.skip_hessian = True
 
     def test_params_table(self):
         # override inherited because match is not good except for params and predict
         res1 = self.res1
         res2 = self.res2
         assert_equal((res1.params != 0).sum(), self.k_params)
-        assert_allclose(res1.params, res2.params, rtol=self.rtol, atol=self.atol)
+        assert_allclose(res1.params, res2.params, rtol=self.rtol,
+                        atol=self.atol)
 
         # failure for penalized values
-        # check only first 2, others fails
+        # check only first 2, others fails, see #4669
         exog_index = slice(None, 2, None)
-        assert_allclose(res1.bse[exog_index], res2.bse[exog_index], rtol=0.1, atol=self.atol)
-        assert_allclose(res1.pvalues[exog_index], res2.pvalues[exog_index], rtol=self.rtol, atol=self.atol)
+        assert_allclose(res1.bse[exog_index], res2.bse[exog_index],
+                        rtol=0.1, atol=self.atol)
+        assert_allclose(res1.pvalues[exog_index], res2.pvalues[exog_index],
+                        rtol=self.rtol, atol=self.atol)
         assert_allclose(res1.predict(), res2.predict(), rtol=1e-5)

@@ -510,20 +510,22 @@ class LikelihoodModel(Model):
         mlefit.mle_settings = optim_settings
         return mlefit
 
-    def _fit_zeros(self, keep_index=None, start_params=None, return_auxiliary=False,
-                   k_params=None, **fit_kwds):
-        """experimental fit the model subject to zero constraints
+    def _fit_zeros(self, keep_index=None, start_params=None,
+                   return_auxiliary=False, k_params=None, **fit_kwds):
+        """experimental, fit the model subject to zero constraints
 
         Intended for internal use cases until we know what we need.
         API will need to change to handle models with two exog.
+        This is not yet supported by all model subclasses.
 
-        This is essentially a simplified version of `fit_constrained`, and does not need
-        to use `offset`.
+        This is essentially a simplified version of `fit_constrained`, and
+        does not need to use `offset`.
 
         The estimation creates a new model with transformed design matrix,
         exog, and converts the results back to the original parameterization.
 
-        Some subclasses could use a more efficient calculation than using a new model.
+        Some subclasses could use a more efficient calculation than using a
+        new model.
 
         Parameters
         ----------
@@ -543,53 +545,58 @@ class LikelihoodModel(Model):
         results : Results instance
 
         """
-        # wee need to append index of extra params to keep_index as in NegativeBinomial
+        # we need to append index of extra params to keep_index as in
+        # NegativeBinomial
         if hasattr(self, 'k_extra') and self.k_extra > 0:
             # we cannot change the original, TODO: should we add keep_index_params?
             keep_index = np.array(keep_index, copy=True)
-            keep_index_p = np.concatenate((keep_index,
-                                           list(range(self.exog.shape[1] + self.k_extra))[-self.k_extra:]))
+            k = self.exog.shape[1]
+            extra_index = np.arange(k, k + self.k_extra)
+            keep_index_p = np.concatenate((keep_index, extra_index))
         else:
             keep_index_p = keep_index
 
         # not all models support start_params, drop if None, hide them in fit_kwds
         if start_params is not None:
             fit_kwds['start_params'] = start_params[keep_index_p]
-            k_params = len(start_params) # ignore k_params in this case, or verify consisteny?
+            k_params = len(start_params)
+            # ignore k_params in this case, or verify consisteny?
 
         # build auxiliary model and fit
         init_kwds = self._get_init_kwds()
-        mod_constr = self.__class__(self.endog, self.exog[:, keep_index], **init_kwds)
+        mod_constr = self.__class__(self.endog, self.exog[:, keep_index],
+                                    **init_kwds)
         res_constr = mod_constr.fit(**fit_kwds)
-        #switch name, only need keep_index for params belos
+        # switch name, only need keep_index for params below
         keep_index = keep_index_p
 
         if k_params is None:
             k_params = self.exog.shape[1]
             k_params += getattr(self, 'k_extra', 0)
 
-
         params_full = np.zeros(k_params)
         params_full[keep_index] = res_constr.params
-
 
         # create dummy results Instance, TODO: wire up properly
         # TODO: this could be moved into separate private method if needed
         # discrete L1 fit_regularized doens't reestimate AFAICS
-        #res = self.fit(maxiter=0, method='nm', disp=0,
         # RLM doesn't have method, disp nor warn_convergence keywords
         # OLS, WLS swallows extra kwds with **kwargs, but doesn't have method='nm'
         try:
-            # Note: addding full_output=False causes currently exceptions
+            # Note: addding full_output=False causes exceptions
             res = self.fit(maxiter=0, disp=0, method='nm', skip_hessian=True,
                            warn_convergence=False, start_params=params_full)
             # we get a wrapper back
         except (TypeError, ValueError):
             res = self.fit()
 
-        # Warning: make sure we are not just changing the wrapper instead of results #2400
+        # Warning: make sure we are not just changing the wrapper instead of
+        # results #2400
+        # TODO: do we need to change res._results.scale in some models?
         if hasattr(res_constr.model, 'scale'):
-            # GLM problem, see #2399
+            # Note: res.model is self
+            # GLM problem, see #2399,
+            # TODO: remove from model if not needed anymore
             res.model.scale = res._results.scale = res_constr.model.scale
 
         if hasattr(res_constr, 'mle_retvals'):
@@ -605,19 +612,21 @@ class LikelihoodModel(Model):
             res._results.mle_settings = res_constr.mle_settings
 
         res._results.params = params_full
-        if not hasattr(res._results, 'normalized_cov_param') or res._results.normalized_cov_param is None:
+        if (not hasattr(res._results, 'normalized_cov_param') or
+            res._results.normalized_cov_param is None):
             res._results.normalized_cov_params = np.zeros((k_params, k_params))
         else:
             res._results.normalized_cov_params[...] = 0
 
-        # TODO: sandwiches, add cov_params_default ?
         # fancy indexing requires integer array
         keep_index = np.array(keep_index)
-        res._results.normalized_cov_params[keep_index[:, None], keep_index] = res_constr.normalized_cov_params
+        res._results.normalized_cov_params[keep_index[:, None], keep_index] = \
+            res_constr.normalized_cov_params
         k_constr = res_constr.df_resid - res._results.df_resid
         if hasattr(res_constr, 'cov_params_default'):
             res._results.cov_params_default = np.zeros((k_params, k_params))
-            res._results.cov_params_default[keep_index[:, None], keep_index] = res_constr.cov_params_default
+            res._results.cov_params_default[keep_index[:, None], keep_index] = \
+                res_constr.cov_params_default
         if hasattr(res_constr, 'cov_type'):
             res._results.cov_type = res_constr.cov_type
             res._results.cov_kwds = res_constr.cov_kwds
@@ -644,13 +653,21 @@ class LikelihoodModel(Model):
         return res
 
     def _fit_collinear(self, atol=1e-14, rtol=1e-13, **kwds):
+        """experimental, fit of the model without collinear variables
+
+        This currently uses QR to drop variables based on the given
+        sequence.
+        Options will be added in future, when the supporting functions
+        to identify collinear variables become available.
+        """
 
         # ------ copied from PR #2380 remove when merged
         x = self.exog
         tol = atol + rtol * x.var(0)
         r = np.linalg.qr(x, mode='r')
         mask = np.abs(r.diagonal()) < np.sqrt(tol)
-        #idx_collinear = np.where(mask)[0]
+        # TODO add to results instance
+        # idx_collinear = np.where(mask)[0]
         idx_keep = np.where(~mask)[0]
         return self._fit_zeros(keep_index=idx_keep, **kwds)
 

@@ -10,6 +10,7 @@ import numpy as np
 from ._penalties import NonePenalty
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_fprime
 
+
 class PenalizedMixin(object):
     """Mixin class for Maximum Penalized Likelihood
 
@@ -17,7 +18,7 @@ class PenalizedMixin(object):
     ----------
     args and kwds for the model super class
     penal : None or instance of Penalized function class
-        If penal is None, then currently SmoothedSCAD is used.
+        If penal is None, then NonePenalty is used.
     pen_weight : float or None
         factor for weighting the penalization term.
         If None, then pen_weight is set to nobs.
@@ -88,7 +89,7 @@ class PenalizedMixin(object):
         elif method == 'fd':
             return approx_fprime(params, loglike, centered=True)
         else:
-            raise ValueError('method not recognize, should be "fd" or "cs"')
+            raise ValueError('method not recognized, should be "fd" or "cs"')
 
     def score(self, params, pen_weight=None, **kwds):
         if pen_weight is None:
@@ -170,18 +171,18 @@ class PenalizedMixin(object):
             method = 'bfgs'
 
         if trim is None:
-            trim = False  # see below infinite recursion in `fit_constrained
+            trim = False
 
         res = super(PenalizedMixin, self).fit(method=method, **kwds)
 
         if trim is False:
-            # note boolean check for "is False" not evaluates to False
+            # note boolean check for "is False", not "False_like"
             return res
         else:
             if trim is True:
                 trim = 1e-4  # trim threshold
             # TODO: make it penal function dependent
-            # temporary standin, only works for Poisson and GLM,
+            # temporary standin, only checked for Poisson and GLM,
             # and is computationally inefficient
             drop_index = np.nonzero(np.abs(res.params) < trim) [0]
             keep_index = np.nonzero(np.abs(res.params) > trim) [0]

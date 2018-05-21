@@ -40,10 +40,9 @@ class Penalty(object):
 
     Parameters
     ----------
-    wts : array-like
+    weights : array-like
         A vector of weights that determines the weight of the penalty
         for each parameter.
-
 
     Notes
     -----
@@ -204,10 +203,19 @@ class SCAD(Penalty):
     Fan and Li use lambda instead of tau, and a instead of c. Fan and Li
     recommend setting c=3.7.
 
-    f(x) = { tau |x|                                   if 0 <= |x| < tau
-           { -(|x|^2 - 2 c tau |x| + tau^2) / (2 (c - 1)   if tau <= |x| < c tau
-           { (c + 1) tau^2 / 2                         if c tau <= |x|
+    f(x) = { tau |x|                                        if 0 <= |x| < tau
+           { -(|x|^2 - 2 c tau |x| + tau^2) / (2 (c - 1))   if tau <= |x| < c tau
+           { (c + 1) tau^2 / 2                              if c tau <= |x|
 
+    Parameters
+    ----------
+    tau : float
+        slope and threshold for linear segment
+    c : float
+        factor for second threshold which is c * tau
+    weights : None or array
+        weights for penalty of each parameter. If an entry is zero, then the
+        corresponding parameter will not be penalized.
 
     References
     ----------
@@ -297,18 +305,31 @@ class SCADSmoothed(SCAD):
     This follows Fan and Li 2001 equation (3.7).
 
     Parameterization follows Boo, Johnson, Li and Tan 2011
+    see docstring of SCAD
 
+    Parameters
+    ----------
+    tau : float
+        slope and threshold for linear segment
+    c : float
+        factor for second threshold
+    c0 : float
+        threshold for quadratically smoothed segment
+    restriction : None or array
+        linear constraints for
 
-    TODO: Use delegation instead of subclassing, so smoothing can be added to all
-    penalty classes.
+    Notes
+    -----
+    TODO: Use delegation instead of subclassing, so smoothing can be added to
+    all penalty classes.
 
     """
 
-    def __init__(self, tau, c=3.7, c0=None, wts=None, restriction=None):
-        if wts is None:
+    def __init__(self, tau, c=3.7, c0=None, weights=None, restriction=None):
+        if weights is None:
             self.weights = 1.
         else:
-            self.weights = wts
+            self.weights = weights
         self.alpha = 1.
         self.tau = tau
         self.c = c
@@ -337,7 +358,7 @@ class SCADSmoothed(SCAD):
 
         # shift down so func(0) == 0
         value -= self.aq1
-        #change the segment corrsponding to quadratic approximation
+        # change the segment corrsponding to quadratic approximation
         p_abs = np.atleast_1d(np.abs(params))
         mask = p_abs < self.c0
         p_abs_masked = p_abs[mask]
@@ -373,11 +394,9 @@ class SCADSmoothed(SCAD):
         value = super(SCADSmoothed, self).deriv2(params)
         self.weights = weights
 
-        #change the segment corrsponding to quadratic approximation
+        # change the segment corrsponding to quadratic approximation
         p = np.atleast_1d(params)
-        #p_abs = np.abs(p)
         mask = np.abs(p) < self.c0
-        #p_abs_masked = p_abs[mask]
         value[mask] = 2 * self.aq2
 
         if self.restriction is not None and np.size(params) > 1:
@@ -403,7 +422,6 @@ class ConstraintsPenalty(object):
         If it is not None, then restriction defines a linear transformation
         of the parameters. The penalty function is applied to each transformed
         parameter independently.
-
 
     Notes
     -----
@@ -441,7 +459,8 @@ class ConstraintsPenalty(object):
             value(s) of penalty function
         """
         # TODO: `and np.size(params) > 1` is hack for llnull, need better solution
-        if self.restriction is not None: # and np.size(params) > 1:
+        # Is this still needed? it seems to work without
+        if self.restriction is not None:
             params = self.restriction.dot(params)
 
         value = self.penalty.func(params)
@@ -461,12 +480,12 @@ class ConstraintsPenalty(object):
         deriv2 : ndarray
             array of first partial derivatives
         """
-        if self.restriction is not None: # and np.size(params) > 1:
+        if self.restriction is not None:
             params = self.restriction.dot(params)
 
         value = self.penalty.deriv(params)
 
-        if self.restriction is not None: # and np.size(params) > 1:
+        if self.restriction is not None:
             return self.weights * value.T.dot(self.restriction)
         else:
             return (self.weights * value.T)
@@ -487,7 +506,7 @@ class ConstraintsPenalty(object):
             second derivative matrix
         """
 
-        if self.restriction is not None and np.size(params) > 1:
+        if self.restriction is not None:
             params = self.restriction.dot(params)
 
         value = self.penalty.deriv2(params)

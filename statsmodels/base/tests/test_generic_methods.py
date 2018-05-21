@@ -105,7 +105,6 @@ class CheckGenericMixin(object):
         if summ2 is not None:
             assert_(string_use_t in summ2)
 
-
     # TODO The following is not (yet) guaranteed across models
     #@knownfailureif(True)
     def test_fitted(self):
@@ -149,8 +148,6 @@ class CheckGenericMixin(object):
             res.predict(p_exog.tolist())
             res.predict(p_exog[0].tolist())
         else:
-
-            import pandas as pd
             from pandas.util.testing import assert_series_equal
 
             fitted = res.fittedvalues[:2]
@@ -168,32 +165,30 @@ class CheckGenericMixin(object):
             predicted = res.predict(p_exog)
 
             if p_exog.ndim == 1:
-                predicted_pandas = res.predict(pd.Series(p_exog, index=exog_index))
-
+                predicted_pandas = res.predict(pd.Series(p_exog,
+                                                         index=exog_index))
             else:
-                predicted_pandas = res.predict(pd.DataFrame(p_exog, index=exog_index))
+                predicted_pandas = res.predict(pd.DataFrame(p_exog,
+                                                            index=exog_index))
 
             if predicted.ndim == 1:
-
                 assert_(isinstance(predicted_pandas, pd.Series))
-
                 predicted_expected = pd.Series(predicted, index=exog_index)
                 assert_series_equal(predicted_expected, predicted_pandas)
 
             else:
                 assert_(isinstance(predicted_pandas, pd.DataFrame))
-
                 predicted_expected = pd.DataFrame(predicted, index=exog_index)
                 assert_(predicted_expected.equals(predicted_pandas))
 
-
     def test_zero_constrained(self):
         # not completely generic yet
-        if (isinstance(self.results.model, (sm.GEE))):#, sm.OLS, sm.WLS))):
+        if (isinstance(self.results.model, (sm.GEE))):
+            # GEE does not subclass LikelihoodModel
             raise SkipTest
 
-        use_start_params = not isinstance(self.results.model, (sm.RLM, sm.OLS, sm.WLS,
-                                                               sm.NegativeBinomial))
+        use_start_params = not isinstance(self.results.model,
+                                          (sm.RLM, sm.OLS, sm.WLS))
         self.use_start_params = use_start_params  # attach for _get_constrained
 
         keep_index = list(range(self.results.model.exog.shape[1]))
@@ -206,16 +201,16 @@ class CheckGenericMixin(object):
 
         if use_start_params:
             res1 = self.results.model._fit_zeros(keep_index,
-                                                 start_params=self.results.params)#[keep_index])
+                                        start_params=self.results.params)
         else:
             res1 = self.results.model._fit_zeros(keep_index)
 
         res2 = self._get_constrained(keep_index, keep_index_p)
 
         assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-10)
-        assert_allclose(res1.params[drop_index], 0, rtol=1e-10)
+        assert_equal(res1.params[drop_index], 0)
         assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-10)
-        assert_allclose(res1.bse[drop_index], 0, rtol=1e-10)
+        assert_equal(res1.bse[drop_index], 0)
         assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=1e-10)
         assert_allclose(res1.pvalues[keep_index_p], res2.pvalues, rtol=1e-10)
 
@@ -233,7 +228,6 @@ class CheckGenericMixin(object):
         predicted2 = res2.predict(ex[:, keep_index], **self.predict_kwds)
         assert_allclose(predicted1, predicted2, rtol=1e-10)
 
-
     def _get_constrained(self, keep_index, keep_index_p):
         # override in some test classes, no fit_kwds yet, e.g. cov_type
         mod2 = self.results.model
@@ -246,15 +240,13 @@ class CheckGenericMixin(object):
             res = mod.fit()
         return res
 
-
     def test_zero_collinear(self):
         # not completely generic yet
-        if (isinstance(self.results.model, (sm.GEE))):#, sm.OLS, sm.WLS))):
+        if (isinstance(self.results.model, (sm.GEE))):
             raise SkipTest
 
         use_start_params = not isinstance(self.results.model,
                                           (sm.RLM, sm.OLS, sm.WLS, sm.GLM))
-                                           # sm.NegativeBinomial))
         self.use_start_params = use_start_params  # attach for _get_constrained
         keep_index = list(range(self.results.model.exog.shape[1]))
         # index for params might include extra params
@@ -266,7 +258,7 @@ class CheckGenericMixin(object):
 
         keep_index_p = list(range(self.results.params.shape[0]))
 
-        #create collinear model
+        # create collinear model
         mod2 = self.results.model
         mod_cls = mod2.__class__
         init_kwds = mod2._get_init_kwds()
@@ -284,25 +276,30 @@ class CheckGenericMixin(object):
         cov_types = ['nonrobust', 'HC0']
 
         for cov_type in cov_types:
-            if cov_type != 'nonrobust' and (isinstance(self.results.model, (sm.RLM))):
-                raise SkipTest
+            # Note: for RLM we only check default when cov_type is 'nonrobust'
+            # cov_type is otherwise ignored
+            if cov_type != 'nonrobust' and (isinstance(self.results.model,
+                                                       sm.RLM)):
+                return
 
             if use_start_params:
                 start_params = np.zeros(k_vars + k_extra)
-                method =  self.results.mle_settings['optimizer']  #string not mutable
+                method =  self.results.mle_settings['optimizer']
+                # string in `method` is not mutable, so no need for copy
                 sp =  self.results.mle_settings['start_params'].copy()
                 if self.transform_index is not None:
                     # work around internal transform_params, currently in NB
                     sp[self.transform_index] = np.exp(sp[self.transform_index])
 
-                start_params[keep_index_p] = sp #self.results.params
-                res1 = mod._fit_collinear(cov_type=cov_type, start_params=start_params,
+                start_params[keep_index_p] = sp
+                res1 = mod._fit_collinear(cov_type=cov_type,
+                                          start_params=start_params,
                                           method=method, disp=0)
                 if cov_type != 'nonrobust':
                     # reestimate original model to get robust cov
                     res2 = self.results.model.fit(cov_type=cov_type,
-                                             start_params=sp,
-                                             method=method, disp=0)
+                                                  start_params=sp,
+                                                  method=method, disp=0)
             else:
                 # more special casing RLM
                 if (isinstance(self.results.model, (sm.RLM))):
@@ -313,7 +310,6 @@ class CheckGenericMixin(object):
                     # reestimate original model to get robust cov
                     res2 = self.results.model.fit(cov_type=cov_type)
 
-            #res2 = self._get_constrained(keep_index, keep_index_p)
             if cov_type == 'nonrobust':
                 res2 = self.results
 
@@ -333,12 +329,13 @@ class CheckGenericMixin(object):
                                     rtol=1e-10, atol=1e-20)
 
             # Poisson has reduced precision in params, difficult optimization?
-            assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-6) #rtol=1e-10)
+            assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-6)
             assert_allclose(res1.params[drop_index], 0, rtol=1e-10)
             assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-8)
             assert_allclose(res1.bse[drop_index], 0, rtol=1e-10)
             assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=5e-8)
-            assert_allclose(res1.pvalues[keep_index_p], res2.pvalues, rtol=1e-6, atol=1e-30)
+            assert_allclose(res1.pvalues[keep_index_p], res2.pvalues,
+                            rtol=1e-6, atol=1e-30)
 
             if hasattr(res1, 'resid'):
                 # discrete models, Logit don't have `resid` yet
@@ -382,7 +379,7 @@ class TestGenericOLSOneExog(CheckGenericMixin):
 
     def test_zero_constrained(self):
         # override, we cannot remove the only regressor
-        #raise SkipTest
+        raise SkipTest
         pass
 
 
@@ -419,7 +416,7 @@ class TestGenericPoissonOffset(CheckGenericMixin):
         np.random.seed(987689)
         y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
         model = sm.Poisson(y_count, x, offset=0.01 * np.ones(nobs),
-                           exposure=np.ones(nobs)) #bug with default
+                           exposure=np.ones(nobs))  # bug with default
         # use start_params to converge faster
         start_params = np.array([0.75334818, 0.99425553, 1.00494724, 1.00247112])
         self.results = model.fit(start_params=start_params, method='bfgs',
@@ -436,12 +433,7 @@ class TestGenericNegativeBinomial(CheckGenericMixin):
         np.random.seed(987689)
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
-        #mod = sm.NegativeBinomial(data.endog, data.exog)
         mod = sm.NegativeBinomial(data.endog, exog)
-        start_params = np.array([0.1, -0.0565406 , -0.21213599,  0.08783076,
-                                 -0.02991835,  0.22901974,  0.0621026,
-                                  0.06799283,  0.08406688,  0.18530969,
-                                  1.36645452])
         start_params = np.array([-0.05783623, -0.26655806,  0.04109148, -0.03815837,
                                  0.2685168 ,   0.03811594, -0.04426238,  0.01614795,
                                  0.17490962,  0.66461151,   1.2925957 ])
