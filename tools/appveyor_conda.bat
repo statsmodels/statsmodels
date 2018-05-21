@@ -1,4 +1,4 @@
-# Install required conda version
+REM Install required conda version
 curl -fsS -o c:\Miniconda.exe "https://repo.continuum.io/miniconda/Miniconda%PY_MAJOR_VER%-latest-Windows-%PYTHON_ARCH%.exe"
 START /WAIT C:\Miniconda.exe /S /D=C:\Py
 PATH="C:\Py;C:\Py\Scripts;C:\Py\Library\bin;%PATH%"
