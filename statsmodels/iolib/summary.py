@@ -301,7 +301,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
     def num_to_str(x, width=6):
         if np.isnan(x):
             return (width - 3) * ' ' + 'NaN'
-        return "%#6d" % results.nobs
+        return "%#6d" % x
 
     default_items = dict([
           ('Dependent Variable:', lambda: [yname]),
