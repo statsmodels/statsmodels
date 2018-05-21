@@ -32,3 +32,5 @@ include cythonize.dat
 prune */__pycache__
 
 global-exclude *~ *.swp  *.pyc *.pyo *.bak
+include versioneer.py
+include statsmodels/_version.py

@@ -4,6 +4,8 @@ include =
     */statsmodels/*
 
 omit =
+    # Ignore lack of coverage of versioneer 
+    */_version.py
     # print_version is untestable
     */print_version.py
     # skip compatability code
