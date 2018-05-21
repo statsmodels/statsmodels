@@ -1,24 +1,23 @@
 """unit test for automatic sarimax forecasting."""
+import os
+import pytest
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
+from statsmodels.tsa.automatic import sarimax
+from statsmodels import datasets
 
-# # Dataset
-wpi1 = requests.get('http://www.stata-press.com/data/r12/wpi1.dta').content
-data = pd.read_stata(BytesIO(wpi1))
-data.index = data.t
 
-def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), spec=None):
+current_path = os.path.dirname(os.path.abspath(__file__))
+macrodata = datasets.macrodata.load_pandas().data
+macrodata.index = pd.PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
+
+def test_non_stepwise():
     """Auto order function for SARIMAX models."""
-    aic_matrix = np.zeros(p, q)
-    for p in range(max_order[0]):
-        for q in range(max_order[1]):
-            if p == 0 and q == 0:
-                continue
-            # fit  the model
-            # TODO smoke test
-            mod = sm.tsa.statespace.SARIMAX(endog, order=(p, d, q))
-            res = mod.fit(disp=False)
-            aic_matrix[p, q] = res.aic
-    min_aic = aic_matrix.min()
-    p, q = np.where(aic_matrix == min_aic)
+    p, q = sarimax.auto_order(macrodata.infl, d=0)
+    # p, q = sarimax.auto_order(macrodata.infl, d=0, enforce_stationarity=False)
+    desired_p = 2
+    desired_q = 2
+    assert_equal(p, desired_p)
+    assert_equal(q, desired_q)
+
