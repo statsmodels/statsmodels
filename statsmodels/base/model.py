@@ -2213,7 +2213,6 @@ class ResultMixin(object):
         distributed observations.
         """
         results = []
-        print(self.model.__class__)
         hascloneattr = True if hasattr(self.model, 'cloneattr') else False
         for i in range(nrep):
             rvsind = np.random.randint(self.nobs, size=self.nobs)
