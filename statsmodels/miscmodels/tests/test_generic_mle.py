@@ -149,3 +149,79 @@ class TestMyParetoRestriction(CheckGenericMixin):
 
         # Note: loc is fixed, no problems with parameters close to min data
         cls.skip_bsejac = False
+
+
+class TwoPeakLLHNoExog(GenericLikelihoodModel):
+    """Fit height of signal peak over background."""
+    start_params = [10, 1000]
+    cloneattr = ['start_params', 'signal', 'background']
+    exog_names = ['n_signal', 'n_background']
+    endog_names = ['alpha']
+
+    def __init__(self, endog, exog=None, signal=None, background=None,
+                 *args, **kwargs):
+        # assume we know the shape + location of the two components,
+        # so we re-use their PDFs here
+        self.signal = signal
+        self.background = background
+        super(TwoPeakLLHNoExog, self).__init__(endog=endog, exog=exog,
+                                         *args, **kwargs)
+
+    def loglike(self, params):        # pylint: disable=E0202
+        return -self.nloglike(params)
+
+    def nloglike(self, params):
+        endog = self.endog
+        return self.nlnlike(params, endog)
+
+    def nlnlike(self, params, endog):
+        n_sig = params[0]
+        n_bkg = params[1]
+        if (n_sig < 0) or n_bkg < 0:
+            return np.inf
+        n_tot = n_bkg + n_sig
+        alpha = endog
+        sig = self.signal.pdf(alpha)
+        bkg = self.background.pdf(alpha)
+        sumlogl = np.sum(
+            np.ma.log(
+                (n_sig * sig) + (n_bkg * bkg)
+            )
+        )
+        sumlogl -= n_tot
+        return -sumlogl
+
+
+class TestTwoPeakLLHNoExog(object):
+
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(42)
+        pdf_a = stats.halfcauchy(loc=0, scale=1)
+        pdf_b = stats.uniform(loc=0, scale=100)
+
+        n_a = 30
+        n_b = 1000
+        params = [n_a, n_b]
+
+        X = np.concatenate([
+            pdf_a.rvs(size=n_a),
+            pdf_b.rvs(size=n_b),
+        ])[:, np.newaxis]
+        cls.X = X
+        cls.params = params
+        cls.pdf_a = pdf_a
+        cls.pdf_b = pdf_b
+
+    def test_fit(self):
+        llh_noexog = TwoPeakLLHNoExog(self.X,
+                                      signal=self.pdf_a,
+                                      background=self.pdf_b)
+
+        res = llh_noexog.fit()
+        assert np.allclose(res.params, self.params, rtol=1e-1)
+        assert np.isnan(res.df_resid)
+        res_bs = res.bootstrap(nrep=50)
+        assert res_bs is not None
+        smry = res.summary()
+        assert smry is not None
