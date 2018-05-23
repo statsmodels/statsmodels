@@ -6,6 +6,7 @@ import pandas as pd
 import statsmodels.api as sm
 from statsmodels.tsa.automatic import sarimax
 from statsmodels import datasets
+from numpy.testing import assert_equal
 
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -19,8 +20,8 @@ def test_non_stepwise():
 #    p, q = sarimax.auto_order(macrodata.infl, d=0, enforce_stationarity=False)
     desired_p = 2
     desired_q = 2
-    assert p == desired_p
-    assert q == desired_q
+    assert_equal(p, desired_p)
+    assert_equal(q, desired_q)
 
 
 def test_stepwise():
@@ -30,5 +31,5 @@ def test_stepwise():
     p, q = sarimax.auto_order(macrodata['infl'], stepwise=True)
     desired_p = 3
     desired_q = 3
-    assert p == desired_p
-    assert q == desired_q
+    assert_equal(p, desired_p)
+    assert_equal(q, desired_q)
