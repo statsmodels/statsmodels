@@ -21,7 +21,7 @@ class PoissonPenalized(PenalizedMixin, Poisson):
 
 
 def test_poisson_screening():
-    # this is mostly a dump of my trial notebook
+    # this is mostly a dump of my development notebook
     # number of exog candidates is reduced to 500 to reduce time
     np.random.seed(987865)
 
@@ -30,7 +30,7 @@ def test_poisson_screening():
     x = (np.random.rand(nobs, k_vars) + 1.* (np.random.rand(nobs, 1)-0.5)) * 2 - 1
     x *= 1.2
 
-    x = (x - x.mean()) / x.std(0)
+    x = (x - x.mean(0)) / x.std(0)
     x[:, 0] = 1
     beta = np.zeros(k_vars)
     idx_non_zero_true = [0, 100, 300, 400, 411]
@@ -53,7 +53,7 @@ def test_poisson_screening():
 
     screener = VariableScreening(mod_initial, base_class)
     exog_candidates = x[:, 1:]
-    res_screen = screener.screen_vars(exog_candidates, maxiter=10)
+    res_screen = screener.screen_exog(exog_candidates, maxiter=10)
 
     res_screen.idx_nonzero
 

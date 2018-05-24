@@ -79,7 +79,27 @@ class VariableScreening(object):
         self.threshold_trim = 1e-4
         self.k_max_included = 20
 
-    def screen_vars(self, exog, endog=None, maxiter=5, disp=0):
+    def ranking_measure(self, res_pen, exog, keep=None):
+        endog = self.endog
+        # TODO: does it really help to change/trim params
+        # we are not reestimating with trimmed model
+        p = res_pen.params.copy()
+        if keep is not None:
+            p[~keep] = 0
+        if hasattr(res_pen, 'resid_pearson'):
+            # this is different from the else
+            # here we use the resid_pearson from res_pen which includes
+            # dropped variables/params
+            resid_pearson = res_pen.resid_pearson
+        else:
+            predicted = res_pen.model.predict(p)
+            # this is currently hardcoded for Poisson
+            resid_pearson = (endog - predicted) / np.sqrt(predicted)
+
+        mom_cond = np.abs(resid_pearson.dot(exog))**2
+        return mom_cond
+
+    def screen_exog(self, exog, endog=None, maxiter=5, disp=0):
         model_class = self.model_class
         if endog is None:
             # allow a different endog than used in model
@@ -92,7 +112,6 @@ class VariableScreening(object):
         x = np.column_stack((x0, x1))
         nobs, k_vars = x.shape
 
-
         history = defaultdict(list)
         idx_nonzero = [0]
         keep = np.array([True])
@@ -103,19 +122,8 @@ class VariableScreening(object):
 
         for _ in range(maxiter):
             # This does not work, droping the Poisson fit creates problems
-            p = res_pen.params.copy()
-            p[~keep] = 0
-            if hasattr(res_pen, 'resid_pearson'):
-                # this is different from the else
-                # here we use the resid_pearson from res_pen which includes
-                # dropped variables/params
-                resid_pearson = res_pen.resid_pearson
-            else:
-                predicted = res_pen.model.predict(p)
-                # this is currently hardcoded for Poisson
-                resid_pearson = (endog - predicted) / np.sqrt(predicted)
 
-            mom_cond = np.abs(resid_pearson.dot(x1))**2
+            mom_cond = self.ranking_measure(res_pen, x1, keep=keep)
             mcs = np.sort(mom_cond)[::-1]
             #print(mcs[:10])
 
@@ -129,7 +137,8 @@ class VariableScreening(object):
                                        pen_weight=nobs * 10,
                                        **self.init_kwds).fit(method='bfgs',
                                                 start_params=start_params2,
-                                                warn_convergence=False, disp=disp)
+                                                warn_convergence=False, disp=disp,
+                                                skip_hessian=True)
 
             keep = np.abs(res_pen.params) > self.threshold_trim
             # use largest params to keep
