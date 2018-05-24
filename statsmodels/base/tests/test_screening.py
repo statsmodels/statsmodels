@@ -72,3 +72,52 @@ def test_poisson_screening():
     parameters = parameters.join(ps, how='outer')
 
     assert_allclose(parameters['oracle'], parameters['final'], atol=5e-6)
+
+def test_screen_iterated():
+    np.random.seed(987865)
+
+    nobs, k_nonzero = 100, 5
+
+    x = (np.random.rand(nobs, k_nonzero - 1) +
+         1.* (np.random.rand(nobs, 1) - 0.5)) * 2 - 1
+    x *= 1.2
+    x = (x - x.mean(0)) / x.std(0)
+    x = np.column_stack((np.ones(nobs), x))
+
+    beta = 1. / np.arange(1, k_nonzero + 1)
+    beta = np.sqrt(beta)  # make small coefficients larger
+    linpred = x.dot(beta)
+    mu = np.exp(linpred)
+    y = np.random.poisson(mu)
+
+    common = x[:, 1:].sum(1)[:, None]
+
+    x_nonzero = x
+
+    def exog_iterator():
+        k_vars = 100
+
+        n_batches = 6
+        for i in range(n_batches):
+            x = (0.05 * common + np.random.rand(nobs, k_vars) +
+                 1.* (np.random.rand(nobs, 1) - 0.5)) * 2 - 1
+            x *= 1.2
+            if i < k_nonzero - 1:
+                # hide a nonezero
+                x[:, 10] = x_nonzero[:, i + 1]
+            x = (x - x.mean(0)) / x.std(0)
+            yield x
+
+    mod_initial = PoissonPenalized(y, np.ones(nobs), pen_weight=nobs * 500)
+    base_class = Poisson
+    screener = VariableScreening(mod_initial, base_class)
+    screener.k_max_add = 30
+
+    final = screener.screen_exog_iterator(exog_iterator())
+    names = ['var0_10', 'var1_10', 'var2_10', 'var3_10']
+    assert_equal(final.exog_final_names, names)
+    idx_full = np.array([[ 0, 10],
+                         [ 1, 10],
+                         [ 2, 10],
+                         [ 3, 10]], dtype=np.int64)
+    assert_equal(final.idx_nonzero_batches, idx_full)

@@ -180,3 +180,35 @@ class VariableScreening(object):
                                start_params = start_params,
                                history = history)
         return res
+
+    def screen_exog_iterator(self, exog_iterator):
+        res_batches = []
+        res_idx = []
+        exog_winner = []
+        exog_idx = []
+        for ex in exog_iterator:
+            res_screen = self.screen_exog(ex, maxiter=20)
+            res_batches.append(res_screen)
+            res_idx.append(res_screen.idx_nonzero)
+            exog_winner.append(ex[:, res_screen.idx_nonzero[1:] - 1])
+            exog_idx.append(res_screen.idx_nonzero[1:] - 1)
+
+        exog_winner = np.column_stack(exog_winner)
+        res_screen_final = self.screen_exog(exog_winner, maxiter=20)
+
+
+        exog_winner_names = ['var%d_%d' % (bidx, idx)
+                             for bidx, batch in enumerate(exog_idx)
+                             for idx in batch]
+
+        idx_full = [(bidx, idx)
+                    for bidx, batch in enumerate(exog_idx)
+                    for idx in batch]
+        ex_final_idx = res_screen_final.idx_nonzero[1:] - 1
+        final_names = np.array(exog_winner_names)[ex_final_idx]
+        res_screen_final.idx_nonzero_batches = np.array(idx_full)[ex_final_idx]
+        res_screen_final.exog_final_names = final_names
+        history = {'res_idx': res_idx,
+                   'exog_idx': exog_idx}
+        res_screen_final.history = history
+        return res_screen_final
