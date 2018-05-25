@@ -100,4 +100,4 @@ class ForecastSet:
             measure_vals[mod] = self.models[mod].measure
         min_measure = measure_vals.min()
         model = np.where(measure_vals == min_measure)
-        return self.models(model)
+        return self.models[model]
