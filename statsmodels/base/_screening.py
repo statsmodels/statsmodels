@@ -83,8 +83,12 @@ class VariableScreening(object):
         self.k_max_included = k_max_included
         self.ranking_attr = kwargs.get('ranking_attr', 'resid_pearson')
 
-    def ranking_measure(self, res_pen, exog, keep=None):
+    def ranking_measure(self, res_pen, exog, keep=None, project=True):
         endog = self.endog
+
+        if project:
+            ex_incl = res_pen.model.exog[:, keep]
+            exog = exog - ex_incl.dot(np.linalg.pinv(ex_incl).dot(exog))
 
         if self.ranking_attr == 'predicted':
             # I keep the following for more experiments
@@ -176,12 +180,13 @@ class VariableScreening(object):
             history['idx_nonzero'].append(idx_nonzero)
             history['keep'].append(keep)
             history['params_keep'].append(start_params)
+            history['idx_added'].append(idx)
 
         # final esimate
         res_final = model_class(endog, x[:, idx_nonzero], penal=self.penal,
                                 pen_weight=self.pen_weight,
                                 **self.init_kwds).fit(method='bfgs',
-                                          start_params=res_pen.params[keep],
+                                          start_params=start_params,
                                           warn_convergence=False, disp=disp)
 
         res = ScreeningResults(self,
