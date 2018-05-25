@@ -116,7 +116,7 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3),
                 new_q = q + 1
                 min_aic = res.aic
         # both p and q vary by -1
-        if(q - 1 >= 0) and (q - 1 >= 0):
+        if(p - 1 >= 0) and (q - 1 >= 0):
             mod = sm.tsa.statespace.SARIMAX(endog,
                                             order=(p - 1, d, q - 1), **spec)
             res = mod.fit(disp=False)
