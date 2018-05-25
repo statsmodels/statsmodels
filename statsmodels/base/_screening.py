@@ -56,7 +56,8 @@ class VariableScreening(object):
 
     """
 
-    def __init__(self, model, base_class, **kwargs):
+    def __init__(self, model, base_class, k_add=5, k_max_add=0,
+                 threshold_trim=1e-4, k_max_included=20, **kwargs):
 
         self.model = model
         self.model_class = model.__class__
@@ -68,35 +69,46 @@ class VariableScreening(object):
 
         self.endog = model.endog
         self.exog_keep = model.exog
+        self.nobs = len(self.endog)
         self.penal = SCADSmoothed(0.1, c0=0.0001)
 
         # this is only needed for initial start_params
         self.base_class = base_class
 
+        self.pen_weight = kwargs.pop('pen_weight', self.nobs * 10)
         # option for screening algorithm
-        self.k_add = 5
-        self.k_max_add = 10
-        self.threshold_trim = 1e-4
-        self.k_max_included = 20
+        self.k_add = k_add
+        self.k_max_add = k_max_add
+        self.threshold_trim = threshold_trim
+        self.k_max_included = k_max_included
+        self.ranking_attr = kwargs.get('ranking_attr', 'resid_pearson')
 
     def ranking_measure(self, res_pen, exog, keep=None):
         endog = self.endog
-        # TODO: does it really help to change/trim params
-        # we are not reestimating with trimmed model
-        p = res_pen.params.copy()
-        if keep is not None:
-            p[~keep] = 0
-        if hasattr(res_pen, 'resid_pearson'):
-            # this is different from the else
-            # here we use the resid_pearson from res_pen which includes
-            # dropped variables/params
-            resid_pearson = res_pen.resid_pearson
-        else:
+
+        if self.ranking_attr == 'predicted':
+            # I keep the following for more experiments
+
+            # TODO: does it really help to change/trim params
+            # we are not reestimating with trimmed model
+            p = res_pen.params.copy()
+            if keep is not None:
+                p[~keep] = 0
             predicted = res_pen.model.predict(p)
             # this is currently hardcoded for Poisson
-            resid_pearson = (endog - predicted) / np.sqrt(predicted)
-
-        mom_cond = np.abs(resid_pearson.dot(exog))**2
+            resid_factor = (endog - predicted) / np.sqrt(predicted)
+        elif self.ranking_attr[:6] == 'model.':
+            # use model method, this is intended for score_factor
+            attr = self.ranking_attr.split('.')[1]
+            resid_factor = getattr(res_pen.model, attr)(res_pen.params)
+            if resid_factor.ndim == 2:
+                # for score_factor when extra params are in model
+                resid_factor = resid_factor[:, 0]
+            mom_cond = np.abs(resid_factor.dot(exog))**2
+        else:
+            # use results attribute
+            resid_factor = getattr(res_pen, self.ranking_attr)
+            mom_cond = np.abs(resid_factor.dot(exog))**2
         return mom_cond
 
     def screen_exog(self, exog, endog=None, maxiter=5, disp=0):
@@ -134,7 +146,7 @@ class VariableScreening(object):
             start_params2[:len(start_params)] = start_params
 
             res_pen = model_class(endog, x[:, idx], penal=self.penal,
-                                       pen_weight=nobs * 10,
+                                       pen_weight=self.pen_weight,
                                        **self.init_kwds).fit(method='bfgs',
                                                 start_params=start_params2,
                                                 warn_convergence=False, disp=disp,
@@ -167,7 +179,7 @@ class VariableScreening(object):
 
         # final esimate
         res_final = model_class(endog, x[:, idx_nonzero], penal=self.penal,
-                                pen_weight=nobs * 10,
+                                pen_weight=self.pen_weight,
                                 **self.init_kwds).fit(method='bfgs',
                                           start_params=res_pen.params[keep],
                                           warn_convergence=False, disp=disp)
