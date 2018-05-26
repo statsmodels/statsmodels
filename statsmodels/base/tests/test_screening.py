@@ -6,7 +6,6 @@ Author: Josef Perktold
 
 """
 
-import pytest
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
@@ -21,8 +20,10 @@ from statsmodels.base._screening import VariableScreening
 class PoissonPenalized(PenalizedMixin, Poisson):
     pass
 
+
 class LogitPenalized(PenalizedMixin, Logit):
     pass
+
 
 class GLMPenalized(PenalizedMixin, GLM):
     pass
@@ -57,9 +58,8 @@ def test_poisson_screening():
     parameters['oracle'] = res_oracle.params
 
     mod_initial = PoissonPenalized(y, np.ones(nobs), pen_weight=nobs * 5)
-    base_class = Poisson
 
-    screener = VariableScreening(mod_initial, base_class)
+    screener = VariableScreening(mod_initial)
     exog_candidates = x[:, 1:]
     res_screen = screener.screen_exog(exog_candidates, maxiter=10)
 
@@ -117,8 +117,7 @@ def test_screen_iterated():
             yield x
 
     mod_initial = PoissonPenalized(y, np.ones(nobs), pen_weight=nobs * 500)
-    base_class = Poisson
-    screener = VariableScreening(mod_initial, base_class)
+    screener = VariableScreening(mod_initial)
     screener.k_max_add = 30
 
     final = screener.screen_exog_iterator(exog_iterator())
@@ -166,9 +165,7 @@ def test_logit_screening():
     parameters['oracle'] = res_oracle.params
 
     mod_initial = LogitPenalized(y, np.ones(nobs), pen_weight=nobs * 0.5)
-    base_class = Logit
-
-    screener = VariableScreening(mod_initial, base_class, **screener_kwds)
+    screener = VariableScreening(mod_initial, **screener_kwds)
     screener.k_max_add = 30
     exog_candidates = x[:, 1:]
     res_screen = screener.screen_exog(exog_candidates, maxiter=30)
@@ -213,9 +210,8 @@ def test_glmlogit_screening():
 
     #mod_initial = LogitPenalized(y, np.ones(nobs), pen_weight=nobs * 0.5)
     mod_initial = GLMPenalized(y, np.ones(nobs), family=family.Binomial())
-    base_class = GLMPenalized
 
-    screener = VariableScreening(mod_initial, base_class, **screener_kwds)
+    screener = VariableScreening(mod_initial, **screener_kwds)
     screener.k_max_add = 10
     exog_candidates = x[:, 1:]
     res_screen = screener.screen_exog(exog_candidates, maxiter=30)
