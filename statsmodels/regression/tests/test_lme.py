@@ -1099,57 +1099,67 @@ def test_random_effects_getters():
 def test_smw_solver():
 
     np.random.seed(23)
-    p = 5
-    q = 4
-    r = 2
-    d = 2
 
-    A = np.random.normal(size=(p, q))
-    AtA = np.dot(A.T, A)
+    def tester(p, q, r, s):
 
-    B = np.zeros((q, q))
-    B[0:r, 0:r] = np.random.normal(size=(r, r))
-    di = np.random.uniform(size=d)
-    B[r:q, r:q] = np.diag(1/di)
-    Qi = np.linalg.inv(B[0:r, 0:r])
-    s = 0.5
+        d = q - r
 
-    x = np.random.normal(size=p)
-    y2 = np.linalg.solve(s*np.eye(p, p) + np.dot(A, np.dot(B, A.T)), x)
+        A = np.random.normal(size=(p, q))
+        AtA = np.dot(A.T, A)
 
-    f = _smw_solver(s, A, AtA, Qi, di)
-    y1 = f(x)
-    assert_allclose(y1, y2)
+        B = np.zeros((q, q))
+        B[0:r, 0:r] = np.random.normal(size=(r, r))
+        di = np.random.uniform(size=d)
+        B[r:q, r:q] = np.diag(1/di)
+        Qi = np.linalg.inv(B[0:r, 0:r])
+        s = 0.5
 
-    f = _smw_solver(s, sparse.csr_matrix(A), sparse.csr_matrix(AtA), Qi, di)
-    y1 = f(x)
-    assert_allclose(y1, y2)
+        x = np.random.normal(size=p)
+        y2 = np.linalg.solve(s*np.eye(p, p) + np.dot(A, np.dot(B, A.T)), x)
 
+        f = _smw_solver(s, A, AtA, Qi, di)
+        y1 = f(x)
+        assert_allclose(y1, y2)
+
+        f = _smw_solver(s, sparse.csr_matrix(A), sparse.csr_matrix(AtA), Qi, di)
+        y1 = f(x)
+        assert_allclose(y1, y2)
+
+    for p in 5, 10:
+        for q in 4, 8:
+            for r in 2, 3:
+                for s in 0, 0.5:
+                    tester(p, q, r, s)
 
 def test_smw_logdet():
 
     np.random.seed(23)
-    p = 5
-    q = 4
-    r = 2
-    d = 2
 
-    A = np.random.normal(size=(p, q))
-    AtA = np.dot(A.T, A)
+    def tester(p, q, r, s):
 
-    B = np.zeros((q, q))
-    c = np.random.normal(size=(r, r))
-    B[0:r, 0:r] = np.dot(c.T, c)
-    di = np.random.uniform(size=d)
-    B[r:q, r:q] = np.diag(1/di)
-    Qi = np.linalg.inv(B[0:r, 0:r])
-    s = 0.5
+        d = q - r
+        A = np.random.normal(size=(p, q))
+        AtA = np.dot(A.T, A)
 
-    _, d2 = np.linalg.slogdet(s*np.eye(p, p) + np.dot(A, np.dot(B, A.T)))
+        B = np.zeros((q, q))
+        c = np.random.normal(size=(r, r))
+        B[0:r, 0:r] = np.dot(c.T, c)
+        di = np.random.uniform(size=d)
+        B[r:q, r:q] = np.diag(1/di)
+        Qi = np.linalg.inv(B[0:r, 0:r])
+        s = 0.5
 
-    _, bd = np.linalg.slogdet(B)
-    d1 = _smw_logdet(s, A, AtA, Qi, di, bd)
-    assert_allclose(d1, d2)
+        _, d2 = np.linalg.slogdet(s*np.eye(p, p) + np.dot(A, np.dot(B, A.T)))
+
+        _, bd = np.linalg.slogdet(B)
+        d1 = _smw_logdet(s, A, AtA, Qi, di, bd)
+        assert_allclose(d1, d2)
+
+    for p in 5, 10:
+        for q in 4, 8:
+            for r in 2, 3:
+                for s in 0, 0.5:
+                    tester(p, q, r, s)
 
 
 if __name__ == "__main__":
