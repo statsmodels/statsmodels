@@ -435,8 +435,8 @@ def _smw_solver(s, A, AtA, Qi, di):
     AtA : square ndarray
         :math:`A^\prime  A`, a q x q matrix.
     Qi : square symmetric ndarray
-        The matrix `B` is q x q, where q = r + s.  `B` consists of a r
-        x r diagonal block whose inverse is `Qi`, and a s x s diagonal
+        The matrix `B` is q x q, where q = r + d.  `B` consists of a r
+        x r diagonal block whose inverse is `Qi`, and a d x d diagonal
         block, whose inverse is diag(di).
     di : 1d array-like
         See documentation for Qi.
@@ -487,7 +487,7 @@ def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
         sI + ABA^\prime
 
     Uses the matrix determinant lemma to accelerate the calculation.
-    B is assumed to be positive semidefinite, and s > 0, therefore the
+    B is assumed to be positive definite, and s > 0, therefore the
     determinant is positive.
 
     Parameters

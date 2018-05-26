@@ -1102,14 +1102,14 @@ def test_smw_solver():
     p = 5
     q = 4
     r = 2
-    s = 2
+    d = 2
 
     A = np.random.normal(size=(p, q))
     AtA = np.dot(A.T, A)
 
     B = np.zeros((q, q))
     B[0:r, 0:r] = np.random.normal(size=(r, r))
-    di = np.random.uniform(size=s)
+    di = np.random.uniform(size=d)
     B[r:q, r:q] = np.diag(1/di)
     Qi = np.linalg.inv(B[0:r, 0:r])
     s = 0.5
@@ -1132,7 +1132,7 @@ def test_smw_logdet():
     p = 5
     q = 4
     r = 2
-    s = 2
+    d = 2
 
     A = np.random.normal(size=(p, q))
     AtA = np.dot(A.T, A)
@@ -1140,7 +1140,7 @@ def test_smw_logdet():
     B = np.zeros((q, q))
     c = np.random.normal(size=(r, r))
     B[0:r, 0:r] = np.dot(c.T, c)
-    di = np.random.uniform(size=s)
+    di = np.random.uniform(size=d)
     B[r:q, r:q] = np.diag(1/di)
     Qi = np.linalg.inv(B[0:r, 0:r])
     s = 0.5
