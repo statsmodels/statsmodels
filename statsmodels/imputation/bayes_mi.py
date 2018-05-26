@@ -1,4 +1,5 @@
 import numpy as np
+from collections import OrderedDict
 from statsmodels.base.model import LikelihoodModelResults
 
 
@@ -58,7 +59,7 @@ class BayesGaussMI(object):
         # Identify all distinct missing data patterns
         z = 1 + np.log(1 + np.arange(self.mask.shape[1]))
         c = np.dot(self.mask, z)
-        rowmap = {}
+        rowmap = OrderedDict()
         for i, v in enumerate(c):
             if v == 0:
                 # No missing values
@@ -66,13 +67,7 @@ class BayesGaussMI(object):
             if v not in rowmap:
                 rowmap[v] = []
             rowmap[v].append(i)
-        patterns = [np.asarray(v) for v in rowmap.values()]
-
-        # Give the missing data patterns a deterministic order
-        np.random.seed(4234)
-        c = np.asarray([np.dot(x, np.random.uniform(size=len(x))) for x in patterns])
-        ii = np.argsort(c)
-        self.patterns = [patterns[i] for i in ii]
+        self.patterns = [np.asarray(v) for v in rowmap.values()]
 
         # Simple starting values for mean and covariance
         p = self.data.shape[1]
