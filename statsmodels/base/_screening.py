@@ -193,10 +193,9 @@ class VariableScreening(object):
         #start_params = [endog.mean()]
         res_pen = model_class(endog, x0, **self.init_kwds).fit(disp=disp)
         start_params = res_pen.params
-
-        for _ in range(maxiter):
-            # This does not work, droping the Poisson fit creates problems
-
+        converged = False
+        idx_old = []
+        for it in range(maxiter):
             mom_cond = self.ranking_measure(res_pen, x1, keep=keep)
             mcs = np.sort(mom_cond)[::-1]
 
@@ -236,6 +235,12 @@ class VariableScreening(object):
             history['params_keep'].append(start_params)
             history['idx_added'].append(idx)
 
+            if (len(idx_nonzero) == len(idx_old) and
+                    (idx_nonzero == idx_old).all()):
+                converged = True
+                break
+            idx_old = idx_nonzero
+
         # final esimate
         res_final = model_class(endog, x[:, idx_nonzero], penal=self.penal,
                                 pen_weight=self.pen_weight,
@@ -249,7 +254,8 @@ class VariableScreening(object):
                                idx_nonzero = idx_nonzero,
                                idx_excl = idx_excl,
                                start_params = start_params,
-                               history = history)
+                               history = history,
+                               converged = converged)
         return res
 
     def screen_exog_iterator(self, exog_iterator):
@@ -291,8 +297,8 @@ class VariableScreening(object):
             # avoid storing res_screen, only for debugging
             # res_batches.append(res_screen)
             res_idx.append(res_screen.idx_nonzero)
-            exog_winner.append(ex[:, res_screen.idx_nonzero[1:] - 1])
-            exog_idx.append(res_screen.idx_nonzero[1:] - 1)
+            exog_winner.append(ex[:, res_screen.idx_nonzero[1:] - self.k_keep])
+            exog_idx.append(res_screen.idx_nonzero[1:] - self.k_keep)
 
         exog_winner = np.column_stack(exog_winner)
         res_screen_final = self.screen_exog(exog_winner, maxiter=20)
@@ -305,7 +311,7 @@ class VariableScreening(object):
         idx_full = [(bidx, idx)
                     for bidx, batch in enumerate(exog_idx)
                     for idx in batch]
-        ex_final_idx = res_screen_final.idx_nonzero[1:] - 1
+        ex_final_idx = res_screen_final.idx_nonzero[1:] - self.k_keep
         final_names = np.array(exog_winner_names)[ex_final_idx]
         res_screen_final.idx_nonzero_batches = np.array(idx_full)[ex_final_idx]
         res_screen_final.exog_final_names = final_names
