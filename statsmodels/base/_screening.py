@@ -241,6 +241,7 @@ class VariableScreening(object):
                 break
             idx_old = idx_nonzero
 
+
         # final esimate
         res_final = model_class(endog, x[:, idx_nonzero], penal=self.penal,
                                 pen_weight=self.pen_weight,
@@ -255,7 +256,8 @@ class VariableScreening(object):
                                idx_excl = idx_excl,
                                start_params = start_params,
                                history = history,
-                               converged = converged)
+                               converged = converged,
+                               iterations = it)
         return res
 
     def screen_exog_iterator(self, exog_iterator):
