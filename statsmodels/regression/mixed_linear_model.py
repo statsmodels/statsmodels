@@ -499,8 +499,8 @@ def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
     AtA : square ndarray
         :math:`A^\prime  A`, a q x q matrix.
     Qi : square symmetric ndarray
-        The matrix `B` is q x q, where q = r + s.  `B` consists of a r
-        x r diagonal block whose inverse is `Qi`, and a s x s diagonal
+        The matrix `B` is q x q, where q = r + d.  `B` consists of a r
+        x r diagonal block whose inverse is `Qi`, and a d x d diagonal
         block, whose inverse is diag(di).
     di : 1d array-like
         See documentation for Qi.
