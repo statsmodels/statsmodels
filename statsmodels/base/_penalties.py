@@ -93,9 +93,14 @@ class Penalty(object):
 
     def _null_weights(self, params):
         """work around for Null model
+
+        This will not be needed anymore when we can use `self._null_drop_keys`
+        as in DiscreteModels.
+        TODO: check other models
         """
         if np.size(self.weights) > 1:
             if len(params) == 1:
+                raise  # raise to identify models where this would be needed
                 return 0.
 
         return self.weights
