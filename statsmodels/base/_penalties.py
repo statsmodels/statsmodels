@@ -91,6 +91,15 @@ class Penalty(object):
                       DeprecationWarning)
         return self.deriv(params)
 
+    def _null_weights(self, params):
+        """work around for Null model
+        """
+        if np.size(self.weights) > 1:
+            if len(params) == 1:
+                return 0.
+
+        return self.weights
+
 
 class NonePenalty(Penalty):
     """
@@ -339,22 +348,29 @@ class SCADSmoothed(SCAD):
 
         # get coefficients for quadratic approximation
         c0 = self.c0
+        # need to temporarily override weights for call to super
+        weights = self.weights
+        self.weights = 1.
         deriv_c0 = super(SCADSmoothed, self).grad(c0)
         value_c0 = super(SCADSmoothed, self).func(c0)
+        self.weights = weights
+
         self.aq1 = value_c0 - 0.5 * deriv_c0 * c0
         self.aq2 = 0.5 * deriv_c0 / c0
         self.restriction = restriction
 
     def func(self, params):
+        # workaround for Null model
+        weights = self._null_weights(params)
         # TODO: `and np.size(params) > 1` is hack for llnull, need better solution
         if self.restriction is not None and np.size(params) > 1:
             params = self.restriction.dot(params)
         # need to temporarily override weights for call to super
         # Note: we have the same problem with `restriction`
-        weights = self.weights
+        self_weights = self.weights
         self.weights = 1.
         value = super(SCADSmoothed, self).func(params[None, ...])
-        self.weights = weights
+        self.weights = self_weights
 
         # shift down so func(0) == 0
         value -= self.aq1
@@ -364,16 +380,18 @@ class SCADSmoothed(SCAD):
         p_abs_masked = p_abs[mask]
         value[mask] = self.aq2 * p_abs_masked**2
 
-        return (self.weights * value).sum(0)
+        return (weights * value).sum(0)
 
     def grad(self, params):
+        # workaround for Null model
+        weights = self._null_weights(params)
         if self.restriction is not None and np.size(params) > 1:
             params = self.restriction.dot(params)
         # need to temporarily override weights for call to super
-        weights = self.weights
+        self_weights = self.weights
         self.weights = 1.
         value = super(SCADSmoothed, self).grad(params)
-        self.weights = weights
+        self.weights = self_weights
 
         #change the segment corrsponding to quadratic approximation
         p = np.atleast_1d(params)
@@ -386,13 +404,15 @@ class SCADSmoothed(SCAD):
             return weights * value
 
     def deriv2(self, params):
+        # workaround for Null model
+        weights = self._null_weights(params)
         if self.restriction is not None and np.size(params) > 1:
             params = self.restriction.dot(params)
         # need to temporarily override weights for call to super
-        weights = self.weights
+        self_weights = self.weights
         self.weights = 1.
         value = super(SCADSmoothed, self).deriv2(params)
-        self.weights = weights
+        self.weights = self_weights
 
         # change the segment corrsponding to quadratic approximation
         p = np.atleast_1d(params)
@@ -402,9 +422,10 @@ class SCADSmoothed(SCAD):
         if self.restriction is not None and np.size(params) > 1:
             # note: super returns 1d array for diag, i.e. hessian_diag
             # TODO: weights are missing
-            return (self.restriction.T * value).dot(self.restriction)
+            return (self.restriction.T * (weights * value)
+                    ).dot(self.restriction)
         else:
-            return value
+            return weights * value
 
 
 class ConstraintsPenalty(object):
