@@ -30,9 +30,10 @@ class VariableScreening(object):
     pen_weight : None or float
         penalization weight use in SCAD penalized MLE
     k_add : int
-        number of exog to add
+        number of exog to add during expansion
+        see Notes section for tie handling
     k_max_add : int
-        maximum number of variables to add during variable addition, i.e.
+        maximum number of variables to include during variable addition, i.e.
         forward selection. default is 30
     threshold_trim : float
         threshold for trimming parameters to zero, default is 1e-4
@@ -53,6 +54,14 @@ class VariableScreening(object):
     -----
     Status: experimental, tested only on a limited set of models and
     with a limited set of model options.
+
+    Tie handling: If there are ties at the decision threshold, then all those
+    tied exog columns are treated in the same way. During forward selection
+    all exog columns with the same boundary value are included. During
+    elimination, the tied columns are not dropped. Consequently, if ties are
+    present, then the number of included exog can be larger than specified
+    by k_add, k_max_add and k_max_included.
+
 
     TODOs and current limitations:
 
@@ -78,7 +87,7 @@ class VariableScreening(object):
 
     """
 
-    def __init__(self, model, pen_weight=None, k_add=5, k_max_add=30,
+    def __init__(self, model, pen_weight=None, k_add=30, k_max_add=30,
                  threshold_trim=1e-4, k_max_included=20,
                  ranking_attr='resid_pearson', ranking_project=True):
 
@@ -180,7 +189,7 @@ class VariableScreening(object):
             endog = self.endog
         x0 = self.exog_keep
         x1 = exog
-        k0 = x0.shape[1]
+        k_current = x0.shape[1]
         # TODO: remove the need for x, use x1 separately from x0
         # needs change to idx to be based on x1 (candidate variables)
         x = np.column_stack((x0, x1))
@@ -190,23 +199,26 @@ class VariableScreening(object):
         idx_nonzero = [0]
         keep = np.array([True])
         idx_excl = np.arange(1, k_vars)
-        #start_params = [endog.mean()]
-        res_pen = model_class(endog, x0, **self.init_kwds).fit(disp=disp)
+        mod_pen = model_class(endog, x0, **self.init_kwds)
+        # don't penalize initial estimate
+        mod_pen.pen_weight = 0
+        res_pen = mod_pen.fit(disp=disp)
         start_params = res_pen.params
         converged = False
         idx_old = []
         for it in range(maxiter):
             mom_cond = self.ranking_measure(res_pen, x1, keep=keep)
             mcs = np.sort(mom_cond)[::-1]
-
-            threshold = mcs[max((self.k_max_add, k0 + self.k_add))]
+            idx_thr = min((self.k_max_add, k_current + self.k_add, len(mcs)))
+            threshold = mcs[idx_thr]
+            # indices of exog in current expansion model
             idx = np.concatenate((idx_nonzero, idx_excl[mom_cond > threshold]))
             start_params2 = np.zeros(len(idx))
             start_params2[:len(start_params)] = start_params
 
             res_pen = model_class(endog, x[:, idx], penal=self.penal,
-                                       pen_weight=self.pen_weight,
-                                       **self.init_kwds).fit(method=method,
+                                  pen_weight=self.pen_weight,
+                                  **self.init_kwds).fit(method=method,
                                                 start_params=start_params2,
                                                 warn_convergence=False, disp=disp,
                                                 skip_hessian=True)
@@ -215,20 +227,27 @@ class VariableScreening(object):
             # use largest params to keep
             if len(res_pen.params) > self.k_max_included:
                 # TODO we can use now np.partition with partial sort
-                thresh_params = np.sort(np.abs(res_pen.params))[-self.k_max_included]
+                thresh_params = np.sort(np.abs(res_pen.params))[
+                                                        -self.k_max_included]
                 keep2 = np.abs(res_pen.params) > thresh_params
                 keep = np.logical_and(keep, keep2)
+
+            # Note: idx and keep are for current expansion model
+            # idx_nonzero has indices of selected variables in full exog
             idx_nonzero = idx[keep]
 
             if disp:
                 print(idx_nonzero)
-            x0 = x[:, idx_nonzero]
+            # x0 is exog of currently selected model, not used in iteration
+            # x0 = x[:, idx_nonzero]
+            k_current = len(idx_nonzero)
             start_params = res_pen.params[keep]
 
-            # use mask to get excluded
+            # use mask to get excluded indices
             mask_excl = np.ones(k_vars, dtype=bool)
             mask_excl[idx_nonzero] = False
             idx_excl = np.nonzero(mask_excl)[0]
+            # candidates for inclusion in next iteration
             x1 = x[:, idx_excl]
             history['idx_nonzero'].append(idx_nonzero)
             history['keep'].append(keep)
@@ -243,11 +262,13 @@ class VariableScreening(object):
 
 
         # final esimate
-        res_final = model_class(endog, x[:, idx_nonzero], penal=self.penal,
+        mod_final = model_class(endog, x[:, idx_nonzero],
+                                penal=self.penal,
                                 pen_weight=self.pen_weight,
-                                **self.init_kwds).fit(method=method,
-                                          start_params=start_params,
-                                          warn_convergence=False, disp=disp)
+                                **self.init_kwds)
+        res_final = mod_final.fit(method=method,
+                                  start_params=start_params,
+                                  warn_convergence=False, disp=disp)
 
         res = ScreeningResults(self,
                                results_pen = res_pen,
@@ -290,6 +311,7 @@ class VariableScreening(object):
             in the exog_iterator.
 
         """
+        k_keep = self.k_keep
         # res_batches = []
         res_idx = []
         exog_winner = []
@@ -299,8 +321,8 @@ class VariableScreening(object):
             # avoid storing res_screen, only for debugging
             # res_batches.append(res_screen)
             res_idx.append(res_screen.idx_nonzero)
-            exog_winner.append(ex[:, res_screen.idx_nonzero[1:] - self.k_keep])
-            exog_idx.append(res_screen.idx_nonzero[1:] - self.k_keep)
+            exog_winner.append(ex[:, res_screen.idx_nonzero[k_keep:] - k_keep])
+            exog_idx.append(res_screen.idx_nonzero[k_keep:] - k_keep)
 
         exog_winner = np.column_stack(exog_winner)
         res_screen_final = self.screen_exog(exog_winner, maxiter=20)
@@ -313,7 +335,7 @@ class VariableScreening(object):
         idx_full = [(bidx, idx)
                     for bidx, batch in enumerate(exog_idx)
                     for idx in batch]
-        ex_final_idx = res_screen_final.idx_nonzero[1:] - self.k_keep
+        ex_final_idx = res_screen_final.idx_nonzero[k_keep:] - k_keep
         final_names = np.array(exog_winner_names)[ex_final_idx]
         res_screen_final.idx_nonzero_batches = np.array(idx_full)[ex_final_idx]
         res_screen_final.exog_final_names = final_names
