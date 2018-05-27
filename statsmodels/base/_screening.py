@@ -13,6 +13,11 @@ from statsmodels.base._penalties import SCADSmoothed
 
 
 class ScreeningResults(object):
+    """Results for Variable Screening
+
+
+
+    """
     def __init__(self, screener, **kwds):
         self.screener = screener
         self.__dict__.update(**kwds)
@@ -30,7 +35,7 @@ class VariableScreening(object):
     pen_weight : None or float
         penalization weight use in SCAD penalized MLE
     k_add : int
-        number of exog to add during expansion
+        number of exog to add during expansion or forward selection
         see Notes section for tie handling
     k_max_add : int
         maximum number of variables to include during variable addition, i.e.
@@ -87,8 +92,8 @@ class VariableScreening(object):
 
     """
 
-    def __init__(self, model, pen_weight=None, k_add=30, k_max_add=30,
-                 threshold_trim=1e-4, k_max_included=20,
+    def __init__(self, model, pen_weight=None, use_weights=True, k_add=30,
+                 k_max_add=30, threshold_trim=1e-4, k_max_included=20,
                  ranking_attr='resid_pearson', ranking_project=True):
 
         self.model = model
@@ -103,7 +108,7 @@ class VariableScreening(object):
         self.exog_keep = model.exog
         self.k_keep = model.exog.shape[1]
         self.nobs = len(self.endog)
-        self.penal = SCADSmoothed(0.1, c0=0.0001)
+        self.penal = self._get_penal()
 
         if pen_weight is not None:
             self.pen_weight = pen_weight
@@ -111,12 +116,18 @@ class VariableScreening(object):
             self.pen_weight = self.nobs * 10
 
         # option for screening algorithm
+        self.use_weights = use_weights
         self.k_add = k_add
         self.k_max_add = k_max_add
         self.threshold_trim = threshold_trim
         self.k_max_included = k_max_included
         self.ranking_attr = ranking_attr
         self.ranking_project = ranking_project
+
+    def _get_penal(self, weights=None):
+        """create new Penalty instance
+        """
+        return SCADSmoothed(0.1, c0=0.0001, weights=weights)
 
     def ranking_measure(self, res_pen, exog, keep=None):
         """compute measure for ranking exog candidates for inclusion
@@ -216,12 +227,20 @@ class VariableScreening(object):
             start_params2 = np.zeros(len(idx))
             start_params2[:len(start_params)] = start_params
 
-            res_pen = model_class(endog, x[:, idx], penal=self.penal,
+            if self.use_weights:
+                weights = np.ones(len(idx))
+                weights[:self.k_keep] = 0
+                # modify Penalty instance attached to self
+                # damgerous if res_pen is reused
+                self.penal.weights = weights
+            mod_pen = model_class(endog, x[:, idx], penal=self.penal,
                                   pen_weight=self.pen_weight,
-                                  **self.init_kwds).fit(method=method,
-                                                start_params=start_params2,
-                                                warn_convergence=False, disp=disp,
-                                                skip_hessian=True)
+                                  **self.init_kwds)
+
+            res_pen = mod_pen.fit(method=method,
+                                  start_params=start_params2,
+                                  warn_convergence=False, disp=disp,
+                                  skip_hessian=True)
 
             keep = np.abs(res_pen.params) > self.threshold_trim
             # use largest params to keep
@@ -260,12 +279,19 @@ class VariableScreening(object):
                 break
             idx_old = idx_nonzero
 
-
         # final esimate
+        if self.use_weights:
+            weights = np.ones(len(idx_nonzero))
+            weights[:self.k_keep] = 0
+            # create new Penalty instance to avoide sharing attached penal
+            penal = self._get_penal(weights=weights)
+        else:
+            penal = self.penal
         mod_final = model_class(endog, x[:, idx_nonzero],
-                                penal=self.penal,
+                                penal=penal,
                                 pen_weight=self.pen_weight,
                                 **self.init_kwds)
+
         res_final = mod_final.fit(method=method,
                                   start_params=start_params,
                                   warn_convergence=False, disp=disp)
