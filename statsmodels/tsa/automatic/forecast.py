@@ -5,9 +5,18 @@ from statsmodels.tools.decorators import cache_readonly
 
 
 class Forecast:
-    def __init__(self, endog, model, test_sample='auto', **spec):
-        if test_sample == 'auto':
-            test_sample = int(0.8 * len(endog))
+    def __init__(self, endog, model, test_sample=0.2, **spec):
+        if type(test_sample) == str:
+            self.endog_training = endog[:test_sample][:-1]
+            self.endog_test = endog[test_sample:]
+        else:
+            if type(test_sample) == float | type(test_sample) == int:
+                if test_sample > 0.0 & test_sample < 1.0:
+                    # here test_sample is containing the number of observations
+                    # to consider for the endog_test
+                    test_sample = int(test_sample * len(endog))
+            self.endog_training = endog[:-test_sample]
+            self.endog_test = endog[-test_sample:]
         self.endog_training = endog[:test_sample][:-1]
         self.endog_test = endog[test_sample:]
         self.model = model(self.endog_training, **spec)
