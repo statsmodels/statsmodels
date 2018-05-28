@@ -608,9 +608,11 @@ class GLM(base.LikelihoodModel):
             else:
                 observed = True
 
+        tmp = getattr(self, '_tmp_like_exog', np.empty_like(self.exog))
+
         factor = self.hessian_factor(params, scale=scale, observed=observed)
-        hess = -np.dot(self.exog.T * factor, self.exog)
-        return hess
+        np.multiply(self.exog.T, factor, out=tmp.T)
+        return -tmp.T.dot(self.exog)
 
     def information(self, params, scale=None):
         """
@@ -1068,6 +1070,7 @@ class GLM(base.LikelihoodModel):
                                   cov_kwds=cov_kwds, use_t=use_t, **kwargs)
         else:
             self._optim_hessian = kwargs.get('optim_hessian')
+            self._tmp_like_exog = np.empty_like(self.exog)
             fit_ = self._fit_gradient(start_params=start_params,
                                       method=method,
                                       maxiter=maxiter,
@@ -1078,6 +1081,7 @@ class GLM(base.LikelihoodModel):
                                       max_start_irls=max_start_irls,
                                       **kwargs)
             self._optim_hessian = None
+            self._tmp_like_exog = None
             return fit_
 
     def _fit_gradient(self, start_params=None, method="newton",
