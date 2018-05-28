@@ -1,0 +1,108 @@
+#cython: boundscheck=False
+#cython: wraparound=False
+#cython: cdivision=False
+"""
+Exponential smoothing filter
+
+Author: Chad Fulton  
+License: BSD-3
+"""
+
+{{py:
+
+TYPES = {
+    "s": ("np.float32_t", "np.float32", "np.NPY_FLOAT32"),
+    "d": ("np.float64_t", "float", "np.NPY_FLOAT64"),
+    "c": ("np.complex64_t", "np.complex64", "np.NPY_COMPLEX64"),
+    "z": ("np.complex128_t", "complex", "np.NPY_COMPLEX128"),
+}
+
+}}
+
+# Typical imports
+import numpy as np
+import warnings
+cimport numpy as np
+cimport cython
+
+cdef int FORTRAN = 1
+
+{{for prefix, types in TYPES.items()}}
+{{py:cython_type, dtype, typenum = types}}
+
+cpdef {{prefix}}es_filter(int nobs, int nobs_init, int nobs_output,
+                          str trend, str seasonal, int damped_trend, int seasonal_periods,
+                          {{cython_type}} smoothing_level,
+                          {{cython_type}} smoothing_slope,
+                          {{cython_type}} smoothing_seasonal,
+                          {{cython_type}} damping_slope,
+                          {{cython_type}} [:] endog,
+                          int [:] missing,
+                          {{cython_type}} [:] filtered_level,
+                          {{cython_type}} [:] filtered_slope,
+                          {{cython_type}} [:] filtered_seasonal,
+                          {{cython_type}} [:] forecasts):
+
+    cdef int t
+    cdef {{cython_type}} endog_t, endog_adj, level_trend, trend_prev, detrended
+
+    # Iterations
+    for t in range(nobs_init, nobs_output):
+        # Endog component
+        endog_t = endog[t - nobs_init]
+        if seasonal == 'add':
+            endog_adj = endog_t - filtered_seasonal[t - seasonal_periods]
+        elif seasonal == 'mul':
+            endog_adj = endog_t / filtered_seasonal[t - seasonal_periods]
+        else:
+            endog_adj = endog_t
+
+        # Intermediate variables
+        level_trend = filtered_level[t-1]
+        if trend == 'add':
+            trend_prev = damping_slope * filtered_slope[t-1]
+            level_trend = level_trend + trend_prev
+        elif trend == 'mul':
+            trend_prev = filtered_slope[t-1]**damping_slope
+            level_trend = level_trend * trend_prev
+
+        # Detrended component
+        if seasonal == 'add':
+            detrended = endog_t - level_trend
+        elif seasonal == 'mul':
+            detrended = endog_t / level_trend
+
+        # Level
+        if not missing[t - nobs_init]:
+            filtered_level[t] = (smoothing_level * endog_adj +
+                                 (1 - smoothing_level) * level_trend)
+        else:
+            filtered_level[t] = level_trend
+
+        # Slope
+        if trend == 'add':
+            filtered_slope[t] = (
+                smoothing_slope * (filtered_level[t] - filtered_level[t-1]) +
+                (1 - smoothing_slope) * trend_prev)
+        elif trend == 'mul':
+            filtered_slope[t] = (
+                smoothing_slope * (filtered_level[t] / filtered_level[t-1]) +
+                (1 - smoothing_slope) * trend_prev)
+
+        # Seasonal
+        if seasonal is not None:
+            if not missing[t - nobs_init]:
+                filtered_seasonal[t] = (smoothing_seasonal * detrended +
+                                        (1 - smoothing_seasonal) *
+                                        filtered_seasonal[t - seasonal_periods])
+            else:
+                filtered_seasonal[t] = filtered_seasonal[t - seasonal_periods]
+
+        # Prediction
+        forecasts[t] = level_trend
+        if seasonal == 'add':
+            forecasts[t] = forecasts[t] + filtered_seasonal[t - seasonal_periods]
+        elif seasonal == 'mul':
+            forecasts[t] = forecasts[t] * filtered_seasonal[t - seasonal_periods]
+
+{{endfor}}

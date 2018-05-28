@@ -69,6 +69,7 @@ rehab.table
 salary.table
 .ipynb_checkpoints
 statsmodels/tsa/statespace/_statespace.pyx
+statsmodels/tsa/exponential_smoothing/_exponential_smoother.pyx
 statsmodels/tsa/regime_switching/_hamilton_filter.pyx
 statsmodels/tsa/regime_switching/_kim_smoother.pyx
 statsmodels/tsa/statespace/_representation.pyx

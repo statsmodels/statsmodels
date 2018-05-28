@@ -24,4 +24,4 @@ from .statespace.varmax import VARMAX
 from .statespace.dynamic_factor import DynamicFactor
 from .regime_switching.markov_regression import MarkovRegression
 from .regime_switching.markov_autoregression import MarkovAutoregression
-from .holtwinters import ExponentialSmoothing, SimpleExpSmoothing, Holt
+from .exponential_smoothing.exponential_smoothing import ExponentialSmoothing
