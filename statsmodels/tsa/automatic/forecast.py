@@ -11,8 +11,8 @@ class Forecast:
             self.endog_training = endog[:test_sample][:-1]
             self.endog_test = endog[test_sample:]
         else:
-            if type(test_sample) == float | type(test_sample) == int:
-                if test_sample > 0.0 & test_sample < 1.0:
+            if type(test_sample) == float or type(test_sample) == int:
+                if test_sample > 0.0 and test_sample < 1.0:
                     # here test_sample is containing the number of observations
                     # to consider for the endog_test
                     test_sample = int(test_sample * len(endog))
@@ -30,12 +30,12 @@ class Forecast:
         return self.results.fittedvalues
 
     @cache_readonly
-    def nobs_training(self, endog_training):
-        return len(endog_training)
+    def nobs_training(self):
+        return len(self.endog_training)
 
     @cache_readonly
-    def nobs_test(self, endog_test):
-        return len(endog_test)
+    def nobs_test(self):
+        return len(self.endog_test)
 
     @cache_readonly
     def forecasts(self):
@@ -116,4 +116,5 @@ class ForecastSet:
             measure_vals[mod] = getattr(self.models[mod], measure)
         min_measure = measure_vals.min()
         model = np.where(measure_vals == min_measure)
-        return self.models[model]
+        # print(self.models[0][0])
+        return self.models[model[0][0]]
