@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import numpy as np
 import pandas as pd
 import patsy
@@ -226,6 +228,8 @@ class ProcessRegression(base.LikelihoodModel):
             groups_ix[g].append(i)
         self._groups_ix = groups_ix
 
+        self.verbose = False
+
     def _check_args(self, endog, exog, exog_scale, exog_smooth, time, groups):
 
         v = [
@@ -328,15 +332,15 @@ class ProcessRegression(base.LikelihoodModel):
         a vector.  Use `unpack` to access the component vectors.
         """
 
-        mnpar, sdpar, smpar = self.unpack(params)
+        mnpar, scpar, smpar = self.unpack(params)
 
         # Residuals
         resid = self.endog - np.dot(self.exog, mnpar)
 
-        # Standard deviations
-        sd = np.exp(np.dot(self.exog_scale, sdpar))
+        # Scaling parameters
+        sc = np.exp(np.dot(self.exog_scale, scpar))
 
-        # Smoothness
+        # Smoothness parameters
         sm = np.exp(np.dot(self.exog_smooth, smpar))
 
         # Get the log-likelihood
@@ -344,11 +348,14 @@ class ProcessRegression(base.LikelihoodModel):
         for g, ix in self._groups_ix.items():
 
             # Get the covariance matrix for this person.
-            cm = self.cov.get_cov(self.time[ix], sd[ix], sm[ix])
+            cm = self.cov.get_cov(self.time[ix], sc[ix], sm[ix])
 
             re = resid[ix]
             ll -= 0.5 * np.linalg.slogdet(cm)[1]
             ll -= 0.5 * np.dot(re, np.linalg.solve(cm, re))
+
+        if self.verbose:
+            print("L=", ll)
 
         return ll
 
@@ -414,9 +421,14 @@ class ProcessRegression(base.LikelihoodModel):
                 score[pm + pv:] -= 0.5 * (np.sum(jacs[i] * cmi) * sm[ix[i]] *
                                           self.exog_smooth[ix[i], :])
 
+        if self.verbose:
+            print("|G|=", np.sqrt(np.sum(score * score)))
+
         return score
 
-    def fit(self, method="BFGS", minim_opts=None):
+    def fit(self, method="BFGS", minim_opts=None, verbose=False):
+
+        self.verbose = verbose
 
         q = self.exog_scale.shape[1] + self.exog_smooth.shape[1]
         f = minimize(

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from statsmodels.regression.process_reg import (ProcessRegression,
                                                 GaussianCovariance)
 import numpy as np
