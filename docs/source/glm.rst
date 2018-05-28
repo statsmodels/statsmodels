@@ -178,7 +178,6 @@ available link functions can be obtained by
    :toctree: generated/
 
    Link
-
    CDFLink
    CLogLog
    Log
@@ -194,3 +193,32 @@ available link functions can be obtained by
    logit
    nbinom
    probit
+
+.. _varfuncs:
+
+Variance Functions
+^^^^^^^^^^^^^^^^^^
+
+Each of the families has an associated variance function. You can access
+the variance functions here:
+
+::
+
+    >>> sm.families.<familyname>.variance
+
+.. module:: statsmodels.genmod.families.varfuncs
+.. currentmodule:: statsmodels.genmod.families.varfuncs
+
+.. autosummary::
+   :toctree: generated/
+
+  VarianceFunction
+  constant
+  Power
+  mu
+  mu_squared
+  mu_cubed
+  Binomial
+  binary
+  NegativeBinomial
+  nbinom
