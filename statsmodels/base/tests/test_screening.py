@@ -50,8 +50,7 @@ def _get_poisson_data():
     return y, x, idx_nonzero_true, beta
 
 def test_poisson_screening():
-    # this is mostly a dump of my development notebook
-    # number of exog candidates is reduced to 500 to reduce time
+
     np.random.seed(987865)
 
     y, x, idx_nonzero_true, beta = _get_poisson_data()
@@ -72,10 +71,7 @@ def test_poisson_screening():
     exog_candidates = x[:, 1:]
     res_screen = screener.screen_exog(exog_candidates, maxiter=10)
 
-    res_screen.idx_nonzero
-
-    res_screen.results_final
-
+    assert_equal(np.sort(res_screen.idx_nonzero), idx_nonzero_true)
 
     xnames = ['var%4d' % ii for ii in res_screen.idx_nonzero]
     xnames[0] = 'const'
@@ -89,6 +85,7 @@ def test_poisson_screening():
     parameters = parameters.join(ps, how='outer')
 
     assert_allclose(parameters['oracle'], parameters['final'], atol=5e-6)
+
 
 def test_screen_iterated():
     np.random.seed(987865)
@@ -125,29 +122,28 @@ def test_screen_iterated():
             x = (x - x.mean(0)) / x.std(0)
             yield x
 
-    mod_initial = PoissonPenalized(y, np.ones(nobs), pen_weight=nobs * 500)
-    screener = VariableScreening(mod_initial)
-    screener.k_max_add = 30
+    dummy = np.ones(nobs)
+    dummy[:nobs // 2] = 0
+    exog_keep = np.column_stack((np.ones(nobs), dummy))
+    for k in [1, 2]:
+        mod_initial = PoissonPenalized(y, exog_keep[:, :k], pen_weight=nobs * 500)
+        screener = VariableScreening(mod_initial)
+        screener.k_max_add = 30
 
-    final = screener.screen_exog_iterator(exog_iterator())
-    names = ['var0_10', 'var1_10', 'var2_10', 'var3_10']
-    assert_equal(final.exog_final_names, names)
-    idx_full = np.array([[ 0, 10],
-                         [ 1, 10],
-                         [ 2, 10],
-                         [ 3, 10]], dtype=np.int64)
-    assert_equal(final.idx_nonzero_batches, idx_full)
-
+        final = screener.screen_exog_iterator(exog_iterator())
+        names = ['var0_10', 'var1_10', 'var2_10', 'var3_10']
+        assert_equal(final.exog_final_names, names)
+        idx_full = np.array([[ 0, 10],
+                             [ 1, 10],
+                             [ 2, 10],
+                             [ 3, 10]], dtype=np.int64)
+        assert_equal(final.idx_nonzero_batches, idx_full)
 
 
 def test_glmpoisson_screening():
-    # this is mostly a dump of my development notebook
-    # number of exog candidates is reduced to 500 to reduce time
 
     y, x, idx_nonzero_true, beta = _get_poisson_data()
     nobs = len(y)
-    # test uses
-    screener_kwds = dict(pen_weight=nobs * 0.7, threshold_trim=1e-3)
 
     xnames_true = ['var%4d' % ii for ii in idx_nonzero_true]
     xnames_true[0] = 'const'
@@ -164,9 +160,6 @@ def test_glmpoisson_screening():
     res_screen = screener.screen_exog(exog_candidates, maxiter=10)
 
     assert_equal(np.sort(res_screen.idx_nonzero), idx_nonzero_true)
-
-    res_screen.results_final
-
 
     xnames = ['var%4d' % ii for ii in res_screen.idx_nonzero]
     xnames[0] = 'const'
@@ -225,10 +218,12 @@ def test_logit_screening():
     exog_candidates = x[:, 1:]
     res_screen = screener.screen_exog(exog_candidates, maxiter=30)
 
-    res_screen.idx_nonzero
-
-    res_screen.results_final
-
+    # we have extra variables, check index for larger params
+    mask = np.abs(res_screen.results_final.params) > 0.1
+    assert_equal(np.sort(res_screen.idx_nonzero[mask]), idx_nonzero_true)
+    # regression test
+    idx_r = np.array([  0, 100, 163, 300, 400, 411,  74])
+    assert_equal(res_screen.idx_nonzero, idx_r)
 
     xnames = ['var%4d' % ii for ii in res_screen.idx_nonzero]
     xnames[0] = 'const'
@@ -332,18 +327,12 @@ def test_glmgaussian_screening():
     res_oracle = GLMPenalized(y, xframe_true, family=family.Gaussian()).fit()
     parameters['oracle'] = res_oracle.params
 
-    #mod_initial = LogitPenalized(y, np.ones(nobs), pen_weight=nobs * 0.5)
     mod_initial = GLMPenalized(y, np.ones(nobs), family=family.Gaussian())
-
     screener = VariableScreening(mod_initial, **screener_kwds)
-    #screener.k_max_add = 10
     exog_candidates = x[:, 1:]
     res_screen = screener.screen_exog(exog_candidates, maxiter=30)
 
-    res_screen.idx_nonzero
-
-    res_screen.results_final
-
+    assert_equal(np.sort(res_screen.idx_nonzero), idx_nonzero_true)
 
     xnames = ['var%4d' % ii for ii in res_screen.idx_nonzero]
     xnames[0] = 'const'
