@@ -98,6 +98,11 @@
             "target": "notebooks/generated/glm_formula.html",
             "img": "../_static/images/glm_formulas.png"
 
+        },
+        {
+            "text": "Weighting Observations with GLMs",
+            "target": "notebooks/generated/glm_weights.html",
+            "img": "../_static/images/glm_weights.png"
         }
         ]
   },
@@ -121,7 +126,7 @@
       "header":"Statistics",
       "id":"stats",
       "links":[
-        {   
+        {
             "text": "ANOVA",
             "target": "notebooks/generated/interactions_anova.html",
             "img": "../_static/images/anova.png"
@@ -209,7 +214,7 @@
     "header":"User Notes",
     "id":"user",
     "links":[
-    {   
+    {
         "text": "Contrasts",
         "target": "notebooks/generated/contrasts.html",
         "img": "../_static/images/contrasts.png"
