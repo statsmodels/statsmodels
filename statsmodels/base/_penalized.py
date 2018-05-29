@@ -51,6 +51,8 @@ class PenalizedMixin(object):
             self.pen_weight = 0
 
         self._init_keys.extend(['penal', 'pen_weight'])
+        self._null_drop_keys = getattr(self, '_null_drop_keys', [])
+        self._null_drop_keys.extend(['penal'])
 
     def loglike(self, params, pen_weight=None, **kwds):
         if pen_weight is None:

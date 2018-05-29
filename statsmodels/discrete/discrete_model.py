@@ -3690,6 +3690,7 @@ class L1CountResults(DiscreteResults):
         self.df_resid = float(self.model.endog.shape[0] - self.nnz_params) + k_extra
 
 class PoissonResults(CountResults):
+
     def predict_prob(self, n=None, exog=None, exposure=None, offset=None,
                      transform=True):
         """
@@ -3718,6 +3719,27 @@ class PoissonResults(CountResults):
                           transform=transform, linear=False)[:,None]
         # uses broadcasting
         return stats.poisson.pmf(counts, mu)
+
+    @property
+    def resid_pearson(self):
+        """
+        Pearson residuals
+
+        Notes
+        -----
+        Pearson residuals are defined to be
+
+        .. math:: r_j = \\frac{(y - M_jp_j)}{\\sqrt{M_jp_j(1-p_j)}}
+
+        where :math:`p_j=cdf(X\\beta)` and :math:`M_j` is the total number of
+        observations sharing the covariate pattern :math:`j`.
+
+        For now :math:`M_j` is always set to 1.
+        """
+        # Pearson residuals
+        p = self.predict()  # fittedvalues is still linear
+        return (self.model.endog - p)/np.sqrt(p)
+
 
 class L1PoissonResults(L1CountResults, PoissonResults):
     pass
