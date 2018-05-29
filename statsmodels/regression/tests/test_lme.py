@@ -13,7 +13,6 @@ import statsmodels.tools.numdiff as nd
 import os
 import csv
 import scipy
-import itertools
 import nose.tools
 
 # TODO: add tests with unequal group sizes
@@ -620,10 +619,7 @@ class TestMixedLM(object):
         model1 = MixedLM(endog, exog, groups, exog_re=exog_re, exog_vc=exog_vc)
         result1 = model1.fit()
 
-        df = pd.DataFrame(
-            exog[:, 1:], columns=[
-                "x1",
-            ])
+        df = pd.DataFrame(exog[:, 1:], columns=["x1"])
         df["y"] = endog
         df["re1"] = exog_re[:, 0]
         df["re2"] = exog_re[:, 1]
@@ -767,8 +763,8 @@ class TestMixedLMSummary(object):
         # Test that the summary correctly includes all variables.
         summ = self.res.summary()
         desired = ["const", "x1", "x2", "Group Var"]
-        actual = summ.tables[
-            1].index.values  # Second table is summary of params
+        # Second table is summary of params
+        actual = summ.tables[1].index.values
         assert_equal(actual, desired)
 
     def test_summary_xname_fe(self):
@@ -857,9 +853,9 @@ fnames = [x for x in fnames if x.startswith("lme") and x.endswith(".csv")]
 
 # Copied from bashtage's #3847
 @nose.tools.nottest
-@pytest.mark.parametrize('fname,reml,irf',
-                         itertools.product(fnames, [False, True],
-                                           [False, True]))
+@pytest.mark.parametrize('fname', fnames)
+@pytest.mark.parametrize('reml', [False, True])
+@pytest.mark.parametrize('irf', [False, True])
 def test_r(fname, reml, irf):
     ds_ix = int(fname[3:5])
     do1(reml, irf, ds_ix)
@@ -1187,10 +1183,10 @@ def test_smw_solver():
         y1 = f(x)
         assert_allclose(y1, y2)
 
-    for p in 5, 10:
-        for q in 4, 8:
-            for r in 2, 3:
-                for s in 0, 0.5:
+    for p in (5, 10):
+        for q in (4, 8):
+            for r in (2, 3):
+                for s in (0, 0.5):
                     tester(p, q, r, s)
 
 
@@ -1218,13 +1214,8 @@ def test_smw_logdet():
         d1 = _smw_logdet(s, A, AtA, Qi, di, bd)
         assert_allclose(d1, d2)
 
-    for p in 5, 10:
-        for q in 4, 8:
-            for r in 2, 3:
-                for s in 0, 0.5:
+    for p in (5, 10):
+        for q in (4, 8):
+            for r in (2, 3):
+                for s in (0, 0.5):
                     tester(p, q, r, s)
-
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])
