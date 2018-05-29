@@ -222,8 +222,8 @@ def test_logit_screening():
     mask = np.abs(res_screen.results_final.params) > 0.1
     assert_equal(np.sort(res_screen.idx_nonzero[mask]), idx_nonzero_true)
     # regression test
-    idx_r = np.array([  0, 100, 163, 300, 400, 411,  74])
-    assert_equal(res_screen.idx_nonzero, idx_r)
+    idx_r = np.array([0, 74, 100, 163, 300, 400, 411])
+    assert_equal(np.sort(res_screen.idx_nonzero), idx_r)
 
     xnames = ['var%4d' % ii for ii in res_screen.idx_nonzero]
     xnames[0] = 'const'

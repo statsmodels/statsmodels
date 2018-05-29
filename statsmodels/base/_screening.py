@@ -135,9 +135,6 @@ class VariableScreening(object):
     moment condition with resid_pearson or others without freq_weights.
     pearson_resid: GLM resid_pearson does not include freq_weights.
 
-    fit_kwds are missing, e.g. we need to avoid irls in GLM, this is done
-    by using start_params and a gradient fit_method.
-
     variable names: do we keep track of those? currently made-up names
 
     currently only supports numpy arrays, no exog type check or conversion
@@ -190,6 +187,7 @@ class VariableScreening(object):
         endog = self.endog
 
         if self.ranking_project:
+            assert res_pen.model.exog.shape[1] == len(keep)
             ex_incl = res_pen.model.exog[:, keep]
             exog = exog - ex_incl.dot(np.linalg.pinv(ex_incl).dot(exog))
 
@@ -219,7 +217,7 @@ class VariableScreening(object):
         return mom_cond
 
     def screen_exog(self, exog, endog=None, maxiter=100, method='bfgs',
-                    disp=False):
+                    disp=False, fit_kwds=None):
         """screen and select variables (columns) in exog
 
         Parameters
@@ -260,20 +258,26 @@ class VariableScreening(object):
         # needs change to idx to be based on x1 (candidate variables)
         x = np.column_stack((x0, x1))
         nobs, k_vars = x.shape
+        fkwds = fit_kwds if fit_kwds is not None else {}
+        fit_kwds = {'maxiter': 200, 'disp': False}
+        fit_kwds.update(fkwds)
 
         history = defaultdict(list)
-        idx_nonzero = [0]
-        keep = np.array([True])
-        idx_excl = np.arange(1, k_vars)
+        idx_nonzero = np.arange(k_keep, dtype=np.int)
+        keep = np.ones(k_keep, np.bool_)
+        idx_excl = np.arange(k_keep, k_vars)
         mod_pen = model_class(endog, x0, **self.init_kwds)
         # don't penalize initial estimate
         mod_pen.pen_weight = 0
-        res_pen = mod_pen.fit(disp=disp)
+        res_pen = mod_pen.fit(**fit_kwds)
         start_params = res_pen.params
         converged = False
         idx_old = []
         for it in range(maxiter):
+            # candidates for inclusion in next iteration
+            x1 = x[:, idx_excl]
             mom_cond = self.ranking_measure(res_pen, x1, keep=keep)
+            assert len(mom_cond) == len(idx_excl)
             mcs = np.sort(mom_cond)[::-1]
             idx_thr = min((self.k_max_add, k_current + self.k_add, len(mcs)))
             threshold = mcs[idx_thr]
@@ -294,8 +298,8 @@ class VariableScreening(object):
 
             res_pen = mod_pen.fit(method=method,
                                   start_params=start_params2,
-                                  warn_convergence=False, disp=disp,
-                                  skip_hessian=True)
+                                  warn_convergence=False, skip_hessian=True,
+                                  **fit_kwds)
 
             keep = np.abs(res_pen.params) > self.threshold_trim
             # use largest params to keep
@@ -322,8 +326,6 @@ class VariableScreening(object):
             mask_excl = np.ones(k_vars, dtype=bool)
             mask_excl[idx_nonzero] = False
             idx_excl = np.nonzero(mask_excl)[0]
-            # candidates for inclusion in next iteration
-            x1 = x[:, idx_excl]
             history['idx_nonzero'].append(idx_nonzero)
             history['keep'].append(keep)
             history['params_keep'].append(start_params)
@@ -350,7 +352,8 @@ class VariableScreening(object):
 
         res_final = mod_final.fit(method=method,
                                   start_params=start_params,
-                                  warn_convergence=False, disp=disp)
+                                  warn_convergence=False,
+                                  **fit_kwds)
         # set exog_names for final model
         xnames = ['var%4d' % ii for ii in idx_nonzero]
         res_final.model.exog_names[k_keep:] = xnames[k_keep:]
