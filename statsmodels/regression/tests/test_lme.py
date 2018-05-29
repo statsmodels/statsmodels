@@ -391,6 +391,9 @@ class TestMixedLM(object):
         # library(geepack)
         # rm = lmer(Weight ~ Time + (1 | Pig), data=dietox)
         # rm = lmer(Weight ~ Time + (1 | Pig), REML=FALSE, data=dietox)
+        #
+        # Comments below are R code used to extract the numbers used
+        # for comparison.
 
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         rdir = os.path.join(cur_dir, 'results')
@@ -450,6 +453,9 @@ class TestMixedLM(object):
         # library(geepack)
         # r = lmer(Weight ~ Time + (1 + Time | Pig), data=dietox)
         # r = lmer(Weight ~ Time + (1 + Time | Pig), REML=FALSE, data=dietox)
+        #
+        # Comments below are the R code used to extract the constants
+        # for comparison.
 
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         rdir = os.path.join(cur_dir, 'results')
