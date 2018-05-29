@@ -312,6 +312,7 @@ class VariableScreening(object):
 
             # Note: idx and keep are for current expansion model
             # idx_nonzero has indices of selected variables in full exog
+            keep[:k_keep] = True  # always keep exog_keep
             idx_nonzero = idx[keep]
 
             if disp:
@@ -338,6 +339,8 @@ class VariableScreening(object):
             idx_old = idx_nonzero
 
         # final esimate
+        # check that we still have exog_keep
+        assert np.all(idx_nonzero[:k_keep] == np.arange(k_keep))
         if self.use_weights:
             weights = np.ones(len(idx_nonzero))
             weights[:k_keep] = 0

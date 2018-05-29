@@ -298,9 +298,9 @@ def _get_gaussian_data():
     x *= 1.2
 
     x = (x - x.mean(0)) / x.std(0)
-    x[:, 0] = 1
+    x[:, 0] = 1  # make first column into constant
     beta = np.zeros(k_vars)
-    idx_nonzero_true = [0, 100, 300, 400, 411]
+    idx_nonzero_true = [0, 1, 300, 400, 411]
     beta[idx_nonzero_true] = 1. / np.arange(1, k_nonzero + 1)
     beta = np.sqrt(beta)  # make small coefficients larger
     linpred = x.dot(beta)
@@ -313,6 +313,8 @@ def test_glmgaussian_screening():
 
     y, x, idx_nonzero_true, beta = _get_gaussian_data()
     nobs = len(y)
+    # demeaning makes constant zero, checks that exog_keep are not trimmed
+    y = y - y.mean(0)
 
     # test uses
     screener_kwds = dict(pen_weight=nobs * 0.75, threshold_trim=1e-3,
@@ -327,22 +329,25 @@ def test_glmgaussian_screening():
     res_oracle = GLMPenalized(y, xframe_true, family=family.Gaussian()).fit()
     parameters['oracle'] = res_oracle.params
 
-    mod_initial = GLMPenalized(y, np.ones(nobs), family=family.Gaussian())
-    screener = VariableScreening(mod_initial, **screener_kwds)
-    exog_candidates = x[:, 1:]
-    res_screen = screener.screen_exog(exog_candidates, maxiter=30)
+    for k_keep in [1, 2]:
+        mod_initial = GLMPenalized(y, x[:, :k_keep], family=family.Gaussian())
+        screener = VariableScreening(mod_initial, **screener_kwds)
+        exog_candidates = x[:, k_keep:]
+        res_screen = screener.screen_exog(exog_candidates, maxiter=30)
 
-    assert_equal(np.sort(res_screen.idx_nonzero), idx_nonzero_true)
+        assert_equal(np.sort(res_screen.idx_nonzero), idx_nonzero_true)
 
-    xnames = ['var%4d' % ii for ii in res_screen.idx_nonzero]
-    xnames[0] = 'const'
+        xnames = ['var%4d' % ii for ii in res_screen.idx_nonzero]
+        xnames[0] = 'const'
 
-    # smoke test
-    res_screen.results_final.summary(xname=xnames)
-    res_screen.results_pen.summary()
-    assert_equal(res_screen.results_final.mle_retvals['converged'], True)
+        # smoke test
+        res_screen.results_final.summary(xname=xnames)
+        res_screen.results_pen.summary()
+        assert_equal(res_screen.results_final.mle_retvals['converged'], True)
 
-    ps = pd.Series(res_screen.results_final.params, index=xnames, name='final')
-    parameters = parameters.join(ps, how='outer')
+        ps = pd.Series(res_screen.results_final.params, index=xnames, name='final')
+        parameters = parameters.join(ps, how='outer')
 
-    assert_allclose(parameters['oracle'], parameters['final'], atol=1e-5)
+        assert_allclose(parameters['oracle'], parameters['final'], atol=1e-5)
+        # we need to remove 'final' again for next iteration
+        del parameters['final']
