@@ -4,7 +4,7 @@ from scipy.stats import norm
 from statsmodels.tools.decorators import cache_readonly
 
 
-class Forecast:
+class Forecast(object):
     def __init__(self, endog, model, test_sample=0.2, **spec):
         # TODO: make date selection of test sample more robust
         if type(test_sample) == str:
@@ -97,7 +97,7 @@ class Forecast:
         return np.mean(np.abs(q_j))
 
 
-class ForecastSet:
+class ForecastSet(object):
     """docstring for second class."""
 
     def __init__(self, endog, test_sample):

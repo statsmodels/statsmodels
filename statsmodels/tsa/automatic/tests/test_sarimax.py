@@ -17,7 +17,7 @@ macrodata.index = pd.PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
 def test_non_stepwise():
     """test function for non-stepwise auto_order."""
     p, q = sarimax.auto_order(macrodata['infl'], d=0)
-    #p, q = sarimax.auto_order(macrodata.infl, d=0, enforce_stationarity=False)
+# p, q = sarimax.auto_order(macrodata.infl, d=0, enforce_stationarity=False)
     desired_p = 2
     desired_q = 2
     assert_equal(p, desired_p)

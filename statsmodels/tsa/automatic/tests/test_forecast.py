@@ -15,7 +15,7 @@ macrodata = datasets.macrodata.load_pandas().data
 macrodata.index = pd.PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
 
 
-def test_forecast():
+def test_forecast_smoke():
     f1 = Forecast(  macrodata['infl'], sm.tsa.SARIMAX,
                     test_sample=0.3, **{'order': (1, 0, 0)})
     desired_nobs_test = 60
@@ -38,7 +38,7 @@ def test_forecast():
     assert_allclose(f1.mase, desired_mase)
 
 
-def test_forecast_set():
+def test_forecast_set_smoke():
     fs1 = ForecastSet(macrodata['infl'], test_sample=0.2)
     fs1.add(model=sm.tsa.SARIMAX, **{'order': (1, 0, 0)})
     fs1.add(model=sm.tsa.SARIMAX, **{'order': (1, 0, 1)})

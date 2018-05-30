@@ -44,8 +44,12 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3),
         for p in range(max_order[0]):
             for q in range(max_order[1]):
                 # fit  the model
-                mod = sm.tsa.statespace.SARIMAX(endog, order=(p, d, q), **spec)
-                res = mod.fit(disp=False)
+                try:
+                    mod = sm.tsa.statespace.SARIMAX(endog,
+                                                    order=(p, d, q), **spec)
+                    res = mod.fit(disp=False)
+                except Exception as e:
+                    raise e
                 aic_matrix[p, q] = res.aic
                 # print(res.aic)
         # print(aic_matrix)
@@ -68,7 +72,7 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3),
                 **spec)
             res = mod.fit(disp=False)
             aic_vals[model] = res.aic
-        print(aic_vals)
+        # print(aic_vals)
         min_aic = aic_vals.min()
         model = int(np.where(aic_vals == min_aic)[0])
         p, q = order_init[model][0], order_init[model][1]
