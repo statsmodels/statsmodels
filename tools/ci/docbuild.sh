@@ -29,3 +29,12 @@ echo '========================================================================'
 echo '=          Broken Behavior (Errors and Warnings to be Fixed)           ='
 echo '========================================================================'
 cat doc_build.log | grep -E '(SEVERE|ERROR|WARNING)' | grep -Ev '(noindex|toctree)'
+
+# Deploy with doctr
+cd ${SRCDIR};
+if [[ -z "$TRAVIS_TAG" ]]; then
+  doctr deploy --built-docs docs/build/html/ --deploy-repo statsmodels/statsmodels.github.io devel;
+else
+  doctr deploy --built-docs docs/build/html/ --deploy-repo statsmodels/statsmodels.github.io "$TRAVIS_TAG";
+  doctr deploy --built-docs docs/build/html/ --deploy-repo statsmodels/statsmodels.github.io stable;
+fi;
