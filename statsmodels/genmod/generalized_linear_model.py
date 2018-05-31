@@ -1080,8 +1080,8 @@ class GLM(base.LikelihoodModel):
                                       cov_kwds=cov_kwds, use_t=use_t,
                                       max_start_irls=max_start_irls,
                                       **kwargs)
-            self._optim_hessian = None
-            self._tmp_like_exog = None
+            del self._optim_hessian
+            del self._tmp_like_exog
             return fit_
 
     def _fit_gradient(self, start_params=None, method="newton",
