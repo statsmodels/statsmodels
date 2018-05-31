@@ -21,16 +21,11 @@ import os
 
 from statsmodels import datasets
 from statsmodels.tsa.statespace.mlemodel import MLEModel
-from statsmodels.tsa.statespace.tools import compatibility_mode
 from statsmodels.tsa.statespace.tests.results import results_kalman_filter
 from numpy.testing import assert_almost_equal, assert_allclose
 import pytest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
-
-if compatibility_mode:
-    raise SkipTest('In compatibility mode.')
-    pytestmark = pytest.mark.skip('In compatibility mode.')
 
 
 class TestClark1989(object):

@@ -21,16 +21,11 @@ from statsmodels.tsa.statespace.kalman_filter import (
 from statsmodels.tsa.statespace.kalman_smoother import (
     SMOOTH_CONVENTIONAL, SMOOTH_CLASSICAL, SMOOTH_ALTERNATIVE,
     SMOOTH_UNIVARIATE)
-from statsmodels.tsa.statespace.tools import compatibility_mode
 from statsmodels.tsa.statespace.tests.results import results_kalman_filter
 from numpy.testing import assert_equal, assert_allclose
 import pytest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
-
-if compatibility_mode:
-    pytestmark = pytest.mark.skipif(compatibility_mode, reason='In compatibility mode')
-    raise SkipTest('In compatibility mode')
 
 
 class Trivariate(object):
@@ -421,7 +416,7 @@ class TestTrivariateUnivariateAllMissingAlternate(TestTrivariateUnivariateAllMis
     def test_using_alterate(self):
         assert(self.model._kalman_filter.filter_timing == 1)
 
-@skipif(compatibility_mode, reason='Compatibility mode')
+
 class TestDFM(object):
     @classmethod
     def setup_class(cls, which='mixed', *args, **kwargs):

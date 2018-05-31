@@ -132,10 +132,6 @@ class SimulationSmoother(KalmanSmoother):
     def _simulate(self, nsimulations, measurement_shocks, state_shocks,
                   initial_state):
 
-        if self._compatibility_mode:
-            return super(SimulationSmoother, self)._simulate(
-                nsimulations, measurement_shocks, state_shocks, initial_state)
-
         prefix = self.prefix
 
         # Create the simulator if necessary
@@ -222,11 +218,6 @@ class SimulationSmoother(KalmanSmoother):
         -------
         SimulationSmoothResults
         """
-
-        if self._compatibility_mode:
-            raise NotImplementedError('Simulation smoothing is not available.'
-                                      ' Consider updating dependencies for'
-                                      ' more options.')
 
         # Set the class to be the default results class, if None provided
         if results_class is None:

@@ -52,7 +52,6 @@ from statsmodels.tsa.statespace.simulation_smoother import (
     SIMULATION_DISTURBANCE,
     SIMULATION_ALL
 )
-from statsmodels.tsa.statespace.tools import compatibility_mode
 from numpy.testing import assert_equal
 
 
@@ -81,33 +80,32 @@ class TestOptions(Options):
         model.filter_conventional = True
         assert_equal(model.filter_method, FILTER_CONVENTIONAL)
 
-        if not compatibility_mode:
-            model.filter_collapsed = True
-            assert_equal(model.filter_method, FILTER_CONVENTIONAL | FILTER_COLLAPSED)
-            model.filter_conventional = False
-            assert_equal(model.filter_method, FILTER_COLLAPSED)
+        model.filter_collapsed = True
+        assert_equal(model.filter_method, FILTER_CONVENTIONAL | FILTER_COLLAPSED)
+        model.filter_conventional = False
+        assert_equal(model.filter_method, FILTER_COLLAPSED)
 
-            # Try setting directly via method
-            model.set_filter_method(FILTER_AUGMENTED)
-            assert_equal(model.filter_method, FILTER_AUGMENTED)
+        # Try setting directly via method
+        model.set_filter_method(FILTER_AUGMENTED)
+        assert_equal(model.filter_method, FILTER_AUGMENTED)
 
-            # Try setting via boolean via method
-            model.set_filter_method(filter_conventional=True, filter_augmented=False)
-            assert_equal(model.filter_method, FILTER_CONVENTIONAL)
+        # Try setting via boolean via method
+        model.set_filter_method(filter_conventional=True, filter_augmented=False)
+        assert_equal(model.filter_method, FILTER_CONVENTIONAL)
 
-            # Try setting and unsetting all
-            model.filter_method = 0
-            for name in model.filter_methods:
-                setattr(model, name, True)
-            assert_equal(
-                model.filter_method,
-                FILTER_CONVENTIONAL | FILTER_EXACT_INITIAL | FILTER_AUGMENTED |
-                FILTER_SQUARE_ROOT | FILTER_UNIVARIATE | FILTER_COLLAPSED |
-                FILTER_EXTENDED | FILTER_UNSCENTED
-            )
-            for name in model.filter_methods:
-                setattr(model, name, False)
-            assert_equal(model.filter_method, 0)
+        # Try setting and unsetting all
+        model.filter_method = 0
+        for name in model.filter_methods:
+            setattr(model, name, True)
+        assert_equal(
+            model.filter_method,
+            FILTER_CONVENTIONAL | FILTER_EXACT_INITIAL | FILTER_AUGMENTED |
+            FILTER_SQUARE_ROOT | FILTER_UNIVARIATE | FILTER_COLLAPSED |
+            FILTER_EXTENDED | FILTER_UNSCENTED
+        )
+        for name in model.filter_methods:
+            setattr(model, name, False)
+        assert_equal(model.filter_method, 0)
 
     def test_inversion_methods(self):
         model = self.model

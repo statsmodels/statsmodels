@@ -364,12 +364,6 @@ ext_data = dict(
               "depends" : [],
               "include_dirs": [],
               "sources" : []},
-    _statespace = {"name" : "statsmodels/tsa/statespace/_statespace.c",
-              "depends" : ["statsmodels/src/capsule.h"],
-              "include_dirs": ["statsmodels/src"] + npymath_info['include_dirs'],
-              "libraries": npymath_info['libraries'],
-              "library_dirs": npymath_info['library_dirs'],
-              "sources" : []},
     linbin = {"name" : "statsmodels/nonparametric/linbin.c",
              "depends" : [],
              "sources" : []},
@@ -463,14 +457,7 @@ statespace_ext_data = dict(
               "filename": "_tools",
               "sources": []},
 )
-try:
-    from scipy.linalg import cython_blas
-    ext_data.update(statespace_ext_data)
-except ImportError:
-    for name, data in statespace_ext_data.items():
-        path = '.'.join([data["name"].split('.')[0], 'pyx.in'])
-        append_cython_exclusion(path.replace('/', os.path.sep),
-                                CYTHON_EXCLUSION_FILE)
+ext_data.update(statespace_ext_data)
 
 extensions = []
 for name, data in ext_data.items():

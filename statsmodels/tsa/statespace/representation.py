@@ -326,7 +326,6 @@ class Representation(object):
                 setattr(self, name, scope[name])
 
         # Options
-        self._compatibility_mode = tools.compatibility_mode
         self.initial_variance = initial_variance
         self.prefix_statespace_map = (statespace_classes
                                       if statespace_classes is not None
@@ -846,7 +845,6 @@ class FrozenRepresentation(object):
     def update_representation(self, model):
         # Model
         self.model = model
-        self._compatibility_mode = model._compatibility_mode
 
         # Data type
         self.prefix = model.prefix
