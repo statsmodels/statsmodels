@@ -1,7 +1,3 @@
-#cython: profile=False
-#cython: boundscheck=False
-#cython: wraparound=False
-#cython: cdivision=False
 """
 Kalman Filter
 
@@ -412,6 +408,7 @@ cdef class {{prefix}}KalmanFilter(object):
                  'converged_filtered_state_cov': np.array(self.converged_filtered_state_cov, copy=True, order='F'),
                  'converged_forecast_error_cov': np.array(self.converged_forecast_error_cov, copy=True, order='F'),
                  'converged_kalman_gain': np.array(self.converged_kalman_gain, copy=True, order='F'),
+                 'converged_M': np.array(self.converged_M, copy=True, order='F'),
                  'converged_predicted_state_cov': np.array(self.converged_predicted_state_cov, copy=True, order='F'),
                  'filtered_state': np.array(self.filtered_state, copy=True, order='F'),
                  'filtered_state_cov': np.array(self.filtered_state_cov, copy=True, order='F'),
@@ -454,6 +451,7 @@ cdef class {{prefix}}KalmanFilter(object):
         self.converged_filtered_state_cov = state['converged_filtered_state_cov']
         self.converged_forecast_error_cov = state['converged_forecast_error_cov']
         self.converged_kalman_gain = state['converged_kalman_gain']
+        self.converged_M = state['converged_M']
         self.converged_predicted_state_cov = state['converged_predicted_state_cov']
         self.filtered_state = state['filtered_state']
         self.filtered_state_cov = state['filtered_state_cov']
@@ -489,6 +487,7 @@ cdef class {{prefix}}KalmanFilter(object):
         self._converged_filtered_state_cov = &self.converged_filtered_state_cov[0,0]
         self._converged_predicted_state_cov = &self.converged_predicted_state_cov[0,0]
         self._converged_kalman_gain = &self.converged_kalman_gain[0,0]
+        self._converged_M = &self.converged_M[0,0]
         self._forecast_error_fac = &self.forecast_error_fac[0,0]
         self._forecast_error_work = &self.forecast_error_work[0,0]
         self._forecast_error_ipiv = &self.forecast_error_ipiv[0]
@@ -606,6 +605,9 @@ cdef class {{prefix}}KalmanFilter(object):
         dim2[0] = self.k_states; dim2[1] = self.k_endog;
         self.converged_kalman_gain = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         self._converged_kalman_gain = &self.converged_kalman_gain[0,0]
+        dim2[0] = self.k_states; dim2[1] = self.k_endog;
+        self.converged_M = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
+        self._converged_M = &self.converged_M[0,0]
 
         # #### Arrays for temporary calculations
         # *Note*: in math notation below, a $\\#$ will represent a generic
@@ -1068,7 +1070,7 @@ cdef class {{prefix}}KalmanFilter(object):
             # $|F_t|$
             self.determinant = self.converged_determinant
             # $M_t$
-            blas.{{prefix}}copy(&self.k_endogstates, &self.M[0, 0, self.t-1], &inc, self._M, &inc)
+            blas.{{prefix}}copy(&self.k_endogstates, self._converged_M, &inc, self._M, &inc)
 
     cdef void numerical_stability(self):
         cdef int i, j
@@ -1179,6 +1181,8 @@ cdef class {{prefix}}KalmanFilter(object):
                 self.converged_determinant = self.determinant
                 # $K_t$
                 blas.{{prefix}}copy(&self.k_endogstates, &self.kalman_gain[0, 0, gain_t], &inc, self._converged_kalman_gain, &inc)
+                # $M_t$
+                blas.{{prefix}}copy(&self.k_endogstates, &self.M[0, 0, predicted_t], &inc, self._converged_M, &inc)
 
     cdef void migrate_storage(self):
         cdef:

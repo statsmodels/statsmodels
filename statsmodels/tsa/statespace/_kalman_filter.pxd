@@ -87,6 +87,7 @@ cdef class sKalmanFilter(object):
     cdef readonly np.float32_t [::1,:] converged_filtered_state_cov
     cdef readonly np.float32_t [::1,:] converged_predicted_state_cov
     cdef readonly np.float32_t [::1,:] converged_kalman_gain
+    cdef readonly np.float32_t [::1,:] converged_M
     cdef readonly np.float32_t converged_determinant
 
     # ### Temporary arrays
@@ -139,6 +140,7 @@ cdef class sKalmanFilter(object):
     cdef np.float32_t * _converged_filtered_state_cov
     cdef np.float32_t * _converged_predicted_state_cov
     cdef np.float32_t * _converged_kalman_gain
+    cdef np.float32_t * _converged_M
 
     cdef np.float32_t * _forecast_error_fac
     cdef int * _forecast_error_ipiv
@@ -229,6 +231,7 @@ cdef class dKalmanFilter(object):
     cdef readonly np.float64_t [::1,:] converged_filtered_state_cov
     cdef readonly np.float64_t [::1,:] converged_predicted_state_cov
     cdef readonly np.float64_t [::1,:] converged_kalman_gain
+    cdef readonly np.float64_t [::1,:] converged_M
     cdef readonly np.float64_t converged_determinant
 
     # ### Temporary arrays
@@ -281,6 +284,7 @@ cdef class dKalmanFilter(object):
     cdef np.float64_t * _converged_filtered_state_cov
     cdef np.float64_t * _converged_predicted_state_cov
     cdef np.float64_t * _converged_kalman_gain
+    cdef np.float64_t * _converged_M
 
     cdef np.float64_t * _forecast_error_fac
     cdef int * _forecast_error_ipiv
@@ -371,6 +375,7 @@ cdef class cKalmanFilter(object):
     cdef readonly np.complex64_t [::1,:] converged_filtered_state_cov
     cdef readonly np.complex64_t [::1,:] converged_predicted_state_cov
     cdef readonly np.complex64_t [::1,:] converged_kalman_gain
+    cdef readonly np.complex64_t [::1,:] converged_M
     cdef readonly np.complex64_t converged_determinant
 
     # ### Temporary arrays
@@ -423,6 +428,7 @@ cdef class cKalmanFilter(object):
     cdef np.complex64_t * _converged_filtered_state_cov
     cdef np.complex64_t * _converged_predicted_state_cov
     cdef np.complex64_t * _converged_kalman_gain
+    cdef np.complex64_t * _converged_M
 
     cdef np.complex64_t * _forecast_error_fac
     cdef int * _forecast_error_ipiv
@@ -513,6 +519,7 @@ cdef class zKalmanFilter(object):
     cdef readonly np.complex128_t [::1,:] converged_filtered_state_cov
     cdef readonly np.complex128_t [::1,:] converged_predicted_state_cov
     cdef readonly np.complex128_t [::1,:] converged_kalman_gain
+    cdef readonly np.complex128_t [::1,:] converged_M
     cdef readonly np.complex128_t converged_determinant
 
     # ### Temporary arrays
@@ -565,6 +572,7 @@ cdef class zKalmanFilter(object):
     cdef np.complex128_t * _converged_filtered_state_cov
     cdef np.complex128_t * _converged_predicted_state_cov
     cdef np.complex128_t * _converged_kalman_gain
+    cdef np.complex128_t * _converged_M
 
     cdef np.complex128_t * _forecast_error_fac
     cdef int * _forecast_error_ipiv
