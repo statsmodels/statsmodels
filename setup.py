@@ -134,6 +134,7 @@ def check_dependency_versions(min_versions):
     try:
         import scipy
     except ImportError:
+        setup_requires.append('scipy')
         install_requires.append('scipy')
     else:
         try:
