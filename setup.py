@@ -134,6 +134,7 @@ def check_dependency_versions(min_versions):
     try:
         import scipy
     except ImportError:
+        setup_requires.append('scipy')
         install_requires.append('scipy')
     else:
         try:
@@ -378,6 +379,11 @@ ext_data = dict(
     )
 
 statespace_ext_data = dict(
+    _initialization = {"name" : "statsmodels/tsa/statespace/_initialization.c",
+              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
+              "libraries": npymath_info['libraries'],
+              "library_dirs": npymath_info['library_dirs'],
+              "sources": []},
     _representation = {"name" : "statsmodels/tsa/statespace/_representation.c",
               "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
               "libraries": npymath_info['libraries'],
@@ -402,6 +408,12 @@ statespace_ext_data = dict(
               "sources": []},
     _kalman_filter_univariate = {"name" : "statsmodels/tsa/statespace/_filters/_univariate.c",
               "filename": "_univariate",
+              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
+              "libraries": npymath_info['libraries'],
+              "library_dirs": npymath_info['library_dirs'],
+              "sources": []},
+    _kalman_filter_univariate_diffuse = {"name" : "statsmodels/tsa/statespace/_filters/_univariate_diffuse.c",
+              "filename": "_univariate_diffuse",
               "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
               "libraries": npymath_info['libraries'],
               "library_dirs": npymath_info['library_dirs'],
@@ -431,6 +443,12 @@ statespace_ext_data = dict(
               "sources": []},
     _kalman_smoother_univariate = {"name" : "statsmodels/tsa/statespace/_smoothers/_univariate.c",
               "filename": "_univariate",
+              "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
+              "libraries": npymath_info['libraries'],
+              "library_dirs": npymath_info['library_dirs'],
+              "sources": []},
+    _kalman_smoother_univariate_diffuse = {"name" : "statsmodels/tsa/statespace/_smoothers/_univariate_diffuse.c",
+              "filename": "_univariate_diffuse",
               "include_dirs": ['statsmodels/src'] + npymath_info['include_dirs'],
               "libraries": npymath_info['libraries'],
               "library_dirs": npymath_info['library_dirs'],

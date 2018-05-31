@@ -1175,7 +1175,6 @@ class Test_ar_no_enforce(SARIMAXCoverageTest):
 
         model2 = sarimax.SARIMAX(endog, exog, **kwargs)
         # Fixes needed for edge case model
-        model2.ssm._initial_variance = mod1.ssm._initial_variance
         model2.ssm.initialization = mod1.ssm.initialization
 
         res1 = self.model.filter(self.true_params)
@@ -1868,7 +1867,6 @@ def test_manual_stationary_initialization():
     mod2 = sarimax.SARIMAX(endog, order=(3,0,0))
     mod2.ssm.initialize_known(res1.filter_results.initial_state,
                               res1.filter_results.initial_state_cov)
-    mod2.initialize_state()  # a noop in this case (include for coverage)
     res2 = mod2.filter([0.5,0.2,0.1,1])
 
     # Create a third model with "known" initialization, but specified in kwargs
@@ -1907,7 +1905,6 @@ def test_manual_approximate_diffuse_initialization():
     mod2 = sarimax.SARIMAX(endog, order=(3,0,0))
     mod2.ssm.initialize_known(res1.filter_results.initial_state,
                               res1.filter_results.initial_state_cov)
-    mod2.initialize_state()  # a noop in this case (include for coverage)
     res2 = mod2.filter([0.5,0.2,0.1,1])
 
     # Create a third model with "known" initialization, but specified in kwargs

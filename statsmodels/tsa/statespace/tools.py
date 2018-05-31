@@ -19,6 +19,7 @@ has_trmm = True
 prefix_dtype_map = {
     's': np.float32, 'd': np.float64, 'c': np.complex64, 'z': np.complex128
 }
+prefix_initialization_map = {}
 prefix_statespace_map = {}
 prefix_kalman_filter_map = {}
 prefix_kalman_smoother_map = {}
@@ -56,10 +57,16 @@ def set_mode(compatibility=None):
     # Initialize the appropriate mode
     if not compatibility:
         from scipy.linalg import cython_blas
-        from . import (_representation, _kalman_filter, _kalman_smoother,
-                       _simulation_smoother, _tools)
+        from . import (_initialization, _representation, _kalman_filter,
+                       _kalman_smoother, _simulation_smoother, _tools)
         compatibility_mode = False
 
+        prefix_initialization_map.update({
+            's': _initialization.sInitialization,
+            'd': _initialization.dInitialization,
+            'c': _initialization.cInitialization,
+            'z': _initialization.zInitialization
+        })
         prefix_statespace_map.update({
             's': _representation.sStatespace, 'd': _representation.dStatespace,
             'c': _representation.cStatespace, 'z': _representation.zStatespace

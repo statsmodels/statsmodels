@@ -1204,6 +1204,8 @@ class FilterResults(FrozenRepresentation):
     ----------
     nobs : int
         Number of observations.
+    nobs_diffuse : int
+        Number of observations under the diffuse Kalman filter.
     k_endog : int
         The dimension of the observation series.
     k_states : int
@@ -1252,6 +1254,8 @@ class FilterResults(FrozenRepresentation):
         The state vector used to initialize the Kalamn filter.
     initial_state_cov : array_like
         The state covariance matrix used to initialize the Kalamn filter.
+    initial_diffuse_state_cov : array_like
+        Diffuse state covariance matrix used to initialize the Kalamn filter.
     filter_method : int
         Bitmask representing the Kalman filtering method
     inversion_method : int
@@ -1283,6 +1287,10 @@ class FilterResults(FrozenRepresentation):
         The predicted state vector at each time period.
     predicted_state_cov : array
         The predicted state covariance matrix at each time period.
+    forecast_error_diffuse_cov : array
+        Diffuse forecast error covariance matrix at each time period.
+    predicted_diffuse_state_cov : array
+        The predicted diffuse state covariance matrix at each time period.
     kalman_gain : array
         The Kalman gain at each time period.
     forecasts : array
@@ -1299,6 +1307,7 @@ class FilterResults(FrozenRepresentation):
         'conserve_memory', 'filter_timing', 'tolerance', 'loglikelihood_burn',
         'converged', 'period_converged', 'filtered_state',
         'filtered_state_cov', 'predicted_state', 'predicted_state_cov',
+        'forecasts_error_diffuse_cov', 'predicted_diffuse_state_cov',
         'tmp1', 'tmp2', 'tmp3', 'tmp4', 'forecasts',
         'forecasts_error', 'forecasts_error_cov', 'llf_obs',
         'collapsed_forecasts', 'collapsed_forecasts_error',
@@ -1431,6 +1440,8 @@ class FilterResults(FrozenRepresentation):
                 self.tmp2 = np.array(kalman_filter.tmp2, copy=True)
                 self.tmp3 = np.array(kalman_filter.tmp3, copy=True)
                 self.tmp4 = np.array(kalman_filter.tmp4, copy=True)
+                self.M = np.array(kalman_filter.M, copy=True)
+                self.M_diffuse = np.array(kalman_filter.M_inf, copy=True)
         else:
             self._kalman_gain = None
 
@@ -1444,6 +1455,25 @@ class FilterResults(FrozenRepresentation):
             kalman_filter.forecast_error_cov, copy=True
         )
         self.llf_obs = np.array(kalman_filter.loglikelihood, copy=True)
+
+        # Diffuse objects
+        self.nobs_diffuse = kalman_filter.nobs_diffuse
+        self.initial_diffuse_state_cov = None
+        self.forecasts_error_diffuse_cov = None
+        self.predicted_diffuse_state_cov = None
+        if self.nobs_diffuse > 0:
+            self.initial_diffuse_state_cov = np.array(
+                kalman_filter.model.initial_diffuse_state_cov, copy=True)
+            self.predicted_diffuse_state_cov = np.array(
+                    kalman_filter.predicted_diffuse_state_cov, copy=True)
+            if has_missing and not self.filter_collapsed:
+                self.forecasts_error_diffuse_cov = np.array(reorder_missing_matrix(
+                    kalman_filter.forecast_error_diffuse_cov, self.missing, reorder_cols=True, reorder_rows=True,
+                    prefix=self.prefix))
+            else:
+                self.forecasts_error_diffuse_cov = np.array(
+                    kalman_filter.forecast_error_diffuse_cov, copy=True)
+                
 
         # If there was missing data, save the original values from the Kalman
         # filter output, since below will set the values corresponding to
@@ -1522,6 +1552,11 @@ class FilterResults(FrozenRepresentation):
                     self.forecasts_error[:, t] = np.nan
                     self.forecasts_error[mask, t] = (
                         self.endog[mask, t] - self.forecasts[mask, t])
+                    # TODO: We should only fill in the non-masked elements of
+                    # this array. Also, this will give the multivariate version
+                    # even if univariate filtering was selected. Instead, we
+                    # should use the reordering methods and then replace the
+                    # masked values with NaNs
                     self.forecasts_error_cov[:, :, t] = np.dot(
                         np.dot(self.design[:, :, design_t],
                                self.predicted_state_cov[:, :, t]),

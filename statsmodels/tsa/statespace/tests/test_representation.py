@@ -666,8 +666,8 @@ def test_initialization():
     initial_state = np.zeros(2,) + 1.5
     initial_state_cov = np.eye(2) * 3.
     mod.initialize_known(initial_state, initial_state_cov)
-    assert_equal(mod._initial_state.sum(), 3)
-    assert_equal(mod._initial_state_cov.diagonal().sum(), 6)
+    assert_equal(mod.initialization.constant.sum(), 3)
+    assert_equal(mod.initialization.stationary_cov.diagonal().sum(), 6)
 
     # Test invalid initial_state
     initial_state = np.zeros(10,)

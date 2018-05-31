@@ -71,6 +71,7 @@ salary.table
 statsmodels/tsa/statespace/_statespace.pyx
 statsmodels/tsa/regime_switching/_hamilton_filter.pyx
 statsmodels/tsa/regime_switching/_kim_smoother.pyx
+statsmodels/tsa/statespace/_initialization.pyx
 statsmodels/tsa/statespace/_representation.pyx
 statsmodels/tsa/statespace/_kalman_filter.pyx
 statsmodels/tsa/statespace/_kalman_smoother.pyx

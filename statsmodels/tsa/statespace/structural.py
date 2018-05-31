@@ -12,6 +12,7 @@ from statsmodels.compat.collections import OrderedDict
 import numpy as np
 from statsmodels.tsa.filters.hp_filter import hpfilter
 from statsmodels.tsa.tsatools import lagmat
+from .initialization import Initialization
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from scipy.linalg import solve_discrete_lyapunov
 from statsmodels.tools.tools import Bunch
@@ -609,6 +610,9 @@ class UnobservedComponents(MLEModel):
                             'mle_regression'] + list(kwargs.keys())
         # TODO: I think the kwargs or not attached, need to recover from ???
 
+        # Initialize the state
+        self.initialize_default()
+
     def _get_init_kwds(self):
         # Get keywords based on model attributes
         kwds = super(UnobservedComponents, self)._get_init_kwds()
@@ -772,46 +776,29 @@ class UnobservedComponents(MLEModel):
             self._var_repetitions[cov_ix] = 2
         self._repeat_any_var = any(self._var_repetitions > 1)
 
-    def initialize_state(self):
-        # Initialize the AR component as stationary, the rest as approximately
-        # diffuse
-        initial_state = np.zeros(self.k_states)
-        initial_state_cov = (
-            np.eye(self.k_states, dtype=self.ssm.transition.dtype) *
-            self.ssm.initial_variance
-        )
+    def initialize_default(self, approximate_diffuse_variance=None):
+        if approximate_diffuse_variance is None:
+            approximate_diffuse_variance = self.ssm.initial_variance
+
+        init = Initialization(
+            self.k_states,
+            approximate_diffuse_variance=approximate_diffuse_variance)
 
         if self.autoregressive:
+            offset = (self.level + self.trend +
+                      self._k_seasonal_states +
+                      self._k_freq_seas_states +
+                      self._k_cycle_states)
+            length = self.ar_order
+            init.set((0, offset), 'approximate_diffuse')
+            init.set((offset, offset + length), 'stationary')
+            init.set((offset + length, self.k_states), 'approximate_diffuse')
+        # If we do not have an autoregressive component, then everything has
+        # a diffuse initialization
+        else:
+            init.set(None, 'approximate_diffuse')
 
-            start = (
-                self.level + self.trend +
-                self._k_seasonal_states +
-                self._k_freq_seas_states +
-                self._k_cycle_states
-            )
-            end = start + self.ar_order
-            selection_stationary = self.ssm['selection', start:end, :, 0]
-            selected_state_cov_stationary = np.dot(
-                np.dot(selection_stationary, self.ssm['state_cov', :, :, 0]),
-                selection_stationary.T
-            )
-            try:
-                initial_state_cov_stationary = solve_discrete_lyapunov(
-                    self.ssm['transition', start:end, start:end, 0],
-                    selected_state_cov_stationary
-                )
-            except:
-                initial_state_cov_stationary = solve_discrete_lyapunov(
-                    self.ssm['transition', start:end, start:end, 0],
-                    selected_state_cov_stationary,
-                    method='direct'
-                )
-
-            initial_state_cov[start:end, start:end] = (
-                initial_state_cov_stationary
-            )
-
-        self.ssm.initialize_known(initial_state, initial_state_cov)
+        self.ssm.initialization = init
 
     @property
     def _res_classes(self):
@@ -1097,9 +1084,6 @@ class UnobservedComponents(MLEModel):
                     params[offset:offset+self.k_exog]
                 )[None, :]
             offset += self.k_exog
-
-        # Initialize the state
-        self.initialize_state()
 
 
 class UnobservedComponentsResults(MLEResults):

@@ -170,34 +170,33 @@ cdef {{cython_type}} {{prefix}}forecast_error_cov({{prefix}}KalmanFilter kfilter
         k_states = model._k_posdef
 
     # *Intermediate calculation* (used just below and then once more)  
-    # `tmp1` array used here, dimension $(m \times 1)$  
-    # $\\#_1 = P_{t,i} Z_{t,i}'$  
+    # $M_{t,i} = P_{t,i} Z_{t,i}'$  
     # $(m \times 1) = (m \times m) (1 \times m)'$
     blas.{{prefix}}gemv("N", &model._k_states, &k_states,
           &alpha, kfilter._filtered_state_cov, &kfilter.k_states,
                   &model._design[i], &model._k_endog,
-          &beta, &kfilter._tmp1[i*kfilter.k_states], &inc)
+          &beta, &kfilter._M[i*kfilter.k_states], &inc)
 
     # $F_{t,i} \equiv Z_{t,i} P_{t,i} Z_{t,i}' + H_{t,i}$
     {{if combined_prefix == 'd'}}
     # blas.{{prefix}}symv("U", &model._k_states,
     #       &alpha, kfilter._filtered_state_cov, &kfilter.k_states,
     #               &model._design[i], &model._k_endog,
-    #       &beta, kfilter._tmp1, &inc)
+    #       &beta, &kfilter._M[i*kfilter.k_states], &inc)
 
     forecast_error_cov = (
         model._obs_cov[i + i*model._k_endog] +
         blas.{{prefix}}dot(&k_states, &model._design[i], &model._k_endog,
-                                      &kfilter._tmp1[i*kfilter.k_states], &inc)
+                                      &kfilter._M[i*kfilter.k_states], &inc)
     )
     {{else}}
     # blas.{{prefix}}gemv("N", &model._k_states, &k_states,
     #       &alpha, kfilter._filtered_state_cov, &kfilter.k_states,
     #               &model._design[i], &model._k_endog,
-    #       &beta, kfilter._tmp1, &inc)
+    #       &beta, &kfilter._M[i*kfilter.k_states], &inc)
 
     blas.{{prefix}}gemv("N", &inc, &k_states,
-                   &alpha, &kfilter._tmp1[i*kfilter.k_states], &inc,
+                   &alpha, &kfilter._M[i*kfilter.k_states], &inc,
                            &model._design[i], &model._k_endog,
                    &beta, kfilter._tmp0, &inc)
     forecast_error_cov = model._obs_cov[i + i*model._k_endog] + kfilter._tmp0[0]
@@ -229,7 +228,7 @@ cdef void {{prefix}}filtered_state({{prefix}}KalmanFilter kfilter, {{prefix}}Sta
     # $a_{t,i+1} = a_{t,i} + P_{t,i} Z_{t,i}' F_{t,i}^{-1} v_{t,i}$  
     for j in range(model._k_states):
         if not kfilter.converged:
-            kfilter._kalman_gain[j + i*kfilter.k_states] = kfilter._tmp1[j + i*kfilter.k_states] * forecast_error_cov_inv
+            kfilter._kalman_gain[j + i*kfilter.k_states] = kfilter._M[j + i*kfilter.k_states] * forecast_error_cov_inv
         kfilter._filtered_state[j] = (
             kfilter._filtered_state[j] +
             kfilter._forecast_error[i] * kfilter._kalman_gain[j + i*kfilter.k_states]
@@ -253,19 +252,19 @@ cdef void {{prefix}}filtered_state_cov({{prefix}}KalmanFilter kfilter, {{prefix}
 
     # $P_{t,i+1} = P_{t,i} - P_{t,i} Z_{t,i}' F_{t,i}^{-1} Z_{t,i} P_{t,i}'$
     # blas.{{prefix}}ger{{combined_suffix}}(&model._k_states, &model._k_states,
-    #     &gamma, kfilter._tmp1, &inc,
+    #     &gamma, &kfilter._M[i*kfilter.k_states], &inc,
     #             &kfilter._kalman_gain[i*kfilter.k_states], &inc,
     #     kfilter._filtered_state_cov, &kfilter.k_states
     # )
 
     {{if combined_prefix == 'd'}}
     blas.{{prefix}}syr("L", &model._k_states,
-        &scalar, &kfilter._tmp1[i*kfilter.k_states], &inc,
+        &scalar, &kfilter._M[i*kfilter.k_states], &inc,
                  kfilter._filtered_state_cov, &kfilter.k_states
     )
     {{else}}
     blas.{{prefix}}syrk("L", "N", &model._k_states, &inc,
-        &scalar, &kfilter._tmp1[i*kfilter.k_states], &kfilter.k_states,
+        &scalar, &kfilter._M[i*kfilter.k_states], &kfilter.k_states,
         &alpha, kfilter._filtered_state_cov, &kfilter.k_states)
     {{endif}}
 

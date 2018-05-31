@@ -1,0 +1,293 @@
+#cython: profile=False
+#cython: boundscheck=False
+#cython: wraparound=False
+#cython: cdivision=False
+"""
+State Space Models
+
+Author: Chad Fulton  
+License: Simplified-BSD
+"""
+
+{{py:
+
+TYPES = {
+    "s": ("np.float32_t", "np.float32", "np.NPY_FLOAT32"),
+    "d": ("np.float64_t", "float", "np.NPY_FLOAT64"),
+    "c": ("np.complex64_t", "np.complex64", "np.NPY_COMPLEX64"),
+    "z": ("np.complex128_t", "complex", "np.NPY_COMPLEX128"),
+}
+
+}}
+
+# Typical imports
+cimport numpy as np
+import numpy as np
+from statsmodels.src.math cimport *
+cimport scipy.linalg.cython_blas as blas
+cimport scipy.linalg.cython_lapack as lapack
+
+from statsmodels.tsa.statespace._kalman_filter cimport (
+    MEMORY_NO_LIKELIHOOD, MEMORY_NO_STD_FORECAST)
+
+{{for prefix, types in TYPES.items()}}
+{{py:cython_type, dtype, typenum = types}}
+{{py:
+combined_prefix = prefix
+combined_cython_type = cython_type
+if prefix == 'c':
+    combined_prefix = 'z'
+    combined_cython_type = 'np.complex128_t'
+if prefix == 's':
+    combined_prefix = 'd'
+    combined_cython_type = 'np.float64_t'
+combined_suffix = ''
+if combined_prefix == 'z':
+    combined_suffix = 'u'
+}}
+
+from statsmodels.tsa.statespace._filters._univariate cimport (
+    {{prefix}}forecast_error, {{prefix}}forecast_error_cov,
+    {{prefix}}temp_arrays, {{prefix}}predicted_state, {{prefix}}predicted_state_cov)
+
+# ### Univariate Kalman filter
+#
+# The following are the routines as defined in the univariate Kalman filter.
+#
+# See Durbin and Koopman (2012) Chapter 6.4
+
+cdef int {{prefix}}forecast_univariate_diffuse({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
+    # Constants
+    cdef:
+        int i, j, k
+        int inc = 1
+        {{cython_type}} forecast_error_cov, forecast_error_cov_inv, forecast_error_diffuse_cov, forecast_error_diffuse_cov_inv, F1, F12
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+        {{cython_type}} gamma = -1.0
+
+    # Initialize the filtered states
+    blas.{{prefix}}copy(&kfilter.k_states, kfilter._input_state, &inc,
+                                           kfilter._filtered_state, &inc)
+    blas.{{prefix}}copy(&kfilter.k_states2, kfilter._input_state_cov, &inc,
+                                            kfilter._filtered_state_cov, &inc)
+    blas.{{prefix}}copy(&kfilter.k_states2, kfilter._input_diffuse_state_cov, &inc,
+                                            kfilter._predicted_diffuse_state_cov, &inc)
+
+    # Iterate over endogenous variables
+    for i in range(model._k_endog):
+        # forecast_t, v_t, 
+        {{prefix}}forecast_error(kfilter, model, i)
+
+        # F_{*,t}
+        forecast_error_cov = {{prefix}}forecast_error_cov(kfilter, model, i)
+        if forecast_error_cov{{if combined_prefix == 'z'}}.real{{endif}} < 0:
+            kfilter._forecast_error_cov[i + i*kfilter.k_endog] = 0
+            forecast_error_cov = 0
+
+        # Save temporary array data
+        if not forecast_error_cov == 0:
+            forecast_error_cov_inv = 1.0 / forecast_error_cov
+            {{prefix}}temp_arrays(kfilter, model, i, forecast_error_cov_inv)
+
+        # F_{\infty,t}
+        forecast_error_diffuse_cov = {{prefix}}forecast_error_diffuse_cov(kfilter, model, i)
+        if forecast_error_diffuse_cov{{if combined_prefix == 'z'}}.real{{endif}} < 0:
+            kfilter._forecast_error_diffuse_cov[i + i*kfilter.k_endog] = 0
+            forecast_error_diffuse_cov = 0
+
+        # F_{\infty, i, i, t} > 0
+        if forecast_error_diffuse_cov{{if combined_prefix == 'z'}}.real{{endif}} > kfilter.tolerance_diffuse:
+            forecast_error_diffuse_cov_inv = 1.0 / forecast_error_diffuse_cov
+
+            F1 = forecast_error_diffuse_cov_inv
+            # Usually F2 = -forecast_error_cov * forecast_error_diffuse_cov_inv**2
+            # but this version is more convenient for the *axpy call
+            F12 = -forecast_error_cov * forecast_error_diffuse_cov_inv
+
+            # K0 = M_inf[:, i:i+1] * F1
+            blas.{{prefix}}copy(&kfilter.k_states, &kfilter._M_inf[i * kfilter.k_states], &inc, kfilter._tmpK0, &inc)
+            blas.{{prefix}}scal(&kfilter.k_states, &F1, kfilter._tmpK0, &inc)
+            # K1 = M[:, i:i+1] * F1 + M_inf[:, i:i+1] * F2
+            # K1 = M[:, i:i+1] * F1 + K0 * F12
+            blas.{{prefix}}copy(&kfilter.k_states, &kfilter._M[i*kfilter.k_states], &inc, kfilter._tmpK1, &inc)
+            blas.{{prefix}}scal(&kfilter.k_states, &F1, kfilter._tmpK1, &inc)
+            blas.{{prefix}}axpy(&kfilter.k_states, &F12, kfilter._tmpK0, &inc, kfilter._tmpK1, &inc)
+            # L0 = np.eye(m) - np.dot(K0, Zi)
+            kfilter.tmpL0[:] = 0
+            blas.{{prefix}}ger{{combined_suffix}}(&model._k_states, &model._k_states, &gamma, kfilter._tmpK0, &inc, &model._design[i], &model._k_endog, kfilter._tmpL0, &kfilter.k_states)
+            for j in range(kfilter.k_states):
+                kfilter._tmpL0[j + j*kfilter.k_states] = kfilter._tmpL0[j + j*kfilter.k_states] + 1
+            # L1 = -np.dot(K1, Zi)
+            kfilter.tmpL1[:] = 0
+            blas.{{prefix}}ger{{combined_suffix}}(&model._k_states, &model._k_states, &gamma, kfilter._tmpK1, &inc, &model._design[i], &model._k_endog, kfilter._tmpL1, &kfilter.k_states)
+
+            # a_t = a_t + K0[:, 0] * v[i]
+            blas.{{prefix}}axpy(&kfilter.k_states, &kfilter._forecast_error[i], kfilter._tmpK0, &inc, kfilter._filtered_state, &inc)
+
+            # P_t = np.dot(P_t_inf, L1.T) + np.dot(P_t, L0.T)
+            # `tmp0` array used here, dimension $(m \times m)$  
+            blas.{{prefix}}copy(&kfilter.k_states2, kfilter._filtered_state_cov, &inc, kfilter._tmp0, &inc)
+            blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
+              &alpha, kfilter._tmp0, &kfilter.k_states,
+                      kfilter._tmpL0, &kfilter.k_states,
+              &beta, kfilter._filtered_state_cov, &kfilter.k_states)
+            blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
+              &alpha, kfilter._predicted_diffuse_state_cov, &kfilter.k_states,
+                      kfilter._tmpL1, &kfilter.k_states,
+              &alpha, kfilter._filtered_state_cov, &kfilter.k_states)
+            # P_t_inf = np.dot(P_t_inf, L0.T)
+            blas.{{prefix}}copy(&kfilter.k_states2, kfilter._predicted_diffuse_state_cov, &inc, kfilter._tmp0, &inc)
+            blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
+              &alpha, kfilter._tmp0, &kfilter.k_states,
+                      kfilter._tmpL0, &kfilter.k_states,
+              &beta, kfilter._predicted_diffuse_state_cov, &kfilter.k_states)
+
+            # Loglikelihood
+            kfilter._loglikelihood[0] = (
+                kfilter._loglikelihood[0] - 0.5*(
+                    {{combined_prefix}}log(2 * NPY_PI * forecast_error_diffuse_cov)))
+        elif not forecast_error_cov == 0:
+            forecast_error_cov_inv = 1.0 / forecast_error_cov
+
+            # K0 = M[:, i:i+1] / F[i, i]
+            blas.{{prefix}}copy(&kfilter.k_states, &kfilter._M[i*kfilter.k_states], &inc, kfilter._tmpK0, &inc)
+            blas.{{prefix}}scal(&kfilter.k_states, &forecast_error_cov_inv, kfilter._tmpK0, &inc)
+
+            # L0 = np.eye(m) - np.dot(K0, Zi)
+            kfilter.tmpL0[:] = 0
+            blas.{{prefix}}ger{{combined_suffix}}(&model._k_states, &model._k_states, &gamma, kfilter._tmpK0, &inc, &model._design[i], &model._k_endog, kfilter._tmpL0, &kfilter.k_states)
+            for j in range(kfilter.k_states):
+                kfilter._tmpL0[j + j*kfilter.k_states] = kfilter._tmpL0[j + j*kfilter.k_states] + 1
+
+            # a_t = a_t + K0[:, 0] * v[i]
+            blas.{{prefix}}axpy(&kfilter.k_states, &kfilter._forecast_error[i], kfilter._tmpK0, &inc, kfilter._filtered_state, &inc)
+            # P_t = np.dot(P_t, L0)
+            blas.{{prefix}}copy(&kfilter.k_states2, kfilter._filtered_state_cov, &inc, kfilter._tmp0, &inc)
+            blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
+              &alpha, kfilter._tmp0, &kfilter.k_states,
+                      kfilter._tmpL0, &kfilter.k_states,
+              &beta, kfilter._filtered_state_cov, &kfilter.k_states)
+            # P_t_inf = P_t_inf
+            # (noop)
+
+            # Loglikelihood
+            if not forecast_error_cov == 0:
+                kfilter._loglikelihood[0] = (
+                    kfilter._loglikelihood[0] - 0.5*(
+                        {{combined_prefix}}log(2 * NPY_PI * forecast_error_cov) + 
+                        kfilter._forecast_error[i]**2 * forecast_error_cov_inv))
+
+        # Kalman gain
+        blas.{{prefix}}copy(&kfilter.k_states, kfilter._tmpK0, &inc, &kfilter._kalman_gain[i * kfilter.k_states], &inc)
+
+        # Prediction (done below)
+        # a_t1[:] = np.dot(T, a_tt)
+        # P_t1[:] = np.dot(np.dot(T, P_tt), T.T) + RQR
+        # P_t1_inf[:] = np.dot(np.dot(T, P_t_inf), T.T)
+
+    return 0
+
+
+cdef {{cython_type}} {{prefix}}forecast_error_diffuse_cov({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, int i):
+    cdef:
+        int inc = 1
+        {{cython_type}} alpha = 1
+        {{cython_type}} beta = 0
+        {{cython_type}} forecast_error_diffuse_cov
+        int k_states = model._k_states
+
+    # Adjust for a VAR transition (i.e. design = [#, 0], where the zeros
+    # correspond to all states except the first k_posdef states)
+    if model.subset_design:
+        k_states = model._k_posdef
+
+    # *Intermediate calculation*
+    # `M_inf` array used here, dimension $(m \times 1)$  
+    # $M_{i, \infty} = P_{t,i,\infty} Z_{t,i}'$  
+    # $(m \times 1) = (m \times m) (1 \times m)'$
+    blas.{{prefix}}gemv("N", &model._k_states, &model._k_states,
+          &alpha, kfilter._predicted_diffuse_state_cov, &kfilter.k_states,
+                  &model._design[i], &model._k_endog,
+          &beta, &kfilter._M_inf[i * kfilter.k_states], &inc)
+
+    # $F_{t,i,\infty} \equiv Z_{t,i} P_{t,i,\infty} Z_{t,i}'$
+    {{if combined_prefix == 'd'}}
+    # blas.{{prefix}}symv("U", &model._k_states,
+    #       &alpha, kfilter._filtered_state_cov, &kfilter.k_states,
+    #               &model._design[i], &model._k_endog,
+    #       &beta, &kfilter._M_inf[i * kfilter.k_states], &inc)
+
+    forecast_error_diffuse_cov = (
+        blas.{{prefix}}dot(&k_states, &model._design[i], &model._k_endog,
+                                      &kfilter._M_inf[i * kfilter.k_states], &inc)
+    )
+    {{else}}
+    # blas.{{prefix}}gemv("N", &model._k_states, &k_states,
+    #       &alpha, kfilter._filtered_state_cov, &kfilter.k_states,
+    #               &model._design[i], &model._k_endog,
+    #       &beta, &kfilter._M_inf[i * kfilter.k_states], &inc)
+
+    blas.{{prefix}}gemv("N", &inc, &k_states,
+                   &alpha, &kfilter._M_inf[i * kfilter.k_states], &inc,
+                           &model._design[i], &model._k_endog,
+                   &beta, kfilter._tmp0, &inc)
+    forecast_error_cov = kfilter._tmp0[0]
+    {{endif}}
+    kfilter._forecast_error_diffuse_cov[i + i*kfilter.k_endog] = forecast_error_diffuse_cov
+    return forecast_error_diffuse_cov
+
+
+cdef int {{prefix}}prediction_univariate_diffuse({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
+    # Constants
+    cdef:
+        int inc = 1
+        int i, j
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+        {{cython_type}} gamma = -1.0
+
+    {{prefix}}predicted_state(kfilter, model)
+    {{prefix}}predicted_state_cov(kfilter, model)
+    {{prefix}}predicted_diffuse_state_cov(kfilter, model)
+
+    return 0
+
+
+cdef void {{prefix}}predicted_diffuse_state_cov({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
+    cdef:
+        int inc = 1
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+
+    # Need special handling for the completely missing case, since the
+    # conventional Kalman filter routines are used in this case and they don't
+    # copy over the predicted diffuse state cov
+    if model._nmissing == model.k_endog:
+        blas.{{prefix}}copy(&kfilter.k_states2, kfilter._input_diffuse_state_cov, &inc,
+                                                kfilter._predicted_diffuse_state_cov, &inc)
+
+    # P_t1_inf[:] = np.dot(np.dot(T, P_t_inf), T.T)
+    blas.{{prefix}}gemm("N", "N", &model._k_states, &model._k_states, &model._k_states,
+          &alpha, model._transition, &model._k_states,
+                  kfilter._predicted_diffuse_state_cov, &kfilter.k_states,
+          &beta, kfilter._tmp0, &kfilter.k_states)
+    # $P_{t+1} = 1.0 \\#_0 T_t' + 1.0 \\#$  
+    # $(m \times m) = (m \times m) (m \times m) + (m \times m)$
+    blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
+          &alpha, kfilter._tmp0, &kfilter.k_states,
+                  model._transition, &model._k_states,
+          &beta, kfilter._predicted_diffuse_state_cov, &kfilter.k_states)
+
+
+# Note: updating, inverse, loglikelihood are all performed in prior steps
+cdef int {{prefix}}updating_univariate_diffuse({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
+    return 0
+
+cdef {{cython_type}} {{prefix}}inverse_noop_univariate_diffuse({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, {{cython_type}} determinant) except *:
+    return 0
+
+cdef {{cython_type}} {{prefix}}loglikelihood_univariate_diffuse({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, {{cython_type}} determinant):
+    return 0
+
+{{endfor}}

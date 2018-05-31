@@ -297,6 +297,9 @@ class MLEModel(tsbase.TimeSeriesModel):
     @property
     def initialization(self):
         return self.ssm.initialization
+    @initialization.setter
+    def initialization(self, value):
+        self.ssm.initialization = value
 
     @property
     def initial_variance(self):
@@ -1146,7 +1149,7 @@ class MLEModel(tsbase.TimeSeriesModel):
     _hessian_param_defaults = [True, 'approx', None, False]
 
     def hessian(self, params, *args, **kwargs):
-        """
+        r"""
         Hessian matrix of the likelihood function, evaluated at the given
         parameters
 
@@ -1551,10 +1554,23 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         # Dimensions
         self.nobs = self.filter_results.nobs
+        self.nobs_diffuse = self.filter_results.nobs_diffuse
+        # This only excludes explicitly burned (usually approximate diffuse)
+        # periods but does not exclude approximate diffuse periods. This is
+        # because the loglikelihood remains valid for the initial periods in
+        # the exact diffuse case (see DK, 2012, section 7.2) and so also do
+        # e.g. information criteria (see DK, 2012, section 7.4) and the score
+        # vector (see DK, 2012, section 7.3.3, equation 7.15).
+        # However, other objects should be excluded in the diffuse periods
+        # (e.g. the diffuse forecast errors, so in some cases a different
+        # nobs_effective will have to be computed and used)
         self.nobs_effective = self.nobs - self.loglikelihood_burn
 
-        # Degrees of freedom
-        self.df_model = self.params.size
+        P = self.filter_results.initial_diffuse_state_cov
+        self.k_diffuse_states = 0 if P is None else np.sum(np.diagonal(P) == 1)
+
+        # Degrees of freedom (see DK 2012, section 7.4)
+        self.df_model = self.params.size + self.k_diffuse_states
         self.df_resid = self.nobs_effective - self.df_model
 
         # Setup covariance matrix notes dictionary
@@ -1589,6 +1605,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             'filtered_state', 'filtered_state_cov', 'predicted_state',
             'predicted_state_cov', 'forecasts', 'forecasts_error',
             'forecasts_error_cov', 'standardized_forecasts_error',
+            'forecasts_error_diffuse_cov', 'predicted_diffuse_state_cov',
             'scaled_smoothed_estimator',
             'scaled_smoothed_estimator_cov', 'smoothing_error',
             'smoothed_state',
@@ -1741,13 +1758,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
     def _cov_params_approx(self, approx_complex_step=True,
                            approx_centered=False):
-        nobs = self.model.nobs - self.filter_results.loglikelihood_burn
-
-        evaluated_hessian = nobs * self.model.hessian(params=self.params,
-                                    transformed=True,
-                                    method='approx',
-                                    approx_complex_step=approx_complex_step,
-                                    approx_centered=approx_centered)
+        evaluated_hessian = self.nobs_effective * self.model.hessian(
+            params=self.params, transformed=True, method='approx',
+            approx_complex_step=approx_complex_step,
+            approx_centered=approx_centered)
         # TODO: Case with "not approx_complex_step" is not hit in
         # tests as of 2017-05-19
 
@@ -1768,13 +1782,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                        self._cov_approx_centered)
 
     def _cov_params_oim(self, approx_complex_step=True, approx_centered=False):
-        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
-
-        evaluated_hessian = nobs * self.model.hessian(self.params,
-                                        hessian_method='oim',
-                                        transformed=True,
-                                        approx_complex_step=approx_complex_step,
-                                        approx_centered=approx_centered)
+        evaluated_hessian = self.nobs_effective * self.model.hessian(
+            self.params, hessian_method='oim', transformed=True,
+            approx_complex_step=approx_complex_step,
+            approx_centered=approx_centered)
 
         (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
 
@@ -1793,12 +1804,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                                     self._cov_approx_centered)
 
     def _cov_params_opg(self, approx_complex_step=True, approx_centered=False):
-        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
-
-        evaluated_hessian = nobs * self.model._hessian_opg(self.params,
-                                        transformed=True,
-                                        approx_complex_step=approx_complex_step,
-                                        approx_centered=approx_centered)
+        evaluated_hessian = self.nobs_effective * self.model._hessian_opg(
+            self.params, transformed=True,
+            approx_complex_step=approx_complex_step,
+            approx_centered=approx_centered)
 
         (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
 
@@ -1826,15 +1835,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
     def _cov_params_robust_oim(self, approx_complex_step=True,
                                approx_centered=False):
-        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
         cov_opg = self._cov_params_opg(approx_complex_step=approx_complex_step,
                                        approx_centered=approx_centered)
 
-        evaluated_hessian = nobs * self.model.hessian(self.params,
-                                        hessian_method='oim',
-                                        transformed=True,
-                                        approx_complex_step=approx_complex_step,
-                                        approx_centered=approx_centered)
+        evaluated_hessian = self.nobs_effective * self.model.hessian(
+            self.params, hessian_method='oim', transformed=True,
+            approx_complex_step=approx_complex_step,
+            approx_centered=approx_centered)
 
         cov_params, singular_values = pinv_extended(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
@@ -1856,14 +1863,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
     def _cov_params_robust_approx(self, approx_complex_step=True,
                                   approx_centered=False):
-        nobs = (self.model.nobs - self.filter_results.loglikelihood_burn)
         cov_opg = self._cov_params_opg(approx_complex_step=approx_complex_step,
                                        approx_centered=approx_centered)
 
-        evaluated_hessian = nobs * self.model.hessian(self.params,
-                                        transformed=True,
-                                        method='approx',
-                                        approx_complex_step=approx_complex_step)
+        evaluated_hessian = self.nobs_effective * self.model.hessian(
+            self.params, transformed=True, method='approx',
+            approx_complex_step=approx_complex_step)
         # TODO: Case with "not approx_complex_step" is not
         # hit in tests as of 2017-05-19
 
@@ -2056,9 +2061,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Notes
         -----
-        If the first `d` loglikelihood values were burned (i.e. in the
-        specified model, `loglikelihood_burn=d`), then this test is calculated
-        ignoring the first `d` residuals.
+        Let `d` = max(loglikelihood_burn, nobs_diffuse); this test is
+        calculated ignoring the first `d` residuals.
 
         In the case of missing data, the maintained hypothesis is that the
         data are missing completely at random. This test is then run on the
@@ -2075,7 +2079,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         if method == 'jarquebera':
             from statsmodels.stats.stattools import jarque_bera
-            d = self.loglikelihood_burn
+            d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
             output = []
             for i in range(self.model.k_endog):
                 resid = self.filter_results.standardized_forecasts_error[i, d:]
@@ -2147,9 +2151,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             H(h) = \sum_{t=T-h+1}^T  \tilde v_t^2
             \Bigg / \sum_{t=d+1}^{d+1+h} \tilde v_t^2
 
-        where :math:`d` is the number of periods in which the loglikelihood was
-        burned in the parent model (usually corresponding to diffuse
-        initialization).
+        where :math:`d` = max(loglikelihood_burn, nobs_diffuse)` (usually
+        corresponding to diffuse initialization under either the approximate
+        or exact approach).
 
         This statistic can be tested against an :math:`F(h,h)` distribution.
         Alternatively, :math:`h H(h)` is asymptotically distributed according
@@ -2174,12 +2178,16 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         if method == 'breakvar':
             # Store some values
             squared_resid = self.filter_results.standardized_forecasts_error**2
-            d = self.loglikelihood_burn
+            d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+            # This differs from self.nobs_effective because here we want to
+            # exclude exact diffuse periods, whereas self.nobs_effective only
+            # excludes explicitly burned (usually approximate diffuse) periods.
+            nobs_effective = self.nobs - d
 
             test_statistics = []
             p_values = []
             for i in range(self.model.k_endog):
-                h = int(np.round(self.nobs_effective / 3))
+                h = int(np.round(nobs_effective / 3))
                 numer_resid = squared_resid[i, -h:]
                 numer_resid = numer_resid[~np.isnan(numer_resid)]
                 numer_dof = len(numer_resid)
@@ -2273,9 +2281,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Notes
         -----
-        If the first `d` loglikelihood values were burned (i.e. in the
-        specified model, `loglikelihood_burn=d`), then this test is calculated
-        ignoring the first `d` residuals.
+        Let `d` = max(loglikelihood_burn, nobs_diffuse); this test is
+        calculated ignoring the first `d` residuals.
 
         Output is nan for any endogenous variable which has missing values.
 
@@ -2289,13 +2296,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         if method == 'ljungbox' or method == 'boxpierce':
             from statsmodels.stats.diagnostic import acorr_ljungbox
-            d = self.loglikelihood_burn
+            d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+            # This differs from self.nobs_effective because here we want to
+            # exclude exact diffuse periods, whereas self.nobs_effective only
+            # excludes explicitly burned (usually approximate diffuse) periods.
+            nobs_effective = self.nobs - d
             output = []
 
             # Default lags for acorr_ljungbox is 40, but may not always have
             # that many observations
             if lags is None:
-                lags = min(40, self.nobs_effective - 1)
+                lags = min(40, nobs_effective - 1)
 
             for i in range(self.model.k_endog):
                 results = acorr_ljungbox(
@@ -2587,14 +2598,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
         _import_mpl()
         fig = create_mpl_fig(fig, figsize)
-        # Eliminate residuals associated with burned likelihoods
-        d = self.loglikelihood_burn
+        # Eliminate residuals associated with burned or diffuse likelihoods
+        d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
         resid = self.filter_results.standardized_forecasts_error[variable, d:]
 
         # Top-left: residuals vs time
         ax = fig.add_subplot(221)
         if hasattr(self.data, 'dates') and self.data.dates is not None:
-            x = self.data.dates[self.loglikelihood_burn:]._mpl_repr()
+            x = self.data.dates[d:]._mpl_repr()
         else:
             x = np.arange(len(resid))
         ax.plot(x, resid)

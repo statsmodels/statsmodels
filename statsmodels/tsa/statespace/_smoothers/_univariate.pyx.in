@@ -256,6 +256,7 @@ cdef int {{prefix}}smoothed_estimators_time_univariate({{prefix}}KalmanSmoother 
                                               model._transition, &model._k_states,
                                       &beta, &smoother.scaled_smoothed_estimator_cov[0, 0, smoother.t-1], &kfilter.k_states)
 
+
 cdef int {{prefix}}smoothed_disturbances_univariate({{prefix}}KalmanSmoother smoother, {{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
     # Note: this only differs from the conventional version in the
     # definition of the smoothed measurement disturbance and cov
