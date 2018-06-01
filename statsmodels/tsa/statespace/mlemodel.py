@@ -1747,11 +1747,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (float) Akaike Information Criterion
         """
-<<<<<<< c911d882025194c55204af185adebe63dfa92787
         # return -2 * self.llf + 2 * self.df_model
-=======
-        # return -2 * self.llf + 2 * self.df_mdoel
->>>>>>> REF: Add effective nobs (nobs - burned periods)
         return aic(self.llf, self.nobs_effective, self.df_model)
 
     @cache_readonly
