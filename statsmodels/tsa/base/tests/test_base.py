@@ -56,7 +56,7 @@ def test_predict_freq():
 def test_keyerror_start_date():
     x = np.arange(1,36.)
 
-    dates = date_range("1972-4-1", "2007-4-1", freq="AS-APR")
+    # dates = date_range("1972-4-1", "2007-4-1", freq="AS-APR")
     dates = pd.date_range("1972-4-30", "2006-4-30", freq="A-APR")
     series = pd.Series(x, index=dates)
     model = TimeSeriesModel(series)
