@@ -164,11 +164,17 @@ def score_test(self, exog_extra=None, params_constrained=None,
     """
     # TODO: we are computing unnecessary things for cov_type nonrobust
     model = self.model
-    nobs = model.nobs
+    nobs = model.endog.shape[0] # model.nobs
+    # discrete Poisson does not have nobs
     if params_constrained is None:
         params_constrained = self.params
     cov_type = cov_type if cov_type is not None else self.cov_type
     r_matrix = None
+
+    if observed is False:
+        hess_kwd = {'observed': False}
+    else:
+        hess_kwd = {}
 
     if exog_extra is None:
 
@@ -182,7 +188,7 @@ def score_test(self, exog_extra=None, params_constrained=None,
 
         score = model.score(params_constrained)
         score_obs = model.score_obs(params_constrained)
-        hessian = model.hessian(params_constrained, observed=observed)
+        hessian = model.hessian(params_constrained, **hess_kwd)
 
     else:
         if cov_type == 'V':
@@ -202,7 +208,7 @@ def score_test(self, exog_extra=None, params_constrained=None,
         score_obs = (score_factor[:, None] * ex)
         score = score_obs.sum(0)
         hessian_factor = model.hessian_factor(params_constrained,
-                                             observed=observed)
+                                              **hess_kwd)
         hessian = -np.dot(ex.T * hessian_factor, ex)
 
     if cov_type == 'nonrobust':

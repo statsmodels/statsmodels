@@ -10,9 +10,12 @@ import numpy as np
 from numpy.testing import assert_allclose
 from scipy import stats
 
+import pytest
+
 from statsmodels.regression.linear_model import OLS
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
+from statsmodels.discrete.discrete_model import Poisson
 import statsmodels.stats._diagnostic_other as diao
 from statsmodels.base._parameter_inference import score_test
 
@@ -21,9 +24,11 @@ class TestScoreTest(object):
     # compares score to wald, and regression test for pvalues
     rtol_ws = 5e-3
     atol_ws = 0
+    rtol_wooldridge = 0.004
     dispersed = False  # Poisson correctly specified
     # regression numbers
     res_pvalue = [0.31786373532550893, 0.32654081685271297]
+    skip_wooldridge = False
 
     @classmethod
     def setup_class(cls):
@@ -79,9 +84,66 @@ class TestScoreTest(object):
         # regression number
         assert_allclose(lm_constr[1], self.res_pvalue[1], rtol=1e-12, atol=1e-14)
 
+        if not self.skip_wooldridge:
+            # compare with Wooldridge auxiliary regression
+            # does not work for Poisson, even with family attribute
+            # diao.lm_test_glm assumes fittedvalues is mean (not linear pred)
+            lm_wooldridge = diao.lm_test_glm(res_drop, self.exog_extra)
+            assert_allclose(lm_wooldridge.pval1, self.res_pvalue[0],
+                            rtol=1e-12, atol=1e-14)
+            assert_allclose(lm_wooldridge.pval3, self.res_pvalue[1],
+                            rtol=self.rtol_wooldridge)
+            # smoke test
+            lm_wooldridge.summary()
+
 
 class TestScoreTestDispersed(TestScoreTest):
     rtol_ws = 0.11
     atol_ws = 0.015
+    rtol_wooldridge = 0.03
+    dispersed = True  # Poisson is mis-specified
+    res_pvalue = [5.412978775609189e-14, 0.05027602575743518]
+
+
+class TestScoreTestPoisson(TestScoreTest):
+    # compares score to wald, and regression test for pvalues
+    rtol_ws = 5e-3
+    atol_ws = 0
+    rtol_wooldridge = 0.004
+    dispersed = False  # Poisson correctly specified
+    # regression numbers
+    res_pvalue = [0.31786373532550893, 0.32654081685271297]
+    skip_wooldridge = True
+
+    @classmethod
+    def setup_class(cls):
+        # copy-paste except for model
+        nobs, k_vars = 500, 5
+
+        np.random.seed(786452)
+        x = np.random.randn(nobs, k_vars)
+        x[:, 0] = 1
+        x2 = np.random.randn(nobs, 2)
+        xx = np.column_stack((x, x2))
+
+        if cls.dispersed:
+            het = np.random.randn(nobs)
+            y = np.random.poisson(np.exp(x.sum(1) * 0.5 + het))
+            #y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
+        else:
+            y = np.random.poisson(np.exp(x.sum(1) * 0.5))
+
+        cls.exog_extra = x2
+        cls.model_full = Poisson(y, xx)
+        cls.model_drop = Poisson(y, x)
+
+    def test_wald_score(self):
+        super(TestScoreTestPoisson, self).test_wald_score()
+
+
+class TestScoreTestPoissonDispersed(TestScoreTestPoisson):
+    rtol_ws = 0.11
+    atol_ws = 0.015
+    rtol_wooldridge = 0.03
     dispersed = True  # Poisson is mis-specified
     res_pvalue = [5.412978775609189e-14, 0.05027602575743518]
