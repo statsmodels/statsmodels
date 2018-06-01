@@ -1,5 +1,5 @@
 """
-Tests for _statespace module
+Tests for _representation and _kalman_filter modules
 
 Author: Chad Fulton
 License: Simplified-BSD
@@ -44,7 +44,7 @@ except ImportError:
 from scipy.linalg import solve_discrete_lyapunov
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 from statsmodels.tsa.statespace.sarimax import SARIMAX
-from statsmodels.tsa.statespace import _statespace as ss
+from statsmodels.tsa.statespace import _representation, _kalman_filter
 from .results import results_kalman_filter
 from numpy.testing import assert_almost_equal, assert_allclose
 
@@ -52,12 +52,12 @@ from numpy.testing import assert_almost_equal, assert_allclose
 NP_LT_18 = LooseVersion(np.__version__).version[:2] < [1, 8]
 
 prefix_statespace_map = {
-    's': ss.sStatespace, 'd': ss.dStatespace,
-    'c': ss.cStatespace, 'z': ss.zStatespace
+    's': _representation.sStatespace, 'd': _representation.dStatespace,
+    'c': _representation.cStatespace, 'z': _representation.zStatespace
 }
 prefix_kalman_filter_map = {
-    's': ss.sKalmanFilter, 'd': ss.dKalmanFilter,
-    'c': ss.cKalmanFilter, 'z': ss.zKalmanFilter
+    's': _kalman_filter.sKalmanFilter, 'd': _kalman_filter.dKalmanFilter,
+    'c': _kalman_filter.cKalmanFilter, 'z': _kalman_filter.zKalmanFilter
 }
 
 current_path = os.path.dirname(os.path.abspath(__file__))
