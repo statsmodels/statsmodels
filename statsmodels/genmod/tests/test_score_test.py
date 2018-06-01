@@ -29,6 +29,13 @@ class TestScoreTest(object):
     # regression numbers
     res_pvalue = [0.31786373532550893, 0.32654081685271297]
     skip_wooldridge = False
+    res_disptest = np.array([[ 0.13927919,  0.44461477],
+                             [ 0.13927919,  0.44461477],
+                             [ 0.21295545,  0.41568086],
+                             [ 0.14935018,  0.88127732],
+                             [ 0.14935018,  0.88127732],
+                             [ 0.14841761,  0.8820132 ],
+                             [ 0.22836064,  0.81936588]])
 
     @classmethod
     def setup_class(cls):
@@ -96,6 +103,11 @@ class TestScoreTest(object):
             # smoke test
             lm_wooldridge.summary()
 
+    def test_dispersion(self):
+        res_drop = self.model_drop.fit()
+        res_test = diao.dispersion_poisson(res_drop)
+        assert_allclose(res_test[0], self.res_disptest, rtol=1e-6, atol=1e-14)
+
 
 class TestScoreTestDispersed(TestScoreTest):
     rtol_ws = 0.11
@@ -103,6 +115,13 @@ class TestScoreTestDispersed(TestScoreTest):
     rtol_wooldridge = 0.03
     dispersed = True  # Poisson is mis-specified
     res_pvalue = [5.412978775609189e-14, 0.05027602575743518]
+    res_disptest = np.array([[  1.26473634e+02,   0.00000000e+00],
+                             [  1.26473634e+02,   0.00000000e+00],
+                             [  1.19393621e+02,   0.00000000e+00],
+                             [  4.53940519e+00,   5.64131397e-06],
+                             [  4.53940519e+00,   5.64131397e-06],
+                             [  2.98154154e+00,   2.86801135e-03],
+                             [  4.27569194e+00,   1.90544551e-05]])
 
 
 class TestScoreTestPoisson(TestScoreTest):
@@ -113,7 +132,14 @@ class TestScoreTestPoisson(TestScoreTest):
     dispersed = False  # Poisson correctly specified
     # regression numbers
     res_pvalue = [0.31786373532550893, 0.32654081685271297]
-    skip_wooldridge = True
+    skip_wooldridge = False
+    res_disptest = np.array([[ 0.13927919,  0.44461477],
+                             [ 0.13927919,  0.44461477],
+                             [ 0.21295545,  0.41568086],
+                             [ 0.14935018,  0.88127732],
+                             [ 0.14935018,  0.88127732],
+                             [ 0.14841761,  0.8820132 ],
+                             [ 0.22836064,  0.81936588]])
 
     @classmethod
     def setup_class(cls):
@@ -147,3 +173,10 @@ class TestScoreTestPoissonDispersed(TestScoreTestPoisson):
     rtol_wooldridge = 0.03
     dispersed = True  # Poisson is mis-specified
     res_pvalue = [5.412978775609189e-14, 0.05027602575743518]
+    res_disptest = np.array([[  1.26473634e+02,   0.00000000e+00],
+                             [  1.26473634e+02,   0.00000000e+00],
+                             [  1.19393621e+02,   0.00000000e+00],
+                             [  4.53940519e+00,   5.64131397e-06],
+                             [  4.53940519e+00,   5.64131397e-06],
+                             [  2.98154154e+00,   2.86801135e-03],
+                             [  4.27569194e+00,   1.90544551e-05]])

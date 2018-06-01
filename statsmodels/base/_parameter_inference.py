@@ -70,9 +70,9 @@ def _lm_robust(score, R, Ainv, B, V=None):
         else:
             inner = R.dot(V).dot(R.T)
 
-    #lm_stat2 = wscore.dot(np.linalg.pinv(inner).dot(wscore))
-    # Let's assume inner is invertible, TODO: check if usecase for pinv exists
-    lm_stat = wscore.dot(np.linalg.solve(inner, wscore))
+        #lm_stat2 = wscore.dot(np.linalg.pinv(inner).dot(wscore))
+        # Let's assume inner is invertible, TODO: check if usecase for pinv exists
+        lm_stat = wscore.dot(np.linalg.solve(inner, wscore))
     pval = stats.chi2.sf(lm_stat, k_constraints)
     return lm_stat, pval, k_constraints
 

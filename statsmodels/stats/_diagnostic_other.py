@@ -160,8 +160,8 @@ def lm_test_glm(result, exog_extra, mean_deriv=None):
 
     # TODO check for rank or redundant, note OLS calculates the rank
     k_constraint = dm_excl.shape[1]
-
-    v = var_func(res.fittedvalues)
+    fittedvalues = res.predict()  # discrete has linpred instead of mean
+    v = var_func(fittedvalues)
     std = np.sqrt(v)
     res_ols1 = OLS(res.resid_response / std, np.column_stack((dm_incl, dm_excl)) / std[:, None]).fit()
 
@@ -404,7 +404,6 @@ def lm_robust_subset(score, k_constraints, score_deriv, cov_score):
 
     cov_score_constraints = tmp.dot(cov_score.dot(tmp.T))
 
-
     #lm_stat2 = wscore.dot(np.linalg.pinv(inner).dot(wscore))
     # Let's assume inner is invertible, TODO: check if usecase for pinv exists
     lm_stat = score.dot(np.linalg.solve(cov_score_constraints, score))
@@ -512,8 +511,8 @@ def dispersion_poisson(results):
 
     endog = results.model.endog
     nobs = endog.shape[0]   #TODO: use attribute, may need to be added
-    fitted = results.predict(results.params)
-    fitted = results.fittedvalues
+    fitted = results.predict()
+    #fitted = results.fittedvalues  # discrete has linear prediction
     #this assumes Poisson
     resid2 = results.resid_response**2
     var_resid_endog = (resid2 - endog)
