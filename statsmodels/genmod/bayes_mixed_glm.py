@@ -410,6 +410,14 @@ class _BayesMixedGLM(base.Model):
 
         return model
 
+    def fit(self, method="BFGS", minim_opts=None):
+        """
+        fit is equivalent to fit_map for this class.
+
+        See fit_map for parameter information.
+        """
+        self.fit_map(method, minim_opts)
+
     def fit_map(self, method="BFGS", minim_opts=None):
         """
         Construct the Laplace approximation to the posterior
@@ -446,6 +454,38 @@ class _BayesMixedGLM(base.Model):
         hess_inv = np.linalg.inv(hess)
 
         return BayesMixedGLMResults(self, r.x, hess_inv, optim_retvals=r)
+
+    def predict(self, params, exog=None, linear=False):
+        """
+        Return the fitted mean structure.
+
+        Parameters
+        ----------
+        params : array-like
+            The parameter vector, may be the full parameter vector, or may
+            be truncated to include only the mean parameters.
+        exog : array-like
+            The design matrix for the mean structure.  If omitted, use the
+            model's design matrix.
+        linear : bool
+            If True, return the linear predictor without passing through the
+            link function.
+
+        Result
+        ------
+        A 1-dimensional array of predicted values
+        """
+
+        if exog is None:
+            exog = self.exog
+
+        q = exog.shape[1]
+        pr = np.dot(exog, params[0:q])
+
+        if not linear:
+            pr = self.family.link.inverse(pr)
+
+        return pr
 
 
 class _VariationalBayesMixedGLM(object):
@@ -816,6 +856,26 @@ class BayesMixedGLMResults(object):
             x.index = na
 
         return x
+
+    def predict(self, exog=None, linear=False):
+        """
+        Return predicted values for the mean structure.
+
+        Parameters
+        ----------
+        exog : array-like
+            The design matrix for the mean structure.  If None,
+            use the model's design matrix.
+        linear : bool
+            If True, returns the linear predictor, otherwise
+            transform the linear predictor using the link function.
+
+        Returns
+        -------
+        A one-dimensional array of fitted values.
+        """
+
+        return self.model.predict(self.params, exog, linear)
 
 
 class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
