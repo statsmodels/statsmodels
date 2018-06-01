@@ -72,16 +72,16 @@ class RecursiveLS(MLEModel):
         self.k_exog = exog.shape[1]
 
         # Handle coefficient initialization
-        # By default, do not calculate likelihood while it is controlled by
-        # diffuse initial conditions.
         kwargs.setdefault('loglikelihood_burn', self.k_exog)
-        kwargs.setdefault('initialization', 'approximate_diffuse')
-        kwargs.setdefault('initial_variance', 1e9)
+        kwargs.setdefault('initialization', 'diffuse')
 
         # Initialize the state space representation
         super(RecursiveLS, self).__init__(
             endog, k_states=self.k_exog, exog=exog, **kwargs
         )
+
+        # Use univariate filtering by default
+        self.ssm.filter_univariate = True
 
         # Setup the state space representation
         self['design'] = self.exog[:, :, None].T
@@ -93,9 +93,6 @@ class RecursiveLS(MLEModel):
 
     @classmethod
     def from_formula(cls, formula, data, subset=None):
-        """
-        Not implemented for state space models
-        """
         return super(MLEModel, cls).from_formula(formula, data, subset)
 
     def fit(self):
