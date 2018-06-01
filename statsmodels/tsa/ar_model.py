@@ -786,10 +786,6 @@ class ARResults(tsbase.TimeSeriesModelResults):
         k = self.k_trend
         return np.roots(np.r_[1, -self.params[k:]]) ** -1
 
-    @cache_readonly
-    def fittedvalues(self):
-        return self.model.predict(self.params)
-
     def predict(self, start=None, end=None, dynamic=False):
         params = self.params
         predictedvalues = self.model.predict(params, start, end, dynamic)

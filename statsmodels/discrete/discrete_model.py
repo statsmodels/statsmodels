@@ -3610,11 +3610,11 @@ class DiscreteResults(base.LikelihoodModelResults):
         return smry
 
 
-
 class CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {
                     "one_line_description" : "A results class for count data",
                     "extra_attr" : ""}
+
     @cache_readonly
     def resid(self):
         """
@@ -3630,6 +3630,7 @@ class CountResults(DiscreteResults):
         are also handled.
         """
         return self.model.endog - self.predict()
+
 
 class NegativeBinomialResults(CountResults):
     __doc__ = _discrete_results_docs % {

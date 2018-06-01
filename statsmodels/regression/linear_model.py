@@ -1492,18 +1492,9 @@ class RegressionResults(base.LikelihoodModelResults):
         return float(self.model.wexog.shape[0])
 
     @cache_readonly
-    def fittedvalues(self):
-        return self.model.predict(self.params, self.model.exog)
-
-    @cache_readonly
     def wresid(self):
         return self.model.wendog - self.model.predict(
             self.params, self.model.wexog)
-
-    @cache_readonly
-    def resid(self):
-        return self.model.endog - self.model.predict(
-            self.params, self.model.exog)
 
     # TODO: fix writable example
     @cache_writable()

@@ -2050,40 +2050,12 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         return cov_params
 
     @cache_readonly
-    def fittedvalues(self):
-        """
-        (array) The predicted values of the model. An (nobs x k_endog) array.
-        """
-        return self.model.predict(self.params)
-
-    @cache_readonly
     def hqic(self):
         """
         (float) Hannan-Quinn Information Criterion
         """
         # return -2*self.llf + 2*np.log(np.log(self.nobs))*self.params.shape[0]
         return hqic(self.llf, self.nobs, self.params.shape[0])
-
-    @cache_readonly
-    def llf_obs(self):
-        """
-        (float) The value of the log-likelihood function evaluated at `params`.
-        """
-        return self.model.loglikeobs(self.params)
-
-    @cache_readonly
-    def llf(self):
-        """
-        (float) The value of the log-likelihood function evaluated at `params`.
-        """
-        return self.model.loglike(self.params)
-
-    @cache_readonly
-    def resid(self):
-        """
-        (array) The model residuals. An (nobs x k_endog) array.
-        """
-        return self.model.endog - self.fittedvalues
 
     def predict(self, start=None, end=None, probabilities=None,
                 conditional=False):

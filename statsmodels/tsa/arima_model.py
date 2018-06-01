@@ -1443,10 +1443,6 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         return self.params[k+k_ar:]
 
     @cache_readonly
-    def llf(self):
-        return self.model.loglike(self.params)
-
-    @cache_readonly
     def bse(self):
         params = self.params
         hess = self.model.hessian(params)

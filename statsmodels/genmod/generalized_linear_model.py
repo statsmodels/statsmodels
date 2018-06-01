@@ -1515,12 +1515,8 @@ class GLMResults(base.LikelihoodModelResults):
         return chisqsum
 
     @cache_readonly
-    def fittedvalues(self):
-        return self.mu
-
-    @cache_readonly
     def mu(self):
-        return self.model.predict(self.params)
+        return self.fittedvalues
 
     @cache_readonly
     def null(self):

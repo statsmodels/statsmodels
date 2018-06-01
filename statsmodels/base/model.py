@@ -931,6 +931,18 @@ class Results(object):
         if hasattr(model, 'k_constant'):
             self.k_constant = model.k_constant
 
+    @cache_readonly
+    def fittedvalues(self):
+        return self.model.predict(self.params)
+
+    @cache_readonly
+    def resid(self):
+        """
+        Returns the residuals, the endogeneous data minus the fitted
+        values from the model.
+        """
+        return self.model.endog - self.fittedvalues
+
     def predict(self, exog=None, transform=True, *args, **kwargs):
         """
         Call self.model.predict with self.params as the first argument.
@@ -1237,6 +1249,13 @@ class LikelihoodModelResults(Results):
             # TODO: we shouldn't need use_t in get_robustcov_results
             get_robustcov_results(self, cov_type=cov_type, use_self=True,
                                   use_t=use_t, **cov_kwds)
+
+    @cache_readonly
+    def llf_obs(self):
+        """
+        (float) The optimized value of the log-likelihood, pointwise.
+        """
+        return self.model.loglikeobs(self.params)
 
     @cache_readonly
     def llf(self):
