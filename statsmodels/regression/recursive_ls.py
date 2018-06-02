@@ -114,6 +114,12 @@ class RecursiveLS(MLEModel):
         # variance, so we set it here to 1
         self['obs_cov', 0, 0] = 1.
 
+        # Linear constraints are technically imposed by adding "fake" endog
+        # variables that are used during filtering, but for all model- and
+        # results-based purposes we want k_endog = 1.
+        if r_matrix is not None:
+            self.k_endog = 1
+
     @classmethod
     def from_formula(cls, formula, data, subset=None):
         return super(MLEModel, cls).from_formula(formula, data, subset)

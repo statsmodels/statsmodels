@@ -92,6 +92,12 @@ cdef int {{prefix}}forecast_univariate({{prefix}}KalmanFilter kfilter, {{prefix}
         else:
             forecast_error_cov = kfilter._forecast_error_cov[i + i*kfilter.k_endog]
 
+        # Handle numerical issues that can cause a very small negative
+        # forecast_error_cov
+        if forecast_error_cov{{if combined_prefix == 'z'}}.real{{endif}} < 0:
+            kfilter._forecast_error_cov[i + i*kfilter.k_endog] = 0
+            forecast_error_cov = 0
+
         # If we have a non-zero variance
         # (if we have a zero-variance then we are done with this iteration)
         if not forecast_error_cov == 0:
