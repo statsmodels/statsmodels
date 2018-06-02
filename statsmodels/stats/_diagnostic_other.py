@@ -579,20 +579,19 @@ def dispersion_poisson_generic(results, exog_new_test, exog_new_control=None,
     in a Poisson model. The performed test is a Wald test on the coefficients
     of the `exog_new_test`.
 
-
+    Warning: insufficiently tested, especially for options
 
     """
-    from scipy import stats
 
     if hasattr(results, '_results'):
         results = results._results
 
     endog = results.model.endog
     nobs = endog.shape[0]   #TODO: use attribute, may need to be added
-    #fitted = results.predict(results.params) #for discrete.Poisson
-    fitted = results.fittedvalues
-    #this assumes Poisson
+    # fitted = results.fittedvalues  # generic has linpred as fittedvalues
+    fitted = results.predict()
     resid2 = results.resid_response**2
+    #the following assumes Poisson
     if use_endog:
         var_resid = (resid2 - endog)
     else:
@@ -629,7 +628,8 @@ def dispersion_poisson_generic(results, exog_new_test, exog_new_control=None,
     else:
         # we don't have controls and can use overall fit
         nobs = endog_v.shape[0]
-        stat_ols = nobs * res_ols.rsquared
+        rsquared_noncentered = 1 - res_ols.ssr/res_ols.uncentered_tss
+        stat_ols = nobs * rsquared_noncentered
         pval_ols = stats.chi2.sf(stat_ols, k_constraints)
 
     return stat_ols, pval_ols

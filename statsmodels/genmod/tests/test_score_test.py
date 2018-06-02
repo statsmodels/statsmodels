@@ -36,6 +36,7 @@ class TestScoreTest(object):
                              [ 0.14935018,  0.88127732],
                              [ 0.14841761,  0.8820132 ],
                              [ 0.22836064,  0.81936588]])
+    res_disptest_g = [0.052247629593715761, 0.81919738867722225]
 
     @classmethod
     def setup_class(cls):
@@ -107,6 +108,15 @@ class TestScoreTest(object):
         res_drop = self.model_drop.fit()
         res_test = diao.dispersion_poisson(res_drop)
         assert_allclose(res_test[0], self.res_disptest, rtol=1e-6, atol=1e-14)
+        # constant only dispersion
+        ex = np.ones((res_drop.model.endog.shape[0], 1))
+        # ex = np.column_stack((np.ones(res_drop.model.endog.shape[0]),
+        #                      res_drop.predict()))  # or **2
+        # dispersion_poisson_generic might not be correct
+        # or not clear what the alternative hypothesis is
+        # choosing different `ex` implies different alternative hypotheses
+        res_test = diao.dispersion_poisson_generic(res_drop, ex)
+        assert_allclose(res_test, self.res_disptest_g, rtol=1e-6, atol=1e-14)
 
 
 class TestScoreTestDispersed(TestScoreTest):
@@ -122,6 +132,7 @@ class TestScoreTestDispersed(TestScoreTest):
                              [  4.53940519e+00,   5.64131397e-06],
                              [  2.98154154e+00,   2.86801135e-03],
                              [  4.27569194e+00,   1.90544551e-05]])
+    res_disptest_g = [17.670784788586968, 2.6262956791721383e-05]
 
 
 class TestScoreTestPoisson(TestScoreTest):
@@ -140,6 +151,7 @@ class TestScoreTestPoisson(TestScoreTest):
                              [ 0.14935018,  0.88127732],
                              [ 0.14841761,  0.8820132 ],
                              [ 0.22836064,  0.81936588]])
+    res_disptest_g = [0.052247629593715761, 0.81919738867722225]
 
     @classmethod
     def setup_class(cls):
@@ -180,3 +192,4 @@ class TestScoreTestPoissonDispersed(TestScoreTestPoisson):
                              [  4.53940519e+00,   5.64131397e-06],
                              [  2.98154154e+00,   2.86801135e-03],
                              [  4.27569194e+00,   1.90544551e-05]])
+    res_disptest_g = [17.670784788586968, 2.6262956791721383e-05]
