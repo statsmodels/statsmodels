@@ -254,4 +254,28 @@ class TestCMTOLS(CheckCMT):
         tres_ = (tres.stat_cmt, tres.pval_cmt)
         res_all.append(('cmt', tres_))
 
+        score_deriv_uu = cov_moms[:-2, :-2]
+        score_deriv_cu = cov_moms[-2:, :-2]
+        cov_score_cc = covm[-2:, -2:]
+        cov_score_cu = covm[-2:, :-2]
+        cov_score_uu = covm[:-2, :-2]
+        moms[-2:], 2, cov_moms, covm
+        tres = diao.lm_robust_subset_parts(moms[-2:], 2, score_deriv_uu,
+                                     score_deriv_cu, cov_score_cc,
+                                     cov_score_cu, cov_score_uu)
+
+        res_all.append(('score subset_parts QMLE', tres))
+
+
+        params_deriv = np.eye(x.shape[1], x.shape[1] - 2)
+        #params_deriv[[-2, -1], [-2, -1]] = 0
+        score = moms
+        score_deriv = cov_moms
+        cov_score = covm
+
+        tres = diao.lm_robust_reparameterized(score, params_deriv,
+                           score_deriv, cov_score)
+
+        res_all.append(('score reparam QMLE', tres))
+
         return res_all

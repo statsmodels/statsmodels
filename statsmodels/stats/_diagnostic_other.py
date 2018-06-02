@@ -437,16 +437,18 @@ def lm_robust_subset_parts(score, k_constraints,
     TODO: these function should just return the covariance of the score
     instead of calculating the score/lm test.
 
-    Implementation similar to lm_robust_subset based on Boos 1992, section 4.1
+    Implementation similar to lm_robust_subset and is based on Boos 1992,
+    section 4.1 in the form attributed to Breslow (1990). It doesn't use the
+    computation attributed to Kent (1982) and Engle (1984).
     """
 
-    tmp_proj = np.linalg.solve(score_deriv_uu, score_deriv_cu)
-    tmp = tmp_proj.dot(cov_score_cu)
+    tmp_proj = np.linalg.solve(score_deriv_uu, score_deriv_cu.T).T
+    tmp = tmp_proj.dot(cov_score_cu.T)
 
-    cov = cov_score_cc
-    cov -= tmp_proj
-    cov -= tmp_proj.T
-    cov += tmp.dot(tmp_proj.T)
+    # this needs to make a copy of cov_score_cc for further inplace modification
+    cov = cov_score_cc - tmp
+    cov -= tmp.T
+    cov += tmp_proj.dot(cov_score_uu).dot(tmp_proj.T)
 
     lm_stat = score.dot(np.linalg.solve(cov, score))
     pval = stats.chi2.sf(lm_stat, k_constraints)
@@ -464,20 +466,21 @@ def lm_robust_reparameterized(score, params_deriv,
 
     score and other arrays are for full parameter space `params`
 
-    Boos 1992, section 4.4
+    Boos 1992, section 4.3, expression for T_{GS} just before example 6
     """
     # Boos notation
     # params_deriv G
 
-    k_params, k_constraints = params_deriv.shape
+    k_params, k_reduced = params_deriv.shape
+    k_constraints = k_params - k_reduced
 
     G = params_deriv  # shortcut alias
 
-    tmp_c0 = np.linalg.solve(G.dot(score_deriv.dot(G)))
-    tmp_c1 = score_deriv.dot(G.dot(tmp_c0.dot(G)))
+    tmp_c0 = np.linalg.pinv(G.T.dot(score_deriv.dot(G)))
+    tmp_c1 = score_deriv.dot(G.dot(tmp_c0.dot(G.T)))
     tmp_c = np.eye(k_params) - tmp_c1
 
-    cov = tmp_c.dot(cov_score.dot(tmp_c))  # warning: reduced rank
+    cov = tmp_c.dot(cov_score.dot(tmp_c.T))  # warning: reduced rank
 
     lm_stat = score.dot(np.linalg.pinv(cov).dot(score))
     pval = stats.chi2.sf(lm_stat, k_constraints)
@@ -630,7 +633,6 @@ def dispersion_poisson_generic(results, exog_new_test, exog_new_control=None,
         pval_ols = stats.chi2.sf(stat_ols, k_constraints)
 
     return stat_ols, pval_ols
-
 
 
 def conditional_moment_test_generic(mom_test, mom_test_deriv,
