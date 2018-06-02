@@ -28,7 +28,7 @@ cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 
 from statsmodels.tsa.statespace._kalman_filter cimport (
-    MEMORY_NO_LIKELIHOOD, MEMORY_NO_STD_FORECAST)
+    FILTER_CONCENTRATED, MEMORY_NO_LIKELIHOOD, MEMORY_NO_STD_FORECAST)
 
 {{for prefix, types in TYPES.items()}}
 {{py:cython_type, dtype, typenum = types}}
@@ -148,6 +148,7 @@ cdef int {{prefix}}forecast_univariate_diffuse({{prefix}}KalmanFilter kfilter, {
                 kfilter._loglikelihood[0] - 0.5*(
                     {{combined_prefix}}log(2 * NPY_PI * forecast_error_diffuse_cov)))
         elif forecast_error_cov{{if combined_prefix == 'z'}}.real{{endif}} > kfilter.tolerance_diffuse:
+            kfilter.nobs_kendog_diffuse_nonsingular = kfilter.nobs_kendog_diffuse_nonsingular + 1
             forecast_error_cov_inv = 1.0 / forecast_error_cov
 
             # K0 = M[:, i:i+1] / F[i, i]
@@ -175,8 +176,12 @@ cdef int {{prefix}}forecast_univariate_diffuse({{prefix}}KalmanFilter kfilter, {
             if not forecast_error_cov == 0:
                 kfilter._loglikelihood[0] = (
                     kfilter._loglikelihood[0] - 0.5*(
-                        {{combined_prefix}}log(2 * NPY_PI * forecast_error_cov) + 
-                        kfilter._forecast_error[i]**2 * forecast_error_cov_inv))
+                        {{combined_prefix}}log(2 * NPY_PI * forecast_error_cov)))
+
+                if kfilter.filter_method & FILTER_CONCENTRATED:
+                    kfilter._scale[0] = kfilter._scale[0] + kfilter._forecast_error[i]**2 * forecast_error_cov_inv
+                else:
+                    kfilter._loglikelihood[0] = kfilter._loglikelihood[0] - 0.5 * (kfilter._forecast_error[i]**2 * forecast_error_cov_inv)
 
         # Kalman gain
         blas.{{prefix}}copy(&kfilter.k_states, kfilter._tmpK0, &inc, &kfilter._kalman_gain[i * kfilter.k_states], &inc)

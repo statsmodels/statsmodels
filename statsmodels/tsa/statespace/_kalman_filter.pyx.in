@@ -745,6 +745,7 @@ cdef class {{prefix}}KalmanFilter(object):
 
         if reset:
             self.nobs_diffuse = 0
+            self.nobs_kendog_diffuse_nonsingular = 0
             self.converged = 0
             self.period_converged = 0
 
@@ -1012,6 +1013,7 @@ cdef class {{prefix}}KalmanFilter(object):
             self.updating = {{prefix}}updating_univariate_diffuse
             self.inversion = {{prefix}}inverse_noop_univariate_diffuse
             self.calculate_loglikelihood = {{prefix}}loglikelihood_univariate_diffuse
+            self.calculate_scale = {{prefix}}scale_univariate
             self.prediction = {{prefix}}prediction_univariate_diffuse
         # Univariate method
         elif self.filter_method & FILTER_UNIVARIATE:

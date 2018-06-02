@@ -884,7 +884,15 @@ class KalmanFilter(Representation):
 
             scale = np.sum(kfilter.scale[loglikelihood_burn:]) / nobs_k_endog
 
-            loglike += -0.5 * nobs_k_endog * (np.log(scale) + 1)
+            loglike += -0.5 * nobs_k_endog
+
+            # Now need to modify this for diffuse initialization, since for
+            # diffuse periods we only need to add in the scale value part if
+            # the diffuse forecast error covariance matrix element was singular
+            if kfilter.nobs_diffuse > 0:
+                nobs_k_endog -= kfilter.nobs_kendog_diffuse_nonsingular
+
+            loglike += -0.5 * nobs_k_endog * np.log(scale)
         return loglike
 
     def loglikeobs(self, **kwargs):
@@ -933,9 +941,20 @@ class KalmanFilter(Representation):
 
             scale = np.sum(kfilter.scale[loglikelihood_burn:]) / nobs_k_endog
 
+            # Need to modify this for diffuse initialization, since for
+            # diffuse periods we only need to add in the scale value if the
+            # diffuse forecast error covariance matrix element was singular
+            nsingular = 0
+            if kfilter.nobs_diffuse > 0:
+                d = kfilter.nobs_diffuse
+                Finf = kfilter.forecast_error_diffuse_cov
+                singular = np.diagonal(Finf).real <= kfilter.tolerance_diffuse
+                nsingular = np.sum(~singular, axis=1)
+
             scale_obs = np.array(kfilter.scale, copy=True)
             llf_obs += -0.5 * (
-                (self.k_endog - nmissing) * np.log(scale) + scale_obs / scale)
+                (self.k_endog - nmissing - nsingular) * np.log(scale) +
+                 scale_obs / scale)
 
         # Set any burned observations to have zero likelihood
         llf_obs[:loglikelihood_burn] = 0
@@ -1670,10 +1689,21 @@ class FilterResults(FrozenRepresentation):
             scale_obs = np.array(kalman_filter.scale, copy=True)
             self.scale = np.sum(scale_obs[d:]) / nobs_k_endog
 
+            # Need to modify this for diffuse initialization, since for
+            # diffuse periods we only need to add in the scale value if the
+            # diffuse forecast error covariance matrix element was singular
+            nsingular = 0
+            if kalman_filter.nobs_diffuse > 0:
+                d = kalman_filter.nobs_diffuse
+                Finf = kalman_filter.forecast_error_diffuse_cov
+                singular = (np.diagonal(Finf).real <=
+                            kalman_filter.tolerance_diffuse)
+                nsingular = np.sum(~singular, axis=1)
+
             # Adjust the loglikelihood obs (see `KalmanFilter.loglikeobs` for
             # defaults on the adjustment)
             self.llf_obs += -0.5 * (
-                (self.k_endog - nmissing) * np.log(self.scale) +
+                (self.k_endog - nmissing - nsingular) * np.log(self.scale) +
                 scale_obs / self.scale)
 
             # Scale the filter output

@@ -65,6 +65,7 @@ cdef class sKalmanFilter(object):
     cdef readonly int t
     cdef public np.float64_t tolerance, tolerance_diffuse
     cdef readonly int nobs_diffuse
+    cdef readonly int nobs_kendog_diffuse_nonsingular
     cdef readonly int converged
     cdef readonly int period_converged
     cdef readonly int time_invariant
@@ -213,6 +214,7 @@ cdef class dKalmanFilter(object):
     cdef readonly int t
     cdef public np.float64_t tolerance, tolerance_diffuse
     cdef readonly int nobs_diffuse
+    cdef readonly int nobs_kendog_diffuse_nonsingular
     cdef readonly int converged
     cdef readonly int period_converged
     cdef readonly int time_invariant
@@ -361,6 +363,7 @@ cdef class cKalmanFilter(object):
     cdef readonly int t
     cdef public np.float64_t tolerance, tolerance_diffuse
     cdef readonly int nobs_diffuse
+    cdef readonly int nobs_kendog_diffuse_nonsingular
     cdef readonly int converged
     cdef readonly int period_converged
     cdef readonly int time_invariant
@@ -509,6 +512,7 @@ cdef class zKalmanFilter(object):
     cdef readonly int t
     cdef public np.float64_t tolerance, tolerance_diffuse
     cdef readonly int nobs_diffuse
+    cdef readonly int nobs_kendog_diffuse_nonsingular
     cdef readonly int converged
     cdef readonly int period_converged
     cdef readonly int time_invariant
