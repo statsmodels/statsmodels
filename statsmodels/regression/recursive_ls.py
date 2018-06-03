@@ -93,7 +93,6 @@ class RecursiveLS(MLEModel):
             endog[:, 1:] = q_matrix
 
         # Handle coefficient initialization
-        kwargs.setdefault('loglikelihood_burn', self.k_exog)
         kwargs.setdefault('initialization', 'diffuse')
 
         # Initialize the state space representation
@@ -136,8 +135,7 @@ class RecursiveLS(MLEModel):
         smoother_results = self.smooth(return_ssm=True)
         # Compute the MLE of sigma2 (see Harvey, 1989 equation 4.2.5)
         resid = smoother_results.standardized_forecasts_error[0]
-        sigma2 = (np.inner(resid, resid) /
-                  (self.nobs - self.loglikelihood_burn))
+        sigma2 = (np.inner(resid, resid) / self.nobs)
 
         # Now construct a results class, where the params are the final
         # estimates of the regression coefficients
@@ -146,7 +144,7 @@ class RecursiveLS(MLEModel):
 
     def filter(self, return_ssm=False, **kwargs):
         # Get the state space output
-        result = super(RecursiveLS, self).filter([], transformed=True,
+        result = super(RecursiveLS, self).filtering([], transformed=True,
                                                  cov_type='none',
                                                  return_ssm=True, **kwargs)
 
@@ -361,9 +359,9 @@ class RecursiveLSResults(MLEResults):
            Series B (Methodological) 37 (2): 149-92.
 
         """
-        llb = self.loglikelihood_burn
-        return (np.cumsum(self.resid_recursive[self.loglikelihood_burn:]) /
-                np.std(self.resid_recursive[llb:], ddof=1))
+        d = max(self.nobs_diffuse, self.loglikelihood_burn)
+        return (np.cumsum(self.resid_recursive[d:]) /
+                np.std(self.resid_recursive[d:], ddof=1))
 
     @cache_readonly
     def cusum_squares(self):
@@ -399,7 +397,8 @@ class RecursiveLSResults(MLEResults):
            Series B (Methodological) 37 (2): 149-92.
 
         """
-        numer = np.cumsum(self.resid_recursive[self.loglikelihood_burn:]**2)
+        d = max(self.nobs_diffuse, self.loglikelihood_burn)
+        numer = np.cumsum(self.resid_recursive[d:]**2)
         denom = numer[-1]
         return numer / denom
 
@@ -458,11 +457,11 @@ class RecursiveLSResults(MLEResults):
                 dates = self.data.dates._mpl_repr()
             else:
                 dates = np.arange(self.nobs)
-            llb = self.loglikelihood_burn
+            d = max(self.nobs_diffuse, self.loglikelihood_burn)
 
             # Plot the coefficient
             coef = self.recursive_coefficients
-            ax.plot(dates[llb:], coef.filtered[variable, llb:],
+            ax.plot(dates[d:], coef.filtered[variable, d:],
                     label='Recursive estimates: %s' % exog_names[variable])
 
             # Legend
@@ -479,7 +478,7 @@ class RecursiveLSResults(MLEResults):
                 ci_upper = (
                     coef.filtered[variable] + critical_value * std_errors)
                 ci_poly = ax.fill_between(
-                    dates[llb:], ci_lower[llb:], ci_upper[llb:], alpha=0.2
+                    dates[d:], ci_lower[d:], ci_upper[d:], alpha=0.2
                 )
                 ci_label = ('$%.3g \\%%$ confidence interval'
                             % ((1 - alpha)*100))
@@ -524,7 +523,7 @@ class RecursiveLSResults(MLEResults):
         exactly the same confidence bands (which are produced in cusum6 by
         lw, uw) because they burn the first k_exog + 1 periods instead of the
         first k_exog. If this change is performed
-        (so that `tmp = (self.nobs - llb - 1)**0.5`), then the output here
+        (so that `tmp = (self.nobs - d - 1)**0.5`), then the output here
         matches cusum6.
 
         The cusum6 behavior does not seem to be consistent with
@@ -543,12 +542,12 @@ class RecursiveLSResults(MLEResults):
             raise ValueError('Invalid significance level.')
 
         # Get the points for the significance bound lines
-        llb = self.loglikelihood_burn
-        tmp = (self.nobs - llb - ddof)**0.5
-        upper_line = lambda x: scalar * tmp + 2 * scalar * (x - llb) / tmp
+        d = max(self.nobs_diffuse, self.loglikelihood_burn)
+        tmp = (self.nobs - d - ddof)**0.5
+        upper_line = lambda x: scalar * tmp + 2 * scalar * (x - d) / tmp
 
         if points is None:
-            points = np.array([llb, self.nobs])
+            points = np.array([d, self.nobs])
         return -upper_line(points), upper_line(points)
 
     def plot_cusum(self, alpha=0.05, legend_loc='upper left',
@@ -595,17 +594,17 @@ class RecursiveLSResults(MLEResults):
             dates = self.data.dates._mpl_repr()
         else:
             dates = np.arange(self.nobs)
-        llb = self.loglikelihood_burn
+        d = max(self.nobs_diffuse, self.loglikelihood_burn)
 
         # Plot cusum series and reference line
-        ax.plot(dates[llb:], self.cusum, label='CUSUM')
-        ax.hlines(0, dates[llb], dates[-1], color='k', alpha=0.3)
+        ax.plot(dates[d:], self.cusum, label='CUSUM')
+        ax.hlines(0, dates[d], dates[-1], color='k', alpha=0.3)
 
         # Plot significance bounds
         lower_line, upper_line = self._cusum_significance_bounds(alpha)
-        ax.plot([dates[llb], dates[-1]], upper_line, 'k--',
+        ax.plot([dates[d], dates[-1]], upper_line, 'k--',
                 label='%d%% significance' % (alpha * 100))
-        ax.plot([dates[llb], dates[-1]], lower_line, 'k--')
+        ax.plot([dates[d], dates[-1]], lower_line, 'k--')
 
         ax.legend(loc=legend_loc)
 
@@ -628,8 +627,8 @@ class RecursiveLSResults(MLEResults):
         """
         # Get the approximate critical value associated with the significance
         # level
-        llb = self.loglikelihood_burn
-        n = 0.5 * (self.nobs - llb) - 1
+        d = max(self.nobs_diffuse, self.loglikelihood_burn)
+        n = 0.5 * (self.nobs - d) - 1
         try:
             ix = [0.1, 0.05, 0.025, 0.01, 0.005].index(alpha / 2)
         except ValueError:
@@ -639,8 +638,8 @@ class RecursiveLSResults(MLEResults):
 
         # Get the points for the significance bound lines
         if points is None:
-            points = np.array([llb, self.nobs])
-        line = (points - llb) / (self.nobs - llb)
+            points = np.array([d, self.nobs])
+        line = (points - d) / (self.nobs - d)
 
         return line - crit, line + crit
 
@@ -695,18 +694,18 @@ class RecursiveLSResults(MLEResults):
             dates = self.data.dates._mpl_repr()
         else:
             dates = np.arange(self.nobs)
-        llb = self.loglikelihood_burn
+        d = max(self.nobs_diffuse, self.loglikelihood_burn)
 
         # Plot cusum series and reference line
-        ax.plot(dates[llb:], self.cusum_squares, label='CUSUM of squares')
-        ref_line = (np.arange(llb, self.nobs) - llb) / (self.nobs - llb)
-        ax.plot(dates[llb:], ref_line, 'k', alpha=0.3)
+        ax.plot(dates[d:], self.cusum_squares, label='CUSUM of squares')
+        ref_line = (np.arange(d, self.nobs) - d) / (self.nobs - d)
+        ax.plot(dates[d:], ref_line, 'k', alpha=0.3)
 
         # Plot significance bounds
         lower_line, upper_line = self._cusum_squares_significance_bounds(alpha)
-        ax.plot([dates[llb], dates[-1]], upper_line, 'k--',
+        ax.plot([dates[d], dates[-1]], upper_line, 'k--',
                 label='%d%% significance' % (alpha * 100))
-        ax.plot([dates[llb], dates[-1]], lower_line, 'k--')
+        ax.plot([dates[d], dates[-1]], lower_line, 'k--')
 
         ax.legend(loc=legend_loc)
 

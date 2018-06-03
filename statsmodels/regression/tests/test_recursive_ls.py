@@ -162,8 +162,6 @@ def test_resid_recursive():
     res = mod.fit()
 
     # Test the recursive residuals against those from R (strucchange)
-    # Due to initialization issues, we get more agreement as we get
-    # farther from the initial values.
     assert_allclose(res.resid_recursive[2:10].T,
                     results_R.iloc[:8]['rec_resid'])
     assert_allclose(res.resid_recursive[9:20].T,
@@ -197,10 +195,10 @@ def test_cusum():
     # differences (as seen above in the recursive residuals).
     # Here we explicitly reverse engineer our cusum to match their to show the
     # equivalence
-    llb = res.loglikelihood_burn
-    cusum = res.cusum * np.std(res.resid_recursive[llb:], ddof=1)
-    cusum -= res.resid_recursive[llb]
-    cusum /= np.std(res.resid_recursive[llb+1:], ddof=1)
+    d = res.nobs_diffuse
+    cusum = res.cusum * np.std(res.resid_recursive[d:], ddof=1)
+    cusum -= res.resid_recursive[d]
+    cusum /= np.std(res.resid_recursive[d+1:], ddof=1)
     cusum = cusum[1:]
     assert_allclose(cusum, results_stata.iloc[3:]['cusum'], atol=1e-6, rtol=1e-5)
 
@@ -214,13 +212,13 @@ def test_cusum():
     # Again note that cusum6 excludes the first 3 elements, so we need to
     # change the ddof and points.
     actual_bounds = res._cusum_significance_bounds(
-        alpha=0.05, ddof=1, points=np.arange(llb+1, res.nobs))
+        alpha=0.05, ddof=1, points=np.arange(d+1, res.nobs))
     desired_bounds = results_stata.iloc[3:][['lw', 'uw']].T
     assert_allclose(actual_bounds, desired_bounds, rtol=1e-6)
 
     # Test the cusum bounds against statsmodels
     actual_bounds = res._cusum_significance_bounds(
-        alpha=0.05, ddof=0, points=np.arange(llb, res.nobs))
+        alpha=0.05, ddof=0, points=np.arange(d, res.nobs))
     desired_bounds = recursive_olsresiduals(res_ols)[-1]
     assert_allclose(actual_bounds, desired_bounds)
 
@@ -231,11 +229,9 @@ def test_cusum():
 
 def test_stata():
     # Test the cusum and cusumsq statistics against Stata (cusum6)
-    # Note that here we change the loglikelihood_burn variable to explicitly
-    # excude the first 3 elements as in Stata, so we can compare directly
     mod = RecursiveLS(endog, exog, loglikelihood_burn=3)
     res = mod.fit()
-    llb = res.loglikelihood_burn
+    d = max(res.nobs_diffuse, res.loglikelihood_burn)
 
     assert_allclose(res.resid_recursive[3:], results_stata.iloc[3:]['rr'],
                     atol=1e-5, rtol=1e-5)
@@ -244,13 +240,13 @@ def test_stata():
                     atol=1e-5)
 
     actual_bounds = res._cusum_significance_bounds(
-        alpha=0.05, ddof=0, points=np.arange(llb+1, res.nobs+1))
+        alpha=0.05, ddof=0, points=np.arange(d+1, res.nobs+1))
     desired_bounds = results_stata.iloc[3:][['lw', 'uw']].T
     assert_allclose(actual_bounds, desired_bounds, atol=1e-5)
 
     # Note: Stata uses a set of tabulated critical values whereas we use an
     # approximation formula, so this test is quite imprecise
     actual_bounds = res._cusum_squares_significance_bounds(
-        alpha=0.05, points=np.arange(llb+1, res.nobs+1))
+        alpha=0.05, points=np.arange(d+1, res.nobs+1))
     desired_bounds = results_stata.iloc[3:][['lww', 'uww']].T
     assert_allclose(actual_bounds, desired_bounds, atol=1e-2)
