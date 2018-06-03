@@ -17,27 +17,17 @@ def test_pandas_nodates_index():
 
     # Test with a non-date index that doesn't raise an exception because it
     # can be coerced into a nanosecond DatetimeIndex
-    # (This test doesn't make sense for Numpy < 1.7 since they don't have
-    # nanosecond support)
-    # (This test also doesn't make sense for Pandas < 0.14 since we don't
-    # support nanosecond index in Pandas < 0.14)
-    try:
-        # Check for Numpy < 1.7
-        pd.to_offset('N')
-    except:
-        pass
-    else:
-        data = [988, 819, 964]
-        # index=pd.date_range('1970-01-01', periods=3, freq='QS')
-        index = pd.to_datetime([100, 101, 102])
-        s = pd.Series(data, index=index)
+    data = [988, 819, 964]
+    # index=pd.date_range('1970-01-01', periods=3, freq='QS')
+    index = pd.to_datetime([100, 101, 102])
+    s = pd.Series(data, index=index)
 
-        actual_str = (index[0].strftime('%Y-%m-%d %H:%M:%S.%f') +
-                      str(index[0].value))
-        assert_equal(actual_str, '1970-01-01 00:00:00.000000100')
-        mod = TimeSeriesModel(s)
-        start, end, out_of_sample, _ = mod._get_prediction_index(0, 4)
-        assert_equal(len(mod.data.predict_dates), 5)
+    actual_str = (index[0].strftime('%Y-%m-%d %H:%M:%S.%f') +
+                  str(index[0].value))
+    assert_equal(actual_str, '1970-01-01 00:00:00.000000100')
+    mod = TimeSeriesModel(s)
+    start, end, out_of_sample, _ = mod._get_prediction_index(0, 4)
+    assert_equal(len(mod.data.predict_dates), 5)
 
 def test_predict_freq():
     # test that predicted dates have same frequency
@@ -66,8 +56,7 @@ def test_predict_freq():
 def test_keyerror_start_date():
     x = np.arange(1,36.)
 
-    # there's a bug in pandas up to 0.10.2 for YearBegin
-    #dates = date_range("1972-4-1", "2007-4-1", freq="AS-APR")
+    # dates = date_range("1972-4-1", "2007-4-1", freq="AS-APR")
     dates = pd.date_range("1972-4-30", "2006-4-30", freq="A-APR")
     series = pd.Series(x, index=dates)
     model = TimeSeriesModel(series)

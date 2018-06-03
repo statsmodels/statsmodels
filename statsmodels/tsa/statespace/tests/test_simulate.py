@@ -16,7 +16,6 @@ from scipy.signal import lfilter
 
 from statsmodels.tsa.statespace import (sarimax, structural, varmax,
                                         dynamic_factor)
-from statsmodels.tsa.statespace.tools import compatibility_mode
 from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal)
 from statsmodels.compat.testing import skipif
 

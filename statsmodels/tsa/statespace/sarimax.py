@@ -11,7 +11,6 @@ from warnings import warn
 
 import numpy as np
 from .initialization import Initialization
-from .kalman_filter import KalmanFilter
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
     companion_matrix, diff, is_invertible, constrain_stationary_univariate,

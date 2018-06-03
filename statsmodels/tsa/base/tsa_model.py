@@ -6,14 +6,7 @@ import datetime
 import warnings
 import numpy as np
 from pandas import (to_datetime, Int64Index, DatetimeIndex, Period,
-                    PeriodIndex, Timestamp, Series, Index)
-# RangeIndex only introduced in Pandas 0.18, so we include a shim until
-# Statsmodels requires that version.
-try:
-    from pandas import RangeIndex
-except ImportError:
-    class RangeIndex(object):
-        pass
+                    PeriodIndex, RangeIndex, Timestamp, Series, Index)
 from pandas.tseries.frequencies import to_offset
 
 from statsmodels.base import data

@@ -462,11 +462,6 @@ class KalmanFilter(Representation):
             if name in kwargs:
                 setattr(self, name, kwargs[name])
 
-        if self._compatibility_mode and not self.filter_method == 1:
-            raise NotImplementedError('Only conventional Kalman filtering'
-                                      ' is available. Consider updating'
-                                      ' dependencies for more options.')
-
     def set_inversion_method(self, inversion_method=None, **kwargs):
         r"""
         Set the inversion method
@@ -722,13 +717,6 @@ class KalmanFilter(Representation):
             self.filter_timing = int(not kwargs['timing_init_predicted'])
         if 'timing_init_filtered' in kwargs:
             self.filter_timing = int(kwargs['timing_init_filtered'])
-
-        if (self._compatibility_mode and
-                self.filter_timing == TIMING_INIT_FILTERED):
-            raise NotImplementedError('Only "predicted" Kalman filter'
-                                      ' timing is available. Consider'
-                                      ' updating dependencies for more'
-                                      ' options.')
 
     def _filter(self, filter_method=None, inversion_method=None,
                 stability_method=None, conserve_memory=None,
@@ -1165,7 +1153,7 @@ class KalmanFilter(Representation):
                 'loglikelihood_burn': self.loglikelihood_burn
             }
             model_kwargs.update(representation)
-            model = KalmanFilter(np.zeros(self.endog.T.shape), self.k_states,
+            model = self.__class__(np.zeros(self.endog.T.shape), self.k_states,
                                  self.k_posdef, **model_kwargs)
             model.initialize_approximate_diffuse()
             model._initialize_filter()
@@ -1398,10 +1386,8 @@ class FilterResults(FrozenRepresentation):
 
         # Reset caches
         has_missing = np.sum(self.nmissing) > 0
-        if not self._compatibility_mode and not (self.memory_no_std_forecast or
-                                                 self.invert_lu or
-                                                 self.solve_lu or
-                                                 self.filter_collapsed):
+        if not (self.memory_no_std_forecast or self.invert_lu or
+                self.solve_lu or self.filter_collapsed):
             if has_missing:
                 self._standardized_forecasts_error = np.array(
                     reorder_missing_vector(
@@ -1413,37 +1399,34 @@ class FilterResults(FrozenRepresentation):
         else:
             self._standardized_forecasts_error = None
 
-        if not self._compatibility_mode:
-            # In the partially missing data case, all entries will
-            # be in the upper left submatrix rather than the correct placement
-            # Re-ordering does not make sense in the collapsed case.
-            if has_missing and (not self.memory_no_gain and
-                                not self.filter_collapsed):
-                self._kalman_gain = np.array(reorder_missing_matrix(
-                    kalman_filter.kalman_gain, self.missing, reorder_cols=True,
-                    prefix=self.prefix))
-                self.tmp1 = np.array(reorder_missing_matrix(
-                    kalman_filter.tmp1, self.missing, reorder_cols=True,
-                    prefix=self.prefix))
-                self.tmp2 = np.array(reorder_missing_vector(
-                    kalman_filter.tmp2, self.missing, prefix=self.prefix))
-                self.tmp3 = np.array(reorder_missing_matrix(
-                    kalman_filter.tmp3, self.missing, reorder_rows=True,
-                    prefix=self.prefix))
-                self.tmp4 = np.array(reorder_missing_matrix(
-                    kalman_filter.tmp4, self.missing, reorder_cols=True,
-                    reorder_rows=True, prefix=self.prefix))
-            else:
-                self._kalman_gain = np.array(
-                    kalman_filter.kalman_gain, copy=True)
-                self.tmp1 = np.array(kalman_filter.tmp1, copy=True)
-                self.tmp2 = np.array(kalman_filter.tmp2, copy=True)
-                self.tmp3 = np.array(kalman_filter.tmp3, copy=True)
-                self.tmp4 = np.array(kalman_filter.tmp4, copy=True)
-                self.M = np.array(kalman_filter.M, copy=True)
-                self.M_diffuse = np.array(kalman_filter.M_inf, copy=True)
+        # In the partially missing data case, all entries will
+        # be in the upper left submatrix rather than the correct placement
+        # Re-ordering does not make sense in the collapsed case.
+        if has_missing and (not self.memory_no_gain and
+                            not self.filter_collapsed):
+            self._kalman_gain = np.array(reorder_missing_matrix(
+                kalman_filter.kalman_gain, self.missing, reorder_cols=True,
+                prefix=self.prefix))
+            self.tmp1 = np.array(reorder_missing_matrix(
+                kalman_filter.tmp1, self.missing, reorder_cols=True,
+                prefix=self.prefix))
+            self.tmp2 = np.array(reorder_missing_vector(
+                kalman_filter.tmp2, self.missing, prefix=self.prefix))
+            self.tmp3 = np.array(reorder_missing_matrix(
+                kalman_filter.tmp3, self.missing, reorder_rows=True,
+                prefix=self.prefix))
+            self.tmp4 = np.array(reorder_missing_matrix(
+                kalman_filter.tmp4, self.missing, reorder_cols=True,
+                reorder_rows=True, prefix=self.prefix))
         else:
-            self._kalman_gain = None
+            self._kalman_gain = np.array(
+                kalman_filter.kalman_gain, copy=True)
+            self.tmp1 = np.array(kalman_filter.tmp1, copy=True)
+            self.tmp2 = np.array(kalman_filter.tmp2, copy=True)
+            self.tmp3 = np.array(kalman_filter.tmp3, copy=True)
+            self.tmp4 = np.array(kalman_filter.tmp4, copy=True)
+            self.M = np.array(kalman_filter.M, copy=True)
+            self.M_diffuse = np.array(kalman_filter.M_inf, copy=True)
 
         # Note: use forecasts rather than forecast, so as not to interfer
         # with the `forecast` methods in subclasses
@@ -1863,7 +1846,7 @@ class FilterResults(FrozenRepresentation):
                 'loglikelihood_burn': self.loglikelihood_burn
             }
             model_kwargs.update(representation)
-            model = KalmanFilter(
+            model = self.model.__class__(
                 endog, self.k_states, self.k_posdef, **model_kwargs
             )
             model.initialize_known(

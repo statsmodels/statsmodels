@@ -15,7 +15,6 @@ import warnings
 from statsmodels.tsa.statespace import (sarimax, varmax, kalman_filter,
                                         kalman_smoother)
 from statsmodels.tsa.statespace.mlemodel import MLEModel, MLEResultsWrapper
-from statsmodels.tsa.statespace.tools import compatibility_mode
 from statsmodels.datasets import nile
 from numpy.testing import assert_almost_equal, assert_equal, assert_allclose, assert_raises
 from statsmodels.tsa.statespace.tests.results import results_sarimax, results_var_misc
@@ -135,17 +134,13 @@ def test_wrapping():
     # transferring)
 
     # Change the attributes in the model class
-    if compatibility_mode:
-        assert_raises(NotImplementedError, mod.set_filter_method, 100)
-    else:
-        mod.set_filter_method(100)
+    mod.set_filter_method(100)
     mod.set_stability_method(101)
     mod.set_conserve_memory(102)
     mod.set_smoother_output(103)
 
     # Assert that the changes have occurred in the ssm class
-    if not compatibility_mode:
-        assert_equal(mod.ssm.filter_method, 100)
+    assert_equal(mod.ssm.filter_method, 100)
     assert_equal(mod.ssm.stability_method, 101)
     assert_equal(mod.ssm.conserve_memory, 102)
     assert_equal(mod.ssm.smoother_output, 103)
@@ -154,15 +149,6 @@ def test_wrapping():
     assert_equal(kf.filter_method, kalman_filter.FILTER_CONVENTIONAL)
     assert_equal(kf.stability_method, kalman_filter.STABILITY_FORCE_SYMMETRY)
     assert_equal(kf.conserve_memory, kalman_filter.MEMORY_STORE_ALL)
-
-    # Re-initialize the filter object (this would happen automatically anytime
-    # loglike, filter, etc. were called)
-    # In this case, an error will be raised since filter_method=100 is not
-    # valid
-    # Note: this error is only raised in the compatibility case, since the
-    # newer filter logic checks for a valid filter mode at a different point
-    if compatibility_mode:
-        assert_raises(NotImplementedError, mod.ssm._initialize_filter)
 
     # Now, test the setting of the other two methods by resetting the
     # filter method to a valid value

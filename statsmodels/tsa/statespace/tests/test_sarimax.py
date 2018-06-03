@@ -2024,8 +2024,6 @@ def test_predict_custom_index():
 
 
 def test_arima000():
-    from statsmodels.tsa.statespace.tools import compatibility_mode
-
     # Test an ARIMA(0,0,0) with measurement error model (i.e. just estimating
     # a variance term)
     np.random.seed(328423)
@@ -2049,11 +2047,6 @@ def test_arima000():
     error = np.random.normal(size=nobs)
     endog = np.ones(nobs) * 10 + error
     exog = np.ones(nobs)
-
-    # We need univariate filtering here, to guarantee we won't hit singular
-    # forecast error covariance matrices.
-    if compatibility_mode:
-        return
 
     # OLS
     mod = sarimax.SARIMAX(endog, order=(0, 0, 0), exog=exog)
