@@ -250,3 +250,27 @@ def test_stata():
         alpha=0.05, points=np.arange(d+1, res.nobs+1))
     desired_bounds = results_stata.iloc[3:][['lww', 'uww']].T
     assert_allclose(actual_bounds, desired_bounds, atol=1e-2)
+
+
+def test_constraints_stata():
+    endog = dta['infl']
+    exog = add_constant(dta[['m1', 'unemp']])
+
+    mod = RecursiveLS(endog, exog, constraints='m1 + unemp = 1')
+    res = mod.fit()
+
+    # See tests/results/test_rls.do
+    desired = [-0.7001083844336, -0.0018477514060, 1.0018477514060]
+    assert_allclose(res.params, desired)
+
+    # The given llf is the one produced by the Kalman filter with diffuse
+    # initialization, and it is not identical to that formed from the
+    # OLS residuals. However, we can compute that version and check it against
+    # what is returned by Stata
+    from scipy.stats import norm
+    n = norm(loc=0, scale=res.filter_results.obs_cov[0, 0]**0.5)
+    llf = np.log(n.pdf(res.resid_recursive)).sum()
+    # See tests/results/test_rls.do
+    desired = -534.4292052931121
+    assert_allclose(llf, desired)
+
