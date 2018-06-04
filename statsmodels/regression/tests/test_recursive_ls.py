@@ -263,14 +263,7 @@ def test_constraints_stata():
     desired = [-0.7001083844336, -0.0018477514060, 1.0018477514060]
     assert_allclose(res.params, desired)
 
-    # The given llf is the one produced by the Kalman filter with diffuse
-    # initialization, and it is not identical to that formed from the
-    # OLS residuals. However, we can compute that version and check it against
-    # what is returned by Stata
-    from scipy.stats import norm
-    n = norm(loc=0, scale=res.filter_results.obs_cov[0, 0]**0.5)
-    llf = np.log(n.pdf(res.resid_recursive)).sum()
     # See tests/results/test_rls.do
     desired = -534.4292052931121
-    assert_allclose(llf, desired)
+    assert_allclose(res.llf, desired)
 
