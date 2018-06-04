@@ -120,8 +120,9 @@ class RecursiveLS(MLEModel):
             self.k_endog = 1
 
     @classmethod
-    def from_formula(cls, formula, data, subset=None):
-        return super(MLEModel, cls).from_formula(formula, data, subset)
+    def from_formula(cls, formula, data, subset=None, constraints=None):
+        return super(MLEModel, cls).from_formula(formula, data, subset,
+                                                 constraints=constraints)
 
     def fit(self):
         """
