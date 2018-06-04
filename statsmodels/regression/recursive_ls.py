@@ -144,7 +144,7 @@ class RecursiveLS(MLEModel):
 
     def filter(self, return_ssm=False, **kwargs):
         # Get the state space output
-        result = super(RecursiveLS, self).filtering([], transformed=True,
+        result = super(RecursiveLS, self).filter([], transformed=True,
                                                  cov_type='none',
                                                  return_ssm=True, **kwargs)
 
