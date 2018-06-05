@@ -905,6 +905,10 @@ class Poisson(CountModel):
 
     """ + base._missing_param_doc}
 
+    @property
+    def family(self):
+        from statsmodels.genmod import families
+        return families.Poisson()
 
     def cdf(self, X):
         """
@@ -1196,6 +1200,37 @@ class Poisson(CountModel):
         L = np.exp(np.dot(X,params) + offset + exposure)
         return (self.endog - L)[:,None] * X
 
+    def score_factor(self, params):
+        """
+        Poisson model score_factor for each observation
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        score : array-like
+            The score factor (nobs, ) of the model evaluated at `params`
+
+        Notes
+        -----
+        .. math:: \\frac{\\partial\\ln L_{i}}{\\partial\\beta}=\\left(y_{i}-\\lambda_{i}\\right)
+
+        for observations :math:`i=1,...,n`
+
+        where the loglinear model is assumed
+
+        .. math:: \\ln\\lambda_{i}=x_{i}\\beta
+        """
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+        X = self.exog
+        L = np.exp(np.dot(X,params) + offset + exposure)
+        return (self.endog - L)
+
+
     def hessian(self, params):
         """
         Poisson model Hessian matrix of the loglikelihood
@@ -1225,6 +1260,36 @@ class Poisson(CountModel):
         X = self.exog
         L = np.exp(np.dot(X,params) + exposure + offset)
         return -np.dot(L*X.T, X)
+
+    def hessian_factor(self, params):
+        """
+        Poisson model Hessian factor
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        hess : ndarray, (nobs,)
+            The Hessian factor, second derivative of loglikelihood function
+            with respect to the linear predictor evaluated at `params`
+
+        Notes
+        -----
+        .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\\sum_{i=1}^{n}\\lambda_{i}
+
+        where the loglinear model is assumed
+
+        .. math:: \\ln\\lambda_{i}=x_{i}\\beta
+
+        """
+        offset = getattr(self, "offset", 0)
+        exposure = getattr(self, "exposure", 0)
+        X = self.exog
+        L = np.exp(np.dot(X,params) + exposure + offset)
+        return L
 
 
 class GeneralizedPoisson(CountModel):
@@ -3414,6 +3479,10 @@ class DiscreteResults(base.LikelihoodModelResults):
     @cache_readonly
     def fittedvalues(self):
         return np.dot(self.model.exog, self.params[:self.model.exog.shape[1]])
+
+    @cache_readonly
+    def resid_response(self):
+        return self.model.endog - self.predict()
 
     @cache_readonly
     def aic(self):
