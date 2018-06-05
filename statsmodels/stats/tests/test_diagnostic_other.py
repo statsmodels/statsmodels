@@ -8,7 +8,6 @@ License: BSD-3
 
 """
 
-
 import numpy as np
 from numpy.testing import assert_allclose
 
@@ -27,13 +26,11 @@ class CheckCMT(object):
             assert_allclose(actual, expected[:np.size(actual)], rtol=1e-13,
                             err_msg=msg)
 
-
     def test_scorehc0(self):
         expected = self.results_hc0
         for msg, actual in self.res_hc0():
             assert_allclose(actual, expected[:np.size(actual)], rtol=1e-13,
                             err_msg=msg)
-
 
     def test_scoreopg(self):
         expected = self.results_opg
@@ -69,7 +66,6 @@ class TestCMTOLS(CheckCMT):
         cls.results_score = (1.6857659627548, 0.43046770240535, 2)
         cls.results_hc0 = (1.6385932313952, 0.4407415561953, 2)
         cls.results_opg = (1.72226002418488, 0.422684174119544, 2.0)
-
 
     @classmethod    # TODO: a better structure ?
     def attach_moment_conditions(self):
@@ -112,7 +108,6 @@ class TestCMTOLS(CheckCMT):
         self.weights = weights
         self.L = L
 
-
     def res_score(self):
         res_ols = self.res_ols
         nobs = self.nobs
@@ -124,7 +119,6 @@ class TestCMTOLS(CheckCMT):
         weights = self.weights
         L = self.L
         x = self.exog_full  # for auxiliary regression only
-
 
         res_all = []
 
@@ -139,7 +133,6 @@ class TestCMTOLS(CheckCMT):
                               np.linalg.inv(cov_moms), cov_moms)
         res_all.append(('score mle', tres))
 
-
         tres = CMTNewey(moms, cov_moms, cov_moms[:,:-2], weights, L).chisquare
         res_all.append(('Newey', tres))
 
@@ -147,9 +140,7 @@ class TestCMTOLS(CheckCMT):
                           cov_moms[-2:, :-2], cov_moms).chisquare
         res_all.append(('Tauchen', tres))
 
-
         return res_all
-
 
     def res_opg(self):
         res_ols = self.res_ols
@@ -163,7 +154,6 @@ class TestCMTOLS(CheckCMT):
         x = self.exog_full
 
         res_ols2_hc0 = OLS(res_ols.model.endog, x).fit(cov_type='HC0')
-
 
         res_all = []
 
@@ -186,16 +176,15 @@ class TestCMTOLS(CheckCMT):
         res_all.append(('score subset QMLE', tres))
 
         tres = diao.lm_robust(moms, np.eye(moms.shape[0])[-2:],
-                              np.linalg.inv(covm), covm, V=None)
+                              np.linalg.inv(covm), covm, cov_params=None)
         res_all.append(('scoreB QMLE', tres))
 
         tres = diao.lm_robust(moms, np.eye(moms.shape[0])[-2:],
-                              np.linalg.inv(covm), None, V=np.linalg.inv(covm))
+                              np.linalg.inv(covm), None,
+                              cov_params=np.linalg.inv(covm))
         res_all.append(('scoreV QMLE', tres))
 
-
         return res_all
-
 
     def res_hc0(self):
         res_ols = self.res_ols
@@ -211,9 +200,7 @@ class TestCMTOLS(CheckCMT):
         x0 = res_ols.model.exog
         x1 = self.exog_add
 
-
         res_all = []
-
 
         tres = diao.cm_test_robust(resid=res_ols.resid, resid_deriv=x0,
                                    instruments=x1, weights=1)
@@ -231,17 +218,21 @@ class TestCMTOLS(CheckCMT):
         res_all.append(('score subset QMLE', tres))
 
         tres = diao.lm_robust(moms, np.eye(moms.shape[0])[-2:],
-                              np.linalg.inv(cov_moms), covm, V=None)
+                              np.linalg.inv(cov_moms), covm)
         res_all.append(('scoreB QMLE', tres))
 
         # need sandwich cov_params V
         Ainv = np.linalg.inv(cov_moms)
         vv = Ainv.dot(covm).dot(Ainv)
         tres = diao.lm_robust(moms, np.eye(moms.shape[0])[-2:],
-                              np.linalg.inv(cov_moms), None, V=vv)
+                              np.linalg.inv(cov_moms), None,
+                              cov_params=vv)
         res_all.append(('scoreV QMLE', tres))
 
-        tres = diao.conditional_moment_test_generic(moms_obs[:, -2:], cov_moms[-2:, :-2], moms_obs[:,:-2], cov_moms[:-2, :-2])#, covm)
+        tres = diao.conditional_moment_test_generic(moms_obs[:, -2:],
+                                                    cov_moms[-2:, :-2],
+                                                    moms_obs[:,:-2],
+                                                    cov_moms[:-2, :-2])
         tres_ = (tres.stat_cmt, tres.pval_cmt)
         res_all.append(('cmt', tres_))
 
@@ -265,7 +256,6 @@ class TestCMTOLS(CheckCMT):
                                      cov_score_cu, cov_score_uu)
 
         res_all.append(('score subset_parts QMLE', tres))
-
 
         params_deriv = np.eye(x.shape[1], x.shape[1] - 2)
         #params_deriv[[-2, -1], [-2, -1]] = 0

@@ -20,34 +20,148 @@ We need clean versions with good defaults for those functions that are
 intended for the user.
 
 
+
 References
 ----------
-general:
 
-Wooldridge
-Cameron and Trivedi
-Wooldridge, and Cameron Trivedi also cover the special cases for GLM/LEF
-White
-Pagan and Vella
-Newey and McFadden
-Davidson and MacKinnon
+The following references are collected after my intitial implementation and is
+most likely not exactly what I used.
 
-GLM:
+The main articles on which the functions are directly based upon, are Boos 1992,
+Tauchen 1985 and Whitney 1985a. Wooldrige artificial regression is
+based on several articles and his text book.
+Background reading are the textbooks by Cameron and Trivedi, Wooldridge and
+Davidson and MacKinnon.
+Newey and MacFadden 1994 provide some of the theoretical background.
 
-Boos
-Breslow 1990
+Poisson dispersion tests are based on Dean 1992 and articles and text books by
+Cameron and Trivedi.
+
+The references currently do not include the literature on LM-test for
+specification and diagnostic testing, like Pagan, Bera, Bera and Yoon and
+many others, except those for the Poisson excess dispersion case and Pagan
+and Vella.
 
 
-Poisson:
-...
+Boos, Dennis D. 1992. “On Generalized Score Tests.” The American Statistician 46
+(4): 327–33. https://doi.org/10.2307/2685328.
 
+Breslow, Norman. 1989. “Score Tests in Overdispersed GLM’s.” In Statistical
+Modelling, edited by Adriano Decarli, Brian J. Francis, Robert Gilchrist, and
+Gilg U. H. Seeber, 64–74. Lecture Notes in Statistics 57. Springer New York.
+http://link.springer.com/chapter/10.1007/978-1-4612-3680-1_8.
 
+Breslow, Norman. 1990. “Tests of Hypotheses in Overdispersed Poisson Regression
+and Other Quasi- Likelihood Models.” Journal of the American Statistical
+Association 85 (410): 565–71. https://doi.org/10.2307/2289799.
+
+Cameron, A. Colin, and Pravin K. Trivedi. 1986. “Econometric Models Based on
+Count Data. Comparisons and Applications of Some Estimators and Tests.” Journal
+of Applied Econometrics 1 (1): 29–53. https://doi.org/10.1002/jae.3950010104.
+
+Cameron, A. Colin, and Pravin K. Trivedi. 1990a. “Conditional Moment Tests and
+Orthogonal Polynomials.” Indiana University, Department of Economics, Working
+Paper, 90–051.
+
+Cameron, A. Colin, and Pravin K. Trivedi. 1990b. “Regression-Based Tests for
+Overdispersion in the Poisson Model.” Journal of Econometrics 46 (3): 347–64.
+https://doi.org/10.1016/0304-4076(90)90014-K.
+
+Cameron, A. Colin, and Pravin K. Trivedi. Microeconometrics: methods and
+applications. Cambridge university press, 2005.
+
+Cameron, A. Colin, and Pravin K. Trivedi. Regression analysis of count data.
+Vol. 53. Cambridge university press, 2013.
+
+Davidson, Russell, and James G. MacKinnon. 1981. “Several Tests for Model
+Specification in the Presence of Alternative Hypotheses.” Econometrica 49 (3):
+781–93. https://doi.org/10.2307/1911522.
+
+Davidson, Russell, and James G. MacKinnon. 1990. “Specification Tests Based on
+Artificial Regressions.” Journal of the American Statistical Association 85
+(409): 220–27. https://doi.org/10.2307/2289548.
+
+Davidson, Russell, and James G. MacKinnon. 1991. “Artificial Regressions and C
+(α) Tests.” Economics Letters 35 (2): 149–53.
+https://doi.org/10.1016/0165-1765(91)90162-E.
+
+Davidson, Russell, and James G. MacKinnon. Econometric theory and methods. Vol.
+5. New York: Oxford University Press, 2004.
+
+Dean, C. B. 1992. “Testing for Overdispersion in Poisson and Binomial Regression
+Models.” Journal of the American Statistical Association 87 (418): 451–57.
+https://doi.org/10.2307/2290276.
+
+Dean, C., and J. F. Lawless. 1989. “Tests for Detecting Overdispersion in
+Poisson Regression Models.” Journal of the American Statistical Association 84
+(406): 467–72. https://doi.org/10.2307/2289931.
+
+Newey, Whitney K. 1985a. “Generalized Method of Moments Specification Testing.”
+Journal of Econometrics 29 (3): 229–56.
+https://doi.org/10.1016/0304-4076(85)90154-X.
+
+Newey, Whitney K. 1985b. “Maximum Likelihood Specification Testing and
+Conditional Moment Tests.” Econometrica 53 (5): 1047–70.
+https://doi.org/10.2307/1911011.
+
+Newey, Whitney K. and Kenneth D. West. 1987. “Hypothesis Testing with Efficient
+Method of Moments Estimation.” International Economic Review 28 (3): 777–87.
+https://doi.org/10.2307/2526578.
+
+Newey, Whitney K. and Daniel McFadden. 1994 "Large sample estimation and
+hypothesis testing." Handbook of econometrics 4: 2111-2245.
+
+Pagan, Adrian, and Frank Vella. 1989. “Diagnostic Tests for Models Based on
+Individual Data: A Survey.” Journal of Applied Econometrics 4 (S1): S29–59.
+https://doi.org/10.1002/jae.3950040504.
+
+Tauchen, George. 1985. “Diagnostic Testing and Evaluation of Maximum Likelihood
+Models.” Journal of Econometrics 30 (1–2): 415–43.
+https://doi.org/10.1016/0304-4076(85)90149-6.
+
+White, Halbert. 1981. “Consequences and Detection of Misspecified Nonlinear
+Regression Models.” Journal of the American Statistical Association 76 (374):
+419–33. https://doi.org/10.2307/2287845.
+
+White, Halbert. 1983. “Maximum Likelihood Estimation of Misspecified Models.”
+Econometrica 51 (2): 513. https://doi.org/10.2307/1912004.
+
+White, Halbert. 1994. Estimation, Inference and Specification Analysis.
+Cambridge: Cambridge University Press. https://doi.org/10.1017/CCOL0521252806.
+
+Wooldridge, Jeffrey M. 1991. “Specification Testing and Quasi-Maximum-
+Likelihood Estimation.” Journal of Econometrics 48 (1–2): 29–55.
+https://doi.org/10.1016/0304-4076(91)90031-8.
+
+Wooldridge, Jeffrey M. 1990. “A Unified Approach to Robust, Regression-Based
+Specification Tests.” Econometric Theory 6 (1): 17–43.
+
+Wooldridge, Jeffrey M. 1991a. “On the Application of Robust, Regression- Based
+Diagnostics to Models of Conditional Means and Conditional Variances.” Journal
+of Econometrics 47 (1): 5–46. https://doi.org/10.1016/0304-4076(91)90076-P.
+
+Wooldridge, Jeffrey M. 1991b. “On the Application of Robust, Regression- Based
+Diagnostics to Models of Conditional Means and Conditional Variances.” Journal
+of Econometrics 47 (1): 5–46. https://doi.org/10.1016/0304-4076(91)90076-P.
+
+Wooldridge, Jeffrey M. 1991c. “Specification Testing and Quasi-Maximum-
+Likelihood Estimation.” Journal of Econometrics 48 (1–2): 29–55.
+https://doi.org/10.1016/0304-4076(91)90031-8.
+
+Wooldridge, Jeffrey M. 1994. “On the Limits of GLM for Specification Testing: A
+Comment on Gurmu and Trivedi.” Econometric Theory 10 (2): 409–18.
+https://doi.org/10.2307/3532875.
+
+Wooldridge, Jeffrey M. 1997. “Quasi-Likelihood Methods for Count Data.” Handbook
+of Applied Econometrics 2: 352–406.
+
+Wooldridge, Jeffrey M. Econometric analysis of cross section and panel data. MIT
+press, 2010.
 
 """
 
 import numpy as np
 from scipy import stats
-
 
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import OLS
@@ -61,7 +175,6 @@ class ResultsGeneric(object):
 
 
 class TestResults(ResultsGeneric):
-
 
     def summary(self):
         txt = 'Specification Test (LM, score)\n'
@@ -78,8 +191,8 @@ class TestResults(ResultsGeneric):
         txt += 'HC       : robust to any heteroscedasticity\n'
         txt += 'test is not robust to correlation across observations'
 
-
         return txt
+
 
 def lm_test_glm(result, exog_extra, mean_deriv=None):
     '''score/lagrange multiplier test for GLM
@@ -114,17 +227,17 @@ def lm_test_glm(result, exog_extra, mean_deriv=None):
     TODO: add `df` to results and make df detection more robust
 
     This implements the auxiliary regression procedure of Wooldridge,
-    implemented based on the presentation in chapter 8 in Handbook of ...
-
+    implemented based on the presentation in chapter 8 in Handbook of
+    Applied Econometrics 2.
 
     References
     ----------
-    Wooldridge
-    Wooldridge
-    and more Wooldridge
+    Wooldridge, Jeffrey M. 1997. “Quasi-Likelihood Methods for Count Data.”
+    Handbook of Applied Econometrics 2: 352–406.
+
+    and other articles and text book by Wooldridge
 
     '''
-
 
     if hasattr(result, '_result'):
         res = result._result
@@ -191,7 +304,6 @@ def lm_test_glm(result, exog_extra, mean_deriv=None):
     return tres
 
 
-
 def cm_test_robust(resid, resid_deriv, instruments, weights=1):
     '''score/lagrange multiplier of Wooldridge
 
@@ -224,13 +336,11 @@ def cm_test_robust(resid, resid_deriv, instruments, weights=1):
 
     Notes
     -----
-
     This implements the auxiliary regression procedure of Wooldridge,
     implemented based on procedure 2.1 in Wooldridge 1990.
 
     Wooldridge allows for multivariate conditional moments (`resid`)
     TODO: check dimensions for multivariate case for extension
-
 
     References
     ----------
@@ -247,7 +357,6 @@ def cm_test_robust(resid, resid_deriv, instruments, weights=1):
 
 
     nobs = resid.shape[0]
-
 
     from statsmodels.stats.multivariate_tools import partial_project
 
@@ -271,14 +380,13 @@ def cm_test_robust(resid, resid_deriv, instruments, weights=1):
 
     # for checking, this corresponds to nobs * rsquared of auxiliary regression
     stat2 = OLS(np.ones(nobs), moms_test).fit().ess
-
-
     pval = stats.chi2.sf(stat, k_constraint)
 
     return stat, pval, stat2
 
 
-def lm_robust(score, R, Ainv, B, V=None):
+def lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
+              cov_params=None):
     '''general formula for score/LM test
 
     generalized score or lagrange multiplier test for implicit constraints
@@ -288,7 +396,6 @@ def lm_robust(score, R, Ainv, B, V=None):
     linear constraints are given by `R params - q = 0`
 
     It is assumed that all arrays are evaluated at the constrained estimates.
-
 
     Parameters
     ----------
@@ -317,6 +424,8 @@ def lm_robust(score, R, Ainv, B, V=None):
     -----
 
     '''
+    # shorthand alias
+    R, Ainv, B, V = constraint_matrix, score_deriv_inv, cov_score, cov_params
 
     tmp = R.dot(Ainv)
     wscore = tmp.dot(score)  # C Ainv score
@@ -339,7 +448,7 @@ def lm_robust(score, R, Ainv, B, V=None):
     return lm_stat#, lm_stat2
 
 
-def lm_robust_subset(score, k_constraints, score_deriv, cov_score):
+def lm_robust_subset(score, k_constraints, score_deriv_inv, cov_score):
     '''general formula for score/LM test
 
     generalized score or lagrange multiplier test for constraints on a subset
@@ -350,7 +459,6 @@ def lm_robust_subset(score, k_constraints, score_deriv, cov_score):
 
     It is assumed that all arrays are evaluated at the constrained estimates.
 
-
     Parameters
     ----------
     score : ndarray, 1-D
@@ -358,7 +466,7 @@ def lm_robust_subset(score, k_constraints, score_deriv, cov_score):
         of constrained model
     k_constraint: int
         number of constraints
-    score_deriv : ndarray, symmetric, square
+    score_deriv_inv : ndarray, symmetric, square
         inverse of second derivative of objective function
         TODO: could be OPG or any other estimator if information matrix
         equality holds
@@ -373,10 +481,11 @@ def lm_robust_subset(score, k_constraints, score_deriv, cov_score):
     -------
     lm_stat : float
         score/lagrange multiplier statistic
+    p-value : float
+        p-value of the LM test based on chisquare distribution
 
     Notes
     -----
-
     The implementation is based on Boos 1992 section 4.1. The same derivation
     is also in other articles and in text books.
 
@@ -395,8 +504,8 @@ def lm_robust_subset(score, k_constraints, score_deriv, cov_score):
     # submatrices of score_deriv/hessian
     # these are I22 and I12 in Boos
     #h_uu = score_deriv[-k_constraints:, -k_constraints:]
-    h_uu = score_deriv[:-k_constraints, :-k_constraints]
-    h_cu = score_deriv[-k_constraints:, :-k_constraints]
+    h_uu = score_deriv_inv[:-k_constraints, :-k_constraints]
+    h_cu = score_deriv_inv[-k_constraints:, :-k_constraints]
 
     # TODO: pinv or solve ?
     tmp_proj = h_cu.dot(np.linalg.inv(h_uu))
@@ -411,7 +520,8 @@ def lm_robust_subset(score, k_constraints, score_deriv, cov_score):
 
 #     # check second calculation Boos referencing Kent 1982 and Engle 1984
 #     # we can use this when robust_cov_params of full model is available
-#     h_inv = np.linalg.inv(score_deriv)
+#     #h_inv = np.linalg.inv(score_deriv)
+#     hinv = score_deriv_inv
 #     v = h_inv.dot(cov_score.dot(h_inv)) # this is robust cov_params
 #     v_cc = v[:k_constraints, :k_constraints]
 #     h_cc = score_deriv[:k_constraints, :k_constraints]
@@ -434,6 +544,41 @@ def lm_robust_subset_parts(score, k_constraints,
 
     Calculates mainly the covariance of the constraint part of the score.
 
+    Parameters
+    ----------
+    score : ndarray, 1-D
+        derivative of objective function at estimated parameters
+        of constrained model. These is the score component for the restricted
+        part under hypothesis. The unconstrained part of the score is assumed
+        to be zero.
+    k_constraint: int
+        number of constraints
+    score_deriv_uu : ndarray, symmetric, square
+        first derivative of moment equation or second derivative of objective
+        function for the unconstrained part
+        TODO: could be OPG or any other estimator if information matrix
+        equality holds
+    score_deriv_cu : ndarray
+        first cross derivative of moment equation or second cross
+        derivative of objective function between.
+    cov_score_cc :  ndarray
+        covariance matrix of the score for the unconstrained part.
+        This is the inner part of a sandwich estimator.
+    cov_score_cu :  ndarray
+        covariance matrix of the score for the off-diagonal block, i.e.
+        covariance between constrained and unconstrained part.
+    cov_score_uu :  ndarray
+        covariance matrix of the score for the unconstrained part.
+
+    Returns
+    -------
+    lm_stat : float
+        score/lagrange multiplier statistic
+    p-value : float
+        p-value of the LM test based on chisquare distribution
+
+    Notes
+    -----
     TODO: these function should just return the covariance of the score
     instead of calculating the score/lm test.
 
@@ -455,8 +600,7 @@ def lm_robust_subset_parts(score, k_constraints,
     return lm_stat, pval
 
 
-def lm_robust_reparameterized(score, params_deriv,
-                           score_deriv, cov_score):
+def lm_robust_reparameterized(score, params_deriv, score_deriv, cov_score):
     """robust generalized score test for transformed parameters
 
     The parameters are given by a nonlinear transformation of the estimated
@@ -466,6 +610,30 @@ def lm_robust_reparameterized(score, params_deriv,
 
     score and other arrays are for full parameter space `params`
 
+    Parameters
+    ----------
+    score : ndarray, 1-D
+        derivative of objective function at estimated parameters
+        of constrained model
+    params_deriv: ndarray
+        Jacobian G of the parameter trasnformation
+    score_deriv: ndarray, symmetric, square
+        second derivative of objective function
+        TODO: could be OPG or any other estimator if information matrix
+        equality holds
+    cov_score B :  ndarray, symmetric, square
+        covariance matrix of the score. This is the inner part of a sandwich
+        estimator.
+
+    Returns
+    -------
+    lm_stat : float
+        score/lagrange multiplier statistic
+    p-value : float
+        p-value of the LM test based on chisquare distribution
+
+    Notes
+    -----
     Boos 1992, section 4.3, expression for T_{GS} just before example 6
     """
     # Boos notation
@@ -502,12 +670,19 @@ def dispersion_poisson(results):
     Parameters
     ----------
     results : Poisson results instance
-        TODO: currently uses GLMResults properties
-        this can be either a discrete Poisson or a GLM with family Poisson
-        results instance
+        This can be a results instance for either a discrete Poisson or a GLM
+        with family Poisson.
+
+    Returns
+    -------
+    res : ndarray, shape (7, 2)
+       each row contains the test statistic and p-value for one of the 7 tests
+       computed here.
+    description : 2-D list of strings
+       Each test has two strings a descriptive name and a string for the
+       alternative hypothesis.
 
     """
-    from scipy import stats
 
     if hasattr(results, '_results'):
         results = results._results
@@ -559,12 +734,12 @@ def dispersion_poisson(results):
     results_all.append([stat_ols_hc1_nb2, pval_ols_hc1_nb2])
     description.append(['CT nb2 HC1', 'mu (1 + a mu)'])
 
-    res_ols_nb1 = OLS(endog_v, np.ones(len(endog_v))).fit(cov_type='HC1', use_t=False)
+    res_ols_nb1 = OLS(endog_v, np.ones(len(endog_v))).fit(cov_type='HC1',
+                                                          use_t=False)
     stat_ols_hc1_nb1 = res_ols_nb1.tvalues[0]
     pval_ols_hc1_nb1 = res_ols_nb1.pvalues[0]
     results_all.append([stat_ols_hc1_nb1, pval_ols_hc1_nb1])
     description.append(['CT nb1 HC1', 'mu (1 + a)'])
-
 
     return np.array(results_all), description
 
@@ -664,12 +839,12 @@ def conditional_moment_test_generic(mom_test, mom_test_deriv,
         conditions under test in the first k_constraint rows and columns.
         If it is not None, then it will be estimated based on cov_type.
         I think: This is the Hessian of the extended or alternative model
-        under full MLE and score test assuming information matrix identity holds.
+        under full MLE and score test assuming information matrix identity
+        holds.
 
     Returns
     -------
     results
-
 
     Notes
     -----
@@ -771,7 +946,6 @@ def conditional_moment_test_regression(mom_test, mom_test_deriv=None,
     return statistic, pval
 
 
-
 class CMTNewey(object):
     """generic moment test for GMM
 
@@ -780,7 +954,6 @@ class CMTNewey(object):
     This is based on Newey 1985 on GMM.
     Lemma 1:
     Theorem 1
-
 
     The main method is `chisquare` which returns the result of the
     conditional moment test.
@@ -806,7 +979,6 @@ class CMTNewey(object):
         defines a Linear combination of moments that have expected value equal
         to zero under the Null hypothesis.
 
-
     Notes
     -----
     The one letter names in Newey 1985 are
@@ -830,14 +1002,12 @@ class CMTNewey(object):
     assumes it in the following. Lemma 1 in both articles are essentially the
     same assuming D = H' W.
 
-
     References
     ----------
     - Newey 1985a, Generalized Method of Moment specification testing,
       Journal of Econometrics
     - Newey 1985b, Maximum Likelihood Specification Testing and Conditional
       Moment Tests, Econometrica
-
 
     """
 
@@ -859,7 +1029,6 @@ class CMTNewey(object):
         # assuming full rank of L'
         self.k_constraints = self.transf_mt.shape[0]
 
-
     @cache_readonly
     def asy_transf_params(self):
 
@@ -871,7 +1040,6 @@ class CMTNewey(object):
         #res = np.linalg.pinv(htw.dot(moments_deriv)).dot(htw)
         return -res
 
-
     @cache_readonly
     def project_w(self):
         # P_w = I - H (H' W H)^{-1} H' W
@@ -880,7 +1048,6 @@ class CMTNewey(object):
         res = moments_deriv.dot(self.asy_transf_params)
         res += np.eye(res.shape[0])
         return res
-
 
     @cache_readonly
     def asy_transform_mom_constraints(self):
@@ -908,11 +1075,9 @@ class CMTNewey(object):
 
         return transf.dot(self.asy_cov_moments).dot(transf.T)
 
-
     @cache_readonly
     def rank_cov_mom_constraints(self):
         return np.linalg.matrix_rank(self.cov_mom_constraints)
-
 
     def ztest(self):
         """statistic, p-value and degrees of freedom of separate moment test
@@ -930,7 +1095,6 @@ class CMTNewey(object):
         pval = stats.norm.sf(np.abs(stat))*2
         return stat, pval
 
-
     @cache_readonly
     def chisquare(self):
         """statistic, p-value and degrees of freedom of joint moment test
@@ -941,7 +1105,6 @@ class CMTNewey(object):
         # Newey uses a generalized inverse
         stat = diff.T.dot(np.linalg.pinv(cov).dot(diff))
         df = self.rank_cov_mom_constraints
-        from scipy import stats
         pval = stats.chi2.sf(stat, df)  # Theorem 1
         return stat, pval, df
 
@@ -955,7 +1118,6 @@ class CMTTauchen(object):
     conditional moment test.
 
     Warning: name of class and of methods will likely be changed
-
 
     Parameters
     ----------
@@ -988,7 +1150,6 @@ class CMTTauchen(object):
         self.k_params = score.shape[-1]
         self.k_moments_all = self.k_params + self.k_moments_test
 
-
     @cache_readonly
     def cov_params_all(self):
         m_deriv = np.zeros((self.k_moments_all, self.k_moments_all))
@@ -1003,7 +1164,6 @@ class CMTTauchen(object):
     @cache_readonly
     def cov_mom_constraints(self):
         return self.cov_params_all[self.k_params:, self.k_params:]
-
 
     @cache_readonly
     def rank_cov_mom_constraints(self):
@@ -1026,7 +1186,6 @@ class CMTTauchen(object):
         pval = stats.norm.sf(np.abs(stat))*2
         return stat, pval
 
-
     @cache_readonly
     def chisquare(self):
         """statistic, p-value and degrees of freedom of joint moment test
@@ -1039,6 +1198,5 @@ class CMTTauchen(object):
         #df = self.k_moments_test
         # We allow for redundant mom_constraints:
         df = self.rank_cov_mom_constraints
-        from scipy import stats
         pval = stats.chi2.sf(stat, df)
         return stat, pval, df

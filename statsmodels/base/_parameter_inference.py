@@ -16,7 +16,8 @@ import statsmodels.stats._diagnostic_other as diao
 
 
 # this is a copy from stats._diagnostic_other
-def _lm_robust(score, R, Ainv, B, V=None):
+def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
+               cov_params=None):
     '''general formula for score/LM test
 
     generalized score or lagrange multiplier test for implicit constraints
@@ -35,10 +36,10 @@ def _lm_robust(score, R, Ainv, B, V=None):
         of constrained model
     constraint_matrix R : ndarray
         Linear restriction matrix or Jacobian of nonlinear constraints
-    hessian_inv, Ainv : ndarray, symmetric, square
+    score_deriv_inv, Ainv : ndarray, symmetric, square
         inverse of second derivative of objective function
-        TODO: could be OPG or any other estimator if information matrix
-        equality holds
+        TODO: could be inverse of OPG or any other estimator if information
+        matrix equality holds
     cov_score B :  ndarray, symmetric, square
         covariance matrix of the score. This is the inner part of a sandwich
         estimator.
@@ -50,11 +51,16 @@ def _lm_robust(score, R, Ainv, B, V=None):
     -------
     lm_stat : float
         score/lagrange multiplier statistic
+    p-value : float
+        p-value of the LM test based on chisquare distribution
 
     Notes
     -----
 
     '''
+    # shorthand alias
+    R, Ainv, B, V = constraint_matrix, score_deriv_inv, cov_score, cov_params
+
     k_constraints = np.linalg.matrix_rank(R)
     tmp = R.dot(Ainv)
     wscore = tmp.dot(score)  # C Ainv score
@@ -91,7 +97,7 @@ def score_test(self, exog_extra=None, params_constrained=None,
 
     - fit_constrained result: model contains score and hessian function for
       the full, unrestricted model, but the parameter estimate in the results
-      instance are for the restricted model. This is the case if the model
+      instance is for the restricted model. This is the case if the model
       was estimated with fit_constrained.
     - restricted model with variable addition: If exog_extra is not None, then
       it is assumed that the current model is a model with zero restrictions
@@ -101,8 +107,8 @@ def score_test(self, exog_extra=None, params_constrained=None,
       params_constrained is not None, then the model is assumed to be for the
       unrestricted model, but the provided parameters are for the restricted
       model.
-      TODO: This will currently only work for `nonrobust` cov_type, otherwise
-      we will also need the restriction matrix.
+      TODO: This case will currently only work for `nonrobust` cov_type,
+      otherwise we will also need the restriction matrix provided by the user.
 
 
     Parameters
@@ -151,7 +157,8 @@ def score_test(self, exog_extra=None, params_constrained=None,
 
     Notes
     -----
-    not yet verified for case with scale not equal to 1.
+    Status: experimental, several options are not implemented yet or are not
+    verified yet. Currently available ptions might also still change.
 
     cov_type is 'nonrobust':
 
@@ -160,6 +167,10 @@ def score_test(self, exog_extra=None, params_constrained=None,
     matrix.
 
     cov_type is 'HC0'
+
+    The covariance matrix of the score is the simple empirical covariance of
+    score_obs without degrees of freedom correction.
+
 
     """
     # TODO: we are computing unnecessary things for cov_type nonrobust
@@ -217,12 +228,12 @@ def score_test(self, exog_extra=None, params_constrained=None,
         hinv = -np.linalg.inv(hessian)
         cov_score = nobs * np.cov(score_obs.T)
         # temporary to try out
-        lm = _lm_robust(score, r_matrix, hinv, cov_score, V=None)
+        lm = _lm_robust(score, r_matrix, hinv, cov_score, cov_params=None)
         return lm
         # alternative is to use only the center, but it is singular
         # https://github.com/statsmodels/statsmodels/pull/2096#issuecomment-393646205
         # cov_score_test_inv = cov_lm_robust(score, r_matrix, hinv,
-        #                                   cov_score, V=None)
+        #                                   cov_score, cov_params=None)
     elif cov_type.upper() == 'V':
         # TODO: this doesn't work, V in fit_constrained results is singular
         # we need cov_params without the zeros in it
@@ -230,7 +241,7 @@ def score_test(self, exog_extra=None, params_constrained=None,
         cov_score = nobs * np.cov(score_obs.T)
         V = self.cov_params_default
         # temporary to try out
-        chi2stat = _lm_robust(score, r_matrix, hinv, cov_score, V=V)
+        chi2stat = _lm_robust(score, r_matrix, hinv, cov_score, cov_params=V)
         pval = stats.chi2.sf(chi2stat, k_constraints)
         return chi2stat, pval
     else:
