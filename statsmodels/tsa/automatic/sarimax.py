@@ -61,6 +61,7 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                                 res = mod.fit(disp=False)
                                 if res.aic < min_aic:
                                     min_aic = res.aic
+                                    intercept_val = True
                                     n_p, n_q, n_P, n_Q = p, q, P, Q
                             mod = sm.tsa.statespace.SARIMAX(
                                     endog,
@@ -70,14 +71,21 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                             res = mod.fit(disp=False)
                             if res.aic < min_aic:
                                     min_aic = res.aic
+                                    intercept_val = False
                                     n_p, n_q, n_P, n_Q = p, q, P, Q
                         except Exception as e:
-                            warnings.warn('Could not fit model with {},{}'
-                                          .format(p, q))
+                            warnings.warn('Could not fit model with {},{},{}'
+                                          .format(p, d, q))
                             # aic_matrix[p, q] = np.inf
-        return n_p, n_q, n_P, n_Q
+        if s > 1:
+            return intercept_val, n_p, n_q, n_P, n_Q
+        else:
+            return intercept_val, n_p, n_q
     else:
         """stepwise algorithm for auto order"""
+        """
+        Initial Modelfitting.
+        """
         if d + D <= 1:
             allow_intercept = False
         else:
@@ -97,34 +105,68 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                         }
         for model in range(4):
             if s > 1:
-                mod = sm.tsa.statespace.SARIMAX(
-                        endog,
-                        order=(order_init[model][0], d,
-                               order_init[model][1]),
-                        seasonal_order=(seasonal_init[model][0], D,
-                                        seasonal_init[model][1], s),
-                        **spec)
-                res = mod.fit(disp=False)
-                aic_vals[model] = res.aic
+                try:
+                    if allow_intercept:
+                        mod = sm.tsa.statespace.SARIMAX(
+                                endog,
+                                order=(order_init[model][0], d,
+                                       order_init[model][1]), trend='c',
+                                seasonal_order=(seasonal_init[model][0], D,
+                                                seasonal_init[model][1], s),
+                                **spec)
+                        res = mod.fit(disp=False)
+                        aic_vals[model] = res.aic
+                    else:
+                        mod = sm.tsa.statespace.SARIMAX(
+                                endog,
+                                order=(order_init[model][0], d,
+                                       order_init[model][1]),
+                                seasonal_order=(seasonal_init[model][0], D,
+                                                seasonal_init[model][1], s),
+                                **spec)
+                        res = mod.fit(disp=False)
+                        aic_vals[model] = res.aic
+                except Exception as e:
+                    warnings.warn('Could not fit model ({},{},{})({},{},{},{})'
+                                  .format(order_init[model][0], d,
+                                          order_init[model][1],
+                                          seasonal_init[model][0], D,
+                                          seasonal_init[model][1], s))
             else:
-                mod = sm.tsa.statespace.SARIMAX(
-                        endog,
-                        order=(order_init[model][0], d,
-                               order_init[model][1]),
-                        **spec)
-                res = mod.fit(disp=False)
-                aic_vals[model] = res.aic
+                try:
+                    if allow_intercept:
+                        mod = sm.tsa.statespace.SARIMAX(
+                                endog,
+                                order=(order_init[model][0], d,
+                                       order_init[model][1]), trend='c',
+                                **spec)
+                        res = mod.fit(disp=False)
+                        aic_vals[model] = res.aic
+                    else:
+                        mod = sm.tsa.statespace.SARIMAX(
+                                endog,
+                                order=(order_init[model][0], d,
+                                       order_init[model][1]),
+                                **spec)
+                        res = mod.fit(disp=False)
+                        aic_vals[model] = res.aic
+                except Exception as e:
+                    warnings.warn('Could not fit model with {},{},{}'
+                                  .format(order_init[model][0], d,
+                                          order_init[model][0]))
         # print(aic_vals)
         min_aic = aic_vals.min()
         # print(min_aic)
-        model = int(np.where(aic_vals == min_aic)[0])
+        model = np.where(aic_vals == min_aic)[0][0]
+        # print(model)
         p, q = order_init[model][0], order_init[model][1]
         if s > 1:
             P, Q = seasonal_init[model][0], seasonal_init[model][1]
         else:
             P, Q = 0, 0
-        new_val = [p, q]
-        # print(p, q)
+        """
+        Modifying model Parameters and refitting.
+        """
         order_new = {
                         0: [p+1, q, P, Q],
                         1: [p-1, q, P, Q],
@@ -139,10 +181,10 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                         10: [p, q, P+1, Q+1],
                         11: [p, q, P-1, Q-1]
                     }
-        for model in range(12):
-            if s > 1:
-                try:
-                    if (order_new[model][0] >= 0 and
+        new_val = [p, q, P, Q]
+        if s > 1:
+            for model in range(12):
+                if (order_new[model][0] >= 0 and
                         order_new[model][0] <= max_order[0] and
                         order_new[model][1] >= 0 and
                         order_new[model][1] <= max_order[1] and
@@ -150,6 +192,7 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                         order_new[model][2] <= max_seasonal_order[0] and
                         order_new[model][3] >= 0 and
                         order_new[model][3] <= max_seasonal_order[1]):
+                    try:
                         if allow_intercept:
                             mod = sm.tsa.statespace.SARIMAX(
                                     endog,
@@ -161,33 +204,35 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                             if res.aic < min_aic:
                                 min_aic = res.aic
                                 new_val = order_new[model]
-                        mod = sm.tsa.statespace.SARIMAX(
-                                endog,
-                                order=(order_new[model][0], d,
-                                       order_new[model][1]),
-                                seasonal_order=(order_new[model][2], D,
-                                                order_new[model][3], s),
-                                **spec)
-                        res = mod.fit(disp=False)
-                        # print(res.aic)
-                        # print(order_new[model][0], order_new[model][1])
-                        if res.aic < min_aic:
-                            min_aic = res.aic
-                            new_val = order_new[model]
-                except Exception as e:
-                    warnings.warn('Could not fit model with p={},q={},P={},Q={}'
-                                  .format(order_new[model][0],
-                                          order_new[model][1],
-                                          order_new[model][2],
-                                          order_new[model][3]))
-                return new_val[0], new_val[1], new_val[2], new_val[3]
-            else:
-                try:
-                    if (order_new[model][0] >= 0 and
-                        order_new[model][0] <= max_order[0] and
-                        order_new[model][1] >= 0 and
-                        order_new[model][1] <= max_order[1] and
-                        order_new[model][2] >= 0):
+                        else:
+                            mod = sm.tsa.statespace.SARIMAX(
+                                    endog,
+                                    order=(order_new[model][0], d,
+                                           order_new[model][1]),
+                                    seasonal_order=(order_new[model][2], D,
+                                                    order_new[model][3], s),
+                                    **spec)
+                            res = mod.fit(disp=False)
+                            # print(res.aic)
+                            # print(order_new[model][0], order_new[model][1])
+                            if res.aic < min_aic:
+                                min_aic = res.aic
+                                new_val = order_new[model]
+                    except Exception as e:
+                        warnings.warn('Could not fit model ({},{},{})({},{},{},{})'
+                                      .format(order_new[model][0], d,
+                                              order_new[model][1],
+                                              order_new[model][2], D,
+                                              order_new[model][3], s))
+            return allow_intercept, new_val[0], new_val[1], new_val[2], new_val[3]
+        else:
+            for model in range(12):
+                if (order_new[model][0] >= 0 and
+                    order_new[model][0] <= max_order[0] and
+                    order_new[model][1] >= 0 and
+                    order_new[model][1] <= max_order[1] and
+                    order_new[model][2] >= 0):
+                    try:
                         if allow_intercept:
                             mod = sm.tsa.statespace.SARIMAX(
                                     endog,
@@ -197,19 +242,20 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                             if res.aic < min_aic:
                                 min_aic = res.aic
                                 new_val = order_new[model]
-                        mod = sm.tsa.statespace.SARIMAX(
-                                endog,
-                                order=(order_new[model][0], d,
-                                       order_new[model][1]),
-                                **spec)
-                        res = mod.fit(disp=False)
-                        # print(res.aic)
-                        # print(order_new[model][0], order_new[model][1])
-                        if res.aic < min_aic:
-                            min_aic = res.aic
-                            new_val = order_new[model]
-                except Exception as e:
-                    warnings.warn('Could not fit model with p={}and q={}'
-                                  .format(order_new[model][0],
-                                          order_new[model][1]))
-                return new_val[0], new_val[1]
+                        else:
+                            mod = sm.tsa.statespace.SARIMAX(
+                                    endog,
+                                    order=(order_new[model][0], d,
+                                           order_new[model][1]),
+                                    **spec)
+                            res = mod.fit(disp=False)
+                            # print(res.aic)
+                            # print(order_new[model][0], order_new[model][1])
+                            if res.aic < min_aic:
+                                min_aic = res.aic
+                                new_val = order_new[model]
+                    except Exception as e:
+                        warnings.warn('Could not fit model with p={}and q={}'
+                                      .format(order_new[model][0],
+                                              order_new[model][1]))
+                return allow_intercept, new_val[0], new_val[1]
