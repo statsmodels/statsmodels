@@ -37,11 +37,14 @@ from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.tools.numdiff import approx_fprime_cs
 import statsmodels.base.model as base
 from statsmodels.base.data import handle_data  # for mnlogit
+from statsmodels.base._constraints import fit_constrained_wrap
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
+
 from statsmodels.distributions import genpoisson_p
+
 
 try:
     import cvxopt  # noqa:F401
@@ -507,6 +510,14 @@ class BinaryModel(DiscreteModel):
         discretefit = L1BinaryResults(self, bnryfit)
         return L1BinaryResultsWrapper(discretefit)
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
+
+    def fit_constrained(self, constraints, start_params=None, **fit_kwds):
+
+        res = fit_constrained_wrap(self, constraints, start_params=None,
+                                   **fit_kwds)
+        return res
+
+    fit_constrained.__doc__ = fit_constrained_wrap.__doc__
 
     def _derivative_predict(self, params, exog=None, transform='dydx',
                             offset=None):
