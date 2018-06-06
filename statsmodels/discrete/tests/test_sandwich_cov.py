@@ -473,8 +473,8 @@ class CheckDiscreteGLM(object):
     # compare GLM with other models, no verified reference results
 
     def test_basic(self):
-        res1 = self.res1
-        res2 = self.res2
+        res1 = self.res1  # GLM model
+        res2 = self.res2  # comparison model, discrete or OLS
 
         assert_equal(res1.cov_type, self.cov_type)
         assert_equal(res2.cov_type, self.cov_type)
@@ -482,6 +482,56 @@ class CheckDiscreteGLM(object):
         rtol = getattr(res1, 'rtol', 1e-13)
         assert_allclose(res1.params, res2.params, rtol=rtol)
         assert_allclose(res1.bse, res2.bse, rtol=1e-10)
+
+    def test_score_hessian(self):
+        res1 = self.res1
+        res2 = self.res2
+
+        # We need to fix scale in GLM and OLS,
+        # discrete MLE have it always fixed
+        if isinstance(res2.model, OLS):
+            kwds = {'scale': res2.scale}
+        else:
+            kwds = {}
+        if isinstance(res2.model, OLS):
+            sgn = + 1
+        else:
+            sgn = -1  # see #4714
+
+        score1 = res1.model.score(res1.params * 0.98, scale=res1.scale)
+        score2 = res2.model.score(res1.params * 0.98, **kwds)
+        assert_allclose(score1, score2, rtol=1e-13)
+
+        hess1 = res1.model.hessian(res1.params, scale=res1.scale)
+        hess2 = res2.model.hessian(res1.params, **kwds)
+        assert_allclose(hess1, hess2, rtol=1e-10)
+
+        if isinstance(res2.model, OLS):
+            # skip the rest
+            return
+        scoref1 = res1.model.score_factor(res1.params, scale=res1.scale)
+        scoref2 = res2.model.score_factor(res1.params, **kwds)
+        assert_allclose(scoref1, scoref2, rtol=1e-10)
+
+        hessf1 = res1.model.hessian_factor(res1.params, scale=res1.scale)
+        hessf2 = res2.model.hessian_factor(res1.params, **kwds)
+        assert_allclose(sgn * hessf1, hessf2, rtol=1e-10)
+
+
+class TestGLMPoisson(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+        endog_count = np.random.poisson(endog)
+        cls.cov_type = 'HC0'
+
+        mod1 = GLM(endog_count, exog, family=families.Poisson())
+        cls.res1 = mod1.fit(cov_type='HC0')
+
+        mod1 = smd.Poisson(endog_count, exog)
+        cls.res2 = mod1.fit(cov_type='HC0')
+
+        cls.res1.rtol = 1e-11
 
 
 class TestGLMLogit(CheckDiscreteGLM):

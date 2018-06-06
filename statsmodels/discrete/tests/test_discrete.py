@@ -60,6 +60,46 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
 
+
+def check_jac(self):
+    # moved from CheckModelResults
+    res1 = self.res1
+    exog = self.res1.model.exog
+    #basic cross check
+    jacsum = self.res1.model.score_obs(self.res1.params).sum(0)
+    score = self.res1.model.score(self.res1.params)
+    assert_almost_equal(jacsum, score, DECIMAL_9) #Poisson has low precision ?
+
+    if isinstance(res1.model, (NegativeBinomial, MNLogit)):
+        # skip the rest
+        return
+
+    # check score_factor
+    # TODO: change when score_obs uses score_factor for DRYing
+    s1 = res1.model.score_obs(res1.params)
+    sf = res1.model.score_factor(res1.params)
+    if sf.ndim == 1:
+        s2 = sf[:, None] * exog
+    elif sf.ndim == 2:
+        s2 = np.column_stack((sf[:, :1] * exog, sf[:, 1:]))
+
+    assert_allclose(s2, s1, rtol=1e-10)
+
+    # check hessian_factor
+    h1 = res1.model.hessian(res1.params)
+    hf = res1.model.hessian_factor(res1.params)
+    if sf.ndim == 1:
+        h2 = (hf * exog.T).dot(exog)
+    elif sf.ndim == 2:
+        h00 = (hf[:, 0] * exog.T).dot(exog)
+        h10 = np.atleast_2d(hf[:, 1].T.dot(exog))
+        h11 = np.atleast_2d(hf[:, 2].sum(0))
+        h2 = np.vstack((np.column_stack((h00, h10.T)),
+                        np.column_stack((h10, h11))))
+
+    assert_allclose(h2, h1, rtol=1e-10)
+
+
 class CheckModelResults(object):
     """
     res2 should be the test results from RModelWrap
@@ -126,10 +166,7 @@ class CheckModelResults(object):
         assert_almost_equal(llobssum, self.res1.llf, DECIMAL_14)
 
     def test_jac(self):
-        #basic cross check
-        jacsum = self.res1.model.score_obs(self.res1.params).sum(0)
-        score = self.res1.model.score(self.res1.params)
-        assert_almost_equal(jacsum, score, DECIMAL_9) #Poisson has low precision ?
+        check_jac(self)
 
 
 class CheckBinaryResults(CheckModelResults):
@@ -1873,6 +1910,10 @@ class TestGeneralizedPoisson_underdispersion(object):
         chi2 = stats.chisquare(freq, pr.sum(0))
         assert_allclose(chi2[:], (0.64628806058715882, 0.98578597726324468),
                         rtol=0.01)
+
+    def test_jac(self):
+        self.res1 = self.res
+        check_jac(self)
 
 
 class TestNegativeBinomialPNB2Newton(CheckModelResults):
