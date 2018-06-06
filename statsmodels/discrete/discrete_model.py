@@ -32,7 +32,9 @@ from statsmodels.base.data import handle_data  # for mnlogit
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
+from statsmodels.base._constraints import fit_constrained_wrap
 import statsmodels.base._parameter_inference as pinf
+
 from statsmodels.distributions import genpoisson_p
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools import data as data_tools, tools
@@ -42,6 +44,7 @@ from statsmodels.tools.sm_exceptions import (
     PerfectSeparationError,
     SpecificationWarning,
 )
+
 
 try:
     import cvxopt  # noqa:F401
@@ -532,6 +535,14 @@ class BinaryModel(DiscreteModel):
 
         discretefit = L1BinaryResults(self, bnryfit)
         return L1BinaryResultsWrapper(discretefit)
+
+    def fit_constrained(self, constraints, start_params=None, **fit_kwds):
+
+        res = fit_constrained_wrap(self, constraints, start_params=None,
+                                   **fit_kwds)
+        return res
+
+    fit_constrained.__doc__ = fit_constrained_wrap.__doc__
 
     def _derivative_predict(self, params, exog=None, transform='dydx',
                             offset=None):
