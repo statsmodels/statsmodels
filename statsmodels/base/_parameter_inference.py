@@ -9,7 +9,7 @@ import numpy as np
 from scipy import stats
 
 
-# this is a copy from stats._diagnostic_other
+# this is a copy from stats._diagnostic_other to avoid circular imports
 def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
                cov_params=None):
     '''general formula for score/LM test
@@ -216,7 +216,11 @@ def score_test(self, exog_extra=None, params_constrained=None,
         score = score_obs.sum(0)
         hessian_factor = model.hessian_factor(params_constrained,
                                               **hess_kwd)
-        hessian = -np.dot(ex.T * hessian_factor, ex)
+        # see #4714
+        from statsmodels.genmod.generalized_linear_model import GLM
+        if isinstance(model, GLM):
+            hessian_factor *= -1
+        hessian = np.dot(ex.T * hessian_factor, ex)
 
     if cov_type == 'nonrobust':
         cov_score_test = -hessian
