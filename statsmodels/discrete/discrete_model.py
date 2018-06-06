@@ -1308,7 +1308,7 @@ class Poisson(CountModel):
         exposure = getattr(self, "exposure", 0)
         X = self.exog
         L = np.exp(np.dot(X,params) + exposure + offset)
-        return L
+        return -L
 
 
 class GeneralizedPoisson(CountModel):
@@ -1571,6 +1571,32 @@ class GeneralizedPoisson(CountModel):
         else:
             return score
 
+    def score_factor(self, params):
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+
+        params = params[:-1]
+        p = self.parameterization
+        exog = self.exog
+        y = self.endog[:,None]
+        mu = self.predict(params)[:,None]
+        mu_p = np.power(mu, p)
+        a1 = 1 + alpha * mu_p
+        a2 = mu + alpha * mu_p * y
+        a3 = alpha * p * mu ** (p - 1)
+        a4 = a3 * y
+        dmudb = mu
+
+        dalpha = (mu_p * (y * ((y - 1) / a2 - 2 / a1) + a2 / a1**2))
+        dparams = dmudb * (-a4 / a1 +
+                           a3 * a2 / (a1 ** 2) +
+                           (1 + a4) * ((y - 1) / a2 - 1 / a1) +
+                           1 / mu)
+
+        return np.column_stack((dparams, dalpha))
+
     def _score_p(self, params):
         """
         Generalized Poisson model derivative of the log-likelihood by p-parameter
@@ -1677,6 +1703,89 @@ class GeneralizedPoisson(CountModel):
         hess_arr[-1,-1] = dldada.sum()
 
         return hess_arr
+
+    def hessian_factor(self, params):
+        """
+        Generalized Poisson model Hessian matrix of the loglikelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        hess : ndarray, (nobs, 3)
+            The Hessian factor, second derivative of loglikelihood function
+            with respect to linear predictor and dispersion parameter
+            evaluated at `params`
+            The first column contains the second derivative w.r.t. linpred,
+            the second column contains the cross derivative, and the
+            third column contains the second derivative w.r.t. the dispersion
+            parameter.
+
+        """
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+
+        params = params[:-1]
+        p = self.parameterization
+        exog = self.exog
+        y = self.endog #[:,None]
+        mu = self.predict(params)  # [:,None]
+        mu_p = np.power(mu, p)
+        a1 = 1 + alpha * mu_p
+        a2 = mu + alpha * mu_p * y
+        a3 = alpha * p * mu ** (p - 1)
+        a4 = a3 * y
+        a5 = p * mu ** (p - 1)
+        dmudb = mu
+
+        # for dl/dlinpred dparams
+        nobs, k_vars = exog.shape
+        hess_fact = np.empty((nobs, 3))
+
+
+        hess_fact[:, 0] = mu * (
+             mu * (a3 * a4 / a1**2 -
+                   2 * a3**2 * a2 / a1**3 +
+                   2 * a3 * (a4 + 1) / a1**2 -
+                   a4 * p / (mu * a1) +
+                   a3 * p * a2 / (mu * a1**2) +
+                   a4 / (mu * a1) -
+                   a3 * a2 / (mu * a1**2) +
+                   (y - 1) * a4 * (p - 1) / (a2 * mu) -
+                   (y - 1) * (1 + a4)**2 / a2**2 -
+                   a4 * (p - 1) / (a1 * mu) -
+                   1 / mu**2) +
+             (-a4 / a1 +
+              a3 * a2 / a1**2 +
+              (y - 1) * (1 + a4) / a2 -
+              (1 + a4) / a1 +
+              1 / mu))
+
+        # for dl/dlinpred dalpha
+        dldpda = ((2 * a4 * mu_p / a1**2 -
+                         2 * a3 * mu_p * a2 / a1**3 -
+                         mu_p * y * (y - 1) * (1 + a4) / a2**2 +
+                         mu_p * (1 + a4) / a1**2 +
+                         a5 * y * (y - 1) / a2 -
+                         2 * a5 * y / a1 +
+                         a5 * a2 / a1**2) * dmudb)
+
+        hess_fact[:, 1] = dldpda
+
+        # for dl/dalpha dalpha
+        dldada = mu_p**2 * (3 * y / a1**2 -
+                            (y / a2)**2. * (y - 1) -
+                            2 * a2 / a1**3)
+
+        hess_fact[:, 2] = dldada
+
+        return hess_fact
+
 
     def predict(self, params, exog=None, exposure=None, offset=None,
                 which='mean'):
@@ -1885,6 +1994,34 @@ class Logit(BinaryModel):
         L = self.cdf(np.dot(X, params))
         return (y - L)[:,None] * X
 
+    def score_factor(self, params):
+        """
+        Logit model derivative of the log-likelihood with respect to linpred
+
+        Parameters
+        ----------
+        params: array-like
+            The parameters of the model
+
+        Returns
+        -------
+        jac : array-like
+            The derivative of the loglikelihood for each observation evaluated
+            at `params`.
+
+        Notes
+        -----
+        .. math:: \\frac{\\partial\\ln L_{i}}{\\partial\\beta}=\\left(y_{i}-\\Lambda_{i}\\right)x_{i}
+
+        for observations :math:`i=1,...,n`
+
+        """
+
+        y = self.endog
+        X = self.exog
+        L = self.cdf(np.dot(X, params))
+        return (y - L)
+
     def hessian(self, params):
         """
         Logit model Hessian matrix of the log-likelihood
@@ -1907,6 +2044,30 @@ class Logit(BinaryModel):
         X = self.exog
         L = self.cdf(np.dot(X,params))
         return -np.dot(L*(1-L)*X.T,X)
+
+    def hessian_factor(self, params):
+        """
+        Logit model Hessian matrix of the log-likelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        hess : ndarray, (k_vars, k_vars)
+            The Hessian, second derivative of loglikelihood function,
+            evaluated at `params`
+
+        Notes
+        -----
+        .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\\sum_{i}\\Lambda_{i}\\left(1-\\Lambda_{i}\\right)x_{i}x_{i}^{\\prime}
+        """
+        X = self.exog
+        L = self.cdf(np.dot(X,params))
+        return -L * (1 - L)
+
 
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
@@ -2097,6 +2258,39 @@ class Probit(BinaryModel):
         L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
         return L[:,None] * X
 
+    def score_factor(self, params):
+        """
+        Probit model Jacobian for each observation
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        jac : array-like
+            The derivative of the loglikelihood for each observation evaluated
+            at `params`.
+
+        Notes
+        -----
+        .. math:: \\frac{\\partial\\ln L_{i}}{\\partial\\beta}=\\left[\\frac{q_{i}\\phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}{\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}\\right]x_{i}
+
+        for observations :math:`i=1,...,n`
+
+        Where :math:`q=2y-1`. This simplification comes from the fact that the
+        normal distribution is symmetric.
+        """
+        y = self.endog
+        X = self.exog
+        XB = np.dot(X,params)
+        q = 2*y - 1
+        # clip to get rid of invalid divide complaint
+        L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
+        return L
+
+
     def hessian(self, params):
         """
         Probit model Hessian matrix of the log-likelihood
@@ -2127,6 +2321,37 @@ class Probit(BinaryModel):
         q = 2*self.endog - 1
         L = q*self.pdf(q*XB)/self.cdf(q*XB)
         return np.dot(-L*(L+XB)*X.T,X)
+
+    def hessian_factor(self, params):
+        """
+        Probit model Hessian factor of the log-likelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        hess : ndarray, (nobs,)
+            The Hessian factor, second derivative of loglikelihood function
+            with respect to linear predictor evaluated at `params`
+
+        Notes
+        -----
+        .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\\lambda_{i}\\left(\\lambda_{i}+x_{i}^{\\prime}\\beta\\right)x_{i}x_{i}^{\\prime}
+
+        where
+
+        .. math:: \\lambda_{i}=\\frac{q_{i}\\phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}{\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}
+
+        and :math:`q=2y-1`
+        """
+        X = self.exog
+        XB = np.dot(X,params)
+        q = 2 * self.endog - 1
+        L = q * self.pdf(q * XB) / self.cdf(q * XB)
+        return -L * (L + XB)
 
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
@@ -3074,6 +3299,49 @@ class NegativeBinomialP(CountModel):
         else:
             return score
 
+    def score_factor(self, params):
+        """
+        Generalized Negative Binomial (NB-P) model score (gradient) vector of the log-likelihood for each observations.
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        score : ndarray, 1-D
+            The score vector of the model, i.e. the first derivative of the
+            loglikelihood function, evaluated at `params`
+        """
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+
+        params = params[:-1]
+        p = 2 - self.parameterization
+        y = self.endog
+
+        mu = self.predict(params)
+        mu_p = mu**p
+        a1 = mu_p / alpha
+        a2 = mu + a1
+        a3 = y + a1
+        a4 = p * a1 / mu
+
+        dgpart = digamma(a3) - digamma(a1)
+
+        dparams = ((a4 * dgpart -
+                   a3 / a2) +
+                   y / mu + a4 * (1 - a3 / a2 + np.log(a1 / a2)))
+        dparams = (mu * dparams).T
+        dalpha = (-a1 / alpha * (dgpart +
+                                 np.log(a1 / a2) +
+                                 1 - a3 / a2))
+
+        return np.column_stack((dparams, dalpha))
+
     def hessian(self, params):
         """
         Generalized Negative Binomial (NB-P) model hessian maxtrix of the log-likelihood
@@ -3148,6 +3416,73 @@ class NegativeBinomialP(CountModel):
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
         return hess_arr
+
+    def hessian_factor(self, params):
+        """
+        Generalized Negative Binomial (NB-P) model hessian maxtrix of the log-likelihood
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model
+
+        Returns
+        -------
+        hessian : ndarray, 2-D
+            The hessian matrix of the model.
+        """
+        if self._transparams:
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+        params = params[:-1]
+
+        p = 2 - self.parameterization
+        y = self.endog
+        exog = self.exog
+        mu = self.predict(params)
+
+        mu_p = mu**p
+        a1 = mu_p / alpha
+        a2 = mu + a1
+        a3 = y + a1
+        a4 = p * a1 / mu
+        a5 = a4 * p / mu
+
+        dgpart = digamma(a3) - digamma(a1)
+
+        nobs = exog.shape[0]
+        hess_fact = np.zeros((nobs, 3))
+
+        coeff = mu**2 * (((1 + a4)**2 * a3 / a2**2 -
+                          a3 * (a5 - a4 / mu) / a2 -
+                          y / mu**2 -
+                          2 * a4 * (1 + a4) / a2 +
+                          a5 * (np.log(a1) - np.log(a2) + dgpart + 2) -
+                          a4 * (np.log(a1) - np.log(a2) + dgpart + 1) / mu -
+                          a4**2 * (polygamma(1, a1) - polygamma(1, a3))) +
+                         (-(1 + a4) * a3 / a2 +
+                          y / mu +
+                          a4 * (np.log(a1) - np.log(a2) + dgpart + 1)) / mu)
+
+        hess_fact[:, 0] = coeff
+
+        hess_fact[:, 1] = (mu * a1 *
+                ((1 + a4) * (1 - a3 / a2) / a2 -
+                 p * (np.log(a1 / a2) + dgpart + 2) / mu +
+                 p * (a3 / mu + a4) / a2 +
+                 a4 * (polygamma(1, a1) - polygamma(1, a3))) / alpha)
+
+        da2 = (a1 * (2 * np.log(a1 / a2) +
+                     2 * dgpart + 3 -
+                     2 * a3 / a2 - a1 * polygamma(1, a1) +
+                     a1 * polygamma(1, a3) - 2 * a1 / a2 +
+                     a1 * a3 / a2**2) / alpha**2)
+
+        hess_fact[:, 2] = da2
+
+        return hess_fact
+
 
     def _get_start_params_null(self):
         offset = getattr(self, "offset", 0)
