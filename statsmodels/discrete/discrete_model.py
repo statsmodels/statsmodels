@@ -446,14 +446,16 @@ class DiscreteModel(base.LikelihoodModel):
 
 class BinaryModel(DiscreteModel):
 
-    def __init__(self, endog, exog, **kwargs):
-        super(BinaryModel, self).__init__(endog, exog, **kwargs)
+    def __init__(self, endog, exog, offset=None, **kwargs):
+        super(BinaryModel, self).__init__(endog, exog, offset=offset, **kwargs)
         if (not issubclass(self.__class__, MultinomialModel) and
                 not np.all((self.endog >= 0) & (self.endog <= 1))):
             raise ValueError("endog must be in the unit interval.")
+        if offset is None:
+            delattr(self, 'offset')
 
 
-    def predict(self, params, exog=None, linear=False):
+    def predict(self, params, exog=None, linear=False, offset=None):
         """
         Predict response variable of a model given exogenous variables.
 
@@ -473,12 +475,21 @@ class BinaryModel(DiscreteModel):
         array
             Fitted values at exog.
         """
+        # Use fit offset if appropriate
+        if offset is None and exog is None and hasattr(self, 'offset'):
+            offset = self.offset
+        elif offset is None:
+            offset = 0.
+
         if exog is None:
             exog = self.exog
+
+        linpred = np.dot(exog, params) + offset
+
         if not linear:
-            return self.cdf(np.dot(exog, params))
+            return self.cdf(linpred)
         else:
-            return np.dot(exog, params)
+            return linpred
 
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
@@ -497,7 +508,8 @@ class BinaryModel(DiscreteModel):
         return L1BinaryResultsWrapper(discretefit)
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
-    def _derivative_predict(self, params, exog=None, transform='dydx'):
+    def _derivative_predict(self, params, exog=None, transform='dydx',
+                            offset=None):
         """
         For computing marginal effects standard errors.
 
@@ -510,13 +522,14 @@ class BinaryModel(DiscreteModel):
         """
         if exog is None:
             exog = self.exog
-        dF = self.pdf(np.dot(exog, params))[:,None] * exog
+        linpred = self.predict(params, exog, offset=offset, linear=True)
+        dF = self.pdf(linpred)[:,None] * exog
         if 'ey' in transform:
-            dF /= self.predict(params, exog)[:,None]
+            dF /= self.predict(params, exog, offset=offset)[:,None]
         return dF
 
     def _derivative_exog(self, params, exog=None, transform='dydx',
-                         dummy_idx=None, count_idx=None):
+                         dummy_idx=None, count_idx=None, offset=None):
         """
         For computing marginal effects returns dF(XB) / dX where F(.) is
         the predicted probabilities
@@ -531,8 +544,9 @@ class BinaryModel(DiscreteModel):
         if exog is None:
             exog = self.exog
 
-        margeff = np.dot(self.pdf(np.dot(exog, params))[:, None],
-                         params[None, :])
+        linpred = self.predict(params, exog, offset=offset, linear=True)
+        margeff = np.dot(self.pdf(linpred)[:,None],
+                         params[None,:])
 
         if 'ex' in transform:
             margeff *= exog
@@ -1839,7 +1853,14 @@ class Logit(BinaryModel):
     exog : array
         A reference to the exogenous design.
     """ % {'params' : base._model_params_doc,
-           'extra_params' : base._missing_param_doc}
+           'extra_params' :
+           """offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+
+    """ + base._missing_param_doc}
 
     def cdf(self, X):
         """
@@ -1911,7 +1932,8 @@ class Logit(BinaryModel):
         """
         q = 2*self.endog - 1
         X = self.exog
-        return np.sum(np.log(self.cdf(q*np.dot(X,params))))
+        linpred = self.predict(params, linear=True)
+        return np.sum(np.log(self.cdf(q * linpred)))
 
     def loglikeobs(self, params):
         """
@@ -1939,7 +1961,8 @@ class Logit(BinaryModel):
         """
         q = 2*self.endog - 1
         X = self.exog
-        return np.log(self.cdf(q*np.dot(X,params)))
+        linpred = self.predict(params, linear=True)
+        return np.log(self.cdf(q * linpred))
 
     def score(self, params):
         """
@@ -1963,8 +1986,8 @@ class Logit(BinaryModel):
 
         y = self.endog
         X = self.exog
-        L = self.cdf(np.dot(X,params))
-        return np.dot(y - L,X)
+        fitted = self.predict(params)
+        return np.dot(y - fitted, X)
 
     def score_obs(self, params):
         """
@@ -1991,8 +2014,8 @@ class Logit(BinaryModel):
 
         y = self.endog
         X = self.exog
-        L = self.cdf(np.dot(X, params))
-        return (y - L)[:,None] * X
+        fitted = self.predict(params)
+        return (y - fitted)[:,None] * X
 
     def score_factor(self, params):
         """
@@ -2019,8 +2042,8 @@ class Logit(BinaryModel):
 
         y = self.endog
         X = self.exog
-        L = self.cdf(np.dot(X, params))
-        return (y - L)
+        fitted = self.predict(params)
+        return (y - fitted)
 
     def hessian(self, params):
         """
@@ -2042,7 +2065,7 @@ class Logit(BinaryModel):
         .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\\sum_{i}\\Lambda_{i}\\left(1-\\Lambda_{i}\\right)x_{i}x_{i}^{\\prime}
         """
         X = self.exog
-        L = self.cdf(np.dot(X,params))
+        L = self.predict(params)
         return -np.dot(L*(1-L)*X.T,X)
 
     def hessian_factor(self, params):
@@ -2065,7 +2088,7 @@ class Logit(BinaryModel):
         .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\\sum_{i}\\Lambda_{i}\\left(1-\\Lambda_{i}\\right)x_{i}x_{i}^{\\prime}
         """
         X = self.exog
-        L = self.cdf(np.dot(X,params))
+        L = self.predict(params)
         return -L * (1 - L)
 
 
@@ -2093,7 +2116,14 @@ class Probit(BinaryModel):
     exog : array
         A reference to the exogenous design.
     """ % {'params' : base._model_params_doc,
-           'extra_params' : base._missing_param_doc}
+           'extra_params' :
+           """offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
+
+    """ + base._missing_param_doc}
 
     def cdf(self, X):
         """
@@ -2162,9 +2192,8 @@ class Probit(BinaryModel):
         """
 
         q = 2*self.endog - 1
-        X = self.exog
-        return np.sum(np.log(np.clip(self.cdf(q*np.dot(X,params)),
-            FLOAT_EPS, 1)))
+        linpred = self.predict(params, linear=True)
+        return np.sum(np.log(np.clip(self.cdf(q * linpred), FLOAT_EPS, 1)))
 
     def loglikeobs(self, params):
         """
@@ -2193,7 +2222,8 @@ class Probit(BinaryModel):
 
         q = 2*self.endog - 1
         X = self.exog
-        return np.log(np.clip(self.cdf(q*np.dot(X,params)), FLOAT_EPS, 1))
+        linpred = self.predict(params, linear=True)
+        return np.log(np.clip(self.cdf(q*linpred), FLOAT_EPS, 1))
 
 
     def score(self, params):
@@ -2220,7 +2250,7 @@ class Probit(BinaryModel):
         """
         y = self.endog
         X = self.exog
-        XB = np.dot(X,params)
+        XB = self.predict(params, linear=True)
         q = 2*y - 1
         # clip to get rid of invalid divide complaint
         L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
@@ -2252,7 +2282,7 @@ class Probit(BinaryModel):
         """
         y = self.endog
         X = self.exog
-        XB = np.dot(X,params)
+        XB = self.predict(params, linear=True)
         q = 2*y - 1
         # clip to get rid of invalid divide complaint
         L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
@@ -2284,7 +2314,7 @@ class Probit(BinaryModel):
         """
         y = self.endog
         X = self.exog
-        XB = np.dot(X,params)
+        XB = self.predict(params, linear=True)
         q = 2*y - 1
         # clip to get rid of invalid divide complaint
         L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
@@ -2317,7 +2347,7 @@ class Probit(BinaryModel):
         and :math:`q=2y-1`
         """
         X = self.exog
-        XB = np.dot(X,params)
+        XB = self.predict(params, linear=True)
         q = 2*self.endog - 1
         L = q*self.pdf(q*XB)/self.cdf(q*XB)
         return np.dot(-L*(L+XB)*X.T,X)
@@ -2348,7 +2378,7 @@ class Probit(BinaryModel):
         and :math:`q=2y-1`
         """
         X = self.exog
-        XB = np.dot(X,params)
+        XB = self.predict(params, linear=True)
         q = 2 * self.endog - 1
         L = q * self.pdf(q * XB) / self.cdf(q * XB)
         return -L * (L + XB)

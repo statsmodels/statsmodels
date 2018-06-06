@@ -516,6 +516,20 @@ class TestGLMLogit(CheckDiscreteGLM):
         cls.res2 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
 
 
+class TestGLMLogitOffset(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+        endog_bin = (endog > endog.mean()).astype(int)
+        cls.cov_type = 'cluster'
+        offset = np.ones(endog_bin.shape[0])
+
+        mod1 = GLM(endog_bin, exog, family=families.Binomial(), offset=offset)
+        cls.res1 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+
+        mod1 = smd.Logit(endog_bin, exog, offset=offset)
+        cls.res2 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+
 class TestGLMProbit(CheckDiscreteGLM):
 
     @classmethod
@@ -542,6 +556,25 @@ class TestGLMProbit(CheckDiscreteGLM):
         hess1 = res1.model.hessian(res1.params)
         hess2 = res2.model.hessian(res1.params)
         assert_allclose(hess1, hess2, rtol=1e-10)
+
+
+class TestGLMProbitOffset(CheckDiscreteGLM):
+
+    @classmethod
+    def setup_class(cls):
+        endog_bin = (endog > endog.mean()).astype(int)
+        cls.cov_type = 'cluster'
+        offset = np.ones(endog_bin.shape[0])
+
+        mod1 = GLM(endog_bin, exog,
+                   family=families.Binomial(link=links.probit()),
+                   offset=offset)
+        cls.res1 = mod1.fit(method='newton',
+                            cov_type='cluster', cov_kwds=dict(groups=group))
+
+        mod1 = smd.Probit(endog_bin, exog, offset=offset)
+        cls.res2 = mod1.fit(cov_type='cluster', cov_kwds=dict(groups=group))
+        cls.rtol = 1e-6
 
 
 class TestGLMGaussNonRobust(CheckDiscreteGLM):
