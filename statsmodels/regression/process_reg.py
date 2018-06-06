@@ -3,7 +3,6 @@
 import numpy as np
 import pandas as pd
 import patsy
-import statsmodels
 import statsmodels.base.model as base
 import statsmodels.api as sm
 import collections
@@ -239,7 +238,8 @@ class ProcessRegression(base.LikelihoodModel):
             len(groups)
         ]
         if min(v) != max(v):
-            msg = "The leading dimensions of all array arguments must be equal."
+            msg = ("The leading dimensions of all array arguments " +
+                   "must be equal.")
             raise ValueError(msg)
 
     @classmethod
@@ -379,7 +379,7 @@ class ProcessRegression(base.LikelihoodModel):
         """
 
         mnpar, sdpar, smpar = self.unpack(params)
-        pm, pv, ps = len(mnpar), len(sdpar), len(smpar)
+        pm, pv = len(mnpar), len(sdpar)
 
         # Residuals
         resid = self.endog - np.dot(self.exog, mnpar)
@@ -430,7 +430,6 @@ class ProcessRegression(base.LikelihoodModel):
 
         self.verbose = verbose
 
-        q = self.exog_scale.shape[1] + self.exog_smooth.shape[1]
         f = minimize(
             lambda x: -self.loglike(x),
             method=method,
@@ -515,13 +514,16 @@ class ProcessRegression(base.LikelihoodModel):
         """
 
         if exog is None:
-            exog = self.exog
+            if hasattr(self.data, "frame"):
+                exog = self.data.frame
+            else:
+                exog = self.exog
 
         if hasattr(self.data, "design_info"):
             exog = patsy.dmatrix(self.data.design_info, exog)
 
         if len(params) > exog.shape[1]:
-            params = params[:, 0:exog.shape[1]]
+            params = params[0:exog.shape[1]]
 
         return np.dot(exog, params)
 
@@ -543,9 +545,6 @@ class ProcessRegressionResults(base.LikelihoodModelResults):
 
     def predict(self, exog=None):
 
-        if exog is None:
-            exog = self.model.exog
-
         return self.model.predict(self.params, exog)
 
     def covariance(self, time, scale, smooth):
@@ -557,10 +556,10 @@ class ProcessRegressionResults(base.LikelihoodModelResults):
         time : array-like
             The time points at which the fitted covariance
             matrix is calculated.
-        scale : Dataframe
+        scale : array-like
             The data used to determine the scale parameter,
             must have len(time) rows.
-        smooth: Dataframe
+        smooth: array-like
             The data used to determine the smoothness parameter,
             must have len(time) rows.
 
@@ -573,12 +572,12 @@ class ProcessRegressionResults(base.LikelihoodModelResults):
         If the model was fit using formulas, `scale` and `smooth` should
         be Dataframes, containing all variables that were present in the
         respective scaling and smoothing formulas used to fit the model.
-        Otherwise, `scale` and `smooth` should contain data arrays whose
+        Otherwise, `scale` and `smooth` should be data arrays whose
         columns align with the fitted scaling and smoothing parameters.
         """
 
-        return self.model.covariance(time, sca, smo, self.scale_params,
-                                     self.smooth_params)
+        return self.model.covariance(time, self.scale_params,
+                                     self.smooth_params, scale, smooth)
 
     def summary(self):
 

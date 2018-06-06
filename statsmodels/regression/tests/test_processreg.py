@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import collections
 import statsmodels.tools.numdiff as nd
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 
 
 def setup1(n):
@@ -49,15 +49,22 @@ def test_arrays():
 
     np.random.seed(8996)
 
-    y, x_mean, x_sd, x_sm, time, groups = setup1(1000)
+    y, x_mean, x_sc, x_sm, time, groups = setup1(1000)
 
-    preg = ProcessRegression(y, x_mean, x_sd, x_sm, time, groups)
+    preg = ProcessRegression(y, x_mean, x_sc, x_sm, time, groups)
 
     f = preg.fit()
-    s = f.summary()
+    f.summary()  # Smoke test
 
+    # Compare the parameter estimates to population values.
     epar = np.r_[1, 0, -1, 0, 1, 0, 0.5, -0.1]
     assert_allclose(f.params, epar, atol=0.1, rtol=1)
+
+    # Test the fitted covariance matrix
+    cv = f.covariance(time[0:5], x_sc[0:5, :], x_sm[0:5, :])
+    assert_allclose(cv, cv.T)
+    a, _ = np.linalg.eig(cv)
+    assert_equal(a > 0, True)
 
 
 def test_formulas():
@@ -91,18 +98,29 @@ def test_formulas():
         groups="groups",
         data=df)
     f = preg.fit()
-    f.summary()
+    f.summary()  # Smoke test
 
+    # Compare the parameter estimates to population values.
     epar = np.r_[0, 1, 0, -1, 0, 1, 0, 0.5, -0.1]
     assert_allclose(f.params, epar, atol=0.1, rtol=1)
 
+    # Test the fitted covariance matrix
+    cv = f.covariance(df.time.iloc[0:5], df.iloc[0:5, :],
+                      df.iloc[0:5, :])
+    assert_allclose(cv, cv.T)
+    a, _ = np.linalg.eig(cv)
+    assert_equal(a > 0, True)
 
+
+# Test the score functions using numerical derivatives.
 def test_score_numdiff():
 
     y, x_mean, x_sd, x_sm, time, groups = setup1(1000)
 
     preg = ProcessRegression(y, x_mean, x_sd, x_sm, time, groups)
-    loglike = lambda x: preg.loglike(x)
+
+    def loglike(x):
+        return preg.loglike(x)
     q = x_mean.shape[1] + x_sd.shape[1] + x_sm.shape[1]
 
     np.random.seed(342)
