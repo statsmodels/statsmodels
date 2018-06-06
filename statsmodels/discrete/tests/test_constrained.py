@@ -444,6 +444,31 @@ class TestGLMLogitConstrained1(CheckGLMConstrainedMixin):
         cls.res1 = fit_constrained(mod1, R, q)
 
 
+class TestLogitConstrained1(CheckGLMConstrainedMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.idx = slice(None)
+        # params sequence same as Stata, but Stata reports param = nan
+        # and we have param = value = 0
+
+        #res1ul = Logit(data.endog, data.exog).fit(method="newton", disp=0)
+        cls.res2 = reslogit.results_constraint1
+
+        mod1 = Logit(spector_data.endog, spector_data.exog)
+
+        constr = 'x1 = 2.8'
+        # newton doesn't work, raises hessian singular
+        cls.res1m = mod1.fit_constrained(constr, method='bfgs')
+
+        R, q = cls.res1m.constraints.coefs, cls.res1m.constraints.constants
+        cls.res1 = fit_constrained(mod1, R, q, fit_kwds={'method': 'bfgs'})
+
+    @pytest.mark.skip(reason='not a GLM')
+    def test_glm(self):
+        return
+
+
 class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
 
     @classmethod
@@ -518,6 +543,38 @@ class TestGLMLogitConstrained2HC(CheckGLMConstrainedMixin):
                                                          'cov_type': cov_type,
                                                          'cov_kwds': cov_kwds})
         cls.constraints_rq = (R, q)
+
+
+class TestLogitConstrained2HC(CheckGLMConstrainedMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.idx = slice(None)  # params sequence same as Stata
+        #res1ul = Logit(data.endog, data.exog).fit(method="newton", disp=0)
+        cls.res2 = reslogit.results_constraint2_robust
+
+        mod1 = Logit(spector_data.endog, spector_data.exog)
+
+        # not used to match Stata for HC
+        # nobs, k_params = mod1.exog.shape
+        # k_params -= 1   # one constraint
+        cov_type = 'HC0'
+        cov_kwds = {'scaling_factor': 32/31}
+        # looks like nobs / (nobs - 1) and not (nobs - 1.) / (nobs - k_params)}
+        constr = 'x1 - x3 = 0'
+        cls.res1m = mod1.fit_constrained(constr, cov_type=cov_type,
+                                         cov_kwds=cov_kwds, atol=1e-10,
+                                         )
+
+        R, q = cls.res1m.constraints.coefs, cls.res1m.constraints.constants
+        cls.res1 = fit_constrained(mod1, R, q, fit_kwds={'atol': 1e-10,
+                                                         'cov_type': cov_type,
+                                                         'cov_kwds': cov_kwds})
+        cls.constraints_rq = (R, q)
+
+    @pytest.mark.skip(reason='not a GLM')
+    def test_glm(self):
+        return
 
 
 def junk():
