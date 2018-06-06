@@ -1,4 +1,5 @@
 from statsmodels.iolib.table import SimpleTable
+import numpy as np
 
 
 class HypothesisTestResults(object):
@@ -66,10 +67,10 @@ class HypothesisTestResults(object):
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
-        return (self.test_statistic == other.test_statistic) \
-            and (self.crit_value == other.crit_value) \
-            and (self.pvalue == other.pvalue) \
-            and (self.signif == other.signif)
+        return np.allclose(self.test_statistic, other.test_statistic) \
+            and np.allclose(self.crit_value, other.crit_value) \
+            and np.allclose(self.pvalue, other.pvalue) \
+            and np.allclose(self.signif, other.signif)
 
 
 class CausalityTestResults(HypothesisTestResults):
