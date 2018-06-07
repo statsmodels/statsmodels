@@ -670,7 +670,7 @@ class CheckIV2SLS(object):
         res_f = res1.f_test(restriction[:-1]) # without constant
         # TODO res1.fvalue problem, see issue #1104
         assert_allclose(res_f.fvalue, res1.fvalue, rtol=1e-12, atol=0)
-        assert_allclose(res_f.pvalue, res1.f_pvalue, rtol=1e-12, atol=0)
+        assert_allclose(res_f.pvalue, res1.f_pvalue, rtol=1e-10, atol=0)
         assert_allclose(res_f.fvalue, res2.F, rtol=1e-10, atol=0)
         assert_allclose(res_f.pvalue, res2.Fp, rtol=1e-08, atol=0)
 
