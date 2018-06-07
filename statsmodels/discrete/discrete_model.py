@@ -34,6 +34,7 @@ import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 from statsmodels.base._constraints import fit_constrained_wrap
 import statsmodels.base._parameter_inference as pinf
+infer = pinf   # alias, 2 different shorcut names
 
 from statsmodels.distributions import genpoisson_p
 import statsmodels.regression.linear_model as lm
@@ -4168,6 +4169,20 @@ class DiscreteResults(base.LikelihoodModelResults):
             return pinf.gbic(self)
         else:
             raise ValueError("Name of information criterion not recognized.")
+
+    def score_test(self, exog_extra=None, params_constrained=None,
+                   hypothesis='joint', cov_type=None, cov_kwds=None,
+                   k_constraints=None, observed=True):
+
+        res = infer.score_test(self, exog_extra=exog_extra,
+                               params_constrained=params_constrained,
+                               hypothesis=hypothesis,
+                               cov_type=cov_type, cov_kwds=cov_kwds,
+                               k_constraints=k_constraints,
+                               observed=observed)
+        return res
+
+    score_test.__doc__ = infer.score_test.__doc__
 
     def _get_endog_name(self, yname, yname_list):
         if yname is None:
