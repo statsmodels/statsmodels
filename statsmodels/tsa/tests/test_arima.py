@@ -2361,7 +2361,7 @@ def test_endog_int():
     assert_allclose(res.params, resf.params, atol=1e-6)
     assert_allclose(res.bse, resf.bse, atol=1e-6)
 
-    res = ARIMA(y.cumsum(), order=(1, 1, 1)).fit(disp=0, solver='newton')
-    resf = ARIMA(yf.cumsum(), order=(1, 1, 1)).fit(disp=0, solver='newton')
-    assert_allclose(res.params, resf.params, atol=1e-6)
-    assert_allclose(res.bse, resf.bse, atol=1e-6)
+    res = ARIMA(y.cumsum(), order=(1, 1, 1)).fit(disp=0)
+    resf = ARIMA(yf.cumsum(), order=(1, 1, 1)).fit(disp=0)
+    assert_allclose(res.params, resf.params, rtol=1e-6, atol=1e-5)
+    assert_allclose(res.bse, resf.bse, rtol=1e-6, atol=1e-5)

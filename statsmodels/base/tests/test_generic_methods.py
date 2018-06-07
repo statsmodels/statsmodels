@@ -207,12 +207,16 @@ class CheckGenericMixin(object):
 
         res2 = self._get_constrained(keep_index, keep_index_p)
 
-        assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-10)
+        assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-10,
+                        atol=1e-10)
         assert_equal(res1.params[drop_index], 0)
-        assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-10)
+        assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-10,
+                        atol=1e-10)
         assert_equal(res1.bse[drop_index], 0)
-        assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=1e-10)
-        assert_allclose(res1.pvalues[keep_index_p], res2.pvalues, rtol=1e-10)
+        assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=1e-10,
+                        atol=1e-10)
+        assert_allclose(res1.pvalues[keep_index_p], res2.pvalues, rtol=1e-10,
+                        atol=1e-10)
 
         if hasattr(res1, 'resid'):
             # discrete models, Logit don't have `resid` yet
