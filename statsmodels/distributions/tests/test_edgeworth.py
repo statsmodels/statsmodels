@@ -4,11 +4,11 @@ import warnings
 
 import numpy as np
 from numpy.polynomial.hermite_e import HermiteE
-from numpy.testing import (run_module_suite, assert_equal, assert_raises, 
+from numpy.testing import (run_module_suite, assert_equal, assert_raises,
                            assert_allclose)
 import numpy.testing as npt
 
-from scipy.misc import factorial, factorial2
+from statsmodels.compat.scipy import factorial, factorial2
 from scipy.special import gamma
 import scipy.stats as stats
 
