@@ -214,4 +214,3 @@ if __name__ == "__main__":
                                       freq='Q'))
 
     res = seasonal_decompose(data)
-
