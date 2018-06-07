@@ -40,6 +40,7 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.base.data import handle_data  # for mnlogit
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 from statsmodels.base._constraints import fit_constrained_wrap
+import statsmodels.base._parameter_inference as infer
 import statsmodels.regression.linear_model as lm
 from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.distributions import genpoisson_p
@@ -3865,6 +3866,22 @@ class DiscreteResults(base.LikelihoodModelResults):
     @cache_readonly
     def bic(self):
         return -2*self.llf + np.log(self.nobs)*(self.df_model+1)
+
+
+    def score_test(self, exog_extra=None, params_constrained=None,
+                   hypothesis='joint', cov_type=None, cov_kwds=None,
+                   k_constraints=None, observed=True):
+
+        res = infer.score_test(self, exog_extra=exog_extra,
+                               params_constrained=params_constrained,
+                               hypothesis=hypothesis,
+                               cov_type=cov_type, cov_kwds=cov_kwds,
+                               k_constraints=k_constraints,
+                               observed=observed)
+        return res
+
+    score_test.__doc__ = infer.score_test.__doc__
+
 
     def _get_endog_name(self, yname, yname_list):
         if yname is None:

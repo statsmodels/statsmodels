@@ -517,6 +517,20 @@ class CheckDiscreteGLM(object):
         hessf2 = res2.model.hessian_factor(res1.params, **kwds)
         assert_allclose(sgn * hessf1, hessf2, rtol=1e-10)
 
+    def test_score_test(self):
+        res1 = self.res1
+        res2 = self.res2
+
+        if isinstance(res2.model, OLS):
+            # skip
+            return
+
+        fitted = self.res1.fittedvalues
+        exog_extra = np.column_stack((fitted**2, fitted**3))
+        res_lm1 = res1.score_test(exog_extra, cov_type='nonrobust')
+        res_lm2 = res2.score_test(exog_extra, cov_type='nonrobust')
+        assert_allclose(np.hstack(res_lm1), np.hstack(res_lm2), rtol=5e-7)
+
 
 class TestGLMPoisson(CheckDiscreteGLM):
 

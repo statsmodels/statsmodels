@@ -26,6 +26,7 @@ from statsmodels.tools.decorators import cache_readonly, resettable_cache
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
+import statsmodels.base._parameter_inference as infer
 import statsmodels.regression._tools as reg_tools
 
 from statsmodels.graphics._regressionplots_doc import (
@@ -1657,6 +1658,20 @@ class GLMResults(base.LikelihoodModelResults):
         return res
 
     get_prediction.__doc__ = pred.get_prediction_glm.__doc__
+
+    def score_test(self, exog_extra=None, params_constrained=None,
+                   hypothesis='joint', cov_type=None, cov_kwds=None,
+                   k_constraints=None, observed=True):
+
+        res = infer.score_test(self, exog_extra=exog_extra,
+                               params_constrained=params_constrained,
+                               hypothesis=hypothesis,
+                               cov_type=cov_type, cov_kwds=cov_kwds,
+                               k_constraints=k_constraints,
+                               observed=observed)
+        return res
+
+    score_test.__doc__ = infer.score_test.__doc__
 
     def get_hat_matrix_diag(self, observed=True):
         """
