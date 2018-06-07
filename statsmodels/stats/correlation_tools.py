@@ -861,16 +861,9 @@ class MultivariateKernel(object):
     """
     Base class for multivariate kernels.
 
-    Parameters
-    ----------
-    bw : array-like
-        The bandwidths for the components of the kernel.
-
-    Returns
-    -------
-    An instance with `call` method having signature `call(x, loc)`,
-    returning the kernel weights comparing `x` (a 1d ndarray) to each
-    row of `loc` (a 2d ndarray).
+    An instance of MultivariateKernel implements a `call` method having
+    signature `call(x, loc)`, returning the kernel weights comparing `x`
+    (a 1d ndarray) to each row of `loc` (a 2d ndarray).
     """
 
     def call(x):
