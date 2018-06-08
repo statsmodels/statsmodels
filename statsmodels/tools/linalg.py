@@ -283,7 +283,7 @@ def _dot(x, y):
 
 
 # From numpy, adapted to work with sparse and dense arrays.
-def _multi_dot_three(A, B, C):
+def multi_dot_three(A, B, C):
     """
     Find best ordering for three arrays and do the multiplication.
 
@@ -303,7 +303,7 @@ def _multi_dot_three(A, B, C):
         return _dot(A, _dot(B, C))
 
 
-def _dotsum(x, y):
+def dotsum(x, y):
     """
     Returns sum(x * y), where '*' is the pointwise product, computed
     efficiently for dense and sparse matrices.
@@ -316,7 +316,7 @@ def _dotsum(x, y):
         return np.dot(x.ravel(), y.ravel())
 
 
-def _smw_solver(s, A, AtA, Qi, di):
+def smw_solver(s, A, AtA, Qi, di):
     """
     Returns a solver for the linear system:
 
@@ -361,7 +361,7 @@ def _smw_solver(s, A, AtA, Qi, di):
     m = Qi.shape[0]
     qmat[0:m, 0:m] += Qi
     d = qmat.shape[0]
-    qmat.flat[m*(d+1)::d+1] += di
+    qmat.flat[m * (d + 1)::d + 1] += di
     if sparse.issparse(A):
         qmati = sparse.linalg.spsolve(sparse.csc_matrix(qmat), A.T)
     else:
@@ -381,7 +381,7 @@ def _smw_solver(s, A, AtA, Qi, di):
     return solver
 
 
-def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
+def smw_logdet(s, A, AtA, Qi, di, B_logdet):
     """
     Returns the log determinant of
 
@@ -426,7 +426,7 @@ def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
     m = Qi.shape[0]
     qmat[0:m, 0:m] += Qi
     d = qmat.shape[0]
-    qmat.flat[m*(d+1)::d+1] += di
+    qmat.flat[m * (d + 1)::d + 1] += di
     _, ld1 = np.linalg.slogdet(qmat)
     return B_logdet + ld + ld1
 

@@ -159,7 +159,8 @@ from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.base._penalties import Penalty
 from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.tools.linalg import (
-    _dot, _multi_dot_three, _dotsum, _smw_solver, _smw_logdet)
+    _dot, multi_dot_three as _multi_dot_three, dotsum as _dotsum,
+    smw_solver as _smw_solver, smw_logdet as _smw_logdet)
 
 
 def _get_exog_re_names(self, exog_re):

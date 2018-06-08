@@ -1,5 +1,5 @@
 from statsmodels.tools import linalg
-from statsmodels.tools.linalg import _smw_solver, _smw_logdet
+from statsmodels.tools.linalg import smw_solver, smw_logdet
 import numpy as np
 from numpy.testing import assert_allclose
 from scipy.linalg import toeplitz
@@ -47,12 +47,11 @@ def test_smw_solver():
         x = np.random.normal(size=p)
         y2 = np.linalg.solve(s * np.eye(p, p) + np.dot(A, np.dot(B, A.T)), x)
 
-        f = _smw_solver(s, A, AtA, Qi, di)
+        f = smw_solver(s, A, AtA, Qi, di)
         y1 = f(x)
         assert_allclose(y1, y2)
 
-        f = _smw_solver(s, sparse.csr_matrix(A), sparse.csr_matrix(AtA), Qi,
-                        di)
+        f = smw_solver(s, sparse.csr_matrix(A), sparse.csr_matrix(AtA), Qi, di)
         y1 = f(x)
         assert_allclose(y1, y2)
 
@@ -84,7 +83,7 @@ def test_smw_logdet():
         _, d2 = np.linalg.slogdet(s * np.eye(p, p) + np.dot(A, np.dot(B, A.T)))
 
         _, bd = np.linalg.slogdet(B)
-        d1 = _smw_logdet(s, A, AtA, Qi, di, bd)
+        d1 = smw_logdet(s, A, AtA, Qi, di, bd)
         assert_allclose(d1, d2)
 
     for p in (5, 10):
