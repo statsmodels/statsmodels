@@ -2313,8 +2313,8 @@ def test_arma_pickle():
     mod = ARMA(x, (1, 1))
     pkl_mod = cPickle.loads(cPickle.dumps(mod))
 
-    res = mod.fit(trend="c", disp=-1)
-    pkl_res = pkl_mod.fit(trend="c", disp=-1)
+    res = mod.fit(trend="c", disp=-1, solver='newton')
+    pkl_res = pkl_mod.fit(trend="c", disp=-1, solver='newton')
 
     assert_allclose(res.params, pkl_res.params)
     assert_allclose(res.llf, pkl_res.llf)
@@ -2328,8 +2328,8 @@ def test_arima_pickle():
     mod = ARIMA(endog, (1, 1, 1))
     pkl_mod = cPickle.loads(cPickle.dumps(mod))
 
-    res = mod.fit(trend="c", disp=-1)
-    pkl_res = pkl_mod.fit(trend="c", disp=-1)
+    res = mod.fit(trend="c", disp=-1, solver='newton')
+    pkl_res = pkl_mod.fit(trend="c", disp=-1, solver='newton')
 
     assert_allclose(res.params, pkl_res.params)
     assert_allclose(res.llf, pkl_res.llf)
@@ -2361,7 +2361,7 @@ def test_endog_int():
     assert_allclose(res.params, resf.params, atol=1e-6)
     assert_allclose(res.bse, resf.bse, atol=1e-6)
 
-    res = ARIMA(y.cumsum(), order=(1,1,1)).fit(disp=0)
-    resf = ARIMA(yf.cumsum(), order=(1,1,1)).fit(disp=0)
-    assert_allclose(res.params, resf.params, atol=1e-6)
-    assert_allclose(res.bse, resf.bse, atol=1e-6)
+    res = ARIMA(y.cumsum(), order=(1, 1, 1)).fit(disp=0)
+    resf = ARIMA(yf.cumsum(), order=(1, 1, 1)).fit(disp=0)
+    assert_allclose(res.params, resf.params, rtol=1e-6, atol=1e-5)
+    assert_allclose(res.bse, resf.bse, rtol=1e-6, atol=1e-5)

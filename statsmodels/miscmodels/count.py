@@ -31,7 +31,7 @@ Issues
 from __future__ import print_function
 import numpy as np
 from scipy import stats
-from scipy.misc import factorial
+from statsmodels.compat.scipy import factorial
 import statsmodels.api as sm
 from statsmodels.base.model import GenericLikelihoodModel
 
@@ -335,4 +335,3 @@ if __name__ == '__main__':
     print('')
     print('glm params  ', maxabs(resdp.params, resp.params), maxabsrel(resdp.params, resp.params))
     print('glm bse     ', maxabs(resdp.bse, resp.bse), maxabsrel(resdp.bse, resp.bse))
-

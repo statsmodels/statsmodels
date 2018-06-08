@@ -179,4 +179,3 @@ class TestPoissonZi(CompareMixin):
         from numpy.testing import assert_warns
         mod1.data.xnames = mod1.data.xnames * 2
         assert_warns(ValueWarning, mod1.fit, disp=0)
-

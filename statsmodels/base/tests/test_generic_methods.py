@@ -200,19 +200,23 @@ class CheckGenericMixin(object):
             del keep_index_p[i]
 
         if use_start_params:
-            res1 = self.results.model._fit_zeros(keep_index,
+            res1 = self.results.model._fit_zeros(keep_index, maxiter=500,
                                         start_params=self.results.params)
         else:
-            res1 = self.results.model._fit_zeros(keep_index)
+            res1 = self.results.model._fit_zeros(keep_index, maxiter=500)
 
         res2 = self._get_constrained(keep_index, keep_index_p)
 
-        assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-10)
+        assert_allclose(res1.params[keep_index_p], res2.params, rtol=1e-10,
+                        atol=1e-10)
         assert_equal(res1.params[drop_index], 0)
-        assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-10)
+        assert_allclose(res1.bse[keep_index_p], res2.bse, rtol=1e-10,
+                        atol=1e-10)
         assert_equal(res1.bse[drop_index], 0)
-        assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=1e-10)
-        assert_allclose(res1.pvalues[keep_index_p], res2.pvalues, rtol=1e-10)
+        assert_allclose(res1.tvalues[keep_index_p], res2.tvalues, rtol=1e-10,
+                        atol=1e-10)
+        assert_allclose(res1.pvalues[keep_index_p], res2.pvalues, rtol=1e-10,
+                        atol=1e-10)
 
         if hasattr(res1, 'resid'):
             # discrete models, Logit don't have `resid` yet
@@ -235,9 +239,10 @@ class CheckGenericMixin(object):
         init_kwds = mod2._get_init_kwds()
         mod = mod_cls(mod2.endog, mod2.exog[:, keep_index], **init_kwds)
         if self.use_start_params:
-            res = mod.fit(start_params=self.results.params[keep_index_p])
+            res = mod.fit(start_params=self.results.params[keep_index_p],
+                          maxiter=500)
         else:
-            res = mod.fit()
+            res = mod.fit(maxiter=500)
         return res
 
     def test_zero_collinear(self):
@@ -437,7 +442,7 @@ class TestGenericNegativeBinomial(CheckGenericMixin):
         start_params = np.array([-0.05783623, -0.26655806,  0.04109148, -0.03815837,
                                  0.2685168 ,   0.03811594, -0.04426238,  0.01614795,
                                  0.17490962,  0.66461151,   1.2925957 ])
-        self.results = mod.fit(start_params=start_params, disp=0)
+        self.results = mod.fit(start_params=start_params, disp=0, maxiter=500)
         self.transform_index = -1
 
 

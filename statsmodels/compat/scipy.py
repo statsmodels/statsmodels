@@ -258,3 +258,10 @@ try:
 except ImportError:
     from scipy.special import gammaln
     loggamma = gammaln
+
+# Work around for factorial changes in 1.0.0
+
+try:
+    from scipy.special import factorial, factorial2
+except ImportError:
+    from scipy.misc import factorial, factorial2

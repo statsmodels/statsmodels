@@ -40,9 +40,12 @@ import statsmodels.stats.outliers_influence as oi
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
+
 def compare_t_est(sp, sp_dict, decimal=(14, 14)):
-    assert_almost_equal(sp[0], sp_dict['statistic'], decimal=decimal[0])
-    assert_almost_equal(sp[1], sp_dict['pvalue'], decimal=decimal[1])
+    assert_allclose(sp[0], sp_dict['statistic'], atol=10 ** -decimal[0],
+                    rtol=10 ** -decimal[0])
+    assert_allclose(sp[1], sp_dict['pvalue'], atol=10 ** -decimal[1],
+                    rtol=10 ** -decimal[0])
 
 
 def notyet_atst():

@@ -47,8 +47,8 @@ def test_pickle_fit_sarimax():
     mod = sarimax.SARIMAX(data['lgdp'], order=(1, 1, 0))
     pkl_mod = cPickle.loads(cPickle.dumps(mod))
 
-    res = mod.fit(disp=-1)
-    pkl_res = pkl_mod.fit(disp=-1)
+    res = mod.fit(disp=-1, full_output=True, method='newton')
+    pkl_res = pkl_mod.fit(disp=-1, full_output=True, method='newton')
 
     assert_allclose(res.llf_obs, pkl_res.llf_obs)
     assert_allclose(res.tvalues, pkl_res.tvalues)

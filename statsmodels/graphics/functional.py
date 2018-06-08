@@ -6,7 +6,7 @@ from statsmodels.compat.python import combinations, range, zip
 from statsmodels.compat.collections import OrderedDict
 from statsmodels.graphics.utils import _import_mpl
 import numpy as np
-from scipy.misc import factorial
+from statsmodels.compat.scipy import factorial
 try:
     from scipy.optimize import differential_evolution
     have_de_optim = True
@@ -310,9 +310,9 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
     if labels is None:
         # For use with pandas, get the labels
-        if hasattr(data, 'index'): 
+        if hasattr(data, 'index'):
             labels = data.index
-        else: 
+        else:
             labels = np.arange(len(data))
 
     data = np.asarray(data)
