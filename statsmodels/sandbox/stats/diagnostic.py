@@ -1015,12 +1015,12 @@ def spec_white(resid, exog):
 
     Returns
     -------
-    dof : int
-        degrees of freedom
     stat : float
         test statistic
     pval : float
         chi-square p-value for test statistic
+    dof : int
+        degrees of freedom
 
     Notes
     -----
@@ -1029,8 +1029,13 @@ def spec_white(resid, exog):
     estimator with White's heteroscedasticity-consistent estimator. The
     test statistic is shown to be chi-square distributed.
 
+    Null hypothesis is homoscedastic and correctly specified.
+
     Assumes the OLS design matrix contains an intercept term and at least
     one variable. The intercept is removed to calculate the test statistic.
+
+    Interaction terms (squares and crosses of OLS regressors) are added to
+    the design matrix to calculate the test statistic.
 
     Degrees-of-freedom (full rank) = nvar + nvar * (nvar + 1) / 2
 
@@ -1067,7 +1072,7 @@ def spec_white(resid, exog):
     # chi-square test
     dof = devx.shape[1]
     pval = stats.chi2.sf(stat, dof)
-    return dof, stat, pval
+    return stat, pval, dof
 
 
 def _neweywestcov(resid, x):
