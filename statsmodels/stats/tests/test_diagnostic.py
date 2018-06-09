@@ -466,29 +466,28 @@ class TestDiagnosticG(object):
     def test_spec_white(self):
         resdir = os.path.join(cur_dir, "results")
         wsfiles = ['wspec1.csv', 'wspec2.csv', 'wspec3.csv', 'wspec4.csv']
-        for file in os.listdir(resdir):
-            if file in wsfiles:
-                mdlfile = os.path.join(resdir, file)
-                mdl = np.asarray(pd.read_csv(mdlfile))
-                # DV is in last column
-                lastcol = mdl.shape[1] - 1
-                dv = mdl[:,lastcol]
-                # create design matrix
-                design = np.concatenate((np.ones((mdl.shape[0], 1)), \
-                    np.delete(mdl, lastcol, 1)), axis=1)
-                # perform OLS and generate residuals
-                resids = dv - np.dot(design, np.linalg.lstsq(design, dv, rcond=-1)[0])
-                # perform White spec test. wspec3/wspec4 contain dummies.
-                wsres = smsdia.spec_white(resids, design)
-                # compare results to SAS 9.3 output
-                if file == 'wspec1.csv':
-                    assert_almost_equal(wsres, [3.251, 0.661, 5], decimal=3)
-                elif file == 'wspec2.csv':
-                    assert_almost_equal(wsres, [6.070, 0.733, 9], decimal=3)
-                elif file == 'wspec3.csv':
-                    assert_almost_equal(wsres, [6.767, 0.454, 7], decimal=3)
-                else:
-                    assert_almost_equal(wsres, [8.462, 0.671, 11], decimal=3)
+        for file in wsfiles:
+            mdlfile = os.path.join(resdir, file)
+            mdl = np.asarray(pd.read_csv(mdlfile))
+            # DV is in last column
+            lastcol = mdl.shape[1] - 1
+            dv = mdl[:,lastcol]
+            # create design matrix
+            design = np.concatenate((np.ones((mdl.shape[0], 1)), \
+                np.delete(mdl, lastcol, 1)), axis=1)
+            # perform OLS and generate residuals
+            resids = dv - np.dot(design, np.linalg.lstsq(design, dv, rcond=-1)[0])
+            # perform White spec test. wspec3/wspec4 contain dummies.
+            wsres = smsdia.spec_white(resids, design)
+            # compare results to SAS 9.3 output
+            if file == 'wspec1.csv':
+                assert_almost_equal(wsres, [3.251, 0.661, 5], decimal=3)
+            elif file == 'wspec2.csv':
+                assert_almost_equal(wsres, [6.070, 0.733, 9], decimal=3)
+            elif file == 'wspec3.csv':
+                assert_almost_equal(wsres, [6.767, 0.454, 7], decimal=3)
+            else:
+                assert_almost_equal(wsres, [8.462, 0.671, 11], decimal=3)
 
 
     def test_compare_nonnested(self):

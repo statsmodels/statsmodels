@@ -1070,8 +1070,9 @@ def spec_white(resid, exog):
     sqmndevs = sqe - np.mean(sqe)
     D = np.dot(exog.T, sqmndevs)
     devx = exog - np.mean(exog, axis=0)
-    B = np.linalg.multi_dot([devx.T, np.diag(np.square(sqmndevs)), devx])
-    stat = np.linalg.multi_dot([D, np.linalg.inv(B), D])
+    devx *= sqmndevs[:, None]
+    B = devx.T.dot(devx)
+    stat = D.dot(np.linalg.solve(B, D))
 
     # chi-square test
     dof = devx.shape[1]
