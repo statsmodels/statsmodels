@@ -127,6 +127,7 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                         res = mod.fit(disp=False)
                         aic_vals[model] = res.aic
                 except Exception as e:
+                    aic_vals[mode] = np.inf
                     warnings.warn('Could not fit model ({},{},{})({},{},{},{})'
                                   .format(order_init[model][0], d,
                                           order_init[model][1],
@@ -151,6 +152,7 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                         res = mod.fit(disp=False)
                         aic_vals[model] = res.aic
                 except Exception as e:
+                    aic_vals[model] = np.inf
                     warnings.warn('Could not fit model with {},{},{}'
                                   .format(order_init[model][0], d,
                                           order_init[model][0]))
