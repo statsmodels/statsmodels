@@ -1864,10 +1864,7 @@ class FilterResults(FrozenRepresentation):
             model = KalmanFilter(
                 endog, self.k_states, self.k_posdef, **model_kwargs
             )
-            model.initialize_known(
-                self.initial_state,
-                self.initial_state_cov
-            )
+            model.initialization = self.initialization
             model._initialize_filter()
             model._initialize_state()
 
