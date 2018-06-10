@@ -297,7 +297,7 @@ class RecursiveLSResults(MLEResults):
 
     @cache_readonly
     def resid_recursive(self):
-        """
+        r"""
         Recursive residuals
 
         Returns
@@ -308,15 +308,20 @@ class RecursiveLSResults(MLEResults):
 
         Notes
         -----
-        The first `k_exog` residuals are typically unreliable due to
-        initialization.
+        These quantities are defined in, for example, Harvey (1989)
+        section 5.4. In fact, there he defines the standardized innovations in
+        equation 5.4.1, but in his version they have non-unit variance, whereas
+        the standardized forecast errors computed by the Kalman filter here
+        assume unit variance. To convert to Harvey's definition, we need to
+        multiply by the standard deviation.
+
+        Harvey notes that in smaller samples, "although the second moment
+        of the :math:`\tilde \sigma_*^{-1} \tilde v_t`'s is unity, the
+        variance is not necessarily equal to unity as the mean need not be
+        equal to zero", and he defines an alternative version (which are
+        not provided here).
 
         """
-        # See Harvey (1989) section 5.4; he defines the standardized
-        # innovations in 5.4.1, but they have non-unit variance, whereas
-        # the standardized forecast errors assume unit variance. To convert
-        # to Harvey's definition, we need to multiply by the standard
-        # deviation.
         return (self.filter_results.standardized_forecasts_error[0] *
                 self.filter_results.obs_cov[0, 0]**0.5)
 
