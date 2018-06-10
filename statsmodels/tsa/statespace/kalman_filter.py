@@ -748,8 +748,6 @@ class KalmanFilter(Representation):
 
         # Run the filter
         kfilter()
-        tmp = np.array(kfilter.loglikelihood)
-        tmp2 = np.array(kfilter.predicted_state)
 
         return kfilter
 
