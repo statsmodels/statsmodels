@@ -410,14 +410,14 @@ class RecursiveLSResults(MLEResults):
         return numer / denom
 
     @cache_readonly
-    def llf_obs(self):
+    def llf_recursive_obs(self):
         from scipy.stats import norm
         return np.log(norm.pdf(self.resid_recursive, loc=0,
                                scale=self.filter_results.obs_cov[0, 0]**0.5))
 
     @cache_readonly
-    def llf(self):
-        return np.sum(self.llf_obs)
+    def llf_recursive(self):
+        return np.sum(self.llf_recursive_obs)
 
     def plot_recursive_coefficient(self, variables=0, alpha=0.05,
                                    legend_loc='upper left', fig=None,
