@@ -80,17 +80,17 @@ class RecursiveLS(MLEModel):
         self.k_exog = exog.shape[1]
 
         # Handle constraints
-        r_matrix = q_matrix = None
+        self._r_matrix = self._q_matrix = None
         if constraints is not None:
             from patsy import DesignInfo
             from statsmodels.base.data import handle_data
             data = handle_data(endog, exog, **kwargs)
             names = data.param_names
             LC = DesignInfo(names).linear_constraint(constraints)
-            r_matrix, q_matrix = LC.coefs, LC.constants
+            self._r_matrix, self._q_matrix = LC.coefs, LC.constants
 
-            endog = np.c_[endog, np.zeros((len(endog), len(r_matrix)))]
-            endog[:, 1:] = q_matrix
+            endog = np.c_[endog, np.zeros((len(endog), len(self._r_matrix)))]
+            endog[:, 1:] = self._q_matrix
 
         # Handle coefficient initialization
         kwargs.setdefault('initialization', 'diffuse')
@@ -105,8 +105,8 @@ class RecursiveLS(MLEModel):
         # Setup the state space representation
         self['design'] = np.zeros((self.k_endog, self.k_states, self.nobs))
         self['design', 0] = self.exog[:, :, None].T
-        if r_matrix is not None:
-            self['design', 1:, :] = r_matrix[:, :, None]
+        if self._r_matrix is not None:
+            self['design', 1:, :] = self._r_matrix[:, :, None]
         self['transition'] = np.eye(self.k_states)
 
         # Notice that the filter output does not depend on the measurement
@@ -116,7 +116,7 @@ class RecursiveLS(MLEModel):
         # Linear constraints are technically imposed by adding "fake" endog
         # variables that are used during filtering, but for all model- and
         # results-based purposes we want k_endog = 1.
-        if r_matrix is not None:
+        if self._r_matrix is not None:
             self.k_endog = 1
 
     @classmethod
