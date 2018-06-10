@@ -100,7 +100,7 @@ cdef int {{prefix}}forecast_univariate({{prefix}}KalmanFilter kfilter, {{prefix}
 
         # If we have a non-zero variance
         # (if we have a zero-variance then we are done with this iteration)
-        if not forecast_error_cov == 0:
+        if forecast_error_cov{{if combined_prefix == 'z'}}.real{{endif}} > kfilter.tolerance_diffuse:
             forecast_error_cov_inv = 1.0 / forecast_error_cov
             if not (kfilter.conserve_memory & MEMORY_NO_STD_FORECAST > 0):
                 kfilter._standardized_forecast_error[i] = (
