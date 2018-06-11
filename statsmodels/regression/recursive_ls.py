@@ -6,6 +6,9 @@ License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
 
+try: unicode
+except NameError: unicode = str
+
 from warnings import warn
 from statsmodels.compat.collections import OrderedDict
 
@@ -470,6 +473,37 @@ class RecursiveLSResults(MLEResults):
             return self.centered_tss / (self.df_resid + self.df_model)
         else:
             return self.uncentered_tss / (self.df_resid + self.df_model)
+
+    def get_prediction(self, start=None, end=None, dynamic=False,
+                       index=None, **kwargs):
+        # Note: need to override this, because we currently don't support
+        # dynamic prediction or forecasts when there are constraints.
+        if start is None:
+            start = self.model._index[0]
+
+        # Handle start, end, dynamic
+        start, end, out_of_sample, prediction_index = (
+            self.model._get_prediction_index(start, end, index))
+
+        # Handle `dynamic`
+        if isinstance(dynamic, (bytes, unicode)):
+            dynamic, _, _ = self.model._get_index_loc(dynamic)
+
+        if self.model._r_matrix is not None and (out_of_sample or dynamic):
+            raise NotImplementedError('Cannot yet perform out-of-sample or'
+                                      ' dynamic prediction in models with'
+                                      ' constraints.')
+
+        # Perform the prediction
+        # This is a (k_endog x npredictions) array; don't want to squeeze in
+        # case of npredictions = 1
+        prediction_results = self.filter_results.predict(
+            start, end + out_of_sample + 1, dynamic, **kwargs)
+
+        # Return a new mlemodel.PredictionResults object
+        return PredictionResultsWrapper(PredictionResults(
+            self, prediction_results, row_labels=prediction_index))
+    get_prediction.__doc__ = MLEResults.get_prediction.__doc__
 
     def plot_recursive_coefficient(self, variables=0, alpha=0.05,
                                    legend_loc='upper left', fig=None,
