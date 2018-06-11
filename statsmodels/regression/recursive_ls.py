@@ -248,7 +248,6 @@ class RecursiveLSResults(MLEResults):
         super(RecursiveLSResults, self).__init__(
             model, params, filter_results, cov_type, **kwargs)
 
-        self.df_resid = np.inf  # attribute required for wald tests
 
         # Save _init_kwds
         self._init_kwds = self.model._get_init_kwds()
