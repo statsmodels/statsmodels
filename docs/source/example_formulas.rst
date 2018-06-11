@@ -18,6 +18,7 @@ Loading modules and functions
 
 .. ipython:: python
 
+    import statsmodels.api as sm
     import statsmodels.formula.api as smf
     import numpy as np
     import pandas
@@ -133,7 +134,8 @@ Define a custom function:
 .. ipython:: python
 
     def log_plus_1(x):
-        return np.log(x) + 1.
+        return np.log(x) + 1.0
+
     res = smf.ols(formula='Lottery ~ log_plus_1(Literacy)', data=df).fit()
     print(res.params)
 
