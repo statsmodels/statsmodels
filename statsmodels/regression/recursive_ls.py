@@ -414,13 +414,62 @@ class RecursiveLSResults(MLEResults):
 
     @cache_readonly
     def llf_recursive_obs(self):
+        """
+        (float) Loglikelihood at observation, computed from recursive residuals
+        """
         from scipy.stats import norm
         return np.log(norm.pdf(self.resid_recursive, loc=0,
                                scale=self.filter_results.obs_cov[0, 0]**0.5))
 
     @cache_readonly
     def llf_recursive(self):
+        """
+        (float) Loglikelihood defined by recursive residuals, equivalent to OLS
+        """
         return np.sum(self.llf_recursive_obs)
+
+    @cache_readonly
+    def ssr(self):
+        d = max(self.nobs_diffuse, self.loglikelihood_burn)
+        return (self.nobs - d) * self.filter_results.obs_cov[0, 0, 0]
+
+    @cache_readonly
+    def centered_tss(self):
+        return np.sum((self.filter_results.endog[0] -
+                       np.mean(self.filter_results.endog))**2)
+
+    @cache_readonly
+    def uncentered_tss(self):
+        return np.sum((self.filter_results.endog[0])**2)
+
+    @cache_readonly
+    def ess(self):
+        if self.k_constant:
+            return self.centered_tss - self.ssr
+        else:
+            return self.uncentered_tss - self.ssr
+
+    @cache_readonly
+    def rsquared(self):
+        if self.k_constant:
+            return 1 - self.ssr / self.centered_tss
+        else:
+            return 1 - self.ssr / self.uncentered_tss
+
+    @cache_readonly
+    def mse_model(self):
+        return self.ess / self.df_model
+
+    @cache_readonly
+    def mse_resid(self):
+        return self.ssr / self.df_resid
+
+    @cache_readonly
+    def mse_total(self):
+        if self.k_constant:
+            return self.centered_tss / (self.df_resid + self.df_model)
+        else:
+            return self.uncentered_tss / (self.df_resid + self.df_model)
 
     def plot_recursive_coefficient(self, variables=0, alpha=0.05,
                                    legend_loc='upper left', fig=None,
