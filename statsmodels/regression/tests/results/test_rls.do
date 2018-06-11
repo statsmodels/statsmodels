@@ -15,3 +15,6 @@ cnsreg infl m1 unemp, c(1)
 
 disp %18.13f e(ll) // -534.4292052931121
 matrix list e(b), format(%15.13f) //  -0.0018477514060   1.0018477514060  -0.7001083844336
+
+mata: se=sqrt(diagonal(st_matrix("e(V)")))
+mata: se // .0005369357, .0005369357, .4699552366
