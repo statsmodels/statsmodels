@@ -248,6 +248,10 @@ class RecursiveLSResults(MLEResults):
         super(RecursiveLSResults, self).__init__(
             model, params, filter_results, cov_type, **kwargs)
 
+        # Since we are overriding params with things that aren't MLE params,
+        # need to adjust df's
+        self.df_model = self.k_diffuse_states
+        self.df_resid = self.nobs_effective - self.df_model
 
         # Save _init_kwds
         self._init_kwds = self.model._get_init_kwds()
