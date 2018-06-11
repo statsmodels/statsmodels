@@ -14,6 +14,7 @@ import os
 import warnings
 from statsmodels.datasets import macrodata
 from statsmodels.regression.linear_model import OLS
+from statsmodels.genmod.api import GLM
 from statsmodels.tools.eval_measures import aic, bic
 from statsmodels.regression.recursive_ls import RecursiveLS
 from statsmodels.stats.diagnostic import recursive_olsresiduals
@@ -138,6 +139,94 @@ def test_ols():
     assert_allclose(actual_aic, res_ols.aic)
     actual_bic = bic(llf_alternative, res.nobs_effective, res.df_model)
     assert_allclose(actual_bic, res_ols.bic)
+
+
+def test_glm(constraints=None):
+    # More comprehensive tests against GLM estimates (this is sort of redundant
+    # given `test_ols`, but this is mostly to complement the tests in
+    # `test_glm_constrained`)
+    endog = dta.infl
+    exog = add_constant(dta[['unemp', 'm1']])
+
+    mod = RecursiveLS(endog, exog, constraints=constraints)
+    res = mod.fit()
+
+    mod_glm = GLM(endog, exog)
+    if constraints is None:
+        res_glm = mod_glm.fit()
+    else:
+        res_glm = mod_glm.fit_constrained(constraints=constraints)
+
+    # Regression coefficients, standard errors, and estimated scale
+    assert_allclose(res.params, res_glm.params)
+    assert_allclose(res.bse, res_glm.bse)
+    # Note: scale here is computed according to Harvey, 1989, 4.2.5, and is
+    # the called the ML estimator and sometimes (e.g. later in section 5)
+    # denoted \tilde \sigma_*^2
+    assert_allclose(res.filter_results.obs_cov[0, 0], res_glm.scale)
+
+    # OLS residuals are equivalent to smoothed forecast errors
+    # (the latter are defined as e_t|T by Harvey, 1989, 5.4.5)
+    # (this follows since the smoothed state simply contains the
+    # full-information estimates of the regression coefficients)
+    actual = (mod.endog[:, 0] -
+              np.sum(mod['design', 0, :, :] * res.smoothed_state, axis=0))
+    assert_allclose(actual, res_glm.resid_response)
+
+    # Given the estimate of scale as `sum(v_t^2 / f_t) / (T - d)` (see
+    # Harvey, 1989, 4.2.5 on p. 183), then llf_recursive is equivalent to the
+    # full OLS loglikelihood (i.e. without the scale concentrated out).
+    desired = mod_glm.loglike(res_glm.params, scale=res_glm.scale)
+    assert_allclose(res.llf_recursive, desired)
+    # Alternatively, we can constrcut the concentrated OLS loglikelihood
+    # by computing the scale term with `nobs` in the denominator rather than
+    # `nobs - d`.
+    scale_alternative = np.sum((
+        res.standardized_forecasts_error[0, 1:] *
+        res.filter_results.obs_cov[0, 0]**0.5)**2) / mod.nobs
+    llf_alternative = np.log(norm.pdf(res.resid_recursive, loc=0,
+                                      scale=scale_alternative**0.5)).sum()
+    assert_allclose(llf_alternative, res_glm.llf)
+
+    # Prediction
+    # TODO: prediction in this case is not working.
+    design = np.ones((2, 3, 10))
+    design[1] = mod['design', 1, :, 0:1]
+    assert_raises(NotImplementedError, res.forecast, 10, design=design)
+    # actual = res.forecast(10, design=design)
+    # assert_allclose(actual, res_glm.predict(np.ones((10, 3))))
+
+    # Hypothesis tests
+    actual = res.t_test('m1 = 0')
+    desired = res_glm.t_test('m1 = 0')
+    assert_allclose(actual.statistic, desired.statistic)
+    assert_allclose(actual.pvalue, desired.pvalue, atol=1e-15)
+
+    actual = res.f_test('m1 = 0')
+    desired = res_glm.f_test('m1 = 0')
+    assert_allclose(actual.statistic, desired.statistic)
+    # TODO: Why is this tolerance relatively wide, whereas the t_test is very
+    # tight?
+    assert_allclose(actual.pvalue, desired.pvalue, atol=1e-6)
+
+    # Information criteria
+    # Note: the llf and llf_obs given in the results are based on the Kalman
+    # filter and so the ic given in results will not be identical to the
+    # OLS versions. Additionally, llf_recursive is comparable to the
+    # non-concentrated llf, and not the concentrated llf that is by default
+    # used in OLS. Compute new ic based on llf_alternative to compare.
+    # TODO: Why do I need a -1 here but not in the unconstrained case? It must
+    # have something to do with the fact that GLM does not report the intercept
+    # as a degree of freedom so we need to subtract it here, but then why don't
+    # we need to do that it the unconstrained case?
+    actual_aic = aic(llf_alternative, res.nobs_effective, res.df_model - 1)
+    assert_allclose(actual_aic, res_glm.aic)
+    # TODO: Why does AIC match but BIC does not match?
+    # actual_bic = bic(llf_alternative, res.nobs_effective, res.df_model)
+    # assert_allclose(actual_bic, res_glm.bic)
+
+def test_glm_constrained():
+    test_glm(constraints='m1 + unemp = 1')
 
 
 def test_filter():
