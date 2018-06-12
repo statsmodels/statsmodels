@@ -171,7 +171,7 @@ def test_glm(constraints=None):
     # full-information estimates of the regression coefficients)
     actual = (mod.endog[:, 0] -
               np.sum(mod['design', 0, :, :] * res.smoothed_state, axis=0))
-    assert_allclose(actual, res_glm.resid_response)
+    assert_allclose(actual, res_glm.resid_response, atol=1e-7)
 
     # Given the estimate of scale as `sum(v_t^2 / f_t) / (T - d)` (see
     # Harvey, 1989, 4.2.5 on p. 183), then llf_recursive is equivalent to the
