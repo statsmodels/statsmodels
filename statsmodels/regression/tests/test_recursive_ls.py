@@ -178,7 +178,7 @@ def test_glm(constraints=None):
     # full OLS loglikelihood (i.e. without the scale concentrated out).
     desired = mod_glm.loglike(res_glm.params, scale=res_glm.scale)
     assert_allclose(res.llf_recursive, desired)
-    # Alternatively, we can constrcut the concentrated OLS loglikelihood
+    # Alternatively, we can construct the concentrated OLS loglikelihood
     # by computing the scale term with `nobs` in the denominator rather than
     # `nobs - d`.
     scale_alternative = np.sum((
@@ -190,11 +190,13 @@ def test_glm(constraints=None):
 
     # Prediction
     # TODO: prediction in this case is not working.
-    design = np.ones((2, 3, 10))
-    design[1] = mod['design', 1, :, 0:1]
-    assert_raises(NotImplementedError, res.forecast, 10, design=design)
-    # actual = res.forecast(10, design=design)
-    # assert_allclose(actual, res_glm.predict(np.ones((10, 3))))
+    if constraints is None:
+        design = np.ones((1, 3, 10))
+        actual = res.forecast(10, design=design)
+        assert_allclose(actual, res_glm.predict(np.ones((10, 3))))
+    else:
+        design = np.ones((2, 3, 10))
+        assert_raises(NotImplementedError, res.forecast, 10, design=design)
 
     # Hypothesis tests
     actual = res.t_test('m1 = 0')
@@ -215,13 +217,15 @@ def test_glm(constraints=None):
     # OLS versions. Additionally, llf_recursive is comparable to the
     # non-concentrated llf, and not the concentrated llf that is by default
     # used in OLS. Compute new ic based on llf_alternative to compare.
-    # TODO: Why do I need a -1 here but not in the unconstrained case? It must
-    # have something to do with the fact that GLM does not report the intercept
-    # as a degree of freedom so we need to subtract it here, but then why don't
-    # we need to do that it the unconstrained case?
-    actual_aic = aic(llf_alternative, res.nobs_effective, res.df_model - 1)
+    # TODO: Why do I need a -1 here in the constrained case but not in the
+    # unconstrained case? It must have something to do with the fact that GLM
+    # does not report the intercept as a degree of freedom so we need to
+    # subtract it here, but then why don't we need to do that it the
+    # unconstrained case?
+    df_model = res.df_model - 1 if constraints is not None else res.df_model
+    actual_aic = aic(llf_alternative, res.nobs_effective, df_model)
     assert_allclose(actual_aic, res_glm.aic)
-    # TODO: Why does AIC match but BIC does not match?
+    # See gh#1733 for details on why the BIC doesn't match while AIC does
     # actual_bic = bic(llf_alternative, res.nobs_effective, res.df_model)
     # assert_allclose(actual_bic, res_glm.bic)
 
@@ -438,5 +442,13 @@ def test_constraints_stata():
 
     # See tests/results/test_rls.do
     desired = -534.4292052931121
-    assert_allclose(res.llf, desired)
+    # Note that to compute what Stata reports as the llf, we need to use a
+    # different denominator for estimating the scale, and then compute the
+    # llf from the alternative recursive residuals
+    scale_alternative = np.sum((
+        res.standardized_forecasts_error[0, 1:] *
+        res.filter_results.obs_cov[0, 0]**0.5)**2) / mod.nobs
+    llf_alternative = np.log(norm.pdf(res.resid_recursive, loc=0,
+                                      scale=scale_alternative**0.5)).sum()
+    assert_allclose(llf_alternative, desired)
 

@@ -17,7 +17,8 @@ import pandas as pd
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.statespace.mlemodel import (
-    MLEModel, MLEResults, MLEResultsWrapper)
+    MLEModel, MLEResults, MLEResultsWrapper, PredictionResults,
+    PredictionResultsWrapper)
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 import statsmodels.base.wrapper as wrap
