@@ -1607,6 +1607,26 @@ class GLMResults(base.LikelihoodModelResults):
 
     get_prediction.__doc__ = pred.get_prediction_glm.__doc__
 
+    def get_hat_matrix_diag(self, observed=True):
+        weights = self.model.hessian_factor(self.params, observed=observed)
+        wexog = np.sqrt(weights)[:, None] * self.model.exog
+
+        hd = (wexog * np.linalg.pinv(wexog).T).sum(1)
+        return hd
+
+    def get_influence(self, observed=True):
+        from statsmodels.stats.outliers_influence import Influence
+        weights = self.model.hessian_factor(self.params, observed=observed)
+        weights_sqrt = np.sqrt(weights)
+        wexog = weights_sqrt[:, None] * self.model.exog
+        wendog = weights_sqrt * self.model.endog
+
+        hat_matrix_diag = self.get_hat_matrix_diag(observed=observed)
+        infl = Influence(self, endog=wendog, exog=wexog,
+                         resid=self.resid_pearson,
+                         hat_matrix_diag=hat_matrix_diag)
+        return infl
+
     def remove_data(self):
         # GLM has alias/reference in result instance
         self._data_attr.extend([i for i in self.model._data_attr

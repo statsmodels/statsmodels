@@ -217,6 +217,7 @@ class OLSInfluence(object):
         self.nobs, self.k_vars = results.model.exog.shape
         self.endog = results.model.endog
         self.exog = results.model.exog
+        self.resid = results.resid
         self.model_class = results.model.__class__
 
         self.sigma_est = np.sqrt(results.mse_resid)
@@ -239,7 +240,7 @@ class OLSInfluence(object):
         '''(cached attribute) PRESS residuals
         '''
         hii = self.hat_matrix_diag
-        return self.results.resid / (1 - hii)
+        return self.resid / (1 - hii)
 
     @cache_readonly
     def influence(self):
@@ -250,7 +251,7 @@ class OLSInfluence(object):
         where u are the residuals and h is the diagonal of the hat_matrix
         '''
         hii = self.hat_matrix_diag
-        return self.results.resid * hii / (1 - hii)
+        return self.resid * hii / (1 - hii)
 
     @cache_readonly
     def hat_diag_factor(self):
@@ -320,7 +321,7 @@ class OLSInfluence(object):
             #can be replace by different estimators of sigma
             sigma = np.sqrt(sigma2_est)
 
-        return  self.results.resid / sigma / np.sqrt(1 - hii)
+        return  self.resid / sigma / np.sqrt(1 - hii)
 
     @cache_readonly
     def dffits_internal(self):
@@ -755,3 +756,118 @@ def summary_table(res, alpha=0.05):
 
     return st, data, ss2
 
+
+class Influence(OLSInfluence):
+    """Influence and outlier measures (experimental)
+
+    This currently subclasses OLSInfluence instead of the other way.
+
+    """
+
+    def __init__(self, results, resid=None, endog=None, exog=None,
+                 hat_matrix_diag=None, scale=None):
+        # I'm not calling super for now, OLS attributes might not be available
+        #check which model is allowed
+        self.results = maybe_unwrap_results(results)
+        # TODO: check for extra params in e.g. NegBin
+        self.nobs, self.k_vars = results.model.exog.shape
+        self.endog = endog if endog is not None else results.model.endog
+        self.exog = exog if exog is not None else results.model.exog
+        self.resid = resid if resid is not None else results.resid
+        self.scale = scale if scale is not None else results.scale
+        self.model_class = results.model.__class__
+        # We will need init kwds where we use this
+
+        self.sigma_est = np.sqrt(scale if scale is not None else
+                                 results.scale)
+
+        # TODO don't use cached attribute in OLSInfluence
+        self._hat_matrix_diag = (hat_matrix_diag if hat_matrix_diag is not None
+                                 else self.results.get_hat_matrix())
+
+        self.aux_regression_exog = {}
+        self.aux_regression_endog = {}
+
+
+    @cache_readonly
+    def hat_matrix_diag(self):
+        '''(cached attribute) diagonal of the hat_matrix for OLS
+
+        Notes
+        -----
+        temporarily calculated here, this should go to model class
+        '''
+        return self._hat_matrix_diag
+
+    @cache_readonly
+    def dfbetas(self):
+        '''(cached attribute) parameter estimates for all LOOO regressions
+
+        uses results from leave-one-observation-out loop
+        '''
+
+        beta_i = np.linalg.pinv(self.exog) * self.resid_studentized_internal
+        beta_i /= np.sqrt(1 - self.hat_matrix_diag)
+        return beta_i.T
+
+    @cache_readonly
+    def sigma2_not_obsi(self):
+        ''' fake external sigma2
+        (cached attribute) error variance for all LOOO regressions
+
+        This is 'mse_resid' from each auxiliary regression.
+
+        uses results from leave-one-observation-out loop
+        '''
+        #return np.asarray(self._res_looo['mse_resid'])
+        #TODO: do we get a shortcut
+        return self.scale * np.ones(self.nobs)
+
+    def summary_frame(self):
+        """
+        Creates a DataFrame with all available influence results.
+
+        Returns
+        -------
+        frame : DataFrame
+            A DataFrame with all results.
+
+        Notes
+        -----
+        The resultant DataFrame contains six variables in addition to the
+        DFBETAS. These are:
+
+        * cooks_d : Cook's Distance defined in `Influence.cooks_distance`
+        * standard_resid : Standardized residuals defined in
+          `Influence.resid_studentized_internal`
+        * hat_diag : The diagonal of the projection, or hat, matrix defined in
+          `Influence.hat_matrix_diag`
+        * dffits_internal : DFFITS statistics using internally Studentized
+          residuals defined in `Influence.dffits_internal`
+        * dffits : DFFITS statistics using externally Studentized residuals
+          defined in `Influence.dffits`
+        * student_resid : Externally Studentized residuals defined in
+          `Influence.resid_studentized_external`
+        """
+        from pandas import DataFrame
+
+        # row and column labels
+        data = self.results.model.data
+        row_labels = data.row_labels
+        beta_labels = ['dfb_' + i for i in data.xnames]
+
+        # grab the results
+        summary_data = DataFrame(dict(
+                            cooks_d = self.cooks_distance[0],
+                            standard_resid = self.resid_studentized_internal,
+                            hat_diag = self.hat_matrix_diag,
+                            dffits_internal = self.dffits_internal[0],
+                            #student_resid = self.resid_studentized_external,
+                            #dffits = self.dffits[0],
+                                        ),
+                            index = row_labels)
+        #NOTE: if we don't give columns, order of above will be arbitrary
+        dfbeta = DataFrame(self.dfbetas, columns=beta_labels,
+                            index=row_labels)
+
+        return dfbeta.join(summary_data)
