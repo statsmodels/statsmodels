@@ -23,8 +23,9 @@ Loading modules and functions
     import numpy as np
     import pandas
 
-Notice that we called ``statsmodels.formula.api`` instead of the usual
-``statsmodels.api``. The ``formula.api`` hosts many of the same
+Notice that we called ``statsmodels.formula.api`` in addition to the usual
+``statsmodels.api``. In fact, ``statsmodels.api`` is used here only to load
+the dataset. The ``formula.api`` hosts many of the same
 functions found in ``api`` (e.g. OLS, GLM), but it also holds lower case
 counterparts for most of these models. In general, lower case models
 accept ``formula`` and ``df`` arguments, whereas upper case ones take
