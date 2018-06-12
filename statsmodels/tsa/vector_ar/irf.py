@@ -79,6 +79,14 @@ class BaseIRAnalysis(object):
         else:
             self._A = util.comp_matrix(model.coefs)
 
+    def _choose_irfs(self, orth=False, svar=False):
+        if orth:
+            return self.orth_irfs
+        elif svar:
+            return self.svar_irfs
+        else:
+            return self.irfs
+
     def cov(self, *args, **kwargs):
         raise NotImplementedError
 
@@ -125,15 +133,13 @@ class BaseIRAnalysis(object):
         if orth and svar:
             raise ValueError("For SVAR system, set orth=False")
 
+        irfs = self._choose_irfs(orth, svar)
         if orth:
             title = 'Impulse responses (orthogonalized)'
-            irfs = self.orth_irfs
         elif svar:
             title = 'Impulse responses (structural)'
-            irfs = self.svar_irfs
         else:
             title = 'Impulse responses'
-            irfs = self.irfs
 
         if plot_stderr == False:
             stderr = None
@@ -329,12 +335,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         model = self.model
         periods = self.periods
-        if orth:
-            irfs = self.orth_irfs
-        elif svar:
-            irfs = self.svar_irfs
-        else:
-            irfs = self.irfs
+        irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
@@ -392,12 +393,7 @@ class IRAnalysis(BaseIRAnalysis):
         """
         model = self.model
         periods = self.periods
-        if orth:
-            irfs = self.orth_irfs
-        elif svar:
-            irfs = self.svar_irfs
-        else:
-            irfs = self.irfs
+        irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)
@@ -460,12 +456,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         model = self.model
         periods = self.periods
-        if orth:
-            irfs = self.orth_irfs
-        elif svar:
-            irfs = self.svar_irfs
-        else:
-            irfs = self.irfs
+        irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
                                    burn=100)

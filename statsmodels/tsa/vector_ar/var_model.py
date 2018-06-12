@@ -1510,30 +1510,9 @@ class VARResults(VARProcess):
         Returns
         -------
         Tuple of lower and upper arrays of ma_rep monte carlo standard errors
-
         """
-        neqs = self.neqs
-        # mean = self.mean()
-        k_ar = self.k_ar
-        coefs = self.coefs
-        sigma_u = self.sigma_u
-        intercept = self.intercept
-        # df_model = self.df_model
-        nobs = self.nobs
-
-        ma_coll = np.zeros((repl, T+1, neqs, neqs))
-
-        def fill_coll(sim):
-            ret = VAR(sim, exog=self.exog).fit(maxlags=k_ar, trend=self.trend)
-            ret = ret.orth_ma_rep(maxn=T) if orth else ret.ma_rep(maxn=T)
-            return ret.cumsum(axis=0) if cum else ret
-
-        for i in range(repl):
-            # discard first hundred to eliminate correct for starting bias
-            sim = util.varsim(coefs, intercept, sigma_u,
-                              seed=seed, steps=nobs+burn)
-            sim = sim[burn:]
-            ma_coll[i, :, :, :] = fill_coll(sim)
+        ma_coll = self.irf_resim(orth=orth, repl=repl, T=T,
+                                 seed=seed, burn=burn, cum=cum)
 
         ma_sort = np.sort(ma_coll, axis=0)  # sort to get quantiles
         # python 2: round returns float
