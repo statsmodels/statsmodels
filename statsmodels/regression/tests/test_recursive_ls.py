@@ -165,6 +165,10 @@ def test_glm(constraints=None):
     # denoted \tilde \sigma_*^2
     assert_allclose(res.filter_results.obs_cov[0, 0], res_glm.scale)
 
+    # DoF
+    # Note: GLM does not include intercept in DoF, so modify by -1
+    assert_equal(res.df_model - 1, res_glm.df_model)
+
     # OLS residuals are equivalent to smoothed forecast errors
     # (the latter are defined as e_t|T by Harvey, 1989, 5.4.5)
     # (this follows since the smoothed state simply contains the
@@ -207,9 +211,7 @@ def test_glm(constraints=None):
     actual = res.f_test('m1 = 0')
     desired = res_glm.f_test('m1 = 0')
     assert_allclose(actual.statistic, desired.statistic)
-    # TODO: Why is this tolerance relatively wide, whereas the t_test is very
-    # tight?
-    assert_allclose(actual.pvalue, desired.pvalue, atol=1e-6)
+    assert_allclose(actual.pvalue, desired.pvalue)
 
     # Information criteria
     # Note: the llf and llf_obs given in the results are based on the Kalman
@@ -217,13 +219,7 @@ def test_glm(constraints=None):
     # OLS versions. Additionally, llf_recursive is comparable to the
     # non-concentrated llf, and not the concentrated llf that is by default
     # used in OLS. Compute new ic based on llf_alternative to compare.
-    # TODO: Why do I need a -1 here in the constrained case but not in the
-    # unconstrained case? It must have something to do with the fact that GLM
-    # does not report the intercept as a degree of freedom so we need to
-    # subtract it here, but then why don't we need to do that it the
-    # unconstrained case?
-    df_model = res.df_model - 1 if constraints is not None else res.df_model
-    actual_aic = aic(llf_alternative, res.nobs_effective, df_model)
+    actual_aic = aic(llf_alternative, res.nobs_effective, res.df_model)
     assert_allclose(actual_aic, res_glm.aic)
     # See gh#1733 for details on why the BIC doesn't match while AIC does
     # actual_bic = bic(llf_alternative, res.nobs_effective, res.df_model)
