@@ -911,9 +911,9 @@ class SARIMAX(MLEModel):
             not is_invertible(np.r_[1, -params_ar])
         )
         if invalid_ar:
-            raise ValueError('Non-stationary starting autoregressive'
-                             ' parameters found with `enforce_stationarity`'
-                             ' set to True.')
+            warn('Non-stationary starting autoregressive parameters'
+                 ' found. Using zeros as starting parameters.')
+            params_ar *= 0
 
         # If we have estimated non-invertible start parameters but enforce
         # invertibility is on, raise an error
@@ -923,8 +923,9 @@ class SARIMAX(MLEModel):
             not is_invertible(np.r_[1, params_ma])
         )
         if invalid_ma:
-            raise ValueError('non-invertible starting MA parameters found'
-                             ' with `enforce_invertibility` set to True.')
+            warn('Non-invertible starting MA parameters found.'
+                 ' Using zeros as starting parameters.')
+            params_ma *= 0
 
         # Seasonal Parameters
         _, params_seasonal_ar, params_seasonal_ma, params_seasonal_variance = (
@@ -942,9 +943,10 @@ class SARIMAX(MLEModel):
             not is_invertible(np.r_[1, -params_seasonal_ar])
         )
         if invalid_seasonal_ar:
-            raise ValueError('Non-stationary starting autoregressive'
-                             ' parameters found with `enforce_stationarity`'
-                             ' set to True.')
+            warn('Non-stationary starting seasonal autoregressive'
+                 ' Using zeros as starting parameters.')
+            params_seasonal_ar *= 0
+
 
         # If we have estimated non-invertible start parameters but enforce
         # invertibility is on, raise an error
@@ -954,9 +956,9 @@ class SARIMAX(MLEModel):
             not is_invertible(np.r_[1, params_seasonal_ma])
         )
         if invalid_seasonal_ma:
-            raise ValueError('non-invertible starting seasonal moving average'
-                             ' parameters found with `enforce_invertibility`'
-                             ' set to True.')
+            warn('Non-invertible starting seasonal moving average'
+                 ' Using zeros as starting parameters.')
+            params_seasonal_ma *= 0
 
         # Variances
         params_exog_variance = []
