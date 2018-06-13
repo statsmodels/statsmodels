@@ -255,7 +255,8 @@ class RecursiveLSResults(MLEResults):
 
         # Since we are overriding params with things that aren't MLE params,
         # need to adjust df's
-        self.df_model = self.k_diffuse_states - self.model.k_constraints
+        q = max(self.loglikelihood_burn, self.k_diffuse_states)
+        self.df_model = q - self.model.k_constraints
         self.df_resid = self.nobs_effective - self.df_model
 
         # Save _init_kwds
@@ -332,7 +333,7 @@ class RecursiveLSResults(MLEResults):
 
         """
         return (self.filter_results.standardized_forecasts_error[0] *
-                self.filter_results.obs_cov[0, 0]**0.5)
+                self.scale**0.5)
 
     @cache_readonly
     def cusum(self):
@@ -425,7 +426,7 @@ class RecursiveLSResults(MLEResults):
         """
         from scipy.stats import norm
         return np.log(norm.pdf(self.resid_recursive, loc=0,
-                               scale=self.filter_results.obs_cov[0, 0]**0.5))
+                               scale=self.scale**0.5))
 
     @cache_readonly
     def llf_recursive(self):
