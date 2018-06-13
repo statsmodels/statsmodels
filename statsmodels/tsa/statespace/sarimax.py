@@ -258,6 +258,17 @@ class SARIMAX(MLEModel):
     Stata and R require using it along with simple differencing (as Stata
     does).
 
+    If `filter_concentrated = True` is used, then the scale of the model is
+    concentrated out of the likelihood. A benefit of this is that there the
+    dimension of the parameter vector is reduced so that numerical maximization
+    of the log-likelihood function may be faster and more stable. If this
+    option in a model with measurement error, it is important to note that the
+    estimated measurement error parameter will be relative to the scale, and
+    is named "snr.measurement_error" instead of "var.measurement_error". To
+    compute the variance of the measurement error in this case one would
+    multiply `snr.measurement_error` parameter by the scale.
+
+
     Detailed information about state space models can be found in [1]_. Some
     specific references are:
 
