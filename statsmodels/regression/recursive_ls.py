@@ -84,6 +84,7 @@ class RecursiveLS(MLEModel):
         self.k_exog = exog.shape[1]
 
         # Handle constraints
+        self.k_constraints = 0
         self._r_matrix = self._q_matrix = None
         if constraints is not None:
             from patsy import DesignInfo
@@ -92,6 +93,7 @@ class RecursiveLS(MLEModel):
             names = data.param_names
             LC = DesignInfo(names).linear_constraint(constraints)
             self._r_matrix, self._q_matrix = LC.coefs, LC.constants
+            self.k_constraints = self._r_matrix.shape[0]
 
             endog = np.c_[endog, np.zeros((len(endog), len(self._r_matrix)))]
             endog[:, 1:] = self._q_matrix
@@ -254,7 +256,7 @@ class RecursiveLSResults(MLEResults):
 
         # Since we are overriding params with things that aren't MLE params,
         # need to adjust df's
-        self.df_model = self.k_diffuse_states
+        self.df_model = self.k_diffuse_states - self.model.k_constraints
         self.df_resid = self.nobs_effective - self.df_model
 
         # Save _init_kwds
@@ -262,7 +264,8 @@ class RecursiveLSResults(MLEResults):
 
         # Save the model specification
         self.specification = Bunch(**{
-            'k_exog': self.model.k_exog})
+            'k_exog': self.model.k_exog,
+            'k_constraints': self.model.k_constraints})
 
     @property
     def recursive_coefficients(self):
