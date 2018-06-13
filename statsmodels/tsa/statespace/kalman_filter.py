@@ -736,8 +736,6 @@ class KalmanFilter(Representation):
 
         # Run the filter
         kfilter()
-        tmp = np.array(kfilter.loglikelihood)
-        tmp2 = np.array(kfilter.predicted_state)
 
         return kfilter
 
@@ -783,7 +781,6 @@ class KalmanFilter(Representation):
         kfilter = self._filter(
             filter_method, inversion_method, stability_method, conserve_memory,
             filter_timing, tolerance, loglikelihood_burn, complex_step)
-        tmp = np.array(kfilter.loglikelihood)
         # Create the results object
         results = self.results_class(self)
         results.update_representation(self)
@@ -1849,10 +1846,7 @@ class FilterResults(FrozenRepresentation):
             model = self.model.__class__(
                 endog, self.k_states, self.k_posdef, **model_kwargs
             )
-            model.initialize_known(
-                self.initial_state,
-                self.initial_state_cov
-            )
+            model.initialization = self.initialization
             model._initialize_filter()
             model._initialize_state()
 
