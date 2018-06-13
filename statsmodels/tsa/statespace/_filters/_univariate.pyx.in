@@ -122,6 +122,11 @@ cdef int {{prefix}}forecast_univariate({{prefix}}KalmanFilter kfilter, {{prefix}
             
             # #### Loglikelihood
             {{prefix}}loglikelihood(kfilter, model, i, forecast_error_cov, forecast_error_cov_inv)
+        else:
+            # Otherwise, we need to record that this observation is not associated
+            # with a loglikelihood step (so that it can be excluded in the denominator
+            # when computing the scale)
+            kfilter.nobs_kendog_univariate_singular = kfilter.nobs_kendog_univariate_singular + 1
 
     # Make final filtered_state_cov symmetric (is not currently symmetric
     # due to use of ?syr or ?her)

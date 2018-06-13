@@ -746,6 +746,7 @@ cdef class {{prefix}}KalmanFilter(object):
         if reset:
             self.nobs_diffuse = 0
             self.nobs_kendog_diffuse_nonsingular = 0
+            self.nobs_kendog_univariate_singular = 0
             self.converged = 0
             self.period_converged = 0
 

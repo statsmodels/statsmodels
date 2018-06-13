@@ -878,11 +878,16 @@ class KalmanFilter(Representation):
         # Need to modify the computed log-likelihood to incorporate the
         # MLE scale.
         if self.filter_method & FILTER_CONCENTRATED:
+            d = max(loglikelihood_burn, kfilter.nobs_diffuse)
             nobs_k_endog = np.sum(
                 self.k_endog -
-                np.array(self._statespace.nmissing)[loglikelihood_burn:])
+                np.array(self._statespace.nmissing)[d:])
 
-            scale = np.sum(kfilter.scale[loglikelihood_burn:]) / nobs_k_endog
+            # In the univariate case, we need to subtract observations
+            # associated with a singular forecast error covariance matrix
+            nobs_k_endog -= kfilter.nobs_kendog_univariate_singular
+
+            scale = np.sum(kfilter.scale[d:]) / nobs_k_endog
 
             loglike += -0.5 * nobs_k_endog
 
@@ -936,10 +941,15 @@ class KalmanFilter(Representation):
         # denominator of the scale computation and in the llf_obs adjustment
         # to take into account missing values.
         if self.filter_method & FILTER_CONCENTRATED:
+            d = max(loglikelihood_burn, kfilter.nobs_diffuse)
             nmissing = np.array(self._statespace.nmissing)
-            nobs_k_endog = np.sum(self.k_endog - nmissing[loglikelihood_burn:])
+            nobs_k_endog = np.sum(self.k_endog - nmissing[d:])
 
-            scale = np.sum(kfilter.scale[loglikelihood_burn:]) / nobs_k_endog
+            # In the univariate case, we need to subtract observations
+            # associated with a singular forecast error covariance matrix
+            nobs_k_endog -= kfilter.nobs_kendog_univariate_singular
+
+            scale = np.sum(kfilter.scale[d:]) / nobs_k_endog
 
             # Need to modify this for diffuse initialization, since for
             # diffuse periods we only need to add in the scale value if the
@@ -1681,10 +1691,14 @@ class FilterResults(FrozenRepresentation):
         # version, so we do not need to modify collapsed arrays.
         self.scale = 1.
         if self.filter_concentrated and self.model._scale is None:
-            d = self.loglikelihood_burn
+            d = max(self.loglikelihood_burn, self.nobs_diffuse)
             # Compute the scale
             nmissing = np.array(kalman_filter.model.nmissing)
             nobs_k_endog = np.sum(self.k_endog - nmissing[d:])
+
+            # In the univariate case, we need to subtract observations
+            # associated with a singular forecast error covariance matrix
+            nobs_k_endog -= kalman_filter.nobs_kendog_univariate_singular
 
             scale_obs = np.array(kalman_filter.scale, copy=True)
             self.scale = np.sum(scale_obs[d:]) / nobs_k_endog
@@ -1717,13 +1731,11 @@ class FilterResults(FrozenRepresentation):
             if self.missing_forecasts_error_cov is not None:
                 self.missing_forecasts_error_cov *= self.scale
 
-            if not self._compatibility_mode:
-                # Note: do not have to adjust the Kalman gain or tmp4
-                self.tmp1 *= self.scale
-                self.tmp2 /= self.scale
-                self.tmp3 /= self.scale
-            if not self._compatibility_mode and not (
-                    self.memory_no_std_forecast or
+            # Note: do not have to adjust the Kalman gain or tmp4
+            self.tmp1 *= self.scale
+            self.tmp2 /= self.scale
+            self.tmp3 /= self.scale
+            if not (self.memory_no_std_forecast or
                     self.invert_lu or
                     self.solve_lu or
                     self.filter_collapsed):
