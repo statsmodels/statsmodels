@@ -1557,6 +1557,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Dimensions
         self.nobs = self.filter_results.nobs
         self.nobs_diffuse = self.filter_results.nobs_diffuse
+        if self.nobs_diffuse > 0 and self.loglikelihood_burn > 0:
+            warnings.warn('Care should be used when applying a loglikelihood'
+                          ' burn to a model with exact diffuse initialization.'
+                          ' Some results objects, e.g. degrees of freedom,'
+                          ' expect only one of the two to be set.')
         # This only excludes explicitly burned (usually approximate diffuse)
         # periods but does not exclude approximate diffuse periods. This is
         # because the loglikelihood remains valid for the initial periods in
