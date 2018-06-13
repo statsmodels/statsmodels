@@ -15,11 +15,7 @@ from .results import results_varmax
 from statsmodels.tsa.statespace import (
     sarimax, structural, dynamic_factor, varmax)
 from numpy.testing import assert_equal, assert_raises, assert_allclose
-from statsmodels.tsa.statespace.tools import compatibility_mode
 from nose.exc import SkipTest
-
-if compatibility_mode:
-    raise SkipTest
 
 
 def get_sarimax_models(endog, filter_univariate=False, **kwargs):
