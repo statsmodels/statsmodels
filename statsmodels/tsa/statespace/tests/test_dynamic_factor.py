@@ -105,11 +105,14 @@ class CheckDynamicFactor(object):
         self.model.enforce_stationarity = True
         assert_allclose(results.llf, self.results.llf, rtol=1e-5)
 
-    def test_mle(self):
+    def test_mle(self, init_powell=True):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter('always')
-            results = self.model.fit(method='powell', maxiter=100, disp=False)
-            results = self.model.fit(results.params, maxiter=1000, disp=False)
+            start_params = self.model.start_params
+            if init_powell:
+                results = self.model.fit(method='powell', maxiter=100, disp=False)
+                start_params = results.params
+            results = self.model.fit(start_params, maxiter=1000, disp=False)
             results = self.model.fit(results.params, method='nm', maxiter=1000,
                                      disp=False)
             if not results.llf > self.results.llf:
@@ -609,6 +612,9 @@ class TestSUR_autocorrelated_errors(CheckDynamicFactor):
     def test_dynamic_predict(self):
         exog = np.c_[np.ones((16, 1)), (np.arange(75, 75+16) + 2)[:, np.newaxis]]
         super(TestSUR_autocorrelated_errors, self).test_dynamic_predict(exog=exog)
+
+    def test_mle(self):
+        super(TestSUR_autocorrelated_errors, self).test_mle(init_powell=False)
 
 
 def test_misspecification():
