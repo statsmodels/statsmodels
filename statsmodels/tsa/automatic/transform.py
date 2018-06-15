@@ -40,7 +40,7 @@ def predict_lambda(endog, lambda_range, d, seasonal_periods, offset=True, gridsi
         if lambda_val == 0:
             y_transform = y_gmean * np.log(endog)
         else:
-            y_transform = ((endog ** lambda_val) - 1) / (lambda_val * (y_gmean ** lambda_val - 1))
+            y_transform = ((endog ** lambda_val) - 1) / (lambda_val * (y_gmean ** (lambda_val - 1)))
         model = sm.OLS(y_transform[:nobs], exog).fit()
     #     print(model.ssr)
         if model.ssr < min_ssr:
