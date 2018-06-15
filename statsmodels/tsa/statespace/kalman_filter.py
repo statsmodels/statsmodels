@@ -1721,25 +1721,27 @@ class FilterResults(FrozenRepresentation):
                 scale_obs / self.scale)
 
             # Scale the filter output
-            self.obs_cov *= self.scale
-            self.state_cov *= self.scale
+            self.obs_cov = self.obs_cov * self.scale
+            self.state_cov = self.state_cov * self.scale
 
-            self.initial_state_cov *= self.scale
-            self.predicted_state_cov *= self.scale
-            self.filtered_state_cov *= self.scale
-            self.forecasts_error_cov *= self.scale
+            self.initial_state_cov = self.initial_state_cov * self.scale
+            self.predicted_state_cov = self.predicted_state_cov * self.scale
+            self.filtered_state_cov = self.filtered_state_cov * self.scale
+            self.forecasts_error_cov = self.forecasts_error_cov * self.scale
             if self.missing_forecasts_error_cov is not None:
-                self.missing_forecasts_error_cov *= self.scale
+                self.missing_forecasts_error_cov = (
+                    self.missing_forecasts_error_cov * self.scale)
 
             # Note: do not have to adjust the Kalman gain or tmp4
-            self.tmp1 *= self.scale
-            self.tmp2 /= self.scale
-            self.tmp3 /= self.scale
+            self.tmp1 = self.tmp1 * self.scale
+            self.tmp2 = self.tmp2 / self.scale
+            self.tmp3 = self.tmp3 / self.scale
             if not (self.memory_no_std_forecast or
                     self.invert_lu or
                     self.solve_lu or
                     self.filter_collapsed):
-                self._standardized_forecasts_error /= self.scale**0.5
+                self._standardized_forecasts_error = (
+                    self._standardized_forecasts_error / self.scale**0.5)
         # The self.model._scale value is only not None within a fixed_scale
         # context, in which case it is set and indicates that we should
         # generally view this results object as using a concentrated scale
