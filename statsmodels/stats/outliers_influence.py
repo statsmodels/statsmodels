@@ -220,7 +220,8 @@ class OLSInfluence(object):
         self.resid = results.resid
         self.model_class = results.model.__class__
 
-        self.sigma_est = np.sqrt(results.mse_resid)
+        #self.sigma_est = np.sqrt(results.mse_resid)
+        self.scale = results.mse_resid
 
         self.aux_regression_exog = {}
         self.aux_regression_endog = {}
@@ -317,7 +318,7 @@ class OLSInfluence(object):
         '''
         hii = self.hat_matrix_diag
         if sigma is None:
-            sigma2_est = self.results.mse_resid
+            sigma2_est = self.scale
             #can be replace by different estimators of sigma
             sigma = np.sqrt(sigma2_est)
 
@@ -389,7 +390,7 @@ class OLSInfluence(object):
         '''
         return np.asarray(self._res_looo['mse_resid'])
 
-    @cache_readonly
+    @property
     def params_not_obsi(self):
         '''(cached attribute) parameter estimates for all LOOO regressions
 
@@ -397,7 +398,7 @@ class OLSInfluence(object):
         '''
         return np.asarray(self._res_looo['params'])
 
-    @cache_readonly
+    @property
     def det_cov_params_not_obsi(self):
         '''(cached attribute) determinant of cov_params of all LOOO regressions
 
@@ -450,7 +451,7 @@ class OLSInfluence(object):
 
         '''
         #TODO:check if correct outside of ols
-        return self.results.mse_resid * (1 - self.hat_matrix_diag)
+        return self.scale * (1 - self.hat_matrix_diag)
 
     @cache_readonly
     def resid_std(self):
@@ -557,8 +558,8 @@ class OLSInfluence(object):
         from statsmodels.sandbox.tools.cross_val import LeaveOneOut
         get_det_cov_params = lambda res: np.linalg.det(res.cov_params())
 
-        endog = self.endog
-        exog = self.exog
+        endog = self.results.model.endog
+        exog = self.results.model.exog
 
         params = np.zeros(exog.shape, dtype=np.float)
         mse_resid = np.zeros(endog.shape, dtype=np.float)
@@ -678,6 +679,86 @@ class OLSInfluence(object):
         return SimpleTable(data, headers=colnames, txt_fmt=fmt,
                            html_fmt=fmt_html)
 
+    def plot_influence(self, external=None, alpha=.05, criterion="cooks",
+                       size=48, plot_alpha=.75, ax=None, **kwargs):
+
+        if external is None:
+            external = 'res_looo' in self._cache
+        external = False
+        from statsmodels.graphics.regressionplots import _influence_plot
+        res = _influence_plot(self.results, self, external=external, alpha=alpha,
+                              criterion=criterion, size=size,
+                              plot_alpha=plot_alpha, ax=ax, **kwargs)
+        return res
+
+
+    def _plot_index(self, y, ylabel, threshold=None, title=None, ax=None):
+        from statsmodels.graphics import utils
+        fig, ax = utils.create_mpl_ax(ax)
+        if title is None:
+            title = "Index Plot"
+        nobs = len(self.endog)
+        index = np.arange(nobs)
+        ax.scatter(index, y)
+
+        if threshold == 'all':
+            large_points = np.ones(nobs, np.bool_)
+        else:
+            large_points = np.abs(y) > threshold
+        psize = 3 * np.ones(nobs)
+        # add point labels
+        labels = self.results.model.data.row_labels
+        if labels is None:
+            labels = np.arange(nobs)
+        ax = utils.annotate_axes(np.where(large_points)[0], labels,
+                                 lzip(index, y),
+                                 lzip(-psize, psize), "large",
+                                 ax)
+
+        font = {"fontsize" : 16, "color" : "black"}
+        ax.set_ylabel(ylabel, **font)
+        ax.set_xlabel("Observation", **font)
+        ax.set_title(title, **font)
+        return fig
+
+    def plot_index(self, y_var='cooks', threshold=None, title=None, ax=None,
+                   idx=None):
+        criterion = y_var  # alias
+        if threshold is None:
+            # TODO: criterion specific defaults
+            threshold = 'all'
+
+        if criterion == 'dfbeta':
+            y = self.dfbetas[:, idx]
+            ylabel = 'DFBETA for ' + self.results.model.exog_names[idx]
+        elif criterion.startswith('cook'):
+            y = self.cooks_distance[0]
+            ylabel = "Cook's distance"
+        elif criterion.startswith('hat') or criterion.startswith('lever'):
+            y = self.hat_matrix_diag
+            ylabel = "Leverage (diagonal of hat matrix)"
+        elif criterion.startswith('cook'):
+            y = self.cooks_distance[0]
+            ylabel = "Cook's distance"
+        elif criterion.startswith('resid'):
+            y = self.resid_studentized_internal
+            ylabel = "Internally Studentized Residuals"
+        else:
+            # assume we have the name of an attribute
+            y = getattr(self, y_var)
+            if idx is not None:
+                y = y[idx]
+            ylabel = y_var
+
+
+#         if kwds:
+#             import warnings
+#             warnings.warn('unused kewords: ' + repr(kwds), UserWarning)
+
+        fig = self._plot_index(y, ylabel, threshold=threshold, title=title,
+                               ax=ax)
+        return fig
+
 
 def summary_table(res, alpha=0.05):
     """
@@ -757,7 +838,7 @@ def summary_table(res, alpha=0.05):
     return st, data, ss2
 
 
-class Influence(OLSInfluence):
+class GLMInfluence(OLSInfluence):
     """Influence and outlier measures (experimental)
 
     This currently subclasses OLSInfluence instead of the other way.
@@ -776,18 +857,10 @@ class Influence(OLSInfluence):
         self.resid = resid if resid is not None else results.resid
         self.scale = scale if scale is not None else results.scale
         self.model_class = results.model.__class__
-        # We will need init kwds where we use this
-
-        self.sigma_est = np.sqrt(scale if scale is not None else
-                                 results.scale)
 
         # TODO don't use cached attribute in OLSInfluence
         self._hat_matrix_diag = (hat_matrix_diag if hat_matrix_diag is not None
                                  else self.results.get_hat_matrix())
-
-        self.aux_regression_exog = {}
-        self.aux_regression_endog = {}
-
 
     @cache_readonly
     def hat_matrix_diag(self):
@@ -806,22 +879,148 @@ class Influence(OLSInfluence):
         uses results from leave-one-observation-out loop
         '''
 
+        beta_i = self.d_params / self.results.bse
+        return beta_i
+
+    @cache_readonly
+    def d_params(self):
+        '''(cached attribute) parameter estimates for all LOOO regressions
+
+        uses results from leave-one-observation-out loop
+        '''
+
         beta_i = np.linalg.pinv(self.exog) * self.resid_studentized_internal
         beta_i /= np.sqrt(1 - self.hat_matrix_diag)
         return beta_i.T
 
     @cache_readonly
+    def params_one(self):
+        return self.results.params + self.d_params
+
+    @cache_readonly
+    def _get_prediction(self):
+        # TODO: do we cache this or does it need to be a method
+        # we only need unchanging parts, alpha for confint could change
+        return self.results.get_prediction()
+
+    @property
+    def d_linpred(self):
+        # TODO: This will need adjustment for extra params in Poisson
+        # use original model exog not transformed influence exog
+        exog = self.results.model.exog
+        return (exog * self.d_params).sum(1)
+
+    @property
+    def d_linpred_scaled(self):
+        # Note: this and the previous methods are for the response
+        # and not for a weighted response, i.e. not the self.exog, self.endog
+        # this will be relevant for WLS comparing fitted endog versus wendog
+        return self.d_linpred / self._get_prediction.linpred.se_mean
+
+    @property
+    def _fittedvalues_one(self):
+        import warnings
+        warnings.warn('this ignores offset and exposure', UserWarning)
+        #TODO: we need to handle offset, exposure and weights
+        # use original model exog not transformed influence exog
+        exog = self.results.model.exog
+        fitted = np.array([self.results.model.predict(pi, exog[i])
+                           for i, pi in enumerate(self.params_one)])
+        return fitted.squeeze()
+
+    @property
+    def _diff_fittedvalues_one(self):
+        # in discrete we cannot reuse results.fittedvalues
+        return self.results.predict() - self._fittedvalues_one
+
+    @cache_readonly
+    def d_fittedvalues(self):
+        # in discrete we cannot reuse results.fittedvalues
+        fittedvalues = self.results.predict()
+        deriv = self.results.model.family.link.inverse_deriv(fittedvalues)
+        return deriv * self.d_linpred
+
+    @property
+    def d_fittedvalues_scaled(self):
+        # Note: this and the previous methods are for the response
+        # and not for a weighted response, i.e. not the self.exog, self.endog
+        # this will be relevant for WLS comparing fitted endog versus wendog
+        return self.d_fittedvalues / self._get_prediction.se_mean
+
+    @cache_readonly
     def sigma2_not_obsi(self):
-        ''' fake external sigma2
-        (cached attribute) error variance for all LOOO regressions
+        '''(cached attribute) error variance for all LOOO regressions
 
         This is 'mse_resid' from each auxiliary regression.
 
         uses results from leave-one-observation-out loop
         '''
-        #return np.asarray(self._res_looo['mse_resid'])
-        #TODO: do we get a shortcut
-        return self.scale * np.ones(self.nobs)
+
+        return np.asarray(self._res_looo['scale'])
+
+    @cache_readonly
+    def _res_looo(self):
+        '''collect required results from the LOOO loop
+
+        all results will be attached.
+        currently only 'params', 'mse_resid', 'det_cov_params' are stored
+
+        regresses endog on exog dropping one observation at a time
+
+        This uses a nobs loop, only attributes of the results instance are stored.
+
+        '''
+        from statsmodels.sandbox.tools.cross_val import LeaveOneOut
+        get_det_cov_params = lambda res: np.linalg.det(res.cov_params())
+
+        endog = self.results.model.endog
+        exog = self.results.model.exog
+
+        init_kwds = self.results.model._get_init_kwds()
+        # We need to drop obs also from extra arrays
+        freq_weights = init_kwds.pop('freq_weights')
+        var_weights = init_kwds.pop('var_weights')
+        offset = offset_ = init_kwds.pop('offset')
+        exposure = exposure_ = init_kwds.pop('exposure')
+        n_trials = n_trials_ = init_kwds.pop('n_trials', None)
+        # family Binomial creates `n` i.e. `n_trials`
+        # we need to reset it
+        # TODO: figure out how to do this properly
+        if hasattr(init_kwds['family'], 'initialize'):
+            # assume we have Binomial
+            is_binomial = True
+        else:
+            is_binomial = False
+
+        params = np.zeros(exog.shape, dtype=np.float)
+        scale = np.zeros(endog.shape, dtype=np.float)
+        det_cov_params = np.zeros(endog.shape, dtype=np.float)
+
+        cv_iter = LeaveOneOut(self.nobs)
+        for inidx, outidx in cv_iter:
+            if offset is not None:
+                offset_ = offset[inidx]
+            if exposure is not None:
+                exposure_ = exposure[inidx]
+            if n_trials is not None:
+                init_kwds['n_trials'] = n_trials[inidx]
+
+            mod_i = self.model_class(endog[inidx], exog[inidx],
+                                     offset=offset_,
+                                     exposure=exposure_,
+                                     #n_trials=n_trials_,
+                                     freq_weights=freq_weights[inidx],
+                                     var_weights=var_weights[inidx],
+                                     **init_kwds)
+            if is_binomial:
+                mod_i.family.n = n_trials_
+            res_i = mod_i.fit()
+            params[outidx] = res_i.params.copy()
+            scale[outidx] = res_i.scale
+            det_cov_params[outidx] = get_det_cov_params(res_i)
+
+        return dict(params=params, scale=scale, mse_resid=scale,  # alias for now
+                       det_cov_params=det_cov_params)
 
     def summary_frame(self):
         """

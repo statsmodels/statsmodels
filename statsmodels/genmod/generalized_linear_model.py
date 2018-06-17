@@ -1615,14 +1615,14 @@ class GLMResults(base.LikelihoodModelResults):
         return hd
 
     def get_influence(self, observed=True):
-        from statsmodels.stats.outliers_influence import Influence
+        from statsmodels.stats.outliers_influence import GLMInfluence
         weights = self.model.hessian_factor(self.params, observed=observed)
         weights_sqrt = np.sqrt(weights)
         wexog = weights_sqrt[:, None] * self.model.exog
         wendog = weights_sqrt * self.model.endog
 
         hat_matrix_diag = self.get_hat_matrix_diag(observed=observed)
-        infl = Influence(self, endog=wendog, exog=wexog,
+        infl = GLMInfluence(self, endog=wendog, exog=wexog,
                          resid=self.resid_pearson,
                          hat_matrix_diag=hat_matrix_diag)
         return infl
