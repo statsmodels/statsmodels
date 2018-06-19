@@ -692,14 +692,14 @@ class OLSInfluence(object):
         return res
 
 
-    def _plot_index(self, y, ylabel, threshold=None, title=None, ax=None):
+    def _plot_index(self, y, ylabel, threshold=None, title=None, ax=None,**kwds):
         from statsmodels.graphics import utils
         fig, ax = utils.create_mpl_ax(ax)
         if title is None:
             title = "Index Plot"
         nobs = len(self.endog)
         index = np.arange(nobs)
-        ax.scatter(index, y)
+        ax.scatter(index, y, **kwds)
 
         if threshold == 'all':
             large_points = np.ones(nobs, np.bool_)
@@ -722,7 +722,7 @@ class OLSInfluence(object):
         return fig
 
     def plot_index(self, y_var='cooks', threshold=None, title=None, ax=None,
-                   idx=None):
+                   idx=None, **kwds):
         criterion = y_var  # alias
         if threshold is None:
             # TODO: criterion specific defaults
@@ -756,7 +756,7 @@ class OLSInfluence(object):
 #             warnings.warn('unused kewords: ' + repr(kwds), UserWarning)
 
         fig = self._plot_index(y, ylabel, threshold=threshold, title=title,
-                               ax=ax)
+                               ax=ax, **kwds)
         return fig
 
 
@@ -861,6 +861,7 @@ class GLMInfluence(OLSInfluence):
         # TODO don't use cached attribute in OLSInfluence
         self._hat_matrix_diag = (hat_matrix_diag if hat_matrix_diag is not None
                                  else self.results.get_hat_matrix())
+        self._cache = {}
 
     @cache_readonly
     def hat_matrix_diag(self):
@@ -868,8 +869,9 @@ class GLMInfluence(OLSInfluence):
 
         Notes
         -----
-        temporarily calculated here, this should go to model class
+
         '''
+
         return self._hat_matrix_diag
 
     @cache_readonly
@@ -1070,3 +1072,90 @@ class GLMInfluence(OLSInfluence):
                             index=row_labels)
 
         return dfbeta.join(summary_data)
+
+
+class MLEInfluence(GLMInfluence):
+    """Local Influence and outlier measures (experimental)
+
+    This currently subclasses GLMInfluence instead of the other way.
+    No common superclass yet.
+    This is another version before checking what is common
+
+    """
+
+    def __init__(self, results, resid=None, endog=None, exog=None,
+                 hat_matrix_diag=None, cov_params=None, scale=None):
+        # I'm not calling super for now, OLS attributes might not be available
+        #check which model is allowed
+        self.results = results = maybe_unwrap_results(results)
+        # TODO: check for extra params in e.g. NegBin
+        self.nobs, self.k_vars = results.model.exog.shape
+        self.endog = endog if endog is not None else results.model.endog
+        self.exog = exog if exog is not None else results.model.exog
+        self.resid = resid if resid is not None else results.resid
+        self.scale = scale if scale is not None else results.scale
+        self.cov_params = (cov_params if cov_params is not None
+                           else results.cov_params())
+        self.model_class = results.model.__class__
+
+        self.hessian = self.results.model.hessian(self.results.params)
+        self.score_obs = self.results.model.score_obs(self.results.params)
+        if hat_matrix_diag is not None:
+            self._hat_matrix_diag = hat_matrix_diag
+
+    @cache_readonly
+    def hat_matrix_diag(self):
+        '''(cached attribute) diagonal of the generalized leverage
+
+        This is the analogue of the hat matrix diagonal for general MLE.
+
+        Notes
+        -----
+
+        '''
+        if hasattr(self, '_hat_matrix_diag'):
+            return self._hat_matrix_diag
+        dmu_dp = self.results.model._deriv_mean_dparams(self.results.params)
+        dsdy = self.results.model._deriv_score_obs_dendog(self.results.params)
+        #dmu_dp = 1 / self.results.model.family.link.deriv(self.results.fittedvalues)
+        h = (dmu_dp * np.linalg.solve(-self.hessian, dsdy.T).T).sum(1)
+        return h
+
+    @cache_readonly
+    def d_params(self):
+        '''(cached attribute) parameter estimates for all LOOO regressions
+
+        uses results from leave-one-observation-out loop
+        '''
+        so_noti = self.score_obs.sum(0) - self.score_obs
+        beta_i = np.linalg.solve(self.hessian, so_noti.T).T
+        return beta_i
+
+    @cache_readonly
+    def cooks_distance(self):
+        '''(cached attribute) Cooks distance
+
+        uses original results, no nobs loop
+
+        '''
+        cooks_d2 = (self.d_params * np.linalg.solve(self.cov_params, self.d_params.T).T).sum(1)
+        cooks_d2 /= self.k_vars
+        from scipy import stats
+        #alpha = 0.1
+        #print stats.f.isf(1-alpha, n_params, res.df_modelwc)
+        # TODO use chi2   # use_f option
+        pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
+
+        return cooks_d2, pvals
+
+    @cache_readonly
+    def resid_studentized_internal(self):
+        """(cached attribute) score residual divided by sqrt of hessian factor
+
+        experimental
+        no reference for this
+
+        """
+        sf = self.results.model.score_factor(self.results.params)
+        hf = self.results.model.hessian_factor(self.results.params)
+        return sf / np.sqrt(hf)

@@ -617,6 +617,59 @@ class GLM(base.LikelihoodModel):
         """
         return self.hessian(params, scale=scale, observed=False)
 
+    def _deriv_mean_dparams(self, params):
+        """
+        Derivative of the expected endog with respect to the parameters.
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+
+        Returns
+        -------
+        The value of the derivative of the expected endog with respect
+        to the parameter vector.
+        """
+        lin_pred = self.predict(params, linear=True)
+        idl = self.family.link.inverse_deriv(lin_pred)
+        dmat = self.exog * idl[:, None]
+        return dmat
+
+    def _deriv_score_obs_dendog(self, params, scale=None):
+        """derivative of score_obs w.r.t. endog
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+
+        Returns
+        -------
+        derivative : ndarray_2d
+            The derivative of the score_obs with respect to endog. This
+            can is given by `score_factor0[:, None] * exog` where
+            `score_factor0` is the score_factor without the residual.
+
+        """
+        mu = self.predict(params)
+        if scale is None:
+            scale = self.estimate_scale(mu)
+
+        score_factor = 1 / self.family.link.deriv(mu)
+        score_factor /= self.family.variance(mu)
+        score_factor *= self.iweights * self.n_trials
+
+        if not scale == 1:
+            score_factor /= scale
+
+        return score_factor[:, None] * self.exog
+
+
     def score_test(self, params_constrained, k_constraints=None,
                    exog_extra=None, observed=True):
         """score test for restrictions or for omitted variables
