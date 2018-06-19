@@ -1,4 +1,4 @@
-"""auromatic box-cox transformation for time-series data."""
+"""automatic box-cox transformation for time-series data."""
 from scipy.stats.mstats import gmean
 import numpy as np
 import pandas as pd
@@ -7,7 +7,7 @@ from statsmodels import datasets
 
 
 def create_exog(nobs, d=0, seasonal_periods=1):
-    """Create a exog series data to fit regression."""
+    """Create an exog series data to fit regression."""
     t = np.arange(1, nobs+1)
     exog = []
     for i in range(d+1):
@@ -81,8 +81,7 @@ def predict_lambda(endog, lambda_range, d, seasonal_periods, offset=True,
         if lambda_val == 0:
             y_transform = y_gmean * np.log(endog)
         else:
-            y_transform = ((endog ** lambda_val) - 1) /
-                          (lambda_val * (y_gmean ** (lambda_val - 1)))
+            y_transform = ((endog ** lambda_val) - 1) / (lambda_val * (y_gmean ** (lambda_val - 1)))
         model = sm.OLS(y_transform[:nobs], exog).fit()
     #     print(model.ssr)
         if model.ssr < min_ssr:
