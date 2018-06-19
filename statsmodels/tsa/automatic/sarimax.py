@@ -21,10 +21,19 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
         input contains the time series data over a period of time.
     criteria : str
         specifies which information criteria to use for model evaluation.
+        'aic' is the default criteria.
     d : int
         differencing factor.
     max_order : list
         maximum possible values of the parameters p and q.
+    D : int
+        differencing factor.
+    s : int
+        Number of seasonal differences.
+    max_seasonal_order : list
+        maximum possible values of the seasonal parameters P and Q.
+    allow_intercept : boolean
+        specifies whether to include the intercept or not.
     stepwise : Boolean
         specifies whether to use the stepwise algorithm or not.
     **spec : list of kwargs
@@ -33,6 +42,9 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
     -------
     p : the autoregressive parameter for the SARIMAX model.
     q : the moving average parameter for the SARIMAX model.
+    if s>1, also returns,
+    P : the seasonal autoregressive parameter for the SARIMAX model.
+    Q : the seasonal moving average parameter for the SARIMAX model.
 
     Notes
     -----
