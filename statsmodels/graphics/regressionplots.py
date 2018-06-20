@@ -758,7 +758,7 @@ def _influence_plot(results, influence, external=True, alpha=.05,
     if external:
         resids = infl.resid_studentized_external
     else:
-        resids = infl.resid_studentized_internal
+        resids = infl.resid_studentized
 
     from scipy import stats
 

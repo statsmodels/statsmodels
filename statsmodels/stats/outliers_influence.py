@@ -182,7 +182,114 @@ def variance_inflation_factor(exog, exog_idx):
     return vif
 
 
-class OLSInfluence(object):
+class _BaseInfluenceMixin(object):
+    """common methods between OLSInfluence and MLE/GLMInfluence
+    """
+
+    @cache_readonly
+    def resid_studentized(self):
+        '''studentized residuals, internal
+
+
+        '''
+        hii = self.hat_matrix_diag
+        return  self.resid / np.sqrt(self.scale * (1 - hii))
+
+    @cache_readonly
+    def cooks_distance(self):
+        '''(cached attribute) Cooks distance
+
+        uses original results, no nobs loop
+
+        '''
+        hii = self.hat_matrix_diag
+        #Eubank p.93, 94
+        cooks_d2 = self.resid_studentized**2 / self.k_vars
+        cooks_d2 *= hii / (1 - hii)
+
+        from scipy import stats
+        #alpha = 0.1
+        #print stats.f.isf(1-alpha, n_params, res.df_modelwc)
+        pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
+
+        return cooks_d2, pvals
+
+    def plot_influence(self, external=None, alpha=.05, criterion="cooks",
+                       size=48, plot_alpha=.75, ax=None, **kwargs):
+
+        if external is None:
+            external = hasattr(self, '_cache') and 'res_looo' in self._cache
+        external = False
+        from statsmodels.graphics.regressionplots import _influence_plot
+        res = _influence_plot(self.results, self, external=external, alpha=alpha,
+                              criterion=criterion, size=size,
+                              plot_alpha=plot_alpha, ax=ax, **kwargs)
+        return res
+
+    def _plot_index(self, y, ylabel, threshold=None, title=None, ax=None,**kwds):
+        from statsmodels.graphics import utils
+        fig, ax = utils.create_mpl_ax(ax)
+        if title is None:
+            title = "Index Plot"
+        nobs = len(self.endog)
+        index = np.arange(nobs)
+        ax.scatter(index, y, **kwds)
+
+        if threshold == 'all':
+            large_points = np.ones(nobs, np.bool_)
+        else:
+            large_points = np.abs(y) > threshold
+        psize = 3 * np.ones(nobs)
+        # add point labels
+        labels = self.results.model.data.row_labels
+        if labels is None:
+            labels = np.arange(nobs)
+        ax = utils.annotate_axes(np.where(large_points)[0], labels,
+                                 lzip(index, y),
+                                 lzip(-psize, psize), "large",
+                                 ax)
+
+        font = {"fontsize" : 16, "color" : "black"}
+        ax.set_ylabel(ylabel, **font)
+        ax.set_xlabel("Observation", **font)
+        ax.set_title(title, **font)
+        return fig
+
+    def plot_index(self, y_var='cooks', threshold=None, title=None, ax=None,
+                   idx=None, **kwds):
+        criterion = y_var  # alias
+        if threshold is None:
+            # TODO: criterion specific defaults
+            threshold = 'all'
+
+        if criterion == 'dfbeta':
+            y = self.dfbetas[:, idx]
+            ylabel = 'DFBETA for ' + self.results.model.exog_names[idx]
+        elif criterion.startswith('cook'):
+            y = self.cooks_distance[0]
+            ylabel = "Cook's distance"
+        elif criterion.startswith('hat') or criterion.startswith('lever'):
+            y = self.hat_matrix_diag
+            ylabel = "Leverage (diagonal of hat matrix)"
+        elif criterion.startswith('cook'):
+            y = self.cooks_distance[0]
+            ylabel = "Cook's distance"
+        elif criterion.startswith('resid'):
+            y = self.resid_studentized
+            ylabel = "Internally Studentized Residuals"
+        else:
+            # assume we have the name of an attribute
+            y = getattr(self, y_var)
+            if idx is not None:
+                y = y[idx]
+            ylabel = y_var
+
+        fig = self._plot_index(y, ylabel, threshold=threshold, title=title,
+                               ax=ax, **kwds)
+        return fig
+
+
+class OLSInfluence(_BaseInfluenceMixin):
     '''class to calculate outlier and influence measures for OLS result
 
     Parameters
@@ -269,6 +376,16 @@ class OLSInfluence(object):
         '''(cached attribute) error sum of squares of PRESS residuals
         '''
         return np.dot(self.resid_press, self.resid_press)
+
+    @cache_readonly
+    def resid_studentized(self):
+        '''(cached attribute) studentized residuals using variance from OLS
+
+        alias for resid_studentized_internal for compatibility with MLEInfluence
+        this uses sigma from original estimate
+        does not require leave one out loop
+        '''
+        return self.resid_studentized_internal
 
     @cache_readonly
     def resid_studentized_internal(self):
@@ -415,24 +532,7 @@ class OLSInfluence(object):
         '''
         return np.asarray(self._res_looo['det_cov_params'])
 
-    @cache_readonly
-    def cooks_distance(self):
-        '''(cached attribute) Cooks distance
 
-        uses original results, no nobs loop
-
-        '''
-        hii = self.hat_matrix_diag
-        #Eubank p.93, 94
-        cooks_d2 = self.resid_studentized_internal**2 / self.k_vars
-        cooks_d2 *= hii / (1 - hii)
-
-        from scipy import stats
-        #alpha = 0.1
-        #print stats.f.isf(1-alpha, n_params, res.df_modelwc)
-        pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
-
-        return cooks_d2, pvals
 
     @cache_readonly
     def cov_ratio(self):
@@ -688,86 +788,6 @@ class OLSInfluence(object):
         return SimpleTable(data, headers=colnames, txt_fmt=fmt,
                            html_fmt=fmt_html)
 
-    def plot_influence(self, external=None, alpha=.05, criterion="cooks",
-                       size=48, plot_alpha=.75, ax=None, **kwargs):
-
-        if external is None:
-            external = hasattr(self, '_cache') and 'res_looo' in self._cache
-        external = False
-        from statsmodels.graphics.regressionplots import _influence_plot
-        res = _influence_plot(self.results, self, external=external, alpha=alpha,
-                              criterion=criterion, size=size,
-                              plot_alpha=plot_alpha, ax=ax, **kwargs)
-        return res
-
-
-    def _plot_index(self, y, ylabel, threshold=None, title=None, ax=None,**kwds):
-        from statsmodels.graphics import utils
-        fig, ax = utils.create_mpl_ax(ax)
-        if title is None:
-            title = "Index Plot"
-        nobs = len(self.endog)
-        index = np.arange(nobs)
-        ax.scatter(index, y, **kwds)
-
-        if threshold == 'all':
-            large_points = np.ones(nobs, np.bool_)
-        else:
-            large_points = np.abs(y) > threshold
-        psize = 3 * np.ones(nobs)
-        # add point labels
-        labels = self.results.model.data.row_labels
-        if labels is None:
-            labels = np.arange(nobs)
-        ax = utils.annotate_axes(np.where(large_points)[0], labels,
-                                 lzip(index, y),
-                                 lzip(-psize, psize), "large",
-                                 ax)
-
-        font = {"fontsize" : 16, "color" : "black"}
-        ax.set_ylabel(ylabel, **font)
-        ax.set_xlabel("Observation", **font)
-        ax.set_title(title, **font)
-        return fig
-
-    def plot_index(self, y_var='cooks', threshold=None, title=None, ax=None,
-                   idx=None, **kwds):
-        criterion = y_var  # alias
-        if threshold is None:
-            # TODO: criterion specific defaults
-            threshold = 'all'
-
-        if criterion == 'dfbeta':
-            y = self.dfbetas[:, idx]
-            ylabel = 'DFBETA for ' + self.results.model.exog_names[idx]
-        elif criterion.startswith('cook'):
-            y = self.cooks_distance[0]
-            ylabel = "Cook's distance"
-        elif criterion.startswith('hat') or criterion.startswith('lever'):
-            y = self.hat_matrix_diag
-            ylabel = "Leverage (diagonal of hat matrix)"
-        elif criterion.startswith('cook'):
-            y = self.cooks_distance[0]
-            ylabel = "Cook's distance"
-        elif criterion.startswith('resid'):
-            y = self.resid_studentized_internal
-            ylabel = "Internally Studentized Residuals"
-        else:
-            # assume we have the name of an attribute
-            y = getattr(self, y_var)
-            if idx is not None:
-                y = y[idx]
-            ylabel = y_var
-
-
-#         if kwds:
-#             import warnings
-#             warnings.warn('unused kewords: ' + repr(kwds), UserWarning)
-
-        fig = self._plot_index(y, ylabel, threshold=threshold, title=title,
-                               ax=ax, **kwds)
-        return fig
-
 
 def summary_table(res, alpha=0.05):
     """
@@ -847,7 +867,7 @@ def summary_table(res, alpha=0.05):
     return st, data, ss2
 
 
-class GLMInfluence(OLSInfluence):
+class GLMInfluence(_BaseInfluenceMixin):
     """Influence and outlier measures (experimental)
 
     This currently subclasses OLSInfluence instead of the other way.
@@ -863,7 +883,7 @@ class GLMInfluence(OLSInfluence):
         self.nobs, self.k_vars = results.model.exog.shape
         self.endog = endog if endog is not None else results.model.endog
         self.exog = exog if exog is not None else results.model.exog
-        self.resid = resid if resid is not None else results.resid
+        self.resid = resid if resid is not None else results.resid_pearson
         self.scale = scale if scale is not None else results.scale
         self.model_class = results.model.__class__
 
@@ -900,7 +920,7 @@ class GLMInfluence(OLSInfluence):
         uses results from leave-one-observation-out loop
         '''
 
-        beta_i = np.linalg.pinv(self.exog) * self.resid_studentized_internal
+        beta_i = np.linalg.pinv(self.exog) * self.resid_studentized
         beta_i /= np.sqrt(1 - self.hat_matrix_diag)
         return beta_i.T
 
@@ -1090,6 +1110,28 @@ class MLEInfluence(GLMInfluence):
     No common superclass yet.
     This is another version before checking what is common
 
+    Parameters
+    ----------
+    results : instance of results class
+        This only works for model and results classes that have the necessary
+        helper methods.
+    other arguments are only to override default behavior and are used instead
+    of the corresponding attribute of the results class.
+    By default resid_pearson is used as resid.
+
+
+    Notes
+    -----
+    MLEInfluence produces the same results as GLMInfluence (verified for GLM
+    Binomial and Gaussian). There might be some differences for non-canonical
+    links or if a robust cov_type is used.
+
+    status: experimental,
+    This class will need changes to support different kinds of models, e.g.
+    extra parameters in discrete.NegativeBinomial or two-part models like
+    ZeroInflatedPoisson.
+
+
     """
 
     def __init__(self, results, resid=None, endog=None, exog=None,
@@ -1101,7 +1143,7 @@ class MLEInfluence(GLMInfluence):
         self.nobs, self.k_vars = results.model.exog.shape
         self.endog = endog if endog is not None else results.model.endog
         self.exog = exog if exog is not None else results.model.exog
-        self.resid = resid if resid is not None else results.resid
+        self.resid = resid if resid is not None else results.resid_pearson
         self.scale = scale if scale is not None else results.scale
         self.cov_params = (cov_params if cov_params is not None
                            else results.cov_params())
@@ -1158,7 +1200,7 @@ class MLEInfluence(GLMInfluence):
         return cooks_d2, pvals
 
     @cache_readonly
-    def resid_studentized_internal(self):
+    def resid_studentized(self):
         """(cached attribute) score residual divided by sqrt of hessian factor
 
         experimental

@@ -98,9 +98,10 @@ class InfluenceCompareExact(object):
 
         assert_allclose(infl0.hat_matrix_diag, infl1.hat_matrix_diag,
                         rtol=1e-12)
+
+        assert_allclose(infl0.resid_studentized,
+                        infl1.resid_studentized, rtol=1e-12)
         assert_allclose(infl0.cooks_distance, infl1.cooks_distance, rtol=1e-7)
-        assert_allclose(infl0.resid_studentized_internal,
-                        infl1.resid_studentized_internal, rtol=1e-12)
         assert_allclose(infl0.dfbetas, infl1.dfbetas, rtol=1e-9, atol=1e-14)
         assert_allclose(infl0.d_params, infl1.d_params, rtol=1e-9, atol=1e-14)
         assert_allclose(infl0.d_fittedvalues, infl1.d_fittedvalues, rtol=1e-9)
@@ -136,7 +137,6 @@ def _check_looo(self):
     diff_params = results.params - res_looo['params']
     assert_allclose(infl.d_params[mask_low], diff_params[mask_low], atol=0.05)
     assert_allclose(infl.params_one[mask_low], res_looo['params'][mask_low], rtol=0.01)
-    #(Pdb) np.max(np.abs((infl.params_one[mask_low] - res_looo['params'][mask_low])/results.params), 0)
 
 
 class TestInfluenceLogitGLMMLE(InfluenceCompareExact):
@@ -148,7 +148,7 @@ class TestInfluenceLogitGLMMLE(InfluenceCompareExact):
               family=families.Binomial()).fit(attach_wls=True, atol=1e-10)
 
         cls.infl1 = res.get_influence()
-        cls.infl0 = MLEInfluence(res, resid=res.resid_pearson)
+        cls.infl0 = MLEInfluence(res)
 
     def test_looo(self):
         _check_looo(self)
@@ -168,7 +168,7 @@ class TestInfluenceGaussianGLMMLE(InfluenceCompareExact):
         #res = GLM(endog, exog).fit()
 
         cls.infl1 = res.get_influence()
-        cls.infl0 = MLEInfluence(res, resid=res.resid_pearson)
+        cls.infl0 = MLEInfluence(res)
 
     def test_looo(self):
         _check_looo(self)
@@ -197,13 +197,13 @@ class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):
 
         assert_allclose(infl0.hat_matrix_diag, infl1.hat_matrix_diag,
                         rtol=1e-12)
+        assert_allclose(infl0.resid_studentized,
+                        infl1.resid_studentized, rtol=1e-12)
         assert_allclose(infl0.cooks_distance, infl1.cooks_distance, rtol=1e-7)
-        assert_allclose(infl0.resid_studentized_internal,
-                        infl1.resid_studentized_internal, rtol=1e-12)
         assert_allclose(infl0.dfbetas, infl1.dfbetas, rtol=0.1) # changed
         # OLSInfluence only has looo dfbeta/d_params
         assert_allclose(infl0.d_params, infl1.dfbeta, rtol=1e-9, atol=1e-14)
-        # d_fittedvalues is not available in OLSInfluence, i.e. only scale dffits
+        # d_fittedvalues is not available in OLSInfluence, i.e. only scaled dffits
         # assert_allclose(infl0.d_fittedvalues, infl1.d_fittedvalues, rtol=1e-9)
         assert_allclose(infl0.d_fittedvalues_scaled,
                         infl1.dffits_internal[0], rtol=1e-9)
