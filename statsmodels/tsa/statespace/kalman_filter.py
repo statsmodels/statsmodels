@@ -762,7 +762,7 @@ class KalmanFilter(Representation):
         """
         # If a scale was provided, use it and do not concentrate it out of the
         # loglikelihood
-        if scale is not None:
+        if scale is not None and scale != 1:
             if not self.filter_concentrated:
                 raise ValueError('Cannot provide scale if filter method does'
                                  ' not include FILTER_CONCENTRATED.')
@@ -776,7 +776,7 @@ class KalmanFilter(Representation):
             yield
         finally:
             # If a scale was provided, reset the model
-            if scale is not None:
+            if scale is not None and scale != 1:
                 self['state_cov'] = state_cov
                 self['obs_cov'] = obs_cov
                 self.filter_concentrated = True
