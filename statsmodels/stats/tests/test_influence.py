@@ -125,6 +125,20 @@ class InfluenceCompareExact(object):
         plt.close('all')
 
 
+def _check_looo(self):
+    infl = self.infl0
+    # unwrap if needed
+    results = getattr(infl.results, '_results', infl.results)
+
+    res_looo = infl._res_looo
+    mask_infl = infl.cooks_distance[0] > 2 * infl.cooks_distance[0].std()
+    mask_low = ~mask_infl
+    diff_params = results.params - res_looo['params']
+    assert_allclose(infl.d_params[mask_low], diff_params[mask_low], atol=0.05)
+    assert_allclose(infl.params_one[mask_low], res_looo['params'][mask_low], rtol=0.01)
+    #(Pdb) np.max(np.abs((infl.params_one[mask_low] - res_looo['params'][mask_low])/results.params), 0)
+
+
 class TestInfluenceLogitGLMMLE(InfluenceCompareExact):
 
     @classmethod
@@ -135,6 +149,9 @@ class TestInfluenceLogitGLMMLE(InfluenceCompareExact):
 
         cls.infl1 = res.get_influence()
         cls.infl0 = MLEInfluence(res, resid=res.resid_pearson)
+
+    def test_looo(self):
+        _check_looo(self)
 
 
 class TestInfluenceGaussianGLMMLE(InfluenceCompareExact):
@@ -152,6 +169,9 @@ class TestInfluenceGaussianGLMMLE(InfluenceCompareExact):
 
         cls.infl1 = res.get_influence()
         cls.infl0 = MLEInfluence(res, resid=res.resid_pearson)
+
+    def test_looo(self):
+        _check_looo(self)
 
 
 class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):

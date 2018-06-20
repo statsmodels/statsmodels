@@ -906,7 +906,7 @@ class GLMInfluence(OLSInfluence):
 
     @cache_readonly
     def params_one(self):
-        return self.results.params + self.d_params
+        return self.results.params - self.d_params
 
     @cache_readonly
     def _get_prediction(self):
@@ -993,7 +993,7 @@ class GLMInfluence(OLSInfluence):
         var_weights = init_kwds.pop('var_weights')
         offset = offset_ = init_kwds.pop('offset')
         exposure = exposure_ = init_kwds.pop('exposure')
-        n_trials = n_trials_ = init_kwds.pop('n_trials', None)
+        n_trials = init_kwds.pop('n_trials', None)
         # family Binomial creates `n` i.e. `n_trials`
         # we need to reset it
         # TODO: figure out how to do this properly
@@ -1019,13 +1019,13 @@ class GLMInfluence(OLSInfluence):
             mod_i = self.model_class(endog[inidx], exog[inidx],
                                      offset=offset_,
                                      exposure=exposure_,
-                                     #n_trials=n_trials_,
                                      freq_weights=freq_weights[inidx],
                                      var_weights=var_weights[inidx],
                                      **init_kwds)
             if is_binomial:
-                mod_i.family.n = n_trials_
-            res_i = mod_i.fit()
+                mod_i.family.n = init_kwds['n_trials']
+            res_i = mod_i.fit(start_params=self.results.params,
+                              method='newton')
             params[outidx] = res_i.params.copy()
             scale[outidx] = res_i.scale
             det_cov_params[outidx] = get_det_cov_params(res_i)
