@@ -289,6 +289,115 @@ class _BaseInfluenceMixin(object):
         return fig
 
 
+class MLEInfluence(GLMInfluence):
+    """Local Influence and outlier measures (experimental)
+
+    This currently subclasses GLMInfluence instead of the other way.
+    No common superclass yet.
+    This is another version before checking what is common
+
+    Parameters
+    ----------
+    results : instance of results class
+        This only works for model and results classes that have the necessary
+        helper methods.
+    other arguments are only to override default behavior and are used instead
+    of the corresponding attribute of the results class.
+    By default resid_pearson is used as resid.
+
+
+    Notes
+    -----
+    MLEInfluence produces the same results as GLMInfluence (verified for GLM
+    Binomial and Gaussian). There might be some differences for non-canonical
+    links or if a robust cov_type is used.
+
+    status: experimental,
+    This class will need changes to support different kinds of models, e.g.
+    extra parameters in discrete.NegativeBinomial or two-part models like
+    ZeroInflatedPoisson.
+
+
+    """
+
+    def __init__(self, results, resid=None, endog=None, exog=None,
+                 hat_matrix_diag=None, cov_params=None, scale=None):
+        # I'm not calling super for now, OLS attributes might not be available
+        #check which model is allowed
+        self.results = results = maybe_unwrap_results(results)
+        # TODO: check for extra params in e.g. NegBin
+        self.nobs, self.k_vars = results.model.exog.shape
+        self.endog = endog if endog is not None else results.model.endog
+        self.exog = exog if exog is not None else results.model.exog
+        self.resid = resid if resid is not None else results.resid_pearson
+        self.scale = scale if scale is not None else results.scale
+        self.cov_params = (cov_params if cov_params is not None
+                           else results.cov_params())
+        self.model_class = results.model.__class__
+
+        self.hessian = self.results.model.hessian(self.results.params)
+        self.score_obs = self.results.model.score_obs(self.results.params)
+        if hat_matrix_diag is not None:
+            self._hat_matrix_diag = hat_matrix_diag
+
+    @cache_readonly
+    def hat_matrix_diag(self):
+        '''(cached attribute) diagonal of the generalized leverage
+
+        This is the analogue of the hat matrix diagonal for general MLE.
+
+        Notes
+        -----
+
+        '''
+        if hasattr(self, '_hat_matrix_diag'):
+            return self._hat_matrix_diag
+        dmu_dp = self.results.model._deriv_mean_dparams(self.results.params)
+        dsdy = self.results.model._deriv_score_obs_dendog(self.results.params)
+        #dmu_dp = 1 / self.results.model.family.link.deriv(self.results.fittedvalues)
+        h = (dmu_dp * np.linalg.solve(-self.hessian, dsdy.T).T).sum(1)
+        return h
+
+    @cache_readonly
+    def d_params(self):
+        '''(cached attribute) parameter estimates for all LOOO regressions
+
+        uses results from leave-one-observation-out loop
+        '''
+        so_noti = self.score_obs.sum(0) - self.score_obs
+        beta_i = np.linalg.solve(self.hessian, so_noti.T).T
+        return beta_i / (1 - self.hat_matrix_diag)[:, None]
+
+    @cache_readonly
+    def cooks_distance(self):
+        '''(cached attribute) Cooks distance
+
+        uses original results, no nobs loop
+
+        '''
+        cooks_d2 = (self.d_params * np.linalg.solve(self.cov_params, self.d_params.T).T).sum(1)
+        cooks_d2 /= self.k_vars
+        from scipy import stats
+        #alpha = 0.1
+        #print stats.f.isf(1-alpha, n_params, res.df_modelwc)
+        # TODO use chi2   # use_f option
+        pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
+
+        return cooks_d2, pvals
+
+    @cache_readonly
+    def resid_studentized(self):
+        """(cached attribute) score residual divided by sqrt of hessian factor
+
+        experimental
+        no reference for this
+
+        """
+        sf = self.results.model.score_factor(self.results.params)
+        hf = self.results.model.hessian_factor(self.results.params)
+        return sf / np.sqrt(hf) / np.sqrt(1 - self.hat_matrix_diag)
+
+
 class OLSInfluence(_BaseInfluenceMixin):
     '''class to calculate outlier and influence measures for OLS result
 
@@ -1101,112 +1210,3 @@ class GLMInfluence(_BaseInfluenceMixin):
                             index=row_labels)
 
         return dfbeta.join(summary_data)
-
-
-class MLEInfluence(GLMInfluence):
-    """Local Influence and outlier measures (experimental)
-
-    This currently subclasses GLMInfluence instead of the other way.
-    No common superclass yet.
-    This is another version before checking what is common
-
-    Parameters
-    ----------
-    results : instance of results class
-        This only works for model and results classes that have the necessary
-        helper methods.
-    other arguments are only to override default behavior and are used instead
-    of the corresponding attribute of the results class.
-    By default resid_pearson is used as resid.
-
-
-    Notes
-    -----
-    MLEInfluence produces the same results as GLMInfluence (verified for GLM
-    Binomial and Gaussian). There might be some differences for non-canonical
-    links or if a robust cov_type is used.
-
-    status: experimental,
-    This class will need changes to support different kinds of models, e.g.
-    extra parameters in discrete.NegativeBinomial or two-part models like
-    ZeroInflatedPoisson.
-
-
-    """
-
-    def __init__(self, results, resid=None, endog=None, exog=None,
-                 hat_matrix_diag=None, cov_params=None, scale=None):
-        # I'm not calling super for now, OLS attributes might not be available
-        #check which model is allowed
-        self.results = results = maybe_unwrap_results(results)
-        # TODO: check for extra params in e.g. NegBin
-        self.nobs, self.k_vars = results.model.exog.shape
-        self.endog = endog if endog is not None else results.model.endog
-        self.exog = exog if exog is not None else results.model.exog
-        self.resid = resid if resid is not None else results.resid_pearson
-        self.scale = scale if scale is not None else results.scale
-        self.cov_params = (cov_params if cov_params is not None
-                           else results.cov_params())
-        self.model_class = results.model.__class__
-
-        self.hessian = self.results.model.hessian(self.results.params)
-        self.score_obs = self.results.model.score_obs(self.results.params)
-        if hat_matrix_diag is not None:
-            self._hat_matrix_diag = hat_matrix_diag
-
-    @cache_readonly
-    def hat_matrix_diag(self):
-        '''(cached attribute) diagonal of the generalized leverage
-
-        This is the analogue of the hat matrix diagonal for general MLE.
-
-        Notes
-        -----
-
-        '''
-        if hasattr(self, '_hat_matrix_diag'):
-            return self._hat_matrix_diag
-        dmu_dp = self.results.model._deriv_mean_dparams(self.results.params)
-        dsdy = self.results.model._deriv_score_obs_dendog(self.results.params)
-        #dmu_dp = 1 / self.results.model.family.link.deriv(self.results.fittedvalues)
-        h = (dmu_dp * np.linalg.solve(-self.hessian, dsdy.T).T).sum(1)
-        return h
-
-    @cache_readonly
-    def d_params(self):
-        '''(cached attribute) parameter estimates for all LOOO regressions
-
-        uses results from leave-one-observation-out loop
-        '''
-        so_noti = self.score_obs.sum(0) - self.score_obs
-        beta_i = np.linalg.solve(self.hessian, so_noti.T).T
-        return beta_i / (1 - self.hat_matrix_diag)[:, None]
-
-    @cache_readonly
-    def cooks_distance(self):
-        '''(cached attribute) Cooks distance
-
-        uses original results, no nobs loop
-
-        '''
-        cooks_d2 = (self.d_params * np.linalg.solve(self.cov_params, self.d_params.T).T).sum(1)
-        cooks_d2 /= self.k_vars
-        from scipy import stats
-        #alpha = 0.1
-        #print stats.f.isf(1-alpha, n_params, res.df_modelwc)
-        # TODO use chi2   # use_f option
-        pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
-
-        return cooks_d2, pvals
-
-    @cache_readonly
-    def resid_studentized(self):
-        """(cached attribute) score residual divided by sqrt of hessian factor
-
-        experimental
-        no reference for this
-
-        """
-        sf = self.results.model.score_factor(self.results.params)
-        hf = self.results.model.hessian_factor(self.results.params)
-        return sf / np.sqrt(hf) / np.sqrt(1 - self.hat_matrix_diag)
