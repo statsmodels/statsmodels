@@ -772,13 +772,16 @@ class KalmanFilter(Representation):
             state_cov = self['state_cov']
             self['obs_cov'] = scale * obs_cov
             self['state_cov'] = scale * state_cov
-        yield
-        # If a scale was provided, reset the model
-        if scale is not None:
-            self['state_cov'] = state_cov
-            self['obs_cov'] = obs_cov
-            self.filter_concentrated = True
-            self._scale = None
+        try:
+            yield
+        finally:
+            # If a scale was provided, reset the model
+            if scale is not None:
+                self['state_cov'] = state_cov
+                self['obs_cov'] = obs_cov
+                self.filter_concentrated = True
+                self._scale = None
+
 
     def _filter(self, filter_method=None, inversion_method=None,
                 stability_method=None, conserve_memory=None,
