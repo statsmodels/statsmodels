@@ -13,6 +13,7 @@ import pandas as pd
 try:
     import matplotlib.pyplot as plt
     have_matplotlib = True
+    plt.switch_backend('Agg')
 except:
     have_matplotlib = False
 
@@ -127,7 +128,7 @@ class InfluenceCompareExact(object):
 
 
 def _check_looo(self):
-    infl = self.infl0
+    infl = self.infl1
     # unwrap if needed
     results = getattr(infl.results, '_results', infl.results)
 

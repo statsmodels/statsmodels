@@ -289,7 +289,7 @@ class _BaseInfluenceMixin(object):
         return fig
 
 
-class MLEInfluence(GLMInfluence):
+class MLEInfluence(_BaseInfluenceMixin):
     """Local Influence and outlier measures (experimental)
 
     This currently subclasses GLMInfluence instead of the other way.
@@ -369,6 +369,20 @@ class MLEInfluence(GLMInfluence):
         return beta_i / (1 - self.hat_matrix_diag)[:, None]
 
     @cache_readonly
+    def dfbetas(self):
+        '''(cached attribute) parameter estimates for all LOOO regressions
+
+        uses results from leave-one-observation-out loop
+        '''
+
+        beta_i = self.d_params / self.results.bse
+        return beta_i
+
+    @cache_readonly
+    def params_one(self):
+        return self.results.params - self.d_params
+
+    @cache_readonly
     def cooks_distance(self):
         '''(cached attribute) Cooks distance
 
@@ -396,6 +410,26 @@ class MLEInfluence(GLMInfluence):
         sf = self.results.model.score_factor(self.results.params)
         hf = self.results.model.hessian_factor(self.results.params)
         return sf / np.sqrt(hf) / np.sqrt(1 - self.hat_matrix_diag)
+
+    @cache_readonly
+    def _get_prediction(self):
+        # TODO: do we cache this or does it need to be a method
+        # we only need unchanging parts, alpha for confint could change
+        return self.results.get_prediction()
+
+    @cache_readonly
+    def d_fittedvalues(self):
+        # results.params might be a pandas.Series
+        params = np.asarray(self.results.params)
+        deriv = self.results.model._deriv_mean_dparams(params)
+        return (deriv * self.d_params).sum(1)
+
+    @property
+    def d_fittedvalues_scaled(self):
+        # Note: this and the previous methods are for the response
+        # and not for a weighted response, i.e. not the self.exog, self.endog
+        # this will be relevant for WLS comparing fitted endog versus wendog
+        return self.d_fittedvalues / self._get_prediction.se_mean
 
 
 class OLSInfluence(_BaseInfluenceMixin):
@@ -549,6 +583,26 @@ class OLSInfluence(_BaseInfluenceMixin):
             sigma = np.sqrt(sigma2_est)
 
         return  self.resid / sigma / np.sqrt(1 - hii)
+
+    # same computation as GLMInfluence
+    @cache_readonly
+    def cooks_distance(self):
+        '''(cached attribute) Cooks distance
+
+        uses original results, no nobs loop
+
+        '''
+        hii = self.hat_matrix_diag
+        #Eubank p.93, 94
+        cooks_d2 = self.resid_studentized**2 / self.k_vars
+        cooks_d2 *= hii / (1 - hii)
+
+        from scipy import stats
+        #alpha = 0.1
+        #print stats.f.isf(1-alpha, n_params, res.df_modelwc)
+        pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
+
+        return cooks_d2, pvals
 
     @cache_readonly
     def dffits_internal(self):
@@ -976,7 +1030,7 @@ def summary_table(res, alpha=0.05):
     return st, data, ss2
 
 
-class GLMInfluence(_BaseInfluenceMixin):
+class GLMInfluence(MLEInfluence):
     """Influence and outlier measures (experimental)
 
     This currently subclasses OLSInfluence instead of the other way.
@@ -1013,16 +1067,6 @@ class GLMInfluence(_BaseInfluenceMixin):
         return self._hat_matrix_diag
 
     @cache_readonly
-    def dfbetas(self):
-        '''(cached attribute) parameter estimates for all LOOO regressions
-
-        uses results from leave-one-observation-out loop
-        '''
-
-        beta_i = self.d_params / self.results.bse
-        return beta_i
-
-    @cache_readonly
     def d_params(self):
         '''(cached attribute) parameter estimates for all LOOO regressions
 
@@ -1033,15 +1077,35 @@ class GLMInfluence(_BaseInfluenceMixin):
         beta_i /= np.sqrt(1 - self.hat_matrix_diag)
         return beta_i.T
 
+    # same computation as OLS
     @cache_readonly
-    def params_one(self):
-        return self.results.params - self.d_params
+    def resid_studentized(self):
+        '''studentized residuals, internal
 
+
+        '''
+        hii = self.hat_matrix_diag
+        return  self.resid / np.sqrt(self.scale * (1 - hii))
+
+    # same computation as OLS
     @cache_readonly
-    def _get_prediction(self):
-        # TODO: do we cache this or does it need to be a method
-        # we only need unchanging parts, alpha for confint could change
-        return self.results.get_prediction()
+    def cooks_distance(self):
+        '''(cached attribute) Cooks distance
+
+        uses original results, no nobs loop
+
+        '''
+        hii = self.hat_matrix_diag
+        #Eubank p.93, 94
+        cooks_d2 = self.resid_studentized**2 / self.k_vars
+        cooks_d2 *= hii / (1 - hii)
+
+        from scipy import stats
+        #alpha = 0.1
+        #print stats.f.isf(1-alpha, n_params, res.df_modelwc)
+        pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
+
+        return cooks_d2, pvals
 
     @property
     def d_linpred(self):
@@ -1072,20 +1136,6 @@ class GLMInfluence(_BaseInfluenceMixin):
     def _diff_fittedvalues_one(self):
         # in discrete we cannot reuse results.fittedvalues
         return self.results.predict() - self._fittedvalues_one
-
-    @cache_readonly
-    def d_fittedvalues(self):
-        # in discrete we cannot reuse results.fittedvalues
-        fittedvalues = self.results.predict()
-        deriv = self.results.model.family.link.inverse_deriv(fittedvalues)
-        return deriv * self.d_linpred
-
-    @property
-    def d_fittedvalues_scaled(self):
-        # Note: this and the previous methods are for the response
-        # and not for a weighted response, i.e. not the self.exog, self.endog
-        # this will be relevant for WLS comparing fitted endog versus wendog
-        return self.d_fittedvalues / self._get_prediction.se_mean
 
     @cache_readonly
     def sigma2_not_obsi(self):
