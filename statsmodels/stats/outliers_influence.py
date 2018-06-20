@@ -381,6 +381,15 @@ class OLSInfluence(object):
         return dfbetas
 
     @cache_readonly
+    def dfbeta(self):
+        '''(cached attribute) dfbetas
+
+        uses results from leave-one-observation-out loop
+        '''
+        dfbeta = self.results.params - self.params_not_obsi
+        return dfbeta
+
+    @cache_readonly
     def sigma2_not_obsi(self):
         '''(cached attribute) error variance for all LOOO regressions
 
@@ -683,7 +692,7 @@ class OLSInfluence(object):
                        size=48, plot_alpha=.75, ax=None, **kwargs):
 
         if external is None:
-            external = 'res_looo' in self._cache
+            external = hasattr(self, '_cache') and 'res_looo' in self._cache
         external = False
         from statsmodels.graphics.regressionplots import _influence_plot
         res = _influence_plot(self.results, self, external=external, alpha=alpha,
@@ -1129,7 +1138,7 @@ class MLEInfluence(GLMInfluence):
         '''
         so_noti = self.score_obs.sum(0) - self.score_obs
         beta_i = np.linalg.solve(self.hessian, so_noti.T).T
-        return beta_i
+        return beta_i / (1 - self.hat_matrix_diag)[:, None]
 
     @cache_readonly
     def cooks_distance(self):
@@ -1158,4 +1167,4 @@ class MLEInfluence(GLMInfluence):
         """
         sf = self.results.model.score_factor(self.results.params)
         hf = self.results.model.hessian_factor(self.results.params)
-        return sf / np.sqrt(hf)
+        return sf / np.sqrt(hf) / np.sqrt(1 - self.hat_matrix_diag)

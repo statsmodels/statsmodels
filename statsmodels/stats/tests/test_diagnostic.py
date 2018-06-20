@@ -845,7 +845,7 @@ def test_influence_dtype():
     assert_almost_equal(cr1, cr3, decimal=8)
 
 
-def test_outlier_test():
+def get_duncan_data():
     # results from R with NA -> 1. Just testing interface here because
     # outlier_test is just a wrapper
     labels = ['accountant', 'pilot', 'architect', 'author', 'chemist',
@@ -880,6 +880,12 @@ def test_outlier_test():
         41.,  16.,  33.,  53.,  67.,  57.,  26.,  29.,  10.,  15.,  19.,
         10.,  13.,  24.,  20.,   7.,   3.,  16.,   6.,  11.,   8.,  41.,
         10.]
+
+    return endog, exog, labels
+
+
+def test_outlier_test():
+    endog, exog, labels = get_duncan_data()
     ndarray_mod = OLS(endog, exog).fit()
     rstudent =  [3.1345185839, -2.3970223990,  2.0438046359, -1.9309187757,
                  1.8870465798, -1.7604905300, -1.7040324156,  1.6024285876,
