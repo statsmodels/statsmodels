@@ -431,6 +431,49 @@ class MLEInfluence(_BaseInfluenceMixin):
         # this will be relevant for WLS comparing fitted endog versus wendog
         return self.d_fittedvalues / self._get_prediction.se_mean
 
+    def summary_frame(self):
+        """
+        Creates a DataFrame with all available influence results.
+
+        Returns
+        -------
+        frame : DataFrame
+            A DataFrame with all results.
+
+        Notes
+        -----
+        The resultant DataFrame contains six variables in addition to the
+        DFBETAS. These are:
+
+        * cooks_d : Cook's Distance defined in `Influence.cooks_distance`
+        * standard_resid : Standardized residuals defined in
+          `Influence.resid_studentized_internal`
+        * hat_diag : The diagonal of the projection, or hat, matrix defined in
+          `Influence.hat_matrix_diag`
+        * dffits_internal : DFFITS statistics using internally Studentized
+          residuals defined in `Influence.dffits_internal`
+
+        """
+        from pandas import DataFrame
+
+        # row and column labels
+        data = self.results.model.data
+        row_labels = data.row_labels
+        beta_labels = ['dfb_' + i for i in data.xnames]
+
+        # grab the results
+        summary_data = DataFrame(dict(
+                            cooks_d = self.cooks_distance[0],
+                            standard_resid = self.resid_studentized,
+                            hat_diag = self.hat_matrix_diag,
+                            dffits_internal = self.d_fittedvalues_scaled),
+                            index = row_labels)
+        #NOTE: if we don't give columns, order of above will be arbitrary
+        dfbeta = DataFrame(self.dfbetas, columns=beta_labels,
+                            index=row_labels)
+
+        return dfbeta.join(summary_data)
+
 
 class OLSInfluence(_BaseInfluenceMixin):
     '''class to calculate outlier and influence measures for OLS result
@@ -1211,52 +1254,3 @@ class GLMInfluence(MLEInfluence):
 
         return dict(params=params, scale=scale, mse_resid=scale,  # alias for now
                        det_cov_params=det_cov_params)
-
-    def summary_frame(self):
-        """
-        Creates a DataFrame with all available influence results.
-
-        Returns
-        -------
-        frame : DataFrame
-            A DataFrame with all results.
-
-        Notes
-        -----
-        The resultant DataFrame contains six variables in addition to the
-        DFBETAS. These are:
-
-        * cooks_d : Cook's Distance defined in `Influence.cooks_distance`
-        * standard_resid : Standardized residuals defined in
-          `Influence.resid_studentized_internal`
-        * hat_diag : The diagonal of the projection, or hat, matrix defined in
-          `Influence.hat_matrix_diag`
-        * dffits_internal : DFFITS statistics using internally Studentized
-          residuals defined in `Influence.dffits_internal`
-        * dffits : DFFITS statistics using externally Studentized residuals
-          defined in `Influence.dffits`
-        * student_resid : Externally Studentized residuals defined in
-          `Influence.resid_studentized_external`
-        """
-        from pandas import DataFrame
-
-        # row and column labels
-        data = self.results.model.data
-        row_labels = data.row_labels
-        beta_labels = ['dfb_' + i for i in data.xnames]
-
-        # grab the results
-        summary_data = DataFrame(dict(
-                            cooks_d = self.cooks_distance[0],
-                            standard_resid = self.resid_studentized_internal,
-                            hat_diag = self.hat_matrix_diag,
-                            dffits_internal = self.dffits_internal[0],
-                            #student_resid = self.resid_studentized_external,
-                            #dffits = self.dffits[0],
-                                        ),
-                            index = row_labels)
-        #NOTE: if we don't give columns, order of above will be arbitrary
-        dfbeta = DataFrame(self.dfbetas, columns=beta_labels,
-                            index=row_labels)
-
-        return dfbeta.join(summary_data)

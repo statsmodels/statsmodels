@@ -9,6 +9,10 @@ import os.path
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
+try:
+    import pandas.testing as pdt
+except ImportError:
+    import pandas.util.testing as pdt
 
 try:
     import matplotlib.pyplot as plt
@@ -126,6 +130,15 @@ class InfluenceCompareExact(object):
         plt.close(fig)
         plt.close('all')
 
+    def test_summary(self):
+        infl1 = self.infl1
+        infl0 = self.infl0
+
+        df0 = infl0.summary_frame()
+        df1 = infl1.summary_frame()
+        assert_allclose(df0.values, df1.values, rtol=1e-7)
+        pdt.assert_index_equal(df0.index, df1.index)
+
 
 def _check_looo(self):
     infl = self.infl1
@@ -208,3 +221,14 @@ class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):
         # assert_allclose(infl0.d_fittedvalues, infl1.d_fittedvalues, rtol=1e-9)
         assert_allclose(infl0.d_fittedvalues_scaled,
                         infl1.dffits_internal[0], rtol=1e-9)
+
+    def test_summary(self):
+        infl1 = self.infl1
+        infl0 = self.infl0
+
+        df0 = infl0.summary_frame()
+        df1 = infl1.summary_frame()
+        # just some basic check on overlap except for dfbetas
+        cols = ['cooks_d', 'standard_resid', 'hat_diag', 'dffits_internal']
+        assert_allclose(df0[cols].values, df1[cols].values, rtol=1e-5)
+        pdt.assert_index_equal(df0.index, df1.index)
