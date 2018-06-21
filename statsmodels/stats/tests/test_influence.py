@@ -106,12 +106,15 @@ class InfluenceCompareExact(object):
 
         assert_allclose(infl0.resid_studentized,
                         infl1.resid_studentized, rtol=1e-12)
-        assert_allclose(infl0.cooks_distance, infl1.cooks_distance, rtol=1e-7)
-        assert_allclose(infl0.dfbetas, infl1.dfbetas, rtol=1e-9, atol=1e-14)
-        assert_allclose(infl0.d_params, infl1.d_params, rtol=1e-9, atol=1e-14)
-        assert_allclose(infl0.d_fittedvalues, infl1.d_fittedvalues, rtol=1e-9)
+
+        cd_rtol = getattr(self, 'cd_rtol', 1e-7)
+        assert_allclose(infl0.cooks_distance[0], infl1.cooks_distance[0],
+                        rtol=cd_rtol)
+        assert_allclose(infl0.dfbetas, infl1.dfbetas, rtol=1e-9, atol=5e-9)
+        assert_allclose(infl0.d_params, infl1.d_params, rtol=1e-9, atol=5e-9)
+        assert_allclose(infl0.d_fittedvalues, infl1.d_fittedvalues, rtol=5e-9)
         assert_allclose(infl0.d_fittedvalues_scaled,
-                        infl1.d_fittedvalues_scaled, rtol=1e-9)
+                        infl1.d_fittedvalues_scaled, rtol=5e-9)
 
     @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plots(self):
@@ -151,7 +154,7 @@ class InfluenceCompareExact(object):
 
         df0 = infl0.summary_frame()
         df1 = infl1.summary_frame()
-        assert_allclose(df0.values, df1.values, rtol=1e-7)
+        assert_allclose(df0.values, df1.values, rtol=5e-5)
         pdt.assert_index_equal(df0.index, df1.index)
 
 
@@ -181,6 +184,49 @@ class TestInfluenceLogitGLMMLE(InfluenceCompareExact):
 
     def test_looo(self):
         _check_looo(self)
+
+
+class TestInfluenceBinomialGLMMLE(InfluenceCompareExact):
+    # example based on Williams and R docs
+
+    @classmethod
+    def setup_class(cls):
+        yi = np.array([0, 2, 14, 19, 30])
+        ni = 40 * np.ones(len(yi))
+        xi = np.arange(1, len(yi) + 1)
+        exog = np.column_stack((np.ones(len(yi)), xi))
+        endog = np.column_stack((yi, ni - yi))
+
+        res = GLM(endog, exog, family=families.Binomial()).fit()
+
+        cls.infl1 = res.get_influence()
+        cls.infl0 = MLEInfluence(res)
+        cls.cd_rtol = 5e-5
+
+    def test_looo(self):
+        _check_looo(self)
+
+    def test_r(self):
+        # values from R,
+        # > xi <- 1:5
+        # > yi <- c(0,2,14,19,30)    # number of mice responding to dose xi
+        # > mi <- rep(40, 5)         # number of mice exposed
+        # > glmI <- glm(cbind(yi, mi -yi) ~ xi, family = binomial)
+        # > imI <- influence.measures(glmI)
+        # > t(imI$infmat)
+
+        # dfbeta/dfbetas and dffits don't make sense to me and are furthe away from
+        # looo than mine
+        # resid seem to be resid_deviance based and not resid_pearson
+        # I didn't compare cov.r
+        infl1 = self.infl1
+        cooks_d = [0.25220202795934726, 0.26107981497746285, 1.28985614424132389,
+                   0.08449722285516942, 0.36362110845918005]
+        hat = [0.2594393406119333,  0.3696442663244837,  0.3535768402250521,
+               0.389209198535791057,  0.6281303543027403]
+
+        assert_allclose(infl1.hat_matrix_diag, hat, rtol=5e-6)
+        assert_allclose(infl1.cooks_distance[0], cooks_d, rtol=1e-5)
 
 
 class TestInfluenceGaussianGLMMLE(InfluenceCompareExact):
