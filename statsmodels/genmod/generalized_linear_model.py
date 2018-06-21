@@ -28,7 +28,6 @@ import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 import statsmodels.regression._tools as reg_tools
 
-
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
     _plot_partial_residuals_doc,
@@ -616,6 +615,58 @@ class GLM(base.LikelihoodModel):
         Fisher information matrix.
         """
         return self.hessian(params, scale=scale, observed=False)
+
+    def _deriv_mean_dparams(self, params):
+        """
+        Derivative of the expected endog with respect to the parameters.
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+
+        Returns
+        -------
+        The value of the derivative of the expected endog with respect
+        to the parameter vector.
+        """
+        lin_pred = self.predict(params, linear=True)
+        idl = self.family.link.inverse_deriv(lin_pred)
+        dmat = self.exog * idl[:, None]
+        return dmat
+
+    def _deriv_score_obs_dendog(self, params, scale=None):
+        """derivative of score_obs w.r.t. endog
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which score is evaluated
+        scale : None or float
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+
+        Returns
+        -------
+        derivative : ndarray_2d
+            The derivative of the score_obs with respect to endog. This
+            can is given by `score_factor0[:, None] * exog` where
+            `score_factor0` is the score_factor without the residual.
+
+        """
+        mu = self.predict(params)
+        if scale is None:
+            scale = self.estimate_scale(mu)
+
+        score_factor = 1 / self.family.link.deriv(mu)
+        score_factor /= self.family.variance(mu)
+        score_factor *= self.iweights * self.n_trials
+
+        if not scale == 1:
+            score_factor /= scale
+
+        return score_factor[:, None] * self.exog
 
     def score_test(self, params_constrained, k_constraints=None,
                    exog_extra=None, observed=True):
@@ -1606,6 +1657,64 @@ class GLMResults(base.LikelihoodModelResults):
         return res
 
     get_prediction.__doc__ = pred.get_prediction_glm.__doc__
+
+    def get_hat_matrix_diag(self, observed=True):
+        """
+        compute the diagonal of the hat matrix
+
+        Parameter
+        ---------
+        observed : boolean
+            If true, then observed hessian is used in the hat matrix
+            computation. If false, then the expected hessian is used.
+            In the case of a canonical link function both are the same.
+
+        Returns
+        -------
+        hat_matrix_diag : ndarray
+            The diagonal of the hat matrix computed from the observed
+            or expected hessian.
+        """
+        weights = self.model.hessian_factor(self.params, observed=observed)
+        wexog = np.sqrt(weights)[:, None] * self.model.exog
+
+        hd = (wexog * np.linalg.pinv(wexog).T).sum(1)
+        return hd
+
+    def get_influence(self, observed=True):
+        """
+        get an instance of GLMInfluence with influence and outlier measures
+
+        Parameter
+        ---------
+        observed : boolean
+            If true, then observed hessian is used in the hat matrix
+            computation. If false, then the expected hessian is used.
+            In the case of a canonical link function both are the same.
+
+        Returns
+        -------
+        infl : GLMInfluence instance
+            The instance has methods to calculate the main influence and
+            outlier measures as attributes.
+
+        See also
+        --------
+        statsmodels.stats.outliers_influence.GLMInfluence
+        """
+        from statsmodels.stats.outliers_influence import GLMInfluence
+
+        weights = self.model.hessian_factor(self.params, observed=observed)
+        weights_sqrt = np.sqrt(weights)
+        wexog = weights_sqrt[:, None] * self.model.exog
+        wendog = weights_sqrt * self.model.endog
+
+        # using get_hat_matrix_diag has duplicated computation
+        hat_matrix_diag = self.get_hat_matrix_diag(observed=observed)
+        infl = GLMInfluence(self, endog=wendog, exog=wexog,
+                         resid=self.resid_pearson,
+                         hat_matrix_diag=hat_matrix_diag)
+        return infl
 
     def remove_data(self):
         # GLM has alias/reference in result instance
