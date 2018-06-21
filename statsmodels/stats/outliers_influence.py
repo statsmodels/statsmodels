@@ -378,11 +378,11 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def hat_matrix_diag(self):
-        '''(cached attribute) diagonal of the generalized leverage
+        """(cached attribute) diagonal of the generalized leverage
 
         This is the analogue of the hat matrix diagonal for general MLE.
 
-        '''
+        """
         if hasattr(self, '_hat_matrix_diag'):
             return self._hat_matrix_diag
 
@@ -394,22 +394,22 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def d_params(self):
-        '''(cached attribute) change in parameter estimates
+        """(cached attribute) change in parameter estimates
 
         This uses one-step approximation of the parameter change to deleting
         one observation.
-        '''
+        """
         so_noti = self.score_obs.sum(0) - self.score_obs
         beta_i = np.linalg.solve(self.hessian, so_noti.T).T
         return beta_i / (1 - self.hat_matrix_diag)[:, None]
 
     @cache_readonly
     def dfbetas(self):
-        '''(cached attribute) scaled change in parameter estimates
+        """(cached attribute) scaled change in parameter estimates
 
         The one-step change of parameters in d_params is rescaled by dividing
         by the standard error of the parameter estimate given by results.bse.
-        '''
+        """
 
         beta_i = self.d_params / self.results.bse
         return beta_i
@@ -467,11 +467,11 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def d_fittedvalues(self):
-        '''(cached attribute) change in expected response, fittedvalues
+        """(cached attribute) change in expected response, fittedvalues
 
         This uses one-step approximation of the parameter change to deleting
         one observation ``d_params`.
-        '''
+        """
         # results.params might be a pandas.Series
         params = np.asarray(self.results.params)
         deriv = self.results.model._deriv_mean_dparams(params)
@@ -479,12 +479,12 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @property
     def d_fittedvalues_scaled(self):
-        '''(cached attribute) change in fittedvalues scaled by standard errors
+        """(cached attribute) change in fittedvalues scaled by standard errors
 
         This uses one-step approximation of the parameter change to deleting
         one observation ``d_params`, and divides by the standard errors
         for the predicted mean provided by results.get_prediction.
-        '''
+        """
         # Note: this and the previous methods are for the response
         # and not for a weighted response, i.e. not the self.exog, self.endog
         # this will be relevant for WLS comparing fitted endog versus wendog
@@ -1188,13 +1188,13 @@ class GLMInfluence(MLEInfluence):
 
     @cache_readonly
     def hat_matrix_diag(self):
-        '''(cached attribute) diagonal of the hat_matrix for GLM
+        """(cached attribute) diagonal of the hat_matrix for GLM
 
         This returns the diagonal of the hat matrix that was provided as
         argument to GLMInfluenc or computes it using the results method
         `get_hat_matrix`.
 
-        '''
+        """
         if hasattr(self, '_hat_matrix_diag'):
             return self._hat_matrix_diag
         else:
@@ -1202,11 +1202,11 @@ class GLMInfluence(MLEInfluence):
 
     @cache_readonly
     def d_params(self):
-        '''(cached attribute) change in parameter estimates
+        """(cached attribute) change in parameter estimates
 
         This uses one-step approximation of the parameter change to deleting
         one observation.
-        '''
+        """
 
         beta_i = np.linalg.pinv(self.exog) * self.resid_studentized
         beta_i /= np.sqrt(1 - self.hat_matrix_diag)
@@ -1215,28 +1215,28 @@ class GLMInfluence(MLEInfluence):
     # same computation as OLS
     @cache_readonly
     def resid_studentized(self):
-        '''(cached attribute) internally studentized residuals
+        """(cached attribute) internally studentized residuals
 
         residuals / sqrt( scale * (1 - hii))
 
         where residuals are those provided to GLMInfluence which are
         pearson residuals by default, and
         hii is the diagonal of the hat matrix.
-        '''
+        """
         hii = self.hat_matrix_diag
         return  self.resid / np.sqrt(self.scale * (1 - hii))
 
     # same computation as OLS
     @cache_readonly
     def cooks_distance(self):
-        '''(cached attribute) Cook's distance
+        """(cached attribute) Cook's distance
 
         Based on one step approximation using resid_studentized and
         hat_matrix_diag for the computation.
 
         Cook's distance divides by the number of explanatory variables.
 
-        '''
+        """
         hii = self.hat_matrix_diag
         #Eubank p.93, 94
         cooks_d2 = self.resid_studentized**2 / self.k_vars
@@ -1251,11 +1251,11 @@ class GLMInfluence(MLEInfluence):
 
     @property
     def d_linpred(self):
-        '''(cached attribute) change in linear prediction
+        """(cached attribute) change in linear prediction
 
         This uses one-step approximation of the parameter change to deleting
         one observation ``d_params`.
-        '''
+        """
         # TODO: This will need adjustment for extra params in Poisson
         # use original model exog not transformed influence exog
         exog = self.results.model.exog
@@ -1263,12 +1263,12 @@ class GLMInfluence(MLEInfluence):
 
     @property
     def d_linpred_scaled(self):
-        '''(cached attribute) change in linpred scaled by standard errors
+        """(cached attribute) change in linpred scaled by standard errors
 
         This uses one-step approximation of the parameter change to deleting
         one observation ``d_params`, and divides by the standard errors
         for linpred provided by results.get_prediction.
-        '''
+        """
         # Note: this and the previous methods are for the response
         # and not for a weighted response, i.e. not the self.exog, self.endog
         # this will be relevant for WLS comparing fitted endog versus wendog
@@ -1296,7 +1296,7 @@ class GLMInfluence(MLEInfluence):
 
     @cache_readonly
     def _res_looo(self):
-        '''collect required results from the LOOO loop
+        """collect required results from the LOOO loop
 
         all results will be attached.
         currently only 'params', 'mse_resid', 'det_cov_params' are stored
@@ -1309,7 +1309,7 @@ class GLMInfluence(MLEInfluence):
 
         Warning: This will need refactoring and API changes to be able to
         add options.
-        '''
+        """
         from statsmodels.sandbox.tools.cross_val import LeaveOneOut
         get_det_cov_params = lambda res: np.linalg.det(res.cov_params())
 

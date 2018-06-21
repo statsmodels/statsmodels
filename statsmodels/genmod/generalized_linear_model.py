@@ -28,7 +28,6 @@ import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 import statsmodels.regression._tools as reg_tools
 
-
 from statsmodels.graphics._regressionplots_doc import (
     _plot_added_variable_doc,
     _plot_partial_residuals_doc,
@@ -668,7 +667,6 @@ class GLM(base.LikelihoodModel):
             score_factor /= scale
 
         return score_factor[:, None] * self.exog
-
 
     def score_test(self, params_constrained, k_constraints=None,
                    exog_extra=None, observed=True):
@@ -1661,6 +1659,22 @@ class GLMResults(base.LikelihoodModelResults):
     get_prediction.__doc__ = pred.get_prediction_glm.__doc__
 
     def get_hat_matrix_diag(self, observed=True):
+        """
+        compute the diagonal of the hat matrix
+
+        Parameter
+        ---------
+        observed : boolean
+            If true, then observed hessian is used in the hat matrix
+            computation. If false, then the expected hessian is used.
+            In the case of a canonical link function both are the same.
+
+        Returns
+        -------
+        hat_matrix_diag : ndarray
+            The diagonal of the hat matrix computed from the observed
+            or expected hessian.
+        """
         weights = self.model.hessian_factor(self.params, observed=observed)
         wexog = np.sqrt(weights)[:, None] * self.model.exog
 
@@ -1668,12 +1682,34 @@ class GLMResults(base.LikelihoodModelResults):
         return hd
 
     def get_influence(self, observed=True):
+        """
+        get an instance of GLMInfluence with influence and outlier measures
+
+        Parameter
+        ---------
+        observed : boolean
+            If true, then observed hessian is used in the hat matrix
+            computation. If false, then the expected hessian is used.
+            In the case of a canonical link function both are the same.
+
+        Returns
+        -------
+        infl : GLMInfluence instance
+            The instance has methods to calculate the main influence and
+            outlier measures as attributes.
+
+        See also
+        --------
+        statsmodels.stats.outliers_influence.GLMInfluence
+        """
         from statsmodels.stats.outliers_influence import GLMInfluence
+
         weights = self.model.hessian_factor(self.params, observed=observed)
         weights_sqrt = np.sqrt(weights)
         wexog = weights_sqrt[:, None] * self.model.exog
         wendog = weights_sqrt * self.model.endog
 
+        # using get_hat_matrix_diag has duplicated computation
         hat_matrix_diag = self.get_hat_matrix_diag(observed=observed)
         infl = GLMInfluence(self, endog=wendog, exog=wexog,
                          resid=self.resid_pearson,
