@@ -1106,7 +1106,7 @@ def test_random_effects_getters():
         y.append(yy)
         x.append(xx)
         z.append(zz)
-        g.append(i * np.ones(m))
+        g.append(["g%d" % i] * m)
 
     y = np.concatenate(y)
     x = np.concatenate(x)
@@ -1142,12 +1142,12 @@ def test_random_effects_getters():
     result = model.fit()
 
     ref = result.random_effects
-    b0 = [ref[k][0:2] for k in range(ng)]
+    b0 = [ref["g%d" % k][0:2] for k in range(ng)]
     b0 = np.asarray(b0)
     assert (np.corrcoef(b0[:, 0], b[:, 0])[0, 1] > 0.8)
     assert (np.corrcoef(b0[:, 1], b[:, 1])[0, 1] > 0.8)
 
-    cf0 = [ref[k][2:6] for k in range(ng)]
+    cf0 = [ref["g%d" % k][2:6] for k in range(ng)]
     cf0 = np.asarray(cf0)
     for k in range(4):
         assert (np.corrcoef(cf0[:, k], cc[:, k])[0, 1] > 0.8)

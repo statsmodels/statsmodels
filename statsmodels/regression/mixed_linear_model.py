@@ -2308,7 +2308,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             ex_r = self.model._aex_r[group_ix]
             ex2_r = self.model._aex_r2[group_ix]
             label = self.model.group_labels[group_ix]
-            vc_var = self.model._expand_vcomp(vcomp, group_ix)
+            vc_var = self.model._expand_vcomp(vcomp, label)
 
             solver = _smw_solver(self.scale, ex_r, ex2_r, cov_re_inv,
                                  1 / vc_var)
@@ -2325,7 +2325,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             v[0:m, 0:m] += self.cov_re
             ix = np.arange(m, v.shape[0])
             v[ix, ix] += vc_var
-            na = self._expand_re_names(group_ix)
+            na = self._expand_re_names(label)
             v = pd.DataFrame(v, index=na, columns=na)
             ranef_dict[label] = v
 
