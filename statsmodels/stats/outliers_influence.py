@@ -186,34 +186,6 @@ class _BaseInfluenceMixin(object):
     """common methods between OLSInfluence and MLE/GLMInfluence
     """
 
-    @cache_readonly
-    def resid_studentized(self):
-        '''studentized residuals, internal
-
-
-        '''
-        hii = self.hat_matrix_diag
-        return  self.resid / np.sqrt(self.scale * (1 - hii))
-
-    @cache_readonly
-    def cooks_distance(self):
-        '''(cached attribute) Cooks distance
-
-        uses original results, no nobs loop
-
-        '''
-        hii = self.hat_matrix_diag
-        #Eubank p.93, 94
-        cooks_d2 = self.resid_studentized**2 / self.k_vars
-        cooks_d2 *= hii / (1 - hii)
-
-        from scipy import stats
-        #alpha = 0.1
-        #print stats.f.isf(1-alpha, n_params, res.df_modelwc)
-        pvals = stats.f.sf(cooks_d2, self.k_vars, self.results.df_resid)
-
-        return cooks_d2, pvals
-
     def plot_influence(self, external=None, alpha=.05, criterion="cooks",
                        size=48, plot_alpha=.75, ax=None, **kwargs):
 
@@ -352,6 +324,7 @@ class MLEInfluence(_BaseInfluenceMixin):
         '''
         if hasattr(self, '_hat_matrix_diag'):
             return self._hat_matrix_diag
+
         dmu_dp = self.results.model._deriv_mean_dparams(self.results.params)
         dsdy = self.results.model._deriv_score_obs_dendog(self.results.params)
         #dmu_dp = 1 / self.results.model.family.link.deriv(self.results.fittedvalues)
@@ -1080,24 +1053,6 @@ class GLMInfluence(MLEInfluence):
 
     """
 
-    def __init__(self, results, resid=None, endog=None, exog=None,
-                 hat_matrix_diag=None, scale=None):
-        # I'm not calling super for now, OLS attributes might not be available
-        #check which model is allowed
-        self.results = maybe_unwrap_results(results)
-        # TODO: check for extra params in e.g. NegBin
-        self.nobs, self.k_vars = results.model.exog.shape
-        self.endog = endog if endog is not None else results.model.endog
-        self.exog = exog if exog is not None else results.model.exog
-        self.resid = resid if resid is not None else results.resid_pearson
-        self.scale = scale if scale is not None else results.scale
-        self.model_class = results.model.__class__
-
-        # TODO don't use cached attribute in OLSInfluence
-        self._hat_matrix_diag = (hat_matrix_diag if hat_matrix_diag is not None
-                                 else self.results.get_hat_matrix())
-        self._cache = {}
-
     @cache_readonly
     def hat_matrix_diag(self):
         '''(cached attribute) diagonal of the hat_matrix for OLS
@@ -1106,8 +1061,10 @@ class GLMInfluence(MLEInfluence):
         -----
 
         '''
-
-        return self._hat_matrix_diag
+        if hasattr(self, '_hat_matrix_diag'):
+            return self._hat_matrix_diag
+        else:
+            return self.results.get_hat_matrix()
 
     @cache_readonly
     def d_params(self):
@@ -1179,17 +1136,6 @@ class GLMInfluence(MLEInfluence):
     def _diff_fittedvalues_one(self):
         # in discrete we cannot reuse results.fittedvalues
         return self.results.predict() - self._fittedvalues_one
-
-    @cache_readonly
-    def sigma2_not_obsi(self):
-        '''(cached attribute) error variance for all LOOO regressions
-
-        This is 'mse_resid' from each auxiliary regression.
-
-        uses results from leave-one-observation-out loop
-        '''
-
-        return np.asarray(self._res_looo['scale'])
 
     @cache_readonly
     def _res_looo(self):

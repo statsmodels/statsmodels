@@ -128,6 +128,21 @@ class InfluenceCompareExact(object):
         plt.close(fig)
         fig = infl1.plot_index('resid', threshold=0.2, title='')
         plt.close(fig)
+
+        fig = infl0.plot_index('dfbeta', idx=1, threshold=0.2, title='')
+        plt.close(fig)
+        fig = infl1.plot_index('dfbeta', idx=1, threshold=0.2, title='')
+        plt.close(fig)
+
+        fig = infl0.plot_index('cook', idx=1, threshold=0.2, title='')
+        plt.close(fig)
+        fig = infl1.plot_index('cook', idx=1, threshold=0.2, title='')
+        plt.close(fig)
+
+        fig = infl0.plot_index('hat', idx=1, threshold=0.2, title='')
+        plt.close(fig)
+        fig = infl1.plot_index('hat', idx=1, threshold=0.2, title='')
+        plt.close(fig)
         plt.close('all')
 
     def test_summary(self):
@@ -221,6 +236,13 @@ class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):
         # assert_allclose(infl0.d_fittedvalues, infl1.d_fittedvalues, rtol=1e-9)
         assert_allclose(infl0.d_fittedvalues_scaled,
                         infl1.dffits_internal[0], rtol=1e-9)
+
+        # specific to linear link
+        assert_allclose(infl0.d_linpred,
+                        infl0.d_fittedvalues, rtol=1e-12)
+        assert_allclose(infl0.d_linpred_scaled,
+                        infl0.d_fittedvalues_scaled, rtol=1e-12)
+
 
     def test_summary(self):
         infl1 = self.infl1
