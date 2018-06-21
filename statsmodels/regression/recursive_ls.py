@@ -108,6 +108,9 @@ class RecursiveLS(MLEModel):
         # Use univariate filtering by default
         self.ssm.filter_univariate = True
 
+        # Concentrate the scale out of the likelihood function
+        self.ssm.filter_concentrated = True
+
         # Setup the state space representation
         self['design'] = np.zeros((self.k_endog, self.k_states, self.nobs))
         self['design', 0] = self.exog[:, :, None].T
@@ -118,6 +121,7 @@ class RecursiveLS(MLEModel):
         # Notice that the filter output does not depend on the measurement
         # variance, so we set it here to 1
         self['obs_cov', 0, 0] = 1.
+        self['transition'] = np.eye(self.k_states)
 
         # Linear constraints are technically imposed by adding "fake" endog
         # variables that are used during filtering, but for all model- and
@@ -138,17 +142,12 @@ class RecursiveLS(MLEModel):
         -------
         RecursiveLSResults
         """
-        # Get the smoother results with an arbitrary measurement variance
         smoother_results = self.smooth(return_ssm=True)
-        # Compute the MLE of sigma2 (see Harvey, 1989 equation 4.2.5)
-        d = max(smoother_results.nobs_diffuse, self.loglikelihood_burn)
-        resid = smoother_results.standardized_forecasts_error[0, d:]
-        sigma2 = np.inner(resid, resid) / (self.nobs - d)
 
-        # Now construct a results class, where the params are the final
-        # estimates of the regression coefficients
-        self['obs_cov', 0, 0] = sigma2
-        return self.smooth()
+        with self.ssm.fixed_scale(smoother_results.scale):
+            res = self.smooth()
+
+        return res
 
     def filter(self, return_ssm=False, **kwargs):
         # Get the state space output
@@ -256,7 +255,8 @@ class RecursiveLSResults(MLEResults):
 
         # Since we are overriding params with things that aren't MLE params,
         # need to adjust df's
-        self.df_model = self.k_diffuse_states - self.model.k_constraints
+        q = max(self.loglikelihood_burn, self.k_diffuse_states)
+        self.df_model = q - self.model.k_constraints
         self.df_resid = self.nobs_effective - self.df_model
 
         # Save _init_kwds
@@ -333,7 +333,7 @@ class RecursiveLSResults(MLEResults):
 
         """
         return (self.filter_results.standardized_forecasts_error[0] *
-                self.filter_results.obs_cov[0, 0]**0.5)
+                self.scale**0.5)
 
     @cache_readonly
     def cusum(self):
@@ -426,7 +426,7 @@ class RecursiveLSResults(MLEResults):
         """
         from scipy.stats import norm
         return np.log(norm.pdf(self.resid_recursive, loc=0,
-                               scale=self.filter_results.obs_cov[0, 0]**0.5))
+                               scale=self.scale**0.5))
 
     @cache_readonly
     def llf_recursive(self):

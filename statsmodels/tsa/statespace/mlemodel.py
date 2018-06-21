@@ -1529,7 +1529,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     params : array
         The parameters of the model.
     scale : float
-        This is currently set to 1.0 and not used by the model or its results.
+        This is currently set to 1.0 unless the model uses concentrated
+        filtering.
 
     See Also
     --------
@@ -1540,10 +1541,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     def __init__(self, model, params, results, cov_type='opg',
                  cov_kwds=None, **kwargs):
         self.data = model.data
+        scale = results.scale
 
         tsbase.TimeSeriesModelResults.__init__(self, model, params,
                                                normalized_cov_params=None,
-                                               scale=1.)
+                                               scale=scale)
 
         # Save the state space representation output
         self.filter_results = results
@@ -1555,6 +1557,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Dimensions
         self.nobs = self.filter_results.nobs
         self.nobs_diffuse = self.filter_results.nobs_diffuse
+        if self.nobs_diffuse > 0 and self.loglikelihood_burn > 0:
+            warnings.warn('Care should be used when applying a loglikelihood'
+                          ' burn to a model with exact diffuse initialization.'
+                          ' Some results objects, e.g. degrees of freedom,'
+                          ' expect only one of the two to be set.')
         # This only excludes explicitly burned (usually approximate diffuse)
         # periods but does not exclude approximate diffuse periods. This is
         # because the loglikelihood remains valid for the initial periods in
@@ -1570,7 +1577,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         self.k_diffuse_states = 0 if P is None else np.sum(np.diagonal(P) == 1)
 
         # Degrees of freedom (see DK 2012, section 7.4)
-        self.df_model = self.params.size + self.k_diffuse_states
+        self.df_model = (self.params.size + self.k_diffuse_states +
+                         self.filter_results.filter_concentrated)
         self.df_resid = self.nobs_effective - self.df_model
 
         # Setup covariance matrix notes dictionary
@@ -1998,7 +2006,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (float) The value of the log-likelihood function evaluated at `params`.
         """
-        return self.model.loglikeobs(self.params)
+        return self.filter_results.llf_obs
 
     @cache_readonly
     def llf(self):
@@ -2509,9 +2517,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         simulated_obs : array
             An (nsimulations x k_endog) array of simulated observations.
         """
-        return self.model.simulate(self.params, nsimulations,
-                                   measurement_shocks, state_shocks,
-                                   initial_state)
+        scale = self.scale if self.filter_results.filter_concentrated else None
+        with self.model.ssm.fixed_scale(scale):
+            sim = self.model.simulate(self.params, nsimulations,
+                                      measurement_shocks, state_shocks,
+                                      initial_state)
+        return sim
 
     def impulse_responses(self, steps=1, impulse=0, orthogonalized=False,
                           cumulative=False, **kwargs):
@@ -2556,9 +2567,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         calculating impulse responses.
 
         """
-        return self.model.impulse_responses(self.params, steps, impulse,
-                                            orthogonalized, cumulative,
-                                            **kwargs)
+        scale = self.scale if self.filter_results.filter_concentrated else None
+        with self.model.ssm.fixed_scale(scale):
+            irfs = self.model.impulse_responses(self.params, steps, impulse,
+                                                orthogonalized, cumulative,
+                                                **kwargs)
+        return irfs
 
     def plot_diagnostics(self, variable=0, lags=10, fig=None, figsize=None):
         """
@@ -2730,6 +2744,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             ('BIC', ["%#5.3f" % self.bic]),
             ('HQIC', ["%#5.3f" % self.hqic])
         ]
+        if self.filter_results.filter_concentrated:
+            top_right.append(('Scale', ["%#5.3f" % self.scale]))
 
         if hasattr(self, 'cov_type'):
             top_left.append(('Covariance Type:', [self.cov_type]))

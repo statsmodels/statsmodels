@@ -91,6 +91,11 @@ class SARIMAX(MLEModel):
     hamilton_representation : boolean, optional
         Whether or not to use the Hamilton representation of an ARMA process
         (if True) or the Harvey representation (if False). Default is False.
+    concentrate_scale : boolean, optional
+        Whether or not to concentrate the scale (variance of the error term)
+        out of the likelihood. This reduces the number of parameters estimated
+        by maximum likelihood by one, but standard errors will then not
+        be available for the scale parameter.
     **kwargs
         Keyword arguments may be used to provide default values for state space
         matrices or for Kalman filtering options. See `Representation`, and
@@ -253,6 +258,17 @@ class SARIMAX(MLEModel):
     Stata and R require using it along with simple differencing (as Stata
     does).
 
+    If `filter_concentrated = True` is used, then the scale of the model is
+    concentrated out of the likelihood. A benefit of this is that there the
+    dimension of the parameter vector is reduced so that numerical maximization
+    of the log-likelihood function may be faster and more stable. If this
+    option in a model with measurement error, it is important to note that the
+    estimated measurement error parameter will be relative to the scale, and
+    is named "snr.measurement_error" instead of "var.measurement_error". To
+    compute the variance of the measurement error in this case one would
+    multiply `snr.measurement_error` parameter by the scale.
+
+
     Detailed information about state space models can be found in [1]_. Some
     specific references are:
 
@@ -282,7 +298,8 @@ class SARIMAX(MLEModel):
                  measurement_error=False, time_varying_regression=False,
                  mle_regression=True, simple_differencing=False,
                  enforce_stationarity=True, enforce_invertibility=True,
-                 hamilton_representation=False, **kwargs):
+                 hamilton_representation=False, concentrate_scale=False,
+                 **kwargs):
 
         # Model parameters
         self.seasonal_periods = seasonal_order[3]
@@ -293,6 +310,7 @@ class SARIMAX(MLEModel):
         self.enforce_stationarity = enforce_stationarity
         self.enforce_invertibility = enforce_invertibility
         self.hamilton_representation = hamilton_representation
+        self.concentrate_scale = concentrate_scale
 
         # Save given orders
         self.order = order
@@ -460,7 +478,8 @@ class SARIMAX(MLEModel):
             self.k_ar_params + self.k_ma_params +
             self.k_seasonal_ar_params + self.k_seasonal_ar_params +
             self.k_trend +
-            self.measurement_error + 1
+            self.measurement_error +
+            int(not self.concentrate_scale)
         )
         if self.mle_regression:
             self.k_params += self.k_exog
@@ -499,6 +518,10 @@ class SARIMAX(MLEModel):
             endog, exog=exog, k_states=k_states, k_posdef=k_posdef, **kwargs
         )
 
+        # Set the filter to concentrate out the scale if requested
+        if self.concentrate_scale:
+            self.ssm.filter_concentrated = True
+
         # Set as time-varying model if we have time-trend or exog
         if self.k_exog > 0 or len(self.polynomial_trend) > 1:
             self.ssm._time_invariant = False
@@ -508,13 +531,16 @@ class SARIMAX(MLEModel):
         self.ssm['state_intercept'] = self.initial_state_intercept
         self.ssm['transition'] = self.initial_transition
         self.ssm['selection'] = self.initial_selection
+        if self.concentrate_scale:
+            self.ssm['state_cov', 0, 0] = 1.
 
         # update _init_keys attached by super
         self._init_keys += ['order',  'seasonal_order', 'trend',
                             'measurement_error', 'time_varying_regression',
                             'mle_regression', 'simple_differencing',
                             'enforce_stationarity', 'enforce_invertibility',
-                            'hamilton_representation'] + list(kwargs.keys())
+                            'hamilton_representation',
+                            'concentrate_scale'] + list(kwargs.keys())
         # TODO: I think the kwargs or not attached, need to recover from ???
 
         # Initialize the state
@@ -976,6 +1002,10 @@ class SARIMAX(MLEModel):
                 params_variance = np.inner(endog, endog) / self.nobs
         params_measurement_variance = 1 if self.measurement_error else []
 
+        # Remove state variance as parameter if scale is concentrated out
+        if self.concentrate_scale:
+            params_variance = []
+
         # Combine all parameters
         return np.r_[
             params_trend,
@@ -1074,7 +1104,7 @@ class SARIMAX(MLEModel):
             'exog_variance': self.k_exog if (
                 self.state_regression and self.time_varying_regression) else 0,
             'measurement_variance': int(self.measurement_error),
-            'variance': int(self.state_error),
+            'variance': int(self.state_error and not self.concentrate_scale),
         }
 
     @property
@@ -1176,20 +1206,30 @@ class SARIMAX(MLEModel):
 
         # Exogenous variances
         if self.state_regression and self.time_varying_regression:
-            exog_var_template = '$\\sigma_\\text{%s}^2$' if latex else 'var.%s'
+            if not self.concentrate_scale:
+                exog_var_template = ('$\\sigma_\\text{%s}^2$' if latex
+                                     else 'var.%s')
+            else:
+                exog_var_template = (
+                    '$\\sigma_\\text{%s}^2 / \\sigma_\\zeta^2$' if latex
+                    else 'snr.%s')
             names['exog_variance'] = [
                 exog_var_template % exog_name for exog_name in self.exog_names
             ]
 
         # Measurement error variance
         if self.measurement_error:
-            meas_var_tpl = (
-                '$\\sigma_\\eta^2$' if latex else 'var.measurement_error'
-            )
+            if not self.concentrate_scale:
+                meas_var_tpl = (
+                    '$\\sigma_\\eta^2$' if latex else 'var.measurement_error')
+            else:
+                meas_var_tpl = (
+                    '$\\sigma_\\eta^2 / \\sigma_\\zeta^2$' if latex
+                    else 'snr.measurement_error')
             names['measurement_variance'] = [meas_var_tpl]
 
         # State variance
-        if self.state_error:
+        if self.state_error and not self.concentrate_scale:
             var_tpl = '$\\sigma_\\zeta^2$' if latex else 'sigma2'
             names['variance'] = [var_tpl]
 
@@ -1292,7 +1332,7 @@ class SARIMAX(MLEModel):
             constrained[start] = unconstrained[start]**2
             start += 1
             end += 1
-        if self.state_error:
+        if self.state_error and not self.concentrate_scale:
             constrained[start] = unconstrained[start]**2
             # start += 1
             # end += 1
@@ -1396,7 +1436,7 @@ class SARIMAX(MLEModel):
             unconstrained[start] = constrained[start]**0.5
             start += 1
             end += 1
-        if self.state_error:
+        if self.state_error and not self.concentrate_scale:
             unconstrained[start] = constrained[start]**0.5
             # start += 1
             # end += 1
@@ -1465,7 +1505,7 @@ class SARIMAX(MLEModel):
             params_measurement_variance = params[start]
             start += 1
             end += 1
-        if self.state_error:
+        if self.state_error and not self.concentrate_scale:
             params_variance = params[start]
         # start += 1
         # end += 1
@@ -1586,7 +1626,8 @@ class SARIMAX(MLEModel):
 
         # State covariance matrix
         if self.k_posdef > 0:
-            self.ssm['state_cov', 0, 0] = params_variance
+            if not self.concentrate_scale:
+                self['state_cov', 0, 0] = params_variance
             if self.state_regression and self.time_varying_regression:
                 self.ssm[self._exog_variance_idx] = params_exog_variance
 
@@ -1656,6 +1697,7 @@ class SARIMAXResults(MLEResults):
             'enforce_stationarity': self.model.enforce_stationarity,
             'enforce_invertibility': self.model.enforce_invertibility,
             'hamilton_representation': self.model.hamilton_representation,
+            'concentrate_scale': self.model.concentrate_scale,
 
             'order': self.model.order,
             'seasonal_order': self.model.seasonal_order,

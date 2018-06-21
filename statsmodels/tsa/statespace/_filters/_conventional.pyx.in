@@ -25,6 +25,8 @@ from statsmodels.src.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 
+from statsmodels.tsa.statespace._kalman_filter cimport FILTER_CONCENTRATED
+
 
 {{for prefix, types in TYPES.items()}}
 {{py:cython_type, dtype, typenum = types}}
@@ -89,6 +91,9 @@ cdef {{cython_type}} {{prefix}}inverse_missing_conventional({{prefix}}KalmanFilt
     return 0.0
 
 cdef {{cython_type}} {{prefix}}loglikelihood_missing_conventional({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model, {{cython_type}} determinant):
+    return 0.0
+
+cdef {{cython_type}} {{prefix}}scale_missing_conventional({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
     return 0.0
 
 # ### Conventional Kalman filter
@@ -280,16 +285,37 @@ cdef {{cython_type}} {{prefix}}loglikelihood_conventional({{prefix}}KalmanFilter
 
     loglikelihood = -0.5*(model._k_endog*{{combined_prefix}}log(2*NPY_PI) + {{combined_prefix}}log(determinant))
 
+    if not kfilter.filter_method & FILTER_CONCENTRATED:
+        {{if combined_prefix == 'd'}}
+        loglikelihood = loglikelihood - 0.5*blas.{{prefix}}dot(&model._k_endog, kfilter._forecast_error, &inc, kfilter._tmp2, &inc)
+        {{else}}
+        blas.{{prefix}}gemv("N", &inc, &model._k_endog,
+                       &alpha, kfilter._forecast_error, &inc,
+                               kfilter._tmp2, &inc,
+                       &beta, kfilter._tmp0, &inc)
+        loglikelihood = loglikelihood - 0.5 * kfilter._tmp0[0]
+        {{endif}}
+
+    return loglikelihood
+
+cdef {{cython_type}} {{prefix}}scale_conventional({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
+    # Constants
+    cdef:
+        {{cython_type}} scale
+        int inc = 1
+        {{cython_type}} alpha = 1.0
+        {{cython_type}} beta = 0.0
+
     {{if combined_prefix == 'd'}}
-    loglikelihood = loglikelihood - 0.5*blas.{{prefix}}dot(&model._k_endog, kfilter._forecast_error, &inc, kfilter._tmp2, &inc)
+    scale = blas.{{prefix}}dot(&model._k_endog, kfilter._forecast_error, &inc, kfilter._tmp2, &inc)
     {{else}}
     blas.{{prefix}}gemv("N", &inc, &model._k_endog,
                    &alpha, kfilter._forecast_error, &inc,
                            kfilter._tmp2, &inc,
                    &beta, kfilter._tmp0, &inc)
-    loglikelihood = loglikelihood - 0.5 * kfilter._tmp0[0]
+    scale = kfilter._tmp0[0]
     {{endif}}
 
-    return loglikelihood
+    return scale
 
 {{endfor}}

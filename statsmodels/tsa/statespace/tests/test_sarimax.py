@@ -16,6 +16,7 @@ from statsmodels.tsa import arima_model as arima
 from .results import results_sarimax
 from statsmodels.tools import add_constant
 from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
+from nose.exc import SkipTest
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -2070,3 +2071,206 @@ def test_arima000():
     mod.initialize_known([10.], np.diag([0.]))
     res = mod.smooth([0., 1.])
     assert_allclose(res.smoothed_state[0], 10, atol=1e-10)
+
+
+def check_concentrated_scale(filter_univariate=False):
+    # Test that concentrating the scale out of the likelihood function works
+    endog = np.diff(results_sarimax.wpi1_data)
+
+    orders = [(1, 0, 0), (2, 2, 2)]
+    seasonal_orders = [(0, 0, 0, 0), (1, 1, 1, 4)]
+
+    simple_differencings = [True, False]
+    exogs = [None, np.ones_like(endog)]
+    trends = [None, 't']
+    # Disabled, see discussion below in setting k_snr for details
+    time_varying_regressions = [True, False]
+    measurement_errors = [True, False]
+
+    import itertools
+    names = ['exog', 'order', 'seasonal_order', 'trend', 'measurement_error',
+             'time_varying_regression', 'simple_differencing']
+    for element in itertools.product(exogs, orders, seasonal_orders, trends,
+                                     measurement_errors,
+                                     time_varying_regressions,
+                                     simple_differencings):
+        kwargs = dict(zip(names, element))
+        if kwargs.get('time_varying_regression', False):
+            kwargs['mle_regression'] = False
+
+        # Sometimes we can have slight differences if the Kalman filters
+        # converge at different observations, so disable convergence.
+        kwargs['tolerance'] = 0
+
+        mod_orig = sarimax.SARIMAX(endog, **kwargs)
+        mod_conc = sarimax.SARIMAX(endog, concentrate_scale=True, **kwargs)
+
+        mod_orig.ssm.filter_univariate = filter_univariate
+        mod_conc.ssm.filter_univariate = filter_univariate
+
+        # The base parameters are the starting parameters from the concentrated
+        # model
+        conc_params = mod_conc.start_params
+        res_conc = mod_conc.smooth(conc_params)
+
+        # We need to map the concentrated parameters to the non-concentrated
+        # model
+        # The first thing is to add an additional parameter for the scale
+        # (here set to 1 because we will multiply by res_conc.scale below, but
+        # because the scale is factored out of the entire obs_cov and state_cov
+        # matrices we may need to multiply more parameters by res_conc.scale
+        # also)
+        orig_params = np.r_[conc_params, 1]
+        k_snr = 1
+
+        # If we have time-varying regressions, then in the concentrated model
+        # we actually are computing signal-to-noise ratios, and we
+        # need to multiply it by the scale to get the variances
+        # the non-concentrated model will expect as parameters
+        if kwargs['time_varying_regression'] and kwargs['exog'] is not None:
+            k_snr += 1
+        # Note: the log-likelihood isn't exactly the same between concentrated
+        # and non-concentrated models with time-varying regression, so this
+        # combinations raises NotImplementedError.
+
+        # If we have measurement error, then in the concentrated model
+        # we actually are computing the signal-to-noise ratio, and we
+        # need to multiply it by the scale to get the measurement error
+        # variance that the non-concentrated model will expect as a
+        # parameter
+        if kwargs['measurement_error']:
+            k_snr += 1
+
+        atol = 1e-5
+        if kwargs['measurement_error'] or kwargs['time_varying_regression']:
+            atol = 1e-3
+
+        orig_params = np.r_[orig_params[:-k_snr],
+                            res_conc.scale * orig_params[-k_snr:]]
+        res_orig = mod_orig.smooth(orig_params)
+
+        # Test loglike
+        # Need to reduce the tolerance when we have measurement error.
+        assert_allclose(res_conc.llf, res_orig.llf, atol=atol)
+
+        # Test state space representation matrices
+        for name in mod_conc.ssm.shapes:
+            if name == 'obs':
+                continue
+            assert_allclose(getattr(res_conc.filter_results, name),
+                            getattr(res_orig.filter_results, name))
+
+        # Test filter / smoother output
+        scale = res_conc.scale
+        d = res_conc.loglikelihood_burn
+
+        filter_attr = ['predicted_state', 'filtered_state', 'forecasts',
+                       'forecasts_error', 'kalman_gain']
+
+        for name in filter_attr:
+            actual = getattr(res_conc.filter_results, name)
+            desired = getattr(res_orig.filter_results, name)
+            assert_allclose(actual, desired, atol=atol)
+
+        # Note: don't want to compare the elements from any diffuse
+        # initialization for things like covariances, so only compare for
+        # periods past the loglikelihood_burn period
+        filter_attr_burn = ['llf_obs', 'standardized_forecasts_error',
+                            'predicted_state_cov', 'filtered_state_cov',
+                            'tmp1', 'tmp2', 'tmp3', 'tmp4']
+        # Also need to ignore covariances of states with diffuse initialization
+        # when time_varying_regression is True
+        diffuse_mask = (res_orig.filter_results.initial_state_cov.diagonal() ==
+                        mod_orig.ssm.initial_variance)
+        ix = np.s_[~diffuse_mask, ~diffuse_mask, :]
+
+        for name in filter_attr_burn:
+            actual = getattr(res_conc.filter_results, name)[..., d:]
+            desired = getattr(res_orig.filter_results, name)[..., d:]
+            # Note: Cannot compare predicted or filtered cov for the time
+            # varying regression state due to effects of approximate diffuse
+            # initialization
+            if (name in ['predicted_state_cov', 'filtered_state_cov'] and
+                    kwargs['time_varying_regression']):
+                assert_allclose(actual[ix], desired[ix], atol=atol)
+            else:
+                assert_allclose(actual, desired, atol=atol)
+
+        smoothed_attr = ['smoothed_state', 'smoothed_state_cov',
+                         'smoothed_state_autocov',
+                         'smoothed_state_disturbance',
+                         'smoothed_state_disturbance_cov',
+                         'smoothed_measurement_disturbance',
+                         'smoothed_measurement_disturbance_cov',
+                         'scaled_smoothed_estimator',
+                         'scaled_smoothed_estimator_cov', 'smoothing_error',
+                         'smoothed_forecasts', 'smoothed_forecasts_error',
+                         'smoothed_forecasts_error_cov']
+
+        for name in smoothed_attr:
+            actual = getattr(res_conc.filter_results, name)[..., d:]
+            desired = getattr(res_orig.filter_results, name)[..., d:]
+            if (name in ['smoothed_state_cov', 'smoothed_state_autocov'] and
+                    kwargs['time_varying_regression']):
+                assert_allclose(actual[ix], desired[ix], atol=atol)
+            else:
+                assert_allclose(actual, desired, atol=atol)
+
+        # Test non-covariance-matrix MLEResults output
+        output = ['aic', 'bic', 'hqic', 'loglikelihood_burn']
+        for name in output:
+            actual = getattr(res_conc, name)
+            desired = getattr(res_orig, name)
+            assert_allclose(actual, desired, atol=atol)
+
+        # Test diagnostic output
+        actual = res_conc.test_normality(method='jarquebera')
+        desired = res_orig.test_normality(method='jarquebera')
+        assert_allclose(actual, desired, rtol=1e-5, atol=atol)
+
+        actual = res_conc.test_heteroskedasticity(method='breakvar')
+        desired = res_orig.test_heteroskedasticity(method='breakvar')
+        assert_allclose(actual, desired, rtol=1e-5, atol=atol)
+
+        actual = res_conc.test_serial_correlation(method='ljungbox')
+        desired = res_orig.test_serial_correlation(method='ljungbox')
+        assert_allclose(actual, desired, rtol=1e-5, atol=atol)
+
+        # Test predict
+        exog = None
+        if kwargs['exog'] is not None:
+            exog = np.ones((130 - mod_conc.nobs + 1, 1))
+        actual = res_conc.get_prediction(start=100, end=130, dynamic=10,
+                                         exog=exog)
+        desired = res_orig.get_prediction(start=100, end=130, dynamic=10,
+                                          exog=exog)
+        assert_allclose(actual.predicted_mean, desired.predicted_mean,
+                        atol=atol)
+        assert_allclose(actual.se_mean, desired.se_mean, atol=atol)
+
+        # Test simulate
+        # Simulate is currently broken for time-varying models, so don't try
+        # to test it here
+        np.random.seed(13847)
+        if mod_conc.ssm.time_invariant:
+            measurement_shocks = np.random.normal(size=10)
+            state_shocks = np.random.normal(size=10)
+            initial_state = np.random.normal(size=(mod_conc.k_states, 1))
+            actual = res_conc.simulate(10, measurement_shocks, state_shocks,
+                                       initial_state)
+            desired = res_orig.simulate(10, measurement_shocks, state_shocks,
+                                        initial_state)
+            assert_allclose(actual, desired, atol=atol)
+
+        # Test impulse responses
+        if mod_conc.ssm.time_invariant:
+            actual = res_conc.impulse_responses(10)
+            desired = res_orig.impulse_responses(10)
+            assert_allclose(actual, desired, atol=atol)
+
+
+def test_concentrated_scale():
+    if tools.compatibility_mode:
+        raise SkipTest
+    check_concentrated_scale(filter_univariate=False)
+    check_concentrated_scale(filter_univariate=True)
