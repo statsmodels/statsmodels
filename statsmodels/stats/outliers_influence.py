@@ -191,7 +191,6 @@ class _BaseInfluenceMixin(object):
 
         if external is None:
             external = hasattr(self, '_cache') and 'res_looo' in self._cache
-        external = False
         from statsmodels.graphics.regressionplots import _influence_plot
         res = _influence_plot(self.results, self, external=external, alpha=alpha,
                               criterion=criterion, size=size,

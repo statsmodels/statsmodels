@@ -122,9 +122,9 @@ class InfluenceCompareExact(object):
         infl1 = self.infl1
         infl0 = self.infl0
 
-        fig = infl0.plot_influence()
+        fig = infl0.plot_influence(external=False)
         plt.close(fig)
-        fig = infl1.plot_influence()
+        fig = infl1.plot_influence(external=False)
         plt.close(fig)
 
         fig = infl0.plot_index('resid', threshold=0.2, title='')
