@@ -15,6 +15,8 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.stats.multitest import multipletests
 from statsmodels.tools.tools import maybe_unwrap_results
 
+from statsmodels.graphics._regressionplots_doc import _plot_influence_doc
+
 # outliers test convenience wrapper
 
 def outlier_test(model_results, method='bonf', alpha=.05, labels=None,
@@ -197,6 +199,9 @@ class _BaseInfluenceMixin(object):
                               plot_alpha=plot_alpha, ax=ax, **kwargs)
         return res
 
+    plot_influence.__doc__ = _plot_influence_doc.format({
+    'extra_params_doc' : ""})
+
     def _plot_index(self, y, ylabel, threshold=None, title=None, ax=None,**kwds):
         from statsmodels.graphics import utils
         fig, ax = utils.create_mpl_ax(ax)
@@ -228,6 +233,30 @@ class _BaseInfluenceMixin(object):
 
     def plot_index(self, y_var='cooks', threshold=None, title=None, ax=None,
                    idx=None, **kwds):
+        """index plot for influence attributes
+
+        Parameters
+        ----------
+        y_var : string
+            Name of attribute or shortcut for predefined attributes that will
+            be plotted on the y-axis.
+        threshold : None or float
+            Threshold for adding annotation with observation labels.
+            Observations for which the absolute value of the y_var is larger
+            than the threshold will be annotated. Set to a negative number to
+            label all observations or to a large number to have no annotation.
+        title : string
+            If provided, the title will replace the default "Index Plot" title.
+        ax : matplolib axis instance
+            The plot will be added to the `ax` if provided, otherwise a new
+            figure is created.
+        idx : None or integer
+            Some attributes require an additional index to select the y-var.
+            In dfbetas this refers to the column indes.
+        kwds : optional keywords
+            Keywords will be used in the call to matplotlib scatter function.
+
+        """
         criterion = y_var  # alias
         if threshold is None:
             # TODO: criterion specific defaults
@@ -277,11 +306,47 @@ class MLEInfluence(_BaseInfluenceMixin):
     By default resid_pearson is used as resid.
 
 
+
+
+    **Attributes**
+
+    hat_matrix_diag (hii) : This is the generalized leverage computed as the
+        local derivative of fittedvalues (predicted mean) with respect to the
+        observed response for each observation.
+    d_params : Change in parameters computed with one Newton step using the
+        full Hessian corrected by division by (1 - hii).
+    dbetas : change in parameters divided by the standard error of parameters
+        from the full model results, ``bse``.
+    cooks_distance : quadratic form for change in parameters weighted by
+        ``cov_params`` from the full model divided by the number of variables.
+        It includes p-values based on the F-distribution which are only
+        approximate outside of linear Gaussian models.
+    resid_studentized : In the general MLE case resid_studentized are
+        computed from the score residuals scaled by hessian factor and
+        leverage. This does not use ``cov_params``.
+    d_fittedvalues : local change of expected mean given the change in the
+        parameters as computed in ``d_params``.
+    d_fittedvalues_scaled : same as d_fittedvalues but scaled by the standard
+        errors of a predicted mean of the response.
+    params_one : is the one step parameter estimate computed as ``params``
+        from the full sample minus ``d_params``.
+
+
+
+
+
+
     Notes
     -----
     MLEInfluence produces the same results as GLMInfluence (verified for GLM
-    Binomial and Gaussian). There might be some differences for non-canonical
+    Binomial and Gaussian). There will be some differences for non-canonical
     links or if a robust cov_type is used.
+
+    Warning: This does currently not work for constrained or penalized models,
+    e.g. models estimated with fit_constrained or fit_regularized.
+
+    This has not yet been tested for correctness when offset or exposure
+    are used, although they should be supported by the code.
 
     status: experimental,
     This class will need changes to support different kinds of models, e.g.
@@ -317,9 +382,6 @@ class MLEInfluence(_BaseInfluenceMixin):
 
         This is the analogue of the hat matrix diagonal for general MLE.
 
-        Notes
-        -----
-
         '''
         if hasattr(self, '_hat_matrix_diag'):
             return self._hat_matrix_diag
@@ -332,9 +394,10 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def d_params(self):
-        '''(cached attribute) parameter estimates for all LOOO regressions
+        '''(cached attribute) change in parameter estimates
 
-        uses results from leave-one-observation-out loop
+        This uses one-step approximation of the parameter change to deleting
+        one observation.
         '''
         so_noti = self.score_obs.sum(0) - self.score_obs
         beta_i = np.linalg.solve(self.hessian, so_noti.T).T
@@ -342,9 +405,10 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def dfbetas(self):
-        '''(cached attribute) parameter estimates for all LOOO regressions
+        '''(cached attribute) scaled change in parameter estimates
 
-        uses results from leave-one-observation-out loop
+        The one-step change of parameters in d_params is rescaled by dividing
+        by the standard error of the parameter estimate given by results.bse.
         '''
 
         beta_i = self.d_params / self.results.bse
@@ -352,15 +416,28 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def params_one(self):
+        """(cached attribute) parameter estimate based on one-step approximation
+
+        This the one step parameter estimate computed as
+        ``params`` from the full sample minus ``d_params``.
+        """
         return self.results.params - self.d_params
 
     @cache_readonly
     def cooks_distance(self):
-        '''(cached attribute) Cooks distance
+        """(cached attribute) Cook's distance and p-values
 
-        uses original results, no nobs loop
+        Based on one step approximation d_params and on results.cov_params
+        Cook's distance divides by the number of explanatory variables.
 
-        '''
+        p-values are based on the F-distribution which are only approximate
+        outside of linear Gaussian models.
+
+        Warning: The definition of p-values might change if we switch to using
+        chi-square distribution instead of F-distribution, or if we make it
+        dependent on the fit keyword use_t.
+
+        """
         cooks_d2 = (self.d_params * np.linalg.solve(self.cov_params, self.d_params.T).T).sum(1)
         cooks_d2 /= self.k_vars
         from scipy import stats
@@ -375,9 +452,8 @@ class MLEInfluence(_BaseInfluenceMixin):
     def resid_studentized(self):
         """(cached attribute) score residual divided by sqrt of hessian factor
 
-        experimental
+        experimental, agrees with GLMInfluence for Binomial and Gaussian.
         no reference for this
-
         """
         sf = self.results.model.score_factor(self.results.params)
         hf = self.results.model.hessian_factor(self.results.params)
@@ -391,6 +467,11 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @cache_readonly
     def d_fittedvalues(self):
+        '''(cached attribute) change in expected response, fittedvalues
+
+        This uses one-step approximation of the parameter change to deleting
+        one observation ``d_params`.
+        '''
         # results.params might be a pandas.Series
         params = np.asarray(self.results.params)
         deriv = self.results.model._deriv_mean_dparams(params)
@@ -398,6 +479,12 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     @property
     def d_fittedvalues_scaled(self):
+        '''(cached attribute) change in fittedvalues scaled by standard errors
+
+        This uses one-step approximation of the parameter change to deleting
+        one observation ``d_params`, and divides by the standard errors
+        for the predicted mean provided by results.get_prediction.
+        '''
         # Note: this and the previous methods are for the response
         # and not for a weighted response, i.e. not the self.exog, self.endog
         # this will be relevant for WLS comparing fitted endog versus wendog
@@ -405,25 +492,26 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     def summary_frame(self):
         """
-        Creates a DataFrame with all available influence results.
+        Creates a DataFrame with influence results.
 
         Returns
         -------
-        frame : DataFrame
-            A DataFrame with all results.
+        frame : pandas DataFrame
+            A DataFrame with selected results for each observation.
+            The index will be the same as provided to the model.
 
         Notes
         -----
         The resultant DataFrame contains six variables in addition to the
-        DFBETAS. These are:
+        ``dfbetas``. These are:
 
-        * cooks_d : Cook's Distance defined in `Influence.cooks_distance`
+        * cooks_d : Cook's Distance defined in ``cooks_distance``
         * standard_resid : Standardized residuals defined in
-          `Influence.resid_studentized_internal`
+          `resid_studentizedl`
         * hat_diag : The diagonal of the projection, or hat, matrix defined in
-          `Influence.hat_matrix_diag`
+          `hat_matrix_diag`
         * dffits_internal : DFFITS statistics using internally Studentized
-          residuals defined in `Influence.dffits_internal`
+          residuals defined in `d_fittedvalues_scaled`
 
         """
         from pandas import DataFrame
@@ -1048,16 +1136,63 @@ def summary_table(res, alpha=0.05):
 class GLMInfluence(MLEInfluence):
     """Influence and outlier measures (experimental)
 
-    This currently subclasses OLSInfluence instead of the other way.
+    This uses partly formulas specific to GLM, specifically cooks_distance
+    is based on the hessian, i.e. observed or expected information matrix and
+    not on cov_params, in contrast to MLEInfluence.
+    Standardization for changes in parameters, in fittedvalues and in
+    the linear predictor are based on cov_params.
 
+    Parameters
+    ----------
+    results : instance of results class
+        This only works for model and results classes that have the necessary
+        helper methods.
+    other arguments are only to override default behavior and are used instead
+    of the corresponding attribute of the results class.
+    By default resid_pearson is used as resid.
+
+
+
+
+    **Attributes**
+
+    hat_matrix_diag (hii) : diagonal for hatmatrix using the formulas for
+        GLM
+    d_params : Change in parameters computed as one step approximation to
+        deleting an observation.
+    dbetas : change in parameters divided by the standard error of parameters
+        from the full model results, ``bse``.
+    cooks_distance : Computed using formulas for GLM and does not use
+        results.cov_params.
+        It includes p-values based on the F-distribution which are only
+        approximate outside of linear Gaussian models.
+    resid_studentized : studentized pearson residuals.
+    d_fittedvalues : local change of expected mean given the change in the
+        parameters as computed in d_params.
+    d_fittedvalues_scaled : same as d_fittedvalues but scaled by the standard
+        errors of a predicted mean of the response.
+    d_linpred : local change in linear prediction.
+    d_linpred_scale : local change in linear prediction scaled by the
+        standard errors for the prediction based on cov_params.
+
+    Notes
+    -----
+    This has not yet been tested for correctness when offset or exposure
+    are used, although they should be supported by the code.
+
+    Some GLM specific measures like d_deviance are still missing.
+
+    Computing an explicit leave-one-observation-out (LOOO) loop is included
+    but no influence measures are currently computed from it.
     """
 
     @cache_readonly
     def hat_matrix_diag(self):
-        '''(cached attribute) diagonal of the hat_matrix for OLS
+        '''(cached attribute) diagonal of the hat_matrix for GLM
 
-        Notes
-        -----
+        This returns the diagonal of the hat matrix that was provided as
+        argument to GLMInfluenc or computes it using the results method
+        `get_hat_matrix`.
 
         '''
         if hasattr(self, '_hat_matrix_diag'):
@@ -1067,9 +1202,10 @@ class GLMInfluence(MLEInfluence):
 
     @cache_readonly
     def d_params(self):
-        '''(cached attribute) parameter estimates for all LOOO regressions
+        '''(cached attribute) change in parameter estimates
 
-        uses results from leave-one-observation-out loop
+        This uses one-step approximation of the parameter change to deleting
+        one observation.
         '''
 
         beta_i = np.linalg.pinv(self.exog) * self.resid_studentized
@@ -1079,9 +1215,13 @@ class GLMInfluence(MLEInfluence):
     # same computation as OLS
     @cache_readonly
     def resid_studentized(self):
-        '''studentized residuals, internal
+        '''(cached attribute) internally studentized residuals
 
+        residuals / sqrt( scale * (1 - hii))
 
+        where residuals are those provided to GLMInfluence which are
+        pearson residuals by default, and
+        hii is the diagonal of the hat matrix.
         '''
         hii = self.hat_matrix_diag
         return  self.resid / np.sqrt(self.scale * (1 - hii))
@@ -1089,9 +1229,12 @@ class GLMInfluence(MLEInfluence):
     # same computation as OLS
     @cache_readonly
     def cooks_distance(self):
-        '''(cached attribute) Cooks distance
+        '''(cached attribute) Cook's distance
 
-        uses original results, no nobs loop
+        Based on one step approximation using resid_studentized and
+        hat_matrix_diag for the computation.
+
+        Cook's distance divides by the number of explanatory variables.
 
         '''
         hii = self.hat_matrix_diag
@@ -1108,6 +1251,11 @@ class GLMInfluence(MLEInfluence):
 
     @property
     def d_linpred(self):
+        '''(cached attribute) change in linear prediction
+
+        This uses one-step approximation of the parameter change to deleting
+        one observation ``d_params`.
+        '''
         # TODO: This will need adjustment for extra params in Poisson
         # use original model exog not transformed influence exog
         exog = self.results.model.exog
@@ -1115,6 +1263,12 @@ class GLMInfluence(MLEInfluence):
 
     @property
     def d_linpred_scaled(self):
+        '''(cached attribute) change in linpred scaled by standard errors
+
+        This uses one-step approximation of the parameter change to deleting
+        one observation ``d_params`, and divides by the standard errors
+        for linpred provided by results.get_prediction.
+        '''
         # Note: this and the previous methods are for the response
         # and not for a weighted response, i.e. not the self.exog, self.endog
         # this will be relevant for WLS comparing fitted endog versus wendog
@@ -1122,6 +1276,8 @@ class GLMInfluence(MLEInfluence):
 
     @property
     def _fittedvalues_one(self):
+        """experimental code
+        """
         import warnings
         warnings.warn('this ignores offset and exposure', UserWarning)
         #TODO: we need to handle offset, exposure and weights
@@ -1133,6 +1289,8 @@ class GLMInfluence(MLEInfluence):
 
     @property
     def _diff_fittedvalues_one(self):
+        """experimental code
+        """
         # in discrete we cannot reuse results.fittedvalues
         return self.results.predict() - self._fittedvalues_one
 
@@ -1143,10 +1301,14 @@ class GLMInfluence(MLEInfluence):
         all results will be attached.
         currently only 'params', 'mse_resid', 'det_cov_params' are stored
 
-        regresses endog on exog dropping one observation at a time
+        Reestimates the model with endog and exog dropping one observation
+        at a time
 
-        This uses a nobs loop, only attributes of the results instance are stored.
+        This uses a nobs loop, only attributes of the results instance are
+        stored.
 
+        Warning: This will need refactoring and API changes to be able to
+        add options.
         '''
         from statsmodels.sandbox.tools.cross_val import LeaveOneOut
         get_det_cov_params = lambda res: np.linalg.det(res.cov_params())
