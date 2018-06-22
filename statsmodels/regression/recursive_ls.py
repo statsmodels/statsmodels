@@ -248,6 +248,10 @@ class RecursiveLSResults(MLEResults):
         super(RecursiveLSResults, self).__init__(
             model, params, filter_results, cov_type, **kwargs)
 
+        # Typically we don't use t distribution by default in state space
+        # models, but we should here for comparison with typical OLS models
+        self.use_t = True
+
         # Since we are overriding params with things that aren't MLE params,
         # need to adjust df's
         q = max(self.loglikelihood_burn, self.k_diffuse_states)
