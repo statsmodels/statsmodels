@@ -266,6 +266,171 @@ class RecursiveLSResults(MLEResults):
             'k_exog': self.model.k_exog,
             'k_constraints': self.model.k_constraints})
 
+    def t_test(self, r_matrix, loc=None, cov_p=None, scale=None, use_t=None):
+        """
+        Compute a t-test for a each linear hypothesis of the form Rb = q
+
+        Parameters
+        ----------
+        r_matrix : array-like, str, tuple
+            - array : If an array is given, a p x k 2d array or length k 1d
+              array specifying the linear restrictions. It is assumed
+              that the linear combination is equal to zero.
+            - str : The full hypotheses to test can be given as a string.
+              See the examples.
+            - tuple : A tuple of arrays in the form (R, q). If q is given,
+              can be either a scalar or a length p row vector.
+        loc : int, str, or datetime, optional
+            Zero-indexed observation number at which to compute the t-test.
+            Can also be a date string to parse or a datetime type. Default is
+            to compute the t-test using the full-sample estimates. Cannot be
+            used in combination with `cov_p`.
+        cov_p : array-like
+            An alternative estimate for the parameter covariance matrix.
+            If None is given, self.normalized_cov_params is used.
+        scale : float, optional
+            An optional `scale` to use.  Default is the scale specified
+            by the model fit.
+        use_t : bool, optional
+            If use_t is None, then the default of the model is used.
+            If use_t is True, then the p-values are based on the t
+            distribution.
+            If use_t is False, then the p-values are based on the normal
+            distribution.
+
+        Returns
+        -------
+        res : ContrastResults instance
+            The results for the test are attributes of this results instance.
+            The available results have the same elements as the parameter table
+            in `summary()`.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import statsmodels.api as sm
+        >>> data = sm.datasets.longley.load()
+        >>> data.exog = sm.add_constant(data.exog)
+        >>> results = sm.OLS(data.endog, data.exog).fit()
+        >>> r = np.zeros_like(results.params)
+        >>> r[5:] = [1,-1]
+        >>> print(r)
+        [ 0.  0.  0.  0.  0.  1. -1.]
+
+        r tests that the coefficients on the 5th and 6th independent
+        variable are the same.
+
+        >>> T_test = results.t_test(r)
+        >>> print(T_test)
+                                     Test for Constraints
+        ==============================================================================
+                         coef    std err          t      P>|t|      [0.025      0.975]
+        ------------------------------------------------------------------------------
+        c0         -1829.2026    455.391     -4.017      0.003   -2859.368    -799.037
+        ==============================================================================
+        >>> T_test.effect
+        -1829.2025687192481
+        >>> T_test.sd
+        455.39079425193762
+        >>> T_test.tvalue
+        -4.0167754636411717
+        >>> T_test.pvalue
+        0.0015163772380899498
+
+        Alternatively, you can specify the hypothesis tests using a string
+
+        >>> from statsmodels.formula.api import ols
+        >>> dta = sm.datasets.longley.load_pandas().data
+        >>> formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
+        >>> results = ols(formula, dta).fit()
+        >>> hypotheses = 'GNPDEFL = GNP, UNEMP = 2, YEAR/1829 = 1'
+        >>> t_test = results.t_test(hypotheses)
+        >>> print(t_test)
+                                     Test for Constraints
+        ==============================================================================
+                         coef    std err          t      P>|t|      [0.025      0.975]
+        ------------------------------------------------------------------------------
+        c0            15.0977     84.937      0.178      0.863    -177.042     207.238
+        c1            -2.0202      0.488     -8.231      0.000      -3.125      -0.915
+        c2             1.0001      0.249      0.000      1.000       0.437       1.563
+        ==============================================================================
+
+        See Also
+        ---------
+        tvalues : individual t statistics
+        f_test : for F tests
+        patsy.DesignInfo.linear_constraint
+        """
+        from statsmodels.tools.tools import recipr
+        from statsmodels.stats.contrast import ContrastResults
+        from patsy import DesignInfo
+        names = self.model.data.param_names
+        LC = DesignInfo(names).linear_constraint(r_matrix)
+        r_matrix, q_matrix = LC.coefs, LC.constants
+        num_ttests = r_matrix.shape[0]
+        num_params = r_matrix.shape[1]
+
+        # Check we don't have conflicting `loc` and `cov_p`
+        if loc is not None and cov_p is not None:
+            raise ValueError('Cannot use `loc` in combination with `cov_p`.')
+
+        if num_params != self.params.shape[0]:
+            raise ValueError('r_matrix and params are not aligned')
+        if q_matrix is None:
+            q_matrix = np.zeros(num_ttests)
+        else:
+            q_matrix = np.asarray(q_matrix)
+            q_matrix = q_matrix.squeeze()
+        if q_matrix.size > 1:
+            if q_matrix.shape[0] != num_ttests:
+                raise ValueError("r_matrix and q_matrix must have the same "
+                                 "number of rows")
+
+        if use_t is None:
+            # switch to use_t false if undefined
+            use_t = (hasattr(self, 'use_t') and self.use_t)
+
+        _t = _sd = None
+
+        # If we've been given a location
+        if loc is not None:
+            t, _, out_of_sample, _ = (
+                self.model._get_prediction_index(loc, loc, index=None))
+            if t > self.model.nobs:
+                raise ValueError('Given t-test location is not in the sample.')
+            # Get the appropriate cov
+            params = self.filtered_state[:, t]
+            cov_p = self.filtered_state_cov[:, :, t]
+
+            # Rescale the covariance parameters based on the scale estiamted
+            # as of observation t
+            d = max(self.loglikelihood_burn, self.nobs_diffuse)
+            scale = np.sum(self.filter_results.scale_obs[d:t + 1]) / t
+            cov_p *= scale / self.scale
+        else:
+            params = self.params
+
+        _effect = np.dot(r_matrix, params)
+        # nan_dot multiplies with the convention nan * 0 = 0
+
+        if num_ttests > 1:
+            _sd = np.sqrt(np.diag(self.cov_params(
+                r_matrix=r_matrix, cov_p=cov_p)))
+        else:
+            _sd = np.sqrt(self.cov_params(r_matrix=r_matrix, cov_p=cov_p))
+        _t = (_effect - q_matrix) * recipr(_sd)
+
+        nobs_effective = (t + 1) - self.loglikelihood_burn
+        df_resid = nobs_effective - self.df_model
+
+        if use_t:
+            return ContrastResults(effect=_effect, t=_t, sd=_sd,
+                                   df_denom=df_resid)
+        else:
+            return ContrastResults(effect=_effect, statistic=_t, sd=_sd,
+                                   df_denom=df_resid,
+                                   distribution='norm')
+
     @property
     def recursive_coefficients(self):
         """
