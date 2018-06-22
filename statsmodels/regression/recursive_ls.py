@@ -405,9 +405,13 @@ class RecursiveLSResults(MLEResults):
             # Rescale the covariance parameters based on the scale estiamted
             # as of observation t
             d = max(self.loglikelihood_burn, self.nobs_diffuse)
-            scale = np.sum(self.filter_results.scale_obs[d:t + 1]) / t
+            nmissing = np.sum(self.filter_results.nmissing[d:t + 1])
+            n = (t + 1 - d) - nmissing
+            scale = (np.sum(self.filter_results.scale_obs[d:t + 1]) / n)
             cov_p *= scale / self.scale
         else:
+            t = self.model.nobs
+            nmissing = np.sum(self.filter_results.nmissing[d:])
             params = self.params
 
         _effect = np.dot(r_matrix, params)
@@ -420,7 +424,7 @@ class RecursiveLSResults(MLEResults):
             _sd = np.sqrt(self.cov_params(r_matrix=r_matrix, cov_p=cov_p))
         _t = (_effect - q_matrix) * recipr(_sd)
 
-        nobs_effective = (t + 1) - self.loglikelihood_burn
+        nobs_effective = (t + 1) - nmissing - self.loglikelihood_burn
         df_resid = nobs_effective - self.df_model
 
         if use_t:
