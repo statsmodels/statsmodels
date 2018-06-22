@@ -448,3 +448,29 @@ def test_constraints_stata():
                                       scale=scale_alternative**0.5)).sum()
     assert_allclose(llf_alternative, desired)
 
+
+def test_recursive_t_test():
+    nobs = 40
+    endog = dta['infl'].iloc[:nobs]
+    endog.iloc[10] = np.nan
+    exog = add_constant(dta[['m1', 'unemp']]).iloc[:nobs]
+    k = exog.shape[1]
+
+    mod = RecursiveLS(endog, exog)
+    res = mod.fit()
+
+    restriction = 'm1 + unemp = 1, const = 0.5'
+
+    for t in range(4, mod.nobs):
+        mod_ols = OLS(endog[:t + 1], exog[:t + 1], missing='drop')
+        res_ols = mod_ols.fit()
+        ttest_ols = res_ols.t_test(restriction)
+
+        ttest_rls = res.t_test(restriction, loc=t)
+
+        assert_allclose(ttest_rls.effect, ttest_ols.effect)
+        assert_allclose(ttest_rls.sd, ttest_ols.sd)
+        assert_allclose(ttest_rls.tvalue, ttest_ols.tvalue, atol=1e-8)
+        assert_allclose(ttest_rls.pvalue, ttest_ols.pvalue)
+        assert_allclose(ttest_rls.conf_int(), ttest_ols.conf_int())
+
