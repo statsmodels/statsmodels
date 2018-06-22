@@ -142,12 +142,7 @@ class RecursiveLS(MLEModel):
         -------
         RecursiveLSResults
         """
-        smoother_results = self.smooth(return_ssm=True)
-
-        with self.ssm.fixed_scale(smoother_results.scale):
-            res = self.smooth()
-
-        return res
+        return self.smooth()
 
     def filter(self, return_ssm=False, **kwargs):
         # Get the state space output
