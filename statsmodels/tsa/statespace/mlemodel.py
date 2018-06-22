@@ -1126,7 +1126,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         if method == 'harvey':
             score = self._score_obs_harvey(
-                params, transformed=transformed,
+                params,
                 approx_complex_step=approx_complex_step, **kwargs)
         elif method == 'approx' and approx_complex_step:
             # the default epsilon can be too small
