@@ -203,7 +203,7 @@ def test_glm(constraints=None):
         assert_raises(NotImplementedError, res.forecast, 10, design=design)
 
     # Hypothesis tests
-    actual = res.t_test('m1 = 0')
+    actual = res.t_test('m1 = 0', use_t=False)
     desired = res_glm.t_test('m1 = 0')
     assert_allclose(actual.statistic, desired.statistic)
     assert_allclose(actual.pvalue, desired.pvalue, atol=1e-15)
