@@ -410,6 +410,7 @@ class RecursiveLSResults(MLEResults):
             scale = (np.sum(self.filter_results.scale_obs[d:t + 1]) / n)
             cov_p *= scale / self.scale
         else:
+            d = max(self.loglikelihood_burn, self.nobs_diffuse)
             t = self.model.nobs
             nmissing = np.sum(self.filter_results.nmissing[d:])
             params = self.params
