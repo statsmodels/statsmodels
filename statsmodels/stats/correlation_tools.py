@@ -14,10 +14,11 @@ from scipy.optimize import fminbound
 import warnings
 
 from statsmodels.tools.tools import Bunch
-from statsmodels.tools.sm_exceptions import (IterationLimitWarning,
-    iteration_limit_doc)
+from statsmodels.tools.sm_exceptions import (
+    IterationLimitWarning, iteration_limit_doc)
 
-def clip_evals(x, value=0): #threshold=0, value=0):
+
+def clip_evals(x, value=0):  # threshold=0, value=0):
     evals, evecs = np.linalg.eigh(x)
     clipped = np.any(evals < 0)
     x_new = np.dot(evecs * np.maximum(evals, value), evecs.T)
@@ -86,10 +87,10 @@ def corr_nearest(corr, threshold=1e-15, n_fact=100):
         x_new = x_psd.copy()
         x_new[diag_idx, diag_idx] = 1
     else:
-        import warnings
         warnings.warn(iteration_limit_doc, IterationLimitWarning)
 
     return x_new
+
 
 def corr_clipped(corr, threshold=1e-15):
     '''
@@ -145,9 +146,9 @@ def corr_clipped(corr, threshold=1e-15):
     if not clipped:
         return corr
 
-    #cov2corr
+    # cov2corr
     x_std = np.sqrt(np.diag(x_new))
-    x_new = x_new / x_std / x_std[:,None]
+    x_new = x_new / x_std / x_std[:, None]
     return x_new
 
 
@@ -164,8 +165,8 @@ def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
     cov : ndarray, (k,k)
         initial covariance matrix
     method : string
-        if "clipped", then the faster but less accurate ``corr_clipped`` is used.
-        if "nearest", then ``corr_nearest`` is used
+        if "clipped", then the faster but less accurate ``corr_clipped`` is
+        used.if "nearest", then ``corr_nearest`` is used
     threshold : float
         clipping threshold for smallest eigen value, see Notes
     nfact : int or float
@@ -220,6 +221,7 @@ def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
         return cov_, corr_, std_
     else:
         return cov_
+
 
 def _nmono_linesearch(obj, grad, x, d, obj_hist, M=10, sig1=0.1,
                       sig2=0.9, gam=1e-4, maxiter=100):
@@ -355,7 +357,7 @@ def _spg_optim(func, grad, start, project, maxiter=1e4, M=10,
     params = start.copy()
     gval = grad(params)
 
-    obj_hist = [func(params),]
+    obj_hist = [func(params), ]
 
     for itr in range(int(maxiter)):
 
@@ -374,12 +376,18 @@ def _spg_optim(func, grad, start, project, maxiter=1e4, M=10,
         d -= params
 
         # Carry out the nonmonotone line search
-        alpha, params1, fval, gval1 = _nmono_linesearch(func, grad, params, d,
-                                                 obj_hist, M=M,
-                                                 sig1=sig1,
-                                                 sig2=sig2,
-                                                 gam=gam,
-                                                 maxiter=maxiter_nmls)
+        alpha, params1, fval, gval1 = _nmono_linesearch(
+            func,
+            grad,
+            params,
+            d,
+            obj_hist,
+            M=M,
+            sig1=sig1,
+            sig2=sig2,
+            gam=gam,
+            maxiter=maxiter_nmls)
+
         if alpha is None:
             return Bunch(**{"Converged": False, "params": params,
                             "objective_values": obj_hist,
@@ -414,7 +422,7 @@ def _project_correlation_factors(X):
     nm = np.sqrt((X*X).sum(1))
     ii = np.flatnonzero(nm > 1)
     if len(ii) > 0:
-        X[ii,:] /= nm[ii][:, None]
+        X[ii, :] /= nm[ii][:, None]
 
 
 class FactoredPSDMatrix:
@@ -448,14 +456,12 @@ class FactoredPSDMatrix:
         self.factor = u
         self.scales = s**2
 
-
     def to_matrix(self):
         """
         Returns the PSD matrix represented by this instance as a full
         (square) matrix.
         """
         return np.diag(self.diag) + np.dot(self.root, self.root.T)
-
 
     def decorrelate(self, rhs):
         """
@@ -533,7 +539,6 @@ class FactoredPSDMatrix:
         logdet += np.sum(np.log(1 + 1 / self.scales))
 
         return logdet
-
 
 
 def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
@@ -624,11 +629,11 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
     p, _ = corr.shape
 
     # Starting values (following the PCA method in BHR).
-    u,s,vt = svds(corr, rank)
+    u, s, vt = svds(corr, rank)
     X = u * np.sqrt(s)
     nm = np.sqrt((X**2).sum(1))
     ii = np.flatnonzero(nm > 1e-5)
-    X[ii,:] /= nm[ii][:, None]
+    X[ii, :] /= nm[ii][:, None]
 
     # Zero the diagonal
     corr1 = corr.copy()
@@ -762,8 +767,9 @@ def cov_nearest_factor_homog(cov, rank):
     Lambda_opt = Lambda - k_opt
     fac_opt = Q * np.sqrt(Lambda_opt)
 
-    diag = k_opt * np.ones(m, dtype=np.float64) #- (fac_opt**2).sum(1)
+    diag = k_opt * np.ones(m, dtype=np.float64)  # - (fac_opt**2).sum(1)
     return FactoredPSDMatrix(diag, fac_opt)
+
 
 def corr_thresholded(data, minabs=None, max_elt=1e7):
     """
@@ -840,7 +846,7 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
     ir = 0
     while ir < nrow:
         ir2 = min(data.shape[0], ir + bs)
-        cm = np.dot(data[ir:ir2,:], data.T) / (ncol - 1)
+        cm = np.dot(data[ir:ir2, :], data.T) / (ncol - 1)
         cma = np.abs(cm)
         ipos, jpos = np.nonzero(cma >= minabs)
         ipos_all.append(ipos + ir)
@@ -926,7 +932,7 @@ class GaussianMultivariateKernel(MultivariateKernel):
         return np.exp(-(x - loc)**2 / (2 * self.bw2)).sum(1) / self.bwk
 
 
-def kernel_covariance(exog, loc, group, kernel=None, bw=None):
+def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
     """
     Use kernel averaging to estimate a multivariate covariance function.
 
@@ -947,8 +953,8 @@ def kernel_covariance(exog, loc, group, kernel=None, bw=None):
     loc : array-like
         The rows of loc are the locations (e.g. in space or time) at
         which the rows of exog are observed.
-    group : array-like
-        The values of group are labels for distinct independent copies
+    groups : array-like
+        The values of groups are labels for distinct independent copies
         of the process.
     kernel : MultivariateKernel instance, optional
         An instance of MultivariateKernel, defaults to
@@ -974,19 +980,19 @@ def kernel_covariance(exog, loc, group, kernel=None, bw=None):
 
     exog = np.asarray(exog)
     loc = np.asarray(loc)
-    group = np.asarray(group)
+    groups = np.asarray(groups)
 
     if loc.ndim == 1:
         loc = loc[:, None]
 
-    v = [exog.shape[0], loc.shape[0], len(group)]
+    v = [exog.shape[0], loc.shape[0], len(groups)]
     if min(v) != max(v):
-        msg = "exog, loc, and group must have the same number of rows"
+        msg = "exog, loc, and groups must have the same number of rows"
         raise ValueError(msg)
 
     # Map from group labels to the row indices in each group.
     ix = {}
-    for i, g in enumerate(group):
+    for i, g in enumerate(groups):
         if g not in ix:
             ix[g] = []
         ix[g].append(i)
