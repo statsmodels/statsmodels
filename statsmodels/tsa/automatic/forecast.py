@@ -1,7 +1,5 @@
 """Classes to hold the Forecast results individually and in sets."""
 import numpy as np
-import pandas as pd
-from scipy.stats import norm
 from statsmodels.tools.decorators import cache_readonly
 
 

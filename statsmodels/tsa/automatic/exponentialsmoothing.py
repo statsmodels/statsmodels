@@ -1,6 +1,6 @@
 """Automatic selection of the Exponential Smoothing Model."""
 import numpy as np
-import pandas as pd
+import warnings
 import statsmodels.api as sm
 
 
@@ -23,8 +23,7 @@ def auto_es(endog, seasonal_periods=1):
                         min_aic = res.aic
                         model = [t, s]
                 except Exception as e:
-                    # TODO add warning
-                    pass e
+                    warnings.warn(str(e))  # TODO add warning
         else:
             try:
                 mod = sm.tsa.ExponentialSmoothing(endog, trend=t,
@@ -34,6 +33,5 @@ def auto_es(endog, seasonal_periods=1):
                     min_aic = res.aic
                     model = [t, None]
             except Exception as e:
-                # TODO add warning
-                pass e
+                warnings.warn(str(e))  # TODO add warning
     return model

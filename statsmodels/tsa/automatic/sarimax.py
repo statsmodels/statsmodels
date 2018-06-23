@@ -1,6 +1,5 @@
 """automatic forecasting for SARIMAX models."""
 import numpy as np
-import pandas as pd
 import warnings
 import statsmodels.api as sm
 
@@ -215,6 +214,7 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                                     seasonal_order=(order_new[model][2], D,
                                                     order_new[model][3], s),
                                     trend='c', **spec)
+                            res = mod.fit(disp=False)
                             if res.aic < min_aic:
                                 min_aic = res.aic
                                 new_val = order_new[model]
@@ -253,6 +253,7 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                                     order=(order_new[model][0], d,
                                            order_new[model][1]),
                                     trend='c', **spec)
+                            res = mod.fit(disp=False)
                             if res.aic < min_aic:
                                 min_aic = res.aic
                                 new_val = order_new[model]

@@ -1,9 +1,7 @@
 """automatic box-cox transformation for time-series data."""
 from scipy.stats.mstats import gmean
 import numpy as np
-import pandas as pd
 import statsmodels.api as sm
-from statsmodels import datasets
 
 
 def create_exog(nobs, d=0, seasonal_periods=1):
