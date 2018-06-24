@@ -294,7 +294,16 @@ class Table(object):
 
     @cache_readonly
     def marginal_probabilities(self):
-        # docstring for cached attributes in init above
+        """
+        Estimate marginal probability distributions for the rows and columns.
+
+        Returns
+        -------
+        row : ndarray
+            Marginal row probabilities
+        col : ndarray
+            Marginal column probabilities
+        """
 
         n = self.table.sum()
         row = self.table.sum(1) / n
@@ -308,7 +317,13 @@ class Table(object):
 
     @cache_readonly
     def independence_probabilities(self):
-        # docstring for cached attributes in init above
+        """
+        Returns fitted joint probabilities under independence.
+
+        The returned table is outer(row, column), where row and
+        column are the estimated marginal distributions
+        of the rows and columns.
+        """
 
         row, col = self.marginal_probabilities
         itab = np.outer(row, col)
@@ -321,7 +336,12 @@ class Table(object):
 
     @cache_readonly
     def fittedvalues(self):
-        # docstring for cached attributes in init above
+        """
+        Returns fitted cell counts under independence.
+
+        The returned cell counts are estimates under a model
+        where the rows and columns of the table are independent.
+        """
 
         probs = self.independence_probabilities
         fit = self.table.sum() * probs
@@ -329,7 +349,12 @@ class Table(object):
 
     @cache_readonly
     def resid_pearson(self):
-        # docstring for cached attributes in init above
+        """
+        Returns Pearson residuals.
+
+        The Pearson residuals are calculated under a model where
+        the rows and columns of the table are independent.
+        """
 
         fit = self.fittedvalues
         resids = (self.table - fit) / np.sqrt(fit)
@@ -337,7 +362,9 @@ class Table(object):
 
     @cache_readonly
     def standardized_resids(self):
-        # docstring for cached attributes in init above
+        """
+        Returns standardized residuals under independence.
+        """
 
         row, col = self.marginal_probabilities
         sresids = self.resid_pearson / np.sqrt(np.outer(1 - row, 1 - col))
@@ -345,13 +372,24 @@ class Table(object):
 
     @cache_readonly
     def chi2_contribs(self):
-        # docstring for cached attributes in init above
+        """
+        Returns the contributions to the chi^2 statistic for independence.
+
+        The returned table contains the contribution of each cell to the chi^2
+        test statistic for the null hypothesis that the rows and columns
+        are independent.
+        """
 
         return self.resid_pearson**2
 
     @cache_readonly
     def local_log_oddsratios(self):
-        # docstring for cached attributes in init above
+        """
+        Returns local log odds ratios.
+
+        The local log odds ratios are the log odds ratios
+        calculated for contiguous 2x2 sub-tables.
+        """
 
         ta = self.table.copy()
         a = ta[0:-1, 0:-1]
@@ -371,13 +409,25 @@ class Table(object):
 
     @cache_readonly
     def local_oddsratios(self):
-        # docstring for cached attributes in init above
+        """
+        Returns local odds ratios.
+
+        See documentation for local_log_oddsratios.
+        """
 
         return np.exp(self.local_log_oddsratios)
 
     @cache_readonly
     def cumulative_log_oddsratios(self):
-        # docstring for cached attributes in init above
+        """
+        Returns cumulative log odds ratios.
+
+        The cumulative log odds ratios for a contingency table
+        with ordered rows and columns are calculated by collapsing
+        all cells to the left/right and above/below a given point,
+        to obtain a 2x2 table from which a log odds ratio can be
+        calculated.
+        """
 
         ta = self.table.cumsum(0).cumsum(1)
 
@@ -399,7 +449,11 @@ class Table(object):
 
     @cache_readonly
     def cumulative_oddsratios(self):
-        # docstring for cached attributes in init above
+        """
+        Returns the cumulative odds ratios for a contingency table.
+
+        See documentation for cumulative_log_oddsratio.
+        """
 
         return np.exp(self.cumulative_log_oddsratios)
 
@@ -687,21 +741,27 @@ class Table2x2(SquareTable):
 
     @cache_readonly
     def log_oddsratio(self):
-        # docstring for cached attributes in init above
+        """
+        Returns the log odds ratio for a 2x2 table.
+        """
 
         f = self.table.flatten()
         return np.dot(np.log(f), np.r_[1, -1, -1, 1])
 
     @cache_readonly
     def oddsratio(self):
-        # docstring for cached attributes in init above
+        """
+        Returns the odds ratio for a 2x2 table.
+        """
 
         return (self.table[0, 0] * self.table[1, 1] /
                 (self.table[0, 1] * self.table[1, 0]))
 
     @cache_readonly
     def log_oddsratio_se(self):
-        # docstring for cached attributes in init above
+        """
+        Returns the standard error for the log odds ratio.
+        """
 
         return np.sqrt(np.sum(1 / self.table))
 
@@ -770,20 +830,28 @@ class Table2x2(SquareTable):
 
     @cache_readonly
     def riskratio(self):
-        # docstring for cached attributes in init above
+        """
+        Returns the risk ratio for a 2x2 table.
+
+        The risk ratio is calcuoated with respec to the rows.
+        """
 
         p = self.table[:, 0] / self.table.sum(1)
         return p[0] / p[1]
 
     @cache_readonly
     def log_riskratio(self):
-        # docstring for cached attributes in init above
+        """
+        Returns the log od the risk ratio.
+        """
 
         return np.log(self.riskratio)
 
     @cache_readonly
     def log_riskratio_se(self):
-        # docstring for cached attributes in init above
+        """
+        Returns the standard error of the log of the risk ratio.
+        """
 
         n = self.table.sum(1)
         p = self.table[:, 0] / n
