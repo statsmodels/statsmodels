@@ -923,9 +923,11 @@ class StratifiedTable(object):
         An estimate of the pooled odds ratio.  This is the
         Mantel-Haenszel estimate of an odds ratio that is common to
         all tables.
-    risk_pooled : float
+    riskratio_pooled : float
         An estimate of the pooled risk ratio.  This is an estimate of
         a risk ratio that is common to all the tables.
+    risk_pooled : float
+        Same as riskratio_pooled, deprecated.
 
     Notes
     -----
@@ -1067,7 +1069,7 @@ class StratifiedTable(object):
         return np.log(self.oddsratio_pooled)
 
     @cache_readonly
-    def risk_pooled(self):
+    def riskratio_pooled(self):
         # doc for cached attributes in init above
 
         acd = self.table[0, 0, :] * self._cpd
@@ -1075,6 +1077,11 @@ class StratifiedTable(object):
 
         rr = np.sum(acd / self._n) / np.sum(cab / self._n)
         return rr
+
+    @cache_readonly
+    def risk_pooled(self):
+        # Deprecated due to name being misleading
+        return riskratio_pooled
 
     @cache_readonly
     def logodds_pooled_se(self):
@@ -1233,7 +1240,7 @@ class StratifiedTable(object):
         stubs = ["Pooled odds", "Pooled log odds", "Pooled risk ratio", ""]
         data = [[fmt(x) for x in [self.oddsratio_pooled, co_lcb, co_ucb]],
                 [fmt(x) for x in [self.logodds_pooled, clo_lcb, clo_ucb]],
-                [fmt(x) for x in [self.risk_pooled, "", ""]],
+                [fmt(x) for x in [self.riskratio_pooled, "", ""]],
                 ['', '', '']]
         tab1 = iolib.SimpleTable(data, headers, stubs, data_aligns="r",
                                  table_dec_above='')
