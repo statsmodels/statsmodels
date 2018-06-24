@@ -148,7 +148,8 @@ class Table(object):
             self.table = self.table + 0.5
 
     def __str__(self):
-        s = "A %dx%d contingency table with counts:\n" % tuple(self.table.shape)
+        s = ("A %dx%d contingency table with counts:\n" %
+             tuple(self.table.shape))
         s += np.array_str(self.table)
         return s
 
@@ -1081,7 +1082,7 @@ class StratifiedTable(object):
     @cache_readonly
     def risk_pooled(self):
         # Deprecated due to name being misleading
-        return riskratio_pooled
+        return self.riskratio_pooled
 
     @cache_readonly
     def logodds_pooled_se(self):
