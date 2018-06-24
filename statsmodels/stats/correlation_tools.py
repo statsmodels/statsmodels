@@ -1024,6 +1024,8 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
             j2 = ii[j2.flat]
             w = kx[j1] * ky[j2]
 
+            # TODO: some other form of broadcasting may be faster than
+            # einsum here
             cm += np.einsum("ij,ik,i->jk", exog[j1, :], exog[j2, :], w)
             cw += w.sum()
 
