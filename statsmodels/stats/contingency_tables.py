@@ -916,7 +916,7 @@ class StratifiedTable(object):
         An estimate of the pooled log odds ratio.  This is the
         Mantel-Haenszel estimate of an odds ratio that is common to
         all the tables.
-    log_oddsratio_se : float
+    logodds_pooled_se : float
         The estimated standard error of the pooled log odds ratio,
         following Robins, Breslow and Greenland (Biometrics
         42:311-323).
@@ -1058,20 +1058,15 @@ class StratifiedTable(object):
 
     @cache_readonly
     def oddsratio_pooled(self):
-        # doc for cached attributes in init above
-
         odds_ratio = np.sum(self._ad / self._n) / np.sum(self._bc / self._n)
         return odds_ratio
 
     @cache_readonly
     def logodds_pooled(self):
-        # doc for cached attributes in init above
-
         return np.log(self.oddsratio_pooled)
 
     @cache_readonly
     def riskratio_pooled(self):
-        # doc for cached attributes in init above
 
         acd = self.table[0, 0, :] * self._cpd
         cab = self.table[1, 0, :] * self._apb
@@ -1086,7 +1081,6 @@ class StratifiedTable(object):
 
     @cache_readonly
     def logodds_pooled_se(self):
-        # doc for cached attributes in init above
 
         adns = np.sum(self._ad / self._n)
         bcns = np.sum(self._bc / self._n)
