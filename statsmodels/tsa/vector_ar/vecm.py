@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import division, print_function
 
-import math
 from collections import defaultdict
-from math import log
 import numpy as np
 from numpy import hstack, vstack
 from numpy.linalg import inv, svd
@@ -22,7 +20,7 @@ import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.tsa.vector_ar.irf as irf
 import statsmodels.tsa.vector_ar.plotting as plot
 from statsmodels.tsa.vector_ar.hypothesis_test_results import \
-    CausalityTestResults, NormalityTestResults, WhitenessTestResults
+    CausalityTestResults, WhitenessTestResults
 from statsmodels.tsa.vector_ar.util import get_index, seasonal_dummies
 from statsmodels.tsa.vector_ar.var_model import forecast, forecast_interval, \
     VAR, ma_rep, orth_ma_rep, test_normality, LagOrderResults, _compute_acov
@@ -1274,8 +1272,8 @@ class VECMResults(object):
         r = self.coint_rank
         s00, _, _, _, _, lambd, _ = _sij(self._delta_x, self._delta_y_1_T,
                                          self._y_lag1)
-        return - K * T * log(2*math.pi) / 2  \
-            - T * (log(np.linalg.det(s00)) + sum(np.log(1-lambd)[:r])) / 2  \
+        return - K * T * np.log(2*np.pi) / 2  \
+            - T * (np.log(np.linalg.det(s00)) + sum(np.log(1-lambd)[:r])) / 2  \
             - K * T / 2
 
     @cache_readonly
