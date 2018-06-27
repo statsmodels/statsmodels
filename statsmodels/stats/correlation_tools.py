@@ -872,7 +872,7 @@ class MultivariateKernel(object):
     (a 1d ndarray) to each row of `loc` (a 2d ndarray).
     """
 
-    def call(x):
+    def call(self, x, loc):
         raise NotImplementedError
 
     def set_bandwidth(self, bw):
