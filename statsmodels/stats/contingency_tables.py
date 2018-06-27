@@ -30,8 +30,9 @@ from statsmodels.tools.decorators import cache_readonly, resettable_cache
 import numpy as np
 from scipy import stats
 import pandas as pd
+import warnings
 from statsmodels import iolib
-from statsmodels.tools.sm_exceptions import SingularMatrixWarning
+from statsmodels.tools import sm_exceptions
 
 
 def _make_df_square(table):
@@ -618,9 +619,8 @@ class SquareTable(Table):
         try:
             statistic = n_obs * np.dot(d, np.linalg.solve(vmat, d))
         except np.linalg.LinAlgError:
-            import warnings
             warnings.warn("Unable to invert covariance matrix",
-                          SingularMatrixWarning)
+                          sm_exceptions.SingularMatrixWarning)
             b = _Bunch()
             b.statistic = np.nan
             b.pvalue = np.nan
@@ -1126,11 +1126,22 @@ class StratifiedTable(object):
 
     @cache_readonly
     def oddsratio_pooled(self):
+        """
+        The pooled odds ratio.
+
+        The value is an estimate of a common odds ratio across all of the
+        stratified tables.
+        """
         odds_ratio = np.sum(self._ad / self._n) / np.sum(self._bc / self._n)
         return odds_ratio
 
     @cache_readonly
     def logodds_pooled(self):
+        """
+        Returns the logarithm of the pooled odds ratio.
+
+        See oddsratio_pooled for more information.
+        """
         return np.log(self.oddsratio_pooled)
 
     @cache_readonly
@@ -1145,6 +1156,8 @@ class StratifiedTable(object):
     @cache_readonly
     def risk_pooled(self):
         # Deprecated due to name being misleading
+        msg = "'risk_pooled' is deprecated, use 'riskratio_pooled' instead"
+        warnings.warn(msg, DeprecationWarning)
         return self.riskratio_pooled
 
     @cache_readonly
