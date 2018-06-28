@@ -734,10 +734,11 @@ class CheckHasConstant(object):
             fit_kwds = getattr(self, 'fit_kwds', {})
             try:
                 res = mod.fit(**fit_kwds)
+            except np.linalg.LinAlgError:
+                pass
+            else:
                 assert_equal(res.model.k_constant, result[0])
                 assert_equal(res.model.data.k_constant, result[0])
-            except:
-                pass
 
 
     @classmethod
