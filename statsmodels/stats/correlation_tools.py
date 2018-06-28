@@ -968,8 +968,8 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
 
     Returns
     -------
-    A function C(x, y) which estimates the covariance between
-    values of the process located at x and y.
+    A real-valued function C(x, y) that returns an estimate of the covariance
+    between values of the process located at x and y.
 
     References
     ----------
