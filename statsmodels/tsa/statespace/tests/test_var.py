@@ -58,7 +58,7 @@ def check_irf(test, mod, results, params=None):
 
     L = np.linalg.cholesky(Sigma_u)
     if params is None:
-        params = results['params'].copy()
+        params = np.copy(results['params'])
     params[-6:] = L[np.tril_indices_from(L)]
     res = mod.smooth(params)
 
