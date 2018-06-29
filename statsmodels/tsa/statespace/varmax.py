@@ -305,7 +305,6 @@ class VARMAX(MLEModel):
             exog = self._trend_data
         elif self.k_exog > 0:
             exog = self.exog
-        error_variance = None
 
         # Although the Kalman filter can deal with missing values in endog,
         # conditional sum of squares cannot
