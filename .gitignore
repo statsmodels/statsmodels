@@ -80,8 +80,10 @@ statsmodels/tsa/statespace/_tools.pyx
 statsmodels/tsa/statespace/_filters/_conventional.pyx
 statsmodels/tsa/statespace/_filters/_inversions.pyx
 statsmodels/tsa/statespace/_filters/_univariate.pyx
+statsmodels/tsa/statespace/_filters/_univariate_diffuse.pyx
 statsmodels/tsa/statespace/_smoothers/_conventional.pyx
 statsmodels/tsa/statespace/_smoothers/_univariate.pyx
+statsmodels/tsa/statespace/_smoothers/_univariate_diffuse.pyx
 statsmodels/tsa/statespace/_smoothers/_alternative.pyx
 statsmodels/tsa/statespace/_smoothers/_classical.pyx
 
