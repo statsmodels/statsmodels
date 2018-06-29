@@ -1216,7 +1216,13 @@ class KalmanFilter(Representation):
             impulse = np.dot(state_chol, impulse)
 
         # If we have a time-invariant system, we can solve for the IRF directly
-        if self.time_invariant:
+        # Note that it doesn't matter if we have time-invariant intercepts,
+        # since those don't affect the IRF anyway
+        time_invariant = (
+            self._design.shape[2] == self._obs_cov.shape[2] ==
+            self._transition.shape[2] == self._selection.shape[2] ==
+            self._state_cov.shape[2])
+        if time_invariant:
             # Get the state space matrices
             design = self.design[:, :, 0]
             transition = self.transition[:, :, 0]

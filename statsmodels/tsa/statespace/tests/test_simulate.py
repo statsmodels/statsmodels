@@ -424,7 +424,8 @@ def test_varmax():
     state = np.r_[1, 1]
     for i in range(nobs):
         desired[i] = state
-        state = exog[i] * [5, -2] + np.dot(transition, state)
+        if i < nobs - 1:
+            state = exog[i + 1] * [5, -2] + np.dot(transition, state)
     assert_allclose(actual, desired)
 
     # VMA(1)
