@@ -6,6 +6,7 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+from __future__ import print_function
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_raises
@@ -30,7 +31,7 @@ if __name__ == '__main__':
     L = evecs[:, :k_constr]
     T = evecs[:, k_constr:]
 
-    print T.T.dot(np.eye(k_vars))
+    print(T.T.dot(np.eye(k_vars)))
 
     tr = np.column_stack((T, R.T))
 

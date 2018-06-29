@@ -37,6 +37,7 @@ To push to GH, you need to set below the GH repository owner, API token and
 repository name you wan to push issues into. See the GH section for the
 necessary variables.
 """
+from __future__ import print_function
 
 import collections
 import os.path
@@ -91,7 +92,7 @@ def create_session():
     rrd_dir = os.path.expanduser("~/.cache/hydrazine/rrd")
     for d in [lplib_cachedir, hydrazine_cachedir, rrd_dir]:
         if not os.path.isdir(d):
-            os.makedirs(d, mode=0700)
+            os.makedirs(d, mode=0o700)
 
     hydrazine_credentials_filename = os.path.join(hydrazine_cachedir,
         'credentials')
@@ -219,7 +220,7 @@ bugs = {}
 for bt in list(bug_tasks):
     b = Bug(bt)
     bugs[b.id] = b
-    print b.title
+    print(b.title)
     sys.stdout.flush()
 
 #-----------------------------------------------------------------------------
@@ -292,24 +293,24 @@ for n, bug_id in enumerate(bids):
     title = format_title(bug)
     body = format_body(bug)
 
-    print
+    print()
     if len(title)<65:
-        print bug.id, '[{0}/{1}]'.format(n+1, nbugs), title
+        print(bug.id, '[{0}/{1}]'.format(n+1, nbugs), title)
     else:
-        print bug.id, title[:65]+'...'
+        print(bug.id, title[:65]+'...')
 
     # still check bug.status, in case we manually added other bugs to the list
     # above (mostly during testing)
     if bug.status in to_skip:
-        print '--- Skipping - status:',bug.status
+        print('--- Skipping - status:',bug.status)
         continue
 
-    print '+++ Filing...',
+    print('+++ Filing...', end=' ')
     sys.stdout.flush()
 
     # Create github issue for this bug
     issue = gh.issues.open(repo, title=title, body=body)
-    print 'created GitHub #', issue.number
+    print('created GitHub #', issue.number)
     gh_issues.append(issue.number)
     sys.stdout.flush()
 
@@ -358,14 +359,14 @@ for n, bug_id in enumerate(bids):
     batch_size = 10
     tsleep = 60
     if (len(gh_issues) % batch_size)==0:
-        print
-        print '*** SLEEPING for {0} seconds to avoid github blocking... ***'.format(tsleep)
+        print()
+        print('*** SLEEPING for {0} seconds to avoid github blocking... ***'.format(tsleep))
         sys.stdout.flush()
         time.sleep(tsleep)
 
 # Summary report
-print
-print '*'*80
-print 'Summary of GitHub issues filed:'
-print gh_issues
-print 'Total:', len(gh_issues)
+print()
+print('*'*80)
+print('Summary of GitHub issues filed:')
+print(gh_issues)
+print('Total:', len(gh_issues))
