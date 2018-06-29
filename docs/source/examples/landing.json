@@ -211,6 +211,17 @@
       ]
   },
   {
+      "header":"State space models - Technical notes",
+      "id":"statespace_notes",
+      "links":[
+        {
+            "text": "State space models: concentrating out the scale",
+            "target": "notebooks/generated/statespace_concentrated_scale.html",
+            "img": "../_static/images/statespace_concentrated_scale.png"
+        }
+      ]
+  },
+  {
     "header":"User Notes",
     "id":"user",
     "links":[
