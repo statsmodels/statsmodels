@@ -53,6 +53,11 @@
         "text": "Categorical Interactions",
         "target": "notebooks/generated/categorical_interaction_plot.html",
         "img": "../_static/images/categorical_interaction_plot.png"
+    },
+    {
+        "text": "Box Plots",
+        "target": "notebooks/generated/plots_boxplots.html",
+        "img": "../_static/images/plots_boxplots.png"
     }
         ]
 
@@ -103,6 +108,11 @@
             "text": "Weighting Observations with GLMs",
             "target": "notebooks/generated/glm_weights.html",
             "img": "../_static/images/glm_weights.png"
+        },
+        {
+            "text": "Influence Measures for GLMs",
+            "target": "notebooks/generated/influence_glm_logit.html",
+            "img": "../_static/images/influence_glm_logit.png"
         }
         ]
   },
@@ -161,6 +171,11 @@
             "text": "Markov switching autoregression",
             "target": "notebooks/generated/markov_autoregression.html",
             "img": "../_static/images/markov_autoregression.png"
+        },
+        {
+            "text": "Exponential Smoothing",
+            "target": "notebooks/generated/exponential_smoothing.html",
+            "img": "../_static/images/exponential_smoothing.png"
         }
           ]
   },
@@ -207,6 +222,11 @@
             "text": "ARMA: Sunspots Data",
             "target": "notebooks/generated/statespace_arma_0.html",
             "img": "../_static/images/statespace_arma0.png"
+        },
+        {
+            "text": "Seasonality in Time Series Data",
+            "target": "notebooks/generated/statespace_seasonal.html",
+            "img": "../_static/images/statespace_seasonal.png"
         }
       ]
   },
@@ -249,6 +269,21 @@
         "text": "Dates in Time-Series Models",
         "target": "notebooks/generated/tsa_dates.html",
         "img": "../_static/images/tsa_dates.png"
+    },
+    {
+        "text": "Least squares fitting of models to data",
+        "target": "notebooks/generated/chi2_fitting.html",
+        "img": "../_static/images/chi2_fitting.png"
+    },
+    {
+        "text": "Distributed Estimations",
+        "target": "notebooks/generated/distributed_estimation.html",
+        "img": "../_static/images/distributed_estimation.png"
+    },
+    {
+        "text": "Principal Component Analysis",
+        "target": "notebooks/generated/pca_fertility_factors.html",
+        "img": "../_static/images/pca_fertility_factors.png"
     }
         ]
   }
