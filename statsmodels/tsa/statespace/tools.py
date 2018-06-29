@@ -1790,3 +1790,50 @@ def prepare_exog(exog):
 
         k_exog = exog.shape[1]
     return (k_exog, exog)
+
+
+def prepare_trend_spec(trend):
+    # Trend
+    if trend is None or trend in ['n', 'nc']:
+        polynomial_trend = np.ones((0))
+        if trend == 'nc':
+            warnings.warn("Argument option trend='nc' is deprecated. Please"
+                          " use option trend='n'.", DeprecationWarning)
+    elif trend == 'c':
+        polynomial_trend = np.r_[1]
+    elif trend == 't':
+        polynomial_trend = np.r_[0, 1]
+    elif trend == 'ct':
+        polynomial_trend = np.r_[1, 1]
+    elif trend == 'ctt':
+        # TODO deprecate ctt?
+        polynomial_trend = np.r_[1, 1, 1]
+    else:
+        trend = np.array(trend)
+        if trend.ndim > 0:
+            polynomial_trend = (trend > 0).astype(int)
+        else:
+            raise ValueError('Invalid trend method.')
+
+    # Note: k_trend is not the degree of the trend polynomial, because e.g.
+    # k_trend = 1 corresponds to the degree zero polynomial (with only a
+    # constant term).
+    k_trend = int(np.sum(polynomial_trend))
+
+    return polynomial_trend, k_trend
+
+
+def prepare_trend_data(polynomial_trend, k_trend, nobs, offset=1):
+    # Cache the arrays for calculating the intercept from the trend
+    # components
+    time_trend = np.arange(offset, nobs + offset)
+    trend_data = np.zeros((nobs, k_trend))
+    i = 0
+    for k in polynomial_trend.nonzero()[0]:
+        if k == 0:
+            trend_data[:, i] = np.ones(nobs,)
+        else:
+            trend_data[:, i] = time_trend**k
+        i += 1
+
+    return trend_data
