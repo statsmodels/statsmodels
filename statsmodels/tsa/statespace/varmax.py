@@ -39,10 +39,14 @@ class VARMAX(MLEModel):
     order : iterable
         The (p,q) order of the model for the number of AR and MA parameters to
         use.
-    trend : {'nc', 'c'}, optional
-        Parameter controlling the deterministic trend polynomial.
-        Can be specified as a string where 'c' indicates a constant intercept
-        and 'nc' indicates no intercept term.
+    trend : str{'n','c','t','ct'} or iterable, optional
+        Parameter controlling the deterministic trend polynomial :math:`A(t)`.
+        Can be specified as a string where 'c' indicates a constant (i.e. a
+        degree zero component of the trend polynomial), 't' indicates a
+        linear trend with time, and 'ct' is both. Can also be specified as an
+        iterable defining the polynomial as in `numpy.poly1d`, where
+        `[1,1,0,1]` would denote :math:`a + bt + ct^3`. Default is a constant
+        trend component.
     error_cov_type : {'diagonal', 'unstructured'}, optional
         The structure of the covariance matrix of the error term, where
         "unstructured" puts no restrictions on the matrix and "diagonal"
@@ -67,10 +71,13 @@ class VARMAX(MLEModel):
     order : iterable
         The (p,q) order of the model for the number of AR and MA parameters to
         use.
-    trend : {'nc', 'c'}, optional
-        Parameter controlling the deterministic trend polynomial.
-        Can be specified as a string where 'c' indicates a constant intercept
-        and 'nc' indicates no intercept term.
+    trend : str{'n','c','t','ct'} or iterable
+        Parameter controlling the deterministic trend polynomial :math:`A(t)`.
+        Can be specified as a string where 'c' indicates a constant (i.e. a
+        degree zero component of the trend polynomial), 't' indicates a
+        linear trend with time, and 'ct' is both. Can also be specified as an
+        iterable defining the polynomial as in `numpy.poly1d`, where
+        `[1,1,0,1]` would denote :math:`a + bt + ct^3`.
     error_cov_type : {'diagonal', 'unstructured'}, optional
         The structure of the covariance matrix of the error term, where
         "unstructured" puts no restrictions on the matrix and "diagonal"
@@ -93,7 +100,7 @@ class VARMAX(MLEModel):
 
     .. math::
 
-        y_t = \nu + A_1 y_{t-1} + \dots + A_p y_{t-p} + B x_t + \epsilon_t +
+        y_t = A(t) + A_1 y_{t-1} + \dots + A_p y_{t-p} + B x_t + \epsilon_t +
         M_1 \epsilon_{t-1} + \dots M_q \epsilon_{t-q}
 
     where :math:`\epsilon_t \sim N(0, \Omega)`, and where :math:`y_t` is a
