@@ -193,9 +193,14 @@ cdef {{cython_type}} {{prefix}}inverse_cholesky({{prefix}}KalmanFilter kfilter, 
         # we want to solve the equation L_t' v_t^s = v_t)
         if not (kfilter.conserve_memory & MEMORY_NO_STD_FORECAST > 0):
             blas.{{prefix}}copy(&kfilter.k_endog, kfilter._forecast_error, &inc, kfilter._standardized_forecast_error, &inc)
-            lapack.{{prefix}}trtrs("U", "T", "N", &kfilter.k_endog, &inc,
+            lapack.{{prefix}}trtrs("U", "T", "N", &model._k_endog, &inc,
                                    kfilter._forecast_error_fac, &kfilter.k_endog,
                                    kfilter._standardized_forecast_error, &kfilter.k_endog, &info)
+
+            if info != 0:
+                raise np.linalg.LinAlgError('Error computing standardized'
+                                            ' forecast error at period %d'
+                                            % kfilter.t)
 
         # Continue taking the inverse
         lapack.{{prefix}}potri("U", &model._k_endog, kfilter._forecast_error_fac, &kfilter.k_endog, &info)
@@ -312,9 +317,14 @@ cdef {{cython_type}} {{prefix}}solve_cholesky({{prefix}}KalmanFilter kfilter, {{
     # we want to solve the equation L_t' v_t^s = v_t)
     if not (kfilter.conserve_memory & MEMORY_NO_STD_FORECAST > 0):
         blas.{{prefix}}copy(&kfilter.k_endog, kfilter._forecast_error, &inc, kfilter._standardized_forecast_error, &inc)
-        lapack.{{prefix}}trtrs("U", "T", "N", &kfilter.k_endog, &inc,
+        lapack.{{prefix}}trtrs("U", "T", "N", &model._k_endog, &inc,
                                kfilter._forecast_error_fac, &kfilter.k_endog,
                                kfilter._standardized_forecast_error, &kfilter.k_endog, &info)
+
+        if info != 0:
+                raise np.linalg.LinAlgError('Error computing standardized'
+                                            ' forecast error at period %d'
+                                            % kfilter.t)
 
     # Solve the linear systems  
     # `tmp2` array used here, dimension $(p \times 1)$  
