@@ -7,8 +7,9 @@ import os
 import sys
 
 from warnings import simplefilter
-from statsmodels.tools.sm_exceptions import (ConvergenceWarning, CacheWriteWarning,
-                                             IterationLimitWarning, InvalidTestWarning)
+from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning, CacheWriteWarning,
+    IterationLimitWarning, InvalidTestWarning)
 
 simplefilter("always", (ConvergenceWarning, CacheWriteWarning,
                         IterationLimitWarning, InvalidTestWarning))
@@ -16,7 +17,7 @@ simplefilter("always", (ConvergenceWarning, CacheWriteWarning,
 debug_warnings = False
 
 if debug_warnings:
-    import sys, warnings
+    import warnings
 
     warnings.simplefilter("default")
     # use the following to raise an exception for debugging specific warnings
@@ -41,7 +42,8 @@ class PytestTester(object):
             import pytest
             if not LooseVersion(pytest.__version__) >= LooseVersion('3.0'):
                 raise ImportError
-            extra_args = ['--tb=short','--disable-pytest-warnings'] if extra_args is None else extra_args
+            if extra_args is None:
+                extra_args = ['--tb=short', '--disable-pytest-warnings']
             cmd = [self.package_path] + extra_args
             print('Running pytest ' + ' '.join(cmd))
             pytest.main(cmd)
