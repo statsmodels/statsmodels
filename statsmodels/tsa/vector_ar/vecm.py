@@ -14,7 +14,7 @@ from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tools.tools import chain_dot
-from statsmodels.tsa.tsatools import duplication_matrix, vec
+from statsmodels.tsa.tsatools import duplication_matrix, vec, lagmat
 
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.tsa.vector_ar.irf as irf
@@ -607,22 +607,9 @@ def coint_johansen(endog, det_order, k_ar_diff):
                       category=HypothesisTestWarning)
 
     from statsmodels.regression.linear_model import OLS
-    tdiff = np.diff
 
     class Holder(object):
         pass
-
-    def trimr(x, front, end):
-        if end > 0:
-            return x[front:-end]
-        else:
-            return x[front:]
-
-    import statsmodels.tsa.tsatools as tsat
-    mlag = tsat.lagmat
-
-    def lag(x, lags):
-        return x[:-lags]
 
     def detrend(y, order):
         if order == -1:
@@ -645,17 +632,17 @@ def coint_johansen(endog, det_order, k_ar_diff):
         f = det_order
 
     endog = detrend(endog, det_order)
-    dx = tdiff(endog, 1, axis=0)
-    z = mlag(dx, k_ar_diff)
-    z = trimr(z, k_ar_diff, 0)
+    dx = np.diff(endog, 1, axis=0)
+    z = lagmat(dx, k_ar_diff)
+    z = z[k_ar_diff:]
     z = detrend(z, f)
 
-    dx = trimr(dx, k_ar_diff, 0)
+    dx = dx[k_ar_diff:]
 
     dx = detrend(dx, f)
     r0t = resid(dx, z)
-    lx = lag(endog, k_ar_diff)
-    lx = trimr(lx, 1, 0)
+    lx = endog[:-k_ar_diff]
+    lx = lx[1:]
     dx = detrend(lx, f)
     rkt = resid(dx, z)  # level on lagged diffs
     skk = np.dot(rkt.T, rkt) / rkt.shape[0]
@@ -682,7 +669,7 @@ def coint_johansen(endog, det_order, k_ar_diff):
     iota = np.ones(neqs)
     t, junk = rkt.shape
     for i in range(0, neqs):
-        tmp = trimr(np.log(iota-a), i, 0)
+        tmp = np.log(iota - a)[i:]
         lr1[i] = -t * np.sum(tmp, 0)
         lr2[i] = -t * np.log(1-a[i])
         cvm[i, :] = c_sja(neqs - i, det_order)
