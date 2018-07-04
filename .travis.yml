@@ -12,6 +12,7 @@ env:
     - OPTIONAL=
     - COVERAGE=false
     - USEMPL=true
+    - USENUMPYBASE=false
     - MATPLOTLIB=
     - DOCBUILD=false
 
@@ -43,6 +44,7 @@ matrix:
     env:
     - PYTHON=2.7
     - NUMPY=1.11
+    - USENUMPYBASE=true
     - SCIPY=0.18
     - PANDAS=0.19
     - MATPLOTLIB=1.5
@@ -65,7 +67,7 @@ matrix:
   - python: 2.7
     env:
     - PYTHON=2.7
-    - NUMPY=1.11
+    - NUMPY=1.12
     - SCIPY=0.18
     - PANDAS=0.19
     - USEMPL=false
@@ -94,6 +96,7 @@ before_install:
   # Build package list to avoid empty package=versions; only needed for versioned packages
   - PKGS="python=${PYTHON}"
   - PKGS="${PKGS} numpy"; if [ ${NUMPY} ]; then PKGS="${PKGS}=${NUMPY}"; fi
+  - if [ ${USENUMPYBASE} = true ]; then PKGS="${PKGS} numpy-base=${NUMPY}"; fi
   - PKGS="${PKGS} scipy"; if [ ${SCIPY} ]; then PKGS="${PKGS}=${SCIPY}"; fi
   - PKGS="${PKGS} patsy"; if [ ${PATSY} ]; then PKGS="${PKGS}=${PATSY}"; fi
   - PKGS="${PKGS} pandas"; if [ ${PANDAS} ]; then PKGS="${PKGS}=${PANDAS}"; fi
