@@ -3,7 +3,7 @@ import numpy as np
 import warnings
 import statsmodels.api as sm
 
-from statsmodels.tsa.automatic import transform
+# from statsmodels.tsa.automatic import transform
 
 
 def auto_es(endog, measure='aic', seasonal_periods=1, damped=False,
@@ -15,11 +15,12 @@ def auto_es(endog, measure='aic', seasonal_periods=1, damped=False,
         trends = ["add", "mul", None]
     # damped
     seasonal = ["add", "mul", None]
-    if lambda_val == 'auto':
-        lambda_val = transform.predict_lambda(endog)
-    else:
-        if lambda_val is not None:
-            additive_only = True
+    # TODO use lambda in fitting ES models
+    # if lambda_val == 'auto':
+    #     lambda_val = transform.predict_lambda(endog)
+    # else:
+    #     if lambda_val is not None:
+    #         additive_only = True
     if additive_only:
         trends = ["add"]
         seasonal = ["add"]
@@ -40,7 +41,7 @@ def auto_es(endog, measure='aic', seasonal_periods=1, damped=False,
                     if getattr(res, measure) < min_aic:
                         min_aic = getattr(res, measure)
                         model = [t, s]
-                        results = res
+                        # results = res
                 except Exception as e:
                     warnings.warn(str(e))  # TODO add warning
         else:
@@ -54,7 +55,7 @@ def auto_es(endog, measure='aic', seasonal_periods=1, damped=False,
                 if getattr(res, measure) < min_aic:
                     min_aic = getattr(res, measure)
                     model = [t, None]
-                    results = res
+                    # results = res
             except Exception as e:
                 warnings.warn(str(e), "here")  # TODO add warning
     return model
