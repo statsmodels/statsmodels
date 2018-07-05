@@ -42,7 +42,7 @@ matrix:
   - python: 2.7
     env:
     - PYTHON=2.7
-    - NUMPY=1.11
+    - NUMPY=1.11*=py27h3dfced4_4
     - SCIPY=0.18
     - PANDAS=0.19
     - MATPLOTLIB=1.5
@@ -65,7 +65,7 @@ matrix:
   - python: 2.7
     env:
     - PYTHON=2.7
-    - NUMPY=1.11
+    - NUMPY=1.11*=py27h3dfced4_4
     - SCIPY=0.18
     - PANDAS=0.19
     - USEMPL=false
