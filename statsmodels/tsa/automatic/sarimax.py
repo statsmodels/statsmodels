@@ -89,9 +89,9 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                                           .format(p, d, q))
                             # aic_matrix[p, q] = np.inf
         if s > 1:
-            return intercept_val, n_p, n_q, n_P, n_Q
+            return intercept_val, n_p, d, n_q, n_P, D, n_Q
         else:
-            return intercept_val, n_p, n_q
+            return intercept_val, n_p, d, n_q
     else:
         """stepwise algorithm for auto order"""
         """
@@ -238,7 +238,7 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                                               order_new[model][1],
                                               order_new[model][2], D,
                                               order_new[model][3], s))
-            return allow_intercept, new_val[0], new_val[1], new_val[2], new_val[3]
+            return allow_intercept, new_val[0], d, new_val[1], new_val[2], D, new_val[3]
         else:
             for model in range(12):
                 if (order_new[model][0] >= 0 and
@@ -273,4 +273,4 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                         warnings.warn('Could not fit model with p={}and q={}'
                                       .format(order_new[model][0],
                                               order_new[model][1]))
-                return allow_intercept, new_val[0], new_val[1]
+                return allow_intercept, new_val[0], d, new_val[1]

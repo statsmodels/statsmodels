@@ -1,12 +1,16 @@
 """Classes to hold the Forecast results individually and in sets."""
 import numpy as np
+import statsmodels.api as sm
 from statsmodels.tools.decorators import cache_readonly
+
+from statsmodels.tsa.automatic import sarimax
+from statsmodels.tsa.automatic import exponentialsmoothing
 
 
 class Forecast(object):
     """Class to hold the data of a single forecast model."""
 
-    def __init__(self, endog, model, test_sample=0.2, **spec):
+    def __init__(self, endog, model, s=1, test_sample=0.2, auto_params=False, **spec):
         """Intialize the data for the Forecast class."""
         # TODO: make date selection of test sample more robust
         if type(test_sample) == str:
@@ -20,7 +24,32 @@ class Forecast(object):
                     test_sample = int(test_sample * len(endog))
             self.endog_training = endog[:-test_sample]
             self.endog_test = endog[-test_sample:]
-        self.model = model(self.endog_training, **spec)
+        if auto_params:
+            if (model == sm.tsa.SARIMAX):
+                if s > 1:
+                    trend, p, d, q, P, D, Q = sarimax.auto_order(endog,
+                                                                 stepwise=True,
+                                                                 s=s, **spec)
+                    # update dictionary
+                    spec['order'] = (p, d, q)
+                    spec['seasonal_order'] = (P, D, Q, s)
+                    if trend:
+                        spec['trend'] = 'c'
+                else:
+                    trend, p, d, q = sarimax.auto_order(endog,
+                                                        stepwise=True, **spec)
+                    # update dictionary
+                    spec['order'] = (p, d, q)
+                    if trend:
+                        spec['trend'] = 'c'
+            if(model == sm.tsa.ExponentialSmoothing):
+                mod = exponentialsmoothing.auto_es(endog, **spec)
+                # update dictionary
+                spec['trend'] = mod[0]
+                spec['seasonal'] = mod[1]
+        # Fitting the appropriate model
+        # self.model = model(self.endog_training, **spec)
+        self.model = model(endog, **spec)
         self.results = self.model.fit()
 
     @property
