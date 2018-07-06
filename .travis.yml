@@ -14,6 +14,8 @@ env:
     - USEMPL=true
     - MATPLOTLIB=
     - DOCBUILD=false
+    - BUILD_INIT=tools/travis_conda.sh
+    - DEPEND_ALWAYS="pyyaml joblib"
 
 matrix:
   fast_finish: true
@@ -69,42 +71,47 @@ matrix:
     - SCIPY=0.18
     - PANDAS=0.19
     - USEMPL=false
+  # Standard pip install
+  - python: 3.6
+    env:
+    - BUILD_INIT=tools/travis_pip.sh
+  # Latest pre-release packages
+  - python: 3.6
+    env:
+    - PIP_PRE=true
+    - BUILD_INIT=tools/travis_pip.sh
+
+  allow_failures:
+  # pre-testing is a little fragile. Make it an FYI.
+  - python: 3.6
+    env:
+    - PIP_PRE=true
+    - BUILD_INIT=tools/travis_pip.sh
 
 notifications:
   email:
     on_success: always
 
-# Setup anaconda
 before_install:
-  - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-  - chmod +x miniconda.sh
-  - ./miniconda.sh -b -p /home/travis/miniconda
-  - export PATH=/home/travis/miniconda/bin:$PATH
   - export MKL_NUM_THREADS=1
   - export NUMEXPR_NUM_THREADS=1
   - export OMP_NUM_THREADS=1
-  - conda config --set always_yes yes
-  - conda update --quiet conda
   # Fix for headless TravisCI
   - "export DISPLAY=:99.0"
   - "sh -e /etc/init.d/xvfb start"
   # Avoid noise from matplotlib
   - mkdir -p $HOME/.config/matplotlib
   - SRCDIR=$PWD
-  # Build package list to avoid empty package=versions; only needed for versioned packages
-  - PKGS="python=${PYTHON}"
-  - PKGS="${PKGS} numpy"; if [ ${NUMPY} ]; then PKGS="${PKGS}=${NUMPY}"; fi
-  - PKGS="${PKGS} scipy"; if [ ${SCIPY} ]; then PKGS="${PKGS}=${SCIPY}"; fi
-  - PKGS="${PKGS} patsy"; if [ ${PATSY} ]; then PKGS="${PKGS}=${PATSY}"; fi
-  - PKGS="${PKGS} pandas"; if [ ${PANDAS} ]; then PKGS="${PKGS}=${PANDAS}"; fi
-  - PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}=${CYTHON}"; fi
-  - if [ ${USEMPL} = true ]; then PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi; fi
-  - if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --cov-config=.travis_coveragerc --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
-  - echo conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml
-  - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml joblib
-  - source activate statsmodels-test
+  # Source recipe to install packages
+  - source $BUILD_INIT
   - pip install 'pytest<4' pytest-xdist nose
-  - if [ ${COVERAGE} = true ]; then pip install codecov coverage coveralls pytest-cov; fi
+  - |
+    if [ ${COVERAGE} = true ]; then
+        pip install codecov coverage coveralls pytest-cov
+        export COVERAGE_OPTS="--cov-config=.travis_coveragerc --cov=statsmodels"
+    else
+        export COVERAGE_OPTS=""
+    fi
   - if [ ${DOCBUILD} = true ]; then bash tools/ci_docbuild_install.sh; fi;
   - export SRCDIR=$PWD
   # Ensure tests are correctly gathered by xdist
