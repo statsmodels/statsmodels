@@ -1318,7 +1318,7 @@ class MICEResults(LikelihoodModelResults):
         """
 
         from statsmodels.iolib import summary2
-        from statsmodels.compat.collections import OrderedDict
+        from collections import OrderedDict
 
         smry = summary2.Summary()
         float_format = "%8.3f"

@@ -11,7 +11,7 @@ from __future__ import division
 from statsmodels.compat.python import (iteritems, iterkeys, lrange, string_types, lzip,
                                 itervalues, zip, range)
 import numpy as np
-from statsmodels.compat.collections import OrderedDict
+from collections import OrderedDict
 from itertools import product
 
 from numpy import iterable, r_, cumsum, array

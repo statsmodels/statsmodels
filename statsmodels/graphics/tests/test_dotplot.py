@@ -144,11 +144,8 @@ def test_all():
     points = np.random.normal(size=20)
     lines = np.kron(range(5), np.ones(4)).astype(np.int32)
     styles = np.kron(np.ones(5), range(4)).astype(np.int32)
-    #marker_props = {k: {"color": "rgbc"[k], "marker": "osvp"[k],
-    #                    "ms": 7, "alpha": 0.6} for k in range(4)}
-    # python 2.6 compat, can be removed later
-    marker_props = dict((k, {"color": "rgbc"[k], "marker": "osvp"[k],
-                        "ms": 7, "alpha": 0.6}) for k in range(4))
+    marker_props = {k: {"color": "rgbc"[k], "marker": "osvp"[k],
+                        "ms": 7, "alpha": 0.6} for k in range(4)}
     fig = dot_plot(points, lines=lines, styles=styles, ax=ax,
             marker_props=marker_props)
     ax.set_title("Dotplot with custom colors and symbols")

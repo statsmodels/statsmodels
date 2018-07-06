@@ -10,7 +10,7 @@ try: unicode
 except NameError: unicode = str
 
 from warnings import warn
-from statsmodels.compat.collections import OrderedDict
+from collections import OrderedDict
 
 import numpy as np
 import pandas as pd

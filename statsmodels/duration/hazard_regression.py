@@ -489,8 +489,8 @@ class PHReg(model.LikelihoodModel):
         The penalty is the ``elastic net`` penalty, which is a
         combination of L1 and L2 penalties.
 
-        The function that is minimized is: 
-        
+        The function that is minimized is:
+
         .. math::
 
             -loglike/n + alpha*((1-L1\_wt)*|params|_2^2/2 + L1\_wt*|params|_1)
@@ -1577,7 +1577,7 @@ class PHRegResults(base.LikelihoodModelResults):
         """
 
         from statsmodels.iolib import summary2
-        from statsmodels.compat.collections import OrderedDict
+        from collections import OrderedDict
         smry = summary2.Summary()
         float_format = "%8.3f"
 
