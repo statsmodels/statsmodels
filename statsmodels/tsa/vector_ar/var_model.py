@@ -527,6 +527,8 @@ class VAR(tsbase.TimeSeriesModel):
         """
         Returns in-sample predictions or forecasts
         """
+        params = np.array(params)
+
         if start is None:
             start = lags
 
