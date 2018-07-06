@@ -383,7 +383,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal()
         assert_allclose(bse[:3], self.true['var_oim'][:3], atol=1e-5)
-        assert_allclose(bse[-10:], self.true['var_oim'][-10:], atol=2e-4)
+        assert_allclose(bse[-10:], self.true['var_oim'][-10:], atol=3e-4)
 
     @skip("Known failure, no sequence of optimizers has been found which can achieve the maximum.")
     def test_mle(self):
