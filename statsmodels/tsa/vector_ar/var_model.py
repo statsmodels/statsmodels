@@ -523,17 +523,18 @@ class VAR(tsbase.TimeSeriesModel):
         self.neqs = self.endog.shape[1]
         self.n_totobs = len(endog)
 
-    def _get_predict_start(self, start, k_ar):
-        if start is None:
-            start = k_ar
-        return super(VAR, self)._get_predict_start(start)
-
     def predict(self, params, start=None, end=None, lags=1, trend='c'):
         """
         Returns in-sample predictions or forecasts
         """
-        start = self._get_predict_start(start, lags)
-        end, out_of_sample = self._get_predict_end(end)
+        params = np.array(params)
+
+        if start is None:
+            start = lags
+
+        # Handle start, end
+        start, end, out_of_sample, prediction_index = (
+            self._get_prediction_index(start, end))
 
         if end < start:
             raise ValueError("end is before start")
