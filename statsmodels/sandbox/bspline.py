@@ -290,7 +290,7 @@ class BSpline(object):
             x.shape = (1,)
         x.shape = (np.product(_shape,axis=0),)
         if i < self.tau.shape[0] - 1:
-           ## TODO: OWNDATA flags...
+            # TODO: OWNDATA flags...
             v = _hbspline.evaluate(x, self.tau, self.m, d, i, i+1)
         else:
             return np.zeros(x.shape, np.float64)

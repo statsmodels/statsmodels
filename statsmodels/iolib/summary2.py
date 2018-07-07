@@ -222,7 +222,7 @@ class Summary(object):
         'end{tabular}\\n\\\\begin{tabular}{.*}\\n')
 
         if self._merge_latex:
-             # create single tabular object for summary_col
+            # create single tabular object for summary_col
             tab = re.sub(to_replace,'\midrule\n\midrule\n', tab)
 
         out = '\\begin{table}', title, tab, '\\end{table}'

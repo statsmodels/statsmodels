@@ -24,36 +24,36 @@ from scipy import ndimage
 #   useless for multivariate application
 
 def labelmeanfilter(y, x):
-   # requires integer labels
-   # from mailing list scipy-user 2009-02-11
-   labelsunique = np.arange(np.max(y)+1)
-   labelmeans = np.array(ndimage.mean(x, labels=y, index=labelsunique))
-   # returns label means for each original observation
-   return labelmeans[y]
+    # requires integer labels
+    # from mailing list scipy-user 2009-02-11
+    labelsunique = np.arange(np.max(y)+1)
+    labelmeans = np.array(ndimage.mean(x, labels=y, index=labelsunique))
+    # returns label means for each original observation
+    return labelmeans[y]
 
 #groupcount: i.e. number of observation by group/label
 #np.array(ndimage.histogram(yrvs[:,0],0,10,1,labels=yrvs[:,0],index=np.unique(yrvs[:,0])))
 
 def labelmeanfilter_nd(y, x):
-   # requires integer labels
-   # from mailing list scipy-user 2009-02-11
-   # adjusted for 2d x with column variables
+    # requires integer labels
+    # from mailing list scipy-user 2009-02-11
+    # adjusted for 2d x with column variables
 
-   labelsunique = np.arange(np.max(y)+1)
-   labmeansdata = []
-   labmeans = []
+    labelsunique = np.arange(np.max(y)+1)
+    labmeansdata = []
+    labmeans = []
 
-   for xx in x.T:
-      labelmeans = np.array(ndimage.mean(xx, labels=y, index=labelsunique))
-      labmeansdata.append(labelmeans[y])
-      labmeans.append(labelmeans)
-   # group count:
-   labelcount = np.array(ndimage.histogram(y, labelsunique[0], labelsunique[-1]+1,
+    for xx in x.T:
+        labelmeans = np.array(ndimage.mean(xx, labels=y, index=labelsunique))
+        labmeansdata.append(labelmeans[y])
+        labmeans.append(labelmeans)
+    # group count:
+    labelcount = np.array(ndimage.histogram(y, labelsunique[0], labelsunique[-1]+1,
                         1, labels=y, index=labelsunique))
 
-   # returns array of lable/group counts and of label/group means
-   #         and label/group means for each original observation
-   return labelcount, np.array(labmeans), np.array(labmeansdata).T
+    # returns array of lable/group counts and of label/group means
+    #         and label/group means for each original observation
+    return labelcount, np.array(labmeans), np.array(labmeansdata).T
 
 def labelmeanfilter_str(ys, x):
     # works also for string labels in ys, but requires 1D
@@ -129,4 +129,4 @@ def groupsstats_dummy(y, x, nonseq=0):
 
 
 if __name__ == '__main__':
-   pass
+    pass

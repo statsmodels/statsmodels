@@ -1005,8 +1005,8 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
     varnames = header['varlist']
     fmtlist = header['fmtlist']
     dataname = header['data_label']
-    labels = header['vlblist'] # labels are thrown away unless DataArray
-                               # type is used
+    labels = header['vlblist']  # labels are thrown away unless DataArray
+                                # type is used
     data = np.zeros((nobs,numvars))
     stata_dta = fhd.dataset()
 

@@ -398,7 +398,7 @@ class Model(GLM, AdditiveModel):
         resid = Y - self.results.mu
         return (np.power(resid, 2) / self.family.variance(self.results.mu)).sum() \
                     / self.df_resid   #TODO check this
-                   #/ AdditiveModel.df_resid(self)  #what is the class doing here?
+                    #/ AdditiveModel.df_resid(self)  #what is the class doing here?
 
 
     def fit(self, Y, rtol=1.0e-06, maxiter=30):

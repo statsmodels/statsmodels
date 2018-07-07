@@ -87,8 +87,8 @@ def bkfilter(X, low=6, high=32, K=12):
     bweights -= bweights.mean() # make sure weights sum to zero
     if X.ndim == 2:
         bweights = bweights[:,None]
-    X = fftconvolve(X, bweights, mode='valid') # get a centered moving avg/
-                                               # convolution
+    X = fftconvolve(X, bweights, mode='valid')
+    # get a centered moving avg/convolution
     if _pandas_wrapper is not None:
         return _pandas_wrapper(X)
 

@@ -112,9 +112,9 @@ distdiscrete = [
     ['poisson',  (0.6,)],
     ['randint',  (7, 31)],
     ['skellam',  (15, 8)],
-    ['zipf',     (4,)] ]   # arg=4 is ok,
-                           # Zipf broken for arg = 2, e.g. weird .stats
-                           # looking closer, mean, var should be inf for arg=2
+    ['zipf',     (4,)] ]    # arg=4 is ok,
+                            # Zipf broken for arg = 2, e.g. weird .stats
+                            # looking closer, mean, var should be inf for arg=2
 
 distslow = ['rdist', 'gausshyper', 'recipinvgauss', 'ksone', 'genexpon',
             'vonmises', 'rice', 'mielke', 'semicircular', 'cosine', 'invweibull',

@@ -971,8 +971,8 @@ def test_arma_predict_indices():
 
     # works - in-sample
     # None
-                  # given, expected, dynamic
     start_test_cases = [
+                  # given, expected, dynamic
                   (None, 9, True),
                   # all start get moved back by k_diff
                   (9, 9, True),
@@ -1047,8 +1047,8 @@ def test_arima_predict_indices():
 
     # works - in-sample
     # None
-                  # given, expected, dynamic
     start_test_cases = [
+                  # given, expected, dynamic
                   (None, 4, True),
                   # all start get moved back by k_diff
                   (5, 4, True),

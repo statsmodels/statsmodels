@@ -5,7 +5,7 @@ import pandas as pd
 from statsmodels.tools.tools import Bunch
 
 def parse(path, ssm):
-  # Dimensions
+    # Dimensions
     n = ssm.nobs
     p = ssm.k_endog
     m = ssm.k_states

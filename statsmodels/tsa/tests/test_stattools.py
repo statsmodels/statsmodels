@@ -114,8 +114,9 @@ class TestADFNoConstant2(CheckADF):
         cls.res1 = adfuller(cls.y, regression="nc", autolag=None,
                 maxlag=1)
         cls.teststat = -2.4511596
-        cls.pvalue = 0.013747 # Stata does not return a p-value for noconstant
-                               # this value is just taken from our results
+        cls.pvalue = 0.013747
+        # Stata does not return a p-value for noconstant
+        # this value is just taken from our results
         cls.critvalues = [-2.587,-1.950,-1.617]
         _, _1, _2, cls.store = adfuller(cls.y, regression="nc", autolag=None,
                                          maxlag=1, store=True)

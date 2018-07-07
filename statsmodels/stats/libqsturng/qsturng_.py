@@ -439,14 +439,14 @@ def _phi( p ):
 
     # Rational approximation for lower region:
     if p < plow:
-       q  = math.sqrt(-2*math.log(p))
-       return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / \
-               ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1)
+        q  = math.sqrt(-2*math.log(p))
+        return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / \
+                 ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1)
 
     # Rational approximation for upper region:
     if phigh < p:
-       q  = math.sqrt(-2*math.log(1-p))
-       return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / \
+        q  = math.sqrt(-2*math.log(1-p))
+        return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / \
                 ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1)
 
     # Rational approximation for central region:

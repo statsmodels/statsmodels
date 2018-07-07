@@ -176,9 +176,9 @@ TableF5-1.txt', names=True)
         y[:-1]))
     instruments = sm.add_constant(instruments, prepend=False)
     sem_mod = Sem2SLS(sys3, indep_endog = indep_endog, instruments=instruments)
-    sem_params = sem_mod.fit() # first equation is right, but not second?
-                               # should y_t in the diff be instrumented?
-                               # how would R know this in the script?
+    sem_params = sem_mod.fit()  # first equation is right, but not second?
+                                # should y_t in the diff be instrumented?
+                                # how would R know this in the script?
     # well, let's check...
     y_instr = sem_mod.wexog[0][:,0]
     wyd = y_instr - y[:-1]

@@ -18,12 +18,12 @@ mod = GenericLikelihoodModel(data.endog, data.exog*2, loglike, score)
 res = mod.fit(method="nm", maxiter = 500)
 
 def probitloglike(params, endog, exog):
-      """
-      Log likelihood for the probit
-      """
-      q = 2*endog - 1
-      X = exog
-      return np.add.reduce(stats.norm.logcdf(q*np.dot(X,params)))
+    """
+    Log likelihood for the probit
+    """
+    q = 2*endog - 1
+    X = exog
+    return np.add.reduce(stats.norm.logcdf(q*np.dot(X,params)))
 
 mod = GenericLikelihoodModel(data.endog, data.exog, loglike=probitloglike)
 res = mod.fit(method="nm", fargs=(data.endog,data.exog), maxiter=500)

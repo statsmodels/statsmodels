@@ -954,8 +954,7 @@ class GofChisquarePower(Power):
 
     '''
 
-    def power(self, effect_size, nobs, alpha, n_bins, ddof=0):
-              #alternative='two-sided'):
+    def power(self, effect_size, nobs, alpha, n_bins, ddof=0):#alternative='two-sided'):
         '''Calculate the power of a chisquare test for one sample
 
         Only two-sided alternative is implemented

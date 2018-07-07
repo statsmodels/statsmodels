@@ -419,8 +419,8 @@ class QuantRegResults(RegressionResults):
                              use_t=True)
 
 #        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-                          #yname=yname, xname=xname,
-                          #title="")
+#                          yname=yname, xname=xname,
+#                          title="")
 
         #add warnings/notes, added to text format only
         etext = []

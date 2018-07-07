@@ -30,7 +30,6 @@ import statsmodels.formula.api as smf
 from .results.results_discrete import Spector, DiscreteL1, RandHIE, Anes
 from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
                                              ConvergenceWarning)
-                                             #PerfectSeparationWarning)
 from scipy.stats import nbinom
 
 try:

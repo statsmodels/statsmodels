@@ -292,7 +292,7 @@ class TestKernelReg(KernelRegressionTestBase):
         Y = b1 * O + b2 * C2 + noise
 
         bw= [3.63473198e+00, 1.21404803e+06]
-                 # This is the cv_ls bandwidth estimated earlier
+        # This is the cv_ls bandwidth estimated earlier
         # The cv_ls bandwidth was estimated earlier to save time
         model = nparam.KernelReg(endog=[Y], exog=[O, C3],
                                  reg_type='ll', var_type='oc', bw=bw)

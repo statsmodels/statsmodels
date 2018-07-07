@@ -41,8 +41,8 @@ def get_griliches76_data():
     X = add_constant(griliches76_data[['s', 'iq', 'expr', 'tenure', 'rns',
                                        'smsa', 'D_67', 'D_68', 'D_69', 'D_70',
                                        'D_71', 'D_73']],
-                                       prepend=True)  # for R comparison
                                        #prepend=False)  # for Stata comparison
+                                       prepend=True)  # for R comparison
 
     Z = add_constant(griliches76_data[['expr', 'tenure', 'rns', 'smsa', \
                                        'D_67', 'D_68', 'D_69', 'D_70', 'D_71',

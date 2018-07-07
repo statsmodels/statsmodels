@@ -570,7 +570,7 @@ class OneWayMixedResults(LikelihoodModelResults):
             rows, cols = k, 1
         if bins is None:
             #bins = self.model.n_units // 20    #TODO: just roughly, check
-           # bins = np.sqrt(self.model.n_units)
+            #bins = np.sqrt(self.model.n_units)
             bins = 5 + 2 * self.model.n_units**(1./3.)
 
         if use_loc:
@@ -644,8 +644,8 @@ class OneWayMixedResults(LikelihoodModelResults):
             raise ValueError('less than two variables available')
 
         return scatter_ellipse(self.params_random_units,
-                               ell_kwds={'color':'r'})
                                #ell_kwds not implemented yet
+                               ell_kwds={'color':'r'})
 
 #        #note I have written this already as helper function, get it
 #        import matplotlib.pyplot as plt
