@@ -206,9 +206,6 @@ class _BayesMixedGLM(base.Model):
                 msg = "The lengths of vcp_names and ident should be the same"
                 raise ValueError(msg)
 
-        endog = np.asarray(endog)
-        exog = np.asarray(exog)
-
         if not sparse.issparse(exog_vc):
             exog_vc = sparse.csr_matrix(exog_vc)
 
@@ -770,7 +767,7 @@ class BayesMixedGLMResults(object):
 
         self.model = model
         self.params = params
-        self.cov_params = cov_params
+        self._cov_params = cov_params
         self.optim_retvals = optim_retvals
 
         self.fe_mean, self.vcp_mean, self.vc_mean = (
@@ -785,6 +782,13 @@ class BayesMixedGLMResults(object):
         self.vcp_sd = np.sqrt(self.vcp_sd)
         self.vc_sd = np.sqrt(self.vc_sd)
 
+    def cov_params(self):
+        if hasattr(self.model.data, "frame"):
+            na = (self.model.fep_names + self.model.vcp_names +
+                  self.model.vc_names)
+            return pd.DataFrame(self._cov_params, index=na, columns=na)
+        return self._cov_params
+
     def summary(self):
 
         df = pd.DataFrame()
@@ -794,11 +798,11 @@ class BayesMixedGLMResults(object):
 
         df["Post. Mean"] = self.params[0:m]
 
-        if self.cov_params.ndim == 2:
-            v = np.diag(self.cov_params)[0:m]
+        if self._cov_params.ndim == 2:
+            v = np.diag(self._cov_params)[0:m]
             df["Post. SD"] = np.sqrt(v)
         else:
-            df["Post. SD"] = np.sqrt(self.cov_params[0:m])
+            df["Post. SD"] = np.sqrt(self._cov_params[0:m])
 
         # Convert variance parameters to natural scale
         df["VC"] = np.exp(df["Post. Mean"])
