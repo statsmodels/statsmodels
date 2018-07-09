@@ -476,7 +476,7 @@ class SARIMAX(MLEModel):
         # Number of parameters
         self.k_params = (
             self.k_ar_params + self.k_ma_params +
-            self.k_seasonal_ar_params + self.k_seasonal_ar_params +
+            self.k_seasonal_ar_params + self.k_seasonal_ma_params +
             self.k_trend +
             self.measurement_error +
             int(not self.concentrate_scale)
