@@ -3,28 +3,56 @@ import numpy as np
 import warnings
 import statsmodels.api as sm
 
-# from statsmodels.tsa.automatic import transform
-
 
 def auto_es(endog, measure='aic', seasonal_periods=1, damped=False,
-            lambda_val=None, additive_only=False, alpha=None, beta=None,
+            additive_only=False, alpha=None, beta=None,
             gamma=None, phi=None):
+    """Perform automatic calculation of the parameters used in ES models.
+
+    This uses a brute force approach to traverse through all the possible
+    parameters of the model and select the best model based on the measure values.
+
+    Parameters
+    ----------
+    endog : list
+        input contains the time series data over a period of time.
+    measure : str
+        specifies which information measure to use for model evaluation.
+        'aic' is the default measure.
+    seasonal_periods : int
+        the length of a seaonal period.
+    damped : boolean
+        includes damped trends.
+    additive_only : boolean
+        Allows only additive trend and seasonal models.
+    alpha : float
+        Smoothing level.
+    beta : float
+        Smoothing slope.
+    gamma : float
+        Smoothing seasonal.
+    phi : float
+        damping slope.
+
+    Returns
+    -------
+    model : pair
+        Pair containing trend,seasonal component type.
+    Notes
+    -----
+    Status : Work In Progress.
+
+    """
     if damped:
         trends = ["add", "mul"]
     else:
         trends = ["add", "mul", None]
     # damped
     seasonal = ["add", "mul", None]
-    # TODO use lambda in fitting ES models
-    # if lambda_val == 'auto':
-    #     lambda_val = transform.predict_lambda(endog)
-    # else:
-    #     if lambda_val is not None:
-    #         additive_only = True
     if additive_only:
         trends = ["add"]
         seasonal = ["add"]
-    min_aic = np.inf
+    min_measure = np.inf
     model = [None, None]
     results = None
     for t in trends:
@@ -38,8 +66,8 @@ def auto_es(endog, measure='aic', seasonal_periods=1, damped=False,
                     res = mod.fit(smoothing_level=alpha, smoothing_slope=beta,
                                   smoothing_seasonal=gamma, damping_slope=phi)
                     # print(t, s, res.aic)
-                    if getattr(res, measure) < min_aic:
-                        min_aic = getattr(res, measure)
+                    if getattr(res, measure) < min_measure:
+                        min_measure = getattr(res, measure)
                         model = [t, s]
                         # results = res
                 except Exception as e:
@@ -52,8 +80,8 @@ def auto_es(endog, measure='aic', seasonal_periods=1, damped=False,
                 res = mod.fit(smoothing_level=alpha, smoothing_slope=beta,
                               smoothing_seasonal=gamma, damping_slope=phi)
                 # print(t, res.aic)
-                if getattr(res, measure) < min_aic:
-                    min_aic = getattr(res, measure)
+                if getattr(res, measure) < min_measure:
+                    min_measure = getattr(res, measure)
                     model = [t, None]
                     # results = res
             except Exception as e:

@@ -16,8 +16,8 @@ macrodata.index = pd.PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
 
 
 def test_forecast_smoke():
-    f1 = Forecast(  macrodata['infl'], sm.tsa.SARIMAX,
-                    test_sample=0.3, **{'order': (1, 0, 0)})
+    f1 = Forecast(macrodata['infl'], sm.tsa.SARIMAX,
+                  test_sample=0.3, **{'order': (1, 0, 0)})
     desired_nobs_test = 60
     desired_nobs_training = 143
     # desired_resid

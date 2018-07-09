@@ -4,7 +4,7 @@ import warnings
 import statsmodels.api as sm
 
 
-def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
+def auto_order(endog, measure='aic', d=0, max_order=(3, 3), D=0, s=1,
                max_seasonal_order=(1, 1), allow_intercept=False,
                stepwise=False, **spec):
     """Perform automatic calculation of the parameters used in SARIMAX models.
@@ -18,9 +18,9 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
     ----------
     endog : list
         input contains the time series data over a period of time.
-    criteria : str
+    measure : str
         specifies which information criteria to use for model evaluation.
-        'aic' is the default criteria.
+        'aic' is the default measure.
     d : int
         differencing factor.
     max_order : list
@@ -39,6 +39,7 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
 
     Returns
     -------
+    allow_intercept : if intercept is present in the model.
     p : the autoregressive parameter for the SARIMAX model.
     q : the moving average parameter for the SARIMAX model.
     if s>1, also returns,
@@ -70,8 +71,8 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                                         seasonal_order=(P, D, Q, s),
                                         trend='c', **spec)
                                 res = mod.fit(disp=False)
-                                if res.aic < min_aic:
-                                    min_aic = res.aic
+                                if getattr(res, measure) < min_aic:
+                                    min_aic = getattr(res, measure)
                                     intercept_val = True
                                     n_p, n_q, n_P, n_Q = p, q, P, Q
                             mod = sm.tsa.statespace.SARIMAX(
@@ -80,8 +81,8 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                                     seasonal_order=(P, D, Q, s),
                                     **spec)
                             res = mod.fit(disp=False)
-                            if res.aic < min_aic:
-                                    min_aic = res.aic
+                            if getattr(res, measure) < min_aic:
+                                    min_aic = getattr(res, measure)
                                     intercept_val = False
                                     n_p, n_q, n_P, n_Q = p, q, P, Q
                         except Exception as e:
@@ -126,7 +127,7 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                                                 seasonal_init[model][1], s),
                                 **spec)
                         res = mod.fit(disp=False)
-                        aic_vals[model] = res.aic
+                        aic_vals[model] = getattr(res, measure)
                     else:
                         mod = sm.tsa.statespace.SARIMAX(
                                 endog,
@@ -136,7 +137,7 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                                                 seasonal_init[model][1], s),
                                 **spec)
                         res = mod.fit(disp=False)
-                        aic_vals[model] = res.aic
+                        aic_vals[model] = getattr(res, measure)
                 except Exception as e:
                     aic_vals[mode] = np.inf
                     warnings.warn('Could not fit model ({},{},{})({},{},{},{})'
@@ -153,7 +154,7 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                                        order_init[model][1]), trend='c',
                                 **spec)
                         res = mod.fit(disp=False)
-                        aic_vals[model] = res.aic
+                        aic_vals[model] = getattr(res, measure)
                     else:
                         mod = sm.tsa.statespace.SARIMAX(
                                 endog,
@@ -161,7 +162,7 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                                        order_init[model][1]),
                                 **spec)
                         res = mod.fit(disp=False)
-                        aic_vals[model] = res.aic
+                        aic_vals[model] = getattr(res, measure)
                 except Exception as e:
                     aic_vals[model] = np.inf
                     warnings.warn('Could not fit model with {},{},{}'
@@ -215,8 +216,8 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                                                     order_new[model][3], s),
                                     trend='c', **spec)
                             res = mod.fit(disp=False)
-                            if res.aic < min_aic:
-                                min_aic = res.aic
+                            if getattr(res, measure) < min_aic:
+                                min_aic = getattr(res, measure)
                                 new_val = order_new[model]
                         else:
                             mod = sm.tsa.statespace.SARIMAX(
@@ -227,10 +228,10 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                                                     order_new[model][3], s),
                                     **spec)
                             res = mod.fit(disp=False)
-                            # print(res.aic)
+                            # print(getattr(res, measure))
                             # print(order_new[model][0], order_new[model][1])
-                            if res.aic < min_aic:
-                                min_aic = res.aic
+                            if getattr(res, measure) < min_aic:
+                                min_aic = getattr(res, measure)
                                 new_val = order_new[model]
                     except Exception as e:
                         warnings.warn('Could not fit model ({},{},{})({},{},{},{})'
@@ -254,8 +255,8 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                                            order_new[model][1]),
                                     trend='c', **spec)
                             res = mod.fit(disp=False)
-                            if res.aic < min_aic:
-                                min_aic = res.aic
+                            if getattr(res, measure) < min_aic:
+                                min_aic = getattr(res, measure)
                                 new_val = order_new[model]
                         else:
                             mod = sm.tsa.statespace.SARIMAX(
@@ -264,10 +265,10 @@ def auto_order(endog, criteria='aic', d=0, max_order=(3, 3), D=0, s=1,
                                            order_new[model][1]),
                                     **spec)
                             res = mod.fit(disp=False)
-                            # print(res.aic)
+                            # print(getattr(res, measure))
                             # print(order_new[model][0], order_new[model][1])
-                            if res.aic < min_aic:
-                                min_aic = res.aic
+                            if getattr(res, measure) < min_aic:
+                                min_aic = getattr(res, measure)
                                 new_val = order_new[model]
                     except Exception as e:
                         warnings.warn('Could not fit model with p={}and q={}'

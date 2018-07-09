@@ -14,26 +14,41 @@ macrodata = datasets.macrodata.load_pandas().data
 macrodata.index = pd.PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
 
 
-def test_non_stepwise():
-    """test function for non-stepwise auto_order."""
-    intercept, p, q = sarimax.auto_order(macrodata['infl'], d=0)
+def test_smoke_non_stepwise():
+    """Test function for non-stepwise auto_order."""
+    intercept, p, d, q = sarimax.auto_order(macrodata['infl'], d=0)
 # p, q = sarimax.auto_order(macrodata.infl, d=0, enforce_stationarity=False)
     desired_intercept = False
     desired_p = 2
+    desired_d = 0
     desired_q = 2
     assert_equal(intercept, desired_intercept)
     assert_equal(p, desired_p)
+    assert_equal(d, desired_d)
     assert_equal(q, desired_q)
 
 
-def test_stepwise():
-    """test function for stepwise auto_order."""
+def test_smoke_stepwise():
+    """Test function for stepwise auto_order."""
     # p, q = sarimax.auto_order(
     #             macrodata['infl'], stepwise=True, enforce_stationarity=False)
-    intercept, p, q = sarimax.auto_order(macrodata['infl'], stepwise=True)
+    intercept, p, d, q = sarimax.auto_order(macrodata['infl'], stepwise=True)
     desired_intercept = False
     desired_p = 2
+    desired_d = 0
     desired_q = 2
     assert_equal(intercept, desired_intercept)
     assert_equal(p, desired_p)
+    assert_equal(d, desired_d)
+    assert_equal(q, desired_q)
+
+
+def test_auto_order():
+    """Test function for auto_order against auto.arima."""
+    intercept, p, d, q = sarimax.auto_order(macrodata['cpi'], d=2)
+    desired_p = 1
+    desired_d = 2
+    desired_q = 2
+    assert_equal(p, desired_p)
+    assert_equal(d, desired_d)
     assert_equal(q, desired_q)
