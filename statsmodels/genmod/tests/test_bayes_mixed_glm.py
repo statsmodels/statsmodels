@@ -205,6 +205,10 @@ def test_logit_map_crossed_formula():
     assert_allclose(r.iloc[0, :].values,
                     np.r_[-0.02004904, 0.094014], atol=1e-4)
 
+    cm = rslt.cov_params()
+    p = rslt.params.shape[0]
+    assert_equal(list(cm.shape), [p, p])
+
 
 def test_elbo_grad():
 
@@ -310,7 +314,7 @@ def test_simple_poisson_vb():
         -0.07233493, -0.06706505, -0.47159649,  1.12575122, -1.02442201],
                     rtol=1e-4, atol=1e-4)
 
-    assert_allclose(rslt1.cov_params.flat[0:5], np.r_[
+    assert_allclose(rslt1.cov_params().flat[0:5], np.r_[
         0.00790914, 0.00080666, -0.00050719, 0.00022648, 0.00046235],
                     rtol=1e-4, atol=1e-4)
 
@@ -318,7 +322,7 @@ def test_simple_poisson_vb():
         -0.07088814, -0.06373107, -0.22770786,  1.12923746, -1.26161339],
                     rtol=1e-4, atol=1e-4)
 
-    assert_allclose(rslt2.cov_params[0:5], np.r_[
+    assert_allclose(rslt2.cov_params()[0:5], np.r_[
         0.00747782, 0.0092554, 0.04508904, 0.02934488, 0.20312746],
                     rtol=1e-4, atol=1e-4)
 
@@ -343,7 +347,7 @@ def test_crossed_logit_vb():
         -9.64030461e-03, 2.32701078e-03],
                     rtol=1e-4, atol=1e-4)
 
-    assert_allclose(rslt1.cov_params.flat[0:5], np.r_[
+    assert_allclose(rslt1.cov_params().flat[0:5], np.r_[
         4.12927123e-02, -2.04448923e-04, 4.64829219e-05,
         1.20377543e-04, -1.45003234e-04],
                     rtol=1e-4, atol=1e-4)
@@ -352,7 +356,7 @@ def test_crossed_logit_vb():
         -0.70834417, -0.3571011, 0.19126823, -0.36074489, 0.058976],
                     rtol=1e-4, atol=1e-4)
 
-    assert_allclose(rslt2.cov_params[0:5], np.r_[
+    assert_allclose(rslt2.cov_params()[0:5], np.r_[
         0.05212492, 0.04729656, 0.03916944, 0.25921842, 0.25782576],
                     rtol=1e-4, atol=1e-4)
 
