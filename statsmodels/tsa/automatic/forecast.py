@@ -33,21 +33,25 @@ class Forecast(object):
 
         """
         # TODO: make date selection of test sample more robust
-        if type(test_sample) == str:
-            self.endog_training = endog[:test_sample][:-1]
-            self.endog_test = endog[test_sample:]
+        if test_sample is None:
+            self.endog_training = endog
+            self.indicator = True
         else:
-            if type(test_sample) == float or type(test_sample) == int:
-                if test_sample > 0.0 and test_sample < 1.0:
-                    # here test_sample is containing the number of observations
-                    # to consider for the endog_test
-                    test_sample = int(test_sample * len(endog))
-            self.endog_training = endog[:-test_sample]
-            self.endog_test = endog[-test_sample:]
+            if type(test_sample) == str:
+                self.endog_training = endog[:test_sample][:-1]
+                self.endog_test = endog[test_sample:]
+            else:
+                if type(test_sample) == float or type(test_sample) == int:
+                    if test_sample > 0.0 and test_sample < 1.0:
+                        # here test_sample is containing the number of
+                        # observations to consider for the endog_test
+                        test_sample = int(test_sample * len(endog))
+                self.endog_training = endog[:-test_sample]
+                self.endog_test = endog[-test_sample:]
         if auto_params:
             if (model == sm.tsa.SARIMAX):
                 if s > 1:
-                    trend, p, d, q, P, D, Q = sarimax.auto_order(endog,
+                    trend, p, d, q, P, D, Q = sarimax.auto_order(self.endog_training,
                                                                  stepwise=True,
                                                                  s=s, **spec)
                     # update dictionary
@@ -56,14 +60,14 @@ class Forecast(object):
                     if trend:
                         spec['trend'] = 'c'
                 else:
-                    trend, p, d, q = sarimax.auto_order(endog,
+                    trend, p, d, q = sarimax.auto_order(self.endog_training,
                                                         stepwise=True, **spec)
                     # update dictionary
                     spec['order'] = (p, d, q)
                     if trend:
                         spec['trend'] = 'c'
             if(model == sm.tsa.ExponentialSmoothing):
-                mod = exponentialsmoothing.auto_es(endog, **spec)
+                mod = exponentialsmoothing.auto_es(self.endog_training, **spec)
                 # update dictionary
                 spec['trend'] = mod[0]
                 spec['seasonal'] = mod[1]
@@ -145,7 +149,7 @@ class ForecastSet(object):
     the best Forecast object based on some evaluation measure.
     """
 
-    def __init__(self, endog, test_sample):
+    def __init__(self, endog=None, test_sample=None):
         """Initialize the values of the ForecastSet class.
 
         Parameters
@@ -171,6 +175,17 @@ class ForecastSet(object):
         """
         fcast = Forecast(self.endog, model, self.test_sample, **spec)
         self.models.append(fcast)
+
+    def add_fcast(self, fcast_ob):
+        """Add a Forecast object to this ForecastSet.
+
+        Parameters
+        ----------
+        model : class
+            specifies which model to use for forecasting the data.
+
+        """
+        self.models.append(fcast_ob)
 
     def select(self, measure='mae'):
         """Select the best forecast based on criteria provided by the user.
