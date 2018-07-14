@@ -1,5 +1,6 @@
 """Classes to hold the Forecast results individually and in sets."""
 import numpy as np
+import warnings
 import statsmodels.api as sm
 from statsmodels.tools.decorators import cache_readonly
 
@@ -187,6 +188,17 @@ class ForecastSet(object):
         """
         self.models.append(fcast_ob)
 
+    def validate(self):
+        train = self.models[0].endog_training
+        test = self.models[0].endog_test
+        ctr = 0
+        for i in range(1, len(self.models)):
+            if not ((self.models[i].endog_training.equals(train)) and
+                    (self.models[i].endog_test.equals(test))):
+                return False
+        return True
+
+
     def select(self, measure='mae'):
         """Select the best forecast based on criteria provided by the user.
 
@@ -201,10 +213,13 @@ class ForecastSet(object):
             specifies which model to use for forecasting the data.
 
         """
-        measure_vals = np.zeros(len(self.models))
-        for mod in range(len(self.models)):
-            measure_vals[mod] = getattr(self.models[mod], measure)
-        min_measure = measure_vals.min()
-        model = np.where(measure_vals == min_measure)
-        # print(self.models[0][0])
-        return self.models[model[0][0]]
+        if (self.validate()):
+            measure_vals = np.zeros(len(self.models))
+            for mod in range(len(self.models)):
+                measure_vals[mod] = getattr(self.models[mod], measure)
+            min_measure = measure_vals.min()
+            model = np.where(measure_vals == min_measure)
+            # print(self.models[0][0])
+            return self.models[model[0][0]]
+        else:
+            warnings.warn("Cannot Compare models with diffetent training and test data")
