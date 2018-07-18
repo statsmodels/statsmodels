@@ -245,6 +245,9 @@ class _BayesMixedGLM(base.Model):
         self.vc_names = vc_names
         self.fe_p = fe_p
         self.vcp_p = vcp_p
+        self.names = fep_names + vcp_names
+        if vc_names is not None:
+            self.names += vc_names
 
     def _unpack(self, vec):
 
@@ -607,7 +610,7 @@ class _VariationalBayesMixedGLM(object):
         return mean_grad, sd_grad
 
     def fit_vb(self, mean=None, sd=None, fit_method="BFGS", minim_opts=None,
-               verbose=False):
+               scale_fe=False, verbose=False):
         """
         Fit a model using the variational Bayes mean field approximation.
 
@@ -645,6 +648,14 @@ class _VariationalBayesMixedGLM(object):
         """
 
         self.verbose = verbose
+
+        if scale_fe:
+            mn = self.exog.mean(0)
+            sc = self.exog.std(0)
+            self._exog_save = self.exog.copy()
+            ixs = np.flatnonzero(sc > 1e-8)
+            self.exog[:, ixs] -= mn[ixs]
+            self.exog[:, ixs] /= sc[ixs]
 
         n = self.k_fep + self.k_vcp + self.k_vc
         ml = self.k_fep + self.k_vcp + self.k_vc
@@ -693,7 +704,16 @@ class _VariationalBayesMixedGLM(object):
             warnings.warn("VB fitting did not converge")
 
         n = len(mm.x) // 2
-        return BayesMixedGLMResults(self, mm.x[0:n], np.exp(2*mm.x[n:]), mm)
+        params = mm.x[0:n]
+        sd = np.exp(2*mm.x[n:])
+
+        if scale_fe:
+            self.exog = self._exog_save
+            del self._exog_save
+            params[ixs] /= sc[ixs]
+            sd[ixs] /= sc[ixs]
+
+        return BayesMixedGLMResults(self, params, sd, mm)
 
     # Handle terms in the ELBO that are common to all models.
     def _elbo_common(self, fep_mean, fep_sd, vcp_mean, vcp_sd, vc_mean, vc_sd):
