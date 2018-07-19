@@ -462,7 +462,8 @@ class _BayesMixedGLM(base.Model):
         if scale_fe:
             mn = self.exog.mean(0)
             sc = self.exog.std(0)
-            self._exog_save = self.exog.copy()
+            self._exog_save = self.exog
+            self.exog = self.exog.copy()
             ixs = np.flatnonzero(sc > 1e-8)
             self.exog[:, ixs] -= mn[ixs]
             self.exog[:, ixs] /= sc[ixs]
@@ -702,7 +703,8 @@ class _VariationalBayesMixedGLM(object):
         if scale_fe:
             mn = self.exog.mean(0)
             sc = self.exog.std(0)
-            self._exog_save = self.exog.copy()
+            self._exog_save = self.exog
+            self.exog = self.exog.copy()
             ixs = np.flatnonzero(sc > 1e-8)
             self.exog[:, ixs] -= mn[ixs]
             self.exog[:, ixs] /= sc[ixs]
@@ -861,8 +863,8 @@ class BayesMixedGLMResults(object):
 
         df = pd.DataFrame()
         m = self.model.k_fep + self.model.k_vcp
-        df["Type"] = (["F" for k in range(self.model.k_fep)] +
-                      ["R" for k in range(self.model.k_vcp)])
+        df["Type"] = (["M" for k in range(self.model.k_fep)] +
+                      ["V" for k in range(self.model.k_vcp)])
 
         df["Post. Mean"] = self.params[0:m]
 
@@ -873,15 +875,15 @@ class BayesMixedGLMResults(object):
             df["Post. SD"] = np.sqrt(self._cov_params[0:m])
 
         # Convert variance parameters to natural scale
-        df["VC"] = np.exp(df["Post. Mean"])
-        df["VC (LB)"] = np.exp(df["Post. Mean"] - 2 * df["Post. SD"])
-        df["VC (UB)"] = np.exp(df["Post. Mean"] + 2 * df["Post. SD"])
-        df["VC"] = ["%.3f" % x for x in df.VC]
-        df["VC (LB)"] = ["%.3f" % x for x in df["VC (LB)"]]
-        df["VC (UB)"] = ["%.3f" % x for x in df["VC (UB)"]]
-        df.loc[df.index < self.model.k_fep, "VC"] = ""
-        df.loc[df.index < self.model.k_fep, "VC (LB)"] = ""
-        df.loc[df.index < self.model.k_fep, "VC (UB)"] = ""
+        df["SD"] = np.exp(df["Post. Mean"])
+        df["SD (LB)"] = np.exp(df["Post. Mean"] - 2 * df["Post. SD"])
+        df["SD (UB)"] = np.exp(df["Post. Mean"] + 2 * df["Post. SD"])
+        df["SD"] = ["%.3f" % x for x in df.SD]
+        df["SD (LB)"] = ["%.3f" % x for x in df["SD (LB)"]]
+        df["SD (UB)"] = ["%.3f" % x for x in df["SD (UB)"]]
+        df.loc[df.index < self.model.k_fep, "SD"] = ""
+        df.loc[df.index < self.model.k_fep, "SD (LB)"] = ""
+        df.loc[df.index < self.model.k_fep, "SD (UB)"] = ""
 
         df.index = self.model.fep_names + self.model.vcp_names
 
@@ -889,6 +891,9 @@ class BayesMixedGLMResults(object):
         summ.add_title(self.model.family.__class__.__name__ +
                        " Mixed GLM Results")
         summ.add_df(df)
+
+        summ.add_text("Parameter types are mean (M) and variance (V)")
+        summ.add_text("Posterior mean/SD are for logged V parameters")
 
         return summ
 
