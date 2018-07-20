@@ -892,8 +892,8 @@ class BayesMixedGLMResults(object):
                        " Mixed GLM Results")
         summ.add_df(df)
 
-        summ.add_text("Parameter types are mean (M) and variance (V)")
-        summ.add_text("Posterior mean/SD are for logged V parameters")
+        summ.add_text("Parameter types are mean structure (M) and variance structure (V)")
+        summ.add_text("Variance parameters are modeled as log standard deviations")
 
         return summ
 
