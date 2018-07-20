@@ -430,6 +430,44 @@ def test_crossed_poisson_vb():
         atol=1e-4)
 
 
+def test_poisson_formula():
+
+    y, exog_fe, exog_vc, ident = gen_crossed_poisson(10, 10, 1, 0.5)
+
+    for vb in False, True:
+
+        glmm1 = PoissonBayesMixedGLM(
+            y, exog_fe, exog_vc, ident)
+        if vb:
+            rslt1 = glmm1.fit_vb()
+        else:
+            rslt1 = glmm1.fit_map()
+
+        # Build categorical variables that match exog_vc
+        df = pd.DataFrame({"y": y, "x1": exog_fe[:, 0]})
+        z1 = np.zeros(len(y))
+        for j,k in enumerate(np.flatnonzero(ident == 0)):
+            z1[exog_vc[:, k] == 1] = j
+        df["z1"] = z1
+        z2 = np.zeros(len(y))
+        for j,k in enumerate(np.flatnonzero(ident == 1)):
+            z2[exog_vc[:, k] == 1] = j
+        df["z2"] = z2
+
+        fml = "y ~ 0 + x1"
+        from collections import OrderedDict
+        vc_fml = OrderedDict({})
+        vc_fml["z1"] = "0 + C(z1)"
+        vc_fml["z2"] = "0 + C(z2)"
+        glmm2 = PoissonBayesMixedGLM.from_formula(fml, vc_fml, df)
+        if vb:
+            rslt2 = glmm2.fit_vb()
+        else:
+            rslt2 = glmm2.fit_map()
+
+        assert_allclose(rslt1.params, rslt2.params, rtol=1e-5)
+
+
 def test_scale_vb():
 
     y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 0)
