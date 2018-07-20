@@ -1055,7 +1055,8 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
                  vcp_p=1,
                  fe_p=2,
                  fep_names=None,
-                 vcp_names=None):
+                 vcp_names=None,
+                 vc_names=None):
 
         super(PoissonBayesMixedGLM, self).__init__(
             endog=endog,
@@ -1066,7 +1067,8 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             fe_p=fe_p,
             family=families.Poisson(),
             fep_names=fep_names,
-            vcp_names=vcp_names)
+            vcp_names=vcp_names,
+            vc_names=None)
 
     @classmethod
     def from_formula(cls,
@@ -1085,9 +1087,7 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             data,
             family=fam,
             vcp_p=vcp_p,
-            fe_p=fe_p,
-            vcp_names=vcp_names,
-            vc_names=vc_names)
+            fe_p=fe_p)
 
         # Copy over to the intended class structure
         mod = PoissonBayesMixedGLM(
