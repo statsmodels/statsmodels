@@ -419,6 +419,35 @@ class TestTrivariateUnivariateAllMissingAlternate(TestTrivariateUnivariateAllMis
 
 class TestDFM(object):
     @classmethod
+    def create_model(cls, obs, **kwargs):
+        # Create the model with typical state space
+        mod = MLEModel(obs, k_states=2, k_posdef=2, **kwargs)
+        mod['design'] = np.array([[-32.47143586, 17.33779024],
+                                  [-7.40264169, 1.69279859],
+                                  [-209.04702853, 125.2879374]])
+        mod['obs_cov'] = np.diag(
+            np.array([0.0622668, 1.95666886, 58.37473642]))
+        mod['transition'] = np.array([[0.29935707, 0.33289005],
+                                      [-0.7639868, 1.2844237]])
+        mod['selection'] = np.eye(2)
+        mod['state_cov'] = np.array([[1.2, -0.25],
+                                     [-0.25, 1.1]])
+        mod.initialize_approximate_diffuse(1e6)
+        return mod
+
+    @classmethod
+    def collapse(cls, obs, **kwargs):
+        mod = cls.create_model(obs, **kwargs)
+        mod.smooth([], return_ssm=True)
+
+        _ss = mod.ssm._statespace
+        out = np.zeros((mod.nobs, mod.k_states))
+        for t in range(mod.nobs):
+            _ss.seek(t, mod.ssm.filter_univariate, 1)
+            out[t] = np.array(_ss.collapse_obs)
+        return out
+
+    @classmethod
     def setup_class(cls, which='mixed', *args, **kwargs):
         # Data
         dta = datasets.macrodata.load_pandas().data
@@ -438,40 +467,27 @@ class TestDFM(object):
             obs.iloc[119:130, 0] = np.nan
             obs.iloc[119:130, 2] = np.nan
 
-        # Create the model with typical state space
-        mod = MLEModel(obs, k_states=2, k_posdef=2, **kwargs)
-        mod['design'] = np.array([[-32.47143586, 17.33779024],
-                                  [-7.40264169, 1.69279859],
-                                  [-209.04702853, 125.2879374]])
-        mod['obs_cov'] = np.diag(
-            np.array([0.0622668, 1.95666886, 58.37473642]))
-        mod['transition'] = np.array([[0.29935707, 0.33289005],
-                                      [-0.7639868, 1.2844237]])
-        mod['selection'] = np.eye(2)
-        mod['state_cov'] = np.array([[1.2, -0.25],
-                                     [-0.25, 1.1]])
-        mod.initialize_approximate_diffuse(1e6)
+        mod = cls.create_model(obs, **kwargs)
         cls.model = mod.ssm
 
         n_disturbance_variates = (
             (cls.model.k_endog + cls.model.k_posdef) * cls.model.nobs
         )
+        np.random.seed(1234)
+        dv = np.random.normal(size=n_disturbance_variates)
+        isv = np.random.normal(size=cls.model.k_states)
 
         # Collapsed filtering, smoothing, and simulation smoothing
         cls.model.filter_collapsed = True
         cls.results_b = cls.model.smooth()
-        cls.sim_b = cls.model.simulation_smoother(
-            disturbance_variates=np.zeros(n_disturbance_variates),
-            initial_state_variates=np.zeros(cls.model.k_states)
-        )
+        cls.sim_b = cls.model.simulation_smoother()
+        cls.sim_b.simulate(disturbance_variates=dv, initial_state_variates=isv)
 
         # Conventional filtering, smoothing, and simulation smoothing
         cls.model.filter_collapsed = False
         cls.results_a = cls.model.smooth()
-        cls.sim_a = cls.model.simulation_smoother(
-            disturbance_variates=np.zeros(n_disturbance_variates),
-            initial_state_variates=np.zeros(cls.model.k_states)
-        )
+        cls.sim_a = cls.model.simulation_smoother()
+        cls.sim_a.simulate(disturbance_variates=dv, initial_state_variates=isv)
 
         # Create the model with augmented state space
         kwargs.pop('filter_collapsed', None)
@@ -618,19 +634,22 @@ class TestDFM(object):
     def test_simulation_smoothed_state(self):
         assert_allclose(
             self.sim_a.simulated_state,
-            self.sim_a.simulated_state
+            self.sim_b.simulated_state
         )
 
+    # Skipped because "measurement" refers to different things; even different
+    # dimensions
+    @skip
     def test_simulation_smoothed_measurement_disturbance(self):
         assert_allclose(
             self.sim_a.simulated_measurement_disturbance,
-            self.sim_a.simulated_measurement_disturbance
+            self.sim_b.simulated_measurement_disturbance
         )
 
     def test_simulation_smoothed_state_disturbance(self):
         assert_allclose(
             self.sim_a.simulated_state_disturbance,
-            self.sim_a.simulated_state_disturbance
+            self.sim_b.simulated_state_disturbance
         )
 
 
@@ -675,15 +694,28 @@ class TestDFMAlternativeSmoothing(TestDFM):
                      SMOOTH_ALTERNATIVE)
 
 
-class TestDFMClassicalSmoothing(TestDFM):
+class TestDFMMeasurementDisturbance(TestDFM):
     @classmethod
     def setup_class(cls, *args, **kwargs):
-        super(TestDFMClassicalSmoothing, cls).setup_class(
-            smooth_method=SMOOTH_CLASSICAL, **kwargs)
+        super(TestDFMMeasurementDisturbance, cls).setup_class(
+            smooth_method=SMOOTH_CLASSICAL, which='none', **kwargs)
 
-    def test_smooth_method(self):
-        assert_equal(self.model.smooth_method, SMOOTH_CLASSICAL)
-        assert_equal(self.model._kalman_smoother.smooth_method,
-                     SMOOTH_CLASSICAL)
-        assert_equal(self.model._kalman_smoother._smooth_method,
-                     SMOOTH_CLASSICAL)
+    def test_smoothed_state_disturbance(self):
+        assert_allclose(
+            self.results_a.smoothed_state_disturbance,
+            self.results_b.smoothed_state_disturbance, atol=1e-7)
+
+    def test_smoothed_measurement_disturbance(self):
+        assert_allclose(
+            self.collapse(self.results_a.smoothed_measurement_disturbance.T).T,
+            self.results_b.smoothed_measurement_disturbance, atol=1e-7)
+
+    def test_simulation_smoothed_measurement_disturbance(self):
+        assert_allclose(
+            self.collapse(self.sim_a.simulated_measurement_disturbance.T),
+            self.sim_b.simulated_measurement_disturbance.T, atol=1e-7)
+
+    def test_simulation_smoothed_state_disturbance(self):
+        assert_allclose(
+            self.sim_a.simulated_state_disturbance,
+            self.sim_b.simulated_state_disturbance, atol=1e-7)
