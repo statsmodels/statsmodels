@@ -191,7 +191,6 @@ class ForecastSet(object):
     def validate(self):
         train = self.models[0].endog_training
         test = self.models[0].endog_test
-        ctr = 0
         for i in range(1, len(self.models)):
             if not ((self.models[i].endog_training.equals(train)) and
                     (self.models[i].endog_test.equals(test))):

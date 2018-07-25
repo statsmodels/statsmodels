@@ -54,7 +54,6 @@ def auto_es(endog, measure='aic', seasonal_periods=1, damped=False,
         seasonal = ["add"]
     min_measure = np.inf
     model = [None, None]
-    results = None
     for t in trends:
         if seasonal_periods > 1:
             for s in seasonal:
