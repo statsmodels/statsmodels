@@ -104,7 +104,7 @@ class ModelData(object):
                                           return_type='dataframe')
                     break
                 except (NameError, PatsyError) as e:
-                    print('not in depth %d' % depth)
+                    # print('not in depth %d' % depth)
                     exc.append(e)   # why do I need a reference from outside except block
                     pass
             else:
