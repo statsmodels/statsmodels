@@ -958,6 +958,8 @@ class SARIMAX(MLEModel):
                  ' Using zeros as starting parameters.')
             params_ma *= 0
 
+        # We want to bound the starting variance away from zero
+        params_variance = max(params_variance, 1e-10)
 
         # Seasonal Parameters
         _, params_seasonal_ar, params_seasonal_ma, params_seasonal_variance = (
