@@ -958,9 +958,6 @@ class SARIMAX(MLEModel):
                  ' Using zeros as starting parameters.')
             params_ma *= 0
 
-        # We want to bound the starting variance away from zero
-        params_variance = max(params_variance, 1e-10)
-
         # Seasonal Parameters
         _, params_seasonal_ar, params_seasonal_ma, params_seasonal_variance = (
             self._conditional_sum_squares(
@@ -1001,14 +998,17 @@ class SARIMAX(MLEModel):
             params_exog_variance = [1] * self.k_exog
         if (self.state_error and type(params_variance) == list and
                 len(params_variance) == 0):
-            if not (type(params_variance) == list and
-                    params_seasonal_variance == []):
+            if not (type(params_seasonal_variance) == list and
+                    len(params_seasonal_variance) == 0):
                 params_variance = params_seasonal_variance
             elif self.k_exog > 0:
                 params_variance = np.inner(endog, endog)
             else:
                 params_variance = np.inner(endog, endog) / self.nobs
         params_measurement_variance = 1 if self.measurement_error else []
+
+        # We want to bound the starting variance away from zero
+        params_variance = np.atleast_1d(max(np.array(params_variance), 1e-10))
 
         # Remove state variance as parameter if scale is concentrated out
         if self.concentrate_scale:
