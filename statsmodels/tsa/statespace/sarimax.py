@@ -332,10 +332,12 @@ class SARIMAX(MLEModel):
             self.polynomial_ar = np.r_[1., np.ones(order[0])]
         else:
             self.polynomial_ar = np.r_[1., order[0]]
+        self._polynomial_ar = self.polynomial_ar.copy()
         if isinstance(order[2], (int, long, np.integer)):
             self.polynomial_ma = np.r_[1., np.ones(order[2])]
         else:
             self.polynomial_ma = np.r_[1., order[2]]
+        self._polynomial_ma = self.polynomial_ma.copy()
         # Assume that they are given from lowest degree to highest, that the
         # degrees correspond to (1*s, 2*s, ..., P*s), and that they are
         # boolean vectors (0 for not included, 1 for included).
@@ -351,6 +353,7 @@ class SARIMAX(MLEModel):
             for i in range(len(seasonal_order[0])):
                 tmp = (i + 1) * self.seasonal_periods
                 self.polynomial_seasonal_ar[tmp] = seasonal_order[0][i]
+        self._polynomial_seasonal_ar = self.polynomial_seasonal_ar.copy()
         if isinstance(seasonal_order[2], (int, long, np.integer)):
             self.polynomial_seasonal_ma = np.r_[
                 1.,  # constant
@@ -363,6 +366,7 @@ class SARIMAX(MLEModel):
             for i in range(len(seasonal_order[2])):
                 tmp = (i + 1) * self.seasonal_periods
                 self.polynomial_seasonal_ma[tmp] = seasonal_order[2][i]
+        self._polynomial_seasonal_ma = self.polynomial_seasonal_ma.copy()
 
         # Deterministic trend polynomial
         self.trend = trend
@@ -376,6 +380,7 @@ class SARIMAX(MLEModel):
             self.polynomial_trend = np.r_[1, 1]
         else:
             self.polynomial_trend = (np.array(trend) > 0).astype(int)
+        self._polynomial_trend = self.polynomial_trend.copy()
 
         # Model orders
         # Note: k_ar, k_ma, k_seasonal_ar, k_seasonal_ma do not include the
@@ -993,14 +998,17 @@ class SARIMAX(MLEModel):
             params_exog_variance = [1] * self.k_exog
         if (self.state_error and type(params_variance) == list and
                 len(params_variance) == 0):
-            if not (type(params_variance) == list and
-                    params_seasonal_variance == []):
+            if not (type(params_seasonal_variance) == list and
+                    len(params_seasonal_variance) == 0):
                 params_variance = params_seasonal_variance
             elif self.k_exog > 0:
                 params_variance = np.inner(endog, endog)
             else:
                 params_variance = np.inner(endog, endog) / self.nobs
         params_measurement_variance = 1 if self.measurement_error else []
+
+        # We want to bound the starting variance away from zero
+        params_variance = np.atleast_1d(max(np.array(params_variance), 1e-10))
 
         # Remove state variance as parameter if scale is concentrated out
         if self.concentrate_scale:
@@ -1512,42 +1520,42 @@ class SARIMAX(MLEModel):
 
         # Update lag polynomials
         if self.k_ar > 0:
-            if self.polynomial_ar.dtype == params.dtype:
-                self.polynomial_ar[self._polynomial_ar_idx] = -params_ar
+            if self._polynomial_ar.dtype == params.dtype:
+                self._polynomial_ar[self._polynomial_ar_idx] = -params_ar
             else:
-                polynomial_ar = self.polynomial_ar.real.astype(params.dtype)
+                polynomial_ar = self._polynomial_ar.real.astype(params.dtype)
                 polynomial_ar[self._polynomial_ar_idx] = -params_ar
-                self.polynomial_ar = polynomial_ar
+                self._polynomial_ar = polynomial_ar
 
         if self.k_ma > 0:
-            if self.polynomial_ma.dtype == params.dtype:
-                self.polynomial_ma[self._polynomial_ma_idx] = params_ma
+            if self._polynomial_ma.dtype == params.dtype:
+                self._polynomial_ma[self._polynomial_ma_idx] = params_ma
             else:
-                polynomial_ma = self.polynomial_ma.real.astype(params.dtype)
+                polynomial_ma = self._polynomial_ma.real.astype(params.dtype)
                 polynomial_ma[self._polynomial_ma_idx] = params_ma
-                self.polynomial_ma = polynomial_ma
+                self._polynomial_ma = polynomial_ma
 
         if self.k_seasonal_ar > 0:
             idx = self._polynomial_seasonal_ar_idx
-            if self.polynomial_seasonal_ar.dtype == params.dtype:
-                self.polynomial_seasonal_ar[idx] = -params_seasonal_ar
+            if self._polynomial_seasonal_ar.dtype == params.dtype:
+                self._polynomial_seasonal_ar[idx] = -params_seasonal_ar
             else:
                 polynomial_seasonal_ar = (
-                    self.polynomial_seasonal_ar.real.astype(params.dtype)
+                    self._polynomial_seasonal_ar.real.astype(params.dtype)
                 )
                 polynomial_seasonal_ar[idx] = -params_seasonal_ar
-                self.polynomial_seasonal_ar = polynomial_seasonal_ar
+                self._polynomial_seasonal_ar = polynomial_seasonal_ar
 
         if self.k_seasonal_ma > 0:
             idx = self._polynomial_seasonal_ma_idx
-            if self.polynomial_seasonal_ma.dtype == params.dtype:
-                self.polynomial_seasonal_ma[idx] = params_seasonal_ma
+            if self._polynomial_seasonal_ma.dtype == params.dtype:
+                self._polynomial_seasonal_ma[idx] = params_seasonal_ma
             else:
                 polynomial_seasonal_ma = (
-                    self.polynomial_seasonal_ma.real.astype(params.dtype)
+                    self._polynomial_seasonal_ma.real.astype(params.dtype)
                 )
                 polynomial_seasonal_ma[idx] = params_seasonal_ma
-                self.polynomial_seasonal_ma = polynomial_seasonal_ma
+                self._polynomial_seasonal_ma = polynomial_seasonal_ma
 
         # Get the reduced form lag polynomial terms by multiplying the regular
         # and seasonal lag polynomials
@@ -1556,16 +1564,16 @@ class SARIMAX(MLEModel):
         # lowest to highest, it does not matter.
         if self.k_seasonal_ar > 0:
             reduced_polynomial_ar = -np.polymul(
-                self.polynomial_ar, self.polynomial_seasonal_ar
+                self._polynomial_ar, self._polynomial_seasonal_ar
             )
         else:
-            reduced_polynomial_ar = -self.polynomial_ar
+            reduced_polynomial_ar = -self._polynomial_ar
         if self.k_seasonal_ma > 0:
             reduced_polynomial_ma = np.polymul(
-                self.polynomial_ma, self.polynomial_seasonal_ma
+                self._polynomial_ma, self._polynomial_seasonal_ma
             )
         else:
-            reduced_polynomial_ma = self.polynomial_ma
+            reduced_polynomial_ma = self._polynomial_ma
 
         # Observation intercept
         # Exogenous data with MLE estimation of parameters enters through a
@@ -1724,11 +1732,11 @@ class SARIMAXResults(MLEResults):
         })
 
         # Polynomials
-        self.polynomial_trend = self.model.polynomial_trend
-        self.polynomial_ar = self.model.polynomial_ar
-        self.polynomial_ma = self.model.polynomial_ma
-        self.polynomial_seasonal_ar = self.model.polynomial_seasonal_ar
-        self.polynomial_seasonal_ma = self.model.polynomial_seasonal_ma
+        self.polynomial_trend = self.model._polynomial_trend
+        self.polynomial_ar = self.model._polynomial_ar
+        self.polynomial_ma = self.model._polynomial_ma
+        self.polynomial_seasonal_ar = self.model._polynomial_seasonal_ar
+        self.polynomial_seasonal_ma = self.model._polynomial_seasonal_ma
         self.polynomial_reduced_ar = np.polymul(
             self.polynomial_ar, self.polynomial_seasonal_ar
         )
