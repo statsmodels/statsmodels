@@ -17,8 +17,8 @@ def r_sq_elimination(x, y):
     noOfColumn = x.shape[1]
     bestModel = pd.DataFrame(x)
     foundNew = False
-    for col in x.columns:
-        temp = x.drop(col, axis=1)
+    for i in range(1, noOfColumn):
+        temp = x.drop(x.columns[i], axis=1)
         ols_regeressor = sm.OLS(endog=y, exog=temp).fit()
         rValue = float("{0:.4f}".format(ols_regeressor.rsquared_adj))
         if bestValue < rValue:
@@ -29,6 +29,7 @@ def r_sq_elimination(x, y):
     if foundNew == True:
         bestModel = r_sq_elimination(bestModel, y)
         return bestModel
+    
     return bestModel
 
 
