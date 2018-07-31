@@ -43,11 +43,22 @@ def test_smoke_stepwise():
     assert_equal(q, desired_q)
 
 
-def test_auto_order():
+def test_auto_order_cpi():
     """Test function for auto_order against auto.arima."""
     intercept, p, d, q = sarimax.auto_order(macrodata['cpi'], d=2)
     desired_p = 1
     desired_d = 2
+    desired_q = 2
+    assert_equal(p, desired_p)
+    assert_equal(d, desired_d)
+    assert_equal(q, desired_q)
+
+def test_auto_order_infl():
+    """Test function for auto_order against auto.arima."""
+    intercept, p, d, q = sarimax.auto_order(macrodata['infl'], stepwise=True,
+                                            d=1)
+    desired_p = 2
+    desired_d = 1
     desired_q = 2
     assert_equal(p, desired_p)
     assert_equal(d, desired_d)

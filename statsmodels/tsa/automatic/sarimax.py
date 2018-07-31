@@ -26,7 +26,7 @@ def auto_order(endog, measure='aic', d=0, max_order=(3, 3), D=0, s=1,
     max_order : list
         maximum possible values of the parameters p and q.
     D : int
-        differencing factor.
+        seasonal differencing factor.
     s : int
         Number of seasonal differences.
     max_seasonal_order : list
@@ -41,9 +41,11 @@ def auto_order(endog, measure='aic', d=0, max_order=(3, 3), D=0, s=1,
     -------
     allow_intercept : if intercept is present in the model.
     p : the autoregressive parameter for the SARIMAX model.
+    d : the differencing parameter for the SARIMAX model.
     q : the moving average parameter for the SARIMAX model.
     if s>1, also returns,
     P : the seasonal autoregressive parameter for the SARIMAX model.
+    D : the seasonal differencing parameter for the SARIMAX model.
     Q : the seasonal moving average parameter for the SARIMAX model.
 
     Notes
@@ -52,10 +54,14 @@ def auto_order(endog, measure='aic', d=0, max_order=(3, 3), D=0, s=1,
     Citation : Hyndman, Rob J., and Yeasmin Khandakar.
          "Automatic Time Series Forecasting: The forecast Package for R."
 
+    Example
+    --------
+    from statsmodels import datasets
+    macrodata = datasets.macrodata.load_pandas().data
+    macrodata.index = pd.PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
+    intercept, p, d, q = sarimax.auto_order(macrodata['infl'], d=0)
     """
     if not stepwise:
-        # aic_matrix = np.zeros((max_order[0], max_order[1],
-        #                       max_seasonal_order[0], max_seasonal_order[1]))
         n_p, n_q, n_P, n_Q = 0, 0, 0, 0
         min_aic = np.inf
         for p in range(max_order[0]):
@@ -168,11 +174,8 @@ def auto_order(endog, measure='aic', d=0, max_order=(3, 3), D=0, s=1,
                     warnings.warn('Could not fit model with {},{},{}'
                                   .format(order_init[model][0], d,
                                           order_init[model][0]))
-        # print(aic_vals)
         min_aic = aic_vals.min()
-        # print(min_aic)
         model = np.where(aic_vals == min_aic)[0][0]
-        # print(model)
         p, q = order_init[model][0], order_init[model][1]
         if s > 1:
             P, Q = seasonal_init[model][0], seasonal_init[model][1]
@@ -228,8 +231,6 @@ def auto_order(endog, measure='aic', d=0, max_order=(3, 3), D=0, s=1,
                                                     order_new[model][3], s),
                                     **spec)
                             res = mod.fit(disp=False)
-                            # print(getattr(res, measure))
-                            # print(order_new[model][0], order_new[model][1])
                             if getattr(res, measure) < min_aic:
                                 min_aic = getattr(res, measure)
                                 new_val = order_new[model]
@@ -265,8 +266,6 @@ def auto_order(endog, measure='aic', d=0, max_order=(3, 3), D=0, s=1,
                                            order_new[model][1]),
                                     **spec)
                             res = mod.fit(disp=False)
-                            # print(getattr(res, measure))
-                            # print(order_new[model][0], order_new[model][1])
                             if getattr(res, measure) < min_aic:
                                 min_aic = getattr(res, measure)
                                 new_val = order_new[model]
