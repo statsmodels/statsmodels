@@ -1998,7 +1998,7 @@ class MixedLM(base.LikelihoodModel):
         for meth in method:
             if meth.lower() in ["newton", "ncg"]:
                 raise ValueError(
-                    "method %s not available for MixedLM" % method)
+                    "method %s not available for MixedLM" % meth)
 
         self.reml = reml
         self.cov_pen = cov_pen
