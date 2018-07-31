@@ -230,7 +230,7 @@ for bt in list(bug_tasks):
 # Github libraries
 from github2 import core, issues, client
 for mod in (core, issues, client):
-   reload(mod)
+    reload(mod)
 
 
 def format_title(bug):

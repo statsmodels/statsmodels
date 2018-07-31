@@ -551,7 +551,7 @@ def pacf_ols(x, nlags=40):
     pacf = [1.]
     for k in range(1, nlags+1):
         res = OLS(x0[k:], xlags[k:, :k+1]).fit()
-         #np.take(xlags[k:], range(1,k+1)+[-1],
+        #np.take(xlags[k:], range(1,k+1)+[-1],
 
         pacf.append(res.params[-1])
     return np.array(pacf)

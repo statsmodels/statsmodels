@@ -393,7 +393,7 @@ class StateSpaceModel(object):
 #        xi10 = self.xi10
 #        y = self.endog
 #        ntrain = self.ntrain
- #       loglike = kalmanfilter(F,H,y,xi10,Q,ntrain)
+#        loglike = kalmanfilter(F,H,y,xi10,Q,ntrain)
 
     def fit_kalman(self, start_params, xi10, ntrain=1, F=None, A=None, H=None,
             Q=None,

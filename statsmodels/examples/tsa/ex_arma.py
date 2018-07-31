@@ -97,6 +97,6 @@ arma1 = Armamle_old(y22)
 arma1.nar = 2
 arma1.nma = 2
 #arma1res = arma1.fit(start_params=np.r_[-0.5, -0.1, 0.1, 0.1, 0.5], method='fmin')
-                     #maxfun=1000)
+#                     maxfun=1000)
 arma1res = arma1.fit(start_params=res.params*0.7, method='fmin')
 print(arma1res.params)

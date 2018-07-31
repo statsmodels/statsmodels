@@ -56,7 +56,7 @@ indexsym = ['gspc', 'dji']
 # download data
 dmall = {}
 for sy in dj30:
-   dmall[sy]  = getquotes(sy, start_date, end_date)
+    dmall[sy]  = getquotes(sy, start_date, end_date)
 
 # combine into WidePanel
 pawp = pa.WidePanel.fromDict(dmall)

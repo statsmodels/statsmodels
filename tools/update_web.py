@@ -117,8 +117,9 @@ def create_update_gitdir():
         if retcode != 0:
             msg = """There was a problem cloning the repo"""
             raise Exception(msg)
-    else:  # directory exists, can't pull if you're not on a branch
-           # just delete it and clone again. Lazy but clean solution.
+    else:
+        # directory exists, can't pull if you're not on a branch
+        # just delete it and clone again. Lazy but clean solution.
         shutil.rmtree(gitdname)
         create_update_gitdir()
 

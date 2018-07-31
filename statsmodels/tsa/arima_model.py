@@ -392,11 +392,11 @@ def _make_arma_names(data, k_trend, order, exog_names):
     # is called multiple times.
     if k_ma ==0 and k_ar ==0:
         if len(exog_names) != 0:
-          return exog_names
+            return exog_names
     elif  (exog_names[-k_ma:] == ma_lag_names ) and \
            exog_names[-(k_ar+k_ma):-k_ma] == ar_lag_names and \
            (not exog_names or not trend_name or trend_name[0] == exog_names[0]):
-           return exog_names
+            return exog_names
 
     exog_names = trend_name + exog_names + ar_lag_names + ma_lag_names
     return exog_names

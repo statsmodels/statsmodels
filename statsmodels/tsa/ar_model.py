@@ -587,7 +587,7 @@ class AR(tsbase.TimeSeriesModel):
         #elif method == "yw":
         #    params, omega = yule_walker(endog, order=maxlag,
         #            method="mle", demean=False)
-           # how to handle inference after Yule-Walker?
+        #    # how to handle inference after Yule-Walker?
         #    self.params = params #TODO: don't attach here
         #    self.omega = omega
 

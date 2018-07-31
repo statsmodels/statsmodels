@@ -138,12 +138,12 @@ class AffineDiffusion(Diffusion):
         Xtemp = xzero
         Xem[:,0] = xzero
         for j in np.arange(1,L):
-           #Winc = np.sum(dW[:,Tratio*(j-1)+1:Tratio*j],1)
-           Winc = np.sum(dW[:,np.arange(Tratio*(j-1)+1,Tratio*j)],1)
-           #Xtemp = Xtemp + Dt*lamda*Xtemp + mu*Xtemp*Winc;
-           Xtemp = Xtemp + self._drift(x=Xtemp) + self._sig(x=Xtemp) * Winc
-           #Dt*lamda*Xtemp + mu*Xtemp*Winc;
-           Xem[:,j] = Xtemp
+            #Winc = np.sum(dW[:,Tratio*(j-1)+1:Tratio*j],1)
+            Winc = np.sum(dW[:,np.arange(Tratio*(j-1)+1,Tratio*j)],1)
+            #Xtemp = Xtemp + Dt*lamda*Xtemp + mu*Xtemp*Winc;
+            Xtemp = Xtemp + self._drift(x=Xtemp) + self._sig(x=Xtemp) * Winc
+            #Dt*lamda*Xtemp + mu*Xtemp*Winc;
+            Xem[:,j] = Xtemp
         return Xem
 
 '''

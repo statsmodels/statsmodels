@@ -109,7 +109,7 @@ class PanelModel(object):
 #                    time == None:
 #                raise ValueError("If pandel_data is False then endog, exog, \
 #panel_arr, and time_arr cannot be None.")
-           self.initialize(endog, exog, panel, time, xtnames, equation)
+            self.initialize(endog, exog, panel, time, xtnames, equation)
 #        elif aspandas != False:
 #            if not isinstance(endog, str):
 #                raise ValueError("If a pandas object is supplied then endog \

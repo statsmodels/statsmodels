@@ -177,8 +177,8 @@ class TestPoissonConstrained1b(CheckPoissonConstrainedMixin):
         # example without offset
         formula = 'deaths ~ smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data,
-                                   exposure=data['pyears'].values)
                                    #offset=np.log(data['pyears'].values))
+                                   exposure=data['pyears'].values)
         #res1a = mod1a.fit()
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
@@ -281,8 +281,8 @@ class TestPoissonConstrained2b(CheckPoissonConstrainedMixin):
         # example without offset
         formula = 'deaths ~ smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data,
-                                   exposure=data['pyears'].values)
                                    #offset=np.log(data['pyears'].values))
+                                   exposure=data['pyears'].values)
         #res1a = mod1a.fit()
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
@@ -378,8 +378,8 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
 
         formula = 'deaths ~ smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data,
-                                   exposure=data['pyears'].values)
                                    #offset=np.log(data['pyears'].values))
+                                   exposure=data['pyears'].values)
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         res2 = mod.fit_constrained(constr, start_params=self.res1m.params,

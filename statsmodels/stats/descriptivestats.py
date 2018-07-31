@@ -217,7 +217,7 @@ class Describe(object):
         import scipy.stats
         #BUG: the following has all per the same per=99
         ##perdict = dict(('perc_%2d'%per, [lambda x:
-         #      scipy.stats.scoreatpercentile(x, per), None, None])
+        #       scipy.stats.scoreatpercentile(x, per), None, None])
         ##          for per in (1,5,10,25,50,75,90,95,99))
 
         def _fun(per):
@@ -265,8 +265,8 @@ class Describe(object):
                             self._columns_list if (self._is_dtype_like(col) ==
                                                       'number')]
                     #calc[2].append([len(np.unique(self.dataset[col])) for col
-                                   #in self._columns_list if
-                                   #self._is_dtype_like(col)=='string']
+                    #                in self._columns_list if
+                    #                self._is_dtype_like(col)=='string']
                 else:
                     calc[1] = ['Col '+str(col) for col in self._columns_list]
                     calc[2] = [calc[0](self.dataset[:,col]) for col in
