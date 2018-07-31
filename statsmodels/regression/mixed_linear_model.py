@@ -1997,7 +1997,8 @@ class MixedLM(base.LikelihoodModel):
 
         for meth in method:
             if meth.lower() in ["newton", "ncg"]:
-                raise ValueError("method %s not available for MixedLM" % method)
+                raise ValueError(
+                    "method %s not available for MixedLM" % method)
 
         self.reml = reml
         self.cov_pen = cov_pen
@@ -2051,10 +2052,12 @@ class MixedLM(base.LikelihoodModel):
                 packed = rslt.params
                 if j + 1 < len(method):
                     next_method = method[j + 1]
-                    warnings.warn("Retrying MixedLM optimization with %s" % next_method,
-                                    ConvergenceWarning)
+                    warnings.warn(
+                        "Retrying MixedLM optimization with %s" % next_method,
+                        ConvergenceWarning)
                 else:
-                    msg = "MixedLM optimization failed, trying a different optimizer may help."
+                    msg = ("MixedLM optimization failed, " +
+                           "trying a different optimizer may help.")
                     warnings.warn(msg, ConvergenceWarning)
 
             # The optimization succeeded
