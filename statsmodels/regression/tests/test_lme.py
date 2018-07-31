@@ -737,7 +737,7 @@ class TestMixedLM(object):
         pen = penalties.L2()
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            mdf4 = md.fit_regularized(method=pen, alpha=100.)
+            mdf4 = md.fit_regularized(method=pen, alpha=10.)
         mdf4.summary()
 
         # Pseudo-Huber regularization
