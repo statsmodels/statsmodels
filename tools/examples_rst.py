@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import os
 import sys
 import re
@@ -51,7 +52,7 @@ def check_script(filename):
     if result != 0: # raised an error
         msg = "Not generating reST from %s. An error occurred.\n" % filename
         msg += stderr
-        print msg
+        print(msg)
         return False
     return True
 
@@ -115,7 +116,7 @@ def write_file(outfile, rst_file_pth):
     """
     Write outfile to rst_file_pth
     """
-    print "Writing ", os.path.basename(rst_file_pth)
+    print("Writing ", os.path.basename(rst_file_pth))
     write_file = open(rst_file_pth, 'w')
     write_file.writelines(outfile)
     write_file.close()
@@ -160,7 +161,7 @@ if __name__ == "__main__":
                 to_write, filehash = hash_funcs.check_hash(whole_file,
                                                            example)
                 if not to_write:
-                    print "Hash has not changed for file %s" % example
+                    print("Hash has not changed for file %s" % example)
                     continue
                 elif (not example.endswith('.py') or example in exclude_list or
                       not check_script(example_file)):

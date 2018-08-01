@@ -1,6 +1,7 @@
 """
 Code maintenance script modified from PyMC
 """
+from __future__ import print_function
 
 #!/usr/bin/env python
 import sys
@@ -35,7 +36,7 @@ def find_whitespace(fname):
     for line in fd.readlines():
         #print repr(line)
         if ' \n' in line:
-            print fname
+            print(fname)
             break
 
 
