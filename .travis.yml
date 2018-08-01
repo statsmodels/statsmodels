@@ -127,7 +127,7 @@ script:
   # Run tests
   - echo pytest -n 2 ${COVERAGE_OPTS} statsmodels --skip-examples
   - pytest ${COVERAGE_OPTS} statsmodels --skip-examples
-  - lint.sh
+  - ./lint.sh
 
 after_success:
   - if [ ${COVERAGE} = true ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi
