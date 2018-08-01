@@ -109,6 +109,7 @@ before_install:
   - pip install 'pytest<4' pytest-xdist nose
   - if [ ${COVERAGE} = true ]; then pip install codecov coverage coveralls pytest-cov; fi
   - if [ ${DOCBUILD} = true ]; then bash tools/ci_docbuild_install.sh; fi;
+  - pip install flake8
   - export SRCDIR=$PWD
   # Ensure tests are correctly gathered by xdist
   - export PYTHONHASHSEED=0
@@ -126,6 +127,7 @@ script:
   # Run tests
   - echo pytest -n 2 ${COVERAGE_OPTS} statsmodels --skip-examples
   - pytest ${COVERAGE_OPTS} statsmodels --skip-examples
+  - lint.sh
 
 after_success:
   - if [ ${COVERAGE} = true ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi

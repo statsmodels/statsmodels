@@ -30,7 +30,7 @@ if __name__ == '__main__':
     L = evecs[:, :k_constr]
     T = evecs[:, k_constr:]
 
-    print T.T.dot(np.eye(k_vars))
+    print(T.T.dot(np.eye(k_vars)))
 
     tr = np.column_stack((T, R.T))
 
