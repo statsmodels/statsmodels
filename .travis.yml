@@ -73,6 +73,7 @@ matrix:
     - SCIPY=0.18
     - PANDAS=0.19
     - USEMPL=false
+    - LINT=true
 
 notifications:
   email:
