@@ -9,12 +9,12 @@ def test_lhs():
 
     corners = np.array([[0, 2], [10, 5]])
 
-    sample = latin.latin_hypercube(dim=2, n_sample=5, bounds=corners)
+    sample = latin.latin_hypercube(dim=2, n_samples=5, bounds=corners)
     out = np.array([[5.746, 3.219], [5.479, 3.261], [9.246, 4.798],
                     [9.097, 4.495], [9.753, 4.074]])
     assert_almost_equal(sample, out, decimal=1)
 
-    sample = latin.latin_hypercube(dim=2, n_sample=5, centered=True)
+    sample = latin.latin_hypercube(dim=2, n_samples=5, centered=True)
     out = np.array([[0.3, 0.9], [0.7, 0.7], [0.1, 0.9],
                     [0.5, 0.5], [0.1, 0.7]])
     assert_almost_equal(sample, out, decimal=1)
@@ -31,23 +31,24 @@ def test_orthogonal_lhs():
     assert_almost_equal(sample, out, decimal=1)
 
     # Checking independency of the random numbers generated
-    n_sample = 500
-    sample = latin.orthogonal_latin_hypercube(dim=2, n_sample=n_sample)
+    n_samples = 500
+    sample = latin.orthogonal_latin_hypercube(dim=2, n_samples=n_samples)
     min_b = 50  # number of bins
-    bins = np.linspace(0, 1, min(min_b, n_sample) + 1)
+    bins = np.linspace(0, 1, min(min_b, n_samples) + 1)
     hist = np.histogram(sample[:, 0], bins=bins)
-    out = np.array([n_sample / min_b] * min_b)
+    out = np.array([n_samples / min_b] * min_b)
     assert_equal(hist[0], out)
 
     hist = np.histogram(sample[:, 1], bins=bins)
     assert_equal(hist[0], out)
+
 
 @pytest.mark.xfail(raises=AssertionError, reason='Global optimization')
 def test_optimal_design():
     np.random.seed(123456)
 
     start_design = latin.orthogonal_latin_hypercube(2, 5)
-    sample = latin.optimal_design(dim=2, n_sample=5, start_design=start_design)
+    sample = latin.optimal_design(dim=2, n_samples=5, start_design=start_design)
     out = np.array([[0.025, 0.223], [0.779, 0.677], [0.452, 0.043],
                     [0.393, 0.992], [0.875, 0.416]])
     assert_almost_equal(sample, out, decimal=1)

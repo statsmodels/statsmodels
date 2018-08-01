@@ -3,7 +3,7 @@ from __future__ import division
 import numpy as np
 
 
-def discrepancy(sample, bounds=None):
+def discrepancy(sample, bounds=None, iterative=False):
     """Discrepancy.
 
     Compute the centered discrepancy on a given sample.
@@ -18,6 +18,8 @@ def discrepancy(sample, bounds=None):
         Desired range of transformed data. The transformation apply the bounds
         on the sample and not the theoretical space, unit cube. Thus min and
         max values of the sample will coincide with the bounds.
+    iterative : bool
+        Must be False if not using it for updating the discrepancy.
 
     Returns
     -------
@@ -32,7 +34,11 @@ def discrepancy(sample, bounds=None):
 
     """
     sample = np.asarray(sample)
-    n_sample, dim = sample.shape
+
+    n_samples, dim = sample.shape
+
+    if iterative:
+        n_samples += 1
 
     # Sample scaling from bounds to unit hypercube
     if bounds is not None:
@@ -51,10 +57,52 @@ def discrepancy(sample, bounds=None):
                      0.5 * abs(s0[:, None] - s0))
     disc2 = prod_arr.sum()
 
-    c2 = ((13.0 / 12.0) ** dim - 2.0 / n_sample * disc1 +
-          1.0 / (n_sample ** 2) * disc2)
+    c2 = ((13.0 / 12.0) ** dim - 2.0 / n_samples * disc1 +
+          1.0 / (n_samples ** 2) * disc2)
 
     return c2
+
+
+def update_discrepancy(x_new, sample, initial_disc, bounds=None):
+    """Update the discrepancy with a new sample.
+
+    Parameters
+    ----------
+    x_new : array_like (1, k_vars)
+        The new sample to add in `sample`.
+    sample : array_like (n_samples, k_vars)
+        The initial sample.
+    initial_disc : float
+        Centered discrepancy of the `sample`.
+    bounds : tuple or array_like ([min, k_vars], [max, k_vars])
+        Desired range of transformed data. The transformation apply the bounds
+        on the sample and not the theoretical space, unit cube. Thus min and
+        max values of the sample will coincide with the bounds.
+
+    Returns
+    -------
+    discrepancy : float
+        Centered discrepancy of the sample composed of `x_new` and `sample`.
+
+    """
+    # Sample scaling from bounds to unit hypercube
+    if bounds is not None:
+        min_ = bounds.min(axis=0)
+        max_ = bounds.max(axis=0)
+        sample = (sample - min_) / (max_ - min_)
+        x_new = (x_new - min_) / (max_ - min_)
+
+    n_samples = len(sample) + 1
+    abs_ = abs(x_new - 0.5)
+
+    disc1 = - 2 / n_samples * np.prod(1 + 1/2 * abs_ - 1/2 * abs_ ** 2)
+    disc2 = 2 / (n_samples ** 2) * np.sum(np.prod(1 + 1/2 * abs_ +
+                                                  1/2 * abs(sample - 0.5) -
+                                                  1/2 * abs(x_new - sample),
+                                                  axis=1))
+    disc3 = 1 / (n_samples ** 2) * np.prod(1 + abs_)
+
+    return initial_disc + disc1 + disc2 + disc3
 
 
 def primes_from_2_to(n):
@@ -123,14 +171,14 @@ def n_primes(n):
     return primes
 
 
-def van_der_corput(n_sample, base=2, start_index=0):
+def van_der_corput(n_samples, base=2, start_index=0):
     """Van der Corput sequence.
 
     Pseudo-random number generator based on a b-adic expansion.
 
     Parameters
     ----------
-    n_sample : int
+    n_samples : int
         Number of element of the sequence.
     base : int
         Base of the sequence.
@@ -144,7 +192,7 @@ def van_der_corput(n_sample, base=2, start_index=0):
 
     """
     sequence = []
-    for i in range(start_index, start_index + n_sample):
+    for i in range(start_index, start_index + n_samples):
         n_th_number, denom = 0., 1.
         quotient = i
         while quotient > 0:
@@ -156,7 +204,7 @@ def van_der_corput(n_sample, base=2, start_index=0):
     return sequence
 
 
-def halton(dim, n_sample, bounds=None, start_index=0):
+def halton(dim, n_samples, bounds=None, start_index=0):
     """Halton sequence.
 
     Pseudo-random number generator that generalize the Van der Corput sequence
@@ -168,7 +216,7 @@ def halton(dim, n_sample, bounds=None, start_index=0):
     ----------
     dim : int
         Dimension of the parameter space.
-    n_sample : int
+    n_samples : int
         Number of samples to generate in the parametr space.
     bounds : tuple or array_like ([min, k_vars], [max, k_vars])
         Desired range of transformed data. The transformation apply the bounds
@@ -192,7 +240,7 @@ def halton(dim, n_sample, bounds=None, start_index=0):
     Generate samples from a low discrepancy sequence of Halton.
 
     >>> from statsmodels.tools import sequences
-    >>> sample = sequences.halton(dim=2, n_sample=5)
+    >>> sample = sequences.halton(dim=2, n_samples=5)
 
     Compute the quality of the sample using the discrepancy criterion.
 
@@ -200,13 +248,13 @@ def halton(dim, n_sample, bounds=None, start_index=0):
 
     If some wants to continue an existing design, extra points can be obtained.
 
-    >>> sample_continued = sequences.halton(dim=2, n_sample=5, start_index=5)
+    >>> sample_continued = sequences.halton(dim=2, n_samples=5, start_index=5)
 
     """
     base = n_primes(dim)
 
     # Generate a sample using a Van der Corput sequence per dimension.
-    sample = [van_der_corput(n_sample + 1, dim, start_index) for dim in base]
+    sample = [van_der_corput(n_samples + 1, dim, start_index) for dim in base]
     sample = np.array(sample).T[1:]
 
     # Sample scaling from unit hypercube to feature range

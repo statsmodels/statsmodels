@@ -11,17 +11,17 @@ except ImportError:
 from statsmodels.tools.sequences import discrepancy
 
 
-def orthogonal_latin_hypercube(dim, n_sample, bounds=None):
+def orthogonal_latin_hypercube(dim, n_samples, bounds=None):
     """Orthogonal array-based Latin hypercube sampling (OA-LHS).
 
     On top of the constraints from the Latin Hypercube, an orthogonal array of
-    size n_sample is defined and only one point is allowed per subspace.
+    size n_samples is defined and only one point is allowed per subspace.
 
     Parameters
     ----------
     dim : int
         Dimension of the parameter space.
-    n_sample : int
+    n_samples : int
         Number of samples to generate in the parametr space.
     bounds : tuple or array_like ([min, k_vars], [max, k_vars])
         Desired range of transformed data. The transformation apply the bounds
@@ -40,12 +40,12 @@ def orthogonal_latin_hypercube(dim, n_sample, bounds=None):
 
     """
     sample = []
-    step = 1.0 / n_sample
+    step = 1.0 / n_samples
 
     for i in range(dim):
-        # Enforce a unique point per grid        
-        j = np.arange(n_sample) * step
-        temp = j + np.random.uniform(low=0, high=step, size= n_sample)
+        # Enforce a unique point per grid
+        j = np.arange(n_samples) * step
+        temp = j + np.random.uniform(low=0, high=step, size=n_samples)
         np.random.shuffle(temp)
 
         sample.append(temp)
@@ -61,23 +61,25 @@ def orthogonal_latin_hypercube(dim, n_sample, bounds=None):
     return sample
 
 
-def latin_hypercube(dim, n_sample, bounds=None, centered=False):
+def latin_hypercube(dim, n_samples, bounds=None, centered=False):
     """Latin hypercube sampling (LHS).
 
-    The parameter space is subdivided into an orthogonal grid of n_sample per
-    dimension. Within this multi-dimensional grid, n_sample are selected by
+    The parameter space is subdivided into an orthogonal grid of n_samples per
+    dimension. Within this multi-dimensional grid, n_samples are selected by
     ensuring there is only one sample per row and column.
 
     Parameters
     ----------
     dim : int
         Dimension of the parameter space.
-    n_sample : int
+    n_samples : int
         Number of samples to generate in the parametr space.
     bounds : tuple or array_like ([min, k_vars], [max, k_vars])
         Desired range of transformed data. The transformation apply the bounds
         on the sample and not the theoretical space, unit cube. Thus min and
         max values of the sample will coincide with the bounds.
+    centered : bool
+        Center the point within the multi-dimensional grid.
 
     Returns
     -------
@@ -94,11 +96,11 @@ def latin_hypercube(dim, n_sample, bounds=None, centered=False):
     if centered:
         r = 0.5
     else:
-        r = np.random.random_sample((n_sample, dim))
+        r = np.random.random_sample((n_samples, dim))
 
-    q = np.random.random_integers(low=1, high=n_sample, size=(n_sample, dim))
+    q = np.random.random_integers(low=1, high=n_samples, size=(n_samples, dim))
 
-    sample = 1. / n_sample * (q - r)
+    sample = 1. / n_samples * (q - r)
 
     # Sample scaling from unit hypercube to feature range
     if bounds is not None:
@@ -109,7 +111,7 @@ def latin_hypercube(dim, n_sample, bounds=None, centered=False):
     return sample
 
 
-def optimal_design(dim, n_sample, bounds=None, start_design=None, niter=1,
+def optimal_design(dim, n_samples, bounds=None, start_design=None, niter=1,
                    force=False, optimization=True):
     """Optimal design.
 
@@ -125,7 +127,7 @@ def optimal_design(dim, n_sample, bounds=None, start_design=None, niter=1,
     ----------
     dim : int
         Dimension of the parameter space.
-    n_sample : int
+    n_samples : int
         Number of samples to generate in the parametr space.
     bounds : tuple or array_like ([min, k_vars], [max, k_vars])
         Desired range of transformed data. The transformation apply the bounds
@@ -141,6 +143,7 @@ def optimal_design(dim, n_sample, bounds=None, start_design=None, niter=1,
     optimization : bool
         Optimal design using global optimization or random generation of
         `niter` samples.
+
     Returns
     -------
     sample : array_like (n_samples, k_vars)
@@ -161,7 +164,7 @@ def optimal_design(dim, n_sample, bounds=None, start_design=None, niter=1,
             bounds = np.array([best_doe.min(axis=0), best_doe.max(axis=0)])
     if optimization:
         if best_doe is None:
-            best_doe = orthogonal_latin_hypercube(dim, n_sample, bounds)
+            best_doe = orthogonal_latin_hypercube(dim, n_samples, bounds)
 
         def _perturb_best_doe(x, bounds):
             """Perturbe the DoE and keep track of the best DoE.
@@ -200,13 +203,13 @@ def optimal_design(dim, n_sample, bounds=None, start_design=None, niter=1,
             return disc
 
         # Total number of possible design
-        complexity = dim * n_sample ** 2
+        complexity = dim * n_samples ** 2
 
         if have_basinhopping and ((complexity > 1e6) or force):
-            bounds_optim = ([0, dim - 1], [0, n_sample - 1], [0, n_sample - 1])
+            bounds_optim = ([0, dim - 1], [0, n_samples - 1], [0, n_samples - 1])
         else:
-            bounds_optim = (slice(0, dim - 1, 1), slice(0, n_sample - 1, 1),
-                            slice(0, n_sample - 1, 1))
+            bounds_optim = (slice(0, dim - 1, 1), slice(0, n_samples - 1, 1),
+                            slice(0, n_samples - 1, 1))
 
         for n in range(niter):
             if have_basinhopping and ((complexity > 1e6) or force):
@@ -221,7 +224,7 @@ def optimal_design(dim, n_sample, bounds=None, start_design=None, niter=1,
 
     else:
         for n in range(niter):
-            doe = orthogonal_latin_hypercube(dim, n_sample, bounds)
+            doe = orthogonal_latin_hypercube(dim, n_samples, bounds)
             disc = discrepancy(doe, bounds)
             if disc < best_disc:
                 best_disc = disc

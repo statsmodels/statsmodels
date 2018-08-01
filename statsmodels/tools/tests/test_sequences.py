@@ -17,6 +17,18 @@ def test_discrepancy():
     npt.assert_allclose(sequences.discrepancy(space_2, corners), 0.0105, atol=1e-4)
 
 
+def test_update_discrepancy():
+    space_1 = [[1, 3], [2, 6], [3, 2], [4, 5], [5, 1], [6, 4]]
+
+    corners = np.array([[0.5, 0.5], [6.5, 6.5]])
+
+    disc_init = sequences.discrepancy(space_1[:-1], corners, iterative=True)
+    disc_iter = sequences.update_discrepancy(space_1[-1], space_1[:-1],
+                                             disc_init, bounds=corners)
+
+    npt.assert_allclose(disc_iter, 0.0081, atol=1e-4)
+
+
 def test_van_der_corput():
     sample = sequences.van_der_corput(10)
     out = [0., 0.5, 0.25, 0.75, 0.125, 0.625, 0.375, 0.875, 0.0625, 0.5625]
@@ -35,11 +47,11 @@ def test_primes():
 
 def test_halton():
     corners = np.array([[0, 2], [10, 5]])
-    sample = sequences.halton(dim=2, n_sample=5, bounds=corners)
+    sample = sequences.halton(dim=2, n_samples=5, bounds=corners)
 
     out = np.array([[5., 3.], [2.5, 4.], [7.5, 2.3], [1.25, 3.3], [6.25, 4.3]])
     npt.assert_almost_equal(sample, out, decimal=1)
 
-    sample = sequences.halton(dim=2, n_sample=3, bounds=corners, start_index=2)
+    sample = sequences.halton(dim=2, n_samples=3, bounds=corners, start_index=2)
     out = np.array([[7.5, 2.3], [1.25, 3.3], [6.25, 4.3]])
     npt.assert_almost_equal(sample, out, decimal=1)
