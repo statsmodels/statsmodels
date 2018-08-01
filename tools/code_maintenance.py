@@ -35,7 +35,7 @@ def find_whitespace(fname):
     for line in fd.readlines():
         #print repr(line)
         if ' \n' in line:
-            print fname
+            print(fname)
             break
 
 
