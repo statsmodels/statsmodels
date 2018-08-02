@@ -1078,8 +1078,8 @@ class MICEData(object):
 
         # Unwind the indices
         jj = np.arange(dxi.shape[0])
-        ix = dxi[[jj, ir]]
-        iz = ixm[[jj, ix]]
+        ix = dxi[(jj, ir)]
+        iz = ixm[(jj, ix)]
 
         imputed_miss = np.array(endog_obs[iz]).squeeze()
         self._store_changes(vname, imputed_miss)

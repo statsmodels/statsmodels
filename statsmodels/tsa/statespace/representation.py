@@ -381,7 +381,7 @@ class Representation(object):
 
             # See note on time-varying arrays, below
             if matrix.shape[-1] == 1:
-                return matrix[[slice(None)]*(matrix.ndim-1) + [0]]
+                return matrix[tuple([slice(None)]*(matrix.ndim-1) + [0])]
             else:
                 return matrix
         # Otherwise if we have a tuple, we want a slice of a matrix
