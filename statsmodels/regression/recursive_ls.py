@@ -96,7 +96,7 @@ class RecursiveLS(MLEModel):
             self.k_constraints = self._r_matrix.shape[0]
 
             endog = np.c_[endog, np.zeros((len(endog), len(self._r_matrix)))]
-            endog[:, 1:] = self._q_matrix
+            endog[:, 1:] = self._q_matrix[:, 0]
 
         # Handle coefficient initialization
         kwargs.setdefault('initialization', 'diffuse')
