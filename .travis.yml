@@ -16,14 +16,25 @@ env:
     - MATPLOTLIB=
     - DOCBUILD=false
     - LINT=false
+    - MKL_NUM_THREADS=1 # Enforce single thread
+    - NUMEXPR_NUM_THREADS=1
+    - OMP_NUM_THREADS=1
+    - OPENBLAS_NUM_THREADS=1
+    - PYTHONHASHSEED=0 # Ensure tests are correctly gathered by xdist
+    - BLAS="mkl blas=*=mkl" # Use Intel MKL by default
 
 matrix:
   fast_finish: true
   include:
+  # Python 3.7 + cutting edge packages
+  - python: 2.7
+    env:
+    - PYTHON=3.7
   # Python 3.6 + cutting edge packages
   - python: 2.7
     env:
     - PYTHON=3.6
+    - BLAS="nomkl blas=*=openblas"
     - COVERAGE=true
   # Python 2.7 + partially updated numpy, mpl; cutting edge scipy, pandas
   - python: 2.7
@@ -47,6 +58,7 @@ matrix:
     - PYTHON=2.7
     - NUMPY=1.11
     - USENUMPYBASE=true
+    - BLAS= # Do not specify blas in this config due to conflict
     - SCIPY=0.18
     - PANDAS=0.19
     - MATPLOTLIB=1.5
@@ -75,6 +87,7 @@ matrix:
     - USEMPL=false
     - LINT=true
 
+
 notifications:
   email:
     on_success: always
@@ -85,9 +98,6 @@ before_install:
   - chmod +x miniconda.sh
   - ./miniconda.sh -b -p /home/travis/miniconda
   - export PATH=/home/travis/miniconda/bin:$PATH
-  - export MKL_NUM_THREADS=1
-  - export NUMEXPR_NUM_THREADS=1
-  - export OMP_NUM_THREADS=1
   - conda config --set always_yes yes
   - conda update --quiet conda
   # Fix for headless TravisCI
@@ -97,8 +107,7 @@ before_install:
   - mkdir -p $HOME/.config/matplotlib
   - SRCDIR=$PWD
   # Build package list to avoid empty package=versions; only needed for versioned packages
-  - PKGS="python=${PYTHON}"
-  - PKGS="${PKGS} numpy"; if [ ${NUMPY} ]; then PKGS="${PKGS}=${NUMPY}"; fi
+  - PKGS="numpy"; if [ ${NUMPY} ]; then PKGS="${PKGS}=${NUMPY}"; fi
   - if [ ${USENUMPYBASE} = true ]; then PKGS="${PKGS} numpy-base=${NUMPY}"; fi
   - PKGS="${PKGS} scipy"; if [ ${SCIPY} ]; then PKGS="${PKGS}=${SCIPY}"; fi
   - PKGS="${PKGS} patsy"; if [ ${PATSY} ]; then PKGS="${PKGS}=${PATSY}"; fi
@@ -106,16 +115,14 @@ before_install:
   - PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}=${CYTHON}"; fi
   - if [ ${USEMPL} = true ]; then PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi; fi
   - if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --cov-config=.travis_coveragerc --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
-  - echo conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml
-  - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml joblib
+  - echo conda create --yes --quiet -n statsmodels-test python=${PYTHON} ${BLAS} ${PKGS} ${OPTIONAL} pyyaml joblib
+  - conda create --yes --quiet -n statsmodels-test python=${PYTHON} ${BLAS} ${PKGS} ${OPTIONAL} pyyaml joblib
   - source activate statsmodels-test
   - pip install 'pytest<4' pytest-xdist nose
   - if [ ${COVERAGE} = true ]; then pip install codecov coverage coveralls pytest-cov; fi
   - if [ ${DOCBUILD} = true ]; then bash tools/ci_docbuild_install.sh; fi;
   - pip install flake8
   - export SRCDIR=$PWD
-  # Ensure tests are correctly gathered by xdist
-  - export PYTHONHASHSEED=0
 
 # Install packages
 install:
