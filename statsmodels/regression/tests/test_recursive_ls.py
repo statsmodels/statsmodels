@@ -448,3 +448,36 @@ def test_constraints_stata():
                                       scale=scale_alternative**0.5)).sum()
     assert_allclose(llf_alternative, desired)
 
+
+def test_multiple_constraints():
+    endog = dta['infl']
+    exog = add_constant(dta[['m1', 'unemp', 'cpi']])
+
+    constraints = [
+        'm1 + unemp = 1',
+        'cpi = 0',
+    ]
+
+    mod = RecursiveLS(endog, exog, constraints=constraints)
+    res = mod.fit()
+
+    # See tests/results/test_rls.do
+    desired = [-0.7001083844336, -0.0018477514060, 1.0018477514060, 0]
+    assert_allclose(res.params, desired, atol=1e-10)
+
+    # See tests/results/test_rls.do
+    desired = [.4699552366, .0005369357, .0005369357, 0]
+    assert_allclose(res.bse[0], desired[0], atol=1e-1)
+    assert_allclose(res.bse[1:], desired[1:], atol=1e-4)
+
+    # See tests/results/test_rls.do
+    desired = -534.4292052931121
+    # Note that to compute what Stata reports as the llf, we need to use a
+    # different denominator for estimating the scale, and then compute the
+    # llf from the alternative recursive residuals
+    scale_alternative = np.sum((
+        res.standardized_forecasts_error[0, 1:] *
+        res.filter_results.obs_cov[0, 0]**0.5)**2) / mod.nobs
+    llf_alternative = np.log(norm.pdf(res.resid_recursive, loc=0,
+                                      scale=scale_alternative**0.5)).sum()
+    assert_allclose(llf_alternative, desired)
