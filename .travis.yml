@@ -15,6 +15,7 @@ env:
     - USENUMPYBASE=false
     - MATPLOTLIB=
     - DOCBUILD=false
+    - BLAS=mkl
 
 matrix:
   fast_finish: true
@@ -24,6 +25,7 @@ matrix:
     env:
     - PYTHON=3.6
     - COVERAGE=true
+    - BLAS=openblas
   # Python 2.7 + partially updated numpy, mpl; cutting edge scipy, pandas
   - python: 2.7
     env:
@@ -48,6 +50,7 @@ matrix:
     - SCIPY=0.18
     - PANDAS=0.19
     - MATPLOTLIB=1.5
+    - BLAS=openblas
   # Python 3.4 + baseline packages
   - python: 2.7
     env:
@@ -101,6 +104,7 @@ before_install:
   - PKGS="${PKGS} patsy"; if [ ${PATSY} ]; then PKGS="${PKGS}=${PATSY}"; fi
   - PKGS="${PKGS} pandas"; if [ ${PANDAS} ]; then PKGS="${PKGS}=${PANDAS}"; fi
   - PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}=${CYTHON}"; fi
+  - PKGS="${PKGS} blas"; if [ ${BLAS} ]; then PKGS="${PKGS}=*=${BLAS}"; fi
   - if [ ${USEMPL} = true ]; then PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi; fi
   - if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --cov-config=.travis_coveragerc --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
   - echo conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} pyyaml
