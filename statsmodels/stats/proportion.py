@@ -1177,3 +1177,89 @@ def shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=True)
     else:
         return (count1 + corr[0,0], nobs1 + corr[0].sum(),
                 count2 + corr[1,0], nobs2 + corr[1].sum()), prob_indep
+
+
+def score_test_proportion_2samp(count1, nobs1, count2, nobs2, value=None,
+                                compare='diff', correction=True):
+    if value is None:
+        # TODO: odds ratio does not work if value=1
+        value = 0 if compare == 'diff' else 1 + 1e-10
+    print('value', value)
+    nobs = nobs1 + nobs2
+    count = count1 + count2
+    p1 = count1 / nobs1
+    p2 = count2 / nobs2
+    # this uses index 0 from Miettinen Nurminned 1985
+    count0, nobs0 = count2, nobs2
+    p0 = p2
+
+    if compare == 'diff':
+        diff = value  # hypothesis value
+
+        tmp3 = nobs
+        tmp2 = (nobs1 + 2 * nobs0) * diff - nobs - count
+        tmp1 = (count0 * diff - nobs - 2 * count0) * diff + count
+        tmp0 = count0 * diff * (1 - diff)
+        q = (tmp2 / (3 * tmp3))**3 - tmp1 * tmp2 / (6 * tmp3**2) + tmp0 / (2 * tmp3)
+        p = np.sign(q) * np.sqrt((tmp2 / (3 * tmp3))**2 - tmp1 / (3 * tmp3))
+        a = (np.pi + np.arccos(q / p**3)) / 3
+
+        prop0 = 2 * p * np.cos(a) - tmp2 / (3 * tmp3)
+        prop1 = prop0 + diff
+
+        correction = True
+        var = prop1 * (1 - prop1) / nobs1 + prop0 * (1 - prop0) / nobs0
+        if correction:
+            var *= nobs / (nobs - 1)
+
+        statistic = (p1 - p0 - diff) / np.sqrt(var)
+        pvalue = stats.norm.sf(np.abs(statistic)) * 2
+
+    elif compare == 'ratio':
+        # risk ratio
+        ratio = value
+
+        a = nobs * ratio
+        b = -(nobs1 * ratio + count1 + nobs2 + count0 * ratio)
+        c = count
+        prop0 = (-b - np.sqrt(b**2 - 4 * a * c)) / (2 * a)
+        prop1 = prop0 * ratio
+        print(prop0, prop1)
+
+        var = prop1 * (1 - prop1) / nobs1 + ratio**2 * prop0 * (1 - prop0) / nobs0
+        if correction:
+            var *= nobs / (nobs - 1)
+
+        statistic = (p1 / p0 - ratio) / np.sqrt(var)   # PASS
+        statistic = (p1 - ratio * p0) / np.sqrt(var)  # Miettinen Nurminen
+        print(statistic)
+        pvalue = stats.norm.sf(np.abs(statistic)) * 2
+        print(pvalue)
+
+    elif compare in ['or', 'odds-ratio']:
+        # odds ratio
+        oratio = value
+        # TODO: this needs special case for oratio = 1
+
+        a = nobs0 * (oratio - 1)
+        b = nobs1 * oratio + nobs0 - count * (oratio - 1)
+        c = -count
+        prop0 = (-b + np.sqrt(b**2 - 4 * a * c)) / (2 * a)
+        prop1 = prop0 * oratio / (1 + prop0 * (oratio - 1))
+        print('\nodds-ratio')
+        print(prop0, prop1)
+
+
+        var = 1 / (prop1 * (1 - prop1) * nobs1) + 1 / (prop0 * (1 - prop0) * nobs0)
+        if correction:
+            var *= nobs / (nobs - 1)
+
+
+        d = (p1 - prop1) / (prop1 * (1 - prop1)) - (p0 - prop0) / (prop0 * (1 - prop0))
+        statistic = d / np.sqrt(var)
+        print(statistic)
+        pvalue = stats.norm.sf(np.abs(statistic)) * 2
+        print(pvalue)
+
+    # TODO: what do we return, result class ?
+    return statistic, pvalue, (prop1, prop0)
