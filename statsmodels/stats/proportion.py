@@ -1263,3 +1263,93 @@ def score_test_proportion_2samp(count1, nobs1, count2, nobs2, value=None,
 
     # TODO: what do we return, result class ?
     return statistic, pvalue, (prop1, prop0)
+
+
+class Holder(object):
+    pass
+
+
+def _confint_riskratio_koopman(x0, x1, n0, n1, alpha=0.05):
+    """score confidence interval for ratio or proportions, Koopman/Nand
+
+    """
+    x = x0 + x1
+    n = n0 + n1
+    z = stats.norm.isf(alpha / 2)**2
+    #z = stats.chi2.isf(alpha, 1)
+    #equ 6 in Nam 1995
+    a1 = n0 * (n0 * n * x1 + n1 * (n0 + x1) * z)
+    a2 = - n0 * (n0 * n1 * x +  2 * n * x0 * x1 + n1 * (n0 + x0 + 2 * x1) * z)
+    a3 = 2 * n0 * n1 * x0 * x + n * x0 * x0 * x1 + n0 * n1 * x * z
+    a4 = - n1 * x0 * x0 * x
+
+    p_roots_ = np.sort(np.roots([a1, a2, a3, a4]))
+    print(p_roots_)
+    p_roots = p_roots_[:2][::-1]
+
+    # equ 5
+    ci = (1 - (n1 - x1) * (1 - p_roots) / (x0 + n1 - n * p_roots) ) / p_roots
+
+    res = Holder()
+    res.confint = ci
+    res._p_roots = p_roots_  # for unit tests, can be dropped
+    return res
+
+
+def _confint_riskratio_paired_nam(table, alpha=0.05):
+    """confidence interval for marginal risk ratio for matched pairs
+
+    need full table
+
+             success fail  marginal
+    success    x11    x10  x1.
+    fail       x01    x00  x0.
+    marginal   x.1    x.0   n
+
+    The confidence interval is for the ratio p1 / p0 where
+    p1 = x1. / n and
+    p0 - x.1 / n
+    Todo: rename p1 to pa and p2 to pb, so we have a, b for treatment and
+    0, 1 for success/failure
+
+    current namings follow Nam 2009
+
+    status
+    testing:
+    compared to example in Nam 2009
+    internal polynomial coefficients in calculation correspond at around 4 decimals
+    confidence interval agrees only at 2 decimals
+
+    """
+    x11, x10, x01, x00 = np.ravel(table)
+    n = np.sum(table)  #nobs
+    p10, p01 = x10 / n, x01 / n
+    p1 = (x11 + x10) / n
+    p0 = (x11 + x01) / n
+    q00 = 1 - x00 / n
+
+    z2 = stats.norm.isf(alpha / 2)**2
+    #z = stats.chi2.isf(alpha, 1)
+    # before equ 3 in Nam 2009
+
+    g1 = (n * p0 + z2 / 2) * p0
+    g2 = - (2 * n * p1 * p0 + z2 * q00)
+    g3 = (n * p1 + z2 / 2) * p1
+
+    a0 = g1**2 - (z2 * p0 / 2)**2
+    a1 = 2 * g1 * g2
+    a2 = g2**2 + 2 * g1 * g3 + z2**2 * (p1 * p0 - 2 * p10 * p01) / 2
+    a3 = 2 * g2 * g3
+    a4 = g3**2 - (z2 * p1 / 2)**2
+
+    p_roots = np.sort(np.roots([a0, a1, a2, a3, a4]))
+    #p_roots = np.sort(np.roots([1, a1 / a0, a2 / a0, a3 / a0, a4 / a0]))
+    print([a1 / a0, a2 / a0, a3 / a0, a4 / a0])
+    print(p_roots)
+
+    ci = [p_roots.min(), p_roots.max()]
+    res = Holder()
+    res.confint = ci
+    res.p = p1, p0
+    res._p_roots = p_roots  # for unit tests, can be dropped
+    return res

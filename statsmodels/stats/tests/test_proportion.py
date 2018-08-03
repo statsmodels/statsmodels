@@ -648,3 +648,30 @@ def test_score_test_2indep():
     for co in ['diff', 'ratio', 'or']:
         res = score_test_proportion_2samp(count1, nobs1, count2, nobs2, compare=co)
         assert_allclose(res[-1][0], res[-1][1], rtol=1e-10)
+
+
+def test_score_confint_koopman_nam():
+
+    #example Koopman, based on Nam 1995
+
+    x0, n0 = 16, 80
+    x1, n1 = 36, 40
+    x = x0 + x1
+    n = n0 + n1
+    p0 = x0 / n0
+    p1 = x1 / n1
+
+    results_nam = Holder()
+    results_nam.p0_roots = [0.1278, 0.2939, 0.4876]
+    results_nam.conf_int = [2.940, 7.152]
+
+    res = smprop._confint_riskratio_koopman(x0, x1, n0, n1, alpha=0.05)
+
+    assert_allclose(res._p_roots, results_nam.p0_roots, atol=4)
+    assert_allclose(res.confint, results_nam.conf_int, atol=3)
+
+    table = [67, 9, 7, 16] #[67, 7, 9, 16] #
+    resp = smprop._confint_riskratio_paired_nam(table, alpha=0.05)
+    # TODO: currently regression test, need verified results
+    ci_old = [0.917832,  1.154177]
+    assert_allclose(resp.confint, ci_old, atol=3)
