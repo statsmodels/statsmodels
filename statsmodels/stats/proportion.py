@@ -6,6 +6,7 @@ Created on Fri Mar 01 00:23:07 2013
 Author: Josef Perktold
 License: BSD-3
 """
+from __future__ import division
 from statsmodels.compat.python import lzip, range
 import numpy as np
 from scipy import stats, optimize
@@ -1041,3 +1042,138 @@ def proportions_chisquare_pairscontrol(count, nobs, value=None,
                                    )[1]
                for pair in all_pairs]
     return AllPairsResults(pvals, all_pairs, multitest_method=multitest_method)
+
+
+def confint_proportion_2indep(count1, nobs1, count2, nobs2, method='newcomb',
+                              compare='diff', alpha=0.05):
+    """Confidence intervals for comparing two independent proportions
+
+    This assumes that we have two independent binomial samples.
+
+    Parameters
+    ----------
+    count1, nobs1 :
+        count and sample size for first sample
+    count2, nobs2 :
+        count and sample size for the second sample
+    method : string
+        method for computing confidence interval
+        diff:
+         - 'wald',
+         - 'agresti-caffo'
+
+        ratio:
+         - 'log'
+         - 'log-adjusted'
+
+        odds-ratio:
+         - 'logistic'
+         - 'logistic-adjusted'
+
+    compare : string in ['diff', 'ratio' 'odds-ratio']
+        If compare is diff, then the confidence interval is for diff = p1 - p2
+        If compare is ratio, then the confidence interval is for the risk ratio
+        defined by ratio = p1 / p2.
+        If compare is odds-ratio, then the confidence interval is for the
+        odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2)
+
+    alpha : float
+        significance leverl for the confidence interval, default is 0.05.
+        The nominal coverage probability is 1 - alpha.
+
+    """
+
+    method = method.lower()
+    if method.startswith('agr'):
+        method = 'agresti-caffo'
+
+    p1 = count1 / nobs1
+    p2 = count2 / nobs2
+    diff = p1 - p2
+    addone = 1 if method == 'agresti-caffo' else 0
+
+    if compare == 'diff':
+        if method in ['wald', 'agresti-caffo']:
+            count1_, nobs1_ = count1 + addone, nobs1 + 2 * addone
+            count2_, nobs2_ = count2 + addone, nobs2 + 2 * addone
+            p1_ = count1_ / nobs1_
+            p2_ = count2_ / nobs2_
+            diff_ = p1_ - p2_
+            var = p1_ * (1 - p1_) / nobs1_ + p2_ * (1 - p2_) / nobs2_
+            z = stats.norm.isf(alpha / 2)
+            d_wald = z * np.sqrt(var)
+            low = diff_ - d_wald
+            upp = diff_ + d_wald
+
+
+        elif method.startswith('newcomb'):
+            low1, upp1 = proportion_confint(count1, nobs1,
+                                            method='wilson', alpha=alpha)
+            low2, upp2 = proportion_confint(count2, nobs2,
+                                            method='wilson', alpha=alpha)
+            d_low = np.sqrt((p1 - low1)**2 + (upp2 - p2)**2)
+            d_upp = np.sqrt((p2 - low2)**2 + (upp1 - p1)**2)
+            low = diff - d_low
+            upp = diff + d_upp
+        else:
+            raise ValueError('method not recognized')
+
+    elif compare == 'ratio':
+        ratio = p1 / p2
+        if method in ['log', 'log-adjusted']:
+            addhalf = 0.5 if method == 'log-adjusted' else 0
+            count1_, nobs1_ = count1 + addhalf, nobs1 + addhalf
+            count2_, nobs2_ = count2 + addhalf, nobs2 + addhalf
+            p1_ = count1_ / nobs1_
+            p2_ = count2_ / nobs2_
+            ratio_ = p1_ / p2_
+            var = (1 / count1_) - 1 / nobs1_ + 1 / count2_ - 1 / nobs2_
+            z = stats.norm.isf(alpha / 2)
+            d_log = z * np.sqrt(var)
+            low = np.exp(np.log(ratio_) - d_log)
+            upp = np.exp(np.log(ratio_) + d_log)
+
+        else:
+            raise ValueError('method not recognized')
+
+    elif compare in ['or', 'odds-ratio']:
+        odds_ratio = p1 / (1 - p1) / p2 * (1 - p2)
+        if method in ['logit', 'logit-adjusted', 'logit-smoothed']:
+            if method in ['logit-smoothed']:
+                adjusted = shrink_prob(count1, nobs1, count2, nobs2,
+                                       shrink_factor=2, return_corr=False)[0]
+                count1_, nobs1_, count2_, nobs2_ = adjusted
+
+            else:
+                addhalf = 0.5 if method == 'logit-adjusted' else 0
+                count1_, nobs1_ = count1 + addhalf, nobs1 + 2 * addhalf
+                count2_, nobs2_ = count2 + addhalf, nobs2 + 2 * addhalf
+            p1_ = count1_ / nobs1_
+            p2_ = count2_ / nobs2_
+            odds_ratio_ = p1_ / (1 - p1_) / p2_ * (1 - p2_)
+            var = (1 / count1_ + 1 / (nobs1_ - count1_) +
+                   1 / count2_ + 1 / (nobs2_ - count2_))
+            z = stats.norm.isf(alpha / 2)
+            d_log = z * np.sqrt(var)
+            low = np.exp(np.log(odds_ratio_) - d_log)
+            upp = np.exp(np.log(odds_ratio_) + d_log)
+        else:
+            raise ValueError('method not recognized')
+
+    else:
+        raise ValueError('compare not recognized')
+
+    return low, upp
+
+
+def shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=True):
+    nobs_col = np.array([count1 + count2, nobs1 - count1 + nobs2 - count2])
+    nobs_row = np.array([nobs1, nobs2])
+    nobs = nobs1 + nobs2
+    prob_indep = (nobs_col * nobs_row[:, None]) / nobs**2
+    corr = shrink_factor * prob_indep
+    if return_corr:
+        return (corr[0,0], corr[0].sum(), corr[1,0], corr[1].sum())
+    else:
+        return (count1 + corr[0,0], nobs1 + corr[0].sum(),
+                count2 + corr[1,0], nobs2 + corr[1].sum()), prob_indep
