@@ -57,32 +57,26 @@ def auto_es(endog, measure='aic', seasonal_periods=1, damped=False,
     for t in trends:
         if seasonal_periods > 1:
             for s in seasonal:
-                # print(t, s)
                 try:
                     mod = sm.tsa.ExponentialSmoothing(endog, trend=t,
                                                       seasonal=s,
                                                       seasonal_periods=seasonal_periods)
                     res = mod.fit(smoothing_level=alpha, smoothing_slope=beta,
                                   smoothing_seasonal=gamma, damping_slope=phi)
-                    # print(t, s, res.aic)
                     if getattr(res, measure) < min_measure:
                         min_measure = getattr(res, measure)
                         model = [t, s]
-                        # results = res
                 except Exception as e:
-                    warnings.warn(str(e))  # TODO add warning
+                    warnings.warn(str(e))
         else:
-            # print(trends, seasonal)
             try:
                 mod = sm.tsa.ExponentialSmoothing(endog, trend=t,
                                                   seasonal_periods=seasonal_periods)
                 res = mod.fit(smoothing_level=alpha, smoothing_slope=beta,
                               smoothing_seasonal=gamma, damping_slope=phi)
-                # print(t, res.aic)
                 if getattr(res, measure) < min_measure:
                     min_measure = getattr(res, measure)
                     model = [t, None]
-                    # results = res
             except Exception as e:
-                warnings.warn(str(e), "here")  # TODO add warning
+                warnings.warn(str(e))
     return model

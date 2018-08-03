@@ -30,3 +30,12 @@ def test_auto_es():
     desired_seasonal = None
     assert_equal(trend, desired_trend)
     assert_equal(seasonal, desired_seasonal)
+
+
+def test_auto_es_infl():
+    """Test function for auto_es against ets()."""
+    trend, seasonal = exponentialsmoothing.auto_es(macrodata['infl'])
+    desired_trend = None
+    desired_seasonal = None
+    assert_equal(trend, desired_trend)
+    assert_equal(seasonal, desired_seasonal)
