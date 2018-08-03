@@ -2740,10 +2740,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         top_right = [
             ('No. Observations:', [self.nobs]),
             ('Log Likelihood', ["%#5.3f" % self.llf]),
+        ]
+        if hasattr(self, 'rsquared'):
+            top_right.append(('R-squared:', ["%#8.3f" % self.rsquared]))
+        top_right += [
             ('AIC', ["%#5.3f" % self.aic]),
             ('BIC', ["%#5.3f" % self.bic]),
-            ('HQIC', ["%#5.3f" % self.hqic])
-        ]
+            ('HQIC', ["%#5.3f" % self.hqic])]
         if self.filter_results.filter_concentrated:
             top_right.append(('Scale', ["%#5.3f" % self.scale]))
 
