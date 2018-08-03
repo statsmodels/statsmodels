@@ -150,7 +150,7 @@ class ForecastSet(object):
     the best Forecast object based on some evaluation measure.
     """
 
-    def __init__(self, endog=None, test_sample=None):
+    def __init__(self, endog, test_sample):
         """Initialize the values of the ForecastSet class.
 
         Parameters
@@ -182,8 +182,8 @@ class ForecastSet(object):
 
         Parameters
         ----------
-        model : class
-            specifies which model to use for forecasting the data.
+        fcast_ob : Forecast object
+            already created Forecast object class.
 
         """
         self.models.append(fcast_ob)
