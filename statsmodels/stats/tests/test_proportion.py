@@ -650,6 +650,17 @@ def test_score_test_2indep():
         assert_allclose(res[-1][0], res[-1][1], rtol=1e-10)
 
 
+def test_test_2indep():
+    # currently only SMOKE test
+    # this does not verify the statistic and pvalue yet
+    alpha = 0.05
+    count1, nobs1 = 7, 34
+    count2, nobs2 = 1, 34
+
+    for co in ['diff', 'ratio', 'or']:
+        res = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2, compare=co)
+
+
 def test_score_confint_koopman_nam():
 
     #example Koopman, based on Nam 1995

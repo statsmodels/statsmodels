@@ -1265,6 +1265,128 @@ def score_test_proportion_2samp(count1, nobs1, count2, nobs2, value=None,
     return statistic, pvalue, (prop1, prop0)
 
 
+def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
+                            method=None, compare='diff', alpha=0.05):
+    """Hypothesis test for comparing two independent proportions
+
+    This assumes that we have two independent binomial samples.
+
+    Parameters
+    ----------
+    count1, nobs1 :
+        count and sample size for first sample
+    count2, nobs2 :
+        count and sample size for the second sample
+    method : string
+        method for computing confidence interval
+        diff:
+         - 'wald',
+         - 'agresti-caffo'
+
+        ratio:
+         - 'log'
+         - 'log-adjusted'
+
+        odds-ratio:
+         - 'logistic'
+         - 'logistic-adjusted'
+
+    compare : string in ['diff', 'ratio' 'odds-ratio']
+        If compare is diff, then the confidence interval is for diff = p1 - p2
+        If compare is ratio, then the confidence interval is for the risk ratio
+        defined by ratio = p1 / p2.
+        If compare is odds-ratio, then the confidence interval is for the
+        odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2)
+
+    alpha : float
+        significance leverl for the confidence interval, default is 0.05.
+        The nominal coverage probability is 1 - alpha.
+
+    """
+    method_default = {'diff': 'agresti-caffo',
+                      'ratio': 'log-adjusted',
+                      'odds-ratio': 'logit-smoothed'}
+    # normalize compare name
+    if compare.lower() == 'or':
+        compare = 'odds-ratio'
+    if method is None:
+        method = method_default[compare]
+
+    method = method.lower()
+    if method.startswith('agr'):
+        method = 'agresti-caffo'
+
+    if value is None:
+        value = 0 if compare == 'diff' else 1
+
+    p1 = count1 / nobs1
+    p2 = count2 / nobs2
+    diff = p1 - p2
+    addone = 1 if method == 'agresti-caffo' else 0
+
+    if compare == 'diff':
+        if method in ['wald', 'agresti-caffo']:
+            count1_, nobs1_ = count1 + addone, nobs1 + 2 * addone
+            count2_, nobs2_ = count2 + addone, nobs2 + 2 * addone
+            p1_ = count1_ / nobs1_
+            p2_ = count2_ / nobs2_
+            diff_ = p1_ - p2_
+            var = p1_ * (1 - p1_) / nobs1_ + p2_ * (1 - p2_) / nobs2_
+            statistic = diff / np.sqrt(var)
+            distr = 'normal'
+
+        elif method.startswith('newcomb'):
+            raise NotImplementedError('newcomb not available for hypothesis test')
+        else:
+            raise ValueError('method not recognized')
+
+    elif compare == 'ratio':
+        ratio = p1 / p2
+        if method in ['log', 'log-adjusted']:
+            addhalf = 0.5 if method == 'log-adjusted' else 0
+            count1_, nobs1_ = count1 + addhalf, nobs1 + addhalf
+            count2_, nobs2_ = count2 + addhalf, nobs2 + addhalf
+            p1_ = count1_ / nobs1_
+            p2_ = count2_ / nobs2_
+            ratio_ = p1_ / p2_
+            var = (1 / count1_) - 1 / nobs1_ + 1 / count2_ - 1 / nobs2_
+            statistic = (ratio - value) / np.sqrt(var)
+            distr = 'normal'
+
+        else:
+            raise ValueError('method not recognized')
+
+    elif compare in ['or', 'odds-ratio']:
+        odds_ratio = p1 / (1 - p1) / p2 * (1 - p2)
+        if method in ['logit', 'logit-adjusted', 'logit-smoothed']:
+            if method in ['logit-smoothed']:
+                adjusted = shrink_prob(count1, nobs1, count2, nobs2,
+                                       shrink_factor=2, return_corr=False)[0]
+                count1_, nobs1_, count2_, nobs2_ = adjusted
+
+            else:
+                addhalf = 0.5 if method == 'logit-adjusted' else 0
+                count1_, nobs1_ = count1 + addhalf, nobs1 + 2 * addhalf
+                count2_, nobs2_ = count2 + addhalf, nobs2 + 2 * addhalf
+            p1_ = count1_ / nobs1_
+            p2_ = count2_ / nobs2_
+            odds_ratio_ = p1_ / (1 - p1_) / p2_ * (1 - p2_)
+            var = (1 / count1_ + 1 / (nobs1_ - count1_) +
+                   1 / count2_ + 1 / (nobs2_ - count2_))
+            statistic = (odds_ratio - value) / np.sqrt(var)
+            distr = 'normal'
+        else:
+            raise ValueError('method not recognized')
+
+    else:
+        raise ValueError('compare not recognized')
+
+    if distr == 'normal':
+        pvalue = stats.norm.sf(np.abs(statistic)) * 2
+
+    return statistic, pvalue
+
+
 class Holder(object):
     pass
 
