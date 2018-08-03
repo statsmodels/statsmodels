@@ -285,6 +285,7 @@ def get_rdataset(dataname, package="datasets", cache=False):
     # NOTE: use raw github bc html site might not be most up to date
     data_base_url = ("https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/"
                      "master/csv/"+package+"/")
+    
     docs_base_url = ("https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/"
                      "master/doc/"+package+"/rst/")
     cache = _get_cache(cache)
