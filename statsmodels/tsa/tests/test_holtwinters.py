@@ -9,7 +9,8 @@ import pandas as pd
 from numpy.testing import assert_almost_equal, assert_equal
 from statsmodels.tsa.holtwinters import (ExponentialSmoothing,
                                          SimpleExpSmoothing, Holt)
-from pandas import DataFrame, DatetimeIndex
+import statsmodels.tsa.holtwinters as holtwinters
+import statsmodels.tsa._holtwinters as smoothers
 
 class TestHoltWinters(object):
     @classmethod
@@ -224,3 +225,24 @@ class TestHoltWinters(object):
 
     def test_raises(self):
         pass
+
+
+# TODO: Needs to be implemented for all smoothers
+def test_equivalence():
+    x = np.array([0.5,0.3,10.0,1.0,1.0,1.0,1.0])
+    m = 4
+    xi = np.array([True,False,True, True,False,False] + [True]*m)
+    xiu = xi.astype(np.uint8)
+    p = np.zeros(6+m)
+    n = 100
+    y = 10 + np.random.randn(n)
+    l = np.zeros(n)
+    b = np.zeros(n)
+    s = np.ones(n+m-1)
+    max_seen = np.finfo(np.double).max
+    l2 = l.copy()
+    b2 = b.copy()
+    s2 = s.copy()
+
+    sse1 = holtwinters._holt_win__mul(x, xi, p, y, l, b, s, m, n, max_seen)
+    sse2 = smoothers._holt_win__mul(x, xiu, p, y, l2, b2, s2, m, n, max_seen)
