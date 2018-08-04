@@ -16,7 +16,7 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_array_less,
 from statsmodels.stats.proportion import (proportion_confint,
                                           confint_proportion_2indep,
                                           multinomial_proportions_confint,
-                                          score_test_proportion_2samp,
+                                          score_test_proportion_2indep,
                                           )
 import statsmodels.stats.proportion as smprop
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
@@ -631,6 +631,9 @@ def test_confint_2indep():
     ci = confint_proportion_2indep(count1, nobs1, count2, nobs2, compare='ratio',
                                    method='log-adjusted')
     assert_allclose(ci, [0.92, 27], rtol=0.01)
+    ci = confint_proportion_2indep(count1, nobs1, count2, nobs2, compare='ratio',
+                                   method='score')
+    assert_allclose(ci, [1.21, 43], rtol=0.01)
 
     # odds-ratio
     ci = confint_proportion_2indep(count1, nobs1, count2, nobs2, compare='or',
@@ -651,7 +654,7 @@ def test_score_test_2indep():
     count2, nobs2 = 1, 34
 
     for co in ['diff', 'ratio', 'or']:
-        res = score_test_proportion_2samp(count1, nobs1, count2, nobs2, compare=co)
+        res = score_test_proportion_2indep(count1, nobs1, count2, nobs2, compare=co)
         assert_allclose(res[-1][0], res[-1][1], rtol=1e-10)
 
 
