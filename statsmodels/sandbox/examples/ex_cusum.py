@@ -80,7 +80,7 @@ plt.plot(rresid)
 plt.plot(np.abs(rresid))
 
 print('cusum test reject:')
-print(((rcusum[1:]>rcusumci[1])|(rcusum[1:]<rcusumci[0])).any())
+print(((rcusum[1:]>rcusumci[1]) | (rcusum[1:]<rcusumci[0])).any())
 
 rresid2, rparams2, rypred2, rresid_standardized2, rresid_scaled2, rcusum2, rcusumci2 = \
             recursive_olsresiduals2(res1, skip)
