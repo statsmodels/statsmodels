@@ -262,7 +262,7 @@ class Factor(Term):
         Return the 'main effect' columns of a factor, choosing
         an optional reference key.
 
-	The reference key can be one of the keys of the Factor,
+        The reference key can be one of the keys of the Factor,
         or an integer, representing which column to remove.
         It defaults to 0.
 
