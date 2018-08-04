@@ -186,8 +186,8 @@ class PenalizedMixin(object):
             # TODO: make it penal function dependent
             # temporary standin, only checked for Poisson and GLM,
             # and is computationally inefficient
-            drop_index = np.nonzero(np.abs(res.params) < trim) [0]
-            keep_index = np.nonzero(np.abs(res.params) > trim) [0]
+            drop_index = np.nonzero(np.abs(res.params) < trim)[0]
+            keep_index = np.nonzero(np.abs(res.params) > trim)[0]
 
             if drop_index.any():
                 # TODO: do we need to add results attributes?

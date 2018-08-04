@@ -221,7 +221,7 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
         index.append(term.name())
 
     table.index = Index(index + ['Residual'])
-    table = table.iloc [np.argsort(col_order + [model.model.exog.shape[1]+1])]
+    table = table.iloc[np.argsort(col_order + [model.model.exog.shape[1]+1])]
     # back out sum of squares from f_test
     ssr = table[test] * table['df'] * model.ssr/model.df_resid
     table['sum_sq'] = ssr

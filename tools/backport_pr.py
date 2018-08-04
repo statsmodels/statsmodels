@@ -141,7 +141,7 @@ def should_backport(labels=None, milestone=None):
         pr = get_pull_request("statsmodels/statsmodels", issue['number'],
                 auth=True)
         if not pr['merged']:
-            print ("Marked PR closed without merge: %i" % pr['number'])
+            print("Marked PR closed without merge: %i" % pr['number'])
             continue
         if pr['number'] not in should_backport:
             merged_dates.append(pr['merged_at'])
@@ -159,13 +159,13 @@ if __name__ == '__main__':
         already = already_backported(branch)
         #NOTE: change this to the label you've used for marking a backport
         should = should_backport(milestone="0.5.1")
-        print ("The following PRs should be backported:")
+        print("The following PRs should be backported:")
         to_backport = []
         if already:
             should = should.loc[set(should.index).difference(already)]
         should.sort()
         for pr, date in should.iteritems():
-            print (pr)
+            print(pr)
         sys.exit(0)
 
     sys.exit(backport_pr(sys.argv[1], int(sys.argv[2])))
