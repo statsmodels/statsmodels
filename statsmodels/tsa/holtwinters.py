@@ -444,7 +444,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
     def fit(self, smoothing_level=None, smoothing_slope=None, smoothing_seasonal=None,
             damping_slope=None, optimized=True, use_boxcox=False, remove_bias=False,
-            use_basinhopping=False):
+            use_basinhopping=False, start_params=None, initial_level=None, initial_slope=None):
         """
         fit Holt Winter's Exponential Smoothing
 
@@ -474,6 +474,14 @@ class ExponentialSmoothing(TimeSeriesModel):
             to zero.
         use_basinhopping : bool, optional
             Using Basin Hopping optimizer to find optimal values
+        start_params: array, optional
+            Starting values to used when optimizing the fit.  If not provided,
+            starting values are determined using a combination of grid search
+            and reasonable values based on the initial values of the data
+        initial_level: float, optional
+            Value to use when initializing the fitted level.
+        initial_slope: float, optional
+            Value to use when initializing the fitted slope.
 
         Returns
         -------
@@ -498,6 +506,8 @@ class ExponentialSmoothing(TimeSeriesModel):
         beta = smoothing_slope
         gamma = smoothing_seasonal
         phi = damping_slope
+        l0 = initial_level
+        b0 = initial_slope
 
         data = self.endog
         damped = self.damped
@@ -527,15 +537,18 @@ class ExponentialSmoothing(TimeSeriesModel):
         p = np.zeros(6 + m)
         max_seen = np.finfo(np.double).max
         if seasoning:
-            l0 = y[np.arange(self.nobs) % m == 0].mean()
-            b0 = ((y[m:m + m] - y[:m]) / m).mean() if trending else None
+            l0 = y[np.arange(self.nobs) % m == 0].mean() if l0 is None else l0
+            if b0 is None:
+                b0 = ((y[m:m + m] - y[:m]) / m).mean() if trending else None
             s0 = list(y[:m] / l0) if seasonal == 'mul' else list(y[:m] - l0)
         elif trending:
-            l0 = y[0]
-            b0 = y[1] / y[0] if trend == 'mul' else y[1] - y[0]
+            l0 = y[0] if l0 is None else l0
+            if b0 is None:
+                b0 = y[1] / y[0] if trend == 'mul' else y[1] - y[0]
             s0 = []
         else:
-            l0 = y[0]
+            if l0 is None:
+                l0 = y[0]
             b0 = None
             s0 = []
         if optimized:
@@ -557,15 +570,17 @@ class ExponentialSmoothing(TimeSeriesModel):
                 init_gamma = gamma if gamma is not None else 0.05 * \
                     (1 - init_alpha)
                 xi = np.array([alpha is None, beta is None, gamma is None,
-                               True, trending, phi is None and damped] + [True] * m)
+                               initial_level is None, trending and initial_slope is None,
+                               phi is None and damped] + [True] * m)
                 func = func_dict[(seasonal, trend)]
             elif trending:
                 xi = np.array([alpha is None, beta is None, False,
-                               True, True, phi is None and damped] + [False] * m)
+                               initial_level is None, initial_slope is None,
+                               phi is None and damped] + [False] * m)
                 func = func_dict[(None, trend)]
             else:
                 xi = np.array([alpha is None, False, False,
-                               True, False, False] + [False] * m)
+                               initial_level is None, False, False] + [False] * m)
                 func = func_dict[(None, None)]
             p[:] = [init_alpha, init_beta, init_gamma, l0, b0, init_phi] + s0
 
@@ -578,10 +593,15 @@ class ExponentialSmoothing(TimeSeriesModel):
             bounds = np.array([(0.0, 1.0), (0.0, 1.0), (0.0, 1.0),
                                (0.0, None), (0.0, None), (0.0, 1.0)] + [(None, None), ] * m)
             args = (txi.astype(np.uint8), p, y, l, b, s, m, self.nobs, max_seen)
-            res = brute(func, bounds[txi], args, Ns=20, full_output=True, finish=None)
-            (p[txi], max_seen, grid, Jout) = res
-            [alpha, beta, gamma, l0, b0, phi] = p[:6]
-            s0 = p[6:]
+            if start_params is None:
+                res = brute(func, bounds[txi], args, Ns=20, full_output=True, finish=None)
+                (p[txi], max_seen, grid, Jout) = res
+            else:
+                args = (xi.astype(np.uint8), p, y, l, b, s, m, self.nobs, max_seen)
+                p[xi] = start_params
+                max_seen = func(np.ascontiguousarray(p[xi]), *args)
+            # alpha, beta, gamma, l0, b0, phi = p[:6]
+            # s0 = p[6:]
             # bounds = np.array([(0.0,1.0),(0.0,1.0),(0.0,1.0),(0.0,None),
             # (0.0,None),(0.8,1.0)] + [(None,None),]*m)
             args = (xi.astype(np.uint8), p, y, l, b, s, m, self.nobs, max_seen)
