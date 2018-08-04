@@ -15,6 +15,7 @@ env:
     - USENUMPYBASE=false
     - MATPLOTLIB=
     - DOCBUILD=false
+    - LINT=false
 
 matrix:
   fast_finish: true
@@ -39,6 +40,7 @@ matrix:
     - SCIPY=1.0
     - PANDAS=0.22
     - MATPLOTLIB=2.0
+    - LINT=true
   # Python 2.7 + baseline packages
   - python: 2.7
     env:
@@ -71,6 +73,7 @@ matrix:
     - SCIPY=0.18
     - PANDAS=0.19
     - USEMPL=false
+    - LINT=true
 
 notifications:
   email:
@@ -109,6 +112,7 @@ before_install:
   - pip install 'pytest<4' pytest-xdist nose
   - if [ ${COVERAGE} = true ]; then pip install codecov coverage coveralls pytest-cov; fi
   - if [ ${DOCBUILD} = true ]; then bash tools/ci_docbuild_install.sh; fi;
+  - pip install flake8
   - export SRCDIR=$PWD
   # Ensure tests are correctly gathered by xdist
   - export PYTHONHASHSEED=0
@@ -126,6 +130,7 @@ script:
   # Run tests
   - echo pytest -n 2 ${COVERAGE_OPTS} statsmodels --skip-examples
   - pytest ${COVERAGE_OPTS} statsmodels --skip-examples
+  - ./lint.sh
 
 after_success:
   - if [ ${COVERAGE} = true ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi
