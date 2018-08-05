@@ -10,7 +10,6 @@ Properties:
 Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice. OTexts, 2014.
 
 Author: Terence L van Zyl
-
 """
 import numpy as np
 import pandas as pd
@@ -401,7 +400,13 @@ class ExponentialSmoothing(TimeSeriesModel):
             self.seasonal_periods = seasonal_periods
             if seasonal_periods is None:
                 try:
-                    freq = pd.infer_freq(endog.index)
+                    # TODO: Is a better version of this implemented somewhere?
+                    freq = None
+                    index = endog.index
+                    if hasattr(index, 'freq') and hasattr(index.freq, 'freqstr'):
+                        freq = endog.index.freq.freqstr
+                    if not freq:
+                         freq = pd.infer_freq(index)
                     self.seasonal_periods = _freq_to_period[freq]
                 except (ValueError, TypeError, AttributeError):
                     raise ValueError('Unable to detect seasonal periods.')
@@ -444,7 +449,8 @@ class ExponentialSmoothing(TimeSeriesModel):
 
     def fit(self, smoothing_level=None, smoothing_slope=None, smoothing_seasonal=None,
             damping_slope=None, optimized=True, use_boxcox=False, remove_bias=False,
-            use_basinhopping=False, start_params=None, initial_level=None, initial_slope=None):
+            use_basinhopping=False, start_params=None, initial_level=None, initial_slope=None,
+            use_brute=True):
         """
         fit Holt Winter's Exponential Smoothing
 
@@ -482,6 +488,9 @@ class ExponentialSmoothing(TimeSeriesModel):
             Value to use when initializing the fitted level.
         initial_slope: float, optional
             Value to use when initializing the fitted slope.
+        use_brute: bool, optional
+            Search for good starting values using a brute force (grid) optimizer.
+            If False, a naive set of starting values is used.
 
         Returns
         -------
@@ -583,43 +592,60 @@ class ExponentialSmoothing(TimeSeriesModel):
                                initial_level is None, False, False] + [False] * m)
                 func = func_dict[(None, None)]
             p[:] = [init_alpha, init_beta, init_gamma, l0, b0, init_phi] + s0
-
-            # txi [alpha, beta, gamma, l0, b0, phi, s0,..,s_(m-1)]
-            # Have a quick look in the region for a good starting place for alpha etc.
-            # using guesstimates for the levels
-            txi = xi & np.array(
-                [True, True, True, False, False, True] + [False] * m)
-            txi = txi.astype(np.bool)
-            bounds = np.array([(0.0, 1.0), (0.0, 1.0), (0.0, 1.0),
-                               (0.0, None), (0.0, None), (0.0, 1.0)] + [(None, None), ] * m)
-            args = (txi.astype(np.uint8), p, y, l, b, s, m, self.nobs, max_seen)
-            if start_params is None:
-                res = brute(func, bounds[txi], args, Ns=20, full_output=True, finish=None)
-                (p[txi], max_seen, grid, Jout) = res
-            else:
+            if np.any(xi):
+                # txi [alpha, beta, gamma, l0, b0, phi, s0,..,s_(m-1)]
+                # Have a quick look in the region for a good starting place for alpha etc.
+                # using guesstimates for the levels
+                txi = xi & np.array(
+                    [True, True, True, False, False, True] + [False] * m)
+                txi = txi.astype(np.bool)
+                bounds = np.array([(0.0, 1.0), (0.0, 1.0), (0.0, 1.0),
+                                   (0.0, None), (0.0, None), (0.0, 1.0)] + [(None, None), ] * m)
+                args = (txi.astype(np.uint8), p, y, l, b, s, m, self.nobs, max_seen)
+                if start_params is None and np.any(txi) and use_brute:
+                    res = brute(func, bounds[txi], args, Ns=20, full_output=True, finish=None)
+                    (p[txi], max_seen, grid, Jout) = res
+                else:
+                    if start_params is not None:
+                        p[xi] = start_params
+                    args = (xi.astype(np.uint8), p, y, l, b, s, m, self.nobs, max_seen)
+                    max_seen = func(np.ascontiguousarray(p[xi]), *args)
+                # alpha, beta, gamma, l0, b0, phi = p[:6]
+                # s0 = p[6:]
+                # bounds = np.array([(0.0,1.0),(0.0,1.0),(0.0,1.0),(0.0,None),
+                # (0.0,None),(0.8,1.0)] + [(None,None),]*m)
                 args = (xi.astype(np.uint8), p, y, l, b, s, m, self.nobs, max_seen)
-                p[xi] = start_params
-                max_seen = func(np.ascontiguousarray(p[xi]), *args)
-            # alpha, beta, gamma, l0, b0, phi = p[:6]
-            # s0 = p[6:]
-            # bounds = np.array([(0.0,1.0),(0.0,1.0),(0.0,1.0),(0.0,None),
-            # (0.0,None),(0.8,1.0)] + [(None,None),]*m)
-            args = (xi.astype(np.uint8), p, y, l, b, s, m, self.nobs, max_seen)
-            if use_basinhopping:
-                # Take a deeper look in the local minimum we are in to find the best
-                # solution to parameters, maybe hop around to try escape the local
-                # minimum we may be in.
-                res = basinhopping(func, p[xi],
-                                   minimizer_kwargs={'args': args, 'bounds': bounds[xi]},
-                                   stepsize=0.01)
+                if use_basinhopping:
+                    # Take a deeper look in the local minimum we are in to find the best
+                    # solution to parameters, maybe hop around to try escape the local
+                    # minimum we may be in.
+                    res = basinhopping(func, p[xi],
+                                       minimizer_kwargs={'args': args, 'bounds': bounds[xi]},
+                                       stepsize=0.01)
+                    success = res.lowest_optimization_result.success
+                else:
+                    # Take a deeper look in the local minimum we are in to find the best
+                    # solution to parameters
+                    res = minimize(func, p[xi], args=args, bounds=bounds[xi])
+                    success = res.success
+
+                if not success:
+                    from warnings import warn
+                    from statsmodels.tools.sm_exceptions import ConvergenceWarning
+                    warn("Optimization failed to converge. Check mle_retvals.",
+                         ConvergenceWarning)
+                p[xi] = res.x
+                opt = res
             else:
-                # Take a deeper look in the local minimum we are in to find the best
-                # solution to parameters
-                res = minimize(func, p[xi], args=args, bounds=bounds[xi])
-            p[xi] = res.x
+                from warnings import warn
+                from statsmodels.tools.sm_exceptions import EstimationWarning
+                message = "Model has no free parameters to estimate. Set " \
+                          "optimized=False to suppress this warning"
+                warn(message, EstimationWarning)
+
             [alpha, beta, gamma, l0, b0, phi] = p[:6]
             s0 = p[6:]
-            opt = res
+
         hwfit = self._predict(h=0, smoothing_level=alpha, smoothing_slope=beta,
                               smoothing_seasonal=gamma, damping_slope=phi,
                               initial_level=l0, initial_slope=b0, initial_seasons=s0,
