@@ -13,15 +13,15 @@ Author: Terence L van Zyl
 """
 import numpy as np
 import pandas as pd
+from scipy.optimize import basinhopping, brute, minimize
+from scipy.spatial.distance import sqeuclidean
 
+import statsmodels.tsa._holtwinters as smoothers
 from statsmodels.base.model import Results
 from statsmodels.base.wrapper import populate_wrapper, union_dicts, ResultsWrapper
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
-import statsmodels.tsa._holtwinters as smoothers
 from statsmodels.tsa.x13 import _freq_to_period
 
-from scipy.optimize import basinhopping, brute, minimize
-from scipy.spatial.distance import sqeuclidean
 try:
     from scipy.special import inv_boxcox
 except ImportError:
@@ -68,9 +68,9 @@ def _holt_mul_dam(x, xi, p, y, l, b, s, m, n, max_seen):
     if beta > alpha:
         return max_seen
     for i in range(1, n):
-        l[i] = (y_alpha[i - 1]) + (alphac * (l[i - 1] * b[i - 1]**phi))
-        b[i] = (beta * (l[i] / l[i - 1])) + (betac * b[i - 1]**phi)
-    return sqeuclidean(l * b**phi, y)
+        l[i] = (y_alpha[i - 1]) + (alphac * (l[i - 1] * b[i - 1] ** phi))
+        b[i] = (beta * (l[i] / l[i - 1])) + (betac * b[i - 1] ** phi)
+    return sqeuclidean(l * b ** phi, y)
 
 
 def _holt_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
@@ -142,7 +142,7 @@ def _holt_win__add(x, xi, p, y, l, b, s, m, n, max_seen):
     for i in range(1, n):
         l[i] = (y_alpha[i - 1]) - (alpha * s[i - 1]) + (alphac * (l[i - 1]))
         s[i + m - 1] = y_gamma[i - 1] - \
-            (gamma * (l[i - 1])) + (gammac * s[i - 1])
+                       (gamma * (l[i - 1])) + (gammac * s[i - 1])
     return sqeuclidean(l + s[:-(m - 1)], y)
 
 
@@ -160,7 +160,7 @@ def _holt_win_add_mul_dam(x, xi, p, y, l, b, s, m, n, max_seen):
         return max_seen
     for i in range(1, n):
         l[i] = (y_alpha[i - 1] / s[i - 1]) + \
-            (alphac * (l[i - 1] + phi * b[i - 1]))
+               (alphac * (l[i - 1] + phi * b[i - 1]))
         b[i] = (beta * (l[i] - l[i - 1])) + (betac * phi * b[i - 1])
         s[i + m - 1] = (y_gamma[i - 1] / (l[i - 1] + phi *
                                           b[i - 1])) + (gammac * s[i - 1])
@@ -181,11 +181,11 @@ def _holt_win_mul_mul_dam(x, xi, p, y, l, b, s, m, n, max_seen):
         return max_seen
     for i in range(1, n):
         l[i] = (y_alpha[i - 1] / s[i - 1]) + \
-            (alphac * (l[i - 1] * b[i - 1]**phi))
-        b[i] = (beta * (l[i] / l[i - 1])) + (betac * b[i - 1]**phi)
+               (alphac * (l[i - 1] * b[i - 1] ** phi))
+        b[i] = (beta * (l[i] / l[i - 1])) + (betac * b[i - 1] ** phi)
         s[i + m - 1] = (y_gamma[i - 1] / (l[i - 1] *
-                                          b[i - 1]**phi)) + (gammac * s[i - 1])
-    return sqeuclidean((l * b**phi) * s[:-(m - 1)], y)
+                                          b[i - 1] ** phi)) + (gammac * s[i - 1])
+    return sqeuclidean((l * b ** phi) * s[:-(m - 1)], y)
 
 
 def _holt_win_add_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
@@ -202,10 +202,10 @@ def _holt_win_add_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
         return max_seen
     for i in range(1, n):
         l[i] = (y_alpha[i - 1]) - (alpha * s[i - 1]) + \
-            (alphac * (l[i - 1] + phi * b[i - 1]))
+               (alphac * (l[i - 1] + phi * b[i - 1]))
         b[i] = (beta * (l[i] - l[i - 1])) + (betac * phi * b[i - 1])
         s[i + m - 1] = y_gamma[i - 1] - \
-            (gamma * (l[i - 1] + phi * b[i - 1])) + (gammac * s[i - 1])
+                       (gamma * (l[i - 1] + phi * b[i - 1])) + (gammac * s[i - 1])
     return sqeuclidean((l + phi * b) + s[:-(m - 1)], y)
 
 
@@ -223,11 +223,32 @@ def _holt_win_mul_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
         return max_seen
     for i in range(1, n):
         l[i] = (y_alpha[i - 1]) - (alpha * s[i - 1]) + \
-            (alphac * (l[i - 1] * b[i - 1]**phi))
-        b[i] = (beta * (l[i] / l[i - 1])) + (betac * b[i - 1]**phi)
+               (alphac * (l[i - 1] * b[i - 1] ** phi))
+        b[i] = (beta * (l[i] / l[i - 1])) + (betac * b[i - 1] ** phi)
         s[i + m - 1] = y_gamma[i - 1] - \
-            (gamma * (l[i - 1] * b[i - 1]**phi)) + (gammac * s[i - 1])
+                       (gamma * (l[i - 1] * b[i - 1] ** phi)) + (gammac * s[i - 1])
     return sqeuclidean((l * phi * b) + s[:-(m - 1)], y)
+
+
+SMOOTHERS = {('mul', 'add'): smoothers._holt_win_add_mul_dam,
+             ('mul', 'mul'): smoothers._holt_win_mul_mul_dam,
+             ('mul', None): smoothers._holt_win__mul,  # _holt_win__mul
+             ('add', 'add'): smoothers._holt_win_add_add_dam,  # _holt_win_add_add_dam
+             ('add', 'mul'): smoothers._holt_win_mul_add_dam,
+             ('add', None): smoothers._holt_win__add,  # _holt_win__add
+             (None, 'add'): smoothers._holt_add_dam,  # _holt_add_dam
+             (None, 'mul'): smoothers._holt_mul_dam,  # _holt_mul_dam
+             (None, None): smoothers._holt__}  # _holt__
+
+PY_SMOOTHERS = {('mul', 'add'): _holt_win_add_mul_dam,
+                ('mul', 'mul'): _holt_win_mul_mul_dam,
+                ('mul', None): _holt_win__mul,
+                ('add', 'add'): _holt_win_add_add_dam,
+                ('add', 'mul'): _holt_win_mul_add_dam,
+                ('add', None): _holt_win__add,
+                (None, 'add'): _holt_add_dam,
+                (None, 'mul'): _holt_mul_dam,
+                (None, None): _holt__}
 
 
 class HoltWintersResults(Results):
@@ -406,7 +427,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                     if hasattr(index, 'freq') and hasattr(index.freq, 'freqstr'):
                         freq = endog.index.freq.freqstr
                     if not freq:
-                         freq = pd.infer_freq(index)
+                        freq = pd.infer_freq(index)
                     self.seasonal_periods = _freq_to_period[freq]
                 except (ValueError, TypeError, AttributeError):
                     raise ValueError('Unable to detect seasonal periods.')
@@ -547,8 +568,12 @@ class ExponentialSmoothing(TimeSeriesModel):
         max_seen = np.finfo(np.double).max
         if seasoning:
             l0 = y[np.arange(self.nobs) % m == 0].mean() if l0 is None else l0
-            if b0 is None:
-                b0 = ((y[m:m + m] - y[:m]) / m).mean() if trending else None
+            if b0 is None and trending:
+                lead, lag =y[m:m + m],  y[:m]
+                if trend == 'mul':
+                    b0 = lead.mean() / lag.mean()
+                else:
+                    b0 = ((lead - lag) / m).mean() # TODO: Divide by m here?
             s0 = list(y[:m] / l0) if seasonal == 'mul' else list(y[:m] - l0)
         elif trending:
             l0 = y[0] if l0 is None else l0
@@ -566,38 +591,28 @@ class ExponentialSmoothing(TimeSeriesModel):
             init_gamma = None
             init_phi = phi if phi is not None else 0.99
             # Selection of functions to optimize for appropriate parameters
-            func_dict = {('mul', 'add'): smoothers._holt_win_add_mul_dam,
-                         ('mul', 'mul'): smoothers._holt_win_mul_mul_dam,
-                         ('mul', None): smoothers._holt_win__mul,  # _holt_win__mul
-                         ('add', 'add'): smoothers._holt_win_add_add_dam,  # _holt_win_add_add_dam
-                         ('add', 'mul'): smoothers._holt_win_mul_add_dam,
-                         ('add', None): smoothers._holt_win__add,  # _holt_win__add
-                         (None, 'add'): smoothers._holt_add_dam,  # _holt_add_dam
-                         (None, 'mul'): smoothers._holt_mul_dam,  # _holt_mul_dam
-                         (None, None): smoothers._holt__}  # _holt__
             if seasoning:
                 init_gamma = gamma if gamma is not None else 0.05 * \
-                    (1 - init_alpha)
+                                                             (1 - init_alpha)
                 xi = np.array([alpha is None, beta is None, gamma is None,
                                initial_level is None, trending and initial_slope is None,
                                phi is None and damped] + [True] * m)
-                func = func_dict[(seasonal, trend)]
+                func = SMOOTHERS[(seasonal, trend)]
             elif trending:
                 xi = np.array([alpha is None, beta is None, False,
                                initial_level is None, initial_slope is None,
                                phi is None and damped] + [False] * m)
-                func = func_dict[(None, trend)]
+                func = SMOOTHERS[(None, trend)]
             else:
                 xi = np.array([alpha is None, False, False,
                                initial_level is None, False, False] + [False] * m)
-                func = func_dict[(None, None)]
+                func = SMOOTHERS[(None, None)]
             p[:] = [init_alpha, init_beta, init_gamma, l0, b0, init_phi] + s0
             if np.any(xi):
                 # txi [alpha, beta, gamma, l0, b0, phi, s0,..,s_(m-1)]
                 # Have a quick look in the region for a good starting place for alpha etc.
                 # using guesstimates for the levels
-                txi = xi & np.array(
-                    [True, True, True, False, False, True] + [False] * m)
+                txi = xi & np.array([True, True, True, False, False, True] + [False] * m)
                 txi = txi.astype(np.bool)
                 bounds = np.array([(0.0, 1.0), (0.0, 1.0), (0.0, 1.0),
                                    (0.0, None), (0.0, None), (0.0, 1.0)] + [(None, None), ] * m)
@@ -709,7 +724,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         l[0] = initial_level
         b[0] = initial_slope
         s[:m] = initial_seasons
-        phi_h = np.cumsum(np.repeat(phi, h + 1)**np.arange(1, h + 1 + 1)
+        phi_h = np.cumsum(np.repeat(phi, h + 1) ** np.arange(1, h + 1 + 1)
                           ) if damped else np.arange(1, h + 1 + 1)
         trended = {'mul': np.multiply,
                    'add': np.add,
@@ -726,13 +741,13 @@ class ExponentialSmoothing(TimeSeriesModel):
         if seasonal == 'mul':
             for i in range(1, self.nobs + 1):
                 l[i] = y_alpha[i - 1] / s[i - 1] + \
-                    (alphac * trended(l[i - 1], dampen(b[i - 1], phi)))
+                       (alphac * trended(l[i - 1], dampen(b[i - 1], phi)))
                 if trending:
                     b[i] = (beta * detrend(l[i], l[i - 1])) + \
-                        (betac * dampen(b[i - 1], phi))
+                           (betac * dampen(b[i - 1], phi))
                 s[i + m - 1] = y_gamma[i - 1] / \
-                    trended(l[i - 1], dampen(b[i - 1], phi)) + \
-                    (gammac * s[i - 1])
+                               trended(l[i - 1], dampen(b[i - 1], phi)) + \
+                               (gammac * s[i - 1])
             slope = b[1:i + 1].copy()
             season = s[m:i + m].copy()
             l[i:] = l[i]
@@ -745,13 +760,13 @@ class ExponentialSmoothing(TimeSeriesModel):
         elif seasonal == 'add':
             for i in range(1, self.nobs + 1):
                 l[i] = y_alpha[i - 1] - (alpha * s[i - 1]) + \
-                    (alphac * trended(l[i - 1], dampen(b[i - 1], phi)))
+                       (alphac * trended(l[i - 1], dampen(b[i - 1], phi)))
                 if trending:
                     b[i] = (beta * detrend(l[i], l[i - 1])) + \
-                        (betac * dampen(b[i - 1], phi))
+                           (betac * dampen(b[i - 1], phi))
                 s[i + m - 1] = y_gamma[i - 1] - \
-                    (gamma * trended(l[i - 1],
-                                     dampen(b[i - 1], phi))) + (gammac * s[i - 1])
+                               (gamma * trended(l[i - 1],
+                                                dampen(b[i - 1], phi))) + (gammac * s[i - 1])
             slope = b[1:i + 1].copy()
             season = s[m:i + m].copy()
             l[i:] = l[i]
@@ -764,10 +779,10 @@ class ExponentialSmoothing(TimeSeriesModel):
         else:
             for i in range(1, self.nobs + 1):
                 l[i] = y_alpha[i - 1] + \
-                    (alphac * trended(l[i - 1], dampen(b[i - 1], phi)))
+                       (alphac * trended(l[i - 1], dampen(b[i - 1], phi)))
                 if trending:
                     b[i] = (beta * detrend(l[i], l[i - 1])) + \
-                        (betac * dampen(b[i - 1], phi))
+                           (betac * dampen(b[i - 1], phi))
             slope = b[1:i + 1].copy()
             season = s[m:i + m].copy()
             l[i:] = l[i]
@@ -847,7 +862,8 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     def __init__(self, endog):
         super(SimpleExpSmoothing, self).__init__(endog)
 
-    def fit(self, smoothing_level=None, optimized=True):
+    def fit(self, smoothing_level=None, optimized=True, start_params=None,
+            initial_level=None, use_brute=True):
         """
         fit Simple Exponential Smoothing wrapper(...)
 
@@ -856,8 +872,17 @@ class SimpleExpSmoothing(ExponentialSmoothing):
         smoothing_level : float, optional
             The smoothing_level value of the simple exponential smoothing, if the value is
             set then this value will be used as the value.
-        optimized : bool
+        optimized : bool, optional
             Should the values that have not been set above be optimized automatically?
+        start_params: array, optional
+            Starting values to used when optimizing the fit.  If not provided,
+            starting values are determined using a combination of grid search
+            and reasonable values based on the initial values of the data
+        initial_level: float, optional
+            Value to use when initializing the fitted level.
+        use_brute: bool, optional
+            Search for good starting values using a brute force (grid) optimizer.
+            If False, a naive set of starting values is used.
 
         Returns
         -------
@@ -875,7 +900,9 @@ class SimpleExpSmoothing(ExponentialSmoothing):
             OTexts, 2014.
         """
         return super(SimpleExpSmoothing, self).fit(smoothing_level=smoothing_level,
-                                                   optimized=optimized)
+                                                   optimized=optimized, start_params=start_params,
+                                                   initial_level=initial_level,
+                                                   use_brute=use_brute)
 
 
 class Holt(ExponentialSmoothing):
@@ -915,7 +942,9 @@ class Holt(ExponentialSmoothing):
         trend = 'mul' if exponential else 'add'
         super(Holt, self).__init__(endog, trend=trend, damped=damped)
 
-    def fit(self, smoothing_level=None, smoothing_slope=None, damping_slope=None, optimized=True):
+    def fit(self, smoothing_level=None, smoothing_slope=None, damping_slope=None,
+            optimized=True, start_params=None, initial_level=None,
+            initial_slope=None, use_brute=True):
         """
         fit Holt's Exponential Smoothing wrapper(...)
 
@@ -932,6 +961,17 @@ class Holt(ExponentialSmoothing):
             set then this value will be used as the value.
         optimized : bool, optional
             Should the values that have not been set above be optimized automatically?
+        start_params: array, optional
+            Starting values to used when optimizing the fit.  If not provided,
+            starting values are determined using a combination of grid search
+            and reasonable values based on the initial values of the data
+        initial_level: float, optional
+            Value to use when initializing the fitted level.
+        initial_slope: float, optional
+            Value to use when initializing the fitted slope.
+        use_brute: bool, optional
+            Search for good starting values using a brute force (grid) optimizer.
+            If False, a naive set of starting values is used.
 
         Returns
         -------
@@ -950,4 +990,5 @@ class Holt(ExponentialSmoothing):
         """
         return super(Holt, self).fit(smoothing_level=smoothing_level,
                                      smoothing_slope=smoothing_slope, damping_slope=damping_slope,
-                                     optimized=optimized)
+                                     optimized=optimized, start_params=start_params,
+                                     initial_level=None, initial_slope=None, use_brute=use_brute)
