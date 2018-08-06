@@ -61,6 +61,7 @@ def auto_order(endog, measure='aic', d=0, max_order=(3, 3), D=0, s=1,
     macrodata.index = pd.PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
     intercept, p, d, q = sarimax.auto_order(macrodata['infl'], d=0)
     """
+    intercept_val = allow_intercept
     if not stepwise:
         n_p, n_q, n_P, n_Q = 0, 0, 0, 0
         min_aic = np.inf
