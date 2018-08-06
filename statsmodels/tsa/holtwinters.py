@@ -15,19 +15,14 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import basinhopping, brute, minimize
 from scipy.spatial.distance import sqeuclidean
+from scipy.special import inv_boxcox
+from scipy.stats import boxcox
 
-import statsmodels.tsa._holtwinters as smoothers
 from statsmodels.base.model import Results
 from statsmodels.base.wrapper import populate_wrapper, union_dicts, ResultsWrapper
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
+import statsmodels.tsa._exponential_smoothers as smoothers
 from statsmodels.tsa.x13 import _freq_to_period
-
-try:
-    from scipy.special import inv_boxcox
-except ImportError:
-    def inv_boxcox(x, lmbda):
-        return np.exp(np.log1p(lmbda * x) / lmbda) if lmbda != 0 else np.exp(x)
-from scipy.stats import boxcox
 
 
 def _holt_init(x, xi, p, y, l, b):
@@ -232,13 +227,13 @@ def _holt_win_mul_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
 
 SMOOTHERS = {('mul', 'add'): smoothers._holt_win_add_mul_dam,
              ('mul', 'mul'): smoothers._holt_win_mul_mul_dam,
-             ('mul', None): smoothers._holt_win__mul,  # _holt_win__mul
-             ('add', 'add'): smoothers._holt_win_add_add_dam,  # _holt_win_add_add_dam
+             ('mul', None): smoothers._holt_win__mul,
+             ('add', 'add'): smoothers._holt_win_add_add_dam,
              ('add', 'mul'): smoothers._holt_win_mul_add_dam,
-             ('add', None): smoothers._holt_win__add,  # _holt_win__add
-             (None, 'add'): smoothers._holt_add_dam,  # _holt_add_dam
-             (None, 'mul'): smoothers._holt_mul_dam,  # _holt_mul_dam
-             (None, None): smoothers._holt__}  # _holt__
+             ('add', None): smoothers._holt_win__add,
+             (None, 'add'): smoothers._holt_add_dam,
+             (None, 'mul'): smoothers._holt_mul_dam,
+             (None, None): smoothers._holt__}
 
 PY_SMOOTHERS = {('mul', 'add'): _holt_win_add_mul_dam,
                 ('mul', 'mul'): _holt_win_mul_mul_dam,
@@ -268,6 +263,9 @@ class HoltWintersResults(Results):
         Dictionary including all attributes from the VARMAX model instance.
     params: dict
         All the parameters for the Exponential Smoothing model.
+    params_formatted: pd.DataFrame
+        DataFrame containins all parameters, their short names and a flag
+        indicating whether the parameter's value was optimized to fit the data.
     fittedfcast: array
         An array of both the fitted values and forecast values.
     fittedvalues: array
@@ -294,7 +292,8 @@ class HoltWintersResults(Results):
         An array of the residuals of the fittedvalues and actual values.
     k: int
         the k parameter used to remove the bias in AIC, BIC etc.
-
+    optimized: bool
+        Flag indicating whether the model parameters were optimized to fit the data.
     """
 
     def __init__(self, model, params, **kwds):
@@ -348,6 +347,77 @@ class HoltWintersResults(Results):
         except ValueError:
             # May occur when the index doesn't have a freq
             return self.model._predict(h=steps, **self.params).fcastvalues
+
+    def summary(self):
+        """Summarize the Model
+
+        Returns
+        -------
+        smry : Summary instance
+            This holds the summary table and text, which can be printed or
+            converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary
+        """
+        from statsmodels.iolib.summary import Summary
+        from statsmodels.iolib.table import SimpleTable
+        model = self.model
+        title = model.__class__.__name__ + ' Model Results'
+
+        dep_variable = 'endog'
+        if isinstance(self.model.endog, pd.DataFrame):
+            dep_variable = self.model.endog.columns[0]
+        elif isinstance(self.model.endog, pd.Series):
+            dep_variable = self.model.endog.name
+        seasonal_periods = None if self.model.seasonal is None else self.model.seasonal_periods
+        lookup = {'add': 'Additive', 'additive': 'Additive',
+                  'mul': 'Multiplicative', 'multiplicative': 'Multiplicative', None: 'None'}
+        top_left = [('Dep. Variable:', [dep_variable]),
+                    ('Model:', [model.__class__.__name__]),
+                    ('Optimzed:', [str(np.any(self.optimized))]),
+                    ('Trend:', [lookup[self.model.trend]]),
+                    ('Seasonal:', [lookup[self.model.seasonal]]),
+                    ('Seasonal Periods', [str(seasonal_periods)])]
+
+        top_right = [
+            ('No. Observations:', [str(len(self.model.endog))]),
+            ('SSE', ['{:5.3f}'.format(self.sse)]),
+            ('AIC', ['{:5.3f}'.format(self.aic)]),
+            ('BIC', ['{:5.3f}'.format(self.bic)]),
+            ('AICC', ['{:5.3f}'.format(self.aicc)]),
+            ('Date:', None),
+            ('Time:', None)]
+
+        smry = Summary()
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
+                             title=title)
+        formatted = self.params_formatted  # type: pd.DataFrame
+
+        def _fmt(x):
+            abs_x = np.abs(x)
+            scale = 1
+            if abs_x != 0:
+                scale = int(np.log10(abs_x))
+            if scale > 4 or scale < -3:
+                return '{:>20.5g}'.format(x)
+            dec = min(7 - scale, 7)
+            fmt = '{{:>20.{0}f}}'.format(dec)
+            return fmt.format(x)
+
+        tab = []
+        for _, vals in formatted.iterrows():
+            tab.append([_fmt(vals.iloc[1]),
+                        '{0:>20}'.format(vals.iloc[0]),
+                        '{0:>20}'.format(str(bool(vals.iloc[2])))])
+        params_table = SimpleTable(tab, headers=['coeff', 'code', 'optimized'],
+                                   title="",
+                                   stubs=list(formatted.index))
+
+        smry.tables.append(params_table)
+
+        return smry
 
 
 class HoltWintersResultsWrapper(ResultsWrapper):
@@ -413,26 +483,19 @@ class ExponentialSmoothing(TimeSeriesModel):
         self.trending = trend in ['mul', 'add']
         self.seasoning = seasonal in ['mul', 'add']
         if (self.trend == 'mul' or self.seasonal == 'mul') and np.any(endog <= 0.0):
-            raise NotImplementedError(
-                'Unable to correct for negative or zero values')
+            raise ValueError('endog must be strictly positive when using multiplicative '
+                             'trend or seasonal components.')
         if self.damped and not self.trending:
-            raise NotImplementedError('Can only dampen the trend component')
+            raise ValueError('Can only dampen the trend component')
         if self.seasoning:
             self.seasonal_periods = seasonal_periods
             if seasonal_periods is None:
                 try:
-                    # TODO: Is a better version of this implemented somewhere?
-                    freq = None
-                    index = endog.index
-                    if hasattr(index, 'freq') and hasattr(index.freq, 'freqstr'):
-                        freq = endog.index.freq.freqstr
-                    if not freq:
-                        freq = pd.infer_freq(index)
-                    self.seasonal_periods = _freq_to_period[freq]
+                    self.seasonal_periods = _freq_to_period[self._index_freq.freqstr]
                 except (ValueError, TypeError, AttributeError):
                     raise ValueError('Unable to detect seasonal periods.')
             if self.seasonal_periods <= 1:
-                ValueError('seasonal_periods must be larger than 1.')
+                raise ValueError('seasonal_periods must be larger than 1.')
         else:
             self.seasonal_periods = 0
         self.nobs = len(self.endog)
@@ -560,7 +623,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             lamda = None
             y = data.squeeze()
         if np.ndim(y) != 1:
-            raise NotImplementedError('Only 1 dimensional data supported')
+            raise ValueError('Only 1 dimensional data supported')
         l = np.zeros((self.nobs,))
         b = np.zeros((self.nobs,))
         s = np.zeros((self.nobs + m - 1,))
@@ -569,11 +632,11 @@ class ExponentialSmoothing(TimeSeriesModel):
         if seasoning:
             l0 = y[np.arange(self.nobs) % m == 0].mean() if l0 is None else l0
             if b0 is None and trending:
-                lead, lag =y[m:m + m],  y[:m]
+                lead, lag = y[m:m + m], y[:m]
                 if trend == 'mul':
-                    b0 = lead.mean() / lag.mean()
+                    b0 = np.exp((np.log(lead.mean()) - np.log(lag.mean())) / m)
                 else:
-                    b0 = ((lead - lag) / m).mean() # TODO: Divide by m here?
+                    b0 = ((lead - lag) / m).mean()
             s0 = list(y[:m] / l0) if seasonal == 'mul' else list(y[:m] - l0)
         elif trending:
             l0 = y[0] if l0 is None else l0
@@ -585,6 +648,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 l0 = y[0]
             b0 = None
             s0 = []
+        xi = np.zeros_like(p, dtype=np.bool)
         if optimized:
             init_alpha = alpha if alpha is not None else 0.5 / max(m, 1)
             init_beta = beta if beta is not None else 0.1 * init_alpha if trending else beta
@@ -622,6 +686,10 @@ class ExponentialSmoothing(TimeSeriesModel):
                     (p[txi], max_seen, grid, Jout) = res
                 else:
                     if start_params is not None:
+                        start_params = np.atleast_1d(np.squeeze(start_params))
+                        if len(start_params) != xi.sum():
+                            raise ValueError('start_params must have {0} values but '
+                                             'has {1} instead'.format(len(xi), len(start_params)))
                         p[xi] = start_params
                     args = (xi.astype(np.uint8), p, y, l, b, s, m, self.nobs, max_seen)
                     max_seen = func(np.ascontiguousarray(p[xi]), *args)
@@ -664,14 +732,15 @@ class ExponentialSmoothing(TimeSeriesModel):
         hwfit = self._predict(h=0, smoothing_level=alpha, smoothing_slope=beta,
                               smoothing_seasonal=gamma, damping_slope=phi,
                               initial_level=l0, initial_slope=b0, initial_seasons=s0,
-                              use_boxcox=use_boxcox, lamda=lamda, remove_bias=remove_bias)
+                              use_boxcox=use_boxcox, lamda=lamda, remove_bias=remove_bias,
+                              is_optimized=xi)
         hwfit._results.mle_retvals = opt
         return hwfit
 
     def _predict(self, h=None, smoothing_level=None, smoothing_slope=None,
                  smoothing_seasonal=None, initial_level=None, initial_slope=None,
                  damping_slope=None, initial_seasons=None, use_boxcox=None, lamda=None,
-                 remove_bias=None):
+                 remove_bias=None, is_optimized=None):
         """
         Helper prediction function
 
@@ -798,10 +867,8 @@ class ExponentialSmoothing(TimeSeriesModel):
             slope = detrend(trend[:i], level)
             if seasonal == 'add':
                 season = (fitted - inv_boxcox(trend, lamda))[:i]
-            elif seasonal == 'mul':
+            else:  # seasonal == 'mul':
                 season = (fitted / inv_boxcox(trend, lamda))[:i]
-            else:
-                pass
         sse = sqeuclidean(fitted[:-h - 1], data)
         # (s0 + gamma) + (b0 + beta) + (l0 + alpha) + phi
         k = m * seasoning + 2 * trending + 2 + 1 * damped
@@ -823,10 +890,30 @@ class ExponentialSmoothing(TimeSeriesModel):
                        'use_boxcox': use_boxcox,
                        'lamda': lamda,
                        'remove_bias': remove_bias}
+
+        # Format parameters into a DataFrame
+        codes = ['alpha', 'beta', 'gamma', 'l.0', 'b.0', 'phi']
+        codes += ['s.{0}'.format(i) for i in range(m)]
+        idx = ['smoothing_level', 'smoothing_slope', 'smoothing_seasonal',
+               'initial_level', 'initial_slope', 'damping_slope']
+        idx += ['initial_seasons.{0}'.format(i) for i in range(m)]
+        formatted = np.r_[alpha, beta, gamma, l[0], b[0], phi, np.squeeze(s[:m])]
+        if is_optimized is None:
+            optimized = np.zeros(len(codes), dtype=np.bool)
+        else:
+            optimized = is_optimized.astype(np.bool)
+        included = [True, trending, seasoning, True, trending, damped]
+        included += [True] * m
+        formatted = pd.DataFrame([[c, f, o] for c, f, o in zip(codes, formatted, optimized)],
+                                 columns=['name', 'param', 'optimized'],
+                                 index=idx)
+        formatted = formatted.loc[included]
+
         hwfit = HoltWintersResults(self, self.params, fittedfcast=fitted,
                                    fittedvalues=fitted[:-h - 1], fcastvalues=fitted[-h - 1:],
                                    sse=sse, level=level, slope=slope, season=season, aic=aic,
-                                   bic=bic, aicc=aicc, resid=resid, k=k)
+                                   bic=bic, aicc=aicc, resid=resid, k=k,
+                                   params_formatted=formatted, optimized=optimized)
         return HoltWintersResultsWrapper(hwfit)
 
 

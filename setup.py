@@ -370,9 +370,9 @@ ext_data = dict(
     _smoothers_lowess = {"name" : "statsmodels/nonparametric/_smoothers_lowess.c",
              "depends" : [],
              "sources" : []},
-    _holtwinters = {"name": "statsmodels/tsa/_holtwinters.c",
-                    "depends": [],
-                    "sources": []}
+    _exponential_smoothers = {"name": "statsmodels/tsa/_exponential_smoothers.c",
+                              "depends": [],
+                              "sources": []}
 )
 
 statespace_ext_data = dict(
