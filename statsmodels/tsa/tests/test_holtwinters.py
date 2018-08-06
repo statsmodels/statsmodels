@@ -49,6 +49,37 @@ def _simple_dbl_exp_smoother(x, alpha, beta, l0, b0, nforecast=0):
     return l, b, f, err, xhat
 
 
+def _simple_trip_exp_smoother(x, alpha, beta, gamma, l0, b0, s0):
+    n = x.shape[0]
+    a = np.zeros(n)
+    b = np.zeros(n)
+    s = np.zeros(n)
+    m = len(s0)
+    one_step = np.zeros(n)
+    for t in range(n):
+        lag = t - 1
+        if lag < 0:
+            atm1 = l0
+            btm1 = b0
+        else:
+            atm1 = a[t - 1]
+            btm1 = b[t - 1]
+        slag = t - m
+        if slag < 0:
+            stmm = s0[t]
+        else:
+            stmm = s[t - m]
+        if t - m + 1 < 0:
+            stmmp1 = s0[t + 1]
+        else:
+            stmmp1 = s[t - m + 1]
+        a[t] = alpha * (x[t] - stmm) + (1 - alpha) * (atm1 + btm1)
+        b[t] = beta * (a[t] - atm1) + (1 - beta) * btm1
+        s[t] = gamma * (x[t] - a[t] - b[t]) + (1 - gamma) * stmm
+        one_step[t] = a[t] + b[t] + stmmp1
+    return a, b, s, one_step
+
+
 class TestHoltWinters(object):
     @classmethod
     def setup_class(cls):
@@ -408,3 +439,15 @@ def test_direct_holt_add():
     assert_allclose(b, res.slope)
     assert_allclose(f, res.level.iloc[-1] + res.slope.iloc[-1] * np.array([1, 2, 3, 4, 5]))
     assert_allclose(f, res.forecast(5))
+
+    mod = ExponentialSmoothing(housing_data, trend='add', seasonal='add')
+    res = mod.fit()
+    print(res.params)
+    alpha = res.params['smoothing_level']
+    beta = res.params['smoothing_slope']
+    gamma = res.params['smoothing_seasonal']
+    l, b, s, one_step = _simple_trip_exp_smoother(x, alpha, beta, gamma,
+                                                  l0=res.params['initial_level'],
+                                                  b0=res.params['initial_slope'],
+                                                  s0=res.params['initial_seasons'])
+    print(l)
