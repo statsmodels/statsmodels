@@ -1,22 +1,28 @@
 """Yearly sunspots data 1700-2008"""
+from os.path import dirname, abspath
+
+from numpy import recfromtxt, array
+from pandas import Series, DataFrame
+
+from statsmodels.datasets.utils import Dataset
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """This data is public domain."""
-TITLE       = __doc__
-SOURCE      = """
+COPYRIGHT = """This data is public domain."""
+TITLE = __doc__
+SOURCE = """
 http://www.ngdc.noaa.gov/stp/solar/solarda3.html
 
 The original dataset contains monthly data on sunspot activity in the file
 ./src/sunspots_yearly.dat.  There is also sunspots_monthly.dat.
 """
 
-DESCRSHORT  = """Yearly (1700-2008) data on sunspots from the National
+DESCRSHORT = """Yearly (1700-2008) data on sunspots from the National
 Geophysical Data Center."""
 
-DESCRLONG   = DESCRSHORT
+DESCRLONG = DESCRSHORT
 
-NOTE        = """::
+NOTE = """::
 
     Number of Observations - 309 (Annual 1700 - 2008)
     Number of Variables - 1
@@ -27,11 +33,6 @@ NOTE        = """::
     The data file contains a 'YEAR' variable that is not returned by load.
 """
 
-from numpy import recfromtxt, array
-from pandas import Series, DataFrame
-
-from statsmodels.datasets.utils import Dataset
-from os.path import dirname, abspath
 
 def load():
     """
@@ -55,6 +56,7 @@ def load():
                       endog_name=endog_name)
     return dataset
 
+
 def load_pandas():
     data = DataFrame(_get_data())
     # TODO: time series
@@ -62,6 +64,7 @@ def load_pandas():
     dataset = Dataset(data=data, names=list(data.columns),
                       endog=endog, endog_name='volume')
     return dataset
+
 
 def _get_data():
     filepath = dirname(abspath(__file__))

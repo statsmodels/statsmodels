@@ -1,1 +1,2 @@
-from .data import *
+__all__ = ["load", "load_pandas"]
+from .data import load, load_pandas

@@ -1,10 +1,10 @@
 """(West) German interest and inflation rate 1972-1998"""
+from os.path import dirname, abspath, join
 
-from numpy import recfromtxt, column_stack, array
+from numpy import recfromtxt
 from pandas import DataFrame
 
 from statsmodels.datasets.utils import Dataset
-from os.path import dirname, abspath, pardir, join
 
 __docformat__ = 'restructuredtext'
 
@@ -75,4 +75,3 @@ def _get_data():
 
 def __str__():
     return "e6"
-

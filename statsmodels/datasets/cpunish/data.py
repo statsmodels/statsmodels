@@ -1,19 +1,24 @@
 """US Capital Punishment dataset."""
+from os.path import dirname, abspath
+
+from numpy import recfromtxt
+
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Used with express permission from the original author,
+COPYRIGHT = """Used with express permission from the original author,
 who retains all rights."""
-TITLE       = __doc__
-SOURCE      = """
+TITLE = __doc__
+SOURCE = """
 Jeff Gill's `Generalized Linear Models: A Unified Approach`
 
 http://jgill.wustl.edu/research/books.html
 """
 
-DESCRSHORT  = """Number of state executions in 1997"""
+DESCRSHORT = """Number of state executions in 1997"""
 
-DESCRLONG   = """This data describes the number of times capital punishment is implemented
+DESCRLONG = """This data describes the number of times capital punishment is implemented
 at the state level for the year 1997.  The outcome variable is the number of
 executions.  There were executions in 17 states.
 Included in the data are explanatory variables for median per capita income
@@ -24,7 +29,7 @@ whether the state is in the South, and (an estimate of) the proportion
 of the population with a college degree of some kind.
 """
 
-NOTE        = """::
+NOTE = """::
 
     Number of Observations - 17
     Number of Variables - 7
@@ -42,9 +47,6 @@ NOTE        = """::
     State names are included in the data file, though not returned by load.
 """
 
-from numpy import recfromtxt, column_stack, array
-from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
 
 def load():
     """
@@ -58,6 +60,7 @@ def load():
     data = _get_data()
     return du.process_recarray(data, endog_idx=0, dtype=float)
 
+
 def load_pandas():
     """
     Load the cpunish data and return a Dataset class.
@@ -70,9 +73,11 @@ def load_pandas():
     data = _get_data()
     return du.process_recarray_pandas(data, endog_idx=0, dtype=float)
 
+
 def _get_data():
     filepath = dirname(abspath(__file__))
     with open(filepath + '/cpunish.csv', 'rb') as f:
         data = recfromtxt(f, delimiter=",",
-                          names=True, dtype=float, usecols=(1,2,3,4,5,6,7))
+                          names=True, dtype=float,
+                          usecols=(1, 2, 3, 4, 5, 6, 7))
     return data
