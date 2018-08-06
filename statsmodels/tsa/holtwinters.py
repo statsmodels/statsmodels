@@ -897,7 +897,11 @@ class ExponentialSmoothing(TimeSeriesModel):
         idx = ['smoothing_level', 'smoothing_slope', 'smoothing_seasonal',
                'initial_level', 'initial_slope', 'damping_slope']
         idx += ['initial_seasons.{0}'.format(i) for i in range(m)]
-        formatted = np.r_[alpha, beta, gamma, l[0], b[0], phi, np.squeeze(s[:m])]
+
+        formatted = [alpha, beta, gamma, l[0], b[0], phi]
+        formatted += s[:m].tolist()
+        formatted = list(map(lambda v: np.nan if v is None else v, formatted))
+        formatted = np.array(formatted)
         if is_optimized is None:
             optimized = np.zeros(len(codes), dtype=np.bool)
         else:

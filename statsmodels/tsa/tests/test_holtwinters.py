@@ -23,6 +23,32 @@ SEASONALS = ('add', 'mul', None)
 TRENDS = ('add', 'mul', None)
 
 
+def _simple_dbl_exp_smoother(x, alpha, beta, l0, b0, nforecast=0):
+    """
+    Simple, slow, direct implementation of double exp smoothing for testing
+    """
+    n = x.shape[0]
+    l = np.zeros(n)
+    b = np.zeros(n)
+    xhat = np.zeros(n)
+    f = np.zeros(nforecast)
+    l[0] = l0
+    b[0] = b0
+    # Special case the 0 observations since index -1 is not available
+    xhat[0] = l0 + b0
+    l[0] = alpha * x[0] + (1 - alpha) * (l0 + b0)
+    b[0] = beta * (l[0] - l0) + (1 - beta) * b0
+    for t in range(1, n):
+        # Obs in index t is the time t forecast for t + 1
+        l[t] = alpha * x[t] + (1 - alpha) * (l[t - 1] + b[t - 1])
+        b[t] = beta * (l[t] - l[t - 1]) + (1 - beta) * b[t - 1]
+
+    xhat[1:] = l[0:-1] + b[0:-1]
+    f[:] = l[-1] + np.arange(1, nforecast + 1) * b[-1]
+    err = x - xhat
+    return l, b, f, err, xhat
+
+
 class TestHoltWinters(object):
     @classmethod
     def setup_class(cls):
@@ -204,7 +230,6 @@ class TestHoltWinters(object):
         assert_almost_equal(fit5.params['initial_slope'], 1.02, 2)
         assert_almost_equal(fit5.sse, 6082.00, 2)  # 6100.11
 
-
     def test_hw_seasonal(self):
         fit1 = ExponentialSmoothing(self.aust, seasonal_periods=4,
                                     trend='additive',
@@ -353,3 +378,33 @@ def test_equivalence_cython_python(trend, seasonal):
     sse_cy = cy_func(p, xi, p_copy, y, l, b, s, m, nobs, max_seen)
     sse_py = py_func(p, xi, p_copy, y, l, b, s, m, nobs, max_seen)
     assert_allclose(sse_py, sse_cy)
+
+
+def test_direct_holt_add():
+    mod = SimpleExpSmoothing(housing_data)
+    res = mod.fit()
+    x = np.squeeze(np.asarray(mod.endog))
+    alpha = res.params['smoothing_level']
+    l, b, f, err, xhat = _simple_dbl_exp_smoother(x, alpha, beta=0.0,
+                                                  l0=res.params['initial_level'], b0=0.0,
+                                                  nforecast=5)
+
+    assert_allclose(l, res.level)
+    assert_allclose(f, res.level.iloc[-1] * np.ones(5))
+    assert_allclose(f, res.forecast(5))
+
+    mod = ExponentialSmoothing(housing_data, trend='add')
+    res = mod.fit()
+    x = np.squeeze(np.asarray(mod.endog))
+    alpha = res.params['smoothing_level']
+    beta = res.params['smoothing_slope']
+    l, b, f, err, xhat = _simple_dbl_exp_smoother(x, alpha, beta=beta,
+                                                  l0=res.params['initial_level'],
+                                                  b0=res.params['initial_slope'], nforecast=5)
+
+    assert_allclose(xhat, res.fittedvalues)
+    assert_allclose(l + b, res.level + res.slope)
+    assert_allclose(l, res.level)
+    assert_allclose(b, res.slope)
+    assert_allclose(f, res.level.iloc[-1] + res.slope.iloc[-1] * np.array([1, 2, 3, 4, 5]))
+    assert_allclose(f, res.forecast(5))
