@@ -611,8 +611,8 @@ class ExponentialSmoothing(TimeSeriesModel):
         beta = smoothing_slope
         gamma = smoothing_seasonal
         phi = damping_slope
-        l0 = initial_level
-        b0 = initial_slope
+        l0 = self._l0 = initial_level
+        b0 = self._b0 = initial_slope
 
         data = self.endog
         damped = self.damped
@@ -636,30 +636,14 @@ class ExponentialSmoothing(TimeSeriesModel):
             y = data.squeeze()
         if np.ndim(y) != 1:
             raise ValueError('Only 1 dimensional data supported')
+        self._y = y
         l = np.zeros(self.nobs)
         b = np.zeros(self.nobs)
         s = np.zeros(self.nobs + m - 1)
         p = np.zeros(6 + m)
         max_seen = np.finfo(np.double).max
-        if seasoning:
-            l0 = y[np.arange(self.nobs) % m == 0].mean() if l0 is None else l0
-            if b0 is None and trending:
-                lead, lag = y[m:m + m], y[:m]
-                if trend == 'mul':
-                    b0 = np.exp((np.log(lead.mean()) - np.log(lag.mean())) / m)
-                else:
-                    b0 = ((lead - lag) / m).mean()
-            s0 = list(y[:m] / l0) if seasonal == 'mul' else list(y[:m] - l0)
-        elif trending:
-            l0 = y[0] if l0 is None else l0
-            if b0 is None:
-                b0 = y[1] / y[0] if trend == 'mul' else y[1] - y[0]
-            s0 = []
-        else:
-            if l0 is None:
-                l0 = y[0]
-            b0 = None
-            s0 = []
+        l0, b0, s0 = self.initial_values()
+
         xi = np.zeros_like(p, dtype=np.bool)
         if optimized:
             init_alpha = alpha if alpha is not None else 0.5 / max(m, 1)
@@ -747,6 +731,61 @@ class ExponentialSmoothing(TimeSeriesModel):
                               use_boxcox=use_boxcox, remove_bias=remove_bias, is_optimized=xi)
         hwfit._results.mle_retvals = opt
         return hwfit
+
+    def initial_values(self):
+        """
+        Computes the initial values used in the exponential smoothing recursions.
+
+        Returns
+        -------
+        initial_level : float
+            The initial value used for the level component
+        initial_slope : {float, None}
+            The initial value used for the trend component
+        initial_seasons : list
+            The initial values used for the seasonal components
+
+        Notes
+        -----
+        Convenience function the exposes the values used to initialize the recursions.  When
+        optimizing parameters these are used as starting values.
+
+        Method used to compute the initial value depends on when components are included in the
+        model.  In a simple exponential smoothing model without trend or a seasonal components,
+        the initial value is set to the first observation. When a trend is added, the trend is
+        initialized either using y[1]/y[0], if multiplicative, or y[1]-y[0]. When the seasonal
+        component is added the initialization adapts to account for the modified structure.
+        """
+        y = self._y
+        trend = self.trend
+        seasonal = self.seasonal
+        seasoning = self.seasoning
+        trending = self.trending
+        m = self.seasonal_periods
+        l0 = self._l0
+        b0 = self._b0
+        if seasoning:
+            l0 = y[np.arange(self.nobs) % m == 0].mean() if l0 is None else l0
+            if b0 is None and trending:
+                lead, lag = y[m:m + m], y[:m]
+                if trend == 'mul':
+                    b0 = np.exp((np.log(lead.mean()) - np.log(lag.mean())) / m)
+                else:
+                    b0 = ((lead - lag) / m).mean()
+            s0 = list(y[:m] / l0) if seasonal == 'mul' else list(y[:m] - l0)
+        elif trending:
+            l0 = y[0] if l0 is None else l0
+            if b0 is None:
+                b0 = y[1] / y[0] if trend == 'mul' else y[1] - y[0]
+            s0 = []
+        else:
+            if l0 is None:
+                l0 = y[0]
+            b0 = None
+            s0 = []
+
+        return l0, b0, s0
+
 
     def _predict(self, h=None, smoothing_level=None, smoothing_slope=None,
                  smoothing_seasonal=None, initial_level=None, initial_slope=None,
