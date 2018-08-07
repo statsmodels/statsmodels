@@ -1699,6 +1699,7 @@ class FilterResults(FrozenRepresentation):
         # Note: concentrated computation is not permitted with collapsed
         # version, so we do not need to modify collapsed arrays.
         self.scale = 1.
+        self.scale_obs = None
         if self.filter_concentrated and self.model._scale is None:
             d = max(self.loglikelihood_burn, self.nobs_diffuse)
             # Compute the scale
@@ -1709,8 +1710,8 @@ class FilterResults(FrozenRepresentation):
             # associated with a singular forecast error covariance matrix
             nobs_k_endog -= kalman_filter.nobs_kendog_univariate_singular
 
-            scale_obs = np.array(kalman_filter.scale, copy=True)
-            self.scale = np.sum(scale_obs[d:]) / nobs_k_endog
+            self.scale_obs = np.array(kalman_filter.scale, copy=True)
+            self.scale = np.sum(self.scale_obs[d:]) / nobs_k_endog
 
             # Need to modify this for diffuse initialization, since for
             # diffuse periods we only need to add in the scale value if the
@@ -1727,7 +1728,7 @@ class FilterResults(FrozenRepresentation):
             # defaults on the adjustment)
             self.llf_obs += -0.5 * (
                 (self.k_endog - nmissing - nsingular) * np.log(self.scale) +
-                scale_obs / self.scale)
+                self.scale_obs / self.scale)
 
             # Scale the filter output
             self.obs_cov = self.obs_cov * self.scale
