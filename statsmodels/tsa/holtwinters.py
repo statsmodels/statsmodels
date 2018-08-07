@@ -64,9 +64,9 @@ def _holt_mul_dam(x, xi, p, y, l, b, s, m, n, max_seen):
     if beta > alpha:
         return max_seen
     for i in range(1, n):
-        l[i] = (y_alpha[i - 1]) + (alphac * (l[i - 1] * b[i - 1] ** phi))
-        b[i] = (beta * (l[i] / l[i - 1])) + (betac * b[i - 1] ** phi)
-    return sqeuclidean(l * b ** phi, y)
+        l[i] = (y_alpha[i - 1]) + (alphac * (l[i - 1] * b[i - 1]**phi))
+        b[i] = (beta * (l[i] / l[i - 1])) + (betac * b[i - 1]**phi)
+    return sqeuclidean(l * b**phi, y)
 
 
 def _holt_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
@@ -176,11 +176,11 @@ def _holt_win_mul_mul_dam(x, xi, p, y, l, b, s, m, n, max_seen):
         return max_seen
     for i in range(1, n):
         l[i] = (y_alpha[i - 1] / s[i - 1]) + \
-               (alphac * (l[i - 1] * b[i - 1] ** phi))
-        b[i] = (beta * (l[i] / l[i - 1])) + (betac * b[i - 1] ** phi)
+               (alphac * (l[i - 1] * b[i - 1]**phi))
+        b[i] = (beta * (l[i] / l[i - 1])) + (betac * b[i - 1]**phi)
         s[i + m - 1] = (y_gamma[i - 1] / (l[i - 1] *
-                                          b[i - 1] ** phi)) + (gammac * s[i - 1])
-    return sqeuclidean((l * b ** phi) * s[:-(m - 1)], y)
+                                          b[i - 1]**phi)) + (gammac * s[i - 1])
+    return sqeuclidean((l * b**phi) * s[:-(m - 1)], y)
 
 
 def _holt_win_add_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
@@ -217,10 +217,10 @@ def _holt_win_mul_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
         return max_seen
     for i in range(1, n):
         l[i] = (y_alpha[i - 1]) - (alpha * s[i - 1]) + \
-               (alphac * (l[i - 1] * b[i - 1] ** phi))
-        b[i] = (beta * (l[i] / l[i - 1])) + (betac * b[i - 1] ** phi)
+               (alphac * (l[i - 1] * b[i - 1]**phi))
+        b[i] = (beta * (l[i] / l[i - 1])) + (betac * b[i - 1]**phi)
         s[i + m - 1] = y_gamma[i - 1] - \
-            (gamma * (l[i - 1] * b[i - 1] ** phi)) + (gammac * s[i - 1])
+            (gamma * (l[i - 1] * b[i - 1]**phi)) + (gammac * s[i - 1])
     return sqeuclidean((l * phi * b) + s[:-(m - 1)], y)
 
 
@@ -804,7 +804,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         l[0] = initial_level
         b[0] = initial_slope
         s[:m] = initial_seasons
-        phi_h = np.cumsum(np.repeat(phi, h + 1) ** np.arange(1, h + 1 + 1)
+        phi_h = np.cumsum(np.repeat(phi, h + 1)**np.arange(1, h + 1 + 1)
                           ) if damped else np.arange(1, h + 1 + 1)
         trended = {'mul': np.multiply,
                    'add': np.add,
