@@ -19,6 +19,7 @@ from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.statespace.mlemodel import (
     MLEModel, MLEResults, MLEResultsWrapper, PredictionResults,
     PredictionResultsWrapper)
+from statsmodels.tsa.statespace.tools import concat
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 import statsmodels.base.wrapper as wrap
@@ -67,7 +68,8 @@ class RecursiveLS(MLEModel):
     """
     def __init__(self, endog, exog, constraints=None, **kwargs):
         # Standardize data
-        if not _is_using_pandas(endog, None):
+        endog_using_pandas = _is_using_pandas(endog, None)
+        if not endog_using_pandas:
             endog = np.asanyarray(endog)
 
         exog_is_using_pandas = _is_using_pandas(exog, None)
@@ -95,8 +97,14 @@ class RecursiveLS(MLEModel):
             self._r_matrix, self._q_matrix = LC.coefs, LC.constants
             self.k_constraints = self._r_matrix.shape[0]
 
-            endog = np.c_[endog, np.zeros((len(endog), len(self._r_matrix)))]
-            endog[:, 1:] = self._q_matrix
+            constraint_endog = np.zeros((len(endog), len(self._r_matrix)))
+            if endog_using_pandas:
+                constraint_endog = pd.DataFrame(constraint_endog,
+                                                index=endog.index)
+                endog = concat([endog, constraint_endog], axis=1)
+                endog.values[:, 1:] = self._q_matrix[:, 0]
+            else:
+                endog[:, 1:] = self._q_matrix[:, 0]
 
         # Handle coefficient initialization
         kwargs.setdefault('initialization', 'diffuse')
@@ -194,6 +202,11 @@ class RecursiveLS(MLEModel):
             )
 
         return result
+
+    @property
+    def endog_names(self):
+        endog_names = super(RecursiveLS, self).endog_names
+        return endog_names[0]
 
     @property
     def param_names(self):
