@@ -237,7 +237,7 @@ class Representation(object):
     """
     transition = MatrixWrapper('transition', 'transition')
     r"""
-    (array) Transition matrix: :math:`T~(k\_states \times k\_states \times nobs)`
+    (array) Transition matrix: :math:`T~(k\_states \times k\_states \times nobs)`  # noqa E501
     """
     state_intercept = MatrixWrapper('state intercept', 'state_intercept')
     r"""
@@ -245,11 +245,11 @@ class Representation(object):
     """
     selection = MatrixWrapper('selection', 'selection')
     r"""
-    (array) Selection matrix: :math:`R~(k\_states \times k\_posdef \times nobs)`
+    (array) Selection matrix :math:`R~(k\_states \times k\_posdef \times nobs)`
     """
     state_cov = MatrixWrapper('state covariance matrix', 'state_cov')
     r"""
-    (array) State covariance matrix: :math:`Q~(k\_posdef \times k\_posdef \times nobs)`
+    (array) State covariance matrix: :math:`Q~(k\_posdef \times k\_posdef \times nobs)`  # noqa E501
     """
 
     def __init__(self, k_endog, k_states, k_posdef=None,
@@ -749,7 +749,6 @@ class Representation(object):
         # object.
         if prefix is None:
             prefix = self.prefix
-        dtype = tools.prefix_dtype_map[prefix]
 
         # (Re-)initialize the statespace model
         if isinstance(self.initialization, Initialization):
