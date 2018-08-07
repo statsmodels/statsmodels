@@ -602,11 +602,12 @@ class Initialization(object):
         # the blocks and return those
         else:
             for block_index, init in self.blocks.items():
-                out = init(
-                    index=tuple(np.array(index)[block_index, ]),
-                    model=model, initial_state_mean=initial_state_mean,
-                    initial_diffuse_state_cov=initial_diffuse_state_cov,
-                    initial_stationary_state_cov=initial_stationary_state_cov)
+                # TODO: Should something be done with the object returned
+                # by init?
+                init(index=tuple(np.array(index)[block_index, ]),
+                     model=model, initial_state_mean=initial_state_mean,
+                     initial_diffuse_state_cov=initial_diffuse_state_cov,
+                     initial_stationary_state_cov=initial_stationary_state_cov)
 
         return (initial_state_mean, initial_diffuse_state_cov,
                 initial_stationary_state_cov)

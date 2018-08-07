@@ -5,24 +5,26 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
-from statsmodels.compat.python import long
-
 from warnings import warn
 
 import numpy as np
+
+from statsmodels.compat.python import long
+from statsmodels.tools.tools import Bunch
+from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.sm_exceptions import ValueWarning
+import statsmodels.base.wrapper as wrap
+
+from statsmodels.tsa.tsatools import lagmat
+
 from .initialization import Initialization
 from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
 from .tools import (
     companion_matrix, diff, is_invertible, constrain_stationary_univariate,
-    unconstrain_stationary_univariate, solve_discrete_lyapunov,
+    unconstrain_stationary_univariate,
     prepare_exog
 )
-from statsmodels.tools.tools import Bunch
-from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tsa.tsatools import lagmat
-from statsmodels.tools.decorators import cache_readonly
-from statsmodels.tools.sm_exceptions import ValueWarning
-import statsmodels.base.wrapper as wrap
 
 
 class SARIMAX(MLEModel):
@@ -676,7 +678,8 @@ class SARIMAX(MLEModel):
             # Differencing operators are at the beginning
             init.set((0, self._k_states_diff), 'approximate_diffuse')
             # Stationary component in the middle
-            init.set((self._k_states_diff, self._k_states_diff + self._k_order),
+            init.set((self._k_states_diff,
+                      self._k_states_diff + self._k_order),
                      'stationary')
             # Regression components at the end
             init.set((self._k_states_diff + self._k_order,
