@@ -9,6 +9,19 @@ if [ "$LINT" ]; then
     if [ $? -ne "0" ]; then
         RET=1
     fi
+
+    # Run with --isolated to ignore config files, the files included here
+    # pass _all_ flake8 checks
+    flake8 --isolated \
+        statsmodels/info.py \
+        statsmodels/resampling/ \
+        statsmodels/interface/ \
+        statsmodels/regression/mixed_linear_model.py \
+        statsmodels/duration/__init__.py
+    if [ $? -ne "0" ]; then
+        RET=1
+    fi
+
 fi
 
 exit $RET

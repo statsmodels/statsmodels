@@ -20,7 +20,6 @@ Statistical models
 """
 __docformat__ = 'restructuredtext en'
 
-depends = ['numpy',
-        'scipy']
+depends = ['numpy', 'scipy']
 
 postpone_import = True
