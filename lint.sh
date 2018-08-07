@@ -16,6 +16,7 @@ if [ "$LINT" ]; then
         statsmodels/info.py \
         statsmodels/resampling/ \
         statsmodels/interface/ \
+        statsmodels/tsa/regime_switching \
         statsmodels/regression/mixed_linear_model.py \
         statsmodels/duration/__init__.py
     if [ $? -ne "0" ]; then
