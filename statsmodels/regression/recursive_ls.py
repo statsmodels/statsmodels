@@ -6,22 +6,18 @@ License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
 
-try: unicode
-except NameError: unicode = str
-
-from warnings import warn
-from collections import OrderedDict
+try: unicode  # noqa: E701
+except NameError: unicode = str  # noqa: E701
 
 import numpy as np
 import pandas as pd
-from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.statespace.mlemodel import (
     MLEModel, MLEResults, MLEResultsWrapper, PredictionResults,
     PredictionResultsWrapper)
 from statsmodels.tsa.statespace.tools import concat
 from statsmodels.tools.tools import Bunch
-from statsmodels.tools.decorators import cache_readonly, resettable_cache
+from statsmodels.tools.decorators import cache_readonly
 import statsmodels.base.wrapper as wrap
 
 # Columns are alpha = 0.1, 0.05, 0.025, 0.01, 0.005
@@ -664,7 +660,9 @@ class RecursiveLSResults(MLEResults):
         # Get the points for the significance bound lines
         d = max(self.nobs_diffuse, self.loglikelihood_burn)
         tmp = (self.nobs - d - ddof)**0.5
-        upper_line = lambda x: scalar * tmp + 2 * scalar * (x - d) / tmp
+
+        def upper_line(x):
+            return scalar * tmp + 2 * scalar * (x - d) / tmp
 
         if points is None:
             points = np.array([d, self.nobs])
@@ -705,7 +703,7 @@ class RecursiveLSResults(MLEResults):
         """
         # Create the plot
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
-        plt = _import_mpl()
+        _import_mpl()
         fig = create_mpl_fig(fig, figsize)
         ax = fig.add_subplot(1, 1, 1)
 
@@ -805,7 +803,7 @@ class RecursiveLSResults(MLEResults):
         """
         # Create the plot
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
-        plt = _import_mpl()
+        _import_mpl()
         fig = create_mpl_fig(fig, figsize)
         ax = fig.add_subplot(1, 1, 1)
 
@@ -839,4 +837,6 @@ class RecursiveLSResultsWrapper(MLEResultsWrapper):
     _methods = {}
     _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
                                      _methods)
+
+
 wrap.populate_wrapper(RecursiveLSResultsWrapper, RecursiveLSResults)
