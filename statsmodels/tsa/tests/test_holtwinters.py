@@ -1,9 +1,9 @@
 """
-Created on Wed Jul 12 09:44:01 2017
-
-@author: tvzyl
+Author: Terence L van Zyl
+Modified: Kevin Sheppard
 """
 import os
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -49,41 +49,10 @@ def _simple_dbl_exp_smoother(x, alpha, beta, l0, b0, nforecast=0):
     return l, b, f, err, xhat
 
 
-def _simple_trip_exp_smoother(x, alpha, beta, gamma, l0, b0, s0):
-    n = x.shape[0]
-    a = np.zeros(n)
-    b = np.zeros(n)
-    s = np.zeros(n)
-    m = len(s0)
-    one_step = np.zeros(n)
-    for t in range(n):
-        lag = t - 1
-        if lag < 0:
-            atm1 = l0
-            btm1 = b0
-        else:
-            atm1 = a[t - 1]
-            btm1 = b[t - 1]
-        slag = t - m
-        if slag < 0:
-            stmm = s0[t]
-        else:
-            stmm = s[t - m]
-        if t - m + 1 < 0:
-            stmmp1 = s0[t + 1]
-        else:
-            stmmp1 = s[t - m + 1]
-        a[t] = alpha * (x[t] - stmm) + (1 - alpha) * (atm1 + btm1)
-        b[t] = beta * (a[t] - atm1) + (1 - beta) * btm1
-        s[t] = gamma * (x[t] - a[t] - b[t]) + (1 - gamma) * stmm
-        one_step[t] = a[t] + b[t] + stmmp1
-    return a, b, s, one_step
-
-
 class TestHoltWinters(object):
     @classmethod
     def setup_class(cls):
-        # Changed for backwards compatability with pandas
+        # Changed for backwards compatibility with pandas
 
         # oildata_oil_json = '{"851990400000":446.6565229,"883526400000":454.4733065,"915062400000":455.662974,"946598400000":423.6322388,"978220800000":456.2713279,"1009756800000":440.5880501,"1041292800000":425.3325201,"1072828800000":485.1494479,"1104451200000":506.0481621,"1135987200000":526.7919833,"1167523200000":514.268889,"1199059200000":494.2110193}'
         # oildata_oil = pd.read_json(oildata_oil_json, typ='Series').sort_index()
@@ -174,14 +143,15 @@ class TestHoltWinters(object):
                                     seasonal='mul').fit()
         fit2 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='add',
                                     seasonal='mul').fit()
-        #        fit3 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='add', seasonal='mul').fit(remove_bias=True, use_basinhopping=True)
+        # fit3 = ExponentialSmoothing(self.aust, seasonal_periods=4, trend='add',
+        # seasonal='mul').fit(remove_bias=True, use_basinhopping=True)
         assert_almost_equal(fit1.predict('2011-03-01 00:00:00',
                                          '2011-12-01 00:00:00'),
                             [61.3083, 37.3730, 46.9652, 51.5578], 3)
         assert_almost_equal(fit2.predict(end='2011-12-01 00:00:00'),
                             [61.3083, 37.3730, 46.9652, 51.5578], 3)
 
-    #        assert_almost_equal(fit3.predict('2010-10-01 00:00:00', '2010-10-01 00:00:00'), [49.087], 3)
+    # assert_almost_equal(fit3.predict('2010-10-01 00:00:00', '2010-10-01 00:00:00'), [49.087], 3)
 
     def test_ndarray(self):
         fit1 = ExponentialSmoothing(self.aust.values, seasonal_periods=4,
@@ -331,7 +301,10 @@ def test_2d_data():
 def test_infer_freq():
     hd2 = housing_data.copy()
     hd2.index = list(hd2.index)
-    mod = ExponentialSmoothing(hd2, trend='add', seasonal='add')
+    with warnings.catch_warnings(record=True) as w:
+        mod = ExponentialSmoothing(hd2, trend='add', seasonal='add')
+        assert len(w) == 1
+        assert 'ValueWarning' in str(w[0])
     assert mod.seasonal_periods == 12
 
 
@@ -439,15 +412,3 @@ def test_direct_holt_add():
     assert_allclose(b, res.slope)
     assert_allclose(f, res.level.iloc[-1] + res.slope.iloc[-1] * np.array([1, 2, 3, 4, 5]))
     assert_allclose(f, res.forecast(5))
-
-    mod = ExponentialSmoothing(housing_data, trend='add', seasonal='add')
-    res = mod.fit()
-    print(res.params)
-    alpha = res.params['smoothing_level']
-    beta = res.params['smoothing_slope']
-    gamma = res.params['smoothing_seasonal']
-    l, b, s, one_step = _simple_trip_exp_smoother(x, alpha, beta, gamma,
-                                                  l0=res.params['initial_level'],
-                                                  b0=res.params['initial_slope'],
-                                                  s0=res.params['initial_seasons'])
-    print(l)

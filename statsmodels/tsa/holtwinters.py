@@ -1,6 +1,4 @@
 """
-Created on Wed Jul 12 09:35:35 2017
-
 Notes
 -----
 Code written using below textbook as a reference.
@@ -10,7 +8,10 @@ Properties:
 Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice. OTexts, 2014.
 
 Author: Terence L van Zyl
+Modified: Kevin Sheppard
 """
+from statsmodels.compat.python import string_types
+
 import numpy as np
 import pandas as pd
 from scipy.optimize import basinhopping, brute, minimize
@@ -136,8 +137,7 @@ def _holt_win__add(x, xi, p, y, l, b, s, m, n, max_seen):
         return max_seen
     for i in range(1, n):
         l[i] = (y_alpha[i - 1]) - (alpha * s[i - 1]) + (alphac * (l[i - 1]))
-        s[i + m - 1] = y_gamma[i - 1] - \
-                       (gamma * (l[i - 1])) + (gammac * s[i - 1])
+        s[i + m - 1] = y_gamma[i - 1] - (gamma * (l[i - 1])) + (gammac * s[i - 1])
     return sqeuclidean(l + s[:-(m - 1)], y)
 
 
@@ -199,8 +199,7 @@ def _holt_win_add_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
         l[i] = (y_alpha[i - 1]) - (alpha * s[i - 1]) + \
                (alphac * (l[i - 1] + phi * b[i - 1]))
         b[i] = (beta * (l[i] - l[i - 1])) + (betac * phi * b[i - 1])
-        s[i + m - 1] = y_gamma[i - 1] - \
-                       (gamma * (l[i - 1] + phi * b[i - 1])) + (gammac * s[i - 1])
+        s[i + m - 1] = y_gamma[i - 1] - (gamma * (l[i - 1] + phi * b[i - 1])) + (gammac * s[i - 1])
     return sqeuclidean((l + phi * b) + s[:-(m - 1)], y)
 
 
@@ -221,7 +220,7 @@ def _holt_win_mul_add_dam(x, xi, p, y, l, b, s, m, n, max_seen):
                (alphac * (l[i - 1] * b[i - 1] ** phi))
         b[i] = (beta * (l[i] / l[i - 1])) + (betac * b[i - 1] ** phi)
         s[i + m - 1] = y_gamma[i - 1] - \
-                       (gamma * (l[i - 1] * b[i - 1] ** phi)) + (gammac * s[i - 1])
+            (gamma * (l[i - 1] * b[i - 1] ** phi)) + (gammac * s[i - 1])
     return sqeuclidean((l * phi * b) + s[:-(m - 1)], y)
 
 
@@ -259,19 +258,17 @@ class HoltWintersResults(Results):
 
     Attributes
     ----------
-    specification : dictionary
-        Dictionary including all attributes from the VARMAX model instance.
     params: dict
         All the parameters for the Exponential Smoothing model.
     params_formatted: pd.DataFrame
-        DataFrame containins all parameters, their short names and a flag
+        DataFrame containing all parameters, their short names and a flag
         indicating whether the parameter's value was optimized to fit the data.
     fittedfcast: array
         An array of both the fitted values and forecast values.
     fittedvalues: array
         An array of the fitted values. Fitted by the Exponential Smoothing
         model.
-    fcast: array
+    fcastvalues: array
         An array of the forecast values forecast by the Exponential Smoothing
         model.
     sse: float
@@ -281,7 +278,7 @@ class HoltWintersResults(Results):
     slope: array
         An array of the slope values that make up the fitted values.
     season: array
-        An array of the seaonal values that make up the fitted values.
+        An array of the seasonal values that make up the fitted values.
     aic: float
         The Akaike information criterion.
     bic: float
@@ -294,11 +291,19 @@ class HoltWintersResults(Results):
         the k parameter used to remove the bias in AIC, BIC etc.
     optimized: bool
         Flag indicating whether the model parameters were optimized to fit the data.
+    mle_retvals:  {None, scipy.optimize.optimize.OptimizeResult}
+        Optimization results if the parameters were optimized to fit the data.
+
+    Methods
+    -------
+    forecast
+    predict
+    summary
     """
 
-    def __init__(self, model, params, **kwds):
+    def __init__(self, model, params, **kwargs):
         self.data = model.data
-        super(HoltWintersResults, self).__init__(model, params, **kwds)
+        super(HoltWintersResults, self).__init__(model, params, **kwargs)
 
     def predict(self, start=None, end=None):
         """
@@ -374,12 +379,19 @@ class HoltWintersResults(Results):
         seasonal_periods = None if self.model.seasonal is None else self.model.seasonal_periods
         lookup = {'add': 'Additive', 'additive': 'Additive',
                   'mul': 'Multiplicative', 'multiplicative': 'Multiplicative', None: 'None'}
+        transform = self.params['use_boxcox']
+        box_cox_transform = True if transform else False
+        box_cox_coeff = transform if isinstance(transform, string_types) else self.params['lamda']
+        if isinstance(box_cox_coeff, float):
+            box_cox_coeff = '{:>10.5f}'.format(box_cox_coeff)
         top_left = [('Dep. Variable:', [dep_variable]),
                     ('Model:', [model.__class__.__name__]),
-                    ('Optimzed:', [str(np.any(self.optimized))]),
+                    ('Optimized:', [str(np.any(self.optimized))]),
                     ('Trend:', [lookup[self.model.trend]]),
                     ('Seasonal:', [lookup[self.model.seasonal]]),
-                    ('Seasonal Periods', [str(seasonal_periods)])]
+                    ('Seasonal Periods:', [str(seasonal_periods)]),
+                    ('Box-Cox:', [str(box_cox_transform)]),
+                    ('Box-Cox Coeff.:', [str(box_cox_coeff)])]
 
         top_right = [
             ('No. Observations:', [str(len(self.model.endog))]),
@@ -624,9 +636,9 @@ class ExponentialSmoothing(TimeSeriesModel):
             y = data.squeeze()
         if np.ndim(y) != 1:
             raise ValueError('Only 1 dimensional data supported')
-        l = np.zeros((self.nobs,))
-        b = np.zeros((self.nobs,))
-        s = np.zeros((self.nobs + m - 1,))
+        l = np.zeros(self.nobs)
+        b = np.zeros(self.nobs)
+        s = np.zeros(self.nobs + m - 1)
         p = np.zeros(6 + m)
         max_seen = np.finfo(np.double).max
         if seasoning:
@@ -658,7 +670,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             if seasoning:
                 init_gamma = gamma if gamma is not None else 0.05 * \
                                                              (1 - init_alpha)
-                xi = np.array([alpha is None, beta is None, gamma is None,
+                xi = np.array([alpha is None, trending and beta is None, gamma is None,
                                initial_level is None, trending and initial_slope is None,
                                phi is None and damped] + [True] * m)
                 func = SMOOTHERS[(seasonal, trend)]
@@ -683,7 +695,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 args = (txi.astype(np.uint8), p, y, l, b, s, m, self.nobs, max_seen)
                 if start_params is None and np.any(txi) and use_brute:
                     res = brute(func, bounds[txi], args, Ns=20, full_output=True, finish=None)
-                    (p[txi], max_seen, grid, Jout) = res
+                    p[txi], max_seen, _, _ = res
                 else:
                     if start_params is not None:
                         start_params = np.atleast_1d(np.squeeze(start_params))
@@ -732,8 +744,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         hwfit = self._predict(h=0, smoothing_level=alpha, smoothing_slope=beta,
                               smoothing_seasonal=gamma, damping_slope=phi,
                               initial_level=l0, initial_slope=b0, initial_seasons=s0,
-                              use_boxcox=use_boxcox, lamda=lamda, remove_bias=remove_bias,
-                              is_optimized=xi)
+                              use_boxcox=use_boxcox, remove_bias=remove_bias, is_optimized=xi)
         hwfit._results.mle_retvals = opt
         return hwfit
 
@@ -807,68 +818,68 @@ class ExponentialSmoothing(TimeSeriesModel):
                   'add': np.multiply,
                   None: lambda b, phi: 0
                   }[trend]
+        nobs = self.nobs
         if seasonal == 'mul':
-            for i in range(1, self.nobs + 1):
+            for i in range(1, nobs + 1):
                 l[i] = y_alpha[i - 1] / s[i - 1] + \
                        (alphac * trended(l[i - 1], dampen(b[i - 1], phi)))
                 if trending:
                     b[i] = (beta * detrend(l[i], l[i - 1])) + \
                            (betac * dampen(b[i - 1], phi))
-                s[i + m - 1] = y_gamma[i - 1] / \
-                               trended(l[i - 1], dampen(b[i - 1], phi)) + \
-                               (gammac * s[i - 1])
-            slope = b[1:i + 1].copy()
-            season = s[m:i + m].copy()
-            l[i:] = l[i]
+                s[i + m - 1] = y_gamma[i - 1] / trended(l[i - 1], dampen(b[i - 1], phi)) + \
+                    (gammac * s[i - 1])
+            slope = b[1:nobs + 1].copy()
+            season = s[m:nobs + m].copy()
+            l[nobs:] = l[nobs]
             if trending:
-                b[:i] = dampen(b[:i], phi)
-                b[i:] = dampen(b[i], phi_h)
+                b[:nobs] = dampen(b[:nobs], phi)
+                b[nobs:] = dampen(b[nobs], phi_h)
             trend = trended(l, b)
-            s[i + m - 1:] = [s[(i - 1) + j % m] for j in range(h + 1 + 1)]
+            s[nobs + m - 1:] = [s[(nobs - 1) + j % m] for j in range(h + 1 + 1)]
             fitted = trend * s[:-m]
         elif seasonal == 'add':
-            for i in range(1, self.nobs + 1):
+            for i in range(1, nobs + 1):
                 l[i] = y_alpha[i - 1] - (alpha * s[i - 1]) + \
                        (alphac * trended(l[i - 1], dampen(b[i - 1], phi)))
                 if trending:
                     b[i] = (beta * detrend(l[i], l[i - 1])) + \
                            (betac * dampen(b[i - 1], phi))
                 s[i + m - 1] = y_gamma[i - 1] - \
-                               (gamma * trended(l[i - 1],
-                                                dampen(b[i - 1], phi))) + (gammac * s[i - 1])
-            slope = b[1:i + 1].copy()
-            season = s[m:i + m].copy()
-            l[i:] = l[i]
+                    (gamma * trended(l[i - 1], dampen(b[i - 1], phi))) + \
+                    (gammac * s[i - 1])
+            slope = b[1:nobs + 1].copy()
+            season = s[m:nobs + m].copy()
+            l[nobs:] = l[nobs]
             if trending:
-                b[:i] = dampen(b[:i], phi)
-                b[i:] = dampen(b[i], phi_h)
+                b[:nobs] = dampen(b[:nobs], phi)
+                b[nobs:] = dampen(b[nobs], phi_h)
             trend = trended(l, b)
-            s[i + m - 1:] = [s[(i - 1) + j % m] for j in range(h + 1 + 1)]
+            s[nobs + m - 1:] = [s[(nobs - 1) + j % m] for j in range(h + 1 + 1)]
             fitted = trend + s[:-m]
         else:
-            for i in range(1, self.nobs + 1):
+            for i in range(1, nobs + 1):
                 l[i] = y_alpha[i - 1] + \
                        (alphac * trended(l[i - 1], dampen(b[i - 1], phi)))
                 if trending:
                     b[i] = (beta * detrend(l[i], l[i - 1])) + \
                            (betac * dampen(b[i - 1], phi))
-            slope = b[1:i + 1].copy()
-            season = s[m:i + m].copy()
-            l[i:] = l[i]
+            slope = b[1:nobs + 1].copy()
+            season = s[m:nobs + m].copy()
+            l[nobs:] = l[nobs]
             if trending:
-                b[:i] = dampen(b[:i], phi)
-                b[i:] = dampen(b[i], phi_h)
+                b[:nobs] = dampen(b[:nobs], phi)
+                b[nobs:] = dampen(b[nobs], phi_h)
             trend = trended(l, b)
             fitted = trend
-        level = l[1:i + 1].copy()
+        level = l[1:nobs + 1].copy()
         if use_boxcox or use_boxcox == 'log' or isinstance(use_boxcox, float):
             fitted = inv_boxcox(fitted, lamda)
             level = inv_boxcox(level, lamda)
-            slope = detrend(trend[:i], level)
+            slope = detrend(trend[:nobs], level)
             if seasonal == 'add':
-                season = (fitted - inv_boxcox(trend, lamda))[:i]
+                season = (fitted - inv_boxcox(trend, lamda))[:nobs]
             else:  # seasonal == 'mul':
-                season = (fitted / inv_boxcox(trend, lamda))[:i]
+                season = (fitted / inv_boxcox(trend, lamda))[:nobs]
         sse = sqeuclidean(fitted[:-h - 1], data)
         # (s0 + gamma) + (b0 + beta) + (l0 + alpha) + phi
         k = m * seasoning + 2 * trending + 2 + 1 * damped
