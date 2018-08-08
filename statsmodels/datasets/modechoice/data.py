@@ -1,7 +1,11 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
-
 """Travel Mode Choice"""
+from os.path import dirname, abspath
+
+import numpy as np
+
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -23,10 +27,11 @@ DESCRLONG = """The data, collected as part of a 1987 intercity mode choice
 study, are a sub-sample of 210 non-business trips between Sydney, Canberra and
 Melbourne in which the traveler chooses a mode from four alternatives (plane,
 car, bus and train). The sample, 840 observations, is choice based with
-over-sampling of the less popular modes (plane, train and bus) and under-sampling
-of the more popular mode, car. The level of service data was derived from highway
-and transport networks in Sydney, Melbourne, non-metropolitan N.S.W. and Victoria,
-including the Australian Capital Territory."""
+over-sampling of the less popular modes (plane, train and bus) and
+under-sampling of the more popular mode, car. The level of service data was
+derived from highway and transport networks in Sydney, Melbourne,
+non-metropolitan N.S.W. and Victoria, including the Australian Capital
+Territory."""
 
 NOTE = """::
 
@@ -52,9 +57,6 @@ NOTE = """::
         hinc = household income ($1000s).
         psize = traveling group size in mode chosen (number)."""
 
-import numpy as np
-from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
 
 def load():
     """
@@ -66,8 +68,9 @@ def load():
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    return du.process_recarray(data, endog_idx=2, exog_idx=[3,4,5,6,7,8],
+    return du.process_recarray(data, endog_idx=2, exog_idx=[3, 4, 5, 6, 7, 8],
                                dtype=float)
+
 
 def load_pandas():
     """
@@ -80,8 +83,10 @@ def load_pandas():
     """
 
     data = _get_data()
-    return du.process_recarray_pandas(data, endog_idx = 2, exog_idx=[3,4,5,6,7,8],
+    return du.process_recarray_pandas(data, endog_idx=2,
+                                      exog_idx=[3, 4, 5, 6, 7, 8],
                                       dtype=float)
+
 
 def _get_data():
     filepath = dirname(abspath(__file__))

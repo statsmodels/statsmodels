@@ -1,27 +1,33 @@
 """United States Macroeconomic data"""
+from os.path import dirname, abspath
+
+from numpy import recfromtxt
+from pandas import DataFrame
+
+from statsmodels.datasets.utils import Dataset
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """This is public domain."""
-TITLE       = __doc__
-SOURCE      = """
+COPYRIGHT = """This is public domain."""
+TITLE = __doc__
+SOURCE = """
 Compiled by Skipper Seabold. All data are from the Federal Reserve Bank of St.
 Louis [1] except the unemployment rate which was taken from the National
 Bureau of Labor Statistics [2]. ::
 
-    [1] Data Source: FRED, Federal Reserve Economic Data, Federal Reserve Bank of
-        St. Louis; http://research.stlouisfed.org/fred2/; accessed December 15,
-        2009.
+    [1] Data Source: FRED, Federal Reserve Economic Data, Federal Reserve
+        Bank of St. Louis; http://research.stlouisfed.org/fred2/;
+        accessed December 15, 2009.
 
     [2] Data Source: Bureau of Labor Statistics, U.S. Department of Labor;
         http://www.bls.gov/data/; accessed December 15, 2009.
 """
 
-DESCRSHORT  = """US Macroeconomic Data for 1959Q1 - 2009Q3"""
+DESCRSHORT = """US Macroeconomic Data for 1959Q1 - 2009Q3"""
 
-DESCRLONG   = DESCRSHORT
+DESCRLONG = DESCRSHORT
 
-NOTE        = """::
+NOTE = """::
     Number of Observations - 203
 
     Number of Variables - 14
@@ -53,11 +59,6 @@ NOTE        = """::
         realint   - Real interest rate (tbilrate - infl)
 """
 
-from numpy import recfromtxt, column_stack, array
-from pandas import DataFrame
-
-from statsmodels.datasets.utils import Dataset
-from os.path import dirname, abspath
 
 def load():
     """
@@ -77,10 +78,12 @@ def load():
     dataset = Dataset(data=data, names=names)
     return dataset
 
+
 def load_pandas():
     dataset = load()
     dataset.data = DataFrame(dataset.data)
     return dataset
+
 
 def _get_data():
     filepath = dirname(abspath(__file__))
@@ -89,9 +92,9 @@ def _get_data():
                           names=True, dtype=float)
     return data
 
+
 variable_names = ["realcons", "realgdp", "realinv"]
 
 
 def __str__():
     return "macrodata"
-

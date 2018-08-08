@@ -1,20 +1,27 @@
 """American National Election Survey 1996"""
+from os.path import dirname, abspath
+
+from numpy import recfromtxt, log
+import numpy.lib.recfunctions as nprf
+
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """This is public domain."""
-TITLE       = __doc__
-SOURCE      = """
+COPYRIGHT = """This is public domain."""
+TITLE = __doc__
+SOURCE = """
 http://www.electionstudies.org/
 
 The American National Election Studies.
 """
 
-DESCRSHORT  = """This data is a subset of the American National Election Studies of 1996."""
+DESCRSHORT = """This data is a subset of the American National Election
+Studies of 1996."""
 
-DESCRLONG   = DESCRSHORT
+DESCRLONG = DESCRSHORT
 
-NOTE        = """::
+NOTE = """::
 
     Number of observations - 944
     Number of variables - 10
@@ -85,10 +92,6 @@ NOTE        = """::
             logpopul - log(popul + .1)
 """
 
-from numpy import recfromtxt, log
-import numpy.lib.recfunctions as nprf
-from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
 
 def load():
     """Load the anes96 data and returns a Dataset class.
@@ -103,6 +106,7 @@ def load():
                                exog_idx=[10, 2, 6, 7, 8],
                                dtype=float)
 
+
 def load_pandas():
     """Load the anes96 data and returns a Dataset class.
 
@@ -115,6 +119,7 @@ def load_pandas():
     return du.process_recarray_pandas(data, endog_idx=5,
                                       exog_idx=[10, 2, 6, 7, 8],
                                       dtype=float)
+
 
 def _get_data():
     filepath = dirname(abspath(__file__))

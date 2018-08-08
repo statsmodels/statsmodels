@@ -14,6 +14,7 @@ if [ "$LINT" ]; then
     # pass _all_ flake8 checks
     flake8 --isolated \
         statsmodels/info.py \
+        statsmodels/data/ \
         statsmodels/resampling/ \
         statsmodels/interface/ \
         statsmodels/tsa/regime_switching \

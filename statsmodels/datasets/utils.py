@@ -2,7 +2,6 @@ from statsmodels.compat.numpy import recarray_select
 from statsmodels.compat.python import (range, StringIO, urlopen,
                                        HTTPError, URLError, lrange,
                                        cPickle, urljoin, BytesIO, long, PY3)
-import sys
 import shutil
 from os import environ
 from os import makedirs
@@ -68,7 +67,7 @@ class Dataset(dict):
         # attribute you must create this in the dataset's load function.
         try:  # some datasets have string variables
             self.raw_data = self.data.view((float, len(self.names)))
-        except:
+        except (ValueError, TypeError):
             pass
 
     def __repr__(self):
@@ -205,7 +204,7 @@ def _urlopen_cached(url, cache):
         try:
             data = _open_cache(cache_path)
             from_cache = True
-        except:
+        except Exception:  # TODO: Catch something more specific
             pass
 
     # not using the cache or didn't find it in cache
@@ -273,7 +272,6 @@ def get_rdataset(dataname, package="datasets", cache=False):
         * from_cache - Whether not cached data was retrieved
         * __doc__ - The verbatim R documentation.
 
-
     Notes
     -----
     If the R dataset has an integer index. This is reset to be zero-based.
@@ -329,6 +327,7 @@ def clear_data_home(data_home=None):
     """Delete all the content of the data home cache."""
     data_home = get_data_home(data_home)
     shutil.rmtree(data_home)
+
 
 def check_internet(url=None):
     """Check if internet is available"""

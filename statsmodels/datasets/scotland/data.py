@@ -1,18 +1,23 @@
 """Taxation Powers Vote for the Scottish Parliament 1997 dataset."""
+from os.path import dirname, abspath
+
+import numpy as np
+
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Used with express permission from the original author,
+COPYRIGHT = """Used with express permission from the original author,
 who retains all rights."""
-TITLE       = "Taxation Powers Vote for the Scottish Parliamant 1997"
-SOURCE      = """
+TITLE = "Taxation Powers Vote for the Scottish Parliamant 1997"
+SOURCE = """
 Jeff Gill's `Generalized Linear Models: A Unified Approach`
 
 http://jgill.wustl.edu/research/books.html
 """
-DESCRSHORT  = """Taxation Powers' Yes Vote for Scottish Parliamanet-1997"""
+DESCRSHORT = """Taxation Powers' Yes Vote for Scottish Parliamanet-1997"""
 
-DESCRLONG   = """
+DESCRLONG = """
 This data is based on the example in Gill and describes the proportion of
 voters who voted Yes to grant the Scottish Parliament taxation powers.
 The data are divided into 32 council districts.  This example's explanatory
@@ -27,7 +32,7 @@ The original source files and variable information are included in
 /scotland/src/
 """
 
-NOTE        = """::
+NOTE = """::
 
     Number of Observations - 32 (1 for each Scottish district)
 
@@ -51,9 +56,6 @@ NOTE        = """::
     returned by load.
 """
 
-import numpy as np
-from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
 
 def load():
     """
@@ -67,6 +69,7 @@ def load():
     data = _get_data()
     return du.process_recarray(data, endog_idx=0, dtype=float)
 
+
 def load_pandas():
     """
     Load the Scotvote data and returns a Dataset instance.
@@ -79,9 +82,11 @@ def load_pandas():
     data = _get_data()
     return du.process_recarray_pandas(data, endog_idx=0, dtype=float)
 
+
 def _get_data():
     filepath = dirname(abspath(__file__))
-    with open(filepath + '/scotvote.csv',"rb") as f:
+    with open(filepath + '/scotvote.csv', "rb") as f:
         data = np.recfromtxt(f, delimiter=",",
-                             names=True, dtype=float, usecols=(1,2,3,4,5,6,7,8))
+                             names=True, dtype=float,
+                             usecols=(1, 2, 3, 4, 5, 6, 7, 8))
     return data

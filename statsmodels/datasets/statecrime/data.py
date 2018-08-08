@@ -1,21 +1,25 @@
 #! /usr/bin/env python
-
 """Statewide Crime Data"""
+from os.path import dirname, abspath
+
+import numpy as np
+
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """Public domain."""
-TITLE       = """Statewide Crime Data 2009"""
-SOURCE      = """
-All data is for 2009 and was obtained from the American Statistical Abstracts except as indicated below.
+COPYRIGHT = """Public domain."""
+TITLE = """Statewide Crime Data 2009"""
+SOURCE = """
+All data is for 2009 and was obtained from the American Statistical Abstracts
+except as indicated below.
 """
 
-DESCRSHORT  = """State crime data 2009"""
+DESCRSHORT = """State crime data 2009"""
 
-DESCRLONG   = DESCRSHORT
+DESCRLONG = DESCRSHORT
 
-#suggested notes
-NOTE        = """::
+NOTE = """::
 
     Number of observations: 51
     Number of variables: 8
@@ -53,9 +57,6 @@ NOTE        = """::
         % of population in Urbanized Areas as of 2010 Census. Urbanized
         Areas are area of 50,000 or more people."""
 
-import numpy as np
-from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
 
 def load():
     """
@@ -67,21 +68,20 @@ def load():
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    ##### SET THE INDICES #####
-    #NOTE: None for exog_idx is the complement of endog_idx
+    # NOTE: None for exog_idx is the complement of endog_idx
     return du.process_recarray(data, endog_idx=2, exog_idx=[7, 4, 3, 5],
                                dtype=float)
 
+
 def load_pandas():
     data = _get_data()
-    ##### SET THE INDICES #####
-    #NOTE: None for exog_idx is the complement of endog_idx
-    return du.process_recarray_pandas(data, endog_idx=2, exog_idx=[7,4,3,5],
+    # NOTE: None for exog_idx is the complement of endog_idx
+    return du.process_recarray_pandas(data, endog_idx=2, exog_idx=[7, 4, 3, 5],
                                       dtype=float, index_idx=0)
+
 
 def _get_data():
     filepath = dirname(abspath(__file__))
-    ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
     with open(filepath + '/statecrime.csv', 'rb') as f:
         try:
             data = np.recfromtxt(f, delimiter=",", names=True,
