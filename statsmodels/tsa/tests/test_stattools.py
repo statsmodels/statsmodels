@@ -4,19 +4,19 @@ import warnings
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import (assert_almost_equal, assert_equal, assert_raises, assert_,
-                           assert_allclose)
+from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
+                           assert_, assert_allclose)
 from pandas import Series, DatetimeIndex, DataFrame
 
 from statsmodels.compat.numpy import recarray_select
 from statsmodels.compat.python import lrange
 from statsmodels.datasets import macrodata, sunspots
-from statsmodels.tools.sm_exceptions import ColinearityWarning
-from statsmodels.tools.sm_exceptions import MissingDataError
+from statsmodels.tools.sm_exceptions import (CollinearityWarning,
+                                             MissingDataError)
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw,
                                        pacf, grangercausalitytests,
-                                       coint, acovf, kpss, arma_order_select_ic,
-                                       levinson_durbin)
+                                       coint, acovf, kpss,
+                                       arma_order_select_ic, levinson_durbin)
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -364,7 +364,7 @@ def test_coint_identical_series():
     scale_e = 1
     np.random.seed(123)
     y = scale_e * np.random.randn(nobs)
-    warnings.simplefilter('always', ColinearityWarning)
+    warnings.simplefilter('always', CollinearityWarning)
     with warnings.catch_warnings(record=True) as w:
         c = coint(y, y, trend="c", maxlag=0, autolag=None)
     assert_equal(len(w), 1)
@@ -379,7 +379,7 @@ def test_coint_perfect_collinearity():
     np.random.seed(123)
     x = scale_e * np.random.randn(nobs, 2)
     y = 1 + x.sum(axis=1) + 1e-7 * np.random.randn(nobs)
-    warnings.simplefilter('always', ColinearityWarning)
+    warnings.simplefilter('always', CollinearityWarning)
     with warnings.catch_warnings(record=True) as w:
         c = coint(y, x, trend="c", maxlag=0, autolag=None)
     assert_equal(c[1], 0.0)
