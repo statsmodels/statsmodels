@@ -26,10 +26,7 @@ NOTE = """::
         age - age at the time of surgery
         censored - indicates if an observation is censored.  1 is uncensored
 """
-
-import numpy as np
 from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
 
 def load():
     """
@@ -40,24 +37,18 @@ def load():
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
-    data = _get_data()
-    ##### SET THE INDICES #####
-    #NOTE: None for exog_idx is the complement of endog_idx
-    dset = du.process_recarray(data, endog_idx=0, exog_idx=None, dtype=float)
-    dset.censors = dset.exog[:,0]
-    dset.exog = dset.exog[:,1]
-    return dset
+    return du.as_numpy_dataset(load_pandas())
+
 
 def load_pandas():
     data = _get_data()
     ##### SET THE INDICES #####
     #NOTE: None for exog_idx is the complement of endog_idx
-    return du.process_recarray_pandas(data, endog_idx=0, exog_idx=None,
-                                      dtype=float)
+    dataset = du.process_pandas(data, endog_idx=0, exog_idx=None)
+    dataset.censors = dataset.exog.iloc[:, 0]
+    dataset.exog = dataset.exog.iloc[:, 1]
+    return dataset
+
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
-    with open(filepath + '/heart.csv', 'rb') as f:
-        data = np.recfromtxt(f, delimiter=",", names = True, dtype=float)
-    return data
+    return du.load_csv(__file__, 'heart.csv')

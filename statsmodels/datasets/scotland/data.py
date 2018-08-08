@@ -50,10 +50,7 @@ NOTE        = """::
     Council district names are included in the data file, though are not
     returned by load.
 """
-
-import numpy as np
 from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
 
 def load():
     """
@@ -64,8 +61,8 @@ def load():
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
-    data = _get_data()
-    return du.process_recarray(data, endog_idx=0, dtype=float)
+    return du.as_numpy_dataset(load_pandas())
+
 
 def load_pandas():
     """
@@ -77,11 +74,10 @@ def load_pandas():
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    return du.process_recarray_pandas(data, endog_idx=0, dtype=float)
+    return du.process_pandas(data, endog_idx=0)
+
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    with open(filepath + '/scotvote.csv',"rb") as f:
-        data = np.recfromtxt(f, delimiter=",",
-                             names=True, dtype=float, usecols=(1,2,3,4,5,6,7,8))
-    return data
+    data = du.load_csv(__file__, 'scotvote.csv')
+    data = data.iloc[:, 1:9]
+    return data.astype(float)

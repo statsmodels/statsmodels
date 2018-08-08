@@ -63,10 +63,8 @@ NOTE        = """::
         PERMINTE_AVTRSEXP_AVSAL
         PERSPEN_PTRATIO_PCTAF
 """
-
-from numpy import recfromtxt, column_stack, array
 from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
+
 
 def load():
     """
@@ -77,31 +75,26 @@ def load():
     Load instance:
         a class of the data with array attrbutes 'endog' and 'exog'
     """
-    data = _get_data()
-    return du.process_recarray(data, endog_idx=[0, 1], dtype=float)
+    return du.as_numpy_dataset(load_pandas())
+
 
 def load_pandas():
     data = _get_data()
-    return du.process_recarray_pandas(data, endog_idx=['NABOVE', 'NBELOW'],
-                                      dtype=float)
+    return du.process_pandas(data, endog_idx=['NABOVE', 'NBELOW'])
+
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
+    data = du.load_csv(__file__, 'star98.csv')
     names = ["NABOVE","NBELOW","LOWINC","PERASIAN","PERBLACK","PERHISP",
             "PERMINTE","AVYRSEXP","AVSALK","PERSPENK","PTRATIO","PCTAF",
             "PCTCHRT","PCTYRRND","PERMINTE_AVYRSEXP","PERMINTE_AVSAL",
             "AVYRSEXP_AVSAL","PERSPEN_PTRATIO","PERSPEN_PCTAF","PTRATIO_PCTAF",
             "PERMINTE_AVYRSEXP_AVSAL","PERSPEN_PTRATIO_PCTAF"]
-    with open(filepath + '/star98.csv',"rb") as f:
-        data = recfromtxt(f, delimiter=",",
-                          names=names, skip_header=1, dtype=float)
+    data.columns = names
+    nabove = data['NABOVE'].copy()
+    nbelow = data['NBELOW'].copy()
 
-        # careful now
-        nabove = data['NABOVE'].copy()
-        nbelow = data['NBELOW'].copy()
-
-        data['NABOVE'] = nbelow # successes
-        data['NBELOW'] = nabove - nbelow # now failures
+    data['NABOVE'] = nbelow # successes
+    data['NBELOW'] = nabove - nbelow # now failures
 
     return data

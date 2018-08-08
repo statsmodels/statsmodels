@@ -52,10 +52,8 @@ NOTE        = """::
     urban
         % of population in Urbanized Areas as of 2010 Census. Urbanized
         Areas are area of 50,000 or more people."""
-
-import numpy as np
 from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
+
 
 def load():
     """
@@ -66,26 +64,15 @@ def load():
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
-    data = _get_data()
-    ##### SET THE INDICES #####
-    #NOTE: None for exog_idx is the complement of endog_idx
-    return du.process_recarray(data, endog_idx=2, exog_idx=[7, 4, 3, 5],
-                               dtype=float)
+    return du.as_numpy_dataset(load_pandas())
+
 
 def load_pandas():
     data = _get_data()
     ##### SET THE INDICES #####
     #NOTE: None for exog_idx is the complement of endog_idx
-    return du.process_recarray_pandas(data, endog_idx=2, exog_idx=[7,4,3,5],
-                                      dtype=float, index_idx=0)
+    return du.process_pandas(data, endog_idx=2, exog_idx=[7, 4, 3, 5], index_idx=0)
+
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
-    with open(filepath + '/statecrime.csv', 'rb') as f:
-        try:
-            data = np.recfromtxt(f, delimiter=",", names=True,
-                                 dtype=None, encoding='utf-8')
-        except TypeError:
-            data = np.recfromtxt(f, delimiter=",", names=True, dtype=None)
-    return data
+    return du.load_csv(__file__, 'statecrime.csv')

@@ -38,10 +38,9 @@ NOTE        = """::
     Note that raw_data has firm expanded to dummy variables, since it is a
     string categorical variable.
 """
+import pandas as pd
 
-from numpy import recfromtxt, column_stack, array
 from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
 
 def load():
     """
@@ -57,12 +56,7 @@ def load():
     raw_data has the firm variable expanded to dummy variables for each
     firm (ie., there is no reference dummy)
     """
-    from statsmodels.tools import categorical
-    data = _get_data()
-    raw_data = categorical(data, col='firm', drop=True)
-    ds = du.process_recarray(data, endog_idx=0, stack=False)
-    ds.raw_data = raw_data
-    return ds
+    return du.as_numpy_dataset(load_pandas())
 
 def load_pandas():
     """
@@ -78,17 +72,14 @@ def load_pandas():
     raw_data has the firm variable expanded to dummy variables for each
     firm (ie., there is no reference dummy)
     """
-    from pandas import DataFrame
-    from statsmodels.tools import categorical
     data = _get_data()
-    raw_data = categorical(data, col='firm', drop=True)
-    ds = du.process_recarray_pandas(data, endog_idx=0)
-    ds.raw_data = DataFrame(raw_data)
+    data.year = data.year.astype(float)
+    raw_data = pd.get_dummies(data)
+    ds = du.process_pandas(data, endog_idx=0)
+    ds.raw_data = raw_data
     return ds
 
+
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    with open(filepath + '/grunfeld.csv','rb') as f:
-        data = recfromtxt(f, delimiter=",",
-                          names=True, dtype="f8,f8,f8,a17,f8")
+    data = du.load_csv(__file__, 'grunfeld.csv')
     return data

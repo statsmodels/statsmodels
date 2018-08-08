@@ -44,10 +44,13 @@ NOTE = """::
     Committee names are included as a variable in the data file though not
     returned by load.
 """
-
-from numpy import recfromtxt, column_stack, array
 from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
+
+
+def load_pandas():
+    data = _get_data()
+    return du.process_pandas(data, endog_idx=0)
+
 
 def load():
     """Load the committee data and returns a data class.
@@ -57,16 +60,10 @@ def load():
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
-    data = _get_data()
-    return du.process_recarray(data, endog_idx=0, dtype=float)
+    return du.as_numpy_dataset(load_pandas())
 
-def load_pandas():
-    data = _get_data()
-    return du.process_recarray_pandas(data, endog_idx=0, dtype=float)
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    with open(filepath + '/committee.csv', 'rb') as f:
-        data = recfromtxt(f, delimiter=",",
-                          names=True, dtype=float, usecols=(1,2,3,4,5,6))
+    data = du.load_csv(__file__, 'committee.csv')
+    data = data.iloc[:, 1:7].astype(float)
     return data

@@ -33,7 +33,7 @@ NOTE = """::
         Dp        - Delta log gdp deflator
         R         - nominal long term interest rate
 """
-
+from statsmodels.datasets import utils as du
 
 variable_names = ["Dp", "R"]
 first_season = 1  # 1 stands for: first observation in Q2 (0 would mean Q1)
@@ -53,25 +53,18 @@ def load():
     The interest_inflation Dataset instance does not contain endog and exog
     attributes.
     """
+    return du.as_numpy_dataset(load_pandas())
+
+
+def load_pandas():
     data = _get_data()
-    names = data.dtype.names
+    names = data.columns
     dataset = Dataset(data=data, names=names)
     return dataset
 
 
-def load_pandas():
-    dataset = load()
-    dataset.data = DataFrame(dataset.data)
-    return dataset
-
-
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    with open(join(filepath, 'E6.csv'), 'rb') as f:
-        data = recfromtxt(f, delimiter=",",
-                          names=True, dtype=float)
-        return data
-
+    return du.load_csv(__file__, 'E6.csv', convert_float=True)
 
 def __str__():
     return "e6"

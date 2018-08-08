@@ -32,13 +32,13 @@ NOTE = """::
         TEMPERATURE - average sea surface temperature in degrees Celcius
                       (12 columns, one per month).
 """
+from statsmodels.datasets import utils as du
 
 
-from numpy import recfromtxt, column_stack, array
-from pandas import DataFrame
-
-from statsmodels.datasets.utils import Dataset
-from os.path import dirname, abspath
+def load_pandas():
+    data = _get_data()
+    dataset = du.Dataset(data=data, names=list(data.columns))
+    return dataset
 
 
 def load():
@@ -54,21 +54,8 @@ def load():
     -----
     The elnino Dataset instance does not contain endog and exog attributes.
     """
-    data = _get_data()
-    names = data.dtype.names
-    dataset = Dataset(data=data, names=names)
-    return dataset
-
-
-def load_pandas():
-    dataset = load()
-    dataset.data = DataFrame(dataset.data)
-    return dataset
+    return du.as_numpy_dataset(load_pandas())
 
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    with open(filepath + '/elnino.csv', 'rb') as f:
-        data = recfromtxt(f, delimiter=",",
-                          names=True, dtype=float)
-    return data
+    return du.load_csv(__file__, 'elnino.csv', convert_float=True)

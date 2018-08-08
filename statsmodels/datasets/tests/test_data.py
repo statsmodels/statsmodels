@@ -18,10 +18,19 @@ for dataset_name in dir(statsmodels.datasets):
 @pytest.mark.parametrize('dataset_name', datasets)
 def test_dataset(dataset_name):
     dataset = importlib.import_module('statsmodels.datasets.' + dataset_name)
-    data = dataset.load()
-    assert isinstance(data, Dataset)
-    assert isinstance(data.data, np.recarray)
 
-    df_data = dataset.load_pandas()
-    assert isinstance(df_data, Dataset)
-    assert isinstance(df_data.data, pd.DataFrame)
+    ds = dataset.load()
+    assert isinstance(ds, Dataset)
+    assert isinstance(ds.data, np.ndarray)
+    if hasattr(ds, 'exog'):
+        assert isinstance(ds.exog, np.ndarray)
+    if hasattr(ds, 'endog'):
+        assert isinstance(ds.endog, np.ndarray)
+
+    ds2 = dataset.load_pandas()
+    assert isinstance(ds2, Dataset)
+    assert isinstance(ds2.data, pd.DataFrame)
+    if hasattr(ds, 'exog'):
+        assert isinstance(ds2.exog, (pd.DataFrame, pd.Series))
+    if hasattr(ds, 'endog'):
+        assert isinstance(ds2.endog, (pd.DataFrame, pd.Series))

@@ -25,10 +25,11 @@ NOTE        = """::
         smoking - yes or no, according to a person's smoking behavior
         lung_cancer - yes or no, according to a person's lung cancer status
 """
+import os
 
 import pandas as pd
-from statsmodels.datasets import utils
-import os
+
+from statsmodels.datasets import utils as du
 
 
 def load_pandas():
@@ -40,10 +41,9 @@ def load_pandas():
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
-
     filepath = os.path.dirname(os.path.abspath(__file__))
     data = pd.read_csv(os.path.join(filepath + '/china_smoking.csv'), index_col="Location")
-    return utils.Dataset(data=data, title="Smoking and lung cancer in Chinese regions")
+    return du.Dataset(data=data, title="Smoking and lung cancer in Chinese regions")
 
 
 def load():
@@ -55,5 +55,4 @@ def load():
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
-    recarray = load_pandas().data.to_records()
-    return utils.Dataset(data=recarray, title="Smoking and lung cancer in Chinese regions")
+    return du.as_numpy_dataset(load_pandas())

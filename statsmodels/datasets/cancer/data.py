@@ -25,10 +25,15 @@ NOTE        = """::
         population - The population of the county
 
 """
-
-import numpy as np
 from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
+
+
+def load_pandas():
+    data = _get_data()
+    ##### SET THE INDICES #####
+    #NOTE: None for exog_idx is the complement of endog_idx
+    return du.process_pandas(data, endog_idx=0, exog_idx=None)
+
 
 def load():
     """
@@ -39,21 +44,8 @@ def load():
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
-    data = _get_data()
-    ##### SET THE INDICES #####
-    #NOTE: None for exog_idx is the complement of endog_idx
-    return du.process_recarray(data, endog_idx=0, exog_idx=None, dtype=float)
+    return du.as_numpy_dataset(load_pandas())
 
-def load_pandas():
-    data = _get_data()
-    ##### SET THE INDICES #####
-    #NOTE: None for exog_idx is the complement of endog_idx
-    return du.process_recarray_pandas(data, endog_idx=0, exog_idx=None,
-                                      dtype=float)
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
-    with open(filepath + '/cancer.csv', 'rb') as f:
-        data = np.recfromtxt(f, delimiter=",", names=True, dtype=float)
-    return data
+    return du.load_csv(__file__, 'cancer.csv', convert_float=True)

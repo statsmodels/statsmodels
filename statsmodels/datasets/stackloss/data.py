@@ -29,10 +29,8 @@ NOTE        = """::
         WATERTEMP - Cooling water temperature in the absorption tower
         ACIDCONC  - Acid concentration of circulating acid minus 50 times 10.
 """
-
-from numpy import recfromtxt, column_stack, array
 from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
+
 
 def load():
     """
@@ -43,8 +41,7 @@ def load():
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
-    data = _get_data()
-    return du.process_recarray(data, endog_idx=0, dtype=float)
+    return du.as_numpy_dataset(load_pandas())
 
 def load_pandas():
     """
@@ -56,11 +53,8 @@ def load_pandas():
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    return du.process_recarray_pandas(data, endog_idx=0, dtype=float)
+    return du.process_pandas(data, endog_idx=0)
+
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    with open(filepath + '/stackloss.csv',"rb") as f:
-        data = recfromtxt(f, delimiter=",",
-                          names=True, dtype=float)
-    return data
+    return du.load_csv(__file__, 'stackloss.csv').astype(float)

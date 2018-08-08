@@ -1,5 +1,5 @@
 import os
-
+import numpy as np
 from numpy.testing import assert_, assert_array_equal
 import pytest
 
@@ -32,6 +32,7 @@ def test_get_rdataset():
 def test_webuse():
     # test copied and adjusted from iolib/tests/test_foreign
     from statsmodels.iolib.tests.results.macrodata import macrodata_result as res2
+    res2 = np.array([list(row) for row in res2])
     base_gh = "http://github.com/statsmodels/statsmodels/raw/master/statsmodels/datasets/macrodata/"
     internet_available = check_internet(base_gh)
     if not internet_available:
@@ -51,4 +52,4 @@ def test_webuse_pandas():
         pytest.skip('Unable to retrieve file - skipping test')
     res1 = webuse('macrodata', baseurl=base_gh)
     res1 = res1.astype(float)
-    assert_frame_equal(res1, dta)
+    assert_frame_equal(res1, dta.astype(float))

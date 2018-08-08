@@ -25,21 +25,7 @@ NOTE        = """::
     Variable name definitions - See Source for more information on the
                                 variables.
 """
-
-from numpy import recfromtxt
 from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
-
-def load():
-    """Load the credit card data and returns a Dataset class.
-
-    Returns
-    -------
-    Dataset instance:
-        See DATASET_PROPOSAL.txt for more information.
-    """
-    data = _get_data()
-    return du.process_recarray(data, endog_idx=0, dtype=float)
 
 def load_pandas():
     """Load the credit card data and returns a Dataset class.
@@ -50,10 +36,19 @@ def load_pandas():
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    return du.process_recarray_pandas(data, endog_idx=0)
+    return du.process_pandas(data, endog_idx=0)
+
+
+def load():
+    """Load the credit card data and returns a Dataset class.
+
+    Returns
+    -------
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
+    """
+    return du.as_numpy_dataset(load_pandas())
+
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    with open(filepath + "/ccard.csv", 'rb') as f:
-        data = recfromtxt(f, delimiter=",", names=True, dtype=float)
-    return data
+    return du.load_csv(__file__, 'ccard.csv', convert_float=True)
