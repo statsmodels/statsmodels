@@ -224,9 +224,11 @@ class Power(object):
             from statsmodels.tools.sm_exceptions import HypothesisTestWarning
             warnings.warn('Warning: Effect size of 0 detected', HypothesisTestWarning)
             if key == 'power':
-                return alpha
+                # FIXME: just put alpha in the signature dummy
+                return kwds['alpha']
             if key == 'alpha':
-                return power
+                # FIXME: just put alpha in the signature dummy
+                return kwds['power']
             else:
                 raise ValueError('Cannot detect an effect-size of 0. Try changing your effect-size.')
 
