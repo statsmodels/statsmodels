@@ -167,7 +167,7 @@ class TestDiagnosticG(object):
 
         cov = sw.cov_hac_simple(res, nlags=4, use_correction=False)
         bse_hac = sw.se_cov(cov)
-        assert_almost_equal(cov, cov_hac_4, decimal=14)
+        assert_almost_equal(cov, cov_hac_4, decimal=13)
         assert_almost_equal(bse_hac, np.sqrt(np.diag(cov)), decimal=14)
 
         cov = sw.cov_hac_simple(res, nlags=10, use_correction=False)
@@ -489,7 +489,7 @@ class TestDiagnosticG(object):
                     -5.727181590258883, 1.021128495098556e-08, '***')]
 
         ct1 = smsdia.compare_cox(res, res2)
-        assert_almost_equal(ct1, coxtest[0][3:5], decimal=13)
+        assert_almost_equal(ct1, coxtest[0][3:5], decimal=12)
 
         ct2 = smsdia.compare_cox(res2, res)
         assert_almost_equal(ct2, coxtest[1][3:5], decimal=12)
