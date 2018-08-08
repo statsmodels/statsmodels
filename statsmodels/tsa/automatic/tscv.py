@@ -2,7 +2,39 @@
 import numpy as np
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
 
+
 def evaluate(endog, forecast, roll_window=30, **spec):
+    """Evaluate time series cross validation.
+
+    The function calculates the time series cross validation by making point
+    forecasts over a window dataset. It uses the idea mentioned in Hyndman's
+    book.
+
+    Parameters
+    ----------
+    endog : list
+        input containing the time series data over a period of time.
+
+    forecast : forecast function/ TimeSeries Model
+        can be a custom forecast function or a TimeSeries model.
+
+    roll_window : int
+        the length of the rolling window.
+
+    **spec : kwargs
+
+    Returns
+    -------
+    fcast_error : list
+        the forecast error calculated by fitting the models for every window
+        and making point forecast.
+
+    Notes
+    -----
+    Reference : https://otexts.org/fpp2/accuracy.html
+    https://robjhyndman.com/hyndsight/tscv/
+
+    """
     endog = np.array(endog)
     nobs = len(endog)
     fcast_error = np.zeros(nobs) * np.nan
