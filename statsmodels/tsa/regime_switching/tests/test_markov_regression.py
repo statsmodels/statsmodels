@@ -8,11 +8,13 @@ from __future__ import division, absolute_import, print_function
 
 import os
 import warnings
+
 import numpy as np
+from numpy.testing import assert_allclose, assert_raises
 import pandas as pd
+
 from statsmodels.tsa.regime_switching import (markov_switching,
                                               markov_regression)
-from numpy.testing import assert_allclose, assert_raises
 
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -958,7 +960,6 @@ class TestFedFundsConstShort(MarkovRegression):
         expected_marginals = np.empty((k_regimes, nobs))
         expected_marginals[:, :2] = [[1/3], [1/3], [1/3]]
         expected_marginals[:, 2:] = [[0], [1], [0]]
-
 
         py_results = markov_switching.py_hamilton_filter(
             initial_probabilities, regime_transition, conditional_likelihoods)

@@ -5,15 +5,17 @@ Author: Chad Fulton
 License: BSD-3
 """
 from __future__ import division, absolute_import, print_function
-from statsmodels.compat.testing import skip
 
 import warnings
 import os
+
 import numpy as np
+from numpy.testing import assert_equal, assert_allclose
 import pandas as pd
+
+from statsmodels.compat.testing import skip
 from statsmodels.tools import add_constant
 from statsmodels.tsa.regime_switching import markov_autoregression
-from numpy.testing import assert_equal, assert_allclose
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 

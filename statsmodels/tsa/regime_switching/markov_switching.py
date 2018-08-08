@@ -4,26 +4,26 @@ Markov switching models
 Author: Chad Fulton
 License: BSD-3
 """
-
 from __future__ import division, absolute_import, print_function
 
 import warnings
-import numpy as np
-import pandas as pd
 from collections import OrderedDict
 
+import numpy as np
+import pandas as pd
 from scipy.misc import logsumexp
-from statsmodels.base.data import PandasData
-import statsmodels.tsa.base.tsa_model as tsbase
+
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 from statsmodels.tools.eval_measures import aic, bic, hqic
 from statsmodels.tools.tools import pinv_extended
 from statsmodels.tools.sm_exceptions import EstimationWarning
+
 import statsmodels.base.wrapper as wrap
+from statsmodels.base.data import PandasData
 
-
+import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.statespace.tools import find_best_blas_type, prepare_exog
 
 from statsmodels.tsa.regime_switching._hamilton_filter import (
@@ -1547,7 +1547,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                     if proposed_llf > llf:
                         llf = proposed_llf
                         params = self.untransform_params(proposed_params)
-                except:
+                except Exception:  # FIXME: catch something specific
                     pass
 
         # Return transformed parameters
