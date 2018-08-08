@@ -314,97 +314,9 @@ def corrent(px,py,pxpy,logbase=2):
     return mutualinfo(px,py,pxpy,logbase=logbase)/shannonentropy(py,
             logbase=logbase)
 
-def covent(px,py,pxpy,logbase=2):
-    """
-    An information theoretic covariance measure.
-
-    Reflects linear and nonlinear correlation between two random variables
-    X and Y, characterized by the discrete probability distributions px and py
-    respectively.
-
-    Parameters
-    ----------
-    px : array-like
-        Discrete probability distribution of random variable X
-    py : array-like
-        Discrete probability distribution of random variable Y
-    pxpy : 2d array-like, optional
-        Joint probability distribution of X and Y.  If pxpy is None, X and Y
-        are assumed to be independent.
-    logbase : int or np.e, optional
-        Default is 2 (bits)
-
-    Returns
-    -------
-    condent(px,py,pxpy,logbase=logbase) + condent(py,px,pxpy,
-            logbase=logbase)
-
-    Notes
-    -----
-    This is also equivalent to
-
-    covent(px,py,pxpy) = condent(px,py,pxpy) + condent(py,px,pxpy)
-    """
-    if not _isproperdist(px) or not _isproperdist(py):
-        raise ValueError("px or py is not a proper probability distribution")
-    if pxpy != None and not _isproperdist(pxpy):
-        raise ValueError("pxpy is not a proper joint distribtion")
-    if pxpy == None:
-        pxpy = np.outer(py,px)
-
-    return condent(px,py,pxpy,logbase=logbase) + condent(py,px,pxpy,
-            logbase=logbase)
-
 
 #### Generalized Entropies ####
 
-def renyientropy(px,alpha=1,logbase=2,measure='R'):
-    """
-    Renyi's generalized entropy
-
-    Parameters
-    ----------
-    px : array-like
-        Discrete probability distribution of random variable X.  Note that
-        px is assumed to be a proper probability distribution.
-    logbase : int or np.e, optional
-        Default is 2 (bits)
-    alpha : float or inf
-        The order of the entropy.  The default is 1, which in the limit
-        is just Shannon's entropy.  2 is Renyi (Collision) entropy.  If
-        the string "inf" or numpy.inf is specified the min-entropy is returned.
-    measure : str, optional
-        The type of entropy measure desired.  'R' returns Renyi entropy
-        measure.  'T' returns the Tsallis entropy measure.
-
-    Returns
-    -------
-    1/(1-alpha)*log(sum(px**alpha))
-
-    In the limit as alpha -> 1, Shannon's entropy is returned.
-
-    In the limit as alpha -> inf, min-entropy is returned.
-    """
-#TODO:finish returns
-#TODO:add checks for measure
-    if not _isproperdist(px):
-        raise ValueError("px is not a proper probability distribution")
-    alpha = float(alpha)
-    if alpha == 1:
-        genent = shannonentropy(px)
-        if logbase != 2:
-            return logbasechange(2, logbase) * genent
-        return genent
-    elif 'inf' in string(alpha).lower() or alpha == np.inf:
-        return -np.log(np.max(px))
-
-    # gets here if alpha != (1 or inf)
-    px = px**alpha
-    genent = np.log(px.sum())
-    if logbase == 2:
-        return 1/(1-alpha) * genent
-    else:
-        return 1/(1-alpha) * logbasechange(2, logbase) * genent
 
 #TODO: before completing this, need to rethink the organization of
 # (relative) entropy measures, ie., all put into one function

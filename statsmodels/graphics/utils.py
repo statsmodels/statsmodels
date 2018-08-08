@@ -126,7 +126,7 @@ def get_data_names(series_or_dataframe):
         names = getattr(series_or_dataframe, 'columns', None)
     if not names:
         shape = getattr(series_or_dataframe, 'shape', [1])
-        nvars = 1 if len(shape) == 1 else series.shape[1]
+        nvars = 1 if len(shape) == 1 else series_or_dataframe.shape[1]
         names = ["X%d" for names in range(nvars)]
         if nvars == 1:
             names = names[0]

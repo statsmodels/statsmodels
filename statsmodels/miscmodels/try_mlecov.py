@@ -113,19 +113,6 @@ def mvn_nloglike_obs(x, sigma):
 
     return llike
 
-def invertibleroots(ma):
-    import numpy.polynomial as poly
-    pr = poly.polyroots(ma)
-    insideroots = np.abs(pr)<1
-    if insideroots.any():
-        pr[np.abs(pr)<1] = 1./pr[np.abs(pr)<1]
-        pnew = poly.Polynomial.fromroots(pr)
-        mainv = pn.coef/pnew.coef[0]
-        wasinvertible = False
-    else:
-        mainv = ma
-        wasinvertible = True
-    return mainv, wasinvertible
 
 def getpoly(self, params):
     ar = np.r_[[1], -params[:self.nar]]
@@ -174,18 +161,6 @@ class MLEGLS(GenericLikelihoodModel):
         sig = sig * params[-1]**2
         loglik = mvn_loglike(self.endog, sig)
         return loglik
-
-    def fit_invertible(self, *args, **kwds):
-        res = self.fit(*args, **kwds)
-        ma = np.r_[[1], res.params[self.nar: self.nar+self.nma]]
-        mainv, wasinvertible = invertibleroots(ma)
-        if not wasinvertible:
-            start_params = res.params.copy()
-            start_params[self.nar: self.nar+self.nma] = mainv[1:]
-            #need to add args kwds
-            res = self.fit(start_params=start_params)
-        return res
-
 
 
 if __name__ == '__main__':

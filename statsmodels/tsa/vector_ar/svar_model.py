@@ -710,7 +710,7 @@ class SVARResults(SVARProcess, VARResults):
                         mean_AB = np.mean(g_list, axis = 0)
                         split = len(A_pass[A_mask])
                         opt_A = mean_AB[:split]
-                        opt_A = mean_AB[split:]
+                        opt_B = mean_AB[split:]
                     ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
                                  B=B_pass).fit(maxlags=k_ar,\
                                  A_guess=opt_A, B_guess=opt_B).\

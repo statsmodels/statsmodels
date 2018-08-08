@@ -51,6 +51,10 @@ from launchpadlib.credentials import Credentials
 from launchpadlib.launchpad import (
     Launchpad, STAGING_SERVICE_ROOT, EDGE_SERVICE_ROOT )
 
+
+if sys.version_info.major == 3:
+    from importlib import reload
+
 #-----------------------------------------------------------------------------
 # Launchpad configuration
 #-----------------------------------------------------------------------------
@@ -97,9 +101,10 @@ def create_session():
         'credentials')
     if os.path.exists(hydrazine_credentials_filename):
         credentials = Credentials()
-        credentials.load(file(
-            os.path.expanduser("~/.cache/hydrazine/credentials"),
-            "r"))
+        path = os.path.expanduser("~/.cache/hydrazine/credentials")
+        with open(path, "r") as fd:
+            credentials.load(fd)
+
         trace('loaded existing credentials')
         return Launchpad(credentials, service_root,
             lplib_cachedir)
@@ -110,9 +115,8 @@ def create_session():
             service_root,
             lplib_cachedir)
         trace('saving credentials...')
-        launchpad.credentials.save(file(
-            hydrazine_credentials_filename,
-            "w"))
+        with open(hydrazine_credentials_filename, "w") as fd:
+            launchpad.credentials.save(fd)
         return launchpad
 
 def canonical_enum(entered, options):

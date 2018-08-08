@@ -516,17 +516,6 @@ class SmoothingSpline(BSpline):
 
         del(bty); del(mask); del(bt)
 
-    def smooth(self, y, x=None, weights=None):
-
-        if self.method == "target_df":
-            if hasattr(self, 'pen'):
-                self.fit(y, x=x, weights=weights, pen=self.pen)
-            else:
-                self.fit_target_df(y, x=x, weights=weights, df=self.target_df)
-        elif self.method == "optimize_gcv":
-            self.fit_optimize_gcv(y, x=x, weights=weights)
-
-
     def gcv(self):
         """
         Generalized cross-validation score of current fit.
@@ -630,35 +619,3 @@ class SmoothingSpline(BSpline):
                    higher or decreasing df")
             if np.fabs(curdf - df) / df < tol:
                 break
-
-    def fit_optimize_gcv(self, y, x=None, weights=None, tol=1.0e-03,
-                         brack=(-100,20)):
-        """
-        Fit smoothing spline trying to optimize GCV.
-
-        Try to find a bracketing interval for scipy.optimize.golden
-        based on bracket.
-
-        It is probably best to use target_df instead, as it is
-        sometimes difficult to find a bracketing interval.
-
-        INPUTS:
-           y       -- response variable
-           x       -- if None, uses self.x
-           df      -- target degrees of freedom
-           weights -- optional array of weights
-           tol     -- (relative) tolerance for convergence
-           brack   -- an initial guess at the bracketing interval
-
-        OUTPUTS: None
-           The smoothing spline is determined by self.coef,
-           subsequent calls of __call__ will be the smoothing spline.
-
-        """
-
-        def _gcv(pen, y, x):
-            self.fit(y, x=x, pen=np.exp(pen))
-            a = self.gcv()
-            return a
-
-        a = golden(_gcv, args=(y,x), brack=bracket, tol=tol)

@@ -7,7 +7,7 @@ from statsmodels.compat.numpy import np_matrix_rank
 
 #http://www.irisa.fr/aladin/wg-statlin/WORKSHOPS/RENNES02/SLIDES/Foschi.pdf
 
-__all__ = ['SUR', 'Sem2SLS']
+__all__ = ['SUR']
 
 #probably should have a SystemModel superclass
 # TODO: does it make sense of SUR equations to have
@@ -254,115 +254,6 @@ exogenous variables.  Got length %s" % len(sys))
     def predict(self, design):
         pass
 
-#TODO: Should just have a general 2SLS estimator to subclass
-# for IV, FGLS, etc.
-# Also should probably have SEM class and estimators as subclasses
-class Sem2SLS(object):
-    """
-    Two-Stage Least Squares for Simultaneous equations
-
-    Parameters
-    ----------
-    sys : list
-        [endog1, exog1, endog2, exog2,...] It will be of length 2 x M,
-        where M is the number of equations endog = exog.
-    indep_endog : dict
-        A dictionary mapping the equation to the column numbers of the
-        the independent endogenous regressors in each equation.
-        It is assumed that the system is inputed as broken up into
-        LHS and RHS. For now, the values of the dict have to be sequences.
-        Note that the keys for the equations should be zero-indexed.
-    instruments : array
-        Array of the exogenous independent variables.
-
-    Notes
-    -----
-    This is unfinished, and the design should be refactored.
-    Estimation is done by brute force and there is no exploitation of
-    the structure of the system.
-    """
-    def __init__(self, sys, indep_endog=None, instruments=None):
-        if len(sys) % 2 != 0:
-            raise ValueError("sys must be a list of pairs of endogenous and \
-exogenous variables.  Got length %s" % len(sys))
-        M = len(sys[1::2])
-        self._M = M
-# The lists are probably a bad idea
-        self.endog = sys[::2]   # these are just list containers
-        self.exog = sys[1::2]
-        self._K = [np_matrix_rank(_) for _ in sys[1::2]]
-#        fullexog = np.column_stack((_ for _ in self.exog))
-
-        self.instruments = instruments
-
-        # Keep the Y_j's in a container to get IVs
-        instr_endog = {}
-        [instr_endog.setdefault(_,[]) for _ in iterkeys(indep_endog)]
-
-        for eq_key in indep_endog:
-            for varcol in indep_endog[eq_key]:
-                instr_endog[eq_key].append(self.exog[eq_key][:,varcol])
-                # ^ copy needed?
-#        self._instr_endog = instr_endog
-
-        self._indep_endog = indep_endog
-        _col_map = np.cumsum(np.hstack((0,self._K))) # starting col no.s
-# move this check to whiten since we're not going to build a full exog?
-        for eq_key in indep_endog:
-            try:
-                iter(indep_endog[eq_key])
-            except:
-#                eq_key = [eq_key]
-                raise TypeError("The values of the indep_exog dict must be\
- iterable. Got type %s for converter %s" % (type(del_col)))
-#            for del_col in indep_endog[eq_key]:
-#                fullexog = np.delete(fullexog,  _col_map[eq_key]+del_col, 1)
-#                _col_map[eq_key+1:] -= 1
-
-# Josef's example for deleting reoccuring "rows"
-#        fullexog = np.unique(fullexog.T.view([('',fullexog.dtype)]*\
-#                fullexog.shape[0])).view(fullexog.dtype).reshape(\
-#                fullexog.shape[0],-1)
-# From http://article.gmane.org/gmane.comp.python.numeric.general/32276/
-# Or Jouni' suggetsion of taking a hash:
-# http://www.mail-archive.com/numpy-discussion@scipy.org/msg04209.html
-# not clear to me how this would work though, only if they are the *same*
-# elements?
-#        self.fullexog = fullexog
-        self.wexog = self.whiten(instr_endog)
-
-
-    def whiten(self, Y):
-        """
-        Runs the first stage of the 2SLS.
-
-        Returns the RHS variables that include the instruments.
-        """
-        wexog = []
-        indep_endog = self._indep_endog # this has the col mapping
-#        fullexog = self.fullexog
-        instruments = self.instruments
-        for eq in range(self._M): # need to go through all equations regardless
-            instr_eq = Y.get(eq, None) # Y has the eq to ind endog array map
-            newRHS = self.exog[eq].copy()
-            if instr_eq:
-                for i,LHS in enumerate(instr_eq):
-                    yhat = GLS(LHS, self.instruments).fit().fittedvalues
-                    newRHS[:,indep_endog[eq][i]] = yhat
-                # this might fail if there is a one variable column (nobs,)
-                # in exog
-            wexog.append(newRHS)
-        return wexog
-
-    def fit(self):
-        """
-        """
-        delta = []
-        wexog = self.wexog
-        endog = self.endog
-        for j in range(self._M):
-            delta.append(GLS(endog[j], wexog[j]).fit().params)
-        return delta
 
 class SysResults(LikelihoodModelResults):
     """

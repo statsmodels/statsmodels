@@ -139,7 +139,8 @@ class HoldIt(object):
             txt.append('%s%s = %s' % (prefix, x, repr(getattr(self,x))))
         txt.extend(['','']) #add empty lines at end
         if not filename is None:
-            file(filename, 'a+').write('\n'.join(txt))
+            with open(filename, 'a+') as fd:
+              fd.write('\n'.join(txt))
         return txt
 
 def generate_princomp(xo, filen='testsave.py'):
@@ -184,18 +185,6 @@ def generate_armarep(filen='testsave.py'):
     res_armarep.save(filename=filen, header=False,
             comment=("''mlab.garchma(-res_armarep.ar[1:], res_armarep.ma[1:], 20)\n" +
                      "mlab.garchar(-res_armarep.ar[1:], res_armarep.ma[1:], 20)''"))
-
-
-
-
-
-def exampletest():
-    from statsmodels.sandbox import tsa
-    arrep = tsa.arma_impulse_response(res_armarep.ma, res_armarep.ar, nobs=21)[1:]
-    marep = tsa.arma_impulse_response(res_armarep.ar, res_armarep.ma, nobs=21)[1:]
-    assert_array_almost_equal(res_armarep.marep.ravel(), marep, 14)
-    #difference in sign convention to matlab for AR term
-    assert_array_almost_equal(-res_armarep.arrep.ravel(), arrep, 14)
 
 
 if __name__ == '__main__':
