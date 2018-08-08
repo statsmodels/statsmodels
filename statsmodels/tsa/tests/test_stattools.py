@@ -1,21 +1,22 @@
-from statsmodels.compat.numpy import recarray_select
+import os
+import warnings
 
-from statsmodels.compat.python import lrange
-from statsmodels.tools.sm_exceptions import ColinearityWarning
-from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
-                                               pacf, grangercausalitytests,
-                                               coint, acovf, kpss, ResultsStore,
-                                               arma_order_select_ic)
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import (assert_almost_equal, assert_equal, assert_warns,
-                           assert_raises, assert_, assert_allclose)
-from statsmodels.datasets import macrodata, sunspots
+from numpy.testing import (assert_almost_equal, assert_equal, assert_raises, assert_,
+                           assert_allclose)
 from pandas import Series, DatetimeIndex, DataFrame
-import os
-import warnings
+
+from statsmodels.compat.numpy import recarray_select
+from statsmodels.compat.python import lrange
+from statsmodels.datasets import macrodata, sunspots
+from statsmodels.tools.sm_exceptions import ColinearityWarning
 from statsmodels.tools.sm_exceptions import MissingDataError
+from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw,
+                                       pacf, grangercausalitytests,
+                                       coint, acovf, kpss, arma_order_select_ic,
+                                       levinson_durbin)
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -503,7 +504,6 @@ def test_acovf_fft_vs_convolution():
 def test_arma_order_select_ic():
     # smoke test, assumes info-criteria are right
     from statsmodels.tsa.arima_process import arma_generate_sample
-    import statsmodels.api as sm
 
     arparams = np.array([.75, -.25])
     maparams = np.array([.65, .35])
@@ -568,6 +568,18 @@ def test_acf_fft_dataframe():
     result = acf(sunspots.load_pandas().data[['SUNACTIVITY']], fft=True)
     assert_equal(result.ndim, 1)
 
+
+def test_levinson_durbin_acov():
+    rho = 0.9
+    m = 20
+    acov = rho**np.arange(200)
+    sigma2_eps, ar, pacf, _, _ = levinson_durbin(acov, m, isacov=True)
+    assert_allclose(sigma2_eps, 1 - rho ** 2)
+    assert_allclose(ar, np.array([rho] + [0] * (m - 1)), atol=1e-8)
+    assert_allclose(pacf, np.array([1, rho] + [0] * (m - 1)), atol=1e-8)
+
+
 if __name__=="__main__":
     import pytest
     pytest.main([__file__, '-vvs', '-x', '--pdb'])
+

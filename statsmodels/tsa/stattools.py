@@ -717,7 +717,8 @@ def periodogram(X):
 #copied from nitime and statsmodels\sandbox\tsa\examples\try_ld_nitime.py
 #TODO: check what to return, for testing and trying out returns everything
 def levinson_durbin(s, nlags=10, isacov=False):
-    '''Levinson-Durbin recursion for autoregressive processes
+    """
+    Levinson-Durbin recursion for autoregressive processes
 
     Parameters
     ----------
@@ -736,14 +737,14 @@ def levinson_durbin(s, nlags=10, isacov=False):
     sigma_v : float
         estimate of the error variance ?
     arcoefs : ndarray
-        estimate of the autoregressive coefficients
+        estimate of the autoregressive coefficients for a model including nlags
     pacf : ndarray
         partial autocorrelation function
     sigma : ndarray
         entire sigma array from intermediate result, last value is sigma_v
     phi : ndarray
         entire phi array from intermediate result, last column contains
-        autoregressive coefficients for AR(nlags) with a leading 1
+        autoregressive coefficients for AR(nlags)
 
     Notes
     -----
@@ -753,15 +754,10 @@ def levinson_durbin(s, nlags=10, isacov=False):
     If this function is called with the time series (isacov=False), then the
     sample autocovariance function is calculated with the default options
     (biased, no fft).
-    '''
+    """
     s = np.asarray(s)
-    order = nlags  # rename compared to nitime
-    #from nitime
+    order = nlags
 
-    ##if sxx is not None and type(sxx) == np.ndarray:
-    ##    sxx_m = sxx[:order+1]
-    ##else:
-    ##    sxx_m = ut.autocov(s)[:order+1]
     if isacov:
         sxx_m = s
     else:
