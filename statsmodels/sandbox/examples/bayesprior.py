@@ -33,18 +33,7 @@ class igamma_gen(rv_continuous):
     def _munp(self, n, a, b):
         args = (a,b)
         super(igamma_gen, self)._munp(self, n, *args)
-#TODO: is this robust for differential entropy in this case? closed form or
-#shortcuts in special?
-    def _entropy(self, *args):
-        def integ(x):
-            val = self._pdf(x, *args)
-            return val*log(val)
 
-        entr = -integrate.quad(integ, self.a, self.b)[0]
-        if not np.isnan(entr):
-            return entr
-        else:
-            raise ValueError("Problem with integration.  Returned nan.")
 
 igamma = igamma_gen(a=0.0, name='invgamma', longname="An inverted gamma",
             shapes = 'a,b', extradoc="""
