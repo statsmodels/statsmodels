@@ -5,14 +5,18 @@ Tests for contingency table analyses.
 import numpy as np
 import statsmodels.stats.contingency_tables as ctab
 import pandas as pd
-from numpy.testing import assert_allclose, assert_equal
+from numpy.testing import assert_allclose, assert_equal, assert_raises
 import os
 import statsmodels.api as sm
 
+from statsmodels.datasets import presidential2016
+
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 fname = "contingency_table_r_results.csv"
-fpath = os.path.join(cur_dir, 'results', fname)
+results_dirpath = os.path.join(cur_dir, 'results')
+fpath = os.path.join(results_dirpath, fname)
 r_results = pd.read_csv(fpath)
+presidential_data = sm.datasets.presidential2016.load_pandas().data
 
 
 tables = [None, None, None]
@@ -546,7 +550,6 @@ class Check2x2Mixin(object):
         assert_equal(self.tbl_obj.summary().as_text(),
                      self.summary_string)
 
-
 class Test2x2_1(Check2x2Mixin):
 
     @classmethod
@@ -579,3 +582,638 @@ class Test2x2_1(Check2x2Mixin):
                 '---------------------------------------------------']
         cls.summary_string = '\n'.join(ss)
         cls.initialize()
+
+
+
+# MRCV R values calculated by hand in this notebook:
+# https://github.com/rogueleaderr/statsmodels_supplementary_docs/blob/master/MRCV%20R%20Reference%20Version.ipynb
+def test_MMI_item_response_table():
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, :6],
+                                         presidential_data.columns[:6],
+                              "expected_choice", orientation="wide")
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11],
+                                            presidential_data.columns[6:11],
+                                 "believe_true", orientation="wide")
+    multiple_response_table = ctab.MultipleResponseTable([rows_factor, ],
+                                                         [columns_factor])
+    build_table = multiple_response_table._item_response_table_for_MMI
+    srcv_item_response_table_python = build_table(rows_factor,
+                                          columns_factor)
+    result_path = "srcv_r_item_response_table_result.csv"
+    fpath = os.path.join(results_dirpath, result_path)
+    srcv_item_response_table_r = pd.DataFrame.from_csv(fpath)
+    # R writes out the csv in a weird flattened table with the column labels
+    #  as "term", "term", "term"... so indexing sensibly is hard. also we
+    # can't reindex either dataframe to match the
+    # column order of the other b/c the column orders are lost
+    # also the python table has nested columns while the R csv is flattened
+    # so the striding by 2 matches columns appropriately
+    for i in range(0, len(columns_factor.labels) * 2, 2):
+        c = columns_factor.labels[i // 2]
+        r_left_offset = i
+        r_right_offset = i + 2
+        py_group = srcv_item_response_table_python.loc[:, c]
+        r_group = srcv_item_response_table_r.iloc[:,
+                  r_left_offset:r_right_offset]
+        assert_allclose(py_group.values, r_group)
+
+
+def test_SPMI_item_response_table():
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11],
+                                         presidential_data.columns[6:11],
+                              "believe_true", orientation="wide")
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 11:],
+                                            presidential_data.columns[11:],
+                                 "why_uncertain", orientation="wide")
+    multiple_response_table = ctab.MultipleResponseTable([rows_factor, ],
+                                                         [columns_factor])
+    build = multiple_response_table._item_response_table_for_SPMI
+    spmi_item_response_table_python = build(rows_factor, columns_factor)
+    result_path = "spmi_r_item_response_table_result.csv"
+    fpath = os.path.join(results_dirpath, result_path)
+    spmi_item_response_table_r = pd.DataFrame.from_csv(fpath)
+    assert_allclose(spmi_item_response_table_r.values,
+                    spmi_item_response_table_python.values)
+
+
+def test_calculate_pairwise_chi2s_for_MMI_item_response_table():
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, :6],
+                                         presidential_data.columns[:6],
+                              "expected_choice", orientation="wide")
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11],
+                                            presidential_data.columns[6:11],
+                                 "believe_true", orientation="wide")
+    multiple_response_table = ctab.MultipleResponseTable([rows_factor, ],
+                                                         [columns_factor])
+    calculate = multiple_response_table._chi2s_for_MMI_item_response_table
+    pairwise_chis = calculate(rows_factor, columns_factor)
+    r_results_fname = "srcv_r_all_chis_result.csv"
+    r_results_fpath = os.path.join(results_dirpath, r_results_fname)
+    results_from_r = pd.Series.from_csv(r_results_fpath)
+    assert_allclose(pairwise_chis, results_from_r)
+
+
+def test_multiple_mutual_independence_false_using_bonferroni():
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, :6],
+                                         presidential_data.columns[:6],
+                              "expected_choice", orientation="wide")
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11],
+                                            presidential_data.columns[6:11],
+                                 "believe_true", orientation="wide")
+    multiple_response_table = ctab.MultipleResponseTable([rows_factor, ],
+                                                         [columns_factor])
+    bonferroni_test = multiple_response_table._test_MMI_using_bonferroni
+    p_value_overall, p_values_cellwise = bonferroni_test(rows_factor,
+                                                       columns_factor)
+    fpath = os.path.join(results_dirpath, "srcv_r_bonferroni.csv")
+    r_result = pd.DataFrame.from_csv(fpath)
+    p_value_overall_r = r_result["p.value.bon"]
+    cell_p_values_r = r_result.iloc[:, 1:]
+    reshaped_python_values = p_values_cellwise.values.reshape(5, 1)
+    assert_allclose(reshaped_python_values, cell_p_values_r.T)
+    assert_allclose(p_value_overall_r, p_value_overall)
+
+
+def test_multiple_mutual_independence_false_using_rao_scott_2():
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, :6],
+                                         presidential_data.columns[:6],
+                              "expected_choice", orientation="wide")
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11],
+                                            presidential_data.columns[6:11],
+                                 "believe_true", orientation="wide")
+    multiple_response_table = ctab.MultipleResponseTable([rows_factor, ],
+                                                         [columns_factor])
+    rao_scott_2_test = multiple_response_table._test_MMI_using_rao_scott_2
+    p_value_overall = rao_scott_2_test(rows_factor, columns_factor)
+    fpath = os.path.join(results_dirpath, "srcv_r_rao_scott.csv")
+    r_result = pd.DataFrame.from_csv(fpath)
+    p_value_overall_r = r_result["p.value.rs2"]
+    assert_allclose(p_value_overall_r, p_value_overall)
+
+
+def test_calculate_pairwise_chi2s_for_SPMI_item_response_table():
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11],
+                                         presidential_data.columns[6:11],
+                             "believe_true", orientation="wide")
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 11:],
+                                            presidential_data.columns[11:],
+                                 "why_uncertain", orientation="wide")
+    multiple_response_table = ctab.MultipleResponseTable([rows_factor, ],
+                                                         [columns_factor])
+    calculate = multiple_response_table._chi2s_for_SPMI_item_response_table
+    spmi_pairwise_chis_python = calculate(rows_factor, columns_factor)
+    r_results_fname = "spmi_r_pairwise_chis_result.csv"
+    r_results_fpath = os.path.join(results_dirpath, r_results_fname)
+    spmi_pairwise_chis_r = pd.DataFrame.from_csv(r_results_fpath)
+    assert_allclose(spmi_pairwise_chis_r.values.astype(float),
+                    spmi_pairwise_chis_python.values.astype(float))
+
+
+def test_SPMI_false_using_bonferroni():
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11],
+                                         presidential_data.columns[6:11],
+                              "believe_true", orientation="wide")
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 11:],
+                                            presidential_data.columns[11:],
+                                 "why_uncertain", orientation="wide")
+    multiple_response_table = ctab.MultipleResponseTable([rows_factor, ],
+                                                         [columns_factor])
+    test = multiple_response_table._test_SPMI_using_bonferroni
+    result = test(rows_factor, columns_factor)
+    p_value_overall_bonferroni, cellwise_p_bonferroni_python = result
+    fpath = os.path.join(results_dirpath, "spmi_r_bonferroni.csv")
+    spmi_bonferroni_r = pd.DataFrame.from_csv(fpath)
+
+    p_value_overall_r = spmi_bonferroni_r["p.value.bon"]
+    cell_p_values_r = spmi_bonferroni_r.iloc[:, 1:]
+
+    assert_allclose(cellwise_p_bonferroni_python, cell_p_values_r)
+    assert_allclose(p_value_overall_r, p_value_overall_bonferroni)
+
+
+def test_SPMI_false_using_rao_scott_2():
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11],
+                                         presidential_data.columns[6:11],
+                              "believe_true", orientation="wide")
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 11:],
+                                            presidential_data.columns[11:],
+                                 "why_uncertain", orientation="wide")
+    multiple_response_table = ctab.MultipleResponseTable([rows_factor, ],
+                                                         [columns_factor])
+    rao_scott_2_test = multiple_response_table._test_SPMI_using_rao_scott_2
+    p_value_overall = rao_scott_2_test(rows_factor, columns_factor)
+    fpath = os.path.join(results_dirpath, "spmi_r_rao_scott.csv")
+    r_result = pd.DataFrame.from_csv(fpath)
+    p_value_overall_r = r_result["p.value.rs2"]
+    assert_allclose(p_value_overall_r, p_value_overall)
+
+
+def build_random_single_select(n=10000, choices=None):
+    if choices:
+        k = len(choices)
+    else:
+        k = 3
+        choices = ["sedan", "truck", "motorcycle"]
+    car_type = np.random.randint(k, size=(n)) + 1
+    base_pop = pd.DataFrame(car_type).reset_index()
+    base_pop.columns = ['person', 'choice']
+    base_pop['_response'] = 1
+    dataframe = pd.pivot_table(base_pop,
+                               values='_response',
+                               fill_value=0,
+                               index='person',
+                               columns='choice',
+                               aggfunc=np.sum,
+                               margins=False)
+    car_choice = dataframe.copy()
+    car_choice.columns = choices
+    return car_choice
+
+
+def test_multiple_mutual_independence_true():
+    np.random.seed(100)
+    food_choices = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
+                                columns=["eggs", "cheese", "candy",
+                                         "sushi", "none"])
+    car_choice = build_random_single_select()
+    srcv = ctab.Factor.from_array(car_choice, car_choice.columns,
+                                  "car_choice", orientation="wide")
+    mrcv = ctab.Factor.from_array(food_choices, food_choices.columns,
+                                  "food_choices", orientation="wide")
+    multiple_response_table = ctab.MultipleResponseTable([srcv, ], [mrcv, ])
+    rao_scott_2_test = multiple_response_table._test_MMI_using_rao_scott_2
+    rao_p_value = rao_scott_2_test(srcv, mrcv)
+    np.testing.assert_(rao_p_value >= 0.05)
+    bonferroni_test = multiple_response_table._test_MMI_using_bonferroni
+    bonferroni_p_value_overall, \
+    bonferroni_cell_p_values = bonferroni_test(srcv, mrcv)
+    np.testing.assert_(bonferroni_p_value_overall >= 0.05)
+    np.testing.assert_(np.all(bonferroni_cell_p_values >= 0.05))
+
+
+def test_simultaneous_pairwise_mutual_independence_true():
+    np.random.seed(100)
+    food_choices = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
+                                columns=["eggs", "cheese", "candy",
+                                         "sushi", "none"])
+    language = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
+                                           columns=["English", "French",
+                                                    "Mandarin", "Hungarian",
+                                                    "none"])
+    mrcv_1 = ctab.Factor.from_array(language, language.columns,
+                                    "car_choice", orientation="wide")
+    mrcv_2 = ctab.Factor.from_array(food_choices, food_choices.columns,
+                                    "food_choices", orientation="wide")
+    multiple_response_table = ctab.MultipleResponseTable([mrcv_1, ],
+                                                         [mrcv_2, ])
+    rao_scott_2_test = multiple_response_table._test_SPMI_using_rao_scott_2
+    rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
+    np.testing.assert_(rao_p_value >= 0.05)
+    bonferroni_test = multiple_response_table._test_SPMI_using_bonferroni
+    result = bonferroni_test(mrcv_1, mrcv_2)
+    bonferroni_p_value_overall, bonferroni_cell_p_values = result
+    np.testing.assert_(bonferroni_p_value_overall >= 0.05)
+    np.testing.assert_(np.all(bonferroni_cell_p_values >= 0.05))
+
+
+def test_overlapping_names_allowed():
+    # Hit a bug in development if two factors
+    # shared levels with the same name
+    np.random.seed(100)
+    food_choices = ["eggs", "cheese", "candy", "sushi", "none"]
+    best_food = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                             columns=food_choices)
+    worst_food = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                              columns=food_choices)
+    mrcv_1 = ctab.Factor.from_array(worst_food, worst_food.columns,
+                                    "car_choice", orientation="wide")
+    mrcv_2 = ctab.Factor.from_array(best_food, best_food.columns,
+                                    "best_food", orientation="wide")
+    multiple_response_table = ctab.MultipleResponseTable([mrcv_1, ],
+                                                         [mrcv_2, ])
+    rao_scott_2_test = multiple_response_table._test_SPMI_using_rao_scott_2
+    rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
+    np.testing.assert_(rao_p_value >= 0.05)
+
+    car_choice = build_random_single_select(n=1000, choices=food_choices)
+    srcv = ctab.Factor.from_array(car_choice, food_choices,
+                                  "srcv", orientation="wide")
+    multiple_response_table = ctab.MultipleResponseTable([srcv, ],
+                                                         [mrcv_2, ])
+    rao_scott_2_test = multiple_response_table._test_SPMI_using_rao_scott_2
+    rao_p_value = rao_scott_2_test(mrcv_1, mrcv_2)
+    np.testing.assert_(rao_p_value >= 0.05)
+
+
+def test_duplicate_names_allowed():
+    np.random.seed(100)
+    # Hit a bug in development if two levels had the same name
+    food_choices = ["eggs", "eggs", "candy", "eggs", "none"]
+    best_food = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                             columns=food_choices)
+    worst_food = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                              columns=food_choices)
+    mrcv_1 = ctab.Factor.from_array(worst_food, worst_food.columns,
+                                    "", orientation="wide")
+    mrcv_2 = ctab.Factor.from_array(best_food, best_food.columns,
+                                    "", orientation="wide")
+    multiple_response_table = ctab.MultipleResponseTable([mrcv_1, ],
+                                                         [mrcv_2, ])
+    result = multiple_response_table.test_for_independence(method="rao")
+    np.testing.assert_(result.p_value_overall >= 0.05)
+
+    car_choice = build_random_single_select(n=1000, choices=food_choices)
+    srcv = ctab.Factor.from_array(car_choice, food_choices, "srcv",
+                                  orientation="wide")
+    multiple_response_table = ctab.MultipleResponseTable([srcv, ],
+                                                         [mrcv_2, ])
+    result = multiple_response_table.test_for_independence(method="rao")
+    np.testing.assert_(result.p_value_overall >= 0.05)
+
+    # deduplicator modifies in-place so need to recreate data
+    car_choice = build_random_single_select(n=1000, choices=food_choices)
+    srcv = ctab.Factor.from_array(car_choice, food_choices, "srcv",
+                                  orientation="wide")
+    best_food = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                              columns=food_choices)
+    mrcv_2 = ctab.Factor.from_array(best_food, best_food.columns,
+                                    "best_food", orientation="wide")
+    narrow_srcv = srcv.cast_wide_to_narrow()
+    narrow_mrcv = mrcv_2.cast_wide_to_narrow()
+    multiple_response_table = ctab.MultipleResponseTable([narrow_srcv, ],
+                                                         [narrow_mrcv, ])
+    result = multiple_response_table.test_for_independence(method="rao")
+    np.testing.assert_(result.p_value_overall >= 0.05)
+
+
+def test_MRCV_table_from_data():
+    multiple_response_questions = presidential_data.iloc[:, 6:]
+    construct = ctab.MultipleResponseTable.from_data
+    table = construct(multiple_response_questions, 5, 5)
+    expected = np.array([44, 49, 15, 22, 12])  # from a manual run
+    np.testing.assert_equal(table.table.iloc[0, :], expected)
+
+
+def test_MRCV_table_from_factors():
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11],
+                                         presidential_data.columns[6:11],
+                              "believe_true", orientation="wide")
+    columns_factor = ctab.Factor.from_array(presidential_data.iloc[:, 11:],
+                                            presidential_data.columns[11:],
+                                 "why_uncertain", orientation="wide")
+    multiple_response_table = ctab.MultipleResponseTable([rows_factor, ],
+                                                         [columns_factor])
+    expected = np.array([44, 49, 15, 22, 12])  # from a manual run
+    np.testing.assert_equal(multiple_response_table.table.iloc[0, :].values,
+                            expected)
+
+
+def test_Factor_from_wide_data():
+    single_response_data = presidential_data.iloc[:, :6]
+    single_response_factor = ctab.Factor.from_array(single_response_data,
+                                                    range(0, 6), "")
+    narrow_dataframe = single_response_factor.cast_wide_to_narrow().data
+    # actually selected options
+    narrow_dataframe = narrow_dataframe[narrow_dataframe.value == 1]
+    columns = ['observation_id', 'factor_level', 'value']
+    top_row = narrow_dataframe[columns].iloc[0]
+    expected = [0, 4, 1]  # from a manual run
+    np.testing.assert_array_equal(top_row, expected)
+
+
+def test_Factor_wide_to_narrow():
+    # had a bug with index names
+    n = 100
+    car_choice = build_random_single_select(n)
+    srcv = ctab.Factor(car_choice, "car_choice", orientation="wide")
+    wide = srcv.cast_wide_to_narrow()
+    np.testing.assert_equal(wide.data.shape, (300, 3))
+
+
+def test_Factor_from_narrow_data():
+    rows_factor = ctab.Factor.from_array(presidential_data.iloc[:, 6:11],
+                                         presidential_data.columns[6:11],
+                              "believe_true", orientation="wide")
+    narrow_factor = rows_factor.cast_wide_to_narrow()
+    wide_factor = narrow_factor.cast_narrow_to_wide()
+    # pivoting the dataframe sorts the columns lexographically
+    # (because the original column order is not preserved when the
+    # dataframe is cast to narrow) so to compare, we need to sort
+    # the columns of the original dataframe
+    rows_dataframe = rows_factor.data.sort_index(axis=1)
+    matches = rows_dataframe == wide_factor.data
+    np.testing.assert_(matches.all().all())
+
+
+def test_Factor_autodetect_multiple_response():
+    single_response_data = presidential_data.iloc[:, :6]
+    fake_labels_srcv = list(range(0, 6))
+    fake_labels_mrcv = list(range(0, 5))
+    build = ctab.Factor.from_array
+    single_response_factor = build(single_response_data,
+                                   fake_labels_srcv, "")
+    np.testing.assert_(not single_response_factor.multiple_response)
+    multiple_response_data = presidential_data.iloc[:, 6:11]
+    multiple_response_factor = build(multiple_response_data,
+                                     fake_labels_mrcv, "")
+    np.testing.assert_(multiple_response_factor.multiple_response)
+
+
+def test_Factor_columns_must_have_labels():
+    single_response_data = presidential_data.iloc[:, :6]
+    with assert_raises(ValueError):
+        build = ctab.Factor.from_array
+        single_response_factor = build(single_response_data, [], "")
+
+
+def test_MRCV_table_with_ones():
+    a = np.ones((1000, 2))
+    b = np.ones((1000, 2))
+    labels = ["Yes", "No"]
+    mrcv_1 = ctab.Factor.from_array(a, labels, "alive",
+                                    orientation="wide",
+                                    multiple_response=True)
+    mrcv_2 = ctab.Factor.from_array(b, labels, "cool",
+                                    orientation="wide",
+                                    multiple_response=True)
+    multiple_response_table = ctab.MultipleResponseTable([mrcv_1, ],
+                                                         [mrcv_2, ])
+    results = multiple_response_table.test_for_independence()
+    np.testing.assert_(np.all(np.isnan(results.p_values_cellwise)))
+
+
+def test_MRCV_table_with_zeros():
+    a = np.zeros((1000, 2))
+    b = np.zeros((1000, 2))
+    labels = ["Yes", "No"]
+    mrcv_1 = ctab.Factor.from_array(a, labels, "alive",
+                                    orientation="wide",
+                                    multiple_response=True)
+    mrcv_2 = ctab.Factor.from_array(b, labels, "cool",
+                                    orientation="wide",
+                                    multiple_response=True)
+    multiple_response_table = ctab.MultipleResponseTable([mrcv_1, ],
+                                                         [mrcv_2, ])
+    results = multiple_response_table.test_for_independence()
+    np.testing.assert_(np.all(np.isnan(results.p_values_cellwise)))
+
+
+def test_MMI_table_with_no_variance():
+    # if the single response factor has every observation on the
+    # same level, decline to calculate
+    a = np.zeros((1000, 1))
+    b = np.ones((1000, 1))
+    food_choices = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
+                                columns=["eggs", "cheese",
+                                         "candy", "sushi", "none"])
+    labels = ["Yes", "No"]
+    ab = np.concatenate((a, b), axis=1)
+    srcv = ctab.Factor.from_array(ab, labels, "alive",
+                                  orientation="wide",
+                                  multiple_response=False)
+    mrcv_2 = ctab.Factor(food_choices, "cool", orientation="wide",
+                         multiple_response=True)
+    multiple_response_table = ctab.MultipleResponseTable([srcv, ],
+                                                         [mrcv_2, ])
+    results = multiple_response_table.test_for_independence()
+    np.testing.assert_(np.all(np.isnan(results.p_values_cellwise)))
+
+
+def test_SPMI_table_with_no_variance():
+    # if a factor has every observation on the
+    # same level, decline to calculate
+    a = np.zeros((1000, 1))
+    b = np.ones((1000, 1))
+    food_choices = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
+                                columns=["eggs", "cheese",
+                                         "candy", "sushi", "none"])
+    labels = ["Yes", "No"]
+    ab = np.concatenate((a, b), axis=1)
+    mrcv_1 = ctab.Factor.from_array(ab, labels, "alive",
+                                  orientation="wide",
+                                  multiple_response=True)
+    mrcv_2 = ctab.Factor(food_choices, "cool", orientation="wide",
+                         multiple_response=True)
+    multiple_response_table = ctab.MultipleResponseTable([mrcv_1, ],
+                                                         [mrcv_2, ])
+    results = multiple_response_table.test_for_independence()
+    np.testing.assert_(np.all(np.isnan(results.p_values_cellwise)))
+
+
+def test_MRCV_2x2_table():
+    # hit a bug with 2x2 tables not working
+    np.random.seed(100)
+    a = pd.DataFrame(np.random.randint(2, size=(1000, 2)),
+                             columns=["good", "bad"])
+    b = pd.DataFrame(np.random.randint(2, size=(1000, 2)),
+                             columns=["eggs", "cheese"])
+    mrcv_1 = ctab.Factor(a, "alive", orientation="wide",
+                         multiple_response=True)
+    mrcv_2 = ctab.Factor(b, "cool", orientation="wide",
+                         multiple_response=True)
+    multiple_response_table = ctab.MultipleResponseTable([mrcv_1, ],
+                                                         [mrcv_2, ])
+    results = multiple_response_table.test_for_independence()
+    np.testing.assert_(results.p_value_overall > 0.05)
+
+
+def test_for_MRCV_independence():
+    # test all the different combinations the top-level
+    #  test_for_independence should be
+    # able to dispatch automatically
+    food_choices = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
+                                columns=["eggs", "cheese",
+                                         "candy", "sushi", "none"])
+    language = pd.DataFrame(np.random.randint(2, size=(10000, 5)),
+                            columns=["English", "French",
+                                     "Mandarin", "Hungarian", "none"])
+    car_choice = build_random_single_select()
+    second_car_choice = build_random_single_select()
+    srcv_1 = ctab.Factor(car_choice, "", orientation="wide")
+    srcv_2 = ctab.Factor(second_car_choice, "", orientation="wide")
+    mrcv_1 = ctab.Factor(food_choices, "", orientation="wide",
+                         multiple_response=True)
+    mrcv_2 = ctab.Factor(language, "", orientation="wide",
+                         multiple_response=True)
+
+    table = ctab.MultipleResponseTable([srcv_1, ], [mrcv_1, ])
+    results = table.test_for_independence()
+    np.testing.assert_equal(results.independence_type,
+                            'Marginal Mutual Independence')
+    np.testing.assert_equal(results.method, 'Bonferroni')
+
+    table = ctab.MultipleResponseTable([srcv_1, ], [mrcv_1, ])
+    results = table.test_for_independence(method="bon")
+    np.testing.assert_equal(results.independence_type,
+                            'Marginal Mutual Independence')
+    np.testing.assert_equal(results.method, 'Bonferroni')
+
+    table = ctab.MultipleResponseTable([mrcv_1, ], [srcv_1, ])
+    results = table.test_for_independence(method="bon")
+    np.testing.assert_equal(results.independence_type,
+                            'Marginal Mutual Independence')
+    np.testing.assert_equal(results.method, 'Bonferroni')
+
+    table = ctab.MultipleResponseTable([srcv_1, ], [mrcv_1, ])
+    results = table.test_for_independence(method="rao")
+    np.testing.assert_equal(results.independence_type,
+                            'Marginal Mutual Independence')
+    np.testing.assert_equal(results.method, 'Rao-Scott')
+
+    table = ctab.MultipleResponseTable([mrcv_1, ], [srcv_1, ])
+    results = table.test_for_independence(method="rao")
+    np.testing.assert_equal(results.independence_type,
+                            'Marginal Mutual Independence')
+    np.testing.assert_equal(results.method, 'Rao-Scott')
+
+    table = ctab.MultipleResponseTable([srcv_1, ], [srcv_2, ])
+    results = table.test_for_independence()
+    np.testing.assert_equal(type(results),
+                            ctab.ContingencyTableNominalIndependenceResult)
+
+    table = ctab.MultipleResponseTable([mrcv_2, ], [mrcv_1, ])
+    results = table.test_for_independence()
+    expected = 'Simultaneous Pairwise Mutual Independence'
+    np.testing.assert_equal(results.independence_type, expected)
+    np.testing.assert_equal(results.method, 'Bonferroni')
+
+    table = ctab.MultipleResponseTable([mrcv_1, ], [mrcv_2, ])
+    results = table.test_for_independence(method="bon")
+    np.testing.assert_equal(results.independence_type, expected)
+    np.testing.assert_equal(results.method, 'Bonferroni')
+
+    table = ctab.MultipleResponseTable([mrcv_1, ], [mrcv_2, ])
+    results = table.test_for_independence(method="rao")
+    np.testing.assert_equal(results.independence_type, expected)
+    np.testing.assert_equal(results.method, 'Rao-Scott')
+
+    # test accepting narrows
+    food_choices = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                                columns=["eggs", "cheese",
+                                         "candy", "sushi", "none"])
+    language = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                                           columns=["English", "French",
+                                                    "Mandarin",
+                                                    "Hungarian", "none"])
+    mrcv_1 = ctab.Factor(food_choices, "car_choice", orientation="wide")
+    mrcv_2 = ctab.Factor(language, "language", orientation="wide")
+    narrow_mrcv_1 = mrcv_1.cast_wide_to_narrow()
+    narrow_mrcv_2 = mrcv_2.cast_wide_to_narrow()
+    multiple_response_table = ctab.MultipleResponseTable([narrow_mrcv_1, ],
+                                                         [narrow_mrcv_2, ])
+    result = multiple_response_table.test_for_independence(method="rao")
+    np.testing.assert_(result.p_value_overall >= 0.05)
+    result = multiple_response_table.test_for_independence(method="bon")
+    np.testing.assert_(result.p_value_overall >= 0.05)
+
+def test_combining_factors():
+    food_choices = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                                columns=["eggs", "cheese",
+                                         "candy", "sushi", "none"])
+    language = pd.DataFrame(np.random.randint(2, size=(1000, 5)),
+                            columns=["English", "French",
+                                     "Mandarin", "Hungarian", "none"])
+    car_choice = build_random_single_select(n=1000)
+    second_car_choice = build_random_single_select(n=1000)
+    srcv_1 = ctab.Factor(car_choice, "", orientation="wide")
+    srcv_2 = ctab.Factor(second_car_choice, "", orientation="wide")
+    mrcv_1 = ctab.Factor(food_choices, "", orientation="wide",
+                         multiple_response=True)
+    mrcv_2 = ctab.Factor(language, "", orientation="wide",
+                         multiple_response=True)
+
+    srcv_srcv = srcv_1.combine_with(srcv_2)
+
+    np.testing.assert_(srcv_srcv.labels[0] ==
+                       "('motorcycle', 'motorcycle')")
+    np.testing.assert_(srcv_srcv.labels[-1] == "('truck', 'truck')")
+    np.testing.assert_(srcv_srcv.data.shape == (1000, 9))
+
+    srcv_mrcv = srcv_1.combine_with(mrcv_1)
+    np.testing.assert_(srcv_mrcv.labels[0] == "('motorcycle', 'candy')")
+    np.testing.assert_(srcv_mrcv.labels[-1] == "('truck', 'sushi')")
+    np.testing.assert_(srcv_mrcv.data.shape == (1000, 15))
+
+    mrcv_mrcv = mrcv_1.combine_with(mrcv_2)
+    np.testing.assert_(mrcv_mrcv.labels[0] == "('candy', 'English')")
+    np.testing.assert_(mrcv_mrcv.labels[-1] == "('sushi', 'none')")
+    np.testing.assert_(mrcv_mrcv.data.shape == (1000, 25))
+
+    narrow = mrcv_2.cast_wide_to_narrow()
+    wide_narrow = mrcv_1.combine_with(narrow)
+    np.testing.assert_(wide_narrow.labels[0] == "('candy', 'English')")
+    np.testing.assert_(wide_narrow.labels[-1] == "('sushi', 'none')")
+    np.testing.assert_(wide_narrow.data.shape == (1000, 25))
+
+    narrow_wide = narrow.combine_with(mrcv_1)
+    np.testing.assert_(narrow_wide.labels[0] == "('English', 'candy')")
+    np.testing.assert_(narrow_wide.labels[-1] == "('none', 'sushi')")
+    np.testing.assert_(narrow_wide.data.shape == (1000, 25))
+
+    narrow_2 = mrcv_2.cast_wide_to_narrow()
+    narrow_narrow = narrow.combine_with(narrow_2)
+    np.testing.assert_(narrow_narrow.labels[0] ==
+                       "('English', 'English')")
+    np.testing.assert_(narrow_narrow.labels[-1] == "('none', 'none')")
+    np.testing.assert_(narrow_narrow.data.shape == (1000, 25))
+
+
+def test_creating_narrow_factor_from_data():
+    car_choice = build_random_single_select(n=1000)
+    index_name = car_choice.index.name
+    melted = pd.melt(car_choice.reset_index(), id_vars=index_name)
+    melted = melted.rename(columns={index_name: "observation_id"})
+    narrowed = melted.sort_values("observation_id")
+    narrow_data = narrowed.reset_index(drop=True)
+    with assert_raises(NotImplementedError):
+        ctab.Factor(narrow_data, "", orientation="narrow")
+    narrow_data.columns = ['observation_id', 'factor_level', 'value']
+    srcv = ctab.Factor(narrow_data, "", orientation="narrow")
+    np.testing.assert_equal(srcv.data.shape, (3000, 3))
+    levels = srcv.data['factor_level'].unique()
+    expected = np.array(['sedan', 'truck', 'motorcycle'], dtype=object)
+    np.testing.assert_equal(levels, expected)
+
+if __name__ == "__main__":
+    import nose
+    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
