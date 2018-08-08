@@ -73,8 +73,3 @@ def _est_regression_summary():
 #            print c1,c2
 #            counter += 1
     np.testing.assert_(actual == desired)
-
-
-if __name__ == '__main__':
-    test_regression_summary()
-

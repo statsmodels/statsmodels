@@ -22,6 +22,8 @@ array([  2.12286549e+00,   1.27450889e+00,   7.86898619e-02,
          9.39554926e-02,   2.00610244e-01,   1.32239575e-01,
          1.24504352e-03,  -8.81846018e-02])
 '''
+import numpy as np
+
 
 def acovf_fft(x, demean=True):
     '''autocovariance function with call to fftconvolve, biased

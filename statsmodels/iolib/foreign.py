@@ -757,7 +757,7 @@ class StataWriter(object):
         dtype = data.dtype
         descr = dtype.descr
         if dtype.names is None:
-            varlist = _default_names(nvar)
+            varlist = _default_names(self.nvar)
         else:
             varlist = dtype.names
 

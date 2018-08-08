@@ -21,7 +21,9 @@ filenameli = ['SiRstv.dat', 'SmLs01.dat', 'SmLs02.dat', 'SmLs03.dat', 'AtmWtAg.d
 
 def getnist(filename):
     fname = os.path.abspath(os.path.join('./data', filename))
-    content = file(fname,'r').read().split('\n')
+    with open(fname, 'r') as fd:
+        content = fd.read().split('\n')
+
     data = [line.split() for line in content[60:]]
     certified = [line.split() for line in content[40:48] if line]
     dataf = np.loadtxt(fname, skiprows=60)

@@ -1139,9 +1139,3 @@ def mvnormcdf(upper, mu, cov, lower=None,  **kwds):
     #v/np.sqrt(np.atleast_2d(np.diag(covv)))/np.sqrt(np.atleast_2d(np.diag(covv))).T
 
     return mvstdnormcdf(lower, upper, corr, **kwds)
-
-
-
-
-if __name__ == '__main__':
-    examples_transf()

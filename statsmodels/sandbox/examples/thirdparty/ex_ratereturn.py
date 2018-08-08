@@ -24,7 +24,8 @@ import statsmodels.sandbox.tools as sbtools
 from statsmodels.graphics.correlation import plot_corr, plot_corr_grid
 
 try:
-    rrdm = cPickle.load(file('dj30rr','rb'))
+    with open('dj30rr', 'rb') as fd:
+        rrdm = cPickle.load(fd)
 except Exception: #blanket for any unpickling error
     print("Error with unpickling, a new pickle file can be created with findow_1")
     raise

@@ -139,7 +139,8 @@ class HoldIt(object):
             txt.append('%s%s = %s' % (prefix, x, repr(getattr(self,x))))
         txt.extend(['','']) #add empty lines at end
         if not filename is None:
-            file(filename, 'a+').write('\n'.join(txt))
+            with open(filename, 'a+') as fd:
+                fd.write('\n'.join(txt))
         return txt
 
 def generate_princomp(xo, filen='testsave.py'):

@@ -160,7 +160,7 @@ def yule_walker_acov(acov, order=1, method="unbiased", df=None, inv=False):
         inverse of the Toepliz matrix
 
     """
-
+    from scipy.linalg import toeplitz
 
     R = toeplitz(r[:-1])
 

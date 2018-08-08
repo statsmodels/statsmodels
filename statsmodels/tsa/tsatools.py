@@ -187,10 +187,12 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
             col = x.dtype.names[col]
         if not PY3:
             # TODO: Get rid of this kludge.  See GH # 3658
-            names = [bytes(name) if isinstance(name, unicode) else name for name in names]
+            names = [bytes(name)
+                     if isinstance(name, unicode)  # noqa:F821
+                     else name for name in names]
             # Fail loudly if there is a non-ascii name.
             x.dtype.names = names
-            if isinstance(col, unicode):
+            if isinstance(col, unicode):  # noqa:F821
                 col = bytes(col)
 
         contemp = x[col]

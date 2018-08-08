@@ -167,7 +167,7 @@ def tstd_pdf(x, df):
     '''
 
     r = np.array(df*1.0)
-    Px = np.exp(special.gammaln((r+1)/2.)-special.gammaln(r/2.))/np.sqrt((r-2)*pi)
+    Px = np.exp(special.gammaln((r+1)/2.)-special.gammaln(r/2.))/np.sqrt((r-2)*np.pi)
     Px /= (1+(x**2)/(r-2))**((r+1)/2.)
     return Px
 
