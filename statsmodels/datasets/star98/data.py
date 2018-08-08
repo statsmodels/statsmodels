@@ -94,7 +94,7 @@ def _get_data():
     nabove = data['NABOVE'].copy()
     nbelow = data['NBELOW'].copy()
 
-    data['NABOVE'] = nbelow # successes
-    data['NBELOW'] = nabove - nbelow # now failures
+    data['NABOVE'] = nbelow  # successes
+    data['NBELOW'] = nabove - nbelow  # now failures
 
     return data

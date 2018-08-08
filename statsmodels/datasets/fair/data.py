@@ -65,8 +65,6 @@ def load():
 
 def load_pandas():
     data = _get_data()
-    ##### SET THE INDICES #####
-    #NOTE: None for exog_idx is the complement of endog_idx
     return du.process_pandas(data, endog_idx=8, exog_idx=None)
 
 

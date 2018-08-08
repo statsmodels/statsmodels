@@ -42,8 +42,6 @@ def load():
 
 def load_pandas():
     data = _get_data()
-    ##### SET THE INDICES #####
-    #NOTE: None for exog_idx is the complement of endog_idx
     dataset = du.process_pandas(data, endog_idx=0, exog_idx=None)
     dataset.censors = dataset.exog.iloc[:, 0]
     dataset.exog = dataset.exog.iloc[:, 1]

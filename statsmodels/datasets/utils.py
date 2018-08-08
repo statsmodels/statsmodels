@@ -287,6 +287,7 @@ def check_internet(url=None):
         return False
     return True
 
+
 def strip_column_names(df):
     """
     Remove leading and trailing single quotes
@@ -323,7 +324,10 @@ def load_csv(base_file, csv_name, sep=',', convert_float=False):
     filepath = dirname(abspath(base_file))
     filename = join(filepath,csv_name)
     engine = 'python' if sep != ',' else 'c'
-    data = read_csv(filename, sep=sep, engine=engine)
+    float_precision = {}
+    if engine == 'c':
+        float_precision = {'float_precision': True}
+    data = read_csv(filename, sep=sep, engine=engine, **float_precision)
     if convert_float:
         data = data.astype(float)
     return data

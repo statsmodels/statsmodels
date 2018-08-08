@@ -42,15 +42,11 @@ def load():
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    ##### SET THE INDICES #####
-    #NOTE: None for exog_idx is the complement of endog_idx
     return du.process_recarray(data, endog_idx=0, exog_idx=None, dtype=float)
 
 
 def load_pandas():
     data = _get_data()
-    ##### SET THE INDICES #####
-    #NOTE: None for exog_idx is the complement of endog_idx
     return du.process_recarray_pandas(data, endog_idx=0, exog_idx=None,
                                       dtype=float)
 
