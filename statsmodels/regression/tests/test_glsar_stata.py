@@ -38,10 +38,10 @@ class TestGLSARCorc(CheckStataResultsPMixin):
 
     @classmethod
     def setup_class(cls):
-        d2 = macrodata.load().data
-        g_gdp = 400*np.diff(np.log(d2['realgdp']))
-        g_inv = 400*np.diff(np.log(d2['realinv']))
-        exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1]], prepend=False)
+        d2 = macrodata.load_pandas().data
+        g_gdp = 400*np.diff(np.log(d2['realgdp'].values))
+        g_inv = 400*np.diff(np.log(d2['realinv'].values))
+        exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1].values], prepend=False)
 
         mod1 = GLSAR(g_inv, exogg, 1)
         cls.res = mod1.iterative_fit(5)

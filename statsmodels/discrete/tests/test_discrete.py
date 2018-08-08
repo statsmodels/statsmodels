@@ -1316,7 +1316,7 @@ class CheckMNLogitBaseZero(CheckModelResults):
 
     def test_margeff_dummy(self):
         data = self.data
-        vote = data.data['vote']
+        vote = data.data[:, data.names.index('vote')]
         exog = np.column_stack((data.exog, vote))
         exog = sm.add_constant(exog, prepend=False)
         res = MNLogit(data.endog, exog).fit(method="newton", disp=0)

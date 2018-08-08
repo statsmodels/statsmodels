@@ -43,19 +43,8 @@ def test_genfromdta_pandas():
     res1 = sm.iolib.genfromdta(curdir+'/../../datasets/macrodata/macrodata.dta',
                         pandas=True)
     res1 = res1.astype(float)
-    assert_frame_equal(res1, dta)
+    assert_frame_equal(res1, dta.astype(float))
 
-def test_stata_writer_structured():
-    buf = BytesIO()
-    dta = macrodata.load().data
-    dtype = dta.dtype
-    dta = dta.astype(np.dtype([('year', int),
-                               ('quarter', int)] + dtype.descr[2:]))
-    writer = StataWriter(buf, dta)
-    writer.write_file()
-    buf.seek(0)
-    dta2 = genfromdta(buf)
-    assert_array_equal(dta, dta2)
 
 def test_stata_writer_array():
     buf = BytesIO()
@@ -88,15 +77,11 @@ def test_missing_roundtrip():
 
 def test_stata_writer_pandas():
     buf = BytesIO()
-    dta = macrodata.load().data
-    dtype = dta.dtype
-    #as of 0.9.0 pandas only supports i8 and f8
-    dta = dta.astype(np.dtype([('year', 'i8'),
-                               ('quarter', 'i8')] + dtype.descr[2:]))
-    dta4 = dta.astype(np.dtype([('year', 'i4'),
-                               ('quarter', 'i4')] + dtype.descr[2:]))
-    dta = DataFrame.from_records(dta)
-    dta4 = DataFrame.from_records(dta4)
+    dta = macrodata.load_pandas().data
+    dta4 = dta.copy()
+    for col in ('year','quarter'):
+        dta[col] = dta[col].astype(np.int64)
+        dta4[col] = dta4[col].astype(np.int32)
     # dta is int64 'i8'  given to Stata writer
     writer = StataWriter(buf, dta)
     writer.write_file()

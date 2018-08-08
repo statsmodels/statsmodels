@@ -55,10 +55,10 @@ def test_cov_cluster_2groups():
 def test_hac_simple():
 
     from statsmodels.datasets import macrodata
-    d2 = macrodata.load().data
-    g_gdp = 400*np.diff(np.log(d2['realgdp']))
-    g_inv = 400*np.diff(np.log(d2['realinv']))
-    exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1]])
+    d2 = macrodata.load_pandas().data
+    g_gdp = 400*np.diff(np.log(d2['realgdp'].values))
+    g_inv = 400*np.diff(np.log(d2['realinv'].values))
+    exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1].values])
     res_olsg = OLS(g_inv, exogg).fit()
 
 

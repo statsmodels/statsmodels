@@ -57,14 +57,6 @@ class TestFormulaDict(CheckFormulaOLS):
         super(TestFormulaDict, cls).setup_class()
 
 
-class TestFormulaRecArray(CheckFormulaOLS):
-    @classmethod
-    def setup_class(cls):
-        data = load().data
-        cls.model = ols(longley_formula, data)
-        super(TestFormulaRecArray, cls).setup_class()
-
-
 def test_tests():
     formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
     dta = load_pandas().data

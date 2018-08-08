@@ -8,8 +8,8 @@ class TestTransform:
 
     @classmethod
     def setup_class(cls):
-        data = macrodata.load()
-        cls.x = data.data['realgdp']
+        data = macrodata.load_pandas()
+        cls.x = data.data['realgdp'].values
         cls.bc = BoxCox()
 
     def test_nonpositive(self):
