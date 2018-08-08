@@ -161,6 +161,13 @@ def test_simple_poisson_map():
                 assert_equal(pr2.min() >= 0, True)
                 assert_equal(pr3.min() >= 0, True)
 
+    # Check dimensions and PSD status of cov_params
+    for rslt in rslt1, rslt2:
+        cp = rslt.cov_params()
+        p = len(rslt.params)
+        assert_equal(cp.shape, np.r_[p, p])
+        np.linalg.cholesky(cp)
+
 
 def test_crossed_logit_map():
 
@@ -174,6 +181,12 @@ def test_crossed_logit_map():
         glmm.logposterior_grad(rslt.params),
         np.zeros_like(rslt.params),
         atol=1e-4)
+
+    # Check dimensions and PSD status of cov_params
+    cp = rslt.cov_params()
+    p = len(rslt.params)
+    assert_equal(cp.shape, np.r_[p, p])
+    np.linalg.cholesky(cp)
 
 
 def test_crossed_poisson_map():
@@ -189,6 +202,11 @@ def test_crossed_poisson_map():
         np.zeros_like(rslt.params),
         atol=1e-4)
 
+    # Check dimensions and PSD status of cov_params
+    cp = rslt.cov_params()
+    p = len(rslt.params)
+    assert_equal(cp.shape, np.r_[p, p])
+    np.linalg.cholesky(cp)
 
 def test_logit_map_crossed_formula():
 
@@ -209,10 +227,11 @@ def test_logit_map_crossed_formula():
     assert_allclose(
         r.iloc[0, :].values, np.r_[-0.02004904, 0.094014], atol=1e-4)
 
+    # Check dimensions and PSD status of cov_params
     cm = rslt.cov_params()
     p = rslt.params.shape[0]
     assert_equal(list(cm.shape), [p, p])
-
+    np.linalg.cholesky(cm)
 
 def test_elbo_grad():
 
@@ -301,6 +320,15 @@ def test_simple_logit_vb():
         rtol=1e-4,
         atol=1e-4)
 
+    for rslt in rslt1, rslt2:
+        cp = rslt.cov_params()
+        p = len(rslt.params)
+        if rslt is rslt1:
+            assert_equal(cp.shape, np.r_[p, p])
+            np.linalg.cholesky(cp)
+        else:
+            assert_equal(cp.shape, np.r_[p,])
+            assert_equal(cp > 0, True*np.ones(p))
 
 def test_simple_poisson_vb():
 
@@ -339,6 +367,16 @@ def test_simple_poisson_vb():
         np.r_[0.00747782, 0.0092554, 0.04508904, 0.02934488, 0.20312746],
         rtol=1e-4,
         atol=1e-4)
+
+    for rslt in rslt1, rslt2:
+        cp = rslt.cov_params()
+        p = len(rslt.params)
+        if rslt is rslt1:
+            assert_equal(cp.shape, np.r_[p, p])
+            np.linalg.cholesky(cp)
+        else:
+            assert_equal(cp.shape, np.r_[p,])
+            assert_equal(cp > 0, True*np.ones(p))
 
 
 def test_crossed_logit_vb():
@@ -382,6 +420,16 @@ def test_crossed_logit_vb():
         rtol=1e-4,
         atol=1e-4)
 
+    for rslt in rslt1, rslt2:
+        cp = rslt.cov_params()
+        p = len(rslt.params)
+        if rslt is rslt1:
+            assert_equal(cp.shape, np.r_[p, p])
+            np.linalg.cholesky(cp)
+        else:
+            assert_equal(cp.shape, np.r_[p,])
+            assert_equal(cp > 0, True*np.ones(p))
+
 
 def test_crossed_logit_vb_formula():
 
@@ -400,6 +448,16 @@ def test_crossed_logit_vb_formula():
 
     rslt1.summary()
     rslt2.summary()
+
+    for rslt in rslt1, rslt2:
+        cp = rslt.cov_params()
+        p = len(rslt.params)
+        if rslt is rslt1:
+            assert_equal(cp.shape, np.r_[p,])
+            assert_equal(cp > 0, True*np.ones(p))
+        else:
+            assert_equal(cp.shape, np.r_[p,])
+            assert_equal(cp > 0, True*np.ones(p))
 
 
 def test_crossed_poisson_vb():
@@ -428,6 +486,16 @@ def test_crossed_poisson_vb():
         np.r_[-0.54691502, 0.22297158, -0.52673802, -0.06218684, 0.74385237],
         rtol=1e-4,
         atol=1e-4)
+
+    for rslt in rslt1, rslt2:
+        cp = rslt.cov_params()
+        p = len(rslt.params)
+        if rslt is rslt1:
+            assert_equal(cp.shape, np.r_[p, p])
+            np.linalg.cholesky(cp)
+        else:
+            assert_equal(cp.shape, np.r_[p,])
+            assert_equal(cp > 0, True*np.ones(p))
 
 
 def test_poisson_formula():
@@ -467,6 +535,15 @@ def test_poisson_formula():
 
         assert_allclose(rslt1.params, rslt2.params, rtol=1e-5)
 
+        for rslt in rslt1, rslt2:
+            cp = rslt.cov_params()
+            p = len(rslt.params)
+            if vb:
+                assert_equal(cp.shape, np.r_[p,])
+                assert_equal(cp > 0, True*np.ones(p))
+            else:
+                assert_equal(cp.shape, np.r_[p, p])
+                np.linalg.cholesky(cp)
 
 def test_scale_vb():
 
