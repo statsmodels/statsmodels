@@ -495,29 +495,6 @@ class GOF(object):
             return gof_pvals[pvals][testid](stat, self.nobs)
 
 
-
-
-
-
-
-
-def gof_mc(randfn, distr, nobs=100):
-    #print '\nIs it correctly sized?'
-    from collections import defaultdict
-
-    results = defaultdict(list)
-    for i in range(1000):
-        rvs = randfn(nobs)
-        goft = GOF(rvs, distr)
-        for ti in all_gofs:
-            results[ti].append(goft.get_test(ti, 'stephens70upp')[0][1])
-
-    resarr = np.array([results[ti] for ti in all_gofs])
-    print('         ', '      '.join(all_gofs))
-    print('at 0.01:', (resarr < 0.01).mean(1))
-    print('at 0.05:', (resarr < 0.05).mean(1))
-    print('at 0.10:', (resarr < 0.1).mean(1))
-
 def asquare(cdfvals, axis=0):
     '''vectorized Anderson Darling A^2, Stephens 1974'''
     ndim = len(cdfvals.shape)

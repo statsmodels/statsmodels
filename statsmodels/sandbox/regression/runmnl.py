@@ -145,33 +145,6 @@ class TryNCLogit(object):
                                       params[self.beta_indices[choiceind]])
         return res
 
-    def loglike_leafbranch(self, params, tau):
-        #normalization ?
-        #check/change naming for tau
-        xb = self.xbetas(params)
-        expxb = np.exp(xb/tau)
-        sumexpxb = expxb.sum(1)#[:,None]
-        logsumexpxb = np.log(sumexpxb)
-        #loglike = (self.endog * xb).sum(1) - logsumexpxb
-        probs = expxb/sumexpxb[:,None]
-        return probs, logsumexpxp
-        #if self.endog where index then xb[self.endog]
-        #return -loglike.sum()   #return sum for now not for each observation
-
-    def loglike_branch(self, params, tau):
-        #not yet sure how to keep track of branches during walking of tree
-        ivs = []
-        for b in branches:
-            probs, iv = loglike_leafbranch(self, params, tau)
-            ivs.append(iv)
-
-        #ivs = np.array(ivs)   #note ivs is (nobs,nbranchchoices)
-        ivs = np.column_stack(ivs) # this way ?
-        exptiv = np.exp(tau*ivs)
-        sumexptiv = exptiv.sum(1)
-        logsumexpxb = np.log(sumexpxb)
-        probs = exptiv/sumexptiv[:,None]
-
 
 ####### obsolete version to try out attaching data,
 ####### new in treewalkerclass.py, copy new version to replace this

@@ -20,16 +20,9 @@ class StandardNormal(object):
     '''
     def rvs(self, size):
         return np.random.standard_normal(size)
-    def pdf(self, x):
-        return exp(-x**2 * 0.5) / sqrt2pi
+
     def logpdf(self, x):
         return -x**2 * 0.5 - logsqrt2pi
-    def _cdf(self, x):
-        return special.ndtr(x)
-    def _logcdf(self, x):
-        return log(special.ndtr(x))
-    def _ppf(self, q):
-        return special.ndtri(q)
 
 
 class AffineTransform(object):
@@ -68,24 +61,12 @@ class AffineTransform(object):
     def invtransform(self, y):
         return np.dot(self.tmatinv, y - self.const)
 
-    def pdf(self, x):
-        return 1. / self.absdet * self.dist.pdf(self.invtransform(x))
-
     def logpdf(self, x):
         return - self.logabsdet + self.dist.logpdf(self.invtransform(x))
 
 
 from .linalg_decomp_1 import SvdArray, OneTimeProperty
 
-class MultivariateNormal(object):
-    '''multivariate normal distribution with plain linalg
-
-    '''
-
-    def __init__(mean, sigma):
-        self.mean = mean
-        self.sigma = sigma
-        self.sigmainv = sigmainv
 
 class MultivariateNormalChol(object):
     '''multivariate normal distribution with cholesky decomposition of sigma
