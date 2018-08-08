@@ -26,13 +26,6 @@ import numpy as np
 from statsmodels.regression.linear_model import OLS, GLS
 from statsmodels.tools.grouputils import Group, GroupSorted
 
-#not used
-class Unit(object):
-
-    def __init__(endog, exog):
-        self.endog = endog
-        self.exog = exog
-
 
 def sum_outer_product_loop(x, group_iter):
     '''sum outerproduct dot(x_i, x_i.T) over individuals

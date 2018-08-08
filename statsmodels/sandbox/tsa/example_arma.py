@@ -398,12 +398,3 @@ pltxcorr(plt,x,x)
 plt.figure()
 pltxcorr(plt,x,x, usevlines=False)
 plt.figure()
-#FIXME: plotacf was moved to graphics/tsaplots.py, and interface changed
-plotacf(plt, acf1[:20], np.arange(len(acf1[:20])), usevlines=True)
-plt.figure()
-ax = plt.subplot(211)
-plotacf(ax, acf1[:20], usevlines=True)
-ax = plt.subplot(212)
-plotacf(ax, acf1[:20], np.arange(len(acf1[:20])), usevlines=False)
-
-#plt.show()

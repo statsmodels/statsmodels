@@ -9,21 +9,6 @@ from scipy import stats
 import matplotlib.pylab as plt
 
 
-def plotkde(covfact):
-    gkde.reset_covfact(covfact)
-    kdepdf = gkde.evaluate(ind)
-    plt.figure()
-    # plot histgram of sample
-    plt.hist(xn, bins=20, normed=1)
-    # plot estimated density
-    plt.plot(ind, kdepdf, label='kde', color="g")
-    # plot data generating density
-    plt.plot(ind, alpha * stats.norm.pdf(ind, loc=mlow) +
-                  (1-alpha) * stats.norm.pdf(ind, loc=mhigh),
-                  color="r", label='DGP: normal mix')
-    plt.title('Kernel Density Estimation - ' + str(gkde.covfact))
-    plt.legend()
-
 from numpy.testing import assert_array_almost_equal, \
                assert_almost_equal, assert_
 def test_kde_1d():
