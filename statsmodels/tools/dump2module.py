@@ -85,7 +85,9 @@ class HoldIt(object):
             txt.append('%s%s = %s' % (prefix, x, repr(getattr(self,x))))
         txt.extend(['','']) #add empty lines at end
         if not filename is None:
-            file(filename, 'a+').write('\n'.join(txt))
+            with open(filename, 'a+') as fd:
+                fd.write('\n'.join(txt))
+
         np.set_printoptions(**print_opt_old)
         self._filename = filename
         self._useinstance = useinstance
