@@ -5,7 +5,25 @@ import statsmodels.api as sm
 
 
 def create_exog(nobs, d=0, seasonal_periods=1):
-    """Create an exog series data to fit regression."""
+    """Create an exog series data to fit regression.
+
+    Parameters
+    ----------
+    nobs : int
+        number of observations/ length of the series to be created.
+
+    d : int
+        the differencing parameter for the given time series.
+
+    seasonal_periods: int
+        the seasonality of the given time series.
+
+    Returns
+    -------
+    exog : list
+        A list of values to fit a linear regression.
+
+    """
     t = np.arange(1, nobs+1)
     exog = []
     for i in range(d+1):
@@ -62,6 +80,7 @@ def predict_lambda(endog, lambda_range, d, seasonal_periods, offset=True,
     Status : Work In Progress.
     Citation :  Draper and Smith
                 "Applied Regression Analysis" - 1986
+
     """
     nobs = len(endog)
     if np.any(endog < 0):
