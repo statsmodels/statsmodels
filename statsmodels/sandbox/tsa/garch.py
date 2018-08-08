@@ -635,30 +635,6 @@ class Garch(TSMLEModel):
         return llike
 
 
-def gjrconvertparams(self, params, nar, nma):
-    """
-    flat to matrix
-
-    Notes
-    -----
-    needs to be overwritten by subclass
-    """
-    p, q = nar, nma
-    ar = np.concatenate(([1], params[:p]))
-    #ar = np.concatenate(([1], -np.abs(params[:p]))) #???
-    #better safe than fast and sorry
-    #
-    ma = np.zeros((q+1,3))
-    ma[0,0] = params[-1]
-    #lag coefficients for ma innovation
-    ma[:,1] = np.concatenate(([0], params[p:p+q]))
-    #delta lag coefficients for negative ma innovation
-    ma[:,2] = np.concatenate(([0], params[p+q:p+2*q]))
-
-    mu = params[-1]
-    params2 = (ar, ma) #(mu, ar, ma)
-    return paramsclass
-
 #TODO: this should be generalized to ARMA?
 #can possibly also leverage TSME above
 # also note that this is NOT yet general
@@ -738,7 +714,7 @@ class AR(LikelihoodModel):
                 ylag[0]**2*(1-params**2)/(2*sigma2**2)*dsdr
         if self.penalty:
             pass
-        j = Jacobian(self.loglike)
+        j = ndt.Jacobian(self.loglike)
         return j(params)
 #        return gradient
 
@@ -754,7 +730,7 @@ class AR(LikelihoodModel):
         Returns numerical hessian for now.  Depends on numdifftools.
         """
 
-        h = Hessian(self.loglike)
+        h = ndt.Hessian(self.loglike)
         return h(params)
 
     def fit(self, start_params=None, method='bfgs', maxiter=35, tol=1e-08,
