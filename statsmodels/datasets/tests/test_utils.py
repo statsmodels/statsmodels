@@ -16,6 +16,7 @@ def test_get_rdataset():
         pytest.skip('Unable to retrieve file - skipping test')
     duncan = get_rdataset("Duncan", "car", cache=cur_dir)
     assert_(isinstance(duncan, utils.Dataset))
+    duncan = get_rdataset("Duncan", "carData", cache=cur_dir)
     assert_(duncan.from_cache)
 
     # test writing and reading cache

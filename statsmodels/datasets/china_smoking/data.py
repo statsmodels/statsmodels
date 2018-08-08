@@ -42,8 +42,11 @@ def load_pandas():
         See DATASET_PROPOSAL.txt for more information.
     """
     filepath = os.path.dirname(os.path.abspath(__file__))
-    data = pd.read_csv(os.path.join(filepath + '/china_smoking.csv'), index_col="Location")
-    return du.Dataset(data=data, title="Smoking and lung cancer in Chinese regions")
+    raw_data = pd.read_csv(os.path.join(filepath + '/china_smoking.csv'))
+    data = raw_data.set_index('Location')
+    dset = du.Dataset(data=data, title="Smoking and lung cancer in Chinese regions")
+    dset.raw_data = raw_data
+    return dset
 
 
 def load():

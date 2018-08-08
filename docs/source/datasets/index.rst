@@ -30,7 +30,7 @@ The `Rdatasets project <http://vincentarelbundock.github.io/Rdatasets/>`__ gives
 .. ipython:: python
 
    import statsmodels.api as sm
-   duncan_prestige = sm.datasets.get_rdataset("Duncan", "car")
+   duncan_prestige = sm.datasets.get_rdataset("Duncan", "carData")
    print(duncan_prestige.__doc__)
    duncan_prestige.data.head(5)
 

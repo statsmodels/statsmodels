@@ -308,7 +308,7 @@ def anova_lm(*args, **kwargs):
     --------
     >>> import statsmodels.api as sm
     >>> from statsmodels.formula.api import ols
-    >>> moore = sm.datasets.get_rdataset("Moore", "car", cache=True) # load
+    >>> moore = sm.datasets.get_rdataset("Moore", "carData", cache=True) # load
     >>> data = moore.data
     >>> data = data.rename(columns={"partner.status" :
     ...                             "partner_status"}) # make name pythonic
