@@ -1,22 +1,20 @@
 """
 Statistical tools for time series analysis
 """
-from statsmodels.compat.python import (iteritems, range, lrange, string_types,
-                                       lzip, zip, long)
-from statsmodels.compat.scipy import _next_regular
-
 import numpy as np
 from numpy.linalg import LinAlgError
 from scipy import stats
 
+from statsmodels.compat.python import (iteritems, range, lrange, string_types,
+                                       lzip, zip, long)
+from statsmodels.compat.scipy import _next_regular
 from statsmodels.regression.linear_model import OLS, yule_walker
-from statsmodels.tools.tools import add_constant, Bunch
-from statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
-from statsmodels.tsa.adfvalues import mackinnonp, mackinnoncrit
-from statsmodels.tsa._bds import bds
-from statsmodels.tsa.arima_model import ARMA
 from statsmodels.tools.sm_exceptions import InterpolationWarning, MissingDataError
-
+from statsmodels.tools.tools import add_constant, Bunch
+from statsmodels.tsa._bds import bds
+from statsmodels.tsa.adfvalues import mackinnonp, mackinnoncrit
+from statsmodels.tsa.arima_model import ARMA
+from statsmodels.tsa.tsatools import lagmat, lagmat2ds, add_trend
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
@@ -1073,7 +1071,7 @@ def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
 
 
 def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
-                         model_kw={}, fit_kw={}):
+                         model_kw=None, fit_kw=None):
     """
     Returns information criteria for many ARMA models
 
@@ -1139,14 +1137,16 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
         raise ValueError("Need a list or a tuple for ic if not a string.")
 
     results = np.zeros((len(ic), max_ar + 1, max_ma + 1))
-
+    model_kw = {} if model_kw is None else model_kw
+    fit_kw = {} if fit_kw is None else fit_kw
+    y_arr = y
     for ar in ar_range:
         for ma in ma_range:
             if ar == 0 and ma == 0 and trend == 'nc':
                 results[:, ar, ma] = np.nan
                 continue
 
-            mod = _safe_arma_fit(y, (ar, ma), model_kw, trend, fit_kw)
+            mod = _safe_arma_fit(y_arr, (ar, ma), model_kw, trend, fit_kw)
             if mod is None:
                 results[:, ar, ma] = np.nan
                 continue
@@ -1162,7 +1162,7 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     min_res = {}
     for i, result in iteritems(res):
         mins = np.where(result.min().min() == result)
-        min_res.update({i + '_min_order' : (mins[0][0], mins[1][0])})
+        min_res.update({i + '_min_order': (mins[0][0], mins[1][0])})
     res.update(min_res)
 
     return Bunch(**res)
