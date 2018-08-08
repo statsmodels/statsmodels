@@ -39,15 +39,15 @@ A simple example of random coefficients, as in (i) above, is:
 
    Y_{ij} = \beta_0 + \beta_1X_{ij} + \gamma_{0i} + \gamma_{1i}X_{ij} + \epsilon_{ij}
 
-Here, :math:`Y_{ij}` is the :math:`j`th measured response for subject
+Here, :math:`Y_{ij}` is the :math:`j^\rm{th}` measured response for subject
 :math:`i`, and :math:`X_{ij}` is a covariate for this response.  The
 "fixed effects parameters" :math:`\beta_0` and :math:`\beta_1` are
 shared by all subjects, and the errors :math:`\epsilon_{ij}` are
 independent of everything else, and identically distributed (with mean
-zero).  The "random effects parameters" :math:`gamma_{0i}` and
-:math:`gamma_{1i}` follow a bivariate distribution with mean zero,
-described by three parameters: :math:`{\rm var}\gamma_{0i}`,
-:math:`{\rm var}\gamma_{1i}`, and :math:`{\rm cov}(\gamma_{0i},
+zero).  The "random effects parameters" :math:`\gamma_{0i}` and
+:math:`\gamma_{1i}` follow a bivariate distribution with mean zero,
+described by three parameters: :math:`{\rm var}(\gamma_{0i})`,
+:math:`{\rm var}(\gamma_{1i})`, and :math:`{\rm cov}(\gamma_{0i},
 \gamma_{1i})`.  There is also a parameter for :math:`{\rm
 var}(\epsilon_{ij})`.
 
@@ -57,7 +57,7 @@ A simple example of variance components, as in (ii) above, is:
 
    Y_{ijk} = \beta_0 + \eta_{1i} + \eta_{2j} + \epsilon_{ijk}
 
-Here, :math:`Y_{ijk}` is the :math:`k`th measured response under
+Here, :math:`Y_{ijk}` is the :math:`k^\rm{th}` measured response under
 conditions :math:`i, j`.  The only "mean structure parameter" is
 :math:`\beta_0`.  The :math:`\eta_{1i}` are independent and
 identically distributed with zero mean, and variance :math:`\tau_1^2`,
@@ -121,7 +121,7 @@ where
   and covariance matrix :math:`\Psi`; note that each group
   gets its own independent realization of gamma.
 * :math:`Q_j` is a :math:`n_i \times q_j` dimensional design matrix for the
-  :math:`j^{th}` variance component.
+  :math:`j^\rm{th}` variance component.
 * :math:`\eta_j` is a :math:`q_j`-dimensional random vector containing independent
   and identically distributed values with variance :math:`\tau_j^2`.
 * :math:`\epsilon` is a :math:`n_i` dimensional vector of i.i.d normal
