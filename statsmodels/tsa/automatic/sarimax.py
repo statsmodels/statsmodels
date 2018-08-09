@@ -274,4 +274,4 @@ def auto_order(endog, measure='aic', d=0, max_order=(3, 3), D=0, s=1,
                         warnings.warn('Could not fit model with p={}and q={}'
                                       .format(order_new[model][0],
                                               order_new[model][1]))
-                return allow_intercept, new_val[0], d, new_val[1]
+            return allow_intercept, new_val[0], d, new_val[1]
