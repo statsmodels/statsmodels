@@ -12,6 +12,8 @@ from numpy.testing import assert_equal
 current_path = os.path.dirname(os.path.abspath(__file__))
 macrodata = datasets.macrodata.load_pandas().data
 macrodata.index = pd.PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
+new_data = pd.read_csv('../CPIAPPNS.csv')
+new_data.index = pd.PeriodIndex(start='04-2010', end='03-2018', freq='M')
 
 
 def test_smoke_non_stepwise():
@@ -53,13 +55,26 @@ def test_auto_order_cpi():
     assert_equal(d, desired_d)
     assert_equal(q, desired_q)
 
+
 def test_auto_order_infl():
     """Test function for auto_order against auto.arima."""
     intercept, p, d, q = sarimax.auto_order(macrodata['infl'], stepwise=True,
                                             d=1)
-    desired_p = 2
+    desired_p = 1
     desired_d = 1
     desired_q = 2
+    assert_equal(p, desired_p)
+    assert_equal(d, desired_d)
+    assert_equal(q, desired_q)
+
+
+def test_auto_order_CPIAPPNS():
+    """Test function for auto_order against auto.arima."""
+    intercept, p, d, q = sarimax.auto_order(new_data['CPIAPPNS'],
+                                            stepwise=True, d=1)
+    desired_p = 3
+    desired_d = 1
+    desired_q = 3
     assert_equal(p, desired_p)
     assert_equal(d, desired_d)
     assert_equal(q, desired_q)
