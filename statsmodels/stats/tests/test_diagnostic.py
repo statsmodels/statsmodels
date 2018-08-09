@@ -167,13 +167,13 @@ class TestDiagnosticG(object):
 
         cov = sw.cov_hac_simple(res, nlags=4, use_correction=False)
         bse_hac = sw.se_cov(cov)
-        assert_almost_equal(cov, cov_hac_4, decimal=13)
+        assert_almost_equal(cov, cov_hac_4, decimal=14)
         assert_almost_equal(bse_hac, np.sqrt(np.diag(cov)), decimal=14)
 
         cov = sw.cov_hac_simple(res, nlags=10, use_correction=False)
         bse_hac = sw.se_cov(cov)
-        assert_almost_equal(cov, cov_hac_10, decimal=12)
-        assert_almost_equal(bse_hac, np.sqrt(np.diag(cov)), decimal=12)
+        assert_almost_equal(cov, cov_hac_10, decimal=14)
+        assert_almost_equal(bse_hac, np.sqrt(np.diag(cov)), decimal=14)
 
 
     def test_het_goldfeldquandt(self):
@@ -308,7 +308,7 @@ class TestDiagnosticG(object):
         bg = smsdia.acorr_breusch_godfrey(res, nlags=4)
         bg_r = [breuschgodfrey_c['statistic'], breuschgodfrey_c['pvalue'],
                 breuschgodfrey_f['statistic'], breuschgodfrey_f['pvalue']]
-        assert_almost_equal(bg, bg_r, decimal=12)
+        assert_almost_equal(bg, bg_r, decimal=13)
 
         # check that lag choice works
         bg2 = smsdia.acorr_breusch_godfrey(res, nlags=None)
@@ -480,7 +480,7 @@ class TestDiagnosticG(object):
         assert_almost_equal(jt1, jtest[0][3:5], decimal=13)
 
         jt2 = smsdia.compare_j(res, res2)
-        assert_almost_equal(jt2, jtest[1][3:5], decimal=12)
+        assert_almost_equal(jt2, jtest[1][3:5], decimal=14)
 
         #Estimate        Std. Error  z value   Pr(>|z|)
         coxtest = [('fitted(M1) ~ M2', -0.782030488930356, 0.599696502782265,
@@ -489,7 +489,7 @@ class TestDiagnosticG(object):
                     -5.727181590258883, 1.021128495098556e-08, '***')]
 
         ct1 = smsdia.compare_cox(res, res2)
-        assert_almost_equal(ct1, coxtest[0][3:5], decimal=12)
+        assert_almost_equal(ct1, coxtest[0][3:5], decimal=13)
 
         ct2 = smsdia.compare_cox(res2, res)
         assert_almost_equal(ct2, coxtest[1][3:5], decimal=12)
@@ -612,7 +612,7 @@ class TestDiagnosticG(object):
         lf2 = smsdia.lilliefors(res.resid**2)
         lf3 = smsdia.lilliefors(res.resid[:20])
 
-        compare_t_est(lf1, lilliefors1, decimal=(12, 12))
+        compare_t_est(lf1, lilliefors1, decimal=(14, 14))
         compare_t_est(lf2, lilliefors2, decimal=(14, 14)) #pvalue very small
         assert_approx_equal(lf2[1], lilliefors2['pvalue'], significant=10)
         compare_t_est(lf3, lilliefors3, decimal=(14, 1))
@@ -662,14 +662,14 @@ class TestDiagnosticG(object):
         assert_almost_equal(c0, lsdiag['cooks'], decimal=14)
         assert_almost_equal(infl.hat_matrix_diag, lsdiag['hat'], decimal=14)
         assert_almost_equal(infl.resid_studentized_internal,
-                            lsdiag['std.res'], decimal=12)
+                            lsdiag['std.res'], decimal=14)
 
         #slow:
         #infl._get_all_obs()  #slow, nobs estimation loop, called implicitly
         dffits, dffth = infl.dffits
-        assert_almost_equal(dffits, lsdiag['dfits'], decimal=13)
+        assert_almost_equal(dffits, lsdiag['dfits'], decimal=14)
         assert_almost_equal(infl.resid_studentized_external,
-                            lsdiag['stud.res'], decimal=12)
+                            lsdiag['stud.res'], decimal=14)
 
         import pandas
         fn = os.path.join(cur_dir,"results/influence_measures_R.csv")
@@ -683,7 +683,7 @@ class TestDiagnosticG(object):
         assert_almost_equal(infl.dfbetas, infl_r2[:,:3], decimal=13)
         assert_almost_equal(infl.cov_ratio, infl_r2[:,4], decimal=14)
         #duplicates
-        assert_almost_equal(dffits, infl_r2[:,3], decimal=13)
+        assert_almost_equal(dffits, infl_r2[:,3], decimal=14)
         assert_almost_equal(c0, infl_r2[:,5], decimal=14)
         assert_almost_equal(infl.hat_matrix_diag, infl_r2[:,6], decimal=14)
 
@@ -803,13 +803,13 @@ def test_influence_wrapped():
     assert_almost_equal(c0, lsdiag['cooks'], 14)
     assert_almost_equal(infl.hat_matrix_diag, (lsdiag['hat']), 14)
     assert_almost_equal(infl.resid_studentized_internal,
-                        lsdiag['std.res'], 12)
+                        lsdiag['std.res'], 14)
 
     #slow:
     dffits, dffth = infl.dffits
-    assert_almost_equal(dffits, lsdiag['dfits'], 13)
+    assert_almost_equal(dffits, lsdiag['dfits'], 14)
     assert_almost_equal(infl.resid_studentized_external,
-                        lsdiag['stud.res'], 12)
+                        lsdiag['stud.res'], 14)
 
     import pandas
     fn = os.path.join(cur_dir,"results/influence_measures_R.csv")

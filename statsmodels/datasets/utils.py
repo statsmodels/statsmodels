@@ -326,7 +326,7 @@ def load_csv(base_file, csv_name, sep=',', convert_float=False):
     engine = 'python' if sep != ',' else 'c'
     float_precision = {}
     if engine == 'c':
-        float_precision = {'float_precision': True}
+        float_precision = {'float_precision': 'high'}
     data = read_csv(filename, sep=sep, engine=engine, **float_precision)
     if convert_float:
         data = data.astype(float)
