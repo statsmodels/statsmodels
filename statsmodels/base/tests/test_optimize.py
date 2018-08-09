@@ -77,4 +77,3 @@ def test_full_output():
             assert_(xopt.shape == () and xopt.size == 1)
         else:
             assert_(len(xopt) == 1)
-

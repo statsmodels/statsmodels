@@ -124,6 +124,3 @@ if __name__ == '__main__':
     plt.title('observed versus fitted values')
 
     plt.show()
-
-
-

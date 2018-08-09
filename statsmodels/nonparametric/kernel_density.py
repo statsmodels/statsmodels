@@ -687,4 +687,3 @@ class KDEMultivariateConditional(GenericKDE):
         class_type = 'KDEMultivariateConditional'
         class_vars = (self.k_dep, self.dep_type, self.indep_type)
         return class_type, class_vars
-

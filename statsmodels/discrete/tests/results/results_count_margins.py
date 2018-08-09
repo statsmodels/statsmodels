@@ -385,4 +385,3 @@ results_negbin_margins_dummy = Bunch(
                 margins_cov_rownames=margins_cov_rownames,
                 **est
                 )
-

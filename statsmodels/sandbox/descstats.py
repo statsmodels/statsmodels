@@ -183,5 +183,3 @@ if __name__ == '__main__':
         sum3 = descstats(np.column_stack((data2.ahe,data2.yrseduc)))
         sum4 = descstats(np.column_stack(([data2[_] for \
                 _ in data2.dtype.names])))
-
-

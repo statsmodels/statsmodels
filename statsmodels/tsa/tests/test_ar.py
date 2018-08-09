@@ -341,6 +341,3 @@ def test_ar_select_order_tstat():
 #            r = AR(endog_tmp, exog_tmp).fit(maxlag=lag, trend='ct')
 #            results.append([r.aic, r.hqic, r.bic, r.fpe])
 #        self.res1 = np.asarray(results).T.reshape(4,-1, order='C')
-
-
-

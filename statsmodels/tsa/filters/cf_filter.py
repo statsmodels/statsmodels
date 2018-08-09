@@ -105,4 +105,3 @@ if __name__ == "__main__":
     cycle, trend = cffilter(dta, 6, 32, drift=True)
     dta = sm.datasets.macrodata.load().data['tbilrate'][1:]
     cycle2, trend2 = cffilter(dta, 6, 32, drift=True)
-

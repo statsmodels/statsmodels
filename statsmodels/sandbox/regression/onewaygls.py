@@ -379,4 +379,3 @@ standard dev', np.sqrt(res.sigmabygroup)
         lrpval = stats.chi2.sf(lrstat, lrdf)
 
         return lrstat, lrpval, lrdf
-

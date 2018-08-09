@@ -164,4 +164,3 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
             ax.yaxis.set_major_locator(mticker.MaxNLocator(3))
 
     return fig
-

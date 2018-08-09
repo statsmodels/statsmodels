@@ -219,5 +219,3 @@ if __name__ == '__main__':
             print(n, p)
             print(c_sja(n, p))
             print(c_sjt(n, p))
-
-

@@ -94,4 +94,3 @@ variable_names = ["realcons", "realgdp", "realinv"]
 
 def __str__():
     return "macrodata"
-

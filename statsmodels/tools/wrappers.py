@@ -50,4 +50,3 @@ def linmod(y, x, weights=None, sigma=None, add_const=True, filter_missing=True,
         return WLS(y, x, weights=weights, **kwds)
     else:
         return OLS(y, x, **kwds)
-

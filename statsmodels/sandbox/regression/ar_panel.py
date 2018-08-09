@@ -111,4 +111,3 @@ if __name__ == '__main__':
     #print(mod.ar1filter(mod.endog, 1))
     resa, reso = mod.fit()
     print(resa[0], reso.params)
-

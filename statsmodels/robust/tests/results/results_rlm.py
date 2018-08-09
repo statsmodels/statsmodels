@@ -392,5 +392,3 @@ class AndrewsHuber(object):
     def conf_int(self):
         return [(0.5395,1.0460),(.3575,1.7397),
                 (-.4271,.1599),(-63.2213,-18.5423)]
-
-

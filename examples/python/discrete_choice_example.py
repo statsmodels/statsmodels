@@ -228,4 +228,3 @@ ax.plot(kde_resid.support, kde_resid.density, 'r');
 fig = plt.figure(figsize=(12,8))
 ax = fig.add_subplot(111)
 fig = sm.graphics.qqplot(resid, line='r', ax=ax)
-

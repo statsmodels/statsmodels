@@ -173,4 +173,3 @@ if __name__ == '__main__':
     aav = acovf(x[:,0])
     print(aav[0] == np.var(x[:,0]))
     aac = acf(x[:,0])
-

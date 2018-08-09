@@ -290,5 +290,3 @@ class TestDecompose:
         x = self.data.astype(float).copy()
         x.iloc[2] = np.nan
         assert_raises(ValueError, seasonal_decompose, x)
-
-

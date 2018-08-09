@@ -383,5 +383,3 @@ if __name__ == '__main__':
                             prepend=False)
     modp = sm.Poisson(datap.endog, exogp)
     resp = modp.fit(method='newton', disp=0)
-
-

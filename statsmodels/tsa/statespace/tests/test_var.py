@@ -265,4 +265,3 @@ def test_var_c_2exog():
     check_irf(test, mod, results)
 
     # FEVD: TODO
-

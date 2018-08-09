@@ -143,4 +143,3 @@ if 'arma' in examples:
 
     #fmin estimates for coefficients in ARMA(3,3) look good
     #but not inverse Hessian, sometimes negative values for variance
-

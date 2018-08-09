@@ -390,6 +390,3 @@ if __name__ == "__main__":
         def test_basic_4a(self):
             t1 = Describe(data4)
             print(t1.summary(stats='all'))
-
-
-

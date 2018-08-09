@@ -96,7 +96,3 @@ R = [[0, 1, 0, 0],
 # i.e. coefficient on both dummy variables equal zero
 print("Test hypothesis that all groups have same intercept")
 print(res2.f_test(R))
-
-
-
-

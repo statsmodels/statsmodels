@@ -344,4 +344,3 @@ class TestArmaProcess(TestCase):
         pg = process.periodogram()
         assert_almost_equal(pg[0], np.linspace(0,np.pi,100,False))
         assert_almost_equal(pg[1], np.sqrt(2 / np.pi) / 2 * np.ones(100))
-

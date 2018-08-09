@@ -37,4 +37,3 @@ mod2.summary()
 
 print(mod1.params[1])
 print(mod2.params[1] * 2)
-

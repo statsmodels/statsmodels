@@ -40,4 +40,3 @@ def test_plot_corr_grid():
 
     fig = plot_corr_grid([corr_matrix] * 3, normcolor=True, titles='', cmap='jet')
     plt.close(fig)
-

@@ -224,4 +224,3 @@ infl = ols_results.get_influence()
 
 
 print(infl.summary_frame().filter(regex="dfb"))
-

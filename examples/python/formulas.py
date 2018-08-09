@@ -135,4 +135,3 @@ print(X[:5])
 
 
 print(sm.OLS(y, X).fit().summary())
-

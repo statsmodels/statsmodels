@@ -925,4 +925,3 @@ class TestRegCoefD(TestRegCoefC):
         m = m / float(len(self.dom_x))
         m = np.reshape(m, (np.shape(self.exog)[0], 1))
         return m
-

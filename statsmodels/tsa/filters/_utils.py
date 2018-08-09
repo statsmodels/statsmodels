@@ -145,4 +145,3 @@ def test_pandas_freq_decorator():
     expected = X.rename(columns=dict(zip('ABCD', 'EFGH')))
     func = pandas_wrapper(dummy_func_array, names=list('EFGH'))
     pd.util.testing.assert_frame_equal(func(X), expected)
-

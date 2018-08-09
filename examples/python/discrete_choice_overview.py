@@ -107,4 +107,3 @@ print(res_nbin.summary())
 
 mlogit_res = mlogit_mod.fit(method='bfgs', maxiter=100)
 print(mlogit_res.summary())
-

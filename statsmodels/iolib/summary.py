@@ -951,4 +951,3 @@ if __name__ == "__main__":
     data.exog = sm.add_constant(data.exog)
     res = sm.OLS(data.endog, data.exog).fit()
     #summary(
-

@@ -97,4 +97,3 @@ ax.set_title("US national election '96 - Age & Party Identification")
 
 # Show all plots.
 plt.show()
-

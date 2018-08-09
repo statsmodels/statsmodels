@@ -476,4 +476,3 @@ class Test_Factor(object):
         fcor *= (np.abs(fcor) >= 0.2)
 
         assert_allclose(tcor.todense(), fcor, rtol=0.25, atol=1e-3)
-

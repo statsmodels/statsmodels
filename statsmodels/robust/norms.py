@@ -850,4 +850,3 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
             mu = nmu
     raise ValueError("location estimator failed to converge in %d iterations"\
             % maxiter)
-

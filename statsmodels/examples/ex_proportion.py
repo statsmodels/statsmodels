@@ -54,4 +54,3 @@ plt.xlabel('Number of Observations')
 plt.ylabel('Power')
 
 plt.show()
-

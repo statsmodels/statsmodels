@@ -374,4 +374,3 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
     def generate_sample(cls, ar, ma, nsample, std=1):
         eta = std * np.random.randn(nsample)
         return signal.lfilter(ma, ar, eta)
-

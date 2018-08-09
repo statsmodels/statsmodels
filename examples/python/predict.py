@@ -70,4 +70,3 @@ res.params
 # Now we only have to pass the single variable and we get the transformed right-hand side variables automatically
 
 res.predict(exog=dict(x1=x1n))
-

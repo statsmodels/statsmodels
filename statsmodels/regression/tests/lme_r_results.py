@@ -455,4 +455,3 @@ cov_re_reml_irf_11 = np.array([0.3966454,0,0,1.106551]).reshape(2,2, order='F')
 scale_reml_irf_11 = np.array([4.860342])
 
 loglike_reml_irf_11 = np.array([-605.2274])
-

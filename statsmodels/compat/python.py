@@ -238,4 +238,3 @@ def get_class(func):
     except AttributeError:
         #Python 3
         return func.__self__.__class__
-

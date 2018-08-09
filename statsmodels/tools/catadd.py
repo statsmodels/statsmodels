@@ -50,8 +50,3 @@ if __name__ == '__main__':
                          + ['var2_%d' %i for i in np.arange(2)]
     xo,vo = add_indep(x, varnames)
     print(xo.shape)
-
-
-
-
-

@@ -188,6 +188,3 @@ if __name__ == '__main__':
         print("with cross validation - slower")
         mod.fit_find_nfact(maxfact=None, skip_crossval=False, cv_iter=None)
         print(mod.summary_find_nfact())
-
-
-

@@ -92,4 +92,3 @@ lzip(name, test)
 name = ['t value', 'p value']
 test = sms.linear_harvey_collier(results)
 lzip(name, test)
-

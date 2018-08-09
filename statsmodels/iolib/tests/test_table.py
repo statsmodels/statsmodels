@@ -222,5 +222,3 @@ stub R2 C2  40.95038  40.65765
 if __name__ == "__main__":
     #unittest.main()
     pass
-
-

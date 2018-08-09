@@ -105,6 +105,3 @@ print(supb, pval, crit)
 #print breaks_cusumolsresid(rresid[skip:])
 #this function is still completely wrong, cut and paste doesn't apply
 #print breaks_cusum(rresid[skip:])
-
-
-

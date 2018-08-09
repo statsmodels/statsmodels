@@ -1270,4 +1270,3 @@ class Bunch(dict):
 
 
 results = Bunch(llf=llf, nobs=nobs, k=k, k_exog=k_exog, sigma=sigma, chi2=chi2, df_model=df_model, k_ar=k_ar, k_ma=k_ma, params=params, cov_params=cov_params, xb=xb, y=y, resid=resid, yr=yr, mse=mse, stdp=stdp, icstats=icstats, )
-

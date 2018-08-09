@@ -100,4 +100,3 @@ w_est = w.copy()
 w_est[w!=1.] = np.sqrt(var2) / np.sqrt(var1)
 res_fwls = sm.WLS(y, X, 1./w_est).fit()
 print(res_fwls.summary())
-

@@ -30,4 +30,3 @@ def load_pickle(fname):
     """
     with get_file_obj(fname, 'rb') as fin:
         return cPickle.load(fin)
-

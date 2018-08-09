@@ -4,4 +4,3 @@ from .smpickle import save_pickle, load_pickle
 
 from statsmodels import PytestTester
 test = PytestTester()
-
