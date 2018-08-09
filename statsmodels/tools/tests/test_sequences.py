@@ -13,8 +13,10 @@ def test_discrepancy():
     npt.assert_allclose(sequences.discrepancy(space_0), 0.1353, atol=1e-4)
 
     # From Fang et al. Design and modeling for computer experiments, 2006
-    npt.assert_allclose(sequences.discrepancy(space_1, corners), 0.0081, atol=1e-4)
-    npt.assert_allclose(sequences.discrepancy(space_2, corners), 0.0105, atol=1e-4)
+    npt.assert_allclose(sequences.discrepancy(space_1, corners), 0.0081,
+                        atol=1e-4)
+    npt.assert_allclose(sequences.discrepancy(space_2, corners), 0.0105,
+                        atol=1e-4)
 
 
 def test_van_der_corput():
