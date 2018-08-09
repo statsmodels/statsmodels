@@ -73,7 +73,7 @@ product of the row and column marginal distributions:
 
 .. math::
 
-P_{ij} = \sum_k P_{ij} \cdot \sum_k P_{kj} \forall i, j
+    P_{ij} = \sum_k P_{ij} \cdot \sum_k P_{kj} \forall i, j
 
 We can obtain the best-fitting independent distribution for our
 observed data, and then view residuals which identify particular cells
@@ -111,7 +111,7 @@ linear by linear association test is
 
 .. math::
 
-\sum_k r_i c_j T_{ij}
+    \sum_k r_i c_j T_{ij}
 
 where :math:`r_i` and :math:`c_j` are row and column scores.  Often
 these scores are set to the sequences 0, 1, ....  This gives the
@@ -167,7 +167,7 @@ identical, meaning that
 
 .. math::
 
-\sum_j P_{ij} = \sum_j P_{ji} \forall i
+    \sum_j P_{ij} = \sum_j P_{ji} \forall i
 
 Note that for these properties to be applicable the table :math:`P`
 (and :math:`T`) must be square, and the row and column categories must
