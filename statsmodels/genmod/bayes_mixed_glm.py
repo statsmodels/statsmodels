@@ -853,10 +853,17 @@ class BayesMixedGLMResults(object):
         self.vc_sd = np.sqrt(self.vc_sd)
 
     def cov_params(self):
+
         if hasattr(self.model.data, "frame"):
+            # Return the covariance matrix as a dataframe or series
             na = (self.model.fep_names + self.model.vcp_names +
                   self.model.vc_names)
-            return pd.DataFrame(self._cov_params, index=na, columns=na)
+            if self._cov_params.ndim == 2:
+                return pd.DataFrame(self._cov_params, index=na, columns=na)
+            else:
+                return pd.Series(self._cov_params, index=na)
+
+        # Return the covariance matrix as a ndarray
         return self._cov_params
 
     def summary(self):
@@ -1068,7 +1075,7 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             family=families.Poisson(),
             fep_names=fep_names,
             vcp_names=vcp_names,
-            vc_names=None)
+            vc_names=vc_names)
 
     @classmethod
     def from_formula(cls,
