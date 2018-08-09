@@ -286,11 +286,9 @@ def test_dampen_no_trend(seasonal):
 
 @pytest.mark.parametrize('seasonal', ('add', 'mul'))
 def test_invalid_seasonal(seasonal):
-    y = -np.ones(100)
+    y = pd.Series(-np.ones(100),index=pd.date_range('2000-1-1', periods=100, freq='MS'))
     with pytest.raises(ValueError):
         ExponentialSmoothing(y, seasonal=seasonal, seasonal_periods=1)
-    with pytest.raises(ValueError):
-        ExponentialSmoothing(y, seasonal=seasonal)
 
 
 def test_2d_data():

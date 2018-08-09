@@ -22,9 +22,8 @@ from scipy.stats import boxcox
 from statsmodels.base.model import Results
 from statsmodels.base.wrapper import populate_wrapper, union_dicts, ResultsWrapper
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
+from statsmodels.tsa.tsatools import freq_to_period
 import statsmodels.tsa._exponential_smoothers as smoothers
-from statsmodels.tsa.x13 import _freq_to_period
-
 
 def _holt_init(x, xi, p, y, l, b):
     """Initialization for the Holt Models"""
@@ -502,10 +501,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         if self.seasoning:
             self.seasonal_periods = seasonal_periods
             if seasonal_periods is None:
-                try:
-                    self.seasonal_periods = _freq_to_period[self._index_freq.freqstr]
-                except (ValueError, TypeError, AttributeError):
-                    raise ValueError('Unable to detect seasonal periods.')
+                self.seasonal_periods = freq_to_period(self._index_freq)
             if self.seasonal_periods <= 1:
                 raise ValueError('seasonal_periods must be larger than 1.')
         else:
