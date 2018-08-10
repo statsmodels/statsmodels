@@ -131,7 +131,7 @@ def check_dependency_versions(min_versions):
                               (npversion, min_versions['numpy']))
 
     try:
-        import scipy
+        import scipy  # noqa:F401
     except ImportError:
         setup_requires.append('scipy')
         install_requires.append('scipy')

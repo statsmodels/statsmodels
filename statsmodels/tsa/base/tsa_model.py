@@ -1,7 +1,5 @@
-from statsmodels.compat.python import lrange, long
+from statsmodels.compat.python import long
 from statsmodels.compat.pandas import is_numeric_dtype, Float64Index
-
-import datetime
 
 import warnings
 import numpy as np

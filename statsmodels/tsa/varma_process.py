@@ -30,10 +30,7 @@ see also VAR section in Notes.txt
 """
 from __future__ import print_function
 import numpy as np
-from numpy.testing import assert_equal
 from scipy import signal
-#might not (yet) need the following
-from scipy.signal.signaltools import _centered as trim_centered
 
 from statsmodels.tsa.tsatools import lagmat
 

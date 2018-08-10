@@ -26,8 +26,7 @@ except ImportError:
     class RangeIndex(object):
         pass
 
-from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal,
-                           assert_raises)
+from numpy.testing import assert_equal, assert_raises
 
 from statsmodels.tsa.base import tsa_model
 

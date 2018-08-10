@@ -10,8 +10,6 @@ https://github.com/ipython/ipython/blob/master/tools/github_stats.py
 
 from __future__ import print_function
 
-import json
-import re
 import sys
 
 from datetime import datetime, timedelta

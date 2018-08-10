@@ -10,7 +10,6 @@ The first group of functions provide consistency checks
 """
 import numpy as np
 from numpy.testing import assert_allclose, assert_
-import pytest
 
 # the following are copied from
 # statsmodels.base.tests.test_generic_methods.CheckGenericMixin

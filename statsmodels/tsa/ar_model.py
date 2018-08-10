@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
-from statsmodels.compat.python import iteritems, range, string_types, lmap, long
+from statsmodels.compat.python import iteritems, range, lmap
 
 import numpy as np
 from numpy import dot, identity

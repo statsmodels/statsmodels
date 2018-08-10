@@ -14,10 +14,8 @@ import numpy.linalg as npl
 from numpy.linalg import slogdet
 
 from statsmodels.tools.numdiff import (approx_hess, approx_fprime)
-from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
-from statsmodels.tsa.vector_ar.var_model import VARProcess, \
-                                                        VARResults
+from statsmodels.tsa.vector_ar.var_model import VARProcess, VARResults
 
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tsa.base.tsa_model as tsbase

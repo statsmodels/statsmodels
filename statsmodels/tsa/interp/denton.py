@@ -1,10 +1,10 @@
 
 import numpy as np
-from numpy import (dot, eye, diag_indices, zeros, column_stack, ones, diag,
+from numpy import (dot, eye, diag_indices, zeros, ones, diag,
         asarray, r_)
-from numpy.linalg import inv, solve
+from numpy.linalg import solve
 #from scipy.linalg import block_diag
-from scipy import linalg
+
 
 #def denton(indicator, benchmark, freq="aq", **kwarg):
 #    """
