@@ -9,7 +9,7 @@ tests.
 """
 # pylint: disable-msg=E1101
 from statsmodels.compat.python import range
-from statsmodels.compat.testing import SkipTest, skip
+
 import os
 import warnings
 
@@ -433,8 +433,8 @@ class TestProbitBasinhopping(CheckBinaryResults):
     @classmethod
     def setup_class(cls):
         if not has_basinhopping:
-            raise SkipTest("Skipped TestProbitBasinhopping since"
-                           " basinhopping solver is not available")
+            pytest.skip(msg="Skipped TestProbitBasinhopping since"
+                            " basinhopping solver is not available")
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -463,8 +463,8 @@ class TestProbitMinimizeDogleg(CheckBinaryResults):
     @classmethod
     def setup_class(cls):
         if not has_dogleg:
-            raise SkipTest("Skipped TestProbitMinimizeDogleg since "
-                           "dogleg method is not available")
+            pytest.skip(msg="Skipped TestProbitMinimizeDogleg since "
+                            "dogleg method is not available")
 
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
@@ -580,7 +580,7 @@ class TestCVXOPT(object):
     @classmethod
     def setup_class(cls):
         if not has_cvxopt:
-            raise SkipTest('Skipped test_cvxopt since cvxopt is not available')
+            pytest.skip(msg='Skipped test_cvxopt since cvxopt is not available')
         cls.data = sm.datasets.spector.load()
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=True)
 
@@ -792,7 +792,7 @@ class TestMNLogitL1Compatability(CheckL1Compatability):
         assert_almost_equal(np.nan, t_reg.sd[m])
         assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:m, :m], DECIMAL_3)
 
-    @skip("Skipped test_f_test for MNLogit")
+    @pytest.mark.skip("Skipped test_f_test for MNLogit")
     def test_f_test(self):
         pass
 

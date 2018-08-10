@@ -1,7 +1,6 @@
-from statsmodels.compat.testing import skipif
-
 import numpy as np
 import pandas as pd
+import pytest
 from statsmodels.imputation import mice
 import statsmodels.api as sm
 from numpy.testing import assert_equal, assert_allclose, dec
@@ -222,7 +221,7 @@ class TestMICEData(object):
         assert_equal(imp_data._cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
 
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_missing_pattern(self):
 
         df = gendat()
@@ -238,7 +237,7 @@ class TestMICEData(object):
                     close_or_save(pdf, fig)
 
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_bivariate(self):
 
         df = gendat()
@@ -252,7 +251,7 @@ class TestMICEData(object):
             close_or_save(pdf, fig)
 
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_fit_obs(self):
 
         df = gendat()
@@ -266,7 +265,7 @@ class TestMICEData(object):
             close_or_save(pdf, fig)
 
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_imputed_hist(self):
 
         df = gendat()

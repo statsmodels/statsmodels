@@ -18,47 +18,9 @@ else:
 
     SKIP_TYPES = (type, types.ClassType)
 
-try:
-    from unittest.case import SkipTest
-except ImportError:
-    try:
-        from unittest2 import SkipTest
-    except ImportError:
-        raise ImportError('Unable to locate SkipTest.  unittest or unittest2 required.')
-
-
-def skip(reason):
-    def decorator(test_item):
-        if not hasattr(test_item, '__name__') and has_pytest:
-            return pytest.mark.skip(reason)
-        if not isinstance(test_item, SKIP_TYPES):
-            @functools.wraps(test_item)
-            def skip_wrapper(*args, **kwargs):
-                raise SkipTest(reason)
-
-            test_item = skip_wrapper
-
-        test_item.__unittest_skip__ = True
-        test_item.__unittest_skip_why__ = reason
-        return test_item
-
-    return decorator
-
 
 def _id(obj):
     return obj
-
-
-def skipIf(condition, reason):
-    """
-    Skip a test if the condition is true.
-    """
-    if condition:
-        return skip(reason)
-    return _id
-
-
-skipif = skipIf
 
 
 def example(t):
@@ -91,4 +53,4 @@ def example(t):
     return t
 
 
-__all__ = ['skip', 'skipif', 'SkipTest', 'example']
+__all__ = ['example']

@@ -27,7 +27,6 @@ TestGlmGaussianWLS                statsmodels.WLS        X      X               
 ================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ==== =========
 """
 from __future__ import division
-from statsmodels.compat.testing import SkipTest
 
 import warnings
 from warnings import catch_warnings
@@ -768,8 +767,6 @@ class TestBinomial0RepeatedvsDuplicated(CheckWeight):
 
 
 def test_warnings_raised():
-    if sys.version_info < (3, 4):
-        raise SkipTest
     weights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
     # faking aweights by using normalized freq_weights
     weights = np.array(weights)

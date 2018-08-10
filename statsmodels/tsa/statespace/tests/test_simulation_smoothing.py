@@ -5,10 +5,10 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
-from statsmodels.compat.testing import SkipTest
 
 import numpy as np
 import pandas as pd
+import pytest
 import os
 
 from statsmodels import datasets

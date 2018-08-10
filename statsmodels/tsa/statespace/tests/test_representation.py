@@ -13,11 +13,11 @@ Classical and Gibbs-Sampling Approaches with Applications".
 MIT Press Books. The MIT Press.
 """
 from __future__ import division, absolute_import, print_function
-from statsmodels.compat.testing import skip, SkipTest
 
 import warnings
 import numpy as np
 import pandas as pd
+import pytest
 import os
 
 from statsmodels.tsa.statespace.representation import Representation
@@ -120,7 +120,7 @@ class TestClark1987Single(Clark1987):
     """
     @classmethod
     def setup_class(cls):
-        raise SkipTest('Not implemented')
+        pytest.skip(msg='Not implemented')
         super(TestClark1987Single, cls).setup_class(
             dtype=np.float32, conserve_memory=0
         )
@@ -139,7 +139,7 @@ class TestClark1987Double(Clark1987):
         cls.results = cls.run_filter()
 
 
-@skip('Not implemented')
+@pytest.mark.skip('Not implemented')
 class TestClark1987SingleComplex(Clark1987):
     """
     Basic single precision complex test for the loglikelihood and filtered

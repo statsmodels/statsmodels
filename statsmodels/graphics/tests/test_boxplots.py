@@ -1,6 +1,5 @@
-from statsmodels.compat.testing import skipif
-
 import numpy as np
+import pytest
 
 from statsmodels.graphics.boxplots import violinplot, beanplot
 from statsmodels.datasets import anes96
@@ -13,7 +12,7 @@ except:
     have_matplotlib = False
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_violinplot_beanplot():
     # Test violinplot and beanplot with the same dataset.
     data = anes96.load_pandas()

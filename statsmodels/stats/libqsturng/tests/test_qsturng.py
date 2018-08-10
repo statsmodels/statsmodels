@@ -6,7 +6,6 @@
 extensively ensure the stability and accuracy of the functions"""
 
 from statsmodels.compat.python import iterkeys, lzip, lmap
-from statsmodels.compat.testing import skip
 
 from numpy.testing import rand, assert_, assert_equal, \
     assert_almost_equal, assert_array_almost_equal, assert_array_equal, \
@@ -79,7 +78,7 @@ class TestQsturng(object):
 
     #remove from testsuite, used only for table generation and fails on
     #Debian S390, no idea why
-    @skip
+    @pytest.mark.skip
     def test_all_to_tbl(self):
         from statsmodels.stats.libqsturng.make_tbls import T,R
         ps, rs, vs, qs = [], [], [], []

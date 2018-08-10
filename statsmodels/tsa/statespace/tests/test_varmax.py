@@ -5,10 +5,10 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
-from statsmodels.compat.testing import skip
 
 import numpy as np
 import pandas as pd
+import pytest
 import os
 import re
 
@@ -631,12 +631,12 @@ class TestVARMA(CheckFREDManufacturing):
         # meaninful
         pass
 
-    @skip('Known failure: standard errors do not match.')
+    @pytest.mark.skip('Known failure: standard errors do not match.')
     def test_bse_approx(self):
         # Standard errors do not match Stata's
         pass
 
-    @skip('Known failure: standard errors do not match.')
+    @pytest.mark.skip('Known failure: standard errors do not match.')
     def test_bse_oim(self):
         # Standard errors do not match Stata's
         pass
@@ -716,12 +716,12 @@ class TestVMA1(CheckFREDManufacturing):
         # meaninful
         pass
 
-    @skip('Known failure: standard errors do not match.')
+    @pytest.mark.skip('Known failure: standard errors do not match.')
     def test_bse_approx(self):
         # Standard errors do not match Stata's
         pass
 
-    @skip('Known failure: standard errors do not match.')
+    @pytest.mark.skip('Known failure: standard errors do not match.')
     def test_bse_oim(self):
         # Standard errors do not match Stata's
         pass

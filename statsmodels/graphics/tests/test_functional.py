@@ -1,7 +1,8 @@
 from statsmodels.compat.python import range
-from statsmodels.compat.testing import skipif
+
 import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal
+import pytest
 
 from statsmodels.datasets import elnino
 from statsmodels.graphics.functional import \
@@ -21,7 +22,7 @@ labels = data.raw_data[:, 0].astype(int)
 data = data.raw_data[:, 1:]
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_hdr_basic():
     fig, hdr = hdrboxplot(data, labels=labels)
     print(hdr)
@@ -60,7 +61,7 @@ def test_hdr_basic():
     plt.close(fig)
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_hdr_plot():
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -75,7 +76,7 @@ def test_hdr_plot():
     plt.close(fig)
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_hdr_alpha():
     fig, hdr = hdrboxplot(data, alpha=[0.7])
     extra_quant_t = np.vstack([[25.1, 26.5, 27.0, 26.4, 25.4, 24.1,
@@ -86,7 +87,7 @@ def test_hdr_alpha():
     plt.close(fig)
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_hdr_multiple_alpha():
     fig, hdr = hdrboxplot(data, alpha=[0.4, 0.92])
     extra_quant_t = [[25.712, 27.052, 27.711, 27.200,
@@ -105,7 +106,7 @@ def test_hdr_multiple_alpha():
     plt.close(fig)
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_hdr_threshold():
     fig, hdr = hdrboxplot(data, alpha=[0.8], threshold=0.93)
     labels_pos = np.all(np.in1d(data, hdr.outliers).reshape(data.shape), axis=1)
@@ -114,7 +115,7 @@ def test_hdr_threshold():
     plt.close(fig)
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_hdr_bw():
     fig, hdr = hdrboxplot(data, bw='cv_ml')
     median_t = [24.25, 25.64, 25.99, 25.04, 23.71, 22.38,
@@ -123,7 +124,7 @@ def test_hdr_bw():
     plt.close(fig)
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_hdr_ncomp():
     fig, hdr = hdrboxplot(data, ncomp=3)
     median_t = [24.33, 25.71, 26.04, 25.08, 23.74, 22.40,
@@ -167,7 +168,7 @@ def test_banddepth_MBD():
     assert_almost_equal(depth, expected_depth, decimal=4)
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_fboxplot_rainbowplot():
     # Test fboxplot and rainbowplot together, is much faster.
     def harmfunc(t):
