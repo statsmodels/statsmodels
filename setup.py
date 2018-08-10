@@ -3,12 +3,22 @@ import os
 from collections import defaultdict
 from os.path import relpath, join as pjoin
 
-import numpy
 import pkg_resources
-from Cython import Tempita as tempita
-from Cython.Build import cythonize
-from Cython.Distutils import build_ext
-from numpy.distutils.misc_util import get_info
+
+try:
+    # SM_FORCE_C is a testing shim to force setup to use C source files
+    FORCE_C = int(os.environ.get('SM_FORCE_C', 0))
+    if FORCE_C:
+        raise ImportError('Force import error for testing')
+    from Cython import Tempita
+    from Cython.Build import cythonize
+    from Cython.Distutils import build_ext
+
+    HAS_CYTHON = True
+except ImportError:
+    from setuptools.command.build_ext import build_ext
+
+    HAS_CYTHON = False
 from setuptools import Extension, find_packages, setup
 from setuptools.dist import Distribution
 
@@ -26,20 +36,17 @@ INSTALL_REQUIREMENTS.update({'pandas': '0.19',  # released October 2016
                              'patsy': '0.4.0',  # released July 2015
                              })
 
-EXTRAS = {'build': ['cython>=0.24'],
-          'install': ['cython>=0.24'],
-          'develop': ['cython>=0.24'],
-          'docs': ['sphinx',
-                   'nbconvert',
-                   'jupyter_client',
-                   'ipykernel',
-                   'matplotlib',
-                   'nbformat',
-                   'numpydoc',
-                   'pandas-datareader']}
+SETUP_REQUIRES = [k + '>=' + v for k, v in SETUP_REQUIREMENTS.items()]
+INSTALL_REQUIRES = [k + '>=' + v for k, v in INSTALL_REQUIREMENTS.items()]
+
+EXTRAS_REQUIRE = {'build': ['cython>=0.24'],
+                  'install': ['cython>=0.24'],
+                  'develop': ['cython>=0.24'],
+                  'docs': ['sphinx', 'nbconvert', 'jupyter_client', 'ipykernel',
+                           'matplotlib', 'nbformat', 'numpydoc', 'pandas-datareader']}
 
 ###############################################################################
-# Key Values that Change Each Release
+# Values that rarely change
 ###############################################################################
 
 DISTNAME = 'statsmodels'
@@ -68,12 +75,6 @@ CLASSIFIERS = ['Development Status :: 4 - Beta',
                'Topic :: Office/Business :: Financial',
                'Topic :: Scientific/Engineering']
 
-NUMPY_INCLUDES = [numpy.get_include()]
-NUMPY_INCLUDES += [pkg_resources.resource_filename('numpy', 'core/include')]
-NUMPY_MATH_LIBS = get_info('npymath')
-
-# Determine whether to build the cython extensions with coverage
-# measurement enabled.
 ADDITIONAL_PACKAGE_DATA = {
     'statsmodels.datasets.tests': ['*.zip'],
     'statsmodels.iolib.tests.results': ['*.dta'],
@@ -85,15 +86,14 @@ ADDITIONAL_PACKAGE_DATA = {
     'statsmodels.sandbox.regression.tests': ['*.dta', '*.csv']
 }
 
-cmdclass = versioneer.get_cmdclass()
-cmdclass['build_ext'] = build_ext
-
 ##############################################################################
 # Extension Building
 ##############################################################################
 COMPILER_DIRECTIVES = {}
+DEFINE_MACROS = []
 
-ext_data = dict(
+
+exts = dict(
     _exponential_smoothers={'source': 'statsmodels/tsa/_exponential_smoothers.pyx'},
     _hamilton_filter={'source': 'statsmodels/tsa/regime_switching/_hamilton_filter.pyx.in'},
     _kim_smoother={'source': 'statsmodels/tsa/regime_switching/_kim_smoother.pyx.in'},
@@ -101,115 +101,124 @@ ext_data = dict(
     _smoothers_lowess={'source': 'statsmodels/nonparametric/_smoothers_lowess.pyx'},
     kalman_loglike={'source': 'statsmodels/tsa/kalmanf/kalman_loglike.pyx',
                     'include_dirs': ['statsmodels/src'],
-                    'depends': ['statsmodels/src/capsule.h']},
-    _initialization={'source': 'statsmodels/tsa/statespace/_initialization.pyx.in',
-                     'include_dirs': ['statsmodels/src'],
-                     'blas': True},
-    _representation={'source': 'statsmodels/tsa/statespace/_representation.pyx.in',
-                     'include_dirs': ['statsmodels/src'],
-                     'blas': True},
-    _kalman_filter={'source': 'statsmodels/tsa/statespace/_kalman_filter.pyx.in',
-                    'filename': '_kalman_filter',
-                    'include_dirs': ['statsmodels/src'],
-                    'blas': True},
-    _kalman_filter_conventional={
-        'source': 'statsmodels/tsa/statespace/_filters/_conventional.pyx.in',
-        'filename': '_conventional',
-        'include_dirs': ['statsmodels/src'],
-        'blas': True},
-    _kalman_filter_inversions={'source': 'statsmodels/tsa/statespace/_filters/_inversions.pyx.in',
-                               'filename': '_inversions',
-                               'include_dirs': ['statsmodels/src'],
-                               'blas': True},
-    _kalman_filter_univariate={'source': 'statsmodels/tsa/statespace/_filters/_univariate.pyx.in',
-                               'filename': '_univariate',
-                               'include_dirs': ['statsmodels/src'],
-                               'blas': True},
-    _kalman_filter_univariate_diffuse={
-        'source': 'statsmodels/tsa/statespace/_filters/_univariate_diffuse.pyx.in',
-        'filename': '_univariate_diffuse',
-        'include_dirs': ['statsmodels/src'],
-        'blas': True},
-    _kalman_smoother={'source': 'statsmodels/tsa/statespace/_kalman_smoother.pyx.in',
-                      'include_dirs': ['statsmodels/src'],
-                      'blas': True},
-    _kalman_smoother_alternative={
-        'source': 'statsmodels/tsa/statespace/_smoothers/_alternative.pyx.in',
-        'filename': '_alternative',
-        'include_dirs': ['statsmodels/src'],
-        'blas': True},
-    _kalman_smoother_classical={
-        'source': 'statsmodels/tsa/statespace/_smoothers/_classical.pyx.in',
-        'include_dirs': ['statsmodels/src'],
-        'blas': True},
-    _kalman_smoother_conventional={
-        'source': 'statsmodels/tsa/statespace/_smoothers/_conventional.pyx.in',
-        'include_dirs': ['statsmodels/src'],
-        'blas': True},
-    _kalman_smoother_univariate={
-        'source': 'statsmodels/tsa/statespace/_smoothers/_univariate.pyx.in',
-        'filename': '_univariate',
-        'include_dirs': ['statsmodels/src'],
-        'blas': True},
-    _kalman_smoother_univariate_diffuse={
-        'source': 'statsmodels/tsa/statespace/_smoothers/_univariate_diffuse.pyx.in',
-        'filename': '_univariate',
-        'include_dirs': ['statsmodels/src'],
-        'blas': True},
-    _kalman_simulation_smoother={
-        'source': 'statsmodels/tsa/statespace/_simulation_smoother.pyx.in',
-        'filename': '_simulation_smoother',
-        'include_dirs': ['statsmodels/src'],
-        'blas': True},
-    _kalman_tools={'source': 'statsmodels/tsa/statespace/_tools.pyx.in',
-                   'filename': '_tools',
-                   'blas': True},
-)
+                    'depends': ['statsmodels/src/capsule.h']})
 
-define_macros = []
-extensions = []
+statespace_exts = [
+    'statsmodels/tsa/statespace/_initialization.pyx.in',
+    'statsmodels/tsa/statespace/_representation.pyx.in',
+    'statsmodels/tsa/statespace/_kalman_filter.pyx.in',
+    'statsmodels/tsa/statespace/_filters/_conventional.pyx.in',
+    'statsmodels/tsa/statespace/_filters/_inversions.pyx.in',
+    'statsmodels/tsa/statespace/_filters/_univariate.pyx.in',
+    'statsmodels/tsa/statespace/_filters/_univariate_diffuse.pyx.in',
+    'statsmodels/tsa/statespace/_kalman_smoother.pyx.in',
+    'statsmodels/tsa/statespace/_smoothers/_alternative.pyx.in',
+    'statsmodels/tsa/statespace/_smoothers/_classical.pyx.in',
+    'statsmodels/tsa/statespace/_smoothers/_conventional.pyx.in',
+    'statsmodels/tsa/statespace/_smoothers/_univariate.pyx.in',
+    'statsmodels/tsa/statespace/_smoothers/_univariate_diffuse.pyx.in',
+    'statsmodels/tsa/statespace/_simulation_smoother.pyx.in',
+    'statsmodels/tsa/statespace/_tools.pyx.in',
+]
 
-for config in ext_data.values():
-    uses_blas = True
-    source = config['source']
-    if source.endswith('pyx.in'):
-        with open(source, 'r') as templated:
+
+class DeferredBuildExt(build_ext):
+    """build_ext command for use when numpy headers are needed."""
+
+    def build_extensions(self):
+        self._update_extensions()
+        build_ext.build_extensions(self)
+
+    def _update_extensions(self):
+        import numpy
+        from numpy.distutils.misc_util import get_info
+
+        numpy_includes = [numpy.get_include()]
+        numpy_includes += [pkg_resources.resource_filename('numpy', 'core/include')]
+        numpy_includes = list(set(numpy_includes))
+        numpy_math_libs = get_info('npymath')
+
+        for extension in self.extensions:
+            if not hasattr(extension, 'include_dirs'):
+                continue
+            extension.include_dirs = list(set(extension.include_dirs + numpy_includes))
+            if extension.name in EXT_REQUIRES_NUMPY_MATH_LIBS:
+                extension.include_dirs += numpy_math_libs['include_dirs']
+                extension.libraries += numpy_math_libs['libraries']
+                extension.library_dirs += numpy_math_libs['library_dirs']
+
+
+cmdclass = versioneer.get_cmdclass()
+cmdclass['build_ext'] = DeferredBuildExt
+
+
+def check_source(source_name):
+    """Chooses C or pyx source files, and raises if C is needed but missing"""
+    source_ext = '.pyx'
+    if not HAS_CYTHON:
+        source_name = source_name.replace('.pyx.in', '.c')
+        source_name = source_name.replace('.pyx', '.c')
+        source_ext = '.c'
+        if not os.path.exists(source_name):
+            raise FileNotFoundError('C source not found.  You must have Cython installed to '
+                                    'build if the C source files have not been generated.')
+    return source_name, source_ext
+
+
+def process_tempita(source_name):
+    """Runs pyx.in files through tempita is needed"""
+    if source_name.endswith('pyx.in'):
+        with open(source_name, 'r') as templated:
             pyx_template = templated.read()
-        pyx = tempita.sub(pyx_template)
-        pyx_filename = source[:-3]
+        pyx = Tempita.sub(pyx_template)
+        pyx_filename = source_name[:-3]
         with open(pyx_filename, 'w') as pyx_file:
             pyx_file.write(pyx)
-        file_stats = os.stat(source)
+        file_stats = os.stat(source_name)
         try:
             os.utime(pyx_filename, ns=(file_stats.st_atime_ns, file_stats.st_mtime_ns))
         except AttributeError:
             os.utime(pyx_filename, (file_stats.st_atime, file_stats.st_mtime))
-        source = pyx_filename
+        source_name = pyx_filename
+    return source_name
 
-    name = source.replace('/', '.').replace('.pyx', '')
-    include_dirs = config.get('include_dirs', []) + NUMPY_INCLUDES
+
+EXT_REQUIRES_NUMPY_MATH_LIBS = []
+extensions = []
+for config in exts.values():
+    uses_blas = True
+    source, ext = check_source(config['source'])
+    source = process_tempita(source)
+    name = source.replace('/', '.').replace(ext, '')
+    include_dirs = config.get('include_dirs', [])
     depends = config.get('depends', [])
     libraries = config.get('libraries', [])
     library_dirs = config.get('library_dirs', [])
 
     uses_numpy_libraries = config.get('numpy_libraries', False)
     if uses_blas or uses_numpy_libraries:
-        libraries.extend(NUMPY_MATH_LIBS['libraries'])
-        library_dirs.extend(NUMPY_MATH_LIBS['library_dirs'])
+        EXT_REQUIRES_NUMPY_MATH_LIBS.append(name)
 
     ext = Extension(name, [source],
                     include_dirs=include_dirs, depends=depends,
                     libraries=libraries, library_dirs=library_dirs,
-                    define_macros=define_macros)
+                    define_macros=DEFINE_MACROS)
     extensions.append(ext)
 
-extensions = cythonize(extensions, compiler_directives=COMPILER_DIRECTIVES)
+for source in statespace_exts:
+    source, ext = check_source(source)
+    source = process_tempita(source)
+    name = source.replace('/', '.').replace(ext, '')
 
+    EXT_REQUIRES_NUMPY_MATH_LIBS.append(name)
+    ext = Extension(name, [source],
+                    include_dirs=['statsmodels/src'], depends=[],
+                    libraries=[], library_dirs=[],
+                    define_macros=DEFINE_MACROS)
+    extensions.append(ext)
 
-class BinaryDistribution(Distribution):
-    def is_pure(self):
-        return False
-
+if HAS_CYTHON:
+    extensions = cythonize(extensions, compiler_directives=COMPILER_DIRECTIVES)
 
 ##############################################################################
 # Construct package data
@@ -233,6 +242,12 @@ for path, filetypes in ADDITIONAL_PACKAGE_DATA.items():
 if os.path.exists('MANIFEST'):
     os.unlink('MANIFEST')
 
+
+class BinaryDistribution(Distribution):
+    def is_pure(self):
+        return False
+
+
 setup(name=DISTNAME,
       version=versioneer.get_version(),
       maintainer=MAINTAINER,
@@ -250,8 +265,8 @@ setup(name=DISTNAME,
       package_data=package_data,
       distclass=BinaryDistribution,
       include_package_data=False,  # True will install all files in repo
-      setup_requires=[k + '>=' + v for k, v in SETUP_REQUIREMENTS.items()],
+      setup_requires=SETUP_REQUIRES,
       install_requires=[k + '>=' + v for k, v in INSTALL_REQUIREMENTS.items()],
-      extras_require=EXTRAS,
+      extras_require=EXTRAS_REQUIRE,
       zip_safe=False,
       )
