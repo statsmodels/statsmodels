@@ -9,3 +9,8 @@ write.csv(e, file = "result_tscv.csv")
 
 e <- tsCV(y, far2, h=1, window=30)
 write.csv(e, file = "result_tscv_cpi.csv")
+
+data_new <- read.csv('../CPIAPPNS.csv')
+y<-ts(data_new$CPIAPPNS)
+e <- tsCV(y, far2, h=1, window=30)
+write.csv(e, file = "result_tscv_CPIAPPNS.csv")

@@ -12,12 +12,21 @@ dataset = macrodata['infl']
 dataset_cpi = macrodata['cpi']
 
 curdir = os.path.dirname(os.path.abspath(__file__))
+new_data = pd.read_csv('../CPIAPPNS.csv')
+new_data.index = pd.PeriodIndex(start='04-2010', end='03-2018', freq='M')
+new_data = new_data['CPIAPPNS']
+
+curdir = os.path.dirname(os.path.abspath(__file__))
 data_file = os.path.join(curdir, "results/result_tscv.csv")
 data = pd.read_csv(data_file, header=None)
 
 curdir = os.path.dirname(os.path.abspath(__file__))
 data_file = os.path.join(curdir, "results/result_tscv_cpi.csv")
 data_cpi = pd.read_csv(data_file, header=None)
+
+curdir = os.path.dirname(os.path.abspath(__file__))
+data_file = os.path.join(curdir, "results/result_tscv_CPIAPPNS.csv")
+data_CPIAPPNS = pd.read_csv(data_file, header=None)
 
 
 def forecast_fixed_ar1(endog, horizon=1):
@@ -40,3 +49,10 @@ def test_tscv_unit_2():
     e = tscv.evaluate(dataset_cpi, forecast_fixed_ar1, roll_window=30)
     for i in range(30, 203):
         assert_allclose(float(data_cpi.iloc[i, 1]), e[i])
+
+
+def test_tscv_unit_3_CPIAPPNS():
+    """Test Function."""
+    e = tscv.evaluate(new_data, forecast_fixed_ar1, roll_window=30)
+    for i in range(30, 96):
+        assert_allclose(float(data_CPIAPPNS.iloc[i, 1]), e[i])
