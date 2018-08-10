@@ -24,7 +24,7 @@ csv_path = dir_path + '/results_tweedie_aweights_nonrobust.csv'
 resids = np.array(pd.read_csv(csv_path))
 res['resids'] = resids
 results_tweedie_aweights_nonrobust = Bunch(**res) 
- 
+
 res = dict() 
 res['params'] = np.array([4.3171222670686564271, -0.0388351754897242607, 0.54097404980660868112,
  1.0560051462982855686, ])
@@ -99,7 +99,7 @@ res['resids'] = np.array([-6.0158828837706774806, -5.0064618231514179669, -5.582
  0.75244856783359348462, 0.047398081967250066393, 0.36323882603675039515,
  ]).reshape((48, 4, ), order="F")
 results_gamma_aweights_nonrobust = Bunch(**res) 
- 
+
 res = dict() 
 res['params'] = np.array([0.019083886843747652901, 0.93993818512595395109, ])
 res['bse'] = np.array([0.021677623131071667439, 0.82525358247654523325, ])

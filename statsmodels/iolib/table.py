@@ -287,7 +287,7 @@ class SimpleTable(list):
         """Return list of Row,
         the raw data as rows of cells.
         """
-        
+
         _Cell = self._Cell
         _Row = self._Row
         rows = []
@@ -298,7 +298,7 @@ class SimpleTable(list):
                 cell.datatype = next(dtypes)
                 cell.row = newrow  # a cell knows its row
             rows.append(newrow)
-         
+
         return rows
 
     def pad(self, s, width, align):
