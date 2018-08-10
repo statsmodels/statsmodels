@@ -1660,11 +1660,11 @@ class GLMResults(base.LikelihoodModelResults):
 
     def get_hat_matrix_diag(self, observed=True):
         """
-        compute the diagonal of the hat matrix
+        Compute the diagonal of the hat matrix
 
-        Parameter
-        ---------
-        observed : boolean
+        Parameters
+        ----------
+        observed : bool
             If true, then observed hessian is used in the hat matrix
             computation. If false, then the expected hessian is used.
             In the case of a canonical link function both are the same.
@@ -1683,11 +1683,11 @@ class GLMResults(base.LikelihoodModelResults):
 
     def get_influence(self, observed=True):
         """
-        get an instance of GLMInfluence with influence and outlier measures
+        Get an instance of GLMInfluence with influence and outlier measures
 
-        Parameter
-        ---------
-        observed : boolean
+        Parameters
+        ----------
+        observed : bool
             If true, then observed hessian is used in the hat matrix
             computation. If false, then the expected hessian is used.
             In the case of a canonical link function both are the same.
