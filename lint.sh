@@ -34,7 +34,8 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/statespace/*.py \
         statsmodels/tsa/statespace/tests/results/ \
         statsmodels/tsa/statespace/tests/test_var.py \
-        conftest.py
+        statsmodels/conftest.py \
+        setup.py
     if [ $? -ne "0" ]; then
         RET=1
     fi

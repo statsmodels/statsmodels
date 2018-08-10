@@ -36,12 +36,13 @@ INSTALL_REQUIREMENTS.update({'pandas': '0.19',  # released October 2016
                              'patsy': '0.4.0',  # released July 2015
                              })
 
+CYTHON_MIN_VER = '0.24'  # released Apr 2016
+
 SETUP_REQUIRES = [k + '>=' + v for k, v in SETUP_REQUIREMENTS.items()]
 INSTALL_REQUIRES = [k + '>=' + v for k, v in INSTALL_REQUIREMENTS.items()]
 
-EXTRAS_REQUIRE = {'build': ['cython>=0.24'],
-                  'install': ['cython>=0.24'],
-                  'develop': ['cython>=0.24'],
+EXTRAS_REQUIRE = {'build': ['cython>=' + CYTHON_MIN_VER],
+                  'develop': ['cython>=' + CYTHON_MIN_VER],
                   'docs': ['sphinx', 'nbconvert', 'jupyter_client', 'ipykernel',
                            'matplotlib', 'nbformat', 'numpydoc', 'pandas-datareader']}
 
@@ -51,7 +52,8 @@ EXTRAS_REQUIRE = {'build': ['cython>=0.24'],
 
 DISTNAME = 'statsmodels'
 DESCRIPTION = 'Statistical computations and models for Python'
-README = open(pjoin(os.getcwd(), 'README.rst')).read()
+with open(pjoin(os.getcwd(), 'README.rst')) as readme:
+    README = readme.read()
 LONG_DESCRIPTION = README
 MAINTAINER = 'Josef Perktold, Chad Fulton, Kerby Shedden'
 MAINTAINER_EMAIL = 'pystatsmodels@googlegroups.com'
