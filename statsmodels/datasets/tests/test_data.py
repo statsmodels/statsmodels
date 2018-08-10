@@ -2,7 +2,6 @@ import importlib
 
 import numpy as np
 import pandas as pd
-import nose
 import pytest
 
 import statsmodels.datasets
@@ -16,8 +15,6 @@ for dataset_name in dir(statsmodels.datasets):
         datasets.append(dataset_name)
 
 
-# TODO: Remove nottest when nose support is dropped
-@nose.tools.nottest
 @pytest.mark.parametrize('dataset_name', datasets)
 def test_dataset(dataset_name):
     dataset = importlib.import_module('statsmodels.datasets.' + dataset_name)
@@ -28,9 +25,3 @@ def test_dataset(dataset_name):
     df_data = dataset.load_pandas()
     assert isinstance(df_data, Dataset)
     assert isinstance(df_data.data, pd.DataFrame)
-
-
-# TODO: Remove when nose support is dropped
-def test_all_datasets():
-    for dataset in datasets:
-        test_dataset(dataset)

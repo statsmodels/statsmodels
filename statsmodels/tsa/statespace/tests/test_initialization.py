@@ -19,7 +19,6 @@ from statsmodels.tsa.statespace import (sarimax, structural, varmax,
 from statsmodels.tsa.statespace.initialization import Initialization
 from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal,
                            assert_raises)
-from nose.exc import SkipTest
 
 
 def check_initialization(mod, init, a_true, Pinf_true, Pstar_true):

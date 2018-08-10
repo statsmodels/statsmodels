@@ -1,5 +1,5 @@
 # NOTE: contains only one test, _est_cont_fit, that is renamed so that
-#       nose doesn't run it
+#       the test runner doesn't run it
 # I put this here for the record and for the case when someone wants to
 # verify the quality of fit
 # with current parameters: relatively small sample size, default starting values

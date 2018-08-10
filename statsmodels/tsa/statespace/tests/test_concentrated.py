@@ -15,7 +15,6 @@ from .results import results_varmax
 from statsmodels.tsa.statespace import (
     sarimax, structural, dynamic_factor, varmax)
 from numpy.testing import assert_equal, assert_raises, assert_allclose
-from nose.exc import SkipTest
 
 
 def get_sarimax_models(endog, filter_univariate=False, **kwargs):

@@ -124,12 +124,6 @@ def _show_versions_only():
         print("    pygments: Not installed")
 
     try:
-        import nose
-        print("nose: %s" % safe_version(nose))
-    except ImportError:
-        print("nose: Not installed")
-
-    try:
         import pytest
         print("pytest: %s (%s)" % (safe_version(pytest), dirname(pytest.__file__)))
     except ImportError:
@@ -270,12 +264,6 @@ def show_versions(show_dirs=True):
                                          dirname(pygments.__file__)))
     except ImportError:
         print("    pygments: Not installed")
-
-    try:
-        import nose
-        print("nose: %s (%s)" % (safe_version(nose), dirname(nose.__file__)))
-    except ImportError:
-        print("nose: Not installed")
 
     try:
         import pytest

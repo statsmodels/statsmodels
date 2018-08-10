@@ -9,9 +9,9 @@ We strive to follow a `Test Driven Development (TDD) <https://en.wikipedia.org/w
 All models or statistical functions that are added to the main code base are to have
 tests versus an existing statistical package, if possible.
 
-Introduction to Nose
-~~~~~~~~~~~~~~~~~~~~
-Like many packages, statsmodels uses the `Nose testing system <http://nose.readthedocs.io/en/latest/>`__ and the convenient extensions in `numpy.testing <http://docs.scipy.org/doc/numpy/reference/routines.testing.html>`__. Nose itself is an extension of :mod:`Python's unittest <python:unittest>`. Nose will find any file, directory, function, or class name that matches the regular expression ``(?:^|[b_./-])[Tt]est``. This is mainly functions that begin with test* and classes that begin with Test*.
+Introduction to pytest
+~~~~~~~~~~~~~~~~~~~~~~
+Like many packages, statsmodels uses the `pytest testing system <https://docs.pytest.org/en/latest/contents.html>`__ and the convenient extensions in `numpy.testing <http://docs.scipy.org/doc/numpy/reference/routines.testing.html>`__.  Pytest will find any file, directory, function, or class name that starts with ``test`` or ``Test`` (classes only). Test function should start with ``test``, test classes should start with ``Test``. These functions and classes should be placed in files with names beginning with ``test`` in a directory called ``tests``.
 
 .. _run-tests:
 
@@ -30,7 +30,7 @@ You can test submodules by::
 
 How To Write A Test
 ~~~~~~~~~~~~~~~~~~~
-NumPy provides a good introduction to unit testing with Nose and NumPy extensions `here <https://github.com/numpy/numpy/blob/master/doc/TESTS.rst.txt>`__. It is worth a read for some more details. 
+NumPy provides a good introduction to unit testing with pytest and NumPy extensions `here <https://github.com/numpy/numpy/blob/master/doc/TESTS.rst.txt>`__. It is worth a read for some more details.
 Here, we will document a few conventions we follow that are worth mentioning. Often we want to test 
 a whole model at once rather than just one function, for example. The following is a pared down 
 version test_discrete.py. In this case, several different models with different options need to be 
@@ -80,12 +80,12 @@ tested. The tests look something like
             assert_almost_equal(self.res1.foo, self.res2.foo, 4)
 
     if __name__ == "__main__":
-        import nose
-        nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
+        import pytest
+        pytest.main([__file__, '-vvs', '-x', '--pdb'])
 
 The main workhorse is the `CheckDiscreteResults` class. Notice that we can set the level of precision 
 for `tvalues` to be different than the default in the subclass  `TestProbitNewton`. All of the test 
-classes have a `setupClass` :func:`python:classmethod`. Otherwise, Nose would reinstantiate the class
+classes have a `setup_class` :func:`python:classmethod`. Otherwise, pytest would reinstantiate the class
 before every single test method. If the fitting of the model is time consuming, then this is clearly
 undesirable. Finally, we have a script at the bottom so that we can run the tests should be running
 the Python file.

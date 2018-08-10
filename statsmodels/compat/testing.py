@@ -22,12 +22,9 @@ try:
     from unittest.case import SkipTest
 except ImportError:
     try:
-        from nose import SkipTest
+        from unittest2 import SkipTest
     except ImportError:
-        try:
-            from unittest2 import SkipTest
-        except ImportError:
-            raise ImportError('Unable to locate SkipTest.  unittest, unittest2 or nose required.')
+        raise ImportError('Unable to locate SkipTest.  unittest or unittest2 required.')
 
 
 def skip(reason):
