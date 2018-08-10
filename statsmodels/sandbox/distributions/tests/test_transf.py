@@ -21,7 +21,7 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 from scipy import stats, special
 from statsmodels.sandbox.distributions.extras import (
-    lognormalg, squarenormalg, absnormalg, negsquarenormalg, squaretg)
+    squarenormalg, absnormalg, negsquarenormalg, squaretg)
 
 
 # some patches to scipy.stats.distributions so tests work and pass

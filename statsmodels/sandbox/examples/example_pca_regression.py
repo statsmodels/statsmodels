@@ -16,7 +16,7 @@ endogenous variable.
 
 
 import numpy as np
-from numpy.testing import assert_array_almost_equal
+
 import statsmodels.api as sm
 from statsmodels.sandbox.tools import pca
 from statsmodels.sandbox.tools.cross_val import LeaveOneOut
@@ -91,8 +91,8 @@ print('best result for k, by AIC, BIC, R2_adj, L1O')
 print(np.r_[(np.argmin(results[:,1:3],0), np.argmax(results[:,3],0),
              np.argmin(results[:,-1],0))])
 
-from statsmodels.iolib.table import (SimpleTable, default_txt_fmt,
-                        default_latex_fmt, default_html_fmt)
+from statsmodels.iolib.table import SimpleTable
+
 
 headers = 'k, AIC, BIC, R2_adj, L1O'.split(', ')
 numformat = ['%6d'] + ['%10.3f']*4 #'%10.4f'

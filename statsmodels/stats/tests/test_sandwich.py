@@ -12,7 +12,7 @@ Author: Josef Perktold
 import numpy as np
 from numpy.testing import assert_almost_equal
 
-from statsmodels.regression.linear_model import OLS, GLSAR
+from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 import statsmodels.stats.sandwich_covariance as sw
 #import statsmodels.sandbox.panel.sandwich_covariance_generic as swg

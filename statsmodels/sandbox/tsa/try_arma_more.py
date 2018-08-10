@@ -17,11 +17,11 @@ from scipy import signal, ndimage
 import matplotlib.mlab as mlb
 import matplotlib.pyplot as plt
 
-from statsmodels.tsa.arima_process import arma_generate_sample, arma_periodogram
+from statsmodels.tsa.arima_process import arma_generate_sample
 from statsmodels.tsa.stattools import acovf
 hastalkbox = False
 try:
-    import scikits.talkbox as stb
+    import scikits.talkbox as stb  # noqa:F401
     import scikits.talkbox.spectral.basic as stbs
 except:
     hastalkbox = False

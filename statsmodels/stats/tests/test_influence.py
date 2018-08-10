@@ -24,13 +24,10 @@ except:
 import pytest
 
 from statsmodels.regression.linear_model import OLS
-from statsmodels.discrete.discrete_model import Logit
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
 
-import statsmodels.stats.outliers_influence as oi
-from statsmodels.stats.outliers_influence import (GLMInfluence,
-                                                  MLEInfluence)
+from statsmodels.stats.outliers_influence import MLEInfluence
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 

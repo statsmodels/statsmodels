@@ -36,7 +36,6 @@ Journal of the American Statistical Association, Vol 64, No. 325. (1969), pp. 38
 """
 from statsmodels.compat.python import string_types
 import numpy as np
-from scipy.interpolate import interp1d
 from scipy import stats
 from .tabledist import TableDist
 

@@ -35,7 +35,6 @@ import numpy.fft as fft
 #import scipy.fftpack as fft
 from scipy import signal
 #from try_var_convolve import maxabs
-from statsmodels.sandbox.archive.linalg_decomp_1 import OneTimeProperty
 from statsmodels.tsa.arima_process import ArmaProcess
 
 

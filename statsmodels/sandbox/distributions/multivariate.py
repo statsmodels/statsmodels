@@ -17,9 +17,9 @@ Genz and Bretz for formula
 from __future__ import print_function
 import numpy as np
 from scipy import integrate, stats, special
-from scipy.stats import chi,chi2
+from scipy.stats import chi
 
-from .extras import mvnormcdf, mvstdnormcdf, mvnormcdf
+from .extras import mvnormcdf, mvstdnormcdf
 
 from numpy import exp as np_exp
 from numpy import log as np_log

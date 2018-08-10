@@ -6,7 +6,6 @@ import numpy as np
 import statsmodels.api as sm
 import scikits.timeseries as ts
 import scikits.timeseries.lib.plotlib as tplt
-from matplotlib import pyplot as plt
 
 data = sm.datasets.macrodata.load()
 data = data.data

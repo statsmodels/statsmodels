@@ -10,7 +10,7 @@ from scipy import stats
 #from statsmodels.stats.moment_helpers import mnc2mvsk
 from statsmodels.sandbox.distributions.sppatch import expect_v2
 
-from .distparams import distcont, distdiscrete#, distslow
+from .distparams import distcont#, distslow
 
 
 specialcases = {'ncf':{'ub':1000} # diverges if it's too large, checked for mean

@@ -144,8 +144,7 @@ yres = arfilter(x,a3f[:,:,:2])
 print(np.all(yres == (x[1:,:].sum(1) + x[:-1].sum(1))[:,None]))
 
 # don't do these imports, here just for copied fftconvolve
-from scipy.fftpack import fft, ifft, ifftshift, fft2, ifft2, fftn, \
-     ifftn, fftfreq
+from scipy.fftpack import fftn, ifftn
 from numpy import product,array
 
 from statsmodels.tsa.filters.filtertools import fftconvolveinv as fftconvolve

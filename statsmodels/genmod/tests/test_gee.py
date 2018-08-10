@@ -17,7 +17,7 @@ import numpy as np
 import pytest
 
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
-                           assert_array_less, assert_raises, assert_, dec)
+                           assert_array_less, assert_raises, assert_)
 from statsmodels.genmod.generalized_estimating_equations import (
     GEE, OrdinalGEE, NominalGEE, NominalGEEResults, OrdinalGEEResults,
     NominalGEEResultsWrapper, OrdinalGEEResultsWrapper)

@@ -22,11 +22,10 @@ LIMDEP software.
 '''
 
 import numpy as np
-from scipy.special import gammaln
 from scipy.stats import nbinom
 from statsmodels.base.model import GenericLikelihoodModel
 from statsmodels.base.model import GenericLikelihoodModelResults
-import statsmodels.api as sm
+
 
 #### Negative Binomial Log-likelihoods ####
 def _ll_nbp(y, X, beta, alph, Q):

@@ -7,7 +7,7 @@ from statsmodels.compat import range
 import os
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
-                           assert_allclose, assert_, assert_array_less, dec)
+                           assert_allclose, assert_, assert_array_less)
 import pytest
 from scipy import stats
 import statsmodels.api as sm
@@ -16,7 +16,7 @@ from statsmodels.tools.tools import add_constant
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from statsmodels.discrete import discrete_model as discrete
 from statsmodels.tools.sm_exceptions import DomainWarning
-from statsmodels.tools.numdiff import (approx_fprime, approx_fprime_cs,
+from statsmodels.tools.numdiff import (approx_fprime,
                                        approx_hess)
 import pytest
 import warnings
@@ -29,7 +29,8 @@ DECIMAL_1 = 1
 DECIMAL_0 = 0
 
 try:
-    import matplotlib.pyplot as plt  #makes plt available for test functions
+    import matplotlib.pyplot as plt  # noqa:F401
+    # makes plt available for test functions
     have_matplotlib = True
 except:
     have_matplotlib = False
@@ -915,7 +916,6 @@ def test_plots():
     model = sm.GLM(endog, exog, family=sm.families.Binomial())
     result = model.fit()
 
-    import matplotlib.pyplot as plt
     import pandas as pd
     from statsmodels.graphics.regressionplots import add_lowess
 

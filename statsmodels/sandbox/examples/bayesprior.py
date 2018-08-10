@@ -9,7 +9,7 @@ try:
 except:
     print("pymc not imported")
     pymc_installed = 0
-from scipy.stats import gamma, beta, invgamma
+
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy import stats, integrate

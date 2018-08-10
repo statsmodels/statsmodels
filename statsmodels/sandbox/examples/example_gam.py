@@ -15,7 +15,7 @@ import scipy.stats
 from statsmodels.sandbox.gam import AdditiveModel
 from statsmodels.sandbox.gam import Model as GAM #?
 from statsmodels.genmod.families import family
-from statsmodels.genmod.generalized_linear_model import GLM
+
 
 standardize = lambda x: (x - x.mean()) / x.std()
 demean = lambda x: (x - x.mean())

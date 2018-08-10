@@ -148,7 +148,7 @@ from __future__ import print_function
 import numpy as np
 
 from statsmodels.sandbox.distributions.multivariate import (
-                mvstdtprob, mvstdnormcdf, mvnormcdf)
+                mvstdtprob, mvnormcdf)
 
 def expect_mc(dist, func=lambda x: 1, size=50000):
     '''calculate expected value of function by Monte Carlo integration

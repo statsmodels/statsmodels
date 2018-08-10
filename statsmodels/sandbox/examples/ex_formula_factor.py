@@ -4,11 +4,7 @@ Created on Sat May 15 19:59:42 2010
 Author: josef-pktd
 """
 
-import numpy as np
-
 from statsmodels.sandbox import formula
-import statsmodels.sandbox.contrast_old as contrast
-
 
 
 #define a categorical variable - factor

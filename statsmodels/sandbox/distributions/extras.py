@@ -54,7 +54,7 @@ License: BSD
 
 from __future__ import print_function
 from statsmodels.compat.python import range, iteritems
-from scipy import stats, special, integrate  # integrate is for scipy 0.6.0 ???
+from scipy import stats, special
 from scipy.stats import distributions
 from statsmodels.stats.moment_helpers import mvsk2mc, mc2mvsk
 import numpy as np
@@ -488,9 +488,7 @@ License: BSD
 
 '''
 
-from scipy import integrate # for scipy 0.6.0
-
-from scipy import stats, info
+from scipy import stats
 from scipy.stats import distributions
 
 

@@ -102,7 +102,7 @@ Author: Josef Perktold
 License : BSD (3-clause)
 '''
 from __future__ import print_function
-from statsmodels.compat.python import lzip, iteritems, itervalues, lrange, zip
+from statsmodels.compat.python import iteritems, itervalues, lrange, zip
 import numpy as np
 from pprint import pprint
 

@@ -30,7 +30,6 @@ from __future__ import division
 from statsmodels.compat.python import PY3
 
 import warnings
-from warnings import catch_warnings
 import sys
 
 import numpy as np

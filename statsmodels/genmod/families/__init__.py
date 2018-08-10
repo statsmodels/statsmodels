@@ -9,8 +9,7 @@ These families are described in
    Chapman & Hall, London, 1983.
 
 '''
-
-#from statsmodels.family.family import Gaussian, Family, Poisson, Gamma, \
-#    InverseGaussian, Binomial, NegativeBinomial
+__all__ = ["Gaussian", "Family", "Poisson", "Gamma", "InverseGaussian",
+           "Binomial", "NegativeBinomial", "Tweedie"]
 from .family import Gaussian, Family, Poisson, Gamma, \
     InverseGaussian, Binomial, NegativeBinomial, Tweedie
