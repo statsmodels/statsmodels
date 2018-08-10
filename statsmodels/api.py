@@ -29,7 +29,6 @@ from .imputation.bayes_mi import BayesGaussMI, MI
 from .nonparametric import api as nonparametric
 from . import distributions
 from .__init__ import test
-from . import version
 
 from .graphics.gofplots import qqplot, qqplot_2samples, qqline, ProbPlot
 from .graphics import api as graphics
@@ -59,3 +58,7 @@ if os.path.exists(chmpath):
 
 del os
 del chmpath
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions

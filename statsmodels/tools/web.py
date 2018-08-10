@@ -5,7 +5,7 @@ to a function's reference
 import webbrowser
 
 from statsmodels.compat.python import urlencode
-from statsmodels.version import release
+from statsmodels import __version__
 
 BASE_URL = 'https://www.statsmodels.org/'
 
@@ -69,7 +69,7 @@ def webdoc(arg=None, stable=None):
 
     Uses the default system browser.
     """
-    stable = release if stable is None else stable
+    stable = __version__ if 'dev' not in __version__ else stable
     url_or_error = _generate_url(arg, stable)
     if isinstance(url_or_error, ValueError):
         raise url_or_error
