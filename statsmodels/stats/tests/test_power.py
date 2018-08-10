@@ -15,10 +15,11 @@ from distutils.version import LooseVersion
 
 
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_allclose, assert_raises,
+from numpy.testing import (assert_almost_equal, assert_allclose,
                            assert_equal, assert_warns, dec)
 import pytest
 import scipy
+import pytest
 
 import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
@@ -735,11 +736,14 @@ def test_power_solver():
     # I let this case fail, could be fixed for some statistical tests
     # (we shouldn't get here in the first place)
     # effect size is negative, but last stage brentq uses [1e-8, 1-1e-8]
-    assert_raises(ValueError, nip.solve_power, None, nobs1=1600, alpha=0.01,
-                  power=0.005, ratio=1, alternative='larger')
+    with pytest.raises(ValueError):
+        nip.solve_power(None, nobs1=1600, alpha=0.01,
+                        power=0.005, ratio=1, alternative='larger')
 
-    assert_raises(ValueError, nip.solve_power, nobs1=None, effect_size=0, alpha=0.01,
-                  power=0.005, ratio=1, alternative='larger')
+    with pytest.raises(ValueError):
+        nip.solve_power(nobs1=None, effect_size=0, alpha=0.01,
+                        power=0.005, ratio=1, alternative='larger')
+
 
 @pytest.mark.skipif(SM_GT_10, reason='Known failure on modern SciPy')
 def test_power_solver_warn():

@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from statsmodels.imputation import mice
 import statsmodels.api as sm
-from numpy.testing import assert_equal, assert_allclose, dec
+from numpy.testing import assert_equal, assert_allclose
 
 try:
     import matplotlib.pyplot as plt  #makes plt available for test functions

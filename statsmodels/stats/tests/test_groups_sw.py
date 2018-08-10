@@ -8,7 +8,9 @@ Created on Thu May 17 21:09:41 2012
 Author: Josef Perktold
 """
 import numpy as np
-from numpy.testing import assert_equal, assert_raises
+from numpy.testing import assert_equal
+import pytest
+
 import statsmodels.stats.sandwich_covariance as sw
 from statsmodels.tools.grouputils import Group, GroupSorted
 
@@ -27,8 +29,8 @@ class CheckPanelLagMixin(object):
 
     def test_raises(self):
         mlag = self.mlag
-        assert_raises(ValueError, sw.lagged_groups, self.x, mlag,
-                      self.g.groupidx)
+        with pytest.raises(ValueError):
+            sw.lagged_groups(self.x, mlag, self.g.groupidx)
 
 
 class TestBalanced(CheckPanelLagMixin):

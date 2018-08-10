@@ -6,9 +6,9 @@ Author: Josef Perktold
 License: BSD-3
 
 """
-
+import pytest
 import numpy as np
-from numpy.testing import assert_allclose, assert_raises
+from numpy.testing import assert_allclose
 
 from statsmodels.base._constraints import (TransformRestriction,
                    transform_params_constraint, fit_constrained)
@@ -65,8 +65,10 @@ if __name__ == '__main__':
     q = [1, 1]
     #tri2 = TransformRestriction(Ri2, q)
     #p = tri.expand([1,1])
-    assert_raises(ValueError, TransformRestriction, Ri2, q)
-    # L doesn't have full row rank, calculating constant fails with Singular Matrix
+    with pytest.raises(ValueError):
+        TransformRestriction(Ri2, q)
+        # L doesn't have full row rank, calculating constant fails
+        # with Singular Matrix
 
     # transform data xr = T x
     np.random.seed(1)

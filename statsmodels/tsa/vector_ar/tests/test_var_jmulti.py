@@ -1,7 +1,8 @@
 from __future__ import absolute_import, print_function
 
+import pytest
 import numpy as np
-from numpy.testing import assert_, assert_allclose, assert_raises
+from numpy.testing import assert_, assert_allclose
 
 import statsmodels.datasets.macrodata.data as macro
 from statsmodels.compat.python import range
@@ -539,6 +540,10 @@ def test_exceptions():
 
             # instant causality:
             ### 0<signif<1
-            assert_raises(ValueError, results_sm[ds][dt].test_inst_causality, 0, 0) # this means signif=0
+            with pytest.raises(ValueError):
+                # this means signif=0
+                results_sm[ds][dt].test_inst_causality(0, 0)
             ### causing must be int, str or iterable of int or str
-            assert_raises(TypeError, results_sm[ds][dt].test_inst_causality, [0.5])  # 0.5 not an int
+            with pytest.raises(TypeError):
+                # 0.5 not an int
+                results_sm[ds][dt].test_inst_causality([0.5])

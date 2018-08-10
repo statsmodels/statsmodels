@@ -1,8 +1,10 @@
 from datetime import datetime
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
-                           assert_raises, assert_)
+                           assert_)
 from numpy import array, column_stack
+import pytest
+
 from statsmodels.datasets import macrodata
 from pandas import Index, DataFrame, DatetimeIndex, concat
 from statsmodels.tsa.filters.api import (bkfilter, hpfilter, cffilter,
@@ -673,8 +675,8 @@ class TestFilters(object):
         expected = self.expected.recurse_init_na
         np.testing.assert_almost_equal(res, expected)
 
-        assert_raises(ValueError, recursive_filter, x,
-                      [.75, .25, .5], [150, 100])
+        with pytest.raises(ValueError):
+            recursive_filter(x, [.75, .25, .5], [150, 100])
 
     def test_pandas(self):
         start = datetime(1951, 3, 31)

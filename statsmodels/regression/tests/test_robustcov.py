@@ -8,9 +8,9 @@ Author: Josef Perktold
 
 import numpy as np
 from scipy import stats
+import pytest
 
-from numpy.testing import (assert_allclose, assert_equal, assert_warns,
-                           assert_raises)
+from numpy.testing import (assert_allclose, assert_equal, assert_warns)
 
 
 from statsmodels.regression.linear_model import OLS, WLS
@@ -411,8 +411,10 @@ class TestOLSRobustCluster2Input(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     def test_too_many_groups(self):
         long_groups = self.groups.reshape(-1, 1)
         groups3 = np.hstack((long_groups, long_groups, long_groups))
-        assert_raises(ValueError, self.res1.get_robustcov_results,'cluster',
-                      groups=groups3, use_correction=True, use_t=True)
+        with pytest.raises(ValueError):
+            self.res1.get_robustcov_results('cluster',
+                                            groups=groups3,
+                                            use_correction=True, use_t=True)
 
     def test_2way_dataframe(self):
         import pandas as pd

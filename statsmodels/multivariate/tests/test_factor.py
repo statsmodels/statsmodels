@@ -4,9 +4,11 @@ import os
 
 import numpy as np
 import pandas as pd
+import pytest
+
 from statsmodels.multivariate.factor import Factor
 from numpy.testing import (assert_equal, assert_array_almost_equal,
-        assert_raises, assert_array_equal, assert_, assert_array_less)
+        assert_array_equal, assert_, assert_array_less)
 from numpy.testing.utils import assert_allclose
 import pytest
 
@@ -61,14 +63,15 @@ def test_direct_corr_matrix():
     assert_array_equal(mod.endog_names, ['Basal', 'Occ', 'Max', 'id'])
 
     # Test set endog_names with the wrong number of elements
-    assert_raises(ValueError, setattr, mod, 'endog_names',
-                  X.iloc[:, :1].columns)
+    with pytest.raises(ValueError):
+        mod.endog_names = X.iloc[:, :1].columns
 
 
 def test_unknown_fa_method_error():
     # Test raise error if an unkonwn FA method is specified in fa.method
     mod = Factor(X.iloc[:, 1:-1], 2, method='ab')
-    assert_raises(ValueError, mod.fit)
+    with pytest.raises(ValueError):
+        mod.fit()
 
 
 def test_example_compare_to_R_output():

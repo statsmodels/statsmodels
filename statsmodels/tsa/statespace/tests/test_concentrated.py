@@ -10,11 +10,13 @@ from __future__ import division, absolute_import, print_function
 
 import numpy as np
 import pandas as pd
+import pytest
+
 from statsmodels.tools.tools import Bunch
 from .results import results_varmax
 from statsmodels.tsa.statespace import (
     sarimax, structural, dynamic_factor, varmax)
-from numpy.testing import assert_equal, assert_raises, assert_allclose
+from numpy.testing import assert_equal, assert_allclose
 
 
 def get_sarimax_models(endog, filter_univariate=False, **kwargs):
@@ -137,8 +139,10 @@ def test_fixed_scale_sarimax():
     params[-1] *= 1.2
 
     # Test that these are not equal in the default computation
-    assert_raises(AssertionError, assert_allclose,
-                  mod_conc.loglike(params[:-1]), mod_orig.loglike(params))
+    with pytest.raises(AssertionError):
+        # WTF This is not a reasonable way to make this assertion
+        assert_allclose(mod_conc.loglike(params[:-1]),
+                        mod_orig.loglike(params))
 
     # Now test that the llf is equal when we use the fixed_scale decorator
     with mod_conc.ssm.fixed_scale(params[-1]):

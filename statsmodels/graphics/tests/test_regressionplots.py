@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 import statsmodels.api as sm
-from numpy.testing import assert_equal, assert_raises
+from numpy.testing import assert_equal
 from statsmodels.graphics.regressionplots import (plot_fit, plot_ccpr,
                   plot_partregress, plot_regress_exog, abline_plot,
                   plot_partregress_grid, plot_ccpr_grid, add_lowess,
@@ -120,7 +120,8 @@ class TestPlot(object):
             pass
         plt.close(fig)
 
-        assert_raises(ValueError, influence_plot, self.res, criterion='unknown')
+        with pytest.raises(ValueError):
+            influence_plot(self.res, criterion='unknown')
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_leverage_resid2(self):
