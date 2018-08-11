@@ -1,10 +1,12 @@
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal, assert_raises)
-from statsmodels.base.transform import (BoxCox)
+from numpy.testing import assert_almost_equal, assert_equal
+import pytest
+
+from statsmodels.base.transform import BoxCox
 from statsmodels.datasets import macrodata
 
 
-class TestTransform:
+class TestTransform(object):
 
     @classmethod
     def setup_class(cls):
@@ -15,32 +17,37 @@ class TestTransform:
     def test_nonpositive(self):
         # Testing negative values
         y = [1, -1, 1]
-        assert_raises(ValueError, self.bc.transform_boxcox, y)
+        with pytest.raises(ValueError):
+            self.bc.transform_boxcox(y)
 
         # Testing nonzero
         y = [1, 0, 1]
-        assert_raises(ValueError, self.bc.transform_boxcox, y)
+        with pytest.raises(ValueError):
+            self.bc.transform_boxcox(y)
 
     def test_invalid_bounds(self):
         # more than two bounds
-        assert_raises(ValueError, self.bc._est_lambda, self.x, (-3, 2, 3))
+        with pytest.raises(ValueError):
+            self.bc._est_lambda(self.x, (-3, 2, 3))
 
         # upper bound <= lower bound
-        assert_raises(ValueError, self.bc._est_lambda, self.x, (2, -1))
+        with pytest.raises(ValueError):
+            self.bc._est_lambda(self.x, (2, -1))
 
     def test_unclear_methods(self):
         # Both _est_lambda and untransform have a method argument that should
         # be tested.
-        assert_raises(ValueError, self.bc._est_lambda,
-                      self.x, (-1, 2), 'test')
-        assert_raises(ValueError, self.bc.untransform_boxcox,
-                      self.x, 1, 'test')
+        with pytest.raises(ValueError):
+            self.bc._est_lambda(self.x, (-1, 2), 'test')
+
+        with pytest.raises(ValueError):
+            self.bc.untransform_boxcox(self.x, 1, 'test')
 
     def test_unclear_scale_parameter(self):
         # bc.guerrero allows for 'mad' and 'sd', for the MAD and Standard
         # Deviation, respectively
-        assert_raises(ValueError, self.bc._est_lambda,
-                      self.x, scale='test')
+        with pytest.raises(ValueError):
+            self.bc._est_lambda(self.x, scale='test')
 
         # Next, check if mad/sd work:
         self.bc._est_lambda(self.x, scale='mad')

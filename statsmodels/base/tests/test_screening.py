@@ -201,7 +201,7 @@ def test_logit_screening():
 
     y, x, idx_nonzero_true, beta = _get_logit_data()
     nobs = len(y)
-    # test uses
+    # screener_kwds used by test
     screener_kwds = dict(pen_weight=nobs * 0.7, threshold_trim=1e-3)
 
     xnames_true = ['var%4d' % ii for ii in idx_nonzero_true]
@@ -247,7 +247,7 @@ def test_glmlogit_screening():
     y, x, idx_nonzero_true, beta = _get_logit_data()
     nobs = len(y)
 
-    # test uses
+    # screener_kwds used by test
     screener_kwds = dict(pen_weight=nobs * 0.75, threshold_trim=1e-3,
                          ranking_attr='model.score_factor')
 
@@ -260,7 +260,6 @@ def test_glmlogit_screening():
     res_oracle = GLMPenalized(y, xframe_true, family=family.Binomial()).fit()
     parameters['oracle'] = res_oracle.params
 
-    #mod_initial = LogitPenalized(y, np.ones(nobs), pen_weight=nobs * 0.5)
     mod_initial = GLMPenalized(y, np.ones(nobs), family=family.Binomial())
 
     screener = VariableScreening(mod_initial, **screener_kwds)
