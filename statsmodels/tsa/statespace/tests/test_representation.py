@@ -120,7 +120,7 @@ class TestClark1987Single(Clark1987):
     """
     @classmethod
     def setup_class(cls):
-        pytest.skip(msg='Not implemented')
+        pytest.skip('Not implemented')
         super(TestClark1987Single, cls).setup_class(
             dtype=np.float32, conserve_memory=0
         )

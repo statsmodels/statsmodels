@@ -93,7 +93,7 @@ class CheckPowerMixin(object):
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_power_plot(self):
         if self.cls == smp.FTestPower:
-            pytest.skip(msg='skip FTestPower plot_power')
+            pytest.skip('skip FTestPower plot_power')
         plt.close()
         fig = plt.figure()
         ax = fig.add_subplot(2,1,1)

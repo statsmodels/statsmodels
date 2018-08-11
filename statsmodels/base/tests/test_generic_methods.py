@@ -118,7 +118,7 @@ class CheckGenericMixin(object):
         else:
             results = self.results
         if isinstance(results, GLMResults) or isinstance(results, DiscreteResults):
-            pytest.skip(msg='Infeasible for {0}'.format(type(results)))
+            pytest.skip('Infeasible for {0}'.format(type(results)))
 
         res = self.results
         fitted = res.fittedvalues
@@ -184,7 +184,7 @@ class CheckGenericMixin(object):
         # not completely generic yet
         if (isinstance(self.results.model, (sm.GEE))):
             # GEE does not subclass LikelihoodModel
-            pytest.skip(msg='GEE does not subclass LikelihoodModel')
+            pytest.skip('GEE does not subclass LikelihoodModel')
 
         use_start_params = not isinstance(self.results.model,
                                           (sm.RLM, sm.OLS, sm.WLS))
@@ -247,7 +247,7 @@ class CheckGenericMixin(object):
     def test_zero_collinear(self):
         # not completely generic yet
         if isinstance(self.results.model, (sm.GEE)):
-            pytest.skip(msg='Not completely generic yet')
+            pytest.skip('Not completely generic yet')
 
         use_start_params = not isinstance(self.results.model,
                                           (sm.RLM, sm.OLS, sm.WLS, sm.GLM))
@@ -383,7 +383,7 @@ class TestGenericOLSOneExog(CheckGenericMixin):
 
     def test_zero_constrained(self):
         # override, we cannot remove the only regressor
-        pytest.skip(msg='Override since cannot remove the only regressor')
+        pytest.skip('Override since cannot remove the only regressor')
         pass
 
 

@@ -239,7 +239,7 @@ class TestLargeStateCovAR1(object):
         # TODO This test is skipped since an exception is currently raised if
         # k_posdef > k_states. However, this test could be used if models of
         # those types were allowed.
-        pytest.skip(msg='Not implemented')
+        pytest.skip('Not implemented')
 
         # Data: just some sample data
         endog = [0.2, -1.5, -.3, -.1, 1.5, 0.2, -0.3, 0.2, 0.5, 0.8]

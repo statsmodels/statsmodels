@@ -5,11 +5,8 @@ import sys
 
 import pytest
 
-from statsmodels.compat.testing import example
-
 try:
     print('In try')
-    import pytest
     import jupyter_client
     import nbformat
     from nbconvert.preprocessors import ExecutePreprocessor
@@ -39,7 +36,7 @@ if not nbs:
     pytestmark = pytest.mark.skip(reason='No notebooks found so not tests run')
 
 
-@example
+@pytest.mark.example
 def test_notebook(notebook):
     fullfile = os.path.abspath(notebook)
     _, filename = os.path.split(fullfile)
@@ -47,7 +44,7 @@ def test_notebook(notebook):
     
     for known_fail in KNOWN_FAILURES:
         if filename == known_fail:
-            pytest.skip(msg='{0} is known to fail'.format(filename))
+            pytest.skip('{0} is known to fail'.format(filename))
     
     with io.open(fullfile, encoding='utf-8') as f:
         nb = nbformat.read(fullfile, as_version=4)

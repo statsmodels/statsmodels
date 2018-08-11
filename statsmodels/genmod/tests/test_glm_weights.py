@@ -27,6 +27,7 @@ TestGlmGaussianWLS                statsmodels.WLS        X      X               
 ================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ==== =========
 """
 from __future__ import division
+from statsmodels.compat.python import PY3
 
 import warnings
 from warnings import catch_warnings
@@ -272,7 +273,7 @@ class TestGlmPoissonFwClu(CheckWeight):
         # no wnobs yet in sandwich covariance calcualtion
         cls.corr_fact = 1 / np.sqrt(n_groups / (n_groups - 1))   #np.sqrt((wsum - 1.) / wsum)
         cov_kwds = {'groups': gid, 'use_correction':False}
-        with pytest.warns(SpecificationWarning):
+        with pytest.warns(None):
             cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                             family=sm.families.Poisson(), freq_weights=fweights
                             ).fit(cov_type='cluster', cov_kwds=cov_kwds)
@@ -773,13 +774,16 @@ def test_warnings_raised():
     gid = np.arange(1, 17 + 1) // 2
 
     cov_kwds = {'groups': gid, 'use_correction': False}
-    with pytest.warns(SpecificationWarning):
+
+    # Work around for buggy pytest repeated warning capture on Python 2.7
+    warning_type = SpecificationWarning if PY3 else None
+    with pytest.warns(warning_type):
         res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                    family=sm.families.Poisson(), freq_weights=weights
                    ).fit(cov_type='cluster', cov_kwds=cov_kwds)
         res1.summary()
 
-    with pytest.warns(SpecificationWarning):
+    with pytest.warns(warning_type):
         res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                    family=sm.families.Poisson(), var_weights=weights
                    ).fit(cov_type='cluster', cov_kwds=cov_kwds)

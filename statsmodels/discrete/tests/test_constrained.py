@@ -102,7 +102,7 @@ class CheckPoissonConstrainedMixin(object):
             df_r = res2.N - res2.df_m - 1
             assert_equal(res1.df_resid, df_r)
         else:
-            pytest.skip(msg="not available yet")
+            pytest.skip("not available yet")
 
     def test_other(self):
         # some results may not be valid or available for all models
@@ -120,7 +120,7 @@ class CheckPoissonConstrainedMixin(object):
                     warnings.warn(message)
 
         else:
-            pytest.skip(msg="not available yet")
+            pytest.skip("not available yet")
 
 
 class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):

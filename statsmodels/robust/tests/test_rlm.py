@@ -33,7 +33,7 @@ class CheckRlmResultsMixin(object):
 #TODO: get other results from SAS, though if it works for one...
     def test_confidenceintervals(self):
         if not hasattr(self.res2, 'conf_int'):
-            pytest.skip(msg="Results from R")
+            pytest.skip("Results from R")
         else:
             assert_almost_equal(self.res1.conf_int(), self.res2.conf_int(),
             DECIMAL_4)
@@ -57,7 +57,7 @@ class CheckRlmResultsMixin(object):
 
     def test_bcov_unscaled(self):
         if not hasattr(self.res2, 'bcov_unscaled'):
-            pytest.skip(msg="No unscaled cov matrix from SAS")
+            pytest.skip("No unscaled cov matrix from SAS")
         else:
             assert_almost_equal(self.res1.bcov_unscaled,
                     self.res2.bcov_unscaled, DECIMAL_4)
@@ -74,7 +74,7 @@ class CheckRlmResultsMixin(object):
 
     def test_tvalues(self):
         if not hasattr(self.res2, 'tvalues'):
-            pytest.skip(msg="No tvalues in benchmark")
+            pytest.skip("No tvalues in benchmark")
         else:
             assert_allclose(self.res1.tvalues, self.res2.tvalues, rtol=0.003)
 

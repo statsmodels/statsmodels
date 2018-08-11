@@ -433,7 +433,7 @@ class TestProbitBasinhopping(CheckBinaryResults):
     @classmethod
     def setup_class(cls):
         if not has_basinhopping:
-            pytest.skip(msg="Skipped TestProbitBasinhopping since"
+            pytest.skip("Skipped TestProbitBasinhopping since"
                             " basinhopping solver is not available")
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
@@ -463,7 +463,7 @@ class TestProbitMinimizeDogleg(CheckBinaryResults):
     @classmethod
     def setup_class(cls):
         if not has_dogleg:
-            pytest.skip(msg="Skipped TestProbitMinimizeDogleg since "
+            pytest.skip("Skipped TestProbitMinimizeDogleg since "
                             "dogleg method is not available")
 
         data = sm.datasets.spector.load()
@@ -580,7 +580,7 @@ class TestCVXOPT(object):
     @classmethod
     def setup_class(cls):
         if not has_cvxopt:
-            pytest.skip(msg='Skipped test_cvxopt since cvxopt is not available')
+            pytest.skip('Skipped test_cvxopt since cvxopt is not available')
         cls.data = sm.datasets.spector.load()
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=True)
 

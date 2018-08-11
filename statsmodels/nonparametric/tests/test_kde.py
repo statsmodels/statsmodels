@@ -207,7 +207,7 @@ class CheckKDEWeights(object):
 
     def test_evaluate(self):
         if self.kernel_name == 'cos':
-            pytest.skip(msg="Cosine kernel fails against Stata")
+            pytest.skip("Cosine kernel fails against Stata")
         kde_vals = [self.res1.evaluate(xi) for xi in self.x]
         kde_vals = np.squeeze(kde_vals)  #kde_vals is a "column_list"
         npt.assert_almost_equal(kde_vals, self.res_density,
