@@ -12,7 +12,7 @@ dataset = macrodata['infl']
 dataset_cpi = macrodata['cpi']
 
 curdir = os.path.dirname(os.path.abspath(__file__))
-new_data = pd.read_csv('../CPIAPPNS.csv')
+new_data = pd.read_csv(os.path.join(curdir, 'CPIAPPNS.csv'))
 new_data.index = pd.PeriodIndex(start='04-2010', end='03-2018', freq='M')
 new_data = new_data['CPIAPPNS']
 

@@ -9,10 +9,10 @@ from statsmodels import datasets
 from numpy.testing import assert_equal
 
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+curdir = os.path.dirname(os.path.abspath(__file__))
 macrodata = datasets.macrodata.load_pandas().data
 macrodata.index = pd.PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
-new_data = pd.read_csv('../CPIAPPNS.csv')
+new_data = pd.read_csv(os.path.join(curdir, 'CPIAPPNS.csv'))
 new_data.index = pd.PeriodIndex(start='04-2010', end='03-2018', freq='M')
 
 
