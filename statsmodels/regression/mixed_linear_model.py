@@ -1938,7 +1938,7 @@ class MixedLM(base.LikelihoodModel):
 
     def fit(self, start_params=None, reml=True, niter_sa=0,
             do_cg=True, fe_pen=None, cov_pen=None, free=None,
-            full_output=False, method='bfgs', **kwargs):
+            full_output=False, method=None, **kwargs):
         """
         Fit a linear mixed model to the data.
 
@@ -1976,20 +1976,29 @@ class MixedLM(base.LikelihoodModel):
         full_output : bool
             If true, attach iteration history to results
         method : string
-            Optimization method.
+            Optimization method.  Can be a scipy.optimize method name,
+            or a list of such names to be tried in sequence.
 
         Returns
         -------
         A MixedLMResults instance.
         """
 
-        _allowed_kwargs = ['gtol', 'maxiter']
+        _allowed_kwargs = ['gtol', 'maxiter', 'eps', 'maxcor', 'ftol',
+                           'tol', 'disp', 'maxls']
         for x in kwargs.keys():
             if x not in _allowed_kwargs:
-                raise ValueError("Argument %s not allowed for MixedLM.fit" % x)
+                warnings.warn("Argument %s not used by MixedLM.fit" % x)
 
-        if method.lower() in ["newton", "ncg"]:
-            raise ValueError("method %s not available for MixedLM" % method)
+        if method is None:
+            method = ['bfgs', 'lbfgs']
+        elif isinstance(method, str):
+            method = [method]
+
+        for meth in method:
+            if meth.lower() in ["newton", "ncg"]:
+                raise ValueError(
+                    "method %s not available for MixedLM" % meth)
 
         self.reml = reml
         self.cov_pen = cov_pen
@@ -2032,16 +2041,24 @@ class MixedLM(base.LikelihoodModel):
             if niter_sa > 0:
                 warnings.warn("niter_sa is currently ignored")
 
-            # It seems that the optimizers sometimes stop too soon, so
-            # we run a few times.
-            for rep in range(5):
+            # Try optimizing one or more times
+            for j in range(len(method)):
                 rslt = super(MixedLM, self).fit(start_params=packed,
                                                 skip_hessian=True,
-                                                method=method,
+                                                method=method[j],
                                                 **kwargs)
                 if rslt.mle_retvals['converged']:
                     break
                 packed = rslt.params
+                if j + 1 < len(method):
+                    next_method = method[j + 1]
+                    warnings.warn(
+                        "Retrying MixedLM optimization with %s" % next_method,
+                        ConvergenceWarning)
+                else:
+                    msg = ("MixedLM optimization failed, " +
+                           "trying a different optimizer may help.")
+                    warnings.warn(msg, ConvergenceWarning)
 
             # The optimization succeeded
             params = np.atleast_1d(rslt.params)
@@ -2050,7 +2067,9 @@ class MixedLM(base.LikelihoodModel):
 
         converged = rslt.mle_retvals['converged']
         if not converged:
-            msg = "Gradient optimization failed."
+            gn = self.score(rslt.params)
+            gn = np.sqrt(np.sum(gn**2))
+            msg = "Gradient optimization failed, |grad| = %f" % gn
             warnings.warn(msg, ConvergenceWarning)
 
         # Convert to the final parameterization (i.e. undo the square
