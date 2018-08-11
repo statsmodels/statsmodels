@@ -21,7 +21,7 @@ from statsmodels.tools.sm_exceptions import InvalidTestWarning
 
 from .results import results_macro_ols_robust as res
 from .results import results_grunfeld_ols_robust_cluster as res2
-#test_hac_simple():
+
 
 class CheckOLSRobust(object):
 
@@ -209,7 +209,6 @@ class CheckOLSRobustNewMixin(object):
         rtol = 1e-5
         # Note we always use df_resid for scale
         # Stata uses nobs or df_resid for rmse, not always available in Stata
-        #assert_allclose(res1.scale, res2.rmse**2 * res2.N / (res2.N - res2.df_m - 1), rtol=rtol)
         skip = False
         if hasattr(res2, 'rss'):
             scale = res2.rss / (res2.N - res2.df_m - 1)
@@ -240,7 +239,8 @@ class CheckOLSRobustNewMixin(object):
 
 
 
-    def test_smoke(self):
+    def test_summary(self):
+        # smoke test
         self.res1.summary()
 
 
@@ -279,7 +279,6 @@ class TestOLSRobust2SmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
         assert_equal(df, r_df)
 
         assert_warns(InvalidTestWarning, res1.compare_f_test, res_ols2)
-        #fva, pval, df = res1.compare_f_test(res_ols2)
 
 
 
@@ -336,7 +335,6 @@ class CheckOLSRobustCluster(CheckOLSRobust):
 
     @classmethod
     def setup_class(cls):
-        #import pandas as pa
         from statsmodels.datasets import grunfeld
 
         dtapa = grunfeld.data.load_pandas()
@@ -491,7 +489,6 @@ class TestOLSRobustCluster2LargeFit(CheckOLSRobustCluster, CheckOLSRobustNewMixi
 
     def setup(self):
         model = OLS(self.res1.model.endog, self.res1.model.exog)
-        #res_ols = self.res1.model.fit(cov_type='cluster',
         res_ols = model.fit(cov_type='cluster',
                                       cov_kwds=dict(groups=self.groups,
                                                   use_correction=False,
@@ -692,7 +689,6 @@ class CheckWLSRobustCluster(CheckOLSRobust):
 
     @classmethod
     def setup_class(cls):
-        #import pandas as pa
         from statsmodels.datasets import grunfeld
 
         dtapa = grunfeld.data.load_pandas()
@@ -791,7 +787,6 @@ class TestWLSOLSRobustSmall(object):
 
     @classmethod
     def setup_class(cls):
-        #import pandas as pa
         from statsmodels.datasets import grunfeld
 
         dtapa = grunfeld.data.load_pandas()
