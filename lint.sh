@@ -24,6 +24,15 @@ if [ "$LINT" ]; then
         RET=1
     fi
 
+    # Until these checks get merged into the setup.cfg checks or this module
+    # gets checked in the strict check above, individual checks for
+    # partially-fixed files
+    flake8 --isolated --select=E127,E128,E203,E301,E302,E303,E305 \
+        statsmodels/discrete/discrete_model.py
+    if [ $? -ne "0" ]; then
+        RET=1
+    fi
+
 fi
 
 exit $RET
