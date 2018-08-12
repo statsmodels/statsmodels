@@ -1,10 +1,11 @@
 import numpy as np
+from numpy.testing import assert_allclose, assert_array_equal
+import pytest
+
 from statsmodels.stats import knockoff_regeffects as kr
 from statsmodels.stats._knockoff import (RegressionFDR,
                                          _design_knockoff_equi,
                                          _design_knockoff_sdp)
-from numpy.testing import assert_allclose, assert_array_equal
-from numpy.testing.decorators import slow
 
 try:
     import cvxopt
@@ -81,7 +82,7 @@ def test_testers():
             RegressionFDR(y, x, tv, design_method=method)
 
 
-@slow
+@pytest.mark.slow
 def test_sim():
     # This function assesses the performance of the knockoff approach
     # relative to its theoretical claims.
