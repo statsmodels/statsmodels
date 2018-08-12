@@ -21,7 +21,7 @@ def test_dataset(dataset_name):
 
     ds = dataset.load()
     assert isinstance(ds, Dataset)
-    assert isinstance(ds.data, np.ndarray)
+    assert isinstance(ds.data, np.recarray)
     if hasattr(ds, 'exog'):
         assert isinstance(ds.exog, np.ndarray)
     if hasattr(ds, 'endog'):

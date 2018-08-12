@@ -335,7 +335,10 @@ def load_csv(base_file, csv_name, sep=',', convert_float=False):
 
 def as_numpy_dataset(ds):
     """Convert a pandas dataset to a NumPy dataset"""
-    ds.data = np.asarray(ds.data)
+    import warnings
+    warnings.warn('load will return datasets containing pandas DataFrames and Series '
+                  'in the Future', FutureWarning)
+    ds.data = ds.data.to_records()
     for d in dir(ds):
         if d.startswith('_'):
             continue
