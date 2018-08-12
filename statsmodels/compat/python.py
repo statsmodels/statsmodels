@@ -162,6 +162,7 @@ else:
 
     urlopen = urllib2.urlopen
     urljoin = urlparse.urljoin
+    urlretrieve = urllib.urlretrieve
     urlencode = urllib.urlencode
     HTTPError = urllib2.HTTPError
     URLError = urllib2.URLError
