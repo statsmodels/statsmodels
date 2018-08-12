@@ -150,7 +150,3 @@ class PanelSample(object):
 
         endog = self.y_true + noise
         return endog
-
-
-if __name__ == '__main__':
-    pass
