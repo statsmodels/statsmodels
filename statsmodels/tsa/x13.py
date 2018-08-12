@@ -33,7 +33,8 @@ class _freq_to_period:
             return 12
         elif key.startswith('Q'):
             return 4
-
+        elif key.startswith('W'):
+            return 52
 
 _freq_to_period = _freq_to_period()
 

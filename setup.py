@@ -369,8 +369,11 @@ ext_data = dict(
              "sources" : []},
     _smoothers_lowess = {"name" : "statsmodels/nonparametric/_smoothers_lowess.c",
              "depends" : [],
-             "sources" : []}
-    )
+             "sources" : []},
+    _exponential_smoothers = {"name": "statsmodels/tsa/_exponential_smoothers.c",
+                              "depends": [],
+                              "sources": []}
+)
 
 statespace_ext_data = dict(
     _initialization = {"name" : "statsmodels/tsa/statespace/_initialization.c",
