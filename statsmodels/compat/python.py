@@ -23,6 +23,7 @@ if PY3:
     import io
     bytes = bytes
     str = str
+    unicode = str
     asunicode = lambda x, _ : str(x)
 
     def asbytes(s):
@@ -123,6 +124,7 @@ else:
 
     bytes = str
     str = str
+    unicode = unicode
     asbytes = str
     asstr = str
     asstr2 = str

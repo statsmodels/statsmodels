@@ -18,7 +18,8 @@ if [ "$LINT" ]; then
         statsmodels/interface/ \
         statsmodels/tsa/regime_switching \
         statsmodels/regression/mixed_linear_model.py \
-        statsmodels/duration/__init__.py
+        statsmodels/duration/__init__.py \
+        statsmodels/regression/recursive_ls.py
     if [ $? -ne "0" ]; then
         RET=1
     fi
