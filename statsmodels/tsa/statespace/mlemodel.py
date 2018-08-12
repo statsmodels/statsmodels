@@ -8,8 +8,8 @@ License: Simplified-BSD
 from __future__ import division, absolute_import, print_function
 from statsmodels.compat.python import long
 
-try: unicode
-except NameError: unicode = str
+try: unicode  # noqa: E701
+except NameError: unicode = str  # noqa: E701
 
 import numpy as np
 import pandas as pd
@@ -297,6 +297,7 @@ class MLEModel(tsbase.TimeSeriesModel):
     @property
     def initialization(self):
         return self.ssm.initialization
+
     @initialization.setter
     def initialization(self, value):
         self.ssm.initialization = value
@@ -2220,16 +2221,20 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 # Setup functions to calculate the p-values
                 if use_f:
                     from scipy.stats import f
-                    pval_lower = lambda test_statistics: f.cdf(
-                        test_statistics, numer_dof, denom_dof)
-                    pval_upper = lambda test_statistics: f.sf(
-                        test_statistics, numer_dof, denom_dof)
+
+                    def pval_lower(test_statistics):
+                        return f.cdf(test_statistics, numer_dof, denom_dof)
+
+                    def pval_upper(test_statistics):
+                        return f.sf(test_statistics, numer_dof, denom_dof)
                 else:
                     from scipy.stats import chi2
-                    pval_lower = lambda test_statistics: chi2.cdf(
-                        numer_dof * test_statistics, denom_dof)
-                    pval_upper = lambda test_statistics: chi2.sf(
-                        numer_dof * test_statistics, denom_dof)
+
+                    def pval_lower(test_statistics):
+                        return chi2.cdf(numer_dof * test_statistics, denom_dof)
+
+                    def pval_upper(test_statistics):
+                        return chi2.sf(numer_dof * test_statistics, denom_dof)
 
                 # Calculate the one- or two-sided p-values
                 alternative = alternative.lower()
@@ -2634,7 +2639,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         ax = fig.add_subplot(222)
         # temporarily disable Deprecation warning, normed -> density
         # hist needs to use `density` in future when minimum matplotlib has it
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True):
             ax.hist(resid_nonmissing, normed=True, label='Hist')
         from scipy.stats import gaussian_kde, norm
         kde = gaussian_kde(resid_nonmissing)
@@ -2709,17 +2714,18 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             model_name = model.__class__.__name__
 
         # Diagnostic tests results
+        # TODO can we narrow down these exceptions?
         try:
             het = self.test_heteroskedasticity(method='breakvar')
-        except:
+        except:  # noqa: E722
             het = np.array([[np.nan]*2])
         try:
             lb = self.test_serial_correlation(method='ljungbox')
-        except:
+        except:  # noqa: E722
             lb = np.array([[np.nan]*2]).reshape(1, 2, 1)
         try:
             jb = self.test_normality(method='jarquebera')
-        except:
+        except:  # noqa: E722
             jb = np.array([[np.nan]*4])
 
         # Create the tables
@@ -2753,9 +2759,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         if hasattr(self, 'cov_type'):
             top_left.append(('Covariance Type:', [self.cov_type]))
 
-        format_str = lambda array: [
-            ', '.join(['{0:.2f}'.format(i) for i in array])
-        ]
+        def format_str(array):
+            return [', '.join(['{0:.2f}'.format(i) for i in array])]
+
         diagn_left = [('Ljung-Box (Q):', format_str(lb[:, 0, -1])),
                       ('Prob(Q):', format_str(lb[:, 1, -1])),
                       ('Heteroskedasticity (H):', format_str(het[:, 0])),
@@ -2815,6 +2821,8 @@ class MLEResultsWrapper(wrap.ResultsWrapper):
     }
     _wrap_methods = wrap.union_dicts(
         tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods)
+
+
 wrap.populate_wrapper(MLEResultsWrapper, MLEResults)
 
 
@@ -2933,4 +2941,6 @@ class PredictionResultsWrapper(wrap.ResultsWrapper):
 
     _methods = {}
     _wrap_methods = wrap.union_dicts(_methods)
+
+
 wrap.populate_wrapper(PredictionResultsWrapper, PredictionResults)
