@@ -115,7 +115,7 @@ def add_trend(x, trend="c", prepend=False, has_constant='skip'):
         x = np.column_stack(x[::order])
 
     if is_recarray:
-        x = x.to_records(index=False, convert_datetime64=False)
+        x = x.to_records(index=False)
         new_descr = x.dtype.descr
         extra_col = len(new_descr) - len(descr)
         if prepend:

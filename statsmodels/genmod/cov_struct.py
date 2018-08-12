@@ -396,8 +396,8 @@ class Nested(CovStruct):
             # This is used to construct the working correlation
             # matrix.
             ilabel = np.zeros((ngrp, ngrp), dtype=np.int32)
-            ilabel[[ix1, ix2]] = ncm + 1
-            ilabel[[ix2, ix1]] = ncm + 1
+            ilabel[ix1, ix2] = ncm + 1
+            ilabel[ix2, ix1] = ncm + 1
             ilabels.append(ilabel)
 
             # This is used to estimate the variance components.

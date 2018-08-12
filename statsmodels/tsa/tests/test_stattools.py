@@ -148,7 +148,7 @@ class TestACF(CheckCorrGram):
         #cls.acf = np.concatenate(([1.], cls.acf))
         cls.qstat = cls.results['Q1']
         cls.res1 = acf(cls.x, nlags=40, qstat=True, alpha=.05)
-        cls.confint_res = cls.results[['acvar_lb','acvar_ub']].as_matrix()
+        cls.confint_res = cls.results[['acvar_lb','acvar_ub']].values
 
     def test_acf(self):
         assert_almost_equal(self.res1[0][1:41], self.acf, DECIMAL_8)
