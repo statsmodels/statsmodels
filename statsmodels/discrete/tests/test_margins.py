@@ -44,7 +44,6 @@ class TestPoissonMargin(CheckMarginMixin):
                         -5.0529]
         mod_poi = Poisson(endog, exog)
         res_poi = mod_poi.fit(start_params=start_params)
-        #res_poi = mod_poi.fit(maxiter=100)
         marge_poi = res_poi.get_margeff()
         cls.res = res_poi
         cls.margeff = marge_poi
