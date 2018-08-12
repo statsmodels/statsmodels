@@ -23,7 +23,6 @@ import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.compat.numpy import np_matrix_rank
 
-mat = np.array
 
 def svar_ckerr(svar_type, A, B):
     if A is None and (svar_type == 'A' or svar_type == 'AB'):
@@ -90,8 +89,8 @@ class SVAR(tsbase.TimeSeriesModel):
             self.B_mask = B_mask
 
         # convert A and B to numeric
-        #TODO: change this when masked support is better or with formula
-        #integration
+        # TODO: change this when masked support is better or with formula
+        # integration
         Anum = np.zeros(A.shape, dtype=float)
         Anum[~A_mask] = A[~A_mask]
         Anum[A_mask] = np.nan
@@ -250,9 +249,9 @@ class SVAR(tsbase.TimeSeriesModel):
         self.sigma_u = omega
 
         A, B = self._solve_AB(start_params, override=override,
-                                                    solver=solver,
-                                                    maxiter=maxiter,
-                                                    maxfun=maxfun)
+                              solver=solver,
+                              maxiter=maxiter,
+                              maxfun=maxfun)
         A_mask = self.A_mask
         B_mask = self.B_mask
 
@@ -272,7 +271,7 @@ class SVAR(tsbase.TimeSeriesModel):
         is estimated
         """
 
-        #TODO: this doesn't look robust if A or B is None
+        # TODO: this doesn't look robust if A or B is None
         A = self.A
         B = self.B
         A_mask = self.A_mask
@@ -291,13 +290,12 @@ class SVAR(tsbase.TimeSeriesModel):
 
         W = np.dot(npl.inv(B),A)
         trc_in = np.dot(np.dot(W.T,W),sigma_u)
-        sign, b_logdet = slogdet(B**2) #numpy 1.4 compat
+        sign, b_logdet = slogdet(B**2)  # numpy 1.4 compat
         b_slogdet = sign * b_logdet
 
         likl = -nobs/2. * (neqs * np.log(2 * np.pi) - \
                 np.log(npl.det(A)**2) + b_slogdet + \
                 np.trace(trc_in))
-
 
         return likl
 
@@ -316,7 +314,6 @@ class SVAR(tsbase.TimeSeriesModel):
         loglike = self.loglike
         return approx_fprime(AB_mask, loglike, epsilon=1e-8)
 
-
     def hessian(self, AB_mask):
         """
         Returns numerical hessian.
@@ -325,7 +322,7 @@ class SVAR(tsbase.TimeSeriesModel):
         return approx_hess(AB_mask, loglike)
 
     def _solve_AB(self, start_params, maxiter, maxfun, override=False,
-            solver='bfgs'):
+                  solver='bfgs'):
         """
         Solves for MLE estimate of structural parameters
 
@@ -347,9 +344,8 @@ class SVAR(tsbase.TimeSeriesModel):
         Returns
         -------
         A_solve, B_solve: ML solutions for A, B matrices
-
         """
-        #TODO: this could stand a refactor
+        # TODO: this could stand a refactor
         A_mask = self.A_mask
         B_mask = self.B_mask
         A = self.A
@@ -363,14 +359,12 @@ class SVAR(tsbase.TimeSeriesModel):
             J = self._compute_J(A, B)
             self.check_order(J)
             self.check_rank(J)
-        else: #TODO: change to a warning?
+        else:  # TODO: change to a warning?
             print("Order/rank conditions have not been checked")
 
         retvals = super(SVAR, self).fit(start_params=start_params,
                     method=solver, maxiter=maxiter,
                     maxfun=maxfun, ftol=1e-20, disp=0).params
-
-
 
         A[A_mask] = retvals[:A_len]
         B[B_mask] = retvals[A_len:]
@@ -378,20 +372,18 @@ class SVAR(tsbase.TimeSeriesModel):
         return A, B
 
     def _compute_J(self, A_solve, B_solve):
-
-        #first compute appropriate duplication matrix
+        # first compute appropriate duplication matrix
         # taken from Magnus and Neudecker (1980),
-        #"The Elimination Matrix: Some Lemmas and Applications
+        # "The Elimination Matrix: Some Lemmas and Applications
         # the creation of the D_n matrix follows MN (1980) directly,
-        #while the rest follows Hamilton (1994)
+        # while the rest follows Hamilton (1994)
 
         neqs = self.neqs
         sigma_u = self.sigma_u
         A_mask = self.A_mask
         B_mask = self.B_mask
 
-        #first generate duplication matrix, see MN (1980) for notation
-
+        # first generate duplication matrix, see MN (1980) for notation
         D_nT = np.zeros([int((1.0 / 2) * (neqs) * (neqs + 1)), neqs**2])
 
         for j in range(neqs):
@@ -479,7 +471,6 @@ class SVARProcess(VARProcess):
         self.names = names
 
     def orth_ma_rep(self, maxn=10, P=None):
-
         """
 
         Unavailable for SVAR
@@ -500,7 +491,8 @@ class SVARProcess(VARProcess):
             P = np.dot(npl.inv(A_solve), B_solve)
 
         ma_mats = self.ma_rep(maxn=maxn)
-        return mat([np.dot(coefs, P) for coefs in ma_mats])
+        return np.array([np.dot(coefs, P) for coefs in ma_mats])
+
 
 class SVARResults(SVARProcess, VARResults):
     """
@@ -568,6 +560,7 @@ class SVARResults(SVARProcess, VARResults):
     """
 
     _model_type = 'SVAR'
+    # TODO: This attribute exists only for SVAR and VAR; get rid of it.
 
     def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
                  A=None, B=None, A_mask=None, B_mask=None, model=None,
@@ -581,7 +574,7 @@ class SVARResults(SVARProcess, VARResults):
         self.n_totobs, self.neqs = self.y.shape
         self.nobs = self.n_totobs - lag_order
         k_trend = util.get_trendorder(trend)
-        if k_trend > 0: # make this the polynomial trend order
+        if k_trend > 0:  # make this the polynomial trend order
             trendorder = k_trend - 1
         else:
             trendorder = None
@@ -601,16 +594,16 @@ class SVARResults(SVARProcess, VARResults):
         intercept = self.params[0]
         coefs = reshaped.swapaxes(1, 2).copy()
 
-        #SVAR components
-        #TODO: if you define these here, you don't also have to define
-        #them in SVAR process, but I left them for now -ss
+        # SVAR components
+        # TODO: if you define these here, you don't also have to define
+        # them in SVAR process, but I left them for now -ss
         self.A = A
         self.B = B
         self.A_mask = A_mask
         self.B_mask = B_mask
 
         super(SVARResults, self).__init__(coefs, intercept, sigma_u, A,
-                             B, names=names)
+                                          B, names=names)
 
     def irf(self, periods=10, var_order=None):
         """
@@ -625,7 +618,7 @@ class SVARResults(SVARProcess, VARResults):
         irf : IRAnalysis
         """
         A = self.A
-        B= self.B
+        B = self.B
         P = np.dot(npl.inv(A), B)
 
         return IRAnalysis(self, P=P, periods=periods, svar=True)
@@ -690,13 +683,12 @@ class SVARResults(SVARProcess, VARResults):
             s_type = 'AB'
         g_list = []
 
-
         for i in range(repl):
-            #discard first hundred to correct for starting bias
+            # discard first hundred to correct for starting bias
             sim = util.varsim(coefs, intercept, sigma_u,
                     steps=nobs+burn)
             sim = sim[burn:]
-            if cum == True:
+            if cum is True:
                 if i < 10:
                     sol = SVAR(sim, svar_type=s_type, A=A_pass,
                                B=B_pass).fit(maxlags=k_ar)
@@ -711,13 +703,14 @@ class SVARResults(SVARProcess, VARResults):
                         split = len(A_pass[A_mask])
                         opt_A = mean_AB[:split]
                         opt_A = mean_AB[split:]
+                    # FIXME: opt_B is not defined.
                     ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
                                  B=B_pass).fit(maxlags=k_ar,\
                                  A_guess=opt_A, B_guess=opt_B).\
                                  svar_ma_rep(maxn=T).cumsum(axis=0)
 
 
-            elif cum == False:
+            elif cum is False:
                 if i < 10:
                     sol = SVAR(sim, svar_type=s_type, A=A_pass,
                                B=B_pass).fit(maxlags=k_ar)
@@ -740,4 +733,3 @@ class SVARResults(SVARProcess, VARResults):
         lower = ma_sort[index[0],:, :, :]
         upper = ma_sort[index[1],:, :, :]
         return lower, upper
-
