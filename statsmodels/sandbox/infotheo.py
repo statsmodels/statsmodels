@@ -395,7 +395,7 @@ def renyientropy(px,alpha=1,logbase=2,measure='R'):
         if logbase != 2:
             return logbasechange(2, logbase) * genent
         return genent
-    elif 'inf' in string(alpha).lower() or alpha == np.inf:
+    elif 'inf' in str(alpha).lower() or alpha == np.inf:
         return -np.log(np.max(px))
 
     # gets here if alpha != (1 or inf)

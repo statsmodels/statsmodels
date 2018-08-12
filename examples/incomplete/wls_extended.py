@@ -261,7 +261,7 @@ for it in range(niter):
     bootres[it, :nvar] = res.params
     bootres[it, nvar:] = res.bse
 
-np.set_print(options(linewidth=200))
+np.set_printoptions(linewidth=200)
 print('Bootstrap Results of parameters and parameter standard deviation  OLS')
 print('Parameter estimates')
 print('median', np.median(bootres[:,:5], 0))

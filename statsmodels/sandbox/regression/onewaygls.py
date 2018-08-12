@@ -284,7 +284,7 @@ class OneWayLS(object):
         return '\n'.join(txt), summarytable
 
 
-    def print_summary(res):
+    def print_summary(self, res):
         '''printable string of summary
 
         '''

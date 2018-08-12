@@ -430,18 +430,6 @@ if __name__ == '__main__': #pragma : no cover
     jac2 = (jac+jacmin)/2.
     print(np.dot(jac2.T, jac2))
 
-    #he = approx_hess(xk,fun2,epsilon,*args)
-    print(approx_hess_old(xk,fun2,1e-3,args))
-    he = approx_hess_old(xk,fun2,None,args)
-    print('hessfd')
-    print(he)
-    print('epsilon =', None)
-    print(he[0] - 2*np.dot(x.T, x))
-
-    for eps in [1e-3,1e-4,1e-5,1e-6]:
-        print('eps =', eps)
-        print(approx_hess_old(xk,fun2,eps,args)[0] - 2*np.dot(x.T, x))
-
     hcs2 = approx_hess_cs(xk,fun2,args=args)
     print('hcs2')
     print(hcs2 - 2*np.dot(x.T, x))

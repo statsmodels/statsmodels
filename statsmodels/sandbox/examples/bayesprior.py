@@ -12,7 +12,7 @@ except:
 from scipy.stats import gamma, beta, invgamma
 import numpy as np
 from matplotlib import pyplot as plt
-from scipy import stats
+from scipy import stats, integrate
 from scipy.stats import rv_continuous
 from scipy.special import gammaln, gammaincinv, gamma, gammainc
 from numpy import log,exp
