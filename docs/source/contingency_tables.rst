@@ -74,7 +74,7 @@ product of the row and column marginal distributions:
 
 .. math::
 
-    P_{ij} = \sum_k P_{ij} \cdot \sum_k P_{kj} \forall i, j
+    P_{ij} = \sum_k P_{ij} \cdot \sum_k P_{kj} \quad \text{for all} \quad  i, j
 
 We can obtain the best-fitting independent distribution for our
 observed data, and then view residuals which identify particular cells
