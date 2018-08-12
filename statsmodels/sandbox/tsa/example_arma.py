@@ -399,6 +399,7 @@ plt.figure()
 pltxcorr(plt,x,x, usevlines=False)
 plt.figure()
 #FIXME: plotacf was moved to graphics/tsaplots.py, and interface changed
+from statsmodels.graphics.tsaplots import plotacf
 plotacf(plt, acf1[:20], np.arange(len(acf1[:20])), usevlines=True)
 plt.figure()
 ax = plt.subplot(211)

@@ -34,7 +34,7 @@ def levinson_durbin_nitime(s, order=10, isacov=False):
         sig[k] = sig[k-1]*(1 - phi[k,k]**2)
 
     sigma_v = sig[-1]; arcoefs = phi[1:,-1]
-    return sigma_v, arcoefs, pacf, phi  #return everything
+    return sigma_v, arcoefs, phi  #return everything
 
 import nitime.utils as ut
 

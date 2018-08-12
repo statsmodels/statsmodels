@@ -657,7 +657,7 @@ def gjrconvertparams(self, params, nar, nma):
 
     mu = params[-1]
     params2 = (ar, ma) #(mu, ar, ma)
-    return paramsclass
+    return params2
 
 #TODO: this should be generalized to ARMA?
 #can possibly also leverage TSME above

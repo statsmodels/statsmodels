@@ -67,6 +67,7 @@ from numpy.testing import assert_almost_equal
 
 import matplotlib.pyplot as plt
 import numdifftools as ndt
+from scipy import optimize
 
 import statsmodels.api as sm
 from statsmodels.sandbox import tsa

@@ -131,10 +131,10 @@ else:
     strchar = 'S'
 
     def isfileobj(f):
-        return isinstance(f, file)
+        return isinstance(f, file)  # noqa:F821
 
     def asunicode(s, encoding='ascii'):
-        if isinstance(s, unicode):
+        if isinstance(s, unicode):  # noqa:F821
             return s
         return s.decode(encoding)
 
@@ -142,7 +142,7 @@ else:
         return open(filename, mode=mode)
 
     # import iterator versions of these functions
-    range = xrange
+    range = xrange  # noqa:F821
     zip = itertools.izip
     filter = itertools.ifilter
     map = itertools.imap
@@ -162,9 +162,9 @@ else:
     urlencode = urllib.urlencode
     HTTPError = urllib2.HTTPError
     URLError = urllib2.URLError
-    string_types = basestring
+    string_types = basestring  # noqa:F821
 
-    input = raw_input
+    input = raw_input  # noqa:F821
 
 
 def getexception():
