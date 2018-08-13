@@ -58,7 +58,8 @@ def custom_labeller(cell):
 class TestCell(object):
     def test_celldata(self):
         celldata = cell0data, cell1data, row1data[0], row1data[1]
-        cells = [Cell(datum, datatype=i%2) for i, datum in enumerate(celldata)]
+        cells = [Cell(datum, datatype=i % 2)
+                 for i, datum in enumerate(celldata)]
         for cell, datum in zip(cells, celldata):
             assert_equal(cell.data, datum)
 

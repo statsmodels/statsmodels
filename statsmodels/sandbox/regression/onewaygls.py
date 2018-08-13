@@ -335,7 +335,7 @@ standard dev', np.sqrt(res.sigmabygroup)
 
         from statsmodels.iolib import SimpleTable
         resvals = {}
-        resvals['tab'] = str(SimpleTable([(['%r'%(row[0],)]
+        resvals['tab'] = str(SimpleTable([(['%r' % (row[0],)]
                             + list(row[1])
                             + ['*']*(row[1][1]>0.5).item() ) for row in summtable],
                           headers=['pair', 'F-statistic','p-value','df_denom',

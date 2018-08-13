@@ -807,7 +807,7 @@ class CompareMeans(object):
         
         title = 'Test for equality of means'
         yname = 'y' # not used in params_frame
-        xname = ['subset #%d'%(ii + 1) for ii in range(tstat.shape[0])]
+        xname = ['subset #%d' % (ii + 1) for ii in range(tstat.shape[0])]
 
         from statsmodels.iolib.summary import summary_params
         return summary_params((None, params, std_err, tstat, pvalue, conf_int),
