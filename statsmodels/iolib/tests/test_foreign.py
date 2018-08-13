@@ -46,10 +46,25 @@ def test_genfromdta_pandas():
     assert_frame_equal(res1, dta.astype(float))
 
 
+def test_stata_writer_structured():
+    buf = BytesIO()
+    dta = macrodata.load(as_pandas=False).data
+    dtype = dta.dtype
+    dt = [('year', int), ('quarter', int)] + dtype.descr[2:]
+    if not PY3:  # Remove unicode
+        dt = [(name.encode('ascii'), typ) for name, typ in dt]
+    dta = dta.astype(np.dtype(dt))
+    writer = StataWriter(buf, dta)
+    writer.write_file()
+    buf.seek(0)
+    dta2 = genfromdta(buf)
+    assert_array_equal(dta, dta2)
+
+
 def test_stata_writer_array():
     buf = BytesIO()
     dta = macrodata.load(as_pandas=False).data
-    dta = DataFrame.from_records(dta, index='index')
+    dta = DataFrame.from_records(dta)
     dta.columns = ["v%d" % i for i in range(1,15)]
     writer = StataWriter(buf, dta.values)
     writer.write_file()
@@ -57,7 +72,6 @@ def test_stata_writer_array():
     dta2 = genfromdta(buf)
     dta = dta.to_records(index=False)
     assert_array_equal(dta, dta2)
-
 
 def test_missing_roundtrip():
     buf = BytesIO()
