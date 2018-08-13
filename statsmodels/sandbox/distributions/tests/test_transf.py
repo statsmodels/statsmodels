@@ -35,7 +35,7 @@ def f_stats(self, dfn, dfd):
     arr, where, inf, sqrt, nan = np.array, np.where, np.inf, np.sqrt, np.nan
     v2 = arr(dfd*1.0)
     v1 = arr(dfn*1.0)
-    mu = where (v2 > 2, v2 / arr(v2 - 2), inf)
+    mu = where(v2 > 2, v2 / arr(v2 - 2), inf)
     mu2 = 2*v2*v2*(v2+v1-2)/(v1*(v2-2)**2 * (v2-4))
     mu2 = where(v2 > 4, mu2, inf)
     #g1 = 2*(v2+2*v1-2)/(v2-6)*sqrt((2*v2-4)/(v1*(v2+v1-2)))

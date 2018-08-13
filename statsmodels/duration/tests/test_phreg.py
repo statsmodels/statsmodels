@@ -412,7 +412,6 @@ class TestPHReg(object):
                     return llf
 
                 # Confirm that we are doing better than glmnet.
-                from numpy.testing import assert_equal
                 llf_r = plf(params)
                 llf_sm = plf(sm_result.params)
                 assert_equal(np.sign(llf_sm - llf_r), 1)
