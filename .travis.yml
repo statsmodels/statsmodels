@@ -30,12 +30,12 @@ matrix:
   - python: 2.7
     env:
     - PYTHON=3.7
+    - COVERAGE=true
   # Python 3.6 + cutting edge packages
   - python: 2.7
     env:
     - PYTHON=3.6
     - BLAS="nomkl blas=*=openblas"
-    - COVERAGE=true
   # Python 2.7 + partially updated numpy, mpl; cutting edge scipy, pandas
   - python: 2.7
     env:
