@@ -318,8 +318,7 @@ class VariableScreening(object):
             if disp:
                 print(keep)
                 print(idx_nonzero)
-            # x0 is exog of currently selected model, not used in iteration
-            # x0 = x[:, idx_nonzero]
+
             k_current = len(idx_nonzero)
             start_params = res_pen.params[keep]
 
@@ -405,7 +404,6 @@ class VariableScreening(object):
 
         """
         k_keep = self.k_keep
-        # res_batches = []
         res_idx = []
         exog_winner = []
         exog_idx = []

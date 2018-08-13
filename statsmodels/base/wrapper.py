@@ -44,11 +44,9 @@ class ResultsWrapper(object):
         return obj
 
     def __getstate__(self):
-        #print 'pickling wrapper', self.__dict__
         return self.__dict__
 
     def __setstate__(self, dict_):
-        #print 'unpickling wrapper', dict_
         self.__dict__.update(dict_)
 
     def save(self, fname, remove_data=False):
