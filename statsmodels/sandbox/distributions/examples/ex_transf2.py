@@ -236,7 +236,8 @@ if __name__ == '__main__':
     #Note the results differ for skew and kurtosis. I think the 3rd and 4th moment
     #    in the scipy.stats.f distribution is incorrect.
     # I corrected it now in stats.distributions.py in bzr branch
-    v1=1; v2=10;
+    v1=1
+    v2=10
     g1 = 2*(v2+2*v1-2.)/(v2-6.)*np.sqrt(2*(v2-4.)/(v1*(v2+v1-2.)))
     g2 = 3/(2.*v2-16)*(8+g1*g1*(v2-6.))
     print('corrected skew, kurtosis of f(1,10) is', g1, g2)
