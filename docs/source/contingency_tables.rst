@@ -60,7 +60,8 @@ construct the array of cell counts for us:
 
 .. ipython:: python
 
-    table = sm.stats.Table.from_data(df[["Treatment", "Improved"]])
+    data = df[["Treatment", "Improved"]]
+    table = sm.stats.Table.from_data(data)
 
 
 Independence
@@ -73,7 +74,7 @@ product of the row and column marginal distributions:
 
 .. math::
 
-P_{ij} = \sum_k P_{ij} \cdot \sum_k P_{kj} \forall i, j
+    P_{ij} = \sum_k P_{ij} \cdot \sum_k P_{kj} \forall i, j
 
 We can obtain the best-fitting independent distribution for our
 observed data, and then view residuals which identify particular cells
@@ -111,7 +112,7 @@ linear by linear association test is
 
 .. math::
 
-\sum_k r_i c_j T_{ij}
+    \sum_k r_i c_j T_{ij}
 
 where :math:`r_i` and :math:`c_j` are row and column scores.  Often
 these scores are set to the sequences 0, 1, ....  This gives the
@@ -152,10 +153,11 @@ dichotomizing the row and column factors at each possible point.
 A mosaic plot is a graphical approach to informally assessing
 dependence in two-way tables.
 
-::
+.. ipython:: python
 
     from statsmodels.graphics.mosaicplot import mosaic
-    mosaic(data)
+    fig, _ = mosaic(data, index=["Treatment", "Improved"])
+
 
 Symmetry and homogeneity
 ------------------------
@@ -167,7 +169,7 @@ identical, meaning that
 
 .. math::
 
-\sum_j P_{ij} = \sum_j P_{ji} \forall i
+    \sum_j P_{ij} = \sum_j P_{ji} \forall i
 
 Note that for these properties to be applicable the table :math:`P`
 (and :math:`T`) must be square, and the row and column categories must
