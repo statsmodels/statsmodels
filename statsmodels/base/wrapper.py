@@ -118,7 +118,7 @@ def populate_wrapper(klass, wrapping):
 if __name__ == '__main__':
     import statsmodels.api as sm
     from pandas import DataFrame
-    data = sm.datasets.longley.load()
+    data = sm.datasets.longley.load(as_pandas=False)
     df = DataFrame(data.exog, columns=data.exog_name)
     y = data.endog
     # data.exog = sm.add_constant(data.exog)
@@ -129,7 +129,7 @@ if __name__ == '__main__':
     # olswrap = RegressionResultsWrapper(olsresult)
     # rlmwrap = RLMResultsWrapper(rlmresult)
 
-    data = sm.datasets.wfs.load()
+    data = sm.datasets.wfs.load(as_pandas=False)
     # get offset
     offset = np.log(data.exog[:, -1])
     exog = data.exog[:, :-1]

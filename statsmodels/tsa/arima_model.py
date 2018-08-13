@@ -1978,7 +1978,7 @@ if __name__ == "__main__":
     arma22_css = ARMA(y_arma22)
     res22css = arma22_css.fit(trend='nc', order=(2, 2), method='css')
 
-    data = sm.datasets.sunspots.load()
+    data = sm.datasets.sunspots.load(as_pandas=False)
     ar = ARMA(data.endog)
     resar = ar.fit(trend='nc', order=(9, 0))
 

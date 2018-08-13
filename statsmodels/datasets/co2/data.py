@@ -65,7 +65,7 @@ def load(as_pandas=None):
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
-    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
+    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas, retain_index=True)
 
 def _get_data():
     return du.load_csv(__file__, 'co2.csv')

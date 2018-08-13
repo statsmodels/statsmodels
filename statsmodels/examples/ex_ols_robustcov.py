@@ -7,7 +7,7 @@ from statsmodels.datasets import macrodata
 import statsmodels.regression.tests.results.results_macro_ols_robust as res
 
 
-d2 = macrodata.load().data
+d2 = macrodata.load(as_pandas=False).data
 g_gdp = 400*np.diff(np.log(d2['realgdp']))
 g_inv = 400*np.diff(np.log(d2['realinv']))
 exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1]], prepend=False)

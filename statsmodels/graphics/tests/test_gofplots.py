@@ -110,7 +110,7 @@ class BaseProbplotMixin(object):
 class TestProbPlotLongely(BaseProbplotMixin):
     def setup(self):
         np.random.seed(5)
-        self.data = sm.datasets.longley.load()
+        self.data = sm.datasets.longley.load(as_pandas=False)
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
         self.mod_fit = sm.OLS(self.data.endog, self.data.exog).fit()
         self.prbplt = sm.ProbPlot(self.mod_fit.resid, stats.t, distargs=(4,))
@@ -147,7 +147,7 @@ class TestProbPlotRandomNormalLocScale(BaseProbplotMixin):
 
 class TestTopLevel(object):
     def setup(self):
-        self.data = sm.datasets.longley.load()
+        self.data = sm.datasets.longley.load(as_pandas=False)
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
         self.mod_fit = sm.OLS(self.data.endog, self.data.exog).fit()
         self.res = self.mod_fit.resid

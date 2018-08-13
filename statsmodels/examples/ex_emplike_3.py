@@ -10,7 +10,7 @@ from __future__ import print_function
 import statsmodels.api as sm
 import numpy as np
 
-data = sm.datasets.heart.load()
+data = sm.datasets.heart.load(as_pandas=False)
 # Note this data has endog, exog and censors
 # We will take the log (base 10) of the endogenous survival times
 

@@ -171,7 +171,7 @@ class TestRemoveDataPickleNegativeBinomial(RemoveDataPickle):
     def setup(self):
         #fit for each test, because results will be changed by test
         np.random.seed(987689)
-        data = sm.datasets.randhie.load()
+        data = sm.datasets.randhie.load(as_pandas=False)
         exog = sm.add_constant(data.exog, prepend=False)
         mod = sm.NegativeBinomial(data.endog, data.exog)
         self.results = mod.fit(disp=0)

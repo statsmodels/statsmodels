@@ -49,7 +49,7 @@ def compare_t_est(sp, sp_dict, decimal=(14, 14)):
 
 
 def notyet_atst():
-    d = macrodata.load().data
+    d = macrodata.load(as_pandas=False).data
 
     realinv = d['realinv']
     realgdp = d['realgdp']

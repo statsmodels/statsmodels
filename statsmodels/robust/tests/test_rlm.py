@@ -96,7 +96,7 @@ class TestRlm(CheckRlmResultsMixin):
     @classmethod
     def setup_class(cls):
         from statsmodels.datasets.stackloss import load
-        cls.data = load()  # class attributes for subclasses
+        cls.data = load(as_pandas=False)  # class attributes for subclasses
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
         # Test precisions
         cls.decimal_standarderrors = DECIMAL_1
@@ -203,7 +203,7 @@ class TestRlmHuber(CheckRlmResultsMixin):
     @classmethod
     def setup_class(cls):
         from statsmodels.datasets.stackloss import load
-        cls.data = load()
+        cls.data = load(as_pandas=False)
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
         results = RLM(cls.data.endog, cls.data.exog,\
                     M=sm.robust.norms.HuberT()).fit(scale_est=\
@@ -297,7 +297,7 @@ class TestRlmSresid(CheckRlmResultsMixin):
     @classmethod
     def setup_class(cls):
         from statsmodels.datasets.stackloss import load
-        cls.data = load()  # class attributes for subclasses
+        cls.data = load(as_pandas=False)  # class attributes for subclasses
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=False)
         # Test precisions
         cls.decimal_standarderrors = DECIMAL_1

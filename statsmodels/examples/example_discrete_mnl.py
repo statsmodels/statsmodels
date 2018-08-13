@@ -6,7 +6,7 @@ from statsmodels.compat.python import lrange
 import numpy as np
 import statsmodels.api as sm
 
-anes_data = sm.datasets.anes96.load()
+anes_data = sm.datasets.anes96.load(as_pandas=False)
 anes_exog = anes_data.exog
 anes_exog = sm.add_constant(anes_exog, prepend=False)
 mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)

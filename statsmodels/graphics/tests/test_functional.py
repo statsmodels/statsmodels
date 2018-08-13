@@ -17,7 +17,7 @@ except ImportError:
     have_matplotlib = False
 
 
-data = elnino.load()
+data = elnino.load(as_pandas=False)
 labels = data.raw_data[:, 0].astype(int)
 data = data.raw_data[:, 1:]
 

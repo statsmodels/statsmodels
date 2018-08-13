@@ -831,7 +831,7 @@ wrap.populate_wrapper(ARResultsWrapper, ARResults)  # noqa:E305
 
 if __name__ == "__main__":
     import statsmodels.api as sm
-    sunspots = sm.datasets.sunspots.load()
+    sunspots = sm.datasets.sunspots.load(as_pandas=False)
 # Why does R demean the data by defaut?
     ar_ols = AR(sunspots.endog)
     res_ols = ar_ols.fit(maxlag=9)

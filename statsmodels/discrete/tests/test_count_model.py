@@ -69,7 +69,7 @@ class CheckGeneric(object):
 class TestZeroInflatedModel_logit(CheckGeneric):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load()
+        data = sm.datasets.randhie.load(as_pandas=False)
         cls.endog = data.endog
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
@@ -87,7 +87,7 @@ class TestZeroInflatedModel_logit(CheckGeneric):
 class TestZeroInflatedModel_probit(CheckGeneric):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load()
+        data = sm.datasets.randhie.load(as_pandas=False)
         cls.endog = data.endog
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
@@ -105,7 +105,7 @@ class TestZeroInflatedModel_probit(CheckGeneric):
 class TestZeroInflatedModel_offset(CheckGeneric):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load()
+        data = sm.datasets.randhie.load(as_pandas=False)
         cls.endog = data.endog
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
@@ -240,7 +240,7 @@ class TestZeroInflatedPoisson_predict(object):
 class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load()
+        data = sm.datasets.randhie.load(as_pandas=False)
         cls.endog = data.endog
         exog = sm.add_constant(data.exog[:,1:4], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
@@ -340,7 +340,7 @@ class TestZeroInflatedGeneralizedPoisson_predict(object):
 class TestZeroInflatedNegativeBinomialP(CheckGeneric):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.randhie.load()
+        data = sm.datasets.randhie.load(as_pandas=False)
         cls.endog = data.endog
         exog = sm.add_constant(data.exog[:,1], prepend=False)
         exog_infl = sm.add_constant(data.exog[:,0], prepend=False)
@@ -531,7 +531,7 @@ class TestZeroInflatedNegativeBinomialP_predict(object):
 class TestZeroInflatedNegativeBinomialP_predict2(object):
         @classmethod
         def setup_class(cls):
-            data = sm.datasets.randhie.load()
+            data = sm.datasets.randhie.load(as_pandas=False)
 
             cls.endog = data.endog
             exog = data.exog

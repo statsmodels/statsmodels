@@ -280,7 +280,7 @@ def hdrboxplot(data, ncomp=2, alpha=None, threshold=0.95, bw=None,
 
     >>> import matplotlib.pyplot as plt
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.elnino.load()
+    >>> data = sm.datasets.elnino.load(as_pandas=False)
 
     Create a functional boxplot.  We see that the years 1982-83 and 1997-98 are
     outliers; these are the years where El Nino (a climate pattern
@@ -560,7 +560,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
 
     >>> import matplotlib.pyplot as plt
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.elnino.load()
+    >>> data = sm.datasets.elnino.load(as_pandas=False)
 
     Create a functional boxplot.  We see that the years 1982-83 and 1997-98 are
     outliers; these are the years where El Nino (a climate pattern
@@ -713,7 +713,7 @@ def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
 
     >>> import matplotlib.pyplot as plt
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.elnino.load()
+    >>> data = sm.datasets.elnino.load(as_pandas=False)
 
     Create a rainbow plot:
 

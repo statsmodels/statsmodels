@@ -333,7 +333,7 @@ def load_csv(base_file, csv_name, sep=',', convert_float=False):
     return data
 
 
-def as_numpy_dataset(ds, as_pandas=None):
+def as_numpy_dataset(ds, as_pandas=None, retain_index=False):
     """Convert a pandas dataset to a NumPy dataset"""
     if as_pandas:
         return ds
@@ -342,7 +342,7 @@ def as_numpy_dataset(ds, as_pandas=None):
         warnings.warn('load will return datasets containing pandas DataFrames and Series '
                       'in the Future.  To suppress this message, specify load_pandas=False',
                       FutureWarning)
-    ds.data = ds.data.to_records()
+    ds.data = ds.data.to_records(index=retain_index)
     for d in dir(ds):
         if d.startswith('_'):
             continue

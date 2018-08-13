@@ -706,7 +706,7 @@ class GenericLikelihoodModel(LikelihoodModel):
     see also subclasses in directory miscmodels
 
     import statsmodels.api as sm
-    data = sm.datasets.spector.load()
+    data = sm.datasets.spector.load(as_pandas=False)
     data.exog = sm.add_constant(data.exog)
     # in this dir
     from model import GenericLikelihoodModel
@@ -1398,7 +1398,7 @@ class LikelihoodModelResults(Results):
         --------
         >>> import numpy as np
         >>> import statsmodels.api as sm
-        >>> data = sm.datasets.longley.load()
+        >>> data = sm.datasets.longley.load(as_pandas=False)
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> r = np.zeros_like(results.params)
@@ -1535,7 +1535,7 @@ class LikelihoodModelResults(Results):
         --------
         >>> import numpy as np
         >>> import statsmodels.api as sm
-        >>> data = sm.datasets.longley.load()
+        >>> data = sm.datasets.longley.load(as_pandas=False)
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> A = np.identity(len(results.params))
@@ -1937,7 +1937,7 @@ class LikelihoodModelResults(Results):
         Examples
         --------
         >>> import statsmodels.api as sm
-        >>> data = sm.datasets.longley.load()
+        >>> data = sm.datasets.longley.load(as_pandas=False)
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> results.conf_int()

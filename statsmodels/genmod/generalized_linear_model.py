@@ -124,7 +124,7 @@ class GLM(base.LikelihoodModel):
     Examples
     --------
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.scotland.load()
+    >>> data = sm.datasets.scotland.load(as_pandas=False)
     >>> data.exog = sm.add_constant(data.exog)
 
     Instantiate a gamma family model with the default link function.
@@ -1903,7 +1903,7 @@ wrap.populate_wrapper(GLMResultsWrapper, GLMResults)
 
 if __name__ == "__main__":
     import statsmodels.api as sm
-    data = sm.datasets.longley.load()
+    data = sm.datasets.longley.load(as_pandas=False)
     # data.exog = add_constant(data.exog)
     GLMmod = GLM(data.endog, data.exog).fit()
     GLMT = GLMmod.summary(returns='tables')
@@ -1949,7 +1949,7 @@ Log likelihood   = -76.94564525                    BIC             =  10.20398
 
     # NOTE: wfs dataset has been removed due to a licensing issue
     # example of using offset
-    # data = sm.datasets.wfs.load()
+    # data = sm.datasets.wfs.load(as_pandas=False)
     # get offset
     # offset = np.log(data.exog[:,-1])
     # exog = data.exog[:,:-1]

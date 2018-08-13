@@ -576,7 +576,7 @@ if __name__ == "__main__":
     import statsmodels.api as sm
     import pandas
 
-    data = sm.datasets.macrodata.load()
+    data = sm.datasets.macrodata.load(as_pandas=False)
 
     #make a DataFrame
     #TODO: attach a DataFrame to some of the datasets, for quicker use

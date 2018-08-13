@@ -18,7 +18,7 @@ class CheckFormulaOLS(object):
 
     @classmethod
     def setup_class(cls):
-        cls.data = load()
+        cls.data = load(as_pandas=False)
 
     def test_endog_names(self):
         assert self.model.endog_names == 'TOTEMP'

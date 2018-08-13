@@ -26,7 +26,7 @@ import pdb  # pdb.set_trace()
 
 
 ## Load the data from Spector and Mazzeo (1980)
-spector_data = sm.datasets.spector.load()
+spector_data = sm.datasets.spector.load(as_pandas=False)
 spector_data.exog = sm.add_constant(spector_data.exog)
 N = len(spector_data.endog)
 K = spector_data.exog.shape[1]
@@ -57,7 +57,7 @@ print(logit_l1_res.summary())
 print(logit_l1_cvxopt_res.summary())
 
 ### Multinomial Logit Example using American National Election Studies Data
-anes_data = sm.datasets.anes96.load()
+anes_data = sm.datasets.anes96.load(as_pandas=False)
 anes_exog = anes_data.exog
 anes_exog = sm.add_constant(anes_exog, prepend=False)
 mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
@@ -84,7 +84,7 @@ print(mlogit_l1_res.summary())
 #
 #
 #### Logit example with many params, sweeping alpha
-spector_data = sm.datasets.spector.load()
+spector_data = sm.datasets.spector.load(as_pandas=False)
 X = spector_data.exog
 Y = spector_data.endog
 

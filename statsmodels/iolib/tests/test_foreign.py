@@ -48,8 +48,8 @@ def test_genfromdta_pandas():
 
 def test_stata_writer_array():
     buf = BytesIO()
-    dta = macrodata.load().data
-    dta = DataFrame.from_records(dta)
+    dta = macrodata.load(as_pandas=False).data
+    dta = DataFrame.from_records(dta, index='index')
     dta.columns = ["v%d" % i for i in range(1,15)]
     writer = StataWriter(buf, dta.values)
     writer.write_file()
@@ -57,6 +57,7 @@ def test_stata_writer_array():
     dta2 = genfromdta(buf)
     dta = dta.to_records(index=False)
     assert_array_equal(dta, dta2)
+
 
 def test_missing_roundtrip():
     buf = BytesIO()
