@@ -259,8 +259,9 @@ class PanelModel(object):
         if method: # get rid of this with default
             method = method.lower()
         model = model.lower()
-        if method and method not in ["lsdv", "demeaned", "mle", "gls", "be",
-            "fe"]: # get rid of if method with default
+        if method and method not in ["lsdv", "demeaned", "mle",
+                                     "gls", "be", "fe"]:
+            # get rid of if method with default
             raise ValueError("%s not a valid method" % method)
 #        if method == "lsdv":
 #            self.fit_lsdv(model)

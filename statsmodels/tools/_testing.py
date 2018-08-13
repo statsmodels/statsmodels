@@ -85,8 +85,7 @@ def check_fitted(results):
         results = results._results
     else:
         results = results
-    if (isinstance(results, GLMResults) or
-        isinstance(results, DiscreteResults)):
+    if isinstance(results, (GLMResults, DiscreteResults)):
         raise SkipTest()
 
     res = results
@@ -109,8 +108,7 @@ def check_predict_types(results):
     else:
         results = results
 
-    if (isinstance(results, GLMResults) or
-        isinstance(results, DiscreteResults)):
+    if isinstance(results, (GLMResults, DiscreteResults)):
         # SMOKE test only  TODO
         res.predict(p_exog)
         res.predict(p_exog.tolist())

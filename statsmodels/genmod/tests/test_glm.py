@@ -111,7 +111,8 @@ class CheckModelResultsMixin(object):
     def test_aic_Stata(self):
         # Stata uses the below llf for aic definition for these families
         if isinstance(self.res1.model.family, (sm.families.Gamma,
-            sm.families.InverseGaussian, sm.families.NegativeBinomial)):
+                                               sm.families.InverseGaussian,
+                                               sm.families.NegativeBinomial)):
             llf = self.res1.model.family.loglike(self.res1.model.endog,
                                                  self.res1.mu,
                                                  self.res1.model.var_weights,
@@ -137,7 +138,8 @@ class CheckModelResultsMixin(object):
         # Stata uses the below llf for these families
         # We differ with R for them
         if isinstance(self.res1.model.family, (sm.families.Gamma,
-            sm.families.InverseGaussian, sm.families.NegativeBinomial)):
+                                               sm.families.InverseGaussian,
+                                               sm.families.NegativeBinomial)):
             llf = self.res1.model.family.loglike(self.res1.model.endog,
                                                  self.res1.mu,
                                                  self.res1.model.var_weights,
