@@ -288,7 +288,8 @@ class TestOLSRobustHACSmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
 
     def setup(self):
         res_ols = self.res1.get_robustcov_results('HAC', maxlags=4,
-                                            use_correction=True, use_t=True)
+                                                  use_correction=True,
+                                                  use_t=True)
         self.res3 = self.res1
         self.res1 = res_ols
         self.bse_robust = res_ols.bse
@@ -348,7 +349,7 @@ class CheckOLSRobustCluster(CheckOLSRobust):
         cls.res1 = OLS(dtapa_endog, exog).fit()
 
         firm_names, firm_id = np.unique(np.asarray(dtapa_exog[['firm']], 'S20'),
-                                    return_inverse=True)
+                                        return_inverse=True)
         cls.groups = firm_id
         #time indicator in range(max Ti)
         time = np.asarray(dtapa_exog[['year']])
@@ -427,10 +428,9 @@ class TestOLSRobustCluster2Fit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
 
     def setup(self):
         res_ols = self.res1.model.fit(cov_type='cluster',
-                                      cov_kwds=dict(
-                                                  groups=self.groups,
-                                                  use_correction=True,
-                                                  use_t=True))
+                                      cov_kwds=dict(groups=self.groups,
+                                                    use_correction=True,
+                                                    use_t=True))
         self.res3 = self.res1
         self.res1 = res_ols
         self.bse_robust = res_ols.bse
@@ -493,10 +493,10 @@ class TestOLSRobustCluster2LargeFit(CheckOLSRobustCluster, CheckOLSRobustNewMixi
         model = OLS(self.res1.model.endog, self.res1.model.exog)
         #res_ols = self.res1.model.fit(cov_type='cluster',
         res_ols = model.fit(cov_type='cluster',
-                                      cov_kwds=dict(groups=self.groups,
-                                                  use_correction=False,
-                                                  use_t=False,
-                                                  df_correction=True))
+                            cov_kwds=dict(groups=self.groups,
+                                          use_correction=False,
+                                          use_t=False,
+                                          df_correction=True))
         self.res3 = self.res1
         self.res1 = res_ols
         self.bse_robust = res_ols.bse
@@ -549,9 +549,9 @@ class TestOLSRobustClusterGSFit(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     def setup(self):
         res_ols = self.res1.model.fit(cov_type='nw-groupsum',
                                       cov_kwds=dict(time=self.time,
-                                                  maxlags=4,
-                                                  use_correction=False,
-                                                  use_t=True))
+                                                    maxlags=4,
+                                                    use_correction=False,
+                                                    use_t=True))
         self.res3 = self.res1
         self.res1 = res_ols
         self.bse_robust = res_ols.bse
@@ -645,7 +645,7 @@ class TestOLSRobustCluster2G(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
         self.bse_robust = res_ols.bse
         self.cov_robust = res_ols.cov_params()
         cov1 = sw.cov_cluster_2groups(self.res1, self.groups, group2=self.time,
-                                       use_correction=True)[0]
+                                      use_correction=True)[0]
         se1 =  sw.se_cov(cov1)
         self.bse_robust2 = se1
         self.cov_robust2 = cov1
@@ -670,7 +670,7 @@ class TestOLSRobustCluster2GLarge(CheckOLSRobustCluster, CheckOLSRobustNewMixin)
         self.bse_robust = res_ols.bse
         self.cov_robust = res_ols.cov_params()
         cov1 = sw.cov_cluster_2groups(self.res1, self.groups, group2=self.time,
-                                       use_correction=False)[0]
+                                      use_correction=False)[0]
         se1 =  sw.se_cov(cov1)
         self.bse_robust2 = se1
         self.cov_robust2 = cov1
@@ -704,7 +704,7 @@ class CheckWLSRobustCluster(CheckOLSRobust):
         cls.res1 = WLS(dtapa_endog, exog, weights=1/dtapa_exog['value']).fit()
 
         firm_names, firm_id = np.unique(np.asarray(dtapa_exog[['firm']], 'S20'),
-                                    return_inverse=True)
+                                        return_inverse=True)
         cls.groups = firm_id
         #time indicator in range(max Ti)
         time = np.asarray(dtapa_exog[['year']])
@@ -806,7 +806,7 @@ class TestWLSOLSRobustSmall(object):
                           np.asarray(exog) * w_sqrt[:, None]).fit() # hasconst=True ?
 
         firm_names, firm_id = np.unique(np.asarray(dtapa_exog[['firm']], 'S20'),
-                                    return_inverse=True)
+                                        return_inverse=True)
         cls.groups = firm_id
         #time indicator in range(max Ti)
         time = np.asarray(dtapa_exog[['year']])
@@ -898,5 +898,5 @@ def test_cov_type_fixed_scale():
     assert_allclose(res.bse, [3*0.30714756, 3*0.85045308], rtol=1e-3)
 
     res = WLS(ydata, xdata, weights=weights).fit(cov_type='fixed scale',
-                                                  cov_kwds={'scale':9})
+                                                 cov_kwds={'scale':9})
     assert_allclose(res.bse, [3*0.30714756, 3*0.85045308], rtol=1e-3)
