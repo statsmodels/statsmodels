@@ -111,6 +111,7 @@ ext_data = dict(
     _kim_smoother={'source': 'statsmodels/tsa/regime_switching/_kim_smoother.pyx.in'},
     linbin={'source': 'statsmodels/nonparametric/linbin.pyx'},
     _smoothers_lowess={'source': 'statsmodels/nonparametric/_smoothers_lowess.pyx'},
+    _exponential_smoothers={'source': 'statsmodels/tsa/_exponential_smoothers.pyx'},
     kalman_loglike={'source': 'statsmodels/tsa/kalmanf/kalman_loglike.pyx',
                     'include_dirs': ['statsmodels/src'],
                     'depends': ['statsmodels/src/capsule.h']},

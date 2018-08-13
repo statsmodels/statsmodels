@@ -137,7 +137,7 @@ script:
   - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; source ${SRCDIR}/tools/ci/docbuild.sh; exit 0; fi;
   # Run tests
   - echo pytest -n 2 ${COVERAGE_OPTS} statsmodels --skip-examples
-  - pytest ${COVERAGE_OPTS} --skip-examples statsmodels/tsa/statespace statsmodels/tsa/kalmanf statsmodels/tsa/regime_switching statsmodels/nonparametric
+  - pytest ${COVERAGE_OPTS} --skip-slow --skip-examples statsmodels/tsa/statespace statsmodels/tsa/kalmanf statsmodels/tsa/regime_switching statsmodels/tsa/tests/test_holtwinters.py statsmodels/nonparametric
   - ./lint.sh
 
 after_success:
