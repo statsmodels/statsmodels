@@ -85,7 +85,9 @@ s = np.zeros(N)
 s = np.searchsorted(sk_special_X, sm_special_X)
 
 ## Plot
-plt.figure(2);plt.clf();plt.grid()
+plt.figure(2)
+plt.clf()
+plt.grid()
 plt.xlabel('Index in sklearn simulation')
 plt.ylabel('Coefficient value')
 plt.title('Regularization Paths')

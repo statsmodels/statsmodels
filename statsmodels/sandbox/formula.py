@@ -663,8 +663,10 @@ def isnested(A, B, namespace=None):
     """
 
     if namespace is not None:
-        A = copy.copy(A); A.namespace = namespace
-        B = copy.copy(B); B.namespace = namespace
+        A = copy.copy(A)
+        A.namespace = namespace
+        B = copy.copy(B)
+        B.namespace = namespace
 
     a = A(values=True)[0]
     b = B(values=True)[0]
@@ -756,7 +758,8 @@ def interactions(terms, order=[1,2]):
                 values[tuple(I[:,m])] = v
 
     key = list(iterkeys(values))[0]
-    value = values[key]; del(values[key])
+    value = values[key]
+    del(values[key])
 
     for v in itervalues(values):
         value += v

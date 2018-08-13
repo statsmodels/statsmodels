@@ -1014,9 +1014,9 @@ def loglike_GARCH11(params, y):
     alpha =  params[1] # coefficient of lagged squared error
     beta  =  params[2] # coefficient of lagged variance
 
-    y2   = y**2;
+    y2   = y**2
     nobs = y2.shape[0]
-    ht    = np.zeros(nobs);
+    ht    = np.zeros(nobs)
     ht[0] = y2.mean()  #sum(y2)/T;
 
     for i in range(1,nobs):
@@ -1025,7 +1025,7 @@ def loglike_GARCH11(params, y):
     sqrtht  = np.sqrt(ht)
     x       = y/sqrtht
 
-    llvalues = -0.5*np.log(2*np.pi) - np.log(sqrtht) - 0.5*(x**2);
+    llvalues = -0.5*np.log(2*np.pi) - np.log(sqrtht) - 0.5*(x**2)
     return llvalues.sum(), llvalues, ht
 
 from statsmodels.tsa.filters.filtertools import miso_lfilter

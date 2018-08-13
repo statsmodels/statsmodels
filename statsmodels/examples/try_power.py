@@ -12,7 +12,10 @@ import numpy as np
 import statsmodels.stats.power as smp
 import statsmodels.stats.proportion as smpr
 
-sigma=1; d=0.3; nobs=80; alpha=0.05
+sigma=1
+d=0.3
+nobs=80
+alpha=0.05
 print(smp.normal_power(d, nobs/2, 0.05))
 print(smp.NormalIndPower().power(d, nobs, 0.05))
 print(smp.NormalIndPower().solve_power(effect_size=0.3, nobs1=80, alpha=0.05, power=None))
