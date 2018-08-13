@@ -41,9 +41,15 @@ def load_pandas():
     return dataset
 
 
-def load():
+def load(as_pandas=None):
     """
     Load the El Nino data and return a Dataset class.
+
+    Parameters
+    ----------
+    as_pandas : bool
+        Flag indicating whether to return pandas DataFrames and Series
+        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
@@ -54,7 +60,7 @@ def load():
     -----
     The elnino Dataset instance does not contain endog and exog attributes.
     """
-    return du.as_numpy_dataset(load_pandas())
+    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
 
 
 def _get_data():

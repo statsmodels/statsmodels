@@ -39,9 +39,15 @@ variable_names = ["Dp", "R"]
 first_season = 1  # 1 stands for: first observation in Q2 (0 would mean Q1)
 
 
-def load():
+def load(as_pandas=None):
     """
     Load the West German interest/inflation data and return a Dataset class.
+
+    Parameters
+    ----------
+    as_pandas : bool
+        Flag indicating whether to return pandas DataFrames and Series
+        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
@@ -53,7 +59,7 @@ def load():
     The interest_inflation Dataset instance does not contain endog and exog
     attributes.
     """
-    return du.as_numpy_dataset(load_pandas())
+    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
 
 
 def load_pandas():

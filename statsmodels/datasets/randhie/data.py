@@ -46,32 +46,42 @@ NOTE        = """::
 """
 from statsmodels.datasets import utils as du
 
-def load():
+def load(as_pandas=None):
     """
     Loads the RAND HIE data and returns a Dataset class.
 
+    Parameters
     ----------
-    endog - response variable, mdvis
-    exog - design
+    as_pandas : bool
+        Flag indicating whether to return pandas DataFrames and Series
+        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
-    Load instance:
-        a class of the data with array attrbutes 'endog' and 'exog'
+    -------
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
+
+    Notes
+    -----
+    endog - response variable, mdvis
+    exog - design
     """
-    return du.as_numpy_dataset(load_pandas())
+    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
 
 
 def load_pandas():
     """
     Loads the RAND HIE data and returns a Dataset class.
 
-    ----------
+    Returns
+    -------
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
+
+    Notes
+    -----
     endog - response variable, mdvis
     exog - design
-
-    Returns
-    Load instance:
-        a class of the data with array attrbutes 'endog' and 'exog'
     """
     return du.process_pandas(_get_data(), endog_idx=0)
 

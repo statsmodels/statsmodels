@@ -33,16 +33,22 @@ def load_pandas():
     return du.process_pandas(data, endog_idx=0, exog_idx=None)
 
 
-def load():
+def load(as_pandas=None):
     """
     Load the data and return a Dataset class instance.
+
+    Parameters
+    ----------
+    as_pandas : bool
+        Flag indicating whether to return pandas DataFrames and Series
+        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
-    return du.as_numpy_dataset(load_pandas())
+    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
 
 
 def _get_data():

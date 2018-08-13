@@ -42,9 +42,15 @@ import pandas as pd
 
 from statsmodels.datasets import utils as du
 
-def load():
+def load(as_pandas=None):
     """
     Loads the Grunfeld data and returns a Dataset class.
+
+    Parameters
+    ----------
+    as_pandas : bool
+        Flag indicating whether to return pandas DataFrames and Series
+        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
@@ -56,7 +62,7 @@ def load():
     raw_data has the firm variable expanded to dummy variables for each
     firm (ie., there is no reference dummy)
     """
-    return du.as_numpy_dataset(load_pandas())
+    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
 
 def load_pandas():
     """

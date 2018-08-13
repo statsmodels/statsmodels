@@ -66,16 +66,22 @@ NOTE        = """::
 from statsmodels.datasets import utils as du
 
 
-def load():
+def load(as_pandas=None):
     """
     Load the star98 data and returns a Dataset class instance.
+
+    Parameters
+    ----------
+    as_pandas : bool
+        Flag indicating whether to return pandas DataFrames and Series
+        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
     Load instance:
         a class of the data with array attrbutes 'endog' and 'exog'
     """
-    return du.as_numpy_dataset(load_pandas())
+    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
 
 
 def load_pandas():
