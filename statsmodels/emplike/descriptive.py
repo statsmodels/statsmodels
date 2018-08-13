@@ -288,7 +288,7 @@ class _OptFuncts(object):
             return chi2.sf(-2 * llr, 1)
         return -2 * llr
 
-    def  _ci_limits_var(self, var):
+    def _ci_limits_var(self, var):
         """
         Used to determine the confidence intervals for the variance.
         It calls test_var and when called by an optimizer,
@@ -586,7 +586,7 @@ class DescStatUV(_OptFuncts):
                 max(endog) - epsilon_u)
             llim = optimize.brentq(self._ci_limits_mu, middle,
                 min(endog) + epsilon_l)
-            return  llim, ulim
+            return llim, ulim
 
         if method == 'gamma':
             self.r0 = chi2.ppf(sig, 1)
@@ -638,7 +638,7 @@ class DescStatUV(_OptFuncts):
         if return_weights:
             return llr, p_val, self.new_weights.T
         else:
-            return  llr, p_val
+            return llr, p_val
 
     def ci_var(self, lower_bound=None, upper_bound=None, sig=.05):
         """
@@ -802,7 +802,7 @@ class DescStatUV(_OptFuncts):
                                      full_output=1, disp=0)[1]
         p_val = chi2.sf(llr, 1)
         if return_weights:
-            return  llr, p_val, self.new_weights.T
+            return llr, p_val, self.new_weights.T
         return llr, p_val
 
     def test_joint_skew_kurt(self, skew0, kurt0, return_weights=False):
@@ -880,7 +880,7 @@ class DescStatUV(_OptFuncts):
         self.r0 = chi2.ppf(1 - sig, 1)
         llim = optimize.brentq(self._ci_limits_skew, lower_bound, skew(endog))
         ulim = optimize.brentq(self._ci_limits_skew, skew(endog), upper_bound)
-        return   llim, ulim
+        return llim, ulim
 
     def ci_kurt(self, sig=.05, upper_bound=None, lower_bound=None):
         """
@@ -935,7 +935,7 @@ class DescStatUV(_OptFuncts):
                              kurtosis(endog))
         ulim = optimize.brentq(self._ci_limits_kurt, kurtosis(endog), \
                              upper_bound)
-        return   llim, ulim
+        return llim, ulim
 
 
 class DescStatMV(_OptFuncts):

@@ -32,7 +32,7 @@ def add_indep(x, varnames, dtype=None):
         xout[:,count] = xi
         rank_new = np_matrix_rank(xout)
         #print(rank_new)
-        if  rank_new > rank_old:
+        if rank_new > rank_old:
             varnames_new.append(ni)
             rank_old = rank_new
             count += 1

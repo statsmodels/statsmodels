@@ -378,6 +378,6 @@ def test_micedata_miss1():
         assert_equal(data_imp.ix_miss[k], ix_miss[k])
 
 
-if  __name__=="__main__":
+if __name__=="__main__":
     import pytest
     pytest.main([__file__, '-vvs', '-x', '--pdb'])

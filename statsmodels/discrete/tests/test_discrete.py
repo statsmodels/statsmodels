@@ -2116,7 +2116,7 @@ class TestNegativeBinomialPL1Compatability(CheckL1Compatability):
         cls.k_extra = 1  # 1 extra parameter in nb2
 
 
-class  TestNegativeBinomialPPredictProb(object):
+class TestNegativeBinomialPPredictProb(object):
 
     def test_predict_prob_p1(self):
         expected_params = [1, -0.5]
