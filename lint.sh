@@ -4,7 +4,7 @@ echo "inside $0"
 
 RET=0
 
-if [ "$LINT" ]; then
+if [ "$LINT" = true ]; then
     flake8 statsmodels
     if [ $? -ne "0" ]; then
         RET=1
