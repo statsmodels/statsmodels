@@ -151,7 +151,7 @@ def momentcondunbound(distfn, params, mom2, quantile=None):
     '''
     shape, loc, scale = params
     mom2diff = np.array(distfn.stats(shape, loc,scale)) - mom2
-    if not quantile is None:
+    if quantile is not None:
         pq, xq = quantile
         #ppfdiff = distfn.ppf(pq, alpha)
         cdfdiff = distfn.cdf(xq, shape, loc, scale) - pq
@@ -172,7 +172,7 @@ def momentcondunboundls(distfn, params, mom2, quantile=None, shape=None):
     '''
     loc, scale = params
     mom2diff = np.array(distfn.stats(shape, loc, scale)) - mom2
-    if not quantile is None:
+    if quantile is not None:
         pq, xq = quantile
         #ppfdiff = distfn.ppf(pq, alpha)
         cdfdiff = distfn.cdf(xq, shape, loc, scale) - pq
@@ -261,7 +261,7 @@ def fitbinned(distfn, freq, binedges, start, fixed=None):
     added factorial
 
     '''
-    if not fixed is None:
+    if fixed is not None:
         raise NotImplementedError
     nobs = np.sum(freq)
     lnnobsfact = special.gammaln(nobs+1)
@@ -307,7 +307,7 @@ def fitbinnedgmm(distfn, freq, binedges, start, fixed=None, weightsoptimal=True)
     added factorial
 
     '''
-    if not fixed is None:
+    if fixed is not None:
         raise NotImplementedError
     nobs = np.sum(freq)
     if weightsoptimal:

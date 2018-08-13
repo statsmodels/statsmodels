@@ -39,13 +39,13 @@ class PlainMatrixArray(object):
 
     '''
     def __init__(self, data=None, sym=None):
-        if not data is None:
+        if data is not None:
             if sym is None:
                 self.x = np.asarray(data)
                 self.m = np.dot(self.x.T, self.x)
             else:
                 raise ValueError('data and sym cannot be both given')
-        elif not sym is None:
+        elif sym is not None:
             self.m = np.asarray(sym)
             self.x = np.eye(*self.m.shape) #default
 

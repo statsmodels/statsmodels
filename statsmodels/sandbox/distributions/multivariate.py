@@ -77,7 +77,7 @@ def mvstdtprob(a, b, R, df, ieps=1e-5, quadkwds=None, mvstkwds=None):
     and the integration.
     """
     kwds = dict(args=(a, b, R, df), epsabs=1e-4, epsrel=1e-2, limit=150)
-    if not quadkwds is None:
+    if quadkwds is not None:
         kwds.update(quadkwds)
     lower, upper = chi.ppf([ieps, 1 - ieps], df)
     res, err = integrate.quad(funbgh2, lower, upper, **kwds)

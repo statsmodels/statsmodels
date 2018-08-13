@@ -517,7 +517,7 @@ class GMM(Model):
         # TODO: this is a temporary fix, need
         xnames = self.data.xnames
 
-        if not param_names is None:
+        if param_names is not None:
             if len(params) == len(param_names):
                 self.data.xnames = param_names
             else:
@@ -656,7 +656,7 @@ class GMM(Model):
 
         if optim_args is None:
             optim_args = {}
-        if not 'disp' in optim_args:
+        if 'disp' not in optim_args:
             optim_args['disp'] = 1
 
         if maxiter == 0 or maxiter == 'cue':
@@ -1010,7 +1010,7 @@ class GMM(Model):
         elif weights_method == 'flatkernel':
             #uniform cut-off window
             # This was a trial version, can use HAC with flatkernel
-            if not 'maxlag' in wargs:
+            if 'maxlag' not in wargs:
                 raise ValueError('flatkernel requires maxlag')
 
             maxlag = wargs['maxlag']
@@ -1157,12 +1157,12 @@ class GMMResults(LikelihoodModelResults):
 #             return self._cov_params
 
         # set defaults based on fit arguments
-        if not 'wargs' in kwds:
+        if 'wargs' not in kwds:
             # Note: we don't check the keys in wargs, use either all or nothing
             kwds['wargs'] = self.wargs
-        if not 'weights_method' in kwds:
+        if 'weights_method' not in kwds:
             kwds['weights_method'] = self.options_other['weights_method']
-        if not 'has_optimal_weights' in kwds:
+        if 'has_optimal_weights' not in kwds:
             kwds['has_optimal_weights'] = self.options_other['has_optimal_weights']
 
         gradmoms = self.model.gradient_momcond(self.params)
@@ -1707,7 +1707,7 @@ class DistQuantilesGMM(GMM):
         self.endog = endog
 
         #make this optional for fit
-        if not 'pquant' in kwds:
+        if 'pquant' not in kwds:
             self.pquant = pquant = np.array([0.01, 0.05,0.1,0.4,0.6,0.9,0.95,0.99])
         else:
             self.pquant = pquant = kwds['pquant']

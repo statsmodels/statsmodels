@@ -153,7 +153,7 @@ def contrast_product(names1, names2, intgroup1=None, intgroup2=None, pairs=False
                               for c,v in zip(row, names_prod)[::-1] if c != 0])
                                  for row in contrast_prod2]
 
-    if (not intgroup1 is None) and (not intgroup1 is None):
+    if (intgroup1 is not None) and (intgroup1 is not None):
         d1, _ = dummy_1d(intgroup1)
         d2, _ = dummy_1d(intgroup2)
         dummy = dummy_product(d1, d2)

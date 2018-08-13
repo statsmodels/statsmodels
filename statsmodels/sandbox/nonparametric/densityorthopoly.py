@@ -202,7 +202,7 @@ def inner_cont(polys, lower, upper, weight=None):
         for j in range(i+1):
             p1 = polys[i]
             p2 = polys[j]
-            if not weight is None:
+            if weight is not None:
                 innp, err = integrate.quad(lambda x: p1(x)*p2(x)*weight(x),
                                        lower, upper)
             else:
@@ -287,7 +287,7 @@ class DensityOrthoPoly(object):
     '''
 
     def __init__(self, polybase=None, order=5):
-        if not polybase is None:
+        if polybase is not None:
             self.polybase = polybase
             self.polys = polys = [polybase(i) for i in range(order)]
         #try:

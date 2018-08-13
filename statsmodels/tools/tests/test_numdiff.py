@@ -212,7 +212,7 @@ class CheckDerivativeMixin(object):
         for test_params in self.params:
             #hetrue = 0
             hetrue = self.hesstrue(test_params)
-            if not hetrue is None: #Hessian doesn't work for 2d return of fun
+            if hetrue is not None: #Hessian doesn't work for 2d return of fun
                 fun = self.fun()
                 #default works, epsilon 1e-6 or 1e-8 is not precise enough
                 hefd = numdiff.approx_hess1(test_params, fun, #epsilon=1e-8,
@@ -234,7 +234,7 @@ class CheckDerivativeMixin(object):
         for test_params in self.params:
             #hetrue = 0
             hetrue = self.hesstrue(test_params)
-            if not hetrue is None: #Hessian doesn't work for 2d return of fun
+            if hetrue is not None: #Hessian doesn't work for 2d return of fun
                 fun = self.fun()
                 hecs = numdiff.approx_hess_cs(test_params, fun, args=self.args)
                 assert_almost_equal(hetrue, hecs, decimal=DEC6)

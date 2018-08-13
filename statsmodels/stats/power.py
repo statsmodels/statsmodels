@@ -914,7 +914,7 @@ class FTestAnovaPower(Power):
 
         '''
         # update start values for root finding
-        if not k_groups is None:
+        if k_groups is not None:
             self.start_ttp['nobs'] = k_groups * 10
             self.start_bqexp['nobs'] = dict(low=k_groups * 2,
                                             start_upp=k_groups * 10)

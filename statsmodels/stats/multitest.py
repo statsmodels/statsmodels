@@ -247,7 +247,7 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
     else:
         raise ValueError('method not recognized')
 
-    if not pvals_corrected is None: #not necessary anymore
+    if pvals_corrected is not None: #not necessary anymore
         pvals_corrected[pvals_corrected>1] = 1
     if is_sorted or returnsorted:
         return reject, pvals_corrected, alphacSidak, alphacBonf

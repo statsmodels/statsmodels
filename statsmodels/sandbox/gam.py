@@ -193,7 +193,7 @@ class AdditiveModel(object):
 
     def __init__(self, exog, smoothers=None, weights=None, family=None):
         self.exog = exog
-        if not weights is None:
+        if weights is not None:
             self.weights = weights
         else:
             self.weights = np.ones(self.exog.shape[0])

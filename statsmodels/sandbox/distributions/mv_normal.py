@@ -982,7 +982,7 @@ class MVNormal(MVElliptical):
         '''
         #indices need to be nd arrays for broadcasting
         keep = np.asarray(indices)
-        given = np.asarray([i for i in range(self.nvars) if not i in keep])
+        given = np.asarray([i for i in range(self.nvars) if i not in keep])
         sigmakk = self.sigma[keep[:, None], keep]
         sigmagg = self.sigma[given[:, None], given]
         sigmakg = self.sigma[keep[:, None], given]
