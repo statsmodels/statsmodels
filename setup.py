@@ -14,6 +14,7 @@ import subprocess
 import re
 from distutils.version import StrictVersion, LooseVersion
 
+import versioneer
 
 # temporarily redirect config directory to prevent matplotlib importing
 # testing that for writeable directory which results in sandbox error in
@@ -333,12 +334,11 @@ class DummyBuildSrc(Command):
     def run(self):
         pass
 
-
-cmdclass = {'clean': CleanCommand,
-            'build': build}
-
-cmdclass["build_src"] = DummyBuildSrc
-cmdclass["build_ext"] = CheckingBuildExt
+cmdclass = versioneer.get_cmdclass()
+cmdclass['clean'] = CleanCommand
+cmdclass['build'] = build
+cmdclass['build_src'] = DummyBuildSrc
+cmdclass['build_ext'] = CheckingBuildExt
 
 
 # some linux distros require it
@@ -561,7 +561,7 @@ if __name__ == "__main__":
                        'pandas-datareader']}
 
     setup(name = DISTNAME,
-          version = VERSION,
+          version = versioneer.get_version(),
           maintainer = MAINTAINER,
           ext_modules = extensions,
           maintainer_email = MAINTAINER_EMAIL,
