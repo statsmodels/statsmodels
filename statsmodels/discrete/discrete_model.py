@@ -412,6 +412,7 @@ class DiscreteModel(base.LikelihoodModel):
         """
         raise NotImplementedError
 
+
 class BinaryModel(DiscreteModel):
 
     def __init__(self, endog, exog, **kwargs):
@@ -419,7 +420,6 @@ class BinaryModel(DiscreteModel):
         if (not issubclass(self.__class__, MultinomialModel) and
                 not np.all((self.endog >= 0) & (self.endog <= 1))):
             raise ValueError("endog must be in the unit interval.")
-
 
     def predict(self, params, exog=None, linear=False):
         """
@@ -515,6 +515,7 @@ class BinaryModel(DiscreteModel):
             margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
                     self, params)
         return margeff
+
 
 class MultinomialModel(BinaryModel):
 
@@ -627,7 +628,6 @@ class MultinomialModel(BinaryModel):
         return L1MultinomialResultsWrapper(mnfit)
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
-
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
         For computing marginal effects standard errors.
@@ -723,6 +723,7 @@ class MultinomialModel(BinaryModel):
                     self, params)
         return margeff.reshape(len(exog), -1, order='F')
 
+
 class CountModel(DiscreteModel):
     def __init__(self, endog, exog, offset=None, exposure=None, missing='none',
                  **kwargs):
@@ -742,7 +743,6 @@ class CountModel(DiscreteModel):
         self.endog = np.asarray(self.endog, dt)
         dt = np.promote_types(self.exog.dtype, np.float64)
         self.exog = np.asarray(self.exog, dt)
-
 
     def _check_inputs(self, offset, exposure, endog):
         if offset is not None and offset.shape[0] != endog.shape[0]:
@@ -879,6 +879,7 @@ class CountModel(DiscreteModel):
 
 class OrderedModel(DiscreteModel):
     pass
+
 
 #### Public Model Classes ####
 
@@ -1070,7 +1071,6 @@ class Poisson(CountModel):
 
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
-
     def fit_constrained(self, constraints, start_params=None, **fit_kwds):
         """fit the model subject to linear equality constraints
 
@@ -1139,7 +1139,6 @@ class Poisson(CountModel):
         res._results.k_constr = k_constr
         res._results.results_constrained = res_constr
         return res
-
 
     def score(self, params):
         """
@@ -1908,6 +1907,7 @@ class Logit(BinaryModel):
         return BinaryResultsWrapper(discretefit)
     fit.__doc__ = DiscreteModel.fit.__doc__
 
+
 class Probit(BinaryModel):
     __doc__ = """
     Binary choice Probit model
@@ -1966,7 +1966,6 @@ class Probit(BinaryModel):
         X = np.asarray(X)
         return stats.norm._pdf(X)
 
-
     def loglike(self, params):
         """
         Log-likelihood of probit model (i.e., the normal distribution).
@@ -2023,7 +2022,6 @@ class Probit(BinaryModel):
         q = 2*self.endog - 1
         X = self.exog
         return np.log(np.clip(self.cdf(q*np.dot(X,params)), FLOAT_EPS, 1))
-
 
     def score(self, params):
         """
@@ -2126,6 +2124,7 @@ class Probit(BinaryModel):
         discretefit = ProbitResults(self, bnryfit)
         return BinaryResultsWrapper(discretefit)
     fit.__doc__ = DiscreteModel.fit.__doc__
+
 
 class MNLogit(MultinomialModel):
     __doc__ = """
@@ -2454,9 +2453,6 @@ class NegativeBinomial(CountModel):
 
     References
     ----------
-
-    References:
-
     Greene, W. 2008. "Functional forms for the negtive binomial model
         for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University
@@ -2661,7 +2657,6 @@ class NegativeBinomial(CountModel):
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
         return hess_arr
 
-
     def _hessian_nb1(self, params):
         """
         Hessian of NB1 model.
@@ -2773,7 +2768,7 @@ class NegativeBinomial(CountModel):
 
         return hess_arr
 
-    #TODO: replace this with analytic where is it used?
+    # TODO: replace this with analytic where is it used?
     def score_obs(self, params):
         sc = approx_fprime_cs(params, self.loglikeobs)
         return sc
@@ -2862,7 +2857,6 @@ class NegativeBinomial(CountModel):
         result._get_robustcov_results(cov_type=cov_type,
                                     use_self=True, use_t=use_t, **cov_kwds)
         return result
-
 
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
@@ -3368,7 +3362,6 @@ class DiscreteResults(base.LikelihoodModelResults):
                 get_robustcov_results(self, cov_type=cov_type, use_self=True,
                                            **cov_kwds)
 
-
     def __getstate__(self):
         # remove unpicklable methods
         mle_settings = getattr(self, 'mle_settings', None)
@@ -3679,7 +3672,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         return smry
 
 
-
 class CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {
                     "one_line_description" : "A results class for count data",
@@ -3699,6 +3691,7 @@ class CountResults(DiscreteResults):
         are also handled.
         """
         return self.model.endog - self.predict()
+
 
 class NegativeBinomialResults(CountResults):
     __doc__ = _discrete_results_docs % {
@@ -3726,6 +3719,7 @@ class NegativeBinomialResults(CountResults):
         return -2*self.llf + np.log(self.nobs)*(self.df_model +
                                                 self.k_constant + k_extra)
 
+
 class GeneralizedPoissonResults(NegativeBinomialResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description" : "A results class for Generalized Poisson",
@@ -3736,6 +3730,7 @@ class GeneralizedPoissonResults(NegativeBinomialResults):
         p = getattr(self.model, 'parameterization', 0)
         mu = self.predict()
         return (1 + self.params[-1] * mu**p)**2
+
 
 class L1CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
@@ -3757,6 +3752,7 @@ class L1CountResults(DiscreteResults):
 
         self.df_model = self.nnz_params - 1 - k_extra
         self.df_resid = float(self.model.endog.shape[0] - self.nnz_params) + k_extra
+
 
 class PoissonResults(CountResults):
 
@@ -3813,15 +3809,19 @@ class PoissonResults(CountResults):
 class L1PoissonResults(L1CountResults, PoissonResults):
     pass
 
+
 class L1NegativeBinomialResults(L1CountResults, NegativeBinomialResults):
     pass
+
 
 class L1GeneralizedPoissonResults(L1CountResults, GeneralizedPoissonResults):
     pass
 
+
 class OrderedResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" : "A results class for ordered discrete data." , "extra_attr" : ""}
     pass
+
 
 class BinaryResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" : "A results class for binary data", "extra_attr" : ""}
@@ -3846,7 +3846,6 @@ class BinaryResults(DiscreteResults):
         pred = np.array(self.predict() > threshold, dtype=float)
         bins = np.array([0, 0.5, 1])
         return np.histogram2d(actual, pred, bins=bins)[0]
-
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 yname_list=None):
@@ -3953,6 +3952,7 @@ class BinaryResults(DiscreteResults):
         """
         return self.model.endog - self.predict()
 
+
 class LogitResults(BinaryResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description" : "A results class for Logit Model",
@@ -3973,6 +3973,7 @@ class LogitResults(BinaryResults):
         """
         # Generalized residuals
         return self.model.endog - self.predict()
+
 
 class ProbitResults(BinaryResults):
     __doc__ = _discrete_results_docs % {
@@ -3996,6 +3997,7 @@ class ProbitResults(BinaryResults):
         pdf = model.pdf(XB)
         cdf = model.cdf(XB)
         return endog * pdf/cdf - (1-endog)*pdf/(1-cdf)
+
 
 class L1BinaryResults(BinaryResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
