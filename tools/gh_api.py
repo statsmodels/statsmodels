@@ -58,8 +58,8 @@ def get_auth_token():
         return token
 
     print("Please enter your github username and password. These are not "
-           "stored, only used to get an oAuth token. You can revoke this at "
-           "any time on Github.")
+          "stored, only used to get an oAuth token. You can revoke this at "
+          "any time on Github.")
     user = input("Username: ")
     pw = getpass.getpass("Password: ")
 
@@ -278,7 +278,7 @@ def post_download(project, filename, name=None, description=""):
     url = "https://api.github.com/repos/{project}/downloads".format(project=project)
 
     payload = json.dumps(dict(name=name, size=len(filedata),
-                    description=description))
+                              description=description))
     response = requests.post(url, data=payload, headers=make_auth_header())
     response.raise_for_status()
     reply = json.loads(response.content)

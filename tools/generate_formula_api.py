@@ -45,16 +45,15 @@ def iter_subclasses(cls, _seen=None, template_classes=[]):
 def write_formula_api(directory):
     template_classes = ['DiscreteModel', 'BinaryModel', 'MultinomialModel',
                         'OrderedModel', 'CountModel',
-                      'LikelihoodModel', 'GenericLikelihoodModel',
-                      'TimeSeriesModel',
-                      # this class should really be deleted
-                      'ARIMAProcess',
-                      # these need some more work, so don't expose them
-                      'ARIMA', 'VAR', 'SVAR', 'AR', 'NBin', 'NbReg', 'ARMA',
-                      ]
+                        'LikelihoodModel', 'GenericLikelihoodModel',
+                        'TimeSeriesModel',
+                        # this class should really be deleted
+                        'ARIMAProcess',
+                        # these need some more work, so don't expose them
+                        'ARIMA', 'VAR', 'SVAR', 'AR', 'NBin', 'NbReg', 'ARMA']
 
-    fout = open(os.path.join(directory, 'statsmodels', 'formula', 'api.py'),
-                                        'w')
+    path = os.path.join(directory, 'statsmodels', 'formula', 'api.py')
+    fout = open(path, 'w')
     for model in iter_subclasses(Model, template_classes=template_classes):
         print("Generating API for %s" % model.__name__)
         fout.write(

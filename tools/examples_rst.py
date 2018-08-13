@@ -24,9 +24,8 @@ exclude_list = ['run_all.py',
 
 file_path = os.path.dirname(__file__)
 docs_rst_dir = os.path.realpath(os.path.join(file_path,
-                    '../docs/source/examples/generated/'))
-example_dir = os.path.realpath(os.path.join(file_path,
-                    '../examples/'))
+                                             '../docs/source/examples/generated/'))
+example_dir = os.path.realpath(os.path.join(file_path, '../examples/'))
 
 
 def check_script(filename):
@@ -40,7 +39,7 @@ def check_script(filename):
     file_to_run += "from matplotlib import use; use('Agg'); "
     file_to_run += "execfile(r'%s')\"" % os.path.join(example_dir, filename)
     proc = subprocess.Popen(file_to_run, shell=True, stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
+                            stderr=subprocess.PIPE)
     #NOTE: use communicate to wait for process termination
     stdout, stderr = proc.communicate()
     result = proc.returncode
@@ -87,7 +86,7 @@ def parse_file(block):
         # preserve blank lines
 
         if line.startswith('#') and not (line.startswith('#%') or
-                line.startswith('#@')):
+                                         line.startswith('#@')):
             # on some ReST text
             if code_snippet: # were on a code snippet
                 outfile.append('')
