@@ -28,6 +28,44 @@ You can test submodules by::
     >>> sm.discrete.test()
 
 
+Running Tests using the command line
+------------------------------------
+Test can also be run from the command line by calling ``pytest``.  Tests can be run
+at different levels:
+
+* Project level, which runs all tests.  Running the entire test suite is slow
+  and normally this would only be needed if making deep changes to statsmodels.
+
+.. code-block:: bash
+
+    pytest statsmodels
+
+* Folder level, which runs all tests below a folder
+
+.. code-block:: bash
+
+    pytest statsmodels/regression/tests
+
+* File level, which runs all tests in a file
+
+.. code-block:: bash
+
+    pytest statsmodels/regression/tests/test_regression.py
+
+* Class level, which runs all tests in a class
+
+.. code-block:: bash
+
+    pytest statsmodels/regression/tests/test_regression.py::TestOLS
+
+* Test level, which runs a single test.  The first example runs a test in a
+  class.  The second runs a stand alone test.
+
+.. code-block:: bash
+
+    pytest statsmodels/regression/tests/test_regression.py::TestOLS::test_missing
+    pytest statsmodels/regression/tests/test_regression.py::test_ridge
+
 How To Write A Test
 ~~~~~~~~~~~~~~~~~~~
 NumPy provides a good introduction to unit testing with pytest and NumPy extensions `here <https://github.com/numpy/numpy/blob/master/doc/TESTS.rst.txt>`__. It is worth a read for some more details.
@@ -79,13 +117,9 @@ tested. The tests look something like
         def test_model_specifc(self):
             assert_almost_equal(self.res1.foo, self.res2.foo, 4)
 
-    if __name__ == "__main__":
-        import pytest
-        pytest.main([__file__, '-vvs', '-x', '--pdb'])
-
 The main workhorse is the `CheckDiscreteResults` class. Notice that we can set the level of precision 
 for `tvalues` to be different than the default in the subclass  `TestProbitNewton`. All of the test 
-classes have a `setup_class` :func:`python:classmethod`. Otherwise, pytest would reinstantiate the class
+classes have a ``@classmethod`` called ``setup_class``. Otherwise, pytest would reinstantiate the class
 before every single test method. If the fitting of the model is time consuming, then this is clearly
 undesirable. Finally, we have a script at the bottom so that we can run the tests should be running
 the Python file.

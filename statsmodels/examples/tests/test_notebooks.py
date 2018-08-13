@@ -6,12 +6,10 @@ import sys
 import pytest
 
 try:
-    print('In try')
     import jupyter_client
     import nbformat
     from nbconvert.preprocessors import ExecutePreprocessor
 except ImportError:
-    print('In Except')
     pytestmark = pytest.mark.skip(reason='Required packages not available')
 
 KNOWN_FAILURES = ['distributed_estimation']
