@@ -5,9 +5,12 @@ Note: uncomment plt.show() to display graphs
 
 example = 2  # 1,2 or 3
 
+import time
+
 import numpy as np
 import numpy.random as R
 import matplotlib.pyplot as plt
+import scipy.stats
 
 from statsmodels.sandbox.gam import AdditiveModel
 from statsmodels.sandbox.gam import Model as GAM #?
@@ -48,7 +51,6 @@ if example == 1:
     plt.legend()
     plt.title('gam.AdditiveModel')
 
-import scipy.stats, time
 
 if example == 2:
     print("binomial")

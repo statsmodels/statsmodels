@@ -16,7 +16,7 @@ simplefilter("always", (ConvergenceWarning, CacheWriteWarning,
 debug_warnings = False
 
 if debug_warnings:
-    import sys, warnings
+    import warnings
 
     warnings.simplefilter("default")
     # use the following to raise an exception for debugging specific warnings
