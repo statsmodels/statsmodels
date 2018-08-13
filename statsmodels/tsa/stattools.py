@@ -1139,7 +1139,7 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     results = np.zeros((len(ic), max_ar + 1, max_ma + 1))
     model_kw = {} if model_kw is None else model_kw
     fit_kw = {} if fit_kw is None else fit_kw
-    y_arr = y
+    y_arr = np.asarray(y)
     for ar in ar_range:
         for ma in ma_range:
             if ar == 0 and ma == 0 and trend == 'nc':
