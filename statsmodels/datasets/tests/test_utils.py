@@ -24,9 +24,9 @@ def test_get_rdataset():
     assert_(guerry.from_cache is False)
     guerry2 = get_rdataset("Guerry", "HistData", cache=cur_dir)
     assert_(guerry2.from_cache is True)
-    fn = "raw.github.com,vincentarelbundock,Rdatasets,master,csv,HistData,Guerry.csv.zip"
+    fn = "raw.githubusercontent.com,vincentarelbundock,Rdatasets,master,csv,HistData,Guerry.csv.zip"
     os.remove(os.path.join(cur_dir, fn))
-    fn = "raw.github.com,vincentarelbundock,Rdatasets,master,doc,HistData,rst,Guerry.rst.zip"
+    fn = "raw.githubusercontent.com,vincentarelbundock,Rdatasets,master,doc,HistData,rst,Guerry.rst.zip"
     os.remove(os.path.join(cur_dir, fn))
 
 

@@ -180,7 +180,7 @@ def _get_data(base_url, dataname, cache, extension="csv"):
 def _get_dataset_meta(dataname, package, cache):
     # get the index, you'll probably want this cached because you have
     # to download info about all the data to get info about any of the data...
-    index_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/master/"
+    index_url = ("https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/master/"
                  "datasets.csv")
     data, _ = _urlopen_cached(index_url, cache)
     # Python 3
@@ -230,9 +230,9 @@ def get_rdataset(dataname, package="datasets", cache=False):
     dataset is in the cache, it's used.
     """
     # NOTE: use raw github bc html site might not be most up to date
-    data_base_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/"
+    data_base_url = ("https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/"
                      "master/csv/"+package+"/")
-    docs_base_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/"
+    docs_base_url = ("https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/"
                      "master/doc/"+package+"/rst/")
     cache = _get_cache(cache)
     data, from_cache = _get_data(data_base_url, dataname, cache)
