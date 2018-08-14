@@ -1361,7 +1361,8 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
         method = 'agresti-caffo'
 
     if value is None:
-        value = 0 if compare == 'diff' else 1
+        # TODO: odds ratio does not work if value=1 for score test
+        value = 0 if compare == 'diff' else 1 + 1e-10
 
     p1 = count1 / nobs1
     p2 = count2 / nobs2
@@ -1374,7 +1375,7 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
             count2_, nobs2_ = count2 + addone, nobs2 + 2 * addone
             p1_ = count1_ / nobs1_
             p2_ = count2_ / nobs2_
-            diff_stat = p1_ - p2_
+            diff_stat = p1_ - p2_ - value
             var = p1_ * (1 - p1_) / nobs1_ + p2_ * (1 - p2_) / nobs2_
             statistic = diff_stat / np.sqrt(var)
             distr = 'normal'
@@ -1386,6 +1387,7 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
             # Note score part is the same call for all compare
             res = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
                                               value=None, compare=compare,
+                                              alternative=alternative,
                                               correction=correction)
             statistic, pvalue = res[:2]
             distr = 'normal'
@@ -1404,12 +1406,13 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
             p2_ = count2_ / nobs2_
             ratio_ = p1_ / p2_
             var = (1 / count1_) - 1 / nobs1_ + 1 / count2_ - 1 / nobs2_
-            diff_stat = (ratio - value)
-            statistic = (ratio - value) / np.sqrt(var)
+            diff_stat = np.log(ratio_) - np.log(value)
+            statistic = diff_stat / np.sqrt(var)
             distr = 'normal'
         elif method == 'score':
             res = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
-                                              value=None, compare=compare,
+                                              value=value, compare=compare,
+                                              alternative=alternative,
                                               correction=correction)
             statistic, pvalue = res[:2]
             distr = 'normal'
@@ -1436,12 +1439,14 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
             var = (1 / count1_ + 1 / (nobs1_ - count1_) +
                    1 / count2_ + 1 / (nobs2_ - count2_))
 
-            diff_stat = (odds_ratio - value)
+            diff_stat = np.log(odds_ratio_) - np.log(value)
+            statistic = diff_stat / np.sqrt(var)
             distr = 'normal'
 
         elif method == 'score':
             res = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
-                                              value=None, compare=compare,
+                                              value=value, compare=compare,
+                                              alternative=alternative,
                                               correction=correction)
             statistic, pvalue = res[:2]
             distr = 'normal'

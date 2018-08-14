@@ -654,14 +654,48 @@ def test_score_test_2indep():
 
 
 def test_test_2indep():
-    # currently only SMOKE test
-    # this does not verify the statistic and pvalue yet
+    # this checks the pvalue of the hypothesis test at value equal to the
+    # confidence limit
     alpha = 0.05
     count1, nobs1 = 7, 34
     count2, nobs2 = 1, 34
 
-    for co in ['diff', 'ratio', 'or']:
-        res = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2, compare=co)
+    methods_both = [
+                    ('diff', 'agresti-caffo'),
+                    # ('diff', 'newcomb'),  # only confint
+                    # ('diff', 'score'), # no confint yet
+                    ('diff', 'wald'),
+                    ('ratio', 'log'),
+                    ('ratio', 'log-adjusted'),
+                    ('ratio', 'score'),
+                    ('odds-ratio', 'logit'),
+                    ('odds-ratio', 'logit-adjusted'),
+                    ('odds-ratio', 'logit-smoothed'),
+                    # ('odds-ratio', 'score'),  # no confint yet
+                    ]
+
+    for co, method in methods_both:
+        low, upp = confint_proportion_2indep(count1, nobs1, count2, nobs2,
+                                             compare=co, method=method,
+                                             alpha=alpha)
+
+        _, pv = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
+                value=low, compare=co, method=method, correction=False)
+        assert_allclose(pv, alpha, atol=1e-10)
+
+        _, pv = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
+                value=upp, compare=co, method=method, correction=False)
+        assert_allclose(pv, alpha, atol=1e-10)
+
+        _, pv = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
+                value=upp, compare=co, method=method, alternative='smaller',
+                correction=False)
+        assert_allclose(pv, alpha / 2, atol=1e-10)
+
+        _, pv = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
+                value=low, compare=co, method=method, alternative='larger',
+                correction=False)
+        assert_allclose(pv, alpha / 2, atol=1e-10)
 
 
 def test_score_confint_koopman_nam():
