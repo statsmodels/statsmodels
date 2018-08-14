@@ -15,6 +15,7 @@ from statsmodels.compat.python import zip, lzip, lmap, string_types
 import datetime
 
 import numpy as np
+import pandas as pd
 from pandas.io.stata import StataReader, StataWriter
 
 from statsmodels.iolib.openfile import get_file_obj
@@ -126,69 +127,27 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
         to datetime types according to the variable's format.
     """
     if isinstance(fname, string_types):
-        fhd = StataReader(open(fname, 'rb'), missing_values=False,
+        fhd = StataReader(open(fname, 'rb'), convert_missing=False,
                           encoding=encoding)
     elif not hasattr(fname, 'read'):
         raise TypeError("The input should be a string or a filehandle. "\
                         "(got %s instead)" % type(fname))
     else:
-        fhd = StataReader(fname, missing_values=False, encoding=encoding)
+        fhd = StataReader(fname, convert_missing=False, encoding=encoding)
 #    validate_names = np.lib._iotools.NameValidator(excludelist=excludelist,
 #                                    deletechars=deletechars,
 #                                    case_sensitive=case_sensitive)
 
-    #TODO: This needs to handle the byteorder?
-    header = fhd.file_headers()
-    types = header['dtyplist']
-    nobs = header['nobs']
-    numvars = header['nvar']
-    varnames = header['varlist']
-    fmtlist = header['fmtlist']
-    dataname = header['data_label']
-    labels = header['vlblist']  # labels are thrown away unless DataArray
-                                # type is used
-    data = np.zeros((nobs,numvars))
-    stata_dta = fhd.dataset()
+    data = fhd.read()
+    for col in data.columns:
+        if data[col].dtype == 'datetime64[ns]':
+            # convert to python datetime objects... for some reason
+            data[col] = pd.Series(data[col].dt.to_pydatetime(), dtype='O')
 
-    dt = np.dtype(lzip(varnames, types))
-    data = np.zeros((nobs), dtype=dt) # init final array
-
-    for rownum,line in enumerate(stata_dta):
-        # doesn't handle missing value objects, just casts
-        # None will only work without missing value object.
-        if None in line:
-            for i,val in enumerate(line):
-                #NOTE: This will only be scalar types because missing strings
-                # are empty not None in Stata
-                if val is None:
-                    line[i] = missing_flt
-        data[rownum] = tuple(line)
-
-    if pandas:
-        from pandas import DataFrame
-        data = DataFrame.from_records(data)
-        if convert_dates:
-            cols = np.where(lmap(lambda x : x in _date_formats, fmtlist))[0]
-            for col in cols:
-                i = col
-                col = data.columns[col]
-                data[col] = data[col].apply(_stata_elapsed_date_to_datetime,
-                        args=(fmtlist[i],))
-    elif convert_dates:
-        #date_cols = np.where(map(lambda x : x in _date_formats,
-        #                                                    fmtlist))[0]
-        # make the dtype for the datetime types
-        cols = np.where(lmap(lambda x : x in _date_formats, fmtlist))[0]
-        dtype = data.dtype.descr
-        dtype = [(dt[0], object) if i in cols else dt for i,dt in
-                 enumerate(dtype)]
-        data = data.astype(dtype) # have to copy
-        for col in cols:
-            def convert(x):
-                return _stata_elapsed_date_to_datetime(x, fmtlist[col])
-            data[data.dtype.names[col]] = lmap(convert,
-                                              data[data.dtype.names[col]])
+    if not pandas:
+        data = data.to_records(index=False)
     return data
+
 
 def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
     """
