@@ -22,7 +22,7 @@ env:
     - OPENBLAS_NUM_THREADS=1
     - PYTHONHASHSEED=0 # Ensure tests are correctly gathered by xdist
     - BLAS="mkl blas=*=mkl" # Use Intel MKL by default
-    - BUILD_INIT=tools/travis_conda.sh
+    - BUILD_INIT=tools/ci/travis_conda.sh
     - DEPEND_ALWAYS="pyyaml joblib"
 
 matrix:
@@ -91,19 +91,19 @@ matrix:
   # Standard pip install
   - python: 3.6
     env:
-    - BUILD_INIT=tools/travis_pip.sh
+    - BUILD_INIT=tools/ci/travis_pip.sh
   # Latest pre-release packages
   - python: 3.6
     env:
     - PIP_PRE=true
-    - BUILD_INIT=tools/travis_pip.sh
+    - BUILD_INIT=tools/ci/travis_pip.sh
 
   allow_failures:
   # pre-testing is a little fragile. Make it an FYI.
   - python: 3.6
     env:
     - PIP_PRE=true
-    - BUILD_INIT=tools/travis_pip.sh
+    - BUILD_INIT=tools/ci/travis_pip.sh
 
 notifications:
   email:
@@ -126,7 +126,7 @@ before_install:
     else
         export COVERAGE_OPTS=""
     fi
-  - if [ ${DOCBUILD} = true ]; then bash tools/ci_docbuild_install.sh; fi;
+  - if [ ${DOCBUILD} = true ]; then bash tools/ci/docbuild_install.sh; fi;
   - pip install flake8
   - export SRCDIR=$PWD
 
@@ -139,7 +139,7 @@ script:
   # Show versions
   - python -c 'import statsmodels.api as sm; sm.show_versions();'
   # docbuild and exit, if required
-  - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; bash ${SRCDIR}/tools/ci_docbuild.sh; exit 0; fi;
+  - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; bash ${SRCDIR}/tools/ci/docbuild.sh; exit 0; fi;
   # Run tests
   - echo pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples
   - pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples

@@ -25,10 +25,11 @@ platform:
     - x64
 
 build_script:
-  - If Defined PY_MAJOR_VER ( call tools\appveyor_conda.bat ) else ( call tools\appveyor_pip.bat )
   - SET MKL_NUM_THREADS=1
   - SET NUMEXPR_NUM_THREADS=1
   - SET OMP_NUM_THREADS=1
+  - SET OPENBLAS_NUM_THREADS=1
+  - If Defined PY_MAJOR_VER ( call tools\ci\appveyor_conda.bat ) else ( call tools\ci\appveyor_pip.bat )
   - pip install "pytest<4" pytest-xdist
   - python setup.py develop
 
