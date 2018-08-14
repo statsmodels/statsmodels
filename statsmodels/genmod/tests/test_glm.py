@@ -545,10 +545,8 @@ class TestGlmGammaIdentity(CheckModelResultsMixin):
         res2 = CancerIdentity()
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            cls.res1 = GLM(res2.endog, res2.exog,
-                           family=sm.families.Gamma(
-                                link=sm.families.links.identity())
-                            ).fit()
+            fam = sm.families.Gamma(link=sm.families.links.identity())
+            cls.res1 = GLM(res2.endog, res2.exog, family=fam).fit()
         cls.res2 = res2
 
 #    def setup(cls):

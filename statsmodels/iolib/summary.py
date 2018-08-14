@@ -120,8 +120,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
                    'GLSAR' : 'Least Squares',
                    'WLS' : 'Least Squares',
                    'RLM' : '?',
-                   'GLM' : '?'
-                   }
+                   'GLM' : '?'}
     if title==0:
         title = model_types[self.model.__class__.__name__]
     if yname is None:
@@ -175,21 +174,19 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
                                  )
 
     gen_stubs_right = ('Method:',
-                      'Time:',
-                      'Number of Obs:',
-                      'df resid'
-                      )
+                       'Time:',
+                       'Number of Obs:',
+                       'df resid')
     gen_data_right = ([modeltype], #was dist family need to look at more
                       time_of_day,
                       [nobs],
                       [df_resid]
                       )
     gen_table_right = SimpleTable(gen_data_right,
-                                 gen_header,
-                                 gen_stubs_right,
-                                 title = gen_title,
-                                 txt_fmt = gen_fmt
-                                 )
+                                  gen_header,
+                                  gen_stubs_right,
+                                  title = gen_title,
+                                  txt_fmt = gen_fmt)
     gen_table_left.extend_right(gen_table_right)
     general_table = gen_table_left
 
@@ -201,15 +198,14 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
             'GLSAR' : self.t(),
             'WLS' : self.t(),
             'RLM' : self.t(),
-            'GLM' : self.t()
-            }
+            'GLM' : self.t()}
     prob_stats = {'OLS' : self.pvalues,
-                 'GLS' : self.pvalues,
-                 'GLSAR' : self.pvalues,
-                 'WLS' : self.pvalues,
-                 'RLM' : self.pvalues,
-                 'GLM' : self.pvalues
-                }
+                  'GLS' : self.pvalues,
+                  'GLSAR' : self.pvalues,
+                  'WLS' : self.pvalues,
+                  'RLM' : self.pvalues,
+                  'GLM' : self.pvalues
+                  }
     #Dictionary to store the header names for the parameter part of the
     #summary table. look up by modeltype
     alp = str((1-alpha)*100)+'%'
@@ -234,9 +230,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
                        ["%#6.4f" % (std_err[i]) for i in exog_len],
                        ["%#6.4f" % (tstat[i]) for i in exog_len],
                        ["%#6.4f" % (prob_stat[i]) for i in exog_len],
-                       ["(%#5g, %#5g)" % tuple(conf_int[i]) for i in \
-                                                             exog_len]
-                      )
+                       ["(%#5g, %#5g)" % tuple(conf_int[i]) for i in exog_len])
     parameter_table = SimpleTable(params_data,
                                   param_header[modeltype],
                                   params_stubs,
@@ -272,8 +266,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
         pass
 
     printers  = {'OLS': ols_printer,
-                'GLM' : glm_printer
-                }
+                 'GLM': glm_printer}
 
     if returns=='print':
         try:
@@ -495,8 +488,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
                        [forg(tvalues[i]) for i in exog_idx],
                        ["%#6.3f" % (pvalues[i]) for i in exog_idx],
                        [forg(conf_int[i,0]) for i in exog_idx],
-                       [forg(conf_int[i,1]) for i in exog_idx]
-                      )
+                       [forg(conf_int[i,1]) for i in exog_idx])
     parameter_table = SimpleTable(params_data,
                                   param_header,
                                   params_stubs,
@@ -616,8 +608,7 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
         extras_list = [[['%10s' % ('(' + forg(v, prec=3).strip() + ')')
                                 for v in col]
                                 for col in getattr(result, what)]
-                                for what in extras
-                                ]
+                                for what in extras]
         data = lzip(res_params, *extras_list)
         data = [i for j in data for i in j]  #flatten
         stubs = lzip(endog_names, *[['']*len(endog_names)]*len(extras))

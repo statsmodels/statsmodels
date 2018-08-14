@@ -415,9 +415,8 @@ class TestGMMStOneiter(CheckGMM):
                                             weights=res1.weights))))
         # TODO: doesn't look different
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
-        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=False,
-                                               #use_weights=True #weights=w
-                                                         ))))
+        bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=False))))
+                                                #use_weights=True #weights=w
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
 
         #This doesn't replicate Stata oneway either

@@ -50,7 +50,8 @@ def write_formula_api(directory):
                         # this class should really be deleted
                         'ARIMAProcess',
                         # these need some more work, so don't expose them
-                        'ARIMA', 'VAR', 'SVAR', 'AR', 'NBin', 'NbReg', 'ARMA']
+                        'ARIMA', 'VAR', 'SVAR', 'AR', 'NBin', 'NbReg', 'ARMA',
+                        ]
 
     path = os.path.join(directory, 'statsmodels', 'formula', 'api.py')
     fout = open(path, 'w')

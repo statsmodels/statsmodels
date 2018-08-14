@@ -50,8 +50,7 @@ Generalized Pareto distribution
 
 genpareto2.pdf(x,c) = (1+c*x)**(-1-1/c)
 for c != 0, and for x >= 0 for all c, and x < 1/abs(c) for c < 0.
-"""
-                          )
+""")
 
 shape, loc, scale = 0.5, 0, 1
 rv = np.arange(5)

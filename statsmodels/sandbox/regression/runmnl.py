@@ -345,8 +345,7 @@ print(clogit.fit())
 tree0 = ('top',
             [('Fly',['Air']),
              ('Ground', ['Train', 'Car', 'Bus'])
-             ]
-        )
+             ])
 
 datadict = dict(zip(['Air', 'Train', 'Bus', 'Car'],
                     [xifloat[i]for i in range(4)]))

@@ -335,7 +335,7 @@ class TestGLMPoissonCluFit(CheckCountRobustMixin):
                                                 use_correction=True,
                                                 df_correction=True),  #TODO has no effect
                                   use_t=False, #True,
-                                                )
+                                  )
 
         # The model results, t_test, ... should also work without
         # normalized_cov_params, see #2209

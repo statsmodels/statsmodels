@@ -213,7 +213,7 @@ class TestTuckeyHSD2(CheckTuckeyHSDMixin):
         tukeyhsd2s = np.array([ 1.5,1,-0.5,0.3214915,
                                -0.1785085,-1.678509,2.678509,2.178509,
                                 0.6785085,0.01056279,0.1079035,0.5513904]
-                                ).reshape(3,4, order='F')
+                              ).reshape(3,4, order='F')
         cls.meandiff2 = tukeyhsd2s[:, 0]
         cls.confint2 = tukeyhsd2s[:, 1:3]
         pvals = tukeyhsd2s[:, 3]
