@@ -34,7 +34,7 @@ from statsmodels.graphics.mosaicplot import _split_rect
 
 @pytest.mark.skipif(not have_matplotlib or pandas_old,
         reason='matplotlib not available or pandas too old')
-def test_data_conversion():
+def test_data_conversion(close_figures):
     # It will not reorder the elements
     # so the dictionary will look odd
     # as it key order has the c and b
@@ -76,7 +76,7 @@ def test_data_conversion():
     pylab.close('all')
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_mosaic_simple():
+def test_mosaic_simple(close_figures):
     # display a simple plot of 4 categories of data, splitted in four
     # levels with increasing size for each group
     # creation of the levels
@@ -108,7 +108,7 @@ def test_mosaic_simple():
 
 @pytest.mark.skipif(not have_matplotlib or pandas_old,
         reason='matplotlib not available or pandas too old')
-def test_mosaic():
+def test_mosaic(close_figures):
     # make the same analysis on a known dataset
 
     # load the data and clean it a bit
@@ -146,7 +146,7 @@ def test_mosaic():
     pylab.close('all')
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_mosaic_very_complex():
+def test_mosaic_very_complex(close_figures):
     # make a scattermatrix of mosaic plots to show the correlations between
     # each pair of variable in a dataset. Could be easily converted into a
     # new function that does this automatically based on the type of data
@@ -188,7 +188,7 @@ def test_mosaic_very_complex():
     pylab.close('all')
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_axes_labeling():
+def test_axes_labeling(close_figures):
     from numpy.random import rand
     key_set = (['male', 'female'], ['old', 'adult', 'young'],
                ['worker', 'unemployed'], ['yes', 'no'])
@@ -208,7 +208,7 @@ def test_axes_labeling():
 
 @pytest.mark.skipif(not have_matplotlib or pandas_old,
         reason='matplotlib not available or pandas too old')
-def test_mosaic_empty_cells():
+def test_mosaic_empty_cells(close_figures):
     # SMOKE test  see #2286
     import pandas as pd
     mydata = pd.DataFrame({'id2': {64: 'Angelica',
@@ -436,7 +436,7 @@ def test_gap_split():
 
 @pytest.mark.skipif(not have_matplotlib or pandas_old,
         reason='matplotlib not available or pandas too old')
-def test_default_arg_index():
+def test_default_arg_index(close_figures):
     # 2116
     import pandas as pd
     df = pd.DataFrame({'size' : ['small', 'large', 'large', 'small', 'large',

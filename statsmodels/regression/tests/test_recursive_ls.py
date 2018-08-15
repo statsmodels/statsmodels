@@ -266,38 +266,32 @@ def test_estimates():
 
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_plots():
+def test_plots(close_figures):
     exog = add_constant(dta[['m1', 'pop']])
     mod = RecursiveLS(endog, exog)
     res = mod.fit()
 
     # Basic plot
     fig = res.plot_recursive_coefficient()
-    plt.close(fig)
 
     # Specific variable
     fig = res.plot_recursive_coefficient(variables=['m1'])
-    plt.close(fig)
 
     # All variables
     fig = res.plot_recursive_coefficient(variables=[0, 'm1', 'pop'])
-    plt.close(fig)
 
     # Basic plot
     fig = res.plot_cusum()
-    plt.close(fig)
 
     # Other alphas
     for alpha in [0.01, 0.10]:
         fig = res.plot_cusum(alpha=alpha)
-        plt.close(fig)
 
     # Invalid alpha
     assert_raises(ValueError, res.plot_cusum, alpha=0.123)
 
     # Basic plot
     fig = res.plot_cusum_squares()
-    plt.close(fig)
 
     # Numpy input (no dates)
     mod = RecursiveLS(endog.values, exog.values)
@@ -305,15 +299,12 @@ def test_plots():
 
     # Basic plot
     fig = res.plot_recursive_coefficient()
-    plt.close(fig)
 
     # Basic plot
     fig = res.plot_cusum()
-    plt.close(fig)
 
     # Basic plot
     fig = res.plot_cusum_squares()
-    plt.close(fig)
 
 
 def test_from_formula():

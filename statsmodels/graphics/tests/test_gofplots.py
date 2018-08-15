@@ -1,10 +1,8 @@
 import numpy as np
 import pytest
-
-import statsmodels.api as sm
-from statsmodels.graphics.gofplots import qqplot, qqline, ProbPlot
 from scipy import stats
 
+import statsmodels.api as sm
 
 try:
     import matplotlib.pyplot as plt
@@ -21,90 +19,89 @@ class BaseProbplotMixin(object):
         self.other_array = np.random.normal(size=self.prbplt.data.shape)
         self.other_prbplot = sm.ProbPlot(self.other_array)
 
-    def teardown(self):
-        if have_matplotlib:
-            plt.close('all')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    def test_qqplot(self, close_figures):
+        self.prbplt.qqplot(ax=self.ax, line=self.line)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_qqplot(self):
-        self.fig = self.prbplt.qqplot(ax=self.ax, line=self.line)
+    def test_ppplot(self, close_figures):
+        self.prbplt.ppplot(ax=self.ax, line=self.line)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_ppplot(self):
-        plt.close('all')
-        self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line)
+    def test_probplot(self, close_figures):
+        self.prbplt.probplot(ax=self.ax, line=self.line)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_probplot(self):
-        self.fig = self.prbplt.probplot(ax=self.ax, line=self.line)
+    def test_qqplot_other_array(self, close_figures):
+        self.prbplt.qqplot(ax=self.ax, line=self.line,
+                           other=self.other_array)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_qqplot_other_array(self):
-        self.fig = self.prbplt.qqplot(ax=self.ax, line=self.line,
-                                        other=self.other_array)
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_ppplot_other_array(self):
-        self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line,
-                                        other=self.other_array)
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def t_est_probplot_other_array(self):
-        self.fig = self.prbplt.probplot(ax=self.ax, line=self.line,
-                                        other=self.other_array)
+    def test_ppplot_other_array(self, close_figures):
+        self.prbplt.ppplot(ax=self.ax, line=self.line,
+                           other=self.other_array)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_qqplot_other_prbplt(self):
-        self.fig = self.prbplt.qqplot(ax=self.ax, line=self.line,
-                                        other=self.other_prbplot)
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_ppplot_other_prbplt(self):
-        self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line,
-                                        other=self.other_prbplot)
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def t_est_probplot_other_prbplt(self):
-        self.fig = self.prbplt.probplot(ax=self.ax, line=self.line,
-                                        other=self.other_prbplot)
+    def t_est_probplot_other_array(self, close_figures):
+        self.prbplt.probplot(ax=self.ax, line=self.line,
+                             other=self.other_array)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_qqplot_custom_labels(self):
-        self.fig = self.prbplt.qqplot(ax=self.ax, line=self.line,
-                                      xlabel='Custom X-Label',
-                                      ylabel='Custom Y-Label')
+    def test_qqplot_other_prbplt(self, close_figures):
+        self.prbplt.qqplot(ax=self.ax, line=self.line,
+                           other=self.other_prbplot)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_ppplot_custom_labels(self):
-        self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line,
-                                      xlabel='Custom X-Label',
-                                      ylabel='Custom Y-Label')
+    def test_ppplot_other_prbplt(self, close_figures):
+        self.prbplt.ppplot(ax=self.ax, line=self.line,
+                           other=self.other_prbplot)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_probplot_custom_labels(self):
-        self.fig = self.prbplt.probplot(ax=self.ax, line=self.line,
-                                        xlabel='Custom X-Label',
-                                        ylabel='Custom Y-Label')
+    def t_est_probplot_other_prbplt(self, close_figures):
+        self.prbplt.probplot(ax=self.ax, line=self.line,
+                             other=self.other_prbplot)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_qqplot_pltkwargs(self):
-        self.fig = self.prbplt.qqplot(ax=self.ax, line=self.line,
-                                      marker='d',
-                                      markerfacecolor='cornflowerblue',
-                                      markeredgecolor='white',
-                                      alpha=0.5)
+    def test_qqplot_custom_labels(self, close_figures):
+        self.prbplt.qqplot(ax=self.ax, line=self.line,
+                           xlabel='Custom X-Label',
+                           ylabel='Custom Y-Label')
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_ppplot_pltkwargs(self):
-        self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line,
-                                      marker='d',
-                                      markerfacecolor='cornflowerblue',
-                                      markeredgecolor='white',
-                                      alpha=0.5)
+    def test_ppplot_custom_labels(self, close_figures):
+        self.prbplt.ppplot(ax=self.ax, line=self.line,
+                           xlabel='Custom X-Label',
+                           ylabel='Custom Y-Label')
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_probplot_pltkwargs(self):
-        self.fig = self.prbplt.probplot(ax=self.ax, line=self.line,
-                                        marker='d',
-                                        markerfacecolor='cornflowerblue',
-                                        markeredgecolor='white',
-                                        alpha=0.5)
+    def test_probplot_custom_labels(self, close_figures):
+        self.prbplt.probplot(ax=self.ax, line=self.line,
+                             xlabel='Custom X-Label',
+                             ylabel='Custom Y-Label')
+
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    def test_qqplot_pltkwargs(self, close_figures):
+        self.prbplt.qqplot(ax=self.ax, line=self.line,
+                           marker='d',
+                           markerfacecolor='cornflowerblue',
+                           markeredgecolor='white',
+                           alpha=0.5)
+
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    def test_ppplot_pltkwargs(self, close_figures):
+        self.prbplt.ppplot(ax=self.ax, line=self.line,
+                           marker='d',
+                           markerfacecolor='cornflowerblue',
+                           markeredgecolor='white',
+                           alpha=0.5)
+
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    def test_probplot_pltkwargs(self, close_figures):
+        self.prbplt.probplot(ax=self.ax, line=self.line,
+                             marker='d',
+                             markerfacecolor='cornflowerblue',
+                             markeredgecolor='white',
+                             alpha=0.5)
 
 
 class TestProbPlotLongely(BaseProbplotMixin):
@@ -155,34 +152,29 @@ class TestTopLevel(object):
         self.other_array = np.random.normal(size=self.prbplt.data.shape)
         self.other_prbplot = sm.ProbPlot(self.other_array)
 
-    def teardown(self):
-        if have_matplotlib:
-            plt.close('all')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    def test_qqplot(self, close_figures):
+        sm.qqplot(self.res, line='r')
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_qqplot(self):
-        fig = sm.qqplot(self.res, line='r')
+    def test_qqplot_pltkwargs(self, close_figures):
+        sm.qqplot(self.res, line='r', marker='d',
+                  markerfacecolor='cornflowerblue',
+                  markeredgecolor='white',
+                  alpha=0.5)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_qqplot_pltkwargs(self):
-        fig = sm.qqplot(self.res, line='r', marker='d',
-                                      markerfacecolor='cornflowerblue',
-                                      markeredgecolor='white',
-                                      alpha=0.5)
-
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_qqplot_2samples_ProbPlotObjects(self):
+    def test_qqplot_2samples_ProbPlotObjects(self, close_figures):
         # also tests all values for line
         for line in ['r', 'q', '45', 's']:
             # test with `ProbPlot` instances
-            fig = sm.qqplot_2samples(self.prbplt, self.other_prbplot,
-                                     line=line)
-            plt.close('all')
+            sm.qqplot_2samples(self.prbplt, self.other_prbplot,
+                               line=line)
+
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_qqplot_2samples_arrays(self):
+    def test_qqplot_2samples_arrays(self, close_figures):
         # also tests all values for line
         for line in ['r', 'q', '45', 's']:
             # test with arrays
-            fig = sm.qqplot_2samples(self.res, self.other_array, line=line)
-            plt.close('all')
+            sm.qqplot_2samples(self.res, self.other_array, line=line)

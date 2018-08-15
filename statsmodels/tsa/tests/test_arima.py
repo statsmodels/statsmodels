@@ -2057,18 +2057,16 @@ def test_arma_missing():
 
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_plot_predict():
+def test_plot_predict(close_figures):
     from statsmodels.datasets.sunspots import load_pandas
 
     dta = load_pandas().data[['SUNACTIVITY']]
     dta.index = DatetimeIndex(start='1700', end='2009', freq='A')[:309]
     res = ARMA(dta, (3, 0)).fit(disp=-1)
     fig = res.plot_predict('1990', '2012', dynamic=True, plot_insample=False)
-    plt.close(fig)
 
     res = ARIMA(dta, (3, 1, 0)).fit(disp=-1)
     fig = res.plot_predict('1990', '2012', dynamic=True, plot_insample=False)
-    plt.close(fig)
 
 
 def test_arima_diff2():

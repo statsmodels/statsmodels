@@ -52,7 +52,7 @@ class TestPCA(object):
         cls.x_wide = f.dot(b) + e
 
     @pytest.mark.skipif(missing_matplotlib, reason='matplotlib not available')
-    def test_smoke_plot_and_repr(self):
+    def test_smoke_plot_and_repr(self, close_figures):
         pc = PCA(self.x)
         fig = pc.plot_scree()
         fig = pc.plot_scree(ncomp=10)
@@ -188,7 +188,7 @@ class TestPCA(object):
         assert_raises(ValueError, PCA, np.nan * np.ones((200,100)), tol=2.0)
 
     @pytest.mark.skipif(missing_matplotlib, reason='matplotlib not available')
-    def test_pandas(self):
+    def test_pandas(self, close_figures):
         pc = PCA(pd.DataFrame(self.x))
         pc1 = PCA(self.x)
         assert_allclose(pc.factors.values, pc1.factors)

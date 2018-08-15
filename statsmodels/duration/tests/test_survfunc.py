@@ -21,8 +21,6 @@ except ImportError:
 def close_or_save(pdf, fig):
     if pdf_output:
         pdf.savefig(fig)
-    else:
-        plt.close(fig)
 
 
 """
@@ -192,7 +190,7 @@ def test_survdiff():
 
 
 @pytest.mark.skipif(not have_matplotlib, reason='requires matplotlib')
-def test_plot_km():
+def test_plot_km(close_figures):
 
     if pdf_output:
         from matplotlib.backends.backend_pdf import PdfPages

@@ -30,9 +30,6 @@ def close_or_save(pdf, fig):
 
 
 def teardown_module():
-    if not have_matplotlib:
-        return
-    plt.close('all')
     if pdf_output:
         pdf.close()
 
@@ -223,7 +220,7 @@ class TestMICEData(object):
 
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_missing_pattern(self):
+    def test_plot_missing_pattern(self, close_figures):
 
         df = gendat()
         imp_data = mice.MICEData(df)
@@ -239,7 +236,7 @@ class TestMICEData(object):
 
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_bivariate(self):
+    def test_plot_bivariate(self, close_figures):
 
         df = gendat()
         imp_data = mice.MICEData(df)
@@ -253,7 +250,7 @@ class TestMICEData(object):
 
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_fit_obs(self):
+    def test_fit_obs(self, close_figures):
 
         df = gendat()
         imp_data = mice.MICEData(df)
@@ -267,7 +264,7 @@ class TestMICEData(object):
 
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_imputed_hist(self):
+    def test_plot_imputed_hist(self, close_figures):
 
         df = gendat()
         imp_data = mice.MICEData(df)

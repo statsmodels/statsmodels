@@ -96,7 +96,6 @@ def run_ucm(name):
         # Smoke test for plot_components
         if have_matplotlib:
             fig = res_true.plot_components()
-            plt.close(fig)
 
         # Now fit the model via MLE
         with warnings.catch_warnings(record=True) as w:
@@ -110,11 +109,11 @@ def run_ucm(name):
             res.summary()
 
 
-def test_irregular():
+def test_irregular(close_figures):
     run_ucm('irregular')
 
 
-def test_fixed_intercept():
+def test_fixed_intercept(close_figures):
     # Clear warnings
     structural.__warningregistry__ = {}
 
@@ -125,23 +124,23 @@ def test_fixed_intercept():
         assert_equal(str(w[0].message), message)
 
 
-def test_deterministic_constant():
+def test_deterministic_constant(close_figures):
     run_ucm('deterministic_constant')
 
 
-def test_random_walk():
+def test_random_walk(close_figures):
     run_ucm('random_walk')
 
 
-def test_local_level():
+def test_local_level(close_figures):
     run_ucm('local_level')
 
 
-def test_fixed_slope():
+def test_fixed_slope(close_figures):
     run_ucm('fixed_slope')
 
 
-def test_fixed_slope_warn():
+def test_fixed_slope_warn(close_figures):
     # Clear warnings
     structural.__warningregistry__ = {}
 
@@ -152,51 +151,51 @@ def test_fixed_slope_warn():
         assert_equal(str(w[0].message), message)
 
 
-def test_deterministic_trend():
+def test_deterministic_trend(close_figures):
     run_ucm('deterministic_trend')
 
 
-def test_random_walk_with_drift():
+def test_random_walk_with_drift(close_figures):
     run_ucm('random_walk_with_drift')
 
 
-def test_local_linear_deterministic_trend():
+def test_local_linear_deterministic_trend(close_figures):
     run_ucm('local_linear_deterministic_trend')
 
 
-def test_local_linear_trend():
+def test_local_linear_trend(close_figures):
     run_ucm('local_linear_trend')
 
 
-def test_smooth_trend():
+def test_smooth_trend(close_figures):
     run_ucm('smooth_trend')
 
 
-def test_random_trend():
+def test_random_trend(close_figures):
     run_ucm('random_trend')
 
 
-def test_cycle():
+def test_cycle(close_figures):
     run_ucm('cycle')
 
 
-def test_seasonal():
+def test_seasonal(close_figures):
     run_ucm('seasonal')
 
 
-def test_freq_seasonal():
+def test_freq_seasonal(close_figures):
     run_ucm('freq_seasonal')
 
 
-def test_reg():
+def test_reg(close_figures):
     run_ucm('reg')
 
 
-def test_rtrend_ar1():
+def test_rtrend_ar1(close_figures):
     run_ucm('rtrend_ar1')
 
 
-def test_lltrend_cycle_seasonal_reg_ar1():
+def test_lltrend_cycle_seasonal_reg_ar1(close_figures):
     run_ucm('lltrend_cycle_seasonal_reg_ar1')
 
 

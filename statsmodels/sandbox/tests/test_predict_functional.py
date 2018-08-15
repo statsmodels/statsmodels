@@ -35,12 +35,9 @@ class TestPredFunc(object):
     def close_or_save(self, fig):
         if pdf_output:
             self.pdf.savefig(fig)
-        else:
-            plt.close(fig)
-
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_formula(self):
+    def test_formula(self, close_figures):
 
         np.random.seed(542)
         n = 500
@@ -92,9 +89,8 @@ class TestPredFunc(object):
         plt.title("Linear model prediction")
         self.close_or_save(fig)
 
-
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_lm_contrast(self):
+    def test_lm_contrast(self, close_figures):
 
         np.random.seed(542)
         n = 200
@@ -128,9 +124,8 @@ class TestPredFunc(object):
         plt.title("Linear model contrast")
         self.close_or_save(fig)
 
-
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_glm_formula_contrast(self):
+    def test_glm_formula_contrast(self, close_figures):
 
         np.random.seed(542)
         n = 50
@@ -165,9 +160,8 @@ class TestPredFunc(object):
         plt.title("Poisson regression contrast")
         self.close_or_save(fig)
 
-
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_scb(self):
+    def test_scb(self, close_figures):
 
         np.random.seed(473)
         n = 100
@@ -232,7 +226,7 @@ class TestPredFunc(object):
 
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_glm_formula(self):
+    def test_glm_formula(self, close_figures):
 
         np.random.seed(542)
         n = 500
@@ -300,9 +294,8 @@ class TestPredFunc(object):
             plt.title("Binomial GLM prediction")
             self.close_or_save(fig)
 
-
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_noformula_prediction(self):
+    def test_noformula_prediction(self, close_figures):
 
         np.random.seed(6434)
         n = 200

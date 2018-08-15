@@ -18,11 +18,9 @@ except ImportError:
 def close_or_save(pdf, fig):
     if pdf_output:
         pdf.savefig(fig)
-    else:
-        plt.close(fig)
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_all():
+def test_all(close_figures):
 
     if pdf_output:
         from matplotlib.backends.backend_pdf import PdfPages
@@ -416,4 +414,3 @@ def test_all():
 
     if pdf_output:
         pdf.close()
-    plt.close('all')

@@ -21,7 +21,8 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/regime_switching \
         statsmodels/regression/mixed_linear_model.py \
         statsmodels/duration/__init__.py \
-        statsmodels/regression/recursive_ls.py
+        statsmodels/regression/recursive_ls.py \
+        conftest.py
     if [ $? -ne "0" ]; then
         RET=1
     fi

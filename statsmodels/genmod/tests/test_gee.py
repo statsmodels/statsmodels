@@ -49,14 +49,6 @@ else:
 def close_or_save(pdf, fig):
     if pdf_output:
         pdf.savefig(fig)
-    plt.close(fig)
-
-
-def teardown_module():
-    if have_matplotlib:
-        plt.close('all')
-        if pdf_output:
-            pdf.close()
 
 
 def load_data(fname, icept=True):
@@ -168,7 +160,7 @@ class TestGEE(object):
         assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_nominal_plot(self):
+    def test_nominal_plot(self, close_figures):
         np.random.seed(34234)
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
         exog = np.ones((8, 2))
@@ -183,7 +175,6 @@ class TestGEE(object):
         # Smoke test for figure
         fig = result.plot_distribution()
         assert_equal(isinstance(fig, plt.Figure), True)
-        plt.close(fig)
 
     def test_margins_poisson(self):
         # Check marginal effects for a Poisson GEE fit.
@@ -815,7 +806,7 @@ class TestGEE(object):
             model1.fit()
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_ordinal_plot(self):
+    def test_ordinal_plot(self, close_figures):
         family = Binomial()
 
         endog, exog, groups = load_data("gee_ordinal_1.csv",
@@ -829,7 +820,6 @@ class TestGEE(object):
         # Smoke test for figure
         fig = rslt.plot_distribution()
         assert_equal(isinstance(fig, plt.Figure), True)
-        plt.close(fig)
 
     def test_nominal(self):
 
@@ -1569,7 +1559,7 @@ class TestGEEMultinomialCovType(CheckConsistency):
 
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_plots():
+def test_plots(close_figures):
 
     np.random.seed(378)
     exog = np.random.normal(size=100)
@@ -1582,17 +1572,12 @@ def test_plots():
     # Smoke tests
     fig = result.plot_added_variable(1)
     assert_equal(isinstance(fig, plt.Figure), True)
-    plt.close(fig)
     fig = result.plot_partial_residuals(1)
     assert_equal(isinstance(fig, plt.Figure), True)
-    plt.close(fig)
     fig = result.plot_ceres_residuals(1)
     assert_equal(isinstance(fig, plt.Figure), True)
-    plt.close(fig)
     fig = result.plot_isotropic_dependence()
     assert_equal(isinstance(fig, plt.Figure), True)
-    plt.close(fig)
-
 
 
 def test_missing():
