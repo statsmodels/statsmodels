@@ -279,4 +279,3 @@ if __name__ == '__main__':
         plt.plot(grid, mcdf, lw=2, color='black')
 
         plt.show()
-

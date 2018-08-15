@@ -740,4 +740,3 @@ class SVARResults(SVARProcess, VARResults):
         lower = ma_sort[index[0],:, :, :]
         upper = ma_sort[index[1],:, :, :]
         return lower, upper
-

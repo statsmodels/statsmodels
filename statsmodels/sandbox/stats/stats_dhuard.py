@@ -328,14 +328,3 @@ if __name__ == '__main__':
     print('(np.diff(ppfs)).min()', (np.diff(ppfs)).min())
     print('(np.diff(cdf_ongrid)).min()', (np.diff(cdf_ongrid)).min())
     #plt.show()
-
-
-
-
-
-
-
-
-
-
-

@@ -107,4 +107,3 @@ plt.ylabel(r'\beta_\mbox{income}')
 plt.xlabel('Quantiles of the conditional food expenditure distribution')
 plt.legend()
 plt.show()
-

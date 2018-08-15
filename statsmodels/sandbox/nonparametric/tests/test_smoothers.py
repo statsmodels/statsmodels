@@ -109,4 +109,3 @@ if __name__ == '__main__':
 
     t3 = TestPolySmoother3()
     t3.test_predict()
-

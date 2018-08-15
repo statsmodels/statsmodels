@@ -132,4 +132,3 @@ def check_predict_types(results):
         #predicted = res.predict(pandas.DataFrame(p_exog))
         #assert_(isinstance(predicted, pandas.DataFrame))
         #assert_allclose(predicted, fitted, rtol=1e-12)
-

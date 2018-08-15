@@ -38,4 +38,3 @@ savetxt('y_arma_data.csv', np.column_stack((y_arma11, y_arma14, y_arma41,
             y_arma50c,y_arma02c)), names=['y_arma11','y_arma14','y_arma41',
                 'y_arma22','y_arma50', 'y_arma02','y_arma11c','y_arma14c',
                 'y_arma41c','y_arma22c', 'y_arma50c','y_arma02c'], delimiter=",")
-

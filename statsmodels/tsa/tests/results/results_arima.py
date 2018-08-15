@@ -433,6 +433,3 @@ class ARIMA112(object):
             self.forecasterr = forecast_results['fc112cse_css'][-25:]
             self.forecast_dyn = forecast_results['fc112cdyn_css']
             self.forecasterr_dyn = forecast_results['fc112cdynse_css']
-
-
-

@@ -29,6 +29,3 @@ class TestWeb(object):
             webdoc(array, True)
         with pytest.raises(ValueError):
             webdoc(1, False)
-
-
-

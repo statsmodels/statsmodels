@@ -78,5 +78,3 @@ class TsaDescriptive(object):
         ax.set_title('Partial Autocorrelation' + namestr)
 
         return fig
-
-

@@ -229,4 +229,3 @@ ax.vlines(rm, *ylim)
 xlim = ax.get_xlim()
 ax.hlines(hm, *xlim)
 ax.margins(0,0)
-

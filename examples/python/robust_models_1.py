@@ -383,4 +383,3 @@ beta_true
 
 
 se_loss(all_betas.mean(0) - beta_true)
-

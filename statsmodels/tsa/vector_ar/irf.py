@@ -698,5 +698,3 @@ class IRAnalysis(BaseIRAnalysis):
 
     def fevd_table(self):
         pass
-
-

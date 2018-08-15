@@ -42,7 +42,3 @@ fac.main_effect(reference=2)().shape
 
 fac.main_effect(reference=2)().T
 fac.names()
-
-
-
-

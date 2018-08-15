@@ -29,5 +29,3 @@ print('%-10s %5s %-8s' % ('variable', 'trend', '  adf'))
 for name, torder in datatrendli:
     adf_, pval = unitroot_adf(macrod[name], trendorder=torder)[:2]
     print('%-10s %5d %8.4f %8.4f' % (name, torder, adf_, pval))
-
-

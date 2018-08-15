@@ -285,4 +285,3 @@ if __name__ == '__main__':
     x = pinv2(a0)
     x2 = scipy.linalg.pinv2(a0)
     print(np.max(np.abs(x-x2)))
-

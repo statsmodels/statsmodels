@@ -81,5 +81,3 @@ print(np.linalg.eigh(np.linalg.inv(hb))[0])
 ##pp=np.array(store_params)
 ##print pp.min(0)
 ##print pp.max(0)
-
-

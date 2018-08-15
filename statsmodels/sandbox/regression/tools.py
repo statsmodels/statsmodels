@@ -391,11 +391,3 @@ if __name__ == '__main__':
             assert_almost_equal(tstd_lls(yt, np.array([loc, scale**2]), df),
                                 llt(yt,loc,scale*np.sqrt((df-2.)/df),df), 5,
                                 err_msg='loglike')
-
-
-
-
-
-
-
-

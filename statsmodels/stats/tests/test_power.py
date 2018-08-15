@@ -785,4 +785,3 @@ if __name__ == '__main__':
     nt = TestNormalIndPower_onesamp1()
     nt.test_power()
     nt.test_roots()
-

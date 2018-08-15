@@ -193,5 +193,3 @@ if __name__ == '__main__':
         plt.plot(x, y, 'o')
         olsres = sm.OLS(y, exog).fit()
         plt.plot(x, olsres.fittedvalues)
-
-

@@ -213,6 +213,3 @@ class ARResultsMLE(object):
 
         else:
             pass
-
-
-

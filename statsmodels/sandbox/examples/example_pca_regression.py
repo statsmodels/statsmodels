@@ -106,6 +106,3 @@ print("Notes: k is number of components of PCA,")
 print("       constant is added additionally")
 print("       k=0 means regression on constant only")
 print("       L1O: sum of squared prediction errors for leave-one-out")
-
-
-

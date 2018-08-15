@@ -922,4 +922,3 @@ def test_poisson_residuals():
         assert_allclose(res_poi_e.resid_anscombe, res_poi_w.resid_anscombe)
     assert_allclose(res_poi_e.resid_anscombe_unscaled,
                     res_poi_w.resid_anscombe)
-

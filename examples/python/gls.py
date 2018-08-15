@@ -81,4 +81,3 @@ print(gls_results.params)
 print(glsar_results.params)
 print(gls_results.bse)
 print(glsar_results.bse)
-

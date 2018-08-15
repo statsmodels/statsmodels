@@ -1622,5 +1622,3 @@ if __name__ == '__main__':
 
     y = x.sum(1) + 10.*(1-0.5*(x[:,1]>10))*np.random.rand(nobs)
     print(HetGoldfeldQuandt().run(y,x, 1, alternative='dec'))
-
-

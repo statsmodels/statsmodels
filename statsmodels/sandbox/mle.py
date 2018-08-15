@@ -62,4 +62,3 @@ if warnflag==0:
     plt.figure()
     plt.semilogy(np.arange(0,len(data)),data)
     print('Rayleigh quotient NCG',R(v))
-

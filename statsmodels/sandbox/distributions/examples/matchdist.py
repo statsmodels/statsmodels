@@ -260,4 +260,3 @@ if __name__ == '__main__':
         plt.savefig(os.path.join(imagedir,'%s%s%02d_%s.png'% (prefix, ri,ii, distname)))
     ##plt.show()
     ##plt.close()
-

@@ -75,4 +75,3 @@ def _get_data():
 
 def __str__():
     return "e6"
-

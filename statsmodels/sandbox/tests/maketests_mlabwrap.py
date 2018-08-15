@@ -242,6 +242,3 @@ if __name__ == '__main__':
     mbaryw = mlab.ar(x1000-x1000.mean(), 20, 'yw')
     res_ywar.arcoef1000 = np.array(mbaryw.a.ravel())
     res_ywar.save(filename=filen, header=False)
-
-
-

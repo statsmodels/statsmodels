@@ -901,5 +901,3 @@ def cov_nw_groupsum(results, nlags, time, weights_func=weights_bartlett,
             cov_hac *= ((nobs-1.) / float(nobs - k_params))
 
     return cov_hac
-
-

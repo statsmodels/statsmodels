@@ -45,4 +45,3 @@ res_nb1 = NegativeBinomial.from_formula("Days ~ C(Weight) * C(Duration)", data,
                                         loglike_method='nb1').fit(cov_type='HC0')
 print('\nNegative Binomial nb2')
 print(res_nb1.wald_test_terms(skip_single=False))
-

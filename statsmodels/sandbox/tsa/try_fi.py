@@ -75,6 +75,3 @@ if __name__ == '__main__':
         print(ar_app, ma_app)
         ar_app, ma_app, res = ar2arma(ar_desired, 10, 10, n=100, mse='ar')#, start = [-0.1, 0.1])
         print(ar_app, ma_app)
-
-
-

@@ -310,7 +310,3 @@ class CopulaBivariate(object):
             args = self.copargs
         return self.copula(self.marginalcdfs[0](x), self.marginalcdfs[1](y),
                            *args)
-
-
-
-

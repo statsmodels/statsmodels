@@ -230,6 +230,3 @@ if __name__ == '__main__':
     print(llo.sum(), llo.shape)
     print(mvn_loglike_chol(y, sigma))
     print(mvn_loglike_sum(y, sigma))
-
-
-

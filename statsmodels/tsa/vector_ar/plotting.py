@@ -265,5 +265,3 @@ def _get_irf_plot_config(names, impcol, rescol):
 
 #-------------------------------------------------------------------------------
 # Forecast error variance decomposition
-
-

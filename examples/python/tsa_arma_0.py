@@ -190,4 +190,3 @@ ax.legend()
 # P-value of the unit-root test, resoundly rejects the null of no unit-root.
 
 print(sm.tsa.adfuller(cpi)[1])
-

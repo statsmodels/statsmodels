@@ -398,4 +398,3 @@ plt.figtext(0.5, 0.935,  'WLS rm2 Bootstrap',
 #   without a constant. In this case autodedection wouldn't work this
 #   way. Also, I'm not sure whether a ddof keyword parameter can also
 #   handle the hasconst case.
-

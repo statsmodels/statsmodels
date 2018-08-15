@@ -49,4 +49,3 @@ if 2 in examples:
                     in sorted(results2['coefficients'])]
     print(params_est)
     print(', '.join(['%13.10f']*21) % tuple(params_est))
-

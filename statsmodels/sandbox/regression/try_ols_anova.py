@@ -284,5 +284,3 @@ if __name__ == '__main__':
         rest_b1a_ = sm.OLS(y_b1a_, X_b1a_).fit()
         #print(rest_b1a_.params)
         print(anova_str % anovadict(rest_b1a_))
-
-

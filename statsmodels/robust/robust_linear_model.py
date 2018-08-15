@@ -670,4 +670,3 @@ if __name__=="__main__":
 #%s
 #""" % (results_ols.params, results_huber.params, results_ramsaysE.params,
 #            results_andrewWave.params, results_hampel.params)
-

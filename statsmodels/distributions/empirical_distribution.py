@@ -180,4 +180,3 @@ if __name__ == "__main__":
     plt.ylim(0, 1.05)
     plt.vlines(x, 0, .05)
     plt.show()
-

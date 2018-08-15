@@ -1817,4 +1817,3 @@ class DistQuantilesGMM(GMM):
 results_class_dict = {'GMMResults': GMMResults,
                       'IVGMMResults': IVGMMResults,
                       'DistQuantilesGMM': GMMResults}  #TODO: should be a default
-
