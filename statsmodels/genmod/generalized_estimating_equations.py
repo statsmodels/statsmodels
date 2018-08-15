@@ -1324,7 +1324,7 @@ class GEE(base.Model):
         return margeff
 
 
-    def QIC(self, params, scale, cov_params):
+    def qic(self, params, scale, cov_params):
         """
         Returns quasi-information criteria and quasi-likelihood values.
 
@@ -1539,13 +1539,19 @@ class GEEResults(base.LikelihoodModelResults):
             sresid.append(self.centered_resid[ii])
         return sresid
 
-    @cache_readonly
-    def QIC(self):
+    def qic(self, scale=None):
         """
         Returns the QIC and QICu information criteria.
+
+        For families with a scale parameter (e.g. Gaussian),
+        provide as the scale argument the estimated scale
+        from the largest model under consideration.
         """
 
-        _, qic, qicu = self.model.QIC(self.params, self.scale,
+        if scale is None:
+            scale = self.scale
+
+        _, qic, qicu = self.model.QIC(self.params, scale,
                   self.cov_params())
 
         return qic, qicu

@@ -1681,8 +1681,8 @@ def test_qic_known():
             ql1 = np.sum(y * np.log(mean1) - mean1 - c)
             ql2 = np.sum(y * np.log(mean2) - mean2 - c)
 
-        qle1, _, _ = model1.QIC(result1.params, result1.scale, result1.cov_params())
-        qle2, _, _ = model2.QIC(result2.params, result2.scale, result2.cov_params())
+        qle1, _, _ = model1.qic(result1.params, result1.scale, result1.cov_params())
+        qle2, _, _ = model2.qic(result2.params, result2.scale, result2.cov_params())
 
         assert_allclose(ql1, qle1, rtol=1e-4)
         assert_allclose(ql2, qle2, rtol=1e-4)
@@ -1713,7 +1713,7 @@ def test_qic_diff():
         else:
             qldiff = np.sum(y * np.log(mean1) - mean1) - np.sum(y * np.log(mean2) - mean2)
 
-        qle1, _, _ = model1.QIC(result1.params, result1.scale, result1.cov_params())
-        qle2, _, _ = model2.QIC(result2.params, result2.scale, result2.cov_params())
+        qle1, _, _ = model1.qic(result1.params, result1.scale, result1.cov_params())
+        qle2, _, _ = model2.qic(result2.params, result2.scale, result2.cov_params())
 
         assert_allclose(qle1 - qle2, qldiff, rtol=1e-4, atol=1e-4)
