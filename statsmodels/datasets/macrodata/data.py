@@ -1,4 +1,5 @@
 """United States Macroeconomic data"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -52,7 +53,6 @@ NOTE        = """::
         infl      - Inflation rate (ln(cpi_{t}/cpi_{t-1}) * 400)
         realint   - Real interest rate (tbilrate - infl)
 """
-from statsmodels.datasets import utils as du
 
 
 def load_pandas():

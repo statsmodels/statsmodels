@@ -1,4 +1,5 @@
 """US Capital Punishment dataset."""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -41,7 +42,7 @@ NOTE        = """::
 
     State names are included in the data file, though not returned by load.
 """
-from statsmodels.datasets import utils as du
+
 
 def load_pandas():
     """

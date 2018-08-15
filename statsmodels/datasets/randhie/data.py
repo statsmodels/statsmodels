@@ -1,4 +1,5 @@
 """RAND Health Insurance Experiment Data"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -44,7 +45,7 @@ NOTE        = """::
         hlthp   - 1 if self-rated health is poor
         (Omitted category is excellent self-rated health)
 """
-from statsmodels.datasets import utils as du
+
 
 def load(as_pandas=None):
     """

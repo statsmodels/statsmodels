@@ -1,6 +1,5 @@
-#! /usr/bin/env python
-
 """Name of dataset."""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -26,8 +25,6 @@ NOTE        = """
 
 Any other useful information that does not fit into the above categories.
 """
-
-from statsmodels.datasets import utils as du
 
 
 def load(as_pandas=None):

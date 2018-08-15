@@ -1,6 +1,8 @@
-#! /usr/bin/env python
-
 """Mauna Loa Weekly Atmospheric CO2 Data"""
+import pandas as pd
+
+from statsmodels.datasets import utils as du
+
 
 __docformat__ = 'restructuredtext'
 
@@ -37,9 +39,6 @@ NOTE        = """::
 
     The data returned by load_pandas contains the dates as the index.
 """
-import pandas as pd
-
-from statsmodels.datasets import utils as du
 
 
 def load_pandas():

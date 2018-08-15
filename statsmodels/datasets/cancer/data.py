@@ -1,4 +1,5 @@
 """Breast Cancer Data"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -25,7 +26,6 @@ NOTE        = """::
         population - The population of the county
 
 """
-from statsmodels.datasets import utils as du
 
 
 def load_pandas():

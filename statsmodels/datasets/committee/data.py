@@ -1,4 +1,5 @@
 """First 100 days of the US House of Representatives 1995"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -44,7 +45,6 @@ NOTE = """::
     Committee names are included as a variable in the data file though not
     returned by load.
 """
-from statsmodels.datasets import utils as du
 
 
 def load_pandas():

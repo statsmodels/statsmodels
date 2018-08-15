@@ -1,4 +1,7 @@
 """Grunfeld (1950) Investment Data"""
+import pandas as pd
+
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -38,9 +41,6 @@ NOTE        = """::
     Note that raw_data has firm expanded to dummy variables, since it is a
     string categorical variable.
 """
-import pandas as pd
-
-from statsmodels.datasets import utils as du
 
 def load(as_pandas=None):
     """

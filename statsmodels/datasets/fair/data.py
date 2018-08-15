@@ -1,6 +1,5 @@
-#! /usr/bin/env python
-
 """Fair's Extramarital Affairs Data"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -49,7 +48,7 @@ NOTE        = """::
 
     See the original paper for more details.
 """
-from statsmodels.datasets import utils as du
+
 
 def load(as_pandas=None):
     """

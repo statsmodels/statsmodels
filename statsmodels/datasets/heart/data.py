@@ -1,4 +1,5 @@
 """Heart Transplant Data, Miller 1976"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -26,7 +27,7 @@ NOTE = """::
         age - age at the time of surgery
         censored - indicates if an observation is censored.  1 is uncensored
 """
-from statsmodels.datasets import utils as du
+
 
 def load(as_pandas=None):
     """

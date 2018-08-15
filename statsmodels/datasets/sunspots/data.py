@@ -1,4 +1,5 @@
 """Yearly sunspots data 1700-2008"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -26,11 +27,6 @@ NOTE        = """::
 
     The data file contains a 'YEAR' variable that is not returned by load.
 """
-from os.path import dirname, abspath
-
-import pandas as pd
-
-from statsmodels.datasets import utils as du
 
 
 def load_pandas():

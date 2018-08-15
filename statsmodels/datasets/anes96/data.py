@@ -1,4 +1,7 @@
 """American National Election Survey 1996"""
+from numpy import log
+
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -84,13 +87,6 @@ NOTE = """::
                 from "Left" to "Right".
             logpopul - log(popul + .1)
 """
-
-from os.path import dirname, abspath
-
-import pandas as pd
-from numpy import log
-
-from statsmodels.datasets import utils as du
 
 
 def load_pandas():

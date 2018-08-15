@@ -1,4 +1,5 @@
 """Spector and Mazzeo (1980) - Program Effectiveness Data"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -31,7 +32,6 @@ NOTE        = """::
         PSI   - participation in program
         GPA   - Student's grade point average
 """
-from statsmodels.datasets import utils as du
 
 
 def load(as_pandas=None):

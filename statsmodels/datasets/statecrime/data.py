@@ -1,6 +1,5 @@
-#! /usr/bin/env python
-
 """Statewide Crime Data"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -52,7 +51,6 @@ NOTE        = """::
     urban
         % of population in Urbanized Areas as of 2010 Census. Urbanized
         Areas are area of 50,000 or more people."""
-from statsmodels.datasets import utils as du
 
 
 def load(as_pandas=None):

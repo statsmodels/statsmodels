@@ -1,10 +1,5 @@
 """(West) German interest and inflation rate 1972-1998"""
-
-from numpy import recfromtxt, column_stack, array
-from pandas import DataFrame
-
-from statsmodels.datasets.utils import Dataset
-from os.path import dirname, abspath, pardir, join
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -33,7 +28,6 @@ NOTE = """::
         Dp        - Delta log gdp deflator
         R         - nominal long term interest rate
 """
-from statsmodels.datasets import utils as du
 
 variable_names = ["Dp", "R"]
 first_season = 1  # 1 stands for: first observation in Q2 (0 would mean Q1)
@@ -65,7 +59,7 @@ def load(as_pandas=None):
 def load_pandas():
     data = _get_data()
     names = data.columns
-    dataset = Dataset(data=data, names=names)
+    dataset = du.Dataset(data=data, names=names)
     return dataset
 
 

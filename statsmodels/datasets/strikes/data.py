@@ -1,5 +1,5 @@
-#! /usr/bin/env python
 """U.S. Strike Duration Data"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -35,7 +35,7 @@ NOTE        = """::
                 duration - duration of the strike in days
                 iprod - unanticipated industrial production
 """
-from statsmodels.datasets import utils as du
+
 
 
 def load_pandas():

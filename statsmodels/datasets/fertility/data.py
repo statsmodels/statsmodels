@@ -1,6 +1,5 @@
-#! /usr/bin/env python
-
 """World Bank Fertility Data."""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -46,7 +45,6 @@ NOTE        = """
         Indicator Code - The World Bank Series code
         1960 - 2013 - The fertility rate for the given year
 """
-from statsmodels.datasets import utils as du
 
 
 def load(as_pandas=None):

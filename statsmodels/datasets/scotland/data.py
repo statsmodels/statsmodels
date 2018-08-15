@@ -1,4 +1,5 @@
 """Taxation Powers Vote for the Scottish Parliament 1997 dataset."""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -50,7 +51,7 @@ NOTE        = """::
     Council district names are included in the data file, though are not
     returned by load.
 """
-from statsmodels.datasets import utils as du
+
 
 def load(as_pandas=None):
     """

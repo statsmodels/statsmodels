@@ -1,4 +1,5 @@
 """Smoking and lung cancer in eight cities in China."""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -25,11 +26,6 @@ NOTE        = """::
         smoking - yes or no, according to a person's smoking behavior
         lung_cancer - yes or no, according to a person's lung cancer status
 """
-import os
-
-import pandas as pd
-
-from statsmodels.datasets import utils as du
 
 
 def load_pandas():

@@ -1,4 +1,7 @@
 """Nile River Flows."""
+import pandas as pd
+
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -26,9 +29,6 @@ NOTE        = """::
         year - the year of the observations
         volumne - the discharge at Aswan in 10^8, m^3
 """
-import pandas as pd
-
-from statsmodels.datasets import utils as du
 
 
 def load(as_pandas=None):

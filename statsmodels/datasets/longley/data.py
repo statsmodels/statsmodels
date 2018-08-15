@@ -1,4 +1,5 @@
 """Longley dataset"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -38,7 +39,7 @@ NOTE        = """::
             POP - Population
             YEAR - Year (1947 - 1962)
 """
-from statsmodels.datasets import utils as du
+
 
 
 def load(as_pandas=None):

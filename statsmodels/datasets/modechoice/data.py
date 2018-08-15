@@ -1,7 +1,5 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-
 """Travel Mode Choice"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -51,11 +49,6 @@ NOTE = """::
             (dollars).
         hinc = household income ($1000s).
         psize = traveling group size in mode chosen (number)."""
-import os
-
-import pandas as pd
-
-from statsmodels.datasets import utils as du
 
 
 def load(as_pandas=None):

@@ -1,4 +1,5 @@
 """Star98 Educational Testing dataset."""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -63,7 +64,7 @@ NOTE        = """::
         PERMINTE_AVTRSEXP_AVSAL
         PERSPEN_PTRATIO_PCTAF
 """
-from statsmodels.datasets import utils as du
+
 
 
 def load(as_pandas=None):

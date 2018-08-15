@@ -1,4 +1,5 @@
 """Stack loss data"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -29,7 +30,6 @@ NOTE        = """::
         WATERTEMP - Cooling water temperature in the absorption tower
         ACIDCONC  - Acid concentration of circulating acid minus 50 times 10.
 """
-from statsmodels.datasets import utils as du
 
 
 def load(as_pandas=None):

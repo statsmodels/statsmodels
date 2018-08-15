@@ -1,4 +1,5 @@
 """Bill Greene's credit scoring data."""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -25,7 +26,7 @@ NOTE        = """::
     Variable name definitions - See Source for more information on the
                                 variables.
 """
-from statsmodels.datasets import utils as du
+
 
 def load_pandas():
     """Load the credit card data and returns a Dataset class.

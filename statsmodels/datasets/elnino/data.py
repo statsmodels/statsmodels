@@ -1,4 +1,5 @@
 """El Nino dataset, 1950 - 2010"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -32,7 +33,6 @@ NOTE = """::
         TEMPERATURE - average sea surface temperature in degrees Celcius
                       (12 columns, one per month).
 """
-from statsmodels.datasets import utils as du
 
 
 def load_pandas():

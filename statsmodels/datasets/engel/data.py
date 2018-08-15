@@ -1,6 +1,5 @@
-#! /usr/bin/env python
-
 """Name of dataset."""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -30,7 +29,6 @@ NOTE        = """::
         income - annual household income (Belgian francs)
         foodexp - annual household food expenditure (Belgian francs)
 """
-from statsmodels.datasets import utils as du
 
 def load(as_pandas=None):
     """
@@ -57,4 +55,3 @@ def load_pandas():
 
 def _get_data():
     return du.load_csv(__file__, 'engel.csv')
-
