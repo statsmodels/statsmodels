@@ -189,8 +189,8 @@ def _convert_out_to_series(x, dates, name):
     x-13arima-seats output.
     """
     from statsmodels.compat import StringIO
-    from pandas import read_table
-    out = read_table(StringIO(x), skiprows=2, header=None)
+    from pandas import read_csv
+    out = read_csv(StringIO(x), skiprows=2, header=None, sep='\t', engine='python')
     return out.set_index(dates).rename(columns={1 : name})[name]
 
 

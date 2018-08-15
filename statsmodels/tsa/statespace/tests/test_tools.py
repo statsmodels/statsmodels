@@ -385,7 +385,7 @@ class TestConstrainStationaryMultivariate(object):
                 cov = np.eye(unconstrained.shape[0])
             constrained, _ = tools.constrain_stationary_multivariate(unconstrained, cov)
             companion = tools.companion_matrix(
-                [1] + [-constrained[i] for i in range(len(constrained))]
+                [1] + [-np.squeeze(constrained[i]) for i in range(len(constrained))]
             ).T
             assert_equal(np.max(np.abs(np.linalg.eigvals(companion))) < 1, True)
 

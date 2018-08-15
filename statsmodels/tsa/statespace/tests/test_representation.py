@@ -1025,8 +1025,8 @@ def test_simulate():
                   state_shocks)
 
     # ARMA(1,1): phi = [0.1], theta = [0.5], sigma^2 = 2
-    phi = np.r_[0.1]
-    theta = np.r_[0.5]
+    phi = 0.1
+    theta = 0.5
     mod = sarimax.SARIMAX([0], order=(1, 0, 1))
     mod.update(np.r_[phi, theta, sigma2])
 

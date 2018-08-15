@@ -58,8 +58,8 @@ class CheckGeneric(object):
         exog_infl_null = self.res1.res_null.model.exog_infl
         assert_array_equal(exog_infl_null.shape,
                      (len(self.res1.model.exog), 1))
-        assert_equal(exog_null.ptp(), 0)
-        assert_equal(exog_infl_null.ptp(), 0)
+        assert_equal(np.ptp(exog_null), 0)
+        assert_equal(np.ptp(exog_infl_null), 0)
 
     def test_summary(self):
         # SMOKE test
