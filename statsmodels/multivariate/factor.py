@@ -12,7 +12,7 @@ from statsmodels.iolib import summary2
 import warnings
 
 try:
-    import matplotlib.pyplot
+    import matplotlib.pyplot  # noqa:F401
     missing_matplotlib = False
 except ImportError:
     missing_matplotlib = True

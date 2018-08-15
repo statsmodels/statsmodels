@@ -7,7 +7,7 @@ from ._gpa_rotation import oblimin_objective, orthomax_objective, CF_objective
 from ._gpa_rotation import ff_partial_target, ff_target
 from ._gpa_rotation import vgQ_partial_target, vgQ_target
 from ._gpa_rotation import rotateA, GPA
-import numpy as np
+
 
 __all__ = []
 
