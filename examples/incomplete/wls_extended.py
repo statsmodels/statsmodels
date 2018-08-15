@@ -47,7 +47,6 @@ fvalue = mse_model/wls_fit.mse_resid
 rsquared_adj = 1 -(wls_fit.nobs)/(wls_fit.df_resid)*(1-rsquared)
 
 
-
 #Trying to figure out what's going on in this example
 #----------------------------------------------------
 
@@ -80,6 +79,7 @@ plt.xlim([0,2000]);
 #@savefig wls_robust_compare.png
 plt.ylim([0,2000]);
 
+
 #What is going on? A more systematic look at the data
 #----------------------------------------------------
 
@@ -108,7 +108,6 @@ def getrsq(fitresult):
         resid = fitresult[0]
         endog = fitresult[1]
         nobs = resid.shape[0]
-
 
     rss = np.dot(resid, resid)
     tss = np.var(endog)*nobs
