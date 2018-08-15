@@ -5,11 +5,11 @@ Created on Mon Oct 28 15:25:14 2013
 
 Author: Josef Perktold
 """
-
+import pytest
 import numpy as np
 from scipy import stats
 
-from numpy.testing import (assert_allclose, assert_equal, assert_warns,
+from numpy.testing import (assert_allclose, assert_equal,
                            assert_raises)
 
 
@@ -269,7 +269,8 @@ class TestOLSRobust2SmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
         r_pval =  .0307306938402991
         r_chi2 =  4.667944083588736
         r_df =  1
-        assert_warns(InvalidTestWarning, res1.compare_lr_test, res_ols2)
+        with pytest.warns(InvalidTestWarning):
+            res1.compare_lr_test(res_ols2)
         import warnings
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -278,7 +279,8 @@ class TestOLSRobust2SmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
         assert_allclose(pval, r_pval, rtol=1e-11)
         assert_equal(df, r_df)
 
-        assert_warns(InvalidTestWarning, res1.compare_f_test, res_ols2)
+        with pytest.warns(InvalidTestWarning):
+            res1.compare_f_test(res_ols2)
         #fva, pval, df = res1.compare_f_test(res_ols2)
 
 

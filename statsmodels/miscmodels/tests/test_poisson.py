@@ -2,6 +2,7 @@
 
 
 '''
+import pytest
 import numpy as np
 from numpy.testing import assert_almost_equal
 import statsmodels.api as sm
@@ -176,6 +177,6 @@ class TestPoissonZi(CompareMixin):
     def test_exog_names_warning(self):
         mod = self.res.model
         mod1 = PoissonOffsetGMLE(mod.endog, mod.exog, offset=mod.offset)
-        from numpy.testing import assert_warns
         mod1.data.xnames = mod1.data.xnames * 2
-        assert_warns(ValueWarning, mod1.fit, disp=0)
+        with pytest.warns(ValueWarning):
+            mod1.fit(disp=0)

@@ -483,7 +483,8 @@ class TestKPSS(SetupKPSS):
         with warnings.catch_warnings(record=True) as w:
             kpss_stat, pval, lags, crits = kpss(self.x, 'c')
         assert_equal(lags, int(np.ceil(12. * np.power(len(self.x) / 100., 1 / 4.))))
-        # assert_warns(UserWarning, kpss, self.x)
+        #with pytest.warns(UserWarning):
+        #    kpss(self.x)
 
 
 def test_pandasacovf():

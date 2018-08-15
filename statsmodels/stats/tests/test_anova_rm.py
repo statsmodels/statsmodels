@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from statsmodels.stats.anova import AnovaRM
 from numpy.testing import (assert_array_almost_equal, assert_raises,
-                           assert_warns, assert_equal)
+                           assert_equal)
 from pandas.util.testing import assert_frame_equal
 
 
