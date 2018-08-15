@@ -1,4 +1,6 @@
+# pylint:disable=W0611
 from .python import (  # noqa:F401
+    PY3,
     bytes, str, unicode, string_types,
     range, map, zip, filter, reduce, long, unichr,
     lrange, lzip, lmap, lfilter,
@@ -8,14 +10,12 @@ from .python import (  # noqa:F401
     HTTPError, URLError,
     urlretrieve, urlopen, urljoin, urlencode,
     builtins,
-    namedtuple,
-    inspect,
     cPickle,
     isfileobj,
     open_latin1, strchar,
     zip_longest,
     input,
-    ArgSpec, getargspec,
+    getargspec,
     getexception,
     advance_iterator, next,
     callable,

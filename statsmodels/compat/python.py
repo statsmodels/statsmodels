@@ -1,6 +1,7 @@
 """
 Compatibility tools for differences between Python 2 and 3
 """
+# pylint:disable=W0611
 import functools
 import itertools
 import sys
