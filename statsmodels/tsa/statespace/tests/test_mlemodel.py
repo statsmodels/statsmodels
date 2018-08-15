@@ -288,6 +288,7 @@ def test_score_analytic_ar1():
     # Check the Hessian: these approximations are not very good, particularly
     # when phi is close to 0
     params = np.r_[0.5, 1.]
+
     def hessian(phi, sigma2):
         hessian = np.zeros((2,2))
         hessian[0,0] = (-phi**2 - 1) / (phi**2 - 1)**2
@@ -505,6 +506,7 @@ def check_endog(endog, nobs=2, k_endog=1, **kwargs):
 
     return mod
 
+
 def test_basic_endog():
     # Test various types of basic python endog inputs (e.g. lists, scalars...)
 
@@ -543,6 +545,7 @@ def test_basic_endog():
     endog = (1.,2.)
     mod = check_endog(endog, **kwargs)
     mod.filter([])
+
 
 def test_numpy_endog():
     # Test various types of numpy endog inputs
@@ -636,6 +639,7 @@ def test_numpy_endog():
     mod = check_endog(endog, k_endog=2, **kwargs2)
     mod.filter([])
 
+
 def test_pandas_endog():
     # Test various types of pandas endog inputs (e.g. TimeSeries, etc.)
 
@@ -696,6 +700,7 @@ def test_pandas_endog():
     mod = check_endog(endog, k_endog=2, **kwargs2)
     mod.filter([])
 
+
 def test_diagnostics():
     mod, res = get_dummy_mod()
 
@@ -729,6 +734,7 @@ def test_diagnostics():
     actual = res.test_heteroskedasticity(method=None, alternative='d', use_f=False)
     desired = res.test_serial_correlation(method='boxpierce')
 
+
 def test_diagnostics_nile_eviews():
     # Test the diagnostic tests using the Nile dataset. Results are from 
     # "Fitting State Space Models with EViews" (Van den Bossche 2011,
@@ -757,6 +763,7 @@ def test_diagnostics_nile_eviews():
     # Test Jarque-Bera
     actual = res.test_normality(method='jarquebera')[0, :2]
     assert_allclose(actual, [0.041686, 0.979373], atol=1e-5)
+
 
 def test_diagnostics_nile_durbinkoopman():
     # Test the diagnostic tests using the Nile dataset. Results are from 
@@ -791,6 +798,7 @@ def test_diagnostics_nile_durbinkoopman():
     # Note: only 2 digits provided in the book
     actual = res.test_heteroskedasticity(method='breakvar')[0, 0]
     assert_allclose(actual, [0.61], atol=1e-2)
+
 
 def test_prediction_results():
     # Just smoke tests for the PredictionResults class, which is copied from

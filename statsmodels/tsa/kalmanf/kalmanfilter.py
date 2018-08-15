@@ -38,6 +38,7 @@ from . import kalman_loglike
 # Block Kalman filtering for large-scale DSGE models
 # but this is obviously macro model specific
 
+
 def _init_diffuse(T,R):
     m = T.shape[1] # number of states
     r = R.shape[1] # should also be the number of states?
@@ -47,6 +48,7 @@ def _init_diffuse(T,R):
 
 def kalmansmooth(F, A, H, Q, R, y, X, xi10):
     pass
+
 
 def kalmanfilter(F, A, H, Q, R, y, X, xi10, ntrain, history=False):
     """
@@ -336,7 +338,6 @@ class StateSpaceModel(object):
         else:
             raise ValueError("No multivariate filter written yet")
 
-
     def _updateloglike(self, params, xi10, ntrain, penalty, upperbounds, lowerbounds,
             F,A,H,Q,R, history):
         """
@@ -444,6 +445,7 @@ class StateSpaceModel(object):
         self.gradient = score
         self.cov_params = cov_params # how to interpret this?
         self.warnflag = warnflag
+
 
 def updatematrices(params, y, xi10, ntrain, penalty, upperbound, lowerbound):
     """
@@ -724,7 +726,6 @@ if __name__ == "__main__":
     # P0 is a positive definite matrix repr the confidence in the guess
     # larger diagonal elements signify less confidence
 
-
     # we also know that y1 = mu
     # and MSE(y1) = variance*(1+theta**2) = np.dot(np.dot(H.T,P0),H)
 
@@ -798,11 +799,12 @@ if __name__ == "__main__":
 #        gtol = 1e-8, epsilon=1e-10)
 #    array([ 0.83111567,  1.2695249 ,  0.61436685])
 
-
     F = lambda x : np.array([[x[0],0],[0,0]])
+
     def Q(x):
         cholQ = np.array([[x[1],0],[0,x[2]]])
         return np.dot(cholQ,cholQ.T)
+
     H = np.ones((2,1))
 #    ssm_model = StateSpaceModel(y)  # need to pass in Xi10!
 #    ssm_model.fit_kalman(start_params=params, xi10=xi10, F=F, Q=Q, H=H,
@@ -821,8 +823,6 @@ if __name__ == "__main__":
 #    np.testing.assert_almost_equal(ssm_model2.params, thetaunc, 4)
     # maybe add a line search check to make sure we didn't get stuck in a local
     # max for more complicated ssm?
-
-
 
 # Examples from Durbin and Koopman
     import zipfile

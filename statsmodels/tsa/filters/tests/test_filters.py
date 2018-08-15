@@ -51,6 +51,7 @@ def test_bking1d():
     Y = bkfilter(X, 6, 32, 12)
     assert_almost_equal(Y,bking_results,4)
 
+
 def test_bking2d():
     # Test Baxter-King band-pass filter with 2d input
     bking_results = array([[7.320813,-.0374475], [2.886914,-.0430094],
@@ -117,6 +118,7 @@ def test_bking2d():
     X = macrodata.load_pandas().data[['realinv','cpi']].values.astype(np.float)
     Y = bkfilter(X, 6, 32, 12)
     assert_almost_equal(Y,bking_results,4)
+
 
 def test_hpfilter():
     # Test Hodrick-Prescott Filter. Results taken from Stata.
@@ -326,6 +328,7 @@ def test_hpfilter():
     dta = macrodata.load_pandas().data['realgdp'].values
     res = column_stack((hpfilter(dta,1600)))
     assert_almost_equal(res,hpfilt_res,6)
+
 
 def test_cfitz_filter():
     # Test Christiano-Fitzgerald Filter. Results taken from R.
@@ -539,6 +542,7 @@ def test_cfitz_filter():
     cyc, trend = cffilter(dta[:,1])
     assert_almost_equal(cyc, cfilt_res[:,1], 8)
 
+
 def test_bking_pandas():
     # 1d
     dta = macrodata.load_pandas().data
@@ -559,6 +563,7 @@ def test_bking_pandas():
     assert_equal(filtered.index[-1], datetime(2006, 9, 30))
     assert_equal(filtered.columns.values, ["infl", "unemp"])
 
+
 def test_cfitz_pandas():
     # 1d
     dta = macrodata.load_pandas().data
@@ -578,6 +583,7 @@ def test_cfitz_pandas():
     assert_equal(cycle.index[0], datetime(1959, 3, 31))
     assert_equal(cycle.index[-1], datetime(2009, 9, 30))
     assert_equal(cycle.columns.values, ["infl", "unemp"])
+
 
 def test_hpfilter_pandas():
     dta = macrodata.load_pandas().data

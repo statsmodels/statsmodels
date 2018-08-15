@@ -10,6 +10,7 @@ from numpy.testing import assert_equal, assert_almost_equal
 import statsmodels.tsa.stattools as tsast
 from statsmodels.datasets import macrodata
 
+
 def test_adf_autolag():
     #see issue #246
     #this is mostly a unit test
@@ -37,7 +38,6 @@ def test_adf_autolag():
         #same result with lag fixed at usedlag of autolag
         adf2 = tsast.adfuller(x, maxlag=2, autolag=None, regression=tr)
         assert_almost_equal(adf3[:2], adf2[:2], decimal=12)
-
 
     tr = 'c'
     #check maxlag with autolag

@@ -782,7 +782,6 @@ class KalmanFilter(Representation):
                 self.filter_concentrated = True
                 self._scale = None
 
-
     def _filter(self, filter_method=None, inversion_method=None,
                 stability_method=None, conserve_memory=None,
                 filter_timing=None, tolerance=None, loglikelihood_burn=None,
@@ -1586,7 +1585,6 @@ class FilterResults(FrozenRepresentation):
             else:
                 self.forecasts_error_diffuse_cov = np.array(
                     kalman_filter.forecast_error_diffuse_cov, copy=True)
-                
 
         # If there was missing data, save the original values from the Kalman
         # filter output, since below will set the values corresponding to

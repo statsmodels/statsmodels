@@ -5,6 +5,7 @@ datasets/macrodata/var.do
 
 import numpy as np
 
+
 class MacrodataResults(object):
     def __init__(self):
         params = [-0.2794863875, 0.0082427826, 0.6750534746, 0.2904420695,
@@ -56,7 +57,6 @@ class MacrodataResults(object):
         bse = np.asarray(bse).reshape(3,-1)
         bse = np.hstack((bse[:,-1][:,None],bse[:,:-1:2],bse[:,1::2]))
         self.bse = bse
-
 
 
 #array([[ -2.79434736e-01, 6.75015752e-01, 3.32194508e-02,

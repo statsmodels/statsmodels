@@ -859,6 +859,8 @@ def constrain_stationary_multivariate(unconstrained, variance,
         ]
 
     return constrained, variance
+
+
 constrain_stationary_multivariate.__doc__ = (
     constrain_stationary_multivariate_python.__doc__)
 

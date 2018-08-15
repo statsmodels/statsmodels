@@ -29,6 +29,7 @@ def test_pandas_nodates_index():
     start, end, out_of_sample, _ = mod._get_prediction_index(0, 4)
     assert_equal(len(mod.data.predict_dates), 5)
 
+
 def test_predict_freq():
     # test that predicted dates have same frequency
     x = np.arange(1,36.)
@@ -63,6 +64,7 @@ def test_keyerror_start_date():
 
     npt.assert_raises(KeyError, model._get_prediction_index, "1970-4-30", None)
 
+
 def test_period_index():
     # test 1285
 
@@ -73,6 +75,7 @@ def test_period_index():
     assert_equal(model._index.freqstr, "M")
     model = TimeSeriesModel(pd.Series(x, index=dates))
     npt.assert_(model.data.freq == "M")
+
 
 def test_pandas_dates():
 
@@ -87,6 +90,7 @@ def test_pandas_dates():
     model = TimeSeriesModel(df['price'])
 
     assert_equal(model.data.dates, result.index)
+
 
 def test_get_predict_start_end():
     index = pd.DatetimeIndex(start='1970-01-01', end='1990-01-01', freq='AS')

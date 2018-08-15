@@ -32,6 +32,7 @@ with open(current_path+"/resids_css_c.csv", "rb") as fd:
 with open(current_path+"/results_arma_forecasts.csv", "rb") as fd:
     forecast_results = genfromtxt(fd, names=True, delimiter=",", dtype=float)
 
+
 class Y_arma11(object):
     def __init__(self, method="mle"):
         if method == "mle":
@@ -140,6 +141,7 @@ class Y_arma14(object):
                             6.126120 ]
             self.sigma2 = 1.031950951582**2
 
+
 class Y_arma41(object):
     def __init__(self, method="mle"):
         if method == "mle":
@@ -204,6 +206,7 @@ class Y_arma41(object):
                             0.2503143 ]
             self.sigma2 = 0.914551777765**2
 
+
 class Y_arma22(object):
     def __init__(self, method="mle"):
         if method == "mle":
@@ -257,6 +260,7 @@ class Y_arma22(object):
 #            self.tvalues = [ 12.80,  -8.327,  1.853,  -11.35]
             self.tvalues = [12.385077, -8.795883,  1.657944, -9.755738]
             self.sigma2 = 1.074973483083**2
+
 
 class Y_arma50(object):
     def __init__(self, method="mle"):
@@ -358,6 +362,7 @@ class Y_arma02(object):
 #            self.tvalues = [3.949, -15.30]
             self.tvalues = [3.620967, -13.705514 ]
             self.sigma2 = 1.123571177436**2
+
 
 class Y_arma11c(object):
     def __init__(self, method="mle"):
@@ -686,6 +691,7 @@ class Y_arma50c(object):
                             3.28562597329, 3.62338153462, -2.77652428699 ]
 #            self.sigma2 = 0.987100631424**2
             self.sigma2 = 0.974939 ** 2
+
 
 class Y_arma02c(object):
     def __init__(self, method="mle"):

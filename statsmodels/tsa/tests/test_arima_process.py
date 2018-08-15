@@ -43,6 +43,7 @@ def test_arma_acovf():
     rep2 = [1. * sigma * phi ** i / (1 - phi ** 2) for i in range(N)]
     assert_almost_equal(rep1, rep2, 7)  # 7 is max precision here
 
+
 def test_arma_acovf_persistent():
     # Test arma_acovf in case where there is a near-unit root.
     # .999 is high enough to trigger the "while ir[-1] > 5*1e-5:" clause,
@@ -61,6 +62,7 @@ def test_arma_acovf_persistent():
     assert_equal(res.ndim, 1)
     assert_allclose(res, expected, atol=1e-6)
     # atol=7 breaks at .999, worked at .995
+
 
 def test_arma_acf():
     # Check for specific AR(1)
@@ -156,6 +158,7 @@ def test_armafft():
             ac2 = arma.acovf(10)[:10]
             assert_almost_equal(ac1, ac2, decimal=7,
                                 err_msg='acovf not equal for %s, %s' % (ar, ma))
+
 
 def test_lpol2index_index2lpol():
     process = ArmaProcess([1, 0, 0, -0.8])
@@ -328,7 +331,6 @@ class TestArmaProcess(TestCase):
         for i in range(2, 200):
             expected[i] = 1.6 * expected[i - 1] - 0.9 * expected[i - 2] + expected[i]
         assert_almost_equal(sample, expected[100:])
-
 
         np.random.seed(12345)
         sample = process.generate_sample(nsample=(100,5))

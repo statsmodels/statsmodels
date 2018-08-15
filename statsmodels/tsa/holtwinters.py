@@ -25,6 +25,7 @@ from statsmodels.tsa.base.tsa_model import TimeSeriesModel
 from statsmodels.tsa.tsatools import freq_to_period
 import statsmodels.tsa._exponential_smoothers as smoothers
 
+
 def _holt_init(x, xi, p, y, l, b):
     """Initialization for the Holt Models"""
     p[xi.astype(np.bool)] = x
@@ -781,7 +782,6 @@ class ExponentialSmoothing(TimeSeriesModel):
             s0 = []
 
         return l0, b0, s0
-
 
     def _predict(self, h=None, smoothing_level=None, smoothing_slope=None,
                  smoothing_seasonal=None, initial_level=None, initial_slope=None,

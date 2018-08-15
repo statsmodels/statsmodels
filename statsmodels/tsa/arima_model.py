@@ -1772,7 +1772,6 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         _ = _import_mpl()
         fig, ax = create_mpl_ax(ax)
 
-
         # use predict so you set dates
         forecast = self.predict(start, end, exog, dynamic)
         # doing this twice. just add a plot keyword to predict?
@@ -1784,7 +1783,6 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             fc_error = self._forecast_error(steps)
             conf_int = self._forecast_conf_int(forecast[-steps:], fc_error,
                                                alpha)
-
 
         if hasattr(self.data, "predict_dates"):
             from pandas import Series
@@ -1816,7 +1814,7 @@ class ARMAResultsWrapper(wrap.ResultsWrapper):
     _methods = {}
     _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
                                      _methods)
-wrap.populate_wrapper(ARMAResultsWrapper, ARMAResults)
+wrap.populate_wrapper(ARMAResultsWrapper, ARMAResults)  # noqa:E305
 
 
 class ARIMAResults(ARMAResults):
@@ -1941,7 +1939,7 @@ class ARIMAResults(ARMAResults):
 
 class ARIMAResultsWrapper(ARMAResultsWrapper):
     pass
-wrap.populate_wrapper(ARIMAResultsWrapper, ARIMAResults)
+wrap.populate_wrapper(ARIMAResultsWrapper, ARIMAResults)  # noqa:E305
 
 
 if __name__ == "__main__":

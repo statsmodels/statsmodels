@@ -826,7 +826,7 @@ class ARResultsWrapper(wrap.ResultsWrapper):
     _methods = {}
     _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
                                      _methods)
-wrap.populate_wrapper(ARResultsWrapper, ARResults)
+wrap.populate_wrapper(ARResultsWrapper, ARResults)  # noqa:E305
 
 
 if __name__ == "__main__":

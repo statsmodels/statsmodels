@@ -22,6 +22,7 @@ NP_LT_18 = LooseVersion(np.__version__).version[:2] < [1, 8]
 if NP_LT_18:
     raise SkipTest("NumPy <= 1.8 doesn't preserve matrix order when copying")
 
+
 def test_sarimax():
     mod = sarimax.SARIMAX(macrodata['realgdp'].values, order=(4, 1, 0))
     res = mod.smooth(mod.start_params)

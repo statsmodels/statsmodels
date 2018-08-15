@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Bunch(dict):
     def __init__(self, **kw):
         dict.__init__(self, kw)
@@ -629,7 +630,6 @@ b_var = np.array([
 b_var_colnames = 'L.gdp L2.gdp L3.gdp L.cons L2.cons L3.cons L.inv L2.inv L3.inv _cons L.gdp L2.gdp L3.gdp L.cons L2.cons L3.cons L.inv L2.inv L3.inv _cons L.gdp L2.gdp L3.gdp L.cons L2.cons L3.cons L.inv L2.inv L3.inv _cons'.split()
 
 b_var_rownames = 'y1'.split()
-
 
 
 results_svar1_small = Bunch(

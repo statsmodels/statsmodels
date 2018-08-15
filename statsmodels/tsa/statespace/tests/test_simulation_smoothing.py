@@ -471,6 +471,7 @@ class TestDFM(TestMultivariateVARKnown):
     def test_loglike(self):
         pass
 
+
 class MultivariateVAR(object):
     """
     More generic tests for simulation smoothing; use actual N(0,1) variates

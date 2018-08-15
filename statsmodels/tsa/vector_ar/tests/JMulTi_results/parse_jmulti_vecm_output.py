@@ -402,7 +402,6 @@ def load_results_jmulti(dataset):
             results["inst_caus"]["p"][(causing, caused)] = \
                 inst_results[3]
 
-
         # ---------------------------------------------------------------------
         # parse output related to impulse-response analysis:
         ir_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \

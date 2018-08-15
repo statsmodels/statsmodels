@@ -24,6 +24,7 @@ __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
 
 SQRTEPS = np.sqrt(np.finfo(np.double).eps)
 
+
 #NOTE: now in two places to avoid circular import
 #TODO: I like the bunch pattern for this too.
 class ResultsStore(object):
@@ -380,7 +381,6 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
         x[~notmask_bool] = np.nan
 
     return acov
-
 
 
 def q_stat(x, nobs, type="ljungbox"):
@@ -1166,6 +1166,7 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     res.update(min_res)
 
     return Bunch(**res)
+
 
 def has_missing(data):
     """

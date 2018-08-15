@@ -508,12 +508,15 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim='forward',
         lagsli.append(lagmat(x[:, k], maxlag, trim=trim, original='in')[:, dropex:maxlagex + 1])
     return np.column_stack(lagsli)
 
+
 def vec(mat):
     return mat.ravel('F')
+
 
 def vech(mat):
     # Gets Fortran-order
     return mat.T.take(_triu_indices(len(mat)))
+
 
 # tril/triu/diag, suitable for ndarray.take
 
@@ -521,18 +524,22 @@ def _tril_indices(n):
     rows, cols = np.tril_indices(n)
     return rows * n + cols
 
+
 def _triu_indices(n):
     rows, cols = np.triu_indices(n)
     return rows * n + cols
+
 
 def _diag_indices(n):
     rows, cols = np.diag_indices(n)
     return rows * n + cols
 
+
 def unvec(v):
     k = int(np.sqrt(len(v)))
     assert(k * k == len(v))
     return v.reshape((k, k), order='F')
+
 
 def unvech(v):
     # quadratic formula, correct fp error
@@ -548,6 +555,7 @@ def unvech(v):
 
     return result
 
+
 def duplication_matrix(n):
     """
     Create duplication matrix D_n which satisfies vec(S) = D_n vech(S) for
@@ -559,6 +567,7 @@ def duplication_matrix(n):
     """
     tmp = np.eye(n * (n + 1) // 2)
     return np.array([unvech(x).ravel() for x in tmp]).T
+
 
 def elimination_matrix(n):
     """
@@ -574,6 +583,7 @@ def elimination_matrix(n):
     """
     vech_indices = vec(np.tril(np.ones((n, n))))
     return np.eye(n * n)[vech_indices != 0]
+
 
 def commutation_matrix(p, q):
     """
@@ -591,6 +601,7 @@ def commutation_matrix(p, q):
     K = np.eye(p * q)
     indices = np.arange(p * q).reshape((p, q), order='F')
     return K.take(indices.ravel(), axis=0)
+
 
 def _ar_transparams(params):
     """
@@ -616,6 +627,7 @@ def _ar_transparams(params):
         newparams[:j] = tmp[:j]
     return newparams
 
+
 def _ar_invtransparams(params):
     """
     Inverse of the Jones reparameterization
@@ -635,6 +647,7 @@ def _ar_invtransparams(params):
         params[:j] = tmp[:j]
     invarcoefs = -np.log((1-params)/(1+params))
     return invarcoefs
+
 
 def _ma_transparams(params):
     """
@@ -659,6 +672,7 @@ def _ma_transparams(params):
             tmp[kiter] += b * newparams[j-kiter-1]
         newparams[:j] = tmp[:j]
     return newparams
+
 
 def _ma_invtransparams(macoefs):
     """

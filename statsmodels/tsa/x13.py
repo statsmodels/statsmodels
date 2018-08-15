@@ -36,6 +36,7 @@ class _freq_to_period:
         elif key.startswith('W'):
             return 52
 
+
 _freq_to_period = _freq_to_period()
 
 _period_to_freq = {12 : 'M', 4 : 'Q'}

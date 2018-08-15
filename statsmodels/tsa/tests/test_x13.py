@@ -29,7 +29,6 @@ class TestX13(object):
         if not isinstance(cls.monthly_start_data, (pd.DataFrame, pd.Series)):
             cls.monthly_start_data = cls.monthly_start_data.mean()
 
-
     def test_x13_arima_select_order(self):
         res = x13_arima_select_order(self.monthly_data)
         assert_(isinstance(res.order, tuple))

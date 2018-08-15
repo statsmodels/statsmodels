@@ -44,6 +44,7 @@ DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
 
+
 class CheckVAR(object):
     # just so pylint won't complain
     res1 = None
@@ -98,6 +99,7 @@ class CheckVAR(object):
     def test_bse(self):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
 
+
 def get_macrodata():
     data = sm.datasets.macrodata.load_pandas().data[['realgdp','realcons','realinv']]
     data = data.to_records(index=False)
@@ -105,15 +107,18 @@ def get_macrodata():
     nd = np.diff(np.log(nd), axis=0)
     return nd.ravel().view(data.dtype, type=np.ndarray)
 
+
 def generate_var():
     from rpy2.robjects import r
     import pandas.rpy.common as prp
     r.source('tests/var.R')
     return prp.convert_robj(r['result'], use_pandas=False)
 
+
 def write_generate_var():
     result = generate_var()
     np.savez('tests/results/vars_results.npz', **result)
+
 
 class RResults(object):
     """
@@ -150,6 +155,7 @@ class RResults(object):
 
         self.causality = data['causality']
 
+
 def close_plots():
     try:
         import matplotlib.pyplot as plt
@@ -157,12 +163,15 @@ def close_plots():
     except ImportError:
         pass
 
+
 _orig_stdout = None
+
 
 def setup_module():
     global _orig_stdout
     _orig_stdout = sys.stdout
     sys.stdout = StringIO()
+
 
 def teardown_module():
     sys.stdout = _orig_stdout
@@ -181,13 +190,11 @@ class CheckIRF(object):
         self._check_irfs(self.irf.irfs, self.ref.irf)
         self._check_irfs(self.irf.orth_irfs, self.ref.orth_irf)
 
-
     def _check_irfs(self, py_irfs, r_irfs):
         for i, name in enumerate(self.res.names):
             ref_irfs = r_irfs[name].view((float, self.k), type=np.ndarray)
             res_irfs = py_irfs[:, :, i]
             assert_almost_equal(ref_irfs, res_irfs)
-
 
     @skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_irf(self):
@@ -319,7 +326,6 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     def test_summary(self):
         summ = self.res.summary()
-
 
     def test_detsig(self):
         assert_almost_equal(self.res.detomega, self.ref.detomega)
@@ -503,8 +509,10 @@ class E1_Results(object):
                                    [.048, .230, .288],
                                    [.043, .208, .260]])
 
+
 basepath = os.path.split(sm.__file__)[0]
 resultspath = basepath + '/tsa/vector_ar/tests/results/'
+
 
 def get_lutkepohl_data(name='e2'):
     lut_data = basepath + '/tsa/vector_ar/data/'
@@ -512,11 +520,13 @@ def get_lutkepohl_data(name='e2'):
 
     return util.parse_lutkepohl_data(path)
 
+
 def test_lutkepohl_parse():
     files = ['e%d' % i for i in range(1, 7)]
 
     for f in files:
         get_lutkepohl_data(f)
+
 
 class TestVARResultsLutkepohl(object):
     """
@@ -563,6 +573,7 @@ class TestVARResultsLutkepohl(object):
         orth_stderr = self.irf.lr_effect_stderr(orth=True)
         assert_almost_equal(np.round(stderr, 3), self.lut.lr_stderr)
 
+
 def test_get_trendorder():
     results = {
         'c' : 1,
@@ -599,6 +610,7 @@ def test_var_constant():
     with pytest.raises(ValueError):
         model.fit(1)
 
+
 def test_var_trend():
     # see 2271
     data = get_macrodata().view((float,3), type=np.ndarray)
@@ -606,7 +618,6 @@ def test_var_trend():
     model = sm.tsa.VAR(data)
     results = model.fit(4) #, trend = 'c')
     irf = results.irf(10)
-
 
     data_nc = data - data.mean(0)
     model_nc = sm.tsa.VAR(data_nc)
@@ -624,7 +635,6 @@ def test_irf_trend():
     model = sm.tsa.VAR(data)
     results = model.fit(4) #, trend = 'c')
     irf = results.irf(10)
-
 
     data_nc = data - data.mean(0)
     model_nc = sm.tsa.VAR(data_nc)

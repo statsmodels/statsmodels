@@ -297,6 +297,7 @@ class MLEModel(tsbase.TimeSeriesModel):
     @property
     def initialization(self):
         return self.ssm.initialization
+
     @initialization.setter
     def initialization(self, value):
         self.ssm.initialization = value
@@ -2815,7 +2816,7 @@ class MLEResultsWrapper(wrap.ResultsWrapper):
     }
     _wrap_methods = wrap.union_dicts(
         tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods)
-wrap.populate_wrapper(MLEResultsWrapper, MLEResults)
+wrap.populate_wrapper(MLEResultsWrapper, MLEResults)  # noqa:E305
 
 
 class PredictionResults(pred.PredictionResults):
@@ -2933,4 +2934,4 @@ class PredictionResultsWrapper(wrap.ResultsWrapper):
 
     _methods = {}
     _wrap_methods = wrap.union_dicts(_methods)
-wrap.populate_wrapper(PredictionResultsWrapper, PredictionResults)
+wrap.populate_wrapper(PredictionResultsWrapper, PredictionResults)  # noqa:E305

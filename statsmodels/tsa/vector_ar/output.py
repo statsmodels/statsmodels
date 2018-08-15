@@ -24,6 +24,7 @@ _default_table_fmt = dict(
     fmt = 'txt'
 )
 
+
 class VARSummary(object):
     default_fmt = dict(
         #data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
@@ -114,7 +115,6 @@ class VARSummary(object):
         # Handle overall fit statistics
 
         model = self.model
-
 
         part2Lstubs = ('No. of Equations:',
                        'Nobs:',

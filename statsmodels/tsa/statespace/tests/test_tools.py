@@ -18,6 +18,7 @@ from numpy.testing import (
     assert_raises
 )
 
+
 class TestCompanionMatrix(object):
 
     cases = [
@@ -37,6 +38,7 @@ class TestCompanionMatrix(object):
     def test_cases(self):
         for polynomial, result in self.cases:
             assert_equal(tools.companion_matrix(polynomial), result)
+
 
 class TestDiff(object):
 
@@ -80,6 +82,7 @@ class TestDiff(object):
             series = pd.DataFrame(series)
             x = tools.diff(series, diff, seasonal_diff, seasonal_periods)
             assert_almost_equal(x, result)
+
 
 class TestSolveDiscreteLyapunov(object):
 
@@ -147,6 +150,7 @@ class TestSolveDiscreteLyapunov(object):
         desired = self.solve_dicrete_lyapunov_direct(a, q, complex_step=True)
         assert_allclose(actual, desired)
 
+
 class TestConcat(object):
 
     x = np.arange(10)
@@ -175,6 +179,7 @@ class TestConcat(object):
         for args in self.invalid:
             assert_raises(args[-1], tools.concat, *args[:-1])
 
+
 class TestIsInvertible(object):
 
     cases = [
@@ -190,6 +195,7 @@ class TestIsInvertible(object):
         for polynomial, invertible in self.cases:
             assert_equal(tools.is_invertible(polynomial), invertible)
 
+
 class TestConstrainStationaryUnivariate(object):
 
     cases = [
@@ -201,6 +207,7 @@ class TestConstrainStationaryUnivariate(object):
             result = tools.constrain_stationary_univariate(unconstrained)
             assert_equal(result, constrained)
 
+
 class TestUnconstrainStationaryUnivariate(object):
 
     cases = [
@@ -211,6 +218,7 @@ class TestUnconstrainStationaryUnivariate(object):
         for constrained, unconstrained in self.cases:
             result = tools.unconstrain_stationary_univariate(constrained)
             assert_allclose(result, unconstrained)
+
 
 class TestStationaryUnivariate(object):
     # Test that the constraint and unconstraint functions are inverses
@@ -230,6 +238,7 @@ class TestStationaryUnivariate(object):
             constrained = tools.constrain_stationary_univariate(unconstrained)
             reunconstrained = tools.unconstrain_stationary_univariate(constrained)
             assert_allclose(reunconstrained, unconstrained)
+
 
 class TestValidateMatrixShape(object):
     # name, shape, nrows, ncols, nobs
@@ -258,6 +267,7 @@ class TestValidateMatrixShape(object):
                 ValueError, tools.validate_matrix_shape, *args
             )
 
+
 class TestValidateVectorShape(object):
     # name, shape, nrows, ncols, nobs
     valid = [
@@ -282,6 +292,7 @@ class TestValidateVectorShape(object):
             assert_raises(
                 ValueError, tools.validate_vector_shape, *args
             )
+
 
 def test_multivariate_acovf():
     _acovf = tools._compute_multivariate_acovf_from_coefficients
@@ -352,6 +363,7 @@ def test_multivariate_pacf():
     assert_allclose(
         tools._compute_multivariate_sample_pacf(np.c_[x, y], maxlag=1)[0],
         np.diag([1, 0]), atol=1e-2)
+
 
 class TestConstrainStationaryMultivariate(object):
 

@@ -548,7 +548,6 @@ class UnobservedComponents(MLEModel):
             self.autoregressive
         )
 
-
         # The ar states are initialized as stationary, so they don't need to be
         # burned.
         loglikelihood_burn = kwargs.get('loglikelihood_burn',
@@ -1320,7 +1319,6 @@ class UnobservedComponentsResults(MLEResults):
                     [self.filtered_state_cov[offset + j, offset + j] for j in
                      states_in_sum], axis=0)
 
-
                 item = Bunch(
                     filtered=filtered_state,
                     filtered_cov=filtered_cov,
@@ -1825,5 +1823,5 @@ class UnobservedComponentsResultsWrapper(MLEResultsWrapper):
     _methods = {}
     _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
                                      _methods)
-wrap.populate_wrapper(UnobservedComponentsResultsWrapper,
+wrap.populate_wrapper(UnobservedComponentsResultsWrapper,  # noqa:E305
                       UnobservedComponentsResults)

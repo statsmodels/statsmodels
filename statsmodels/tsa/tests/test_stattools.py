@@ -26,6 +26,7 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
 
+
 class CheckADF(object):
     """
     Test Augmented Dickey-Fuller
@@ -47,6 +48,7 @@ class CheckADF(object):
         critvalues = [self.res1[4][lev] for lev in self.levels]
         assert_almost_equal(critvalues, self.critvalues, DECIMAL_2)
 
+
 class TestADFConstant(CheckADF):
     """
     Dickey-Fuller test for unit root
@@ -59,6 +61,7 @@ class TestADFConstant(CheckADF):
         cls.pvalue = .99399563
         cls.critvalues = [-3.476, -2.883, -2.573]
 
+
 class TestADFConstantTrend(CheckADF):
     """
     """
@@ -70,11 +73,13 @@ class TestADFConstantTrend(CheckADF):
         cls.pvalue = .67682968
         cls.critvalues = [-4.007, -3.437, -3.137]
 
+
 #class TestADFConstantTrendSquared(CheckADF):
 #    """
 #    """
 #    pass
 #TODO: get test values from R?
+
 
 class TestADFNoConstant(CheckADF):
     """
@@ -89,6 +94,7 @@ class TestADFNoConstant(CheckADF):
                         # assumed that its right-tail is well-behaved
         cls.critvalues = [-2.587, -1.950, -1.617]
 
+
 # No Unit Root
 
 class TestADFConstant2(CheckADF):
@@ -100,6 +106,7 @@ class TestADFConstant2(CheckADF):
         cls.pvalue = .00038661
         cls.critvalues = [-3.476, -2.883, -2.573]
 
+
 class TestADFConstantTrend2(CheckADF):
     @classmethod
     def setup_class(cls):
@@ -108,6 +115,7 @@ class TestADFConstantTrend2(CheckADF):
         cls.teststat = -4.425093
         cls.pvalue = .00199633
         cls.critvalues = [-4.006, -3.437, -3.137]
+
 
 class TestADFNoConstant2(CheckADF):
     @classmethod
@@ -124,6 +132,7 @@ class TestADFNoConstant2(CheckADF):
 
     def test_store_str(self):
         assert_equal(self.store.__str__(), 'Augmented Dickey-Fuller Test Results')
+
 
 class CheckCorrGram(object):
     """
@@ -181,6 +190,7 @@ class TestACF_FFT(CheckCorrGram):
     def test_qstat(self):
         #todo why is res1/qstat 1 short
         assert_almost_equal(self.res1[1], self.qstat, DECIMAL_3)
+
 
 class TestACFMissing(CheckCorrGram):
     # Test Autocorrelation Function using Missing
@@ -240,7 +250,6 @@ class TestPACF(CheckCorrGram):
         assert_equal(confint[0], [1, 1])
         assert_equal(pacfols[0], 1)
 
-
     def test_yw(self):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
         assert_almost_equal(pacfyw[1:], self.pacfyw, DECIMAL_8)
@@ -253,6 +262,7 @@ class TestPACF(CheckCorrGram):
         pacfyw = pacf(self.x, nlags=40, method="yw")
         pacfld = pacf(self.x, nlags=40, method="ldu")
         assert_almost_equal(pacfyw, pacfld, DECIMAL_8)
+
 
 class CheckCoint(object):
     """
@@ -267,6 +277,7 @@ class CheckCoint(object):
 
     def test_tstat(self):
         assert_almost_equal(self.coint_t,self.teststat, DECIMAL_4)
+
 
 # this doesn't produce the old results anymore
 class TestCoint_t(CheckCoint):
@@ -475,7 +486,6 @@ class TestKPSS(SetupKPSS):
         # assert_warns(UserWarning, kpss, self.x)
 
 
-
 def test_pandasacovf():
     s = Series(lrange(1, 11))
     assert_almost_equal(acovf(s), acovf(s.values))
@@ -490,6 +500,7 @@ def test_acovf2d():
     X = np.random.random((10,2))
     assert_raises(ValueError, acovf, X)
 
+
 def test_acovf_fft_vs_convolution():
     np.random.seed(1)
     q = np.random.normal(size=100)
@@ -499,6 +510,7 @@ def test_acovf_fft_vs_convolution():
             F1 = acovf(q, demean=demean, unbiased=unbiased, fft=True)
             F2 = acovf(q, demean=demean, unbiased=unbiased, fft=False)
             assert_almost_equal(F1, F2, decimal=7)
+
 
 @pytest.mark.slow
 def test_arma_order_select_ic():
@@ -540,6 +552,7 @@ def test_arma_order_select_ic():
     assert_(res.aic.index.equals(aic.index))
     assert_(res.aic.columns.equals(aic.columns))
     assert_equal(res.aic_min_order, (1, 2))
+
 
 def test_arma_order_select_ic_failure():
     # this should trigger an SVD convergence failure, smoke test that it
