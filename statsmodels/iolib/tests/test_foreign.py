@@ -8,13 +8,13 @@ from datetime import datetime
 
 from numpy.testing import assert_array_equal, assert_, assert_equal, dec
 import numpy as np
+import pandas as pd
 from pandas import DataFrame, isnull
 import pandas.util.testing as ptesting
 
 from statsmodels.compat.python import BytesIO, asbytes
 import statsmodels.api as sm
-from statsmodels.iolib.foreign import (StataWriter, genfromdta,
-            _datetime_to_stata_elapsed, _stata_elapsed_date_to_datetime)
+from statsmodels.iolib.foreign import StataWriter, genfromdta
 from statsmodels.datasets import macrodata
 
 
@@ -52,7 +52,7 @@ def test_stata_writer_structured():
     dtype = dta.dtype
     dta = dta.astype(np.dtype([('year', int),
                                ('quarter', int)] + dtype.descr[2:]))
-    writer = StataWriter(buf, dta)
+    writer = StataWriter(buf, pd.DataFrame(dta), write_index=False)
     writer.write_file()
     buf.seek(0)
     dta2 = genfromdta(buf)
@@ -63,7 +63,7 @@ def test_stata_writer_array():
     dta = macrodata.load().data
     dta = DataFrame.from_records(dta)
     dta.columns = ["v%d" % i for i in range(1,15)]
-    writer = StataWriter(buf, dta.values)
+    writer = StataWriter(buf, pd.DataFrame(dta), write_index=False)
     writer.write_file()
     buf.seek(0)
     dta2 = genfromdta(buf)
@@ -75,7 +75,7 @@ def test_missing_roundtrip():
     dta = np.array([(np.nan, np.inf, "")],
                       dtype=[("double_miss", float), ("float_miss", np.float32),
                               ("string_miss", "a1")])
-    writer = StataWriter(buf, dta)
+    writer = StataWriter(buf, pd.DataFrame(dta), write_index=False)
     writer.write_file()
     buf.seek(0)
     dta = genfromdta(buf, missing_flt=np.nan)
@@ -99,7 +99,7 @@ def test_stata_writer_pandas():
     dta = DataFrame.from_records(dta)
     dta4 = DataFrame.from_records(dta4)
     # dta is int64 'i8'  given to Stata writer
-    writer = StataWriter(buf, dta)
+    writer = StataWriter(buf, dta, write_index=False)
     writer.write_file()
     buf.seek(0)
     dta2 = genfromdta(buf)
@@ -110,7 +110,7 @@ def test_stata_writer_pandas():
         ptesting.assert_frame_equal(dta.reset_index(), dta5)
     else:
         # don't check index because it has different size, int32 versus int64
-        ptesting.assert_frame_equal(dta4, dta5[dta5.columns[1:]])
+        ptesting.assert_frame_equal(dta4, dta5)
 
 def test_stata_writer_unicode():
     # make sure to test with characters outside the latin-1 encoding
@@ -138,35 +138,6 @@ def test_genfromdta_datetime():
     assert_array_equal(dta.iloc[0].tolist(), results[0])
     assert_array_equal(dta.iloc[1].tolist(), results[1])
 
-def test_date_converters():
-    ms = [-1479597200000, -1e6, -1e5, -100, 1e5, 1e6, 1479597200000]
-    days = [-1e5, -1200, -800, -365, -50, 0, 50, 365, 800, 1200, 1e5]
-    weeks = [-1e4, -1e2, -53, -52, -51, 0, 51, 52, 53, 1e2, 1e4]
-    months = [-1e4, -1e3, -100, -13, -12, -11, 0, 11, 12, 13, 100, 1e3, 1e4]
-    quarter = [-100, -50, -5, -4, -3, 0, 3, 4, 5, 50, 100]
-    half = [-50, 40, 30, 10, 3, 2, 1, 0, 1, 2, 3, 10, 30, 40, 50]
-    year = [1, 50, 500, 1000, 1500, 1975, 2075]
-    for i in ms:
-        assert_equal(_datetime_to_stata_elapsed(
-                     _stata_elapsed_date_to_datetime(i, "tc"), "tc"), i)
-    for i in days:
-        assert_equal(_datetime_to_stata_elapsed(
-                     _stata_elapsed_date_to_datetime(i, "td"), "td"), i)
-    for i in weeks:
-        assert_equal(_datetime_to_stata_elapsed(
-                     _stata_elapsed_date_to_datetime(i, "tw"), "tw"), i)
-    for i in months:
-        assert_equal(_datetime_to_stata_elapsed(
-                     _stata_elapsed_date_to_datetime(i, "tm"), "tm"), i)
-    for i in quarter:
-        assert_equal(_datetime_to_stata_elapsed(
-                     _stata_elapsed_date_to_datetime(i, "tq"), "tq"), i)
-    for i in half:
-        assert_equal(_datetime_to_stata_elapsed(
-                     _stata_elapsed_date_to_datetime(i, "th"), "th"), i)
-    for i in year:
-        assert_equal(_datetime_to_stata_elapsed(
-                     _stata_elapsed_date_to_datetime(i, "ty"), "ty"), i)
 
 @skipif(pandas_old, 'pandas too old')
 def test_datetime_roundtrip():
@@ -175,7 +146,8 @@ def test_datetime_roundtrip():
                     (4, datetime(2010, 3, 1), 5)],
                     dtype=[('var1', float), ('var2', object), ('var3', float)])
     buf = BytesIO()
-    writer = StataWriter(buf, dta, {"var2" : "tm"})
+    writer = StataWriter(buf, DataFrame(dta), {"var2" : "tm"},
+                         write_index=False)
     writer.write_file()
     buf.seek(0)
     dta2 = genfromdta(buf)
@@ -183,11 +155,11 @@ def test_datetime_roundtrip():
 
     dta = DataFrame.from_records(dta)
     buf = BytesIO()
-    writer = StataWriter(buf, dta, {"var2" : "tm"})
+    writer = StataWriter(buf, dta, {"var2" : "tm"}, write_index=False)
     writer.write_file()
     buf.seek(0)
     dta2 = genfromdta(buf, pandas=True)
-    ptesting.assert_frame_equal(dta, dta2.drop('index', axis=1))
+    ptesting.assert_frame_equal(dta, dta2)
 
 
 if __name__ == "__main__":
