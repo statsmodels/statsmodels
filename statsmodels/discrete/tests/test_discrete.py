@@ -32,18 +32,21 @@ from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from scipy.stats import nbinom
 
 try:
+    # pylint:disable=unused-variable
     import cvxopt  # noqa:F401
     has_cvxopt = True
 except ImportError:
     has_cvxopt = False
 
 try:
+    # pylint:disable=unused-variable
     from scipy.optimize import basinhopping  # noqa:F401
     has_basinhopping = True
 except ImportError:
     has_basinhopping = False
 
 try:
+    # pylint:disable=unused-variable
     from scipy.optimize._trustregion_dogleg import _minimize_dogleg  # noqa:F401
     has_dogleg = True
 except ImportError:
