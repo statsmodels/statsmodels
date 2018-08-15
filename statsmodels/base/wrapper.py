@@ -4,6 +4,7 @@ import functools
 import numpy as np
 from statsmodels.compat.python import get_function_name, iteritems, getargspec
 
+
 class ResultsWrapper(object):
     """
     Class which wraps a statsmodels estimation Results class and steps in to
@@ -114,6 +115,7 @@ def populate_wrapper(klass, wrapping):
         func = getattr(wrapping, meth)
         wrapper = make_wrapper(func, how)
         setattr(klass, meth, wrapper)
+
 
 if __name__ == '__main__':
     import statsmodels.api as sm

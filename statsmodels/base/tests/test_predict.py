@@ -31,7 +31,6 @@ class CheckPredictReturns(object):
         assert_equal(pred.index, np.arange(len(pred)))
         assert_allclose(pred.values, fitted.values, rtol=1e-13)
 
-
     def test_1d(self):
         # one observation
         res = self.res
@@ -46,7 +45,6 @@ class CheckPredictReturns(object):
         pred = res.predict(xmean.to_frame().T)
         assert_equal(pred.index, np.arange(1))
         assert_allclose(pred, fittedm, rtol=1e-13)
-
 
         # Series
         pred = res.predict(data.mean())

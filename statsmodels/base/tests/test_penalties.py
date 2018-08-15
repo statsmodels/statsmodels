@@ -12,6 +12,7 @@ from numpy.testing import assert_allclose
 import statsmodels.base._penalties as smpen
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 
+
 class CheckPenalty(object):
 
     def test_symmetry(self):

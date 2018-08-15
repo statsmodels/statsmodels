@@ -166,6 +166,7 @@ class TestRemoveDataPicklePoisson(RemoveDataPickle):
         #TODO: temporary, fixed in master
         self.predict_kwds = dict(exposure=1, offset=0)
 
+
 class TestRemoveDataPickleNegativeBinomial(RemoveDataPickle):
 
     def setup(self):
@@ -175,6 +176,7 @@ class TestRemoveDataPickleNegativeBinomial(RemoveDataPickle):
         exog = sm.add_constant(data.exog, prepend=False)
         mod = sm.NegativeBinomial(data.endog, data.exog)
         self.results = mod.fit(disp=0)
+
 
 class TestRemoveDataPickleLogit(RemoveDataPickle):
 
@@ -260,8 +262,11 @@ class TestPickleFormula4(TestPickleFormula2):
     def setup(self):
         self.results = sm.OLS.from_formula("Y ~ np.log(abs(A) + 1) + B * C", data=self.data).fit()
 
-# we need log in module namespace for the following test
+
+# we need log in module namespace for TestPickleFormula5
 from numpy import log
+
+
 class TestPickleFormula5(TestPickleFormula2):
 
     def setup(self):
@@ -279,7 +284,6 @@ class TestRemoveDataPicklePoissonRegularized(RemoveDataPickle):
         y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
         model = sm.Poisson(y_count, x)
         self.results = model.fit_regularized(method='l1', disp=0, alpha=10)
-
 
 
 if __name__ == '__main__':

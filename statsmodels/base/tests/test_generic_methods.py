@@ -78,7 +78,6 @@ class CheckGenericMixin(object):
                 'Conf. Int. Low', 'Conf. Int. Upp.']
         assert_array_equal(summf.columns.values, cols)
 
-
     def test_ftest_pvalues(self):
         res = self.results
         use_t = res.use_t
@@ -569,7 +568,6 @@ class CheckAnovaMixin(object):
         cls.data = test.data.drop([0,1,2])
         cls.initialize()
 
-
     def test_combined(self):
         res = self.res
         wa = res.wald_test_terms(skip_single=False, combine_terms=['Duration', 'Weight'])
@@ -582,7 +580,6 @@ class CheckAnovaMixin(object):
         c_duration = eye[[1, 4, 5]]
 
         compare_waldres(res, wa, [c_const, c_d, c_w, c_dw, c_duration, c_weight])
-
 
     def test_categories(self):
         # test only multicolumn terms
@@ -632,7 +629,6 @@ class TestWaldAnovaOLS(CheckAnovaMixin):
 
         mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
         cls.res = mod.fit(use_t=False)
-
 
     def test_noformula(self):
         endog = self.res.model.endog
@@ -763,7 +759,6 @@ class TestTTestPairwiseOLS(CheckPairwise):
                            'C(Weight)[T.3]',
                            'C(Weight)[T.3] - C(Weight)[T.2]']
 
-
     def test_alpha(self):
         pw1 = self.res.t_test_pairwise(self.term_name, method='hommel',
                                        factor_labels='A B C'.split())
@@ -816,6 +811,7 @@ class TestTTestPairwiseOLS3(CheckPairwise):
         cls.constraints = ['C(Weight)[2] - C(Weight)[1]',
                            'C(Weight)[3] - C(Weight)[1]',
                            'C(Weight)[3] - C(Weight)[2]']
+
 
 class TestTTestPairwiseOLS4(CheckPairwise):
 

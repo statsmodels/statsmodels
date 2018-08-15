@@ -420,7 +420,6 @@ class VariableScreening(object):
         exog_winner = np.column_stack(exog_winner)
         res_screen_final = self.screen_exog(exog_winner, maxiter=20)
 
-
         exog_winner_names = ['var%d_%d' % (bidx, idx)
                              for bidx, batch in enumerate(exog_idx)
                              for idx in batch]
