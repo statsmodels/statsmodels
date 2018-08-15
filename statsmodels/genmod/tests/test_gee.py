@@ -17,7 +17,7 @@ import numpy as np
 import pytest
 
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
-                           assert_array_less, assert_raises, assert_, dec)
+                           assert_array_less, assert_raises, assert_)
 from statsmodels.genmod.generalized_estimating_equations import (
     GEE, OrdinalGEE, NominalGEE, NominalGEEResults, OrdinalGEEResults,
     NominalGEEResultsWrapper, OrdinalGEEResultsWrapper)
@@ -1639,9 +1639,7 @@ def test_missing():
     assert_almost_equal(res.params.values, res2.params.values)
 
 
-# Test quasi-likelihood by numerical integration in two settings
-# where there is a closed form expression.
-def test_qic_known():
+def simple_qic_data():
 
     y = np.r_[0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0]
     x1 = np.r_[0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0]
@@ -1649,6 +1647,14 @@ def test_qic_known():
     g = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4]
     x1 = x1[:, None]
     x2 = x2[:, None]
+
+    return y, x1, x2, g
+
+# Test quasi-likelihood by numerical integration in two settings
+# where there is a closed form expression.
+def test_qic_known():
+
+    y, x1, x2, g = simple_qic_data()
 
     for j in 0, 1:
 
@@ -1685,12 +1691,7 @@ def test_qic_known():
 # here so that constants that are inconvenient to compute cancel out.
 def test_qic_diff():
 
-    y = np.r_[0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0]
-    x1 = np.r_[0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0]
-    x2 = np.r_[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-    g = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4]
-    x1 = x1[:, None]
-    x2 = x2[:, None]
+    y, x1, x2, g = simple_qic_data()
 
     for j in 0, 1, 2:
 
