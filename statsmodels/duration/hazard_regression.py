@@ -2,7 +2,7 @@ import numpy as np
 from statsmodels.base import model
 import statsmodels.base.model as base
 from statsmodels.tools.decorators import cache_readonly
-from scipy.optimize import brent
+
 from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.compat.numpy import np_new_unique
 
@@ -1284,8 +1284,6 @@ class PHReg(model.LikelihoodModel):
         # TODO: this returns a Python list of rv_discrete objects, so
         # nothing can be vectorized.  It appears that rv_discrete does
         # not allow vectorization.
-
-        from scipy.stats.distributions import rv_discrete
 
         surv = self.surv
         bhaz = self.baseline_cumulative_hazard(params)
