@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-# Script to build docs
+# Script to text examples and build docs on travis
 
 # Change to doc directory
 cd ${SRCDIR}/docs

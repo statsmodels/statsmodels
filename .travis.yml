@@ -12,7 +12,6 @@ env:
     - OPTIONAL=
     - COVERAGE=false
     - USEMPL=true
-    - USENUMPYBASE=false
     - MATPLOTLIB=
     - DOCBUILD=false
     - LINT=false
@@ -23,30 +22,31 @@ env:
     - PYTHONHASHSEED=0 # Ensure tests are correctly gathered by xdist
     - BLAS="mkl blas=*=mkl" # Use Intel MKL by default
     - BUILD_INIT=tools/ci/travis_conda.sh
-    - DEPEND_ALWAYS="pyyaml joblib"
+    - DEPEND_ALWAYS="pyyaml joblib pip colorama"
 
 matrix:
   fast_finish: true
   include:
   # Python 3.7 + cutting edge packages
-  - python: 2.7
+  - python: 3.6 # 3.7 is not available on travis
     env:
     - PYTHON=3.7
     - COVERAGE=true
-  # Python 3.6 + cutting edge packages
-  - python: 2.7
+  # Python 3.6 + legacy blas
+  - python: 3.6
     env:
     - PYTHON=3.6
+    - NUMPY=1.14
     - BLAS="nomkl blas=*=openblas"
-  # Python 2.7 + partially updated numpy, mpl; cutting edge scipy, pandas
-  - python: 2.7
+  # Documentation build (on Python 3.6 + cutting edge packages)
+  - python: 3.6
     env:
-    - PYTHON=2.7
-    - NUMPY=1.13
-    - MATPLOTLIB=2.0
-    - COVERAGE=true
+    - PYTHON=3.6
+    # (can't use pandas=0.23 with pandas-datareader <= 0.6)
+    - PANDAS=0.22
+    - DOCBUILD=true
   # Python 3.5 + partially updated packages
-  - python: 2.7
+  - python: 3.5
     env:
     - PYTHON=3.5
     - NUMPY=1.13
@@ -54,38 +54,29 @@ matrix:
     - PANDAS=0.22
     - MATPLOTLIB=2.0
     - LINT=true
-  # Python 2.7 + baseline packages
-  - python: 2.7
-    env:
-    - PYTHON=2.7
-    - NUMPY=1.11
-    - USENUMPYBASE=true
-    - BLAS= # Do not specify blas in this config due to conflict
-    - SCIPY=0.18
-    - PANDAS=0.19
-    - MATPLOTLIB=1.5
   # Python 3.4 + baseline packages
-  - python: 2.7
+  - python: 3.4
     env:
     - PYTHON=3.4
     - NUMPY=1.11
     - SCIPY=0.18
     - PANDAS=0.19
     - MATPLOTLIB=1.5
-  # Documentation build (on Python 3.6 + cutting edge packages)
+  # Python 2.7 + partially updated numpy, mpl; cutting edge scipy, pandas
   - python: 2.7
     env:
-    - PYTHON=3.6
-    # (can't use pandas=0.23 with pandas-datareader <= 0.6)
-    - PANDAS=0.22
-    - DOCBUILD=true
-  # No Matplotlib (on Python 2.7 + baseline packages)
+    - PYTHON=2.7
+    - NUMPY=1.13
+    - MATPLOTLIB=2.0
+    - COVERAGE=true
+  # Python 2.7 + baseline packages
   - python: 2.7
     env:
     - PYTHON=2.7
     - NUMPY=1.12
-    - SCIPY=0.18
-    - PANDAS=0.19
+    - BLAS= # Do not specify blas in this config due to conflict
+    - SCIPY=0.19
+    - PANDAS=0.20
     - USEMPL=false
     - LINT=true
   # Standard pip install
@@ -126,7 +117,7 @@ before_install:
     else
         export COVERAGE_OPTS=""
     fi
-  - if [ ${DOCBUILD} = true ]; then bash tools/ci/docbuild_install.sh; fi;
+  - if [ ${DOCBUILD} = true ]; then source tools/ci/docbuild_install.sh; fi;
   - pip install flake8
   - export SRCDIR=$PWD
 
@@ -139,7 +130,7 @@ script:
   # Show versions
   - python -c 'import statsmodels.api as sm; sm.show_versions();'
   # docbuild and exit, if required
-  - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; bash ${SRCDIR}/tools/ci/docbuild.sh; exit 0; fi;
+  - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; source ${SRCDIR}/tools/ci/docbuild.sh; exit 0; fi;
   # Run tests
   - echo pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples
   - pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples

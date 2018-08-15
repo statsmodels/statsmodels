@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+# Additional installation requirements for travis docbuilds
 
 set -x  # echo on
 # Install system dependencies
