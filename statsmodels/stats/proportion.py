@@ -1223,14 +1223,20 @@ def shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=True)
 def score_test_proportion_2indep(count1, nobs1, count2, nobs2, value=None,
                                 compare='diff', alternative='two-sided',
                                 correction=True):
+
+    value_default = 0 if compare == 'diff' else 1
     if value is None:
         # TODO: odds ratio does not work if value=1
-        value = 0 if compare == 'diff' else 1 + 1e-10
+        value = value_default
 
     nobs = nobs1 + nobs2
     count = count1 + count2
     p1 = count1 / nobs1
     p2 = count2 / nobs2
+    if value == value_default:
+        # use pooled estimator if equality test
+        # shortcut, but required for odds ratio
+        prop0 = prop1 = count / nobs
     # this uses index 0 from Miettinen Nurminned 1985
     count0, nobs0 = count2, nobs2
     p0 = p2
@@ -1238,16 +1244,17 @@ def score_test_proportion_2indep(count1, nobs1, count2, nobs2, value=None,
     if compare == 'diff':
         diff = value  # hypothesis value
 
-        tmp3 = nobs
-        tmp2 = (nobs1 + 2 * nobs0) * diff - nobs - count
-        tmp1 = (count0 * diff - nobs - 2 * count0) * diff + count
-        tmp0 = count0 * diff * (1 - diff)
-        q = (tmp2 / (3 * tmp3))**3 - tmp1 * tmp2 / (6 * tmp3**2) + tmp0 / (2 * tmp3)
-        p = np.sign(q) * np.sqrt((tmp2 / (3 * tmp3))**2 - tmp1 / (3 * tmp3))
-        a = (np.pi + np.arccos(q / p**3)) / 3
+        if diff != 0:
+            tmp3 = nobs
+            tmp2 = (nobs1 + 2 * nobs0) * diff - nobs - count
+            tmp1 = (count0 * diff - nobs - 2 * count0) * diff + count
+            tmp0 = count0 * diff * (1 - diff)
+            q = (tmp2 / (3 * tmp3))**3 - tmp1 * tmp2 / (6 * tmp3**2) + tmp0 / (2 * tmp3)
+            p = np.sign(q) * np.sqrt((tmp2 / (3 * tmp3))**2 - tmp1 / (3 * tmp3))
+            a = (np.pi + np.arccos(q / p**3)) / 3
 
-        prop0 = 2 * p * np.cos(a) - tmp2 / (3 * tmp3)
-        prop1 = prop0 + diff
+            prop0 = 2 * p * np.cos(a) - tmp2 / (3 * tmp3)
+            prop1 = prop0 + diff
 
         correction = True
         var = prop1 * (1 - prop1) / nobs1 + prop0 * (1 - prop0) / nobs0
@@ -1260,11 +1267,12 @@ def score_test_proportion_2indep(count1, nobs1, count2, nobs2, value=None,
         # risk ratio
         ratio = value
 
-        a = nobs * ratio
-        b = -(nobs1 * ratio + count1 + nobs2 + count0 * ratio)
-        c = count
-        prop0 = (-b - np.sqrt(b**2 - 4 * a * c)) / (2 * a)
-        prop1 = prop0 * ratio
+        if ratio != 1:
+            a = nobs * ratio
+            b = -(nobs1 * ratio + count1 + nobs2 + count0 * ratio)
+            c = count
+            prop0 = (-b - np.sqrt(b**2 - 4 * a * c)) / (2 * a)
+            prop1 = prop0 * ratio
 
         var = prop1 * (1 - prop1) / nobs1 + ratio**2 * prop0 * (1 - prop0) / nobs0
         if correction:
@@ -1277,13 +1285,14 @@ def score_test_proportion_2indep(count1, nobs1, count2, nobs2, value=None,
     elif compare in ['or', 'odds-ratio']:
         # odds ratio
         oratio = value
-        # TODO: this needs special case for oratio = 1
 
-        a = nobs0 * (oratio - 1)
-        b = nobs1 * oratio + nobs0 - count * (oratio - 1)
-        c = -count
-        prop0 = (-b + np.sqrt(b**2 - 4 * a * c)) / (2 * a)
-        prop1 = prop0 * oratio / (1 + prop0 * (oratio - 1))
+        if oratio != 1:
+            # Note the constraint estimator does not handle odds-ratio = 1
+            a = nobs0 * (oratio - 1)
+            b = nobs1 * oratio + nobs0 - count * (oratio - 1)
+            c = -count
+            prop0 = (-b + np.sqrt(b**2 - 4 * a * c)) / (2 * a)
+            prop1 = prop0 * oratio / (1 + prop0 * (oratio - 1))
 
         var = 1 / (prop1 * (1 - prop1) * nobs1) + 1 / (prop0 * (1 - prop0) * nobs0)
         if correction:
@@ -1371,7 +1380,7 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
 
     if value is None:
         # TODO: odds ratio does not work if value=1 for score test
-        value = 0 if compare == 'diff' else 1 + 1e-10
+        value = 0 if compare == 'diff' else 1
 
     p1 = count1 / nobs1
     p2 = count2 / nobs2

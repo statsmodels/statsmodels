@@ -646,13 +646,26 @@ def test_confint_2indep():
 
 def test_score_test_2indep():
     # this does not verify the statistic and pvalue yet
-    alpha = 0.05
     count1, nobs1 = 7, 34
     count2, nobs2 = 1, 34
 
     for co in ['diff', 'ratio', 'or']:
-        res = score_test_proportion_2indep(count1, nobs1, count2, nobs2, compare=co)
+        res = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
+                                           compare=co)
         assert_allclose(res[-1][0], res[-1][1], rtol=1e-10)
+
+        # check that equality case is handled
+        val = 0 if co == 'diff' else 1.
+        s0, pv0 = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
+                                               compare=co, value=val)[:2]
+        s1, pv1 = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
+                                               compare=co, value=val + 1e-10)[:2]
+        assert_allclose(s0, s1, rtol=1e-8)
+        assert_allclose(pv0, pv1, rtol=1e-8)
+        s1, pv1 = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
+                                               compare=co, value=val - 1e-10)[:2]
+        assert_allclose(s0, s1, rtol=1e-8)
+        assert_allclose(pv0, pv1, rtol=1e-8)
 
 
 def test_test_2indep():
