@@ -17,6 +17,11 @@ from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.stats.weightstats import _zstat_generic2
 
 
+class Holder(object):
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+
 def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     '''confidence interval for a binomial proportion
 
@@ -446,6 +451,10 @@ def std_prop(prop, nobs):
         standard error for a proportion of nobs independent observations
     '''
     return np.sqrt(prop * (1. - prop) / nobs)
+
+
+def _std_diff_prop(p1, p2, ratio=1):
+    return np.sqrt(p1 * (1 - p1) + p2 * (1 - p2) / ratio)
 
 
 def _power_ztost(mean_low, var_low, mean_upp, var_upp, mean_alt, var_alt,
@@ -1464,8 +1473,76 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
     return statistic, pvalue
 
 
-class Holder(object):
-    pass
+def _std_2prop_power(diff, p2, ratio=1, alpha=0.05, value=0):
+    """compute standard error under null and alternative for 2 proportions
+
+    helper function for power and sample size computation
+
+    """
+    if value != 0:
+        msg = 'non-zero diff under null, value, is not yet implemented'
+        raise NotImplementedError(msg)
+
+    nobs_ratio = ratio
+    p1 = p2 + diff
+    # The following contains currently redundant variables that will
+    # be useful for different options for the null variance
+    p_pooled = (p1 + p2 * ratio) / (1 + ratio)
+    # probabilities for the variance for the null statistic
+    p1_vnull, p2_vnull = p_pooled, p_pooled
+    p2_alt = p2
+    p1_alt = p2_alt + diff
+
+    std_null = _std_diff_prop(p1_vnull, p2_vnull)
+    std_alt = _std_diff_prop(p1_alt, p2_alt, ratio=nobs_ratio)
+    return p_pooled, std_null, std_alt
+
+
+def power_proportion_2indep(diff, p2, nobs, ratio=1, alpha=0.05,
+                            value=0, alternative='two-sided',
+                            return_results=True):
+    """power for ztest that two independent proportions are equal
+
+    This assumes that the variance is based on the pooled proportion
+    under the null and
+
+    """
+    # TODO: avoid possible circular import, check if needed
+    from statsmodels.stats.power import normal_power_het
+
+    p_pooled, std_null, std_alt = _std_2prop_power(diff, p2, ratio=1,
+                                                   alpha=0.05, value=0)
+
+    pow_ = normal_power_het(diff, nobs, alpha, std_null=std_null,
+                            std_alternative=std_alt,
+                            alternative=alternative)
+
+    if return_results:
+        res = Holder(power=pow_,
+                     p_pooled=p_pooled,
+                     std_null=std_null,
+                     std_alt=std_alt)
+        return res
+    else:
+        return pow_
+
+
+def samplesize_proportion_2indep_onetail(diff, p2, power, ratio=1, alpha=0.05,
+                                         value=0, alternative='two-sided'):
+    """
+
+    """
+    if alternative in ['two-sided', '2s']:
+        alpha = alpha / 2
+    # TODO: avoid possible circular import, check if needed
+    from statsmodels.stats.power import normal_sample_size_one_tail
+
+    _, std_null, std_alt = _std_2prop_power(diff, p2, ratio=ratio,
+                                            alpha=alpha, value=value)
+
+    nobs = normal_sample_size_one_tail(diff, power, alpha, std_null=std_null,
+                                       std_alternative=std_alt)
+    return nobs
 
 
 def _confint_riskratio_koopman(x0, x1, n0, n1, alpha=0.05):

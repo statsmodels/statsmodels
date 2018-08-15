@@ -71,9 +71,27 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
     return pow_
 
 def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.):
-    '''Calculate power of a normal distributed test statistic
+    """Calculate power of a normal distributed test statistic
 
-    '''
+    This is an generalization of `normal_power` when variance under Null and
+    Alternative differ.
+
+    Parameters
+    ----------
+    effect size : float
+        difference in the estimated means or statistics under the alternative
+        normalized by the standard deviation (without division by sqrt(nobs).
+    nobs : float or int
+        number of observations
+    alpha : float in interval (0,1)
+        significance level, e.g. 0.05, is the probability of a type I
+        error, that is wrong rejections if the Null Hypothesis is true.
+    alternative : string, 'two-sided' (default), 'larger', 'smaller'
+        extra argument to choose whether the power is calculated for a
+        two-sided (default) or one sided test. The one-sided test can be
+        either 'larger', 'smaller'.
+    """
+
     d = effect_size
 
     if alternative in ['two-sided', '2s']:
@@ -93,6 +111,103 @@ def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.):
         pow_ += stats.norm.cdf(crit - d*np.sqrt(nobs)/sigma)
     return pow_
 
+
+def normal_power_het(diff, nobs, alpha, std_null=1., std_alternative=None,
+                 alternative='two-sided'):
+    """Calculate power of a normal distributed test statistic
+
+    This is an generalization of `normal_power` when variance under Null and
+    Alternative differ.
+
+    Parameters
+    ----------
+    diff : float
+        difference in the estimated means or statistics under the alternative.
+    nobs : float or int
+        number of observations
+    alpha : float in interval (0,1)
+        significance level, e.g. 0.05, is the probability of a type I
+        error, that is wrong rejections if the Null Hypothesis is true.
+    std_null : float
+        standard deviation under the Null hypothesis without division by
+        sqrt(nobs)
+    std_null : float
+        standard deviation under the Alternative hypothesis without division
+        by sqrt(nobs)
+    alternative : string, 'two-sided' (default), 'larger', 'smaller'
+        extra argument to choose whether the power is calculated for a
+        two-sided (default) or one sided test. The one-sided test can be
+        either 'larger', 'smaller'.
+
+    Returns
+    -------
+    power : float
+    """
+
+    d = diff
+    if std_alternative is None:
+        std_alternative = std_null
+
+    if alternative in ['two-sided', '2s']:
+        alpha_ = alpha / 2.  #no inplace changes, doesn't work
+    elif alternative in ['smaller', 'larger']:
+        alpha_ = alpha
+    else:
+        raise ValueError("alternative has to be 'two-sided', 'larger' " +
+                         "or 'smaller'")
+
+    std_ratio = std_null / std_alternative
+    pow_ = 0
+    if alternative in ['two-sided', '2s', 'larger']:
+        crit = stats.norm.isf(alpha_)
+        pow_ = stats.norm.sf(crit * std_ratio -
+                             d*np.sqrt(nobs) / std_alternative)
+    if alternative in ['two-sided', '2s', 'smaller']:
+        crit = stats.norm.ppf(alpha_)
+        pow_ += stats.norm.cdf(crit * std_ratio -
+                               d*np.sqrt(nobs) / std_alternative)
+    return pow_
+
+
+def normal_sample_size_one_tail(diff, power, alpha, std_null=1.,
+                                 std_alternative=None):
+    """explicit sample size computation if only one tail is relevant
+
+    The sample size is based on the power in one tail assuming that the
+    alternative is in the tail where the test has power that increases
+    with sample size.
+    Use alpha/2 to compute the one tail approximation to the two-sided
+    test, i.e. consider only one tail of two-sided test.
+
+    Parameters
+    ----------
+    diff : float
+        difference in the estimated means or statistics under the alternative.
+    power : float in interval (alpha, 1)
+        number of observations
+    alpha : float in interval (0,1)
+        significance level, e.g. 0.05, is the probability of a type I
+        error, that is wrong rejections if the Null Hypothesis is true.
+    std_null : float
+        standard deviation under the Null hypothesis without division by
+        sqrt(nobs)
+    std_null : float
+        standard deviation under the Alternative hypothesis without division
+        by sqrt(nobs)
+
+    Returns
+    -------
+    nobs : float
+        sample size to achieve the desired power
+
+    """
+
+    crit_power = stats.norm.isf(power)
+    crit = stats.norm.isf(alpha)
+    n1 = ((crit * std_null - crit_power * std_alternative) / diff)**2
+    return n1
+
+
 def ftest_anova_power(effect_size, nobs, alpha, k_groups=2, df=None):
     '''power for ftest for one way anova with k equal sized groups
 
@@ -105,6 +220,7 @@ def ftest_anova_power(effect_size, nobs, alpha, k_groups=2, df=None):
     crit = stats.f.isf(alpha, df_denom, df_num)
     pow_ = stats.ncf.sf(crit, df_denom, df_num, effect_size**2 * nobs)
     return pow_#, crit
+
 
 def ftest_power(effect_size, df_num, df_denom, alpha, ncc=1):
     '''Calculate the power of a F-test.
