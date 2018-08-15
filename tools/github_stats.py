@@ -25,6 +25,7 @@ from gh_api import get_paged_request, make_auth_header, get_pull_request
 ISO8601 = "%Y-%m-%dT%H:%M:%SZ"
 PER_PAGE = 100
 
+
 #-----------------------------------------------------------------------------
 # Functions
 #-----------------------------------------------------------------------------
@@ -35,8 +36,10 @@ def get_issues(project="statsmodels/statsmodels", state="closed", pulls=False):
     url = "https://api.github.com/repos/%s/%s?state=%s&per_page=%i" % (project, which, state, PER_PAGE)
     return get_paged_request(url, headers=make_auth_header())
 
+
 def round_hour(dt):
     return dt.replace(minute=0,second=0,microsecond=0)
+
 
 def _parse_datetime(s):
     """Parse dates in the format returned by the Github API."""
@@ -70,7 +73,6 @@ def split_pulls(all_issues, project="statsmodels/statsmodels"):
         else:
             issues.append(i)
     return issues, pulls
-
 
 
 def issues_closed_since(period=timedelta(days=365), project="statsmodels/statsmodels", pulls=False):
@@ -115,6 +117,7 @@ def report(issues, show_urls=False):
     else:
         for i in issues:
             print(u'* %d: %s' % (i['number'], i['title']))
+
 
 #-----------------------------------------------------------------------------
 # Main script

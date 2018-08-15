@@ -39,17 +39,20 @@ from gh_api import (
 
 from pandas import Series
 
+
 def find_rejects(root='.'):
     for dirname, dirs, files in os.walk(root):
         for fname in files:
             if fname.endswith('.rej'):
                 yield os.path.join(dirname, fname)
 
+
 def get_current_branch():
     branches = check_output(['git', 'branch'])
     for branch in branches.splitlines():
         if branch.startswith('*'):
             return branch[1:].strip()
+
 
 def backport_pr(branch, num, project='statsmodels/statsmodels'):
     current_branch = get_current_branch()
@@ -102,7 +105,9 @@ def backport_pr(branch, num, project='statsmodels/statsmodels'):
 
     return 0
 
+
 backport_re = re.compile(r"[Bb]ackport.*?(\d+)")
+
 
 def already_backported(branch, since_tag=None):
     """return set of PRs that have been backported already"""
@@ -111,6 +116,7 @@ def already_backported(branch, since_tag=None):
     cmd = ['git', 'log', '%s..%s' % (since_tag, branch), '--oneline']
     lines = check_output(cmd).decode('utf8')
     return set(int(num) for num in backport_re.findall(lines))
+
 
 def should_backport(labels=None, milestone=None):
     """return set of PRs marked for backport"""
@@ -147,6 +153,7 @@ def should_backport(labels=None, milestone=None):
             merged_dates.append(pr['merged_at'])
             should_backport.append(pr['number'])
     return Series(merged_dates, index=should_backport)
+
 
 if __name__ == '__main__':
 

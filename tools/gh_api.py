@@ -30,6 +30,7 @@ else:
 # password
 fake_username = 'statsmodels_tools'
 
+
 class Obj(dict):
     """Dictionary with attribute access to names."""
     def __getattr__(self, name):
@@ -41,7 +42,10 @@ class Obj(dict):
     def __setattr__(self, name, val):
         self[name] = val
 
+
 token = None
+
+
 def get_auth_token():
     global token
 
@@ -74,13 +78,16 @@ def get_auth_token():
     keyring.set_password('github', fake_username, token)
     return token
 
+
 def make_auth_header():
     return {'Authorization': 'token ' + get_auth_token()}
+
 
 def post_issue_comment(project, num, body):
     url = 'https://api.github.com/repos/{project}/issues/{num}/comments'.format(project=project, num=num)
     payload = json.dumps({'body': body})
     requests.post(url, data=payload, headers=make_auth_header())
+
 
 def post_gist(content, description='', filename='file', auth=False):
     """Post some text to a Gist, and return the URL."""
@@ -100,6 +107,7 @@ def post_gist(content, description='', filename='file', auth=False):
     response_data = json.loads(response.text)
     return response_data['html_url']
 
+
 def get_pull_request(project, num, auth=False):
     """get pull request info  by number
     """
@@ -112,6 +120,7 @@ def get_pull_request(project, num, auth=False):
     response.raise_for_status()
     return json.loads(response.text, object_hook=Obj)
 
+
 def get_pull_request_files(project, num, auth=False):
     """get list of files in a pull request"""
     url = "https://api.github.com/repos/{project}/pulls/{num}/files".format(project=project, num=num)
@@ -121,8 +130,10 @@ def get_pull_request_files(project, num, auth=False):
         header = None
     return get_paged_request(url, headers=header)
 
+
 element_pat = re.compile(r'<(.+?)>')
 rel_pat = re.compile(r'rel=[\'"](\w+)[\'"]')
+
 
 def get_paged_request(url, headers=None, **params):
     """get a full list, handling APIv3's paging"""
@@ -139,6 +150,7 @@ def get_paged_request(url, headers=None, **params):
             break
     return results
 
+
 def get_pulls_list(project, auth=False, **params):
     """get pull request list"""
     params.setdefault("state", "closed")
@@ -149,6 +161,7 @@ def get_pulls_list(project, auth=False, **params):
         headers = None
     pages = get_paged_request(url, headers=headers, **params)
     return pages
+
 
 def get_issues_list(project, auth=False, **params):
     """get issues list"""
@@ -161,6 +174,7 @@ def get_issues_list(project, auth=False, **params):
     pages = get_paged_request(url, headers=headers, **params)
     return pages
 
+
 def get_milestones(project, auth=False, **params):
     url = "https://api.github.com/repos/{project}/milestones".format(project=project)
     if auth:
@@ -170,6 +184,7 @@ def get_milestones(project, auth=False, **params):
     pages = get_paged_request(url, headers=headers, **params)
     return pages
 
+
 def get_milestone_id(project, milestone, auth=False, **params):
     pages = get_milestones(project, auth=auth, **params)
     for page in pages:
@@ -178,12 +193,15 @@ def get_milestone_id(project, milestone, auth=False, **params):
     else:
         raise ValueError("milestone %s not found" % milestone)
 
+
 def is_pull_request(issue):
     """Return True if the given issue is a pull request."""
     return bool(issue.get('pull_request', {}).get('html_url', None))
 
+
 # encode_multipart_formdata is from urllib3.filepost
 # The only change is to iter_fields, to enforce S3's required key ordering
+
 
 def iter_fields(fields):
     fields = fields.copy()
@@ -192,6 +210,7 @@ def iter_fields(fields):
         yield (key, fields.pop(key))
     for (k,v) in fields.items():
         yield k,v
+
 
 def encode_multipart_formdata(fields, boundary=None):
     """

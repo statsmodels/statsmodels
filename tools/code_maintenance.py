@@ -15,6 +15,7 @@ dep_files = {}
 for mod_str in mod_strs:
     dep_files[mod_str] = []
 
+
 def remove_whitespace(fname):
     # Remove trailing whitespace
     fd = open(fname,mode='U') # open in universal newline mode
@@ -29,6 +30,7 @@ def remove_whitespace(fname):
         fd.write(line+'\n')
     fd.close()
     # print 'Removed whitespace from %s'%fname
+
 
 def find_whitespace(fname):
     fd = open(fname, mode='U')

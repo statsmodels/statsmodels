@@ -14,6 +14,7 @@ generate_formula_api /home/skipper/statsmodels/statsmodels/
 import sys
 import os
 
+
 def iter_subclasses(cls, _seen=None, template_classes=[]):
     """
     Generator to iterate over all the subclasses of Model. Based on
@@ -40,6 +41,7 @@ def iter_subclasses(cls, _seen=None, template_classes=[]):
         for sub in iter_subclasses(sub, _seen, template_classes):
             yield sub
 
+
 def write_formula_api(directory):
     template_classes = ['DiscreteModel', 'BinaryModel', 'MultinomialModel',
                         'OrderedModel', 'CountModel',
@@ -62,6 +64,7 @@ def write_formula_api(directory):
                 model.__name__.lower() +' = '+ model.__name__ +'.from_formula\n'
                 )
     fout.close()
+
 
 if __name__ == "__main__":
     import statsmodels.api as sm
