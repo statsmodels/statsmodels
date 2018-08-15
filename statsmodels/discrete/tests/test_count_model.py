@@ -1,10 +1,9 @@
 
 from __future__ import division
-import os
+
 import numpy as np
-from numpy.testing import (assert_, assert_almost_equal,
-                           assert_equal, assert_array_equal, assert_allclose,
-                           assert_array_less)
+from numpy.testing import (assert_,
+                           assert_equal, assert_array_equal, assert_allclose)
 
 import statsmodels.api as sm
 from .results.results_discrete import RandHIE

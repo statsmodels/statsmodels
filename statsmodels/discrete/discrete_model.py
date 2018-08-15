@@ -20,7 +20,7 @@ from __future__ import division
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
            "GeneralizedPoisson", "NegativeBinomialP"]
 
-from statsmodels.compat.python import lmap, lzip, range
+from statsmodels.compat.python import lmap, range
 from statsmodels.compat.scipy import loggamma
 
 import numpy as np

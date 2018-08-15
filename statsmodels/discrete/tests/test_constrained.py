@@ -15,10 +15,8 @@ from numpy.testing import assert_allclose, assert_equal, assert_
 
 import pandas as pd
 import patsy
-import pytest
 
 from statsmodels.discrete.discrete_model import Poisson
-from statsmodels.discrete.discrete_model import Logit
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
 from statsmodels.base._constraints import fit_constrained
