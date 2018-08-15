@@ -32,7 +32,6 @@ from __future__ import print_function
 import numpy as np
 from scipy import stats
 from statsmodels.compat.scipy import factorial
-import statsmodels.api as sm
 from statsmodels.base.model import GenericLikelihoodModel
 
 def maxabs(arr1, arr2):
