@@ -1877,7 +1877,18 @@ def test_arima_exog_predict_1d():
     x = np.random.random(100)
     mod = ARMA(y, (2, 1), x).fit(disp=-1)
     newx = np.random.random(10)
-    results = mod.forecast(steps=10, alpha=0.05, exog=newx)
+    mod.forecast(steps=10, alpha=0.05, exog=newx)
+
+    with pytest.raises(ValueError):
+        mod.forecast(steps=10, alpha=0.05, exog=newx[:5])
+
+    with pytest.raises(ValueError):
+        mod.forecast(steps=10, alpha=0.05)
+
+    too_many = pd.DataFrame(np.zeros((10, 2)),
+                            columns=['x1', 'x2'])
+    with pytest.raises(ValueError):
+        mod.forecast(steps=10, alpha=0.05, exog=too_many)
 
 
 def test_arima_1123():
@@ -2142,6 +2153,16 @@ def test_arima111_predict_exog_2127():
 
     assert_allclose(predicts, predicts_res, atol=5e-6)
 
+    # Smoke check of forecast with exog in ARIMA
+    res.forecast(steps=10, exog=np.empty(10))
+
+    with pytest.raises(ValueError):
+        res.forecast(steps=10)
+    with pytest.raises(ValueError):
+        res.forecast(steps=10, exog=np.empty((10, 2)))
+    with pytest.raises(ValueError):
+        res.forecast(steps=10, exog=np.empty(100))
+
 
 def test_ARIMA_exog_predict():
     # test forecasting and dynamic prediction with exog against Stata
@@ -2260,6 +2281,14 @@ def test_ARIMA_exog_predict():
     predict_3b = res_002.predict(start=100, end=120,
                                  exog=exog_full.values[100:120], dynamic=True)
     assert_allclose(predict_3a, predict_3b, rtol=1e-10)
+
+    h = len(exog_full.values[197:])
+    with pytest.raises(ValueError):
+        res_002.forecast(steps=h)
+    with pytest.raises(ValueError):
+        res_002.forecast(steps=h, exog=np.empty((h, 20)))
+    with pytest.raises(ValueError):
+        res_002.forecast(steps=h, exog=np.empty(20))
 
 
 def test_arima_fit_mutliple_calls():
