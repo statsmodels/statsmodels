@@ -10,8 +10,8 @@ License: BSD-3
 
 from statsmodels.compat.python import range
 import numpy as np
-import statsmodels.base.model as base
-from statsmodels.regression.linear_model import OLS, GLS, WLS, RegressionResults
+
+from statsmodels.regression.linear_model import OLS, GLS, WLS
 
 
 def atleast_2dcols(x):
