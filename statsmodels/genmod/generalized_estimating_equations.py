@@ -1373,8 +1373,9 @@ class GEE(base.Model):
         equations.  Biometrics (57)1.
         """
 
-        if self.cov_struct is not cov_structs.Independence:
+        if not isinstance(self.cov_struct, cov_structs.Independence):
             msg = "Only the independence correlation structure can be used with QIC"
+            raise ValueError(msg)
 
         varfunc = self.family.variance
 
