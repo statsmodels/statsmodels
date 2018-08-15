@@ -11,7 +11,7 @@ from statsmodels.compat.python import iterkeys, cPickle, BytesIO
 import warnings
 
 import numpy as np
-from numpy.testing import assert_, assert_equal
+from numpy.testing import assert_
 import pandas as pd
 
 import statsmodels.api as sm
@@ -261,7 +261,7 @@ class TestPickleFormula4(TestPickleFormula2):
         self.results = sm.OLS.from_formula("Y ~ np.log(abs(A) + 1) + B * C", data=self.data).fit()
 
 # we need log in module namespace for the following test
-from numpy import log
+from numpy import log  # noqa: F401
 class TestPickleFormula5(TestPickleFormula2):
 
     def setup(self):

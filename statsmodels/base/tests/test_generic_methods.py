@@ -21,7 +21,8 @@ import statsmodels.api as sm
 from numpy.testing import (assert_, assert_allclose, assert_equal,
                            assert_array_equal)
 
-import platform
+from statsmodels.formula.api import ols, glm
+from statsmodels.discrete.discrete_model import Poisson
 
 
 class CheckGenericMixin(object):
@@ -627,9 +628,6 @@ class TestWaldAnovaOLS(CheckAnovaMixin):
 
     @classmethod
     def initialize(cls):
-        from statsmodels.formula.api import ols, glm, poisson
-        from statsmodels.discrete.discrete_model import Poisson
-
         mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
         cls.res = mod.fit(use_t=False)
 
@@ -653,9 +651,6 @@ class TestWaldAnovaOLSF(CheckAnovaMixin):
 
     @classmethod
     def initialize(cls):
-        from statsmodels.formula.api import ols, glm, poisson
-        from statsmodels.discrete.discrete_model import Poisson
-
         mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
         cls.res = mod.fit()  # default use_t=True
 
@@ -680,9 +675,6 @@ class TestWaldAnovaGLM(CheckAnovaMixin):
 
     @classmethod
     def initialize(cls):
-        from statsmodels.formula.api import ols, glm, poisson
-        from statsmodels.discrete.discrete_model import Poisson
-
         mod = glm("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
         cls.res = mod.fit(use_t=False)
 
@@ -691,8 +683,6 @@ class TestWaldAnovaPoisson(CheckAnovaMixin):
 
     @classmethod
     def initialize(cls):
-        from statsmodels.discrete.discrete_model import Poisson
-
         mod = Poisson.from_formula("Days ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
         cls.res = mod.fit(cov_type='HC0')
 
@@ -725,9 +715,6 @@ class T_estWaldAnovaOLSNoFormula(object):
 
     @classmethod
     def initialize(cls):
-        from statsmodels.formula.api import ols, glm, poisson
-        from statsmodels.discrete.discrete_model import Poisson
-
         mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
         cls.res = mod.fit()  # default use_t=True
 
@@ -749,7 +736,6 @@ class TestTTestPairwiseOLS(CheckPairwise):
 
     @classmethod
     def setup_class(cls):
-        from statsmodels.formula.api import ols
         import statsmodels.stats.tests.test_anova as ttmod
 
         test = ttmod.TestAnova3()
@@ -784,7 +770,6 @@ class TestTTestPairwiseOLS2(CheckPairwise):
 
     @classmethod
     def setup_class(cls):
-        from statsmodels.formula.api import ols
         import statsmodels.stats.tests.test_anova as ttmod
 
         test = ttmod.TestAnova3()
@@ -803,7 +788,6 @@ class TestTTestPairwiseOLS3(CheckPairwise):
 
     @classmethod
     def setup_class(cls):
-        from statsmodels.formula.api import ols
         import statsmodels.stats.tests.test_anova as ttmod
 
         test = ttmod.TestAnova3()
@@ -821,7 +805,6 @@ class TestTTestPairwiseOLS4(CheckPairwise):
 
     @classmethod
     def setup_class(cls):
-        from statsmodels.formula.api import ols
         import statsmodels.stats.tests.test_anova as ttmod
 
         test = ttmod.TestAnova3()
@@ -840,7 +823,6 @@ class TestTTestPairwisePoisson(CheckPairwise):
 
     @classmethod
     def setup_class(cls):
-        from statsmodels.discrete.discrete_model import Poisson
         import statsmodels.stats.tests.test_anova as ttmod
 
         test = ttmod.TestAnova3()
