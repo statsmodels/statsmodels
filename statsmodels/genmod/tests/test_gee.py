@@ -1639,6 +1639,80 @@ def test_missing():
     assert_almost_equal(res.params.values, res2.params.values)
 
 
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])
+# Test quasi-likelihood by numerical integration in two settings
+# where there is a closed form expression.
+def test_qic_known():
+
+    y = np.r_[0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0]
+    x1 = np.r_[0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0]
+    x2 = np.r_[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    g = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4]
+    x1 = x1[:, None]
+    x2 = x2[:, None]
+
+    for j in 0, 1:
+
+        if j == 0:
+            fam = sm.families.Gaussian()
+        else:
+            fam = sm.families.Poisson()
+
+        model1 = GEE(y, x1, family=fam, groups=g)
+        result1 = model1.fit(ddof_scale=0)
+        mean1 = result1.fittedvalues
+
+        model2 = GEE(y, x2, family=fam, groups=g)
+        result2 = model2.fit(ddof_scale=0)
+        mean2 = result2.fittedvalues
+
+        if j == 0:
+            ql1 = -len(y) / 2.
+            ql2 = -len(y) / 2.
+        else:
+            c = np.zeros_like(y)
+            ii = y > 0
+            c[ii] = y[ii] * np.log(y[ii]) - y[ii]
+            ql1 = np.sum(y * np.log(mean1) - mean1 - c)
+            ql2 = np.sum(y * np.log(mean2) - mean2 - c)
+
+        qle1, _, _ = model1.QIC(result1.params, result1.scale, result1.cov_params())
+        qle2, _, _ = model2.QIC(result2.params, result2.scale, result2.cov_params())
+
+        assert_allclose(ql1, qle1, rtol=1e-4)
+        assert_allclose(ql2, qle2, rtol=1e-4)
+
+# Compare differences of QL values computed by numerical integration.  Use difference
+# here so that constants that are inconvenient to compute cancel out.
+def test_qic_diff():
+
+    y = np.r_[0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0]
+    x1 = np.r_[0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0]
+    x2 = np.r_[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    g = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4]
+    x1 = x1[:, None]
+    x2 = x2[:, None]
+
+    for j in 0, 1, 2:
+
+        fam = [sm.families.Gaussian(), sm.families.Binomial(), sm.families.Poisson()][j]
+
+        model1 = GEE(y, x1, family=fam, groups=g)
+        result1 = model1.fit(ddof_scale=0)
+        mean1 = result1.fittedvalues
+
+        model2 = GEE(y, x2, family=fam, groups=g)
+        result2 = model2.fit(ddof_scale=0)
+        mean2 = result2.fittedvalues
+
+        if j == 0:
+            qldiff = 0
+        elif j == 1:
+            qldiff = np.sum(y * np.log(mean1 / (1 - mean1)) + np.log(1 - mean1))
+            qldiff -= np.sum(y * np.log(mean2 / (1 - mean2)) + np.log(1 - mean2))
+        else:
+            qldiff = np.sum(y * np.log(mean1) - mean1) - np.sum(y * np.log(mean2) - mean2)
+
+        qle1, _, _ = model1.QIC(result1.params, result1.scale, result1.cov_params())
+        qle2, _, _ = model2.QIC(result2.params, result2.scale, result2.cov_params())
+
+        assert_allclose(qle1 - qle2, qldiff, rtol=1e-4, atol=1e-4)
