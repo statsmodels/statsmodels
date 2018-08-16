@@ -34,4 +34,5 @@ build_script:
   - python setup.py develop
 
 test_script:
-  - pytest -n 2 -r a statsmodels
+  # Remove xdist until warning reporting is working
+  - pytest -n auto -r s statsmodels --skip-examples
