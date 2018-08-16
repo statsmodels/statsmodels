@@ -629,7 +629,7 @@ def test_confint_2indep():
                                    method='log-adjusted')
     assert_allclose(ci, [0.92, 27], rtol=0.01)
     ci = confint_proportion_2indep(count1, nobs1, count2, nobs2, compare='ratio',
-                                   method='score')
+                                   method='score', correction=False)
     assert_allclose(ci, [1.21, 43], rtol=0.01)
 
     # odds-ratio
@@ -692,7 +692,7 @@ def test_test_2indep():
     for co, method in methods_both:
         low, upp = confint_proportion_2indep(count1, nobs1, count2, nobs2,
                                              compare=co, method=method,
-                                             alpha=alpha)
+                                             alpha=alpha, correction=False)
 
         _, pv = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
                 value=low, compare=co, method=method, correction=False)
@@ -711,6 +711,16 @@ def test_test_2indep():
                 value=low, compare=co, method=method, alternative='larger',
                 correction=False)
         assert_allclose(pv, alpha / 2, atol=1e-10)
+
+    # test Miettinen/Nurminen small sample correction
+    co, method = 'ratio', 'score'
+    low, upp = confint_proportion_2indep(count1, nobs1, count2, nobs2,
+                                         compare=co, method=method,
+                                         alpha=alpha, correction=True)
+
+    _, pv = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
+            value=low, compare=co, method=method, correction=True)
+    assert_allclose(pv, alpha, atol=1e-10)
 
 
 def test_score_confint_koopman_nam():

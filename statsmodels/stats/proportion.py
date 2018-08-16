@@ -1061,7 +1061,7 @@ def proportions_chisquare_pairscontrol(count, nobs, value=None,
 
 
 def confint_proportion_2indep(count1, nobs1, count2, nobs2, method=None,
-                              compare='diff', alpha=0.05):
+                              compare='diff', alpha=0.05, correction=True):
     """Confidence intervals for comparing two independent proportions
 
     This assumes that we have two independent binomial samples.
@@ -1171,7 +1171,7 @@ def confint_proportion_2indep(count1, nobs1, count2, nobs2, method=None,
 
         elif method == 'score':
             res = _confint_riskratio_koopman(count2, count1, nobs2, nobs1,
-                                             alpha=alpha)
+                                             alpha=alpha, correction=correction)
             low, upp = res.confint
 
         else:
@@ -1181,7 +1181,7 @@ def confint_proportion_2indep(count1, nobs1, count2, nobs2, method=None,
         odds_ratio = p1 / (1 - p1) / p2 * (1 - p2)
         if method in ['logit', 'logit-adjusted', 'logit-smoothed']:
             if method in ['logit-smoothed']:
-                adjusted = shrink_prob(count1, nobs1, count2, nobs2,
+                adjusted = _shrink_prob(count1, nobs1, count2, nobs2,
                                        shrink_factor=2, return_corr=False)[0]
                 count1_, nobs1_, count2_, nobs2_ = adjusted
 
@@ -1207,7 +1207,35 @@ def confint_proportion_2indep(count1, nobs1, count2, nobs2, method=None,
     return low, upp
 
 
-def shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=True):
+def _shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=True):
+    """shrink observed counts towards independence
+
+    Helper function for 'logit-smoothed' inference for the odds-ratio of two
+    independent proportions.
+
+    Parameters
+    ----------
+    count1, nobs1 : float or int
+        count and sample size for first sample
+    count2, nobs2 : float or int
+        count and sample size for the second sample
+    shrink_factor : float
+        This corresponds to the number of observations that are added in total
+        proportional to the probabilities under independence.
+    return_corr : bool
+        If true, then only the correction term is returned
+        If false, then the corrected counts, i.e. original counts plus
+        correction term, are returned.
+
+    Returns
+    -------
+    count1_corr, nobs1_corr, count2_corr, nobs2_corr : float
+        correction or corrected counts
+    prob_indep :
+        TODO/Warning : this will change most likely
+        probabilities under independence, only returned if return_corr is false.
+
+    """
     nobs_col = np.array([count1 + count2, nobs1 - count1 + nobs2 - count2])
     nobs_row = np.array([nobs1, nobs2])
     nobs = nobs1 + nobs2
@@ -1223,6 +1251,46 @@ def shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=True)
 def score_test_proportion_2indep(count1, nobs1, count2, nobs2, value=None,
                                 compare='diff', alternative='two-sided',
                                 correction=True):
+    """score_test for two independent proportions
+
+    This uses the constrained estimate of the proportions to compute
+    the variance under the Null hypothesis.
+
+    Parameters
+    ----------
+    count1, nobs1 :
+        count and sample size for first sample
+    count2, nobs2 :
+        count and sample size for the second sample
+    value : float
+        diff, ratio or odds-ratio under the null hypothesis. If value is None,
+        then equality of proportions under the Null is assumed,
+        i.e. value=0 for 'diff' or value=1 for either rate or odds-ratio..
+    compare : string in ['diff', 'ratio' 'odds-ratio']
+        If compare is diff, then the confidence interval is for diff = p1 - p2
+        If compare is ratio, then the confidence interval is for the risk ratio
+        defined by ratio = p1 / p2.
+        If compare is odds-ratio, then the confidence interval is for the
+        odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2)
+    alpha : float
+        significance leverl for the confidence interval, default is 0.05.
+        The nominal coverage probability is 1 - alpha.
+
+    Returns
+    -------
+    statistic : float
+        test statistic asymptotically normal distributed N(0, 1)
+    pvalue : float
+        p-value based on normal distribution
+    (prop1, prop2) : tuple
+        constrained estimate of the proportions under the Null
+
+    Notes
+    -----
+    Status: experimental, the type or extra information in the return might
+    change.
+
+    """
 
     value_default = 0 if compare == 'diff' else 1
     if value is None:
@@ -1339,7 +1407,7 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
         odds-ratio:
          - 'logit': wald test using logit transformation
          - 'logit-adjusted': : wald test using logit transformation, add 0.5 to counts
-         - 'logit--smoothed': : wald test using logit transformation, biases
+         - 'logit-smoothed': : wald test using logit transformation, biases
            cell counts towards independence by adding two observations in total.
          - 'score' if correction is True, then this uses the degrees of freedom
            correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
@@ -1356,8 +1424,11 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
 
     Returns
     -------
-    statistic, pvalue
-
+    Warning/TODO: this should return Results instance by default
+    statistic : float
+        test statistic asymptotically normal distributed N(0, 1)
+    pvalue : float
+        p-value based on normal distribution
 
     Notes
     -----
@@ -1443,7 +1514,7 @@ def test_proportions_2indep(count1, nobs1, count2, nobs2, value=None,
         odds_ratio = p1 / (1 - p1) / p2 * (1 - p2)
         if method in ['logit', 'logit-adjusted', 'logit-smoothed']:
             if method in ['logit-smoothed']:
-                adjusted = shrink_prob(count1, nobs1, count2, nobs2,
+                adjusted = _shrink_prob(count1, nobs1, count2, nobs2,
                                        shrink_factor=2, return_corr=False)[0]
                 count1_, nobs1_, count2_, nobs2_ = adjusted
 
@@ -1538,13 +1609,19 @@ def power_proportion_2indep(diff, p2, nobs, ratio=1, alpha=0.05,
 
 def samplesize_proportion_2indep_onetail(diff, p2, power, ratio=1, alpha=0.05,
                                          value=0, alternative='two-sided'):
-    """
+    """required sample size assuming normal distribution based on one tail
 
+    This uses an explicit computation for the sample size that is required
+    to achieve a given power corresponding to the appropriate tails of the
+    normal distribution. This ignores the far tail in a two-sided test
+    which is negligable in the common case when alternative and null are
+    far apart.
     """
-    if alternative in ['two-sided', '2s']:
-        alpha = alpha / 2
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_sample_size_one_tail
+
+    if alternative in ['two-sided', '2s']:
+        alpha = alpha / 2
 
     _, std_null, std_alt = _std_2prop_power(diff, p2, ratio=ratio,
                                             alpha=alpha, value=value)
@@ -1554,14 +1631,20 @@ def samplesize_proportion_2indep_onetail(diff, p2, power, ratio=1, alpha=0.05,
     return nobs
 
 
-def _confint_riskratio_koopman(x0, x1, n0, n1, alpha=0.05):
+def _confint_riskratio_koopman(x0, x1, n0, n1, alpha=0.05, correction=True):
     """score confidence interval for ratio or proportions, Koopman/Nam
 
     current namings follows Nam, signature not consistent with other functions
+
+    When correction is True, then the small sample correction nobs / (nobs - 1)
+    by Miettinen/Nurminen is used.
     """
     x = x0 + x1
     n = n0 + n1
     z = stats.norm.isf(alpha / 2)**2
+    if correction:
+        # Mietinnen/Nurminen small sample correction
+        z *= n / (n - 1)
     #z = stats.chi2.isf(alpha, 1)
     #equ 6 in Nam 1995
     a1 = n0 * (n0 * n * x1 + n1 * (n0 + x1) * z)
