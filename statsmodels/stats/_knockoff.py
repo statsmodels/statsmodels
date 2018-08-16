@@ -24,8 +24,9 @@ http://statweb.stanford.edu/~candes/papers/FDR_regression.pdf
 """
 
 import numpy as np
+import pandas as pd
 from statsmodels.compat.numpy import np_new_unique
-
+from statsmodels.iolib import summary2
 
 class RegressionFDR(object):
     """
@@ -66,11 +67,19 @@ class RegressionFDR(object):
     the 'equivariant' approach, set `design_method='sdp'` to use an
     alternative approach involving semidefinite programming.  See
     Barber and Candes for more information about both approaches.  The
-    sdp approach requires that cvxopt be installed.
+    sdp approach requires that the cvxopt package be installed.
     """
 
     def __init__(self, endog, exog, regeffects, method="knockoff",
                  **kwargs):
+
+        if hasattr(exog, "columns"):
+		self.xnames = exog.columns
+        else:
+            self.xnames = ["x%d" % j for j in range(exog.shape[1])]
+
+        exog = np.asarray(exog)
+        endog = np.asarray(endog)
 
         if "design_method" not in kwargs:
             kwargs["design_method"] = "equi"
@@ -84,7 +93,7 @@ class RegressionFDR(object):
         endog = endog - np.mean(endog)
 
         self.endog = endog
-        self.exog = exog
+        self.exog = np.concatenate((exog1, exog2), axis=1)
         self.exog1 = exog1
         self.exog2 = exog2
 
@@ -103,12 +112,22 @@ class RegressionFDR(object):
         numer = cc[ii]
         numer[ii < 0] = 0
 
+        # The knockoff+ estimated FDR
+        fdrp = (1 + numer) / denom
+
         # The knockoff estimated FDR
-        fdr = (1 + numer) / denom
+        fdr = numer / denom
 
         self.fdr = fdr[inv]
+        self.fdrp = fdrp[inv]
         self._ufdr = fdr
         self._unq = unq
+
+        df = pd.DataFrame(index=self.xnames)
+        df["Stat"] = self.stats
+        df["FDR+"] = self.fdrp
+        df["FDR"] = self.fdr
+        self.fdr_df = df
 
     def threshold(self, tfdr):
         """
@@ -119,6 +138,14 @@ class RegressionFDR(object):
             return self._unq[self._ufdr <= tfdr][0]
         else:
             return np.inf
+
+    def summary(self):
+
+        summ = summary2.Summary()
+        summ.add_title("Regression FDR results")
+        summ.add_df(self.fdr_df)
+
+        return summ
 
 
 def _design_knockoff_sdp(exog):
@@ -139,7 +166,7 @@ def _design_knockoff_sdp(exog):
     # Standardize exog
     xnm = np.sum(exog**2, 0)
     xnm = np.sqrt(xnm)
-    exog /= xnm
+    exog = exog / xnm
 
     Sigma = np.dot(exog.T, exog)
 
@@ -190,7 +217,7 @@ def _design_knockoff_equi(exog):
     # Standardize exog
     xnm = np.sum(exog**2, 0)
     xnm = np.sqrt(xnm)
-    exog /= xnm
+    exog = exog / xnm
 
     xcov = np.dot(exog.T, exog)
     ev, _ = np.linalg.eig(xcov)

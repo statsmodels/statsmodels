@@ -124,3 +124,37 @@ class OLSEffects(RegressionEffects):
         q = len(result.params) // 2
         stats = np.abs(result.params[0:q]) - np.abs(result.params[q:])
         return stats
+
+
+class RegModelEffects(RegressionEffects):
+    """
+    Use any regression model for Regression FDR analysis.
+
+    Parameters
+    ----------
+    parent : RegressionFDR instance
+        The RegressionFDR instance to which this effect size is
+        applied.
+    model : class
+        Any model with appropriate fit or fit_regularized
+        functions
+    regularized : bool
+        If True, use fit_regularized to fit the model
+    reg_kws : dict
+        Dictionary of keyword arguments for fit_regularized
+    """
+
+    def __init__(self, model, regularized=False, reg_kws=None):
+        self.model = model
+        self.regularized = regularized
+        self.reg_kws = reg_kws
+
+    def stats(self, parent):
+        model = self.model(parent.endog, parent.exog)
+        if self.regularized:
+            params = model.fit_regularized(**self.reg_kws).params
+        else:
+            params = model.fit().params
+        q = len(params) // 2
+        stats = np.abs(params[0:q]) - np.abs(params[q:])
+        return stats

@@ -1,7 +1,7 @@
 import numpy as np
-from numpy.testing import assert_allclose, assert_array_equal
+from numpy.testing import assert_allclose, assert_array_equal, assert_equal
 import pytest
-
+import statsmodels.api as sm
 from statsmodels.stats import knockoff_regeffects as kr
 from statsmodels.stats._knockoff import (RegressionFDR,
                                          _design_knockoff_equi,
@@ -63,24 +63,29 @@ def test_testers():
     np.random.seed(2432)
 
     n = 200
-    p = 50
 
-    y = np.random.normal(size=n)
-    x = np.random.normal(size=(n, p))
+    for p in 49, 50:
 
-    testers = [kr.CorrelationEffects(),
-               kr.ForwardEffects(pursuit=False),
-               kr.ForwardEffects(pursuit=True),
-               kr.OLSEffects()]
+        y = np.random.normal(size=n)
+        x = np.random.normal(size=(n, p))
 
-    for method in "equi", "sdp":
+        testers = [kr.CorrelationEffects(),
+                   kr.ForwardEffects(pursuit=False),
+                   kr.ForwardEffects(pursuit=True),
+                   kr.OLSEffects(),
+                   kr.RegModelEffects(sm.OLS),
+                   kr.RegModelEffects(sm.OLS, True, {"L1_wt": 0, "alpha": 1})]
 
-        if method == "sdp" and not has_cvxopt:
-            continue
+        for method in "equi", "sdp":
 
-        for tv in testers:
-            RegressionFDR(y, x, tv, design_method=method)
+            if method == "sdp" and not has_cvxopt:
+                continue
 
+            for tv in testers:
+                kn = RegressionFDR(y, x, tv, design_method=method)
+                assert_equal(len(kn.stats), p)
+                assert_equal(len(kn.fdr), p)
+                _ = kn.summary()
 
 @pytest.mark.slow
 def test_sim():
@@ -88,10 +93,17 @@ def test_sim():
     # relative to its theoretical claims.
 
     np.random.seed(43234)
+
+    # Number of variables with a non-zero coefficient
     npos = 30
+
+    # Aim to control FDR to this level
     target_fdr = 0.2
+
+    # Number of siumulation replications
     nrep = 10
 
+    # Statistic, n, p, effect size
     testers = [[kr.CorrelationEffects(), 300, 100, 6],
                [kr.ForwardEffects(pursuit=False), 300, 100, 3.5],
                [kr.ForwardEffects(pursuit=True), 300, 100, 3.5],
@@ -104,36 +116,46 @@ def test_sim():
 
         for tester_info in testers:
 
-            fdr = 0
-            power = 0
-            tester = tester_info[0]
-            n = tester_info[1]
-            p = tester_info[2]
-            es = tester_info[3]
+            (tester, n, p, es) = tuple(tester_info)
 
+            fdr, power = 0, 0
             for k in range(nrep):
 
+                # Generate the predictors
                 x = np.random.normal(size=(n, p))
                 x /= np.sqrt(np.sum(x*x, 0))
 
+                # Generate the response variable
                 coeff = es * (-1)**np.arange(npos)
                 y = np.dot(x[:, 0:npos], coeff) + np.random.normal(size=n)
 
                 kn = RegressionFDR(y, x, tester)
 
+                # Threshold to achieve the target FDR
                 tr = kn.threshold(target_fdr)
+
+                # Number of selected coefficients
                 cp = np.sum(kn.stats >= tr)
-                cp = max(cp, 1)
+
+                # Number of false positives
                 fp = np.sum(kn.stats[npos:] >= tr)
-                fdr += fp/cp
+
+                # Observed FDR
+                fdr += fp / max(cp, 1)
+
+                # Proportion of true positives that are detected
                 power += np.mean(kn.stats[0:npos] >= tr)
 
+                # The estimated FDR may never exceed the target FDR
                 estimated_fdr = (np.sum(kn.stats <= -tr) /
                                  (1 + np.sum(kn.stats >= tr)))
-                assert_array_equal(estimated_fdr < target_fdr, True)
+                assert_equal(estimated_fdr < target_fdr, True)
 
             power /= nrep
             fdr /= nrep
 
+            # Check for reasonable power
             assert_array_equal(power > 0.6, True)
+
+            # Check that we are close to the target FDR
             assert_array_equal(fdr < target_fdr + 0.05, True)
