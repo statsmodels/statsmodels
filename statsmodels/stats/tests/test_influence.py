@@ -75,7 +75,7 @@ class InfluenceCompareExact(object):
                         rtol=1e-12)
 
         assert_allclose(infl0.resid_studentized,
-                        infl1.resid_studentized, rtol=1e-12)
+                        infl1.resid_studentized, rtol=1e-12, atol=1e-7)
 
         cd_rtol = getattr(self, 'cd_rtol', 1e-7)
         assert_allclose(infl0.cooks_distance[0], infl1.cooks_distance[0],
