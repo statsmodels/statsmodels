@@ -29,7 +29,6 @@ def r_sq_elimination(x, y):
     if foundNew == True:
         bestModel = r_sq_elimination(bestModel, y)
         return bestModel
-    
     return bestModel
 
 
