@@ -43,8 +43,9 @@ INSTALL_REQUIRES = [k + '>=' + v for k, v in INSTALL_REQUIREMENTS.items()]
 
 EXTRAS_REQUIRE = {'build': ['cython>=' + CYTHON_MIN_VER],
                   'develop': ['cython>=' + CYTHON_MIN_VER],
-                  'docs': ['sphinx', 'nbconvert', 'jupyter_client', 'ipykernel',
-                           'matplotlib', 'nbformat', 'numpydoc', 'pandas-datareader']}
+                  'docs': ['sphinx', 'nbconvert', 'jupyter_client',
+                           'ipykernel', 'matplotlib', 'nbformat', 'numpydoc',
+                           'pandas-datareader']}
 
 ###############################################################################
 # Values that rarely change
@@ -96,11 +97,11 @@ DEFINE_MACROS = []
 
 
 exts = dict(
-    _exponential_smoothers={'source': 'statsmodels/tsa/_exponential_smoothers.pyx'},
-    _hamilton_filter={'source': 'statsmodels/tsa/regime_switching/_hamilton_filter.pyx.in'},
-    _kim_smoother={'source': 'statsmodels/tsa/regime_switching/_kim_smoother.pyx.in'},
+    _exponential_smoothers={'source': 'statsmodels/tsa/_exponential_smoothers.pyx'},  # noqa: E501
+    _hamilton_filter={'source': 'statsmodels/tsa/regime_switching/_hamilton_filter.pyx.in'},  # noqa: E501
+    _kim_smoother={'source': 'statsmodels/tsa/regime_switching/_kim_smoother.pyx.in'},  # noqa: E501
     linbin={'source': 'statsmodels/nonparametric/linbin.pyx'},
-    _smoothers_lowess={'source': 'statsmodels/nonparametric/_smoothers_lowess.pyx'},
+    _smoothers_lowess={'source': 'statsmodels/nonparametric/_smoothers_lowess.pyx'},  # noqa: E501
     kalman_loglike={'source': 'statsmodels/tsa/kalmanf/kalman_loglike.pyx',
                     'include_dirs': ['statsmodels/src'],
                     'depends': ['statsmodels/src/capsule.h']})
@@ -136,14 +137,16 @@ class DeferredBuildExt(build_ext):
         from numpy.distutils.misc_util import get_info
 
         numpy_includes = [numpy.get_include()]
-        numpy_includes += [pkg_resources.resource_filename('numpy', 'core/include')]
+        extra_incl = pkg_resources.resource_filename('numpy', 'core/include')
+        numpy_includes += [extra_incl]
         numpy_includes = list(set(numpy_includes))
         numpy_math_libs = get_info('npymath')
 
         for extension in self.extensions:
             if not hasattr(extension, 'include_dirs'):
                 continue
-            extension.include_dirs = list(set(extension.include_dirs + numpy_includes))
+            extension.include_dirs = list(set(extension.include_dirs +
+                                              numpy_includes))
             if extension.name in EXT_REQUIRES_NUMPY_MATH_LIBS:
                 extension.include_dirs += numpy_math_libs['include_dirs']
                 extension.libraries += numpy_math_libs['libraries']
@@ -162,8 +165,9 @@ def check_source(source_name):
         source_name = source_name.replace('.pyx', '.c')
         source_ext = '.c'
         if not os.path.exists(source_name):
-            raise FileNotFoundError('C source not found.  You must have Cython installed to '
-                                    'build if the C source files have not been generated.')
+            msg = 'C source not found.  You must have Cython installed to ' \
+                  'build if the C source files have not been generated.'
+            raise IOError(msg)
     return source_name, source_ext
 
 
@@ -178,7 +182,8 @@ def process_tempita(source_name):
             pyx_file.write(pyx)
         file_stats = os.stat(source_name)
         try:
-            os.utime(pyx_filename, ns=(file_stats.st_atime_ns, file_stats.st_mtime_ns))
+            os.utime(pyx_filename, ns=(file_stats.st_atime_ns,
+                                       file_stats.st_mtime_ns))
         except AttributeError:
             os.utime(pyx_filename, (file_stats.st_atime, file_stats.st_mtime))
         source_name = pyx_filename
@@ -227,7 +232,7 @@ if HAS_CYTHON:
 ##############################################################################
 package_data = defaultdict(list)
 filetypes = ['*.csv', '*.txt', '*.dta']
-for root, dirnames, filenames in os.walk(pjoin(os.getcwd(), 'statsmodels', 'datasets')):
+for root, dirnames, filenames in os.walk(pjoin(os.getcwd(), 'statsmodels', 'datasets')):  # noqa: E501
     matches = []
     for filetype in filetypes:
         for filename in fnmatch.filter(filenames, filetype):
@@ -268,7 +273,7 @@ setup(name=DISTNAME,
       distclass=BinaryDistribution,
       include_package_data=False,  # True will install all files in repo
       setup_requires=SETUP_REQUIRES,
-      install_requires=[k + '>=' + v for k, v in INSTALL_REQUIREMENTS.items()],
+      install_requires=INSTALL_REQUIRES,
       extras_require=EXTRAS_REQUIRE,
       zip_safe=False,
       )
