@@ -4236,8 +4236,3 @@ wrap.populate_wrapper(MultinomialResultsWrapper, MultinomialResults)
 class L1MultinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1MultinomialResultsWrapper, L1MultinomialResults)
-
-
-if __name__=="__main__":
-    import numpy as np
-    import statsmodels.api as sm

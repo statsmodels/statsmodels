@@ -126,7 +126,3 @@ def groupsstats_dummy(y, x, nonseq=0):
     xdevmeangr = x - meandata  # deviation from category/group mean
     vargr = np.dot((xdevmeangr * xdevmeangr).T, dummy) / countgr
     return meangr, vargr, xdevmeangr, countgr
-
-
-if __name__ == '__main__':
-    pass

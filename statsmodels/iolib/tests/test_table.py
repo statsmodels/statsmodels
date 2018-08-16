@@ -217,8 +217,3 @@ stub R2 C2  40.95038  40.65765
                    "('y', 'amax')     0.2432      0.035   "]
 
         assert_equal(sorted(desired), sorted(interesting_lines)  )
-
-
-if __name__ == "__main__":
-    #unittest.main()
-    pass

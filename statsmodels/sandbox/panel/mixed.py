@@ -666,8 +666,3 @@ class OneWayMixedResults(LikelihoodModelResults):
 #                count += 1
 #
 #        return fig
-
-
-if __name__ == '__main__':
-    #see examples/ex_mixed_lls_1.py
-    pass

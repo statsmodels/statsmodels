@@ -854,8 +854,3 @@ class TestTTestPairwisePoisson(CheckPairwise):
         cls.constraints = ['C(Weight)[T.2]',
                            'C(Weight)[T.3]',
                            'C(Weight)[T.3] - C(Weight)[T.2]']
-
-
-
-if __name__ == '__main__':
-    pass
