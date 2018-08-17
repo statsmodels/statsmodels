@@ -50,13 +50,13 @@ def funbgh(s, a, b, R, df):
     ret += np_log(mvstdnormcdf(s*a/sqrt_df, s*b/sqrt_df, R,
                                          maxpts=1000000, abseps=1e-6))
     ret = np_exp(ret)
-    return  ret
+    return ret
 
 def funbgh2(s, a, b, R, df):
     n = len(a)
     sqrt_df = np.sqrt(df)
     #np.power(s, df-1) * np_exp(-s*s*0.5)
-    return  np_exp((df-1)*np_log(s)-s*s*0.5) \
+    return np_exp((df-1)*np_log(s)-s*s*0.5) \
            * mvstdnormcdf(s*a/sqrt_df, s*b/sqrt_df, R[np.tril_indices(n, -1)],
                           maxpts=1000000, abseps=1e-4)
 

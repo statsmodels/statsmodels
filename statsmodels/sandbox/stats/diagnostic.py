@@ -1465,7 +1465,7 @@ class StatTestMC(object):
         does not do any plotting
         '''
         if self.mcres.ndim == 2:
-            if  not idx is None:
+            if idx is not None:
                 mcres = self.mcres[:,idx]
             else:
                 raise ValueError('currently only 1 statistic at a time')

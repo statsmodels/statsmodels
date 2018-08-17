@@ -347,7 +347,7 @@ class BisquareHuber(object):
         self.df_resid = 17
 
     def conf_int(self):
-        return  [(0.5399,1.0465),(.3565,1.7389),
+        return [(0.5399,1.0465),(.3565,1.7389),
                 (-.4271,.1600),(-63.2381,-18.5517)]
 
 

@@ -127,7 +127,7 @@ def test_multinomial_proportions_errors():
         assert_raises(NotImplementedError, multinomial_proportions_confint,
                       [5] * 50, method=method)
 
-def  test_confint_multinomial_proportions_zeros():
+def test_confint_multinomial_proportions_zeros():
     # test when a count is zero or close to zero
     # values from R MultinomialCI
     ci01 = np.array([

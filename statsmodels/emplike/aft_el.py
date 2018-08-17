@@ -339,7 +339,7 @@ class emplikeAFT(object):
         km = np.cumprod(km)  # If no ties, this is kaplan-meier
         tied = self._is_tied(endog, censors)
         wtd_km = self._km_w_ties(tied, km)
-        return  (censors / wtd_km).reshape(nobs, 1)
+        return (censors / wtd_km).reshape(nobs, 1)
 
     def fit(self):
         """

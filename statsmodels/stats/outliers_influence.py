@@ -685,7 +685,7 @@ class OLSInfluence(_BaseInfluenceMixin):
             #can be replace by different estimators of sigma
             sigma = np.sqrt(sigma2_est)
 
-        return  self.resid / sigma / np.sqrt(1 - hii)
+        return self.resid / sigma / np.sqrt(1 - hii)
 
     # same computation as GLMInfluence
     @cache_readonly
@@ -1224,7 +1224,7 @@ class GLMInfluence(MLEInfluence):
         hii is the diagonal of the hat matrix.
         """
         hii = self.hat_matrix_diag
-        return  self.resid / np.sqrt(self.scale * (1 - hii))
+        return self.resid / np.sqrt(self.scale * (1 - hii))
 
     # same computation as OLS
     @cache_readonly

@@ -257,7 +257,7 @@ class Describe(object):
 
             columstypes = self.dataset.dtype
             #TODO: do we need to make sure they dtype is float64 ?
-            for  astat in stats:
+            for astat in stats:
                 calc = self.univariate[astat]
                 if self._arraytype == 'sctruct':
                     calc[1] =  self._columns_list
