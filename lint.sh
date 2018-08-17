@@ -4,7 +4,8 @@ echo "inside $0"
 
 RET=0
 
-if [ "$LINT" = true ]; then
+if [ "$LINT" == true ]; then
+    echo "Linting all files with limited rules"
     flake8 statsmodels
     if [ $? -ne "0" ]; then
         RET=1
@@ -12,6 +13,7 @@ if [ "$LINT" = true ]; then
 
     # Run with --isolated to ignore config files, the files included here
     # pass _all_ flake8 checks
+    echo "Linting known clean files with strict rules"
     flake8 --isolated \
         statsmodels/info.py \
         statsmodels/resampling/ \
@@ -24,6 +26,15 @@ if [ "$LINT" = true ]; then
         RET=1
     fi
 
+    # Tests any new python files
+    NEW_FILES=$(git diff master --name-status -u -- "*.py" | grep ^A | cut -c 3- | paste -sd " " -)
+    if [ -n "$NEW_FILES" ]; then
+        echo "Linting newly added files with strict rules"
+        flake8 --isolated $(eval echo $NEW_FILES)
+        if [ $? -ne "0" ]; then
+            RET=1
+        fi
+    fi
 fi
 
 exit $RET
