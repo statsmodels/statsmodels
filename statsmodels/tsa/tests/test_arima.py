@@ -226,7 +226,7 @@ class Test_Y_ARMA11_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
         self.res1.save(fh)
         fh.seek(0,0)
         res_unpickled = self.res1.__class__.load(fh)
-        assert_(type(res_unpickled) is type(self.res1))
+        assert type(res_unpickled) is type(self.res1)  # noqa: E721
 
 
 class Test_Y_ARMA14_NoConst(CheckArmaResultsMixin):

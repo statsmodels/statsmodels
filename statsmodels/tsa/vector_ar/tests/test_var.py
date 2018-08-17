@@ -263,7 +263,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_equal(model2.endog_names, self.ref.names)
 
     def test_get_eq_index(self):
-        assert(type(self.res.names) is list)
+        assert type(self.res.names) is list  # noqa: E721
 
         for i, name in enumerate(self.names):
             idx = self.res.get_eq_index(i)
@@ -435,7 +435,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         self.res.save(fh)
         fh.seek(0,0)
         res_unpickled = self.res.__class__.load(fh)
-        assert_(type(res_unpickled) is type(self.res))
+        assert type(res_unpickled) is type(self.res)  # noqa: E721
 
 
 class E1_Results(object):
