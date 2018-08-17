@@ -137,7 +137,7 @@ class L2(Penalty):
 
     def __init__(self, weights=None, wts=None):
         weights = _check_wts(weights, wts)  # for deprecation wts
-        if weights  is None:
+        if weights is None:
             self.weights  = 1.
         else:
             self.weights  = weights
@@ -182,7 +182,7 @@ class PseudoHuber(Penalty):
     def __init__(self, dlt, weights=None, wts=None):
         self.dlt = dlt
         weights = _check_wts(weights, wts)  # for deprecation wts
-        if weights  is None:
+        if weights is None:
             self.weights  = 1.
         else:
             self.weights  = weights
