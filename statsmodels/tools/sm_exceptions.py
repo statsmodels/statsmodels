@@ -122,7 +122,7 @@ class HessianInversionWarning(ModelWarning):
     pass
 
 
-class ColinearityWarning(ModelWarning):
+class CollinearityWarning(ModelWarning):
     pass
 
 warnings.simplefilter('always', category=ModelWarning)
