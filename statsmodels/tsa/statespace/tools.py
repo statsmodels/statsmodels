@@ -1042,7 +1042,7 @@ def _compute_multivariate_acovf_from_coefficients(
     # Then stack the VAR(p) into a VAR(1) in companion matrix form:
     # z_{t+1} = F z_t + v_t
     companion = companion_matrix(
-        [1] + [-coefficients[i] for i in range(order)]
+        [1] + [-np.squeeze(coefficients[i]) for i in range(order)]
     ).T
 
     # Compute the error variance matrix for the stacked form: E v_t v_t'

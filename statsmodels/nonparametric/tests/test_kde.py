@@ -71,7 +71,7 @@ class CheckKDE(object):
         # added it as test method to TestKDEGauss below
         # inDomain is not vectorized
         #kde_vals = self.res1.evaluate(self.res1.support)
-        kde_vals = [self.res1.evaluate(xi) for xi in self.res1.support]
+        kde_vals = [np.squeeze(self.res1.evaluate(xi)) for xi in self.res1.support]
         kde_vals = np.squeeze(kde_vals)  #kde_vals is a "column_list"
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries
@@ -216,7 +216,7 @@ class CheckKDEWeights(object):
 
     def test_compare(self):
         xx = self.res1.support
-        kde_vals = [self.res1.evaluate(xi) for xi in xx]
+        kde_vals = [np.squeeze(self.res1.evaluate(xi)) for xi in xx]
         kde_vals = np.squeeze(kde_vals)  #kde_vals is a "column_list"
         mask_valid = np.isfinite(kde_vals)
         # TODO: nans at the boundaries

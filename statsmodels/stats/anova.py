@@ -627,9 +627,9 @@ if __name__ == "__main__":
     # in R
     #library(car)
     #write.csv(Moore, "moore.csv", row.names=FALSE)
-    moore = pandas.read_table('moore.csv', delimiter=",", skiprows=1,
-                                names=['partner_status','conformity',
-                                    'fcategory','fscore'])
+    moore = pandas.read_csv('moore.csv', skiprows=1,
+                            names=['partner_status','conformity',
+                                   'fcategory','fscore'])
     moore_lm = ols('conformity ~ C(fcategory, Sum)*C(partner_status, Sum)',
                     data=moore).fit()
 
