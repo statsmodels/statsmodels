@@ -379,24 +379,6 @@ class StateSpaceModel(object):
             loglike += penalty * np.sum((paramsorig-params)**2)
         return loglike
 
-#        r = self.r
-#        n = self.n
-#        F = np.diagonal(np.ones(r-1), k=-1) # think this will be wrong for VAR
-                                            # cf. 13.1.22 but think VAR
-#        F[0] = params[:p] # assumes first p start_params are coeffs
-                                # of obs. vector, needs to be nxp for VAR?
-#        self.F = F
-#        cholQ = np.diag(start_params[p:]) # fails for bivariate
-                                                        # MA(1) section
-                                                        # 13.4.2
-#        Q = np.dot(cholQ,cholQ.T)
-#        self.Q = Q
-#        HT = np.zeros((n,r))
-#        xi10 = self.xi10
-#        y = self.endog
-#        ntrain = self.ntrain
-#        loglike = kalmanfilter(F,H,y,xi10,Q,ntrain)
-
     def fit_kalman(self, start_params, xi10, ntrain=1, F=None, A=None, H=None,
             Q=None,
             R=None, method="bfgs", penalty=True, upperbounds=None,
@@ -782,8 +764,8 @@ if __name__ == "__main__":
     for i in range(1,nobs):
         xihistory[:,i] = np.dot(F,xihistory[:,i-1]) + \
                 np.dot(cholQ,np.random.randn(2,1)).squeeze()
-                # this makes an ARMA process?
-                # check notes, do the math
+        # TODO: this makes an ARMA process?; check notes, do the math
+
     y = np.dot(H.T, xihistory)
     y = y.T
 

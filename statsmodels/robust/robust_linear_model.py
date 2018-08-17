@@ -437,7 +437,7 @@ class RLMResults(base.LikelihoodModelResults):
             # [W_jk]^-1 = [SUM(psi_deriv(Sr_i)*x_ij*x_jk)]^-1
             # where Sr are the standardized residuals
             if model.cov == "H2":
-            # These are correct, based on Huber (1973) 8.13
+                # These are correct, based on Huber (1973) 8.13
                 return k*(1/self.df_resid)*np.sum(\
                     model.M.psi(self.sresid)**2)*self.scale**2\
                     /((1/self.nobs)*np.sum(\
@@ -573,8 +573,8 @@ class RLMResultsWrapper(lm.RegressionResultsWrapper):
 wrap.populate_wrapper(RLMResultsWrapper, RLMResults)
 
 if __name__=="__main__":
-#NOTE: This is to be removed
-#Delivery Time Data is taken from Montgomery and Peck
+    # NOTE: This is to be removed
+    # Delivery Time Data is taken from Montgomery and Peck
     import statsmodels.api as sm
 
 #delivery time(minutes)

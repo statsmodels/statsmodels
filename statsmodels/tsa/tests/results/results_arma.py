@@ -291,7 +291,7 @@ class Y_arma50(object):
             self.forecast = forecast_results['fc50']
             self.forecasterr = forecast_results['fe50']
         elif method =="css":
-#NOTE: some results use x-12 arima because gretl uses LS estimates for AR CSS
+            # NOTE: some results use x-12 arima because gretl uses LS estimates for AR CSS
             self.params = [0.725706505843, -0.305501865989, 0.320719417706,
                     0.226552951649, -0.089852608091                    ]
 #            self.aic = 674.817286564674
@@ -339,7 +339,7 @@ class Y_arma02(object):
             self.tvalues = [3.433, -13.53]
             self.sigma2 = 1.122887152869 ** 2
         elif method =="css":
-# bse, cov_params, tvalues taken from R
+            # bse, cov_params, tvalues taken from R
             self.params = [0.175605240783, -0.688421349504]
             self.aic = 773.725350463014
             self.bic = 784.289733216601
@@ -387,9 +387,9 @@ class Y_arma11c(object):
             self.forecast = forecast_results['fc11c']
             self.forecasterr = forecast_results['fe11c']
         elif method =="css":
-#            self.params = [1.625462134333, 0.666386002049, 0.409512270580]
-#NOTE: gretl gives the intercept not the mean, x-12-arima and R agree with us
-#NOTE: params, bse, cov_params, tvals from R
+            #self.params = [1.625462134333, 0.666386002049, 0.409512270580]
+            # NOTE: gretl gives the intercept not the mean, x-12-arima and R agree with us
+            # NOTE: params, bse, cov_params, tvals from R
             self.params = [4.872477127267, 0.666395534262, 0.409517026658]
             self.aic = 734.613526514951
             self.bic = 748.683338100810
@@ -445,9 +445,9 @@ class Y_arma14c(object):
             self.tvalues = [29.67, 3.895, 2.106, -5.013, 1.796, 4.966]
             self.sigma2 = 0.990262659233 ** 2
         elif method =="css":
-#NOTE: params, bse, cov_params, and tvalues from R
-#            self.params = [1.502401748545, 0.683090744792, 0.197636417391,
-#                    -0.763847295045, 0.137000823589, 0.304781097398]
+            # NOTE: params, bse, cov_params, and tvalues from R
+            #self.params = [1.502401748545, 0.683090744792, 0.197636417391,
+            #        -0.763847295045, 0.137000823589, 0.304781097398]
             self.params = [4.740785760452, 0.683056278882,  0.197681128402,
                            -0.763804443884, 0.136991271488, 0.304776424257]
             self.aic = 719.977407193363
@@ -515,9 +515,9 @@ class Y_arma41c(object):
             self.forecast = forecast_results['fc41c']
             self.forecasterr = forecast_results['fe41c']
         elif method =="css":
-#            self.params = [-0.077068926631, 0.763816531155, -0.270949972390,
-#                    -0.284496499726, 0.757135838677, 0.225247299659]
-#NOTE: params, cov_params, bse, and tvalues from R
+            #self.params = [-0.077068926631, 0.763816531155, -0.270949972390,
+            #        -0.284496499726, 0.757135838677, 0.225247299659]
+            # NOTE: params, cov_params, bse, and tvalues from R
             self.params = [-2.234160612756, 0.763815335585, -0.270946894536,
                            -0.284497190744, 0.757136686518, 0.225260672575]
             self.aic = 668.907200379791
@@ -581,9 +581,9 @@ class Y_arma22c(object):
             self.tvalues = [99.41,  10.06, -5.120,  0.5184, -9.900]
             self.sigma2 = 1.196309833136 ** 2
         elif method =="css":
-#NOTE: params, bse, cov_params, and tvalues from R
-#            self.params = [2.571274348147, 0.793030965872, -0.363511071688,
-#                    0.033543918525, -0.702593972949]
+            # NOTE: params, bse, cov_params, and tvalues from R
+            #self.params = [2.571274348147, 0.793030965872, -0.363511071688,
+            #        0.033543918525, -0.702593972949]
             self.params = [4.507207454494, 0.793055048760, -0.363521072479,
                             0.033519062805, -0.702595834943]
             self.aic = 806.807171655455
@@ -648,10 +648,10 @@ class Y_arma50c(object):
             self.forecast = forecast_results['fc50c']
             self.forecasterr = forecast_results['fe50c']
         elif method =="css":
-#NOTE: params, bse, cov_params, tvalues from R
-#likelihood based results from x-12 arima
-#            self.params = [0.843173779572, 0.755433266689, -0.296886816205,
-#                    0.253572751789, 0.276975022313, -0.172637420881]
+            # NOTE: params, bse, cov_params, tvalues from R
+            #   likelihood based results from x-12 arima
+            #self.params = [0.843173779572, 0.755433266689, -0.296886816205,
+            #        0.253572751789, 0.276975022313, -0.172637420881]
             self.params = [4.593494860193, 0.755427402630, -0.296867127441,
                            0.253556723526, 0.276987447724, -0.172647993470]
 #            self.aic = 694.843378847617
@@ -714,7 +714,7 @@ class Y_arma02c(object):
             self.tvalues = [117.7, 4.063, -13.15]
             self.sigma2 = 1.081406299967 ** 2
         elif method =="css":
-#NOTE: cov_params and tvalues taken from R
+            # NOTE: cov_params and tvalues taken from R
             self.params = [4.519869870853, 0.202414429306, -0.647482560461]
             self.aic = 756.679105324347
             self.bic = 770.764948995796

@@ -1498,7 +1498,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
     @cache_readonly
     def pvalues(self):
-    #TODO: same for conditional and unconditional?
+        # TODO: same for conditional and unconditional?
         df_resid = self.df_resid
         return t.sf(np.abs(self.tvalues), df_resid) * 2
 

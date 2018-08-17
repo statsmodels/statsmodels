@@ -45,8 +45,10 @@ class MacrodataResults(object):
         self.fpe = 7.421287668357018e-13
         self.detsig = 6.01498432283e-13
         self.llf = 1962.572126661708
-        self.chi2_1 = 75.44775165699033 # don't know how they calculate this
-                                        # it's not -2 * (ll1 - ll0)
+
+        self.chi2_1 = 75.44775165699033
+        # don't know how they calculate this; it's not -2 * (ll1 - ll0)
+        
         self.chi2_2 = 33.19878716815366
         self.chi2_3 = 83.90568280242312
         bse = [.1666662376, .1704584393, .1289691456, .1433308696, .0257313781,

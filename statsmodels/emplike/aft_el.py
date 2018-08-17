@@ -137,9 +137,9 @@ class OptAFT(_OptFuncts):
             # See Zhou 2005, section 3.
             self.model._fit_weights = wts
             new_opt_res = self._opt_wtd_nuis_regress(to_test)
-                # ^ Uncensored weights' contribution to likelihood value.
+            # ^ Uncensored weights' contribution to likelihood value.
             F = self.new_weights
-                # ^ M step
+            # ^ M step
             diff = np.abs(new_opt_res - opt_res)
             opt_res = new_opt_res
             iters = iters + 1

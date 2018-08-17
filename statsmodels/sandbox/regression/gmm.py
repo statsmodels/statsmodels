@@ -1151,11 +1151,6 @@ class GMMResults(LikelihoodModelResults):
         # this should use by default whatever options have been specified in
         # fit
 
-        # TODO: don't do this when we want to change options
-#         if hasattr(self, '_cov_params'):
-#             #replace with decorator later
-#             return self._cov_params
-
         # set defaults based on fit arguments
         if not 'wargs' in kwds:
             # Note: we don't check the keys in wargs, use either all or nothing

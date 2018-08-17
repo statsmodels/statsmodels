@@ -147,8 +147,9 @@ class KDEUnivariate(object):
         self.density = density
         self.support = grid
         self.bw = bw
-        self.kernel = kernel_switch[kernel](h=bw) # we instantiate twice,
-                                                # should this passed to funcs?
+        self.kernel = kernel_switch[kernel](h=bw)
+        # TODO: we instantiate twice, should this passed to funcs?
+
         # put here to ensure empty cache after re-fit with new options
         self.kernel.weights = weights
         if weights is not None:
@@ -445,8 +446,9 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
         Series C. 31.2, 93-9.
     """
     X = np.asarray(X)
-    X = X[np.logical_and(X > clip[0], X < clip[1])] # won't work for two columns.
-                                                # will affect underlying data?
+    X = X[np.logical_and(X > clip[0], X < clip[1])]
+    # won't work for two columns.
+    # TODO: will affect underlying data?
 
     # Get kernel object corresponding to selection
     kern = kernel_switch[kernel]()
@@ -493,10 +495,12 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     # step 3 and 4 for optimal bw compute zstar and the density estimate f
     # don't have to redo the above if just changing bw, ie., for cross val
 
-#NOTE: silverman_transform is the closed form solution of the FFT of the
-#gaussian kernel. Not yet sure how to generalize it.
-    zstar = silverman_transform(bw, gridsize, RANGE)*y # 3.49 in Silverman
-                                                    # 3.50 w Gaussian kernel
+    # NOTE: silverman_transform is the closed form solution of the FFT of the
+    # gaussian kernel. Not yet sure how to generalize it.
+    zstar = silverman_transform(bw, gridsize, RANGE)*y
+    # 3.49 in Silverman
+    # 3.50 w Gaussian kernel
+
     f = revrt(zstar)
     if retgrid:
         return f, grid, bw
@@ -545,6 +549,6 @@ if __name__ == "__main__":
 #        dens = revrt(SMOOTH)
 
     except:
-#        ft = np.loadtxt('./ft_silver.csv')
-#        smooth = np.loadtxt('./smooth_silver.csv')
+        #ft = np.loadtxt('./ft_silver.csv')
+        #smooth = np.loadtxt('./smooth_silver.csv')
         print("Didn't get the estimates from the Silverman algorithm")

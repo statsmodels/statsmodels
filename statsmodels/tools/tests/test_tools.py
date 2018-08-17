@@ -290,51 +290,54 @@ class TestCategoricalNumerical(object):
         assert_array_equal(test_dum, self.dummy)
         assert_equal(len(dum.dtype.names), 5)
 
-#    def test_arraylike2d(self):
-#        des = tools.categorical(self.structdes.tolist(), col=2)
-#        test_des = des[:,-5:]
-#        assert_array_equal(test_des, self.dummy)
-#        assert_equal(des.shape[1], 9)
+    # TODO: Why are these commented-out?  similar tests commented-out below
+    #    have a comment saying it is "until we have type coercsion";
+    #    what does that mean?
+    #def test_arraylike2d(self):
+    #    des = tools.categorical(self.structdes.tolist(), col=2)
+    #    test_des = des[:,-5:]
+    #    assert_array_equal(test_des, self.dummy)
+    #    assert_equal(des.shape[1], 9)
 
-#    def test_arraylike1d(self):
-#        instr = self.structdes['instrument'].tolist()
-#        dum = tools.categorical(instr)
-#        test_dum = dum[:,-5:]
-#        assert_array_equal(test_dum, self.dummy)
-#        assert_equal(dum.shape[1], 6)
+    #def test_arraylike1d(self):
+    #    instr = self.structdes['instrument'].tolist()
+    #    dum = tools.categorical(instr)
+    #    test_dum = dum[:,-5:]
+    #    assert_array_equal(test_dum, self.dummy)
+    #    assert_equal(dum.shape[1], 6)
 
-#    def test_arraylike2d_drop(self):
-#        des = tools.categorical(self.structdes.tolist(), col=2, drop=True)
-#        test_des = des[:,-5:]
-#        assert_array_equal(test__des, self.dummy)
-#        assert_equal(des.shape[1], 8)
+    #def test_arraylike2d_drop(self):
+    #    des = tools.categorical(self.structdes.tolist(), col=2, drop=True)
+    #    test_des = des[:,-5:]
+    #    assert_array_equal(test__des, self.dummy)
+    #    assert_equal(des.shape[1], 8)
 
-#    def test_arraylike1d_drop(self):
-#        instr = self.structdes['instrument'].tolist()
-#        dum = tools.categorical(instr, drop=True)
-#        assert_array_equal(dum, self.dummy)
-#        assert_equal(dum.shape[1], 5)
+    #def test_arraylike1d_drop(self):
+    #    instr = self.structdes['instrument'].tolist()
+    #    dum = tools.categorical(instr, drop=True)
+    #    assert_array_equal(dum, self.dummy)
+    #    assert_equal(dum.shape[1], 5)
 
 
 class TestCategoricalString(TestCategoricalNumerical):
 
-# comment out until we have type coercion
-#    def test_array2d(self):
-#        des = np.column_stack((self.des, self.instr, self.des))
-#        des = tools.categorical(des, col=2)
-#        assert_array_equal(des[:,-5:], self.dummy)
-#        assert_equal(des.shape[1],10)
+    # TODO: comment out until we have type coercion
+    #def test_array2d(self):
+    #    des = np.column_stack((self.des, self.instr, self.des))
+    #    des = tools.categorical(des, col=2)
+    #    assert_array_equal(des[:,-5:], self.dummy)
+    #    assert_equal(des.shape[1],10)
 
-#    def test_array1d(self):
-#        des = tools.categorical(self.instr)
-#        assert_array_equal(des[:,-5:], self.dummy)
-#        assert_equal(des.shape[1],6)
+    #def test_array1d(self):
+    #    des = tools.categorical(self.instr)
+    #    assert_array_equal(des[:,-5:], self.dummy)
+    #    assert_equal(des.shape[1],6)
 
-#    def test_array2d_drop(self):
-#        des = np.column_stack((self.des, self.instr, self.des))
-#        des = tools.categorical(des, col=2, drop=True)
-#        assert_array_equal(des[:,-5:], self.dummy)
-#        assert_equal(des.shape[1],9)
+    #def test_array2d_drop(self):
+    #    des = np.column_stack((self.des, self.instr, self.des))
+    #    des = tools.categorical(des, col=2, drop=True)
+    #    assert_array_equal(des[:,-5:], self.dummy)
+    #    assert_equal(des.shape[1],9)
 
     def test_array1d_drop(self):
         des = tools.categorical(self.string_var, drop=True)

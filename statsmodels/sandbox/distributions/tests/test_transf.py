@@ -103,7 +103,7 @@ class Test_Transf2(object):
     def test_equivalent(self):
         xx, ppfq = self.xx, self.ppfq
         for d1,d2 in self.dist_equivalents:
-##            print d1.name
+            #print d1.name
             assert_almost_equal(d1.cdf(xx), d2.cdf(xx), err_msg='cdf'+d1.name)
             assert_almost_equal(d1.pdf(xx), d2.pdf(xx),
                                 err_msg='pdf '+d1.name+d2.name)

@@ -105,10 +105,6 @@ class PanelModel(object):
     def __init__(self, endog=None, exog=None, panel=None, time=None,
             xtnames=None, equation=None, panel_data=None):
         if panel_data == None:
-#            if endog == None and exog == None and panel == None and \
-#                    time == None:
-#                raise ValueError("If pandel_data is False then endog, exog, \
-#panel_arr, and time_arr cannot be None.")
             self.initialize(endog, exog, panel, time, xtnames, equation)
 #        elif aspandas != False:
 #            if not isinstance(endog, str):

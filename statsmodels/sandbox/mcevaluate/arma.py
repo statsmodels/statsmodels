@@ -63,13 +63,6 @@ def mc_summary(res, rt=None):
 
 
 if __name__ == '__main__':
-
-#short version
-#    true, est, bse = mcarma22(niter=50)
-#    print(true
-#    #print(est
-#    print(est.mean(0)
-
     ''' niter 50, sample size=1000, 2 runs
     [-0.55 -0.1   0.3   0.2 ]
     [-0.542401   -0.09904305  0.30840599  0.2052473 ]

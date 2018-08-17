@@ -46,8 +46,8 @@ def moment_exponential_add(params, exog, exp=True):
     if exp:
         predicted = np.exp(np.dot(exog, params))
         #if not np.isfinite(predicted).all():
-            #print "invalid predicted", predicted
-            #raise RuntimeError('invalid predicted')
+        #    #print "invalid predicted", predicted
+        #    #raise RuntimeError('invalid predicted')
         predicted = np.clip(predicted, 0, 1e100)  # try to avoid inf
     else:
         predicted = np.dot(exog, params)

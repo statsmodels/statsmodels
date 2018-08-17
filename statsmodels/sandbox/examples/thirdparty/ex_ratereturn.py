@@ -117,7 +117,6 @@ if has_sklearn:
     normcolor = None
     fig = plt.figure()
     for i, c in enumerate([rrcorr, corr_lw, corr_oas, corr_mcd]):
-    #for i, c in enumerate([np.cov(rr, rowvar=0), cov_lw, cov_oas, cov_mcd]):
         ax = fig.add_subplot(2,2,i+1)
         plot_corr(c, xnames=None, title=titles[i],
               normcolor=normcolor, ax=ax)

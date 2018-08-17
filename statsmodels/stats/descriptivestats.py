@@ -110,19 +110,19 @@ class Describe(object):
             #sign_test_P = [self.sign_test_p, None, None]
         )
 
-        #TODO: Basic stats for strings
-        #self.strings = dict(
-            #unique = [np.unique, None, None],
-            #number_uniq = [len(
-            #most = [
-            #least = [
+        # TODO: Basic stats for strings
+        # self.strings = dict(
+        #    unique = [np.unique, None, None],
+        #    number_uniq = [len(
+        #    most = [
+        #    least = [
 
-        #TODO: Multivariate
-        #self.multivariate = dict(
-            #corrcoef(x[, y, rowvar, bias]),
-            #cov(m[, y, rowvar, bias]),
-            #histogram2d(x, y[, bins, range, normed, weights])
-            #)
+        # TODO: Multivariate
+        # self.multivariate = dict(
+        #    corrcoef(x[, y, rowvar, bias]),
+        #    cov(m[, y, rowvar, bias]),
+        #    histogram2d(x, y[, bins, range, normed, weights])
+        #    )
         self._arraytype = None
         self._columns_list = None
 
@@ -152,8 +152,8 @@ class Describe(object):
         unknown. `numpy.lib._iotools._is_string_like`
         """
         def string_like():
-        #TODO: not sure what the result is if the first item is some type of
-        #      missing value
+            # TODO: not sure what the result is if the first item is some
+            #       type of missing value
             try:
                 self.dataset[col][0] + ''
             except (TypeError, ValueError):
@@ -245,7 +245,7 @@ class Describe(object):
                     self._columns_list = self.dataset.dtype.names
                     #self._columns_list = [col for col in
                     #                      self.dataset.dtype.names if
-                            #(self._is_dtype_like(col)=='number')]
+                    #        (self._is_dtype_like(col)=='number')]
                 else:
                     self._columns_list = lrange(self.dataset.shape[1])
             else:
@@ -306,9 +306,9 @@ class Describe(object):
     #TODO: There must be a better way but formating the stats of a fuction that
     #      returns 2 values is a problem.
     #def sign_test_m(samp,mu0=0):
-        #return self.sign_test(samp,mu0)[0]
+    #    return self.sign_test(samp,mu0)[0]
     #def sign_test_p(samp,mu0=0):
-        #return self.sign_test(samp,mu0)[1]
+    #    return self.sign_test(samp,mu0)[1]
 
 if __name__ == "__main__":
     #unittest.main()

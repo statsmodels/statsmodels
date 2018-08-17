@@ -369,7 +369,6 @@ class RU2NMNL(object):
                     print('parent', parent)
                 self.branchleaves[parent].extend(self.branchleaves[name])
             if 0:  #not name == 'top':  # not used anymore !!! ???
-            #if not name == 'top':
                 #TODO: do I need this only on the lowest branches ?
                 tmpsum = 0
                 for k in self.branchleaves[name]:
@@ -387,8 +386,8 @@ class RU2NMNL(object):
                     if np.size(self.datadict[name])>0:
                         #not used yet, might have to move one indentation level
                         #self.probs[k] = self.probs[k] / tmpsum
-##                            np.exp(-self.datadict[name] *
-##                             np.sum(self.recursionparams[self.parinddict[name]]))
+                        #      np.exp(-self.datadict[name] *
+                        #       np.sum(self.recursionparams[self.parinddict[name]]))
                         if DEBUG:
                             print('self.datadict[name], self.probs[k]')
                             print(self.datadict[name], self.probs[k])

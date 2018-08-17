@@ -404,8 +404,8 @@ class EmbeddedSphinxShell(object):
         input_lines = input.split('\n')
         if len(input_lines) > 1:
             if input_lines[-1] != "":
-                input_lines.append('')  # make sure there's a blank line
-                                        # so splitter buffer gets reset
+                # make sure there's a blank line so splitter buffer gets reset
+                input_lines.append('')
 
         continuation = '   %s:'%''.join(['.']*(len(str(lineno))+2))
 

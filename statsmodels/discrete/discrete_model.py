@@ -2844,7 +2844,7 @@ class NegativeBinomial(CountModel):
                         maxiter=maxiter, method=method, disp=disp,
                         full_output=full_output, callback=callback,
                         **kwargs)
-                        # TODO: Fix NBin _check_perfect_pred
+        # TODO: Fix NBin _check_perfect_pred
         if self.loglike_method.startswith('nb'):
             # mlefit is a wrapped counts results
             self._transparams = False # don't need to transform anymore now
@@ -3741,7 +3741,6 @@ class L1CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
             "A results class for count data fit by l1 regularization",
             "extra_attr" : _l1_results_attr}
-        #discretefit = CountResults(self, cntfit)
 
     def __init__(self, model, cntfit):
         super(L1CountResults, self).__init__(model, cntfit)

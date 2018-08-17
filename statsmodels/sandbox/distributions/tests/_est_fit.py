@@ -50,8 +50,8 @@ def check_cont_fit(distname,arg):
         raise AssertionError('nan returned in fit')
     else:
         if np.any((np.abs(diff) - diffthreshold) > 0.0):
-##            txt = 'WARNING - diff too large with small sample'
-##            print 'parameter diff =', diff - diffthreshold, txt
+            #txt = 'WARNING - diff too large with small sample'
+            #print 'parameter diff =', diff - diffthreshold, txt
             rvs = np.concatenate([rvs,distfn.rvs(size=n_repl2-n_repl1,*arg)])
             est = distfn.fit(rvs) #,*arg)
             truearg = np.hstack([arg,[0.0,1.0]])

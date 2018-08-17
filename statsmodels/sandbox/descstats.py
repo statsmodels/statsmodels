@@ -36,8 +36,8 @@ def descstats(data, cols=None, axis=0):
 
     x = np.array(data)  # or rather, the data we're interested in
     if cols is None:
-#       if isinstance(x, np.recarray):
-#            cols = np.array(len(x.dtype.names))
+        #if isinstance(x, np.recarray):
+        #     cols = np.array(len(x.dtype.names))
         if not isinstance(x, np.recarray) and x.ndim == 1:
             x = x[:,None]
 
