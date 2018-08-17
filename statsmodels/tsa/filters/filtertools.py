@@ -51,6 +51,7 @@ def _pad_nans(x, head=None, tail=None):
 #     ifftn, fftfreq
 #from numpy import product,array
 
+
 def fftconvolveinv(in1, in2, mode="full"):
     """Convolve two N-dimensional arrays using FFT. See convolve.
 
@@ -93,6 +94,7 @@ def fftconvolveinv(in1, in2, mode="full"):
     elif mode == "valid":
         return trim_centered(ret,abs(s2-s1)+1)
 
+
 #code duplication with fftconvolveinv
 def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     """Convolve two N-dimensional arrays using FFT. See convolve.
@@ -124,7 +126,6 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
         s2 = max(s2, s3) # try this looks reasonable for ARMA
         #s2 = s3
 
-
     complex_result = (np.issubdtype(in1.dtype, np.complex) or
                       np.issubdtype(in2.dtype, np.complex))
     size = s1+s2-1
@@ -154,6 +155,7 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
         return trim_centered(ret,osize)
     elif mode == "valid":
         return trim_centered(ret,abs(s2-s1)+1)
+
 
 #original changes and examples in sandbox.tsa.try_var_convolve
 #examples and tests are there

@@ -555,10 +555,13 @@ def test_slice_notation():
     # Test invalid __setitem__
     def set_designs():
         mod['designs'] = 1
+
     def set_designs2():
         mod['designs',0,0] = 1
+
     def set_designs3():
         mod[0] = 1
+
     assert_raises(IndexError, set_designs)
     assert_raises(IndexError, set_designs2)
     assert_raises(IndexError, set_designs3)
@@ -766,6 +769,7 @@ def test_filter():
     res = mod.filter()
     assert_equal(isinstance(res, FilterResults), True)
 
+
 def test_loglike():
     # Tests of invalid calls to the loglike function
 
@@ -945,6 +949,7 @@ def test_standardized_forecasts_error():
         standardized_forecasts_error,
     )
 
+
 def test_simulate():
     # Test for simulation of new time-series
     from scipy.signal import lfilter
@@ -1051,6 +1056,7 @@ def test_simulate():
         np.r_[0, state_shocks[:-1]])
 
     assert_allclose(actual, desired)
+
 
 def test_impulse_responses():
     # Test for impulse response functions
@@ -1229,6 +1235,7 @@ def test_impulse_responses():
     res = mod.filter([phi, 1.])
     actual = res.impulse_responses(steps=10)
     assert_allclose(actual, desired)
+
 
 def test_missing():
     # Datasets

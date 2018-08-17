@@ -196,6 +196,7 @@ class Trivariate(object):
             self.sim_a.simulated_state_disturbance
         )
 
+
 class TestTrivariateConventional(Trivariate):
 
     @classmethod
@@ -221,6 +222,7 @@ class TestTrivariateConventional(Trivariate):
             disturbance_variates=np.zeros(n_disturbance_variates),
             initial_state_variates=np.zeros(cls.model.k_states)
         )
+
 
 class TestTrivariateConventionalAlternate(TestTrivariateConventional):
     @classmethod
@@ -407,6 +409,7 @@ class TestTrivariateUnivariateAllMissing(Trivariate):
             disturbance_variates=np.zeros(n_disturbance_variates),
             initial_state_variates=np.zeros(cls.model.k_states)
         )
+
 
 class TestTrivariateUnivariateAllMissingAlternate(TestTrivariateUnivariateAllMissing):
     @classmethod

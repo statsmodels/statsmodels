@@ -560,6 +560,7 @@ class TimeSeriesModelResults(base.LikelihoodModelResults):
         super(TimeSeriesModelResults,
                 self).__init__(model, params, normalized_cov_params, scale)
 
+
 class TimeSeriesResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
     _wrap_attrs = wrap.union_dicts(base.LikelihoodResultsWrapper._wrap_attrs,
@@ -567,8 +568,9 @@ class TimeSeriesResultsWrapper(wrap.ResultsWrapper):
     _methods = {'predict' : 'dates'}
     _wrap_methods = wrap.union_dicts(base.LikelihoodResultsWrapper._wrap_methods,
                                      _methods)
-wrap.populate_wrapper(TimeSeriesResultsWrapper,
+wrap.populate_wrapper(TimeSeriesResultsWrapper,  # noqa:E305
                       TimeSeriesModelResults)
+
 
 if __name__ == "__main__":
     import statsmodels.api as sm

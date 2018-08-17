@@ -17,6 +17,7 @@ DECIMAL_6 = 6
 DECIMAL_5 = 5
 DECIMAL_4 = 4
 
+
 class CheckARMixin(object):
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_6)
@@ -41,6 +42,7 @@ class CheckARMixin(object):
         fh.seek(0,0)
         res_unpickled = self.res1.__class__.load(fh)
         assert_(type(res_unpickled) is type(self.res1))
+
 
 class TestAROLSConstant(CheckARMixin):
     """
@@ -258,7 +260,6 @@ class TestAutolagAR(object):
             bic = (bic - log_sigma2) * (1 + k_ar)/(1 + k_ar + k_trend)
             bic += log_sigma2
 
-
             results.append([aic, hqic, bic, r.fpe])
         res1 = np.asarray(results).T.reshape(4,-1, order='C')
         # aic correction to match R
@@ -268,6 +269,7 @@ class TestAutolagAR(object):
     def test_ic(self):
 
         npt.assert_almost_equal(self.res1, self.res2, DECIMAL_6)
+
 
 def test_ar_dates():
     # just make sure they work
@@ -281,6 +283,7 @@ def test_ar_dates():
     assert_equal(ar_model.data.predict_dates, predict_dates)
     assert_equal(pred.index, predict_dates)
 
+
 def test_ar_named_series():
     dates = PeriodIndex(start="2011-1", periods=72, freq='M')
     y = Series(np.random.randn(72), name="foobar", index=dates)
@@ -288,12 +291,14 @@ def test_ar_named_series():
     assert_(results.params.index.equals(Index(["const", "L1.foobar",
                                                "L2.foobar"])))
 
+
 def test_ar_start_params():
     # fix 236
     # smoke test
     data = sm.datasets.sunspots.load()
     res = AR(data.endog).fit(maxlag=9, start_params=0.1*np.ones(10),
                              method="mle", disp=-1, maxiter=100)
+
 
 def test_ar_series():
     # smoke test for 773
@@ -314,6 +319,7 @@ def test_ar_select_order():
     res = ar.select_order(maxlag=12, ic='aic')
     assert_(res == 2)
 
+
 # GH 2658
 def test_ar_select_order_tstat():
     rs = np.random.RandomState(123)
@@ -325,7 +331,6 @@ def test_ar_select_order_tstat():
     ar = AR(ts)
     res = ar.select_order(maxlag=5, ic='t-stat')
     assert_equal(res, 0)
-
 
 
 #TODO: likelihood for ARX model?

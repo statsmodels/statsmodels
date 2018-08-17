@@ -205,6 +205,7 @@ class TestVAR(CheckLutkepohl):
         for i in range(len(names)):
             assert_equal(re.search('%s +%.4f' % (names[i], params[i]), table) is None, False)
 
+
 class TestVAR_diagonal(CheckLutkepohl):
     @classmethod
     def setup_class(cls):
@@ -359,6 +360,7 @@ class TestVAR_measurement_error(CheckLutkepohl):
         for i in range(len(names)):
             assert_equal(re.search('%s +%.4f' % (names[i], params[i]), table) is None, False)
 
+
 class TestVAR_obs_intercept(CheckLutkepohl):
     @classmethod
     def setup_class(cls):
@@ -483,6 +485,7 @@ class TestVAR_exog(CheckLutkepohl):
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
             assert_equal(re.search('%s +%.4f' % (names[i], params[i]), table) is None, False)
+
 
 class TestVAR_exog2(CheckLutkepohl):
     # This is a regression test, to make sure that the setup with multiple exog

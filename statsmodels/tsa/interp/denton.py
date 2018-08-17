@@ -119,9 +119,6 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     >>> benchmark = [500,400,300,400,500]
     >>> benchmarked = dentonm(indicator, benchmark, freq="aq")
 
-
-
-
     Notes
     -----
     Denton's method minimizes the distance given by the penalty function, in
@@ -139,7 +136,6 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 
     sum(X) = A, for each period.  Where X is the benchmarked series, I is
     the indicator, and A is the benchmark.
-
 
     References
     ----------
@@ -162,7 +158,6 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 #        D4 - sum((X[t]/I[t] - X[t-1]/I[t-1])**2)
 #        D5 - sum((X[t]/I[t] / X[t-1]/I[t-1] - 1)**2)
 #NOTE: only D4 is the only one implemented, see IMF chapter 6.
-
 
     # check arrays and make 2d
     indicator = asarray(indicator)
@@ -238,6 +233,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
         X = r_[X,extrapolated]
 
     return X.squeeze()
+
 
 if __name__ == "__main__":
     import numpy as np

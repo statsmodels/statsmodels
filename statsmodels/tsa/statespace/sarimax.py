@@ -978,7 +978,6 @@ class SARIMAX(MLEModel):
                  ' Using zeros as starting parameters.')
             params_seasonal_ar *= 0
 
-
         # If we have estimated non-invertible start parameters but enforce
         # invertibility is on, raise an error
         invalid_seasonal_ma = (
@@ -2004,4 +2003,4 @@ class SARIMAXResultsWrapper(MLEResultsWrapper):
     _methods = {}
     _wrap_methods = wrap.union_dicts(MLEResultsWrapper._wrap_methods,
                                      _methods)
-wrap.populate_wrapper(SARIMAXResultsWrapper, SARIMAXResults)
+wrap.populate_wrapper(SARIMAXResultsWrapper, SARIMAXResults)  # noqa:E305

@@ -18,6 +18,7 @@ from statsmodels.tsa.vector_ar.vecm import VECM, select_order, select_coint_rank
 import pytest
 pytestmark = pytest.mark.filterwarnings('ignore:in the future np.array_split')
 
+
 class DataSet(object):
     """
     A class for representing the data in a data module.
@@ -47,6 +48,7 @@ class DataSet(object):
 
     def __str__(self):
         return self.data_module.__str__()
+
 
 atol = 0.0005  # absolute tolerance
 rtol = 0  # relative tolerance
@@ -172,6 +174,7 @@ def build_err_msg(ds, dt_s, parameter_str):
         err_msg += ", seasons: " + str(seasons)
     return err_msg
 
+
 def setup():
     datasets.append(
         DataSet(e6, [0, 4], [0, 1], ["Dp", "R"]),
@@ -184,6 +187,7 @@ def setup():
         results_sm[ds] = load_results_statsmodels(ds)
         results_sm_exog[ds] = load_results_statsmodels_exog(ds)
         results_sm_exog_coint[ds] = load_results_statsmodels_exog_coint(ds)
+
 
 setup()
 
@@ -1384,7 +1388,6 @@ def test_VECM_seasonal_forecast():
     res0 = VECM(xx, k_ar_diff=0, coint_rank=2, deterministic='co', seasons=seasons, first_season=0).fit()
     res2 = VECM(xx, k_ar_diff=2, coint_rank=2, deterministic='co', seasons=seasons, first_season=0).fit()
     res4 = VECM(xx, k_ar_diff=4, coint_rank=2, deterministic='co', seasons=seasons, first_season=0).fit()
-
 
     # check that seasonal dummy are independent of number of lags
     assert_allclose(res2._delta_x.T[-2 * seasons:, -seasons:],

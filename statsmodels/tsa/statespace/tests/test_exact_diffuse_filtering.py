@@ -64,6 +64,7 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 macrodata = datasets.macrodata.load_pandas().data
 macrodata.index = pd.PeriodIndex(start='1959Q1', end='2009Q3', freq='Q')
 
+
 # - Model definitions --------------------------------------------------------
 
 def model_local_level(endog=None, params=None, direct=False):
@@ -96,6 +97,7 @@ def model_local_level(endog=None, params=None, direct=False):
         ssm.initialize(Initialization(ssm.k_states, 'diffuse'))
 
     return mod, ssm
+
 
 def model_local_linear_trend(endog=None, params=None, direct=False):
     if endog is None:
@@ -845,6 +847,7 @@ class TestVAR1Mixed_Approx(CheckVAR1Mixed, CheckApproximateDiffuseMixin,
                         np.diag([kappa, stationary_init]))
         assert_equal(self.results_b.initial_diffuse_state_cov, None)
 
+
 class TestVAR1Mixed_KFAS(CheckVAR1Mixed, CheckKFASMixin, CheckVAR1):
     # TODO: fails
     results_path = os.path.join(
@@ -953,6 +956,7 @@ class TestDFMCollapsed_Approx(CheckApproximateDiffuseMixin, CheckDFMCollapsed):
 # - Common level model, above
 # - multivariate test with non-diagonal observation covariance matrix
 # - simulation smoother
+
 
 @pytest.mark.xfail
 def test_irrelevant_state():

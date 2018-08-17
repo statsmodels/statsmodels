@@ -5,6 +5,7 @@ from statsmodels.tsa.base.datetools import (
     date_parser, date_range_str, dates_from_str, dates_from_range)
 from pandas import DatetimeIndex, PeriodIndex
 
+
 def test_regex_matching_month():
     t1 = "1999m4"
     t2 = "1999:m4"
@@ -16,6 +17,7 @@ def test_regex_matching_month():
     npt.assert_equal(date_parser(t3), result)
     npt.assert_equal(date_parser(t4), result)
 
+
 def test_regex_matching_quarter():
     t1 = "1999q4"
     t2 = "1999:q4"
@@ -26,6 +28,7 @@ def test_regex_matching_quarter():
     npt.assert_equal(date_parser(t2), result)
     npt.assert_equal(date_parser(t3), result)
     npt.assert_equal(date_parser(t4), result)
+
 
 def test_dates_from_range():
     results = [datetime(1959, 3, 31, 0, 0),

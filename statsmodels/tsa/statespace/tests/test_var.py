@@ -83,6 +83,7 @@ def check_irf(test, mod, results, params=None):
         assert_allclose(res.impulse_responses(10, i, orthogonalized=True, cumulative=True),
                         results_var_R_output[columns])
 
+
 def test_var_basic():
     test = 'basic'
 

@@ -1271,7 +1271,6 @@ class VECMResults(object):
         # compare p. 93, 297 Lutkepohl (2005)
         return 2 * chain_dot(d_K_plus, np.kron(sigma_u, sigma_u), d_K_plus.T)
 
-
     @cache_readonly
     def cov_params_default(self):  # p.296 (7.2.21)
         # Sigma_co described on p. 287
@@ -2010,7 +2009,6 @@ class VECMResults(object):
 
         return WhitenessTestResults(statistic, crit_value, pvalue, df, signif,
                                     nlags, adjusted)
-
 
     def plot_data(self, with_presample=False):
         """

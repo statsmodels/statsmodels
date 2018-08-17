@@ -745,7 +745,6 @@ class TestFriedmanStateRegression(Friedman):
 
         cls.result = cls.model.filter(cls.true_params)
 
-
     def test_mle(self):
         result = self.model.fit(disp=-1)
         assert_allclose(
@@ -925,6 +924,7 @@ class TestFriedmanForecast(Friedman):
             self.true['dynamic_forecast'], 3
         )
 
+
 class SARIMAXCoverageTest(object):
     @classmethod
     def setup_class(cls, i, decimal=4, endog=None, *args, **kwargs):
@@ -1076,6 +1076,7 @@ class Test_ar(SARIMAXCoverageTest):
         kwargs['order'] = (3,0,0)
         super(Test_ar, cls).setup_class(0, *args, **kwargs)
 
+
 class Test_ar_as_polynomial(SARIMAXCoverageTest):
     # // AR: (p,0,0) x (0,0,0,0)
     # arima wpi, arima(3,0,0) noconstant vce(oim)
@@ -1084,6 +1085,7 @@ class Test_ar_as_polynomial(SARIMAXCoverageTest):
     def setup_class(cls, *args, **kwargs):
         kwargs['order'] = ([1,1,1],0,0)
         super(Test_ar_as_polynomial, cls).setup_class(0, *args, **kwargs)
+
 
 class Test_ar_trend_c(SARIMAXCoverageTest):
     # // 'c'
@@ -1097,6 +1099,7 @@ class Test_ar_trend_c(SARIMAXCoverageTest):
         # Modify true params to convert from mean to intercept form
         cls.true_params[0] = (1 - cls.true_params[1:4].sum()) * cls.true_params[0]
 
+
 class Test_ar_trend_ct(SARIMAXCoverageTest):
     # // 'ct'
     # arima wpi c t, arima(3,0,0) noconstant vce(oim)
@@ -1108,6 +1111,7 @@ class Test_ar_trend_ct(SARIMAXCoverageTest):
         super(Test_ar_trend_ct, cls).setup_class(2, *args, **kwargs)
         # Modify true params to convert from mean to intercept form
         cls.true_params[:2] = (1 - cls.true_params[2:5].sum()) * cls.true_params[:2]
+
 
 class Test_ar_trend_polynomial(SARIMAXCoverageTest):
     # // polynomial [1,0,0,1]
@@ -1121,6 +1125,7 @@ class Test_ar_trend_polynomial(SARIMAXCoverageTest):
         # Modify true params to convert from mean to intercept form
         cls.true_params[:2] = (1 - cls.true_params[2:5].sum()) * cls.true_params[:2]
 
+
 class Test_ar_diff(SARIMAXCoverageTest):
     # // AR and I(d): (p,d,0) x (0,0,0,0)
     # arima wpi, arima(3,2,0) noconstant vce(oim)
@@ -1129,6 +1134,7 @@ class Test_ar_diff(SARIMAXCoverageTest):
     def setup_class(cls, *args, **kwargs):
         kwargs['order'] = (3,2,0)
         super(Test_ar_diff, cls).setup_class(4, *args, **kwargs)
+
 
 class Test_ar_seasonal_diff(SARIMAXCoverageTest):
     # // AR and I(D): (p,0,0) x (0,D,0,s)
@@ -1140,6 +1146,7 @@ class Test_ar_seasonal_diff(SARIMAXCoverageTest):
         kwargs['seasonal_order'] = (0,2,0,4)
         super(Test_ar_seasonal_diff, cls).setup_class(5, *args, **kwargs)
 
+
 class Test_ar_diffuse(SARIMAXCoverageTest):
     # // AR and diffuse initialization
     # arima wpi, arima(3,0,0) noconstant vce(oim) diffuse
@@ -1150,6 +1157,7 @@ class Test_ar_diffuse(SARIMAXCoverageTest):
         kwargs['initialization'] = 'approximate_diffuse'
         kwargs['initial_variance'] = 1e9
         super(Test_ar_diffuse, cls).setup_class(6, *args, **kwargs)
+
 
 class Test_ar_no_enforce(SARIMAXCoverageTest):
     # // AR: (p,0,0) x (0,0,0,0)
@@ -1195,6 +1203,7 @@ class Test_ar_exogenous(SARIMAXCoverageTest):
         kwargs['exog'] = (endog - np.floor(endog))**2
         super(Test_ar_exogenous, cls).setup_class(7, *args, **kwargs)
 
+
 class Test_ar_exogenous_in_state(SARIMAXCoverageTest):
     # // ARX
     # arima wpi x, arima(3,0,0) noconstant vce(oim)
@@ -1232,6 +1241,7 @@ class Test_ar_exogenous_in_state(SARIMAXCoverageTest):
             self.decimal
         )
 
+
 class Test_ma(SARIMAXCoverageTest):
     # // MA: (0,0,q) x (0,0,0,0)
     # arima wpi, arima(0,0,3) noconstant vce(oim)
@@ -1241,6 +1251,7 @@ class Test_ma(SARIMAXCoverageTest):
         kwargs['order'] = (0,0,3)
         super(Test_ma, cls).setup_class(8, *args, **kwargs)
 
+
 class Test_ma_as_polynomial(SARIMAXCoverageTest):
     # // MA: (0,0,q) x (0,0,0,0)
     # arima wpi, arima(0,0,3) noconstant vce(oim)
@@ -1249,6 +1260,7 @@ class Test_ma_as_polynomial(SARIMAXCoverageTest):
     def setup_class(cls, *args, **kwargs):
         kwargs['order'] = (0,0,[1,1,1])
         super(Test_ma_as_polynomial, cls).setup_class(8, *args, **kwargs)
+
 
 class Test_ma_trend_c(SARIMAXCoverageTest):
     # // 'c'
@@ -1260,6 +1272,7 @@ class Test_ma_trend_c(SARIMAXCoverageTest):
         kwargs['trend'] = 'c'
         super(Test_ma_trend_c, cls).setup_class(9, *args, **kwargs)
 
+
 class Test_ma_trend_ct(SARIMAXCoverageTest):
     # // 'ct'
     # arima wpi c t, arima(0,0,3) noconstant vce(oim)
@@ -1269,6 +1282,7 @@ class Test_ma_trend_ct(SARIMAXCoverageTest):
         kwargs['order'] = (0,0,3)
         kwargs['trend'] = 'ct'
         super(Test_ma_trend_ct, cls).setup_class(10, *args, **kwargs)
+
 
 class Test_ma_trend_polynomial(SARIMAXCoverageTest):
     # // polynomial [1,0,0,1]
@@ -1280,6 +1294,7 @@ class Test_ma_trend_polynomial(SARIMAXCoverageTest):
         kwargs['trend'] = [1,0,0,1]
         super(Test_ma_trend_polynomial, cls).setup_class(11, *args, **kwargs)
 
+
 class Test_ma_diff(SARIMAXCoverageTest):
     # // MA and I(d): (0,d,q) x (0,0,0,0)
     # arima wpi, arima(0,2,3) noconstant vce(oim)
@@ -1288,6 +1303,7 @@ class Test_ma_diff(SARIMAXCoverageTest):
     def setup_class(cls, *args, **kwargs):
         kwargs['order'] = (0,2,3)
         super(Test_ma_diff, cls).setup_class(12, *args, **kwargs)
+
 
 class Test_ma_seasonal_diff(SARIMAXCoverageTest):
     # // MA and I(D): (p,0,0) x (0,D,0,s)
@@ -1298,6 +1314,7 @@ class Test_ma_seasonal_diff(SARIMAXCoverageTest):
         kwargs['order'] = (0,0,3)
         kwargs['seasonal_order'] = (0,2,0,4)
         super(Test_ma_seasonal_diff, cls).setup_class(13, *args, **kwargs)
+
 
 class Test_ma_diffuse(SARIMAXCoverageTest):
     # // MA and diffuse initialization
@@ -1310,6 +1327,7 @@ class Test_ma_diffuse(SARIMAXCoverageTest):
         kwargs['initial_variance'] = 1e9
         super(Test_ma_diffuse, cls).setup_class(14, *args, **kwargs)
 
+
 class Test_ma_exogenous(SARIMAXCoverageTest):
     # // MAX
     # arima wpi x, arima(0,0,3) noconstant vce(oim)
@@ -1321,6 +1339,7 @@ class Test_ma_exogenous(SARIMAXCoverageTest):
         kwargs['exog'] = (endog - np.floor(endog))**2
         super(Test_ma_exogenous, cls).setup_class(15, *args, **kwargs)
 
+
 class Test_arma(SARIMAXCoverageTest):
     # // ARMA: (p,0,q) x (0,0,0,0)
     # arima wpi, arima(3,0,3) noconstant vce(oim)
@@ -1329,6 +1348,7 @@ class Test_arma(SARIMAXCoverageTest):
     def setup_class(cls, *args, **kwargs):
         kwargs['order'] = (3,0,3)
         super(Test_arma, cls).setup_class(16, *args, **kwargs)
+
 
 class Test_arma_trend_c(SARIMAXCoverageTest):
     # // 'c'
@@ -1342,6 +1362,7 @@ class Test_arma_trend_c(SARIMAXCoverageTest):
         # Modify true params to convert from mean to intercept form
         cls.true_params[:1] = (1 - cls.true_params[1:4].sum()) * cls.true_params[:1]
 
+
 class Test_arma_trend_ct(SARIMAXCoverageTest):
     # // 'ct'
     # arima wpi c t, arima(3,0,2) noconstant vce(oim)
@@ -1353,6 +1374,7 @@ class Test_arma_trend_ct(SARIMAXCoverageTest):
         super(Test_arma_trend_ct, cls).setup_class(18, *args, **kwargs)
         # Modify true params to convert from mean to intercept form
         cls.true_params[:2] = (1 - cls.true_params[2:5].sum()) * cls.true_params[:2]
+
 
 class Test_arma_trend_polynomial(SARIMAXCoverageTest):
     # // polynomial [1,0,0,1]
@@ -1366,6 +1388,7 @@ class Test_arma_trend_polynomial(SARIMAXCoverageTest):
         # Modify true params to convert from mean to intercept form
         cls.true_params[:2] = (1 - cls.true_params[2:5].sum()) * cls.true_params[:2]
 
+
 class Test_arma_diff(SARIMAXCoverageTest):
     # // ARMA and I(d): (p,d,q) x (0,0,0,0)
     # arima wpi, arima(3,2,2) noconstant vce(oim)
@@ -1374,6 +1397,7 @@ class Test_arma_diff(SARIMAXCoverageTest):
     def setup_class(cls, *args, **kwargs):
         kwargs['order'] = (3,2,2)
         super(Test_arma_diff, cls).setup_class(20, *args, **kwargs)
+
 
 class Test_arma_seasonal_diff(SARIMAXCoverageTest):
     # // ARMA and I(D): (p,0,q) x (0,D,0,s)
@@ -1385,6 +1409,7 @@ class Test_arma_seasonal_diff(SARIMAXCoverageTest):
         kwargs['seasonal_order'] = (0,2,0,4)
         super(Test_arma_seasonal_diff, cls).setup_class(21, *args, **kwargs)
 
+
 class Test_arma_diff_seasonal_diff(SARIMAXCoverageTest):
     # // ARMA and I(d) and I(D): (p,d,q) x (0,D,0,s)
     # arima wpi, arima(3,2,2) sarima(0,2,0,4) noconstant vce(oim)
@@ -1394,6 +1419,7 @@ class Test_arma_diff_seasonal_diff(SARIMAXCoverageTest):
         kwargs['order'] = (3,2,2)
         kwargs['seasonal_order'] = (0,2,0,4)
         super(Test_arma_diff_seasonal_diff, cls).setup_class(22, *args, **kwargs)
+
 
 class Test_arma_diffuse(SARIMAXCoverageTest):
     # // ARMA and diffuse initialization
@@ -1406,6 +1432,7 @@ class Test_arma_diffuse(SARIMAXCoverageTest):
         kwargs['initial_variance'] = 1e9
         super(Test_arma_diffuse, cls).setup_class(23, *args, **kwargs)
 
+
 class Test_arma_exogenous(SARIMAXCoverageTest):
     # // ARMAX
     # arima wpi x, arima(3,0,2) noconstant vce(oim)
@@ -1417,6 +1444,7 @@ class Test_arma_exogenous(SARIMAXCoverageTest):
         kwargs['exog'] = (endog - np.floor(endog))**2
         super(Test_arma_exogenous, cls).setup_class(24, *args, **kwargs)
 
+
 class Test_seasonal_ar(SARIMAXCoverageTest):
     # // SAR: (0,0,0) x (P,0,0,s)
     # arima wpi, sarima(3,0,0,4) noconstant vce(oim)
@@ -1427,6 +1455,7 @@ class Test_seasonal_ar(SARIMAXCoverageTest):
         kwargs['seasonal_order'] = (3,0,0,4)
         super(Test_seasonal_ar, cls).setup_class(25, *args, **kwargs)
 
+
 class Test_seasonal_ar_as_polynomial(SARIMAXCoverageTest):
     # // SAR: (0,0,0) x (P,0,0,s)
     # arima wpi, sarima(3,0,0,4) noconstant vce(oim)
@@ -1436,6 +1465,7 @@ class Test_seasonal_ar_as_polynomial(SARIMAXCoverageTest):
         kwargs['order'] = (0,0,0)
         kwargs['seasonal_order'] = ([1,1,1],0,0,4)
         super(Test_seasonal_ar_as_polynomial, cls).setup_class(25, *args, **kwargs)
+
 
 class Test_seasonal_ar_trend_c(SARIMAXCoverageTest):
     # // 'c'
@@ -1450,6 +1480,7 @@ class Test_seasonal_ar_trend_c(SARIMAXCoverageTest):
         # Modify true params to convert from mean to intercept form
         cls.true_params[:1] = (1 - cls.true_params[1:4].sum()) * cls.true_params[:1]
 
+
 class Test_seasonal_ar_trend_ct(SARIMAXCoverageTest):
     # // 'ct'
     # arima wpi c t, sarima(3,0,0,4) noconstant vce(oim)
@@ -1462,6 +1493,7 @@ class Test_seasonal_ar_trend_ct(SARIMAXCoverageTest):
         super(Test_seasonal_ar_trend_ct, cls).setup_class(27, *args, **kwargs)
         # Modify true params to convert from mean to intercept form
         cls.true_params[:2] = (1 - cls.true_params[2:5].sum()) * cls.true_params[:2]
+
 
 class Test_seasonal_ar_trend_polynomial(SARIMAXCoverageTest):
     # // polynomial [1,0,0,1]
@@ -1476,6 +1508,7 @@ class Test_seasonal_ar_trend_polynomial(SARIMAXCoverageTest):
         # Modify true params to convert from mean to intercept form
         cls.true_params[:2] = (1 - cls.true_params[2:5].sum()) * cls.true_params[:2]
 
+
 class Test_seasonal_ar_diff(SARIMAXCoverageTest):
     # // SAR and I(d): (0,d,0) x (P,0,0,s)
     # arima wpi, arima(0,2,0) sarima(3,0,0,4) noconstant vce(oim)
@@ -1486,6 +1519,7 @@ class Test_seasonal_ar_diff(SARIMAXCoverageTest):
         kwargs['seasonal_order'] = (3,0,0,4)
         super(Test_seasonal_ar_diff, cls).setup_class(29, *args, **kwargs)
 
+
 class Test_seasonal_ar_seasonal_diff(SARIMAXCoverageTest):
     # // SAR and I(D): (0,0,0) x (P,D,0,s)
     # arima wpi, sarima(3,2,0,4) noconstant vce(oim)
@@ -1495,6 +1529,7 @@ class Test_seasonal_ar_seasonal_diff(SARIMAXCoverageTest):
         kwargs['order'] = (0,0,0)
         kwargs['seasonal_order'] = (3,2,0,4)
         super(Test_seasonal_ar_seasonal_diff, cls).setup_class(30, *args, **kwargs)
+
 
 class Test_seasonal_ar_diffuse(SARIMAXCoverageTest):
     # // SAR and diffuse initialization
@@ -1508,6 +1543,7 @@ class Test_seasonal_ar_diffuse(SARIMAXCoverageTest):
         kwargs['initial_variance'] = 1e9
         super(Test_seasonal_ar_diffuse, cls).setup_class(31, *args, **kwargs)
 
+
 class Test_seasonal_ar_exogenous(SARIMAXCoverageTest):
     # // SARX
     # arima wpi x, sarima(3,0,0,4) noconstant vce(oim)
@@ -1520,6 +1556,7 @@ class Test_seasonal_ar_exogenous(SARIMAXCoverageTest):
         kwargs['exog'] = (endog - np.floor(endog))**2
         super(Test_seasonal_ar_exogenous, cls).setup_class(32, *args, **kwargs)
 
+
 class Test_seasonal_ma(SARIMAXCoverageTest):
     # // SMA
     # arima wpi, sarima(0,0,3,4) noconstant vce(oim)
@@ -1530,6 +1567,7 @@ class Test_seasonal_ma(SARIMAXCoverageTest):
         kwargs['seasonal_order'] = (0,0,3,4)
         super(Test_seasonal_ma, cls).setup_class(33, *args, **kwargs)
 
+
 class Test_seasonal_ma_as_polynomial(SARIMAXCoverageTest):
     # // SMA
     # arima wpi, sarima(0,0,3,4) noconstant vce(oim)
@@ -1539,6 +1577,7 @@ class Test_seasonal_ma_as_polynomial(SARIMAXCoverageTest):
         kwargs['order'] = (0,0,0)
         kwargs['seasonal_order'] = (0,0,[1,1,1],4)
         super(Test_seasonal_ma_as_polynomial, cls).setup_class(33, *args, **kwargs)
+
 
 class Test_seasonal_ma_trend_c(SARIMAXCoverageTest):
     # // 'c'
@@ -1552,6 +1591,7 @@ class Test_seasonal_ma_trend_c(SARIMAXCoverageTest):
         kwargs['decimal'] = 3
         super(Test_seasonal_ma_trend_c, cls).setup_class(34, *args, **kwargs)
 
+
 class Test_seasonal_ma_trend_ct(SARIMAXCoverageTest):
     # // 'ct'
     # arima wpi c t, sarima(0,0,3,4) noconstant vce(oim)
@@ -1562,6 +1602,7 @@ class Test_seasonal_ma_trend_ct(SARIMAXCoverageTest):
         kwargs['seasonal_order'] = (0,0,3,4)
         kwargs['trend'] = 'ct'
         super(Test_seasonal_ma_trend_ct, cls).setup_class(35, *args, **kwargs)
+
 
 class Test_seasonal_ma_trend_polynomial(SARIMAXCoverageTest):
     # // polynomial [1,0,0,1]
@@ -1575,6 +1616,7 @@ class Test_seasonal_ma_trend_polynomial(SARIMAXCoverageTest):
         kwargs['decimal'] = 3
         super(Test_seasonal_ma_trend_polynomial, cls).setup_class(36, *args, **kwargs)
 
+
 class Test_seasonal_ma_diff(SARIMAXCoverageTest):
     # // SMA and I(d): (0,d,0) x (0,0,Q,s)
     # arima wpi, arima(0,2,0) sarima(0,0,3,4) noconstant vce(oim)
@@ -1585,6 +1627,7 @@ class Test_seasonal_ma_diff(SARIMAXCoverageTest):
         kwargs['seasonal_order'] = (0,0,3,4)
         super(Test_seasonal_ma_diff, cls).setup_class(37, *args, **kwargs)
 
+
 class Test_seasonal_ma_seasonal_diff(SARIMAXCoverageTest):
     # // SMA and I(D): (0,0,0) x (0,D,Q,s)
     # arima wpi, sarima(0,2,3,4) noconstant vce(oim)
@@ -1594,6 +1637,7 @@ class Test_seasonal_ma_seasonal_diff(SARIMAXCoverageTest):
         kwargs['order'] = (0,0,0)
         kwargs['seasonal_order'] = (0,2,3,4)
         super(Test_seasonal_ma_seasonal_diff, cls).setup_class(38, *args, **kwargs)
+
 
 class Test_seasonal_ma_diffuse(SARIMAXCoverageTest):
     # // SMA and diffuse initialization
@@ -1607,6 +1651,7 @@ class Test_seasonal_ma_diffuse(SARIMAXCoverageTest):
         kwargs['initial_variance'] = 1e9
         super(Test_seasonal_ma_diffuse, cls).setup_class(39, *args, **kwargs)
 
+
 class Test_seasonal_ma_exogenous(SARIMAXCoverageTest):
     # // SMAX
     # arima wpi x, sarima(0,0,3,4) noconstant vce(oim)
@@ -1619,6 +1664,7 @@ class Test_seasonal_ma_exogenous(SARIMAXCoverageTest):
         kwargs['exog'] = (endog - np.floor(endog))**2
         super(Test_seasonal_ma_exogenous, cls).setup_class(40, *args, **kwargs)
 
+
 class Test_seasonal_arma(SARIMAXCoverageTest):
     # // SARMA: (0,0,0) x (P,0,Q,s)
     # arima wpi, sarima(3,0,2,4) noconstant vce(oim)
@@ -1628,6 +1674,7 @@ class Test_seasonal_arma(SARIMAXCoverageTest):
         kwargs['order'] = (0,0,0)
         kwargs['seasonal_order'] = (3,0,2,4)
         super(Test_seasonal_arma, cls).setup_class(41, *args, **kwargs)
+
 
 class Test_seasonal_arma_trend_c(SARIMAXCoverageTest):
     # // 'c'
@@ -1642,6 +1689,7 @@ class Test_seasonal_arma_trend_c(SARIMAXCoverageTest):
         # Modify true params to convert from mean to intercept form
         cls.true_params[:1] = (1 - cls.true_params[1:4].sum()) * cls.true_params[:1]
 
+
 class Test_seasonal_arma_trend_ct(SARIMAXCoverageTest):
     # // 'ct'
     # arima wpi c t, sarima(3,0,2,4) noconstant vce(oim)
@@ -1654,6 +1702,7 @@ class Test_seasonal_arma_trend_ct(SARIMAXCoverageTest):
         super(Test_seasonal_arma_trend_ct, cls).setup_class(43, *args, **kwargs)
         # Modify true params to convert from mean to intercept form
         cls.true_params[:2] = (1 - cls.true_params[2:5].sum()) * cls.true_params[:2]
+
 
 class Test_seasonal_arma_trend_polynomial(SARIMAXCoverageTest):
     # // polynomial [1,0,0,1]
@@ -1689,6 +1738,7 @@ class Test_seasonal_arma_trend_polynomial(SARIMAXCoverageTest):
         self.result.cov_params_oim
         self.result.cov_params_opg
 
+
 class Test_seasonal_arma_diff(SARIMAXCoverageTest):
     # // SARMA and I(d): (0,d,0) x (P,0,Q,s)
     # arima wpi, arima(0,2,0) sarima(3,0,2,4) noconstant vce(oim)
@@ -1699,6 +1749,7 @@ class Test_seasonal_arma_diff(SARIMAXCoverageTest):
         kwargs['seasonal_order'] = (3,0,2,4)
         super(Test_seasonal_arma_diff, cls).setup_class(45, *args, **kwargs)
 
+
 class Test_seasonal_arma_seasonal_diff(SARIMAXCoverageTest):
     # // SARMA and I(D): (0,0,0) x (P,D,Q,s)
     # arima wpi, sarima(3,2,2,4) noconstant vce(oim)
@@ -1708,6 +1759,7 @@ class Test_seasonal_arma_seasonal_diff(SARIMAXCoverageTest):
         kwargs['order'] = (0,0,0)
         kwargs['seasonal_order'] = (3,2,2,4)
         super(Test_seasonal_arma_seasonal_diff, cls).setup_class(46, *args, **kwargs)
+
 
 class Test_seasonal_arma_diff_seasonal_diff(SARIMAXCoverageTest):
     # // SARMA and I(d) and I(D): (0,d,0) x (P,D,Q,s)
@@ -1739,6 +1791,7 @@ class Test_seasonal_arma_diff_seasonal_diff(SARIMAXCoverageTest):
         self.result.cov_params_oim
         self.result.cov_params_opg
 
+
 class Test_seasonal_arma_diffuse(SARIMAXCoverageTest):
     # // SARMA and diffuse initialization
     # arima wpi, sarima(3,0,2,4) noconstant vce(oim) diffuse
@@ -1752,6 +1805,7 @@ class Test_seasonal_arma_diffuse(SARIMAXCoverageTest):
         kwargs['initial_variance'] = 1e9
         super(Test_seasonal_arma_diffuse, cls).setup_class(48, *args, **kwargs)
 
+
 class Test_seasonal_arma_exogenous(SARIMAXCoverageTest):
     # // SARMAX
     # arima wpi x, sarima(3,0,2,4) noconstant vce(oim)
@@ -1763,6 +1817,7 @@ class Test_seasonal_arma_exogenous(SARIMAXCoverageTest):
         endog = results_sarimax.wpi1_data
         kwargs['exog'] = (endog - np.floor(endog))**2
         super(Test_seasonal_arma_exogenous, cls).setup_class(49, *args, **kwargs)
+
 
 class Test_sarimax_exogenous(SARIMAXCoverageTest):
     # // SARIMAX and exogenous
@@ -1783,6 +1838,7 @@ class Test_sarimax_exogenous(SARIMAXCoverageTest):
         assert_allclose(self.true_params[6:9], result.seasonalarparams)
         assert_allclose(self.true_params[9:11], result.seasonalmaparams)
 
+
 class Test_sarimax_exogenous_not_hamilton(SARIMAXCoverageTest):
     # // SARIMAX and exogenous
     # arima wpi x, arima(3,2,2) sarima(3,2,2,4) noconstant vce(oim)
@@ -1796,6 +1852,7 @@ class Test_sarimax_exogenous_not_hamilton(SARIMAXCoverageTest):
         kwargs['hamilton_representation'] = False
         kwargs['simple_differencing'] = False
         super(Test_sarimax_exogenous_not_hamilton, cls).setup_class(50, *args, **kwargs)
+
 
 class Test_sarimax_exogenous_diffuse(SARIMAXCoverageTest):
     # // SARIMAX and exogenous diffuse
@@ -1811,6 +1868,7 @@ class Test_sarimax_exogenous_diffuse(SARIMAXCoverageTest):
         kwargs['initialization'] = 'approximate_diffuse'
         kwargs['initial_variance'] = 1e9
         super(Test_sarimax_exogenous_diffuse, cls).setup_class(51, *args, **kwargs)
+
 
 class Test_arma_exog_trend_polynomial_missing(SARIMAXCoverageTest):
     # // ARMA and exogenous and trend polynomial and missing
@@ -1833,6 +1891,7 @@ class Test_arma_exog_trend_polynomial_missing(SARIMAXCoverageTest):
         # Modify true params to convert from mean to intercept form
         cls.true_params[0] = (1 - cls.true_params[2:5].sum()) * cls.true_params[0]
 
+
 # Miscellaneous coverage tests
 def test_simple_time_varying():
     # This tests time-varying parameters regression when in fact the parameters
@@ -1854,8 +1913,10 @@ def test_simple_time_varying():
     # one)
     assert_almost_equal(res.filter_results.filtered_state[0][1:], [0.5]*99, 9)
 
+
 def test_invalid_time_varying():
     assert_raises(ValueError, sarimax.SARIMAX, endog=[1,2,3], mle_regression=True, time_varying_regression=True)
+
 
 def test_manual_stationary_initialization():
     endog = results_sarimax.wpi1_data
@@ -1893,6 +1954,7 @@ def test_manual_stationary_initialization():
     assert_almost_equal(res1.llf, res4.llf)
     assert_almost_equal(res1.filter_results.filtered_state,
                         res4.filter_results.filtered_state)
+
 
 def test_manual_approximate_diffuse_initialization():
     endog = results_sarimax.wpi1_data
@@ -1934,6 +1996,7 @@ def test_manual_approximate_diffuse_initialization():
     assert_almost_equal(res1.llf, res4.llf)
     assert_almost_equal(res1.filter_results.filtered_state,
                         res4.filter_results.filtered_state)
+
 
 def test_results():
     endog = results_sarimax.wpi1_data

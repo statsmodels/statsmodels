@@ -923,7 +923,6 @@ class VARProcess(object):
         """
         return self.intercept_longrun()
 
-
     def ma_rep(self, maxn=10):
         r"""Compute MA(:math:`\infty`) coefficient matrices
 
@@ -1590,6 +1589,7 @@ class VARResults(VARProcess):
         # TODO: much lower-hanging fruit in caching `np.trace` and `chain_dot` below.
         B = self._bmat_forc_cov()
         _B = {}
+
         def bpow(i):
             if i not in _B:
                 _B[i] = np.linalg.matrix_power(B, i)
@@ -2095,7 +2095,7 @@ class VARResultsWrapper(wrap.ResultsWrapper):
     _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
                                      _methods)
     _wrap_methods.pop('cov_params')  # not yet a method in VARResults
-wrap.populate_wrapper(VARResultsWrapper, VARResults)
+wrap.populate_wrapper(VARResultsWrapper, VARResults)  # noqa:E305
 
 
 class FEVD(object):

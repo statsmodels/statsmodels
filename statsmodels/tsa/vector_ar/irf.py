@@ -21,6 +21,7 @@ import statsmodels.tsa.vector_ar.util as util
 
 mat = np.array
 
+
 class BaseIRAnalysis(object):
     """
     Base class for plotting and computing IRF-related statistics, want to be
@@ -71,7 +72,6 @@ class BaseIRAnalysis(object):
                 self.svar_lr_effects = np.dot(model.long_run_effects(), P)
             else:
                 self.orth_lr_effects = np.dot(model.long_run_effects(), P)
-
 
         # auxiliary stuff
         if vecm:
@@ -358,7 +358,6 @@ class IRAnalysis(BaseIRAnalysis):
             for j in range(neqs):
                 lower[1:,i,j] = irfs[1:,i,j] + W[i,j,:,k[i,j]]*q*np.sqrt(eigva[i,j,k[i,j]])
                 upper[1:,i,j] = irfs[1:,i,j] - W[i,j,:,k[i,j]]*q*np.sqrt(eigva[i,j,k[i,j]])
-
 
         return lower, upper
 

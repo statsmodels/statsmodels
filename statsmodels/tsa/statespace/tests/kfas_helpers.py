@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.tools.tools import Bunch
 
+
 def parse(path, ssm):
     # Dimensions
     n = ssm.nobs
