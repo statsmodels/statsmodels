@@ -5,7 +5,7 @@ from statsmodels.regression.mixed_linear_model import (
     MixedLM, MixedLMParams, _smw_solver, _smw_logdet)
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_)
-from . import lme_r_results
+from .results import lme_r_results
 from statsmodels.base import _penalties as penalties
 import pytest
 from scipy import sparse
