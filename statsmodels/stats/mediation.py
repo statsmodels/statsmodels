@@ -386,7 +386,7 @@ class MediationResults(object):
                                  self.prop_med_avg]):
 
             if ((vec is self.prop_med_ctrl) or (vec is self.prop_med_tx) or
-                (vec is self.prop_med_avg)):
+                    (vec is self.prop_med_avg)):
                 smry.iloc[i, 0] = np.median(vec)
             else:
                 smry.iloc[i, 0] = vec.mean()

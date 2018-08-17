@@ -748,7 +748,7 @@ def interactions(terms, order=[1,2]):
             # only keep combinations that have unique entries
 
             if (np.unique(I[:,m]).shape == I[:,m].shape and
-                np.alltrue(np.equal(np.sort(I[:,m]), I[:,m]))):
+                    np.alltrue(np.equal(np.sort(I[:,m]), I[:,m]))):
                 ll = [terms[j] for j in I[:,m]]
                 v = ll[0]
                 for ii in range(len(ll)-1):

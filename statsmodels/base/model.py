@@ -613,7 +613,7 @@ class LikelihoodModel(Model):
 
         res._results.params = params_full
         if (not hasattr(res._results, 'normalized_cov_param') or
-            res._results.normalized_cov_param is None):
+                res._results.normalized_cov_param is None):
             res._results.normalized_cov_params = np.zeros((k_params, k_params))
         else:
             res._results.normalized_cov_params[...] = 0
@@ -985,9 +985,8 @@ class Results(object):
             from patsy import dmatrix
             if isinstance(exog, pd.Series):
                 # we are guessing whether it should be column or row
-                if (hasattr(exog, 'name') and
-                    isinstance(exog.name, str) and
-                    exog.name in design_info.describe()):
+                if (hasattr(exog, 'name') and isinstance(exog.name, str) and
+                        exog.name in design_info.describe()):
                     # assume we need one column
                     exog = pd.DataFrame(exog)
                 else:

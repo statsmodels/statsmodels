@@ -188,7 +188,7 @@ def is_pull_request(issue):
 def iter_fields(fields):
     fields = fields.copy()
     for key in ('key', 'acl', 'Filename', 'success_action_status', 'AWSAccessKeyId',
-        'Policy', 'Signature', 'Content-Type', 'file'):
+                'Policy', 'Signature', 'Content-Type', 'file'):
         yield (key, fields.pop(key))
     for (k,v) in fields.items():
         yield k,v

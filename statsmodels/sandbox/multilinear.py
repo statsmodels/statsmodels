@@ -44,7 +44,7 @@ def _model2dataframe(model_endog, model_exog, model_type=OLS, **kwargs):
 
 
 def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
-    alpha=0.05, subset=None, model_type=OLS, **kwargs):
+             alpha=0.05, subset=None, model_type=OLS, **kwargs):
     """apply a linear model to several endogenous variables on a dataframe
 
     Take a linear model definition via formula and a dataframe that will be
