@@ -28,6 +28,7 @@ import pandas as pd
 from statsmodels.compat.numpy import np_new_unique
 from statsmodels.iolib import summary2
 
+
 class RegressionFDR(object):
     """
     Control FDR in a regression procedure.

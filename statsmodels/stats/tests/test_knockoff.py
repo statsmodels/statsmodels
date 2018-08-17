@@ -64,7 +64,7 @@ def test_testers():
 
     n = 200
 
-    for p in 49, 50:
+    for p in [49, 50]:
 
         y = np.random.normal(size=n)
         x = np.random.normal(size=(n, p))
@@ -74,7 +74,8 @@ def test_testers():
                    kr.ForwardEffects(pursuit=True),
                    kr.OLSEffects(),
                    kr.RegModelEffects(sm.OLS),
-                   kr.RegModelEffects(sm.OLS, True, {"L1_wt": 0, "alpha": 1})]
+                   kr.RegModelEffects(sm.OLS, True,
+                                      fit_kws={"L1_wt": 0, "alpha": 1})]
 
         for method in "equi", "sdp":
 

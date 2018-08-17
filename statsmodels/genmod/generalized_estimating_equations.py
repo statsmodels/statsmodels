@@ -1644,24 +1644,25 @@ class GEEResults(base.LikelihoodModelResults):
             title = self.model.__class__.__name__ + ' ' +\
                 "Regression Results"
 
-        # Override the dataframe names if xname is provided as an
+        # Override the exog variable names if xname is provided as an
         # argument.
-        if xname is not None:
-            xna = xname
-        else:
-            xna = self.model.exog_names
+        if xname is None:
+            xname = self.model.exog_names
+
+        if yname is None:
+            yname = self.model.endog_names
 
         # Create summary table instance
         from statsmodels.iolib.summary import Summary
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                             yname=self.model.endog_names, xname=xna,
+                             yname=yname, xname=xname,
                              title=title)
-        smry.add_table_params(self, yname=yname, xname=xna,
+        smry.add_table_params(self, yname=yname, xname=xname,
                               alpha=alpha, use_t=False)
         smry.add_table_2cols(self, gleft=diagn_left,
                              gright=diagn_right, yname=yname,
-                             xname=xna, title="")
+                             xname=xname, title="")
 
         return smry
 
