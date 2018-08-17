@@ -75,7 +75,7 @@ class RegressionFDR(object):
                  **kwargs):
 
         if hasattr(exog, "columns"):
-		self.xnames = exog.columns
+            self.xnames = exog.columns
         else:
             self.xnames = ["x%d" % j for j in range(exog.shape[1])]
 

@@ -56,37 +56,30 @@ def test_sdp():
     assert_allclose(cm1, cm2, rtol=1e-4, atol=1e-4)
     assert_allclose(cm1 - cm3, np.diag(sl * np.ones(4)), rtol=1e-5, atol=1e-5)
 
-
-def test_testers():
-    # Smoke test
-
-    np.random.seed(2432)
-
-    n = 200
-
-    for p in [49, 50]:
-
-        y = np.random.normal(size=n)
-        x = np.random.normal(size=(n, p))
-
-        testers = [kr.CorrelationEffects(),
+@pytest.mark.parametrize("p", [49, 50])
+@pytest.mark.parametrize("tester", [
+                   kr.CorrelationEffects(),
                    kr.ForwardEffects(pursuit=False),
                    kr.ForwardEffects(pursuit=True),
                    kr.OLSEffects(),
                    kr.RegModelEffects(sm.OLS),
                    kr.RegModelEffects(sm.OLS, True,
-                                      fit_kws={"L1_wt": 0, "alpha": 1})]
+                                      fit_kws={"L1_wt": 0, "alpha": 1}),
+                ])
+@pytest.mark.parametrize("method", ["equi", "sdp"])
+def test_testers(p, tester, method):
 
-        for method in "equi", "sdp":
+    np.random.seed(2432)
+    n = 200
 
-            if method == "sdp" and not has_cvxopt:
-                continue
+    y = np.random.normal(size=n)
+    x = np.random.normal(size=(n, p))
 
-            for tv in testers:
-                kn = RegressionFDR(y, x, tv, design_method=method)
-                assert_equal(len(kn.stats), p)
-                assert_equal(len(kn.fdr), p)
-                _ = kn.summary()
+    kn = RegressionFDR(y, x, tester, design_method=method)
+    assert_equal(len(kn.stats), p)
+    assert_equal(len(kn.fdr), p)
+    kn.summary()  # smoke test
+
 
 @pytest.mark.slow
 def test_sim():
