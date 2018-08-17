@@ -1,7 +1,6 @@
 """
 Tests for iolib/foreign.py
 """
-from statsmodels.compat.testing import skipif
 import os
 import warnings
 from datetime import datetime
@@ -10,6 +9,7 @@ from numpy.testing import assert_array_equal, assert_, assert_equal, dec
 import numpy as np
 from pandas import DataFrame, isnull
 import pandas.util.testing as ptesting
+import pytest
 
 from statsmodels.compat.python import BytesIO, asbytes
 import statsmodels.api as sm
@@ -19,7 +19,6 @@ from statsmodels.datasets import macrodata
 
 
 from statsmodels.compat.pandas import version as pandas_version
-pandas_old = pandas_version < '0.9'
 
 # Test precisions
 DECIMAL_4 = 4
@@ -168,7 +167,6 @@ def test_date_converters():
         assert_equal(_datetime_to_stata_elapsed(
                      _stata_elapsed_date_to_datetime(i, "ty"), "ty"), i)
 
-@skipif(pandas_old, 'pandas too old')
 def test_datetime_roundtrip():
     dta = np.array([(1, datetime(2010, 1, 1), 2),
                     (2, datetime(2010, 2, 1), 3),

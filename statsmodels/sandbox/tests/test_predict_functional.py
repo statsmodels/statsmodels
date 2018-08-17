@@ -1,8 +1,7 @@
-from statsmodels.compat.testing import skipif
-
 from statsmodels.sandbox.predict_functional import predict_functional
 import numpy as np
 import pandas as pd
+import pytest
 import statsmodels.api as sm
 from numpy.testing import dec
 
@@ -40,7 +39,7 @@ class TestPredFunc(object):
             plt.close(fig)
 
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_formula(self):
 
         np.random.seed(542)
@@ -94,7 +93,7 @@ class TestPredFunc(object):
         self.close_or_save(fig)
 
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_lm_contrast(self):
 
         np.random.seed(542)
@@ -130,7 +129,7 @@ class TestPredFunc(object):
         self.close_or_save(fig)
 
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_glm_formula_contrast(self):
 
         np.random.seed(542)
@@ -167,7 +166,7 @@ class TestPredFunc(object):
         self.close_or_save(fig)
 
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_scb(self):
 
         np.random.seed(473)
@@ -232,7 +231,7 @@ class TestPredFunc(object):
                 self.close_or_save(fig)
 
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_glm_formula(self):
 
         np.random.seed(542)
@@ -302,7 +301,7 @@ class TestPredFunc(object):
             self.close_or_save(fig)
 
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_noformula_prediction(self):
 
         np.random.seed(6434)

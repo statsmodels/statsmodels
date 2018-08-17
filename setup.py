@@ -41,8 +41,7 @@ except ImportError:
     _have_setuptools = False
 
 if _have_setuptools:
-    setuptools_kwargs = {"zip_safe": False,
-                         "test_suite": "nose.collector"}
+    setuptools_kwargs = {"zip_safe": False}
 else:
     setuptools_kwargs = {}
     if sys.version_info[0] >= 3:

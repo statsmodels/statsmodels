@@ -168,7 +168,7 @@ Optional Dependencies
 * If installed, `X-12-ARIMA <http://www.census.gov/srd/www/x13as/>`__ or
   `X-13ARIMA-SEATS <http://www.census.gov/srd/www/x13as/>`__ can be used
   for time-series analysis.
-* `Nose <https://nose.readthedocs.org/en/latest>`__ is required to run
+* `pytest <https://docs.pytest.org/en/latest/>`__ is required to run
   the test suite.
 * `IPython <http://ipython.org>`__ >= 3.0 is required to build the
   docs locally or to use the notebooks.

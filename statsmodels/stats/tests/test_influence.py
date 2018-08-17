@@ -21,6 +21,8 @@ try:
 except:
     have_matplotlib = False
 
+import pytest
+
 from statsmodels.regression.linear_model import OLS
 from statsmodels.discrete.discrete_model import Logit
 from statsmodels.genmod.generalized_linear_model import GLM
@@ -29,8 +31,6 @@ from statsmodels.genmod import families
 import statsmodels.stats.outliers_influence as oi
 from statsmodels.stats.outliers_influence import (GLMInfluence,
                                                   MLEInfluence)
-
-from statsmodels.compat.testing import skipif
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -86,7 +86,7 @@ class InfluenceCompareExact(object):
         assert_allclose(infl0.d_fittedvalues_scaled,
                         infl1.d_fittedvalues_scaled, rtol=5e-9)
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plots(self):
         # SMOKE tests for plots
         infl1 = self.infl1

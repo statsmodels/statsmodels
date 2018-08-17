@@ -3,12 +3,12 @@ Test functions for models.GLM
 """
 from __future__ import division
 from statsmodels.compat import range
-from statsmodels.compat.testing import skipif
 
 import os
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
                            assert_allclose, assert_, assert_array_less, dec)
+import pytest
 from scipy import stats
 import statsmodels.api as sm
 from statsmodels.genmod.generalized_linear_model import GLM
@@ -902,7 +902,7 @@ def test_formula_missing_exposure():
                   exposure=exposure, family=family)
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plots():
 
     np.random.seed(378)

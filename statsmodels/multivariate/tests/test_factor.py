@@ -7,8 +7,8 @@ import pandas as pd
 from statsmodels.multivariate.factor import Factor
 from numpy.testing import (assert_equal, assert_array_almost_equal,
         assert_raises, assert_array_equal, assert_, assert_array_less)
-from numpy.testing.decorators import skipif
 from numpy.testing.utils import assert_allclose
+import pytest
 
 try:
     import matplotlib.pyplot as plt
@@ -190,7 +190,7 @@ id            0.2060        -0.5556
     assert_equal(actual, desired)
 
 
-@skipif(missing_matplotlib)
+@pytest.mark.skipif(missing_matplotlib, reason='matplotlib not available')
 def test_plots():
     mod = Factor(X.iloc[:, 1:], 3)
     results = mod.fit()

@@ -11,11 +11,12 @@ Created on Wed Oct 30 14:01:27 2013
 Author: Josef Perktold
 """
 from statsmodels.compat.python import range
+from statsmodels.compat.scipy import NumpyVersion
+
 import numpy as np
 import pandas as pd
+import pytest
 import statsmodels.api as sm
-from statsmodels.compat.scipy import NumpyVersion
-from statsmodels.compat.testing import SkipTest
 
 from numpy.testing import (assert_, assert_allclose, assert_equal,
                            assert_array_equal)
@@ -116,8 +117,8 @@ class CheckGenericMixin(object):
             results = self.results._results
         else:
             results = self.results
-        if isinstance(results, (GLMResults, DiscreteResults)):
-            raise SkipTest('Infeasible for {0}'.format(type(results)))
+        if isinstance(results, GLMResults) or isinstance(results, DiscreteResults):
+            pytest.skip('Infeasible for {0}'.format(type(results)))
 
         res = self.results
         fitted = res.fittedvalues
@@ -183,7 +184,7 @@ class CheckGenericMixin(object):
         # not completely generic yet
         if (isinstance(self.results.model, (sm.GEE))):
             # GEE does not subclass LikelihoodModel
-            raise SkipTest
+            pytest.skip('GEE does not subclass LikelihoodModel')
 
         use_start_params = not isinstance(self.results.model,
                                           (sm.RLM, sm.OLS, sm.WLS))
@@ -245,8 +246,8 @@ class CheckGenericMixin(object):
 
     def test_zero_collinear(self):
         # not completely generic yet
-        if (isinstance(self.results.model, (sm.GEE))):
-            raise SkipTest
+        if isinstance(self.results.model, (sm.GEE)):
+            pytest.skip('Not completely generic yet')
 
         use_start_params = not isinstance(self.results.model,
                                           (sm.RLM, sm.OLS, sm.WLS, sm.GLM))
@@ -382,7 +383,7 @@ class TestGenericOLSOneExog(CheckGenericMixin):
 
     def test_zero_constrained(self):
         # override, we cannot remove the only regressor
-        raise SkipTest
+        pytest.skip('Override since cannot remove the only regressor')
         pass
 
 

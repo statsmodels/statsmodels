@@ -10,7 +10,6 @@ Author: Chad Fulton
 License: BSD-3
 """
 from __future__ import division, absolute_import, print_function
-from statsmodels.compat.testing import SkipTest
 
 import warnings
 import numpy as np
@@ -694,16 +693,11 @@ def test_prediction_increment_pandas_dates():
 
 
 def test_prediction_increment_pandas_dates_nanosecond():
-    # This test is only valid if the version of Pandas has nanosecond support
-    # and is > 0.14
-    try:
-        # Date-based index
-        endog = dta[2].copy()
-        endog.index = pd.DatetimeIndex(start='1970-01-01', periods=len(endog),
-                                       freq='N')
-        mod = tsa_model.TimeSeriesModel(endog)
-    except:
-        raise SkipTest
+    # Date-based index
+    endog = dta[2].copy()
+    endog.index = pd.DatetimeIndex(start='1970-01-01', periods=len(endog),
+                                   freq='N')
+    mod = tsa_model.TimeSeriesModel(endog)
 
     # Tests three common use cases: basic prediction, negative indexes, and
     # out-of-sample indexes.

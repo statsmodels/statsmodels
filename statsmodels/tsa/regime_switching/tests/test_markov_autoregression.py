@@ -12,8 +12,8 @@ import os
 import numpy as np
 from numpy.testing import assert_equal, assert_allclose
 import pandas as pd
+import pytest
 
-from statsmodels.compat.testing import skip
 from statsmodels.tools import add_constant
 from statsmodels.tsa.regime_switching import markov_autoregression
 
@@ -793,7 +793,7 @@ class TestHamiltonAR1SwitchTVTP(MarkovAutoregression):
         super(TestHamiltonAR1SwitchTVTP, cls).setup_class(
             true, rgnp, k_regimes=2, order=1, exog_tvtp=exog_tvtp)
 
-    @skip
+    @pytest.mark.skip
     def test_fit_em(self):
         pass
 
@@ -831,11 +831,11 @@ class TestFilardo(MarkovAutoregression):
             true, endog, k_regimes=2, order=4, switching_ar=False,
             exog_tvtp=exog_tvtp)
 
-    @skip
+    @pytest.mark.skip
     def test_fit(self, **kwargs):
         pass
 
-    @skip
+    @pytest.mark.skip
     def test_fit_em(self):
         pass
 
@@ -876,11 +876,11 @@ class TestFilardoPandas(MarkovAutoregression):
             true, endog, k_regimes=2, order=4, switching_ar=False,
             exog_tvtp=exog_tvtp)
 
-    @skip
+    @pytest.mark.skip
     def test_fit(self, **kwargs):
         pass
 
-    @skip
+    @pytest.mark.skip
     def test_fit_em(self):
         pass
 

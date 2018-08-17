@@ -13,7 +13,6 @@ import statsmodels.tools.numdiff as nd
 import os
 import csv
 import scipy
-import nose.tools
 
 # TODO: add tests with unequal group sizes
 
@@ -849,23 +848,13 @@ fnames = os.listdir(rdir)
 fnames = [x for x in fnames if x.startswith("lme") and x.endswith(".csv")]
 
 
-# Copied from bashtage's #3847
-@nose.tools.nottest
+# Copied from #3847
 @pytest.mark.parametrize('fname', fnames)
 @pytest.mark.parametrize('reml', [False, True])
 @pytest.mark.parametrize('irf', [False, True])
 def test_r(fname, reml, irf):
     ds_ix = int(fname[3:5])
     do1(reml, irf, ds_ix)
-
-
-# TODO: Remove after nose is permanently dropped
-def test_r_all():
-    for fname in fnames:
-        for reml in [False, True]:
-            for irf in [False, True]:
-                ds_ix = int(fname[3:5])
-                do1(reml, irf, ds_ix)
 
 
 # ------------------------------------------------------------------

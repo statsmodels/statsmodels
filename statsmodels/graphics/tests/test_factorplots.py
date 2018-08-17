@@ -1,4 +1,3 @@
-from statsmodels.compat.testing import SkipTest
 import numpy as np
 from numpy.testing import assert_raises, assert_equal
 from pandas import Series
@@ -20,7 +19,7 @@ class TestInteractionPlot(object):
     @classmethod
     def setup_class(cls):
         if not have_matplotlib:
-            raise SkipTest('matplotlib not available')
+            pytest.skip('matplotlib not available')
         np.random.seed(12345)
         cls.weight = np.random.randint(1,4,size=60)
         cls.duration = np.random.randint(1,3,size=60)

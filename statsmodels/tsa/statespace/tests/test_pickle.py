@@ -13,12 +13,12 @@ Classical and Gibbs-Sampling Approaches with Applications".
 MIT Press Books. The MIT Press.
 """
 from __future__ import division, absolute_import, print_function
-from statsmodels.compat.testing import SkipTest
 from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
 from numpy.testing import assert_equal, assert_allclose
+import pytest
 
 from statsmodels.compat import cPickle
 from statsmodels.tsa.statespace import sarimax
@@ -26,12 +26,6 @@ from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
 from statsmodels.tsa.statespace.representation import Representation
 from statsmodels.tsa.statespace.structural import UnobservedComponents
 from .results import results_kalman_filter
-
-# Skip copy test on older NumPy since copy does not preserve order
-NP_LT_18 = LooseVersion(np.__version__).version[:2] < [1, 8]
-
-if NP_LT_18:
-    raise SkipTest("Old NumPy doesn't preserve matrix order when copying")
 
 true = results_kalman_filter.uc_uni
 data = pd.DataFrame(

@@ -7,7 +7,6 @@ import warnings
 # pylint: disable=W0612,W0231
 from statsmodels.compat.python import (iteritems, StringIO, lrange, BytesIO,
                                        range)
-from statsmodels.compat.testing import skipif
 
 import os
 import sys
@@ -196,7 +195,7 @@ class CheckIRF(object):
             res_irfs = py_irfs[:, :, i]
             assert_almost_equal(ref_irfs, res_irfs)
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_irf(self):
         import matplotlib.pyplot as plt
         self.irf.plot()
@@ -216,7 +215,7 @@ class CheckIRF(object):
         self.irf.plot(impulse=0, response=1, orth=True)
         close_plots()
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_cum_effects(self):
         # I need close after every plot to avoid segfault, see #3158
         import matplotlib.pyplot as plt
@@ -241,7 +240,7 @@ class CheckFEVD(object):
     #---------------------------------------------------------------------------
     # FEVD tests
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_fevd_plot(self):
         self.fevd.plot()
         close_plots()
@@ -420,22 +419,22 @@ class TestVARResults(CheckIRF, CheckFEVD):
         y = self.res.y[:-self.p:]
         point, lower, upper = self.res.forecast_interval(y, 5)
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_sim(self):
         self.res.plotsim(steps=100)
         close_plots()
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot(self):
         self.res.plot()
         close_plots()
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_acorr(self):
         self.res.plot_acorr()
         close_plots()
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_forecast(self):
         self.res.plot_forecast(5)
         close_plots()

@@ -1,7 +1,6 @@
 import itertools
 import os
 
-import nose
 import numpy as np
 from statsmodels.duration.hazard_regression import PHReg
 from numpy.testing import (assert_allclose,
@@ -111,23 +110,6 @@ class TestPHReg(object):
 
         #smoke test
         time_h, cumhaz, surv = phrb.baseline_cumulative_hazard[0]
-
-    # Run all the tests
-    # TODO: Remove after nose is fully dropped in favor of parameterized version
-    # TODO: Restructure file to remove class
-    def test_r(self):
-
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, 'results')
-        fnames = os.listdir(rdir)
-        fnames = [x for x in fnames if x.startswith("survival")
-                  and x.endswith(".csv")]
-
-        for fname in fnames:
-            for ties in "breslow","efron":
-                for entry_f in False,True:
-                    for strata_f in False,True:
-                        self.do1(fname, ties, entry_f, strata_f)
 
     def test_missing(self):
 
@@ -428,8 +410,6 @@ entry_f = (False, True)
 strata_f = (False, True)
 
 
-# TODO: Re-enable after nose is fully dropped
-@nose.tools.nottest
 @pytest.mark.parametrize('fname,ties,entry_f,strata_f',
                          list(itertools.product(fnames, ties, entry_f, strata_f)))
 def test_r(fname, ties, entry_f, strata_f):

@@ -1,7 +1,7 @@
-from statsmodels.compat.testing import skipif
-
 import numpy as np
 import pandas as pd
+import pytest
+
 from statsmodels.graphics.agreement import mean_diff_plot
 
 
@@ -12,7 +12,7 @@ except:
     have_matplotlib = False
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_mean_diff_plot():
 
     # Seed the random number generator.

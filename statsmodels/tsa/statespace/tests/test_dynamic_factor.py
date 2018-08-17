@@ -5,10 +5,10 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
-from statsmodels.compat.testing import skip
 
 import numpy as np
 import pandas as pd
+import pytest
 import os
 import re
 
@@ -388,7 +388,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
         assert_allclose(bse[:3], self.true['var_oim'][:3], atol=1e-5)
         assert_allclose(bse[-10:], self.true['var_oim'][-10:], atol=3e-4)
 
-    @skip("Known failure, no sequence of optimizers has been found which can achieve the maximum.")
+    @pytest.mark.skip("Known failure, no sequence of optimizers has been found which can achieve the maximum.")
     def test_mle(self):
         # The following gets us to llf=546.53, which is still not good enough
         # llf = 300.842477412

@@ -5,7 +5,7 @@ from distutils.version import LooseVersion
 import numpy as np
 import pandas as pd
 from numpy.testing import assert_equal, assert_
-from statsmodels.compat.testing import skipif
+import pytest
 
 import statsmodels.api as sm
 from statsmodels.graphics.tsaplots import (plot_acf, plot_pacf, month_plot,
@@ -22,7 +22,7 @@ except:
 pandas_lt_0_19_2 = LooseVersion(pd.__version__) < '0.19.1'
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plot_acf():
     # Just test that it runs.
     fig = plt.figure()
@@ -40,7 +40,7 @@ def test_plot_acf():
     plt.close(fig)
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plot_acf_irregular():
     # Just test that it runs.
     fig = plt.figure()
@@ -58,7 +58,7 @@ def test_plot_acf_irregular():
     plt.close(fig)
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plot_pacf():
     # Just test that it runs.
     fig = plt.figure()
@@ -75,7 +75,7 @@ def test_plot_pacf():
     plt.close(fig)
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plot_pacf_kwargs():
     # Just test that it runs.
     fig = plt.figure()
@@ -119,7 +119,7 @@ def test_plot_pacf_kwargs():
     assert_(linestyle != with_vlines)
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plot_acf_kwargs():
     # Just test that it runs.
     fig = plt.figure()
@@ -152,7 +152,7 @@ def test_plot_acf_kwargs():
     assert_(with_vlines != plain)
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plot_pacf_irregular():
     # Just test that it runs.
     fig = plt.figure()
@@ -170,7 +170,7 @@ def test_plot_pacf_irregular():
     plt.close(fig)
 
 
-@skipif(not have_matplotlib or pandas_lt_0_19_2,
+@pytest.mark.skipif(not have_matplotlib or pandas_lt_0_19_2,
         reason='matplotlib not available or pandas too old')
 def test_plot_month():
     dta = sm.datasets.elnino.load_pandas().data
@@ -198,7 +198,7 @@ def test_plot_month():
     plt.close(fig)
 
 
-@skipif(not have_matplotlib or pandas_lt_0_19_2,
+@pytest.mark.skipif(not have_matplotlib or pandas_lt_0_19_2,
         reason='matplotlib not available or pandas too old')
 def test_plot_quarter():
     dta = sm.datasets.macrodata.load_pandas().data
@@ -224,7 +224,7 @@ def test_plot_quarter():
     quarter_plot(dta.unemp)
     plt.close('all')
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_seasonal_plot():
     rs = np.random.RandomState(1234)
     data = rs.randn(20,12)

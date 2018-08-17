@@ -8,10 +8,10 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
-from statsmodels.compat.testing import SkipTest, skip, skipif
 
 import numpy as np
 import pandas as pd
+import pytest
 import os
 
 from statsmodels import datasets
@@ -150,7 +150,7 @@ class Trivariate(object):
 
     # Skipped because "measurement" refers to different things; even different
     # dimensions
-    @skip
+    @pytest.mark.skip
     def test_smoothed_measurement_disturbance(self):
         assert_allclose(
             self.results_a.smoothed_measurement_disturbance,
@@ -159,7 +159,7 @@ class Trivariate(object):
 
     # Skipped because "measurement" refers to different things; even different
     # dimensions
-    @skip
+    @pytest.mark.skip
     def test_smoothed_measurement_disturbance_cov(self):
         assert_allclose(
             self.results_a.smoothed_measurement_disturbance_cov,
@@ -606,7 +606,7 @@ class TestDFM(object):
 
     # Skipped because "measurement" refers to different things; even different
     # dimensions
-    @skip
+    @pytest.mark.skip
     def test_smoothed_measurement_disturbance(self):
         assert_allclose(
             self.results_a.smoothed_measurement_disturbance,
@@ -615,7 +615,7 @@ class TestDFM(object):
 
     # Skipped because "measurement" refers to different things; even different
     # dimensions
-    @skip
+    @pytest.mark.skip
     def test_smoothed_measurement_disturbance_cov(self):
         assert_allclose(
             self.results_a.smoothed_measurement_disturbance_cov,
@@ -642,7 +642,7 @@ class TestDFM(object):
 
     # Skipped because "measurement" refers to different things; even different
     # dimensions
-    @skip
+    @pytest.mark.skip
     def test_simulation_smoothed_measurement_disturbance(self):
         assert_allclose(
             self.sim_a.simulated_measurement_disturbance,

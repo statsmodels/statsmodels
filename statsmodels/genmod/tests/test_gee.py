@@ -10,10 +10,11 @@ exactly.
 """
 
 from statsmodels.compat import lrange
-from statsmodels.compat.testing import skipif
+
+import os
 
 import numpy as np
-import os
+import pytest
 
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_array_less, assert_raises, assert_, dec)
@@ -166,7 +167,7 @@ class TestGEE(object):
         assert_allclose(marg.margeff, np.r_[-0.41197961], rtol=1e-5)
         assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_nominal_plot(self):
         np.random.seed(34234)
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
@@ -813,7 +814,7 @@ class TestGEE(object):
             model1 = NominalGEE(y, x, groups, cov_struct=nmi)
             model1.fit()
 
-    @skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_ordinal_plot(self):
         family = Binomial()
 
@@ -1567,7 +1568,7 @@ class TestGEEMultinomialCovType(CheckConsistency):
         check_wrapper(rslt2)
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plots():
 
     np.random.seed(378)

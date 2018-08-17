@@ -27,13 +27,12 @@ TestGlmGaussianWLS                statsmodels.WLS        X      X               
 ================================= ====================== ====== ===================== === ======= ======== ============== ============= ============== ============= ============== ==== =========
 """
 from __future__ import division
-from statsmodels.compat.testing import SkipTest
+from statsmodels.compat.python import PY3
 
 import warnings
 from warnings import catch_warnings
 import sys
 
-import nose
 import numpy as np
 from numpy.testing import (assert_raises, assert_allclose)
 import pandas as pd
@@ -274,8 +273,7 @@ class TestGlmPoissonFwClu(CheckWeight):
         # no wnobs yet in sandwich covariance calcualtion
         cls.corr_fact = 1 / np.sqrt(n_groups / (n_groups - 1))   #np.sqrt((wsum - 1.) / wsum)
         cov_kwds = {'groups': gid, 'use_correction':False}
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=SpecificationWarning)
+        with pytest.warns(None):
             cls.res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                             family=sm.families.Poisson(), freq_weights=fweights
                             ).fit(cov_type='cluster', cov_kwds=cov_kwds)
@@ -769,8 +767,6 @@ class TestBinomial0RepeatedvsDuplicated(CheckWeight):
 
 
 def test_warnings_raised():
-    if sys.version_info < (3, 4):
-        raise SkipTest
     weights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
     # faking aweights by using normalized freq_weights
     weights = np.array(weights)
@@ -778,37 +774,29 @@ def test_warnings_raised():
     gid = np.arange(1, 17 + 1) // 2
 
     cov_kwds = {'groups': gid, 'use_correction': False}
-    with warnings.catch_warnings(record=True) as w:
+
+    # Work around for buggy pytest repeated warning capture on Python 2.7
+    warning_type = SpecificationWarning if PY3 else None
+    with pytest.warns(warning_type):
         res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                    family=sm.families.Poisson(), freq_weights=weights
                    ).fit(cov_type='cluster', cov_kwds=cov_kwds)
         res1.summary()
-        assert len(w) >= 1
 
-    with warnings.catch_warnings(record=True) as w:
+    with pytest.warns(warning_type):
         res1 = GLM(cpunish_data.endog, cpunish_data.exog,
                    family=sm.families.Poisson(), var_weights=weights
                    ).fit(cov_type='cluster', cov_kwds=cov_kwds)
         res1.summary()
-        assert len(w) >= 1
 
 
 weights = [1, 1, 1, 2, 2, 2, 3, 3, 3, 1, 1, 1, 2, 2, 2, 3, 3]
 
 
-# TODO: Re-enable once nose is permanently dropped
-@nose.tools.nottest
 @pytest.mark.parametrize('formatted', [weights, np.asarray(weights), pd.Series(weights)],
                          ids=['list', 'ndarray', 'Series'])
 def test_weights_different_formats(formatted):
     check_weights_as_formats(formatted)
-
-
-# TODO: Remove once nose is permanently dropped
-def test_weights_different_formats_all():
-    check_weights_as_formats(weights)
-    check_weights_as_formats(np.asarray(weights))
-    check_weights_as_formats(pd.Series(weights))
 
 
 def check_weights_as_formats(weights):

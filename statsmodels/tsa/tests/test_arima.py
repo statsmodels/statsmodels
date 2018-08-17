@@ -1,5 +1,4 @@
 from statsmodels.compat.python import lrange, BytesIO, cPickle
-from statsmodels.compat.testing import skip, skipif
 
 import os
 import warnings
@@ -23,12 +22,11 @@ from statsmodels.tsa.tests.results import results_arma, results_arima
 from statsmodels.tsa.arima_process import arma_generate_sample
 
 import scipy  # only needed for version check
-scipy_old = LooseVersion(scipy.__version__) < '0.16'
 
 try:
     import matplotlib.pyplot as plt
     have_matplotlib = True
-except:
+except ImportError:
     have_matplotlib = False
 
 DECIMAL_4 = 4
@@ -1978,7 +1976,7 @@ class TestARMA00(object):
         predictions = self.arma_00_res.predict()
         assert_almost_equal(self.y.mean() * np.ones_like(predictions), predictions)
 
-    @skip
+    @pytest.mark.skip
     def test_information_criteria(self):
         # This test is invalid since the ICs differ due to df_model differences
         # between OLS and ARIMA
@@ -2047,7 +2045,7 @@ def test_arma_missing():
     assert_raises(MissingDataError, ARMA, y, (1, 0), missing='raise')
 
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_plot_predict():
     from statsmodels.datasets.sunspots import load_pandas
 
@@ -2098,7 +2096,6 @@ def test_arima_diff2():
     assert_almost_equal(predicted, predicted_res, 3)
 
 
-@skipif(scipy_old, reason='scipy is old, test might fail')
 def test_arima111_predict_exog_2127():
     # regression test for issue #2127
     ef =  [ 0.03005,  0.03917,  0.02828,  0.03644,  0.03379,  0.02744,

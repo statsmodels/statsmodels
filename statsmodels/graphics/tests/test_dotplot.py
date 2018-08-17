@@ -1,6 +1,6 @@
-from statsmodels.compat.testing import skipif
-
 import numpy as np
+import pytest
+
 from statsmodels.graphics.dotplots import dot_plot
 import pandas as pd
 
@@ -21,7 +21,7 @@ def close_or_save(pdf, fig):
     else:
         plt.close(fig)
 
-@skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
 def test_all():
 
     if pdf_output:
