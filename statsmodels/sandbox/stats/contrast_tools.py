@@ -26,60 +26,9 @@ from __future__ import print_function
 from statsmodels.compat.python import zip
 import numpy as np
 
-#next 3 functions copied from multicomp.py
+from statsmodels.sandbox.stats.multicomp import (
+    contrast_allpairs, contrast_all_one, contrast_diff_mean)
 
-def contrast_allpairs(nm):
-    '''contrast or restriction matrix for all pairs of nm variables
-
-    Parameters
-    ----------
-    nm : int
-
-    Returns
-    -------
-    contr : ndarray, 2d, (nm*(nm-1)/2, nm)
-       contrast matrix for all pairwise comparisons
-
-    '''
-    contr = []
-    for i in range(nm):
-        for j in range(i+1, nm):
-            contr_row = np.zeros(nm)
-            contr_row[i] = 1
-            contr_row[j] = -1
-            contr.append(contr_row)
-    return np.array(contr)
-
-def contrast_all_one(nm):
-    '''contrast or restriction matrix for all against first comparison
-
-    Parameters
-    ----------
-    nm : int
-
-    Returns
-    -------
-    contr : ndarray, 2d, (nm-1, nm)
-       contrast matrix for all against first comparisons
-
-    '''
-    contr = np.column_stack((np.ones(nm-1), -np.eye(nm-1)))
-    return contr
-
-def contrast_diff_mean(nm):
-    '''contrast or restriction matrix for all against mean comparison
-
-    Parameters
-    ----------
-    nm : int
-
-    Returns
-    -------
-    contr : ndarray, 2d, (nm-1, nm)
-       contrast matrix for all against mean comparisons
-
-    '''
-    return np.eye(nm) - np.ones((nm,nm))/nm
 
 def signstr(x, noplus=False):
     if x in [-1,0,1]:
