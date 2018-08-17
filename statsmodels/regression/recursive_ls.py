@@ -201,7 +201,7 @@ class RecursiveLS(MLEModel):
     @property
     def endog_names(self):
         endog_names = super(RecursiveLS, self).endog_names
-        return endog_names[0]
+        return endog_names[0] if isinstance(endog_names, list) else endog_names
 
     @property
     def param_names(self):
@@ -274,6 +274,13 @@ class RecursiveLSResults(MLEResults):
         self.specification = Bunch(**{
             'k_exog': self.model.k_exog,
             'k_constraints': self.model.k_constraints})
+
+        # Adjust results to remove "faux" endog from the constraints
+        if self.model._r_matrix is not None:
+            for name in ['forecasts', 'forecasts_error',
+                         'forecasts_error_cov', 'standardized_forecasts_error',
+                         'forecasts_error_diffuse_cov']:
+                setattr(self, name, getattr(self, name)[0:1])
 
     @property
     def recursive_coefficients(self):

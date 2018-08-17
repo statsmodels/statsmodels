@@ -1986,7 +1986,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # This is a (k_endog x nobs array; don't want to squeeze in case of
         # the corner case where nobs = 1 (mostly a concern in the predict or
         # forecast functions, but here also to maintain consistency)
-        fittedvalues = self.filter_results.forecasts
+        fittedvalues = self.forecasts
         if fittedvalues.shape[0] == 1:
             fittedvalues = fittedvalues[0, :]
         else:
@@ -2041,7 +2041,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # This is a (k_endog x nobs array; don't want to squeeze in case of
         # the corner case where nobs = 1 (mostly a concern in the predict or
         # forecast functions, but here also to maintain consistency)
-        resid = self.filter_results.forecasts_error
+        resid = self.forecasts_error
         if resid.shape[0] == 1:
             resid = resid[0, :]
         else:
