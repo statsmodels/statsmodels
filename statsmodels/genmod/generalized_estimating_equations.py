@@ -1551,7 +1551,7 @@ class GEEResults(base.LikelihoodModelResults):
         if scale is None:
             scale = self.scale
 
-        _, qic, qicu = self.model.QIC(self.params, scale,
+        _, qic, qicu = self.model.qic(self.params, scale,
                   self.cov_params())
 
         return qic, qicu

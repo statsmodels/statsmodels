@@ -1681,11 +1681,17 @@ def test_qic_known():
             ql1 = np.sum(y * np.log(mean1) - mean1 - c)
             ql2 = np.sum(y * np.log(mean2) - mean2 - c)
 
-        qle1, _, _ = model1.qic(result1.params, result1.scale, result1.cov_params())
-        qle2, _, _ = model2.qic(result2.params, result2.scale, result2.cov_params())
+        qle1 = model1.qic(result1.params, result1.scale, result1.cov_params())
+        qle2 = model2.qic(result2.params, result2.scale, result2.cov_params())
 
-        assert_allclose(ql1, qle1, rtol=1e-4)
-        assert_allclose(ql2, qle2, rtol=1e-4)
+        assert_allclose(ql1, qle1[0], rtol=1e-4)
+        assert_allclose(ql2, qle2[0], rtol=1e-4)
+
+        qler1 = result1.qic()
+        qler2 = result2.qic()
+        assert_equal(qler1, qle1[1:])
+        assert_equal(qler2, qle2[1:])
+
 
 # Compare differences of QL values computed by numerical integration.  Use difference
 # here so that constants that are inconvenient to compute cancel out.
