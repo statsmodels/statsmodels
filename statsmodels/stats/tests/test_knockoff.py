@@ -82,7 +82,14 @@ def test_testers(p, tester, method):
 
 
 @pytest.mark.slow
-def test_sim():
+@pytest.mark.parametrize("method", ["equi", "sdp"])
+@pytest.mark.parametrize("tester,n,p,es", [
+    [kr.CorrelationEffects(), 300, 100, 6],
+    [kr.ForwardEffects(pursuit=False), 300, 100, 3.5],
+    [kr.ForwardEffects(pursuit=True), 300, 100, 3.5],
+    [kr.OLSEffects(), 3000, 200, 3.5],
+])
+def test_sim(method, tester, n, p, es):
     # This function assesses the performance of the knockoff approach
     # relative to its theoretical claims.
 
@@ -97,59 +104,47 @@ def test_sim():
     # Number of siumulation replications
     nrep = 10
 
-    # Statistic, n, p, effect size
-    testers = [[kr.CorrelationEffects(), 300, 100, 6],
-               [kr.ForwardEffects(pursuit=False), 300, 100, 3.5],
-               [kr.ForwardEffects(pursuit=True), 300, 100, 3.5],
-               [kr.OLSEffects(), 3000, 200, 3.5]]
+    if method == "sdp" and not has_cvxopt:
+        return
 
-    for method in "equi", "sdp":
+    fdr, power = 0, 0
+    for k in range(nrep):
 
-        if method == "sdp" and not has_cvxopt:
-            continue
+        # Generate the predictors
+        x = np.random.normal(size=(n, p))
+        x /= np.sqrt(np.sum(x*x, 0))
 
-        for tester_info in testers:
+        # Generate the response variable
+        coeff = es * (-1)**np.arange(npos)
+        y = np.dot(x[:, 0:npos], coeff) + np.random.normal(size=n)
 
-            (tester, n, p, es) = tuple(tester_info)
+        kn = RegressionFDR(y, x, tester)
 
-            fdr, power = 0, 0
-            for k in range(nrep):
+        # Threshold to achieve the target FDR
+        tr = kn.threshold(target_fdr)
 
-                # Generate the predictors
-                x = np.random.normal(size=(n, p))
-                x /= np.sqrt(np.sum(x*x, 0))
+        # Number of selected coefficients
+        cp = np.sum(kn.stats >= tr)
 
-                # Generate the response variable
-                coeff = es * (-1)**np.arange(npos)
-                y = np.dot(x[:, 0:npos], coeff) + np.random.normal(size=n)
+        # Number of false positives
+        fp = np.sum(kn.stats[npos:] >= tr)
 
-                kn = RegressionFDR(y, x, tester)
+        # Observed FDR
+        fdr += fp / max(cp, 1)
 
-                # Threshold to achieve the target FDR
-                tr = kn.threshold(target_fdr)
+        # Proportion of true positives that are detected
+        power += np.mean(kn.stats[0:npos] >= tr)
 
-                # Number of selected coefficients
-                cp = np.sum(kn.stats >= tr)
+        # The estimated FDR may never exceed the target FDR
+        estimated_fdr = (np.sum(kn.stats <= -tr) /
+                         (1 + np.sum(kn.stats >= tr)))
+        assert_equal(estimated_fdr < target_fdr, True)
 
-                # Number of false positives
-                fp = np.sum(kn.stats[npos:] >= tr)
+    power /= nrep
+    fdr /= nrep
 
-                # Observed FDR
-                fdr += fp / max(cp, 1)
+    # Check for reasonable power
+    assert_array_equal(power > 0.6, True)
 
-                # Proportion of true positives that are detected
-                power += np.mean(kn.stats[0:npos] >= tr)
-
-                # The estimated FDR may never exceed the target FDR
-                estimated_fdr = (np.sum(kn.stats <= -tr) /
-                                 (1 + np.sum(kn.stats >= tr)))
-                assert_equal(estimated_fdr < target_fdr, True)
-
-            power /= nrep
-            fdr /= nrep
-
-            # Check for reasonable power
-            assert_array_equal(power > 0.6, True)
-
-            # Check that we are close to the target FDR
-            assert_array_equal(fdr < target_fdr + 0.05, True)
+    # Check that we are close to the target FDR
+    assert_array_equal(fdr < target_fdr + 0.05, True)
