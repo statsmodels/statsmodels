@@ -371,7 +371,7 @@ def test_causality():  # test Granger- and instantaneous causality
                 if len(causing_ind) == 1:
                     g_p_obt_single = granger_sm_single_ind.pvalue
                     assert_allclose(g_p_obt_single, g_p_obt, 1e-07, 0, False,
-                        err_msg_g_t + " - list of int and int as ".upper() + \
+                                    err_msg_g_t + " - list of int and int as ".upper() +
                                     "argument don't yield the same result!".upper())
 
                 # test instantaneous causality ################################

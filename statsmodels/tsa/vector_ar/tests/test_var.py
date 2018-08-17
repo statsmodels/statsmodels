@@ -65,20 +65,23 @@ class CheckVAR(object):
         results = self.res1.results
         for i in range(len(results)):
             assert_almost_equal(results[i].mse_resid**.5,
-                    eval('self.res2.rmse_'+str(i+1)), DECIMAL_6)
+                                eval('self.res2.rmse_'+str(i+1)),
+                                DECIMAL_6)
 
     def test_rsquared(self):
         results = self.res1.results
         for i in range(len(results)):
             assert_almost_equal(results[i].rsquared,
-                    eval('self.res2.rsquared_'+str(i+1)), DECIMAL_3)
+                                eval('self.res2.rsquared_'+str(i+1)),
+                                DECIMAL_3)
 
     def test_llf(self):
         results = self.res1.results
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL_2)
         for i in range(len(results)):
             assert_almost_equal(results[i].llf,
-                    eval('self.res2.llf_'+str(i+1)), DECIMAL_2)
+                                eval('self.res2.llf_'+str(i+1)),
+                                DECIMAL_2)
 
     def test_aic(self):
         assert_almost_equal(self.res1.aic, self.res2.aic)
@@ -788,7 +791,7 @@ class TestVARExtras(object):
                                                 exog_future=exf)
         exf2 = exf[:, None]**[0, 1]
         fci3 = res_lin_trend2.forecast_interval(res_lin_trend2.endog[-2:], h,
-                                               exog_future=exf2)
+                                                exog_future=exf2)
         assert_allclose(fci2, fci1, rtol=1e-12)
         assert_allclose(fci3, fci1, rtol=1e-12)
         assert_allclose(fci3, fci2, rtol=1e-12)

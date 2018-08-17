@@ -130,13 +130,13 @@ class CausalityTestResults(HypothesisTestResults):
         if not basic_test:
             return False
         test = self.test == other.test
-        variables = self.causing == other.causing and \
-                    self.caused == other.caused
+        variables = (self.causing == other.causing and
+                     self.caused == other.caused)
         # instantaneous causality is a symmetric relation ==> causing and
         # caused may be swapped
         if not variables and self.test == "inst":
-            variables = self.causing == other.caused and \
-                        self.caused == other.causing
+            variables = (self.causing == other.caused and
+                         self.caused == other.causing)
         return test and variables
 
 
