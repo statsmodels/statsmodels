@@ -126,6 +126,7 @@ class TestFormula(object):
         t1 = formula.Term("A")
         t2 = formula.Term("B")
         f = t1 + t2 + t1 * t2
+
         def other(val):
             return np.array([3.2*val,4.342*val**2, 5.234*val**3])
         q = formula.Quantitative(['other%d' % i for i in range(1,4)], termname='other', func=t1, transform=other)

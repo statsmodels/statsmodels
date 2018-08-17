@@ -167,6 +167,7 @@ class TestMICEData(object):
 
         # Save the dataset size at each iteration.
         hist = []
+
         def cb(imp):
             hist.append(imp.data.shape)
 

@@ -159,6 +159,7 @@ class Describe(object):
             except (TypeError, ValueError):
                 return False
             return True
+
         def number_like():
             try:
                 self.dataset[col][0] + 1.0
