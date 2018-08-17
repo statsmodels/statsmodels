@@ -293,7 +293,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
             return adfstat, pvalue, usedlag, nobs, critvalues, icbest
 
 
-def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
+def acovf(x, unbiased=False, demean=True, fft=None, missing='none', nlag=None):
     """
     Autocovariance for 1D
 
@@ -309,8 +309,14 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
         If True, use FFT convolution.  This method should be preferred
         for long time series.
     missing : str
-        A string in ['none', 'raise', 'conservative', 'drop'] specifying how the NaNs
-        are to be treated.
+        A string in ['none', 'raise', 'conservative', 'drop'] specifying how
+        the NaNs are to be treated.
+    nlag : {int, None}
+        Limit the number of autocovariances returned.  Size of returned
+        array is nlag + 1.  Setting nlag when fft is False uses a simple,
+        direct estimator of the autocovariances that only computes the first
+        nlag + 1 values. This can be much faster when the time series is long
+        and only a small number of autocovariances are needed.
 
     Returns
     -------
@@ -323,6 +329,14 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
            and amplitude modulation. Sankhya: The Indian Journal of
            Statistics, Series A, pp.383-392.
     """
+    if fft is None:
+        import warnings
+        msg = 'fft=True will become the default in a future version of ' \
+              'statsmodels. To suppress this warning, explicitly set ' \
+              'fft=False.'
+        warnings.warn(msg, FutureWarning)
+        fft = False
+
     x = np.squeeze(np.asarray(x))
     if x.ndim > 1:
         raise ValueError("x must be 1d. Got %d dims." % x.ndim)
@@ -337,17 +351,19 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     if deal_with_masked:
         if missing == 'raise':
             raise MissingDataError("NaNs were encountered in the data")
-        notmask_bool = ~np.isnan(x) #bool
+        notmask_bool = ~np.isnan(x)  # bool
         if missing == 'conservative':
+            # Must copy for thread safety
+            x = x.copy()
             x[~notmask_bool] = 0
-        else: #'drop'
-            x = x[notmask_bool] #copies non-missing
-        notmask_int = notmask_bool.astype(int) #int
+        else:  # 'drop'
+            x = x[notmask_bool]  # copies non-missing
+        notmask_int = notmask_bool.astype(int)  # int
 
     if demean and deal_with_masked:
         # whether 'drop' or 'conservative':
-        xo = x - x.sum()/notmask_int.sum()
-        if missing=='conservative':
+        xo = x - x.sum() / notmask_int.sum()
+        if missing == 'conservative':
             xo[~notmask_bool] = 0
     elif demean:
         xo = x - x.mean()
@@ -355,14 +371,44 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
         xo = x
 
     n = len(x)
-    if unbiased and deal_with_masked and missing=='conservative':
+    lag_len = nlag
+    if nlag is None:
+        lag_len = n - 1
+    elif nlag > n - 1:
+        raise ValueError('nlag must be smaller than nobs - 1')
+
+    if not fft and nlag is not None:
+        acov = np.empty(lag_len + 1)
+        acov[0] = xo.dot(xo)
+        for i in range(lag_len):
+            acov[i + 1] = xo[i + 1:].dot(xo[:-(i + 1)])
+        if not deal_with_masked or missing == 'drop':
+            if unbiased:
+                acov /= (n - np.arange(lag_len + 1))
+            else:
+                acov /= n
+        else:
+            if unbiased:
+                divisor = np.empty(lag_len + 1, dtype=np.int64)
+                divisor[0] = notmask_int.sum()
+                for i in range(lag_len):
+                    divisor[i + 1] = notmask_int[i + 1:].dot(notmask_int[:-(i + 1)])
+                    # divisor[i + 1] = [notmask_int[i + 1:] * notmask_int[:-(i + 1)].sum()
+                divisor[divisor == 0] = 1
+                acov /= divisor
+            else:
+                acov /= notmask_int.sum()
+        return acov
+
+    if unbiased and deal_with_masked and missing == 'conservative':
         d = np.correlate(notmask_int, notmask_int, 'full')
+        d[d == 0] = 1
     elif unbiased:
         xi = np.arange(1, n + 1)
         d = np.hstack((xi, xi[:-1][::-1]))
-    elif deal_with_masked: #biased and NaNs given and ('drop' or 'conservative')
-        d = notmask_int.sum() * np.ones(2*n-1)
-    else: #biased and no NaNs or missing=='none'
+    elif deal_with_masked:  # biased and NaNs given and ('drop' or 'conservative')
+        d = notmask_int.sum() * np.ones(2 * n - 1)
+    else:  # biased and no NaNs or missing=='none'
         d = n * np.ones(2 * n - 1)
 
     if fft:
@@ -372,12 +418,11 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
         acov = np.fft.ifft(Frf * np.conjugate(Frf))[:nobs] / d[nobs - 1:]
         acov = acov.real
     else:
-        acov = (np.correlate(xo, xo, 'full') / d)[n - 1:]
+        acov = np.correlate(xo, xo, 'full')[n - 1:] / d[n - 1:]
 
-    if deal_with_masked and missing=='conservative':
-        # restore data for the user
-        x[~notmask_bool] = np.nan
-
+    if nlag is not None:
+        # Copy to allow gc of full array rather than view
+        return acov[:lag_len + 1].copy()
     return acov
 
 
@@ -413,7 +458,7 @@ def q_stat(x, nobs, type="ljungbox"):
 #NOTE: Changed unbiased to False
 #see for example
 # http://www.itl.nist.gov/div898/handbook/eda/section3/autocopl.htm
-def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None,
+def acf(x, unbiased=False, nlags=40, qstat=False, fft=None, alpha=None,
         missing='none'):
     """
     Autocorrelation function for 1d arrays.
@@ -456,11 +501,14 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None,
     -----
     The acf at lag 0 (ie., 1) is returned.
 
-    This is based np.correlate which does full convolution. For very long time
-    series it is recommended to use fft convolution instead.
+    For very long time series it is recommended to use fft convolution instead.
+    When fft is False uses a simple, direct estimator of the autocovariances
+    that only computes the first nlag + 1 values. This can be much faster when
+    the time series is long and only a small number of autocovariances are
+    needed.
 
     If unbiased is true, the denominator for the autocovariance is adjusted
-    but the autocorrelation is not an unbiased estimtor.
+    but the autocorrelation is not an unbiased estimator.
 
     References
     ----------
@@ -469,6 +517,14 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None,
        Statistics, Series A, pp.383-392.
 
     """
+    if fft is None:
+        import warnings
+        msg = 'fft=True will become the default in a future version of ' \
+              'statsmodels. To suppress this warning, explicitly set ' \
+              'fft=False.'
+        warnings.warn(msg, FutureWarning)
+        fft = False
+
     nobs = len(x)  # should this shrink for missing='drop' and NaNs in x?
     avf = acovf(x, unbiased=unbiased, demean=True, fft=fft, missing=missing)
     acf = avf[:nlags + 1] / avf[0]
@@ -600,13 +656,13 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     elif method in ['ywm', 'ywmle', 'yw_mle']:
         ret = pacf_yw(x, nlags=nlags, method='mle')
     elif method in ['ld', 'ldu', 'ldunbiase', 'ld_unbiased']:
-        acv = acovf(x, unbiased=True)
+        acv = acovf(x, unbiased=True, fft=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
         #print 'ld', ld_
         ret = ld_[2]
     # inconsistent naming with ywmle
     elif method in ['ldb', 'ldbiased', 'ld_biased']:
-        acv = acovf(x, unbiased=False)
+        acv = acovf(x, unbiased=False, fft=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
         ret = ld_[2]
     else:
@@ -759,7 +815,7 @@ def levinson_durbin(s, nlags=10, isacov=False):
     if isacov:
         sxx_m = s
     else:
-        sxx_m = acovf(s)[:order + 1]  # not tested
+        sxx_m = acovf(s, fft=False)[:order + 1]  # not tested
 
     phi = np.zeros((order + 1, order + 1), 'd')
     sig = np.zeros(order + 1)
