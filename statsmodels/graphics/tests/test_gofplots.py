@@ -47,7 +47,7 @@ class BaseProbplotMixin(object):
         self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line,
                                         other=self.other_array)
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def t_est_probplot_other_array(self):
+    def test_probplot_other_array(self):
         self.fig = self.prbplt.probplot(ax=self.ax, line=self.line,
                                         other=self.other_array)
 
@@ -60,7 +60,7 @@ class BaseProbplotMixin(object):
         self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line,
                                         other=self.other_prbplot)
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def t_est_probplot_other_prbplt(self):
+    def test_probplot_other_prbplt(self):
         self.fig = self.prbplt.probplot(ax=self.ax, line=self.line,
                                         other=self.other_prbplot)
 
