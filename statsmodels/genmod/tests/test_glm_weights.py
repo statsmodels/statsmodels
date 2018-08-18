@@ -69,6 +69,41 @@ family_pairs = [(fam.Binomial, [lnk.logit, lnk.probit, lnk.cloglog, lnk.log,
                                         lnk.inverse_squared, lnk.identity])]
 
 
+def gen_linpred(family_class, link, exog):
+    if (family_class, link) == (fam.Poisson, lnk.identity):
+        lin_pred = 20 + exog.sum(1)
+    elif (family_class, link) == (fam.Poisson, lnk.sqrt):
+        lin_pred = 2 + exog.sum(1)
+
+    elif (family_class, link) == (fam.Binomial, lnk.log):
+        lin_pred = -1 + exog.sum(1) / 8
+
+    elif (family_class, link) == (fam.InverseGaussian, lnk.inverse_power):
+        lin_pred = 1 + exog.sum(1) / 5
+    elif (family_class, link) == (fam.InverseGaussian, lnk.identity):
+        lin_pred = 20 + 5 * exog.sum(1)
+        lin_pred = np.clip(lin_pred, 1e-4, np.inf)
+    elif (family_class, link) == (fam.InverseGaussian, lnk.inverse_squared):
+        lin_pred = 0.5 + exog.sum(1) / 5
+    elif (family_class, link) == (fam.InverseGaussian, lnk.log):
+        lin_pred = -1 + exog.sum(1)
+
+    elif (family_class, link) == (fam.NegativeBinomial, lnk.identity):
+        lin_pred = 20 + 5 * exog.sum(1)
+        lin_pred = np.clip(lin_pred, 1e-4, np.inf)
+    elif (family_class, link) == (fam.NegativeBinomial, lnk.inverse_squared):
+        lin_pred = 0.1 + np.random.uniform(size=exog.shape[0])
+    elif (family_class, link) == (fam.NegativeBinomial, lnk.inverse_power):
+        lin_pred = 1 + exog.sum(1) / 5
+
+    # the following fails with identity link, because endog < 0
+    # elif family_class == fam.Gamma:
+    #     lin_pred = 0.5 * exog.sum(1) + np.random.uniform(size=exog.shape[0])
+    else:
+        lin_pred = np.random.uniform(size=exog.shape[0])
+    return lin_pred
+
+
 def gen_endog(lin_pred, family_class, link, binom_version=0):
 
     np.random.seed(872)
@@ -473,79 +508,56 @@ def test_wtd_gradient_irls():
     exog = np.random.normal(size=(n, p))
     exog[:, 0] = 1
 
+    # pairs of family_class/link that we skip because of convergence problems
+    # TODO: get these to converge
+    skip_pairs = [(fam.Binomial, lnk.cloglog),
+                  (fam.Binomial, lnk.log),
+                  (fam.Gamma, lnk.log),
+                  (fam.Gamma, lnk.identity),
+                  (fam.Gamma, lnk.inverse_power),
+                  (fam.Gaussian, lnk.log),
+                  (fam.Gaussian, lnk.inverse_power),
+                  (fam.InverseGaussian, lnk.log),
+                  (fam.InverseGaussian, lnk.identity),
+                  (fam.InverseGaussian, lnk.inverse_squared),
+                  (fam.NegativeBinomial, lnk.inverse_squared),
+                  (fam.NegativeBinomial, lnk.inverse_power)
+                  ]
+
+    # family_class/link pairs for which we set method="newton"
+    newton_pairs = [(fam.InverseGaussian, lnk.inverse_power),
+                    (fam.NegativeBinomial, lnk.identity)
+                    ]
+
     skip_one = False
     for family_class, family_links in family_pairs:
         for link in family_links:
             for binom_version in 0, 1:
                 method = 'bfgs'
 
-                if family_class != fam.Binomial and binom_version == 1:
-                    continue
-                elif family_class == fam.Binomial and link == lnk.cloglog:
-                    # Cannot get gradient to converage with var_weights here
-                    continue
-                elif family_class == fam.Binomial and link == lnk.log:
-                    # Cannot get gradient to converage with var_weights here
-                    continue
-                elif (family_class, link) == (fam.Poisson, lnk.identity):
-                    lin_pred = 20 + exog.sum(1)
-                elif (family_class, link) == (fam.Binomial, lnk.log):
-                    lin_pred = -1 + exog.sum(1) / 8
-                elif (family_class, link) == (fam.Poisson, lnk.sqrt):
-                    lin_pred = -2 + exog.sum(1)
-                elif (family_class, link) == (fam.Gamma, lnk.log):
-                    # Cannot get gradient to converge with var_weights here
-                    continue
-                elif (family_class, link) == (fam.Gamma, lnk.identity):
-                    # Cannot get gradient to converage with var_weights here
-                    continue
-                elif (family_class, link) == (fam.Gamma, lnk.inverse_power):
-                    # Cannot get gradient to converage with var_weights here
-                    continue
-                elif (family_class, link) == (fam.Gaussian, lnk.log):
-                    # Cannot get gradient to converage with var_weights here
-                    continue
-                elif (family_class, link) == (fam.Gaussian, lnk.inverse_power):
-                    # Cannot get gradient to converage with var_weights here
-                    continue
-                elif (family_class, link) == (fam.InverseGaussian, lnk.log):
-                    # Cannot get gradient to converage with var_weights here
-                    lin_pred = -1 + exog.sum(1)
-                    continue
-                elif (family_class, link) == (fam.InverseGaussian,
-                                              lnk.identity):
-                    # Cannot get gradient to converage with var_weights here
-                    lin_pred = 20 + 5*exog.sum(1)
-                    lin_pred = np.clip(lin_pred, 1e-4, np.inf)
-                    continue
-                elif (family_class, link) == (fam.InverseGaussian,
-                                              lnk.inverse_squared):
-                    lin_pred = 0.5 + exog.sum(1) / 5
-                    continue  # skip due to non-convergence
-                elif (family_class, link) == (fam.InverseGaussian,
-                                              lnk.inverse_power):
-                    lin_pred = 1 + exog.sum(1) / 5
-                    method = 'newton'
-                elif (family_class, link) == (fam.NegativeBinomial,
-                                              lnk.identity):
-                    lin_pred = 20 + 5*exog.sum(1)
-                    lin_pred = np.clip(lin_pred, 1e-3, np.inf)
-                    method = 'newton'
-                elif (family_class, link) == (fam.NegativeBinomial,
-                                              lnk.inverse_squared):
-                    lin_pred = 0.1 + np.random.uniform(size=exog.shape[0])
-                    continue  # skip due to non-convergence
-                elif (family_class, link) == (fam.NegativeBinomial,
-                                              lnk.inverse_power):
-                    # Cannot get gradient to converage with var_weights here
-                    lin_pred = 1 + exog.sum(1) / 5
+                if (family_class, link) in skip_pairs:
+                    # Can't get gradient to converage with var_weights here
+                    # TODO: better to xfail?
                     continue
 
-                elif (family_class, link) == (fam.Gaussian, lnk.inverse_power):
+                if family_class != fam.Binomial and binom_version == 1:
+                    continue
+
+                if (family_class, link) == (fam.Gaussian, lnk.inverse_power):
                     # adding skip because of convergence failure
                     skip_one = True
+
+                if (family_class, link) in newton_pairs:
+                    method = 'newton'
+
+                if (family_class, link) == (fam.Poisson, lnk.sqrt):
+                    # TODO: In this one case test_wtd_gradient_irls uses
+                    #    a different lin_pred than the two tests in test_glm.py,
+                    #    which have a positive 2 instead of a negative 2.
+                    #    See if these can be made to match.
+                    lin_pred = -2 + exog.sum(1)
                 else:
-                    lin_pred = np.random.uniform(size=exog.shape[0])
+                    lin_pred = gen_linpred(family_class, link, exog)
 
                 endog = gen_endog(lin_pred, family_class, link, binom_version)
                 if binom_version == 0:

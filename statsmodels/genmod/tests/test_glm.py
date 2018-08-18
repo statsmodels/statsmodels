@@ -20,7 +20,8 @@ from statsmodels.tools.sm_exceptions import DomainWarning
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.datasets import cpunish, longley
 
-from .test_glm_weights import gen_endog, family_pairs, check_irls_equivalence
+from .test_glm_weights import (
+    gen_endog, family_pairs, check_irls_equivalence, gen_linpred)
 
 # Test Precisions
 DECIMAL_4 = 4
@@ -1077,48 +1078,30 @@ def test_gradient_irls():
     exog = np.random.normal(size=(n, p))
     exog[:, 0] = 1
 
+    # pairs of family_class/link that we skip because of convergence problems
+    # TODO: get these to converge
+    skip_pairs = [(fam.InverseGaussian, lnk.inverse_squared),
+                  (fam.NegativeBinomial, lnk.inverse_squared)
+                  ]
+
     skip_one = False
     for family_class, family_links in family_pairs:
         for link in family_links:
-            for binom_version in 0,1:
+            for binom_version in [0, 1]:
+
+                if (family_class, link) in skip_pairs:
+                    # Can't get gradient to converage with var_weights here
+                    # TODO: better to xfail?
+                    continue
 
                 if family_class != fam.Binomial and binom_version == 1:
                     continue
 
-                if (family_class, link) == (fam.Poisson, lnk.identity):
-                    lin_pred = 20 + exog.sum(1)
-                elif (family_class, link) == (fam.Binomial, lnk.log):
-                    lin_pred = -1 + exog.sum(1) / 8
-                elif (family_class, link) == (fam.Poisson, lnk.sqrt):
-                    lin_pred = 2 + exog.sum(1)
-                elif (family_class, link) == (fam.InverseGaussian, lnk.log):
-                    #skip_zero = True
-                    lin_pred = -1 + exog.sum(1)
-                elif (family_class, link) == (fam.InverseGaussian, lnk.identity):
-                    lin_pred = 20 + 5*exog.sum(1)
-                    lin_pred = np.clip(lin_pred, 1e-4, np.inf)
-                elif (family_class, link) == (fam.InverseGaussian, lnk.inverse_squared):
-                    lin_pred = 0.5 + exog.sum(1) / 5
-                    continue # skip due to non-convergence
-                elif (family_class, link) == (fam.InverseGaussian, lnk.inverse_power):
-                    lin_pred = 1 + exog.sum(1) / 5
-                elif (family_class, link) == (fam.NegativeBinomial, lnk.identity):
-                    lin_pred = 20 + 5*exog.sum(1)
-                    lin_pred = np.clip(lin_pred, 1e-4, np.inf)
-                elif (family_class, link) == (fam.NegativeBinomial, lnk.inverse_squared):
-                    lin_pred = 0.1 + np.random.uniform(size=exog.shape[0])
-                    continue # skip due to non-convergence
-                elif (family_class, link) == (fam.NegativeBinomial, lnk.inverse_power):
-                    lin_pred = 1 + exog.sum(1) / 5
-
-                elif (family_class, link) == (fam.Gaussian, lnk.inverse_power):
+                if (family_class, link) == (fam.Gaussian, lnk.inverse_power):
                     # adding skip because of convergence failure
                     skip_one = True
-                # the following fails with identity link, because endog < 0
-                # elif family_class == fam.Gamma:
-                #     lin_pred = 0.5 * exog.sum(1) + np.random.uniform(size=exog.shape[0])
-                else:
-                    lin_pred = np.random.uniform(size=exog.shape[0])
+
+                lin_pred = gen_linpred(family_class, link, exog)
 
                 endog = gen_endog(lin_pred, family_class, link, binom_version)
 
@@ -1148,6 +1131,8 @@ def test_gradient_irls():
                     check_irls_equivalence(rslt_gradient, rslt_irls,
                                            mod_gradient)
 
+                    # TODO: make the next couple lines part
+                    #  of check_irls_equivalence?
                     rslt_gradient_eim = mod_gradient.fit(max_start_irls=0,
                                                          cov_type='eim',
                                                          start_params=rslt_gradient.params,
@@ -1170,51 +1155,30 @@ def test_gradient_irls_eim():
     exog = np.random.normal(size=(n, p))
     exog[:, 0] = 1
 
+    # pairs of family_class/link that we skip because of convergence problems
+    # TODO: get these to converge
+    skip_pairs = [(fam.InverseGaussian, lnk.inverse_squared),
+                  (fam.NegativeBinomial, lnk.inverse_squared)
+                  ]
+
     skip_one = False
     for family_class, family_links in family_pairs:
         for link in family_links:
-            for binom_version in 0, 1:
+            for binom_version in [0, 1]:
+
+                if (family_class, link) in skip_pairs:
+                    # Can't get gradient to converage with var_weights here
+                    # TODO: better to xfail?
+                    continue
 
                 if family_class != fam.Binomial and binom_version == 1:
                     continue
 
-                if (family_class, link) == (fam.Poisson, lnk.identity):
-                    lin_pred = 20 + exog.sum(1)
-                elif (family_class, link) == (fam.Binomial, lnk.log):
-                    lin_pred = -1 + exog.sum(1) / 8
-                elif (family_class, link) == (fam.Poisson, lnk.sqrt):
-                    lin_pred = 2 + exog.sum(1)
-                elif (family_class, link) == (fam.InverseGaussian, lnk.log):
-                    # skip_zero = True
-                    lin_pred = -1 + exog.sum(1)
-                elif (family_class, link) == (fam.InverseGaussian,
-                                              lnk.identity):
-                    lin_pred = 20 + 5*exog.sum(1)
-                    lin_pred = np.clip(lin_pred, 1e-4, np.inf)
-                elif (family_class, link) == (fam.InverseGaussian,
-                                              lnk.inverse_squared):
-                    lin_pred = 0.5 + exog.sum(1) / 5
-                    continue  # skip due to non-convergence
-                elif (family_class, link) == (fam.InverseGaussian,
-                                              lnk.inverse_power):
-                    lin_pred = 1 + exog.sum(1) / 5
-                elif (family_class, link) == (fam.NegativeBinomial,
-                                              lnk.identity):
-                    lin_pred = 20 + 5*exog.sum(1)
-                    lin_pred = np.clip(lin_pred, 1e-4, np.inf)
-                elif (family_class, link) == (fam.NegativeBinomial,
-                                              lnk.inverse_squared):
-                    lin_pred = 0.1 + np.random.uniform(size=exog.shape[0])
-                    continue  # skip due to non-convergence
-                elif (family_class, link) == (fam.NegativeBinomial,
-                                              lnk.inverse_power):
-                    lin_pred = 1 + exog.sum(1) / 5
-
-                elif (family_class, link) == (fam.Gaussian, lnk.inverse_power):
+                if (family_class, link) == (fam.Gaussian, lnk.inverse_power):
                     # adding skip because of convergence failure
                     skip_one = True
-                else:
-                    lin_pred = np.random.uniform(size=exog.shape[0])
+
+                lin_pred = gen_linpred(family_class, link, exog)
 
                 endog = gen_endog(lin_pred, family_class, link, binom_version)
 
