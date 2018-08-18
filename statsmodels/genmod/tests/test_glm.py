@@ -1107,7 +1107,8 @@ def test_gradient_irls():
 
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    mod_irls = sm.GLM(endog, exog, family=family_class(link=link()))
+                    mod_irls = sm.GLM(endog, exog,
+                                      family=family_class(link=link()))
                 rslt_irls = mod_irls.fit(method="IRLS")
 
                 if not (family_class, link) in [(fam.Poisson, lnk.sqrt),
@@ -1117,16 +1118,20 @@ def test_gradient_irls():
                     check_score_hessian(rslt_irls)
 
                 # Try with and without starting values.
-                for max_start_irls, start_params in (0, rslt_irls.params), (3, None):
+                for max_start_irls, start_params in [(0, rslt_irls.params),
+                                                     (3, None)]:
                     # TODO: skip convergence failures for now
                     if max_start_irls > 0 and skip_one:
                         continue
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore")
-                        mod_gradient = sm.GLM(endog, exog, family=family_class(link=link()))
-                    rslt_gradient = mod_gradient.fit(max_start_irls=max_start_irls,
-                                                     start_params=start_params,
-                                                     method="newton", maxiter=300)
+                        mod_gradient = sm.GLM(endog, exog,
+                                              family=family_class(link=link()))
+                    rslt_gradient = mod_gradient.fit(
+                            max_start_irls=max_start_irls,
+                            start_params=start_params,
+                            method="newton", maxiter=300
+                    )
 
                     check_irls_equivalence(rslt_gradient, rslt_irls,
                                            mod_gradient)
@@ -1189,8 +1194,8 @@ def test_gradient_irls_eim():
                 rslt_irls = mod_irls.fit(method="IRLS")
 
                 # Try with and without starting values.
-                for max_start_irls, start_params in ((0, rslt_irls.params),
-                                                     (3, None)):
+                for max_start_irls, start_params in [(0, rslt_irls.params),
+                                                     (3, None)]:
                     # TODO: skip convergence failures for now
                     if max_start_irls > 0 and skip_one:
                         continue

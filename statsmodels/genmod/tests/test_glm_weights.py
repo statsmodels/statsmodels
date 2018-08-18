@@ -532,7 +532,7 @@ def test_wtd_gradient_irls():
     skip_one = False
     for family_class, family_links in family_pairs:
         for link in family_links:
-            for binom_version in 0, 1:
+            for binom_version in [0, 1]:
                 method = 'bfgs'
 
                 if (family_class, link) in skip_pairs:
@@ -562,11 +562,8 @@ def test_wtd_gradient_irls():
                 endog = gen_endog(lin_pred, family_class, link, binom_version)
                 if binom_version == 0:
                     wts = np.ones_like(endog)
-                    tmp = np.random.randint(
-                            2,
-                            5,
-                            size=(endog > endog.mean()).sum()
-                    )
+                    tmp = np.random.randint(2, 5,
+                                            size=(endog > endog.mean()).sum())
                     wts[endog > endog.mean()] = tmp
                 else:
                     wts = np.ones(shape=endog.shape[0])
@@ -582,8 +579,8 @@ def test_wtd_gradient_irls():
                                          tol_criterion='params')
 
                 # Try with and without starting values.
-                for max_start_irls, start_params in ((0, rslt_irls.params),
-                                                     (3, None)):
+                for max_start_irls, start_params in [(0, rslt_irls.params),
+                                                     (3, None)]:
                     # TODO: skip convergence failures for now
                     if max_start_irls > 0 and skip_one:
                         continue
