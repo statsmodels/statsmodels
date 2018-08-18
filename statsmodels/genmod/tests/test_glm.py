@@ -20,6 +20,8 @@ from statsmodels.tools.sm_exceptions import DomainWarning
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.datasets import cpunish, longley
 
+from .test_glm_weights import gen_endog, family_pairs, check_irls_equivalence
+
 # Test Precisions
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -1024,39 +1026,6 @@ def test_plots(close_figures):
         add_lowess(fig.axes[0], frac=0.5)
         close_or_save(pdf, fig)
 
-def gen_endog(lin_pred, family_class, link, binom_version=0):
-
-    np.random.seed(872)
-
-    fam = sm.families
-
-    mu = link().inverse(lin_pred)
-
-    if family_class == fam.Binomial:
-        if binom_version == 0:
-            endog = 1*(np.random.uniform(size=len(lin_pred)) < mu)
-        else:
-            endog = np.empty((len(lin_pred), 2))
-            n = 10
-            endog[:, 0] = (np.random.uniform(size=(len(lin_pred), n)) < mu[:, None]).sum(1)
-            endog[:, 1] = n - endog[:, 0]
-    elif family_class == fam.Poisson:
-        endog = np.random.poisson(mu)
-    elif family_class == fam.Gamma:
-        endog = np.random.gamma(2, mu)
-    elif family_class == fam.Gaussian:
-        endog = mu + 2 * np.random.normal(size=len(lin_pred))
-    elif family_class == fam.NegativeBinomial:
-        from scipy.stats.distributions import nbinom
-        endog = nbinom.rvs(mu, 0.5)
-    elif family_class == fam.InverseGaussian:
-        from scipy.stats.distributions import invgauss
-        endog = invgauss.rvs(mu, scale=20)
-    else:
-        raise ValueError
-
-    return endog
-
 
 @pytest.mark.smoke
 def test_summary():
@@ -1102,12 +1071,6 @@ def test_gradient_irls():
 
     fam = sm.families
     lnk = sm.families.links
-    families = [(fam.Binomial, [lnk.logit, lnk.probit, lnk.cloglog, lnk.log, lnk.cauchy]),
-                (fam.Poisson, [lnk.log, lnk.identity, lnk.sqrt]),
-                (fam.Gamma, [lnk.log, lnk.identity, lnk.inverse_power]),
-                (fam.Gaussian, [lnk.identity, lnk.log, lnk.inverse_power]),
-                (fam.InverseGaussian, [lnk.log, lnk.identity, lnk.inverse_power, lnk.inverse_squared]),
-                (fam.NegativeBinomial, [lnk.log, lnk.inverse_power, lnk.inverse_squared, lnk.identity])]
 
     n = 100
     p = 3
@@ -1115,7 +1078,7 @@ def test_gradient_irls():
     exog[:, 0] = 1
 
     skip_one = False
-    for family_class, family_links in families:
+    for family_class, family_links in family_pairs:
         for link in family_links:
             for binom_version in 0,1:
 
@@ -1182,22 +1145,8 @@ def test_gradient_irls():
                                                      start_params=start_params,
                                                      method="newton", maxiter=300)
 
-                    assert_allclose(rslt_gradient.params,
-                                    rslt_irls.params, rtol=1e-6, atol=5e-5)
-
-                    assert_allclose(rslt_gradient.llf, rslt_irls.llf,
-                                    rtol=1e-6, atol=1e-6)
-
-                    assert_allclose(rslt_gradient.scale, rslt_irls.scale,
-                                    rtol=1e-6, atol=1e-6)
-
-                    # Get the standard errors using expected information.
-                    gradient_bse = rslt_gradient.bse
-                    ehess = mod_gradient.hessian(rslt_gradient.params, observed=False)
-                    gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
-                    assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6, atol=5e-5)
-                    # rslt_irls.bse corresponds to observed=True
-                    assert_allclose(rslt_gradient.bse, rslt_irls.bse, rtol=0.2, atol=5e-5)
+                    check_irls_equivalence(rslt_gradient, rslt_irls,
+                                           mod_gradient)
 
                     rslt_gradient_eim = mod_gradient.fit(max_start_irls=0,
                                                          cov_type='eim',
@@ -1215,16 +1164,6 @@ def test_gradient_irls_eim():
 
     fam = sm.families
     lnk = sm.families.links
-    families = [(fam.Binomial, [lnk.logit, lnk.probit, lnk.cloglog, lnk.log,
-                                lnk.cauchy]),
-                (fam.Poisson, [lnk.log, lnk.identity, lnk.sqrt]),
-                (fam.Gamma, [lnk.log, lnk.identity, lnk.inverse_power]),
-                (fam.Gaussian, [lnk.identity, lnk.log, lnk.inverse_power]),
-                (fam.InverseGaussian, [lnk.log, lnk.identity,
-                                       lnk.inverse_power,
-                                       lnk.inverse_squared]),
-                (fam.NegativeBinomial, [lnk.log, lnk.inverse_power,
-                                        lnk.inverse_squared, lnk.identity])]
 
     n = 100
     p = 3
@@ -1232,7 +1171,7 @@ def test_gradient_irls_eim():
     exog[:, 0] = 1
 
     skip_one = False
-    for family_class, family_links in families:
+    for family_class, family_links in family_pairs:
         for link in family_links:
             for binom_version in 0, 1:
 
@@ -1302,22 +1241,8 @@ def test_gradient_irls_eim():
                             optim_hessian='eim'
                     )
 
-                    assert_allclose(rslt_gradient.params, rslt_irls.params,
-                                    rtol=1e-6, atol=5e-5)
-
-                    assert_allclose(rslt_gradient.llf, rslt_irls.llf,
-                                    rtol=1e-6, atol=1e-6)
-
-                    assert_allclose(rslt_gradient.scale, rslt_irls.scale,
-                                    rtol=1e-6, atol=1e-6)
-
-                    # Get the standard errors using expected information.
-                    ehess = mod_gradient.hessian(rslt_gradient.params,
-                                                 observed=False)
-                    gradient_bse = np.sqrt(-np.diag(np.linalg.inv(ehess)))
-
-                    assert_allclose(gradient_bse, rslt_irls.bse, rtol=1e-6,
-                                    atol=5e-5)
+                    check_irls_equivalence(rslt_gradient, rslt_irls,
+                                           mod_gradient)
 
 
 def test_glm_irls_method():
