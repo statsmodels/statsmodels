@@ -69,6 +69,9 @@ def test_sdp():
 @pytest.mark.parametrize("method", ["equi", "sdp"])
 def test_testers(p, tester, method):
 
+    if method == "sdp" and not has_cvxopt:
+        return
+
     np.random.seed(2432)
     n = 200
 
@@ -92,6 +95,9 @@ def test_testers(p, tester, method):
 def test_sim(method, tester, n, p, es):
     # This function assesses the performance of the knockoff approach
     # relative to its theoretical claims.
+
+    if method == "sdp" and not has_cvxopt:
+        return
 
     np.random.seed(43234)
 
