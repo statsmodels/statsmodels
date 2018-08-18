@@ -10,12 +10,11 @@ exactly.
 """
 
 from statsmodels.compat import lrange
-from statsmodels.compat.testing import skipif
-import pytest
-import numpy as np
 import os
+import numpy as np
+import pytest
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
-                           assert_array_less, assert_raises, assert_)
+                           assert_array_less, assert_raises, assert_, dec)
 from statsmodels.genmod.generalized_estimating_equations import (
     GEE, OrdinalGEE, NominalGEE, NominalGEEResults, OrdinalGEEResults,
     NominalGEEResultsWrapper, OrdinalGEEResultsWrapper)
