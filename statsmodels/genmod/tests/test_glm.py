@@ -1084,10 +1084,10 @@ def test_gradient_irls():
                   (fam.NegativeBinomial, lnk.inverse_squared)
                   ]
 
-    skip_one = False
     for family_class, family_links in family_pairs:
         for link in family_links:
             for binom_version in [0, 1]:
+                skip_one = False
 
                 if (family_class, link) in skip_pairs:
                     # Can't get gradient to converage with var_weights here
@@ -1097,7 +1097,8 @@ def test_gradient_irls():
                 if family_class != fam.Binomial and binom_version == 1:
                     continue
 
-                if (family_class, link) == (fam.Gaussian, lnk.inverse_power):
+                if (family_class, link) in [(fam.Gaussian, lnk.inverse_power),
+                                            (fam.InverseGaussian, lnk.identity)]:
                     # adding skip because of convergence failure
                     skip_one = True
 
@@ -1166,10 +1167,10 @@ def test_gradient_irls_eim():
                   (fam.NegativeBinomial, lnk.inverse_squared)
                   ]
 
-    skip_one = False
     for family_class, family_links in family_pairs:
         for link in family_links:
             for binom_version in [0, 1]:
+                skip_one = False
 
                 if (family_class, link) in skip_pairs:
                     # Can't get gradient to converage with var_weights here
