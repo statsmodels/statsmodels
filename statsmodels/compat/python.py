@@ -7,6 +7,7 @@ import sys
 import urllib
 
 PY3 = (sys.version_info[0] >= 3)
+PY37 = (sys.version_info[:2] == (3, 7))
 
 if PY3:
     import builtins

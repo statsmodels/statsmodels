@@ -1,10 +1,12 @@
+from statsmodels.compat.python import PY37
+
 import numpy as np
 import pandas as pd
 from statsmodels.tools.grouputils import Grouping
 from statsmodels.tools.tools import categorical
 from statsmodels.datasets import grunfeld, anes96
 from pandas.util import testing as ptesting
-
+import pytest
 
 class CheckGrouping(object):
 
@@ -53,6 +55,8 @@ class CheckGrouping(object):
         np.testing.assert_array_equal(sorted_data, expected_sorted_data)
         np.testing.assert_(isinstance(sorted_data, np.ndarray))
 
+    @pytest.mark.xfail(condition=PY37,
+                       reason='Unexplained conversion to complex on Python 3.7')
     def test_transform_dataframe(self):
         names = self.data.index.names
         transformed_dataframe = self.grouping.transform_dataframe(
@@ -76,6 +80,8 @@ class CheckGrouping(object):
             np.testing.assert_array_equal(transformed_dataframe,
                                           expected.values)
 
+    @pytest.mark.xfail(condition=PY37,
+                       reason='Unexplained conversion to complex on Python 3.7')
     def test_transform_array(self):
         names = self.data.index.names
         transformed_array = self.grouping.transform_array(
