@@ -92,11 +92,11 @@ def test_formulas():
     smooth_formula = "0 + xsm1 + xsm2"
     preg = ProcessRegression.from_formula(
         mean_formula,
-        scale_formula,
-        smooth_formula,
+        data=df,
+        scale_formula=scale_formula,
+        smooth_formula=smooth_formula,
         time="time",
-        groups="groups",
-        data=df)
+        groups="groups")
     f = preg.fit()
     f.summary()  # Smoke test
 
@@ -125,7 +125,7 @@ def test_score_numdiff():
 
     np.random.seed(342)
 
-    for k in range(5):
+    for _ in range(5):
         par0 = preg._get_start()
         par = par0 + 0.1 * np.random.normal(size=q)
         score = preg.score(par)

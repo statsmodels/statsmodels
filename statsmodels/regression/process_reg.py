@@ -132,7 +132,7 @@ class GaussianCovariance(ProcessCovariance):
 
         # Derivatives with respect to the smoothing parameters.
         jsm = []
-        for i in range(0, len(sm)):
+        for i, _ in enumerate(sm):
             di *= 0
             di[i, :] += 0.5
             di[:, i] += 0.5
@@ -245,13 +245,37 @@ class ProcessRegression(base.LikelihoodModel):
     @classmethod
     def from_formula(cls,
                      formula,
-                     scale_formula,
-                     smooth_formula,
-                     time,
-                     groups,
                      data,
                      subset=None,
-                     missing='none'):
+                     drop_cols=None,
+                     *args,
+                     **kwargs):
+
+        if "scale_formula" in kwargs:
+            scale_formula = kwargs["scale_formula"]
+        else:
+            raise ValueError("scale_formula is a required argument")
+
+        if "smooth_formula" in kwargs:
+            smooth_formula = kwargs["smooth_formula"]
+        else:
+            raise ValueError("smooth_formula is a required argument")
+
+        if "time" in kwargs:
+            time = kwargs["time"]
+        else:
+            raise ValueError("time is a required argument")
+
+        if "groups" in kwargs:
+            groups = kwargs["groups"]
+        else:
+            raise ValueError("groups is a required argument")
+
+        if subset is not None:
+            warnings.Warn("'subset' is ignored")
+
+        if drop_cols is not None:
+            warnings.Warn("'drop_cols' is ignored")
 
         if isinstance(time, string_types):
             time = np.asarray(data[time])
@@ -345,7 +369,7 @@ class ProcessRegression(base.LikelihoodModel):
 
         # Get the log-likelihood
         ll = 0.
-        for g, ix in self._groups_ix.items():
+        for _, ix in self._groups_ix.items():
 
             # Get the covariance matrix for this person.
             cm = self.cov.get_cov(self.time[ix], sc[ix], sm[ix])
@@ -408,7 +432,7 @@ class ProcessRegression(base.LikelihoodModel):
             rx = np.outer(resid[ix], resid[ix])
             qm = np.linalg.solve(cm, rx)
             qm = 0.5 * np.linalg.solve(cm, qm.T)
-            for i in range(len(ix)):
+            for i, _ in enumerate(ix):
                 jq = np.sum(jacv[i] * qm)
                 score[pm:pm + pv] += jq * sd[ix[i]] * self.exog_scale[ix[i], :]
                 score[pm:pm + pv] -= 0.5 * (np.sum(jacv[i] * cmi) * sd[ix[i]] *
@@ -426,9 +450,16 @@ class ProcessRegression(base.LikelihoodModel):
 
         return score
 
-    def fit(self, method="BFGS", minim_opts=None, verbose=False):
+    def fit(self, start_params=None, method='BFGS', maxiter=100, full_output=True,
+            disp=True, fargs=(), callback=None, retall=False,
+            skip_hessian=False, **kwargs):
 
-        self.verbose = verbose
+        if "verbose" in kwargs:
+            self.verbose = kwargs["verbose"]
+
+        minim_opts = {}
+        if "minim_opts" in kwargs:
+            minim_opts = kwargs["minim_opts"]
 
         f = minimize(
             lambda x: -self.loglike(x),
@@ -445,7 +476,7 @@ class ProcessRegression(base.LikelihoodModel):
         hess = approx_fprime(f.x, lambda x: self.score(x))
         try:
             cov_params = -np.linalg.inv(hess)
-        except:
+        except Exception:
             cov_params = None
 
         rslt = ProcessRegressionResults(self, f.x, cov_params)
@@ -499,7 +530,7 @@ class ProcessRegression(base.LikelihoodModel):
 
         return self.cov.get_cov(time, sca, smo)
 
-    def predict(self, params, exog=None):
+    def predict(self, params, exog=None, *args, **kwargs):
         """
         Obtain predictions of the mean structure.
 
@@ -543,7 +574,13 @@ class ProcessRegressionResults(base.LikelihoodModelResults):
         if optim_retvals is not None:
             self.optim_retvals = optim_retvals
 
-    def predict(self, exog=None):
+    def predict(self, exog=None, transform=True, *args, **kwargs):
+
+        if not transform:
+            warnings.Warn("'transform=False' ignored in predict")
+
+        if len(args) > 0 or len(kwarg) > 0:
+            warnings.Warn("extra arguments ignored by 'predict'")
 
         return self.model.predict(self.params, exog)
 
@@ -591,7 +628,7 @@ class ProcessRegressionResults(base.LikelihoodModelResults):
 
         try:
             df["StdErr"] = np.sqrt(np.diag(self.cov_params()))
-        except:
+        except Exception:
             df["StdErr"] = np.nan
 
         if hasattr(self.model, "exog_names_full"):
