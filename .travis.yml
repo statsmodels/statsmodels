@@ -135,8 +135,8 @@ script:
   # docbuild and exit, if required
   - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; bash ${SRCDIR}/tools/ci_docbuild.sh; exit 0; fi;
   # Run tests
-  - echo pytest -n 2 ${COVERAGE_OPTS} statsmodels --skip-examples
-  - pytest ${COVERAGE_OPTS} statsmodels --skip-examples
+  - echo pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples
+  - pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples
   - ./lint.sh
 
 after_success:
