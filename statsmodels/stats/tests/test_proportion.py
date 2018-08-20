@@ -652,18 +652,21 @@ def test_score_test_2indep():
     for co in ['diff', 'ratio', 'or']:
         res = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
                                            compare=co)
-        assert_allclose(res[-1][0], res[-1][1], rtol=1e-10)
+        assert_allclose(res.prop1_null, res.prop2_null, rtol=1e-10)
 
         # check that equality case is handled
         val = 0 if co == 'diff' else 1.
         s0, pv0 = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
-                                               compare=co, value=val)[:2]
+                                               compare=co, value=val,
+                                               return_results=False)[:2]
         s1, pv1 = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
-                                               compare=co, value=val + 1e-10)[:2]
+                                               compare=co, value=val + 1e-10,
+                                               return_results=False)[:2]
         assert_allclose(s0, s1, rtol=1e-8)
         assert_allclose(pv0, pv1, rtol=1e-8)
         s1, pv1 = score_test_proportion_2indep(count1, nobs1, count2, nobs2,
-                                               compare=co, value=val - 1e-10)[:2]
+                                               compare=co, value=val - 1e-10,
+                                               return_results=False)[:2]
         assert_allclose(s0, s1, rtol=1e-8)
         assert_allclose(pv0, pv1, rtol=1e-8)
 
@@ -694,22 +697,22 @@ def test_test_2indep():
                                              compare=co, method=method,
                                              alpha=alpha, correction=False)
 
-        _, pv = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
+        res = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
                 value=low, compare=co, method=method, correction=False)
-        assert_allclose(pv, alpha, atol=1e-10)
+        assert_allclose(res.pvalue, alpha, atol=1e-10)
 
-        _, pv = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
+        res = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
                 value=upp, compare=co, method=method, correction=False)
-        assert_allclose(pv, alpha, atol=1e-10)
+        assert_allclose(res.pvalue, alpha, atol=1e-10)
 
         _, pv = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
                 value=upp, compare=co, method=method, alternative='smaller',
-                correction=False)
+                correction=False, return_results=False)
         assert_allclose(pv, alpha / 2, atol=1e-10)
 
         _, pv = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
                 value=low, compare=co, method=method, alternative='larger',
-                correction=False)
+                correction=False, return_results=False)
         assert_allclose(pv, alpha / 2, atol=1e-10)
 
     # test Miettinen/Nurminen small sample correction
@@ -718,9 +721,9 @@ def test_test_2indep():
                                          compare=co, method=method,
                                          alpha=alpha, correction=True)
 
-    _, pv = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
+    res = smprop.test_proportions_2indep(count1, nobs1, count2, nobs2,
             value=low, compare=co, method=method, correction=True)
-    assert_allclose(pv, alpha, atol=1e-10)
+    assert_allclose(res.pvalue, alpha, atol=1e-10)
 
 
 def test_score_confint_koopman_nam():
