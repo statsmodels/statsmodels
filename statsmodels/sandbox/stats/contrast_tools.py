@@ -639,7 +639,7 @@ if __name__ == '__main__':
 
     y = np.arange(12)
     x1 = np.arange(12)//4
-    x2 = np.arange(12)//2%2
+    x2 = np.arange(12)//2 % 2
 
     if 'small' in examples:
         d1, d1_labels = dummy_1d(x1)

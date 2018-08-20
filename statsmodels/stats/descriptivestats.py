@@ -223,7 +223,7 @@ class Describe(object):
         def _fun(per):
             return lambda x: scipy.stats.scoreatpercentile(x, per)
 
-        perdict = dict(('perc_%02d'%per, [_fun(per), None, None])
+        perdict = dict(('perc_%02d' % per, [_fun(per), None, None])
                        for per in (1,5,10,25,50,75,90,95,99))
 
         if 'percentiles' in stats:

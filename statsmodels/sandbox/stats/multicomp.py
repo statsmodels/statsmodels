@@ -799,7 +799,7 @@ class MultiComparison(object):
             for grp in group_order:
                 if grp not in groups:
                     raise ValueError(
-                            "group_order value '%s' not found in groups"%grp)
+                            "group_order value '%s' not found in groups" % grp)
             self.groupsunique = np.array(group_order)
             self.groupintlab = np.empty(len(data), int)
             self.groupintlab.fill(-999)  # instead of a nan
