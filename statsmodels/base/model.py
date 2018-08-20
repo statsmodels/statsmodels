@@ -1234,7 +1234,7 @@ class LikelihoodModelResults(Results):
                              'specified.'}
         else:
             # TODO: we shouldn't need use_t in get_robustcov_results
-            get_robustcov_results(self, cov_type=cov_type, use_self=True,
+            get_robustcov_results(self, cov_type=cov_type, use_self=use_self,
                                   use_t=use_t, **cov_kwds)
 
     @cache_readonly
