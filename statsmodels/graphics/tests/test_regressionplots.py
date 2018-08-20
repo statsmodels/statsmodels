@@ -13,7 +13,7 @@ from numpy.testing.utils import assert_array_less
 try:
     import matplotlib.pyplot as plt  #makes plt available for test functions
     have_matplotlib = True
-except:
+except ImportError:
     have_matplotlib = False
 
 pdf_output = False
@@ -23,6 +23,7 @@ if pdf_output:
     pdf = PdfPages("test_regressionplots.pdf")
 else:
     pdf = None
+
 
 def close_or_save(pdf, fig):
     if pdf_output:
@@ -213,6 +214,7 @@ class TestABLinePandas(TestABLine):
         mod = sm.OLS(y,X).fit()
         cls.mod = mod
 
+
 class TestAddedVariablePlot(object):
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
@@ -223,7 +225,7 @@ class TestAddedVariablePlot(object):
         n = 100
         p = 3
         exog = np.random.normal(size=(n, p))
-        lin_pred = 4 + exog[:, 0] + 0.2*exog[:, 1]**2
+        lin_pred = 4 + exog[:, 0] + 0.2 * exog[:, 1]**2
         expval = np.exp(lin_pred)
         endog = np.random.poisson(expval)
 
@@ -236,7 +238,7 @@ class TestAddedVariablePlot(object):
                     weight_str = ["Unweighted", "Weighted"][use_glm_weights]
 
                     # Run directly and called as a results method.
-                    for j in 0,1:
+                    for j in 0, 1:
 
                         if j == 0:
                             fig = plot_added_variable(results, focus_col,
@@ -245,8 +247,8 @@ class TestAddedVariablePlot(object):
                             ti = "Added variable plot"
                         else:
                             fig = results.plot_added_variable(focus_col,
-                                                 use_glm_weights=use_glm_weights,
-                                                 resid_type=resid_type)
+                                                              use_glm_weights=use_glm_weights,
+                                                              resid_type=resid_type)
                             ti = "Added variable plot (called as method)"
                         ax = fig.get_axes()[0]
 
@@ -260,6 +262,7 @@ class TestAddedVariablePlot(object):
                         ti += "Using '%s' residuals" % resid_type
                         ax.set_title(ti)
                         close_or_save(pdf, fig)
+                        close_figures()
 
 
 class TestPartialResidualPlot(object):

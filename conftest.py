@@ -26,6 +26,11 @@ def close_figures():
     """
     Fixture that closes all figures after a test function has completed
 
+    Returns
+    -------
+    closer : callable
+        Function that will close all figures when called.
+
     Notes
     -----
     Used by passing as an argument to the function that produces a plot,
@@ -33,10 +38,25 @@ def close_figures():
 
     def test_some_plot(close_figures):
         <test code>
+
+    If a function creates many figures, then these can be destroyed within a
+    test function by calling close_figures to ensure that the number of
+    figures does not become too large.
+
+    def test_many_plots(close_figures):
+        for i in range(100000):
+            plt.plot(x,y)
+            close_figures()
     """
-    yield None
     try:
-        from matplotlib.pyplot import close
-        close('all')
+        import matplotlib.pyplot
+
+        def close():
+            matplotlib.pyplot.close('all')
+
     except ImportError:
-        pass
+        def close():
+            pass
+
+    yield close
+    close()
