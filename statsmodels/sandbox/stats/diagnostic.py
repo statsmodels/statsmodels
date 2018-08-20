@@ -1046,6 +1046,8 @@ def spec_white(resid, exog):
     White, H. (1980). A heteroskedasticity-consistent covariance matrix
     estimator and a direct test for heteroscedasticity. Econometrica,
     48: 817-838.
+
+    See also het_white.
     '''
     x = np.asarray(exog)
     e = np.asarray(resid)
@@ -1056,7 +1058,6 @@ def spec_white(resid, exog):
     # add interaction terms
     i0, i1 = np.triu_indices(x.shape[1])
     exog = np.delete(x[:,i0] * x[:,i1], 0, 1)
-    assert exog.shape[1] == nvar + nvar * (nvar + 1) / 2
 
     # collinearity check - see _fit_collinear
     atol=1e-14; rtol=1e-13
@@ -1068,11 +1069,11 @@ def spec_white(resid, exog):
     # calculate test statistic
     sqe = e * e
     sqmndevs = sqe - np.mean(sqe)
-    D = np.dot(exog.T, sqmndevs)
+    d = np.dot(exog.T, sqmndevs)
     devx = exog - np.mean(exog, axis=0)
     devx *= sqmndevs[:, None]
-    B = devx.T.dot(devx)
-    stat = D.dot(np.linalg.solve(B, D))
+    b = devx.T.dot(devx)
+    stat = d.dot(np.linalg.solve(b, d))
 
     # chi-square test
     dof = devx.shape[1]
@@ -1701,5 +1702,3 @@ if __name__ == '__main__':
 
     y = x.sum(1) + 10.*(1-0.5*(x[:,1]>10))*np.random.rand(nobs)
     print(HetGoldfeldQuandt().run(y,x, 1, alternative='dec'))
-
-
