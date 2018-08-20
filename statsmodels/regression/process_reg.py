@@ -160,6 +160,19 @@ class GaussianCovariance(ProcessCovariance):
         return jsc, jsm
 
 
+def _check_args(endog, exog, exog_scale, exog_smooth, time, groups):
+
+    v = [
+        len(endog), exog.shape[0], exog_scale.shape[0],
+        exog_smooth.shape[0],
+        len(time),
+        len(groups)
+    ]
+    if min(v) != max(v):
+        msg = ("The leading dimensions of all array arguments " +
+               "must be equal.")
+        raise ValueError(msg)
+
 class ProcessRegression(base.LikelihoodModel):
     """
     Fit a Gaussian mean/variance regression model.
@@ -220,7 +233,7 @@ class ProcessRegression(base.LikelihoodModel):
             cov = GaussianCovariance()
         self.cov = cov
 
-        self._check_args(endog, exog, exog_scale, exog_smooth, time, groups)
+        _check_args(endog, exog, exog_scale, exog_smooth, time, groups)
 
         groups_ix = collections.defaultdict(lambda: [])
         for i, g in enumerate(groups):
@@ -228,19 +241,6 @@ class ProcessRegression(base.LikelihoodModel):
         self._groups_ix = groups_ix
 
         self.verbose = False
-
-    def _check_args(self, endog, exog, exog_scale, exog_smooth, time, groups):
-
-        v = [
-            len(endog), exog.shape[0], exog_scale.shape[0],
-            exog_smooth.shape[0],
-            len(time),
-            len(groups)
-        ]
-        if min(v) != max(v):
-            msg = ("The leading dimensions of all array arguments " +
-                   "must be equal.")
-            raise ValueError(msg)
 
     @classmethod
     def from_formula(cls,
@@ -416,7 +416,7 @@ class ProcessRegression(base.LikelihoodModel):
 
         # Get the log-likelihood
         score = np.zeros(len(mnpar) + len(sdpar) + len(smpar))
-        for g, ix in self._groups_ix.items():
+        for _, ix in self._groups_ix.items():
 
             # Get the covariance matrix for this person.
             cm = self.cov.get_cov(self.time[ix], sd[ix], sm[ix])
@@ -439,7 +439,7 @@ class ProcessRegression(base.LikelihoodModel):
                                             self.exog_scale[ix[i], :])
 
             # The derivatives for the smoothness parameters.
-            for i in range(len(ix)):
+            for i, _ in enumerate(ix):
                 jq = np.sum(jacs[i] * qm)
                 score[pm + pv:] += jq * sm[ix[i]] * self.exog_smooth[ix[i], :]
                 score[pm + pv:] -= 0.5 * (np.sum(jacs[i] * cmi) * sm[ix[i]] *
@@ -473,7 +473,7 @@ class ProcessRegression(base.LikelihoodModel):
                 np.sum(f.jac**2)))
             warnings.warn(msg)
 
-        hess = approx_fprime(f.x, lambda x: self.score(x))
+        hess = approx_fprime(f.x, self.score)
         try:
             cov_params = -np.linalg.inv(hess)
         except Exception:
@@ -579,7 +579,7 @@ class ProcessRegressionResults(base.LikelihoodModelResults):
         if not transform:
             warnings.Warn("'transform=False' ignored in predict")
 
-        if len(args) > 0 or len(kwarg) > 0:
+        if len(args) > 0 or len(kwargs) > 0:
             warnings.Warn("extra arguments ignored by 'predict'")
 
         return self.model.predict(self.params, exog)
