@@ -1053,7 +1053,6 @@ def spec_white(resid, exog):
     e = np.asarray(resid)
     if x.ndim == 1:
         raise ValueError('X should have a constant and at least one variable')
-    nvar = x.shape[1] - 1
 
     # add interaction terms
     i0, i1 = np.triu_indices(x.shape[1])
