@@ -1230,6 +1230,9 @@ class LikelihoodModelResults(Results):
 
     def _get_robustcov_results(self, cov_type='nonrobust', use_self=True,
                                use_t=None, **cov_kwds):
+        if use_self is False:
+            raise ValueError("use_self should have been removed long ago.  "
+                             "See GH#4401")
         from statsmodels.base.covtype import get_robustcov_results
         if cov_kwds is None:
             cov_kwds = {}
