@@ -232,6 +232,7 @@ class Power(object):
 
 
         self._counter = 0
+
         def func(x):
             kwds[key] = x
             fval = self._power_identity(**kwds)

@@ -1662,6 +1662,7 @@ def homogeneous_subsets(vals, dcrit):
     subsetsli = []
     if np.size(dcrit) == 1:
         dcrit = dcrit*np.ones((nvals, nvals))  #example numbers for experimenting
+
     def subsets(vals, indices_):
         '''recursive function for constructing homogeneous subset
 

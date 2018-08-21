@@ -65,6 +65,7 @@ def anova_oneway(y, x, seq=0):
     R2 = (ssbn/(sswn+ssbn))  #R-squared
     resstd = np.sqrt(msw) #residual standard deviation
     #print(f, prob
+
     def _fix2scalar(z): # return number
         if np.shape(z) == (1, 1): return z[0,0]
         else: return z
