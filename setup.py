@@ -32,6 +32,24 @@ SETUP_REQUIREMENTS = {'numpy': '1.11',  # released March 2016
                       'scipy': '0.18',  # released July 2016
                       }
 
+REQ_NOT_MET_MSG = """
+{0} is installed but older ({1}) than required ({2}). You must manually
+upgrade {0} before installing or install into a fresh virtualenv.
+"""
+for key in SETUP_REQUIREMENTS:
+    import importlib
+    from distutils.version import LooseVersion
+    req_ver = LooseVersion(SETUP_REQUIREMENTS[key])
+    try:
+        mod = importlib.import_module(key)
+        ver = LooseVersion(mod.__version__)
+        if ver < req_ver:
+            raise RuntimeError(REQ_NOT_MET_MSG.format(key, ver, req_ver))
+    except ImportError:
+        pass
+    except AttributeError:
+        raise RuntimeError(REQ_NOT_MET_MSG.format(key, ver, req_ver))
+
 INSTALL_REQUIREMENTS = SETUP_REQUIREMENTS.copy()
 INSTALL_REQUIREMENTS.update({'pandas': '0.19',  # released October 2016
                              'patsy': '0.4.0',  # released July 2015
