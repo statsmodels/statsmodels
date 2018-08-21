@@ -295,12 +295,6 @@ class HoltWintersResults(Results):
         the data.
     mle_retvals:  {None, scipy.optimize.optimize.OptimizeResult}
         Optimization results if the parameters were optimized to fit the data.
-
-    Methods
-    -------
-    forecast
-    predict
-    summary
     """
 
     def __init__(self, model, params, **kwargs):
@@ -356,7 +350,8 @@ class HoltWintersResults(Results):
             return self.model._predict(h=steps, **self.params).fcastvalues
 
     def summary(self):
-        """Summarize the Model
+        """
+        Summarize the fitted Model
 
         Returns
         -------

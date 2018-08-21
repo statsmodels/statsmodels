@@ -98,13 +98,17 @@ class GLMGamResults(GLMResults):
 
     **Extra Attributes**
 
-    edf : list of effective degrees of freedom for each column of the
-        design matrix.
-    hat_matrix_diag : diagonal of hat matrix
-    gcv : generalized cross-validation criterion computed as
-        `gcv = scale / (1. - hat_matrix_trace / self.nobs)**2`
-    cv : cross-validation criterion computed as
-        cv = ((resid_pearson / (1. - hat_matrix_diag))**2).sum() / self.nobs
+    edf
+        list of effective degrees of freedom for each column of the design
+        matrix.
+    hat_matrix_diag
+        diagonal of hat matrix
+    gcv
+        generalized cross-validation criterion computed as
+        ``gcv = scale / (1. - hat_matrix_trace / self.nobs)**2``
+    cv
+        cross-validation criterion computed as
+        ``cv = ((resid_pearson / (1. - hat_matrix_diag))**2).sum() / self.nobs``
 
     Notes
     -----

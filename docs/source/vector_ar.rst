@@ -105,6 +105,7 @@ Several ways to visualize the data using `matplotlib` are available.
 Plotting input time series:
 
 .. ipython:: python
+   :okwarning:
 
    @savefig var_plot_input.png
    results.plot()
