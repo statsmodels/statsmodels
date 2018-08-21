@@ -4,7 +4,7 @@ import statsmodels.api as sm
 from numpy.testing import assert_allclose, assert_equal, assert_almost_equal
 from patsy import dmatrices  # pylint: disable=E0611
 from statsmodels.regression.quantile_regression import QuantReg
-from results.results_quantile_regression import (
+from .results.results_quantile_regression import (
     biweight_chamberlain, biweight_hsheather, biweight_bofinger,
     cosine_chamberlain, cosine_hsheather, cosine_bofinger,
     gaussian_chamberlain, gaussian_hsheather, gaussian_bofinger,
