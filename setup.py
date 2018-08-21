@@ -20,6 +20,7 @@ except ImportError:
 
     HAS_CYTHON = False
 from setuptools import Extension, find_packages, setup
+from distutils.command.clean import clean
 from setuptools.dist import Distribution
 
 import versioneer
@@ -125,6 +126,17 @@ statespace_exts = [
 ]
 
 
+class CleanCommand(clean):
+    def run(self):
+        msg = """
+
+python setup.py clean is not supported.
+
+Use git clean -xfd instead
+"""
+        raise NotImplementedError(msg)
+
+
 class DeferredBuildExt(build_ext):
     """build_ext command for use when numpy headers are needed."""
 
@@ -155,6 +167,7 @@ class DeferredBuildExt(build_ext):
 
 cmdclass = versioneer.get_cmdclass()
 cmdclass['build_ext'] = DeferredBuildExt
+cmdclass['clean'] = CleanCommand
 
 
 def check_source(source_name):
