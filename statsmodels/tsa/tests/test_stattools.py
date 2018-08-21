@@ -18,6 +18,7 @@ from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw,
                                        coint, acovf, kpss,
                                        arma_order_select_ic, levinson_durbin)
 
+
 DECIMAL_8 = 8
 DECIMAL_6 = 6
 DECIMAL_5 = 5
@@ -536,8 +537,8 @@ def test_arma_order_select_ic():
                       [ 517.61019619,  496.99650196,  499.52656493],
                       [ 498.12580329,  499.75598491,  504.99255506],
                       [ 499.49225249,  504.96650341,  510.48779255]])
-    aic = DataFrame(aic_x , index=lrange(5), columns=lrange(3))
-    bic = DataFrame(bic_x , index=lrange(5), columns=lrange(3))
+    aic = DataFrame(aic_x, index=lrange(5), columns=lrange(3))
+    bic = DataFrame(bic_x, index=lrange(5), columns=lrange(3))
     assert_almost_equal(res.aic.values, aic.values, 5)
     assert_almost_equal(res.bic.values, bic.values, 5)
     assert_equal(res.aic_min_order, (1, 2))
@@ -546,6 +547,15 @@ def test_arma_order_select_ic():
     assert_(res.aic.columns.equals(aic.columns))
     assert_(res.bic.index.equals(bic.index))
     assert_(res.bic.columns.equals(bic.columns))
+
+    index = pd.date_range('2000-1-1', freq='M', periods=len(y))
+    y_series = pd.Series(y, index=index)
+    res_pd = arma_order_select_ic(y_series, max_ar=2, max_ma=1,
+                                  ic=['aic', 'bic'], trend='nc')
+    assert_almost_equal(res_pd.aic.values, aic.values[:3, :2], 5)
+    assert_almost_equal(res_pd.bic.values, bic.values[:3, :2], 5)
+    assert_equal(res_pd.aic_min_order, (2, 1))
+    assert_equal(res_pd.bic_min_order, (1, 1))
 
     res = arma_order_select_ic(y, ic='aic', trend='nc')
     assert_almost_equal(res.aic.values, aic.values, 5)
