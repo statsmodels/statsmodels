@@ -1,35 +1,28 @@
-from statsmodels.regression.linear_model import (GLS,
-                                                 WLS,
-                                                 OLS,
-                                                 GLSAR)
-from statsmodels.regression.mixed_linear_model import MixedLM
-from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.robust.robust_linear_model import RLM
-from statsmodels.discrete.discrete_model import (MNLogit,
-                                                 Logit,
-                                                 Probit,
-                                                 Poisson,
-                                                 NegativeBinomial)
-from statsmodels.regression.quantile_regression import QuantReg
-from statsmodels.duration.hazard_regression import PHReg
-from statsmodels.genmod.generalized_estimating_equations import (GEE,
-                                                                 OrdinalGEE,
-                                                                 NominalGEE)
+import statsmodels.regression.linear_model as lm
+import statsmodels.discrete.discrete_model as dm
+import statsmodels.regression.mixed_linear_model as mlm
+import statsmodels.genmod.generalized_linear_model as glm
+import statsmodels.robust.robust_linear_model as roblm
+import statsmodels.regression.quantile_regression as qr
+import statsmodels.duration.hazard_regression as hr
+import statsmodels.genmod.generalized_estimating_equations as gee
 
-GLS = GLS.from_formula
-WLS = WLS.from_formula
-OLS = OLS.from_formula
-GLSAR = GLSAR.from_formula
-MixedML = MixedLM.from_formula
-GLM = GLM.from_formula
-RLM = RLM.from_formula
-MNLogit = MNLogit.from_formula
-Logit = Logit.from_formula
-Probit = Probit.from_formula
-Poisson = Poisson.from_formula
-NegativeBinomial = NegativeBinomial.from_formula
-QuantReg = QuantReg.from_formula
-PHReg = PHReg.from_formula
-GEE = GEE.from_formula
-OrdinalGEE = OrdinalGEE.from_formula
-NominalGEE = NominalGEE.from_formula
+gls = lm.GLS.from_formula
+wls = lm.WLS.from_formula
+ols = lm.OLS.from_formula
+glsar = lm.GLSAR.from_formula
+mixedlm = mlm.MixedLM.from_formula
+glm = glm.GLM.from_formula
+rlm = roblm.RLM.from_formula
+mnlogit = dm.MNLogit.from_formula
+logit = dm.Logit.from_formula
+probit = dm.Probit.from_formula
+poisson = dm.Poisson.from_formula
+negativebinomial = dm.NegativeBinomial.from_formula
+quantreg = qr.QuantReg.from_formula
+phreg = hr.PHReg.from_formula
+gee = gee.GEE.from_formula
+ordinal_gee = gee.OrdinalGEE.from_formula
+nominal_gee = gee.NominalGEE.from_formula
+
+del lm, dm, mlm, glm, roblm, qr, hr, gee
