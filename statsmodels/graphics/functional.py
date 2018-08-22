@@ -1,13 +1,13 @@
 """Module for functional boxplots."""
+from statsmodels.compat.python import range, zip
+from statsmodels.compat.scipy import factorial
 
 from statsmodels.multivariate.pca import PCA
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
-from statsmodels.compat.python import range, zip
 from statsmodels.graphics.utils import _import_mpl
 from collections import OrderedDict
 from itertools import combinations
 import numpy as np
-from statsmodels.compat.scipy import factorial
 try:
     from scipy.optimize import differential_evolution, brute, fmin
     have_de_optim = True
@@ -16,31 +16,13 @@ except ImportError:
     have_de_optim = False
 from multiprocessing import Pool
 import itertools
-try:
-    import copyreg
-except ImportError:
-    import copy_reg as copyreg
-import types
-
 from . import utils
 
 
 __all__ = ['hdrboxplot', 'fboxplot', 'rainbowplot', 'banddepth']
 
 
-def _pickle_method(m):
-    """Handle pickling issues with class instance."""
-    if m.im_self is None:
-        return getattr, (m.im_class, m.im_func.func_name)
-    else:
-        return getattr, (m.im_self, m.im_func.func_name)
-
-
-copyreg.pickle(types.MethodType, _pickle_method)
-
-
 class HdrResults(object):
-
     """Wrap results and pretty print them."""
 
     def __init__(self, kwds):
