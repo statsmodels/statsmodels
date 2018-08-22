@@ -2388,13 +2388,13 @@ def test_endog_int():
 
     res = AR(y).fit(5)
     resf = AR(yf).fit(5)
-    assert_allclose(res.params, resf.params, atol=1e-6)
-    assert_allclose(res.bse, resf.bse, atol=1e-6)
+    assert_allclose(res.params, resf.params, atol=1e-5)
+    assert_allclose(res.bse, resf.bse, atol=1e-5)
 
     res = ARMA(y, order=(2, 1)).fit(disp=0)
     resf = ARMA(yf, order=(2, 1)).fit(disp=0)
-    assert_allclose(res.params, resf.params, atol=1e-6)
-    assert_allclose(res.bse, resf.bse, atol=1e-6)
+    assert_allclose(res.params, resf.params, atol=1e-5)
+    assert_allclose(res.bse, resf.bse, atol=1e-5)
 
     res = ARIMA(y.cumsum(), order=(1, 1, 1)).fit(disp=0)
     resf = ARIMA(yf.cumsum(), order=(1, 1, 1)).fit(disp=0)
