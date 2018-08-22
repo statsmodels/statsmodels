@@ -10,6 +10,13 @@
 Vector Autoregressions :mod:`tsa.vector_ar`
 ===========================================
 
+:mod:`statsmodels.tsa.vector_ar` contains methods that are useful
+for simultaneously modeling and analyzing multiple time series using
+:ref:`Vector Autoregressions (VAR) <var>` and
+:ref:`Vector Error Correction Models (VECM) <vecm>`.
+
+.. _var_process:
+
 VAR(p) processes
 ----------------
 
@@ -157,6 +164,37 @@ function:
    @savefig var_forecast.png
    results.plot_forecast(10)
 
+Class Reference
+~~~~~~~~~~~~~~~
+
+.. module:: statsmodels.tsa.vector_ar
+   :synopsis: Vector autoregressions and related tools
+
+.. currentmodule:: statsmodels.tsa.vector_ar
+
+.. autosummary::
+   :toctree: generated/
+
+   var_model.VAR
+   var_model.VARProcess
+   var_model.VARResults
+
+
+Post-estimation Analysis
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Several process properties and additional results after
+estimation are available for vector autoregressive processes.
+
+.. autosummary::
+   :toctree: generated/
+
+   var_model.LagOrderResults
+   hypothesis_test_results.HypothesisTestResults
+   hypothesis_test_results.NormalityTestResults
+   hypothesis_test_results.WhitenessTestResults
+
+
 Impulse Response Analysis
 -------------------------
 
@@ -208,6 +246,14 @@ the long run effects as follows:
     irf.plot_cum_effects(orth=False)
 
 
+Reference
+~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+
+   irf.IRAnalysis
+
 Forecast Error Variance Decomposition (FEVD)
 --------------------------------------------
 
@@ -235,6 +281,14 @@ They can also be visualized through the returned :class:`FEVD` object:
     @savefig var_fevd.png
     results.fevd(20).plot()
 
+
+Reference
+~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+
+   var_model.FEVD
 
 Statistical tests
 -----------------
@@ -320,21 +374,101 @@ The forecasts can be visualized using `plot_forecast`:
     @savefig dvar_forecast.png
     var.plot_forecast(2)
 
-Class Reference
----------------
-
-.. module:: statsmodels.tsa.vector_ar
-   :synopsis: Vector autoregressions and related tools
-
-.. currentmodule:: statsmodels.tsa.vector_ar
+Reference
+~~~~~~~~~
 
 .. autosummary::
    :toctree: generated/
 
-   var_model.VAR
-   var_model.VARProcess
-   var_model.VARResults
-   irf.IRAnalysis
-   var_model.FEVD
-   dynamic.DynamicVAR
+   hypothesis_test_results.HypothesisTestResults
+   hypothesis_test_results.CausalityTestResults
+   hypothesis_test_results.NormalityTestResults
+   hypothesis_test_results.WhitenessTestResults
 
+.. _vecm:
+
+Vector Error Correction Models (VECM)
+-------------------------------------
+
+Vector Error Correction Models are used to study short-run deviations from
+one or more permanent stochastic trends (unit roots). A VECM models the
+difference of a vector of time series by imposing structure that is implied
+by the assumed number of stochastic trends. :class:`VECM` is used to
+specify and estimate these models.
+
+A VECM(:math:`k_{ar}-1`) has the following form
+
+.. math:: 
+
+    \Delta y_t = \Pi y_{t-1} + \Gamma_1 \Delta y_{t-1} + \ldots 
+                   + \Gamma_{k_{ar}-1} \Delta y_{t-k_{ar}+1} + u_t
+
+where
+
+.. math:: 
+
+    \Pi = \alpha \beta'
+
+as described in chapter 7 of [1]_.
+
+A VECM(:math:`k_{ar} - 1`) with deterministic terms has the form
+
+.. math::
+
+   \Delta y_t = \alpha \begin{pmatrix}\beta' & \eta'\end{pmatrix} \begin{pmatrix}y_{t-1} \\
+                D^{co}_{t-1}\end{pmatrix} + \Gamma_1 \Delta y_{t-1} + \dots + \Gamma_{k_{ar}-1} \Delta y_{t-k_{ar}+1} + C D_t + u_t.
+
+In :math:`D^{co}_{t-1}` we have the deterministic terms which are inside
+the cointegration relation (or restricted to the cointegration relation).
+:math:`\eta` is the corresponding estimator. To pass a deterministic term
+inside the cointegration relation, we can use the `exog_coint` argument.
+For the two special cases of an intercept and a linear trend there exists
+a simpler way to declare these terms: we can pass ``"ci"`` and ``"li"``
+respectively to the `deterministic` argument. So for an intercept inside
+the cointegration relation we can either pass ``"ci"`` as `deterministic`
+or `np.ones(len(data))` as `exog_coint` if `data` is passed as the
+`endog` argument. This ensures that :math:`D_{t-1}^{co} = 1` for all
+:math:`t`.
+
+We can also use deterministic terms outside the cointegration relation.
+These are defined in :math:`D_t` in the formula above with the
+corresponding estimators in the matrix :math:`C`. We specify such terms by
+passing them to the `exog` argument. For an intercept and/or linear trend
+we again have the possibility to use `deterministic` alternatively. For
+an intercept we pass ``"co"`` and for a linear trend we pass ``"lo"`` where
+the `o` stands for `outside`.
+
+The following table shows the five cases considered in [2]_. The last
+column indicates which string to pass to the `deterministic` argument for
+each of these cases.
+
+====  ===============================  ===================================  =============
+Case  Intercept                        Slope of the linear trend            `deterministic`
+====  ===============================  ===================================  =============
+I     0                                0                                    ``"nc"``
+II    :math:`- \alpha \beta^T \mu`     0                                    ``"ci"``
+III   :math:`\neq 0`                   0                                    ``"co"``
+IV    :math:`\neq 0`                   :math:`- \alpha \beta^T \gamma`      ``"coli"``
+V     :math:`\neq 0`                   :math:`\neq 0`                       ``"colo"``
+====  ===============================  ===================================  =============
+
+Reference
+~~~~~~~~~
+
+.. autosummary::
+   :toctree: generated/
+
+   vecm.VECM
+   vecm.coint_johansen
+   vecm.select_order
+   vecm.select_coint_rank
+   vecm.VECMResults
+   vecm.CointRankResults
+
+
+References
+^^^^^^^^^^
+.. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+
+.. [2] Johansen, S. 1995. *Likelihood-Based Inference in Cointegrated *
+       *Vector Autoregressive Models*. Oxford University Press.
