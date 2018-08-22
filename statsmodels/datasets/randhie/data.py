@@ -1,4 +1,5 @@
 """RAND Health Insurance Experiment Data"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -45,44 +46,46 @@ NOTE        = """::
         (Omitted category is excellent self-rated health)
 """
 
-from numpy import recfromtxt, column_stack, array
-from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
 
-PATH = '%s/%s' % (dirname(abspath(__file__)), 'randhie.csv')
-
-def load():
+def load(as_pandas=None):
     """
     Loads the RAND HIE data and returns a Dataset class.
 
+    Parameters
     ----------
-    endog - response variable, mdvis
-    exog - design
+    as_pandas : bool
+        Flag indicating whether to return pandas DataFrames and Series
+        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
-    Load instance:
-        a class of the data with array attrbutes 'endog' and 'exog'
+    -------
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
+
+    Notes
+    -----
+    endog - response variable, mdvis
+    exog - design
     """
-    data = _get_data()
-    return du.process_recarray(data, endog_idx=0, dtype=float)
+    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
+
 
 def load_pandas():
     """
     Loads the RAND HIE data and returns a Dataset class.
 
-    ----------
+    Returns
+    -------
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
+
+    Notes
+    -----
     endog - response variable, mdvis
     exog - design
-
-    Returns
-    Load instance:
-        a class of the data with array attrbutes 'endog' and 'exog'
     """
-    from pandas import read_csv
-    data = read_csv(PATH)
-    return du.process_recarray_pandas(data, endog_idx=0)
+    return du.process_pandas(_get_data(), endog_idx=0)
+
 
 def _get_data():
-    with open(PATH, "rb") as f:
-        data = recfromtxt(f, delimiter=",", names=True, dtype=float)
-    return data
+    return du.load_csv(__file__, 'randhie.csv')

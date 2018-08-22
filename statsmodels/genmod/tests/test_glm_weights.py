@@ -50,7 +50,7 @@ from .results import res_R_var_weight as res_r
 # load data into module namespace
 from statsmodels.datasets.cpunish import load
 
-cpunish_data = load()
+cpunish_data = load(as_pandas=False)
 cpunish_data.exog[:, 3] = np.log(cpunish_data.exog[:, 3])
 cpunish_data.exog = add_constant(cpunish_data.exog, prepend=False)
 
@@ -819,7 +819,7 @@ class TestBinomialVsVarWeights(CheckWeight):
     @classmethod
     def setup_class(cls):
         from statsmodels.datasets.star98 import load
-        data = load()
+        data = load(as_pandas=False)
         data.exog /= data.exog.std(0)
         data.exog = add_constant(data.exog, prepend=False)
 

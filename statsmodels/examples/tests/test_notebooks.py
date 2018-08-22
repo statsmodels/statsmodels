@@ -12,9 +12,22 @@ try:
 except ImportError:
     pytestmark = pytest.mark.skip(reason='Required packages not available')
 
-KNOWN_FAILURES = ['distributed_estimation']
-if os.name == 'nt':
-    KNOWN_FAILURES += ['mixed_lm_example']
+try:
+    import rpy2
+    HAS_RPY2 = True
+except ImportError:
+    HAS_RPY2 = False
+
+try:
+    import joblib
+    HAS_JOBLIB = True
+except ImportError:
+    HAS_JOBLIB = False
+
+
+KNOWN_FAILURES = []
+JOBLIB_NOTEBOOKS = ['distributed_estimation']
+RPY2_NOTEBOOKS = ['mixed_lm_example', 'robust_models_1']
 
 kernel_name = 'python%s' % sys.version_info.major
 
@@ -38,12 +51,15 @@ if not nbs:
 def test_notebook(notebook):
     fullfile = os.path.abspath(notebook)
     _, filename = os.path.split(fullfile)
-    filename, _ = os.path.splitext(notebook)
-    
-    for known_fail in KNOWN_FAILURES:
-        if filename == known_fail:
-            pytest.skip('{0} is known to fail'.format(filename))
-    
+    filename, _ = os.path.splitext(filename)
+
+    if filename in KNOWN_FAILURES:
+        raise SkipTest('{0} is known to fail'.format(filename))
+    if filename in RPY2_NOTEBOOKS and not HAS_RPY2:
+        raise SkipTest('{0} requires rpy2 which is not installed'.format(filename))
+    if filename in JOBLIB_NOTEBOOKS and not JOBLIB_NOTEBOOKS:
+        raise SkipTest('{0} requires joblib which is not installed'.format(filename))
+
     with io.open(fullfile, encoding='utf-8') as f:
         nb = nbformat.read(fullfile, as_version=4)
     

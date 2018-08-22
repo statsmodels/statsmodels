@@ -1,6 +1,5 @@
-#! /usr/bin/env python
-
 """Name of dataset."""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -27,14 +26,29 @@ NOTE        = """
 Any other useful information that does not fit into the above categories.
 """
 
-import numpy as np
-from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
 
-
-def load():
+def load(as_pandas=None):
     """
     Load the data and return a Dataset class instance.
+
+    Parameters
+    ----------
+    as_pandas : bool
+        Flag indicating whether to return pandas DataFrames and Series
+        or numpy recarrays and arrays.  If True, returns pandas.
+
+    Returns
+    --------
+    Dataset instance:
+        See DATASET_PROPOSAL.txt for more information.
+
+    """
+    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
+
+
+def load_pandas():
+    """
+    Load the strikes data and return a Dataset class instance.
 
     Returns
     -------
@@ -42,22 +56,8 @@ def load():
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    ##### SET THE INDICES #####
-    #NOTE: None for exog_idx is the complement of endog_idx
-    return du.process_recarray(data, endog_idx=0, exog_idx=None, dtype=float)
-
-
-def load_pandas():
-    data = _get_data()
-    ##### SET THE INDICES #####
-    #NOTE: None for exog_idx is the complement of endog_idx
-    return du.process_recarray_pandas(data, endog_idx=0, exog_idx=None,
-                                      dtype=float)
+    return du.process_pandas(data, endog_idx=0)
 
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
-    with open(filepath + '/DatasetName.csv', 'rb') as fd:
-        data = np.recfromtxt(fd, delimiter=",", names=True, dtype=float)
-    return data
+    return du.load_csv(__file__, 'DatasetName.csv')

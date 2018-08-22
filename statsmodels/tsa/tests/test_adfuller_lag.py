@@ -14,11 +14,11 @@ from statsmodels.datasets import macrodata
 def test_adf_autolag():
     #see issue #246
     #this is mostly a unit test
-    d2 = macrodata.load().data
+    d2 = macrodata.load_pandas().data
 
     for k_trend, tr in enumerate(['nc', 'c', 'ct', 'ctt']):
         #[None:'nc', 0:'c', 1:'ct', 2:'ctt']
-        x = np.log(d2['realgdp'])
+        x = np.log(d2['realgdp'].values)
         xd = np.diff(x)
 
         #check exog

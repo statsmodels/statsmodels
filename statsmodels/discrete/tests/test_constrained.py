@@ -27,7 +27,7 @@ from statsmodels.tools.tools import add_constant
 from statsmodels import datasets
 
 
-spector_data = datasets.spector.load()
+spector_data = datasets.spector.load(as_pandas=False)
 spector_data.exog = add_constant(spector_data.exog, prepend=False)
 
 from .results import results_poisson_constrained as results

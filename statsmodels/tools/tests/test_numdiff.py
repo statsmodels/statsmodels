@@ -93,7 +93,7 @@ class TestGradMNLogit(CheckGradLoglikeMixin):
     @classmethod
     def setup_class(cls):
         #from .results.results_discrete import Anes
-        data = sm.datasets.anes96.load()
+        data = sm.datasets.anes96.load(as_pandas=False)
         exog = data.exog
         exog = sm.add_constant(exog, prepend=False)
         cls.mod = sm.MNLogit(data.endog, exog)
@@ -140,7 +140,7 @@ class TestGradMNLogit(CheckGradLoglikeMixin):
 class TestGradLogit(CheckGradLoglikeMixin):
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.spector.load()
+        data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
         #mod = sm.Probit(data.endog, data.exog)
         cls.mod = sm.Logit(data.endog, data.exog)
@@ -339,7 +339,7 @@ if __name__ == '__main__':
 
     import statsmodels.api as sm
 
-    data = sm.datasets.spector.load()
+    data = sm.datasets.spector.load(as_pandas=False)
     data.exog = sm.add_constant(data.exog, prepend=False)
     #mod = sm.Probit(data.endog, data.exog)
     mod = sm.Logit(data.endog, data.exog)
@@ -372,12 +372,12 @@ if __name__ == '__main__':
     print('cs', hesscs)
     print(maxabs(hess(test_params), hesscs))
 
-    data = sm.datasets.anes96.load()
+    data = sm.datasets.anes96.load(as_pandas=False)
     exog = data.exog
     exog = sm.add_constant(exog, prepend=False)
     res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
 
-    datap = sm.datasets.randhie.load()
+    datap = sm.datasets.randhie.load(as_pandas=False)
     nobs = len(datap.endog)
     exogp = sm.add_constant(datap.exog.view(float).reshape(nobs,-1),
                             prepend=False)

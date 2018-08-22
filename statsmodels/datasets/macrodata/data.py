@@ -1,4 +1,5 @@
 """United States Macroeconomic data"""
+from statsmodels.datasets import utils as du
 
 __docformat__ = 'restructuredtext'
 
@@ -53,15 +54,21 @@ NOTE        = """::
         realint   - Real interest rate (tbilrate - infl)
 """
 
-from numpy import recfromtxt, column_stack, array
-from pandas import DataFrame
 
-from statsmodels.datasets.utils import Dataset
-from os.path import dirname, abspath
+def load_pandas():
+    data = _get_data()
+    return du.Dataset(data=data, names=list(data.columns))
 
-def load():
+
+def load(as_pandas=None):
     """
     Load the US macro data and return a Dataset class.
+
+    Parameters
+    ----------
+    as_pandas : bool
+        Flag indicating whether to return pandas DataFrames and Series
+        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
@@ -72,22 +79,12 @@ def load():
     -----
     The macrodata Dataset instance does not contain endog and exog attributes.
     """
-    data = _get_data()
-    names = data.dtype.names
-    dataset = Dataset(data=data, names=names)
-    return dataset
+    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
 
-def load_pandas():
-    dataset = load()
-    dataset.data = DataFrame(dataset.data)
-    return dataset
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    with open(filepath + '/macrodata.csv', 'rb') as f:
-        data = recfromtxt(f, delimiter=",",
-                          names=True, dtype=float)
-    return data
+    return du.load_csv(__file__, 'macrodata.csv').astype(float)
+
 
 variable_names = ["realcons", "realgdp", "realinv"]
 

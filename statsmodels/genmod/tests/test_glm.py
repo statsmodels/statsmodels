@@ -250,7 +250,7 @@ class TestGlmGaussian(CheckModelResultsMixin):
         cls.decimal_bse = DECIMAL_3
 
         from statsmodels.datasets.longley import load
-        cls.data = load()
+        cls.data = load(as_pandas=False)
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
         cls.res1 = GLM(cls.data.endog, cls.data.exog,
                         family=sm.families.Gaussian()).fit()
@@ -359,7 +359,7 @@ class TestGlmBinomial(CheckModelResultsMixin):
 
         from statsmodels.datasets.star98 import load
         from .results.results_glm import Star98
-        data = load()
+        data = load(as_pandas=False)
         data.exog = add_constant(data.exog, prepend=False)
         cls.res1 = GLM(data.endog, data.exog, \
         family=sm.families.Binomial()).fit()
@@ -480,7 +480,7 @@ class TestGlmGamma(CheckModelResultsMixin):
 
         from statsmodels.datasets.scotland import load
         from .results.results_glm import Scotvote
-        data = load()
+        data = load(as_pandas=False)
         data.exog = add_constant(data.exog, prepend=False)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -550,7 +550,7 @@ class TestGlmPoisson(CheckModelResultsMixin, CheckComparisonMixin):
         '''
         from .results.results_glm import Cpunish
         from statsmodels.datasets.cpunish import load
-        cls.data = load()
+        cls.data = load(as_pandas=False)
         cls.data.exog[:,3] = np.log(cls.data.exog[:,3])
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
         cls.res1 = GLM(cls.data.endog, cls.data.exog,
@@ -650,7 +650,7 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
         cls.decimal_fittedvalues = DECIMAL_1
 
         from statsmodels.datasets.committee import load
-        cls.data = load()
+        cls.data = load(as_pandas=False)
         cls.data.exog[:,2] = np.log(cls.data.exog[:,2])
         interaction = cls.data.exog[:,2]*cls.data.exog[:,1]
         cls.data.exog = np.column_stack((cls.data.exog,interaction))
@@ -692,7 +692,7 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
         cls.decimal_params = DECIMAL_4
         cls.decimal_bse = DECIMAL_4
         cls.decimal_aic_R = 3
-        data = load()
+        data = load(as_pandas=False)
         data.exog[:,3] = np.log(data.exog[:,3])
         data.exog = add_constant(data.exog, prepend=True)
         exposure = [100] * len(data.endog)
@@ -817,7 +817,7 @@ def test_score_test_OLS():
 
 def test_attribute_writable_resettable():
     # Regression test for mutables and class constructors.
-    data = sm.datasets.longley.load()
+    data = sm.datasets.longley.load(as_pandas=False)
     endog, exog = data.endog, data.exog
     glm_model = sm.GLM(endog, exog)
     assert_equal(glm_model.family.link.power, 1.0)
@@ -840,7 +840,7 @@ class Test_start_params(CheckModelResultsMixin):
         cls.decimal_bse = DECIMAL_3
 
         from statsmodels.datasets.longley import load
-        cls.data = load()
+        cls.data = load(as_pandas=False)
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
         params = sm.OLS(cls.data.endog, cls.data.exog).fit().params
         cls.res1 = GLM(cls.data.endog, cls.data.exog,
@@ -1274,7 +1274,7 @@ class CheckWtdDuplicationMixin(object):
     @classmethod
     def setup_class(cls):
         from statsmodels.datasets.cpunish import load
-        cls.data = load()
+        cls.data = load(as_pandas=False)
         cls.endog = cls.data.endog
         cls.exog = cls.data.exog
         np.random.seed(1234)
@@ -1655,7 +1655,7 @@ class TestWtdTweediePower15(CheckWtdDuplicationMixin):
 def test_wtd_patsy_missing():
     from statsmodels.datasets.cpunish import load
     import pandas as pd
-    data = load()
+    data = load(as_pandas=False)
     data.exog[0, 0] = np.nan
     data.endog[[2, 4, 6, 8]] = np.nan
     data.pandas = pd.DataFrame(data.exog, columns=data.exog_name)
@@ -1978,7 +1978,7 @@ class TestConvergence(object):
         Test Binomial family with canonical logit link using star98 dataset.
         '''
         from statsmodels.datasets.star98 import load
-        data = load()
+        data = load(as_pandas=False)
         data.exog = add_constant(data.exog, prepend=False)
         cls.model = GLM(data.endog, data.exog,
                          family=sm.families.Binomial())

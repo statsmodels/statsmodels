@@ -13,7 +13,7 @@ from statsmodels.sandbox.sysreg import SUR, Sem2SLS
 # This example uses the subset of the Grunfeld data in Greene's Econometric
 # Analysis Chapter 14 (5th Edition)
 
-grun_data = sm.datasets.grunfeld.load()
+grun_data = sm.datasets.grunfeld.load(as_pandas=False)
 
 firms = ['General Motors', 'Chrysler', 'General Electric', 'Westinghouse',
         'US Steel']
@@ -74,7 +74,7 @@ print(grun_ires.params)
 # See Greene's Econometric Analysis for more information
 
 # Load the data
-macrodata = sm.datasets.macrodata.load().data
+macrodata = sm.datasets.macrodata.load(as_pandas=False).data
 
 # Not needed, but make sure the data is sorted
 macrodata = np.sort(macrodata, order=['year','quarter'])

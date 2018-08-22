@@ -15,7 +15,7 @@ if __name__ == '__main__':
                             default_latex_fmt, default_html_fmt)
     import numpy as np
 
-    data = load()
+    data = load(as_pandas=False)
     data.exog = sm.tools.add_constant(data.exog, prepend=False)
 
     resols = sm.OLS(data.endog, data.exog).fit()

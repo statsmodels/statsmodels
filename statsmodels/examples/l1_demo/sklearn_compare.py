@@ -33,7 +33,7 @@ use_spector = False
 #### Load data
 ## The Spector and Mazzeo (1980) data from statsmodels
 if use_spector:
-    spector_data = sm.datasets.spector.load()
+    spector_data = sm.datasets.spector.load(as_pandas=False)
     X = spector_data.exog
     Y = spector_data.endog
 else:

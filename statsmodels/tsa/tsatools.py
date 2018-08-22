@@ -167,7 +167,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     --------
 
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.macrodata.load()
+    >>> data = sm.datasets.macrodata.load(as_pandas=False)
     >>> data = data.data[['year','quarter','realgdp','cpi']]
     >>> data = sm.tsa.add_lag(data, 'realgdp', lags=2)
 

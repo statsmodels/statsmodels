@@ -15,9 +15,9 @@ from statsmodels.datasets import macrodata
 import statsmodels.tsa.stattools as tsa_stats
 
 # some example data
-mdata = macrodata.load().data
-mdata = mdata[['realgdp','realcons']]
-data = mdata.view((float,2))
+mdata = macrodata.load_pandas().data
+mdata = mdata[['realgdp','realcons']].values
+data = mdata
 data = np.diff(np.log(data), axis=0)
 
 #R: lmtest:grangertest

@@ -370,7 +370,7 @@ if __name__ == '__main__': #pragma : no cover
     from scipy.optimize.optimize import approx_fhess_p
     import numpy as np
 
-    data = sm.datasets.spector.load()
+    data = sm.datasets.spector.load(as_pandas=False)
     data.exog = sm.add_constant(data.exog, prepend=False)
     mod = sm.Probit(data.endog, data.exog)
     res = mod.fit(method="newton")

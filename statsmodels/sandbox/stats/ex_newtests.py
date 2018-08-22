@@ -4,7 +4,7 @@ from .diagnostic import unitroot_adf
 
 import statsmodels.datasets.macrodata.data as macro
 
-macrod = macro.load().data
+macrod = macro.load(as_pandas=False).data
 
 print(macro.NOTE)
 

@@ -1,6 +1,8 @@
-#! /usr/bin/env python
-
 """Mauna Loa Weekly Atmospheric CO2 Data"""
+import pandas as pd
+
+from statsmodels.datasets import utils as du
+
 
 __docformat__ = 'restructuredtext'
 
@@ -38,42 +40,31 @@ NOTE        = """::
     The data returned by load_pandas contains the dates as the index.
 """
 
-import numpy as np
-from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
 
-import pandas as pd
+def load_pandas():
+    data = _get_data()
+    index = pd.date_range(start=str(data['date'][0]), periods=len(data), freq='W-SAT')
+    dataset = data[['co2']]
+    dataset.index = index
+    return du.Dataset(data=dataset, names=list(data.columns))
 
-def load():
+
+def load(as_pandas=None):
     """
     Load the data and return a Dataset class instance.
+
+    Parameters
+    ----------
+    as_pandas : bool
+        Flag indicating whether to return pandas DataFrames and Series
+        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
     Dataset instance:
         See DATASET_PROPOSAL.txt for more information.
     """
-    data = _get_data()
-    names = data.dtype.names
-    return du.Dataset(data=data, names=names)
-
-
-def load_pandas():
-    data = load()
-    # pandas <= 0.12.0 fails in the to_datetime regex on Python 3
-    index = pd.DatetimeIndex(start=data.data['date'][0].decode('utf-8'),
-                             periods=len(data.data), freq='W-SAT')
-    dataset = pd.DataFrame(data.data['co2'], index=index, columns=['co2'])
-    #NOTE: this is how I got the missing values in co2.csv
-    #new_index = pd.DatetimeIndex(start='1958-3-29', end=index[-1],
-    #                             freq='W-SAT')
-    #data.data = dataset.reindex(new_index)
-    data.data = dataset
-    return data
-
+    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas, retain_index=True)
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    with open(filepath + '/co2.csv', 'rb') as f:
-        data = np.recfromtxt(f, delimiter=",", names=True, dtype=['a8', float])
-    return data
+    return du.load_csv(__file__, 'co2.csv')

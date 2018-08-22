@@ -47,7 +47,7 @@ def test_bking1d():
                 -92.98669, -51.91707, -.7313812, 43.22938, 64.62762, 64.07226,
                 59.35707, 67.06026, 91.87247, 124.4591, 151.2402, 163.0648,
                 154.6432])
-    X = macrodata.load().data['realinv']
+    X = macrodata.load_pandas().data['realinv'].values
     Y = bkfilter(X, 6, 32, 12)
     assert_almost_equal(Y,bking_results,4)
 

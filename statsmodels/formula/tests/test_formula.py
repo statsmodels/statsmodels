@@ -18,7 +18,7 @@ class CheckFormulaOLS(object):
 
     @classmethod
     def setup_class(cls):
-        cls.data = load()
+        cls.data = load(as_pandas=False)
 
     def test_endog_names(self):
         assert self.model.endog_names == 'TOTEMP'
@@ -55,14 +55,6 @@ class TestFormulaDict(CheckFormulaOLS):
         data = dict((k, v.tolist()) for k, v in iteritems(load_pandas().data))
         cls.model = ols(longley_formula, data)
         super(TestFormulaDict, cls).setup_class()
-
-
-class TestFormulaRecArray(CheckFormulaOLS):
-    @classmethod
-    def setup_class(cls):
-        data = load().data
-        cls.model = ols(longley_formula, data)
-        super(TestFormulaRecArray, cls).setup_class()
 
 
 def test_tests():

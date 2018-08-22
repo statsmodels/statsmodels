@@ -201,7 +201,7 @@ from statsmodels.graphics.api import abline_plot
 from statsmodels.formula.api import ols, rlm
 
 
-prestige = sm.datasets.get_rdataset("Duncan", "car", cache=True).data
+prestige = sm.datasets.get_rdataset("Duncan", "carData", cache=True).data
 
 
 print(prestige.head(10))

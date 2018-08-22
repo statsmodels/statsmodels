@@ -67,7 +67,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     Examples (needs updating)
     --------
     >>> import statsmodels as sm
-    >>> data = sm.datasets.longley.load()
+    >>> data = sm.datasets.longley.load(as_pandas=False)
     >>> data.exog = sm.add_constant(data.exog)
     >>> ols_results = sm.OLS(data.endog, data.exog).results
     >>> print ols_results.summary()
@@ -947,7 +947,7 @@ class Summary(object):
 
 if __name__ == "__main__":
     import statsmodels.api as sm
-    data = sm.datasets.longley.load()
+    data = sm.datasets.longley.load(as_pandas=False)
     data.exog = sm.add_constant(data.exog)
     res = sm.OLS(data.endog, data.exog).fit()
     #summary(
