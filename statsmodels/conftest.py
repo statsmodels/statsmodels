@@ -21,6 +21,14 @@ def pytest_runtest_setup(item):
         pytest.skip("skipping due to --skip-examples")
 
 
+def pytest_configure(config):
+    try:
+        import matplotlib
+        matplotlib.use('agg')
+    except ImportError:
+        pass
+
+
 @pytest.fixture()
 def close_figures():
     """
