@@ -34,10 +34,10 @@ structure is within statsmodels.tsa is
  - arima_model : univariate ARMA process, estimation with conditional
    and exact maximum likelihood and conditional least-squares
  - statespace : Comprehensive statespace model specification and estimation. See
-   the :ref:`statespace documentation. <statespace>`.
+   the :ref:`statespace documentation <statespace>`.
  - vector_ar, var : vector autoregressive process (VAR) and vector error correction
    models, estimation, impulse response analysis, forecast error variance decompositions,
-   and data visualization tools. See the :ref:`vector_ar documentation. <var>`.
+   and data visualization tools. See the :ref:`vector_ar documentation <var>`.
  - kalmanf : estimation classes for ARMA and other models with exact MLE using
    Kalman Filter
  - arma_process : properties of arma processes with given parameters, this

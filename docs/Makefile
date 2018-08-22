@@ -2,7 +2,7 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    =-j 2
+SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 SPHINXPROJ    = statsmodels
 SOURCEDIR     = source
@@ -23,24 +23,16 @@ ALLSPHINXOPTS   = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS)
 
 # Put it first so that "make" without argument is like "make help".
 help:
-	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(ALLSPHINXOPTS) $(O)
 
 .PHONY: help Makefile
 
-clean:
-	-rm -rf $(BUILDDIR)/*
-	-rm -rf source/generated/
-	-rm -rf source/generated/examples/notebooks/
-	-rm -rf source/dev/generated/
-	-rm -rf ../examples/executed/
-
-cleancache:
+cleanall: 
+	@$(SPHINXBUILD) -M clean "$(SOURCEDIR)" "$(BUILDDIR)" $(ALLSPHINXOPTS) $(O)
 	-rm source/examples/generated/*
 	-rm -rf source/examples/notebooks/generated/*
 	-rm -rf ../tools/hash_dict.pickle
 	-rm -rf source/datasets/generated/*
-
-cleanall: clean cleancache
 
 notebooks:
 	@echo "Generating notebooks from examples/notebooks folder"
@@ -58,7 +50,8 @@ html:
 	@echo "Generating notebooks from examples/notebooks folder"
 	$(TOOLSPATH)$(NOTEBOOKBUILD) --parallel --report-errors --skip-existing
 	@echo "Running sphinx-build"
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@echo @$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(ALLSPHINXOPTS) $(O)
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(ALLSPHINXOPTS) $(O)
 	@echo "Copying rendered example notebooks"
 	mkdir -p $(BUILDDIR)/html/examples/notebooks/generated
 	cp source/examples/notebooks/generated/*html $(BUILDDIR)/html/examples/notebooks/generated
@@ -70,4 +63,4 @@ html:
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %: Makefile
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(ALLSPHINXOPTS) $(O)
