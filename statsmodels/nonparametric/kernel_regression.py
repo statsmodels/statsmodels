@@ -42,7 +42,6 @@ from ._kernel_base import GenericKDE, EstimatorSettings, gpke, \
     LeaveOneOut, _get_type_pos, _adjust_shape, _compute_min_std_IQR
 
 
-
 __all__ = ['KernelReg', 'KernelCensoredReg']
 
 
@@ -57,9 +56,9 @@ class KernelReg(GenericKDE):
 
     Parameters
     ----------
-    endog: list with one element which is array_like
+    endog: array-like
         This is the dependent variable.
-    exog: list
+    exog: array-like
         The training data for the independent variable(s)
         Each element in the list is a separate variable
     var_type: str
@@ -74,9 +73,10 @@ class KernelReg(GenericKDE):
         'll' local Linear estimator.  Default is 'll'
     bw: str or array_like, optional
         Either a user-specified bandwidth or the method for bandwidth
-        selection.  If a string, valid values are 'cv_ls' (least-squares
+        selection. If a string, valid values are 'cv_ls' (least-squares
         cross-validation) and 'aic' (AIC Hurvich bandwidth estimation).
-        Default is 'cv_ls'.
+        Default is 'cv_ls'. User specified bandwidth must have as many
+        entries as the number of variables.
     defaults: EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation.
 
@@ -98,6 +98,11 @@ class KernelReg(GenericKDE):
         self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
         self._set_defaults(defaults)
+        if not isinstance(bw, string_types):
+            bw = np.asarray(bw)
+            if len(bw) != self.k_vars:
+                raise ValueError('bw must have the same dimension as the '
+                                 'number of variables.')
         if not self.efficient:
             self.bw = self._compute_reg_bw(bw)
         else:

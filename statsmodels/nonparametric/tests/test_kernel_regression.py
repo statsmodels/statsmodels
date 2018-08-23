@@ -330,6 +330,14 @@ class TestKernelReg(KernelRegressionTestBase):
         npt.assert_equal(model.bw, bw_user)
 
 
+def test_invalid_bw():
+    # GH4873
+    x = np.arange(400)
+    y = x ** 2
+    with pytest.raises(ValueError):
+        nparam.KernelReg(x, y, 'c', bw=[12.5, 1.])
+
+
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__, '-vvs', '-x', '--pdb'])
