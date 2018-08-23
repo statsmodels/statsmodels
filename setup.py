@@ -307,4 +307,5 @@ setup(name=DISTNAME,
       install_requires=INSTALL_REQUIRES,
       extras_require=EXTRAS_REQUIRE,
       zip_safe=False,
+      data_files=[('', ['LICENSE.txt'])]
       )
