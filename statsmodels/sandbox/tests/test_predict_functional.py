@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import pytest
 import statsmodels.api as sm
-from numpy.testing import dec
 
 # If true, the output is written to a multi-page pdf file.
 pdf_output = False
