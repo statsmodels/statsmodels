@@ -3,6 +3,11 @@
 """
 This module implements likelihood-based estimation (MLE) of Gaussian models for
 finite-dimensional observations made on infinite-dimensional processes.
+
+The implementation is tailored to regression-style analyses in which the mean
+and covariance structures are parameterized in terms of covariates.  The fitting
+is based on a grouped dataset.  The repeated observations within a group are related
+through the Gaussian covariance model.
 """
 
 import numpy as np
@@ -482,10 +487,13 @@ class ProcessRegression(base.LikelihoodModel):
         if "minim_opts" in kwargs:
             minim_opts = kwargs["minim_opts"]
 
+        if start_params is None:
+            start_params = self._get_start()
+
         f = minimize(
             lambda x: -self.loglike(x),
             method=method,
-            x0=self._get_start(),
+            x0=start_params,
             jac=lambda x: -self.score(x),
             options=minim_opts)
 
