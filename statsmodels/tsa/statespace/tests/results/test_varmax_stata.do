@@ -94,7 +94,7 @@ outsheet pred* dyn* fcas* using results_var_stata.csv, comma replace
 // VARMA(1,1)
 // Note: Stata does not have this built-in, so we need to create the state space form ourselves
 // This replicates example 4 from the Stata documentation
-use http://www.stata-press.com/data/r12/manufac, clear
+use https://www.stata-press.com/data/r12/manufac, clear
 
 gen dlncaputil = D.lncaputil
 gen dlnhours = D.lnhours

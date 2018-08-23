@@ -25,7 +25,7 @@ Using Datasets from Stata
 Using Datasets from R
 ---------------------
 
-The `Rdatasets project <http://vincentarelbundock.github.io/Rdatasets/>`__ gives access to the datasets available in R's core datasets package and many other common R packages. All of these datasets are available to statsmodels by using the :func:`get_rdataset` function. The actual data is accessible by the ``data`` attribute. For example:
+The `Rdatasets project <https://vincentarelbundock.github.io/Rdatasets/>`__ gives access to the datasets available in R's core datasets package and many other common R packages. All of these datasets are available to statsmodels by using the :func:`get_rdataset` function. The actual data is accessible by the ``data`` attribute. For example:
 
 .. ipython:: python
 

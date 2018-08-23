@@ -6,7 +6,7 @@ See also the packages "vars" and "MTS"
 
 Data from:
 
-http://www.stata-press.com/data/r14/lutkepohl2.dta
+https://www.stata-press.com/data/r14/lutkepohl2.dta
 
 Author: Chad Fulton
 License: Simplified-BSD

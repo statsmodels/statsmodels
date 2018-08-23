@@ -233,8 +233,8 @@ from statsmodels.compat.python import urlopen
 from numpy.testing import assert_almost_equal
 import pandas
 import patsy
-medpar = pandas.read_csv(urlopen('http://vincentarelbundock.github.com/Rdatasets/csv/COUNT/medpar.csv'))
-mdvis = pandas.read_csv(urlopen('http://vincentarelbundock.github.com/Rdatasets/csv/COUNT/mdvis.csv'))
+medpar = pandas.read_csv(urlopen('https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/csv/COUNT/medpar.csv'))
+mdvis = pandas.read_csv(urlopen('https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/csv/COUNT/mdvis.csv'))
 
 # NB-2
 '''

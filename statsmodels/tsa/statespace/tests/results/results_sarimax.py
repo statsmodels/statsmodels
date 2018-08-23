@@ -6,9 +6,9 @@ See also Stata time series documentation.
 
 Data from:
 
-http://www.stata-press.com/data/r12/wpi1
-http://www.stata-press.com/data/r12/air2
-http://www.stata-press.com/data/r12/friedman2
+https://www.stata-press.com/data/r12/wpi1
+https://www.stata-press.com/data/r12/air2
+https://www.stata-press.com/data/r12/friedman2
 
 Author: Chad Fulton
 License: Simplified-BSD

@@ -22,7 +22,7 @@ How does statsmodels handle missing data?
 
 Missing data can be handled via the ``missing`` keyword argument. Every model takes this keyword. You can find more information in the docstring of :class:`statsmodels.base.Model <base.model.Model>`. 
 
-.. `Model class <http://www.statsmodels.org/devel/dev/generated/statsmodels.base.model.Model.html#statsmodels.base.model.Model>`_.
+.. `Model class <https://www.statsmodels.org/devel/dev/generated/statsmodels.base.model.Model.html#statsmodels.base.model.Model>`_.
 
 .. _build-faq:
 

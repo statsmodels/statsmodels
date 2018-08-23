@@ -1,5 +1,5 @@
 // Dataset
-use http://www.stata-press.com/data/r12/wpi1, clear
+use https://www.stata-press.com/data/r12/wpi1, clear
 rename t time
 
 set more off

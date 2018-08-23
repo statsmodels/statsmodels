@@ -14,7 +14,7 @@ from statsmodels.formula.api import ols
 
 #### Load the Data
 
-# We can use a utility function to load any R dataset available from the great <a href="http://vincentarelbundock.github.com/Rdatasets/">Rdatasets package</a>.
+# We can use a utility function to load any R dataset available from the great <a href="https://vincentarelbundock.github.io/Rdatasets/">Rdatasets package</a>.
 
 prestige = sm.datasets.get_rdataset("Duncan", "carData", cache=True).data
 
