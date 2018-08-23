@@ -30,8 +30,6 @@ from __future__ import division
 from statsmodels.compat.python import PY3
 
 import warnings
-from warnings import catch_warnings
-import sys
 
 import numpy as np
 from numpy.testing import (assert_raises, assert_allclose)
@@ -205,11 +203,12 @@ class TestGlmPoissonPwNr(CheckWeight):
         #modd = discrete.Poisson(cpunish_data.endog, cpunish_data.exog)
         cls.res2 = res_stata.results_poisson_pweight_nonrobust
 
-    @pytest.mark.xfail(reason='Known to fail')
+    # TODO: find more informative reasons why these fail
+    @pytest.mark.xfail(reason='Known to fail', strict=True)
     def test_basic(self):
         super(TestGlmPoissonPwNr, self).test_basic()
 
-    @pytest.mark.xfail(reason='Known to fail')
+    @pytest.mark.xfail(reason='Known to fail', strict=True)
     def test_compare_optimizers(self):
         super(TestGlmPoissonPwNr, self).test_compare_optimizers()
 
