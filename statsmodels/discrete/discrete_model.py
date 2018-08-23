@@ -1436,7 +1436,7 @@ class GeneralizedPoisson(CountModel):
             self._transparams = True
         else:
             if use_transparams:
-                warnings.warn("Paramter \"use_transparams\" is ignored",
+                warnings.warn('Parameter "use_transparams" is ignored',
                               RuntimeWarning)
             self._transparams = False
 
