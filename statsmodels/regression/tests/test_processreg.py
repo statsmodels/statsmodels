@@ -74,6 +74,9 @@ def test_arrays():
     yhat0 = preg.predict(params=f.params, exog=x_mean)
     assert_equal(yhat, yhat0)
 
+    # Smoke test t-test
+    f.t_test(np.eye(len(f.params)))
+
 def test_formulas():
 
     np.random.seed(8482)
@@ -125,6 +128,9 @@ def test_formulas():
     assert_equal(yhat, yhatm)
     yhat0 = preg.predict(params=f.params, exog=df)
     assert_equal(yhat, yhat0)
+
+    # Smoke test t-test
+    f.t_test(np.eye(len(f.params)))
 
 
 # Test the score functions using numerical derivatives.

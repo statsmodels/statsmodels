@@ -229,6 +229,22 @@ class ProcessRegression(base.LikelihoodModel):
             groups=groups,
             **kwargs)
 
+        # Create parameter names
+        xnames = []
+        if hasattr(exog, "columns"):
+            xnames = list(exog.columns)
+        else:
+            xnames = ["Mean%d" % j for j in range(exog.shape[1])]
+        if hasattr(exog_scale, "columns"):
+            xnames += list(exog_scale.columns)
+        else:
+            xnames += ["Scale%d" % j for j in range(exog_scale.shape[1])]
+        if hasattr(exog_smooth, "columns"):
+            xnames += list(exog_smooth.columns)
+        else:
+            xnames += ["Smooth%d" % j for j in range(exog_smooth.shape[1])]
+        self.data.param_names = xnames
+
         if cov is None:
             cov = GaussianCovariance()
         self.cov = cov
@@ -304,7 +320,7 @@ class ProcessRegression(base.LikelihoodModel):
 
         mod.data.scale_design_info = scale_design_info
         mod.data.smooth_design_info = smooth_design_info
-        mod.exog_names_full = mod.exog_names + scale_names + smooth_names
+        mod.data.param_names = mod.exog_names + scale_names + smooth_names
 
         return mod
 
@@ -574,6 +590,8 @@ class ProcessRegressionResults(base.LikelihoodModelResults):
         if optim_retvals is not None:
             self.optim_retvals = optim_retvals
 
+        self.df_resid = model.endog.shape[0] - len(params)
+
     def predict(self, exog=None, transform=True, *args, **kwargs):
 
         if not transform:
@@ -616,7 +634,7 @@ class ProcessRegressionResults(base.LikelihoodModelResults):
         return self.model.covariance(time, self.scale_params,
                                      self.smooth_params, scale, smooth)
 
-    def summary(self):
+    def summary(self, alpha=0.05):
 
         df = pd.DataFrame()
         pm = self.model.exog.shape[1]
@@ -624,23 +642,25 @@ class ProcessRegressionResults(base.LikelihoodModelResults):
         ps = self.model.exog_smooth.shape[1]
 
         df["Type"] = ["Mean"] * pm + ["Scale"] * pv + ["Smooth"] * ps
-        df["Estimate"] = self.params
+        df["coef"] = self.params
 
         try:
-            df["StdErr"] = np.sqrt(np.diag(self.cov_params()))
+            df["std err"] = np.sqrt(np.diag(self.cov_params()))
         except Exception:
-            df["StdErr"] = np.nan
+            df["std err"] = np.nan
 
-        if hasattr(self.model, "exog_names_full"):
-            df.index = self.model.exog_names_full
-        else:
-            ix = ["Mean%d" % j for j in range(pm)]
-            ix += ["Scale%d" % j for j in range(pv)]
-            ix += ["Smooth%d" % j for j in range(ps)]
-            df.index = ix
+        from scipy.stats.distributions import norm
+        df["t"] = df.coef / df["std err"]
+        df["P>|t|"] = norm.cdf(2 * (1 - np.abs(df.t)))
+
+        f = norm.ppf(1 - alpha / 2)
+        df["[%.3f" % (alpha / 2)] = df.coef - f * df["std err"]
+        df["%.3f]" % (1 - alpha / 2)] = df.coef + f * df["std err"]
+
+        df.index = self.model.data.param_names
 
         summ = summary2.Summary()
-        summ.add_title("Process Regression Results")
+        summ.add_title("Gaussian process regression results")
         summ.add_df(df)
 
         return summ
