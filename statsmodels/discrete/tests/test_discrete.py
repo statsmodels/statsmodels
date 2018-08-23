@@ -77,11 +77,7 @@ class CheckModelResults(CheckModelMixin):
     def test_zstat(self):
         assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_4)
 
-    @pytest.mark.xfail(reason="No idea!  But this test didn't get run at all "
-                              "until GH#4506, so at least now we know it's "
-                              "broken.",
-                       strict=True)
-    def pvalues(self):
+    def test_pvalues(self):
         assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL_4)
 
     def test_cov_params(self):
@@ -1050,7 +1046,18 @@ class TestPoissonNewton(CheckModelResults):
         super(TestPoissonNewton, self).test_cov_params()
 
 
-class TestNegativeBinomialNB2Newton(CheckModelResults):
+class CheckNegBinMixin(object):
+    # Test methods shared by TestNegativeBinomialXYZ classes
+
+    @pytest.mark.xfail(reason="pvalues do not match, in some cases wrong size",
+                       strict=True, raises=AssertionError)
+    def test_pvalues(self):
+        assert_almost_equal(self.res1.pvalues,
+                            self.res2.pvalues,
+                            DECIMAL_4)
+
+
+class TestNegativeBinomialNB2Newton(CheckNegBinMixin, CheckModelResults):
 
     @classmethod
     def setup_class(cls):
@@ -1096,7 +1103,7 @@ class TestNegativeBinomialNB2Newton(CheckModelResults):
                             self.res2.fittedvalues[:10], DECIMAL_3)
 
 
-class TestNegativeBinomialNB1Newton(CheckModelResults):
+class TestNegativeBinomialNB1Newton(CheckNegBinMixin, CheckModelResults):
 
     @classmethod
     def setup_class(cls):
@@ -1135,7 +1142,7 @@ class TestNegativeBinomialNB1Newton(CheckModelResults):
         pass
 
 
-class TestNegativeBinomialNB2BFGS(CheckModelResults):
+class TestNegativeBinomialNB2BFGS(CheckNegBinMixin, CheckModelResults):
 
     @classmethod
     def setup_class(cls):
@@ -1183,7 +1190,7 @@ class TestNegativeBinomialNB2BFGS(CheckModelResults):
                             self.res2.fittedvalues[:10], DECIMAL_3)
 
 
-class TestNegativeBinomialNB1BFGS(CheckModelResults):
+class TestNegativeBinomialNB1BFGS(CheckNegBinMixin, CheckModelResults):
 
     @classmethod
     def setup_class(cls):
@@ -1221,12 +1228,11 @@ class TestNegativeBinomialNB1BFGS(CheckModelResults):
         pass
 
 
-class TestNegativeBinomialGeometricBFGS(CheckModelResults):
+class TestNegativeBinomialGeometricBFGS(CheckNegBinMixin, CheckModelResults):
     # Cannot find another implementation of the geometric to cross-check results
     # we only test fitted values because geometric has fewer parameters
     # than nb1 and nb2
     # and we want to make sure that predict() np.dot(exog, params) works
-
 
     @classmethod
     def setup_class(cls):
@@ -1859,7 +1865,7 @@ class TestGeneralizedPoisson_underdispersion(object):
                         rtol=0.01)
 
 
-class TestNegativeBinomialPNB2Newton(CheckModelResults):
+class TestNegativeBinomialPNB2Newton(CheckNegBinMixin, CheckModelResults):
 
     @classmethod
     def setup_class(cls):
@@ -1908,7 +1914,7 @@ class TestNegativeBinomialPNB2Newton(CheckModelResults):
                         self.res2.fittedvalues[:10])
 
 
-class TestNegativeBinomialPNB1Newton(CheckModelResults):
+class TestNegativeBinomialPNB1Newton(CheckNegBinMixin, CheckModelResults):
 
     @classmethod
     def setup_class(cls):
@@ -1950,7 +1956,7 @@ class TestNegativeBinomialPNB1Newton(CheckModelResults):
                         atol=1e-3, rtol=1e-3)
 
 
-class TestNegativeBinomialPNB2BFGS(CheckModelResults):
+class TestNegativeBinomialPNB2BFGS(CheckNegBinMixin, CheckModelResults):
 
     @classmethod
     def setup_class(cls):
@@ -2004,7 +2010,7 @@ class TestNegativeBinomialPNB2BFGS(CheckModelResults):
                         atol=1e-3, rtol=1e-3)
 
 
-class TestNegativeBinomialPNB1BFGS(CheckModelResults):
+class TestNegativeBinomialPNB1BFGS(CheckNegBinMixin, CheckModelResults):
 
     @classmethod
     def setup_class(cls):
