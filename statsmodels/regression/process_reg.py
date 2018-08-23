@@ -476,7 +476,7 @@ class ProcessRegression(base.LikelihoodModel):
 
         return score
 
-    def fit(self, start_params=None, method='BFGS', maxiter=100, full_output=True,
+    def fit(self, start_params=None, method=None, maxiter=100, full_output=True,
             disp=True, fargs=(), callback=None, retall=False,
             skip_hessian=False, **kwargs):
 
@@ -490,17 +490,34 @@ class ProcessRegression(base.LikelihoodModel):
         if start_params is None:
             start_params = self._get_start()
 
-        f = minimize(
-            lambda x: -self.loglike(x),
-            method=method,
-            x0=start_params,
-            jac=lambda x: -self.score(x),
-            options=minim_opts)
+        if type(method) is str:
+            method = [method]
+        elif method is None:
+            method = ["powell", "bfgs"]
 
-        if not f.success:
-            msg = ("Fitting did not converge, |gradient|=%.6f" % np.sqrt(
-                np.sum(f.jac**2)))
-            warnings.warn(msg)
+        for j, meth in enumerate(method):
+
+            if meth in ("powell",):
+                jac = None
+            else:
+                jac = lambda x: -self.score(x)
+
+            f = minimize(
+                lambda x: -self.loglike(x),
+                method=meth,
+                x0=start_params,
+                jac=jac,
+                options=minim_opts)
+
+            if not f.success:
+                msg = ("Fitting did not converge, |gradient|=%.6f" % (np.sqrt(
+                    np.sum(f.jac**2))))
+                if j < len(meth) - 1:
+                    msg += ", trying %s next..." % meth[j+1]
+                warnings.warn(msg)
+
+            if np.isfinite(f.x).all():
+                start_params = f.x
 
         hess = approx_fprime(f.x, self.score)
         try:
