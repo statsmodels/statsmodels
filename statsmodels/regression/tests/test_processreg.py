@@ -62,10 +62,17 @@ def test_arrays():
 
     # Test the fitted covariance matrix
     cv = f.covariance(time[0:5], x_sc[0:5, :], x_sm[0:5, :])
-    assert_allclose(cv, cv.T)
+    assert_allclose(cv, cv.T)  # Check symmetry
     a, _ = np.linalg.eig(cv)
-    assert_equal(a > 0, True)
+    assert_equal(a > 0, True)  # Check PSD
 
+    # Test predict
+    yhat = f.predict()
+    assert_equal(np.corrcoef(yhat, y)[0, 1] > 0.75, True)
+    yhatm = f.predict(exog=x_mean)
+    assert_equal(yhat, yhatm)
+    yhat0 = preg.predict(params=f.params, exog=x_mean)
+    assert_equal(yhat, yhat0)
 
 def test_formulas():
 
@@ -110,6 +117,14 @@ def test_formulas():
     assert_allclose(cv, cv.T)
     a, _ = np.linalg.eig(cv)
     assert_equal(a > 0, True)
+
+    # Test predict
+    yhat = f.predict()
+    assert_equal(np.corrcoef(yhat, y)[0, 1] > 0.75, True)
+    yhatm = f.predict(exog=df)
+    assert_equal(yhat, yhatm)
+    yhat0 = preg.predict(params=f.params, exog=df)
+    assert_equal(yhat, yhat0)
 
 
 # Test the score functions using numerical derivatives.
