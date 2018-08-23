@@ -1520,10 +1520,19 @@ class RegressionResults(base.LikelihoodModelResults):
     def centered_tss(self):
         model = self.model
         weights = getattr(model, 'weights', None)
+        sigma = getattr(model, 'sigma', None)
         if weights is not None:
-            return np.sum(weights * (
-                model.endog - np.average(model.endog, weights=weights))**2)
-        else:  # this is probably broken for GLS
+            mean = np.average(model.endog, weights=weights)
+            return np.sum(weights * (model.endog - mean)**2)
+        elif sigma is not None:
+            # Exactly matches WLS when sigma is diagonal
+            iota = np.ones_like(model.endog)
+            iota = model.whiten(iota)
+            mean = model.wendog.dot(iota) / iota.dot(iota)
+            err = model.endog - mean
+            err = model.whiten(err)
+            return np.sum(err**2)
+        else:
             centered_endog = model.wendog - model.wendog.mean()
             return np.dot(centered_endog, centered_endog)
 
