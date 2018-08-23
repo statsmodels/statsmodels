@@ -47,7 +47,8 @@ import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 from statsmodels.emplike.elregress import _ELRegOpts
 import warnings
-from statsmodels.tools.sm_exceptions import InvalidTestWarning
+from statsmodels.tools.sm_exceptions import (InvalidTestWarning,
+                                             MissingDataError)
 
 # need import in module instead of lazily to copy `__doc__`
 from statsmodels.regression._prediction import PredictionResults
@@ -195,6 +196,17 @@ class RegressionModel(base.LikelihoodModel):
     def __init__(self, endog, exog, **kwargs):
         super(RegressionModel, self).__init__(endog, exog, **kwargs)
         self._data_attr.extend(['pinv_wexog', 'wendog', 'wexog', 'weights'])
+        self._check_finite(list(kwargs.keys()))
+
+    def _check_finite(self, additional_vars):
+        checks = ['endog', 'exog'] + additional_vars
+        msg = '{0} contains Inf/NaN values. Model cannot be estimated.'
+        for check in checks:
+            if not hasattr(self, check):
+                continue
+            val = getattr(self, check)
+            if isinstance(val, np.ndarray) and not np.all(np.isfinite(val)):
+                raise MissingDataError(msg.format(check))
 
     def initialize(self):
         self.wexog = self.whiten(self.exog)
@@ -678,6 +690,9 @@ class WLS(RegressionModel):
             weights = np.array([weights.squeeze()])
         else:
             weights = weights.squeeze()
+        if not np.all(np.isfinite(weights)):
+            raise MissingDataError('weights contains Inf/NaN values. Model '
+                                   'cannot be estimated.')
         super(WLS, self).__init__(endog, exog, missing=missing,
                                   weights=weights, hasconst=hasconst, **kwargs)
         nobs = self.exog.shape[0]

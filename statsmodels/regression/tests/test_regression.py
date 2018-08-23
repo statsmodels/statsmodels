@@ -3,18 +3,22 @@ Test functions for models.regression
 """
 # TODO: Test for LM
 from statsmodels.compat.python import long, lrange
+
 import warnings
-import pandas
+
 import numpy as np
+import pandas as pd
+import pytest
 from numpy.testing import (assert_almost_equal, assert_,
                            assert_raises, assert_equal, assert_allclose)
-import pytest
 from scipy.linalg import toeplitz
-from statsmodels.tools.tools import add_constant, categorical
-from statsmodels.regression.linear_model import (OLS, WLS, GLS, yule_walker,
-                                                 burg)
-from statsmodels.datasets import longley
 from scipy.stats import t as student_t
+
+from statsmodels.datasets import longley
+from statsmodels.regression.linear_model import (OLS, WLS, GLS, yule_walker,
+                                                 burg, GLSAR)
+from statsmodels.tools.sm_exceptions import MissingDataError
+from statsmodels.tools.tools import add_constant, categorical
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -941,12 +945,12 @@ def test_const_indicator():
 def test_conf_int_single_regressor():
     # GH#706 single-regressor model (i.e. no intercept) with 1D exog
     # should get passed to DataFrame for conf_int
-    y = pandas.Series(np.random.randn(10))
-    x = pandas.Series(np.ones(10))
+    y = pd.Series(np.random.randn(10))
+    x = pd.Series(np.ones(10))
     res = OLS(y, x).fit()
     conf_int = res.conf_int()
     np.testing.assert_equal(conf_int.shape, (1, 2))
-    np.testing.assert_(isinstance(conf_int, pandas.DataFrame))
+    np.testing.assert_(isinstance(conf_int, pd.DataFrame))
 
 
 def test_summary_as_latex():
@@ -1126,7 +1130,7 @@ def test_missing_formula_predict():
 
     data = np.linspace(0, 10, nsample)
     null = np.array([np.nan])
-    data = pandas.DataFrame({'x': np.concatenate((data, null))})
+    data = pd.DataFrame({'x': np.concatenate((data, null))})
     beta = np.array([1, 0.1])
     e = np.random.normal(size=nsample+1)
     data['y'] = beta[0] + beta[1] * data['x'] + e
@@ -1331,3 +1335,51 @@ def test_sqrt_lasso():
         # Regression test the parameters
         assert_allclose(rslt.params[0:5], expected_params[refit],
                 rtol=1e-5, atol=1e-5)
+
+
+@pytest.mark.parametrize('mod', [OLS, GLS, WLS, GLSAR])
+@pytest.mark.parametrize('bad_value', [np.nan, np.inf])
+@pytest.mark.parametrize('use_pandas', [True, False])
+def test_test_finite_check(mod, bad_value, use_pandas):
+    endog = np.random.randn(100)
+    exog = np.random.randn(100, 2)
+    if use_pandas:
+        endog = pd.Series(endog)
+        exog = pd.DataFrame(exog)
+    endog_missing = endog.copy()
+    endog_missing[50] = bad_value
+    with pytest.raises(MissingDataError) as err:
+        mod(endog_missing, exog)
+    assert err.type is MissingDataError
+    assert 'endog' in err.value.args[0]
+    if bad_value is np.nan:
+        mod(endog_missing, exog, missing='drop')
+
+    arr = exog.values if use_pandas else exog
+    arr[0] = bad_value
+    with pytest.raises(MissingDataError) as err:
+        mod(endog, exog)
+    assert err.type is MissingDataError
+    assert 'exog' in err.value.args[0]
+    if bad_value is np.nan:
+        mod(endog, exog, missing='drop')
+
+
+@pytest.mark.parametrize('use_pandas', [True, False])
+@pytest.mark.parametrize('bad_value', [np.nan, np.inf])
+def test_finite_weight_sigma(bad_value, use_pandas):
+    endog = np.random.randn(100)
+    exog = np.random.randn(100, 2)
+    weights = sigma = np.ones(100)
+    weights[-2:] = bad_value
+    if use_pandas:
+        sigma = weights = pd.Series(weights)
+    with pytest.raises(MissingDataError) as err:
+        WLS(endog, exog, weights=weights)
+    assert err.type is MissingDataError
+    assert 'weights' in err.value.args[0]
+
+    with pytest.raises(MissingDataError) as err:
+        GLS(endog, exog, sigma=sigma)
+    assert err.type is MissingDataError
+    assert 'sigma' in err.value.args[0]
