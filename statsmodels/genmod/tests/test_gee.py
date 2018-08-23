@@ -10,12 +10,9 @@ exactly.
 """
 
 from statsmodels.compat import lrange
-
 import os
-
 import numpy as np
 import pytest
-
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_array_less, assert_raises, assert_, dec)
 from statsmodels.genmod.generalized_estimating_equations import (
@@ -1639,6 +1636,88 @@ def test_missing():
     assert_almost_equal(res.params.values, res2.params.values)
 
 
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])
+def simple_qic_data(fam):
+
+    y = np.r_[0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0]
+    x1 = np.r_[0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0]
+    x2 = np.r_[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    g = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4]
+    x1 = x1[:, None]
+    x2 = x2[:, None]
+
+    return y, x1, x2, g
+
+# Test quasi-likelihood by numerical integration in two settings
+# where there is a closed form expression.
+@pytest.mark.parametrize("family", [sm.families.Gaussian, sm.families.Poisson])
+def test_ql_known(family):
+
+    fam = family()
+
+    y, x1, x2, g = simple_qic_data(family)
+
+    model1 = GEE(y, x1, family=fam, groups=g)
+    result1 = model1.fit(ddof_scale=0)
+    mean1 = result1.fittedvalues
+
+    model2 = GEE(y, x2, family=fam, groups=g)
+    result2 = model2.fit(ddof_scale=0)
+    mean2 = result2.fittedvalues
+
+    if family is sm.families.Gaussian:
+        ql1 = -len(y) / 2.
+        ql2 = -len(y) / 2.
+    elif family is sm.families.Poisson:
+        c = np.zeros_like(y)
+        ii = y > 0
+        c[ii] = y[ii] * np.log(y[ii]) - y[ii]
+        ql1 = np.sum(y * np.log(mean1) - mean1 - c)
+        ql2 = np.sum(y * np.log(mean2) - mean2 - c)
+    else:
+        raise ValueError("Unknown family")
+
+    qle1 = model1.qic(result1.params, result1.scale, result1.cov_params())
+    qle2 = model2.qic(result2.params, result2.scale, result2.cov_params())
+
+    assert_allclose(ql1, qle1[0], rtol=1e-4)
+    assert_allclose(ql2, qle2[0], rtol=1e-4)
+
+    qler1 = result1.qic()
+    qler2 = result2.qic()
+    assert_equal(qler1, qle1[1:])
+    assert_equal(qler2, qle2[1:])
+
+
+# Compare differences of QL values computed by numerical integration.  Use difference
+# here so that constants that are inconvenient to compute cancel out.
+@pytest.mark.parametrize("family", [sm.families.Gaussian,
+                                    sm.families.Binomial,
+                                    sm.families.Poisson])
+def test_ql_diff(family):
+
+    fam = family()
+
+    y, x1, x2, g = simple_qic_data(family)
+
+    model1 = GEE(y, x1, family=fam, groups=g)
+    result1 = model1.fit(ddof_scale=0)
+    mean1 = result1.fittedvalues
+
+    model2 = GEE(y, x2, family=fam, groups=g)
+    result2 = model2.fit(ddof_scale=0)
+    mean2 = result2.fittedvalues
+
+    if family is sm.families.Gaussian:
+        qldiff = 0
+    elif family is sm.families.Binomial:
+        qldiff = np.sum(y * np.log(mean1 / (1 - mean1)) + np.log(1 - mean1))
+        qldiff -= np.sum(y * np.log(mean2 / (1 - mean2)) + np.log(1 - mean2))
+    elif family is sm.families.Poisson:
+        qldiff = np.sum(y * np.log(mean1) - mean1) - np.sum(y * np.log(mean2) - mean2)
+    else:
+        raise ValueError("unknown family")
+
+    qle1, _, _ = model1.qic(result1.params, result1.scale, result1.cov_params())
+    qle2, _, _ = model2.qic(result2.params, result2.scale, result2.cov_params())
+
+    assert_allclose(qle1 - qle2, qldiff, rtol=1e-5, atol=1e-5)

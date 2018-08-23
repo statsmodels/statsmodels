@@ -1324,6 +1324,92 @@ class GEE(base.Model):
         return margeff
 
 
+    def qic(self, params, scale, cov_params):
+        """
+        Returns quasi-information criteria and quasi-likelihood values.
+
+        Parameters
+        ----------
+        params : array-like
+            The GEE estimates of the regression parameters.
+        scale : scalar
+            Estimated scale parameter
+        cov_params : array-like
+            An estimate of the covariance matrix for the
+            model parameters.  Conventionally this is the robust
+            covariance matrix.
+
+        Returns
+        -------
+        ql : scalar
+            The quasi-likelihood value
+        qic : scalar
+            A QIC that can be used to compare the mean and covariance
+            structures of the model.
+        qicu : scalar
+            A simplified QIC that can be used to compare mean structures
+            but not covariance structures
+
+        Notes
+        -----
+        This method can only be called if the model was fit using the
+        independence covariance structure.
+
+        The quasi-likelihood used here is obtained by numerically evaluating
+        Wedderburn's integral representation of the quasi-likelihood function.
+        The advantage of this approach is that it works for all families and
+        links.  Most other software packages use analytical expressions for
+        quasi-likelihoods that are based on canonical link functions.  These
+        analytical expressions omit additive constants that only depend on the
+        data.  Therefore the numerical values of our QL and QIC values will
+        differ from the values reported by other packages.  However only the
+        differences between two QIC values calculated for different models
+        using the same data are meaningful.  Our QIC should produce the same
+        QIC differences as other software.
+
+        Reference
+        ---------
+        W. Pan (2001).  Akaike's information criterion in generalized estimating
+        equations.  Biometrics (57)1.
+        """
+
+        if not isinstance(self.cov_struct, cov_structs.Independence):
+            msg = "Only the independence correlation structure can be used with QIC"
+            raise ValueError(msg)
+
+        varfunc = self.family.variance
+
+        means = []
+        omega = 0.0  # omega^-1 is the model-based covariance assuming independence
+        for i in range(self.num_group):
+            expval, lpr = self.cached_means[i]
+            means.append(expval)
+            dmat = self.mean_deriv(self.exog_li[i], lpr)
+            omega += np.dot(dmat.T, dmat) / scale
+
+        means = np.concatenate(means)
+
+        # The quasi-likelihood, use change of variables so the integration is
+        # from -1 to 1.
+        du = means - self.endog
+        nstep = 10000
+        qv = np.empty(nstep)
+        xv = np.linspace(-0.99999, 1, nstep)
+        for i, g in enumerate(xv):
+            u = self.endog + (g + 1) * du / 2.0
+            vu = varfunc(u)
+            qv[i] = -np.sum(du**2 * (g + 1) / vu)
+        qv /= (4 * scale)
+
+        from scipy.integrate import trapz
+        ql = trapz(qv, dx=xv[1] - xv[0])
+
+        qicu = -2 * ql + 2 * self.exog.shape[1]
+        qic = -2 * ql + 2 * np.trace(np.dot(omega, cov_params))
+
+        return ql, qic, qicu
+
+
 class GEEResults(base.LikelihoodModelResults):
 
     __doc__ = (
@@ -1452,6 +1538,23 @@ class GEEResults(base.LikelihoodModelResults):
             ii = self.model.group_indices[v]
             sresid.append(self.centered_resid[ii])
         return sresid
+
+    def qic(self, scale=None):
+        """
+        Returns the QIC and QICu information criteria.
+
+        For families with a scale parameter (e.g. Gaussian),
+        provide as the scale argument the estimated scale
+        from the largest model under consideration.
+        """
+
+        if scale is None:
+            scale = self.scale
+
+        _, qic, qicu = self.model.qic(self.params, scale,
+                  self.cov_params())
+
+        return qic, qicu
 
     # FIXME: alias to be removed, temporary backwards compatibility
     split_resid = resid_split
