@@ -490,7 +490,7 @@ class ProcessRegression(base.LikelihoodModel):
         if start_params is None:
             start_params = self._get_start()
 
-        if type(method) is str:
+        if isinstance(method, str):
             method = [method]
         elif method is None:
             method = ["powell", "bfgs"]
@@ -525,7 +525,16 @@ class ProcessRegression(base.LikelihoodModel):
         except Exception:
             cov_params = None
 
-        rslt = ProcessRegressionResults(self, f.x, cov_params)
+        class rslt:
+            pass
+
+        r = rslt()
+        r.params = f.x
+        r.normalized_cov_params = cov_params
+        r.optim_retvals = f
+        r.scale = 1
+
+        rslt = ProcessRegressionResults(self, r)
 
         return rslt
 
@@ -605,26 +614,23 @@ class ProcessRegression(base.LikelihoodModel):
         return np.dot(exog, params)
 
 
-class ProcessRegressionResults(base.LikelihoodModelResults):
+class ProcessRegressionResults(base.GenericLikelihoodModelResults):
     """
     Results class for Gaussian process regression models.
     """
 
-    def __init__(self, model, params, cov_params, optim_retvals=None):
+    def __init__(self, model, mlefit):
 
         super(ProcessRegressionResults, self).__init__(
-            model, params, normalized_cov_params=cov_params)
+            model, mlefit)
 
-        pa = model.unpack(params)
+        pa = model.unpack(mlefit.params)
 
         self.mean_params = pa[0]
         self.scale_params = pa[1]
         self.smooth_params = pa[2]
 
-        if optim_retvals is not None:
-            self.optim_retvals = optim_retvals
-
-        self.df_resid = model.endog.shape[0] - len(params)
+        self.df_resid = model.endog.shape[0] - len(mlefit.params)
 
     def predict(self, exog=None, transform=True, *args, **kwargs):
 
