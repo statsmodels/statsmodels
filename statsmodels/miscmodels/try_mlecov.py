@@ -120,7 +120,7 @@ def invertibleroots(ma):
     if insideroots.any():
         pr[np.abs(pr)<1] = 1./pr[np.abs(pr)<1]
         pnew = poly.Polynomial.fromroots(pr)
-        mainv = pn.coef/pnew.coef[0]
+        mainv = pnew.coef/pnew.coef[0]
         wasinvertible = False
     else:
         mainv = ma
