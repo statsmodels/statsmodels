@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 
+"""
+This module implements likelihood-based estimation (MLE) of Gaussian models for
+finite-dimensional observations made on infinite-dimensional processes.
+"""
+
 import numpy as np
 import pandas as pd
 import patsy
@@ -576,6 +581,10 @@ class ProcessRegression(base.LikelihoodModel):
 
 
 class ProcessRegressionResults(base.LikelihoodModelResults):
+    """
+    Results class for Gaussian process regression models.
+    """
+
     def __init__(self, model, params, cov_params, optim_retvals=None):
 
         super(ProcessRegressionResults, self).__init__(
@@ -634,7 +643,7 @@ class ProcessRegressionResults(base.LikelihoodModelResults):
         return self.model.covariance(time, self.scale_params,
                                      self.smooth_params, scale, smooth)
 
-    def summary(self, alpha=0.05):
+    def summary(self, yname=None, xname=None, title=None, alpha=0.05):
 
         df = pd.DataFrame()
         pm = self.model.exog.shape[1]
@@ -660,7 +669,9 @@ class ProcessRegressionResults(base.LikelihoodModelResults):
         df.index = self.model.data.param_names
 
         summ = summary2.Summary()
-        summ.add_title("Gaussian process regression results")
+        if title is None:
+            title = "Gaussian process regression results"
+        summ.add_title(title)
         summ.add_df(df)
 
         return summ
