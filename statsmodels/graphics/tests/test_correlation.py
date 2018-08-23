@@ -13,30 +13,24 @@ except:
 
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_plot_corr():
+def test_plot_corr(close_figures):
     hie_data = randhie.load_pandas()
     corr_matrix = np.corrcoef(hie_data.data.values.T)
 
-    fig = plot_corr(corr_matrix, xnames=hie_data.names)
-    plt.close(fig)
+    plot_corr(corr_matrix, xnames=hie_data.names)
 
-    fig = plot_corr(corr_matrix, xnames=[], ynames=hie_data.names)
-    plt.close(fig)
+    plot_corr(corr_matrix, xnames=[], ynames=hie_data.names)
 
-    fig = plot_corr(corr_matrix, normcolor=True, title='', cmap='jet')
-    plt.close(fig)
+    plot_corr(corr_matrix, normcolor=True, title='', cmap='jet')
 
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_plot_corr_grid():
+def test_plot_corr_grid(close_figures):
     hie_data = randhie.load_pandas()
     corr_matrix = np.corrcoef(hie_data.data.values.T)
 
-    fig = plot_corr_grid([corr_matrix] * 2, xnames=hie_data.names)
-    plt.close(fig)
+    plot_corr_grid([corr_matrix] * 2, xnames=hie_data.names)
 
-    fig = plot_corr_grid([corr_matrix] * 5, xnames=[], ynames=hie_data.names)
-    plt.close(fig)
+    plot_corr_grid([corr_matrix] * 5, xnames=[], ynames=hie_data.names)
 
-    fig = plot_corr_grid([corr_matrix] * 3, normcolor=True, titles='', cmap='jet')
-    plt.close(fig)
+    plot_corr_grid([corr_matrix] * 3, normcolor=True, titles='', cmap='jet')

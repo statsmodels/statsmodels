@@ -72,7 +72,7 @@ class CheckDynamicFactor(object):
         self.model.enforce_stationarity = True
         assert_allclose(actual, self.model.start_params)
 
-    def test_results(self):
+    def test_results(self, close_figures):
         # Smoke test for creating the summary
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -92,7 +92,6 @@ class CheckDynamicFactor(object):
         # Smoke test for plot_coefficients_of_determination
         if have_matplotlib:
             fig = self.results.plot_coefficients_of_determination();
-            plt.close(fig)
 
     def test_no_enforce(self):
         return

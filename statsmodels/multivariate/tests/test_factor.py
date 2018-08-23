@@ -191,18 +191,14 @@ id            0.2060        -0.5556
 
 
 @pytest.mark.skipif(missing_matplotlib, reason='matplotlib not available')
-def test_plots():
+def test_plots(close_figures):
     mod = Factor(X.iloc[:, 1:], 3)
     results = mod.fit()
     results.rotate('oblimin')
     fig = results.plot_scree()
-    plt.close(fig)
 
     fig_loadings = results.plot_loadings()
     assert_equal(3, len(fig_loadings))
-    for fig in fig_loadings[:-1]:
-        plt.close(fig)
-    plt.close('all')
 
 
 def test_getframe_smoke():

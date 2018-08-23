@@ -990,7 +990,7 @@ class SARIMAXCoverageTest(object):
         assert_almost_equal(constrained, true_constrained, 4)
         self.model.enforce_stationarity, self.model.enforce_invertibility = stat, inv
 
-    def test_results(self):
+    def test_results(self, close_figures):
         self.result = self.model.filter(self.true_params)
 
         # Just make sure that no exceptions are thrown during summary
@@ -999,7 +999,6 @@ class SARIMAXCoverageTest(object):
         # Make sure that no exceptions are thrown during plot_diagnostics
         if have_matplotlib:
             fig = self.result.plot_diagnostics()
-            plt.close(fig)
 
         # And make sure no expections are thrown calculating any of the
         # covariance matrix types
@@ -1718,7 +1717,7 @@ class Test_seasonal_arma_trend_polynomial(SARIMAXCoverageTest):
         # Modify true params to convert from mean to intercept form
         cls.true_params[:2] = (1 - cls.true_params[2:5].sum()) * cls.true_params[:2]
 
-    def test_results(self):
+    def test_results(self, close_figures):
         self.result = self.model.filter(self.true_params)
 
         # Just make sure that no exceptions are thrown during summary
@@ -1727,7 +1726,6 @@ class Test_seasonal_arma_trend_polynomial(SARIMAXCoverageTest):
         # Make sure that no exceptions are thrown during plot_diagnostics
         if have_matplotlib:
             fig = self.result.plot_diagnostics()
-            plt.close(fig)
 
         # And make sure no expections are thrown calculating any of the
         # covariance matrix types
@@ -1771,7 +1769,7 @@ class Test_seasonal_arma_diff_seasonal_diff(SARIMAXCoverageTest):
         kwargs['seasonal_order'] = (3,2,2,4)
         super(Test_seasonal_arma_diff_seasonal_diff, cls).setup_class(47, *args, **kwargs)
 
-    def test_results(self):
+    def test_results(self, close_figures):
         self.result = self.model.filter(self.true_params)
 
         # Just make sure that no exceptions are thrown during summary
@@ -1780,7 +1778,6 @@ class Test_seasonal_arma_diff_seasonal_diff(SARIMAXCoverageTest):
         # Make sure that no exceptions are thrown during plot_diagnostics
         if have_matplotlib:
             fig = self.result.plot_diagnostics()
-            plt.close(fig)
 
         # And make sure no expections are thrown calculating any of the
         # covariance matrix types

@@ -45,11 +45,9 @@ else:
 def close_or_save(pdf, fig):
     if pdf_output:
         pdf.savefig(fig)
-    plt.close(fig)
 
 def teardown_module():
     if have_matplotlib:
-        plt.close('all')
         if pdf_output:
             pdf.close()
 
@@ -903,7 +901,7 @@ def test_formula_missing_exposure():
 
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_plots():
+def test_plots(close_figures):
 
     np.random.seed(378)
     n = 200

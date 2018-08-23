@@ -155,14 +155,6 @@ class RResults(object):
         self.causality = data['causality']
 
 
-def close_plots():
-    try:
-        import matplotlib.pyplot as plt
-        plt.close('all')
-    except ImportError:
-        pass
-
-
 _orig_stdout = None
 
 
@@ -170,11 +162,6 @@ def setup_module():
     global _orig_stdout
     _orig_stdout = sys.stdout
     sys.stdout = StringIO()
-
-
-def teardown_module():
-    sys.stdout = _orig_stdout
-    close_plots()
 
 
 class CheckIRF(object):
@@ -196,41 +183,28 @@ class CheckIRF(object):
             assert_almost_equal(ref_irfs, res_irfs)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_irf(self):
+    def test_plot_irf(self, close_figures):
         import matplotlib.pyplot as plt
         self.irf.plot()
-        plt.close('all')
         self.irf.plot(plot_stderr=False)
-        plt.close('all')
 
         self.irf.plot(impulse=0, response=1)
-        plt.close('all')
         self.irf.plot(impulse=0)
-        plt.close('all')
         self.irf.plot(response=0)
-        plt.close('all')
 
         self.irf.plot(orth=True)
-        plt.close('all')
         self.irf.plot(impulse=0, response=1, orth=True)
-        close_plots()
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_cum_effects(self):
+    def test_plot_cum_effects(self, close_figures):
         # I need close after every plot to avoid segfault, see #3158
         import matplotlib.pyplot as plt
-        plt.close('all')
         self.irf.plot_cum_effects()
-        plt.close('all')
         self.irf.plot_cum_effects(plot_stderr=False)
-        plt.close('all')
         self.irf.plot_cum_effects(impulse=0, response=1)
-        plt.close('all')
 
         self.irf.plot_cum_effects(orth=True)
-        plt.close('all')
         self.irf.plot_cum_effects(impulse=0, response=1, orth=True)
-        close_plots()
 
 
 class CheckFEVD(object):
@@ -241,9 +215,8 @@ class CheckFEVD(object):
     # FEVD tests
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_fevd_plot(self):
+    def test_fevd_plot(self, close_figures):
         self.fevd.plot()
-        close_plots()
 
     def test_fevd_repr(self):
         self.fevd
@@ -420,27 +393,23 @@ class TestVARResults(CheckIRF, CheckFEVD):
         point, lower, upper = self.res.forecast_interval(y, 5)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_sim(self):
+    def test_plot_sim(self, close_figures):
         self.res.plotsim(steps=100)
-        close_plots()
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot(self):
+    def test_plot(self, close_figures):
         self.res.plot()
-        close_plots()
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_acorr(self):
+    def test_plot_acorr(self, close_figures):
         self.res.plot_acorr()
-        close_plots()
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_forecast(self):
+    def test_plot_forecast(self, close_figures):
         self.res.plot_forecast(5)
-        close_plots()
 
     def test_reorder(self):
-        #manually reorder
+        # manually reorder
         data = self.data.view((float,3), type=np.ndarray)
         names = self.names
         data2 = np.append(np.append(data[:,2,None], data[:,0,None], axis=1), data[:,1,None], axis=1)
@@ -664,7 +633,7 @@ class TestVARExtras(object):
         data = np.diff(np.log(data), axis=0) * 400
         cls.res0 = sm.tsa.VAR(data).fit(maxlags=2)
 
-    def test_process(self):
+    def test_process(self, close_figures):
         res0 = self.res0
         k_ar = res0.k_ar
         fc20 = res0.forecast(res0.endog[-k_ar:], 20)
@@ -696,10 +665,8 @@ class TestVARExtras(object):
 
         # partially SMOKE test
         if have_matplotlib and MATPLOTLIB_GT_15:
-            fig = res0.plotsim()
-            plt.close(fig)
-            fig = res0.plot_acorr()
-            plt.close(fig)
+            res0.plotsim()
+            res0.plot_acorr()
 
             fig = res0.plot_forecast(20)
             fcp = fig.axes[0].get_children()[1].get_ydata()[-20:]
@@ -709,8 +676,6 @@ class TestVARExtras(object):
             assert_allclose(fc20[:, 1], fcp, rtol=1e-13)
             fcp = fig.axes[2].get_children()[1].get_ydata()[-20:]
             assert_allclose(fc20[:, 2], fcp, rtol=1e-13)
-            plt.close(fig)
-            plt.close('all')
 
             fig_asym = irf.plot()
             fig_mc = irf.plot(stderr_type='mc', repl=1000, seed=987128)
@@ -721,9 +686,6 @@ class TestVARExtras(object):
                 # use m as desired because it is larger
                 # a is for some irf much smaller than m
                 assert_allclose(a, m, atol=0.1, rtol=0.9)
-            plt.close(fig_asym)
-            plt.close(fig_mc)
-            plt.close('all')
 
     def test_forecast_cov(self):
         # forecast_cov can include parameter uncertainty if contant-only

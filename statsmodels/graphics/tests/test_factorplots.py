@@ -26,17 +26,15 @@ class TestInteractionPlot(object):
         cls.days = np.log(np.random.randint(1,30, size=60))
 
 
-    def test_plot_both(self):
+    def test_plot_both(self, close_figures):
         fig = interaction_plot(self.weight, self.duration, self.days,
                  colors=['red','blue'], markers=['D','^'], ms=10)
-        plt.close(fig)
 
-    def test_plot_rainbow(self):
+    def test_plot_rainbow(self, close_figures):
         fig = interaction_plot(self.weight, self.duration, self.days,
                  markers=['D','^'], ms=10)
-        plt.close(fig)
 
-    def test_plot_pandas(self):
+    def test_plot_pandas(self, close_figures):
         weight = Series(self.weight, name='Weight')
         duration = Series(self.duration, name='Duration')
         days = Series(self.days, name='Days')
@@ -47,10 +45,8 @@ class TestInteractionPlot(object):
         assert_equal(trace, 'Duration')
         assert_equal(ax.get_ylabel(), 'mean of Days')
         assert_equal(ax.get_xlabel(), 'Weight')
-        plt.close(fig)
 
-
-    def test_plot_string_data(self):
+    def test_plot_string_data(self, close_figures):
         weight = Series(self.weight, name='Weight').astype('str')
         duration = Series(self.duration, name='Duration')
         days = Series(self.days, name='Days')
@@ -61,29 +57,19 @@ class TestInteractionPlot(object):
         assert_equal(trace, 'Duration')
         assert_equal(ax.get_ylabel(), 'mean of Days')
         assert_equal(ax.get_xlabel(), 'Weight')
-        plt.close(fig)
 
-    def test_formatting(self):
+    def test_formatting(self, close_figures):
         fig = interaction_plot(self.weight, self.duration, self.days, colors=['r','g'], linestyles=['--','-.'])
         assert_equal(isinstance(fig, plt.Figure), True)
-        plt.close(fig)
 
-    def test_formatting_errors(self):
-        #plt.close('all')
+    def test_formatting_errors(self, close_figures):
         assert_raises(ValueError, interaction_plot, self.weight, self.duration, self.days, markers=['D'])
-        plt.close('all')
         assert_raises(ValueError, interaction_plot, self.weight, self.duration, self.days, colors=['b','r','g'])
-        plt.close('all')
         assert_raises(ValueError, interaction_plot, self.weight, self.duration, self.days, linestyles=['--','-.',':'])
-        plt.close('all')
 
-
-    def test_plottype(self):
+    def test_plottype(self, close_figures):
         fig = interaction_plot(self.weight, self.duration, self.days, plottype='line')
         assert_equal(isinstance(fig, plt.Figure), True)
-        plt.close(fig)
         fig = interaction_plot(self.weight, self.duration, self.days, plottype='scatter')
         assert_equal(isinstance(fig, plt.Figure), True)
-        plt.close(fig)
         assert_raises(ValueError, interaction_plot, self.weight, self.duration, self.days, plottype='unknown')
-        plt.close('all')

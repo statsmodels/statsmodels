@@ -13,7 +13,7 @@ from numpy.testing.utils import assert_array_less
 try:
     import matplotlib.pyplot as plt  #makes plt available for test functions
     have_matplotlib = True
-except:
+except ImportError:
     have_matplotlib = False
 
 pdf_output = False
@@ -24,16 +24,10 @@ if pdf_output:
 else:
     pdf = None
 
+
 def close_or_save(pdf, fig):
     if pdf_output:
         pdf.savefig(fig)
-    plt.close(fig)
-
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def teardown_module():
-    plt.close('all')
-    if pdf_output:
-        pdf.close()
 
 class TestPlot(object):
 
@@ -52,7 +46,7 @@ class TestPlot(object):
         self.res = res
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_fit(self):
+    def test_plot_fit(self, close_figures):
         res = self.res
 
         fig = plot_fit(res, 0, y_true=None)
@@ -72,29 +66,22 @@ class TestPlot(object):
         close_or_save(pdf, fig)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_oth(self):
+    def test_plot_oth(self, close_figures):
         #just test that they run
         res = self.res
-        plt.close('all')
         plot_fit(res, 0, y_true=None)
-        plt.close('all')
         plot_partregress_grid(res, exog_idx=[0,1])
-        plt.close('all')
         plot_regress_exog(res, exog_idx=0)
-        plt.close('all')
         plot_ccpr(res, exog_idx=0)
-        plt.close('all')
         plot_ccpr_grid(res, exog_idx=[0])
-        plt.close('all')
         fig = plot_ccpr_grid(res, exog_idx=[0,1])
         for ax in fig.axes:
             add_lowess(ax)
    
         close_or_save(pdf, fig)
-        plt.close('all')
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_influence(self):
+    def test_plot_influence(self, close_figures):
         infl = self.res.get_influence()
         fig = influence_plot(self.res)
         assert_equal(isinstance(fig, plt.Figure), True)
@@ -107,7 +94,6 @@ class TestPlot(object):
         except AttributeError:
             import warnings
             warnings.warn('test not compatible with matplotlib version')
-        plt.close(fig)
 
         fig = influence_plot(self.res, criterion='DFFITS')
         assert_equal(isinstance(fig, plt.Figure), True)
@@ -118,15 +104,13 @@ class TestPlot(object):
             assert_array_less(ssr, 1e-12)
         except AttributeError:
             pass
-        plt.close(fig)
 
         assert_raises(ValueError, influence_plot, self.res, criterion='unknown')
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plot_leverage_resid2(self):
+    def test_plot_leverage_resid2(self, close_figures):
         fig = plot_leverage_resid2(self.res)
         assert_equal(isinstance(fig, plt.Figure), True)
-        plt.close(fig)
 
 
 class TestPlotPandas(TestPlot):
@@ -149,15 +133,14 @@ class TestPlotPandas(TestPlot):
         self.data = data
 
 class TestPlotFormula(TestPlotPandas):
+
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_one_column_exog(self):
+    def test_one_column_exog(self, close_figures):
         from statsmodels.formula.api import ols
         res = ols("y~var1-1", data=self.data).fit()
         fig = plot_regress_exog(res, "var1")
-        plt.close(fig)
         res = ols("y~var1", data=self.data).fit()
         fig = plot_regress_exog(res, "var1")
-        plt.close(fig)
 
 
 class TestABLine(object):
@@ -173,14 +156,14 @@ class TestABLine(object):
         cls.mod = mod
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_abline_model(self):
+    def test_abline_model(self, close_figures):
         fig = abline_plot(model_results=self.mod)
         ax = fig.axes[0]
         ax.scatter(self.X[:,1], self.y)
         close_or_save(pdf, fig)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_abline_model_ax(self):
+    def test_abline_model_ax(self, close_figures):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.scatter(self.X[:,1], self.y)
@@ -188,14 +171,14 @@ class TestABLine(object):
         close_or_save(pdf, fig)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_abline_ab(self):
+    def test_abline_ab(self, close_figures):
         mod = self.mod
         intercept, slope = mod.params
         fig = abline_plot(intercept=intercept, slope=slope)
         close_or_save(pdf, fig)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_abline_ab_ax(self):
+    def test_abline_ab_ax(self, close_figures):
         mod = self.mod
         intercept, slope = mod.params
         fig = plt.figure()
@@ -205,7 +188,7 @@ class TestABLine(object):
         close_or_save(pdf, fig)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_abline_remove(self):
+    def test_abline_remove(self, close_figures):
         mod = self.mod
         intercept, slope = mod.params
         fig = plt.figure()
@@ -231,17 +214,18 @@ class TestABLinePandas(TestABLine):
         mod = sm.OLS(y,X).fit()
         cls.mod = mod
 
+
 class TestAddedVariablePlot(object):
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_added_variable_poisson(self):
+    def test_added_variable_poisson(self, close_figures):
 
         np.random.seed(3446)
 
         n = 100
         p = 3
         exog = np.random.normal(size=(n, p))
-        lin_pred = 4 + exog[:, 0] + 0.2*exog[:, 1]**2
+        lin_pred = 4 + exog[:, 0] + 0.2 * exog[:, 1]**2
         expval = np.exp(lin_pred)
         endog = np.random.poisson(expval)
 
@@ -254,7 +238,7 @@ class TestAddedVariablePlot(object):
                     weight_str = ["Unweighted", "Weighted"][use_glm_weights]
 
                     # Run directly and called as a results method.
-                    for j in 0,1:
+                    for j in 0, 1:
 
                         if j == 0:
                             fig = plot_added_variable(results, focus_col,
@@ -263,8 +247,8 @@ class TestAddedVariablePlot(object):
                             ti = "Added variable plot"
                         else:
                             fig = results.plot_added_variable(focus_col,
-                                                 use_glm_weights=use_glm_weights,
-                                                 resid_type=resid_type)
+                                                              use_glm_weights=use_glm_weights,
+                                                              resid_type=resid_type)
                             ti = "Added variable plot (called as method)"
                         ax = fig.get_axes()[0]
 
@@ -278,12 +262,13 @@ class TestAddedVariablePlot(object):
                         ti += "Using '%s' residuals" % resid_type
                         ax.set_title(ti)
                         close_or_save(pdf, fig)
+                        close_figures()
 
 
 class TestPartialResidualPlot(object):
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_partial_residual_poisson(self):
+    def test_partial_residual_poisson(self, close_figures):
 
         np.random.seed(3446)
 
@@ -319,7 +304,7 @@ class TestPartialResidualPlot(object):
 class TestCERESPlot(object):
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_ceres_poisson(self):
+    def test_ceres_poisson(self, close_figures):
 
         np.random.seed(3446)
 

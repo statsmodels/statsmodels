@@ -23,7 +23,7 @@ data = data.raw_data[:, 1:]
 
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_hdr_basic():
+def test_hdr_basic(close_figures):
     fig, hdr = hdrboxplot(data, labels=labels)
     print(hdr)
 
@@ -58,11 +58,10 @@ def test_hdr_basic():
     outliers = labels[labels_pos]
     assert_equal([1982, 1983, 1997, 1998], outliers)
     assert_equal(labels[hdr.outliers_idx], outliers)
-    plt.close(fig)
 
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_hdr_plot():
+def test_hdr_plot(close_figures):
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
@@ -73,22 +72,20 @@ def test_hdr_plot():
     ax.set_xticks(np.arange(13, step=3) - 1)
     ax.set_xticklabels(["", "Mar", "Jun", "Sep", "Dec"])
     ax.set_xlim([-0.2, 11.2])
-    plt.close(fig)
 
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_hdr_alpha():
+def test_hdr_alpha(close_figures):
     fig, hdr = hdrboxplot(data, alpha=[0.7])
     extra_quant_t = np.vstack([[25.1, 26.5, 27.0, 26.4, 25.4, 24.1,
                                 23.0, 22.0, 21.7, 22.1, 22.7, 23.8],
                                [23.4, 24.8, 25.0, 23.9, 22.4, 21.1,
                                 20.0, 19.3, 19.2, 19.4, 20.1, 21.3]])
     assert_almost_equal(hdr.extra_quantiles, extra_quant_t, decimal=0)
-    plt.close(fig)
 
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_hdr_multiple_alpha():
+def test_hdr_multiple_alpha(close_figures):
     fig, hdr = hdrboxplot(data, alpha=[0.4, 0.92])
     extra_quant_t = [[25.712, 27.052, 27.711, 27.200,
                       26.162, 24.833, 23.639, 22.378,
@@ -103,34 +100,30 @@ def test_hdr_multiple_alpha():
                       23.177, 21.923, 20.791, 20.015,
                       19.697, 19.951, 20.622, 21.858]]
     assert_almost_equal(hdr.extra_quantiles, np.vstack(extra_quant_t), decimal=0)
-    plt.close(fig)
 
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_hdr_threshold():
+def test_hdr_threshold(close_figures):
     fig, hdr = hdrboxplot(data, alpha=[0.8], threshold=0.93)
     labels_pos = np.all(np.in1d(data, hdr.outliers).reshape(data.shape), axis=1)
     outliers = labels[labels_pos]
     assert_equal([1968, 1982, 1983, 1997, 1998], outliers)
-    plt.close(fig)
 
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_hdr_bw():
+def test_hdr_bw(close_figures):
     fig, hdr = hdrboxplot(data, bw='cv_ml')
     median_t = [24.25, 25.64, 25.99, 25.04, 23.71, 22.38,
                 21.31, 20.44, 20.24, 20.51, 21.19, 22.38]
     assert_almost_equal(hdr.median, median_t, decimal=2)
-    plt.close(fig)
 
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_hdr_ncomp():
+def test_hdr_ncomp(close_figures):
     fig, hdr = hdrboxplot(data, ncomp=3)
     median_t = [24.33, 25.71, 26.04, 25.08, 23.74, 22.40,
                 21.32, 20.45, 20.25, 20.53, 21.2 , 22.39]
     assert_almost_equal(hdr.median, median_t, decimal=2)
-    plt.close(fig)
 
 
 def test_banddepth_BD2():
@@ -169,7 +162,7 @@ def test_banddepth_MBD():
 
 
 @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-def test_fboxplot_rainbowplot():
+def test_fboxplot_rainbowplot(close_figures):
     # Test fboxplot and rainbowplot together, is much faster.
     def harmfunc(t):
         """Test function, combination of a few harmonic terms."""
@@ -203,9 +196,6 @@ def test_fboxplot_rainbowplot():
     ix_expected2 = np.array([2, 11, 17, 18])
     assert_equal(ix_outliers, ix_expected2)
 
-    plt.close(fig)
-
     # rainbowplot test (re-uses depth variable)
     xdata = np.arange(data[0].size)
     fig = rainbowplot(data, xdata=xdata, depth=depth, cmap=plt.cm.rainbow)
-    plt.close(fig)

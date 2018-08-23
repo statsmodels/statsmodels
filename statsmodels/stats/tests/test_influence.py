@@ -87,36 +87,26 @@ class InfluenceCompareExact(object):
                         infl1.d_fittedvalues_scaled, rtol=5e-9)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_plots(self):
+    def test_plots(self, close_figures):
         # SMOKE tests for plots
         infl1 = self.infl1
         infl0 = self.infl0
 
         fig = infl0.plot_influence(external=False)
-        plt.close(fig)
         fig = infl1.plot_influence(external=False)
-        plt.close(fig)
 
         fig = infl0.plot_index('resid', threshold=0.2, title='')
-        plt.close(fig)
         fig = infl1.plot_index('resid', threshold=0.2, title='')
-        plt.close(fig)
 
         fig = infl0.plot_index('dfbeta', idx=1, threshold=0.2, title='')
-        plt.close(fig)
         fig = infl1.plot_index('dfbeta', idx=1, threshold=0.2, title='')
-        plt.close(fig)
 
         fig = infl0.plot_index('cook', idx=1, threshold=0.2, title='')
-        plt.close(fig)
         fig = infl1.plot_index('cook', idx=1, threshold=0.2, title='')
-        plt.close(fig)
 
         fig = infl0.plot_index('hat', idx=1, threshold=0.2, title='')
-        plt.close(fig)
         fig = infl1.plot_index('hat', idx=1, threshold=0.2, title='')
-        plt.close(fig)
-        plt.close('all')
+
 
     def test_summary(self):
         infl1 = self.infl1

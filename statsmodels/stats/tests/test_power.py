@@ -91,7 +91,7 @@ class CheckPowerMixin(object):
             kwds[key] = value  # reset dict
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
-    def test_power_plot(self):
+    def test_power_plot(self, close_figures):
         if self.cls == smp.FTestPower:
             pytest.skip('skip FTestPower plot_power')
         plt.close()
@@ -110,7 +110,6 @@ class CheckPowerMixin(object):
                                   #alternative='larger',
                                   ax=ax, title='',
                                   **self.kwds_extra)
-        plt.close(fig)
 
 #''' test cases
 #one sample
