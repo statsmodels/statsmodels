@@ -24,7 +24,7 @@ developers) do not get the Cython/Tempita dependencies.
 
 Originally written by Dag Sverre Seljebotn, and copied here from:
 
-https://raw.github.com/dagss/private-scipy-refactor/cythonize/cythonize.py
+https://raw.githubusercontent.com/dagss/private-scipy-refactor/cythonize/cythonize.py
 
 Note: this script does not check any of the dependent C libraries; it only
 operates on the Cython .pyx files.

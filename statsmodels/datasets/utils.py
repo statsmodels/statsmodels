@@ -8,7 +8,7 @@ import numpy as np
 from pandas import read_stata, read_csv, DataFrame, Series, Index
 
 
-def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
+def webuse(data, baseurl='https://www.stata-press.com/data/r11/', as_df=True):
     """
     Download and return an example dataset from Stata.
 

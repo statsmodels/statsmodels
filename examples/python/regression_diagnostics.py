@@ -1,7 +1,7 @@
 
 ## Regression diagnostics
 
-# This example file shows how to use a few of the ``statsmodels`` regression diagnostic tests in a real-life context. You can learn about more tests and find out more information abou the tests here on the [Regression Diagnostics page.](http://www.statsmodels.org/stable/diagnostic.html)
+# This example file shows how to use a few of the ``statsmodels`` regression diagnostic tests in a real-life context. You can learn about more tests and find out more information abou the tests here on the [Regression Diagnostics page.](https://www.statsmodels.org/stable/diagnostic.html)
 # 
 # Note that most of the tests described here only return a tuple of numbers, without any annotation. A full description of outputs is always included in the docstring and in the online ``statsmodels`` documentation. For presentation purposes, we use the ``zip(name,test)`` construct to pretty-print(short descriptions in the examples below.
 
@@ -16,7 +16,7 @@ import statsmodels.formula.api as smf
 import statsmodels.stats.api as sms
 
 # Load data
-url = 'http://vincentarelbundock.github.io/Rdatasets/csv/HistData/Guerry.csv'
+url = 'https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/csv/HistData/Guerry.csv'
 dat = pd.read_csv(url)
 
 # Fit regression model (using the natural log of one of the regressors)
@@ -59,7 +59,7 @@ from statsmodels.graphics.regressionplots import plot_leverage_resid2
 print(plot_leverage_resid2(results))
 
 
-# Other plotting options can be found on the [Graphics page.](http://www.statsmodels.org/stable/graphics.html)
+# Other plotting options can be found on the [Graphics page.](https://www.statsmodels.org/stable/graphics.html)
 
 # ## Multicollinearity
 # 

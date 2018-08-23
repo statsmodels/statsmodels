@@ -685,7 +685,7 @@ class Lbw(object):
     '''
     The LBW data can be found here
 
-    http://www.stata-press.com/data/r9/rmain.html
+    https://www.stata-press.com/data/r9/rmain.html
     '''
     def __init__(self):
         # data set up for data not in datasets
@@ -803,7 +803,7 @@ class Cancer(object):
     '''
     The Cancer data can be found here
 
-    http://www.stata-press.com/data/r10/rmain.html
+    https://www.stata-press.com/data/r10/rmain.html
     '''
     def __init__(self):
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -2202,7 +2202,7 @@ class Medpar1(object):
     '''
     The medpar1 data can be found here.
 
-    http://www.stata-press.com/data/hh2/medpar1
+    https://www.stata-press.com/data/hh2/medpar1
     '''
     def __init__(self):
         filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),

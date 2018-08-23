@@ -189,4 +189,4 @@ Prefix commit messages in the master branch of the main shared repository with t
 .. vbench
 .. ------
 ..
-.. See :ref:`vbenchdoc` notes for working with the `statsmodels vbench suite <http://www.statsmodels.org/vbench>`_. The github repository is available `here <https://github.com/statsmodels/vbench>`_.
+.. See :ref:`vbenchdoc` notes for working with the `statsmodels vbench suite <https://www.statsmodels.org/vbench>`_. The github repository is available `here <https://github.com/statsmodels/vbench>`_.

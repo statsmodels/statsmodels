@@ -281,7 +281,7 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
     Examples
     --------
     A toy example on a real dataset, the Guerry dataset from R
-    >>> url = "http://vincentarelbundock.github.com/"
+    >>> url = "https://raw.githubusercontent.com/vincentarelbundock/"
     >>> url = url + "Rdatasets/csv/HistData/Guerry.csv"
     >>> df = pd.read_csv(url, index_col='dept')
 

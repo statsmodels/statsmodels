@@ -34,7 +34,7 @@ def test_webuse():
     # test copied and adjusted from iolib/tests/test_foreign
     from statsmodels.iolib.tests.results.macrodata import macrodata_result as res2
     res2 = np.array([list(row) for row in res2])
-    base_gh = "http://github.com/statsmodels/statsmodels/raw/master/statsmodels/datasets/macrodata/"
+    base_gh = "https://github.com/statsmodels/statsmodels/raw/master/statsmodels/datasets/macrodata/"
     internet_available = check_internet(base_gh)
     if not internet_available:
         pytest.skip('Unable to retrieve file - skipping test')
@@ -47,7 +47,7 @@ def test_webuse_pandas():
     from pandas.util.testing import assert_frame_equal
     from statsmodels.datasets import macrodata
     dta = macrodata.load_pandas().data
-    base_gh = "http://github.com/statsmodels/statsmodels/raw/master/statsmodels/datasets/macrodata/"
+    base_gh = "https://github.com/statsmodels/statsmodels/raw/master/statsmodels/datasets/macrodata/"
     internet_available = check_internet(base_gh)
     if not internet_available:
         pytest.skip('Unable to retrieve file - skipping test')

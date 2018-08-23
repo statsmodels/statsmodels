@@ -56,8 +56,8 @@ DISTNAME = 'statsmodels'
 DESCRIPTION = 'Statistical computations and models for Python'
 LONG_DESCRIPTION = README
 MAINTAINER = 'Josef Perktold, Chad Fulton, Kerby Shedden'
-MAINTAINER_EMAIL ='pystatsmodels@googlegroups.com'
-URL = 'http://www.statsmodels.org/'
+MAINTAINER_EMAIL = 'pystatsmodels@googlegroups.com'
+URL = 'https://www.statsmodels.org/'
 LICENSE = 'BSD License'
 DOWNLOAD_URL = ''
 

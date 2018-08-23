@@ -57,7 +57,7 @@ development of statsmodels:
 
 We would also like to thank our hosting providers, `github
 <https://github.com/>`_ for the public code repository, `github.io
-<http://www.statsmodels.org/stable/index.html>`_ for hosting our documentation and `python.org
+<https://www.statsmodels.org/stable/index.html>`_ for hosting our documentation and `python.org
 <https://www.python.org/>`_ for making our downloads available on PyPi.
 
 We also thank our continuous integration providers,
