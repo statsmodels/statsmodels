@@ -1,6 +1,8 @@
 import numpy as np
 import os
 
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+
 
 class ARLagResults(object):
     """
@@ -35,7 +37,7 @@ class ARLagResults(object):
                   5.596116931659277,  5.716592528473011, 248.572915484827206,
                   5.515935627515806,  5.601455679120634,  5.729461000735226,
                 248.654927915301300]
-            self.ic = np.asarray(ic).reshape(4,-1, order='F')
+            self.ic = np.asarray(ic).reshape(4, -1, order='F')
 
 
 class ARResultsOLS(object):
@@ -51,32 +53,34 @@ class ARResultsOLS(object):
                       -.16653934246587,  .14980629416032,  -.09462417064796,
                        .00491001240749,  .0504665930841, -.08635349190816,
                        .25349103194757]
-# These are returned by stata VAR, using the (V)AR scale/sigma
-# we return the true OLS bse by default
-# the stata residuals can be achived by np.sqrt(np.diag(res1.cov_params()))
+            # These are returned by stata VAR, using the (V)AR scale/sigma
+            # we return the true OLS bse by default
+            # the stata residuals can be achieved
+            # by np.sqrt(np.diag(res1.cov_params()))
             self.bse_stata = [2.413485601, .0560359041, .0874490762,
                               .0900894414, .0899348339, .0900100797,
                               .0898385666, .0896997939, .0869773089,
                               .0559505756]
-# The below are grom gretl's ARIMA command with conditional maxium likelihood
+            # The below are grom gretl's ARIMA command with conditional
+            # maximum likelihood
             self.bse_gretl = [2.45474, 0.0569939, 0.0889440, 0.0916295,
                             0.0914723, 0.0915488, 0.0913744, 0.0912332,
                             0.0884642, 0.0569071]
             self.rmse = 15.1279294937327
             self.fpe = 236.4827257929261
             self.llf = -1235.559128419549
-#NOTE: we use a different definition of these ic than Stata
-# but our order selection results agree with R VARselect
-# close to Stata for Lutkepohl but we penalize the ic for the trend terms
-#            self.bic = 8.427186938618863
-#            self.aic = 8.30372752279699
-#            self.hqic = 8.353136159250697
+            # NOTE: we use a different definition of these ic than Stata
+            # but our order selection results agree with R VARselect
+            # close to Stata for Lutkepohl but we penalize the ic for
+            # the trend terms
+            # self.bic = 8.427186938618863
+            # self.aic = 8.30372752279699
+            # self.hqic = 8.353136159250697
 
-#NOTE: predictions were taken from gretl, but agree with Stata
-            # test predict
-#TODO: remove one of the files
-            filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                "AROLSConstantPredict.csv")
+            # NOTE: predictions were taken from gretl, but agree with Stata
+            #   test predict
+            # TODO: remove one of the files
+            filename = os.path.join(cur_dir, "AROLSConstantPredict.csv")
             predictresults = np.loadtxt(filename)
             fv = predictresults[:300,0]
             pv = predictresults[300:,1]
@@ -124,13 +128,13 @@ class ARResultsOLS(object):
             self.rmse = 15.29712618677774
             self.sigma = 226.9820074869752
             self.llf = -1239.41217278661
-# See note above
-#            self.bic =  8.433861292817106
-#            self.hqic =  8.367215591385756
-#            self.aic =  8.322747818577421
+            # See note above; TODO: be more specific about "above"
+            # self.bic =  8.433861292817106
+            # self.hqic =  8.367215591385756
+            # self.aic =  8.322747818577421
             self.fpe =  241.0221316614273
-            filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                "AROLSNoConstantPredict.csv")
+
+            filename = os.path.join(cur_dir, "AROLSNoConstantPredict.csv")
             predictresults = np.loadtxt(filename)
             fv = predictresults[:300,0]
             pv = predictresults[300:,1]
@@ -175,10 +179,9 @@ class ARResultsMLE(object):
         if constant:
 
             # NOTE: Stata's estimated parameters differ from gretl
-            filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                "ARMLEConstantPredict.csv")
-            filename2 = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                    'results_ar_forecast_mle_dynamic.csv')
+            filename = os.path.join(cur_dir, "ARMLEConstantPredict.csv")
+            filename2 = os.path.join(cur_dir,
+                                     'results_ar_forecast_mle_dynamic.csv')
             predictresults = np.loadtxt(filename, delimiter=",")
             year = predictresults[:,0]
             pv = predictresults[:,1]
