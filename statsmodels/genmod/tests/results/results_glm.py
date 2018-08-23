@@ -81,9 +81,11 @@ class Longley(object):
         self.bic_Stata = 836399.1760177979 # no bic in R?
         self.df_model = 6
         self.df_resid = 9
-        self.chi2 = 1981.711859508729    #TODO: taken from Stata not available
-                                        # in sm yet
-#        self.pearson_chi2 = 836424.1293162981   # from Stata (?)
+
+        # TODO: taken from Stata; not available in sm yet
+        self.chi2 = 1981.711859508729
+
+        # self.pearson_chi2 = 836424.1293162981   # from Stata (?)
         self.fittedvalues = np.array([60055.659970240202, 61216.013942398131,
                      60124.71283224225, 61597.114621930756, 62911.285409240052,
                      63888.31121532945, 65153.048956395127, 63774.180356866214,
@@ -97,7 +99,6 @@ class GaussianLog(object):
     Uses generated data.  These results are from R and Stata.
     """
     def __init__(self):
-#        self.resids = np.genfromtxt('./glm_gaussian_log_resid.csv', ',')
         self.resids = np.array([[3.20800000e-04, 3.20800000e-04,
             8.72100000e-04, 3.20800000e-04,   3.20800000e-04],
            [  8.12100000e-04,   8.12100000e-04,   2.16350000e-03,
@@ -3828,8 +3829,10 @@ class Wfs(object):
         self.bic_Stata = -179.9959200693088 # no bic in R?
         self.df_model = 10
         self.df_resid = 59
-        self.chi2 = 2699.138063147485   #TODO: taken from Stata not available
-                                        # in sm yet
+
+        # TODO: taken from Stata; not available in sm yet
+        self.chi2 = 2699.138063147485
+
         self.fittedvalues = [7.11599,19.11356,33.76075,33.26743,11.94399,
                 27.49849,35.07923,37.22563,64.18037,108.0408,100.0948,35.67896,
                 24.10508,73.99577,52.2802,38.88975,35.06507,102.1198,107.251,
@@ -3897,8 +3900,10 @@ class CpunishTweediePower15(object):
         # self.bic_Stata = -179.9959200693088 # no bic in R?
         self.df_model = 1
         self.df_resid = 15
-        # self.chi2 = 2699.138063147485     #TODO: taken from Stata not available
-                                            # in sm yet
+
+        # TODO: taken from Stata; not available in sm yet
+        # self.chi2 = 2699.138063147485
+
         self.fittedvalues = [8.09501758000751, 8.42856326056927,
                              1.68642881732415, 7.74178229423817,
                              7.95441118875248, 1.53333978161934,
@@ -3965,8 +3970,10 @@ class CpunishTweediePower2(object):
         # self.bic_Stata = -179.9959200693088 # no bic in R?
         self.df_model = 1
         self.df_resid = 15
-        # self.chi2 = 2699.138063147485     #TODO: taken from Stata not available
-                                            # in sm yet
+
+        # TODO: taken from Stata; not available in sm yet
+        # self.chi2 = 2699.138063147485
+
         self.fittedvalues = [8.06024318838318, 8.39480078450791,
                              1.69154512871877, 7.7059362524505,
                              7.91921022348665, 1.53799164935069,
@@ -4035,8 +4042,10 @@ class CpunishTweedieLog1(object):
         # self.bic_Stata = -179.9959200693088 # no bic in R?
         self.df_model = 1
         self.df_resid = 15
-        # self.chi2 = 2699.138063147485     #TODO: taken from Stata not available
-                                            # in sm yet
+
+        # TODO: taken from Stata; not available in sm yet
+        # self.chi2 = 2699.138063147485
+
         self.fittedvalues = [8.27689906137016, 9.30731835845648,
                              1.80984539843424, 7.30975297068573,
                              7.87746969906705, 1.71495822007233,
@@ -4116,8 +4125,10 @@ class FairTweedieLog15(object):
         # self.bic_Stata = -179.9959200693088 # no bic in R?
         self.df_model = 2
         self.df_resid = 6363
-        # self.chi2 = 2699.138063147485     #TODO: taken from Stata not available
-                                            # in sm yet
+
+        # TODO: taken from Stata; not available in sm yet
+        # self.chi2 = 2699.138063147485
+
         self.fittedvalues = [1.10897954981504, 0.537938133372725,
                              0.722602160018842, 0.507247757370731,
                              0.364216335344828, 0.537493243830281,
