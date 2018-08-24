@@ -1285,7 +1285,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False,
         return rho, np.sqrt(sigmasq)
 
 
-def ar_burg(endog, lags=1):
+def burg(endog, order=1, demean=True):
     """
     Burg's AP(p) parameter estimator
 
@@ -1293,12 +1293,14 @@ def ar_burg(endog, lags=1):
     ----------
     endog : array-like
         The endogenous variable
-    lags : int, optional
+    order : int, optional
         Order of the AR.  Default is 1.
+    demean : bool, optional
+        Flag indicating to subtract the mean from endog before estimation
 
     Returns
     -------
-    coeffs : ndarray
+    rho : ndarray
         AR(p) coefficients computed using Burg's algorithm
     sigma2 : float
         Estimate of the residual variance
@@ -1319,7 +1321,12 @@ def ar_burg(endog, lags=1):
     endog = np.squeeze(np.asarray(endog))
     if endog.ndim != 1:
         raise ValueError('endog must be 1-d or squeezable to 1-d.')
-    pacf, sigma = pacf_burg(endog, lags)
+    order = int(order)
+    if order < 1:
+        raise ValueError('order must be an integer larger than 1')
+    if demean:
+        endog = endog - endog.mean()
+    pacf, sigma = pacf_burg(endog, order)
     return levinson_durbin_partial(pacf), sigma[-1]
 
 

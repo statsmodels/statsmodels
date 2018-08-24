@@ -574,15 +574,16 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     return np.array(pacf)
 
 
-def pacf_burg(x, nlag=None):
+def pacf_burg(x, nlags=None, demean=True):
     """
     Parameters
     ----------
     x : array-like
         Observations of time series for which pacf is calculated
-    nlag : int, optional
+    nlags : int, optional
         Number of lags to compute the partial autocorrelations.  If omitted,
         uses the smaller of 10(log10(nobs)) or nobs - 1
+    demean : bool, optional
 
     Returns
     -------
@@ -596,40 +597,36 @@ def pacf_burg(x, nlag=None):
     --------
     statsmodels.tsa.stattools.pacf
 
-    Notes
-    -----
-    x is demeaned before computing the pacf.
-    This implementation is not memory efficient and so cannot be used very
-    long time series.
-
     References
     ----------
     Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
         forecasting. Springer.
     """
-    x = np.asarray(x)
-    x = np.squeeze(x)
+    x = np.squeeze(np.asarray(x))
     if x.ndim != 1:
         raise ValueError('x must be 1-d or squeezable to 1-d.')
-    x = x - x.mean()
+    if demean:
+        x = x - x.mean()
     nobs = x.shape[0]
-    p = nlag if nlag is not None else nobs - 1
+    p = nlags if nlags is not None else min(int(10 * np.log10(nobs)), nobs - 1)
     if p > nobs - 1:
-        raise ValueError('nlag must be smaller than nobs - 1')
-    u = np.zeros((p + 1, nobs))
-    v = np.zeros((p + 1, nobs))
+        raise ValueError('nlags must be smaller than nobs - 1')
     d = np.zeros(p + 1)
     d[0] = x.dot(x)
     phi = np.ones(p + 1)
-    u[0] = x[::-1]
-    v[0] = x[::-1]
-    d[1] = u[0, :-1].dot(u[0, :-1]) + v[0, 1:].dot(v[0, 1:])
-    phi[1] = 2 / d[1] * v[0, 1:].dot(u[0, :-1])
+    u = x[::-1].copy()
+    v = x[::-1].copy()
+    d[1] = u[:-1].dot(u[:-1]) + v[1:].dot(v[1:])
+    phi[1] = 2 / d[1] * v[1:].dot(u[:-1])
+    last_u = np.empty_like(u)
+    last_v = np.empty_like(v)
     for i in range(1, p):
-        u[i, 1:] = u[i - 1, :-1] - phi[i] * v[i - 1, 1:]
-        v[i, 1:] = v[i - 1, 1:] - phi[i] * u[i - 1, :-1]
-        d[i + 1] = (1 - phi[i] ** 2) * d[i] - v[i, i] ** 2 - u[i, -1] ** 2
-        phi[i + 1] = 2 / d[i + 1] * v[i, i + 1:].dot(u[i, i:-1])
+        last_u[:] = u
+        last_v[:] = v
+        u[1:] = last_u[:-1] - phi[i] * last_v[1:]
+        v[1:] = last_v[1:] - phi[i] * last_u[:-1]
+        d[i + 1] = (1 - phi[i] ** 2) * d[i] - v[i] ** 2 - u[-1] ** 2
+        phi[i + 1] = 2 / d[i + 1] * v[i + 1:].dot(u[i:-1])
     sigma2 = (1 - phi ** 2) * d / (2 * (nobs - np.arange(0, p + 1)))
 
     return phi, sigma2
