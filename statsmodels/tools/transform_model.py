@@ -9,7 +9,6 @@ License: BSD-3
 
 import numpy as np
 
-from statsmodels.compat.python import string_types
 
 class StandardizeTransform(object):
     """class to reparameterize a model for standardized exog
