@@ -11,7 +11,6 @@ Created on Wed Oct 30 14:01:27 2013
 Author: Josef Perktold
 """
 from statsmodels.compat.python import range
-from statsmodels.compat.scipy import NumpyVersion
 
 import numpy as np
 import pandas as pd
@@ -721,7 +720,9 @@ class TestWaldAnovaNegBin1(CheckAnovaMixin):
         cls.res = mod.fit(cov_type='HC0')
 
 
-class T_estWaldAnovaOLSNoFormula(object):
+@pytest.mark.skip(reason="TODO: Find a reason.  "
+                         "This used to just have a mangled name.")
+class TestWaldAnovaOLSNoFormula(object):
 
     @classmethod
     def initialize(cls):
