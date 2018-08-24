@@ -985,7 +985,7 @@ class FactorResults(object):
         ----------
         kurt: float
             Excess kurtosis
-        
+
         Notes
         -----
         If excess kurtosis is known, provide as `kurt`.  Standard
