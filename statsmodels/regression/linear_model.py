@@ -1285,6 +1285,44 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False,
         return rho, np.sqrt(sigmasq)
 
 
+def ar_burg(endog, lags=1):
+    """
+    Burg's AP(p) parameter estimator
+
+    Parameters
+    ----------
+    endog : array-like
+        The endogenous variable
+    lags : int, optional
+        Order of the AR.  Default is 1.
+
+    Returns
+    -------
+    coeffs : ndarray
+        AR(p) coefficients computed using Burg's algorithm
+    sigma2 : float
+        Estimate of the residual variance
+
+    Notes
+    -----
+    AR model estimated includes a constant estimated using the sample mean.
+    This value is not reported.
+
+    References
+    ----------
+    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
+        forecasting. Springer.
+    """
+    # Avoid circular imports
+    from statsmodels.tsa.stattools import levinson_durbin_partial, pacf_burg
+
+    endog = np.squeeze(np.asarray(endog))
+    if endog.ndim != 1:
+        raise ValueError('endog must be 1-d or squeezable to 1-d.')
+    pacf, sigma = pacf_burg(endog, lags)
+    return levinson_durbin_partial(pacf), sigma[-1]
+
+
 class RegressionResults(base.LikelihoodModelResults):
     r"""
     This class summarizes the fit of a linear regression model.

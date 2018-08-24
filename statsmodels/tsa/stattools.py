@@ -574,6 +574,67 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     return np.array(pacf)
 
 
+def pacf_burg(x, nlag=None):
+    """
+    Parameters
+    ----------
+    x : array-like
+        Observations of time series for which pacf is calculated
+    nlag : int, optional
+        Number of lags to compute the partial autocorrelations.  If omitted,
+        uses the smaller of 10(log10(nobs)) or nobs - 1
+
+    Returns
+    -------
+    pacf : ndarray
+        Partial autocorrelations for lags 0, 1, ..., nlag
+    sigma2 : ndarray
+        Residual variance estimates where the value in position m is the
+        residual variance in an AR model that includes m lags
+
+    See also
+    --------
+    statsmodels.tsa.stattools.pacf
+
+    Notes
+    -----
+    x is demeaned before computing the pacf.
+    This implementation is not memory efficient and so cannot be used very
+    long time series.
+
+    References
+    ----------
+    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
+        forecasting. Springer.
+    """
+    x = np.asarray(x)
+    x = np.squeeze(x)
+    if x.ndim != 1:
+        raise ValueError('x must be 1-d or squeezable to 1-d.')
+    x = x - x.mean()
+    nobs = x.shape[0]
+    p = nlag if nlag is not None else nobs - 1
+    if p > nobs - 1:
+        raise ValueError('nlag must be smaller than nobs - 1')
+    u = np.zeros((p + 1, nobs))
+    v = np.zeros((p + 1, nobs))
+    d = np.zeros(p + 1)
+    d[0] = x.dot(x)
+    phi = np.ones(p + 1)
+    u[0] = x[::-1]
+    v[0] = x[::-1]
+    d[1] = u[0, :-1].dot(u[0, :-1]) + v[0, 1:].dot(v[0, 1:])
+    phi[1] = 2 / d[1] * v[0, 1:].dot(u[0, :-1])
+    for i in range(1, p):
+        u[i, 1:] = u[i - 1, :-1] - phi[i] * v[i - 1, 1:]
+        v[i, 1:] = v[i - 1, 1:] - phi[i] * u[i - 1, :-1]
+        d[i + 1] = (1 - phi[i] ** 2) * d[i] - v[i, i] ** 2 - u[i, -1] ** 2
+        phi[i + 1] = 2 / d[i + 1] * v[i, i + 1:].dot(u[i, i:-1])
+    sigma2 = (1 - phi ** 2) * d / (2 * (nobs - np.arange(0, p + 1)))
+
+    return phi, sigma2
+
+
 #NOTE: this is incorrect.
 def pacf_ols(x, nlags=40):
     '''Calculate partial autocorrelations
@@ -833,6 +894,42 @@ def levinson_durbin(s, nlags=10, isacov=False):
     pacf_ = np.diag(phi).copy()
     pacf_[0] = 1.
     return sigma_v, arcoefs, pacf_, sig, phi  # return everything
+
+
+def levinson_durbin_partial(pacf):
+    """
+    Levinson-Durbin algorithm that returns the AR coefficients from the pacf
+
+    Parameters
+    ----------
+    pacf : array-like
+        Partial autocorrelation array for lags 0, 1, ... p
+
+    Returns
+    -------
+    coeffs : ndarray
+        AR(p) coefficients computed from the partial autocorrelations
+
+    References
+    ----------
+    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
+        forecasting. Springer.
+    """
+    pacf = np.squeeze(np.asarray(pacf))
+    if pacf.ndim != 1:
+        raise ValueError('pacf must be 1-d or squeezable to 1-d.')
+    if pacf[0] != 1:
+        raise ValueError('The first entry of the pacf corresponds to lags 0 '
+                         'and so must be 1.')
+    if len(pacf) < 2:
+        raise ValueError('pacf must have at least 2 elements.')
+    pacf = pacf[1:]
+    n = pacf.shape[0]
+    phi = np.diag(pacf)
+    for i in range(1, n):
+        prev = phi[i - 1, :-(n - i)]
+        phi[i, :-(n - i)] = prev - phi[i, i] * prev[::-1]
+    return phi[-1]
 
 
 def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
