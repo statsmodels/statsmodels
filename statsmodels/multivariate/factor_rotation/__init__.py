@@ -23,7 +23,7 @@ References
 [5] http://www.stat.ucla.edu/research/gpa/GPderfree.txt
 """
 
-#__all__ = ['wrappers']
+__all__ = ["rotate_factors", "target_rotation", "procrustes", "promax"]
 
 from ._wrappers import rotate_factors
 
