@@ -25,7 +25,7 @@
 
 from __future__ import print_function
 from statsmodels.compat import lzip
-import statsmodels
+
 import numpy as np
 import pandas as pd
 import statsmodels.formula.api as smf

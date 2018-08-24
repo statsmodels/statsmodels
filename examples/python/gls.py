@@ -11,8 +11,6 @@
 
 from __future__ import print_function
 import statsmodels.api as sm
-import numpy as np
-from statsmodels.iolib.table import (SimpleTable, default_txt_fmt)
 
 # The Longley dataset is a time series dataset:
 

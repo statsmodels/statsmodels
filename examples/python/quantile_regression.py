@@ -26,13 +26,12 @@
 # Conveniently, the Engel dataset is shipped with ``statsmodels``.
 
 from __future__ import print_function
-import patsy
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 import matplotlib.pyplot as plt
-from statsmodels.regression.quantile_regression import QuantReg
+
 
 data = sm.datasets.engel.load_pandas().data
 data.head()

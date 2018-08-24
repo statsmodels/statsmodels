@@ -12,7 +12,6 @@
 from __future__ import print_function
 from statsmodels.compat import lzip
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
