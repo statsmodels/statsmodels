@@ -612,8 +612,8 @@ def pacf_burg(x, nlags=None, demean=True):
     if p > nobs - 1:
         raise ValueError('nlags must be smaller than nobs - 1')
     d = np.zeros(p + 1)
-    d[0] = x.dot(x)
-    phi = np.ones(p + 1)
+    d[0] = 2 * x.dot(x)
+    phi = np.zeros(p + 1)
     u = x[::-1].copy()
     v = x[::-1].copy()
     d[1] = u[:-1].dot(u[:-1]) + v[1:].dot(v[1:])
@@ -627,7 +627,8 @@ def pacf_burg(x, nlags=None, demean=True):
         v[1:] = last_v[1:] - phi[i] * last_u[:-1]
         d[i + 1] = (1 - phi[i] ** 2) * d[i] - v[i] ** 2 - u[-1] ** 2
         phi[i + 1] = 2 / d[i + 1] * v[i + 1:].dot(u[i:-1])
-    sigma2 = (1 - phi ** 2) * d / (2 * (nobs - np.arange(0, p + 1)))
+    sigma2 = (1 - phi ** 2) * d / (2. * (nobs - np.arange(0, p + 1)))
+    phi[0] = 1  # Insert the 0 lag partial autocorrel
 
     return phi, sigma2
 
@@ -927,6 +928,50 @@ def levinson_durbin_partial(pacf):
         prev = phi[i - 1, :-(n - i)]
         phi[i, :-(n - i)] = prev - phi[i, i] * prev[::-1]
     return phi[-1]
+
+
+def pacf2acf(pacf):
+    """
+    Levinson-Durbin algorithm that returns the acf from the pacf
+
+    Parameters
+    ----------
+    pacf : array-like
+        Partial autocorrelation array for lags 0, 1, ... p
+
+    Returns
+    -------
+    coeffs : ndarray
+        AR(p) coefficients computed from the partial autocorrelations
+    acf : ndarray
+        acf computed from the partial autocorrelations
+
+    References
+    ----------
+    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
+        forecasting. Springer.
+    """
+    pacf = np.squeeze(np.asarray(pacf))
+    if pacf.ndim != 1:
+        raise ValueError('pacf must be 1-d or squeezable to 1-d.')
+    if pacf[0] != 1:
+        raise ValueError('The first entry of the pacf corresponds to lags 0 '
+                         'and so must be 1.')
+    if len(pacf) < 2:
+        raise ValueError('pacf must have at least 2 elements.')
+    pacf = pacf[1:]
+    n = pacf.shape[0]
+    acf = np.zeros(n + 1)
+    acf[1] = pacf[0]
+    nu = np.cumprod(1 - pacf ** 2)
+    phi = np.diag(pacf)
+
+    for i in range(1, n):
+        prev = phi[i - 1, :-(n - i)]
+        phi[i, :-(n - i)] = prev - phi[i, i] * prev[::-1]
+        acf[i + 1] = phi[i, i] * nu[i-1] + prev.dot(acf[1:-(n - i)][::-1])
+    acf[0] = 1
+    return phi[-1], acf
 
 
 def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
