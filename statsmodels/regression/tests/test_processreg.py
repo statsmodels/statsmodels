@@ -77,6 +77,7 @@ def test_arrays():
     # Smoke test t-test
     f.t_test(np.eye(len(f.params)))
 
+
 def test_formulas():
 
     np.random.seed(8482)

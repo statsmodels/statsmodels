@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 
 """
-This module implements likelihood-based estimation (MLE) of Gaussian models for
-finite-dimensional observations made on infinite-dimensional processes.
+This module implements likelihood-based estimation (MLE) of Gaussian
+models for finite-dimensional observations made on infinite-dimensional
+processes.
 
-The implementation is tailored to regression-style analyses in which the mean
-and covariance structures are parameterized in terms of covariates.  The fitting
-is based on a grouped dataset.  The repeated observations within a group are related
-through the Gaussian covariance model.
+The implementation is tailored to regression-style analyses in which the
+mean and covariance structures are parameterized in terms of covariates.
+The fitting is based on a grouped dataset.  The repeated observations within
+a group are related through the Gaussian covariance model.
 """
 
 import numpy as np
@@ -182,6 +183,7 @@ def _check_args(endog, exog, exog_scale, exog_smooth, time, groups):
         msg = ("The leading dimensions of all array arguments " +
                "must be equal.")
         raise ValueError(msg)
+
 
 class ProcessRegression(base.LikelihoodModel):
     """
@@ -476,9 +478,9 @@ class ProcessRegression(base.LikelihoodModel):
 
         return score
 
-    def fit(self, start_params=None, method=None, maxiter=None, full_output=True,
-            disp=True, fargs=(), callback=None, retall=False,
-            skip_hessian=False, **kwargs):
+    def fit(self, start_params=None, method=None, maxiter=None,
+            full_output=True, disp=True, fargs=(), callback=None,
+            retall=False, skip_hessian=False, **kwargs):
 
         if "verbose" in kwargs:
             self.verbose = kwargs["verbose"]
