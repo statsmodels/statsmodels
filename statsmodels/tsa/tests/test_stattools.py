@@ -1,3 +1,5 @@
+from statsmodels.compat.python import lrange, PY3
+
 import os
 import warnings
 
@@ -8,8 +10,6 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
                            assert_, assert_allclose)
 from pandas import Series, DatetimeIndex, DataFrame
 
-from statsmodels.compat.numpy import recarray_select
-from statsmodels.compat.python import lrange
 from statsmodels.datasets import macrodata, sunspots
 from statsmodels.tools.sm_exceptions import (CollinearityWarning,
                                              MissingDataError)
@@ -632,7 +632,7 @@ def test_acovf_nlags_missing(unbiased, demean, fft, missing):
 def test_acovf_error():
     with pytest.raises(ValueError):
         x = np.random.randn(250)
-        acovf(x, nlag=250)
+        acovf(x, nlag=250, fft=False)
 
 
 def test_acovf_warns():
