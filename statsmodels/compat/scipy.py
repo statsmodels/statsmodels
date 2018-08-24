@@ -20,8 +20,8 @@ except ImportError:
     class NumpyVersion():
         """Parse and compare numpy version strings.
 
-        Numpy has the following versioning scheme (numbers given are examples; they
-        can be >9) in principle):
+        Numpy has the following versioning scheme (numbers given are examples;
+        they can be >9) in principle):
 
         - Released version: '1.8.0', '1.8.1', etc.
         - Alpha: '1.8.0a1', '1.8.0a2', etc.
@@ -117,7 +117,8 @@ except ImportError:
 
         def _compare(self, other):
             if not isinstance(other, (string_types, NumpyVersion)):
-                raise ValueError("Invalid object to compare with NumpyVersion.")
+                raise ValueError("Invalid object to compare with "
+                                 "NumpyVersion.")
 
             if isinstance(other, string_types):
                 other = NumpyVersion(other)
@@ -207,6 +208,7 @@ def _next_regular(target):
         match = p5
     return match
 
+
 def _valarray(shape, value=np.nan, typecode=None):
     """Return an array of all value.
     """
@@ -217,6 +219,7 @@ def _valarray(shape, value=np.nan, typecode=None):
     if not isinstance(out, np.ndarray):
         out = np.asarray(out)
     return out
+
 
 def _lazywhere(cond, arrays, f, fillvalue=None, f2=None):
     """
@@ -252,7 +255,8 @@ def _lazywhere(cond, arrays, f, fillvalue=None, f2=None):
     return out
 
 
-# Work around for complex chnges in gammaln in 1.0.0.  loggamma introduced in 0.18.
+# Work around for complex chnges in gammaln in 1.0.0.  loggamma
+# introduced in 0.18.
 try:
     from scipy.special import loggamma
 except ImportError:
@@ -262,6 +266,6 @@ except ImportError:
 # Work around for factorial changes in 1.0.0
 
 try:
-    from scipy.special import factorial, factorial2
+    from scipy.special import factorial, factorial2  # noqa:F401
 except ImportError:
-    from scipy.misc import factorial, factorial2
+    from scipy.misc import factorial, factorial2  # noqa:F401

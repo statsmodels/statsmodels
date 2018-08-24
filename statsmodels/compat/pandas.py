@@ -25,7 +25,7 @@ except ImportError:
 # Float64Index introduced in Pandas 0.13.0
 try:
     from pandas import Float64Index
-except:
+except ImportError:
     Float64Index = tuple()
 
 try:

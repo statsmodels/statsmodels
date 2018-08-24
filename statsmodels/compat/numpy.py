@@ -52,15 +52,16 @@ np_matrix_rank = np.linalg.matrix_rank
 if NumpyVersion(np.__version__) >= '1.9.0':
     np_new_unique = np.unique
 else:
-    def np_new_unique(ar, return_index=False, return_inverse=False, return_counts=False):
+    def np_new_unique(ar, return_index=False, return_inverse=False,
+                      return_counts=False):
         """
         Find the unique elements of an array.
 
-        Returns the sorted unique elements of an array. There are three optional
-        outputs in addition to the unique elements: the indices of the input array
-        that give the unique values, the indices of the unique array that
-        reconstruct the input array, and the number of times each unique value
-        comes up in the input array.
+        Returns the sorted unique elements of an array. There are three
+        optional outputs in addition to the unique elements: the indices of
+        the input array that give the unique values, the indices of the unique
+        array that reconstruct the input array, and the number of times each
+        unique value comes up in the input array.
 
         Parameters
         ----------
@@ -70,8 +71,8 @@ else:
             If True, also return the indices of `ar` that result in the unique
             array.
         return_inverse : bool, optional
-            If True, also return the indices of the unique array that can be used
-            to reconstruct `ar`.
+            If True, also return the indices of the unique array that can be
+            used to reconstruct `ar`.
         return_counts : bool, optional
             If True, also return the number of times each unique value comes up
             in `ar`.
@@ -84,7 +85,8 @@ else:
             The sorted unique values.
         unique_indices : ndarray, optional
             The indices of the first occurrences of the unique values in the
-            (flattened) original array. Only provided if `return_index` is True.
+            (flattened) original array. Only provided if `return_index`
+            is True.
         unique_inverse : ndarray, optional
             The indices to reconstruct the (flattened) original array from the
             unique array. Only provided if `return_inverse` is True.
@@ -151,7 +153,8 @@ else:
             return ret
 
         if optional_indices:
-            perm = ar.argsort(kind='mergesort' if return_index else 'quicksort')
+            kind = 'mergesort' if return_index else 'quicksort'
+            perm = ar.argsort(kind=kind)
             aux = ar[perm]
         else:
             ar.sort()
@@ -197,5 +200,7 @@ def _bytelike_dtype_names(arr):
     if not PY3:
         dtype = arr.dtype
         names = dtype.names
-        names = [bytes(name) if isinstance(name, unicode) else name for name in names]
+        names = [bytes(name)
+                 if isinstance(name, unicode) else name  # noqa:F821
+                 for name in names]
         dtype.names = names

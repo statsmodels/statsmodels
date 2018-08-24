@@ -25,6 +25,7 @@ def test_zip_longest():
     assert_(list(zip_longest(*lili)) == transposed, '%r not equal %r' % (
                             zip_longest(*lili), transposed))
 
+
 def test_combinations():
     actual = list(combinations('ABCD', 2))
     desired = [('A', 'B'), ('A', 'C'), ('A', 'D'), ('B', 'C'), ('B', 'D'),
@@ -34,8 +35,6 @@ def test_combinations():
     actual = list(combinations(lrange(4), 3))
     desired = [(0, 1, 2), (0, 1, 3), (0, 2, 3), (1, 2, 3)]
     assert_(actual == desired, '%r not equal %r' % (actual, desired))
-
-
 
 
 if __name__ == '__main__':
