@@ -7,24 +7,8 @@ Author: josef-pktd
 License: BSD
 """
 
-import numpy as np
 import statsmodels.api as sm
 from statsmodels import GLS, WLS, OLS
-
-def remove_nanrows(y, x):
-    '''remove common rows in [y,x] that contain at least one nan
-
-    TODO: this should be made more flexible,
-     arbitrary number of arrays and 1d or 2d arrays
-
-    duplicate: Skipper added sm.tools.drop_missing
-
-    '''
-    mask = ~np.isnan(y)
-    mask *= ~(np.isnan(x).any(-1))  #* or &
-    y = y[mask]
-    x = x[mask]
-    return y, x
 
 
 def linmod(y, x, weights=None, sigma=None, add_const=True, filter_missing=True,
@@ -38,8 +22,8 @@ def linmod(y, x, weights=None, sigma=None, add_const=True, filter_missing=True,
     '''
 
     if filter_missing:
-        y, x = remove_nanrows(y, x)
-        #do the same for masked arrays
+        y, x = sm.tools.tools.drop_missing(y, x)
+        # do the same for masked arrays
 
     if add_const:
         x = sm.add_constant(x, prepend=True)
