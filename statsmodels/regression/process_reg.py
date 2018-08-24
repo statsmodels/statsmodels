@@ -476,7 +476,7 @@ class ProcessRegression(base.LikelihoodModel):
 
         return score
 
-    def fit(self, start_params=None, method=None, maxiter=100, full_output=True,
+    def fit(self, start_params=None, method=None, maxiter=None, full_output=True,
             disp=True, fargs=(), callback=None, retall=False,
             skip_hessian=False, **kwargs):
 
@@ -497,10 +497,15 @@ class ProcessRegression(base.LikelihoodModel):
 
         for j, meth in enumerate(method):
 
-            if meth in ("powell",):
-                jac = None
-            else:
+            jac = None
+            if meth not in ("powell",):
                 jac = lambda x: -self.score(x)
+
+            if maxiter is not None:
+                if np.isscalar(maxiter):
+                    minim_opts["maxiter"] = maxiter
+                else:
+                    minim_opts["maxiter"] = maxiter[j % len(maxiter)]
 
             f = minimize(
                 lambda x: -self.loglike(x),
@@ -510,10 +515,11 @@ class ProcessRegression(base.LikelihoodModel):
                 options=minim_opts)
 
             if not f.success:
-                msg = ("Fitting did not converge, |gradient|=%.6f" % (np.sqrt(
-                    np.sum(f.jac**2))))
-                if j < len(meth) - 1:
-                    msg += ", trying %s next..." % meth[j+1]
+                msg = "Fitting did not converge"
+                if jac is not None:
+                    msg += ", |gradient|=%.6f" % np.sqrt(np.sum(f.jac**2))
+                if j < len(method) - 1:
+                    msg += ", trying %s next..." % method[j+1]
                 warnings.warn(msg)
 
             if np.isfinite(f.x).all():
