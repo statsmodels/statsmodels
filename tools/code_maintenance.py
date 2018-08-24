@@ -1,9 +1,7 @@
+#!/usr/bin/env python
 """
 Code maintenance script modified from PyMC
 """
-
-#!/usr/bin/env python
-import sys
 import os
 
 # This is a function, not a test case, because it has to be run from inside

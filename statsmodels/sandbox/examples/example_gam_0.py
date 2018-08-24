@@ -20,7 +20,7 @@ import scipy.stats
 from statsmodels.sandbox.gam import AdditiveModel
 from statsmodels.sandbox.gam import Model as GAM #?
 from statsmodels.genmod import families
-from statsmodels.genmod.generalized_linear_model import GLM
+
 
 #np.random.seed(987654)
 

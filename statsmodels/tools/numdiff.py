@@ -367,7 +367,6 @@ approx_hess.__doc__ += "\n    This is an alias for approx_hess3"
 
 if __name__ == '__main__': #pragma : no cover
     import statsmodels.api as sm
-    from scipy.optimize.optimize import approx_fhess_p
     import numpy as np
 
     data = sm.datasets.spector.load(as_pandas=False)

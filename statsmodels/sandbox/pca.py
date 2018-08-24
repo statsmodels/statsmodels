@@ -2,7 +2,7 @@
 
 from statsmodels.compat.python import zip
 import numpy as np
-from math import pi
+
 
 class Pca(object):
     """

@@ -4,10 +4,8 @@ Test SVAR estimation
 
 import statsmodels.api as sm
 from statsmodels.tsa.vector_ar.svar_model import SVAR
-from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
-from .results import results_svar
+from numpy.testing import assert_almost_equal, assert_allclose
 import numpy as np
-import numpy.testing as npt
 
 DECIMAL_6 = 6
 DECIMAL_5 = 5

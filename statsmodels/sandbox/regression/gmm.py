@@ -55,13 +55,13 @@ from statsmodels.compat.numpy import np_matrix_rank
 import numpy as np
 from scipy import optimize, stats
 
-from statsmodels.tools.numdiff import approx_fprime, approx_hess
+from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.base.model import (Model,
                                     LikelihoodModel, LikelihoodModelResults)
 from statsmodels.regression.linear_model import (OLS, RegressionResults,
                                                  RegressionResultsWrapper)
 import statsmodels.stats.sandwich_covariance as smcov
-from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import _ensure_2d
 
 DEBUG = 0

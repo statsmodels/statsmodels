@@ -145,7 +145,6 @@ class HoldIt(object):
 
 def generate_princomp(xo, filen='testsave.py'):
     # import mlabwrap only when run as script
-    import mlabwrap
     from mlabwrap import mlab
     np.set_printoptions(precision=14, linewidth=100)
     data =  HoldIt('data')
@@ -174,7 +173,6 @@ def generate_princomp(xo, filen='testsave.py'):
 
 def generate_armarep(filen='testsave.py'):
     # import mlabwrap only when run as script
-    import mlabwrap
     from mlabwrap import mlab
     res_armarep =  HoldIt('armarep')
     res_armarep.ar = np.array([1.,  -0.5, +0.8])
@@ -200,7 +198,6 @@ def exampletest():
 
 
 if __name__ == '__main__':
-    import mlabwrap
     from mlabwrap import mlab
 
     import savedrvs

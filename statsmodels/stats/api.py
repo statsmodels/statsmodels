@@ -15,7 +15,8 @@ from .diagnostic import (
 
 from . import multicomp
 from .multitest import (multipletests, fdrcorrection, fdrcorrection_twostage,
-                        local_fdr, NullDistribution, RegressionFDR)
+                        local_fdr, NullDistribution)
+from ._knockoff import RegressionFDR
 from .multicomp import tukeyhsd
 from . import gof
 from .gof import (powerdiscrepancy, gof_chisquare_discrete,

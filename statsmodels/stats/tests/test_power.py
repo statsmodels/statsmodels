@@ -16,7 +16,7 @@ from distutils.version import LooseVersion
 
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_allclose, assert_raises,
-                           assert_equal, assert_warns, dec)
+                           assert_equal, assert_warns)
 import pytest
 import scipy
 

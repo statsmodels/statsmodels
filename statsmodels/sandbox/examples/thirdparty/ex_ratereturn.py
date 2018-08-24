@@ -10,15 +10,10 @@ Author: josef-pktd
 """
 
 import numpy as np
-import matplotlib.finance as fin
 import matplotlib.pyplot as plt
-import datetime as dt
 
-import pandas as pa
 from statsmodels.compat.python import cPickle
 
-import statsmodels.api as sm
-import statsmodels.sandbox as sb
 import statsmodels.sandbox.tools as sbtools
 
 from statsmodels.graphics.correlation import plot_corr, plot_corr_grid
@@ -84,7 +79,7 @@ fig.savefig('corrmatrixgrid.png', dpi=120)
 
 has_sklearn = True
 try:
-    import sklearn
+    import sklearn  # noqa: F401
 except ImportError:
     has_sklearn = False
     print('sklearn not available')

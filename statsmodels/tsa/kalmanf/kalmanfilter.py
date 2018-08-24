@@ -27,8 +27,8 @@ Harvey uses Durbin and Koopman notation.
 from __future__ import print_function
 from statsmodels.compat.python import lzip, lmap, callable, range
 import numpy as np
-from numpy import dot, identity, kron, log, zeros, pi, eye, issubdtype, ones
-from numpy.linalg import inv, pinv
+from numpy import dot, identity, kron, zeros, eye, issubdtype
+from numpy.linalg import inv
 from scipy import optimize
 from statsmodels.tools.tools import chain_dot
 from . import kalman_loglike
@@ -667,7 +667,6 @@ class KalmanFilter(object):
 
 if __name__ == "__main__":
     import numpy as np
-    from scipy.linalg import block_diag
     import numpy as np
     # Make our observations as in 13.1.13
     np.random.seed(54321)
@@ -812,8 +811,7 @@ if __name__ == "__main__":
 # why does the above take 3 times as many iterations than direct max?
 
     # compare directly to matlab output
-    from scipy import io
-#    y_matlab = io.loadmat('./kalman_y.mat')['y'].reshape(-1,1)
+#    y_matlab = scipy.io.loadmat('./kalman_y.mat')['y'].reshape(-1,1)
 #    ssm_model2 = StateSpaceModel(y_matlab)
 #    ssm_model2.fit_kalman(start_params=params, xi10=xi10, F=F, Q=Q, H=H,
 #            upperbounds=upperbounds, lowerbounds=lowerbounds)

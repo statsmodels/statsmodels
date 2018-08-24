@@ -4,7 +4,7 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_raises, assert_)
 from numpy import array, column_stack
 from statsmodels.datasets import macrodata
-from pandas import Index, DataFrame, DatetimeIndex, concat
+from pandas import DataFrame, DatetimeIndex, concat
 from statsmodels.tsa.filters.api import (bkfilter, hpfilter, cffilter,
                                          convolution_filter, recursive_filter)
 

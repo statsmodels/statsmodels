@@ -26,7 +26,6 @@ from __future__ import print_function
 import numpy as np
 from scipy import signal
 #import matplotlib.pylab as plt
-from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 
 #NOTE: this just returns that predicted values given the

@@ -3,7 +3,7 @@
 '''
 
 import numpy as np
-from statsmodels.sandbox import tsa
+
 from statsmodels.tsa.arima_process import arma_generate_sample
 from .maketests_mlabwrap import HoldIt
 

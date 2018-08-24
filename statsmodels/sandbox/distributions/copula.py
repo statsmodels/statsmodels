@@ -15,7 +15,7 @@ copulas. The Annals of Statistics, 37(5), pp.2990-3022.
 
 
 import numpy as np
-from scipy.special import expm1, log1p
+from scipy.special import expm1
 
 
 def copula_bv_indep(u,v):

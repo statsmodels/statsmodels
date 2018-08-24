@@ -13,7 +13,6 @@ PJ Huber.  1973,  'The 1972 Wald Memorial Lectures: Robust Regression:
 R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
     2002.
 """
-from statsmodels.compat.python import string_types
 import numpy as np
 import scipy.stats as stats
 
@@ -472,8 +471,6 @@ class RLMResults(base.LikelihoodModelResults):
         """
         This is for testing the new summary setup
         """
-        from statsmodels.iolib.summary import (summary_top,
-                                            summary_params, summary_return)
 
 ##        left = [(i, None) for i in (
 ##                        'Dependent Variable:',

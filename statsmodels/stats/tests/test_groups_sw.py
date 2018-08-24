@@ -10,7 +10,7 @@ Author: Josef Perktold
 import numpy as np
 from numpy.testing import assert_equal, assert_raises
 import statsmodels.stats.sandwich_covariance as sw
-from statsmodels.tools.grouputils import Group, GroupSorted
+from statsmodels.tools.grouputils import GroupSorted
 
 class CheckPanelLagMixin(object):
 

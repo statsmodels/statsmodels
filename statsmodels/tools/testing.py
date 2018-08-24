@@ -13,13 +13,6 @@ def strip_rc(version):
     return re.sub(r"rc\d+$", "", version)
 
 
-# local copies, all unchanged
-from numpy.testing import (assert_allclose, assert_almost_equal,
-     assert_approx_equal, assert_array_almost_equal,
-     assert_array_almost_equal_nulp, assert_array_equal, assert_array_less,
-     assert_array_max_ulp, assert_raises, assert_string_equal, assert_warns)
-
-
 # adjusted functions
 
 def assert_equal(actual, desired, err_msg='', verbose=True, **kwds):

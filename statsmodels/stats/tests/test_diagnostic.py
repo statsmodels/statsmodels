@@ -27,7 +27,7 @@ from numpy.testing import (assert_, assert_almost_equal, assert_equal,
                            assert_array_equal)
 import pytest
 
-from statsmodels.regression.linear_model import OLS, GLSAR
+from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
 
@@ -760,7 +760,6 @@ def test_outlier_influence_funcs():
 
 def test_influence_wrapped():
     from pandas import DataFrame
-    from pandas.util.testing import assert_series_equal
 
     d = macrodata.load_pandas().data
     #growth rates

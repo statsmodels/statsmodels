@@ -16,8 +16,7 @@ import os
 import numpy as np
 import pandas as pd
 from statsmodels.tsa.stattools import bds
-from numpy.testing import assert_almost_equal, assert_equal
-from numpy import genfromtxt
+from numpy.testing import assert_almost_equal
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6

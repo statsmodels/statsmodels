@@ -8,7 +8,7 @@ from statsmodels.stats._knockoff import (RegressionFDR,
                                          _design_knockoff_sdp)
 
 try:
-    import cvxopt
+    import cvxopt  # noqa:F401
     has_cvxopt = True
 except:
     has_cvxopt = False

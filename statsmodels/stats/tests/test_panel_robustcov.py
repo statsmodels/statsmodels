@@ -17,7 +17,6 @@ import statsmodels.stats.sandwich_covariance as sw
 
 
 def test_panel_robust_cov():
-    import pandas as pa
     import statsmodels.datasets.grunfeld as gr
     from .results.results_panelrobust import results as res_stata
 

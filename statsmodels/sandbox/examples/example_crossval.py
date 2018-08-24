@@ -8,11 +8,9 @@ if __name__ == '__main__':
     #A: josef-pktd
 
     import statsmodels.api as sm
-    from statsmodels.api import OLS
     #from statsmodels.datasets.longley import load
     from statsmodels.datasets.stackloss import load
-    from statsmodels.iolib.table import (SimpleTable, default_txt_fmt,
-                            default_latex_fmt, default_html_fmt)
+
     import numpy as np
 
     data = load(as_pandas=False)

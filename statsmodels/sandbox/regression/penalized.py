@@ -34,10 +34,9 @@ problem with definition of df_model, it has 1 subtracted for constant
 
 """
 from __future__ import print_function
-from statsmodels.compat.python import range, lrange
+from statsmodels.compat.python import lrange
 import numpy as np
-from statsmodels.tools.decorators import (cache_readonly)
-import statsmodels.base.model as base
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import OLS, GLS, RegressionResults
 
 

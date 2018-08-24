@@ -1,10 +1,8 @@
 import numpy as np
 
-import matplotlib.pyplot as plt
 #import scikits.timeseries as ts
 #import scikits.timeseries.lib.plotlib as tpl
 
-import statsmodels.api as sm
 #from statsmodels.sandbox import tsa
 from statsmodels.sandbox.tsa.garch import Garch, garchplot, Garch0, optimize, loglikeGARCH11
 

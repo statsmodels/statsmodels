@@ -1,9 +1,9 @@
 """
 Test functions for sm.rlm
 """
+import pytest
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_allclose
-import pytest
 from scipy import stats
 import statsmodels.api as sm
 from statsmodels.robust.robust_linear_model import RLM

@@ -7,14 +7,14 @@ extensively ensure the stability and accuracy of the functions"""
 
 from statsmodels.compat.python import iterkeys, lzip, lmap
 
-from numpy.testing import rand, assert_, assert_equal, \
-    assert_almost_equal, assert_array_almost_equal, assert_array_equal, \
-    assert_approx_equal, assert_raises, run_module_suite
+from numpy.testing import assert_equal, \
+    assert_almost_equal, assert_array_almost_equal, \
+    assert_raises, run_module_suite
 
 import numpy as np
 import pytest
 
-from statsmodels.stats.libqsturng import qsturng, psturng,p_keys,v_keys
+from statsmodels.stats.libqsturng import qsturng, psturng
 
 
 def read_ch(fname):

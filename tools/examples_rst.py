@@ -4,11 +4,6 @@ import os
 import sys
 import re
 import subprocess
-import pickle
-from StringIO import StringIO
-
-# 3rd party
-from matplotlib import pyplot as plt
 
 # Ours
 import hash_funcs

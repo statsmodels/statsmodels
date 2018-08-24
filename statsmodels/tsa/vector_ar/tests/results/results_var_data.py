@@ -1,5 +1,4 @@
-import numpy as np
-from numpy import array, rec, inf, nan
+from numpy import array, rec
 
 
 class Holder(object):

@@ -2,7 +2,7 @@ import numpy as np
 import numpy.testing as npt
 import pandas as pd
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
-from statsmodels.tools.testing import assert_equal, assert_raises
+from statsmodels.tools.testing import assert_equal
 from datetime import datetime
 
 
