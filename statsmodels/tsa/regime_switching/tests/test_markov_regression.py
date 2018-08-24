@@ -10,8 +10,9 @@ import os
 import warnings
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_raises
+from numpy.testing import assert_allclose
 import pandas as pd
+import pytest
 
 from statsmodels.tsa.regime_switching import (markov_switching,
                                               markov_regression)
@@ -1031,7 +1032,7 @@ class TestFedFundsConstShort(MarkovRegression):
 
         for func in [markov_switching.py_hamilton_filter,
                      markov_switching.cy_hamilton_filter]:
-            with assert_raises(ValueError):
+            with pytest.raises(ValueError):
                 func(initial_probabilities,
                      regime_transition,
                      conditional_likelihoods)

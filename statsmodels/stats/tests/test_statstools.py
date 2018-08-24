@@ -2,7 +2,9 @@
 # TODO: Test robust kurtosis
 import numpy as np
 import pandas as pd
-from numpy.testing import (assert_almost_equal, assert_raises, assert_equal)
+from numpy.testing import (assert_almost_equal, assert_equal)
+import pytest
+
 from statsmodels.stats.stattools import (omni_normtest, jarque_bera,
                                          durbin_watson, _medcouple_1d, medcouple,
                                          robust_kurtosis, robust_skewness)
@@ -186,7 +188,8 @@ class TestStattools(object):
 
     def test_medcouple_1d(self):
         x = np.reshape(np.arange(100.0),(50,2))
-        assert_raises(ValueError, _medcouple_1d, x)
+        with pytest.raises(ValueError):
+            _medcouple_1d(x)
 
     def test_medcouple_symmetric(self):
         mc = medcouple(np.arange(5.0))

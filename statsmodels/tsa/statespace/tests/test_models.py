@@ -6,6 +6,7 @@ License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
 
+import pytest
 import numpy as np
 import pandas as pd
 import os
@@ -16,7 +17,7 @@ import warnings
 from statsmodels.tsa.statespace import mlemodel, sarimax
 from statsmodels import datasets
 
-from numpy.testing import assert_almost_equal, assert_equal, assert_allclose, assert_raises
+from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
 from .results import results_sarimax
 
 current_path = os.path.dirname(os.path.abspath(__file__))
@@ -230,7 +231,8 @@ class LargeStateCovAR1(mlemodel.MLEModel):
 
 
 def test_large_kposdef():
-    assert_raises(ValueError, LargeStateCovAR1, np.arange(10))
+    with pytest.raises(ValueError):
+        LargeStateCovAR1(np.arange(10))
 
 
 class TestLargeStateCovAR1(object):

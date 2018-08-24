@@ -4,11 +4,11 @@ Test functions for models.formula
 
 import string
 
+import pytest
 import numpy as np
 import numpy.random as R
 import numpy.linalg as L
-from numpy.testing import (assert_almost_equal, assert_equal, assert_,
-                           assert_raises)
+from numpy.testing import (assert_almost_equal, assert_equal, assert_)
 
 from statsmodels.sandbox import formula #, contrast #, utils
 from statsmodels.sandbox import contrast_old as contrast
@@ -22,7 +22,8 @@ class TestTerm(object):
 
         t2 = formula.Term("not_so_trivial", sqr, "sqr")
 
-        assert_raises(ValueError, formula.Term, "name", termname=0)
+        with pytest.raises(ValueError):
+            formula.Term("name", termname=0)
 
 
     def test_str(self):

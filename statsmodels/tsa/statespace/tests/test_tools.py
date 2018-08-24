@@ -8,15 +8,14 @@ from __future__ import division, absolute_import, print_function
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from scipy.linalg import solve_discrete_lyapunov
 from statsmodels.tsa.statespace import tools
 from statsmodels.tsa.api import acovf
 # from .results import results_sarimax
 from numpy.testing import (
-    assert_allclose, assert_equal, assert_array_equal, assert_almost_equal,
-    assert_raises
-)
+    assert_allclose, assert_equal, assert_array_equal, assert_almost_equal)
 
 
 class TestCompanionMatrix(object):
@@ -177,7 +176,9 @@ class TestConcat(object):
 
     def test_invalid(self):
         for args in self.invalid:
-            assert_raises(args[-1], tools.concat, *args[:-1])
+            with pytest.raises(args[-1]):
+                tools.concat(*args[:-1])
+
 
 
 class TestIsInvertible(object):
@@ -263,9 +264,9 @@ class TestValidateMatrixShape(object):
 
     def test_invalid_cases(self):
         for args in self.invalid:
-            assert_raises(
-                ValueError, tools.validate_matrix_shape, *args
-            )
+            with pytest.raises(ValueError):
+                tools.validate_matrix_shape(*args)
+
 
 
 class TestValidateVectorShape(object):
@@ -289,9 +290,9 @@ class TestValidateVectorShape(object):
 
     def test_invalid_cases(self):
         for args in self.invalid:
-            assert_raises(
-                ValueError, tools.validate_vector_shape, *args
-            )
+            with pytest.raises(ValueError):
+                tools.validate_vector_shape(*args)
+
 
 
 def test_multivariate_acovf():

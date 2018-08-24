@@ -1,8 +1,10 @@
 import numpy as np
 import numpy.testing as npt
 import pandas as pd
+import pytest
+
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
-from statsmodels.tools.testing import assert_equal, assert_raises
+from statsmodels.tools.testing import assert_equal
 from datetime import datetime
 
 
@@ -11,9 +13,6 @@ def test_pandas_nodates_index():
     data = [988, 819, 964]
     dates = ['a', 'b', 'c']
     s = pd.Series(data, index=dates)
-
-    # TODO: Remove this, this is now valid
-    # npt.assert_raises(ValueError, TimeSeriesModel, s)
 
     # Test with a non-date index that doesn't raise an exception because it
     # can be coerced into a nanosecond DatetimeIndex
@@ -62,7 +61,9 @@ def test_keyerror_start_date():
     series = pd.Series(x, index=dates)
     model = TimeSeriesModel(series)
 
-    npt.assert_raises(KeyError, model._get_prediction_index, "1970-4-30", None)
+    with pytest.raises(KeyError):
+        model._get_prediction_index("1970-4-30", None)
+
 
 
 def test_period_index():

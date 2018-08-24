@@ -11,8 +11,9 @@ available in R's MASS package.
 
 import os
 
+import pytest
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_, assert_raises,
+from numpy.testing import (assert_almost_equal, assert_,
                            assert_equal)
 
 from statsmodels.nonparametric.smoothers_lowess import lowess
@@ -128,7 +129,8 @@ class TestLowess(object):
         actual_lowess = lowess(y, x, is_sorted=True)
         actual_lowess1 = lowess(y[mask_valid], x[mask_valid], is_sorted=True)
         assert_almost_equal(actual_lowess, actual_lowess1, decimal=13)
-        assert_raises(ValueError, lowess, y, x, missing='raise')
+        with pytest.raises(ValueError):
+            lowess(y, x, missing='raise')
 
         perm_idx = np.arange(len(x))
         np.random.shuffle(perm_idx)

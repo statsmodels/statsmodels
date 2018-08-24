@@ -8,6 +8,7 @@ author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+import pytest
 
 from statsmodels.regression.linear_model import OLS, WLS
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
@@ -94,8 +95,8 @@ def test_predict_se():
 
     #use wrong size for exog
     #prstd, iv_l, iv_u = wls_prediction_std(res3, x2[-1,0], weights=3.)
-    np.testing.assert_raises(ValueError, wls_prediction_std, res3, x2[-1,0],
-                             weights=3.)
+    with pytest.raises(ValueError):
+        wls_prediction_std(res3, x2[-1,0], weights=3.)
 
     # check some weight values
     sew1 = wls_prediction_std(res3, x2[-3:,:])[0]**2

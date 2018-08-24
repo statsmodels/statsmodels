@@ -21,7 +21,7 @@ import re
 import warnings
 from statsmodels.tsa.statespace import mlemodel, varmax
 from .results import results_var_R
-from numpy.testing import assert_equal, assert_raises, assert_allclose
+from numpy.testing import assert_equal, assert_allclose
 import pytest
 from statsmodels.iolib.summary import forg
 

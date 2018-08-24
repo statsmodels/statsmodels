@@ -9,7 +9,7 @@ import pytest
 import numpy as np
 from numpy.testing import (assert_array_almost_equal, assert_almost_equal,
                            assert_allclose,
-                           assert_equal, assert_raises, assert_)
+                           assert_equal, assert_)
 
 from statsmodels.tsa.arima_process import (arma_generate_sample, arma_acovf,
                                            arma_acf, arma_impulse_response, lpol_fiar, lpol_fima,
@@ -240,7 +240,8 @@ class TestArmaProcess(TestCase):
         process2 = process1 * (np.array([1.0, -0.7]), np.array([1.0]))
         assert_equal(process2.arcoefs, np.array([1.6, -0.7 * 0.9]))
 
-        assert_raises(TypeError, process1.__mul__, [3])
+        with pytest.raises(TypeError):
+            process1 * [3]
 
     @pytest.mark.skipif(NP16, reason='numpy<1.7')
     def test_str_repr(self):

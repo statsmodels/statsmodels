@@ -1434,7 +1434,8 @@ class CheckConsistency(object):
                 res_robust_bc.cov_robust_bc)
 
         # check exception for misspelled cov_type
-        assert_raises(ValueError, mod.fit, cov_type='robust_bc')
+        with pytest.raises(ValueError):
+            mod.fit(cov_type='robust_bc')
 
 
 class TestGEEPoissonCovType(CheckConsistency):
