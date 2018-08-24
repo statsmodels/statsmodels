@@ -13,7 +13,7 @@ from numpy.testing import assert_equal
 
 __docformat__ = "restructuredtext en"
 
-from statsmodels.iolib.table import Cell, Row, SimpleTable
+from statsmodels.iolib.table import Cell, SimpleTable
 from statsmodels.iolib.table import default_latex_fmt
 from statsmodels.iolib.table import default_html_fmt
 

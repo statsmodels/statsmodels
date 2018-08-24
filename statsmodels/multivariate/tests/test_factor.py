@@ -215,7 +215,7 @@ def test_getframe_smoke():
 
     # The Styler option require jinja2, skip if not available
     try:
-        from jinja2 import Template
+        from jinja2 import Template  # noqa:F401
     except ImportError:
         return
 

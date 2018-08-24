@@ -1,3 +1,8 @@
+__all__ = ["KDEUnivariate", "lowess", "bandwidths",
+           "KDEMultivariate", "KDEMultivariateConditional",
+           "EstimatorSettings",
+           "KernelReg", "KernelCensoredReg"]
+
 from .kde import KDEUnivariate
 from .smoothers_lowess import lowess
 from . import bandwidths

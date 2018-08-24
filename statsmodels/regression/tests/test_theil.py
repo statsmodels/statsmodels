@@ -8,13 +8,10 @@ Author: Josef Perktold
 import os
 import numpy as np
 import pandas as pd
-from scipy import stats
 
-from numpy.testing import assert_allclose, assert_equal, assert_warns
+from numpy.testing import assert_allclose
 
-from statsmodels.regression.linear_model import OLS, WLS, GLS
-from statsmodels.tools.tools import add_constant
-from statsmodels.tools.sm_exceptions import InvalidTestWarning
+from statsmodels.regression.linear_model import OLS, GLS
 
 from statsmodels.sandbox.regression.penalized import TheilGLS
 

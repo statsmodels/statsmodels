@@ -15,7 +15,7 @@ fit_funcs = {
             }
 
 try:
-    from scipy.optimize import basinhopping
+    from scipy.optimize import basinhopping  # noqa:F401
     fit_funcs.update({'basinhopping': _fit_basinhopping})
 except ImportError:
     pass

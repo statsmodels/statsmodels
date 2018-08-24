@@ -28,24 +28,26 @@ from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from .results.results_discrete import Spector, DiscreteL1, RandHIE, Anes
-from statsmodels.tools.sm_exceptions import (PerfectSeparationError,
-                                             ConvergenceWarning)
+from statsmodels.tools.sm_exceptions import PerfectSeparationError
 from scipy.stats import nbinom
 
 try:
-    import cvxopt
+    # pylint:disable=unused-variable
+    import cvxopt  # noqa:F401
     has_cvxopt = True
 except ImportError:
     has_cvxopt = False
 
 try:
-    from scipy.optimize import basinhopping
+    # pylint:disable=unused-variable
+    from scipy.optimize import basinhopping  # noqa:F401
     has_basinhopping = True
 except ImportError:
     has_basinhopping = False
 
 try:
-    from scipy.optimize._trustregion_dogleg import _minimize_dogleg
+    # pylint:disable=unused-variable
+    from scipy.optimize._trustregion_dogleg import _minimize_dogleg  # noqa:F401
     has_dogleg = True
 except ImportError:
     has_dogleg = False

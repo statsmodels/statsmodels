@@ -10,7 +10,7 @@ import pytest
 from numpy.testing import assert_allclose, assert_equal, assert_raises
 
 try:
-    import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt  # noqa:F401
     missing_matplotlib = False
 except ImportError:
     missing_matplotlib = True
