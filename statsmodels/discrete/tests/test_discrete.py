@@ -39,12 +39,6 @@ except ImportError:
     has_cvxopt = False
 
 
-try:
-    from scipy.optimize._trustregion_dogleg import _minimize_dogleg
-    has_dogleg = True
-except ImportError:
-    has_dogleg = False
-
 DECIMAL_14 = 14
 DECIMAL_10 = 10
 DECIMAL_9 = 9
@@ -451,10 +445,6 @@ class TestProbitMinimizeDogleg(CheckBinaryResults):
 
     @classmethod
     def setup_class(cls):
-        if not has_dogleg:
-            pytest.skip("Skipped TestProbitMinimizeDogleg since "
-                            "dogleg method is not available")
-
         data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
