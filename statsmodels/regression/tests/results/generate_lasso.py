@@ -23,5 +23,5 @@ endog = expval + np.random.normal(size=n)
 data = np.concatenate((endog[:,None], exog), axis=1)
 data = np.around(100*data)
 
-fname = "results/lasso_data.csv"
+fname = "lasso_data.csv"
 np.savetxt(fname, data, fmt="%.0f", delimiter=",")
