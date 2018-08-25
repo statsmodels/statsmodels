@@ -118,7 +118,8 @@ class TestEpanechnikovHsheatherQ75(CheckModelResultsMixin):
     def setup_class(cls):
         data = sm.datasets.engel.load_pandas().data
         y, X = dmatrices('foodexp ~ income', data, return_type='dataframe')
-        cls.res1 = QuantReg(y, X).fit(q=.75, vcov='iid', kernel='epa', bandwidth='hsheather')
+        cls.res1 = QuantReg(y, X).fit(q=.75, vcov='iid', kernel='epa',
+                                      bandwidth='hsheather')
         cls.res2 = epanechnikov_hsheather_q75
 
 
@@ -236,10 +237,16 @@ def test_zero_resid():
     res = QuantReg(y, X).fit(0.5, bandwidth='chamberlain')  # 'bofinger')
     res.summary()
 
-    assert_allclose(res.params, np.array([0.0, 0.96774163]), rtol=1e-4, atol=1e-20)
-    assert_allclose(res.bse, np.array([0.0447576, 0.01154867]), rtol=1e-4, atol=1e-20)
-    assert_allclose(res.resid, np.array([0.0, 3.22583680e-02, -3.22574272e-02,
-                                         9.40732912e-07]), rtol=1e-4, atol=1e-20)
+    assert_allclose(res.params,
+                    np.array([0.0, 0.96774163]),
+                    rtol=1e-4, atol=1e-20)
+    assert_allclose(res.bse,
+                    np.array([0.0447576, 0.01154867]),
+                    rtol=1e-4, atol=1e-20)
+    assert_allclose(res.resid,
+                    np.array([0.0, 3.22583680e-02,
+                              -3.22574272e-02, 9.40732912e-07]),
+                    rtol=1e-4, atol=1e-20)
 
     X = np.array([[1, 0], [0.1, 1], [0, 2.1], [0, 3.1]], dtype=np.float64)
     y = np.array([0, 1, 2, 3], dtype=np.float64)
