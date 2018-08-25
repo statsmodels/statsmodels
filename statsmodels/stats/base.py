@@ -157,17 +157,11 @@ class Statistics(object):
 @nottest
 class TestResult(object):
 
-    _options = [    # including common abbreviations
+    _options = [
         "test_name",
-
-        "hypothesis",
-        "hypo",
-
-        "statistics",
-        "stats",
-
-        "critical_values",
-        "crit_vals"
+        "hypothesis"
+        "statistics"
+        "critical_values"
     ]
 
     def __init__(self, test_name, **kwargs):
