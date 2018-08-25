@@ -5,8 +5,11 @@ Created on Mon Apr 22 14:03:21 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat.python import lzip, zip
 import numpy as np
+
+from statsmodels.compat.python import lzip, zip
+from statsmodels.tools.decorators import nottest
+
 
 class AllPairsResults(object):
     '''Results class for pairwise comparisons, based on p-values
@@ -99,3 +102,102 @@ class AllPairsResults(object):
         text += '\n'.join(('%s  %6.4g' % (pairs, pv) for (pairs, pv) in
                 zip(self.all_pairs_names, self.pval_corrected())))
         return text
+
+
+class Hypothesis(object):
+
+    def __init__(self, null, alternative):
+        self._null = null
+        self._alternative = alternative
+
+    @property
+    def null(self):
+        return self._null
+
+    @property
+    def alternative(self):
+        return self._alternative
+
+    def __str__(self):
+        return ("Hypotheses:\n\t* H0: {0}\n\t* H1: {1}"
+                .format(self._null, self._alternative))
+
+
+class CriticalValues(object):
+
+    def __init__(self, crit_dict):
+        self._crit_dict = crit_dict
+
+    @property
+    def crit_dict(self):
+        return self._crit_dict
+
+    def __str__(self):
+        items = sorted(self._crit_dict.items(),
+                       key=lambda item: int(item[0].strip("%")))
+
+        critical_values = map(lambda item: "[{0}] = {1}".format(*item),
+                              items)
+
+        return "Critical values:\n" + ", ".join(critical_values)
+
+
+class Statistics(object):
+
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+    def __str__(self):
+        items = map(lambda item: "{0} = {1}".format(*item),
+                    self.__dict__.items())
+
+        return "Statistics:\n" + ", ".join(items)
+
+
+@nottest
+class TestResult(object):
+
+    _options = [    # including common abbreviations
+        "test_name",
+
+        "hypothesis",
+        "hypo",
+
+        "statistics",
+        "stats",
+
+        "critical_values",
+        "crit_vals"
+    ]
+
+    def __init__(self, test_name, **kwargs):
+        self.test_name = test_name
+
+        for key, value in kwargs.items():
+            if key in TestResult._options:
+                setattr(self, key, value)
+
+    def summary(self):
+        values = [str(getattr(self, key))
+                  for key in TestResult._options
+                  if hasattr(self, key)]
+
+        return "\n\n".join(values)
+
+    def __str__(self):
+        return self.summary()
+
+if __name__ == "__main__":
+    stats = Statistics(t=1.96, R=1.00)  # a list of test results
+
+    hypothesis = Hypothesis(null="Null hypothesis",
+                            alternative="Something else")
+
+    crit_vals = CriticalValues({"5%": 0.9, "10%": 1.5})
+
+    result = TestResult("Example test",
+                        hypo=hypothesis,
+                        stats=stats,
+                        crit_vals=crit_vals)
+
+    print(result)
