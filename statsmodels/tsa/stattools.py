@@ -894,57 +894,25 @@ def levinson_durbin(s, nlags=10, isacov=False):
     return sigma_v, arcoefs, pacf_, sig, phi  # return everything
 
 
-def levinson_durbin_partial(pacf):
+def levinson_durbin_pacf(pacf, nlags=None):
     """
-    Levinson-Durbin algorithm that returns the AR coefficients from the pacf
+    Levinson-Durbin algorithm that returns the acf and ar coefficients
 
     Parameters
     ----------
     pacf : array-like
         Partial autocorrelation array for lags 0, 1, ... p
+    nlags : int, optional
+        Number of lags in the AR model.  If omitted, returns coefficients from
+        an AR(p) and the first p autocorrelations
 
     Returns
     -------
-    coeffs : ndarray
-        AR(p) coefficients computed from the partial autocorrelations
-
-    References
-    ----------
-    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
-        forecasting. Springer.
-    """
-    pacf = np.squeeze(np.asarray(pacf))
-    if pacf.ndim != 1:
-        raise ValueError('pacf must be 1-d or squeezable to 1-d.')
-    if pacf[0] != 1:
-        raise ValueError('The first entry of the pacf corresponds to lags 0 '
-                         'and so must be 1.')
-    if len(pacf) < 2:
-        raise ValueError('pacf must have at least 2 elements.')
-    pacf = pacf[1:]
-    n = pacf.shape[0]
-    phi = np.diag(pacf)
-    for i in range(1, n):
-        prev = phi[i - 1, :-(n - i)]
-        phi[i, :-(n - i)] = prev - phi[i, i] * prev[::-1]
-    return phi[-1]
-
-
-def pacf2acf(pacf):
-    """
-    Levinson-Durbin algorithm that returns the acf from the pacf
-
-    Parameters
-    ----------
-    pacf : array-like
-        Partial autocorrelation array for lags 0, 1, ... p
-
-    Returns
-    -------
-    coeffs : ndarray
-        AR(p) coefficients computed from the partial autocorrelations
+    arcoefs : ndarray
+        AR coefficients computed from the partial autocorrelations
     acf : ndarray
-        acf computed from the partial autocorrelations
+        acf computed from the partial autocorrelations. Array returned contains
+        the autocorelations corresponding to lags 0, 1, ..., p
 
     References
     ----------
@@ -957,21 +925,25 @@ def pacf2acf(pacf):
     if pacf[0] != 1:
         raise ValueError('The first entry of the pacf corresponds to lags 0 '
                          'and so must be 1.')
-    if len(pacf) < 2:
-        raise ValueError('pacf must have at least 2 elements.')
     pacf = pacf[1:]
     n = pacf.shape[0]
+    if nlags is not None:
+        if nlags > n:
+            raise ValueError('Must provide at least as many values from the '
+                             'pacf as the number of lags.')
+        pacf = pacf[:nlags]
+        n = pacf.shape[0]
+
     acf = np.zeros(n + 1)
     acf[1] = pacf[0]
     nu = np.cumprod(1 - pacf ** 2)
-    phi = np.diag(pacf)
-
+    phi = pacf.copy()
     for i in range(1, n):
-        prev = phi[i - 1, :-(n - i)]
-        phi[i, :-(n - i)] = prev - phi[i, i] * prev[::-1]
-        acf[i + 1] = phi[i, i] * nu[i-1] + prev.dot(acf[1:-(n - i)][::-1])
+        prev = phi[:-(n - i)].copy()
+        phi[:-(n - i)] = prev - phi[i] * prev[::-1]
+        acf[i + 1] = phi[i] * nu[i-1] + prev.dot(acf[1:-(n - i)][::-1])
     acf[0] = 1
-    return phi[-1], acf
+    return phi, acf
 
 
 def grangercausalitytests(x, maxlag, addconst=True, verbose=True):

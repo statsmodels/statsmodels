@@ -1316,7 +1316,7 @@ def burg(endog, order=1, demean=True):
         forecasting. Springer.
     """
     # Avoid circular imports
-    from statsmodels.tsa.stattools import levinson_durbin_partial, pacf_burg
+    from statsmodels.tsa.stattools import levinson_durbin_pacf, pacf_burg
 
     endog = np.squeeze(np.asarray(endog))
     if endog.ndim != 1:
@@ -1326,8 +1326,9 @@ def burg(endog, order=1, demean=True):
         raise ValueError('order must be an integer larger than 1')
     if demean:
         endog = endog - endog.mean()
-    pacf, sigma = pacf_burg(endog, order)
-    return levinson_durbin_partial(pacf), sigma[-1]
+    pacf, sigma = pacf_burg(endog, order, demean=demean)
+    ar, _ = levinson_durbin_pacf(pacf)
+    return ar, sigma[-1]
 
 
 class RegressionResults(base.LikelihoodModelResults):

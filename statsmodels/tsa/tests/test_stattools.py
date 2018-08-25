@@ -16,7 +16,9 @@ from statsmodels.tools.sm_exceptions import (CollinearityWarning,
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw,
                                        pacf, grangercausalitytests,
                                        coint, acovf, kpss,
-                                       arma_order_select_ic, levinson_durbin)
+                                       arma_order_select_ic, levinson_durbin,
+                                       levinson_durbin_pacf,
+                                       pacf_burg)
 
 
 DECIMAL_8 = 8
@@ -610,6 +612,7 @@ def test_levinson_durbin_acov():
     assert_allclose(pacf, np.array([1, rho] + [0] * (m - 1)), atol=1e-8)
 
 
+
 @pytest.mark.parametrize("missing", ['conservative', 'drop', 'raise', 'none'])
 @pytest.mark.parametrize("fft", [False, True])
 @pytest.mark.parametrize("demean", [True, False])
@@ -649,3 +652,58 @@ def test_acovf_warns(acovf_data):
 def test_acf_warns(acovf_data):
     with pytest.warns(FutureWarning):
         acf(acovf_data, nlags=40)
+
+
+def test_pacf2acf_ar():
+    pacf = np.zeros(10)
+    pacf[0] = 1
+    pacf[1] = 0.9
+    ar, acf = levinson_durbin_pacf(pacf)
+    assert_allclose(acf, 0.9 ** np.arange(10.))
+    assert_allclose(ar, pacf[1:], atol=1e-8)
+
+    ar, acf = levinson_durbin_pacf(pacf, nlags=5)
+    assert_allclose(acf, 0.9 ** np.arange(6.))
+    assert_allclose(ar, pacf[1:6], atol=1e-8)
+
+
+def test_pacf2acf_levinson_durbin():
+    pacf = -0.9 ** np.arange(11.)
+    pacf[0] = 1
+    ar, acf = levinson_durbin_pacf(pacf)
+    _, ar_ld, pacf_ld, _, _ = levinson_durbin(acf, 10, isacov=True)
+    assert_allclose(ar, ar_ld, atol=1e-8)
+    assert_allclose(pacf, pacf_ld, atol=1e-8)
+
+    # From R, FitAR, PacfToAR
+    ar_from_r = [-4.1609, -9.2549, -14.4826, -17.6505, -17.5012, -14.2969, -9.5020, -4.9184,
+                 -1.7911, -0.3486]
+    assert_allclose(ar, ar_from_r, atol=1e-4)
+
+
+def test_pacf2acf_errors():
+    pacf = -0.9 ** np.arange(11.)
+    pacf[0] = 1
+    with pytest.raises(ValueError):
+        levinson_durbin_pacf(pacf, nlags=20)
+    with pytest.raises(ValueError):
+        levinson_durbin_pacf(pacf[:1])
+    with pytest.raises(ValueError):
+        levinson_durbin_pacf(np.zeros(10))
+    with pytest.raises(ValueError):
+        levinson_durbin_pacf(np.zeros((10, 2)))
+
+
+def test_pacf_burg():
+    rnd = np.random.RandomState(12345)
+    e = rnd.randn(10001)
+    y = e[1:] + 0.5 * e[:-1]
+    pacf, sigma2 = pacf_burg(y, 10)
+    yw_pacf = pacf_yw(y, 10)
+    assert_allclose(pacf, yw_pacf, atol=5e-4)
+    # Internal consistency check between pacf and sigma2
+    ye = y - y.mean()
+    s2y = ye.dot(ye) / 10000
+    pacf[0] = 0
+    sigma2_direct = s2y * np.cumprod(1 - pacf ** 2)
+    assert_allclose(sigma2, sigma2_direct, atol=1e-3)
