@@ -26,6 +26,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tools/tests/test_linalg.py \
         statsmodels/tools/decorators.py \
         statsmodels/tools/tests/test_decorators.py \
+        statsmodels/tsa/base/tests/test_datetools.py \
         statsmodels/tsa/vector_ar/dynamic.py \
         statsmodels/tsa/statespace/tests/results/ \
         statsmodels/tsa/statespace/tests/test_var.py \
