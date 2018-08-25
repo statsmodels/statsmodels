@@ -358,14 +358,13 @@ class TestPHReg(object):
         fitted_sd = dist.std()
         sample = dist.rvs()
 
-
     def test_fit_regularized(self):
 
         # Data set sizes
-        for n,p in (50,2),(100,5):
+        for n, p in [(50, 2), (100, 5)]:
 
             # Penalty weights
-            for js,s in enumerate([0,0.1]):
+            for js, s in enumerate([0, 0.1]):
 
                 coef_name = "coef_%d_%d_%d" % (n, p, js)
                 params = getattr(survival_enet_r_results, coef_name)
@@ -384,13 +383,16 @@ class TestPHReg(object):
                 assert_allclose(sm_result.params, params, rtol=0.3)
 
                 # Smoke test for summary
-                smry = sm_result.summary()
+                with pytest.raises(NotImplementedError):
+                    # TODO: implement this method
+                    smry = sm_result.summary()
 
                 # The penalized log-likelihood that we are maximizing.
                 def plf(params):
                     llf = model.loglike(params) / len(time)
                     L1_wt = 1
-                    llf = llf - s * ((1 - L1_wt)*np.sum(params**2) / 2 + L1_wt*np.sum(np.abs(params)))
+                    llf = llf - s * ((1 - L1_wt)*np.sum(params**2) / 2 +
+                                     L1_wt*np.sum(np.abs(params)))
                     return llf
 
                 # Confirm that we are doing better than glmnet.
