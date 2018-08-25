@@ -3615,20 +3615,20 @@ class DiscreteResults(base.LikelihoodModelResults):
         if title is None:
             title = self.model.__class__.__name__ + ' ' + "Regression Results"
 
-        #boiler plate
+        # boiler plate
         from statsmodels.iolib.summary import Summary
         smry = Summary()
         yname, yname_list = self._get_endog_name(yname, yname_list)
         # for top of table
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
-                          yname=yname, xname=xname, title=title)
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
+                             yname=yname, xname=xname, title=title)
         # for parameters, etc
         smry.add_table_params(self, yname=yname_list, xname=xname, alpha=alpha,
-                             use_t=self.use_t)
+                              use_t=self.use_t)
 
         if hasattr(self, 'constraints'):
             smry.add_extra_txt(['Model has been estimated subject to linear '
-                          'equality constraints.'])
+                                'equality constraints.'])
 
         #diagnostic table not used yet
         #smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
@@ -3637,7 +3637,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         return smry
 
     def summary2(self, yname=None, xname=None, title=None, alpha=.05,
-            float_format="%.4f"):
+                 float_format="%.4f"):
         """Experimental function to summarize regression results
 
         Parameters
@@ -3662,15 +3662,12 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary2.Summary : class to hold summary results
         """
-        # Summary
         from statsmodels.iolib import summary2
         smry = summary2.Summary()
         smry.add_base(results=self, alpha=alpha, float_format=float_format,
-                xname=xname, yname=yname, title=title)
+                      xname=xname, yname=yname, title=title)
 
         if hasattr(self, 'constraints'):
             smry.add_text('Model has been estimated subject to linear '
@@ -3679,11 +3676,10 @@ class DiscreteResults(base.LikelihoodModelResults):
         return smry
 
 
-
 class CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {
-                    "one_line_description" : "A results class for count data",
-                    "extra_attr" : ""}
+        "one_line_description": "A results class for count data",
+        "extra_attr": ""}
     @cache_readonly
     def resid(self):
         """
