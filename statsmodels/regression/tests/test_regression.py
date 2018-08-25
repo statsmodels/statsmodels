@@ -1025,7 +1025,7 @@ class TestRegularizedFit(object):
     def test_regularized(self):
 
         import os
-        from . import glmnet_r_results
+        from .results import glmnet_r_results
 
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         data = np.loadtxt(os.path.join(cur_dir, "results", "lasso_data.csv"),
