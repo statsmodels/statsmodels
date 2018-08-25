@@ -159,8 +159,8 @@ class TestResult(object):
 
     _options = [
         "test_name",
-        "hypothesis"
-        "statistics"
+        "hypothesis",
+        "statistics",
         "critical_values"
     ]
 
