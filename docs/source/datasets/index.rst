@@ -45,7 +45,7 @@ R Datasets Function Reference
    get_rdataset
    get_data_home
    clear_data_home
-   
+
 
 Available Datasets
 ------------------
@@ -64,7 +64,7 @@ Load a dataset:
 .. ipython:: python
 
    import statsmodels.api as sm
-   data = sm.datasets.longley.load()
+   data = sm.datasets.longley.load(as_pandas=False)
 
 The `Dataset` object follows the bunch pattern explained  in :ref:`proposal <dataset_proposal>`. The full dataset is available in the ``data`` attribute.
 

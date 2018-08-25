@@ -340,7 +340,7 @@ def as_numpy_dataset(ds, as_pandas=None, retain_index=False):
     if as_pandas is None:
         import warnings
         warnings.warn('load will return datasets containing pandas DataFrames and Series '
-                      'in the Future.  To suppress this message, specify load_pandas=False',
+                      'in the Future.  To suppress this message, specify as_pandas=False',
                       FutureWarning)
     ds.data = ds.data.to_records(index=retain_index)
     for d in dir(ds):
