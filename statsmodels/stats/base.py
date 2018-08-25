@@ -186,18 +186,3 @@ class TestResult(object):
 
     def __str__(self):
         return self.summary()
-
-if __name__ == "__main__":
-    stats = Statistics(t=1.96, R=1.00)  # a list of test results
-
-    hypothesis = Hypothesis(null="Null hypothesis",
-                            alternative="Something else")
-
-    crit_vals = CriticalValues({"5%": 0.9, "10%": 1.5})
-
-    result = TestResult("Example test",
-                        hypo=hypothesis,
-                        stats=stats,
-                        crit_vals=crit_vals)
-
-    print(result)
