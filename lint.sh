@@ -29,6 +29,20 @@ if [ "$LINT" == true ]; then
         statsmodels/regression/mixed_linear_model.py \
         statsmodels/regression/recursive_ls.py \
         statsmodels/regression/tests/test_lme.py \
+        statsmodels/stats/__init__.py \
+        statsmodels/stats/_knockoff.py \
+        statsmodels/stats/base.py \
+        statsmodels/stats/correlation_tools.py \
+        statsmodels/stats/knockoff_regeffects.py \
+        statsmodels/stats/multicomp.py \
+        statsmodels/stats/regularized_covariance.py \
+        statsmodels/stats/stattools.py \
+        statsmodels/stats/tests/test_correlation.py \
+        statsmodels/stats/tests/test_descriptivestats.py \
+        statsmodels/stats/tests/test_knockoff.py \
+        statsmodels/stats/tests/test_lilliefors.py \
+        statsmodels/stats/tests/test_qsturng.py \
+        statsmodels/stats/tests/test_regularized_covariance.py \
         statsmodels/tools/linalg.py \
         statsmodels/tools/web.py \
         statsmodels/tools/tests/test_linalg.py \

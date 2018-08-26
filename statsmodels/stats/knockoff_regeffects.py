@@ -146,7 +146,8 @@ class RegModelEffects(RegressionEffects):
         Dictionary of keyword arguments for fit or fit_regularized
     """
 
-    def __init__(self, model_cls, regularized=False, model_kws=None, fit_kws=None):
+    def __init__(self, model_cls, regularized=False, model_kws=None,
+                 fit_kws=None):
         self.model_cls = model_cls
         self.regularized = regularized
         self.model_kws = model_kws if model_kws is not None else {}
