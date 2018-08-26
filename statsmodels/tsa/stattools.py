@@ -10,6 +10,8 @@ from statsmodels.compat.python import (iteritems, range, lrange, string_types,
 from statsmodels.compat.scipy import _next_regular
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.sm_exceptions import InterpolationWarning, MissingDataError
+from statsmodels.stats.base import (TestResult, Hypothesis, Statistics,
+                                    CriticalValues)
 from statsmodels.tools.tools import add_constant, Bunch
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa.adfvalues import mackinnonp, mackinnoncrit
@@ -1213,8 +1215,8 @@ def kpss(x, regression='c', lags=None, store=False):
     crit : dict
         The critical values at 10%, 5%, 2.5% and 1%. Based on
         Kwiatkowski et al. (1992).
-    resstore : (optional) instance of ResultStore
-        An instance of a dummy class with results attached as attributes
+    resstore : (optional) instance of TestResult
+        An instance of TestResult with results attached as attributes
 
     Notes
     -----
@@ -1270,20 +1272,26 @@ def kpss(x, regression='c', lags=None, store=False):
     p_value = np.interp(kpss_stat, crit, pvals)
 
     if p_value == pvals[-1]:
-        warn("p-value is smaller than the indicated p-value", InterpolationWarning)
+        warn("p-value is smaller than the indicated p-value",
+             InterpolationWarning)
     elif p_value == pvals[0]:
-        warn("p-value is greater than the indicated p-value", InterpolationWarning)
+        warn("p-value is greater than the indicated p-value",
+             InterpolationWarning)
 
     crit_dict = {'10%': crit[0], '5%': crit[1], '2.5%': crit[2], '1%': crit[3]}
 
     if store:
-        rstore = ResultsStore()
-        rstore.lags = lags
-        rstore.nobs = nobs
+        statistics = Statistics(lags=lags, nobs=nobs,
+                                kpss_stat=kpss_stat, p_value=p_value)
 
-        stationary_type = "level" if hypo == 'c' else "trend"
-        rstore.H0 = "The series is {0} stationary".format(stationary_type)
-        rstore.HA = "The series is not {0} stationary".format(stationary_type)
+        hypo_text = "level" if hypo == 'c' else "trend"
+
+        hypo = Hypothesis(
+            null="The series is {0} stationary".format(hypo_text),
+            alternative="The series is not {0} stationary".format(hypo_text))
+
+        rstore = TestResult("KPSS test", statistics, hypothesis=hypo,
+                            critical_values=CriticalValues(crit_dict))
 
         return kpss_stat, p_value, crit_dict, rstore
     else:

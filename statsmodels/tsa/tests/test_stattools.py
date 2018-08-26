@@ -477,8 +477,8 @@ class TestKPSS(SetupKPSS):
             kpss_stat, pval, crit, store = kpss(self.x, 'c', 3, True)
 
         # assert attributes, and make sure they're correct
-        assert_equal(store.nobs, len(self.x))
-        assert_equal(store.lags, 3)
+        assert_equal(store.statistics.nobs, len(self.x))
+        assert_equal(store.statistics.lags, 3)
 
     def test_lags(self):
         with warnings.catch_warnings(record=True) as w:

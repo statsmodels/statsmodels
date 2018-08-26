@@ -164,12 +164,28 @@ class TestResult(object):
         "critical_values"
     ]
 
-    def __init__(self, test_name, **kwargs):
+    def __init__(self, test_name, statistics, **kwargs):
         self.test_name = test_name
+        self.statistics = statistics
 
         for key, value in kwargs.items():
             if key in TestResult._options:
                 setattr(self, key, value)
+
+    def __getattr__(self, item):
+        import warnings
+
+        if not hasattr(self.statistics, item):
+            raise AttributeError("{0} is not an understood field on this "
+                                 "TestResult.".format(item))
+
+        warnings.warn("While previously test results returned fields as class "
+                      "attributes, this behaviour has changed. Statistics can "
+                      "now be accessed through the statistics field; other "
+                      "attributes may also be available, dependent on the type "
+                      "of test.", DeprecationWarning)
+
+        return getattr(self.statistics, item)
 
     def summary(self):
         values = [str(getattr(self, key))

@@ -1,4 +1,5 @@
-from numpy.testing import assert_, assert_almost_equal
+from numpy.testing import (assert_, assert_almost_equal, assert_raises,
+                           assert_warns)
 
 from statsmodels.stats.base import (Hypothesis, Statistics, CriticalValues,
                                     TestResult)
@@ -62,3 +63,16 @@ class TestBase:
 
     def test_test_result_str(self):
         assert_(str(self.test_result) == self.test_result.summary())
+
+    def test_direct_access(self):
+        assert_almost_equal(self.test_result.t, 1.0)
+        assert_almost_equal(self.test_result.R, 1.2)
+        assert_almost_equal(self.test_result.p, 0.05)
+
+    def test_raises_missing_value_access(self):
+        with assert_raises(AttributeError):
+            self.test_result.some_missing_statistic
+
+    def test_warn_deprecation(self):
+        with assert_warns(DeprecationWarning):
+            self.test_result.R
