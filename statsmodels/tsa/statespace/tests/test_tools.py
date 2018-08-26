@@ -351,7 +351,7 @@ def test_multivariate_acovf():
     x = np.arange(20)*1.0
     assert_allclose(
         np.squeeze(tools._compute_multivariate_sample_acovf(x, maxlag=4)),
-        acovf(x)[:5])
+        acovf(x, fft=False)[:5])
 
 
 def test_multivariate_pacf():

@@ -22,6 +22,10 @@ if [ "$LINT" == true ]; then
         statsmodels/regression/mixed_linear_model.py \
         statsmodels/duration/__init__.py \
         statsmodels/regression/recursive_ls.py \
+        statsmodels/tools/linalg.py \
+        statsmodels/tools/tests/test_linalg.py \
+        statsmodels/tools/decorators.py \
+        statsmodels/tools/tests/test_decorators.py \
         conftest.py
     if [ $? -ne "0" ]; then
         RET=1

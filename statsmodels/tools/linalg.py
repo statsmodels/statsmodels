@@ -16,7 +16,7 @@ from numpy import asarray_chkfinite, single
 from numpy.linalg import LinAlgError
 
 
-### Linear Least Squares
+# Linear Least Squares
 
 def lstsq(a, b, cond=None, overwrite_a=0, overwrite_b=0):
     """Compute least-squares solution to equation :m:`a x = b`
@@ -246,11 +246,11 @@ def stationary_solve(r, b):
     dim = b.ndim
     if b.ndim == 1:
         b = b[:, None]
-    x = b[0:1,:]
+    x = b[0:1, :]
 
     for j in range(1, len(b)):
         rf = r[0:j][::-1]
-        a = (b[j,:] - np.dot(rf, x)) / (1 - np.dot(rf, db[::-1]))
+        a = (b[j, :] - np.dot(rf, x)) / (1 - np.dot(rf, db[::-1]))
         z = x - np.outer(db[::-1], a)
         x = np.concatenate((z, a[None, :]), axis=0)
 
@@ -266,22 +266,3 @@ def stationary_solve(r, b):
         x = x[:, 0]
 
     return x
-
-
-
-if __name__ == '__main__':
-    #for checking only,
-    #Note on Windows32:
-    #    linalg doesn't always produce the same results in each call
-    import scipy.linalg
-    a0 = np.random.randn(100,10)
-    b0 = a0.sum(1)[:, None] + np.random.randn(100,3)
-    lstsq(a0,b0)
-    pinv(a0)
-    pinv2(a0)
-    x = pinv(a0)
-    x2=scipy.linalg.pinv(a0)
-    print(np.max(np.abs(x-x2)))
-    x = pinv2(a0)
-    x2 = scipy.linalg.pinv2(a0)
-    print(np.max(np.abs(x-x2)))
