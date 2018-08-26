@@ -4,6 +4,7 @@ clone_depth: 50
 os: Visual Studio 2015
 
 environment:
+  PYTEST_DIRECTIVES: --skip-slow --durations=50
   matrix:
     # Pip builds
     - PYTHON: C:\Python27
@@ -30,9 +31,10 @@ build_script:
   - SET OMP_NUM_THREADS=1
   - SET OPENBLAS_NUM_THREADS=1
   - If Defined PY_MAJOR_VER ( call tools\ci\appveyor_conda.bat ) else ( call tools\ci\appveyor_pip.bat )
-  - pip install "pytest<4" pytest-xdist
+  - pip install pytest pytest-xdist
   - python setup.py develop
 
 test_script:
   # Remove xdist until warning reporting is working
-  - pytest -n auto -r s statsmodels --skip-examples
+  - echo pytest -n auto -r s statsmodels --skip-examples %PYTEST_DIRECTIVES%
+  - pytest -n auto -r s statsmodels --skip-examples %PYTEST_DIRECTIVES%
