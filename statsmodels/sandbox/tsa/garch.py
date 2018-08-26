@@ -83,7 +83,7 @@ import matplotlib.pyplot as plt
 
 import numdifftools as ndt
 
-from statsmodels.base.model import Model, LikelihoodModelResults
+from statsmodels.base.model import Model, LikelihoodModelResults, LikelihoodModel
 from statsmodels.sandbox import tsa
 
 
@@ -116,118 +116,6 @@ def normloglike(x, mu=0, sigma2=1, returnlls=False, axis=0):
         #print(np.sum(np.log(sigma2),axis))
         LL  =  -0.5 * (np.sum(np.log(sigma2),axis) + np.sum((x**2)/sigma2, axis)  +  nobs*np.log(2*np.pi))
         return LL
-
-# copied from model.py
-class LikelihoodModel(Model):
-    """
-    Likelihood model is a subclass of Model.
-    """
-
-    def __init__(self, endog, exog=None):
-        super(LikelihoodModel, self).__init__(endog, exog)
-        self.initialize()
-
-    def initialize(self):
-        """
-        Initialize (possibly re-initialize) a Model instance. For
-        instance, the design matrix of a linear model may change
-        and some things must be recomputed.
-        """
-        pass
-#TODO: if the intent is to re-initialize the model with new data then
-# this method needs to take inputs...
-
-    def loglike(self, params):
-        """
-        Log-likelihood of model.
-        """
-        raise NotImplementedError
-
-    def score(self, params):
-        """
-        Score vector of model.
-
-        The gradient of logL with respect to each parameter.
-        """
-        raise NotImplementedError
-
-    def information(self, params):
-        """
-        Fisher information matrix of model
-
-        Returns -Hessian of loglike evaluated at params.
-        """
-        raise NotImplementedError
-
-    def hessian(self, params):
-        """
-        The Hessian matrix of the model
-        """
-        raise NotImplementedError
-
-    def fit(self, start_params=None, method='newton', maxiter=35, tol=1e-08):
-        """
-        Fit method for likelihood based models
-
-        Parameters
-        ----------
-        start_params : array-like, optional
-            An optional
-
-        method : str
-            Method can be 'newton', 'bfgs', 'powell', 'cg', or 'ncg'.
-            The default is newton.  See scipy.optimze for more information.
-        """
-        methods = ['newton', 'bfgs', 'powell', 'cg', 'ncg', 'fmin']
-        if start_params is None:
-            start_params = [0]*self.exog.shape[1] # will fail for shape (K,)
-        if not method in methods:
-            raise ValueError("Unknown fit method %s" % method)
-        f = lambda params: -self.loglike(params)
-        score = lambda params: -self.score(params)
-#        hess = lambda params: -self.hessian(params)
-        hess = None
-#TODO: can we have a unified framework so that we can just do func = method
-# and write one call for each solver?
-
-        if method.lower() == 'newton':
-            iteration = 0
-            start = np.array(start_params)
-            history = [np.inf, start]
-            while (iteration < maxiter and np.all(np.abs(history[-1] - \
-                    history[-2])>tol)):
-                H = self.hessian(history[-1])
-                newparams = history[-1] - np.dot(np.linalg.inv(H),
-                        self.score(history[-1]))
-                history.append(newparams)
-                iteration += 1
-            mlefit = LikelihoodModelResults(self, newparams)
-            mlefit.iteration = iteration
-        elif method == 'bfgs':
-            score=None
-            xopt, fopt, gopt, Hopt, func_calls, grad_calls, warnflag = \
-                optimize.fmin_bfgs(f, start_params, score, full_output=1,
-                        maxiter=maxiter, gtol=tol)
-            converge = not warnflag
-            mlefit = LikelihoodModelResults(self, xopt)
-            optres = 'xopt, fopt, gopt, Hopt, func_calls, grad_calls, warnflag'
-            self.optimresults = dict(zip(optres.split(', '),[
-                xopt, fopt, gopt, Hopt, func_calls, grad_calls, warnflag]))
-        elif method == 'ncg':
-            xopt, fopt, fcalls, gcalls, hcalls, warnflag = \
-                optimize.fmin_ncg(f, start_params, score, fhess=hess,
-                        full_output=1, maxiter=maxiter, avextol=tol)
-            mlefit = LikelihoodModelResults(self, xopt)
-            converge = not warnflag
-        elif method == 'fmin':
-            #fmin(func, x0, args=(), xtol=0.0001, ftol=0.0001, maxiter=None, maxfun=None, full_output=0, disp=1, retall=0, callback=None)
-            xopt, fopt, niter, funcalls, warnflag = \
-                optimize.fmin(f, start_params,
-                        full_output=1, maxiter=maxiter, xtol=tol)
-            mlefit = LikelihoodModelResults(self, xopt)
-            converge = not warnflag
-        self._results = mlefit
-        return mlefit
 
 
 #TODO: I take it this is only a stub and should be included in another
