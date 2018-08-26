@@ -105,7 +105,7 @@ from statsmodels.compat.python import range
 import pandas as pd
 import numpy as np
 
-from statsmodels.tools.grouputils import Group
+from statsmodels.tools.grouputils import Group, group_sums
 from statsmodels.stats.moment_helpers import se_cov
 
 __all__ = ['cov_cluster', 'cov_cluster_2groups', 'cov_hac', 'cov_nw_panel',
@@ -432,30 +432,6 @@ def S_white_simple(x):
         x = x[:,None]
 
     return np.dot(x.T, x)
-
-
-
-def group_sums(x, group):
-    '''sum x for each group, simple bincount version, again
-
-    group : array, integer
-        assumed to be consecutive integers
-
-    no dtype checking because I want to raise in that case
-
-    uses loop over columns of x
-
-    #TODO: remove this, already copied to tools/grouputils
-    '''
-
-    #TODO: transpose return in group_sum, need test coverage first
-
-    # re-label groups or bincount takes too much memory
-    if np.max(group) > 2 * x.shape[0]:
-        group = pd.factorize(group)[0]
-
-    return np.array([np.bincount(group, weights=x[:, col])
-                            for col in range(x.shape[1])])
 
 
 def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
