@@ -42,8 +42,7 @@ matrix:
   - python: 3.6
     env:
     - PYTHON=3.6
-    # (can't use pandas=0.23 with pandas-datareader <= 0.6)
-    - PANDAS=0.22
+    - PANDAS=0.23
     - DOCBUILD=true
   # Python 3.5 + partially updated packages
   - python: 3.5
