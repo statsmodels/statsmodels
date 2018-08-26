@@ -8,7 +8,6 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
                            assert_, assert_allclose)
 from pandas import Series, DatetimeIndex, DataFrame
 
-from statsmodels.compat.numpy import recarray_select
 from statsmodels.compat.python import lrange
 from statsmodels.datasets import macrodata, sunspots
 from statsmodels.tools.sm_exceptions import (CollinearityWarning,
@@ -132,7 +131,7 @@ class TestADFNoConstant2(CheckADF):
                                          maxlag=1, store=True)
 
     def test_store_str(self):
-        assert_equal(self.store.__str__(), 'Augmented Dickey-Fuller Test Results')
+        assert_('Augmented Dickey-Fuller Test' in str(self.store))
 
 
 class CheckCorrGram(object):

@@ -25,13 +25,6 @@ __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
 SQRTEPS = np.sqrt(np.finfo(np.double).eps)
 
 
-#NOTE: now in two places to avoid circular import
-#TODO: I like the bunch pattern for this too.
-class ResultsStore(object):
-    def __str__(self):
-        return self._str  # pylint: disable=E1101
-
-
 def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
              fitargs=(), regresults=False):
     """
@@ -167,8 +160,8 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         levels. Based on MacKinnon (2010)
     icbest : float
         The maximized information criterion if autolag is not None.
-    resstore : ResultStore, optional
-        A dummy class with results attached as attributes
+    resstore : TestResult, optional
+        An instance of TestResult with results attached as attributes
 
     Notes
     -----
@@ -226,7 +219,8 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     xdshort = xdiff[-nobs:]
 
     if store:
-        resstore = ResultsStore()
+        statistics = Statistics()
+
     if autolag:
         if regression != 'nc':
             fullRHS = add_trend(xdall, regression, prepend=True)
@@ -244,7 +238,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
             icbest, bestlag, alres = _autolag(OLS, xdshort, fullRHS, startlag,
                                               maxlag, autolag,
                                               regresults=regresults)
-            resstore.autolag_results = alres
+            statistics.autolag_results = alres
 
         bestlag -= startlag  # convert to lag not column index
 
@@ -264,7 +258,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         resols = OLS(xdshort, xdall[:, :usedlag + 1]).fit()
 
     adfstat = resols.tvalues[0]
-#    adfstat = (resols.params[0]-1.0)/resols.bse[0]
+    # adfstat = (resols.params[0]-1.0)/resols.bse[0]
     # the "asymptotically correct" z statistic is obtained as
     # nobs/(1-np.sum(resols.params[1:-(trendorder+1)])) (resols.params[0] - 1)
     # I think this is the statistic that is used for series that are integrated
@@ -273,21 +267,28 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     # Get approx p-value and critical values
     pvalue = mackinnonp(adfstat, regression=regression, N=1)
     critvalues = mackinnoncrit(N=1, regression=regression, nobs=nobs)
-    critvalues = {"1%" : critvalues[0], "5%" : critvalues[1],
-                  "10%" : critvalues[2]}
+    critvalues = {"1%": critvalues[0], "5%": critvalues[1],
+                  "10%": critvalues[2]}
+
     if store:
-        resstore.resols = resols
-        resstore.maxlag = maxlag
-        resstore.usedlag = usedlag
-        resstore.adfstat = adfstat
-        resstore.critvalues = critvalues
-        resstore.nobs = nobs
-        resstore.H0 = ("The coefficient on the lagged level equals 1 - "
-                       "unit root")
-        resstore.HA = "The coefficient on the lagged level < 1 - stationary"
-        resstore.icbest = icbest
-        resstore._str = 'Augmented Dickey-Fuller Test Results'
-        return adfstat, pvalue, critvalues, resstore
+        statistics.resols = resols
+        statistics.maxlag = maxlag
+        statistics.usedlag = usedlag
+        statistics.adfstat = adfstat
+        statistics.p_value = pvalue
+        statistics.adf_stat = adfstat
+        statistics.nobs = nobs
+        statistics.icbest = icbest
+
+        hypo = Hypothesis(null=("The coefficient on the lagged level equals 1"
+                                " - unit root"),
+                          alternative="The coefficient on the lagged level < 1 "
+                                      "- stationary")
+
+        test_result = TestResult("Augmented Dickey-Fuller Test", statistics,
+                                 hypothesis=hypo, critical_values=critvalues)
+
+        return adfstat, pvalue, critvalues, test_result
     else:
         if not autolag:
             return adfstat, pvalue, usedlag, nobs, critvalues
