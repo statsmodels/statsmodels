@@ -77,10 +77,6 @@ class CheckModelResults(object):
     def pvalues(self):
         assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL_4)
 
-#    def test_cov_params(self):
-#        assert_almost_equal(self.res1.cov_params(), self.res2.cov_params,
-#                DECIMAL_4)
-
     def test_llf(self):
         assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL_4)
 
@@ -338,10 +334,6 @@ class TestProbitNewton(CheckBinaryResults):
         res2.probit()
         cls.res2 = res2
 
-    #def test_predict(self):
-    #    assert_almost_equal(self.res1.model.predict(self.res1.params),
-    #            self.res2.predict, DECIMAL_4)
-
 
 class TestProbitBFGS(CheckBinaryResults):
 
@@ -523,7 +515,7 @@ class TestProbitL1(CheckLikelihoodModelL1):
     def setup_class(cls):
         data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=True)
-        alpha = np.array([0.1, 0.2, 0.3, 10]) #/ data.exog.shape[0]
+        alpha = np.array([0.1, 0.2, 0.3, 10])
         cls.res1 = Probit(data.endog, data.exog).fit_regularized(
             method="l1", alpha=alpha, disp=0, trim_mode='auto',
             auto_trim_tol=0.02, acc=1e-10, maxiter=1000)
@@ -544,7 +536,7 @@ class TestMNLogitL1(CheckLikelihoodModelL1):
         anes_exog = anes_data.exog
         anes_exog = sm.add_constant(anes_exog, prepend=False)
         mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
-        alpha = 10. * np.ones((mlogit_mod.J - 1, mlogit_mod.K)) #/ anes_exog.shape[0]
+        alpha = 10. * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
         alpha[-1,:] = 0
         cls.res1 = mlogit_mod.fit_regularized(
                 method='l1', alpha=alpha, trim_mode='auto', auto_trim_tol=0.02,
@@ -560,7 +552,7 @@ class TestLogitL1(CheckLikelihoodModelL1):
     def setup_class(cls):
         data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=True)
-        cls.alpha = 3 * np.array([0., 1., 1., 1.]) #/ data.exog.shape[0]
+        cls.alpha = 3 * np.array([0., 1., 1., 1.])
         cls.res1 = Logit(data.endog, data.exog).fit_regularized(
             method="l1", alpha=cls.alpha, disp=0, trim_mode='size',
             size_trim_tol=1e-5, acc=1e-10, maxiter=1000)
@@ -586,7 +578,7 @@ class TestCVXOPT(object):
 
     def test_cvxopt_versus_slsqp(self):
         #Compares resutls from cvxopt to the standard slsqp
-        self.alpha = 3. * np.array([0, 1, 1, 1.]) #/ self.data.endog.shape[0]
+        self.alpha = 3. * np.array([0, 1, 1, 1.])
         res_slsqp = Logit(self.data.endog, self.data.exog).fit_regularized(
             method="l1", alpha=self.alpha, disp=0, acc=1e-10, maxiter=1000,
             trim_mode='auto')
@@ -606,7 +598,7 @@ class TestSweepAlphaL1(object):
         cls.alphas = np.array(
                    [[0.1, 0.1, 0.1, 0.1],
                     [0.4, 0.4, 0.5, 0.5],
-                    [0.5, 0.5, 1, 1]]) #/ data.exog.shape[0]
+                    [0.5, 0.5, 1, 1]])
         cls.res1 = DiscreteL1()
         cls.res1.sweep()
 
@@ -954,7 +946,7 @@ class TestLogitNewtonPrepend(CheckMargEff):
         res2 = Spector()
         res2.logit()
         cls.res2 = res2
-        cls.slice = np.roll(np.arange(len(cls.res1.params)), 1) #.astype(int)
+        cls.slice = np.roll(np.arange(len(cls.res1.params)), 1)
 
     def test_resid_pearson(self):
         assert_almost_equal(self.res1.resid_pearson,
@@ -1431,9 +1423,6 @@ class TestMNLogitLBFGSBaseZero(CheckMNLogitBaseZero):
         exog = sm.add_constant(exog, prepend=False)
         mymodel = MNLogit(data.endog, exog)
         cls.res1 = mymodel.fit(method="lbfgs", disp=0, maxiter=50000,
-                #m=12, pgtol=1e-7, factr=1e3, # 5 failures
-                #m=20, pgtol=1e-8, factr=1e2, # 3 failures
-                #m=30, pgtol=1e-9, factr=1e1, # 1 failure
                 m=40, pgtol=1e-10, factr=5e0,
                 loglike_and_score=mymodel.loglike_and_score)
         res2 = Anes()
@@ -2333,13 +2322,12 @@ def test_optim_kwds_prelim():
     X = (df[features] - df[features].mean())/df[features].std()
     y = df['num'].values
     exog = sm.add_constant(X[features].copy())
-    # offset=np.log(df['population'].values + 1)
     # offset currently not used
     offset = None
 
     # we use "nm", "bfgs" does not work for Poisson/exp with older scipy
     optim_kwds_prelim = dict(method='nm', maxiter=5000)
-    model = Poisson(y, exog, offset=offset) #
+    model = Poisson(y, exog, offset=offset)
     res_poi = model.fit(disp=0, **optim_kwds_prelim)
 
     model = NegativeBinomial(y, exog, offset=offset)

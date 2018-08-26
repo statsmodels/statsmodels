@@ -188,8 +188,7 @@ def test_chisquare_prob(results, probs, bin_edges=None, method=None):
         d_ind_bins, k_bins = d_ind, d_ind.shape[1]
         probs_bins = probs
     diff1 = d_ind_bins - probs_bins
-    #diff2 = (1 - d_ind.sum(1)) - (1 - probs_bins.sum(1))
-    x_aux = np.column_stack((score_obs, diff1[:, :-1])) #, diff2))
+    x_aux = np.column_stack((score_obs, diff1[:, :-1]))
     nobs = x_aux.shape[0]
     res_aux = OLS(np.ones(nobs), x_aux).fit()
 
@@ -271,7 +270,6 @@ def test_poisson_zeroinflation(results_poisson, exog_infl=None):
     cross_derivative = (exog_infl.T * (-mu)).dot(exog).T
     cov_infl = (exog_infl.T * ((1 - prob_zero) / prob_zero)).dot(exog_infl)
     score_obs_infl = exog_infl * (((endog == 0) - prob_zero) / prob_zero)[:,None]
-    #score_obs_infl = exog_infl * ((endog == 0) * (1 - prob_zero) / prob_zero - (endog>0))[:,None] #same
     score_infl = score_obs_infl.sum(0)
     cov_score_infl = cov_infl - cross_derivative.T.dot(cov_poi).dot(cross_derivative)
     cov_score_infl_inv = np.linalg.pinv(cov_score_infl)

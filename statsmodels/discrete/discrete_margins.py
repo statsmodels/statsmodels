@@ -169,7 +169,6 @@ def _get_dummy_effects(effects, exog, dummy_ind, method, model, params):
         exog0 = exog.copy() # only copy once, can we avoid a copy?
         exog0[:,i] = 0
         effect0 = model.predict(params, exog0)
-        #fittedvalues0 = np.dot(exog0,params)
         exog0[:,i] = 1
         effect1 = model.predict(params, exog0)
         if 'ey' in method:
@@ -402,7 +401,7 @@ class Margins(object):
     def summary(self, alpha=.05):
         raise NotImplementedError
 
-#class DiscreteMargins(Margins):
+
 class DiscreteMargins(object):
     """Get marginal effects of a Discrete Choice model.
 
@@ -581,7 +580,6 @@ class DiscreteMargins(object):
                 header = ['', _transform_names[method], 'std err', 'z',
                         'P>|z|', '[' + str(alpha/2), str(1-alpha/2) + ']']
                 tble.insert_header_row(0, header)
-                #from IPython.core.debugger import Pdb; Pdb().set_trace()
                 table.append(tble)
 
             table = table_extend(table, keep_headers=True)

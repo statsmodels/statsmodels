@@ -26,15 +26,10 @@ class TestCountDiagnostic(object):
         exog[:nobs//2, 1] = 0
         # offset is used to create misspecification of the model
         # for predicted probabilities conditional moment test
-        #offset = 0.5 * np.random.randn(nobs)
-        #range_mix = 0.5
-        #offset = -range_mix / 2 + range_mix * np.random.rand(nobs)
         offset = 0
         mu_true = np.exp(exog.dot(expected_params[:-1]) + offset)
 
         endog_poi = np.random.poisson(mu_true / 5)
-        # endog3 = distr.zigenpoisson.rvs(mu_true, 0,
-        #                                2, 0.01, size=mu_true.shape)
 
         model_poi = Poisson(endog_poi, exog)
         res_poi = model_poi.fit(method='bfgs', maxiter=5000, maxfun=5000)

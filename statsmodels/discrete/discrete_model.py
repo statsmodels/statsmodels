@@ -2379,64 +2379,10 @@ class MNLogit(MultinomialModel):
         return H
 
 
+# TODO: Consider implementing Weibull?
 #TODO: Weibull can replaced by a survival analsysis function
 # like stat's streg (The cox model as well)
-#class Weibull(DiscreteModel):
-#    """
-#    Binary choice Weibull model
-#
-#    Notes
-#    ------
-#    This is unfinished and untested.
-#    """
-##TODO: add analytic hessian for Weibull
-#    def initialize(self):
-#        pass
-#
-#    def cdf(self, X):
-#        """
-#        Gumbell (Log Weibull) cumulative distribution function
-#        """
-##        return np.exp(-np.exp(-X))
-#        return stats.gumbel_r.cdf(X)
-#        # these two are equivalent.
-#        # Greene table and discussion is incorrect.
-#
-#    def pdf(self, X):
-#        """
-#        Gumbell (LogWeibull) probability distribution function
-#        """
-#        return stats.gumbel_r.pdf(X)
-#
-#    def loglike(self, params):
-#        """
-#        Loglikelihood of Weibull distribution
-#        """
-#        X = self.exog
-#        cdf = self.cdf(np.dot(X,params))
-#        y = self.endog
-#        return np.sum(y*np.log(cdf) + (1-y)*np.log(1-cdf))
-#
-#    def score(self, params):
-#        y = self.endog
-#        X = self.exog
-#        F = self.cdf(np.dot(X,params))
-#        f = self.pdf(np.dot(X,params))
-#        term = (y*f/F + (1 - y)*-f/(1-F))
-#        return np.dot(term,X)
-#
-#    def hessian(self, params):
-#        hess = nd.Jacobian(self.score)
-#        return hess(params)
-#
-#    def fit(self, start_params=None, method='newton', maxiter=35, tol=1e-08):
-## The example had problems with all zero start values, Hessian = 0
-#        if start_params is None:
-#            start_params = OLS(self.endog, self.exog).fit().params
-#        mlefit = super(Weibull, self).fit(start_params=start_params,
-#                method=method, maxiter=maxiter, tol=tol)
-#        return mlefit
-#
+
 
 class NegativeBinomial(CountModel):
     __doc__ = """
@@ -2683,7 +2629,6 @@ class NegativeBinomial(CountModel):
         # for dl/dparams dparams
         dim = exog.shape[1]
         hess_arr = np.empty((dim+1,dim+1))
-        #const_arr = a1*mu*(a1+y)/(mu+a1)**2
         # not all of dparams
         dparams = exog / alpha * (np.log(prob) +
                                   dgpart)
@@ -2795,9 +2740,8 @@ class NegativeBinomial(CountModel):
         if df_resid is None:
             df_resid = resid.shape[0]
         if self.loglike_method == 'nb2':
-            #params.append(np.linalg.pinv(mu[:,None]).dot(resid**2 / mu - 1))
             a = ((resid**2 / mu - 1) / mu).sum() / df_resid
-        else: #self.loglike_method == 'nb1':
+        else:  # i.e. self.loglike_method == 'nb1':
             a = (resid**2 / mu - 1).sum() / df_resid
         return a
 
@@ -3342,8 +3286,6 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     def __init__(self, model, mlefit, cov_type='nonrobust', cov_kwds=None,
                  use_t=None):
-        #super(DiscreteResults, self).__init__(model, params,
-        #        np.linalg.inv(-hessian), scale=1.)
         self.model = model
         self.df_model = model.df_model
         self.df_resid = model.df_resid
@@ -3599,7 +3541,6 @@ class DiscreteResults(base.LikelihoodModelResults):
                      ('Method:', ['MLE']),
                      ('Date:', None),
                      ('Time:', None),
-                     #('No. iterations:', ["%d" % self.mle_retvals['iterations']]),
                      ('converged:', ["%s" % self.mle_retvals['converged']])
                       ]
 
@@ -3630,10 +3571,6 @@ class DiscreteResults(base.LikelihoodModelResults):
             smry.add_extra_txt(['Model has been estimated subject to linear '
                           'equality constraints.'])
 
-        #diagnostic table not used yet
-        #smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-        #                   yname=yname, xname=xname,
-        #                   title="")
         return smry
 
     def summary2(self, yname=None, xname=None, title=None, alpha=.05,
@@ -3897,15 +3834,11 @@ class BinaryResults(DiscreteResults):
         For now :math:`M_j` is always set to 1.
         """
         #These are the deviance residuals
-        #model = self.model
         endog = self.model.endog
-        #exog = model.exog
         # M = # of individuals that share a covariate pattern
         # so M[i] = 2 for i = two share a covariate pattern
         M = 1
         p = self.predict()
-        #Y_0 = np.where(exog == 0)
-        #Y_M = np.where(exog == M)
         #NOTE: Common covariate patterns are not yet handled
         res = -(1-endog)*np.sqrt(2*M*np.abs(np.log(1-p))) + \
                 endog*np.sqrt(2*M*np.abs(np.log(p)))
@@ -3928,9 +3861,7 @@ class BinaryResults(DiscreteResults):
         For now :math:`M_j` is always set to 1.
         """
         # Pearson residuals
-        #model = self.model
         endog = self.model.endog
-        #exog = model.exog
         # M = # of individuals that share a covariate pattern
         # so M[i] = 2 for i = two share a covariate pattern
         # use unique row pattern?
@@ -4054,7 +3985,6 @@ class MultinomialResults(DiscreteResults):
         """
         ju = self.model.J - 1  # highest index
         # these are the actual, predicted indices
-        #idx = lzip(self.model.endog, self.predict().argmax(1))
         bins = np.concatenate(([0], np.linspace(0.5, ju - 0.5, ju), [ju]))
         return np.histogram2d(self.model.endog, self.predict().argmax(1),
                               bins=bins)[0]
@@ -4182,12 +4112,6 @@ wrap.populate_wrapper(GeneralizedPoissonResultsWrapper,
 
 class PoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
-    #_methods = {
-    #        "predict_prob" : "rows",
-    #        }
-    #_wrap_methods = lm.wrap.union_dicts(
-    #                            lm.RegressionResultsWrapper._wrap_methods,
-    #                            _methods)
 wrap.populate_wrapper(PoissonResultsWrapper, PoissonResults)
 
 class L1CountResultsWrapper(lm.RegressionResultsWrapper):
@@ -4195,12 +4119,6 @@ class L1CountResultsWrapper(lm.RegressionResultsWrapper):
 
 class L1PoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
-    #_methods = {
-    #        "predict_prob" : "rows",
-    #        }
-    #_wrap_methods = lm.wrap.union_dicts(
-    #                            lm.RegressionResultsWrapper._wrap_methods,
-    #                            _methods)
 wrap.populate_wrapper(L1PoissonResultsWrapper, L1PoissonResults)
 
 class L1NegativeBinomialResultsWrapper(lm.RegressionResultsWrapper):

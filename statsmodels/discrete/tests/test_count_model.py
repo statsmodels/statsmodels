@@ -45,7 +45,6 @@ class CheckGeneric(object):
 
     def test_init_keys(self):
         init_kwds = self.res1.model._get_init_kwds()
-        #assert_equal(sorted(list(init_kwds.keys())), self.init_keys)
         assert_equal(set(init_kwds.keys()), set(self.init_keys))
         for key, value in self.init_kwds.items():
             assert_equal(init_kwds[key], value)
@@ -303,7 +302,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         assert_allclose(res_bh.bse, self.res2.bse,
                         atol=1e-3, rtol=0.6)
         # skip, res_bh reports converged is false but params agree
-        #assert_(res_bh.mle_retvals['converged'] is True)
+        # assert_(res_bh.mle_retvals['converged'] is True)
 
 class TestZeroInflatedGeneralizedPoisson_predict(object):
     @classmethod
@@ -414,7 +413,7 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
         assert_allclose(res_bh.bse, self.res2.bse,
                         atol=1e-3, rtol=1e-3)
         # skip, res_bh reports converged is false but params agree
-        #assert_(res_bh.mle_retvals['converged'] is True)
+        # assert_(res_bh.mle_retvals['converged'] is True)
 
 
 class TestZeroInflatedNegativeBinomialP_predict(object):
@@ -479,8 +478,6 @@ class TestZeroInflatedNegativeBinomialP_predict(object):
         probs_unique = res.predict(exog=[[1, 0], [1, 1]],
                                    exog_infl=np.asarray([[1], [1]]),
                                    which='prob')
-        # no default for exog_infl yet
-        #probs_unique = res.predict(exog=[[1, 0], [1, 1]], which='prob')
 
         probs_unique2 = probs[[1, nobs-1]]
 
