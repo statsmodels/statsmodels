@@ -38,18 +38,13 @@ from statsmodels.tools.tools import add_constant
 from statsmodels.tsa.stattools import acf, adfuller
 from statsmodels.tsa.tsatools import lagmat
 from statsmodels.compat.numpy import np_matrix_rank
+from statsmodels.stats.base import (Statistics, Hypothesis, TestResult)
 
-#get the old signature back so the examples work
+
+# get the old signature back so the examples work
 def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
     return adfuller(x, maxlag=maxlag, regression=trendorder, autolag=autolag,
                     store=store, regresults=False)
-
-
-#TODO: I like the bunch pattern for this too.
-class ResultsStore(object):
-    def __str__(self):
-        return self._str
-
 
 
 class CompareCox(object):
@@ -318,7 +313,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
         highest lag to use
     autolag : None or string
         If None, then a fixed number of lags given by maxlag is used.
-    store : bool
+    store : bool, optional
         If true then the intermediate results are also returned
 
     Returns
@@ -332,18 +327,15 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
         F test for the parameter restriction
     fpval : float
         pvalue for F test
-    resstore : instance (optional)
-        a class instance that holds intermediate results. Only returned if
-        store=True
+    resstore : TestResult, optional
+        An instance of TestResult with results attached as attributes
 
     See Also
     --------
     het_arch
     acorr_breusch_godfrey
     acorr_ljung_box
-
     '''
-
     if regresults:
         store = True
 
@@ -361,7 +353,8 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     xdall = np.c_[np.ones((nobs,1)), xdall]
     xshort = x[-nobs:]
 
-    if store: resstore = ResultsStore()
+    if store:
+        resstore = Statistics()
 
     if autolag:
         #search for lag length with highest information criteria
@@ -399,7 +392,20 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
     if store:
         resstore.resols = resols
         resstore.usedlag = usedlag
-        return lm, lmpval, fval, fpval, resstore
+
+        resstore.lm_stat = lm
+        resstore.f_stat = fval
+        resstore.f_pvalue = fpval
+        resstore.lm_pvalue = lmpval
+
+        hypo = Hypothesis(null="The data are independently distributed.",
+                          alternative="The data exhibit auto-correlation.")
+
+        test_result = TestResult(
+            "Lagrange Multiplier tests for auto-correlation", resstore,
+            hypothesis=hypo)
+
+        return lm, lmpval, fval, fpval, test_result
     else:
         return lm, lmpval, fval, fpval
 
@@ -435,9 +441,8 @@ def het_arch(resid, maxlag=None, autolag=None, store=False, regresults=False,
         F test for the parameter restriction
     fpval : float
         pvalue for F test
-    resstore : instance (optional)
-        a class instance that holds intermediate results. Only returned if
-        store=True
+    resstore : TestResult, optional
+        An instance of TestResult with results attached as attributes
 
     Notes
     -----
@@ -475,9 +480,8 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
         F test for the parameter restriction
     fpval : float
         pvalue for F test
-    resstore : instance (optional)
-        a class instance that holds intermediate results. Only returned if
-        store=True
+    resstore : TestResult, optional
+        An instance of TestResult with results attached as attributes
 
     Notes
     -----
@@ -510,7 +514,8 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
     exog = np.column_stack((exog_old, xdall))
     k_vars = exog.shape[1]
 
-    if store: resstore = ResultsStore()
+    if store:
+        resstore = Statistics()
 
     resols = OLS(xshort, exog).fit()
     ft = resols.f_test(np.eye(nlags, k_vars, k_vars - nlags))
@@ -526,7 +531,20 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
     if store:
         resstore.resols = resols
         resstore.usedlag = nlags
-        return lm, lmpval, fval, fpval, resstore
+
+        resstore.lm_stat = lm
+        resstore.f_stat = fval
+        resstore.f_pvalue = fpval
+        resstore.lm_pvalue = lmpval
+
+        hypo = Hypothesis(null="The residuals are independently distributed.",
+                          alternative="The residuals exhibit auto-correlation.")
+
+        test_result = TestResult(
+            "Breusch Godfrey Lagrange Multiplier tests for residual "
+            "autocorrelation", resstore, hypothesis=hypo)
+
+        return lm, lmpval, fval, fpval, test_result
     else:
         return lm, lmpval, fval, fpval
 

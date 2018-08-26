@@ -20,6 +20,7 @@ Studies in Nonlinear Dynamics & Econometrics 2 (2) (January 1).
 from __future__ import division
 import numpy as np
 from scipy import stats
+from statsmodels.stats.base import (Hypothesis, Statistics, TestResult)
 
 
 def distance_indicators(x, epsilon=None, distance=1.5):
@@ -167,7 +168,7 @@ def _var(indicators, max_dim):
     return variances, k
 
 
-def bds(x, max_dim=2, epsilon=None, distance=1.5):
+def bds(x, max_dim=2, epsilon=None, distance=1.5, store=False):
     """
     Calculate the BDS test statistic for independence of a time series
 
@@ -182,6 +183,9 @@ def bds(x, max_dim=2, epsilon=None, distance=1.5):
     distance : scalar, optional
         if epsilon is omitted, specifies the distance multiplier to use when
         computing it
+    store : bool, optional
+        If True, a result instance is returned in addition to the statistic and
+        p-value (default is False).
 
     Returns
     -------
@@ -189,6 +193,8 @@ def bds(x, max_dim=2, epsilon=None, distance=1.5):
         The BDS statistic
     pvalue : float
         The p-values associated with the BDS statistic
+    resstore : TestResult, optional
+        An instance of TestResult with results attached as attributes
 
     Notes
     -----
@@ -245,4 +251,17 @@ def bds(x, max_dim=2, epsilon=None, distance=1.5):
         pvalue = 2*stats.norm.sf(np.abs(bds_stats[0, embedding_dim - 2]))
         pvalues[0, embedding_dim - 2] = pvalue
 
-    return np.squeeze(bds_stats), np.squeeze(pvalues)
+    bds_stat, p_value = np.squeeze(bds_stats), np.squeeze(pvalues)
+
+    if store:
+        statistics = Statistics(bds_stat=bds_stat, p_value=p_value)
+
+        hypo = Hypothesis(null="The time series is independent and "
+                               "identically distributed.",
+                          alternative="Unspecified.")
+
+        test_result = TestResult("BDS Test", statistics, hypothesis=hypo)
+
+        return bds_stat, p_value, test_result
+
+    return bds_stat, p_value

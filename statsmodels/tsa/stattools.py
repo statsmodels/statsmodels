@@ -1345,7 +1345,7 @@ def kpss(x, regression='c', lags=None, store=False):
             null="The series is {0} stationary".format(hypo_text),
             alternative="The series is not {0} stationary".format(hypo_text))
 
-        rstore = TestResult("KPSS test", statistics, hypothesis=hypo,
+        rstore = TestResult("KPSS Test", statistics, hypothesis=hypo,
                             critical_values=CriticalValues(crit_dict))
 
         return kpss_stat, p_value, crit_dict, rstore
