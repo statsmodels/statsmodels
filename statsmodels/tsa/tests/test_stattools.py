@@ -28,6 +28,12 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 
 
+@pytest.fixture('module')
+def acovf_data():
+    rnd = np.random.RandomState(12345)
+    return rnd.randn(250)
+
+
 class CheckADF(object):
     """
     Test Augmented Dickey-Fuller
@@ -608,11 +614,11 @@ def test_levinson_durbin_acov():
 @pytest.mark.parametrize("fft", [False, True])
 @pytest.mark.parametrize("demean", [True, False])
 @pytest.mark.parametrize("unbiased", [True, False])
-def test_acovf_nlags(unbiased, demean, fft, missing):
-    rnd = np.random.RandomState(12345)
-    x = rnd.randn(250)
-    full = acovf(x, unbiased=unbiased, demean=demean, fft=fft, missing=missing)
-    limited = acovf(x, unbiased=unbiased, demean=demean, fft=fft, missing=missing, nlag=10)
+def test_acovf_nlags(acovf_data, unbiased, demean, fft, missing):
+    full = acovf(acovf_data, unbiased=unbiased, demean=demean, fft=fft,
+                 missing=missing)
+    limited = acovf(acovf_data, unbiased=unbiased, demean=demean, fft=fft,
+                    missing=missing, nlag=10)
     assert_allclose(full[:11], limited)
 
 
@@ -620,34 +626,26 @@ def test_acovf_nlags(unbiased, demean, fft, missing):
 @pytest.mark.parametrize("fft", [False, True])
 @pytest.mark.parametrize("demean", [True, False])
 @pytest.mark.parametrize("unbiased", [True, False])
-def test_acovf_nlags_missing(unbiased, demean, fft, missing):
-    rnd = np.random.RandomState(12345)
-    x = rnd.randn(250)
-    x[1:3] = np.nan
-    full = acovf(x, unbiased=unbiased, demean=demean, fft=fft, missing=missing)
-    limited = acovf(x, unbiased=unbiased, demean=demean, fft=fft, missing=missing, nlag=10)
+def test_acovf_nlags_missing(acovf_data, unbiased, demean, fft, missing):
+    acovf_data = acovf_data.copy()
+    acovf_data[1:3] = np.nan
+    full = acovf(acovf_data, unbiased=unbiased, demean=demean, fft=fft,
+                 missing=missing)
+    limited = acovf(acovf_data, unbiased=unbiased, demean=demean, fft=fft,
+                    missing=missing, nlag=10)
     assert_allclose(full[:11], limited)
 
 
-def test_acovf_error():
+def test_acovf_error(acovf_data):
     with pytest.raises(ValueError):
-        x = np.random.randn(250)
-        acovf(x, nlag=250, fft=False)
+        acovf(acovf_data, nlag=250, fft=False)
 
 
-def test_acovf_warns():
+def test_acovf_warns(acovf_data):
     with pytest.warns(FutureWarning):
-        x = np.random.randn(250)
-        acovf(x)
+        acovf(acovf_data)
 
 
-def test_acf_warns():
+def test_acf_warns(acovf_data):
     with pytest.warns(FutureWarning):
-        x = np.random.randn(250)
-        acf(x, nlags=40)
-
-
-if __name__ == "__main__":
-    import pytest
-
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])
+        acf(acovf_data, nlags=40)

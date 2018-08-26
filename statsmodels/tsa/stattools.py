@@ -393,10 +393,9 @@ def acovf(x, unbiased=False, demean=True, fft=None, missing='none', nlag=None):
                 divisor[0] = notmask_int.sum()
                 for i in range(lag_len):
                     divisor[i + 1] = notmask_int[i + 1:].dot(notmask_int[:-(i + 1)])
-                    # divisor[i + 1] = [notmask_int[i + 1:] * notmask_int[:-(i + 1)].sum()
                 divisor[divisor == 0] = 1
                 acov /= divisor
-            else:
+            else:  # biased, missing data but npt 'drop'
                 acov /= notmask_int.sum()
         return acov
 
