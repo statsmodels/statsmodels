@@ -276,7 +276,6 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         statistics.usedlag = usedlag
         statistics.adfstat = adfstat
         statistics.p_value = pvalue
-        statistics.adf_stat = adfstat
         statistics.nobs = nobs
         statistics.icbest = icbest
 
