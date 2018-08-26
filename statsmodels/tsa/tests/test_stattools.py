@@ -1,3 +1,5 @@
+from statsmodels.compat.python import lrange, PY3
+
 import os
 import warnings
 
@@ -8,8 +10,6 @@ from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
                            assert_, assert_allclose)
 from pandas import Series, DatetimeIndex, DataFrame
 
-from statsmodels.compat.numpy import recarray_select
-from statsmodels.compat.python import lrange
 from statsmodels.datasets import macrodata, sunspots
 from statsmodels.tools.sm_exceptions import (CollinearityWarning,
                                              MissingDataError)
@@ -26,6 +26,12 @@ DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
+
+
+@pytest.fixture('module')
+def acovf_data():
+    rnd = np.random.RandomState(12345)
+    return rnd.randn(250)
 
 
 class CheckADF(object):
@@ -158,7 +164,7 @@ class TestACF(CheckCorrGram):
         cls.acf = cls.results['acvar']
         #cls.acf = np.concatenate(([1.], cls.acf))
         cls.qstat = cls.results['Q1']
-        cls.res1 = acf(cls.x, nlags=40, qstat=True, alpha=.05)
+        cls.res1 = acf(cls.x, nlags=40, qstat=True, alpha=.05, fft=False)
         cls.confint_res = cls.results[['acvar_lb','acvar_ub']].values
 
     def test_acf(self):
@@ -201,17 +207,18 @@ class TestACFMissing(CheckCorrGram):
         cls.acf = cls.results['acvar'] # drop and conservative
         cls.qstat = cls.results['Q1']
         cls.res_drop = acf(cls.x, nlags=40, qstat=True, alpha=.05,
-                            missing='drop')
+                           missing='drop', fft=False)
         cls.res_conservative = acf(cls.x, nlags=40, qstat=True, alpha=.05,
-                                    missing='conservative')
-        cls.acf_none = np.empty(40) * np.nan # lags 1 to 40 inclusive
+                                   fft=False, missing='conservative')
+        cls.acf_none = np.empty(40) * np.nan  # lags 1 to 40 inclusive
         cls.qstat_none = np.empty(40) * np.nan
         cls.res_none = acf(cls.x, nlags=40, qstat=True, alpha=.05,
-                        missing='none')
+                           missing='none', fft=False)
 
     def test_raise(self):
-        assert_raises(MissingDataError, acf, self.x, nlags=40,
-                      qstat=True, alpha=.05, missing='raise')
+        with pytest.raises(MissingDataError):
+            acf(self.x, nlags=40, qstat=True, fft=False, alpha=.05,
+                missing='raise')
 
     def test_acf_none(self):
         assert_almost_equal(self.res_none[0][1:41], self.acf_none, DECIMAL_8)
@@ -489,17 +496,18 @@ class TestKPSS(SetupKPSS):
 
 def test_pandasacovf():
     s = Series(lrange(1, 11))
-    assert_almost_equal(acovf(s), acovf(s.values))
+    assert_almost_equal(acovf(s, fft=False), acovf(s.values, fft=False))
 
 
 def test_acovf2d():
     dta = sunspots.load_pandas().data
     dta.index = DatetimeIndex(start='1700', end='2009', freq='A')[:309]
     del dta["YEAR"]
-    res = acovf(dta)
-    assert_equal(res, acovf(dta.values))
-    X = np.random.random((10,2))
-    assert_raises(ValueError, acovf, X)
+    res = acovf(dta, fft=False)
+    assert_equal(res, acovf(dta.values, fft=False))
+    x = np.random.random((10, 2))
+    with pytest.raises(ValueError):
+        acovf(x, fft=False)
 
 
 def test_acovf_fft_vs_convolution():
@@ -602,6 +610,42 @@ def test_levinson_durbin_acov():
     assert_allclose(pacf, np.array([1, rho] + [0] * (m - 1)), atol=1e-8)
 
 
-if __name__=="__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])
+@pytest.mark.parametrize("missing", ['conservative', 'drop', 'raise', 'none'])
+@pytest.mark.parametrize("fft", [False, True])
+@pytest.mark.parametrize("demean", [True, False])
+@pytest.mark.parametrize("unbiased", [True, False])
+def test_acovf_nlags(acovf_data, unbiased, demean, fft, missing):
+    full = acovf(acovf_data, unbiased=unbiased, demean=demean, fft=fft,
+                 missing=missing)
+    limited = acovf(acovf_data, unbiased=unbiased, demean=demean, fft=fft,
+                    missing=missing, nlag=10)
+    assert_allclose(full[:11], limited)
+
+
+@pytest.mark.parametrize("missing", ['conservative', 'drop'])
+@pytest.mark.parametrize("fft", [False, True])
+@pytest.mark.parametrize("demean", [True, False])
+@pytest.mark.parametrize("unbiased", [True, False])
+def test_acovf_nlags_missing(acovf_data, unbiased, demean, fft, missing):
+    acovf_data = acovf_data.copy()
+    acovf_data[1:3] = np.nan
+    full = acovf(acovf_data, unbiased=unbiased, demean=demean, fft=fft,
+                 missing=missing)
+    limited = acovf(acovf_data, unbiased=unbiased, demean=demean, fft=fft,
+                    missing=missing, nlag=10)
+    assert_allclose(full[:11], limited)
+
+
+def test_acovf_error(acovf_data):
+    with pytest.raises(ValueError):
+        acovf(acovf_data, nlag=250, fft=False)
+
+
+def test_acovf_warns(acovf_data):
+    with pytest.warns(FutureWarning):
+        acovf(acovf_data)
+
+
+def test_acf_warns(acovf_data):
+    with pytest.warns(FutureWarning):
+        acf(acovf_data, nlags=40)
