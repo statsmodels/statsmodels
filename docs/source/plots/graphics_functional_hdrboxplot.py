@@ -6,7 +6,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
-data = sm.datasets.elnino.load()
+data = sm.datasets.elnino.load(as_pandas=False)
 
 #Create a HDR functional boxplot. We see that the years 1982-83 and 1997-98 are
 #outliers; these are the years where El Nino (a climate pattern
