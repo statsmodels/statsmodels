@@ -300,10 +300,10 @@ class ProcessRegression(base.LikelihoodModel):
             raise ValueError("groups is a required argument")
 
         if subset is not None:
-            warnings.Warn("'subset' is ignored")
+            warnings.warn("'subset' is ignored")
 
         if drop_cols is not None:
-            warnings.Warn("'drop_cols' is ignored")
+            warnings.warn("'drop_cols' is ignored")
 
         if isinstance(time, string_types):
             time = np.asarray(data[time])
@@ -446,32 +446,40 @@ class ProcessRegression(base.LikelihoodModel):
         score = np.zeros(len(mnpar) + len(sdpar) + len(smpar))
         for _, ix in self._groups_ix.items():
 
+            sd_i = sd[ix]
+            sm_i = sm[ix]
+            resid_i = resid[ix]
+            time_i = self.time[ix]
+            exog_i = self.exog[ix, :]
+            exog_scale_i = self.exog_scale[ix, :]
+            exog_smooth_i = self.exog_smooth[ix, :]
+
             # Get the covariance matrix for this person.
-            cm = self.cov.get_cov(self.time[ix], sd[ix], sm[ix])
+            cm = self.cov.get_cov(time_i, sd_i, sm_i)
             cmi = np.linalg.inv(cm)
 
-            jacv, jacs = self.cov.jac(self.time[ix], sd[ix], sm[ix])
+            jacv, jacs = self.cov.jac(time_i, sd_i, sm_i)
 
             # The derivatives for the mean parameters.
-            dcr = np.linalg.solve(cm, resid[ix])
-            score[0:pm] += np.dot(self.exog[ix, :].T, dcr)
+            dcr = np.linalg.solve(cm, resid_i)
+            score[0:pm] += np.dot(exog_i.T, dcr)
 
             # The derivatives for the standard deviation parameters.
-            rx = np.outer(resid[ix], resid[ix])
+            rx = np.outer(resid_i, resid_i)
             qm = np.linalg.solve(cm, rx)
             qm = 0.5 * np.linalg.solve(cm, qm.T)
+            sdx = sd_i[:, None] * exog_scale_i
             for i, _ in enumerate(ix):
                 jq = np.sum(jacv[i] * qm)
-                score[pm:pm + pv] += jq * sd[ix[i]] * self.exog_scale[ix[i], :]
-                score[pm:pm + pv] -= 0.5 * (np.sum(jacv[i] * cmi) * sd[ix[i]] *
-                                            self.exog_scale[ix[i], :])
+                score[pm:pm + pv] += jq * sdx[i, :]
+                score[pm:pm + pv] -= 0.5 * np.sum(jacv[i] * cmi) * sdx[i, :]
 
             # The derivatives for the smoothness parameters.
+            smx = sm_i[:, None] * exog_smooth_i
             for i, _ in enumerate(ix):
                 jq = np.sum(jacs[i] * qm)
-                score[pm + pv:] += jq * sm[ix[i]] * self.exog_smooth[ix[i], :]
-                score[pm + pv:] -= 0.5 * (np.sum(jacs[i] * cmi) * sm[ix[i]] *
-                                          self.exog_smooth[ix[i], :])
+                score[pm + pv:] += jq * smx[i, :]
+                score[pm + pv:] -= 0.5 * np.sum(jacs[i] * cmi) * smx[i, :]
 
         if self.verbose:
             print("|G|=", np.sqrt(np.sum(score * score)))
@@ -643,10 +651,10 @@ class ProcessRegressionResults(base.GenericLikelihoodModelResults):
     def predict(self, exog=None, transform=True, *args, **kwargs):
 
         if not transform:
-            warnings.Warn("'transform=False' ignored in predict")
+            warnings.warn("'transform=False' is ignored in predict")
 
         if len(args) > 0 or len(kwargs) > 0:
-            warnings.Warn("extra arguments ignored by 'predict'")
+            warnings.warn("extra arguments ignored in 'predict'")
 
         return self.model.predict(self.params, exog)
 
