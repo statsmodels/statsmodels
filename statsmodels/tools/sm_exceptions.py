@@ -13,9 +13,11 @@ raised.
 
 import warnings
 
+
 # Errors
 class PerfectSeparationError(Exception):
     pass
+
 
 class MissingDataError(Exception):
     pass
@@ -124,5 +126,6 @@ class HessianInversionWarning(ModelWarning):
 
 class CollinearityWarning(ModelWarning):
     pass
+
 
 warnings.simplefilter('always', category=ModelWarning)

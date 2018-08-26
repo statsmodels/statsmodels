@@ -12,6 +12,7 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_
 import pytest
 
+
 # the following are copied from
 # statsmodels.base.tests.test_generic_methods.CheckGenericMixin
 # and only adjusted to work as standalone functions
@@ -32,8 +33,6 @@ def check_ttest_tvalues(results):
     # test params table frame returned by t_test
     table_res = np.column_stack((res.params, res.bse, res.tvalues,
                                 res.pvalues, res.conf_int()))
-    table1 = np.column_stack((tt.effect, tt.sd, tt.tvalue, tt.pvalue,
-                             tt.conf_int()))
     table2 = tt.summary_frame().values
     assert_allclose(table2, table_res, rtol=1e-12)
 
@@ -51,12 +50,12 @@ def check_ftest_pvalues(results):
     k_vars = len(res.params)
     # check default use_t
     pvals = [res.wald_test(np.eye(k_vars)[k], use_f=use_t).pvalue
-                                               for k in range(k_vars)]
+             for k in range(k_vars)]
     assert_allclose(pvals, res.pvalues, rtol=5e-10, atol=1e-25)
 
     # sutomatic use_f based on results class use_t
     pvals = [res.wald_test(np.eye(k_vars)[k]).pvalue
-                                               for k in range(k_vars)]
+             for k in range(k_vars)]
     assert_allclose(pvals, res.pvalues, rtol=5e-10, atol=1e-25)
 
     # label for pvalues in summary
@@ -73,8 +72,6 @@ def check_ftest_pvalues(results):
         assert_(string_use_t in summ2)
 
 
-# TODO The following is not (yet) guaranteed across models
-#@knownfailureif(True)
 def check_fitted(results):
     # ignore wrapper for isinstance check
     from statsmodels.genmod.generalized_linear_model import GLMResults
@@ -85,13 +82,14 @@ def check_fitted(results):
     else:
         results = results
 
-    if isinstance(results, GLMResults) or isinstance(results, DiscreteResults):
+    if isinstance(results, (DiscreteResults, GLMResults)):
         pytest.skip('Not supported for {0}'.format(str(type(results))))
 
     res = results
     fitted = res.fittedvalues
     assert_allclose(res.model.endog - fitted, res.resid, rtol=1e-12)
     assert_allclose(fitted, res.predict(), rtol=1e-12)
+
 
 def check_predict_types(results):
     res = results
@@ -124,9 +122,3 @@ def check_predict_types(results):
                         rtol=1e-12)
         assert_allclose(fitted[:1], res.predict(p_exog[0]),
                         rtol=1e-12)
-
-        # predict doesn't preserve DataFrame, e.g. dot converts to ndarray
-        #import pandas
-        #predicted = res.predict(pandas.DataFrame(p_exog))
-        #assert_(isinstance(predicted, pandas.DataFrame))
-        #assert_allclose(predicted, fitted, rtol=1e-12)

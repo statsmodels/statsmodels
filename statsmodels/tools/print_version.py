@@ -27,7 +27,8 @@ def _show_versions_only():
         print("byteorder: %s" % sys.byteorder)
         print("LC_ALL: %s" % os.environ.get('LC_ALL', "None"))
         print("LANG: %s" % os.environ.get('LANG', "None"))
-    except:
+    except Exception:
+        # No idea what could be raised here, but don't chance anything
         pass
     try:
         import statsmodels
@@ -125,7 +126,8 @@ def _show_versions_only():
 
     try:
         import pytest
-        print("pytest: %s (%s)" % (safe_version(pytest), dirname(pytest.__file__)))
+        print("pytest: %s (%s)" % (safe_version(pytest),
+                                   dirname(pytest.__file__)))
     except ImportError:
         print("pytest: Not installed")
 
@@ -151,7 +153,8 @@ def show_versions(show_dirs=True):
         print("byteorder: %s" % sys.byteorder)
         print("LC_ALL: %s" % os.environ.get('LC_ALL', "None"))
         print("LANG: %s" % os.environ.get('LANG', "None"))
-    except:
+    except Exception:
+        # No idea what could be raised here, but don't chance anything
         pass
 
     try:
@@ -266,7 +269,8 @@ def show_versions(show_dirs=True):
 
     try:
         import pytest
-        print("pytest: %s (%s)" % (safe_version(pytest), dirname(pytest.__file__)))
+        print("pytest: %s (%s)" % (safe_version(pytest),
+                                   dirname(pytest.__file__)))
     except ImportError:
         print("pytest: Not installed")
 
@@ -278,6 +282,7 @@ def show_versions(show_dirs=True):
         print("virtualenv: Not installed")
 
     print("\n")
+
 
 if __name__ == "__main__":
     show_versions()

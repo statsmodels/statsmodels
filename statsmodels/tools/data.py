@@ -106,7 +106,7 @@ def _is_array_like(endog, exog):
         endog = np.asarray(endog)
         exog = np.asarray(exog)
         return True
-    except:
+    except (TypeError, ValueError):
         return False
 
 
