@@ -1282,7 +1282,7 @@ def test_burg_errors():
 
 def test_str():
     # check that str(RegressionResults) returns a string instead of just
-    # printing one.  GH#5026
+    # printing one.  GH#5026, GH#4618
 
     # TODO: make a fixture for tests that just need any valid Results object
     #   or possibly to provide such an object for each extant model class?
