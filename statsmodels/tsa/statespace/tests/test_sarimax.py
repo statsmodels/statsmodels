@@ -8,6 +8,7 @@ from __future__ import division, absolute_import, print_function
 
 import numpy as np
 import pandas as pd
+import pytest
 import os
 
 import warnings
@@ -2329,6 +2330,7 @@ def check_concentrated_scale(filter_univariate=False):
             assert_allclose(actual, desired, atol=atol)
 
 
+@pytest.mark.slow
 def test_concentrated_scale():
     check_concentrated_scale(filter_univariate=False)
     check_concentrated_scale(filter_univariate=True)

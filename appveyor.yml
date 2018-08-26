@@ -4,13 +4,15 @@ clone_depth: 50
 os: Visual Studio 2015
 
 environment:
-  PYTEST_DIRECTIVES: --skip-slow --durations=50
+  PYTEST_DIRECTIVES: --skip-slow
   matrix:
     # Pip builds
     - PYTHON: C:\Python27
+      PYTEST_DIRECTIVES:
     - PYTHON: C:\Python27-x64
     - PYTHON: C:\Python36
     - PYTHON: C:\Python36-x64
+      PYTEST_DIRECTIVES:
     # Conda builds
     - PY_MAJOR_VER: 2
       PYTHON_ARCH: "x86"
