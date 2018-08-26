@@ -1,10 +1,3 @@
-from statsmodels.base.elastic_net import RegularizedResults
-from statsmodels.stats.regularized_covariance import _calc_nodewise_row, \
-    _calc_nodewise_weight, _calc_approx_inv_cov
-from statsmodels.base.model import LikelihoodModelResults
-from statsmodels.regression.linear_model import OLS
-import numpy as np
-
 """
 Distributed estimation routines. Currently, we support several
 methods of distribution
@@ -70,6 +63,14 @@ debiasing procedure.
 
     formed by node-wise regression.
 """
+import numpy as np
+
+from statsmodels.base.elastic_net import RegularizedResults
+from statsmodels.stats.regularized_covariance import (
+    _calc_nodewise_row,
+    _calc_nodewise_weight, _calc_approx_inv_cov)
+from statsmodels.base.model import LikelihoodModelResults
+from statsmodels.regression.linear_model import OLS
 
 
 def _est_regularized_naive(mod, pnum, partitions, fit_kwds=None):

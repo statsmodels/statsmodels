@@ -2,8 +2,9 @@
 Holds files for l1 regularization of LikelihoodModel, using cvxopt.
 """
 import numpy as np
-import statsmodels.base.l1_solvers_common as l1_solvers_common
 from cvxopt import solvers, matrix
+
+import statsmodels.base.l1_solvers_common as l1_solvers_common
 
 
 def fit_l1_cvxopt_cp(
@@ -56,8 +57,9 @@ def fit_l1_cvxopt_cp(
     """
     start_params = np.array(start_params).ravel('F')
 
-    ## Extract arguments
-    # k_params is total number of covariates, possibly including a leading constant.
+    # Extract arguments
+    # k_params is total number of covariates, possibly including
+    #   a leading constant.
     k_params = len(start_params)
     # The start point
     x0 = np.append(start_params, np.fabs(start_params))
@@ -68,14 +70,14 @@ def fit_l1_cvxopt_cp(
     alpha = alpha * np.ones(k_params)
     assert alpha.min() >= 0
 
-    ## Wrap up functions for cvxopt
-    f_0 = lambda x: _objective_func(f, x, k_params, alpha, *args)
-    Df = lambda x: _fprime(score, x, k_params, alpha)
+    # Wrap up functions for cvxopt
+    f_0 = lambda x: _objective_func(f, x, k_params, alpha, *args)  # noqa:E731
+    Df = lambda x: _fprime(score, x, k_params, alpha)  # noqa:E731
     G = _get_G(k_params)  # Inequality constraint matrix, Gx \leq h
     h = matrix(0.0, (2 * k_params, 1))  # RHS in inequality constraint
-    H = lambda x, z: _hessian_wrapper(hess, x, z, k_params)
+    H = lambda x, z: _hessian_wrapper(hess, x, z, k_params)  # noqa:E731
 
-    ## Define the optimization function
+    # Define the optimization function
     def F(x=None, z=None):
         if x is None:
             return 0, x0
@@ -84,7 +86,7 @@ def fit_l1_cvxopt_cp(
         else:
             return f_0(x), Df(x), H(x, z)
 
-    ## Convert optimization settings to cvxopt form
+    # Convert optimization settings to cvxopt form
     solvers.options['show_progress'] = disp
     solvers.options['maxiters'] = maxiter
     if 'abstol' in kwargs:
@@ -96,12 +98,12 @@ def fit_l1_cvxopt_cp(
     if 'refinement' in kwargs:
         solvers.options['refinement'] = kwargs['refinement']
 
-    ### Call the optimizer
+    # Call the optimizer
     results = solvers.cp(F, G, h)
     x = np.asarray(results['x']).ravel()
     params = x[:k_params]
 
-    ### Post-process
+    # Post-process
     # QC
     qc_tol = kwargs['qc_tol']
     qc_verbose = kwargs['qc_verbose']
@@ -115,8 +117,8 @@ def fit_l1_cvxopt_cp(
         params, k_params, alpha, score, passed, trim_mode, size_trim_tol,
         auto_trim_tol)
 
-    ### Pack up return values for statsmodels
-    # TODO These retvals are returned as mle_retvals...but the fit wasn't ML
+    # Pack up return values for statsmodels
+    # TODO: These retvals are returned as mle_retvals...but the fit wasn't ML
     if full_output:
         fopt = f_0(x)
         gopt = float('nan')  # Objective is non-differentiable
@@ -132,7 +134,7 @@ def fit_l1_cvxopt_cp(
         x = np.array(results['x']).ravel()
         params = x[:k_params]
 
-    ### Return results
+    # Return results
     if full_output:
         return params, retvals
     else:
@@ -169,11 +171,10 @@ def _get_G(k_params):
     """
     The linear inequality constraint matrix.
     """
-    I = np.eye(k_params)
-    A = np.concatenate((-I, -I), axis=1)
-    B = np.concatenate((I, -I), axis=1)
+    Ik = np.eye(k_params)
+    A = np.concatenate((-Ik, -Ik), axis=1)
+    B = np.concatenate((Ik, -Ik), axis=1)
     C = np.concatenate((A, B), axis=0)
-    # Return
     return matrix(C)
 
 

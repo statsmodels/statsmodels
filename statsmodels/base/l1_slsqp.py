@@ -50,7 +50,7 @@ def fit_l1_slsqp(
     """
     start_params = np.array(start_params).ravel('F')
 
-    ### Extract values
+    # Extract values
     # k_params is total number of covariates,
     # possibly including a leading constant.
     k_params = len(start_params)
@@ -66,20 +66,23 @@ def fit_l1_slsqp(
     # Set/retrieve the desired accuracy
     acc = kwargs.setdefault('acc', 1e-10)
 
-    ### Wrap up for use in fmin_slsqp
-    func = lambda x_full: _objective_func(f, x_full, k_params, alpha, *args)
-    f_ieqcons_wrap = lambda x_full: _f_ieqcons(x_full, k_params)
-    fprime_wrap = lambda x_full: _fprime(score, x_full, k_params, alpha)
-    fprime_ieqcons_wrap = lambda x_full: _fprime_ieqcons(x_full, k_params)
+    # Wrap up for use in fmin_slsqp
+    func = lambda x_full: _objective_func(f, x_full,  # noqa:E731
+                                          k_params, alpha, *args)
+    f_ieqcons_wrap = lambda x_full: _f_ieqcons(x_full, k_params)  # noqa:E731
+    fprime_wrap = lambda x_full: _fprime(score, x_full,  # noqa:E731
+                                         k_params, alpha)
+    fprime_ieqcons_wrap = lambda x_full: _fprime_ieqcons(x_full,  # noqa:E731
+                                                         k_params)
 
-    ### Call the solver
+    # Call the solver
     results = fmin_slsqp(
         func, x0, f_ieqcons=f_ieqcons_wrap, fprime=fprime_wrap, acc=acc,
         iter=maxiter, disp=disp_slsqp, full_output=full_output,
         fprime_ieqcons=fprime_ieqcons_wrap)
     params = np.asarray(results[0][:k_params])
 
-    ### Post-process
+    # Post-process
     # QC
     qc_tol = kwargs['qc_tol']
     qc_verbose = kwargs['qc_verbose']
@@ -93,8 +96,8 @@ def fit_l1_slsqp(
         params, k_params, alpha, score, passed, trim_mode, size_trim_tol,
         auto_trim_tol)
 
-    ### Pack up return values for statsmodels optimizers
-    # TODO These retvals are returned as mle_retvals...but the fit wasn't ML.
+    # Pack up return values for statsmodels optimizers
+    # TODO: These retvals are returned as mle_retvals...but the fit wasn't ML.
     # This could be confusing someday.
     if full_output:
         x_full, fx, its, imode, smode = results
@@ -109,7 +112,7 @@ def fit_l1_slsqp(
             'gopt': gopt, 'hopt': hopt, 'trimmed': trimmed,
             'warnflag': warnflag}
 
-    ### Return
+    # Return
     if full_output:
         return params, retvals
     else:
@@ -133,7 +136,6 @@ def _objective_func(f, x_full, k_params, alpha, *args):
     """
     x_params = x_full[:k_params]
     x_added = x_full[k_params:]
-    ## Return
     return f(x_params, *args) + (alpha * x_added).sum()
 
 
@@ -160,9 +162,8 @@ def _fprime_ieqcons(x_full, k_params):
     """
     Derivative of the inequality constraints
     """
-    I = np.eye(k_params)
-    A = np.concatenate((I, I), axis=1)
-    B = np.concatenate((-I, I), axis=1)
+    Ik = np.eye(k_params)
+    A = np.concatenate((Ik, Ik), axis=1)
+    B = np.concatenate((-Ik, Ik), axis=1)
     C = np.concatenate((A, B), axis=0)
-    ## Return
     return C

@@ -39,12 +39,12 @@ def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
     ------
     Warning message if QC check fails.
     """
-    ## Check for fatal errors
+    # Check for fatal errors
     assert not np.isnan(params).max()
     assert (params == params.ravel('F')).min(), \
         "params should have already been 1-d"
 
-    ## Start the theory compliance check
+    # Start the theory compliance check
     fprime = score(params)
     k_params = len(params)
 
@@ -58,7 +58,7 @@ def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
         fprime=fprime, alpha=alpha, params=params, passed_array=passed_array)
     passed = passed_array.min()
     if not passed:
-        num_failed = (passed_array == False).sum()
+        num_failed = (~passed_array).sum()
         message = 'QC check did not pass for %d out of %d parameters' % (
             num_failed, k_params)
         message += '\nTry increasing solver accuracy or number of iterations'\
@@ -88,7 +88,7 @@ def _get_verbose_addon(qc_dict):
 
 
 def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
-        size_trim_tol, auto_trim_tol):
+                   size_trim_tol, auto_trim_tol):
     """
     Trims (set to zero) params that are zero at the theoretical minimum.
     Uses heuristics to account for the solver not actually finding the minimum.
@@ -129,7 +129,7 @@ def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
     trimmed : np.ndarray of Booleans
         trimmed[i] == True if the ith parameter was trimmed.
     """
-    ## Trim the small params
+    # Trim the small params
     trimmed = [False] * k_params
 
     if trim_mode == 'off':
@@ -152,7 +152,7 @@ def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
                     params[i] = 0.0
                     trimmed[i] = True
     else:
-        raise Exception(
+        raise ValueError(
             "trim_mode == %s, which is not recognized" % (trim_mode))
 
     return params, np.asarray(trimmed)

@@ -1,8 +1,3 @@
-import numpy as np
-from statsmodels.base.model import Results
-import statsmodels.base.wrapper as wrap
-from statsmodels.tools.decorators import cache_readonly
-
 """
 Elastic net regularization.
 
@@ -24,6 +19,11 @@ http://www.jstatsoft.org/v33/i01/paper
 This routine should work for any regression model that implements
 loglike, score, and hess.
 """
+import numpy as np
+
+from statsmodels.base.model import Results
+import statsmodels.base.wrapper as wrap
+from statsmodels.tools.decorators import cache_readonly
 
 
 def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):

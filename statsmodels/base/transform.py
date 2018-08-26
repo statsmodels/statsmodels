@@ -10,8 +10,9 @@ class BoxCox(object):
 
     def transform_boxcox(self, x, lmbda=None, method='guerrero', **kwargs):
         """
-        Performs a Box-Cox transformation on the data array x. If lmbda is None,
-        the indicated method is used to estimate a suitable lambda parameter.
+        Performs a Box-Cox transformation on the data array x. If lmbda is
+        None, the indicated method is used to estimate a suitable lambda
+        parameter.
 
         Parameters
         ----------
@@ -191,7 +192,8 @@ class BoxCox(object):
             raise ValueError("Scale '{0}' not understood.".format(scale))
 
         def optim(lmbda):
-            rat = np.divide(dispersion, np.power(mean, 1 - lmbda))  # eq 6, p 40
+            # eq 6, p 40
+            rat = np.divide(dispersion, np.power(mean, 1 - lmbda))
             return np.std(rat, ddof=1) / np.mean(rat)
 
         res = minimize_scalar(optim,

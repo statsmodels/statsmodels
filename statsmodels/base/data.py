@@ -22,8 +22,8 @@ def _asarray_2d_null_rows(x):
     Makes sure input is an array and is 2d. Makes sure output is 2d. True
     indicates a null in the rows of 2d x.
     """
-    #Have to have the asarrays because isnull doesn't account for array-like
-    #input
+    # Have to have the asarrays because isnull doesn't account for array-like
+    # input
     x = np.asarray(x)
     if x.ndim == 1:
         x = x[:, None]
@@ -98,13 +98,15 @@ class ModelData(object):
             except KeyError:
                 data = d['orig_endog'].join(d['orig_exog'])
 
-            for depth in [2, 3, 1, 0, 4]:  # sequence is a guess where to likely find it
+            for depth in [2, 3, 1, 0, 4]:
+                # sequence is a guess where to likely find it
                 try:
                     _, design = dmatrices(d['formula'], data, eval_env=depth,
                                           return_type='dataframe')
                     break
                 except (NameError, PatsyError) as e:
-                    exc.append(e)   # why do I need a reference from outside except block
+                    exc.append(e)
+                    # TODO: why do I need a reference from outside except block
                     pass
             else:
                 raise exc[-1]
@@ -280,8 +282,8 @@ class ModelData(object):
 
         elif missing == 'drop':
             nan_mask = ~nan_mask
-            drop_nans = lambda x: cls._drop_nans(x, nan_mask)
-            drop_nans_2d = lambda x: cls._drop_nans_2d(x, nan_mask)
+            drop_nans = lambda x: cls._drop_nans(x, nan_mask)  # noqa:E731
+            drop_nans_2d = lambda x: cls._drop_nans_2d(x, nan_mask)  # noqa:E731
             combined = dict(zip(combined_names, lmap(drop_nans, combined)))
 
             if missing_idx is not None:
@@ -465,7 +467,7 @@ class PandasData(ModelData):
     """
 
     def _convert_endog_exog(self, endog, exog=None):
-        #TODO: remove this when we handle dtype systematically
+        # TODO: remove this when we handle dtype systematically
         endog = np.asarray(endog)
         exog = exog if exog is None else np.asarray(exog)
         if endog.dtype == object or exog is not None and exog.dtype == object:
