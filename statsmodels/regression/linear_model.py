@@ -361,7 +361,8 @@ class RegressionModel(base.LikelihoodModel):
         dist_class : class
             A random number generator class.  Must take 'loc' and 'scale'
             as arguments and return a random number generator implementing
-            an ``rvs`` method for simulating random values. Defaults to Gaussian.
+            an ``rvs`` method for simulating random values. Defaults to
+            Gaussian.
 
         Returns
         -------
@@ -643,7 +644,7 @@ class WLS(RegressionModel):
     If the weights are a function of the data, then the post estimation
     statistics such as fvalue and mse_model might not be correct, as the
     package does not yet support no-constant regression.
-    """ % {'params': base._model_params_doc,
+    """ % {'params': base._model_params_doc,  # noqa:E501
            'extra_params': base._missing_param_doc + base._extra_param_doc}
 
     def __init__(self, endog, exog, weights=1., missing='none', hasconst=None,
@@ -809,7 +810,7 @@ class OLS(WLS):
     Notes
     -----
     No constant is added by the model unless you are using formulas.
-    """ % {'params': base._model_params_doc,
+    """ % {'params': base._model_params_doc,  # noqa:E501
            'extra_params': base._missing_param_doc + base._extra_param_doc}
 
     # TODO: change example to use datasets.  This was the point of datasets!
@@ -1090,7 +1091,7 @@ class GLSAR(GLS):
     GLSAR is considered to be experimental.
     The linear autoregressive process of order p--AR(p)--is defined as:
     TODO
-    """ % {'params': base._model_params_doc,
+    """ % {'params': base._model_params_doc,  # noqa:E501
            'extra_params': base._missing_param_doc + base._extra_param_doc}
 
     def __init__(self, endog, exog=None, rho=1, missing='none', **kwargs):
@@ -1266,9 +1267,9 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False,
     n = df or X.shape[0]
 
     if method == "unbiased":        # this is df_resid ie., n - p
-        denom = lambda k: n - k
+        denom = lambda k: n - k  # noqa:E731
     else:
-        denom = lambda k: n
+        denom = lambda k: n  # noqa:E731
     if X.ndim > 1 and X.shape[1] != 1:
         raise ValueError("expecting a vector to estimate AR parameters")
     r = np.zeros(order+1, np.float64)
@@ -1511,7 +1512,7 @@ class RegressionResults(base.LikelihoodModelResults):
             setattr(self, key, kwargs[key])
 
     def __str__(self):
-        self.summary()
+        return self.summary()
 
     def conf_int(self, alpha=.05, cols=None):
         """
@@ -2129,7 +2130,7 @@ class RegressionResults(base.LikelihoodModelResults):
             - `kernel` callable or str (optional) : kernel
                   currently available kernels are ['bartlett', 'uniform'],
                   default is Bartlett
-            - `use_correction` False or string in ['hac', 'cluster'] (optional) :
+            - `use_correction` False or string in ['hac', 'cluster'] (optional)
                   If False the the sandwich covariance is calulated without
                   small sample correction.
                   If `use_correction = 'cluster'` (default), then the same
@@ -2156,7 +2157,7 @@ class RegressionResults(base.LikelihoodModelResults):
             - `kernel` callable or str (optional) : kernel
                   currently available kernels are ['bartlett', 'uniform'],
                   default is Bartlett
-            - `use_correction` False or string in ['hac', 'cluster'] (optional) :
+            - `use_correction` False or string in ['hac', 'cluster'] (optional)
                   If False the sandwich covariance is calculated without
                   small sample correction.
             - `df_correction` bool (optional)
@@ -2312,9 +2313,10 @@ class RegressionResults(base.LikelihoodModelResults):
                 raise ValueError('either time or groups needs to be given')
             groupidx = lzip([0] + tt, tt + [nobs_])
             self.n_groups = n_groups = len(groupidx)
-            res.cov_params_default = sw.cov_nw_panel(self, maxlags, groupidx,
-                                                     weights_func=weights_func,
-                                                     use_correction=use_correction)
+            res.cov_params_default = sw.cov_nw_panel(
+                self, maxlags, groupidx,
+                weights_func=weights_func,
+                use_correction=use_correction)
             res.cov_kwds['description'] = (
                 'Standard Errors are robust to' +
                 'cluster correlation ' + '(' + cov_type + ')')
@@ -2414,8 +2416,8 @@ class RegressionResults(base.LikelihoodModelResults):
                     ('Date:', None),
                     ('Time:', None),
                     ('No. Observations:', None),
-                    ('Df Residuals:', None),  # [self.df_resid]), TODO: spelling
-                    ('Df Model:', None),  # [self.df_model])
+                    ('Df Residuals:', None),
+                    ('Df Model:', None),
                     ]
 
         if hasattr(self, 'cov_type'):
@@ -2425,7 +2427,7 @@ class RegressionResults(base.LikelihoodModelResults):
                      ('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
                      ('F-statistic:', ["%#8.4g" % self.fvalue]),
                      ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
-                     ('Log-Likelihood:', None),  # ["%#6.4g" % self.llf]),
+                     ('Log-Likelihood:', None),
                      ('AIC:', ["%#8.4g" % self.aic]),
                      ('BIC:', ["%#8.4g" % self.bic])
                      ]
@@ -2489,19 +2491,6 @@ class RegressionResults(base.LikelihoodModelResults):
 
         return smry
 
-        #  top = summary_top(self, gleft=topleft, gright=diagn_left, #[],
-        #                    yname=yname, xname=xname,
-        #                    title=self.model.__class__.__name__ + ' ' +
-        #                    "Regression Results")
-        #  par = summary_params(self, yname=yname, xname=xname, alpha=.05,
-        #                       use_t=False)
-        #
-        #  diagn = summary_top(self, gleft=diagn_left, gright=diagn_right,
-        #                      yname=yname, xname=xname,
-        #                      title="Linear Model")
-        #
-        #  return summary_return([top, par, diagn], return_fmt=return_fmt)
-
     def summary2(self, yname=None, xname=None, title=None, alpha=.05,
                  float_format="%.4f"):
         """Experimental summary function to summarize the regression results
@@ -2528,9 +2517,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary2.Summary : class to hold summary results
         """
         # Diagnostics
         from statsmodels.stats.stattools import (jarque_bera,
@@ -2564,13 +2551,14 @@ class RegressionResults(base.LikelihoodModelResults):
 
         # Warnings
         if eigvals[-1] < 1e-10:
-            warn = "The smallest eigenvalue is %6.3g. This might indicate that\
-            there are strong multicollinearity problems or that the design\
-            matrix is singular." % eigvals[-1]
+            warn = ("The smallest eigenvalue is %6.3g. This might indicate "
+                    "that there are strong multicollinearity problems or "
+                    "that the design matrix is singular." % eigvals[-1])
             smry.add_text(warn)
         if condno > 1000:
-            warn = "* The condition number is large (%.g). This might indicate \
-            strong multicollinearity or other numerical problems." % condno
+            warn = ("* The condition number is large (%.g). This might "
+                    "indicate strong multicollinearity or other numerical "
+                    "problems." % condno)
             smry.add_text(warn)
 
         return smry
@@ -2612,7 +2600,7 @@ class OLSResults(RegressionResults):
         return OLSInfluence(self)
 
     def outlier_test(self, method='bonf', alpha=.05, labels=None,
-                 order=False, cutoff=None):
+                     order=False, cutoff=None):
         """
         Test observations for outliers according to method
 
@@ -2637,11 +2625,13 @@ class OLSResults(RegressionResults):
             returned pandas DataFrame. See also Returns below
         order : bool
             Whether or not to order the results by the absolute value of the
-            studentized residuals. If labels are provided they will also be sorted.
+            studentized residuals. If labels are provided they will also be
+            sorted.
         cutoff : None or float in [0, 1]
-            If cutoff is not None, then the return only includes observations with
-            multiple testing corrected p-values strictly below the cutoff. The
-            returned array or dataframe can be empty if t
+            If cutoff is not None, then the return only includes observations
+            with multiple testing corrected p-values strictly below the cutoff.
+            The returned array or dataframe can be empty if
+            [TODO: Finish this sentence]
 
         Returns
         -------
@@ -2788,13 +2778,11 @@ class OLSResults(RegressionResults):
 
         Returns
         -------
-
         ci : tuple
             The confidence interval
 
         See Also
         --------
-
         el_test
 
         Notes
@@ -2828,9 +2816,12 @@ class OLSResults(RegressionResults):
             upper_bound = self.conf_int(.01)[param_num][1]
         if lower_bound is None:
             lower_bound = self.conf_int(.01)[param_num][0]
-        f = lambda b0: self.el_test(np.array([b0]), np.array([param_num]),
-                                    method=method,
-                                    stochastic_exog=stochastic_exog)[0]-r0
+
+        def f(b0):
+            return self.el_test(np.array([b0]), np.array([param_num]),
+                                method=method,
+                                stochastic_exog=stochastic_exog)[0]-r0
+
         lowerl = optimize.brenth(f, lower_bound,
                                  self.params[param_num])
         upperl = optimize.brenth(f, self.params[param_num],
@@ -2864,7 +2855,7 @@ class RegressionResultsWrapper(wrap.ResultsWrapper):
                         base.LikelihoodResultsWrapper._wrap_methods,
                         _methods)
 
-wrap.populate_wrapper(RegressionResultsWrapper,
+wrap.populate_wrapper(RegressionResultsWrapper,  # noqa:E305
                       RegressionResults)
 
 
