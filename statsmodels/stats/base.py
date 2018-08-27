@@ -266,9 +266,15 @@ class TestResult(object):
         List of strings, passed to the statistics object. See also Statistics
         for intended use.
     kwargs : dict, keys in {"hypothesis", "critical_values"}
-        If the kwargs' keys are in TestResults._options, the corresponding
+        If the kwargs' keys are in ``TestResults._options``, the corresponding
         value is set on this object. Intended to dynamically set attributes
         based on test components.
+
+    Attributes
+    ----------
+    attributes : list
+        All attributes available on ``self`` that are test components.
+        Utilises ``_options`` to determine this.
 
     Examples
     --------
@@ -319,6 +325,10 @@ class TestResult(object):
     def __getattr__(self, item):
         import warnings
 
+        # Requested item may be present on the statistics field. While this
+        # type of delegation is generally unusual, we do so here to ensure
+        # the new TestResult class does not break existing code, which may
+        # rely on direct attribute access.
         if not hasattr(self.statistics, item):
             raise AttributeError("`{0}` is not an understood field on this "
                                  "TestResult.".format(item))
@@ -328,6 +338,16 @@ class TestResult(object):
         return getattr(self.statistics, item)
 
     def summary(self):
+        """
+        Returns a formatted string summary of this TestResult object. All
+        attributes present on the object that are also in ``_options`` will
+        be present in the summary.
+
+        Returns
+        -------
+        str
+            Formatted summary
+        """
         values = [str(getattr(self, key))
                   for key in TestResult._options
                   if hasattr(self, key)]
