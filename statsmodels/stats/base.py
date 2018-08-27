@@ -193,7 +193,10 @@ class CriticalValues(object):
 
 class Statistics(object):
     """
-    TODO
+    Container for statistics and other values computed in a test.
+
+    This class serves as a container for all values a test should return to the
+    user, including e.g. the p-value, test statistic, degrees of freedom, etc.
 
     Parameters
     ----------
@@ -204,6 +207,25 @@ class Statistics(object):
     ----------
     attributes : list
         All attributes available on ``self``, except for ``print_filter``.
+
+    Notes
+    -----
+    ``TestResult`` sets a field ``print_filter`` on this class which regulates
+    its string representation, printing only those attributes listed in
+    ``print_filter``.
+
+    Example,
+
+    >>> from statsmodels.stats.base import Statistics
+    >>> stats = Statistics(value1=True, value2=0.05)
+    >>> print(stats)
+    Statistics:
+    value1 = True, value2 = 0.05
+
+    >>> stats.print_filter = ["value1"]
+    >>> print(stats)
+    Statistics:
+    value1 = True
     """
 
     def __init__(self, **kwargs):
