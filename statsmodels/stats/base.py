@@ -105,6 +105,19 @@ class AllPairsResults(object):
 
 
 class Hypothesis(object):
+    """
+    Container for test hypotheses.
+
+    This class may be used to store the hypothesis part of a TestResult, which
+    is convenient for e.g. attribute look-up and printing.
+
+    Parameters
+    ----------
+    null : str
+        The null hypothesis
+    alternative : str
+        The alternative hypothesis
+    """
 
     def __init__(self, null, alternative):
         self._null = null
@@ -124,6 +137,30 @@ class Hypothesis(object):
 
 
 class CriticalValues(object):
+    """
+    Container for critical values of a test.
+
+    This class may be used to store the critical values of a TestResult, which
+    is convenient for e.g. attribute look-up and printing.
+
+    Parameters
+    ----------
+    crit_dict : dict
+        A dictionary of critical values
+
+    Examples
+    --------
+    >>> from statsmodels.stats.base import CriticalValues
+    >>> vals = CriticalValues({"5%": 0.9, "10%": 1.5})  # percentages
+    >>> print(vals)
+    Critical values:
+    [5%] = 0.9, [10%] = 1.5
+
+    >>> vals2 = CriticalValues({0.05: 0.9, 0.1: 1.5})  # alpha values
+    >>> print(vals2)
+    Critical values:
+    [0.05] = 0.9, [0.1] = 1.5
+    """
 
     def __init__(self, crit_dict):
         self._crit_dict = crit_dict
@@ -134,7 +171,7 @@ class CriticalValues(object):
 
     def __str__(self):
         items = sorted(self._crit_dict.items(),
-                       key=lambda item: int(item[0].strip("%")))
+                       key=lambda item: float(str(item[0]).strip("%")))
 
         critical_values = map(lambda item: "[{0}] = {1}".format(*item),
                               items)
@@ -143,6 +180,9 @@ class CriticalValues(object):
 
 
 class Statistics(object):
+    """
+
+    """
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
@@ -165,6 +205,9 @@ class Statistics(object):
 
 @nottest
 class TestResult(object):
+    """
+
+    """
 
     _options = ["test_name", "hypothesis", "statistics", "critical_values"]
 
@@ -211,3 +254,8 @@ class TestResult(object):
 
     def __str__(self):
         return self.summary()
+
+
+if __name__ == "__main__":
+    vals = CriticalValues({"5%": 0.9, "10%": 1.5})  # percentages
+    print(vals)
