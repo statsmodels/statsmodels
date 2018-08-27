@@ -250,7 +250,45 @@ class Statistics(object):
 @nottest
 class TestResult(object):
     """
+    A modular container for the results of a (statistical) test.
 
+    The base ``TestResult`` class takes a variable number of optional
+    attributes, alongside a test name and an object composed of statistics.
+
+    Parameters
+    ----------
+    test_name : str
+        Test name, e.g. "Two-sided t-test".
+    statistics : Statistics
+        A collection of statistics. The passed object *should* expose these
+        as attributes.
+    print_filter : list, optional
+        List of strings, passed to the statistics object. See also Statistics
+        for intended use.
+    kwargs : dict, keys in {"hypothesis", "critical_values"}
+        If the kwargs' keys are in TestResults._options, the corresponding
+        value is set on this object. Intended to dynamically set attributes
+        based on test components.
+
+    Examples
+    --------
+    This class is intended to be used alongside the other containers in this
+    module.
+    
+    >>> from statsmodels.stats.base import (Hypothesis, Statistics, TestResult)
+    >>> hypo = Hypothesis(null="The null hypothesis", 
+    >>>                   alternative="The alternative")
+    >>> stats = Statistics(test_stat=1.5, p_value=0.09)
+    >>> result = TestResult("Test name", stats, hypothesis=hypo)
+    >>> print(result)
+    Test name
+
+    Hypotheses:
+        * H0: The null hypothesis
+        * H1: The alternative
+
+    Statistics:
+    test_stat = 1.5, p_value = 0.09
     """
 
     _options = ["test_name", "hypothesis", "statistics", "critical_values"]
