@@ -146,10 +146,20 @@ class Statistics(object):
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
+        self.print_filter = None
+
+    @property
+    def attributes(self):  # print_filter is internal
+        return [key for key in self.__dict__.keys()
+                if key != "print_filter"]
 
     def __str__(self):
-        items = map(lambda item: "{0} = {1}".format(*item),
-                    self.__dict__.items())
+        def _filter(key):
+            return not self.print_filter or key in self.print_filter
+
+        items = filter(lambda item: _filter(item), self.attributes)
+        items = map(lambda item: "{0} = {1}".format(item, getattr(self, item)),
+                    items)
 
         return "Statistics:\n" + ", ".join(items)
 
@@ -157,33 +167,39 @@ class Statistics(object):
 @nottest
 class TestResult(object):
 
-    _options = [
-        "test_name",
-        "hypothesis",
-        "statistics",
-        "critical_values"
-    ]
+    _options = ["test_name", "hypothesis", "statistics", "critical_values"]
 
-    def __init__(self, test_name, statistics, **kwargs):
+    _warn = """
+    While previously test results returned fields as class attributes, this 
+    behaviour has changed. Statistics can now be accessed through the statistics
+    attribute; other attributes may also be available, dependent on the type of
+    test. You may use `test.attributes` and `test.statistics.attributes` to 
+    discover all available attributes."
+    """
+
+    def __init__(self, test_name, statistics, print_filter=None, **kwargs):
         self.test_name = test_name
+
         self.statistics = statistics
+        self.statistics.print_filter = print_filter
 
         for key, value in kwargs.items():
             if key in TestResult._options:
                 setattr(self, key, value)
 
+    @property
+    def attributes(self):
+        return [option for option in self._options
+                if hasattr(self, option)]
+
     def __getattr__(self, item):
         import warnings
 
         if not hasattr(self.statistics, item):
-            raise AttributeError("{0} is not an understood field on this "
+            raise AttributeError("`{0}` is not an understood field on this "
                                  "TestResult.".format(item))
 
-        warnings.warn("While previously test results returned fields as class "
-                      "attributes, this behaviour has changed. Statistics can "
-                      "now be accessed through the statistics field; other "
-                      "attributes may also be available, dependent on the type "
-                      "of test.", DeprecationWarning)
+        warnings.warn(self._warn, DeprecationWarning)
 
         return getattr(self.statistics, item)
 

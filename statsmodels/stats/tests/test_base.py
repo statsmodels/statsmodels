@@ -1,5 +1,5 @@
 from numpy.testing import (assert_, assert_almost_equal, assert_raises,
-                           assert_warns)
+                           assert_warns, assert_equal)
 
 from statsmodels.stats.base import (Hypothesis, Statistics, CriticalValues,
                                     TestResult)
@@ -39,6 +39,19 @@ class TestBase:
         assert_("t = 1.0" in str(self.statistics))
         assert_("p = 0.05" in str(self.statistics))
 
+    def test_statistics_print_filter(self):
+        assert_("print_filter" not in str(self.statistics))
+
+        self.statistics.print_filter = ["R"]
+
+        assert_("R = 1.2" in str(self.statistics))
+        assert_("t = 1.0" not in str(self.statistics))
+        assert_("p = 0.05" not in str(self.statistics))
+
+    def test_statistics_attributes(self):
+        for item in ["R", "p", "t"]:
+            assert_(item in self.statistics.attributes)
+
     def test_critical_values_properties(self):
         assert_(self.critical_values.crit_dict == {"5%": 0.9, "10%": 1.5})
 
@@ -69,10 +82,41 @@ class TestBase:
         assert_almost_equal(self.test_result.R, 1.2)
         assert_almost_equal(self.test_result.p, 0.05)
 
+    def test_test_result_attributes(self):
+        # These are the items we passed above, so they should be available
+        on_test = ["statistics", "test_name", "hypothesis", "critical_values"]
+
+        for item in on_test:
+            assert_(item in self.test_result.attributes)
+
+        assert_("some_value" not in self.test_result.attributes)
+
+        # attributes explicitly compare against _options
+        assert_(all(item in TestResult._options
+                    for item in self.test_result.attributes))
+
     def test_raises_missing_value_access(self):
         with assert_raises(AttributeError):
             self.test_result.some_missing_statistic
 
     def test_warn_deprecation(self):
         with assert_warns(DeprecationWarning):
-            self.test_result.R
+            assert_equal(self.test_result.R,
+                         self.test_result.statistics.R)
+
+    def test_warn_message_and_num_warnings(self):
+        import warnings
+
+        warnings.simplefilter('default')  # should be as explicit as possible
+
+        with warnings.catch_warnings(record=True) as warns:
+            assert_equal(self.test_result.R,
+                         self.test_result.statistics.R)
+
+            # should only be the one DeprecationWarning, no more
+            assert_equal(len(warns), 1)
+
+            for warning in warns:
+                assert_(self.test_result._warn
+                        in str(warning.message))
+
