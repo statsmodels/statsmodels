@@ -775,7 +775,7 @@ class TestHypothesis(object):
     def test_value_in_text(self):
         for value in range(1, 100):
             hypo = _hypothesis(value, "two-sided")
-            assert_(value in str(hypo))
+            assert_(str(value) in str(hypo))
 
     def test_raises_wrong_alternative(self):
         with assert_raises(ValueError):
