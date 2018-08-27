@@ -9,18 +9,10 @@ License: BSD-3
 currently all tests are against R
 
 """
-#import warnings
-#warnings.simplefilter("default")
-# ResourceWarning doesn't exist in python 2
-#warnings.simplefilter("ignore", ResourceWarning)
 import os
 
 import numpy as np
 import pandas as pd
-
-# skipping some parts
-from distutils.version import LooseVersion
-PD_GE_17 = LooseVersion(pd.__version__) >= '0.17'
 
 from numpy.testing import (assert_, assert_almost_equal, assert_equal,
                            assert_approx_equal, assert_allclose,
@@ -946,14 +938,11 @@ def test_outlier_test():
     assert_almost_equal(res_outl2.values, res2, 7)
     assert_equal(res_outl2.index.tolist(), sorted_labels)
 
-    if PD_GE_17:
-        # pandas < 0.17 does not have sort_values method
-        res_outl1 = res_pd.outlier_test(method='b')
-        res_outl1 = res_outl1.sort_values(['unadj_p'], ascending=True)
-        assert_almost_equal(res_outl1.values, res2, 7)
-        assert_equal(res_outl1.index.tolist(), sorted_labels)
-        assert_array_equal(res_outl2.index, res_outl1.index)
-
+    res_outl1 = res_pd.outlier_test(method='b')
+    res_outl1 = res_outl1.sort_values(['unadj_p'], ascending=True)
+    assert_almost_equal(res_outl1.values, res2, 7)
+    assert_equal(res_outl1.index.tolist(), sorted_labels)
+    assert_array_equal(res_outl2.index, res_outl1.index)
 
     # additional keywords in method
     res_outl3 = res_pd.outlier_test(method='b', order=True)

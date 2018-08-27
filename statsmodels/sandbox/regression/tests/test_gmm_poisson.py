@@ -14,7 +14,6 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.sandbox.regression import gmm
 
 from numpy.testing import assert_allclose, assert_equal
-from statsmodels.compat.scipy import NumpyVersion
 
 
 def get_data():

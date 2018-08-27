@@ -29,7 +29,6 @@ malist = [[1.],
           [1, 0.9, -0.3]]
 
 DECIMAL_4 = 4
-NP16 = LooseVersion(np.__version__) < '1.7'
 
 
 def test_arma_acovf():
@@ -242,7 +241,6 @@ class TestArmaProcess(TestCase):
 
         assert_raises(TypeError, process1.__mul__, [3])
 
-    @pytest.mark.skipif(NP16, reason='numpy<1.7')
     def test_str_repr(self):
         process1 = ArmaProcess.from_coeffs([.9], [.2])
         out = process1.__str__()

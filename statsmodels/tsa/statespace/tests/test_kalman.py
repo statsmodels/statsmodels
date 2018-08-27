@@ -27,19 +27,7 @@ import pandas as pd
 import os
 import pytest
 
-try:
-    from scipy.linalg.blas import find_best_blas_type
-except ImportError:
-    # Shim for SciPy 0.11, derived from tag=0.11 scipy.linalg.blas
-    _type_conv = {'f': 's', 'd': 'd', 'F': 'c', 'D': 'z', 'G': 'z'}
-
-    def find_best_blas_type(arrays):
-        dtype, index = max(
-            [(ar.dtype, i) for i, ar in enumerate(arrays)])
-        prefix = _type_conv.get(dtype.char, 'd')
-        return (prefix, dtype, None)
-
-
+from scipy.linalg.blas import find_best_blas_type
 from scipy.linalg import solve_discrete_lyapunov
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 from statsmodels.tsa.statespace.sarimax import SARIMAX

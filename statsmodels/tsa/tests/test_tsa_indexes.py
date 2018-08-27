@@ -16,16 +16,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-# RangeIndex only introduced in Pandas 0.18, so we include a shim until
-# Statsmodels requires that version.
-has_range_index = False
-try:
-    from pandas import RangeIndex
-    has_range_index = True
-except ImportError:
-    class RangeIndex(object):
-        pass
-
 from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal,
                            assert_raises)
 
@@ -95,9 +85,8 @@ series_timestamp_indexes = [
     (pd.Series(x), x.freq) for x in base_date_indexes]
 
 # Supported increment indexes
-supported_increment_indexes = [(pd.Int64Index(np.arange(nobs)), None)]
-if has_range_index:
-    supported_increment_indexes += [
+supported_increment_indexes = [
+    (pd.Int64Index(np.arange(nobs)), None),
     (pd.RangeIndex(start=0, stop=nobs, step=1), None),
     (pd.RangeIndex(start=-5, stop=nobs - 5, step=1), None),
     (pd.RangeIndex(start=0, stop=nobs * 6, step=6), None)]
@@ -209,7 +198,7 @@ def test_instantiation_valid():
 
             mod = tsa_model.TimeSeriesModel(endog)
             assert_equal(isinstance(mod._index,
-                                    (pd.Int64Index, RangeIndex)), True)
+                                    (pd.Int64Index, pd.RangeIndex)), True)
             assert_equal(mod._index_none, True)
             assert_equal(mod._index_dates, False)
             assert_equal(mod._index_generated, True)
@@ -323,19 +312,18 @@ def test_instantiation_valid():
         assert_equal(mod.data.dates, None)
         assert_equal(mod.data.freq, None)
 
-        if has_range_index:
-            # RangeIndex (start=0, end=nobs, so equivalent to increment index)
-            endog = base_endog.copy()
-            endog.index = supported_increment_indexes[1][0]
+        # RangeIndex (start=0, end=nobs, so equivalent to increment index)
+        endog = base_endog.copy()
+        endog.index = supported_increment_indexes[1][0]
 
-            mod = tsa_model.TimeSeriesModel(endog)
-            assert_equal(type(mod._index) == RangeIndex, True)
-            assert_equal(mod._index_none, False)
-            assert_equal(mod._index_dates, False)
-            assert_equal(mod._index_generated, False)
-            assert_equal(mod._index_freq, None)
-            assert_equal(mod.data.dates, None)
-            assert_equal(mod.data.freq, None)
+        mod = tsa_model.TimeSeriesModel(endog)
+        assert_equal(type(mod._index) == pd.RangeIndex, True)
+        assert_equal(mod._index_none, False)
+        assert_equal(mod._index_dates, False)
+        assert_equal(mod._index_generated, False)
+        assert_equal(mod._index_freq, None)
+        assert_equal(mod.data.dates, None)
+        assert_equal(mod.data.freq, None)
 
         # Supported indexes *when a freq is given*, should not raise a warning
         with warnings.catch_warnings():
@@ -429,7 +417,7 @@ def test_instantiation_valid():
                 endog.index = ix
                 mod = tsa_model.TimeSeriesModel(endog)
                 assert_equal(isinstance(mod._index,
-                             (pd.Int64Index, RangeIndex)), True)
+                             (pd.Int64Index, pd.RangeIndex)), True)
                 assert_equal(mod._index_none, False)
                 assert_equal(mod._index_dates, False)
                 assert_equal(mod._index_generated, True)
@@ -452,7 +440,7 @@ def test_instantiation_valid():
                 endog.index = ix
                 mod = tsa_model.TimeSeriesModel(endog)
                 assert_equal(isinstance(mod._index,
-                             (pd.Int64Index, RangeIndex)), True)
+                             (pd.Int64Index, pd.RangeIndex)), True)
                 assert_equal(mod._index_none, False)
                 assert_equal(mod._index_dates, False)
                 assert_equal(mod._index_generated, True)
@@ -752,7 +740,6 @@ def test_prediction_increment_pandas_dates_nanosecond():
     assert_equal(prediction_index.equals(desired_index), True)
 
 
-@pytest.mark.skipif(not has_range_index, reason='No RangeIndex')
 def test_range_index():
     tsa_model.__warningregistry__ = {}
 
@@ -765,7 +752,6 @@ def test_range_index():
         assert_equal(len(w), 0)
 
 
-@pytest.mark.skipif(not has_range_index, reason='No RangeIndex')
 def test_prediction_rangeindex():
     index = supported_increment_indexes[2][0]
     endog = pd.Series(dta[0], index=index)
@@ -811,7 +797,6 @@ def test_prediction_rangeindex():
     assert_equal(prediction_index.equals(desired_index), True)
 
 
-@pytest.mark.skipif(not has_range_index, reason='No RangeIndex')
 def test_prediction_rangeindex_withstep():
     index = supported_increment_indexes[3][0]
     endog = pd.Series(dta[0], index=index)
