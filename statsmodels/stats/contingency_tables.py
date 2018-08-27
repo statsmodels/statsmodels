@@ -26,7 +26,7 @@ identically distributed.
 """
 
 from __future__ import division
-from statsmodels.tools.decorators import cache_readonly, resettable_cache
+from statsmodels.tools.decorators import cache_readonly
 import numpy as np
 from scipy import stats
 import pandas as pd
@@ -954,7 +954,7 @@ class StratifiedTable(object):
 
         self.table = table
 
-        self._cache = resettable_cache()
+        self._cache = {}
 
         # Quantities to precompute.  Table entries are [[a, b], [c,
         # d]], 'ad' is 'a * d', 'apb' is 'a + b', 'dma' is 'd - a',

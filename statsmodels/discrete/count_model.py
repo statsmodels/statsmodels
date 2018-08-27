@@ -18,7 +18,7 @@ from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
 from statsmodels.distributions import zipoisson, zigenpoisson, zinegbin
 from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
                                        approx_hess_cs, approx_fprime_cs)
-from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 

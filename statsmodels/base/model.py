@@ -7,7 +7,7 @@ from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.tools import recipr, nan_dot
 from statsmodels.stats.contrast import (ContrastResults, WaldTestResults,
                                         t_test_pairwise)
-from statsmodels.tools.decorators import resettable_cache, cache_readonly
+from statsmodels.tools.decorators import cache_readonly
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.tools.sm_exceptions import ValueWarning, \
@@ -2318,7 +2318,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
             # retrofitting the model, used in t_test TODO: check design
             self.model.df_resid = self.df_resid
 
-        self._cache = resettable_cache()
+        self._cache = {}
         self.__dict__.update(mlefit.__dict__)
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):

@@ -2,56 +2,7 @@ from __future__ import print_function
 from statsmodels.tools.sm_exceptions import CacheWriteWarning
 import warnings
 
-__all__ = ['resettable_cache', 'cache_readonly', 'cache_writable']
-
-
-class ResettableCache(dict):
-    """
-    Dictionary whose elements mey depend one from another.
-
-    If entry `B` depends on entry `A`, changing the values of entry `A` will
-    reset the value of entry `B` to a default (None); deleteing entry `A` will
-    delete entry `B`.  The connections between entries are stored in a
-    `_resetdict` private attribute.
-
-    Parameters
-    ----------
-    reset : dictionary, optional
-        An optional dictionary, associated a sequence of entries to any key
-        of the object.
-    items : var, optional
-        An optional dictionary used to initialize the dictionary
-
-    Examples
-    --------
-    >>> reset = dict(a=('b',), b=('c',))
-    >>> cache = resettable_cache(a=0, b=1, c=2, reset=reset)
-    >>> assert_equal(cache, dict(a=0, b=1, c=2))
-
-    >>> print("Try resetting a")
-    >>> cache['a'] = 1
-    >>> assert_equal(cache, dict(a=1, b=None, c=None))
-    >>> cache['c'] = 2
-    >>> assert_equal(cache, dict(a=1, b=None, c=2))
-    >>> cache['b'] = 0
-    >>> assert_equal(cache, dict(a=1, b=0, c=None))
-
-    >>> print("Try deleting b")
-    >>> del(cache['a'])
-    >>> assert_equal(cache, {})
-    """
-
-    def __init__(self, reset=None, **items):
-        dict.__init__(self, **items)
-
-    def __setitem__(self, key, value):
-        dict.__setitem__(self, key, value)
-
-    def __delitem__(self, key):
-        dict.__delitem__(self, key)
-
-
-resettable_cache = ResettableCache
+__all__ = ['cache_readonly', 'cache_writable']
 
 
 class CachedAttribute(object):
@@ -68,7 +19,7 @@ class CachedAttribute(object):
         _cachename = self.cachename
         _cache = getattr(obj, _cachename, None)
         if _cache is None:
-            setattr(obj, _cachename, resettable_cache())
+            setattr(obj, _cachename, {})
             _cache = getattr(obj, _cachename)
         # Get the name of the attribute to set and cache
         name = self.name

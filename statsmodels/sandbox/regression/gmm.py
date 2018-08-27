@@ -60,7 +60,7 @@ from statsmodels.base.model import (Model,
 from statsmodels.regression.linear_model import (OLS, RegressionResults,
                                                  RegressionResultsWrapper)
 import statsmodels.stats.sandwich_covariance as smcov
-from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import _ensure_2d
 
 DEBUG = 0

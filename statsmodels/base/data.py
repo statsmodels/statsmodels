@@ -5,8 +5,7 @@ results, and doing data cleaning
 from statsmodels.compat.python import reduce, iteritems, lmap, zip, range
 import numpy as np
 from pandas import DataFrame, Series, isnull
-from statsmodels.tools.decorators import (resettable_cache, cache_readonly,
-                                          cache_writable)
+from statsmodels.tools.decorators import cache_readonly, cache_writable
 import statsmodels.tools.data as data_util
 from statsmodels.tools.sm_exceptions import MissingDataError
 
@@ -77,7 +76,7 @@ class ModelData(object):
         # this has side-effects, attaches k_constant and const_idx
         self._handle_constant(hasconst)
         self._check_integrity()
-        self._cache = resettable_cache()
+        self._cache = {}
 
     def __getstate__(self):
         from copy import copy

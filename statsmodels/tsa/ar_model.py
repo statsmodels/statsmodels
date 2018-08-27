@@ -11,8 +11,7 @@ from statsmodels.tsa.tsatools import (lagmat, add_trend,
                                       _ar_transparams, _ar_invtransparams)
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.model as base
-from statsmodels.tools.decorators import (resettable_cache,
-                                          cache_readonly, cache_writable)
+from statsmodels.tools.decorators import cache_readonly, cache_writable
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.tsa.kalmanf.kalmanfilter import KalmanFilter
 import statsmodels.base.wrapper as wrap
@@ -680,7 +679,7 @@ class ARResults(tsbase.TimeSeriesModelResults):
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(ARResults, self).__init__(model, params, normalized_cov_params,
                                         scale)
-        self._cache = resettable_cache()
+        self._cache = {}
         self.nobs = model.nobs
         n_totobs = len(model.endog)
         self.n_totobs = n_totobs
