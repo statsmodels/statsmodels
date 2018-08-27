@@ -157,9 +157,8 @@ class Statistics(object):
         def _filter(key):
             return not self.print_filter or key in self.print_filter
 
-        items = filter(lambda item: _filter(item), self.attributes)
         items = map(lambda item: "{0} = {1}".format(item, getattr(self, item)),
-                    items)
+                    filter(_filter, self.attributes))
 
         return "Statistics:\n" + ", ".join(items)
 
