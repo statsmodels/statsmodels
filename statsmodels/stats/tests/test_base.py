@@ -1,12 +1,8 @@
-import warnings
-
 from numpy.testing import (assert_, assert_almost_equal, assert_raises,
                            assert_warns, assert_equal)
 
 from statsmodels.stats.base import (Hypothesis, Statistics, CriticalValues,
                                     TestResult)
-
-warnings.simplefilter('always')  # should be as explicit as possible
 
 
 class TestBase:
@@ -109,6 +105,10 @@ class TestBase:
                          self.test_result.statistics.R)
 
     def test_warn_message_and_num_warnings(self):
+        import warnings
+
+        warnings.simplefilter("always")
+
         with warnings.catch_warnings(record=True) as warns:
             assert_equal(self.test_result.R,
                          self.test_result.statistics.R)
@@ -119,3 +119,5 @@ class TestBase:
             for warning in warns:
                 assert_(self.test_result._warn
                         in str(warning.message))
+
+        warnings.resetwarnings()  # is this necessary?
