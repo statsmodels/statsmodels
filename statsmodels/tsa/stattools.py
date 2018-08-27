@@ -275,6 +275,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         statistics.maxlag = maxlag
         statistics.usedlag = usedlag
         statistics.adfstat = adfstat
+        statistics.adf_stat = adfstat
         statistics.p_value = pvalue
         statistics.nobs = nobs
         statistics.icbest = icbest
@@ -285,6 +286,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
                                       "- stationary")
 
         test_result = TestResult("Augmented Dickey-Fuller Test", statistics,
+                                 print_filter=["adf_stat", "p_value"],
                                  hypothesis=hypo, critical_values=critvalues)
 
         return adfstat, pvalue, critvalues, test_result
@@ -1346,6 +1348,7 @@ def kpss(x, regression='c', lags=None, store=False):
             alternative="The series is not {0} stationary".format(hypo_text))
 
         rstore = TestResult("KPSS Test", statistics, hypothesis=hypo,
+                            print_filter=["kpss_stat", "p_value"],
                             critical_values=CriticalValues(crit_dict))
 
         return kpss_stat, p_value, crit_dict, rstore

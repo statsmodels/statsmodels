@@ -403,6 +403,7 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
 
         test_result = TestResult(
             "Lagrange Multiplier tests for auto-correlation", resstore,
+            print_filter=["lm_stat", "f_stat", "f_pvalue", "lm_pvalue"],
             hypothesis=hypo)
 
         return lm, lmpval, fval, fpval, test_result
@@ -542,7 +543,8 @@ def acorr_breusch_godfrey(results, nlags=None, store=False):
 
         test_result = TestResult(
             "Breusch Godfrey Lagrange Multiplier tests for residual "
-            "autocorrelation", resstore, hypothesis=hypo)
+            "autocorrelation", resstore, hypothesis=hypo,
+            print_filter=["lm_stat", "f_stat", "f_pvalue", "lm_pvalue"])
 
         return lm, lmpval, fval, fpval, test_result
     else:
