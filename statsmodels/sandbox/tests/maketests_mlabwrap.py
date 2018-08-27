@@ -192,6 +192,7 @@ def generate_armarep(filen='testsave.py'):
 
 def exampletest():
     from statsmodels.sandbox import tsa
+    res_armarep =  HoldIt('armarep')
     arrep = tsa.arma_impulse_response(res_armarep.ma, res_armarep.ar, nobs=21)[1:]
     marep = tsa.arma_impulse_response(res_armarep.ar, res_armarep.ma, nobs=21)[1:]
     assert_array_almost_equal(res_armarep.marep.ravel(), marep, 14)

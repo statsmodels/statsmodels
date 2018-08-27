@@ -327,22 +327,23 @@ yy = y.values[:,None]
 xx = X['log.Te'].values[:,None]
 
 
-get_ipython().magic(u'load_ext rmagic')
+get_ipython().magic(u'load_ext rmagic')  # noqa:F821
 
-get_ipython().magic(u'R library(robustbase)')
-get_ipython().magic(u'Rpush yy xx')
-get_ipython().magic(u'R mod <- lmrob(yy ~ xx);')
-get_ipython().magic(u'R params <- mod$coefficients;')
-get_ipython().magic(u'Rpull params')
-
-
-get_ipython().magic(u'R print(mod)')
+get_ipython().magic(u'R library(robustbase)')  # noqa:F821
+get_ipython().magic(u'Rpush yy xx')  # noqa:F821
+get_ipython().magic(u'R mod <- lmrob(yy ~ xx);')  # noqa:F821
+get_ipython().magic(u'R params <- mod$coefficients;')  # noqa:F821
+get_ipython().magic(u'Rpull params')  # noqa:F821
 
 
-print(params)
+get_ipython().magic(u'R print(mod)')  # noqa:F821
 
 
-abline_plot(intercept=params[0], slope=params[1], ax=ax, color='green')
+print(params)  # noqa:F821  `params` is defined via ipython magic
+
+
+abline_plot(intercept=params[0], slope=params[1],  # noqa:F821
+            ax=ax, color='green')
 
 
 #### Exercise: Breakdown points of M-estimator
