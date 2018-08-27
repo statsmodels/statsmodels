@@ -280,9 +280,9 @@ class TestResult(object):
     --------
     This class is intended to be used alongside the other containers in this
     module.
-    
+
     >>> from statsmodels.stats.base import (Hypothesis, Statistics, TestResult)
-    >>> hypo = Hypothesis(null="The null hypothesis", 
+    >>> hypo = Hypothesis(null="The null hypothesis",
     >>>                   alternative="The alternative")
     >>> stats = Statistics(test_stat=1.5, p_value=0.09)
     >>> result = TestResult("Test name", stats, hypothesis=hypo)
