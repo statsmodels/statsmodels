@@ -75,7 +75,7 @@ class InfluenceCompareExact(object):
                         rtol=1e-12)
 
         assert_allclose(infl0.resid_studentized,
-                        infl1.resid_studentized, rtol=1e-12)
+                        infl1.resid_studentized, rtol=1e-12, atol=1e-7)
 
         cd_rtol = getattr(self, 'cd_rtol', 1e-7)
         assert_allclose(infl0.cooks_distance[0], infl1.cooks_distance[0],
@@ -233,7 +233,7 @@ class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):
         assert_allclose(infl0.hat_matrix_diag, infl1.hat_matrix_diag,
                         rtol=1e-12)
         assert_allclose(infl0.resid_studentized,
-                        infl1.resid_studentized, rtol=1e-12)
+                        infl1.resid_studentized, rtol=1e-12, atol=1e-7)
         assert_allclose(infl0.cooks_distance, infl1.cooks_distance, rtol=1e-7)
         assert_allclose(infl0.dfbetas, infl1.dfbetas, rtol=0.1) # changed
         # OLSInfluence only has looo dfbeta/d_params

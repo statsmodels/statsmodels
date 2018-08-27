@@ -8,6 +8,7 @@ from __future__ import division, absolute_import, print_function
 
 import numpy as np
 import pandas as pd
+import pytest
 import os
 
 import warnings
@@ -195,6 +196,7 @@ def test_rtrend_ar1(close_figures):
     run_ucm('rtrend_ar1')
 
 
+@pytest.mark.slow
 def test_lltrend_cycle_seasonal_reg_ar1(close_figures):
     run_ucm('lltrend_cycle_seasonal_reg_ar1')
 

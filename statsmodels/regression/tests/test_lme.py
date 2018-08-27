@@ -1046,6 +1046,7 @@ def test_summary_col():
     assert_equal(str(out), s)
 
 
+@pytest.mark.slow
 def test_random_effects_getters():
     # Simulation-based test to make sure that the BLUPs and actual
     # random effects line up.

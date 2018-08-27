@@ -2,6 +2,8 @@ from __future__ import division
 
 import numpy as np
 from numpy.testing import assert_almost_equal
+import pytest
+
 from statsmodels.datasets import heart
 from statsmodels.tools import add_constant
 from statsmodels.emplike.aft_el import emplikeAFT
@@ -37,6 +39,7 @@ class Test_AFTModel(GenRes):
         assert_almost_equal(self.res1.test_beta([3.5, -.035], [0, 1]),
                             self.res2.test_joint, decimal=4)
 
+    @pytest.mark.slow
     def test_betaci(self):
         ci = self.res1.ci_beta(1, -.06, 0)
         ll = ci[0]

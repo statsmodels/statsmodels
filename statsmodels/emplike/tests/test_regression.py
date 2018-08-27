@@ -23,6 +23,7 @@ class GenRes(object):
         cls.res2 = RegressionResults()
 
 
+@pytest.mark.slow
 class TestRegressionPowell(GenRes):
     """
     All confidence intervals are tested by conducting a hypothesis

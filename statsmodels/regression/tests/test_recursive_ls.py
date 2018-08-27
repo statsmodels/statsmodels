@@ -160,7 +160,7 @@ def test_glm(constraints=None):
 
     # Regression coefficients, standard errors, and estimated scale
     assert_allclose(res.params, res_glm.params)
-    assert_allclose(res.bse, res_glm.bse)
+    assert_allclose(res.bse, res_glm.bse, atol=1e-6)
     # Note: scale here is computed according to Harvey, 1989, 4.2.5, and is
     # the called the ML estimator and sometimes (e.g. later in section 5)
     # denoted \tilde \sigma_*^2
