@@ -23,7 +23,7 @@ Examples
 .. ipython:: python
 
   # Load the data from Spector and Mazzeo (1980)
-  spector_data = sm.datasets.spector.load()
+  spector_data = sm.datasets.spector.load_pandas()
   spector_data.exog = sm.add_constant(spector_data.exog)
 
   # Logit Model
