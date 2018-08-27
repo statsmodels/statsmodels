@@ -2,15 +2,10 @@ from __future__ import absolute_import
 
 from distutils.version import LooseVersion
 
-import pandas
-from pandas import RangeIndex, Float64Index  # noqa:F401
+import pandas as pd
 
 
-version = LooseVersion(pandas.__version__)
-
-
-def sort_values(df, *args, **kwargs):
-    return df.sort_values(*args, **kwargs)
+version = LooseVersion(pd.__version__)
 
 
 try:
@@ -20,12 +15,11 @@ except ImportError:
 
 if version >= '0.20':
     from pandas.tseries import frequencies
-    data_klasses = (pandas.Series, pandas.DataFrame, pandas.Panel)
+    data_klasses = (pd.Series, pd.DataFrame, pd.Panel)
 else:
     try:
         import pandas.tseries.frequencies as frequencies
     except ImportError:
         from pandas.core import datetools as frequencies  # noqa
 
-    data_klasses = (pandas.Series, pandas.DataFrame, pandas.Panel,
-                    pandas.WidePanel)
+    data_klasses = (pd.Series, pd.DataFrame, pd.Panel, pd.WidePanel)

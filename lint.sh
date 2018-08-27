@@ -17,7 +17,12 @@ if [ "$LINT" == true ]; then
     # pass _all_ flake8 checks
     echo "Linting known clean files with strict rules"
     flake8 --isolated \
+        examples/python/robust_models_1.py \
+        statsmodels/compat/pandas.py \
         statsmodels/resampling/ \
+        statsmodels/graphics/tsaplots.py \
+        statsmodels/graphics/tests/test_mosaicplot.py \
+        statsmodels/imputation/ros.py \
         statsmodels/interface/ \
         statsmodels/graphics/functional.py \
         statsmodels/graphics/tests/test_functional.py \
@@ -29,10 +34,12 @@ if [ "$LINT" == true ]; then
         statsmodels/regression/mixed_linear_model.py \
         statsmodels/duration/__init__.py \
         statsmodels/regression/recursive_ls.py \
+        statsmodels/sandbox/multilinear.py \
         statsmodels/tools/linalg.py \
         statsmodels/tools/tests/test_linalg.py \
         statsmodels/tools/decorators.py \
         statsmodels/tools/tests/test_decorators.py \
+        statsmodels/tsa/base/tsa_model.py \
         statsmodels/tsa/base/tests/test_datetools.py \
         statsmodels/tsa/vector_ar/dynamic.py \
         statsmodels/tsa/vector_ar/hypothesis_test_results.py \

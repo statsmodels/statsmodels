@@ -19,8 +19,6 @@ import numpy
 from scipy import stats
 import pandas
 
-from statsmodels.compat.pandas import sort_values
-
 
 def _ros_sort(df, observations, censorship, warn=False):
     """
@@ -53,18 +51,20 @@ def _ros_sort(df, observations, censorship, warn=False):
     """
 
     # separate uncensored data from censored data
-    censored = sort_values(df[df[censorship]], observations, axis=0)
-    uncensored = sort_values(df[~df[censorship]], observations, axis=0)
+    censored = df[df[censorship]].sort_values(observations, axis=0)
+    uncensored = df[~df[censorship]].sort_values(observations, axis=0)
 
     if censored[observations].max() > uncensored[observations].max():
-        censored = censored[censored[observations] <= uncensored[observations].max()]
+        mask = censored[observations] <= uncensored[observations].max()
+        censored = censored[mask]
 
         if warn:
             msg = ("Dropping censored observations greater than "
                    "the max uncensored observation.")
             warnings.warn(msg)
 
-    return censored.append(uncensored)[[observations, censorship]].reset_index(drop=True)
+    joined = censored.append(uncensored)[[observations, censorship]]
+    return joined.reset_index(drop=True)
 
 
 def cohn_numbers(df, observations, censorship):
@@ -116,7 +116,7 @@ def cohn_numbers(df, observations, censorship):
         below = df[observations] < row['upper_dl']
 
         # index of non-detect observations
-        detect = df[censorship] == False
+        detect = df[censorship] == False  # noqa:E712
 
         # return the number of observations where all conditions are True
         return df[above & below & detect].shape[0]
@@ -133,8 +133,8 @@ def cohn_numbers(df, observations, censorship):
         less_thanequal = df[observations] <= row['lower_dl']
 
         # index of detects, non-detects
-        uncensored = df[censorship] == False
-        censored = df[censorship] == True
+        uncensored = df[censorship] == False  # noqa:E712
+        censored = df[censorship] == True  # noqa:E712
 
         # number observations less than or equal to lower_dl DL and non-detect
         LTE_censored = df[less_thanequal & censored].shape[0]
@@ -193,12 +193,14 @@ def cohn_numbers(df, observations, censorship):
         cohn.loc[:, 'nobs_below'] = cohn.apply(nobs_below, axis=1)
         cohn.loc[:, 'ncen_equal'] = cohn.apply(ncen_equal, axis=1)
         cohn = cohn.reindex(range(DLs.shape[0] + 1))
-        cohn.loc[:, 'prob_exceedance'] = compute_PE(cohn['nuncen_above'], cohn['nobs_below'])
+        cohn.loc[:, 'prob_exceedance'] = compute_PE(cohn['nuncen_above'],
+                                                    cohn['nobs_below'])
 
     else:
         dl_cols = ['lower_dl', 'upper_dl', 'nuncen_above',
                    'nobs_below', 'ncen_equal', 'prob_exceedance']
-        cohn = pandas.DataFrame(numpy.empty((0, len(dl_cols))), columns=dl_cols)
+        cohn = pandas.DataFrame(numpy.empty((0, len(dl_cols))),
+                                columns=dl_cols)
 
     return cohn
 
@@ -317,8 +319,9 @@ def _ros_plot_pos(row, censorship, cohn):
     if censored:
         return (1 - dl_1['prob_exceedance']) * rank / (dl_1['ncen_equal']+1)
     else:
-        return (1 - dl_1['prob_exceedance']) + (dl_1['prob_exceedance'] - dl_2['prob_exceedance']) * \
-                rank / (dl_1['nuncen_above']+1)
+        return ((1 - dl_1['prob_exceedance']) +
+                (dl_1['prob_exceedance'] - dl_2['prob_exceedance']) *
+                rank / (dl_1['nuncen_above']+1))
 
 
 def _norm_plot_pos(observations):
@@ -413,8 +416,8 @@ def _impute(df, observations, censorship, transform_in, transform_out):
     """
 
     # detect/non-detect selectors
-    uncensored_mask = df[censorship] == False
-    censored_mask = df[censorship] == True
+    uncensored_mask = df[censorship] == False  # noqa:E712
+    censored_mask = df[censorship] == True  # noqa:E712
 
     # fit a line to the logs of the detected data
     fit_params = stats.linregress(
@@ -428,8 +431,11 @@ def _impute(df, observations, censorship, transform_in, transform_out):
     # model the data based on the best-fit curve
     # (editted for pandas 0.14 compatibility; see commit 63f162e
     #  when `pipe` and `assign` are available)
-    df.loc[:, 'estimated'] = transform_out(slope * df['Zprelim'][censored_mask] + intercept)
-    df.loc[:, 'final'] = numpy.where(df[censorship], df['estimated'], df[observations])
+    df.loc[:, 'estimated'] = transform_out(
+        slope * df['Zprelim'][censored_mask] + intercept)
+
+    df.loc[:, 'final'] = numpy.where(df[censorship], df['estimated'],
+                                     df[observations])
 
     return df
 
@@ -477,12 +483,15 @@ def _do_ros(df, observations, censorship, transform_in, transform_out):
     # (editted for pandas 0.14 compatibility; see commit 63f162e
     #  when `pipe` and `assign` are available)
     modeled = _ros_sort(df, observations=observations, censorship=censorship)
-    modeled.loc[:, 'det_limit_index'] = modeled[observations].apply(_detection_limit_index, args=(cohn,))
-    modeled.loc[:, 'rank'] = _ros_group_rank(modeled, 'det_limit_index', censorship)
+    modeled.loc[:, 'det_limit_index'] = modeled[observations].apply(
+                                        _detection_limit_index, args=(cohn,))
+    modeled.loc[:, 'rank'] = _ros_group_rank(modeled, 'det_limit_index',
+                                             censorship)
     modeled.loc[:, 'plot_pos'] = plotting_positions(modeled, censorship, cohn)
     modeled.loc[:, 'Zprelim'] = stats.norm.ppf(modeled['plot_pos'])
 
-    return _impute(modeled, observations, censorship, transform_in, transform_out)
+    return _impute(modeled, observations, censorship,
+                   transform_in, transform_out)
 
 
 def impute_ros(observations, censorship, df=None, min_uncensored=2,
@@ -575,15 +584,16 @@ def impute_ros(observations, censorship, df=None, min_uncensored=2,
     # uncensored data
     # (editted for pandas 0.14 compatibility; see commit 63f162e
     #  when `pipe` and `assign` are available)
-    elif (N_uncensored < min_uncensored) or (fraction_censored > max_fraction_censored):
+    elif ((N_uncensored < min_uncensored) or
+          (fraction_censored > max_fraction_censored)):
         output = df[[observations, censorship]].copy()
         output.loc[:, 'final'] = df[observations]
         output.loc[df[censorship], 'final'] *= substitution_fraction
 
-
     # normal ROS stuff
     else:
-        output = _do_ros(df, observations, censorship, transform_in, transform_out)
+        output = _do_ros(df, observations, censorship,
+                         transform_in, transform_out)
 
     # convert to an array if necessary
     if as_array:

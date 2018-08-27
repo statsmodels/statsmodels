@@ -7,11 +7,11 @@ import pytest
 
 # utilities for the tests
 
-from statsmodels.compat.pandas import sort_values
 from collections import OrderedDict
 from statsmodels.api import datasets
 
 import numpy as np
+import pandas as pd
 from itertools import product
 try:
     import matplotlib.pyplot as plt
@@ -38,7 +38,7 @@ def test_data_conversion(close_figures):
     _, ax = plt.subplots(4, 4)
     data = {'ax': 1, 'bx': 2, 'cx': 3}
     mosaic(data, ax=ax[0, 0], title='basic dict', axes_label=False)
-    data = pandas.Series(data)
+    data = pd.Series(data)
     mosaic(data, ax=ax[0, 1], title='basic series', axes_label=False)
     data = [1, 2, 3]
     mosaic(data, ax=ax[0, 2], title='basic list', axes_label=False)
@@ -47,24 +47,31 @@ def test_data_conversion(close_figures):
 
     data = {('ax', 'cx'): 1, ('bx', 'cx'): 2, ('ax', 'dx'): 3, ('bx', 'dx'): 4}
     mosaic(data, ax=ax[1, 0], title='compound dict', axes_label=False)
-    mosaic(data, ax=ax[2, 0], title='inverted keys dict', index=[1, 0], axes_label=False)
-    data = pandas.Series(data)
+    mosaic(data, ax=ax[2, 0],
+           title='inverted keys dict', index=[1, 0], axes_label=False)
+    data = pd.Series(data)
     mosaic(data, ax=ax[1, 1], title='compound series', axes_label=False)
     mosaic(data, ax=ax[2, 1], title='inverted keys series', index=[1, 0])
     data = [[1, 2], [3, 4]]
     mosaic(data, ax=ax[1, 2], title='compound list', axes_label=False)
     mosaic(data, ax=ax[2, 2], title='inverted keys list', index=[1, 0])
     data = np.array([[1, 2], [3, 4]])
-    mosaic(data, ax=ax[1, 3], title='compound array', axes_label=False)
-    mosaic(data, ax=ax[2, 3], title='inverted keys array', index=[1, 0], axes_label=False)
+    mosaic(data, ax=ax[1, 3],
+           title='compound array', axes_label=False)
+    mosaic(data, ax=ax[2, 3],
+           title='inverted keys array', index=[1, 0], axes_label=False)
 
     gender = ['male', 'male', 'male', 'female', 'female', 'female']
     pet = ['cat', 'dog', 'dog', 'cat', 'dog', 'cat']
-    data = pandas.DataFrame({'gender': gender, 'pet': pet})
-    mosaic(data, ['gender'], ax=ax[3, 0], title='dataframe by key 1', axes_label=False)
-    mosaic(data, ['pet'], ax=ax[3, 1], title='dataframe by key 2', axes_label=False)
-    mosaic(data, ['gender', 'pet'], ax=ax[3, 2], title='both keys', axes_label=False)
-    mosaic(data, ['pet', 'gender'], ax=ax[3, 3], title='keys inverted', axes_label=False)
+    data = pd.DataFrame({'gender': gender, 'pet': pet})
+    mosaic(data, ['gender'], ax=ax[3, 0],
+           title='dataframe by key 1', axes_label=False)
+    mosaic(data, ['pet'], ax=ax[3, 1],
+           title='dataframe by key 2', axes_label=False)
+    mosaic(data, ['gender', 'pet'], ax=ax[3, 2],
+           title='both keys', axes_label=False)
+    mosaic(data, ['pet', 'gender'], ax=ax[3, 3],
+           title='keys inverted', axes_label=False)
 
     plt.suptitle('testing data conversion (plot 1 of 4)')
 
@@ -83,16 +90,16 @@ def test_mosaic_simple(close_figures):
     # which colours should I use for the various categories?
     # put it into a dict
     props = {}
-    #males and females in blue and red
+    # males and females in blue and red
     props[('male',)] = {'color': 'b'}
     props[('female',)] = {'color': 'r'}
     # all the groups corresponding to ill groups have a different color
     for key in keys:
         if 'ill' in key:
             if 'male' in key:
-                props[key] = {'color': 'BlueViolet' , 'hatch': '+'}
+                props[key] = {'color': 'BlueViolet', 'hatch': '+'}
             else:
-                props[key] = {'color': 'Crimson' , 'hatch': '+'}
+                props[key] = {'color': 'Crimson', 'hatch': '+'}
     # mosaic of the data, with given gaps and colors
     mosaic(data, gap=0.05, properties=props, axes_label=False)
     plt.suptitle('syntetic data, 4 categories (plot 2 of 4)')
@@ -110,28 +117,28 @@ def test_mosaic(close_figures):
     # sort by the marriage quality and give meaningful name
     # [rate_marriage, age, yrs_married, children,
     # religious, educ, occupation, occupation_husb]
-    datas = sort_values(datas, ['rate_marriage', 'religious'])
+    datas = datas.sort_values(['rate_marriage', 'religious'])
 
     num_to_desc = {1: 'awful', 2: 'bad', 3: 'intermediate',
-                      4: 'good', 5: 'wonderful'}
+                   4: 'good', 5: 'wonderful'}
     datas['rate_marriage'] = datas['rate_marriage'].map(num_to_desc)
     num_to_faith = {1: 'non religious', 2: 'poorly religious', 3: 'religious',
-                      4: 'very religious'}
+                    4: 'very religious'}
     datas['religious'] = datas['religious'].map(num_to_faith)
     num_to_cheat = {False: 'faithful', True: 'cheated'}
     datas['cheated'] = datas['cheated'].map(num_to_cheat)
     # finished cleaning
     _, ax = plt.subplots(2, 2)
     mosaic(datas, ['rate_marriage', 'cheated'], ax=ax[0, 0],
-                title='by marriage happiness')
+           title='by marriage happiness')
     mosaic(datas, ['religious', 'cheated'], ax=ax[0, 1],
-                title='by religiosity')
+           title='by religiosity')
     mosaic(datas, ['rate_marriage', 'religious', 'cheated'], ax=ax[1, 0],
-                title='by both', labelizer=lambda k:'')
+           title='by both', labelizer=lambda k: '')
     ax[1, 0].set_xlabel('marriage rating')
     ax[1, 0].set_ylabel('religion status')
     mosaic(datas, ['religious', 'rate_marriage'], ax=ax[1, 1],
-                title='inter-dependence', axes_label=False)
+           title='inter-dependence', axes_label=False)
     plt.suptitle("extramarital affairs (plot 3 of 4)")
 
 
@@ -142,7 +149,7 @@ def test_mosaic_very_complex(close_figures):
     # new function that does this automatically based on the type of data
     key_name = ['gender', 'age', 'health', 'work']
     key_base = (['male', 'female'], ['old', 'young'],
-                    ['healty', 'ill'], ['work', 'unemployed'])
+                ['healty', 'ill'], ['work', 'unemployed'])
     keys = list(product(*key_base))
     data = OrderedDict(zip(keys, range(1, 1 + len(keys))))
     props = {}
@@ -163,8 +170,9 @@ def test_mosaic_very_complex(close_figures):
             else:
                 ji = max(i, j)
                 ij = min(i, j)
-                temp_data = OrderedDict([((k[ij], k[ji]) + tuple(k[r] for r in m), v)
-                                            for k, v in iteritems(data)])
+                temp_data = OrderedDict([
+                    ((k[ij], k[ji]) + tuple(k[r] for r in m), v)
+                    for k, v in iteritems(data)])
 
                 keys = list(iterkeys(temp_data))
                 for k in keys:
@@ -178,26 +186,24 @@ def test_mosaic_very_complex(close_figures):
 
 @pytest.mark.matplotlib
 def test_axes_labeling(close_figures):
-    from numpy.random import rand
     key_set = (['male', 'female'], ['old', 'adult', 'young'],
                ['worker', 'unemployed'], ['yes', 'no'])
     # the cartesian product of all the categories is
     # the complete set of categories
     keys = list(product(*key_set))
-    data = OrderedDict(zip(keys, rand(len(keys))))
-    lab = lambda k: ''.join(s[0] for s in k)
+    data = OrderedDict(zip(keys, np.random.rand(len(keys))))
+    lab = lambda k: ''.join(s[0] for s in k)  # noqa:E731
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
     mosaic(data, ax=ax1, labelizer=lab, horizontal=True, label_rotation=45)
     mosaic(data, ax=ax2, labelizer=lab, horizontal=False,
-        label_rotation=[0, 45, 90, 0])
-    #fig.tight_layout()
+           label_rotation=[0, 45, 90, 0])
+
     fig.suptitle("correct alignment of the axes labels")
 
 
 @pytest.mark.matplotlib
 def test_mosaic_empty_cells(close_figures):
     # SMOKE test  see #2286
-    import pandas as pd
     mydata = pd.DataFrame({'id2': {64: 'Angelica',
                                    65: 'DXW_UID', 66: 'casuid01',
                                    67: 'casuid01', 68: 'EC93_uid',
@@ -216,7 +222,7 @@ def test_mosaic_empty_cells(close_figures):
     fig, vals = mosaic(mydata, ['id1','id2'])
 
 
-eq = lambda x, y: assert_(np.allclose(x, y))
+eq = lambda x, y: assert_(np.allclose(x, y))  # noqa:E731
 
 
 def test_recursive_split():
@@ -351,24 +357,24 @@ def test_rect_pure_split():
     eq(_split_rect(*pure_square, **conf_v), v_2split)
 
     # division in three equal pieces from the perfect square
-    h_2split = [(0.0, 0.0, 1 / 3, 1.0), (1 / 3, 0.0, 1 / 3, 1.0), (2 / 3, 0.0,
-                 1 / 3, 1.0)]
+    h_2split = [(0.0, 0.0, 1 / 3, 1.0), (1 / 3, 0.0, 1 / 3, 1.0),
+                (2 / 3, 0.0, 1 / 3, 1.0)]
     conf_h = dict(proportion=[1, 1, 1], gap=0.0, horizontal=True)
     eq(_split_rect(*pure_square, **conf_h), h_2split)
 
-    v_2split = [(0.0, 0.0, 1.0, 1 / 3), (0.0, 1 / 3, 1.0, 1 / 3), (0.0, 2 / 3,
-                 1.0, 1 / 3)]
+    v_2split = [(0.0, 0.0, 1.0, 1 / 3), (0.0, 1 / 3, 1.0, 1 / 3),
+                (0.0, 2 / 3, 1.0, 1 / 3)]
     conf_v = dict(proportion=[1, 1, 1], gap=0.0, horizontal=False)
     eq(_split_rect(*pure_square, **conf_v), v_2split)
 
     # division in three non-equal pieces from the perfect square
-    h_2split = [(0.0, 0.0, 1 / 4, 1.0), (1 / 4, 0.0, 1 / 2, 1.0), (3 / 4, 0.0,
-                 1 / 4, 1.0)]
+    h_2split = [(0.0, 0.0, 1 / 4, 1.0), (1 / 4, 0.0, 1 / 2, 1.0),
+                (3 / 4, 0.0, 1 / 4, 1.0)]
     conf_h = dict(proportion=[1, 2, 1], gap=0.0, horizontal=True)
     eq(_split_rect(*pure_square, **conf_h), h_2split)
 
-    v_2split = [(0.0, 0.0, 1.0, 1 / 4), (0.0, 1 / 4, 1.0, 1 / 2), (0.0, 3 / 4,
-                 1.0, 1 / 4)]
+    v_2split = [(0.0, 0.0, 1.0, 1 / 4), (0.0, 1 / 4, 1.0, 1 / 2),
+                (0.0, 3 / 4, 1.0, 1 / 4)]
     conf_v = dict(proportion=[1, 2, 1], gap=0.0, horizontal=False)
     eq(_split_rect(*pure_square, **conf_v), v_2split)
 
@@ -426,4 +432,5 @@ def test_default_arg_index(close_figures):
                                  'small'],
                        'length' : ['long', 'short', 'short', 'long', 'long',
                                    'short']})
-    assert_raises(ValueError, mosaic, data=df, title='foobar')
+    with pytest.raises(ValueError):
+        mosaic(data=df, title='foobar')

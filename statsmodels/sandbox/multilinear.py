@@ -11,7 +11,6 @@ multigroup:
     more significant than outside the group.
 """
 
-from statsmodels.compat.pandas import sort_values
 from statsmodels.compat.python import iteritems, string_types
 from patsy import dmatrix
 import pandas as pd
@@ -19,6 +18,7 @@ from statsmodels.api import OLS
 from statsmodels.api import stats
 import numpy as np
 import logging
+
 
 def _model2dataframe(model_endog, model_exog, model_type=OLS, **kwargs):
     """return a series containing the summary of a linear model
@@ -29,7 +29,7 @@ def _model2dataframe(model_endog, model_exog, model_type=OLS, **kwargs):
     model_result = model_type(model_endog, model_exog, **kwargs).fit()
     # keeps track of some global statistics
     statistics = pd.Series({'r2': model_result.rsquared,
-                  'adj_r2': model_result.rsquared_adj})
+                            'adj_r2': model_result.rsquared_adj})
     # put them togher with the result for each term
     result_df = pd.DataFrame({'params': model_result.params,
                               'pvals': model_result.pvalues,
@@ -147,7 +147,8 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
     # it's not waterproof but is a good enough criterion for everyday use
     if column_list is None:
         column_list = [name for name in dataframe.columns
-                      if dataframe[name].dtype != object and name not in model]
+                       if dataframe[name].dtype != object and
+                       name not in model]
     # if it's a single string transform it in a single element list
     if isinstance(column_list, string_types):
         column_list = [column_list]
@@ -172,7 +173,7 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
     # mangle them togheter and sort by complexive p-value
     summary = pd.DataFrame(col_results)
     # order by the p-value: the most useful model first!
-    summary = sort_values(summary.T, [('pvals', '_f_test')])
+    summary = summary.T.sort_values([('pvals', '_f_test')])
     summary.index.name = 'endogenous vars'
     # implementing the pvalue correction method
     smt = stats.multipletests
@@ -217,9 +218,9 @@ def _test_group(pvalues, group_name, group, exact=True):
     pvalue = test(np.array(table))[1]
     # is the group more represented or less?
     part = group_sign, group_nonsign, extern_sign, extern_nonsign
-    #increase = (group_sign / group_total) > (total_significant / totals)
-    increase = np.log((totals * group_sign)
-                      / (total_significant * group_total))
+
+    ratio = (totals * group_sign) / (total_significant * group_total)
+    increase = np.log(ratio)
     return pvalue, increase, part
 
 
@@ -303,7 +304,8 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
         raise ValueError("the series should be binary")
     if hasattr(pvals.index, 'is_unique') and not pvals.index.is_unique:
         raise ValueError("series with duplicated index is not accepted")
-    results = {'pvals': {},
+    results = {
+        'pvals': {},
         'increase': {},
         '_in_sign': {},
         '_in_non': {},
@@ -317,7 +319,7 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
         results['_in_non'][group_name] = res[2][1]
         results['_out_sign'][group_name] = res[2][2]
         results['_out_non'][group_name] = res[2][3]
-    result_df = sort_values(pd.DataFrame(results), 'pvals')
+    result_df = pd.DataFrame(results).sort_values('pvals')
     if not keep_all:
         result_df = result_df[result_df.increase]
     smt = stats.multipletests

@@ -1,12 +1,11 @@
-from statsmodels.compat.python import lrange, long
-from statsmodels.compat.pandas import is_numeric_dtype, Float64Index
-
-import datetime
+from statsmodels.compat.python import long
+from statsmodels.compat.pandas import is_numeric_dtype
 
 import warnings
 import numpy as np
 from pandas import (to_datetime, Int64Index, DatetimeIndex, Period,
-                    PeriodIndex, RangeIndex, Timestamp, Series, Index)
+                    PeriodIndex, RangeIndex, Timestamp, Series, Index,
+                    Float64Index)
 from pandas.tseries.frequencies import to_offset
 
 from statsmodels.base import data
@@ -140,7 +139,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     if not isinstance(_index, Index):
                         raise ValueError('Could not coerce to date index')
                     index = _index
-                except:
+                except (TypeError, ValueError):
                     # Only want to actually raise an exception if `dates` was
                     # provided but can't be coerced. If we got the index from
                     # the row_labels, we'll just ignore it and use the integer
@@ -412,7 +411,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 loc = loc[0]  # Require scalar
                 index = self.data.row_labels[:loc + 1]
                 index_was_expanded = False
-            except:
+            except KeyError:
                 raise e
         return loc, index, index_was_expanded
 
@@ -557,31 +556,17 @@ class TimeSeriesModel(base.LikelihoodModel):
 class TimeSeriesModelResults(base.LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params, scale=1.):
         self.data = model.data
-        super(TimeSeriesModelResults,
-                self).__init__(model, params, normalized_cov_params, scale)
+        super(TimeSeriesModelResults, self).__init__(model, params,
+                                                     normalized_cov_params,
+                                                     scale)
 
 
 class TimeSeriesResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
     _wrap_attrs = wrap.union_dicts(base.LikelihoodResultsWrapper._wrap_attrs,
-                                    _attrs)
-    _methods = {'predict' : 'dates'}
-    _wrap_methods = wrap.union_dicts(base.LikelihoodResultsWrapper._wrap_methods,
-                                     _methods)
+                                   _attrs)
+    _methods = {'predict': 'dates'}
+    _wrap_methods = wrap.union_dicts(
+        base.LikelihoodResultsWrapper._wrap_methods, _methods)
 wrap.populate_wrapper(TimeSeriesResultsWrapper,  # noqa:E305
                       TimeSeriesModelResults)
-
-
-if __name__ == "__main__":
-    import statsmodels.api as sm
-    import pandas
-
-    data = sm.datasets.macrodata.load(as_pandas=False)
-
-    #make a DataFrame
-    #TODO: attach a DataFrame to some of the datasets, for quicker use
-    dates = [str(int(x[0])) +':'+ str(int(x[1])) \
-             for x in data.data[['year','quarter']]]
-
-    df = pandas.DataFrame(data.data[['realgdp','realinv','realcons']], index=dates)
-    ex_mod = TimeSeriesModel(df)
