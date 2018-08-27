@@ -117,6 +117,13 @@ class Hypothesis(object):
         The null hypothesis
     alternative : str
         The alternative hypothesis
+
+    Attributes
+    ----------
+    null : str
+        The passed null hypothesis, as a property
+    alternative : str
+        The passed alternative hypothesis, as a property
     """
 
     def __init__(self, null, alternative):
@@ -147,6 +154,11 @@ class CriticalValues(object):
     ----------
     crit_dict : dict
         A dictionary of critical values
+
+    Attributes
+    ----------
+    crit_dict : dict
+        The passed dictionary, as a property
 
     Examples
     --------
@@ -181,12 +193,22 @@ class CriticalValues(object):
 
 class Statistics(object):
     """
+    TODO
 
+    Parameters
+    ----------
+    kwargs : dict
+        Keyword arguments, to store on ``self``.
+
+    Attributes
+    ----------
+    attributes : list
+        All attributes available on ``self``, except for ``print_filter``.
     """
 
     def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
         self.print_filter = None
+        self.__dict__.update(kwargs)
 
     @property
     def attributes(self):  # print_filter is internal
@@ -254,8 +276,3 @@ class TestResult(object):
 
     def __str__(self):
         return self.summary()
-
-
-if __name__ == "__main__":
-    vals = CriticalValues({"5%": 0.9, "10%": 1.5})  # percentages
-    print(vals)
