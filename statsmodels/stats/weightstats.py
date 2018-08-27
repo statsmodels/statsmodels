@@ -37,6 +37,7 @@ import numpy as np
 from scipy import stats
 
 from statsmodels.tools.decorators import OneTimeProperty
+from statsmodels.stats.base import (Hypothesis, Statistics, TestResult)
 
 
 class DescrStatsW(object):
@@ -1112,13 +1113,13 @@ class CompareMeans(object):
 
 
 def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
-                      weights=(None, None), value=0):
-    '''ttest independent sample
+                      weights=(None, None), value=0, store=False):
+    """
+    T-test independent sample
 
     convenience function that uses the classes and throws away the intermediate
-    results,
-    compared to scipy stats: drops axis option, adds alternative, usevar, and
-    weights option
+    results, compared to scipy stats: drops axis option, adds alternative,
+    usevar, and weights option.
 
     Parameters
     ----------
@@ -1140,7 +1141,9 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
         ``DescrStatsW``
     value : float
         difference between the means under the Null hypothesis.
-
+    store : bool, optional
+        If True, a result instance is returned in addition to the statistic and
+        p-value (default is False).
 
     Returns
     -------
@@ -1150,12 +1153,23 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
         pvalue of the t-test
     df : int or float
         degrees of freedom used in the t-test
-
-    '''
+    resstore : TestResult, optional
+        An instance of TestResult with results attached as attributes
+    """
     cm = CompareMeans(DescrStatsW(x1, weights=weights[0], ddof=0),
-                     DescrStatsW(x2, weights=weights[1], ddof=0))
+                      DescrStatsW(x2, weights=weights[1], ddof=0))
+
     tstat, pval, dof = cm.ttest_ind(alternative=alternative, usevar=usevar,
                                     value=value)
+
+    if store:
+        statistics = Statistics(t_stat=tstat, p_value=pval, df=dof,
+                                usevar=usevar)
+
+        result = TestResult("T-test for independent samples", statistics,
+                            hypothesis=_hypothesis(value, alternative))
+
+        return tstat, pval, result
 
     return tstat, pval, dof
 
@@ -1292,7 +1306,7 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
     return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
 
 def ztest(x1, x2=None, value=0, alternative='two-sided', usevar='pooled',
-          ddof=1.):
+          ddof=1., store=False):
     '''test for mean based on normal distribution, one or two samples
 
     In the case of two samples, the samples are assumed to be independent.
@@ -1322,19 +1336,23 @@ def ztest(x1, x2=None, value=0, alternative='two-sided', usevar='pooled',
         Degrees of freedom use in the calculation of the variance of the mean
         estimate. In the case of comparing means this is one, however it can
         be adjusted for testing other statistics (proportion, correlation)
+    store : bool, optional
+        If True, a result instance is returned in addition to the statistic and
+        p-value (default is False).
 
     Returns
     -------
-    tstat : float
+    zstat : float
         test statisic
     pvalue : float
         pvalue of the t-test
+    resstore : TestResult, optional
+        An instance of TestResult with results attached as attributes
 
     Notes
     -----
     usevar not implemented, is always pooled in two sample case
     use CompareMeans instead.
-
     '''
     # TODO: this should delegate to CompareMeans like ttest_ind
     #       However that does not implement ddof
@@ -1362,7 +1380,21 @@ def ztest(x1, x2=None, value=0, alternative='two-sided', usevar='pooled',
 
     std_diff = np.sqrt(var_pooled)
     #stat = x1_mean - x2_mean - value
-    return _zstat_generic(x1_mean, x2_mean, std_diff, alternative, diff=value)
+
+    z_stat, p_value = _zstat_generic(x1_mean, x2_mean, std_diff, alternative,
+                                     diff=value)
+
+    if store:
+        statistics = Statistics(z_stat=z_stat, p_value=p_value)
+
+        result = TestResult("Z-test for the mean of one or two samples",
+                            statistics, hypothesis=_hypothesis(value,
+                                                               alternative))
+
+        return z_stat, p_value, result
+
+    return z_stat, p_value
+
 
 def zconfint(x1, x2=None, value=0, alpha=0.05, alternative='two-sided',
                   usevar='pooled', ddof=1.):
@@ -1427,6 +1459,7 @@ def zconfint(x1, x2=None, value=0, alpha=0.05, alternative='two-sided',
     ci = _zconfint_generic(x1_mean - x2_mean - value, std_diff, alpha, alternative)
     return ci
 
+
 def ztost(x1, low, upp, x2=None, usevar='pooled', ddof=1.):
     '''Equivalence test based on normal distribution
 
@@ -1462,3 +1495,39 @@ def ztost(x1, low, upp, x2=None, usevar='pooled', ddof=1.):
     tt2 = ztest(x1, x2, alternative='smaller', usevar=usevar, value=upp,
                 ddof=ddof)
     return np.maximum(tt1[1], tt2[1]), tt1, tt2,
+
+
+def _hypothesis(value, alternative):
+    """
+    Helper function for hypothesis set-up. See code above, and also
+    TestResult/Hypothesis.
+
+    Parameters
+    ----------
+    value : float
+        Population mean
+    alternative : str
+        Alternative hypothesis
+
+    Returns
+    -------
+    Hypothesis
+        Hypothesis object parametrised with the null and alternative
+        specifications built here.
+    """
+    options = {
+        "larger": ", it is larger",
+        "smaller": ", it is smaller",
+        "two-sided": ""
+    }
+
+    if alternative not in options:
+        raise ValueError("`{0}` not understood.".format(alternative))
+
+    null = "The difference in means between the samples equals" \
+           " {0}".format(value)
+
+    alternative = "The difference does not equal {0}{1}.".format(
+        value, options[alternative])
+
+    return Hypothesis(null, alternative)
