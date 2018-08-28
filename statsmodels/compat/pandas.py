@@ -29,3 +29,12 @@ else:
 
     data_klasses = (pandas.Series, pandas.DataFrame, pandas.Panel,
                     pandas.WidePanel)
+
+try:
+    import pandas.testing as testing
+except ImportError:
+    import pandas.util.testing as testing
+
+assert_frame_equal = testing.assert_frame_equal
+assert_index_equal = testing.assert_index_equal
+assert_series_equal = testing.assert_series_equal

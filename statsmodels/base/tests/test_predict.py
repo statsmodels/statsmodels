@@ -2,12 +2,12 @@
 """
 Tests for Results.predict
 """
+from statsmodels.compat.pandas import testing as pdt
 
 import numpy as np
 import pandas as pd
 
 from numpy.testing import assert_allclose, assert_equal
-import pandas.util.testing as pdt
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.genmod.generalized_linear_model import GLM

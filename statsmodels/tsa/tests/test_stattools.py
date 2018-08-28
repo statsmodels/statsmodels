@@ -1,3 +1,4 @@
+from statsmodels.compat.pandas import assert_index_equal
 from statsmodels.compat.python import lrange
 
 import os
@@ -752,14 +753,13 @@ def test_innovations_errors():
 def test_innovations_filter_brockwell_davis():
     ma = -0.9
     acovf = np.array([1 + ma ** 2, ma])
-    theta, sigma2 = innovations_algo(acovf, nobs=4)
+    theta, _ = innovations_algo(acovf, nobs=4)
     e = np.random.randn(5)
     endog = e[1:] + ma * e[:-1]
     resid = innovations_filter(endog, theta)
     expected = [endog[0]]
     for i in range(1, 4):
         expected.append(endog[i] + theta[i, 0] * expected[-1])
-    print(expected)
     expected = np.array(expected)
     assert_allclose(resid, expected)
 
@@ -767,20 +767,20 @@ def test_innovations_filter_brockwell_davis():
 def test_innovations_filter_pandas():
     ma = np.array([-0.9, 0.5])
     acovf = np.array([1 + (ma ** 2).sum(), ma[0] + ma[1] * ma[0], ma[1]])
-    theta, sigma2 = innovations_algo(acovf, nobs=10)
+    theta, _ = innovations_algo(acovf, nobs=10)
     endog = np.random.randn(10)
     endog_pd = pd.Series(endog,
                          index=pd.date_range('2000-01-01', periods=10))
     resid = innovations_filter(endog, theta)
     resid_pd = innovations_filter(endog_pd, theta)
     assert_allclose(resid, resid_pd.values)
-    pd.testing.assert_index_equal(endog_pd.index, resid_pd.index)
+    assert_index_equal(endog_pd.index, resid_pd.index)
 
 
 def test_innovations_filter_errors():
     ma = -0.9
     acovf = np.array([1 + ma ** 2, ma])
-    theta, sigma2 = innovations_algo(acovf, nobs=4)
+    theta, _ = innovations_algo(acovf, nobs=4)
     with pytest.raises(ValueError):
         innovations_filter(np.empty((2, 2)), theta)
     with pytest.raises(ValueError):

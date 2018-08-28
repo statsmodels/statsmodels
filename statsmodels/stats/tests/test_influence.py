@@ -4,15 +4,12 @@ Created on Tue Jun 12 13:18:12 2018
 
 Author: Josef Perktold
 """
+from statsmodels.compat.pandas import testing as pdt
 
 import os.path
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
-try:
-    import pandas.testing as pdt
-except ImportError:
-    import pandas.util.testing as pdt
 
 import pytest
 

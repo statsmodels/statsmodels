@@ -1,12 +1,12 @@
 """assert functions from numpy and pandas testing
 
 """
+from statsmodels.compat.pandas import testing as pdt
 
 import re
 
 import numpy.testing as npt
 import pandas
-import pandas.util.testing as pdt
 
 # for pandas version check
 def strip_rc(version):
