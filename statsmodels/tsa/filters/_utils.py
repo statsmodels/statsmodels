@@ -6,7 +6,7 @@ from statsmodels.tsa.tsatools import freq_to_period
 
 def _get_pandas_wrapper(X, trim_head=None, trim_tail=None, names=None):
     index = X.index
-    #TODO: allow use index labels
+    # TODO: allow use index labels
     if trim_head is None and trim_tail is None:
         index = index
     elif trim_tail is None:
@@ -18,11 +18,11 @@ def _get_pandas_wrapper(X, trim_head=None, trim_tail=None, names=None):
     if hasattr(X, "columns"):
         if names is None:
             names = X.columns
-        return lambda x : X.__class__(x, index=index, columns=names)
+        return lambda x: X.__class__(x, index=index, columns=names)
     else:
         if names is None:
             names = X.name
-        return lambda x : X.__class__(x, index=index, name=names)
+        return lambda x: X.__class__(x, index=index, name=names)
 
 
 def _maybe_get_pandas_wrapper(X, trim_head=None, trim_tail=None):
@@ -35,7 +35,7 @@ def _maybe_get_pandas_wrapper(X, trim_head=None, trim_tail=None):
     if _is_using_pandas(X, None):
         return _get_pandas_wrapper(X, trim_head, trim_tail)
     else:
-        return lambda x : x
+        return lambda x: x
 
 
 def _maybe_get_pandas_wrapper_freq(X, trim=None):
@@ -45,7 +45,7 @@ def _maybe_get_pandas_wrapper_freq(X, trim=None):
         freq = index.inferred_freq
         return func, freq
     else:
-        return lambda x : x, None
+        return lambda x: x, None
 
 
 def pandas_wrapper(func, trim_head=None, trim_tail=None, names=None, *args,
@@ -107,44 +107,9 @@ def pandas_wrapper_freq(func, trim_head=None, trim_tail=None,
                                            columns)
         index = X.index
         freq = index.inferred_freq
-        kwargs.update({freq_kw : freq_to_period(freq)})
+        kwargs.update({freq_kw: freq_to_period(freq)})
         ret = func(X, *args, **kwargs)
         ret = wrapper_func(ret)
         return ret
 
     return new_func
-
-
-def dummy_func(X):
-    return X
-
-
-def dummy_func_array(X):
-    return X.values
-
-
-def dummy_func_pandas_columns(X):
-    return X.values
-
-
-def dummy_func_pandas_series(X):
-    return X['A']
-
-
-import pandas as pd
-import numpy as np
-
-
-def test_pandas_freq_decorator():
-    X = pd.util.testing.makeDataFrame()
-    # in X, get a function back that returns an X with the same columns
-    func = pandas_wrapper(dummy_func)
-
-    np.testing.assert_equal(func(X.values), X)
-
-    func = pandas_wrapper(dummy_func_array)
-    pd.util.testing.assert_frame_equal(func(X), X)
-
-    expected = X.rename(columns=dict(zip('ABCD', 'EFGH')))
-    func = pandas_wrapper(dummy_func_array, names=list('EFGH'))
-    pd.util.testing.assert_frame_equal(func(X), expected)

@@ -86,16 +86,17 @@ def hpfilter(X, lamb=1600):
     X = np.asarray(X, float)
     if X.ndim > 1:
         X = X.squeeze()
+
     nobs = len(X)
-    I = sparse.eye(nobs,nobs)
-    offsets = np.array([0,1,2])
-    data = np.repeat([[1.],[-2.],[1.]], nobs, axis=1)
-    K = sparse.dia_matrix((data, offsets), shape=(nobs-2,nobs))
+    nI = sparse.eye(nobs, nobs)
+    offsets = np.array([0, 1, 2])
+    data = np.repeat([[1.], [-2.], [1.]], nobs, axis=1)
+    K = sparse.dia_matrix((data, offsets), shape=(nobs-2, nobs))
 
     use_umfpack = True
-    trend = spsolve(I+lamb*K.T.dot(K), X, use_umfpack=use_umfpack)
+    trend = spsolve(nI+lamb*K.T.dot(K), X, use_umfpack=use_umfpack)
 
-    cycle = X-trend
+    cycle = X - trend
     if _pandas_wrapper is not None:
         return _pandas_wrapper(cycle), _pandas_wrapper(trend)
     return cycle, trend
