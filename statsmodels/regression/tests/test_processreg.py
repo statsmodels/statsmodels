@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from statsmodels.regression.process_reg import (ProcessRegression,
+from statsmodels.regression.process_reg import (ProcessMLE,
                                                 GaussianCovariance)
 import numpy as np
 import pandas as pd
@@ -51,7 +51,7 @@ def test_arrays():
 
     y, x_mean, x_sc, x_sm, time, groups = setup1(1000)
 
-    preg = ProcessRegression(y, x_mean, x_sc, x_sm, time, groups)
+    preg = ProcessMLE(y, x_mean, x_sc, x_sm, time, groups)
 
     f = preg.fit()
     f.summary()  # Smoke test
@@ -101,7 +101,7 @@ def test_formulas():
     mean_formula = "y ~ x1 + x2 + x3 + x4"
     scale_formula = "0 + xsd1 + xsd2"
     smooth_formula = "0 + xsm1 + xsm2"
-    preg = ProcessRegression.from_formula(
+    preg = ProcessMLE.from_formula(
         mean_formula,
         data=df,
         scale_formula=scale_formula,
@@ -139,7 +139,7 @@ def test_score_numdiff():
 
     y, x_mean, x_sd, x_sm, time, groups = setup1(1000)
 
-    preg = ProcessRegression(y, x_mean, x_sd, x_sm, time, groups)
+    preg = ProcessMLE(y, x_mean, x_sd, x_sm, time, groups)
 
     def loglike(x):
         return preg.loglike(x)

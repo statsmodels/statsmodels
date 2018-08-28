@@ -48,7 +48,7 @@ class ProcessCovariance(object):
       s[i] \cdot s[j] \cdot h(|time[i] - time[j]| / \sqrt{(u[i] + u[j]) /
       2}) \cdot \frac{u[i]^{1/})u[j]^{1/4}}{\sqrt{(u[i] + u[j])/2}}
 
-    The ProcessRegression class allows linear models with this
+    The ProcessMLE class allows linear models with this
     covariance structure to be fit using maximum likelihood (ML), which
     is equivalent to generalized least squares (GLS) in this setting.
 
@@ -185,7 +185,7 @@ def _check_args(endog, exog, exog_scale, exog_smooth, time, groups):
         raise ValueError(msg)
 
 
-class ProcessRegression(base.LikelihoodModel):
+class ProcessMLE(base.LikelihoodModel):
     """
     Fit a Gaussian mean/variance regression model.
 
@@ -232,7 +232,7 @@ class ProcessRegression(base.LikelihoodModel):
                  cov=None,
                  **kwargs):
 
-        super(ProcessRegression, self).__init__(
+        super(ProcessMLE, self).__init__(
             endog,
             exog,
             exog_scale=exog_scale,
@@ -321,7 +321,7 @@ class ProcessRegression(base.LikelihoodModel):
         smooth_names = smooth_design_info.column_names
         exog_smooth = np.asarray(exog_smooth)
 
-        mod = super(ProcessRegression, cls).from_formula(
+        mod = super(ProcessMLE, cls).from_formula(
             formula,
             data=data,
             subset=None,
@@ -550,7 +550,7 @@ class ProcessRegression(base.LikelihoodModel):
         r.optim_retvals = f
         r.scale = 1
 
-        rslt = ProcessRegressionResults(self, r)
+        rslt = ProcessMLEResults(self, r)
 
         return rslt
 
@@ -630,14 +630,14 @@ class ProcessRegression(base.LikelihoodModel):
         return np.dot(exog, params)
 
 
-class ProcessRegressionResults(base.GenericLikelihoodModelResults):
+class ProcessMLEResults(base.GenericLikelihoodModelResults):
     """
     Results class for Gaussian process regression models.
     """
 
     def __init__(self, model, mlefit):
 
-        super(ProcessRegressionResults, self).__init__(
+        super(ProcessMLEResults, self).__init__(
             model, mlefit)
 
         pa = model.unpack(mlefit.params)
