@@ -227,23 +227,23 @@ lltrend_cycle_seasonal_reg_ar1 = {
         # Numpy exog dataset
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
          'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
-         'exog': 'numpy', 'mle_regression': False,}, 
+         'exog': 'numpy', 'mle_regression': False},
         # Annual frequency dataset
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
          'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
-         'exog': True, 'mle_regression': False, 'freq':'AS'},
+         'exog': True, 'mle_regression': False, 'freq': 'AS'},
         # Quarterly frequency dataset
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
          'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
-         'exog': True, 'mle_regression': False, 'freq':'QS'},
+         'exog': True, 'mle_regression': False, 'freq': 'QS'},
         # Monthly frequency dataset
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
          'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
-         'exog': True, 'mle_regression': False, 'freq':'MS'},
+         'exog': True, 'mle_regression': False, 'freq': 'MS'},
         # Minutely frequency dataset
         {'level': 'lltrend', 'autoregressive': 1, 'cycle': True,
          'stochastic_cycle': True, 'seasonal': 4, 'autoregressive': 1,
-         'exog': True, 'mle_regression': False, 'freq':'T',
+         'exog': True, 'mle_regression': False, 'freq': 'T',
          'cycle_period_bounds': (1.5*12, 12*12)},
     ],
     'params': [0.0001, 0.01, 0.06, 0.0001, 0.0001, 0.1, 2*pi / 10, 0.2],
