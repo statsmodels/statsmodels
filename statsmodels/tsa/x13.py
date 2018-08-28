@@ -39,9 +39,9 @@ class _freq_to_period:
 
 _freq_to_period = _freq_to_period()
 
-_period_to_freq = {12 : 'M', 4 : 'Q'}
-_log_to_x12 = {True : 'log', False : 'none', None : 'auto'}
-_bool_to_yes_no = lambda x : 'yes' if x else 'no'
+_period_to_freq = {12: 'M', 4: 'Q'}
+_log_to_x12 = {True: 'log', False: 'none', None: 'auto'}
+_bool_to_yes_no = lambda x: 'yes' if x else 'no'  # noqa:E731
 
 
 def _find_x12(x12path=None, prefer_x13=True):
@@ -95,7 +95,10 @@ def _clean_order(order):
     order tuple. Also accepts (1 1 0) and return arma order and (0, 0, 0)
     """
     order = re.findall("\([0-9 ]*?\)", order)
-    clean = lambda x : tuple(map(int, re.sub("[()]", "", x).split(" ")))
+
+    def clean(x):
+        return tuple(map(int, re.sub("[()]", "", x).split(" ")))
+
     if len(order) > 1:
         order, sorder = map(clean, order)
     else:
@@ -191,8 +194,9 @@ def _convert_out_to_series(x, dates, name):
     """
     from statsmodels.compat import StringIO
     from pandas import read_csv
-    out = read_csv(StringIO(x), skiprows=2, header=None, sep='\t', engine='python')
-    return out.set_index(dates).rename(columns={1 : name})[name]
+    out = read_csv(StringIO(x), skiprows=2,
+                   header=None, sep='\t', engine='python')
+    return out.set_index(dates).rename(columns={1: name})[name]
 
 
 def _open_and_read(fname):
@@ -219,7 +223,7 @@ class Spec(object):
         options = ""
         for key, value in iteritems(kwargs):
             options += "{0}={1}\n".format(key, value)
-            self.__dict__.update({key : value})
+            self.__dict__.update({key: value})
         self.options = options
 
 
@@ -456,7 +460,7 @@ def x13_arima_analysis(endog, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
             #   not sure why. no process should have these open
             os.remove(ftempin.name)
             os.remove(ftempout.name)
-        except:
+        except OSError:
             if os.path.exists(ftempin.name):
                 warn("Failed to delete resource {0}".format(ftempin.name),
                      IOWarning)
@@ -605,32 +609,3 @@ class X13ArimaAnalysisResult(object):
 
         fig.tight_layout()
         return fig
-
-
-if __name__ == "__main__":
-    import numpy as np
-    from statsmodels.tsa.arima_process import ArmaProcess
-    np.random.seed(123)
-    ar = [1, .35, .8]
-    ma = [1, .8]
-    arma = ArmaProcess(ar, ma, nobs=100)
-    assert arma.isstationary()
-    assert arma.isinvertible()
-    y = arma.generate_sample()
-    dates = pd.date_range("1/1/1990", periods=len(y), freq='M')
-    ts = pd.Series(y, index=dates)
-
-    xpath = "/home/skipper/src/x12arima/x12a"
-
-    try:
-        results = x13_arima_analysis(xpath, ts)
-    except:
-        print("Caught exception")
-
-    results = x13_arima_analysis(xpath, ts, log=False)
-
-    # import pandas as pd
-    # seas_y = pd.read_csv("usmelec.csv")
-    # seas_y = pd.Series(seas_y["usmelec"].values,
-    #                        index=pd.DatetimeIndex(seas_y["date"], freq="MS"))
-    # results = x13_arima_analysis(xpath, seas_y)
