@@ -411,7 +411,8 @@ class TimeSeriesModel(base.LikelihoodModel):
                 loc = loc[0]  # Require scalar
                 index = self.data.row_labels[:loc + 1]
                 index_was_expanded = False
-            except KeyError:
+            except (IndexError, AttributeError):
+                # AttributeError if self.data.row_labels is None
                 raise e
         return loc, index, index_was_expanded
 
