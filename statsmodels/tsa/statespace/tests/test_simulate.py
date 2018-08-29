@@ -487,3 +487,58 @@ def test_dynamic_factor():
                                        k_factors=2, factor_order=2, exog=exog,
                                        error_order=2, error_var=True)
     mod.simulate(mod.start_params, nobs)
+
+
+def test_known_initialization():
+    # Need to test that "known" initialization is taken into account in
+    # time series simulation
+    np.random.seed(38947)
+    nobs = 100
+    eps = np.random.normal(size=nobs)
+
+    eps1 = np.zeros(nobs)
+    eps2 = np.zeros(nobs)
+    eps2[49] = 1
+    eps3 = np.zeros(nobs)
+    eps3[50:] = 1
+
+    # SARIMAX
+    # (test that when state shocks are shut down, the initial state
+    # geometrically declines according to the AR parameter)
+    mod = sarimax.SARIMAX([0], order=(1, 0, 0))
+    mod.ssm.initialize_known([100], [[0]])
+    actual = mod.simulate([0.5, 1.], nobs, state_shocks=eps1)
+    assert_allclose(actual, 100 * 0.5**np.arange(nobs))
+
+    # Unobserved components
+    # (test that the initial level shifts the entire path)
+    mod = structural.UnobservedComponents([0], 'local level')
+    mod.ssm.initialize_known([100], [[0]])
+    actual = mod.simulate([1., 1.], nobs, measurement_shocks=eps,
+                          state_shocks=eps2)
+    assert_allclose(actual, 100 + eps + eps3)
+
+    # VARMAX
+    # (here just test that with an independent VAR we have each initial state
+    # geometrically declining at the appropriate rate)
+    transition = np.diag([0.5, 0.2])
+    mod = varmax.VARMAX([[0, 0]], order=(1, 0), trend='nc')
+    mod.initialize_known([100, 50], np.diag([0, 0]))
+    actual = mod.simulate(np.r_[transition.ravel(), 1., 0, 1.], nobs,
+                          measurement_shocks=np.c_[eps1, eps1],
+                          state_shocks=np.c_[eps1, eps1])
+
+    assert_allclose(actual, np.c_[100 * 0.5**np.arange(nobs),
+                                  50 * 0.2**np.arange(nobs)])
+
+    # Dynamic factor
+    # (test that the initial state declines geometrically and then loads
+    # correctly onto the series)
+    mod = dynamic_factor.DynamicFactor([[0, 0]], k_factors=1, factor_order=1)
+    mod.initialize_known([100], [[0]])
+    print(mod.param_names)
+    actual = mod.simulate([0.8, 0.2, 1.0, 1.0, 0.5], nobs,
+                          measurement_shocks=np.c_[eps1, eps1],
+                          state_shocks=eps1)
+    tmp = 100 * 0.5**np.arange(nobs)
+    assert_allclose(actual, np.c_[0.8 * tmp, 0.2 * tmp])
