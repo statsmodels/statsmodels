@@ -536,25 +536,6 @@ class GroupsStats(object):
         #temporary until separated and made all lazy
         self.runbasic(useranks=useranks)
 
-
-
-    def runbasic_old(self, useranks=False):
-        #check: refactoring screwed up case useranks=True
-
-        #groupxsum = np.bincount(intlab, weights=X[:,0])
-        #groupxmean = groupxsum * 1.0 / groupnobs
-        x = self.x
-        if useranks:
-            self.xx = x[:,1].argsort().argsort() + 1  #rankraw
-        else:
-            self.xx = x[:,0]
-        self.groupsum = groupranksum = np.bincount(self.intlab, weights=self.xx)
-        #print('groupranksum', groupranksum, groupranksum.shape, self.groupnobs.shape
-        # start at 1 for stats.rankdata :
-        self.groupmean = grouprankmean = groupranksum * 1.0 / self.groupnobs # + 1
-        self.groupmeanfilter = grouprankmean[self.intlab]
-        #return grouprankmean[intlab]
-
     def runbasic(self, useranks=False):
         #check: refactoring screwed up case useranks=True
 
