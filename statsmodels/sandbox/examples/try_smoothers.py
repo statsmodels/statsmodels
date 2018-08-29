@@ -11,7 +11,8 @@ import numpy as np
 
 if __name__ == "__main__":
     #from statsmodels.sandbox.nonparametric import smoothers as s
-    from statsmodels.sandbox.nonparametric import smoothers, kernels
+    from statsmodels.nonparametric import kernels
+    from statsmodels.sandbox.nonparametric import smoothers
     import matplotlib.pyplot as plt
     #from numpy import sin, array, random
 

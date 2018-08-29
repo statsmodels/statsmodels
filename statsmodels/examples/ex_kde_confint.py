@@ -11,7 +11,7 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 import statsmodels.nonparametric.api as npar
-from statsmodels.sandbox.nonparametric import kernels
+from statsmodels.nonparametric import kernels
 from statsmodels.distributions.mixture_rvs import mixture_rvs
 
 # example from test_kde.py mixture of two normal distributions

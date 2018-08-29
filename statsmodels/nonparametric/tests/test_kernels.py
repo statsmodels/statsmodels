@@ -8,7 +8,7 @@ Author: Josef Perktold
 from __future__ import print_function
 import os
 import numpy as np
-from statsmodels.sandbox.nonparametric import kernels
+from statsmodels.nonparametric import kernels
 
 from numpy.testing import assert_allclose, assert_array_less
 
