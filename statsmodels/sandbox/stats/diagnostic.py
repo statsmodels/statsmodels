@@ -17,7 +17,6 @@ TODO
 * refactor to store intermediate results
 * how easy is it to attach a test that is a class to a result instance,
   for example CompareCox as a method compare_cox(self, other) ?
-* StatTestMC has been moved and should be deleted
 
 missing:
 
@@ -1412,99 +1411,6 @@ def breaks_AP(endog, exog, skip):
     pass
 
 
-#delete when testing is finished
-class StatTestMC(object):
-    """class to run Monte Carlo study on a statistical test'''
-
-    TODO
-    print(summary, for quantiles and for histogram
-    draft in trying out script log
-
-
-    this has been copied to tools/mctools.py, with improvements
-
-    """
-
-    def __init__(self, dgp, statistic):
-        self.dgp = dgp #staticmethod(dgp)  #no self
-        self.statistic = statistic # staticmethod(statistic)  #no self
-
-    def run(self, nrepl, statindices=None, dgpargs=[], statsargs=[]):
-        '''run the actual Monte Carlo and save results
-
-
-        '''
-        self.nrepl = nrepl
-        self.statindices = statindices
-        self.dgpargs = dgpargs
-        self.statsargs = statsargs
-
-        dgp = self.dgp
-        statfun = self.statistic # name ?
-
-        #single return statistic
-        if statindices is None:
-            self.nreturn = nreturns = 1
-            mcres = np.zeros(nrepl)
-            for ii in range(nrepl-1):
-                x = dgp(*dgpargs) #(1e-4+np.random.randn(nobs)).cumsum()
-                mcres[ii] = statfun(x, *statsargs) #unitroot_adf(x, 2,trendorder=0, autolag=None)
-        #more than one return statistic
-        else:
-            self.nreturn = nreturns = len(statindices)
-            self.mcres = mcres = np.zeros((nrepl, nreturns))
-            for ii in range(nrepl-1):
-                x = dgp(*dgpargs) #(1e-4+np.random.randn(nobs)).cumsum()
-                ret = statfun(x, *statsargs)
-                mcres[ii] = [ret[i] for i in statindices]
-
-        self.mcres = mcres
-
-    def histogram(self, idx=None, critval=None):
-        '''calculate histogram values
-
-        does not do any plotting
-        '''
-        if self.mcres.ndim == 2:
-            if idx is not None:
-                mcres = self.mcres[:,idx]
-            else:
-                raise ValueError('currently only 1 statistic at a time')
-        else:
-            mcres = self.mcres
-
-        if critval is None:
-            histo = np.histogram(mcres, bins=10)
-        else:
-            if not critval[0] == -np.inf:
-                bins=np.r_[-np.inf, critval, np.inf]
-            if not critval[0] == -np.inf:
-                bins=np.r_[bins, np.inf]
-            histo = np.histogram(mcres,
-                                 bins=np.r_[-np.inf, critval, np.inf])
-
-        self.histo = histo
-        self.cumhisto = np.cumsum(histo[0])*1./self.nrepl
-        self.cumhistoreversed = np.cumsum(histo[0][::-1])[::-1]*1./self.nrepl
-        return histo, self.cumhisto, self.cumhistoreversed
-
-    def quantiles(self, idx=None, frac=[0.01, 0.025, 0.05, 0.1, 0.975]):
-        '''calculate quantiles of Monte Carlo results
-
-        '''
-
-        if self.mcres.ndim == 2:
-            if not idx is None:
-                mcres = self.mcres[:,idx]
-            else:
-                raise ValueError('currently only 1 statistic at a time')
-        else:
-            mcres = self.mcres
-
-        self.frac = frac = np.asarray(frac)
-        self.mcressort = mcressort = np.sort(self.mcres)
-        return frac, mcressort[(self.nrepl*frac).astype(int)]
-
 if __name__ == '__main__':
 
     examples = ['adf']
@@ -1568,29 +1474,7 @@ if __name__ == '__main__':
         def adf20(x):
             return unitroot_adf(x, 2,trendorder=0, autolag=None)[:2]
 
-        print('\nResults with MC class')
-        mc1 = StatTestMC(randwalksim, adf20)
-        mc1.run(1000, statindices=[0,1])
-        print(mc1.histogram(0, critval=[-3.5, -3.17, -2.9 , -2.58,  0.26]))
-        print(mc1.quantiles(0))
 
-        print('\nLjung Box')
-
-        def lb4(x):
-            s,p = acorr_ljungbox(x, lags=4)
-            return s[-1], p[-1]
-
-        def lb4(x):
-            s,p = acorr_ljungbox(x, lags=1)
-            return s[0], p[0]
-
-        print('Results with MC class')
-        mc1 = StatTestMC(normalnoisesim, lb4)
-        mc1.run(1000, statindices=[0,1])
-        print(mc1.histogram(1, critval=[0.01, 0.025, 0.05, 0.1, 0.975]))
-        print(mc1.quantiles(1))
-        print(mc1.quantiles(0))
-        print(mc1.histogram(0))
 
     nobs = 100
     x = np.ones((nobs,2))
