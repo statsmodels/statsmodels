@@ -476,18 +476,10 @@ def randmvn(rho, size=(1, 2), standardize=False):
 #
 #============================
 
-def tiecorrect(xranks):
-    '''
-
-    should be equivalent of scipy.stats.tiecorrect
-
-    '''
-    #casting to int rounds down, but not relevant for this case
-    rankbincount = np.bincount(np.asarray(xranks,dtype=int))
-    nties = rankbincount[rankbincount > 1]
-    ntot = float(len(xranks));
-    tiecorrection = 1 - (nties**3 - nties).sum()/(ntot**3 - ntot)
-    return tiecorrection
+# not sure if these is needed, but putting these here to keep the
+# namespace unchanged
+tiecorrect = stats.tiecorrect
+rankdata = stats.rankdata
 
 
 class GroupsStats(object):
@@ -989,25 +981,6 @@ class MultiComparison(object):
 
         return TukeyHSDResults(self, results_table, res[5], res[1], res[2],
                                res[3], res[4], res[6], res[7], var_)
-
-
-
-def rankdata(x):
-    '''rankdata, equivalent to scipy.stats.rankdata
-
-    just a different implementation, I have not yet compared speed
-
-    '''
-    uni, intlab = np.unique(x[:,0], return_inverse=True)
-    groupnobs = np.bincount(intlab)
-    groupxsum = np.bincount(intlab, weights=X[:,0])
-    groupxmean = groupxsum * 1.0 / groupnobs
-
-    rankraw = x[:,0].argsort().argsort()
-    groupranksum = np.bincount(intlab, weights=rankraw)
-    # start at 1 for stats.rankdata :
-    grouprankmean = groupranksum * 1.0 / groupnobs + 1
-    return grouprankmean[intlab]
 
 
 #new
