@@ -76,24 +76,32 @@ ValueError: zero-size array to ufunc.reduce without identity
 
 
 '''
-
-
-#import xlrd
-#import xlwt
 from __future__ import print_function
+
 from statsmodels.compat.python import lzip, range, lrange, zip
 import scipy.stats
-import numpy
+from scipy import interpolate
+from scipy import stats
+
 import numpy as np
 import math
 import copy
-from scipy import stats
 from statsmodels.iolib.table import SimpleTable
 from numpy.testing import assert_almost_equal, assert_equal
-#temporary circular import
-from statsmodels.stats.multitest import multipletests, _ecdf as ecdf, fdrcorrection as fdrcorrection0, fdrcorrection_twostage
+
+# temporary circular import
+from statsmodels.stats.multitest import (
+    multipletests,
+    _ecdf as ecdf,
+    fdrcorrection as fdrcorrection0,
+    fdrcorrection_twostage)
+
 from statsmodels.graphics import utils
 from statsmodels.tools.sm_exceptions import ValueWarning
+
+# first two not actually used here, imported to keep the namespace unchanged
+from .contrast_tools import (
+    contrast_diff_mean, contrast_all_one, contrast_allpairs)
 
 qcrit = '''
   2     3     4     5     6     7     8     9     10
@@ -129,7 +137,7 @@ crows = c[:,0]
 cv005 = c[:, 1::2]
 cv001 = c[:, 2::2]
 
-from scipy import interpolate
+
 def get_tukeyQcrit(k, df, alpha=0.05):
     '''
     return critical values for Tukey's HSD (Q)
@@ -183,13 +191,13 @@ def Tukeythreegene(first,second,third):
 ##   qwb.sheet_names()
 ##   qcrittable = qwb.sheet_by_name(u'Sheet1')
 
-    firstmean = numpy.mean(first) #means of the three arrays
-    secondmean = numpy.mean(second)
-    thirdmean = numpy.mean(third)
+    firstmean = np.mean(first) #means of the three arrays
+    secondmean = np.mean(second)
+    thirdmean = np.mean(third)
 
-    firststd = numpy.std(first) #standard deviations of the threearrays
-    secondstd = numpy.std(second)
-    thirdstd = numpy.std(third)
+    firststd = np.std(first) #standard deviations of the threearrays
+    secondstd = np.std(second)
+    thirdstd = np.std(third)
 
     firsts2 = math.pow(firststd,2) #standard deviation squared of the three arrays
     seconds2 = math.pow(secondstd,2)
@@ -249,16 +257,16 @@ def Tukeythreegene2(genes): #Performing the Tukey HSD post-hoc test for three ge
     means = []
     stds = []
     for gene in genes:
-        means.append(numpy.mean(gene))
-        std.append(numpy.std(gene))
+        means.append(np.mean(gene))
+        std.append(np.std(gene))
 
-    #firstmean = numpy.mean(first) #means of the three arrays
-    #secondmean = numpy.mean(second)
-    #thirdmean = numpy.mean(third)
+    #firstmean = np.mean(first) #means of the three arrays
+    #secondmean = np.mean(second)
+    #thirdmean = np.mean(third)
 
-    #firststd = numpy.std(first) #standard deviations of the three arrays
-    #secondstd = numpy.std(second)
-    #thirdstd = numpy.std(third)
+    #firststd = np.std(first) #standard deviations of the three arrays
+    #secondstd = np.std(second)
+    #thirdstd = np.std(third)
 
     stds2 = []
     for std in stds:
@@ -584,6 +592,7 @@ class GroupsStats(object):
 
     def groupvarwithin(self):
         return self.groupsswithin()/(self.groupnobs-1) #.sum()
+
 
 class TukeyHSDResults(object):
     """Results from Tukey HSD test, with additional plot methods
@@ -1405,59 +1414,6 @@ def distance_st_range(mean_all, nobs_all, var_all, df=None, triu=False):
 
     return st_range, meandiffs, std_pairs, (idx1,idx2)  #return square arrays
 
-
-def contrast_allpairs(nm):
-    '''contrast or restriction matrix for all pairs of nm variables
-
-    Parameters
-    ----------
-    nm : int
-
-    Returns
-    -------
-    contr : ndarray, 2d, (nm*(nm-1)/2, nm)
-       contrast matrix for all pairwise comparisons
-
-    '''
-    contr = []
-    for i in range(nm):
-        for j in range(i+1, nm):
-            contr_row = np.zeros(nm)
-            contr_row[i] = 1
-            contr_row[j] = -1
-            contr.append(contr_row)
-    return np.array(contr)
-
-def contrast_all_one(nm):
-    '''contrast or restriction matrix for all against first comparison
-
-    Parameters
-    ----------
-    nm : int
-
-    Returns
-    -------
-    contr : ndarray, 2d, (nm-1, nm)
-       contrast matrix for all against first comparisons
-
-    '''
-    contr = np.column_stack((np.ones(nm-1), -np.eye(nm-1)))
-    return contr
-
-def contrast_diff_mean(nm):
-    '''contrast or restriction matrix for all against mean comparison
-
-    Parameters
-    ----------
-    nm : int
-
-    Returns
-    -------
-    contr : ndarray, 2d, (nm-1, nm)
-       contrast matrix for all against mean comparisons
-
-    '''
-    return np.eye(nm) - np.ones((nm,nm))/nm
 
 def tukey_pvalues(std_range, nm, df):
     #corrected but very slow with warnings about integration
