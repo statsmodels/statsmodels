@@ -10,7 +10,7 @@ License: BSD-3
 import numpy as np
 from statsmodels.regression.linear_model import OLS, WLS
 
-from statsmodels.sandbox.regression.predstd import wls_prediction_std
+from statsmodels.regression._tools import wls_prediction_std
 from statsmodels.regression._prediction import get_prediction
 from statsmodels.genmod._prediction import params_transform_univariate
 

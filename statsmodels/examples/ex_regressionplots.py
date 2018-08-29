@@ -10,7 +10,7 @@ import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 
-from statsmodels.sandbox.regression.predstd import wls_prediction_std
+from statsmodels.regression._tools import wls_prediction_std
 import statsmodels.graphics.regressionplots as smrp
 
 #example from tut.ols with changes

@@ -1075,7 +1075,7 @@ def summary_table(res, alpha=0.05):
     """
 
     from scipy import stats
-    from statsmodels.sandbox.regression.predstd import wls_prediction_std
+    from statsmodels.regression._tools import wls_prediction_std
 
     infl = OLSInfluence(res)
 

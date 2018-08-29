@@ -13,7 +13,7 @@ import numpy as np
 #from scipy import stats
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
-from statsmodels.sandbox.regression.predstd import wls_prediction_std
+from statsmodels.regression._tools import wls_prediction_std
 
 #fix a seed for these examples
 np.random.seed(98765789)
