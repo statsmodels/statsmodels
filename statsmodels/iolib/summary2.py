@@ -116,7 +116,8 @@ class Summary(object):
                 if model in _model_types:
                     model = _model_types[model]
                 self.title = 'Results: ' + model
-            except:
+            except AttributeError:
+                # i.e. results is not a Result instance
                 self.title = ''
 
     def add_base(self, results, alpha=0.05, float_format="%.4f", title=None,
@@ -160,8 +161,6 @@ class Summary(object):
         pad_col, pad_index, widest = _measure_tables(tables, settings)
 
         rule_equal = widest * '='
-        #TODO: this isn't used anywhere?
-        rule_dash = widest * '-'
 
         simple_tables = _simple_tables(tables, settings, pad_col, pad_index)
         tab = [x.as_text() for x in simple_tables]
@@ -193,8 +192,6 @@ class Summary(object):
 
         tables = self.tables
         settings = self.settings
-        #TODO: this isn't used anywhere
-        title = self.title
 
         simple_tables = _simple_tables(tables, settings)
         tab = [x.as_html() for x in simple_tables]
@@ -219,11 +216,11 @@ class Summary(object):
         tab = '\n\\hline\n'.join(tab)
 
         to_replace = ('\\\\hline\\n\\\\hline\\n\\\\'
-        'end{tabular}\\n\\\\begin{tabular}{.*}\\n')
+                      'end{tabular}\\n\\\\begin{tabular}{.*}\\n')
 
         if self._merge_latex:
             # create single tabular object for summary_col
-            tab = re.sub(to_replace,r'\\midrule\n\\midrule\n', tab)
+            tab = re.sub(to_replace, r'\\midrule\n\\midrule\n', tab)
 
         out = '\\begin{table}', title, tab, '\\end{table}'
         out = '\n'.join(out)
@@ -256,13 +253,13 @@ def _measure_tables(tables, settings):
 
 
 # Useful stuff
-_model_types = {'OLS' : 'Ordinary least squares',
-                'GLS' : 'Generalized least squares',
-                'GLSAR' : 'Generalized least squares with AR(p)',
-                'WLS' : 'Weighted least squares',
-                'RLM' : 'Robust linear model',
+_model_types = {'OLS': 'Ordinary least squares',
+                'GLS': 'Generalized least squares',
+                'GLSAR': 'Generalized least squares with AR(p)',
+                'WLS': 'Weighted least squares',
+                'RLM': 'Robust linear model',
                 'NBin': 'Negative binomial model',
-                'GLM' : 'Generalized linear model'
+                'GLM': 'Generalized linear model'
                 }
 
 
@@ -412,7 +409,8 @@ def _col_info(result, info_dict=None):
             continue
         try:
             out.append(info_dict[i](result))
-        except:
+        except Exception:
+            # TODO: What do we expect info_dict[i](result) to raise?
             out.append('')
         index.append(i)
     out = pd.DataFrame({str(result.model.endog_names): out}, index=index)
@@ -461,9 +459,9 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         list of names of the regressors in the desired order. All regressors
         not specified will be appended to the end of the list.
     drop_omitted : bool, optional
-        Includes regressors that are not specified in regressor_order. If False,
-        regressors not specified will be appended to end of the list. If True,
-        only regressors in regressors_list will be included.
+        Includes regressors that are not specified in regressor_order.
+        If False, regressors not specified will be appended to end of the list.
+        If True, only regressors in regressors_list will be included.
     """
 
     if not isinstance(results, list):
@@ -480,7 +478,8 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     for i in range(len(cols)):
         cols[i].columns = [colnames[i]]
 
-    merg = lambda x, y: x.merge(y, how='outer', right_index=True,
+    merg = lambda x, y: x.merge(y, how='outer',  # noqa:E731
+                                right_index=True,
                                 left_index=True)
     summ = reduce(merg, cols)
 
@@ -490,7 +489,9 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
         unordered = [x for x in varnames if x not in regressor_order + ['']]
         order = ordered + list(np.unique(unordered))
 
-        f = lambda idx: sum([[x + 'coef', x + 'stde'] for x in idx], [])
+        def f(idx):
+            return sum([[x + 'coef', x + 'stde'] for x in idx], [])
+
         summ.index = f(pd.unique(varnames))
         summ = summ.reindex(f(order))
         summ.index = [x[:-4] for x in summ.index]
@@ -510,7 +511,9 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
     # use unique column names, otherwise the merge will not succeed
     for df, name in zip(cols, _make_unique([df.columns[0] for df in cols])):
         df.columns = [name]
-    merg = lambda x, y: x.merge(y, how='outer', right_index=True,
+
+    merg = lambda x, y: x.merge(y, how='outer',  # noqa:E731
+                                right_index=True,
                                 left_index=True)
     info = reduce(merg, cols)
     dat = pd.DataFrame(np.vstack([summ, info]))  # pd.concat better, but error
@@ -533,7 +536,7 @@ def summary_col(results, float_format='%.4f', model_names=(), stars=False,
 def _formatter(element, float_format='%.4f'):
     try:
         out = float_format % element
-    except:
+    except TypeError:
         out = str(element)
     return out.strip()
 
@@ -550,7 +553,8 @@ def _df_to_simpletable(df, align='r', float_format="%.4f", header=True,
     if index:
         stubs = [str(x) + int(pad_index) * ' ' for x in dat.index.tolist()]
     else:
-        dat.iloc[:, 0] = [str(x) + int(pad_index) * ' ' for x in dat.iloc[:, 0]]
+        dat.iloc[:, 0] = [str(x) + int(pad_index) * ' '
+                          for x in dat.iloc[:, 0]]
         stubs = None
     st = SimpleTable(np.array(dat), headers=headers, stubs=stubs,
                      ltx_fmt=fmt_latex, txt_fmt=fmt_txt)
