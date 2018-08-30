@@ -1078,6 +1078,10 @@ class KalmanFilter(Representation):
                 initial_state_mean, initial_state_cov)
         elif self.initialization == 'approximate_diffuse':
             initial_state = np.zeros(self.k_states)
+        elif self.initialization is not None:
+            out = self.initialization(model=self)
+            initial_state = out[0] + np.random.multivariate_normal(
+                np.zeros_like(out[0]), out[2])
         else:
             initial_state = np.zeros(self.k_states)
 
