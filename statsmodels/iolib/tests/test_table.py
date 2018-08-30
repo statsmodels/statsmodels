@@ -9,6 +9,7 @@ from statsmodels.regression.linear_model import OLS
 ltx_fmt1 = default_latex_fmt.copy()
 html_fmt1 = default_html_fmt.copy()
 
+
 class TestSimpleTable(object):
     def test_SimpleTable_1(self):
         # Basic test, test_SimpleTable_1
@@ -20,7 +21,7 @@ stub1 1.30312 2.73999
 stub2 1.95038 2.65765
 ---------------------
 '''
-        test1data = [[1.30312, 2.73999],[1.95038, 2.65765]]
+        test1data = [[1.30312, 2.73999], [1.95038, 2.65765]]
         test1stubs = ('stub1', 'stub2')
         test1header = ('header1', 'header2')
         actual = SimpleTable(test1data, test1header, test1stubs,
@@ -78,22 +79,22 @@ stub R2 C2  40.95038  40.65765
 
     def test_SimpleTable_4(self):
         # Basic test, test_SimpleTable_4 test uses custom txt_fmt
-        txt_fmt1 = dict(data_fmts = ['%3.2f', '%d'],
-                        empty_cell = ' ',
-                        colwidths = 1,
+        txt_fmt1 = dict(data_fmts=['%3.2f', '%d'],
+                        empty_cell=' ',
+                        colwidths=1,
                         colsep=' * ',
-                        row_pre = '* ',
-                        row_post = ' *',
+                        row_pre='* ',
+                        row_post=' *',
                         table_dec_above='*',
                         table_dec_below='*',
                         header_dec_below='*',
-                        header_fmt = '%s',
-                        stub_fmt = '%s',
+                        header_fmt='%s',
+                        stub_fmt='%s',
                         title_align='r',
-                        header_align = 'r',
-                        data_aligns = "r",
-                        stubs_align = "l",
-                        fmt = 'txt'
+                        header_align='r',
+                        data_aligns="r",
+                        stubs_align="l",
+                        fmt='txt'
                         )
         ltx_fmt1 = default_latex_fmt.copy()
         html_fmt1 = default_html_fmt.copy()
@@ -101,11 +102,12 @@ stub R2 C2  40.95038  40.65765
         cell1data = 1
         row0data = [cell0data, cell1data]
         row1data = [2, 3.333]
-        table1data = [ row0data, row1data ]
+        table1data = [row0data, row1data]
         test1stubs = ('stub1', 'stub2')
         test1header = ('header1', 'header2')
-        tbl = SimpleTable(table1data, test1header, test1stubs,txt_fmt=txt_fmt1,
-                          ltx_fmt=ltx_fmt1, html_fmt=html_fmt1)
+        tbl = SimpleTable(table1data, test1header, test1stubs,
+                          txt_fmt=txt_fmt1, ltx_fmt=ltx_fmt1,
+                          html_fmt=html_fmt1)
 
         def test_txt_fmt1(self):
             # Limited test of custom txt_fmt
@@ -118,9 +120,8 @@ stub R2 C2  40.95038  40.65765
 *****************************
 """
             actual = '\n%s\n' % tbl.as_text()
-            #print(actual)
-            #print(desired)
             assert_equal(actual, desired)
+
         def test_ltx_fmt1(self):
             # Limited test of custom ltx_fmt
             desired = r"""
@@ -134,8 +135,6 @@ stub R2 C2  40.95038  40.65765
 \end{tabular}
 """
             actual = '\n%s\n' % tbl.as_latex_tabular(center=False)
-            #print(actual)
-            #print(desired)
             assert_equal(actual, desired)
             # Test "center=True" (the default):
             desired_centered = r"""
@@ -145,6 +144,7 @@ stub R2 C2  40.95038  40.65765
 """ % desired[1:-1]
             actual_centered = '\n%s\n' % tbl.as_latex_tabular()
             assert_equal(actual_centered, desired_centered)
+
         def test_html_fmt1(self):
             # Limited test of custom html_fmt
             desired = """
@@ -159,24 +159,28 @@ stub R2 C2  40.95038  40.65765
   <th>stub2</th>    <td>2</td>     <td>3.333</td> 
 </tr>
 </table>
-"""
+"""  # noqa:W291
             actual = '\n%s\n' % tbl.as_html()
             assert_equal(actual, desired)
+
         test_txt_fmt1(self)
         test_ltx_fmt1(self)
         test_html_fmt1(self)
+
     def test_SimpleTable_special_chars(self):
-    # Simple table with characters: (%, >, |, _, $, &, #)
+        # Simple table with characters: (%, >, |, _, $, &, #)
         cell0c_data = 22
         cell1c_data = 1053
         row0c_data = [cell0c_data, cell1c_data]
         row1c_data = [23, 6250.4]
-        table1c_data = [ row0c_data, row1c_data ]
+        table1c_data = [row0c_data, row1c_data]
         test1c_stubs = ('>stub1%', 'stub_2')
         test1c_header = ('#header1$', 'header&|')
-        tbl_c = SimpleTable(table1c_data, test1c_header, test1c_stubs, ltx_fmt=ltx_fmt1)
+        tbl_c = SimpleTable(table1c_data, test1c_header,
+                            test1c_stubs, ltx_fmt=ltx_fmt1)
+
         def test_ltx_special_chars(self):
-        # Test for special characters (latex) in headers and stubs
+            # Test for special characters (latex) in headers and stubs
             desired = r"""
 \begin{tabular}{lcc}
 \toprule
@@ -189,32 +193,34 @@ stub R2 C2  40.95038  40.65765
 """
             actual = '\n%s\n' % tbl_c.as_latex_tabular(center=False)
             assert_equal(actual, desired)
-        test_ltx_special_chars(self)
-    def test_regression_with_tuples(self):
-        i = pandas.Series( [1,2,3,4]*10 , name="i")
-        y = pandas.Series( [1,2,3,4,5]*8, name="y")
-        x = pandas.Series( [1,2,3,4,5,6,7,8]*5, name="x")
 
-        df = pandas.DataFrame( index=i.index )
-        df = df.join( i )
-        endo = df.join( y )
-        exo = df.join( x )
+        test_ltx_special_chars(self)
+
+    def test_regression_with_tuples(self):
+        i = pandas.Series([1, 2, 3, 4]*10, name="i")
+        y = pandas.Series([1, 2, 3, 4, 5]*8, name="y")
+        x = pandas.Series([1, 2, 3, 4, 5, 6, 7, 8]*5, name="x")
+
+        df = pandas.DataFrame(index=i.index)
+        df = df.join(i)
+        endo = df.join(y)
+        exo = df.join(x)
         endo_groups = endo.groupby("i")
         exo_groups = exo.groupby("i")
-        exo_Df = exo_groups.agg( [np.sum, np.max] )
-        endo_Df = endo_groups.agg( [np.sum, np.max] )
-        reg = OLS(exo_Df[[("x", "sum")]],endo_Df).fit()
+        exo_Df = exo_groups.agg([np.sum, np.max])
+        endo_Df = endo_groups.agg([np.sum, np.max])
+        reg = OLS(exo_Df[[("x", "sum")]], endo_Df).fit()
         interesting_lines = []
         import warnings
         with warnings.catch_warnings():
             # Catch ominormal warning, not interesting here
             warnings.simplefilter("ignore")
-            for line in str( reg.summary() ).splitlines():
+            for line in str(reg.summary()).splitlines():
                 if "('" in line:
-                    interesting_lines.append( line[:38] )
+                    interesting_lines.append(line[:38])
 
         desired = ["Dep. Variable:           ('x', 'sum') ",
                    "('y', 'sum')      1.4595      0.209   ",
                    "('y', 'amax')     0.2432      0.035   "]
 
-        assert_equal(sorted(desired), sorted(interesting_lines)  )
+        assert_equal(sorted(desired), sorted(interesting_lines))
