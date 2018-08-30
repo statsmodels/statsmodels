@@ -576,6 +576,8 @@ def pacf_yw(x, nlags=40, method='unbiased'):
 
 def pacf_burg(x, nlags=None, demean=True):
     """
+    Burg's partial autocorrelation estimator
+
     Parameters
     ----------
     x : array-like
@@ -613,24 +615,24 @@ def pacf_burg(x, nlags=None, demean=True):
         raise ValueError('nlags must be smaller than nobs - 1')
     d = np.zeros(p + 1)
     d[0] = 2 * x.dot(x)
-    phi = np.zeros(p + 1)
+    pacf = np.zeros(p + 1)
     u = x[::-1].copy()
     v = x[::-1].copy()
     d[1] = u[:-1].dot(u[:-1]) + v[1:].dot(v[1:])
-    phi[1] = 2 / d[1] * v[1:].dot(u[:-1])
+    pacf[1] = 2 / d[1] * v[1:].dot(u[:-1])
     last_u = np.empty_like(u)
     last_v = np.empty_like(v)
     for i in range(1, p):
         last_u[:] = u
         last_v[:] = v
-        u[1:] = last_u[:-1] - phi[i] * last_v[1:]
-        v[1:] = last_v[1:] - phi[i] * last_u[:-1]
-        d[i + 1] = (1 - phi[i] ** 2) * d[i] - v[i] ** 2 - u[-1] ** 2
-        phi[i + 1] = 2 / d[i + 1] * v[i + 1:].dot(u[i:-1])
-    sigma2 = (1 - phi ** 2) * d / (2. * (nobs - np.arange(0, p + 1)))
-    phi[0] = 1  # Insert the 0 lag partial autocorrel
+        u[1:] = last_u[:-1] - pacf[i] * last_v[1:]
+        v[1:] = last_v[1:] - pacf[i] * last_u[:-1]
+        d[i + 1] = (1 - pacf[i] ** 2) * d[i] - v[i] ** 2 - u[-1] ** 2
+        pacf[i + 1] = 2 / d[i + 1] * v[i + 1:].dot(u[i:-1])
+    sigma2 = (1 - pacf ** 2) * d / (2. * (nobs - np.arange(0, p + 1)))
+    pacf[0] = 1  # Insert the 0 lag partial autocorrel
 
-    return phi, sigma2
+    return pacf, sigma2
 
 
 #NOTE: this is incorrect.
@@ -937,13 +939,13 @@ def levinson_durbin_pacf(pacf, nlags=None):
     acf = np.zeros(n + 1)
     acf[1] = pacf[0]
     nu = np.cumprod(1 - pacf ** 2)
-    phi = pacf.copy()
+    arcoefs = pacf.copy()
     for i in range(1, n):
-        prev = phi[:-(n - i)].copy()
-        phi[:-(n - i)] = prev - phi[i] * prev[::-1]
-        acf[i + 1] = phi[i] * nu[i-1] + prev.dot(acf[1:-(n - i)][::-1])
+        prev = arcoefs[:-(n - i)].copy()
+        arcoefs[:-(n - i)] = prev - arcoefs[i] * prev[::-1]
+        acf[i + 1] = arcoefs[i] * nu[i-1] + prev.dot(acf[1:-(n - i)][::-1])
     acf[0] = 1
-    return phi, acf
+    return arcoefs, acf
 
 
 def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
