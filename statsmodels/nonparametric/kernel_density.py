@@ -33,9 +33,9 @@ from __future__ import division
 from statsmodels.compat.python import range, next
 import numpy as np
 
+from statsmodels.tools.tools import leave_one_out
 from . import kernels
-from ._kernel_base import GenericKDE, EstimatorSettings, gpke, \
-    LeaveOneOut, _adjust_shape
+from ._kernel_base import GenericKDE, EstimatorSettings, gpke, _adjust_shape
 
 
 __all__ = ['KDEMultivariate', 'KDEMultivariateConditional', 'EstimatorSettings']
@@ -153,7 +153,7 @@ class KDEMultivariate(GenericKDE):
         .. math:: K_{h}(X_{i},X_{j}) =
             \prod_{s=1}^{q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
         """
-        LOO = LeaveOneOut(self.data)
+        LOO = leave_one_out(len(self.data))
         L = 0
         for i, X_not_i in enumerate(LOO):
             f_i = gpke(bw, data=-X_not_i, data_predict=-self.data[i, :],
@@ -320,7 +320,7 @@ class KDEMultivariate(GenericKDE):
         kertypes = dict(c=kernels.gaussian,
                         o=kernels.wang_ryzin,
                         u=kernels.aitchison_aitken)
-        LOO = LeaveOneOut(self.data)
+        LOO = leave_one_out(len(self.data))
         L = 0   # leave-one-out likelihood
         Kval = np.empty((data.shape[0]-1, data.shape[1]))
         for i, X_not_i in enumerate(LOO):
@@ -463,8 +463,8 @@ class KDEMultivariateConditional(GenericKDE):
         Similar to ``KDE.loo_likelihood`, but substitute ``f(y|x)=f(x,y)/f(x)``
         for ``f(x)``.
         """
-        yLOO = LeaveOneOut(self.data)
-        xLOO = LeaveOneOut(self.exog).__iter__()
+        yLOO = leave_one_out(len(self.data))
+        xLOO = leave_one_out(len(self.exog)).__iter__()
         L = 0
         for i, Y_j in enumerate(yLOO):
             X_not_i = next(xLOO)
@@ -649,7 +649,7 @@ class KDEMultivariateConditional(GenericKDE):
         .. [2] Racine, J., Li, Q. "Nonparametric Estimation of Distributions
                 with Categorical and Continuous Data." Working Paper. (2000)
         """
-        zLOO = LeaveOneOut(self.data)
+        zLOO = leave_one_out(len(self.data))
         CV = 0
         nobs = float(self.nobs)
         expander = np.ones((self.nobs - 1, 1))

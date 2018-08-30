@@ -572,3 +572,13 @@ class TestEnsure2d(object):
         results = tools._ensure_2d(self.ndarray[:,0])
         assert_array_equal(results[0], self.ndarray[:,[0]])
         assert_equal(results[1], None)
+
+
+def test_leave_one_out():
+    n = 4
+    pairs = list(tools.leave_one_out(n))
+
+    for trainset, testset in pairs:
+        assert trainset.sum() == n - 1
+        assert testset.sum() == 1
+        assert not (trainset & testset).any()
