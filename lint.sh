@@ -29,6 +29,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/vector_ar/dynamic.py \
         statsmodels/tsa/statespace/*.py \
         statsmodels/tsa/statespace/tests/results/ \
+        statsmodels/tsa/statespace/tests/test_varmax.py \
         statsmodels/tsa/statespace/tests/test_var.py \
         conftest.py
     if [ $? -ne "0" ]; then
