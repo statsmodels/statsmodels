@@ -86,7 +86,7 @@ class KernelReg(GenericKDE):
         The bandwidth parameters.
     """
     def __init__(self, endog, exog, var_type, reg_type='ll', bw='cv_ls',
-                 defaults=EstimatorSettings()):
+                 defaults=None):
         self.var_type = var_type
         self.data_type = var_type
         self.reg_type = reg_type
@@ -97,6 +97,7 @@ class KernelReg(GenericKDE):
         self.nobs = np.shape(self.exog)[0]
         self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
+        defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
         if not self.efficient:
             self.bw = self._compute_reg_bw(bw)
@@ -479,7 +480,7 @@ class KernelCensoredReg(KernelReg):
         The bandwidth parameters
     """
     def __init__(self, endog, exog, var_type, reg_type, bw='cv_ls',
-                 censor_val=0, defaults=EstimatorSettings()):
+                 censor_val=0, defaults=None):
         self.var_type = var_type
         self.data_type = var_type
         self.reg_type = reg_type
@@ -490,6 +491,7 @@ class KernelCensoredReg(KernelReg):
         self.nobs = np.shape(self.exog)[0]
         self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
+        defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
         self.censor_val = censor_val
         if self.censor_val is not None:

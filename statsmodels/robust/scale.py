@@ -14,6 +14,7 @@ from scipy.stats import norm as Gaussian
 from . import norms
 from statsmodels.tools import tools
 
+
 def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
     # c \approx .6745
     """
@@ -172,7 +173,9 @@ class Huber(object):
                 return nmu.squeeze(), nscale.squeeze()
         raise ValueError('joint estimation of location and scale failed to converge in %d iterations' % self.maxiter)
 
+
 huber = Huber()
+
 
 class HuberScale(object):
     """
@@ -232,5 +235,6 @@ class HuberScale(object):
             #if niter == self.maxiter:
             #    raise ValueError("Huber's scale failed to converge")
         return scalehist[-1]
+
 
 hubers_scale = HuberScale()
