@@ -8,9 +8,11 @@ Author: Josef Perktold
 from statsmodels.compat.python import lzip, range
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
-from statsmodels.sandbox.stats.runs import (mcnemar, cochrans_q, Runs,
-                                            symmetry_bowker,
-                                            runstest_1samp, runstest_2samp)
+
+from statsmodels.stats.runs import Runs, runstest_1samp, runstest_2samp
+from statsmodels.sandbox.stats.runs import (mcnemar, cochrans_q,
+                                            symmetry_bowker)
+
 
 def _expand_table(table):
     '''expand a 2 by 2 contingency table to observations
