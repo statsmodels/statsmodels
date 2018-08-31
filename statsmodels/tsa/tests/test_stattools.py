@@ -707,3 +707,10 @@ def test_pacf_burg():
     pacf[0] = 0
     sigma2_direct = s2y * np.cumprod(1 - pacf ** 2)
     assert_allclose(sigma2, sigma2_direct, atol=1e-3)
+
+
+def test_pacf_burg_error():
+    with pytest.raises(ValueError):
+        pacf_burg(np.empty((20,2)), 10)
+    with pytest.raises(ValueError):
+        pacf_burg(np.empty(100), 101)

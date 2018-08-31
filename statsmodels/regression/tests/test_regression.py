@@ -1276,7 +1276,3 @@ def test_burg_errors():
         burg(np.random.randn(100), 0)
     with pytest.raises(ValueError):
         burg(np.random.randn(100), 'apple')
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])
