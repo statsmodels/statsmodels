@@ -574,6 +574,67 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     return np.array(pacf)
 
 
+def pacf_burg(x, nlags=None, demean=True):
+    """
+    Burg's partial autocorrelation estimator
+
+    Parameters
+    ----------
+    x : array-like
+        Observations of time series for which pacf is calculated
+    nlags : int, optional
+        Number of lags to compute the partial autocorrelations.  If omitted,
+        uses the smaller of 10(log10(nobs)) or nobs - 1
+    demean : bool, optional
+
+    Returns
+    -------
+    pacf : ndarray
+        Partial autocorrelations for lags 0, 1, ..., nlag
+    sigma2 : ndarray
+        Residual variance estimates where the value in position m is the
+        residual variance in an AR model that includes m lags
+
+    See also
+    --------
+    statsmodels.tsa.stattools.pacf
+
+    References
+    ----------
+    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
+        forecasting. Springer.
+    """
+    x = np.squeeze(np.asarray(x))
+    if x.ndim != 1:
+        raise ValueError('x must be 1-d or squeezable to 1-d.')
+    if demean:
+        x = x - x.mean()
+    nobs = x.shape[0]
+    p = nlags if nlags is not None else min(int(10 * np.log10(nobs)), nobs - 1)
+    if p > nobs - 1:
+        raise ValueError('nlags must be smaller than nobs - 1')
+    d = np.zeros(p + 1)
+    d[0] = 2 * x.dot(x)
+    pacf = np.zeros(p + 1)
+    u = x[::-1].copy()
+    v = x[::-1].copy()
+    d[1] = u[:-1].dot(u[:-1]) + v[1:].dot(v[1:])
+    pacf[1] = 2 / d[1] * v[1:].dot(u[:-1])
+    last_u = np.empty_like(u)
+    last_v = np.empty_like(v)
+    for i in range(1, p):
+        last_u[:] = u
+        last_v[:] = v
+        u[1:] = last_u[:-1] - pacf[i] * last_v[1:]
+        v[1:] = last_v[1:] - pacf[i] * last_u[:-1]
+        d[i + 1] = (1 - pacf[i] ** 2) * d[i] - v[i] ** 2 - u[-1] ** 2
+        pacf[i + 1] = 2 / d[i + 1] * v[i + 1:].dot(u[i:-1])
+    sigma2 = (1 - pacf ** 2) * d / (2. * (nobs - np.arange(0, p + 1)))
+    pacf[0] = 1  # Insert the 0 lag partial autocorrel
+
+    return pacf, sigma2
+
+
 #NOTE: this is incorrect.
 def pacf_ols(x, nlags=40):
     '''Calculate partial autocorrelations
@@ -833,6 +894,58 @@ def levinson_durbin(s, nlags=10, isacov=False):
     pacf_ = np.diag(phi).copy()
     pacf_[0] = 1.
     return sigma_v, arcoefs, pacf_, sig, phi  # return everything
+
+
+def levinson_durbin_pacf(pacf, nlags=None):
+    """
+    Levinson-Durbin algorithm that returns the acf and ar coefficients
+
+    Parameters
+    ----------
+    pacf : array-like
+        Partial autocorrelation array for lags 0, 1, ... p
+    nlags : int, optional
+        Number of lags in the AR model.  If omitted, returns coefficients from
+        an AR(p) and the first p autocorrelations
+
+    Returns
+    -------
+    arcoefs : ndarray
+        AR coefficients computed from the partial autocorrelations
+    acf : ndarray
+        acf computed from the partial autocorrelations. Array returned contains
+        the autocorelations corresponding to lags 0, 1, ..., p
+
+    References
+    ----------
+    Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series and
+        forecasting. Springer.
+    """
+    pacf = np.squeeze(np.asarray(pacf))
+    if pacf.ndim != 1:
+        raise ValueError('pacf must be 1-d or squeezable to 1-d.')
+    if pacf[0] != 1:
+        raise ValueError('The first entry of the pacf corresponds to lags 0 '
+                         'and so must be 1.')
+    pacf = pacf[1:]
+    n = pacf.shape[0]
+    if nlags is not None:
+        if nlags > n:
+            raise ValueError('Must provide at least as many values from the '
+                             'pacf as the number of lags.')
+        pacf = pacf[:nlags]
+        n = pacf.shape[0]
+
+    acf = np.zeros(n + 1)
+    acf[1] = pacf[0]
+    nu = np.cumprod(1 - pacf ** 2)
+    arcoefs = pacf.copy()
+    for i in range(1, n):
+        prev = arcoefs[:-(n - i)].copy()
+        arcoefs[:-(n - i)] = prev - arcoefs[i] * prev[::-1]
+        acf[i + 1] = arcoefs[i] * nu[i-1] + prev.dot(acf[1:-(n - i)][::-1])
+    acf[0] = 1
+    return arcoefs, acf
 
 
 def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
