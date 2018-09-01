@@ -862,7 +862,8 @@ class VARMAXResults(MLEResults):
 
         # If we had exog, then the last predicted_state has been set to NaN
         # since we didn't have the appropriate exog to create it. Then, if
-        # we are purely forecasting, TODO: Finish this sentence?
+        # we are forecasting, we now have new exog that we need to put into
+        # the existing state_intercept array (and we will take it out, below)
         if last_intercept is not None:
             self.filter_results.state_intercept[:, -1] = last_intercept
 
