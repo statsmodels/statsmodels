@@ -739,8 +739,6 @@ class KalmanFilter(Representation):
         if 'timing_init_filtered' in kwargs:
             self.filter_timing = int(kwargs['timing_init_filtered'])
 
-    from contextlib import contextmanager
-
     @contextmanager
     def fixed_scale(self, scale):
         """
@@ -966,7 +964,7 @@ class KalmanFilter(Representation):
             scale_obs = np.array(kfilter.scale, copy=True)
             llf_obs += -0.5 * (
                 (self.k_endog - nmissing - nsingular) * np.log(scale) +
-                 scale_obs / scale)
+                scale_obs / scale)
 
         # Set any burned observations to have zero likelihood
         llf_obs[:loglikelihood_burn] = 0
@@ -1287,7 +1285,7 @@ class KalmanFilter(Representation):
             }
             model_kwargs.update(representation)
             model = self.__class__(np.zeros(self.endog.T.shape), self.k_states,
-                                 self.k_posdef, **model_kwargs)
+                                   self.k_posdef, **model_kwargs)
             model.initialize_approximate_diffuse()
             model._initialize_filter()
             model._initialize_state()
@@ -1583,9 +1581,11 @@ class FilterResults(FrozenRepresentation):
             self.predicted_diffuse_state_cov = np.array(
                     kalman_filter.predicted_diffuse_state_cov, copy=True)
             if has_missing and not self.filter_collapsed:
-                self.forecasts_error_diffuse_cov = np.array(reorder_missing_matrix(
-                    kalman_filter.forecast_error_diffuse_cov, self.missing, reorder_cols=True, reorder_rows=True,
-                    prefix=self.prefix))
+                self.forecasts_error_diffuse_cov = np.array(
+                    reorder_missing_matrix(
+                        kalman_filter.forecast_error_diffuse_cov,
+                        self.missing, reorder_cols=True, reorder_rows=True,
+                        prefix=self.prefix))
             else:
                 self.forecasts_error_diffuse_cov = np.array(
                     kalman_filter.forecast_error_diffuse_cov, copy=True)

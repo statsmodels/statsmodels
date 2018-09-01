@@ -598,15 +598,14 @@ class Initialization(object):
                     tools.solve_discrete_lyapunov(transition,
                                                   selected_state_cov,
                                                   complex_step=complex_step))
-        # Otherwise, if using blocks, combine the elements returned by each of
-        # the blocks and return those
         else:
+            # Otherwise, if using blocks, recursively initialize
+            # them (values will be set in-place)
             for block_index, init in self.blocks.items():
-                out = init(
-                    index=tuple(np.array(index)[block_index, ]),
-                    model=model, initial_state_mean=initial_state_mean,
-                    initial_diffuse_state_cov=initial_diffuse_state_cov,
-                    initial_stationary_state_cov=initial_stationary_state_cov)
+                init(index=tuple(np.array(index)[block_index, ]),
+                     model=model, initial_state_mean=initial_state_mean,
+                     initial_diffuse_state_cov=initial_diffuse_state_cov,
+                     initial_stationary_state_cov=initial_stationary_state_cov)
 
         return (initial_state_mean, initial_diffuse_state_cov,
                 initial_stationary_state_cov)

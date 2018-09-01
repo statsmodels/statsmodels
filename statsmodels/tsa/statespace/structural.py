@@ -10,20 +10,22 @@ from warnings import warn
 from collections import OrderedDict
 
 import numpy as np
-from statsmodels.tsa.filters.hp_filter import hpfilter
-from statsmodels.tsa.tsatools import lagmat
-from .initialization import Initialization
-from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
-from scipy.linalg import solve_discrete_lyapunov
+
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.sm_exceptions import (ValueWarning, OutputWarning,
                                              SpecificationWarning)
+import statsmodels.base.wrapper as wrap
+
+from statsmodels.tsa.filters.hp_filter import hpfilter
+from statsmodels.tsa.tsatools import lagmat
+
+from .mlemodel import MLEModel, MLEResults, MLEResultsWrapper
+from .initialization import Initialization
 from .tools import (
     companion_matrix, constrain_stationary_univariate,
     unconstrain_stationary_univariate,
     prepare_exog
 )
-import statsmodels.base.wrapper as wrap
 
 _mask_map = {
     1: 'irregular',
@@ -919,7 +921,8 @@ class UnobservedComponents(MLEModel):
             elif key == 'seasonal_var':
                 param_names.append('sigma2.seasonal')
             elif key.startswith('freq_seasonal_var_'):
-                # There are potentially multiple frequency domain seasonal terms
+                # There are potentially multiple frequency domain
+                # seasonal terms
                 idx_fseas_comp = int(key[-1])
                 periodicity = self.freq_seasonal_periods[idx_fseas_comp]
                 harmonics = self.freq_seasonal_harmonics[idx_fseas_comp]
