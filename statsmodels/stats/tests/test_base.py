@@ -10,7 +10,7 @@ class TestBase:
     @classmethod
     def setup_class(cls):
         cls.hypothesis = Hypothesis(null="Null", alternative="Alternative")
-        cls.statistics = Statistics(t=1.0, R=1.2, p=0.05)
+        cls.statistics = Statistics(t=1.0, r=1.2, p=0.05)
         cls.critical_values = CriticalValues({"5%": 0.9, "10%": 1.5})
 
         cls.test_result = TestResult("Example test",
@@ -31,25 +31,27 @@ class TestBase:
 
     def test_statistics_access(self):
         assert_almost_equal(self.statistics.t, 1.0)
-        assert_almost_equal(self.statistics.R, 1.2)
+        assert_almost_equal(self.statistics.r, 1.2)
         assert_almost_equal(self.statistics.p, 0.05)
 
     def test_statistics_str(self):
-        assert_("R = 1.2" in str(self.statistics))
+        self.statistics.print_filter = None
+
+        assert_("r = 1.2" in str(self.statistics))
         assert_("t = 1.0" in str(self.statistics))
         assert_("p = 0.05" in str(self.statistics))
 
     def test_statistics_print_filter(self):
         assert_("print_filter" not in str(self.statistics))
 
-        self.statistics.print_filter = ["R"]
+        self.statistics.print_filter = ["r"]
 
-        assert_("R = 1.2" in str(self.statistics))
+        assert_("r = 1.2" in str(self.statistics))
         assert_("t = 1.0" not in str(self.statistics))
         assert_("p = 0.05" not in str(self.statistics))
 
     def test_statistics_attributes(self):
-        for item in ["R", "p", "t"]:
+        for item in ["r", "p", "t"]:
             assert_(item in self.statistics.attributes)
 
     def test_critical_values_properties(self):
@@ -79,7 +81,7 @@ class TestBase:
 
     def test_direct_access(self):
         assert_almost_equal(self.test_result.t, 1.0)
-        assert_almost_equal(self.test_result.R, 1.2)
+        assert_almost_equal(self.test_result.r, 1.2)
         assert_almost_equal(self.test_result.p, 0.05)
 
     def test_test_result_attributes(self):
@@ -99,10 +101,24 @@ class TestBase:
         with assert_raises(AttributeError):
             self.test_result.some_missing_statistic
 
+    def test_iterable_test_result(self):
+        p, r, t = self.test_result
+
+        assert_almost_equal(p, self.statistics.p)
+        assert_almost_equal(r, self.statistics.r)
+        assert_almost_equal(t, self.statistics.t)
+
+    def test_iterable_test_result_filter(self):
+        self.statistics.print_filter = ["r"]
+
+        r, = self.test_result
+
+        assert_almost_equal(r, self.statistics.r)
+
     def test_warn_deprecation(self):
         with assert_warns(DeprecationWarning):
-            assert_equal(self.test_result.R,
-                         self.test_result.statistics.R)
+            assert_equal(self.test_result.r,
+                         self.test_result.statistics.r)
 
     def test_warn_message_and_num_warnings(self):
         import warnings
@@ -110,8 +126,8 @@ class TestBase:
         warnings.simplefilter("always")
 
         with warnings.catch_warnings(record=True) as warns:
-            assert_equal(self.test_result.R,
-                         self.test_result.statistics.R)
+            assert_equal(self.test_result.r,
+                         self.test_result.statistics.r)
 
             # should only be the one DeprecationWarning, no more
             assert_equal(len(warns), 1)

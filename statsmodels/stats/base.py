@@ -234,8 +234,8 @@ class Statistics(object):
 
     @property
     def attributes(self):  # print_filter is internal
-        return [key for key in self.__dict__.keys()
-                if key != "print_filter"]
+        return sorted([key for key in self.__dict__.keys()
+                       if key != "print_filter"])
 
     def __str__(self):
         def _filter(key):
@@ -336,6 +336,26 @@ class TestResult(object):
         warnings.warn(self._warn, DeprecationWarning)
 
         return getattr(self.statistics, item)
+
+    def __iter__(self):
+        """
+        This unpacks the TestResult instance as the individual values of its
+        statistics. Mostly here to preserve backwards compatibility with tests
+        that returned tuples of values.
+
+        Returns
+        -------
+        tuple
+            If ``print_filter`` is present, this returns only the values in that
+            list, ordered similarly. If not, it returns all values in
+            ``Statistics``, ordered lexicographically.
+        """
+        if self.statistics.print_filter:
+            return (getattr(self.statistics, attr)
+                    for attr in self.statistics.print_filter)
+
+        return (getattr(self.statistics, attr)
+                for attr in self.statistics.attributes)
 
     def summary(self):
         """
