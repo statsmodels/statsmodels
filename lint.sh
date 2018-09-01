@@ -28,6 +28,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tools/tests/test_decorators.py \
         statsmodels/tsa/vector_ar/dynamic.py \
         statsmodels/tsa/statespace/tests/results/ \
+        statsmodels/tsa/statespace/tests/test_var.py \
         conftest.py
     if [ $? -ne "0" ]; then
         RET=1
