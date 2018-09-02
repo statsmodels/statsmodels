@@ -6,11 +6,11 @@ Created on Mon May 27 12:07:02 2013
 Author: Josef Perktold
 """
 
+import pytest
 import numpy as np
 import pytest
 import scipy.sparse as sparse
-from numpy.testing import (assert_almost_equal, assert_allclose,
-                           assert_equal)
+from numpy.testing import assert_almost_equal, assert_allclose
 from statsmodels.stats.correlation_tools import (
     corr_nearest, corr_clipped, cov_nearest,
     _project_correlation_factors, corr_nearest_factor, _spg_optim,
@@ -300,7 +300,8 @@ class Test_Factor(object):
         err_msg = 'rank=%d, niter=%d' % (dm, len(rslt.objective_values))
         assert_allclose(rslt.objective_values[:5], objvals[dm - 1],
                         rtol=0.5, err_msg=err_msg)
-        assert_equal(rslt.Converged, True, err_msg=err_msg)
+        assert rslt.Converged
+
         mat1 = rslt.corr.to_matrix()
         assert_allclose(mat, mat1, rtol=0.25, atol=1e-3, err_msg=err_msg)
 
@@ -357,7 +358,7 @@ class Test_Factor(object):
         x = np.random.normal(size=dm)
         rslt = _spg_optim(obj, grad, x, project)
         xnew = rslt.params
-        assert_equal(rslt.Converged, True)
+        assert rslt.Converged is True
         assert_almost_equal(obj(xnew), 0, decimal=3)
 
     def test_decorrelate(self, reset_randomstate):
@@ -409,10 +410,10 @@ class Test_Factor(object):
         d = 100
 
         # Construct a test matrix with exact factor structure
-        X = np.zeros((d,dm), dtype=np.float64)
+        X = np.zeros((d, dm), dtype=np.float64)
         x = np.linspace(0, 2*np.pi, d)
         for j in range(dm):
-            X[:,j] = np.sin(x*(j+1))
+            X[:, j] = np.sin(x*(j+1))
         mat = np.dot(X, X.T)
         np.fill_diagonal(mat, np.diag(mat) + 3.1)
 
@@ -429,10 +430,10 @@ class Test_Factor(object):
         d = 100
 
         # Construct a test matrix with exact factor structure
-        X = np.zeros((d,dm), dtype=np.float64)
+        X = np.zeros((d, dm), dtype=np.float64)
         x = np.linspace(0, 2*np.pi, d)
         for j in range(dm):
-            X[:,j] = np.sin(x*(j+1))
+            X[:, j] = np.sin(x*(j+1))
         mat = np.dot(X, X.T)
         np.fill_diagonal(mat, np.diag(mat) + 3.1)
 
