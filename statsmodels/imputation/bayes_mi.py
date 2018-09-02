@@ -291,6 +291,7 @@ class MI(object):
 
         par = []
         cov = []
+        all_results = []
 
         for k in range(self.nrep):
 
@@ -311,6 +312,7 @@ class MI(object):
                           **self.model_kwds_fn(da))
 
             result = model.fit(*self.fit_args(da), **self.fit_kwds(da))
+            all_results.append(result)
 
             par.append(np.asarray(result.params.copy()))
             cov.append(np.asarray(result.cov_params().copy()))
@@ -319,6 +321,9 @@ class MI(object):
 
         r = MIResults(self, model, params, cov_params)
         r.fmi = fmi
+
+        r.results = all_results
+
         return r
 
     def _combine(self, par, cov):
