@@ -5,19 +5,16 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
+import os
 
 import numpy as np
+from numpy.testing import assert_allclose
 import pandas as pd
-import os
-import re
 import pytest
-import warnings
 
 from statsmodels.tsa.statespace import mlemodel, sarimax
 from statsmodels import datasets
 
-from numpy.testing import assert_almost_equal, assert_equal, assert_allclose, assert_raises
-from .results import results_sarimax
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -58,7 +55,8 @@ class TestIntercepts(object):
     @classmethod
     def setup_class(cls, which='mixed', **kwargs):
         # Results
-        path = current_path + os.sep + 'results/results_intercepts_R.csv'
+        path = os.path.join(current_path, 'results',
+                            'results_intercepts_R.csv')
         cls.desired = pd.read_csv(path)
 
         # Data
@@ -230,7 +228,8 @@ class LargeStateCovAR1(mlemodel.MLEModel):
 
 
 def test_large_kposdef():
-    assert_raises(ValueError, LargeStateCovAR1, np.arange(10))
+    with pytest.raises(ValueError):
+        LargeStateCovAR1(np.arange(10))
 
 
 class TestLargeStateCovAR1(object):
@@ -256,14 +255,13 @@ class TestLargeStateCovAR1(object):
         cls.res = mod.smooth(params)
 
     def test_dimensions(self):
-        assert_equal(self.res.filter_results.k_states, 1)
-        assert_equal(self.res.filter_results.k_posdef, 2)
-        assert_equal(self.res.smoothed_state_disturbance.shape, (2, 10))
+        assert self.res.filter_results.k_states == 1
+        assert self.res.filter_results.k_posdef == 2
+        assert self.res.smoothed_state_disturbance.shape == (2, 10)
 
-        assert_equal(self.res_desired.filter_results.k_states, 1)
-        assert_equal(self.res_desired.filter_results.k_posdef, 1)
-        assert_equal(self.res_desired.smoothed_state_disturbance.shape,
-                     (1, 10))
+        assert self.res_desired.filter_results.k_states == 1
+        assert self.res_desired.filter_results.k_posdef == 1
+        assert self.res_desired.smoothed_state_disturbance.shape == (1, 10)
 
     def test_loglike(self):
         assert_allclose(self.res.llf_obs, self.res_desired.llf_obs)
