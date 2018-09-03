@@ -181,7 +181,7 @@ class LikelihoodModel(Model):
         methods = ['newton', 'bfgs', 'powell', 'cg', 'ncg', 'fmin']
         if start_params is None:
             start_params = [0]*self.exog.shape[1] # will fail for shape (K,)
-        if not method in methods:
+        if method not in methods:
             raise ValueError("Unknown fit method %s" % method)
         f = lambda params: -self.loglike(params)
         score = lambda params: -self.score(params)

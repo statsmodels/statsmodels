@@ -1057,7 +1057,7 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     else:
         raise ValueError('corrcoef has incorrect dimension')
 
-    if not 'maxpts' in kwds:
+    if 'maxpts' not in kwds:
         if n >2:
             kwds['maxpts'] = 10000*n
 
