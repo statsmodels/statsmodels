@@ -3,12 +3,12 @@
 .. _install:
 
 Installation
-------------
+============
 
-Using setuptools
-~~~~~~~~~~~~~~~~
+Pre-packaged binaries
+---------------------
 
-To obtain the latest released version of statsmodels using pip
+To obtain the latest released version of statsmodels using pip::
 
     pip install -U statsmodels
 
@@ -17,15 +17,18 @@ the wheel or source and install.
 
 Statsmodels is also available in through conda provided by
 `Anaconda <https://www.continuum.io/downloads>`__. The latest release can
-be installed using
+be installed using::
 
     conda install -c conda-forge statsmodels
 
-Obtaining the Source
-~~~~~~~~~~~~~~~~~~~~
+For Windows users, unofficial recent binaries (wheels) are occasionally
+available `here <https://www.lfd.uci.edu/~gohlke/pythonlibs/#statsmodels>`__.
 
-We do not release very often but the master branch of our source code is 
-usually fine for everyday use. You can get the latest source from our 
+Obtaining the Source
+--------------------
+
+We do not release very often but the master branch of our source code is
+usually fine for everyday use. You can get the latest source from our
 `github repository <https://github.com/statsmodels/statsmodels>`__. Or if you
 have git installed::
 
@@ -38,11 +41,16 @@ If you want to keep up to date with the source on github just periodically do::
 in the statsmodels directory.
 
 Installation from Source
-~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------
 
 You will need a C compiler installed to build statsmodels. If you are building
 from the github source and not a source release, then you will also need
-Cython. You can follow the instructions below to get a C compiler setup for Windows.
+Cython. You can follow the instructions below to get a C compiler setup for
+Windows.
+
+If your system is already set up with pip, a compiler, and git, you can try::
+
+    pip install git+https://github.com/django-extensions/django-extensions
 
 Linux
 ^^^^^
@@ -61,87 +69,16 @@ Windows
 
 It is strongly recommended to use 64-bit Python if possible.
 
-Python 2.7
-~~~~~~~~~~
-Obtain
-`Microsoft Visual C++ Compiler for Python 2.7 <https://www.microsoft.com/en-gb/download/details.aspx?id=44266>`__
-and then install using
+Getting the right compiler is especially confusing for Windows users. Over time,
+Python has been built using a variety of different Windows C compilers.
+`This guide <https://wiki.python.org/moin/WindowsCompilers>`_ should help
+clarify which version of Python uses which compiler by default.
 
-    python setup.py install
-
-Python 3.5
-~~~~~~~~~~
-Download and install the most recent version of
-`Visual Studio Community Edition <https://www.visualstudio.com/vs/community/>`__
-and then install using
-
-    python setup.py install
-
-
-32-bit or other versions of Python
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-You can build 32-bit version of the code on windows using mingw32.
-
-First, get and install `mingw32 <http://www.mingw.org/>`__. Then, you'll need to edit distutils.cfg. This is usually found somewhere like C:\Python27\Lib\distutils\distutils.cfg. Add these lines::
-
-    [build]
-    compiler=mingw32
-
-Then in the statsmodels directory do::
-
-    python setup.py build
-    python setup.py install
-
-OR
-
-You can build 32-bit Microsoft SDK. Detailed instructions can be found on the
-Cython wiki `here <https://github.com/cython/cython/wiki/CythonExtensionsOnWindows>`__.
-The gist of these instructions follow. You will need to download the free
-Windows SDK C/C++ compiler from Microsoft. You must use
-the **Microsoft Windows SDK for Windows 7 and .NET Framework 3.5 SP1** to be
-comptible with Python 2.7, 3.1, and 3.2. The link for the 3.5 SP1 version is
-
-`https://www.microsoft.com/en-us/download/details.aspx?id=18950 <https://www.microsoft.com/en-us/download/details.aspx?id=18950>`__
-
-For Python 3.3 and 3.4, you need to use the **Microsoft Windows SDK for Windows 7 and .NET Framework 4**,
-available from
-
-`https://www.microsoft.com/en-us/download/details.aspx?id=8279 <https://www.microsoft.com/en-us/download/details.aspx?id=8279>`__
-
-For 7.0, get the ISO file GRMSDKX_EN_DVD.iso for AMD64. After you install this,
-open the SDK Command Shell (Start -> All Programs ->
-Microsoft Windows SDK v7.0 -> CMD Shell). CD to the statsmodels directory and type::
-
-    set DISTUTILS_USE_SDK=1
-
-To build a 64-bit application type::
-
-    setenv /x64 /release
-
-To build a 32-bit application type::
-
-    setenv /x86 /release
-
-The prompt should change colors to green. Then proceed as usual to install::
-
-    python setup.py build
-    python setup.py install
-
-For 7.1, the instructions are exactly the same, except you use the download
-link provided above and make sure you are using SDK 7.1.
-
-If you want to accomplish the same without opening up the SDK CMD SHELL, then
-you can use these commands at the CMD Prompt or in a batch file.::
-
-    setlocal EnableDelayedExpansion
-    CALL "C:\Program Files\Microsoft SDKs\Windows\v7.0\Bin\SetEnv.cmd" /x64 /release
-    set DISTUTILS_USE_SDK=1
-
-Replace `/x64` with `/x86` and `v7.0` with `v7.1` as needed.
-
+Alternatively, you can use the
+`MinGW-w64 toolchoin <http://mingw-w64.org/doku.php>`__.
 
 Dependencies
-~~~~~~~~~~~~
+------------
 
 The current minimum dependencies are:
 
@@ -161,7 +98,7 @@ September 2018, when we will update to reflect Numpy >= 1.12 (released January
 2017).
 
 Optional Dependencies
-~~~~~~~~~~~~~~~~~~~~~
+---------------------
 
 * `Matplotlib <http://matplotlib.org/>`__ >= 1.5 is needed for plotting
   functions and running many of the examples.

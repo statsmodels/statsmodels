@@ -64,7 +64,7 @@ Load a dataset:
 .. ipython:: python
 
    import statsmodels.api as sm
-   data = sm.datasets.longley.load(as_pandas=False)
+   data = sm.datasets.longley.load_pandas()
 
 The `Dataset` object follows the bunch pattern explained  in :ref:`proposal <dataset_proposal>`. The full dataset is available in the ``data`` attribute.
 
@@ -76,8 +76,8 @@ Most datasets hold convenient representations of the data in the attributes `end
 
 .. ipython:: python
 
-   data.endog[:5]
-   data.exog[:5,:]
+   data.endog.iloc[:5]
+   data.exog.iloc[:5,:]
 
 Univariate datasets, however, do not have an `exog` attribute.
 
