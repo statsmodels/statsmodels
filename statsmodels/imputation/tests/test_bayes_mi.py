@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 from statsmodels.imputation.bayes_mi import BayesGaussMI, MI
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 
 
 def test_pat():
@@ -150,10 +150,17 @@ def test_mi_formula():
                        "x2": x[:, 2], "x3": x[:, 3]})
     fml = "y ~ 0 + x1 + x2 + x3"
 
+    def model_kwds_fn(x):
+        return {"data": x}
+
     np.random.seed(2342)
     imp = BayesGaussMI(df.copy())
-    mi = MI(imp, sm.OLS, formula=fml, burn=0)
-    r = mi.fit()
+    mi = MI(imp, sm.OLS, formula=fml, burn=0,
+            model_kwds_fn=model_kwds_fn)
+
+    results_cb = lambda x: x
+
+    r = mi.fit(results_cb=results_cb)
     r.summary()  # smoke test
     # TODO: why does the test tolerance need to be so slack?
     # There is unexpected variation across versions on travis.
@@ -164,3 +171,5 @@ def test_mi_formula():
                     [0.00029746, 0.00407264, 0.00019496],
                     [-0.00035057, 0.00019496, 0.00509413]])
     assert_allclose(r.cov_params(), c, 0.3, 0)
+
+    assert_equal(len(r.results), 20)
