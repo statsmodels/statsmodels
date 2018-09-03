@@ -121,6 +121,7 @@ The distribution families are the same as for GLM, currently implemented are
    InverseGaussian
    NegativeBinomial
    Poisson
+   Tweedie
 
 
 Link Functions
@@ -156,4 +157,3 @@ The list of available link functions can be obtained by
    logit
    nbinom
    probit
-
