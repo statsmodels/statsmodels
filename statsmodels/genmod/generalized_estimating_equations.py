@@ -1352,30 +1352,26 @@ class GEE(base.Model):
 
         Notes
         -----
-        This method can only be called if the model was fit using the
-        independence covariance structure.
-
         The quasi-likelihood used here is obtained by numerically evaluating
         Wedderburn's integral representation of the quasi-likelihood function.
-        The advantage of this approach is that it works for all families and
-        links.  Most other software packages use analytical expressions for
-        quasi-likelihoods that are based on canonical link functions.  These
-        analytical expressions omit additive constants that only depend on the
-        data.  Therefore the numerical values of our QL and QIC values will
+        This approach is valid for all families and  links.  Many other
+        packages use analytical expressions for quasi-likelihoods that are valid
+        in special cases where the link function is canonical.  These analytical
+        expressions may omit additive constants that only depend on the
+        data.  Therefore, the numerical values of our QL and QIC values will
         differ from the values reported by other packages.  However only the
         differences between two QIC values calculated for different models
         using the same data are meaningful.  Our QIC should produce the same
         QIC differences as other software.
+
+        When using the QIC for models with unknown scale parameter, use a common
+        estimate of the scale parameter for all models being compared.
 
         Reference
         ---------
         W. Pan (2001).  Akaike's information criterion in generalized estimating
         equations.  Biometrics (57)1.
         """
-
-        if not isinstance(self.cov_struct, cov_structs.Independence):
-            msg = "Only the independence correlation structure can be used with QIC"
-            raise ValueError(msg)
 
         varfunc = self.family.variance
 
