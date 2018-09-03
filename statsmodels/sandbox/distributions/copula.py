@@ -321,7 +321,7 @@ def transform_bilogistic(t, beta, delta):
 
     def _check_args(beta, delta):
         cond1 = (beta > 0) and (beta <= 1) and (delta > 0) and (delta <= 1)
-        cond2 = (beta < 0)  and (delta < 0)
+        cond2 = (beta < 0) and (delta < 0)
         return cond1 | cond2
 
     if not np.all(_check_args(beta, delta)):

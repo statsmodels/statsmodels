@@ -113,7 +113,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     n_trace = len(plot_data['trace'].unique())
 
     linestyles = ['-'] * n_trace if linestyles is None else linestyles
-    markers = ['.'] * n_trace  if markers is None else markers
+    markers = ['.'] * n_trace if markers is None else markers
     colors = rainbow(n_trace) if colors is None else colors
 
     if len(linestyles) != n_trace:

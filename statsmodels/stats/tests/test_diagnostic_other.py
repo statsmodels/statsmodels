@@ -13,7 +13,7 @@ from numpy.testing import assert_allclose
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.stats._diagnostic_other import CMTNewey, CMTTauchen
-import statsmodels.stats._diagnostic_other  as diao
+import statsmodels.stats._diagnostic_other as diao
 
 
 class CheckCMT(object):

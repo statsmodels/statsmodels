@@ -5,7 +5,7 @@ def _est_regression_summary():
     #little luck getting this test to pass (It should?), can be used for
     #visual testing of the regression.summary table
     #fixed, might fail at minute changes
-    from statsmodels.regression.tests.test_regression  import TestOLS
+    from statsmodels.regression.tests.test_regression import TestOLS
     #from test_regression import TestOLS
     import time
     from string import Template
