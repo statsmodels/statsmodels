@@ -982,7 +982,7 @@ class MVNormal(MVElliptical):
         '''
         #indices need to be nd arrays for broadcasting
         keep = np.asarray(indices)
-        given = np.asarray([i for i in range(self.nvars) if not i in keep])
+        given = np.asarray([i for i in range(self.nvars) if i not in keep])
         sigmakk = self.sigma[keep[:, None], keep]
         sigmagg = self.sigma[given[:, None], given]
         sigmakg = self.sigma[keep[:, None], given]
@@ -1167,7 +1167,7 @@ class MVT(MVElliptical):
         #full rank method could also be in elliptical and called with super
         #after the rank check
         B = scale_matrix  #tmp variable as shorthand
-        if not B.shape == (self.nvars, self.nvars):
+        if B.shape != (self.nvars, self.nvars):
             if (np.linalg.eigvals(B) <= 0).any():
                 raise ValueError('affine transform has to be full rank')
 

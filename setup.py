@@ -73,7 +73,7 @@ class build_ext(_build_ext):
 
         for ext in self.extensions:
             if (hasattr(ext, 'include_dirs') and
-                    not numpy_incl in ext.include_dirs):
+                    numpy_incl not in ext.include_dirs):
                 ext.include_dirs.append(numpy_incl)
         _build_ext.build_extensions(self)
 
