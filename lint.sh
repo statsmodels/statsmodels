@@ -18,6 +18,8 @@ if [ "$LINT" == true ]; then
         statsmodels/info.py \
         statsmodels/resampling/ \
         statsmodels/interface/ \
+        statsmodels/iolib/smpickle.py \
+        statsmodels.iolib/tests/test_pickle.py \
         statsmodels/tsa/regime_switching \
         statsmodels/regression/mixed_linear_model.py \
         statsmodels/duration/__init__.py \
