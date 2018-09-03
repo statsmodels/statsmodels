@@ -24,7 +24,7 @@ class HypothesisTestResults(object):
         summary.
     """
     def __init__(self, test_statistic, crit_value, pvalue, df,
-                 signif, method, title, h0, ):
+                 signif, method, title, h0):
         self.test_statistic = test_statistic
         self.crit_value = crit_value
         self.pvalue = pvalue
@@ -130,8 +130,8 @@ class CausalityTestResults(HypothesisTestResults):
         if not basic_test:
             return False
         test = self.test == other.test
-        variables = self.causing == other.causing and \
-                    self.caused == other.caused
+        variables = (self.causing == other.causing and
+                     self.caused == other.caused)
         # instantaneous causality is a symmetric relation ==> causing and
         # caused may be swapped
         if not variables and self.test == "inst":
