@@ -33,7 +33,7 @@ class TestBandwidthCalculation(object):
                        0.29781147113698891]
 
         kern = kernels.Gaussian()
-        
+
         bw_calc = [0, 0, 0]
         for ii, bw in enumerate(['scott','silverman','normal_reference']):
             bw_calc[ii] = select_bandwidth(Xi, bw, kern)

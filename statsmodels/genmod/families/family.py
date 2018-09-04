@@ -202,7 +202,7 @@ class Family(object):
 
         .. math::
            resid\_dev_i = sign(y_i-\mu_i) \sqrt{D_i}
-           
+
         D_i is calculated from the _resid_dev method in each family.
         Distribution-specific documentation of the calculation is available
         there.
@@ -1166,7 +1166,7 @@ class NegativeBinomial(Family):
     Parameterization for :math:`y=0, 1, 2, \ldots` is
 
     .. math::
-      
+
        f(y) = \frac{\Gamma(y+\frac{1}{\alpha})}{y!\Gamma(\frac{1}{\alpha})}
               \left(\frac{1}{1+\alpha\mu}\right)^{\frac{1}{\alpha}}
               \left(\frac{\alpha\mu}{1+\alpha\mu}\right)^y

@@ -62,7 +62,7 @@ class TestDiff(object):
     def test_cases(self):
         # Basic cases
         for series, diff, seasonal_diff, seasonal_periods, result in self.cases:
-            
+
             # Test numpy array
             x = tools.diff(series, diff, seasonal_diff, seasonal_periods)
             assert_almost_equal(x, result)
@@ -154,7 +154,7 @@ class TestSolveDiscreteLyapunov(object):
 class TestConcat(object):
 
     x = np.arange(10)
-    
+
     valid = [
         (((1,2,3),(4,)), (1,2,3,4)),
         (((1,2,3),[4]), (1,2,3,4)),

@@ -46,7 +46,7 @@ quantiles = np.arange(.05, .96, .1)
 def fit_model(q):
     res = mod.fit(q=q)
     return [q, res.params['Intercept'], res.params['income']] + res.conf_int().loc['income'].tolist()
-    
+
 models = [fit_model(x) for x in quantiles]
 models = pd.DataFrame(models, columns=['q', 'a', 'b','lb','ub'])
 
@@ -75,7 +75,7 @@ get_y = lambda a, b: a + b * x
 for i in range(models.shape[0]):
     y = get_y(models.a[i], models.b[i])
     plt.plot(x, y, linestyle='dotted', color='grey')
-    
+
 y = get_y(ols['a'], ols['b'])
 plt.plot(x, y, color='red', label='OLS')
 

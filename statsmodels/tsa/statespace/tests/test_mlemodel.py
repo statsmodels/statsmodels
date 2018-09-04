@@ -54,7 +54,7 @@ def get_dummy_mod(fit=True, pandas=False):
             res = mod.fit(disp=-1)
     else:
         res = None
-    
+
     return mod, res
 
 

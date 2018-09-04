@@ -323,7 +323,7 @@ class TestKdeRefit():
                                     getattr(pdf2, attr)[:10]))
 
 class TestNormConstant():
-    
+
     def test_norm_constant_calculation(self):
         custom_gauss = kernels.CustomKernel(lambda x: np.exp(-x**2/2.0))
         gauss_true_const = 0.3989422804014327
