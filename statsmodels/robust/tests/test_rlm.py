@@ -112,11 +112,7 @@ class TestRlm(CheckRlmResultsMixin):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-
     def setup(self):
-#        r.library('MASS')
-#        self.res2 = RModel(self.data.endog, self.data.exog,
-#                        r.rlm, psi="psi.huber")
         from .results.results_rlm import Huber
         self.res2 = Huber()
 
@@ -144,8 +140,6 @@ class TestHampel(TestRlm):
         cls.res1.h3 = h3
 
     def setup(self):
-#        self.res2 = RModel(self.data.endog[:,None], self.data.exog,
-#        r.rlm, psi="psi.hampel") #, init="lts")
         from .results.results_rlm import Hampel
         self.res2 = Hampel()
 
@@ -171,8 +165,6 @@ class TestRlmBisquare(TestRlm):
         cls.res1.h3 = h3
 
     def setup(self):
-#        self.res2 = RModel(self.data.endog, self.data.exog,
-#                        r.rlm, psi="psi.bisquare")
         from .results.results_rlm import BiSquare
         self.res2 = BiSquare()
 
@@ -313,11 +305,7 @@ class TestRlmSresid(CheckRlmResultsMixin):
         cls.res1.h2 = h2
         cls.res1.h3 = h3
 
-
     def setup(self):
-#        r.library('MASS')
-#        self.res2 = RModel(self.data.endog, self.data.exog,
-#                        r.rlm, psi="psi.huber")
         from .results.results_rlm import Huber
         self.res2 = Huber()
 
