@@ -78,7 +78,7 @@ get_y = lambda a, b: a + b * x
 for i in range(models.shape[0]):
     y = get_y(models.a[i], models.b[i])
     plt.plot(x, y, linestyle='dotted', color='grey')
-    
+
 y = get_y(ols['a'], ols['b'])
 plt.plot(x, y, color='red', label='OLS')
 
