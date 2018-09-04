@@ -2,13 +2,12 @@ from statsmodels.compat.python import range, lrange, lmap, lzip, zip_longest
 import numpy as np
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import (gen_fmt, fmt_2,
-                                                fmt_params, fmt_base, fmt_2cols)
-#from statsmodels.iolib.summary2d import summary_params_2dflat
-#from summary2d import summary_params_2dflat
+                                               fmt_params, fmt_base, fmt_2cols)
+
 
 def forg(x, prec=3):
     if prec == 3:
-    #for 3 decimals
+        # for 3 decimals
         if (abs(x) >= 1e4) or (abs(x) < 1e-4):
             return '%9.3g' % x
         else:
@@ -862,8 +861,6 @@ class Summary(object):
             table = summary_params(res, yname=yname, xname=xname, alpha=alpha,
                                    use_t=use_t)
         elif res.params.ndim == 2:
-#            _, table = summary_params_2dflat(res, yname=yname, xname=xname,
-#                                             alpha=alpha, use_t=use_t)
             _, table = summary_params_2dflat(res, endog_names=yname,
                                              exog_names=xname,
                                              alpha=alpha, use_t=use_t)
