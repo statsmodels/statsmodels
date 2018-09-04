@@ -62,7 +62,7 @@ def test_notebook(notebook):
 
     with io.open(fullfile, encoding='utf-8') as f:
         nb = nbformat.read(fullfile, as_version=4)
-    
+
     ep = ExecutePreprocessor(allow_errors=False,
                              timeout=20,
                              kernel_name=kernel_name)
