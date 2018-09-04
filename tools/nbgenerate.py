@@ -7,8 +7,6 @@ import sys
 
 from colorama import init, Fore
 
-init()
-
 from functools import partial
 
 try:
@@ -22,24 +20,27 @@ import nbformat
 from nbconvert import HTMLExporter, RSTExporter
 from nbconvert.preprocessors import ExecutePreprocessor
 
-EXAMPLE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
-                                           "examples"))
+init()
+
+here = os.path.dirname(__file__)
+pkgdir = os.path.split(here)[0]
+EXAMPLE_DIR = os.path.abspath(os.path.join(pkgdir, "examples"))
 SOURCE_DIR = os.path.join(EXAMPLE_DIR, "notebooks")
 EXECUTED_DIR = os.path.join(EXAMPLE_DIR, "executed")
-DST_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
+DST_DIR = os.path.abspath(os.path.join(pkgdir,
                                        "docs", "source", "examples",
                                        "notebooks", "generated"))
 
 error_message = """
-***************************************************************************************************
+******************************************************************************
 ERROR: Error occured when running {notebook}
 {exception}
 {message}
-***************************************************************************************************
+******************************************************************************
 """
-for dir in [EXECUTED_DIR, DST_DIR]:
-    if not os.path.exists(dir):
-        os.makedirs(dir)
+for dname in [EXECUTED_DIR, DST_DIR]:
+    if not os.path.exists(dname):
+        os.makedirs(dname)
 
 
 def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
@@ -142,8 +143,9 @@ def do_one(nb, to=None, execute=None, timeout=None, kernel_name=None,
     return dst
 
 
-def do(fp=None, directory=None, to='html', execute=True, timeout=1000, kernel_name='',
-       parallel=False, report_errors=True, error_fail=False, skip_existing=False):
+def do(fp=None, directory=None, to='html', execute=True, timeout=1000,
+       kernel_name='', parallel=False, report_errors=True, error_fail=False,
+       skip_existing=False):
     if fp is None:
         nbs = find_notebooks(directory)
     else:
@@ -152,7 +154,8 @@ def do(fp=None, directory=None, to='html', execute=True, timeout=1000, kernel_na
     if kernel_name is None:
         kernel_name = find_kernel_name()
 
-    func = partial(do_one, to=to, execute=execute, timeout=timeout, kernel_name=kernel_name,
+    func = partial(do_one, to=to,
+                   execute=execute, timeout=timeout, kernel_name=kernel_name,
                    report_error=report_errors, error_fail=error_fail,
                    skip_existing=skip_existing)
 
@@ -188,26 +191,37 @@ parser.add_argument("--timeout", type=int, default=1000,
                     help="Seconds to allow for each cell before timing out")
 parser.add_argument("--kernel_name", type=str, default=None,
                     help="Name of kernel to execute with")
-parser.add_argument("--skip-execution", dest='skip_execution', action='store_true',
+parser.add_argument("--skip-execution", dest='skip_execution',
+                    action='store_true',
                     help="Skip execution notebooks before converting")
 parser.add_argument('--parallel', dest='parallel', action='store_true',
                     help='Execute notebooks in parallel')
-parser.add_argument('--report-errors', dest='report_errors', action='store_true',
+parser.add_argument('--report-errors', dest='report_errors',
+                    action='store_true',
                     help='Report errors that occur when executing notebooks')
 parser.add_argument('--fail-on-error', dest='error_fail', action='store_true',
-                    help='Fail when an error occurs when executing a cell in a notebook.')
-parser.add_argument('--skip-existing', dest='skip_existing', action='store_true',
-                    help='Skip execution of an executed file exists and is newer than the '
-                         'notebook.')
-parser.set_defaults(parallel=True, skip_execution=False, report_errors=True, error_fail=False,
+                    help='Fail when an error occurs when executing a cell '
+                         'in a notebook.')
+parser.add_argument('--skip-existing', dest='skip_existing',
+                    action='store_true',
+                    help='Skip execution of an executed file exists and '
+                         'is newer than the notebook.')
+parser.set_defaults(parallel=True, skip_execution=False,
+                    report_errors=True, error_fail=False,
                     skip_existing=False)
 
 
 def main():
     args = parser.parse_args()
-    do(fp=args.fp, directory=args.directory, to=args.to, execute=not args.skip_execution,
-       timeout=args.timeout, kernel_name=args.kernel_name, parallel=args.parallel,
-       report_errors=args.report_errors, error_fail=args.error_fail,
+    do(fp=args.fp,
+       directory=args.directory,
+       to=args.to,
+       execute=not args.skip_execution,
+       timeout=args.timeout,
+       kernel_name=args.kernel_name,
+       parallel=args.parallel,
+       report_errors=args.report_errors,
+       error_fail=args.error_fail,
        skip_existing=args.skip_existing)
 
 
