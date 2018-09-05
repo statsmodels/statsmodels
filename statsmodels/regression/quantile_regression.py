@@ -189,7 +189,7 @@ class QuantReg(RegressionModel):
                         break
 
         if n_iter == max_iter:
-            warnings.warn("Maximum number of iterations (" + str(max_iter) + 
+            warnings.warn("Maximum number of iterations (" + str(max_iter) +
                           ") reached.", IterationLimitWarning)
 
         e = endog - np.dot(exog, beta)

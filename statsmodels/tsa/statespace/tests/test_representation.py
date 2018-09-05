@@ -698,7 +698,7 @@ def test_no_endog():
 
 
 def test_cython():
-    # Test the cython _kalman_filter creation, re-creation, calling, etc. 
+    # Test the cython _kalman_filter creation, re-creation, calling, etc.
 
     # Check that datatypes are correct:
     for prefix, dtype in tools.prefix_dtype_map.items():

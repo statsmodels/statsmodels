@@ -184,7 +184,7 @@ class PolySmoother(object):
             if not hasattr(self, "X"):
                 raise ValueError("x needed to fit PolySmoother")
         else:
-            if x.ndim > 1: 
+            if x.ndim > 1:
                 print('Warning: 2d x detected in PolySmoother predict, shape:', x.shape)
                 #x=x[0,:] #TODO: check orientation, row or col
             self.X = np.array([(x**i) for i in range(self.order+1)]).T

@@ -159,7 +159,7 @@ stub R2 C2  40.95038  40.65765
   <th>stub2</th>    <td>2</td>     <td>3.333</td> 
 </tr>
 </table>
-"""
+"""  # noqa:W291
             actual = '\n%s\n' % tbl.as_html()
             assert_equal(actual, desired)
         test_txt_fmt1(self)

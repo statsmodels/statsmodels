@@ -220,8 +220,8 @@ class KDEMultivariate(GenericKDE):
         The multivariate CDF for mixed data (continuous and ordered/unordered
         discrete) is estimated by:
 
-        .. math:: 
-        
+        .. math::
+
             F(x^{c},x^{d})=n^{-1}\sum_{i=1}^{n}\left[G(\frac{x^{c}-X_{i}}{h})\sum_{u\leq x^{d}}L(X_{i}^{d},x_{i}^{d}, \lambda)\right]
 
         where G() is the product kernel CDF estimator for the continuous
@@ -555,8 +555,8 @@ class KDEMultivariateConditional(GenericKDE):
         The multivariate conditional CDF for mixed data (continuous and
         ordered/unordered discrete) is estimated by:
 
-        .. math:: 
-            
+        .. math::
+
             F(y|x)=\frac{n^{-1}\sum_{i=1}^{n}G(\frac{y-Y_{i}}{h_{0}}) W_{h}(X_{i},x)}{\widehat{\mu}(x)}
 
         where G() is the product kernel CDF estimator for the dependent (y)

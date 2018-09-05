@@ -177,7 +177,7 @@ class GenericKDE (object):
             self._bw_method = 'normal_reference'
         if isinstance(bw, string_types):
             self._bw_method = bw
-        else: 
+        else:
             self._bw_method = "user-specified"
             return bw
 
