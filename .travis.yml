@@ -117,7 +117,7 @@ before_install:
         export COVERAGE_OPTS=""
     fi
   - if [ ${DOCBUILD} = true ]; then source tools/ci/docbuild_install.sh; fi;
-  - pip install flake8
+  - pip install flake8 flake8-per-file-ignores
   - export SRCDIR=$PWD
 
 # Install packages

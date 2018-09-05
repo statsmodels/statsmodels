@@ -1,3 +1,4 @@
+# pylint: disable=trailing-whitespace
 import numpy as np
 
 llf = np.array([-243.77512585356])
