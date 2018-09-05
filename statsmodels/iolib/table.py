@@ -287,7 +287,7 @@ class SimpleTable(list):
         """Return list of Row,
         the raw data as rows of cells.
         """
-        
+
         _Cell = self._Cell
         _Row = self._Row
         rows = []
@@ -298,7 +298,7 @@ class SimpleTable(list):
                 cell.datatype = next(dtypes)
                 cell.row = newrow  # a cell knows its row
             rows.append(newrow)
-         
+
         return rows
 
     def pad(self, s, width, align):
@@ -346,7 +346,11 @@ class SimpleTable(list):
             return self._colwidths[key]
 
     def _get_fmt(self, output_format, **fmt_dict):
-        """Return dict, the formatting options.
+        """
+
+        Returns
+        -------
+        formatting_options : dict
         """
         output_format = get_output_format(output_format)
         # first get the default formatting
@@ -359,14 +363,23 @@ class SimpleTable(list):
         return fmt
 
     def as_csv(self, **fmt_dict):
-        """Return string, the table in CSV format.
-        Currently only supports comma separator."""
+        """
+        Currently only supports comma separator.
+
+        Returns
+        -------
+        csv_table : str
+        """
         # fetch the format, which may just be default_csv_format
         fmt = self._get_fmt('csv', **fmt_dict)
         return self.as_text(**fmt)
 
     def as_text(self, **fmt_dict):
-        """Return string, the table as text."""
+        """
+        Returns
+        -------
+        text_table : str
+        """
         # fetch the text format, override with fmt_dict
         fmt = self._get_fmt('txt', **fmt_dict)
         # get rows formatted as strings
@@ -390,10 +403,14 @@ class SimpleTable(list):
         return '\n'.join(formatted_rows)
 
     def as_html(self, **fmt_dict):
-        """Return string.
+        """
         This is the default formatter for HTML tables.
         An HTML table formatter must accept as arguments
         a table and a format dictionary.
+
+        Returns
+        -------
+        html_table : str
         """
         # fetch the text format, override with fmt_dict
         fmt = self._get_fmt('html', **fmt_dict)
@@ -406,14 +423,19 @@ class SimpleTable(list):
         return '\n'.join(formatted_rows)
 
     def as_latex_tabular(self, center=True, **fmt_dict):
-        '''Return string, the table as a LaTeX tabular environment.
-        Note: will require the booktabs package.'''
+        '''
+        Note: will require the booktabs package.
+
+        Returns
+        -------
+        latex_tabular : str
+        '''
         # fetch the text format, override with fmt_dict
         fmt = self._get_fmt('latex', **fmt_dict)
 
         formatted_rows = []
         if center:
-            formatted_rows.append( r'\begin{center}' )
+            formatted_rows.append(r'\begin{center}')
 
         table_dec_above = fmt['table_dec_above'] or ''
         table_dec_below = fmt['table_dec_below'] or ''
@@ -448,17 +470,17 @@ class SimpleTable(list):
             title = r'%%\caption{%s}' % self.title
             formatted_rows.append(title)
         if center:
-            formatted_rows.append( r'\end{center}' )
+            formatted_rows.append(r'\end{center}')
 
         return '\n'.join(formatted_rows)
 
-
     def extend_right(self, table):
-        """Return None.
+        """
         Extend each row of `self` with corresponding row of `table`.
         Does **not** import formatting from ``table``.
         This generally makes sense only if the two tables have
         the same number of rows, but that is not enforced.
+
         :note: To extend append a table below, just use `extend`,
         which is the ordinary list method.  This generally makes sense
         only if the two tables have the same number of columns,
@@ -468,7 +490,8 @@ class SimpleTable(list):
             row1.extend(row2)
 
     def label_cells(self, func):
-        """Return None.  Labels cells based on `func`.
+        """
+        Labels cells based on `func`.
         If ``func(cell) is None`` then its datatype is
         not changed; otherwise it is set to ``func(cell)``.
         """
@@ -505,12 +528,14 @@ class Row(list):
         Parameters
         ----------
         seq : sequence of data or cells
-        table : SimpleTable
         datatype : str ('data' or 'header')
+        table : SimpleTable
+        celltype : ??
         dec_below : str
           (e.g., 'header_dec_below' or 'row_dec_below')
           decoration tag, identifies the decoration to go below the row.
           (Decoration is repeated as needed for text formats.)
+        **fmt_dict : ??
         """
         self.datatype = datatype
         self.table = table
@@ -527,8 +552,9 @@ class Row(list):
 
     def add_format(self, output_format, **fmt_dict):
         """
-        Return None. Adds row-instance specific formatting
+        Adds row-instance specific formatting
         for the specified output format.
+
         Example: myrow.add_format('txt', row_dec_below='+-')
         """
         output_format = get_output_format(output_format)
@@ -537,8 +563,8 @@ class Row(list):
         self.special_fmts[output_format].update(fmt_dict)
 
     def insert_stub(self, loc, stub):
-        """Return None.  Inserts a stub cell
-        in the row at `loc`.
+        """
+        Inserts a stub cell in the row at `loc`.
         """
         _Cell = self._Cell
         if not isinstance(stub, _Cell):
@@ -547,7 +573,8 @@ class Row(list):
         self.insert(loc, stub)
 
     def _get_fmt(self, output_format, **fmt_dict):
-        """Return dict, the formatting options.
+        """
+        Return dict, the formatting options.
         """
         output_format = get_output_format(output_format)
         # first get the default formatting
@@ -569,18 +596,24 @@ class Row(list):
         return fmt
 
     def get_aligns(self, output_format, **fmt_dict):
-        """Return string, sequence of column alignments.
-        Ensure comformable data_aligns in `fmt_dict`."""
+        """
+        Return string, sequence of column alignments.
+        Ensure comformable data_aligns in `fmt_dict`.
+        """
         fmt = self._get_fmt(output_format, **fmt_dict)
         return ''.join(cell.alignment(output_format, **fmt) for cell in self)
 
     def as_string(self, output_format='txt', **fmt_dict):
-        """Return string: the formatted row.
+        """
         This is the default formatter for rows.
         Override this to get different formatting.
         A row formatter must accept as arguments
         a row (self) and an output format,
         one of ('html', 'txt', 'csv', 'latex').
+
+        Returns
+        -------
+        formatted_row : str
         """
         fmt = self._get_fmt(output_format, **fmt_dict)
 
@@ -878,8 +911,9 @@ default_latex_fmt = dict(
     stub=r'\textbf{%s}',
     empty='',
     missing='--',
-    #replacements will be processed in lexicographical order
-    replacements={"#" : "\#", "$" : "\$", "%" : "\%", "&" : "\&", ">" : "$>$", "_" : "\_", "|" : "$|$"} 
+    # replacements will be processed in lexicographical order
+    replacements={"#": "\#", "$": "\$", "%": "\%", "&": "\&",
+                  ">": "$>$", "_": "\_", "|": "$|$"}
 )
 
 default_fmts = dict(

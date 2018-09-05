@@ -7,6 +7,7 @@ from numpy.testing import assert_equal
 from statsmodels.iolib.summary2 import summary_col
 from statsmodels.regression.linear_model import OLS, add_constant
 
+
 class TestSummaryLatex(object):
 
     def test_summarycol(self):
@@ -29,13 +30,13 @@ x1    & -0.7500  & -1.5769   \\
 \end{center}
 \end{table}
 '''
-        x = [1,5,7,3,5]
+        x = [1, 5, 7, 3, 5]
         x = add_constant(x)
-        y1 = [6,4,2,7,4]
-        y2 = [8,5,0,12,4]
-        reg1 = OLS(y1,x).fit()
-        reg2 = OLS(y2,x).fit()
-        actual = summary_col([reg1,reg2]).as_latex()
+        y1 = [6, 4, 2, 7, 4]
+        y2 = [8, 5, 0, 12, 4]
+        reg1 = OLS(y1, x).fit()
+        reg2 = OLS(y2, x).fit()
+        actual = summary_col([reg1, reg2]).as_latex()
         actual = '\n%s\n' % actual
         assert_equal(desired, actual)
 
@@ -83,14 +84,12 @@ x1    & -0.7500  & -1.5769   \\
         # Test that latex output of regular OLS output still contains
         # multiple tables
 
-        x = [1,5,7,3,5]
+        x = [1, 5, 7, 3, 5]
         x = add_constant(x)
-        y1 = [6,4,2,7,4]
-        reg1 = OLS(y1,x).fit()
+        y1 = [6, 4, 2, 7, 4]
+        reg1 = OLS(y1, x).fit()
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             actual = reg1.summary().as_latex()
-        string_to_find = r'''\end{tabular}
-\begin{tabular}'''
-        result = string_to_find in actual
-        assert(result is True)
+        string_to_find = '\\end{tabular}\n\\begin{tabular}'
+        assert string_to_find in actual
