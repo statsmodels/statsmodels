@@ -41,11 +41,12 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from __future__ import division, absolute_import, print_function
+import os
 
 import numpy as np
+from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
-import os
 
 from statsmodels import datasets
 from statsmodels.tsa.statespace.initialization import Initialization
@@ -53,7 +54,6 @@ from statsmodels.tsa.statespace.kalman_smoother import KalmanSmoother
 from statsmodels.tsa.statespace.varmax import VARMAX
 from statsmodels.tsa.statespace.dynamic_factor import DynamicFactor
 from statsmodels.tsa.statespace.structural import UnobservedComponents
-from numpy.testing import assert_equal, assert_allclose
 
 from . import kfas_helpers
 
@@ -178,8 +178,8 @@ def model_common_level(endog=None, params=None, restricted=False):
 
 def model_var1(endog=None, params=None, measurement_error=False, init=None):
     if endog is None:
-        endog = (np.log(
-            macrodata[['realgdp','realcons']]).iloc[:21].diff().iloc[1:] * 400)
+        lvls = macrodata[['realgdp', 'realcons']]
+        endog = (np.log(lvls).iloc[:21].diff().iloc[1:] * 400)
     if params is None:
         params = np.r_[0.5, 0.3, 0.2, 0.4, 2**0.5, 0, 3**0.5]
         if measurement_error:
@@ -199,8 +199,8 @@ def model_var1(endog=None, params=None, measurement_error=False, init=None):
 
 def model_dfm(endog=None, params=None, factor_order=2):
     if endog is None:
-        endog = (np.log(
-            macrodata[['realgdp','realcons']]).iloc[:21].diff().iloc[1:] * 400)
+        lvls = macrodata[['realgdp', 'realcons']]
+        endog = (np.log(lvls).iloc[:21].diff().iloc[1:] * 400)
     if params is None:
         params = np.r_[0.5, 1., 1.5, 2., 0.9, 0.1]
 
@@ -246,7 +246,7 @@ class TestLocalLevelAnalytic(object):
         assert_allclose(res.predicted_diffuse_state_cov[0, 0, 1], 0)
 
         # Miscellaneous
-        assert_equal(res.nobs_diffuse, 1)
+        assert res.nobs_diffuse == 1
 
 
 class TestLocalLevelAnalyticDirect(TestLocalLevelAnalytic):
@@ -294,7 +294,7 @@ class TestLocalLinearTrendAnalytic(object):
                         np.zeros((2, 2)))
 
         # Miscellaneous
-        assert_equal(res.nobs_diffuse, 2)
+        assert res.nobs_diffuse == 2
 
 
 class TestLocalLinearTrendAnalyticDirect(TestLocalLinearTrendAnalytic):
@@ -334,7 +334,7 @@ class TestLocalLinearTrendAnalyticMissing(TestLocalLinearTrendAnalytic):
         assert_allclose(res.predicted_state_cov[:, :, 3], P4)
 
         # Miscellaneous
-        assert_equal(res.nobs_diffuse, 3)
+        assert res.nobs_diffuse == 3
 
 
 def test_common_level_analytic():
@@ -370,7 +370,7 @@ def test_common_level_analytic():
     assert_allclose(res.predicted_diffuse_state_cov[..., 1], np.zeros((2, 2)))
 
     # Miscellaneous
-    assert_equal(res.nobs_diffuse, 1)
+    assert res.nobs_diffuse == 1
 
 
 def test_common_level_restricted_analytic():
@@ -405,7 +405,7 @@ def test_common_level_restricted_analytic():
     assert_allclose(res.predicted_diffuse_state_cov[..., 1], 0)
 
     # Miscellaneous
-    assert_equal(res.nobs_diffuse, 1)
+    assert res.nobs_diffuse == 1
 
 
 class CheckSSMResults(object):
@@ -624,7 +624,8 @@ class CheckApproximateDiffuseMixin(object):
         kappa = cls.approximate_diffuse_variance
         if init_approx is None:
             init_approx = Initialization(cls.ssm.k_states,
-                'approximate_diffuse', approximate_diffuse_variance=kappa)
+                                         'approximate_diffuse',
+                                         approximate_diffuse_variance=kappa)
         cls.ssm.initialize(init_approx)
         cls.results_b = cls.ssm.smooth()
 
@@ -635,7 +636,7 @@ class CheckApproximateDiffuseMixin(object):
         kappa = self.approximate_diffuse_variance
         assert_allclose(self.results_b.initial_state_cov,
                         np.eye(self.ssm.k_states) * kappa)
-        assert_equal(self.results_b.initial_diffuse_state_cov, None)
+        assert self.results_b.initial_diffuse_state_cov is None
 
 
 class CheckKFASMixin(object):
@@ -735,7 +736,8 @@ class TestVAR1MeasurementError_Approx(CheckApproximateDiffuseMixin,
 
 
 class TestVAR1MeasurementError_KFAS(CheckKFASMixin, CheckVAR1MeasurementError):
-    results_path = os.path.join(current_path, 'results',
+    results_path = os.path.join(
+        current_path, 'results',
         'results_exact_initial_var1_measurement_error_R.csv')
 
 
@@ -745,8 +747,8 @@ class TestVAR1MeasurementError_KFAS(CheckKFASMixin, CheckVAR1MeasurementError):
 class CheckVAR1Missing(CheckVAR1):
     @classmethod
     def setup_class(cls, **kwargs):
-        endog = (np.log(
-            macrodata[['realgdp','realcons']]).iloc[:21].diff().iloc[1:] * 400)
+        lvls = macrodata[['realgdp', 'realcons']]
+        endog = (np.log(lvls).iloc[:21].diff().iloc[1:] * 400)
         endog.iloc[0:5, 0] = np.nan
         endog.iloc[8:12, :] = np.nan
         kwargs['endog'] = endog
@@ -842,7 +844,7 @@ class TestVAR1Mixed_Approx(CheckVAR1Mixed, CheckApproximateDiffuseMixin,
         kappa = self.approximate_diffuse_variance
         assert_allclose(self.results_b.initial_state_cov,
                         np.diag([kappa, stationary_init]))
-        assert_equal(self.results_b.initial_diffuse_state_cov, None)
+        assert self.results_b.initial_diffuse_state_cov is None
 
 
 class TestVAR1Mixed_KFAS(CheckVAR1Mixed, CheckKFASMixin, CheckVAR1):
@@ -964,13 +966,14 @@ def test_irrelevant_state():
     endog = macrodata.infl
 
     spec = {
-        'freq_seasonal': [{'period':8, 'harmonics': 6},
+        'freq_seasonal': [{'period': 8, 'harmonics': 6},
                           {'period': 36, 'harmonics': 6}]
     }
 
     # Approximate diffuse version
     mod = UnobservedComponents(endog, 'llevel', **spec)
-    mod.ssm.initialization = Initialization(mod.k_states,'approximate_diffuse')
+    mod.ssm.initialization = Initialization(mod.k_states,
+                                            'approximate_diffuse')
     res = mod.smooth([3.4, 7.2, 0.01, 0.01])
 
     # Exact diffuse version

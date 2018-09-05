@@ -8,11 +8,12 @@ License: Simplified-BSD
 from __future__ import division, absolute_import, print_function
 
 import numpy as np
+from numpy.testing import assert_allclose
 from scipy.linalg import solve_discrete_lyapunov
+import pytest
 
 from statsmodels.tsa.statespace import sarimax, varmax
 from statsmodels.tsa.statespace.initialization import Initialization
-from numpy.testing import assert_allclose, assert_raises
 
 
 def check_initialization(mod, init, a_true, Pinf_true, Pstar_true):
@@ -368,34 +369,54 @@ def test_nested():
 
 def test_invalid():
     # Invalid initializations (also tests for some invalid calls to set)
-    assert_raises(ValueError, Initialization, 5, '')
-    assert_raises(ValueError, Initialization, 5, 'stationary', constant=[1, 2])
-    assert_raises(ValueError, Initialization, 5, 'stationary',
-                  stationary_cov=[1, 2])
-    assert_raises(ValueError, Initialization, 5, 'known')
-    assert_raises(ValueError, Initialization, 5, 'known', constant=[1])
-    assert_raises(ValueError, Initialization, 5, 'known', stationary_cov=[0])
+    with pytest.raises(ValueError):
+        Initialization(5, '')
+    with pytest.raises(ValueError):
+        Initialization(5, 'stationary', constant=[1, 2])
+    with pytest.raises(ValueError):
+        Initialization(5, 'stationary', stationary_cov=[1, 2])
+    with pytest.raises(ValueError):
+        Initialization(5, 'known')
+    with pytest.raises(ValueError):
+        Initialization(5, 'known', constant=[1])
+    with pytest.raises(ValueError):
+        Initialization(5, 'known', stationary_cov=[0])
 
     # Invalid set() / unset() calls
     init = Initialization(5)
-    assert_raises(ValueError, init.set, -1, 'diffuse')
-    assert_raises(ValueError, init.unset, -1)
-    assert_raises(ValueError, init.set, 5, 'diffuse')
-    assert_raises(ValueError, init.set, 'x', 'diffuse')
-    assert_raises(ValueError, init.unset, 'x')
-    assert_raises(ValueError, init.set, (1, 2, 3), 'diffuse')
-    assert_raises(ValueError, init.unset, (1, 2, 3))
+    with pytest.raises(ValueError):
+        init.set(-1, 'diffuse')
+    with pytest.raises(ValueError):
+        init.unset(-1)
+    with pytest.raises(ValueError):
+        init.set(5, 'diffuse')
+    with pytest.raises(ValueError):
+        init.set('x', 'diffuse')
+    with pytest.raises(ValueError):
+        init.unset('x')
+    with pytest.raises(ValueError):
+        init.set((1, 2, 3), 'diffuse')
+    with pytest.raises(ValueError):
+        init.unset((1, 2, 3))
+
     init.set(None, 'diffuse')
-    assert_raises(ValueError, init.set, 1, 'diffuse')
-    init.clear()
-    init.set(1, 'diffuse')
-    assert_raises(ValueError, init.set, None, 'stationary')
+    with pytest.raises(ValueError):
+        init.set(1, 'diffuse')
 
     init.clear()
-    assert_raises(ValueError, init.unset, 1)
+    init.set(1, 'diffuse')
+    with pytest.raises(ValueError):
+        init.set(None, 'stationary')
+
+    init.clear()
+    with pytest.raises(ValueError):
+        init.unset(1)
 
     # Invalid __call__
     init = Initialization(2)
-    assert_raises(ValueError, init)
+    with pytest.raises(ValueError):
+        init()
+
     init = Initialization(2, 'stationary')
-    assert_raises(ValueError, init)
+    with pytest.raises(ValueError):
+        init()

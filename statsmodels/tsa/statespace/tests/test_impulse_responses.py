@@ -6,13 +6,13 @@ License: Simplified-BSD
 """
 
 from __future__ import division, absolute_import, print_function
-
 import warnings
+
 import numpy as np
+from numpy.testing import assert_allclose
 
 from statsmodels.tsa.statespace import (sarimax, structural, varmax,
                                         dynamic_factor)
-from numpy.testing import assert_allclose
 
 
 def test_sarimax():

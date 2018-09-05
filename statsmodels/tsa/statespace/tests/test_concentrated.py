@@ -9,11 +9,13 @@ License: Simplified-BSD
 from __future__ import division, absolute_import, print_function
 
 import numpy as np
+from numpy.testing import assert_allclose
 import pandas as pd
+import pytest
+
 from statsmodels.tools.tools import Bunch
-from .results import results_varmax
 from statsmodels.tsa.statespace import sarimax, varmax
-from numpy.testing import assert_raises, assert_allclose
+from .results import results_varmax
 
 
 def get_sarimax_models(endog, filter_univariate=False, **kwargs):
@@ -104,7 +106,6 @@ def test_concentrated_predict_sarimax():
     nobs = 30
     np.random.seed(28953)
     endog = np.random.normal(size=nobs)
-    kwargs = {}
 
     # Typical model
     out = get_sarimax_models(endog)
@@ -136,8 +137,9 @@ def test_fixed_scale_sarimax():
     params[-1] *= 1.2
 
     # Test that these are not equal in the default computation
-    assert_raises(AssertionError, assert_allclose,
-                  mod_conc.loglike(params[:-1]), mod_orig.loglike(params))
+    with pytest.raises(AssertionError):
+        assert_allclose(mod_conc.loglike(params[:-1]),
+                        mod_orig.loglike(params))
 
     # Now test that the llf is equal when we use the fixed_scale decorator
     with mod_conc.ssm.fixed_scale(params[-1]):

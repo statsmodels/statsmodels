@@ -17,21 +17,22 @@ Time Series Analysis.
 Princeton, N.J.: Princeton University Press.
 """
 from __future__ import division, absolute_import, print_function
-from statsmodels.compat import cPickle
 
 import copy
+import os
 
 import numpy as np
+from numpy.testing import assert_almost_equal, assert_allclose
 import pandas as pd
-import os
 import pytest
 
 from scipy.linalg.blas import find_best_blas_type
 from scipy.linalg import solve_discrete_lyapunov
+
+from statsmodels.compat import cPickle
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 from statsmodels.tsa.statespace import _representation, _kalman_filter
 from .results import results_kalman_filter
-from numpy.testing import assert_almost_equal, assert_allclose
 
 prefix_statespace_map = {
     's': _representation.sStatespace, 'd': _representation.dStatespace,
@@ -89,23 +90,23 @@ class Clark1987(object):
         cls.k_states = k_states = 4  # dimension of state space
         # transition matrix
         cls.transition = np.zeros((k_states, k_states, 1),
-                                   dtype=dtype, order="F")
+                                  dtype=dtype, order="F")
         cls.transition[([0, 0, 1, 1, 2, 3],
-                         [0, 3, 1, 2, 1, 3],
-                         [0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1]
+                        [0, 3, 1, 2, 1, 3],
+                        [0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1]
         # state intercept
         cls.state_intercept = np.zeros((k_states, 1), dtype=dtype, order="F")
         # selection matrix
         cls.selection = np.asfortranarray(np.eye(k_states)[:, :, None],
-                                           dtype=dtype)
+                                          dtype=dtype)
         # state covariance matrix
         cls.state_cov = np.zeros((k_states, k_states, 1),
-                                  dtype=dtype, order="F")
+                                 dtype=dtype, order="F")
 
         # Initialization: Diffuse priors
         cls.initial_state = np.zeros((k_states,), dtype=dtype, order="F")
         cls.initial_state_cov = np.asfortranarray(np.eye(k_states)*100,
-                                                   dtype=dtype)
+                                                  dtype=dtype)
 
         # Update matrices with given parameters
         (sigma_v, sigma_e, sigma_w, phi_1, phi_2) = np.array(
@@ -336,7 +337,7 @@ class Clark1987Forecast(Clark1987):
         # Add missing observations to the end (to forecast)
         cls._obs = cls.obs
         cls.obs = np.array(np.r_[cls.obs[0, :], [np.nan]*nforecast],
-                            ndmin=2, dtype=dtype, order="F")
+                           ndmin=2, dtype=dtype, order="F")
 
     def test_filtered_state(self):
         assert_almost_equal(
@@ -472,23 +473,23 @@ class Clark1989(object):
 
         # transition matrix
         cls.transition = np.zeros((k_states, k_states, 1),
-                                   dtype=dtype, order="F")
+                                  dtype=dtype, order="F")
         cls.transition[([0, 0, 1, 1, 2, 3, 4, 5],
-                         [0, 4, 1, 2, 1, 2, 4, 5],
-                         [0, 0, 0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1, 1, 1]
+                        [0, 4, 1, 2, 1, 2, 4, 5],
+                        [0, 0, 0, 0, 0, 0, 0, 0])] = [1, 1, 0, 0, 1, 1, 1, 1]
         # state intercept
         cls.state_intercept = np.zeros((k_states, 1), dtype=dtype, order="F")
         # selection matrix
         cls.selection = np.asfortranarray(np.eye(k_states)[:, :, None],
-                                           dtype=dtype)
+                                          dtype=dtype)
         # state covariance matrix
         cls.state_cov = np.zeros((k_states, k_states, 1),
-                                  dtype=dtype, order="F")
+                                 dtype=dtype, order="F")
 
         # Initialization: Diffuse priors
         cls.initial_state = np.zeros((k_states,), dtype=dtype)
         cls.initial_state_cov = np.asfortranarray(np.eye(k_states)*100,
-                                                   dtype=dtype)
+                                                  dtype=dtype)
 
         # Update matrices with given parameters
         (sigma_v, sigma_e, sigma_w, sigma_vl, sigma_ec,
