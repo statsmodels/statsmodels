@@ -66,7 +66,7 @@ class KalmanFilter(Representation):
         The dimension of the unobserved state process.
     k_posdef : int, optional
         The dimension of a guaranteed positive definite covariance matrix
-        describing the shocks in the measurement equation. Must be less than
+        describing the shocks in the transition equation. Must be less than
         or equal to `k_states`. Default is `k_states`.
     loglikelihood_burn : int, optional
         The number of initial periods during which the loglikelihood is not
