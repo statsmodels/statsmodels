@@ -5,6 +5,7 @@ from __future__ import print_function
 import numpy as np
 from statsmodels.compat.python import range
 
+
 def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
     """
     Theory dictates that one of two conditions holds:

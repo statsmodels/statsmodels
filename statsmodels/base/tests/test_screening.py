@@ -49,6 +49,7 @@ def _get_poisson_data():
     y = np.random.poisson(mu)
     return y, x, idx_nonzero_true, beta
 
+
 def test_poisson_screening():
 
     np.random.seed(987865)
@@ -270,7 +271,6 @@ def test_glmlogit_screening():
     res_screen.idx_nonzero
 
     res_screen.results_final
-
 
     xnames = ['var%4d' % ii for ii in res_screen.idx_nonzero]
     xnames[0] = 'const'

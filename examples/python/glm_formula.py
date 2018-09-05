@@ -28,6 +28,8 @@ mod1.summary()
 
 def double_it(x):
     return 2 * x
+
+
 formula = 'SUCCESS ~ double_it(LOWINC) + PERASIAN + PERBLACK + PERHISP + PCTCHRT +            PCTYRRND + PERMINTE*AVYRSEXP*AVSALK + PERSPENK*PTRATIO*PCTAF'
 mod2 = smf.glm(formula=formula, data=dta, family=sm.families.Binomial()).fit()
 mod2.summary()

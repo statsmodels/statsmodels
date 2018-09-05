@@ -33,6 +33,7 @@ docs_rst_dir = os.path.realpath(os.path.join(file_path,
 example_dir = os.path.realpath(os.path.join(file_path,
                     '../examples/'))
 
+
 def check_script(filename):
     """
     Run all the files in filelist from run_all. Add any with problems
@@ -55,6 +56,7 @@ def check_script(filename):
         return False
     return True
 
+
 def parse_docstring(block):
     """
     Strips the docstring from a string representation of the file.
@@ -69,6 +71,7 @@ def parse_docstring(block):
     docstring = block[start:start+end]
     block = block[start+end+3:]
     return docstring.strip(), block
+
 
 def parse_file(block):
     """
@@ -111,6 +114,7 @@ def parse_file(block):
             outfile.append('   '+line.strip('\n'))
     return '\n'.join(outfile)
 
+
 def write_file(outfile, rst_file_pth):
     """
     Write outfile to rst_file_pth
@@ -119,6 +123,7 @@ def write_file(outfile, rst_file_pth):
     write_file = open(rst_file_pth, 'w')
     write_file.writelines(outfile)
     write_file.close()
+
 
 def restify(example_file, filehash, fname):
     """
@@ -136,6 +141,7 @@ def restify(example_file, filehash, fname):
     write_file(rst_file, write_filename)
     if filehash is not None:
         hash_funcs.update_hash_dict(filehash, fname)
+
 
 if __name__ == "__main__":
     sys.path.insert(0, example_dir)

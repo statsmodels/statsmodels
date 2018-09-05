@@ -23,6 +23,7 @@ from __future__ import division
 
 import numpy as np
 
+
 def _check_wts(weights, wts):
     """helper function for deprecating `wts`
     """

@@ -365,8 +365,6 @@ class RegularizedResultsWrapper(wrap.ResultsWrapper):
         'resid': 'rows',
         'fittedvalues': 'rows',
     }
-
     _wrap_attrs = _attrs
-
-wrap.populate_wrapper(RegularizedResultsWrapper,
+wrap.populate_wrapper(RegularizedResultsWrapper,  # noqa:E305
                       RegularizedResults)

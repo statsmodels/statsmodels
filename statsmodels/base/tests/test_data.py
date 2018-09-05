@@ -10,6 +10,7 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
 from statsmodels.discrete.discrete_model import Logit
 
+
 #class TestDates(object):
 #    @classmethod
 #    def setup_class(cls):
@@ -19,6 +20,7 @@ from statsmodels.discrete.discrete_model import Logit
 #    def test_dates(self):
 #        np.testing.assert_equal(data.wrap_output(self.dates_input, 'dates'),
 #                                self.dates_result)
+
 
 class TestArrays(object):
     @classmethod
@@ -391,6 +393,7 @@ class TestSeriesSeries(TestDataFrames):
         np.testing.assert_equal(self.data.endog, self.endog.values.squeeze())
         np.testing.assert_equal(self.data.exog, self.exog.values[:,None])
 
+
 def test_alignment():
     #Fix Issue #206
     from statsmodels.regression.linear_model import OLS
@@ -411,6 +414,7 @@ def test_alignment():
 
     # which index do we get??
     np.testing.assert_raises(ValueError, OLS, *(endog, exog))
+
 
 class TestMultipleEqsArrays(TestArrays):
     @classmethod
@@ -498,6 +502,7 @@ class TestMultipleEqsDataFrames(TestDataFrames):
                                                  'columns_eq'),
                                 self.col_eq_result)
 
+
 class TestMissingArray(object):
     @classmethod
     def setup_class(cls):
@@ -563,6 +568,7 @@ class TestMissingArray(object):
         idx = ~np.isnan(np.c_[self.y, self.X]).any(axis=1)
         weights = weights[idx]
         np.testing.assert_array_equal(data.weights, weights)
+
 
 class TestMissingPandas(object):
     @classmethod
@@ -740,7 +746,6 @@ class CheckHasConstant(object):
                 assert_equal(res.model.k_constant, result[0])
                 assert_equal(res.model.data.k_constant, result[0])
 
-
     @classmethod
     def setup_class(cls):
         # create data
@@ -796,6 +801,7 @@ class TestHasConstantGLM(CheckHasConstant):
     @classmethod
     def _initialize(cls):
         cls.y = cls.y_bin
+
 
 class TestHasConstantLogit(CheckHasConstant):
 

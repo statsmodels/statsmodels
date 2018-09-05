@@ -48,6 +48,7 @@ try:
 except NameError:
     WindowsError = None
 
+
 #
 # Rules
 #
@@ -82,6 +83,7 @@ def process_pyx(fromfile, tofile):
     except OSError:
         raise OSError('Cython needs to be installed')
 
+
 def process_tempita_pyx(fromfile, tofile):
     try:
         try:
@@ -100,11 +102,14 @@ def process_tempita_pyx(fromfile, tofile):
         f.write(pyxcontent)
     process_pyx(pyxfile, tofile)
 
+
 rules = {
     # fromext : function
     '.pyx' : process_pyx,
     '.pyx.in' : process_tempita_pyx
     }
+
+
 #
 # Hash db
 #
@@ -120,16 +125,19 @@ def load_hashes(filename):
         hashes = {}
     return hashes
 
+
 def save_hashes(hash_db, filename):
     with open(filename, 'w') as f:
         for key, value in sorted(hash_db.items()):
             f.write("%s %s %s\n" % (key, value[0], value[1]))
+
 
 def sha1_of_file(filename):
     h = hashlib.sha1()
     with open(filename, "rb") as f:
         h.update(f.read())
     return h.hexdigest()
+
 
 #
 # Exclusions
@@ -154,10 +162,12 @@ def normpath(path):
         path = path[2:]
     return path
 
+
 def get_hash(frompath, topath):
     from_hash = sha1_of_file(frompath)
     to_hash = sha1_of_file(topath) if os.path.exists(topath) else None
     return (from_hash, to_hash)
+
 
 def process(path, fromfile, tofile, processor_function, hash_db):
     fullfrompath = os.path.join(path, fromfile)
@@ -202,6 +212,7 @@ def find_process_files(root_dir):
                     tofile = filename[:-len(fromext)] + toext
                     process(cur_dir, fromfile, tofile, function, hash_db)
                     save_hashes(hash_db, HASH_FILE)
+
 
 def main():
     try:

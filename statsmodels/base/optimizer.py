@@ -7,6 +7,7 @@ from __future__ import print_function
 import numpy as np
 from scipy import optimize
 
+
 def _check_method(method, methods):
     if method not in methods:
         message = "Unknown fit method %s" % method
@@ -212,7 +213,6 @@ class Optimizer(object):
         result = model_instance.fit()
         """
         pass
-
 
     def _fit_regularized(self, params):
         #TODO: code won't necessarily be general here. 3 options.

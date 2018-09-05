@@ -7,6 +7,7 @@ from statsmodels.compat import cPickle
 
 file_path = os.path.dirname(__file__)
 
+
 def get_hash(f):
     """
     Gets hexadmecimal md5 hash of a string
@@ -15,6 +16,7 @@ def get_hash(f):
     m = hashlib.md5()
     m.update(f)
     return m.hexdigest()
+
 
 def update_hash_dict(filehash, filename):
     """
@@ -28,6 +30,7 @@ def update_hash_dict(filehash, filename):
     hash_dict.update({filename: filehash})
     with open(os.path.join(file_path, 'hash_dict.pickle'), 'wb') as f:
         cPickle.dump(hash_dict, f)
+
 
 def check_hash(rawfile, filename):
     """
