@@ -8,7 +8,7 @@ from __future__ import division, absolute_import, print_function
 
 import pytest
 import numpy as np
-from numpy.testing import (assert_allclose, assert_equal,
+from numpy.testing import (assert_allclose, assert_equal, assert_array_less,
                            assert_array_equal, assert_almost_equal)
 import pandas as pd
 from scipy.linalg import solve_discrete_lyapunov
@@ -401,7 +401,7 @@ class TestConstrainStationaryMultivariate(object):
                 [1] + [-np.squeeze(constrained[i])
                        for i in range(len(constrained))]
             ).T
-            assert np.max(np.abs(np.linalg.eigvals(companion))) < 1
+            assert_array_less(np.abs(np.linalg.eigvals(companion)), 1)
 
 
 class TestUnconstrainStationaryMultivariate(object):
