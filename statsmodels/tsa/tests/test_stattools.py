@@ -612,7 +612,6 @@ def test_levinson_durbin_acov():
     assert_allclose(pacf, np.array([1, rho] + [0] * (m - 1)), atol=1e-8)
 
 
-
 @pytest.mark.parametrize("missing", ['conservative', 'drop', 'raise', 'none'])
 @pytest.mark.parametrize("fft", [False, True])
 @pytest.mark.parametrize("demean", [True, False])

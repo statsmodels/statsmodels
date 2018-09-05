@@ -12,6 +12,7 @@ from statsmodels.compat.python import range
 from statsmodels.tools.sm_exceptions import (ValueWarning,
                                              EstimationWarning)
 
+
 def _norm(x):
     return np.sqrt(np.sum(x * x))
 

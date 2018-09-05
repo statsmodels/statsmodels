@@ -580,7 +580,6 @@ def impute_ros(observations, censorship, df=None, min_uncensored=2,
         output.loc[:, 'final'] = df[observations]
         output.loc[df[censorship], 'final'] *= substitution_fraction
 
-
     # normal ROS stuff
     else:
         output = _do_ros(df, observations, censorship, transform_in, transform_out)

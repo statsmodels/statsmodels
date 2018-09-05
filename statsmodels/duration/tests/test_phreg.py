@@ -48,6 +48,7 @@ def get_results(n, p, ext, ties):
     hazard = getattr(survival_r_results, hazard_name)
     return coef, se, time, hazard
 
+
 class TestPHReg(object):
 
     # Load a data file from the results directory
@@ -357,7 +358,6 @@ class TestPHReg(object):
         fitted_var = dist.var()
         fitted_sd = dist.std()
         sample = dist.rvs()
-
 
     def test_fit_regularized(self):
 

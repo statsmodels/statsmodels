@@ -41,7 +41,6 @@ def compare_r_output_dogs_data(method):
     .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
     '''
 
-
     # Repeated measures with orthogonal polynomial contrasts coding
     mod = _MultivariateOLS.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
@@ -147,6 +146,7 @@ def test_from_formula_vs_no_formula():
     assert_array_almost_equal(r1['Drug']['stat'].values,
                               r0['Drug']['stat'].values, decimal=6)
 
+
 def test_L_M_matrices_1D_array():
     mod = _MultivariateOLS.from_formula(
         'Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted',
@@ -175,6 +175,7 @@ def test_exog_1D_array():
 def test_endog_1D_array():
     assert_raises(ValueError, _MultivariateOLS.from_formula,
         'Histamine0 ~ 0 + Depleted', data)
+
 
 def test_affine_hypothesis():
     # Testing affine hypothesis, compared with R car linearHypothesis

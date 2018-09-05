@@ -565,7 +565,6 @@ class FactorResults(object):
         self.loadings = factor.loadings
         self.rotation_matrix = np.eye(self.n_comp)
 
-
     def __str__(self):
         return self.summary().__str__()
 

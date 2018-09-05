@@ -106,7 +106,6 @@ class TestMICEData(object):
         assert_equal(exog_obs.shape, [190, 6])
         assert_equal(exog_miss.shape, [10, 6])
 
-
     def test_next_sample(self):
 
         df = gendat()
@@ -121,7 +120,6 @@ class TestMICEData(object):
 
         # The returned dataframes are all the same object
         assert(all_x[0] is all_x[1])
-
 
     def test_pertmeth(self):
         # Test with specified perturbation method.
@@ -142,7 +140,6 @@ class TestMICEData(object):
                 assert_allclose(orig[mx], imp_data.data[mx])
 
         assert_equal(imp_data._cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
-
 
     def test_phreg(self):
 
@@ -218,7 +215,6 @@ class TestMICEData(object):
 
         assert_equal(imp_data._cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
 
-
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_missing_pattern(self, close_figures):
 
@@ -234,7 +230,6 @@ class TestMICEData(object):
                                       color_row_patterns=color_row_patterns)
                     close_or_save(pdf, fig)
 
-
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_bivariate(self, close_figures):
 
@@ -247,7 +242,6 @@ class TestMICEData(object):
             fig = imp_data.plot_bivariate('x2', 'x4', plot_points=plot_points)
             fig.get_axes()[0].set_title('plot_bivariate')
             close_or_save(pdf, fig)
-
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_fit_obs(self, close_figures):
@@ -262,7 +256,6 @@ class TestMICEData(object):
             fig.get_axes()[0].set_title('plot_fit_scatterplot')
             close_or_save(pdf, fig)
 
-
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
     def test_plot_imputed_hist(self, close_figures):
 
@@ -275,7 +268,6 @@ class TestMICEData(object):
             fig = imp_data.plot_imputed_hist('x4')
             fig.get_axes()[0].set_title('plot_imputed_hist')
             close_or_save(pdf, fig)
-
 
 
 class TestMICE(object):
@@ -292,7 +284,6 @@ class TestMICE(object):
         # Smoke test for results
         smr = result.summary()
 
-
     def test_MICE1(self):
 
         df = gendat()
@@ -305,14 +296,12 @@ class TestMICE(object):
             x = mi.next_sample()
             assert(issubclass(x.__class__, RegressionResultsWrapper))
 
-
     def test_MICE1_regularized(self):
 
         df = gendat()
         imp = mice.MICEData(df, perturbation_method='boot')
         imp.set_imputer('x1', 'x2 + y', fit_kwds={'alpha': 1, 'L1_wt': 0})
         imp.update_all()
-
 
     def test_MICE2(self):
 
@@ -327,7 +316,6 @@ class TestMICE(object):
             x = mi.next_sample()
             assert(isinstance(x, GLMResultsWrapper))
             assert(isinstance(x.family, sm.families.Binomial))
-
 
     def test_combine(self):
 
@@ -373,8 +361,3 @@ def test_micedata_miss1():
 
     for k in ix_miss:
         assert_equal(data_imp.ix_miss[k], ix_miss[k])
-
-
-if __name__=="__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

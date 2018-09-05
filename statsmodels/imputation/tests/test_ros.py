@@ -233,7 +233,6 @@ class Test_cohn_numbers(object):
              'nuncen_above': numpy.nan, 'prob_exceedance': 0.0, 'upper_dl': numpy.nan}
         ])[self.final_cols]
 
-
     def test_baseline(self):
         result = ros.cohn_numbers(self.df, observations='conc', censorship='censored')
         pdtest.assert_frame_equal(result, self.expected_baseline)
