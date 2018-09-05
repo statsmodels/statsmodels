@@ -37,7 +37,7 @@ def parse(path, ssm):
     # Reformat the KFAS output to compare with statsmodels output
     res = Bunch()
     d = len(kfas['Pinf_1'].dropna())
-    
+
     # forecasts
     res['forecasts'] = dta['m'].values[:n].T
     res['forecasts_error'] = dta['v'].values[:n].T
