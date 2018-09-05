@@ -50,7 +50,7 @@ class zigeneralizedpoisson_gen(rv_discrete):
 
     def _logpmf(self, x, mu, alpha, p, w):
         return _lazywhere(x != 0, (x, mu, alpha, p, w),
-                          (lambda x, mu, alpha, p, w: np.log(1. - w) + 
+                          (lambda x, mu, alpha, p, w: np.log(1. - w) +
                           genpoisson_p.logpmf(x, mu, alpha, p)),
                           np.log(w + (1. - w) *
                           genpoisson_p.pmf(x, mu, alpha, p)))
@@ -70,7 +70,7 @@ class zinegativebinomial_gen(rv_discrete):
     def _logpmf(self, x, mu, alpha, p, w):
         s, p = self.convert_params(mu, alpha, p)
         return _lazywhere(x != 0, (x, s, p, w),
-                          (lambda x, s, p, w: np.log(1. - w) + 
+                          (lambda x, s, p, w: np.log(1. - w) +
                           nbinom.logpmf(x, s, p)),
                           np.log(w + (1. - w) *
                           nbinom.pmf(x, s, p)))

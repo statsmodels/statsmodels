@@ -92,8 +92,8 @@ class Factor(Model):
     -----
     **Experimental**
 
-    Supported rotations: 'varimax', 'quartimax', 'biquartimax', 
-    'equamax', 'oblimin', 'parsimax', 'parsimony', 'biquartimin', 
+    Supported rotations: 'varimax', 'quartimax', 'biquartimax',
+    'equamax', 'oblimin', 'parsimax', 'parsimony', 'biquartimin',
     'promax'
 
     If method='ml', the factors are rotated to satisfy condition IC3
@@ -985,7 +985,7 @@ class FactorResults(object):
         ----------
         kurt: float
             Excess kurtosis
-        
+
         Notes
         -----
         If excess kurtosis is known, provide as `kurt`.  Standard
