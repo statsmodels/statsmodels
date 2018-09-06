@@ -186,7 +186,7 @@ class TestPsturng(object):
     def test_100_random_values(self):
         n = 100
         ps = np.random.random(n)*(.999 - .1) + .1
-        rs = np.random.random_integers(2, 100, n)
+        rs = np.random.randint(2, 101, n)
         vs = np.random.random(n)*998. + 2.
         qs = qsturng(ps, rs, vs)
         estimates = psturng(qs, rs, vs)

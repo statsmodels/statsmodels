@@ -109,3 +109,9 @@ try:
     from scipy.special import factorial, factorial2  # noqa:F401
 except ImportError:
     from scipy.misc import factorial, factorial2  # noqa:F401
+
+# Moved in 1.0 to special
+try:
+    from scipy.special import logsumexp  # noqa:F401
+except:
+    from scipy.misc import logsumexp  # noqa:F401

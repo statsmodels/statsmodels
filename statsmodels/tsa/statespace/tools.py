@@ -1799,7 +1799,7 @@ def prepare_trend_spec(trend):
     if trend is None or trend in ['n', 'nc']:
         polynomial_trend = np.ones((0))
         if trend == 'nc':
-            warnings.warn("Argument option trend='nc' is deprecated. Please"
+            warnings.warn("Argument option trend='n' is deprecated. Please"
                           " use option trend='n'.", DeprecationWarning)
     elif trend == 'c':
         polynomial_trend = np.r_[1]

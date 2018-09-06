@@ -391,7 +391,7 @@ def test_varmax():
     transition = np.array([[0.5,  0.1],
                            [-0.1, 0.2]])
 
-    mod = varmax.VARMAX([[0, 0]], order=(1, 0), trend='nc')
+    mod = varmax.VARMAX([[0, 0]], order=(1, 0), trend='n')
     actual = mod.simulate(np.r_[transition.ravel(), 1., 0, 1.], nobs,
                           state_shocks=np.c_[eps1, eps1],
                           initial_state=np.zeros(mod.k_states))
