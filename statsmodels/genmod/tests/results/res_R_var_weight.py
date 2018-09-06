@@ -10,7 +10,7 @@ dir_path = os.path.dirname(path)
 class Bunch(dict):
     def __init__(self, **kw):
         dict.__init__(self, kw)
-        self.__dict__  = self
+        self.__dict__ = self
 
 res = dict() 
 res['params'] = np.array([0.74699331283637471213, -0.031592165334818442246, -0.021959412079720418837,

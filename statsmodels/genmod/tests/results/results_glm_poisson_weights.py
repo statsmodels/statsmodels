@@ -165,7 +165,7 @@ resids_rownames = 'r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15 r16 r17'.s
 class Bunch(dict):
     def __init__(self, **kw):
         dict.__init__(self, kw)
-        self.__dict__  = self
+        self.__dict__ = self
 
         for i,att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
             self[att] = self.params_table[:,i]

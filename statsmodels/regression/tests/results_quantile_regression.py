@@ -2,7 +2,7 @@ import numpy as np
 class Bunch(dict):
     def __init__(self, **kw):
         dict.__init__(self, kw)
-        self.__dict__  = self
+        self.__dict__ = self
 
 epanechnikov_hsheather_q75 = Bunch()
 epanechnikov_hsheather_q75.table = np.array([
