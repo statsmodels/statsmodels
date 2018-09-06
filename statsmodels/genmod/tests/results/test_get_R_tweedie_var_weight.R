@@ -34,10 +34,15 @@ pyprint <- function(arr, prefix=NULL, suffix=NULL) {
     i <- 1
     for (val in arr) {
       cat(val)
-      if (i %% 3 == 0) {
+      if (i == length(arr)) {
+        if (i %% 3 == 0) {
+          cat("\n")
+        }
+      }
+      else if (i %% 3 == 0) {
         cat(",\n    ")
       }
-      else if (i < length(arr)) {
+      else {
         cat(", ")
       }
       i <- 1 + i
@@ -45,10 +50,15 @@ pyprint <- function(arr, prefix=NULL, suffix=NULL) {
     cat("])")
     if (!is.null(dim(arr))) {
       cat(".reshape((")
+      j <- 1
       for (size in dim(arr)) {
-        cat(sprintf("%s, ", size))
+        cat(sprintf("%s", size))
+        if (j < length(dim(arr))) {
+          cat(", ")
+        }
+        j <- 1 + j
       }
-      cat("), order=\"F\")")
+      cat("))")
     }
   }
   if (!is.null(suffix)) {
@@ -64,13 +74,12 @@ cat("
 class Bunch(dict):
     def __init__(self, **kw):
         dict.__init__(self, kw)
-        self.__dict__  = self
-
+        self.__dict__ = self
 
 ")
 
 out2py <- function(model, name, resid_csv = FALSE){
-  cat("res = dict()\n")
+  cat("\nres = dict()\n")
   pyprint(model$coefficients, prefix = "res['params'] = ")
   pyprint(diag(vcov(model))^0.5, prefix = "res['bse'] = ")
   cat(sprintf("res['deviance'] = %f\n", model$deviance))
@@ -98,7 +107,7 @@ out2py <- function(model, name, resid_csv = FALSE){
   } else {
     pyprint(r, "res['resids'] = ")
   }
-  cat(sprintf("%s = Bunch(**res)\n\n", name))
+  cat(sprintf("%s = Bunch(**res)\n", name))
 }
 
 control <- glm.control(epsilon = 1e-25, maxit = 100)
