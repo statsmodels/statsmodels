@@ -190,7 +190,8 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
     for ky in values.keys():
         fexog.loc[:, ky] = values[ky]
 
-    dexog = patsy.dmatrix(model.data.design_info.builder, fexog, return_type='dataframe')
+    dexog = patsy.dmatrix(model.data.design_info, fexog,
+                          return_type='dataframe')
     return dexog, fexog, fvals
 
 
@@ -300,28 +301,33 @@ def predict_functional(result, focus_var, summaries=None, values=None,
     if exog is not None:
 
         if any(x is not None for x in [summaries, summaries2, values, values2]):
-            raise ValueError("if `exog` is provided then do not provide `summaries` or `values`")
+            raise ValueError("if `exog` is provided then do not "
+                             "provide `summaries` or `values`")
 
         fexog = exog
-        dexog = patsy.dmatrix(model.data.design_info.builder,
+        dexog = patsy.dmatrix(model.data.design_info,
                               fexog, return_type='dataframe')
         fvals = exog[focus_var]
 
         if exog2 is not None:
             fexog2 = exog
-            dexog2 = patsy.dmatrix(model.data.design_info.builder,
+            dexog2 = patsy.dmatrix(model.data.design_info,
                                    fexog2, return_type='dataframe')
             fvals2 = fvals
 
     else:
 
         values, summaries, values2, summaries2 = _check_args(values,
-                             summaries, values2, summaries2)
+                                                             summaries,
+                                                             values2,
+                                                             summaries2)
 
-        dexog, fexog, fvals = _make_exog(result, focus_var, summaries, values, num_points)
+        dexog, fexog, fvals = _make_exog(result, focus_var, summaries,
+                                         values, num_points)
 
         if len(summaries2) + len(values2) > 0:
-            dexog2, fexog2, fvals2 = _make_exog(result, focus_var, summaries2, values2, num_points)
+            dexog2, fexog2, fvals2 = _make_exog(result, focus_var, summaries2,
+                                                values2, num_points)
 
     from statsmodels.genmod.generalized_linear_model import GLM
     from statsmodels.genmod.generalized_estimating_equations import GEE
