@@ -78,7 +78,6 @@ class TestFForm(object):
     Regression" Journal of Business & Economics Statistics.
 
     See chapter 12 in [1]  pp. 355-357.
-
     """
     def __init__(self, endog, exog, bw, var_type, fform, estimator, nboot=100):
         self.endog = endog
