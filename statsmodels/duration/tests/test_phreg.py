@@ -193,13 +193,16 @@ class TestPHReg(object):
 
         pr1 = result1.predict()
         pr2 = result1.predict(exog=df)
-        pr3 = model1.predict(result1.params, exog=dfp) # No standard errors
-        pr4 = model1.predict(result1.params, cov_params=result1.cov_params(), exog=dfp)
+        pr3 = model1.predict(result1.params, exog=dfp)  # No standard errors
+        pr4 = model1.predict(result1.params,
+                             cov_params=result1.cov_params(),
+                             exog=dfp)
 
         prl = (pr1, pr2, pr3, pr4)
         for i in range(4):
             for j in range(i):
-                assert_allclose(prl[i].predicted_values, prl[j].predicted_values)
+                assert_allclose(prl[i].predicted_values,
+                                prl[j].predicted_values)
 
         prl = (pr1, pr2, pr4)
         for i in range(3):
