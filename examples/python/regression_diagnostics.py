@@ -9,7 +9,6 @@
 
 from __future__ import print_function
 from statsmodels.compat import lzip
-import statsmodels
 import numpy as np
 import pandas as pd
 import statsmodels.formula.api as smf
@@ -72,7 +71,7 @@ np.linalg.cond(results.model.exog)
 # 
 # Breush-Pagan test:
 
-name = ['Lagrange multiplier statistic', 'p-value', 
+name = ['Lagrange multiplier statistic', 'p-value',
         'f-value', 'f p-value']
 test = sms.het_breushpagan(results.resid, results.model.exog)
 lzip(name, test)

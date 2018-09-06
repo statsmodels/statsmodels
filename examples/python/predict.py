@@ -18,7 +18,7 @@ y_true = np.dot(X, beta)
 y = y_true + sig * np.random.normal(size=nsample)
 
 
-# ## Estimation 
+# ## Estimation
 
 olsmod = sm.OLS(y, X)
 olsres = olsmod.fit()
@@ -48,7 +48,7 @@ fig, ax = plt.subplots()
 ax.plot(x1, y, 'o', label="Data")
 ax.plot(x1, y_true, 'b-', label="True")
 ax.plot(np.hstack((x1, x1n)), np.hstack((ypred, ynewpred)), 'r', label="OLS prediction")
-ax.legend(loc="best");
+ax.legend(loc="best")
 
 
 ### Predicting with Formulas
