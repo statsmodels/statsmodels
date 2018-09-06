@@ -459,6 +459,7 @@ def _ptransform(p):
     """function for p-value abcissa transformation"""
     return -1. / (1. + 1.5 * _phi((1. + p)/2.))
 
+
 def _func(a, p, r, v):
     """
     calculates f-hat for the coefficients in a, probability p,
@@ -474,12 +475,17 @@ def _func(a, p, r, v):
     if r == 3:
         f += -0.002 / (1. + 12. * _phi(p)**2)
 
+        if np.isinf(v):
+            # Clip infinite v values
+            v = 1e38
+
         if v <= 4.364:
-            f += 1./517. - 1./(312.*(v,1e38)[np.isinf(v)])
+            f += 1./517. - 1./(312.*v)
         else:
-            f += 1./(191.*(v,1e38)[np.isinf(v)])
+            f += 1./(191.*v)
 
     return -f
+
 
 def _select_ps(p):
     # There are more generic ways of doing this but profiling
@@ -511,6 +517,7 @@ def _select_ps(p):
         return .500, .675, .750
     else:
         return .100, .500, .675
+
 
 def _interpolate_p(p, r, v):
     """
