@@ -30,13 +30,14 @@ pyprint <- function(arr, prefix=NULL, suffix=NULL) {
     cat("None\n")
   } else {
     cat("np.array([")
+    cat("\n    ")
     i <- 1
     for (val in arr) {
       cat(val)
       if (i %% 3 == 0) {
-        cat(",\n ")
+        cat(",\n    ")
       }
-      else {
+      else if (i < length(arr)) {
         cat(", ")
       }
       i <- 1 + i
@@ -51,7 +52,7 @@ pyprint <- function(arr, prefix=NULL, suffix=NULL) {
     }
   }
   if (!is.null(suffix)) {
-    cat(sprintf("%s \n", suffix))
+    cat(sprintf("%s\n", suffix))
   }
   else {
     cat("\n")
@@ -82,7 +83,7 @@ out2py <- function(model, name, resid_csv = FALSE){
     cat(sprintf("res['ll'] = %f\n", ll))
   }
   
-  cat("res['resids_colnames'] = ['resid_response', 'resid_pearson', 'resid_deviance', 'resid_working']\n" )
+  cat("res['resids_colnames'] = [\n    'resid_response', 'resid_pearson', 'resid_deviance', 'resid_working']\n" )
   
   r <- cbind(residuals.glm(model, 'response'),
              residuals.glm(model, 'pearson'),
