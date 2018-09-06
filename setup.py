@@ -1,5 +1,6 @@
 import fnmatch
 import os
+import sys
 from collections import defaultdict
 from os.path import relpath, join as pjoin
 
@@ -151,8 +152,9 @@ class CleanCommand(clean):
 python setup.py clean is not supported.
 
 Use git clean -xfd instead
-"""
-        raise NotImplementedError(msg)
+"""     
+        print(msg)
+        sys.exit(1)
 
 
 class DeferredBuildExt(build_ext):
