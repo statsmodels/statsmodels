@@ -10,6 +10,7 @@ License: BSD-3
 import numpy as np
 from scipy import stats
 
+
 # this is similar to ContrastResults after t_test, partially copied and adjusted
 class PredictionResults(object):
 
@@ -47,7 +48,6 @@ class PredictionResults(object):
     def tvalues(self):
         return self.predicted_mean / self.se_mean
 
-
     def t_test(self, value=0, alternative='two-sided'):
         '''z- or t-test for hypothesis that mean is equal to value
 
@@ -68,8 +68,6 @@ class PredictionResults(object):
             if not specified is the normal distribution.
 
         '''
-        # from statsmodels.stats.weightstats
-
         # assumes symmetric distribution
         stat = (self.predicted_mean - value) / self.se_mean
 
@@ -83,10 +81,10 @@ class PredictionResults(object):
             raise ValueError('invalid alternative')
         return stat, pvalue
 
-
     def conf_int(self, method='endpoint', alpha=0.05, **kwds):
         """
-        Returns the confidence interval of the value, `effect` of the constraint.
+        Returns the confidence interval of the value, `effect` of the
+        constraint.
 
         This is currently only available for t and z tests.
 
@@ -122,7 +120,6 @@ class PredictionResults(object):
 
         return ci
 
-
     def summary_frame(self, what='all', alpha=0.05):
         # TODO: finish and cleanup
         import pandas as pd
@@ -135,7 +132,6 @@ class PredictionResults(object):
         to_include['mean_ci_lower'] = ci_mean[:, 0]
         to_include['mean_ci_upper'] = ci_mean[:, 1]
 
-
         self.table = to_include
         #OrderedDict doesn't work to preserve sequence
         # pandas dict doesn't handle 2d_array
@@ -147,7 +143,8 @@ class PredictionResults(object):
 
 
 def get_prediction_glm(self, exog=None, transform=True, weights=None,
-                   row_labels=None, linpred=None, link=None, pred_kwds=None):
+                       row_labels=None, linpred=None, link=None,
+                       pred_kwds=None):
     """
     compute prediction results
 
@@ -178,10 +175,10 @@ def get_prediction_glm(self, exog=None, transform=True, weights=None,
 
     """
 
-    ### prepare exog and row_labels, based on base Results.predict
+    # prepare exog and row_labels, based on base Results.predict
     if transform and hasattr(self.model, 'formula') and exog is not None:
         from patsy import dmatrix
-        exog = dmatrix(self.model.data.design_info.builder,
+        exog = dmatrix(self.model.data.design_info,
                        exog)
 
     if exog is not None:
@@ -236,7 +233,7 @@ def get_prediction_glm(self, exog=None, transform=True, weights=None,
 
 
 def params_transform_univariate(params, cov_params, link=None, transform=None,
-                     row_labels=None):
+                                row_labels=None):
     """
     results for univariate, nonlinear, monotonicaly transformed parameters
 
@@ -265,9 +262,9 @@ def params_transform_univariate(params, cov_params, link=None, transform=None,
 
     # TODO: need ci for linear prediction, method of `lin_pred
     linpred = PredictionResults(params, np.diag(cov_params), dist=dist,
-                             row_labels=row_labels, link=links.identity())
+                                row_labels=row_labels, link=links.identity())
 
     res = PredictionResults(predicted_mean, var_pred_mean, dist=dist,
-                             row_labels=row_labels, linpred=linpred, link=link)
+                            row_labels=row_labels, linpred=linpred, link=link)
 
     return res
