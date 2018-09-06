@@ -7,6 +7,7 @@ Author: Josef Perktold
 """
 
 import numpy as np
+import pytest
 import scipy.sparse as sparse
 from numpy.testing import (assert_almost_equal, assert_allclose,
                            assert_equal)
@@ -16,6 +17,9 @@ from statsmodels.stats.correlation_tools import (
     corr_thresholded, cov_nearest_factor_homog, FactoredPSDMatrix)
 
 import warnings
+
+# ignore PendingDeprecationWarning due to matrix conversion in SciPy
+pytestmark = pytest.mark.filterwarnings('ignore:matrix subclass')
 
 def norm_f(x, y):
     '''Frobenious norm (squared sum) of difference between two arrays

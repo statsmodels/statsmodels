@@ -475,9 +475,11 @@ def _func(a, p, r, v):
         f += -0.002 / (1. + 12. * _phi(p)**2)
 
         if v <= 4.364:
-            f += 1./517. - 1./(312.*(v,1e38)[np.isinf(v)])
+            v = v if not np.isinf(v) else 1e38
+            f += 1. / 517. - 1. / (312. * v)
         else:
-            f += 1./(191.*(v,1e38)[np.isinf(v)])
+            v = v if not np.isinf(v) else 1e38
+            f += 1. / (191. * v)
 
     return -f
 
@@ -578,10 +580,11 @@ def _interpolate_p(p, r, v):
 
     else:
         # linear interpolation in q and p
+        v = min(v, 1e38)
         q0 = math.sqrt(2) * -y0 * \
-             scipy.stats.t.isf((1.+p0)/2., (v,1e38)[v>1e38])
+             scipy.stats.t.isf((1.+p0)/2., v)
         q1 = math.sqrt(2) * -y1 * \
-             scipy.stats.t.isf((1.+p1)/2., (v,1e38)[v>1e38])
+             scipy.stats.t.isf((1.+p1)/2., v)
 
         d1 = (q1-q0)/(p1-p0)
         d0 = q0
@@ -590,8 +593,9 @@ def _interpolate_p(p, r, v):
         q = d1 * (p-p0) + d0
 
         # transform back to y
+        v = min(v, 1e38)
         y = -q / (math.sqrt(2) * \
-                  scipy.stats.t.isf((1.+p)/2., (v,1e38)[v>1e38]))
+                  scipy.stats.t.isf((1.+p)/2., v))
 
     return y
 
@@ -751,8 +755,8 @@ def _qsturng(p, r, v):
     elif p not in p_keys:
         y = _interpolate_p(p, r, v)
 
-    return math.sqrt(2) * -y * \
-           scipy.stats.t.isf((1.+p)/2., (v,1e38)[v>1e38])
+    v = min(v, 1e38)
+    return math.sqrt(2) * -y * scipy.stats.t.isf((1. + p) / 2., v)
 
 # make a qsturng functinon that will accept list-like objects
 _vqsturng = np.vectorize(_qsturng)

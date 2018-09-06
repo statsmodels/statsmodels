@@ -359,15 +359,6 @@ if __name__ == '__main__':
     print('fd', numdiff.approx_fprime(test_params,score,epsilon))
     print('cs', numdiff.approx_fprime_cs(test_params, score))
 
-    #print('fd', numdiff.approx_hess(test_params, loglike, epsilon)) #TODO: bug
-    '''
-    Traceback (most recent call last):
-      File "C:\Josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\sandbox\regression\test_numdiff.py", line 74, in <module>
-        print('fd', numdiff.approx_hess(test_params, loglike, epsilon))
-      File "C:\Josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\sandbox\regression\numdiff.py", line 118, in approx_hess
-        xh = x + h
-    TypeError: can only concatenate list (not "float") to list
-    '''
     hesscs = numdiff.approx_hess_cs(test_params, loglike)
     print('cs', hesscs)
     print(maxabs(hess(test_params), hesscs))

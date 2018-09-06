@@ -769,7 +769,7 @@ class TestRegCoefC(object):
         n = np.shape(Y)[0]
         lam = np.empty(shape=(self.nres, ))
         for i in range(self.nres):
-            ind = np.random.random_integers(0, n-1, size=(n,1))
+            ind = np.random.randint(0, n, size=(n, 1))
             Y1 = Y[ind, 0]
             X1 = X[ind, :]
             lam[i] = self._compute_lambda(Y1, X1)
@@ -798,7 +798,7 @@ class TestRegCoefC(object):
         e = Y - M
         e = e - np.mean(e)  # recenter residuals
         for i in range(self.nboot):
-            ind = np.random.random_integers(0, n-1, size=(n,1))
+            ind = np.random.randint(0, n, size=(n, 1))
             e_boot = e[ind, 0]
             Y_boot = M + e_boot
             t_dist[i] = self._compute_test_stat(Y_boot, self.exog)
