@@ -102,7 +102,7 @@ out2py <- function(model, name, resid_csv = FALSE){
 
 control <- glm.control(epsilon = 1e-25, maxit = 100)
 
-data = read.csv('../statsmodels/datasets/fair/fair.csv')
+data = read.csv('../../../datasets/fair/fair.csv')
 data$weights <- rep(1, length(data$rate_marriage))
 data$weights[seq(1, length(data$rate_marriage), 5)] <- 5
 data$weights[seq(1, length(data$rate_marriage), 13)] <- 3
@@ -115,7 +115,7 @@ model <- glm(affairs ~ 1 + age + yrs_married,
 
 out2py(model, "results_tweedie_aweights_nonrobust", "results_tweedie_aweights_nonrobust.csv")
 
-data <- read.csv('../statsmodels/genmod/tests/results/stata_cancer_glm.csv')
+data <- read.csv('stata_cancer_glm.csv')
 data$weights <- rep(1, length(data$studytime))
 data$weights[seq(1, length(data$studytime), 5)] <- 5
 data$weights[seq(1, length(data$studytime), 13)] <- 3
@@ -129,7 +129,7 @@ model <- glm(studytime ~ 1 + age + drug,
 
 out2py(model, "results_gamma_aweights_nonrobust")
 
-data <- read.csv('../statsmodels/datasets/cpunish/cpunish.csv')
+data <- read.csv('../../../datasets/cpunish/cpunish.csv')
 data$INCOME <- data$INCOME / 1000
 data$weight <- c(1, 2, 3, 4, 5, 4, 3, 2, 1, 2, 3, 4, 5, 4, 3, 2, 1)
 
