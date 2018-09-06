@@ -16,7 +16,7 @@ from distutils.version import LooseVersion
 
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_allclose, assert_raises,
-                           assert_equal, assert_warns, dec)
+                           assert_equal, dec)
 import pytest
 import scipy
 
@@ -762,8 +762,9 @@ def test_power_solver_warn():
     nip.start_ttp['nobs1'] = np.nan
 
     from statsmodels.tools.sm_exceptions import ConvergenceWarning
-    assert_warns(ConvergenceWarning, nip.solve_power, 0.1, nobs1=None,
-                  alpha=0.01, power=pow_, ratio=1, alternative='larger')
+    with pytest.warns(ConvergenceWarning):
+        nip.solve_power(0.1, nobs1=None,
+                        alpha=0.01, power=pow_, ratio=1, alternative='larger')
     # this converges with scipy 0.11  ???
     # nip.solve_power(0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative='larger')
 
