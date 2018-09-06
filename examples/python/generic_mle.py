@@ -69,13 +69,13 @@ print(sm_probit_manual.cov_params())
 # log-likelihood (type NB-2) function expressed as:
 # 
 # $$
-#     \mathcal{L}(\beta_j; y, \alpha) = \sum_{i=1}^n y_i ln 
+#     \mathcal{L}(\beta_j; y, \alpha) = \sum_{i=1}^n y_i ln
 #     \left ( \frac{\alpha exp(X_i'\beta)}{1+\alpha exp(X_i'\beta)} \right ) -
 #     \frac{1}{\alpha} ln(1+\alpha exp(X_i'\beta)) + ln \Gamma (y_i + 1/\alpha) - ln \Gamma (y_i+1) - ln \Gamma (1/\alpha)
 # $$
 # 
 # with a matrix of regressors $X$, a vector of coefficients $\beta$,
-# and the negative binomial heterogeneity parameter $\alpha$. 
+# and the negative binomial heterogeneity parameter $\alpha$.
 # 
 # Using the ``nbinom`` distribution from ``scipy``, we can write this likelihood
 # simply as:
@@ -103,13 +103,13 @@ from statsmodels.base.model import GenericLikelihoodModel
 class NBin(GenericLikelihoodModel):
     def __init__(self, endog, exog, **kwds):
         super(NBin, self).__init__(endog, exog, **kwds)
-        
+
     def nloglikeobs(self, params):
         alph = params[-1]
         beta = params[:-1]
         ll = _ll_nb2(self.endog, self.exog, beta, alph)
-        return -ll 
-    
+        return -ll
+
     def fit(self, start_params=None, maxiter=10000, maxfun=5000, **kwds):
         # we have one additional parameter and we need to add it for summary
         self.exog_names.append('alpha')
@@ -118,16 +118,16 @@ class NBin(GenericLikelihoodModel):
             start_params = np.append(np.zeros(self.exog.shape[1]), .5)
             # intercept
             start_params[-2] = np.log(self.endog.mean())
-        return super(NBin, self).fit(start_params=start_params, 
-                                     maxiter=maxiter, maxfun=maxfun, 
-                                     **kwds) 
+        return super(NBin, self).fit(start_params=start_params,
+                                     maxiter=maxiter, maxfun=maxfun,
+                                     **kwds)
 
 
-# Two important things to notice: 
+# Two important things to notice:
 # 
-# + ``nloglikeobs``: This function should return one evaluation of the negative log-likelihood function per observation in your dataset (i.e. rows of the endog/X matrix). 
+# + ``nloglikeobs``: This function should return one evaluation of the negative log-likelihood function per observation in your dataset (i.e. rows of the endog/X matrix).
 # + ``start_params``: A one-dimensional array of starting values needs to be provided. The size of this array determines the number of parameters that will be used in optimization.
-#    
+# 
 # That's it! You're done!
 # 
 # ### Usage Example
@@ -135,7 +135,7 @@ class NBin(GenericLikelihoodModel):
 # The [Medpar](https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/doc/COUNT/medpar.html)
 # dataset is hosted in CSV format at the [Rdatasets repository](https://raw.githubusercontent.com/vincentarelbundock/Rdatasets). We use the ``read_csv``
 # function from the [Pandas library](http://pandas.pydata.org) to load the data
-# in memory. We then print(the first few columns: 
+# in memory. We then print(the first few columns:
 # 
 
 import statsmodels.api as sm
@@ -157,7 +157,7 @@ X = medpar[["type2", "type3", "hmo", "white"]]
 X["constant"] = 1
 
 
-# Then, we fit the model and extract some information: 
+# Then, we fit the model and extract some information:
 
 mod = NBin(y, X)
 res = mod.fit()
@@ -197,7 +197,7 @@ print(res_nbin.bse)
 #     url = 'https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/csv/COUNT/medpar.csv'
 #     medpar = read.csv(url)
 #     f = los~factor(type)+hmo+white
-#     
+# 
 #     library(MASS)
 #     mod = glm.nb(f, medpar)
 #     coef(summary(mod))
@@ -208,7 +208,7 @@ print(res_nbin.bse)
 #     hmo           -0.06795522 0.05321375 -1.277024  2.015939e-01
 #     white         -0.12906544 0.06836272 -1.887951  5.903257e-02
 # 
-# ### Numerical precision 
+# ### Numerical precision
 # 
 # The ``statsmodels`` generic MLE and ``R`` parameter estimates agree up to the fourth decimal. The standard errors, however, agree only up to the second decimal. This discrepancy is the result of imprecision in our Hessian numerical estimates. In the current context, the difference between ``MASS`` and ``statsmodels`` standard error estimates is substantively irrelevant, but it highlights the fact that users who need very precise estimates may not always want to rely on default settings when using numerical derivatives. In such cases, it is better to use analytical derivatives with the ``LikelihoodModel`` class.
 # 

@@ -40,7 +40,7 @@ results = model.fit()
 print(results.summary())
 
 
-# Quantities of interest can be extracted directly from the fitted model. Type ``dir(results)`` for a full list. Here are some examples:  
+# Quantities of interest can be extracted directly from the fitted model. Type ``dir(results)`` for a full list. Here are some examples:
 
 print('Parameters: ', results.params)
 print('R2: ', results.rsquared)
@@ -84,7 +84,7 @@ ax.plot(x, y_true, 'b-', label="True")
 ax.plot(x, res.fittedvalues, 'r--.', label="OLS")
 ax.plot(x, iv_u, 'r--')
 ax.plot(x, iv_l, 'r--')
-ax.legend(loc='best');
+ax.legend(loc='best')
 
 
 # ## OLS with dummy variables
@@ -155,7 +155,7 @@ print(res2.f_test("x2 = x3 = 0"))
 
 # ### Small group effects
 # 
-# If we generate artificial data with smaller group effects, the T test can no longer reject the Null hypothesis: 
+# If we generate artificial data with smaller group effects, the T test can no longer reject the Null hypothesis:
 
 beta = [1., 0.3, -0.0, 10]
 y_true = np.dot(X, beta)
@@ -172,7 +172,7 @@ print(res3.f_test("x2 = x3 = 0"))
 
 # ### Multicollinearity
 # 
-# The Longley dataset is well known to have high multicollinearity. That is, the exogenous predictors are highly correlated. This is problematic because it can affect the stability of our coefficient estimates as we make minor changes to model specification. 
+# The Longley dataset is well known to have high multicollinearity. That is, the exogenous predictors are highly correlated. This is problematic because it can affect the stability of our coefficient estimates as we make minor changes to model specification.
 
 from statsmodels.datasets.longley import load_pandas
 y = load_pandas().endog
@@ -189,7 +189,7 @@ print(ols_results.summary())
 
 # #### Condition number
 # 
-# One way to assess multicollinearity is to compute the condition number. Values over 20 are worrisome (see Greene 4.9). The first step is to normalize the independent variables to have unit length: 
+# One way to assess multicollinearity is to compute the condition number. Values over 20 are worrisome (see Greene 4.9). The first step is to normalize the independent variables to have unit length:
 
 for i, name in enumerate(X):
     if name == "const":
@@ -198,7 +198,7 @@ for i, name in enumerate(X):
 norm_xtx = np.dot(norm_x.T,norm_x)
 
 
-# Then, we take the square root of the ratio of the biggest to the smallest eigen values. 
+# Then, we take the square root of the ratio of the biggest to the smallest eigenvalues.
 
 eigs = np.linalg.eigvals(norm_xtx)
 condition_number = np.sqrt(eigs.max() / eigs.min())
@@ -207,7 +207,7 @@ print(condition_number)
 
 # #### Dropping an observation
 # 
-# Greene also points out that dropping a single observation can have a dramatic effect on the coefficient estimates: 
+# Greene also points out that dropping a single observation can have a dramatic effect on the coefficient estimates:
 
 ols_results2 = sm.OLS(y.iloc[:14], X.iloc[:14]).fit()
 print("Percentage change %4.2f%%\n"*7 % tuple([i for i in (ols_results2.params - ols_results.params)/ols_results.params*100]))

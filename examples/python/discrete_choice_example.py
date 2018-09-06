@@ -28,7 +28,7 @@ print(dta.head(10))
 print(dta.describe())
 
 
-affair_mod = logit("affair ~ occupation + educ + occupation_husb" 
+affair_mod = logit("affair ~ occupation + educ + occupation_husb"
                    "+ rate_marriage + age + yrs_married + children"
                    " + religious", dta).fit()
 
@@ -51,9 +51,9 @@ respondent1000 = dta.iloc[1000]
 print(respondent1000)
 
 
-resp = dict(zip(range(1,9), respondent1000[["occupation", "educ", 
-                                            "occupation_husb", "rate_marriage", 
-                                            "age", "yrs_married", "children", 
+resp = dict(zip(range(1,9), respondent1000[["occupation", "educ",
+                                            "occupation_husb", "rate_marriage",
+                                            "age", "yrs_married", "children",
                                             "religious"]].tolist()))
 resp.update({0 : 1})
 print(resp)
@@ -81,7 +81,7 @@ ax = fig.add_subplot(111)
 support = np.linspace(-6, 6, 1000)
 ax.plot(support, stats.logistic.cdf(support), 'r-', label='Logistic')
 ax.plot(support, stats.norm.cdf(support), label='Probit')
-ax.legend();
+ax.legend()
 
 
 fig = plt.figure(figsize=(12,8))
@@ -89,12 +89,12 @@ ax = fig.add_subplot(111)
 support = np.linspace(-6, 6, 1000)
 ax.plot(support, stats.logistic.pdf(support), 'r-', label='Logistic')
 ax.plot(support, stats.norm.pdf(support), label='Probit')
-ax.legend();
+ax.legend()
 
 
 # Compare the estimates of the Logit Fair model above to a Probit model. Does the prediction table look better? Much difference in marginal effects?
 
-#### Genarlized Linear Model Example
+#### Generalized Linear Model Example
 
 print(sm.datasets.star98.SOURCE)
 
@@ -137,7 +137,7 @@ glm_mod = glm(formula, dta, family=sm.families.Binomial()).fit()
 print(glm_mod.summary())
 
 
-# The number of trials 
+# The number of trials
 
 glm_mod.model.data.orig_endog.sum(1)
 
@@ -189,7 +189,7 @@ fig = abline_plot(model_results=y_vs_yhat, ax=ax)
 
 ##### Plot fitted values vs Pearson residuals
 
-# Pearson residuals are defined to be 
+# Pearson residuals are defined to be
 # 
 # $$\frac{(y - \mu)}{\sqrt{(var(\mu))}}$$
 # 
@@ -200,27 +200,27 @@ ax = fig.add_subplot(111, title='Residual Dependence Plot', xlabel='Fitted Value
                           ylabel='Pearson Residuals')
 ax.scatter(yhat, stats.zscore(glm_mod.resid_pearson))
 ax.axis('tight')
-ax.plot([0.0, 1.0],[0.0, 0.0], 'k-');
+ax.plot([0.0, 1.0],[0.0, 0.0], 'k-')
 
 
 ##### Histogram of standardized deviance residuals with Kernel Density Estimate overlayed
 
-# The definition of the deviance residuals depends on the family. For the Binomial distribution this is 
+# The definition of the deviance residuals depends on the family. For the Binomial distribution this is
 # 
 # $$r_{dev} = sign\(Y-\mu\)*\sqrt{2n(Y\log\frac{Y}{\mu}+(1-Y)\log\frac{(1-Y)}{(1-\mu)}}$$
 # 
 # They can be used to detect ill-fitting covariates
 
 resid = glm_mod.resid_deviance
-resid_std = stats.zscore(resid) 
+resid_std = stats.zscore(resid)
 kde_resid = sm.nonparametric.KDEUnivariate(resid_std)
 kde_resid.fit()
 
 
 fig = plt.figure(figsize=(12,8))
 ax = fig.add_subplot(111, title="Standardized Deviance Residuals")
-ax.hist(resid_std, bins=25, normed=True);
-ax.plot(kde_resid.support, kde_resid.density, 'r');
+ax.hist(resid_std, bins=25, normed=True)
+ax.plot(kde_resid.support, kde_resid.density, 'r')
 
 
 ##### QQ-plot of deviance residuals

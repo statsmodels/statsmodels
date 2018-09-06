@@ -7,17 +7,16 @@ from scipy import stats
 import matplotlib.pyplot as plt
 
 import statsmodels.api as sm
-from statsmodels.compat.pandas import sort_values
 
 
-# * An M-estimator minimizes the function 
+# * An M-estimator minimizes the function
 # 
 # $$Q(e_i, \rho) = \sum_i~\rho \left (\frac{e_i}{s}\right )$$
 # 
-# where $\rho$ is a symmetric function of the residuals 
+# where $\rho$ is a symmetric function of the residuals
 # 
 # * The effect of $\rho$ is to reduce the influence of outliers
-# * $s$ is an estimate of scale. 
+# * $s$ is an estimate of scale.
 # * The robust estimates $\hat{\beta}$ are computed by the iteratively re-weighted least squares algorithm
 
 # * We have several choices available for the weighting functions to be used
@@ -43,7 +42,7 @@ help(norms.AndrewWave.weights)
 a = 1.339
 support = np.linspace(-np.pi*a, np.pi*a, 100)
 andrew = norms.AndrewWave(a=a)
-plot_weights(support, andrew.weights, ['$-\pi*a$', '0', '$\pi*a$'], [-np.pi*a, 0, np.pi*a]);
+plot_weights(support, andrew.weights, ['$-\pi*a$', '0', '$\pi*a$'], [-np.pi*a, 0, np.pi*a])
 
 
 #### Hampel's 17A
@@ -54,7 +53,7 @@ help(norms.Hampel.weights)
 c = 8
 support = np.linspace(-3*c, 3*c, 1000)
 hampel = norms.Hampel(a=2., b=4., c=c)
-plot_weights(support, hampel.weights, ['3*c', '0', '3*c'], [-3*c, 0, 3*c]);
+plot_weights(support, hampel.weights, ['3*c', '0', '3*c'], [-3*c, 0, 3*c])
 
 
 #### Huber's t
@@ -65,7 +64,7 @@ help(norms.HuberT.weights)
 t = 1.345
 support = np.linspace(-3*t, 3*t, 1000)
 huber = norms.HuberT(t=t)
-plot_weights(support, huber.weights, ['-3*t', '0', '3*t'], [-3*t, 0, 3*t]);
+plot_weights(support, huber.weights, ['-3*t', '0', '3*t'], [-3*t, 0, 3*t])
 
 
 #### Least Squares
@@ -75,7 +74,7 @@ help(norms.LeastSquares.weights)
 
 support = np.linspace(-3, 3, 1000)
 lst_sq = norms.LeastSquares()
-plot_weights(support, lst_sq.weights, ['-3', '0', '3'], [-3, 0, 3]);
+plot_weights(support, lst_sq.weights, ['-3', '0', '3'], [-3, 0, 3])
 
 
 #### Ramsay's Ea
@@ -86,7 +85,7 @@ help(norms.RamsayE.weights)
 a = .3
 support = np.linspace(-3*a, 3*a, 1000)
 ramsay = norms.RamsayE(a=a)
-plot_weights(support, ramsay.weights, ['-3*a', '0', '3*a'], [-3*a, 0, 3*a]);
+plot_weights(support, ramsay.weights, ['-3*a', '0', '3*a'], [-3*a, 0, 3*a])
 
 
 #### Trimmed Mean
@@ -97,7 +96,7 @@ help(norms.TrimmedMean.weights)
 c = 2
 support = np.linspace(-3*c, 3*c, 1000)
 trimmed = norms.TrimmedMean(c=c)
-plot_weights(support, trimmed.weights, ['-3*c', '0', '3*c'], [-3*c, 0, 3*c]);
+plot_weights(support, trimmed.weights, ['-3*c', '0', '3*c'], [-3*c, 0, 3*c])
 
 
 #### Tukey's Biweight
@@ -108,7 +107,7 @@ help(norms.TukeyBiweight.weights)
 c = 4.685
 support = np.linspace(-3*c, 3*c, 1000)
 tukey = norms.TukeyBiweight(c=c)
-plot_weights(support, tukey.weights, ['-3*c', '0', '3*c'], [-3*c, 0, 3*c]);
+plot_weights(support, tukey.weights, ['-3*c', '0', '3*c'], [-3*c, 0, 3*c])
 
 
 #### Scale Estimators
@@ -169,7 +168,7 @@ kde = sm.nonparametric.KDE(fat_tails)
 kde.fit()
 fig = plt.figure(figsize=(12,8))
 ax = fig.add_subplot(111)
-ax.plot(kde.support, kde.density);
+ax.plot(kde.support, kde.density)
 
 
 print(fat_tails.mean(), fat_tails.std())
@@ -214,7 +213,7 @@ xy_outlier = prestige.loc['minister'][['income','prestige']]
 ax1.annotate('Minister', xy_outlier, xy_outlier+1, fontsize=16)
 ax2 = fig.add_subplot(212, xlabel='Education',
                            ylabel='Prestige')
-ax2.scatter(prestige.education, prestige.prestige);
+ax2.scatter(prestige.education, prestige.prestige)
 
 
 ols_model = ols('prestige ~ income + education', prestige).fit()
@@ -233,12 +232,12 @@ print(infl.summary_frame().loc['minister'])
 
 
 sidak = ols_model.outlier_test('sidak')
-sort_values(sidak, 'unadj_p', inplace=True)
+sidak.sort_values('unadj_p', inplace=True)
 print(sidak)
 
 
 fdr = ols_model.outlier_test('fdr_bh')
-sort_values(fdr, 'unadj_p', inplace=True)
+fdr.sort_values('unadj_p', inplace=True)
 print(fdr)
 
 
@@ -262,7 +261,7 @@ ax = fig.add_subplot(111, xlabel='log(Temp)', ylabel='log(Light)', title='Hertzs
 ax.scatter(*dta.values.T)
 # highlight outliers
 e = Ellipse((3.5, 6), .2, 1, alpha=.25, color='r')
-ax.add_patch(e);
+ax.add_patch(e)
 ax.annotate('Red giants', xy=(3.6, 6), xytext=(3.8, 6),
             arrowprops=dict(facecolor='black', shrink=0.05, width=2),
             horizontalalignment='left', verticalalignment='bottom',
@@ -300,12 +299,12 @@ hat_diag.loc[hat_diag > h_bar]
 
 
 sidak2 = ols_model.outlier_test('sidak')
-sort_values(sidak2, 'unadj_p', inplace=True)
+sidak2.sort_values('unadj_p', inplace=True)
 print(sidak2)
 
 
 fdr2 = ols_model.outlier_test('fdr_bh')
-sort_values(fdr2, 'unadj_p', inplace=True)
+fdr2.sort_values('unadj_p', inplace=True)
 print(fdr2)
 
 
@@ -320,7 +319,7 @@ wls_model = sm.WLS(y, X, weights=weights).fit()
 abline_plot(model_results=wls_model, ax=ax, color='green')
 
 
-# * MM estimators are good for this type of problem, unfortunately, we don't yet have these yet. 
+# * MM estimators are good for this type of problem, unfortunately, we don't yet have these yet.
 # * It's being worked on, but it gives a good excuse to look at the R cell magics in the notebook.
 
 yy = y.values[:,None]
