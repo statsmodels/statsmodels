@@ -91,7 +91,7 @@ out2py <- function(model, name, resid_csv = FALSE){
   
   if (is.character(resid_csv)) {
     write.csv(r, resid_csv, row.names = FALSE)
-    cat(sprintf("csv_path = dir_path + '/%s'\n", resid_csv))
+    cat(sprintf("csv_path = os.path.join(dir_path, '%s')\n", resid_csv))
     cat(sprintf("resids = np.array(pd.read_csv(csv_path))\n"))
     cat(sprintf("res['resids'] = resids\n"))
   } else {
