@@ -36,7 +36,7 @@ problem with definition of df_model, it has 1 subtracted for constant
 from __future__ import print_function
 from statsmodels.compat.python import range, lrange
 import numpy as np
-from statsmodels.tools.decorators import (cache_readonly)
+from statsmodels.tools.decorators import cache_readonly
 import statsmodels.base.model as base
 from statsmodels.regression.linear_model import OLS, GLS, RegressionResults
 
@@ -44,7 +44,7 @@ from statsmodels.regression.linear_model import OLS, GLS, RegressionResults
 def atleast_2dcols(x):
     x = np.asarray(x)
     if x.ndim == 1:
-        x = x[:,None]
+        x = x[:, None]
     return x
 
 
@@ -59,8 +59,8 @@ class TheilGLS(GLS):
 
     .. math:: q = R \beta + v
 
-    :math:`E(u) = 0`, :math:`cov(u) = \Sigma`
-    :math:`cov(u, v) = \Sigma_p`, with full rank.
+    :math:`E(u) = 0`, :math:`cov(u) = \\Sigma`
+    :math:`cov(u, v) = \\Sigma_p`, with full rank.
 
     u and v are assumed to be independent of each other.
     If :math:`E(v) = 0`, then the estimator is unbiased.
