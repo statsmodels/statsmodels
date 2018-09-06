@@ -124,7 +124,6 @@ def parse_lutkepohl_data(path): # pragma: no cover
 
     from collections import deque
     from datetime import datetime
-    import pandas
     import re
 
     regex = re.compile(asbytes(r'<(.*) (\w)([\d]+)>.*'))

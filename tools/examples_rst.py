@@ -140,7 +140,6 @@ def restify(example_file, filehash, fname):
 
 if __name__ == "__main__":
     sys.path.insert(0, example_dir)
-    from run_all import filelist
     sys.path.remove(example_dir)
 
     if not os.path.exists(docs_rst_dir):

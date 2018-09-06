@@ -1852,7 +1852,6 @@ def test_bad_start_params():
 
 def test_arima_small_data_bug():
     # Issue 1038, too few observations with given order
-    from datetime import datetime
     import statsmodels.api as sm
 
     vals = [96.2, 98.3, 99.1, 95.5, 94.0, 87.1, 87.9, 86.7402777504474]
@@ -1866,7 +1865,6 @@ def test_arima_small_data_bug():
 
 def test_arima_dataframe_integer_name():
     # Smoke Test for Issue 1038
-    from datetime import datetime
     import statsmodels.api as sm
 
     vals = [96.2, 98.3, 99.1, 95.5, 94.0, 87.1, 87.9, 86.7402777504474,
