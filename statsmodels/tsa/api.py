@@ -11,7 +11,10 @@ from . import tsatools
 from .tsatools import (add_trend, detrend, lagmat, lagmat2ds, add_lag)
 from . import interp
 from . import stattools
-from .stattools import *
+from .stattools import (
+    acovf, acf, pacf, pacf_yw, pacf_ols, ccovf, ccf,
+    periodogram, q_stat, coint, arma_order_select_ic,
+    adfuller, kpss, bds)
 from .base import datetools
 from .seasonal import seasonal_decompose
 from ..graphics import tsaplots as graphics

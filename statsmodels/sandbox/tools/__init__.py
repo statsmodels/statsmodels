@@ -7,4 +7,4 @@ pca : tested against matlab
 pcasvd : tested against matlab
 '''
 
-from .tools_pca import * #pca, pcasvd
+from .tools_pca import pca, pcasvd
