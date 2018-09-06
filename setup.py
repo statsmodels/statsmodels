@@ -523,21 +523,20 @@ if __name__ == "__main__":
     # and *.csv and *.txt files in test/results folders
     package_data = get_data_files()
     packages = find_packages()
-    packages.append("statsmodels.tsa.vector_ar.data")
 
     package_data["statsmodels.datasets.tests"].append("*.zip")
     package_data["statsmodels.iolib.tests.results"].append("*.dta")
     package_data["statsmodels.stats.tests.results"].append("*.json")
-    package_data["statsmodels.tsa.vector_ar.tests.results"].append("*.npz")
+
     # data files that don't follow the tests/results pattern. should fix.
+    package_data.update({"statsmodels.tsa.vector_ar.tests.results":
+                        ["*.npz", "*.dat"]})
     package_data.update({"statsmodels.stats.tests" : ["*.txt"]})
 
     package_data.update({"statsmodels.stats.libqsturng" :
                          ["*.r", "*.txt", "*.dat"]})
     package_data.update({"statsmodels.stats.libqsturng.tests" :
                          ["*.csv", "*.dat"]})
-    package_data.update({"statsmodels.tsa.vector_ar.data" : ["*.dat"]})
-    package_data.update({"statsmodels.tsa.vector_ar.data" : ["*.dat"]})
     # temporary, until moved:
     package_data.update({"statsmodels.sandbox.regression.tests" :
                          ["*.dta", "*.csv"]})
