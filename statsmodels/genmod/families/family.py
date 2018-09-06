@@ -78,7 +78,9 @@ class Family(object):
             warnmssg = "Calling Family(..) with a link class as argument "
             warnmssg += "is deprecated.\n"
             warnmssg += "Use an instance of a link class instead."
-            warnings.warn(warnmssg, category=DeprecationWarning)
+            lvl = 2 if type(self) is Family else 3
+            warnings.warn(warnmssg,
+                          category=DeprecationWarning, stacklevel=lvl)
             self.link = link()
         else:
             self.link = link

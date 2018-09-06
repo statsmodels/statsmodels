@@ -1162,7 +1162,7 @@ class InvGauss(object):
 #        hyperbolic random variables seems to be the canonical ref
 #        Y = np.dot(X,params) + np.random.wald(mu, sigma, 1000)
 #        model = GLM(Y, X, family=models.family.InverseGaussian(link=\
-#            models.family.links.identity))
+#            models.family.links.identity()))
 
     def __init__(self):
         # set up data #
