@@ -39,6 +39,5 @@ build_script:
   - python setup.py develop
 
 test_script:
-  # Remove xdist until warning reporting is working
   - echo pytest -n auto -r s statsmodels --skip-examples %PYTEST_DIRECTIVES%
   - pytest -n auto -r s statsmodels --skip-examples %PYTEST_DIRECTIVES%
