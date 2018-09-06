@@ -776,7 +776,7 @@ class TestRegCoefC(object):
         but slows down computation significantly.
         """
         n = np.shape(Y)[0]
-        lam = np.empty(shape=(self.nres, ))
+        lam = np.empty(shape=(self.nres,))
         for i in range(self.nres):
             ind = np.random.randint(0, n, size=(n, 1))
             Y1 = Y[ind, 0]
@@ -802,7 +802,7 @@ class TestRegCoefC(object):
         X[:, self.test_vars] = np.mean(X[:, self.test_vars], axis=0)
         # Calculate the restricted mean. See p. 372 in [8]
         M = KernelReg(Y, X, self.var_type, self.model.reg_type, self.bw,
-                      defaults = EstimatorSettings(efficient=False)).fit()[0]
+                      defaults=EstimatorSettings(efficient=False)).fit()[0]
         M = np.reshape(M, (n, 1))
         e = Y - M
         e = e - np.mean(e)  # recenter residuals
