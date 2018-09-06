@@ -523,7 +523,7 @@ if __name__ == "__main__":
     # and *.csv and *.txt files in test/results folders
     package_data = get_data_files()
     packages = find_packages()
-    packages.append("statsmodels.tsa.vector_ar.data")
+    packages.append("statsmodels.tsa.vector_ar.tests.data")
 
     package_data["statsmodels.datasets.tests"].append("*.zip")
     package_data["statsmodels.iolib.tests.results"].append("*.dta")
@@ -536,8 +536,7 @@ if __name__ == "__main__":
                          ["*.r", "*.txt", "*.dat"]})
     package_data.update({"statsmodels.stats.libqsturng.tests" :
                          ["*.csv", "*.dat"]})
-    package_data.update({"statsmodels.tsa.vector_ar.data" : ["*.dat"]})
-    package_data.update({"statsmodels.tsa.vector_ar.data" : ["*.dat"]})
+    package_data.update({"statsmodels.tsa.vector_ar.tests.data" : ["*.dat"]})
     # temporary, until moved:
     package_data.update({"statsmodels.sandbox.regression.tests" :
                          ["*.dta", "*.csv"]})

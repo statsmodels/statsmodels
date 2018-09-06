@@ -12,8 +12,8 @@ import pytest
 #      with no events, entry times after censoring times, etc.
 
 # All the R results
-from . import survival_r_results
-from . import survival_enet_r_results
+from .results import survival_r_results
+from .results import survival_enet_r_results
 
 """
 Tests of PHReg against R coxph.

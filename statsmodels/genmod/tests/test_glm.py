@@ -1929,7 +1929,7 @@ class TestRegularized(object):
     def test_regularized(self):
 
         import os
-        from . import glmnet_r_results
+        from .results import glmnet_r_results
 
         for dtype in "binomial", "poisson":
 

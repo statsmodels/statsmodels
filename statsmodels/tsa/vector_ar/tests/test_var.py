@@ -483,7 +483,7 @@ resultspath = basepath + '/tsa/vector_ar/tests/results/'
 
 
 def get_lutkepohl_data(name='e2'):
-    lut_data = basepath + '/tsa/vector_ar/data/'
+    lut_data = basepath + '/tsa/vector_ar/tests/data/'
     path = lut_data + '%s.dat' % name
 
     return util.parse_lutkepohl_data(path)

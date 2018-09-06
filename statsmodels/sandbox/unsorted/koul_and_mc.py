@@ -1,3 +1,7 @@
+# TODO: This file was moved from emplike.koul_and_mc, where it would
+#   have raised an OSError if it were ever imported.  See if it can be made
+#   into a useful test or example
+
 from statsmodels.compat.python import range
 import statsmodels.api as sm
 import numpy as np
