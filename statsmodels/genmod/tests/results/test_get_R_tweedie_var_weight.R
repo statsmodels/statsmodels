@@ -65,23 +65,24 @@ class Bunch(dict):
         dict.__init__(self, kw)
         self.__dict__  = self
 
+
 ")
 
 out2py <- function(model, name, resid_csv = FALSE){
-  cat("res = dict() \n")
+  cat("res = dict()\n")
   pyprint(model$coefficients, prefix = "res['params'] = ")
   pyprint(diag(vcov(model))^0.5, prefix = "res['bse'] = ")
-  cat(sprintf("res['deviance'] = %f \n", model$deviance))
+  cat(sprintf("res['deviance'] = %f\n", model$deviance))
   
   ll = logLik(model)
   
   if (is.na(ll)) {
-    cat("res['ll'] = np.nan \n")
+    cat("res['ll'] = np.nan\n")
   } else {
-    cat(sprintf("res['ll'] = %f \n", ll))
+    cat(sprintf("res['ll'] = %f\n", ll))
   }
   
-  cat("res['resids_colnames'] = ['resid_response', 'resid_pearson', 'resid_deviance', 'resid_working'] \n" )
+  cat("res['resids_colnames'] = ['resid_response', 'resid_pearson', 'resid_deviance', 'resid_working']\n" )
   
   r <- cbind(residuals.glm(model, 'response'),
              residuals.glm(model, 'pearson'),
@@ -96,7 +97,7 @@ out2py <- function(model, name, resid_csv = FALSE){
   } else {
     pyprint(r, "res['resids'] = ")
   }
-  cat(sprintf("%s = Bunch(**res) \n \n", name))
+  cat(sprintf("%s = Bunch(**res)\n\n", name))
 }
 
 control <- glm.control(epsilon = 1e-25, maxit = 100)
