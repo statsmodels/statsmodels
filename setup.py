@@ -2,7 +2,7 @@ import fnmatch
 import os
 import sys
 from collections import defaultdict
-from os.path import relpath, join as pjoin
+from os.path import relpath, abspath, split, join as pjoin
 
 import pkg_resources
 
@@ -70,10 +70,10 @@ EXTRAS_REQUIRE = {'build': ['cython>=' + CYTHON_MIN_VER],
 ###############################################################################
 # Values that rarely change
 ###############################################################################
-
 DISTNAME = 'statsmodels'
 DESCRIPTION = 'Statistical computations and models for Python'
-with open(pjoin(os.getcwd(), 'README.rst')) as readme:
+SETUP_DIR = split(abspath(__file__))[0]
+with open(pjoin(SETUP_DIR, 'README.rst')) as readme:
     README = readme.read()
 LONG_DESCRIPTION = README
 MAINTAINER = 'Josef Perktold, Chad Fulton, Kerby Shedden'
