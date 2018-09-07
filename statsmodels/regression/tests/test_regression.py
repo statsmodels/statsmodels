@@ -265,6 +265,7 @@ class TestRTO(CheckRegressionResults):
         res_qr = OLS(data.endog, data.exog).fit(method="qr")
         cls.res_qr = res_qr
 
+
 class TestFtest(object):
     """
     Tests f_test vs. RegressionResults
@@ -288,6 +289,7 @@ class TestFtest(object):
 
     def test_Df_num(self):
         assert_equal(self.Ftest.df_num, 6)
+
 
 class TestFTest2(object):
     """
@@ -315,7 +317,7 @@ class TestFTest2(object):
 
     def test_pvalue(self):
         assert_almost_equal(self.Ftest1.pvalue, 0.0056052885317493459,
-                DECIMAL_4)
+                            DECIMAL_4)
 
     def test_df_denom(self):
         assert_equal(self.Ftest1.df_denom, 9)
@@ -354,12 +356,12 @@ class TestFtestQ(object):
     def test_df_num(self):
         assert_equal(self.Ftest1.df_num, 5)
 
+
 class TestTtest(object):
     """
     Test individual t-tests.  Ie., are the coefficients significantly
     different than zero.
-
-        """
+    """
     @classmethod
     def setup_class(cls):
         data = longley.load(as_pandas=False)
@@ -380,8 +382,9 @@ class TestTtest(object):
         assert_almost_equal(self.Ttest.sd, self.res1.bse, DECIMAL_4)
 
     def test_pvalue(self):
-        assert_almost_equal(self.Ttest.pvalue, student_t.sf(
-            np.abs(self.res1.tvalues), self.res1.model.df_resid)*2,
+        expected = 2 * student_t.sf(np.abs(self.res1.tvalues),
+                                    self.res1.model.df_resid)
+        assert_almost_equal(self.Ttest.pvalue, expected,
                             DECIMAL_4)
 
     def test_df_denom(self):
@@ -389,6 +392,7 @@ class TestTtest(object):
 
     def test_effect(self):
         assert_almost_equal(self.Ttest.effect, self.res1.params)
+
 
 class TestTtest2(object):
     """
@@ -422,6 +426,7 @@ class TestTtest2(object):
 
     def test_effect(self):
         assert_almost_equal(self.Ttest1.effect, -1829.2025687186533, DECIMAL_4)
+
 
 class TestGLS(object):
     """
@@ -485,6 +490,7 @@ class TestGLS(object):
         assert_equal(mod.endog.shape[0], 13)
         assert_equal(mod.exog.shape[0], 13)
         assert_equal(mod.sigma.shape, (13, 13))
+
 
 class TestGLS_alt_sigma(CheckRegressionResults):
     """
@@ -594,7 +600,6 @@ class TestLM(object):
                                                     use_lr=True)
         LMstat2 = LMstat_OLS[0]
         assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
-
 
     def test_LM_nonnested(self):
         assert_raises(ValueError, self.res2_restricted.compare_lm_test,
@@ -758,8 +763,7 @@ def test_wls_tss():
 class TestWLSScalarVsArray(CheckRegressionResults):
     @classmethod
     def setup_class(cls):
-        from statsmodels.datasets.longley import load
-        dta = load(as_pandas=False)
+        dta = longley.load(as_pandas=False)
         dta.exog = add_constant(dta.exog, prepend=True)
         wls_scalar = WLS(dta.endog, dta.exog, weights=1./3).fit()
         weights = [1/3.] * len(dta.endog)
@@ -881,7 +885,8 @@ class TestGLS_large_data(TestDataDimensions):
         cls.ols_res = OLS(y, X).fit()
 
     def test_large_equal_params(self):
-        assert_almost_equal(self.ols_res.params, self.gls_res.params, DECIMAL_7)
+        assert_almost_equal(self.ols_res.params, self.gls_res.params,
+                            DECIMAL_7)
 
     def test_large_equal_loglike(self):
         assert_almost_equal(self.ols_res.llf, self.gls_res.llf, DECIMAL_7)
@@ -999,7 +1004,7 @@ def test_summary():
 Warnings: \\newline
  [1] Standard Errors assume that the covariance matrix of the errors is correctly specified. \\newline
  [2] The condition number is large, 4.86e+09. This might indicate that there are \\newline
- strong multicollinearity or other numerical problems."""
+ strong multicollinearity or other numerical problems."""  # noqa:E501
     assert_equal(table, expected)
 
 
@@ -1139,8 +1144,6 @@ def test_fvalue_implicit_constant():
     x = ((x > 0) == [True, False]).astype(int)
     y = x.sum(1) + np.random.randn(nobs)
 
-    from statsmodels.regression.linear_model import OLS, WLS
-
     res = OLS(y, x).fit(cov_type='HC1')
     assert_(np.isnan(res.fvalue))
     assert_(np.isnan(res.f_pvalue))
@@ -1158,8 +1161,6 @@ def test_fvalue_only_constant():
     np.random.seed(2)
     x = np.ones(nobs)
     y = np.random.randn(nobs)
-
-    from statsmodels.regression.linear_model import OLS, WLS
 
     res = OLS(y, x).fit(cov_type='hac', cov_kwds={'maxlags': 3})
     assert_(np.isnan(res.fvalue))
@@ -1222,7 +1223,7 @@ def test_regularized_predict():
     yvec = xmat.sum(1) + np.random.normal(size=n)
     wgt = np.random.uniform(1, 2, n)
 
-    for klass in WLS, GLS:
+    for klass in [WLS, GLS]:
         model1 = klass(yvec, xmat,  weights=wgt)
         result1 = model1.fit_regularized(alpha=2., L1_wt=0.5, refit=True)
 
@@ -1234,6 +1235,7 @@ def test_regularized_predict():
 
         pr = result1.predict()
         assert_allclose(fittedvalues, pr)
+
 
 def test_regularized_options():
     n = 100
@@ -1276,3 +1278,18 @@ def test_burg_errors():
         burg(np.random.randn(100), 0)
     with pytest.raises(ValueError):
         burg(np.random.randn(100), 'apple')
+
+
+def test_str():
+    # check that str(RegressionResults) returns a string instead of just
+    # printing one.  GH#5026, GH#4618
+
+    # TODO: make a fixture for tests that just need any valid Results object
+    #   or possibly to provide such an object for each extant model class?
+    data = longley.load_pandas()
+    endog = data.endog
+    exog = add_constant(data.exog)
+
+    model = OLS(endog, exog)
+    result = model.fit()
+    assert str(result) is not None
