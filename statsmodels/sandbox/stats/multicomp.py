@@ -1012,29 +1012,6 @@ def rankdata(x):
 
 #new
 
-def compare_ordered(vals, alpha):
-    '''simple ordered sequential comparison of means
-
-    vals : array_like
-        means or rankmeans for independent groups
-
-    incomplete, no return, not used yet
-    '''
-    vals = np.asarray(vals)
-    alphaf = alpha  # Notation ?
-    sortind = np.argsort(vals)
-    pvals = vals[sortind]
-    sortrevind = sortind.argsort()
-    ntests = len(vals)
-    #alphacSidak = 1 - np.power((1. - alphaf), 1./ntests)
-    #alphacBonf = alphaf / float(ntests)
-    v1, v2 = np.triu_indices(ntests, 1)
-    #v1,v2 have wrong sequence
-    for i in range(4):
-        for j in range(4,i, -1):
-            print(i,j)
-
-
 
 def varcorrection_unbalanced(nobs_all, srange=False):
     '''correction factor for variance with unequal sample sizes
@@ -1120,53 +1097,6 @@ def varcorrection_pairs_unbalanced(nobs_all, srange=False):
     else:
         return (1./n1 + 1./n2) / 2.
 
-def varcorrection_unequal(var_all, nobs_all, df_all):
-    '''return joint variance from samples with unequal variances and unequal
-    sample sizes
-
-    something is wrong
-
-    Parameters
-    ----------
-    var_all : array_like
-        The variance for each sample
-    nobs_all : array_like
-        The number of observations for each sample
-    df_all : array_like
-        degrees of freedom for each sample
-
-    Returns
-    -------
-    varjoint : float
-        joint variance.
-    dfjoint : float
-        joint Satterthwait's degrees of freedom
-
-
-    Notes
-    -----
-    (copy, paste not correct)
-    variance is
-
-    1/k * sum_i 1/n_i
-
-    where k is the number of samples and summation is over i=0,...,k-1.
-    If all n_i are the same, then the correction factor is 1/n.
-
-    This needs to be multiplies by the joint variance estimate, means square
-    error, MSE. To obtain the correction factor for the standard deviation,
-    square root needs to be taken.
-
-    This is for variance of mean difference not of studentized range.
-    '''
-
-    var_all = np.asarray(var_all)
-    var_over_n = var_all *1./ nobs_all  #avoid integer division
-    varjoint = var_over_n.sum()
-
-    dfjoint = varjoint**2 / (var_over_n**2 * df_all).sum()
-
-    return varjoint, dfjoint
 
 def varcorrection_pairs_unequal(var_all, nobs_all, df_all):
     '''return joint variance from samples with unequal variances and unequal
