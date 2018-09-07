@@ -481,8 +481,7 @@ class PandasData(ModelData):
 
     @classmethod
     def _drop_nans_2d(cls, x, nan_mask):
-        if hasattr(x, 'loc'):
-            # i.e. is pandas Series/DataFrame
+        if isinstance(x, (pd.Series, pd.DataFrame)):
             return x.loc[nan_mask].loc[:, nan_mask]
         else:  # extra arguments could be plain ndarrays
             return super(PandasData, cls)._drop_nans_2d(x, nan_mask)
