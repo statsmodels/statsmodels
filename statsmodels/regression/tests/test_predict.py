@@ -10,7 +10,7 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 
 from statsmodels.regression.linear_model import OLS, WLS
-from statsmodels.sandbox.regression.predstd import wls_prediction_std
+from statsmodels.regression._tools import wls_prediction_std
 from statsmodels.regression._prediction import get_prediction
 
 

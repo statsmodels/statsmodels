@@ -18,7 +18,7 @@ from patsy import dmatrix
 from statsmodels.regression.linear_model import OLS, GLS, WLS
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod.generalized_estimating_equations import GEE
-from statsmodels.sandbox.regression.predstd import wls_prediction_std
+from statsmodels.regression._tools import wls_prediction_std
 from statsmodels.graphics import utils
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.tools.tools import maybe_unwrap_results
