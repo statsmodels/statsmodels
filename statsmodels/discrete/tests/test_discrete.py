@@ -418,7 +418,7 @@ class TestProbitBasinhopping(CheckBinaryResults):
 
     @classmethod
     def setup_class(cls):
-        data = sm.datasets.spector.load()
+        data = sm.datasets.spector.load(as_pandas=False)
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
         res2.probit()

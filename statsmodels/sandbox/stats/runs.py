@@ -22,7 +22,7 @@ TODO
 from __future__ import print_function
 import numpy as np
 from scipy import stats
-from scipy.misc import comb
+from scipy.special import comb
 import warnings
 
 class Runs(object):

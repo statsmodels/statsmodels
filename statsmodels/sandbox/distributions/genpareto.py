@@ -9,7 +9,7 @@ Author: josef-pktd
 from __future__ import print_function
 import numpy as np
 from scipy import stats
-from scipy.misc import comb
+from scipy.special import comb
 from scipy.stats.distributions import rv_continuous
 
 from numpy import where, inf

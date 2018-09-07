@@ -192,14 +192,14 @@ def test_varmax():
     varmax.__warningregistry__ = {}
 
     # VAR(2) - single series
-    mod1 = varmax.VARMAX([[0]], order=(2, 0), trend='nc')
+    mod1 = varmax.VARMAX([[0]], order=(2, 0), trend='n')
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 0))
     actual = mod1.impulse_responses([0.5, 0.2, 1], steps)
     desired = mod2.impulse_responses([0.5, 0.2, 1], steps)
     assert_allclose(actual, desired)
 
     # VMA(2) - single series
-    mod1 = varmax.VARMAX([[0]], order=(0, 2), trend='nc')
+    mod1 = varmax.VARMAX([[0]], order=(0, 2), trend='n')
     mod2 = sarimax.SARIMAX([0], order=(0, 0, 2))
     actual = mod1.impulse_responses([0.5, 0.2, 1], steps)
     desired = mod2.impulse_responses([0.5, 0.2, 1], steps)
@@ -208,7 +208,7 @@ def test_varmax():
     # VARMA(2, 2) - single series
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='nc')
+        mod1 = varmax.VARMAX([[0]], order=(2, 2), trend='n')
     mod2 = sarimax.SARIMAX([0], order=(2, 0, 2))
     actual = mod1.impulse_responses([0.5, 0.2, 0.1, -0.2, 1], steps)
     desired = mod2.impulse_responses([0.5, 0.2, 0.1, -0.2, 1], steps)

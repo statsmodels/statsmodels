@@ -20,9 +20,9 @@ def test_cov2corr():
     corr = cov2corr(cov_a)
     assert_almost_equal(corr, corr_a, decimal=15)
 
-    cov_mat = np.matrix(cov_a)
+    cov_mat = cov_a
     corr_mat = cov2corr(cov_mat)
-    assert_(isinstance(corr_mat, np.matrixlib.defmatrix.matrix))
+    assert_(isinstance(corr_mat, np.ndarray))
     assert_equal(corr_mat, corr)
 
     cov_ma = np.ma.array(cov_a)

@@ -475,7 +475,7 @@ class PandasData(ModelData):
 
     @classmethod
     def _drop_nans(cls, x, nan_mask):
-        if hasattr(x, 'ix'):
+        if isinstance(x, (Series, DataFrame)):
             return x.loc[nan_mask]
         else:  # extra arguments could be plain ndarrays
             return super(PandasData, cls)._drop_nans(x, nan_mask)

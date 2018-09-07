@@ -470,11 +470,11 @@ def test_summary():
     txt = str(res.summary())
 
     # Test res.summary when the model has dates
-    assert_equal(re.search('Sample:\s+01-01-1980', txt) is not None, True)
-    assert_equal(re.search('\s+- 01-01-1984', txt) is not None, True)
+    assert_equal(re.search(r'Sample:\s+01-01-1980', txt) is not None, True)
+    assert_equal(re.search(r'\s+- 01-01-1984', txt) is not None, True)
 
     # Test res.summary when `model_name` was not provided
-    assert_equal(re.search('Model:\s+MLEModel', txt) is not None, True)
+    assert_equal(re.search(r'Model:\s+MLEModel', txt) is not None, True)
 
     # Smoke test that summary still works when diagnostic tests fail
     with warnings.catch_warnings():
@@ -867,7 +867,7 @@ def test_lutkepohl_information_criteria():
     # (use loglikelihood_burn=1 to mimic conditional MLE used by Stata's var
     # command).
     true = results_var_misc.lutkepohl_var1_lustats
-    mod = varmax.VARMAX(endog, order=(1, 0), trend='nc',
+    mod = varmax.VARMAX(endog, order=(1, 0), trend='n',
                         error_cov_type='unstructured', loglikelihood_burn=1,)
     res = mod.filter(true['params'])
     assert_allclose(res.llf, true['loglike'])
