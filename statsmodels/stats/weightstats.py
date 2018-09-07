@@ -36,7 +36,7 @@ compared yet.
 import numpy as np
 from scipy import stats
 
-from statsmodels.tools.decorators import OneTimeProperty
+from statsmodels.tools.decorators import cache_readonly
 
 
 class DescrStatsW(object):
@@ -106,37 +106,37 @@ class DescrStatsW(object):
         if weights is None:
             self.weights = np.ones(self.data.shape[0])
         else:
-            #why squeeze?
+            # TODO: why squeeze?
             self.weights = np.asarray(weights).squeeze().astype(float)
         self.ddof = ddof
 
 
-    @OneTimeProperty
+    @cache_readonly
     def sum_weights(self):
         return self.weights.sum(0)
 
-    @OneTimeProperty
+    @cache_readonly
     def nobs(self):
         '''alias for number of observations/cases, equal to sum of weights
         '''
         return self.sum_weights
 
-    @OneTimeProperty
+    @cache_readonly
     def sum(self):
         '''weighted sum of data'''
         return np.dot(self.data.T, self.weights)
 
-    @OneTimeProperty
+    @cache_readonly
     def mean(self):
         '''weighted mean of data'''
         return self.sum / self.sum_weights
 
-    @OneTimeProperty
+    @cache_readonly
     def demeaned(self):
         '''data with weighted mean subtracted'''
         return self.data - self.mean
 
-    @OneTimeProperty
+    @cache_readonly
     def sumsquares(self):
         '''weighted sum of squares of demeaned data'''
         return np.dot((self.demeaned**2).T, self.weights)
@@ -172,13 +172,13 @@ class DescrStatsW(object):
         '''
         return np.sqrt(self.var_ddof(ddof=ddof))
 
-    @OneTimeProperty
+    @cache_readonly
     def var(self):
         '''variance with default degrees of freedom correction
         '''
         return self.sumsquares / (self.sum_weights - self.ddof)
 
-    @OneTimeProperty
+    @cache_readonly
     def _var(self):
         '''variance without degrees of freedom correction
 
@@ -186,13 +186,13 @@ class DescrStatsW(object):
         '''
         return self.sumsquares / self.sum_weights
 
-    @OneTimeProperty
+    @cache_readonly
     def std(self):
         '''standard deviation with default degrees of freedom correction
         '''
         return np.sqrt(self.var)
 
-    @OneTimeProperty
+    @cache_readonly
     def cov(self):
         '''weighted covariance of data if data is 2 dimensional
 
@@ -203,7 +203,7 @@ class DescrStatsW(object):
         cov_ /= (self.sum_weights - self.ddof)
         return cov_
 
-    @OneTimeProperty
+    @cache_readonly
     def corrcoef(self):
         '''weighted correlation with default ddof
 
@@ -211,7 +211,7 @@ class DescrStatsW(object):
         '''
         return self.cov / self.std / self.std[:,None]
 
-    @OneTimeProperty
+    @cache_readonly
     def std_mean(self):
         '''standard deviation of weighted mean
         '''
@@ -814,14 +814,14 @@ class CompareMeans(object):
                 alpha=alpha, use_t=use_t, yname=yname, xname=xname,
                 title=title)
 
-    @OneTimeProperty
+    @cache_readonly
     def std_meandiff_separatevar(self):
         #this uses ``_var`` to use ddof=0 for formula
         d1 = self.d1
         d2 = self.d2
         return np.sqrt(d1._var / (d1.nobs-1) + d2._var / (d2.nobs-1))
 
-    @OneTimeProperty
+    @cache_readonly
     def std_meandiff_pooledvar(self):
         '''variance assuming equal variance in both data sets
 
