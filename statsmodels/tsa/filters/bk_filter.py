@@ -71,26 +71,31 @@ def bkfilter(X, low=6, high=32, K=12):
     statsmodels.tsa.filters.hp_filter.hpfilter
     statsmodels.tsa.seasonal.seasonal_decompose
     """
-    #TODO: change the docstring to ..math::?
-    #TODO: allow windowing functions to correct for Gibb's Phenomenon?
+    # TODO: change the docstring to ..math::?
+    # TODO: allow windowing functions to correct for Gibb's Phenomenon?
     # adjust bweights (symmetrically) by below before demeaning
     # Lancosz Sigma Factors np.sinc(2*j/(2.*K+1))
     _pandas_wrapper = _maybe_get_pandas_wrapper(X, K, K)
     X = np.asarray(X)
-    omega_1 = 2.*np.pi/high # convert from freq. to periodicity
+
+    omega_1 = 2.*np.pi/high  # convert from freq. to periodicity
     omega_2 = 2.*np.pi/low
+
     bweights = np.zeros(2*K+1)
-    bweights[K] = (omega_2 - omega_1)/np.pi # weight at zero freq.
-    j = np.arange(1,int(K)+1)
+    bweights[K] = (omega_2 - omega_1)/np.pi  # weight at zero freq.
+    j = np.arange(1, int(K)+1)
+
     weights = 1/(np.pi*j)*(np.sin(omega_2*j)-np.sin(omega_1*j))
-    bweights[K+j] = weights # j is an idx
-    bweights[:K] = weights[::-1] # make symmetric weights
-    bweights -= bweights.mean() # make sure weights sum to zero
+
+    bweights[K+j] = weights       # j is an idx
+    bweights[:K] = weights[::-1]  # make symmetric weights
+    bweights -= bweights.mean()   # make sure weights sum to zero
     if X.ndim == 2:
-        bweights = bweights[:,None]
+        bweights = bweights[:, None]
+
     X = fftconvolve(X, bweights, mode='valid')
     # get a centered moving avg/convolution
+
     if _pandas_wrapper is not None:
         return _pandas_wrapper(X)
-
     return X

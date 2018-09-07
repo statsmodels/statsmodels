@@ -19,8 +19,7 @@ if [ "$LINT" == true ]; then
         statsmodels/resampling/ \
         statsmodels/interface/ \
         statsmodels/iolib/smpickle.py \
-        statsmodels.iolib/tests/test_pickle.py \
-        statsmodels/tsa/regime_switching \
+        statsmodels/iolib/tests/test_pickle.py \
         statsmodels/regression/mixed_linear_model.py \
         statsmodels/duration/__init__.py \
         statsmodels/regression/recursive_ls.py \
@@ -29,6 +28,8 @@ if [ "$LINT" == true ]; then
         statsmodels/tools/decorators.py \
         statsmodels/tools/tests/test_decorators.py \
         statsmodels/tsa/base/tests/test_datetools.py \
+        statsmodels/tsa/filters/ \
+        statsmodels/tsa/regime_switching \
         statsmodels/tsa/vector_ar/dynamic.py \
         statsmodels/tsa/vector_ar/hypothesis_test_results.py \
         statsmodels/tsa/statespace/*.py \
