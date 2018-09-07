@@ -593,9 +593,7 @@ def _interpolate_p(p, r, v):
         q = d1 * (p-p0) + d0
 
         # transform back to y
-        v = min(v, 1e38)
-        y = -q / (math.sqrt(2) * \
-                  scipy.stats.t.isf((1.+p)/2., v))
+        y = -q / (math.sqrt(2) * scipy.stats.t.isf((1.+p)/2., v))
 
     return y
 
