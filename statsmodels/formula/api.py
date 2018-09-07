@@ -21,8 +21,8 @@ poisson = dm.Poisson.from_formula
 negativebinomial = dm.NegativeBinomial.from_formula
 quantreg = qr.QuantReg.from_formula
 phreg = hr.PHReg.from_formula
-gee = gee.GEE.from_formula
 ordinal_gee = gee.OrdinalGEE.from_formula
 nominal_gee = gee.NominalGEE.from_formula
+gee = gee.GEE.from_formula
 
 del lm, dm, mlm, glm, roblm, qr, hr, gee
