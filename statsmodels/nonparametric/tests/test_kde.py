@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from statsmodels.distributions.mixture_rvs import mixture_rvs
 from statsmodels.nonparametric.kde import KDEUnivariate as KDE
-import statsmodels.sandbox.nonparametric.kernels as kernels
+import statsmodels.nonparametric.kernels as kernels
 from scipy import stats
 
 # get results from Stata

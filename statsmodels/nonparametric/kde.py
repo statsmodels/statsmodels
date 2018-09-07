@@ -15,9 +15,9 @@ from __future__ import absolute_import, print_function, division
 from statsmodels.compat.python import range
 import numpy as np
 from scipy import integrate, stats
-from statsmodels.sandbox.nonparametric import kernels
+
 from statsmodels.tools.decorators import (cache_readonly, resettable_cache)
-from . import bandwidths
+from . import bandwidths, kernels
 from .kdetools import (forrt, revrt, silverman_transform)
 from .linbin import fast_linbin
 

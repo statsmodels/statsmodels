@@ -11,7 +11,7 @@ from __future__ import print_function
 from statsmodels.compat.python import long
 
 import numpy as np
-from . import kernels
+from statsmodels.nonparametric import kernels
 #import numbers
 #from scipy.linalg import solveh_banded
 #from scipy.optimize import golden

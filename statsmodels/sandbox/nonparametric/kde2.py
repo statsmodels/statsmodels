@@ -2,7 +2,7 @@
 from __future__ import print_function
 from statsmodels.compat.python import lzip, zip
 import numpy as np
-from . import kernels
+from statsmodels.nonparametric import kernels
 
 
 #TODO: should this be a function?
