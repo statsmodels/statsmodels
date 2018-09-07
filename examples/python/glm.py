@@ -88,7 +88,7 @@ abline_plot(model_results=line_fit, ax=ax)
 
 ax.set_title('Model Fit Plot')
 ax.set_ylabel('Observed values')
-ax.set_xlabel('Fitted values')
+ax.set_xlabel('Fitted values');
 
 
 # Plot yhat vs. Pearson residuals:
@@ -112,7 +112,7 @@ fig, ax = plt.subplots()
 resid = res.resid_deviance.copy()
 resid_std = stats.zscore(resid)
 ax.hist(resid_std, bins=25)
-ax.set_title('Histogram of standardized deviance residuals')
+ax.set_title('Histogram of standardized deviance residuals');
 
 
 # QQ Plot of Deviance Residuals:

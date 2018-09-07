@@ -25,7 +25,7 @@ dta.index = pd.Index(sm.tsa.datetools.dates_from_range('1700', '2008'))
 del dta["YEAR"]
 
 
-dta.plot(figsize=(12,8))
+dta.plot(figsize=(12,8));
 
 
 fig = plt.figure(figsize=(12,8))
@@ -58,7 +58,7 @@ sm.stats.durbin_watson(arma_mod30.resid.values)
 
 fig = plt.figure(figsize=(12,8))
 ax = fig.add_subplot(111)
-ax = arma_mod30.resid.plot(ax=ax)
+ax = arma_mod30.resid.plot(ax=ax);
 
 
 resid = arma_mod30.resid
@@ -134,7 +134,7 @@ arma_t.isstationary
 
 fig = plt.figure(figsize=(12,8))
 ax = fig.add_subplot(111)
-ax.plot(arma_t.generate_sample(nsample=50))
+ax.plot(arma_t.generate_sample(nsample=50));
 
 
 arparams = np.array([1, .35, -.15, .55, .1])

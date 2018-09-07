@@ -40,8 +40,8 @@ for values, group in factor_groups:
     i,j = values
     plt.scatter(group['X'], group['S'], marker=symbols[j], color=colors[i-1],
                s=144)
-plt.xlabel('Experience')
-plt.ylabel('Salary')
+plt.xlabel('Experience');
+plt.ylabel('Salary');
 
 
 # Fit a linear model:
@@ -83,7 +83,7 @@ df_infl[:5]
 # Now plot the reiduals within the groups separately:
 
 resid = lm.resid
-plt.figure(figsize=(6,6))
+plt.figure(figsize=(6,6));
 for values, group in factor_groups:
     i,j = values
     group_num = i*2 + j - 1  # for plotting purposes
@@ -133,8 +133,8 @@ for values, group in factor_groups:
     idx = group.index
     plt.scatter(X[idx], resid[idx], marker=symbols[j], color=colors[i-1],
             s=144, edgecolors='black')
-plt.xlabel('X')
-plt.ylabel('standardized resids')
+plt.xlabel('X');
+plt.ylabel('standardized resids');
 
 
 # Looks like one observation is an outlier.
@@ -179,8 +179,8 @@ for values, group in factor_groups:
     idx = group.index
     plt.scatter(X[idx], resid[idx], marker=symbols[j], color=colors[i-1],
             s=144, edgecolors='black')
-plt.xlabel('X[~[32]]')
-plt.ylabel('standardized resids')
+plt.xlabel('X[~[32]]');
+plt.ylabel('standardized resids');
 
 
 #  Plot the fitted values
@@ -198,8 +198,8 @@ for values, group in factor_groups:
     # drop NA because there is no idx 32 in the final model
     plt.plot(mf.X[idx].dropna(), lm_final.fittedvalues[idx].dropna(),
             ls=lstyle[j], color=colors[i-1])
-plt.xlabel('Experience')
-plt.ylabel('Salary')
+plt.xlabel('Experience');
+plt.ylabel('Salary');
 
 
 # From our first look at the data, the difference between Master's and PhD in the management group is different than in the non-management group. This is an interaction between the two qualitative variables management,M and education,E. We can visualize this by first removing the effect of experience, then plotting the means within each of the 6 groups using interaction.plot.
@@ -227,65 +227,65 @@ markers = ['o', 'v']
 for factor, group in factor_group:
     plt.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
-plt.xlabel('TEST')
-plt.ylabel('JPERF')
+plt.xlabel('TEST');
+plt.ylabel('JPERF');
 
 min_lm = ols('JPERF ~ TEST', data=jobtest_table).fit()
 print(min_lm.summary())
 
-plt.figure(figsize=(6,6))
+plt.figure(figsize=(6,6));
 for factor, group in factor_group:
     plt.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
 
 plt.xlabel('TEST')
 plt.ylabel('JPERF')
-abline_plot(model_results = min_lm, ax=plt.gca())
+abline_plot(model_results = min_lm, ax=plt.gca());
 
 min_lm2 = ols('JPERF ~ TEST + TEST:ETHN',
         data=jobtest_table).fit()
 
 print(min_lm2.summary())
 
-plt.figure(figsize=(6,6))
+plt.figure(figsize=(6,6));
 for factor, group in factor_group:
     plt.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
 
 abline_plot(intercept = min_lm2.params['Intercept'],
-                 slope = min_lm2.params['TEST'], ax=plt.gca(), color='purple')
+                 slope = min_lm2.params['TEST'], ax=plt.gca(), color='purple');
 abline_plot(intercept = min_lm2.params['Intercept'],
         slope = min_lm2.params['TEST'] + min_lm2.params['TEST:ETHN'],
-        ax=plt.gca(), color='green')
+        ax=plt.gca(), color='green');
 
 
 min_lm3 = ols('JPERF ~ TEST + ETHN', data = jobtest_table).fit()
 print(min_lm3.summary())
 
-plt.figure(figsize=(6,6))
+plt.figure(figsize=(6,6));
 for factor, group in factor_group:
     plt.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
 
 abline_plot(intercept = min_lm3.params['Intercept'],
-                 slope = min_lm3.params['TEST'], ax=plt.gca(), color='purple')
+                 slope = min_lm3.params['TEST'], ax=plt.gca(), color='purple');
 abline_plot(intercept = min_lm3.params['Intercept'] + min_lm3.params['ETHN'],
-        slope = min_lm3.params['TEST'], ax=plt.gca(), color='green')
+        slope = min_lm3.params['TEST'], ax=plt.gca(), color='green');
 
 
 min_lm4 = ols('JPERF ~ TEST * ETHN', data = jobtest_table).fit()
 print(min_lm4.summary())
 
-plt.figure(figsize=(6,6))
+plt.figure(figsize=(6,6));
 for factor, group in factor_group:
     plt.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
 
 abline_plot(intercept = min_lm4.params['Intercept'],
-                 slope = min_lm4.params['TEST'], ax=plt.gca(), color='purple')
+                 slope = min_lm4.params['TEST'], ax=plt.gca(), color='purple');
 abline_plot(intercept = min_lm4.params['Intercept'] + min_lm4.params['ETHN'],
         slope = min_lm4.params['TEST'] + min_lm4.params['TEST:ETHN'],
-        ax=plt.gca(), color='green')
+        ax=plt.gca(), color='green');
 
 
 # is there any effect of ETHN on slope or intercept?

@@ -76,7 +76,7 @@ fig = sm.graphics.plot_partregress("prestige", "income", ["income", "education"]
 ax = fig.axes[0]
 
 ax.set_xlim(-2e-15, 1e-14)
-ax.set_ylim(-25, 30)
+ax.set_ylim(-25, 30);
 
 
 fix, ax = plt.subplots(figsize=(12,14))

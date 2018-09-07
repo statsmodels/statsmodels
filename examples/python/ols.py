@@ -84,7 +84,7 @@ ax.plot(x, y_true, 'b-', label="True")
 ax.plot(x, res.fittedvalues, 'r--.', label="OLS")
 ax.plot(x, iv_u, 'r--')
 ax.plot(x, iv_l, 'r--')
-ax.legend(loc='best')
+ax.legend(loc='best');
 
 
 # ## OLS with dummy variables

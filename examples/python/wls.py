@@ -87,7 +87,7 @@ ax.plot(x, iv_l_ols, 'r--')
 ax.plot(x, res_wls.fittedvalues, 'g--.')
 ax.plot(x, iv_u, 'g--', label="WLS")
 ax.plot(x, iv_l, 'g--')
-ax.legend(loc="best")
+ax.legend(loc="best");
 
 
 # ## Feasible Weighted Least Squares (2-stage FWLS)

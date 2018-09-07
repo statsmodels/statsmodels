@@ -11,7 +11,7 @@ np.random.seed(12345)
 weight = Series(np.repeat(['low', 'hi', 'low', 'hi'], 15), name='weight')
 nutrition = Series(np.repeat(['lo_carb', 'hi_carb'], 30), name='nutrition')
 days = np.log(np.random.randint(1, 30, size=60))
-plt.figure(figsize=(6, 6))
+plt.figure(figsize=(6, 6));
 interaction_plot(x=weight, trace=nutrition, response=days,
                  colors=['red', 'blue'], markers=['D', '^'], ms=10)
 

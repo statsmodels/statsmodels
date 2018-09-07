@@ -81,7 +81,7 @@ ax = fig.add_subplot(111)
 support = np.linspace(-6, 6, 1000)
 ax.plot(support, stats.logistic.cdf(support), 'r-', label='Logistic')
 ax.plot(support, stats.norm.cdf(support), label='Probit')
-ax.legend()
+ax.legend();
 
 
 fig = plt.figure(figsize=(12,8))
@@ -89,7 +89,7 @@ ax = fig.add_subplot(111)
 support = np.linspace(-6, 6, 1000)
 ax.plot(support, stats.logistic.pdf(support), 'r-', label='Logistic')
 ax.plot(support, stats.norm.pdf(support), label='Probit')
-ax.legend()
+ax.legend();
 
 
 # Compare the estimates of the Logit Fair model above to a Probit model. Does the prediction table look better? Much difference in marginal effects?
@@ -200,7 +200,7 @@ ax = fig.add_subplot(111, title='Residual Dependence Plot', xlabel='Fitted Value
                           ylabel='Pearson Residuals')
 ax.scatter(yhat, stats.zscore(glm_mod.resid_pearson))
 ax.axis('tight')
-ax.plot([0.0, 1.0],[0.0, 0.0], 'k-')
+ax.plot([0.0, 1.0],[0.0, 0.0], 'k-');
 
 
 ##### Histogram of standardized deviance residuals with Kernel Density Estimate overlayed
@@ -219,8 +219,8 @@ kde_resid.fit()
 
 fig = plt.figure(figsize=(12,8))
 ax = fig.add_subplot(111, title="Standardized Deviance Residuals")
-ax.hist(resid_std, bins=25, normed=True)
-ax.plot(kde_resid.support, kde_resid.density, 'r')
+ax.hist(resid_std, bins=25, normed=True);
+ax.plot(kde_resid.support, kde_resid.density, 'r');
 
 
 ##### QQ-plot of deviance residuals

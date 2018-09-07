@@ -28,9 +28,9 @@ print(dta.head(10))
 
 fig = plt.figure(figsize=(12,8))
 ax = fig.add_subplot(111)
-dta.realgdp.plot(ax=ax)
-legend = ax.legend(loc = 'upper left')
-legend.prop.set_size(20)
+dta.realgdp.plot(ax=ax);
+legend = ax.legend(loc = 'upper left');
+legend.prop.set_size(20);
 
 
 #### Hodrick-Prescott Filter
@@ -53,9 +53,9 @@ gdp_decomp["trend"] = gdp_trend
 
 fig = plt.figure(figsize=(12,8))
 ax = fig.add_subplot(111)
-gdp_decomp[["realgdp", "trend"]]["2000-03-31":].plot(ax=ax, fontsize=16)
+gdp_decomp[["realgdp", "trend"]]["2000-03-31":].plot(ax=ax, fontsize=16);
 legend = ax.get_legend()
-legend.prop.set_size(20)
+legend.prop.set_size(20);
 
 
 #### Baxter-King approximate band-pass filter: Inflation and Unemployment
@@ -92,7 +92,7 @@ bk_cycles = sm.tsa.filters.bkfilter(dta[["infl","unemp"]])
 
 fig = plt.figure(figsize=(14,10))
 ax = fig.add_subplot(111)
-bk_cycles.plot(ax=ax, style=['r--', 'b-'])
+bk_cycles.plot(ax=ax, style=['r--', 'b-']);
 
 
 #### Christiano-Fitzgerald approximate band-pass filter: Inflation and Unemployment
@@ -124,7 +124,7 @@ print(cf_cycles.head(10))
 
 fig = plt.figure(figsize=(14,10))
 ax = fig.add_subplot(111)
-cf_cycles.plot(ax=ax, style=['r--','b-'])
+cf_cycles.plot(ax=ax, style=['r--','b-']);
 
 
 # Filtering assumes *a priori* that business cycles exist. Due to this assumption, many macroeconomic models seek to create models that match the shape of impulse response functions rather than replicating properties of filtered series. See VAR notebook.
