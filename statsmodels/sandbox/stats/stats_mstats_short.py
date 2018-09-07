@@ -311,13 +311,16 @@ def plotting_positions_w1d(data, weights=None, alpha=0.4, beta=0.4,
         res[xargsort] = (1.*ws-alpha)/(ws[-1]+1.-alpha-beta)
     return res
 
+
 def edf_normal_inverse_transformed(x, alpha=3./8, beta=3./8, axis=0):
     '''rank based normal inverse transformed cdf
     '''
     from scipy import stats
-    ranks = plotting_positions(data, alpha=alpha, beta=alpha, axis=0, masknan=False)
+    ranks = plotting_positions(x,
+                               alpha=alpha, beta=alpha, axis=0, masknan=False)
     ranks_transf = stats.norm.ppf(ranks)
     return ranks_transf
+
 
 if __name__ == '__main__':
 
