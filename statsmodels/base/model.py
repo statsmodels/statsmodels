@@ -1257,10 +1257,7 @@ class LikelihoodModelResults(Results):
         """
         Return the t-statistic for a given parameter estimate.
         """
-        with np.errstate(divide="ignore"):
-            # Don't issue RuntimeWarnings for division by zero.
-            tvals = self.params / self.bse
-        return tvals
+        return self.params / self.bse
 
     @cache_readonly
     def pvalues(self):
