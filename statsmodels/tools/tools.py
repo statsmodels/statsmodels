@@ -546,3 +546,25 @@ def _ensure_2d(x, ndarray=False):
         return np.asarray(x)[:, None], name
     else:
         return pd.DataFrame(x), name
+
+
+def leave_one_out(n):
+    """
+    Provides train/test indexes to split data in train/test sets
+
+    Simplified variant of sklearn LeaveOneOut.
+
+    Parameters
+    ----------
+    n : int
+
+    Yields
+    ------
+    train_index : np.ndarray
+    test_index : np.ndarray
+    """
+    for idx in range(n):
+        test_index  = np.zeros(n, dtype=np.bool)
+        test_index[idx] = True
+        train_index = np.logical_not(test_index)
+        yield train_index, test_index

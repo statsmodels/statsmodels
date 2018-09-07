@@ -392,40 +392,6 @@ class EstimatorSettings(object):
         self.n_jobs = n_jobs
 
 
-class LeaveOneOut(object):
-    """
-    Generator to give leave-one-out views on X.
-
-    Parameters
-    ----------
-    X : array-like
-        2-D array.
-
-    Examples
-    --------
-    >>> X = np.random.normal(0, 1, [10,2])
-    >>> loo = LeaveOneOut(X)
-    >>> for x in loo:
-    ...    print x
-
-    Notes
-    -----
-    A little lighter weight than sklearn LOO. We don't need test index.
-    Also passes views on X, not the index.
-    """
-    def __init__(self, X):
-        self.X = np.asarray(X)
-
-    def __iter__(self):
-        X = self.X
-        nobs, k_vars = np.shape(X)
-
-        for i in range(nobs):
-            index = np.ones(nobs, dtype=np.bool)
-            index[i] = False
-            yield X[index, :]
-
-
 def _get_type_pos(var_type):
     ix_cont = np.array([c == 'c' for c in var_type])
     ix_ord = np.array([c == 'o' for c in var_type])

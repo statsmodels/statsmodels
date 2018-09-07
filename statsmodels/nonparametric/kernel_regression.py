@@ -38,8 +38,9 @@ import numpy as np
 from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
+from statsmodels.tools.tools import leave_one_out
 from ._kernel_base import GenericKDE, EstimatorSettings, gpke, \
-    LeaveOneOut, _get_type_pos, _adjust_shape, _compute_min_std_IQR
+    _get_type_pos, _adjust_shape, _compute_min_std_IQR
 
 
 
@@ -301,8 +302,8 @@ class KernelReg(GenericKDE):
         and :math:`h` is the vector of bandwidths
 
         """
-        LOO_X = LeaveOneOut(self.exog)
-        LOO_Y = LeaveOneOut(self.endog).__iter__()
+        LOO_X = leave_one_out(len(self.exog))
+        LOO_Y = leave_one_out(len(self.endog)).__iter__()
         L = 0
         for ii, X_not_i in enumerate(LOO_X):
             Y = next(LOO_Y)
@@ -621,9 +622,9 @@ class KernelCensoredReg(KernelReg):
         and :math:`h` is the vector of bandwidths
 
         """
-        LOO_X = LeaveOneOut(self.exog)
-        LOO_Y = LeaveOneOut(self.endog).__iter__()
-        LOO_W = LeaveOneOut(self.W_in).__iter__()
+        LOO_X = leave_one_out(len(self.exog))
+        LOO_Y = leave_one_out(len(self.endog)).__iter__()
+        LOO_W = leave_one_out(len(self.W_in)).__iter__()
         L = 0
         for ii, X_not_i in enumerate(LOO_X):
             Y = next(LOO_Y)
