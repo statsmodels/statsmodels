@@ -59,8 +59,8 @@ class TheilGLS(GLS):
 
     .. math:: q = R \beta + v
 
-    :math:`E(u) = 0`, :math:`cov(u) = \\Sigma`
-    :math:`cov(u, v) = \\Sigma_p`, with full rank.
+    :math:`E(u) = 0`, :math:`cov(u) = \Sigma`
+    :math:`cov(u, v) = \Sigma_p`, with full rank.
 
     u and v are assumed to be independent of each other.
     If :math:`E(v) = 0`, then the estimator is unbiased.
