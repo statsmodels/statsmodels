@@ -94,3 +94,18 @@ x1    & -0.7500  & -1.5769   \\
 \begin{tabular}'''
         result = string_to_find in actual
         assert(result is True)
+
+
+class TestSummaryLabels(object):
+
+    def test_OLSsummary_rsquared_label(self):
+        # Check that the "uncentered" label is correctly added after rsquared
+        x = [1, 5, 7, 3, 5, 2, 5, 3]
+        y = [6, 4, 2, 7, 4, 9, 10, 2]
+        reg_with_constant = OLS(y, x, hasconst=True).fit()
+        assert 'R-squared:' in str(reg_with_constant.summary2())
+        assert 'R-squared:' in str(reg_with_constant.summary())
+
+        reg_without_constant = OLS(y, x, hasconst=False).fit()
+        assert 'R-squared (uncentered):' in str(reg_without_constant.summary2())
+        assert 'R-squared (uncentered):' in str(reg_without_constant.summary())
