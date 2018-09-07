@@ -52,6 +52,7 @@ def _pad_nans(x, head=None, tail=None):
 #from numpy import product,array
 
 
+# previous location in sandbox.tsa.try_var_convolve
 def fftconvolveinv(in1, in2, mode="full"):
     """Convolve two N-dimensional arrays using FFT. See convolve.
 
@@ -308,8 +309,8 @@ def convolution_filter(x, filt, nsides=2):
     return result
 
 
-#copied from sandbox.tsa.garch
-def miso_lfilter(ar, ma, x, useic=False): #[0.1,0.1]):
+# previously located in sandbox.tsa.garch
+def miso_lfilter(ar, ma, x, useic=False):
     '''
     use nd convolution to merge inputs,
     then use lfilter to produce output

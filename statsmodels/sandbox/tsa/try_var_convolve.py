@@ -18,7 +18,8 @@ import numpy as np
 from numpy.testing import assert_equal
 from scipy import signal
 from scipy.signal.signaltools import _centered as trim_centered
-_centered = trim_centered
+
+from statsmodels.tsa.filters.filtertools import fftconvolveinv as fftconvolve
 
 
 x = np.arange(40).reshape((2,20)).T
@@ -45,9 +46,8 @@ print(trim_centered(y, x.shape))
 assert_equal(yvalid[:,0], y0.ravel())
 assert_equal(yvalid[:,1], y1.ravel())
 
-from statsmodels.tsa.filters import arfilter
-#copied/moved to statsmodels.tsa.filters
-def arfilter_old(x, a):
+
+def arfilter(x, a):
     '''apply an autoregressive filter to a series x
 
     x can be 2d, a can be 1d, 2d, or 3d
@@ -148,49 +148,6 @@ from scipy.fftpack import fft, ifft, ifftshift, fft2, ifft2, fftn, \
      ifftn, fftfreq
 from numpy import product,array
 
-from statsmodels.tsa.filters.filtertools import fftconvolveinv as fftconvolve
-#copied/moved to statsmodels.tsa.filters
-def fftconvolve_old(in1, in2, in3=None, mode="full"):
-    """Convolve two N-dimensional arrays using FFT. See convolve.
-
-    copied from scipy.signal.signaltools, but here used to try out inverse filter
-    doesn't work or I can't get it to work
-
-     2010-10-23:
-    looks ok to me for 1d,
-    from results below with padded data array (fftp)
-    but it doesn't work for multidimensional inverse filter (fftn)
-    original signal.fftconvolve also uses fftn
-
-    """
-    s1 = array(in1.shape)
-    s2 = array(in2.shape)
-    complex_result = (np.issubdtype(in1.dtype, np.complex) or
-                      np.issubdtype(in2.dtype, np.complex))
-    size = s1+s2-1
-
-    # Always use 2**n-sized FFT
-    fsize = 2**np.ceil(np.log2(size))
-    IN1 = fftn(in1,fsize)
-    #IN1 *= fftn(in2,fsize) #JP: this looks like the only change I made
-    IN1 /= fftn(in2,fsize)  # use inverse filter
-    # note the inverse is elementwise not matrix inverse
-    # is this correct, NO  doesn't seem to work for VARMA
-    fslice = tuple([slice(0, int(sz)) for sz in size])
-    ret = ifftn(IN1)[fslice].copy()
-    del IN1
-    if not complex_result:
-        ret = ret.real
-    if mode == "full":
-        return ret
-    elif mode == "same":
-        if product(s1,axis=0) > product(s2,axis=0):
-            osize = s1
-        else:
-            osize = s2
-        return _centered(ret,osize)
-    elif mode == "valid":
-        return _centered(ret,abs(s2-s1)+1)
 
 yff = fftconvolve(x.astype(float)[:,:,None],a3f)
 
