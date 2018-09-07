@@ -28,6 +28,8 @@ platform:
     - x64
 
 build_script:
+  # Show information about CPU running job to understand BLAS issues
+  - wmic cpu get caption, name, numberofcores
   - SET MKL_NUM_THREADS=1
   - SET NUMEXPR_NUM_THREADS=1
   - SET OMP_NUM_THREADS=1

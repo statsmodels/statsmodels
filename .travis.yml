@@ -100,6 +100,8 @@ notifications:
     on_success: always
 
 before_install:
+  # Show information about CPU running job to understand BLAS issues
+  - sudo lshw -class processor
   # Fix for headless TravisCI
   - "export DISPLAY=:99.0"
   - "sh -e /etc/init.d/xvfb start"
