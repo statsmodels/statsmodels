@@ -55,7 +55,7 @@ from .correlation_tools import (corr_clipped, corr_nearest,
             corr_nearest_factor, corr_thresholded, cov_nearest,
             cov_nearest_factor_homog, FactoredPSDMatrix)
 
-from statsmodels.sandbox.stats.runs import (Runs, runstest_1samp, runstest_2samp)
+from .runs import Runs, runstest_1samp, runstest_2samp
 
 from statsmodels.stats.contingency_tables import (mcnemar, cochrans_q,
                                                   SquareTable,

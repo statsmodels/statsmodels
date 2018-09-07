@@ -24,6 +24,7 @@ if [ "$LINT" == true ]; then
         statsmodels/regression/mixed_linear_model.py \
         statsmodels/duration/__init__.py \
         statsmodels/regression/recursive_ls.py \
+        statsmodels/stats/runs.py \
         statsmodels/tools/linalg.py \
         statsmodels/tools/tests/test_linalg.py \
         statsmodels/tools/decorators.py \
