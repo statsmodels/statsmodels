@@ -151,8 +151,11 @@ class CleanCommand(clean):
 
 python setup.py clean is not supported.
 
-Use git clean -xfd instead
-"""     
+Use one of:
+
+* `git clean -xdf` to clean all untracked files
+* `git clean -Xdf` to clean untracked files ignored by .gitignore
+"""
         print(msg)
         sys.exit(1)
 
