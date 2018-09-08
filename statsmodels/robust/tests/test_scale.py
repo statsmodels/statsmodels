@@ -4,10 +4,13 @@ Test functions for models.robust.scale
 
 import numpy as np
 from numpy.random import standard_normal
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
+from scipy import stats
+
 # Example from Section 5.5, Venables & Ripley (2002)
 
 import statsmodels.robust.scale as scale
+import statsmodels.robust.norms as rnorms
 
 DECIMAL = 4
 #TODO: Can replicate these tests using stackloss data and R if this
@@ -115,3 +118,48 @@ class TestHuberAxes(object):
     def test_axisneg1(self):
         m, s = self.h(self.X, axis=-1)
         assert_equal(m.shape, (40,10))
+
+
+def test_scale_iter():
+    # regression test, and approximately correct
+    np.random.seed(54321)
+    v = np.array([1, 0.5, 0.4])
+    x = standard_normal((40,3)) * np.sqrt(v)
+    x[:2] = [2, 2, 2]
+
+    x = x[:,0]  # 1d only ?
+    v = v[0]
+
+    c = 4.685
+    # c**2/6=3.6582041666667 shifts origin to zero BUG #1341
+    meef_scale=lambda x:rnorms.TukeyBiweight().rho(x) + (c**2/6)
+    scale_bias = 0.43684963023076195
+    s = scale._scale_iter(x, meef_scale=meef_scale, scale_bias=scale_bias)
+    assert_allclose(s, v, rtol=1e-1)
+    assert_allclose(s, 1.0683298, rtol=1e-6)  # regression test number
+
+
+def test_scale_trimmed_approx():
+    scale_trimmed = scale.scale_trimmed # shorthand
+    nobs = 500
+    np.random.seed(965578)
+    x = 2*np.random.randn(nobs)
+    x[:10] = 60
+
+    alpha = 0.2
+    res = scale_trimmed(x, alpha)
+    s = scale_trimmed(np.column_stack((x, 2*x)), alpha).scale
+    assert_allclose(s, [2, 4], rtol=1e-1)
+    s = scale_trimmed(np.column_stack((x, 2*x)).T, alpha, axis=1).scale
+    assert_allclose(s, [2, 4], rtol=1e-1)
+    s = scale_trimmed(np.column_stack((x, x)).T, alpha, axis=None).scale
+    assert_allclose(s, [2], rtol=1e-1)
+    s2 = scale_trimmed(np.column_stack((x, x)).ravel(), alpha).scale
+    assert_allclose(s2, [2], rtol=1e-1)
+    assert_allclose(s2, s, rtol=1e-1)
+    s = scale_trimmed(x, alpha, distr=stats.t, distargs=(100,)).scale
+    assert_allclose(s, [2], rtol=1e-1)
+
+
+if __name__=="__main__":
+    run_module_suite()
