@@ -282,7 +282,7 @@ def test_combine_indices():
                                      'sector1.region1', 'sector0.region0',
                                      'sector1.region0', 'sector1.region0',
                                      'sector0.region1', 'sector0.region0'],
-                                    dtype='|S15')
+                                    dtype='|U15')
     assert_equal(group_joint, group_joint_expected)
 
 
