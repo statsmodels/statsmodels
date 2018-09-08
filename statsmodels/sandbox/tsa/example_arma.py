@@ -16,6 +16,7 @@ from statsmodels.tsa.arima_process import arma_acovf, arma_acf, ARIMA
 #from movstat import acf, acovf
 #from statsmodels.sandbox.tsa import acf, acovf, pacf
 from statsmodels.tsa.stattools import acf, acovf, pacf
+from statsmodels.graphics.tsaplots import plotacf
 
 ar = [1., -0.6]
 #ar = [1., 0.]
