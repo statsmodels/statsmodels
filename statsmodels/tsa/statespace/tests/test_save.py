@@ -5,9 +5,6 @@ Tests of save / load / remove_data state space functionality.
 from __future__ import division, absolute_import, print_function
 from statsmodels.compat import cPickle
 
-import numpy as np
-from distutils.version import LooseVersion
-import pytest
 import os
 
 from statsmodels import datasets

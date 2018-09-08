@@ -10,9 +10,8 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 import pandas as pd
 
-import warnings
 from statsmodels.tsa.statespace import sarimax
-from numpy.testing import assert_equal, assert_allclose
+from numpy.testing import assert_equal
 
 
 def test_predict_dates():
