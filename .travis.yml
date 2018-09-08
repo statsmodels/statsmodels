@@ -110,7 +110,7 @@ before_install:
   - SRCDIR=$PWD
   # Source recipe to install packages
   - source $BUILD_INIT
-  - pip install 'pytest<4' pytest-xdist nose
+  - pip install pytest pytest-xdist pip pytest-randomly nose
   - |
     if [ ${COVERAGE} = true ]; then
         pip install codecov coverage coveralls pytest-cov
