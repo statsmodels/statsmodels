@@ -88,9 +88,11 @@ def _remove_intercept_patsy(terms):
         terms.remove(INTERCEPT)
     return terms
 
+
 def _has_intercept(design_info):
     from patsy.desc import INTERCEPT
     return INTERCEPT in design_info.terms
+
 
 def _intercept_idx(design_info):
     """
@@ -100,9 +102,8 @@ def _intercept_idx(design_info):
     from numpy import array
     return array([INTERCEPT == i for i in design_info.terms])
 
+
 def make_hypotheses_matrices(model_results, test_formula):
-    """
-    """
     from patsy.constraint import linear_constraint
     exog_names = model_results.model.exog_names
     LC = linear_constraint(test_formula, exog_names)

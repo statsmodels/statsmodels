@@ -17,6 +17,7 @@ if [ "$LINT" == true ]; then
     flake8 --isolated \
         statsmodels/info.py \
         statsmodels/resampling/ \
+        statsmodels/formula/ \
         statsmodels/interface/ \
         statsmodels/iolib/smpickle.py \
         statsmodels.iolib/tests/test_pickle.py \
