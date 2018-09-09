@@ -8,6 +8,7 @@ IRLS.
 import numpy as np
 import pandas as pd
 from statsmodels.compat.python import asbytes
+from statsmodels.compat.numpy import NUMPY_LT_113
 from . import glm_test_resids
 import os
 from statsmodels.api import add_constant, categorical
@@ -15,8 +16,6 @@ from statsmodels.api import add_constant, categorical
 # for genfromtxt changes
 import sys
 PY2 = (sys.version_info[0] < 3)
-from distutils.version import LooseVersion
-NUMPY_LT_113 = LooseVersion(np.__version__) < '1.13.0'
 
 # Test Precisions
 DECIMAL_4 = 4

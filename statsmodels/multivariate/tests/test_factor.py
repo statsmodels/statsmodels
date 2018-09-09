@@ -208,8 +208,7 @@ def test_getframe_smoke():
 
     df = res.get_loadings_frame(style='raw')
     assert_(isinstance(df, pd.DataFrame))
-    if pd.__version__ < '0.17':
-        return
+
     lds = res.get_loadings_frame(style='strings', decimals=3, threshold=0.3)
     lds.to_latex()
 
