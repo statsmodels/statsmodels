@@ -2,7 +2,6 @@ from __future__ import division
 from statsmodels.compat.python import iterkeys, zip, lrange, iteritems, range
 
 from numpy.testing import assert_, assert_raises
-from numpy.testing import run_module_suite
 import pytest
 
 # utilities for the tests
@@ -445,7 +444,3 @@ def test_default_arg_index(close_figures):
                                    'short']})
     assert_raises(ValueError, mosaic, data=df, title='foobar')
     pylab.close('all')
-
-
-if __name__ == '__main__':
-    run_module_suite()

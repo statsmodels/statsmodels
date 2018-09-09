@@ -185,8 +185,3 @@ def test_datetime_roundtrip():
     buf.seek(0)
     dta2 = genfromdta(buf, pandas=True)
     ptesting.assert_frame_equal(dta, dta2.drop('index', axis=1))
-
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

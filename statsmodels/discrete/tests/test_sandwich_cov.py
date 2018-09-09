@@ -722,13 +722,3 @@ class TestGLMGaussHACGroupsum(CheckDiscreteGLM):
     def test_kwd(self):
         # test corrected keyword name
         assert_allclose(self.res1b.bse, self.res1.bse, rtol=1e-12)
-
-
-
-if __name__ == '__main__':
-    tt = TestPoissonClu()
-    tt.setup_class()
-    tt.test_basic()
-    tt = TestNegbinClu()
-    tt.setup_class()
-    tt.test_basic()

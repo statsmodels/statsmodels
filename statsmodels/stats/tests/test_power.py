@@ -773,14 +773,3 @@ def test_power_solver_warn():
                               alternative='larger')
         assert_equal(nip.cache_fit_res[0], 0)
         assert_equal(len(nip.cache_fit_res), 3)
-
-
-
-if __name__ == '__main__':
-    test_normal_power_explicit()
-    nt = TestNormalIndPower1()
-    nt.test_power()
-    nt.test_roots()
-    nt = TestNormalIndPower_onesamp1()
-    nt.test_power()
-    nt.test_roots()

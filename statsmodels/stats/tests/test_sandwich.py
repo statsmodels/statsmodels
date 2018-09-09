@@ -88,7 +88,3 @@ def test_hac_simple():
     cov3 = sw.cov_hac_simple(res_olsg, use_correction=False)
     cov4 = sw.cov_hac_simple(res_olsg, nlags=4, use_correction=False)
     assert_almost_equal(cov3, cov4, decimal=14)
-
-if __name__ == '__main__':
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

@@ -154,7 +154,3 @@ def test_returns_inputs():
     x = np.arange(20)
     result = lowess(y, x, frac=.4)
     assert_almost_equal(result, np.column_stack((x, y)))
-
-if __name__ == '__main__':
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

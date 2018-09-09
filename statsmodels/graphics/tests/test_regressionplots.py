@@ -336,7 +336,3 @@ class TestCERESPlot(object):
                 ax.set_title(ti + "\nPoisson regression\n" +
                              effect_str)
                 close_or_save(pdf, fig)
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

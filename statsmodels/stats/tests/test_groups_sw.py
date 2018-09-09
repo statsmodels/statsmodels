@@ -75,7 +75,3 @@ class TestUnBalanced(CheckPanelLagMixin):
             5 : np.array([[113, 114, 115, 116, 117]]),
             }
         cls.calculate()
-
-if __name__ == '__main__':
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

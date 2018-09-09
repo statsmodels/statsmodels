@@ -910,8 +910,3 @@ def test_raise_nonfinite_exog():
     assert_raises(MissingDataError, OLS, y, x)
     x[1, 1] = np.nan
     assert_raises(MissingDataError, OLS, y, x)
-
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

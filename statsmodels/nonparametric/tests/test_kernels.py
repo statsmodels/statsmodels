@@ -143,12 +143,3 @@ class TestBiweight(CheckKernelMixin):
     kern = kernels.Biweight()
     se_n_diff = 9
     low_rtol = 0.3
-
-if __name__ == '__main__':
-    tt = TestEpan()
-    tt = TestGau()
-    tt = TestBiweight()
-    tt.test_smoothconf()
-    diff_rel = tt.fittedg / tt.res_fittedg - 1
-    diff_abs = tt.fittedg - tt.res_fittedg
-    mask = np.abs(tt.fittedg - tt.res_fittedg) > (0.3 + 0.1 * tt.res_fittedg)
