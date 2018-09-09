@@ -16,7 +16,6 @@ import numpy as np
 from numpy.testing import (assert_almost_equal, assert_allclose, assert_raises,
                            assert_equal, assert_warns)
 import pytest
-import scipy
 
 import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
