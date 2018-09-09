@@ -386,9 +386,8 @@ def test_coint_identical_series():
     np.random.seed(123)
     y = scale_e * np.random.randn(nobs)
     warnings.simplefilter('always', CollinearityWarning)
-    with warnings.catch_warnings(record=True) as w:
+    with pytest.warns(CollinearityWarning):
         c = coint(y, y, trend="c", maxlag=0, autolag=None)
-    assert_equal(len(w), 1)
     assert_equal(c[1], 0.0)
     assert_(np.isneginf(c[0]))
 
