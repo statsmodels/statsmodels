@@ -6,7 +6,7 @@ import pandas
 
 
 version = LooseVersion(pandas.__version__)
-pandas_lt_0_19_2 = version < '0.19.1'
+pandas_lte_0_19_2 = version < LooseVersion('0.19.2')
 pandas_gt_0_19_2 = version > LooseVersion('0.19.2')
 
 
