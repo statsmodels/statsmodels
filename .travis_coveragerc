@@ -24,7 +24,8 @@ omit =
     */tests/p*
     */tests/r*
     */tests/s*
-
+    # Versioneer
+    */_version.py
 
 
 [report]
