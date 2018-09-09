@@ -308,8 +308,7 @@ def convolution_filter(x, filt, nsides=2):
     return result
 
 
-#copied from sandbox.tsa.garch
-def miso_lfilter(ar, ma, x, useic=False): #[0.1,0.1]):
+def miso_lfilter(ar, ma, x, useic=False):
     '''
     use nd convolution to merge inputs,
     then use lfilter to produce output
