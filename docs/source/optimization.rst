@@ -9,8 +9,10 @@ of a model.
 
   1. Basic linear models such as :ref:`WLS and OLS <regression>` are directly
      estimated using appropriate linear algebra.
-  2. :ref:`RLM <rlm>`, :ref:`GLM <glm>`, and other models use iteratively
-     re-weighted least squares regression.
+  2. :ref:`RLM <rlm>` and :ref:`GLM <glm>`, and a few other models by default
+     use model-specific algorithms. RLM and GLM use iteratively re-weighted
+     least squares, for example. However, you can optionally select one of the
+     optimizers discussed below.
   3. For other models, the most common method for nonlinear estimation is
      using `optimizers <https://docs.scipy.org/doc/scipy/reference/optimize.html>`_
      from `scipy <https://docs.scipy.org/doc/scipy/reference/index.html>`_.
