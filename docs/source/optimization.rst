@@ -4,17 +4,28 @@
 Optimization
 ============
 
-Many of the models we use such as :ref:`GLM <glm>` and
-:ref:`discrete models <discretemod>` allow for the optional selection of a
-scipy optimizer. This can either be defaut or an option based on the model
-selected.
+statsmodels uses three types of algorithms for the estimation of the parameters
+of a model.
+
+  1. Basic linear models such as :ref:`WLS and OLS <regression>` are directly
+     estimated using appropriate linear algebra.
+  2. :ref:`RLM <rlm>`, :ref:`GLM <glm>`, and other models use iteratively
+     re-weighted least squares regression.
+  3. For other models, the most common method for nonlinear estimation is
+     using `optimizers <https://docs.scipy.org/doc/scipy/reference/optimize.html>`_
+     from `scipy <https://docs.scipy.org/doc/scipy/reference/index.html>`_.
+
+Where practical, certain models allow for the optional selection of a
+scipy optimizer. A particular scipy optimizer might be default or an option.
+Depending on the model and the data, choosing an appropriate scipy optimizer
+enables avoidance of a local minima, fitting models in less time, or fitting a
+model with less memory resource.
 
 statsmodels supports the following optimizers along with keyword arguments
 associated with that specific optimizer:
 
 - ``newton`` - Newton-Raphson iteration. While not directly from scipy, we
-  consider it an optimizer because only the objective function and the score
-  are required parameters.
+  consider it an optimizer because only the score and hessian are required.
     tol : float
         Relative error in params acceptable for convergence.
 - ``nm`` - scipy's ``fmin_nm``
@@ -118,6 +129,13 @@ associated with that specific optimizer:
           - `args` <- `fargs`
           - `jac` <- `score`
           - `hess` <- `hess`
+  - ``minimize`` - Allows the use of any scipy optimizer.
+      min_method : str, optional
+          Name of minimization method to use.
+          Any method specific arguments can be passed directly.
+          For a list of methods and their arguments, see
+          documentation of `scipy.optimize.minimize`.
+          If no method is specified, then BFGS is used.
 
 Model Class
 -----------

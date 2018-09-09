@@ -50,19 +50,36 @@ Windows.
 
 If your system is already set up with pip, a compiler, and git, you can try::
 
-    pip install git+https://github.com/django-extensions/django-extensions
+    pip install git+https://github.com/statsmodels/statsmodels
+
+If you do not have pip installed or want to do the installation more manually,
+you can also type::
+
+.. code-block:: bash
+
+    python setup.py install
+
+Or even more manually
+
+.. code-block:: bash
+
+    python setup.py build
+    python setup.py install
+
+statsmodels can also be installed in `develop` mode which installs statsmodels
+into the current python environment in-place. The advantage of this is that
+edited modules will immediately be re-interpreted when the python interpreter
+restarts without having to re-install statsmodels.
+
+.. code-block:: bash
+
+    python setup.py develop
 
 Linux
 ^^^^^
 
-Once you have obtained the source, you can do (with appropriate permissions)::
-
-    python setup.py install
-
-Or::
-
-    python setup.py build
-    python setup.py install
+If you are using Linux, we assume that you are savvy enough to install `gcc` on
+your own. More than likely, its already installed.
 
 Windows
 ^^^^^^^
@@ -74,8 +91,12 @@ Python has been built using a variety of different Windows C compilers.
 `This guide <https://wiki.python.org/moin/WindowsCompilers>`_ should help
 clarify which version of Python uses which compiler by default.
 
-Alternatively, you can use the
-`MinGW-w64 toolchoin <http://mingw-w64.org/doku.php>`__.
+Mac
+^^^
+
+Installing statsmodels on MacOS will requires installing `gcc` which provides
+a suitable C compiler. We recommend installing Xcode and the Command Line
+Tools.
 
 Dependencies
 ------------

@@ -7,6 +7,16 @@
 Frequently Asked Question
 =========================
 
+What is statsmodels?
+--------------------
+
+statsmodels is a Python package that provides a collection of widely-used
+statistical models. While statsmodels historically has an econometrics-heavy
+user base, the package is designed to be useful to a large variety of
+statistical use cases. In comparison with other Python-based modelling
+tools, statsmodels focuses more heavily on the statistics and diagnostics
+underlying the models than having the most cutting-edge or predictive models.
+
 .. _endog-exog-faq:
 
 What do endog and exog mean?
@@ -34,7 +44,7 @@ Why won't statsmodels build?
 
 Remember that to build, you must have:
 
-- The appropriate dependencies (numpy, pandas, Cython) installed
+- The appropriate dependencies (numpy, pandas, scipy, Cython) installed
 - A suitable C compiler
 - A working python installation
 
