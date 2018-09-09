@@ -274,8 +274,9 @@ class TestTheilPanel(object):
         k_vars = 3
 
         from statsmodels.sandbox.panel.random_panel import PanelSample
-        dgp = PanelSample(nobs, k_vars, n_groups)
-        dgp.group_means = 2 + np.random.randn(n_groups) #add random intercept
+        dgp = PanelSample(nobs, k_vars, n_groups, seed=303305)
+        # add random intercept, using same RandomState
+        dgp.group_means = 2 + dgp.random_state.randn(n_groups)
         print('seed', dgp.seed)
         y = dgp.generate_panel()
         x = np.column_stack((dgp.exog[:,1:],
@@ -303,19 +304,19 @@ class TestTheilPanel(object):
 
         # regression test
         params1 = np.array([
-            0.96518694,  1.06152005,  0.31844136,  3.02747485,  3.25308031,
-            3.76229199,  1.99795797,  3.9831158 ,  3.1055317 ,  1.91599103,
-            4.5354633 ,  4.14332517,  3.69462963,  3.79567255,  2.18633118,
-            2.02848738,  3.74269763,  3.60041509,  3.27734962,  2.47771329,
-            3.23858674,  4.2973348 ,  3.98013994,  3.73415254,  2.88870379,
-            3.91311563,  3.71043309,  1.80506601,  3.78067131,  1.77164485,
-            3.88247   ,  3.28328127,  3.1313951 ,  3.03006754,  3.31012921,
-            3.08761618,  2.96735903,  1.54005178,  1.27778498,  1.47949121,
-            4.87184321,  3.03812406,  3.43574332,  2.16983158,  4.45339409,
-            2.64502381,  4.04767553,  4.42282326,  2.40153298,  3.55409206,
-            2.71256315,  3.32197196,  3.56054788,  2.58639318,  0.96230275,
-            1.8382348 ,  2.30788361,  2.49415769,  0.74777288,  3.04014659,
-            1.82256153,  4.89165865])
+            0.9751655 ,  1.05215277,  0.37135028,  2.0492626 ,  2.82062503,
+            2.82139775,  1.92940468,  2.96942081,  2.86349583,  3.20695368,
+            4.04516422,  3.04918839,  4.54748808,  3.49026961,  3.15529618,
+            4.25552932,  2.65471759,  3.62328747,  3.07283053,  3.49485898,
+            3.42301424,  2.94677593,  2.81549427,  2.24895113,  2.29222784,
+            2.89194946,  3.17052308,  2.37754241,  3.54358533,  3.79838425,
+            1.91189071,  1.15976407,  4.05629691,  1.58556827,  4.49941666,
+            4.08608599,  3.1889269 ,  2.86203652,  3.06785013,  1.9376162 ,
+            2.90657681,  3.71910592,  3.15607617,  3.58464547,  2.15466323,
+            4.87026717,  2.92909833,  2.64998337,  2.891171  ,  4.04422964,
+            3.54616122,  4.12135273,  3.70232028,  3.8314497 ,  2.2591451 ,
+            2.39321422,  3.13064532,  2.1569678 ,  2.04667506,  3.92064689,
+            3.66243644,  3.11742725])
         assert_allclose(res.params, params1)
 
         pen_weight_aicc = mod.select_pen_weight(method='aicc')
@@ -324,10 +325,10 @@ class TestTheilPanel(object):
         pen_weight_bic = mod.select_pen_weight(method='bic')
         assert_allclose(pen_weight_gcv, pen_weight_aicc, rtol=0.1)
         # regression tests:
-        assert_allclose(pen_weight_aicc, 2.98779297, rtol=1e-4)
-        assert_allclose(pen_weight_gcv,  2.69970703, rtol=1e-4)
-        assert_allclose(pen_weight_bic, 5.76005859, rtol=1e-4)
-        assert_allclose(pen_weight_cv, 1.3, rtol=1e-4)
+        assert_allclose(pen_weight_aicc, 4.77333984, rtol=1e-4)
+        assert_allclose(pen_weight_gcv,  4.45546875, rtol=1e-4)
+        assert_allclose(pen_weight_bic, 9.35957031, rtol=1e-4)
+        assert_allclose(pen_weight_cv, 1.99277344, rtol=1e-4)
 
 
     def test_combine_subset_regression(self):
@@ -353,13 +354,14 @@ class TestTheilPanel(object):
         res_olsf = OLS(ys, xs[:, :k]).fit()
 
         assert_allclose(res_1p.params, res_olsf.params, rtol=1e-9)
-        corr_fact = 0.96156318 # corrct for differences in scale computation
+        corr_fact = np.sqrt(res_1p.scale / res_olsf.scale)
+        # corrct for differences in scale computation
         assert_allclose(res_1p.bse, res_olsf.bse * corr_fact, rtol=1e-3)
 
         # regression test, does not verify numbers
         # especially why are these smaller than OLS on full sample
         # in larger sample, nobs=600, those were close to full OLS
         bse1 = np.array([
-            0.27609914,  0.15808869,  0.39880789,  0.78583194,  0.68619331,
-            0.56252314,  0.55757562,  0.68538523,  0.39695081,  0.55988991])
+            0.26589869,  0.15224812,  0.38407399,  0.75679949,  0.66084200,
+            0.54174080,  0.53697607,  0.66006377,  0.38228551,  0.53920485])
         assert_allclose(res_1s.bse, bse1, rtol=1e-7)
