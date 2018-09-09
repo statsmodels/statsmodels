@@ -7,7 +7,7 @@ from pandas.util.testing import assert_frame_equal, assert_series_equal
 
 from statsmodels.compat.pandas import pandas_gt_0_19_2
 
-pytestmark = pytest.mark.skipif(pandas_gt_19_2,
+pytestmark = pytest.mark.skipif(pandas_gt_0_19_2,
                                 reason='Requires pandas <= 0.19.2')
 
 from statsmodels.tsa.vector_ar.dynamic import _window_ols
