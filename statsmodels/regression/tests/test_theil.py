@@ -291,11 +291,10 @@ class TestTheilPanel(object):
         x = self.exog
         n_groups, k_vars = self.dgp.n_groups, self.dgp.k_vars
 
-        R = np.c_[np.zeros((n_groups, k_vars-1)), np.eye(n_groups)]
-        r = np.zeros(n_groups)
-        R = np.c_[np.zeros((n_groups-1, k_vars)),
-                  np.eye(n_groups-1)-1./n_groups * np.ones((n_groups-1, n_groups-1))]
-        r = np.zeros(n_groups-1)
+        Rg = (np.eye(n_groups-1) - 1. / n_groups *
+                np.ones((n_groups - 1, n_groups-1)))
+        R = np.c_[np.zeros((n_groups - 1, k_vars)), Rg]
+        r = np.zeros(n_groups - 1)
         R[:, k_vars-1] = -1
 
         lambd = 1 #1e-4
@@ -330,7 +329,6 @@ class TestTheilPanel(object):
         assert_allclose(pen_weight_bic, 9.35957031, rtol=1e-4)
         assert_allclose(pen_weight_cv, 1.99277344, rtol=1e-4)
 
-
     def test_combine_subset_regression(self):
         # split sample into two, use first sample as prior for second
         endog = self.endog
@@ -348,7 +346,9 @@ class TestTheilPanel(object):
         res_ols1 = OLS(ys[n05:], xs[n05:, :k]).fit()
 
         w = res_ols1.scale / res_ols0.scale   #1.01
-        mod_1 = TheilGLS(ys[n05:], xs[n05:, :k], r_matrix=np.eye(k), q_matrix=res_ols0.params, sigma_prior=w * res_ols0.cov_params())
+        mod_1 = TheilGLS(ys[n05:], xs[n05:, :k], r_matrix=np.eye(k),
+                         q_matrix=res_ols0.params,
+                         sigma_prior=w * res_ols0.cov_params())
         res_1p = mod_1.fit(cov_type='data-prior')
         res_1s = mod_1.fit(cov_type='sandwich')
         res_olsf = OLS(ys, xs[:, :k]).fit()
