@@ -42,8 +42,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from __future__ import absolute_import
 import numpy as np
 
+from distutils.version import LooseVersion
+
+
 from .python import PY3
 
+NUMPY_LT_113 = LooseVersion(np.__version__) < '1.13.0'
 
 np_matrix_rank = np.linalg.matrix_rank
 np_new_unique = np.unique
