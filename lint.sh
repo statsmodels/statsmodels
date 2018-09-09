@@ -20,6 +20,8 @@ if [ "$LINT" == true ]; then
         statsmodels/info.py \
         statsmodels/resampling/ \
         statsmodels/interface/ \
+        statsmodels/graphics/functional.py \
+        statsmodels/graphics/tests/test_functional.py \
         statsmodels/iolib/smpickle.py \
         statsmodels.iolib/tests/test_pickle.py \
         statsmodels/graphics/tsaplots.py \
