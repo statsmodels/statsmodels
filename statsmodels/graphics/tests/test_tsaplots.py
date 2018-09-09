@@ -6,7 +6,7 @@ from numpy.testing import assert_equal, assert_
 import pytest
 
 import statsmodels.api as sm
-from statsmodels.compat.pandas import pandas_lt_0_19_2
+from statsmodels.compat.pandas import pandas_lte_0_19_2
 from statsmodels.graphics.tsaplots import (plot_acf, plot_pacf, month_plot,
                                            quarter_plot, seasonal_plot)
 import statsmodels.tsa.arima_process as tsp
@@ -153,7 +153,7 @@ def test_plot_pacf_irregular(close_figures):
     plot_pacf(pacf, ax=ax, alpha=None, zero=False)
 
 
-@pytest.mark.skipif(pandas_lt_0_19_2, reason='pandas too old')
+@pytest.mark.skipif(pandas_lte_0_19_2, reason='pandas too old')
 @pytest.mark.matplotlib
 def test_plot_month(close_figures):
     dta = sm.datasets.elnino.load_pandas().data
@@ -177,7 +177,7 @@ def test_plot_month(close_figures):
     fig = month_plot(dta)
 
 
-@pytest.mark.skipif(pandas_lt_0_19_2, reason='pandas too old')
+@pytest.mark.skipif(pandas_lte_0_19_2, reason='pandas too old')
 @pytest.mark.matplotlib
 def test_plot_quarter(close_figures):
     dta = sm.datasets.macrodata.load_pandas().data
