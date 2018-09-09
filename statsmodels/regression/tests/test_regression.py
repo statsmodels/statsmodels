@@ -486,6 +486,7 @@ class TestGLS(object):
         assert_equal(mod.exog.shape[0], 13)
         assert_equal(mod.sigma.shape, (13, 13))
 
+
 class TestGLS_alt_sigma(CheckRegressionResults):
     """
     Test that GLS with no argument is equivalent to OLS.
@@ -664,15 +665,6 @@ class TestGLS_WLS_equivalence(TestOLS_GLS_WLS_equivalence):
         cls.results.append(WLS(y, X, 0.01 * w).fit())
         cls.results.append(GLS(y, X, 100 * w_inv).fit())
         cls.results.append(GLS(y, X, np.diag(0.1 * w_inv)).fit())
-
-    def test_rsquared(self):
-        # TODO: WLS rsquared is ok, GLS might have wrong centered_tss
-        # We only check that WLS and GLS rsquared is invariant to scaling
-        # WLS and GLS have different rsquared
-        assert_almost_equal(self.results[1].rsquared, self.results[0].rsquared,
-                            DECIMAL_7)
-        assert_almost_equal(self.results[3].rsquared, self.results[2].rsquared,
-                            DECIMAL_7)
 
 
 class TestNonFit(object):
