@@ -1,4 +1,3 @@
-from distutils.version import LooseVersion
 
 import numpy as np
 import pandas as pd
@@ -6,9 +5,9 @@ import pytest
 from numpy.testing import assert_allclose
 from pandas.util.testing import assert_frame_equal, assert_series_equal
 
-PD_GT_19 = LooseVersion(pd.__version__) > LooseVersion('0.19.2')
+from statsmodels.compat.pandas import pandas_gt_0_19_2
 
-pytestmark = pytest.mark.skipif(PD_GT_19,
+pytestmark = pytest.mark.skipif(pandas_gt_19_2,
                                 reason='Requires pandas <= 0.19.2')
 
 from statsmodels.tsa.vector_ar.dynamic import _window_ols

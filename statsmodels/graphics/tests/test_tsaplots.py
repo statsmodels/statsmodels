@@ -1,13 +1,12 @@
 from statsmodels.compat.python import lmap, BytesIO
 
-from distutils.version import LooseVersion
-
 import numpy as np
 import pandas as pd
 from numpy.testing import assert_equal, assert_
 import pytest
 
 import statsmodels.api as sm
+from statsmodels.compat.pandas import pandas_lt_0_19_2
 from statsmodels.graphics.tsaplots import (plot_acf, plot_pacf, month_plot,
                                            quarter_plot, seasonal_plot)
 import statsmodels.tsa.arima_process as tsp
@@ -17,8 +16,6 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:
     pass
-
-pandas_lt_0_19_2 = LooseVersion(pd.__version__) < '0.19.1'
 
 
 @pytest.mark.matplotlib

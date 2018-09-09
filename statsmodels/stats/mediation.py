@@ -20,7 +20,6 @@ from statsmodels.compat.python import string_types
 import numpy as np
 import pandas as pd
 from statsmodels.graphics.utils import maybe_name_or_idx
-import statsmodels.compat.pandas as pdc  # pragma: no cover
 
 
 class Mediation(object):
@@ -369,7 +368,6 @@ class MediationResults(object):
         self.ACME_avg = (self.ACME_ctrl + self.ACME_tx) / 2
         self.ADE_avg = (self.ADE_ctrl + self.ADE_tx) / 2
 
-
     def summary(self, alpha=0.05):
         """
         Provide a summary of a mediation analysis.
@@ -395,9 +393,6 @@ class MediationResults(object):
             smry.iloc[i, 2] = np.percentile(vec, 100 * (1 - alpha / 2))
             smry.iloc[i, 3] = _pvalue(vec)
 
-        if pdc.version < '0.17.0':  # pragma: no cover
-            smry = smry.convert_objects(convert_numeric=True)
-        else:  # pragma: no cover
-            smry = smry.apply(pd.to_numeric, errors='coerce')
+        smry = smry.apply(pd.to_numeric, errors='coerce')
 
         return smry
