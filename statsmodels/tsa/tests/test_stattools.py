@@ -1,3 +1,4 @@
+from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import assert_index_equal
 from statsmodels.compat.python import lrange
 
@@ -14,7 +15,7 @@ from pandas import Series, DatetimeIndex, DataFrame
 from statsmodels.datasets import macrodata, sunspots
 from statsmodels.tools.sm_exceptions import (CollinearityWarning,
                                              MissingDataError)
-from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw,
+from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw, pacf_ols,
                                        pacf, grangercausalitytests,
                                        coint, acovf, kpss,
                                        arma_order_select_ic, levinson_durbin,
@@ -261,6 +262,21 @@ class TestPACF(CheckCorrGram):
         assert_equal(centered[0], [0., 0.])
         assert_equal(confint[0], [1, 1])
         assert_equal(pacfols[0], 1)
+
+    def test_ols_inefficient(self):
+        lag_len = 5
+        pacfols = pacf_ols(self.x, nlags=lag_len, efficient=False)
+        x = self.x.copy()
+        x -= x.mean()
+        n = x.shape[0]
+        lags = np.zeros((n - 5, 5))
+        lead = x[5:]
+        direct = np.empty(lag_len + 1)
+        direct[0] = 1.0
+        for i in range(lag_len):
+            lags[:, i] = x[5 - (i + 1):-(i + 1)]
+            direct[i + 1] = lstsq(lags[:, :(i + 1)], lead, rcond=None)[0][-1]
+        assert_allclose(pacfols, direct, atol=1e-8)
 
     def test_yw(self):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")

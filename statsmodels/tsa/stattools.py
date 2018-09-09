@@ -1,8 +1,10 @@
 """
 Statistical tools for time series analysis
 """
+from __future__ import division
 from statsmodels.compat.python import (iteritems, range, lrange, string_types,
                                        lzip, zip, long)
+from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.scipy import _next_regular
 
 import numpy as np
@@ -568,6 +570,12 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     pacf : 1d array
         partial autocorrelations, maxlag+1 elements
 
+    See also
+    --------
+    statsmodels.tsa.stattools.pacf
+    statsmodels.tsa.stattools.pacf_burg
+    statsmodels.tsa.stattools.pacf_ols
+
     Notes
     -----
     This solves yule_walker for each desired lag and contains
@@ -603,6 +611,8 @@ def pacf_burg(x, nlags=None, demean=True):
     See also
     --------
     statsmodels.tsa.stattools.pacf
+    statsmodels.tsa.stattools.pacf_yw
+    statsmodels.tsa.stattools.pacf_ols
 
     References
     ----------
@@ -640,8 +650,9 @@ def pacf_burg(x, nlags=None, demean=True):
     return pacf, sigma2
 
 
-def pacf_ols(x, nlags=40, unbiased=True):
-    '''Calculate partial autocorrelations via OLS
+def pacf_ols(x, nlags=40, efficient=True, unbiased=False):
+    """
+    Calculate partial autocorrelations via OLS
 
     Parameters
     ----------
@@ -649,39 +660,68 @@ def pacf_ols(x, nlags=40, unbiased=True):
         observations of time series for which pacf is calculated
     nlags : int
         Number of lags for which pacf is returned.  Lag 0 is not returned.
+    efficient : bool, optional
+        If true, uses the maximum number of available observations to compute
+        each partial autocorrelation. If not, uses the same number of
+        observations to compute all pacf values.
+    unbiased : bool, optional
+        Adjust each partial autocorrelation by n / (n - lag)
 
     Returns
     -------
     pacf : 1d array
-        partial autocorrelations, maxlag+1 elements
+        partial autocorrelations, (maxlag,) array corresponding to lags
+        0, 1, ..., maxlag
 
     Notes
     -----
-    This solves a separate OLS estimation for each desired lag.
+    This solves a separate OLS estimation for each desired lag. Setting
+    efficient to True has two effects. First, it uses `nobs - lag`
+    observations of estimate each pacf.  Second, it re-estimates the mean in
+    each regression. If efficient is False, then the data are first demeaned,
+    and then `nobs - maxlag` observations are used to estimate each partial
+    autocorrelation.
+
+    The inefficient estimator appears to have better finite sample properties.
+    This option should only be used in time series that are covariance
+    stationary.
+
+    OLS estimation of the pacf does not guarantee that all pacf values are
+    between -1 and 1.
+
+    See also
+    --------
+    statsmodels.tsa.stattools.pacf
+    statsmodels.tsa.stattools.pacf_yw
+    statsmodels.tsa.stattools.pacf_burg
 
     References
     ----------
     .. [1] Box, G. E., Jenkins, G. M., Reinsel, G. C., & Ljung, G. M. (2015).
-    Time series analysis: forecasting and control.
-    John Wiley & Sons, p. 66
-
-    '''
+       Time series analysis: forecasting and control. John Wiley & Sons, p. 66
+    """
     n = len(x)
-    # Demean the series
-    x = x - np.mean(x)
-    # Create lags for multivariate OLS
-    xlags, x0 = lagmat(x, nlags, original='sep')
-    pacf = [1.]
-    for k in range(1, nlags + 1):
-        res = OLS(x0, xlags[:, :k]).fit()
-        # Last coefficient corresponds to PACF value (see [1])
-        coeff = res.params[-1]
-        if unbiased:
-            coeff = coeff * n / (n - k)
+    pacf = np.empty(nlags + 1)
+    pacf[0] = 1.0
+    if efficient:
+        xlags, x0 = lagmat(x, nlags, original='sep')
+        xlags = add_constant(xlags)
+        for k in range(1, nlags + 1):
+            params = lstsq(xlags[k:, :k + 1], x0[k:], rcond=None)[0]
+            pacf[k] = params[-1]
+    else:
+        x = x - np.mean(x)
+        # Create a single set of lags for multivariate OLS
+        xlags, x0 = lagmat(x, nlags, original='sep', trim='both')
+        for k in range(1, nlags + 1):
+            params = lstsq(xlags[:, :k], x0, rcond=None)[0]
+            # Last coefficient corresponds to PACF value (see [1])
+            pacf[k] = params[-1]
 
-        pacf.append(coeff)
+    if unbiased:
+        pacf *= n / (n - np.arange(nlags + 1))
 
-    return np.array(pacf)
+    return pacf
 
 
 def pacf(x, nlags=40, method='ywunbiased', alpha=None):
@@ -694,13 +734,14 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
         observations of time series for which pacf is calculated
     nlags : int
         largest lag for which pacf is returned
-    method : {'ywunbiased', 'ywmle', 'ols'}
+    method : {'ywunbiased', 'ywmle', 'ols', 'ols-inefficient'}
         specifies which method for the calculations to use:
 
         - yw or ywunbiased : yule walker with bias correction in denominator
           for acovf. Default.
         - ywm or ywmle : yule walker without bias correction
-        - ols - regression of time series on lags of it and on constant
+        - ols : regression of time series on lags of it and on constant
+        - ols-inefficient : regression of time series using a common sample
         - ld or ldunbiased : Levinson-Durbin recursion with bias correction
         - ldb or ldbiased : Levinson-Durbin recursion without bias correction
     alpha : float, optional
@@ -716,14 +757,22 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     confint : array, optional
         Confidence intervals for the PACF. Returned if confint is not None.
 
+    See also
+    --------
+    statsmodels.tsa.stattools.acf
+    statsmodels.tsa.stattools.pacf_yw
+    statsmodels.tsa.stattools.pacf_burg
+    statsmodels.tsa.stattools.pacf_ols
+
     Notes
     -----
     This solves yule_walker equations or ols for each desired lag
     and contains currently duplicate calculations.
     """
 
-    if method == 'ols':
-        ret = pacf_ols(x, nlags=nlags)
+    if method in ('ols', 'ols-inefficient'):
+        efficient = 'inefficient' not in method
+        ret = pacf_ols(x, nlags=nlags, efficient=efficient)
     elif method in ['yw', 'ywu', 'ywunbiased', 'yw_unbiased']:
         ret = pacf_yw(x, nlags=nlags, method='unbiased')
     elif method in ['ywm', 'ywmle', 'yw_mle']:
