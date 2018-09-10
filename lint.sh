@@ -34,6 +34,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tools/decorators.py \
         statsmodels/tools/tests/test_decorators.py \
         statsmodels/tsa/base/tests/test_datetools.py \
+        statsmodels/tsa/kalmanf/ \
         statsmodels/tsa/regime_switching \
         statsmodels/tsa/vector_ar/dynamic.py \
         statsmodels/tsa/vector_ar/hypothesis_test_results.py \

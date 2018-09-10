@@ -16,7 +16,7 @@ Notes
 This file follows Hamilton's notation pretty closely.
 The ARMA Model class follows Durbin and Koopman notation.
 Harvey uses Durbin and Koopman notation.
-"""
+"""  # noqa:E501
 # Anderson and Moore `Optimal Filtering` provides a more efficient algorithm
 # namely the information filter
 # if the number of series is much greater than the number of states
@@ -25,12 +25,8 @@ Harvey uses Durbin and Koopman notation.
 # Harvey notes that the square root filter will keep P_t pos. def. but
 # is not strictly needed outside of the engineering (long series)
 from __future__ import print_function
-from statsmodels.compat.python import lzip, lmap, callable, range
 import numpy as np
-from numpy import dot, identity, kron, log, zeros, pi, eye, issubdtype, ones
-from numpy.linalg import inv, pinv
-from scipy import optimize
-from statsmodels.tools.tools import chain_dot
+
 from . import kalman_loglike
 
 # Fast filtering and smoothing for multivariate state space models
@@ -80,22 +76,23 @@ class KalmanFilter(object):
         ----------
         Durbin and Koopman Section 3.7.
         """
-        arr = zeros((r, r), dtype=params.dtype, order="F")
+        arr = np.zeros((r, r), dtype=params.dtype, order="F")
         # allows for complex-step derivative
-        params_padded = zeros(r, dtype=params.dtype,
-                              order="F")
+        params_padded = np.zeros(r, dtype=params.dtype,
+                                 order="F")
         # handle zero coefficients if necessary
         # NOTE: squeeze added for cg optimizer
         params_padded[:p] = params[k:p + k]
         arr[:, 0] = params_padded
         # first p params are AR coeffs w/ short params
-        arr[:-1, 1:] = eye(r - 1)
+        arr[:-1, 1:] = np.eye(r - 1)
         return arr
 
     @classmethod
     def R(cls, params, r, k, q, p):  # R is H in Hamilton
         """
-        The coefficient matrix for the state vector in the observation equation.
+        The coefficient matrix for the state vector in the observation
+        equation.
 
         Its dimension is r+k x 1.
 
@@ -116,10 +113,10 @@ class KalmanFilter(object):
         ----------
         Durbin and Koopman Section 3.7.
         """
-        arr = zeros((r, 1), dtype=params.dtype, order="F")
+        arr = np.zeros((r, 1), dtype=params.dtype, order="F")
         # this allows zero coefficients
         # dtype allows for compl. der.
-        arr[1:q + 1, :] = params[p + k:p + k + q][: ,None]
+        arr[1:q + 1, :] = params[p + k:p + k + q][:, None]
         arr[0] = 1.0
         return arr
 
@@ -139,7 +136,7 @@ class KalmanFilter(object):
         Currently only returns a 1 x r vector [1,0,0,...0].  Will need to
         be generalized when the Kalman Filter becomes more flexible.
         """
-        arr = zeros((1, r), order="F")
+        arr = np.zeros((1, r), order="F")
         arr[:, 0] = 1.
         return arr
 
@@ -149,10 +146,10 @@ class KalmanFilter(object):
         """
         Returns just the errors of the Kalman Filter
         """
-        if issubdtype(paramsdtype, np.float64):
+        if np.issubdtype(paramsdtype, np.float64):
             return kalman_loglike.kalman_filter_double(
                 y, k, k_ar, k_ma, k_lags, int(nobs), Z_mat, R_mat, T_mat)[0]
-        elif issubdtype(paramsdtype, np.complex128):
+        elif np.issubdtype(paramsdtype, np.complex128):
             return kalman_loglike.kalman_filter_complex(
                 y, k, k_ar, k_ma, k_lags, int(nobs), Z_mat, R_mat, T_mat)[0]
         else:
@@ -179,7 +176,7 @@ class KalmanFilter(object):
             newparams = params  # don't need a copy if not modified.
 
         if k > 0:
-            y -= dot(arma_model.exog, newparams[:k])
+            y -= np.dot(arma_model.exog, newparams[:k])
 
         # system matrices
         Z_mat = cls.Z(k_lags)
@@ -213,17 +210,17 @@ class KalmanFilter(object):
         complex values being used to compute the numerical derivative. If
         available will use a Cython version of the Kalman Filter.
         """
-        # TODO: see section 3.4.6 in Harvey for computing the derivatives in the
-        # recursion itself.
+        # TODO: see section 3.4.6 in Harvey for computing the derivatives in
+        # the recursion itself.
         # TODO: this won't work for time-varying parameters
         (y, k, nobs, k_ar, k_ma, k_lags, newparams, Z_mat, m, R_mat, T_mat,
          paramsdtype) = cls._init_kalman_state(params, arma_model)
-        if issubdtype(paramsdtype, np.float64):
-            loglike, sigma2 =  kalman_loglike.kalman_loglike_double(
+        if np.issubdtype(paramsdtype, np.float64):
+            loglike, sigma2 = kalman_loglike.kalman_loglike_double(
                 y, k, k_ar, k_ma, k_lags, int(nobs),
                 Z_mat, R_mat, T_mat)
-        elif issubdtype(paramsdtype, np.complex128):
-            loglike, sigma2 =  kalman_loglike.kalman_loglike_complex(
+        elif np.issubdtype(paramsdtype, np.complex128):
+            loglike, sigma2 = kalman_loglike.kalman_loglike_complex(
                 y, k, k_ar, k_ma, k_lags, int(nobs),
                 Z_mat.astype(complex), R_mat, T_mat)
         else:
