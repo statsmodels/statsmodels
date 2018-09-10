@@ -1387,7 +1387,7 @@ class VECMResults(object):
                                        self.det_coef_coint.shape[0])
         ret_1dim = self.stderr_params[start:start+self.gamma.size]
         return ret_1dim.reshape(self.gamma.shape, order="F")
-    
+
     @cache_readonly
     def stderr_det_coef(self):
         if self.det_coef.size == 0:

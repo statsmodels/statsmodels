@@ -77,7 +77,7 @@ class TestPlot(object):
         fig = plot_ccpr_grid(res, exog_idx=[0,1])
         for ax in fig.axes:
             add_lowess(ax)
-   
+
         close_or_save(pdf, fig)
 
     @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
