@@ -250,7 +250,7 @@ class MI(object):
 
         if model_args_fn is None:
             def f(x):
-                return (x,)
+                return []
             model_args_fn = f
         self.model_args_fn = model_args_fn
 
@@ -280,17 +280,25 @@ class MI(object):
         for k in range(burn):
             imp.update()
 
-    def fit(self):
+    def fit(self, results_cb=None):
         """
-        fit imputes datasets, fits models, and pools results.
+        Impute datasets, fit models, and pool results.
+
+        Parameters
+        ----------
+        results_cb : function, optional
+            If provided, each results instance r is passed through `results_cb`,
+            then appended to the `results` attribute of the MIResults object.
+            To save complete results, use `results_cb=lambda x: x`.  The default
+            behavior is to save no results.
 
         Returns
         -------
         A MIResults object.
         """
 
-        par = []
-        cov = []
+        par, cov = [], []
+        all_results = []
 
         for k in range(self.nrep):
 
@@ -312,6 +320,9 @@ class MI(object):
 
             result = model.fit(*self.fit_args(da), **self.fit_kwds(da))
 
+            if results_cb is not None:
+                all_results.append(results_cb(result))
+
             par.append(np.asarray(result.params.copy()))
             cov.append(np.asarray(result.cov_params().copy()))
 
@@ -319,6 +330,9 @@ class MI(object):
 
         r = MIResults(self, model, params, cov_params)
         r.fmi = fmi
+
+        r.results = all_results
+
         return r
 
     def _combine(self, par, cov):

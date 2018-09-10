@@ -107,9 +107,9 @@ class RLM(base.LikelihoodModel):
     """ % {'params' : base._model_params_doc,
             'extra_params' : base._missing_param_doc}
 
-    def __init__(self, endog, exog, M=norms.HuberT(), missing='none',
+    def __init__(self, endog, exog, M=None, missing='none',
                  **kwargs):
-        self.M = M
+        self.M = M if M is not None else norms.HuberT()
         super(base.LikelihoodModel, self).__init__(endog, exog,
                 missing=missing, **kwargs)
         self._initialize()

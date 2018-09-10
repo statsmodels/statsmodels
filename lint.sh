@@ -8,6 +8,8 @@ if [ "$LINT" == true ]; then
     echo "Linting all files with limited rules"
     flake8 statsmodels
     if [ $? -ne "0" ]; then
+        echo "Changed files failed linting using the required set of rules."
+        echo "Additions and changes must conform to Python code style rules."
         RET=1
     fi
 
@@ -20,6 +22,7 @@ if [ "$LINT" == true ]; then
         statsmodels/interface/ \
         statsmodels/iolib/smpickle.py \
         statsmodels.iolib/tests/test_pickle.py \
+        statsmodels/graphics/tsaplots.py \
         statsmodels/tsa/regime_switching \
         statsmodels/regression/mixed_linear_model.py \
         statsmodels/duration/__init__.py \
@@ -34,8 +37,10 @@ if [ "$LINT" == true ]; then
         statsmodels/tsa/statespace/*.py \
         statsmodels/tsa/statespace/tests/results/ \
         statsmodels/tsa/statespace/tests/test_var.py \
-        conftest.py
+        statsmodels/conftest.py \
+        setup.py
     if [ $? -ne "0" ]; then
+        echo "Previously passing files failed linting."
         RET=1
     fi
 
@@ -45,6 +50,7 @@ if [ "$LINT" == true ]; then
         echo "Linting newly added files with strict rules"
         flake8 --isolated $(eval echo $NEW_FILES)
         if [ $? -ne "0" ]; then
+            echo "New files failed linting."
             RET=1
         fi
     fi
