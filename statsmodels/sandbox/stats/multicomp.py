@@ -281,97 +281,6 @@ def catstack(args):
     return x, labels
 
 
-
-
-def maxzero(x):
-    '''find all up zero crossings and return the index of the highest
-
-    Not used anymore
-
-
-    >>> np.random.seed(12345)
-    >>> x = np.random.randn(8)
-    >>> x
-    array([-0.20470766,  0.47894334, -0.51943872, -0.5557303 ,  1.96578057,
-            1.39340583,  0.09290788,  0.28174615])
-    >>> maxzero(x)
-    (4, array([1, 4]))
-
-
-    no up-zero-crossing at end
-
-    >>> np.random.seed(0)
-    >>> x = np.random.randn(8)
-    >>> x
-    array([ 1.76405235,  0.40015721,  0.97873798,  2.2408932 ,  1.86755799,
-           -0.97727788,  0.95008842, -0.15135721])
-    >>> maxzero(x)
-    (None, array([6]))
-    '''
-    x = np.asarray(x)
-    cond1 = x[:-1] < 0
-    cond2 = x[1:] > 0
-    #allzeros = np.nonzero(np.sign(x[:-1])*np.sign(x[1:]) <= 0)[0] + 1
-    allzeros = np.nonzero((cond1 & cond2) | (x[1:]==0))[0] + 1
-    if x[-1] >=0:
-        maxz = max(allzeros)
-    else:
-        maxz = None
-    return maxz, allzeros
-
-def maxzerodown(x):
-    '''find all up zero crossings and return the index of the highest
-
-    Not used anymore
-
-    >>> np.random.seed(12345)
-    >>> x = np.random.randn(8)
-    >>> x
-    array([-0.20470766,  0.47894334, -0.51943872, -0.5557303 ,  1.96578057,
-            1.39340583,  0.09290788,  0.28174615])
-    >>> maxzero(x)
-    (4, array([1, 4]))
-
-
-    no up-zero-crossing at end
-
-    >>> np.random.seed(0)
-    >>> x = np.random.randn(8)
-    >>> x
-    array([ 1.76405235,  0.40015721,  0.97873798,  2.2408932 ,  1.86755799,
-           -0.97727788,  0.95008842, -0.15135721])
-    >>> maxzero(x)
-    (None, array([6]))
-'''
-    x = np.asarray(x)
-    cond1 = x[:-1] > 0
-    cond2 = x[1:] < 0
-    #allzeros = np.nonzero(np.sign(x[:-1])*np.sign(x[1:]) <= 0)[0] + 1
-    allzeros = np.nonzero((cond1 & cond2) | (x[1:]==0))[0] + 1
-    if x[-1] <=0:
-        maxz = max(allzeros)
-    else:
-        maxz = None
-    return maxz, allzeros
-
-
-
-def rejectionline(n, alpha=0.5):
-    '''reference line for rejection in multiple tests
-
-    Not used anymore
-
-    from: section 3.2, page 60
-    '''
-    t = np.arange(n)/float(n)
-    frej = t/( t * (1-alpha) + alpha)
-    return frej
-
-
-
-
-
-
 #I don't remember what I changed or why 2 versions,
 #this follows german diss ???  with rline
 #this might be useful if the null hypothesis is not "all effects are zero"
@@ -1780,8 +1689,6 @@ if __name__ == '__main__':
         print(maxzero(x1))
         #[(0, 1), (1, 1), (2, 1), (3, 0), (4, -1), (5, -1), (6, -1), (7, 0), (8, 1), (9, 1), (10, -1), (11, 1)]
         #(11, array([ 3,  7, 11]))
-
-        print(maxzerodown(-np.array(x1)))
 
         locs = np.linspace(0,1,10)
         locs = np.array([0.]*6 + [0.75]*4)
