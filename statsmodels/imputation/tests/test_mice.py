@@ -6,10 +6,9 @@ import statsmodels.api as sm
 from numpy.testing import assert_equal, assert_allclose
 
 try:
-    import matplotlib.pyplot as plt  #makes plt available for test functions
-    have_matplotlib = True
+    import matplotlib.pyplot as plt
 except:
-    have_matplotlib = False
+    pass
 
 pdf_output = False
 
@@ -22,11 +21,8 @@ else:
 
 
 def close_or_save(pdf, fig):
-    if not have_matplotlib:
-        return
     if pdf_output:
         pdf.savefig(fig)
-    plt.close(fig)
 
 
 def teardown_module():
@@ -219,7 +215,7 @@ class TestMICEData(object):
         assert_equal(imp_data._cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
 
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_plot_missing_pattern(self, close_figures):
 
         df = gendat()
@@ -233,9 +229,10 @@ class TestMICEData(object):
                                       hide_complete_rows=hide_complete_rows,
                                       color_row_patterns=color_row_patterns)
                     close_or_save(pdf, fig)
+                    close_figures()
 
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_plot_bivariate(self, close_figures):
 
         df = gendat()
@@ -247,9 +244,10 @@ class TestMICEData(object):
             fig = imp_data.plot_bivariate('x2', 'x4', plot_points=plot_points)
             fig.get_axes()[0].set_title('plot_bivariate')
             close_or_save(pdf, fig)
+            close_figures()
 
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_fit_obs(self, close_figures):
 
         df = gendat()
@@ -261,9 +259,10 @@ class TestMICEData(object):
             fig = imp_data.plot_fit_obs('x4', plot_points=plot_points)
             fig.get_axes()[0].set_title('plot_fit_scatterplot')
             close_or_save(pdf, fig)
+            close_figures()
 
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_plot_imputed_hist(self, close_figures):
 
         df = gendat()
@@ -275,7 +274,7 @@ class TestMICEData(object):
             fig = imp_data.plot_imputed_hist('x4')
             fig.get_axes()[0].set_title('plot_imputed_hist')
             close_or_save(pdf, fig)
-
+            close_figures()
 
 
 class TestMICE(object):

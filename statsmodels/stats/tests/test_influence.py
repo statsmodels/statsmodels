@@ -16,10 +16,8 @@ except ImportError:
 
 try:
     import matplotlib.pyplot as plt
-    have_matplotlib = True
-    plt.switch_backend('Agg')
-except:
-    have_matplotlib = False
+except ImportError:
+    pass
 
 import pytest
 
@@ -86,7 +84,7 @@ class InfluenceCompareExact(object):
         assert_allclose(infl0.d_fittedvalues_scaled,
                         infl1.d_fittedvalues_scaled, rtol=5e-9)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_plots(self, close_figures):
         # SMOKE tests for plots
         infl1 = self.infl1

@@ -24,10 +24,9 @@ import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
 
 try:
-    import matplotlib.pyplot as plt  # makes plt available for test functions
-    have_matplotlib = True
+    import matplotlib.pyplot as plt
 except ImportError:
-    have_matplotlib = False
+    pass
 
 
 SM_GT_10 = LooseVersion(scipy.__version__) >= '0.10'
@@ -90,7 +89,7 @@ class CheckPowerMixin(object):
             #yield assert_allclose, result, value, 0.001, 0, key+' failed'
             kwds[key] = value  # reset dict
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_power_plot(self, close_figures):
         if self.cls == smp.FTestPower:
             pytest.skip('skip FTestPower plot_power')

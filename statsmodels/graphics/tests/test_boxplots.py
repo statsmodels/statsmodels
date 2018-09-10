@@ -4,15 +4,13 @@ import pytest
 from statsmodels.graphics.boxplots import violinplot, beanplot
 from statsmodels.datasets import anes96
 
-
 try:
     import matplotlib.pyplot as plt
-    have_matplotlib = True
-except:
-    have_matplotlib = False
+except ImportError:
+    pass
 
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.requires_matplotlib
 def test_violinplot_beanplot(close_figures):
     # Test violinplot and beanplot with the same dataset.
     data = anes96.load_pandas()

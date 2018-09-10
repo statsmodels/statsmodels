@@ -21,9 +21,8 @@ from statsmodels.tsa.arima_process import arma_generate_sample
 
 try:
     import matplotlib.pyplot as plt
-    have_matplotlib = True
 except ImportError:
-    have_matplotlib = False
+    pass
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -2055,7 +2054,7 @@ def test_arma_missing():
     assert_raises(MissingDataError, ARMA, y, (1, 0), missing='raise')
 
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.requires_matplotlib
 def test_plot_predict(close_figures):
     from statsmodels.datasets.sunspots import load_pandas
 

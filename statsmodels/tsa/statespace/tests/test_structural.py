@@ -17,14 +17,6 @@ from statsmodels.tsa.statespace import structural
 from statsmodels.tsa.statespace.structural import UnobservedComponents
 from statsmodels.tsa.statespace.tests.results import results_structural
 
-
-try:
-    import matplotlib.pyplot as plt  # noqa:F401
-    have_matplotlib = True
-except ImportError:
-    have_matplotlib = False
-
-
 dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start='1959-01-01', end='2009-07-01', freq='QS')
 
@@ -93,9 +85,12 @@ def run_ucm(name):
         atol = true.get('atol', 0)
         assert_allclose(res_true.llf, true['llf'], rtol=rtol, atol=atol)
 
-        # Smoke test for plot_components
-        if have_matplotlib:
+        # Optional smoke test for plot_components
+        try:
+            import matplotlib.pyplot as plt  # noqa:F401
             res_true.plot_components()
+        except ImportError:
+            pass
 
         # Now fit the model via MLE
         with warnings.catch_warnings(record=True):

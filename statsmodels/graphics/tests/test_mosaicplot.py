@@ -2,6 +2,7 @@ from __future__ import division
 from statsmodels.compat.python import iterkeys, zip, lrange, iteritems, range
 
 from numpy.testing import assert_, assert_raises
+import pandas as pd
 import pytest
 
 # utilities for the tests
@@ -14,12 +15,8 @@ import numpy as np
 from itertools import product
 try:
     import matplotlib.pyplot as pylab
-    have_matplotlib = True
-except:
-    have_matplotlib = False
-
-from statsmodels.compat.pandas import version as pandas_version
-pandas_old = pandas_version < '0.9'
+except ImportError:
+    pass
 
 # the main drawing function
 from statsmodels.graphics.mosaicplot import mosaic
@@ -31,8 +28,7 @@ from statsmodels.graphics.mosaicplot import _normalize_split
 from statsmodels.graphics.mosaicplot import _split_rect
 
 
-@pytest.mark.skipif(not have_matplotlib or pandas_old,
-        reason='matplotlib not available or pandas too old')
+@pytest.mark.requires_matplotlib
 def test_data_conversion(close_figures):
     # It will not reorder the elements
     # so the dictionary will look odd
@@ -74,7 +70,7 @@ def test_data_conversion(close_figures):
     #pylab.show()
     pylab.close('all')
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.requires_matplotlib
 def test_mosaic_simple(close_figures):
     # display a simple plot of 4 categories of data, splitted in four
     # levels with increasing size for each group
@@ -105,8 +101,7 @@ def test_mosaic_simple(close_figures):
     pylab.close('all')
 
 
-@pytest.mark.skipif(not have_matplotlib or pandas_old,
-        reason='matplotlib not available or pandas too old')
+@pytest.mark.requires_matplotlib
 def test_mosaic(close_figures):
     # make the same analysis on a known dataset
 
@@ -144,7 +139,7 @@ def test_mosaic(close_figures):
     #pylab.show()
     pylab.close('all')
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.requires_matplotlib
 def test_mosaic_very_complex(close_figures):
     # make a scattermatrix of mosaic plots to show the correlations between
     # each pair of variable in a dataset. Could be easily converted into a
@@ -186,7 +181,7 @@ def test_mosaic_very_complex(close_figures):
     #pylab.show()
     pylab.close('all')
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.requires_matplotlib
 def test_axes_labeling(close_figures):
     from numpy.random import rand
     key_set = (['male', 'female'], ['old', 'adult', 'young'],
@@ -205,8 +200,8 @@ def test_axes_labeling(close_figures):
     #pylab.show()
     pylab.close('all')
 
-@pytest.mark.skipif(not have_matplotlib or pandas_old,
-        reason='matplotlib not available or pandas too old')
+
+@pytest.mark.requires_matplotlib
 def test_mosaic_empty_cells(close_figures):
     # SMOKE test  see #2286
     import pandas as pd
@@ -433,11 +428,9 @@ def test_gap_split():
     eq(_split_rect(*pure_square, **conf_h), h_2split)
 
 
-@pytest.mark.skipif(not have_matplotlib or pandas_old,
-        reason='matplotlib not available or pandas too old')
+@pytest.mark.requires_matplotlib
 def test_default_arg_index(close_figures):
     # 2116
-    import pandas as pd
     df = pd.DataFrame({'size' : ['small', 'large', 'large', 'small', 'large',
                                  'small'],
                        'length' : ['long', 'short', 'short', 'long', 'long',

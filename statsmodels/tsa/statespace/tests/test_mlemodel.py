@@ -23,9 +23,8 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 
 try:
     import matplotlib.pyplot as plt
-    have_matplotlib = True
 except ImportError:
-    have_matplotlib = False
+    pass
 
 # Basic kwargs
 kwargs = {

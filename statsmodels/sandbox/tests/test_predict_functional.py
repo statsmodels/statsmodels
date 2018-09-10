@@ -10,9 +10,8 @@ pdf_output = False
 try:
     import matplotlib.pyplot as plt
     import matplotlib
-    have_matplotlib = True
 except ImportError:
-    have_matplotlib = False
+    pass
 
 def pctl(q):
     return lambda x : np.percentile(x, 100 *q)
@@ -35,7 +34,7 @@ class TestPredFunc(object):
         if pdf_output:
             self.pdf.savefig(fig)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_formula(self, close_figures):
 
         np.random.seed(542)
@@ -88,7 +87,7 @@ class TestPredFunc(object):
         plt.title("Linear model prediction")
         self.close_or_save(fig)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_lm_contrast(self, close_figures):
 
         np.random.seed(542)
@@ -123,7 +122,7 @@ class TestPredFunc(object):
         plt.title("Linear model contrast")
         self.close_or_save(fig)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_glm_formula_contrast(self, close_figures):
 
         np.random.seed(542)
@@ -159,7 +158,7 @@ class TestPredFunc(object):
         plt.title("Poisson regression contrast")
         self.close_or_save(fig)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_scb(self, close_figures):
 
         np.random.seed(473)
@@ -224,7 +223,7 @@ class TestPredFunc(object):
                 self.close_or_save(fig)
 
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_glm_formula(self, close_figures):
 
         np.random.seed(542)
@@ -293,7 +292,7 @@ class TestPredFunc(object):
             plt.title("Binomial GLM prediction")
             self.close_or_save(fig)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_noformula_prediction(self, close_figures):
 
         np.random.seed(6434)

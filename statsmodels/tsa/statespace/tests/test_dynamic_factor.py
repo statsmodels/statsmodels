@@ -20,9 +20,8 @@ from statsmodels.iolib.summary import forg
 
 try:
     import matplotlib.pyplot as plt
-    have_matplotlib = True
 except ImportError:
-    have_matplotlib = False
+    pass
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -89,9 +88,10 @@ class CheckDynamicFactor(object):
         else:
             assert_equal(self.results.coefficient_matrices_var, None)
 
+    @pytest.mark.requires_matplotlib
+    def test_plot_coefficients_of_determination(self, close_figures):
         # Smoke test for plot_coefficients_of_determination
-        if have_matplotlib:
-            fig = self.results.plot_coefficients_of_determination();
+        self.results.plot_coefficients_of_determination()
 
     def test_no_enforce(self):
         return

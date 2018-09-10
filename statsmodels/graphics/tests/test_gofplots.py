@@ -4,82 +4,78 @@ from scipy import stats
 
 import statsmodels.api as sm
 
-try:
-    import matplotlib.pyplot as plt
-    import matplotlib
-    have_matplotlib = True
-except ImportError:
-    have_matplotlib = False
-
 
 class BaseProbplotMixin(object):
-    def base_setup(self):
-        if have_matplotlib:
+    def setup(self):
+        try:
+            import matplotlib.pyplot as plt
             self.fig, self.ax = plt.subplots()
+        except ImportError:
+            pass
         self.other_array = np.random.normal(size=self.prbplt.data.shape)
         self.other_prbplot = sm.ProbPlot(self.other_array)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_qqplot(self, close_figures):
         self.prbplt.qqplot(ax=self.ax, line=self.line)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_ppplot(self, close_figures):
         self.prbplt.ppplot(ax=self.ax, line=self.line)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_probplot(self, close_figures):
         self.prbplt.probplot(ax=self.ax, line=self.line)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_qqplot_other_array(self, close_figures):
         self.prbplt.qqplot(ax=self.ax, line=self.line,
                            other=self.other_array)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_ppplot_other_array(self, close_figures):
         self.prbplt.ppplot(ax=self.ax, line=self.line,
                            other=self.other_array)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def t_est_probplot_other_array(self, close_figures):
         self.prbplt.probplot(ax=self.ax, line=self.line,
                              other=self.other_array)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_qqplot_other_prbplt(self, close_figures):
         self.prbplt.qqplot(ax=self.ax, line=self.line,
                            other=self.other_prbplot)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_ppplot_other_prbplt(self, close_figures):
         self.prbplt.ppplot(ax=self.ax, line=self.line,
                            other=self.other_prbplot)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def t_est_probplot_other_prbplt(self, close_figures):
         self.prbplt.probplot(ax=self.ax, line=self.line,
                              other=self.other_prbplot)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_qqplot_custom_labels(self, close_figures):
         self.prbplt.qqplot(ax=self.ax, line=self.line,
                            xlabel='Custom X-Label',
                            ylabel='Custom Y-Label')
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_ppplot_custom_labels(self, close_figures):
         self.prbplt.ppplot(ax=self.ax, line=self.line,
                            xlabel='Custom X-Label',
                            ylabel='Custom Y-Label')
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_probplot_custom_labels(self, close_figures):
         self.prbplt.probplot(ax=self.ax, line=self.line,
                              xlabel='Custom X-Label',
                              ylabel='Custom Y-Label')
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_qqplot_pltkwargs(self, close_figures):
         self.prbplt.qqplot(ax=self.ax, line=self.line,
                            marker='d',
@@ -87,7 +83,7 @@ class BaseProbplotMixin(object):
                            markeredgecolor='white',
                            alpha=0.5)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_ppplot_pltkwargs(self, close_figures):
         self.prbplt.ppplot(ax=self.ax, line=self.line,
                            marker='d',
@@ -95,7 +91,7 @@ class BaseProbplotMixin(object):
                            markeredgecolor='white',
                            alpha=0.5)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_probplot_pltkwargs(self, close_figures):
         self.prbplt.probplot(ax=self.ax, line=self.line,
                              marker='d',
@@ -112,7 +108,7 @@ class TestProbPlotLongely(BaseProbplotMixin):
         self.mod_fit = sm.OLS(self.data.endog, self.data.exog).fit()
         self.prbplt = sm.ProbPlot(self.mod_fit.resid, stats.t, distargs=(4,))
         self.line = 'r'
-        self.base_setup()
+        super(TestProbPlotLongely, self).setup()
 
 
 class TestProbPlotRandomNormalMinimal(BaseProbplotMixin):
@@ -121,7 +117,7 @@ class TestProbPlotRandomNormalMinimal(BaseProbplotMixin):
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = sm.ProbPlot(self.data)
         self.line = None
-        self.base_setup()
+        super(TestProbPlotRandomNormalMinimal, self).setup()
 
 
 class TestProbPlotRandomNormalWithFit(BaseProbplotMixin):
@@ -130,7 +126,7 @@ class TestProbPlotRandomNormalWithFit(BaseProbplotMixin):
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = sm.ProbPlot(self.data, fit=True)
         self.line = 'q'
-        self.base_setup()
+        super(TestProbPlotRandomNormalWithFit, self).setup()
 
 
 class TestProbPlotRandomNormalLocScale(BaseProbplotMixin):
@@ -139,7 +135,7 @@ class TestProbPlotRandomNormalLocScale(BaseProbplotMixin):
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = sm.ProbPlot(self.data, loc=8.25, scale=3.25)
         self.line = '45'
-        self.base_setup()
+        super(TestProbPlotRandomNormalLocScale, self).setup()
 
 
 class TestTopLevel(object):
@@ -152,18 +148,18 @@ class TestTopLevel(object):
         self.other_array = np.random.normal(size=self.prbplt.data.shape)
         self.other_prbplot = sm.ProbPlot(self.other_array)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_qqplot(self, close_figures):
         sm.qqplot(self.res, line='r')
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_qqplot_pltkwargs(self, close_figures):
         sm.qqplot(self.res, line='r', marker='d',
                   markerfacecolor='cornflowerblue',
                   markeredgecolor='white',
                   alpha=0.5)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_qqplot_2samples_ProbPlotObjects(self, close_figures):
         # also tests all values for line
         for line in ['r', 'q', '45', 's']:
@@ -172,7 +168,7 @@ class TestTopLevel(object):
                                line=line)
 
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.requires_matplotlib
     def test_qqplot_2samples_arrays(self, close_figures):
         # also tests all values for line
         for line in ['r', 'q', '45', 's']:
