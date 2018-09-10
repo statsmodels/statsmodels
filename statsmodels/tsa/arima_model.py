@@ -230,12 +230,10 @@ _arima_plot_predict = ("""
 
 
 def cumsum_n(x, n):
-    if n:
-        n -= 1
+    for _ in range(n):
         x = np.cumsum(x)
-        return cumsum_n(x, n)
-    else:
-        return x
+
+    return x
 
 
 def _check_arima_start(start, k_ar, k_diff, method, dynamic):
