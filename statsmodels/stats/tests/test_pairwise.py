@@ -153,8 +153,7 @@ sas_ = dta5.iloc[[1, 3, 2]]
 
 from statsmodels.stats.multicomp import (tukeyhsd, pairwise_tukeyhsd,
                                          MultiComparison)
-#import statsmodels.sandbox.stats.multicomp as multi
-#print tukeyhsd(dta['Brand'], dta['Rust'])
+
 
 def get_thsd(mci, alpha=0.05):
     var_ = np.var(mci.groupstats.groupdemean(), ddof=len(mci.groupsunique))
