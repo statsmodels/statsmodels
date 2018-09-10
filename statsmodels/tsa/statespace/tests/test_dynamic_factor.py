@@ -91,7 +91,7 @@ class CheckDynamicFactor(object):
 
         # Smoke test for plot_coefficients_of_determination
         if have_matplotlib:
-            fig = self.results.plot_coefficients_of_determination();
+            fig = self.results.plot_coefficients_of_determination()
 
     def test_no_enforce(self):
         return

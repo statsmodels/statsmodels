@@ -132,9 +132,9 @@ class AffineDiffusion(Diffusion):
         W, t = self.simulateW(nobs=nobs, T=T, dt=dt, nrepl=nrepl)
         dW = self.dW
         t = np.linspace(dt, 1, nobs)
-        Dt = Tratio*dt;
-        L = nobs/Tratio;        # L EM steps of size Dt = R*dt
-        Xem = np.zeros((nrepl,L));    # preallocate for efficiency
+        Dt = Tratio*dt
+        L = nobs/Tratio        # L EM steps of size Dt = R*dt
+        Xem = np.zeros((nrepl,L))    # preallocate for efficiency
         Xtemp = xzero
         Xem[:,0] = xzero
         for j in np.arange(1,L):

@@ -122,7 +122,7 @@ class GaussProcess(object):
     def plot(self, y, plt=plt ):
         '''some basic plots'''
         #todo return proper graph handles
-        plt.figure();
+        plt.figure()
         plt.plot(self.x,self.y, 'bo-', self.x, self.yest, 'r.-')
         plt.title('sample (training) points')
         plt.figure()

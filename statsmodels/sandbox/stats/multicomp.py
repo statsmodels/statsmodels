@@ -485,7 +485,7 @@ def tiecorrect(xranks):
     #casting to int rounds down, but not relevant for this case
     rankbincount = np.bincount(np.asarray(xranks,dtype=int))
     nties = rankbincount[rankbincount > 1]
-    ntot = float(len(xranks));
+    ntot = float(len(xranks))
     tiecorrection = 1 - (nties**3 - nties).sum()/(ntot**3 - ntot)
     return tiecorrection
 
@@ -1898,7 +1898,7 @@ if __name__ == '__main__':
 
         rankbincount = np.bincount(xranks.astype(int))
         nties = rankbincount[rankbincount > 1]
-        ntot = float(len(xranks));
+        ntot = float(len(xranks))
         tiecorrection = 1 - (nties**3 - nties).sum()/(ntot**3 - ntot)
         assert_almost_equal(tiecorrection, stats.tiecorrect(xranks),15)
         print('\ntiecorrection for data and ranks')

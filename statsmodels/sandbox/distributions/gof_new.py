@@ -72,7 +72,7 @@ def ks_2samp(data1, data2):
     >>> from scipy.stats import ks_2samp
 
     >>> #fix random seed to get the same result
-    >>> np.random.seed(12345678);
+    >>> np.random.seed(12345678)
 
     >>> n1 = 200  # size of first sample
     >>> n2 = 300  # size of second sample
@@ -80,7 +80,7 @@ def ks_2samp(data1, data2):
     different distribution
     we can reject the null hypothesis since the pvalue is below 1%
 
-    >>> rvs1 = stats.norm.rvs(size=n1,loc=0.,scale=1);
+    >>> rvs1 = stats.norm.rvs(size=n1,loc=0.,scale=1)
     >>> rvs2 = stats.norm.rvs(size=n2,loc=0.5,scale=1.5)
     >>> ks_2samp(rvs1,rvs2)
     (0.20833333333333337, 4.6674975515806989e-005)
