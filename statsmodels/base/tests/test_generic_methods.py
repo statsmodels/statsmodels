@@ -217,7 +217,8 @@ class CheckGenericMixin(object):
 
         if hasattr(res1, 'resid'):
             # discrete models, Logit don't have `resid` yet
-            assert_allclose(res1.resid, res2.resid, rtol=1e-10)
+            # atol discussion at gh-5158
+            assert_allclose(res1.resid, res2.resid, rtol=1e-10, atol=1e-12)
 
         ex = self.results.model.exog.mean(0)
         predicted1 = res1.predict(ex, **self.predict_kwds)
