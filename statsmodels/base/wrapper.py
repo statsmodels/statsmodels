@@ -21,15 +21,14 @@ class ResultsWrapper(object):
         return [x for x in dir(self._results)]
 
     def __getattribute__(self, attr):
-        get = lambda name: object.__getattribute__(self, name)
 
         try:
-            results = get('_results')
+            results = object.__getattribute__(self, '_results')
         except AttributeError:
             pass
 
         try:
-            return get(attr)
+            return object.__getattribute__(self, attr)
         except AttributeError:
             pass
 
@@ -44,11 +43,9 @@ class ResultsWrapper(object):
         return obj
 
     def __getstate__(self):
-        #print 'pickling wrapper', self.__dict__
         return self.__dict__
 
     def __setstate__(self, dict_):
-        #print 'unpickling wrapper', dict_
         self.__dict__.update(dict_)
 
     def save(self, fname, remove_data=False):
@@ -91,7 +88,8 @@ def make_wrapper(func, how):
         results = object.__getattribute__(self, '_results')
         data = results.model.data
         if how and isinstance(how, tuple):
-            obj = data.wrap_output(func(results, *args, **kwargs), how[0], how[1:])
+            obj = data.wrap_output(func(results, *args, **kwargs),
+                                   how[0], how[1:])
         elif how:
             obj = data.wrap_output(func(results, *args, **kwargs), how)
         return obj
@@ -144,7 +142,8 @@ if __name__ == '__main__':
     # convert edu to dummy
     exog = sm.tools.categorical(exog, col=0, drop=True)
     # drop reference categories and add intercept
-    exog = sm.add_constant(exog[:, [1, 2, 3, 4, 5, 7, 8, 10, 11, 12]], prepend=False)
+    exog = sm.add_constant(exog[:, [1, 2, 3, 4, 5, 7, 8, 10, 11, 12]],
+                           prepend=False)
 
     endog = np.round(data.endog)
     mod = sm.GLM(endog, exog, family=sm.families.Poisson()).fit()
