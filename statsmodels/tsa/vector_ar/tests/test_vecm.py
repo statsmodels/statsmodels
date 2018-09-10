@@ -799,7 +799,8 @@ def test_fc():
                 exog_model = results_sm_exog[ds][dt].exog
                 exog_seasons_fc = exog_model[-seasons:, :seasons-1]
                 exog_seasons_fc = np.pad(exog_seasons_fc,
-                    ((0, STEPS-exog_seasons_fc.shape[0]), (0, 0)), "wrap")
+                                         ((0, STEPS-exog_seasons_fc.shape[0]), (0, 0)),
+                                         "wrap")
                 # if linear trend in exog
                 if exog_seasons_fc.shape[1] + 1 == exog_model.shape[1]:
                     exog_lt_fc = exog_model[-1, -1] + 1 + np.arange(STEPS)
@@ -952,14 +953,14 @@ def test_granger_causality():
                 # check whether string sequences as args work in the same way:
                 g_p_obt_str = granger_sm_str.pvalue
                 assert_allclose(g_p_obt_str, g_p_obt, 1e-07, 0, False,
-                    err_msg_g_t + " - sequences of integers and ".upper() + \
+                                err_msg_g_t + " - sequences of integers and ".upper() +
                                 "strings as arguments don't yield the same result!".upper())
                 # check if int (e.g. 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     g_p_obt_single = granger_sm_single_ind.pvalue
                     assert_allclose(g_p_obt_single, g_p_obt, 1e-07, 0, False,
-                        err_msg_g_t + " - list of int and int as ".upper() + \
+                                    err_msg_g_t + " - list of int and int as ".upper() +
                                     "argument don't yield the same result!".upper())
 
 
@@ -1402,8 +1403,8 @@ def test_VECM_seasonal_forecast():
 
     # predict 3 cycles, check location of dips
     dips_true = np.array([[ 4,  4,  4],
-                       [10, 10, 10],
-                       [16, 16, 16]])
+                          [10, 10, 10],
+                          [16, 16, 16]])
     for res in [res0, res2, res4]:
         forecast = res.predict(steps=3*seasons)
         dips = np.sort(np.argsort(forecast, axis=0)[:3], axis=0)

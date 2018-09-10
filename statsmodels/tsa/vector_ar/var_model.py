@@ -475,7 +475,7 @@ class LagOrderResults:
     def summary(self):  # basically copied from (now deleted) print_ic_table()
         cols = sorted(self.ics)  # ["aic", "bic", "hqic", "fpe"]
         str_data = np.array([["%#10.4g" % v for v in self.ics[c]] for c in cols],
-                       dtype=object).T
+                            dtype=object).T
         # mark minimum with an asterisk
         for i, col in enumerate(cols):
             idx = int(self.selected_orders[col]), i
@@ -636,9 +636,9 @@ class VAR(tsbase.TimeSeriesModel):
         if self.exog is not None:
             x_names_to_add = [("exog%d" % i)
                               for i in range(self.exog.shape[1])]
-            self.data.xnames = self.data.xnames[:k_trend] + \
-                               x_names_to_add + \
-                               self.data.xnames[k_trend:]
+            self.data.xnames = (self.data.xnames[:k_trend] +
+                                x_names_to_add +
+                                self.data.xnames[k_trend:])
 
         return self._estimate_var(lags, trend=trend)
 
@@ -1523,7 +1523,7 @@ class VARResults(VARProcess):
         return lower, upper
 
     def irf_resim(self, orth=False, repl=1000, T=10,
-                      seed=None, burn=100, cum=False):
+                  seed=None, burn=100, cum=False):
         """
         Simulates impulse response function, returning an array of simulations.
         Used for Sims-Zha error band calculation.
@@ -2090,7 +2090,7 @@ class VARResultsWrapper(wrap.ResultsWrapper):
               'sigma_u_mle': 'cov_eq',
               'stderr': 'columns_eq'}
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
-                                    _attrs)
+                                   _attrs)
     _methods = {}
     _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
                                      _methods)

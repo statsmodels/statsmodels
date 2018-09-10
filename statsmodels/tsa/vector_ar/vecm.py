@@ -1456,7 +1456,7 @@ class VECMResults(object):
     # confidence intervals
     def _make_conf_int(self, est, stderr, alpha):
         struct_arr = np.zeros(est.shape, dtype=[("lower", float),
-                                               ("upper", float)])
+                                                ("upper", float)])
         struct_arr["lower"] = est - scipy.stats.norm.ppf(1 - alpha/2) * stderr
         struct_arr["upper"] = est + scipy.stats.norm.ppf(1 - alpha/2) * stderr
         return struct_arr
@@ -1536,8 +1536,9 @@ class VECMResults(object):
         for i in range(2, self.k_ar):
             start_row = self.neqs**2 + (i-2) * self.neqs**2
             start_col = self.neqs**2 + (i-2) * self.neqs**2
-            vecm_var_transformation[start_row:start_row+self.neqs**2,
-                start_col:start_col+2*self.neqs**2] = hstack((-eye, eye))
+            rslice = slice(start_row, start_row+self.neqs**2)
+            cslice = slice(start_col, start_col+2*self.neqs**2)
+            vecm_var_transformation[rslice, cslice] = hstack((-eye, eye))
         # for A_p:
         vecm_var_transformation[-self.neqs**2:, -self.neqs**2:] = -eye
         return chain_dot(vecm_var_transformation, self.cov_params_wo_det,
@@ -1664,7 +1665,7 @@ class VECMResults(object):
             if exog_coint_fc.ndim == 1:
                 exog_coint_fc = exog_coint_fc[:, None]  # make 2-D
             exog_coint_fc = np.vstack((self.exog_coint[-1:],
-                                          exog_coint_fc[:steps-1]))
+                                       exog_coint_fc[:steps-1]))
             exog.append(exog_coint_fc)
             trend_coefs.append(self.alpha.dot(self.exog_coint_coefs.T).T)
 
