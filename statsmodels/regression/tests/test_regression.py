@@ -11,7 +11,6 @@ from numpy.testing import (assert_almost_equal, assert_approx_equal, assert_,
 import pytest
 from scipy.linalg import toeplitz
 from statsmodels.tools.tools import add_constant, categorical
-from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.regression.linear_model import (OLS, WLS, GLS, yule_walker,
                                                  burg)
 from statsmodels.datasets import longley
@@ -167,7 +166,7 @@ class TestOLS(CheckRegressionResults):
         Q, R = np.linalg.qr(data.exog)
         model_qr.exog_Q, model_qr.exog_R = Q, R
         model_qr.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
-        model_qr.rank = np_matrix_rank(R)
+        model_qr.rank = np.linalg.matrix_rank(R)
         res_qr2 = model_qr.fit(method="qr")
 
         cls.res_qr = res_qr

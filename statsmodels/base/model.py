@@ -13,7 +13,6 @@ from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.tools.sm_exceptions import ValueWarning, \
     HessianInversionWarning
 from statsmodels.formula import handle_formula_data
-from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.base.optimizer import Optimizer
 
 
@@ -772,7 +771,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         # and should contain any preprocessing that needs to be done for a model
         if self.exog is not None:
             # assume constant
-            er = np_matrix_rank(self.exog)
+            er = np.linalg.matrix_rank(self.exog)
             self.df_model = float(er - 1)
             self.df_resid = float(self.exog.shape[0] - er)
         else:

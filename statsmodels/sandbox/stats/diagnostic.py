@@ -37,9 +37,9 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 from statsmodels.tsa.stattools import acf, adfuller
 from statsmodels.tsa.tsatools import lagmat
-from statsmodels.compat.numpy import np_matrix_rank
 
-#get the old signature back so the examples work
+
+# get the old signature back so the examples work
 def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
     return adfuller(x, maxlag=maxlag, regression=trendorder, autolag=autolag,
                     store=store, regresults=False)
@@ -658,7 +658,7 @@ def het_white(resid, exog, retres=False):
     #degrees of freedom take possible reduced rank in exog into account
     #df_model checks the rank to determine df
     #extra calculation that can be removed:
-    assert resols.df_model == np_matrix_rank(exog) - 1
+    assert resols.df_model == np.linalg.matrix_rank(exog) - 1
     lmpval = stats.chi2.sf(lm, resols.df_model)
     return lm, lmpval, fval, fpval
 

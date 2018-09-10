@@ -39,7 +39,6 @@ import statsmodels.base.model as base
 from statsmodels.base.data import handle_data  # for mnlogit
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
-from statsmodels.compat.numpy import np_matrix_rank
 
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 from statsmodels.distributions import genpoisson_p
@@ -178,7 +177,7 @@ class DiscreteModel(base.LikelihoodModel):
         and should contain any preprocessing that needs to be done for a model.
         """
         # assumes constant
-        rank = np_matrix_rank(self.exog)
+        rank = np.linalg.matrix_rank(self.exog)
         self.df_model = float(rank - 1)
         self.df_resid = float(self.exog.shape[0] - rank)
 
