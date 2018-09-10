@@ -470,15 +470,6 @@ def _make_lag_matrix(x, lags):
     return pd.DataFrame(data, columns=columns)
 
 
-class Equation(object):
-    """
-    Stub, estimate one equation
-    """
-
-    def __init__(self, y, x):
-        pass
-
-
 if __name__ == '__main__':
     import pandas.util.testing as ptest
 
