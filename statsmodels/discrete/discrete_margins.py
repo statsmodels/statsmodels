@@ -1,36 +1,39 @@
-#Splitting out maringal effects to see if they can be generalized
+# Splitting out marginal effects to see if they can be generalized
 
 from statsmodels.compat.python import lzip, callable, range
 import numpy as np
 from scipy.stats import norm
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
 
-#### margeff helper functions ####
-#NOTE: todo marginal effects for group 2
+# margeff helper functions
+# TODO: marginal effects for group 2
 # group 2 oprobit, ologit, gologit, mlogit, biprobit
+
 
 def _check_margeff_args(at, method):
     """
     Checks valid options for margeff
     """
-    if at not in ['overall','mean','median','zero','all']:
+    if at not in ['overall', 'mean', 'median', 'zero', 'all']:
         raise ValueError("%s not a valid option for `at`." % at)
-    if method not in ['dydx','eyex','dyex','eydx']:
+    if method not in ['dydx', 'eyex', 'dyex', 'eydx']:
         raise ValueError("method is not understood.  Got %s" % method)
+
 
 def _check_discrete_args(at, method):
     """
     Checks the arguments for margeff if the exogenous variables are discrete.
     """
-    if method in ['dyex','eyex']:
+    if method in ['dyex', 'eyex']:
         raise ValueError("%s not allowed for discrete variables" % method)
     if at in ['median', 'zero']:
         raise ValueError("%s not allowed for discrete variables" % at)
 
+
 def _get_const_index(exog):
     """
     Returns a boolean array of non-constant column indices in exog and
-    an scalar array of where the constant is or None
+    a scalar array of where the constant is 0 or None
     """
     effects_idx = exog.var(0) != 0
     if np.any(~effects_idx):
@@ -38,6 +41,7 @@ def _get_const_index(exog):
     else:
         const_idx = None
     return effects_idx, const_idx
+
 
 def _isdummy(X):
     """
@@ -67,14 +71,16 @@ def _isdummy(X):
         ind = np.asarray([ind])
     return np.where(ind)[0]
 
+
 def _get_dummy_index(X, const_idx):
     dummy_ind = _isdummy(X)
     dummy = True
 
-    if dummy_ind.size == 0: # don't waste your time
+    if dummy_ind.size == 0:  # don't waste your time
         dummy = False
-        dummy_ind = None # this gets passed to stand err func
+        dummy_ind = None  # this gets passed to stand err func
     return dummy_ind, dummy
+
 
 def _iscount(X):
     """
@@ -94,7 +100,7 @@ def _iscount(X):
     array([0, 3, 4])
     """
     X = np.asarray(X)
-    remainder = np.logical_and(np.logical_and(np.all(X % 1. == 0, axis = 0),
+    remainder = np.logical_and(np.logical_and(np.all(X % 1. == 0, axis=0),
                                X.var(0) != 0), np.all(X >= 0, axis=0))
     dummy = _isdummy(X)
     remainder = np.where(remainder)[0].tolist()
@@ -102,42 +108,43 @@ def _iscount(X):
         remainder.remove(idx)
     return np.array(remainder)
 
+
 def _get_count_index(X, const_idx):
     count_ind = _iscount(X)
     count = True
 
-    if count_ind.size == 0: # don't waste your time
+    if count_ind.size == 0:  # don't waste your time
         count = False
-        count_ind = None # for stand err func
+        count_ind = None  # for stand err func
     return count_ind, count
 
+
 def _get_margeff_exog(exog, at, atexog, ind):
-    if atexog is not None: # user supplied
+    if atexog is not None:  # user supplied
         if isinstance(atexog, dict):
             # assumes values are singular or of len(exog)
             for key in atexog:
-                exog[:,key] = atexog[key]
-        elif isinstance(atexog, np.ndarray): #TODO: handle DataFrames
+                exog[:, key] = atexog[key]
+        elif isinstance(atexog, np.ndarray):  # TODO: handle DataFrames
             if atexog.ndim == 1:
                 k_vars = len(atexog)
             else:
                 k_vars = atexog.shape[1]
-            try:
-                assert k_vars == exog.shape[1]
-            except:
+            if k_vars != exog.shape[1]:
                 raise ValueError("atexog does not have the same number "
-                        "of variables as exog")
+                                 "of variables as exog")
             exog = atexog
 
-    #NOTE: we should fill in atexog after we process at
+    # NOTE: we should fill in atexog after we process at
     if at == 'mean':
         exog = np.atleast_2d(exog.mean(0))
     elif at == 'median':
         exog = np.atleast_2d(np.median(exog, axis=0))
     elif at == 'zero':
-        exog = np.zeros((1,exog.shape[1]))
-        exog[0,~ind] = 1
+        exog = np.zeros((1, exog.shape[1]))
+        exog[0, ~ind] = 1
     return exog
+
 
 def _get_count_effects(effects, exog, count_ind, method, model, params):
     """
@@ -151,13 +158,14 @@ def _get_count_effects(effects, exog, count_ind, method, model, params):
         effect0 = model.predict(params, exog0)
         exog0[:, i] += 2
         effect1 = model.predict(params, exog0)
-        #NOTE: done by analogy with dummy effects but untested bc
-        # stata doesn't handle both count and eydx anywhere
+        # NOTE: done by analogy with dummy effects but untested because
+        #   stata doesn't handle both count and eydx anywhere
         if 'ey' in method:
             effect0 = np.log(effect0)
             effect1 = np.log(effect1)
         effects[:, i] = ((effect1 - effect0)/2)
     return effects
+
 
 def _get_dummy_effects(effects, exog, dummy_ind, method, model, params):
     """
@@ -166,11 +174,10 @@ def _get_dummy_effects(effects, exog, dummy_ind, method, model, params):
     """
     # this is the index for the effect and the index for dummy col in exog
     for i in dummy_ind:
-        exog0 = exog.copy() # only copy once, can we avoid a copy?
-        exog0[:,i] = 0
+        exog0 = exog.copy()  # only copy once, TODO: can we avoid a copy?
+        exog0[:, i] = 0
         effect0 = model.predict(params, exog0)
-        #fittedvalues0 = np.dot(exog0,params)
-        exog0[:,i] = 1
+        exog0[:, i] = 1
         effect1 = model.predict(params, exog0)
         if 'ey' in method:
             effect0 = np.log(effect0)
@@ -178,17 +185,19 @@ def _get_dummy_effects(effects, exog, dummy_ind, method, model, params):
         effects[:, i] = (effect1 - effect0)
     return effects
 
+
 def _effects_at(effects, at):
     if at == 'all':
         effects = effects
     elif at == 'overall':
         effects = effects.mean(0)
     else:
-        effects = effects[0,:]
+        effects = effects[0, :]
     return effects
 
+
 def _margeff_cov_params_dummy(model, cov_margins, params, exog, dummy_ind,
-        method, J):
+                              method, J):
     r"""
     Returns the Jacobian for discrete regressors for use in margeff_cov_params.
 
@@ -205,23 +214,25 @@ def _margeff_cov_params_dummy(model, cov_margins, params, exog, dummy_ind,
     for i in dummy_ind:
         exog0 = exog.copy()
         exog1 = exog.copy()
-        exog0[:,i] = 0
-        exog1[:,i] = 1
+        exog0[:, i] = 0
+        exog1[:, i] = 1
         dfdb0 = model._derivative_predict(params, exog0, method)
         dfdb1 = model._derivative_predict(params, exog1, method)
         dfdb = (dfdb1 - dfdb0)
-        if dfdb.ndim >= 2: # for overall
+        if dfdb.ndim >= 2:  # for overall
             dfdb = dfdb.mean(0)
         if J > 1:
             K = dfdb.shape[1] // (J-1)
             cov_margins[i::K, :] = dfdb
         else:
             # dfdb could be too short if there are extra params, k_extra > 0
-            cov_margins[i, :len(dfdb)] = dfdb # how each F changes with change in B
+            cov_margins[i, :len(dfdb)] = dfdb
+            # dfdb describes how each F changes with change in B
     return cov_margins
 
+
 def _margeff_cov_params_count(model, cov_margins, params, exog, count_ind,
-                             method, J):
+                              method, J):
     r"""
     Returns the Jacobian for discrete regressors for use in margeff_cov_params.
 
@@ -237,20 +248,22 @@ def _margeff_cov_params_count(model, cov_margins, params, exog, count_ind,
     """
     for i in count_ind:
         exog0 = exog.copy()
-        exog0[:,i] -= 1
+        exog0[:, i] -= 1
         dfdb0 = model._derivative_predict(params, exog0, method)
-        exog0[:,i] += 2
+        exog0[:, i] += 2
         dfdb1 = model._derivative_predict(params, exog0, method)
         dfdb = (dfdb1 - dfdb0)
-        if dfdb.ndim >= 2: # for overall
+        if dfdb.ndim >= 2:  # for overall
             dfdb = dfdb.mean(0) / 2
         if J > 1:
             K = dfdb.shape[1] / (J-1)
             cov_margins[i::K, :] = dfdb
         else:
             # dfdb could be too short if there are extra params, k_extra > 0
-            cov_margins[i, :len(dfdb)] = dfdb # how each F changes with change in B
+            cov_margins[i, :len(dfdb)] = dfdb
+            # dfdb describes how each F changes with change in B
     return cov_margins
+
 
 def margeff_cov_params(model, params, exog, cov_params, at, derivative,
                        dummy_ind, count_ind, method, J):
@@ -279,7 +292,7 @@ def margeff_cov_params(model, params, exog, cov_params, at, derivative,
         - 'zero', The marginal effects at zero for each regressor.
         - 'all', The marginal effects at each observation.
 
-        Only overall has any effect here.you
+        Only overall has any effect here.
 
     derivative : function or array-like
         If a function, it returns the marginal effects of the model with
@@ -308,26 +321,29 @@ def margeff_cov_params(model, params, exog, cov_params, at, derivative,
         params = params.ravel('F')  # for Multinomial
         try:
             jacobian_mat = approx_fprime_cs(params, derivative,
-                                            args=(exog,method))
+                                            args=(exog, method))
         except TypeError:  # norm.cdf doesn't take complex values
             from statsmodels.tools.numdiff import approx_fprime
             jacobian_mat = approx_fprime(params, derivative,
-                                            args=(exog,method))
+                                         args=(exog, method))
         if at == 'overall':
             jacobian_mat = np.mean(jacobian_mat, axis=1)
         else:
             jacobian_mat = jacobian_mat.squeeze()  # exog was 2d row vector
         if dummy_ind is not None:
             jacobian_mat = _margeff_cov_params_dummy(model, jacobian_mat,
-                                params, exog, dummy_ind, method, J)
+                                                     params, exog, dummy_ind,
+                                                     method, J)
         if count_ind is not None:
             jacobian_mat = _margeff_cov_params_count(model, jacobian_mat,
-                                params, exog, count_ind, method, J)
+                                                     params, exog, count_ind,
+                                                     method, J)
     else:
         jacobian_mat = derivative
 
-    #NOTE: this won't go through for at == 'all'
+    # NOTE: this won't go through for at == 'all'
     return np.dot(np.dot(jacobian_mat, cov_params), jacobian_mat.T)
+
 
 def margeff_cov_with_se(model, params, exog, cov_params, at, derivative,
                         dummy_ind, count_ind, method, J):
@@ -338,23 +354,27 @@ def margeff_cov_with_se(model, params, exog, cov_params, at, derivative,
     and their standard errors.
     """
     cov_me = margeff_cov_params(model, params, exog, cov_params, at,
-                                              derivative, dummy_ind,
-                                              count_ind, method, J)
+                                derivative, dummy_ind,
+                                count_ind, method, J)
     return cov_me, np.sqrt(np.diag(cov_me))
+
 
 def margeff():
     pass
 
+
 def _check_at_is_all(method):
     if method['at'] == 'all':
         raise NotImplementedError("Only margeff are available when `at` is "
-                    "all. Please input specific points if you would like to "
-                    "do inference.")
+                                  "all. Please input specific points if you "
+                                  "would like to do inference.")
+
 
 _transform_names = dict(dydx='dy/dx',
                         eyex='d(lny)/d(lnx)',
                         dyex='dy/d(lnx)',
                         eydx='d(lny)/dx')
+
 
 class Margins(object):
     """
@@ -364,7 +384,7 @@ class Margins(object):
     I (SS) need to look at details of other models.
     """
     def __init__(self, results, get_margeff, derivative, dist=None,
-                       margeff_args=()):
+                 margeff_args=()):
         self._cache = resettable_cache()
         self.results = results
         self.dist = dist
@@ -402,7 +422,7 @@ class Margins(object):
     def summary(self, alpha=.05):
         raise NotImplementedError
 
-#class DiscreteMargins(Margins):
+
 class DiscreteMargins(object):
     """Get marginal effects of a Discrete Choice model.
 
@@ -442,7 +462,7 @@ class DiscreteMargins(object):
 
         Returns
         -------
-        frame : DataFrames
+        frame : DataFrame
             A DataFrame summarizing the marginal effects.
 
         Notes
@@ -455,35 +475,36 @@ class DiscreteMargins(object):
         model = self.results.model
         from pandas import DataFrame, MultiIndex
         names = [_transform_names[self.margeff_options['method']],
-                                  'Std. Err.', 'z', 'Pr(>|z|)',
-                                  'Conf. Int. Low', 'Cont. Int. Hi.']
-        ind = self.results.model.exog.var(0) != 0 # True if not a constant
+                 'Std. Err.', 'z', 'Pr(>|z|)',
+                 'Conf. Int. Low', 'Cont. Int. Hi.']
+        ind = self.results.model.exog.var(0) != 0  # True if not a constant
         exog_names = self.results.model.exog_names
         k_extra = getattr(model, 'k_extra', 0)
         if k_extra > 0:
             exog_names = exog_names[:-k_extra]
-        var_names = [name for i,name in enumerate(exog_names) if ind[i]]
+        var_names = [name for i, name in enumerate(exog_names) if ind[i]]
 
         if self.margeff.ndim == 2:
             # MNLogit case
             ci = self.conf_int(alpha)
             table = np.column_stack([i.ravel("F") for i in
-                        [self.margeff, self.margeff_se, self.tvalues,
-                         self.pvalues, ci[:, 0, :], ci[:, 1, :]]])
+                                     [self.margeff, self.margeff_se,
+                                      self.tvalues, self.pvalues,
+                                      ci[:, 0, :], ci[:, 1, :]]])
 
             _, yname_list = results._get_endog_name(model.endog_names,
-                                                        None, all=True)
+                                                    None, all=True)
             ynames = np.repeat(yname_list, len(var_names))
             xnames = np.tile(var_names, len(yname_list))
             index = MultiIndex.from_tuples(list(zip(ynames, xnames)),
                                            names=['endog', 'exog'])
         else:
-            table = np.column_stack((self.margeff, self.margeff_se, self.tvalues,
-                                     self.pvalues, self.conf_int(alpha)))
-            index=var_names
+            table = np.column_stack((self.margeff, self.margeff_se,
+                                     self.tvalues, self.pvalues,
+                                     self.conf_int(alpha)))
+            index = var_names
 
         return DataFrame(table, columns=names, index=index)
-
 
     @cache_readonly
     def pvalues(self):
@@ -534,15 +555,15 @@ class DiscreteMargins(object):
         title = model.__class__.__name__ + " Marginal Effects"
         method = self.margeff_options['method']
         top_left = [('Dep. Variable:', [model.endog_names]),
-                ('Method:', [method]),
-                ('At:', [self.margeff_options['at']]),]
+                    ('Method:', [method]),
+                    ('At:', [self.margeff_options['at']])]
 
         from statsmodels.iolib.summary import (Summary, summary_params,
-                                                table_extend)
-        exog_names = model.exog_names[:] # copy
+                                               table_extend)
+        exog_names = model.exog_names[:]  # i.e. make a copy
         smry = Summary()
 
-        # sigh, we really need to hold on to this in _data...
+        # TODO: sigh, we really need to hold on to this in _data...
         _, const_idx = _get_const_index(model.exog)
         if const_idx is not None:
             exog_names.pop(const_idx[0])
@@ -552,15 +573,15 @@ class DiscreteMargins(object):
         J = int(getattr(model, "J", 1))
         if J > 1:
             yname, yname_list = results._get_endog_name(model.endog_names,
-                                                None, all=True)
+                                                        None, all=True)
         else:
             yname = model.endog_names
             yname_list = [yname]
 
         smry.add_table_2cols(self, gleft=top_left, gright=[],
-                yname=yname, xname=exog_names, title=title)
+                             yname=yname, xname=exog_names, title=title)
 
-        #NOTE: add_table_params is not general enough yet for margeff
+        # NOTE: add_table_params is not general enough yet for margeff
         # could use a refactor with getattr instead of hard-coded params
         # tvalues etc.
         table = []
@@ -571,33 +592,32 @@ class DiscreteMargins(object):
         pvalues = self.pvalues
         if J > 1:
             for eq in range(J):
-                restup = (results, margeff[:,eq], margeff_se[:,eq],
-                          tvalues[:,eq], pvalues[:,eq], conf_int[:,:,eq])
+                restup = (results, margeff[:, eq], margeff_se[:, eq],
+                          tvalues[:, eq], pvalues[:, eq], conf_int[:, :, eq])
                 tble = summary_params(restup, yname=yname_list[eq],
-                              xname=exog_names, alpha=alpha, use_t=False,
-                              skip_header=True)
+                                      xname=exog_names, alpha=alpha,
+                                      use_t=False, skip_header=True)
                 tble.title = yname_list[eq]
                 # overwrite coef with method name
                 header = ['', _transform_names[method], 'std err', 'z',
-                        'P>|z|', '[' + str(alpha/2), str(1-alpha/2) + ']']
+                          'P>|z|', '[' + str(alpha/2), str(1-alpha/2) + ']']
                 tble.insert_header_row(0, header)
-                #from IPython.core.debugger import Pdb; Pdb().set_trace()
                 table.append(tble)
 
             table = table_extend(table, keep_headers=True)
         else:
             restup = (results, margeff, margeff_se, tvalues, pvalues, conf_int)
             table = summary_params(restup, yname=yname, xname=exog_names,
-                    alpha=alpha, use_t=False, skip_header=True)
+                                   alpha=alpha, use_t=False, skip_header=True)
             header = ['', _transform_names[method], 'std err', 'z',
-                        'P>|z|', '[' + str(alpha/2), str(1-alpha/2) + ']']
+                      'P>|z|', '[' + str(alpha/2), str(1-alpha/2) + ']']
             table.insert_header_row(0, header)
 
         smry.tables.append(table)
         return smry
 
     def get_margeff(self, at='overall', method='dydx', atexog=None,
-                          dummy=False, count=False):
+                    dummy=False, count=False):
         """Get marginal effects of the fitted model.
 
         Parameters
@@ -656,8 +676,8 @@ class DiscreteMargins(object):
         When using after Poisson, returns the expected number of events
         per period, assuming that the model is loglinear.
         """
-        self._reset() # always reset the cache when this is called
-        #TODO: if at is not all or overall, we can also put atexog values
+        self._reset()  # always reset the cache when this is called
+        # TODO: if at is not all or overall, we can also put atexog values
         # in summary table head
         method = method.lower()
         at = at.lower()
@@ -666,10 +686,11 @@ class DiscreteMargins(object):
         results = self.results
         model = results.model
         params = results.params
-        exog = model.exog.copy() # copy because values are changed
-        effects_idx, const_idx =  _get_const_index(exog)
+        exog = model.exog.copy()  # copy because values are changed
+        effects_idx, const_idx = _get_const_index(exog)
         if hasattr(model, 'k_extra') and model.k_extra > 0:
-            effects_idx = np.concatenate((effects_idx, np.zeros(model.k_extra, np.bool_)))
+            effects_idx = np.concatenate((effects_idx,
+                                          np.zeros(model.k_extra, np.bool_)))
 
         if dummy:
             _check_discrete_args(at, method)
@@ -692,31 +713,33 @@ class DiscreteMargins(object):
 
         # get base marginal effects, handled by sub-classes
         effects = model._derivative_exog(params, exog, method,
-                                                    dummy_idx, count_idx)
+                                         dummy_idx, count_idx)
 
         J = getattr(model, 'J', 1)
-        effects_idx = np.tile(effects_idx, J) # adjust for multi-equation.
+        effects_idx = np.tile(effects_idx, J)  # adjust for multi-equation.
 
         effects = _effects_at(effects, at)
 
         if at == 'all':
             if J > 1:
-                K = model.K - np.any(~effects_idx) # subtract constant
+                K = model.K - np.any(~effects_idx)  # subtract constant
                 self.margeff = effects[:, effects_idx].reshape(-1, K, J,
-                                                                order='F')
+                                                               order='F')
             else:
                 self.margeff = effects[:, effects_idx]
         else:
             # Set standard error of the marginal effects by Delta method.
+            deriv_exog = model._derivative_exog
             margeff_cov, margeff_se = margeff_cov_with_se(model, params, exog,
-                                                results.cov_params(), at,
-                                                model._derivative_exog,
-                                                dummy_idx, count_idx,
-                                                method, J)
+                                                          results.cov_params(),
+                                                          at,
+                                                          deriv_exog,
+                                                          dummy_idx, count_idx,
+                                                          method, J)
 
             # reshape for multi-equation
             if J > 1:
-                K = model.K - np.any(~effects_idx) # subtract constant
+                K = model.K - np.any(~effects_idx)  # subtract constant
                 self.margeff = effects[effects_idx].reshape(K, J, order='F')
                 self.margeff_se = margeff_se[effects_idx].reshape(K, J,
                                                                   order='F')
