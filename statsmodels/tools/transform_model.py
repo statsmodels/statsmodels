@@ -10,6 +10,7 @@ License: BSD-3
 import numpy as np
 
 
+
 class StandardizeTransform(object):
     """class to reparameterize a model for standardized exog
 
