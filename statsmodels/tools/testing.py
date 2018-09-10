@@ -8,10 +8,6 @@ import re
 import numpy.testing as npt
 import pandas
 
-# for pandas version check
-def strip_rc(version):
-    return re.sub(r"rc\d+$", "", version)
-
 
 # local copies, all unchanged
 from numpy.testing import (assert_allclose, assert_almost_equal,
