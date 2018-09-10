@@ -31,21 +31,9 @@ class TestInteractionPlot(object):
                  markers=['D','^'], ms=10)
 
     @pytest.mark.matplotlib
-    def test_plot_pandas(self, close_figures):
-        weight = Series(self.weight, name='Weight')
-        duration = Series(self.duration, name='Duration')
-        days = Series(self.days, name='Days')
-        fig = interaction_plot(weight, duration, days,
-                 markers=['D','^'], ms=10)
-        ax = fig.axes[0]
-        trace = ax.get_legend().get_title().get_text()
-        assert_equal(trace, 'Duration')
-        assert_equal(ax.get_ylabel(), 'mean of Days')
-        assert_equal(ax.get_xlabel(), 'Weight')
-
-    @pytest.mark.matplotlib
-    def test_plot_string_data(self, close_figures):
-        weight = Series(self.weight, name='Weight').astype('str')
+    @pytest.mark.parametrize('astype', ['str', 'int'])
+    def test_plot_pandas(self, astype, close_figures):
+        weight = Series(self.weight, name='Weight').astype(astype)
         duration = Series(self.duration, name='Duration')
         days = Series(self.days, name='Days')
         fig = interaction_plot(weight, duration, days,
