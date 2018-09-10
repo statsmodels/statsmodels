@@ -3,7 +3,6 @@
 
 import numpy as np
 
-from statsmodels.compat.pandas import sort_values
 from statsmodels.graphics import utils
 from statsmodels.tsa.stattools import acf, pacf
 
@@ -12,7 +11,10 @@ def _prepare_data_corr_plot(x, lags, zero):
     zero = bool(zero)
     irregular = False if zero else True
     if lags is None:
-        lags = np.arange(not zero, len(x))
+        # GH 4663 - use a sensible default value
+        nobs = x.shape[0]
+        lim = min(int(np.ceil(10 * np.log10(nobs))), nobs - 1)
+        lags = np.arange(not zero, lim + 1)
     elif np.isscalar(lags):
         lags = np.arange(not zero, int(lags) + 1)  # +1 for zero lag
     else:
@@ -48,7 +50,11 @@ def _plot_corr(ax, title, acf_x, confint, lags, irregular, use_vlines,
             lags = lags[1:]
             confint = confint[1:]
             acf_x = acf_x[1:]
-        ax.fill_between(lags, confint[:, 0] - acf_x, confint[:, 1] - acf_x, alpha=.25)
+        lags = lags.astype(np.float)
+        lags[0] -= 0.5
+        lags[-1] += 0.5
+        ax.fill_between(lags, confint[:, 0] - acf_x,
+                        confint[:, 1] - acf_x, alpha=.25)
 
 
 def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
@@ -170,6 +176,7 @@ def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywunbiased',
         - ols - regression of time series on lags of it and on constant
         - ld or ldunbiased : Levinson-Durbin recursion with bias correction
         - ldb or ldbiased : Levinson-Durbin recursion without bias correction
+
     use_vlines : bool, optional
         If True, vertical lines and markers are plotted.
         If False, only markers are plotted.  The default marker is 'o'; it can
@@ -250,7 +257,7 @@ def seasonal_plot(grouped_x, xticklabels, ylabel=None, ax=None):
     start = 0
     ticks = []
     for season, df in grouped_x:
-        df = df.copy() # or sort balks for series. may be better way
+        df = df.copy()  # or sort balks for series. may be better way
         df.sort_index()
         nobs = len(df)
         x_plot = np.arange(start, start + nobs)
@@ -304,7 +311,6 @@ def month_plot(x, dates=None, ylabel=None, ax=None):
 
     .. plot:: plots/graphics_month_plot.py
     """
-    from pandas import DataFrame
 
     if dates is None:
         from statsmodels.tools.data import _check_period_index
@@ -313,9 +319,10 @@ def month_plot(x, dates=None, ylabel=None, ax=None):
         from pandas import Series, PeriodIndex
         x = Series(x, index=PeriodIndex(dates, freq="M"))
 
-    xticklabels = ['j','f','m','a','m','j','j','a','s','o','n','d']
-    return seasonal_plot(x.groupby(lambda y : y.month), xticklabels,
+    xticklabels = ['j', 'f', 'm', 'a', 'm', 'j', 'j', 'a', 's', 'o', 'n', 'd']
+    return seasonal_plot(x.groupby(lambda y: y.month), xticklabels,
                          ylabel=ylabel, ax=ax)
+
 
 def quarter_plot(x, dates=None, ylabel=None, ax=None):
     """
@@ -338,7 +345,6 @@ def quarter_plot(x, dates=None, ylabel=None, ax=None):
     -------
     matplotlib.Figure
     """
-    from pandas import DataFrame
 
     if dates is None:
         from statsmodels.tools.data import _check_period_index
@@ -348,5 +354,5 @@ def quarter_plot(x, dates=None, ylabel=None, ax=None):
         x = Series(x, index=PeriodIndex(dates, freq="Q"))
 
     xticklabels = ['q1', 'q2', 'q3', 'q4']
-    return seasonal_plot(x.groupby(lambda y : y.quarter), xticklabels,
+    return seasonal_plot(x.groupby(lambda y: y.quarter), xticklabels,
                          ylabel=ylabel, ax=ax)
