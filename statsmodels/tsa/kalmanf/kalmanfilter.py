@@ -39,17 +39,6 @@ from . import kalman_loglike
 # but this is obviously macro model specific
 
 
-def _init_diffuse(T,R):
-    m = T.shape[1] # number of states
-    r = R.shape[1] # should also be the number of states?
-    Q_0 = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F'))
-    return zeros((m,1)), Q_0.reshape(r,r,order='F')
-
-
-def kalmansmooth(F, A, H, Q, R, y, X, xi10):
-    pass
-
-
 class KalmanFilter(object):
     """
     Kalman Filter code intended for use with the ARMA model.
