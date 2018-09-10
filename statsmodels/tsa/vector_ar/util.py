@@ -172,18 +172,6 @@ def parse_lutkepohl_data(path): # pragma: no cover
     return data, date_range
 
 
-def get_logdet(m):
-    from statsmodels.tools.linalg import logdet_symm
-    return logdet_symm(m)
-
-
-get_logdet = np.deprecate(get_logdet,
-                          "statsmodels.tsa.vector_ar.util.get_logdet",
-                          "statsmodels.tools.linalg.logdet_symm",
-                          "get_logdet is deprecated and will be removed in "
-                          "0.8.0")
-
-
 def norm_signif_level(alpha=0.05):
     return stats.norm.ppf(1 - alpha / 2)
 
