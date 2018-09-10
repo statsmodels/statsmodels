@@ -11,7 +11,7 @@ except ImportError:
     pass
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_mean_diff_plot(close_figures):
 
     # Seed the random number generator.

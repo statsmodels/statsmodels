@@ -14,21 +14,13 @@ try:
 except ImportError:
     import pandas.util.testing as pdt
 
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    pass
-
 import pytest
 
 from statsmodels.regression.linear_model import OLS
-from statsmodels.discrete.discrete_model import Logit
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.genmod import families
 
-import statsmodels.stats.outliers_influence as oi
-from statsmodels.stats.outliers_influence import (GLMInfluence,
-                                                  MLEInfluence)
+from statsmodels.stats.outliers_influence import MLEInfluence
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -84,7 +76,7 @@ class InfluenceCompareExact(object):
         assert_allclose(infl0.d_fittedvalues_scaled,
                         infl1.d_fittedvalues_scaled, rtol=5e-9)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plots(self, close_figures):
         # SMOKE tests for plots
         infl1 = self.infl1

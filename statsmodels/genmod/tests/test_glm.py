@@ -28,11 +28,6 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
 
-try:
-    import matplotlib.pyplot as plt
-except:
-    pass
-
 pdf_output = False
 
 if pdf_output:
@@ -901,7 +896,7 @@ def test_formula_missing_exposure():
                   exposure=exposure, family=family)
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_plots(close_figures):
 
     np.random.seed(378)
@@ -914,7 +909,6 @@ def test_plots(close_figures):
     model = sm.GLM(endog, exog, family=sm.families.Binomial())
     result = model.fit()
 
-    import matplotlib.pyplot as plt
     import pandas as pd
     from statsmodels.graphics.regressionplots import add_lowess
 

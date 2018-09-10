@@ -89,11 +89,10 @@ class CheckPowerMixin(object):
             #yield assert_allclose, result, value, 0.001, 0, key+' failed'
             kwds[key] = value  # reset dict
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_power_plot(self, close_figures):
         if self.cls == smp.FTestPower:
             pytest.skip('skip FTestPower plot_power')
-        plt.close()
         fig = plt.figure()
         ax = fig.add_subplot(2,1,1)
         fig = self.cls().plot_power(dep_var='nobs',
@@ -103,12 +102,12 @@ class CheckPowerMixin(object):
                                   ax=ax, title='Power of t-Test',
                                   **self.kwds_extra)
         ax = fig.add_subplot(2,1,2)
-        fig = self.cls().plot_power(dep_var='es',
-                                  nobs=np.array([10, 20, 30, 50, 70, 100]),
-                                  effect_size=np.linspace(0.01, 2, 51),
-                                  #alternative='larger',
-                                  ax=ax, title='',
-                                  **self.kwds_extra)
+        self.cls().plot_power(dep_var='es',
+                              nobs=np.array([10, 20, 30, 50, 70, 100]),
+                              effect_size=np.linspace(0.01, 2, 51),
+                              #alternative='larger',
+                              ax=ax, title='',
+                              **self.kwds_extra)
 
 #''' test cases
 #one sample

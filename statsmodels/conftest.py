@@ -30,10 +30,11 @@ def pytest_runtest_setup(item):
     if 'example' in item.keywords and item.config.getoption("--skip-examples"):
         pytest.skip("skipping due to --skip-examples")
 
-    if 'requires_matplotlib' in item.keywords and item.config.getoption("--skip-matplotlib"):
+    if 'matplotlib' in item.keywords and \
+            item.config.getoption("--skip-matplotlib"):
         pytest.skip("skipping due to --skip-matplotlib")
 
-    if 'requires_matplotlib' in item.keywords and not HAVE_MATPLOTLIB:
+    if 'matplotlib' in item.keywords and not HAVE_MATPLOTLIB:
         pytest.skip("skipping since matplotlib is not intalled")
 
 

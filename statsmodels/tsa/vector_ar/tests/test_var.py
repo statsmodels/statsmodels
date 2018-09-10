@@ -14,8 +14,7 @@ import numpy as np
 import pytest
 
 try:
-    import matplotlib
-    import matplotlib.pyplot as plt
+    import matplotlib  # noqa: F401
     from distutils.version import LooseVersion
     MATPLOTLIB_GT_15 = LooseVersion(matplotlib.__version__) >= '1.5.0'
 except ImportError:
@@ -178,7 +177,7 @@ class CheckIRF(object):
             res_irfs = py_irfs[:, :, i]
             assert_almost_equal(ref_irfs, res_irfs)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plot_irf(self, close_figures):
         self.irf.plot()
         self.irf.plot(plot_stderr=False)
@@ -190,7 +189,7 @@ class CheckIRF(object):
         self.irf.plot(orth=True)
         self.irf.plot(impulse=0, response=1, orth=True)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plot_cum_effects(self, close_figures):
         self.irf.plot_cum_effects()
         self.irf.plot_cum_effects(plot_stderr=False)
@@ -207,7 +206,7 @@ class CheckFEVD(object):
     #---------------------------------------------------------------------------
     # FEVD tests
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_fevd_plot(self, close_figures):
         self.fevd.plot()
 
@@ -385,19 +384,19 @@ class TestVARResults(CheckIRF, CheckFEVD):
         y = self.res.y[:-self.p:]
         point, lower, upper = self.res.forecast_interval(y, 5)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plot_sim(self, close_figures):
         self.res.plotsim(steps=100)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plot(self, close_figures):
         self.res.plot()
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plot_acorr(self, close_figures):
         self.res.plot_acorr()
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plot_forecast(self, close_figures):
         self.res.plot_forecast(5)
 

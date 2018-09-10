@@ -215,7 +215,7 @@ class TestMICEData(object):
         assert_equal(imp_data._cycle_order, ['x5', 'x3', 'x4', 'y', 'x2', 'x1'])
 
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plot_missing_pattern(self, close_figures):
 
         df = gendat()
@@ -232,7 +232,7 @@ class TestMICEData(object):
                     close_figures()
 
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plot_bivariate(self, close_figures):
 
         df = gendat()
@@ -247,7 +247,7 @@ class TestMICEData(object):
             close_figures()
 
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_fit_obs(self, close_figures):
 
         df = gendat()
@@ -262,7 +262,7 @@ class TestMICEData(object):
             close_figures()
 
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plot_imputed_hist(self, close_figures):
 
         df = gendat()

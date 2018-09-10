@@ -15,67 +15,67 @@ class BaseProbplotMixin(object):
         self.other_array = np.random.normal(size=self.prbplt.data.shape)
         self.other_prbplot = sm.ProbPlot(self.other_array)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_qqplot(self, close_figures):
         self.prbplt.qqplot(ax=self.ax, line=self.line)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_ppplot(self, close_figures):
         self.prbplt.ppplot(ax=self.ax, line=self.line)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_probplot(self, close_figures):
         self.prbplt.probplot(ax=self.ax, line=self.line)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_qqplot_other_array(self, close_figures):
         self.prbplt.qqplot(ax=self.ax, line=self.line,
                            other=self.other_array)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_ppplot_other_array(self, close_figures):
         self.prbplt.ppplot(ax=self.ax, line=self.line,
                            other=self.other_array)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def t_est_probplot_other_array(self, close_figures):
         self.prbplt.probplot(ax=self.ax, line=self.line,
                              other=self.other_array)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_qqplot_other_prbplt(self, close_figures):
         self.prbplt.qqplot(ax=self.ax, line=self.line,
                            other=self.other_prbplot)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_ppplot_other_prbplt(self, close_figures):
         self.prbplt.ppplot(ax=self.ax, line=self.line,
                            other=self.other_prbplot)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def t_est_probplot_other_prbplt(self, close_figures):
         self.prbplt.probplot(ax=self.ax, line=self.line,
                              other=self.other_prbplot)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_qqplot_custom_labels(self, close_figures):
         self.prbplt.qqplot(ax=self.ax, line=self.line,
                            xlabel='Custom X-Label',
                            ylabel='Custom Y-Label')
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_ppplot_custom_labels(self, close_figures):
         self.prbplt.ppplot(ax=self.ax, line=self.line,
                            xlabel='Custom X-Label',
                            ylabel='Custom Y-Label')
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_probplot_custom_labels(self, close_figures):
         self.prbplt.probplot(ax=self.ax, line=self.line,
                              xlabel='Custom X-Label',
                              ylabel='Custom Y-Label')
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_qqplot_pltkwargs(self, close_figures):
         self.prbplt.qqplot(ax=self.ax, line=self.line,
                            marker='d',
@@ -83,7 +83,7 @@ class BaseProbplotMixin(object):
                            markeredgecolor='white',
                            alpha=0.5)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_ppplot_pltkwargs(self, close_figures):
         self.prbplt.ppplot(ax=self.ax, line=self.line,
                            marker='d',
@@ -91,7 +91,7 @@ class BaseProbplotMixin(object):
                            markeredgecolor='white',
                            alpha=0.5)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_probplot_pltkwargs(self, close_figures):
         self.prbplt.probplot(ax=self.ax, line=self.line,
                              marker='d',
@@ -148,18 +148,18 @@ class TestTopLevel(object):
         self.other_array = np.random.normal(size=self.prbplt.data.shape)
         self.other_prbplot = sm.ProbPlot(self.other_array)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_qqplot(self, close_figures):
         sm.qqplot(self.res, line='r')
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_qqplot_pltkwargs(self, close_figures):
         sm.qqplot(self.res, line='r', marker='d',
                   markerfacecolor='cornflowerblue',
                   markeredgecolor='white',
                   alpha=0.5)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_qqplot_2samples_ProbPlotObjects(self, close_figures):
         # also tests all values for line
         for line in ['r', 'q', '45', 's']:
@@ -168,7 +168,7 @@ class TestTopLevel(object):
                                line=line)
 
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_qqplot_2samples_arrays(self, close_figures):
         # also tests all values for line
         for line in ['r', 'q', '45', 's']:

@@ -44,7 +44,7 @@ class TestPlot(object):
 
         self.res = res
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plot_fit(self, close_figures):
         res = self.res
 
@@ -64,7 +64,7 @@ class TestPlot(object):
 
         close_or_save(pdf, fig)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plot_oth(self, close_figures):
         #just test that they run
         res = self.res
@@ -79,7 +79,7 @@ class TestPlot(object):
    
         close_or_save(pdf, fig)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plot_influence(self, close_figures):
         infl = self.res.get_influence()
         fig = influence_plot(self.res)
@@ -106,7 +106,7 @@ class TestPlot(object):
 
         assert_raises(ValueError, influence_plot, self.res, criterion='unknown')
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plot_leverage_resid2(self, close_figures):
         fig = plot_leverage_resid2(self.res)
         assert_equal(isinstance(fig, plt.Figure), True)
@@ -133,7 +133,7 @@ class TestPlotPandas(TestPlot):
 
 class TestPlotFormula(TestPlotPandas):
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_one_column_exog(self, close_figures):
         from statsmodels.formula.api import ols
         res = ols("y~var1-1", data=self.data).fit()
@@ -154,14 +154,14 @@ class TestABLine(object):
         cls.y = y
         cls.mod = mod
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_abline_model(self, close_figures):
         fig = abline_plot(model_results=self.mod)
         ax = fig.axes[0]
         ax.scatter(self.X[:,1], self.y)
         close_or_save(pdf, fig)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_abline_model_ax(self, close_figures):
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -169,14 +169,14 @@ class TestABLine(object):
         fig = abline_plot(model_results=self.mod, ax=ax)
         close_or_save(pdf, fig)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_abline_ab(self, close_figures):
         mod = self.mod
         intercept, slope = mod.params
         fig = abline_plot(intercept=intercept, slope=slope)
         close_or_save(pdf, fig)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_abline_ab_ax(self, close_figures):
         mod = self.mod
         intercept, slope = mod.params
@@ -186,7 +186,7 @@ class TestABLine(object):
         fig = abline_plot(intercept=intercept, slope=slope, ax=ax)
         close_or_save(pdf, fig)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_abline_remove(self, close_figures):
         mod = self.mod
         intercept, slope = mod.params
@@ -216,7 +216,7 @@ class TestABLinePandas(TestABLine):
 
 class TestAddedVariablePlot(object):
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_added_variable_poisson(self, close_figures):
 
         np.random.seed(3446)
@@ -266,7 +266,7 @@ class TestAddedVariablePlot(object):
 
 class TestPartialResidualPlot(object):
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_partial_residual_poisson(self, close_figures):
 
         np.random.seed(3446)
@@ -302,7 +302,7 @@ class TestPartialResidualPlot(object):
 
 class TestCERESPlot(object):
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_ceres_poisson(self, close_figures):
 
         np.random.seed(3446)

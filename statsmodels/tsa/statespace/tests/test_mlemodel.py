@@ -21,11 +21,6 @@ from statsmodels.tsa.statespace.tests.results import results_sarimax, results_va
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    pass
-
 # Basic kwargs
 kwargs = {
     'k_states': 1, 'design': [[1]], 'transition': [[1]],

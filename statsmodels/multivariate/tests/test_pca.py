@@ -9,12 +9,6 @@ import pandas as pd
 import pytest
 from numpy.testing import assert_allclose, assert_equal, assert_raises
 
-try:
-    import matplotlib.pyplot as plt
-    missing_matplotlib = False
-except ImportError:
-    missing_matplotlib = True
-
 from statsmodels.multivariate.pca import PCA
 from statsmodels.multivariate.tests.results.datamlw import data, princomp1, princomp2
 
@@ -51,7 +45,7 @@ class TestPCA(object):
         b = rs.standard_gamma(lam, size=(k, n)) / lam
         cls.x_wide = f.dot(b) + e
 
-    @pytest.mark.skipif(missing_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_smoke_plot_and_repr(self, close_figures):
         pc = PCA(self.x)
         fig = pc.plot_scree()
@@ -187,7 +181,7 @@ class TestPCA(object):
         assert_raises(ValueError, PCA, self.x, tol=2.0)
         assert_raises(ValueError, PCA, np.nan * np.ones((200,100)), tol=2.0)
 
-    @pytest.mark.skipif(missing_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_pandas(self, close_figures):
         pc = PCA(pd.DataFrame(self.x))
         pc1 = PCA(self.x)

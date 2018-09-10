@@ -19,7 +19,7 @@ labels = data.raw_data[:, 0].astype(int)
 data = data.raw_data[:, 1:]
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_hdr_basic(close_figures):
     _, hdr = hdrboxplot(data, labels=labels, seed=12345)
 
@@ -57,7 +57,7 @@ def test_hdr_basic(close_figures):
     assert_equal(labels[hdr.outliers_idx], outliers)
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_hdr_basic_brute(close_figures):
     _, hdr = hdrboxplot(data, labels=labels, use_brute=True)
 
@@ -69,7 +69,7 @@ def test_hdr_basic_brute(close_figures):
     assert_almost_equal(hdr.median, median_t, decimal=2)
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_hdr_plot(close_figures):
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -83,7 +83,7 @@ def test_hdr_plot(close_figures):
     ax.set_xlim([-0.2, 11.2])
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_hdr_alpha(close_figures):
     _, hdr = hdrboxplot(data, alpha=[0.7], seed=12345)
     extra_quant_t = np.vstack([[25.1, 26.5, 27.0, 26.4, 25.4, 24.1,
@@ -93,7 +93,7 @@ def test_hdr_alpha(close_figures):
     assert_almost_equal(hdr.extra_quantiles, extra_quant_t, decimal=0)
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_hdr_multiple_alpha(close_figures):
     _, hdr = hdrboxplot(data, alpha=[0.4, 0.92], seed=12345)
     extra_quant_t = [[25.712, 27.052, 27.711, 27.200,
@@ -112,7 +112,7 @@ def test_hdr_multiple_alpha(close_figures):
                         decimal=0)
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_hdr_threshold(close_figures):
     _, hdr = hdrboxplot(data, alpha=[0.8], threshold=0.93, seed=12345)
     labels_pos = np.all(np.in1d(data, hdr.outliers).reshape(data.shape),
@@ -121,7 +121,7 @@ def test_hdr_threshold(close_figures):
     assert_equal([1968, 1982, 1983, 1997, 1998], outliers)
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_hdr_bw(close_figures):
     _, hdr = hdrboxplot(data, bw='cv_ml', seed=12345)
     median_t = [24.25, 25.64, 25.99, 25.04, 23.71, 22.38,
@@ -129,7 +129,7 @@ def test_hdr_bw(close_figures):
     assert_almost_equal(hdr.median, median_t, decimal=2)
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_hdr_ncomp(close_figures):
     _, hdr = hdrboxplot(data, ncomp=3, seed=12345)
     median_t = [24.33, 25.71, 26.04, 25.08, 23.74, 22.40,
@@ -172,7 +172,7 @@ def test_banddepth_MBD():
     assert_almost_equal(depth, expected_depth, decimal=4)
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_fboxplot_rainbowplot(close_figures):
     # Test fboxplot and rainbowplot together, is much faster.
     def harmfunc(t):

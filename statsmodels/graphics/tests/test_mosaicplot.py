@@ -14,7 +14,7 @@ from statsmodels.api import datasets
 import numpy as np
 from itertools import product
 try:
-    import matplotlib.pyplot as pylab
+    import matplotlib.pyplot as plt
 except ImportError:
     pass
 
@@ -28,14 +28,14 @@ from statsmodels.graphics.mosaicplot import _normalize_split
 from statsmodels.graphics.mosaicplot import _split_rect
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_data_conversion(close_figures):
     # It will not reorder the elements
     # so the dictionary will look odd
     # as it key order has the c and b
     # keys swapped
     import pandas
-    fig, ax = pylab.subplots(4, 4)
+    _, ax = plt.subplots(4, 4)
     data = {'ax': 1, 'bx': 2, 'cx': 3}
     mosaic(data, ax=ax[0, 0], title='basic dict', axes_label=False)
     data = pandas.Series(data)
@@ -66,11 +66,10 @@ def test_data_conversion(close_figures):
     mosaic(data, ['gender', 'pet'], ax=ax[3, 2], title='both keys', axes_label=False)
     mosaic(data, ['pet', 'gender'], ax=ax[3, 3], title='keys inverted', axes_label=False)
 
-    pylab.suptitle('testing data conversion (plot 1 of 4)')
-    #pylab.show()
-    pylab.close('all')
+    plt.suptitle('testing data conversion (plot 1 of 4)')
 
-@pytest.mark.requires_matplotlib
+
+@pytest.mark.matplotlib
 def test_mosaic_simple(close_figures):
     # display a simple plot of 4 categories of data, splitted in four
     # levels with increasing size for each group
@@ -96,12 +95,10 @@ def test_mosaic_simple(close_figures):
                 props[key] = {'color': 'Crimson' , 'hatch': '+'}
     # mosaic of the data, with given gaps and colors
     mosaic(data, gap=0.05, properties=props, axes_label=False)
-    pylab.suptitle('syntetic data, 4 categories (plot 2 of 4)')
-    #pylab.show()
-    pylab.close('all')
+    plt.suptitle('syntetic data, 4 categories (plot 2 of 4)')
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_mosaic(close_figures):
     # make the same analysis on a known dataset
 
@@ -124,7 +121,7 @@ def test_mosaic(close_figures):
     num_to_cheat = {False: 'faithful', True: 'cheated'}
     datas['cheated'] = datas['cheated'].map(num_to_cheat)
     # finished cleaning
-    fig, ax = pylab.subplots(2, 2)
+    _, ax = plt.subplots(2, 2)
     mosaic(datas, ['rate_marriage', 'cheated'], ax=ax[0, 0],
                 title='by marriage happiness')
     mosaic(datas, ['religious', 'cheated'], ax=ax[0, 1],
@@ -135,11 +132,10 @@ def test_mosaic(close_figures):
     ax[1, 0].set_ylabel('religion status')
     mosaic(datas, ['religious', 'rate_marriage'], ax=ax[1, 1],
                 title='inter-dependence', axes_label=False)
-    pylab.suptitle("extramarital affairs (plot 3 of 4)")
-    #pylab.show()
-    pylab.close('all')
+    plt.suptitle("extramarital affairs (plot 3 of 4)")
 
-@pytest.mark.requires_matplotlib
+
+@pytest.mark.matplotlib
 def test_mosaic_very_complex(close_figures):
     # make a scattermatrix of mosaic plots to show the correlations between
     # each pair of variable in a dataset. Could be easily converted into a
@@ -153,7 +149,7 @@ def test_mosaic_very_complex(close_figures):
     props[('male', 'old')] = {'color': 'r'}
     props[('female',)] = {'color': 'pink'}
     L = len(key_base)
-    fig, axes = pylab.subplots(L, L)
+    _, axes = plt.subplots(L, L)
     for i in range(L):
         for j in range(L):
             m = set(range(L)).difference(set((i, j)))
@@ -177,11 +173,10 @@ def test_mosaic_very_complex(close_figures):
                     del temp_data[k]
                 mosaic(temp_data, ax=axes[i, j], axes_label=False,
                        properties=props, gap=0.05, horizontal=i > j)
-    pylab.suptitle('old males should look bright red,  (plot 4 of 4)')
-    #pylab.show()
-    pylab.close('all')
+    plt.suptitle('old males should look bright red,  (plot 4 of 4)')
 
-@pytest.mark.requires_matplotlib
+
+@pytest.mark.matplotlib
 def test_axes_labeling(close_figures):
     from numpy.random import rand
     key_set = (['male', 'female'], ['old', 'adult', 'young'],
@@ -191,17 +186,15 @@ def test_axes_labeling(close_figures):
     keys = list(product(*key_set))
     data = OrderedDict(zip(keys, rand(len(keys))))
     lab = lambda k: ''.join(s[0] for s in k)
-    fig, (ax1, ax2) = pylab.subplots(1, 2, figsize=(16, 8))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
     mosaic(data, ax=ax1, labelizer=lab, horizontal=True, label_rotation=45)
     mosaic(data, ax=ax2, labelizer=lab, horizontal=False,
         label_rotation=[0, 45, 90, 0])
     #fig.tight_layout()
     fig.suptitle("correct alignment of the axes labels")
-    #pylab.show()
-    pylab.close('all')
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_mosaic_empty_cells(close_figures):
     # SMOKE test  see #2286
     import pandas as pd
@@ -220,9 +213,7 @@ def test_mosaic_empty_cells(close_figures):
 
     ct = pd.crosstab(mydata.id1, mydata.id2)
     fig, vals = mosaic(ct.T.unstack())
-    pylab.close('all')
     fig, vals = mosaic(mydata, ['id1','id2'])
-    pylab.close('all')
 
 
 eq = lambda x, y: assert_(np.allclose(x, y))
@@ -428,7 +419,7 @@ def test_gap_split():
     eq(_split_rect(*pure_square, **conf_h), h_2split)
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_default_arg_index(close_figures):
     # 2116
     df = pd.DataFrame({'size' : ['small', 'large', 'large', 'small', 'large',
@@ -436,4 +427,3 @@ def test_default_arg_index(close_figures):
                        'length' : ['long', 'short', 'short', 'long', 'long',
                                    'short']})
     assert_raises(ValueError, mosaic, data=df, title='foobar')
-    pylab.close('all')

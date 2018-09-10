@@ -87,7 +87,7 @@ def run_ucm(name):
 
         # Optional smoke test for plot_components
         try:
-            import matplotlib.pyplot as plt  # noqa:F401
+            import matplotlib.pyplot  # noqa:F401
             res_true.plot_components()
         except ImportError:
             pass

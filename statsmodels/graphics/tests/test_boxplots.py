@@ -10,7 +10,7 @@ except ImportError:
     pass
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_violinplot_beanplot(close_figures):
     # Test violinplot and beanplot with the same dataset.
     data = anes96.load_pandas()

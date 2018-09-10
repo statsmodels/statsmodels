@@ -9,7 +9,6 @@ pdf_output = False
 
 try:
     import matplotlib.pyplot as plt
-    import matplotlib
 except ImportError:
     pass
 
@@ -34,7 +33,7 @@ class TestPredFunc(object):
         if pdf_output:
             self.pdf.savefig(fig)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_formula(self, close_figures):
 
         np.random.seed(542)
@@ -87,7 +86,7 @@ class TestPredFunc(object):
         plt.title("Linear model prediction")
         self.close_or_save(fig)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_lm_contrast(self, close_figures):
 
         np.random.seed(542)
@@ -122,7 +121,7 @@ class TestPredFunc(object):
         plt.title("Linear model contrast")
         self.close_or_save(fig)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_glm_formula_contrast(self, close_figures):
 
         np.random.seed(542)
@@ -158,7 +157,7 @@ class TestPredFunc(object):
         plt.title("Poisson regression contrast")
         self.close_or_save(fig)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_scb(self, close_figures):
 
         np.random.seed(473)
@@ -222,8 +221,7 @@ class TestPredFunc(object):
 
                 self.close_or_save(fig)
 
-
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_glm_formula(self, close_figures):
 
         np.random.seed(542)
@@ -292,7 +290,7 @@ class TestPredFunc(object):
             plt.title("Binomial GLM prediction")
             self.close_or_save(fig)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_noformula_prediction(self, close_figures):
 
         np.random.seed(6434)

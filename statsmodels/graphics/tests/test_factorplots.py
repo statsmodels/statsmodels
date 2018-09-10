@@ -7,7 +7,6 @@ from statsmodels.graphics.factorplots import interaction_plot
 
 try:
     import matplotlib.pyplot as plt
-    import matplotlib
 except ImportError:
     pass
 
@@ -21,17 +20,17 @@ class TestInteractionPlot(object):
         cls.duration = np.random.randint(1,3,size=60)
         cls.days = np.log(np.random.randint(1,30, size=60))
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plot_both(self, close_figures):
         fig = interaction_plot(self.weight, self.duration, self.days,
                  colors=['red','blue'], markers=['D','^'], ms=10)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plot_rainbow(self, close_figures):
         fig = interaction_plot(self.weight, self.duration, self.days,
                  markers=['D','^'], ms=10)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plot_pandas(self, close_figures):
         weight = Series(self.weight, name='Weight')
         duration = Series(self.duration, name='Duration')
@@ -44,7 +43,7 @@ class TestInteractionPlot(object):
         assert_equal(ax.get_ylabel(), 'mean of Days')
         assert_equal(ax.get_xlabel(), 'Weight')
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plot_string_data(self, close_figures):
         weight = Series(self.weight, name='Weight').astype('str')
         duration = Series(self.duration, name='Duration')
@@ -57,18 +56,18 @@ class TestInteractionPlot(object):
         assert_equal(ax.get_ylabel(), 'mean of Days')
         assert_equal(ax.get_xlabel(), 'Weight')
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_formatting(self, close_figures):
         fig = interaction_plot(self.weight, self.duration, self.days, colors=['r','g'], linestyles=['--','-.'])
         assert_equal(isinstance(fig, plt.Figure), True)
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_formatting_errors(self, close_figures):
         assert_raises(ValueError, interaction_plot, self.weight, self.duration, self.days, markers=['D'])
         assert_raises(ValueError, interaction_plot, self.weight, self.duration, self.days, colors=['b','r','g'])
         assert_raises(ValueError, interaction_plot, self.weight, self.duration, self.days, linestyles=['--','-.',':'])
 
-    @pytest.mark.requires_matplotlib
+    @pytest.mark.matplotlib
     def test_plottype(self, close_figures):
         fig = interaction_plot(self.weight, self.duration, self.days, plottype='line')
         assert_equal(isinstance(fig, plt.Figure), True)

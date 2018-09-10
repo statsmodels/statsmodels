@@ -9,7 +9,6 @@ pdf_output = False
 
 try:
     import matplotlib.pyplot as plt
-    import matplotlib
 except ImportError:
     pass
 
@@ -19,7 +18,7 @@ def close_or_save(pdf, fig):
         pdf.savefig(fig)
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_all(close_figures):
 
     if pdf_output:

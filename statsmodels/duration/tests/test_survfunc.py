@@ -188,7 +188,7 @@ def test_survdiff():
     assert_allclose(stat, 13.35259, atol=1e-4, rtol=1e-4)
 
 
-@pytest.mark.requires_matplotlib
+@pytest.mark.matplotlib
 def test_plot_km(close_figures):
 
     if pdf_output:
