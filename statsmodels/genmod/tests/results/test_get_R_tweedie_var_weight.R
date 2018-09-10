@@ -35,7 +35,7 @@ pyprint <- function(arr, prefix=NULL, suffix=NULL) {
     for (val in arr) {
       cat(val)
       if (i == length(arr)) {
-        if (i %% 3 == 0) {
+        if (i %% 3 != 1) {
           cat("\n")
         }
       }
@@ -58,7 +58,7 @@ pyprint <- function(arr, prefix=NULL, suffix=NULL) {
         }
         j <- 1 + j
       }
-      cat("))")
+      cat("), order=\"F\")")
     }
   }
   if (!is.null(suffix)) {
