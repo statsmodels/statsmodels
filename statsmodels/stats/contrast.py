@@ -94,20 +94,11 @@ class ContrastResults(object):
         else:
             raise NotImplementedError('Confidence Interval not available')
 
-
-    def __array__(self):
-        if hasattr(self, "fvalue"):
-            return self.fvalue
-        else:
-            return self.tvalue
-
     def __str__(self):
         return self.summary().__str__()
 
-
     def __repr__(self):
         return str(self.__class__) + '\n' + self.__str__()
-
 
     def summary(self, xname=None, alpha=0.05, title=None):
         """Summarize the Results of the hypothesis test
