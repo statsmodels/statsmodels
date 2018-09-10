@@ -47,18 +47,6 @@ from .iolib.smpickle import load_pickle as load
 from .tools.print_version import show_versions
 from .tools.web import webdoc
 
-import os
-
-chmpath = os.path.join(os.path.dirname(__file__), 'statsmodelsdoc.chm')
-if os.path.exists(chmpath):
-    def open_help(chmpath=chmpath):
-        from subprocess import Popen
-
-        p = Popen(chmpath, shell=True)
-
-del os
-del chmpath
-
 from ._version import get_versions
 __version__ = get_versions()['version']
 del get_versions
