@@ -348,11 +348,7 @@ def kstest_fit(x, dist='norm', pvalmethod='approx'):
     return d_ks, pval
 
 
-
 lilliefors = kstest_fit
-lillifors = np.deprecate(lilliefors, 'lillifors', 'lilliefors',
-                               "Use lilliefors, lillifors will be "
-                               "removed in 0.9 \n(Note: misspelling missing 'e')")
 
 # namespace aliases
 from functools import partial
