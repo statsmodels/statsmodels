@@ -1323,7 +1323,6 @@ class GEE(base.Model):
                                          self, params)
         return margeff
 
-
     def qic(self, params, scale, cov_params):
         """
         Returns quasi-information criteria and quasi-likelihood values.
@@ -1367,10 +1366,10 @@ class GEE(base.Model):
         When using the QIC for models with unknown scale parameter, use a common
         estimate of the scale parameter for all models being compared.
 
-        Reference
-        ---------
-        W. Pan (2001).  Akaike's information criterion in generalized estimating
-        equations.  Biometrics (57)1.
+        References
+        ----------
+        .. [*] W. Pan (2001).  Akaike's information criterion in generalized estimating
+               equations.  Biometrics (57) 1.
         """
 
         varfunc = self.family.variance
