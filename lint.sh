@@ -19,7 +19,7 @@ if [ "$LINT" == true ]; then
         statsmodels/resampling/ \
         statsmodels/interface/ \
         statsmodels/iolib/smpickle.py \
-        statsmodels.iolib/tests/test_pickle.py \
+        statsmodels/iolib/tests/test_pickle.py \
         statsmodels/tsa/regime_switching \
         statsmodels/regression/mixed_linear_model.py \
         statsmodels/duration/__init__.py \
@@ -39,6 +39,23 @@ if [ "$LINT" == true ]; then
     if [ $? -ne "0" ]; then
         RET=1
     fi
+
+    # Run a subset of checks on a subset of files; once these checks are
+    # passing on all files, this block can be removed
+    echo "Linting for spacing in a subset of files"
+    flake8 --select=E301,E302,E303,E304,E305 \
+        tools/ \
+        examples/ \
+        statsmodels/*.py \
+        statsmodels/base/ \
+        statsmodels/duration/ \
+        statsmodels/emplike/ \
+        statsmodels/formula/ \
+        statsmodels/imputation/ \
+        statsmodels/interface/ \
+        statsmodels/multivariate/ \
+        statsmodels/resampling/ \
+        statsmodels/tsa/
 
     # Tests any new python files
     NEW_FILES=$(git diff master --name-status -u -- "*.py" | grep ^A | cut -c 3- | paste -sd " " -)

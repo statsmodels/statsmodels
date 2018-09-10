@@ -329,7 +329,7 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
                          'transform_M':M, 'constant_C':C}
     return results
 
-_multivariate_test.__doc__ = (
+_multivariate_test.__doc__ = (  # noqa:E305
         """
         Multivariate linear model hypotheses testing
 
@@ -363,6 +363,7 @@ _multivariate_test.__doc__ = (
         results : MANOVAResults
 
         """)
+
 
 class _MultivariateOLS(Model):
     """
@@ -444,7 +445,8 @@ class _MultivariateOLSResults(object):
         return MultivariateTestResults(results,
                                        self.endog_names,
                                        self.exog_names)
-    mv_test.__doc__ = ("""
+    mv_test.__doc__ = (  # noqa:E305
+"""
 Linear hypotheses testing
 
 Parameters
@@ -465,6 +467,7 @@ where `params` is the regression coefficient matrix for the
 linear model y = x * params, `L` is the contrast matrix, `M` is the
 dependent variable transform matrix and C is the constant matrix.
 """)
+
     def summary(self):
         raise NotImplementedError
 

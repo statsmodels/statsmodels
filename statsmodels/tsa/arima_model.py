@@ -1570,8 +1570,6 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
                 raise ValueError('Forecast values for exog are required when '
                                  'the model contains exogenous regressors.')
 
-
-
         forecast = _arma_predict_out_of_sample(self.params,
                                                steps, self.resid, self.k_ar,
                                                self.k_ma, self.k_trend,

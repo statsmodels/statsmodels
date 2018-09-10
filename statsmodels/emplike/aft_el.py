@@ -39,6 +39,7 @@ from .descriptive import _OptFuncts
 import warnings
 from statsmodels.tools.sm_exceptions import IterationLimitWarning
 
+
 class OptAFT(_OptFuncts):
     """
     Provides optimization functions used in estimating and conducting
@@ -249,7 +250,6 @@ class emplikeAFT(object):
         mask = self.censors.ravel().astype(bool)
         self.uncens_endog = self.endog[mask, :].reshape(-1, 1)
         self.uncens_exog = self.exog[mask, :]
-
 
     def _is_tied(self, endog, censors):
         """

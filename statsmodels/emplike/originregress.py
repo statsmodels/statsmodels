@@ -159,8 +159,9 @@ class OriginResults(RegressionResults):
         self.params = np.squeeze(params)
         self.llr = est_llr
         self.llf_el = llf_el
+
     def el_test(self, b0_vals, param_nums, method='nm',
-                            stochastic_exog=1, return_weights=0):
+                stochastic_exog=1, return_weights=0):
         """
         Returns the llr and p-value for a hypothesized parameter value
         for a regression that goes through the origin

@@ -284,7 +284,6 @@ class DescStatRes(object):
         self.test_joint_skew_kurt = (8.753952, .012563)
 
 
-
 class RegressionResults(object):
     """
     Results for EL Regression
@@ -325,6 +324,7 @@ class RegressionResults(object):
 
         self.test_ci_beta3 = (-0.3804313225443794, 0.006934528877337928)
 
+
 class ANOVAResults(object):
     """
     Results for ANOVA
@@ -353,6 +353,7 @@ class AFTRes(object):
         self.test_beta0 = (.132511, 0.7158323)
         self.test_beta1 = (.297951, .5851693)
         self.test_joint = (11.8068, 0.002730147)
+
 
 class OriginResults(object):
     """

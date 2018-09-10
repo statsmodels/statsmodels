@@ -79,6 +79,7 @@ def test_manova_test_input_validation():
     mod.mv_test(hypothesis)
     hypothesis = [('test', np.array([[1, 1]]), None)]
     assert_raises(ValueError, mod.mv_test, hypothesis)
+    # FIXME: don't docstring-out test
     """
     assert_raises_regex(ValueError,
                         ('Contrast matrix L should have the same number of '
@@ -89,12 +90,14 @@ def test_manova_test_input_validation():
     mod.mv_test(hypothesis)
     hypothesis = [('test', np.array([[1, 1, 1]]), np.array([[1], [1]]))]
     assert_raises(ValueError, mod.mv_test, hypothesis)
+    # FIXME: don't docstring-out test
     """
     assert_raises_regex(ValueError,
                         ('Transform matrix M should have the same number of '
                          'rows as the number of columns of endog! 2 != 3'),
                         mod.mv_test, hypothesis)
     """
+
 
 def test_endog_1D_array():
     assert_raises(ValueError, MANOVA.from_formula, 'Basal ~ Loc', X)

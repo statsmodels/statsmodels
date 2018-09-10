@@ -14,6 +14,7 @@ import numpy as np
 
 longley_formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
 
+
 class CheckFormulaOLS(object):
 
     @classmethod
@@ -25,7 +26,8 @@ class CheckFormulaOLS(object):
 
     def test_exog_names(self):
         assert self.model.exog_names == ['Intercept', 'GNPDEFL', 'GNP',
-                                             'UNEMP', 'ARMED', 'POP', 'YEAR']
+                                         'UNEMP', 'ARMED', 'POP', 'YEAR']
+
     def test_design(self):
         npt.assert_equal(self.model.exog,
                          add_constant(self.data.exog, prepend=True))

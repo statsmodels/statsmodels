@@ -78,7 +78,6 @@ _predict_cov_params_docstring = """
         otherwise optional."""
 
 
-
 class PHSurvivalTime(object):
 
     def __init__(self, time, status, exog, strata=None, entry=None,
@@ -257,7 +256,6 @@ class PHSurvivalTime(object):
             self.ufailt_ix.append([np.asarray(x, dtype=np.int32) for x in uft_ix])
             self.risk_enter.append([np.asarray(x, dtype=np.int32) for x in risk_enter1])
             self.risk_exit.append([np.asarray(x, dtype=np.int32) for x in risk_exit1])
-
 
 
 class PHReg(model.LikelihoodModel):
@@ -456,7 +454,6 @@ class PHReg(model.LikelihoodModel):
 
         return results
 
-
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         start_params=None, refit=False, **kwargs):
         """
@@ -526,7 +523,6 @@ class PHReg(model.LikelihoodModel):
                               start_params=start_params,
                               refit=refit,
                               **defaults)
-
 
     def loglike(self, params):
         """
@@ -1420,7 +1416,6 @@ class PHRegResults(base.LikelihoodModelResults):
 
         return self.model.get_distribution(self.params)
 
-
     def predict(self, endog=None, exog=None, strata=None,
                 offset=None, transform=True, pred_type="lhr"):
         # docstring attached below
@@ -1640,6 +1635,7 @@ class PHRegResults(base.LikelihoodModelResults):
             smry.add_text("Standard errors do not account for the regularization")
 
         return smry
+
 
 class rv_discrete_float(object):
     """
