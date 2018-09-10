@@ -611,7 +611,6 @@ class Spector(object):
         # don't know why margeff is different, but trust official results
         self.margeff_count_dummy_dydxoverall_se = [.1094379569,   .0177869773,
                                                     .1420034]
-                #.1574340751 ]
 
         # from new margeff
         self.margeff_count_dummy_dydxmean = [0.533849340033768,

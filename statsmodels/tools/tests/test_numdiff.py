@@ -99,7 +99,7 @@ class TestGradMNLogit(CheckGradLoglikeMixin):
         cls.mod = sm.MNLogit(data.endog, exog)
 
         #def loglikeflat(cls, params):
-            #reshapes flattened params
+        #    # reshapes flattened params
         #    return cls.loglike(params.reshape(6,6))
         #cls.mod.loglike = loglikeflat  #need instance method
         #cls.params = [np.ones((6,6)).ravel()]
@@ -270,7 +270,6 @@ class TestDerivativeFun2(CheckDerivativeMixin):
     def gradtrue(self, params):
         y, x = self.y, self.x
         return (-x*2*(y-np.dot(x, params))[:,None]).sum(0)
-                #2*(y-np.dot(x, params)).sum(0)
 
     def hesstrue(self, params):
         x = self.x

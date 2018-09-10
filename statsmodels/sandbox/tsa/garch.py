@@ -106,7 +106,7 @@ def normloglike(x, mu=0, sigma2=1, returnlls=False, axis=0):
 
     x = x - mu  # assume can be broadcasted
     if returnlls:
-    #Compute the individual log likelihoods if needed
+        # Compute the individual log likelihoods if needed
         lls = -0.5*(np.log(2*np.pi) + np.log(sigma2) + x**2/sigma2)
         # Use these to comput the LL
         LL = np.sum(lls,axis)
@@ -712,7 +712,7 @@ class AR(LikelihoodModel):
                 .5 * np.log(1-params**2) - .5*diffsumsq/sigma2 -\
                 ylag[0]**2 * (1-params**2)/(2*sigma2)
         if usepenalty:
-        # subtract a quadratic penalty since we min the negative of loglike
+            # subtract a quadratic penalty since we min the negative of loglike
             loglike -= 1000 *(oldparams-.9999)**2
         return loglike
 

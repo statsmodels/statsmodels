@@ -166,7 +166,7 @@ stub R2 C2  40.95038  40.65765
         test_ltx_fmt1(self)
         test_html_fmt1(self)
     def test_SimpleTable_special_chars(self):
-    # Simple table with characters: (%, >, |, _, $, &, #)
+        # Simple table with characters: (%, >, |, _, $, &, #)
         cell0c_data = 22
         cell1c_data = 1053
         row0c_data = [cell0c_data, cell1c_data]
@@ -175,8 +175,9 @@ stub R2 C2  40.95038  40.65765
         test1c_stubs = ('>stub1%', 'stub_2')
         test1c_header = ('#header1$', 'header&|')
         tbl_c = SimpleTable(table1c_data, test1c_header, test1c_stubs, ltx_fmt=ltx_fmt1)
+
         def test_ltx_special_chars(self):
-        # Test for special characters (latex) in headers and stubs
+            # Test for special characters (latex) in headers and stubs
             desired = r"""
 \begin{tabular}{lcc}
 \toprule
@@ -189,7 +190,9 @@ stub R2 C2  40.95038  40.65765
 """
             actual = '\n%s\n' % tbl_c.as_latex_tabular(center=False)
             assert_equal(actual, desired)
+
         test_ltx_special_chars(self)
+
     def test_regression_with_tuples(self):
         i = pandas.Series( [1,2,3,4]*10 , name="i")
         y = pandas.Series( [1,2,3,4,5]*8, name="y")

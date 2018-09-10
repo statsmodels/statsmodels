@@ -69,9 +69,9 @@ def VAR(x,B, const=0):
     T = x.shape[0]
     xhat = np.zeros(x.shape)
     for t in range(p,T): #[p+2]:#
-##        print(p,T)
-##        print(x[t-p:t,:,np.newaxis].shape)
-##        print(B.shape)
+        #print(p,T)
+        #print(x[t-p:t,:,np.newaxis].shape)
+        #print(B.shape)
         #print(x[t-p:t,:,np.newaxis])
         xhat[t,:] = const + (x[t-p:t,:,np.newaxis]*B).sum(axis=1).sum(axis=0)
     return xhat
@@ -94,9 +94,9 @@ def VARMA(x,B,C, const=0):
     e = np.zeros(x.shape)
     start = max(P,Q)
     for t in range(start,T): #[p+2]:#
-##        print(p,T
-##        print(x[t-p:t,:,np.newaxis].shape
-##        print(B.shape
+        #print(p,T
+        #print(x[t-p:t,:,np.newaxis].shape
+        #print(B.shape
         #print(x[t-p:t,:,np.newaxis]
         xhat[t,:] =  const + (x[t-P:t,:,np.newaxis]*B).sum(axis=1).sum(axis=0) + \
                      (e[t-Q:t,:,np.newaxis]*C).sum(axis=1).sum(axis=0)

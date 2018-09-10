@@ -21,8 +21,8 @@ gen_fmt = dict(
         stubs_align = "l",
         fmt = 'txt'
         )
-        # Note table_1l_fmt over rides the below formating unless it is not
-        # appended to table_1l
+# Note table_1l_fmt overrides the below formating unless it is not
+# appended to table_1l
 fmt_1_right = dict(
         data_fmts = ["%s", "%s", "%s", "%s", "%s"],
         empty_cell = '',

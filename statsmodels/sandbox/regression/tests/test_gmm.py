@@ -79,7 +79,8 @@ pvalues = np.array([  1.72360000e-33,   7.57025400e-16,   5.55625000e-02,
          5.83809900e-05,   2.85474400e-01,   3.53813900e-01,
          3.40336100e-03,   3.91575100e-03,   9.36840200e-02,
          1.06401300e-01])
-    #-----------------
+# -----------------
+
 
 def test_iv2sls_r():
 
@@ -340,7 +341,7 @@ class TestGMMStOnestep(CheckGMM):
         # try other versions for bse,
         # TODO: next two produce the same as before (looks like)
         bse = np.sqrt(np.diag((res1._cov_params(has_optimal_weights=False))))
-                                            #weights=res1.weights))))
+
         # TODO: doesn't look different
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
         #nobs = instrument.shape[0]

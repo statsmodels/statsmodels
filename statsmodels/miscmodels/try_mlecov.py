@@ -29,7 +29,7 @@ def mvn_loglike_sum(x, sigma):
     llf = -np.log(SSR) * nobs2      # concentrated likelihood
     llf -= (1+np.log(np.pi/nobs2))*nobs2  # with likelihood constant
     if np.any(sigma) and sigma.ndim == 2:
-    #FIXME: robust-enough check?  unneeded if _det_sigma gets defined
+        # FIXME: robust-enough check?  unneeded if _det_sigma gets defined
         llf -= .5*np.log(np.linalg.det(sigma))
     return llf
 

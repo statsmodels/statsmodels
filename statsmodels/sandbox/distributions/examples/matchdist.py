@@ -218,8 +218,8 @@ if __name__ == '__main__':
             tail_prob = stats.t.sf(crit,dgp_arg,scale=dgp_scale)
             print('crit, prob', quant, crit, tail_prob)
             #if distname == 'norm':
-                #plothist(rvs,loc_est,scale_est)
-                #args = tuple()
+            #    plothist(rvs,loc_est,scale_est)
+            #    args = tuple()
             results.append([distname,ks_stat, ks_pval,arg_est,loc_est,scale_est,crit,tail_prob ])
             #plothist(rvs,distfn,arg_est,loc_est,scale_est)
 

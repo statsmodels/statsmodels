@@ -135,7 +135,7 @@ y1y2pairsp2 = np.zeros((draws,2))
 # prior 2
 theta12_2 = []
 for draw in range(draws):
-#    y1 = np.random.uniform(-4,6)
+    #y1 = np.random.uniform(-4,6)
     theta1 = np.random.uniform(0,1)
     theta2 = np.random.normal(mu_*(1-theta1), lambda_**2*(1-theta1)**2)
     theta12_2.append([theta1,theta2])

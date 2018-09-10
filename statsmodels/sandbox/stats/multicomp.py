@@ -178,10 +178,10 @@ def get_tukeyQcrit2(k, df, alpha=0.05):
 
 def Tukeythreegene(first,second,third):
     #Performing the Tukey HSD post-hoc test for three genes
-##   qwb = xlrd.open_workbook('F:/Lab/bioinformatics/qcrittable.xls')
-##    #opening the workbook containing the q crit table
-##   qwb.sheet_names()
-##   qcrittable = qwb.sheet_by_name(u'Sheet1')
+    #qwb = xlrd.open_workbook('F:/Lab/bioinformatics/qcrittable.xls')
+    #opening the workbook containing the q crit table
+    #qwb.sheet_names()
+    #qcrittable = qwb.sheet_by_name(u'Sheet1')
 
     firstmean = numpy.mean(first) #means of the three arrays
     secondmean = numpy.mean(second)

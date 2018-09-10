@@ -306,14 +306,14 @@ alpha          4.57898241 0.22015968 20.7984603  4.14746943  5.01049539
 '''
 
 #def test_nb1():
-    #y, X = patsy.dmatrices('los ~ C(type) + hmo + white', medpar)
-    #y = np.array(y)[:,0]
-    ## TODO: Test fails with some of the other optimization methods
-    #nb1 = NBin(y,X,'nb1').fit(method='ncg', maxiter=10000, maxfun=5000)
-    #assert_almost_equal(nb1.params,
-                        #[2.34918407014186, 0.161754714412848, 0.418792569970658,
-                        # -0.0453356614650342, -0.129512952033423, 4.57898241219275],
-                        #decimal=2)
+#    y, X = patsy.dmatrices('los ~ C(type) + hmo + white', medpar)
+#    y = np.array(y)[:,0]
+#    # TODO: Test fails with some of the other optimization methods
+#    nb1 = NBin(y,X,'nb1').fit(method='ncg', maxiter=10000, maxfun=5000)
+#    assert_almost_equal(nb1.params,
+#                        [2.34918407014186, 0.161754714412848, 0.418792569970658,
+#                         -0.0453356614650342, -0.129512952033423, 4.57898241219275],
+#                        decimal=2)
 
 # NB-Geometric
 '''
@@ -351,13 +351,13 @@ Number of Fisher Scoring iterations: 5
 '''
 
 #def test_geom():
-    #y, X = patsy.dmatrices('los ~ C(type) + hmo + white', medpar)
-    #y = np.array(y)[:,0]
-    ## TODO: remove alph from geom params
-    #geom = NBin(y,X,'geom').fit(maxiter=10000, maxfun=5000)
-    #assert_almost_equal(geom.params,
-                        #[2.3084850946241, 0.221206159108742, 0.705986369841159,
-                        # -0.0677871843613577, -0.127088772164963],
-                        #decimal=4)
+#    y, X = patsy.dmatrices('los ~ C(type) + hmo + white', medpar)
+#    y = np.array(y)[:,0]
+#    # TODO: remove alph from geom params
+#    geom = NBin(y,X,'geom').fit(maxiter=10000, maxfun=5000)
+#    assert_almost_equal(geom.params,
+#                        [2.3084850946241, 0.221206159108742, 0.705986369841159,
+#                         -0.0677871843613577, -0.127088772164963],
+#                        decimal=4)
 
 test_nb2()

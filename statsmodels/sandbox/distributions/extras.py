@@ -521,13 +521,13 @@ class Transf_gen(distributions.rv_continuous):
         a = kwargs.pop('a', -np.inf)
         b = kwargs.pop('b', np.inf)
         self.decr = kwargs.pop('decr', False)
-            #defines whether it is a decreasing (True)
-            #       or increasing (False) monotonic transformation
+        # descr defines whether it is a decreasing (True)
+        #   or increasing (False) monotonic transformation
 
 
         self.u_args, self.u_kwargs = get_u_argskwargs(**kwargs)
         self.kls = kls  #(self.u_args, self.u_kwargs)
-                        # possible to freeze the underlying distribution
+        # possible to freeze the underlying distribution
 
         super(Transf_gen,self).__init__(a=a, b=b, name = name,
                                 longname = longname, extradoc = extradoc)
@@ -726,13 +726,13 @@ class TransfTwo_gen(distributions.rv_continuous):
         a = kwargs.pop('a', -np.inf) # attached to self in super
         b = kwargs.pop('b', np.inf)  # self.a, self.b would be overwritten
         self.shape = kwargs.pop('shape', False)
-            #defines whether it is a `u` shaped or `hump' shaped
-            #       transformation
+        # shape defines whether it is a `u` shaped or `hump' shaped
+        #       transformation
 
 
         self.u_args, self.u_kwargs = get_u_argskwargs(**kwargs)
         self.kls = kls  #(self.u_args, self.u_kwargs)
-                        # possible to freeze the underlying distribution
+        # possible to freeze the underlying distribution
 
         super(TransfTwo_gen,self).__init__(a=a, b=b, name = name,
                                 shapes = kls.shapes,
@@ -763,7 +763,7 @@ class TransfTwo_gen(distributions.rv_continuous):
 
         return signpdf * (self.derivplus(x)*self.kls._pdf(self.funcinvplus(x),*args, **kwargs) -
                    self.derivminus(x)*self.kls._pdf(self.funcinvminus(x),*args, **kwargs))
-            #note scipy _cdf only take *args not *kwargs
+        # note scipy _cdf only take *args not *kwargs
 
     def _cdf(self,x,*args, **kwargs):
         #print args
@@ -824,7 +824,6 @@ squarenormalg = TransfTwo_gen(stats.norm, sqfunc.squarefunc, sqfunc.inverseplus,
                 numargs = 0, name = 'squarenorm', longname = 'squared normal distribution',
                 extradoc = '\ndistribution of the square of a normal random variable' +\
                            ' y=x**2 with x N(0.0,1)')
-                        #u_loc=l, u_scale=s)
 squaretg = TransfTwo_gen(stats.t, sqfunc.squarefunc, sqfunc.inverseplus,
                 sqfunc.inverseminus, sqfunc.derivplus, sqfunc.derivminus,
                 shape='u', a=0.0, b=np.inf,
@@ -854,7 +853,7 @@ negsquarenormalg = TransfTwo_gen(stats.norm, negsquarefunc, inverseplus, inverse
                 numargs = 0, name = 'negsquarenorm', longname = 'negative squared normal distribution',
                 extradoc = '\ndistribution of the negative square of a normal random variable' +\
                            ' y=-x**2 with x N(0.0,1)')
-                        #u_loc=l, u_scale=s)
+
 
 def inverseplus(x):
     return x

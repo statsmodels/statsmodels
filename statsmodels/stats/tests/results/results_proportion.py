@@ -110,7 +110,7 @@ res_binom[(29, 30)].ci_upp = np.array([
     0.9980676, 0.9982575, 0.9940914])
 
 # > bci = binom.confint(x = c(0), n = 30, tol = 1e-8)
-    # this ci_low clips one negative value to 0
+# Note: this ci_low clips one negative value to 0
 res_binom[(0, 30)].ci_low = np.zeros(11)
 res_binom[(0, 30)].ci_upp = np.array([
     0.13471170, 0.00000000, 0.06151672, 0.11570331,
@@ -122,5 +122,5 @@ res_binom[(30, 30)].ci_low = np.array([
     0.8652883, 1.0000000, 0.9384833, 0.8842967,
     0.8842967, 0.8842967, 0.8842967, 0.8959711,
     0.9379822, 0.8586795, 0.8864866])
-    # this ci_upp clips one value > 1
+# Note: this ci_upp clips one value > 1
 res_binom[(30, 30)].ci_upp = np.ones(11)

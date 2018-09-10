@@ -231,10 +231,10 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
 
     elif method.lower() in ['fdr_gbs']:
         #adaptive stepdown in Gavrilov, Benjamini, Sarkar, Annals of Statistics 2009
-##        notreject = pvals > alphaf / np.arange(ntests, 0, -1) #alphacSidak
-##        notrejectmin = np.min(np.nonzero(notreject))
-##        notreject[notrejectmin:] = True
-##        reject = ~notreject
+        #notreject = pvals > alphaf / np.arange(ntests, 0, -1) #alphacSidak
+        #notrejectmin = np.min(np.nonzero(notreject))
+        #notreject[notrejectmin:] = True
+        #reject = ~notreject
 
         ii = np.arange(1, ntests + 1)
         q = (ntests + 1. - ii)/ii * pvals / (1. - pvals)

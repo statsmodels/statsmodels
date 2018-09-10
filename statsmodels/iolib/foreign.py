@@ -993,9 +993,6 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
                         "(got %s instead)" % type(fname))
     else:
         fhd = StataReader(fname, missing_values=False, encoding=encoding)
-#    validate_names = np.lib._iotools.NameValidator(excludelist=excludelist,
-#                                    deletechars=deletechars,
-#                                    case_sensitive=case_sensitive)
 
     #TODO: This needs to handle the byteorder?
     header = fhd.file_headers()
@@ -1005,8 +1002,9 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
     varnames = header['varlist']
     fmtlist = header['fmtlist']
     dataname = header['data_label']
-    labels = header['vlblist']  # labels are thrown away unless DataArray
-                                # type is used
+    labels = header['vlblist']
+    # labels are thrown away unless DataArray type is used
+
     data = np.zeros((nobs,numvars))
     stata_dta = fhd.dataset()
 
