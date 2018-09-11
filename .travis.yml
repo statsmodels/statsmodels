@@ -111,14 +111,11 @@ before_install:
   - SRCDIR=$PWD
   # Source recipe to install packages
   - source $BUILD_INIT
-  - pip install pytest pytest-xdist pip pytest-randomly nose
-  - if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --cov-config=.travis_coveragerc --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
-  - if [ ${COVERAGE} = true ]; then export CYTHON_COVERAGE=1; fi
-  - echo "Cython coverage:" ${CYTHON_COVERAGE}
+  - pip install pytest pytest-xdist pip pytest-randomly
   - |
     if [ ${COVERAGE} = true ]; then
         pip install codecov coverage coveralls pytest-cov
-        export COVERAGE_OPTS="--cov-config=.travis_coveragerc --cov=statsmodels"
+        export COVERAGE_OPTS=" --cov-config=.travis_coveragerc --cov=statsmodels "
         export CYTHON_COVERAGE=1
     else
         export COVERAGE_OPTS=""

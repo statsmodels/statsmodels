@@ -545,7 +545,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             use_basinhopping=False, start_params=None, initial_level=None, initial_slope=None,
             use_brute=True):
         """
-        Fit the model
+        fit Holt Winter's Exponential Smoothing
 
         Parameters
         ----------
@@ -973,7 +973,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
 class SimpleExpSmoothing(ExponentialSmoothing):
     """
-    Simple Exponential Smoothing
+    Simple Exponential Smoothing wrapper(...)
 
     Parameters
     ----------
@@ -987,12 +987,11 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     Notes
     -----
     This is a full implementation of the simple exponential smoothing as
-    per [1].  `SimpleExpSmoothing` is a restricted version of
-    :class:`ExponentialSmoothing`.
+    per [1].
 
     See Also
     ---------
-    ExponentialSmoothing
+    Exponential Smoothing
     Holt
 
     References
@@ -1007,7 +1006,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     def fit(self, smoothing_level=None, optimized=True, start_params=None,
             initial_level=None, use_brute=True):
         """
-        Fit the model
+        fit Simple Exponential Smoothing wrapper(...)
 
         Parameters
         ----------
@@ -1049,7 +1048,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
 
 class Holt(ExponentialSmoothing):
     """
-    Holt's Exponential Smoothing
+    Holt's Exponential Smoothing wrapper(...)
 
     Parameters
     ----------
@@ -1066,13 +1065,13 @@ class Holt(ExponentialSmoothing):
 
     Notes
     -----
-    This is a full implementation of the Holts exponential smoothing as
-    per [1]. `Holt` is a restricted version of :class:`ExponentialSmoothing`.
+    This is a full implementation of the Holt's exponential smoothing as
+    per [1].
 
     See Also
     ---------
-    ExponentialSmoothing
-    SimpleExpSmoothing
+    Exponential Smoothing
+    Simple Exponential Smoothing
 
     References
     ----------
@@ -1122,7 +1121,7 @@ class Holt(ExponentialSmoothing):
 
         Notes
         -----
-        This is a full implementation of the Holt;s exponential smoothing as
+        This is a full implementation of the Holt's exponential smoothing as
         per [1].
 
         References
