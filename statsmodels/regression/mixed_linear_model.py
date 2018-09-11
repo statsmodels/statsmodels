@@ -142,22 +142,23 @@ likelihood function, so that calculation is not implemented here.
 Therefore, optimization methods requiring the Hessian matrix such as
 the Newton-Raphson algorithm cannot be used for model fitting.
 """
+from collections import OrderedDict
+import warnings
 
 import numpy as np
-import statsmodels.base.model as base
-from statsmodels.tools.decorators import cache_readonly
-from statsmodels.tools import data as data_tools
 from scipy.stats.distributions import norm
 from scipy import sparse
 import pandas as pd
 import patsy
-from collections import OrderedDict
-from statsmodels.compat.python import string_types
-from statsmodels.compat import range
-import warnings
+
+from statsmodels.compat import range, string_types
+
+from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools import data as data_tools
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
+
+import statsmodels.base.model as base
 from statsmodels.base._penalties import Penalty
-from statsmodels.compat.numpy import np_matrix_rank
 
 
 def _dot(x, y):
@@ -2177,7 +2178,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         super(MixedLMResults, self).__init__(model, params,
                                              normalized_cov_params=cov_params)
         self.nobs = self.model.nobs
-        self.df_resid = self.nobs - np_matrix_rank(self.model.exog)
+        self.df_resid = self.nobs - np.linalg.matrix_rank(self.model.exog)
 
     @cache_readonly
     def fittedvalues(self):
