@@ -2,7 +2,6 @@ from statsmodels.compat.python import lrange, BytesIO, cPickle
 
 import os
 import warnings
-from distutils.version import LooseVersion
 
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_allclose,
@@ -11,7 +10,6 @@ import pandas as pd
 from pandas import PeriodIndex, DatetimeIndex
 import pytest
 
-from statsmodels.datasets.macrodata import load as load_macrodata
 from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
 import statsmodels.sandbox.tsa.fftarma as fa
 from statsmodels.tools.testing import assert_equal
@@ -20,8 +18,6 @@ from statsmodels.tsa.arima_model import AR, ARMA, ARIMA
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.tests.results import results_arma, results_arima
 from statsmodels.tsa.arima_process import arma_generate_sample
-
-import scipy  # only needed for version check
 
 try:
     import matplotlib.pyplot as plt
@@ -1768,6 +1764,7 @@ def test_arima_no_diff():
     # ARMA model, need ARIMA(p, 0, q) to return an ARMA in init.
     ar = [1, -.75, .15, .35]
     ma = [1, .25, .9]
+    np.random.seed(12345)
     y = arma_generate_sample(ar, ma, 100)
     mod = ARIMA(y, (3, 0, 2))
     assert_(type(mod) is ARMA)
@@ -1781,6 +1778,7 @@ def test_arima_predict_noma():
     # smoke test
     ar = [1, .75]
     ma = [1]
+    np.random.seed(12345)
     data = arma_generate_sample(ar, ma, 100)
     arma = ARMA(data, order=(0,1))
     arma_res = arma.fit(disp=-1)
@@ -1916,6 +1914,7 @@ def test_arima_1123():
 
     dates = pd.date_range(start='1980', periods=nobs, freq='A')
 
+    np.random.seed(12345)
     y = arma_generate_sample(arparams, maparams, nobs)
 
     X = np.random.randn(nobs)
@@ -2331,6 +2330,7 @@ def test_long_ar_start_params():
 
     nobs = 30
 
+    np.random.seed(12345)
     y = arma_generate_sample(arparams, maparams, nobs)
 
     model = ARMA(y, order=(2, 2))
