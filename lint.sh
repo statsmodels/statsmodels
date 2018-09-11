@@ -27,6 +27,7 @@ if [ "$LINT" == true ]; then
         statsmodels/graphics/tsaplots.py \
         statsmodels/tsa/regime_switching \
         statsmodels/regression/mixed_linear_model.py \
+        statsmodels/regression/tests/test_lme.py \
         statsmodels/duration/__init__.py \
         statsmodels/regression/recursive_ls.py \
         statsmodels/tools/linalg.py \
