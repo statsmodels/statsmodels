@@ -1,4 +1,4 @@
-global-include *.csv *.py *.txt *.pyx *.pxd *.pxi *.c *.h
+global-include *.csv *.py *.txt *.pyx *.pxd *.pxi *.pyx.in *.c *.h
 include MANIFEST.in
 include README.rst
 
