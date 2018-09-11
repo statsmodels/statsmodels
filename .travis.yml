@@ -24,6 +24,7 @@ env:
     - BUILD_INIT=tools/ci/travis_conda.sh
     - DEPEND_ALWAYS="pyyaml joblib pip colorama"
     - CYTHON_COVERAGE=
+    - COVERAGE_OPTS=""
 
 matrix:
   fast_finish: true
@@ -111,14 +112,12 @@ before_install:
   - SRCDIR=$PWD
   # Source recipe to install packages
   - source $BUILD_INIT
-  - pip install pytest pytest-xdist pip pytest-randomly
+  - pip install pytest pytest-xdist pip pytest-randomly nose
   - |
     if [ ${COVERAGE} = true ]; then
         pip install codecov coverage coveralls pytest-cov
-        export COVERAGE_OPTS=" --cov-config=.travis_coveragerc --cov=statsmodels "
+        export COVERAGE_OPTS="--cov-config=.travis_coveragerc --cov=statsmodels"
         export CYTHON_COVERAGE=1
-    else
-        export COVERAGE_OPTS=""
     fi
   - echo "Cython coverage:" ${CYTHON_COVERAGE}
   - if [ ${DOCBUILD} = true ]; then source tools/ci/docbuild_install.sh; fi;
