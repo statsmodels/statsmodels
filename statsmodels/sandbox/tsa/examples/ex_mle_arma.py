@@ -9,13 +9,9 @@ copyright: Simplified BSD see license.txt
 """
 from __future__ import print_function
 import numpy as np
-from numpy.testing import assert_almost_equal
-
-import matplotlib.pyplot as plt
 
 import numdifftools as ndt
 
-import statsmodels.api as sm
 from statsmodels.sandbox import tsa
 from statsmodels.tsa.arma_mle import Arma  # local import
 from statsmodels.tsa.arima_process import arma_generate_sample
