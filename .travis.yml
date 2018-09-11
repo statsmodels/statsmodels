@@ -23,7 +23,7 @@ env:
     - BLAS="mkl blas=*=mkl" # Use Intel MKL by default
     - BUILD_INIT=tools/ci/travis_conda.sh
     - DEPEND_ALWAYS="pyyaml joblib pip colorama"
-    - CYTHON_COVERAGE=
+    - SM_CYTHON_COVERAGE=false # Run takes > 1 hour and so not feasible
 
 matrix:
   fast_finish: true
@@ -101,6 +101,8 @@ notifications:
     on_success: always
 
 before_install:
+  # Ensure latest tags are available
+  - git fetch --tags
   # Show information about CPU running job to understand BLAS issues
   - sudo lshw -class processor
   # Fix for headless TravisCI
@@ -112,25 +114,25 @@ before_install:
   # Source recipe to install packages
   - source $BUILD_INIT
   - pip install pytest pytest-xdist pip pytest-randomly nose
-  - if [ ${COVERAGE} = true ]; then export COVERAGE_OPTS=" --cov-config=.travis_coveragerc --cov=statsmodels "; else export COVERAGE_OPTS=""; fi
-  - if [ ${COVERAGE} = true ]; then export CYTHON_COVERAGE=1; fi
-  - echo "Cython coverage:" ${CYTHON_COVERAGE}
   - |
     if [ ${COVERAGE} = true ]; then
         pip install codecov coverage coveralls pytest-cov
-        export COVERAGE_OPTS="--cov-config=.travis_coveragerc --cov=statsmodels"
-        export CYTHON_COVERAGE=1
+        if [ -z ${SM_CYTHON_COVERAGE} ] || [ ${SM_CYTHON_COVERAGE} = false ]; then
+          export COVERAGE_OPTS="--cov-config=.travis_coveragerc --cov=statsmodels"
+        else
+          export COVERAGE_OPTS="--cov-config=.coveragerc_cython --cov=statsmodels"
+        fi
+        echo "Cython coverage:" ${SM_CYTHON_COVERAGE}
     else
         export COVERAGE_OPTS=""
     fi
-  - echo "Cython coverage:" ${CYTHON_COVERAGE}
   - if [ ${DOCBUILD} = true ]; then source tools/ci/docbuild_install.sh; fi;
   - pip install flake8
   - export SRCDIR=$PWD
 
 # Install packages
 install:
-  - python setup_coverage.py develop
+  - python setup.py develop
 
 script:
   # Show versions
@@ -138,8 +140,8 @@ script:
   # docbuild and exit, if required
   - if [ ${DOCBUILD} = true ]; then cd ${SRCDIR}/docs; source ${SRCDIR}/tools/ci/docbuild.sh; exit 0; fi;
   # Run tests
-  - echo pytest -r a ${COVERAGE_OPTS} --skip-slow --skip-examples statsmodels/tsa/statespace statsmodels/tsa/kalmanf statsmodels/tsa/regime_switching statsmodels/tsa/tests/test_holtwinters.py statsmodels/nonparametric
-  - pytest -r a ${COVERAGE_OPTS} --skip-slow --skip-examples statsmodels/tsa/statespace statsmodels/tsa/kalmanf statsmodels/tsa/regime_switching statsmodels/tsa/tests/test_holtwinters.py statsmodels/nonparametric
+  - echo pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples
+  - pytest -r a ${COVERAGE_OPTS} statsmodels --skip-examples
   - ./lint.sh
 
 after_success:

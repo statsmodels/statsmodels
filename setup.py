@@ -1,3 +1,9 @@
+"""
+To build with coverage of Cython files
+export SM_CYTHON_COVERAGE=1
+python setup.py develop
+pytest --cov-config=.coveragerc_cython --cov=statsmodels statsmodels
+"""
 import fnmatch
 import os
 import sys
@@ -86,6 +92,7 @@ CLASSIFIERS = ['Development Status :: 4 - Beta',
                'Environment :: Console',
                'Programming Language :: Cython',
                'Programming Language :: Python :: 2.7',
+               'Programming Language :: Python :: 3.4',
                'Programming Language :: Python :: 3.5',
                'Programming Language :: Python :: 3.6',
                'Programming Language :: Python :: 3.7',
@@ -112,8 +119,13 @@ ADDITIONAL_PACKAGE_DATA = {
 ##############################################################################
 # Extension Building
 ##############################################################################
-COMPILER_DIRECTIVES = {}
-DEFINE_MACROS = []
+CYTHON_COVERAGE = os.environ.get('SM_CYTHON_COVERAGE', False)
+CYTHON_COVERAGE = CYTHON_COVERAGE in ('1', 'true', '"true"')
+CYTHON_TRACE_NOGIL = str(int(CYTHON_COVERAGE))
+if CYTHON_COVERAGE:
+    print('Building with coverage for Cython code')
+COMPILER_DIRECTIVES = {'linetrace': CYTHON_COVERAGE}
+DEFINE_MACROS = [('CYTHON_TRACE_NOGIL', CYTHON_TRACE_NOGIL)]
 
 
 exts = dict(
