@@ -7,7 +7,7 @@ import pandas.util.testing as pdtest
 
 import numpy as np
 from numpy.testing import assert_equal
-import panda as pd
+import pandas as pd
 import pytest
 
 from statsmodels.imputation import ros
