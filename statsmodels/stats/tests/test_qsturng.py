@@ -7,20 +7,22 @@ Author: Josef Perktold
 """
 
 import numpy as np
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_allclose
 
 from statsmodels.stats.libqsturng import qsturng, psturng
 from statsmodels.sandbox.stats.multicomp import get_tukeyQcrit
 
+
 def test_qstrung():
-    rows = [   5,    6,    7,    8,    9,   10,   11,   12,   13,   14,   15,
-              16,   17,   18,   19,   20,   24,   30,   40,   60,  120, 9999]
-    cols = np.arange(2,11)
+    rows = [5,    6,    7,    8,    9,   10,   11,   12,   13,   14,   15,
+            16,   17,   18,   19,   20,   24,   30,   40,   60,  120, 9999]
+    cols = np.arange(2, 11)
 
     for alpha in [0.01, 0.05]:
         for k in cols:
             c1 = get_tukeyQcrit(k, rows, alpha=alpha)
             c2 = qsturng(1-alpha, k, rows)
-            assert_almost_equal(c1, c2, decimal=2)
-            #roundtrip
-            assert_almost_equal(psturng(qsturng(1-alpha, k, rows), k, rows), alpha, 5)
+            assert_allclose(c1, c2, rtol=1e-2)
+            # roundtrip
+            assert_allclose(psturng(qsturng(1-alpha, k, rows), k, rows), alpha,
+                            rtol=1e-5)

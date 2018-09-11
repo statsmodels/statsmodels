@@ -9,7 +9,7 @@ from __future__ import print_function
 from statsmodels.compat.python import lrange, lmap
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 
 from statsmodels import iolib

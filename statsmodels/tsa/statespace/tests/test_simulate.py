@@ -9,15 +9,12 @@ from __future__ import division, absolute_import, print_function
 
 import warnings
 import numpy as np
-import pandas as pd
-import os
-import sys
+
 from scipy.signal import lfilter
 
 from statsmodels.tsa.statespace import (sarimax, structural, varmax,
                                         dynamic_factor)
-from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal)
-import pytest
+from numpy.testing import assert_allclose
 
 
 def test_arma_lfilter():

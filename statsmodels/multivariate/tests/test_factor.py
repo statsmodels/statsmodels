@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pandas as pd
 from statsmodels.multivariate.factor import Factor
-from numpy.testing import (assert_equal, assert_array_almost_equal,
+from numpy.testing import (assert_equal, assert_allclose,
         assert_raises, assert_array_equal, assert_, assert_array_less)
 from numpy.testing.utils import assert_allclose
 import pytest
@@ -55,7 +55,7 @@ def test_direct_corr_matrix():
                   [0.967587154301, 0.212758741910989],
                   [0.929891035996, -0.000603217967568],
                   [0.486822656362, -0.869649573289374]])
-    assert_array_almost_equal(results.loadings, a, decimal=8)
+    assert_allclose(results.loadings, a, rtol=1e-8)
     # Test set and get endog_names
     mod.endog_names = X.iloc[:, 1:-1].columns
     assert_array_equal(mod.endog_names, ['Basal', 'Occ', 'Max', 'id'])
@@ -106,7 +106,7 @@ def test_example_compare_to_R_output():
                   [0.967587154301, 0.212758741910989],
                   [0.929891035996, -0.000603217967568],
                   [0.486822656362, -0.869649573289374]])
-    assert_array_almost_equal(results.loadings, a, decimal=8)
+    assert_allclose(results.loadings, a, rtol=1e-8)
 
     # No rotation WITH squared multiple correlations prior
     # produce same results as in R `fa`
@@ -116,7 +116,7 @@ def test_example_compare_to_R_output():
                   [0.97113975, 0.17207499],
                   [0.9618705, -0.2004196],
                   [0.37570708, -0.45821379]])
-    assert_array_almost_equal(results.loadings, a, decimal=8)
+    assert_allclose(results.loadings, a, rtol=1e-8)
 
     # Same as R GRArotation
     results.rotate('varimax')
@@ -124,12 +124,12 @@ def test_example_compare_to_R_output():
                   [0.97424206, -0.15354033],
                   [0.84418097, -0.502714],
                   [0.20601929, -0.55558235]])
-    assert_array_almost_equal(results.loadings, a, decimal=8)
+    assert_allclose(results.loadings, a, rtol=1e-8)
 
     results.rotate('quartimax')  # Same as R fa
     a = np.array([[0.98935598, 0.98242714, 0.94078972, 0.33442284],
                   [0.117190049, 0.086943252, -0.283332952, -0.489159543]])
-    assert_array_almost_equal(results.loadings, a.T, decimal=8)
+    assert_allclose(results.loadings, a.T, rtol=1e-8)
 
     results.rotate('equamax')  # Not the same as R fa
 
@@ -141,7 +141,7 @@ def test_example_compare_to_R_output():
     a = np.array([[1.02834170170, 1.00178840104, 0.71824931384,
                    -0.00013510048],
                   [0.06563421, 0.03096076, -0.39658839, -0.59261944]])
-    assert_array_almost_equal(results.loadings, a.T, decimal=8)
+    assert_allclose(results.loadings, a.T, rtol=1e-8)
 
     # Testing result summary string
     results.rotate('varimax')
