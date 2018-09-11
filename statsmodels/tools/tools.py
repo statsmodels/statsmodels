@@ -166,7 +166,7 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
         if _swap:
             tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1, 0)
 
-        if not tmp_arr.dtype.names:  # how do we get to this code path?
+        if not tmp_arr.dtype.names:  # TODO: how do we get to this code path?
             tmp_arr = [asstr2(item) for item in np.squeeze(tmp_arr)]
         elif tmp_arr.dtype.names:
             tmp_arr = [asstr2(item) for item in np.squeeze(tmp_arr.tolist())]

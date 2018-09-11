@@ -8,12 +8,13 @@ Author: Josef Perktold
 
 
 from __future__ import print_function
-from statsmodels.compat.python import BytesIO, asbytes, StringIO
+from statsmodels.compat.python import BytesIO, StringIO
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 
 
-ss = '''\
+# Specfically use bytes for Py3.2 recfromtxt compat
+ss = b'''\
   43.9  1   1
   39.0  1   2
   46.7  1   3
@@ -55,8 +56,8 @@ ss = '''\
   40.9  4   9
   39.7  4  10'''
 
-#idx   Treatment StressReduction
-ss2 = '''\
+# idx   Treatment StressReduction
+ss2 = b'''\
 1     mental               2
 2     mental               2
 3     mental               3
@@ -88,7 +89,7 @@ ss2 = '''\
 29   medical               3
 30   medical               1'''
 
-ss3 = '''\
+ss3 = b'''\
 1 24.5
 1 23.5
 1 26.4
@@ -105,7 +106,7 @@ ss3 = '''\
 3 26.2
 3 27.8'''
 
-ss5 = '''\
+ss5 = b'''\
 2 - 3	4.340	0.691	7.989	***
 2 - 1	4.600	0.951	8.249	***
 3 - 2	-4.340	-7.989	-0.691	***
@@ -113,13 +114,8 @@ ss5 = '''\
 1 - 2	-4.600	-8.249	-0.951	***
 1 - 3	-0.260	-3.909	3.389	'''
 
-#accommodate recfromtxt for python 3.2, requires bytes
-ss = asbytes(ss)
-ss2 = asbytes(ss2)
-ss3 = asbytes(ss3)
-ss5 = asbytes(ss5)
 
-dta = np.recfromtxt(BytesIO(ss), names=("Rust","Brand","Replication"))
+dta = np.recfromtxt(BytesIO(ss), names=("Rust", "Brand","Replication"))
 dta2 = np.recfromtxt(BytesIO(ss2), names = ("idx", "Treatment", "StressReduction"))
 dta3 = np.recfromtxt(BytesIO(ss3), names = ("Brand", "Relief"))
 dta5 = np.recfromtxt(BytesIO(ss5), names = ('pair', 'mean', 'lower', 'upper', 'sig'), delimiter='\t')

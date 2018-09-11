@@ -10,48 +10,31 @@ PY3 = (sys.version_info[0] >= 3)
 PY37 = (sys.version_info[:2] == (3, 7))
 
 if PY3:
-    import builtins
     from collections import namedtuple
     from io import StringIO, BytesIO
     import inspect
 
     cStringIO = StringIO
     import pickle as cPickle
-    pickle = cPickle
     import urllib.request
     import urllib.parse
-    from urllib.request import HTTPError, urlretrieve, URLError
-    import io
+    from urllib.request import HTTPError, URLError
     bytes = bytes
     str = str
     unicode = str
-    asunicode = lambda x, _ : str(x)
-
-    def asbytes(s):
-        if isinstance(s, bytes):
-            return s
-        return s.encode('latin1')
 
     def asstr(s):
         if isinstance(s, str):
             return s
         return s.decode('latin1')
 
-    def asstr2(s):  #added JP, not in numpy version
+    def asstr2(s):  # added JP, not in numpy version
         if isinstance(s, str):
             return s
         elif isinstance(s, bytes):
             return s.decode('latin1')
         else:
             return str(s)
-
-    def isfileobj(f):
-        return isinstance(f, io.FileIO)
-
-    def open_latin1(filename, mode='r'):
-        return open(filename, mode=mode, encoding='iso-8859-1')
-
-    strchar = 'U'
 
     # have to explicitly put builtins into the namespace
     range = range
@@ -60,7 +43,6 @@ if PY3:
     filter = filter
     reduce = functools.reduce
     long = int
-    unichr = chr
     zip_longest = itertools.zip_longest
 
     # list-producing versions of the major Python iterating functions
@@ -83,7 +65,9 @@ if PY3:
     string_types = str
     input = input
 
-    ArgSpec= namedtuple('ArgSpec', ['args', 'varargs', 'keywords', 'defaults'])
+    ArgSpec = namedtuple('ArgSpec',
+                         ['args', 'varargs', 'keywords', 'defaults'])
+
     def getargspec(func):
         """
         Simple workaroung for getargspec deprecation that returns
@@ -91,7 +75,7 @@ if PY3:
         """
         sig = inspect.signature(func)
         parameters = sig.parameters
-        args, defaults  = [], []
+        args, defaults = [], []
         varargs, keywords = None, None
 
         for key in parameters:
@@ -112,44 +96,29 @@ if PY3:
 else:
     import __builtin__ as builtins
     # not writeable when instantiated with string, doesn't handle unicode well
-    from cStringIO import StringIO as cStringIO
+    from cStringIO import StringIO as cStringIO  # noqa:F401
     # always writeable
     from StringIO import StringIO
-    from inspect import getargspec
+    from inspect import getargspec  # noqa:F401
 
     BytesIO = StringIO
-    import cPickle
-    pickle = cPickle
+    import cPickle  # noqa:F401
     import urllib2
     import urlparse
 
     bytes = str
     str = str
     unicode = unicode
-    asbytes = str
     asstr = str
     asstr2 = str
-    strchar = 'S'
-
-    def isfileobj(f):
-        return isinstance(f, file)
-
-    def asunicode(s, encoding='ascii'):
-        if isinstance(s, unicode):
-            return s
-        return s.decode(encoding)
-
-    def open_latin1(filename, mode='r'):
-        return open(filename, mode=mode)
 
     # import iterator versions of these functions
-    range = xrange
+    range = xrange  # noqa:F401
     zip = itertools.izip
     filter = itertools.ifilter
     map = itertools.imap
     reduce = reduce
     long = long
-    unichr = unichr
     zip_longest = itertools.izip_longest
 
     # Python 2-builtin ranges produce lists
@@ -163,42 +132,17 @@ else:
     urlencode = urllib.urlencode
     HTTPError = urllib2.HTTPError
     URLError = urllib2.URLError
-    string_types = basestring
+    string_types = basestring  # noqa:F401
 
-    input = raw_input
-
-
-def getexception():
-    return sys.exc_info()[1]
-
-
-def asbytes_nested(x):
-    if hasattr(x, '__iter__') and not isinstance(x, (bytes, str)):
-        return [asbytes_nested(y) for y in x]
-    else:
-        return asbytes(x)
-
-
-def asunicode_nested(x):
-    if hasattr(x, '__iter__') and not isinstance(x, (bytes, str)):
-        return [asunicode_nested(y) for y in x]
-    else:
-        return asunicode(x)
+    input = raw_input  # noqa:F401
 
 
 try:
-    advance_iterator = next
+    next = next
 except NameError:
-    def advance_iterator(it):
+    def next(it):
         return it.next()
-next = advance_iterator
 
-
-try:
-    callable = callable
-except NameError:
-    def callable(obj):
-        return any("__call__" in klass.__dict__ for klass in type(obj).__mro__)
 
 def iteritems(obj, **kwargs):
     """replacement for six's iteritems for Python2/3 compat
@@ -230,12 +174,5 @@ def get_function_name(func):
     try:
         return func.im_func.func_name
     except AttributeError:
-        #Python 3
+        # Python 3
         return func.__name__
-
-def get_class(func):
-    try:
-        return func.im_class
-    except AttributeError:
-        #Python 3
-        return func.__self__.__class__

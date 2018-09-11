@@ -12,7 +12,7 @@ import numpy as np
 from pandas import DataFrame, isnull
 import pandas.util.testing as ptesting
 
-from statsmodels.compat.python import BytesIO, asbytes
+from statsmodels.compat.python import BytesIO
 import statsmodels.api as sm
 from statsmodels.iolib.foreign import (StataWriter, genfromdta,
             _datetime_to_stata_elapsed, _stata_elapsed_date_to_datetime)
@@ -83,7 +83,7 @@ def test_missing_roundtrip():
     dta = genfromdta(buf, missing_flt=np.nan)
     assert_(isnull(dta[0][0]))
     assert_(isnull(dta[0][1]))
-    assert_(dta[0][2] == asbytes(""))
+    assert_(dta[0][2] == b"")
 
     dta = genfromdta(os.path.join(curdir, "results/data_missing.dta"),
             missing_flt=-999)

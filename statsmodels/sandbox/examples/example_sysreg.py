@@ -1,7 +1,6 @@
 """Example: statsmodels.sandbox.sysreg
 """
 #TODO: this is going to change significantly once we have a panel data structure
-from statsmodels.compat.python import lmap, asbytes
 import numpy as np
 import statsmodels.api as sm
 from statsmodels.sandbox.sysreg import SUR, Sem2SLS
@@ -15,10 +14,9 @@ from statsmodels.sandbox.sysreg import SUR, Sem2SLS
 
 grun_data = sm.datasets.grunfeld.load(as_pandas=False)
 
-firms = ['General Motors', 'Chrysler', 'General Electric', 'Westinghouse',
-        'US Steel']
-#for Python 3 compatibility
-firms = lmap(asbytes, firms)
+# Need bytes for Py3 compat
+firms = [b'General Motors', b'Chrysler', b'General Electric', b'Westinghouse',
+         b'US Steel']
 
 grun_exog = grun_data.exog
 grun_endog = grun_data.endog
