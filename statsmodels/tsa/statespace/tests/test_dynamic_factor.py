@@ -15,7 +15,7 @@ import re
 import warnings
 from statsmodels.tsa.statespace import dynamic_factor
 from .results import results_varmax, results_dynamic_factor
-from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
+from numpy.testing import assert_equal, assert_raises, assert_allclose
 from statsmodels.iolib.summary import forg
 
 try:

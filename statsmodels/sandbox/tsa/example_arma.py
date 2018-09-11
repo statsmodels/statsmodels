@@ -7,14 +7,10 @@ plus 3 functions from nitime.utils
 from __future__ import print_function
 from statsmodels.compat.python import range
 import numpy as np
-from numpy.testing import assert_array_almost_equal
-
-import matplotlib.mlab as mlab
+from numpy.testing import assert_allclose
 
 from statsmodels.tsa.arima_process import arma_generate_sample, arma_impulse_response
 from statsmodels.tsa.arima_process import arma_acovf, arma_acf, ARIMA
-#from movstat import acf, acovf
-#from statsmodels.sandbox.tsa import acf, acovf, pacf
 from statsmodels.tsa.stattools import acf, acovf, pacf
 
 ar = [1., -0.6]
@@ -157,8 +153,8 @@ for c, args in cases:
     #something broke again,
     #for high persistence case eg ar=0.99, nobs of IR has to be large
     #made changes to arma_acovf
-    assert_array_almost_equal(myacovf, othacovf,10)
-    assert_array_almost_equal(myacf, othacovf/othacovf[0],10)
+    assert_allclose(myacovf, othacovf, rtol=1e-10)
+    assert_allclose(myacf, othacovf/othacovf[0], rtol=1e-10)
 
 
 #from nitime.utils

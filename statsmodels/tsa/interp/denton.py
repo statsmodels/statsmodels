@@ -249,7 +249,7 @@ if __name__ == "__main__":
 
     imf_stata = np.array([969.8, 998.4, 1018.3, 1013.4, 1007.2, 1042.9,
                                 1060.3, 1051.0, 1040.6, 1066.5, 1071.7, 1051.0])
-    np.testing.assert_almost_equal(imf_stata, x_imf, 1)
+    np.testing.assert_allclose(imf_stata, x_imf, rtol=1e-1)
 
     # Denton example
     zQ = np.array([50,100,150,100] * 5)

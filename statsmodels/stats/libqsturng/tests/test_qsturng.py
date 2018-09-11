@@ -7,14 +7,13 @@ extensively ensure the stability and accuracy of the functions"""
 
 from statsmodels.compat.python import iterkeys, lzip, lmap
 
-from numpy.testing import rand, assert_, assert_equal, \
-    assert_almost_equal, assert_array_almost_equal, assert_array_equal, \
-    assert_approx_equal, assert_raises, run_module_suite
+from numpy.testing import (assert_equal, assert_allclose,
+                           assert_raises, run_module_suite)
 
 import numpy as np
 import pytest
 
-from statsmodels.stats.libqsturng import qsturng, psturng,p_keys,v_keys
+from statsmodels.stats.libqsturng import qsturng, psturng
 
 
 def read_ch(fname):
@@ -27,17 +26,17 @@ def read_ch(fname):
 class TestQsturng(object):
     def test_scalar(self):
         # scalar input -> scalar output
-        assert_almost_equal(4.43645545899562, qsturng(.9,5,6), 5)
+        assert_allclose(4.43645545899562, qsturng(.9,5,6), rtol=5)
 
     def test_vector(self):
         # vector input -> vector output
-        assert_array_almost_equal(np.array([3.98832389,
-                                            4.56835318,
-                                            6.26400894]),
-                                  qsturng([.8932, .9345,.9827],
-                                          [4, 4, 4],
-                                          [6, 6, 6]),
-                                  5)
+        assert_allclose(np.array([3.98832389,
+                                  4.56835318,
+                                  6.26400894]),
+                        qsturng([.8932, .9345,.9827],
+                                [4, 4, 4],
+                                [6, 6, 6]),
+                        rtol=1e-5)
 
     def test_invalid_parameters(self):
         # p < .1
@@ -73,8 +72,8 @@ class TestQsturng(object):
                  (0.675, 20.0, 18.0, 4.23706426096),
                  (0.1, 60.0, 60.0, 3.69215469278)]
 
-        for p,r,v,q in cases:
-            assert_almost_equal(q, qsturng(p,r,v), 5)
+        for p, r, v, q in cases:
+            assert_allclose(q, qsturng(p,r,v), rtol=1e-5)
 
     #remove from testsuite, used only for table generation and fails on
     #Debian S390, no idea why
@@ -116,8 +115,9 @@ class TestQsturng(object):
                  (0.9503, 2.0, 4.434, 3.7871158594867262),
                  (0.7276132, 95.0, 91.43983, 5.4100384868499889)]
 
-        for p,r,v,q in cases:
-            assert_almost_equal(q, qsturng(p,r,v), 5)
+        for p, r, v, q in cases:
+            # TODO: use pytest parametrize
+            assert_allclose(q, qsturng(p,r,v), rtol=1e-5)
 
     @pytest.mark.slow
     def test_10000_to_ch(self):
@@ -131,25 +131,24 @@ class TestQsturng(object):
         errors = np.abs(qs-qsturng(ps,rs,vs))/qs
         assert_equal(np.array([]), np.where(errors > .03)[0])
 
+
 class TestPsturng(object):
     def test_scalar(self):
         "scalar input -> scalar output"
-        assert_almost_equal(.1, psturng(4.43645545899562,5,6), 5)
+        assert_allclose(.1, psturng(4.43645545899562,5,6), rtol=1e-5)
 
     def test_vector(self):
         "vector input -> vector output"
-        assert_array_almost_equal(np.array([0.10679889,
-                                             0.06550009,
-                                             0.01730145]),
-                                  psturng([3.98832389,
-                                           4.56835318,
-                                           6.26400894],
-                                          [4, 4, 4],
-                                          [6, 6, 6]),
-                                  5)
+        assert_allclose(np.array([0.10679889,
+                                  0.06550009,
+                                  0.01730145]),
+                        psturng([3.98832389, 4.56835318, 6.26400894],
+                                [4, 4, 4],
+                                [6, 6, 6]),
+                        rtol=1e-5)
 
     def test_v_equal_one(self):
-        assert_almost_equal(.1, psturng(.2,5,1), 5)
+        assert_allclose(.1, psturng(.2,5,1), rtol=1e-5)
 
     def test_invalid_parameters(self):
         # q < .1
@@ -179,8 +178,9 @@ class TestPsturng(object):
                  (0.60412143947363051, 36, 895.83526933271548, 4.381717596850172),
                  (0.88739052300665977, 77, 426.03665511558262, 5.6333929480341309)]
 
-        for p,r,v,q in cases:
-            assert_almost_equal(1.-p, psturng(q,r,v), 5)
+        for p, r, v, q in cases:
+            # TODO: use pytest parametrize
+            assert_allclose(1.-p, psturng(q,r,v), rtol=1e-5)
 
     @pytest.mark.slow
     def test_100_random_values(self):

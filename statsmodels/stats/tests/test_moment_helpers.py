@@ -6,19 +6,21 @@ Author: Josef Perktold
 """
 
 from statsmodels.stats import moment_helpers
-from statsmodels.stats.moment_helpers import (cov2corr,
-                    mvsk2mc, mc2mvsk, mnc2mc, mc2mnc, cum2mc, mc2cum,
-                    mnc2cum)
+from statsmodels.stats.moment_helpers import (
+    cov2corr,
+    mvsk2mc, mc2mvsk, mnc2mc, mc2mnc, cum2mc, mc2cum,
+    mnc2cum)
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_, assert_equal
+from numpy.testing import assert_, assert_equal, assert_allclose
+
 
 def test_cov2corr():
     cov_a = np.ones((3,3))+np.diag(np.arange(1,4)**2 - 1)
     corr_a = np.array([[1, 1/2., 1/3.],[1/2., 1, 1/2./3.],[1/3., 1/2./3., 1]])
 
     corr = cov2corr(cov_a)
-    assert_almost_equal(corr, corr_a, decimal=15)
+    assert_allclose(corr, corr_a, rtol=1e-15)
 
     cov_mat = cov_a
     corr_mat = cov2corr(cov_mat)

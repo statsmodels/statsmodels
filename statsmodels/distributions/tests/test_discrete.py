@@ -1,10 +1,7 @@
-import os
 import numpy as np
 import statsmodels.api as sm
 from scipy.stats import poisson, nbinom
-from numpy.testing import (assert_, assert_almost_equal,
-                           assert_equal, assert_array_equal, assert_allclose,
-                           assert_array_less)
+from numpy.testing import assert_allclose
 
 
 class TestGenpoisson_p(object):
@@ -36,6 +33,7 @@ class TestGenpoisson_p(object):
         poisson_pmf = poisson.logpmf(6, 1)
         genpoisson_pmf = sm.distributions.genpoisson_p.logpmf(6, 1, 0, 2)
         assert_allclose(poisson_pmf, genpoisson_pmf, rtol=1e-15)
+
 
 class TestZIPoisson(object):
     """

@@ -7,18 +7,13 @@ License: Simplified-BSD
 
 from __future__ import division, absolute_import, print_function
 
-import warnings
 import numpy as np
-import pandas as pd
-import os
-from scipy.linalg import solve_discrete_lyapunov
-from scipy.signal import lfilter
 
-from statsmodels.tsa.statespace import (sarimax, structural, varmax,
-                                        dynamic_factor)
+from scipy.linalg import solve_discrete_lyapunov
+
+from statsmodels.tsa.statespace import sarimax, varmax
 from statsmodels.tsa.statespace.initialization import Initialization
-from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal,
-                           assert_raises)
+from numpy.testing import assert_allclose, assert_raises
 
 
 def check_initialization(mod, init, a_true, Pinf_true, Pstar_true):

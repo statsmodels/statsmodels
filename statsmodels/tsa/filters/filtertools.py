@@ -359,7 +359,7 @@ def miso_lfilter(ar, ma, x, useic=False): #[0.1,0.1]):
     #inp2 = signal.convolve(x, ma[:,::-1])[:, (x.shape[1]+1)//2]
     inp = signal.correlate(x, ma[::-1,:])[:, (x.shape[1]+1)//2]
     #for testing 2d equivalence between convolve and correlate
-    #np.testing.assert_almost_equal(inp2, inp)
+    #np.testing.assert_allclose(inp2, inp)
     nobs = x.shape[0]
     # cut of extra values at end
 

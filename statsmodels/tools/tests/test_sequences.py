@@ -20,11 +20,11 @@ def test_discrepancy():
 def test_van_der_corput():
     sample = sequences.van_der_corput(10)
     out = [0., 0.5, 0.25, 0.75, 0.125, 0.625, 0.375, 0.875, 0.0625, 0.5625]
-    npt.assert_almost_equal(sample, out)
+    npt.assert_allclose(sample, out)
 
     sample = sequences.van_der_corput(5, start_index=3)
     out = [0.75, 0.125, 0.625, 0.375, 0.875]
-    npt.assert_almost_equal(sample, out)
+    npt.assert_allclose(sample, out)
 
 
 def test_primes():
@@ -38,8 +38,8 @@ def test_halton():
     sample = sequences.halton(dim=2, n_sample=5, bounds=corners)
 
     out = np.array([[5., 3.], [2.5, 4.], [7.5, 2.3], [1.25, 3.3], [6.25, 4.3]])
-    npt.assert_almost_equal(sample, out, decimal=1)
+    npt.assert_allclose(sample, out, rtol=1e-1)
 
     sample = sequences.halton(dim=2, n_sample=3, bounds=corners, start_index=2)
     out = np.array([[7.5, 2.3], [1.25, 3.3], [6.25, 4.3]])
-    npt.assert_almost_equal(sample, out, decimal=1)
+    npt.assert_allclose(sample, out, decimal=1e-1)

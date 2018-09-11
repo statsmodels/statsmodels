@@ -16,22 +16,13 @@ import os
 import numpy as np
 import pandas as pd
 from statsmodels.tsa.stattools import bds
-from numpy.testing import assert_almost_equal, assert_equal
-from numpy import genfromtxt
-
-DECIMAL_8 = 8
-DECIMAL_6 = 6
-DECIMAL_5 = 5
-DECIMAL_4 = 4
-DECIMAL_3 = 3
-DECIMAL_2 = 2
-DECIMAL_1 = 1
+from numpy.testing import assert_allclose
 
 curdir = os.path.dirname(os.path.abspath(__file__))
-data_file = os.path.join(curdir, "results/bds_data.csv")
+data_file = os.path.join(curdir, "results", "bds_data.csv")
 data = pd.read_csv(data_file, header=None)
 
-res_file = os.path.join(curdir, "results/bds_results.csv")
+res_file = os.path.join(curdir, "results", "bds_results.csv")
 results = pd.read_csv(res_file, header=None)
 
 
@@ -42,10 +33,10 @@ class CheckBDS(object):
     Test values from Kanzler's MATLAB program bds.
     """
     def test_stat(self):
-        assert_almost_equal(self.res[0], self.bds_stats, DECIMAL_8)
+        assert_allclose(self.res[0], self.bds_stats, rtol=1e-8)
 
     def test_pvalue(self):
-        assert_almost_equal(self.res[1], self.pvalues, DECIMAL_8)
+        assert_allclose(self.res[1], self.pvalues, rtol=1e-8)
 
 
 class TestBDSSequence(CheckBDS):
