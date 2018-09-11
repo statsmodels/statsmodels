@@ -9,7 +9,9 @@ from statsmodels.compat.python import (iteritems, range, lrange, string_types,
                                        lzip, zip, long)
 from statsmodels.compat.scipy import _next_regular
 from statsmodels.regression.linear_model import OLS, yule_walker
-from statsmodels.tools.sm_exceptions import InterpolationWarning, MissingDataError
+from statsmodels.tools.sm_exceptions import (InterpolationWarning,
+                                             MissingDataError,
+                                             CollinearityWarning)
 from statsmodels.tools.tools import add_constant, Bunch
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa.adfvalues import mackinnonp, mackinnoncrit
@@ -1196,7 +1198,8 @@ def coint(y0, y1, trend='c', method='aeg', maxlag=None, autolag='aic',
     else:
         import warnings
         warnings.warn("y0 and y1 are (almost) perfectly colinear."
-                      "Cointegration test is not reliable in this case.")
+                      "Cointegration test is not reliable in this case.",
+                      CollinearityWarning)
         # Edge case where series are too similar
         res_adf = (-np.inf,)
 
