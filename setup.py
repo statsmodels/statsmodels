@@ -2,7 +2,8 @@
 To build with coverage of Cython files
 export SM_CYTHON_COVERAGE=1
 python setup.py develop
-pytest --cov-config=.coveragerc_cython --cov=statsmodels statsmodels
+pytest --cov-config=tools/coveragerc/.coveragerc_cython --cov=statsmodels \
+       statsmodels
 """
 import fnmatch
 import os
@@ -280,14 +281,14 @@ if HAS_CYTHON:
 ##############################################################################
 package_data = defaultdict(list)
 filetypes = ['*.csv', '*.txt', '*.dta']
-for root, dirnames, filenames in os.walk(pjoin(os.getcwd(), 'statsmodels', 'datasets')):  # noqa: E501
+for root, _, filenames in os.walk(pjoin(os.getcwd(), 'statsmodels', 'datasets')):  # noqa: E501
     matches = []
     for filetype in filetypes:
         for filename in fnmatch.filter(filenames, filetype):
             matches.append(filename)
     if matches:
         package_data['.'.join(relpath(root).split(os.path.sep))] = filetypes
-for root, dirnames, filenames in os.walk(pjoin(os.getcwd(), 'statsmodels')):
+for root, _, _ in os.walk(pjoin(os.getcwd(), 'statsmodels')):
     if root.endswith('results'):
         package_data['.'.join(relpath(root).split(os.path.sep))] = filetypes
 

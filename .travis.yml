@@ -118,9 +118,9 @@ before_install:
     if [ ${COVERAGE} = true ]; then
         pip install codecov coverage coveralls pytest-cov
         if [ -z ${SM_CYTHON_COVERAGE} ] || [ ${SM_CYTHON_COVERAGE} = false ]; then
-          export COVERAGE_OPTS="--cov-config=.travis_coveragerc --cov=statsmodels"
+          export COVERAGE_OPTS="--cov-config=tools/coveragerc/.coveragerc_travis --cov=statsmodels"
         else
-          export COVERAGE_OPTS="--cov-config=.coveragerc_cython --cov=statsmodels"
+          export COVERAGE_OPTS="--cov-config=tools/coveragerc/.coveragerc_cython --cov=statsmodels"
         fi
         echo "Cython coverage:" ${SM_CYTHON_COVERAGE}
     else
@@ -145,5 +145,5 @@ script:
   - ./lint.sh
 
 after_success:
-  - if [ ${COVERAGE} = true ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi
+  - if [ ${COVERAGE} = true ]; then coveralls --rcfile=${SRCDIR}/tools/coveragerc/.coveragerc_travis; fi
   - if [ ${COVERAGE} = true ]; then codecov; fi
