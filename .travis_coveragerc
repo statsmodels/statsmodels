@@ -1,8 +1,6 @@
 [run]
 source = statsmodels
 branch = True
-include =
-    */statsmodels/*
 
 omit =
     # print_version is untestable

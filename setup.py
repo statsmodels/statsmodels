@@ -119,7 +119,8 @@ ADDITIONAL_PACKAGE_DATA = {
 ##############################################################################
 # Extension Building
 ##############################################################################
-CYTHON_COVERAGE = bool(os.environ.get('SM_CYTHON_COVERAGE', False))
+CYTHON_COVERAGE = os.environ.get('SM_CYTHON_COVERAGE', False)
+CYTHON_COVERAGE = CYTHON_COVERAGE in ('1', 'true', '"true"')
 CYTHON_TRACE_NOGIL = str(int(CYTHON_COVERAGE))
 if CYTHON_COVERAGE:
     print('Building with coverage for Cython code')

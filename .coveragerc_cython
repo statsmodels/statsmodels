@@ -2,8 +2,6 @@
 source = statsmodels
 branch = True
 plugins = Cython.Coverage
-include =
-    */statsmodels/*
 
 omit =
     # print_version is untestable
@@ -47,10 +45,12 @@ exclude_lines =
     raise AssertionError
     raise NotImplementedError
     except NotImplementedError
-
     # Ignore pass
     pass
 
     # Don't complain if non-runnable code isn't run:
     if 0:
     if __name__ == .__main__.:
+
+[html]
+directory = cython_coverage_report

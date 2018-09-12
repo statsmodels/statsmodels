@@ -1,10 +1,36 @@
 # .coveragerc to control coverage.py
 [run]
 source = statsmodels
-branch = False
+branch = True
+
+omit =
+    # print_version is untestable
+    */print_version.py
+    # skip compatibility code
+    */compat/*
+    # Unused file
+    */results/gee_generate_tests.py
+    # Results for tests
+    */tests/results/*
+    # Simulation checks
+    */tests/*_simulation_check.py
+    # Misc non-test files in test directories
+    */tests/_*
+    */tests/e*
+    */tests/c*
+    */tests/d*
+    */tests/g*
+    */tests/m*
+    */tests/p*
+    */tests/r*
+    */tests/s*
+    # Versioneer
+    */_version.py
 
 [report]
 show_missing = True
+
+ignore_errors = False
 
 # Regexes for lines to exclude from consideration
 exclude_lines =
@@ -25,8 +51,6 @@ exclude_lines =
     # Don't complain if non-runnable code isn't run:
     if 0:
     if __name__ == .__main__.:
-
-ignore_errors = False
 
 [html]
 directory = coverage_html_report
