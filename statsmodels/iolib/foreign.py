@@ -748,7 +748,8 @@ class StataWriter(object):
         Helper to call encode before writing to file for Python 3 compat.
         """
         if not isinstance(to_write, bytes):
-            to_write = to_write.encode('ascii')
+            # TODO: why not utf8?
+            to_write = to_write.encode('latin1')
         self._file.write(to_write)
 
     def _prepare_structured_array(self, data):
