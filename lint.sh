@@ -17,7 +17,6 @@ if [ "$LINT" == true ]; then
     # pass _all_ flake8 checks
     echo "Linting known clean files with strict rules"
     flake8 --isolated \
-        examples/python/robust_models_1.py \
         statsmodels/compat/pandas.py \
         statsmodels/resampling/ \
         statsmodels/graphics/tsaplots.py \
