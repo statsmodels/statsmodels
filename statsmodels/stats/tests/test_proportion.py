@@ -569,6 +569,3 @@ def test_proportion_ztests():
     res2 = smprop.proportions_chisquare(np.asarray([15, 10]), np.asarray([20., 20]))
     # test only p-value
     assert_almost_equal(res1[1], res2[1], decimal=13)
-
-if __name__ == '__main__':
-    test_confint_proportion()

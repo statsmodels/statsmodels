@@ -102,8 +102,3 @@ def test_moment_conversion_types():
     assert np.all([isinstance(getattr(moment_helpers,f)(tuple([1.0, 1, 0, 3])),list) or
             isinstance(getattr(moment_helpers,f)(np.array([1.0, 1, 0, 3])),tuple)
             for f in all_f])
-
-if __name__ == '__main__':
-    test_cov2corr()
-    test_moment_conversion()
-    test_moment_conversion_types()

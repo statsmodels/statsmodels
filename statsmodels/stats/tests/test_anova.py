@@ -515,7 +515,3 @@ class TestAnova3HC3(TestAnovaLM):
         #np.testing.assert_almost_equal(results['sum_sq'].values, Sum_Sq, 4)
         np.testing.assert_almost_equal(results['F'].values, F, 4)
         np.testing.assert_almost_equal(results['PR(>F)'].values, PrF)
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

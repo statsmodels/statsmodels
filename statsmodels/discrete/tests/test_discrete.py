@@ -2376,8 +2376,3 @@ def test_unchanging_degrees_of_freedom():
     # Test that the call to `fit_regularized` didn't modify model.df_model inplace.
     assert_equal(res3.df_model, res1.df_model)
     assert_equal(res3.df_resid, res1.df_resid)
-
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

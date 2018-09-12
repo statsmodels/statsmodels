@@ -414,8 +414,3 @@ strata_f = (False, True)
                          list(itertools.product(fnames, ties, entry_f, strata_f)))
 def test_r(fname, ties, entry_f, strata_f):
     TestPHReg.do1(fname, ties, entry_f, strata_f)
-
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])

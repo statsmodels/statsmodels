@@ -557,16 +557,3 @@ def tost_transform_paired():
     assert_almost_equal(res1[1:], res_sas[1:], 2)
     #result R tost
     assert_almost_equal(res1[0], tost_s_paired.p_value, 13)
-
-if __name__ == '__main__':
-    tt = TestTostp1()
-    tt.test_special()
-    for cls in [TestTostp1, TestTostp2, TestTosti1, TestTosti2,
-                TestTostip1, TestTostip2]:
-        #print cls
-        tt = cls()
-        tt.test_pval()
-
-    test_ttest()
-    tost_transform_paired()
-    test_tost_log()

@@ -298,8 +298,3 @@ class TestStattools(object):
         kurtosis = robust_kurtosis(self.kurtosis_x, dg=(delta,gamma), excess=False)
         q = np.percentile(x,[delta, 100.0-delta, gamma, 100.0-gamma])
         assert_almost_equal(kurtosis[3], (q[1] - q[0]) / (q[3] - q[2]))
-
-
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, '-vvs', '-x', '--pdb'])
