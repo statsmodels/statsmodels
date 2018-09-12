@@ -122,3 +122,10 @@ def check_predict_types(results):
                         rtol=1e-12)
         assert_allclose(fitted[:1], res.predict(p_exog[0]),
                         rtol=1e-12)
+
+        # FIXME: xfail instead of commenting out.
+        # predict doesn't preserve DataFrame, e.g. dot converts to ndarray
+        # import pandas
+        # predicted = res.predict(pandas.DataFrame(p_exog))
+        # assert_(isinstance(predicted, pandas.DataFrame))
+        # assert_allclose(predicted, fitted, rtol=1e-12)
