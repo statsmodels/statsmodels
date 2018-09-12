@@ -23,8 +23,7 @@ env:
     - BLAS="mkl blas=*=mkl" # Use Intel MKL by default
     - BUILD_INIT=tools/ci/travis_conda.sh
     - DEPEND_ALWAYS="pyyaml joblib pip colorama"
-    - CYTHON_COVERAGE=
-    - COVERAGE_OPTS=""
+    - SM_CYTHON_COVERAGE=
 
 matrix:
   fast_finish: true
@@ -102,6 +101,8 @@ notifications:
     on_success: always
 
 before_install:
+  # Ensure latest tags are available
+  - git fetch --tags
   # Show information about CPU running job to understand BLAS issues
   - sudo lshw -class processor
   # Fix for headless TravisCI
@@ -116,17 +117,20 @@ before_install:
   - |
     if [ ${COVERAGE} = true ]; then
         pip install codecov coverage coveralls pytest-cov
-        export COVERAGE_OPTS="--cov-config=.travis_coveragerc --cov=statsmodels"
-        export CYTHON_COVERAGE=1
+        export SM_CYTHON_COVERAGE=1
+        export COVERAGE_OPTS="--cov-config=.coveragerc_cython --cov=statsmodels"
+    else
+        export COVERAGE_OPTS=""
     fi
-  - echo "Cython coverage:" ${CYTHON_COVERAGE}
+  - echo "Cython coverage:" ${SM_CYTHON_COVERAGE}
   - if [ ${DOCBUILD} = true ]; then source tools/ci/docbuild_install.sh; fi;
   - pip install flake8
   - export SRCDIR=$PWD
 
 # Install packages
 install:
-  - python setup_coverage.py develop
+  - python setup.py build_ext --inplace
+  - python setup.py develop
 
 script:
   # Show versions

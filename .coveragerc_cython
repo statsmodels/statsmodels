@@ -1,6 +1,7 @@
 [run]
 source = statsmodels
 branch = True
+plugins = Cython.Coverage
 include =
     */statsmodels/*
 

@@ -1,15 +1,10 @@
 # .coveragerc to control coverage.py
 [run]
 source = statsmodels
-branch = True
-plugins = Cython.Coverage
+branch = False
 
 [report]
 show_missing = True
-
-omit=
-    */tests/*
-    */datasets/*
 
 # Regexes for lines to exclude from consideration
 exclude_lines =
@@ -31,8 +26,7 @@ exclude_lines =
     if 0:
     if __name__ == .__main__.:
 
-include = */statsmodels/*
-ignore_errors = True
+ignore_errors = False
 
 [html]
 directory = coverage_html_report
