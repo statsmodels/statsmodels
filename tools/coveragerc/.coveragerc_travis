@@ -1,4 +1,3 @@
-# .coveragerc to control coverage.py
 [run]
 source = statsmodels
 branch = True
@@ -30,7 +29,7 @@ omit =
 [report]
 show_missing = True
 
-ignore_errors = False
+ignore_errors = True
 
 # Regexes for lines to exclude from consideration
 exclude_lines =
@@ -45,12 +44,10 @@ exclude_lines =
     raise AssertionError
     raise NotImplementedError
     except NotImplementedError
+
     # Ignore pass
     pass
 
     # Don't complain if non-runnable code isn't run:
     if 0:
     if __name__ == .__main__.:
-
-[html]
-directory = coverage_html_report

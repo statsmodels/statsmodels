@@ -1,12 +1,12 @@
 [run]
+source = statsmodels
 branch = True
-include =
-    */statsmodels/*
+plugins = Cython.Coverage
 
 omit =
     # print_version is untestable
     */print_version.py
-    # skip compatability code
+    # skip compatibility code
     */compat/*
     # Unused file
     */results/gee_generate_tests.py
@@ -27,8 +27,11 @@ omit =
     # Versioneer
     */_version.py
 
-
 [report]
+show_missing = True
+
+ignore_errors = True
+
 # Regexes for lines to exclude from consideration
 exclude_lines =
     # Have to re-enable the standard pragma
@@ -41,8 +44,13 @@ exclude_lines =
     # Don't complain if tests don't hit defensive assertion code:
     raise AssertionError
     raise NotImplementedError
+    except NotImplementedError
+    # Ignore pass
+    pass
 
     # Don't complain if non-runnable code isn't run:
     if 0:
     if __name__ == .__main__.:
-    if name == .__main__.:
+
+[html]
+directory = cython_coverage_report

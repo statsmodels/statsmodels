@@ -23,6 +23,7 @@ env:
     - BLAS="mkl blas=*=mkl" # Use Intel MKL by default
     - BUILD_INIT=tools/ci/travis_conda.sh
     - DEPEND_ALWAYS="pyyaml joblib pip colorama"
+    - SM_CYTHON_COVERAGE=false # Run takes > 1 hour and so not feasible
 
 matrix:
   fast_finish: true
@@ -100,6 +101,8 @@ notifications:
     on_success: always
 
 before_install:
+  # Ensure latest tags are available
+  - git fetch --tags
   # Show information about CPU running job to understand BLAS issues
   - sudo lshw -class processor
   # Fix for headless TravisCI
@@ -114,7 +117,12 @@ before_install:
   - |
     if [ ${COVERAGE} = true ]; then
         pip install codecov coverage coveralls pytest-cov
-        export COVERAGE_OPTS="--cov-config=.travis_coveragerc --cov=statsmodels"
+        if [ -z ${SM_CYTHON_COVERAGE} ] || [ ${SM_CYTHON_COVERAGE} = false ]; then
+          export COVERAGE_OPTS="--cov-config=tools/coveragerc/.coveragerc_travis --cov=statsmodels"
+        else
+          export COVERAGE_OPTS="--cov-config=tools/coveragerc/.coveragerc_cython --cov=statsmodels"
+        fi
+        echo "Cython coverage:" ${SM_CYTHON_COVERAGE}
     else
         export COVERAGE_OPTS=""
     fi
@@ -124,7 +132,6 @@ before_install:
 
 # Install packages
 install:
-  - python setup.py build_ext --inplace
   - python setup.py develop
 
 script:
@@ -138,5 +145,5 @@ script:
   - ./lint.sh
 
 after_success:
-  - if [ ${COVERAGE} = true ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi
+  - if [ ${COVERAGE} = true ]; then coveralls --rcfile=${SRCDIR}/tools/coveragerc/.coveragerc_travis; fi
   - if [ ${COVERAGE} = true ]; then codecov; fi
