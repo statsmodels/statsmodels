@@ -1,6 +1,32 @@
 # .coveragerc to control coverage.py
 [run]
-branch = False
+branch = True
+include =
+    */statsmodels/*
+
+omit =
+    # print_version is untestable
+    */print_version.py
+    # skip compatability code
+    */compat/*
+    # Unused file
+    */results/gee_generate_tests.py
+    # Results for tests
+    */tests/results/*
+    # Simulation checks
+    */tests/*_simulation_check.py
+    # Misc non-test files in test directories
+    */tests/_*
+    */tests/e*
+    */tests/c*
+    */tests/d*
+    */tests/g*
+    */tests/m*
+    */tests/p*
+    */tests/r*
+    */tests/s*
+    # Versioneer
+    */_version.py
 
 [report]
 show_missing = True
