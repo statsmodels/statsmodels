@@ -3229,7 +3229,7 @@ class NegativeBinomialP(CountModel):
             qc_tol=0.03, **kwargs):
 
         if method not in ['l1', 'l1_cvxopt_cp']:
-            raise TypeError(
+            raise ValueError(
                     "argument method == %s, which is not handled" % method)
 
         if np.size(alpha) == 1 and alpha != 0:
@@ -3321,7 +3321,7 @@ class NegativeBinomialP(CountModel):
             size, prob = self.convert_params(params, mu)
             return nbinom.pmf(counts, size[:,None], prob[:,None])
         else:
-            raise TypeError('keyword \'which\' = %s not recognized' % which)
+            raise ValueError('keyword "which" = %s not recognized' % which)
 
     def convert_params(self, params, mu):
         alpha = params[-1]

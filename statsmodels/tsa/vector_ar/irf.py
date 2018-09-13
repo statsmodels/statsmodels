@@ -220,7 +220,7 @@ class BaseIRAnalysis(object):
             lr_effects = self.lr_effects
 
         if stderr_type not in ['asym', 'mc']:
-            raise TypeError
+            raise ValueError("`stderr_type` must be one of 'asym', 'mc'")
         else:
             if stderr_type == 'asym':
                 stderr = self.cum_effect_cov(orth=orth)

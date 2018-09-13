@@ -83,8 +83,8 @@ class GenericZeroInflated(CountModel):
             self._hessian_inflate = self._hessian_probit
 
         else:
-            raise TypeError("inflation == %s, which is not handled"
-                % inflation)
+            raise ValueError("inflation == %s, which is not handled"
+                             % inflation)
 
         self.inflation = inflation
         self.k_extra = self.k_inflate
@@ -227,7 +227,7 @@ class GenericZeroInflated(CountModel):
         if method in ['l1', 'l1_cvxopt_cp']:
             discretefit = self.result_class_reg(self, cntfit)
         else:
-            raise TypeError(
+            raise ValueError(
                     "argument method == %s, which is not handled" % method)
 
         return self.result_class_reg_wrapper(discretefit)
