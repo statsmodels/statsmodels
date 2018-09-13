@@ -4,7 +4,7 @@ to a function's reference
 """
 import webbrowser
 
-from statsmodels.compat.python import urlencode
+from statsmodels.compat.python import urlencode, string_types
 from statsmodels import __version__
 
 BASE_URL = 'https://www.statsmodels.org/'
@@ -12,8 +12,8 @@ BASE_URL = 'https://www.statsmodels.org/'
 
 def _generate_url(arg, stable):
     """
-    Parse inputs and return a correctly formatted URL or an error if the input
-    is not understandable
+    Parse inputs and return a correctly formatted URL or raises ValueError
+    if the input is not understandable
     """
     url = BASE_URL
     if stable:
@@ -23,7 +23,7 @@ def _generate_url(arg, stable):
 
     if arg is None:
         return url
-    elif type(arg) is str:
+    elif isinstance(arg, string_types):
         url += 'search.html?'
         url += urlencode({'q': arg})
         url += '&check_keywords=yes&area=default'
@@ -33,11 +33,11 @@ def _generate_url(arg, stable):
             func_name = func.__name__
             func_module = func.__module__
             if not func_module.startswith('statsmodels.'):
-                return ValueError('Function must be from statsmodels')
+                raise ValueError('Function must be from statsmodels')
             url += 'generated/'
             url += func_module + '.' + func_name + '.html'
-        except:
-            return ValueError('Input not understood')
+        except AttributeError:
+            raise ValueError('Input not understood')
     return url
 
 
@@ -71,7 +71,5 @@ def webdoc(arg=None, stable=None):
     """
     stable = __version__ if 'dev' not in __version__ else stable
     url_or_error = _generate_url(arg, stable)
-    if isinstance(url_or_error, ValueError):
-        raise url_or_error
     webbrowser.open(url_or_error)
     return None
