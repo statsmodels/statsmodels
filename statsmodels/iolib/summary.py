@@ -952,11 +952,3 @@ class Summary(object):
         if self.extra_txt is not None:
             html = html + '<br/><br/>' + self.extra_txt.replace('\n', '<br/>')
         return html
-
-
-if __name__ == "__main__":
-    import statsmodels.api as sm
-    data = sm.datasets.longley.load(as_pandas=False)
-    data.exog = sm.add_constant(data.exog)
-    res = sm.OLS(data.endog, data.exog).fit()
-    #summary(
