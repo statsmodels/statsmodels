@@ -17,6 +17,3 @@ def test_add_indep():
     assert_equal(xo, np.column_stack((x0, x1, x2)))
     assert_equal((linalg.svdvals(x) > 1e-12).sum(), 3)
     assert_equal(vo, ['const', 'var1_1', 'var2_1'])
-
-if __name__ == '__main__':
-    test_add_indep()
