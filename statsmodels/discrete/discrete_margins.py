@@ -342,8 +342,10 @@ def margeff_cov_with_se(model, params, exog, cov_params, at, derivative,
                                               count_ind, method, J)
     return cov_me, np.sqrt(np.diag(cov_me))
 
+
 def margeff():
-    pass
+    raise NotImplementedError
+
 
 
 def _check_at_is_all(method):

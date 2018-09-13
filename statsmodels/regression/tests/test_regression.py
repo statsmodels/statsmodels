@@ -1044,9 +1044,6 @@ class TestRegularizedFit(object):
                 rslt = mod.fit_regularized(L1_wt=L1_wt, alpha=lam)
                 assert_almost_equal(rslt.params, params, decimal=3)
 
-                # Smoke test for summary
-                rslt.summary()
-
                 # Smoke test for profile likeihood
                 mod.fit_regularized(L1_wt=L1_wt, alpha=lam,
                                     profile_scale=True)

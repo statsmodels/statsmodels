@@ -383,9 +383,6 @@ class TestPHReg(object):
                 # the R side.  See below for further checks.
                 assert_allclose(sm_result.params, params, rtol=0.3)
 
-                # Smoke test for summary
-                smry = sm_result.summary()
-
                 # The penalized log-likelihood that we are maximizing.
                 def plf(params):
                     llf = model.loglike(params) / len(time)

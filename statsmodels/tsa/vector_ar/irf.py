@@ -696,4 +696,4 @@ class IRAnalysis(BaseIRAnalysis):
         return np.dot(Lk.T, L.inv(B))
 
     def fevd_table(self):
-        pass
+        raise NotImplementedError

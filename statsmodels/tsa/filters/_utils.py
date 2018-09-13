@@ -84,7 +84,7 @@ def pandas_wrapper_bunch(func, trim_head=None, trim_tail=None,
 
 def pandas_wrapper_predict(func, trim_head=None, trim_tail=None,
                            columns=None, *args, **kwargs):
-    pass
+    raise NotImplementedError
 
 
 def pandas_wrapper_freq(func, trim_head=None, trim_tail=None,

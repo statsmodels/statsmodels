@@ -171,7 +171,7 @@ def acorr_plot(acorr, linewidth=8, xlabel=None, ax=None):
 
 
 def plot_acorr_with_error():
-    pass
+    raise NotImplementedError
 
 
 def adjust_subplots(**kwds):

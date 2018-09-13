@@ -2031,7 +2031,6 @@ class TestARMA00(object):
         ols_res = OLS(y_lead, X).fit()
         arma_res = ARMA(y_lead,order=(0,0),exog=y_lag).fit(trend='nc', disp=-1)
         assert_almost_equal(ols_res.params, arma_res.params)
-        pass
 
 
 def test_arima_dates_startatend():
