@@ -3,12 +3,11 @@ import numpy as np
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import (gen_fmt, fmt_2,
                                                 fmt_params, fmt_base, fmt_2cols)
-#from statsmodels.iolib.summary2d import summary_params_2dflat
-#from summary2d import summary_params_2dflat
+
 
 def forg(x, prec=3):
     if prec == 3:
-    #for 3 decimals
+        # for 3 decimals
         if (abs(x) >= 1e4) or (abs(x) < 1e-4):
             return '%9.3g' % x
         else:
@@ -19,7 +18,8 @@ def forg(x, prec=3):
         else:
             return '%10.4f' % x
     else:
-        raise NotImplementedError
+        raise ValueError("`prec` argument must be either 3 or 4, not {prec}"
+                         .format(prec=prec))
 
 
 def summary(self, yname=None, xname=None, title=0, alpha=.05,

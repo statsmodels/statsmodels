@@ -984,8 +984,8 @@ class DescStatMV(_OptFuncts):
         endog = self.endog
         nobs = self.nobs
         if len(mu_array) != endog.shape[1]:
-            raise Exception('mu_array must have the same number of \
-                           elements as the columns of the data.')
+            raise ValueError('mu_array must have the same number of '
+                             'elements as the columns of the data.')
         mu_array = mu_array.reshape(1, endog.shape[1])
         means = np.ones((endog.shape[0], endog.shape[1]))
         means = mu_array * means
@@ -1050,7 +1050,7 @@ class DescStatMV(_OptFuncts):
         >>> contourp.show()
         """
         if self.endog.shape[1] != 2:
-            raise Exception('Data must contain exactly two variables')
+            raise ValueError('Data must contain exactly two variables')
         fig, ax = utils.create_mpl_ax()
         if var2_name is None:
             ax.set_ylabel('Variable 2')
@@ -1091,7 +1091,7 @@ class DescStatMV(_OptFuncts):
         nobs = self.nobs
         endog = self.endog
         if endog.shape[1] != 2:
-            raise Exception('Correlation matrix not yet implemented')
+            raise NotImplementedError('Correlation matrix not yet implemented')
         nuis0 = np.array([endog[:, 0].mean(),
                               endog[:, 0].var(),
                               endog[:, 1].mean(),

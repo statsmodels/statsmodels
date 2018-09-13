@@ -152,7 +152,7 @@ def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
                     params[i] = 0.0
                     trimmed[i] = True
     else:
-        raise Exception(
+        raise ValueError(
             "trim_mode == %s, which is not recognized" % (trim_mode))
 
     return params, np.asarray(trimmed)

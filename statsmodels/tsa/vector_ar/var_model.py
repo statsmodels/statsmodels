@@ -617,8 +617,8 @@ class VAR(tsbase.TimeSeriesModel):
         if ic is not None:
             selections = self.select_order(maxlags=maxlags)
             if not hasattr(selections, ic):
-                raise Exception("%s not recognized, must be among %s"
-                                % (ic, sorted(selections)))
+                raise ValueError("%s not recognized, must be among %s"
+                                 % (ic, sorted(selections)))
             lags = getattr(selections, ic)
             if verbose:
                 print(selections)
@@ -1792,7 +1792,7 @@ class VARResults(VARProcess):
             df = (num_restr, k * self.df_resid)
             dist = stats.f(*df)
         else:
-            raise Exception('kind %s not recognized' % kind)
+            raise ValueError('kind %s not recognized' % kind)
 
         pvalue = dist.sf(statistic)
         crit_value = dist.ppf(1 - signif)
