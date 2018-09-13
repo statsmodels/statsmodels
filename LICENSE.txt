@@ -4,7 +4,7 @@ All rights reserved.
 Copyright (c) 2006-2008 Scipy Developers.
 All rights reserved.
 
-Copyright (c) 2009-2012 Statsmodels Developers.
+Copyright (c) 2009-2018 Statsmodels Developers.
 All rights reserved.
 
 

@@ -8,6 +8,7 @@ pytest --cov-config=tools/coveragerc/.coveragerc_cython --cov=statsmodels \
 import fnmatch
 import os
 import sys
+import shutil
 from collections import defaultdict
 from os.path import relpath, abspath, split, join as pjoin
 
@@ -106,7 +107,17 @@ CLASSIFIERS = ['Development Status :: 4 - Beta',
                'Topic :: Office/Business :: Financial',
                'Topic :: Scientific/Engineering']
 
+FILES_TO_INCLUDE_IN_PACKAGE = ['LICENSE.txt', 'setup.cfg']
+
+FILES_COPIED_TO_PACKAGE = []
+for filename in FILES_TO_INCLUDE_IN_PACKAGE:
+    if os.path.exists(filename):
+        dest = os.path.join('statsmodels', filename)
+        shutil.copy2(filename, dest)
+        FILES_COPIED_TO_PACKAGE.append(dest)
+
 ADDITIONAL_PACKAGE_DATA = {
+    'statsmodels': FILES_TO_INCLUDE_IN_PACKAGE,
     'statsmodels.datasets.tests': ['*.zip'],
     'statsmodels.iolib.tests.results': ['*.dta'],
     'statsmodels.stats.tests.results': ['*.json'],
@@ -327,3 +338,7 @@ setup(name=DISTNAME,
       zip_safe=False,
       data_files=[('', ['LICENSE.txt', 'setup.cfg'])]
       )
+
+# Clean-up copied files
+for copy in FILES_COPIED_TO_PACKAGE:
+    os.unlink(copy)
