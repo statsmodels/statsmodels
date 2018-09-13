@@ -41,7 +41,6 @@ class RemoveDataPickle(object):
         cls.predict_kwds = {}
 
     def test_remove_data_pickle(self):
-        import pandas as pd
         from pandas.util.testing import assert_series_equal
 
         results = self.results
@@ -156,13 +155,12 @@ class TestRemoveDataPicklePoisson(RemoveDataPickle):
         x = self.exog
         np.random.seed(987689)
         y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
-        model = sm.Poisson(y_count, x)  #, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
+        model = sm.Poisson(y_count, x)
         # use start_params to converge faster
         start_params = np.array([0.75334818, 0.99425553, 1.00494724, 1.00247112])
         self.results = model.fit(start_params=start_params, method='bfgs',
                                  disp=0)
 
-        #TODO: temporary, fixed in master
         self.predict_kwds = dict(exposure=1, offset=0)
 
 
@@ -185,7 +183,7 @@ class TestRemoveDataPickleLogit(RemoveDataPickle):
         nobs = x.shape[0]
         np.random.seed(987689)
         y_bin = (np.random.rand(nobs) < 1.0 / (1 + np.exp(x.sum(1) - x.mean()))).astype(int)
-        model = sm.Logit(y_bin, x)  #, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
+        model = sm.Logit(y_bin, x)
         # use start_params to converge faster
         start_params = np.array([-0.73403806, -1.00901514, -0.97754543, -0.95648212])
         self.results = model.fit(start_params=start_params, method='bfgs', disp=0)

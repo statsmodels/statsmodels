@@ -43,7 +43,7 @@ class CheckPenalizedPoisson(object):
         nobs, k_vars = 500, 10
         k_nonzero = 4
         x = ((np.random.rand(nobs, k_vars) +
-              0.5* (np.random.rand(nobs, 1) - 0.5)) * 2 - 1)
+              0.5 * (np.random.rand(nobs, 1) - 0.5)) * 2 - 1)
         x *= 1.2
         x[:, 0] = 1
         beta = np.zeros(k_vars)
@@ -86,8 +86,12 @@ class CheckPenalizedPoisson(object):
                             rtol=self.rtol, atol=self.atol)
         assert_allclose(res1.predict(), res2.predict(), rtol=0.05)
 
-    def test_smoke(self):
+    def test_summary(self):
+        # smoke test
         self.res1.summary()
+
+    def test_summary2(self):
+        # smoke test
         self.res1.summary2()
 
     def test_numdiff(self):
@@ -294,8 +298,6 @@ class TestPenalizedPoissonOraclePenalized(CheckPenalizedPoisson):
         cls.res2 = modp.fit(method='bfgs', maxiter=100, disp=0)
 
         mod = PoissonPenalized(y, x, penal=cls.penalty)
-        # mod.pen_weight *= 1.5
-        # mod.penal.tau = 0.05
         cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=False, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
@@ -363,7 +365,8 @@ class TestPenalizedPoissonOraclePenalized2HC(CheckPenalizedPoisson):
                                    'robust (HC0)',
                     'adjust_df': False, 'use_t': False, 'scaling_factor': None}
         assert_equal(self.res1.cov_kwds, cov_kwds)
-        assert_equal(self.res1.cov_kwds, self.res1.results_constrained.cov_kwds)
+        assert_equal(self.res1.cov_kwds,
+                     self.res1.results_constrained.cov_kwds)
 
         # numbers are regression test using bfgs
         params = np.array([0.96817787574701109, 0.43674374940137434,
@@ -402,7 +405,7 @@ class TestPenalizedLogitNoPenal(CheckPenalizedLogit):
         mod.pen_weight = 0
         cls.res1 = mod.fit(disp=0)
 
-        cls.atol = 1e-4  # why not closer ?
+        cls.atol = 1e-4  # TODO: why not closer ?
 
 
 class TestPenalizedLogitOracle(CheckPenalizedLogit):
@@ -453,8 +456,6 @@ class TestPenalizedLogitOraclePenalized(CheckPenalizedLogit):
         cls.res2 = modp.fit(method='bfgs', maxiter=100, disp=0)
 
         mod = LogitPenalized(y, x, penal=cls.penalty)
-        # mod.pen_weight *= 1.5
-        # mod.penal.tau = 0.05
         cls.res1 = mod.fit(method='bfgs', maxiter=100, trim=False, disp=0)
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
@@ -517,8 +518,8 @@ class TestPenalizedGLMBinomCountNoPenal(CheckPenalizedBinomCount):
         mod = GLMPenalized(y, x, family=family.Binomial(), offset=offset,
                            penal=cls.penalty)
         mod.pen_weight = 0
-        cls.res1 = mod.fit(method='bfgs', max_start_irls=3, maxiter=100, disp=0,
-                           start_params=cls.res2.params*0.9)
+        cls.res1 = mod.fit(method='bfgs', max_start_irls=3, maxiter=100,
+                           disp=0, start_params=cls.res2.params*0.9)
 
         cls.atol = 1e-10
         cls.k_params = 4
@@ -535,7 +536,8 @@ class TestPenalizedGLMBinomCountNoPenal(CheckPenalizedBinomCount):
 class TestPenalizedGLMBinomCountOracleHC(CheckPenalizedBinomCount):
     # TODO: There are still problems with this case
     # using the standard optimization, I get convergence failures and
-    # different estimates depending on details, e.g. small changes in pen_weight
+    # different estimates depending on details, e.g. small changes in
+    # pen_weight
     # most likely convexity fails with SCAD in this case
 
     @classmethod
@@ -704,7 +706,8 @@ class TestPenalizedGLMGaussianL2Theil(CheckPenalizedGaussian):
         cls.rtol = 1e-5
 
     def test_params_table(self):
-        # override inherited because match is not good except for params and predict
+        # override inherited because match is not good except
+        # for params and predict
         res1 = self.res1
         res2 = self.res2
         assert_equal((res1.params != 0).sum(), self.k_params)
