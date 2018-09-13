@@ -327,7 +327,7 @@ def test_invalid_start_param_length():
         mod.fit(start_params=np.array([0.5]))
 
 
-def test_basin_hopping():
+def test_basin_hopping(reset_randomstate):
     mod = ExponentialSmoothing(housing_data, trend='add')
     res = mod.fit()
     res2 = mod.fit(use_basinhopping=True)
