@@ -2163,7 +2163,7 @@ def test_arima111_predict_exog_2127():
         res.forecast(steps=10, exog=np.empty(100))
 
 
-def test_ARIMA_exog_predict():
+def test_arima_exog_predict():
     # test forecasting and dynamic prediction with exog against Stata
 
     dta = load_macrodata_pandas().data
@@ -2184,93 +2184,123 @@ def test_ARIMA_exog_predict():
 
     # pandas
 
-    mod = ARIMA(data_sample['loginv'], (1,0,1), exog=data_sample[['loggdp', 'logcons']])
+    mod = ARIMA(data_sample['loginv'], (1, 0, 1),
+                exog=data_sample[['loggdp', 'logcons']])
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         res = mod.fit(disp=0, solver='bfgs', maxiter=5000)
 
-    predicted_arma_fp = res.predict(start=197, end=202, exog=exog_full.values[197:]).values
-    predicted_arma_dp = res.predict(start=193, end=202, exog=exog_full[197:], dynamic=True)
+    predicted_arma_fp = res.predict(start=197, end=202,
+                                    exog=exog_full.values[197:]).values
+    predicted_arma_dp = res.predict(start=193, end=202,
+                                    exog=exog_full[197:], dynamic=True)
 
     # numpy
-    mod2 = ARIMA(np.asarray(data_sample['loginv']), (1,0,1),
-                   exog=np.asarray(data_sample[['loggdp', 'logcons']]))
-    res2 = mod2.fit(start_params=res.params, disp=0, solver='bfgs', maxiter=5000)
+    mod2 = ARIMA(np.asarray(data_sample['loginv']), (1, 0, 1),
+                 exog=np.asarray(data_sample[['loggdp', 'logcons']]))
+    res2 = mod2.fit(start_params=res.params, disp=0,
+                    solver='bfgs', maxiter=5000)
 
     exog_full = data[['loggdp', 'logcons']]
-    predicted_arma_f = res2.predict(start=197, end=202, exog=exog_full.values[197:])
-    predicted_arma_d = res2.predict(start=193, end=202, exog=exog_full[197:], dynamic=True)
+    predicted_arma_f = res2.predict(start=197, end=202,
+                                    exog=exog_full.values[197:])
+    predicted_arma_d = res2.predict(start=193, end=202,
+                                    exog=exog_full[197:], dynamic=True)
 
-    #ARIMA(1, 1, 1)
-    ex = np.asarray(data_sample[['loggdp', 'logcons']].diff())
+    endog_scale = 100
+    ex_scale = 1000
+    # ARIMA(1, 1, 1)
+    ex = ex_scale * np.asarray(data_sample[['loggdp', 'logcons']].diff())
     # The first obsevation is not (supposed to be) used, but I get a Lapack problem
     # Intel MKL ERROR: Parameter 5 was incorrect on entry to DLASCL.
     ex[0] = 0
-    mod111 = ARIMA(np.asarray(data_sample['loginv']), (1,1,1),
-                       # Stata differences also the exog
-                       exog=ex)
+    mod111 = ARIMA(100 * np.asarray(data_sample['loginv']), (1, 1, 1),
+                   # Stata differences also the exog
+                   exog=ex)
 
     res111 = mod111.fit(disp=0, solver='bfgs', maxiter=5000)
-    exog_full_d = data[['loggdp', 'logcons']].diff()
+    exog_full_d = ex_scale * data[['loggdp', 'logcons']].diff()
     res111.predict(start=197, end=202, exog=exog_full_d.values[197:])
 
-    predicted_arima_f = res111.predict(start=196, end=202, exog=exog_full_d.values[197:], typ='levels')
-    predicted_arima_d = res111.predict(start=193, end=202, exog=exog_full_d.values[197:], typ='levels', dynamic=True)
+    predicted_arima_f = res111.predict(start=196, end=202,
+                                       exog=exog_full_d.values[197:],
+                                       typ='levels')
+    predicted_arima_d = res111.predict(start=193, end=202,
+                                       exog=exog_full_d.values[197:],
+                                       typ='levels', dynamic=True)
 
-    res_f101 = np.array([ 7.73975859954,  7.71660108543,  7.69808978329,  7.70872117504,
-             7.6518392758 ,  7.69784279784,  7.70290907856,  7.69237782644,
-             7.65017785174,  7.66061689028,  7.65980022857,  7.61505314129,
-             7.51697158428,  7.5165760663 ,  7.5271053284 ])
-    res_f111 = np.array([ 7.74460013693,  7.71958207517,  7.69629561172,  7.71208186737,
-             7.65758850178,  7.69223472572,  7.70411775588,  7.68896109499,
-             7.64016249001,  7.64871881901,  7.62550283402,  7.55814609462,
-             7.44431310053,  7.42963968062,  7.43554675427])
-    res_d111 = np.array([ 7.74460013693,  7.71958207517,  7.69629561172,  7.71208186737,
-             7.65758850178,  7.69223472572,  7.71870821151,  7.7299430215 ,
-             7.71439447355,  7.72544001101,  7.70521902623,  7.64020040524,
-             7.5281927191 ,  7.5149442694 ,  7.52196378005])
-    res_d101 = np.array([ 7.73975859954,  7.71660108543,  7.69808978329,  7.70872117504,
-             7.6518392758 ,  7.69784279784,  7.72522142662,  7.73962377858,
-             7.73245950636,  7.74935432862,  7.74449584691,  7.69589103679,
-             7.5941274688 ,  7.59021764836,  7.59739267775])
+    res_f101 = np.array(
+        [7.73975859954, 7.71660108543, 7.69808978329, 7.70872117504,
+         7.65183927580, 7.69784279784, 7.70290907856, 7.69237782644,
+         7.65017785174, 7.66061689028, 7.65980022857, 7.61505314129,
+         7.51697158428, 7.51657606630, 7.5271053284])
+    res_f111 = np.array(
+        [7.74460013693, 7.71958207517, 7.69629561172, 7.71208186737,
+         7.65758850178, 7.69223472572, 7.70411775588, 7.68896109499,
+         7.64016249001, 7.64871881901, 7.62550283402, 7.55814609462,
+         7.44431310053, 7.42963968062, 7.43554675427])
+    res_d111 = np.array(
+        [7.74460013693, 7.71958207517, 7.69629561172, 7.71208186737,
+         7.65758850178, 7.69223472572, 7.71870821151, 7.72994302150,
+         7.71439447355, 7.72544001101, 7.70521902623, 7.64020040524,
+         7.52819271910, 7.51494426940, 7.52196378005])
+    res_d101 = np.array(
+        [7.73975859954, 7.71660108543, 7.69808978329, 7.70872117504,
+         7.65183927580, 7.69784279784, 7.72522142662, 7.73962377858,
+         7.73245950636, 7.74935432862, 7.74449584691, 7.69589103679,
+         7.59412746880, 7.59021764836, 7.59739267775])
 
-    assert_allclose(predicted_arma_dp, res_d101[-len(predicted_arma_d):], atol=1e-4)
-    assert_allclose(predicted_arma_fp, res_f101[-len(predicted_arma_f):], atol=1e-4)
-    assert_allclose(predicted_arma_d, res_d101[-len(predicted_arma_d):], atol=1e-4)
-    assert_allclose(predicted_arma_f, res_f101[-len(predicted_arma_f):], atol=1e-4)
-    assert_allclose(predicted_arima_d, res_d111[-len(predicted_arima_d):], rtol=1e-4, atol=1e-4)
-    assert_allclose(predicted_arima_f, res_f111[-len(predicted_arima_f):], rtol=1e-4, atol=1e-4)
+    assert_allclose(predicted_arma_dp,
+                    res_d101[-len(predicted_arma_d):], atol=1e-4)
+    assert_allclose(predicted_arma_fp,
+                    res_f101[-len(predicted_arma_f):], atol=1e-4)
+    assert_allclose(predicted_arma_d,
+                    res_d101[-len(predicted_arma_d):], atol=1e-4)
+    assert_allclose(predicted_arma_f,
+                    res_f101[-len(predicted_arma_f):], atol=1e-4)
+    assert_allclose(predicted_arima_d / endog_scale,
+                    res_d111[-len(predicted_arima_d):], rtol=1e-4, atol=1e-4)
+    assert_allclose(predicted_arima_f / endog_scale,
+                    res_f111[-len(predicted_arima_f):], rtol=1e-4, atol=1e-4)
 
     # test for forecast with 0 ar fix in #2457 numbers again from Stata
 
-    res_f002 = np.array([ 7.70178181209,  7.67445481224,  7.6715373765 ,  7.6772915319 ,
-         7.61173201163,  7.67913499878,  7.6727609212 ,  7.66275451925,
-         7.65199799315,  7.65149983741,  7.65554131408,  7.62213286298,
-         7.53795983357,  7.53626130154,  7.54539963934])
-    res_d002 = np.array([ 7.70178181209,  7.67445481224,  7.6715373765 ,  7.6772915319 ,
-         7.61173201163,  7.67913499878,  7.67306697759,  7.65287924998,
-         7.64904451605,  7.66580449603,  7.66252081172,  7.62213286298,
-         7.53795983357,  7.53626130154,  7.54539963934])
+    res_f002 = np.array(
+        [7.70178181209, 7.67445481224, 7.67153737650, 7.67729153190,
+         7.61173201163, 7.67913499878, 7.67276092120, 7.66275451925,
+         7.65199799315, 7.65149983741, 7.65554131408, 7.62213286298,
+         7.53795983357, 7.53626130154, 7.54539963934])
+    res_d002 = np.array(
+        [7.70178181209, 7.67445481224, 7.67153737650, 7.67729153190,
+         7.61173201163, 7.67913499878, 7.67306697759, 7.65287924998,
+         7.64904451605, 7.66580449603, 7.66252081172, 7.62213286298,
+         7.53795983357, 7.53626130154, 7.54539963934])
 
-    mod_002 = ARIMA(np.asarray(data_sample['loginv']), (0,0,2),
-                   exog=np.asarray(data_sample[['loggdp', 'logcons']]))
+    mod_002 = ARIMA(np.asarray(data_sample['loginv']), (0, 0, 2),
+                    exog=np.asarray(data_sample[['loggdp', 'logcons']]))
 
     # doesn't converge with default starting values
-    res_002 = mod_002.fit(start_params=np.concatenate((res.params[[0, 1, 2, 4]], [0])),
-                          disp=0, solver='bfgs', maxiter=5000)
+    start_params = np.concatenate((res.params[[0, 1, 2, 4]], [0]))
+    res_002 = mod_002.fit(start_params=start_params, disp=0,
+                          solver='bfgs', maxiter=5000)
 
     # forecast
-    fpredict_002 = res_002.predict(start=197, end=202, exog=exog_full.values[197:])
+    fpredict_002 = res_002.predict(start=197, end=202,
+                                   exog=exog_full.values[197:])
     forecast_002 = res_002.forecast(steps=len(exog_full.values[197:]),
                                     exog=exog_full.values[197:])
-    forecast_002 = forecast_002[0]  # TODO we are not checking the other results
-    assert_allclose(fpredict_002, res_f002[-len(fpredict_002):], rtol=1e-4, atol=1e-6)
-    assert_allclose(forecast_002, res_f002[-len(forecast_002):], rtol=1e-4, atol=1e-6)
+    # TODO: Checking other results
+    forecast_002 = forecast_002[0]
+    assert_allclose(fpredict_002, res_f002[-len(fpredict_002):],
+                    rtol=1e-4, atol=1e-6)
+    assert_allclose(forecast_002, res_f002[-len(forecast_002):],
+                    rtol=1e-4, atol=1e-6)
 
     # dynamic predict
-    dpredict_002 = res_002.predict(start=193, end=202, exog=exog_full.values[197:],
-                                   dynamic=True)
-    assert_allclose(dpredict_002, res_d002[-len(dpredict_002):], rtol=1e-4, atol=1e-6)
+    dpredict_002 = res_002.predict(start=193, end=202,
+                                   exog=exog_full.values[197:], dynamic=True)
+    assert_allclose(dpredict_002, res_d002[-len(dpredict_002):],
+                    rtol=1e-4, atol=1e-6)
 
     # in-sample dynamic predict should not need exog, #2982
     predict_3a = res_002.predict(start=100, end=120, dynamic=True)
