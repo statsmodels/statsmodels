@@ -33,10 +33,10 @@ def _generate_url(arg, stable):
             func_name = func.__name__
             func_module = func.__module__
             if not func_module.startswith('statsmodels.'):
-                return ValueError('Function must be from statsmodels')
+                raise ValueError('Function must be from statsmodels')
             url += 'generated/'
             url += func_module + '.' + func_name + '.html'
-        except:
+        except AttributeError:
             return ValueError('Input not understood')
     return url
 

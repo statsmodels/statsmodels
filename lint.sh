@@ -29,6 +29,22 @@ if [ "$LINT" == true ]; then
         statsmodels/regression/mixed_linear_model.py \
         statsmodels/duration/__init__.py \
         statsmodels/regression/recursive_ls.py \
+        statsmodels/tools/tests/test_parallel.py \
+        statsmodels/tools/tests/test_sequences.py \
+        statsmodels/tools/tests/test_transform_model.py \
+        statsmodels/tools/tests/test_web.py \
+        statsmodels/tools/_testing.py \
+        statsmodels/tools/catadd.py \
+        statsmodels/tools/data.py \
+        statsmodels/tools/eval_measures.py \
+        statsmodels/tools/grouputils.py \
+        statsmodels/tools/parallel.py \
+        statsmodels/tools/print_version.py \
+        statsmodels/tools/rootfinding.py \
+        statsmodels/tools/sequences.py \
+        statsmodels/tools/sm_exceptions.py \
+        statsmodels/tools/transform_model.py \
+        statsmodels/tools/web.py \
         statsmodels/tools/linalg.py \
         statsmodels/tools/tests/test_linalg.py \
         statsmodels/tools/decorators.py \
