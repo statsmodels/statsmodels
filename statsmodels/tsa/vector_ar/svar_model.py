@@ -168,8 +168,8 @@ class SVAR(tsbase.TimeSeriesModel):
         if ic is not None:
             selections = self.select_order(maxlags=maxlags, verbose=verbose)
             if ic not in selections:
-                raise Exception("%s not recognized, must be among %s"
-                                % (ic, sorted(selections)))
+                raise ValueError("%s not recognized, must be among %s"
+                                 % (ic, sorted(selections)))
             lags = selections[ic]
             if verbose:
                 print('Using %d based on %s criterion' %  (lags, ic))

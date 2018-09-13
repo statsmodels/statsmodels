@@ -137,7 +137,7 @@ def _get_window_type(window_type):
         elif window_type_up == 'EXPANDING':
             return EXPANDING
 
-    raise Exception('Unrecognized window type: %s' % window_type)
+    raise ValueError('Unrecognized window type: %s' % window_type)
 
 
 class DynamicVAR(object):

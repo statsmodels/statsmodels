@@ -325,7 +325,7 @@ class DiscreteModel(base.LikelihoodModel):
         if method in ['l1', 'l1_cvxopt_cp']:
             cov_params_func = self.cov_params_func_l1
         else:
-            raise Exception("argument method == %s, which is not handled"
+            raise ValueError("argument method == %s, which is not handled"
                             % method)
 
         ### Bundle up extra kwargs for the dictionary kwargs.  These are
@@ -460,7 +460,7 @@ class BinaryModel(DiscreteModel):
         if method in ['l1', 'l1_cvxopt_cp']:
             discretefit = L1BinaryResults(self, bnryfit)
         else:
-            raise Exception(
+            raise ValueError(
                     "argument method == %s, which is not handled" % method)
         return L1BinaryResultsWrapper(discretefit)
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
@@ -871,7 +871,7 @@ class CountModel(DiscreteModel):
         if method in ['l1', 'l1_cvxopt_cp']:
             discretefit = L1CountResults(self, cntfit)
         else:
-            raise Exception(
+            raise ValueError(
                     "argument method == %s, which is not handled" % method)
         return L1CountResultsWrapper(discretefit)
     fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
@@ -1064,7 +1064,7 @@ class Poisson(CountModel):
         if method in ['l1', 'l1_cvxopt_cp']:
             discretefit = L1PoissonResults(self, cntfit)
         else:
-            raise Exception(
+            raise ValueError(
                     "argument method == %s, which is not handled" % method)
         return L1PoissonResultsWrapper(discretefit)
 
@@ -1513,7 +1513,7 @@ class GeneralizedPoisson(CountModel):
         if method in ['l1', 'l1_cvxopt_cp']:
             discretefit = L1GeneralizedPoissonResults(self, cntfit)
         else:
-            raise Exception(
+            raise ValueError(
                     "argument method == %s, which is not handled" % method)
 
         return L1GeneralizedPoissonResultsWrapper(discretefit)
@@ -2903,7 +2903,7 @@ class NegativeBinomial(CountModel):
         if method in ['l1', 'l1_cvxopt_cp']:
             discretefit = L1NegativeBinomialResults(self, cntfit)
         else:
-            raise Exception(
+            raise ValueError(
                     "argument method == %s, which is not handled" % method)
 
         return L1NegativeBinomialResultsWrapper(discretefit)
