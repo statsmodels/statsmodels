@@ -154,8 +154,7 @@ def corr_clipped(corr, threshold=1e-15):
 
 def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
                 return_all=False):
-
-    '''
+    """
     Find the nearest covariance matrix that is postive (semi-) definite
 
     This leaves the diagonal, i.e. the variance, unchanged
@@ -169,7 +168,7 @@ def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
         used.if "nearest", then ``corr_nearest`` is used
     threshold : float
         clipping threshold for smallest eigen value, see Notes
-    nfact : int or float
+    n_fact : int or float
         factor to determine the maximum number of iterations in
         ``corr_nearest``. See its doc string
     return_all : bool
@@ -205,14 +204,13 @@ def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
     --------
     corr_nearest
     corr_clipped
-
-    '''
+    """
 
     from statsmodels.stats.moment_helpers import cov2corr, corr2cov
     cov_, std_ = cov2corr(cov, return_std=True)
     if method == 'clipped':
         corr_ = corr_clipped(cov_, threshold=threshold)
-    elif method == 'nearest':
+    else:  # method == 'nearest'
         corr_ = corr_nearest(cov_, threshold=threshold, n_fact=n_fact)
 
     cov_ = corr2cov(corr_, std_)
@@ -604,10 +602,10 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
 
     References
     ----------
-    R Borsdof, N Higham, M Raydan (2010).  Computing a nearest
-    correlation matrix with factor structure. SIAM J Matrix Anal
-    Appl, 31:5, 2603-2622.
-    http://eprints.ma.man.ac.uk/1523/01/covered/MIMS_ep2009_87.pdf
+    .. [*] R Borsdof, N Higham, M Raydan (2010).  Computing a nearest
+       correlation matrix with factor structure. SIAM J Matrix Anal Appl,
+       31:5, 2603-2622.
+       http://eprints.ma.man.ac.uk/1523/01/covered/MIMS_ep2009_87.pdf
 
     Examples
     --------
@@ -681,7 +679,8 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
                 ir += bs
             return fval
 
-    rslt = _spg_optim(func, grad, X, _project_correlation_factors)
+    rslt = _spg_optim(func, grad, X, _project_correlation_factors, ctol=ctol,
+                      lam_min=lam_min, lam_max=lam_max, maxiter=maxiter)
     root = rslt.params
     diag = 1 - (root**2).sum(1)
     soln = FactoredPSDMatrix(diag, root)
