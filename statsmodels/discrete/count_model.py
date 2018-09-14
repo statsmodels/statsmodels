@@ -168,9 +168,6 @@ class GenericZeroInflated(CountModel):
             full_output=1, disp=1, callback=None,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
         if start_params is None:
-            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
-            if np.size(offset) == 1 and offset == 0:
-                offset = None
             start_params = self._get_start_params()
 
         if callback is None:
@@ -208,9 +205,6 @@ class GenericZeroInflated(CountModel):
         alpha_p = alpha[:-(self.k_extra - extra)] if (self.k_extra
             and np.size(alpha) > 1) else alpha
         if start_params is None:
-            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
-            if np.size(offset) == 1 and offset == 0:
-                offset = None
             start_params = self.model_main.fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=0, callback=callback,
@@ -535,10 +529,11 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         result = self.distribution.pmf(counts, mu, w)
         return result[0] if transform else result
 
-    def _get_start_params(self):
+    def _get_start_params(self, **kwargs):
         start_params = self.model_main.fit(disp=0, method="nm").params
         start_params = np.append(np.ones(self.k_inflate) * 0.1, start_params)
         return start_params
+    _get_start_params.__doc__ = base.LikelihoodModel._get_start_params.__doc__
 
 
 class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
@@ -610,13 +605,14 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         result = self.distribution.pmf(counts, mu, params_main[-1], p, w)
         return result[0] if transform else result
 
-    def _get_start_params(self):
+    def _get_start_params(self, **kwargs):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ConvergenceWarning)
             start_params = ZeroInflatedPoisson(self.endog, self.exog,
                 exog_infl=self.exog_infl).fit(disp=0).params
         start_params = np.append(start_params, 0.1)
         return start_params
+    _get_start_params.__doc__ = base.LikelihoodModel._get_start_params.__doc__
 
 
 class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
@@ -689,12 +685,13 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         result = self.distribution.pmf(counts, mu, params_main[-1], p, w)
         return result[0] if transform else result
 
-    def _get_start_params(self):
+    def _get_start_params(self, **kwargs):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ConvergenceWarning)
             start_params = self.model_main.fit(disp=0, method='nm').params
         start_params = np.append(np.zeros(self.k_inflate), start_params)
         return start_params
+    _get_start_params.__doc__ = base.LikelihoodModel._get_start_params.__doc__
 
 
 class ZeroInflatedPoissonResults(CountResults):

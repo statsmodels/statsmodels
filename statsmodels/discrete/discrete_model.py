@@ -632,13 +632,17 @@ class MultinomialModel(BinaryModel):
             pred = np.column_stack((np.zeros(len(exog)), pred))
         return pred
 
+    @Appender(base.LikelihoodModel._get_start_params.__doc__)
+    def _get_start_params(self, **kwargs):
+        return np.zeros((self.K * (self.J-1)))
+
     @Appender(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
         if start_params is None:
-            start_params = np.zeros((self.K * (self.J-1)))
-        else:
-            start_params = np.asarray(start_params)
+            start_params = self._get_start_params(**kwargs)
+
+        start_params = np.asarray(start_params)
         callback = lambda x : None # placeholder until check_perfect_pred
         # skip calling super to handle results from LikelihoodModel
         mnfit = base.LikelihoodModel.fit(self, start_params = start_params,
@@ -1085,14 +1089,23 @@ class Poisson(CountModel):
         params = [np.log(const)]
         return params
 
+    @Appender(base.LikelihoodModel._get_start_params.__doc__)
+    def _get_start_params(self, **kwargs):
+        if self.data.const_idx is not None:
+            # k_params or k_exog not available?
+            start_params = 0.001 * np.ones(self.exog.shape[1])
+            null_starts = self._get_start_params_null()[0]
+            start_params[self.data.const_idx] = null_starts
+        else:
+            start_params = super(Poisson, self)._get_start_params(**kwargs)
+        return start_params
+
     @Appender(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
 
-        if start_params is None and self.data.const_idx is not None:
-            # k_params or k_exog not available?
-            start_params = 0.001 * np.ones(self.exog.shape[1])
-            start_params[self.data.const_idx] = self._get_start_params_null()[0]
+        if start_params is None:
+            start_params = self._get_start_params(**kwargs)
 
         cntfit = super(CountModel, self).fit(start_params=start_params,
                                              method=method,
@@ -1472,6 +1485,28 @@ class GeneralizedPoisson(CountModel):
         a = ((np.abs(resid) / np.sqrt(mu) - 1) * mu**(-q)).sum() / df_resid
         return a
 
+    @Appender(base.LikelihoodModel._get_start_params.__doc__)
+    def _get_start_params(self, **kwargs):
+        offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+        if np.size(offset) == 1 and offset == 0:
+            offset = None
+
+        optim_kwds_prelim = {'disp': 0, 'skip_hessian': True,
+                             'warn_convergence': False}
+        optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
+
+        mod_poi = Poisson(self.endog, self.exog, offset=offset)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+
+            res_poi = mod_poi.fit(**optim_kwds_prelim)
+
+        start_params = res_poi.params
+        a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
+                                      df_resid=res_poi.df_resid)
+        start_params = np.append(start_params, max(-0.1, a))
+        return start_params
 
     @Appender(
         """
@@ -1495,20 +1530,7 @@ class GeneralizedPoisson(CountModel):
             self._transparams = False
 
         if start_params is None:
-            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
-            if np.size(offset) == 1 and offset == 0:
-                offset = None
-            optim_kwds_prelim = {'disp': 0, 'skip_hessian': True,
-                                 'warn_convergence': False}
-            optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
-            mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            with warnings.catch_warnings():
-                warnings.simplefilter("always")
-                res_poi = mod_poi.fit(**optim_kwds_prelim)
-            start_params = res_poi.params
-            a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
-                                          df_resid=res_poi.df_resid)
-            start_params = np.append(start_params, max(-0.1, a))
+            start_params = self._get_start_params(**kwargs)
 
         if callback is None:
             # work around perfect separation callback #3895
@@ -2888,6 +2910,32 @@ class NegativeBinomial(CountModel):
             a = (resid**2 / mu - 1).sum() / df_resid
         return a
 
+    def _get_start_params(self, **kwargs):
+        # Use poisson fit as first guess.
+        # TODO, Warning: this assumes exposure is logged
+        offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+        if np.size(offset) == 1 and offset == 0:
+            offset = None
+
+        optim_kwds_prelim = {'disp': 0, 'skip_hessian': True,
+                             'warn_convergence': False}
+        optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
+
+        mod_poi = Poisson(self.endog, self.exog, offset=offset)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            res_poi = mod_poi.fit(**optim_kwds_prelim)
+
+        start_params = res_poi.params
+
+        if self.loglike_method.startswith('nb'):
+            a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
+                                          df_resid=res_poi.df_resid)
+            start_params = np.append(start_params, max(0.05, a))
+        return start_params
+    _get_start_params.__doc__ = base.LikelihoodModel._get_start_params.__doc__
+
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None,
             cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
@@ -2902,23 +2950,7 @@ class NegativeBinomial(CountModel):
             self._transparams = False # because we need to step in alpha space
 
         if start_params is None:
-            # Use poisson fit as first guess.
-            #TODO, Warning: this assumes exposure is logged
-            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
-            if np.size(offset) == 1 and offset == 0:
-                offset = None
-            optim_kwds_prelim = {'disp': 0, 'skip_hessian': True,
-                                 'warn_convergence': False}
-            optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
-            mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            with warnings.catch_warnings():
-                warnings.simplefilter("always")
-                res_poi = mod_poi.fit(**optim_kwds_prelim)
-            start_params = res_poi.params
-            if self.loglike_method.startswith('nb'):
-                a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
-                                              df_resid=res_poi.df_resid)
-                start_params = np.append(start_params, max(0.05, a))
+            start_params = self._get_start_params(**kwargs)
         else:
             if self._transparams is True:
                 # transform user provided start_params dispersion, see #3918
@@ -3262,6 +3294,28 @@ class NegativeBinomialP(CountModel):
         a = ((resid**2 / mu - 1) * mu**(-q)).sum() / df_resid
         return a
 
+    @Appender(base.LikelihoodModel._get_start_params.__doc__)
+    def _get_start_params(self, **kwargs):
+        offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+        if np.size(offset) == 1 and offset == 0:
+            offset = None
+
+        optim_kwds_prelim = {'disp': 0, 'skip_hessian': True,
+                             'warn_convergence': False}
+        optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
+        mod_poi = Poisson(self.endog, self.exog, offset=offset)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+
+            res_poi = mod_poi.fit(**optim_kwds_prelim)
+
+        start_params = res_poi.params
+        a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
+                                      df_resid=res_poi.df_resid)
+        start_params = np.append(start_params, max(0.05, a))
+        return start_params
+
     @Appender(DiscreteModel.fit.__doc__)
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, use_transparams=False,
@@ -3284,21 +3338,7 @@ class NegativeBinomialP(CountModel):
             self._transparams = False
 
         if start_params is None:
-            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
-            if np.size(offset) == 1 and offset == 0:
-                offset = None
-
-            optim_kwds_prelim = {'disp': 0, 'skip_hessian': True,
-                                 'warn_convergence': False}
-            optim_kwds_prelim.update(kwargs.get('optim_kwds_prelim', {}))
-            mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            with warnings.catch_warnings():
-                warnings.simplefilter("always")
-                res_poi = mod_poi.fit(**optim_kwds_prelim)
-            start_params = res_poi.params
-            a = self._estimate_dispersion(res_poi.predict(), res_poi.resid,
-                                          df_resid=res_poi.df_resid)
-            start_params = np.append(start_params, max(0.05, a))
+            start_params = self._get_start_params(**kwargs)
 
         if callback is None:
             # work around perfect separation callback #3895
