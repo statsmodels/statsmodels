@@ -4,7 +4,7 @@ import pytest
 from numpy.testing import assert_equal
 
 from statsmodels.tools.decorators import (
-    cache_readonly, cache_writable, CacheWriteWarning)
+    cache_readonly, CacheWriteWarning)
 
 
 def test_cache_readonly():
