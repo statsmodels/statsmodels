@@ -173,7 +173,7 @@ class GenericZeroInflated(CountModel):
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
-            start_params = self._get_start_params()
+            start_params = self._get_start_params(start_params)
 
         if callback is None:
             # work around perfect separation callback #3895
@@ -543,7 +543,10 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         result = self.distribution.pmf(counts, mu, w)
         return result[0] if transform else result
 
-    def _get_start_params(self):
+    def _get_start_params(self, start_params=None):
+        if start_params is not None:
+            return start_params
+        
         start_params = self.model_main.fit(disp=0, method="nm").params
         start_params = np.append(np.ones(self.k_inflate) * 0.1, start_params)
         return start_params
@@ -618,7 +621,10 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         result = self.distribution.pmf(counts, mu, params_main[-1], p, w)
         return result[0] if transform else result
 
-    def _get_start_params(self):
+    def _get_start_params(self, start_params=None):
+        if start_params is not None:
+            return start_params
+        
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ConvergenceWarning)
             start_params = ZeroInflatedPoisson(self.endog, self.exog,
@@ -697,7 +703,9 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         result = self.distribution.pmf(counts, mu, params_main[-1], p, w)
         return result[0] if transform else result
 
-    def _get_start_params(self):
+    def _get_start_params(self, start_params=None):
+        if start_params is not None:
+            return start_params
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ConvergenceWarning)
             start_params = self.model_main.fit(disp=0, method='nm').params
