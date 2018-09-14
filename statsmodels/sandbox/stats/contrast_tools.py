@@ -26,7 +26,6 @@ from __future__ import print_function
 from statsmodels.compat.python import zip
 import numpy as np
 
-#next 3 functions copied from multicomp.py
 
 def contrast_allpairs(nm):
     '''contrast or restriction matrix for all pairs of nm variables
@@ -50,6 +49,7 @@ def contrast_allpairs(nm):
             contr.append(contr_row)
     return np.array(contr)
 
+
 def contrast_all_one(nm):
     '''contrast or restriction matrix for all against first comparison
 
@@ -65,6 +65,7 @@ def contrast_all_one(nm):
     '''
     contr = np.column_stack((np.ones(nm-1), -np.eye(nm-1)))
     return contr
+
 
 def contrast_diff_mean(nm):
     '''contrast or restriction matrix for all against mean comparison

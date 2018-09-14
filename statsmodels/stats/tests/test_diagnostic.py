@@ -27,7 +27,6 @@ import statsmodels.stats.sandwich_covariance as sw
 import statsmodels.stats.diagnostic as smsdia
 import json
 
-#import statsmodels.sandbox.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))

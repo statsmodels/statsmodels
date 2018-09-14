@@ -218,8 +218,6 @@ if __name__ == '__main__':
 ##    mods.nobs = len(ys)
 ##    ress = mods.fit(start_params=np.r_[0.4, np.zeros(12), [0.2, 5.]],maxiter=200)
 ##    print(ress.params
-##    #from statsmodels.sandbox.tsa import arima as tsaa
-##    #tsaa
 ##    import matplotlib.pyplot as plt
 ##    plt.plot(data.endog[1])
 ##    #plt.show()

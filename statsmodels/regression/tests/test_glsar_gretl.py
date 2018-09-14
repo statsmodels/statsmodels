@@ -20,7 +20,6 @@ from statsmodels.datasets import macrodata
 
 import statsmodels.stats.sandwich_covariance as sw
 import statsmodels.stats.diagnostic as smsdia
-#import statsmodels.sandbox.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
 
 
