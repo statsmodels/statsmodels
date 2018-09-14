@@ -3,6 +3,8 @@ import numpy.linalg as L
 import scipy.interpolate
 import scipy.linalg
 
+from statsmodels.robust.scale import mad  # noqa:F401
+
 __docformat__ = 'restructuredtext'
 
 def recipr(X):
@@ -14,19 +16,6 @@ def recipr(X):
     x = np.maximum(np.asarray(X).astype(np.float64), 0)
     return np.greater(x, 0.) / (x + np.less_equal(x, 0.))
 
-def mad(a, c=0.6745, axis=0):
-    """
-    Median Absolute Deviation:
-
-    median(abs(a - median(a))) / c
-
-    """
-
-    _shape = a.shape
-    a.shape = np.product(a.shape,axis=0)
-    m = np.median(np.fabs(a - np.median(a))) / c
-    a.shape = _shape
-    return m
 
 def recipr0(X):
     """
