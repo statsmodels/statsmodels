@@ -2,7 +2,6 @@
 """
 Test VAR Model
 """
-from __future__ import print_function
 import warnings
 # pylint: disable=W0612,W0231
 from statsmodels.compat.python import (iteritems, StringIO, lrange, BytesIO,
@@ -14,16 +13,12 @@ import sys
 import numpy as np
 import pytest
 
-have_matplotlib = False
 try:
-    import matplotlib
-    have_matplotlib = True
-    import matplotlib.pyplot as plt
-    plt.switch_backend('Agg')  # otherwise segfault on windows
+    import matplotlib  # noqa: F401
     from distutils.version import LooseVersion
     MATPLOTLIB_GT_15 = LooseVersion(matplotlib.__version__) >= '1.5.0'
 except ImportError:
-    pass
+    MATPLOTLIB_GT_15 = False
 
 
 import statsmodels.api as sm
@@ -182,9 +177,8 @@ class CheckIRF(object):
             res_irfs = py_irfs[:, :, i]
             assert_almost_equal(ref_irfs, res_irfs)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_plot_irf(self, close_figures):
-        import matplotlib.pyplot as plt
         self.irf.plot()
         self.irf.plot(plot_stderr=False)
 
@@ -195,10 +189,8 @@ class CheckIRF(object):
         self.irf.plot(orth=True)
         self.irf.plot(impulse=0, response=1, orth=True)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_plot_cum_effects(self, close_figures):
-        # I need close after every plot to avoid segfault, see #3158
-        import matplotlib.pyplot as plt
         self.irf.plot_cum_effects()
         self.irf.plot_cum_effects(plot_stderr=False)
         self.irf.plot_cum_effects(impulse=0, response=1)
@@ -214,7 +206,7 @@ class CheckFEVD(object):
     #---------------------------------------------------------------------------
     # FEVD tests
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_fevd_plot(self, close_figures):
         self.fevd.plot()
 
@@ -392,19 +384,19 @@ class TestVARResults(CheckIRF, CheckFEVD):
         y = self.res.y[:-self.p:]
         point, lower, upper = self.res.forecast_interval(y, 5)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_plot_sim(self, close_figures):
         self.res.plotsim(steps=100)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_plot(self, close_figures):
         self.res.plot()
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_plot_acorr(self, close_figures):
         self.res.plot_acorr()
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_plot_forecast(self, close_figures):
         self.res.plot_forecast(5)
 
@@ -663,7 +655,7 @@ class TestVARExtras(object):
         irf = res0.irf()
 
         # partially SMOKE test
-        if have_matplotlib and MATPLOTLIB_GT_15:
+        if MATPLOTLIB_GT_15:
             res0.plotsim()
             res0.plot_acorr()
 

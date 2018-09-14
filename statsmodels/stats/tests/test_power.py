@@ -24,10 +24,9 @@ import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
 
 try:
-    import matplotlib.pyplot as plt  # makes plt available for test functions
-    have_matplotlib = True
+    import matplotlib.pyplot as plt
 except ImportError:
-    have_matplotlib = False
+    pass
 
 
 SM_GT_10 = LooseVersion(scipy.__version__) >= '0.10'
@@ -90,11 +89,10 @@ class CheckPowerMixin(object):
             #yield assert_allclose, result, value, 0.001, 0, key+' failed'
             kwds[key] = value  # reset dict
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_power_plot(self, close_figures):
         if self.cls == smp.FTestPower:
             pytest.skip('skip FTestPower plot_power')
-        plt.close()
         fig = plt.figure()
         ax = fig.add_subplot(2,1,1)
         fig = self.cls().plot_power(dep_var='nobs',
@@ -104,12 +102,12 @@ class CheckPowerMixin(object):
                                   ax=ax, title='Power of t-Test',
                                   **self.kwds_extra)
         ax = fig.add_subplot(2,1,2)
-        fig = self.cls().plot_power(dep_var='es',
-                                  nobs=np.array([10, 20, 30, 50, 70, 100]),
-                                  effect_size=np.linspace(0.01, 2, 51),
-                                  #alternative='larger',
-                                  ax=ax, title='',
-                                  **self.kwds_extra)
+        self.cls().plot_power(dep_var='es',
+                              nobs=np.array([10, 20, 30, 50, 70, 100]),
+                              effect_size=np.linspace(0.01, 2, 51),
+                              #alternative='larger',
+                              ax=ax, title='',
+                              **self.kwds_extra)
 
 #''' test cases
 #one sample

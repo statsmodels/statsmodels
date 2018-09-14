@@ -29,10 +29,9 @@ from scipy.stats.distributions import norm
 import warnings
 
 try:
-    import matplotlib.pyplot as plt  # makes plt available for test functions
-    have_matplotlib = True
-except:
-    have_matplotlib = False
+    import matplotlib.pyplot as plt
+except ImportError:
+    pass
 
 pdf_output = False
 
@@ -156,7 +155,7 @@ class TestGEE(object):
         assert_allclose(marg.margeff, np.r_[-0.41197961], rtol=1e-5)
         assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_nominal_plot(self, close_figures):
         np.random.seed(34234)
         endog = np.r_[0, 0, 0, 0, 1, 1, 1, 1]
@@ -802,7 +801,7 @@ class TestGEE(object):
             model1 = NominalGEE(y, x, groups, cov_struct=nmi)
             model1.fit()
 
-    @pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+    @pytest.mark.matplotlib
     def test_ordinal_plot(self, close_figures):
         family = Binomial()
 
@@ -1555,7 +1554,7 @@ class TestGEEMultinomialCovType(CheckConsistency):
         check_wrapper(rslt2)
 
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.matplotlib
 def test_plots(close_figures):
 
     np.random.seed(378)

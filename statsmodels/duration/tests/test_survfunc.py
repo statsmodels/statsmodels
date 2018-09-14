@@ -13,9 +13,8 @@ pdf_output = False
 
 try:
     import matplotlib.pyplot as plt
-    have_matplotlib = True
 except ImportError:
-    have_matplotlib = False
+    pass
 
 
 def close_or_save(pdf, fig):
@@ -189,7 +188,7 @@ def test_survdiff():
     assert_allclose(stat, 13.35259, atol=1e-4, rtol=1e-4)
 
 
-@pytest.mark.skipif(not have_matplotlib, reason='requires matplotlib')
+@pytest.mark.matplotlib
 def test_plot_km(close_figures):
 
     if pdf_output:

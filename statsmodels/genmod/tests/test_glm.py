@@ -28,12 +28,6 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
 
-try:
-    import matplotlib.pyplot as plt  #makes plt available for test functions
-    have_matplotlib = True
-except:
-    have_matplotlib = False
-
 pdf_output = False
 
 if pdf_output:
@@ -42,14 +36,16 @@ if pdf_output:
 else:
     pdf = None
 
+
 def close_or_save(pdf, fig):
     if pdf_output:
         pdf.savefig(fig)
 
+
 def teardown_module():
-    if have_matplotlib:
-        if pdf_output:
-            pdf.close()
+    if pdf_output:
+        pdf.close()
+
 
 class CheckModelResultsMixin(object):
     '''
@@ -900,7 +896,7 @@ def test_formula_missing_exposure():
                   exposure=exposure, family=family)
 
 
-@pytest.mark.skipif(not have_matplotlib, reason='matplotlib not available')
+@pytest.mark.matplotlib
 def test_plots(close_figures):
 
     np.random.seed(378)
@@ -913,7 +909,6 @@ def test_plots(close_figures):
     model = sm.GLM(endog, exog, family=sm.families.Binomial())
     result = model.fit()
 
-    import matplotlib.pyplot as plt
     import pandas as pd
     from statsmodels.graphics.regressionplots import add_lowess
 
