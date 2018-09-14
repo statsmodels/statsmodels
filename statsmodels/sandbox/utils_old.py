@@ -3,36 +3,11 @@ import numpy.linalg as L
 import scipy.interpolate
 import scipy.linalg
 
+from statsmodels.tools.tools import recipr, recipr0, clean0  # noqa:F401
 from statsmodels.robust.scale import mad  # noqa:F401
 
 __docformat__ = 'restructuredtext'
 
-def recipr(X):
-    """
-    Return the reciprocal of an array, setting all entries less than or
-    equal to 0 to 0. Therefore, it presumes that X should be positive in
-    general.
-    """
-    x = np.maximum(np.asarray(X).astype(np.float64), 0)
-    return np.greater(x, 0.) / (x + np.less_equal(x, 0.))
-
-
-def recipr0(X):
-    """
-    Return the reciprocal of an array, setting all entries equal to 0
-    as 0. It does not assume that X should be positive in
-    general.
-    """
-    test = np.equal(np.asarray(X), 0)
-    return np.where(test, 0, 1. / X)
-
-def clean0(matrix):
-    """
-    Erase columns of zeros: can save some time in pseudoinverse.
-    """
-    colsum = np.add.reduce(matrix**2, 0)
-    val = [matrix[:,i] for i in np.flatnonzero(colsum)]
-    return np.array(np.transpose(val))
 
 def rank(X, cond=1.0e-12):
     """
