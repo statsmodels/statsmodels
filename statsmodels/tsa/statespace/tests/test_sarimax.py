@@ -659,10 +659,9 @@ class TestFriedmanMLERegression(Friedman):
 
     def test_mle(self):
         result = self.model.fit(disp=-1)
-        assert_allclose(
-            result.params, self.result.params,
-            atol=1e-2, rtol=1e-3
-        )
+        # Use ratio to make atol more meaningful parameter scale differs
+        ratio = result.params / self.result.params
+        assert_allclose(ratio, np.ones(5), atol=1e-2, rtol=1e-3)
 
     def test_bse(self):
         # test defaults
