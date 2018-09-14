@@ -424,6 +424,7 @@ class TestProbitBasinhopping(CheckBinaryResults):
         res2.probit()
         cls.res2 = res2
         fit = Probit(data.endog, data.exog).fit
+        np.random.seed(1)
         cls.res1 = fit(method="basinhopping", disp=0, niter=5,
                         minimizer={'method' : 'L-BFGS-B', 'tol' : 1e-8})
 
