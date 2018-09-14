@@ -78,7 +78,7 @@ def test_mcnemar_chisquare():
     assert_allclose(res, res3, rtol=1e-6)
 
 
-def test_mcnemar_vectorized():
+def test_mcnemar_vectorized(reset_randomstate):
     ttk = np.random.randint(5,15, size=(2,2,3))
     mcnemar(ttk)
     res = mcnemar(ttk, exact=False)
@@ -200,7 +200,7 @@ def test_cochransq3():
     res = cochrans_q(data)
     assert_allclose(res, [8.4706, 0.0145], atol=5e-5)
 
-def test_runstest():
+def test_runstest(reset_randomstate):
     #comparison numbers from R, tseries, runs.test
     #currently only 2-sided used
     x = np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1])

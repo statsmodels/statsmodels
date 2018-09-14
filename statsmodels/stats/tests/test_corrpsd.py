@@ -339,7 +339,7 @@ class Test_Factor(object):
         assert_allclose(mat_dense, mat_sparse, rtol=.25, atol=1e-3)
 
     # Test on a quadratic function.
-    def test_spg_optim(self):
+    def test_spg_optim(self, reset_randomstate):
 
         dm = 100
 
@@ -362,7 +362,7 @@ class Test_Factor(object):
         assert_equal(rslt.Converged, True)
         assert_almost_equal(obj(xnew), 0, decimal=3)
 
-    def test_decorrelate(self):
+    def test_decorrelate(self, reset_randomstate):
 
         d = 30
         dg = np.linspace(1, 2, d)
@@ -380,7 +380,7 @@ class Test_Factor(object):
         mat3 = np.dot(mat3.T, mat3)
         assert_almost_equal(mat2, mat3)
 
-    def test_logdet(self):
+    def test_logdet(self, reset_randomstate):
 
         d = 30
         dg = np.linspace(1, 2, d)
@@ -393,7 +393,7 @@ class Test_Factor(object):
 
         assert_almost_equal(ld, ld2)
 
-    def test_solve(self):
+    def test_solve(self, reset_randomstate):
 
         d = 30
         dg = np.linspace(1, 2, d)
@@ -449,7 +449,7 @@ class Test_Factor(object):
 
         assert_allclose(mat1, mat2, rtol=0.25, atol=1e-3)
 
-    def test_corr_thresholded(self):
+    def test_corr_thresholded(self, reset_randomstate):
 
         import datetime
 

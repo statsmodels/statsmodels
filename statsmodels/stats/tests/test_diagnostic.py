@@ -734,7 +734,8 @@ def grangertest():
     grangertest = dict(fvalue=1.589672703015157, pvalue=0.178717196987075,
                        df=(198,193))
 
-def test_outlier_influence_funcs():
+
+def test_outlier_influence_funcs(reset_randomstate):
     #smoke test
     x = add_constant(np.random.randn(10, 2))
     y = x.sum(1) + np.random.randn(10)
@@ -749,6 +750,7 @@ def test_outlier_influence_funcs():
     oi.summary_table(res2, alpha=0.05)
     infl = res2.get_influence()
     infl.summary_table()
+
 
 def test_influence_wrapped():
     from pandas import DataFrame
