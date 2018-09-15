@@ -249,8 +249,6 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         res.cov_kwds['time'] = time = kwds.get('time', None)
         res.cov_kwds['groups'] = groups = kwds.get('groups', None)
         #TODO: nlags is currently required
-        #nlags = kwds.get('nlags', True)
-        #res.cov_kwds['nlags'] = nlags
         #TODO: `nlags` or `maxlags`
         res.cov_kwds['maxlags'] = maxlags = kwds['maxlags']
         use_correction = kwds.get('use_correction', 'hac')
@@ -280,8 +278,6 @@ def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         # Driscoll-Kraay standard errors
         res.cov_kwds['time'] = time = kwds['time']
         #TODO: nlags is currently required
-        #nlags = kwds.get('nlags', True)
-        #res.cov_kwds['nlags'] = nlags
         #TODO: `nlags` or `maxlags`
         res.cov_kwds['maxlags'] = maxlags = kwds['maxlags']
         use_correction = kwds.get('use_correction', 'cluster')

@@ -4,6 +4,8 @@ Test functions for models.regression
 # TODO: Test for LM
 from statsmodels.compat.python import long, lrange
 import warnings
+
+import pytest
 import pandas
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_approx_equal, assert_,
@@ -1039,13 +1041,15 @@ class TestRegularizedFit(object):
             exog = exog - exog.mean(0)
             exog /= exog.std(0, ddof=1)
 
-            for cls in OLS, WLS, GLS:
+            for cls in [OLS, WLS, GLS]:
                 mod = cls(endog, exog)
                 rslt = mod.fit_regularized(L1_wt=L1_wt, alpha=lam)
                 assert_almost_equal(rslt.params, params, decimal=3)
 
                 # Smoke test for summary
-                rslt.summary()
+                with pytest.raises(NotImplementedError):
+                    # TODO: implement this method
+                    rslt.summary()
 
                 # Smoke test for profile likeihood
                 mod.fit_regularized(L1_wt=L1_wt, alpha=lam,

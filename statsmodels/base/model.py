@@ -434,7 +434,6 @@ class LikelihoodModel(Model):
         # args in most (any?) of the optimize function
 
         nobs = self.endog.shape[0]
-        # f = lambda params, *args: -self.loglike(params, *args) / nobs
 
         def f(params, *args):
             return -self.loglike(params, *args) / nobs
@@ -603,10 +602,7 @@ class LikelihoodModel(Model):
             res._results.mle_retvals = res_constr.mle_retvals
             # not available for not scipy optimization, e.g. glm irls
             # TODO: what retvals should be required?
-            # res.mle_retvals['fcall'] = res_constr.mle_retvals.get('fcall', np.nan)
-            # res.mle_retvals['iterations'] = res_constr.mle_retvals.get(
-            #                                                 'iterations', np.nan)
-            # res.mle_retvals['converged'] = res_constr.mle_retvals['converged']
+
         # overwrite all mle_settings
         if hasattr(res_constr, 'mle_settings'):
             res._results.mle_settings = res_constr.mle_settings
@@ -667,7 +663,6 @@ class LikelihoodModel(Model):
         r = np.linalg.qr(x, mode='r')
         mask = np.abs(r.diagonal()) < np.sqrt(tol)
         # TODO add to results instance
-        # idx_collinear = np.where(mask)[0]
         idx_keep = np.where(~mask)[0]
         return self._fit_zeros(keep_index=idx_keep, **kwds)
 
@@ -735,8 +730,6 @@ class GenericLikelihoodModel(LikelihoodModel):
 
         # TODO: data structures?
 
-        # TODO temporary solution, force approx normal
-        # self.df_model = 9999
         # somewhere: CacheWriteWarning: 'df_model' cannot be overwritten
         super(GenericLikelihoodModel, self).__init__(endog, exog,
                                                      missing=missing)
@@ -836,7 +829,6 @@ class GenericLikelihoodModel(LikelihoodModel):
         Jacobian/Gradient of log-likelihood evaluated at params for each
         observation.
         """
-        # kwds.setdefault('epsilon', 1e-4)
         kwds.setdefault('centered', True)
         return approx_fprime(params, self.loglikeobs, **kwds)
 
@@ -906,7 +898,6 @@ class GenericLikelihoodModel(LikelihoodModel):
                 warnings.warn('more exog_names than parameters', ValueWarning)
 
         return genericmlefit
-    # fit.__doc__ += LikelihoodModel.fit.__doc__
 
 
 class Results(object):
@@ -1023,7 +1014,7 @@ class Results(object):
             return predict_results
 
     def summary(self):
-        pass
+        raise NotImplementedError
 
 
 # TODO: public method?
@@ -1449,7 +1440,7 @@ class LikelihoodModelResults(Results):
         tvalues : individual t statistics
         f_test : for F tests
         patsy.DesignInfo.linear_constraint
-        """
+        """  # noqa:E501
         from patsy import DesignInfo
         names = self.model.data.param_names
         LC = DesignInfo(names).linear_constraint(r_matrix)
@@ -1591,7 +1582,7 @@ class LikelihoodModelResults(Results):
         is assumed invertible. Here, pX is the generalized inverse of the
         design matrix of the model. There can be problems in non-OLS models
         where the rank of the covariance of the noise is not full.
-        """
+        """  # noqa:E501
         res = self.wald_test(r_matrix, cov_p=cov_p, scale=scale,
                              invcov=invcov, use_f=True)
         return res
@@ -1702,7 +1693,7 @@ class LikelihoodModelResults(Results):
         if use_f:
             F /= J
             return ContrastResults(F=F, df_denom=df_resid,
-                                   df_num=J) #invcov.shape[0])
+                                   df_num=J)
         else:
             return ContrastResults(chi2=F, df_denom=J, statistic=F,
                                    distribution='chi2', distargs=(J,))
@@ -1761,7 +1752,7 @@ class LikelihoodModelResults(Results):
         Duration               11.187849     0.010752286833              3
         Weight                 30.263368  4.32586407145e-06              4
 
-        """
+        """  # noqa:E501
         # lazy import
         from collections import defaultdict
 
@@ -2143,10 +2134,6 @@ class ResultMixin(object):
         log-likelihood
 
         """
-        #  if not hasattr(self, '_results'):
-        #      raise ValueError('need to call fit first')
-        #      #self.fit()
-        #  self.jacv = jacv = self.jac(self._results.params)
         jacv = self.score_obsv
         return np.linalg.inv(np.dot(jacv.T, jacv))
 
@@ -2161,7 +2148,6 @@ class ResultMixin(object):
         jacv = self.score_obsv
         hessv = self.hessv
         hessinv = np.linalg.inv(hessv)
-        #  self.hessinv = hessin = self.cov_params()
         return np.dot(hessinv, np.dot(np.dot(jacv.T, jacv), hessinv))
 
     @cache_readonly
@@ -2212,7 +2198,6 @@ class ResultMixin(object):
         distributed observations.
         """
         results = []
-        print(self.model.__class__)
         hascloneattr = True if hasattr(self, 'cloneattr') else False
         for i in range(nrep):
             rvsind = np.random.randint(self.nobs, size=self.nobs)
@@ -2234,7 +2219,7 @@ class ResultMixin(object):
     def get_nlfun(self, fun):
         # I think this is supposed to get the delta method that is currently
         # in miscmodels count (as part of Poisson example)
-        pass
+        raise NotImplementedError
 
 
 class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
@@ -2348,15 +2333,12 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
                     ('Date:', None),
                     ('Time:', None),
                     ('No. Observations:', None),
-                    ('Df Residuals:', None),  # [self.df_resid]),
-                    ('Df Model:', None),  # [self.df_model])
+                    ('Df Residuals:', None),
+                    ('Df Model:', None),
                     ]
 
-        top_right = [  # ('R-squared:', ["%#8.3f" % self.rsquared]),
-                       # ('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
-                       # ('F-statistic:', ["%#8.4g" % self.fvalue] ),
-                       # ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
-                     ('Log-Likelihood:', None),  # ["%#6.4g" % self.llf]),
+        top_right = [
+                     ('Log-Likelihood:', None),
                      ('AIC:', ["%#8.4g" % self.aic]),
                      ('BIC:', ["%#8.4g" % self.bic])
                      ]

@@ -66,8 +66,8 @@ class TransformRestriction(object):
         # It makes it easier to interpret simple restrictions, e.g. b1 + b2 = 0
         # TODO: make this work, there is something wrong, does not round-trip
         #       need to adjust constant
-        #evecs_maxabs = np.max(np.abs(evecs), 0)
-        #evecs = evecs / evecs_maxabs
+        # evecs_maxabs = np.max(np.abs(evecs), 0)
+        # evecs = evecs / evecs_maxabs
 
         self.evals = evals
         self.evecs = evecs # temporarily attach as attribute
@@ -76,7 +76,6 @@ class TransformRestriction(object):
 
         if q is not None:
             # use solve instead of inv
-            #self.constant = q.T.dot(np.linalg.inv(L.T.dot(R.T)).dot(L.T))
             try:
                 self.constant = q.T.dot(np.linalg.solve(L.T.dot(R.T), L.T))
             except np.linalg.linalg.LinAlgError as e:
@@ -280,13 +279,12 @@ def fit_constrained_wrap(model, constraints, start_params=None, **fit_kwds):
 
     self = model  # alias for use as method
 
-    #constraints = (R, q)
     # TODO: temporary trailing underscore to not overwrite the monkey
     #       patched version
     # TODO: decide whether to move the imports
     from patsy import DesignInfo
-    # we need this import if we copy it to a different module
-    #from statsmodels.base._constraints import fit_constrained
+    # we need this import if we copy it to a different module:
+    # from statsmodels.base._constraints import fit_constrained
 
     # same pattern as in base.LikelihoodModel.t_test
     lc = DesignInfo(self.exog_names).linear_constraint(constraints)
