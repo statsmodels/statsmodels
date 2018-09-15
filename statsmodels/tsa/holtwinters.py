@@ -5,7 +5,8 @@ Code written using below textbook as a reference.
 Results are checked against the expected outcomes in the text book.
 
 Properties:
-Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice. OTexts, 2014.
+Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and
+practice. OTexts, 2014.
 
 Author: Terence L van Zyl
 Modified: Kevin Sheppard
@@ -290,7 +291,8 @@ class HoltWintersResults(Results):
     k: int
         the k parameter used to remove the bias in AIC, BIC etc.
     optimized: bool
-        Flag indicating whether the model parameters were optimized to fit the data.
+        Flag indicating whether the model parameters were optimized to fit
+        the data.
     mle_retvals:  {None, scipy.optimize.optimize.OptimizeResult}
         Optimization results if the parameters were optimized to fit the data.
 
@@ -471,14 +473,14 @@ class ExponentialSmoothing(TimeSeriesModel):
     Notes
     -----
     This is a full implementation of the holt winters exponential smoothing as
-    per [1]. This includes all the unstable methods as well as the stable methods.
-    The implementation of the library covers the functionality of the R
-    library as much as possible whilst still being pythonic.
+    per [1]. This includes all the unstable methods as well as the stable
+    methods. The implementation of the library covers the functionality of the
+    R library as much as possible whilst still being Pythonic.
 
     References
     ----------
-    [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice.
-        OTexts, 2014.
+    [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
+        and practice. OTexts, 2014.
     """
 
     def __init__(self, endog, trend=None, damped=False, seasonal=None,
@@ -545,32 +547,30 @@ class ExponentialSmoothing(TimeSeriesModel):
             use_basinhopping=False, start_params=None, initial_level=None, initial_slope=None,
             use_brute=True):
         """
-        fit Holt Winter's Exponential Smoothing
+        Fit the model
 
         Parameters
         ----------
         smoothing_level : float, optional
-            The alpha value of the simple exponential smoothing, if the value is
-            set then this value will be used as the value.
+            The alpha value of the simple exponential smoothing, if the value
+            is set then this value will be used as the value.
         smoothing_slope :  float, optional
             The beta value of the Holt's trend method, if the value is
             set then this value will be used as the value.
         smoothing_seasonal : float, optional
-            The gamma value of the holt winters seasonal method, if the value is
-            set then this value will be used as the value.
+            The gamma value of the holt winters seasonal method, if the value
+            is set then this value will be used as the value.
         damping_slope : float, optional
             The phi value of the damped method, if the value is
             set then this value will be used as the value.
         optimized : bool, optional
-            Should the values that have not been set above be optimized
-            automatically?
+            Estimate model parameters by maximizing the log-likelihood
         use_boxcox : {True, False, 'log', float}, optional
             Should the Box-Cox transform be applied to the data first? If 'log'
             then apply the log. If float then use lambda equal to float.
         remove_bias : bool, optional
-            Should the bias be removed from the forecast values and fitted values
-            before being returned? Does this by enforcing average residuals equal
-            to zero.
+            Remove bias from forecast values and fitted values by enforcing
+            that the average residual is equal to zero.
         use_basinhopping : bool, optional
             Using Basin Hopping optimizer to find optimal values
         start_params: array, optional
@@ -582,8 +582,8 @@ class ExponentialSmoothing(TimeSeriesModel):
         initial_slope: float, optional
             Value to use when initializing the fitted slope.
         use_brute: bool, optional
-            Search for good starting values using a brute force (grid) optimizer.
-            If False, a naive set of starting values is used.
+            Search for good starting values using a brute force (grid)
+            optimizer. If False, a naive set of starting values is used.
 
         Returns
         -------
@@ -592,15 +592,16 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         Notes
         -----
-        This is a full implementation of the holt winters exponential smoothing as
-        per [1]. This includes all the unstable methods as well as the stable methods.
-        The implementation of the library covers the functionality of the R
-        library as much as possible whilst still being pythonic.
+        This is a full implementation of the holt winters exponential smoothing
+        as per [1]. This includes all the unstable methods as well as the
+        stable methods. The implementation of the library covers the
+        functionality of the R library as much as possible whilst still
+        being Pythonic.
 
         References
         ----------
-        [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice.
-            OTexts, 2014.
+        [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
+            and practice. OTexts, 2014.
         """
         # Variable renames to alpha,beta, etc as this helps with following the
         # mathematical notation in general
@@ -731,7 +732,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
     def initial_values(self):
         """
-        Computes the initial values used in the exponential smoothing recursions.
+        Compute initial values used in the exponential smoothing recursions
 
         Returns
         -------
@@ -744,14 +745,17 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         Notes
         -----
-        Convenience function the exposes the values used to initialize the recursions.  When
-        optimizing parameters these are used as starting values.
+        Convenience function the exposes the values used to initialize the
+        recursions. When optimizing parameters these are used as starting
+        values.
 
-        Method used to compute the initial value depends on when components are included in the
-        model.  In a simple exponential smoothing model without trend or a seasonal components,
-        the initial value is set to the first observation. When a trend is added, the trend is
-        initialized either using y[1]/y[0], if multiplicative, or y[1]-y[0]. When the seasonal
-        component is added the initialization adapts to account for the modified structure.
+        Method used to compute the initial value depends on when components
+        are included in the model.  In a simple exponential smoothing model
+        without trend or a seasonal components, the initial value is set to the
+        first observation. When a trend is added, the trend is initialized
+        either using y[1]/y[0], if multiplicative, or y[1]-y[0]. When the
+        seasonal component is added the initialization adapts to account for
+        the modified structure.
         """
         y = self._y
         trend = self.trend
@@ -973,7 +977,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
 class SimpleExpSmoothing(ExponentialSmoothing):
     """
-    Simple Exponential Smoothing wrapper(...)
+    Simple Exponential Smoothing
 
     Parameters
     ----------
@@ -987,17 +991,18 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     Notes
     -----
     This is a full implementation of the simple exponential smoothing as
-    per [1].
+    per [1].  `SimpleExpSmoothing` is a restricted version of
+    :class:`ExponentialSmoothing`.
 
     See Also
     ---------
-    Exponential Smoothing
+    ExponentialSmoothing
     Holt
 
     References
     ----------
-    [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice.
-        OTexts, 2014.
+    [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
+        and practice. OTexts, 2014.
     """
 
     def __init__(self, endog):
@@ -1006,15 +1011,15 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     def fit(self, smoothing_level=None, optimized=True, start_params=None,
             initial_level=None, use_brute=True):
         """
-        fit Simple Exponential Smoothing wrapper(...)
+        Fit the model
 
         Parameters
         ----------
         smoothing_level : float, optional
-            The smoothing_level value of the simple exponential smoothing, if the value is
-            set then this value will be used as the value.
+            The smoothing_level value of the simple exponential smoothing, if
+            the value is set then this value will be used as the value.
         optimized : bool, optional
-            Should the values that have not been set above be optimized automatically?
+            Estimate model parameters by maximizing the log-likelihood
         start_params: array, optional
             Starting values to used when optimizing the fit.  If not provided,
             starting values are determined using a combination of grid search
@@ -1022,8 +1027,8 @@ class SimpleExpSmoothing(ExponentialSmoothing):
         initial_level: float, optional
             Value to use when initializing the fitted level.
         use_brute: bool, optional
-            Search for good starting values using a brute force (grid) optimizer.
-            If False, a naive set of starting values is used.
+            Search for good starting values using a brute force (grid)
+            optimizer. If False, a naive set of starting values is used.
 
         Returns
         -------
@@ -1037,8 +1042,8 @@ class SimpleExpSmoothing(ExponentialSmoothing):
 
         References
         ----------
-        [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice.
-            OTexts, 2014.
+        [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
+            and practice. OTexts, 2014.
         """
         return super(SimpleExpSmoothing, self).fit(smoothing_level=smoothing_level,
                                                    optimized=optimized, start_params=start_params,
@@ -1048,7 +1053,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
 
 class Holt(ExponentialSmoothing):
     """
-    Holt's Exponential Smoothing wrapper(...)
+    Holt's Exponential Smoothing
 
     Parameters
     ----------
@@ -1066,17 +1071,17 @@ class Holt(ExponentialSmoothing):
     Notes
     -----
     This is a full implementation of the Holt's exponential smoothing as
-    per [1].
+    per [1]. `Holt` is a restricted version of :class:`ExponentialSmoothing`.
 
     See Also
     ---------
-    Exponential Smoothing
-    Simple Exponential Smoothing
+    ExponentialSmoothing
+    SimpleExpSmoothing
 
     References
     ----------
-    [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice.
-        OTexts, 2014.
+    [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
+        and practice. OTexts, 2014.
     """
 
     def __init__(self, endog, exponential=False, damped=False):
@@ -1087,13 +1092,13 @@ class Holt(ExponentialSmoothing):
             optimized=True, start_params=None, initial_level=None,
             initial_slope=None, use_brute=True):
         """
-        fit Holt's Exponential Smoothing wrapper(...)
+        Fit the model
 
         Parameters
         ----------
         smoothing_level : float, optional
-            The alpha value of the simple exponential smoothing, if the value is
-            set then this value will be used as the value.
+            The alpha value of the simple exponential smoothing, if the value
+            is set then this value will be used as the value.
         smoothing_slope :  float, optional
             The beta value of the Holt's trend method, if the value is
             set then this value will be used as the value.
@@ -1101,7 +1106,7 @@ class Holt(ExponentialSmoothing):
             The phi value of the damped method, if the value is
             set then this value will be used as the value.
         optimized : bool, optional
-            Should the values that have not been set above be optimized automatically?
+            Estimate model parameters by maximizing the log-likelihood
         start_params: array, optional
             Starting values to used when optimizing the fit.  If not provided,
             starting values are determined using a combination of grid search
@@ -1111,8 +1116,8 @@ class Holt(ExponentialSmoothing):
         initial_slope: float, optional
             Value to use when initializing the fitted slope.
         use_brute: bool, optional
-            Search for good starting values using a brute force (grid) optimizer.
-            If False, a naive set of starting values is used.
+            Search for good starting values using a brute force (grid)
+            optimizer. If False, a naive set of starting values is used.
 
         Returns
         -------
@@ -1126,8 +1131,8 @@ class Holt(ExponentialSmoothing):
 
         References
         ----------
-        [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles and practice.
-            OTexts, 2014.
+        [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
+            and practice. OTexts, 2014.
         """
         return super(Holt, self).fit(smoothing_level=smoothing_level,
                                      smoothing_slope=smoothing_slope, damping_slope=damping_slope,
