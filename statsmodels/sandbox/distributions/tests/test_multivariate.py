@@ -63,15 +63,17 @@ class Test_MVN_MVT_prob(object):
         df = self.df
         corr2 = self.corr2
 
-        #from -inf
-        #print 'from -inf'
         a2 = a.copy()
         a2[:] = -np.inf
-        probmvn_R = 0.9961141 #using higher precision in R, error approx. 6.866163e-07
-        probmvt_R = 0.9522146 #using higher precision in R, error approx. 1.6e-07
-        assert_almost_equal(probmvt_R, mvstdtprob(a2, b, corr2, df), 4)
-        assert_almost_equal(probmvn_R, mvstdnormcdf(a2, b, corr2, maxpts=100000,
-                                                    abseps=1e-5), 4)
+        # using higher precision in R, error approx. 6.866163e-07
+        probmvn_R = 0.9961141
+        # using higher precision in R, error approx. 1.6e-07
+        probmvt_R = 0.9522146
+        quadkwds = {'epsabs': 1e-08}
+        probmvt = mvstdtprob(a2, b, corr2, df, quadkwds=quadkwds)
+        assert_almost_equal(probmvt_R, probmvt, 4)
+        probmvn = mvstdnormcdf(a2, b, corr2, maxpts=100000, abseps=1e-5)
+        assert_almost_equal(probmvn_R, probmvn, 4)
 
     def test_mvn_mvt_4(self):
         a, bl = self.a, self.b
