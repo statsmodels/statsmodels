@@ -11,7 +11,8 @@ import numpy as np
 from scipy import stats
 from statsmodels.base.model import GenericLikelihoodModel
 
-from numpy.testing import assert_array_less, assert_almost_equal, assert_allclose
+from numpy.testing import (assert_array_less, assert_almost_equal,
+                           assert_allclose, assert_)
 
 class MyPareto(GenericLikelihoodModel):
     '''Maximum Likelihood Estimation pareto distribution
@@ -183,11 +184,7 @@ class TwoPeakLLHNoExog(GenericLikelihoodModel):
         alpha = endog
         sig = self.signal.pdf(alpha)
         bkg = self.background.pdf(alpha)
-        sumlogl = np.sum(
-            np.ma.log(
-                (n_sig * sig) + (n_bkg * bkg)
-            )
-        )
+        sumlogl = np.sum(np.log((n_sig * sig) + (n_bkg * bkg)))
         sumlogl -= n_tot
         return -sumlogl
 
@@ -200,28 +197,29 @@ class TestTwoPeakLLHNoExog(object):
         pdf_a = stats.halfcauchy(loc=0, scale=1)
         pdf_b = stats.uniform(loc=0, scale=100)
 
-        n_a = 30
-        n_b = 1000
+        n_a = 50
+        n_b = 200
         params = [n_a, n_b]
 
-        X = np.concatenate([
-            pdf_a.rvs(size=n_a),
-            pdf_b.rvs(size=n_b),
-        ])[:, np.newaxis]
+        X = np.concatenate([pdf_a.rvs(size=n_a),
+                            pdf_b.rvs(size=n_b),
+                            ])[:, np.newaxis]
         cls.X = X
         cls.params = params
         cls.pdf_a = pdf_a
         cls.pdf_b = pdf_b
 
     def test_fit(self):
+        np.random.seed(42)
         llh_noexog = TwoPeakLLHNoExog(self.X,
                                       signal=self.pdf_a,
                                       background=self.pdf_b)
 
         res = llh_noexog.fit()
-        assert np.allclose(res.params, self.params, rtol=1e-1)
-        assert np.isnan(res.df_resid)
+        assert_allclose(res.params, self.params, rtol=1e-1)
+        # TODO: nan if exog is None,
+        assert_(np.isnan(res.df_resid))
         res_bs = res.bootstrap(nrep=50)
-        assert res_bs is not None
-        smry = res.summary()
-        assert smry is not None
+        assert_allclose(res_bs[2].mean(0), self.params, rtol=1e-1)
+        # SMOKE test,
+        res.summary()
