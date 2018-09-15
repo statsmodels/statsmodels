@@ -5,7 +5,7 @@ Created on Wed Mar 28 15:34:18 2012
 
 Author: Josef Perktold
 """
-from statsmodels.compat.python import BytesIO, asbytes, range
+from statsmodels.compat.python import BytesIO, range
 
 import warnings
 
@@ -17,7 +17,8 @@ from numpy.testing import assert_, assert_allclose, assert_almost_equal, assert_
 
 from statsmodels.stats.libqsturng import qsturng
 
-ss = '''\
+# Specifically use bytes for py3.2 recfromtxt compat
+ss = b'''\
   43.9  1   1
   39.0  1   2
   46.7  1   3
@@ -59,8 +60,8 @@ ss = '''\
   40.9  4   9
   39.7  4  10'''
 
-#idx   Treatment StressReduction
-ss2 = '''\
+# idx   Treatment StressReduction
+ss2 = b'''\
 1     mental               2
 2     mental               2
 3     mental               3
@@ -92,7 +93,7 @@ ss2 = '''\
 29   medical               3
 30   medical               1'''
 
-ss3 = '''\
+ss3 = b'''\
 1 24.5
 1 23.5
 1 26.4
@@ -109,7 +110,7 @@ ss3 = '''\
 3 26.2
 3 27.8'''
 
-ss5 = '''\
+ss5 = b'''\
 2 - 3\t4.340\t0.691\t7.989\t***
 2 - 1\t4.600\t0.951\t8.249\t***
 3 - 2\t-4.340\t-7.989\t-0.691\t***
@@ -130,11 +131,6 @@ cyl_labels = np.array(['USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', '
     'Germany', 'Japan', 'Japan', 'USA', 'USA', 'Japan', 'Japan', 'Japan', 'Japan', 'Japan', 'Japan', 'USA',
     'USA', 'USA', 'USA', 'Japan', 'USA', 'USA', 'USA', 'Germany', 'USA', 'USA', 'USA'])
 
-#accommodate recfromtxt for python 3.2, requires bytes
-ss = asbytes(ss)
-ss2 = asbytes(ss2)
-ss3 = asbytes(ss3)
-ss5 = asbytes(ss5)
 
 dta = np.recfromtxt(BytesIO(ss), names=("Rust", "Brand", "Replication"))
 dta2 = np.recfromtxt(BytesIO(ss2), names=("idx", "Treatment", "StressReduction"))
@@ -333,7 +329,7 @@ class TestTuckeyHSD3(CheckTuckeyHSDMixin):
         #CheckTuckeyHSD.setup_class_()
         cls.meandiff2 = sas_['mean']
         cls.confint2 = sas_[['lower','upper']].astype(float).values.reshape((3, 2))
-        cls.reject2 = sas_['sig'] == asbytes('***')
+        cls.reject2 = sas_['sig'] == b'***'
 
 
 class TestTuckeyHSD4(CheckTuckeyHSDMixin):

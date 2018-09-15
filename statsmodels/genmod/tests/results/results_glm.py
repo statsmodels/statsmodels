@@ -7,7 +7,7 @@ IRLS.
 """
 import numpy as np
 import pandas as pd
-from statsmodels.compat.python import asbytes
+
 from . import glm_test_resids
 import os
 from statsmodels.api import add_constant, categorical
@@ -696,7 +696,7 @@ class Lbw(object):
         if NUMPY_LT_113 or PY2:
             with open(filename, 'rb') as datafile:
                 data=np.recfromcsv(datafile)
-            vfunc = np.vectorize(lambda x: x.strip(asbytes("\"")))
+            vfunc = np.vectorize(lambda x: x.strip(b"\""))
             data['race'] = vfunc(data['race'])
         else:
             data = pd.read_csv(filename).to_records(index=False)

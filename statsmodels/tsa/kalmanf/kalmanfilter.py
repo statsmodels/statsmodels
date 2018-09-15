@@ -25,7 +25,7 @@ Harvey uses Durbin and Koopman notation.
 # Harvey notes that the square root filter will keep P_t pos. def. but
 # is not strictly needed outside of the engineering (long series)
 from __future__ import print_function
-from statsmodels.compat.python import lzip, lmap, callable, range
+from statsmodels.compat.python import lzip, lmap, range
 import numpy as np
 from numpy import dot, identity, kron, log, zeros, pi, eye, issubdtype, ones
 from numpy.linalg import inv, pinv

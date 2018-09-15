@@ -4,7 +4,7 @@ Miscellaneous utility code for VAR estimation
 """
 from __future__ import division
 
-from statsmodels.compat.python import range, string_types, asbytes, long
+from statsmodels.compat.python import range, string_types, long
 from statsmodels.compat.pandas import frequencies
 import numpy as np
 import scipy.stats as stats
@@ -127,13 +127,12 @@ def parse_lutkepohl_data(path): # pragma: no cover
     import pandas
     import re
 
-    regex = re.compile(asbytes('<(.*) (\w)([\d]+)>.*'))
+    regex = re.compile(b'<(.*) (\w)([\d]+)>.*')
     with open(path, 'rb') as f:
         lines = deque(f)
 
     to_skip = 0
-    while asbytes('*/') not in lines.popleft():
-        #while '*/' not in lines.popleft():
+    while b'*/' not in lines.popleft():
         to_skip += 1
 
     while True:
@@ -154,9 +153,9 @@ def parse_lutkepohl_data(path): # pragma: no cover
     year = int(year)
 
     offsets = {
-        asbytes('Q') : frequencies.BQuarterEnd(),
-        asbytes('M') : frequencies.BMonthEnd(),
-        asbytes('A') : frequencies.BYearEnd()
+        b'Q': frequencies.BQuarterEnd(),
+        b'M': frequencies.BMonthEnd(),
+        b'A': frequencies.BYearEnd()
     }
 
     # create an instance

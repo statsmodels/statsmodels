@@ -10,7 +10,7 @@ See also
 numpy.lib.io
 """
 from statsmodels.compat.python import (zip, lzip, lmap, lrange, string_types, long, lfilter,
-                                       asbytes, asstr, range, PY3)
+                                       asstr, range, PY3)
 from struct import unpack, calcsize, pack
 from struct import error as struct_error
 import datetime
@@ -423,14 +423,14 @@ class StataReader(object):
 
     def _null_terminate(self, s, encoding):
         if PY3: # have bytes not strings, so must decode
-            null_byte = asbytes('\x00')
+            null_byte = b'\x00'
             try:
                 s = s.lstrip(null_byte)[:s.index(null_byte)]
             except:
                 pass
             return s.decode(encoding)
         else:
-            null_byte = asbytes('\x00')
+            null_byte = b'\x00'
             try:
                 return s.lstrip(null_byte)[:s.index(null_byte)]
             except:
@@ -745,9 +745,12 @@ class StataWriter(object):
 
     def _write(self, to_write):
         """
-        Helper to call asbytes before writing to file for Python 3 compat.
+        Helper to call encode before writing to file for Python 3 compat.
         """
-        self._file.write(asbytes(to_write))
+        if not isinstance(to_write, bytes):
+            # TODO: why not utf8?
+            to_write = to_write.encode('latin1')
+        self._file.write(to_write)
 
     def _prepare_structured_array(self, data):
         self.nobs = len(data)
