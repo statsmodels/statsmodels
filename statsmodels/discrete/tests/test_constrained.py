@@ -170,15 +170,12 @@ class TestPoissonConstrained1b(CheckPoissonConstrainedMixin):
     def setup_class(cls):
 
         cls.res2 = results.results_exposure_constraint
-        #cls.idx = [3, 4, 5, 6, 0, 1]  # 2 is dropped baseline for categorical
         cls.idx = [6, 2, 3, 4, 5, 0]  # 2 is dropped baseline for categorical
 
         # example without offset
         formula = 'deaths ~ smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data,
-                                   #offset=np.log(data['pyears'].values))
                                    exposure=data['pyears'].values)
-        #res1a = mod1a.fit()
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
         cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
@@ -197,14 +194,12 @@ class TestPoissonConstrained1c(CheckPoissonConstrainedMixin):
     def setup_class(cls):
 
         cls.res2 = results.results_exposure_constraint
-        #cls.idx = [3, 4, 5, 6, 0, 1]  # 2 is dropped baseline for categorical
         cls.idx = [6, 2, 3, 4, 5, 0]  # 2 is dropped baseline for categorical
 
         # example without offset
         formula = 'deaths ~ smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data,
                                    offset=np.log(data['pyears'].values))
-        #res1a = mod1a.fit()
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
         cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
@@ -228,7 +223,6 @@ class TestPoissonNoConstrained(CheckPoissonConstrainedMixin):
         # example without offset
         formula = 'deaths ~ smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data,
-                                   #exposure=data['pyears'].values)
                                    offset=np.log(data['pyears'].values))
         res1 = mod.fit(disp=0)._results
         # res1 is duplicate check, so we can follow the same pattern
@@ -274,15 +268,12 @@ class TestPoissonConstrained2b(CheckPoissonConstrainedMixin):
     def setup_class(cls):
 
         cls.res2 = results.results_exposure_constraint2
-        #cls.idx = [3, 4, 5, 6, 0, 1]  # 2 is dropped baseline for categorical
         cls.idx = [6, 2, 3, 4, 5, 0]  # 2 is dropped baseline for categorical
 
         # example without offset
         formula = 'deaths ~ smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data,
-                                   #offset=np.log(data['pyears'].values))
                                    exposure=data['pyears'].values)
-        #res1a = mod1a.fit()
         constr = 'C(agecat)[T.5] - C(agecat)[T.4] = 0.5'
         lc = patsy.DesignInfo(mod.exog_names).linear_constraint(constr)
         cls.res1 = fit_constrained(mod, lc.coefs, lc.constants,
@@ -302,7 +293,6 @@ class TestPoissonConstrained2c(CheckPoissonConstrainedMixin):
     def setup_class(cls):
 
         cls.res2 = results.results_exposure_constraint2
-        #cls.idx = [3, 4, 5, 6, 0, 1]  # 2 is dropped baseline for categorical
         cls.idx = [6, 2, 3, 4, 5, 0]  # 2 is dropped baseline for categorical
 
         # example without offset
@@ -377,7 +367,6 @@ class TestGLMPoissonConstrained1b(CheckPoissonConstrainedMixin):
 
         formula = 'deaths ~ smokes + C(agecat)'
         mod = Poisson.from_formula(formula, data=data,
-                                   #offset=np.log(data['pyears'].values))
                                    exposure=data['pyears'].values)
 
         constr = 'C(agecat)[T.4] = C(agecat)[T.5]'
@@ -430,7 +419,6 @@ class TestGLMLogitConstrained1(CheckGLMConstrainedMixin):
         # params sequence same as Stata, but Stata reports param = nan
         # and we have param = value = 0
 
-        #res1ul = Logit(data.endog, data.exog).fit(method="newton", disp=0)
         cls.res2 = reslogit.results_constraint1
 
         mod1 = GLM(spector_data.endog, spector_data.exog,
@@ -448,7 +436,6 @@ class TestGLMLogitConstrained2(CheckGLMConstrainedMixin):
     @classmethod
     def setup_class(cls):
         cls.idx = slice(None)  # params sequence same as Stata
-        #res1ul = Logit(data.endog, data.exog).fit(method="newton", disp=0)
         cls.res2 = reslogit.results_constraint2
 
         mod1 = GLM(spector_data.endog, spector_data.exog,

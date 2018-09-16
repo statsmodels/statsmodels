@@ -53,7 +53,6 @@ class RemoveDataPickle(object):
         res = results.summary2()  # SMOKE test also summary2
 
         # uncomment the following to check whether tests run (7 failures now)
-        #np.testing.assert_equal(res, 1)
 
         #check pickle unpickle works on full results
         #TODO: drop of load save is tested
@@ -156,7 +155,7 @@ class TestRemoveDataPicklePoisson(RemoveDataPickle):
         x = self.exog
         np.random.seed(987689)
         y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
-        model = sm.Poisson(y_count, x)  #, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
+        model = sm.Poisson(y_count, x)
         # use start_params to converge faster
         start_params = np.array([0.75334818, 0.99425553, 1.00494724, 1.00247112])
         self.results = model.fit(start_params=start_params, method='bfgs',
@@ -185,7 +184,7 @@ class TestRemoveDataPickleLogit(RemoveDataPickle):
         nobs = x.shape[0]
         np.random.seed(987689)
         y_bin = (np.random.rand(nobs) < 1.0 / (1 + np.exp(x.sum(1) - x.mean()))).astype(int)
-        model = sm.Logit(y_bin, x)  #, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
+        model = sm.Logit(y_bin, x)
         # use start_params to converge faster
         start_params = np.array([-0.73403806, -1.00901514, -0.97754543, -0.95648212])
         self.results = model.fit(start_params=start_params, method='bfgs', disp=0)
@@ -270,7 +269,6 @@ class TestPickleFormula5(TestPickleFormula2):
 
     def setup(self):
         # if we import here, then unpickling fails -> exception in test
-        #from numpy import log
         self.results = sm.OLS.from_formula("Y ~ log(abs(A) + 1) + B * C", data=self.data).fit()
 
 
