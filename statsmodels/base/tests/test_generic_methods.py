@@ -10,6 +10,7 @@ Created on Wed Oct 30 14:01:27 2013
 
 Author: Josef Perktold
 """
+from statsmodels.compat.pandas import assert_series_equal, assert_index_equal
 from statsmodels.compat.python import range
 
 import numpy as np
@@ -660,12 +661,6 @@ class TestWaldAnovaOLSF(CheckAnovaMixin):
         ex.iloc[0, 1] = np.nan
         predicted1 = self.res.predict(ex)
         predicted2 = self.res.predict(ex[1:])
-        from pandas.util.testing import assert_series_equal
-        try:
-            from pandas.util.testing import assert_index_equal
-        except ImportError:
-            # for old pandas
-            from numpy.testing import assert_array_equal as assert_index_equal
 
         assert_index_equal(predicted1.index, ex.index)
         assert_series_equal(predicted1[1:], predicted2)

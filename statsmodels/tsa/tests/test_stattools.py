@@ -1,4 +1,5 @@
-from statsmodels.compat.python import lrange, PY3
+from statsmodels.compat.pandas import assert_index_equal
+from statsmodels.compat.python import lrange
 
 import os
 import warnings
@@ -17,9 +18,8 @@ from statsmodels.tsa.stattools import (adfuller, acf, pacf_yw,
                                        pacf, grangercausalitytests,
                                        coint, acovf, kpss,
                                        arma_order_select_ic, levinson_durbin,
-                                       levinson_durbin_pacf,
-                                       pacf_burg)
-
+                                       levinson_durbin_pacf, pacf_burg,
+                                       innovations_algo, innovations_filter)
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -713,3 +713,77 @@ def test_pacf_burg_error():
         pacf_burg(np.empty((20,2)), 10)
     with pytest.raises(ValueError):
         pacf_burg(np.empty(100), 101)
+
+
+def test_innovations_algo_brockwell_davis():
+    ma = -0.9
+    acovf = np.array([1 + ma ** 2, ma])
+    theta, sigma2 = innovations_algo(acovf, nobs=4)
+    exp_theta = np.array([[0], [-.4972], [-.6606], [-.7404]])
+    assert_allclose(theta, exp_theta, rtol=1e-4)
+    assert_allclose(sigma2, [1.81, 1.3625, 1.2155, 1.1436], rtol=1e-4)
+
+    theta, sigma2 = innovations_algo(acovf, nobs=500)
+    assert_allclose(theta[-1, 0], ma)
+    assert_allclose(sigma2[-1], 1.0)
+
+
+def test_innovations_algo_rtol():
+    ma = np.array([-0.9, 0.5])
+    acovf = np.array([1 + (ma ** 2).sum(), ma[0] + ma[1] * ma[0], ma[1]])
+    theta, sigma2 = innovations_algo(acovf, nobs=500)
+    theta_2, sigma2_2 = innovations_algo(acovf, nobs=500, rtol=1e-8)
+    assert_allclose(theta, theta_2)
+    assert_allclose(sigma2, sigma2_2)
+
+
+def test_innovations_errors():
+    ma = -0.9
+    acovf = np.array([1 + ma ** 2, ma])
+    with pytest.raises(ValueError):
+        innovations_algo(acovf, nobs=2.2)
+    with pytest.raises(ValueError):
+        innovations_algo(acovf, nobs=-1)
+    with pytest.raises(ValueError):
+        innovations_algo(np.empty((2, 2)))
+    with pytest.raises(ValueError):
+        innovations_algo(acovf, rtol='none')
+
+
+def test_innovations_filter_brockwell_davis():
+    ma = -0.9
+    acovf = np.array([1 + ma ** 2, ma])
+    theta, _ = innovations_algo(acovf, nobs=4)
+    e = np.random.randn(5)
+    endog = e[1:] + ma * e[:-1]
+    resid = innovations_filter(endog, theta)
+    expected = [endog[0]]
+    for i in range(1, 4):
+        expected.append(endog[i] + theta[i, 0] * expected[-1])
+    expected = np.array(expected)
+    assert_allclose(resid, expected)
+
+
+def test_innovations_filter_pandas():
+    ma = np.array([-0.9, 0.5])
+    acovf = np.array([1 + (ma ** 2).sum(), ma[0] + ma[1] * ma[0], ma[1]])
+    theta, _ = innovations_algo(acovf, nobs=10)
+    endog = np.random.randn(10)
+    endog_pd = pd.Series(endog,
+                         index=pd.date_range('2000-01-01', periods=10))
+    resid = innovations_filter(endog, theta)
+    resid_pd = innovations_filter(endog_pd, theta)
+    assert_allclose(resid, resid_pd.values)
+    assert_index_equal(endog_pd.index, resid_pd.index)
+
+
+def test_innovations_filter_errors():
+    ma = -0.9
+    acovf = np.array([1 + ma ** 2, ma])
+    theta, _ = innovations_algo(acovf, nobs=4)
+    with pytest.raises(ValueError):
+        innovations_filter(np.empty((2, 2)), theta)
+    with pytest.raises(ValueError):
+        innovations_filter(np.empty(4), theta[:-1])
+    with pytest.raises(ValueError):
+        innovations_filter(pd.DataFrame(np.empty((1, 4))), theta)
