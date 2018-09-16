@@ -1,12 +1,11 @@
-from statsmodels.compat.python import lrange, long
-from statsmodels.compat.pandas import is_numeric_dtype, Float64Index
-
-import datetime
+from statsmodels.compat.python import long
+from statsmodels.compat.pandas import is_numeric_dtype
 
 import warnings
 import numpy as np
 from pandas import (to_datetime, Int64Index, DatetimeIndex, Period,
-                    PeriodIndex, RangeIndex, Timestamp, Series, Index)
+                    PeriodIndex, RangeIndex, Timestamp, Series, Index,
+                    Float64Index)
 from pandas.tseries.frequencies import to_offset
 
 from statsmodels.base import data

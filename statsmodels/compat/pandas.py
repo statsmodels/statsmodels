@@ -3,14 +3,9 @@ from __future__ import absolute_import
 from distutils.version import LooseVersion
 
 import pandas
-from pandas import RangeIndex, Float64Index  # noqa:F401
 
 
 version = LooseVersion(pandas.__version__)
-
-
-def sort_values(df, *args, **kwargs):
-    return df.sort_values(*args, **kwargs)
 
 
 try:
