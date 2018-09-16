@@ -1984,13 +1984,13 @@ class TestARMA00(object):
         # regression test; older implementation of arroots returned None
         # instead of en empty array
         roots = self.arma_00_res.arroots
-        assert roots.size == 0
+        assert_equal(roots.size, 0)
 
     def test_maroots(self):
         # regression test; older implementation of arroots returned None
         # instead of en empty array
         roots = self.arma_00_res.maroots
-        assert roots.size == 0
+        assert_equal(roots.size, 0)
 
     @pytest.mark.skip
     def test_information_criteria(self):
