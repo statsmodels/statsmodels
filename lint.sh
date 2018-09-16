@@ -19,15 +19,14 @@ if [ "$LINT" == true ]; then
     flake8 --isolated \
         statsmodels/resampling/ \
         statsmodels/interface/ \
+        statsmodels/duration/__init__.py \
+        statsmodels/graphics/tsaplots.py \
         statsmodels/graphics/functional.py \
         statsmodels/graphics/tests/test_functional.py \
         statsmodels/examples/tests/ \
         statsmodels/iolib/smpickle.py \
         statsmodels/iolib/tests/test_pickle.py \
-        statsmodels/graphics/tsaplots.py \
-        statsmodels/tsa/regime_switching \
         statsmodels/regression/mixed_linear_model.py \
-        statsmodels/duration/__init__.py \
         statsmodels/regression/recursive_ls.py \
         statsmodels/tools/linalg.py \
         statsmodels/tools/web.py \
@@ -35,6 +34,7 @@ if [ "$LINT" == true ]; then
         statsmodels/tools/decorators.py \
         statsmodels/tools/tests/test_decorators.py \
         statsmodels/tsa/base/tests/test_datetools.py \
+        statsmodels/tsa/regime_switching \
         statsmodels/tsa/vector_ar/dynamic.py \
         statsmodels/tsa/vector_ar/hypothesis_test_results.py \
         statsmodels/tsa/statespace/*.py \
