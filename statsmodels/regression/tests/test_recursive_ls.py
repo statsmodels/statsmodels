@@ -12,7 +12,6 @@ import pytest
 from scipy.stats import norm
 import os
 
-import warnings
 from statsmodels.datasets import macrodata
 from statsmodels.regression.linear_model import OLS
 from statsmodels.genmod.api import GLM
@@ -20,8 +19,7 @@ from statsmodels.tools.eval_measures import aic, bic
 from statsmodels.regression.recursive_ls import RecursiveLS
 from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.tools import add_constant
-from numpy.testing import assert_equal, assert_almost_equal, assert_raises, assert_allclose
-import pytest
+from numpy.testing import assert_equal, assert_raises, assert_allclose
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 

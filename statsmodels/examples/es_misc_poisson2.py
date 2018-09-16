@@ -1,7 +1,7 @@
 
 from __future__ import print_function
 import numpy as np
-from numpy.testing import assert_almost_equal
+
 import statsmodels.api as sm
 from statsmodels.miscmodels.count import (PoissonGMLE, PoissonOffsetGMLE,
                                           PoissonZiGMLE)

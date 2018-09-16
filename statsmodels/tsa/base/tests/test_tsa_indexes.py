@@ -14,10 +14,8 @@ from __future__ import division, absolute_import, print_function
 import warnings
 import numpy as np
 import pandas as pd
-import pytest
 
-from numpy.testing import (assert_allclose, assert_almost_equal, assert_equal,
-                           assert_raises)
+from numpy.testing import assert_equal, assert_raises
 
 from statsmodels.tsa.base import tsa_model
 
