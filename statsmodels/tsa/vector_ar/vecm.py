@@ -1550,7 +1550,7 @@ class VECMResults(object):
     def _chol_sigma_u(self):
         return np.linalg.cholesky(self.cov_resid)
 
-    def orth_ma_rep(self, maxn=10, P=None):
+    def orth_ma_rep(self, maxn=10, p=None):
         """Compute orthogonalized MA coefficient matrices.
 
         For this purpose a matrix  P is used which fulfills
@@ -1561,7 +1561,7 @@ class VECMResults(object):
         ----------
         maxn : int
             Number of coefficient matrices to compute
-        P : ndarray (neqs x neqs), optional
+        p : ndarray (neqs x neqs), optional
             Matrix such that :math:`\\Sigma_u = PP'`. Defaults to Cholesky
             decomposition.
 
@@ -1569,7 +1569,7 @@ class VECMResults(object):
         -------
         coefs : ndarray (maxn x neqs x neqs)
         """
-        return orth_ma_rep(self, maxn, P)
+        return orth_ma_rep(self, maxn, p=p)
 
     def predict(self, steps=5, alpha=None, exog_fc=None, exog_coint_fc=None):
         """

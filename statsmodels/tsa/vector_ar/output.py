@@ -125,7 +125,8 @@ class VARSummary(object):
                        'FPE:',
                        'Det(Omega_mle):')
         part2Ldata = [[model.neqs], [model.nobs], [model.llf], [model.aic]]
-        part2Rdata = [[model.bic], [model.hqic], [model.fpe], [model.detomega]]
+        part2Rdata = [[model.bic], [model.hqic], [model.fpe],
+                      [model.det_cov_resid]]
         part2Lheader = None
         part2L = SimpleTable(part2Ldata, part2Lheader, part2Lstubs,
                              txt_fmt = self.part2_fmt)

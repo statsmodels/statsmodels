@@ -57,7 +57,7 @@ class BaseIRAnalysis(object):
         if svar:
             self.svar_irfs = model.svar_ma_rep(periods, P=P)
         else:
-            self.orth_irfs = model.orth_ma_rep(periods, P=P)
+            self.orth_irfs = model.orth_ma_rep(periods, p=P)
 
         self.cum_effects = self.irfs.cumsum(axis=0)
         if svar:
@@ -260,7 +260,7 @@ class IRAnalysis(BaseIRAnalysis):
         if vecm:
             self.cov_a = model.cov_var_repr
         else:
-            self.cov_a = model._cov_alpha
+            self.cov_a = model._cov_params_ex_trend
         self.cov_sig = model._cov_of_cov_resid
 
         # memoize dict for G matrix function
@@ -337,8 +337,8 @@ class IRAnalysis(BaseIRAnalysis):
         periods = self.periods
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
-        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
-                                   burn=100)
+        irf_resim = model.irf_resim(orth=orth, repl=repl, horizon=periods, seed=seed,
+                                    burn=100)
         q = util.norm_signif_level(signif)
 
         W, eigva, k =self._eigval_decomp_SZ(irf_resim)
@@ -394,8 +394,8 @@ class IRAnalysis(BaseIRAnalysis):
         periods = self.periods
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
-        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
-                                   burn=100)
+        irf_resim = model.irf_resim(orth=orth, repl=repl, horizon=periods, seed=seed,
+                                    burn=100)
 
         W, eigva, k = self._eigval_decomp_SZ(irf_resim)
 
@@ -457,8 +457,8 @@ class IRAnalysis(BaseIRAnalysis):
         periods = self.periods
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
-        irf_resim = model.irf_resim(orth=orth, repl=repl, T=periods, seed=seed,
-                                   burn=100)
+        irf_resim = model.irf_resim(orth=orth, repl=repl, horizon=periods, seed=seed,
+                                    burn=100)
         stack = np.zeros((neqs, repl, periods*neqs))
 
         #stack left to right, up and down
@@ -639,8 +639,9 @@ class IRAnalysis(BaseIRAnalysis):
         """
         model = self.model
         periods = self.periods
-        return model.irf_errband_mc(orth=orth, repl=repl,
-                                    T=periods, signif=signif, seed=seed, burn=burn, cum=True)
+        return model.irf_errband_mc(orth=orth, repl=repl, horizon=periods,
+                                    signif=signif, seed=seed, burn=burn,
+                                    cum=True)
 
     def lr_effect_cov(self, orth=False):
         """

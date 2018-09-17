@@ -481,7 +481,7 @@ class SVARProcess(VARProcess):
         self.B_solve = B_solve
         self.names = names
 
-    def orth_ma_rep(self, maxn=10, P=None):
+    def orth_ma_rep(self, maxn=10, p=None):
         """
 
         Unavailable for SVAR
