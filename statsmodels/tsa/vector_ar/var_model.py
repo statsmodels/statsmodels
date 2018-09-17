@@ -992,24 +992,24 @@ class VARProcess(object):
         """
         return ma_rep(self.coefs, maxn=maxn)
 
-    def orth_ma_rep(self, maxn=10, P=None):
-        r"""Compute orthogonalized MA coefficient matrices using P matrix such
-        that :math:`\Sigma_u = PP^\prime`. P defaults to the Cholesky
-        decomposition of :math:`\Sigma_u`
+    def orth_ma_rep(self, maxn=10, p=None):
+        r"""
+        Compute orthogonalized MA coefficient matrices
 
         Parameters
         ----------
         maxn : int
             Number of coefficient matrices to compute
-        P : ndarray (k x k), optional
+        p : ndarray, optional
             Matrix such that cov_resid = pp'. Defaults to the Cholesky
             decomposition of cov_resid if not provided
 
         Returns
         -------
-        coefs : ndarray (maxn x k x k)
+        coefs : ndarray
+            Array containing the coefficient (maxn x k x k)
         """
-        return orth_ma_rep(self, maxn, P)
+        return orth_ma_rep(self, maxn, p)
 
     def long_run_effects(self):
         """Compute long-run effect of unit impulse
@@ -1450,12 +1450,13 @@ class VARResults(VARProcess):
         return np.dot(self.ys_lagged.T, self.ys_lagged)
 
     @property
-    def _cov_alpha(self):
+    def _cov_params_ex_trend(self):
         """
         Estimated covariance matrix of model coefficients w/o exog
         """
         # drop exog
-        return self.cov_params[self.k_exog*self.neqs:, self.k_exog*self.neqs:]
+        idx = self.k_exog * self.neqs
+        return self.cov_params[idx:, idx:]
 
     @cache_readonly
     def _cov_of_cov_resid(self):

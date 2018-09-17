@@ -364,7 +364,8 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     def test_is_stable(self):
         # may not necessarily be true for other datasets
-        assert(self.res.is_stable(verbose=True))
+        assert self.res.is_stable()
+        assert len(self.res.is_stable(eigenvalues=True)) == 2
 
     def test_acf(self):
         # test that it works...for now
