@@ -344,6 +344,22 @@ def var_loglike(resid, cov_resid, nobs):
 
 
 def _reordered(self, order):
+    """
+    Construct a VARResults with the variables reordered according to order
+
+    Parameters
+    ----------
+    self : VARResult instance
+    order: {List[int], List[str]}
+        New order.  If integers, then interpreted as the index of the new
+        result. If str, then interpreted as the order of the variable names in
+        the new result.
+
+    Returns
+    -------
+    result : VARResults
+        Reordered result
+    """
     # Create new arrays to hold rearranged results from .fit()
     endog = self.endog
     endog_lagged = self.endog_lagged
@@ -351,33 +367,36 @@ def _reordered(self, order):
     cov_resid = self.cov_resid
     names = self.names
     k_ar = self.k_ar
-    endog_new = np.zeros([np.size(endog, 0), np.size(endog, 1)])
-    endog_lagged_new = np.zeros([np.size(endog_lagged, 0), np.size(endog_lagged, 1)])
-    params_new_inc, params_new = [np.zeros([np.size(params, 0), np.size(params, 1)])
-                                  for i in range(2)]
+    endog_reorder = np.zeros_like(endog)
+    endog_lagged_reorder = np.zeros_like(endog_lagged)
+    params_reorder_inc = np.zeros_like(params)
+    params_reorder = np.zeros_like(params)
     cov_resid_reorder_inc = np.zeros_like(cov_resid)
     cov_resid_reorder = np.zeros_like(cov_resid)
+
     num_end = len(self.params[0])
     names_new = []
 
     # Rearrange elements and fill in new arrays
     k = self.k_trend
     for i, c in enumerate(order):
-        endog_new[:, i] = self.endog[:, c]
+        endog_reorder[:, i] = self.endog[:, c]
         if k > 0:
-            params_new_inc[0, i] = params[0, i]
-            endog_lagged_new[:, 0] = endog_lagged[:, 0]
+            params_reorder_inc[0, i] = params[0, i]
+            endog_lagged_reorder[:, 0] = endog_lagged[:, 0]
         for j in range(k_ar):
-            params_new_inc[i+j*num_end+k, :] = self.params[c+j*num_end+k, :]
-            endog_lagged_new[:, i+j*num_end+k] = endog_lagged[:, c+j*num_end+k]
+            _params = self.params[c + j * num_end + k, :]
+            params_reorder_inc[i + j * num_end + k, :] = _params
+            lag = endog_lagged[:, c + j * num_end + k]
+            endog_lagged_reorder[:, i + j * num_end + k] = lag
         cov_resid_reorder_inc[i, :] = cov_resid[c, :]
         names_new.append(names[c])
     for i, c in enumerate(order):
-        params_new[:, i] = params_new_inc[:, c]
+        params_reorder[:, i] = params_reorder_inc[:, c]
         cov_resid_reorder[:, i] = cov_resid_reorder_inc[:, c]
 
-    return VARResults(endog=endog_new, endog_lagged=endog_lagged_new,
-                      params=params_new, cov_resid=cov_resid_reorder,
+    return VARResults(endog=endog_reorder, endog_lagged=endog_lagged_reorder,
+                      params=params_reorder, cov_resid=cov_resid_reorder,
                       lag_order=self.k_ar, model=self.model,
                       trend='c', names=names_new, dates=self.dates)
 
