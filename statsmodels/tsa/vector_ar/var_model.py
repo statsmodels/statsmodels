@@ -819,20 +819,149 @@ class VARProcess(object):
 
         return output
 
+    # ------------------------------------------------------------------
+    # Attributes depending only on the parameters, but not \Sigma_u
+
+    @cache_readonly
+    def roots(self):
+        neqs = self.neqs
+        k_ar = self.k_ar
+        p = neqs * k_ar
+        arr = np.zeros((p, p))
+        arr[:neqs, :] = np.column_stack(self.coefs)
+        arr[neqs:, :-neqs] = np.eye(p-neqs)
+        roots = np.linalg.eig(arr)[0]**-1
+        idx = np.argsort(np.abs(roots))[::-1]  # sort by reverse modulus
+        return roots[idx]
+
     def is_stable(self, verbose=False):
-        """Determine stability based on model coefficients
+        """
+        Determine stability based on model coefficients
 
         Parameters
         ----------
-        verbose : bool
+        verbose : bool, default False
             Print eigenvalues of the VAR(1) companion
 
         Notes
         -----
-        Checks if det(I - Az) = 0 for any mod(z) <= 1, so all the eigenvalues of
-        the companion matrix must lie outside the unit circle
+        Checks if det(I - Az) = 0 for any mod(z) <= 1, so all the eigenvalues
+        of the companion matrix must lie outside the unit circle
         """
         return is_stable(self.coefs, verbose=verbose)
+
+    @cache_readonly
+    def _char_mat(self):
+        return np.eye(self.neqs) - self.coefs.sum(0)
+
+    def long_run_effects(self):
+        """
+        Compute long-run effect of unit impulse
+
+        .. math::
+
+            \Psi_\infty = \sum_{i=0}^\infty \Phi_i
+
+        """
+        return scipy.linalg.inv(self._char_mat)
+
+    def intercept_longrun(self):
+        r"""
+        Long run intercept of stable VAR process
+
+        Lütkepohl eq. 2.1.23
+
+        .. math:: \mu = (I - A_1 - \dots - A_p)^{-1} \alpha
+
+        where \alpha is the intercept (parameter of the constant)
+        """
+        return np.linalg.solve(self._char_mat, self.intercept)
+
+    def mean(self):
+        r"""
+        Long run intercept of stable VAR process
+
+        Warning: trend and exog except for intercept are ignored for this.
+        This might change in future versions.
+
+        Lütkepohl eq. 2.1.23
+
+        .. math:: \mu = (I - A_1 - \dots - A_p)^{-1} \alpha
+
+        where \alpha is the intercept (parameter of the constant)
+        """
+        return self.intercept_longrun()
+
+    def ma_rep(self, maxn=10):
+        r"""
+        Compute MA(:math:`\infty`) coefficient matrices
+
+        Parameters
+        ----------
+        maxn : int
+            Number of coefficient matrices to compute
+
+        Returns
+        -------
+        coefs : ndarray (maxn x k x k)
+        """
+        return ma_rep(self.coefs, maxn=maxn)
+
+    # ------------------------------------------------------------------
+    # Attributes depending on the parameters and \Sigma_u, but not the data
+
+    @cache_readonly
+    def _chol_sigma_u(self):
+        return np.linalg.cholesky(self.sigma_u)
+
+    def orth_ma_rep(self, maxn=10, P=None):
+        r"""Compute orthogonalized MA coefficient matrices using P matrix such
+        that :math:`\Sigma_u = PP^\prime`. P defaults to the Cholesky
+        decomposition of :math:`\Sigma_u`
+
+        Parameters
+        ----------
+        maxn : int
+            Number of coefficient matrices to compute
+        P : ndarray (k x k), optional
+            Matrix such that Sigma_u = PP', defaults to Cholesky descomp
+
+        Returns
+        -------
+        coefs : ndarray (maxn x k x k)
+        """
+        return orth_ma_rep(self, maxn, P)
+
+    @cache_readonly
+    def _cov_sigma(self):
+        """
+        Estimated covariance matrix of vech(sigma_u)
+        """
+        D_K = tsa.duplication_matrix(self.neqs)
+        D_Kinv = np.linalg.pinv(D_K)
+
+        sigxsig = np.kron(self.sigma_u, self.sigma_u)
+        return 2 * chain_dot(D_Kinv, sigxsig, D_Kinv.T)
+
+    def cov_ybar(self):
+        r"""
+        Asymptotically consistent estimate of covariance of the sample mean
+
+        .. math::
+
+            \sqrt(T) (\bar{y} - \mu) \rightarrow {\cal N}(0, \Sigma_{\bar{y}})\\
+
+            \Sigma_{\bar{y}} = B \Sigma_u B^\prime, \text{where } B = (I_K - A_1
+            - \cdots - A_p)^{-1}
+
+        Notes
+        -----
+        Lütkepohl Proposition 3.3
+        """
+        Ainv = scipy.linalg.inv(np.eye(self.neqs) - self.coefs.sum(0))
+        return chain_dot(Ainv, self.sigma_u, Ainv.T)
+
+    # ------------------------------------------------------------------
 
     def simulate_var(self, steps=None, offset=None, seed=None):
         """
@@ -897,81 +1026,6 @@ class VARProcess(object):
         """
         y = self.simulate_var(steps=steps, offset=offset, seed=seed)
         return plotting.plot_mts(y)
-
-    def intercept_longrun(self):
-        r"""Long run intercept of stable VAR process
-
-        Lütkepohl eq. 2.1.23
-
-        .. math:: \mu = (I - A_1 - \dots - A_p)^{-1} \alpha
-
-        where \alpha is the intercept (parameter of the constant)
-        """
-        return np.linalg.solve(self._char_mat, self.intercept)
-
-    def mean(self):
-        r"""Long run intercept of stable VAR process
-
-        Warning: trend and exog except for intercept are ignored for this.
-        This might change in future versions.
-
-        Lütkepohl eq. 2.1.23
-
-        .. math:: \mu = (I - A_1 - \dots - A_p)^{-1} \alpha
-
-        where \alpha is the intercept (parameter of the constant)
-        """
-        return self.intercept_longrun()
-
-    def ma_rep(self, maxn=10):
-        r"""Compute MA(:math:`\infty`) coefficient matrices
-
-        Parameters
-        ----------
-        maxn : int
-            Number of coefficient matrices to compute
-
-        Returns
-        -------
-        coefs : ndarray (maxn x k x k)
-        """
-        return ma_rep(self.coefs, maxn=maxn)
-
-    def orth_ma_rep(self, maxn=10, P=None):
-        r"""Compute orthogonalized MA coefficient matrices using P matrix such
-        that :math:`\Sigma_u = PP^\prime`. P defaults to the Cholesky
-        decomposition of :math:`\Sigma_u`
-
-        Parameters
-        ----------
-        maxn : int
-            Number of coefficient matrices to compute
-        P : ndarray (k x k), optional
-            Matrix such that Sigma_u = PP', defaults to Cholesky descomp
-
-        Returns
-        -------
-        coefs : ndarray (maxn x k x k)
-        """
-        return orth_ma_rep(self, maxn, P)
-
-    def long_run_effects(self):
-        """Compute long-run effect of unit impulse
-
-        .. math::
-
-            \Psi_\infty = \sum_{i=0}^\infty \Phi_i
-
-        """
-        return scipy.linalg.inv(self._char_mat)
-
-    @cache_readonly
-    def _chol_sigma_u(self):
-        return np.linalg.cholesky(self.sigma_u)
-
-    @cache_readonly
-    def _char_mat(self):
-        return np.eye(self.neqs) - self.coefs.sum(0)
 
     def acf(self, nlags=None):
         """Compute theoretical autocovariance function
@@ -1117,7 +1171,7 @@ class VARProcess(object):
         gamma = np.concatenate(gamma, 1)
         return {"Gamma": gamma, "Pi": pi}
 
-# -------------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # VARResults class
 
 
@@ -1330,24 +1384,6 @@ class VARResults(VARProcess):
         z = self.ys_lagged
         return np.kron(scipy.linalg.inv(np.dot(z.T, z)), self.sigma_u)
 
-    def cov_ybar(self):
-        r"""Asymptotically consistent estimate of covariance of the sample mean
-
-        .. math::
-
-            \sqrt(T) (\bar{y} - \mu) \rightarrow {\cal N}(0, \Sigma_{\bar{y}})\\
-
-            \Sigma_{\bar{y}} = B \Sigma_u B^\prime, \text{where } B = (I_K - A_1
-            - \cdots - A_p)^{-1}
-
-        Notes
-        -----
-        Lütkepohl Proposition 3.3
-        """
-
-        Ainv = scipy.linalg.inv(np.eye(self.neqs) - self.coefs.sum(0))
-        return chain_dot(Ainv, self.sigma_u, Ainv.T)
-
     # ------------------------------------------------------------
     # Estimation-related things
 
@@ -1363,17 +1399,6 @@ class VARResults(VARProcess):
         """
         # drop exog
         return self.cov_params[self.k_exog*self.neqs:, self.k_exog*self.neqs:]
-
-    @cache_readonly
-    def _cov_sigma(self):
-        """
-        Estimated covariance matrix of vech(sigma_u)
-        """
-        D_K = tsa.duplication_matrix(self.neqs)
-        D_Kinv = np.linalg.pinv(D_K)
-
-        sigxsig = np.kron(self.sigma_u, self.sigma_u)
-        return 2 * chain_dot(D_Kinv, sigxsig, D_Kinv.T)
 
     @cache_readonly
     def llf(self):
@@ -2069,18 +2094,6 @@ class VARResults(VARProcess):
     def bic(self):
         """Bayesian a.k.a. Schwarz info criterion"""
         return self.info_criteria['bic']
-
-    @cache_readonly
-    def roots(self):
-        neqs = self.neqs
-        k_ar = self.k_ar
-        p = neqs * k_ar
-        arr = np.zeros((p, p))
-        arr[:neqs, :] = np.column_stack(self.coefs)
-        arr[neqs:, :-neqs] = np.eye(p-neqs)
-        roots = np.linalg.eig(arr)[0]**-1
-        idx = np.argsort(np.abs(roots))[::-1]  # sort by reverse modulus
-        return roots[idx]
 
 
 class VARResultsWrapper(wrap.ResultsWrapper):
