@@ -82,28 +82,36 @@ def ma_rep(coefs, maxn=10):
     return phis
 
 
-def is_stable(coefs, verbose=False):
+@deprecate_kwarg('verbose', 'eigenvalues')
+def is_stable(coefs, eigenvalues=False):
     """
-    Determine stability of VAR(p) system by examining the eigenvalues of the
-    VAR(1) representation
+    Test stability of a VAR(p)
 
     Parameters
     ----------
     coefs : ndarray (p x k x k)
+        VAR coefficients
+    eigenvalues : bool
+        Flag indicating to also return eigenvalues
 
     Returns
     -------
     is_stable : bool
+        Indicator that the maximum eigenvalue is less than 1
+    eigenvals : array, optional
+        Array of eigenvalues of the VAR(1) coefficient in the companion form
+
+    Notes
+    -----
+    Computes the eigenvalues of the coefficient matrix in the the companion
+    form of the VAR(p).
     """
-    A_var1 = util.comp_matrix(coefs)
-    eigs = np.linalg.eigvals(A_var1)
-
-    if verbose:
-        print('Eigenvalues of VAR(1) rep')
-        for val in np.abs(eigs):
-            print(val)
-
-    return (np.abs(eigs) <= 1).all()
+    a_var1 = util.comp_matrix(coefs)
+    eigs = np.linalg.eigvals(a_var1)
+    stable = (np.abs(eigs) <= 1).all()
+    if eigenvalues:
+        return stable, eigs
+    return stable
 
 
 @deprecate_kwarg('sig_u', 'cov_resid')
@@ -577,13 +585,7 @@ class VAR(tsbase.TimeSeriesModel):
         return predictedvalues
 
     def fit(self, maxlags=None, method='ols', ic=None, trend='c',
-            verbose=False):
-        # todo: this code is only supporting deterministic terms as exog.
-        # This means that all exog-variables have lag 0. If dealing with
-        # different exogs is necessary, a `lags_exog`-parameter might make
-        # sense (e.g. a sequence of ints specifying lags).
-        # Alternatively, leading zeros for exog-variables with smaller number
-        # of lags than the maximum number of exog-lags might work.
+            verbose=None):
         """
         Fit the VAR model
 
@@ -599,9 +601,7 @@ class VAR(tsbase.TimeSeriesModel):
             aic : Akaike
             fpe : Final prediction error
             hqic : Hannan-Quinn
-            bic : Bayesian a.k.a. Schwarz
-        verbose : bool, default False
-            Print order selection output to the screen
+            bic : Bayesian/Schwarz
         trend : str {"c", "ct", "ctt", "nc"}
             "c" - add constant
             "ct" - constant and trend
@@ -609,14 +609,27 @@ class VAR(tsbase.TimeSeriesModel):
             "nc" - co constant, no trend
             Note that these are prepended to the columns of the dataset.
 
+        Returns
+        -------
+        est : VARResults
+            Results instance
+
         Notes
         -----
         Lütkepohl pp. 146-153
-
-        Returns
-        -------
-        est : VARResultsWrapper
         """
+        # todo: this code is only supporting deterministic terms as exog.
+        # This means that all exog-variables have lag 0. If dealing with
+        # different exogs is necessary, a `lags_exog`-parameter might make
+        # sense (e.g. a sequence of ints specifying lags).
+        # Alternatively, leading zeros for exog-variables with smaller number
+        # of lags than the maximum number of exog-lags might work.
+
+        if verbose is not None:
+            # Deprecated in 0.10.0, remove in 0.11.0
+            import warnings
+            warnings.warn('verbose is deprecated.', DeprecationWarning)
+
         lags = maxlags
 
         if trend not in ['c', 'ct', 'ctt', 'nc']:
@@ -628,9 +641,6 @@ class VAR(tsbase.TimeSeriesModel):
                 raise ValueError("%s not recognized, must be among %s"
                                  % (ic, sorted(selections)))
             lags = getattr(selections, ic)
-            if verbose:
-                print(selections)
-                print('Using %d based on %s criterion' % (lags, ic))
         else:
             if lags is None:
                 lags = 1
@@ -828,20 +838,29 @@ class VARProcess(object):
 
         return output
 
-    def is_stable(self, verbose=False):
+    @deprecate_kwarg('verbose', 'eigenvalues')
+    def is_stable(self, eigenvalues=False):
         """Determine stability based on model coefficients
 
         Parameters
         ----------
-        verbose : bool
+        eigenvalues : bool
             Print eigenvalues of the VAR(1) companion
+
+        Returns
+        -------
+        is_stable : bool
+            Indicator that the maximum eigenvalue is less than 1
+        eigenvals : array, optional
+            Array of eigenvalues of the VAR(1) coefficient in the companion
+            form
 
         Notes
         -----
-        Checks if det(I - Az) = 0 for any mod(z) <= 1, so all the eigenvalues of
-        the companion matrix must lie outside the unit circle
+        Checks if det(I - Az) = 0 for any mod(z) <= 1, so all the eigenvalues
+        of the companion matrix must lie outside the unit circle
         """
-        return is_stable(self.coefs, verbose=verbose)
+        return is_stable(self.coefs, eigenvalues=eigenvalues)
 
     def simulate_var(self, steps=None, offset=None, seed=None):
         """
