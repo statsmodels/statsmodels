@@ -531,19 +531,19 @@ class DynamicFactor(MLEModel):
                     res_errors.params.T[self._idx_error_diag])
 
             # Get the error covariance parameters
+            cov_diag = res_errors.cov_resid.diagonal()
             if self.error_cov_type == 'scalar':
-                params[self._params_error_cov] = (
-                    res_errors.sigma_u.diagonal().mean())
+                params[self._params_error_cov] = (cov_diag.mean())
             elif self.error_cov_type == 'diagonal':
-                params[self._params_error_cov] = res_errors.sigma_u.diagonal()
+                params[self._params_error_cov] = cov_diag
             elif self.error_cov_type == 'unstructured':
                 try:
-                    cov_factor = np.linalg.cholesky(res_errors.sigma_u)
+                    cov_factor = np.linalg.cholesky(res_errors.cov_resid)
                 except np.linalg.LinAlgError:
-                    cov_factor = np.eye(res_errors.sigma_u.shape[0]) * (
-                        res_errors.sigma_u.diagonal().mean()**0.5)
-                cov_factor = np.eye(res_errors.sigma_u.shape[0]) * (
-                    res_errors.sigma_u.diagonal().mean()**0.5)
+                    cov_factor = np.eye(res_errors.cov_resid.shape[0]) * \
+                                 (cov_diag.mean()**0.5)
+                cov_factor = (np.eye(res_errors.cov_resid.shape[0]) *
+                              (cov_diag.mean()**0.5))
                 params[self._params_error_cov] = (
                     cov_factor[self._idx_lower_error_cov].ravel())
 

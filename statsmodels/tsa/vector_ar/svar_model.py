@@ -12,6 +12,10 @@ from statsmodels.compat.python import range
 import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
+try:
+    from pandas.util._decorators import deprecate_kwarg
+except ImportError:
+    from pandas.util.decorators import deprecate_kwarg
 
 from statsmodels.tools.numdiff import (approx_hess, approx_fprime)
 from statsmodels.tools.decorators import cache_readonly
@@ -454,7 +458,7 @@ class SVARProcess(VARProcess):
     ----------
     coefs : ndarray (p x k x k)
     intercept : ndarray (length k)
-    sigma_u : ndarray (k x k)
+    cov_resid : ndarray (k x k)
     names : sequence (length k)
     A : neqs x neqs np.ndarray with unknown parameters marked with 'E'
     A_mask : neqs x neqs mask array with known parameters masked
@@ -465,13 +469,14 @@ class SVARProcess(VARProcess):
     -------
     **Attributes**:
     """
-    def __init__(self, coefs, intercept, sigma_u, A_solve, B_solve,
+    @deprecate_kwarg('sigma_u', 'cov_resid')
+    def __init__(self, coefs, intercept, cov_resid, A_solve, B_solve,
                  names=None):
         self.k_ar = len(coefs)
         self.neqs = coefs.shape[1]
         self.coefs = coefs
         self.intercept = intercept
-        self.sigma_u = sigma_u
+        self.cov_resid = cov_resid
         self.A_solve = A_solve
         self.B_solve = B_solve
         self.names = names
@@ -509,7 +514,7 @@ class SVARResults(SVARProcess, VARResults):
     endog : array
     endog_lagged : array
     params : array
-    sigma_u : array
+    cov_resid : array
     lag_order : int
     model : VAR model instance
     trend : str {'nc', 'c', 'ct'}
@@ -555,9 +560,9 @@ class SVARResults(SVARProcess, VARResults):
     names : list
         variables names
     resid
-    sigma_u : ndarray (K x K)
+    cov_resid : ndarray (K x K)
         Estimate of white noise process variance Var[u_t]
-    sigma_u_mle
+    cov_resid_mle
     stderr
     trenorder
     tvalues
@@ -567,7 +572,8 @@ class SVARResults(SVARProcess, VARResults):
 
     _model_type = 'SVAR'
 
-    def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
+    @deprecate_kwarg('sigma_u', 'cov_resid')
+    def __init__(self, endog, endog_lagged, params, cov_resid, lag_order,
                  A=None, B=None, A_mask=None, B_mask=None, model=None,
                  trend='c', names=None, dates=None):
 
@@ -589,7 +595,7 @@ class SVARResults(SVARProcess, VARResults):
 
         self.exog_names = util.make_lag_names(names, lag_order, k_trend)
         self.params = params
-        self.sigma_u = sigma_u
+        self.cov_resid = cov_resid
 
         # Each matrix needs to be transposed
         reshaped = self.params[self.k_trend:]
@@ -607,8 +613,8 @@ class SVARResults(SVARProcess, VARResults):
         self.A_mask = A_mask
         self.B_mask = B_mask
 
-        super(SVARResults, self).__init__(coefs, intercept, sigma_u, A,
-                             B, names=names)
+        super(SVARResults, self).__init__(coefs, intercept, cov_resid, A,
+                                          B, names=names)
 
     def irf(self, periods=10, var_order=None):
         """
@@ -664,7 +670,7 @@ class SVARResults(SVARProcess, VARResults):
         mean = self.mean()
         k_ar = self.k_ar
         coefs = self.coefs
-        sigma_u = self.sigma_u
+        sigma_u = self.cov_resid
         intercept = self.intercept
         df_model = self.df_model
         nobs = self.nobs

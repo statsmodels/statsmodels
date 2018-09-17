@@ -398,18 +398,18 @@ class VARMAX(MLEModel):
 
         # 5. State covariance terms
         if self.error_cov_type == 'diagonal':
-            params[self._params_state_cov] = res_ar.sigma_u.diagonal()
+            params[self._params_state_cov] = res_ar.cov_resid.diagonal()
         elif self.error_cov_type == 'unstructured':
-            cov_factor = np.linalg.cholesky(res_ar.sigma_u)
+            cov_factor = np.linalg.cholesky(res_ar.cov_resid)
             params[self._params_state_cov] = (
                 cov_factor[self._idx_lower_state_cov].ravel())
 
         # 5. Measurement error variance terms
         if self.measurement_error:
             if self.k_ma > 0:
-                params[self._params_obs_cov] = res_ma.sigma_u.diagonal()
+                params[self._params_obs_cov] = res_ma.cov_resid.diagonal()
             else:
-                params[self._params_obs_cov] = res_ar.sigma_u.diagonal()
+                params[self._params_obs_cov] = res_ar.cov_resid.diagonal()
 
         return params
 

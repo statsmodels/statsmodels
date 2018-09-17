@@ -1012,7 +1012,7 @@ class VECMResults(object):
         matrices :math:`\\Gamma_1, \\dots, \\Gamma_{k_{ar}-1}` of a
         VECM(:math:`k_{ar}-1`). The submatrices are stacked horizontally from
         left to right.
-    sigma_u : ndarray (neqs x neqs)
+    cov_resid : ndarray (neqs x neqs)
         Estimate of white noise process covariance matrix :math:`\\Sigma_u`.
     deterministic : str {``"nc"``, ``"co"``, ``"ci"``, ``"lo"``, ``"li"``}
         * ``"nc"`` - no deterministic terms
@@ -1065,7 +1065,7 @@ class VECMResults(object):
     alpha : see Parameters
     beta : see Parameters
     gamma : see Parameters
-    sigma_u : see Parameters
+    cov_resid : see Parameters
     det_coef_coint : ndarray (#(determinist. terms inside the coint. rel.) x `coint_rank`)
         Estimated coefficients for the all deterministic terms inside the
         cointegration relation.
@@ -1183,7 +1183,7 @@ class VECMResults(object):
     """
 
     def __init__(self, endog, exog, exog_coint, k_ar,
-                 coint_rank, alpha, beta, gamma, sigma_u, deterministic='nc',
+                 coint_rank, alpha, beta, gamma, cov_resid, deterministic='nc',
                  seasons=0, first_season=0, delta_y_1_T=None, y_lag1=None,
                  delta_x=None, model=None, names=None, dates=None):
         self.model = model
@@ -1236,7 +1236,7 @@ class VECMResults(object):
             np.hsplit(self.det_coef,
                       [split_const_season, split_season_lin, split_lin_exog])
 
-        self.sigma_u = sigma_u
+        self.cov_resid = cov_resid
 
         if y_lag1 is not None and delta_x is not None \
                 and delta_y_1_T is not None:
@@ -1264,8 +1264,8 @@ class VECMResults(object):
             - K * T / 2
 
     @cache_readonly
-    def _cov_sigma(self):
-        sigma_u = self.sigma_u
+    def _cov_of_cov_resid(self):
+        sigma_u = self.cov_resid
         d = duplication_matrix(self.neqs)
         d_K_plus = np.linalg.pinv(d)
         # compare p. 93, 297 Lutkepohl (2005)
@@ -1296,7 +1296,7 @@ class VECMResults(object):
                          [omega21, omega22]]).A
 
         mat1 = b_id.dot(inv(omega)).dot(b_id.T)
-        return np.kron(mat1, self.sigma_u)
+        return np.kron(mat1, self.cov_resid)
 
     @cache_readonly
     def cov_params_wo_det(self):
@@ -1356,7 +1356,7 @@ class VECMResults(object):
         det = self.det_coef_coint.shape[0]
         mat2 = np.kron(np.identity(self.neqs-r+det),
                        inv(chain_dot(
-                               self.alpha.T, inv(self.sigma_u), self.alpha)))
+                               self.alpha.T, inv(self.cov_resid), self.alpha)))
         first_rows = np.zeros((r, r))
         last_rows_1d = np.sqrt(np.diag(mat1.dot(mat2)))
         last_rows = last_rows_1d.reshape((self.neqs-r+det, r),
@@ -1548,7 +1548,7 @@ class VECMResults(object):
 
     @cache_readonly
     def _chol_sigma_u(self):
-        return np.linalg.cholesky(self.sigma_u)
+        return np.linalg.cholesky(self.cov_resid)
 
     def orth_ma_rep(self, maxn=10, P=None):
         """Compute orthogonalized MA coefficient matrices.
@@ -1678,7 +1678,7 @@ class VECMResults(object):
         # call the forecasting function of the VAR-module
         if alpha is not None:
             return forecast_interval(last_observations, self.var_rep,
-                                     trend_coefs, self.sigma_u, steps,
+                                     trend_coefs, self.cov_resid, steps,
                                      alpha=alpha,
                                      exog=exog)
         else:
@@ -1822,14 +1822,14 @@ class VECMResults(object):
         x_x_11 = inv(x_x)[:k*(p-1) + num_det_terms,
                           :k*(p-1) + num_det_terms]  # k*(k_ar-1) x k*(k_ar-1)
         # For VAR-models with parameter restrictions the denominator in the
-        # calculation of sigma_u is nobs and not (nobs-k*k_ar-num_det_terms).
+        # calculation of cov_resid is nobs and not (nobs-k*k_ar-num_det_terms).
         # Testing for Granger-causality means testing for restricted
         # parameters, thus the former of the two denominators is used. As
-        # Lutkepohl states, both variants of the estimated sigma_u are
+        # Lutkepohl states, both variants of the estimated cov_resid are
         # possible. (see Lutkepohl, p.198)
         # The choice of the denominator T has also the advantage of getting the
         # same results as the reference software JMulTi.
-        sigma_u = var_results.sigma_u * (t-k*p-num_det_terms) / t
+        sigma_u = var_results.cov_resid * (t-k*p-num_det_terms) / t
         sig_alpha_min_p = t * np.kron(x_x_11, sigma_u)  # k**2*(p-1)xk**2*(p-1)
         middle = inv(chain_dot(C, sig_alpha_min_p, C.T))
 
@@ -1984,14 +1984,14 @@ class VECMResults(object):
         statistic = 0
         u = np.asarray(self.resid)
         acov_list = _compute_acov(u, nlags)
-        # self.sigma_u instead of cov(0) is necessary to get the same
-        # result as JMulTi. The difference between the two is that sigma_u is
+        # self.cov_resid instead of cov(0) is necessary to get the same
+        # result as JMulTi. The difference between the two is that cov_resid is
         # calculated with the usual residuals while in cov(0) the
         # residuals are demeaned. To me JMulTi's behaviour seems a bit strange
         # because it uses the usual residuals here but demeaned residuals in
         # the calculation of autocovariances with lag > 0. (used in the
         # argument of trace() four rows below this comment.)
-        c0_inv = inv(self.sigma_u)  # instead of inv(cov(0))
+        c0_inv = inv(self.cov_resid)  # instead of inv(cov(0))
         if c0_inv.dtype == np.complex128 and np.all(np.imag(c0_inv) == 0):
             c0_inv = np.real(c0_inv)
         for t in range(1, nlags+1):

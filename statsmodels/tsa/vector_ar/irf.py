@@ -37,14 +37,14 @@ class BaseIRAnalysis(object):
         self.order = order
 
         if P is None:
-            sigma = model.sigma_u
+            sigma = model.cov_resid
 
             # TODO, may be difficult at the moment
             # if order is not None:
             #     indexer = [model.get_eq_index(name) for name in order]
             #     sigma = sigma[:, indexer][indexer, :]
 
-            #     if sigma.shape != model.sigma_u.shape:
+            #     if sigma.shape != model.cov_resid.shape:
             #         raise ValueError('variable order is wrong length')
 
             P = la.cholesky(sigma)
@@ -261,7 +261,7 @@ class IRAnalysis(BaseIRAnalysis):
             self.cov_a = model.cov_var_repr
         else:
             self.cov_a = model._cov_alpha
-        self.cov_sig = model._cov_sigma
+        self.cov_sig = model._cov_of_cov_resid
 
         # memoize dict for G matrix function
         self._g_memo = {}

@@ -194,7 +194,7 @@ def acf_to_acorr(acf):
     return acf / np.sqrt(np.outer(diag, diag))
 
 
-def varsim(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
+def varsim(coefs, intercept, cov_resid, steps=100, initvalues=None, seed=None):
     """
     Simulate VAR(p) process, given coefficients and assuming Gaussian noise
 
@@ -211,7 +211,7 @@ def varsim(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
         an observation specific intercept to the autoregression. In this case,
         the intercept/offset should have same number of rows as steps, and the
         same number of columns as endogenous variables (neqs).
-    sig_u : ndarray
+    cov_resid : ndarray
         Covariance matrix of the residuals or innovations.
         If sig_u is None, then an identity matrix is used.
     steps : None or int
@@ -232,9 +232,9 @@ def varsim(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
     rs = np.random.RandomState(seed=seed)
     rmvnorm = rs.multivariate_normal
     p, k, k = coefs.shape
-    if sig_u is None:
-        sig_u = np.eye(k)
-    ugen = rmvnorm(np.zeros(len(sig_u)), sig_u, steps)
+    if cov_resid is None:
+        cov_resid = np.eye(k)
+    ugen = rmvnorm(np.zeros(len(cov_resid)), cov_resid, steps)
     result = np.zeros((steps, k))
     if intercept is not None:
         # intercept can be 2-D like an offset variable

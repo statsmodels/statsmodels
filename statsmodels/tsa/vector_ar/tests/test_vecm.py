@@ -667,9 +667,9 @@ def test_ml_sigma():
             exog_coint = (results_sm_exog_coint[ds][dt].exog_coint is not None)
 
             err_msg = build_err_msg(ds, dt, "Sigma_u")
-            obtained = results_sm[ds][dt].sigma_u
-            obtained_exog = results_sm_exog[ds][dt].sigma_u
-            obtained_exog_coint = results_sm_exog_coint[ds][dt].sigma_u
+            obtained = results_sm[ds][dt].cov_resid
+            obtained_exog = results_sm_exog[ds][dt].cov_resid
+            obtained_exog_coint = results_sm_exog_coint[ds][dt].cov_resid
             desired = results_ref[ds][dt]["est"]["Sigma_u"]
             assert_allclose(obtained, desired, rtol, atol, False, err_msg)
             if exog:
@@ -715,11 +715,11 @@ def test_var_to_vecm():
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
             err_msg = build_err_msg(ds, dt, "VAR to VEC representation")
-            sigma_u = results_sm[ds][dt].sigma_u
+            cov_resid = results_sm[ds][dt].cov_resid
             coefs = results_sm[ds][dt].var_rep
-            intercept = np.zeros(len(sigma_u))
+            intercept = np.zeros(len(cov_resid))
             # Note: _params_info k_trend, k_exog, ... is inferred with defaults
-            var = VARProcess(coefs, intercept, sigma_u)
+            var = VARProcess(coefs, intercept, cov_resid)
             vecm_results = var.to_vecm()
             obtained_pi = vecm_results["Pi"]
             obtained_gamma = vecm_results["Gamma"]

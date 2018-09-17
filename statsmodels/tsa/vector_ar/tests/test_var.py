@@ -88,7 +88,7 @@ class CheckVAR(object):
         assert_almost_equal(self.res1.fpe, self.res2.fpe)
 
     def test_detsig(self):
-        assert_almost_equal(self.res1.detomega, self.res2.detsig)
+        assert_almost_equal(self.res1.det_cov_resid, self.res2.detsig)
 
     def test_bse(self):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
@@ -292,7 +292,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         summ = self.res.summary()
 
     def test_detsig(self):
-        assert_almost_equal(self.res.detomega, self.ref.detomega)
+        assert_almost_equal(self.res.det_cov_resid, self.ref.detomega)
 
     def test_aic(self):
         assert_almost_equal(self.res.aic, self.ref.aic)
@@ -416,7 +416,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
         #check if the main results match
         assert_almost_equal(res2.params, res3.params)
-        assert_almost_equal(res2.sigma_u, res3.sigma_u)
+        assert_almost_equal(res2.cov_resid, res3.cov_resid)
         assert_almost_equal(res2.bic, res3.bic)
         assert_almost_equal(res2.stderr, res3.stderr)
 

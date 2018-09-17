@@ -13,6 +13,10 @@ from statsmodels.compat.python import (range, lrange, string_types,
 from collections import defaultdict
 
 import numpy as np
+try:
+    from pandas.util._decorators import deprecate_kwarg
+except ImportError:
+    from pandas.util.decorators import deprecate_kwarg
 import scipy.stats as stats
 import scipy.linalg
 
@@ -102,7 +106,8 @@ def is_stable(coefs, verbose=False):
     return (np.abs(eigs) <= 1).all()
 
 
-def var_acf(coefs, sig_u, nlags=None):
+@deprecate_kwarg('sig_u', 'cov_resid')
+def var_acf(coefs, cov_resid, nlags=None):
     """
     Compute autocovariance function ACF_y(h) up to nlags of stable VAR(p)
     process
@@ -111,8 +116,8 @@ def var_acf(coefs, sig_u, nlags=None):
     ----------
     coefs : ndarray (p x k x k)
         Coefficient matrices A_i
-    sig_u : ndarray (k x k)
-        Covariance of white noise process u_t
+    cov_resid : ndarray
+        Covariance of the white noise process residuals (k, k)
     nlags : int, optional
         Defaults to order p of system
 
@@ -130,7 +135,7 @@ def var_acf(coefs, sig_u, nlags=None):
 
     # p x k x k, ACF for lags 0, ..., p-1
     result = np.zeros((nlags + 1, k, k))
-    result[:p] = _var_acf(coefs, sig_u)
+    result[:p] = _var_acf(coefs, cov_resid)
 
     # yule-walker equations
     for h in range(p, nlags + 1):
@@ -143,7 +148,7 @@ def var_acf(coefs, sig_u, nlags=None):
     return result
 
 
-def _var_acf(coefs, sig_u):
+def _var_acf(coefs, cov_resid):
     """
     Compute autocovariance function ACF_y(h) for h=1,...,p
 
@@ -157,7 +162,7 @@ def _var_acf(coefs, sig_u):
     A = util.comp_matrix(coefs)
     # construct VAR(1) noise covariance
     SigU = np.zeros((k*p, k*p))
-    SigU[:k, :k] = sig_u
+    SigU[:k, :k] = cov_resid
 
     # vec(ACF) = (I_(kp)^2 - kron(A, A))^-1 vec(Sigma_U)
     vecACF = scipy.linalg.solve(np.eye((k*p)**2) - np.kron(A, A), vec(SigU))
@@ -168,7 +173,7 @@ def _var_acf(coefs, sig_u):
     return acf
 
 
-def forecast_cov(ma_coefs, sigma_u, steps):
+def forecast_cov(ma_coefs, cov_resid, steps):
     """
     Compute theoretical forecast error variance matrices
 
@@ -185,14 +190,14 @@ def forecast_cov(ma_coefs, sigma_u, steps):
     -------
     forc_covs : ndarray (steps x neqs x neqs)
     """
-    neqs = len(sigma_u)
+    neqs = len(cov_resid)
     forc_covs = np.zeros((steps, neqs, neqs))
 
     prior = np.zeros((neqs, neqs))
     for h in range(steps):
         # Sigma(h) = Sigma(h-1) + Phi Sig_u Phi'
         phi = ma_coefs[h]
-        var = chain_dot(phi, sigma_u, phi.T)
+        var = chain_dot(phi, cov_resid, phi.T)
         forc_covs[h] = prior = prior + var
 
     return forc_covs
@@ -257,7 +262,7 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
     return forcs
 
 
-def _forecast_vars(steps, ma_coefs, sig_u):
+def _forecast_vars(steps, ma_coefs, cov_resid):
     """_forecast_vars function used by VECMResults. Note that the definition
     of the local variable covs is the same as in VARProcess and as such it
     differs from the one in VARResults!
@@ -266,27 +271,28 @@ def _forecast_vars(steps, ma_coefs, sig_u):
     ----------
     steps
     ma_coefs
-    sig_u
+    cov_resid : ndarray
+        Residual covariance (neqs, neqs)
 
     Returns
     -------
 
     """
-    covs = mse(ma_coefs, sig_u, steps)
+    covs = mse(ma_coefs, cov_resid, steps)
     # Take diagonal for each cov
-    neqs = len(sig_u)
+    neqs = len(cov_resid)
     inds = np.arange(neqs)
     return covs[:, inds, inds]
 
 
-def forecast_interval(y, coefs, trend_coefs, sig_u, steps=5, alpha=0.05,
+def forecast_interval(y, coefs, trend_coefs, cov_resid, steps=5, alpha=0.05,
                       exog=1):
     assert(0 < alpha < 1)
     q = util.norm_signif_level(alpha)
 
     point_forecast = forecast(y, coefs, trend_coefs, steps, exog)
     ma_coefs = ma_rep(coefs, steps)
-    sigma = np.sqrt(_forecast_vars(steps, ma_coefs, sig_u))
+    sigma = np.sqrt(_forecast_vars(steps, ma_coefs, cov_resid))
 
     forc_lower = point_forecast - q * sigma
     forc_upper = point_forecast + q * sigma
@@ -294,7 +300,7 @@ def forecast_interval(y, coefs, trend_coefs, sig_u, steps=5, alpha=0.05,
     return point_forecast, forc_lower, forc_upper
 
 
-def var_loglike(resid, omega, nobs):
+def var_loglike(resid, cov_resid, nobs):
     r"""
     Returns the value of the VAR(p) log-likelihood.
 
@@ -322,8 +328,8 @@ def var_loglike(resid, omega, nobs):
         -\left(\frac{T}{2}\right)
         \left(\ln\left|\Omega\right|-K\ln\left(2\pi\right)-K\right)
     """
-    logdet = logdet_symm(np.asarray(omega))
-    neqs = len(omega)
+    logdet = logdet_symm(np.asarray(cov_resid))
+    neqs = cov_resid.shape[0]
     part1 = - (nobs * neqs / 2) * np.log(2 * np.pi)
     part2 = - (nobs / 2) * (logdet + neqs)
     return part1 + part2
@@ -334,15 +340,15 @@ def _reordered(self, order):
     endog = self.endog
     endog_lagged = self.endog_lagged
     params = self.params
-    sigma_u = self.sigma_u
+    cov_resid = self.cov_resid
     names = self.names
     k_ar = self.k_ar
     endog_new = np.zeros([np.size(endog, 0), np.size(endog, 1)])
     endog_lagged_new = np.zeros([np.size(endog_lagged, 0), np.size(endog_lagged, 1)])
     params_new_inc, params_new = [np.zeros([np.size(params, 0), np.size(params, 1)])
                                   for i in range(2)]
-    sigma_u_new_inc, sigma_u_new = [np.zeros([np.size(sigma_u, 0), np.size(sigma_u, 1)])
-                                    for i in range(2)]
+    cov_resid_reorder_inc = np.zeros_like(cov_resid)
+    cov_resid_reorder = np.zeros_like(cov_resid)
     num_end = len(self.params[0])
     names_new = []
 
@@ -356,14 +362,14 @@ def _reordered(self, order):
         for j in range(k_ar):
             params_new_inc[i+j*num_end+k, :] = self.params[c+j*num_end+k, :]
             endog_lagged_new[:, i+j*num_end+k] = endog_lagged[:, c+j*num_end+k]
-        sigma_u_new_inc[i, :] = sigma_u[c, :]
+        cov_resid_reorder_inc[i, :] = cov_resid[c, :]
         names_new.append(names[c])
     for i, c in enumerate(order):
         params_new[:, i] = params_new_inc[:, c]
-        sigma_u_new[:, i] = sigma_u_new_inc[:, c]
+        cov_resid_reorder[:, i] = cov_resid_reorder_inc[:, c]
 
     return VARResults(endog=endog_new, endog_lagged=endog_lagged_new,
-                      params=params_new, sigma_u=sigma_u_new,
+                      params=params_new, cov_resid=cov_resid_reorder,
                       lag_order=self.k_ar, model=self.model,
                       trend='c', names=names_new, dates=self.dates)
 
@@ -386,7 +392,7 @@ def orth_ma_rep(results, maxn=10, P=None):
     coefs : ndarray (maxn x neqs x neqs)
     """
     if P is None:
-        P = results._chol_sigma_u
+        P = results._chol_cov_resid
 
     ma_mats = results.ma_rep(maxn=maxn)
     return np.array([np.dot(coefs, P) for coefs in ma_mats])
@@ -764,8 +770,8 @@ class VARProcess(object):
         coefficients for lags of endog, part or params reshaped
     coefs_exog : ndarray
         parameters for trend and user provided exog
-    sigma_u : ndarray (k x k)
-        residual covariance
+    cov_resid : ndarray (neqs x neqs)
+        The covariance matrix of the residuals. :math:`\Sigma_u` in the Notes.
     names : sequence (length k)
     _params_info : dict
         internal dict to provide information about the composition of `params`,
@@ -778,13 +784,14 @@ class VARProcess(object):
     -------
     **Attributes**:
     """
-    def __init__(self, coefs, coefs_exog, sigma_u, names=None, _params_info=None):
+    def __init__(self, coefs, coefs_exog, cov_resid, names=None, _params_info=None):
         self.k_ar = len(coefs)
         self.neqs = coefs.shape[1]
         self.coefs = coefs
         self.coefs_exog = coefs_exog
-        # Note reshaping 1-D coefs_exog to 2_D makes unit tests fail
-        self.sigma_u = sigma_u
+        # TODO: Verify this claim
+        # TODO: Note reshaping 1-D coefs_exog to 2_D makes unit tests fail
+        self.cov_resid = cov_resid
         self.names = names
 
         if _params_info is None:
@@ -887,7 +894,8 @@ class VARProcess(object):
                 raise ValueError('if exog or offset are used, then steps must'
                                  'be equal to their length or None')
 
-        y = util.varsim(self.coefs, offset, self.sigma_u, steps=steps, seed=seed)
+        y = util.varsim(self.coefs, offset, self.cov_resid, steps=steps,
+                        seed=seed)
         return y
 
     def plotsim(self, steps=None, offset=None, seed=None):
@@ -947,7 +955,8 @@ class VARProcess(object):
         maxn : int
             Number of coefficient matrices to compute
         P : ndarray (k x k), optional
-            Matrix such that Sigma_u = PP', defaults to Cholesky descomp
+            Matrix such that cov_resid = pp'. Defaults to the Cholesky
+            decomposition of cov_resid if not provided
 
         Returns
         -------
@@ -966,8 +975,9 @@ class VARProcess(object):
         return scipy.linalg.inv(self._char_mat)
 
     @cache_readonly
-    def _chol_sigma_u(self):
-        return np.linalg.cholesky(self.sigma_u)
+    def _chol_cov_resid(self):
+        """Cholesky factor of the residual covariance"""
+        return np.linalg.cholesky(self.cov_resid)
 
     @cache_readonly
     def _char_mat(self):
@@ -980,7 +990,7 @@ class VARProcess(object):
         -------
         acf : ndarray (p x k x k)
         """
-        return var_acf(self.coefs, self.sigma_u, nlags=nlags)
+        return var_acf(self.coefs, self.cov_resid, nlags=nlags)
 
     def acorr(self, nlags=None):
         """Compute theoretical autocorrelation function
@@ -1060,14 +1070,14 @@ class VARProcess(object):
         """
         ma_coefs = self.ma_rep(steps)
 
-        k = len(self.sigma_u)
+        k = len(self.cov_resid)
         forc_covs = np.zeros((steps, k, k))
 
         prior = np.zeros((k, k))
         for h in range(steps):
             # Sigma(h) = Sigma(h-1) + Phi Sig_u Phi'
             phi = ma_coefs[h]
-            var = chain_dot(phi, self.sigma_u, phi.T)
+            var = chain_dot(phi, self.cov_resid, phi.T)
             forc_covs[h] = prior = prior + var
 
         return forc_covs
@@ -1129,7 +1139,7 @@ class VARResults(VARProcess):
     endog : array
     endog_lagged : array
     params : array
-    sigma_u : array
+    cov_resid : ndarray
     lag_order : int
     model : VAR model instance
     trend : str {'nc', 'c', 'ct'}
@@ -1192,7 +1202,7 @@ class VARResults(VARProcess):
     """
     _model_type = 'VAR'
 
-    def __init__(self, endog, endog_lagged, params, sigma_u, lag_order,
+    def __init__(self, endog, endog_lagged, params, cov_resid, lag_order,
                  model=None, trend='c', names=None, dates=None, exog=None):
 
         self.model = model
@@ -1232,7 +1242,7 @@ class VARResults(VARProcess):
         _params_info = {'k_trend': k_trend,
                         'k_exog_user': k_exog_user,
                         'k_ar': lag_order}
-        super(VARResults, self).__init__(coefs, self.coefs_exog, sigma_u,
+        super(VARResults, self).__init__(coefs, self.coefs_exog, cov_resid,
                                          names=names,
                                          _params_info=_params_info)
 
@@ -1309,11 +1319,47 @@ class VARResults(VARProcess):
         "Centered residual correlation matrix"
         return self.resid_acorr(0)[0]
 
-    @cache_readonly
-    def sigma_u_mle(self):
-        """(Biased) maximum likelihood estimate of noise process covariance
+    @property
+    def sigma_u(self):
         """
-        return self.sigma_u * self.df_resid / self.nobs
+        Debiased estimate of noise process covariance
+
+        Notes
+        -----
+        Deprecated. Use cov_resid
+        """
+        # Deprecated in 0.10.0, remove in 0.11.0
+        import warnings
+        warnings.warn('sigma_u has been deprecated in favor of cov_resid',
+                      DeprecationWarning)
+        return self.cov_resid
+
+    @property
+    def sigma_u_mle(self):
+        """
+        Debiased estimate of noise process covariance
+
+        Notes
+        -----
+        Deprecated. Use cov_resid
+        """
+        # Deprecated in 0.10.0, remove in 0.11.0
+        import warnings
+        warnings.warn('sigma_u_mle has been deprecated in favor of '
+                      'cov_resid_mle', DeprecationWarning)
+        return self.cov_resid
+
+    @cache_readonly
+    def cov_resid_mle(self):
+        """
+        Maximum likelihood estimate of noise process covariance
+
+        Notes
+        -----
+        Has a finite sample bias. Differs from cov_resid by ratio
+        df_resid / nobs
+        """
+        return self.cov_resid * self.df_resid / self.nobs
 
     @cache_readonly
     def cov_params(self):
@@ -1328,7 +1374,7 @@ class VARResults(VARProcess):
         Ref: Lütkepohl p.74-75
         """
         z = self.ys_lagged
-        return np.kron(scipy.linalg.inv(np.dot(z.T, z)), self.sigma_u)
+        return np.kron(scipy.linalg.inv(np.dot(z.T, z)), self.cov_resid)
 
     def cov_ybar(self):
         r"""Asymptotically consistent estimate of covariance of the sample mean
@@ -1346,7 +1392,7 @@ class VARResults(VARProcess):
         """
 
         Ainv = scipy.linalg.inv(np.eye(self.neqs) - self.coefs.sum(0))
-        return chain_dot(Ainv, self.sigma_u, Ainv.T)
+        return chain_dot(Ainv, self.cov_resid, Ainv.T)
 
     # ------------------------------------------------------------
     # Estimation-related things
@@ -1365,20 +1411,20 @@ class VARResults(VARProcess):
         return self.cov_params[self.k_exog*self.neqs:, self.k_exog*self.neqs:]
 
     @cache_readonly
-    def _cov_sigma(self):
+    def _cov_of_cov_resid(self):
         """
-        Estimated covariance matrix of vech(sigma_u)
+        Estimated covariance matrix of vech(cov_resid)
         """
         D_K = tsa.duplication_matrix(self.neqs)
         D_Kinv = np.linalg.pinv(D_K)
 
-        sigxsig = np.kron(self.sigma_u, self.sigma_u)
+        sigxsig = np.kron(self.cov_resid, self.cov_resid)
         return 2 * chain_dot(D_Kinv, sigxsig, D_Kinv.T)
 
     @cache_readonly
     def llf(self):
         "Compute VAR(p) loglikelihood"
-        return var_loglike(self.resid, self.sigma_u_mle, self.nobs)
+        return var_loglike(self.resid, self.cov_resid_mle, self.nobs)
 
     @cache_readonly
     def stderr(self):
@@ -1558,7 +1604,7 @@ class VARResults(VARProcess):
         # mean = self.mean()
         k_ar = self.k_ar
         coefs = self.coefs
-        sigma_u = self.sigma_u
+        cov_resid = self.cov_resid
         intercept = self.intercept
         # df_model = self.df_model
         nobs = self.nobs
@@ -1572,7 +1618,7 @@ class VARResults(VARProcess):
 
         for i in range(repl):
             # discard first hundred to eliminate correct for starting bias
-            sim = util.varsim(coefs, intercept, sigma_u,
+            sim = util.varsim(coefs, intercept, cov_resid,
                               seed=seed, steps=nobs+burn)
             sim = sim[burn:]
             ma_coll[i, :, :, :] = fill_coll(sim)
@@ -1597,12 +1643,12 @@ class VARResults(VARProcess):
             return _B[i]
 
         phis = self.ma_rep(steps)
-        sig_u = self.sigma_u
+        cov_resid = self.cov_resid
 
         omegas = np.zeros((steps, self.neqs, self.neqs))
         for h in range(1, steps + 1):
             if h == 1:
-                omegas[h-1] = self.df_model * self.sigma_u
+                omegas[h-1] = self.df_model * self.cov_resid
                 continue
 
             om = omegas[h-1]
@@ -1611,7 +1657,7 @@ class VARResults(VARProcess):
                     Bi = bpow(h - 1 - i)
                     Bj = bpow(h - 1 - j)
                     mult = np.trace(chain_dot(Bi.T, Ginv, Bj, G))
-                    om += mult * chain_dot(phis[i], sig_u, phis[j].T)
+                    om += mult * chain_dot(phis[i], cov_resid, phis[j].T)
             omegas[h-1] = om
 
         return omegas
@@ -1644,8 +1690,8 @@ class VARResults(VARProcess):
         ----------
         periods : int
         var_decomp : ndarray (k x k), lower triangular
-            Must satisfy Omega = P P', where P is the passed matrix. Defaults to
-            Cholesky decomposition of Omega
+            Must satisfy cov_resid = P P', where P is the passed matrix. Defaults to
+            Cholesky decomposition of cov_resid
         var_order : sequence
             Alternate variable order for Cholesky decomposition
 
@@ -1883,9 +1929,9 @@ class VARResults(VARProcess):
 
         num_restr = len(causing) * len(caused)  # called N in Lutkepohl
 
-        sigma_u = self.sigma_u
-        vech_sigma_u = util.vech(sigma_u)
-        sig_mask = np.zeros(sigma_u.shape)
+        cov_resid = self.cov_resid
+        vech_cov_resid = util.vech(cov_resid)
+        sig_mask = np.zeros(cov_resid.shape)
         # set =1 twice to ensure, that all the ones needed are below the main
         # diagonal:
         sig_mask[causing_ind, caused_ind] = 1
@@ -1894,13 +1940,13 @@ class VARResults(VARProcess):
         inds = np.nonzero(vech_sig_mask)[0]
 
         # Make restriction matrix
-        C = np.zeros((num_restr, len(vech_sigma_u)), dtype=float)
+        C = np.zeros((num_restr, len(vech_cov_resid)), dtype=float)
         for row in range(num_restr):
             C[row, inds[row]] = 1
-        Cs = np.dot(C, vech_sigma_u)
+        Cs = np.dot(C, vech_cov_resid)
         d = np.linalg.pinv(duplication_matrix(k))
         Cd = np.dot(C, d)
-        middle = scipy.linalg.inv(chain_dot(Cd, np.kron(sigma_u, sigma_u), Cd.T)) / 2
+        middle = scipy.linalg.inv(chain_dot(Cd, np.kron(cov_resid, cov_resid), Cd.T)) / 2
 
         wald_statistic = t * chain_dot(Cs.T, middle, Cs)
         df = num_restr
@@ -2013,15 +2059,26 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def detomega(self):
+        """
+        detomega is deprecated. Use `det_cov_resid`
+        """
+        import warnings
+        warnings.warn("detomega is deprecated and will be removed in 0.11.0. "
+                      "Use det_cov_resid.", DeprecationWarning)
+        return self.det_cov_resid
+
+    @cache_readonly
+    def det_cov_resid(self):
         r"""
-        Return determinant of white noise covariance with degrees of freedom
-        correction:
+        Returns determinant of the cov_resid with degrees of freedom correction
 
         .. math::
 
             \hat \Omega = \frac{T}{T - Kp - 1} \hat \Omega_{\mathrm{MLE}}
+
+        where :math:`\Omega` is the covariance of the residuals
         """
-        return scipy.linalg.det(self.sigma_u)
+        return scipy.linalg.det(self.cov_resid)
 
     @cache_readonly
     def info_criteria(self):
@@ -2031,7 +2088,7 @@ class VARResults(VARProcess):
         lag_order = self.k_ar
         free_params = lag_order * neqs ** 2 + neqs * self.k_exog
 
-        ld = logdet_symm(self.sigma_u_mle)
+        ld = logdet_symm(self.cov_resid_mle)
 
         # See Lutkepohl pp. 146-150
 
@@ -2086,8 +2143,8 @@ class VARResults(VARProcess):
 class VARResultsWrapper(wrap.ResultsWrapper):
     _attrs = {'bse': 'columns_eq', 'cov_params': 'cov',
               'params': 'columns_eq', 'pvalues': 'columns_eq',
-              'tvalues': 'columns_eq', 'sigma_u': 'cov_eq',
-              'sigma_u_mle': 'cov_eq',
+              'tvalues': 'columns_eq', 'cov_resid': 'cov_eq',
+              'cov_resid_mle': 'cov_eq',
               'stderr': 'columns_eq'}
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
                                     _attrs)
