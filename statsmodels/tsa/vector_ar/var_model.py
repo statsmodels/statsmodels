@@ -474,7 +474,7 @@ def test_normality(results, signif=0.05):
                                 results.neqs*2, signif)
 
 
-class LagOrderResults:
+class LagOrderResults(object):
     """
     Results class for choosing a model's lag order.
 
@@ -488,29 +488,42 @@ class LagOrderResults:
         The keys are the strings ``"aic"``, ``"bic"``, ``"hqic"``, and
         ``"fpe"``. The corresponding value is an integer specifying the number
         of lags chosen according to a given criterion (key).
-    vecm : bool, default: `False`
-        `True` indicates that the model is a VECM. In case of a VAR model
-        this argument must be `False`.
 
     Notes
     -----
     In case of a VECM the shown lags are lagged differences.
     """
-    def __init__(self, ics, selected_orders, vecm=False):
-        self.title = ("VECM" if vecm else "VAR") + " Order Selection"
-        self.title += " (* highlights the minimums)"
+
+    def __init__(self, ics, selected_orders, vecm=None):
+        if vecm is not None:
+            # Deprecated in 0.10.0, remove in 0.11.0
+            import warnings
+            warnings.warn('vecm is deprecated and instance type is '
+                          'automatically detected.', DeprecationWarning)
+        # Circular import delay
+        from statsmodels.tsa.vector_ar.vecm import VECMResults
+        self.vecm = isinstance(self, VECMResults)
+        self.title = ('VECM' if self.vecm else 'VAR') + ' Order Selection'
+        self.title += ' (* highlights the minimums)'
         self.ics = ics
         self.selected_orders = selected_orders
-        self.vecm = vecm
-        self.aic = selected_orders["aic"]
-        self.bic = selected_orders["bic"]
-        self.hqic = selected_orders["hqic"]
-        self.fpe = selected_orders["fpe"]
+        self.aic = selected_orders['aic']
+        self.bic = selected_orders['bic']
+        self.hqic = selected_orders['hqic']
+        self.fpe = selected_orders['fpe']
 
-    def summary(self):  # basically copied from (now deleted) print_ic_table()
+    def summary(self):
+        """
+        Summary of information criteria
+
+        Returns
+        -------
+        summ : SimpleTable
+            Table that supports printing results or export
+        """
         cols = sorted(self.ics)  # ["aic", "bic", "hqic", "fpe"]
-        str_data = np.array([["%#10.4g" % v for v in self.ics[c]] for c in cols],
-                       dtype=object).T
+        str_data = [['{:10.4g}'.format(v) for v in self.ics[c]] for c in cols]
+        str_data = np.array(str_data, dtype=object).T
         # mark minimum with an asterisk
         for i, col in enumerate(cols):
             idx = int(self.selected_orders[col]), i
@@ -520,12 +533,12 @@ class LagOrderResults:
 
     def __str__(self):
         return "<" + self.__module__ + "." + self.__class__.__name__ \
-                   + " object. Selected orders are: AIC -> " + str(self.aic) \
-                   + ", BIC -> " + str(self.bic)  \
-                   + ", FPE -> " + str(self.fpe) \
-                   + ", HQIC -> " + str(self.hqic) + ">"
+               + " object. Selected orders are: AIC -> " + str(self.aic) \
+               + ", BIC -> " + str(self.bic) \
+               + ", FPE -> " + str(self.fpe) \
+               + ", HQIC -> " + str(self.hqic) + ">"
 
-# -------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
 
 
