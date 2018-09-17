@@ -1528,7 +1528,8 @@ class VARResults(VARProcess):
         return fc_cov
 
     # Monte Carlo irf standard errors
-    def irf_errband_mc(self, orth=False, repl=1000, T=10,
+    @deprecate_kwarg('T', 'horizon')
+    def irf_errband_mc(self, orth=False, repl=1000, horizon=10,
                        signif=0.05, seed=None, burn=100, cum=False):
         """
         Compute Monte Carlo integrated error bands assuming normally
@@ -1537,10 +1538,10 @@ class VARResults(VARProcess):
         Parameters
         ----------
         orth: bool, default False
-            Compute orthoganalized impulse response error bands
+            Compute orthogonalized impulse response error bands
         repl: int
             number of Monte Carlo replications to perform
-        T: int, default 10
+        horizon: int, default 10
             number of impulse response periods
         signif: float (0 < signif <1)
             Significance level for error bars, defaults to 95% CI
@@ -1559,7 +1560,7 @@ class VARResults(VARProcess):
         -------
         Tuple of lower and upper arrays of ma_rep monte carlo standard errors
         """
-        ma_coll = self.irf_resim(orth=orth, repl=repl, T=T,
+        ma_coll = self.irf_resim(orth=orth, repl=repl, horizon=horizon,
                                  seed=seed, burn=burn, cum=cum)
 
         ma_sort = np.sort(ma_coll, axis=0)  # sort to get quantiles
@@ -1570,8 +1571,9 @@ class VARResults(VARProcess):
         upper = ma_sort[upp_idx, :, :, :]
         return lower, upper
 
-    def irf_resim(self, orth=False, repl=1000, T=10,
-                      seed=None, burn=100, cum=False):
+    @deprecate_kwarg('T', 'horizon')
+    def irf_resim(self, orth=False, repl=1000, horizon=10, seed=None,
+                  burn=100, cum=False):
         """
         Simulates impulse response function, returning an array of simulations.
         Used for Sims-Zha error band calculation.
@@ -1582,10 +1584,8 @@ class VARResults(VARProcess):
             Compute orthoganalized impulse response error bands
         repl: int
             number of Monte Carlo replications to perform
-        T: int, default 10
+        horizon: int, default 10
             number of impulse response periods
-        signif: float (0 < signif <1)
-            Significance level for error bars, defaults to 95% CI
         seed: int
             np.random.seed for replications
         burn: int
@@ -1595,7 +1595,8 @@ class VARResults(VARProcess):
 
         Notes
         -----
-        Sims, Christoper A., and Tao Zha. 1999. "Error Bands for Impulse Response." Econometrica 67: 1113-1155.
+        .. [*] Sims, Christoper A., and Tao Zha. 1999. "Error Bands for Impulse
+           Response." Econometrica 67: 1113-1155.
 
         Returns
         -------
@@ -1611,12 +1612,16 @@ class VARResults(VARProcess):
         # df_model = self.df_model
         nobs = self.nobs
 
-        ma_coll = np.zeros((repl, T+1, neqs, neqs))
+        ma_coll = np.zeros((repl, horizon + 1, neqs, neqs))
 
-        def fill_coll(sim):
-            ret = VAR(sim, exog=self.exog).fit(maxlags=k_ar, trend=self.trend)
-            ret = ret.orth_ma_rep(maxn=T) if orth else ret.ma_rep(maxn=T)
-            return ret.cumsum(axis=0) if cum else ret
+        def fill_coll(simulation):
+            ret = VAR(simulation, exog=self.exog).fit(maxlags=k_ar,
+                                                      trend=self.trend)
+            if orth:
+                rep = ret.orth_ma_rep(maxn=horizon)
+            else:
+                rep = ret.ma_rep(maxn=horizon)
+            return rep.cumsum(axis=0) if cum else rep
 
         for i in range(repl):
             # discard first hundred to eliminate correct for starting bias
