@@ -3,7 +3,6 @@
 Test VAR Model
 """
 import warnings
-# pylint: disable=W0612,W0231
 from statsmodels.compat.python import (iteritems, StringIO, lrange, BytesIO,
                                        range)
 
@@ -13,14 +12,6 @@ from collections import defaultdict
 
 import numpy as np
 import pytest
-
-try:
-    import matplotlib  # noqa: F401
-    from distutils.version import LooseVersion
-    MATPLOTLIB_GT_15 = LooseVersion(matplotlib.__version__) >= '1.5.0'
-except ImportError:
-    MATPLOTLIB_GT_15 = False
-
 
 import statsmodels.api as sm
 import statsmodels.tsa.vector_ar.util as util
@@ -643,7 +634,7 @@ class TestVARExtras(object):
         data = np.diff(np.log(data), axis=0) * 400
         cls.res0 = sm.tsa.VAR(data).fit(maxlags=2)
 
-    def test_process(self, close_figures):
+    def test_process(self):
         res0 = self.res0
         k_ar = res0.k_ar
         fc20 = res0.forecast(res0.endog[-k_ar:], 20)
@@ -671,31 +662,34 @@ class TestVARExtras(object):
         assert_equal(res0.k_exog, 1)
         assert_equal(res0.k_ar, 2)
 
+    @pytest.mark.matplotlib
+    def test_process_plotting(self, close_figures):
+        res0 = self.res0
+        k_ar = res0.k_ar
+        fc20 = res0.forecast(res0.endog[-k_ar:], 20)
         irf = res0.irf()
 
-        # partially SMOKE test
-        if MATPLOTLIB_GT_15:
-            res0.plotsim()
-            res0.plot_acorr()
+        res0.plot_sim()
+        res0.plot_acorr()
 
-            fig = res0.plot_forecast(20)
-            fcp = fig.axes[0].get_children()[1].get_ydata()[-20:]
-            # Note values are equal, but keep rtol buffer
-            assert_allclose(fc20[:, 0], fcp, rtol=1e-13)
-            fcp = fig.axes[1].get_children()[1].get_ydata()[-20:]
-            assert_allclose(fc20[:, 1], fcp, rtol=1e-13)
-            fcp = fig.axes[2].get_children()[1].get_ydata()[-20:]
-            assert_allclose(fc20[:, 2], fcp, rtol=1e-13)
+        fig = res0.plot_forecast(20)
+        fcp = fig.axes[0].get_children()[1].get_ydata()[-20:]
+        # Note values are equal, but keep rtol buffer
+        assert_allclose(fc20[:, 0], fcp, rtol=1e-13)
+        fcp = fig.axes[1].get_children()[1].get_ydata()[-20:]
+        assert_allclose(fc20[:, 1], fcp, rtol=1e-13)
+        fcp = fig.axes[2].get_children()[1].get_ydata()[-20:]
+        assert_allclose(fc20[:, 2], fcp, rtol=1e-13)
 
-            fig_asym = irf.plot()
-            fig_mc = irf.plot(stderr_type='mc', repl=1000, seed=987128)
+        fig_asym = irf.plot()
+        fig_mc = irf.plot(stderr_type='mc', repl=1000, seed=987128)
 
-            for k in range(3):
-                a = fig_asym.axes[1].get_children()[k].get_ydata()
-                m = fig_mc.axes[1].get_children()[k].get_ydata()
-                # use m as desired because it is larger
-                # a is for some irf much smaller than m
-                assert_allclose(a, m, atol=0.1, rtol=0.9)
+        for k in range(3):
+            a = fig_asym.axes[1].get_children()[k].get_ydata()
+            m = fig_mc.axes[1].get_children()[k].get_ydata()
+            # use m as desired because it is larger
+            # a is for some irf much smaller than m
+            assert_allclose(a, m, atol=0.1, rtol=0.9)
 
     def test_forecast_cov(self):
         # forecast_cov can include parameter uncertainty if contant-only
@@ -785,9 +779,9 @@ def test_deprecation_warnings(bivariate_var):
     with pytest.warns(DeprecationWarning):
         LagOrderResults(ics, selected_orders, vecm=True)
     with pytest.warns(DeprecationWarning):
-        mod.fit(verbose=True)
-    with pytest.warns(DeprecationWarning):
         res.detomega
+    with pytest.warns(DeprecationWarning):
+        mod.fit(verbose=True)
 
 
 def test_var_single_series(bivariate_var):
@@ -797,6 +791,7 @@ def test_var_single_series(bivariate_var):
         VAR(bivariate_var[:, [0]])
 
 
+@pytest.mark.matplotlib
 def test_plots_smoke(bivariate_var, close_figures):
     mod = VAR(bivariate_var)
     res = mod.fit()

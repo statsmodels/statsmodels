@@ -52,12 +52,7 @@ class DataSet(object):
 
 atol = 0.0005  # absolute tolerance
 rtol = 0  # relative tolerance
-datasets = []
 data = {}
-results_ref = {}
-results_sm = {}
-results_sm_exog = {}
-results_sm_exog_coint = {}
 coint_rank = 1
 
 debug_mode = False
@@ -175,21 +170,22 @@ def build_err_msg(ds, dt_s, parameter_str):
     return err_msg
 
 
-def setup():
-    datasets.append(
-        DataSet(e6, [0, 4], [0, 1], ["Dp", "R"]),
-        # DataSet(...) TODO: append more data sets for more test cases.
-    )
+datasets = []
+results_ref = {}
+results_sm = {}
+results_sm_exog = {}
+results_sm_exog_coint = {}
+datasets.append(
+    DataSet(e6, [0, 4], [0, 1], ["Dp", "R"]),
+    # DataSet(...) TODO: append more data sets for more test cases.
+)
 
-    for ds in datasets:
-        load_data(ds, data)
-        results_ref[ds] = load_results_jmulti(ds)
-        results_sm[ds] = load_results_statsmodels(ds)
-        results_sm_exog[ds] = load_results_statsmodels_exog(ds)
-        results_sm_exog_coint[ds] = load_results_statsmodels_exog_coint(ds)
-
-
-setup()
+for ds in datasets:
+    load_data(ds, data)
+    results_ref[ds] = load_results_jmulti(ds)
+    results_sm[ds] = load_results_statsmodels(ds)
+    results_sm_exog[ds] = load_results_statsmodels_exog(ds)
+    results_sm_exog_coint[ds] = load_results_statsmodels_exog_coint(ds)
 
 
 def test_ml_gamma():
@@ -704,35 +700,48 @@ def test_var_rep():
                 assert_equal(obtained_exog_coint, obtained, "WITH EXOG_COINT" + err_msg)
 
 
-def test_var_to_vecm(close_figures):
-    if debug_mode:
-        if "VAR to VEC representation" not in to_test:  # pragma: no cover
-            return
-        print("\n\nVAR TO VEC", end="")
-    for ds in datasets:
-        for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
+@pytest.mark.parametrize('dataset', datasets)
+def test_var_to_vecm(dataset):
+    ds = dataset
+    for dt in ds.dt_s_list:
+        if debug_mode:
+            print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
-            err_msg = build_err_msg(ds, dt, "VAR to VEC representation")
-            cov_resid = results_sm[ds][dt].cov_resid
-            coefs = results_sm[ds][dt].var_rep
-            intercept = np.zeros(len(cov_resid))
-            # Note: _params_info k_trend, k_exog, ... is inferred with defaults
-            var = VARProcess(coefs, intercept, cov_resid)
-            vecm_results = var.to_vecm()
-            obtained_pi = vecm_results["Pi"]
-            obtained_gamma = vecm_results["Gamma"]
+        err_msg = build_err_msg(ds, dt, "VAR to VEC representation")
+        cov_resid = results_sm[ds][dt].cov_resid
+        coefs = results_sm[ds][dt].var_rep
+        intercept = np.zeros(len(cov_resid))
+        # Note: _params_info k_trend, k_exog, ... is inferred with defaults
+        var = VARProcess(coefs, intercept, cov_resid)
+        vecm_results = var.to_vecm()
+        obtained_pi = vecm_results["Pi"]
+        obtained_gamma = vecm_results["Gamma"]
 
-            desired_pi = np.dot(results_sm[ds][dt].alpha,
-                                results_sm[ds][dt].beta.T)
-            desired_gamma = results_sm[ds][dt].gamma
-            assert_allclose(obtained_pi, desired_pi, rtol, atol, False, err_msg + " Pi")
-            assert_allclose(obtained_gamma, desired_gamma, rtol, atol, False, err_msg + " Gamma")
-            assert 'VAR(4) process' in var.__str__()
-            # Smoke test plotting
-            var.plot_acorr()
+        desired_pi = np.dot(results_sm[ds][dt].alpha,
+                            results_sm[ds][dt].beta.T)
+        desired_gamma = results_sm[ds][dt].gamma
+        assert_allclose(obtained_pi, desired_pi, rtol, atol, False, err_msg + " Pi")
+        assert_allclose(obtained_gamma, desired_gamma, rtol, atol, False, err_msg + " Gamma")
+        assert 'VAR(4) process' in var.__str__()
 
+
+@pytest.mark.matplotlib
+@pytest.mark.parametrize('dataset', datasets)
+def test_var_to_vecm_plotting(close_figures, dataset):
+    ds = dataset
+
+    for dt in ds.dt_s_list:
+        if debug_mode:
+            print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
+
+        err_msg = build_err_msg(ds, dt, "VAR to VEC representation")
+        cov_resid = results_sm[ds][dt].cov_resid
+        coefs = results_sm[ds][dt].var_rep
+        intercept = np.zeros(len(cov_resid))
+        # Note: _params_info k_trend, k_exog, ... is inferred with defaults
+        var = VARProcess(coefs, intercept, cov_resid)
+        # Smoke test plotting
+        var.plot_acorr()
 
 # Commented out since JMulTi shows the same det. terms for both VEC & VAR repr.
 # def test_var_rep_det():

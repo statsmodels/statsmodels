@@ -726,7 +726,6 @@ class VAR(tsbase.TimeSeriesModel):
         predictedvalues[pv_end:] = forecast(y, coefs, intercept, out_of_sample)
         return predictedvalues
 
-    @deprecate_kwarg('verbose', None)
     def fit(self, maxlags=None, method='ols', ic=None, trend='c',
             verbose=None):
         """
@@ -1717,7 +1716,7 @@ class VARResults(VARProcess):
         import warnings
         warnings.warn('sigma_u_mle has been deprecated in favor of '
                       'cov_resid_mle', DeprecationWarning)
-        return self.cov_resid
+        return self.cov_resid_mle
 
     @cache_readonly
     def cov_resid_mle(self):
@@ -1756,7 +1755,8 @@ class VARResults(VARProcess):
         return self.cov_sample_mean()
 
     def cov_sample_mean(self):
-        r"""Asymptotically consistent estimate of covariance of the sample mean
+        r"""
+        Asymptotically covariance of the sample mean estimator
 
         .. math::
 
@@ -2100,7 +2100,7 @@ class VARResults(VARProcess):
             return rep.cumsum(axis=0) if cum else rep
 
         for i in range(repl):
-            # discard first hundred to eliminate correct for starting bias
+            # discard first burn to eliminate correct for starting bias
             sim = util.varsim(coefs, intercept, cov_resid,
                               seed=seed, steps=nobs+burn)
             sim = sim[burn:]
@@ -2355,6 +2355,10 @@ class VARResults(VARProcess):
         -------
         results : CausalityTestResults
             A class holding the test's results.
+
+        See also
+        --------
+        statsmodels.tsa.vector_ar.hypothesis_test_results.CausalityTestResults
 
         References
         ----------
@@ -2821,6 +2825,7 @@ class FEVD(object):
         self.decomp = fevd.swapaxes(0, 1)
 
     def summary(self):
+        """Summary text for the forecast error decomposition"""
         buf = StringIO()
 
         rng = lrange(self.periods)
@@ -2830,7 +2835,7 @@ class FEVD(object):
             buf.write('FEVD for %s\n' % self.endog_names[i])
             buf.write(ppm + '\n')
 
-        print(buf.getvalue())
+        return buf.getvalue()
 
     def cov(self):
         """Compute asymptotic standard errors
