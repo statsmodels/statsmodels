@@ -160,22 +160,29 @@ def _var_acf(coefs, cov_resid):
     """
     Compute autocovariance function ACF_y(h) for h=1,...,p
 
+    Parameters
+    ----------
+    coefs : ndarray (p x k x k)
+        Coefficient matrices A_i
+    cov_resid : ndarray (k x k)
+        Covariance of white noise process u_t
+
     Notes
     -----
     Lütkepohl (2005) p.29
     """
     p, k, k2 = coefs.shape
-    assert(k == k2)
 
-    A = util.comp_matrix(coefs)
+    a = util.comp_matrix(coefs)
     # construct VAR(1) noise covariance
-    SigU = np.zeros((k*p, k*p))
-    SigU[:k, :k] = cov_resid
+    companion_cov_resid = np.zeros((k * p, k * p))
+    companion_cov_resid[:k, :k] = cov_resid
 
     # vec(ACF) = (I_(kp)^2 - kron(A, A))^-1 vec(Sigma_U)
-    vecACF = scipy.linalg.solve(np.eye((k*p)**2) - np.kron(A, A), vec(SigU))
+    vec_acf = scipy.linalg.solve(np.eye((k * p) ** 2) - np.kron(a, a),
+                                 vec(companion_cov_resid))
 
-    acf = unvec(vecACF)
+    acf = unvec(vec_acf)
     acf = acf[:k].T.reshape((p, k, k))
 
     return acf
@@ -456,11 +463,11 @@ def test_normality(results, signif=0.05):
     """
     resid_c = results.resid - results.resid.mean(0)
     sig = np.dot(resid_c.T, resid_c) / results.nobs
-    Pinv = np.linalg.inv(np.linalg.cholesky(sig))
+    p_inv = np.linalg.inv(np.linalg.cholesky(sig))
 
-    w = np.dot(Pinv, resid_c.T)
-    b1 = (w**3).sum(1)[:, None] / results.nobs
-    b2 = (w**4).sum(1)[:, None] / results.nobs - 3
+    w = np.dot(p_inv, resid_c.T)
+    b1 = (w ** 3).sum(1)[:, None] / results.nobs
+    b2 = (w ** 4).sum(1)[:, None] / results.nobs - 3
 
     lam_skew = results.nobs * np.dot(b1.T, b1) / 6
     lam_kurt = results.nobs * np.dot(b2.T, b2) / 24
@@ -471,7 +478,7 @@ def test_normality(results, signif=0.05):
     crit_omni = float(omni_dist.ppf(1 - signif))
 
     return NormalityTestResults(lam_omni, crit_omni, omni_pvalue,
-                                results.neqs*2, signif)
+                                results.neqs * 2, signif)
 
 
 class LagOrderResults(object):
@@ -597,14 +604,16 @@ class VAR(tsbase.TimeSeriesModel):
         if k_trend != 0:
             intercept = params[:k_trend]
             predictedvalues += intercept
+        else:
+            intercept = np.empty((0,))
 
-        y = self.y
-        X = util.get_var_endog(y, lags, trend=trend, has_constant='raise')
-        fittedvalues = np.dot(X, params)
+        y = self.endog
+        x = util.get_var_endog(y, lags, trend=trend, has_constant='raise')
+        fittedvalues = np.dot(x, params)
 
         fv_start = start - k_ar
         pv_end = min(len(predictedvalues), len(fittedvalues) - fv_start)
-        fv_end = min(len(fittedvalues), end-k_ar+1)
+        fv_end = min(len(fittedvalues), end - k_ar + 1)
         predictedvalues[:pv_end] = fittedvalues[fv_start:fv_end]
 
         if not out_of_sample:
@@ -686,9 +695,9 @@ class VAR(tsbase.TimeSeriesModel):
         if self.exog is not None:
             x_names_to_add = [("exog%d" % i)
                               for i in range(self.exog.shape[1])]
-            self.data.xnames = self.data.xnames[:k_trend] + \
-                               x_names_to_add + \
-                               self.data.xnames[k_trend:]
+            self.data.xnames = (self.data.xnames[:k_trend] +
+                                x_names_to_add +
+                                self.data.xnames[k_trend:])
 
         return self._estimate_var(lags, trend=trend)
 
@@ -782,11 +791,8 @@ class VAR(tsbase.TimeSeriesModel):
         selections : LagOrderResults
         """
         if maxlags is None:
-            maxlags = int(round(12*(len(self.endog)/100.)**(1/4.)))
-            # TODO: This expression shows up in a bunch of places, but
-            # in some it is `int` and in others `np.ceil`.  Also in some
-            # it multiplies by 4 instead of 12.  Let's put these all in
-            # one place and document when to use which variant.
+            # TODO: Consider using a function for this common lag length
+            maxlags = int(round(12 * (len(self.endog) / 100.)**(1 / 4.)))
 
         ics = defaultdict(list)
         p_min = 0 if self.exog is not None or trend != "nc" else 1
@@ -859,8 +865,8 @@ class VARProcess(object):
             self.intercept = np.zeros(self.neqs)
 
     def get_eq_index(self, name):
-        "Return integer position of requested equation name"
-        return util.get_index(self.names, name)
+        """Return integer position of requested equation name"""
+        return util.get_index(self.model.endog_names, name)
 
     def __str__(self):
         output = ('VAR(%d) process for %d-dimensional response y_t'
@@ -996,19 +1002,7 @@ class VARProcess(object):
         """
         return np.linalg.solve(self._char_mat, self.intercept)
 
-    def mean(self):
-        r"""Long run intercept of stable VAR process
-
-        Warning: trend and exog except for intercept are ignored for this.
-        This might change in future versions.
-
-        Lütkepohl eq. 2.1.23
-
-        .. math:: \mu = (I - A_1 - \dots - A_p)^{-1} \alpha
-
-        where \alpha is the intercept (parameter of the constant)
-        """
-        return self.intercept_longrun()
+    mean = intercept_longrun
 
     def ma_rep(self, maxn=10):
         r"""Compute MA(:math:`\infty`) coefficient matrices
@@ -1184,7 +1178,8 @@ class VARProcess(object):
         -------
         (mid, lower, upper) : (ndarray, ndarray, ndarray)
         """
-        assert(0 < alpha < 1)
+        if not 0 < alpha < 1:
+            raise ValueError('alpha must be between 0 and 1')
         q = util.norm_signif_level(alpha)
 
         point_forecast = self.forecast(y, steps, exog_future=exog_future)
@@ -1207,7 +1202,29 @@ class VARProcess(object):
         return {"Gamma": gamma, "Pi": pi}
 
 # -------------------------------------------------------------------------------
-# VARResults class
+# VARResults class and utilities
+
+
+def _acovs_to_acorrs(acovs):
+    """Convert 3-d array of autocovariances to autocorrelations"""
+    sd = np.sqrt(np.diag(acovs[0]))
+    return acovs / np.outer(sd, sd)
+
+
+def _compute_acov(x, nlags=1):
+    """Multivariate sample autocovariances"""
+    x = x - x.mean(0)
+
+    result = []
+    for lag in range(nlags + 1):
+        if lag > 0:
+            r = np.dot(x[lag:].T, x[:-lag])
+        else:
+            r = np.dot(x.T, x)
+
+        result.append(r)
+
+    return np.array(result) / len(x)
 
 
 class VARResults(VARProcess):
@@ -1285,12 +1302,11 @@ class VARResults(VARProcess):
                  model=None, trend='c', names=None, dates=None, exog=None):
 
         self.model = model
-        self.y = self.endog = endog   # keep alias for now
-        self.ys_lagged = self.endog_lagged = endog_lagged  # keep alias for now
-        # TODO: Let's finally remove these aliases
+        self.endog = endog
+        self.endog_lagged = endog_lagged
         self.dates = dates
 
-        self.n_totobs, neqs = self.y.shape
+        self.n_totobs, neqs = self.endog.shape
         self.nobs = self.n_totobs - lag_order
         self.trend = trend
         k_trend = util.get_trendorder(trend)
@@ -1326,9 +1342,9 @@ class VARResults(VARProcess):
                                          _params_info=_params_info)
 
     def plot(self):
-        """Plot input time series
-        """
-        return plotting.plot_mts(self.y, names=self.names, index=self.dates)
+        """Plot input time series"""
+        return plotting.plot_mts(self.endog, names=self.names,
+                                 index=self.dates)
 
     @property
     def df_model(self):
@@ -1343,18 +1359,35 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def fittedvalues(self):
-        """The predicted insample values of the response variables of the model.
         """
-        return np.dot(self.ys_lagged, self.params)
+        The predicted in-sample values of the response variables of the model.
+        """
+        return np.dot(self.endog_lagged, self.params)
 
     @cache_readonly
     def resid(self):
-        """Residuals of response variable resulting from estimated coefficients
         """
-        return self.y[self.k_ar:] - self.fittedvalues
+        Residuals of response variable resulting from estimated coefficients.
+        """
+        return self.endog[self.k_ar:] - self.fittedvalues
 
     def sample_acov(self, nlags=1):
-        return _compute_acov(self.y[self.k_ar:], nlags=nlags)
+        """
+        Sample autocovariances of endog
+
+        Parameters
+        ----------
+        nlags : int
+            The number of lags to include. Does not count the zero lag, which
+            will be returned.
+
+        Returns
+        -------
+        acov : ndarray
+            The autocovariace including the zero lag. Shape is
+            (nlags + 1, neqs, neqs).
+        """
+        return _compute_acov(self.endog[self.k_ar:], nlags=nlags)
 
     def sample_acorr(self, nlags=1):
         acovs = self.sample_acov(nlags=nlags)
@@ -1452,7 +1485,7 @@ class VARResults(VARProcess):
         Adjusted to be an unbiased estimator
         Ref: Lütkepohl p.74-75
         """
-        z = self.ys_lagged
+        z = self.endog_lagged
         return np.kron(scipy.linalg.inv(np.dot(z.T, z)), self.cov_resid)
 
     def cov_ybar(self):
@@ -1469,9 +1502,8 @@ class VARResults(VARProcess):
         -----
         Lütkepohl Proposition 3.3
         """
-
-        Ainv = scipy.linalg.inv(np.eye(self.neqs) - self.coefs.sum(0))
-        return chain_dot(Ainv, self.cov_resid, Ainv.T)
+        a_inv = scipy.linalg.inv(np.eye(self.neqs) - self.coefs.sum(0))
+        return chain_dot(a_inv, self.cov_resid, a_inv.T)
 
     # ------------------------------------------------------------
     # Estimation-related things
@@ -1479,7 +1511,7 @@ class VARResults(VARProcess):
     @cache_readonly
     def _zz(self):
         # Z'Z
-        return np.dot(self.ys_lagged.T, self.ys_lagged)
+        return np.dot(self.endog_lagged.T, self.endog_lagged)
 
     @property
     def _cov_params_ex_trend(self):
@@ -1495,11 +1527,11 @@ class VARResults(VARProcess):
         """
         Estimated covariance matrix of vech(cov_resid)
         """
-        D_K = tsa.duplication_matrix(self.neqs)
-        D_Kinv = np.linalg.pinv(D_K)
+        d_k = tsa.duplication_matrix(self.neqs)
+        d_k_inv = np.linalg.pinv(d_k)
 
         sigxsig = np.kron(self.cov_resid, self.cov_resid)
-        return 2 * chain_dot(D_Kinv, sigxsig, D_Kinv.T)
+        return 2 * chain_dot(d_k_inv, sigxsig, d_k_inv.T)
 
     @cache_readonly
     def llf(self):
@@ -1565,10 +1597,11 @@ class VARResults(VARProcess):
         """
         Plot forecast
         """
-        mid, lower, upper = self.forecast_interval(self.y[-self.k_ar:], steps,
-                                                   alpha=alpha)
-        fig = plotting.plot_var_forc(self.y, mid, lower, upper,
-                                     names=self.names, plot_stderr=plot_stderr)
+        mid, lower, upper = self.forecast_interval(self.endog[-self.k_ar:],
+                                                   steps, alpha=alpha)
+        fig = plotting.plot_var_forc(self.endog, mid, lower, upper,
+                                     names=self.model.endog_names,
+                                     plot_stderr=plot_stderr)
         return fig
 
     # Forecast error covariance functions
@@ -1777,8 +1810,8 @@ class VARResults(VARProcess):
         upper[:, :self.k_exog] = np.eye(self.k_exog)
 
         lower_dim = self.neqs * (self.k_ar - 1)
-        I = np.eye(lower_dim)
-        lower = np.column_stack((np.zeros((lower_dim, self.k_exog)), I,
+        eye = np.eye(lower_dim)
+        lower = np.column_stack((np.zeros((lower_dim, self.k_exog)), eye,
                                  np.zeros((lower_dim, self.neqs))))
 
         return np.vstack((upper, self.params.T, lower))
@@ -1822,7 +1855,7 @@ class VARResults(VARProcess):
         -------
         fevd : FEVD instance
         """
-        return FEVD(self, P=var_decomp, periods=periods)
+        return FEVD(self, p=var_decomp, periods=periods)
 
     def reorder(self, order):
         """Reorder variables for structural specification
@@ -1833,8 +1866,8 @@ class VARResults(VARProcess):
         # This converts order to list of integers if given as strings
         if isinstance(order[0], string_types):
             order_new = []
-            for i, nam in enumerate(order):
-                order_new.append(self.names.index(order[i]))
+            for name in order:
+                order_new.append(self.names.index(name))
             order = order_new
         return _reordered(self, order)
 
@@ -1911,8 +1944,7 @@ class VARResults(VARProcess):
                                 "a sequence of these types) or None.")
             causing = [self.names[c] if type(c) == int else c for c in causing]
             causing_ind = [util.get_index(self.names, c) for c in causing]
-
-        if causing is None:
+        else:  # causing is None
             causing_ind = [i for i in range(self.neqs) if i not in caused_ind]
             causing = [self.names[c] for c in caused_ind]
 
@@ -1923,21 +1955,21 @@ class VARResults(VARProcess):
         num_det_terms = self.k_exog
 
         # Make restriction matrix
-        C = np.zeros((num_restr, k * num_det_terms + k**2 * p), dtype=float)
+        c = np.zeros((num_restr, k * num_det_terms + k ** 2 * p), dtype=float)
         cols_det = k * num_det_terms
         row = 0
         for j in range(p):
             for ing_ind in causing_ind:
                 for ed_ind in caused_ind:
-                    C[row, cols_det + ed_ind + k * ing_ind + k**2 * j] = 1
+                    c[row, cols_det + ed_ind + k * ing_ind + k ** 2 * j] = 1
                     row += 1
 
-        # Lutkepohl 3.6.5
-        Cb = np.dot(C, vec(self.params.T))
-        middle = scipy.linalg.inv(chain_dot(C, self.cov_params, C.T))
+        # Lütkepohl 3.6.5
+        c_b = np.dot(c, vec(self.params.T))
+        middle = scipy.linalg.inv(chain_dot(c, self.cov_params, c.T))
 
         # wald statistic
-        lam_wald = statistic = chain_dot(Cb, middle, Cb)
+        lam_wald = statistic = chain_dot(c_b, middle, c_b)
 
         if kind.lower() == 'wald':
             df = num_restr
@@ -1952,9 +1984,9 @@ class VARResults(VARProcess):
         pvalue = dist.sf(statistic)
         crit_value = dist.ppf(1 - signif)
 
-        return CausalityTestResults(causing, caused, statistic,
-                                    crit_value, pvalue, df, signif,
-                                    test="granger", method=kind)
+        return CausalityTestResults(causing, caused, statistic, crit_value,
+                                    pvalue, df, signif, test="granger",
+                                    method=kind)
 
     def test_inst_causality(self, causing, signif=0.05):
         """
@@ -1970,8 +2002,6 @@ class VARResults(VARProcess):
         signif : float between 0 and 1, default 5 %
             Significance level for computing critical values for test,
             defaulting to standard 0.05 level
-        verbose : bool
-            If True, print a table with the results.
 
         Returns
         -------
@@ -2034,9 +2064,9 @@ class VARResults(VARProcess):
         caused = [self.names[c] for c in caused_ind]
 
         # Note: JMulTi seems to be using k_ar+1 instead of k_ar
-        k, t, p = self.neqs, self.nobs, self.k_ar
+        k, t = self.neqs, self.nobs
 
-        num_restr = len(causing) * len(caused)  # called N in Lutkepohl
+        num_restr = len(causing) * len(caused)  # called N in Lütkepohl
 
         cov_resid = self.cov_resid
         vech_cov_resid = util.vech(cov_resid)
@@ -2049,15 +2079,16 @@ class VARResults(VARProcess):
         inds = np.nonzero(vech_sig_mask)[0]
 
         # Make restriction matrix
-        C = np.zeros((num_restr, len(vech_cov_resid)), dtype=float)
+        c = np.zeros((num_restr, len(vech_cov_resid)), dtype=float)
         for row in range(num_restr):
-            C[row, inds[row]] = 1
-        Cs = np.dot(C, vech_cov_resid)
+            c[row, inds[row]] = 1
+        c_s = np.dot(c, vech_cov_resid)
         d = np.linalg.pinv(duplication_matrix(k))
-        Cd = np.dot(C, d)
-        middle = scipy.linalg.inv(chain_dot(Cd, np.kron(cov_resid, cov_resid), Cd.T)) / 2
+        c_d = np.dot(c, d)
+        middle = scipy.linalg.inv(chain_dot(c_d, np.kron(cov_resid, cov_resid),
+                                            c_d.T)) / 2
 
-        wald_statistic = t * chain_dot(Cs.T, middle, Cs)
+        wald_statistic = t * chain_dot(c_s.T, middle, c_s)
         df = num_restr
         dist = stats.chi2(df)
 
@@ -2360,77 +2391,7 @@ class FEVD(object):
             ax.set_title(self.endog_names[i])
 
         # just use the last axis to get handles for plotting
-        handles, labels = ax.get_legend_handles_labels()
+        handles, labels = axes[-1].get_legend_handles_labels()
         fig.legend(handles, labels, loc='upper right')
         plotting.adjust_subplots(right=0.85)
         return fig
-
-# -------------------------------------------------------------------------------
-
-
-def _compute_acov(x, nlags=1):
-    x = x - x.mean(0)
-
-    result = []
-    for lag in range(nlags + 1):
-        if lag > 0:
-            r = np.dot(x[lag:].T, x[:-lag])
-        else:
-            r = np.dot(x.T, x)
-
-        result.append(r)
-
-    return np.array(result) / len(x)
-
-
-def _acovs_to_acorrs(acovs):
-    sd = np.sqrt(np.diag(acovs[0]))
-    return acovs / np.outer(sd, sd)
-
-
-if __name__ == '__main__':
-    from statsmodels.tsa.vector_ar.util import parse_lutkepohl_data
-    import statsmodels.tools.data as data_util
-
-    np.set_printoptions(linewidth=140, precision=5)
-
-    sdata, dates = parse_lutkepohl_data('data/%s.dat' % 'e1')
-
-    names = sdata.dtype.names
-    data = data_util.struct_to_ndarray(sdata)
-    adj_data = np.diff(np.log(data), axis=0)
-    # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
-    model = VAR(adj_data[:-16], dates=dates[1:-16], names=names)
-    # model = VAR(adj_data[:-16], dates=dates[1:-16], names=names)
-
-    est = model.fit(maxlags=2)
-    irf = est.irf()
-
-    y = est.y[-2:]
-    """
-    # irf.plot_irf()
-
-    # i = 2; j = 1
-    # cv = irf.cum_effect_cov(orth=True)
-    # print np.sqrt(cv[:, j * 3 + i, j * 3 + i]) / 1e-2
-
-    # data = np.genfromtxt('Canada.csv', delimiter=',', names=True)
-    # data = data.view((float, 4))
-    """
-
-    '''
-    mdata = sm.datasets.macrodata.load(as_pandas=False).data
-    mdata2 = mdata[['realgdp','realcons','realinv']]
-    names = mdata2.dtype.names
-    data = mdata2.view((float,3))
-    data = np.diff(np.log(data), axis=0)
-
-    import pandas as pn
-    df = pn.DataFrame.fromRecords(mdata)
-    df = np.log(df.reindex(columns=names))
-    df = (df - df.shift(1)).dropna()
-
-    model = VAR(df)
-    est = model.fit(maxlags=2)
-    irf = est.irf()
-    '''

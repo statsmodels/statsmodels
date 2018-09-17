@@ -379,15 +379,15 @@ class TestVARResults(CheckIRF, CheckFEVD):
         acorrs = self.res.acorr(10)
 
     def test_forecast(self):
-        point = self.res.forecast(self.res.y[-5:], 5)
+        point = self.res.forecast(self.res.endog[-5:], 5)
 
     def test_forecast_interval(self):
-        y = self.res.y[:-self.p:]
+        y = self.res.endog[:-self.p:]
         point, lower, upper = self.res.forecast_interval(y, 5)
 
     @pytest.mark.matplotlib
     def test_plot_sim(self, close_figures):
-        self.res.plotsim(steps=100)
+        self.res.plot_sim(steps=100)
 
     @pytest.mark.matplotlib
     def test_plot(self, close_figures):

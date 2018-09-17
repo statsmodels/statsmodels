@@ -88,7 +88,7 @@ def select_order(data, maxlags, deterministic="nc", seasons=0, exog=None,
     selected_orders = dict((ic_name, np.array(ic_value).argmin() - 1 + 1)
                            for ic_name, ic_value in iteritems(ic))
 
-    return LagOrderResults(ic, selected_orders, True)
+    return LagOrderResults(ic, selected_orders)
 
 
 def _linear_trend(nobs, k_ar, coint=False):
