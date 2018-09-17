@@ -10,7 +10,6 @@ Springer Science & Business Media.
 Hamilton, J.D., 1994. Time series analysis. Princeton, NJ: Princeton
 University Press.
 """
-
 from __future__ import division, print_function
 from statsmodels.compat.python import (range, lrange, string_types, StringIO,
                                        iteritems)
@@ -926,22 +925,33 @@ class VARProcess(object):
         are the variable and the rows are the equations so that coefs[i-1] is
         the estimated A_i matrix. See Notes.
     coefs_exog : ndarray
-        parameters for trend and user provided exog
+        1d or 2d array. If 1d, should be of length neqs and is assumed to be
+        a vector of constants. If 2d should be of shape k_trend x neqs
     cov_resid : ndarray (neqs x neqs)
         The covariance matrix of the residuals. :math:`\Sigma_u` in the Notes.
-    names : sequence (length k)
-    _params_info : dict
-        internal dict to provide information about the composition of `params`,
-        specifically `k_trend` (trend order) and `k_exog_user` (the number of
-        exog variables provided by the user).
-        If it is None, then coefs_exog are assumed to be for the intercept and
-        trend.
+    names : sequence (length neqs)
+        The names of the endogenous variables.
+    k_trend : int, optional
+        Order of the trend
+    k_exog_user : int, optional
+        Number of exogenous variables excluding the trend in the model
 
-    Returns
-    -------
-    **Attributes**:
+    Notes
+    -----
+    The VAR(p) process is assumed to be
+
+    .. math::
+
+       y_t = A_1 y_{t-1} + \\ldots + A_p y_{t-p} + u_t
+
+    where
+
+    .. math::
+
+       u_t \sim MVN(0, \Sigma_u)
     """
-    def __init__(self, coefs, coefs_exog, cov_resid, names=None, _params_info=None):
+    def __init__(self, coefs, coefs_exog, cov_resid, names=None,
+                 k_trend=None, k_exog_user=None):
         self.k_ar = len(coefs)
         self.neqs = coefs.shape[1]
         self.coefs = coefs
@@ -951,15 +961,13 @@ class VARProcess(object):
         self.cov_resid = cov_resid
         self.names = names
 
-        if _params_info is None:
-            _params_info = {}
-        self.k_exog_user = _params_info.get('k_exog_user', 0)
+        self.k_exog_user = k_exog_user if k_exog_user is not None else 0
         if self.coefs_exog is not None:
             k_ex = self.coefs_exog.shape[0] if self.coefs_exog.ndim != 1 else 1
             k_c = k_ex - self.k_exog_user
         else:
             k_c = 0
-        self.k_trend = _params_info.get('k_trend', k_c)
+        self.k_trend = k_trend if k_trend is not None else k_c
         # TODO: we need to distinguish exog including trend and exog_user
         self.k_exog = self.k_trend + self.k_exog_user
 
@@ -1519,12 +1527,9 @@ class VARResults(VARProcess):
 
         # maybe change to params class, distinguish exog_all versus exog_user
         # see issue #4535
-        _params_info = {'k_trend': k_trend,
-                        'k_exog_user': k_exog_user,
-                        'k_ar': lag_order}
         super(VARResults, self).__init__(coefs, self.coefs_exog, cov_resid,
-                                         names=names,
-                                         _params_info=_params_info)
+                                         names=names, k_trend=k_trend,
+                                         k_exog_user=k_exog_user)
 
     def plot(self):
         """Plot input time series"""
