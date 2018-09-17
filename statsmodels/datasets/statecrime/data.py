@@ -37,7 +37,7 @@ NOTE        = """::
     murder
         Rate of murders / 100,000 population.
     hs_grad
-        Precent of population having graduated from high school or higher.
+        Percent of population having graduated from high school or higher.
     poverty
         % of individuals below the poverty line
     white
