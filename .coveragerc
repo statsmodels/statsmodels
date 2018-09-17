@@ -45,6 +45,7 @@ exclude_lines =
     raise AssertionError
     raise NotImplementedError
     except NotImplementedError
+    except ImportError
     # Ignore pass
     pass
 

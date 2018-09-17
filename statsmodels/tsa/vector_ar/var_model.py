@@ -1167,6 +1167,7 @@ class VARProcess(object):
         coefs : ndarray
             Array containing the coefficient (maxn x k x k)
         """
+        p = self._chol_cov_resid if p is None else p
         return orth_ma_rep(self, maxn, p)
 
     def long_run_effects(self):
@@ -1640,9 +1641,10 @@ class VARResults(VARProcess):
         fig : matplotlib.Figure
             The figure that contains the plot axes.
         """
+        # TODO: Label the plot
         fig = plotting.plot_full_acorr(self.sample_acorr(nlags=nlags),
                                        linewidth=linewidth,
-                                       xlabel=self.model.endog_names,
+                                       xlabel=None,
                                        **plot_kwargs)
         return fig
 
@@ -2748,15 +2750,10 @@ class VARResults(VARProcess):
         Note that the inverse roots are returned, and stability requires that
         the roots lie outside the unit circle.
         """
-        neqs = self.neqs
-        k_ar = self.k_ar
-        p = neqs * k_ar
-        arr = np.zeros((p, p))
-        arr[:neqs, :] = np.column_stack(self.coefs)
-        arr[neqs:, :-neqs] = np.eye(p - neqs)
-        roots = np.linalg.eig(arr)[0]**-1
-        idx = np.argsort(np.abs(roots))[::-1]  # sort by reverse modulus
-        return roots[idx]
+        _, eigvals = self.is_stable(eigenvalues=True)
+        inv_roots = 1./eigvals
+        idx = np.argsort(np.abs(inv_roots))[::-1]  # sort by reverse modulus
+        return inv_roots[idx]
 
 
 class VARResultsWrapper(wrap.ResultsWrapper):

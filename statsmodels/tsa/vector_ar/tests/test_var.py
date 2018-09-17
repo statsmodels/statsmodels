@@ -9,6 +9,7 @@ from statsmodels.compat.python import (iteritems, StringIO, lrange, BytesIO,
 
 import os
 import sys
+from collections import defaultdict
 
 import numpy as np
 import pytest
@@ -37,6 +38,16 @@ DECIMAL_5 = 5
 DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
+
+
+@pytest.fixture()
+def bivariate_var(reset_randomstate):
+    e = np.random.standard_normal((252, 2))
+    y = np.zeros_like(e)
+    y[:2] = e[:2]
+    for i in range(2, 252):
+        y[i] = .2 * y[i - 1] + .1 * y[i - 2] + e[i]
+    return y
 
 
 class CheckVAR(object):
@@ -749,3 +760,51 @@ class TestVARExtras(object):
         assert_allclose(fci2, fci1, rtol=1e-12)
         assert_allclose(fci3, fci1, rtol=1e-12)
         assert_allclose(fci3, fci2, rtol=1e-12)
+
+
+def test_default_lags(bivariate_var):
+    mod = VAR(bivariate_var)
+    res = mod.fit(ic=None)
+    assert res.k_ar == 1
+
+
+def test_deprecation_warnings(bivariate_var):
+    mod = VAR(bivariate_var)
+    res = mod.fit()
+    p_min = 0 if res.exog is not None or res.trend != "nc" else 1
+    ics = defaultdict(list)
+    for k, v in iteritems(res.info_criteria):
+        ics[k].append(v)
+    from statsmodels.tsa.vector_ar.var_model import LagOrderResults
+    selected_orders = dict((k, np.array(v).argmin() + p_min)
+                           for k, v in iteritems(ics))
+    with pytest.warns(DeprecationWarning):
+        LagOrderResults(ics, selected_orders, vecm=True)
+    with pytest.warns(DeprecationWarning):
+        mod.fit(verbose=True)
+    with pytest.warns(DeprecationWarning):
+        res.detomega
+
+
+def test_var_single_series(bivariate_var):
+    with pytest.raises(ValueError):
+        VAR(bivariate_var[:, 0])
+    with pytest.raises(ValueError):
+        VAR(bivariate_var[:, [0]])
+
+
+def test_plots_smoke(bivariate_var, close_figures):
+    mod = VAR(bivariate_var)
+    res = mod.fit()
+    res.plot_acorr()
+    res.plot_acorr(12, resid=False)
+    res.plot_sample_acorr()
+
+
+def test_var_roots(bivariate_var):
+    mod = VAR(bivariate_var)
+    res = mod.fit(maxlags=1)
+    var_1 = res.params[1:, :]
+    inv_roots = 1. / np.linalg.eig(var_1)[0]
+    inv_roots = np.sort(inv_roots)[::-1]
+    assert_allclose(res.roots, inv_roots)

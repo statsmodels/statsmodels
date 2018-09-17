@@ -704,7 +704,7 @@ def test_var_rep():
                 assert_equal(obtained_exog_coint, obtained, "WITH EXOG_COINT" + err_msg)
 
 
-def test_var_to_vecm():
+def test_var_to_vecm(close_figures):
     if debug_mode:
         if "VAR to VEC representation" not in to_test:  # pragma: no cover
             return
@@ -729,6 +729,9 @@ def test_var_to_vecm():
             desired_gamma = results_sm[ds][dt].gamma
             assert_allclose(obtained_pi, desired_pi, rtol, atol, False, err_msg + " Pi")
             assert_allclose(obtained_gamma, desired_gamma, rtol, atol, False, err_msg + " Gamma")
+            assert 'VAR(4) process' in var.__str__()
+            # Smoke test plotting
+            var.plot_acorr()
 
 
 # Commented out since JMulTi shows the same det. terms for both VEC & VAR repr.
