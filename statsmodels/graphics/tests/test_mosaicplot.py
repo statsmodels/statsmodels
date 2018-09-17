@@ -7,7 +7,6 @@ import pytest
 
 # utilities for the tests
 
-from statsmodels.compat.pandas import sort_values
 from collections import OrderedDict
 from statsmodels.api import datasets
 
@@ -110,7 +109,7 @@ def test_mosaic(close_figures):
     # sort by the marriage quality and give meaningful name
     # [rate_marriage, age, yrs_married, children,
     # religious, educ, occupation, occupation_husb]
-    datas = sort_values(datas, ['rate_marriage', 'religious'])
+    datas = datas.sort_values(['rate_marriage', 'religious'])
 
     num_to_desc = {1: 'awful', 2: 'bad', 3: 'intermediate',
                       4: 'good', 5: 'wonderful'}
