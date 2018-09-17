@@ -374,28 +374,30 @@ def _reordered(self, order):
                       trend='c', names=names_new, dates=self.dates)
 
 
-def orth_ma_rep(results, maxn=10, P=None):
-    r"""Compute Orthogonalized MA coefficient matrices using P matrix such
-    that :math:`\Sigma_u = PP^\prime`. P defaults to the Cholesky
-    decomposition of :math:`\Sigma_u`
+@deprecate_kwarg('P', 'p')
+def orth_ma_rep(results, maxn=10, p=None):
+    r"""
+    Compute orthogonalized MA coefficient matrices
 
     Parameters
     ----------
-    results : VARResults or VECMResults
+    results : {VARResults, VECMResults}
+        Results instance
     maxn : int
         Number of coefficient matrices to compute
-    P : ndarray (neqs x neqs), optional
-        Matrix such that Sigma_u = PP', defaults to the Cholesky decomposition.
+    p : ndarray, optional
+        Matrix such that results.cov_resid = pp'. Defaults to the Cholesky
+        decomposition of results.cov_resid if not provided
 
     Returns
     -------
     coefs : ndarray (maxn x neqs x neqs)
     """
-    if P is None:
-        P = results._chol_cov_resid
+    if p is None:
+        p = results._chol_cov_resid
 
     ma_mats = results.ma_rep(maxn=maxn)
-    return np.array([np.dot(coefs, P) for coefs in ma_mats])
+    return np.array([np.dot(coefs, p) for coefs in ma_mats])
 
 
 def test_normality(results, signif=0.05):
@@ -2160,21 +2162,22 @@ class FEVD(object):
     Compute and plot Forecast error variance decomposition and asymptotic
     standard errors
     """
-    def __init__(self, model, P=None, periods=None):
+    @deprecate_kwarg('P', 'p')
+    def __init__(self, results, p=None, periods=None):
         self.periods = periods
 
-        self.model = model
-        self.neqs = model.neqs
-        self.names = model.model.endog_names
+        self.results = results
+        self.neqs = results.neqs
+        self.endog_names = results.model.endog_names
 
-        self.irfobj = model.irf(var_decomp=P, periods=periods)
+        self.irfobj = results.irf(var_decomp=p, periods=periods)
         self.orth_irfs = self.irfobj.orth_irfs
 
         # cumulative impulse responses
         irfs = (self.orth_irfs[:periods] ** 2).cumsum(axis=0)
 
         rng = lrange(self.neqs)
-        mse = self.model.mse(periods)[:, rng, rng]
+        mse = results.mse(periods)[:, rng, rng]
 
         # lag x equation x component
         fevd = np.empty_like(irfs)
@@ -2190,9 +2193,9 @@ class FEVD(object):
 
         rng = lrange(self.periods)
         for i in range(self.neqs):
-            ppm = output.pprint_matrix(self.decomp[i], rng, self.names)
+            ppm = output.pprint_matrix(self.decomp[i], rng, self.endog_names)
 
-            buf.write('FEVD for %s\n' % self.names[i])
+            buf.write('FEVD for %s\n' % self.endog_names[i])
             buf.write(ppm + '\n')
 
         print(buf.getvalue())
@@ -2238,12 +2241,12 @@ class FEVD(object):
                 lower = this_limits[j - 1] if j > 0 else 0
                 upper = this_limits[j]
                 handle = ax.bar(ticks, upper - lower, bottom=lower,
-                                color=colors[j], label=self.names[j],
+                                color=colors[j], label=self.endog_names[j],
                                 **plot_kwds)
 
                 handles.append(handle)
 
-            ax.set_title(self.names[i])
+            ax.set_title(self.endog_names[i])
 
         # just use the last axis to get handles for plotting
         handles, labels = ax.get_legend_handles_labels()
