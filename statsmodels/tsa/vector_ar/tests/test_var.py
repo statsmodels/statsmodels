@@ -310,7 +310,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         ics = ['aic', 'fpe', 'hqic', 'bic']
 
         for ic in ics:
-            res = self.model.fit(maxlags=10, ic=ic, verbose=True)
+            res = self.model.fit(maxlags=10, ic=ic)
 
         with pytest.raises(Exception):
             self.model.fit(ic='foo')
@@ -355,8 +355,8 @@ class TestVARResults(CheckIRF, CheckFEVD):
             self.res.test_causality(0, 1, kind='foo')
 
     def test_select_order(self):
-        result = self.model.fit(10, ic='aic', verbose=True)
-        result = self.model.fit(10, ic='fpe', verbose=True)
+        result = self.model.fit(10, ic='aic')
+        result = self.model.fit(10, ic='fpe')
 
         # bug
         model = VAR(self.model.endog)
@@ -365,7 +365,10 @@ class TestVARResults(CheckIRF, CheckFEVD):
     def test_is_stable(self):
         # may not necessarily be true for other datasets
         assert self.res.is_stable()
-        assert len(self.res.is_stable(eigenvalues=True)) == 2
+        stable, eigvals = self.res.is_stable(eigenvalues=True)
+        assert isinstance(stable, bool)
+        assert isinstance(eigvals, np.ndarray)
+        assert np.max(np.abs(eigvals)) < 1.0
 
     def test_acf(self):
         # test that it works...for now

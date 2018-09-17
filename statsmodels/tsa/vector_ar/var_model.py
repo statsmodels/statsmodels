@@ -112,7 +112,7 @@ def is_stable(coefs, eigenvalues=False):
     """
     a_var1 = util.comp_matrix(coefs)
     eigs = np.linalg.eigvals(a_var1)
-    stable = (np.abs(eigs) <= 1).all()
+    stable = bool((np.abs(eigs) <= 1).all())
     if eigenvalues:
         return stable, eigs
     return stable
@@ -372,14 +372,12 @@ def forecast_interval(y, coefs, trend_coefs, cov_resid, steps=5, alpha=0.05,
     return point_forecast, forc_lower, forc_upper
 
 
-def var_loglike(resid, cov_resid, nobs):
+def var_loglike(cov_resid, nobs):
     r"""
     VAR(p) log-likelihood assuming normality.
 
     Parameters
     ----------
-    resid : ndarray
-        The residuals of each variable (nobs, neqs)
     cov_resid : ndarray
         This is the maximum likelihood estimate for the equation by equation
         residual covariance. Each element i,j is the average product of the
@@ -655,6 +653,8 @@ class VAR(tsbase.TimeSeriesModel):
             raise ValueError("Only gave one variable to VAR")
         self.neqs = self.endog.shape[1]
         self.n_totobs = len(endog)
+        self.nobs = self.n_totobs
+        self._exog_names = []
 
     def predict(self, params, start=None, end=None, lags=1, trend='c'):
         """
@@ -729,6 +729,7 @@ class VAR(tsbase.TimeSeriesModel):
         predictedvalues[pv_end:] = forecast(y, coefs, intercept, out_of_sample)
         return predictedvalues
 
+    @deprecate_kwarg('verbose', None)
     def fit(self, maxlags=None, method='ols', ic=None, trend='c',
             verbose=None):
         """
@@ -791,7 +792,7 @@ class VAR(tsbase.TimeSeriesModel):
                 lags = 1
 
         k_trend = util.get_trendorder(trend)
-        self.exog_names = util.make_lag_names(self.endog_names, lags, k_trend)
+        self._exog_names = util.make_lag_names(self.endog_names, lags, k_trend)
         self.nobs = self.n_totobs - lags
 
         # add exog to data.xnames (necessary because the length of xnames also
@@ -913,6 +914,11 @@ class VAR(tsbase.TimeSeriesModel):
 
         return LagOrderResults(ics, selected_orders)
 
+    @property
+    def exog_names(self):
+        """Names of endogenous variables"""
+        return self._exog_names
+
 
 class VARProcess(object):
     """
@@ -920,17 +926,18 @@ class VARProcess(object):
 
     Parameters
     ----------
-    coefs : ndarray (p x neqs x neqs)
-        Each of the p matrices are for lag 1, ... , lag p. Where the columns
-        are the variable and the rows are the equations so that coefs[i-1] is
-        the estimated A_i matrix. See Notes.
+    coefs : ndarray
+        Each of the p matrices are for lag 1, ... , lag p (p, neqs, neqs).
+        Where the columns are the variable and the rows are the equations
+        so that coefs[i-1] is the estimated A_i matrix. See Notes.
     coefs_exog : ndarray
         1d or 2d array. If 1d, should be of length neqs and is assumed to be
-        a vector of constants. If 2d should be of shape k_trend x neqs
-    cov_resid : ndarray (neqs x neqs)
-        The covariance matrix of the residuals. :math:`\Sigma_u` in the Notes.
-    names : sequence (length neqs)
-        The names of the endogenous variables.
+        a vector of constants. If 2d must be (k_trend, neqs).
+    cov_resid : ndarray
+        The covariance matrix of the residuals (neqs, neqs).
+        :math:`\Sigma_u` in the Notes.
+    names : list
+        The names of the endogenous variables with neqs elements.
     k_trend : int, optional
         Order of the trend
     k_exog_user : int, optional
@@ -984,12 +991,12 @@ class VARProcess(object):
         return util.get_index(self.model.endog_names, name)
 
     def __str__(self):
-        output = ('VAR(%d) process for %d-dimensional response y_t'
-                  % (self.k_ar, self.neqs))
-        output += '\nstable: %s' % self.is_stable()
-        output += '\nmean: %s' % self.mean()
+        out = ('VAR({0:d}) process for {1:d}-dimensional '
+               'response y_t'.format(self.k_ar, self.neqs))
+        out += '\nstable: %s' % self.is_stable()
+        out += '\nmean: %s' % self.mean()
 
-        return output
+        return out
 
     @deprecate_kwarg('verbose', 'eigenvalues')
     def is_stable(self, eigenvalues=False):
@@ -1292,7 +1299,7 @@ class VARProcess(object):
         if exog_future is not None:
             exogs.append(exog_future)
 
-        if exogs == []:
+        if not exogs:
             exog_future = None
         else:
             exog_future = np.column_stack(exogs)
@@ -1441,17 +1448,29 @@ class VARResults(VARProcess):
     Parameters
     ----------
     endog : ndarray
+        2-d endogenous response variable. The independent variable.
     endog_lagged : ndarray
+        Endogenous data (nobs, p x neqs + k_exog).  Contains all lagged
+        variables plus any trend or exogenous terms.
     params : ndarray
+        Estimate model parameters including trend and lagged endogenous
+        (neqs, neqs x p + k_exog).
     cov_resid : ndarray
+        Estimated covariance of the residuals adjusted for degree of freedom
+        loss (neqs, neqs)
     lag_order : int
+        VAR lag order
     model : VAR model instance
+        The instance of the model estimates
     trend : {'nc', 'c', 'ct'}
-    names : array-like
+        Model trend name
+    names : list
         List of names of the endogenous variables in order of appearance in
         `endog`.
-    dates
-    exog : array
+    dates : pandas.DatetimeIndex, optional
+        Observation dates
+    exog : ndarray, optional
+        2-d exogenous variable.
 
     Attributes
     ----------
@@ -1465,7 +1484,7 @@ class VARResults(VARProcess):
         Endogenous data (nobs, neqs)
     endog_lagged : ndarray
         Endogenous data (nobs, p x neqs + k_exog).  Contains all lagged
-        variables plus any trend or exogenous terms. TODO: Check exogenous
+        variables plus any trend or exogenous terms.
     intercept : ndarray
         Estimated intercepts (neqs, )
     k_ar : int
@@ -1577,7 +1596,7 @@ class VARResults(VARProcess):
         Returns
         -------
         acov : ndarray
-            The autocovariace including the zero lag. Shape is
+            The autocovariance including the zero lag. Shape is
             (nlags + 1, neqs, neqs).
         """
         return _compute_acov(self.endog[self.k_ar:], nlags=nlags)
@@ -1634,7 +1653,7 @@ class VARResults(VARProcess):
         Parameters
         ----------
         nlags : int
-            The number of lags to use in compute the autocovariace. Does
+            The number of lags to use in compute the autocovariance. Does
             not count the zero lag, which will be returned.
 
         Returns
@@ -1786,7 +1805,7 @@ class VARResults(VARProcess):
     @cache_readonly
     def llf(self):
         """VAR(p) log-likelihood"""
-        return var_loglike(self.resid, self.cov_resid_mle, self.nobs)
+        return var_loglike(self.cov_resid_mle, self.nobs)
 
     @cache_readonly
     def stderr(self):
@@ -1948,6 +1967,10 @@ class VARResults(VARProcess):
         Parameters
         ----------
         steps : int
+            Number of steps ahead to construct forecast covariance
+        method : {'mse', 'auto'}
+            'mse' only accounts for residual covariance.  'auto' also
+            incorporates parameter estimation uncertainty.
 
         Notes
         -----
@@ -2103,19 +2126,19 @@ class VARResults(VARProcess):
 
             return cache_b_power[power]
 
-        def bi_ginv_bjt_g(i, j):
-            if (i, j) not in cache_bi_ginv_bjt_g:
-                b_i = b_power(i)
-                b_j = b_power(j)
+        def bi_ginv_bjt_g(pow_i, pow_j):
+            if (pow_i, pow_j) not in cache_bi_ginv_bjt_g:
+                b_i = b_power(pow_i)
+                b_j = b_power(pow_j)
                 prod = np.trace(chain_dot(b_i.T, g_inv, b_j, g))
-                cache_bi_ginv_bjt_g[(i, j)] = prod
-            return cache_bi_ginv_bjt_g[(i, j)]
+                cache_bi_ginv_bjt_g[(pow_i, pow_j)] = prod
+            return cache_bi_ginv_bjt_g[(pow_i, pow_j)]
 
-        def _phi_cov_phit(i, j):
-            if (i, j) not in cache_phi_cov_phit:
-                prod = chain_dot(phis[i], cov_resid, phis[j].T)
-                cache_phi_cov_phit[(i, j)] = prod
-            return cache_phi_cov_phit[(i, j)]
+        def _phi_cov_phit(pow_i, pow_j):
+            if (pow_i, pow_j) not in cache_phi_cov_phit:
+                prod = chain_dot(phis[pow_i], cov_resid, phis[pow_j].T)
+                cache_phi_cov_phit[(pow_i, pow_j)] = prod
+            return cache_phi_cov_phit[(pow_i, pow_j)]
 
         phis = self.ma_rep(steps)
         cov_resid = self.cov_resid
@@ -2180,7 +2203,7 @@ class VARResults(VARProcess):
         Returns
         -------
         irf : IRAnalysis
-            A `statmodels.tsa.vector_ar.irf.IRAnalysis` instance.
+            An IRAnalysis instance
         """
         if var_order is not None:
             raise NotImplementedError('alternate variable order not '
@@ -2336,7 +2359,7 @@ class VARResults(VARProcess):
 
         References
         ----------
-        .. [*] Lütkepohl, H., 2005. New introduction to multiple time series
+        .. [1] Lütkepohl, H., 2005. New introduction to multiple time series
            analysis. Springer Science & Business Media.
         """
         if not (0 < signif < 1):
@@ -2444,7 +2467,7 @@ class VARResults(VARProcess):
 
         References
         ----------
-        .. [*] Lütkepohl, H., 2005. New introduction to multiple time series
+        .. [1] Lütkepohl, H., 2005. New introduction to multiple time series
            analysis. Springer Science & Business Media.
         """
         if not (0 < signif < 1):
@@ -2592,10 +2615,20 @@ class VARResults(VARProcess):
         Returns
         -------
         result : NormalityTestResults
+            Result instance containing the test statistic
 
         Notes
         -----
         H0 (null) : data are generated by a Gaussian-distributed process
+
+        References
+        ----------
+        .. [*] Lütkepohl, H., 2005. New introduction to multiple time series
+           analysis. Springer Science & Business Media.
+
+        .. [*] Kilian, L. & Demiroglu, U. (2000). "Residual-Based Tests for
+           Normality in Autoregressions: Asymptotic Theory and Simulation
+           Evidence." Journal of Business & Economic Statistics
         """
         return test_normality(self, signif=signif)
 
@@ -2652,7 +2685,6 @@ class VARResults(VARProcess):
 
     @property
     def aic(self):
-
         """
         Akaike information criterion
 
@@ -2824,7 +2856,7 @@ class FEVD(object):
         figsize : tuple
             The figure size
         plot_kwds : kwargs
-            Keyword arguments that
+            Additional keyword arguments to pass to the plotting function
 
         Returns
         -------
