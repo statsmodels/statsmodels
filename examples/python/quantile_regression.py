@@ -32,7 +32,6 @@ import statsmodels.api as sm
 import statsmodels.formula.api as smf
 import matplotlib.pyplot as plt
 
-
 data = sm.datasets.engel.load_pandas().data
 data.head()
 
