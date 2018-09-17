@@ -4,12 +4,17 @@ Vector Autoregression (VAR) processes
 
 References
 ----------
-Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
+Lütkepohl, H., 2005. New introduction to multiple time series analysis.
+Springer Science & Business Media.
+
+Hamilton, J.D., 1994. Time series analysis. Princeton, NJ: Princeton
+University Press.
 """
 
 from __future__ import division, print_function
-from statsmodels.compat.python import (range, lrange, string_types,
-                                       StringIO, iteritems)
+from statsmodels.compat.python import (range, lrange, string_types, StringIO,
+                                       iteritems)
+
 from collections import defaultdict
 
 import numpy as np
@@ -17,39 +22,43 @@ try:
     from pandas.util._decorators import deprecate_kwarg
 except ImportError:
     from pandas.util.decorators import deprecate_kwarg
-import scipy.stats as stats
 import scipy.linalg
+import scipy.stats as stats
 
+import statsmodels.base.wrapper as wrap
+import statsmodels.tsa.base.tsa_model as tsbase
+import statsmodels.tsa.tsatools as tsa
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tools.tools import chain_dot, Bunch
 from statsmodels.tsa.tsatools import vec, unvec, duplication_matrix
+from statsmodels.tsa.vector_ar import output, plotting, util
 from statsmodels.tsa.vector_ar.hypothesis_test_results import \
     CausalityTestResults, NormalityTestResults, WhitenessTestResults
-
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
 from statsmodels.tsa.vector_ar.output import VARSummary
 
-import statsmodels.tsa.tsatools as tsa
-from statsmodels.tsa.vector_ar import output, plotting, util
-import statsmodels.tsa.base.tsa_model as tsbase
-import statsmodels.base.wrapper as wrap
-
-
-# -------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 # VAR process routines
+
 
 def ma_rep(coefs, maxn=10):
     r"""
-    MA(\infty) representation of VAR(p) process
+    MA representation of VAR(p) process
 
     Parameters
     ----------
     coefs : ndarray (p x k x k)
+        VAR coefficients
     maxn : int
         Number of MA matrices to compute
+
+    Returns
+    -------
+    ma_coefs : ndarray (maxn + 1 x k x k)
+        Coefficient of MA process for lags 0 to maxn
 
     Notes
     -----
@@ -61,23 +70,19 @@ def ma_rep(coefs, maxn=10):
 
     .. math:: y_t = \mu + \sum_{i=0}^\infty \Phi_i u_{t-i}
 
-    e.g. can recursively compute the \Phi_i matrices with \Phi_0 = I_k
-
-    Returns
-    -------
-    phis : ndarray (maxn + 1 x k x k)
+    The MA coefficients are :math:`\Phi_i` where :math:`\Phi_0 = I_k`.
     """
     p, k, k = coefs.shape
-    phis = np.zeros((maxn+1, k, k))
+    phis = np.zeros((maxn + 1, k, k))
     phis[0] = np.eye(k)
 
     # recursively compute Phi matrices
     for i in range(1, maxn + 1):
-        for j in range(1, i+1):
+        for j in range(1, i + 1):
             if j > p:
                 break
 
-            phis[i] += np.dot(phis[i-j], coefs[j-1])
+            phis[i] += np.dot(phis[i - j], coefs[j - 1])
 
     return phis
 
@@ -117,25 +122,25 @@ def is_stable(coefs, eigenvalues=False):
 @deprecate_kwarg('sig_u', 'cov_resid')
 def var_acf(coefs, cov_resid, nlags=None):
     """
-    Compute autocovariance function ACF_y(h) up to nlags of stable VAR(p)
-    process
+    Compute the autocovariance function of a stable VAR(p) process
 
     Parameters
     ----------
-    coefs : ndarray (p x k x k)
-        Coefficient matrices A_i
+    coefs : ndarray
+        Coefficient matrices of the VAR (p, k,  k)
     cov_resid : ndarray
         Covariance of the white noise process residuals (k, k)
     nlags : int, optional
-        Defaults to order p of system
+        Number of ACF lags. Default value is p.
+
+    Returns
+    -------
+    acf : ndarray
+        Autocorrelation and cross correlations (nlags, k, k)
 
     Notes
     -----
     Ref: Lütkepohl p.28-29
-
-    Returns
-    -------
-    acf : ndarray, (p, k, k)
     """
     p, k, _ = coefs.shape
     if nlags is None:
@@ -151,7 +156,7 @@ def var_acf(coefs, cov_resid, nlags=None):
         # G(h) = A_1 G(h-1) + ... + A_p G(h-p)
 
         for j in range(p):
-            result[h] += np.dot(coefs[j], result[h-j-1])
+            result[h] += np.dot(coefs[j], result[h - j - 1])
 
     return result
 
@@ -188,39 +193,6 @@ def _var_acf(coefs, cov_resid):
     return acf
 
 
-def forecast_cov(ma_coefs, cov_resid, steps):
-    """
-    Compute theoretical forecast error variance matrices
-
-    Parameters
-    ----------
-    steps : int
-        Number of steps ahead
-
-    Notes
-    -----
-    .. math:: \mathrm{MSE}(h) = \sum_{i=0}^{h-1} \Phi \Sigma_u \Phi^T
-
-    Returns
-    -------
-    forc_covs : ndarray (steps x neqs x neqs)
-    """
-    neqs = len(cov_resid)
-    forc_covs = np.zeros((steps, neqs, neqs))
-
-    prior = np.zeros((neqs, neqs))
-    for h in range(steps):
-        # Sigma(h) = Sigma(h-1) + Phi Sig_u Phi'
-        phi = ma_coefs[h]
-        var = chain_dot(phi, cov_resid, phi.T)
-        forc_covs[h] = prior = prior + var
-
-    return forc_covs
-
-
-mse = forecast_cov
-
-
 def forecast(y, coefs, trend_coefs, steps, exog=None):
     """
     Produce linear minimum MSE forecast
@@ -228,14 +200,25 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
     Parameters
     ----------
     y : ndarray (k_ar x neqs)
-    coefs : ndarray (k_ar x neqs x neqs)
-    trend_coefs : ndarray (1 x neqs) or (neqs)
+        The initial values to use for the forecasts.
+    coefs : ndarray
+        Each of the k_ar matrices are for lag 1, ... , lag k_ar. Where the
+        columns are the variable and the rows are the equations so that
+        coefs[i-1] is the estimated A_i matrix of the VAR. (k_ar, neqs, neqs)
+        See VARResults Notes.
+    trend_coefs : ndarray
+        1d or 2d array. If 1d, should be of length neqs and is assumed to be
+        a vector of constants. If 2d should be of shape k_trend x neqs.
     steps : int
-    exog : ndarray (trend_coefs.shape[1] x neqs)
+        Number of steps ahead to forecast
+    exog : ndarray
+        The exogenous variables. Should include constant, trend, etc. as
+        needed, including extrapolating out of sample.
 
     Returns
     -------
-    forecasts : ndarray (steps x neqs)
+    forecasts : ndarray
+        Forecast values (steps, neqs)
 
     Notes
     -----
@@ -277,6 +260,45 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
     return forcs
 
 
+@deprecate_kwarg('sig_u', 'cov_resid')
+def forecast_cov(ma_coefs, cov_resid, steps):
+    """
+    Compute theoretical forecast error variance matrices
+
+    Parameters
+    ----------
+    ma_coefs : ndarray
+        Coefficients from the moving average representation (steps, k, k)
+    cov_resid : ndarray
+        Covariance of white noise process u_t (k, k)
+    steps : int
+        Number of steps ahead
+
+    Notes
+    -----
+    .. math:: \mathrm{MSE}(h) = \sum_{i=0}^{h-1} \Phi \Sigma_u \Phi^T
+
+    Returns
+    -------
+    forc_covs : ndarray
+        Covariance of the forecast errors (steps, neqs, neqs)
+    """
+    k = len(cov_resid)
+    forc_covs = np.zeros((steps, k, k))
+
+    prior = np.zeros((k, k))
+    for h in range(steps):
+        # Sigma(h) = Sigma(h-1) + Phi Sig_u Phi'
+        phi = ma_coefs[h]
+        var = chain_dot(phi, cov_resid, phi.T)
+        forc_covs[h] = prior = prior + var
+
+    return forc_covs
+
+
+mse = forecast_cov
+
+
 def _forecast_vars(steps, ma_coefs, cov_resid):
     """_forecast_vars function used by VECMResults. Note that the definition
     of the local variable covs is the same as in VARProcess and as such it
@@ -284,14 +306,17 @@ def _forecast_vars(steps, ma_coefs, cov_resid):
 
     Parameters
     ----------
-    steps
-    ma_coefs
+    steps : int
+        Number of period to compute forecast variances
+    ma_coefs : ndarray
+        MA coefficients (steps, neqs, neqs)
     cov_resid : ndarray
         Residual covariance (neqs, neqs)
 
     Returns
     -------
-
+    covs : ndarray
+        Forecast variances (steps, neqs)
     """
     covs = mse(ma_coefs, cov_resid, steps)
     # Take diagonal for each cov
@@ -302,7 +327,40 @@ def _forecast_vars(steps, ma_coefs, cov_resid):
 
 def forecast_interval(y, coefs, trend_coefs, cov_resid, steps=5, alpha=0.05,
                       exog=1):
-    assert(0 < alpha < 1)
+    """Construct forecast interval estimates assuming the y are Gaussian
+
+    Parameters
+    ----------
+    y : ndarray (k_ar x neqs)
+        The initial values to use for the forecasts.
+    coefs : ndarray
+        Each of the k_ar matrices are for lag 1, ... , lag k_ar. Where the
+        columns are the variable and the rows are the equations so that
+        coefs[i-1] is the estimated A_i matrix of the VAR. (k_ar, neqs, neqs)
+        See VARResults Notes.
+    trend_coefs : ndarray
+        1d or 2d array. If 1d, should be of length neqs and is assumed to be
+        a vector of constants. If 2d should be of shape k_trend x neqs.
+    cov_resid : ndarray
+        Residual covariance (neqs, neqs)
+    steps : int
+        Number of steps ahead to forecast
+    alpha : float, optional
+        The significance level for the confidence intervals.
+    exog : ndarray
+        The exogenous variables. Should include constant, trend, etc. as
+        needed, including extrapolating out of sample.
+
+    Returns
+    -------
+    point : ndarray
+        Mean value of forecast
+    lower : ndarray
+        Lower bound of confidence interval
+    upper : ndarray
+        Upper bound of confidence interval
+    """
+    assert (0 < alpha < 1)
     q = util.norm_signif_level(alpha)
 
     point_forecast = forecast(y, coefs, trend_coefs, steps, exog)
@@ -317,22 +375,26 @@ def forecast_interval(y, coefs, trend_coefs, cov_resid, steps=5, alpha=0.05,
 
 def var_loglike(resid, cov_resid, nobs):
     r"""
-    Returns the value of the VAR(p) log-likelihood.
+    VAR(p) log-likelihood assuming normality.
 
     Parameters
     ----------
-    resid : ndarray (T x K)
-    omega : ndarray
-        Sigma hat matrix.  Each element i,j is the average product of the
+    resid : ndarray
+        The residuals of each variable (nobs, neqs)
+    cov_resid : ndarray
+        This is the maximum likelihood estimate for the equation by equation
+        residual covariance. Each element i,j is the average product of the
         OLS residual for variable i and the OLS residual for variable j or
-        np.dot(resid.T,resid)/nobs.  There should be no correction for the
+        np.dot(resid.T,resid)/nobs. There should be no correction for the
         degrees of freedom.
     nobs : int
+        The number of observations used during fitting. Does not include
+        the `k_ar` pre-sample observations in Y.
 
     Returns
     -------
     llf : float
-        The value of the loglikelihood function for a VAR(p) model
+        Loglikelihood
 
     Notes
     -----
@@ -340,8 +402,10 @@ def var_loglike(resid, cov_resid, nobs):
 
     .. math::
 
-        -\left(\frac{T}{2}\right)
-        \left(\ln\left|\Omega\right|-K\ln\left(2\pi\right)-K\right)
+        -\left(\frac{nobs}{2}\right)
+        \left(\ln\left|\Omega\right|-neqs \ln\left(2\pi\right)-K\right)
+
+    where :math:`Omega` is the residual covariance.
     """
     logdet = logdet_symm(np.asarray(cov_resid))
     neqs = cov_resid.shape[0]
@@ -441,23 +505,26 @@ def test_normality(results, signif=0.05):
 
     Parameters
     ----------
-    results : VARResults or statsmodels.tsa.vecm.vecm.VECMResults
+    results : {VARResults, VECMResults}
+        Results instance
     signif : float
         The test's significance level.
+
+    Returns
+    -------
+    result : NormalityTestResults
+        Result instance containing the test statistic and related quantities
 
     Notes
     -----
     H0 (null) : data are generated by a Gaussian-distributed process
 
-    Returns
-    -------
-    result : NormalityTestResults
-
     References
     ----------
-    .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+    .. [*] Lütkepohl, H., 2005. New introduction to multiple time series
+       analysis. Springer Science & Business Media.
 
-    .. [2] Kilian, L. & Demiroglu, U. (2000). "Residual-Based Tests for
+    .. [*] Kilian, L. & Demiroglu, U. (2000). "Residual-Based Tests for
        Normality in Autoregressions: Asymptotic Theory and Simulation
        Evidence." Journal of Business & Economic Statistics
     """
@@ -545,6 +612,7 @@ class LagOrderResults(object):
                + ", FPE -> " + str(self.fpe) \
                + ", HQIC -> " + str(self.hqic) + ">"
 
+
 # ----------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
 
@@ -552,8 +620,6 @@ class LagOrderResults(object):
 class VAR(tsbase.TimeSeriesModel):
     r"""
     Fit VAR(p) process and do lag order selection
-
-    .. math:: y_t = A_1 y_{t-1} + \ldots + A_p y_{t-p} + u_t
 
     Parameters
     ----------
@@ -563,24 +629,63 @@ class VAR(tsbase.TimeSeriesModel):
         2-d exogenous variable.
     dates : array-like
         must match number of rows of endog
+    freq : str, optional
+        The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
+        'M', 'A', or 'Q'. This is optional if dates are given.
+    missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised. Default is 'none.'
+
+    Notes
+    -----
+    A VAR(p) process has dynamics described by
+
+    .. math:: y_t = A_1 y_{{t-1}} + \ldots + A_p y_{{t-p}} + u_t
 
     References
     ----------
-    Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
+    .. [*] Lütkepohl, H., 2005. New introduction to multiple time series
+       analysis. Springer Science & Business Media.
     """
+    # TODO: Use existing strings in signature for missing and freq?
     def __init__(self, endog, exog=None, dates=None, freq=None,
                  missing='none'):
         super(VAR, self).__init__(endog, exog, dates, freq, missing=missing)
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VAR")
-        self.y = self.endog  # keep alias for now
-        # TODO: get rid of this alias
         self.neqs = self.endog.shape[1]
         self.n_totobs = len(endog)
 
     def predict(self, params, start=None, end=None, lags=1, trend='c'):
         """
-        Returns in-sample predictions or forecasts
+        In-sample predictions or forecasts
+
+        Parameters
+        ----------
+        params : ndarray
+            Model parameters including trend.
+        start : label
+            The key at which to start prediction. Depending on the underlying
+            model's index, may be an integer, a date (string, datetime object,
+            pd.Timestamp, or pd.Period object), or some other object in the
+            model's row labels.
+        end : label
+            The key at which to end prediction (note that this key will be
+            *included* in prediction). Depending on the underlying
+            model's index, may be an integer, a date (string, datetime object,
+            pd.Timestamp, or pd.Period object), or some other object in the
+            model's row labels.
+        lags : int
+            Number of lags in the model
+        trend : str
+            Order of the trend
+
+        Returns
+        -------
+        predictions : ndarray
+            Array containing predictions. (ninterval, neqs) where ninterval is
+            the number of observations between start and end.
         """
         params = np.array(params)
 
@@ -731,10 +836,10 @@ class VAR(tsbase.TimeSeriesModel):
             x = np.column_stack((x, x_inst))
             del x_inst  # free memory
             temp_z = z
-            z = np.empty((x.shape[0], x.shape[1]+z.shape[1]))
+            z = np.empty((x.shape[0], x.shape[1] + z.shape[1]))
             z[:, :self.k_trend] = temp_z[:, :self.k_trend]
-            z[:, self.k_trend:self.k_trend+x.shape[1]] = x
-            z[:, self.k_trend+x.shape[1]:] = temp_z[:, self.k_trend:]
+            z[:, self.k_trend:self.k_trend + x.shape[1]] = x
+            z[:, self.k_trend + x.shape[1]:] = temp_z[:, self.k_trend:]
             del temp_z, x  # free memory
         # the following modification of z is necessary to get the same results
         # as JMulTi for the constant-term-parameter...
@@ -743,7 +848,7 @@ class VAR(tsbase.TimeSeriesModel):
                 z[:, i] += lags
             # make the same adjustment for the quadratic term
             if (np.diff(np.sqrt(z[:, i])) == 1).all():
-                z[:, i] = (np.sqrt(z[:, i]) + lags)**2
+                z[:, i] = (np.sqrt(z[:, i]) + lags) ** 2
 
         y_sample = endog[lags:]
         # Lütkepohl p75, about 5x faster than stated formula
@@ -755,7 +860,7 @@ class VAR(tsbase.TimeSeriesModel):
         # equivalent definition
         # .. math:: \frac{1}{T - Kp - 1} Y^\prime (I_T - Z (Z^\prime Z)^{-1}
         # Z^\prime) Y
-        # Ref: Lutkepohl p.75
+        # Ref: Lütkepohl p.75
         # df_resid right now is T - Kp - 1, which is a suggested correction
 
         avobs = len(y_sample)
@@ -779,7 +884,7 @@ class VAR(tsbase.TimeSeriesModel):
         Parameters
         ----------
         maxlags : int
-            if None, defaults to 12 * (nobs/100.)**(1./4)
+            if None, defaults to int(12 * (nobs/100.)**(1./4))
         trend : str {"nc", "c", "ct", "ctt"}
             * "nc" - no deterministic terms
             * "c" - constant term
@@ -799,7 +904,7 @@ class VAR(tsbase.TimeSeriesModel):
         for p in range(p_min, maxlags + 1):
             # exclude some periods to same amount of data used for each lag
             # order
-            result = self._estimate_var(p, offset=maxlags-p, trend=trend)
+            result = self._estimate_var(p, offset=maxlags - p, trend=trend)
 
             for k, v in iteritems(result.info_criteria):
                 ics[k].append(v)
@@ -807,17 +912,19 @@ class VAR(tsbase.TimeSeriesModel):
         selected_orders = dict((k, np.array(v).argmin() + p_min)
                                for k, v in iteritems(ics))
 
-        return LagOrderResults(ics, selected_orders, vecm=False)
+        return LagOrderResults(ics, selected_orders)
 
 
 class VARProcess(object):
     """
-    Class represents a known VAR(p) process
+    Representation of a VAR(p) with known parameters
 
     Parameters
     ----------
-    coefs : ndarray (p x k x k)
-        coefficients for lags of endog, part or params reshaped
+    coefs : ndarray (p x neqs x neqs)
+        Each of the p matrices are for lag 1, ... , lag p. Where the columns
+        are the variable and the rows are the equations so that coefs[i-1] is
+        the estimated A_i matrix. See Notes.
     coefs_exog : ndarray
         parameters for trend and user provided exog
     cov_resid : ndarray (neqs x neqs)
@@ -992,29 +1099,39 @@ class VARProcess(object):
         return plotting.plot_mts(y)
 
     def intercept_longrun(self):
-        r"""Long run intercept of stable VAR process
+        r"""
+        Long run intercept of stable VAR process
 
         Lütkepohl eq. 2.1.23
 
         .. math:: \mu = (I - A_1 - \dots - A_p)^{-1} \alpha
 
-        where \alpha is the intercept (parameter of the constant)
+        where :math:`\alpha` is the intercept (parameter of the constant) and
+        A_1, ... A_p are the VAR coefficients.
         """
         return np.linalg.solve(self._char_mat, self.intercept)
 
     mean = intercept_longrun
 
     def ma_rep(self, maxn=10):
-        r"""Compute MA(:math:`\infty`) coefficient matrices
+        r"""
+        Compute MA representation of the VAR model
 
         Parameters
         ----------
         maxn : int
-            Number of coefficient matrices to compute
+            Number of MA coefficients to compute
 
         Returns
         -------
-        coefs : ndarray (maxn x k x k)
+        coefs : ndarray
+            Moving average coefficients (maxn + 1, neqs, neqs). coefs[0] is an
+            identity matrix.
+
+        Notes
+        -----
+        These are the first `maxn` coefficient matrices of the
+        MA(:math:`\infty`).
         """
         return ma_rep(self.coefs, maxn=maxn)
 
@@ -1038,12 +1155,24 @@ class VARProcess(object):
         return orth_ma_rep(self, maxn, p)
 
     def long_run_effects(self):
-        """Compute long-run effect of unit impulse
+        """
+        Compute long-run effect of a unit impulse
+
+        Returns
+        -------
+        lr_effect : ndarray
+            Long-run effect of an impulse
+
+        Notes
+        -----
+        The long-run effect of an impulse is defined as the sum of all
+        coefficients in the MA(:math:`\infty`) representation.
 
         .. math::
 
             \Psi_\infty = \sum_{i=0}^\infty \Phi_i
 
+        where :math:`\Phi_i` is the MA coefficient at lag i.
         """
         return scipy.linalg.inv(self._char_mat)
 
@@ -1054,44 +1183,82 @@ class VARProcess(object):
 
     @cache_readonly
     def _char_mat(self):
+        """Characteristic matrix of the VAR"""
         return np.eye(self.neqs) - self.coefs.sum(0)
 
     def acf(self, nlags=None):
-        """Compute theoretical autocovariance function
+        """
+        Autocovariance function
+
+        Parameters
+        ----------
+        nlags : int or None
+            The number of lags to include in the autocovariance function. The
+            default is the number of lags included in the model.
 
         Returns
         -------
-        acf : ndarray (p x k x k)
+        acf : ndarray
+            Autocovariance and cross covariances (nlags, neqs, neqs)
         """
         return var_acf(self.coefs, self.cov_resid, nlags=nlags)
 
     def acorr(self, nlags=None):
-        """Compute theoretical autocorrelation function
+        """
+        Autocorrelation function
+
+        Parameters
+        ----------
+        nlags : int or None
+            The number of lags to include in the autocovariance function. The
+            default is the number of lags included in the model.
 
         Returns
         -------
-        acorr : ndarray (p x k x k)
+        acorr : ndarray
+            Autocorrelation and cross correlations (nlags, neqs, neqs)
         """
         return util.acf_to_acorr(self.acf(nlags=nlags))
 
     def plot_acorr(self, nlags=10, linewidth=8):
-        "Plot theoretical autocorrelation function"
+        """Plot theoretical autocorrelation function
+
+        Parameters
+        ----------
+        nlags : int, optional
+            Number of lags to plot
+        linewidth : int, optional
+            Width of the line in the plot
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            The figure handle
+        """
         fig = plotting.plot_full_acorr(self.acorr(nlags=nlags),
                                        linewidth=linewidth)
         return fig
 
     def forecast(self, y, steps, exog_future=None):
-        """Produce linear minimum MSE forecasts for desired number of steps
-        ahead, using prior values y
+        """Minimum MSE forecasts for desired number of steps
 
         Parameters
         ----------
-        y : ndarray (p x k)
+        y : ndarray (k_ar x neqs)
+            Deprecated. The initial values to use for the forecasts. If None,
+            the last k_ar values of the original endogenous variables are
+            used. Use statsmodels.tsa.var.forecast instead if you need to
+            give y values.
         steps : int
+            The number of steps ahead to forecast.
+        exog_future : ndarray
+            Forecast values of the exogenous variable or future values of
+            trends.
 
         Returns
         -------
-        forecasts : ndarray (steps x neqs)
+        forecasts : ndarray
+            The forecast values. (steps, neqs)
 
         Notes
         -----
@@ -1113,7 +1280,7 @@ class VARProcess(object):
         if "t" in self.trend:
             exogs.append(exog_lin_trend)
         if "tt" in self.trend:
-            exogs.append(exog_lin_trend**2)
+            exogs.append(exog_lin_trend ** 2)
         if exog_future is not None:
             exogs.append(exog_future)
 
@@ -1123,7 +1290,6 @@ class VARProcess(object):
             exog_future = np.column_stack(exogs)
         return forecast(y, self.coefs, trend_coefs, steps, exog_future)
 
-    # TODO: use `mse` module-level function?
     def mse(self, steps):
         """
         Compute theoretical forecast error variance matrices
@@ -1133,31 +1299,25 @@ class VARProcess(object):
         steps : int
             Number of steps ahead
 
-        Notes
-        -----
-        .. math:: \mathrm{MSE}(h) = \sum_{i=0}^{h-1} \Phi \Sigma_u \Phi^T
-
         Returns
         -------
-        forc_covs : ndarray (steps x neqs x neqs)
+        forc_covs : ndarray
+            Covariance of the forecast errors (steps, neqs, neqs)
+
+        Notes
+        -----
+        .. math:: \mathrm{MSE}(h) = \sum_{i=0}^{h-1} \Phi_i \Sigma_u \Phi_i'
+
+        where :math:`\Sigma_u` is the residual covariance and :math:`\Phi_i`
+        are the coefficient from the MA(:math:`\infty`) representation.
         """
         ma_coefs = self.ma_rep(steps)
-
-        k = len(self.cov_resid)
-        forc_covs = np.zeros((steps, k, k))
-
-        prior = np.zeros((k, k))
-        for h in range(steps):
-            # Sigma(h) = Sigma(h-1) + Phi Sig_u Phi'
-            phi = ma_coefs[h]
-            var = chain_dot(phi, self.cov_resid, phi.T)
-            forc_covs[h] = prior = prior + var
-
-        return forc_covs
+        return forecast_cov(ma_coefs, self.cov_resid, steps)
 
     forecast_cov = mse
 
     def _forecast_vars(self, steps):
+        """Variance of forecast errors"""
         covs = self.forecast_cov(steps)
 
         # Take diagonal for each cov
@@ -1165,18 +1325,36 @@ class VARProcess(object):
         return covs[:, inds, inds]
 
     def forecast_interval(self, y, steps, alpha=0.05, exog_future=None):
-        """Construct forecast interval estimates assuming the y are Gaussian
+        """
+        Construct forecast interval estimates assuming residuals are Gaussian
 
         Parameters
         ----------
+        y : {ndarray, None}
+            The initial values to use for the forecasts. If None,
+            the last k_ar values of the original endogenous variables are
+            used.
+        steps : int
+            Number of steps ahead to forecast
+        alpha : float, optional
+            The significance level for the confidence intervals.
+        exog_future : ndarray, optional
+            Forecast values of the exogenous variables. Should include
+            constant, trend, etc. as needed, including extrapolating out
+            of sample.
+
+        Returns
+        -------
+        point : ndarray
+            Mean value of forecast
+        lower : ndarray
+            Lower bound of confidence interval
+        upper : ndarray
+            Upper bound of confidence interval
 
         Notes
         -----
         Lütkepohl pp. 39-40
-
-        Returns
-        -------
-        (mid, lower, upper) : (ndarray, ndarray, ndarray)
         """
         if not 0 < alpha < 1:
             raise ValueError('alpha must be between 0 and 1')
@@ -1191,15 +1369,36 @@ class VARProcess(object):
         return point_forecast, forc_lower, forc_upper
 
     def to_vecm(self):
+        """
+        Transform a VAR to a VECM
+
+        Returns
+        -------
+        params : Bunch
+            Dict-like object with attributes Gamma and Pi
+
+        Notes
+        -----
+        The parameters of the VECM are defined as
+
+        .. math::
+
+            \Pi = I_k - \sum_{i=1}^p A_i
+
+        .. math::
+
+            \Gamma_i = -\sum_{j=i+1}^p A_j
+        """
         k = self.coefs.shape[1]
         p = self.coefs.shape[0]
         A = self.coefs
         pi = -(np.identity(k) - np.sum(A, 0))
-        gamma = np.zeros((p-1, k, k))
-        for i in range(p-1):
-            gamma[i] = -(np.sum(A[i+1:], 0))
+        gamma = np.zeros((p - 1, k, k))
+        for i in range(p - 1):
+            gamma[i] = -(np.sum(A[i + 1:], 0))
         gamma = np.concatenate(gamma, 1)
-        return {"Gamma": gamma, "Pi": pi}
+        return Bunch(Gamma=gamma, Pi=pi)
+
 
 # -------------------------------------------------------------------------------
 # VARResults class and utilities
@@ -1228,73 +1427,59 @@ def _compute_acov(x, nlags=1):
 
 
 class VARResults(VARProcess):
-    """Estimate VAR(p) process with fixed number of lags
+    """
+    The results instances of a fitted VAR(p) model.
 
     Parameters
     ----------
-    endog : array
-    endog_lagged : array
-    params : array
+    endog : ndarray
+    endog_lagged : ndarray
+    params : ndarray
     cov_resid : ndarray
     lag_order : int
     model : VAR model instance
-    trend : str {'nc', 'c', 'ct'}
+    trend : {'nc', 'c', 'ct'}
     names : array-like
-        List of names of the endogenous variables in order of appearance in `endog`.
+        List of names of the endogenous variables in order of appearance in
+        `endog`.
     dates
     exog : array
 
-
-    Returns
-    -------
-    **Attributes**
-    aic
-    bic
-    bse
-    coefs : ndarray (p x K x K)
-        Estimated A_i matrices, A_i = coefs[i-1]
-    cov_params
-    dates
-    detomega
-    df_model : int
-    df_resid : int
-    endog
-    endog_lagged
-    fittedvalues
-    fpe
-    intercept
-    info_criteria
+    Attributes
+    ----------
+    coefs : ndarray
+        Estimated A_i matrices, A_i = coefs[i-1] (p, neqs, neqs)
+    cov_resid : ndarray
+        Estimate of white noise process variance Var[u_t] (neqs, neqs)
+    dates : {None, DatetimeIndex}
+        Dates of observations
+    endog : ndarray
+        Endogenous data (nobs, neqs)
+    endog_lagged : ndarray
+        Endogenous data (nobs, p x neqs + k_exog).  Contains all lagged
+        variables plus any trend or exogenous terms. TODO: Check exogenous
+    intercept : ndarray
+        Estimated intercepts (neqs, )
     k_ar : int
+        Order of VAR process
     k_trend : int
-    llf
-    model
-    names
+        Number of trend terms in the model, including the constant
+    model : VAR
+        The model instance
+    names : list
+        Variable names
     neqs : int
         Number of variables (equations)
     nobs : int
+        Number of observations used to estimate parameters after
+        accounting for lags
     n_totobs : int
-    params
-    k_ar : int
-        Order of VAR process
-    params : ndarray (Kp + 1) x K
-        A_i matrices and intercept in stacked form [int A_1 ... A_p]
-    pvalues
-    names : list
-        variables names
-    resid
-    roots : array
-        The roots of the VAR process are the solution to
-        (I - coefs[0]*z - coefs[1]*z**2 ... - coefs[p-1]*z**k_ar) = 0.
-        Note that the inverse roots are returned, and stability requires that
-        the roots lie outside the unit circle.
-    sigma_u : ndarray (K x K)
-        Estimate of white noise process variance Var[u_t]
-    sigma_u_mle
-    stderr
-    trenorder
-    tvalues
-    y :
-    ys_lagged
+        Number of observations ignoring losses for lags
+    params : ndarray
+        Stacked A_i matrices and intercept in stacked form [int A_1 ... A_p]
+        (neqs x k_ar + 1, neqs)
+    trend : str
+        String name of included trend terms (e.g., 'c' for a constant)
     """
     _model_type = 'VAR'
 
@@ -1348,13 +1533,16 @@ class VARResults(VARProcess):
 
     @property
     def df_model(self):
-        """Number of estimated parameters, including the intercept / trends
+        """
+        Number of estimated parameters, including the intercept / trends
         """
         return self.neqs * self.k_ar + self.k_exog
 
     @property
     def df_resid(self):
-        """Number of observations minus number of estimated parameters"""
+        """
+        Number of observations minus number of estimated parameters
+        """
         return self.nobs - self.df_model
 
     @cache_readonly
@@ -1390,25 +1578,65 @@ class VARResults(VARProcess):
         return _compute_acov(self.endog[self.k_ar:], nlags=nlags)
 
     def sample_acorr(self, nlags=1):
-        acovs = self.sample_acov(nlags=nlags)
-        return _acovs_to_acorrs(acovs)
-
-    def plot_sample_acorr(self, nlags=10, linewidth=8):
-        "Plot theoretical autocorrelation function"
-        fig = plotting.plot_full_acorr(self.sample_acorr(nlags=nlags),
-                                       linewidth=linewidth)
-        return fig
-
-    def resid_acov(self, nlags=1):
         """
-        Compute centered sample autocovariance (including lag 0)
+        Sample autocorrelations of endog
 
         Parameters
         ----------
         nlags : int
+            The number of lags to include. Does not count the zero lag, which
+            will be returned.
+
 
         Returns
         -------
+        acorr : ndarray
+            The autocorrelation including the zero lag. Shape is
+            (nlags + 1, neqs, neqs).
+        """
+        acovs = self.sample_acov(nlags=nlags)
+        return _acovs_to_acorrs(acovs)
+
+    def plot_sample_acorr(self, nlags=10, linewidth=8, **plot_kwargs):
+        """
+        Plot sample autocorrelation function
+
+        Parameters
+        ----------
+        nlags : int
+            The number of lags to use in compute the autocorrelation. Does
+            not count the zero lag, which will be returned.
+        linewidth : int
+            The linewidth for the plots.
+        plot_kwargs : kwargs
+            Will be passed to `matplotlib.pyplot.axvlines`
+
+        Returns
+        -------
+        fig : matplotlib.Figure
+            The figure that contains the plot axes.
+        """
+        fig = plotting.plot_full_acorr(self.sample_acorr(nlags=nlags),
+                                       linewidth=linewidth,
+                                       xlabel=self.model.endog_names,
+                                       **plot_kwargs)
+        return fig
+
+    def resid_acov(self, nlags=1):
+        """
+        Compute centered sample residual autocovariance (including lag 0)
+
+        Parameters
+        ----------
+        nlags : int
+            The number of lags to use in compute the autocovariace. Does
+            not count the zero lag, which will be returned.
+
+        Returns
+        -------
+        acov : ndarray
+            The autocovariance for the residuals. The shape is
+            (nlags + 1, neqs, neqs).
         """
         return _compute_acov(self.resid, nlags=nlags)
 
@@ -1419,16 +1647,23 @@ class VARResults(VARProcess):
         Parameters
         ----------
         nlags : int
+            The number of lags to use in compute the autocorrelation. Does
+            not count the zero lag, which will be returned.
 
         Returns
         -------
+        acorr : ndarray
+            The autocorrelation for the residuals. The shape is
+            (nlags + 1, neqs, neqs).
         """
         acovs = self.resid_acov(nlags=nlags)
         return _acovs_to_acorrs(acovs)
 
     @cache_readonly
     def resid_corr(self):
-        "Centered residual correlation matrix"
+        """
+        Centered residual correlation matrix
+        """
         return self.resid_acorr(0)[0]
 
     @property
@@ -1480,23 +1715,33 @@ class VARResults(VARProcess):
         Notes
         -----
         Covariance of vec(B), where B is the matrix
-        [params_for_deterministic_terms, A_1, ..., A_p] with the shape
-        (K x (Kp + number_of_deterministic_terms))
+
+        [params_for_deterministic_terms, A_1, ..., A_p] with the shape (q, q)
+        where q = neqs x (neqs x k_ar + number_of_deterministic_terms)
+
         Adjusted to be an unbiased estimator
+
         Ref: Lütkepohl p.74-75
         """
         z = self.endog_lagged
         return np.kron(scipy.linalg.inv(np.dot(z.T, z)), self.cov_resid)
 
     def cov_ybar(self):
+        """
+        Deprecated.  Use cov_sample_mean.
+        """
+        return self.cov_sample_mean()
+
+    def cov_sample_mean(self):
         r"""Asymptotically consistent estimate of covariance of the sample mean
 
         .. math::
 
-            \sqrt(T) (\bar{y} - \mu) \rightarrow {\cal N}(0, \Sigma_{\bar{y}})\\
+            \sqrt(T) (\bar{y} - \mu) \rightarrow
+                                               {\cal N}(0, \Sigma_{\bar{y}}) \\
 
-            \Sigma_{\bar{y}} = B \Sigma_u B^\prime, \text{where } B = (I_K - A_1
-            - \cdots - A_p)^{-1}
+            \Sigma_{\bar{y}} = B \Sigma_u B^\prime, \text{where }
+                               B = (I_K - A_1 - \cdots - A_p)^{-1}
 
         Notes
         -----
@@ -1535,12 +1780,13 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def llf(self):
-        "Compute VAR(p) loglikelihood"
+        """VAR(p) log-likelihood"""
         return var_loglike(self.resid, self.cov_resid_mle, self.nobs)
 
     @cache_readonly
     def stderr(self):
-        """Standard errors of coefficients, reshaped to match in size
+        """
+        Standard errors of coefficients, reshaped to match in size
         """
         stderr = np.sqrt(np.diag(self.cov_params))
         return stderr.reshape((self.df_model, self.neqs), order='C')
@@ -1549,53 +1795,138 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def stderr_endog_lagged(self):
+        """
+        Standard errors of the parameters on the lagged endogenous variables
+
+        Notes
+        -----
+        Compliment of stderr_exog
+        """
         start = self.k_exog
         return self.stderr[start:]
 
     @cache_readonly
-    def stderr_dt(self):
+    def stderr_exog(self):
+        """
+        Standard errors of the exogenous regressors including trends.
+
+        Notes
+        -----
+        Compliment of stderr_endog_lagged
+        """
         end = self.k_exog
         return self.stderr[:end]
 
     @cache_readonly
+    def stderr_dt(self):
+        """
+        Deprecated. Use stderr_exog.
+        """
+        import warnings
+        warnings.warn('stderr_dt is deprecated.  Use stderr_exog.',
+                      DeprecationWarning)
+        return self.stderr_exog
+
+    @cache_readonly
     def tvalues(self):
-        """Compute t-statistics. Use Student-t(T - Kp - 1) = t(df_resid) to test
-        significance.
+        """
+        t-statistics of coefficients
+
+        Notes
+        -----
+        Degree of freedom is `df_resid`
         """
         return self.params / self.stderr
 
     @cache_readonly
     def tvalues_endog_lagged(self):
+        """
+        t-values of the parameters on the lagged endogenous variables
+
+        Notes
+        -----
+        Compliment of tvalues_exog
+        """
         start = self.k_exog
         return self.tvalues[start:]
 
     @cache_readonly
-    def tvalues_dt(self):
+    def tvalues_exog(self):
+        """
+        t-values of the parameters on the exogenous variables
+
+        Notes
+        -----
+        Compliment of tvalues_endog_lagged
+        """
         end = self.k_exog
         return self.tvalues[:end]
 
     @cache_readonly
+    def tvalues_dt(self):
+        """Deprecated.  Use tvalues_exog."""
+        import warnings
+        warnings.warn('tvalues_dt is deprecated.  Use tvalues_exog.',
+                      DeprecationWarning)
+        return self.tvalues_exog
+
+    @cache_readonly
     def pvalues(self):
-        """Two-sided p-values for model coefficients from Student t-distribution
+        """
+        Two-sided p-values for model coefficients from the Normal distribution
         """
         # return stats.t.sf(np.abs(self.tvalues), self.df_resid)*2
         return 2 * stats.norm.sf(np.abs(self.tvalues))
 
     @cache_readonly
     def pvalues_endog_lagged(self):
+        """
+        Two-sided p-values of the parameters on the lagged endogenous variables
+
+        Notes
+        -----
+        Compliment of pvalues_exog
+        """
         start = self.k_exog
         return self.pvalues[start:]
 
     @cache_readonly
-    def pvalues_dt(self):
+    def pvalues_exog(self):
+        """
+        Two-sided p-values of the parameters on the exogenous variables
+
+        Notes
+        -----
+        Compliment of pvalues_endog_lagged
+        """
         end = self.k_exog
         return self.pvalues[:end]
 
-    # todo: --------------------------------------------------------------------
+    @cache_readonly
+    def pvalues_dt(self):
+        """Deprecated.  Use pvalues_exog."""
+        import warnings
+        warnings.warn('pvalues_dt is deprecated.  Use pvalues_exog.',
+                      DeprecationWarning)
+        return self.pvalues_exog
 
     def plot_forecast(self, steps, alpha=0.05, plot_stderr=True):
         """
-        Plot forecast
+        Plot forecasts
+
+        Parameters
+        ----------
+        steps : int
+            The number of steps ahead to forecast.
+        alpha : float
+            The significance level for the confidence intervals.
+        plot_stderr : bool
+            Whether or not to plot the standard error bars.
+
+        Returns
+        -------
+        fig : `matplotlib.figure`
+            The figure that contains the axes
         """
         mid, lower, upper = self.forecast_interval(self.endog[-self.k_ar:],
                                                    steps, alpha=alpha)
@@ -1621,7 +1952,8 @@ class VARResults(VARProcess):
 
         Returns
         -------
-        covs : ndarray (steps x k x k)
+        forc_covs : ndarray
+            Covariance of the forecast errors (steps, neqs, neqs)
         """
         fc_cov = self.mse(steps)
         if method == 'mse':
@@ -1817,11 +2149,13 @@ class VARResults(VARProcess):
         return np.vstack((upper, self.params.T, lower))
 
     def summary(self):
-        """Compute console output summary of estimates
+        """
+        Summary of estimates
 
         Returns
         -------
         summary : VARSummary
+            A `statsmodels.tsa.vector_ar.output.VARSummary` class.
         """
         return VARSummary(self)
 
@@ -1831,19 +2165,21 @@ class VARResults(VARProcess):
         Parameters
         ----------
         periods : int
-        var_decomp : ndarray (k x k), lower triangular
-            Must satisfy cov_resid = P P', where P is the passed matrix. Defaults to
-            Cholesky decomposition of cov_resid
+            The number of periods for which to get the impulse responses.
+        var_decomp : ndarray (neqs x neqs), lower triangular
+            Must satisfy `cov_resid` = P P', where P is the passed matrix.
+            If P is None, defaults to Cholesky decomposition of `cov_resid`.
         var_order : sequence
             Alternate variable order for Cholesky decomposition
 
         Returns
         -------
         irf : IRAnalysis
+            A `statmodels.tsa.vector_ar.irf.IRAnalysis` instance.
         """
         if var_order is not None:
-            raise NotImplementedError('alternate variable order not implemented'
-                                      ' (yet)')
+            raise NotImplementedError('alternate variable order not '
+                                      'implemented (yet)')
 
         return IRAnalysis(self, P=var_decomp, periods=periods)
 
@@ -1851,14 +2187,24 @@ class VARResults(VARProcess):
         """
         Compute forecast error variance decomposition ("fevd")
 
+        Parameters
+        ----------
+        periods : int
+            The number of periods for which to give the FEVD.
+        var_decomp : ndarray (neqs x neqs), lower triangular
+            Must satisfy `cov_resid` = P P', where P is the passed matrix.
+            If P is None, defaults to Cholesky decomposition of `cov_resid`.
+
         Returns
         -------
-        fevd : FEVD instance
+        fevd : FEVD
+            A `statsmodels.tsa.vector_ar.var_model.FEVD` instance.
         """
         return FEVD(self, p=var_decomp, periods=periods)
 
     def reorder(self, order):
-        """Reorder variables for structural specification
+        """
+        Reorder variables for structural specification
         """
         if len(order) != len(self.params[0, :]):
             raise ValueError("Reorder specification length should match "
@@ -1871,8 +2217,72 @@ class VARResults(VARProcess):
             order = order_new
         return _reordered(self, order)
 
-    # --------------------------------------------------------------------------
-    # VAR Diagnostics: Granger-causality, whiteness of residuals, normality, etc
+    # ------------------------------------------------------------------------
+    # VAR Diagnostics: Granger-causality, whiteness of resids, normality, etc.
+
+    # TODO: Rescue?
+    # def test_causality_all(self, kind='F', signif=0.05):
+    #     """
+    #     Returns a DataFrame with tests for all equations and variables.
+    #
+    #     Parameters
+    #     ----------
+    #     kind : str {'F', 'Wald'}
+    #         Perform F-test or Wald (Chi-sq) test
+    #     signif : float, default 5%
+    #         Significance level for computing critical values for test,
+    #         defaulting to standard 0.95 level
+    #
+    #     Returns
+    #     -------
+    #     tbl : DataFrame
+    #         A hierarchical index DataFrame with tests for each equation
+    #         for each variable.
+    #
+    #     Notes
+    #     -----
+    #     If an F-test is requested, then the degrees of freedom given in the
+    #     results table will be the denominator degrees of freedom. The
+    #     """
+    #     kind = kind.lower()
+    #     if kind == 'f':
+    #         columns = ['F', 'df1', 'df2', 'prob(>F)']
+    #     elif kind == 'wald':
+    #         columns = ['chi2', 'df', 'prob(>chi2)']
+    #     else:
+    #         raise ValueError("kind %s not understood" % kind)
+    #     from pandas import DataFrame, MultiIndex
+    #     table = DataFrame(np.zeros((9,len(columns))), columns=columns)
+    #     index = []
+    #     variables = self.model.endog_names
+    #     i = 0
+    #     for vari in variables:
+    #         others = []
+    #         for j, ex_vari in enumerate(variables):
+    #             if vari == ex_vari: # don't want to test this
+    #                 continue
+    #             others.append(ex_vari)
+    #             res = self.test_causality(vari, ex_vari, kind=kind,
+    #                                       verbose=False)
+    #             if kind == 'f':
+    #                 row = (res['statistic'],) + res['df'] + (res['pvalue'],)
+    #             else:
+    #                 row = (res['statistic'], res['df'], res['pvalue'])
+    #             table.ix[[i], columns] = row
+    #             i += 1
+    #             index.append([vari, ex_vari])
+    #         res = self.test_causality(vari, others, kind=kind, verbose=False)
+    #         if kind == 'f':
+    #             row = (res['statistic'],) + res['df'] + (res['pvalue'],)
+    #         else:
+    #             row = (res['statistic'], res['df'], res['pvalue'])
+    #         table.ix[[i], columns] = row
+    #         index.append([vari, 'ALL'])
+    #         i += 1
+    #     table.index = MultiIndex.from_tuples(index, names=['Equation',
+    #                                                        'Excluded'])
+    #
+    #     return table
 
     def test_causality(self, caused, causing=None, kind='f', signif=0.05):
         """
@@ -1917,10 +2327,12 @@ class VARResults(VARProcess):
         Returns
         -------
         results : CausalityTestResults
+            A class holding the test's results.
 
         References
         ----------
-        .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+        .. [*] Lütkepohl, H., 2005. New introduction to multiple time series
+           analysis. Springer Science & Business Media.
         """
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
@@ -1936,7 +2348,6 @@ class VARResults(VARProcess):
         caused_ind = [util.get_index(self.names, c) for c in caused]
 
         if causing is not None:
-
             if isinstance(causing, allowed_types):
                 causing = [causing]
             if not all(isinstance(c, allowed_types) for c in causing):
@@ -2005,26 +2416,8 @@ class VARResults(VARProcess):
 
         Returns
         -------
-        results : dict
-            A dict holding the test's results. The dict's keys are:
-
-            "statistic" : float
-              The calculated test statistic.
-
-            "crit_value" : float
-              The critical value of the Chi^2-distribution.
-
-            "pvalue" : float
-              The p-value corresponding to the test statistic.
-
-            "df" : float
-              The degrees of freedom of the Chi^2-distribution.
-
-            "conclusion" : str {"reject", "fail to reject"}
-              Whether H0 can be rejected or not.
-
-            "signif" : float
-              Significance level
+        results : CausalityTestResults
+            A class holding the test's results.
 
         Notes
         -----
@@ -2046,7 +2439,8 @@ class VARResults(VARProcess):
 
         References
         ----------
-        .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+        .. [*] Lütkepohl, H., 2005. New introduction to multiple time series
+           analysis. Springer Science & Business Media.
         """
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
@@ -2105,9 +2499,12 @@ class VARResults(VARProcess):
 
         Parameters
         ----------
-        nlags : int > 0
+        nlags : int
+            The number of lags for the autocorrelations.
         signif : float, between 0 and 1
-        adjusted : bool, default False
+            Significance level for the test
+        adjusted : bool, optional
+            Flag indicating to use a degree-of-freedom adjustment
 
         Returns
         -------
@@ -2120,20 +2517,21 @@ class VARResults(VARProcess):
 
         References
         ----------
-        .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+        .. [*] Lütkepohl, H., 2005. New introduction to multiple time series
+           analysis. Springer Science & Business Media.
         """
         statistic = 0
         u = np.asarray(self.resid)
         acov_list = _compute_acov(u, nlags)
         cov0_inv = scipy.linalg.inv(acov_list[0])
-        for t in range(1, nlags+1):
+        for t in range(1, nlags + 1):
             ct = acov_list[t]
             to_add = np.trace(chain_dot(ct.T, cov0_inv, ct, cov0_inv))
             if adjusted:
                 to_add /= (self.nobs - t)
             statistic += to_add
-        statistic *= self.nobs**2 if adjusted else self.nobs
-        df = self.neqs**2 * (nlags - self.k_ar)
+        statistic *= self.nobs ** 2 if adjusted else self.nobs
+        df = self.neqs ** 2 * (nlags - self.k_ar)
         dist = stats.chi2(df)
         pvalue = dist.sf(statistic)
         crit_value = dist.ppf(1 - signif)
@@ -2160,7 +2558,7 @@ class VARResults(VARProcess):
 
         Returns
         -------
-        fig : matplotlib figure instance
+        fig : matplotlib.figure.Figure
 
         """
         if resid:
@@ -2171,7 +2569,7 @@ class VARResults(VARProcess):
         bound = 2 / np.sqrt(self.nobs)
 
         fig = plotting.plot_full_acorr(acorrs[1:],
-                                       xlabel=np.arange(1, nlags+1),
+                                       xlabel=np.arange(1, nlags + 1),
                                        err_bound=bound,
                                        linewidth=linewidth)
         fig.suptitle(r"ACF plots for residuals with $2 / \sqrt{T}$ bounds ")
@@ -2179,13 +2577,12 @@ class VARResults(VARProcess):
 
     def test_normality(self, signif=0.05):
         """
-        Test assumption of normal-distributed errors using Jarque-Bera-style
-        omnibus Chi^2 test.
+        Test assumption of normality in resids with Jarque-Bera-style test
 
         Parameters
         ----------
         signif : float
-            Test significance level.
+            Test significance threshold
 
         Returns
         -------
@@ -2250,36 +2647,77 @@ class VARResults(VARProcess):
 
     @property
     def aic(self):
-        """Akaike information criterion"""
+
+        """
+        Akaike information criterion
+
+        ln(det(cov_resid_mle)) + (2 / nobs) * k_ar * k_trend * neqs ** 2
+
+        Notes
+        -----
+        Uses the definition from Lütkepohl.
+        """
         return self.info_criteria['aic']
 
     @property
     def fpe(self):
         """Final Prediction Error (FPE)
 
-        Lütkepohl p. 147, see info_criteria
+        det(cov_resid_mle) * ((nobs + df_model)/df_resid)**neqs
+
+        Notes
+        -----
+        Uses the definition from Lütkepohl.
         """
         return self.info_criteria['fpe']
 
     @property
     def hqic(self):
-        """Hannan-Quinn criterion"""
+        """
+        Hannan-Quinn criterion
+
+        ln(det(cov_resid_mle)) + 2*ln(ln(nobs))/nobs * k_ar * k_trend * neqs**2
+
+        Notes
+        -----
+        Uses the definition from Lütkepohl.
+        """
+
         return self.info_criteria['hqic']
 
     @property
     def bic(self):
-        """Bayesian a.k.a. Schwarz info criterion"""
+        """
+        Bayesian/Schwarz information criterion
+
+        ln(det(cov_resid_mle)) + ln(nobs)/nobs * k_ar * k_trend * neqs ** 2
+
+        Notes
+        -----
+        Uses the definition from Lütkepohl.
+        """
+
         return self.info_criteria['bic']
 
     @cache_readonly
     def roots(self):
+        """
+        Roots of the VAR model
+
+        Notes
+        -----
+        The roots of the VAR process are the solution to
+        (I - coefs[0]*z - coefs[1]*z**2 ... - coefs[p-1]*z**k_ar) = 0.
+        Note that the inverse roots are returned, and stability requires that
+        the roots lie outside the unit circle.
+        """
         neqs = self.neqs
         k_ar = self.k_ar
         p = neqs * k_ar
         arr = np.zeros((p, p))
         arr[:neqs, :] = np.column_stack(self.coefs)
-        arr[neqs:, :-neqs] = np.eye(p-neqs)
-        roots = np.linalg.eig(arr)[0]**-1
+        arr[neqs:, :-neqs] = np.eye(p - neqs)
+        roots = np.linalg.eig(arr)[0] ** -1
         idx = np.argsort(np.abs(roots))[::-1]  # sort by reverse modulus
         return roots[idx]
 
@@ -2291,11 +2729,13 @@ class VARResultsWrapper(wrap.ResultsWrapper):
               'cov_resid_mle': 'cov_eq',
               'stderr': 'columns_eq'}
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
-                                    _attrs)
+                                   _attrs)
     _methods = {}
-    _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
-                                     _methods)
+    _tsbase_methods = tsbase.TimeSeriesResultsWrapper._wrap_methods
+    _wrap_methods = wrap.union_dicts(_tsbase_methods, _methods)
     _wrap_methods.pop('cov_params')  # not yet a method in VARResults
+
+
 wrap.populate_wrapper(VARResultsWrapper, VARResults)  # noqa:E305
 
 
@@ -2303,6 +2743,25 @@ class FEVD(object):
     """
     Compute and plot Forecast error variance decomposition and asymptotic
     standard errors
+
+    Parameters
+    ----------
+    results : VARResults
+        Results of a VAR estimation
+    p :
+        A square root of the residual covariance.
+    periods : int, optional
+        Number of periods to compute the decomposition
+
+    Notes
+    -----
+    p must satisfy
+
+    .. math:
+
+        \Omega = p p'
+
+    where :math:`\Omega` is the residuals covariance
     """
     @deprecate_kwarg('P', 'p')
     def __init__(self, results, p=None, periods=None):
@@ -2351,12 +2810,21 @@ class FEVD(object):
         raise NotImplementedError
 
     def plot(self, periods=None, figsize=(10, 10), **plot_kwds):
-        """Plot graphical display of FEVD
+        """Plot the forecast error variance decompositions
 
         Parameters
         ----------
         periods : int, default None
             Defaults to number originally specified. Can be at most that number
+        figsize : tuple
+            The figure size
+        plot_kwds : kwargs
+            Keyword arguments that
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            The matplotlib figure instance that contains the axes.
         """
         import matplotlib.pyplot as plt
 
@@ -2364,7 +2832,6 @@ class FEVD(object):
         periods = periods or self.periods
 
         fig, axes = plt.subplots(nrows=k, figsize=figsize)
-
         fig.suptitle('Forecast error variance decomposition (FEVD)')
 
         colors = [str(c) for c in np.arange(k, dtype=float) / k]
