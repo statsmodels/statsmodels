@@ -1634,20 +1634,34 @@ class VARResults(VARProcess):
 
     def _omega_forc_cov(self, steps):
         # Approximate MSE matrix \Omega(h) as defined in Lut p97
-        G = self._zz
-        Ginv = scipy.linalg.inv(G)
+        g = self._zz
+        g_inv = scipy.linalg.inv(g)
+        b = self._bmat_forc_cov()
 
-        # memoize powers of B for speedup
-        # TODO: see if can memoize better
-        # TODO: much lower-hanging fruit in caching `np.trace` and `chain_dot` below.
-        B = self._bmat_forc_cov()
-        _B = {}
+        # memoized values speedup
+        cache_b_power = {}
+        cache_bi_ginv_bjt_g = {}
+        cache_phi_cov_phit = {}
 
-        def bpow(i):
-            if i not in _B:
-                _B[i] = np.linalg.matrix_power(B, i)
+        def b_power(power):
+            if power not in cache_b_power:
+                cache_b_power[power] = np.linalg.matrix_power(b, power)
 
-            return _B[i]
+            return cache_b_power[power]
+
+        def bi_ginv_bjt_g(i, j):
+            if (i, j) not in cache_bi_ginv_bjt_g:
+                b_i = b_power(i)
+                b_j = b_power(j)
+                prod = np.trace(chain_dot(b_i.T, g_inv, b_j, g))
+                cache_bi_ginv_bjt_g[(i, j)] = prod
+            return cache_bi_ginv_bjt_g[(i, j)]
+
+        def _phi_cov_phit(i, j):
+            if (i, j) not in cache_phi_cov_phit:
+                prod = chain_dot(phis[i], cov_resid, phis[j].T)
+                cache_phi_cov_phit[(i, j)] = prod
+            return cache_phi_cov_phit[(i, j)]
 
         phis = self.ma_rep(steps)
         cov_resid = self.cov_resid
@@ -1655,17 +1669,21 @@ class VARResults(VARProcess):
         omegas = np.zeros((steps, self.neqs, self.neqs))
         for h in range(1, steps + 1):
             if h == 1:
-                omegas[h-1] = self.df_model * self.cov_resid
+                omegas[h - 1] = self.df_model * self.cov_resid
                 continue
 
-            om = omegas[h-1]
+            om = omegas[h - 1]
             for i in range(h):
                 for j in range(h):
-                    Bi = bpow(h - 1 - i)
-                    Bj = bpow(h - 1 - j)
-                    mult = np.trace(chain_dot(Bi.T, Ginv, Bj, G))
-                    om += mult * chain_dot(phis[i], cov_resid, phis[j].T)
-            omegas[h-1] = om
+                    # Replaced by memoized version
+                    # b_i = b_power(h - 1 - i)
+                    # b_j = b_power(h - 1 - j)
+                    # mult = np.trace(chain_dot(b_i.T, g_inv, b_j, g))
+                    mult = bi_ginv_bjt_g(h - 1 - i, h - 1 - j)
+                    # Replaced by memoized version
+                    # om += mult * chain_dot(phis[i], cov_resid, phis[j].T)
+                    om += mult * _phi_cov_phit(i, j)
+            omegas[h - 1] = om
 
         return omegas
 
