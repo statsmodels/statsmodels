@@ -847,7 +847,7 @@ class VAR(tsbase.TimeSeriesModel):
                 z[:, i] += lags
             # make the same adjustment for the quadratic term
             if (np.diff(np.sqrt(z[:, i])) == 1).all():
-                z[:, i] = (np.sqrt(z[:, i]) + lags) ** 2
+                z[:, i] = (np.sqrt(z[:, i]) + lags)**2
 
         y_sample = endog[lags:]
         # Lütkepohl p75, about 5x faster than stated formula
@@ -1288,7 +1288,7 @@ class VARProcess(object):
         if "t" in self.trend:
             exogs.append(exog_lin_trend)
         if "tt" in self.trend:
-            exogs.append(exog_lin_trend ** 2)
+            exogs.append(exog_lin_trend**2)
         if exog_future is not None:
             exogs.append(exog_future)
 
@@ -2371,13 +2371,13 @@ class VARResults(VARProcess):
         num_det_terms = self.k_exog
 
         # Make restriction matrix
-        c = np.zeros((num_restr, k * num_det_terms + k ** 2 * p), dtype=float)
+        c = np.zeros((num_restr, k * num_det_terms + k**2 * p), dtype=float)
         cols_det = k * num_det_terms
         row = 0
         for j in range(p):
             for ing_ind in causing_ind:
                 for ed_ind in caused_ind:
-                    c[row, cols_det + ed_ind + k * ing_ind + k ** 2 * j] = 1
+                    c[row, cols_det + ed_ind + k * ing_ind + k**2 * j] = 1
                     row += 1
 
         # Lütkepohl 3.6.5
@@ -2535,8 +2535,8 @@ class VARResults(VARProcess):
             if adjusted:
                 to_add /= (self.nobs - t)
             statistic += to_add
-        statistic *= self.nobs ** 2 if adjusted else self.nobs
-        df = self.neqs ** 2 * (nlags - self.k_ar)
+        statistic *= self.nobs**2 if adjusted else self.nobs
+        df = self.neqs**2 * (nlags - self.k_ar)
         dist = stats.chi2(df)
         pvalue = dist.sf(statistic)
         crit_value = dist.ppf(1 - signif)
@@ -2635,7 +2635,7 @@ class VARResults(VARProcess):
         nobs = self.nobs
         neqs = self.neqs
         lag_order = self.k_ar
-        free_params = lag_order * neqs ** 2 + neqs * self.k_exog
+        free_params = lag_order * neqs**2 + neqs * self.k_exog
 
         ld = logdet_symm(self.cov_resid_mle)
 
@@ -2644,7 +2644,7 @@ class VARResults(VARProcess):
         aic = ld + (2. / nobs) * free_params
         bic = ld + (np.log(nobs) / nobs) * free_params
         hqic = ld + (2. * np.log(np.log(nobs)) / nobs) * free_params
-        fpe = ((nobs + self.df_model) / self.df_resid) ** neqs * np.exp(ld)
+        fpe = ((nobs + self.df_model) / self.df_resid)**neqs * np.exp(ld)
         res = Bunch()
         res.update({'aic': aic, 'bic': bic, 'hqic': hqic, 'fpe': fpe})
 
@@ -2656,7 +2656,7 @@ class VARResults(VARProcess):
         """
         Akaike information criterion
 
-        ln(det(cov_resid_mle)) + (2 / nobs) * k_ar * k_trend * neqs ** 2
+        ln(det(cov_resid_mle)) + (2 / nobs) * k_ar * k_trend * neqs**2
 
         Notes
         -----
@@ -2695,7 +2695,7 @@ class VARResults(VARProcess):
         """
         Bayesian/Schwarz information criterion
 
-        ln(det(cov_resid_mle)) + ln(nobs)/nobs * k_ar * k_trend * neqs ** 2
+        ln(det(cov_resid_mle)) + ln(nobs)/nobs * k_ar * k_trend * neqs**2
 
         Notes
         -----
@@ -2722,7 +2722,7 @@ class VARResults(VARProcess):
         arr = np.zeros((p, p))
         arr[:neqs, :] = np.column_stack(self.coefs)
         arr[neqs:, :-neqs] = np.eye(p - neqs)
-        roots = np.linalg.eig(arr)[0] ** -1
+        roots = np.linalg.eig(arr)[0]**-1
         idx = np.argsort(np.abs(roots))[::-1]  # sort by reverse modulus
         return roots[idx]
 
@@ -2780,7 +2780,7 @@ class FEVD(object):
         self.orth_irfs = self.irfobj.orth_irfs
 
         # cumulative impulse responses
-        irfs = (self.orth_irfs[:periods] ** 2).cumsum(axis=0)
+        irfs = (self.orth_irfs[:periods]**2).cumsum(axis=0)
 
         rng = lrange(self.neqs)
         mse = results.mse(periods)[:, rng, rng]
