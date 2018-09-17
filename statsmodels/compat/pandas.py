@@ -33,3 +33,9 @@ except ImportError:
 assert_frame_equal = testing.assert_frame_equal
 assert_index_equal = testing.assert_index_equal
 assert_series_equal = testing.assert_series_equal
+
+try:
+    from pandas.util._decorators import deprecate_kwarg
+except ImportError:
+    # 0.18 and earlier
+    from pandas.util.decorators import deprecate_kwarg

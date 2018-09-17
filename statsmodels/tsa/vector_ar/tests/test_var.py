@@ -371,7 +371,11 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
         # bug
         model = VAR(self.model.endog)
-        model.select_order()
+        order = model.select_order()
+        assert 'AIC: {:d}'.format(order.aic) in order.__str__()
+        assert 'BIC: {:d}'.format(order.bic) in order.__str__()
+        assert 'HQIC: {:d}'.format(order.hqic) in order.__str__()
+        assert 'FPE: {:d}'.format(order.fpe) in order.__str__()
 
     def test_is_stable(self):
         # may not necessarily be true for other datasets
@@ -396,7 +400,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         point = self.res.forecast(self.res.endog[-5:], 5)
 
     def test_forecast_interval(self):
-        y = self.res.endog[:-self.p:]
+        y = self.res.endog[:-self.p]
         point, lower, upper = self.res.forecast_interval(y, 5)
 
     @pytest.mark.matplotlib

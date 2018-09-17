@@ -7,15 +7,12 @@ References
 Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
 from __future__ import print_function, division
+from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.python import range
 
 import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
-try:
-    from pandas.util._decorators import deprecate_kwarg
-except ImportError:
-    from pandas.util.decorators import deprecate_kwarg
 
 from statsmodels.tools.numdiff import (approx_hess, approx_fprime)
 from statsmodels.tools.decorators import cache_readonly

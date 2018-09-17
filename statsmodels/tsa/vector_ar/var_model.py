@@ -11,16 +11,13 @@ Hamilton, J.D., 1994. Time series analysis. Princeton, NJ: Princeton
 University Press.
 """
 from __future__ import division, print_function
+from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.python import (range, lrange, string_types, StringIO,
                                        iteritems)
 
 from collections import defaultdict
 
 import numpy as np
-try:
-    from pandas.util._decorators import deprecate_kwarg
-except ImportError:
-    from pandas.util.decorators import deprecate_kwarg
 import scipy.linalg
 import scipy.stats as stats
 
@@ -603,12 +600,12 @@ class LagOrderResults(object):
                            lrange(len(str_data)), title=self.title)
 
     def __str__(self):
-        return "<" + self.__module__ + "." + self.__class__.__name__ \
-               + " object. Selected orders are: AIC -> " + str(self.aic) \
-               + ", BIC -> " + str(self.bic) \
-               + ", FPE -> " + str(self.fpe) \
-               + ", HQIC -> " + str(self.hqic) + ">"
-
+        mod = self.__module__
+        name = self.__class__.__name__
+        out = '<{mod}.{name} object. \nSelected orders are:\n'
+        out += 'AIC: {aic:d}, BIC: {bic:d}, FPE: {fpe:d}, HQIC: {hqic:d}>'
+        return out.format(mod=mod, name=name, aic=self.aic, bic=self.bic,
+                          fpe=self.fpe, hqic=self.hqic)
 
 # ----------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
