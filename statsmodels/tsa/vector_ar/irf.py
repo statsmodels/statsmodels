@@ -296,11 +296,11 @@ class IRAnalysis(BaseIRAnalysis):
         model = self.model
         periods = self.periods
         if svar == True:
-            return model.sirf_errband_mc(orth=orth, repl=repl, T=periods,
+            return model.sirf_errband_mc(orth=orth, repl=repl, horizon=periods,
                                         signif=signif, seed=seed,
                                         burn=burn, cum=False)
         else:
-            return model.irf_errband_mc(orth=orth, repl=repl, T=periods,
+            return model.irf_errband_mc(orth=orth, repl=repl, horizon=periods,
                                         signif=signif, seed=seed,
                                         burn=burn, cum=False)
 
