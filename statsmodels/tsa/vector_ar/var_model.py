@@ -22,9 +22,9 @@ import scipy.linalg
 
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import cache_readonly
-from statsmodels.tools.sm_exceptions import OutputWarning
-from statsmodels.tools.tools import chain_dot
 from statsmodels.tools.linalg import logdet_symm
+from statsmodels.tools.sm_exceptions import OutputWarning
+from statsmodels.tools.tools import chain_dot, Bunch
 from statsmodels.tsa.tsatools import vec, unvec, duplication_matrix
 from statsmodels.tsa.vector_ar.hypothesis_test_results import \
     CausalityTestResults, NormalityTestResults, WhitenessTestResults
@@ -2159,7 +2159,14 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def info_criteria(self):
-        "information criteria for lagorder selection"
+        """
+        Information criteria for order selection
+
+        Returns
+        -------
+        ic : dict-like
+            Container with all model information criteria
+        """
         nobs = self.nobs
         neqs = self.neqs
         lag_order = self.k_ar
@@ -2167,19 +2174,16 @@ class VARResults(VARProcess):
 
         ld = logdet_symm(self.cov_resid_mle)
 
-        # See Lutkepohl pp. 146-150
+        # See Lütkepohl pp. 146-150
 
         aic = ld + (2. / nobs) * free_params
         bic = ld + (np.log(nobs) / nobs) * free_params
         hqic = ld + (2. * np.log(np.log(nobs)) / nobs) * free_params
         fpe = ((nobs + self.df_model) / self.df_resid) ** neqs * np.exp(ld)
+        res = Bunch()
+        res.update({'aic': aic, 'bic': bic, 'hqic': hqic, 'fpe': fpe})
 
-        return {
-            'aic': aic,
-            'bic': bic,
-            'hqic': hqic,
-            'fpe': fpe
-            }
+        return res
 
     @property
     def aic(self):
