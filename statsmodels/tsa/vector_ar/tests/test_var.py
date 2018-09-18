@@ -780,17 +780,19 @@ def test_deprecation_warnings(bivariate_var_data):
     from statsmodels.tsa.vector_ar.var_model import LagOrderResults
     selected_orders = dict((k, np.array(v).argmin() + p_min)
                            for k, v in iteritems(ics))
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(FutureWarning):
         LagOrderResults(ics, selected_orders, vecm=True)
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(FutureWarning):
         mod.fit(verbose=True)
+    with pytest.warns(FutureWarning):
+        res.cov_ybar()
 
 
 @pytest.mark.parametrize('attr', ['y', 'ys_lagged', 'sigma_u', 'sigma_u_mle',
                                   'stderr_dt', 'tvalues_dt', 'pvalues_dt',
                                   'sigma_u_mle', 'detomega'])
 def test_deprecated_attributes_varresults(bivariate_var_result, attr):
-    with pytest.deprecated_call():
+    with pytest.warns(FutureWarning):
         getattr(bivariate_var_result, attr)
 
 
@@ -826,3 +828,6 @@ def test_var_process_plotting(close_figures):
     var_process = VARProcess(coefs, None, cov_resid, names=['y1', 'y2'])
     var_process.plot_acorr(20)
     var_process.plot_sim(steps=200)
+
+    assert 'VAR(2) process' in var_process.__str__()
+    assert 'stable: True' in var_process.__str__()

@@ -258,7 +258,7 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
 
 @deprecate_kwarg('sig_u', 'cov_resid')
 def forecast_cov(ma_coefs, cov_resid, steps):
-    """
+    r"""
     Compute theoretical forecast error variance matrices
 
     Parameters
@@ -567,7 +567,7 @@ class LagOrderResults(object):
             # Deprecated in 0.10.0, remove in 0.11.0
             import warnings
             warnings.warn('vecm is deprecated and instance type is '
-                          'automatically detected.', DeprecationWarning)
+                          'automatically detected.', FutureWarning)
         # Circular import delay
         from statsmodels.tsa.vector_ar.vecm import VECMResults
         self.vecm = isinstance(self, VECMResults)
@@ -643,7 +643,7 @@ class VAR(tsbase.TimeSeriesModel):
        analysis. Springer Science & Business Media.
     """
     # Deprecation
-    y = deprecated_alias('y', 'endog', '0.11', warning=DeprecationWarning)
+    y = deprecated_alias('y', 'endog', '0.11')
 
     # TODO: Use existing strings in signature for missing and freq?
     def __init__(self, endog, exog=None, dates=None, freq=None,
@@ -773,7 +773,7 @@ class VAR(tsbase.TimeSeriesModel):
         if verbose is not None:
             # Deprecated in 0.10.0, remove in 0.11.0
             import warnings
-            warnings.warn('verbose is deprecated.', DeprecationWarning)
+            warnings.warn('verbose is deprecated.', FutureWarning)
 
         lags = maxlags
 
@@ -920,7 +920,7 @@ class VAR(tsbase.TimeSeriesModel):
 
 
 class VARProcess(object):
-    """
+    r"""
     Representation of a VAR(p) with known parameters
 
     Parameters
@@ -1083,7 +1083,7 @@ class VARProcess(object):
         """Deprecated.  Use plot_sim."""
         import warnings
         warnings.warn("plotsim is deprecated and will be removed in 0.11.0. "
-                      "Use plot_sim.", DeprecationWarning)
+                      "Use plot_sim.", FutureWarning)
 
         return self.plot_sim(steps, offset, seed)
 
@@ -1170,7 +1170,7 @@ class VARProcess(object):
         return orth_ma_rep(self, maxn, p)
 
     def long_run_effects(self):
-        """
+        r"""
         Compute long-run effect of a unit impulse
 
         Returns
@@ -1306,7 +1306,7 @@ class VARProcess(object):
         return forecast(y, self.coefs, trend_coefs, steps, exog_future)
 
     def mse(self, steps):
-        """
+        r"""
         Compute theoretical forecast error variance matrices
 
         Parameters
@@ -1384,7 +1384,7 @@ class VARProcess(object):
         return point_forecast, forc_lower, forc_upper
 
     def to_vecm(self):
-        """
+        r"""
         Transform a VAR to a VECM
 
         Returns
@@ -1509,21 +1509,14 @@ class VARResults(VARProcess):
         String name of included trend terms (e.g., 'c' for a constant)
     """
     # Deprecations
-    y = deprecated_alias('y', 'endog', '0.11', warning=DeprecationWarning)
-    ys_lagged = deprecated_alias('ys_lagged', 'endog_lagged', '0.11',
-                                 warning=DeprecationWarning)
-    sigma_u = deprecated_alias('sigma_u', 'cov_resid', '0.11',
-                               warning=DeprecationWarning)
-    sigma_u_mle = deprecated_alias('sigma_u_mle', 'cov_resid_mle', '0.11',
-                                   warning=DeprecationWarning)
-    stderr_dt = deprecated_alias('stderr_dt', 'stderr_exog', '0.11',
-                                 warning=DeprecationWarning)
-    tvalues_dt = deprecated_alias('tvalues_dt', 'tvalues_exog', '0.11',
-                                  warning=DeprecationWarning)
-    pvalues_dt = deprecated_alias('pvalues_dt', 'pvalues_exog', '0.11',
-                                  warning=DeprecationWarning)
-    detomega = deprecated_alias('detomega', 'det_cov_resid', '0.11',
-                                warning=DeprecationWarning)
+    y = deprecated_alias('y', 'endog', '0.11')
+    ys_lagged = deprecated_alias('ys_lagged', 'endog_lagged', '0.11')
+    sigma_u = deprecated_alias('sigma_u', 'cov_resid', '0.11')
+    sigma_u_mle = deprecated_alias('sigma_u_mle', 'cov_resid_mle', '0.11')
+    stderr_dt = deprecated_alias('stderr_dt', 'stderr_exog', '0.11')
+    tvalues_dt = deprecated_alias('tvalues_dt', 'tvalues_exog', '0.11')
+    pvalues_dt = deprecated_alias('pvalues_dt', 'pvalues_exog', '0.11')
+    detomega = deprecated_alias('detomega', 'det_cov_resid', '0.11', )
     _model_type = 'VAR'
 
     def __init__(self, endog, endog_lagged, params, cov_resid, lag_order,
@@ -1741,6 +1734,9 @@ class VARResults(VARProcess):
         """
         Deprecated.  Use cov_sample_mean.
         """
+        import warnings
+        warnings.warn('cov_ybar is deprecated. Use cov_sample_mean instead.',
+                      FutureWarning)
         return self.cov_sample_mean()
 
     def cov_sample_mean(self):
@@ -2534,7 +2530,7 @@ class VARResults(VARProcess):
                                     nlags, adjusted)
 
     def plot_acorr(self, nlags=10, resid=True, linewidth=8):
-        """
+        r"""
         Plot autocorrelation of sample (endog) or residuals
 
         Sample (Y) or Residual autocorrelations are plotted together with the
@@ -2553,7 +2549,6 @@ class VARResults(VARProcess):
         Returns
         -------
         fig : matplotlib.figure.Figure
-
         """
         if resid:
             acorrs = self.resid_acorr(nlags)
@@ -2728,7 +2723,7 @@ wrap.populate_wrapper(VARResultsWrapper, VARResults)  # noqa:E305
 
 
 class FEVD(object):
-    """
+    r"""
     Compute and plot Forecast error variance decomposition and asymptotic
     standard errors
 

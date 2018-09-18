@@ -722,7 +722,6 @@ def test_var_to_vecm(dataset):
         desired_gamma = results_sm[ds][dt].gamma
         assert_allclose(obtained_pi, desired_pi, rtol, atol, False, err_msg + " Pi")
         assert_allclose(obtained_gamma, desired_gamma, rtol, atol, False, err_msg + " Gamma")
-        assert 'VAR(4) process' in var.__str__()
 
 
 # Commented out since JMulTi shows the same det. terms for both VEC & VAR repr.
