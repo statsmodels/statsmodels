@@ -790,7 +790,7 @@ def test_deprecation_warnings(bivariate_var_data):
                                   'stderr_dt', 'tvalues_dt', 'pvalues_dt',
                                   'sigma_u_mle', 'detomega'])
 def test_deprecated_attributes_varresults(bivariate_var_result, attr):
-    with pytest.warns(DeprecationWarning):
+    with pytest.deprecated_call():
         getattr(bivariate_var_result, attr)
 
 
