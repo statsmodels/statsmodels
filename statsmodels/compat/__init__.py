@@ -1,4 +1,4 @@
-from .python import (  # noqa:F401
+from .python import (
     PY3, PY37,
     bytes, str, unicode, string_types,
     asunicode, asbytes, asstr, asstr2,

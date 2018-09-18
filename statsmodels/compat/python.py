@@ -25,7 +25,7 @@ if PY3:
     bytes = bytes
     str = str
     unicode = str
-    asunicode = lambda x, _ : str(x)
+    asunicode = lambda x, _: str(x)  # noqa:E731
 
     def asbytes(s):
         if isinstance(s, bytes):
@@ -37,7 +37,7 @@ if PY3:
             return s
         return s.decode('latin1')
 
-    def asstr2(s):  #added JP, not in numpy version
+    def asstr2(s):  # added JP, not in numpy version
         if isinstance(s, str):
             return s
         elif isinstance(s, bytes):
@@ -74,7 +74,9 @@ if PY3:
     urlencode = urllib.parse.urlencode
     string_types = str
 
-    ArgSpec= namedtuple('ArgSpec', ['args', 'varargs', 'keywords', 'defaults'])
+    ArgSpec = namedtuple('ArgSpec',
+                         ['args', 'varargs', 'keywords', 'defaults'])
+
     def getargspec(func):
         """
         Simple workaroung for getargspec deprecation that returns
@@ -82,7 +84,7 @@ if PY3:
         """
         sig = inspect.signature(func)
         parameters = sig.parameters
-        args, defaults  = [], []
+        args, defaults = [], []
         varargs, keywords = None, None
 
         for key in parameters:
@@ -103,10 +105,10 @@ if PY3:
 else:
     import __builtin__ as builtins
     # not writeable when instantiated with string, doesn't handle unicode well
-    from cStringIO import StringIO as cStringIO
+    from cStringIO import StringIO as cStringIO  # noqa:F401
     # always writeable
     from StringIO import StringIO
-    from inspect import getargspec
+    from inspect import getargspec  # noqa:F401
 
     BytesIO = StringIO
     import cPickle
@@ -127,7 +129,7 @@ else:
         return s.decode(encoding)
 
     # import iterator versions of these functions
-    range = xrange
+    range = xrange  # noqa:F821
     zip = itertools.izip
     filter = itertools.ifilter
     map = itertools.imap
@@ -147,7 +149,7 @@ else:
     urlencode = urllib.urlencode
     HTTPError = urllib2.HTTPError
     URLError = urllib2.URLError
-    string_types = basestring
+    string_types = basestring  # noqa:F821
 
 
 try:
@@ -155,6 +157,7 @@ try:
 except NameError:
     def next(it):
         return it.next()
+
 
 
 def iteritems(obj, **kwargs):
@@ -187,7 +190,7 @@ def get_class(func):
     try:
         return func.im_class
     except AttributeError:
-        #Python 3
+        # Python 3
         return func.__self__.__class__
 
 
