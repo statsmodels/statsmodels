@@ -329,7 +329,7 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
     else:
         # ensure weights is a numpy array
         weights = np.asarray(weights)
-        
+
         if len(weights) != len(clip_x):
             msg = "The length of the weights must be the same as the given X."
             raise ValueError(msg)
@@ -432,8 +432,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     cross-validation.
 
     References
-    ---------- ::
-
+    ----------
     Fan, J. and J.S. Marron. (1994) `Fast implementations of nonparametric
         curve estimators`. Journal of Computational and Graphical Statistics.
         3.1, 35-56.

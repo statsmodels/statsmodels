@@ -211,7 +211,6 @@ class Family(object):
         resid_dev *= var_weights / scale
         return np.sign(endog - mu) * np.sqrt(np.clip(resid_dev, 0., np.inf))
 
-
     def fitted(self, lin_pred):
         r"""
         Fitted values based on linear predictors lin_pred.
@@ -385,7 +384,7 @@ class Poisson(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.mu
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
@@ -511,7 +510,7 @@ class Gaussian(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.constant
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
@@ -655,7 +654,7 @@ class Gamma(Family):
         ``variance`` is an instance of
         statsmodels.genmod.family.varfuncs.mu_squared
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
@@ -789,7 +788,7 @@ class Binomial(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.binary
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
@@ -1024,7 +1023,7 @@ class InverseGaussian(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.mu_cubed
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
@@ -1162,7 +1161,7 @@ class NegativeBinomial(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.nbinom
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
@@ -1352,10 +1351,11 @@ class Tweedie(Family):
     Tweedie.var_power : float
         The power of the variance function.
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
+
     Notes
     -----
     Logliklihood function not implemented because of the complexity of

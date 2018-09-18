@@ -379,7 +379,7 @@ class TestAdditiveSeasonal(AdditiveSeasonal):
         # available with finite differencing
         # with warnings.catch_warnings():
         #     warnings.simplefilter("ignore")
-            
+
         #     # finite difference, non-centered
         #     bse = self.result._cov_params_approx(
         #         approx_complex_step=False).diagonal()**0.5
@@ -468,7 +468,7 @@ class TestAirlineHamilton(Airline):
         # available with finite differencing
         # with warnings.catch_warnings():
         #     warnings.simplefilter("ignore")
-        
+
         #     # finite difference, non-centered
         #     bse = self.result._cov_params_approx(
         #         approx_complex_step=False).diagonal()**0.5
@@ -522,7 +522,7 @@ class TestAirlineHarvey(Airline):
         # available with finite differencing
         # with warnings.catch_warnings():
         #     warnings.simplefilter("ignore")
-        
+
         #     # finite difference, non-centered
         #     bse = self.result._cov_params_approx(
         #         approx_complex_step=False).diagonal()**0.5
@@ -679,7 +679,7 @@ class TestFriedmanMLERegression(Friedman):
         # available with finite differencing
         # with warnings.catch_warnings():
         #     warnings.simplefilter("ignore")
-        
+
         #     # finite difference, non-centered
         #     bse = self.result._cov_params_approx(
         #         approx_complex_step=False).diagonal()**0.5
