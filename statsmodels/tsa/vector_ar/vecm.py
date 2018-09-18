@@ -986,7 +986,7 @@ class VECM(tsbase.TimeSeriesModel):
 
 
 class VECMResults(object):
-    """Class for holding estimation related results of a vector error
+    r"""Class for holding estimation related results of a vector error
     correction model (VECM).
 
     Parameters
@@ -1001,19 +1001,19 @@ class VECMResults(object):
         Lags in the VAR representation. This implies that the number of lags in
         the VEC representation (=lagged differences) equals :math:`k_{ar} - 1`.
     coint_rank : int, 0 <= `coint_rank` <= neqs
-        Cointegration rank, equals the rank of the matrix :math:`\\Pi` and the
-        number of columns of :math:`\\alpha` and :math:`\\beta`.
+        Cointegration rank, equals the rank of the matrix :math:`\Pi` and the
+        number of columns of :math:`\alpha` and :math:`\beta`.
     alpha : ndarray (neqs x `coint_rank`)
-        Estimate for the parameter :math:`\\alpha` of a VECM.
+        Estimate for the parameter :math:`\alpha` of a VECM.
     beta : ndarray (neqs x `coint_rank`)
-        Estimate for the parameter :math:`\\beta` of a VECM.
+        Estimate for the parameter :math:`\beta` of a VECM.
     gamma : ndarray (neqs x neqs*(k_ar-1))
         Array containing the estimates of the :math:`k_{ar}-1` parameter
-        matrices :math:`\\Gamma_1, \\dots, \\Gamma_{k_{ar}-1}` of a
+        matrices :math:`\Gamma_1, \dots, \Gamma_{k_{ar}-1}` of a
         VECM(:math:`k_{ar}-1`). The submatrices are stacked horizontally from
         left to right.
     cov_resid : ndarray (neqs x neqs)
-        Estimate of white noise process covariance matrix :math:`\\Sigma_u`.
+        Estimate of white noise process covariance matrix :math:`\Sigma_u`.
     deterministic : str {``"nc"``, ``"co"``, ``"ci"``, ``"lo"``, ``"li"``}
         * ``"nc"`` - no deterministic terms
         * ``"co"`` - constant outside the cointegration relation
@@ -1116,8 +1116,8 @@ class VECMResults(object):
     _y_lag1 : see y_lag1 in Parameters
     _delta_x : see delta_x in Parameters
     coint_rank : int
-        Cointegration rank, equals the rank of the matrix :math:`\\Pi` and the
-        number of columns of :math:`\\alpha` and :math:`\\beta`.
+        Cointegration rank, equals the rank of the matrix :math:`\Pi` and the
+        number of columns of :math:`\alpha` and :math:`\beta`.
     llf : float
         The model's log-likelihood.
     cov_params : ndarray (d x d)
@@ -1126,31 +1126,31 @@ class VECMResults(object):
         is equal to neqs * (neqs+num_det_coef_coint + neqs*(k_ar-1)+number of
         deterministic dummy variables outside the cointegration relation). For
         the case with no deterministic terms this matrix is defined on p. 287
-        in [1]_ as :math:`\\Sigma_{co}` and its relationship to the
+        in [1]_ as :math:`\Sigma_{co}` and its relationship to the
         ML-estimators can be seen in eq. (7.2.21) on p. 296 in [1]_.
     cov_params_wo_det : ndarray
         Covariance matrix of the parameters
-        :math:`\\tilde{\\Pi}, \\tilde{\\Gamma}` where
-        :math:`\\tilde{\\Pi} = \\tilde{\\alpha} \\tilde{\\beta'}`.
+        :math:`\tilde{\Pi}, \tilde{\Gamma}` where
+        :math:`\tilde{\Pi} = \tilde{\alpha} \tilde{\beta'}`.
         Equals `cov_params` without the rows and columns related to
-        deterministic terms. This matrix is defined as :math:`\\Sigma_{co}` on
+        deterministic terms. This matrix is defined as :math:`\Sigma_{co}` on
         p. 287 in [1]_.
     stderr_params : ndarray (d)
-        Array containing the standard errors of :math:`\\Pi`, :math:`\\Gamma`,
+        Array containing the standard errors of :math:`\Pi`, :math:`\Gamma`,
         and estimated parameters related to deterministic terms.
     stderr_coint : ndarray (neqs+num_det_coef_coint x `coint_rank`)
-        Array containing the standard errors of :math:`\\beta` and estimated
+        Array containing the standard errors of :math:`\beta` and estimated
         parameters related to deterministic terms inside the cointegration
         relation.
     stderr_alpha :  ndarray (neqs x `coint_rank`)
-        The standard errors of :math:`\\alpha`.
+        The standard errors of :math:`\alpha`.
     stderr_beta : ndarray (neqs x `coint_rank`)
-        The standard errors of :math:`\\beta`.
+        The standard errors of :math:`\beta`.
     stderr_det_coef_coint : ndarray (num_det_coef_coint x `coint_rank`)
         The standard errors of estimated the parameters related to
         deterministic terms inside the cointegration relation.
     stderr_gamma : ndarray (neqs x neqs*(k_ar-1))
-        The standard errors of :math:`\\Gamma_1, \\ldots, \\Gamma_{k_{ar}-1}`.
+        The standard errors of :math:`\Gamma_1, \ldots, \Gamma_{k_{ar}-1}`.
     stderr_det_coef : ndarray (neqs x det. terms outside the coint. relation)
         The standard errors of estimated the parameters related to
         deterministic terms outside the cointegration relation.
@@ -1170,7 +1170,7 @@ class VECMResults(object):
         these matrices can be accessed via ``A[i]`` for
         :math:`i=0, \ldots, k_{ar}-1`.
     cov_var_repr : ndarray (neqs**2 * k_ar x neqs**2 * k_ar)
-        This matrix is called :math:`\\Sigma^{co}_{\\alpha}` on p. 289 in [1]_.
+        This matrix is called :math:`\Sigma^{co}_{\alpha}` on p. 289 in [1]_.
         It is needed e.g. for impulse-response-analysis.
     fittedvalues : ndarray (nobs x neqs)
         The predicted in-sample values of the models' endogenous variables.
@@ -1292,8 +1292,8 @@ class VECMResults(object):
         omega12 = b_y.dot(self._delta_x.T)
         omega21 = omega12.T
         omega22 = self._delta_x.dot(self._delta_x.T)
-        omega = np.bmat([[omega11, omega12],
-                         [omega21, omega22]]).A
+        omega = np.vstack([np.hstack([omega11, omega12]),
+                           np.hstack([omega21, omega22])])
 
         mat1 = b_id.dot(inv(omega)).dot(b_id.T)
         return np.kron(mat1, self.cov_resid)
@@ -1711,7 +1711,7 @@ class VECMResults(object):
                            legend_options={"loc": "lower left"})
 
     def test_granger_causality(self, caused, causing=None, signif=0.05):
-        """
+        r"""
         Test for Granger-causality.
 
         The concept of Granger-causality is described in chapter 7.6.3 of [1]_.
@@ -1845,7 +1845,7 @@ class VECMResults(object):
                                     method="f")
 
     def test_inst_causality(self, causing, signif=0.05):
-        """
+        r"""
         Test for instantaneous causality.
 
         The concept of instantaneous causality is described in chapters 3.6.3
@@ -1939,7 +1939,7 @@ class VECMResults(object):
         return self.y_all.T[self.k_ar:] - self.fittedvalues
 
     def test_normality(self, signif=0.05):
-        """
+        r"""
         Test assumption of normal-distributed errors using Jarque-Bera-style
         omnibus :math:`\\chi^2` test.
 
