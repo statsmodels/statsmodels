@@ -66,7 +66,6 @@ class SVAR(tsbase.TimeSeriesModel):
         #(self.endog, self.names,
         # self.dates) = data_util.interpret_data(endog, names, dates)
 
-        self.y = self.endog #keep alias for now
         self.neqs = self.endog.shape[1]
 
         types = ['A', 'B', 'AB']
@@ -575,11 +574,11 @@ class SVARResults(SVARProcess, VARResults):
                  trend='c', names=None, dates=None):
 
         self.model = model
-        self.y = self.endog = endog  #keep alias for now
-        self.ys_lagged = self.endog_lagged = endog_lagged #keep alias for now
+        self.endog = endog
+        self.endog_lagged = endog_lagged
         self.dates = dates
 
-        self.n_totobs, self.neqs = self.y.shape
+        self.n_totobs, self.neqs = self.endog.shape
         self.nobs = self.n_totobs - lag_order
         k_trend = util.get_trendorder(trend)
         if k_trend > 0: # make this the polynomial trend order

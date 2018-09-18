@@ -195,9 +195,9 @@ def test_ols_det_terms():
             # If there are no det. terms, just make sure we don't compute any:
             if det_key_ref not in results_ref[ds][dt_s]["est"].keys():
                 assert_((results_sm[ds][dt_s].coefs_exog.size == 0 and
-                         results_sm[ds][dt_s].stderr_dt.size == 0 and
-                         results_sm[ds][dt_s].tvalues_dt.size == 0 and
-                         results_sm[ds][dt_s].pvalues_dt.size == 0), err_msg)
+                         results_sm[ds][dt_s].stderr_exog.size == 0 and
+                         results_sm[ds][dt_s].tvalues_exog.size == 0 and
+                         results_sm[ds][dt_s].pvalues_exog.size == 0), err_msg)
                 continue
             obtained = results_sm[ds][dt_s].coefs_exog
             desired = results_ref[ds][dt_s]["est"][det_key_ref]
@@ -207,19 +207,19 @@ def test_ols_det_terms():
             if debug_mode and dont_test_se_t_p:
                 continue
             # standard errors
-            obt = results_sm[ds][dt_s].stderr_dt
+            obt = results_sm[ds][dt_s].stderr_exog
             des = results_ref[ds][dt_s]["se"][det_key_ref]
             des = reorder_jmultis_det_terms(des, dt_s[0].startswith("c"),
                                             dt_s[1]).T
             assert_allclose(obt, des, rtol, atol, False, "STANDARD ERRORS\n" + err_msg)
             # t-values
-            obt = results_sm[ds][dt_s].tvalues_dt
+            obt = results_sm[ds][dt_s].tvalues_exog
             des = results_ref[ds][dt_s]["t"][det_key_ref]
             des = reorder_jmultis_det_terms(des, dt_s[0].startswith("c"),
                                             dt_s[1]).T
             assert_allclose(obt, des, rtol, atol, False, "t-VALUES\n" + err_msg)
             # p-values
-            obt = results_sm[ds][dt_s].pvalues_dt
+            obt = results_sm[ds][dt_s].pvalues_exog
             des = results_ref[ds][dt_s]["p"][det_key_ref]
             des = reorder_jmultis_det_terms(des, dt_s[0].startswith("c"),
                                             dt_s[1]).T
@@ -237,7 +237,7 @@ def test_ols_sigma():
                 print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
 
             err_msg = build_err_msg(ds, dt, "Sigma_u")
-            obtained = results_sm[ds][dt].sigma_u
+            obtained = results_sm[ds][dt].cov_resid
             desired = results_ref[ds][dt]["est"]["Sigma_u"]
             assert_allclose(obtained, desired, rtol, atol, False, err_msg)
 
