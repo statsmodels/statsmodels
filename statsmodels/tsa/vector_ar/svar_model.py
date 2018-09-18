@@ -477,7 +477,7 @@ class SVARProcess(VARProcess):
         self.B_solve = B_solve
         self.names = names
 
-    def orth_ma_rep(self, maxn=10, p=None):
+    def orth_ma_rep(self, maxn=10, cov_root=None):
         """
 
         Unavailable for SVAR
@@ -630,7 +630,7 @@ class SVARResults(SVARProcess, VARResults):
 
         return IRAnalysis(self, P=P, periods=periods, svar=True)
 
-    def sirf_errband_mc(self, orth=False, repl=1000, T=10,
+    def sirf_errband_mc(self, orth=False, repl=1000, steps=10,
                         signif=0.05, seed=None, burn=100, cum=False):
         """
         Compute Monte Carlo integrated error bands assuming normally
@@ -642,7 +642,7 @@ class SVARResults(SVARProcess, VARResults):
             Compute orthoganalized impulse response error bands
         repl: int
             number of Monte Carlo replications to perform
-        T: int, default 10
+        steps: int, default 10
             number of impulse response periods
         signif: float (0 < signif <1)
             Significance level for error bars, defaults to 95% CI
@@ -671,7 +671,7 @@ class SVARResults(SVARProcess, VARResults):
         df_model = self.df_model
         nobs = self.nobs
 
-        ma_coll = np.zeros((repl, T+1, neqs, neqs))
+        ma_coll = np.zeros((repl, steps + 1, neqs, neqs))
         A = self.A
         B = self.B
         A_mask = self.A_mask
@@ -703,7 +703,7 @@ class SVARResults(SVARProcess, VARResults):
                                             tolist(),
                                             sol.B[sol.B_mask].\
                                             tolist()))
-                    ma_coll[i] = sol.svar_ma_rep(maxn=T).cumsum(axis=0)
+                    ma_coll[i] = sol.svar_ma_rep(maxn=steps).cumsum(axis=0)
                 elif i >= 10:
                     if i == 10:
                         mean_AB = np.mean(g_list, axis = 0)
@@ -713,7 +713,7 @@ class SVARResults(SVARProcess, VARResults):
                     ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
                                  B=B_pass).fit(maxlags=k_ar,\
                                  A_guess=opt_A, B_guess=opt_B).\
-                                 svar_ma_rep(maxn=T).cumsum(axis=0)
+                                 svar_ma_rep(maxn=steps).cumsum(axis=0)
 
             elif cum == False:
                 if i < 10:
@@ -721,7 +721,7 @@ class SVARResults(SVARProcess, VARResults):
                                B=B_pass).fit(maxlags=k_ar)
                     g_list.append(np.append(sol.A[A_mask].tolist(),
                                             sol.B[B_mask].tolist()))
-                    ma_coll[i] = sol.svar_ma_rep(maxn=T)
+                    ma_coll[i] = sol.svar_ma_rep(maxn=steps)
                 elif i >= 10:
                     if i == 10:
                         mean_AB = np.mean(g_list, axis = 0)
@@ -731,7 +731,7 @@ class SVARResults(SVARProcess, VARResults):
                     ma_coll[i] = SVAR(sim, svar_type=s_type, A=A_pass,
                                  B=B_pass).fit(maxlags=k_ar,\
                                  A_guess = opt_A, B_guess = opt_B).\
-                                 svar_ma_rep(maxn=T)
+                                 svar_ma_rep(maxn=steps)
 
         ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
         index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1

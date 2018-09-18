@@ -466,8 +466,8 @@ def _reordered(self, order):
                       trend='c', names=names_new, dates=self.dates)
 
 
-@deprecate_kwarg('P', 'p')
-def orth_ma_rep(results, maxn=10, p=None):
+@deprecate_kwarg('P', 'cov_root')
+def orth_ma_rep(results, maxn=10, cov_root=None):
     r"""
     Compute orthogonalized MA coefficient matrices
 
@@ -477,7 +477,7 @@ def orth_ma_rep(results, maxn=10, p=None):
         Results instance
     maxn : int
         Number of coefficient matrices to compute
-    p : ndarray, optional
+    cov_root : ndarray, optional
         Matrix such that results.cov_resid = pp'. Defaults to the Cholesky
         decomposition of results.cov_resid if not provided
 
@@ -485,11 +485,11 @@ def orth_ma_rep(results, maxn=10, p=None):
     -------
     coefs : ndarray (maxn x neqs x neqs)
     """
-    if p is None:
-        p = results._chol_cov_resid
+    if cov_root is None:
+        cov_root = results._chol_cov_resid
 
     ma_mats = results.ma_rep(maxn=maxn)
-    return np.array([np.dot(coefs, p) for coefs in ma_mats])
+    return np.array([np.dot(coefs, cov_root) for coefs in ma_mats])
 
 
 def test_normality(results, signif=0.05):
@@ -1149,7 +1149,7 @@ class VARProcess(object):
         """
         return ma_rep(self.coefs, maxn=maxn)
 
-    def orth_ma_rep(self, maxn=10, p=None):
+    def orth_ma_rep(self, maxn=10, cov_root=None):
         r"""
         Compute orthogonalized MA coefficient matrices
 
@@ -1157,7 +1157,7 @@ class VARProcess(object):
         ----------
         maxn : int
             Number of coefficient matrices to compute
-        p : ndarray, optional
+        cov_root : ndarray, optional
             Matrix such that cov_resid = pp'. Defaults to the Cholesky
             decomposition of cov_resid if not provided
 
@@ -1166,8 +1166,8 @@ class VARProcess(object):
         coefs : ndarray
             Array containing the coefficient (maxn x k x k)
         """
-        p = self._chol_cov_resid if p is None else p
-        return orth_ma_rep(self, maxn, p)
+        cov_root = self._chol_cov_resid if cov_root is None else cov_root
+        return orth_ma_rep(self, maxn, cov_root)
 
     def long_run_effects(self):
         r"""
@@ -1957,8 +1957,8 @@ class VARResults(VARProcess):
         return fc_cov
 
     # Monte Carlo irf standard errors
-    @deprecate_kwarg('T', 'horizon')
-    def irf_errband_mc(self, orth=False, repl=1000, horizon=10,
+    @deprecate_kwarg('T', 'steps')
+    def irf_errband_mc(self, orth=False, repl=1000, steps=10,
                        signif=0.05, seed=None, burn=100, cum=False):
         """
         Compute Monte Carlo integrated error bands assuming normally
@@ -1970,7 +1970,7 @@ class VARResults(VARProcess):
             Compute orthogonalized impulse response error bands
         repl: int
             number of Monte Carlo replications to perform
-        horizon: int, default 10
+        steps: int, default 10
             number of impulse response periods
         signif: float (0 < signif <1)
             Significance level for error bars, defaults to 95% CI
@@ -1992,7 +1992,7 @@ class VARResults(VARProcess):
         -------
         Tuple of lower and upper arrays of ma_rep monte carlo standard errors
         """
-        ma_coll = self.irf_resim(orth=orth, repl=repl, horizon=horizon,
+        ma_coll = self.irf_resim(orth=orth, repl=repl, steps=steps,
                                  seed=seed, burn=burn, cum=cum)
 
         ma_sort = np.sort(ma_coll, axis=0)  # sort to get quantiles
@@ -2003,8 +2003,8 @@ class VARResults(VARProcess):
         upper = ma_sort[upp_idx, :, :, :]
         return lower, upper
 
-    @deprecate_kwarg('T', 'horizon')
-    def irf_resim(self, orth=False, repl=1000, horizon=10, seed=None,
+    @deprecate_kwarg('T', 'steps')
+    def irf_resim(self, orth=False, repl=1000, steps=10, seed=None,
                   burn=100, cum=False):
         """
         Simulates impulse response function, returning an array of simulations.
@@ -2016,7 +2016,7 @@ class VARResults(VARProcess):
             Compute orthoganalized impulse response error bands
         repl: int
             number of Monte Carlo replications to perform
-        horizon: int, default 10
+        steps: int, default 10
             number of impulse response periods
         seed : {None, integer, np.random.RandomState}
             If seed is not None, then it will be used with for the random
@@ -2047,15 +2047,15 @@ class VARResults(VARProcess):
         # df_model = self.df_model
         nobs = self.nobs
 
-        ma_coll = np.zeros((repl, horizon + 1, neqs, neqs))
+        ma_coll = np.zeros((repl, steps + 1, neqs, neqs))
 
         def fill_coll(simulation):
             ret = VAR(simulation, exog=self.exog).fit(maxlags=k_ar,
                                                       trend=self.trend)
             if orth:
-                rep = ret.orth_ma_rep(maxn=horizon)
+                rep = ret.orth_ma_rep(maxn=steps)
             else:
-                rep = ret.ma_rep(maxn=horizon)
+                rep = ret.ma_rep(maxn=steps)
             return rep.cumsum(axis=0) if cum else rep
 
         for i in range(repl):
@@ -2145,14 +2145,15 @@ class VARResults(VARProcess):
         """
         return VARSummary(self)
 
-    def irf(self, periods=10, var_decomp=None, var_order=None):
+    @deprecate_kwarg('var_decomp', 'cov_root')
+    def irf(self, periods=10, cov_root=None, var_order=None):
         """Analyze impulse responses to shocks in system
 
         Parameters
         ----------
         periods : int
             The number of periods for which to get the impulse responses.
-        var_decomp : ndarray (neqs x neqs), lower triangular
+        cov_root : ndarray (neqs x neqs), lower triangular
             Must satisfy `cov_resid` = P P', where P is the passed matrix.
             If P is None, defaults to Cholesky decomposition of `cov_resid`.
         var_order : sequence
@@ -2167,9 +2168,10 @@ class VARResults(VARProcess):
             raise NotImplementedError('alternate variable order not '
                                       'implemented (yet)')
 
-        return IRAnalysis(self, P=var_decomp, periods=periods)
+        return IRAnalysis(self, P=cov_root, periods=periods)
 
-    def fevd(self, periods=10, var_decomp=None):
+    @deprecate_kwarg('var_decomp', 'cov_root')
+    def fevd(self, periods=10, cov_root=None):
         """
         Compute forecast error variance decomposition ("fevd")
 
@@ -2177,7 +2179,7 @@ class VARResults(VARProcess):
         ----------
         periods : int
             The number of periods for which to give the FEVD.
-        var_decomp : ndarray (neqs x neqs), lower triangular
+        cov_root : ndarray (neqs x neqs), lower triangular
             Must satisfy `cov_resid` = P P', where P is the passed matrix.
             If P is None, defaults to Cholesky decomposition of `cov_resid`.
 
@@ -2186,7 +2188,7 @@ class VARResults(VARProcess):
         fevd : FEVD
             A `statsmodels.tsa.vector_ar.var_model.FEVD` instance.
         """
-        return FEVD(self, p=var_decomp, periods=periods)
+        return FEVD(self, cov_root=cov_root, periods=periods)
 
     def reorder(self, order):
         """
@@ -2731,7 +2733,7 @@ class FEVD(object):
     ----------
     results : VARResults
         Results of a VAR estimation
-    p :
+    cov_root : ndarray
         A square root of the residual covariance.
     periods : int, optional
         Number of periods to compute the decomposition
@@ -2746,15 +2748,15 @@ class FEVD(object):
 
     where :math:`\Omega` is the residuals covariance
     """
-    @deprecate_kwarg('P', 'p')
-    def __init__(self, results, p=None, periods=None):
+    @deprecate_kwarg('P', 'cov_root')
+    def __init__(self, results, cov_root=None, periods=None):
         self.periods = periods
 
         self.results = results
         self.neqs = results.neqs
         self.endog_names = results.model.endog_names
 
-        self.irfobj = results.irf(var_decomp=p, periods=periods)
+        self.irfobj = results.irf(cov_root=cov_root, periods=periods)
         self.orth_irfs = self.irfobj.orth_irfs
 
         # cumulative impulse responses

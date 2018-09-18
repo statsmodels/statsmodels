@@ -1550,7 +1550,7 @@ class VECMResults(object):
     def _chol_sigma_u(self):
         return np.linalg.cholesky(self.cov_resid)
 
-    def orth_ma_rep(self, maxn=10, p=None):
+    def orth_ma_rep(self, maxn=10, cov_root=None):
         """Compute orthogonalized MA coefficient matrices.
 
         For this purpose a matrix  P is used which fulfills
@@ -1561,7 +1561,7 @@ class VECMResults(object):
         ----------
         maxn : int
             Number of coefficient matrices to compute
-        p : ndarray (neqs x neqs), optional
+        cov_root : ndarray (neqs x neqs), optional
             Matrix such that :math:`\\Sigma_u = PP'`. Defaults to Cholesky
             decomposition.
 
@@ -1569,7 +1569,7 @@ class VECMResults(object):
         -------
         coefs : ndarray (maxn x neqs x neqs)
         """
-        return orth_ma_rep(self, maxn, p=p)
+        return orth_ma_rep(self, maxn, cov_root=cov_root)
 
     def predict(self, steps=5, alpha=None, exog_fc=None, exog_coint_fc=None):
         """
@@ -1941,7 +1941,7 @@ class VECMResults(object):
     def test_normality(self, signif=0.05):
         r"""
         Test assumption of normal-distributed errors using Jarque-Bera-style
-        omnibus :math:`\\chi^2` test.
+        omnibus :math:`\chi^2` test.
 
         Parameters
         ----------

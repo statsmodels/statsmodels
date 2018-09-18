@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-from statsmodels.compat.python import lmap
-
-from itertools import product
-
 import pytest
 from numpy.testing import assert_equal
 
@@ -94,6 +90,7 @@ def dummy_factory(msg, remove_version, warning):
                              remove_version=remove_version,
                              msg=msg,
                              warning=warning)
+
         def __init__(self, y):
             self.x = y
 
