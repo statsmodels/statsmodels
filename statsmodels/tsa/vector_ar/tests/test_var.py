@@ -219,7 +219,7 @@ class CheckFEVD(object):
         self.fevd.plot()
 
     def test_fevd_repr(self):
-        self.fevd
+        self.fevd.__repr__()
 
     def test_fevd_summary(self):
         self.fevd.summary()
@@ -228,7 +228,7 @@ class CheckFEVD(object):
     def test_fevd_cov(self):
         # test does not crash
         # not implemented
-        covs = self.fevd.cov()
+        self.fevd.cov()
 
 
 class TestVARResults(CheckIRF, CheckFEVD):
@@ -254,7 +254,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         # make sure this works with no names
         ndarr = self.data.view((float, 3), type=np.ndarray)
         model = VAR(ndarr)
-        res = model.fit(self.p)
+        model.fit(self.p)
 
     def test_names(self):
         assert_equal(self.model.endog_names, self.ref.names)
@@ -277,8 +277,8 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     def test_repr(self):
         # just want this to work
-        foo = str(self.res)
-        bar = repr(self.res)
+        str(self.res)
+        repr(self.res)
 
     def test_params(self):
         assert_almost_equal(self.res.params, self.ref.params, DECIMAL_3)
@@ -288,7 +288,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         self.res.cov_params
 
     def test_cov_ybar(self):
-        self.res.cov_ybar()
+        self.res.cov_sample_mean()
 
     def test_tstat(self):
         self.res.tvalues
@@ -297,7 +297,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         self.res.pvalues
 
     def test_summary(self):
-        summ = self.res.summary()
+        self.res.summary()
 
     def test_detsig(self):
         assert_almost_equal(self.res.det_cov_resid, self.ref.detomega)
@@ -318,7 +318,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         ics = ['aic', 'fpe', 'hqic', 'bic']
 
         for ic in ics:
-            res = self.model.fit(maxlags=10, ic=ic)
+            self.model.fit(maxlags=10, ic=ic)
 
         with pytest.raises(Exception):
             self.model.fit(ic='foo')
@@ -353,7 +353,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
             assert_almost_equal(result.pvalue, result2.pvalue, DECIMAL_12)
 
             # make sure works
-            result = self.res.test_causality(name, variables, kind='wald')
+            self.res.test_causality(name, variables, kind='wald')
 
         # corner cases
         _ = self.res.test_causality(self.names[0], self.names[1])
@@ -363,10 +363,9 @@ class TestVARResults(CheckIRF, CheckFEVD):
             self.res.test_causality(0, 1, kind='foo')
 
     def test_select_order(self):
-        result = self.model.fit(10, ic='aic')
-        result = self.model.fit(10, ic='fpe')
+        self.model.fit(10, ic='aic')
+        self.model.fit(10, ic='fpe')
 
-        # bug
         model = VAR(self.model.endog)
         order = model.select_order()
         assert 'AIC: {:d}'.format(order.aic) in order.__str__()
@@ -384,21 +383,21 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     def test_acf(self):
         # test that it works...for now
-        acfs = self.res.acf(10)
+        self.res.acf(10)
 
         # defaults to nlags=lag_order
         acfs = self.res.acf()
         assert(len(acfs) == self.p + 1)
 
     def test_acorr(self):
-        acorrs = self.res.acorr(10)
+        self.res.acorr(10)
 
     def test_forecast(self):
-        point = self.res.forecast(self.res.endog[-5:], 5)
+        self.res.forecast(self.res.endog[-5:], 5)
 
     def test_forecast_interval(self):
         y = self.res.endog[:-self.p]
-        point, lower, upper = self.res.forecast_interval(y, 5)
+        self.res.forecast_interval(y, 5)
 
     @pytest.mark.matplotlib
     def test_plot_sim(self, close_figures):
@@ -545,7 +544,7 @@ class TestVARResultsLutkepohl(object):
 
     def test_lr_effect_stderr(self):
         stderr = self.irf.lr_effect_stderr(orth=False)
-        orth_stderr = self.irf.lr_effect_stderr(orth=True)
+        self.irf.lr_effect_stderr(orth=True)
         assert_almost_equal(np.round(stderr, 3), self.lut.lr_stderr)
 
 
@@ -572,7 +571,7 @@ def test_var_constant():
     d = datetime.datetime.now()
     delta = datetime.timedelta(days=1)
     index = []
-    for i in range(data.shape[0]):
+    for _ in range(data.shape[0]):
         index.append(d)
         d += delta
 
@@ -592,11 +591,11 @@ def test_var_trend():
 
     model = sm.tsa.VAR(data)
     results = model.fit(4) #, trend = 'c')
-    irf = results.irf(10)
+    results.irf(10)
 
     data_nc = data - data.mean(0)
     model_nc = sm.tsa.VAR(data_nc)
-    results_nc = model_nc.fit(4, trend = 'nc')
+    model_nc.fit(4, trend = 'nc')
     with pytest.raises(ValueError):
         model.fit(4, trend='t')
 
