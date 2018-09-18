@@ -2,7 +2,7 @@
 Tools for working with dates
 """
 from statsmodels.compat.python import (lrange, lzip, lmap,
-                                       asstr, reduce, zip, map)
+                                       asstr, zip, map)
 import re
 import datetime
 

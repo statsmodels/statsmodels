@@ -8,7 +8,7 @@ PJ Huber.  'Robust Statistics' John Wiley and Sons, Inc., New York, 1981.
 R Venables, B Ripley. 'Modern Applied Statistics in S'
     Springer, New York, 2002.
 """
-from statsmodels.compat.python import callable, range
+from statsmodels.compat.python import range
 import numpy as np
 from scipy.stats import norm as Gaussian
 from . import norms
