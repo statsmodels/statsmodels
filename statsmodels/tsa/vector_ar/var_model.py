@@ -25,7 +25,7 @@ import statsmodels.base.wrapper as wrap
 import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.tsa.tsatools as tsa
 from statsmodels.iolib.table import SimpleTable
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.decorators import cache_readonly, deprecated_alias
 from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tools.tools import chain_dot, Bunch
@@ -642,6 +642,9 @@ class VAR(tsbase.TimeSeriesModel):
     .. [*] Lütkepohl, H., 2005. New introduction to multiple time series
        analysis. Springer Science & Business Media.
     """
+    # Deprecation
+    y = deprecated_alias('y', 'endog', '0.11', warning=DeprecationWarning)
+
     # TODO: Use existing strings in signature for missing and freq?
     def __init__(self, endog, exog=None, dates=None, freq=None,
                  missing='none'):
@@ -1505,6 +1508,22 @@ class VARResults(VARProcess):
     trend : str
         String name of included trend terms (e.g., 'c' for a constant)
     """
+    # Deprecations
+    y = deprecated_alias('y', 'endog', '0.11', warning=DeprecationWarning)
+    ys_lagged = deprecated_alias('ys_lagged', 'endog_lagged', '0.11',
+                                 warning=DeprecationWarning)
+    sigma_u = deprecated_alias('sigma_u', 'cov_resid', '0.11',
+                               warning=DeprecationWarning)
+    sigma_u_mle = deprecated_alias('sigma_u_mle', 'cov_resid_mle', '0.11',
+                                   warning=DeprecationWarning)
+    stderr_dt = deprecated_alias('stderr_dt', 'stderr_exog', '0.11',
+                                 warning=DeprecationWarning)
+    tvalues_dt = deprecated_alias('tvalues_dt', 'tvalues_exog', '0.11',
+                                  warning=DeprecationWarning)
+    pvalues_dt = deprecated_alias('pvalues_dt', 'pvalues_exog', '0.11',
+                                  warning=DeprecationWarning)
+    detomega = deprecated_alias('detomega', 'det_cov_resid', '0.11',
+                                warning=DeprecationWarning)
     _model_type = 'VAR'
 
     def __init__(self, endog, endog_lagged, params, cov_resid, lag_order,
@@ -1688,36 +1707,6 @@ class VARResults(VARProcess):
         """
         return self.resid_acorr(0)[0]
 
-    @property
-    def sigma_u(self):
-        """
-        Debiased estimate of noise process covariance
-
-        Notes
-        -----
-        Deprecated. Use cov_resid
-        """
-        # Deprecated in 0.10.0, remove in 0.11.0
-        import warnings
-        warnings.warn('sigma_u has been deprecated in favor of cov_resid',
-                      DeprecationWarning)
-        return self.cov_resid
-
-    @property
-    def sigma_u_mle(self):
-        """
-        Debiased estimate of noise process covariance
-
-        Notes
-        -----
-        Deprecated. Use cov_resid
-        """
-        # Deprecated in 0.10.0, remove in 0.11.0
-        import warnings
-        warnings.warn('sigma_u_mle has been deprecated in favor of '
-                      'cov_resid_mle', DeprecationWarning)
-        return self.cov_resid_mle
-
     @cache_readonly
     def cov_resid_mle(self):
         """
@@ -1841,16 +1830,6 @@ class VARResults(VARProcess):
         return self.stderr[:end]
 
     @cache_readonly
-    def stderr_dt(self):
-        """
-        Deprecated. Use stderr_exog.
-        """
-        import warnings
-        warnings.warn('stderr_dt is deprecated.  Use stderr_exog.',
-                      DeprecationWarning)
-        return self.stderr_exog
-
-    @cache_readonly
     def tvalues(self):
         """
         t-statistics of coefficients
@@ -1886,14 +1865,6 @@ class VARResults(VARProcess):
         return self.tvalues[:end]
 
     @cache_readonly
-    def tvalues_dt(self):
-        """Deprecated.  Use tvalues_exog."""
-        import warnings
-        warnings.warn('tvalues_dt is deprecated.  Use tvalues_exog.',
-                      DeprecationWarning)
-        return self.tvalues_exog
-
-    @cache_readonly
     def pvalues(self):
         """
         Two-sided p-values for model coefficients from the Normal distribution
@@ -1924,14 +1895,6 @@ class VARResults(VARProcess):
         """
         end = self.k_exog
         return self.pvalues[:end]
-
-    @cache_readonly
-    def pvalues_dt(self):
-        """Deprecated.  Use pvalues_exog."""
-        import warnings
-        warnings.warn('pvalues_dt is deprecated.  Use pvalues_exog.',
-                      DeprecationWarning)
-        return self.pvalues_exog
 
     def plot_forecast(self, steps, alpha=0.05, plot_stderr=True):
         """
@@ -2634,16 +2597,6 @@ class VARResults(VARProcess):
            Evidence." Journal of Business & Economic Statistics
         """
         return test_normality(self, signif=signif)
-
-    @cache_readonly
-    def detomega(self):
-        """
-        detomega is deprecated. Use `det_cov_resid`
-        """
-        import warnings
-        warnings.warn("detomega is deprecated and will be removed in 0.11.0. "
-                      "Use det_cov_resid.", DeprecationWarning)
-        return self.det_cov_resid
 
     @cache_readonly
     def det_cov_resid(self):

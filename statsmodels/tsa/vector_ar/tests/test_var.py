@@ -11,17 +11,15 @@ import sys
 from collections import defaultdict
 
 import numpy as np
+from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose)
 import pytest
 
 import statsmodels.api as sm
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tools.data as data_util
-from statsmodels.tsa.vector_ar.var_model import VAR
+from statsmodels.tsa.vector_ar.var_model import VAR, VARProcess
 from statsmodels.tools.sm_exceptions import ValueWarning
 
-
-from numpy.testing import (assert_almost_equal, assert_equal, assert_,
-                           assert_allclose)
 
 DECIMAL_12 = 12
 DECIMAL_6 = 6
@@ -32,13 +30,21 @@ DECIMAL_2 = 2
 
 
 @pytest.fixture()
-def bivariate_var(reset_randomstate):
+def bivariate_var_data(reset_randomstate):
+    """A bivariate dataset for VAR estimation"""
     e = np.random.standard_normal((252, 2))
     y = np.zeros_like(e)
     y[:2] = e[:2]
     for i in range(2, 252):
         y[i] = .2 * y[i - 1] + .1 * y[i - 2] + e[i]
     return y
+
+
+@pytest.fixture()
+def bivariate_var_result(bivariate_var_data):
+    """A bivariate VARResults for reuse"""
+    mod = VAR(bivariate_var_data)
+    return mod.fit()
 
 
 class CheckVAR(object):
@@ -760,14 +766,12 @@ class TestVARExtras(object):
         assert_allclose(fci3, fci2, rtol=1e-12)
 
 
-def test_default_lags(bivariate_var):
-    mod = VAR(bivariate_var)
-    res = mod.fit(ic=None)
-    assert res.k_ar == 1
+def test_default_lags(bivariate_var_result):
+    assert bivariate_var_result.k_ar == 1
 
 
-def test_deprecation_warnings(bivariate_var):
-    mod = VAR(bivariate_var)
+def test_deprecation_warnings(bivariate_var_data):
+    mod = VAR(bivariate_var_data)
     res = mod.fit()
     p_min = 0 if res.exog is not None or res.trend != "nc" else 1
     ics = defaultdict(list)
@@ -779,31 +783,46 @@ def test_deprecation_warnings(bivariate_var):
     with pytest.warns(DeprecationWarning):
         LagOrderResults(ics, selected_orders, vecm=True)
     with pytest.warns(DeprecationWarning):
-        res.detomega
-    with pytest.warns(DeprecationWarning):
         mod.fit(verbose=True)
 
 
-def test_var_single_series(bivariate_var):
+@pytest.mark.parametrize('attr', ['y', 'ys_lagged', 'sigma_u', 'sigma_u_mle',
+                                  'stderr_dt', 'tvalues_dt', 'pvalues_dt',
+                                  'sigma_u_mle', 'detomega'])
+def test_deprecated_attributes_varresults(bivariate_var_result, attr):
+    with pytest.warns(DeprecationWarning):
+        getattr(bivariate_var_result, attr)
+
+
+def test_var_single_series(bivariate_var_data):
     with pytest.raises(ValueError):
-        VAR(bivariate_var[:, 0])
+        VAR(bivariate_var_data[:, 0])
     with pytest.raises(ValueError):
-        VAR(bivariate_var[:, [0]])
+        VAR(bivariate_var_data[:, [0]])
 
 
 @pytest.mark.matplotlib
-def test_plots_smoke(bivariate_var, close_figures):
-    mod = VAR(bivariate_var)
-    res = mod.fit()
+def test_plots_smoke(bivariate_var_result, close_figures):
+    res = bivariate_var_result
     res.plot_acorr()
     res.plot_acorr(12, resid=False)
     res.plot_sample_acorr()
 
 
-def test_var_roots(bivariate_var):
-    mod = VAR(bivariate_var)
-    res = mod.fit(maxlags=1)
+def test_var_roots(bivariate_var_result):
+    res = bivariate_var_result
     var_1 = res.params[1:, :]
     inv_roots = 1. / np.linalg.eig(var_1)[0]
     inv_roots = np.sort(inv_roots)[::-1]
     assert_allclose(res.roots, inv_roots)
+
+
+@pytest.mark.matplotlib
+def test_var_process_plotting(close_figures):
+    coefs = 0.2 * np.zeros((2, 2, 2))
+    coefs[1] -= 0.1
+    cov_resid = np.array([[4, 1], [1, 2]])
+
+    var_process = VARProcess(coefs, None, cov_resid, names=['y1', 'y2'])
+    var_process.plot_acorr(20)
+    var_process.plot_sim(steps=200)

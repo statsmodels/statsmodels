@@ -725,33 +725,15 @@ def test_var_to_vecm(dataset):
         assert 'VAR(4) process' in var.__str__()
 
 
-@pytest.mark.matplotlib
-@pytest.mark.parametrize('dataset', datasets)
-def test_var_to_vecm_plotting(close_figures, dataset):
-    ds = dataset
-
-    for dt in ds.dt_s_list:
-        if debug_mode:
-            print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
-        err_msg = build_err_msg(ds, dt, "VAR to VEC representation")
-        cov_resid = results_sm[ds][dt].cov_resid
-        coefs = results_sm[ds][dt].var_rep
-        intercept = np.zeros(len(cov_resid))
-        # Note: _params_info k_trend, k_exog, ... is inferred with defaults
-        var = VARProcess(coefs, intercept, cov_resid)
-        # Smoke test plotting
-        var.plot_acorr()
-
 # Commented out since JMulTi shows the same det. terms for both VEC & VAR repr.
 # def test_var_rep_det():
 #     for ds in datasets:
 #         for dt in dt_s_list:
 #             if dt != "nc":
-#                 err_msg = build_err_msg(ds, dt, "VAR repr. deterministic")
-#                 obtained = 0  # not implemented since the same values as VECM
-#                 desired = results_ref[ds][dt]["est"]["VAR deterministic"]
-#                 assert_allclose(obtained, desired, rtol, atol, False, err_msg)
+#                err_msg = build_err_msg(ds, dt, "VAR repr. deterministic")
+#                obtained = 0  # not implemented since the same values as VECM
+#                desired = results_ref[ds][dt]["est"]["VAR deterministic"]
+#                assert_allclose(obtained, desired, rtol, atol, False, err_msg)
 
 
 def test_log_like():

@@ -297,8 +297,8 @@ class IRAnalysis(BaseIRAnalysis):
         periods = self.periods
         if svar == True:
             return model.sirf_errband_mc(orth=orth, repl=repl, horizon=periods,
-                                        signif=signif, seed=seed,
-                                        burn=burn, cum=False)
+                                         signif=signif, seed=seed,
+                                         burn=burn, cum=False)
         else:
             return model.irf_errband_mc(orth=orth, repl=repl, horizon=periods,
                                         signif=signif, seed=seed,
@@ -338,7 +338,7 @@ class IRAnalysis(BaseIRAnalysis):
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, horizon=periods, seed=seed,
-                                    burn=100)
+                                    burn=burn)
         q = util.norm_signif_level(signif)
 
         W, eigva, k =self._eigval_decomp_SZ(irf_resim)
@@ -395,7 +395,7 @@ class IRAnalysis(BaseIRAnalysis):
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, horizon=periods, seed=seed,
-                                    burn=100)
+                                    burn=burn)
 
         W, eigva, k = self._eigval_decomp_SZ(irf_resim)
 
@@ -458,7 +458,7 @@ class IRAnalysis(BaseIRAnalysis):
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
         irf_resim = model.irf_resim(orth=orth, repl=repl, horizon=periods, seed=seed,
-                                    burn=100)
+                                    burn=burn)
         stack = np.zeros((neqs, repl, periods*neqs))
 
         #stack left to right, up and down
