@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
+from statsmodels.compat.python import lmap
+
+from itertools import product
 
 import pytest
 from numpy.testing import assert_equal
 
-from statsmodels.tools.decorators import (
-    resettable_cache, cache_readonly, cache_writable, CacheWriteWarning)
+from statsmodels.tools.decorators import (resettable_cache, cache_readonly,
+                                          cache_writable, CacheWriteWarning,
+                                          deprecated_alias)
 
 
 def test_resettable_cache():
@@ -78,7 +82,46 @@ def test_cache_readonly():
     assert_equal(ex._cache, dict(b=1, c=2, d=3))
     ex.c = 0
     assert_equal(ex._cache, dict(b=1, c=0, d=None, e=None, f=None))
-    d = ex.d
+    ex.d
     assert_equal(ex._cache, dict(b=1, c=0, d=1, e=None, f=None))
     ex.d = 5
     assert_equal(ex._cache, dict(b=1, c=0, d=5, e=None, f=None))
+
+
+def dummy_factory(msg, remove_version, warning):
+    class Dummy(object):
+        y = deprecated_alias('y', 'x',
+                             remove_version=remove_version,
+                             msg=msg,
+                             warning=warning)
+        def __init__(self, y):
+            self.x = y
+
+    return Dummy(1)
+
+
+@pytest.mark.parametrize('warning', [FutureWarning, UserWarning])
+@pytest.mark.parametrize('remove_version', [None, '0.11'])
+@pytest.mark.parametrize('msg', ['test message', None])
+def test_deprecated_alias(msg, remove_version, warning):
+    dummy_set = dummy_factory(msg, remove_version, warning)
+    with pytest.warns(warning) as w:
+        dummy_set.y = 2
+        assert dummy_set.x == 2
+
+    assert warning.__class__ is w[0].category.__class__
+
+    dummy_get = dummy_factory(msg, remove_version, warning)
+    with pytest.warns(warning) as w:
+        x = dummy_get.y
+        assert x == 1
+
+    assert warning.__class__ is w[0].category.__class__
+    message = str(w[0].message)
+    if not msg:
+        if remove_version:
+            assert 'will be removed' in message
+        else:
+            assert 'will be removed' not in message
+    else:
+        assert msg in message
