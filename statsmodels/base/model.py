@@ -1632,7 +1632,7 @@ class LikelihoodModelResults(Results):
         res : ContrastResults instance
             The results for the test are attributes of this results instance.
 
-        See also
+        See Also
         --------
         statsmodels.stats.contrast.ContrastResults
         f_test

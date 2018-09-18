@@ -730,7 +730,7 @@ def test_cython():
 
     # Prior to initialization, no ?KalmanFilter exists
     assert_equal(mod._kalman_filter, None)
-    
+
     # Bind data and initialize the ?KalmanFilter object
     endog = np.ascontiguousarray(np.array([1., 2.], dtype=np.float64))
     mod.bind(endog)

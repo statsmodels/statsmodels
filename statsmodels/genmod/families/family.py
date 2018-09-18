@@ -202,7 +202,7 @@ class Family(object):
 
         .. math::
            resid\_dev_i = sign(y_i-\mu_i) \sqrt{D_i}
-           
+
         D_i is calculated from the _resid_dev method in each family.
         Distribution-specific documentation of the calculation is available
         there.
@@ -210,7 +210,6 @@ class Family(object):
         resid_dev = self._resid_dev(endog, mu)
         resid_dev *= var_weights / scale
         return np.sign(endog - mu) * np.sqrt(np.clip(resid_dev, 0., np.inf))
-
 
     def fitted(self, lin_pred):
         r"""
@@ -385,7 +384,7 @@ class Poisson(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.mu
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
@@ -511,7 +510,7 @@ class Gaussian(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.constant
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
@@ -655,7 +654,7 @@ class Gamma(Family):
         ``variance`` is an instance of
         statsmodels.genmod.family.varfuncs.mu_squared
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
@@ -789,7 +788,7 @@ class Binomial(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.binary
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
@@ -1016,7 +1015,7 @@ class InverseGaussian(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.mu_cubed
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
@@ -1154,7 +1153,7 @@ class NegativeBinomial(Family):
         ``variance`` is an instance of
         statsmodels.genmod.families.varfuncs.nbinom
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
@@ -1166,7 +1165,7 @@ class NegativeBinomial(Family):
     Parameterization for :math:`y=0, 1, 2, \ldots` is
 
     .. math::
-      
+
        f(y) = \frac{\Gamma(y+\frac{1}{\alpha})}{y!\Gamma(\frac{1}{\alpha})}
               \left(\frac{1}{1+\alpha\mu}\right)^{\frac{1}{\alpha}}
               \left(\frac{\alpha\mu}{1+\alpha\mu}\right)^y
@@ -1340,10 +1339,11 @@ class Tweedie(Family):
     Tweedie.var_power : float
         The power of the variance function.
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family.Family
     :ref:`links`
+
     Notes
     -----
     Logliklihood function not implemented because of the complexity of
