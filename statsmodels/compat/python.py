@@ -20,7 +20,7 @@ if PY3:
     pickle = cPickle
     import urllib.request
     import urllib.parse
-    from urllib.request import HTTPError, urlretrieve, URLError
+    from urllib.request import HTTPError, URLError
     import io
     bytes = bytes
     str = str
@@ -44,14 +44,6 @@ if PY3:
             return s.decode('latin1')
         else:
             return str(s)
-
-    def isfileobj(f):
-        return isinstance(f, io.FileIO)
-
-    def open_latin1(filename, mode='r'):
-        return open(filename, mode=mode, encoding='iso-8859-1')
-
-    strchar = 'U'
 
     # have to explicitly put builtins into the namespace
     range = range
@@ -81,7 +73,6 @@ if PY3:
     urlretrieve = urllib.request.urlretrieve
     urlencode = urllib.parse.urlencode
     string_types = str
-    input = input
 
     ArgSpec= namedtuple('ArgSpec', ['args', 'varargs', 'keywords', 'defaults'])
     def getargspec(func):
@@ -129,18 +120,11 @@ else:
     asbytes = str
     asstr = str
     asstr2 = str
-    strchar = 'S'
-
-    def isfileobj(f):
-        return isinstance(f, file)
 
     def asunicode(s, encoding='ascii'):
         if isinstance(s, unicode):
             return s
         return s.decode(encoding)
-
-    def open_latin1(filename, mode='r'):
-        return open(filename, mode=mode)
 
     # import iterator versions of these functions
     range = xrange
@@ -165,40 +149,13 @@ else:
     URLError = urllib2.URLError
     string_types = basestring
 
-    input = raw_input
-
-
-def getexception():
-    return sys.exc_info()[1]
-
-
-def asbytes_nested(x):
-    if hasattr(x, '__iter__') and not isinstance(x, (bytes, str)):
-        return [asbytes_nested(y) for y in x]
-    else:
-        return asbytes(x)
-
-
-def asunicode_nested(x):
-    if hasattr(x, '__iter__') and not isinstance(x, (bytes, str)):
-        return [asunicode_nested(y) for y in x]
-    else:
-        return asunicode(x)
-
 
 try:
-    advance_iterator = next
+    next = next
 except NameError:
-    def advance_iterator(it):
+    def next(it):
         return it.next()
-next = advance_iterator
 
-
-try:
-    callable = callable
-except NameError:
-    def callable(obj):
-        return any("__call__" in klass.__dict__ for klass in type(obj).__mro__)
 
 def iteritems(obj, **kwargs):
     """replacement for six's iteritems for Python2/3 compat
