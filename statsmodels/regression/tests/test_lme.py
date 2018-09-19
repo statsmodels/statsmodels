@@ -1178,7 +1178,7 @@ class TestSMWSolver(object):
     @pytest.mark.parametrize("p", [5, 10])
     @pytest.mark.parametrize("q", [4, 8])
     @pytest.mark.parametrize("r", [2, 3])
-    @pytest.mark.parametrize("r", [0, 0.5])
+    @pytest.mark.parametrize("s", [0, 0.5])
     def test_smw_solver(self, p, q, r, s):
         check_smw_solver(p, q, r, s)
 
@@ -1212,6 +1212,6 @@ class TestSMWLogdet(object):
     @pytest.mark.parametrize("p", [5, 10])
     @pytest.mark.parametrize("q", [4, 8])
     @pytest.mark.parametrize("r", [2, 3])
-    @pytest.mark.parametrize("r", [0, 0.5])
+    @pytest.mark.parametrize("s", [0, 0.5])
     def test_smw_logdet(self, p, q, r, s):
         check_smw_logdet(p, q, r, s)
