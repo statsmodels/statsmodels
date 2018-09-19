@@ -212,6 +212,13 @@ def iteritems(obj, **kwargs):
     return func(**kwargs)
 
 
+def iterkeys(obj, **kwargs):
+    func = getattr(obj, "iterkeys", None)
+    if not func:
+        func = obj.keys
+    return func(**kwargs)
+
+
 def itervalues(obj, **kwargs):
     func = getattr(obj, "itervalues", None)
     if not func:
