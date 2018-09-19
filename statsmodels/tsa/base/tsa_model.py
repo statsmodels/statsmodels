@@ -1,6 +1,8 @@
 from statsmodels.compat.python import long
 from statsmodels.compat.pandas import is_numeric_dtype
 
+import numbers
+
 import warnings
 import numpy as np
 from pandas import (to_datetime, Int64Index, DatetimeIndex, Period,
@@ -412,7 +414,32 @@ class TimeSeriesModel(base.LikelihoodModel):
                     loc = self.data.row_labels.get_loc(key)
                 else:
                     raise
-                loc = loc[0]  # Require scalar
+                # Require scalar
+                # Pandas may return a slice if there are multiple matching
+                # locations that are monotonic increasing (otherwise it may
+                # return an array of integer locations, see below).
+                if isinstance(loc, slice):
+                    loc = loc.start
+                if isinstance(loc, np.ndarray):
+                    # Pandas may return a mask (boolean array), for e.g.:
+                    # pd.Index(list('abcb')).get_loc('b')
+                    if loc.dtype == bool:
+                        # Return the first True value
+                        # (we know there is at least one True value if we're
+                        # here because otherwise the get_loc call would have
+                        # raised an exception)
+                        loc = np.argmax(loc)
+                    # Finally, Pandas may return an integer array of
+                    # locations that match the given value, for e.g.
+                    # pd.DatetimeIndex(['2001-02', '2001-01']).get_loc('2001')
+                    # (this appears to be slightly undocumented behavior, since
+                    # only int, slice, and mask are mentioned in docs for
+                    # pandas.Index.get_loc as of 0.23.4)
+                    else:
+                        loc = loc[0]
+                if not isinstance(loc, numbers.Integral):
+                    raise
+
                 index = self.data.row_labels[:loc + 1]
                 index_was_expanded = False
             except:
