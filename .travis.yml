@@ -6,6 +6,9 @@ dist: trusty
 sudo: required
 language: python
 
+git:
+  depth: 10000
+
 env:
   # Default values for common packages, override as needed
   global:
@@ -103,8 +106,6 @@ notifications:
     on_success: always
 
 before_install:
-  # Ensure latest tags are available
-  - git fetch --tags
   # Show information about CPU running job to understand BLAS issues
   - sudo lshw -class processor
   # Fix for headless TravisCI
