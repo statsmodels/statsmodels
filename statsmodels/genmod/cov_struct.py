@@ -1,4 +1,4 @@
-from statsmodels.compat.python import iterkeys, itervalues, zip, range
+from statsmodels.compat.python import itervalues, zip, range
 from statsmodels.stats.correlation_tools import cov_nearest
 import numpy as np
 import pandas as pd
@@ -990,7 +990,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
 
         # Storage for the contingency tables for each (c,c')
         tables = {}
-        for ii in iterkeys(cpp[0]):
+        for ii in cpp[0]:
             tables[ii] = np.zeros((2, 2), dtype=np.float64)
 
         # Get the observed crude OR
@@ -1004,7 +1004,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
             endog_00 = np.outer(1. - yvec, 1. - yvec)
 
             cpp1 = cpp[i]
-            for ky in iterkeys(cpp1):
+            for ky in cpp1:
                 ix = cpp1[ky]
                 tables[ky][1, 1] += endog_11[ix[:, 0], ix[:, 1]].sum()
                 tables[ky][1, 0] += endog_10[ix[:, 0], ix[:, 1]].sum()
@@ -1073,7 +1073,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
             emat_00 = 1. - (emat_11 + emat_10 + emat_01)
 
             cpp1 = cpp[i]
-            for ky in iterkeys(cpp1):
+            for ky in cpp1:
                 ix = cpp1[ky]
                 tables[ky][1, 1] += emat_11[ix[:, 0], ix[:, 1]].sum()
                 tables[ky][1, 0] += emat_10[ix[:, 0], ix[:, 1]].sum()

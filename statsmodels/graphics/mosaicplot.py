@@ -8,8 +8,8 @@ see the docstring of the mosaic function for more informations.
 # Author: Enrico Giampieri - 21 Jan 2013
 
 from __future__ import division
-from statsmodels.compat.python import (iteritems, iterkeys, lrange, string_types, lzip,
-                                itervalues, zip, range)
+from statsmodels.compat.python import (iteritems, lrange, string_types, lzip,
+                                       itervalues, zip, range)
 import numpy as np
 from collections import OrderedDict
 from itertools import product
@@ -186,7 +186,7 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
     # this is the unit square that we are going to divide
     base_rect = OrderedDict([(tuple(), (0, 0, 1, 1))])
     # get the list of each possible value for each level
-    categories_levels = _categories_level(list(iterkeys(count_dict)))
+    categories_levels = _categories_level(list(count_dict.keys()))
     L = len(categories_levels)
 
     # recreate the gaps vector starting from an int
@@ -233,7 +233,7 @@ def _create_default_properties(data):
     decoration on the rectangle.  Doesn't manage more than four
     level of categories
     """
-    categories_levels = _categories_level(list(iterkeys(data)))
+    categories_levels = _categories_level(list(data.keys()))
     Nlevels = len(categories_levels)
     # first level, the hue
     L = len(categories_levels[0])
@@ -303,7 +303,7 @@ def _normalize_data(data, index):
         items = list(iteritems(data))
     # make all the keys a tuple, even if simple numbers
     data = OrderedDict([_tuplify(k), v] for k, v in items)
-    categories_levels = _categories_level(list(iterkeys(data)))
+    categories_levels = _categories_level(list(data.keys()))
     # fill the void in the counting dictionary
     indexes = product(*categories_levels)
     contingency = OrderedDict([(k, data.get(k, 0)) for k in indexes])
@@ -338,7 +338,7 @@ def _statistical_coloring(data):
     It will encounter problem if one category has all zeros
     """
     data = _normalize_data(data, None)
-    categories_levels = _categories_level(list(iterkeys(data)))
+    categories_levels = _categories_level(list(data.keys()))
     Nlevels = len(categories_levels)
     total = 1.0 * sum(v for v in itervalues(data))
     # count the proportion of observation
@@ -390,7 +390,7 @@ def _create_labels(rects, horizontal, ax, rotation):
     ax: the axis on which the label should be applied
     rotation: the rotation list for each side
     """
-    categories = _categories_level(list(iterkeys(rects)))
+    categories = _categories_level(list(rects.keys()))
     if len(categories) > 4:
         msg = ("maximum of 4 level supported for axes labeling... and 4"
                "is already a lot of levels, are you sure you need them all?")
@@ -460,7 +460,7 @@ def _create_labels(rects, horizontal, ax, rotation):
         #now we add the labels of this level to the correct axis
 
         ticks_pos[level_idx](list(itervalues(level_ticks)))
-        ticks_lab[level_idx](list(iterkeys(level_ticks)),
+        ticks_lab[level_idx](list(level_ticks.keys()),
                              rotation=rotation[level_idx])
     return labels
 

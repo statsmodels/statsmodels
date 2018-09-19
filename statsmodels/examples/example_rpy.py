@@ -18,7 +18,7 @@ some basic models for comparisons of results to statsmodels.
 '''
 
 from __future__ import print_function
-from statsmodels.compat.python import iterkeys
+
 from rpy import r
 import numpy as np
 import statsmodels.api as sm
@@ -33,7 +33,7 @@ if 1 in examples:
     formula = r('y~%s-1' % '+'.join(des_cols))
     frame = r.data_frame(y=y, x=x)
     results = r.lm(formula, data=frame)
-    print(list(iterkeys(results)))
+    print(list(results.keys()))
     print(results['coefficients'])
 
 if 2 in examples:

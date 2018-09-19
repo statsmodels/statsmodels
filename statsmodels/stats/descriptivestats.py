@@ -1,4 +1,4 @@
-from statsmodels.compat.python import lrange, lmap, iterkeys, iteritems
+from statsmodels.compat.python import lrange, lmap, iteritems
 import numpy as np
 from scipy import stats
 from statsmodels.iolib.table import SimpleTable
@@ -230,7 +230,7 @@ class Describe(object):
         if 'percentiles' in stats:
             self.univariate.update(perdict)
             idx = stats.index('percentiles')
-            stats[idx:idx+1] = sorted(iterkeys(perdict))
+            stats[idx:idx+1] = sorted(perdict.keys())
 
 
 

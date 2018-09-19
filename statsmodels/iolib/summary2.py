@@ -1,4 +1,4 @@
-from statsmodels.compat.python import (lrange, iterkeys, iteritems, lzip,
+from statsmodels.compat.python import (lrange, iteritems, lzip,
                                        reduce, itervalues, zip, string_types,
                                        range)
 
@@ -84,7 +84,7 @@ class Summary(object):
             Data alignment (l/c/r)
         '''
 
-        keys = [_formatter(x, float_format) for x in iterkeys(d)]
+        keys = [_formatter(key, float_format) for key in d]
         vals = [_formatter(x, float_format) for x in itervalues(d)]
         data = np.array(lzip(keys, vals))
 

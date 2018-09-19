@@ -9,8 +9,8 @@ namespace : dictionary
 
 """
 from collections import OrderedDict
-from statsmodels.compat.python import (iterkeys, lrange, callable, string_types,
-                                itervalues, range)
+from statsmodels.compat.python import (lrange, string_types,
+                                       itervalues, range)
 import copy
 import numpy as np
 
@@ -755,8 +755,9 @@ def interactions(terms, order=[1,2]):
                     v *= ll[ii+1]
                 values[tuple(I[:,m])] = v
 
-    key = list(iterkeys(values))[0]
-    value = values[key]; del(values[key])
+    key = list(values.keys())[0]
+    value = values[key]
+    del(values[key])
 
     for v in itervalues(values):
         value += v

@@ -6,7 +6,7 @@ Created on Fri Mar 09 16:00:27 2012
 Author: Josef Perktold
 """
 from __future__ import print_function
-from statsmodels.compat.python import iterkeys, cPickle, BytesIO
+from statsmodels.compat.python import cPickle, BytesIO
 
 import warnings
 
@@ -112,20 +112,20 @@ class RemoveDataPickle(object):
         fh.close()
         assert type(res_unpickled) is type(self.results)  # noqa: E721
 
-        before = sorted(iterkeys(self.results.__dict__))
-        after = sorted(iterkeys(res_unpickled.__dict__))
+        before = sorted(self.results.__dict__.keys())
+        after = sorted(res_unpickled.__dict__.keys())
         assert_(before == after, msg='not equal %r and %r' % (before, after))
 
-        before = sorted(iterkeys(self.results._results.__dict__))
-        after = sorted(iterkeys(res_unpickled._results.__dict__))
+        before = sorted(self.results._results.__dict__.keys())
+        after = sorted(res_unpickled._results.__dict__.keys())
         assert_(before == after, msg='not equal %r and %r' % (before, after))
 
-        before = sorted(iterkeys(self.results.model.__dict__))
-        after = sorted(iterkeys(res_unpickled.model.__dict__))
+        before = sorted(self.results.model.__dict__.keys())
+        after = sorted(res_unpickled.model.__dict__.keys())
         assert_(before == after, msg='not equal %r and %r' % (before, after))
 
-        before = sorted(iterkeys(self.results._cache))
-        after = sorted(iterkeys(res_unpickled._cache))
+        before = sorted(self.results._cache.keys())
+        after = sorted(res_unpickled._cache.keys())
         assert_(before == after, msg='not equal %r and %r' % (before, after))
 
 

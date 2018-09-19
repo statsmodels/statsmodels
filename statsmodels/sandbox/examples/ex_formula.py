@@ -3,7 +3,7 @@
 some work, some things don't
 
 '''
-from statsmodels.compat.python import iterkeys, zip
+from statsmodels.compat.python import zip
 import string
 import numpy as np
 
@@ -69,9 +69,8 @@ print(form.termcolumns(formula.Term('C')))  #doesn't work with string argument
 f2 = (form['A']+form['B'])
 print(f2)
 print(repr(f2))
-list(iterkeys(f2.namespace))   #namespace is still empty
+list(f2.namespace.keys())   #namespace is still empty
 f2.namespace = namespace  #associate data
-iterkeys(f2.namespace)
 f2.design().shape
 contrast.Contrast(formula.Term('A'), f2).matrix
 

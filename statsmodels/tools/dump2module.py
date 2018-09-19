@@ -3,8 +3,8 @@
 Author : Josef Perktold
 '''
 from __future__ import print_function
-from statsmodels.compat.python import iterkeys
 import numpy as np
+
 
 class HoldIt(object):
     '''Class to write numpy arrays into a python module
@@ -134,13 +134,12 @@ class HoldIt(object):
                 if not correct:
                     import warnings
                     warnings.warn("inexact precision in "+d, RuntimeWarning)
-            #try iterating, if object array
+            # try iterating, if object array
             if not correct:
-                correlem =[np.all(data[d].item()[k] ==
-                                  getattr(testsave.var_results, d).item()[k])
-                           for k in iterkeys(data[d].item())]
+                correlem = [np.all(data[d].item()[k] ==
+                                   getattr(testsave.var_results, d).item()[k])
+                            for k in data[d].item()]
                 if not correlem:
-                    #print(d, "wrong")
                     incorrectli.append(d)
             correctli.append(d)
 
@@ -167,9 +166,9 @@ if __name__ == '__main__':
                               rtol=1e-16, atol=1e-16)
             if not correct: print("inexact precision")
         if not correct:
-            correlem =[np.all(data[d].item()[k] ==
+            correlem = [np.all(data[d].item()[k] ==
                               getattr(testsave.var_results, d).item()[k])
-                       for k in iterkeys(data[d].item())]
+                        for k in data[d].item()]
             if not correlem:
                 print(d, "wrong")
 

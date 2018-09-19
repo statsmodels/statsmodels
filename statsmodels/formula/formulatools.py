@@ -1,4 +1,3 @@
-from statsmodels.compat.python import iterkeys
 import statsmodels.tools.data as data_util
 from patsy import dmatrices, NAAction
 import numpy as np
@@ -47,7 +46,7 @@ def handle_formula_data(Y, X, formula, depth=0, missing='drop'):
         Should preserve the input type of Y,X. Could be None.
     """
     # half ass attempt to handle other formula objects
-    if isinstance(formula, tuple(iterkeys(formula_handler))):
+    if isinstance(formula, tuple(formula_handler.keys())):
         return formula_handler[type(formula)]
 
     na_action = NAAction(on_NA=missing)

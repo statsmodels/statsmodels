@@ -1,6 +1,6 @@
 """this script builds the T table and A table for the upper
    quantile stundentized range algorithm"""
-from statsmodels.compat.python import iterkeys, lrange, lmap, zip
+from statsmodels.compat.python import lrange, lmap, zip
 import math
 import scipy.stats
 from scipy.optimize import leastsq
@@ -450,10 +450,10 @@ errfunc = lambda a, p, r, v, q: qhat(a, p, r, v) - q
 A = {} # this is the error matrix
 for p in T:
     for v in T[p]:
-        #eq. 2.4
+        # eq. 2.4
         a0 = random(4)
         a1, success = leastsq(errfunc, a0,
-                              args=(p, np.array(list(iterkeys(R))),
+                              args=(p, np.array(list(R.keys())),
                                     v, np.array(T[p][v])))
 
         if v == 1e38:
