@@ -648,15 +648,20 @@ class MultinomialModel(BinaryModel):
         mnfit = MultinomialResults(self, mnfit)
         return MultinomialResultsWrapper(mnfit)
 
+    def _get_start_params_l1(self, **kwargs):
+        return np.zeros((self.K * (self.J - 1)))
+
     @Appender(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
+
         if start_params is None:
-            start_params = np.zeros((self.K * (self.J-1)))
-        else:
-            start_params = np.asarray(start_params)
+            start_params = self._get_start_params_l1(**kwargs)
+
+        start_params = np.asarray(start_params)
+
         mnfit = DiscreteModel.fit_regularized(
                 self, start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=disp, callback=callback,
@@ -1536,6 +1541,34 @@ class GeneralizedPoisson(CountModel):
                                       use_self=True, use_t=use_t, **cov_kwds)
         return result
 
+    def _get_start_params_l1(self, method='l1',
+            maxiter='defined_by_method', full_output=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+
+        alpha_p = alpha
+        if self.k_extra and np.size(alpha) > 1:
+            alpha_p = alpha[:-1]
+
+        offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+        if np.size(offset) == 1 and offset == 0:
+            offset = None
+
+        mod_poi = Poisson(self.endog, self.exog, offset=offset)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+
+            res_poi = mod_poi.fit_regularized(
+                start_params=None, method=method, maxiter=maxiter,
+                full_output=full_output, disp=0, callback=callback,
+                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+
+        start_params = res_poi.params
+        start_params = np.append(start_params, 0.1)
+        return start_params
+
     @Appender(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
@@ -1549,22 +1582,15 @@ class GeneralizedPoisson(CountModel):
             alpha = alpha * np.ones(k_params)
             alpha[-1] = 0
 
-        alpha_p = alpha[:-1] if (self.k_extra and np.size(alpha) > 1) else alpha
         self._transparams = False
+
         if start_params is None:
-            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
-            if np.size(offset) == 1 and offset == 0:
-                offset = None
-            mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            with warnings.catch_warnings():
-                warnings.simplefilter("always")
-                start_params = mod_poi.fit_regularized(
-                    start_params=start_params, method=method, maxiter=maxiter,
-                    full_output=full_output, disp=0, callback=callback,
-                    alpha=alpha_p, trim_mode=trim_mode,
-                    auto_trim_tol=auto_trim_tol, size_trim_tol=size_trim_tol,
-                    qc_tol=qc_tol, **kwargs).params
-            start_params = np.append(start_params, 0.1)
+            start_params = self._get_start_params_l1(
+                method=method, maxiter=maxiter, full_output=full_output,
+                callback=callback, alpha=alpha,
+                trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol,
+                **kwargs)
 
         cntfit = super(CountModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
@@ -2952,6 +2978,40 @@ class NegativeBinomial(CountModel):
                                     use_self=True, use_t=use_t, **cov_kwds)
         return result
 
+    def _get_start_params_l1(self, method='l1',
+            maxiter='defined_by_method', full_output=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+
+        # Use poisson fit as first guess.
+        # TODO, Warning: this assumes exposure is logged
+
+        # alpha for regularized poisson to get starting values
+        alpha_p = alpha
+        if self.k_extra and np.size(alpha) > 1:
+            alpha_p = alpha[:-1]
+
+        offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+        if np.size(offset) == 1 and offset == 0:
+            offset = None
+
+        mod_poi = Poisson(self.endog, self.exog, offset=offset)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+
+            res_poi = mod_poi.fit_regularized(
+                start_params=None, method=method, maxiter=maxiter,
+                full_output=full_output, disp=0, callback=callback,
+                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+
+        start_params = res_poi.params
+
+        if self.loglike_method.startswith('nb'):
+            start_params = np.append(start_params, 0.1)
+
+        return start_params
 
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
@@ -2967,27 +3027,14 @@ class NegativeBinomial(CountModel):
             alpha = alpha * np.ones(k_params)
             alpha[-1] = 0
 
-        # alpha for regularized poisson to get starting values
-        alpha_p = alpha[:-1] if (self.k_extra and np.size(alpha) > 1) else alpha
-
         self._transparams = False
+
         if start_params is None:
-            # Use poisson fit as first guess.
-            #TODO, Warning: this assumes exposure is logged
-            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
-            if np.size(offset) == 1 and offset == 0:
-                offset = None
-            mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            with warnings.catch_warnings():
-                warnings.simplefilter("always")
-                start_params = mod_poi.fit_regularized(
-                    start_params=start_params, method=method, maxiter=maxiter,
-                    full_output=full_output, disp=0, callback=callback,
-                    alpha=alpha_p, trim_mode=trim_mode,
-                    auto_trim_tol=auto_trim_tol, size_trim_tol=size_trim_tol,
-                    qc_tol=qc_tol, **kwargs).params
-            if self.loglike_method.startswith('nb'):
-                start_params = np.append(start_params, 0.1)
+            start_params = self._get_start_params_l1(
+                method=method, maxiter=maxiter, full_output=full_output,
+                callback=callback, alpha=alpha,
+                trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
 
         cntfit = super(CountModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
@@ -3322,6 +3369,34 @@ class NegativeBinomialP(CountModel):
                                     use_self=True, use_t=use_t, **cov_kwds)
         return result
 
+    def _get_start_params_l1(self, method='l1',
+            maxiter='defined_by_method', full_output=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+
+        alpha_p = alpha
+        if self.k_extra and np.size(alpha) > 1:
+            alpha_p = alpha[:-1]
+
+        offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+        if np.size(offset) == 1 and offset == 0:
+            offset = None
+
+        mod_poi = Poisson(self.endog, self.exog, offset=offset)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+
+            res_poi = mod_poi.fit_regularized(
+                start_params=None, method=method, maxiter=maxiter,
+                full_output=full_output, disp=0, callback=callback,
+                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+
+        start_params = res_poi.params
+        start_params = np.append(start_params, 0.1)
+        return start_params
+
     @Appender(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
@@ -3335,23 +3410,14 @@ class NegativeBinomialP(CountModel):
             alpha = alpha * np.ones(k_params)
             alpha[-1] = 0
 
-        alpha_p = alpha[:-1] if (self.k_extra and np.size(alpha) > 1) else alpha
-
         self._transparams = False
+
         if start_params is None:
-            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
-            if np.size(offset) == 1 and offset == 0:
-                offset = None
-            mod_poi = Poisson(self.endog, self.exog, offset=offset)
-            with warnings.catch_warnings():
-                warnings.simplefilter("always")
-                start_params = mod_poi.fit_regularized(
-                    start_params=start_params, method=method, maxiter=maxiter,
-                    full_output=full_output, disp=0, callback=callback,
-                    alpha=alpha_p, trim_mode=trim_mode,
-                    auto_trim_tol=auto_trim_tol, size_trim_tol=size_trim_tol,
-                    qc_tol=qc_tol, **kwargs).params
-            start_params = np.append(start_params, 0.1)
+            start_params = self._get_start_params_l1(
+                method=method, maxiter=maxiter, full_output=full_output,
+                callback=callback, alpha=alpha,
+                trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
 
         cntfit = super(CountModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,

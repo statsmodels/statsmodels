@@ -192,6 +192,31 @@ class GenericZeroInflated(CountModel):
                                       use_self=True, use_t=use_t, **cov_kwds)
         return result
 
+    def _get_start_params_l1(self, method='l1',
+            maxiter='defined_by_method', full_output=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+
+        alpha_p = alpha
+        if self.k_extra and np.size(alpha) > 1:
+            extra = self.k_extra - self.k_inflate
+            alpha_p = alpha[:-(self.k_extra - extra)]
+            # TODO: Why not just write alpha[:-self.k_inflate]?
+
+        offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
+        if np.size(offset) == 1 and offset == 0:
+            offset = None
+
+        res_main = self.model_main.fit_regularized(
+            start_params=None, method=method, maxiter=maxiter,
+            full_output=full_output, disp=False, callback=callback,
+            alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+            size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+
+        start_params = res_main.params
+        start_params = np.append(np.ones(self.k_inflate), start_params)
+        return start_params
+
     @Appender(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
@@ -204,19 +229,13 @@ class GenericZeroInflated(CountModel):
             k_params = self.k_exog + self.k_inflate
             alpha = alpha * np.ones(k_params)
 
-        extra = self.k_extra - self.k_inflate
-        alpha_p = alpha[:-(self.k_extra - extra)] if (self.k_extra
-            and np.size(alpha) > 1) else alpha
         if start_params is None:
-            offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
-            if np.size(offset) == 1 and offset == 0:
-                offset = None
-            start_params = self.model_main.fit_regularized(
-                start_params=start_params, method=method, maxiter=maxiter,
-                full_output=full_output, disp=0, callback=callback,
-                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
-                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
-            start_params = np.append(np.ones(self.k_inflate), start_params)
+            start_params = self._get_start_params_l1(
+                method=method, maxiter=maxiter, full_output=full_output,
+                callback=callback, alpha=alpha,
+                trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+
         cntfit = super(CountModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=disp, callback=callback,
