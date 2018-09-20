@@ -1,0 +1,61 @@
+version: 2
+jobs:
+
+  python37:
+    docker:
+      - image: continuumio/miniconda3
+    environment:
+      PYTHON: 3.7
+    steps:
+      - checkout
+      - run: tools/ci/circleci_install.sh
+      - run: tools/ci/circleci_test.sh
+
+  python36opb:
+    docker:
+      - image: continuumio/miniconda3
+    environment:
+      PYTHON: 3.6
+      NUMPY: 1.14
+      BLAS: "nomkl blas=*=openblas"
+    steps:
+      - checkout
+      - run: tools/ci/circleci_install.sh
+      - run: tools/ci/circleci_test.sh
+
+  python35:
+    docker:
+      - image: continuumio/miniconda3
+    environment:
+      PYTHON: 3.5
+      NUMPY: 1.13
+      SCIPY: 1.0
+      PANDAS: 0.22
+      MATPLOTLIB: 2.0
+    steps:
+      - checkout
+      - run: tools/ci/circleci_install.sh
+      - run: tools/ci/circleci_test.sh
+
+  python34:
+    docker:
+      - image: continuumio/miniconda3
+    environment:
+      PYTHON: 3.4
+      NUMPY: 1.11
+      SCIPY: 0.18
+      PANDAS: 0.19
+      MATPLOTLIB: 1.5
+    steps:
+      - checkout
+      - run: tools/ci/circleci_install.sh
+      - run: tools/ci/circleci_test.sh
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - python37
+      - python36opb
+      - python35
+      - python34
