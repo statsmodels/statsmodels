@@ -344,7 +344,7 @@ def test_debiased():
 @pytest.mark.smoke
 @pytest.mark.parametrize('trend', TRENDS)
 @pytest.mark.parametrize('seasonal', SEASONALS)
-def test_float_boxcox_smoke(trend, seasonal):
+def test_float_boxcox(trend, seasonal):
     res = ExponentialSmoothing(housing_data, trend=trend, seasonal=seasonal).fit(use_boxcox=0.5)
     assert_allclose(res.params['use_boxcox'], 0.5)
 

@@ -34,7 +34,32 @@ class CheckOLSRobust(object):
         assert_allclose(self.bse_robust, res2.bse, rtol=rtol)
         assert_allclose(self.cov_robust, res2.cov, rtol=rtol)
 
-    def test_tests(self):
+    @pytest.mark.smoke
+    def test_t_test_summary(self):
+        res1 = self.res1
+        mat = np.eye(len(res1.params))
+        # TODO: if the t_test call is expensive, possibly make it a fixture?
+        tt = res1.t_test(mat, cov_p=self.cov_robust)
+
+        tt.summary()
+
+    @pytest.mark.smoke
+    def test_t_test_summary_frame(self):
+        res1 = self.res1
+        mat = np.eye(len(res1.params))
+        tt = res1.t_test(mat, cov_p=self.cov_robust)
+
+        tt.summary_frame()
+
+    @pytest.mark.smoke
+    def test_f_test_summary(self):
+        res1 = self.res1
+        mat = np.eye(len(res1.params))
+        ft = res1.f_test(mat[:-1], cov_p=self.cov_robust)
+
+        ft.summary()
+
+    def test_tests(self):  # TODO: break into well-scoped tests
         # Note: differences between small (t-distribution, ddof) and large (normal)
         # F statistic has no ddof correction in large, but uses F distribution (?)
         res1 = self.res1
@@ -73,12 +98,6 @@ class CheckOLSRobust(object):
             # ivreg2
             assert_equal(ft.df_num, res2.Fdf1)
             assert_equal(ft.df_denom, res2.Fdf2)
-
-        # SMOKE
-        tt.summary()
-        ft.summary()
-        tt.summary_frame()
-
 
 
 class TestOLSRobust1(CheckOLSRobust):

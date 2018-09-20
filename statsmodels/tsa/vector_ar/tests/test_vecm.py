@@ -1338,7 +1338,7 @@ def test_exceptions():
 
 
 @pytest.mark.smoke
-def test_select_coint_rank():  # This is only a smoke test.
+def test_select_coint_rank():
     if debug_mode:
         if "select_coint_rank" not in to_test:  # pragma: no cover
             return
