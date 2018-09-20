@@ -293,7 +293,32 @@ def anova_lm(*args, **kwargs):
     Returns
     -------
     anova : DataFrame
-    A DataFrame containing.
+        When args is a single model, DataFrame contains.
+        sum_sq : float64
+            Sum of squares for model terms.
+        df : float64
+            Degress of freedom for model terms.
+        test statistic : float64
+            Name dependens on selected test statistic. Returns test statistic
+            value for significance.
+        PR(test statistic) : float64
+            Name depends on selected test statistic. P-value for selected test.
+
+        When args is multiple models, DataFrame contains.
+        df_resid : float64
+            Degrees of freedom of residuals in models.
+        ssr : float64
+            Sum of squares of residuals in models.
+        df_diff : float64
+            Degrees of freedom difference from previous model in args
+        ss_dff : float64
+            Difference in ssr from previous model in args
+        test statistic : float64
+            Name depends on selected test statistic. Returns test statistic
+            value for comparison to previous model in args
+        PR(test statistic): float64
+            Name depends on selected test statistic. P-value for selected test
+            statistic comparing to previous model in args
 
     Notes
     -----
@@ -336,7 +361,7 @@ def anova_lm(*args, **kwargs):
     n_models = len(args)
     pr_test = "Pr(>%s)" % test
     names = ['df_resid', 'ssr', 'df_diff', 'ss_diff', test, pr_test]
-    table = DataFrame(np.zeros((n_models, 6)), columns = names)
+    table = DataFrame(np.zeros((n_models, 6)), columns=names)
 
     if not scale: # assume biggest model is last
         scale = args[-1].scale
