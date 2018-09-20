@@ -7,7 +7,6 @@ recursive-exclude dist *
 recursive-exclude tools *
 include tools/examples_rst.py
 include tools/hash_funcs.py
-include tools/cythonize.py
 
 graft statsmodels/datasets
 graft statsmodels/sandbox/regression/data
@@ -25,9 +24,6 @@ include docs/make.bat
 include docs/Makefile
 
 recursive-include examples *
-
-# Cached Cython signatures
-include cythonize.dat
 
 prune */__pycache__
 
