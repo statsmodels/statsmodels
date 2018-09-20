@@ -1337,6 +1337,7 @@ def test_exceptions():
                         vecm_res.predict, 5, None, exog_coint_fc)  # passed as exog_fc-argument!
 
 
+@pytest.mark.smoke
 def test_select_coint_rank():  # This is only a smoke test.
     if debug_mode:
         if "select_coint_rank" not in to_test:  # pragma: no cover

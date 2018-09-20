@@ -854,7 +854,7 @@ class TestGEE(object):
         assert_equal(type(rslt), gee.OrdinalGEEResultsWrapper)
         assert_equal(type(rslt._results), gee.OrdinalGEEResults)
 
-
+    @pytest.mark.smoke
     def test_ordinal_formula(self):
 
         np.random.seed(434)
@@ -876,6 +876,7 @@ class TestGEE(object):
             model = gee.NominalGEE.from_formula("y ~ 0 + x1 + x2", groups, data=df)
             model.fit()
 
+    @pytest.mark.smoke
     def test_ordinal_independence(self):
 
         np.random.seed(434)
@@ -889,6 +890,7 @@ class TestGEE(object):
         model1 = gee.OrdinalGEE(y, x, groups, cov_struct=odi)
         model1.fit()
 
+    @pytest.mark.smoke
     def test_nominal_independence(self):
 
         np.random.seed(434)
@@ -1722,6 +1724,7 @@ def test_regularized_gaussian():
 
     assert_allclose(model.cov_struct.dep_params, np.r_[s], rtol=0.01, atol=0.05)
 
+@pytest.mark.smoke
 @pytest.mark.matplotlib
 def test_plots(close_figures):
 

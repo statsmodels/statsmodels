@@ -9,6 +9,7 @@ import numpy as np
 import pandas
 import scipy
 from scipy import stats
+import pytest
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.sandbox.regression import gmm
@@ -115,8 +116,8 @@ class CheckGMM(object):
         assert_allclose(jpval, pval, rtol=rtol, atol=atol)
         assert_equal(jdf, res2.J_df)
 
-
-    def test_smoke(self):
+    @pytest.mark.smoke
+    def test_summary(self):
         res1 = self.res1
         summ = res1.summary()
         assert_equal(len(summ.tables[1]), len(res1.params) + 1)

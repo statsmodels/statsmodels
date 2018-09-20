@@ -194,6 +194,7 @@ def test_axes_labeling(close_figures):
     fig.suptitle("correct alignment of the axes labels")
 
 
+@pytest.mark.smoke
 @pytest.mark.matplotlib
 def test_mosaic_empty_cells(close_figures):
     # SMOKE test  see #2286

@@ -6,6 +6,7 @@ Author: Josef Perktold
 """
 
 import os
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -116,7 +117,8 @@ class TestTheilTextile(object):
         assert_allclose(res_theil.params, res_ols.params, rtol=1e-10)
         assert_allclose(res_theil.bse, res_ols.bse, rtol=1e-10)
 
-    def test_smoke(self):
+    @pytest.mark.smoke
+    def test_summary(self):
         with pytest.warns(UserWarning):
             self.res1.summary()
 

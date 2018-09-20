@@ -234,6 +234,7 @@ class MarkovAutoregression(object):
         assert_allclose(res.llf, self.true['llf_fit'], atol=self.atol,
                         rtol=self.rtol)
 
+    @pytest.mark.smoke
     def test_fit_em(self, **kwargs):
         # Test EM fitting (smoke test)
         res_em = self.model._fit_em(**kwargs)

@@ -2,6 +2,7 @@ import numpy as np
 from numpy.testing import assert_equal, assert_, assert_raises
 import pandas
 import pandas.util.testing as ptesting
+import pytest
 
 from statsmodels.base import data as sm_data
 from statsmodels.formula import handle_formula_data
@@ -513,6 +514,7 @@ class TestMissingArray(object):
         X[14,2] = np.nan
         cls.y, cls.X = y, X
 
+    @pytest.mark.smoke
     def test_raise_no_missing(self):
         # smoke test for #1700
         sm_data.handle_data(np.random.random(20), np.random.random((20, 2)),
@@ -580,6 +582,7 @@ class TestMissingPandas(object):
         X[14,2] = np.nan
         cls.y, cls.X = pandas.Series(y), pandas.DataFrame(X)
 
+    @pytest.mark.smoke
     def test_raise_no_missing(self):
         # smoke test for #1700
         sm_data.handle_data(pandas.Series(np.random.random(20)),

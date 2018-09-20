@@ -1,3 +1,4 @@
+import pytest
 from numpy.testing import assert_
 
 from statsmodels.base.optimizer import (_fit_newton, _fit_nm,
@@ -28,6 +29,7 @@ def dummy_hess(x):
     return [[2.]]
 
 
+@pytest.mark.smoke
 def test_full_output_false(reset_randomstate):
     # just a smoke test
 

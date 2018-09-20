@@ -341,6 +341,7 @@ def test_debiased():
     assert np.any(res.fittedvalues != res2.fittedvalues)
 
 
+@pytest.mark.smoke
 @pytest.mark.parametrize('trend', TRENDS)
 @pytest.mark.parametrize('seasonal', SEASONALS)
 def test_float_boxcox_smoke(trend, seasonal):

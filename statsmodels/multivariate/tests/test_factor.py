@@ -201,6 +201,7 @@ def test_plots(close_figures):
     assert_equal(3, len(fig_loadings))
 
 
+@pytest.mark.smoke
 def test_getframe_smoke():
     #  mostly smoke tests for now
     mod = Factor(X.iloc[:, 1:-1], 2, smc=True)
@@ -249,6 +250,7 @@ def _zscore(x):
     return (x - x.mean(0)) / x.std(0)
 
 
+@pytest.mark.smoke
 def test_factor_scoring():
     path = os.path.abspath(__file__)
     dir_path = os.path.dirname(path)

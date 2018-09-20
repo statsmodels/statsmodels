@@ -504,6 +504,7 @@ def test_kernel_survfunc2():
     assert_allclose(resultkm.surv_prob, result.surv_prob, rtol=1e-6, atol=1e-6)
 
 
+@pytest.mark.smoke
 def test_kernel_survfunc3():
     # Smoke test for tied times
 
@@ -539,6 +540,7 @@ def test_kernel_cumincidence1():
             assert_allclose(result1.cinc[k], result2.cinc[k], rtol=1e-5)
 
 
+@pytest.mark.smoke
 def test_kernel_cumincidence2():
     # Smoke tests for tied times
 

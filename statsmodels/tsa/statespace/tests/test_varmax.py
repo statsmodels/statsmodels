@@ -49,6 +49,7 @@ class CheckVARMAX(object):
             self.model.enforce_invertibility = True
             assert_allclose(results.llf, self.results.llf, rtol=1e-5)
 
+    @pytest.mark.smoke
     def test_params(self):
         # Smoke test to make sure the start_params are well-defined and
         # lead to a well-defined model
@@ -66,6 +67,7 @@ class CheckVARMAX(object):
         self.model.enforce_invertibility = True
         assert_allclose(actual, self.model.start_params)
 
+    @pytest.mark.smoke
     def test_results(self):
         # Smoke test for creating the summary
         self.results.summary()

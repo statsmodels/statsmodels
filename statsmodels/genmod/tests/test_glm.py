@@ -181,9 +181,12 @@ class CheckModelResultsMixin(object):
             assert_allclose(self.res1.pearson_chi2, self.res2.pearson_chi2,
                             atol=1e-6, rtol=1e-6)
 
+    @pytest.mark.smoke
     def test_summary(self):
-        #SMOKE test
         self.res1.summary()
+
+    @pytest.mark.smoke
+    def test_summary2(self):
         self.res1.summary2()
 
 
@@ -996,6 +999,7 @@ def gen_endog(lin_pred, family_class, link, binom_version=0):
     return endog
 
 
+@pytest.mark.smoke
 def test_summary():
     # Smoke test for summary.
 

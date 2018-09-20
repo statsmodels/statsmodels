@@ -73,6 +73,7 @@ class InfluenceCompareExact(object):
         assert_allclose(infl0.d_fittedvalues_scaled,
                         infl1.d_fittedvalues_scaled, rtol=5e-9)
 
+    @pytest.mark.smoke
     @pytest.mark.matplotlib
     def test_plots(self, close_figures):
         # SMOKE tests for plots

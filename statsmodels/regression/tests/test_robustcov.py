@@ -6,6 +6,7 @@ Created on Mon Oct 28 15:25:14 2013
 Author: Josef Perktold
 """
 
+import pytest
 import numpy as np
 from scipy import stats
 
@@ -238,11 +239,9 @@ class CheckOLSRobustNewMixin(object):
         psum = (res1.resid_pearson**2).sum()
         assert_allclose(psum, df_resid, rtol=1e-13)
 
-
-
-    def test_smoke(self):
+    @pytest.mark.smoke
+    def test_summary(self):
         self.res1.summary()
-
 
 
 class TestOLSRobust2SmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):

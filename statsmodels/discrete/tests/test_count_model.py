@@ -62,8 +62,8 @@ class CheckGeneric(CheckModelMixin):
         assert_equal(np.ptp(exog_null), 0)
         assert_equal(np.ptp(exog_infl_null), 0)
 
+    @pytest.mark.smoke
     def test_summary(self):
-        # SMOKE test
         self.res1.summary()
 
 
