@@ -1783,7 +1783,7 @@ class GLMResults(base.LikelihoodModelResults):
 
         return plot_partial_residuals(self, focus_exog, ax=ax)
 
-    @Appender(plot_ceres_residuals_doc % {'extra_params_doc': ''})
+    @Appender(_plot_ceres_residuals_doc % {'extra_params_doc': ''})
     def plot_ceres_residuals(self, focus_exog, frac=0.66, cond_means=None,
                              ax=None):
 
