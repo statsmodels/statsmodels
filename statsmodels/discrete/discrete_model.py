@@ -1102,12 +1102,7 @@ class Poisson(CountModel):
                                              callback=callback,
                                              **kwargs)
 
-        if 'cov_type' in kwargs:
-            cov_kwds = kwargs.get('cov_kwds', {})
-            kwds = {'cov_type':kwargs['cov_type'], 'cov_kwds':cov_kwds}
-        else:
-            kwds = {}
-        discretefit = PoissonResults(self, cntfit, **kwds)
+        discretefit = PoissonResults(self, cntfit)
         return PoissonResultsWrapper(discretefit)
 
     @Appender(DiscreteModel.fit_regularized.__doc__)
@@ -1525,15 +1520,13 @@ class GeneralizedPoisson(CountModel):
         if use_transparams and method not in ["newton", "ncg"]:
             self._transparams = False
             mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
+            # ensure cov_params are re-evaluated with updated params
+            delattr(mlefit._results, "cov_type")
 
-        gpfit = GeneralizedPoissonResults(self, mlefit._results)
+        gpfit = GeneralizedPoissonResults(self, mlefit._results,
+                                          cov_type=cov_type, use_t=use_t,
+                                          cov_kwds=cov_kwds)
         result = GeneralizedPoissonResultsWrapper(gpfit)
-
-        if cov_kwds is None:
-            cov_kwds = {}
-
-        result._get_robustcov_results(cov_type=cov_type,
-                                      use_self=True, use_t=use_t, **cov_kwds)
         return result
 
     @Appender(DiscreteModel.fit_regularized.__doc__)
@@ -3315,11 +3308,6 @@ class NegativeBinomialP(CountModel):
 
         nbinfit = NegativeBinomialResults(self, mlefit._results)
         result = NegativeBinomialResultsWrapper(nbinfit)
-
-        if cov_kwds is None:
-            cov_kwds = {}
-        result._get_robustcov_results(cov_type=cov_type,
-                                    use_self=True, use_t=use_t, **cov_kwds)
         return result
 
     @Appender(DiscreteModel.fit_regularized.__doc__)
@@ -3464,6 +3452,8 @@ class DiscreteResults(base.LikelihoodModelResults):
                 if cov_kwds is None:
                     cov_kwds = {}
                 from statsmodels.base.covtype import get_robustcov_results
+                # TODO: use self._get_robustcov_results?  Only difference
+                # with base class is that base class passes use_t
                 get_robustcov_results(self, cov_type=cov_type, use_self=True,
                                            **cov_kwds)
 
