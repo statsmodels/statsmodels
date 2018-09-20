@@ -293,7 +293,7 @@ def anova_lm(*args, **kwargs):
     Returns
     -------
     anova : DataFrame
-        When args is a single model, DataFrame contains.
+        When args is a single model, return is DataFrame with columns:
         sum_sq : float64
             Sum of squares for model terms.
         df : float64
@@ -303,7 +303,7 @@ def anova_lm(*args, **kwargs):
         PR(>F) : float64
             P-value for significance of adding model terms.
 
-        When args is multiple models, DataFrame contains.
+        When args is multiple models, return is DataFrame with columns:
         df_resid : float64
             Degrees of freedom of residuals in models.
         ssr : float64
