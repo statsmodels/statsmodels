@@ -937,7 +937,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         """
         Fit the model using maximum likelihood.
 
-        See LikelihoodModel.fit.__doc__ for more information.
+        See LikelihoodModel.fit for more information.
         """
         if start_params is None:
             if hasattr(self, 'start_params'):
