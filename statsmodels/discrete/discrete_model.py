@@ -18,12 +18,10 @@ W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial",
            "GeneralizedPoisson", "NegativeBinomialP", "CountModel"]
 
-from scipy.special import loggamma
-
 import numpy as np
 from pandas import get_dummies, MultiIndex
 
-from scipy.special import gammaln, digamma, polygamma
+from scipy.special import gammaln, digamma, polygamma, loggamma
 from scipy import stats, special
 from scipy.stats import nbinom
 
