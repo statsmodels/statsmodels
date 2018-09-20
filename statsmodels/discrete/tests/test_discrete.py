@@ -2404,3 +2404,31 @@ def test_t_test():
 
     assert_allclose(t1.effect, t2.effect)
     assert_allclose(f1.statistic, f2.statistic)
+
+
+@pytest.mark.parametrize('method', ['newton', 'bfgs'])
+@pytest.mark.parametrize('cov_type', ['nonrobust', 'HC0', 'HC1', 'HC2', 'HC3'])
+@pytest.mark.parametrize('use_t', [True, False])
+@pytest.mark.parametrize('use_transparams', [True, False])
+def test_negbinp_cov_types(use_transparams, use_t, cov_type, method):
+    # GH#5234 Test that cov_type and use_t are correctly attached to the
+    # results of NegativeBinomialP.fit
+
+    # avoid runtime warning in cases where use_transparams is ignored
+    use_transparams = use_transparams and method not in ['newton', 'ncg']
+
+    # Data construction based
+    # on TestNegativeBinomialPL1Compatability.setup_class
+    rand_data = sm.datasets.randhie.load(as_pandas=False)
+
+    rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)
+    rand_exog_st = (rand_exog - rand_exog.mean(0)) / rand_exog.std(0)
+    rand_exog = sm.add_constant(rand_exog_st, prepend=True)
+
+    model = sm.NegativeBinomialP(rand_data.endog, rand_exog)
+    result = model.fit(method=method, cov_type=cov_type, use_t=use_t,
+                       use_transparams=use_transparams,
+                       disp=False)
+
+    assert result.use_t is use_t
+    assert result.cov_type == cov_type
