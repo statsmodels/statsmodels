@@ -1515,6 +1515,9 @@ class GeneralizedPoisson(CountModel):
                              disp=disp,
                              full_output=full_output,
                              callback=callback,
+                             cov_type=cov_type,
+                             use_t=use_t,
+                             cov_kwds=cov_kwds,
                              **kwargs)
 
         if use_transparams and method not in ["newton", "ncg"]:
