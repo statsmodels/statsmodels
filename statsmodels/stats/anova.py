@@ -5,7 +5,7 @@ from pandas import DataFrame, Index
 import patsy
 
 from statsmodels.regression.linear_model import OLS
-from statsmodels.compat.python import lrange, lmap
+from statsmodels.compat.python import lrange
 from statsmodels.formula.formulatools import (_remove_intercept_patsy,
                                     _has_intercept, _intercept_idx)
 from statsmodels.iolib import summary2
@@ -350,9 +350,7 @@ def anova_lm(*args, **kwargs):
         model = args[0]
         return anova_single(model, **kwargs)
 
-    try:
-        assert typ in [1,"I"]
-    except:
+    if typ not in [1,"1"]:
         raise ValueError("Multiple models only supported for type I. "
                          "Got type %s" % str(typ))
 
@@ -366,14 +364,14 @@ def anova_lm(*args, **kwargs):
     if not scale: # assume biggest model is last
         scale = args[-1].scale
 
-    table["ssr"] = lmap(getattr, args, ["ssr"]*n_models)
-    table["df_resid"] = lmap(getattr, args, ["df_resid"]*n_models)
+    table["ssr"] = [mdl.ssr for mdl in args]
+    table["df_resid"] = [mdl.df_resid for mdl in args]
     table.loc[table.index[1:], "df_diff"] = -np.diff(table["df_resid"].values)
     table["ss_diff"] = -table["ssr"].diff()
     if test == "F":
         table["F"] = table["ss_diff"] / table["df_diff"] / scale
         table[pr_test] = stats.f.sf(table["F"], table["df_diff"],
-                             table["df_resid"])
+                                    table["df_resid"])
         # for earlier scipy - stats.f.sf(np.nan, 10, 2) -> 0 not nan
         table[pr_test][table['F'].isnull()] = np.nan
 
