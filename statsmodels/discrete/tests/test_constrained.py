@@ -161,8 +161,6 @@ class TestPoissonConstrained1a(CheckPoissonConstrainedMixin):
         # NOTE: see comment about convergence in llnull for self.res1m
         summ = self.res1m.summary()
         assert_('linear equality constraints' in summ.extra_txt)
-        summ = self.res1m.summary2()
-        assert_('linear equality constraints' in summ.extra_txt[0])
 
     @pytest.mark.smoke
     def test_summary2(self):
