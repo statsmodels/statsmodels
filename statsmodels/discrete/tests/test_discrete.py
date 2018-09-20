@@ -2410,10 +2410,12 @@ def test_t_test():
 @pytest.mark.parametrize('cov_type', ['nonrobust', 'HC0', 'HC1', 'HC2', 'HC3'])
 @pytest.mark.parametrize('use_t', [True, False])
 @pytest.mark.parametrize('use_transparams', [True, False])
-@pytest.mark.parametrize('mod_cls', [sm.NegativeBinomialP, GeneralizedPoisson])
+@pytest.mark.parametrize('mod_cls', [NegativeBinomialP,
+                                     GeneralizedPoisson,
+                                     Poisson])
 def test_cov_types_attached(mod_cls, use_transparams, use_t, cov_type, method):
     # GH#5234 Test that cov_type and use_t are correctly attached to the
-    # results of NegativeBinomialP.fit and GeneralizedPoisson.fit
+    # results of `model.fit`
 
     # avoid runtime warning in cases where use_transparams is ignored
     use_transparams = use_transparams and method not in ['newton', 'ncg']
