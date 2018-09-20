@@ -297,12 +297,11 @@ def anova_lm(*args, **kwargs):
         sum_sq : float64
             Sum of squares for model terms.
         df : float64
-            Degress of freedom for model terms.
-        test statistic : float64
-            Name dependens on selected test statistic. Returns test statistic
-            value for significance.
-        PR(test statistic) : float64
-            Name depends on selected test statistic. P-value for selected test.
+            Degrees of freedom for model terms.
+        F : float64
+            F statistic value for significance of adding model terms.
+        PR(>F) : float64
+            P-value for significance of adding model terms.
 
         When args is multiple models, DataFrame contains.
         df_resid : float64
