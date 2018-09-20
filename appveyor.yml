@@ -30,6 +30,10 @@ platform:
     - x64
 
 build_script:
+  # Search for [appveyor skip] or [skip appveyor] and exit if found in full commit message
+  - ps: $commit=$env:APPVEYOR_REPO_COMMIT_MESSAGE + $env:APPVEYOR_REPO_COMMIT_MESSAGE_EXTENDED
+  - ps: $skip_appveyor=$commit.Contains("[skip appveyor]") -Or $commit.Contains("[appveyor skip]")
+  - ps: If ($skip_appveyor) { echo "[skip appveyor]"; Exit-AppVeyorBuild }
   # Show information about CPU running job to understand BLAS issues
   - wmic cpu get caption, name, numberofcores
   - SET MKL_NUM_THREADS=1
