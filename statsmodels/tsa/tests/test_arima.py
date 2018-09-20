@@ -158,7 +158,6 @@ class CheckArmaResultsMixin(object):
 
     @pytest.mark.smoke
     def test_summary(self):
-        # smoke tests
         self.res1.summary()
 
 
@@ -1772,8 +1771,7 @@ def test_arima_no_diff():
 
 @pytest.mark.smoke
 def test_arima_predict_noma():
-    # issue 657
-    # smoke test
+    # GH#657
     ar = [1, .75]
     ma = [1]
     np.random.seed(12345)

@@ -38,7 +38,6 @@ class CheckFormulaOLS(object):
 
     @pytest.mark.smoke
     def test_summary(self):
-        # smoke test
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore",
                                     "kurtosistest only valid for n>=20")

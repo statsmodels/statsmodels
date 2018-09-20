@@ -12,7 +12,6 @@ class CheckGrouping(object):
 
     @pytest.mark.smoke
     def test_reindex(self):
-        # smoke test
         self.grouping.reindex(self.grouping.index)
 
     def test_count_categories(self):
@@ -131,7 +130,7 @@ class CheckGrouping(object):
 
     @pytest.mark.smoke
     def test_dummies_groups(self):
-        # smoke test, calls dummy_sparse under the hood
+        # calls dummy_sparse under the hood
         self.grouping.dummies_groups()
 
         if len(self.grouping.group_names) > 1:

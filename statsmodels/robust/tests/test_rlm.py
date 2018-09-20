@@ -118,7 +118,6 @@ class TestRlm(CheckRlmResultsMixin):
 
     @pytest.mark.smoke
     def test_summary(self):
-        # smoke test that summary at least returns something
         self.res1.summary()
 
 

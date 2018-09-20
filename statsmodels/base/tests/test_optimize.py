@@ -31,8 +31,6 @@ def dummy_hess(x):
 
 @pytest.mark.smoke
 def test_full_output_false(reset_randomstate):
-    # just a smoke test
-
     # newton needs f, score, start, fargs, kwargs
     # bfgs needs f, score start, fargs, kwargs
     # nm needs ""

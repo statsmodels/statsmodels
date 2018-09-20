@@ -10,7 +10,6 @@ cur_dir = os.path.dirname(os.path.abspath(__file__))
 
 @pytest.mark.smoke
 def test_get_rdataset():
-    # smoke test
     test_url = "https://raw.githubusercontent.com/vincentarelbundock/Rdatasets/master/csv/datasets/cars.csv"
     internet_available = check_internet(test_url)
     if not internet_available:

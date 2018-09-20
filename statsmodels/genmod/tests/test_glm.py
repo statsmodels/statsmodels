@@ -1001,8 +1001,6 @@ def gen_endog(lin_pred, family_class, link, binom_version=0):
 
 @pytest.mark.smoke
 def test_summary():
-    # Smoke test for summary.
-
     np.random.seed(4323)
 
     n = 100
@@ -1010,7 +1008,7 @@ def test_summary():
     exog[:, 0] = 1
     endog = np.random.normal(size=n)
 
-    for method in "irls", "cg":
+    for method in ["irls", "cg"]:
         fa = sm.families.Gaussian()
         model = sm.GLM(endog, exog, family=fa)
         rslt = model.fit(method=method)

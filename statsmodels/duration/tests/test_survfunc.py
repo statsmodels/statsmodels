@@ -506,7 +506,7 @@ def test_kernel_survfunc2():
 
 @pytest.mark.smoke
 def test_kernel_survfunc3():
-    # Smoke test for tied times
+    # cases with tied times
 
     n = 100
     np.random.seed(3434)
@@ -542,7 +542,7 @@ def test_kernel_cumincidence1():
 
 @pytest.mark.smoke
 def test_kernel_cumincidence2():
-    # Smoke tests for tied times
+    # cases with tied times
 
     n = 100
     np.random.seed(3434)

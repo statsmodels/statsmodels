@@ -291,7 +291,6 @@ class TestPHReg(object):
 
     @pytest.mark.smoke
     def test_summary(self):
-        # smoke test
         np.random.seed(34234)
         time = 50 * np.random.uniform(size=200)
         status = np.random.randint(0, 2, 200).astype(np.float64)
@@ -342,7 +341,6 @@ class TestPHReg(object):
 
     @pytest.mark.smoke
     def test_get_distribution(self):
-        # Smoke test
         np.random.seed(34234)
         n = 200
         exog = np.random.normal(size=(n, 2))

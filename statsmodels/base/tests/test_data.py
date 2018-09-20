@@ -516,7 +516,7 @@ class TestMissingArray(object):
 
     @pytest.mark.smoke
     def test_raise_no_missing(self):
-        # smoke test for #1700
+        # GH#1700
         sm_data.handle_data(np.random.random(20), np.random.random((20, 2)),
                             'raise')
 
@@ -584,7 +584,7 @@ class TestMissingPandas(object):
 
     @pytest.mark.smoke
     def test_raise_no_missing(self):
-        # smoke test for #1700
+        # GH#1700
         sm_data.handle_data(pandas.Series(np.random.random(20)),
                             pandas.DataFrame(np.random.random((20, 2))),
                             'raise')

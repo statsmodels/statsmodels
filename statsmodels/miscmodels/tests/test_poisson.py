@@ -45,7 +45,6 @@ class CompareMixin(object):
 
     @pytest.mark.smoke
     def test_summary(self):
-        # SMOKE test
         self.res.summary()
 
 

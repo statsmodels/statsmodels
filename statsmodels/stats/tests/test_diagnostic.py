@@ -762,7 +762,6 @@ def grangertest():
 
 @pytest.mark.smoke
 def test_outlier_influence_funcs(reset_randomstate):
-    # smoke test
     x = add_constant(np.random.randn(10, 2))
     y = x.sum(1) + np.random.randn(10)
     res = OLS(y, x).fit()
