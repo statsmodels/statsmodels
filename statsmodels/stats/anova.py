@@ -312,17 +312,15 @@ def anova_lm(*args, **kwargs):
             Degrees of freedom difference from previous model in args
         ss_dff : float64
             Difference in ssr from previous model in args
-        test statistic : float64
-            Name depends on selected test statistic. Returns test statistic
-            value for comparison to previous model in args
-        PR(test statistic): float64
-            Name depends on selected test statistic. P-value for selected test
-            statistic comparing to previous model in args
+        F : float64
+            F statistic comparing to previous model in args
+        PR(>F): float64
+            P-value for significance comparing to previous model in args
 
     Notes
     -----
-    Model statistics are given in the order of args. Models must have
-    been fit using the formula api.
+    Model statistics are given in the order of args. Models must have been fit
+    using the formula api.
 
     See Also
     --------
