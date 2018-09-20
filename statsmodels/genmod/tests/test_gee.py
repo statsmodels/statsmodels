@@ -154,6 +154,7 @@ class TestGEE(object):
         assert_allclose(marg.margeff, np.r_[-0.41197961], rtol=1e-5)
         assert_allclose(marg.margeff_se, np.r_[0.1379962], rtol=1e-6)
 
+    @pytest.mark.smoke
     @pytest.mark.matplotlib
     def test_nominal_plot(self, close_figures):
         np.random.seed(34234)
@@ -167,7 +168,6 @@ class TestGEE(object):
         result = model.fit(cov_type='naive',
                            start_params=[3.295837, -2.197225])
 
-        # Smoke test for figure
         fig = result.plot_distribution()
         assert_equal(isinstance(fig, plt.Figure), True)
 
@@ -866,11 +866,9 @@ class TestGEE(object):
 
         df = pd.DataFrame({"y": y, "groups": groups, "x1": x1, "x2": x2})
 
-        # smoke test
         model = gee.OrdinalGEE.from_formula("y ~ 0 + x1 + x2", groups, data=df)
         model.fit()
 
-        # smoke test
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             model = gee.NominalGEE.from_formula("y ~ 0 + x1 + x2", groups, data=df)
@@ -885,7 +883,6 @@ class TestGEE(object):
         groups = np.kron(np.arange(n / 2), np.r_[1, 1])
         x = np.random.normal(size=(n, 1))
 
-        # smoke test
         odi = cov_struct.OrdinalIndependence()
         model1 = gee.OrdinalGEE(y, x, groups, cov_struct=odi)
         model1.fit()
@@ -899,13 +896,13 @@ class TestGEE(object):
         groups = np.kron(np.arange(n / 2), np.r_[1, 1])
         x = np.random.normal(size=(n, 1))
 
-        # smoke test
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             nmi = cov_struct.NominalIndependence()
             model1 = gee.NominalGEE(y, x, groups, cov_struct=nmi)
             model1.fit()
 
+    @pytest.mark.smoke
     @pytest.mark.matplotlib
     def test_ordinal_plot(self, close_figures):
         family = families.Binomial()
@@ -918,7 +915,6 @@ class TestGEE(object):
         mod = gee.OrdinalGEE(endog, exog, groups, None, family, va)
         rslt = mod.fit()
 
-        # Smoke test for figure
         fig = rslt.plot_distribution()
         assert_equal(isinstance(fig, plt.Figure), True)
 
@@ -1736,7 +1732,6 @@ def test_plots(close_figures):
     model = gee.GEE(exog, endog, groups)
     result = model.fit()
 
-    # Smoke tests
     fig = result.plot_added_variable(1)
     assert_equal(isinstance(fig, plt.Figure), True)
     fig = result.plot_partial_residuals(1)
