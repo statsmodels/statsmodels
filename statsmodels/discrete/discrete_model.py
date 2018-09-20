@@ -3300,13 +3300,18 @@ class NegativeBinomialP(CountModel):
         mlefit = super(NegativeBinomialP, self).fit(start_params=start_params,
                         maxiter=maxiter, method=method, disp=disp,
                         full_output=full_output, callback=callback,
+                        cov_type=cov_type, use_t=use_t, cov_kwds=cov_kwds,
                         **kwargs)
 
         if use_transparams and method not in ["newton", "ncg"]:
             self._transparams = False
             mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
+            # ensure cov_params are re-evaluated with updated params
+            delattr(mlefit._results, "cov_type")
 
-        nbinfit = NegativeBinomialResults(self, mlefit._results)
+        nbinfit = NegativeBinomialResults(self, mlefit._results,
+                                          cov_type=cov_type, use_t=use_t,
+                                          cov_kwds=cov_kwds)
         result = NegativeBinomialResultsWrapper(nbinfit)
         return result
 
