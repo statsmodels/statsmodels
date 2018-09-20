@@ -1,8 +1,14 @@
 # Source to configure conda CI builds
-wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh -nv
+if [ "$TRAVIS_OS_NAME" = "linux" ]; then
+  CONDA_FILE="Miniconda3-latest-Linux-x86_64.sh";
+fi
+if [ "$TRAVIS_OS_NAME" = "osx" ]; then
+  CONDA_FILE="Miniconda3-latest-MacOSX-x86_64.sh";
+fi
+wget https://repo.continuum.io/miniconda/"$CONDA_FILE" -O miniconda.sh -nv
 chmod +x miniconda.sh
-./miniconda.sh -b -p /home/travis/miniconda
-export PATH=/home/travis/miniconda/bin:$PATH
+./miniconda.sh -b -p "$HOME"/miniconda
+export PATH="$HOME"/miniconda/bin:$PATH
 conda config --set always_yes yes
 conda update --quiet conda
 # Build package list to avoid empty package=versions; only needed for versioned packages
