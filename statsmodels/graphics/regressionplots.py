@@ -11,6 +11,8 @@ update
 
 '''
 from statsmodels.compat.python import lrange, lzip
+from statsmodels.compat.pandas import Appender
+
 import numpy as np
 import pandas as pd
 from patsy import dmatrix
@@ -840,6 +842,11 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     return fig
 
 
+@Appender(_plot_influence_doc.format({
+    'extra_params_doc': "results: object\n"
+                        "    Results for a fitted regression model\n"
+                        "influence: instance\n"
+                        "    instance of Influence for model"}))
 def _influence_plot(results, influence, external=True, alpha=.05,
                     criterion="cooks", size=48, plot_alpha=.75, ax=None,
                     **kwargs):
@@ -886,18 +893,17 @@ def _influence_plot(results, influence, external=True, alpha=.05,
                              lzip(-(psize/2)**.5, (psize/2)**.5), "x-large",
                              ax)
 
-    #TODO: make configurable or let people do it ex-post?
-    font = {"fontsize" : 16, "color" : "black"}
+    # TODO: make configurable or let people do it ex-post?
+    font = {"fontsize": 16, "color": "black"}
     ax.set_ylabel("Studentized Residuals", **font)
     ax.set_xlabel("H Leverage", **font)
     ax.set_title("Influence Plot", **font)
     return fig
 
-_influence_plot.__doc__ = _plot_influence_doc.format({
-    'extra_params_doc' : "results: object\n\tResults for a fitted regression model\n"
-    "influence: instance\n    instance of Influence for model"})
 
-
+@Appender(_plot_influence_doc.format({
+    'extra_params_doc': "results: object\n"
+                        "    Results for a fitted regression model"}))
 def influence_plot(results, external=True, alpha=.05, criterion="cooks",
                    size=48, plot_alpha=.75, ax=None, **kwargs):
 
@@ -907,11 +913,12 @@ def influence_plot(results, external=True, alpha=.05, criterion="cooks",
                           plot_alpha=plot_alpha, ax=ax, **kwargs)
     return res
 
-influence_plot.__doc__ = _plot_influence_doc.format({
-    'extra_params_doc' : "results: object\n"
-                         "    Results for a fitted regression model"})
 
-
+@Appender(_plot_leverage_resid2_doc.format({
+    'extra_params_doc': "results: object\n"
+                        "    Results for a fitted regression model\n"
+                        "influence: instance\n"
+                        "    instance of Influence for model"}))
 def _plot_leverage_resid2(results, influence, alpha=.05, ax=None,
                          **kwargs):
 
@@ -940,26 +947,23 @@ def _plot_leverage_resid2(results, influence, alpha=.05, ax=None,
     ax.margins(.075, .075)
     return fig
 
-_plot_leverage_resid2.__doc__ = _plot_leverage_resid2_doc.format({
-    'extra_params_doc' : "results: object\n\tResults for a fitted regression model\n"
-    "influence: instance\n    instance of Influence for model"})
 
-
+@Appender(_plot_leverage_resid2_doc.format({
+    'extra_params_doc': "results : object\n"
+                        "    Results for a fitted regression model"}))
 def plot_leverage_resid2(results, alpha=.05, ax=None, **kwargs):
 
     infl = results.get_influence()
     res = _plot_leverage_resid2(results, infl, alpha=.05, ax=None,
-                                 **kwargs)
+                                **kwargs)
     return res
 
-plot_leverage_resid2.__doc__ = _plot_leverage_resid2_doc.format({
-    'extra_params_doc' : "results : object\n"
-                         "    Results for a fitted regression model"})
 
-
+@Appender(_plot_added_variable_doc % {
+    'extra_params_doc': "results : object\n"
+                        "    Results for a fitted regression model"})
 def plot_added_variable(results, focus_exog, resid_type=None,
                         use_glm_weights=True, fit_kwargs=None, ax=None):
-    # Docstring attached below
 
     model = results.model
 
@@ -975,7 +979,7 @@ def plot_added_variable(results, focus_exog, resid_type=None,
 
     ax.set_title('Added variable plot', fontsize='large')
 
-    if type(focus_exog) is str:
+    if isinstance(focus_exog, str):
         xname = focus_exog
     else:
         xname = model.exog_names[focus_exog]
@@ -984,9 +988,10 @@ def plot_added_variable(results, focus_exog, resid_type=None,
 
     return fig
 
-plot_added_variable.__doc__ = _plot_added_variable_doc % {
-    'extra_params_doc' : "results : object\n\tResults for a fitted regression model"}
 
+@Appender(_plot_partial_residuals_doc % {
+    'extra_params_doc': "results : object\n"
+                        "    Results for a fitted regression model"})
 def plot_partial_residuals(results, focus_exog, ax=None):
     # Docstring attached below
 
@@ -1002,7 +1007,7 @@ def plot_partial_residuals(results, focus_exog, ax=None):
 
     ax.set_title('Partial residuals plot', fontsize='large')
 
-    if type(focus_exog) is str:
+    if isinstance(focus_exog, str):
         xname = focus_exog
     else:
         xname = model.exog_names[focus_exog]
@@ -1011,12 +1016,12 @@ def plot_partial_residuals(results, focus_exog, ax=None):
 
     return fig
 
-plot_partial_residuals.__doc__ = _plot_partial_residuals_doc % {
-    'extra_params_doc' : "results : object\n\tResults for a fitted regression model"}
 
+@Appender(_plot_ceres_residuals_doc % {
+    'extra_params_doc': "results : object\n"
+                        "    Results for a fitted regression model"})
 def plot_ceres_residuals(results, focus_exog, frac=0.66, cond_means=None,
-               ax=None):
-    # Docstring attached below
+                         ax=None):
 
     model = results.model
 
@@ -1037,8 +1042,6 @@ def plot_ceres_residuals(results, focus_exog, frac=0.66, cond_means=None,
 
     return fig
 
-plot_ceres_residuals.__doc__ = _plot_ceres_residuals_doc % {
-    'extra_params_doc' : "results : object\n\tResults for a fitted regression model"}
 
 def ceres_resids(results, focus_exog, frac=0.66, cond_means=None):
     """

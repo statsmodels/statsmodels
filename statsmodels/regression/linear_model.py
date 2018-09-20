@@ -33,6 +33,7 @@ W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 
 
 from statsmodels.compat.python import lrange, lzip
+from statsmodels.compat.pandas import Appender
 
 import numpy as np
 from scipy.linalg import toeplitz
@@ -609,11 +610,10 @@ class GLS(RegressionModel):
         else:
             return np.diag(self.cholsigmainv)
 
+    @Appender(_fit_regularized_doc)
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         L1_wt=1., start_params=None, profile_scale=False,
                         refit=False, **kwargs):
-        # Docstring attached below
-
         # Need to adjust since RSS/n term in elastic net uses nominal
         # n in denominator
         if self.sigma is not None:
@@ -630,8 +630,6 @@ class GLS(RegressionModel):
             RegularizedResults, RegularizedResultsWrapper)
         rrslt = RegularizedResults(self, rslt.params)
         return RegularizedResultsWrapper(rrslt)
-
-    fit_regularized.__doc__ = _fit_regularized_doc
 
 
 class WLS(RegressionModel):
@@ -788,6 +786,7 @@ class WLS(RegressionModel):
 
         return self.weights
 
+    @Appender(_fit_regularized_doc)
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         L1_wt=1., start_params=None, profile_scale=False,
                         refit=False, **kwargs):
@@ -808,8 +807,6 @@ class WLS(RegressionModel):
             RegularizedResults, RegularizedResultsWrapper)
         rrslt = RegularizedResults(self, rslt.params)
         return RegularizedResultsWrapper(rrslt)
-
-    fit_regularized.__doc__ = _fit_regularized_doc
 
 
 class OLS(WLS):
@@ -1019,10 +1016,10 @@ class OLS(WLS):
 
         return np.ones(self.exog.shape[0])
 
+    @Appender(_fit_regularized_doc)
     def fit_regularized(self, method="elastic_net", alpha=0.,
                         L1_wt=1., start_params=None, profile_scale=False,
                         refit=False, **kwargs):
-        # Docstring attached below
 
         # In the future we could add support for other penalties, e.g. SCAD.
         if method not in ("elastic_net", "sqrt_lasso"):
@@ -1069,8 +1066,6 @@ class OLS(WLS):
                               refit=refit,
                               check_step=False,
                               **defaults)
-
-    fit_regularized.__doc__ = _fit_regularized_doc
 
     def _sqrt_lasso(self, alpha, refit, zero_tol):
 
@@ -2519,14 +2514,13 @@ class RegressionResults(base.LikelihoodModelResults):
 
         return res
 
+    @Appender(pred.get_prediction.__doc__)
     def get_prediction(self, exog=None, transform=True, weights=None,
                        row_labels=None, **kwargs):
 
         return pred.get_prediction(
             self, exog=exog, transform=transform, weights=weights,
             row_labels=row_labels, **kwargs)
-
-    get_prediction.__doc__ = pred.get_prediction.__doc__
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """

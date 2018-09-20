@@ -23,6 +23,7 @@ LA Mancl LA, TA DeRouen (2001). A covariance estimator for GEE with
 improved small-sample properties.  Biometrics. 2001 Mar;57(1):126-34.
 """
 from statsmodels.compat.python import lzip
+from statsmodels.compat.pandas import Appender
 
 import numpy as np
 from scipy import stats
@@ -1248,10 +1249,10 @@ class GEE(base.Model):
         result = model.fit()
         return result.params
 
+    @Appender(_gee_fit_doc)
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
             cov_type='robust', ddof_scale=None, scaling_factor=1.):
-        # Docstring attached below
 
         # Subtract this number from the total sample size when
         # normalizing the scale parameter estimate.
@@ -1386,8 +1387,6 @@ class GEE(base.Model):
                           "maxiter"]
 
         return GEEResultsWrapper(results)
-
-    fit.__doc__ = _gee_fit_doc
 
     def _update_regularized(self, params, pen_wt, scad_param, eps):
 
@@ -1977,10 +1976,10 @@ class GEEResults(base.LikelihoodModelResults):
         return self.model.family.link.inverse(np.dot(self.model.exog,
                                                      self.params))
 
+    @Appender(_plot_added_variable_doc % {'extra_params_doc': ''})
     def plot_added_variable(self, focus_exog, resid_type=None,
                             use_glm_weights=True, fit_kwargs=None,
                             ax=None):
-        # Docstring attached below
 
         from statsmodels.graphics.regressionplots import plot_added_variable
 
@@ -1991,30 +1990,21 @@ class GEEResults(base.LikelihoodModelResults):
 
         return fig
 
-    plot_added_variable.__doc__ = _plot_added_variable_doc % {
-        'extra_params_doc': ''}
-
+    @Appender(_plot_partial_residuals_doc % {'extra_params_doc': ''})
     def plot_partial_residuals(self, focus_exog, ax=None):
-        # Docstring attached below
 
         from statsmodels.graphics.regressionplots import plot_partial_residuals
 
         return plot_partial_residuals(self, focus_exog, ax=ax)
 
-    plot_partial_residuals.__doc__ = _plot_partial_residuals_doc % {
-        'extra_params_doc': ''}
-
+    @Appender(_plot_ceres_residuals_doc % {'extra_params_doc': ''})
     def plot_ceres_residuals(self, focus_exog, frac=0.66, cond_means=None,
                              ax=None):
-        # Docstring attached below
 
         from statsmodels.graphics.regressionplots import plot_ceres_residuals
 
         return plot_ceres_residuals(self, focus_exog, frac,
                                     cond_means=cond_means, ax=ax)
-
-    plot_ceres_residuals.__doc__ = _plot_ceres_residuals_doc % {
-        'extra_params_doc': ''}
 
     def conf_int(self, alpha=.05, cols=None, cov_type=None):
         """
@@ -2462,6 +2452,7 @@ class OrdinalGEE(GEE):
         result = model.fit()
         return result.params
 
+    @Appender(_gee_fit_doc)
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
             cov_type='robust'):
@@ -2480,10 +2471,9 @@ class OrdinalGEE(GEE):
                                      attr_kwds=res_kwds)
         # for k in rslt._props:
         #    setattr(ord_rslt, k, getattr(rslt, k))
+        # TODO: document or delete
 
         return OrdinalGEEResultsWrapper(ord_rslt)
-
-    fit.__doc__ = _gee_fit_doc
 
 
 class OrdinalGEEResults(GEEResults):
@@ -2844,6 +2834,7 @@ class NominalGEE(GEE):
 
         return dmat
 
+    @Appender(_gee_fit_doc)
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             params_niter=1, first_dep_update=0,
             cov_type='robust'):
@@ -2864,12 +2855,11 @@ class NominalGEE(GEE):
                                      rslt.scale,
                                      cov_type=cov_type,
                                      attr_kwds=res_kwds)
+        # TODO: document or delete
         # for k in rslt._props:
         #    setattr(nom_rslt, k, getattr(rslt, k))
 
         return NominalGEEResultsWrapper(nom_rslt)
-
-    fit.__doc__ = _gee_fit_doc
 
 
 class NominalGEEResults(GEEResults):

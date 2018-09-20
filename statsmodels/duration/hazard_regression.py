@@ -15,9 +15,11 @@ hazards model.
 http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 """
 import numpy as np
+
 from statsmodels.base import model
 import statsmodels.base.model as base
 from statsmodels.tools.decorators import cache_readonly
+from statsmodels.compat.pandas import Appender
 
 
 _predict_docstring = """
@@ -1171,9 +1173,11 @@ class PHReg(model.LikelihoodModel):
 
         return cumhaz_f
 
+    @Appender(_predict_docstring % {
+        'params_doc': _predict_params_doc,
+        'cov_params_doc': _predict_cov_params_docstring})
     def predict(self, params, exog=None, cov_params=None, endog=None,
                 strata=None, offset=None, pred_type="lhr"):
-        # docstring attached below
 
         pred_type = pred_type.lower()
         if pred_type not in ["lhr", "hr", "surv", "cumhaz"]:
@@ -1249,9 +1253,6 @@ class PHReg(model.LikelihoodModel):
             ret_val.predicted_values = np.exp(-cumhaz)
 
         return ret_val
-
-    predict.__doc__ = _predict_docstring % {'params_doc': _predict_params_doc,
-                                            'cov_params_doc': _predict_cov_params_docstring}
 
     def get_distribution(self, params):
         """
@@ -1411,11 +1412,9 @@ class PHRegResults(base.LikelihoodModelResults):
 
         return self.model.get_distribution(self.params)
 
-
+    @Appender(_predict_docstring % {'params_doc': '', 'cov_params_doc': ''})
     def predict(self, endog=None, exog=None, strata=None,
                 offset=None, transform=True, pred_type="lhr"):
-        # docstring attached below
-
         return super(PHRegResults, self).predict(exog=exog,
                                                  transform=transform,
                                                  cov_params=self.cov_params(),
@@ -1423,9 +1422,6 @@ class PHRegResults(base.LikelihoodModelResults):
                                                  strata=strata,
                                                  offset=offset,
                                                  pred_type=pred_type)
-
-    predict.__doc__ = _predict_docstring % {'params_doc': '',
-                                            'cov_params_doc': ''}
 
     def _group_stats(self, groups):
         """

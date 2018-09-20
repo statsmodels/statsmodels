@@ -2,11 +2,11 @@
 from distutils.version import LooseVersion
 
 import pandas
-from pandas.util._decorators import deprecate_kwarg
+from pandas.util._decorators import cache_readonly, deprecate_kwarg, Appender
 
 __all__ = ['assert_frame_equal', 'assert_index_equal', 'assert_series_equal',
            'data_klasses', 'frequencies', 'is_numeric_dtype', 'testing',
-           'cache_readonly', 'deprecate_kwarg']
+           'cache_readonly', 'deprecate_kwarg', 'Appender']
 
 version = LooseVersion(pandas.__version__)
 pandas_lt_25_0 = version < LooseVersion('0.25.0')

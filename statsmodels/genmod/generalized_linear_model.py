@@ -18,9 +18,12 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
     Chapman & Hall, Boca Rotan.
 """
 import numpy as np
+
 from . import families
+
 from statsmodels.tools.decorators import (cache_readonly,
                                           cached_data, cached_value)
+from statsmodels.compat.pandas import Appender
 
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
@@ -1663,6 +1666,7 @@ class GLMResults(base.LikelihoodModelResults):
                 (self.model.wnobs - self.df_model - 1) *
                 np.log(self.model.wnobs))
 
+    @Appender(pred.get_prediction_glm.__doc__)
     def get_prediction(self, exog=None, exposure=None, offset=None,
                        transform=True, linear=False,
                        row_labels=None):
@@ -1685,8 +1689,6 @@ class GLMResults(base.LikelihoodModelResults):
                                       pred_kwds=pred_kwds)
 
         return res
-
-    get_prediction.__doc__ = pred.get_prediction_glm.__doc__
 
     def get_hat_matrix_diag(self, observed=True):
         """
@@ -1746,6 +1748,7 @@ class GLMResults(base.LikelihoodModelResults):
                          hat_matrix_diag=hat_matrix_diag)
         return infl
 
+    @Appender(base.LikelihoodModelResults.remove_data.__doc__)
     def remove_data(self):
         # GLM has alias/reference in result instance
         self._data_attr.extend([i for i in self.model._data_attr
@@ -1759,12 +1762,10 @@ class GLMResults(base.LikelihoodModelResults):
         self._iweights = None
         self._n_trials = None
 
-    remove_data.__doc__ = base.LikelihoodModelResults.remove_data.__doc__
-
+    @Appender(_plot_added_variable_doc % {'extra_params_doc': ''})
     def plot_added_variable(self, focus_exog, resid_type=None,
                             use_glm_weights=True, fit_kwargs=None,
                             ax=None):
-        # Docstring attached below
 
         from statsmodels.graphics.regressionplots import plot_added_variable
 
@@ -1775,30 +1776,21 @@ class GLMResults(base.LikelihoodModelResults):
 
         return fig
 
-    plot_added_variable.__doc__ = _plot_added_variable_doc % {
-        'extra_params_doc': ''}
-
+    @Appender(_plot_partial_residuals_doc % {'extra_params_doc': ''})
     def plot_partial_residuals(self, focus_exog, ax=None):
-        # Docstring attached below
 
         from statsmodels.graphics.regressionplots import plot_partial_residuals
 
         return plot_partial_residuals(self, focus_exog, ax=ax)
 
-    plot_partial_residuals.__doc__ = _plot_partial_residuals_doc % {
-        'extra_params_doc': ''}
-
+    @Appender(plot_ceres_residuals_doc % {'extra_params_doc': ''})
     def plot_ceres_residuals(self, focus_exog, frac=0.66, cond_means=None,
                              ax=None):
-        # Docstring attached below
 
         from statsmodels.graphics.regressionplots import plot_ceres_residuals
 
         return plot_ceres_residuals(self, focus_exog, frac,
                                     cond_means=cond_means, ax=ax)
-
-    plot_ceres_residuals.__doc__ = _plot_ceres_residuals_doc % {
-        'extra_params_doc': ''}
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """
