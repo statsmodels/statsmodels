@@ -347,7 +347,7 @@ def anova_lm(*args, **kwargs):
         model = args[0]
         return anova_single(model, **kwargs)
 
-    if typ not in [1,"1"]:
+    if typ not in [1, "I"]:
         raise ValueError("Multiple models only supported for type I. "
                          "Got type %s" % str(typ))
 
