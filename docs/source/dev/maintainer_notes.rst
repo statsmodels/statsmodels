@@ -1,8 +1,8 @@
 Maintainer Notes
 ================
 
-This is for those with read-write access to upstream. It is recommended to name the upstream
-remote something to remind you that it is read-write::
+This is for those with read-write access to upstream. It is recommended to name
+the upstream remote something to remind you that it is read-write::
 
     git remote add upstream-rw git@github.com:statsmodels/statsmodels.git
     git fetch upstream-rw
@@ -11,7 +11,7 @@ Git Workflow
 ------------
 
 Grabbing Changes from Others
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If you need to push changes from others, you can link to their repository by doing::
 
@@ -26,7 +26,7 @@ want to push upstream.
 .. _rebasing:
 
 Rebasing
-~~~~~~~~
+^^^^^^^^
 
 If there are only a few commits, you can rebase to keep a linear history::
 
@@ -39,21 +39,22 @@ so don't forget to do this.
 .. _merging:
 
 Merging
-~~~~~~~
+^^^^^^^
 
-If there is a long series of related commits, then you'll want to merge. You may ask yourself,
-:ref:`ff-no-ff`? See below for more on this choice. Once decided you can do::
+If there is a long series of related commits, then you'll want to merge. You
+may ask yourself, :ref:`ff-no-ff`? See below for more on this choice. Once
+decided you can do::
 
     git fetch upstream-rw
     git merge --no-ff upstream-rw/master
 
-Merging will automaticall close the pull request on github.
+Merging will automatically close the pull request on github.
 
 Check the History
-~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^
 
-This is very important. Again, any and all fixes should be made locally before pushing to the
-repository::
+This is very important. Again, any and all fixes should be made locally before
+pushing to the repository::
 
     git log --oneline --graph
 
@@ -61,25 +62,28 @@ This shows the history in a compact way of the current branch. This::
 
     git log -p upstream-rw/master..
 
-shows the log of commits excluding those that can be reached from upstream-rw/master, and
-including those that can be reached from current HEAD. That is, those changes unique to this
-branch versus upstream-rw/master. See :ref:`Pydagogue <pydagogue:git-log-dots>` for more on using
-dots with log and also for using :ref:`dots with diff <pydagogue:git-diff-dots>`.
+shows the log of commits excluding those that can be reached from
+upstream-rw/master, and including those that can be reached from current HEAD.
+That is, those changes unique to this branch versus upstream-rw/master. See
+:ref:`Pydagogue <pydagogue:git-log-dots>` for more on using dots with log and
+also for using :ref:`dots with diff <pydagogue:git-diff-dots>`.
 
 Push Your Feature Branch
-~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^
 
-All the changes look good? You can push your feature branch after :ref:`merging` or :ref:`rebasing` by::
+All the changes look good? You can push your feature branch after
+:ref:`merging` or :ref:`rebasing` by::
 
     git push upstream-rw shiny-new-feature:master
 
 Cherry-Picking
-~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^
 
-Say you are interested in some commit in another branch, but want to leave the other ones for now.
-You can do this with a cherry-pick. Use `git log --oneline` to find the commit that you want to
-cherry-pick. Say you want commit `dd9ff35` from the `shiny-new-feature` branch. You want to apply
-this commit to master. You simply do::
+Say you are interested in some commit in another branch, but want to leave the
+other ones for now. You can do this with a cherry-pick. Use `git log --oneline`
+to find the commit that you want to cherry-pick. Say you want commit `dd9ff35`
+from the `shiny-new-feature` branch. You want to apply this commit to master.
+You simply do::
 
     git checkout master
     git cherry-pick dd9ff35
@@ -89,10 +93,10 @@ And that's all. This commit is now applied as a new commit in master.
 .. _ff-no-ff:
 
 Merging: To Fast-Forward or Not To Fast-Forward
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-By default, `git merge` is a fast-forward merge. What does this mean, and when do you want to avoid
-this?
+By default, `git merge` is a fast-forward merge. What does this mean, and when
+do you want to avoid this?
 
 .. figure:: images/git_merge.png
    :alt: git merge diagram
@@ -101,45 +105,46 @@ this?
 
    (source `nvie.com <http://nvie.com>`__, post `"A successful Git branching model" <http://nvie.com/posts/a-successful-git-branching-model/>`__)
 
-The fast-forward merge does not create a merge commit. This means that the existence of the feature
-branch is lost in the history. The fast-forward is the default for Git basically because branches are
-cheap and, therefore, *usually* short-lived. If on the other hand, you have a long-lived feature
-branch or are following an iterative workflow on the feature branch (i.e. merge into master, then
-go back to feature branch and add more commits), then it makes sense to include only the merge
-in the main branch, rather than all the intermediate commits of the feature branch, so you should
-use::
+The fast-forward merge does not create a merge commit. This means that the
+existence of the feature branch is lost in the history. The fast-forward is the
+default for Git basically because branches are cheap and, therefore, *usually*
+short-lived. If on the other hand, you have a long-lived feature branch or are
+following an iterative workflow on the feature branch (i.e. merge into master,
+then go back to feature branch and add more commits), then it makes sense to
+include only the merge in the main branch, rather than all the intermediate
+commits of the feature branch, so you should use::
 
     git merge --no-ff
 
 Handling Pull Requests
-~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^
 
-You can apply a pull request through `fetch <https://www.kernel.org/pub/software/scm/git/docs/git-fetch.html>`__ and `merge <https://www.kernel.org/pub/software/scm/git/docs/git-merge.html>`__. In your local
-copy of the main repo::
+You can apply a pull request through `fetch <https://www.kernel.org/pub/software/scm/git/docs/git-fetch.html>`__
+and `merge <https://www.kernel.org/pub/software/scm/git/docs/git-merge.html>`__.
+In your local copy of the main repo::
 
     git checkout master
     git remote add contrib-name git://github.com/contrib-name/statsmodels.git
     git fetch contrib-name
     git merge contrib-name/shiny-new-feature
 
-Check that the merge applies cleanly and the history looks good. Edit the merge message. Add a short
-explanation of what the branch did along with a 'Closes gh-XXX.' string. This will auto-close the pull
-request and link the ticket and closing commit. To automatically close the issue, you can use any of::
+Check that the merge applies cleanly and the history looks good. Edit the merge
+message. Add a short explanation of what the branch did along with a
+'Closes gh-XXX.' string. This will auto-close the pull request and link the
+ticket and closing commit. To automatically close the issue, you can use any
+of::
 
     gh-XXX
     GH-XXX
     #XXX
 
-in the commit message. Any and all problems need to be taken care of locally before doing::
+in the commit message. Any and all problems need to be taken care of locally
+before doing::
 
     git push origin master
 
 Releasing
 ---------
-
-#. Fix the version number. Open setup.py and set::
-
-    ISRELEASED = True
 
 #. Clean the working tree with::
 
@@ -163,18 +168,19 @@ Releasing
 
     python setup.py sdist --formats=gztar,zip register upload
 
-#. Go back to setup.py and set `isreleased = False` and bump the major version in master.
+#. Upload wheels to PyPI. These can uploaded following the instructions in the `statsmodels-wheels repo <https://github.com/macpython/statsmodels-wheels>`_.
 
 #. Update the version numbers in the statsmodels/statsmodels-website repo. These are in conf.py. Also upload the released version docs to stable/, move stable/ to a placeholder for older version documentation.
 
-#. Make an announcment
+#. Make an announcement
 
 #. Profit
 
 
 Commit Comments
 ---------------
-Prefix commit messages in the master branch of the main shared repository with the following::
+Prefix commit messages in the master branch of the main shared repository with
+the following::
 
     ENH: Feature implementation
     BUG: Bug fix
@@ -184,6 +190,7 @@ Prefix commit messages in the master branch of the main shared repository with t
     REL: Release related commit
     TST: Change to a test, adding a test. Only used if not directly related to a bug.
     REF: Refactoring changes
+
 
 .. Notes: vbench is not currently available and it is unclear whether it will return
 .. vbench
