@@ -1327,6 +1327,11 @@ class VARResults(VARProcess):
         Adjusted to be an unbiased estimator
         Ref: Lütkepohl p.74-75
         """
+        import warnings
+        warnings.warn("For consistency with other statmsodels models, "
+                      "starting in version 0.11.0 `VARResults.cov_params` "
+                      "will be a method instead of a property.",
+                      category=FutureWarning)
         z = self.ys_lagged
         return np.kron(scipy.linalg.inv(np.dot(z.T, z)), self.sigma_u)
 
