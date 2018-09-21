@@ -9,19 +9,18 @@ of a model.
 
   1. Basic linear models such as :ref:`WLS and OLS <regression>` are directly
      estimated using appropriate linear algebra.
-  2. :ref:`RLM <rlm>` and :ref:`GLM <glm>`, and a few other models by default
-     use model-specific algorithms. RLM and GLM use iteratively re-weighted
-     least squares, for example. However, you can optionally select one of the
+  2. :ref:`RLM <rlm>` and :ref:`GLM <glm>`, use iteratively re-weighted
+     least squares. However, you can optionally select one of the scipy
      optimizers discussed below.
-  3. For other models, the most common method for nonlinear estimation is
-     using `optimizers <https://docs.scipy.org/doc/scipy/reference/optimize.html>`_
+  3. For all other models, we use
+     `optimizers <https://docs.scipy.org/doc/scipy/reference/optimize.html>`_
      from `scipy <https://docs.scipy.org/doc/scipy/reference/index.html>`_.
 
 Where practical, certain models allow for the optional selection of a
 scipy optimizer. A particular scipy optimizer might be default or an option.
 Depending on the model and the data, choosing an appropriate scipy optimizer
 enables avoidance of a local minima, fitting models in less time, or fitting a
-model with less memory resource.
+model with less memory.
 
 statsmodels supports the following optimizers along with keyword arguments
 associated with that specific optimizer:
