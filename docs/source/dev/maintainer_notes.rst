@@ -137,11 +137,11 @@ in the commit message. Any and all problems need to be taken care of locally bef
 Releasing
 ---------
 
-#. Fix the version number. Open setup.py and set::
+1. Checkout master::
 
-    ISRELEASED = True
+    git checkout statsmodels/master
 
-#. Clean the working tree with::
+2. Clean the working tree with::
 
     git clean -xdf
 
@@ -149,27 +149,61 @@ Releasing
 
     git clean -xdfn
 
-#. Tag the release. For a release candidate, for example::
+3. **Locally** tag the release. For a release candidate, for example::
 
-    git tag -a v0.3.0rc1 -m "Version 0.3.0 Release Candidate 1" 7b2fb29
+    git tag -a v0.10.0rc1 -m "Version 0.10.0 Release Candidate 1" 7b2fb29
 
-#. If on a new minor release (major.minor.micro format) start a new maintenance branch, for example::
+   or just::
 
-    git checkout -b maintenance/0.3.x
+    git tag -a v0.10.0rc1 -m "Version 0.10.0 Release Candidate 1"
 
-   Any bug fixes and maintenance commits intended for the next micro release should be made against master as usual, but tagged with the milestone for the micro release it is intended for. Then merge into master as usual. When ready to do the backports, use the file ``tools/backport_pr.py`` to identify which PRs need to be backported and to apply them to the maintenance branch. The tag for the release should be made in the maintenance branch.
+   to use the last commit in master.
 
-#. Upload the source distribution to PyPI::
+4. Checkout the tag::
 
-    python setup.py sdist --formats=gztar,zip register upload
+    git checkout tags/v0.10.0rc1
 
-#. Go back to setup.py and set `isreleased = False` and bump the major version in master.
+5. Build a sdist to ensure that that the build is clean::
 
-#. Update the version numbers in the statsmodels/statsmodels-website repo. These are in conf.py. Also upload the released version docs to stable/, move stable/ to a placeholder for older version documentation.
+    python setup.py sdist --formats=gztar
 
-#. Make an announcment
+   It is important that the build on the tar.gz file is the same as the tag. It must not be **dirty**
 
-#. Profit
+6. If on a new minor release (major.minor.micro format) start a new maintenance branch, for example::
+
+    git checkout -b maintenance/0.10.x
+
+   Any bug fixes and maintenance commits intended for the next micro release should be made
+   against master as usual, but tagged with the milestone for the micro release it is intended
+   for. Then merge into master as usual. When ready to do the backports, use the file
+   ``tools/backport_pr.py`` to identify which PRs need to be backported and to apply them to the
+   maintenance branch. The tag for the release should be made in the maintenance branch.
+
+7. Upload the source distribution to PyPI::
+
+    twine upload dist/*
+
+   You might want to upload to test first::
+
+    twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+
+8. Go back to the master branch, and add an empty commit::
+
+    git checkout statsmodels/master
+    git commit --allow-empty -m "Start of 0.11.0 development"
+    git tag -a v0.11.0.dev0 -m "Start of 0.11.0 development"
+
+9. Push everything to statsmodels::
+
+    git push --tags
+
+   If a new branch was created::
+
+    git push --set-upstream origin maintenance/0.10.x
+
+10. Make an announcement, and inform maintainers of wheel builders.
+
+11. Profit?
 
 
 Commit Comments
