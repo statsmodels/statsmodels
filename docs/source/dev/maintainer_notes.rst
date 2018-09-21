@@ -205,6 +205,50 @@ Releasing
 
 11. Profit?
 
+Releasing from Maintenance Branch
+---------------------------------
+
+Once any patches have been backported to a maintenance branch, the release steps are
+
+1. Checkout the branch::
+
+    git checkout maintenance/0.10.x
+
+2. Clean up thoroughly::
+
+    git clean -xdf
+
+
+3. **Locally** tag the release::
+
+    git tag -a v0.10.0 -m "Version 0.10.0"
+
+4. Checkout the tag::
+
+    git checkout tags/v0.10.0
+
+5. Build a sdist to ensure that that the build is clean::
+
+    python setup.py sdist --formats=gztar
+
+   It is important that the build on the tar.gz file is the same as the tag. It must not be **dirty**.
+
+6. Upload the source distribution to PyPI ot PyPI test::
+
+    twine upload dist/*
+
+   or::
+
+    twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+
+
+7. Push the tag to statsmodels::
+
+    git push --tags
+
+
+8. Make an announcement, and inform maintainers of wheel builders.
+
 
 Commit Comments
 ---------------
