@@ -706,8 +706,8 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
             df["std err"] = np.nan
 
         from scipy.stats.distributions import norm
-        df["t"] = df.coef / df["std err"]
-        df["P>|t|"] = norm.cdf(2 * (1 - np.abs(df.t)))
+        df["tvalues"] = df.coef / df["std err"]
+        df["P>|t|"] = 2 * norm.sf(np.abs(df.tvalues))
 
         f = norm.ppf(1 - alpha / 2)
         df["[%.3f" % (alpha / 2)] = df.coef - f * df["std err"]
