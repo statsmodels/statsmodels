@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from statsmodels.regression.process_reg import (ProcessMLE,
-                                                GaussianCovariance)
+from statsmodels.regression.process_regression import (
+       ProcessMLE, GaussianCovariance)
 import numpy as np
 import pandas as pd
 import collections
