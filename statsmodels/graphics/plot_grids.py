@@ -75,6 +75,19 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
     fig : Matplotlib figure instance
         If `fig` is None, the created figure.  Otherwise `fig` itself.
 
+    Examples
+    --------
+    >>> import statsmodels.api as sm
+    >>> import matplotlib.pyplot as plt
+    >>> import numpy as np
+
+    >>> from statsmodels.graphics.plot_grids import scatter_ellipse
+    >>> data = sm.datasets.statecrime.load_pandas().data
+    >>> fig = plt.figure(figsize=(8,8))
+    >>> scatter_ellipse(data, varnames=data.columns, fig=fig)
+    >>> plt.show()
+
+    ..plot :: plots/graphics_correlation_plot_corr_grid.py
     """
     fig = utils.create_mpl_fig(fig)
     import matplotlib.ticker as mticker

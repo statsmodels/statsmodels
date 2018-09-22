@@ -57,7 +57,10 @@ Regression Plots
    regressionplots.plot_fit
    regressionplots.plot_regress_exog
    regressionplots.plot_partregress
+   regressionplots.plot_partregress_grid
    regressionplots.plot_ccpr
+   regressionplots.plot_ccpr_grid
+   regressionplots.plot_ceres_residuals
    regressionplots.abline_plot
    regressionplots.influence_plot
    regressionplots.plot_leverage_resid2

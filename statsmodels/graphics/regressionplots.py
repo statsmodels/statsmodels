@@ -173,8 +173,8 @@ def plot_regress_exog(results, exog_idx, fig=None):
     ----------
     results : result instance
         result instance with resid, model.endog and model.exog as attributes
-    exog_idx : int
-        index of regressor in exog matrix
+    exog_idx : int or str
+        Name or index of regressor in exog matrix
     fig : Matplotlib figure instance, optional
         If given, this figure is simply returned.  Otherwise a new figure is
         created.
@@ -182,6 +182,31 @@ def plot_regress_exog(results, exog_idx, fig=None):
     Returns
     -------
     fig : matplotlib figure instance
+
+    Examples
+    --------
+    Load the Statewide Crime data set and build a model with regressors
+    including the rate of high school graduation (hs_grad), population in urban
+    areas (urban), households below poverty line (poverty), and single person
+    households (single).  Outcome variable is the muder rate (murder).
+
+    Build a 2 by 2 figure based on poverty showing fitted versus actual murder
+    rate, residuals versus the poverty rate, partial regression plot of poverty,
+    and CCPR plot for poverty rate.
+
+    >>> import statsmodels.api as sm
+    >>> import matplotlib.pyplot as plot
+    >>> import statsmodels.formula.api as smf
+
+    >>> fig = plt.figure(figsize=(8, 6))
+    >>> crime_data = sm.datasets.statecrime.load_pandas()
+    >>> results = smf.ols('murder ~ hs_grad + urban + poverty + single',
+    ...                   data=crime_data.data).fit()
+    >>> sm.graphics.plot_regress_exog(results, 'poverty', fig=fig)
+    >>> plt.show()
+
+    .. plot:: plots/graphics_regression_regress_exog.py
+
     """
 
     fig = utils.create_mpl_fig(fig)
@@ -326,6 +351,30 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     See Also
     --------
     plot_partregress_grid : Plot partial regression for a set of regressors.
+
+    Examples
+    --------
+    Load the Statewide Crime data set and plot partial regression of the rate
+    of high school graduation (hs_grad) on the murder rate(murder).
+
+    The effects of the percent of the population living in urban areas (urban),
+    below the poverty line (poverty) , and in a single person household (single)
+    are removed by OLS regression.
+
+    >>> import statsmodels.api as sm
+    >>> import matplotlib.pyplot as plt
+
+    >>> crime_data = sm.datasets.statecrime.load_pandas()
+    >>> sm.graphics.plot_partregress(endog='murder', exog_i='hs_grad',
+    ...                              exog_others=['urban', 'poverty', 'single'],
+    ...                              data=crime_data.data, obs_labels=False)
+    >>> plt.show()
+
+    .. plot:: plots/graphics_regression_partregress.py
+
+    More detailed examples can be found in the Regression Plots notebook
+    on the examples page.
+
     """
     #NOTE: there is no interaction between possible missing data and
     #obs_labels yet, so this will need to be tweaked a bit for this case
@@ -439,7 +488,28 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
     See Also
     --------
     plot_partregress : Plot partial regression for a single regressor.
-    plot_ccpr
+    plot_ccpr : Plot CCPR against one regressor
+
+    Examples
+    --------
+    Using the state crime dataset seperately plot the effect of the each
+    variable on the on the outcome, murder rate while accounting for the effect
+    of all other variables in the model visualized with a grid of partial
+    regression plots.
+
+    >>> from statsmodels.graphics.regressionplots import plot_partregress_grid
+    >>> import statsmodels.api as sm
+    >>> import matplotlib.pyplot as plt
+    >>> import statsmodels.formula.api as smf
+
+    >>> fig = plt.figure(figsize=(8, 6))
+    >>> crime_data = sm.datasets.statecrime.load_pandas()
+    >>> results = smf.ols('murder ~ hs_grad + urban + poverty + single',
+    ...                   data=crime_data.data).fit()
+    >>> plot_partregress_grid(results, fig=fig)
+    >>> plt.show()
+
+    .. plot:: plots/graphics_regression_partregress_grid.py
 
     References
     ----------
@@ -530,9 +600,30 @@ def plot_ccpr(results, exog_idx, ax=None):
     is the case, the variance evident in the plot will be an underestimate of
     the true variance.
 
+    Examples
+    --------
+    Using the state crime dataset plot the effect of the rate of single
+    households ('single') on the murder rate while accounting for high school
+    graduation rate ('hs_grad'), percentage of people in an urban area, and rate
+    of poverty ('poverty').
+
+
+    >>> import statsmodels.api as sm
+    >>> import matplotlib.pyplot as plot
+    >>> import statsmodels.formula.api as smf
+
+    >>> crime_data = sm.datasets.statecrime.load_pandas()
+    >>> results = smf.ols('murder ~ hs_grad + urban + poverty + single',
+    ...                   data=crime_data.data).fit()
+    >>> sm.graphics.plot_ccpr(results, 'single')
+    >>> plt.show()
+
+    .. plot:: plots/graphics_regression_ccpr.py
+
     References
     ----------
     http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/ccpr.htm
+
     """
     fig, ax = utils.create_mpl_ax(ax)
 
@@ -593,6 +684,25 @@ def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
     See Also
     --------
     plot_ccpr : Creates CCPR plot for a single regressor.
+
+    Examples
+    --------
+    Using the state crime dataset seperately plot the effect of the each
+    variable on the on the outcome, murder rate while accounting for the effect
+    of all other variables in the model.
+
+    >>> import statsmodels.api as sm
+    >>> import matplotlib.pyplot as plt
+    >>> import statsmodels.formula.api as smf
+
+    >>> fig = plt.figure(figsize=(8, 8))
+    >>> crime_data = sm.datasets.statecrime.load_pandas()
+    >>> results = smf.ols('murder ~ hs_grad + urban + poverty + single',
+    ...                   data=crime_data.data).fit()
+    >>> sm.graphics.plot_ccpr_grid(results, fig=fig)
+    >>> plt.show()
+
+    .. plot:: plots/graphics_regression_ccpr_grid.py
 
     References
     ----------
@@ -660,6 +770,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     --------
     >>> import numpy as np
     >>> import statsmodels.api as sm
+
     >>> np.random.seed(12345)
     >>> X = sm.add_constant(np.random.normal(0, 20, size=30))
     >>> y = np.dot(X, [25, 3.5]) + np.random.normal(0, 30, size=30)
@@ -670,6 +781,9 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     >>> ax.margins(.1)
     >>> import matplotlib.pyplot as plt
     >>> plt.show()
+
+    .. plot:: plots/graphics_regression_abline.py
+
     """
     if ax is not None:  # get axis limits first thing, don't change these
         x = ax.get_xlim()
