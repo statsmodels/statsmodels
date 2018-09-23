@@ -1755,7 +1755,7 @@ def test_arima_predict_exog():
 
 @pytest.mark.smoke
 def test_arima_no_diff():
-    # issue 736
+    # GH#736
     # smoke test, predict will break if we have ARIMAResults but
     # ARMA model, need ARIMA(p, 0, q) to return an ARMA in init.
     ar = [1, -.75, .15, .35]

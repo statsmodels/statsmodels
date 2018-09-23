@@ -419,7 +419,6 @@ class MarkovRegression(object):
 
     @pytest.mark.smoke
     def test_summary(self):
-        # Smoke test for summary
         self.result.summary()
 
     def test_llf(self):
