@@ -243,7 +243,9 @@ class TimeSeriesModel(base.LikelihoodModel):
         Parameters
         ----------
         key : label
-            The key for which to find the location
+            The key for which to find the location if the underlying index is
+            a DateIndex or a location if the underlying index is a RangeIndex
+            or an Int64Index.
         base_index : pd.Index, optional
             Optionally the base index to search. If None, the model's index is
             searched.
@@ -376,7 +378,9 @@ class TimeSeriesModel(base.LikelihoodModel):
         Parameters
         ----------
         key : label
-            The key for which to find the location
+            The key for which to find the location if the underlying index is
+            a DateIndex or is only being used as row labels, or a location if
+            the underlying index is a RangeIndex or an Int64Index.
         base_index : pd.Index, optional
             Optionally the base index to search. If None, the model's index is
             searched.
@@ -441,7 +445,7 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         Returns
         -------
-        start : int
+        start : integer
             The index / observation location at which to begin prediction.
         end : int
             The index / observation location at which to end in-sample
@@ -456,10 +460,20 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         Notes
         -----
-        This method expands on `_get_index_loc` by first trying the given
-        base index (or the model's index if the base index was not given) and
-        then falling back to try again with the model row labels as the base
-        index.
+        The arguments `start` and `end` behave differently, depending on if
+        they are integer or not. If either is an integer, then it is assumed
+        to refer to a *location* in the index, not to an index value. On the
+        other hand, if it is a date string or some other type of object, then
+        it is assumed to refer to an index *value*. In all cases, the returned
+        `start` and `end` values refer to index *locations* (so in the former
+        case, the given location is validated and returned whereas in the
+        latter case a location is found that corresponds to the given index
+        value).
+
+        This difference in behavior is necessary to support `RangeIndex`. This
+        is because integers for a RangeIndex could refer either to index values
+        or to index locations in an ambiguous way (while for `Int64Index`,
+        since we have required them to be full indexes, there is no ambiguity).
 
         """
 
