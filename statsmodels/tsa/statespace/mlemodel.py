@@ -2755,7 +2755,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             ('AIC', ["%#5.3f" % self.aic]),
             ('BIC', ["%#5.3f" % self.bic]),
             ('HQIC', ["%#5.3f" % self.hqic])]
-        if self.filter_results.filter_concentrated:
+        if (self.filter_results is not None and
+                self.filter_results.filter_concentrated):
             top_right.append(('Scale', ["%#5.3f" % self.scale]))
 
         if hasattr(self, 'cov_type'):
