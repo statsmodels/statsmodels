@@ -72,7 +72,7 @@ class UnobservedComponents(MLEModel):
         dictionaries, it defaults to the floor of period/2.
     cycle : bool, optional
         Whether or not to include a cycle component. Default is False.
-    ar : int or None, optional
+    autoregressive : int or None, optional
         The order of the autoregressive component. Default is None.
     exog : array_like or None, optional
         Exogenous variables.
