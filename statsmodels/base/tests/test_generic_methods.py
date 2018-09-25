@@ -250,7 +250,7 @@ class CheckGenericMixin(object):
             pytest.skip('Not completely generic yet')
 
         use_start_params = not isinstance(self.results.model,
-                                          (sm.RLM, sm.OLS, sm.WLS, sm.GLM))
+                                          (sm.RLM, sm.OLS, sm.WLS))
         self.use_start_params = use_start_params  # attach for _get_constrained
         keep_index = list(range(self.results.model.exog.shape[1]))
         # index for params might include extra params
@@ -284,8 +284,12 @@ class CheckGenericMixin(object):
             # cov_type is otherwise ignored
             if cov_type != 'nonrobust' and (isinstance(self.results.model,
                                                        sm.RLM)):
-                return
+                continue
 
+            # method_kwd is not used for GLM, mle_settings is now added
+            # is not used currently, could be used for OLS, WLS
+            method = getattr(self, 'method', None)
+            method_kwd = {'method': method} if method is not None else {}
             if use_start_params:
                 start_params = np.zeros(k_vars + k_extra)
                 method =  self.results.mle_settings['optimizer']
@@ -307,12 +311,12 @@ class CheckGenericMixin(object):
             else:
                 # more special casing RLM
                 if (isinstance(self.results.model, (sm.RLM))):
-                    res1 = mod._fit_collinear()
+                    res1 = mod._fit_collinear(**method_kwd)
                 else:
-                    res1 = mod._fit_collinear(cov_type=cov_type)
+                    res1 = mod._fit_collinear(cov_type=cov_type, **method_kwd)
                 if cov_type != 'nonrobust':
                     # reestimate original model to get robust cov
-                    res2 = self.results.model.fit(cov_type=cov_type)
+                    res2 = self.results.model.fit(cov_type=cov_type, **method_kwd)
 
             if cov_type == 'nonrobust':
                 res2 = self.results

@@ -1125,6 +1125,7 @@ class GLM(base.LikelihoodModel):
             glm_results.mle_retvals = rslt.mle_retvals
             if 'iterations' in rslt.mle_retvals:
                 history['iteration'] = rslt.mle_retvals['iterations']
+        glm_results.mle_settings = rslt.mle_settings
         glm_results.method = method
         glm_results.fit_history = history
 
@@ -1211,6 +1212,7 @@ class GLM(base.LikelihoodModel):
         glm_results.mle_settings = {}
         glm_results.mle_settings['wls_method'] = wls_method
         glm_results.mle_settings['optimizer'] = glm_results.method
+        glm_results.mle_settings['start_params'] = start_params
         if (maxiter > 0) and (attach_wls is True):
             glm_results.results_wls = wls_results
         history['iteration'] = iteration + 1
