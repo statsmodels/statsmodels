@@ -539,3 +539,17 @@ def test_known_initialization():
                           state_shocks=eps1)
     tmp = 100 * 0.5**np.arange(nobs)
     assert_allclose(actual, np.c_[0.8 * tmp, 0.2 * tmp])
+
+
+def test_sequential_simulate():
+    # Test that we can perform simulation, change the system matrices, and then
+    # perform simulation again (i.e. check that everything updates correctly
+    # in the simulation smoother).
+    n_simulations = 100
+    mod = sarimax.SARIMAX([1], order=(0, 0, 0), trend='c')
+
+    actual = mod.simulate([1, 0], n_simulations)
+    assert_allclose(actual, np.ones(n_simulations))
+
+    actual = mod.simulate([10, 0], n_simulations)
+    assert_allclose(actual, np.ones(n_simulations) * 10)
