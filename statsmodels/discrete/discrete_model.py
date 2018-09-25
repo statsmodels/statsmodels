@@ -3480,6 +3480,10 @@ class DiscreteResults(base.LikelihoodModelResults):
     def fittedvalues(self):
         return np.dot(self.model.exog, self.params[:self.model.exog.shape[1]])
 
+    @property
+    def resid(self):
+        return self.resid_response
+
     @cache_readonly
     def resid_response(self):
         return self.model.endog - self.predict()
