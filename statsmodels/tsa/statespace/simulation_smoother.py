@@ -131,19 +131,16 @@ class SimulationSmoother(KalmanSmoother):
 
     def _simulate(self, nsimulations, measurement_shocks, state_shocks,
                   initial_state):
+        # Initialize the filter and representation
+        prefix, dtype, create_smoother, create_filter, create_statespace = (
+            self._initialize_smoother())
 
-        prefix = self.prefix
+        # Initialize the state
+        self._initialize_state(prefix=prefix)
 
         # Create the simulator if necessary
         if (prefix not in self._simulators or
                 not nsimulations == self._simulators[prefix].nobs):
-
-            # Make sure we have the required Statespace representation
-            prefix, dtype, create_statespace = (
-                self._initialize_representation())
-
-            # Initialize the state
-            self._initialize_state(prefix=self.prefix)
 
             simulation_output = 0
             # Kalman smoother parameters
@@ -228,11 +225,8 @@ class SimulationSmoother(KalmanSmoother):
             raise ValueError('Invalid results class provided.')
 
         # Make sure we have the required Statespace representation
-        if prefix is None:
-            prefix = self.prefix
-        prefix, dtype, create_statespace = (
-            self._initialize_representation(prefix)
-        )
+        prefix, dtype, create_smoother, create_filter, create_statespace = (
+            self._initialize_smoother())
 
         # Simulation smoother parameters
         simulation_output = self.get_simulation_output(simulation_output,
@@ -555,10 +549,11 @@ class SimulationSmoothResults(object):
         self._simulated_state_disturbance = None
 
         # Re-initialize the _statespace representation
-        self.model._initialize_representation(prefix=self.prefix)
+        prefix, dtype, create_smoother, create_filter, create_statespace = (
+            self.model._initialize_smoother())
 
         # Initialize the state
-        self.model._initialize_state(prefix=self.prefix)
+        self.model._initialize_state(prefix=prefix)
 
         # Draw the (independent) random variates for disturbances in the
         # simulation
