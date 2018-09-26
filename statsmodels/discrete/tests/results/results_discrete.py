@@ -37,7 +37,7 @@ class Anes(object):
                 .0229760791, .8443638283, .042138047, .1434089089,
                 .0081338625, .0910979921, .025300888, 1.059954821]
         self.bse = np.reshape(bse, (6,-1), order='F')
-        self.yhat = np.loadtxt(os.path.join(cur_dir,'yhat_mnlogit.csv'))
+        self.linpred = np.loadtxt(os.path.join(cur_dir,'yhat_mnlogit.csv'))
         self.phat = np.loadtxt(os.path.join(cur_dir,'phat_mnlogit.csv'))
         self.cov_params = None
         self.llf = -1461.922747312
@@ -444,7 +444,7 @@ class Spector(object):
                   .94534027576447,
                   .52911710739136,
                    .1110308393836])
-        self.yhat = np.array([-3.6007342338562,
+        self.linpred = np.array([-3.6007342338562,
                  -2.7604126930237,
                  -1.4679137468338,
                  -3.6272060871124,
@@ -660,7 +660,7 @@ class Spector(object):
                         .0619288, .9045388, .2731908, .8474501, .8341947,
                         .488726, .6424073, .3286732, .8400168, .9522446,
                         .5399595, .123544]
-        self.yhat = np.array([-2.0930860042572,
+        self.linpred = np.array([-2.0930860042572,
                   -1.615691781044,
                  -.87816804647446,
                  -2.0842070579529,
@@ -735,7 +735,7 @@ class RandHIE(object):
         predict = np.loadtxt(os.path.join(cur_dir, 'yhat_poisson.csv'),
                    delimiter=",")
         self.phat = predict[:,0]
-        self.yhat = predict[:,1]
+        self.linpred = predict[:,1]
         self.llf = -62419.588535018
         self.llnull = -66647.181687959
         self.df_model = 9
@@ -811,7 +811,7 @@ class RandHIE(object):
                 1.71796558863781e-28, 2.2944789508802e-19,
                 3.57231639404726e-158, 0.0268550333379416, 0.630272102021494,
                 0.0163241908407114, 8.55476622951356e-155]
-        self.fittedvalues = [0.892904166867786, 0.892904166867786, 0.892904166867786,
+        self.linpred = [0.892904166867786, 0.892904166867786, 0.892904166867786,
             0.892904166867786, 0.892904166867786, 0.937038051489553,
             0.937038051489553, 0.937038051489553, 0.937038051489553,
             0.937038051489553]
@@ -918,7 +918,7 @@ class RandHIE(object):
                         # from stata for alpha no lnalpha
                          [ 3.609675,    3.856716]]
         #   [  1.28360034e+00,   1.34979803e+00]]
-        self.fittedvalues = [ 0.8487497 ,  0.8487497 ,  0.8487497 ,  0.8487497,
+        self.linpred = [ 0.8487497 ,  0.8487497 ,  0.8487497 ,  0.8487497,
             0.8487497 , 0.88201746,  0.88201746,  0.88201746,  0.88201746,
             0.88201746]
 
@@ -945,7 +945,7 @@ class RandHIE(object):
         self.llnull = -44586.650971362695 # old value -44199.27443567125
         self.llr = 2092.1425097129977 # old value 1317.3888595620811
         self.llr_pvalue = 0 # old value 5.4288002863296022e-278
-        self.fittedvalues = [ 0.89348994,  0.89348994,  0.89348994,
+        self.linpred = [ 0.89348994,  0.89348994,  0.89348994,
                 0.89348994,  0.89348994, 0.9365745 ,  0.9365745 ,  0.9365745 ,
                 0.9365745 ,  0.9365745 ]
         self.conf_int = [[-0.06854453, -0.04683335],

@@ -61,7 +61,7 @@ class CheckModelResults(object):
         assert_allclose(self.res1.conf_int(), self.res2.conf_int, rtol=8e-5)
 
     def test_zstat(self):
-        assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_4)
+        assert_allclose(self.res1.tvalues, self.res2.z, rtol=5e-3, atol=5e-4)
 
     def pvalues(self):
         assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL_4)
@@ -100,21 +100,39 @@ class CheckModelResults(object):
         assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_3)
 
     def test_predict(self):
+
         fitted = self.res1.model.predict(self.res1.params)
-        assert_allclose(fitted, self.res2.phat, atol=1e-4)
+
+        res2_fitted = getattr(self.res2, 'phat', None)
+        if res2_fitted is None:
+            res2_fitted = np.exp(getattr(self.res2, 'linpred', None))
+        if res2_fitted is not None:
+            assert_allclose(fitted[:len(res2_fitted)], res2_fitted, rtol=5e-4)
+
         if self.res1.params.ndim == 2:
             # special case for MNLogit
             endog = self.res1.model.wendog
         else:
             endog = self.res1.model.endog
-        resid = endog - fitted
+        resid = (endog - fitted)
         assert_allclose(self.res1.resid, resid, atol=1e-10)
         assert_allclose(self.res1.resid, self.res1.resid_response, atol=1e-10)
 
     def test_predict_xb(self):
-        assert_almost_equal(self.res1.model.predict(self.res1.params,
-                            linear=True),
-                            self.res2.yhat, DECIMAL_4)
+        try:
+            linpred = self.res1.predict(linear=True)
+        except TypeError:
+            # new count models do not have 'linear' as keyword
+            linpred = self.res1.predict(which='linear')
+
+        res2_linpred = getattr(self.res2, 'linpred', None)
+        if res2_linpred is not None:
+            assert_allclose(linpred[:len(res2_linpred)], res2_linpred,
+                            atol=5e-4, rtol=1e-4)
+
+            # fittedvalues in discrete are currently linear prediction
+            assert_allclose(self.res1.fittedvalues[:len(res2_linpred)],
+                            res2_linpred, atol=5e-4, rtol=1e-4)
 
     def test_loglikeobs(self):
         #basic cross check
@@ -1046,9 +1064,6 @@ class TestNegativeBinomialNB2Newton(CheckModelResults):
     def test_bse(self):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_3)
 
-    def test_params(self):
-        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
-
     def test_alpha(self):
         self.res1.bse # attaches alpha_std_err
         assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha,
@@ -1063,18 +1078,6 @@ class TestNegativeBinomialNB2Newton(CheckModelResults):
     def test_zstat(self): # Low precision because Z vs. t
         assert_almost_equal(self.res1.pvalues[:-1], self.res2.pvalues,
                             DECIMAL_2)
-
-    def test_fittedvalues(self):
-        assert_almost_equal(self.res1.fittedvalues[:10],
-                            self.res2.fittedvalues[:10], DECIMAL_3)
-
-    def test_predict(self):
-        assert_almost_equal(self.res1.predict()[:10],
-                            np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
-
-    def test_predict_xb(self):
-        assert_almost_equal(self.res1.predict(linear=True)[:10],
-                            self.res2.fittedvalues[:10], DECIMAL_3)
 
     def no_info(self):
         pass
@@ -1096,17 +1099,11 @@ class TestNegativeBinomialNB1Newton(CheckModelResults):
         res2.negativebinomial_nb1_bfgs()
         cls.res2 = res2
 
-    def test_zstat(self):
-        assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_1)
-
     def test_lnalpha(self):
         self.res1.bse # attaches alpha_std_err
         assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha, 3)
         assert_almost_equal(self.res1.lnalpha_std_err,
                             self.res2.lnalpha_std_err, DECIMAL_4)
-
-    def test_params(self):
-        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
 
     def test_conf_int(self):
         # the bse for alpha is not high precision from the hessian
@@ -1115,12 +1112,6 @@ class TestNegativeBinomialNB1Newton(CheckModelResults):
                             DECIMAL_2)
 
     def test_jac(self):
-        pass
-
-    def test_predict(self):
-        pass
-
-    def test_predict_xb(self):
         pass
 
 
@@ -1162,18 +1153,6 @@ class TestNegativeBinomialNB2BFGS(CheckModelResults):
         assert_almost_equal(self.res1.pvalues[:-1], self.res2.pvalues,
                             DECIMAL_2)
 
-    def test_fittedvalues(self):
-        assert_almost_equal(self.res1.fittedvalues[:10],
-                            self.res2.fittedvalues[:10], DECIMAL_3)
-
-    def test_predict(self):
-        assert_almost_equal(self.res1.predict()[:10],
-                            np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
-
-    def test_predict_xb(self):
-        assert_almost_equal(self.res1.predict(linear=True)[:10],
-                            self.res2.fittedvalues[:10], DECIMAL_3)
-
     def no_info(self):
         pass
 
@@ -1214,12 +1193,6 @@ class TestNegativeBinomialNB1BFGS(CheckModelResults):
     def test_jac(self):
         pass
 
-    def test_predict(self):
-        pass
-
-    def test_predict_xb(self):
-        pass
-
 
 class TestNegativeBinomialGeometricBFGS(CheckModelResults):
     # Cannot find another implementation of the geometric to cross-check results
@@ -1250,23 +1223,11 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
         assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
                             DECIMAL_3)
 
-    def test_fittedvalues(self):
-        assert_almost_equal(self.res1.fittedvalues[:10],
-                            self.res2.fittedvalues[:10], DECIMAL_3)
-
     def test_jac(self):
         pass
 
-    def test_predict(self):
-        assert_almost_equal(self.res1.predict()[:10],
-                            np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
-
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_3)
-
-    def test_predict_xb(self):
-        assert_almost_equal(self.res1.predict(linear=True)[:10],
-                            self.res2.fittedvalues[:10], DECIMAL_3)
 
     def test_zstat(self): # Low precision because Z vs. t
         assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_1)
@@ -1640,7 +1601,7 @@ def test_binary_pred_table_zeros():
     assert_equal(res.pred_table(), expected)
 
 
-class TestGeneralizedPoisson_p2(object):
+class TestGeneralizedPoisson_p2():
     # Test Generalized Poisson model
 
     @classmethod
@@ -1898,18 +1859,6 @@ class TestNegativeBinomialPNB2Newton(CheckModelResults):
         assert_allclose(self.res1.pvalues[:-1], self.res2.pvalues,
                         atol=5e-3, rtol=5e-3)
 
-    def test_fittedvalues(self):
-        assert_allclose(self.res1.fittedvalues[:10],
-                        self.res2.fittedvalues[:10])
-
-    def test_predict(self):
-        assert_allclose(self.res1.predict()[:10],
-                        np.exp(self.res2.fittedvalues[:10]))
-
-    def test_predict_xb(self):
-        assert_allclose(self.res1.predict(which='linear')[:10],
-                        self.res2.fittedvalues[:10])
-
 
 class TestNegativeBinomialPNB1Newton(CheckModelResults):
 
@@ -1941,16 +1890,6 @@ class TestNegativeBinomialPNB1Newton(CheckModelResults):
         # the bse for alpha is not high precision from the hessian
         # approximation
         assert_allclose(self.res1.conf_int(), self.res2.conf_int,
-                        atol=1e-3, rtol=1e-3)
-
-    def test_predict(self):
-        assert_allclose(self.res1.predict()[:10],
-                        np.exp(self.res2.fittedvalues[:10]),
-                        atol=1e-3, rtol=1e-3)
-
-    def test_predict_xb(self):
-        assert_allclose(self.res1.predict(which='linear')[:10],
-                        self.res2.fittedvalues[:10],
                         atol=1e-3, rtol=1e-3)
 
 
@@ -1992,21 +1931,6 @@ class TestNegativeBinomialPNB2BFGS(CheckModelResults):
     def test_zstat(self): # Low precision because Z vs. t
         assert_allclose(self.res1.pvalues[:-1], self.res2.pvalues,
                         atol=5e-3, rtol=5e-3)
-
-    def test_fittedvalues(self):
-        assert_allclose(self.res1.fittedvalues[:10],
-                        self.res2.fittedvalues[:10],
-                        atol=1e-4, rtol=1e-4)
-
-    def test_predict(self):
-        assert_allclose(self.res1.predict()[:10],
-                        np.exp(self.res2.fittedvalues[:10]),
-                        atol=1e-3, rtol=1e-3)
-
-    def test_predict_xb(self):
-        assert_allclose(self.res1.predict(which='linear')[:10],
-                        self.res2.fittedvalues[:10],
-                        atol=1e-3, rtol=1e-3)
 
 
 class TestNegativeBinomialPNB1BFGS(CheckModelResults):
@@ -2062,16 +1986,6 @@ class TestNegativeBinomialPNB1BFGS(CheckModelResults):
         # approximation
         assert_allclose(self.res1.conf_int(), self.res2.conf_int,
                         atol=5e-2, rtol=5e-2)
-
-    def test_predict(self):
-        assert_allclose(self.res1.predict()[:10],
-                        np.exp(self.res2.fittedvalues[:10]),
-                        atol=5e-3, rtol=5e-3)
-
-    def test_predict_xb(self):
-        assert_allclose(self.res1.predict(which='linear')[:10],
-                        self.res2.fittedvalues[:10],
-                        atol=5e-3, rtol=5e-3)
 
     def test_init_kwds(self):
         kwds = self.res1.model._get_init_kwds()
