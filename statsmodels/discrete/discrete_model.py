@@ -3478,7 +3478,13 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def fittedvalues(self):
-        return np.dot(self.model.exog, self.params[:self.model.exog.shape[1]])
+        try:
+            fitted = self.predict(linear=True)
+        except TypeError:
+            # new count models do not have 'linear' as keyword
+            fitted = self.predict(which='linear')
+
+        return fitted
 
     @property
     def resid(self):
@@ -4042,6 +4048,10 @@ class MultinomialResults(DiscreteResults):
             else:
                 yname_list = ynames
         return yname, yname_list
+
+    @cache_readonly
+    def resid_response(self):
+        return self.model.wendog - self.predict()
 
     def pred_table(self):
         """

@@ -100,8 +100,16 @@ class CheckModelResults(object):
         assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_3)
 
     def test_predict(self):
-        assert_almost_equal(self.res1.model.predict(self.res1.params),
-                            self.res2.phat, DECIMAL_4)
+        fitted = self.res1.model.predict(self.res1.params)
+        assert_allclose(fitted, self.res2.phat, atol=1e-4)
+        if self.res1.params.ndim == 2:
+            # special case for MNLogit
+            endog = self.res1.model.wendog
+        else:
+            endog = self.res1.model.endog
+        resid = endog - fitted
+        assert_allclose(self.res1.resid, resid, atol=1e-10)
+        assert_allclose(self.res1.resid, self.res1.resid_response, atol=1e-10)
 
     def test_predict_xb(self):
         assert_almost_equal(self.res1.model.predict(self.res1.params,
