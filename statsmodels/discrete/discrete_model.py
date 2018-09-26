@@ -3476,23 +3476,13 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         return res_null.llf
 
-    @cache_readonly
-    def fittedvalues(self):
-        try:
-            fitted = self.predict(linear=True)
-        except TypeError:
-            # new count models do not have 'linear' as keyword
-            fitted = self.predict(which='linear')
-
-        return fitted
-
     @property
     def resid(self):
         return self.resid_response
 
     @cache_readonly
     def resid_response(self):
-        return self.model.endog - self.predict()
+        return self.model.endog - self.fittedvalues
 
     @cache_readonly
     def aic(self):

@@ -109,6 +109,10 @@ class CheckModelResults(object):
         if res2_fitted is not None:
             assert_allclose(fitted[:len(res2_fitted)], res2_fitted, rtol=5e-4)
 
+        # fittedvalues in discrete are currently linear prediction
+        assert_allclose(self.res1.fittedvalues[:len(res2_fitted)],
+                        res2_fitted, atol=5e-4, rtol=5e-4)
+
         if self.res1.params.ndim == 2:
             # special case for MNLogit
             endog = self.res1.model.wendog
@@ -129,10 +133,6 @@ class CheckModelResults(object):
         if res2_linpred is not None:
             assert_allclose(linpred[:len(res2_linpred)], res2_linpred,
                             atol=5e-4, rtol=1e-4)
-
-            # fittedvalues in discrete are currently linear prediction
-            assert_allclose(self.res1.fittedvalues[:len(res2_linpred)],
-                            res2_linpred, atol=5e-4, rtol=1e-4)
 
     def test_loglikeobs(self):
         #basic cross check
