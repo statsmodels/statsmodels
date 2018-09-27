@@ -2192,6 +2192,7 @@ class Probit(BinaryModel):
         return BinaryResultsWrapper(discretefit)
 
 
+
 class MNLogit(MultinomialModel):
     __doc__ = """
     Multinomial Logit Model
@@ -2248,11 +2249,55 @@ class MNLogit(MultinomialModel):
                                       names=(yname, None))
         self.data.cov_names = idx
 
-    def pdf(self, eXB):
+    def pdf(self, X, dropfirst=False, submax=False):
+        r"""
+        Multinomial Logit probability density function
+
+        We take a derivative of `cdf` using the quotient
+        rule: (f'g - g'f) / g^2
+        Here "g" is `denom` and "f" is `eXB`
+
+        For each row, this derivative will be a nvars x nvars array, with
+        the first dimension representing the coordinate of `cdf` being
+        differentiated and the second dimension representing the variable
+        doing the differentiation [AWK: how to phrase the last sentence?]
+
+        i.e. row[:, i, j] == \frac{\partial cdf[:, i]}{\partial X[:, j]}
+
+        See tests.test_multinomial.mnlogit_pdf for an alternative (slower)
+        non-loop implementation.
         """
-        NotImplemented
-        """
-        raise NotImplementedError
+        drop = int(dropfirst)
+
+        nobs = len(X)
+        XB = np.column_stack((np.zeros(nobs), X))
+        if submax:
+            XB -= XB.max(1)[:, None]
+            # TODO: benchmark how this affects speed
+
+        eXB = np.exp(XB)
+        denom = eXB.sum(1)
+        prob = eXB / denom[:, None]
+
+        J = self.J
+
+        mat_partials = [[None for idx1 in range(J - drop)]
+                        for idx2 in range(J - drop)]
+        for idx in range(J - drop):
+            for jdx in range(idx, J - drop):
+                mpartial = prob[:, idx + drop] * prob[:, jdx + drop]
+                if idx == jdx:
+                    mpartial -= prob[:, idx + drop]
+                    # An option is to avoid multiplying by `denom` here
+                    # because we will just re-divide by it later, but that
+                    # appears to be slower than just doing it here.
+
+                mat_partials[idx][jdx] = mpartial
+                mat_partials[jdx][idx] = mpartial
+                # Exploit symmetry to cut down on iterations
+
+        deriv = -np.asarray(mat_partials).T
+        return deriv
 
     def cdf(self, X):
         """
@@ -2272,9 +2317,9 @@ class MNLogit(MultinomialModel):
         -----
         In the multinomial logit model.
         .. math:: \\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}
-        """
+        """  # noqa:E501
         eXB = np.column_stack((np.ones(len(X)), np.exp(X)))
-        return eXB/eXB.sum(1)[:,None]
+        return eXB/eXB.sum(1)[:, None]
 
     def loglike(self, params):
         """
@@ -2302,10 +2347,11 @@ class MNLogit(MultinomialModel):
 
         where :math:`d_{ij}=1` if individual `i` chose alternative `j` and 0
         if not.
-        """
+        """  # noqa:E501
         params = params.reshape(self.K, -1, order='F')
         d = self.wendog
-        logprob = np.log(self.cdf(np.dot(self.exog,params)))
+        Xb = np.dot(self.exog, params)
+        logprob = np.log(self.cdf(Xb))
         return np.sum(d * logprob)
 
     def loglikeobs(self, params):
@@ -2336,10 +2382,11 @@ class MNLogit(MultinomialModel):
 
         where :math:`d_{ij}=1` if individual `i` chose alternative `j` and 0
         if not.
-        """
+        """  # noqa:E501
         params = params.reshape(self.K, -1, order='F')
         d = self.wendog
-        logprob = np.log(self.cdf(np.dot(self.exog,params)))
+        Xb = np.dot(self.exog, params)
+        logprob = np.log(self.cdf(Xb))
         return d * logprob
 
     def score(self, params):
@@ -2366,11 +2413,11 @@ class MNLogit(MultinomialModel):
 
         In the multinomial model the score matrix is K x J-1 but is returned
         as a flattened array to work with the solvers.
-        """
+        """  # noqa:E501
         params = params.reshape(self.K, -1, order='F')
-        firstterm = self.wendog[:,1:] - self.cdf(np.dot(self.exog,
-                                                  params))[:,1:]
-        #NOTE: might need to switch terms if params is reshaped
+        Xb = np.dot(self.exog, params)
+        firstterm = self.wendog[:, 1:] - self.cdf(Xb)[:, 1:]
+        # NOTE: might need to switch terms if params is reshaped
         return np.dot(firstterm.T, self.exog).flatten()
 
     def loglike_and_score(self, params):
@@ -2381,7 +2428,8 @@ class MNLogit(MultinomialModel):
         before being minimized by the maximum likelihood fitting machinery.
         """
         params = params.reshape(self.K, -1, order='F')
-        cdf_dot_exog_params = self.cdf(np.dot(self.exog, params))
+        Xb = np.dot(self.exog, params)
+        cdf_dot_exog_params = self.cdf(Xb)
         loglike_value = np.sum(self.wendog * np.log(cdf_dot_exog_params))
         firstterm = self.wendog[:, 1:] - cdf_dot_exog_params[:, 1:]
         score_array = np.dot(firstterm.T, self.exog).flatten()
@@ -2411,12 +2459,13 @@ class MNLogit(MultinomialModel):
         In the multinomial model the score vector is K x (J-1) but is returned
         as a flattened array. The Jacobian has the observations in rows and
         the flattened array of derivatives in columns.
-        """
+        """  # noqa:E501
         params = params.reshape(self.K, -1, order='F')
-        firstterm = self.wendog[:,1:] - self.cdf(np.dot(self.exog,
-                                                  params))[:,1:]
-        #NOTE: might need to switch terms if params is reshaped
-        return (firstterm[:,:,None] * self.exog[:,None,:]).reshape(self.exog.shape[0], -1)
+        Xb = np.dot(self.exog, params)
+        firstterm = self.wendog[:, 1:] - self.cdf(Xb)[:, 1:]
+        # NOTE: might need to switch terms if params is reshaped
+        score_array = firstterm[:, :, None] * self.exog[:, None, :]
+        return score_array.reshape(self.exog.shape[0], -1)
 
     def hessian(self, params):
         """
