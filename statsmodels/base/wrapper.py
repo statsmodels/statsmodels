@@ -96,10 +96,15 @@ def make_wrapper(func, how):
             obj = data.wrap_output(func(results, *args, **kwargs), how)
         return obj
 
-    argspec = getargspec(func)
-    formatted = inspect.formatargspec(argspec[0], varargs=argspec[1],
-                                      defaults=argspec[3])
-
+    try:  # Python 3.3+
+        sig = inspect.signature(func)
+        formatted = str(sig)
+    except AttributeError:
+        # TODO: Remove when Python 2.7 is dropped
+        argspec = getargspec(func)
+        formatted = inspect.formatargspec(argspec[0],
+                                          varargs=argspec[1],
+                                          defaults=argspec[3])
     func_name = get_function_name(func)
 
     wrapper.__doc__ = "%s%s\n%s" % (func_name, formatted, wrapper.__doc__)
