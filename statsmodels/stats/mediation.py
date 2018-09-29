@@ -374,15 +374,20 @@ class MediationResults(object):
         """
 
         columns = ["Estimate", "Lower CI bound", "Upper CI bound", "P-value"]
-        index = ["ACME (control)", "ACME (treated)", "ADE (control)", "ADE (treated)",
-                 "Total effect", "Prop. mediated (control)", "Prop. mediated (treated)",
-                 "ACME (average)", "ADE (average)", "Prop. mediated (average)"]
+        index = ["ACME (control)", "ACME (treated)",
+                 "ADE (control)", "ADE (treated)",
+                 "Total effect",
+                 "Prop. mediated (control)",
+                 "Prop. mediated (treated)",
+                 "ACME (average)", "ADE (average)",
+                 "Prop. mediated (average)"]
         smry = pd.DataFrame(columns=columns, index=index)
 
-        for i, vec in enumerate([self.ACME_ctrl, self.ACME_tx, self.ADE_ctrl, self.ADE_tx,
+        for i, vec in enumerate([self.ACME_ctrl, self.ACME_tx,
+                                 self.ADE_ctrl, self.ADE_tx,
                                  self.total_effect, self.prop_med_ctrl,
-                                 self.prop_med_tx, self.ACME_avg, self.ADE_avg,
-                                 self.prop_med_avg]):
+                                 self.prop_med_tx, self.ACME_avg,
+                                 self.ADE_avg, self.prop_med_avg]):
 
             if ((vec is self.prop_med_ctrl) or (vec is self.prop_med_tx) or
                     (vec is self.prop_med_avg)):
