@@ -45,6 +45,8 @@ without dependencies.
 #    similar to https://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm
 import numpy as np
 
+from statsmodels.compat.pandas import Appender, Substitution
+
 # NOTE: we only do double precision internally so far
 EPS = np.MachAr().eps
 
@@ -244,6 +246,19 @@ def approx_hess_cs(x, f, epsilon=None, args=(), kwargs={}):
     return hess
 
 
+@Substitution(
+    scale="3", 
+    extra_params="""return_grad : bool
+        Whether or not to also return the gradient
+""",
+    extra_returns="""grad : nparray
+        Gradient if return_grad == True
+""",
+    equation_number="7",
+    equation="""1/(d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])))
+"""
+)
+@Appender(_hessian_docs)
 def approx_hess1(x, f, epsilon=None, args=(), kwargs={}, return_grad=False):
     n = len(x)
     h = _get_epsilon(x, 3, epsilon, n)
@@ -268,18 +283,23 @@ def approx_hess1(x, f, epsilon=None, args=(), kwargs={}, return_grad=False):
     else:
         return hess
 
-approx_hess1.__doc__ = _hessian_docs % dict(scale="3",
-extra_params="""return_grad : bool
+
+@Substitution(
+    scale="3",
+    extra_params="""return_grad : bool
         Whether or not to also return the gradient
 """,
-extra_returns="""grad : ndarray
+    extra_returns="""grad : ndarray
         Gradient if return_grad == True
 """,
-equation_number="7",
-equation="""1/(d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])))
-""")
-
-
+    equation_number="8",
+    equation="""1/(2*d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])) -
+                 (f(x + d[k]*e[k]) - f(x)) +
+                 (f(x - d[j]*e[j] - d[k]*e[k]) - f(x + d[j]*e[j])) -
+                 (f(x - d[k]*e[k]) - f(x)))
+"""
+)
+@Appender(_hessian_docs)
 def approx_hess2(x, f, epsilon=None, args=(), kwargs={}, return_grad=False):
     #
     n = len(x)
@@ -310,21 +330,17 @@ def approx_hess2(x, f, epsilon=None, args=(), kwargs={}, return_grad=False):
         return hess
 
 
-approx_hess2.__doc__ = _hessian_docs % dict(scale="3",
-extra_params="""return_grad : bool
-        Whether or not to also return the gradient
-""",
-extra_returns="""grad : ndarray
-        Gradient if return_grad == True
-""",
-equation_number="8",
-equation = """1/(2*d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])) -
-                 (f(x + d[k]*e[k]) - f(x)) +
-                 (f(x - d[j]*e[j] - d[k]*e[k]) - f(x + d[j]*e[j])) -
-                 (f(x - d[k]*e[k]) - f(x)))
-""")
-
-
+@Substitution(
+    scale="4",
+    extra_params="",
+    extra_returns="",
+    equation_number="9",
+    equation="""1/(4*d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j]
+                                                     - d[k]*e[k])) -
+                 (f(x - d[j]*e[j] + d[k]*e[k]) - f(x - d[j]*e[j]
+                                                     - d[k]*e[k]))"""
+)
+@Appender(_hessian_docs)
 def approx_hess3(x, f, epsilon=None, args=(), kwargs={}):
     n = len(x)
     h = _get_epsilon(x, 4, epsilon, n)
@@ -341,12 +357,6 @@ def approx_hess3(x, f, epsilon=None, args=(), kwargs={}):
             hess[j, i] = hess[i, j]
     return hess
 
-approx_hess3.__doc__ = _hessian_docs % dict(scale="4", extra_params="",
-                                            extra_returns="",
-                                            equation_number="9",
-equation = """1/(4*d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j]
-                                                     - d[k]*e[k])) -
-                 (f(x - d[j]*e[j] + d[k]*e[k]) - f(x - d[j]*e[j]
-                                                     - d[k]*e[k]))""")
+
 approx_hess = approx_hess3
 approx_hess.__doc__ += "\n    This is an alias for approx_hess3"

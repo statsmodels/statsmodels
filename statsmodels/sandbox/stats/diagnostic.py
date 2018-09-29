@@ -137,7 +137,6 @@ class CompareCox(object):
 
 
 compare_cox = CompareCox()
-compare_cox.__doc__ = CompareCox.__doc__
 
 
 class CompareJ(object):
@@ -220,7 +219,6 @@ class CompareJ(object):
 
 
 compare_j = CompareJ()
-compare_j.__doc__ = CompareJ.__doc__
 
 
 def acorr_ljungbox(x, lags=None, boxpierce=False):
@@ -876,8 +874,9 @@ class HetGoldfeldQuandt(object):
         return self.run(y, x, idx=idx, split=split, drop=drop, attach=False,
                         alternative=alternative)
 
+
 het_goldfeldquandt = HetGoldfeldQuandt()
-het_goldfeldquandt.__doc__ = het_goldfeldquandt.run.__doc__
+
 
 def linear_harvey_collier(res):
     '''Harvey Collier test for linearity
