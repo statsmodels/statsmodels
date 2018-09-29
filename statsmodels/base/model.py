@@ -2378,9 +2378,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary.Summary : class to hold summary results
         """
 
         top_left = [('Dep. Variable:', None),
@@ -2389,15 +2387,11 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
                     ('Date:', None),
                     ('Time:', None),
                     ('No. Observations:', None),
-                    ('Df Residuals:', None),  # [self.df_resid]),
-                    ('Df Model:', None),  # [self.df_model])
+                    ('Df Residuals:', None),
+                    ('Df Model:', None),
                     ]
 
-        top_right = [  # ('R-squared:', ["%#8.3f" % self.rsquared]),
-                       # ('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
-                       # ('F-statistic:', ["%#8.4g" % self.fvalue] ),
-                       # ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
-                     ('Log-Likelihood:', None),  # ["%#6.4g" % self.llf]),
+        top_right = [('Log-Likelihood:', None),
                      ('AIC:', ["%#8.4g" % self.aic]),
                      ('BIC:', ["%#8.4g" % self.bic])
                      ]
