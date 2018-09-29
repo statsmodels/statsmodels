@@ -744,7 +744,7 @@ class GLM(base.LikelihoodModel):
                                                         scale))
         return history
 
-    def estimate_scale(self, mu, scale=None):
+    def estimate_scale(self, mu):
         """
         Estimate the dispersion/scale.
 
@@ -754,8 +754,6 @@ class GLM(base.LikelihoodModel):
         ----------
         mu : ndarray
             mu is the mean response estimate
-        scale : float
-            only relevant if scaletype == 'dev'
 
         Returns
         -------
@@ -785,9 +783,9 @@ class GLM(base.LikelihoodModel):
             if self.scaletype.lower() == 'x2':
                 return self._estimate_x2_scale(mu)
             elif self.scaletype.lower() == 'dev':
-                return (self.family.deviance(self.endog, mu, self.var_weights,
-                                             self.freq_weights, 1.) /
-                        (self.df_resid))
+                dev = self.family.deviance(self.endog, mu, self.var_weights,
+                                           self.freq_weights, 1.)
+                return dev / self.df_resid
             else:
                 raise ValueError("Scale %s with type %s not understood" %
                                  (self.scaletype, type(self.scaletype)))
@@ -1175,7 +1173,7 @@ class GLM(base.LikelihoodModel):
             lin_pred = np.dot(wlsexog, start_params) + self._offset_exposure
             mu = self.family.fitted(lin_pred)
 
-        scale = self.estimate_scale(mu, scale)
+        scale = self.estimate_scale(mu)
         dev = self.family.deviance(self.endog, mu, self.var_weights,
                                    self.freq_weights, scale)
         if np.isnan(dev):
@@ -1192,7 +1190,7 @@ class GLM(base.LikelihoodModel):
         # params vector.
         if maxiter == 0:
             mu = self.family.fitted(lin_pred)
-            scale = self.estimate_scale(mu, scale)
+            scale = self.estimate_scale(mu)
             wls_results = lm.RegressionResults(self, start_params, None)
             iteration = 0
         for iteration in range(maxiter):
@@ -1208,7 +1206,7 @@ class GLM(base.LikelihoodModel):
             lin_pred += self._offset_exposure
             mu = self.family.fitted(lin_pred)
             history = self._update_history(wls_results, mu, scale, history)
-            scale = self.estimate_scale(mu, scale)
+            scale = self.estimate_scale(mu)
             if endog.squeeze().ndim == 1 and np.allclose(mu - endog, 0):
                 msg = "Perfect separation detected, results not available"
                 raise PerfectSeparationError(msg)
