@@ -205,7 +205,7 @@ model = sm.tsa.UnobservedComponents(
         'period': 100,
         'harmonics': 2
     }])
-res_tf = model.fit()
+res_tf = model.fit(disp=False)
 print(res_tf.summary())
 # The first state variable holds our estimate of the intercept
 print("fixed intercept estimated as {0:.3f}".format(
@@ -254,7 +254,7 @@ model = sm.tsa.UnobservedComponents(
     series, level='fixed intercept', freq_seasonal=[{
         'period': 100
     }])
-res_lf = model.fit()
+res_lf = model.fit(disp=False)
 print(res_lf.summary())
 # The first state variable holds our estimate of the intercept
 print("fixed intercept estimated as {0:.3f}".format(
@@ -330,9 +330,9 @@ h3, = ax1.plot(
     series.index[time_s],
     true_seasonal_10_3[time_s],
     label='True Seasonal 10(3)')
-plt.legend([h1, h2, h3],
-           ['Double Freq. Seasonal', 'Mixed Domain Seasonal', 'Truth'],
-           loc=2)
+plt.legend(
+    [h1, h2, h3], ['Double Freq. Seasonal', 'Mixed Domain Seasonal', 'Truth'],
+    loc=2)
 plt.title('Seasonal 10(3) component')
 plt.show()
 
@@ -351,9 +351,10 @@ h23, = ax2.plot(
     series.index[time_s],
     true_seasonal_100_2[time_s],
     label='True Seasonal 100(2)')
-plt.legend([h21, h22, h23],
-           ['Double Freq. Seasonal', 'Mixed Domain Seasonal', 'Truth'],
-           loc=2)
+plt.legend(
+    [h21, h22, h23],
+    ['Double Freq. Seasonal', 'Mixed Domain Seasonal', 'Truth'],
+    loc=2)
 plt.title('Seasonal 100(2) component')
 plt.show()
 
@@ -382,11 +383,12 @@ h35, = ax3.plot(
     res_lt.seasonal.filtered[time_s],
     label='Lazy Time Seas')
 
-plt.legend([h31, h32, h33, h34, h35], [
-    'Double Freq. Seasonal', 'Mixed Domain Seasonal', 'Truth',
-    'Lazy Freq. Seas', 'Lazy Time Seas'
-],
-           loc=1)
+plt.legend(
+    [h31, h32, h33, h34, h35], [
+        'Double Freq. Seasonal', 'Mixed Domain Seasonal', 'Truth',
+        'Lazy Freq. Seas', 'Lazy Time Seas'
+    ],
+    loc=1)
 plt.title('Seasonal components combined')
 plt.show()
 
