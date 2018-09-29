@@ -226,13 +226,6 @@ def itervalues(obj, **kwargs):
     return func(**kwargs)
 
 
-def get_function_name(func):
-    try:
-        return func.im_func.func_name
-    except AttributeError:
-        #Python 3
-        return func.__name__
-
 def get_class(func):
     try:
         return func.im_class

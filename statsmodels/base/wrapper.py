@@ -2,7 +2,7 @@ import inspect
 import functools
 
 import numpy as np
-from statsmodels.compat.python import get_function_name, iteritems, getargspec
+from statsmodels.compat.python import iteritems, getargspec
 
 
 class ResultsWrapper(object):
@@ -105,9 +105,8 @@ def make_wrapper(func, how):
         formatted = inspect.formatargspec(argspec[0],
                                           varargs=argspec[1],
                                           defaults=argspec[3])
-    func_name = get_function_name(func)
 
-    wrapper.__doc__ = "%s%s\n%s" % (func_name, formatted, wrapper.__doc__)
+    wrapper.__doc__ = "%s%s\n%s" % (func.__name__, formatted, wrapper.__doc__)
 
     return wrapper
 
