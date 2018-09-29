@@ -1852,9 +1852,7 @@ class GLMResults(base.LikelihoodModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary.Summary : class to hold summary results
         """
 
         top_left = [('Dep. Variable:', None),
@@ -1886,7 +1884,7 @@ class GLMResults(base.LikelihoodModelResults):
         # create summary tables
         from statsmodels.iolib.summary import Summary
         smry = Summary()
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right,  # [],
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
                              yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
                               use_t=self.use_t)
@@ -1894,17 +1892,10 @@ class GLMResults(base.LikelihoodModelResults):
         if hasattr(self, 'constraints'):
             smry.add_extra_txt(['Model has been estimated subject to linear '
                                 'equality constraints.'])
-
-        # diagnostic table is not used yet:
-        # smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-        #                   yname=yname, xname=xname,
-        #                   title="")
-
         return smry
 
     def summary2(self, yname=None, xname=None, title=None, alpha=.05,
                  float_format="%.4f"):
-
         """Experimental summary for regression Results
 
         Parameters
@@ -1929,9 +1920,7 @@ class GLMResults(base.LikelihoodModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary2.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary2.Summary : class to hold summary results
         """
         self.method = 'IRLS'
         from statsmodels.iolib import summary2

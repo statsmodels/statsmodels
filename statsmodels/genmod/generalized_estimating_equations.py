@@ -2039,9 +2039,7 @@ class GEEResults(base.LikelihoodModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary.Summary : class to hold summary results
         """
 
         top_left = [('Dep. Variable:', None),
