@@ -460,29 +460,11 @@ class RLMResults(base.LikelihoodModelResults):
     def chisq(self):
         return (self.params/self.bse)**2
 
-    def remove_data(self):
-        super(self.__class__, self).remove_data()
-        #self.model.history['sresid'] = None
-        #self.model.history['weights'] = None
-
-    remove_data.__doc__ = base.LikelihoodModelResults.remove_data.__doc__
-
     def summary(self, yname=None, xname=None, title=0, alpha=.05,
                 return_fmt='text'):
         """
         This is for testing the new summary setup
         """
-
-##        left = [(i, None) for i in (
-##                        'Dependent Variable:',
-##                        'Model type:',
-##                        'Method:',
-##			'Date:',
-##                        'Time:',
-##                        'Number of Obs:',
-##                        'df resid',
-##		        'df model',
-##                         )]
         top_left = [('Dep. Variable:', None),
                     ('Model:', None),
                     ('Method:', ['IRLS']),
@@ -501,24 +483,20 @@ class RLMResults(base.LikelihoodModelResults):
         if title is not None:
             title = "Robust linear Model Regression Results"
 
-        #boiler plate
+        # boiler plate
         from statsmodels.iolib.summary import Summary
         smry = Summary()
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
-                          yname=yname, xname=xname, title=title)
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
+                             yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                             use_t=self.use_t)
+                              use_t=self.use_t)
 
-        #diagnostic table is not used yet
-#        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-#                          yname=yname, xname=xname,
-#                          title="")
-
-#add warnings/notes, added to text format only
-        etext =[]
-        wstr = \
-'''If the model instance has been used for another fit with different fit
-parameters, then the fit options might not be the correct ones anymore .'''
+        # add warnings/notes, added to text format only
+        etext = []
+        wstr = ("If the model instance has been used for another fit "
+                "with different fit\n"
+               "parameters, then the fit options might not be the correct "
+               "ones anymore .")
         etext.append(wstr)
 
         if etext:
@@ -526,13 +504,12 @@ parameters, then the fit options might not be the correct ones anymore .'''
 
         return smry
 
-
     def summary2(self, xname=None, yname=None, title=None, alpha=.05,
-                float_format="%.4f"):
+                 float_format="%.4f"):
         """Experimental summary function for regression results
 
         Parameters
-        -----------
+        ----------
         xname : List of strings of length equal to the number of parameters
             Names of the independent variables (optional)
         yname : string
@@ -553,22 +530,20 @@ parameters, then the fit options might not be the correct ones anymore .'''
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary2.Summary : class to hold summary results
         """
-        # Summary
         from statsmodels.iolib import summary2
         smry = summary2.Summary()
         smry.add_base(results=self, alpha=alpha, float_format=float_format,
-                xname=xname, yname=yname, title=title)
+                      xname=xname, yname=yname, title=title)
 
         return smry
 
 
 class RLMResultsWrapper(lm.RegressionResultsWrapper):
     pass
-wrap.populate_wrapper(RLMResultsWrapper, RLMResults)
+wrap.populate_wrapper(RLMResultsWrapper, RLMResults)  # noqa:E305
+
 
 if __name__=="__main__":
 #NOTE: This is to be removed
