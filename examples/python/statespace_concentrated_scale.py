@@ -109,7 +109,7 @@ class LocalLevel(sm.tsa.statespace.MLEModel):
 # index inflation.
 
 mod = LocalLevel(dta.infl)
-res = mod.fit()
+res = mod.fit(disp=False)
 print(res.summary())
 
 # We can look at the results from the numerical optimizer in the results
@@ -177,7 +177,7 @@ class LocalLevelConcentrated(sm.tsa.statespace.MLEModel):
 # likelihood estimate of $h$.
 
 mod_conc = LocalLevelConcentrated(dta.infl)
-res_conc = mod_conc.fit()
+res_conc = mod_conc.fit(disp=False)
 print(res_conc.summary())
 
 # The estimate of $h$ is provided in the middle table of parameters
@@ -216,12 +216,12 @@ print('h * scale     = %.5f' % (res_conc.params[0] * res_conc.scale))
 
 # Typical approach
 mod_ar = sm.tsa.SARIMAX(dta.cpi, order=(1, 0, 0), trend='ct')
-res_ar = mod_ar.fit()
+res_ar = mod_ar.fit(disp=False)
 
 # Estimating the model with the scale concentrated out
 mod_ar_conc = sm.tsa.SARIMAX(
     dta.cpi, order=(1, 0, 0), trend='ct', concentrate_scale=True)
-res_ar_conc = mod_ar_conc.fit()
+res_ar_conc = mod_ar_conc.fit(disp=False)
 
 # These two approaches produce about the same loglikelihood and
 # parameters, although the model with the concentrated scale was able to
