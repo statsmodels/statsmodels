@@ -128,7 +128,6 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     time_of_day = [time.strftime("%H:%M:%S", time_now)]
     date = time.strftime("%a, %d %b %Y", time_now)
     modeltype = self.model.__class__.__name__
-    #dist_family = self.model.family.__class__.__name__
     nobs = self.nobs
     df_model = self.df_model
     df_resid = self.df_resid
@@ -147,16 +146,6 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
 
     gen_title = title
     gen_header = None
-##    gen_stubs_left = ('Model type:',
-##                      'Date:',
-##                      'Dependent Variable:',
-##                      'df model'
-##                  )
-##    gen_data_left = [[modeltype],
-##                     [date],
-##                     yname, #What happens with multiple names?
-##                     [df_model]
-##                     ]
     gen_table_left = SimpleTable(gen_data_left,
                                  gen_header,
                                  gen_stubs_left,
@@ -226,7 +215,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
                                   param_header[modeltype],
                                   params_stubs,
                                   title = None,
-                                  txt_fmt = fmt_2, #gen_fmt,
+                                  txt_fmt = fmt_2
                                   )
 
     #special table
@@ -312,7 +301,6 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
           ('Dependent Variable:', lambda: [yname]),
           ('Dep. Variable:', lambda: [yname]),
           ('Model:', lambda: [results.model.__class__.__name__]),
-          # ('Model type:', lambda: [results.model.__class__.__name__]),
           ('Date:', lambda: [date]),
           ('Time:', lambda: time_of_day),
           ('Number of Obs:', lambda: [results.nobs]),
@@ -320,7 +308,6 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
           ('Df Model:', lambda: [d_or_f(results.df_model)]),
           ('Df Residuals:', lambda: [d_or_f(results.df_resid)]),
           ('Log-Likelihood:', lambda: ["%#8.5g" % results.llf])  # doesn't exist for RLM - exception
-          # ('Method:', lambda: [???]), # no default for this
     ])
 
     if title is None:
@@ -347,12 +334,11 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
     gen_title = title
     gen_header = None
 
-    #needed_values = [k for k,v in gleft + gright if v is None] #not used anymore
-    #replace missing (None) values with default values
+    # replace missing (None) values with default values
     gen_left_ = []
     for item, value in gen_left:
         if value is None:
-            value = default_items[item]()  #let KeyErrors raise exception
+            value = default_items[item]()  # let KeyErrors raise exception
         gen_left_.append((item, value))
     gen_left = gen_left_
 
@@ -360,7 +346,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
         gen_right_ = []
         for item, value in gen_right:
             if value is None:
-                value = default_items[item]()  #let KeyErrors raise exception
+                value = default_items[item]()  # let KeyErrors raise exception
             gen_right_.append((item, value))
         gen_right = gen_right_
 
@@ -405,7 +391,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
     gen_table_left.extend_right(gen_table_right)
     general_table = gen_table_left
 
-    return general_table #, gen_table_left, gen_table_right
+    return general_table
 
 
 
@@ -484,8 +470,8 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     parameter_table = SimpleTable(params_data,
                                   param_header,
                                   params_stubs,
-                                  title = title,
-                                  txt_fmt = fmt_params #gen_fmt #fmt_2, #gen_fmt,
+                                  title=title,
+                                  txt_fmt=fmt_params
                                   )
 
     return parameter_table
@@ -547,9 +533,6 @@ def summary_params_frame(results, yname=None, xname=None, alpha=.05,
 
     _, xname = _getnames(results, yname=yname, xname=xname)
 
-
-    #------------------
-
     from pandas import DataFrame
     table = np.column_stack((params, std_err, tvalues, pvalues, conf_int))
     return DataFrame(table, columns=param_header, index=xname)
@@ -592,11 +575,9 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
         exog_names = ['var%d' %i for i in range(len(result.params))]
 
     #TODO: check formatting options with different values
-    #res_params = [['%10.4f'%item for item in row] for row in result.params]
     res_params = [[forg(item, prec=4) for item in row] for row in result.params]
     if extras: #not None or non-empty
         #maybe this should be a simple triple loop instead of list comprehension?
-        #below_list = [[['%10s' % ('('+('%10.3f'%v).strip()+')')
         extras_list = [[['%10s' % ('(' + forg(v, prec=3).strip() + ')')
                                 for v in col]
                                 for col in getattr(result, what)]
@@ -605,12 +586,9 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
         data = [i for j in data for i in j]  #flatten
         stubs = lzip(endog_names, *[['']*len(endog_names)]*len(extras))
         stubs = [i for j in stubs for i in j] #flatten
-        #return SimpleTable(data, headers=exog_names, stubs=stubs)
     else:
         data = res_params
         stubs = endog_names
-#        return SimpleTable(data, headers=exog_names, stubs=stubs,
-#                       data_fmts=['%10.4f'])
 
     import copy
     txt_fmt = copy.deepcopy(fmt_params)
@@ -618,12 +596,11 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
     return SimpleTable(data, headers=exog_names,
                              stubs=stubs,
                              title=title,
-#                             data_fmts = ["%s"]),
                              txt_fmt = txt_fmt)
 
 
 def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.05,
-                          use_t=True, keep_headers=True, endog_cols=False): #skip_headers2=True):
+                          use_t=True, keep_headers=True, endog_cols=False):
     '''summary table for parameters that are 2d, e.g. multi-equation models
 
     Parameters
@@ -687,11 +664,6 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.05,
         restup = (res, res.params[:,eq], res.bse[:,eq], res.tvalues[:,eq],
                   res.pvalues[:,eq], res.conf_int(alpha)[eq])
 
-        #not used anymore in current version
-#        if skip_headers2:
-#            skiph = (row != 0)
-#        else:
-#            skiph = False
         skiph = False
         tble = summary_params(restup, yname=endog_names[eq],
                               xname=exog_names, alpha=alpha, use_t=use_t,
@@ -754,18 +726,17 @@ def table_extend(tables, keep_headers=True):
 
 
 def summary_return(tables, return_fmt='text'):
-    ########  Return Summary Tables ########
-        # join table parts then print
+    # join table parts then print
     if return_fmt == 'text':
         strdrop = lambda x: str(x).rsplit('\n',1)[0]
-        #convert to string drop last line
+        # convert to string drop last line
         return '\n'.join(lmap(strdrop, tables[:-1]) + [str(tables[-1])])
     elif return_fmt == 'tables':
         return tables
     elif return_fmt == 'csv':
-        return '\n'.join(map(lambda x: x.as_csv(), tables))
+        return '\n'.join(x.as_csv() for x in tables)
     elif return_fmt == 'latex':
-        #TODO: insert \hline after updating SimpleTable
+        # TODO: insert \hline after updating SimpleTable
         import copy
         table = copy.deepcopy(tables[0])
         del table[-1]
@@ -787,9 +758,11 @@ class Summary(object):
     Attributes
     ----------
     tables : list of tables
-        Contains the list of SimpleTable instances, horizontally concatenated tables are not saved separately.
+        Contains the list of SimpleTable instances, horizontally concatenated
+        tables are not saved separately.
     extra_txt : string
-        extra lines that are added to the text output, used for warnings and explanations.
+        extra lines that are added to the text output, used for warnings
+        and explanations.
     '''
     def __init__(self):
         self.tables = []
@@ -799,7 +772,6 @@ class Summary(object):
         return self.as_text()
 
     def __repr__(self):
-        #return '<' + str(type(self)) + '>\n"""\n' + self.__str__() + '\n"""'
         return str(type(self)) + '\n"""\n' + self.__str__() + '\n"""'
 
     def _repr_html_(self):
@@ -807,7 +779,7 @@ class Summary(object):
         return self.as_html()
 
     def add_table_2cols(self, res,  title=None, gleft=None, gright=None,
-                            yname=None, xname=None):
+                        yname=None, xname=None):
         '''add a double table, 2 tables with one column merged horizontally
 
         Parameters
@@ -944,11 +916,3 @@ class Summary(object):
         if self.extra_txt is not None:
             html = html + '<br/><br/>' + self.extra_txt.replace('\n', '<br/>')
         return html
-
-
-if __name__ == "__main__":
-    import statsmodels.api as sm
-    data = sm.datasets.longley.load(as_pandas=False)
-    data.exog = sm.add_constant(data.exog)
-    res = sm.OLS(data.endog, data.exog).fit()
-    #summary(
