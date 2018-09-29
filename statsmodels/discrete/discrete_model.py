@@ -1428,10 +1428,8 @@ class GeneralizedPoisson(CountModel):
         a = ((np.abs(resid) / np.sqrt(mu) - 1) * mu**(-q)).sum() / df_resid
         return a
 
-    def fit(self, start_params=None, method='bfgs', maxiter=35,
-            full_output=1, disp=1, callback=None, use_transparams=False,
-            cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
-        # TODO: Fix doc string
+
+    @Appender(
         """
         use_transparams : bool
             This parameter enable internal transformation to impose
@@ -1439,7 +1437,12 @@ class GeneralizedPoisson(CountModel):
             use_transparams=True imposes the no underdispersion (alpha > 0)
             constraint. In case use_transparams=True and method="newton" or
             "ncg" transformation is ignored.
-        """
+
+        """)
+    @Appender(DiscreteModel.fit.__doc__)
+    def fit(self, start_params=None, method='bfgs', maxiter=35,
+            full_output=1, disp=1, callback=None, use_transparams=False,
+            cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
         if use_transparams and method not in ['newton', 'ncg']:
             self._transparams = True
         else:
@@ -1471,7 +1474,6 @@ class GeneralizedPoisson(CountModel):
                         full_output=full_output, callback=callback,
                         **kwargs)
 
-
         if use_transparams and method not in ["newton", "ncg"]:
             self._transparams = False
             mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
@@ -1485,8 +1487,6 @@ class GeneralizedPoisson(CountModel):
         result._get_robustcov_results(cov_type=cov_type,
                                       use_self=True, use_t=use_t, **cov_kwds)
         return result
-
-    fit.__doc__ = DiscreteModel.fit.__doc__ + fit.__doc__
 
     @Appender(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(self, start_params=None, method='l1',

@@ -12,6 +12,7 @@ from collections import OrderedDict
 import pandas as pd
 import numpy as np
 
+from statsmodels.compat.pandas import Appender
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tsa.vector_ar import var_model
@@ -965,6 +966,7 @@ class VARMAXResults(MLEResults):
 
         return res
 
+    @Appender(MLEResults.summary.__doc__)
     def summary(self, alpha=.05, start=None, separate_params=True):
         from statsmodels.iolib.summary import summary_params
 
@@ -1090,7 +1092,6 @@ class VARMAXResults(MLEResults):
                 summary.tables.append(table)
 
         return summary
-    summary.__doc__ = MLEResults.summary.__doc__
 
 
 class VARMAXResultsWrapper(MLEResultsWrapper):

@@ -8,6 +8,8 @@ from warnings import warn
 
 import numpy as np
 
+from statsmodels.compat.pandas import Appender
+
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.decorators import cache_readonly
@@ -1942,6 +1944,7 @@ class SARIMAXResults(MLEResults):
             start=start, end=end, dynamic=dynamic, index=index, exog=exog,
             **kwargs)
 
+    @Appender(MLEResults.summary.__doc__)
     def summary(self, alpha=.05, start=None):
         # Create the model name
 
@@ -2001,7 +2004,6 @@ class SARIMAXResults(MLEResults):
         return super(SARIMAXResults, self).summary(
             alpha=alpha, start=start, model_name=model_name
         )
-    summary.__doc__ = MLEResults.summary.__doc__
 
 
 class SARIMAXResultsWrapper(MLEResultsWrapper):
