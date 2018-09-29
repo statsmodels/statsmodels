@@ -360,23 +360,10 @@ class QuantRegResults(RegressionResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary.Summary : class to hold summary results
         """
-
-        # #TODO: import where we need it (for now), add as cached attributes
-        # from statsmodels.stats.stattools import (jarque_bera,
-        #         omni_normtest, durbin_watson)
-        # jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
-        # omni, omnipv = omni_normtest(self.wresid)
-        #
         eigvals = self.eigenvals
         condno = self.condition_number
-        #
-        # self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis,
-        #                   omni=omni, omnipv=omnipv, condno=condno,
-        #                   mineigval=eigvals[0])
 
         top_left = [('Dep. Variable:', None),
                     ('Model:', None),
@@ -389,27 +376,14 @@ class QuantRegResults(RegressionResults):
                      ('Bandwidth:', ["%#8.4g" % self.bandwidth]),
                      ('Sparsity:', ["%#8.4g" % self.sparsity]),
                      ('No. Observations:', None),
-                     ('Df Residuals:', None), #[self.df_resid]), #TODO: spelling
-                     ('Df Model:', None) #[self.df_model])
+                     ('Df Residuals:', None),
+                     ('Df Model:', None)
                      ]
-
-        # diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
-        #               ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
-        #               ('Skew:', ["%#6.3f" % skew]),
-        #               ('Kurtosis:', ["%#6.3f" % kurtosis])
-        #               ]
-        #
-        # diagn_right = [('Durbin-Watson:', ["%#8.3f" % durbin_watson(self.wresid)]),
-        #                ('Jarque-Bera (JB):', ["%#8.3f" % jb]),
-        #                ('Prob(JB):', ["%#8.3g" % jbpv]),
-        #                ('Cond. No.', ["%#8.3g" % condno])
-        #                ]
-
 
         if title is None:
             title = self.model.__class__.__name__ + ' ' + "Regression Results"
 
-        #create summary table instance
+        # create summary table instance
         from statsmodels.iolib.summary import Summary
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
@@ -417,11 +391,7 @@ class QuantRegResults(RegressionResults):
         smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
                               use_t=self.use_t)
 
-#        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-#                          yname=yname, xname=xname,
-#                          title="")
-
-        #add warnings/notes, added to text format only
+        # add warnings/notes, added to text format only
         etext = []
         if eigvals[-1] < 1e-10:
             wstr = "The smallest eigenvalue is %6.3g. This might indicate "
@@ -430,7 +400,7 @@ class QuantRegResults(RegressionResults):
             wstr += "matrix is singular."
             wstr = wstr % eigvals[-1]
             etext.append(wstr)
-        elif condno > 1000:  #TODO: what is recommended
+        elif condno > 1000:  # TODO: what is recommended
             wstr = "The condition number is large, %6.3g. This might "
             wstr += "indicate that there are\n"
             wstr += "strong multicollinearity or other numerical "

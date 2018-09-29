@@ -2451,20 +2451,18 @@ class RegressionResults(base.LikelihoodModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
-
+        statsmodels.iolib.summary.Summary : class to hold summary results
         """
-
-        # TODO: import where we need it (for now), add as cached attributes
         from statsmodels.stats.stattools import (
             jarque_bera, omni_normtest, durbin_watson)
+
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
 
         eigvals = self.eigenvals
         condno = self.condition_number
 
+        # TODO: Avoid adding attributes in non-__init__
         self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis,
                           omni=omni, omnipv=omnipv, condno=condno,
                           mineigval=eigvals[-1])
@@ -2474,7 +2472,7 @@ class RegressionResults(base.LikelihoodModelResults):
         # diagn_right_header = ['Residual stats']
 
         # TODO: requiring list/iterable is a bit annoying
-        # need more control over formatting
+        #   need more control over formatting
         # TODO: default don't work if it's not identically spelled
 
         top_left = [('Dep. Variable:', None),
@@ -2483,8 +2481,8 @@ class RegressionResults(base.LikelihoodModelResults):
                     ('Date:', None),
                     ('Time:', None),
                     ('No. Observations:', None),
-                    ('Df Residuals:', None),  # [self.df_resid]), TODO: spelling
-                    ('Df Model:', None),  # [self.df_model])
+                    ('Df Residuals:', None),
+                    ('Df Model:', None),
                     ]
 
         if hasattr(self, 'cov_type'):
@@ -2495,7 +2493,7 @@ class RegressionResults(base.LikelihoodModelResults):
                      ('Adj. R-squared' + rsquared_type + ':', ["%#8.3f" % self.rsquared_adj]),
                      ('F-statistic:', ["%#8.4g" % self.fvalue]),
                      ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
-                     ('Log-Likelihood:', None),  # ["%#6.4g" % self.llf]),
+                     ('Log-Likelihood:', None),
                      ('AIC:', ["%#8.4g" % self.aic]),
                      ('BIC:', ["%#8.4g" % self.bic])
                      ]
@@ -2543,7 +2541,7 @@ class RegressionResults(base.LikelihoodModelResults):
             wstr += "matrix is singular."
             wstr = wstr % eigvals[-1]
             etext.append(wstr)
-        elif condno > 1000:  # TODO: what is recommended
+        elif condno > 1000:  # TODO: what is recommended?
             wstr = "The condition number is large, %6.3g. This might "
             wstr += "indicate that there are\n"
             wstr += "strong multicollinearity or other numerical "
@@ -2558,19 +2556,6 @@ class RegressionResults(base.LikelihoodModelResults):
             smry.add_extra_txt(etext)
 
         return smry
-
-        #  top = summary_top(self, gleft=topleft, gright=diagn_left, #[],
-        #                    yname=yname, xname=xname,
-        #                    title=self.model.__class__.__name__ + ' ' +
-        #                    "Regression Results")
-        #  par = summary_params(self, yname=yname, xname=xname, alpha=.05,
-        #                       use_t=False)
-        #
-        #  diagn = summary_top(self, gleft=diagn_left, gright=diagn_right,
-        #                      yname=yname, xname=xname,
-        #                      title="Linear Model")
-        #
-        #  return summary_return([top, par, diagn], return_fmt=return_fmt)
 
     def summary2(self, yname=None, xname=None, title=None, alpha=.05,
                  float_format="%.4f"):
@@ -2598,8 +2583,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary : class to hold summary
-            results
+        statsmodels.iolib.summary2.Summary : class to hold summary results
 
         """
         # Diagnostics
