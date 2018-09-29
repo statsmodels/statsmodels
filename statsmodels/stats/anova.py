@@ -635,7 +635,7 @@ class AnovaResults(object):
 
         Returns
         -------
-        summary : Summary instance
+        summary : summary2.Summary instance
 
         """
         summ = summary2.Summary()
@@ -643,6 +643,7 @@ class AnovaResults(object):
         summ.add_df(self.anova_table)
 
         return summ
+
 
 if __name__ == "__main__":
     import pandas

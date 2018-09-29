@@ -887,7 +887,7 @@ class Table2x2(SquareTable):
         """
 
         def fmt(x):
-            if type(x) is str:
+            if isinstance(x, str):
                 return x
             return float_format % x
 
@@ -1246,7 +1246,7 @@ class StratifiedTable(object):
         """
 
         def fmt(x):
-            if type(x) is str:
+            if isinstance(x, str):
                 return x
             return float_format % x
 
