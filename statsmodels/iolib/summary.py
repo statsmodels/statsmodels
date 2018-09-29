@@ -105,8 +105,6 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     """
     import time as time
 
-
-
     #TODO Make sure all self.model.__class__.__name__ are listed
     model_types = {'OLS' : 'Ordinary least squares',
                    'GLS' : 'Generalized least squares',
@@ -121,18 +119,11 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
                    'WLS' : 'Least Squares',
                    'RLM' : '?',
                    'GLM' : '?'}
-    if title==0:
+    if title == 0:
         title = model_types[self.model.__class__.__name__]
-    if yname is None:
-        try:
-            yname = self.model.endog_names
-        except AttributeError:
-            yname = 'y'
-    if xname is None:
-        try:
-            xname = self.model.exog_names
-        except AttributeError:
-            xname = ['var_%d' % i for i in range(len(self.params))]
+
+    yname, xname = _getnames(self, yname, xname)
+
     time_now = time.localtime()
     time_of_day = [time.strftime("%H:%M:%S", time_now)]
     date = time.strftime("%a, %d %b %Y", time_now)
@@ -273,6 +264,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
             return printers[modeltype]()
         except KeyError:
             return printers['OLS']()
+
 
 def _getnames(self, yname=None, xname=None):
     '''extract names from model or construct names
