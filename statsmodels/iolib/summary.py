@@ -6,6 +6,7 @@ import numpy as np
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import (gen_fmt, fmt_2,
                                                fmt_params, fmt_2cols)
+from .summary2 import _model_types
 
 
 def forg(x, prec=3):
@@ -106,17 +107,8 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     -----
     conf_int calculated from normal dist.
     """
-
-    # TODO: Make sure all self.model.__class__.__name__ are listed
-    model_types = {'OLS': 'Ordinary least squares',
-                   'GLS': 'Generalized least squares',
-                   'GLSAR': 'Generalized least squares with AR(p)',
-                   'WLS': 'Weighted least squares',
-                   'RLM': 'Robust linear model',
-                   'GLM': 'Generalized linear model'
-                   }
     if title == 0:
-        title = model_types[self.model.__class__.__name__]
+        title = _model_types[self.model.__class__.__name__]
 
     yname, xname = _getnames(self, yname, xname)
 
