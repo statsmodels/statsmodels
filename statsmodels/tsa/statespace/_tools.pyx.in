@@ -4,7 +4,7 @@
 """
 State Space Model - Cython tools
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 """
 
@@ -20,6 +20,12 @@ cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 
 cdef FORTRAN = 1
+
+ctypedef fused sm_type_t:
+    np.float64_t
+    np.float32_t
+    np.complex64_t
+    np.complex128_t
 
 
 # ------------------------------------------------------------------------
@@ -45,6 +51,73 @@ cdef validate_vector_shape(str name, Py_ssize_t *shape, int nrows, nobs=None):
     if nobs is not None and shape[1] not in [1, nobs]:
         raise ValueError('Invalid time-varying dimension for %s vector:'
                          ' requires 1 or %d got %d' % (name, nobs, shape[1]))
+
+
+# ------------------------------------------------------------------------
+# Blas Wrapping
+
+cdef inline copy(int size, sm_type_t* src_arr, int incx,
+                 sm_type_t* target, int incy):
+    """
+    Parameters
+    ----------
+    size : int
+        number of elements in vectors `src_arr` and `target`
+    src_arr : sm_type_t*
+        Pointer to Array that we are copying _from_
+    incx : int
+        Specifies the increment for the elements of `src_arr`
+    target : sm_type_t*
+        Pointer to Array that we are copying _to_
+    incy : int
+        Specifies the increment for the elements of `target`
+
+    References
+    ----------
+    https://software.intel.com/en-us/mkl-developer-reference-c-cblas-copy
+    """
+    if sm_type_t is np.float32_t:
+        blas.scopy(&size, src_arr, &incx, target, &incy)
+    elif sm_type_t is np.float64_t:
+        blas.dcopy(&size, src_arr, &incx, target, &incy)
+    elif sm_type_t is np.complex64_t:
+        blas.ccopy(&size, src_arr, &incx, target, &incy)
+    elif sm_type_t is np.complex128_t:
+        blas.zcopy(&size, src_arr, &incx, target, &incy)
+
+
+cdef inline swap(int size, sm_type_t* src_arr, int incx,
+                 sm_type_t* target, int incy):
+    """
+    Parameters
+    ----------
+    size : int
+        number of elements in vectors `src_arr` and `target`
+    src_arr : sm_type_t*
+        Pointer to first of two arrays being swapped
+    incx : int
+        Specifies the increment for the elements of `src_arr`
+    target : sm_type_t*
+        Pointer to second of two arrays being swapped
+    incy : int
+        Specifies the increment for the elements of `target`
+
+    References
+    ----------
+    https://software.intel.com/en-us/mkl-developer-reference-c-cblas-swap
+    """
+
+    if sm_type_t is np.float32_t:
+        blas.sswap(&size, src_arr, &incx, target, &incy)
+    elif sm_type_t is np.float64_t:
+        blas.dswap(&size, src_arr, &incx, target, &incy)
+    elif sm_type_t is np.complex64_t:
+        blas.cswap(&size, src_arr, &incx, target, &incy)
+    elif sm_type_t is np.complex128_t:
+        blas.zswap(&size, src_arr, &incx, target, &incy)
+
+
+# ------------------------------------------------------------------------
 
 {{py:
 
@@ -770,10 +843,10 @@ cdef int _{{prefix}}reorder_missing_rows({{cython_type}} * a, int * missing, int
         nobs = nobs - missing[i]
 
     # Perform replacement
-    k = nobs-1
-    for i in range(n-1,-1,-1):
+    k = nobs - 1
+    for i in range(n - 1, -1, -1):
         if not missing[i]:
-            blas.{{prefix}}swap(&m, &a[i], &n, &a[k], &n)
+            swap(m, &a[i], n, &a[k], n)
             k = k - 1
 
 
@@ -792,11 +865,12 @@ cdef int _{{prefix}}reorder_missing_cols({{cython_type}} * a, int * missing, int
         nobs = nobs - missing[i]
 
     # Perform replacement
-    k = nobs-1
-    for i in range(m-1,-1,-1):
+    k = nobs - 1
+    for i in range(m - 1, -1, -1):
         if not missing[i]:
-            blas.{{prefix}}swap(&n, &a[i*n], &inc, &a[k*n], &inc)
+            swap(n, &a[i*n], inc, &a[k*n], inc)
             k = k - 1
+
 
 cpdef int {{prefix}}reorder_missing_matrix({{cython_type}} [::1, :, :] A, int [::1, :] missing, int reorder_rows, int reorder_cols, int diagonal) except *:
     cdef int n, m, T, t
@@ -1022,7 +1096,7 @@ cdef int _{{prefix}}copy_index_cols({{cython_type}} * a, {{cython_type}} * b, in
     # Perform replacement
     for i in range(m):
         if index[i]:
-            blas.{{prefix}}copy(&n, &a[i*n], &inc, &b[i*n], &inc)
+            copy(n, &a[i*n], inc, &b[i*n], inc)
 
 
 cpdef int {{prefix}}copy_index_matrix({{cython_type}} [::1, :, :] A, {{cython_type}} [::1, :, :] B, int [::1, :] index, int index_rows, int index_cols, int diagonal) except *:
@@ -1085,22 +1159,22 @@ cdef int _{{prefix}}select_cov(int k_states, int k_posdef, int k_states_total,
     # (i.e k_posdof == 0)
     if k_posdef > 0:
 
-        # #### Calculate selected state covariance matrix  
+        # #### Calculate selected state covariance matrix
         # $Q_t^* = R_t Q_t R_t'$
-        # 
+        #
         # Combine a selection matrix and a covariance matrix to get
         # a simplified (but possibly singular) "selected" covariance
         # matrix (see e.g. Durbin and Koopman p. 43)
 
-        # `tmp0` array used here, dimension $(m \times r)$  
+        # `tmp0` array used here, dimension $(m \times r)$
 
-        # $\\#_0 = 1.0 * R_t Q_t$  
+        # $\\#_0 = 1.0 * R_t Q_t$
         # $(m \times r) = (m \times r) (r \times r)$
         blas.{{prefix}}gemm("N", "N", &k_states, &k_posdef, &k_posdef,
               &alpha, selection, &k_states_total,
                       cov, &k_posdef,
               &beta, tmp, &k_states)
-        # $Q_t^* = 1.0 * \\#_0 R_t'$  
+        # $Q_t^* = 1.0 * \\#_0 R_t'$
         # $(m \times m) = (m \times r) (m \times r)'$
         blas.{{prefix}}gemm("N", "T", &k_states, &k_states, &k_posdef,
               &alpha, tmp, &k_states,
