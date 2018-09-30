@@ -9,7 +9,7 @@ from statsmodels.compat.python import iterkeys, lzip, lmap
 
 from numpy.testing import (
     assert_equal,
-    assert_almost_equal, assert_array_almost_equal,
+    assert_almost_equal, assert_allclose,
     assert_raises)
 
 import numpy as np
@@ -32,13 +32,11 @@ class TestQsturng(object):
 
     def test_vector(self):
         # vector input -> vector output
-        assert_array_almost_equal(np.array([3.98832389,
-                                            4.56835318,
-                                            6.26400894]),
-                                  qsturng([.8932, .9345,.9827],
-                                          [4, 4, 4],
-                                          [6, 6, 6]),
-                                  5)
+        assert_allclose(np.array([3.98832389, 4.56835318, 6.26400894]),
+                        qsturng([.8932, .9345,.9827],
+                                [4, 4, 4],
+                                [6, 6, 6]),
+                        rtol=1.5e-5)
 
     def test_invalid_parameters(self):
         # p < .1
@@ -139,15 +137,11 @@ class TestPsturng(object):
 
     def test_vector(self):
         "vector input -> vector output"
-        assert_array_almost_equal(np.array([0.10679889,
-                                             0.06550009,
-                                             0.01730145]),
-                                  psturng([3.98832389,
-                                           4.56835318,
-                                           6.26400894],
-                                          [4, 4, 4],
-                                          [6, 6, 6]),
-                                  5)
+        assert_allclose(np.array([0.10679889, 0.06550009, 0.01730145]),
+                        psturng([3.98832389, 4.56835318, 6.26400894],
+                                [4, 4, 4],
+                                [6, 6, 6]),
+                        rtol=1.5e-5)
 
     def test_v_equal_one(self):
         assert_almost_equal(.1, psturng(.2,5,1), 5)

@@ -5,7 +5,7 @@ from statsmodels.compat.python import zip
 
 import pytest
 import numpy as np
-from numpy.testing import (assert_array_almost_equal, assert_equal,
+from numpy.testing import (assert_allclose, assert_equal,
     assert_raises, assert_array_equal)
 import pandas as pd
 from pandas.util.testing import assert_frame_equal, assert_series_equal
@@ -26,42 +26,41 @@ x1000 = xo / 1000.
 
 def test_acf():
     acf_x = tsa.acf(x100, unbiased=False, fft=False)[:21]
-    assert_array_almost_equal(mlacf.acf100.ravel(), acf_x, 8)  # why only dec=8
+    # TODO: why only rtol=1.5e-8?
+    assert_allclose(mlacf.acf100.ravel(), acf_x, rtol=1.5e-8)
+    # TODO: why only rtol=1.5e-9?
     acf_x = tsa.acf(x1000, unbiased=False, fft=False)[:21]
-    assert_array_almost_equal(mlacf.acf1000.ravel(), acf_x, 8)  # why only dec=9
+    assert_allclose(mlacf.acf1000.ravel(), acf_x, rtol=1.5e-9)
 
 
 def test_ccf():
     ccf_x = tsa.ccf(x100[4:], x100[:-4], unbiased=False)[:21]
-    assert_array_almost_equal(mlccf.ccf100.ravel()[:21][::-1], ccf_x, 8)
+    assert_allclose(mlccf.ccf100.ravel()[:21][::-1], ccf_x, rtol=1.5e-8)
     ccf_x = tsa.ccf(x1000[4:], x1000[:-4], unbiased=False)[:21]
-    assert_array_almost_equal(mlccf.ccf1000.ravel()[:21][::-1], ccf_x, 8)
+    assert_allclose(mlccf.ccf1000.ravel()[:21][::-1], ccf_x, rtol=1.5e-8)
 
 
 def test_pacf_yw():
     pacfyw = tsa.pacf_yw(x100, 20, method='mle')
-    assert_array_almost_equal(mlpacf.pacf100.ravel(), pacfyw, 1)
+    assert_allclose(mlpacf.pacf100.ravel(), pacfyw, rtol=1.5e-1)
     pacfyw = tsa.pacf_yw(x1000, 20, method='mle')
-    assert_array_almost_equal(mlpacf.pacf1000.ravel(), pacfyw, 2)
-    # assert False
+    assert_allclose(mlpacf.pacf1000.ravel(), pacfyw, rtol=1.5e-2)
 
 
 def test_pacf_ols():
     pacfols = tsa.pacf_ols(x100, 20)
-    assert_array_almost_equal(mlpacf.pacf100.ravel(), pacfols, 8)
+    assert_allclose(mlpacf.pacf100.ravel(), pacfols, rtol=1e-8)
     pacfols = tsa.pacf_ols(x1000, 20)
-    assert_array_almost_equal(mlpacf.pacf1000.ravel(), pacfols, 8)
-    # assert False
+    assert_allclose(mlpacf.pacf1000.ravel(), pacfols, rtol=1e-8)
 
 
 def test_ywcoef():
-    assert_array_almost_equal(mlywar.arcoef100[1:],
-                              -
-                              sm.regression.yule_walker(x100, 10, method='mle')[
-                                  0], 8)
-    assert_array_almost_equal(mlywar.arcoef1000[1:],
-                              -sm.regression.yule_walker(x1000, 20,
-                                                         method='mle')[0], 8)
+    assert_allclose(mlywar.arcoef100[1:],
+                    -sm.regression.yule_walker(x100, 10, method='mle')[0],
+                    rtol=1.5e-8)
+    assert_allclose(mlywar.arcoef1000[1:],
+                    -sm.regression.yule_walker(x1000, 20, method='mle')[0],
+                    rtol=1.5e-8)
 
 
 def test_yule_walker_inter():
@@ -385,23 +384,34 @@ class TestDetrend(object):
 
     def test_detrend_1d(self):
         data = self.data_1d
-        assert_array_almost_equal(sm.tsa.detrend(data, order=1), np.zeros_like(data))
-        assert_array_almost_equal(sm.tsa.detrend(data, order=0), [-2, -1, 0, 1, 2])
+        assert_allclose(sm.tsa.detrend(data, order=1),
+                        np.zeros_like(data),
+                        rtol=1.5e-6)
+        assert_allclose(sm.tsa.detrend(data, order=0),
+                        [-2, -1, 0, 1, 2],
+                        rtol=1.5e-6)
 
     def test_detrend_2d(self):
         data = self.data_2d
-        assert_array_almost_equal(sm.tsa.detrend(data, order=1, axis=0), np.zeros_like(data))
-        assert_array_almost_equal(sm.tsa.detrend(data, order=0, axis=0), [[-4, -4], [-2, -2], [0, 0], [2, 2], [4, 4]])
-        assert_array_almost_equal(sm.tsa.detrend(data, order=0, axis=1),
-                                  [[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5]])
+        assert_allclose(sm.tsa.detrend(data, order=1, axis=0),
+                        np.zeros_like(data),
+                        rtol=1.5e-6)
+        assert_allclose(sm.tsa.detrend(data, order=0, axis=0),
+                        [[-4, -4], [-2, -2], [0, 0], [2, 2], [4, 4]],
+                        rtol=1.5e-6)
+        assert_allclose(sm.tsa.detrend(data, order=0, axis=1),
+                        [[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5]],
+                        rtol=1.5e-6)
 
     def test_detrend_series(self):
         data = pd.Series(self.data_1d, name='one')
         detrended = sm.tsa.detrend(data, order=1)
-        assert_array_almost_equal(detrended.values, np.zeros_like(data))
+        assert_allclose(detrended.values, np.zeros_like(data), rtol=1.5e-6)
         assert_series_equal(detrended, pd.Series(detrended.values, name='one'))
         detrended = sm.tsa.detrend(data, order=0)
-        assert_array_almost_equal(detrended.values, pd.Series([-2, -1, 0, 1, 2]))
+        assert_allclose(detrended.values,
+                        pd.Series([-2, -1, 0, 1, 2]),
+                        rtol=1.5e-6)
         assert_series_equal(detrended, pd.Series(detrended.values, name='one'))
 
     def test_detrend_dataframe(self):
@@ -410,16 +420,33 @@ class TestDetrend(object):
         data = pd.DataFrame(self.data_2d, columns=columns, index=index)
 
         detrended = sm.tsa.detrend(data, order=1, axis=0)
-        assert_array_almost_equal(detrended.values, np.zeros_like(data))
-        assert_frame_equal(detrended, pd.DataFrame(detrended.values, columns=columns, index=index))
+        assert_allclose(detrended.values, np.zeros_like(data), rtol=1.5e-6)
+        assert_frame_equal(detrended,
+                           pd.DataFrame(detrended.values,
+                                        columns=columns,
+                                        index=index))
 
         detrended = sm.tsa.detrend(data, order=0, axis=0)
-        assert_array_almost_equal(detrended.values, [[-4, -4], [-2, -2], [0, 0], [2, 2], [4, 4]])
-        assert_frame_equal(detrended, pd.DataFrame(detrended.values, columns=columns, index=index))
+        assert_allclose(detrended.values,
+                        [[-4, -4], [-2, -2], [0, 0], [2, 2], [4, 4]],
+                        rtol=1.5e-6)
+        assert_frame_equal(detrended,
+                           pd.DataFrame(detrended.values,
+                                        columns=columns,
+                                        index=index))
 
         detrended = sm.tsa.detrend(data, order=0, axis=1)
-        assert_array_almost_equal(detrended.values, [[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5]])
-        assert_frame_equal(detrended, pd.DataFrame(detrended.values, columns=columns, index=index))
+        assert_allclose(detrended.values,
+                        [[-0.5, 0.5],
+                         [-0.5, 0.5],
+                         [-0.5, 0.5],
+                         [-0.5, 0.5],
+                         [-0.5, 0.5]],
+                        rtol=1.5e-6)
+        assert_frame_equal(detrended,
+                           pd.DataFrame(detrended.values,
+                                        columns=columns,
+                                        index=index))
 
     def test_detrend_dim_too_large(self):
         assert_raises(NotImplementedError, sm.tsa.detrend, np.ones((3, 3, 3)))

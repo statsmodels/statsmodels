@@ -7,7 +7,7 @@ from unittest import TestCase
 
 import pytest
 import numpy as np
-from numpy.testing import (assert_array_almost_equal, assert_almost_equal,
+from numpy.testing import (assert_almost_equal,
                            assert_allclose,
                            assert_equal, assert_raises, assert_)
 
@@ -110,22 +110,22 @@ def test_arma_generate_sample():
                 ar_params = -1 * np.array(ar[1:])
                 ma_params = np.array(ma[1:])
                 rep2 = _manual_arma_generate_sample(ar_params, ma_params, eta)
-                assert_array_almost_equal(rep1, rep2, 13)
+                assert_allclose(rep1, rep2, rtol=1.5e-13)
 
 
 def test_fi():
     # test identity of ma and ar representation of fi lag polynomial
     n = 100
     mafromar = arma_impulse_response(lpol_fiar(0.4, n=n), [1], n)
-    assert_array_almost_equal(mafromar, lpol_fima(0.4, n=n), 13)
+    assert_allclose(mafromar, lpol_fima(0.4, n=n), rtol=1.5e-13)
 
 
 def test_arma_impulse_response():
     arrep = arma_impulse_response(armarep.ma, armarep.ar, leads=21)[1:]
     marep = arma_impulse_response(armarep.ar, armarep.ma, leads=21)[1:]
-    assert_array_almost_equal(armarep.marep.ravel(), marep, 14)
+    assert_allclose(armarep.marep.ravel(), marep, rtol=1.5e-14)
     # difference in sign convention to matlab for AR term
-    assert_array_almost_equal(-armarep.arrep.ravel(), arrep, 14)
+    assert_allclose(-armarep.arrep.ravel(), arrep, rtol=1.5e-14)
 
 
 def test_spectrum():
@@ -256,7 +256,7 @@ class TestArmaProcess(TestCase):
         process1 = ArmaProcess.from_coeffs([.9])
         acf = process1.acf(10)
         expected = np.array(0.9) ** np.arange(10.0)
-        assert_array_almost_equal(acf, expected)
+        assert_allclose(acf, expected, rtol=1.5e-6)
 
         acf = process1.acf()
         assert_(acf.shape[0] == process1.nobs)
@@ -265,7 +265,7 @@ class TestArmaProcess(TestCase):
         process1 = ArmaProcess.from_coeffs([.9])
         pacf = process1.pacf(10)
         expected = np.array([1, 0.9] + [0] * 8)
-        assert_array_almost_equal(pacf, expected)
+        assert_allclose(pacf, expected, rtol=1.5e-6)
 
         pacf = process1.pacf()
         assert_(pacf.shape[0] == process1.nobs)
