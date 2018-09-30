@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 from statsmodels.stats.anova import AnovaRM
-from numpy.testing import (assert_array_almost_equal, assert_raises,
-                           assert_warns, assert_equal)
+from numpy.testing import (assert_allclose, assert_raises,
+                           assert_equal)
 from pandas.util.testing import assert_frame_equal
 
 
@@ -84,8 +84,9 @@ def test_single_factor_repeated_measures_anova():
     """
     df = AnovaRM(data.iloc[:16, :], 'DV', 'id', within=['B']).fit()
     a = [[1, 7, 22.4, 0.002125452]]
-    assert_array_almost_equal(df.anova_table.iloc[:, [1, 2, 0, 3]].values,
-                              a, decimal=5)
+    assert_allclose(df.anova_table.iloc[:, [1, 2, 0, 3]].values,
+                    a,
+                    rtol=1.5e-5)
 
 
 def test_two_factors_repeated_measures_anova():
@@ -97,8 +98,9 @@ def test_two_factors_repeated_measures_anova():
     a = [[1, 7, 40.14159, 3.905263e-04],
          [2, 14, 29.21739, 1.007549e-05],
          [2, 14, 17.10545, 1.741322e-04]]
-    assert_array_almost_equal(df.anova_table.iloc[:,[1, 2, 0, 3]].values,
-                              a, decimal=5)
+    assert_allclose(df.anova_table.iloc[:,[1, 2, 0, 3]].values,
+                    a,
+                    rtol=1.5e-5)
 
 
 def test_three_factors_repeated_measures_anova():
@@ -114,8 +116,9 @@ def test_three_factors_repeated_measures_anova():
          [1,  7, 21.7593382, 0.002301792],
          [2, 14,  6.2416695, 0.011536846],
          [2, 14,  5.4253359, 0.018010647]]
-    assert_array_almost_equal(df.anova_table.iloc[:,[1, 2, 0, 3]].values,
-                              a, decimal=5)
+    assert_allclose(df.anova_table.iloc[:,[1, 2, 0, 3]].values,
+                    a,
+                    rtol=1.5e-5)
 
 
 def test_repeated_measures_invalid_factor_name():

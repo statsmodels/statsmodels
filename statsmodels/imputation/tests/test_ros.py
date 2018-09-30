@@ -2,11 +2,10 @@ from __future__ import division
 
 from textwrap import dedent
 
-import numpy.testing as npt
 import pandas.util.testing as pdtest
 
 import numpy
-from numpy.testing import assert_equal
+from numpy.testing import assert_equal, assert_allclose
 import pandas
 import pytest
 
@@ -303,7 +302,7 @@ class Test__ros_plot_pos(object):
 def test__norm_plot_pos():
     result = ros._norm_plot_pos([1, 2, 3, 4])
     expected = numpy.array([ 0.159104,  0.385452,  0.614548,  0.840896])
-    npt.assert_array_almost_equal(result, expected)
+    assert_allclose(result, expected, rtol=1.5e-6)
 
 
 def test_plotting_positions():
@@ -320,7 +319,7 @@ def test_plotting_positions():
         0.73809524,  0.76428571,  0.79047619,  0.81666667,  0.84285714,
         0.86904762,  0.8952381 ,  0.92142857,  0.94761905,  0.97380952
     ])
-    npt.assert_array_almost_equal(results, expected)
+    assert_allclose(results, expected, rtol=1.5e-6)
 
 
 def test__impute():
@@ -338,7 +337,7 @@ def test__impute():
     df = load_advanced_data()
     df = ros._impute(df, 'conc', 'censored', numpy.log, numpy.exp)
     result = df['final'].values
-    npt.assert_array_almost_equal(result, expected)
+    assert_allclose(result, expected, rtol=1.5e-6)
 
 
 def test__do_ros():
@@ -357,24 +356,24 @@ def test__do_ros():
     df = load_basic_data()
     df = ros._do_ros(df, 'conc', 'censored', numpy.log, numpy.exp)
     result = df['final'].values
-    npt.assert_array_almost_equal(result, expected)
+    assert_allclose(result, expected, rtol=1.5e-6)
 
 
 class CheckROSMixin(object):
     def test_ros_df(self):
         result = ros.impute_ros(self.rescol, self.cencol, df=self.df)
-        npt.assert_array_almost_equal(
+        assert_allclose(
             sorted(result),
             sorted(self.expected_final),
-            decimal=self.decimal
+            rtol=1.5 * 10**-self.decimal
         )
 
     def test_ros_arrays(self):
         result = ros.impute_ros(self.df[self.rescol], self.df[self.cencol], df=None)
-        npt.assert_array_almost_equal(
+        assert_allclose(
             sorted(result),
             sorted(self.expected_final),
-            decimal=self.decimal
+            rtol=1.5 * 10**-self.decimal
         )
 
     def test_cohn(self):
