@@ -945,7 +945,7 @@ cdef int _{{prefix}}copy_missing_submatrix({{cython_type}} * a, {{cython_type}} 
 
     # Perform replacement
     for i in range(nobs):
-        blas.{{prefix}}copy(&nobs, &a[i*n], &inc, &b[i*n], &inc)
+        copy(nobs, &a[i*n], inc, &b[i*n], inc)
 
 
 cdef int _{{prefix}}copy_missing_rows({{cython_type}} * a, {{cython_type}} * b, int * missing, int n, int m):
@@ -965,7 +965,7 @@ cdef int _{{prefix}}copy_missing_rows({{cython_type}} * a, {{cython_type}} * b, 
 
     # Perform replacement
     for i in range(nobs):
-        blas.{{prefix}}copy(&m, &a[i], &n, &b[i], &n)
+        copy(m, &a[i], n, &b[i], n)
 
 
 cdef int _{{prefix}}copy_missing_cols({{cython_type}} * a, {{cython_type}} * b, int * missing, int n, int m):
@@ -985,7 +985,7 @@ cdef int _{{prefix}}copy_missing_cols({{cython_type}} * a, {{cython_type}} * b, 
 
     # Perform replacement
     for i in range(nobs):
-        blas.{{prefix}}copy(&n, &a[i*n], &inc, &b[i*n], &inc)
+        copy(n, &a[i*n], inc, &b[i*n], inc)
 
 
 cpdef int {{prefix}}copy_missing_matrix({{cython_type}} [::1, :, :] A, {{cython_type}} [::1, :, :] B, int [::1, :] missing, int missing_rows, int missing_cols, int diagonal) except *:
@@ -1044,7 +1044,7 @@ cdef int _{{prefix}}copy_index_diagonal({{cython_type}} * a, {{cython_type}} * b
     index is a pointer to an n x 1 array
     n is the dimension of A, B
     """
-    cdef int i, j, k, nobs
+    cdef int i
 
     # Perform replacement
     for i in range(n):
@@ -1061,8 +1061,6 @@ cdef int _{{prefix}}copy_index_submatrix({{cython_type}} * a, {{cython_type}} * 
     index is a pointer to an n x 1 array
     n is the dimension of A, B
     """
-    cdef int i, j, k, nobs, inc = 1
-
     _{{prefix}}copy_index_rows(a, b, index, n, n)
     _{{prefix}}copy_index_cols(a, b, index, n, n)
 
@@ -1075,7 +1073,7 @@ cdef int _{{prefix}}copy_index_rows({{cython_type}} * a, {{cython_type}} * b, in
     n is the number of rows of A
     m is the number of columns of A
     """
-    cdef int i, j, k, nobs
+    cdef int i
 
     # Perform replacement
     for i in range(n):
