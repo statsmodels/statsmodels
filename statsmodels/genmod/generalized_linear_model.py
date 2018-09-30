@@ -1515,6 +1515,10 @@ class GLMResults(base.LikelihoodModelResults):
             get_robustcov_results(self, cov_type=cov_type, use_self=True,
                                   use_t=use_t, **cov_kwds)
 
+    @property
+    def resid(self):
+        return self.resid_response
+
     @cache_readonly
     def resid_response(self):
         return self._n_trials * (self._endog-self.mu)

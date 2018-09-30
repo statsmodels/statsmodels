@@ -80,6 +80,8 @@ class CheckModelResultsMixin(object):
                 resid_a, self.res1.resid_response))
         assert_allclose(resids, resid2, rtol=1e-6, atol=atol)
 
+        assert_allclose(self.res1.resid, self.res1.resid_response, rtol=1e-13)
+
     decimal_aic_R = DECIMAL_4
 
     def test_aic_R(self):
