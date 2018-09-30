@@ -63,8 +63,15 @@ class CheckModelResults(object):
     def test_zstat(self):
         assert_allclose(self.res1.tvalues, self.res2.z, rtol=5e-3, atol=5e-4)
 
-    def pvalues(self):
-        assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL_4)
+    def test_pvalues(self):
+        # NB-geometric and NB2 have less agreement and larger rtol
+        # NB1 fails at rtol=0.01
+        # possible reason is that we compute cov_params at alpha and
+        # not log-alpha parameterization
+        rtol = getattr(self, 'rtol_pvalues', 0.02)
+        # no reference pvalues for extra params in some NegBin tests
+        assert_allclose(self.res1.pvalues[:len(self.res2.pvalues)],
+                        self.res2.pvalues, rtol=rtol, atol=1e-19)
 
 #    def test_cov_params(self):
 #        assert_almost_equal(self.res1.cov_params(), self.res2.cov_params,
@@ -1057,6 +1064,9 @@ class TestNegativeBinomialNB2Newton(CheckModelResults):
         res2.negativebinomial_nb2_bfgs()
         cls.res2 = res2
 
+        # pvalues for NB2 and NBP2 has lower agreement
+        cls.rtol_pvalues = 0.04
+
     def test_jac(self):
         pass
 
@@ -1127,6 +1137,8 @@ class TestNegativeBinomialNB2BFGS(CheckModelResults):
         res2 = RandHIE()
         res2.negativebinomial_nb2_bfgs()
         cls.res2 = res2
+
+        cls.rtol_pvalues = 0.04
 
     def test_jac(self):
         pass
@@ -1210,6 +1222,8 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
         res2 = RandHIE()
         res2.negativebinomial_geometric_bfgs()
         cls.res2 = res2
+
+        cls.rtol_pvalues = 0.05
 
     # the following are regression tests, could be inherited instead
 
@@ -1835,6 +1849,8 @@ class TestNegativeBinomialPNB2Newton(CheckModelResults):
         res2.negativebinomial_nb2_bfgs()
         cls.res2 = res2
 
+        cls.rtol_pvalues = 0.04
+
     #NOTE: The bse is much closer precitions to stata
     def test_bse(self):
         assert_allclose(self.res1.bse, self.res2.bse,
@@ -1906,6 +1922,8 @@ class TestNegativeBinomialPNB2BFGS(CheckModelResults):
         res2 = RandHIE()
         res2.negativebinomial_nb2_bfgs()
         cls.res2 = res2
+
+        cls.rtol_pvalues = 0.04
 
     #NOTE: The bse is much closer precitions to stata
     def test_bse(self):
