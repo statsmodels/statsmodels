@@ -674,8 +674,8 @@ class SVARResults(SVARProcess, VARResults):
         B = self.B
         A_mask = self.A_mask
         B_mask = self.B_mask
-        A_pass = np.zeros(A.shape, dtype='|S1')
-        B_pass = np.zeros(B.shape, dtype='|S1')
+        A_pass = np.zeros(A.shape, dtype='<U11')
+        B_pass = np.zeros(B.shape, dtype='<U11')
         A_pass[~A_mask] = A[~A_mask]
         B_pass[~B_mask] = B[~B_mask]
         A_pass[A_mask] = 'E'
@@ -690,8 +690,8 @@ class SVARResults(SVARProcess, VARResults):
 
         for i in range(repl):
             #discard first hundred to correct for starting bias
-            sim = util.varsim(coefs, intercept, sigma_u,
-                    steps=nobs+burn)
+            sim = util.varsim(coefs, intercept, sigma_u, seed=seed,
+                              steps=nobs + burn)
             sim = sim[burn:]
             if cum == True:
                 if i < 10:

@@ -1,7 +1,7 @@
 """
 Test SVAR estimation
 """
-
+import pytest
 import statsmodels.api as sm
 from statsmodels.tsa.vector_ar.svar_model import SVAR
 from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
@@ -57,3 +57,16 @@ class TestSVAR(object):
         assert_allclose(res1.aic - corr_const, res2.aic_var, atol=1e-12)
         assert_allclose(res1.bic - corr_const, res2.sbic_var, atol=1e-12)
         assert_allclose(res1.hqic - corr_const, res2.hqic_var, atol=1e-12)
+
+    # @pytest.mark.smoke
+    def test_irf(self):
+        # this only checks that the methods work and produce the same result
+        res1 = self.res1
+        errband1 = res1.sirf_errband_mc(orth=False, repl=50, T=10, signif=0.05,
+                                        seed=987123, burn=100, cum=False)
+
+        irf = res1.irf()
+        errband2 = irf.errband_mc(orth=False, svar=True, repl=50,
+                                  signif=0.05, seed=987123, burn=100)
+        # on my Windows environment those two are equal
+        assert_allclose(errband1, errband2, rtol=1e-10)
