@@ -692,7 +692,10 @@ class SVARResults(SVARProcess, VARResults):
             if cum == True:
                 if i < 10:
                     sol = SVAR(sim, svar_type=s_type, A=A_pass,
-                               B=B_pass).fit(maxlags=k_ar)
+                               B=B_pass).fit(maxlags=k_ar,
+                                             A_guess=A[A_mask],
+                                             B_guess=B[B_mask])
+
                     g_list.append(np.append(sol.A[sol.A_mask].\
                                             tolist(),
                                             sol.B[sol.B_mask].\
@@ -712,7 +715,10 @@ class SVARResults(SVARProcess, VARResults):
             elif cum == False:
                 if i < 10:
                     sol = SVAR(sim, svar_type=s_type, A=A_pass,
-                               B=B_pass).fit(maxlags=k_ar)
+                               B=B_pass).fit(maxlags=k_ar,
+                                             A_guess=A[A_mask],
+                                             B_guess=B[B_mask])
+
                     g_list.append(np.append(sol.A[A_mask].tolist(),
                                             sol.B[B_mask].tolist()))
                     ma_coll[i] = sol.svar_ma_rep(maxn=T)
