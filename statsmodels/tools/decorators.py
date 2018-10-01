@@ -1,6 +1,5 @@
 from __future__ import print_function
 from statsmodels.tools.sm_exceptions import CacheWriteWarning
-from statsmodels.compat.python import get_function_name
 import warnings
 
 __all__ = ['resettable_cache', 'cache_readonly', 'cache_writable']
@@ -169,7 +168,7 @@ class OneTimeProperty(object):
              the value of this computation.
              """
         self.getter = func
-        self.name = get_function_name(func)
+        self.name = func.__name__
 
     def __get__(self, obj, type=None):
         """

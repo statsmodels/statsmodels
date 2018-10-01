@@ -2,7 +2,7 @@
 """
 Authors:    Josef Perktold, Skipper Seabold, Denis A. Engemann
 """
-from statsmodels.compat.python import get_function_name, iterkeys, lrange, zip, iteritems
+from statsmodels.compat.python import iterkeys, lrange, zip, iteritems
 import numpy as np
 
 from statsmodels.graphics.plottools import rainbow
@@ -92,7 +92,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     fig, ax = utils.create_mpl_ax(ax)
 
     response_name = ylabel or getattr(response, 'name', 'response')
-    ylabel = '%s of %s' % (get_function_name(func), response_name)
+    ylabel = '%s of %s' % (func.__name__, response_name)
     xlabel = xlabel or getattr(x, 'name', 'X')
     legendtitle = legendtitle or getattr(trace, 'name', 'Trace')
 
