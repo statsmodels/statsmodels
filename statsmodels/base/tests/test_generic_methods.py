@@ -596,16 +596,6 @@ class TestWaldAnovaNegBin1(CheckAnovaMixin):
         cls.res = mod.fit(cov_type='HC0')
 
 
-@pytest.mark.skip(reason="TODO: Find a reason.  "
-                         "This used to just have a mangled name.")
-class TestWaldAnovaOLSNoFormula(object):
-
-    @classmethod
-    def initialize(cls):
-        mod = ols("np.log(Days+1) ~ C(Duration, Sum)*C(Weight, Sum)", cls.data)
-        cls.res = mod.fit()  # default use_t=True
-
-
 class CheckPairwise(object):
 
     def test_default(self):
