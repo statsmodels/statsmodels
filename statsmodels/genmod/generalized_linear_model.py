@@ -768,8 +768,9 @@ class GLM(base.LikelihoodModel):
 
         Notes
         -----
-        The default scale for Binomial and Poisson families is 1.  The default
-        for the other families is Pearson's Chi-Square estimate.
+        The default scale for Binomial, Poisson and Negative Binomial
+        families is 1.  The default for the other families is Pearson's
+        Chi-Square estimate.
 
         See also
         --------

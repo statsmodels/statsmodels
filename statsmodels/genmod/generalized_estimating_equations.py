@@ -701,8 +701,11 @@ class GEE(base.Model):
 
     def estimate_scale(self):
         """
-        Returns an estimate of the scale parameter at the current
-        parameter value.
+        Estimate the dispersion/scale.
+
+        The scale parameter for binomial, Poisson, and multinomial
+        families is fixed at 1, otherwise it is estimated from
+        the data.
         """
 
         if isinstance(self.family, (families.Binomial, families.Poisson,
