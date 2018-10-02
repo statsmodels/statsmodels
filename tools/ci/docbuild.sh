@@ -6,6 +6,7 @@ cd "$SRCDIR"/docs
 # Run notebooks as tests
 pytest ../statsmodels/examples/tests
 
+set -e
 # Clean up
 echo '================================= Clean ================================='
 make clean
@@ -18,6 +19,7 @@ echo '========================================================================'
 echo 'make html > doc_build.log 2>&1'
 make html 2>&1 | tee doc_build.log
 
+set +e
 # Info
 echo '========================================================================'
 echo '=                 Opportunities To Improve (Warnings)                  ='
