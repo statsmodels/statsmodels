@@ -76,6 +76,9 @@ class SVAR(tsbase.TimeSeriesModel):
 
         svar_ckerr(svar_type, A, B)
 
+        self.A_original = A
+        self.B_original = B
+
         #initialize A, B as I if not given
         #Initialize SVAR masks
         if A is None:
@@ -674,18 +677,10 @@ class SVARResults(SVARProcess, VARResults):
         B = self.B
         A_mask = self.A_mask
         B_mask = self.B_mask
-        A_pass = np.zeros(A.shape, dtype='<U11')
-        B_pass = np.zeros(B.shape, dtype='<U11')
-        A_pass[~A_mask] = A[~A_mask]
-        B_pass[~B_mask] = B[~B_mask]
-        A_pass[A_mask] = 'E'
-        B_pass[B_mask] = 'E'
-        if A_mask.sum() == 0:
-            s_type = 'B'
-        elif B_mask.sum() == 0:
-            s_type = 'A'
-        else:
-            s_type = 'AB'
+        A_pass = self.model.A_original
+        B_pass = self.model.B_original
+        s_type = self.model.svar_type
+
         g_list = []
 
         for i in range(repl):
@@ -738,7 +733,8 @@ class SVARResults(SVARProcess, VARResults):
                                  svar_ma_rep(maxn=T)
 
         ma_sort = np.sort(ma_coll, axis=0) #sort to get quantiles
-        index = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
+        index = (int(round(signif / 2 * repl) - 1),
+                 int(round((1 - signif / 2) * repl) - 1))
         lower = ma_sort[index[0],:, :, :]
         upper = ma_sort[index[1],:, :, :]
         return lower, upper
