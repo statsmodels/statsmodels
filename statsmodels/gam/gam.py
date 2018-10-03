@@ -251,6 +251,8 @@ class GLMGam(PenalizedMixin, GLM):
             self._offset_exposure = 0
 
         self.scaletype = 'dev'
+        # during iteration
+        self.scale = 1
 
         if start_params is None:
             mu = self.family.starting_mu(endog)
@@ -291,7 +293,9 @@ class GLMGam(PenalizedMixin, GLM):
             if endog.squeeze().ndim == 1 and np.allclose(mu - endog, 0):
                 msg = "Perfect separation detected, results not available"
                 raise PerfectSeparationError(msg)
-            converged = _check_convergence(criterion, iteration, tol)
+
+            # TODO need atol, rtol
+            converged = _check_convergence(criterion, iteration, tol, 0)
             if converged:
                 break
         self.mu = mu
