@@ -291,6 +291,7 @@ class TestGEE(object):
         # Test missing data handling for calling from the api.  Missing
         # data handling does not currently work for formulas.
 
+        np.random.seed(34234)
         endog = np.random.normal(size=100)
         exog = np.random.normal(size=(100, 3))
         exog[:, 0] = 1
@@ -317,6 +318,7 @@ class TestGEE(object):
     def test_missing_formula(self):
         # Test missing data handling for formulas.
 
+        np.random.seed(34234)
         endog = np.random.normal(size=100)
         exog1 = np.random.normal(size=100)
         exog2 = np.random.normal(size=100)
@@ -672,6 +674,7 @@ class TestGEE(object):
 
         family = Gaussian()
 
+        np.random.seed(34234)
         exog = np.random.normal(size=(300, 4))
         exog[:, 0] = 1
         endog = np.dot(exog, np.r_[1, 1, 0, 0.2]) +\
@@ -924,6 +927,7 @@ class TestGEE(object):
         # Test various group structures (nonconsecutive, different
         # group sizes, not ordered, string labels)
 
+        np.random.seed(234)
         n = 40
         x = np.random.normal(size=(n, 2))
         y = np.random.normal(size=n)
@@ -969,6 +973,7 @@ class TestGEE(object):
         vs = Independence()
         family = Gaussian()
 
+        np.random.seed(34234)
         Y = np.random.normal(size=100)
         X1 = np.random.normal(size=100)
         X2 = np.random.normal(size=100)
@@ -1000,6 +1005,7 @@ class TestGEE(object):
         # variable names or arrays.
 
         n = 100
+        np.random.seed(34234)
         Y = np.random.normal(size=n)
         X1 = np.random.normal(size=n)
         mat = np.concatenate((np.ones((n, 1)), X1[:, None]), axis=1)
@@ -1043,6 +1049,7 @@ class TestGEE(object):
         vs = Independence()
         family = Binomial()
 
+        np.random.seed(34234)
         Y = 1 * (np.random.normal(size=100) < 0)
         X1 = np.random.normal(size=100)
         X2 = np.random.normal(size=100)
@@ -1066,6 +1073,7 @@ class TestGEE(object):
         vs = Independence()
         family = Poisson()
 
+        np.random.seed(34234)
         Y = np.ceil(-np.log(np.random.uniform(size=100)))
         X1 = np.random.normal(size=100)
         X2 = np.random.normal(size=100)
@@ -1173,6 +1181,7 @@ class TestGEE(object):
     def test_predict_exposure(self):
 
         n = 50
+        np.random.seed(34234)
         X1 = np.random.normal(size=n)
         X2 = np.random.normal(size=n)
         groups = np.kron(np.arange(25), np.r_[1, 1])
@@ -1212,6 +1221,7 @@ class TestGEE(object):
         # Test various ways of passing offset and exposure to `from_formula`.
 
         n = 50
+        np.random.seed(34234)
         X1 = np.random.normal(size=n)
         X2 = np.random.normal(size=n)
         groups = np.kron(np.arange(25), np.r_[1, 1])
