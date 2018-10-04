@@ -81,12 +81,16 @@ class TestMICEData(object):
                         np.concatenate((np.arange(10),
                                         np.arange(11, 30, 2),
                                         np.arange(30, 200))))
+        assert_equal([set(imp_data.data[col]) for col in imp_data.data],
+                     [set(df[col].dropna()) for col in df])
 
         for k in range(3):
             imp_data.update_all()
             assert_equal(imp_data.data.shape[0], nrow)
             assert_equal(imp_data.data.shape[1], ncol)
             assert_allclose(orig[mx], imp_data.data[mx])
+            assert_equal([set(imp_data.data[col]) for col in imp_data.data],
+                         [set(df[col].dropna()) for col in df])
 
         fml = 'x1 ~ x2 + x3 + x4 + x5 + y'
         assert_equal(imp_data.conditional_formula['x1'], fml)
@@ -341,13 +345,13 @@ class TestMICE(object):
         mi = mice.MICE("y ~ x1 + x2", sm.OLS, idata, n_skip=20)
         result = mi.fit(10, 20)
 
-        fmi = np.asarray([ 0.1920533 ,  0.1587287 ,  0.33174032])
+        fmi = np.asarray([0.1778143, 0.11057262, 0.29626521])
         assert_allclose(result.frac_miss_info, fmi, atol=1e-5)
 
-        params = np.asarray([-0.05397474,  0.97273307,  1.01652293])
+        params = np.asarray([-0.03486102, 0.96236808, 0.9970371])
         assert_allclose(result.params, params, atol=1e-5)
 
-        tvalues = np.asarray([ -0.84781698,  15.10491582,  13.59998039])
+        tvalues = np.asarray([-0.54674776, 15.28091069, 13.61359403])
         assert_allclose(result.tvalues, tvalues, atol=1e-5)
 
 
