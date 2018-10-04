@@ -7,66 +7,101 @@ License: Simplified-BSD
 import pdb
 import numpy as np
 from scipy.signal import lfilter
+from scipy.linalg import block_diag
 import statsmodels.api as sm
 import pandas as pd
 from .tools import (constrain_stationary_univariate,
     unconstrain_stationary_univariate)
+import warnings
 
 # Construct the model
-class SDR(sm.tsa.statespace.MLEModel):
+class dynamic_regression(sm.tsa.statespace.MLEModel):
     """
     Univariate time-varying coefficient regression models
     
     A model in which the coefficients of the exogonous covariates are 
-    described by a univariate structural model
+    described by a univariate unobserved components model. At present
+    only local level and trend models are available for the coefficinets.
+    Ulitmately it is intended to add the full suite of components that
+    are standard in unobserved components models: 
 
     Parameters
     ----------
     exog : array_like or None, optional
         Exogenous variables.
-    freq_seasonal: list of dicts or None, optional.
-        Whether (and how) to model seasonal component(s) with trig. functions.
-        If specified, there is one dictionary for each frequency-domain
-        seasonal component.  Each dictionary must have the key, value pair for
-        'period' -- integer and may have a key, value pair for
-        'harmonics' -- integer. If 'harmonics' is not specified in any of the
-        dictionaries, it defaults to the floor of period/2.
-    arma_order : tuple
-        A tuple giving the order of the autoregressive and moving average
-        components of the error term respectively. (0,0) by default.
+    exog_models : dict or list of dicts, optional
+        Either a dict, a list containing a single dict, or a list of dict
+        s, one for each exogonous regressor.
+        Admisble keys are the supported component types: 'irregular', 
+        'local_level', and 'trend'. If a key is included in the dict and 
+        it's value is not False, then it is included in the model. If the 
+        corresponding value is "deterministic" then the state 
+        corresponding to that component will not have a disturbance term.
     dynamic_regression : bool
-        Whether or not the regression coefficient updates over time. If False
-        then the states corresponding to the regression coefficients have 0
-        variance.
+        Whether or not the regression coefficient updates over time. If 
+        False then the states corresponding to the regression 
+        coefficients have 0 variance.
     """
-    def __init__(self, endog, exog, freq_seasonal,arma_order=(0,0),
-        dynamic_regression=True):
-        self.arma_order = arma_order
-        self.freq_seasonal_periods = [d['period'] for d in freq_seasonal]
-        self.freq_seasonal_harmonics = [d.get(
-            'harmonics', int(np.floor(d['period'] / 2))) for
-            d in freq_seasonal]
-        self.ar_order = self.arma_order[0]
-        self.ma_order = self.arma_order[1]
-        self.r = max(self.ar_order,self.ma_order+1)
-        self.enforce_stationarity = True
-        self.enforce_invertibility = True
-        self.dynamic_regression = dynamic_regression
-
+    def __init__(self, endog, exog,exog_models={"local_level":True}):
         #Get k_exog from size of exog data
+        valid_components = set(['irregular','local_level','trend'])
         try:
             self.k_exog = exog.shape[1]
         except IndexError:
             exog = np.expand_dims(exog,axis=1)
             self.k_exog = exog.shape[1]
-        k_states = (self.r + self.k_exog +
-            sum(self.freq_seasonal_harmonics)*2)
-        k_state_cov = (self.dynamic_regression*self.k_exog * 3 + 1)
+        if isinstance(exog_models,list):
+            if len(exog_models)!=self.k_exog and len(exog_models)!=1:
+                raise ValueError('We should either recieve no exog_model'
+                    ' ,a single exog_model or a list of k_exog exog_models ')
+        # If we only received a single exog_model in a list, or just one
+        # dict create a k_exog length list of dicts
+        if isinstance(exog_models,list):
+            if len(exog_models)==1:
+                self.exog_models = [exog_models[0] for m in range(self.k_exog)]
+            else:
+                self.exog_models = exog_models
+        elif isinstance(exog_models,dict):
+            self.exog_models = [exog_models for m in range(self.k_exog)]
+        # Expand each exog_model dict to specify all available component
+        # types as False if not already in the dict. All exog_models
+        # must include a local level 
+
+        for idx, mod in enumerate(self.exog_models):
+            if 'irregular' not in mod.keys():
+                mod['irregular'] = False
+            if 'local_level' not in mod.keys():
+                mod['local_level'] = True
+            if 'trend' not in mod.keys():
+                mod['trend'] = False
+            #each model must have a local level
+            if not mod['local_level']:
+                warnings.warn(f"A local level term is required for exog {idx}.",
+                    "Adding stochastic local level.")
+                mod['local_level'] = True
+            # remove any spurious components
+            for c in set(mod.keys()).difference(valid_components):
+                warnings.warn(f"{c} is not a valid component type, removing.")
+                del mod[c]
+
+
+        # Each component of each exog_model requires one state
+        # Note this is will not be true when we allow more more
+        # complex exog models than irregular, level, trend
+        # We need a state covariance for every component not specified 
+        # to be "deterministic"
+        components=[]
+        stochastic=[]
+        for mod in self.exog_models:
+            components += [bool(component) for component in mod.values()]
+            stochastic += [bool(component) and (component != "deterministic")
+                for component in mod.values()]
+        self.k_states = sum(components)
+        self.k_state_cov = sum(stochastic)
         # Initialize the state space model
-        super(SDR, self).__init__(endog, k_states=k_states, exog=exog,
-         k_posdef=k_state_cov, initialization='approximate_diffuse')
-        self.k_posdef=k_state_cov
-        self.k_state_cov=k_state_cov
+        super(dynamic_regression, self).__init__(endog, k_states=self.k_states, exog=exog,
+         k_posdef=self.k_state_cov, initialization='approximate_diffuse')
+        self.k_posdef=self.k_state_cov
         #Construct the design matrix
         self.ssm.shapes['design'] = (self.k_endog,self.k_states,self.nobs)
         self.ssm['design'] = self.initial_design
@@ -80,7 +115,7 @@ class SDR(sm.tsa.statespace.MLEModel):
         self.state_intercept = np.zeros((self.k_states,1))
         self.ssm['state_intercept'] = self.state_intercept
         #construct covariance matrices
-        self.obs_cov =  np.zeros(1)
+        self.obs_cov =  np.zeros((1,1))
         self.ssm['obs_cov'] = self.obs_cov
         self.state_cov = np.zeros((self.k_state_cov,self.k_state_cov))
         self.ssm['state_cov'] = self.state_cov
@@ -90,75 +125,76 @@ class SDR(sm.tsa.statespace.MLEModel):
         """
         Starting parameters for maximum likelihood estimation
         
-        first ar_order terms are ar_params, next ma_order terms are ma params
-        next k_state_cov params are the state covariance, the first of which
-        is the observation covariance which is in the state due to ARMA model
+        First param is the observation covariance
+        Next k_state_cov parsm are the state covariance
         """
-        params = np.zeros(self.ar_order + self.ma_order + self.k_state_cov)
-        params[self.ar_order + self.ma_order] = np.nanvar(self.ssm.endog)
+        params = np.zeros(self.k_state_cov + 1)
+        params[0] = np.nanvar(self.ssm.endog)
         return params
 
     @property
     def initial_design(self):
         """Initial design matrix"""
         # Basic design matrix
-        design = np.vstack((np.ones(self.nobs),np.zeros((self.r-1,self.nobs)),self.exog.transpose()))
-        for ix, h in enumerate(self.freq_seasonal_harmonics):
-            series = self.exog[:,ix]
-            lines=np.array([series,np.repeat(0,self.nobs)])
-            array=np.vstack(tuple(lines for i in range(0,h)))
-            design = np.vstack((design,array))
+        design = np.zeros((0,self.nobs))
+        for idx ,mod in enumerate(self.exog_models):
+            k_components = sum([bool(component) for component in mod.values()])
+            d = self.exog_design(mod)
+            exog = self.exog[:,idx]
+            d = np.tile(d,(self.nobs,1)).transpose()*np.tile(
+                exog,(k_components,1))
+            design = np.r_[design,d]
         design = np.expand_dims(design,axis=0)
         return design
+
+    def exog_design(self,mod):
+        """Part of design matric for the UC model defined by mod"""
+        d = np.zeros(0)
+        if mod["irregular"]:
+            d = np.r_[d,np.ones(1)]
+        if mod["local_level"]:
+            d = np.r_[d,np.ones(1)]
+        if mod["trend"]:
+            d = np.r_[d,np.zeros(1)]
+        return d
 
     @property
     def initial_transition(self):
         """Initial transition matrix"""
         transition = np.zeros((self.k_states,self.k_states))
-        #ARMA
-        transition[1:self.r,0:self.r-1] = np.eye(self.r-1)
-        #Exog level
-        i = self.r
-        transition[i:i+self.k_exog,i:i+self.k_exog] = np.eye(self.k_exog)
-        #Exog seasonal
-        i=self.r + self.k_exog
-        for ix, h in enumerate(self.freq_seasonal_harmonics):
-            n = 2 * h
-            p = self.freq_seasonal_periods[ix]
-            lambda_p = 2 * np.pi / float(p)
-            t = 0 # frequency transition matrix offset
-            for block in range(1, h + 1):
-                cos_lambda_block = np.cos(lambda_p * block)
-                sin_lambda_block = np.sin(lambda_p * block)
-                trans = np.array([[cos_lambda_block, sin_lambda_block],
-                                  [-sin_lambda_block, cos_lambda_block]])
-                trans_s = np.s_[i + t:i + t + 2]
-                transition[trans_s, trans_s] = trans
-                t += 2
-            i += n
+        start = 0
+        for mod in self.exog_models:
+            k_components = sum([bool(component) for component in mod.values()])
+            end = start + k_components
+            if mod['local_level'] and not mod['trend']:
+                t = np.ones((1,1))
+            else:
+                t = np.array([[1,1],[0,1]])
+            if mod['irregular']:
+                t = block_diag(np.zeros((1,1)),t)
+            transition[start:end,start:end] = t
+            start = end
         return transition
+
     
     @property
     def initial_selection(self):
         """Initial selection matrix"""
         selection = np.zeros((self.k_states,self.k_state_cov))
-        #ARMA
-        i,j = 0,0
-        selection[i,j] = 1
-        i += self.r
-        j += 1
-        if self.dynamic_regression:
-            #Exog level
-            selection[i:i+self.k_exog,j:j+self.k_exog] = np.eye(self.k_exog)
-            i += self.k_exog
-            j += self.k_exog
-            #Exog seasonal
-            for ix, h in enumerate(self.freq_seasonal_harmonics):
-                select = np.vstack([np.eye(2) for i in range(h)])
-                selection[i:i+2*h,j:j+2] = select
-                i += 2*h
-                j += 2
-        selection = np.expand_dims(selection,axis=2)
+        start = 0
+        for mod in self.exog_models:
+            k_components = 0
+            if mod['local_level'] != "deterministic":
+                s = np.ones((1,1))
+                k_components += 1
+            if mod['trend'] & (mod['trend']!="deterministic"):
+                s = block_diag(s,np.ones((1,1)))
+                k_components += 1
+            if mod['irregular']:
+                s = block_diag(np.zeros((1,1)),s)
+                k_components += 1
+            end = start + k_components
+            selection[start:end,start:end] = s
         return selection
 
     def update(self, params, transformed=True, **kwargs):
@@ -181,17 +217,12 @@ class SDR(sm.tsa.statespace.MLEModel):
         params : array_like
             Array of parameters.
         """
-        ar_params = params[0:self.ar_order]
-        ma_params = params[self.ar_order:self.ma_order+self.ar_order]
-        state_cov_params = params[self.ma_order+self.ar_order:]
-        if self.ma_order>0:
-            self.ssm.design[0,1:1+self.ma_order,:] = ma_params
-        if self.ar_order>0:
-            self.ssm.transition[0,:self.ar_order,0] = ar_params
-        di = np.diag_indices(self.k_state_cov) + tuple(
-            [np.zeros(self.k_state_cov,dtype=np.int)])
-        self.ssm.state_cov[di] = state_cov_params
-
+        obs_cov = params[0]
+        state_cov_params = params[1:]
+        self.ssm.obs_cov[0,0,0]= obs_cov
+        self.ssm.state_cov[:,:,0][np.diag_indices(
+            self.k_state_cov)] = state_cov_params
+        
 
     def transform_params(self, unconstrained):
         """
@@ -214,30 +245,8 @@ class SDR(sm.tsa.statespace.MLEModel):
         """
         unconstrained = np.array(unconstrained, ndmin=1)
         constrained = np.zeros(unconstrained.shape, unconstrained.dtype)
-        # Transform the AR parameters (phi) to be stationary
         start = 0
-        end = 0
-        if self.ar_order > 0:
-            end += self.ar_order
-            if self.enforce_stationarity:
-                constrained[start:end] = (
-                    constrain_stationary_univariate(unconstrained[start:end])
-                )
-            else:
-                constrained[start:end] = unconstrained[start:end]
-            start += self.ar_order
-
-        # Transform the MA parameters (theta) to be invertible
-        if self.ma_order > 0:
-            end += self.ma_order
-            if self.enforce_invertibility:
-                constrained[start:end] = (
-                    -constrain_stationary_univariate(unconstrained[start:end])
-                )
-            else:
-                constrained[start:end] = unconstrained[start:end]
-            start += self.ma_order
-        # Transform the state covariance to be positive
+        # Transform the covariance params to be positive
         constrained[start:] = unconstrained[start:]**2
         return constrained
     
@@ -264,33 +273,34 @@ class SDR(sm.tsa.statespace.MLEModel):
         unconstrained = np.zeros(constrained.shape, constrained.dtype)
         # Transform the AR parameters (phi) to be stationary
         start = 0
-        end=0
-        if self.ar_order > 0:
-            end += self.ar_order
-            if self.enforce_stationarity:
-                unconstrained[start:end] = (
-                    unconstrain_stationary_univariate(constrained[start:end])
-                )
-            else:
-                unconstrained[start:end] = constrained[start:end]
-            start += self.ar_order
-
-        # Transform the MA parameters (theta) to be invertible
-        if self.ma_order > 0:
-            end += self.ma_order
-            if self.enforce_invertibility:
-                unconstrained[start:end] = (
-                    unconstrain_stationary_univariate(-constrained[start:end])
-                )
-            else:
-                unconstrained[start:end] = constrained[start:end]
-            start += self.ma_order
-        # Transform the state covariance to be positive
+        # Untransform the covariance params which have been transformed
+        # to be positive
         unconstrained[start:] = np.sqrt(constrained[start:])
         return unconstrained
 
-def plot_SDR(results,which="smoothed",alpha=None,figsize=None,combine_coefs=False,
-    combine_components=False,fitted=True,components=True):
+def plot_dynamic_regression(results,which="smoothed",figsize=None,
+    fitted=True,coefficients=True):
+    """
+    Plot the fitted values and/or estimates of time-varying regression
+    coefficients
+    This should be replaced with a customer Results object that has
+    properties to access the various components of the state vector
+    and plotting methods.
+
+    Parameters
+    ----------
+    results : MLEresults object
+        results object returned from fit method
+    which : string or None
+        If "filtered" plot the filtered results, otherwise use smoother results
+    figsize : tuple of two numbers or None
+        figsize passed to pandas plot methods to determine the size of each
+        plot
+    fitted : bool
+        if True display the fitted values
+    coefficients : bool
+        if True display the estimated coefficients
+    """
     if which == "filtered":
         state = results.filtered_state
         fitted_values = results.filter_results.forecasts[0]
@@ -298,43 +308,14 @@ def plot_SDR(results,which="smoothed",alpha=None,figsize=None,combine_coefs=Fals
         state = results.smoothed_state
         fitted_values = results.smoother_results.smoothed_forecasts[0]
     endog = results.model.endog
-    if fitted == True:
+    if fitted:
         pd.DataFrame({"endog":endog[:,0],"fitted_values":fitted_values}
             ).plot(figsize=figsize)
-    if components == True:
-        k_arma_states = results.model.r
-        k_exog = results.model.k_exog
-        nobs = results.model.nobs
-        freq_seasonal_harmonics = results.model.freq_seasonal_harmonics
-        nobs = results.model.nobs
-
-        regression_coefs = state[range(k_arma_states,k_arma_states+k_exog),:]
-
-        if combine_coefs == True:
-            regression_coefs = regression_coefs.sum(axis=0)
-            df1 = pd.DataFrame(regression_coefs,columns=
-            ["regression_coefs"]
-            )
+    if coefficients:
+        if which == "filtered":
+            design = block_diag(tuple(results.model.exog_design(mod) 
+                for mod in results.model.exog_models))@results.filtered_state
         else:
-            df1 = pd.DataFrame(regression_coefs.transpose(),columns=
-            ["regression_coef{!r}".format(ix) for ix in range(k_exog)]
-            )
-
-
-        seasonal_regression_coefs = {}
-        offset=k_exog + k_arma_states
-        for ix, harmonics in enumerate(freq_seasonal_harmonics):
-            h_idx = np.array([i*2 for i in range(0,harmonics)])+offset
-            offset += harmonics*2
-            seasonal_regression_coefs['regression_coef{!r}'.format(ix)] = state[h_idx,:].sum(axis=0)
-        if combine_coefs == True:
-            df2= pd.DataFrame(seasonal_regression_coefs)
-            df2 = pd.DataFrame(df2.sum(axis=1),columns=["regression_coefs"])
-        else:
-            df2= pd.DataFrame(seasonal_regression_coefs
-            )
-        if combine_components:
-            (df1+df2).plot(figsize=figsize,subplots=True)
-        else:
-            df1.plot(figsize=figsize,subplots=True)
-            df2.plot(figsize=figsize,subplots=True)   
+            design = block_diag(tuple(results.model.exog_design(mod) 
+                for mod in results.model.exog_models))@results.smoothed_state
+        pd.DataFrame(design[0,:]).plot(figsize=figsize)
