@@ -494,7 +494,7 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=None, alpha=None,
     acf : array
         autocorrelation function
     confint : array, optional
-        Confidence intervals for the ACF. Returned if confint is not None.
+        Confidence intervals for the ACF. Returned if alpha is not None.
     qstat : array, optional
         The Ljung-Box Q-Statistic.  Returned if q_stat is True.
     pvalues : array, optional
