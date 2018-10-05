@@ -7,12 +7,13 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 from scipy.special import erf
 from scipy import fftpack, integrate, linalg
+from scipy.integrate import nquad
 from .kde_utils import make_ufunc, numpy_trans1d_method
 from . import _cy_kernels
 from copy import copy as shallowcopy
 from ..compat.python import range, long
 from ..compat.numpy import np_meshgrid
-from ..compat.scipy import sp_integrate_nquad as nquad
+
 
 S2PI = np.sqrt(2 * np.pi)
 
