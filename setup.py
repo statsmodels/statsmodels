@@ -149,10 +149,10 @@ exts = dict(
     kalman_loglike={'source': 'statsmodels/tsa/kalmanf/kalman_loglike.pyx',
                     'include_dirs': ['statsmodels/src'],
                     'depends': ['statsmodels/src/capsule.h']},
-    _cy_kernels={"name" : "statsmodels/kernel_methods/_cy_kernels.c",
-             "depends" : ["statsmodels/kernel_merhods/erf.h"]},
-    _cy_fast_linbin={"name" : "statsmodels/kernel_methods/_cy_fast_linbin.c"},
-    _cy_grid_interpolation={"name" : "statsmodels/kernel_methods/_cy_grid_interpolation.c"},  # noqa: E501
+    _cy_kernels={'source' : 'statsmodels/kernel_methods/_cy_kernels.pyx',
+                 'depends' : ['statsmodels/kernel_merhods/erf.h']},
+    _cy_fast_linbin={'source' : 'statsmodels/kernel_methods/_cy_fast_linbin.pyx'},
+    _cy_grid_interpolation={'source' : 'statsmodels/kernel_methods/_cy_grid_interpolation.pyx'},  # noqa: E501
 )
 
 statespace_exts = [
