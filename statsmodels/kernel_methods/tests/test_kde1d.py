@@ -526,7 +526,3 @@ class TestLogCumHazard(TestCumHazard):
     def setUpClass(cls):
         kde_utils.setupClass_lognorm(cls)
         del cls.sizes[1:]
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)

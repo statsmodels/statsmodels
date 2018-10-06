@@ -364,8 +364,3 @@ class TestInterpolation(object):
         interp_test = interp(test_values)
         interp_comp = self.np_interpolate_2d(ax1, ax2, val2, real_values)
         np.testing.assert_allclose(interp_test, interp_comp)
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
