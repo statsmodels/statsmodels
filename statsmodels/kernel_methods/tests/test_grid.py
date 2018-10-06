@@ -246,7 +246,7 @@ class TestInterpolation(object):
         self.grid3.bin_type = 'bb'
         interp = GridInterpolator(self.grid3.sparse(), self.val3)
         test_values = np.array([[[1., 1., 1.]]])
-        iassert_raises(ValueError, nterp, test_values)
+        assert_raises(ValueError, interp, test_values)
 
     def test_bad_pts_2d_2(self):
         self.grid3.bin_type = 'bb'
