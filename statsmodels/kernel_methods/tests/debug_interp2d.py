@@ -2,7 +2,7 @@ from scipy.interpolate import interp2d
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.tri import Triangulation
-from ...compat.numpy import np_meshgrid
+
 
 def interpolate2d(ax1, ax2, values, test_values):
     interp = interp2d(ax1, ax2, values)
@@ -19,7 +19,7 @@ def draw_triangulation(xs, ys, values):
 def run():
     ax1 = np.r_[0:2 * np.pi:124j]
     ax2 = np.r_[-90:90:257j]
-    grid = np_meshgrid(ax1, ax2, indexing='ij')
+    grid = np.meshgrid(ax1, ax2, indexing='ij')
 
     N = 4096
     test_values = np.c_[np.random.rand(N) * 2 * np.pi,
@@ -36,7 +36,7 @@ def run():
     xs = np.r_[0:2 * np.pi:100j]
     ys = np.r_[-90:90:200j]
     gr_vals = interp(xs, ys)
-    gr = np_meshgrid(xs, ys)
+    gr = np.meshgrid(xs, ys)
 
     plt.figure()
     draw_triangulation(gr[0].flatten(), gr[1].flatten(), gr_vals.flatten())

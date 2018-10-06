@@ -12,7 +12,6 @@ from .kde_utils import make_ufunc, numpy_trans1d_method
 from . import _cy_kernels
 from copy import copy as shallowcopy
 from ..compat.python import range, long
-from ..compat.numpy import np_meshgrid
 
 
 S2PI = np.sqrt(2 * np.pi)
@@ -134,8 +133,8 @@ def rfftnfreq(Ns, dx=None, sparse=True):
         fs.append(np.fft.fftfreq(Ns[d], dx[d]))
     fs.append(rfftfreq(Ns[-1], dx[-1]))
     if trans is None:
-        return np_meshgrid(*fs, indexing='ij', sparse=sparse, copy=False)
-    grid = np.asarray(np_meshgrid(*fs, indexing='ij', sparse=False))
+        return np.meshgrid(*fs, indexing='ij', sparse=sparse, copy=False)
+    grid = np.asarray(np.meshgrid(*fs, indexing='ij', sparse=False))
     return np.tensordot(trans, grid, axes=([1], [0]))
 
 
@@ -199,8 +198,8 @@ def fftnsamples(Ns, dx=None, sparse=True):
         dx = np.ones((ndim,), dtype=float)
     fs = [fftsamples(Ns[d], dx[d]) for d in range(ndim)]
     if trans is None:
-        return np_meshgrid(*fs, indexing='ij', sparse=sparse, copy=False)
-    grid = np.asarray(np_meshgrid(*fs, indexing='ij', sparse=False))
+        return np.meshgrid(*fs, indexing='ij', sparse=sparse, copy=False)
+    grid = np.asarray(np.meshgrid(*fs, indexing='ij', sparse=False))
     return np.tensordot(trans, grid, axes=([1], [0]))
 
 
@@ -255,7 +254,7 @@ def dctnfreq(Ns, dx=None, sparse=True):
             raise ValueError("The DCT requires the kernel to be symmetric, "
                              "so only a diagonal transformation is possible")
     fs = [dctfreq(Ns[d], dx[d]) for d in range(ndim)]
-    return np_meshgrid(*fs, indexing='ij', sparse=sparse, copy=False)
+    return np.meshgrid(*fs, indexing='ij', sparse=sparse, copy=False)
 
 
 def dctsamples(N, dx=1.0):
@@ -308,7 +307,7 @@ def dctnsamples(Ns, dx=None, sparse=True):
             raise ValueError("The DCT requires the kernel to be symmetric, "
                              "so only a diagonal transformation is possible")
     fs = [dctsamples(Ns[d], dx[d]) for d in range(ndim)]
-    return np_meshgrid(*fs, indexing='ij', sparse=sparse, copy=False)
+    return np.meshgrid(*fs, indexing='ij', sparse=sparse, copy=False)
 
 
 class Kernel1D(object):
