@@ -4,8 +4,7 @@ from ..kde_utils import Grid, GridInterpolator
 import numpy as np
 from scipy.interpolate import interp2d
 import scipy
-from nose.tools import raises
-from ...tools.testing import assert_equal, assert_allclose
+from ...tools.testing import assert_equal, assert_allclose, assert_raises
 
 
 class TestBasics(object):
@@ -53,24 +52,20 @@ class TestBasics(object):
         it = self.reference[0, 0]
         assert_equal(it, self.axes_def[0][0])
 
-    @raises(ValueError)
     def test_bad_array_type(self):
         p = [1, 2]
         row = [p, p]
         col = [row, row]
-        Grid.fromArrays([col, col])
+        assert_raises(ValueError, Grid.fromArrays, [col, col])
 
-    @raises(ValueError)
     def test_bad_bounds1(self):
-        Grid(self.reference, bounds=[[0, 1], [0, 1], [1, 0], [1, 0]])
+        assert_raises(ValueError, Grid, self.reference, bounds=[[0, 1], [0, 1], [1, 0], [1, 0]])
 
-    @raises(ValueError)
     def test_bad_bounds2(self):
-        Grid(self.reference, bounds=[[0, 1], [0, 1], [0, 0], [0, 1]])
+        assert_raises(ValueError, Grid, self.reference, bounds=[[0, 1], [0, 1], [0, 0], [0, 1]])
 
-    @raises(ValueError)
     def test_bad_bounds3(self):
-        Grid(self.axes_def[0], bounds=[[0, 1], [0, 1], [0, 1], [0, 1]])
+        assert_raises(ValueError, Grid, self.axes_def[0], bounds=[[0, 1], [0, 1], [0, 1], [0, 1]])
 
     def checkIsSame(self, g):
         assert self.reference.almost_equal(g)
@@ -148,13 +143,11 @@ class TestBasics(object):
         g2 = Grid(self.reference, bin_type='c')
         assert_equal(g2.bin_type, 'cccc')
 
-    @raises(ValueError)
     def test_build_from_grid_bin_type_err1(self):
-        Grid(self.reference, bin_type='cr')
+        assert_raises(ValueError, Grid, self.reference, bin_type='cr')
 
-    @raises(ValueError)
     def test_build_from_grid_bin_type_err2(self):
-        Grid(self.reference, bin_type='ccrx')
+        assert_raises(ValueError, Grid, self.reference, bin_type='ccrx')
 
     def test_build_from_grid_bounds(self):
         bnds = [[-1, 1], [-2, 2], [-3, 3], [-4, 4]]
@@ -195,9 +188,8 @@ class TestBasics(object):
     def test_equal_badtype(self):
         assert self.reference != [1]
 
-    @raises(ValueError)
     def test_bad_grid(self):
-        Grid([[[1, 2], [2, 3]]])
+        assert_raises(ValueError, Grid, [[[1, 2], [2, 3]]])
 
     def test_integrate1(self):
         g = Grid(self.axes_def[:2])
@@ -237,9 +229,8 @@ class TestInterpolation(object):
         sg = cls.grid3.sparse()
         cls.val3 = np.cos(sg[0]) + sg[1]
 
-    @raises(ValueError)
     def test_bad_value_shape(self):
-        GridInterpolator(self.grid1, self.val1[:-5])
+        assert_raises(ValueError, GridInterpolator, self.grid1, self.val1[:-5])
 
     @raises(ValueError)
     def test_bad_pts_1d(self):
@@ -251,19 +242,17 @@ class TestInterpolation(object):
                                 self.val1, self.val1[0], self.val1[-1])
         np.testing.assert_allclose(interp_test, interp_comp)
 
-    @raises(ValueError)
     def test_bad_pts_2d_1(self):
         self.grid3.bin_type = 'bb'
         interp = GridInterpolator(self.grid3.sparse(), self.val3)
         test_values = np.array([[[1., 1., 1.]]])
-        interp(test_values)
+        iassert_raises(ValueError, nterp, test_values)
 
-    @raises(ValueError)
     def test_bad_pts_2d_2(self):
         self.grid3.bin_type = 'bb'
         interp = GridInterpolator(self.grid3.sparse(), self.val3)
         test_values = np.array([[1., 1., 1., 1., 1.]])
-        interp(test_values)
+        assert_raises(ValueError, interp, test_values)
 
     def test_0d_pts(self):
         self.grid1.bin_type = 'b'

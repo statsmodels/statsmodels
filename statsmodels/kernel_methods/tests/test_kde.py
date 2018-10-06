@@ -1,8 +1,7 @@
 from __future__ import division, absolute_import, print_function
 
 from .. import kde, kde_methods, kernels
-from nose.tools import raises
-from ...tools.testing import assert_equal
+from ...tools.testing import assert_equal, assert_raises
 import numpy as np
 
 
@@ -19,14 +18,12 @@ class TestConstruction(object):
         assert_equal(m.lower, 0.)
         assert_equal(m.upper, 2.)
 
-    @raises(TypeError)
     def test_bad_init(self):
-        kde.KDE([1, 2, 3], ndim=3)
+        assert_raises(TypeError, kde.KDE, [1, 2, 3], ndim=3)
 
-    @raises(AttributeError)
     def test_bad_fit(self):
         k = kde.KDE([1, 2, 3], bandwidth=0.5)
-        k.fit(ndim=3)
+        assert_raises(AttributeError, k.fit, ndim=3)
 
     def change_kde(self, name, value):
         k = kde.KDE([1, 2, 3])
@@ -46,7 +43,6 @@ class TestConstruction(object):
         for a in attrs:
             yield self.change_kde, a, attrs[a]
 
-    @raises(AttributeError)
     def test_bad_setter(self):
         k = kde.KDE([1, 2, 3])
-        k.set_ndim(3)
+        assert_raises(AttributeError, k.set_ndim, 3)

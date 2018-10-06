@@ -5,8 +5,7 @@ import numpy as np
 from numpy.random import randn
 from scipy import integrate
 from . import kde_utils as kde_utils
-from ...tools.testing import assert_allclose, assert_equal
-from nose.tools import raises
+from ...tools.testing import assert_allclose, assert_equal, assert_raises
 from ..kde_utils import GridInterpolator
 
 
@@ -194,9 +193,9 @@ class TestKDE1D(KDETester):
         assert_allclose(tot, 1, rtol=acc, atol=acc)
         assert_equal(type(est.kernel), type(k.kernel.for_ndim(1)))
 
-    @raises(ValueError)
     def bad_set_axis(self, k, m, name):
-        k.method.axis_type = 'o'
+        with assert_raises(ValueError):
+            k.method.axis_type = 'o'
 
     def set_axis(self, k, m, name):
         k.method.axis_type = 'c'
@@ -231,16 +230,14 @@ class TestKDE1D(KDETester):
             k = self.createKDE(self.vs[0], m)
             yield self.force_span, k, m, str(k.method)
 
-    @raises(ValueError)
     def test_non1d_data(self):
         d = np.array([[1, 2], [3, 4], [5, 6.]])
         k = kde.KDE(d, method=kde_methods.Reflection1D)
-        k.fit()  # should raise a ValueError
+        assert_raises(ValueError, k.fit)
 
-    @raises(ValueError)
     def test_bad_axis_type(self):
         k = kde.KDE(self.vs[0], method=kde_methods.Reflection1D, axis_type='o')
-        k.fit()  # should raise a ValueError
+        assert_raises(ValueError, k.fit)
 
     def test_change_exog(self):
         k = self.createKDE(self.vs[0], self.methods[0])
@@ -255,11 +252,11 @@ class TestKDE1D(KDETester):
         assert_allclose(ys1, ys3, rtol=1e-8, atol=1e-8)
         assert_allclose(xs1.full(), xs3.full(), rtol=1e-8, atol=1e-8)
 
-    @raises(ValueError)
     def test_bad_change_exog(self):
         k = self.createKDE(self.vs[0], self.methods[0])
         est = k.fit()
-        est.exog = self.vs[1]
+        with assert_raises(ValueError):
+            est.exog = self.vs[1]
 
     def update_inputs(self, k, m, name):
         est = k.fit()
@@ -277,26 +274,29 @@ class TestKDE1D(KDETester):
             k.adjust = self.adjust[1]
             yield self.update_inputs, k, m, str(k.method)
 
-    @raises(ValueError)
     def bad_update_inputs1(self, k, m, name):
         est = k.fit()
-        est.update_inputs(self.vs[1][:-5],
-                          weights=self.weights[1],
-                          adjust=self.adjust[1][:-5])
+        assert_raises(ValueError, est.update_inputs,
+            self.vs[1][:-5],
+            weights=self.weights[1],
+            adjust=self.adjust[1][:-5]
+        )
 
-    @raises(ValueError)
     def bad_update_inputs2(self, k, m, name):
         est = k.fit()
-        est.update_inputs(self.vs[1][:-5],
-                          weights=self.weights[1][:-5],
-                          adjust=self.adjust[1])
+        assert_raises(ValueError, est.update_inputs,
+            self.vs[1][:-5],
+            weights=self.weights[1][:-5],
+            adjust=self.adjust[1]
+        )
 
-    @raises(ValueError)
     def bad_update_inputs3(self, k, m, name):
         est = k.fit()
-        est.update_inputs([[1, 2], [2, 3], [3, 4]],
-                          weights=self.weights[1][:-5],
-                          adjust=self.adjust[1])
+        assert_raises(ValueError, est.update_inputs,
+            [[1, 2], [2, 3], [3, 4]],
+            weights=self.weights[1][:-5],
+            adjust=self.adjust[1]
+        )
 
     def test_bad_update_inputs(self):
         for m in self.methods:
@@ -334,9 +334,8 @@ class TestLogKDE1D(TestKDE1D):
         tr1 = kde_methods.create_transform(MyTransform())
         assert_allclose(tr1.Dinv(xs), log_tr.Dinv(xs), rtol=tol, atol=tol)
 
-    @raises(AttributeError)
     def test_bad_transform1(self):
-        kde_methods.create_transform(np.log)
+        assert_raises(AttributeError, kde_methods.create_transform, np.log)
 
 
 class TestSF(KDETester):

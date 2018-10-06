@@ -5,8 +5,7 @@ from .. import kernels
 from scipy import stats, integrate
 import numpy as np
 from . import kde_utils
-from nose.tools import raises
-from ...tools.testing import assert_allclose, assert_equal
+from ...tools.testing import assert_allclose, assert_equal, assert_raises
 from ..fast_linbin import fast_linbin
 from ..kde_utils import Grid
 
@@ -189,9 +188,8 @@ class TestKernels1D(object):
         for kernel in kde_utils.kernels1d:
             yield self.rfft_xfx, kernel
 
-    @raises(ValueError)
     def test_rfftfreq_bad(self):
-        kernels.rfftfreq(1.2)
+        assert_raises(ValueError, kernels.rfftfreq, 1.2)
 
 class TestNormal1d(object):
     @classmethod

@@ -2,8 +2,7 @@ from __future__ import division, absolute_import, print_function
 
 from .. import fast_linbin as linbin
 
-from nose.tools import raises
-from ...tools.testing import (assert_equal, assert_allclose)
+from ...tools.testing import (assert_equal, assert_allclose, assert_raises)
 from scipy import stats
 from itertools import product
 import numpy as np
@@ -45,52 +44,42 @@ class TestContinuousBinning1D(object):
             yield self.validity, fct, s, t, True
             yield self.validity, fct, s, t, False
 
-    @raises(ValueError)
     def bad_data(self, fct):
         bounds = self.bounds
-        fct([[[1]]], bounds, 4, 1., 'b')
+        assert_raises(ValueError, fct, [[[1]]], bounds, 4, 1., 'b')
 
-    @raises(ValueError)
     def bad_bin_type1(self, fct):
         bounds = self.bounds
-        fct(self.data, bounds, 4, 1., 'X')
+        assert_raises(ValueError, fct, self.data, bounds, 4, 1., 'X')
 
-    @raises(ValueError)
     def bad_bin_type2(self, fct):
         bounds = self.bounds
-        fct(self.data, bounds, 4, 1., 'bb')
+        assert_raises(ValueError, fct, self.data, bounds, 4, 1., 'bb')
 
-    @raises(ValueError)
     def bad_bin_type3(self, fct):
         bounds = self.bounds
-        fct(self.data, bounds, 4, 1., '')
+        assert_raises(ValueError, fct, self.data, bounds, 4, 1., '')
 
-    @raises(ValueError)
     def bad_weights(self, fct):
         bounds = self.bounds
-        fct(self.data, bounds, 4, [1, 2, 3], 'b')
+        assert_raises(ValueError, fct, self.data, bounds, 4, [1, 2, 3], 'b')
 
-    @raises(ValueError)
     def bad_bounds1(self, fct):
-        fct(self.data, [[1, 2], [3, 4]], 4, 1., 'b')
+        assert_raises(ValueError, fct, self.data, [[1, 2], [3, 4]], 4, 1., 'b')
 
-    @raises(ValueError)
     def bad_bounds2(self, fct):
-        fct(self.data, [1, 2, 3], 4, 1., 'b')
+        assert_raises(ValueError, fct, self.data, [1, 2, 3], 4, 1., 'b')
 
-    @raises(ValueError)
     def bad_bounds3(self, fct):
-        fct(self.data, 'bad', 4, 1., 'b')
+        assert_raises(ValueError, fct, self.data, 'bad', 4, 1., 'b')
 
-    @raises(ValueError)
     def bad_out1(self, fct):
         out = np.empty((1,), dtype=float)
-        fct(self.data, self.bounds, 4, 1., 'b', out)
+        assert_raises(ValueError, fct, self.data, self.bounds, 4, 1., 'b', out)
 
-    @raises(ValueError)
     def bad_out2(self, fct):
         out = np.empty(self.weights.shape, dtype=int)
-        fct(self.data, self.bounds, 4, 1., 'b', out)
+        assert_raises(ValueError, fct, self.data, self.bounds, 4, 1., 'b', out)
 
     def test_bad_args(self):
         for fct in [linbin.fast_bin, linbin.fast_linbin]:
@@ -145,55 +134,45 @@ class TestContinuousBinningnD(object):
             yield self.validity, fct, d, s, t, True
             yield self.validity, fct, d, s, t, False
 
-    @raises(ValueError)
     def bad_data(self, fct):
         bounds = self.bounds * 4
-        fct([[[1]]], bounds, 4, 1., 'bbbb')
+        assert_raises(ValueError, fct, [[[1]]], bounds, 4, 1., 'bbbb')
 
-    @raises(ValueError)
     def bad_bin_type1(self, fct):
         bounds = self.bounds * 4
-        fct(self.data, bounds, 4, 1., 'X')
+        assert_raises(ValueError, fct, self.data, bounds, 4, 1., 'X')
 
-    @raises(ValueError)
     def bad_bin_type2(self, fct):
         bounds = self.bounds * 4
-        fct(self.data, bounds, 4, 1., 'bbbx')
+        assert_raises(ValueError, fct, self.data, bounds, 4, 1., 'bbbx')
 
-    @raises(ValueError)
     def bad_bin_type3(self, fct):
         bounds = self.bounds * 4
-        fct(self.data, bounds, 4, 1., 'bbb')
+        assert_raises(ValueError, fct, self.data, bounds, 4, 1., 'bbb')
 
-    @raises(ValueError)
     def bad_weights(self, fct):
         bounds = self.bounds * 4
-        fct(self.data, bounds, 4, [1, 2, 3], 'bbbb')
+        assert_raises(ValueError, fct, self.data, bounds, 4, [1, 2, 3], 'bbbb')
 
-    @raises(ValueError)
     def bad_bounds1(self, fct):
         bounds = self.bounds * 3
-        fct(self.data, bounds, 4, 1., 'bbbb')
+        assert_raises(ValueError, fct, self.data, bounds, 4, 1., 'bbbb')
 
-    @raises(ValueError)
     def bad_bounds2(self, fct):
-        fct(self.data, [1, 2, 3], 4, 1., 'bbbb')
+        assert_raises(ValueError, fct, self.data, [1, 2, 3], 4, 1., 'bbbb')
 
-    @raises(ValueError)
     def bad_bounds3(self, fct):
-        fct(self.data, 'bad', 4, 1., 'bbbb')
+        assert_raises(ValueError, fct, self.data, 'bad', 4, 1., 'bbbb')
 
-    @raises(ValueError)
     def bad_out1(self, fct):
         bounds = self.bounds * 4
         out = np.empty((1,), dtype=float)
-        fct(self.data, bounds, 4, 1., 'bbbb', out)
+        assert_raises(ValueError, fct, self.data, bounds, 4, 1., 'bbbb', out)
 
-    @raises(ValueError)
     def bad_out2(self, fct):
         bounds = self.bounds * 4
         out = np.empty(self.weights.shape, dtype=int)
-        fct(self.data, bounds, 4, 1., 'bbbb', out)
+        assert_raises(ValueError, fct, self.data, bounds, 4, 1., 'bbbb', out)
 
     def bad_args(self, test, *args):
         f = getattr(self, test)
