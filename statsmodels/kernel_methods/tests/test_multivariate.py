@@ -74,8 +74,8 @@ class KDETester(object):
 
 class TestMultivariate(KDETester):
     @classmethod
-    def setUpClass(cls):
-        kde_utils.setupClass_multivariate(cls)
+    def setup_class(cls):
+        kde_utils.setup_class_multivariate(cls)
 
     def method_works(self, k, methods, name):
         est = k.fit()

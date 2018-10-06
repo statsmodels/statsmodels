@@ -43,8 +43,8 @@ class KDETester(object):
 
 class TestNonContinuous(KDETester):
     @classmethod
-    def setUpClass(cls):
-        kde_utils.setupClass_nc(cls)
+    def setup_class(cls):
+        kde_utils.setup_class_nc(cls)
 
     def method_works(self, k, method, name):
         est = k.fit()

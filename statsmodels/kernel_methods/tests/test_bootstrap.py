@@ -20,7 +20,7 @@ def adjust_bw2(fitted, fct):
 
 class TestPDFBootstrap(object):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         dst = stats.norm(0, 1)
         cls.data = dst.rvs(200)
         cls.ks = kde.KDE(cls.data).fit()

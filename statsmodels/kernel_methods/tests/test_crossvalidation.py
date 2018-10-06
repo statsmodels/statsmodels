@@ -24,8 +24,8 @@ class TestCV(object):
         return k
 
     @classmethod
-    def setUpClass(cls):
-        kde_utils.setupClass_norm(cls)
+    def setup_class(cls):
+        kde_utils.setup_class_norm(cls)
 
     def loo(self, k, name):
         k.bandwidth = bandwidths.crossvalidation()

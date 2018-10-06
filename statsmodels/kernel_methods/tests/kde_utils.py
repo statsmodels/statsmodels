@@ -22,7 +22,7 @@ def generate_nc(dist, N):
 def generate_multivariate(N, *dists):
     return np.vstack([d.rvs(N) for d in dists]).T
 
-def setupClass_norm(cls):
+def setup_class_norm(cls):
     """
     Setup the class for a 1D normal distribution
     """
@@ -37,7 +37,7 @@ def setupClass_norm(cls):
     cls.upper = 5
     cls.methods = methods_1d
 
-def setupClass_lognorm(cls):
+def setup_class_lognorm(cls):
     cls.dist = stats.lognorm(1)
     cls.sizes = [128, 256, 201]
     cls.args = {}
@@ -50,7 +50,7 @@ def setupClass_lognorm(cls):
     cls.upper = 20
     cls.methods = methods_log
 
-def setupClass_normnd(cls, ndim):
+def setup_class_normnd(cls, ndim):
     """
     Setting up the class for a nD normal distribution
     """
@@ -65,7 +65,7 @@ def setupClass_normnd(cls, ndim):
     cls.methods = methods_nd
     cls.args = {}
 
-def setupClass_nc(cls):
+def setup_class_nc(cls):
     """
     Setting up the class for a nC poisson distribution
     """
@@ -76,7 +76,7 @@ def setupClass_nc(cls):
     cls.args = {}
     cls.methods = methods_nc
 
-def setupClass_multivariate(cls):
+def setup_class_multivariate(cls):
     """
     Setting up the class with a poisson distribution and two normals
     """

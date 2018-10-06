@@ -9,7 +9,7 @@ import numpy as np
 
 class TestContinuousBinning1D(object):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         dst = stats.norm(0, 1)
         cls.data = dst.rvs(2000)
         cls.weights = stats.uniform(1, 5).rvs(2000)
@@ -96,7 +96,7 @@ class TestContinuousBinning1D(object):
 
 class TestContinuousBinningnD(object):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         dst = stats.norm(0, 1)
         cls.data = dst.rvs(4*2000).reshape(2000, 4)
         cls.weights = stats.uniform(1, 5).rvs(2000)
@@ -193,7 +193,7 @@ class TestContinuousBinningnD(object):
 
 class TestDiscreteBinning(object):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         dst = stats.poisson(12)
         cls.data = dst.rvs(2000).reshape(1000, 2)
         cls.weights = stats.uniform(1, 5).rvs(1000)

@@ -78,8 +78,8 @@ class KDETester(object):
 
 class TestKDE2D(KDETester):
     @classmethod
-    def setUpClass(cls):
-        kde_utils.setupClass_normnd(cls, 2)
+    def setup_class(cls):
+        kde_utils.setup_class_normnd(cls, 2)
 
     def method_works(self, k, method, name):
         """

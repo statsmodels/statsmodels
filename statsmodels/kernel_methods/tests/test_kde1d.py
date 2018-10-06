@@ -20,7 +20,7 @@ class FakeModel(object):
 
 class TestBandwidth(object):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.ratios = np.array([1., 2., 5.])
         d = randn(500)
         cls.vs = cls.ratios[:, np.newaxis] * np.array([d, d, d])
@@ -121,8 +121,8 @@ class KDETester(object):
 
 class TestKDE1D(KDETester):
     @classmethod
-    def setUpClass(cls):
-        kde_utils.setupClass_norm(cls)
+    def setup_class(cls):
+        kde_utils.setup_class_norm(cls)
 
     def method_works(self, k, method, name):
         est = k.fit()
@@ -310,8 +310,8 @@ class TestKDE1D(KDETester):
 
 class TestLogKDE1D(TestKDE1D):
     @classmethod
-    def setUpClass(cls):
-        kde_utils.setupClass_lognorm(cls)
+    def setup_class(cls):
+        kde_utils.setup_class_lognorm(cls)
 
     def test_transform(self):
         tr = kde_methods.create_transform(np.log, np.exp)
@@ -340,8 +340,8 @@ class TestLogKDE1D(TestKDE1D):
 
 class TestSF(KDETester):
     @classmethod
-    def setUpClass(cls):
-        kde_utils.setupClass_norm(cls)
+    def setup_class(cls):
+        kde_utils.setup_class_norm(cls)
         del cls.sizes[1:]
 
     def method_works(self, k, method, name):
@@ -366,15 +366,15 @@ class TestSF(KDETester):
 
 class TestLogSF(TestSF):
     @classmethod
-    def setUpClass(cls):
-        kde_utils.setupClass_lognorm(cls)
+    def setup_class(cls):
+        kde_utils.setup_class_lognorm(cls)
         del cls.sizes[1:]
 
 
 class TestISF(KDETester):
     @classmethod
-    def setUpClass(cls):
-        kde_utils.setupClass_norm(cls)
+    def setup_class(cls):
+        kde_utils.setup_class_norm(cls)
         del cls.sizes[1:]
 
     def method_works(self, k, method, name):
@@ -403,15 +403,15 @@ class TestISF(KDETester):
 
 class TestLogISF(TestISF):
     @classmethod
-    def setUpClass(cls):
-        kde_utils.setupClass_lognorm(cls)
+    def setup_class(cls):
+        kde_utils.setup_class_lognorm(cls)
         del cls.sizes[1:]
 
 
 class TestICDF(KDETester):
     @classmethod
-    def setUpClass(cls):
-        kde_utils.setupClass_norm(cls)
+    def setup_class(cls):
+        kde_utils.setup_class_norm(cls)
         del cls.sizes[1:]
 
     def method_works(self, k, method, name):
@@ -440,15 +440,15 @@ class TestICDF(KDETester):
 
 class TestLogICDF(TestICDF):
     @classmethod
-    def setUpClass(cls):
-        kde_utils.setupClass_lognorm(cls)
+    def setup_class(cls):
+        kde_utils.setup_class_lognorm(cls)
         del cls.sizes[1:]
 
 
 class TestHazard(KDETester):
     @classmethod
-    def setUpClass(cls):
-        kde_utils.setupClass_norm(cls)
+    def setup_class(cls):
+        kde_utils.setup_class_norm(cls)
         del cls.sizes[1:]
 
     def method_works(self, k, method, name):
@@ -483,15 +483,15 @@ class TestHazard(KDETester):
 
 class TestLogHazard(TestHazard):
     @classmethod
-    def setUpClass(cls):
-        kde_utils.setupClass_lognorm(cls)
+    def setup_class(cls):
+        kde_utils.setup_class_lognorm(cls)
         del cls.sizes[1:]
 
 
 class TestCumHazard(KDETester):
     @classmethod
-    def setUpClass(cls):
-        kde_utils.setupClass_norm(cls)
+    def setup_class(cls):
+        kde_utils.setup_class_norm(cls)
         del cls.sizes[1:]
 
     def method_works(self, k, method, name):
@@ -523,6 +523,6 @@ class TestCumHazard(KDETester):
 
 class TestLogCumHazard(TestCumHazard):
     @classmethod
-    def setUpClass(cls):
-        kde_utils.setupClass_lognorm(cls)
+    def setup_class(cls):
+        kde_utils.setup_class_lognorm(cls)
         del cls.sizes[1:]

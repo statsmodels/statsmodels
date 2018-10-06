@@ -42,7 +42,7 @@ nd_tol = 1e-5
 
 class TestKernels1D(object):
     @classmethod
-    def setUpClass(cls, lower=-np.inf, test_width=3):
+    def setup_class(cls, lower=-np.inf, test_width=3):
         cls.lower = float(lower)
         cls.hard_points = ()
         cls.quad_args = dict(limit=100)
@@ -193,7 +193,7 @@ class TestKernels1D(object):
 
 class TestNormal1d(object):
     @classmethod
-    def setUpClass(cls, lower=-np.inf):
+    def setup_class(cls, lower=-np.inf):
         cls.kernel = kernels.normal1d()
         test_width = cls.kernel.cut
         cls.norm_ref = stats.norm(loc=0, scale=1)
@@ -229,7 +229,7 @@ class TestNormal1d(object):
 
 class TestKernelsnd(object):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         dist = stats.norm(0, 1)
         cls.ds = np.c_[dist.rvs(200),
                        dist.rvs(200),
@@ -333,7 +333,7 @@ class TestKernelsnd(object):
 
 class TestKernelnc(object):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         dist = stats.poisson(10)
         cls.ds = dist.rvs(10)
         cls.xs = np.arange(0, cls.ds.max()+1)[:, None]

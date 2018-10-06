@@ -9,7 +9,7 @@ from ...tools.testing import assert_equal, assert_allclose, assert_raises
 
 class TestBasics(object):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.sparse_grid = np.ogrid[0:11, 1:100:100j, -5.5:5.5:12j, 0:124]
         cls.sparse_grid[-1] = (cls.sparse_grid[-1] + 0.5) * 2 * np.pi / 124
         cls.axes_def = [g.squeeze() for g in cls.sparse_grid]
@@ -214,7 +214,7 @@ class TestBasics(object):
 
 class TestInterpolation(object):
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         ax1 = np.r_[0:2 * np.pi:124j]
         ax1 = (ax1 + (ax1[1] - ax1[0]) / 2)[:-1]
         cls.grid1 = Grid([ax1])
