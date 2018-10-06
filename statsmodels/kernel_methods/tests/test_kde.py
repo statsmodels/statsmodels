@@ -45,4 +45,5 @@ class TestConstruction(object):
 
     def test_bad_setter(self):
         k = kde.KDE([1, 2, 3])
-        assert_raises(AttributeError, k.set_ndim, 3)
+        with assert_raises(AttributeError):
+            k.set_ndim(3)
