@@ -17,6 +17,23 @@ class FakeModel(object):
     def __init__(self, exog):
         self.exog = exog
 
+    @property
+    def exog(self):
+        return self._exog
+
+    @exog.setter
+    def exog(self, exog):
+        self._exog = np.array(exog).reshape((len(exog), -1))
+
+    @property
+    def ndim(self):
+        """
+        Number of dimensions of the problem.
+        """
+        if self._exog is None:
+            return 0
+        return self._exog.shape[1]
+
 
 class TestBandwidth(object):
     @classmethod
