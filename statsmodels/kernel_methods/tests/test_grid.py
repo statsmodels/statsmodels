@@ -2,15 +2,12 @@ from __future__ import division, absolute_import, print_function
 
 from ..kde_utils import Grid, GridInterpolator
 import numpy as np
-from ...compat.numpy import NumpyVersion
 from scipy.interpolate import interp2d
 import scipy
 from nose.plugins.attrib import attr
 from nose.tools import raises
 from ...tools.testing import assert_equal, assert_allclose
 
-# interp2d doesn't work on older versions of scipy
-can_use_inter2p = NumpyVersion(scipy.__version__) > NumpyVersion('0.11.0')
 
 @attr('kernel_methods')
 class TestBasics(object):
@@ -335,8 +332,6 @@ class TestInterpolation(object):
         return res
 
     def test_2d_bounded(self):
-        if not can_use_inter2p:
-            return
         grid = self.grid2
         grid.bin_type = 'b'
         interp = GridInterpolator(grid, self.val2)
@@ -358,8 +353,6 @@ class TestInterpolation(object):
         np.testing.assert_allclose(interp_test, interp_comp)
 
     def test_2d_cyclic(self):
-        if not can_use_inter2p:
-            return
         grid = self.grid2
         grid.bin_type = 'c'
         interp = GridInterpolator(grid, self.val2)

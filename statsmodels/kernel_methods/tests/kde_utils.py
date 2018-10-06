@@ -1,51 +1,9 @@
 import numpy as np
 from .. import kde_methods as km
 from ..kde_utils import namedtuple, Grid
-from scipy import stats, linalg
+from scipy import stats
 from .. import kernels
-from ...compat.numpy import NumpyVersion
-import scipy
 
-class sp_multivariate_normal(object):
-    """
-    minimal version of multivariate_normal that just handle rvs and pdf with a covariance matrix
-    """
-    def __init__(self, mean=None, cov=1):
-        cov = np.atleast_2d(cov)
-        if cov.ndim != 2 or np.any(cov != cov.T):
-            raise ValueError("The covariance matrix must be a symmetric, positive, matrix")
-        if mean is None:
-            mean = np.array([0.]*cov.shape[0])
-        else:
-            mean = np.atleast_1d(mean)
-            if mean.ndim != 1:
-                raise ValueError("The mean must be at most a 1D array")
-            if cov.shape[0] != mean.shape[0]:
-                raise ValueError("Error, the dimension of the covariance and the mean must be the same")
-        self.trans = linalg.sqrtm(cov)
-        self.inv_cov = linalg.inv(cov)
-        ndim = cov.shape[0]
-        self.factor = 1. / np.sqrt((2*np.pi)**ndim * linalg.det(self.inv_cov))
-        self.ndim = ndim
-        self.norm = stats.norm(0, 1)
-        self.mean = mean[None, :]
-
-    def rvs(self, N):
-        xs = self.norm.rvs(N*self.ndim).reshape((N, self.ndim))
-        return self.mean + np.dot(xs, self.trans)
-
-    def pdf(self, xs):
-        xs = np.atleast_2d(xs)
-        if xs.ndim != 2 or xs.shape[1] != self.ndim:
-            raise ValueError("The evaluation points must have shape (N,D) or (D,), "
-                             " with D the dimension of the normal.")
-        xs = xs - self.mean
-        return self.factor * np.exp(-0.5*np.sum(xs * np.dot(xs, self.inv_cov), axis=1))
-
-if NumpyVersion(scipy.__version__) < NumpyVersion('0.14.0'):
-    multivariate_normal = sp_multivariate_normal
-else:
-    multivariate_normal = stats.multivariate_normal
 
 def generate(dist, N, low, high):
     start = dist.cdf(low)
@@ -96,7 +54,7 @@ def setupClass_normnd(cls, ndim):
     """
     Setting up the class for a nD normal distribution
     """
-    cls.dist = multivariate_normal(cov=np.eye(ndim))
+    cls.dist = stats.multivariate_normal(cov=np.eye(ndim))
     cls.sizes = [32, 64, 128]
     cls.vs = [generate_nd(cls.dist, s) for s in cls.sizes]
     cls.weights = [cls.dist.pdf(v) for v in cls.vs]
