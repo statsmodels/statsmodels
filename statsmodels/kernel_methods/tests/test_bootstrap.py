@@ -3,7 +3,6 @@ from __future__ import division, absolute_import, print_function
 from .. import kde
 from .. import bootstrap
 
-from nose.plugins.attrib import attr
 from ...tools.testing import assert_equal
 from numpy.testing.utils import assert_array_compare
 import operator
@@ -19,7 +18,6 @@ def adjust_bw1(fitted, fct):
 def adjust_bw2(fitted, fct):
     return fitted.exog.std(ddof=1)/(fitted.npts**0.2)
 
-@attr("kernel_methods")
 class TestPDFBootstrap(object):
     @classmethod
     def setUpClass(cls):

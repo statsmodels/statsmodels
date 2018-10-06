@@ -1,7 +1,6 @@
 from __future__ import division, absolute_import, print_function
 
 from . import kde_utils
-from nose.plugins.attrib import attr
 from ...tools.testing import assert_allclose
 from .. import kde
 import numpy as np
@@ -42,7 +41,6 @@ class KDETester(object):
                 k.weights = self.weights[i]
                 yield self.grid_method_works, k, m, 'weights_{0}_{1}'.format(k.method, i)
 
-@attr("kernel_methods")
 class TestNonContinuous(KDETester):
     @classmethod
     def setUpClass(cls):

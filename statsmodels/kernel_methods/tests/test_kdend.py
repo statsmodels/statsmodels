@@ -1,7 +1,6 @@
 from __future__ import division, absolute_import, print_function
 
 from . import kde_utils
-from nose.plugins.attrib import attr
 from ...tools.testing import assert_equal, assert_allclose
 from .. import kde
 
@@ -77,7 +76,6 @@ class KDETester(object):
             #yield self.grid_kernel_works_, k
 
 
-@attr('kernel_methods')
 class TestKDE2D(KDETester):
     @classmethod
     def setUpClass(cls):

@@ -5,7 +5,6 @@ from .. import kernels
 from scipy import stats, integrate
 import numpy as np
 from . import kde_utils
-from nose.plugins.attrib import attr
 from nose.tools import raises
 from ...tools.testing import assert_allclose, assert_equal
 from ..fast_linbin import fast_linbin
@@ -42,7 +41,6 @@ class RefKernelnD(kernels.KernelnD):
 tol = 1e-8
 nd_tol = 1e-5
 
-@attr("kernel_methods")
 class TestKernels1D(object):
     @classmethod
     def setUpClass(cls, lower=-np.inf, test_width=3):
@@ -195,7 +193,6 @@ class TestKernels1D(object):
     def test_rfftfreq_bad(self):
         kernels.rfftfreq(1.2)
 
-@attr("kernel_methods")
 class TestNormal1d(object):
     @classmethod
     def setUpClass(cls, lower=-np.inf):
@@ -232,7 +229,6 @@ class TestNormal1d(object):
     def test_pm2(self):
         self.python_attr('pm2')
 
-@attr("kernel_methods")
 class TestKernelsnd(object):
     @classmethod
     def setUpClass(cls):
@@ -337,7 +333,6 @@ class TestKernelsnd(object):
             yield self.dct2d, k
             yield self.dct3d, k
 
-@attr("kernel_methods")
 class TestKernelnc(object):
     @classmethod
     def setUpClass(cls):

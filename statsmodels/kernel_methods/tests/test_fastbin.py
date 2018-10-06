@@ -2,14 +2,12 @@ from __future__ import division, absolute_import, print_function
 
 from .. import fast_linbin as linbin
 
-from nose.plugins.attrib import attr
 from nose.tools import raises
 from ...tools.testing import (assert_equal, assert_allclose)
 from scipy import stats
 from itertools import product
 import numpy as np
 
-@attr("kernel_methods")
 class TestContinuousBinning1D(object):
     @classmethod
     def setUpClass(cls):
@@ -107,7 +105,6 @@ class TestContinuousBinning1D(object):
             yield self.bad_out1, fct
             yield self.bad_out2, fct
 
-@attr("kernel_methods")
 class TestContinuousBinningnD(object):
     @classmethod
     def setUpClass(cls):
@@ -215,7 +212,6 @@ class TestContinuousBinningnD(object):
             yield self.bad_args, "bad_out1", fct
             yield self.bad_args, "bad_out2", fct
 
-@attr('kernel_methods')
 class TestDiscreteBinning(object):
     @classmethod
     def setUpClass(cls):

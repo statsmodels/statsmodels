@@ -3,11 +3,9 @@ from __future__ import division, absolute_import, print_function
 from .. import kde, kde_methods, kernels
 from nose.tools import raises
 from ...tools.testing import assert_equal
-from nose.plugins.attrib import attr
 import numpy as np
 
 
-@attr('kernel_methods')
 class TestConstruction(object):
     def test_simple(self):
         kde.KDE([1, 2, 3])

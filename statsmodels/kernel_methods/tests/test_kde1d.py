@@ -5,7 +5,6 @@ import numpy as np
 from numpy.random import randn
 from scipy import integrate
 from . import kde_utils as kde_utils
-from nose.plugins.attrib import attr
 from ...tools.testing import assert_allclose, assert_equal
 from nose.tools import raises
 from ..kde_utils import GridInterpolator
@@ -20,7 +19,6 @@ class FakeModel(object):
         self.exog = exog
 
 
-@attr('kernel_methods')
 class TestBandwidth(object):
     @classmethod
     def setUpClass(cls):
@@ -122,7 +120,6 @@ class KDETester(object):
             yield self.grid_kernel_works_, k
 
 
-@attr('kernel_methods')
 class TestKDE1D(KDETester):
     @classmethod
     def setUpClass(cls):
@@ -311,7 +308,6 @@ class TestKDE1D(KDETester):
             yield self.bad_update_inputs3, k, m, str(k.method) + "_bad3"
 
 
-@attr('kernel_methods')
 class TestLogKDE1D(TestKDE1D):
     @classmethod
     def setUpClass(cls):
@@ -343,7 +339,6 @@ class TestLogKDE1D(TestKDE1D):
         kde_methods.create_transform(np.log)
 
 
-@attr('kernel_methods')
 class TestSF(KDETester):
     @classmethod
     def setUpClass(cls):
@@ -370,7 +365,6 @@ class TestSF(KDETester):
         pass
 
 
-@attr('kernel_methods')
 class TestLogSF(TestSF):
     @classmethod
     def setUpClass(cls):
@@ -378,7 +372,6 @@ class TestLogSF(TestSF):
         del cls.sizes[1:]
 
 
-@attr('kernel_methods')
 class TestISF(KDETester):
     @classmethod
     def setUpClass(cls):
@@ -409,7 +402,6 @@ class TestISF(KDETester):
         pass
 
 
-@attr('kernel_methods')
 class TestLogISF(TestISF):
     @classmethod
     def setUpClass(cls):
@@ -417,7 +409,6 @@ class TestLogISF(TestISF):
         del cls.sizes[1:]
 
 
-@attr('kernel_methods')
 class TestICDF(KDETester):
     @classmethod
     def setUpClass(cls):
@@ -448,7 +439,6 @@ class TestICDF(KDETester):
         pass
 
 
-@attr('kernel_methods')
 class TestLogICDF(TestICDF):
     @classmethod
     def setUpClass(cls):
@@ -456,7 +446,6 @@ class TestLogICDF(TestICDF):
         del cls.sizes[1:]
 
 
-@attr('kernel_methods')
 class TestHazard(KDETester):
     @classmethod
     def setUpClass(cls):
@@ -493,7 +482,6 @@ class TestHazard(KDETester):
         pass
 
 
-@attr('kernel_methods')
 class TestLogHazard(TestHazard):
     @classmethod
     def setUpClass(cls):
@@ -501,7 +489,6 @@ class TestLogHazard(TestHazard):
         del cls.sizes[1:]
 
 
-@attr('kernel_methods')
 class TestCumHazard(KDETester):
     @classmethod
     def setUpClass(cls):
@@ -535,7 +522,6 @@ class TestCumHazard(KDETester):
         pass
 
 
-@attr('kernel_methods')
 class TestLogCumHazard(TestCumHazard):
     @classmethod
     def setUpClass(cls):

@@ -1,7 +1,6 @@
 from __future__ import division, absolute_import, print_function
 
 from . import kde_utils
-from nose.plugins.attrib import attr
 from ...tools.testing import assert_equal, assert_allclose
 from .. import kde, kde_methods
 import numpy as np
@@ -73,7 +72,6 @@ class KDETester(object):
                 k.weights = self.weights[j]
                 yield self.grid_method_works, k, [m1, m2], '{0}_{1}'.format(name, j)
 
-@attr("kernel_methods")
 class TestMultivariate(KDETester):
     @classmethod
     def setUpClass(cls):

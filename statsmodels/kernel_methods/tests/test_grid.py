@@ -4,12 +4,10 @@ from ..kde_utils import Grid, GridInterpolator
 import numpy as np
 from scipy.interpolate import interp2d
 import scipy
-from nose.plugins.attrib import attr
 from nose.tools import raises
 from ...tools.testing import assert_equal, assert_allclose
 
 
-@attr('kernel_methods')
 class TestBasics(object):
     @classmethod
     def setUpClass(cls):
@@ -222,7 +220,6 @@ class TestBasics(object):
         val = g.cum_integrate(values)
         assert_allclose(val[-1, -1], g.integrate(values))
 
-@attr('kernel_methods')
 class TestInterpolation(object):
     @classmethod
     def setUpClass(cls):
