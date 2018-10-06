@@ -232,15 +232,11 @@ class TestInterpolation(object):
     def test_bad_value_shape(self):
         assert_raises(ValueError, GridInterpolator, self.grid1, self.val1[:-5])
 
-    @raises(ValueError)
     def test_bad_pts_1d(self):
         self.grid1.bin_type = 'b'
         interp = GridInterpolator(self.grid1.sparse(), self.val1)
         test_values = np.array([[1.]])
-        interp_test = interp(test_values)
-        interp_comp = np.interp(test_values, self.grid1.full(),
-                                self.val1, self.val1[0], self.val1[-1])
-        np.testing.assert_allclose(interp_test, interp_comp)
+        assert_raises(ValueError, interp, test_values)
 
     def test_bad_pts_2d_1(self):
         self.grid3.bin_type = 'bb'
