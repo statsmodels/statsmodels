@@ -2,7 +2,7 @@ from __future__ import division, print_function, absolute_import
 from ..compat.python import string_types
 from keyword import iskeyword as _iskeyword
 from operator import itemgetter as _itemgetter
-from ..compat.ordereddict import OrderedDict
+from collections import OrderedDict
 import sys
 
 
