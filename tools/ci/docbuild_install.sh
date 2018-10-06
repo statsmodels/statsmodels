@@ -4,8 +4,8 @@
 echo sudo apt-get install graphviz -qq
 sudo apt-get install graphviz -qq
 # Install required packages
-echo conda install sphinx ipython jupyter nbconvert numpydoc tzlocal --yes --quiet
-conda install sphinx ipython jupyter nbconvert numpydoc tzlocal --yes --quiet
+echo conda install sphinx "ipython<7.0" jupyter nbconvert numpydoc tzlocal "testpath<0.4.0" --yes --quiet
+conda install sphinx "ipython<7.0" jupyter nbconvert numpydoc tzlocal "testpath<0.4.0" --yes --quiet
 # doctr and pdr
 echo pip install colorama doctr pandas-datareader
 pip install colorama doctr pandas-datareader
