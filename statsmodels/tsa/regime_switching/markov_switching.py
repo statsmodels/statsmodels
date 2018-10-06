@@ -1934,6 +1934,8 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                     self.smoothed_marginal_probabilities, index=index)
 
     def _get_robustcov_results(self, cov_type='opg', **kwargs):
+        from statsmodels.base.covtype import descriptions
+
         use_self = kwargs.pop('use_self', False)
         if use_self:
             res = self
@@ -1964,24 +1966,19 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         elif cov_type == 'none':
             res.cov_params_default = np.zeros((k_params, k_params)) * np.nan
             res._rank = np.nan
-            res.cov_kwds['description'] = 'Covariance matrix not calculated.'
+            res.cov_kwds['description'] = descriptions['none']
         elif self.cov_type == 'approx':
             res.cov_params_default = res.cov_params_approx
-            res.cov_kwds['description'] = (
-                'Covariance matrix calculated using numerical (%s)'
-                ' differentiation.' % approx_type_str)
+            res.cov_kwds['description'] = descriptions['approx'].format(
+                                                approx_type=approx_type_str)
         elif self.cov_type == 'opg':
             res.cov_params_default = res.cov_params_opg
-            res.cov_kwds['description'] = (
-                'Covariance matrix calculated using the outer product of'
-                ' gradients (%s).' % approx_type_str
-            )
+            res.cov_kwds['description'] = descriptions['OPG'].format(
+                                                approx_type=approx_type_str)
         elif self.cov_type == 'robust':
             res.cov_params_default = res.cov_params_robust
-            res.cov_kwds['description'] = (
-                'Quasi-maximum likelihood covariance matrix used for'
-                ' robustness to some misspecifications; calculated using'
-                ' numerical (%s) differentiation.' % approx_type_str)
+            res.cov_kwds['description'] = descriptions['robust'].format(
+                                                approx_type=approx_type_str)
         else:
             raise NotImplementedError('Invalid covariance matrix type.')
 
