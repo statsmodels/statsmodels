@@ -217,6 +217,8 @@ class Transform1D(KDE1DMethod):
         trans_kde = _transKDE(self.method)
         trans_kde.lower = self.trans(kde.lower)
         trans_kde.upper = self.trans(kde.upper)
+        if trans_kde.lower > trans_kde.upper:
+            trans_kde.lower, trans_kde.upper = trans_kde.upper, trans_kde.lower
         trans_kde.exog = self.trans(kde.exog)
 
         copy_attrs = ['weights', 'adjust', 'kernel', 'bandwidth',
