@@ -175,7 +175,10 @@ class botev(object):
         """
         Returns the optimal bandwidth based on the data
         """
-        data = model.exog
+        if model.ndim != 1:
+            raise ValueError('Botev bandwidth selection is only supported for '
+                             '1D KDEs')
+        data = model.exog.reshape((-1,))
         N = 2 ** 10 if self.N is None else int(2 ** np.ceil(np.log2(self.N)))
         lower = getattr(model, 'lower', None)
         upper = getattr(model, 'upper', None)
