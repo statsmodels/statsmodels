@@ -7,7 +7,7 @@ from __future__ import division, absolute_import, print_function
 import numpy as np
 from .kde_utils import numpy_trans1d_method, namedtuple, numpy_trans1d
 from ._kde1d_methods import KDE1DMethod
-from ._kde_methods import KDEMethod, filter_exog
+from ._kde_methods import KDEMethod, filter_exog, invert_cdf
 from ._kde1d_reflection import Reflection1D
 
 _Transform_doc = "Named tuple storing the three function needed to transform an axis"
@@ -454,7 +454,8 @@ class Transform1D(KDE1DMethod):
         xs.transform(self.trans.inv)
         return xs, ys
 
-    def icdf(self, points, out=None):
+    @numpy_trans1d_method(in_dtype=float)
+    def icdf(self, points, out):
         r"""
         Compute the inverse cumulative distribution (quantile) function,
         defined as:
@@ -474,14 +475,9 @@ class Transform1D(KDE1DMethod):
         -------
         ndarray
             Returns the ``out`` variable, updated with the iCDF.
-
-        Notes
-        -----
-        This method computes the icdf in the transformed axis, and transform the result back.
         """
-        out = self.method.icdf(points, out)
-        self.trans.inv(out, out=out)
-        return out
+        return invert_cdf(points, out, self.pdf, self.cdf, self.cdf_grid(),
+                          self.lower, self.upper)
 
     def icdf_grid(self, N=None, cut=None):
         r"""

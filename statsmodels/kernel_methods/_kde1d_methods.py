@@ -35,11 +35,11 @@ References:
 
 from __future__ import division, absolute_import, print_function
 import numpy as np
-from scipy import fftpack, integrate, optimize
+from scipy import fftpack, integrate
 from .kde_utils import make_ufunc, numpy_trans1d_method, finite, AxesType, Grid
 from .fast_linbin import fast_linbin as fast_bin
 from copy import copy as shallow_copy
-from ._kde_methods import KDEMethod, filter_exog
+from ._kde_methods import KDEMethod, filter_exog, invert_cdf
 from . import kernels
 
 
@@ -415,43 +415,8 @@ class KDE1DMethod(KDEMethod):
         This method first approximates the result using linear interpolation on the CDF and refine the result
         numerically using the Newton method.
         """
-        xs, ys = self.cdf_grid()
-        xs = xs.linear()
-        coarse_result = np.interp(points, ys, xs, self.lower, self.upper)
-        lower = self.lower
-        upper = self.upper
-        cdf = self.cdf
-        pdf_out = np.empty(1, dtype=float)
-        tol = 1e-6
-
-        def pdf(x):
-            if x <= lower:
-                return 0
-            if x >= upper:
-                return 0
-            return self.pdf(np.atleast_1d(x), pdf_out)
-
-        @make_ufunc()
-        def find_inverse(p, approx):
-            if p > 1 - 1e-10:
-                return upper
-            if p < 1e-10:
-                return lower
-            if approx >= xs[-1] or approx <= xs[0]:
-                return approx
-            if abs(approx - p) < tol:
-                return approx
-            cdf_out = np.empty(1, dtype=float)
-
-            def f(x):
-                if x <= lower:
-                    return -p
-                elif x >= upper:
-                    return 1 - p
-                return cdf(np.atleast_1d(x), cdf_out) - p
-            return optimize.newton(f, approx, fprime=pdf, tol=tol)
-
-        return find_inverse(points, coarse_result, out=out)
+        return invert_cdf(points, out, self.pdf, self.cdf, self.cdf_grid(),
+                          self.lower, self.upper)
 
     @numpy_trans1d_method(in_dtype=float)
     def sf(self, points, out):

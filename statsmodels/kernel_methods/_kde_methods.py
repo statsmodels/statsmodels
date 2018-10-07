@@ -3,11 +3,15 @@
 
 This module contains the multi-variate KDE meta-method.
 """
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-from __future__ import division, absolute_import, print_function
 import numpy as np
-from .kde_utils import atleast_2df, AxesType
+from scipy import optimize
+
 from . import bandwidths
+from .kde_utils import atleast_2df, AxesType, make_ufunc
 
 
 def _array_arg(value, value_name, ndim, dtype=float):
@@ -67,6 +71,41 @@ def filter_exog(kde, bin_type):
             raise ValueError("The adjustments must be either a single value or an array of shape (npts,)")
         k.adjust = kde.adjust[sel]
     return k
+
+
+def invert_cdf(points, out, pdf, cdf, cdf_grid, lower, upper, tol=1e-6):
+    xs, ys = cdf_grid
+    xs = xs.linear()
+    coarse_result = np.interp(points, ys, xs, lower, upper)
+
+    def bounded_pdf(x):
+        if x <= lower:
+            return 0
+        if x >= upper:
+            return 0
+        return pdf(np.atleast_1d(x))
+
+    @make_ufunc()
+    def find_inverse(p, approx):
+        if p > 1 - 1e-10:
+            return upper
+        if p < 1e-10:
+            return lower
+        if approx >= xs[-1] or approx <= xs[0]:
+            return approx
+        if abs(approx - p) < tol:
+            return approx
+        cdf_out = np.empty(1, dtype=float)
+
+        def f(x):
+            if x <= lower:
+                return -p
+            elif x >= upper:
+                return 1 - p
+            return cdf(np.atleast_1d(x), cdf_out) - p
+        return optimize.newton(f, approx, fprime=bounded_pdf, tol=tol)
+
+    return find_inverse(points, coarse_result, out=out)
 
 
 class KDEMethod(object):
