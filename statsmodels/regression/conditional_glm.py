@@ -7,6 +7,7 @@ import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 import collections
+import warnings
 
 class ConditionalLogit(base.LikelihoodModel):
     """
@@ -31,18 +32,27 @@ class ConditionalLogit(base.LikelihoodModel):
                 row_ix[g] = []
             row_ix[g].append(i)
 
-        # Split the data into groups
+        # Split the data into groups and remove groups with no variation
         endog, exog = np.asarray(endog), np.asarray(exog)
         self._endog_grp = []
         self._exog_grp = []
         self._groupsize = []
+        self.nobs = 0
+        drops = [0, 0]
         for g, ix in row_ix.items():
             y = endog[ix].flat
             if np.std(y) == 0:
+                drops[0] += 1
+                drops[1] += len(y)
                 continue
+            self.nobs += len(y)
             self._endog_grp.append(y)
             self._groupsize.append(len(y))
             self._exog_grp.append(exog[ix, :])
+
+        if drops[0] > 0:
+            msg = "Dropped %d groups and %d observations for having no within-group variance" % tuple(drops)
+            warnings.warn(msg)
 
         # Number of groups
         self._n_groups = len(self._endog_grp)
@@ -130,9 +140,7 @@ class ConditionalLogit(base.LikelihoodModel):
 
     def score_grp(self, grp, params):
 
-        #d = self._denom(grp, params)
         d, h = self._denom_grad(grp, params)
-
         return self._xy[grp] - h / d
 
     def hessian(self, params):
@@ -142,14 +150,17 @@ class ConditionalLogit(base.LikelihoodModel):
         hess = np.atleast_2d(hess)
         return hess
 
-    def fit(self, start_params=None, maxiter=100, method='BFGS'):
+    def fit(self, start_params=None, method='BFGS', maxiter=100,
+            full_output=True, disp=False, fargs=(), callback=None,
+            retall=False, skip_hessian=False, **kwargs):
 
-        rslt = super(ConditionalLogit, self).fit(start_params=start_params, maxiter=maxiter,
-                     method=method)
+        rslt = super(ConditionalLogit, self).fit(start_params=start_params,
+                     method=method, maxiter=maxiter, full_output=full_output,
+                     disp=disp, skip_hessian=skip_hessian)
 
         crslt = ConditionalLogitResults(self, rslt.params, rslt.cov_params(), 1)
         crslt.method = method
-        crslt.nobs = len(self.endog)
+        crslt.nobs = self.nobs
         crslt.n_groups = self._n_groups
         crslt._group_stats = ["%d" % min(self._groupsize),
                               "%d" % max(self._groupsize),
@@ -157,16 +168,26 @@ class ConditionalLogit(base.LikelihoodModel):
         return ConditionalLogitResultsWrapper(crslt)
 
 
-    # Override to allow groups and time to be passed as variable
-    # names.
+    # Override to allow groups to be passed as a variable name.
     @classmethod
-    def from_formula(cls, formula, groups, data, *args, **kwargs):
+    def from_formula(cls, formula, data, subset=None, drop_cols=None,
+                     *args, **kwargs):
 
-        if type(groups) == str:
+        try:
+            groups = kwargs["groups"]
+            del kwargs["groups"]
+        except KeyError:
+            raise ValueError("'groups' is a required argument")
+
+        if isinstance(groups, str):
             groups = data[groups]
 
+        if not "0+" in formula.replace(" ", ""):
+            warnings.warn("ConditionalLogit should not include an intercept")
+
         model = super(ConditionalLogit, cls).from_formula(
-                   formula, data=data, groups=groups, *args, **kwargs)
+                      formula, data=data, groups=groups, *args,
+                      **kwargs)
 
         return model
 
