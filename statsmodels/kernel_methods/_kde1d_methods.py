@@ -422,6 +422,7 @@ class KDE1DMethod(KDEMethod):
         upper = self.upper
         cdf = self.cdf
         pdf_out = np.empty(1, dtype=float)
+        tol = 1e-6
 
         def pdf(x):
             if x <= lower:
@@ -438,6 +439,8 @@ class KDE1DMethod(KDEMethod):
                 return lower
             if approx >= xs[-1] or approx <= xs[0]:
                 return approx
+            if abs(approx - p) < tol:
+                return approx
             cdf_out = np.empty(1, dtype=float)
 
             def f(x):
@@ -446,7 +449,7 @@ class KDE1DMethod(KDEMethod):
                 elif x >= upper:
                     return 1 - p
                 return cdf(np.atleast_1d(x), cdf_out) - p
-            return optimize.newton(f, approx, fprime=pdf, tol=1e-6)
+            return optimize.newton(f, approx, fprime=pdf, tol=tol)
 
         return find_inverse(points, coarse_result, out=out)
 
