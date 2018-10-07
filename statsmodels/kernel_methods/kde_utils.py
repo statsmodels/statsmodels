@@ -3,15 +3,23 @@
 
 Module contained a variety of small useful functions.
 """
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-from __future__ import division, print_function, absolute_import
-from ..compat.python import string_types, range
-import numpy as np
-import inspect
 import functools
-from .namedtuple import namedtuple  # NOQA need to be defined here
+try:
+    from inspect import getfullargspec as getargspec
+except ImportError:
+    from inspect import getargspec
+
+import numpy as np
+
+from ..compat.python import string_types, range
 from ._grid import Grid  # noqa
 from ._grid_interpolation import GridInterpolator  # noqa
+from .namedtuple import namedtuple  # NOQA need to be defined here
+
 
 # Find the largest float available for this numpy
 if hasattr(np, 'float128'):
@@ -50,12 +58,12 @@ def make_ufunc(nin=None, nout=1):
     you know the wanted type for the output.
 
     :param int nin: Number of input. Default is found by using
-        ``inspect.getargspec``
+        ``inspect.getfullargspec``
     :param int nout: Number of output. Default is 1.
     """
     def f(fct):
         if nin is None:
-            Nin = len(inspect.getargspec(fct).args)
+            Nin = len(getargspec(fct).args)
         else:
             Nin = nin
         return np.frompyfunc(fct, Nin, nout)
