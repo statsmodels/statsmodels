@@ -1,5 +1,5 @@
 import numpy as np
-from statsmodels.regression.conditional_glm import ConditionalLogit
+from statsmodels.genmod.conditional_glm import ConditionalLogit
 from statsmodels.tools.numdiff import approx_fprime
 from numpy.testing import assert_allclose
 import pandas as pd
