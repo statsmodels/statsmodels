@@ -1,4 +1,4 @@
-#if !defined(WIN32) || \
+#if !defined(_WIN32) || \
     (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
 
 #include <math.h>
